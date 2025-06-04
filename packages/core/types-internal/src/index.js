@@ -975,21 +975,11 @@ export interface Config {
   getConfigFrom<T>(
     searchPath: FilePath,
     filePaths: Array<FilePath>,
-    options?:
-      | {|
-          /**
-           * @deprecated Use `configKey` instead.
-           */
-          packageKey?: string,
-          parse?: boolean,
-          exclude?: boolean,
-        |}
-      | {|
-          /**
-           * If specified, only invalidate when this config key changes.
-           */
-          configKey?: string,
-        |},
+    options?: {|
+      packageKey?: string,
+      parse?: boolean,
+      exclude?: boolean,
+    |},
   ): Promise<?ConfigResultWithFilePath<T>>;
   /** Finds the nearest package.json from the config's searchPath. */
   getPackage(): Promise<?PackageJSON>;
@@ -1624,11 +1614,6 @@ export interface BundleGraph<TBundle: Bundle> {
   isAssetReachableFromBundle(asset: Asset, bundle: Bundle): boolean;
   /** Returns whether an asset is referenced outside the given bundle. */
   isAssetReferenced(bundle: Bundle, asset: Asset): boolean;
-  /** Returns all assets referenced by a certain bundle. */
-  getReferencedAssets(
-    bundle: Bundle,
-    cache: Map<string, Set<string>>,
-  ): Set<string>;
   /**
    * Resolves the export `symbol` of `asset` to the source,
    * stopping at the first asset after leaving `bundle`.

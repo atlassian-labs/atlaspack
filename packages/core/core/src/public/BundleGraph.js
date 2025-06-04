@@ -186,16 +186,6 @@ export default class BundleGraph<TBundle: IBundle>
     );
   }
 
-  getReferencedAssets(
-    bundle: IBundle,
-    cache: Map<string, Set<string>>,
-  ): Set<string> {
-    return this.#graph.getReferencedAssets(
-      bundleToInternalBundle(bundle),
-      cache,
-    );
-  }
-
   hasParentBundleOfType(bundle: IBundle, type: string): boolean {
     return this.#graph.hasParentBundleOfType(
       bundleToInternalBundle(bundle),

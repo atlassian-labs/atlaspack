@@ -41,7 +41,6 @@ import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {PluginTracer, tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
-import {fromEnvironmentId} from '../EnvironmentManager';
 
 const HASH_REF_PREFIX_LEN = HASH_REF_PREFIX.length;
 const BOUNDARY_LENGTH = HASH_REF_PREFIX.length + 32 - 1;
@@ -112,9 +111,7 @@ async function run({input, options, api}) {
   let cacheKeys = info.cacheKeys;
   let mapKey = cacheKeys.map;
   let fullPath = fromProjectPath(options.projectRoot, filePath);
-  const env = fromEnvironmentId(bundle.env);
-
-  if (mapKey && env.sourceMap && !env.sourceMap.inline) {
+  if (mapKey && bundle.env.sourceMap && !bundle.env.sourceMap.inline) {
     api.invalidateOnFileDelete(
       toProjectPath(options.projectRoot, fullPath + '.map'),
     );
@@ -174,7 +171,12 @@ async function run({input, options, api}) {
   const hasSourceMap = getFeatureFlag('cachePerformanceImprovements')
     ? await options.cache.hasLargeBlob(mapKey)
     : await options.cache.has(mapKey);
-  if (mapKey && env.sourceMap && !env.sourceMap.inline && hasSourceMap) {
+  if (
+    mapKey &&
+    bundle.env.sourceMap &&
+    !bundle.env.sourceMap.inline &&
+    hasSourceMap
+  ) {
     const mapEntry = getFeatureFlag('cachePerformanceImprovements')
       ? await options.cache.getLargeBlob(mapKey)
       : await options.cache.getBlob(mapKey);
@@ -194,7 +196,6 @@ async function run({input, options, api}) {
 
   let res = {
     filePath,
-    bundleId: bundle.id,
     type: info.type,
     stats: {
       size,

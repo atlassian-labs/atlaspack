@@ -46,7 +46,6 @@
     "json5": "^2.2.0",
     "msgpackr": "^1.9.9",
     "nullthrows": "^1.1.1",
-    "protobufjs": "^7.4.0",
     "semver": "^7.5.2"
   },
   "devDependencies": {
@@ -58,10 +57,7 @@
     "tempy": "^0.2.1"
   },
   "exports": {
-    "./*": {
-      "types": "./src/*.d.ts",
-      "default": "./*"
-    },
+    "./*": "./*",
     ".": {
       "types": "./index.d.ts",
       "default": "./lib/index.js"

@@ -2,22 +2,19 @@
 
 import assert from 'assert';
 import {createEnvironment} from '../src/Environment';
-import {fromEnvironmentId} from '../src/EnvironmentManager';
 import PublicEnvironment from '../src/public/Environment';
 import {DEFAULT_OPTIONS} from './test-utils';
 
 describe('Public Environment', () => {
   it('has correct support data for ChromeAndroid', () => {
     let env = new PublicEnvironment(
-      fromEnvironmentId(
-        createEnvironment({
-          context: 'browser',
-          engines: {
-            browsers: ['last 1 Chrome version', 'last 1 ChromeAndroid version'],
-          },
-          outputFormat: 'esmodule',
-        }),
-      ),
+      createEnvironment({
+        context: 'browser',
+        engines: {
+          browsers: ['last 1 Chrome version', 'last 1 ChromeAndroid version'],
+        },
+        outputFormat: 'esmodule',
+      }),
       DEFAULT_OPTIONS,
     );
 
