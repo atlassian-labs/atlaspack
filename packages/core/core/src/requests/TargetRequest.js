@@ -49,6 +49,7 @@ import {BROWSER_ENVS} from '../public/Environment';
 import {optionsProxy, toInternalSourceLocation} from '../utils';
 import {fromProjectPath, toProjectPath, joinProjectPath} from '../projectPath';
 import {requestTypes} from '../RequestTracker';
+import {fromEnvironmentId} from '../EnvironmentManager';
 
 type RunOpts<TResult> = {|
   input: Entry,
@@ -125,7 +126,7 @@ export function skipTarget(
 async function run({input, api, options}) {
   let targetResolver = new TargetResolver(
     api,
-    optionsProxy(options, api.invalidateOnOptionChange),
+    optionsProxy(options, (opt) => api.invalidateOnOptionChange(opt)),
   );
   let targets: TargetRequestResult = await targetResolver.resolve(
     fromProjectPath(options.projectRoot, input.packagePath),
@@ -345,7 +346,7 @@ export class TargetResolver {
             },
           });
         }
-        if (!BROWSER_ENVS.has(targets[0].env.context)) {
+        if (!BROWSER_ENVS.has(fromEnvironmentId(targets[0].env).context)) {
           throw new ThrowableDiagnostic({
             diagnostic: {
               message: `Only browser targets are supported in serve mode`,
@@ -1491,21 +1492,22 @@ async function debugResolvedTargets(input, targets, targetInfo, options) {
 
     // Resolve relevant engines for context.
     let engines;
-    switch (target.env.context) {
+    const env = fromEnvironmentId(target.env);
+    switch (env.context) {
       case 'browser':
       case 'web-worker':
       case 'service-worker':
       case 'worklet': {
-        let browsers = target.env.engines.browsers;
+        let browsers = env.engines.browsers;
         engines = Array.isArray(browsers) ? browsers.join(', ') : browsers;
         break;
       }
       case 'node':
-        engines = target.env.engines.node;
+        engines = env.engines.node;
         break;
       case 'electron-main':
       case 'electron-renderer':
-        engines = target.env.engines.electron;
+        engines = env.engines.electron;
         break;
     }
 
@@ -1547,9 +1549,7 @@ async function debugResolvedTargets(input, targets, targetInfo, options) {
       }
 
       if (keyInfo.inferred) {
-        highlight.inferred.push(
-          md`${key} to be ${JSON.stringify(target.env[key])}`,
-        );
+        highlight.inferred.push(md`${key} to be ${JSON.stringify(env[key])}`);
       }
     }
 
@@ -1578,22 +1578,20 @@ async function debugResolvedTargets(input, targets, targetInfo, options) {
 
     // Format includeNodeModules to be human readable.
     let includeNodeModules;
-    if (typeof target.env.includeNodeModules === 'boolean') {
-      includeNodeModules = String(target.env.includeNodeModules);
-    } else if (Array.isArray(target.env.includeNodeModules)) {
+    if (typeof env.includeNodeModules === 'boolean') {
+      includeNodeModules = String(env.includeNodeModules);
+    } else if (Array.isArray(env.includeNodeModules)) {
       includeNodeModules =
         'only ' +
-        listFormat.format(
-          target.env.includeNodeModules.map((m) => JSON.stringify(m)),
-        );
+        listFormat.format(env.includeNodeModules.map((m) => JSON.stringify(m)));
     } else if (
-      target.env.includeNodeModules &&
-      typeof target.env.includeNodeModules === 'object'
+      env.includeNodeModules &&
+      typeof env.includeNodeModules === 'object'
     ) {
       includeNodeModules =
         'all except ' +
         listFormat.format(
-          Object.entries(target.env.includeNodeModules)
+          Object.entries(env.includeNodeModules)
             .filter(([, v]) => v === false)
             .map(([k]) => JSON.stringify(k)),
         );
@@ -1609,18 +1607,14 @@ async function debugResolvedTargets(input, targets, targetInfo, options) {
                  fromProjectPath(options.projectRoot, input.filePath),
                )}
               **Output**: ${path.relative(process.cwd(), output)}
-              **Format**: ${target.env.outputFormat} ${format(
-        info.outputFormat,
-      )}
-             **Context**: ${target.env.context} ${format(info.context)}
+              **Format**: ${env.outputFormat} ${format(info.outputFormat)}
+             **Context**: ${env.context} ${format(info.context)}
              **Engines**: ${engines || ''} ${format(info.engines)}
-        **Library Mode**: ${String(target.env.isLibrary)} ${format(
-        info.isLibrary,
-      )}
+        **Library Mode**: ${String(env.isLibrary)} ${format(info.isLibrary)}
 **Include Node Modules**: ${includeNodeModules} ${format(
         info.includeNodeModules,
       )}
-            **Optimize**: ${String(target.env.shouldOptimize)} ${format(
+            **Optimize**: ${String(env.shouldOptimize)} ${format(
         info.shouldOptimize,
       )}`,
       codeFrames: target.loc
