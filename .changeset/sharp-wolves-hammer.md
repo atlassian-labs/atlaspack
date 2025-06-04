@@ -2,4 +2,4 @@
 '@atlaspack/rust': patch
 ---
 
-Bump git2 to 0.20.2
+Do not use libgit
