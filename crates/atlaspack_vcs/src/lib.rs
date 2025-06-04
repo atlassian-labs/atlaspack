@@ -739,19 +739,32 @@ mod test {
     }
 
     std::fs::write(repo_path.join("file.txt"), "initial contents").unwrap();
-    Command::new("git")
+    let result = Command::new("git")
       .arg("add")
       .arg(".")
       .current_dir(&repo_path)
       .output()
       .unwrap();
-    Command::new("git")
+    if !result.status.success() {
+      panic!(
+        "Failed to add files to git: {}",
+        String::from_utf8(result.stderr).unwrap()
+      );
+    }
+
+    let result = Command::new("git")
       .arg("commit")
       .arg("-m")
       .arg("Initial commit")
       .current_dir(&repo_path)
       .output()
       .unwrap();
+    if !result.status.success() {
+      panic!(
+        "Failed to commit files to git: {}",
+        String::from_utf8(result.stderr).unwrap()
+      );
+    }
 
     repo_path
   }
