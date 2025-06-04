@@ -51,7 +51,7 @@ function getId(input: AssetRequestInput) {
   return hashString(
     type +
       fromProjectPathRelative(input.filePath) +
-      input.env.id +
+      (typeof input.env === 'string' ? input.env : input.env.id) +
       String(input.isSource) +
       String(input.sideEffects) +
       (input.code ?? '') +
