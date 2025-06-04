@@ -8,7 +8,11 @@ import {ContentGraph} from '@atlaspack/graph';
 
 // Returns a decimal showing the proportion source bundles are common to
 // both bundles versus the total number of source bundles.
-function scoreBundleMerge(bundleA: Bundle, bundleB: Bundle): number {
+function checkBundleThreshold(
+  bundleA: Bundle,
+  bundleB: Bundle,
+  threshold: number,
+): boolean {
   let sharedSourceBundles = 0;
   let allSourceBundles = new Set([
     ...bundleA.sourceBundles,
@@ -21,7 +25,34 @@ function scoreBundleMerge(bundleA: Bundle, bundleB: Bundle): number {
     }
   }
 
-  return sharedSourceBundles / allSourceBundles.size;
+  let score = sharedSourceBundles / allSourceBundles.size;
+  return score >= threshold;
+}
+
+function checkAncestorOverlap(
+  bundleA: Bundle,
+  bundleB: Bundle,
+  importantAncestorBundles: Array<Array<NodeId>>,
+): boolean {
+  if (importantAncestorBundles.length === 0) {
+    return false;
+  }
+
+  for (let ancestorBundle of importantAncestorBundles) {
+    let bundleAHasAllAncestors = ancestorBundle.every((ancestorId) =>
+      bundleA.sourceBundles.has(ancestorId),
+    );
+
+    let bundleBHasAllAncestors = ancestorBundle.every((ancestorId) =>
+      bundleB.sourceBundles.has(ancestorId),
+    );
+
+    if (bundleAHasAllAncestors && bundleBHasAllAncestors) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function getMergeClusters(
@@ -49,6 +80,7 @@ export function findMergeCandidates(
   bundleGraph: IdealBundleGraph,
   bundles: Array<NodeId>,
   threshold: number,
+  importantAncestorBundles: Array<Array<NodeId>> = [],
 ): Array<Array<NodeId>> {
   let graph = new ContentGraph<NodeId>();
   let seen = new Set<string>();
@@ -77,9 +109,10 @@ export function findMergeCandidates(
       let otherBundle = bundleGraph.getNode(otherBundleId);
       invariant(otherBundle && otherBundle !== 'root');
 
-      let score = scoreBundleMerge(bundle, otherBundle);
-
-      if (score >= threshold) {
+      if (
+        checkBundleThreshold(bundle, otherBundle, threshold) ||
+        checkAncestorOverlap(bundle, otherBundle, importantAncestorBundles)
+      ) {
         let bundleNode = graph.addNodeByContentKeyIfNeeded(
           bundleId.toString(),
           bundleId,
