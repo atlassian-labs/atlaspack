@@ -708,78 +708,67 @@ pub fn vcs_list_dirty_files(
 mod test {
   use super::*;
 
-  fn create_test_repo(temp_dir: &tempfile::TempDir) -> PathBuf {
+  fn run_command(command: &mut Command) -> anyhow::Result<()> {
+    let result = command.output()?;
+    if !result.status.success() {
+      return Err(anyhow::anyhow!(
+        "Command failed: {}",
+        String::from_utf8(result.stderr).unwrap()
+      ));
+    }
+    Ok(())
+  }
+
+  fn create_test_repo(temp_dir: &tempfile::TempDir) -> anyhow::Result<PathBuf> {
     let repo_path = temp_dir.path().join("test-repo");
     std::fs::create_dir_all(&repo_path).unwrap();
-    let result = Command::new("git")
-      .arg("init")
-      .current_dir(&repo_path)
-      .output()
-      .unwrap();
-    if !result.status.success() {
-      panic!(
-        "Failed to initialize test repo: {}",
-        String::from_utf8(result.stderr).unwrap()
-      );
-    }
+    let mut command = Command::new("git");
+    command.arg("init").current_dir(&repo_path);
+    run_command(&mut command)?;
 
-    let result = Command::new("git")
+    let mut command = Command::new("git");
+    command
+      .arg("config")
+      .arg("user.email")
+      .arg("test-user@atlassian.com")
+      .current_dir(&repo_path);
+    run_command(&mut command)?;
+
+    let mut command = Command::new("git");
+    command
       .arg("config")
       .arg("user.name")
       .arg("test-user")
-      .current_dir(&repo_path)
-      .output()
-      .unwrap();
+      .current_dir(&repo_path);
+    run_command(&mut command)?;
 
-    if !result.status.success() {
-      panic!(
-        "Failed to set user.name: {}",
-        String::from_utf8(result.stderr).unwrap()
-      );
-    }
+    std::fs::write(repo_path.join("file.txt"), "initial contents")?;
+    let mut command = Command::new("git");
+    command.arg("add").arg(".").current_dir(&repo_path);
+    run_command(&mut command)?;
 
-    std::fs::write(repo_path.join("file.txt"), "initial contents").unwrap();
-    let result = Command::new("git")
-      .arg("add")
-      .arg(".")
-      .current_dir(&repo_path)
-      .output()
-      .unwrap();
-    if !result.status.success() {
-      panic!(
-        "Failed to add files to git: {}",
-        String::from_utf8(result.stderr).unwrap()
-      );
-    }
-
-    let result = Command::new("git")
+    let mut command = Command::new("git");
+    command
       .arg("commit")
       .arg("-m")
       .arg("Initial commit")
-      .current_dir(&repo_path)
-      .output()
-      .unwrap();
-    if !result.status.success() {
-      panic!(
-        "Failed to commit files to git: {}",
-        String::from_utf8(result.stderr).unwrap()
-      );
-    }
+      .current_dir(&repo_path);
+    run_command(&mut command)?;
 
-    repo_path
+    Ok(repo_path)
   }
 
   #[test]
   fn test_create_test_repo() {
     let temp_dir = tempfile::tempdir().unwrap();
-    let repo_path = create_test_repo(&temp_dir);
+    let repo_path = create_test_repo(&temp_dir).unwrap();
     assert!(repo_path.exists());
   }
 
   #[test]
   fn test_rev_parse() {
     let temp_dir = tempfile::tempdir().unwrap();
-    let repo_path = create_test_repo(&temp_dir);
+    let repo_path = create_test_repo(&temp_dir).unwrap();
     let git_hash = rev_parse(&repo_path, "HEAD").unwrap();
     assert_ne!(git_hash, "HEAD");
   }
@@ -787,23 +776,22 @@ mod test {
   #[test]
   fn test_get_file_contents_at_commit() {
     let temp_dir = tempfile::tempdir().unwrap();
-    let repo_path = create_test_repo(&temp_dir);
+    let repo_path = create_test_repo(&temp_dir).unwrap();
     let head_hash = rev_parse(&repo_path, "HEAD").unwrap();
 
     std::fs::write(repo_path.join("file.txt"), "new contents").unwrap();
-    Command::new("git")
-      .arg("add")
-      .arg(".")
-      .current_dir(&repo_path)
-      .output()
-      .unwrap();
-    Command::new("git")
+    let mut command = Command::new("git");
+    command.arg("add").arg(".").current_dir(&repo_path);
+    run_command(&mut command).unwrap();
+
+    let mut command = Command::new("git");
+    command
       .arg("commit")
       .arg("-m")
       .arg("Update file")
-      .current_dir(&repo_path)
-      .output()
-      .unwrap();
+      .current_dir(&repo_path);
+    run_command(&mut command).unwrap();
+
     let current_hash = rev_parse(&repo_path, "HEAD").unwrap();
 
     let contents = get_file_contents_at_commit(&repo_path, &head_hash, Path::new("file.txt"))
@@ -819,7 +807,7 @@ mod test {
   #[test]
   fn test_get_contents_at_commit_missing_file() {
     let temp_dir = tempfile::tempdir().unwrap();
-    let repo_path = create_test_repo(&temp_dir);
+    let repo_path = create_test_repo(&temp_dir).unwrap();
     let head_hash = rev_parse(&repo_path, "HEAD").unwrap();
 
     let contents =
@@ -830,7 +818,7 @@ mod test {
   #[test]
   fn test_get_changed_files_from_git() {
     let temp_dir = tempfile::tempdir().unwrap();
-    let repo_path = create_test_repo(&temp_dir);
+    let repo_path = create_test_repo(&temp_dir).unwrap();
     let head_hash = rev_parse(&repo_path, "HEAD").unwrap();
 
     let changes = get_changed_files_from_git(&repo_path, &head_hash, &head_hash, &[]).unwrap();
