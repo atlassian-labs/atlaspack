@@ -20,8 +20,6 @@ import {
 } from '@atlaspack/utils';
 import Environment from './Environment';
 import {fromProjectPath, toProjectPath} from '../projectPath';
-import {fromEnvironmentId} from '../EnvironmentManager';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 const internalConfigToConfig: DefaultWeakMap<
   AtlaspackOptions,
@@ -47,7 +45,7 @@ export default class PublicConfig implements IConfig {
   }
 
   get env(): Environment {
-    return new Environment(fromEnvironmentId(this.#config.env), this.#options);
+    return new Environment(this.#config.env, this.#options);
   }
 
   get searchPath(): FilePath {
@@ -134,21 +132,11 @@ export default class PublicConfig implements IConfig {
   async getConfigFrom<T>(
     searchPath: FilePath,
     fileNames: Array<string>,
-    options:
-      | ?{|
-          /**
-           * @deprecated Use `configKey` instead.
-           */
-          packageKey?: string,
-          parse?: boolean,
-          exclude?: boolean,
-        |}
-      | ?{|
-          /**
-           * If specified, only invalidate when this config key changes.
-           */
-          configKey?: string,
-        |},
+    options: ?{|
+      packageKey?: string,
+      parse?: boolean,
+      exclude?: boolean,
+    |},
   ): Promise<?ConfigResultWithFilePath<T>> {
     let packageKey = options?.packageKey;
     if (packageKey != null) {
@@ -164,29 +152,6 @@ export default class PublicConfig implements IConfig {
           contents: pkg.contents[packageKey],
           filePath: pkg.filePath,
         };
-      }
-    }
-
-    if (getFeatureFlag('granularTsConfigInvalidation')) {
-      const configKey = options?.configKey;
-      if (configKey != null) {
-        for (let fileName of fileNames) {
-          let config = await this.getConfigFrom(searchPath, [fileName], {
-            exclude: true,
-          });
-
-          if (config && config.contents[configKey]) {
-            // Invalidate only when the package key changes
-            this.invalidateOnConfigKeyChange(config.filePath, configKey);
-
-            return {
-              contents: config.contents[configKey],
-              filePath: config.filePath,
-            };
-          }
-        }
-
-        return null;
       }
     }
 

@@ -206,12 +206,11 @@ export default (new Transformer({
             pkg?.peerDependencies?.react,
         );
 
-      let tsconfig = await config.getConfigFrom<TSConfig['compilerOptions']>(
+      let tsconfig = await config.getConfigFrom<TSConfig>(
         options.projectRoot + '/index',
         ['tsconfig.json', 'jsconfig.json'],
-        {configKey: 'compilerOptions'},
       );
-      let compilerOptions = tsconfig?.contents;
+      let compilerOptions = tsconfig?.contents?.compilerOptions;
 
       // Use explicitly defined JSX options in tsconfig.json over inferred values from dependencies.
       pragma =
@@ -1085,8 +1084,7 @@ export default (new Transformer({
 
     if (map) {
       let sourceMap = new SourceMap(options.projectRoot);
-      const jsonMap = JSON.parse(map);
-      sourceMap.addVLQMap(jsonMap);
+      sourceMap.addVLQMap(JSON.parse(map));
       if (originalMap) {
         sourceMap.extends(originalMap);
       }
