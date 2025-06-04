@@ -1154,9 +1154,32 @@ export function createIdealGraph(
   let modifiedSourceBundles = new Set();
 
   if (config.disableSharedBundles === false) {
+    let viewPageAssetId = '022113ff2039246f';
+    let fullPageEditorAssetId = 'c6612c64059aac31';
+
+    let viewNodeId = bundleGraph
+      .getNodeIdsConnectedFrom(rootNodeId)
+      .find((bundleGroupId) => {
+        let mainEntryAsset = bundleGraph.getNode(bundleGroupId)?.mainEntryAsset;
+
+        return mainEntryAsset?.filePath.includes('ViewPageRouteComponent.tsx');
+      });
+
+    let editNodeId = bundleGraph
+      .getNodeIdsConnectedFrom(rootNodeId)
+      .find((bundleGroupId) => {
+        let mainEntryAsset = bundleGraph.getNode(bundleGroupId)?.mainEntryAsset;
+
+        return mainEntryAsset?.filePath.includes('FullPageEditorComponent.tsx');
+      });
+
+    console.log('View Node ID', viewNodeId);
+    console.log('Edit Node ID', editNodeId);
+
     for (let bundleGroupId of bundleGraph.getNodeIdsConnectedFrom(rootNodeId)) {
       // Find shared bundles in this bundle group.
       let bundleId = bundleGroupId;
+      let overlapBundles = new Set();
 
       // We should include "bundle reuse" as shared bundles that may be removed but the bundle itself would have to be retained
       let bundleIdsInGroup = getBundlesForBundleGroup(bundleId); //get all bundlegrups this bundle is an ancestor of
@@ -1167,6 +1190,12 @@ export function createIdealGraph(
         invariant(bundle !== 'root');
         return count + (bundle.bundleBehavior !== 'inline');
       }, 0);
+
+      if (bundleGroupId === viewNodeId) {
+        console.log('View PRL', numBundlesContributingToPRL);
+      } else if (bundleGroupId === editNodeId) {
+        console.log('Edit PRL', numBundlesContributingToPRL);
+      }
 
       if (numBundlesContributingToPRL > config.maxParallelRequests) {
         let sharedBundleIdsInBundleGroup = bundleIdsInGroup.filter((b) => {
@@ -1210,6 +1239,15 @@ export function createIdealGraph(
             bundleIdsInGroup.includes(b),
           );
 
+          if (
+            (bundleGroupId === editNodeId &&
+              bundleToRemove.sourceBundles.has(viewNodeId)) ||
+            (bundleGroupId === viewNodeId &&
+              bundleToRemove.sourceBundles.has(editNodeId))
+          ) {
+            overlapBundles.add(bundleIdToRemove);
+          }
+
           for (let sourceBundleId of sourceBundles) {
             let sourceBundle = nullthrows(bundleGraph.getNode(sourceBundleId));
             invariant(sourceBundle !== 'root');
@@ -1252,6 +1290,9 @@ export function createIdealGraph(
           }
           numBundlesContributingToPRL--;
         }
+      }
+      if (bundleGroupId === viewNodeId || bundleGroupId === editNodeId) {
+        console.log('Overlaps', bundleGroupId, overlapBundles);
       }
     }
   }
@@ -1328,11 +1369,30 @@ export function createIdealGraph(
       }
     });
 
+    let viewNodeId = bundleGraph
+      .getNodeIdsConnectedFrom(rootNodeId)
+      .find((bundleGroupId) => {
+        let mainEntryAsset = bundleGraph.getNode(bundleGroupId)?.mainEntryAsset;
+
+        return mainEntryAsset?.filePath.includes('ViewPageRouteComponent.tsx');
+      });
+
+    let editNodeId = bundleGraph
+      .getNodeIdsConnectedFrom(rootNodeId)
+      .find((bundleGroupId) => {
+        let mainEntryAsset = bundleGraph.getNode(bundleGroupId)?.mainEntryAsset;
+
+        return mainEntryAsset?.filePath.includes('FullPageEditorComponent.tsx');
+      });
+
     let clusters = findMergeCandidates(
       bundleGraph,
       Array.from(sharedBundles),
       config.sharedBundleMergeThreshold,
+      [[viewNodeId, editNodeId]],
     );
+
+    console.log('Clusters found for merging:', clusters);
 
     for (let cluster of clusters) {
       let [mergeTarget, ...rest] = cluster;
