@@ -8,7 +8,7 @@ workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
-git2 = { workspace = true }
+git2 = { workspace = true, default-features = false }
 hex = { workspace = true }
 nom = { workspace = true }
 rayon = { workspace = true }
