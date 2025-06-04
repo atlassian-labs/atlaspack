@@ -11,6 +11,7 @@ use napi::Env;
 use napi::JsFunction;
 use napi::JsObject;
 use napi::JsUnknown;
+use parking_lot::RwLock;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use tokio::sync::mpsc::unbounded_channel;
@@ -31,7 +32,7 @@ pub struct JsCallable {
   #[cfg(debug_assertions)]
   initial_thread: ThreadId,
   fn_name: Arc<String>,
-  threadsafe_function: ThreadsafeFunction<MapJsParams, ErrorStrategy::Fatal>,
+  threadsafe_function: Arc<RwLock<ThreadsafeFunction<MapJsParams, ErrorStrategy::Fatal>>>,
 }
 
 impl std::fmt::Debug for JsCallable {
@@ -54,7 +55,7 @@ impl JsCallable {
       #[cfg(debug_assertions)]
       initial_thread: std::thread::current().id(),
       fn_name: Arc::new(fn_name),
-      threadsafe_function: tsfn,
+      threadsafe_function: Arc::new(RwLock::new(tsfn)),
     })
   }
 
@@ -75,8 +76,8 @@ impl JsCallable {
     Self::new(jsfn, method_name.to_string())
   }
 
-  pub fn into_unref(mut self, env: &Env) -> napi::Result<Self> {
-    self.threadsafe_function.unref(env)?;
+  pub fn into_unref(self, env: &Env) -> napi::Result<Self> {
+    self.threadsafe_function.write().unref(env)?;
     Ok(self)
   }
 
@@ -122,10 +123,10 @@ impl JsCallable {
     In this case we are using `spawn_local` which creates a light weight tokio task on the
     current thread, having a negligible impact on performance.
     */
-    tokio::task::spawn({
+    std::thread::spawn({
       let threadsafe_function = self.threadsafe_function.clone();
-      async move {
-        threadsafe_function.call_with_return_value(
+      move || {
+        threadsafe_function.read().call_with_return_value(
           Box::new(map_params),
           ThreadsafeFunctionCallMode::NonBlocking,
           {
@@ -199,75 +200,80 @@ impl JsCallable {
 
     let (tx, rx) = channel();
 
-    self.threadsafe_function.call_with_return_value(
-      Box::new(map_params),
-      ThreadsafeFunctionCallMode::NonBlocking,
-      {
-        let fn_name = self.fn_name.clone();
+    std::thread::spawn({
+      let threadsafe_function = self.threadsafe_function.clone();
+      let name = self.fn_name.clone();
+      move || {
+        threadsafe_function.read().call_with_return_value(
+          Box::new(map_params),
+          ThreadsafeFunctionCallMode::NonBlocking,
+          {
+            move |JsValue(value, env)| {
+              if value.is_promise()? {
+                let result: JsObject = value.try_into()?;
+                let then_fn: JsFunction = result.get_named_property("then")?;
 
-        move |JsValue(value, env)| {
-          if value.is_promise()? {
-            let result: JsObject = value.try_into()?;
-            let then_fn: JsFunction = result.get_named_property("then")?;
+                let then_result_fn =
+                  env.create_function_from_closure("JsCallable::then_result_fn", {
+                    let tx = tx.clone();
+                    let fn_name = name.clone();
 
-            let then_result_fn =
-              env.create_function_from_closure("JsCallable::then_result_fn", {
-                let tx = tx.clone();
-                let fn_name = fn_name.clone();
+                    move |ctx| {
+                      if tx.send(map_return(&env, ctx.get::<JsUnknown>(0)?)).is_err() {
+                        return Err(napi::Error::from_reason(format!(
+                          "JsCallable({}) SendError: Result.then()",
+                          &fn_name
+                        )));
+                      }
+                      ctx.env.get_undefined()
+                    }
+                  })?;
 
-                move |ctx| {
-                  if tx.send(map_return(&env, ctx.get::<JsUnknown>(0)?)).is_err() {
-                    return Err(napi::Error::from_reason(format!(
-                      "JsCallable({}) SendError: Result.then()",
-                      &fn_name
-                    )));
-                  }
-                  ctx.env.get_undefined()
-                }
-              })?;
+                let then_error_fn =
+                  env.create_function_from_closure("JsCallable::then_error_fn", {
+                    let tx = tx.clone();
+                    let fn_name = name.clone();
 
-            let then_error_fn = env.create_function_from_closure("JsCallable::then_error_fn", {
-              let tx = tx.clone();
-              let fn_name = fn_name.clone();
+                    move |ctx| {
+                      let return_value = ctx.get::<JsUnknown>(0)?;
+                      let err = napi::Error::from(return_value);
+                      if tx.send(Err(err.into())).is_err() {
+                        return Err(napi::Error::from_reason(format!(
+                          "JsCallable({}) SendError: Result.catch()",
+                          &fn_name
+                        )));
+                      };
+                      ctx.env.get_undefined()
+                    }
+                  })?;
 
-              move |ctx| {
-                let return_value = ctx.get::<JsUnknown>(0)?;
-                let err = napi::Error::from(return_value);
+                then_fn.call(Some(&result), &[then_result_fn, then_error_fn])?;
+                return Ok(());
+              }
+
+              if value.is_error()? {
+                let err = napi::Error::from(value);
                 if tx.send(Err(err.into())).is_err() {
                   return Err(napi::Error::from_reason(format!(
-                    "JsCallable({}) SendError: Result.catch()",
-                    &fn_name
+                    "JsCallable({}) SendError: Sync Result Thrown",
+                    &name
                   )));
                 };
-                ctx.env.get_undefined()
+                return Ok(());
               }
-            })?;
 
-            then_fn.call(Some(&result), &[then_result_fn, then_error_fn])?;
-            return Ok(());
-          }
-
-          if value.is_error()? {
-            let err = napi::Error::from(value);
-            if tx.send(Err(err.into())).is_err() {
-              return Err(napi::Error::from_reason(format!(
-                "JsCallable({}) SendError: Sync Result Thrown",
-                &fn_name
-              )));
-            };
-            return Ok(());
-          }
-
-          if tx.send(map_return(&env, value)).is_err() {
-            return Err(napi::Error::from_reason(format!(
-              "JsCallable({}) SendError: Sync Result",
-              &fn_name
-            )));
-          };
-          Ok(())
-        }
-      },
-    );
+              if tx.send(map_return(&env, value)).is_err() {
+                return Err(napi::Error::from_reason(format!(
+                  "JsCallable({}) SendError: Sync Result",
+                  &name
+                )));
+              };
+              Ok(())
+            }
+          },
+        )
+      }
+    });
 
     match rx.recv() {
       Ok(Ok(result)) => Ok(result),
