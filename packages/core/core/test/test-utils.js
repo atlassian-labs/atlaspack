@@ -1,6 +1,6 @@
 // @flow strict-local
 
-import type {Environment, AtlaspackOptions, Target} from '../src/types';
+import type {AtlaspackOptions, Target} from '../src/types';
 
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {inputFS, outputFS, cache, cacheDir} from '@atlaspack/test-utils';
@@ -51,7 +51,7 @@ export const DEFAULT_OPTIONS: AtlaspackOptions = {
   },
 };
 
-export const DEFAULT_ENV: Environment = createEnvironment({
+export const DEFAULT_ENV: string = createEnvironment({
   context: 'browser',
   engines: {
     browsers: ['> 1%'],

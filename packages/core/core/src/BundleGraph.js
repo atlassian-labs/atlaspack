@@ -49,6 +49,7 @@ import {ISOLATED_ENVS} from './public/Environment';
 import {fromProjectPath, fromProjectPathRelative} from './projectPath';
 import {HASH_REF_PREFIX} from './constants';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {fromEnvironmentId} from './EnvironmentManager';
 
 export const bundleGraphEdgeTypes = {
   // A lack of an edge type indicates to follow the edge while traversing
@@ -148,6 +149,7 @@ export default class BundleGraph {
   _graph: ContentGraph<BundleGraphNode, BundleGraphEdgeType>;
   _bundlePublicIds /*: Set<string> */ = new Set<string>();
   _conditions /*: Map<string, Condition> */ = new Map<string, Condition>();
+  _environmentMap: Map<string, Environment> = new Map();
 
   constructor({
     graph,
@@ -283,7 +285,7 @@ export default class BundleGraph {
       if (
         node.type === 'dependency' &&
         node.value.symbols != null &&
-        node.value.env.shouldScopeHoist &&
+        fromEnvironmentId(node.value.env).shouldScopeHoist &&
         // Disable in dev mode because this feature is at odds with safeToIncrementallyBundle
         isProduction
       ) {
@@ -555,11 +557,11 @@ export default class BundleGraph {
           +needsStableName?: ?boolean,
           +bundleBehavior?: ?IBundleBehavior,
           +shouldContentHash: boolean,
-          +env: Environment,
+          +env: string,
         |}
       | {|
           +type: string,
-          +env: Environment,
+          +env: string,
           +uniqueKey: string,
           +target: Target,
           +needsStableName?: ?boolean,
@@ -1284,6 +1286,143 @@ export default class BundleGraph {
     );
   }
 
+  getReferencedAssets(
+    bundle: Bundle,
+    cache: Map<string, Set<string>>,
+  ): Set<string> {
+    const result = new Set();
+
+    const siblingBundles = new Set(
+      this.getBundleGroupsContainingBundle(bundle).flatMap((bundleGroup) =>
+        this.getBundlesInBundleGroup(bundleGroup, {includeInline: true}),
+      ),
+    );
+
+    const candidates = new Map();
+
+    this.traverseAssets(bundle, (asset) => {
+      // If the asset is available in multiple bundles in the same target, it's referenced.
+      const bundlesWithAsset = this.getBundlesWithAsset(asset);
+      if (
+        bundlesWithAsset.filter(
+          (b) =>
+            b.target.name === bundle.target.name &&
+            b.target.distDir === bundle.target.distDir,
+        ).length > 1
+      ) {
+        result.add(asset.id);
+        return;
+      }
+
+      const assetNodeId = nullthrows(
+        this._graph.getNodeIdByContentKey(asset.id),
+      );
+
+      if (
+        this._graph
+          .getNodeIdsConnectedTo(assetNodeId, bundleGraphEdgeTypes.references)
+          .map((id) => this._graph.getNode(id))
+          .some(
+            (node) =>
+              node?.type === 'dependency' &&
+              (node.value.priority === Priority.lazy ||
+                node.value.priority === Priority.conditional) &&
+              node.value.specifierType !== SpecifierType.url,
+          )
+      ) {
+        // If this asset is referenced by any async dependency, it's referenced.
+        result.add(asset.id);
+        return;
+      }
+
+      const dependencies = this._graph
+        .getNodeIdsConnectedTo(assetNodeId)
+        .map((id) => nullthrows(this._graph.getNode(id)))
+        .filter((node) => node.type === 'dependency')
+        .map((node) => {
+          invariant(node.type === 'dependency');
+          return node.value;
+        });
+
+      candidates.set(asset.id, {
+        asset,
+        dependencies,
+        bundlesWithAsset,
+      });
+    });
+
+    const visitedBundles: Set<Bundle> = new Set();
+
+    // Check if any of this bundle's descendants, referencers, bundles referenced
+    // by referencers, or descendants of its referencers use the asset without
+    // an explicit reference edge. This can happen if e.g. the asset has been
+    // deduplicated.
+    [...siblingBundles].forEach((referencer) => {
+      this.traverseBundles((descendant, _, actions) => {
+        if (descendant.id === bundle.id) {
+          return;
+        }
+
+        if (visitedBundles.has(descendant)) {
+          actions.skipChildren();
+          return;
+        }
+
+        visitedBundles.add(descendant);
+
+        if (
+          descendant.type !== bundle.type ||
+          descendant.env.context !== bundle.env.context
+        ) {
+          actions.skipChildren();
+          return;
+        }
+
+        for (let assetId of this.getBundleDirectReferences(descendant, cache)) {
+          if (candidates.has(assetId)) {
+            result.add(assetId);
+          }
+        }
+      }, referencer);
+    });
+
+    return result;
+  }
+
+  getBundleDirectReferences(
+    bundle: Bundle,
+    cache: Map<string, Set<string>>,
+  ): Set<string> {
+    const cachedResult = cache.get(bundle.id);
+    if (cachedResult != null) {
+      return cachedResult;
+    }
+
+    const directReferences = new Set();
+    const bundleAssets = this.getBundleContainedAssets(bundle);
+    const bundleDependencies = this.getBundleContainedDependencies(bundle);
+
+    for (const dependency of bundleDependencies) {
+      this._graph.forEachNodeIdConnectedFrom(
+        this._graph.getNodeIdByContentKey(dependency),
+        (assetId) => {
+          const asset = nullthrows(this._graph.getNode(assetId));
+          if (asset.type !== 'asset') {
+            return;
+          }
+
+          if (!bundleAssets.has(asset.id)) {
+            directReferences.add(asset.id);
+          }
+        },
+      );
+    }
+
+    cache.set(bundle.id, directReferences);
+
+    return directReferences;
+  }
+
   isAssetReferenced(bundle: Bundle, asset: Asset): boolean {
     // If the asset is available in multiple bundles in the same target, it's referenced.
     if (
@@ -1359,7 +1498,8 @@ export default class BundleGraph {
 
         if (
           descendant.type !== bundle.type ||
-          descendant.env.context !== bundle.env.context
+          fromEnvironmentId(descendant.env).context !==
+            fromEnvironmentId(bundle.env).context
         ) {
           actions.skipChildren();
           return;
@@ -1400,7 +1540,7 @@ export default class BundleGraph {
     // If a bundle's environment is isolated, it can't access assets present
     // in any ancestor bundles. Don't consider any assets reachable.
     if (
-      ISOLATED_ENVS.has(bundle.env.context) ||
+      ISOLATED_ENVS.has(fromEnvironmentId(bundle.env).context) ||
       !bundle.isSplittable ||
       bundle.bundleBehavior === BundleBehavior.isolated ||
       bundle.bundleBehavior === BundleBehavior.inline
@@ -1454,7 +1594,8 @@ export default class BundleGraph {
               node.type === 'root' ||
               (node.type === 'bundle' &&
                 (node.value.id === bundle.id ||
-                  node.value.env.context !== bundle.env.context))
+                  fromEnvironmentId(node.value.env).context !==
+                    fromEnvironmentId(bundle.env).context))
             ) {
               isReachable = false;
               actions.stop();
@@ -1815,6 +1956,36 @@ export default class BundleGraph {
     );
   }
 
+  getBundleContainedAssets(bundle: Bundle): Set<string> {
+    const assets = new Set();
+    this._graph.forEachNodeIdConnectedFrom(
+      this._graph.getNodeIdByContentKey(bundle.id),
+      (nodeId) => {
+        const node = nullthrows(this._graph.getNode(nodeId));
+        if (node.type === 'asset') {
+          assets.add(node.value.id);
+        }
+      },
+      bundleGraphEdgeTypes.contains,
+    );
+    return assets;
+  }
+
+  getBundleContainedDependencies(bundle: Bundle): Set<string> {
+    const dependencies = new Set();
+    this._graph.forEachNodeIdConnectedFrom(
+      this._graph.getNodeIdByContentKey(bundle.id),
+      (nodeId) => {
+        const node = nullthrows(this._graph.getNode(nodeId));
+        if (node.type === 'dependency') {
+          dependencies.add(node.value.id);
+        }
+      },
+      bundleGraphEdgeTypes.contains,
+    );
+    return dependencies;
+  }
+
   filteredTraverse<TValue, TContext>(
     bundleNodeId: NodeId,
     filter: (NodeId, TraversalActions) => ?TValue,
@@ -2128,7 +2299,9 @@ export default class BundleGraph {
       hash.writeString(referencedBundle.id);
     }
 
-    hash.writeString(JSON.stringify(objectSortedEntriesDeep(bundle.env)));
+    hash.writeString(
+      JSON.stringify(objectSortedEntriesDeep(fromEnvironmentId(bundle.env))),
+    );
     return hash.finish();
   }
 
