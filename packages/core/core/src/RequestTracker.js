@@ -1842,7 +1842,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
   let timeout;
   const snapshotKey = getFeatureFlag('cachePerformanceImprovements')
     ? `${cacheKey}/snapshot`
-    : `snapshot-${cacheKey}`;
+    : `snapshot-${hashString(cacheKey)}`;
   const snapshotPath = path.join(options.cacheDir, snapshotKey + '.txt');
 
   const commonMeta = {

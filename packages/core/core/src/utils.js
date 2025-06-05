@@ -50,7 +50,7 @@ export function getPublicId(
     }
   }
 
-  throw new Error('Original id was not unique');
+  throw new Error(`Original id was not unique: ${id}`);
 }
 
 // These options don't affect compilation and should cause invalidations

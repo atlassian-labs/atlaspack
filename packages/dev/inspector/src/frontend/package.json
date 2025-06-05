@@ -1,0 +1,47 @@
+{
+  "name": "@atlaspack/inspector-frontend",
+  "version": "0.1.0",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "atlaspack serve --feature-flag cachePerformanceImprovements=true ./index.html",
+    "build": "atlaspack build --feature-flag cachePerformanceImprovements=true ./index.html",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@atlaskit/css-reset": "*",
+    "@atlaskit/app-provider": "*",
+    "@atlassian/navigation-system": "*",
+    "@atlaskit/logo": "*",
+    "@atlaskit/tabs": "*",
+    "@atlaskit/primitives": "*",
+    "@atlaskit/heading": "*",
+    "@atlaspack/cli": "*",
+    "@atlaspack/core": "*",
+    "@carrotsearch/foamtree": "^3.5.2",
+    "@tanstack/react-query": "5.76.2",
+    "@tanstack/react-virtual": "3.13.9",
+    "axios": "^1.9.0",
+    "cytoscape": "^3.32.0",
+    "cytoscape-dagre": "^2.5.0",
+    "cytoscape-elk": "^2.3.0",
+    "cytoscape-fcose": "^2.2.0",
+    "graphology": "^0.26.0",
+    "graphology-types": "^0.24.8",
+    "graphology-layout": "^0.6.1",
+    "graphology-layout-forceatlas2": "^0.10.1",
+    "mobx": "^6.13.7",
+    "mobx-react-lite": "^4.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router": "^7.6.0",
+    "flexlayout-react": "0.8.17",
+    "sigma": "^3.0.1"
+  },
+  "browserslist": "Chrome 75",
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0"
+  },
+  "type": "commonjs"
+}

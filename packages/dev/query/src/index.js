@@ -51,8 +51,6 @@ export async function loadGraphs(cacheDir: string): Promise<{|
     }
   }
 
-  console.log({requestGraphBlob, bundleGraphBlob, assetGraphBlob});
-
   // Get requestTracker
   let requestTracker;
   if (requestGraphBlob != null && requestGraphKey != null) {
