@@ -104,6 +104,7 @@ export class ScopeHoistingPackager {
   externalAssets: Set<Asset> = new Set();
   forceSkipWrapAssets: Array<string> = [];
   logger: PluginLogger;
+  supportsArrowFunctions: boolean;
 
   constructor(
     options: PluginOptions,
@@ -121,6 +122,10 @@ export class ScopeHoistingPackager {
     this.useAsyncBundleRuntime = useAsyncBundleRuntime;
     this.forceSkipWrapAssets = forceSkipWrapAssets ?? [];
     this.logger = logger;
+    this.supportsArrowFunctions = this.bundle.env.supports(
+      'arrow-functions',
+      true,
+    );
 
     let OutputFormat = OUTPUT_FORMATS[this.bundle.env.outputFormat];
     this.outputFormat = new OutputFormat(this);
@@ -341,7 +346,7 @@ export class ScopeHoistingPackager {
 
     let params = [
       JSON.stringify(this.bundle.publicId),
-      fnExpr(this.bundle.env, [], [codeToRun]),
+      fnExpr(this.supportsArrowFunctions, [], [codeToRun]),
       `${JSON.stringify(deps)}${
         conditions.length > 0
           ? `.concat([${conditions
@@ -717,9 +722,13 @@ export class ScopeHoistingPackager {
       sourceMap?.offsetLines(1, 1);
       lineCount++;
 
+      const args = '(module, exports)';
+      const func = this.supportsArrowFunctions
+        ? `${args} =>`
+        : `function${args}`;
       code = `parcelRegister(${JSON.stringify(
         this.bundleGraph.getAssetPublicId(asset),
-      )}, function(module, exports) {
+      )}, ${func} {
 ${code}
 });
 `;
@@ -1552,7 +1561,7 @@ ${code}
   }
 
   buildFunctionExpression(args: Array<string>, expr: string): string {
-    return this.bundle.env.supports('arrow-functions', true)
+    return this.supportsArrowFunctions
       ? `(${args.join(', ')}) => ${expr}`
       : `function (${args.join(', ')}) { return ${expr}; }`;
   }
