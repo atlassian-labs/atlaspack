@@ -57,7 +57,10 @@
     "tempy": "^0.2.1"
   },
   "exports": {
-    "./*": "./*",
+    "./*": {
+      "types": "./src/*.d.ts",
+      "default": "./*"
+    },
     ".": {
       "types": "./index.d.ts",
       "default": "./lib/index.js"

@@ -34,6 +34,9 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
 
+/**
+ * This if for internal use in atlaspack only.
+ */
 export function setFeatureFlags(flags: FeatureFlags) {
   featureFlagValues = flags;
 }
