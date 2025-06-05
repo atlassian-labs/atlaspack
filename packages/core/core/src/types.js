@@ -573,6 +573,7 @@ export type BundleGroupNode = {|
 
 export type PackagedBundleInfo = {|
   filePath: ProjectPath,
+  bundleId: ContentKey,
   type: string,
   stats: Stats,
 |};
