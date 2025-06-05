@@ -1,0 +1,122 @@
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+
+  color: var(--color);
+  background-color: var(--background-color);
+
+  --background-color: rgb(255, 255, 255);
+  --color: rgb(0, 0, 0);
+  --border-color: #b8b8b8;
+  --base-spacing: 4px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar {
+  height: 100vh;
+  overflow-y: scroll;
+  /* width: 300px; */
+  border-right: 1px solid #434343;
+  display: flex;
+  flex-direction: column;
+  /* flex: 0 0 300px; */
+}
+
+.sidebar h1 {
+  padding: calc(var(--base-spacing) / 2) var(--base-spacing);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar .sidebarItem {
+  padding: var(--base-spacing);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border-color);
+  text-overflow: ellipsis;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.sidebar .sidebarItem:hover {
+  background-color: var(--color);
+  color: var(--background-color);
+}
+
+.sidebar .sidebarItem a {
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
+  text-overflow: ellipsis;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.sidebarFilter {
+  display: flex;
+  gap: calc(var(--base-spacing) * 2);
+  border-bottom: 1px solid var(--border-color);
+  padding: calc(var(--base-spacing) * 2) var(--base-spacing);
+}
+
+.sidebarFilter select {
+  flex: 1;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+table td {
+  border: solid 1px var(--border-color);
+  margin: 0;
+  padding: calc(var(--base-spacing) / 2) var(--base-spacing);
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  width: calc(100% - 300px);
+  overflow-x: scroll;
+  flex-direction: column;
+  gap: calc(var(--base-spacing) * 2);
+  min-height: 100%;
+  /* padding: calc(var(--base-spacing) / 2) var(--base-spacing); */
+}
+
+.contentInner {
+  min-height: 100%;
+}
+
+.treemapTable tr {
+  border-bottom: solid 1px var(--ds-border);
+}
+
+.treemapTable tr:focus-within {
+  background-color: #dbe7ff !important;
+}
+
+.treemapTable tr:nth-child(even) {
+  background-color: #e7e7e79b;
+}
+
+.treemapTable tr:hover {
+  background-color: var(--ds-background-neutral-hovered);
+}

@@ -56,6 +56,20 @@
     "graphviz": "^0.0.9",
     "tempy": "^0.2.1"
   },
+  "exports": {
+    "./*": {
+      "types": "./src/*.d.ts",
+      "default": "./*"
+    },
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./worker": {
+      "@atlaspack::sources": "./src/worker.js",
+      "default": "./lib/worker.js"
+    }
+  },
   "browser": {
     "./src/serializerCore.js": "./src/serializerCore.browser.js"
   },
