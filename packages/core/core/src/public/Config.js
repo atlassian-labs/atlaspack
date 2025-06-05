@@ -185,7 +185,7 @@ export default class PublicConfig implements IConfig {
           }
         }
 
-        return null;
+        // fall through so that file above invalidations are registered
       }
     }
 

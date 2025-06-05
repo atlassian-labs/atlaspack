@@ -6568,7 +6568,7 @@ let packageManager = new NodePackageManager(inputFS, '/');
       });
 
       [true, false].forEach((granularTsConfigInvalidation) => {
-        describe.only(`tsconfig.json granularTsConfigInvalidation=${String(
+        describe(`tsconfig.json granularTsConfigInvalidation=${String(
           granularTsConfigInvalidation,
         )}`, () => {
           it('should react to changes in tsconfig.json compilerOptions', async () => {
