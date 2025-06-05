@@ -3,8 +3,6 @@
 import type {ContentKey, NodeId} from '@atlaspack/graph';
 import type {PackagedBundleInfo} from '@atlaspack/core/src/types';
 
-import fs from 'fs';
-import path from 'path';
 import v8 from 'v8';
 import nullthrows from 'nullthrows';
 import invariant from 'assert';
