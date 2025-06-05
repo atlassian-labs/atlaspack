@@ -8,7 +8,7 @@ import type {
   BundleBehavior as IBundleBehavior,
   SemverRange,
 } from '@atlaspack/types';
-import type {Dependency, Target} from './types';
+import type {Dependency, Environment, Target} from './types';
 import {createDependencyId as createDependencyIdRust} from '@atlaspack/rust';
 import {
   SpecifierType,
@@ -21,7 +21,6 @@ import {toInternalSourceLocation} from './utils';
 import {toProjectPath} from './projectPath';
 import assert from 'assert';
 import {identifierRegistry} from './IdentifierRegistry';
-import {fromEnvironmentId} from './EnvironmentManager';
 
 type DependencyOpts = {|
   id?: string,
@@ -35,7 +34,7 @@ type DependencyOpts = {|
   isEntry?: boolean,
   isOptional?: boolean,
   loc?: SourceLocation,
-  env: string,
+  env: Environment,
   packageConditions?: Array<string>,
   meta?: Meta,
   resolveFrom?: FilePath,
@@ -61,7 +60,7 @@ export function createDependencyId({
 }: {|
   sourceAssetId?: string | void,
   specifier: DependencySpecifier,
-  env: string,
+  env: Environment,
   target?: Target | void,
   pipeline?: ?string,
   specifierType: $Keys<typeof SpecifierType>,
@@ -74,14 +73,8 @@ export function createDependencyId({
   const params = {
     sourceAssetId,
     specifier,
-    environmentId: env,
-    target:
-      target != null
-        ? {
-            ...target,
-            env: fromEnvironmentId(target.env),
-          }
-        : null,
+    environmentId: env.id,
+    target,
     pipeline,
     specifierType: SpecifierType[specifierType],
     bundleBehavior,

@@ -114,6 +114,6 @@ describe('createEnvironment', function () {
       /* ignore */
     }
     const environment = createEnvironment({});
-    expect(environment).toEqual('d821e85f6b50315e');
+    expect(environment.id).toEqual('d821e85f6b50315e');
   });
 });

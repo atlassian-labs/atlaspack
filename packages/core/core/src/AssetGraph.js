@@ -29,7 +29,6 @@ import nullthrows from 'nullthrows';
 import {ContentGraph} from '@atlaspack/graph';
 import {createDependency} from './Dependency';
 import {type ProjectPath, fromProjectPathRelative} from './projectPath';
-import {fromEnvironmentId} from './EnvironmentManager';
 
 type InitOpts = {|
   entries?: Array<ProjectPath>,
@@ -66,7 +65,7 @@ export function nodeFromAssetGroup(assetGroup: AssetGroup): AssetGroupNode {
   return {
     id: hashString(
       fromProjectPathRelative(assetGroup.filePath) +
-        assetGroup.env +
+        assetGroup.env.id +
         String(assetGroup.isSource) +
         String(assetGroup.sideEffects) +
         (assetGroup.code ?? '') +
@@ -148,6 +147,19 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     };
   }
 
+  // Deduplicates Environments by making them referentially equal
+  normalizeEnvironment(input: Asset | Dependency | AssetGroup) {
+    let {id, context} = input.env;
+    let idAndContext = `${id}-${context}`;
+
+    let env = this.envCache.get(idAndContext);
+    if (env) {
+      input.env = env;
+    } else {
+      this.envCache.set(idAndContext, input.env);
+    }
+  }
+
   setRootConnections({entries, assetGroups}: InitOpts) {
     let nodes = [];
     if (entries) {
@@ -223,13 +235,13 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
           env: target.env,
           isEntry: true,
           needsStableName: true,
-          symbols: fromEnvironmentId(target.env).isLibrary
+          symbols: target.env.isLibrary
             ? new Map([['*', {local: '*', isWeak: true, loc: null}]])
             : undefined,
         }),
       );
 
-      if (fromEnvironmentId(node.value.env).isLibrary) {
+      if (node.value.env.isLibrary) {
         // in library mode, all of the entry's symbols are "used"
         node.usedSymbolsDown.add('*');
         node.usedSymbolsUp.set('*', undefined);
@@ -416,7 +428,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
 
       let depIsDeferrable =
         d.symbols &&
-        !(fromEnvironmentId(d.env).isLibrary && d.isEntry) &&
+        !(d.env.isLibrary && d.isEntry) &&
         !d.symbols.has('*') &&
         ![...d.symbols.keys()].some((symbol) => {
           let assetSymbol = resolvedAsset.symbols?.get(symbol)?.local;
@@ -436,6 +448,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     assets: Array<Asset>,
     correspondingRequest: ContentKey,
   ) {
+    this.normalizeEnvironment(assetGroup);
     let assetGroupNode = nodeFromAssetGroup(assetGroup);
     assetGroupNode = this.getNodeByContentKey(assetGroupNode.id);
     if (!assetGroupNode) {
@@ -466,6 +479,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     |}> = [];
     let assetNodeIds = [];
     for (let asset of assets) {
+      this.normalizeEnvironment(asset);
       let isDirect = !dependentAssetKeys.has(asset.uniqueKey);
 
       let dependentAssets = [];
@@ -507,6 +521,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     let depNodeIds: Array<NodeId> = [];
     let depNodesWithAssets = [];
     for (let dep of assetNode.value.dependencies.values()) {
+      this.normalizeEnvironment(dep);
       let depNode = nodeFromDep(dep);
       let existing = this.getNodeByContentKey(depNode.id);
       if (

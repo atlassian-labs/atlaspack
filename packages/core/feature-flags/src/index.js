@@ -11,6 +11,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   atlaspackV3: false,
   useWatchmanWatcher: false,
   importRetry: false,
+  fixQuadraticCacheInvalidation: 'OLD',
   conditionalBundlingApi: false,
   inlineRequiresMultiThreading: false,
   vcsMode: 'OLD',

@@ -375,11 +375,6 @@ impl DatabaseWriter {
       env
     }?;
 
-    // If processes are terminated, they might leave stale readers on the DB
-    // the database will be unusable after it reaches a certain number of
-    // readers, so clean-up is useful on start-up.
-    environment.clear_stale_readers()?;
-
     let mut write_txn = environment.write_txn()?;
     let database = environment.create_database(&mut write_txn, None)?;
 

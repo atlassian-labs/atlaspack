@@ -465,87 +465,93 @@ describe('RequestTracker', () => {
   });
 
   describe('respondToFSEvents', () => {
-    beforeEach(() => {
-      setFeatureFlags({
-        ...DEFAULT_FEATURE_FLAGS,
+    [true, false].forEach((value) => {
+      beforeEach(() => {
+        setFeatureFlags({
+          ...DEFAULT_FEATURE_FLAGS,
+          fixQuadraticCacheInvalidation: value === true ? 'NEW' : 'OLD',
+        });
       });
-    });
 
-    afterEach(() => {
-      setFeatureFlags({
-        ...DEFAULT_FEATURE_FLAGS,
+      afterEach(() => {
+        setFeatureFlags({
+          ...DEFAULT_FEATURE_FLAGS,
+        });
       });
-    });
 
-    it('should invalidate file requests on file changes', async () => {
-      let tracker = new RequestTracker({farm, options});
-      await tracker.runRequest({
-        id: 'abc',
-        type: 7,
-        // $FlowFixMe string isn't a valid result
-        run: async ({api}: {api: RunAPI<string | void>, ...}) => {
-          api.invalidateOnFileUpdate(toProjectPath('', 'my-file'));
-          let result = await Promise.resolve('hello');
-          api.storeResult(result);
-        },
-        input: null,
-      });
-      const requestId = tracker.graph.getNodeIdByContentKey('abc');
-      const invalidated = await tracker.respondToFSEvents(
-        [
-          {
-            type: 'update',
-            path: 'my-file',
-          },
-        ],
-        Number.MAX_VALUE,
-      );
-      assert.equal(invalidated, true);
-      assert.equal(
-        tracker.graph.getNode(requestId)?.invalidateReason,
-        FILE_UPDATE,
-      );
-      assert.deepEqual(Array.from(tracker.graph.invalidNodeIds), [requestId]);
-    });
-
-    /**
-     * This test-case has been missed and invalidation is broken on this case.
-     */
-    it.skip('should invalidate file name requests with invalidate above invalidations', async () => {
-      let tracker = new RequestTracker({farm, options});
-      await tracker.runRequest({
-        id: 'abc',
-        type: 7,
-        // $FlowFixMe string isn't a valid result
-        run: async ({api}: {api: RunAPI<string | void>, ...}) => {
-          api.invalidateOnFileCreate({
-            fileName: 'package.json',
-            aboveFilePath: toProjectPath(
-              '',
-              './node_modules/something/package.json',
-            ),
+      describe(`optimizations feature-flag ${String(value)}`, () => {
+        it('should invalidate file requests on file changes', async () => {
+          let tracker = new RequestTracker({farm, options});
+          await tracker.runRequest({
+            id: 'abc',
+            type: 7,
+            // $FlowFixMe string isn't a valid result
+            run: async ({api}: {api: RunAPI<string | void>, ...}) => {
+              api.invalidateOnFileUpdate(toProjectPath('', 'my-file'));
+              let result = await Promise.resolve('hello');
+              api.storeResult(result);
+            },
+            input: null,
           });
-          let result = await Promise.resolve('hello');
-          api.storeResult(result);
-        },
-        input: null,
+          const requestId = tracker.graph.getNodeIdByContentKey('abc');
+          const invalidated = await tracker.respondToFSEvents(
+            [
+              {
+                type: 'update',
+                path: 'my-file',
+              },
+            ],
+            Number.MAX_VALUE,
+          );
+          assert.equal(invalidated, true);
+          assert.equal(
+            tracker.graph.getNode(requestId)?.invalidateReason,
+            FILE_UPDATE,
+          );
+          assert.deepEqual(Array.from(tracker.graph.invalidNodeIds), [
+            requestId,
+          ]);
+        });
+
+        it('should invalidate file name requests with invalidate above invalidations', async () => {
+          let tracker = new RequestTracker({farm, options});
+          await tracker.runRequest({
+            id: 'abc',
+            type: 7,
+            // $FlowFixMe string isn't a valid result
+            run: async ({api}: {api: RunAPI<string | void>, ...}) => {
+              api.invalidateOnFileCreate({
+                fileName: 'package.json',
+                aboveFilePath: toProjectPath(
+                  '',
+                  './node_modules/something/package.json',
+                ),
+              });
+              let result = await Promise.resolve('hello');
+              api.storeResult(result);
+            },
+            input: null,
+          });
+          const requestId = tracker.graph.getNodeIdByContentKey('abc');
+          const invalidated = await tracker.respondToFSEvents(
+            [
+              {
+                type: 'create',
+                path: './package.json',
+              },
+            ],
+            Number.MAX_VALUE,
+          );
+          assert.equal(invalidated, true);
+          assert.equal(
+            tracker.graph.getNode(requestId)?.invalidateReason,
+            FILE_CREATE,
+          );
+          assert.deepEqual(Array.from(tracker.graph.invalidNodeIds), [
+            requestId,
+          ]);
+        });
       });
-      const requestId = tracker.graph.getNodeIdByContentKey('abc');
-      const invalidated = await tracker.respondToFSEvents(
-        [
-          {
-            type: 'create',
-            path: './package.json',
-          },
-        ],
-        Number.MAX_VALUE,
-      );
-      assert.equal(invalidated, true);
-      assert.equal(
-        tracker.graph.getNode(requestId)?.invalidateReason,
-        FILE_CREATE,
-      );
-      assert.deepEqual(Array.from(tracker.graph.invalidNodeIds), [requestId]);
     });
   });
 });

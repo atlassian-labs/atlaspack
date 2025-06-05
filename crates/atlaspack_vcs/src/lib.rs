@@ -113,7 +113,6 @@
 //!
 
 use anyhow::anyhow;
-use git2::Repository;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -164,9 +163,7 @@ impl VCSState {
     failure_mode: FailureMode,
   ) -> anyhow::Result<VCSState> {
     tracing::info!("Reading VCS state");
-    let repo = Repository::open(path)?;
-    let head = repo.revparse_single("HEAD")?.peel_to_commit()?;
-    let git_hash = head.id().to_string();
+    let git_hash = rev_parse(path, "HEAD")?;
     tracing::info!("Found head commit");
     let files_listing_start_time = Instant::now();
     let file_listing = vcs_list_dirty_files(path, exclude_patterns)?;
@@ -282,28 +279,38 @@ pub struct VCSFile {
 }
 
 fn get_file_contents_at_commit(
-  repo: &Repository,
-  commit: &git2::Commit,
+  repo: &Path,
+  commit: &str,
   path: &Path,
 ) -> anyhow::Result<Option<String>> {
-  // return None if the file is new
-  let tree = commit.tree()?;
-  if tree.get_path(path).is_err() {
-    return Ok(None);
+  let result = Command::new("git")
+    .arg("cat-file")
+    .arg("-p")
+    .arg(format!("{}:{}", commit, path.display()))
+    .current_dir(repo)
+    .output();
+
+  match result {
+    Ok(contents) => {
+      let stderr = String::from_utf8(contents.stderr).unwrap_or_default();
+      if !contents.status.success() && stderr.contains("does not exist in") {
+        return Ok(None);
+      }
+
+      if !contents.status.success() {
+        let status_code = contents.status.code().unwrap_or(-1);
+        return Err(anyhow::anyhow!(
+          "Failed to read contents at {path:?} in revision {commit}: git failed with status {status_code}\n\nSTDERR: {stderr}"
+        ));
+      }
+
+      let contents = String::from_utf8(contents.stdout)?;
+      Ok(Some(contents))
+    }
+    Err(err) => Err(anyhow::anyhow!(
+      "Failed to read contents at {path:?} in revision {commit}: {err}"
+    )),
   }
-
-  let commit_id = commit.id();
-  let contents = Command::new("git")
-    .arg("show")
-    .arg(format!("{}:{}", commit_id, path.display()))
-    .current_dir(repo.path().parent().unwrap())
-    .output()
-    .map_err(|err| {
-      anyhow::anyhow!("Failed to read contents at {path:?} in revision {commit_id} from git: {err}")
-    })?;
-
-  let contents = String::from_utf8(contents.stdout)?;
-  Ok(Some(contents))
 }
 
 #[derive(Debug, PartialEq)]
@@ -345,8 +352,8 @@ pub enum FileChangeType {
 
 pub fn get_changed_files_from_git(
   repo_path: &Path,
-  old_commit: &git2::Commit<'_>,
-  new_commit: &git2::Commit<'_>,
+  old_commit: &str,
+  new_commit: &str,
   dirty_files: &[VCSFile],
 ) -> anyhow::Result<Vec<FileChangeEvent>> {
   let mut tracked_changes = HashSet::new();
@@ -388,12 +395,12 @@ pub fn get_changed_files_from_git(
 
 fn get_diff_with_git_cli(
   repo_path: &Path,
-  old_commit: &git2::Commit<'_>,
-  new_commit: &git2::Commit<'_>,
+  old_commit: &str,
+  new_commit: &str,
   tracked_changes: &mut HashSet<PathBuf>,
   changed_files: &mut Vec<FileChangeEvent>,
 ) -> anyhow::Result<()> {
-  if old_commit.id() == new_commit.id() {
+  if old_commit == new_commit {
     return Ok(());
   }
 
@@ -403,7 +410,7 @@ fn get_diff_with_git_cli(
     // We need to list all changes even if `new_commit` is an ancestor of `old_commit`
     // https://git-scm.com/docs/git-diff
     // https://git-scm.com/docs/gitrevisions
-    .arg(format!("{}..{}", old_commit.id(), new_commit.id()))
+    .arg(format!("{}..{}", old_commit, new_commit))
     .current_dir(repo_path)
     .output()?;
 
@@ -480,12 +487,9 @@ pub fn get_changed_files(
   new_rev: Option<&str>,
   failure_mode: FailureMode,
 ) -> anyhow::Result<Vec<FileChangeEvent>> {
-  let repo = Repository::open(repo_path)?;
   let old_rev = &vcs_state.git_hash;
-  let old_commit = repo.revparse_single(old_rev)?.peel_to_commit()?;
-  let new_commit = repo
-    .revparse_single(new_rev.unwrap_or("HEAD"))?
-    .peel_to_commit()?;
+  let old_commit = rev_parse(repo_path, old_rev)?;
+  let new_commit = rev_parse(repo_path, new_rev.unwrap_or("HEAD"))?;
 
   let mut changed_files =
     get_changed_files_from_git(repo_path, &old_commit, &new_commit, &vcs_state.dirty_files)?;
@@ -528,14 +532,14 @@ pub fn get_changed_files(
     } else {
       tracing::debug!("Reading yarn.lock from git");
       let maybe_old_yarn_lock_blob =
-        get_file_contents_at_commit(&repo, &old_commit, yarn_lock_path)?;
+        get_file_contents_at_commit(repo_path, &old_commit, yarn_lock_path)?;
       maybe_old_yarn_lock_blob
         .map(|s| parse_yarn_lock(&s))
         .transpose()?
     };
 
     let new_yarn_lock_blob: String = if new_rev.is_some() {
-      get_file_contents_at_commit(&repo, &new_commit, yarn_lock_path)?
+      get_file_contents_at_commit(repo_path, &new_commit, yarn_lock_path)?
         .ok_or_else(|| anyhow!("Expected lockfile to exist in current revision"))?
     } else {
       tracing::debug!("Reading raw yarn.lock on current file-system",);
@@ -584,6 +588,22 @@ pub fn get_changed_files(
   tracing::debug!("Done");
 
   Ok(changed_files)
+}
+
+pub fn rev_parse(dir: &Path, rev: &str) -> anyhow::Result<String> {
+  let mut command = Command::new("git");
+  command.arg("rev-parse").arg(rev).current_dir(dir);
+
+  let command = command.output()?;
+  if !command.status.success() {
+    let stderr = String::from_utf8(command.stderr).unwrap_or_default();
+    let exit_code = command.status.code().unwrap_or(-1);
+    return Err(anyhow::anyhow!(
+      "Git rev-parse failed (exit code {exit_code}): {stderr}"
+    ));
+  }
+
+  Ok(String::from_utf8(command.stdout)?.trim().to_string())
 }
 
 pub fn vcs_list_yarn_lock_files(dir: &Path) -> Result<Vec<String>, anyhow::Error> {
@@ -682,4 +702,131 @@ pub fn vcs_list_dirty_files(
     .collect::<anyhow::Result<Vec<_>>>()?;
 
   Ok(results)
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+
+  fn run_command(command: &mut Command) -> anyhow::Result<()> {
+    let result = command.output()?;
+    if !result.status.success() {
+      return Err(anyhow::anyhow!(
+        "Command failed: {}",
+        String::from_utf8(result.stderr).unwrap()
+      ));
+    }
+    Ok(())
+  }
+
+  fn create_test_repo(temp_dir: &tempfile::TempDir) -> anyhow::Result<PathBuf> {
+    let repo_path = temp_dir.path().join("test-repo");
+    std::fs::create_dir_all(&repo_path).unwrap();
+    let mut command = Command::new("git");
+    command.arg("init").current_dir(&repo_path);
+    run_command(&mut command)?;
+
+    let mut command = Command::new("git");
+    command
+      .arg("config")
+      .arg("user.email")
+      .arg("test-user@atlassian.com")
+      .current_dir(&repo_path);
+    run_command(&mut command)?;
+
+    let mut command = Command::new("git");
+    command
+      .arg("config")
+      .arg("user.name")
+      .arg("test-user")
+      .current_dir(&repo_path);
+    run_command(&mut command)?;
+
+    std::fs::write(repo_path.join("file.txt"), "initial contents")?;
+    let mut command = Command::new("git");
+    command.arg("add").arg(".").current_dir(&repo_path);
+    run_command(&mut command)?;
+
+    let mut command = Command::new("git");
+    command
+      .arg("commit")
+      .arg("-m")
+      .arg("Initial commit")
+      .current_dir(&repo_path);
+    run_command(&mut command)?;
+
+    Ok(repo_path)
+  }
+
+  #[test]
+  fn test_create_test_repo() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let repo_path = create_test_repo(&temp_dir).unwrap();
+    assert!(repo_path.exists());
+  }
+
+  #[test]
+  fn test_rev_parse() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let repo_path = create_test_repo(&temp_dir).unwrap();
+    let git_hash = rev_parse(&repo_path, "HEAD").unwrap();
+    assert_ne!(git_hash, "HEAD");
+  }
+
+  #[test]
+  fn test_get_file_contents_at_commit() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let repo_path = create_test_repo(&temp_dir).unwrap();
+    let head_hash = rev_parse(&repo_path, "HEAD").unwrap();
+
+    std::fs::write(repo_path.join("file.txt"), "new contents").unwrap();
+    let mut command = Command::new("git");
+    command.arg("add").arg(".").current_dir(&repo_path);
+    run_command(&mut command).unwrap();
+
+    let mut command = Command::new("git");
+    command
+      .arg("commit")
+      .arg("-m")
+      .arg("Update file")
+      .current_dir(&repo_path);
+    run_command(&mut command).unwrap();
+
+    let current_hash = rev_parse(&repo_path, "HEAD").unwrap();
+
+    let contents = get_file_contents_at_commit(&repo_path, &head_hash, Path::new("file.txt"))
+      .unwrap()
+      .unwrap();
+    assert_eq!(contents, "initial contents".to_string());
+    let contents = get_file_contents_at_commit(&repo_path, &current_hash, Path::new("file.txt"))
+      .unwrap()
+      .unwrap();
+    assert_eq!(contents, "new contents".to_string());
+  }
+
+  #[test]
+  fn test_get_contents_at_commit_missing_file() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let repo_path = create_test_repo(&temp_dir).unwrap();
+    let head_hash = rev_parse(&repo_path, "HEAD").unwrap();
+
+    let contents =
+      get_file_contents_at_commit(&repo_path, &head_hash, Path::new("file1234.txt")).unwrap();
+    assert!(contents.is_none());
+  }
+
+  #[test]
+  fn test_get_changed_files_from_git() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let repo_path = create_test_repo(&temp_dir).unwrap();
+    let head_hash = rev_parse(&repo_path, "HEAD").unwrap();
+
+    let changes = get_changed_files_from_git(&repo_path, &head_hash, &head_hash, &[]).unwrap();
+    assert_eq!(changes.len(), 0);
+
+    std::fs::write(repo_path.join("file.txt"), "new contents").unwrap();
+    let changes = get_changed_files_from_git(&repo_path, &head_hash, &head_hash, &[]).unwrap();
+    assert_eq!(changes.len(), 1);
+    assert_eq!(changes[0].path(), repo_path.join("file.txt"));
+  }
 }
