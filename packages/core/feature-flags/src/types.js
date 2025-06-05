@@ -38,6 +38,10 @@ export type FeatureFlags = {|
    */
   vcsMode: ConsistencyCheckFeatureFlagValue,
   /**
+   * Enable granular TS config invalidation
+   */
+  granularTsConfigInvalidation: boolean,
+  /**
    * Refactor cache to:
    * - Split writes into multiple entries
    * - Remove "large file blob" writes
