@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.3.5
+
+### Patch Changes
+
+- [#594](https://github.com/atlassian-labs/atlaspack/pull/594) [`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix issue where cache database could become invalid due to stale readers
+
 ## 3.3.4
 
 ### Patch Changes

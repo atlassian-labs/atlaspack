@@ -1,5 +1,11 @@
 # @atlaspack/types-internal
 
+## 2.14.8
+
+### Patch Changes
+
+- [#595](https://github.com/atlassian-labs/atlaspack/pull/595) [`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b) Thanks [@yamadapc](https://github.com/yamadapc)! - Add bundleId to write bundle request results
+
 ## 2.14.7
 
 ### Patch Changes

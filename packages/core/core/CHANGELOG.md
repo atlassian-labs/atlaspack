@@ -1,5 +1,23 @@
 # @atlaspack/core
 
+## 2.17.5
+
+### Patch Changes
+
+- [#595](https://github.com/atlassian-labs/atlaspack/pull/595) [`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b) Thanks [@yamadapc](https://github.com/yamadapc)! - Add bundleId to write bundle request results
+
+- Updated dependencies [[`0999fb7`](https://github.com/atlassian-labs/atlaspack/commit/0999fb78da519a6c7582d212883e515fcf6c1252), [`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b), [`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c)]:
+  - @atlaspack/fs@2.15.5
+  - @atlaspack/types@2.14.10
+  - @atlaspack/rust@3.3.5
+  - @atlaspack/cache@3.2.5
+  - @atlaspack/package-manager@2.14.10
+  - @atlaspack/profiler@2.14.8
+  - @atlaspack/workers@2.14.10
+  - @atlaspack/plugin@2.14.10
+  - @atlaspack/logger@2.14.10
+  - @atlaspack/utils@2.14.10
+
 ## 2.17.4
 
 ### Patch Changes
