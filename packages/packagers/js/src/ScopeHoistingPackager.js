@@ -11,6 +11,7 @@ import type {
 
 import {
   DefaultMap,
+  PromiseQueue,
   relativeBundlePath,
   countLines,
   normalizeSeparators,
@@ -24,9 +25,7 @@ import ThrowableDiagnostic, {
 import globals from 'globals';
 import path from 'path';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
-import {createBuildCache} from '@atlaspack/build-cache';
 
-import {LRUCache} from './LRUCache';
 import {ESMOutputFormat} from './ESMOutputFormat';
 import {CJSOutputFormat} from './CJSOutputFormat';
 import {GlobalOutputFormat} from './GlobalOutputFormat';
@@ -37,8 +36,6 @@ import {
   isValidIdentifier,
   makeValidIdentifier,
 } from './utils';
-
-const lruCaches = createBuildCache();
 
 // General regex used to replace imports with the resolved code, references with resolutions,
 // and count the number of newlines in the file for source maps.
@@ -78,8 +75,6 @@ export interface OutputFormat {
   buildBundlePostlude(): [string, number];
 }
 
-const bundleDirectReferences = createBuildCache();
-
 export class ScopeHoistingPackager {
   options: PluginOptions;
   bundleGraph: BundleGraph<NamedBundle>;
@@ -89,6 +84,7 @@ export class ScopeHoistingPackager {
   outputFormat: OutputFormat;
   isAsyncBundle: boolean;
   globalNames: $ReadOnlySet<string>;
+  assetOutputs: Map<string, {|code: string, map: ?Buffer|}>;
   exportedSymbols: Map<
     string,
     {|
@@ -108,8 +104,6 @@ export class ScopeHoistingPackager {
   externalAssets: Set<Asset> = new Set();
   forceSkipWrapAssets: Array<string> = [];
   logger: PluginLogger;
-
-  assetCache: LRUCache<string, [string, ?Buffer]>;
 
   constructor(
     options: PluginOptions,
@@ -137,15 +131,6 @@ export class ScopeHoistingPackager {
       this.bundle.bundleBehavior !== 'isolated';
 
     this.globalNames = GLOBALS_BY_CONTEXT[bundle.env.context];
-
-    let assetCache = lruCaches.get('assetCache');
-    if (!assetCache) {
-      // If assets are 100KB, this is around 1GB
-      assetCache = new LRUCache(10000);
-      lruCaches.set('assetCache', assetCache);
-    }
-
-    this.assetCache = assetCache;
   }
 
   async package(): Promise<{|contents: string, map: ?SourceMap|}> {
@@ -171,12 +156,8 @@ export class ScopeHoistingPackager {
     let res = '';
     let lineCount = 0;
     let sourceMap = null;
-    let processAsset = async (asset) => {
-      if (this.seenAssets.has(asset.id)) {
-        return;
-      }
-
-      let [content, map, lines] = await this.visitAsset(asset);
+    let processAsset = (asset) => {
+      let [content, map, lines] = this.visitAsset(asset);
       if (sourceMap && map) {
         sourceMap.addSourceMap(map, lineCount);
       } else if (this.bundle.env.sourceMap) {
@@ -191,30 +172,21 @@ export class ScopeHoistingPackager {
     // before they are used.
     for (let asset of wrappedAssets) {
       if (!this.seenAssets.has(asset.id)) {
-        await processAsset(asset);
+        processAsset(asset);
       }
     }
 
     // Add each asset that is directly connected to the bundle. Dependencies will be handled
     // by replacing `import` statements in the code.
-    {
-      const assets = [];
-      const seen = new Set();
-      this.bundle.traverseAssets((asset, _, actions) => {
-        if (this.seenAssets.has(asset.id) || seen.has(asset.id)) {
-          actions.skipChildren();
-          return;
-        }
-
-        assets.push(asset);
-        seen.add(asset.id);
+    this.bundle.traverseAssets((asset, _, actions) => {
+      if (this.seenAssets.has(asset.id)) {
         actions.skipChildren();
-      });
-
-      for (let asset of assets) {
-        await processAsset(asset);
+        return;
       }
-    }
+
+      processAsset(asset);
+      actions.skipChildren();
+    });
 
     let [prelude, preludeLines] = this.buildBundlePrelude();
     res = prelude + res;
@@ -278,7 +250,9 @@ export class ScopeHoistingPackager {
       lineCount++;
 
       let mainEntry = nullthrows(this.bundle.getMainEntry());
-      let [code, mapBuffer] = await this.loadAsset(mainEntry);
+      let {code, map: mapBuffer} = nullthrows(
+        this.assetOutputs.get(mainEntry.id),
+      );
       let map;
       if (mapBuffer) {
         map = new SourceMap(this.options.projectRoot, mapBuffer);
@@ -381,18 +355,21 @@ export class ScopeHoistingPackager {
   }
 
   async loadAssets(): Promise<Array<Asset>> {
+    let queue = new PromiseQueue({maxConcurrent: 32});
     let wrapped = [];
-
-    const referencedAssets = this.bundleGraph.getReferencedAssets(
-      this.bundle,
-      bundleDirectReferences,
-    );
-
     this.bundle.traverseAssets((asset) => {
+      queue.add(async () => {
+        let [code, map] = await Promise.all([
+          asset.getCode(),
+          this.bundle.env.sourceMap ? asset.getMapBuffer() : null,
+        ]);
+        return [asset.id, {code, map}];
+      });
+
       if (
         asset.meta.shouldWrap ||
         this.bundle.env.sourceType === 'script' ||
-        referencedAssets.has(asset.id) ||
+        this.bundleGraph.isAssetReferenced(this.bundle, asset) ||
         this.bundleGraph
           .getIncomingDependencies(asset)
           .some((dep) => dep.meta.shouldWrap && dep.specifierType !== 'url')
@@ -448,6 +425,7 @@ export class ScopeHoistingPackager {
       }, wrappedAssetRoot);
     }
 
+    this.assetOutputs = new Map(await queue.run());
     return wrapped;
   }
 
@@ -541,35 +519,19 @@ export class ScopeHoistingPackager {
     return `${obj}[${JSON.stringify(property)}]`;
   }
 
-  async loadAsset(asset: Asset): Promise<[string, ?Buffer]> {
-    const cachedValue = this.assetCache.get(asset.id);
-    if (cachedValue) {
-      return cachedValue;
-    }
-
-    const value = [
-      await asset.getCode(),
-      this.bundle.env.sourceMap ? await asset.getMapBuffer() : null,
-    ];
-
-    this.assetCache.set(asset.id, value);
-
-    return value;
-  }
-
-  async visitAsset(asset: Asset): Promise<[string, ?SourceMap, number]> {
+  visitAsset(asset: Asset): [string, ?SourceMap, number] {
     invariant(!this.seenAssets.has(asset.id), 'Already visited asset');
     this.seenAssets.add(asset.id);
 
-    let [code, map] = await this.loadAsset(asset);
+    let {code, map} = nullthrows(this.assetOutputs.get(asset.id));
     return this.buildAsset(asset, code, map);
   }
 
-  async buildAsset(
+  buildAsset(
     asset: Asset,
     code: string,
     map: ?Buffer,
-  ): Promise<[string, ?SourceMap, number]> {
+  ): [string, ?SourceMap, number] {
     let shouldWrap = this.wrappedAssets.has(asset.id);
     let deps = this.bundleGraph.getDependencies(asset);
 
@@ -601,7 +563,7 @@ export class ScopeHoistingPackager {
           this.bundle.hasAsset(resolved) &&
           !this.seenAssets.has(resolved.id)
         ) {
-          let [code, map, lines] = await this.visitAsset(resolved);
+          let [code, map, lines] = this.visitAsset(resolved);
           depCode += code + '\n';
           if (sourceMap && map) {
             sourceMap.addSourceMap(map, lineCount);
@@ -652,130 +614,100 @@ export class ScopeHoistingPackager {
       // in a single regex so that we only do one pass over the whole code.
       let offset = 0;
       let columnStartIndex = 0;
-
-      const replacementRe = getFeatureFlag('conditionalBundlingApi')
-        ? REPLACEMENT_RE_CONDITIONAL
-        : REPLACEMENT_RE;
-
-      const codeReplacments = [];
-
-      for (let match of code.matchAll(replacementRe)) {
-        const [m, d] = match;
-        const i = match.index;
-
-        if (m === '\n') {
-          columnStartIndex = i + offset + 1;
-          lineCount++;
-          codeReplacments.push({start: i, end: i + 1, replacement: '\n'});
-          continue;
-        }
-
-        // If we matched an import, replace with the source code for the dependency.
-        if (d != null) {
-          let deps = depMap.get(d);
-          if (!deps) {
-            codeReplacments.push({start: i, end: i + m.length, replacement: m});
-            continue;
+      code = code.replace(
+        getFeatureFlag('conditionalBundlingApi')
+          ? REPLACEMENT_RE_CONDITIONAL
+          : REPLACEMENT_RE,
+        (m, d, i) => {
+          if (m === '\n') {
+            columnStartIndex = i + offset + 1;
+            lineCount++;
+            return '\n';
           }
 
-          let replacement = '';
+          // If we matched an import, replace with the source code for the dependency.
+          if (d != null) {
+            let deps = depMap.get(d);
+            if (!deps) {
+              return m;
+            }
 
-          // A single `${id}:${specifier}:esm` might have been resolved to multiple assets due to
-          // reexports.
-          for (let dep of deps) {
-            let resolved = this.bundleGraph.getResolvedAsset(dep, this.bundle);
-            let skipped = this.bundleGraph.isDependencySkipped(dep);
-            if (resolved && !skipped) {
-              // Hoist variable declarations for the referenced parcelRequire dependencies
-              // after the dependency is declared. This handles the case where the resulting asset
-              // is wrapped, but the dependency in this asset is not marked as wrapped. This means
-              // that it was imported/required at the top-level, so its side effects should run immediately.
-              let [res, lines] = this.getHoistedParcelRequires(
-                asset,
+            let replacement = '';
+
+            // A single `${id}:${specifier}:esm` might have been resolved to multiple assets due to
+            // reexports.
+            for (let dep of deps) {
+              let resolved = this.bundleGraph.getResolvedAsset(
                 dep,
-                resolved,
+                this.bundle,
               );
-              let map;
-              if (
-                this.bundle.hasAsset(resolved) &&
-                !this.seenAssets.has(resolved.id)
-              ) {
-                // If this asset is wrapped, we need to hoist the code for the dependency
-                // outside our parcelRequire.register wrapper. This is safe because all
-                // assets referenced by this asset will also be wrapped. Otherwise, inline the
-                // asset content where the import statement was.
-                if (shouldWrap) {
-                  depContent.push(await this.visitAsset(resolved));
-                } else {
-                  let [depCode, depMap, depLines] = await this.visitAsset(
-                    resolved,
-                  );
-                  res = depCode + '\n' + res;
-                  lines += 1 + depLines;
-                  map = depMap;
+              let skipped = this.bundleGraph.isDependencySkipped(dep);
+              if (resolved && !skipped) {
+                // Hoist variable declarations for the referenced parcelRequire dependencies
+                // after the dependency is declared. This handles the case where the resulting asset
+                // is wrapped, but the dependency in this asset is not marked as wrapped. This means
+                // that it was imported/required at the top-level, so its side effects should run immediately.
+                let [res, lines] = this.getHoistedParcelRequires(
+                  asset,
+                  dep,
+                  resolved,
+                );
+                let map;
+                if (
+                  this.bundle.hasAsset(resolved) &&
+                  !this.seenAssets.has(resolved.id)
+                ) {
+                  // If this asset is wrapped, we need to hoist the code for the dependency
+                  // outside our parcelRequire.register wrapper. This is safe because all
+                  // assets referenced by this asset will also be wrapped. Otherwise, inline the
+                  // asset content where the import statement was.
+                  if (shouldWrap) {
+                    depContent.push(this.visitAsset(resolved));
+                  } else {
+                    let [depCode, depMap, depLines] = this.visitAsset(resolved);
+                    res = depCode + '\n' + res;
+                    lines += 1 + depLines;
+                    map = depMap;
+                  }
                 }
+
+                // Push this asset's source mappings down by the number of lines in the dependency
+                // plus the number of hoisted parcelRequires. Then insert the source map for the dependency.
+                if (sourceMap) {
+                  if (lines > 0) {
+                    sourceMap.offsetLines(lineCount + 1, lines);
+                  }
+
+                  if (map) {
+                    sourceMap.addSourceMap(map, lineCount);
+                  }
+                }
+
+                replacement += res;
+                lineCount += lines;
               }
+            }
+            return replacement;
+          }
 
-              // Push this asset's source mappings down by the number of lines in the dependency
-              // plus the number of hoisted parcelRequires. Then insert the source map for the dependency.
-              if (sourceMap) {
-                if (lines > 0) {
-                  sourceMap.offsetLines(lineCount + 1, lines);
-                }
-
-                if (map) {
-                  sourceMap.addSourceMap(map, lineCount);
-                }
-              }
-
-              replacement += res;
-              lineCount += lines;
+          // If it wasn't a dependency, then it was an inline replacement (e.g. $id$import$foo -> $id$export$foo).
+          let replacement = replacements.get(m) ?? m;
+          if (sourceMap) {
+            // Offset the source map columns for this line if the replacement was a different length.
+            // This assumes that the match and replacement both do not contain any newlines.
+            let lengthDifference = replacement.length - m.length;
+            if (lengthDifference !== 0) {
+              sourceMap.offsetColumns(
+                lineCount + 1,
+                i + offset - columnStartIndex + m.length,
+                lengthDifference,
+              );
+              offset += lengthDifference;
             }
           }
-          codeReplacments.push({
-            start: i,
-            end: i + m.length,
-            replacement: replacement,
-          });
-          continue;
-        }
-
-        // If it wasn't a dependency, then it was an inline replacement (e.g. $id$import$foo -> $id$export$foo).
-        let replacement = replacements.get(m) ?? m;
-        if (sourceMap) {
-          // Offset the source map columns for this line if the replacement was a different length.
-          // This assumes that the match and replacement both do not contain any newlines.
-          let lengthDifference = replacement.length - m.length;
-          if (lengthDifference !== 0) {
-            sourceMap.offsetColumns(
-              lineCount + 1,
-              i + offset - columnStartIndex + m.length,
-              lengthDifference,
-            );
-            offset += lengthDifference;
-          }
-        }
-
-        codeReplacments.push({
-          start: i,
-          end: i + m.length,
-          replacement: replacement,
-        });
-      }
-
-      let outputCode = '';
-      if (codeReplacments.length > 0) {
-        let currentIndex = 0;
-        for (let {start, end, replacement} of codeReplacments) {
-          outputCode += code.slice(currentIndex, start) + replacement;
-          currentIndex = end;
-        }
-        outputCode += code.slice(currentIndex);
-      } else {
-        outputCode = code;
-      }
-
-      code = outputCode;
+          return replacement;
+        },
+      );
     }
 
     // If the asset is wrapped, we need to insert the dependency code outside the parcelRequire.register

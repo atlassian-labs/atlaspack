@@ -36,7 +36,6 @@ import {
   fromProjectPathRelative,
 } from './projectPath';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
-import {fromEnvironmentId} from './EnvironmentManager';
 
 type UncommittedAssetOptions = {|
   value: Asset,
@@ -322,11 +321,7 @@ export default class UncommittedAsset {
       ...rest,
       // $FlowFixMe "convert" the $ReadOnlyMaps to the interal mutable one
       symbols,
-      env: mergeEnvironments(
-        this.options.projectRoot,
-        fromEnvironmentId(this.value.env),
-        env,
-      ),
+      env: mergeEnvironments(this.options.projectRoot, this.value.env, env),
       sourceAssetId: this.value.id,
       sourcePath: fromProjectPath(
         this.options.projectRoot,
@@ -391,7 +386,7 @@ export default class UncommittedAsset {
         isSource: this.value.isSource,
         env: mergeEnvironments(
           this.options.projectRoot,
-          fromEnvironmentId(this.value.env),
+          this.value.env,
           result.env,
         ),
         dependencies:

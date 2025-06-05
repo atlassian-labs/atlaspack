@@ -156,17 +156,17 @@ export default class Transformation {
       }
     }
 
-    // if (
-    //   existing == null &&
-    //   // Don't buffer an entire stream into memory since it may not need sourceContent,
-    //   // e.g. large binary files
-    //   !(asset.content instanceof Readable)
-    // ) {
-    //   // If no existing sourcemap was found, initialize asset.sourceContent
-    //   // with the original contents. This will be used when the transformer
-    //   // calls setMap to ensure the source content is in the sourcemap.
-    //   asset.sourceContent = await asset.getCode();
-    // }
+    if (
+      existing == null &&
+      // Don't buffer an entire stream into memory since it may not need sourceContent,
+      // e.g. large binary files
+      !(asset.content instanceof Readable)
+    ) {
+      // If no existing sourcemap was found, initialize asset.sourceContent
+      // with the original contents. This will be used when the transformer
+      // calls setMap to ensure the source content is in the sourcemap.
+      asset.sourceContent = await asset.getCode();
+    }
 
     invalidateDevDeps(
       this.request.invalidDevDeps,

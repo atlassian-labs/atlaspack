@@ -34,7 +34,6 @@ import {
 import Target from './Target';
 import {BundleBehaviorNames} from '../types';
 import {fromProjectPath} from '../projectPath';
-import {fromEnvironmentId} from '../EnvironmentManager';
 
 const inspect = Symbol.for('nodejs.util.inspect.custom');
 
@@ -124,7 +123,7 @@ export class Bundle implements IBundle {
   }
 
   get env(): IEnvironment {
-    return new Environment(fromEnvironmentId(this.#bundle.env), this.#options);
+    return new Environment(this.#bundle.env, this.#options);
   }
 
   get needsStableName(): ?boolean {

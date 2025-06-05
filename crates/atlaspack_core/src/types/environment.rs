@@ -69,8 +69,6 @@ pub struct Environment {
   pub source_map: Option<TargetSourceMapOptions>,
 
   pub source_type: SourceType,
-
-  pub unstable_single_file_output: bool,
 }
 
 #[allow(clippy::too_many_arguments)]

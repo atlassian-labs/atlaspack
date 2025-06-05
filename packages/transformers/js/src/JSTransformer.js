@@ -1084,8 +1084,7 @@ export default (new Transformer({
 
     if (map) {
       let sourceMap = new SourceMap(options.projectRoot);
-      const jsonMap = JSON.parse(map);
-      sourceMap.addVLQMap(jsonMap);
+      sourceMap.addVLQMap(JSON.parse(map));
       if (originalMap) {
         sourceMap.extends(originalMap);
       }

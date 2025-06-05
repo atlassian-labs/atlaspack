@@ -27,7 +27,6 @@ import {
 } from '../types';
 import {fromProjectPath} from '../projectPath';
 import {fromInternalSourceLocation} from '../utils';
-import {fromEnvironmentId} from '../EnvironmentManager';
 
 const SpecifierTypeNames = Object.keys(SpecifierTypeMap);
 const PriorityNames = Object.keys(Priority);
@@ -113,7 +112,7 @@ export default class Dependency implements IDependency {
   }
 
   get env(): IEnvironment {
-    return new Environment(fromEnvironmentId(this.#dep.env), this.#options);
+    return new Environment(this.#dep.env, this.#options);
   }
 
   get packageConditions(): ?Array<string> {

@@ -20,7 +20,6 @@ import {
 } from '@atlaspack/utils';
 import Environment from './Environment';
 import {fromProjectPath, toProjectPath} from '../projectPath';
-import {fromEnvironmentId} from '../EnvironmentManager';
 
 const internalConfigToConfig: DefaultWeakMap<
   AtlaspackOptions,
@@ -46,7 +45,7 @@ export default class PublicConfig implements IConfig {
   }
 
   get env(): Environment {
-    return new Environment(fromEnvironmentId(this.#config.env), this.#options);
+    return new Environment(this.#config.env, this.#options);
   }
 
   get searchPath(): FilePath {

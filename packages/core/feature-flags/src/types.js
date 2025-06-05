@@ -17,6 +17,10 @@ export type FeatureFlags = {|
    */
   importRetry: boolean,
   /**
+   * Fixes quadratic cache invalidation issue
+   */
+  fixQuadraticCacheInvalidation: ConsistencyCheckFeatureFlagValue,
+  /**
    * Enables an experimental "conditional bundling" API - this allows the use of `importCond` syntax
    * in order to have (consumer) feature flag driven bundling. This feature is very experimental,
    * and requires server-side support.
