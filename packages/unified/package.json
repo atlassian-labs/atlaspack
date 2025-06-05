@@ -30,6 +30,8 @@
   },
   "devDependencies": {
     "@mischnic/json-sourcemap": "0.1.0",
+    "@parcel/source-map": "2.1.1",
+    "@parcel/watcher": "2.2.0",
     "@types/node": "^22",
     "nullthrows": "1.1.1",
     "utility-types": "^3.10.0"

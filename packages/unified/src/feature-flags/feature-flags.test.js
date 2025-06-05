@@ -1,12 +1,12 @@
 // @flow strict
 import assert from 'assert';
+import sinon from 'sinon';
 import {
   getFeatureFlag,
   DEFAULT_FEATURE_FLAGS,
   setFeatureFlags,
   runWithConsistencyCheck,
-} from '../src';
-import sinon from 'sinon';
+} from './index.js';
 
 describe('feature-flag test', () => {
   beforeEach(() => {
