@@ -69,6 +69,7 @@ import type {
   InternalGlob,
 } from './types';
 import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
+import {performance} from 'perf_hooks';
 
 export const requestGraphEdgeTypes = {
   subrequest: 2,
@@ -934,7 +935,10 @@ export class RequestGraph extends ContentGraph<
      * True if this is the start-up (loading phase) invalidation.
      */
     isInitialBuild: boolean = false,
-  ): Async<boolean> {
+  ): Promise<{|
+    didInvalidate: boolean,
+    invalidationsByPath: Map<string, number>,
+  |}> {
     let didInvalidate = false;
     let count = 0;
     let predictedTime = 0;
@@ -972,7 +976,10 @@ export class RequestGraph extends ContentGraph<
       return above;
     };
 
+    const invalidationsByPath = new Map();
     for (let {path: _path, type} of events) {
+      const invalidationsBefore = this.getInvalidNodeCount();
+
       if (
         !enableOptimization &&
         process.env.ATLASPACK_DISABLE_CACHE_TIMEOUT !== 'true' &&
@@ -1018,7 +1025,10 @@ export class RequestGraph extends ContentGraph<
             this.invalidNodeIds.add(id);
           }
         }
-        return true;
+        return {
+          didInvalidate: true,
+          invalidationsByPath: new Map(),
+        };
       }
 
       // sometimes mac os reports update events as create events.
@@ -1131,6 +1141,13 @@ export class RequestGraph extends ContentGraph<
           }
         }
       }
+
+      const invalidationsAfter = this.getInvalidNodeCount();
+      const invalidationsForEvent = invalidationsAfter - invalidationsBefore;
+      invalidationsByPath.set(
+        _path,
+        (invalidationsByPath.get(_path) ?? 0) + invalidationsForEvent,
+      );
     }
 
     if (getFeatureFlag('fixQuadraticCacheInvalidation')) {
@@ -1151,7 +1168,10 @@ export class RequestGraph extends ContentGraph<
       },
     });
 
-    return didInvalidate && this.invalidNodeIds.size > 0;
+    return {
+      didInvalidate,
+      invalidationsByPath,
+    };
   }
 
   hasCachedRequestChunk(index: number): boolean {
@@ -1164,6 +1184,13 @@ export class RequestGraph extends ContentGraph<
 
   removeCachedRequestChunkForNode(nodeId: number): void {
     this.cachedRequestChunks.delete(Math.floor(nodeId / this.nodesPerBlob));
+  }
+
+  /**
+   * Returns the number of invalidated nodes in the graph.
+   */
+  getInvalidNodeCount(): number {
+    return this.invalidNodeIds.size;
   }
 }
 
@@ -1288,7 +1315,13 @@ export default class RequestTracker {
     }
   }
 
-  respondToFSEvents(events: Array<Event>, threshold: number): Async<boolean> {
+  respondToFSEvents(
+    events: Array<Event>,
+    threshold: number,
+  ): Promise<{|
+    didInvalidate: boolean,
+    invalidationsByPath: Map<string, number>,
+  |}> {
     return this.graph.respondToFSEvents(events, this.options, threshold);
   }
 
@@ -1903,7 +1936,11 @@ async function loadRequestGraph(options): Async<RequestGraph> {
  */
 type InvalidationFn = {|
   key: string,
-  fn: () => string[] | void | Promise<void>,
+  fn: () =>
+    | InvalidationDetail
+    | Promise<InvalidationDetail>
+    | void
+    | Promise<void>,
 |};
 
 type InvalidationStats = {|
@@ -1934,6 +1971,33 @@ type InvalidationStats = {|
 |};
 
 /**
+ * Details about an invalidation.
+ *
+ * If this is a fs events invalidation, this key will contain statistics about invalidations
+ * by path.
+ *
+ * If this is a env or option invalidation, this key will contain the list of changed environment
+ * variables or options.
+ */
+type InvalidationDetail = string[] | FSInvalidationStats;
+
+/**
+ * Number of invalidations for a given file-system event.
+ */
+type FSInvalidation = {|
+  path: string,
+  count: number,
+|};
+
+type FSInvalidationStats = {|
+  /**
+   * This list will be sorted by the number of nodes invalidated and only the top 10 will be
+   * included.
+   */
+  biggestInvalidations: FSInvalidation[],
+|};
+
+/**
  * Information about a certain cache invalidation type.
  */
 type InvalidationFnStats = {|
@@ -1953,8 +2017,14 @@ type InvalidationFnStats = {|
   count: number,
   /**
    * If this is a env or option invalidation, this key will contain the list of changed values.
+   *
+   * If this is a fs events invalidation, this key will contain statistics about invalidations
    */
-  changes: null | string[],
+  detail: null | InvalidationDetail,
+  /**
+   * Time in milliseconds it took to run the invalidation.
+   */
+  duration: number,
 |};
 
 /**
@@ -1963,7 +2033,7 @@ type InvalidationFnStats = {|
  *
  * Returns the count of nodes invalidated by each invalidation type.
  */
-async function invalidateRequestGraph(
+export async function invalidateRequestGraph(
   requestGraph: RequestGraph,
   options: AtlaspackOptions,
   events: Event[],
@@ -1987,14 +2057,7 @@ async function invalidateRequestGraph(
     },
     {
       key: 'fsEvents',
-      fn: async () => {
-        await requestGraph.respondToFSEvents(
-          options.unstableFileInvalidations || events,
-          options,
-          10000,
-          true,
-        );
-      },
+      fn: () => invalidateRequestGraphFSEvents(requestGraph, options, events),
     },
   ];
 
@@ -2024,22 +2087,61 @@ async function invalidateRequestGraph(
   };
 }
 
+interface InvalidateRequestGraphFSEventsInput {
+  respondToFSEvents(
+    events: Event[],
+    options: AtlaspackOptions,
+    timeout: number,
+    shouldLog: boolean,
+  ): Promise<{invalidationsByPath: Map<string, number>, ...}>;
+}
+
+/**
+ * Invalidate the request graph based on file-system events.
+ *
+ * Returns statistics about the invalidations.
+ */
+export async function invalidateRequestGraphFSEvents(
+  requestGraph: InvalidateRequestGraphFSEventsInput,
+  options: AtlaspackOptions,
+  events: Event[],
+): Promise<FSInvalidationStats> {
+  const {invalidationsByPath} = await requestGraph.respondToFSEvents(
+    options.unstableFileInvalidations || events,
+    options,
+    10000,
+    true,
+  );
+  const biggestInvalidations =
+    getBiggestFSEventsInvalidations(invalidationsByPath);
+
+  return {
+    biggestInvalidations,
+  };
+}
+
+interface RunInvalidationInput {
+  getInvalidNodeCount(): number;
+}
+
 /**
  * Runs an invalidation function and reports metrics.
  */
-async function runInvalidation(
-  requestGraph: RequestGraph,
+export async function runInvalidation(
+  requestGraph: RunInvalidationInput,
   invalidationFn: InvalidationFn,
 ): Promise<InvalidationFnStats> {
-  const startInvalidationCount = requestGraph.invalidNodeIds.size;
+  const start = performance.now();
+  const startInvalidationCount = requestGraph.getInvalidNodeCount();
   const result = await invalidationFn.fn();
-  const count = requestGraph.invalidNodeIds.size - startInvalidationCount;
+  const count = requestGraph.getInvalidNodeCount() - startInvalidationCount;
+  const duration = performance.now() - start;
 
   return {
     key: invalidationFn.key,
     count,
-    changes:
-      typeof result === 'object' && Array.isArray(result) ? result : null,
+    detail: result ?? null,
+    duration,
   };
 }
 
@@ -2093,4 +2195,20 @@ export function cleanUpOrphans<N, E: number>(graph: Graph<N, E>): NodeId[] {
   });
 
   return removedNodeIds;
+}
+
+/**
+ * Returns paths that invalidated the most nodes
+ */
+export function getBiggestFSEventsInvalidations(
+  invalidationsByPath: Map<string, number>,
+  limit: number = 10,
+): Array<FSInvalidation> {
+  const invalidations = [];
+  for (const [path, count] of invalidationsByPath) {
+    invalidations.push({path, count});
+  }
+  invalidations.sort((a, b) => b.count - a.count);
+
+  return invalidations.slice(0, limit);
 }
