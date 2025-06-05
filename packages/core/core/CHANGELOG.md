@@ -1,5 +1,31 @@
 # @atlaspack/core
 
+## 2.17.4
+
+### Patch Changes
+
+- [#588](https://github.com/atlassian-labs/atlaspack/pull/588) [`1940859`](https://github.com/atlassian-labs/atlaspack/commit/194085942f0e86532e9d039fc3f8039badce4594) Thanks [@yamadapc](https://github.com/yamadapc)! - Do not invalidate all javascript files when tsconfig files change
+
+- [#592](https://github.com/atlassian-labs/atlaspack/pull/592) [`15b6155`](https://github.com/atlassian-labs/atlaspack/commit/15b61556e9114203ebbc9de94b864118ca764598) Thanks [@yamadapc](https://github.com/yamadapc)! - Report large file invalidations
+
+- [#503](https://github.com/atlassian-labs/atlaspack/pull/503) [`209692f`](https://github.com/atlassian-labs/atlaspack/commit/209692ffb11eae103a0d65c5e1118a5aa1625818) Thanks [@JakeLane](https://github.com/JakeLane)! - Fix conditional bundling reporter when condition is reused
+
+- [#562](https://github.com/atlassian-labs/atlaspack/pull/562) [`d04de26`](https://github.com/atlassian-labs/atlaspack/commit/d04de26af684d7abfba5091fbe3df16a12cd0ebc) Thanks [@yamadapc](https://github.com/yamadapc)! - Update with feature-flagged change to write packages into files rather than LMDB
+
+- Updated dependencies [[`124b7ff`](https://github.com/atlassian-labs/atlaspack/commit/124b7fff44f71aac9fbad289a9a9509b3dfc9aaa), [`e052521`](https://github.com/atlassian-labs/atlaspack/commit/e0525210850ed1606146eb86991049cf567c5dec), [`15c6d70`](https://github.com/atlassian-labs/atlaspack/commit/15c6d7000bd89da876bc590aa75b17a619a41896), [`e4d966c`](https://github.com/atlassian-labs/atlaspack/commit/e4d966c3c9c4292c5013372ae65b10d19d4bacc6), [`209692f`](https://github.com/atlassian-labs/atlaspack/commit/209692ffb11eae103a0d65c5e1118a5aa1625818), [`42a775d`](https://github.com/atlassian-labs/atlaspack/commit/42a775de8eec638ad188f3271964170d8c04d84b), [`29c2f10`](https://github.com/atlassian-labs/atlaspack/commit/29c2f106de9679adfb5afa04e1910471dc65a427), [`f4da1e1`](https://github.com/atlassian-labs/atlaspack/commit/f4da1e120e73eeb5e8b8927f05e88f04d6148c7b), [`1ef91fc`](https://github.com/atlassian-labs/atlaspack/commit/1ef91fcc863fdd2831511937083dbbc1263b3d9d)]:
+  - @atlaspack/cache@3.2.4
+  - @atlaspack/rust@3.3.4
+  - @atlaspack/fs@2.15.4
+  - @atlaspack/feature-flags@2.16.0
+  - @atlaspack/logger@2.14.9
+  - @atlaspack/utils@2.14.9
+  - @atlaspack/package-manager@2.14.9
+  - @atlaspack/graph@3.4.7
+  - @atlaspack/workers@2.14.9
+  - @atlaspack/profiler@2.14.7
+  - @atlaspack/types@2.14.9
+  - @atlaspack/plugin@2.14.9
+
 ## 2.17.3
 
 ### Patch Changes

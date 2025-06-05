@@ -1,5 +1,12 @@
 # @atlaspack/transformer-pug
 
+## 2.14.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.9
+
 ## 2.14.8
 
 ### Patch Changes

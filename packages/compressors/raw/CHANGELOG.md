@@ -1,5 +1,12 @@
 # @atlaspack/compressor-raw
 
+## 2.13.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.9
+
 ## 2.13.10
 
 ### Patch Changes

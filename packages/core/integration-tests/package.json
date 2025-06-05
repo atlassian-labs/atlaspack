@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/integration-tests",
-  "version": "2.14.1",
+  "version": "2.14.2",
   "private": true,
   "license": "(MIT OR Apache-2.0)",
   "repository": {
@@ -12,7 +12,7 @@
     "test-ci": "ATLASPACK_INTEGRATION_TESTS_CI=true yarn test"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.13.10",
+    "@atlaspack/cli": "2.13.11",
     "@atlaspack/mocha-profiler": "*",
     "@babel/core": "^7.22.11",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
