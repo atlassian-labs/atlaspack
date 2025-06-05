@@ -319,7 +319,7 @@ pub enum FailureMode {
   FailOnMissingNodeModules,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct FileChangeEvent {
   path: PathBuf,
   change_type: FileChangeType,
@@ -343,7 +343,7 @@ impl FileChangeEvent {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FileChangeType {
   Create,
   Update,
@@ -407,6 +407,7 @@ fn get_diff_with_git_cli(
   let output = Command::new("git")
     .arg("diff")
     .arg("--name-status")
+    .arg("--no-renames")
     // We need to list all changes even if `new_commit` is an ancestor of `old_commit`
     // https://git-scm.com/docs/git-diff
     // https://git-scm.com/docs/gitrevisions
@@ -828,5 +829,43 @@ mod test {
     let changes = get_changed_files_from_git(&repo_path, &head_hash, &head_hash, &[]).unwrap();
     assert_eq!(changes.len(), 1);
     assert_eq!(changes[0].path(), repo_path.join("file.txt"));
+  }
+
+  #[test]
+  fn test_get_changed_files_from_git_on_rename() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let repo_path = create_test_repo(&temp_dir).unwrap();
+    let head_hash = rev_parse(&repo_path, "HEAD").unwrap();
+
+    let changes = get_changed_files_from_git(&repo_path, &head_hash, &head_hash, &[]).unwrap();
+    assert_eq!(changes.len(), 0);
+
+    std::fs::rename(repo_path.join("file.txt"), repo_path.join("file2.txt")).unwrap();
+    let mut command = Command::new("git");
+    command.arg("add").arg(".").current_dir(&repo_path);
+    run_command(&mut command).unwrap();
+    let mut command = Command::new("git");
+    command
+      .arg("commit")
+      .arg("-m")
+      .arg("Rename file")
+      .current_dir(&repo_path);
+    run_command(&mut command).unwrap();
+
+    let new_head_hash = rev_parse(&repo_path, "HEAD").unwrap();
+    let changes = get_changed_files_from_git(&repo_path, &head_hash, &new_head_hash, &[]).unwrap();
+    assert_eq!(
+      changes,
+      vec![
+        FileChangeEvent {
+          path: repo_path.join("file.txt"),
+          change_type: FileChangeType::Delete,
+        },
+        FileChangeEvent {
+          path: repo_path.join("file2.txt"),
+          change_type: FileChangeType::Create,
+        }
+      ]
+    );
   }
 }
