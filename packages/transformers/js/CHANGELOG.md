@@ -1,5 +1,15 @@
 # @atlaspack/transformer-js
 
+## 3.2.8
+
+### Patch Changes
+
+- Updated dependencies [[`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c)]:
+  - @atlaspack/rust@3.3.5
+  - @atlaspack/workers@2.14.10
+  - @atlaspack/plugin@2.14.10
+  - @atlaspack/utils@2.14.10
+
 ## 3.2.7
 
 ### Patch Changes
