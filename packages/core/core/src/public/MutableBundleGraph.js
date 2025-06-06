@@ -32,7 +32,7 @@ import {BundleBehavior} from '../types';
 import BundleGroup, {bundleGroupToInternalBundleGroup} from './BundleGroup';
 import type {ProjectPath} from '../projectPath';
 import {identifierRegistry} from '../IdentifierRegistry';
-import {toEnvironmentId, toEnvironmentRef} from '../EnvironmentManager';
+import {toEnvironmentRef} from '../EnvironmentManager';
 
 function createBundleId(data: {|
   entryAssetId: string | null,

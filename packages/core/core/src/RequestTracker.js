@@ -70,8 +70,6 @@ import type {
 } from './types';
 import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
 import {performance} from 'perf_hooks';
-import type {EnvironmentRef} from './EnvironmentManager';
-import {toEnvironmentId} from './EnvironmentManager';
 
 export const requestGraphEdgeTypes = {
   subrequest: 2,
