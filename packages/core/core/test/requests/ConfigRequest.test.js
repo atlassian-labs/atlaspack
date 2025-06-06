@@ -12,7 +12,7 @@ import type {
   ConfigRequestResult,
 } from '../../src/requests/ConfigRequest';
 import type {RunAPI} from '../../src/RequestTracker';
-import {runConfigRequest} from '../../src/requests/ConfigRequest';
+import {getObjectKey, runConfigRequest} from '../../src/requests/ConfigRequest';
 import {toProjectPath} from '../../src/projectPath';
 
 // $FlowFixMe unclear-type forgive me
@@ -228,7 +228,7 @@ describe('ConfigRequest tests', () => {
       ...baseRequest,
       invalidateOnConfigKeyChange: [
         {
-          configKey: 'key1',
+          configKey: ['key1'],
           filePath: toProjectPath(projectRoot, 'config.json'),
         },
       ],
@@ -244,8 +244,180 @@ describe('ConfigRequest tests', () => {
     const call = mockCast(mockRunApi.invalidateOnConfigKeyChange).getCall(0);
     assert.deepEqual(
       call.args,
-      ['config.json', 'key1', hashString('"value1"')],
+      ['config.json', ['key1'], hashString('"value1"')],
       'Invalidate was called for key1',
     );
+  });
+});
+
+describe('getObjectKey', () => {
+  it('can get a key from an object', () => {
+    const obj = {a: {b: {c: 'd'}}};
+    assert.equal(getObjectKey(obj, ['a', 'b', 'c']), 'd');
+  });
+
+  it('returns the original object when key array is empty', () => {
+    const obj = {a: 1, b: 2};
+    assert.deepEqual(getObjectKey(obj, []), obj);
+  });
+
+  it('can access single-level properties', () => {
+    const obj = {name: 'test', age: 25};
+    assert.equal(getObjectKey(obj, ['name']), 'test');
+    assert.equal(getObjectKey(obj, ['age']), 25);
+  });
+
+  it('returns undefined for non-existent keys', () => {
+    const obj = {a: {b: 'value'}};
+    assert.equal(getObjectKey(obj, ['nonexistent']), undefined);
+    assert.equal(getObjectKey(obj, ['a', 'nonexistent']), undefined);
+    assert.equal(getObjectKey(obj, ['a', 'b', 'nonexistent']), undefined);
+  });
+
+  it('handles null and undefined values in the path', () => {
+    const obj = {a: null, b: {c: undefined}};
+    assert.equal(getObjectKey(obj, ['a']), null);
+    assert.equal(getObjectKey(obj, ['b', 'c']), undefined);
+  });
+
+  it('does not throw when trying to access property of null', () => {
+    const obj = {a: null};
+    assert.equal(getObjectKey(obj, ['a', 'b']), undefined);
+  });
+
+  it('does not throw when trying to access property of undefined', () => {
+    const obj = {a: undefined};
+    assert.equal(getObjectKey(obj, ['a', 'b']), undefined);
+  });
+
+  it('can access nested arrays and objects', () => {
+    const obj = {
+      data: [
+        {name: 'item1', props: {color: 'red'}},
+        {name: 'item2', props: {color: 'blue'}},
+      ],
+    };
+    assert.equal(getObjectKey(obj, ['data', '0', 'name']), 'item1');
+    assert.equal(getObjectKey(obj, ['data', '1', 'props', 'color']), 'blue');
+  });
+
+  it('handles numeric keys as strings', () => {
+    const obj = {'0': 'first', '1': {nested: 'value'}};
+    assert.equal(getObjectKey(obj, ['0']), 'first');
+    assert.equal(getObjectKey(obj, ['1', 'nested']), 'value');
+  });
+
+  it('handles keys with special characters', () => {
+    const obj = {
+      'key-with-dashes': 'value1',
+      'key.with.dots': {
+        'nested-key': 'value2',
+      },
+      'key with spaces': 'value3',
+      '@special$chars#': 'value4',
+    };
+    assert.equal(getObjectKey(obj, ['key-with-dashes']), 'value1');
+    assert.equal(getObjectKey(obj, ['key.with.dots', 'nested-key']), 'value2');
+    assert.equal(getObjectKey(obj, ['key with spaces']), 'value3');
+    assert.equal(getObjectKey(obj, ['@special$chars#']), 'value4');
+  });
+
+  it('handles falsy values correctly', () => {
+    const obj = {
+      zero: 0,
+      false: false,
+      emptyString: '',
+      nullValue: null,
+      undefinedValue: undefined,
+      nested: {
+        zero: 0,
+        false: false,
+      },
+    };
+    assert.equal(getObjectKey(obj, ['zero']), 0);
+    assert.equal(getObjectKey(obj, ['false']), false);
+    assert.equal(getObjectKey(obj, ['emptyString']), '');
+    assert.equal(getObjectKey(obj, ['nullValue']), null);
+    assert.equal(getObjectKey(obj, ['undefinedValue']), undefined);
+    assert.equal(getObjectKey(obj, ['nested', 'zero']), 0);
+    assert.equal(getObjectKey(obj, ['nested', 'false']), false);
+  });
+
+  it('handles deep nesting', () => {
+    const obj = {
+      level1: {
+        level2: {
+          level3: {
+            level4: {
+              level5: {
+                deepValue: 'found',
+              },
+            },
+          },
+        },
+      },
+    };
+    assert.equal(
+      getObjectKey(obj, [
+        'level1',
+        'level2',
+        'level3',
+        'level4',
+        'level5',
+        'deepValue',
+      ]),
+      'found',
+    );
+  });
+
+  it('handles Date objects', () => {
+    const date = new Date('2023-01-01');
+    const obj = {
+      timestamp: date,
+      nested: {
+        date: date,
+      },
+    };
+    assert.equal(getObjectKey(obj, ['timestamp']), date);
+    assert.equal(getObjectKey(obj, ['nested', 'date']), date);
+  });
+
+  it('handles complex nested structures with mixed types', () => {
+    const obj = {
+      users: [
+        {
+          id: 1,
+          profile: {
+            settings: {
+              theme: 'dark',
+              notifications: true,
+            },
+          },
+        },
+        {
+          id: 2,
+          profile: {
+            settings: {
+              theme: 'light',
+              notifications: false,
+            },
+          },
+        },
+      ],
+      config: {
+        version: '1.0.0',
+        features: ['feature1', 'feature2'],
+      },
+    };
+
+    assert.equal(
+      getObjectKey(obj, ['users', '0', 'profile', 'settings', 'theme']),
+      'dark',
+    );
+    assert.equal(
+      getObjectKey(obj, ['users', '1', 'profile', 'settings', 'notifications']),
+      false,
+    );
+    assert.equal(getObjectKey(obj, ['config', 'features', '0']), 'feature1');
   });
 });
