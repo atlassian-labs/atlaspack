@@ -49,6 +49,10 @@ export type FeatureFlags = {|
    */
   cachePerformanceImprovements: boolean,
   /**
+   * Deduplicates environments across cache / memory entities
+   */
+  environmentDeduplication: boolean,
+  /**
    * Enable scanning for the presence of loadable to determine side effects
    */
   loadableSideEffects: boolean,
