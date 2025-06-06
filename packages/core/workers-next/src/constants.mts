@@ -1,0 +1,1 @@
+export const DEFAULT_WORKER_TIMEOUT = 3000;
