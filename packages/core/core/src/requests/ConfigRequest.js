@@ -110,6 +110,13 @@ export async function loadPluginConfig<T: PluginWithLoadConfig>(
 
 /**
  * Return value at a given key path within an object.
+ *
+ * @example
+ *     const obj = { a: { b: { c: 'd' } } };
+ *     getObjectKey(obj, ['a', 'b', 'c']);        // 'd'
+ *     getObjectKey(obj, ['a', 'b', 'd']);        // undefined
+ *     getObjectKey(obj, ['a', 'b']);             // { c: 'd' }
+ *     getObjectKey(obj, ['a', 'b', 'c', 'd']);   // undefined
  */
 export function getObjectKey(obj: Object, key: string[]): any {
   let current = obj;

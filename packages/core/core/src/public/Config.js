@@ -40,6 +40,13 @@ const internalConfigToConfig: DefaultWeakMap<
  * That is, reading a nested field `a.b.c` will make a single call to `onRead` with the path
  * `['a', 'b', 'c']`.
  *
+ * In case the value is null or an array, we will track the read as well.
+ *
+ * Iterating over `Object.keys(obj.field)` will register a read for the `['field']` path.
+ * Other reads work normally.
+ *
+ * @example
+ *
  *     const usedPaths = new Set();
  *     const onRead = (path) => {
  *        usedPaths.add(path);
@@ -47,9 +54,10 @@ const internalConfigToConfig: DefaultWeakMap<
  *
  *     const config = makeConfigProxy(onRead, {a: {b: {c: 'd'}}})
  *     console.log(config.a.b.c);
- *     console.log(Array.from(usedPaths)); // ['a', 'b', 'c']
+ *     console.log(Array.from(usedPaths));
+ *     // We get a single read for the path
+ *     // ['a', 'b', 'c']
  *
- * In case the value is null or an array, we will track the read as well.
  */
 export function makeConfigProxy<T>(
   onRead: (path: string[]) => void,
