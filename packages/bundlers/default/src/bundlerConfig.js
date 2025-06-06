@@ -36,7 +36,6 @@ type BaseBundlerConfig = {|
   disableSharedBundles?: boolean,
   manualSharedBundles?: ManualSharedBundles,
   loadConditionalBundlesInParallel?: boolean,
-  sharedBundleMergeThreshold?: number,
   sharedBundleMerge?: MergeCandidates,
 |};
 
@@ -52,7 +51,6 @@ export type ResolvedBundlerConfig = {|
   disableSharedBundles: boolean,
   manualSharedBundles: ManualSharedBundles,
   loadConditionalBundlesInParallel?: boolean,
-  sharedBundleMergeThreshold: number,
   sharedBundleMerge?: MergeCandidates,
 |};
 
@@ -88,7 +86,6 @@ const HTTP_OPTIONS = {
     minBundleSize: 30000,
     maxParallelRequests: 6,
     disableSharedBundles: false,
-    sharedBundleMergeThreshold: 1,
     sharedBundleMerge: [],
   },
   '2': {
@@ -97,7 +94,6 @@ const HTTP_OPTIONS = {
     minBundleSize: 20000,
     maxParallelRequests: 25,
     disableSharedBundles: false,
-    sharedBundleMergeThreshold: 1,
     sharedBundleMerge: [],
   },
 };
@@ -275,9 +271,6 @@ export async function loadBundlerConfig(
   return {
     minBundles: modeConfig.minBundles ?? defaults.minBundles,
     minBundleSize: modeConfig.minBundleSize ?? defaults.minBundleSize,
-    sharedBundleMergeThreshold:
-      modeConfig.sharedBundleMergeThreshold ??
-      defaults.sharedBundleMergeThreshold,
     sharedBundleMerge:
       modeConfig.sharedBundleMerge ?? defaults.sharedBundleMerge,
     maxParallelRequests:
