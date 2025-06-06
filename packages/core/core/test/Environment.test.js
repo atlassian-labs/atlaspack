@@ -5,7 +5,7 @@ import assert from 'assert';
 import expect from 'expect';
 import {createEnvironment} from '../src/Environment';
 import {initializeMonitoring} from '../../rust';
-import {fromEnvironmentId, toEnvironmentId} from '../src/EnvironmentManager';
+import {fromEnvironmentId} from '../src/EnvironmentManager';
 
 describe('Environment', () => {
   it('assigns a default environment with nothing passed', () => {
