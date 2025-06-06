@@ -2,15 +2,15 @@
 '@atlaspack/bundler-default': major
 ---
 
-# Breaking change
+### Breaking change
 
 This new config replaces the previously released `sharedBundleMergeThreshold`.
 
 The following options are available for each merge group.
 
-# Options
+### Options
 
-## overlapThreshold
+#### overlapThreshold
 
 > The same as `sharedBundleMergeThreshold` from #535
 
@@ -24,7 +24,7 @@ Merge bundles share a percentage of source bundles
 }
 ```
 
-## maxBundleSize
+#### maxBundleSize
 
 Merge bundles that are smaller than a configured amount of bytes.
 
@@ -38,7 +38,7 @@ Merge bundles that are smaller than a configured amount of bytes.
 }
 ```
 
-## sourceBundles
+#### sourceBundles
 
 Merge bundles that share a set of source bundles. The matching is relative to the project root, like how manual shared bundle roots work.
 
@@ -50,7 +50,7 @@ Merge bundles that share a set of source bundles. The matching is relative to th
 }
 ```
 
-## minBundlesInGroup
+#### minBundlesInGroup
 
 Merge bundles that belong to a bundle group that's larger than a set amount. This is useful for targetting bundles that would be deleted by the `maxParallelRequests` option.
 
@@ -63,7 +63,7 @@ Merge bundles that belong to a bundle group that's larger than a set amount. Thi
 }
 ```
 
-# Combining options
+## Combining options
 
 When multiple options are provided, all must be true for a merge to be relevant.
 
@@ -78,7 +78,7 @@ For example, merge bundles that are smaller than 20kb and share at least 50% of 
 }
 ```
 
-# Multiple merges
+## Multiple merges
 
 You can also have multiple merge configs.
 
