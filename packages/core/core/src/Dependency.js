@@ -21,7 +21,7 @@ import {toInternalSourceLocation} from './utils';
 import {toProjectPath} from './projectPath';
 import assert from 'assert';
 import {identifierRegistry} from './IdentifierRegistry';
-import {fromEnvironmentId} from './EnvironmentManager';
+import {fromEnvironmentId, toEnvironmentId} from './EnvironmentManager';
 import type {EnvironmentRef} from './EnvironmentManager';
 
 type DependencyOpts = {|
@@ -75,7 +75,7 @@ export function createDependencyId({
   const params = {
     sourceAssetId,
     specifier,
-    environmentId: env,
+    environmentId: toEnvironmentId(env),
     target:
       target != null
         ? {
