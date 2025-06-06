@@ -21,6 +21,13 @@ type ManualSharedBundles = Array<{|
   split?: number,
 |}>;
 
+export type MergeCandidates = Array<{|
+  overlapThreshold?: number,
+  maxBundleSize?: number,
+  sourceBundles?: Array<string>,
+  minBundlesInGroup?: number,
+|}>;
+
 type BaseBundlerConfig = {|
   http?: number,
   minBundles?: number,
@@ -30,6 +37,7 @@ type BaseBundlerConfig = {|
   manualSharedBundles?: ManualSharedBundles,
   loadConditionalBundlesInParallel?: boolean,
   sharedBundleMergeThreshold?: number,
+  sharedBundleMerge?: MergeCandidates,
 |};
 
 type BundlerConfig = {|
@@ -45,6 +53,7 @@ export type ResolvedBundlerConfig = {|
   manualSharedBundles: ManualSharedBundles,
   loadConditionalBundlesInParallel?: boolean,
   sharedBundleMergeThreshold: number,
+  sharedBundleMerge?: MergeCandidates,
 |};
 
 function resolveModeConfig(
@@ -80,6 +89,7 @@ const HTTP_OPTIONS = {
     maxParallelRequests: 6,
     disableSharedBundles: false,
     sharedBundleMergeThreshold: 1,
+    sharedBundleMerge: [],
   },
   '2': {
     minBundles: 1,
@@ -88,6 +98,7 @@ const HTTP_OPTIONS = {
     maxParallelRequests: 25,
     disableSharedBundles: false,
     sharedBundleMergeThreshold: 1,
+    sharedBundleMerge: [],
   },
 };
 
@@ -126,6 +137,30 @@ const CONFIG_SCHEMA: SchemaEntity = {
           },
         },
         required: ['name', 'assets'],
+        additionalProperties: false,
+      },
+    },
+    sharedBundleMerge: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          overlapThreshold: {
+            type: 'number',
+          },
+          maxBundleSize: {
+            type: 'number',
+          },
+          sourceBundles: {
+            type: 'array',
+            items: {
+              type: 'string',
+            },
+          },
+          minBundlesInGroup: {
+            type: 'number',
+          },
+        },
         additionalProperties: false,
       },
     },
@@ -243,6 +278,8 @@ export async function loadBundlerConfig(
     sharedBundleMergeThreshold:
       modeConfig.sharedBundleMergeThreshold ??
       defaults.sharedBundleMergeThreshold,
+    sharedBundleMerge:
+      modeConfig.sharedBundleMerge ?? defaults.sharedBundleMerge,
     maxParallelRequests:
       modeConfig.maxParallelRequests ?? defaults.maxParallelRequests,
     projectRoot: options.projectRoot,
