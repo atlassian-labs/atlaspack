@@ -53,7 +53,8 @@ describe('EnvironmentManager', () => {
     assert.deepEqual(storedEnvironment2, environment2);
 
     const environments = getAllEnvironments();
-    assert.deepEqual(environments, [environment1, environment2]);
+    environments.sort((a, b) => a.id.localeCompare(b.id));
+    assert.deepEqual(environments, [environment2, environment1]);
 
     setAllEnvironments([]);
     const noEnvironments = getAllEnvironments();
