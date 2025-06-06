@@ -2,9 +2,9 @@
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
+import {ContentGraph, BitSet} from '@atlaspack/graph';
 import type {NodeId} from '@atlaspack/graph';
 import type {Bundle, IdealBundleGraph} from './idealGraph';
-import {ContentGraph, BitSet} from '@atlaspack/graph';
 import {memoize, clearCaches} from './memoize';
 
 function getBundlesForBundleGroup(
@@ -45,7 +45,7 @@ function checkBundleThreshold(
   );
 }
 
-let checkAncestorOverlap = memoize(
+let checkSharedSourceBundles = memoize(
   (bundle: Bundle, importantAncestorBundles: Array<NodeId>): boolean => {
     return importantAncestorBundles.every((ancestorId) =>
       bundle.sourceBundles.has(ancestorId),
@@ -91,10 +91,10 @@ function validMerge(
     }
   }
 
-  if (config.importantAncestorBundles != null) {
+  if (config.sourceBundles != null) {
     if (
-      !checkAncestorOverlap(bundleA.bundle, config.importantAncestorBundles) ||
-      !checkAncestorOverlap(bundleB.bundle, config.importantAncestorBundles)
+      !checkSharedSourceBundles(bundleA.bundle, config.sourceBundles) ||
+      !checkSharedSourceBundles(bundleB.bundle, config.sourceBundles)
     ) {
       return false;
     }
@@ -189,10 +189,10 @@ function getPossibleMergeCandidates(
   return uniquePairs;
 }
 
-type MergeGroup = {|
+export type MergeGroup = {|
   overlapThreshold?: number,
   maxBundleSize?: number,
-  importantAncestorBundles?: Array<NodeId>,
+  sourceBundles?: Array<NodeId>,
   minBundlesInGroup?: number,
 |};
 type EdgeType = number;

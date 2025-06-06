@@ -23,104 +23,8 @@ import {DefaultMap, globToRegex} from '@atlaspack/utils';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
 
-import {findMergeCandidates} from './bundleMerge';
-import type {ResolvedBundlerConfig} from './bundlerConfig';
-
-class Stats {
-  constructor() {
-    this.timers = {};
-    this.gauges = {};
-    this.counts = {};
-  }
-
-  now() {
-    return require('perf_hooks').performance.now();
-  }
-
-  getOrInit(group, label) {
-    if (!group[label]) {
-      group[label] = [];
-    }
-    return group[label];
-  }
-
-  count(label) {
-    if (!this.counts[label]) {
-      this.counts[label] = 0;
-    }
-    return this.counts[label]++;
-  }
-
-  time(label) {
-    let start = this.now();
-    return () => {
-      this.getOrInit(this.timers, label).push(this.now() - start);
-    };
-  }
-
-  timeExp(label, fn) {
-    let end = this.time(label);
-    try {
-      return fn();
-    } finally {
-      end();
-    }
-  }
-
-  timeFn(label, fn) {
-    return (...args) => {
-      let end = this.time(label);
-      try {
-        return fn(...args);
-      } finally {
-        end();
-      }
-    };
-  }
-
-  toFixed(value) {
-    return parseFloat(value.toFixed(1));
-  }
-
-  gauge(label, value) {
-    this.getOrInit(this.gauges, label).push(value);
-  }
-
-  p(percentile, values) {
-    return this.toFixed(values[Math.floor(values.length * percentile)]);
-  }
-
-  report() {
-    for (let group of [this.timers, this.gauges]) {
-      let table = {};
-      for (let [label, values] of Object.entries(group)) {
-        if (values.length === 0) {
-          continue;
-        }
-
-        // Sort so percentiles are correct
-        values.sort((a, b) => a - b);
-
-        table[label] = {
-          Total: Math.round(values.reduce((acc, curr) => acc + curr, 0)),
-          Count: values.length,
-          Min: this.toFixed(values[0]),
-          p50: this.p(0.5, values),
-          p75: this.p(0.75, values),
-          p90: this.p(0.9, values),
-          Max: this.toFixed(values[values.length - 1]),
-        };
-      }
-
-      console.table(table);
-    }
-    if (Object.keys(this.counts).length > 0) {
-      console.table(this.counts);
-    }
-  }
-}
-
-const stats = new Stats();
+import {findMergeCandidates, type MergeGroup} from './bundleMerge';
+import type {ResolvedBundlerConfig, MergeCandidates} from './bundlerConfig';
 
 /* BundleRoot - An asset that is the main entry of a Bundle. */
 type BundleRoot = Asset;
@@ -341,6 +245,16 @@ export function createIdealGraph(
     Array<Asset>,
   > = new DefaultMap(() => []);
 
+  let mergeSourceBundleLookup = new Map<string, NodeId>();
+  let mergeSourceBundleAssets = new Set(
+    config.sharedBundleMerge?.flatMap(
+      (c) =>
+        c.sourceBundles?.map((assetMatch) =>
+          path.join(config.projectRoot, assetMatch),
+        ) ?? [],
+    ),
+  );
+
   /**
    * Step Create Bundles: Traverse the assetGraph (aka MutableBundleGraph) and create bundles
    * for asset type changes, parallel, inline, and async or lazy dependencies,
@@ -431,6 +345,14 @@ export function createIdealGraph(
                 bundleRoots.set(childAsset, [bundleId, bundleId]);
                 bundleGroupBundleIds.add(bundleId);
                 bundleGraph.addEdge(bundleGraphRootNodeId, bundleId);
+                // If this asset is relevant for merging then track it's source
+                // bundle id for later
+                if (mergeSourceBundleAssets.has(childAsset.filePath)) {
+                  mergeSourceBundleLookup.set(
+                    path.relative(config.projectRoot, childAsset.filePath),
+                    bundleId,
+                  );
+                }
                 if (manualSharedObject) {
                   // MSB Step 4: If this was the first instance of a match, mark mainAsset for internalization
                   // since MSBs should not have main entry assets
@@ -1227,8 +1149,8 @@ export function createIdealGraph(
 
   // Step merge shared bundles that meet the overlap threshold
   // This step is skipped by default as the threshold defaults to 1
-  if (true) {
-    mergeOverlapBundles();
+  if (config.sharedBundleMerge && config.sharedBundleMerge.length > 0) {
+    mergeOverlapBundles(config.sharedBundleMerge);
   }
 
   // Step Merge Share Bundles: Merge any shared bundles under the minimum bundle size back into
@@ -1250,32 +1172,9 @@ export function createIdealGraph(
   let modifiedSourceBundles = new Set();
 
   if (config.disableSharedBundles === false) {
-    let viewPageAssetId = '022113ff2039246f';
-    let fullPageEditorAssetId = 'c6612c64059aac31';
-
-    let viewNodeId = bundleGraph
-      .getNodeIdsConnectedFrom(rootNodeId)
-      .find((bundleGroupId) => {
-        let mainEntryAsset = bundleGraph.getNode(bundleGroupId)?.mainEntryAsset;
-
-        return mainEntryAsset?.filePath.includes('ViewPageRouteComponent.tsx');
-      });
-
-    let editNodeId = bundleGraph
-      .getNodeIdsConnectedFrom(rootNodeId)
-      .find((bundleGroupId) => {
-        let mainEntryAsset = bundleGraph.getNode(bundleGroupId)?.mainEntryAsset;
-
-        return mainEntryAsset?.filePath.includes('FullPageEditorComponent.tsx');
-      });
-
-    console.log('View Node ID', viewNodeId);
-    console.log('Edit Node ID', editNodeId);
-
     for (let bundleGroupId of bundleGraph.getNodeIdsConnectedFrom(rootNodeId)) {
       // Find shared bundles in this bundle group.
       let bundleId = bundleGroupId;
-      let overlapBundles = new Set();
 
       // We should include "bundle reuse" as shared bundles that may be removed but the bundle itself would have to be retained
       let bundleIdsInGroup = getBundlesForBundleGroup(bundleId); //get all bundlegrups this bundle is an ancestor of
@@ -1286,12 +1185,6 @@ export function createIdealGraph(
         invariant(bundle !== 'root');
         return count + (bundle.bundleBehavior !== 'inline');
       }, 0);
-
-      if (bundleGroupId === viewNodeId) {
-        console.log('View PRL', numBundlesContributingToPRL);
-      } else if (bundleGroupId === editNodeId) {
-        console.log('Edit PRL', numBundlesContributingToPRL);
-      }
 
       if (numBundlesContributingToPRL > config.maxParallelRequests) {
         let sharedBundleIdsInBundleGroup = bundleIdsInGroup.filter((b) => {
@@ -1335,15 +1228,6 @@ export function createIdealGraph(
             bundleIdsInGroup.includes(b),
           );
 
-          if (
-            (bundleGroupId === editNodeId &&
-              bundleToRemove.sourceBundles.has(viewNodeId)) ||
-            (bundleGroupId === viewNodeId &&
-              bundleToRemove.sourceBundles.has(editNodeId))
-          ) {
-            overlapBundles.add(bundleIdToRemove);
-          }
-
           for (let sourceBundleId of sourceBundles) {
             let sourceBundle = nullthrows(bundleGraph.getNode(sourceBundleId));
             invariant(sourceBundle !== 'root');
@@ -1386,9 +1270,6 @@ export function createIdealGraph(
           }
           numBundlesContributingToPRL--;
         }
-      }
-      if (bundleGroupId === viewNodeId || bundleGroupId === editNodeId) {
-        console.log('Overlaps', bundleGroupId, overlapBundles);
       }
     }
   }
@@ -1434,7 +1315,7 @@ export function createIdealGraph(
     bundleGraph.removeNode(bundleToRemoveId);
   }
 
-  function mergeOverlapBundles() {
+  function mergeOverlapBundles(mergeConfig: MergeCandidates) {
     // Find all shared bundles
     let sharedBundles = new Set<NodeId>();
     bundleGraph.traverse((nodeId) => {
@@ -1461,41 +1342,24 @@ export function createIdealGraph(
       }
     });
 
-    let viewNodeId = bundleGraph
-      .getNodeIdsConnectedFrom(rootNodeId)
-      .find((bundleGroupId) => {
-        let mainEntryAsset = bundleGraph.getNode(bundleGroupId)?.mainEntryAsset;
+    let clusters = findMergeCandidates(
+      bundleGraph,
+      Array.from(sharedBundles),
+      mergeConfig.map((config): MergeGroup => ({
+        ...config,
+        sourceBundles: config.sourceBundles?.map((assetMatch) => {
+          let sourceBundleNodeId = mergeSourceBundleLookup.get(assetMatch);
 
-        return mainEntryAsset?.filePath.includes('ViewPageRouteComponent.tsx');
-      });
+          if (sourceBundleNodeId == null) {
+            throw new Error(
+              `Source bundle ${assetMatch} not found in merge source bundle lookup`,
+            );
+          }
 
-    let editNodeId = bundleGraph
-      .getNodeIdsConnectedFrom(rootNodeId)
-      .find((bundleGroupId) => {
-        let mainEntryAsset = bundleGraph.getNode(bundleGroupId)?.mainEntryAsset;
-
-        return mainEntryAsset?.filePath.includes('FullPageEditorComponent.tsx');
-      });
-
-    let end = stats.time('findMergeCandidates');
-    let clusters = findMergeCandidates(bundleGraph, Array.from(sharedBundles), [
-      {
-        overlapThreshold: 0.75,
-      },
-      {
-        importantAncestorBundles: [viewNodeId, editNodeId],
-        maxBundleSize: 5000,
-      },
-      {
-        maxBundleSize: 20000,
-        minBundlesInGroup: 50,
-      },
-      {
-        overlapThreshold: 0.5,
-        maxBundleSize: 50000,
-      },
-    ]);
-    end();
+          return sourceBundleNodeId;
+        }),
+      })),
+    );
 
     for (let cluster of clusters) {
       let [mergeTarget, ...rest] = cluster;
@@ -1503,13 +1367,8 @@ export function createIdealGraph(
       for (let bundleIdToMerge of rest) {
         mergeBundles(bundleGraph, mergeTarget, bundleIdToMerge, assetReference);
       }
-
-      stats.gauge('cluster-size', cluster.length);
-      stats.gauge('bundle-size', bundleGraph.getNode(mergeTarget).size);
     }
   }
-
-  stats.report();
 
   function getBigIntFromContentKey(contentKey) {
     let b = Buffer.alloc(64);
