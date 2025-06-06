@@ -59,7 +59,7 @@ export function createConfig({
   identifierRegistry.addIdentifier('config_request', configId, {
     plugin,
     searchPath,
-    environmentId: environment,
+    environmentId: toEnvironmentId(environment),
     isSource,
   });
   return {
