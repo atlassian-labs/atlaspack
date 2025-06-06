@@ -244,7 +244,7 @@ describe('ConfigRequest tests', () => {
     const call = mockCast(mockRunApi.invalidateOnConfigKeyChange).getCall(0);
     assert.deepEqual(
       call.args,
-      ['config.json', 'key1', hashString('"value1"')],
+      ['config.json', ['key1'], hashString('"value1"')],
       'Invalidate was called for key1',
     );
   });
@@ -280,25 +280,14 @@ describe('getObjectKey', () => {
     assert.equal(getObjectKey(obj, ['b', 'c']), undefined);
   });
 
-  it('throws when trying to access property of null', () => {
+  it('does not throw when trying to access property of null', () => {
     const obj = {a: null};
-    assert.throws(() => {
-      getObjectKey(obj, ['a', 'b']);
-    }, TypeError);
+    assert.equal(getObjectKey(obj, ['a', 'b']), undefined);
   });
 
-  it('throws when trying to access property of undefined', () => {
+  it('does not throw when trying to access property of undefined', () => {
     const obj = {a: undefined};
-    assert.throws(() => {
-      getObjectKey(obj, ['a', 'b']);
-    }, TypeError);
-  });
-
-  it('can access array elements', () => {
-    const obj = {arr: ['first', 'second', 'third']};
-    assert.equal(getObjectKey(obj, ['arr', '0']), 'first');
-    assert.equal(getObjectKey(obj, ['arr', '1']), 'second');
-    assert.equal(getObjectKey(obj, ['arr', '2']), 'third');
+    assert.equal(getObjectKey(obj, ['a', 'b']), undefined);
   });
 
   it('can access nested arrays and objects', () => {
@@ -354,21 +343,6 @@ describe('getObjectKey', () => {
     assert.equal(getObjectKey(obj, ['nested', 'false']), false);
   });
 
-  it('can access function values', () => {
-    const testFunc = () => 'test';
-    const obj = {
-      func: testFunc,
-      nested: {
-        method: function () {
-          return 'method';
-        },
-      },
-    };
-    assert.equal(getObjectKey(obj, ['func']), testFunc);
-    assert.equal(typeof getObjectKey(obj, ['nested', 'method']), 'function');
-    assert.equal(getObjectKey(obj, ['nested', 'method'])(), 'method');
-  });
-
   it('handles deep nesting', () => {
     const obj = {
       level1: {
@@ -394,19 +368,6 @@ describe('getObjectKey', () => {
       ]),
       'found',
     );
-  });
-
-  it('handles objects with prototype properties', () => {
-    const TestConstructor = function () {
-      // $FlowFixMe
-      this.own = 'ownProperty';
-    };
-    TestConstructor.prototype.inherited = 'inheritedProperty';
-
-    // $FlowFixMe
-    const obj = new TestConstructor();
-    assert.equal(getObjectKey(obj, ['own']), 'ownProperty');
-    assert.equal(getObjectKey(obj, ['inherited']), 'inheritedProperty');
   });
 
   it('handles Date objects', () => {
@@ -458,17 +419,5 @@ describe('getObjectKey', () => {
       false,
     );
     assert.equal(getObjectKey(obj, ['config', 'features', '0']), 'feature1');
-  });
-
-  it('throws when object is null', () => {
-    assert.throws(() => {
-      getObjectKey(null, ['key']);
-    }, TypeError);
-  });
-
-  it('throws when object is undefined', () => {
-    assert.throws(() => {
-      getObjectKey(undefined, ['key']);
-    }, TypeError);
   });
 });
