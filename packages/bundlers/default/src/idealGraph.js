@@ -26,6 +26,102 @@ import nullthrows from 'nullthrows';
 import {findMergeCandidates} from './bundleMerge';
 import type {ResolvedBundlerConfig} from './bundlerConfig';
 
+class Stats {
+  constructor() {
+    this.timers = {};
+    this.gauges = {};
+    this.counts = {};
+  }
+
+  now() {
+    return require('perf_hooks').performance.now();
+  }
+
+  getOrInit(group, label) {
+    if (!group[label]) {
+      group[label] = [];
+    }
+    return group[label];
+  }
+
+  count(label) {
+    if (!this.counts[label]) {
+      this.counts[label] = 0;
+    }
+    return this.counts[label]++;
+  }
+
+  time(label) {
+    let start = this.now();
+    return () => {
+      this.getOrInit(this.timers, label).push(this.now() - start);
+    };
+  }
+
+  timeExp(label, fn) {
+    let end = this.time(label);
+    try {
+      return fn();
+    } finally {
+      end();
+    }
+  }
+
+  timeFn(label, fn) {
+    return (...args) => {
+      let end = this.time(label);
+      try {
+        return fn(...args);
+      } finally {
+        end();
+      }
+    };
+  }
+
+  toFixed(value) {
+    return parseFloat(value.toFixed(1));
+  }
+
+  gauge(label, value) {
+    this.getOrInit(this.gauges, label).push(value);
+  }
+
+  p(percentile, values) {
+    return this.toFixed(values[Math.floor(values.length * percentile)]);
+  }
+
+  report() {
+    for (let group of [this.timers, this.gauges]) {
+      let table = {};
+      for (let [label, values] of Object.entries(group)) {
+        if (values.length === 0) {
+          continue;
+        }
+
+        // Sort so percentiles are correct
+        values.sort((a, b) => a - b);
+
+        table[label] = {
+          Total: Math.round(values.reduce((acc, curr) => acc + curr, 0)),
+          Count: values.length,
+          Min: this.toFixed(values[0]),
+          p50: this.p(0.5, values),
+          p75: this.p(0.75, values),
+          p90: this.p(0.9, values),
+          Max: this.toFixed(values[values.length - 1]),
+        };
+      }
+
+      console.table(table);
+    }
+    if (Object.keys(this.counts).length > 0) {
+      console.table(this.counts);
+    }
+  }
+}
+
+const stats = new Stats();
+
 /* BundleRoot - An asset that is the main entry of a Bundle. */
 type BundleRoot = Asset;
 
@@ -1131,7 +1227,7 @@ export function createIdealGraph(
 
   // Step merge shared bundles that meet the overlap threshold
   // This step is skipped by default as the threshold defaults to 1
-  if (config.sharedBundleMergeThreshold < 1) {
+  if (true) {
     mergeOverlapBundles();
   }
 
@@ -1319,6 +1415,13 @@ export function createIdealGraph(
       assetReference.set(asset, newAssetReference);
     }
 
+    // Merge any internalized assets
+    invariant(
+      bundleToKeep.internalizedAssets && bundleToRemove.internalizedAssets,
+      'All shared bundles should have internalized assets',
+    );
+    bundleToKeep.internalizedAssets.union(bundleToRemove.internalizedAssets);
+
     for (let sourceBundleId of bundleToRemove.sourceBundles) {
       if (bundleToKeep.sourceBundles.has(sourceBundleId)) {
         continue;
@@ -1326,17 +1429,6 @@ export function createIdealGraph(
 
       bundleToKeep.sourceBundles.add(sourceBundleId);
       bundleGraph.addEdge(sourceBundleId, bundleToKeepId);
-    }
-
-    // Merge any internalized assets
-    if (bundleToRemove.internalizedAssets) {
-      if (bundleToKeep.internalizedAssets) {
-        bundleToKeep.internalizedAssets.union(
-          bundleToRemove.internalizedAssets,
-        );
-      } else {
-        bundleToKeep.internalizedAssets = bundleToRemove.internalizedAssets;
-      }
     }
 
     bundleGraph.removeNode(bundleToRemoveId);
@@ -1385,14 +1477,25 @@ export function createIdealGraph(
         return mainEntryAsset?.filePath.includes('FullPageEditorComponent.tsx');
       });
 
-    let clusters = findMergeCandidates(
-      bundleGraph,
-      Array.from(sharedBundles),
-      config.sharedBundleMergeThreshold,
-      [[viewNodeId, editNodeId]],
-    );
-
-    console.log('Clusters found for merging:', clusters);
+    let end = stats.time('findMergeCandidates');
+    let clusters = findMergeCandidates(bundleGraph, Array.from(sharedBundles), [
+      {
+        overlapThreshold: 0.75,
+      },
+      {
+        importantAncestorBundles: [viewNodeId, editNodeId],
+        maxBundleSize: 5000,
+      },
+      {
+        maxBundleSize: 20000,
+        minBundlesInGroup: 50,
+      },
+      {
+        overlapThreshold: 0.5,
+        maxBundleSize: 50000,
+      },
+    ]);
+    end();
 
     for (let cluster of clusters) {
       let [mergeTarget, ...rest] = cluster;
@@ -1400,8 +1503,13 @@ export function createIdealGraph(
       for (let bundleIdToMerge of rest) {
         mergeBundles(bundleGraph, mergeTarget, bundleIdToMerge, assetReference);
       }
+
+      stats.gauge('cluster-size', cluster.length);
+      stats.gauge('bundle-size', bundleGraph.getNode(mergeTarget).size);
     }
   }
+
+  stats.report();
 
   function getBigIntFromContentKey(contentKey) {
     let b = Buffer.alloc(64);
