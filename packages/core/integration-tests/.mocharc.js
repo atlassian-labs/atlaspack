@@ -1,7 +1,6 @@
 const mochaRequire = [
   '@atlaspack/babel-register',
   '@atlaspack/test-utils/src/mochaSetup.js',
-  require.resolve('./test/setup.js'),
 ];
 
 if (process.env.ATLASPACK_PROFILE_MOCHA === 'true') {

@@ -194,6 +194,7 @@ async function run({input, options, api}) {
 
   let res = {
     filePath,
+    bundleId: bundle.id,
     type: info.type,
     stats: {
       size,

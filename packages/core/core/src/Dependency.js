@@ -22,6 +22,7 @@ import {toProjectPath} from './projectPath';
 import assert from 'assert';
 import {identifierRegistry} from './IdentifierRegistry';
 import {fromEnvironmentId} from './EnvironmentManager';
+import type {EnvironmentRef} from './EnvironmentManager';
 
 type DependencyOpts = {|
   id?: string,
@@ -35,7 +36,7 @@ type DependencyOpts = {|
   isEntry?: boolean,
   isOptional?: boolean,
   loc?: SourceLocation,
-  env: string,
+  env: EnvironmentRef,
   packageConditions?: Array<string>,
   meta?: Meta,
   resolveFrom?: FilePath,
@@ -61,7 +62,7 @@ export function createDependencyId({
 }: {|
   sourceAssetId?: string | void,
   specifier: DependencySpecifier,
-  env: string,
+  env: EnvironmentRef,
   target?: Target | void,
   pipeline?: ?string,
   specifierType: $Keys<typeof SpecifierType>,

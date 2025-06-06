@@ -8,6 +8,7 @@ import {relativePath} from '@atlaspack/utils';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {createEnvironment} from '../src/Environment';
 import {toProjectPath} from '../src/projectPath';
+import type {EnvironmentRef} from '../src/EnvironmentManager';
 
 export const DEFAULT_OPTIONS: AtlaspackOptions = {
   cacheDir,
@@ -51,7 +52,7 @@ export const DEFAULT_OPTIONS: AtlaspackOptions = {
   },
 };
 
-export const DEFAULT_ENV: string = createEnvironment({
+export const DEFAULT_ENV: EnvironmentRef = createEnvironment({
   context: 'browser',
   engines: {
     browsers: ['> 1%'],

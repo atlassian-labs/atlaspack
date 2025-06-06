@@ -12,8 +12,6 @@ type ConditionalImport<
 > = CondT['default'] | CondF['default'];
 
 /**
- * **IMPORTANT: This API is currently a no-op. Do not use until this message is removed.**
- *
  * Conditionally import a dependency, based on the specified condition.
  *
  * This is a synchronous import that differs from conditionally loading a dynamic import (`import()`)
@@ -21,8 +19,8 @@ type ConditionalImport<
  * This function requires server to guarantee the dependency is loaded.
  *
  * @param condition Condition evaluated by the server
- * @param ifTrueDependency Dependency returned if the condition is true
- * @param ifFalseDependency Dependency returned if the condition is false
+ * @param ifTrueDependency Dependency returned if the condition is true. This should be a relative file path like './ui/comment-component-new.tsx'
+ * @param ifFalseDependency Dependency returned if the condition is false. This should be a relative file path like './ui/comment-component-old.tsx'
  */
 declare function importCond<CondT, CondF>(
   condition: string,

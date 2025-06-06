@@ -12,12 +12,14 @@ import {fromProjectPathRelative} from './projectPath';
 import {createEnvironment} from './Environment';
 import {hashString} from '@atlaspack/rust';
 import {identifierRegistry} from './IdentifierRegistry';
+import type {EnvironmentRef} from './EnvironmentManager';
+import {toEnvironmentId} from './EnvironmentManager';
 
 type ConfigOpts = {|
   plugin: PackageName,
   searchPath: ProjectPath,
   isSource?: boolean,
-  env?: string,
+  env?: EnvironmentRef,
   result?: ConfigResult,
   invalidateOnFileChange?: Set<ProjectPath>,
   invalidateOnConfigKeyChange?: Array<{|
@@ -51,7 +53,7 @@ export function createConfig({
   const configId = hashString(
     plugin +
       fromProjectPathRelative(searchPath) +
-      environment +
+      toEnvironmentId(environment) +
       String(isSource),
   );
   identifierRegistry.addIdentifier('config_request', configId, {

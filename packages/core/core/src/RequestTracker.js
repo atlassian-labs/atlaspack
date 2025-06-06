@@ -20,6 +20,7 @@ import type {Async, EnvMap} from '@atlaspack/types';
 import {
   type Deferred,
   isGlobMatch,
+  isDirectoryInside,
   makeDeferredWithPromise,
   PromiseQueue,
 } from '@atlaspack/utils';
@@ -68,6 +69,9 @@ import type {
   InternalGlob,
 } from './types';
 import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
+import {performance} from 'perf_hooks';
+import type {EnvironmentRef} from './EnvironmentManager';
+import {toEnvironmentId} from './EnvironmentManager';
 
 export const requestGraphEdgeTypes = {
   subrequest: 2,
@@ -77,6 +81,10 @@ export const requestGraphEdgeTypes = {
   invalidated_by_create_above: 6,
   dirname: 7,
 };
+
+class FSBailoutError extends Error {
+  name: string = 'FSBailoutError';
+}
 
 export type RequestGraphEdgeType = $Values<typeof requestGraphEdgeTypes>;
 
@@ -708,8 +716,8 @@ export class RequestGraph extends ContentGraph<
     env: string,
     value: string | void,
   ) {
-    let envNode = nodeFromEnv(env, value);
-    let envNodeId = this.addNode(envNode);
+    const envNode = nodeFromEnv(env, value);
+    const envNodeId = this.addNode(envNode);
 
     if (
       !this.hasEdge(
@@ -849,27 +857,52 @@ export class RequestGraph extends ContentGraph<
     let nodeId = this.getNodeIdByContentKey(node.id);
     let dirname = path.dirname(fromProjectPathRelative(filePath));
 
-    while (dirname !== '/') {
-      if (!this.hasContentKey(dirname)) break;
-      const matchNodeId = this.getNodeIdByContentKey(dirname);
-      if (
-        !this.hasEdge(
-          nodeId,
-          matchNodeId,
-          requestGraphEdgeTypes.invalidated_by_create_above,
+    if (getFeatureFlag('fixQuadraticCacheInvalidation')) {
+      while (dirname !== '/') {
+        if (!this.hasContentKey(dirname)) break;
+        const matchNodeId = this.getNodeIdByContentKey(dirname);
+        if (
+          !this.hasEdge(
+            nodeId,
+            matchNodeId,
+            requestGraphEdgeTypes.invalidated_by_create_above,
+          )
         )
-      )
-        break;
+          break;
 
-      const connectedNodes = this.getNodeIdsConnectedTo(
-        matchNodeId,
-        requestGraphEdgeTypes.invalidated_by_create,
-      );
-      for (let connectedNode of connectedNodes) {
-        invalidateNode(connectedNode, FILE_CREATE);
+        const connectedNodes = this.getNodeIdsConnectedTo(
+          matchNodeId,
+          requestGraphEdgeTypes.invalidated_by_create,
+        );
+        for (let connectedNode of connectedNodes) {
+          invalidateNode(connectedNode, FILE_CREATE);
+        }
+
+        dirname = path.dirname(dirname);
       }
-
-      dirname = path.dirname(dirname);
+    } else {
+      for (let matchNode of matchNodes) {
+        let matchNodeId = this.getNodeIdByContentKey(matchNode.id);
+        if (
+          this.hasEdge(
+            nodeId,
+            matchNodeId,
+            requestGraphEdgeTypes.invalidated_by_create_above,
+          ) &&
+          isDirectoryInside(
+            fromProjectPathRelative(toProjectPathUnsafe(matchNode.id)),
+            dirname,
+          )
+        ) {
+          let connectedNodes = this.getNodeIdsConnectedTo(
+            matchNodeId,
+            requestGraphEdgeTypes.invalidated_by_create,
+          );
+          for (let connectedNode of connectedNodes) {
+            this.invalidateNode(connectedNode, FILE_CREATE);
+          }
+        }
+      }
     }
 
     // Find the `file_name` node for the parent directory and
@@ -904,14 +937,20 @@ export class RequestGraph extends ContentGraph<
      * True if this is the start-up (loading phase) invalidation.
      */
     isInitialBuild: boolean = false,
-  ): Async<boolean> {
+  ): Promise<{|
+    didInvalidate: boolean,
+    invalidationsByPath: Map<string, number>,
+  |}> {
     let didInvalidate = false;
+    let count = 0;
     let predictedTime = 0;
     let startTime = Date.now();
+    const enableOptimization = getFeatureFlag('fixQuadraticCacheInvalidation');
+    const removeOrphans = !enableOptimization;
 
     const invalidatedNodes = new Set();
     const invalidateNode = (nodeId, reason) => {
-      if (invalidatedNodes.has(nodeId)) {
+      if (enableOptimization && invalidatedNodes.has(nodeId)) {
         return;
       }
       invalidatedNodes.add(nodeId);
@@ -920,7 +959,7 @@ export class RequestGraph extends ContentGraph<
     const aboveCache = new Map();
     const getAbove = (fileNameNodeId) => {
       const cachedResult = aboveCache.get(fileNameNodeId);
-      if (cachedResult) {
+      if (enableOptimization && cachedResult) {
         return cachedResult;
       }
 
@@ -939,7 +978,34 @@ export class RequestGraph extends ContentGraph<
       return above;
     };
 
+    const invalidationsByPath = new Map();
     for (let {path: _path, type} of events) {
+      const invalidationsBefore = this.getInvalidNodeCount();
+
+      if (
+        !enableOptimization &&
+        process.env.ATLASPACK_DISABLE_CACHE_TIMEOUT !== 'true' &&
+        ++count === 256
+      ) {
+        let duration = Date.now() - startTime;
+        predictedTime = duration * (events.length >> 8);
+        if (predictedTime > threshold) {
+          logger.warn({
+            origin: '@atlaspack/core',
+            message:
+              'Building with clean cache. Cache invalidation took too long.',
+            meta: {
+              trackableEvent: 'cache_invalidation_timeout',
+              watcherEventCount: events.length,
+              predictedTime,
+            },
+          });
+          throw new FSBailoutError(
+            'Responding to file system events exceeded threshold, start with empty cache.',
+          );
+        }
+      }
+
       let _filePath = toProjectPath(options.projectRoot, _path);
       let filePath = fromProjectPathRelative(_filePath);
       let hasFileRequest = this.hasContentKey(filePath);
@@ -961,7 +1027,10 @@ export class RequestGraph extends ContentGraph<
             this.invalidNodeIds.add(id);
           }
         }
-        return true;
+        return {
+          didInvalidate: true,
+          invalidationsByPath: new Map(),
+        };
       }
 
       // sometimes mac os reports update events as create events.
@@ -1038,7 +1107,7 @@ export class RequestGraph extends ContentGraph<
         // Delete the file node since it doesn't exist anymore.
         // This ensures that files that don't exist aren't sent
         // to requests as invalidations for future requests.
-        this.removeNode(nodeId, false);
+        this.removeNode(nodeId, removeOrphans);
       }
 
       let configKeyNodes = this.configKeyNodes.get(_filePath);
@@ -1070,13 +1139,22 @@ export class RequestGraph extends ContentGraph<
               );
             }
             didInvalidate = true;
-            this.removeNode(nodeId, false);
+            this.removeNode(nodeId, removeOrphans);
           }
         }
       }
+
+      const invalidationsAfter = this.getInvalidNodeCount();
+      const invalidationsForEvent = invalidationsAfter - invalidationsBefore;
+      invalidationsByPath.set(
+        _path,
+        (invalidationsByPath.get(_path) ?? 0) + invalidationsForEvent,
+      );
     }
 
-    cleanUpOrphans(this);
+    if (getFeatureFlag('fixQuadraticCacheInvalidation')) {
+      cleanUpOrphans(this);
+    }
 
     let duration = Date.now() - startTime;
     logger.verbose({
@@ -1092,7 +1170,10 @@ export class RequestGraph extends ContentGraph<
       },
     });
 
-    return didInvalidate && this.invalidNodeIds.size > 0;
+    return {
+      didInvalidate,
+      invalidationsByPath,
+    };
   }
 
   hasCachedRequestChunk(index: number): boolean {
@@ -1105,6 +1186,13 @@ export class RequestGraph extends ContentGraph<
 
   removeCachedRequestChunkForNode(nodeId: number): void {
     this.cachedRequestChunks.delete(Math.floor(nodeId / this.nodesPerBlob));
+  }
+
+  /**
+   * Returns the number of invalidated nodes in the graph.
+   */
+  getInvalidNodeCount(): number {
+    return this.invalidNodeIds.size;
   }
 }
 
@@ -1229,7 +1317,13 @@ export default class RequestTracker {
     }
   }
 
-  respondToFSEvents(events: Array<Event>, threshold: number): Async<boolean> {
+  respondToFSEvents(
+    events: Array<Event>,
+    threshold: number,
+  ): Promise<{|
+    didInvalidate: boolean,
+    invalidationsByPath: Map<string, number>,
+  |}> {
     return this.graph.respondToFSEvents(events, this.options, threshold);
   }
 
@@ -1726,7 +1820,9 @@ async function loadRequestGraph(options): Async<RequestGraph> {
     : `requestGraph-${cacheKey}`;
 
   let timeout;
-  const snapshotKey = `snapshot-${cacheKey}`;
+  const snapshotKey = getFeatureFlag('cachePerformanceImprovements')
+    ? `${cacheKey}/snapshot`
+    : `snapshot-${cacheKey}`;
   const snapshotPath = path.join(options.cacheDir, snapshotKey + '.txt');
 
   const commonMeta = {
@@ -1842,7 +1938,11 @@ async function loadRequestGraph(options): Async<RequestGraph> {
  */
 type InvalidationFn = {|
   key: string,
-  fn: () => string[] | void | Promise<void>,
+  fn: () =>
+    | InvalidationDetail
+    | Promise<InvalidationDetail>
+    | void
+    | Promise<void>,
 |};
 
 type InvalidationStats = {|
@@ -1873,6 +1973,33 @@ type InvalidationStats = {|
 |};
 
 /**
+ * Details about an invalidation.
+ *
+ * If this is a fs events invalidation, this key will contain statistics about invalidations
+ * by path.
+ *
+ * If this is a env or option invalidation, this key will contain the list of changed environment
+ * variables or options.
+ */
+type InvalidationDetail = string[] | FSInvalidationStats;
+
+/**
+ * Number of invalidations for a given file-system event.
+ */
+type FSInvalidation = {|
+  path: string,
+  count: number,
+|};
+
+type FSInvalidationStats = {|
+  /**
+   * This list will be sorted by the number of nodes invalidated and only the top 10 will be
+   * included.
+   */
+  biggestInvalidations: FSInvalidation[],
+|};
+
+/**
  * Information about a certain cache invalidation type.
  */
 type InvalidationFnStats = {|
@@ -1892,8 +2019,14 @@ type InvalidationFnStats = {|
   count: number,
   /**
    * If this is a env or option invalidation, this key will contain the list of changed values.
+   *
+   * If this is a fs events invalidation, this key will contain statistics about invalidations
    */
-  changes: null | string[],
+  detail: null | InvalidationDetail,
+  /**
+   * Time in milliseconds it took to run the invalidation.
+   */
+  duration: number,
 |};
 
 /**
@@ -1902,7 +2035,7 @@ type InvalidationFnStats = {|
  *
  * Returns the count of nodes invalidated by each invalidation type.
  */
-async function invalidateRequestGraph(
+export async function invalidateRequestGraph(
   requestGraph: RequestGraph,
   options: AtlaspackOptions,
   events: Event[],
@@ -1926,14 +2059,7 @@ async function invalidateRequestGraph(
     },
     {
       key: 'fsEvents',
-      fn: async () => {
-        await requestGraph.respondToFSEvents(
-          options.unstableFileInvalidations || events,
-          options,
-          10000,
-          true,
-        );
-      },
+      fn: () => invalidateRequestGraphFSEvents(requestGraph, options, events),
     },
   ];
 
@@ -1963,22 +2089,61 @@ async function invalidateRequestGraph(
   };
 }
 
+interface InvalidateRequestGraphFSEventsInput {
+  respondToFSEvents(
+    events: Event[],
+    options: AtlaspackOptions,
+    timeout: number,
+    shouldLog: boolean,
+  ): Promise<{invalidationsByPath: Map<string, number>, ...}>;
+}
+
+/**
+ * Invalidate the request graph based on file-system events.
+ *
+ * Returns statistics about the invalidations.
+ */
+export async function invalidateRequestGraphFSEvents(
+  requestGraph: InvalidateRequestGraphFSEventsInput,
+  options: AtlaspackOptions,
+  events: Event[],
+): Promise<FSInvalidationStats> {
+  const {invalidationsByPath} = await requestGraph.respondToFSEvents(
+    options.unstableFileInvalidations || events,
+    options,
+    10000,
+    true,
+  );
+  const biggestInvalidations =
+    getBiggestFSEventsInvalidations(invalidationsByPath);
+
+  return {
+    biggestInvalidations,
+  };
+}
+
+interface RunInvalidationInput {
+  getInvalidNodeCount(): number;
+}
+
 /**
  * Runs an invalidation function and reports metrics.
  */
-async function runInvalidation(
-  requestGraph: RequestGraph,
+export async function runInvalidation(
+  requestGraph: RunInvalidationInput,
   invalidationFn: InvalidationFn,
 ): Promise<InvalidationFnStats> {
-  const startInvalidationCount = requestGraph.invalidNodeIds.size;
+  const start = performance.now();
+  const startInvalidationCount = requestGraph.getInvalidNodeCount();
   const result = await invalidationFn.fn();
-  const count = requestGraph.invalidNodeIds.size - startInvalidationCount;
+  const count = requestGraph.getInvalidNodeCount() - startInvalidationCount;
+  const duration = performance.now() - start;
 
   return {
     key: invalidationFn.key,
     count,
-    changes:
-      typeof result === 'object' && Array.isArray(result) ? result : null,
+    detail: result ?? null,
+    duration,
   };
 }
 
@@ -2032,4 +2197,20 @@ export function cleanUpOrphans<N, E: number>(graph: Graph<N, E>): NodeId[] {
   });
 
   return removedNodeIds;
+}
+
+/**
+ * Returns paths that invalidated the most nodes
+ */
+export function getBiggestFSEventsInvalidations(
+  invalidationsByPath: Map<string, number>,
+  limit: number = 10,
+): Array<FSInvalidation> {
+  const invalidations = [];
+  for (const [path, count] of invalidationsByPath) {
+    invalidations.push({path, count});
+  }
+  invalidations.sort((a, b) => b.count - a.count);
+
+  return invalidations.slice(0, limit);
 }

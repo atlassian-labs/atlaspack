@@ -51,7 +51,6 @@ async function main() {
       const throughput = numEntriesInserted / duration;
       console.log('Throughput:', throughput, 'entries / second');
     }
-    safeDB.close();
   }
 
   {
@@ -90,7 +89,6 @@ async function main() {
       const throughput = numEntriesInserted / duration;
       console.log('Safe Throughput:', throughput, 'entries / second');
     }
-    safeDB.close();
   }
 }
 

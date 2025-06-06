@@ -39,6 +39,7 @@ import {hashString, createAssetId as createAssetIdRust} from '@atlaspack/rust';
 import {BundleBehavior as BundleBehaviorMap} from './types';
 import {PluginTracer} from '@atlaspack/profiler';
 import {identifierRegistry} from './IdentifierRegistry';
+import type {EnvironmentRef} from './EnvironmentManager';
 
 export type AssetOptions = {|
   id?: string,
@@ -55,7 +56,7 @@ export type AssetOptions = {|
   bundleBehavior?: ?BundleBehavior,
   isBundleSplittable?: ?boolean,
   isSource: boolean,
-  env: string,
+  env: EnvironmentRef,
   meta?: Meta,
   outputHash?: ?string,
   pipeline?: ?string,

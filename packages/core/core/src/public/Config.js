@@ -20,6 +20,7 @@ import {
 } from '@atlaspack/utils';
 import Environment from './Environment';
 import {fromProjectPath, toProjectPath} from '../projectPath';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {fromEnvironmentId} from '../EnvironmentManager';
 
 const internalConfigToConfig: DefaultWeakMap<
@@ -133,11 +134,21 @@ export default class PublicConfig implements IConfig {
   async getConfigFrom<T>(
     searchPath: FilePath,
     fileNames: Array<string>,
-    options: ?{|
-      packageKey?: string,
-      parse?: boolean,
-      exclude?: boolean,
-    |},
+    options:
+      | ?{|
+          /**
+           * @deprecated Use `configKey` instead.
+           */
+          packageKey?: string,
+          parse?: boolean,
+          exclude?: boolean,
+        |}
+      | ?{|
+          /**
+           * If specified, only invalidate when this config key changes.
+           */
+          configKey?: string,
+        |},
   ): Promise<?ConfigResultWithFilePath<T>> {
     let packageKey = options?.packageKey;
     if (packageKey != null) {
@@ -153,6 +164,29 @@ export default class PublicConfig implements IConfig {
           contents: pkg.contents[packageKey],
           filePath: pkg.filePath,
         };
+      }
+    }
+
+    if (getFeatureFlag('granularTsConfigInvalidation')) {
+      const configKey = options?.configKey;
+      if (configKey != null) {
+        for (let fileName of fileNames) {
+          let config = await this.getConfigFrom(searchPath, [fileName], {
+            exclude: true,
+          });
+
+          if (config && config.contents[configKey]) {
+            // Invalidate only when the package key changes
+            this.invalidateOnConfigKeyChange(config.filePath, configKey);
+
+            return {
+              contents: config.contents[configKey],
+              filePath: config.filePath,
+            };
+          }
+        }
+
+        // fall through so that file above invalidations are registered
       }
     }
 

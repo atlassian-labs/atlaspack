@@ -60,18 +60,41 @@ export async function report({
 
     const manifest = {};
     for (const conditions of bundles.values()) {
-      const bundleInfo = {};
+      const oldBundleInfo = {};
       for (const [key, cond] of conditions) {
-        const bundle = cond.bundle;
-        bundleInfo[key] = {
-          // Reverse bundles so we load children bundles first
-          ifTrueBundles: mapBundles(cond.ifTrueBundles).reverse(),
-          ifFalseBundles: mapBundles(cond.ifFalseBundles).reverse(),
-        };
-        manifest[bundle.target.name] ??= {};
-        manifest[bundle.target.name][
-          relative(bundle.target.distDir, bundle.filePath)
-        ] = bundleInfo;
+        if (getFeatureFlag('conditionalBundlingReporterSameConditionFix')) {
+          const bundle = cond.bundle;
+          const relativeBundlePath = relative(
+            bundle.target.distDir,
+            bundle.filePath,
+          );
+
+          const bundleInfo =
+            manifest[bundle.target.name]?.[relativeBundlePath] ?? {};
+
+          bundleInfo[key] = {
+            ifTrueBundles: mapBundles(cond.ifTrueBundles)
+              .concat(bundleInfo[key]?.ifTrueBundles ?? [])
+              .sort(),
+            ifFalseBundles: mapBundles(cond.ifFalseBundles)
+              .concat(bundleInfo[key]?.ifFalseBundles ?? [])
+              .sort(),
+          };
+
+          manifest[bundle.target.name] ??= {};
+          manifest[bundle.target.name][relativeBundlePath] = bundleInfo;
+        } else {
+          const bundle = cond.bundle;
+          oldBundleInfo[key] = {
+            // Reverse bundles so we load children bundles first
+            ifTrueBundles: mapBundles(cond.ifTrueBundles).reverse(),
+            ifFalseBundles: mapBundles(cond.ifFalseBundles).reverse(),
+          };
+          manifest[bundle.target.name] ??= {};
+          manifest[bundle.target.name][
+            relative(bundle.target.distDir, bundle.filePath)
+          ] = oldBundleInfo;
+        }
       }
     }
 

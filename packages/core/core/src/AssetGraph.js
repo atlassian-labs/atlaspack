@@ -29,7 +29,7 @@ import nullthrows from 'nullthrows';
 import {ContentGraph} from '@atlaspack/graph';
 import {createDependency} from './Dependency';
 import {type ProjectPath, fromProjectPathRelative} from './projectPath';
-import {fromEnvironmentId} from './EnvironmentManager';
+import {fromEnvironmentId, toEnvironmentId} from './EnvironmentManager';
 
 type InitOpts = {|
   entries?: Array<ProjectPath>,
@@ -66,7 +66,7 @@ export function nodeFromAssetGroup(assetGroup: AssetGroup): AssetGroupNode {
   return {
     id: hashString(
       fromProjectPathRelative(assetGroup.filePath) +
-        assetGroup.env +
+        toEnvironmentId(assetGroup.env) +
         String(assetGroup.isSource) +
         String(assetGroup.sideEffects) +
         (assetGroup.code ?? '') +

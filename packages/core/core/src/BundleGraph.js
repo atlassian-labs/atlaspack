@@ -50,6 +50,7 @@ import {fromProjectPath, fromProjectPathRelative} from './projectPath';
 import {HASH_REF_PREFIX} from './constants';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {fromEnvironmentId} from './EnvironmentManager';
+import type {EnvironmentRef} from './EnvironmentManager';
 
 export const bundleGraphEdgeTypes = {
   // A lack of an edge type indicates to follow the edge while traversing
@@ -557,11 +558,11 @@ export default class BundleGraph {
           +needsStableName?: ?boolean,
           +bundleBehavior?: ?IBundleBehavior,
           +shouldContentHash: boolean,
-          +env: string,
+          +env: EnvironmentRef,
         |}
       | {|
           +type: string,
-          +env: string,
+          +env: EnvironmentRef,
           +uniqueKey: string,
           +target: Target,
           +needsStableName?: ?boolean,

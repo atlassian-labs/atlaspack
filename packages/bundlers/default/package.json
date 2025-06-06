@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/bundler-default",
-  "version": "2.16.1",
+  "version": "2.16.2",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -17,11 +17,11 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.1",
-    "@atlaspack/feature-flags": "2.15.1",
-    "@atlaspack/graph": "3.4.6",
-    "@atlaspack/plugin": "2.14.8",
-    "@atlaspack/rust": "3.3.3",
-    "@atlaspack/utils": "2.14.8",
+    "@atlaspack/feature-flags": "2.16.0",
+    "@atlaspack/graph": "3.4.7",
+    "@atlaspack/plugin": "2.14.9",
+    "@atlaspack/rust": "3.3.4",
+    "@atlaspack/utils": "2.14.9",
     "nullthrows": "^1.1.1"
   }
 }
