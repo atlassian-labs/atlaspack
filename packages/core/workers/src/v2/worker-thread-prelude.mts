@@ -1,6 +1,7 @@
 import {parentPort, workerData, MessageChannel, type MessagePort} from 'node:worker_threads';
-import type {  MasterCall, Serializable, Transferrable, WorkerMessage } from './worker-interface.mts';
+import type {  MasterCall, WorkerMessage } from './worker-interface.mts';
 import { PromiseSubject } from './promise-subject.mts';
+import { HandleRef } from './handle-ref.mts';
 
 main();
 async function main() {
@@ -38,7 +39,7 @@ async function main() {
   }
 
   // RPC for the module
-  async function onMessageCallback([id, methodName, args]: WorkerMessage) {
+  async function onMessageCallback([id, methodName, args, serdeArgs]: WorkerMessage) {
     try {
       const result = await module[methodName](api, ...args);
       onEvent.postMessage([id, result]);
@@ -66,7 +67,6 @@ async function main() {
 
 type ListenerMap = Map<number, PromiseSubject<any>>
 
-
 class Api {
   #portMessage: MessagePort
   #counter: number;
@@ -78,7 +78,7 @@ class Api {
   ) {
     this.#portMessage = portMessage
     portMessage.on('message', this.#onmessage);
-    portError.on('message', this.#onmessage);
+    portError.on('message', this.#onerror);
     this.#counter = 0
     this.#listeners = new Map();
   }
@@ -95,7 +95,15 @@ class Api {
     const id = this.#counter++;
     const resp = new PromiseSubject<any>();
     this.#listeners.set(id, resp);
-    this.#portMessage.postMessage([id, options.location, options.args])
+    this.#portMessage.postMessage([id, 0, options.location, options.args])
+    return resp
+  }
+
+  runHandle<R, A extends Array<Transferable>>(handle: number, args: A): Promise<R> {
+    const id = this.#counter++;
+    const resp = new PromiseSubject<any>();
+    this.#listeners.set(id, resp);
+    this.#portMessage.postMessage([id, 1, handle, args])
     return resp
   }
 }

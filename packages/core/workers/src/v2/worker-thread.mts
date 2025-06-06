@@ -9,7 +9,7 @@ import type {
   IWorker,
   WorkerStatus,
   Transferrable,
-  Serializable,
+  HandleFunc,
 } from './worker-interface.mts';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -19,6 +19,7 @@ type ListenerMap = Map<number, PromiseSubject<any>>;
 export type WorkerThreadOptions = {
   workerTimeout: number;
   workerPath: string;
+  reverseHandles: Array<HandleFunc>;
 };
 
 export class WorkerThread extends EventEmitter implements IWorker {
@@ -29,6 +30,7 @@ export class WorkerThread extends EventEmitter implements IWorker {
   #listeners: ListenerMap;
   #counter: number;
   #status: WorkerStatus;
+  #reverseHandles: Array<HandleFunc>;
 
   constructor(options: WorkerThreadOptions) {
     super();
@@ -39,6 +41,7 @@ export class WorkerThread extends EventEmitter implements IWorker {
     this.#onEvent = new PromiseSubject();
     this.#onInternal = new PromiseSubject();
     this.#onEventMaster = new PromiseSubject();
+    this.#reverseHandles = options.reverseHandles;
 
     const worker = new Worker(
       path.join(__dirname, 'worker-thread-prelude.mts'),
@@ -91,11 +94,23 @@ export class WorkerThread extends EventEmitter implements IWorker {
     this.#listeners.get(id)!.resolve(payload);
   };
 
-  #onmessagemaster = async ([id, location, args]: [number, string, any[]]) => {
+  #onmessagemaster = async ([id, kind, ...payload]: [number, number, string, any[]]) => {
     try {
-      const module = await import(location);
-      const result = await module.default(...args);
-      (await this.#onEventMaster).postMessage([id, result]);
+      switch (kind) {
+        case 0: {
+          const [location, args] = payload
+          const module = await import(location);
+          const result = await module.default(...args);
+          (await this.#onEventMaster).postMessage([id, result]);
+          break
+        }
+        case 1: {
+          const [handle, args] = payload
+          const result = await this.#reverseHandles[handle](...args);
+          (await this.#onEventMaster).postMessage([id, result]);
+          break
+        }
+      }
     } catch (error) {
       console.log(error);
     }
@@ -105,7 +120,7 @@ export class WorkerThread extends EventEmitter implements IWorker {
     this.#listeners.get(id)!.reject(payload);
   };
 
-  async exec(methodName: string, args: Array<Transferrable>): Promise<unknown> {
+  async exec(methodName: string, args: Array<Transferrable>, serdeArgs: number[]): Promise<unknown> {
     const [id, resp] = this.#addTask();
 
     (await this.#onEvent).postMessage(
@@ -113,6 +128,7 @@ export class WorkerThread extends EventEmitter implements IWorker {
         id,
         methodName,
         args,
+        serdeArgs,
       ],
       args.filter(
         (arg) =>

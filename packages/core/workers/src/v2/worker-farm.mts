@@ -2,10 +2,18 @@ import {EventEmitter} from 'node:events';
 import {DEFAULT_WORKER_TIMEOUT} from './constants.mts';
 import {WorkerThread} from './worker-thread.mts';
 import type {WorkerThreadOptions} from './worker-thread.mts';
-import type {IWorker, WorkerStatus, Transferrable} from './worker-interface.mts';
+import type {
+  IWorker,
+  WorkerStatus,
+  Transferrable,
+  HandleFunc,
+} from './worker-interface.mts';
+import {Serializable} from './worker-interface.mts';
+import {HandleRef} from './handle-ref.mts';
 
 export type WorkerFarmWorkerStatus = {
   totalTasks: number;
+  handles: number;
   workers: Array<{
     tasks: number;
     status: WorkerStatus;
@@ -20,11 +28,16 @@ export type WorkerFarmOptions = {
 
 export class WorkerFarm extends EventEmitter {
   #workers: Array<IWorker>;
+  #reverseHandles: Array<HandleFunc>;
 
   constructor(options: WorkerFarmOptions) {
     super();
     const resolvedOptions = WorkerFarm.resolveOptions(options);
-    this.#workers = WorkerFarm.spawnWorkers(resolvedOptions);
+    this.#reverseHandles = [];
+    this.#workers = WorkerFarm.spawnWorkers({
+      reverseHandles: this.#reverseHandles,
+      ...resolvedOptions,
+    });
     this.onReady().then(() => this.emit('ready'));
   }
 
@@ -49,6 +62,7 @@ export class WorkerFarm extends EventEmitter {
     for (let i = 0; i < options.workerCount; i++) {
       workers.push(
         new WorkerThread({
+          reverseHandles: options.reverseHandles,
           workerTimeout: options.workerTimeout,
           workerPath: options.workerPath,
         }),
@@ -64,6 +78,7 @@ export class WorkerFarm extends EventEmitter {
   status(): WorkerFarmWorkerStatus {
     return {
       totalTasks: this.tasks(),
+      handles: this.#reverseHandles.length,
       workers: this.#workers.map((w) => ({
         tasks: w.tasks(),
         status: w.status(),
@@ -79,7 +94,9 @@ export class WorkerFarm extends EventEmitter {
     return i;
   }
 
-  run<R = unknown, A extends Array<Transferrable> = any[]>(...args: A): Promise<R> {
+  run<R = unknown, A extends Array<Transferrable> = any[]>(
+    ...args: A
+  ): Promise<R> {
     return this.exec('run', args);
   }
 
@@ -87,7 +104,17 @@ export class WorkerFarm extends EventEmitter {
     methodName: string,
     args: A,
   ): Promise<R> {
-    return this.#workers[this.#next()].exec(methodName, args) as Promise<R>;
+    const serdeArgs: Array<number> = [];
+    const preparedArgs = args.map((arg, index) =>
+      arg instanceof Serializable
+        ? serdeArgs.push(index) && arg.serialize()
+        : arg,
+    );
+    return this.#workers[this.#next()].exec(
+      methodName,
+      preparedArgs,
+      serdeArgs,
+    ) as Promise<R>;
   }
 
   async flush(): Promise<void> {
@@ -98,6 +125,13 @@ export class WorkerFarm extends EventEmitter {
    * any async actions to complete before resolving */
   async end(): Promise<void> {
     await Promise.all(this.#workers.map((w) => w.end()));
+    this.#reverseHandles.length = 0; // clear the array
+  }
+
+  createReverseHandle<R = unknown, A extends Array<Transferrable> = any[]>(
+    handleFunc: HandleFunc<R, A>,
+  ): HandleRef {
+    return new HandleRef(this.#reverseHandles.push(handleFunc) - 1);
   }
 
   /** @description Find the next worker with 0 active tasks
