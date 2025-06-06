@@ -1,3 +1,5 @@
+// @flow strict-local
+
 import assert from 'assert';
 import {
   getAllEnvironments,
