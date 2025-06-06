@@ -784,7 +784,7 @@ export default class PackagerRunner {
       if (getFeatureFlag('cachePerformanceImprovements')) {
         await this.options.cache.setLargeBlob(cacheKeys.content, buffer);
       } else {
-        await this.options.cache.set(cacheKeys.content, buffer);
+        await this.options.cache.setBlob(cacheKeys.content, buffer);
       }
     } else {
       size = contents.length;
@@ -794,7 +794,7 @@ export default class PackagerRunner {
       if (getFeatureFlag('cachePerformanceImprovements')) {
         await this.options.cache.setLargeBlob(cacheKeys.content, contents);
       } else {
-        await this.options.cache.set(cacheKeys.content, contents);
+        await this.options.cache.setBlob(cacheKeys.content, contents);
       }
     }
 
@@ -802,7 +802,7 @@ export default class PackagerRunner {
       if (getFeatureFlag('cachePerformanceImprovements')) {
         await this.options.cache.setLargeBlob(cacheKeys.map, map);
       } else {
-        await this.options.cache.set(cacheKeys.map, map);
+        await this.options.cache.setBlob(cacheKeys.map, map);
       }
     }
 

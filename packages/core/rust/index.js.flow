@@ -339,7 +339,6 @@ declare export class Lmdb {
   startWriteTransaction(): Promise<void>;
   commitWriteTransaction(): Promise<void>;
   delete(key: string): Promise<void>;
-  close(): void;
   compact(targetPath: string): void;
 }
 

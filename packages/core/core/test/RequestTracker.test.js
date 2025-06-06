@@ -5,6 +5,9 @@ import nullthrows from 'nullthrows';
 import RequestTracker, {
   type RunAPI,
   cleanUpOrphans,
+  runInvalidation,
+  getBiggestFSEventsInvalidations,
+  invalidateRequestGraphFSEvents,
 } from '../src/RequestTracker';
 import {Graph} from '@atlaspack/graph';
 import {LMDBLiteCache} from '@atlaspack/cache';
@@ -14,6 +17,8 @@ import {FILE_CREATE, FILE_UPDATE, INITIAL_BUILD} from '../src/constants';
 import {makeDeferredWithPromise} from '@atlaspack/utils';
 import {toProjectPath} from '../src/projectPath';
 import {DEFAULT_FEATURE_FLAGS, setFeatureFlags} from '../../feature-flags/src';
+import sinon from 'sinon';
+import type {AtlaspackOptions} from '../src/types';
 
 const options = {
   ...DEFAULT_OPTIONS,
@@ -465,87 +470,93 @@ describe('RequestTracker', () => {
   });
 
   describe('respondToFSEvents', () => {
-    beforeEach(() => {
-      setFeatureFlags({
-        ...DEFAULT_FEATURE_FLAGS,
+    [true, false].forEach((value) => {
+      beforeEach(() => {
+        setFeatureFlags({
+          ...DEFAULT_FEATURE_FLAGS,
+          fixQuadraticCacheInvalidation: value === true ? 'NEW' : 'OLD',
+        });
       });
-    });
 
-    afterEach(() => {
-      setFeatureFlags({
-        ...DEFAULT_FEATURE_FLAGS,
+      afterEach(() => {
+        setFeatureFlags({
+          ...DEFAULT_FEATURE_FLAGS,
+        });
       });
-    });
 
-    it('should invalidate file requests on file changes', async () => {
-      let tracker = new RequestTracker({farm, options});
-      await tracker.runRequest({
-        id: 'abc',
-        type: 7,
-        // $FlowFixMe string isn't a valid result
-        run: async ({api}: {api: RunAPI<string | void>, ...}) => {
-          api.invalidateOnFileUpdate(toProjectPath('', 'my-file'));
-          let result = await Promise.resolve('hello');
-          api.storeResult(result);
-        },
-        input: null,
-      });
-      const requestId = tracker.graph.getNodeIdByContentKey('abc');
-      const invalidated = await tracker.respondToFSEvents(
-        [
-          {
-            type: 'update',
-            path: 'my-file',
-          },
-        ],
-        Number.MAX_VALUE,
-      );
-      assert.equal(invalidated, true);
-      assert.equal(
-        tracker.graph.getNode(requestId)?.invalidateReason,
-        FILE_UPDATE,
-      );
-      assert.deepEqual(Array.from(tracker.graph.invalidNodeIds), [requestId]);
-    });
-
-    /**
-     * This test-case has been missed and invalidation is broken on this case.
-     */
-    it.skip('should invalidate file name requests with invalidate above invalidations', async () => {
-      let tracker = new RequestTracker({farm, options});
-      await tracker.runRequest({
-        id: 'abc',
-        type: 7,
-        // $FlowFixMe string isn't a valid result
-        run: async ({api}: {api: RunAPI<string | void>, ...}) => {
-          api.invalidateOnFileCreate({
-            fileName: 'package.json',
-            aboveFilePath: toProjectPath(
-              '',
-              './node_modules/something/package.json',
-            ),
+      describe(`optimizations feature-flag ${String(value)}`, () => {
+        it('should invalidate file requests on file changes', async () => {
+          let tracker = new RequestTracker({farm, options});
+          await tracker.runRequest({
+            id: 'abc',
+            type: 7,
+            // $FlowFixMe string isn't a valid result
+            run: async ({api}: {api: RunAPI<string | void>, ...}) => {
+              api.invalidateOnFileUpdate(toProjectPath('', 'my-file'));
+              let result = await Promise.resolve('hello');
+              api.storeResult(result);
+            },
+            input: null,
           });
-          let result = await Promise.resolve('hello');
-          api.storeResult(result);
-        },
-        input: null,
+          const requestId = tracker.graph.getNodeIdByContentKey('abc');
+          const {didInvalidate: invalidated} = await tracker.respondToFSEvents(
+            [
+              {
+                type: 'update',
+                path: 'my-file',
+              },
+            ],
+            Number.MAX_VALUE,
+          );
+          assert.equal(invalidated, true);
+          assert.equal(
+            tracker.graph.getNode(requestId)?.invalidateReason,
+            FILE_UPDATE,
+          );
+          assert.deepEqual(Array.from(tracker.graph.invalidNodeIds), [
+            requestId,
+          ]);
+        });
+
+        it('should invalidate file name requests with invalidate above invalidations', async () => {
+          let tracker = new RequestTracker({farm, options});
+          await tracker.runRequest({
+            id: 'abc',
+            type: 7,
+            // $FlowFixMe string isn't a valid result
+            run: async ({api}: {api: RunAPI<string | void>, ...}) => {
+              api.invalidateOnFileCreate({
+                fileName: 'package.json',
+                aboveFilePath: toProjectPath(
+                  '',
+                  './node_modules/something/package.json',
+                ),
+              });
+              let result = await Promise.resolve('hello');
+              api.storeResult(result);
+            },
+            input: null,
+          });
+          const requestId = tracker.graph.getNodeIdByContentKey('abc');
+          const {didInvalidate: invalidated} = await tracker.respondToFSEvents(
+            [
+              {
+                type: 'create',
+                path: './package.json',
+              },
+            ],
+            Number.MAX_VALUE,
+          );
+          assert.equal(invalidated, true);
+          assert.equal(
+            tracker.graph.getNode(requestId)?.invalidateReason,
+            FILE_CREATE,
+          );
+          assert.deepEqual(Array.from(tracker.graph.invalidNodeIds), [
+            requestId,
+          ]);
+        });
       });
-      const requestId = tracker.graph.getNodeIdByContentKey('abc');
-      const invalidated = await tracker.respondToFSEvents(
-        [
-          {
-            type: 'create',
-            path: './package.json',
-          },
-        ],
-        Number.MAX_VALUE,
-      );
-      assert.equal(invalidated, true);
-      assert.equal(
-        tracker.graph.getNode(requestId)?.invalidateReason,
-        FILE_CREATE,
-      );
-      assert.deepEqual(Array.from(tracker.graph.invalidNodeIds), [requestId]);
     });
   });
 });
@@ -588,5 +599,100 @@ root --- node1 --- node2 ----------- orphan1 --- orphan2
     assert.deepEqual(cleanUpOrphans(graph), [orphan1, orphan2]);
     assert.equal(getNonNullNodes(graph).length, 4);
     assert.equal(Array.from(graph.getAllEdges()).length, 3);
+  });
+});
+
+describe('runInvalidation', () => {
+  it('calls an invalidationFn and tracks the number of invalidated nodes', async () => {
+    const mockRequestTracker = {
+      getInvalidNodeCount: sinon.stub(),
+    };
+
+    mockRequestTracker.getInvalidNodeCount.returns(10000);
+    const result = await runInvalidation(mockRequestTracker, {
+      key: 'fsEvents',
+      fn: () => {
+        mockRequestTracker.getInvalidNodeCount.returns(30000);
+        return {
+          biggestInvalidations: [{path: 'my-file', count: 10000}],
+        };
+      },
+    });
+
+    assert.equal(result.key, 'fsEvents');
+    assert.equal(result.count, 20000);
+    assert.deepEqual(result.detail, {
+      biggestInvalidations: [{path: 'my-file', count: 10000}],
+    });
+    assert(result.duration > 0, 'Duration was not reported');
+  });
+});
+
+describe('invalidateRequestGraphFSEvents', () => {
+  it('calls requestGraph.respondToFSEvents and returns the biggest invalidations', async () => {
+    const requestGraph = {
+      respondToFSEvents: sinon.stub(),
+    };
+
+    requestGraph.respondToFSEvents.returns({
+      invalidationsByPath: new Map([
+        ['file-1', 10],
+        ['file-2', 5000],
+        ['file-3', 8000],
+      ]),
+    });
+    // $FlowFixMe
+    const options: AtlaspackOptions = {
+      unstableFileInvalidations: undefined,
+    };
+
+    const result = await invalidateRequestGraphFSEvents(requestGraph, options, [
+      {
+        path: 'file-1',
+        type: 'create',
+      },
+      {
+        path: 'file-2',
+        type: 'update',
+      },
+      {
+        path: 'file-3',
+        type: 'delete',
+      },
+    ]);
+
+    assert.deepEqual(result.biggestInvalidations, [
+      {path: 'file-3', count: 8000},
+      {path: 'file-2', count: 5000},
+      {path: 'file-1', count: 10},
+    ]);
+    assert.equal(requestGraph.respondToFSEvents.callCount, 1);
+    assert.deepEqual(requestGraph.respondToFSEvents.args[0], [
+      [
+        {path: 'file-1', type: 'create'},
+        {path: 'file-2', type: 'update'},
+        {path: 'file-3', type: 'delete'},
+      ],
+      options,
+      10000,
+      true,
+    ]);
+  });
+});
+
+describe('getBiggestFSEventsInvalidations', () => {
+  it('returns the paths that invalidated the most nodes', () => {
+    const invalidationsByPath = new Map([
+      ['file-1', 10],
+      ['file-2', 5000],
+      ['file-3', 8000],
+      ['file-4', 1000],
+      ['file-5', 1000],
+    ]);
+
+    assert.deepEqual(getBiggestFSEventsInvalidations(invalidationsByPath, 2), [
+      {path: 'file-3', count: 8000},
+      {path: 'file-2', count: 5000},
+    ]);
   });
 });

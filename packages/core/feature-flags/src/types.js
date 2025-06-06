@@ -17,6 +17,10 @@ export type FeatureFlags = {|
    */
   importRetry: boolean,
   /**
+   * Fixes quadratic cache invalidation issue
+   */
+  fixQuadraticCacheInvalidation: ConsistencyCheckFeatureFlagValue,
+  /**
    * Enables an experimental "conditional bundling" API - this allows the use of `importCond` syntax
    * in order to have (consumer) feature flag driven bundling. This feature is very experimental,
    * and requires server-side support.
@@ -33,6 +37,10 @@ export type FeatureFlags = {|
    * - NEW: Return VCS result, but don't call watchman
    */
   vcsMode: ConsistencyCheckFeatureFlagValue,
+  /**
+   * Enable granular TS config invalidation
+   */
+  granularTsConfigInvalidation: boolean,
   /**
    * Refactor cache to:
    * - Split writes into multiple entries
@@ -82,6 +90,10 @@ export type FeatureFlags = {|
    * Enable resolution of bundler config starting from the CWD
    */
   resolveBundlerConfigFromCwd: boolean,
+  /**
+   * Fix a bug where the conditional manifest reporter would drop bundles that have the same condition
+   */
+  conditionalBundlingReporterSameConditionFix: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
@@ -89,3 +101,5 @@ export type ConsistencyCheckFeatureFlagValue =
   | 'OLD'
   | 'NEW_AND_CHECK'
   | 'OLD_AND_CHECK';
+
+declare export var DEFAULT_FEATURE_FLAGS: FeatureFlags;

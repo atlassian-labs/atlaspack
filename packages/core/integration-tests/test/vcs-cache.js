@@ -5,6 +5,7 @@ import childProcess from 'child_process';
 import assert from 'assert';
 import path from 'path';
 import {NodeVCSAwareFS} from '@atlaspack/fs';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {
   bundle,
   assertBundles,
@@ -236,6 +237,20 @@ __metadata:
 }
 
 function findSnapshotPath(): string {
+  if (!getFeatureFlag('cachePerformanceImprovements')) {
+    const filesInCache = fs.readdirSync(cacheDir);
+    const snapshotFileName = filesInCache.find(
+      (file) =>
+        file.startsWith('snapshot-') && !file.endsWith('.native-snapshot.txt'),
+    );
+
+    if (snapshotFileName == null) {
+      throw new Error('No snapshot file found in cache');
+    }
+
+    return path.join(cacheDir, snapshotFileName);
+  }
+
   const requestTrackerKey = fs.readdirSync(
     path.join(cacheDir, 'RequestTracker', ATLASPACK_VERSION),
   )[0];
@@ -941,6 +956,186 @@ __metadata:
     assert.deepEqual(changes2, [
       {path: file2, type: 'update'},
       {path: file3, type: 'update'},
+    ]);
+  });
+
+  it('should handle excluded patterns correctly', async () => {
+    const {root, file1} = setupGitRepository();
+
+    // Create a temporary file that should be excluded
+    const tempFile = path.join(root, 'temp.js');
+    fs.writeFileSync(tempFile, 'module.exports = "temp"');
+
+    const vcsFS = new NodeVCSAwareFS({
+      gitRepoPath: root,
+      excludePatterns: ['temp.js'],
+      logEventDiff: null,
+    });
+
+    // bundle the file
+    const result = await bundle(file1, {
+      inputFS: vcsFS,
+      outputFS: vcsFS,
+      shouldDisableCache: false,
+      featureFlags: {
+        vcsMode: 'NEW',
+      },
+    });
+    assertBundles(result, [
+      {name: 'file1.js', assets: ['file1.js', 'file2.js', 'file3.js']},
+    ]);
+
+    // Modify the excluded file
+    fs.writeFileSync(tempFile, 'module.exports = "temp-modified"');
+
+    const snapshotPath = findSnapshotPath();
+    const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
+
+    // The excluded file should not appear in the changes
+    assert.equal(changes.length, 0);
+  });
+
+  it('should handle file permissions changes', async () => {
+    const {root, file1, file2} = setupGitRepository();
+
+    const vcsFS = new NodeVCSAwareFS({
+      gitRepoPath: root,
+      excludePatterns: [],
+      logEventDiff: null,
+    });
+
+    // bundle the file
+    const result = await bundle(file1, {
+      inputFS: vcsFS,
+      outputFS: vcsFS,
+      shouldDisableCache: false,
+      featureFlags: {
+        vcsMode: 'NEW',
+      },
+    });
+    assertBundles(result, [
+      {name: 'file1.js', assets: ['file1.js', 'file2.js', 'file3.js']},
+    ]);
+
+    // Change file permissions
+    fs.chmodSync(file2, '755');
+
+    const snapshotPath = findSnapshotPath();
+    const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
+
+    // Should detect the permission change
+    assert.deepEqual(changes, [{path: file2, type: 'update'}]);
+  });
+
+  it('should handle large files correctly', async () => {
+    const {root, file1} = setupGitRepository();
+
+    // Create a large file (1MB)
+    const largeFile = path.join(root, 'large.js');
+    const largeContent = 'module.exports = "' + 'x'.repeat(1024 * 1024) + '"';
+    fs.writeFileSync(largeFile, largeContent);
+
+    childProcess.execSync('git add .', {cwd: root, stdio: execStdio});
+    childProcess.execSync('git commit -m "Add large file"', {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    const vcsFS = new NodeVCSAwareFS({
+      gitRepoPath: root,
+      excludePatterns: [],
+      logEventDiff: null,
+    });
+
+    // bundle the file
+    const result = await bundle(file1, {
+      inputFS: vcsFS,
+      outputFS: vcsFS,
+      shouldDisableCache: false,
+      featureFlags: {
+        vcsMode: 'NEW',
+      },
+    });
+    assertBundles(result, [
+      {name: 'file1.js', assets: ['file1.js', 'file2.js', 'file3.js']},
+    ]);
+
+    // Modify the large file
+    const newLargeContent =
+      'module.exports = "' + 'y'.repeat(1024 * 1024) + '"';
+    fs.writeFileSync(largeFile, newLargeContent);
+
+    const snapshotPath = findSnapshotPath();
+    const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
+
+    // Should detect changes in the large file
+    assert.deepEqual(changes, [{path: largeFile, type: 'update'}]);
+  });
+
+  it('should handle file renames correctly', async () => {
+    const {root, file1, file2} = setupGitRepository();
+
+    const vcsFS = new NodeVCSAwareFS({
+      gitRepoPath: root,
+      excludePatterns: [],
+      logEventDiff: null,
+    });
+
+    // bundle the file
+    const result = await bundle(file1, {
+      inputFS: vcsFS,
+      outputFS: vcsFS,
+      shouldDisableCache: false,
+      featureFlags: {
+        vcsMode: 'NEW',
+      },
+    });
+    assertBundles(result, [
+      {name: 'file1.js', assets: ['file1.js', 'file2.js', 'file3.js']},
+    ]);
+
+    // Rename file2 to file2_renamed.js using git
+    const file2Renamed = path.join(root, 'file2_renamed.js');
+    childProcess.execSync(`git mv ${file2} ${file2Renamed}`, {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    // Update file1 to require the renamed file
+    fs.writeFileSync(
+      file1,
+      'console.log(require("./file2_renamed"), require("./file3"));',
+    );
+
+    // Add the changes to git
+    childProcess.execSync('git add .', {cwd: root, stdio: execStdio});
+    childProcess.execSync('git commit -m "Rename file2 to file2_renamed"', {
+      cwd: root,
+      stdio: execStdio,
+    });
+
+    const snapshotPath = findSnapshotPath();
+    const changes = await vcsFS.getEventsSince(root, snapshotPath, {});
+    changes.sort((a, b) => a.path.localeCompare(b.path));
+
+    // Should detect both the rename and the update to file1
+    assert.deepEqual(changes, [
+      {path: file1, type: 'update'},
+      {path: file2Renamed, type: 'create'},
+      {path: file2, type: 'delete'},
+    ]);
+
+    // Verify that the bundle still works with the renamed file
+    const result2 = await bundle(file1, {
+      inputFS: vcsFS,
+      outputFS: vcsFS,
+      shouldDisableCache: false,
+      featureFlags: {
+        vcsMode: 'NEW',
+      },
+    });
+    assertBundles(result2, [
+      {name: 'file1.js', assets: ['file1.js', 'file2_renamed.js', 'file3.js']},
     ]);
   });
 });
