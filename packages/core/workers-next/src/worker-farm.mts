@@ -1,11 +1,11 @@
 import {EventEmitter} from 'node:events';
 import {DEFAULT_WORKER_TIMEOUT} from './constants.mts';
-import {WorkerThread} from './worker-thread.mts';
-import type {WorkerThreadOptions} from './worker-thread.mts';
+import {WorkerThread} from './threads/worker-thread.mts';
+import type {WorkerThreadOptions} from './threads/worker-thread.mts';
 import type {
   IWorker,
   WorkerStatus,
-  Transferrable,
+  TransferItem,
   HandleFunc,
 } from './worker-interface.mts';
 import {Serializable} from './worker-interface.mts';
@@ -104,14 +104,14 @@ export class WorkerFarm extends EventEmitter {
    * @description starts a task on the worker thread. This will run an
    * exported function called "run" within the worker
    */
-  run<R = unknown, A extends Array<Transferrable> = any[]>(
+  run<R = unknown, A extends Array<TransferItem> = any[]>(
     ...args: A
   ): Promise<R> {
     return this.exec('run', args);
   }
 
   /** @description start a task in the worker thread and return the value */
-  exec<R = unknown, A extends Array<Transferrable> = any[]>(
+  exec<R = unknown, A extends Array<TransferItem> = any[]>(
     methodName: string,
     args: A,
   ): Promise<R> {
@@ -164,7 +164,7 @@ export class WorkerFarm extends EventEmitter {
    * @description A function defined on the orchestrator thread which can be
    * executed within the worker thread via the worker's API
    */
-  createReverseHandle<R = unknown, A extends Array<Transferrable> = any[]>(
+  createReverseHandle<R = unknown, A extends Array<TransferItem> = any[]>(
     handleFunc: HandleFunc<R, A>,
   ): HandleRef {
     return new HandleRef(this.#reverseHandles.push(handleFunc) - 1);

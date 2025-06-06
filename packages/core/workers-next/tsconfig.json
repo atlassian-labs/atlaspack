@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "preserveWatchOutput": true,
+    "target": "ESNext",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "declaration": false,
+    "strict": true,
+    "lib": ["ESNext"],
+    "outDir": "lib",
+    "rewriteRelativeImportExtensions": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src"]
+}

@@ -9,6 +9,18 @@
       "options": {
         "trailingComma": "es5"
       }
+    },
+    {
+      "files": "*.mts",
+      "options": {
+        "parser": "typescript"
+      }
+    },
+    {
+      "files": "*.cts",
+      "options": {
+        "parser": "typescript"
+      }
     }
   ]
 }

@@ -105,41 +105,41 @@ describe('WorkerFarm', function () {
     await workerfarm.end();
   });
 
-    it('Should support reverse handle functions in main process that can be called in workers', async () => {
-      let workerfarm = new WorkerFarm({
-        workerPath: path.join(__dirname, 'integration', 'reverse-handle.cjs'),
-      });
-
-      let handle = workerfarm.createReverseHandle(() => 42);
-      let result = await workerfarm.run(handle);
-      assert.equal(result, 42);
-      await workerfarm.end();
+  it('Should support reverse handle functions in main process that can be called in workers', async () => {
+    let workerfarm = new WorkerFarm({
+      workerPath: path.join(__dirname, 'integration', 'reverse-handle.cjs'),
     });
 
-    it('Should dispose of handle objects when ending', async () => {
-      let workerfarm = new WorkerFarm({
-        workerPath: path.join(__dirname, 'integration', 'reverse-handle.cjs'),
-      });
+    let handle = workerfarm.createReverseHandle(() => 42);
+    let result = await workerfarm.run(handle);
+    assert.equal(result, 42);
+    await workerfarm.end();
+  });
 
-      workerfarm.createReverseHandle(() => 42);
-      assert.equal(workerfarm.status().handles, 1);
-      await workerfarm.end();
-      assert.equal(workerfarm.status().handles, 0);
+  it('Should dispose of handle objects when ending', async () => {
+    let workerfarm = new WorkerFarm({
+      workerPath: path.join(__dirname, 'integration', 'reverse-handle.cjs'),
     });
 
-    // it('Should support shared references in workers', async () => {
-    //   let workerfarm = new WorkerFarm({
-    //     workerPath: path.join(__dirname, 'integration', 'shared-reference.cjs'),
-    //   });
+    workerfarm.createReverseHandle(() => 42);
+    assert.equal(workerfarm.status().handles, 1);
+    await workerfarm.end();
+    assert.equal(workerfarm.status().handles, 0);
+  });
 
-    //   let sharedValue = 'Something to be shared';
-    //   let {ref, dispose} = await workerfarm.createSharedReference(sharedValue);
-    //   let result = await workerfarm.run(ref);
-    //   assert.equal(result, 'Something to be shared');
-    //   await dispose();
-    //   result = await workerfarm.run(ref);
-    //   assert.equal(result, 'Shared reference does not exist');
-    // });
+  // it('Should support shared references in workers', async () => {
+  //   let workerfarm = new WorkerFarm({
+  //     workerPath: path.join(__dirname, 'integration', 'shared-reference.cjs'),
+  //   });
+
+  //   let sharedValue = 'Something to be shared';
+  //   let {ref, dispose} = await workerfarm.createSharedReference(sharedValue);
+  //   let result = await workerfarm.run(ref);
+  //   assert.equal(result, 'Something to be shared');
+  //   await dispose();
+  //   result = await workerfarm.run(ref);
+  //   assert.equal(result, 'Shared reference does not exist');
+  // });
 
   //   it('Should resolve shared references in workers', async () => {
   //     let workerfarm = new WorkerFarm({
@@ -210,7 +210,7 @@ describe('WorkerFarm', function () {
   //     assert.equal(workerfarm.sharedReferences.size, 0);
   //   });
 
-    //   it('Forwards stdio from the child process and levels event source if shouldPatchConsole is true', async () => {
+  //   it('Forwards stdio from the child process and levels event source if shouldPatchConsole is true', async () => {
   //     let events = [];
   //     let logDisposable = Logger.onLog((event) => events.push(event));
 

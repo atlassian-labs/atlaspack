@@ -1,18 +1,16 @@
-import path from 'node:path';
-import url from 'node:url';
 import {EventEmitter} from 'node:events';
+import type {Transferable} from 'node:worker_threads';
 import {Worker} from 'node:worker_threads';
-import {Blob} from 'node:buffer';
 import {MessagePort} from 'node:worker_threads';
-import {PromiseSubject} from './promise-subject.mts';
+import {PromiseSubject} from '../promise-subject.mts';
+import {WORKER_PATH} from '../constants.mts';
 import type {
   IWorker,
   WorkerStatus,
-  Transferrable,
+  TransferItem,
   HandleFunc,
-} from './worker-interface.mts';
-
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+  WorkerMasterMessage,
+} from '../worker-interface.mts';
 
 type ListenerMap = Map<number, PromiseSubject<any>>;
 
@@ -43,12 +41,9 @@ export class WorkerThread extends EventEmitter implements IWorker {
     this.#onEventMaster = new PromiseSubject();
     this.#reverseHandles = options.reverseHandles;
 
-    const worker = new Worker(
-      path.join(__dirname, 'worker-thread-prelude.mts'),
-      {
-        workerData: options.workerPath,
-      },
-    );
+    const worker = new Worker(WORKER_PATH, {
+      workerData: options.workerPath,
+    });
 
     worker.once(
       'message',
@@ -94,21 +89,21 @@ export class WorkerThread extends EventEmitter implements IWorker {
     this.#listeners.get(id)!.resolve(payload);
   };
 
-  #onmessagemaster = async ([id, kind, ...payload]: [number, number, string, any[]]) => {
+  #onmessagemaster = async (msg: WorkerMasterMessage) => {
     try {
-      switch (kind) {
+      switch (msg[1]) {
         case 0: {
-          const [location, args] = payload
+          const [id, , location, args] = msg;
           const module = await import(location);
           const result = await module.default(...args);
           (await this.#onEventMaster).postMessage([id, result]);
-          break
+          break;
         }
         case 1: {
-          const [handle, args] = payload
+          const [id, , handle, args] = msg;
           const result = await this.#reverseHandles[handle](...args);
           (await this.#onEventMaster).postMessage([id, result]);
-          break
+          break;
         }
       }
     } catch (error) {
@@ -120,22 +115,18 @@ export class WorkerThread extends EventEmitter implements IWorker {
     this.#listeners.get(id)!.reject(payload);
   };
 
-  async exec(methodName: string, args: Array<Transferrable>, serdeArgs: number[]): Promise<unknown> {
+  async exec(
+    methodName: string,
+    args: Array<TransferItem>,
+    serdeArgs: number[],
+  ): Promise<unknown> {
     const [id, resp] = this.#addTask();
-
+    const transferList: Transferable[] = args.filter(
+      (arg) => arg instanceof ArrayBuffer || arg instanceof MessagePort,
+    );
     (await this.#onEvent).postMessage(
-      [
-        id,
-        methodName,
-        args,
-        serdeArgs,
-      ],
-      args.filter(
-        (arg) =>
-          arg instanceof ArrayBuffer ||
-          arg instanceof MessagePort ||
-          arg instanceof Blob,
-      ),
+      [id, methodName, args, serdeArgs],
+      transferList,
     );
     return resp.finally(() => this.#listeners.delete(id));
   }
@@ -216,7 +207,9 @@ class ClosedListeners implements ListenerMap {
     return this.#inner[Symbol.iterator]();
   }
 
-  [Symbol.toStringTag]: string;
+  get [Symbol.toStringTag](): string {
+    return this.#inner[Symbol.toStringTag];
+  }
 
   set(key: number, value: PromiseSubject<any>): any {
     if (this.#allowed.includes(key)) {

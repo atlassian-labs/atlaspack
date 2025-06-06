@@ -1,7 +1,12 @@
-import {parentPort, workerData, MessageChannel, type MessagePort} from 'node:worker_threads';
-import type {  MasterCall, WorkerMessage } from './worker-interface.mts';
-import { PromiseSubject } from './promise-subject.mts';
-import { HandleRef } from './handle-ref.mts';
+import type {MessagePort} from 'node:worker_threads';
+import {parentPort, workerData, MessageChannel} from 'node:worker_threads';
+import type {
+  MasterCall,
+  WorkerMessage,
+  WorkerInternalMessage,
+  TransferItem,
+} from '../worker-interface.mts';
+import {PromiseSubject} from '../promise-subject.mts';
 
 main();
 async function main() {
@@ -30,16 +35,25 @@ async function main() {
     },
   };
 
-  const api = new Api(onEventMaster, onErrorMaster)
+  const api = new Api(onEventMaster, onErrorMaster);
 
   // Internal messages
-  async function onInternalCallback([id, methodName, args]) {
+  async function onInternalCallback([
+    id,
+    methodName,
+    args,
+  ]: WorkerInternalMessage) {
     const result = await internal[methodName](...args);
     onInternal.postMessage([id, result]);
   }
 
   // RPC for the module
-  async function onMessageCallback([id, methodName, args, serdeArgs]: WorkerMessage) {
+  async function onMessageCallback([
+    id,
+    methodName,
+    args,
+    serdeArgs,
+  ]: WorkerMessage) {
     try {
       const result = await module[methodName](api, ...args);
       onEvent.postMessage([id, result]);
@@ -60,26 +74,30 @@ async function main() {
   onInternal.on('message', onInternalCallback);
 
   parentPort.postMessage(
-    [null, txOnEvent, txOnInternal, txOnError, txOnEventMaster, txOnErrorMaster],
+    [
+      null,
+      txOnEvent,
+      txOnInternal,
+      txOnError,
+      txOnEventMaster,
+      txOnErrorMaster,
+    ],
     [txOnEvent, txOnInternal, txOnError, txOnEventMaster, txOnErrorMaster],
   );
 }
 
-type ListenerMap = Map<number, PromiseSubject<any>>
+type ListenerMap = Map<number, PromiseSubject<any>>;
 
 class Api {
-  #portMessage: MessagePort
+  #portMessage: MessagePort;
   #counter: number;
   #listeners: ListenerMap;
 
-  constructor(
-    portMessage: MessagePort,
-    portError: MessagePort
-  ) {
-    this.#portMessage = portMessage
+  constructor(portMessage: MessagePort, portError: MessagePort) {
+    this.#portMessage = portMessage;
     portMessage.on('message', this.#onmessage);
     portError.on('message', this.#onerror);
-    this.#counter = 0
+    this.#counter = 0;
     this.#listeners = new Map();
   }
 
@@ -95,15 +113,18 @@ class Api {
     const id = this.#counter++;
     const resp = new PromiseSubject<any>();
     this.#listeners.set(id, resp);
-    this.#portMessage.postMessage([id, 0, options.location, options.args])
-    return resp
+    this.#portMessage.postMessage([id, 0, options.location, options.args]);
+    return resp;
   }
 
-  runHandle<R, A extends Array<Transferable>>(handle: number, args: A): Promise<R> {
+  runHandle<R, A extends Array<TransferItem>>(
+    handle: number,
+    args: A,
+  ): Promise<R> {
     const id = this.#counter++;
     const resp = new PromiseSubject<any>();
     this.#listeners.set(id, resp);
-    this.#portMessage.postMessage([id, 1, handle, args])
-    return resp
+    this.#portMessage.postMessage([id, 1, handle, args]);
+    return resp;
   }
 }

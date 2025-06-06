@@ -25,8 +25,7 @@
     "semver": "^7.6.3"
   },
   "devDependencies": {
-    "ts-node": "^10.9.2",
-    "typescript": "^5.5.4"
+    "ts-node": "^10.9.2"
   },
   "engines": {
     "node": ">= 16.0.0"
