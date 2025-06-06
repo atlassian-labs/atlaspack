@@ -107,7 +107,7 @@ export class PluginConfig implements IPluginConfig {
           exclude?: boolean,
         |}
       | {|
-          configKey?: string,
+          readTracking?: boolean,
         |},
   ): Promise<?ConfigResultWithFilePath<T>> {
     return this.#inner.getConfigFrom(searchPath, filePaths, options);
