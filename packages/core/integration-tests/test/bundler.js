@@ -2360,7 +2360,7 @@ describe('bundler', function () {
   });
 
   describe('shared bundle merging', () => {
-    it('should support bundling merging', async () => {
+    it('should support bundling merging with overlap threshold', async () => {
       await fsFixture(overlayFS, __dirname)`
         bundle-merge
           shared-one.js:
@@ -2390,7 +2390,7 @@ describe('bundler', function () {
             {
               "@atlaspack/bundler-default": {
                 "minBundleSize": 0,
-                "sharedBundleMergeThreshold": 0.5
+                "sharedBundleMerge": [{"overlapThreshold": 0.5}]
               }
             }
           yarn.lock:
@@ -2432,6 +2432,280 @@ describe('bundler', function () {
         },
         {
           assets: ['three.js'],
+        },
+      ]);
+
+      await run(b);
+    });
+
+    it('should support bundle merging with sourceBundles', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        bundle-merge-source-bundles
+          shared-one.js:
+            export const one = 'one';
+          shared-two.js:
+            export const two = 'two';
+          shared-three.js:
+            export const three = 'three';
+          shared-four.js:
+            export const four = 'four';
+          one.js:
+            import {one} from './shared-one';
+            import {two} from './shared-two';
+            import {four} from './shared-four';
+          two.js:
+            import {two} from './shared-two';
+            import {three} from './shared-three';
+            import {four} from './shared-four';
+          three.js:
+            import {three} from './shared-three';
+            import {one} from './shared-one';
+          entry.js:
+            const one = import('./one');
+            const two = import('./two');
+            const three = import('./three');
+            sideEffectNoop(Promise.all([one, two, three]));
+
+          entry.html:
+            <script type="module" src="./entry.js"></script>
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "minBundleSize": 0,
+                "sharedBundleMerge": [{
+                  "sourceBundles": ["one.js", "two.js"]
+                }]
+              }
+            }
+          yarn.lock:
+      `;
+
+      const b = await bundle(
+        [path.join(__dirname, 'bundle-merge-source-bundles/entry.html')],
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      assertBundles(b, [
+        {
+          assets: ['entry.html'],
+        },
+        {
+          assets: [
+            'entry.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+          ],
+        },
+        {
+          // Merged shared bundle with assets needed by both one.js and two.js
+          assets: ['shared-two.js', 'shared-four.js', 'esmodule-helpers.js'],
+        },
+        {
+          assets: ['shared-one.js'],
+        },
+        {
+          assets: ['shared-three.js'],
+        },
+        {
+          assets: ['one.js'],
+        },
+        {
+          assets: ['two.js'],
+        },
+        {
+          assets: ['three.js'],
+        },
+      ]);
+
+      await run(b);
+    });
+
+    it('should support bundle merging with maxBundleSize', async () => {
+      let lotsOfCode = 'This string needs to to make the bundle large'.repeat(
+        200,
+      );
+
+      await fsFixture(overlayFS, __dirname)`
+        bundle-merge-max-size
+          shared-one.js:
+            export const one = 'one';
+          shared-two.js:
+            export const two = 'two';
+          shared-three.js:
+            export const three = '${lotsOfCode}';
+          shared-four.js:
+            export const four = 'four';
+          one.js:
+            import {one} from './shared-one';
+            import {two} from './shared-two';
+          two.js:
+            import {two} from './shared-two';
+            import {three} from './shared-three';
+          three.js:
+            import {three} from './shared-three';
+            import {four} from './shared-four';
+          four.js:
+            import {four} from './shared-four';
+            import {one} from './shared-one';
+          entry.js:
+            const one = import('./one');
+            const two = import('./two');
+            const three = import('./three');
+            const four  = import('./four');
+            sideEffectNoop(Promise.all([one, two, three, four]));
+
+          entry.html:
+            <script type="module" src="./entry.js"></script>
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "minBundleSize": 0,
+                "sharedBundleMerge": [{
+                  "maxBundleSize": 1000
+                }]
+              }
+            }
+          yarn.lock:
+      `;
+
+      const b = await bundle(
+        [path.join(__dirname, 'bundle-merge-max-size/entry.html')],
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      assertBundles(b, [
+        {
+          assets: ['entry.html'],
+        },
+        {
+          assets: [
+            'entry.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+          ],
+        },
+        {
+          // Merge all shared bundles that are smaller than the threshold
+          assets: [
+            'shared-one.js',
+            'shared-two.js',
+            'shared-four.js',
+            'esmodule-helpers.js',
+          ],
+        },
+        {
+          assets: ['shared-three.js'],
+        },
+        {
+          assets: ['one.js'],
+        },
+        {
+          assets: ['two.js'],
+        },
+        {
+          assets: ['three.js'],
+        },
+        {
+          assets: ['four.js'],
+        },
+      ]);
+
+      await run(b);
+    });
+
+    it('should support bundle merging with minBundlesInGroup', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        bundle-merge-min-bundles-in-group
+          shared-one.js:
+            export const one = 'one';
+          shared-two.js:
+            export const two = 'two';
+          shared-three.js:
+            export const three = 'three';
+          shared-four.js:
+            export const four = 'four';
+          one.js:
+            import {one} from './shared-one';
+            import {two} from './shared-two';
+          two.js:
+            import {two} from './shared-two';
+            import {three} from './shared-three';
+          three.js:
+            import {three} from './shared-three';
+            import {four} from './shared-four';
+          four.js:
+            import {four} from './shared-four';
+            import {one} from './shared-one';
+            import {two} from './shared-two';
+          entry.js:
+            const one = import('./one');
+            const two = import('./two');
+            const three = import('./three');
+            const four  = import('./four');
+            sideEffectNoop(Promise.all([one, two, three, four]));
+
+          entry.html:
+            <script type="module" src="./entry.js"></script>
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "minBundleSize": 0,
+                "sharedBundleMerge": [{
+                  "minBundlesInGroup": 5
+                }]
+              }
+            }
+          yarn.lock:
+      `;
+
+      const b = await bundle(
+        [path.join(__dirname, 'bundle-merge-min-bundles-in-group/entry.html')],
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      assertBundles(b, [
+        {
+          assets: ['entry.html'],
+        },
+        {
+          assets: [
+            'entry.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+          ],
+        },
+        {
+          // Merge all shared bundles that belong the the largest group
+          assets: [
+            'shared-one.js',
+            'shared-two.js',
+            'shared-four.js',
+            'esmodule-helpers.js',
+          ],
+        },
+        {
+          assets: ['shared-three.js'],
+        },
+        {
+          assets: ['one.js'],
+        },
+        {
+          assets: ['two.js'],
+        },
+        {
+          assets: ['three.js'],
+        },
+        {
+          assets: ['four.js'],
         },
       ]);
 
