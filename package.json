@@ -41,6 +41,8 @@
     "test:integration:v3": "ATLASPACK_V3=true yarn workspace @atlaspack/integration-tests test",
     "test:integration-ci": "yarn workspace @atlaspack/integration-tests test-ci",
     "test:js": "yarn test:js:unit && yarn test:integration",
+    "test:ts": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./scripts/test-ts.mts",
+    "test:ts:watch": "node --experimental-strip-types --disable-warning=ExperimentalWarning --watch-path ./packages --watch-path ./scripts ./scripts/test-ts.mts",
     "test:js:coverage": "yarn nyc yarn test:js:unit",
     "test:js:coverage:report": "yarn nyc report --reporter=html-spa",
     "test:js:unit": "cross-env NODE_ENV=test mocha --conditions=\"@atlaspack::sources\" --timeout 5000",
@@ -61,7 +63,7 @@
     "@khanacademy/flow-to-ts": "^0.5.2",
     "@napi-rs/cli": "^2.18.3",
     "@sentry/cli": "^2.45.0",
-    "@types/node": ">= 18",
+    "@types/node": "^22",
     "buffer": "mischnic/buffer#b8a4fa94",
     "cross-env": "^7.0.0",
     "eslint": "^8.57.0",
@@ -81,7 +83,9 @@
     "semver": "^7.5.2",
     "sinon": "^7.3.1",
     "typescript": "^5.6.2",
-    "zx": "^8.1.9"
+    "zx": "^8.1.9",
+    "nodemon": "^3.1.9",
+    "patch-package": "^8.0.0"
   },
   "engines": {
     "node": ">= 16.0.0"
@@ -95,9 +99,5 @@
     "react-dom": "preact/compat",
     "react": "preact/compat",
     "scheduler": false
-  },
-  "dependencies": {
-    "nodemon": "^3.1.9",
-    "patch-package": "^8.0.0"
   }
 }

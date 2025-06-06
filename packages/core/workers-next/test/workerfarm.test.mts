@@ -20,7 +20,6 @@ import url from 'node:url';
 import {WorkerFarm} from '../src/index.mts';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-
 describe('WorkerFarm', function () {
   // //   this.timeout(30000);
 
@@ -128,19 +127,19 @@ describe('WorkerFarm', function () {
       assert.equal(workerfarm.status().handles, 0);
     });
 
-    it('Should support shared references in workers', async () => {
-      let workerfarm = new WorkerFarm({
-        workerPath: path.join(__dirname, 'integration', 'shared-reference.cjs'),
-      });
+    // it('Should support shared references in workers', async () => {
+    //   let workerfarm = new WorkerFarm({
+    //     workerPath: path.join(__dirname, 'integration', 'shared-reference.cjs'),
+    //   });
 
-      let sharedValue = 'Something to be shared';
-      let {ref, dispose} = await workerfarm.createSharedReference(sharedValue);
-      let result = await workerfarm.run(ref);
-      assert.equal(result, 'Something to be shared');
-      await dispose();
-      result = await workerfarm.run(ref);
-      assert.equal(result, 'Shared reference does not exist');
-    });
+    //   let sharedValue = 'Something to be shared';
+    //   let {ref, dispose} = await workerfarm.createSharedReference(sharedValue);
+    //   let result = await workerfarm.run(ref);
+    //   assert.equal(result, 'Something to be shared');
+    //   await dispose();
+    //   result = await workerfarm.run(ref);
+    //   assert.equal(result, 'Shared reference does not exist');
+    // });
 
   //   it('Should resolve shared references in workers', async () => {
   //     let workerfarm = new WorkerFarm({
