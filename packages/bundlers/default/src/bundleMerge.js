@@ -180,7 +180,7 @@ function getPossibleMergeCandidates(
 
       if (
         // $FlowFixMe both bundles will always have internalizedAssets
-        a.bundle.internalizedAssets.equal(b.bundle.internalizedAssets)
+        a.bundle.internalizedAssets.equals(b.bundle.internalizedAssets)
       ) {
         uniquePairs.push([a, b]);
       }

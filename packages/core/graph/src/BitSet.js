@@ -104,7 +104,7 @@ export class BitSet {
     return setBitsCount;
   }
 
-  equal(other: BitSet): boolean {
+  equals(other: BitSet): boolean {
     for (let i = 0; i < this.bits.length; i++) {
       if (this.bits[i] !== other.bits[i]) {
         return false;
