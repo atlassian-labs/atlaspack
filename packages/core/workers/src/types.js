@@ -66,3 +66,5 @@ export interface ChildImpl {
 }
 
 export type BackendType = 'threads' | 'process' | 'web';
+
+export type SharedReference = number;

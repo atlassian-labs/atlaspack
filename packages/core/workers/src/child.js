@@ -8,9 +8,9 @@ import type {
   WorkerRequest,
   WorkerResponse,
   ChildImpl,
+  SharedReference,
 } from './types';
 import type {Async, IDisposable} from '@atlaspack/types-internal';
-import type {SharedReference} from './WorkerFarm';
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';

@@ -89,7 +89,7 @@ function watch-js() {
     --ext "js,jsx,mjs,cjs,ts,tsx,mts,cts,json,html" \
     --verbose \
     --signal SIGTERM \
-    --exec "/bin/env bash ${PATH_SCRIPT_DIR}/dev build-js || exit 1"
+    --exec "clear && node --experimental-strip-types --disable-warning=ExperimentalWarning --test packages/core/workers/src/v2/test/workerfarm.test.mts || exit 1"
 }
 
 if [ "$1" == "" ];then

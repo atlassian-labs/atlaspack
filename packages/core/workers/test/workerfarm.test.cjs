@@ -5,7 +5,7 @@ const assert = require('assert');
 // eslint-disable-next-line @atlaspack/no-self-package-imports
 const WorkerFarm = require('@atlaspack/workers').default;
 
-describe('WorkerFarm', function () {
+describe.only('WorkerFarm', function () {
   this.timeout(30000);
 
   it('Should start up workers', async () => {

@@ -3,11 +3,11 @@
 import type {ErrorWithCode, FilePath} from '@atlaspack/types-internal';
 import type {
   CallRequest,
-  HandleCallRequest,
   WorkerRequest,
   WorkerDataResponse,
   WorkerErrorResponse,
   BackendType,
+  SharedReference,
 } from './types';
 import type {HandleFunction} from './Handle';
 
@@ -16,7 +16,6 @@ import invariant from 'assert';
 import nullthrows from 'nullthrows';
 import EventEmitter from 'events';
 import {
-  deserialize,
   prepareForSerialization,
   restoreDeserializedObject,
   serialize,
@@ -26,14 +25,14 @@ import Worker, {type WorkerCall} from './Worker';
 import cpuCount from './cpuCount';
 import Handle from './Handle';
 import {child} from './childState';
+import {WorkerApi} from './WorkerApi';
+import {getTimeId} from './getTimeId';
 import {detectBackend} from './backend';
 import {SamplingProfiler, Trace} from '@atlaspack/profiler';
 import fs from 'fs';
 import logger from '@atlaspack/logger';
 
 let referenceId = 1;
-
-export opaque type SharedReference = number;
 
 export type FarmOptions = {|
   maxConcurrentWorkers: number,
@@ -52,61 +51,89 @@ type WorkerModule = {
   ...
 };
 
-export type WorkerApi = {|
-  callMaster(CallRequest, ?boolean): Promise<mixed>,
-  createReverseHandle(fn: HandleFunction): Handle,
-  getSharedReference(ref: SharedReference): mixed,
-  resolveSharedReference(value: mixed): ?SharedReference,
-  callChild?: (childId: number, request: HandleCallRequest) => Promise<mixed>,
-|};
-
-export {Handle};
-
 const DEFAULT_MAX_CONCURRENT_CALLS: number = 30;
+
+export interface IWorkerFarm {
+  /** @description Is the WorkerFarm shutting down */
+  ending: boolean;
+  /** @description Resolved WorkerFarm options */
+  options: FarmOptions;
+  /** @description primitives to communicate with the workers */
+  workerApi: WorkerApi;
+  createHandle(method: string, useMainThread: boolean): HandleFunction;
+  end(): Promise<void>;
+  createReverseHandle(fn: HandleFunction): Handle;
+  createSharedReference(
+    value: mixed,
+    isCacheable: boolean,
+  ): {|ref: SharedReference, dispose(): Promise<mixed>|};
+  startProfile(): void;
+  endProfile(): void;
+  callAllWorkers(method: string, args: Array<any>): Promise<void>;
+  takeHeapSnapshot(): void;
+}
 
 /**
  * workerPath should always be defined inside farmOptions
  */
 
 export default class WorkerFarm extends EventEmitter {
-  callQueue: Array<WorkerCall> = [];
-  ending: boolean = false;
-  localWorker: WorkerModule;
-  localWorkerInit: ?Promise<void>;
+  /** @description Is the WorkerFarm shutting down */
+  ending: boolean;
+  /** @description Resolved WorkerFarm options */
   options: FarmOptions;
+  /** @description primitives to communicate with the workers */
+  workerApi: WorkerApi;
+  // TODO: Make private
+  //   Used only by REPL
+  warmWorkers: number;
+  readyWorkers: number;
+  //   Used by packages/core/core/test/Atlaspack.test.js:71:31
+  sharedReferences: Map<SharedReference, mixed>;
+  sharedReferencesByValue: Map<mixed, SharedReference>;
+
+  #callQueue: Array<WorkerCall>;
+  #localWorker: WorkerModule;
+  #localWorkerInit: ?Promise<void>;
   run: HandleFunction;
-  warmWorkers: number = 0;
-  readyWorkers: number = 0;
-  workers: Map<number, Worker> = new Map();
-  handles: Map<number, Handle> = new Map();
-  sharedReferences: Map<SharedReference, mixed> = new Map();
-  sharedReferencesByValue: Map<mixed, SharedReference> = new Map();
-  serializedSharedReferences: Map<SharedReference, ?ArrayBuffer> = new Map();
-  profiler: ?SamplingProfiler;
+  handles: Map<number, Handle>;
+  workers: Map<number, Worker>;
+  #serializedSharedReferences: Map<SharedReference, ?ArrayBuffer>;
+  #profiler: ?SamplingProfiler;
 
   constructor(farmOptions: $Shape<FarmOptions> = {}) {
     super();
-    this.options = {
-      maxConcurrentWorkers: WorkerFarm.getNumWorkers(),
-      maxConcurrentCallsPerWorker: WorkerFarm.getConcurrentCallsPerWorker(
-        farmOptions.shouldTrace ? 1 : DEFAULT_MAX_CONCURRENT_CALLS,
-      ),
-      forcedKillTime: 500,
-      warmWorkers: false,
-      useLocalWorker: true, // TODO: setting this to false makes some tests fail, figure out why
-      backend: detectBackend(),
-      ...farmOptions,
-    };
+    this.ending = false;
+    this.warmWorkers = 0;
+    this.readyWorkers = 0;
+    this.sharedReferences = new Map();
+    this.sharedReferencesByValue = new Map();
+    this.#callQueue = [];
+    this.#localWorkerInit = undefined;
+    this.handles = new Map();
+    this.workers = new Map();
+    this.#serializedSharedReferences = new Map();
+    this.#profiler = undefined;
+    this.options = WorkerFarm.mergeOptions(farmOptions);
+    this.workerApi = new WorkerApi(
+      this.workers,
+      this.sharedReferences,
+      this.sharedReferencesByValue,
+      // $FlowFixMeZZ
+      (...args: mixed[]) => this.processRequest(...args),
+    );
 
     if (!this.options.workerPath) {
       throw new Error('Please provide a worker path!');
     }
 
     // $FlowFixMe
-    this.localWorker = require(this.options.workerPath);
+    this.#localWorker = require(this.options.workerPath);
 
-    this.localWorkerInit =
-      this.localWorker.childInit != null ? this.localWorker.childInit() : null;
+    this.#localWorkerInit =
+      this.#localWorker.childInit != null
+        ? this.#localWorker.childInit()
+        : null;
 
     this.run = this.createHandle('run');
 
@@ -125,78 +152,55 @@ export default class WorkerFarm extends EventEmitter {
       ),
     );
 
-    this.startMaxWorkers();
+    this.#startMaxWorkers();
   }
 
-  workerApi: {|
-    callChild: (childId: number, request: HandleCallRequest) => Promise<mixed>,
+  static mergeOptions(farmOptions: $Shape<FarmOptions> = {}): FarmOptions {
+    return {
+      maxConcurrentWorkers: WorkerFarm.getNumWorkers(),
+      maxConcurrentCallsPerWorker: WorkerFarm.getConcurrentCallsPerWorker(
+        farmOptions.shouldTrace ? 1 : DEFAULT_MAX_CONCURRENT_CALLS,
+      ),
+      forcedKillTime: 500,
+      warmWorkers: false,
+      useLocalWorker: true, // TODO: setting this to false makes some tests fail, figure out why
+      backend: detectBackend(),
+      ...farmOptions,
+    };
+  }
+
+  static getNumWorkers(): number {
+    return process.env.ATLASPACK_WORKERS
+      ? parseInt(process.env.ATLASPACK_WORKERS, 10)
+      : Math.min(4, Math.ceil(cpuCount() / 2));
+  }
+
+  static isWorker(): boolean {
+    return !!child;
+  }
+
+  static getWorkerApi(): {|
     callMaster: (
       request: CallRequest,
       awaitResponse?: ?boolean,
     ) => Promise<mixed>,
-    createReverseHandle: (fn: HandleFunction) => Handle,
+    createReverseHandle: (fn: (...args: Array<any>) => mixed) => Handle,
     getSharedReference: (ref: SharedReference) => mixed,
     resolveSharedReference: (value: mixed) => void | SharedReference,
     runHandle: (handle: Handle, args: Array<any>) => Promise<mixed>,
-  |} = {
-    callMaster: async (
-      request: CallRequest,
-      awaitResponse: ?boolean = true,
-    ): Promise<mixed> => {
-      // $FlowFixMe
-      let result = await this.processRequest({
-        ...request,
-        awaitResponse,
-      });
-      return deserialize(serialize(result));
-    },
-    createReverseHandle: (fn: HandleFunction): Handle =>
-      this.createReverseHandle(fn),
-    callChild: (childId: number, request: HandleCallRequest): Promise<mixed> =>
-      new Promise((resolve, reject) => {
-        nullthrows(this.workers.get(childId)).call({
-          ...request,
-          resolve,
-          reject,
-          retries: 0,
-        });
-      }),
-    runHandle: (handle: Handle, args: Array<any>): Promise<mixed> =>
-      this.workerApi.callChild(nullthrows(handle.childId), {
-        handle: handle.id,
-        args,
-      }),
-    getSharedReference: (ref: SharedReference) =>
-      this.sharedReferences.get(ref),
-    resolveSharedReference: (value: mixed) =>
-      this.sharedReferencesByValue.get(value),
-  };
-
-  warmupWorker(method: string, args: Array<any>): void {
-    // Workers are already stopping
-    if (this.ending) {
-      return;
-    }
-
-    // Workers are not warmed up yet.
-    // Send the job to a remote worker in the background,
-    // but use the result from the local worker - it will be faster.
-    let promise = this.addCall(method, [...args, true]);
-    if (promise) {
-      promise
-        .then(() => {
-          this.warmWorkers++;
-          if (this.warmWorkers >= this.workers.size) {
-            this.emit('warmedup');
-          }
-        })
-        .catch(() => {});
-    }
+  |} {
+    invariant(
+      child != null,
+      'WorkerFarm.getWorkerApi can only be called within workers',
+    );
+    return child.workerApi;
   }
 
-  shouldStartRemoteWorkers(): boolean {
+  static getConcurrentCallsPerWorker(
+    defaultValue?: number = DEFAULT_MAX_CONCURRENT_CALLS,
+  ): number {
     return (
-      this.options.maxConcurrentWorkers > 0 || !this.options.useLocalWorker
+      parseInt(process.env.ATLASPACK_MAX_CONCURRENT_CALLS, 10) || defaultValue
     );
   }
 
@@ -209,11 +213,11 @@ export default class WorkerFarm extends EventEmitter {
       // Child process workers are slow to start (~600ms).
       // While we're waiting, just run on the main thread.
       // This significantly speeds up startup time.
-      if (this.shouldUseRemoteWorkers() && !useMainThread) {
-        return this.addCall(method, [...args, false]);
+      if (this.#shouldUseRemoteWorkers() && !useMainThread) {
+        return this.#addCall(method, [...args, false]);
       } else {
-        if (this.options.warmWorkers && this.shouldStartRemoteWorkers()) {
-          this.warmupWorker(method, args);
+        if (this.options.warmWorkers && this.#shouldStartRemoteWorkers()) {
+          this.#warmupWorker(method, args);
         }
 
         let processedArgs;
@@ -225,25 +229,242 @@ export default class WorkerFarm extends EventEmitter {
           processedArgs = args;
         }
 
-        if (this.localWorkerInit != null) {
-          await this.localWorkerInit;
-          this.localWorkerInit = null;
+        if (this.#localWorkerInit != null) {
+          await this.#localWorkerInit;
+          this.#localWorkerInit = null;
         }
-        return this.localWorker[method](this.workerApi, ...processedArgs);
+        return this.#localWorker[method](this.workerApi, ...processedArgs);
       }
     };
   }
 
-  onError(error: ErrorWithCode, worker: Worker): void | Promise<void> {
+  async end(): Promise<void> {
+    this.ending = true;
+
+    await Promise.all(
+      Array.from(this.workers.values()).map((worker) =>
+        this.#stopWorker(worker),
+      ),
+    );
+
+    for (let handle of this.handles.values()) {
+      handle.dispose();
+    }
+    this.handles.clear();
+    this.sharedReferences.clear();
+    this.sharedReferencesByValue.clear();
+
+    this.ending = false;
+  }
+
+  createReverseHandle(fn: HandleFunction): Handle {
+    let handle = new Handle({fn});
+    this.handles.set(handle.id, handle);
+    return handle;
+  }
+
+  createSharedReference(
+    value: mixed,
+    isCacheable: boolean = true,
+  ): {|ref: SharedReference, dispose(): Promise<mixed>|} {
+    let ref = referenceId++;
+    this.sharedReferences.set(ref, value);
+    this.sharedReferencesByValue.set(value, ref);
+    if (!isCacheable) {
+      this.#serializedSharedReferences.set(ref, null);
+    }
+
+    return {
+      ref,
+      dispose: () => {
+        this.sharedReferences.delete(ref);
+        this.sharedReferencesByValue.delete(value);
+        this.#serializedSharedReferences.delete(ref);
+
+        let promises = [];
+        for (let worker of this.workers.values()) {
+          if (!worker.sentSharedReferences.has(ref)) {
+            continue;
+          }
+
+          worker.sentSharedReferences.delete(ref);
+          promises.push(
+            new Promise((resolve, reject) => {
+              worker.call({
+                method: 'deleteSharedReference',
+                args: [ref],
+                resolve,
+                reject,
+                skipReadyCheck: true,
+                retries: 0,
+              });
+            }),
+          );
+        }
+        return Promise.all(promises);
+      },
+    };
+  }
+
+  async startProfile() {
+    let promises = [];
+    for (let worker of this.workers.values()) {
+      promises.push(
+        new Promise((resolve, reject) => {
+          worker.call({
+            method: 'startProfile',
+            args: [],
+            resolve,
+            reject,
+            retries: 0,
+            skipReadyCheck: true,
+          });
+        }),
+      );
+    }
+
+    this.#profiler = new SamplingProfiler();
+
+    promises.push(this.#profiler.startProfiling());
+    await Promise.all(promises);
+  }
+
+  async endProfile() {
+    if (!this.#profiler) {
+      return;
+    }
+
+    let promises = [this.#profiler.stopProfiling()];
+    let names = ['Master'];
+
+    for (let worker of this.workers.values()) {
+      names.push('Worker ' + worker.id);
+      promises.push(
+        new Promise((resolve, reject) => {
+          worker.call({
+            method: 'endProfile',
+            args: [],
+            resolve,
+            reject,
+            retries: 0,
+            skipReadyCheck: true,
+          });
+        }),
+      );
+    }
+
+    var profiles = await Promise.all(promises);
+    let trace = new Trace();
+    let filename = `profile-${getTimeId()}.trace`;
+    let stream = trace.pipe(fs.createWriteStream(filename));
+
+    for (let profile of profiles) {
+      trace.addCPUProfile(names.shift(), profile);
+    }
+
+    trace.flush();
+    await new Promise((resolve) => {
+      stream.once('finish', resolve);
+    });
+
+    logger.info({
+      origin: '@atlaspack/workers',
+      message: md`Wrote profile to ${filename}`,
+    });
+  }
+
+  async callAllWorkers(method: string, args: Array<any>) {
+    let promises = [];
+    for (let worker of this.workers.values()) {
+      promises.push(
+        new Promise((resolve, reject) => {
+          worker.call({
+            method,
+            args,
+            resolve,
+            reject,
+            retries: 0,
+          });
+        }),
+      );
+    }
+
+    promises.push(this.#localWorker[method](this.workerApi, ...args));
+    await Promise.all(promises);
+  }
+
+  async takeHeapSnapshot() {
+    let snapshotId = getTimeId();
+
+    try {
+      let snapshotPaths = await Promise.all(
+        [...this.workers.values()].map(
+          (worker) =>
+            new Promise((resolve, reject) => {
+              worker.call({
+                method: 'takeHeapSnapshot',
+                args: [snapshotId],
+                resolve,
+                reject,
+                retries: 0,
+                skipReadyCheck: true,
+              });
+            }),
+        ),
+      );
+
+      logger.info({
+        origin: '@atlaspack/workers',
+        message: md`Wrote heap snapshots to the following paths:\n${snapshotPaths.join(
+          '\n',
+        )}`,
+      });
+    } catch {
+      logger.error({
+        origin: '@atlaspack/workers',
+        message: 'Unable to take heap snapshots. Note: requires Node 11.13.0+',
+      });
+    }
+  }
+
+  #warmupWorker(method: string, args: Array<any>): void {
+    // Workers are already stopping
+    if (this.ending) {
+      return;
+    }
+
+    // Workers are not warmed up yet.
+    // Send the job to a remote worker in the background,
+    // but use the result from the local worker - it will be faster.
+    let promise = this.#addCall(method, [...args, true]);
+    if (promise) {
+      promise
+        .then(() => {
+          this.warmWorkers++;
+          if (this.warmWorkers >= this.workers.size) {
+            this.emit('warmedup');
+          }
+        })
+        .catch(() => {});
+    }
+  }
+
+  #shouldStartRemoteWorkers(): boolean {
+    return (
+      this.options.maxConcurrentWorkers > 0 || !this.options.useLocalWorker
+    );
+  }
+
+  #onError(error: ErrorWithCode, worker: Worker): void | Promise<void> {
     // Handle ipc errors
     if (error.code === 'ERR_IPC_CHANNEL_CLOSED') {
-      return this.stopWorker(worker);
+      return this.#stopWorker(worker);
     } else {
       logger.error(error, '@atlaspack/workers');
     }
   }
 
-  startChild() {
+  #startChild() {
     let worker = new Worker({
       forcedKillTime: this.options.forcedKillTime,
       backend: this.options.backend,
@@ -254,24 +475,24 @@ export default class WorkerFarm extends EventEmitter {
 
     worker.fork(nullthrows(this.options.workerPath));
 
-    worker.on('request', (data) => this.processRequest(data, worker));
+    worker.on('request', (data) => this.#processRequest(data, worker));
 
     worker.on('ready', () => {
       this.readyWorkers++;
       if (this.readyWorkers === this.options.maxConcurrentWorkers) {
         this.emit('ready');
       }
-      this.processQueue();
+      this.#processQueue();
     });
-    worker.on('response', () => this.processQueue());
+    worker.on('response', () => this.#processQueue());
 
-    worker.on('error', (err) => this.onError(err, worker));
-    worker.once('exit', () => this.stopWorker(worker));
+    worker.on('error', (err) => this.#onError(err, worker));
+    worker.once('exit', () => this.#stopWorker(worker));
 
     this.workers.set(worker.id, worker);
   }
 
-  async stopWorker(worker: Worker): Promise<void> {
+  async #stopWorker(worker: Worker): Promise<void> {
     if (!worker.stopped) {
       this.workers.delete(worker.id);
 
@@ -280,7 +501,7 @@ export default class WorkerFarm extends EventEmitter {
       if (worker.calls.size) {
         for (let call of worker.calls.values()) {
           call.retries++;
-          this.callQueue.unshift(call);
+          this.#callQueue.unshift(call);
         }
       }
 
@@ -289,15 +510,15 @@ export default class WorkerFarm extends EventEmitter {
       await worker.stop();
 
       // Process any requests that failed and start a new worker
-      this.processQueue();
+      this.#processQueue();
     }
   }
 
-  processQueue(): void {
-    if (this.ending || !this.callQueue.length) return;
+  #processQueue(): void {
+    if (this.ending || !this.#callQueue.length) return;
 
     if (this.workers.size < this.options.maxConcurrentWorkers) {
-      this.startChild();
+      this.#startChild();
     }
 
     let workers = [...this.workers.values()].sort(
@@ -305,7 +526,7 @@ export default class WorkerFarm extends EventEmitter {
     );
 
     for (let worker of workers) {
-      if (!this.callQueue.length) {
+      if (!this.#callQueue.length) {
         break;
       }
 
@@ -314,17 +535,17 @@ export default class WorkerFarm extends EventEmitter {
       }
 
       if (worker.calls.size < this.options.maxConcurrentCallsPerWorker) {
-        this.callWorker(worker, this.callQueue.shift());
+        this.#callWorker(worker, this.#callQueue.shift());
       }
     }
   }
 
-  async callWorker(worker: Worker, call: WorkerCall): Promise<void> {
+  async #callWorker(worker: Worker, call: WorkerCall): Promise<void> {
     for (let ref of this.sharedReferences.keys()) {
       if (!worker.sentSharedReferences.has(ref)) {
         await worker.sendSharedReference(
           ref,
-          this.getSerializedSharedReference(ref),
+          this.#getSerializedSharedReference(ref),
         );
       }
     }
@@ -332,7 +553,7 @@ export default class WorkerFarm extends EventEmitter {
     worker.call(call);
   }
 
-  async processRequest(
+  async #processRequest(
     data: {|
       location: FilePath,
     |} & $Shape<WorkerRequest>,
@@ -405,53 +626,34 @@ export default class WorkerFarm extends EventEmitter {
     }
   }
 
-  addCall(method: string, args: Array<any>): Promise<any> {
+  #addCall(method: string, args: Array<any>): Promise<any> {
     if (this.ending) {
       throw new Error('Cannot add a worker call if workerfarm is ending.');
     }
 
     return new Promise((resolve, reject) => {
-      this.callQueue.push({
+      this.#callQueue.push({
         method,
         args: args,
         retries: 0,
         resolve,
         reject,
       });
-      this.processQueue();
+      this.#processQueue();
     });
   }
 
-  async end(): Promise<void> {
-    this.ending = true;
-
-    await Promise.all(
-      Array.from(this.workers.values()).map((worker) =>
-        this.stopWorker(worker),
-      ),
-    );
-
-    for (let handle of this.handles.values()) {
-      handle.dispose();
-    }
-    this.handles = new Map();
-    this.sharedReferences = new Map();
-    this.sharedReferencesByValue = new Map();
-
-    this.ending = false;
-  }
-
-  startMaxWorkers(): void {
+  #startMaxWorkers(): void {
     // Starts workers until the maximum is reached
     if (this.workers.size < this.options.maxConcurrentWorkers) {
       let toStart = this.options.maxConcurrentWorkers - this.workers.size;
       while (toStart--) {
-        this.startChild();
+        this.#startChild();
       }
     }
   }
 
-  shouldUseRemoteWorkers(): boolean {
+  #shouldUseRemoteWorkers(): boolean {
     return (
       !this.options.useLocalWorker ||
       ((this.warmWorkers >= this.workers.size || !this.options.warmWorkers) &&
@@ -459,57 +661,8 @@ export default class WorkerFarm extends EventEmitter {
     );
   }
 
-  createReverseHandle(fn: HandleFunction): Handle {
-    let handle = new Handle({fn});
-    this.handles.set(handle.id, handle);
-    return handle;
-  }
-
-  createSharedReference(
-    value: mixed,
-    isCacheable: boolean = true,
-  ): {|ref: SharedReference, dispose(): Promise<mixed>|} {
-    let ref = referenceId++;
-    this.sharedReferences.set(ref, value);
-    this.sharedReferencesByValue.set(value, ref);
-    if (!isCacheable) {
-      this.serializedSharedReferences.set(ref, null);
-    }
-
-    return {
-      ref,
-      dispose: () => {
-        this.sharedReferences.delete(ref);
-        this.sharedReferencesByValue.delete(value);
-        this.serializedSharedReferences.delete(ref);
-
-        let promises = [];
-        for (let worker of this.workers.values()) {
-          if (!worker.sentSharedReferences.has(ref)) {
-            continue;
-          }
-
-          worker.sentSharedReferences.delete(ref);
-          promises.push(
-            new Promise((resolve, reject) => {
-              worker.call({
-                method: 'deleteSharedReference',
-                args: [ref],
-                resolve,
-                reject,
-                skipReadyCheck: true,
-                retries: 0,
-              });
-            }),
-          );
-        }
-        return Promise.all(promises);
-      },
-    };
-  }
-
-  getSerializedSharedReference(ref: SharedReference): ArrayBuffer {
-    let cached = this.serializedSharedReferences.get(ref);
+  #getSerializedSharedReference(ref: SharedReference): ArrayBuffer {
+    let cached = this.#serializedSharedReferences.get(ref);
     if (cached) {
       return cached;
     }
@@ -520,178 +673,9 @@ export default class WorkerFarm extends EventEmitter {
     // If the reference was created with the isCacheable option set to false,
     // serializedSharedReferences will contain `null` as the value.
     if (cached !== null) {
-      this.serializedSharedReferences.set(ref, buf);
+      this.#serializedSharedReferences.set(ref, buf);
     }
 
     return buf;
   }
-
-  async startProfile() {
-    let promises = [];
-    for (let worker of this.workers.values()) {
-      promises.push(
-        new Promise((resolve, reject) => {
-          worker.call({
-            method: 'startProfile',
-            args: [],
-            resolve,
-            reject,
-            retries: 0,
-            skipReadyCheck: true,
-          });
-        }),
-      );
-    }
-
-    this.profiler = new SamplingProfiler();
-
-    promises.push(this.profiler.startProfiling());
-    await Promise.all(promises);
-  }
-
-  async endProfile() {
-    if (!this.profiler) {
-      return;
-    }
-
-    let promises = [this.profiler.stopProfiling()];
-    let names = ['Master'];
-
-    for (let worker of this.workers.values()) {
-      names.push('Worker ' + worker.id);
-      promises.push(
-        new Promise((resolve, reject) => {
-          worker.call({
-            method: 'endProfile',
-            args: [],
-            resolve,
-            reject,
-            retries: 0,
-            skipReadyCheck: true,
-          });
-        }),
-      );
-    }
-
-    var profiles = await Promise.all(promises);
-    let trace = new Trace();
-    let filename = `profile-${getTimeId()}.trace`;
-    let stream = trace.pipe(fs.createWriteStream(filename));
-
-    for (let profile of profiles) {
-      trace.addCPUProfile(names.shift(), profile);
-    }
-
-    trace.flush();
-    await new Promise((resolve) => {
-      stream.once('finish', resolve);
-    });
-
-    logger.info({
-      origin: '@atlaspack/workers',
-      message: md`Wrote profile to ${filename}`,
-    });
-  }
-
-  async callAllWorkers(method: string, args: Array<any>) {
-    let promises = [];
-    for (let worker of this.workers.values()) {
-      promises.push(
-        new Promise((resolve, reject) => {
-          worker.call({
-            method,
-            args,
-            resolve,
-            reject,
-            retries: 0,
-          });
-        }),
-      );
-    }
-
-    promises.push(this.localWorker[method](this.workerApi, ...args));
-    await Promise.all(promises);
-  }
-
-  async takeHeapSnapshot() {
-    let snapshotId = getTimeId();
-
-    try {
-      let snapshotPaths = await Promise.all(
-        [...this.workers.values()].map(
-          (worker) =>
-            new Promise((resolve, reject) => {
-              worker.call({
-                method: 'takeHeapSnapshot',
-                args: [snapshotId],
-                resolve,
-                reject,
-                retries: 0,
-                skipReadyCheck: true,
-              });
-            }),
-        ),
-      );
-
-      logger.info({
-        origin: '@atlaspack/workers',
-        message: md`Wrote heap snapshots to the following paths:\n${snapshotPaths.join(
-          '\n',
-        )}`,
-      });
-    } catch {
-      logger.error({
-        origin: '@atlaspack/workers',
-        message: 'Unable to take heap snapshots. Note: requires Node 11.13.0+',
-      });
-    }
-  }
-
-  static getNumWorkers(): number {
-    return process.env.ATLASPACK_WORKERS
-      ? parseInt(process.env.ATLASPACK_WORKERS, 10)
-      : Math.min(4, Math.ceil(cpuCount() / 2));
-  }
-
-  static isWorker(): boolean {
-    return !!child;
-  }
-
-  static getWorkerApi(): {|
-    callMaster: (
-      request: CallRequest,
-      awaitResponse?: ?boolean,
-    ) => Promise<mixed>,
-    createReverseHandle: (fn: (...args: Array<any>) => mixed) => Handle,
-    getSharedReference: (ref: SharedReference) => mixed,
-    resolveSharedReference: (value: mixed) => void | SharedReference,
-    runHandle: (handle: Handle, args: Array<any>) => Promise<mixed>,
-  |} {
-    invariant(
-      child != null,
-      'WorkerFarm.getWorkerApi can only be called within workers',
-    );
-    return child.workerApi;
-  }
-
-  static getConcurrentCallsPerWorker(
-    defaultValue?: number = DEFAULT_MAX_CONCURRENT_CALLS,
-  ): number {
-    return (
-      parseInt(process.env.ATLASPACK_MAX_CONCURRENT_CALLS, 10) || defaultValue
-    );
-  }
-}
-
-function getTimeId() {
-  let now = new Date();
-  return (
-    String(now.getFullYear()) +
-    String(now.getMonth() + 1).padStart(2, '0') +
-    String(now.getDate()).padStart(2, '0') +
-    '-' +
-    String(now.getHours()).padStart(2, '0') +
-    String(now.getMinutes()).padStart(2, '0') +
-    String(now.getSeconds()).padStart(2, '0')
-  );
 }
