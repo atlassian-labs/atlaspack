@@ -8,7 +8,7 @@ export class SharableReference<T> extends Serializable {
   #value: T;
   #sharedReferences: Map<number, any>;
   #sharedReferencesByValue: Map<any, number>;
-  #workers: Array<IWorker>
+  #workers: Array<IWorker>;
 
   constructor(
     ref: number,
@@ -22,14 +22,16 @@ export class SharableReference<T> extends Serializable {
     this.#value = value;
     this.#sharedReferences = sharedReferences;
     this.#sharedReferencesByValue = sharedReferencesByValue;
-    this.#workers = workers
+    this.#workers = workers;
   }
 
   dispose = async (): Promise<void> => {
     this.#sharedReferences.delete(this.ref);
     this.#sharedReferencesByValue.delete(this.#value);
-    await Promise.all(this.#workers.map(w => w.deleteSharableReference(this.ref)))
-  }
+    await Promise.all(
+      this.#workers.map((w) => w.deleteSharableReference(this.ref)),
+    );
+  };
 
   serialize(): TransferItem {
     return this.ref;

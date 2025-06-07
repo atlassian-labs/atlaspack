@@ -11,7 +11,7 @@ import type {
   HandleFunc,
   WorkerMasterMessage,
 } from '../worker-interface.mts';
-import { SharableReference } from '../sharable-reference.mts';
+import {SharableReference} from '../sharable-reference.mts';
 
 type ListenerMap = Map<number, PromiseSubject<any>>;
 
@@ -21,7 +21,6 @@ export type WorkerThreadOptions = {
   reverseHandles: Array<HandleFunc>;
   sharedReferences: Map<number, any>;
   sharedReferencesByValue: Map<any, number>;
-
 };
 
 export class WorkerThread extends EventEmitter implements IWorker {
@@ -48,7 +47,6 @@ export class WorkerThread extends EventEmitter implements IWorker {
     this.#reverseHandles = options.reverseHandles;
     this.#sharedReferences = options.sharedReferences;
     this.#sharedReferencesByValue = options.sharedReferencesByValue;
-
 
     const worker = new Worker(WORKER_PATH, {
       workerData: options.workerPath,
@@ -115,7 +113,7 @@ export class WorkerThread extends EventEmitter implements IWorker {
           break;
         }
         case 2: {
-          const [id,,ref] = msg;
+          const [id, , ref] = msg;
           const result = await this.#sharedReferences.get!(ref);
           (await this.#onEventMaster).postMessage([id, result]);
           break;
@@ -150,19 +148,23 @@ export class WorkerThread extends EventEmitter implements IWorker {
     const [id, resp] = this.#addTask();
     const data = this.#sharedReferences.get(ref);
     (await this.#onInternal).postMessage([id, 1, ref, data]);
-    await resp
-    this.#listeners.delete(id)
+    await resp;
+    this.#listeners.delete(id);
   }
 
   async deleteSharableReference(ref: number): Promise<void> {
     const [id, resp] = this.#addTask();
     (await this.#onInternal).postMessage([id, 2, ref]);
-    await resp
-    this.#listeners.delete(id)
+    await resp;
+    this.#listeners.delete(id);
   }
 
   async clearSharableReferences(): Promise<void> {
-    await Promise.all(this.#sharedReferences.keys().map(key => this.deleteSharableReference(key)))
+    await Promise.all(
+      this.#sharedReferences
+        .keys()
+        .map((key) => this.deleteSharableReference(key)),
+    );
   }
 
   async end(): Promise<void> {

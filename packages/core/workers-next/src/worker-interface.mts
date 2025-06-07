@@ -51,15 +51,23 @@ export type HandleFunc<R = unknown, A extends Array<TransferItem> = any[]> = (
   ...args: A
 ) => R;
 
-export type WorkerInternalMessage = (
-  WorkerInternalEndMessage |
-  WorkerInternalPutSharedRefMessage |
-  WorkerInternalDeleteSharedRefMessage
-)
+export type WorkerInternalMessage =
+  | WorkerInternalEndMessage
+  | WorkerInternalPutSharedRefMessage
+  | WorkerInternalDeleteSharedRefMessage;
 
 export type WorkerInternalEndMessage = [id: number, methodName: 0, args: []];
-export type WorkerInternalPutSharedRefMessage = [id: number, methodName: 1, ref: number, value: TransferItem];
-export type WorkerInternalDeleteSharedRefMessage = [id: number, methodName: 2, ref: number];
+export type WorkerInternalPutSharedRefMessage = [
+  id: number,
+  methodName: 1,
+  ref: number,
+  value: TransferItem,
+];
+export type WorkerInternalDeleteSharedRefMessage = [
+  id: number,
+  methodName: 2,
+  ref: number,
+];
 
 export type WorkerMasterMessage =
   | [id: number, action: 0, ...WorkerMasterMessageCallMaster]
@@ -76,6 +84,4 @@ export type WorkerMasterMessageReverseHandle = [
   args: Array<TransferItem>,
 ];
 
-export type WorkerMasterMessageSharableReference = [
-  ref: number,
-];
+export type WorkerMasterMessageSharableReference = [ref: number];

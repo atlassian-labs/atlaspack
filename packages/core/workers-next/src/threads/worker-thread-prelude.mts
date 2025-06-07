@@ -32,7 +32,12 @@ async function main() {
 
   const sharedReferences = new Map<number, any>();
   const sharedReferencesByValue = new Map<any, number>();
-  const api = new Api(sharedReferences, sharedReferencesByValue, onEventMaster, onErrorMaster);
+  const api = new Api(
+    sharedReferences,
+    sharedReferencesByValue,
+    onEventMaster,
+    onErrorMaster,
+  );
 
   // Internal messages
   async function onInternalCallback(msg: WorkerInternalMessage) {
@@ -40,8 +45,8 @@ async function main() {
       // End
       case 0: {
         const [id] = msg;
-        sharedReferences.clear()
-        sharedReferencesByValue.clear()
+        sharedReferences.clear();
+        sharedReferencesByValue.clear();
         onEvent.removeAllListeners('message');
         onInternal.removeAllListeners('message');
         onInternal.postMessage([id]);
@@ -51,14 +56,14 @@ async function main() {
       case 1: {
         const [id, , ref, data] = msg;
         sharedReferences.set(ref, data);
-        sharedReferencesByValue.set(data, ref)
+        sharedReferencesByValue.set(data, ref);
         onInternal.postMessage([id]);
         break;
       }
       // Delete shared ref
       case 2: {
         const [id, , ref] = msg;
-        const value = sharedReferences.get(ref)
+        const value = sharedReferences.get(ref);
         sharedReferences.delete(ref);
         sharedReferencesByValue.delete(value);
         onInternal.postMessage([id]);
@@ -159,6 +164,6 @@ class Api {
   }
 
   resolveSharedReference(value: any): number | null {
-    return this.#sharedReferencesByValue.get(value) ?? null
+    return this.#sharedReferencesByValue.get(value) ?? null;
   }
 }

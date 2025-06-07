@@ -10,8 +10,8 @@ import type {
 } from './worker-interface.mts';
 import {Serializable} from './worker-interface.mts';
 import {HandleRef} from './handle-ref.mts';
-import { SharableReference } from './sharable-reference.mts';
-import { WorkerApi } from './worker-api.mts';
+import {SharableReference} from './sharable-reference.mts';
+import {WorkerApi} from './worker-api.mts';
 
 export type WorkerFarmWorkerStatus = {
   totalTasks: number;
@@ -50,7 +50,10 @@ export class WorkerFarm extends EventEmitter {
       sharedReferencesByValue: this.#sharedReferencesByValue,
       ...resolvedOptions,
     });
-    this.workerApi = new WorkerApi(this.#sharedReferences, this.#sharedReferencesByValue)
+    this.workerApi = new WorkerApi(
+      this.#sharedReferences,
+      this.#sharedReferencesByValue,
+    );
     this.onReady().then(() => this.emit('ready'));
   }
 
@@ -148,8 +151,8 @@ export class WorkerFarm extends EventEmitter {
    * any async actions to complete before resolving */
   async end(): Promise<void> {
     await Promise.all(this.#workers.map((w) => w.clearSharableReferences()));
-    this.#sharedReferences.clear()
-    this.#sharedReferencesByValue.clear()
+    this.#sharedReferences.clear();
+    this.#sharedReferencesByValue.clear();
     this.#reverseHandles.length = 0; // clear the array
     await Promise.all(this.#workers.map((w) => w.end()));
   }
@@ -166,7 +169,7 @@ export class WorkerFarm extends EventEmitter {
     this.#sharedReferences.set(id, value);
     this.#sharedReferencesByValue.set(value, id);
 
-    await Promise.all(this.#workers.map(w => w.putSharableReference(id)))
+    await Promise.all(this.#workers.map((w) => w.putSharableReference(id)));
 
     return new SharableReference(
       id,
@@ -202,5 +205,3 @@ export class WorkerFarm extends EventEmitter {
     return tasks.indexOf(Math.min(...tasks));
   }
 }
-
-

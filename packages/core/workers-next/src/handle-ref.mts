@@ -1,7 +1,7 @@
 import {Serializable} from './worker-interface.mts';
 import type {TransferItem} from './worker-interface.mts';
 
-export type SerializedHandleRef = number
+export type SerializedHandleRef = number;
 
 export class HandleRef extends Serializable {
   #ref: number;
