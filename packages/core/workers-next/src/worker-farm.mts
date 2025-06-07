@@ -10,10 +10,13 @@ import type {
 } from './worker-interface.mts';
 import {Serializable} from './worker-interface.mts';
 import {HandleRef} from './handle-ref.mts';
+import { SharableReference } from './sharable-reference.mts';
+import { WorkerApi } from './worker-api.mts';
 
 export type WorkerFarmWorkerStatus = {
   totalTasks: number;
   handles: number;
+  sharedReferences: number;
   workers: Array<{
     tasks: number;
     status: WorkerStatus;
@@ -27,6 +30,7 @@ export type WorkerFarmOptions = {
 };
 
 export class WorkerFarm extends EventEmitter {
+  readonly workerApi: WorkerApi;
   #workers: Array<IWorker>;
   #reverseHandles: Array<HandleFunc>;
   #referenceId: number;
@@ -42,8 +46,11 @@ export class WorkerFarm extends EventEmitter {
     this.#sharedReferencesByValue = new Map();
     this.#workers = WorkerFarm.spawnWorkers({
       reverseHandles: this.#reverseHandles,
+      sharedReferences: this.#sharedReferences,
+      sharedReferencesByValue: this.#sharedReferencesByValue,
       ...resolvedOptions,
     });
+    this.workerApi = new WorkerApi(this.#sharedReferences, this.#sharedReferencesByValue)
     this.onReady().then(() => this.emit('ready'));
   }
 
@@ -71,6 +78,8 @@ export class WorkerFarm extends EventEmitter {
       workers.push(
         new WorkerThread({
           reverseHandles: options.reverseHandles,
+          sharedReferences: options.sharedReferences,
+          sharedReferencesByValue: options.sharedReferencesByValue,
           workerTimeout: options.workerTimeout,
           workerPath: options.workerPath,
         }),
@@ -93,6 +102,7 @@ export class WorkerFarm extends EventEmitter {
     return {
       totalTasks,
       handles: this.#reverseHandles.length,
+      sharedReferences: this.#sharedReferences.size,
       workers: this.#workers.map((w) => ({
         tasks: w.tasks(),
         status: w.status(),
@@ -137,26 +147,33 @@ export class WorkerFarm extends EventEmitter {
    * @description gracefully terminate all workers and wait for
    * any async actions to complete before resolving */
   async end(): Promise<void> {
-    await Promise.all(this.#workers.map((w) => w.end()));
+    await Promise.all(this.#workers.map((w) => w.clearSharableReferences()));
+    this.#sharedReferences.clear()
+    this.#sharedReferencesByValue.clear()
     this.#reverseHandles.length = 0; // clear the array
+    await Promise.all(this.#workers.map((w) => w.end()));
   }
 
   /**
    * @description creates a reference to a value that is transferred
    * lazily and synchronized with workers
    */
-  createSharedReference<T>(
+  async createSharedReference<T>(
     value: T,
     isCacheable: boolean = true,
-  ): SharableReference<T> {
+  ): Promise<SharableReference<T>> {
     let id = this.#referenceId++;
     this.#sharedReferences.set(id, value);
     this.#sharedReferencesByValue.set(value, id);
+
+    await Promise.all(this.#workers.map(w => w.putSharableReference(id)))
+
     return new SharableReference(
       id,
       value,
       this.#sharedReferences,
       this.#sharedReferencesByValue,
+      this.#workers,
     );
   }
 
@@ -186,26 +203,4 @@ export class WorkerFarm extends EventEmitter {
   }
 }
 
-export class SharableReference<T> {
-  ref: number;
-  #value: T;
-  #sharedReferences: Map<number, any>;
-  #sharedReferencesByValue: Map<any, number>;
 
-  constructor(
-    ref: number,
-    value: T,
-    sharedReferences: Map<number, any>,
-    sharedReferencesByValue: Map<any, number>,
-  ) {
-    this.ref = ref;
-    this.#value = value;
-    this.#sharedReferences = sharedReferences;
-    this.#sharedReferencesByValue = sharedReferencesByValue;
-  }
-
-  dispose() {
-    this.#sharedReferences.delete(this.ref);
-    this.#sharedReferencesByValue.delete(this.#value);
-  }
-}

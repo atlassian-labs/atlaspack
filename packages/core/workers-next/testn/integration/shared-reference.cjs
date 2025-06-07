@@ -3,4 +3,4 @@ function run(workerApi, ref) {
   return sharedReference || 'Shared reference does not exist';
 }
 
-exports.run = run;
+module.exports.run = run;

@@ -9,7 +9,7 @@ void (async function () {
   const patterns = args.filter(arg => !arg.startsWith('--') || !arg.startsWith('-'))
 
   if (patterns.length === 0) {
-    patterns.push('**/*.test.mts')
+    patterns.push('**/*.testn.mts')
   }
 
   console.table(patterns)

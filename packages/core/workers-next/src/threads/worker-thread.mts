@@ -11,6 +11,7 @@ import type {
   HandleFunc,
   WorkerMasterMessage,
 } from '../worker-interface.mts';
+import { SharableReference } from '../sharable-reference.mts';
 
 type ListenerMap = Map<number, PromiseSubject<any>>;
 
@@ -18,6 +19,9 @@ export type WorkerThreadOptions = {
   workerTimeout: number;
   workerPath: string;
   reverseHandles: Array<HandleFunc>;
+  sharedReferences: Map<number, any>;
+  sharedReferencesByValue: Map<any, number>;
+
 };
 
 export class WorkerThread extends EventEmitter implements IWorker {
@@ -29,6 +33,8 @@ export class WorkerThread extends EventEmitter implements IWorker {
   #counter: number;
   #status: WorkerStatus;
   #reverseHandles: Array<HandleFunc>;
+  #sharedReferences: Map<number, any>;
+  #sharedReferencesByValue: Map<any, number>;
 
   constructor(options: WorkerThreadOptions) {
     super();
@@ -40,6 +46,9 @@ export class WorkerThread extends EventEmitter implements IWorker {
     this.#onInternal = new PromiseSubject();
     this.#onEventMaster = new PromiseSubject();
     this.#reverseHandles = options.reverseHandles;
+    this.#sharedReferences = options.sharedReferences;
+    this.#sharedReferencesByValue = options.sharedReferencesByValue;
+
 
     const worker = new Worker(WORKER_PATH, {
       workerData: options.workerPath,
@@ -105,6 +114,12 @@ export class WorkerThread extends EventEmitter implements IWorker {
           (await this.#onEventMaster).postMessage([id, result]);
           break;
         }
+        case 2: {
+          const [id,,ref] = msg;
+          const result = await this.#sharedReferences.get!(ref);
+          (await this.#onEventMaster).postMessage([id, result]);
+          break;
+        }
       }
     } catch (error) {
       console.log(error);
@@ -131,11 +146,30 @@ export class WorkerThread extends EventEmitter implements IWorker {
     return resp.finally(() => this.#listeners.delete(id));
   }
 
+  async putSharableReference(ref: number): Promise<void> {
+    const [id, resp] = this.#addTask();
+    const data = this.#sharedReferences.get(ref);
+    (await this.#onInternal).postMessage([id, 1, ref, data]);
+    await resp
+    this.#listeners.delete(id)
+  }
+
+  async deleteSharableReference(ref: number): Promise<void> {
+    const [id, resp] = this.#addTask();
+    (await this.#onInternal).postMessage([id, 2, ref]);
+    await resp
+    this.#listeners.delete(id)
+  }
+
+  async clearSharableReferences(): Promise<void> {
+    await Promise.all(this.#sharedReferences.keys().map(key => this.deleteSharableReference(key)))
+  }
+
   async end(): Promise<void> {
     this.#status = 'ending';
     const [id, resp] = this.#addTask();
     this.#listeners = new ClosedListeners(this.#listeners, [id]);
-    (await this.#onInternal).postMessage([id, 'end', []]);
+    (await this.#onInternal).postMessage([id, 0]);
     await resp;
     await (await this.#worker).terminate();
     this.#status = 'ended';

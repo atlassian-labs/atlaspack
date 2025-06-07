@@ -14,6 +14,9 @@ export interface IWorker extends EventEmitter {
   ): Promise<unknown>;
   end(): Promise<void>;
   flush(): Promise<void>;
+  putSharableReference(ref: number): Promise<void>;
+  deleteSharableReference(ref: number): Promise<void>;
+  clearSharableReferences(): Promise<void>;
 }
 
 export type MasterCall = {
@@ -24,10 +27,6 @@ export type MasterCall = {
 
 export class Serializable {
   serialize(): TransferItem {
-    throw new Error('Not Implemented');
-  }
-
-  deserialize(_target: TransferItem): any {
     throw new Error('Not Implemented');
   }
 }
@@ -46,24 +45,37 @@ export type WorkerMessage = [
   id: number,
   methodName: string,
   args: TransferItem[],
-  serdeArgs: number[],
 ];
 
 export type HandleFunc<R = unknown, A extends Array<TransferItem> = any[]> = (
   ...args: A
 ) => R;
 
-export type WorkerInternalMessage = [id: number, methodName: 'end', args: []];
+export type WorkerInternalMessage = (
+  WorkerInternalEndMessage |
+  WorkerInternalPutSharedRefMessage |
+  WorkerInternalDeleteSharedRefMessage
+)
+
+export type WorkerInternalEndMessage = [id: number, methodName: 0, args: []];
+export type WorkerInternalPutSharedRefMessage = [id: number, methodName: 1, ref: number, value: TransferItem];
+export type WorkerInternalDeleteSharedRefMessage = [id: number, methodName: 2, ref: number];
 
 export type WorkerMasterMessage =
   | [id: number, action: 0, ...WorkerMasterMessageCallMaster]
-  | [id: number, action: 1, ...WorkerMasterMessageReverseHandle];
+  | [id: number, action: 1, ...WorkerMasterMessageReverseHandle]
+  | [id: number, action: 2, ...WorkerMasterMessageSharableReference];
 
 export type WorkerMasterMessageCallMaster = [
   location: string,
   args: Array<TransferItem>,
 ];
+
 export type WorkerMasterMessageReverseHandle = [
   ref: number,
   args: Array<TransferItem>,
+];
+
+export type WorkerMasterMessageSharableReference = [
+  ref: number,
 ];

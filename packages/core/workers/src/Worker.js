@@ -1,12 +1,8 @@
 // @flow
 
 import type {FilePath} from '@atlaspack/types-internal';
-import type {
-  BackendType,
-  WorkerImpl,
-  WorkerMessage,
-  SharedReference,
-} from './types';
+import type {BackendType, WorkerImpl, WorkerMessage} from './types';
+import type {SharedReference} from './WorkerFarm';
 
 import nullthrows from 'nullthrows';
 import EventEmitter from 'events';
