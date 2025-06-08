@@ -30,6 +30,7 @@ import {ContentGraph} from '@atlaspack/graph';
 import {createDependency} from './Dependency';
 import {type ProjectPath, fromProjectPathRelative} from './projectPath';
 import {fromEnvironmentId, toEnvironmentId} from './EnvironmentManager';
+import {getFeatureFlag} from '../../feature-flags/src';
 
 type InitOpts = {|
   entries?: Array<ProjectPath>,
@@ -146,6 +147,23 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
       ...super.serialize(),
       hash: this.hash,
     };
+  }
+
+  // Deduplicates Environments by making them referentially equal
+  normalizeEnvironment(input: Asset | Dependency | AssetGroup) {
+    if (getFeatureFlag('environmentDeduplication')) {
+      return;
+    }
+
+    let {id, context} = fromEnvironmentId(input.env);
+    let idAndContext = `${id}-${context}`;
+
+    let env = this.envCache.get(idAndContext);
+    if (env) {
+      input.env = env;
+    } else {
+      this.envCache.set(idAndContext, fromEnvironmentId(input.env));
+    }
   }
 
   setRootConnections({entries, assetGroups}: InitOpts) {
@@ -436,6 +454,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     assets: Array<Asset>,
     correspondingRequest: ContentKey,
   ) {
+    this.normalizeEnvironment(assetGroup);
     let assetGroupNode = nodeFromAssetGroup(assetGroup);
     assetGroupNode = this.getNodeByContentKey(assetGroupNode.id);
     if (!assetGroupNode) {
@@ -466,6 +485,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     |}> = [];
     let assetNodeIds = [];
     for (let asset of assets) {
+      this.normalizeEnvironment(asset);
       let isDirect = !dependentAssetKeys.has(asset.uniqueKey);
 
       let dependentAssets = [];
@@ -507,6 +527,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     let depNodeIds: Array<NodeId> = [];
     let depNodesWithAssets = [];
     for (let dep of assetNode.value.dependencies.values()) {
+      this.normalizeEnvironment(dep);
       let depNode = nodeFromDep(dep);
       let existing = this.getNodeByContentKey(depNode.id);
       if (
