@@ -113,12 +113,12 @@ export async function loadPluginConfig<T: PluginWithLoadConfig>(
  *
  * @example
  *     const obj = { a: { b: { c: 'd' } } };
- *     getObjectKey(obj, ['a', 'b', 'c']);        // 'd'
- *     getObjectKey(obj, ['a', 'b', 'd']);        // undefined
- *     getObjectKey(obj, ['a', 'b']);             // { c: 'd' }
- *     getObjectKey(obj, ['a', 'b', 'c', 'd']);   // undefined
+ *     getValueAtPath(obj, ['a', 'b', 'c']);        // 'd'
+ *     getValueAtPath(obj, ['a', 'b', 'd']);        // undefined
+ *     getValueAtPath(obj, ['a', 'b']);             // { c: 'd' }
+ *     getValueAtPath(obj, ['a', 'b', 'c', 'd']);   // undefined
  */
-export function getObjectKey(obj: Object, key: string[]): any {
+export function getValueAtPath(obj: Object, key: string[]): any {
   let current = obj;
   for (let part of key) {
     if (current == null) {
@@ -150,7 +150,7 @@ export async function getConfigKeyContentHash(
     fromProjectPath(options.projectRoot, filePath),
   );
 
-  const value = getObjectKey(conf?.config, configKey);
+  const value = getValueAtPath(conf?.config, configKey);
   if (conf == null || value == null) {
     // This can occur when a config key has been removed entirely during `respondToFSEvents`
     return '';

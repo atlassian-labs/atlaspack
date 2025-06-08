@@ -12,7 +12,10 @@ import type {
   ConfigRequestResult,
 } from '../../src/requests/ConfigRequest';
 import type {RunAPI} from '../../src/RequestTracker';
-import {getObjectKey, runConfigRequest} from '../../src/requests/ConfigRequest';
+import {
+  getValueAtPath,
+  runConfigRequest,
+} from '../../src/requests/ConfigRequest';
 import {toProjectPath} from '../../src/projectPath';
 
 // $FlowFixMe unclear-type forgive me
@@ -250,44 +253,44 @@ describe('ConfigRequest tests', () => {
   });
 });
 
-describe('getObjectKey', () => {
+describe('getValueAtPath', () => {
   it('can get a key from an object', () => {
     const obj = {a: {b: {c: 'd'}}};
-    assert.equal(getObjectKey(obj, ['a', 'b', 'c']), 'd');
+    assert.equal(getValueAtPath(obj, ['a', 'b', 'c']), 'd');
   });
 
   it('returns the original object when key array is empty', () => {
     const obj = {a: 1, b: 2};
-    assert.deepEqual(getObjectKey(obj, []), obj);
+    assert.deepEqual(getValueAtPath(obj, []), obj);
   });
 
   it('can access single-level properties', () => {
     const obj = {name: 'test', age: 25};
-    assert.equal(getObjectKey(obj, ['name']), 'test');
-    assert.equal(getObjectKey(obj, ['age']), 25);
+    assert.equal(getValueAtPath(obj, ['name']), 'test');
+    assert.equal(getValueAtPath(obj, ['age']), 25);
   });
 
   it('returns undefined for non-existent keys', () => {
     const obj = {a: {b: 'value'}};
-    assert.equal(getObjectKey(obj, ['nonexistent']), undefined);
-    assert.equal(getObjectKey(obj, ['a', 'nonexistent']), undefined);
-    assert.equal(getObjectKey(obj, ['a', 'b', 'nonexistent']), undefined);
+    assert.equal(getValueAtPath(obj, ['nonexistent']), undefined);
+    assert.equal(getValueAtPath(obj, ['a', 'nonexistent']), undefined);
+    assert.equal(getValueAtPath(obj, ['a', 'b', 'nonexistent']), undefined);
   });
 
   it('handles null and undefined values in the path', () => {
     const obj = {a: null, b: {c: undefined}};
-    assert.equal(getObjectKey(obj, ['a']), null);
-    assert.equal(getObjectKey(obj, ['b', 'c']), undefined);
+    assert.equal(getValueAtPath(obj, ['a']), null);
+    assert.equal(getValueAtPath(obj, ['b', 'c']), undefined);
   });
 
   it('does not throw when trying to access property of null', () => {
     const obj = {a: null};
-    assert.equal(getObjectKey(obj, ['a', 'b']), undefined);
+    assert.equal(getValueAtPath(obj, ['a', 'b']), undefined);
   });
 
   it('does not throw when trying to access property of undefined', () => {
     const obj = {a: undefined};
-    assert.equal(getObjectKey(obj, ['a', 'b']), undefined);
+    assert.equal(getValueAtPath(obj, ['a', 'b']), undefined);
   });
 
   it('can access nested arrays and objects', () => {
@@ -297,14 +300,14 @@ describe('getObjectKey', () => {
         {name: 'item2', props: {color: 'blue'}},
       ],
     };
-    assert.equal(getObjectKey(obj, ['data', '0', 'name']), 'item1');
-    assert.equal(getObjectKey(obj, ['data', '1', 'props', 'color']), 'blue');
+    assert.equal(getValueAtPath(obj, ['data', '0', 'name']), 'item1');
+    assert.equal(getValueAtPath(obj, ['data', '1', 'props', 'color']), 'blue');
   });
 
   it('handles numeric keys as strings', () => {
     const obj = {'0': 'first', '1': {nested: 'value'}};
-    assert.equal(getObjectKey(obj, ['0']), 'first');
-    assert.equal(getObjectKey(obj, ['1', 'nested']), 'value');
+    assert.equal(getValueAtPath(obj, ['0']), 'first');
+    assert.equal(getValueAtPath(obj, ['1', 'nested']), 'value');
   });
 
   it('handles keys with special characters', () => {
@@ -316,10 +319,13 @@ describe('getObjectKey', () => {
       'key with spaces': 'value3',
       '@special$chars#': 'value4',
     };
-    assert.equal(getObjectKey(obj, ['key-with-dashes']), 'value1');
-    assert.equal(getObjectKey(obj, ['key.with.dots', 'nested-key']), 'value2');
-    assert.equal(getObjectKey(obj, ['key with spaces']), 'value3');
-    assert.equal(getObjectKey(obj, ['@special$chars#']), 'value4');
+    assert.equal(getValueAtPath(obj, ['key-with-dashes']), 'value1');
+    assert.equal(
+      getValueAtPath(obj, ['key.with.dots', 'nested-key']),
+      'value2',
+    );
+    assert.equal(getValueAtPath(obj, ['key with spaces']), 'value3');
+    assert.equal(getValueAtPath(obj, ['@special$chars#']), 'value4');
   });
 
   it('handles falsy values correctly', () => {
@@ -334,13 +340,13 @@ describe('getObjectKey', () => {
         false: false,
       },
     };
-    assert.equal(getObjectKey(obj, ['zero']), 0);
-    assert.equal(getObjectKey(obj, ['false']), false);
-    assert.equal(getObjectKey(obj, ['emptyString']), '');
-    assert.equal(getObjectKey(obj, ['nullValue']), null);
-    assert.equal(getObjectKey(obj, ['undefinedValue']), undefined);
-    assert.equal(getObjectKey(obj, ['nested', 'zero']), 0);
-    assert.equal(getObjectKey(obj, ['nested', 'false']), false);
+    assert.equal(getValueAtPath(obj, ['zero']), 0);
+    assert.equal(getValueAtPath(obj, ['false']), false);
+    assert.equal(getValueAtPath(obj, ['emptyString']), '');
+    assert.equal(getValueAtPath(obj, ['nullValue']), null);
+    assert.equal(getValueAtPath(obj, ['undefinedValue']), undefined);
+    assert.equal(getValueAtPath(obj, ['nested', 'zero']), 0);
+    assert.equal(getValueAtPath(obj, ['nested', 'false']), false);
   });
 
   it('handles deep nesting', () => {
@@ -358,7 +364,7 @@ describe('getObjectKey', () => {
       },
     };
     assert.equal(
-      getObjectKey(obj, [
+      getValueAtPath(obj, [
         'level1',
         'level2',
         'level3',
@@ -378,8 +384,8 @@ describe('getObjectKey', () => {
         date: date,
       },
     };
-    assert.equal(getObjectKey(obj, ['timestamp']), date);
-    assert.equal(getObjectKey(obj, ['nested', 'date']), date);
+    assert.equal(getValueAtPath(obj, ['timestamp']), date);
+    assert.equal(getValueAtPath(obj, ['nested', 'date']), date);
   });
 
   it('handles complex nested structures with mixed types', () => {
@@ -411,13 +417,19 @@ describe('getObjectKey', () => {
     };
 
     assert.equal(
-      getObjectKey(obj, ['users', '0', 'profile', 'settings', 'theme']),
+      getValueAtPath(obj, ['users', '0', 'profile', 'settings', 'theme']),
       'dark',
     );
     assert.equal(
-      getObjectKey(obj, ['users', '1', 'profile', 'settings', 'notifications']),
+      getValueAtPath(obj, [
+        'users',
+        '1',
+        'profile',
+        'settings',
+        'notifications',
+      ]),
       false,
     );
-    assert.equal(getObjectKey(obj, ['config', 'features', '0']), 'feature1');
+    assert.equal(getValueAtPath(obj, ['config', 'features', '0']), 'feature1');
   });
 });
