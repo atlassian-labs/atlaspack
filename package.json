@@ -87,7 +87,11 @@
     "node": ">= 16.0.0"
   },
   "lint-staged": {
-    "*.{js,json,md,ts}": "prettier --write",
+    "*.{js,ts,jsx,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md}": "prettier --write",
     "*.rs": "rustfmt"
   },
   "packageManager": "yarn@1.22.19",
