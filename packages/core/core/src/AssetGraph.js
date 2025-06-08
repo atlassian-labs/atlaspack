@@ -30,7 +30,7 @@ import {ContentGraph} from '@atlaspack/graph';
 import {createDependency} from './Dependency';
 import {type ProjectPath, fromProjectPathRelative} from './projectPath';
 import {fromEnvironmentId, toEnvironmentId} from './EnvironmentManager';
-import {getFeatureFlag} from '../../feature-flags/src';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type InitOpts = {|
   entries?: Array<ProjectPath>,
