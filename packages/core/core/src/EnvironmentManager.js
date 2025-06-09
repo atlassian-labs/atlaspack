@@ -4,8 +4,16 @@
  * but the same change must be made for `TypesEnvironment` in @atlaspack/types.
  */
 import type {Environment as CoreEnvironment} from './types';
-import {addEnvironment, getEnvironment} from '@atlaspack/rust';
+import {type Cache} from '@atlaspack/cache';
+import {
+  addEnvironment,
+  getEnvironment,
+  getAllEnvironments,
+  setAllEnvironments,
+} from '@atlaspack/rust';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {instrument} from '@atlaspack/logger';
+import {ATLASPACK_VERSION} from './constants';
 
 const localEnvironmentCache = new Map<string, CoreEnvironment>();
 
@@ -73,4 +81,65 @@ export function fromEnvironmentId(id: EnvironmentRef): CoreEnvironment {
   const env = Object.freeze(getEnvironment(id));
   localEnvironmentCache.set(id, env);
   return env;
+}
+
+/**
+ * Writes all environments and their IDs to the cache
+ * @param {Cache} cache
+ * @returns {Promise<void>}
+ */
+export async function writeEnvironmentsToCache(cache: Cache): Promise<void> {
+  const environments = getAllEnvironments();
+  const environmentIds = new Set<string>();
+
+  // Store each environment individually
+  for (const env of environments) {
+    environmentIds.add(env.id);
+    const envKey = `Environment/${ATLASPACK_VERSION}/${env.id}`;
+
+    await instrument(
+      `RequestTracker::writeToCache::cache.put(${envKey})`,
+      async () => {
+        await cache.set(envKey, env);
+      },
+    );
+  }
+
+  // Store the list of environment IDs
+  await instrument(
+    `RequestTracker::writeToCache::cache.put(${`EnvironmentManager/${ATLASPACK_VERSION}`})`,
+    async () => {
+      await cache.set(
+        `EnvironmentManager/${ATLASPACK_VERSION}`,
+        Array.from(environmentIds),
+      );
+    },
+  );
+}
+
+/**
+ * Loads all environments and their IDs from the cache
+ * @param {Cache} cache
+ * @returns {Promise<void>}
+ */
+export async function loadEnvironmentsFromCache(cache: Cache): Promise<void> {
+  const cachedEnvIds = await cache.get(
+    `EnvironmentManager/${ATLASPACK_VERSION}`,
+  );
+
+  if (cachedEnvIds == null) {
+    return;
+  }
+
+  const environments = [];
+  for (const envId of cachedEnvIds) {
+    const envKey = `Environment/${ATLASPACK_VERSION}/${envId}`;
+    const cachedEnv = await cache.get(envKey);
+    if (cachedEnv != null) {
+      environments.push(cachedEnv);
+    }
+  }
+  if (environments.length > 0) {
+    setAllEnvironments(environments);
+  }
 }

@@ -30,15 +30,15 @@ import nullthrows from 'nullthrows';
 
 import {
   ATLASPACK_VERSION,
-  VALID,
-  INITIAL_BUILD,
   FILE_CREATE,
-  FILE_UPDATE,
   FILE_DELETE,
+  FILE_UPDATE,
   ENV_CHANGE,
+  ERROR,
+  INITIAL_BUILD,
   OPTION_CHANGE,
   STARTUP,
-  ERROR,
+  VALID,
 } from './constants';
 import type {AtlaspackV3} from './atlaspack-v3/AtlaspackV3';
 import {
@@ -70,6 +70,11 @@ import type {
 } from './types';
 import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
 import {performance} from 'perf_hooks';
+
+import {
+  loadEnvironmentsFromCache,
+  writeEnvironmentsToCache,
+} from './EnvironmentManager';
 
 export const requestGraphEdgeTypes = {
   subrequest: 2,
@@ -1572,6 +1577,10 @@ export default class RequestTracker {
         size: this.graph.nodes.length,
       });
 
+      if (getFeatureFlag('environmentDeduplication')) {
+        await writeEnvironmentsToCache(options.cache);
+      }
+
       let serialisedGraph = this.graph.serialize();
 
       // Delete an existing request graph cache, to prevent invalid states
@@ -1855,6 +1864,10 @@ async function loadRequestGraph(options): Async<RequestGraph> {
       ...commonMeta,
     },
   });
+
+  if (getFeatureFlag('environmentDeduplication')) {
+    await loadEnvironmentsFromCache(options.cache);
+  }
 
   const hasRequestGraphInCache = getFeatureFlag('cachePerformanceImprovements')
     ? await options.cache.has(requestGraphKey)

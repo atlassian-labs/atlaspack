@@ -40,6 +40,7 @@ import {version} from '@atlaspack/core/package.json';
 import {deserialize} from '@atlaspack/build-cache';
 import {hashString} from '@atlaspack/rust';
 import {ATLASPACK_VERSION} from '@atlaspack/core/src/constants';
+import {getAllEnvironments} from '@atlaspack/rust';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
 
 let inputDir: string;
@@ -7100,4 +7101,70 @@ let packageManager = new NodePackageManager(inputFS, '/');
       });
     },
   );
+
+  describe('environment caching', function () {
+    it('should cache and load environments between builds', async function () {
+      const EnvironmentManager = require('@atlaspack/core/src/EnvironmentManager');
+      const loadEnvironmentsSpy = sinon.spy(
+        EnvironmentManager,
+        'loadEnvironmentsFromCache',
+      );
+
+      inputDir = path.join(
+        __dirname,
+        '/input',
+        Math.random().toString(36).slice(2),
+      );
+
+      let firstBuildEnvs;
+
+      // First build: Set up initial environments and write to cache
+      await testCache({
+        entries: ['src/index.js'],
+        featureFlags: {
+          environmentDeduplication: true,
+        },
+        async setup() {
+          await overlayFS.writeFile(path.join(inputDir, 'src/index.js'), '');
+        },
+        update() {
+          firstBuildEnvs = getAllEnvironments();
+          const env = firstBuildEnvs.find((e) => e.context === 'browser');
+          assert(env, 'Browser environment should be created in first build');
+        },
+      });
+
+      // Second build: Verify environments are loaded from cache
+      await testCache({
+        entries: ['src/index.js'],
+        featureFlags: {
+          environmentDeduplication: true,
+        },
+        update() {
+          const secondBuildEnvs = getAllEnvironments();
+          assert(
+            loadEnvironmentsSpy.called,
+            'loadEnvironmentsFromCache should be called',
+          );
+
+          // Verify environments from first build are present and identical
+          for (const env of firstBuildEnvs) {
+            const loadedEnv = secondBuildEnvs.find((e) => e.id === env.id);
+            assert(
+              loadedEnv,
+              `Environment ${env.id} should be loaded from cache`,
+            );
+            assert.deepEqual(
+              loadedEnv,
+              env,
+              'Loaded environment should match cached environment',
+            );
+          }
+        },
+      });
+
+      // Restore the original function
+      loadEnvironmentsSpy.restore();
+    });
+  });
 });
