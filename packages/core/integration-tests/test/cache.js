@@ -57,6 +57,7 @@ let packageManager = new NodePackageManager(inputFS, '/');
       {
         inputFS: overlayFS,
         shouldDisableCache: false,
+        watchBackend: 'brute-force',
         featureFlags: {
           ...featureFlags,
           cachePerformanceImprovements,
