@@ -24,7 +24,6 @@ import type {
   BundleNode,
   Dependency,
   DependencyNode,
-  Environment,
   InternalSourceLocation,
   Target,
   Condition,
