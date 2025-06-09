@@ -21,6 +21,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   conditionalBundlingNestedRuntime: false,
   patchProjectPaths: false,
   cachePerformanceImprovements: process.env.NODE_ENV === 'test',
+  environmentDeduplication: false,
   granularTsConfigInvalidation: false,
   inlineStringReplacementPerf: false,
   conditionalBundlingAsyncRuntime: false,

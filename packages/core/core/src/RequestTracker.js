@@ -714,8 +714,8 @@ export class RequestGraph extends ContentGraph<
     env: string,
     value: string | void,
   ) {
-    let envNode = nodeFromEnv(env, value);
-    let envNodeId = this.addNode(envNode);
+    const envNode = nodeFromEnv(env, value);
+    const envNodeId = this.addNode(envNode);
 
     if (
       !this.hasEdge(
