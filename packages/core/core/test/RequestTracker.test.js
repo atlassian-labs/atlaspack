@@ -29,7 +29,6 @@ import {DEFAULT_FEATURE_FLAGS, setFeatureFlags} from '../../feature-flags/src';
 import sinon from 'sinon';
 import type {AtlaspackOptions} from '../src/types';
 import {setAllEnvironments, getAllEnvironments} from '@atlaspack/rust';
-import sinon from 'sinon';
 
 const options = {
   ...DEFAULT_OPTIONS,

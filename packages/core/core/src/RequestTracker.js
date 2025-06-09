@@ -71,6 +71,7 @@ import type {
   RequestInvalidation,
   InternalFileCreateInvalidation,
   InternalGlob,
+  Environment,
 } from './types';
 import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
 import {performance} from 'perf_hooks';
@@ -2263,7 +2264,7 @@ export function getBiggestFSEventsInvalidations(
  * @param {LMDBLiteCache} cache
  * @param {Environment} env
  */
-export async function storeEnvById(cache, env) {
+export async function storeEnvById(cache: Cache, env: Environment) {
   const envKey = `Environment/${ATLASPACK_VERSION}/${env.id}`;
 
   if (await cache.get(envKey)) {
@@ -2283,7 +2284,10 @@ export async function storeEnvById(cache, env) {
  * @param {LMDBLiteCache} cache
  * @param {Set<string>} environmentIds
  */
-export async function storeEnvManager(cache, environmentIds) {
+export async function storeEnvManager(
+  cache: Cache,
+  environmentIds: Iterable<string>,
+) {
   await instrument(
     `RequestTracker::writeToCache::cache.put(${`EnvironmentManager/${ATLASPACK_VERSION}`})`,
     async () => {
@@ -2300,7 +2304,7 @@ export async function storeEnvManager(cache, environmentIds) {
  * @param {LMDBLiteCache} cache
  * @returns {Promise<void>}
  */
-export async function writeEnvironments(cache) {
+export async function writeEnvironments(cache: Cache) {
   const environments = getAllEnvironments();
   const environmentIds = new Set<string>();
 
@@ -2319,7 +2323,7 @@ export async function writeEnvironments(cache) {
  * @param {LMDBLiteCache} cache
  * @returns {Promise<void>}
  */
-export async function loadEnvironmentsFromCache(cache) {
+export async function loadEnvironmentsFromCache(cache: Cache) {
   const cachedEnvIds = await cache.get(
     `EnvironmentManager/${ATLASPACK_VERSION}`,
   );
