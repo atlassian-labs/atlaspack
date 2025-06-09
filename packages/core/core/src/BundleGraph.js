@@ -150,7 +150,6 @@ export default class BundleGraph {
   _graph: ContentGraph<BundleGraphNode, BundleGraphEdgeType>;
   _bundlePublicIds /*: Set<string> */ = new Set<string>();
   _conditions /*: Map<string, Condition> */ = new Map<string, Condition>();
-  _environmentMap: Map<string, Environment> = new Map();
 
   constructor({
     graph,
