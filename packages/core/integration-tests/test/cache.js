@@ -7104,8 +7104,19 @@ let packageManager = new NodePackageManager(inputFS, '/');
 
   describe('environment caching', function () {
     it('should cache and load environments between builds', async function () {
+      const EnvironmentManager = require('@atlaspack/core/src/EnvironmentManager');
+      const loadEnvironmentsSpy = sinon.spy(
+        EnvironmentManager,
+        'loadEnvironmentsFromCache',
+      );
+
+      inputDir = path.join(
+        __dirname,
+        '/input',
+        Math.random().toString(36).slice(2),
+      );
+
       let firstBuildEnvs;
-      let cacheSpy = sinon.spy(logger, 'verbose');
 
       // First build: Set up initial environments and write to cache
       await testCache({
@@ -7126,37 +7137,34 @@ let packageManager = new NodePackageManager(inputFS, '/');
       // Second build: Verify environments are loaded from cache
       await testCache({
         entries: ['src/index.js'],
-        setup() {
-          // No need to write file again, it should be cached
+        featureFlags: {
+          environmentDeduplication: true,
         },
         update() {
+          const secondBuildEnvs = getAllEnvironments();
           assert(
-            cacheSpy.calledWith(
-              sinon.match({
-                origin: '@atlaspack/core',
-                message: 'Environments were loaded from cache',
-              }),
-            ),
-            'Should load environments from cache',
+            loadEnvironmentsSpy.called,
+            'loadEnvironmentsFromCache should be called',
           );
 
-          const secondBuildEnvs = getAllEnvironments();
+          // Verify environments from first build are present and identical
           for (const env of firstBuildEnvs) {
-            const matchingEnv = secondBuildEnvs.find((e) => e.id === env.id);
+            const loadedEnv = secondBuildEnvs.find((e) => e.id === env.id);
             assert(
-              matchingEnv,
-              `Environment from first build (id: ${env.id}) should be present in second build`,
+              loadedEnv,
+              `Environment ${env.id} should be loaded from cache`,
             );
             assert.deepEqual(
-              matchingEnv,
+              loadedEnv,
               env,
-              `Environment from first build (id: ${env.id}) should be identical in second build`,
+              'Loaded environment should match cached environment',
             );
           }
         },
       });
 
-      cacheSpy.restore();
+      // Restore the original function
+      loadEnvironmentsSpy.restore();
     });
   });
 });

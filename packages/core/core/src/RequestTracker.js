@@ -15,11 +15,7 @@ import type {
   Graph,
 } from '@atlaspack/graph';
 import logger, {instrument} from '@atlaspack/logger';
-import {
-  hashString,
-  getAllEnvironments,
-  setAllEnvironments,
-} from '@atlaspack/rust';
+import {hashString} from '@atlaspack/rust';
 import type {Async, EnvMap} from '@atlaspack/types';
 import {
   type Deferred,
@@ -71,10 +67,14 @@ import type {
   RequestInvalidation,
   InternalFileCreateInvalidation,
   InternalGlob,
-  Environment,
 } from './types';
 import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
 import {performance} from 'perf_hooks';
+
+import {
+  loadEnvironmentsFromCache,
+  writeEnvironmentsToCache,
+} from './EnvironmentManager';
 
 export const requestGraphEdgeTypes = {
   subrequest: 2,
@@ -1578,9 +1578,7 @@ export default class RequestTracker {
       });
 
       if (getFeatureFlag('environmentDeduplication')) {
-        async (cache) => {
-          await writeEnvironments(cache);
-        };
+        await writeEnvironmentsToCache(options.cache);
       }
 
       let serialisedGraph = this.graph.serialize();
@@ -1868,25 +1866,7 @@ async function loadRequestGraph(options): Async<RequestGraph> {
   });
 
   if (getFeatureFlag('environmentDeduplication')) {
-    try {
-      await loadEnvironmentsFromCache(options.cache);
-      logger.verbose({
-        origin: '@atlaspack/core',
-        message: 'Environments were loaded from cache',
-        meta: {
-          ...commonMeta,
-        },
-      });
-    } catch (err) {
-      logger.warn({
-        origin: '@atlaspack/core',
-        message: 'Failed to load environments from cache',
-        meta: {
-          ...commonMeta,
-          error: err,
-        },
-      });
-    }
+    await loadEnvironmentsFromCache(options.cache);
   }
 
   const hasRequestGraphInCache = getFeatureFlag('cachePerformanceImprovements')
@@ -2257,90 +2237,4 @@ export function getBiggestFSEventsInvalidations(
   invalidations.sort((a, b) => b.count - a.count);
 
   return invalidations.slice(0, limit);
-}
-
-/**
- * Stores an environment object by its ID
- * @param {LMDBLiteCache} cache
- * @param {Environment} env
- */
-export async function storeEnvById(cache: Cache, env: Environment) {
-  const envKey = `Environment/${ATLASPACK_VERSION}/${env.id}`;
-
-  if (await cache.get(envKey)) {
-    return;
-  }
-
-  await instrument(
-    `RequestTracker::writeToCache::cache.put(${envKey})`,
-    async () => {
-      await cache.set(envKey, env);
-    },
-  );
-}
-
-/**
- * Stores the list of environment IDs
- * @param {LMDBLiteCache} cache
- * @param {Set<string>} environmentIds
- */
-export async function storeEnvManager(
-  cache: Cache,
-  environmentIds: Iterable<string>,
-) {
-  await instrument(
-    `RequestTracker::writeToCache::cache.put(${`EnvironmentManager/${ATLASPACK_VERSION}`})`,
-    async () => {
-      await cache.set(
-        `EnvironmentManager/${ATLASPACK_VERSION}`,
-        Array.from(environmentIds),
-      );
-    },
-  );
-}
-
-/**
- * Writes all environments and their IDs to the cache
- * @param {LMDBLiteCache} cache
- * @returns {Promise<void>}
- */
-export async function writeEnvironments(cache: Cache) {
-  const environments = getAllEnvironments();
-  const environmentIds = new Set<string>();
-
-  // Store each environment individually
-  for (const env of environments) {
-    environmentIds.add(env.id);
-    await storeEnvById(cache, env);
-  }
-
-  // Store the list of environment IDs
-  await storeEnvManager(cache, environmentIds);
-}
-
-/**
- * Loads all environments and their IDs from the cache
- * @param {LMDBLiteCache} cache
- * @returns {Promise<void>}
- */
-export async function loadEnvironmentsFromCache(cache: Cache) {
-  const cachedEnvIds = await cache.get(
-    `EnvironmentManager/${ATLASPACK_VERSION}`,
-  );
-
-  if (cachedEnvIds == null) {
-    return;
-  }
-
-  const environments = [];
-  for (const envId of cachedEnvIds) {
-    const envKey = `Environment/${ATLASPACK_VERSION}/${envId}`;
-    const cachedEnv = await cache.get(envKey);
-    if (cachedEnv != null) {
-      environments.push(cachedEnv);
-    }
-  }
-  if (environments.length > 0) {
-    setAllEnvironments(environments);
-  }
 }
