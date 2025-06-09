@@ -1,5 +1,18 @@
 # @atlaspack/fs
 
+## 2.15.5
+
+### Patch Changes
+
+- [#597](https://github.com/atlassian-labs/atlaspack/pull/597) [`0999fb7`](https://github.com/atlassian-labs/atlaspack/commit/0999fb78da519a6c7582d212883e515fcf6c1252) Thanks [@yamadapc](https://github.com/yamadapc)! - Reduce verbosity of logging
+
+- Updated dependencies [[`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b), [`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c), [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca)]:
+  - @atlaspack/types-internal@2.14.8
+  - @atlaspack/rust@3.3.5
+  - @atlaspack/workers@2.14.10
+  - @atlaspack/logger@2.14.10
+  - @atlaspack/utils@2.14.10
+
 ## 2.15.4
 
 ### Patch Changes

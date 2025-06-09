@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/register",
-  "version": "2.14.9",
+  "version": "2.14.10",
   "private": true,
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -20,10 +20,10 @@
     "clean": "rimraf .parcel-cache"
   },
   "dependencies": {
-    "@atlaspack/config-default": "3.1.9",
-    "@atlaspack/core": "2.17.4",
-    "@atlaspack/fs": "2.15.4",
-    "@atlaspack/package-manager": "2.14.9",
+    "@atlaspack/config-default": "3.1.10",
+    "@atlaspack/core": "2.18.0",
+    "@atlaspack/fs": "2.15.5",
+    "@atlaspack/package-manager": "2.14.10",
     "pirates": "^4.0.0"
   },
   "type": "commonjs"
