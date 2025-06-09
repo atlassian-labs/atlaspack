@@ -144,7 +144,7 @@ type OptionNode = {|
 type ConfigKeyNode = {|
   id: ContentKey,
   +type: typeof CONFIG_KEY,
-  configKey: string,
+  configKey: string[],
   contentHash: string,
 |};
 
@@ -216,7 +216,7 @@ export type RunAPI<TResult: RequestResult> = {|
   invalidateOnFileUpdate: (ProjectPath) => void,
   invalidateOnConfigKeyChange: (
     filePath: ProjectPath,
-    configKey: string,
+    configKey: string[],
     contentHash: string,
   ) => void,
   invalidateOnStartup: () => void,
@@ -283,10 +283,12 @@ const nodeFromOption = (option: string, value: mixed): RequestGraphNode => ({
 
 const nodeFromConfigKey = (
   fileName: ProjectPath,
-  configKey: string,
+  configKey: string[],
   contentHash: string,
 ): RequestGraphNode => ({
-  id: `config_key:${fromProjectPathRelative(fileName)}:${configKey}`,
+  id: `config_key:${fromProjectPathRelative(fileName)}:${JSON.stringify(
+    configKey,
+  )}`,
   type: CONFIG_KEY,
   configKey,
   contentHash,
@@ -527,7 +529,7 @@ export class RequestGraph extends ContentGraph<
   invalidateOnConfigKeyChange(
     requestNodeId: NodeId,
     filePath: ProjectPath,
-    configKey: string,
+    configKey: string[],
     contentHash: string,
   ) {
     let configKeyNodeId = this.addNode(
@@ -1109,11 +1111,22 @@ export class RequestGraph extends ContentGraph<
       }
 
       let configKeyNodes = this.configKeyNodes.get(_filePath);
-      if (configKeyNodes && (type === 'delete' || type === 'update')) {
+
+      // With granular invalidations we will always run this block,
+      // so even if we get a create event (for whatever reason), we will still
+      // try to limit invalidations from config key changes through hashing.
+      //
+      // Currently create events can invalidate a large number of nodes due to
+      // "create above" invalidations.
+      const isConfigKeyChange =
+        getFeatureFlag('granularTsConfigInvalidation') ||
+        type === 'delete' ||
+        type === 'update';
+      if (configKeyNodes && isConfigKeyChange) {
         for (let nodeId of configKeyNodes) {
           let isInvalid = type === 'delete';
 
-          if (type === 'update') {
+          if (type !== 'delete') {
             let node = this.getNode(nodeId);
             invariant(node && node.type === CONFIG_KEY);
 

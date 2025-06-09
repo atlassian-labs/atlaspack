@@ -24,7 +24,7 @@ type ConfigOpts = {|
   invalidateOnFileChange?: Set<ProjectPath>,
   invalidateOnConfigKeyChange?: Array<{|
     filePath: ProjectPath,
-    configKey: string,
+    configKey: string[],
   |}>,
   invalidateOnFileCreate?: Array<InternalFileCreateInvalidation>,
   invalidateOnEnvChange?: Set<string>,
