@@ -641,7 +641,9 @@ export function assertBundles(
   assert.equal(
     actualBundles.length,
     expectedBundles.length,
-    'expected number of bundles mismatched',
+    `Expected number of bundles mismatched\n\nActual bundles: \n\n${util.inspect(
+      actualBundles,
+    )}`,
   );
 
   for (let expectedBundle of expectedBundles) {
