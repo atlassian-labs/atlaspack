@@ -752,8 +752,14 @@ export class BuildError extends ThrowableDiagnostic {
 export function createWorkerFarm(
   options: $Shape<FarmOptions> = {},
 ): WorkerFarm {
-  return new WorkerFarm({
-    ...options,
+  const workersNext = require('@atlaspack/workers-next');
+  return new workersNext.WorkerFarm({
     workerPath: WORKER_PATH,
+    workerCount: options.maxConcurrentWorkers,
+    ...options,
   });
+  // return new WorkerFarm({
+  //   ...options,
+  //   workerPath: WORKER_PATH,
+  // });
 }

@@ -7,9 +7,9 @@
     "declaration": false,
     "strict": true,
     "lib": ["ESNext"],
-    "outDir": "lib",
+    "outDir": "dist",
     "rewriteRelativeImportExtensions": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["src", "testn"]
+  "include": ["src"]
 }

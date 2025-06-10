@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/workers-next",
-  "version": "2.14.9",
+  "version": "2.0.0",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "type": "module",
@@ -14,20 +14,20 @@
   "main": "lib/index.mjs",
   "types": "src/index.mts",
   "scripts": {
-    "build-ts": "yarn tsc --noCheck",
+    "build-tsc": "yarn tsc --noCheck",
     "check-ts": "yarn tsc --noEmit"
   },
   "exports": {
     ".": {
       "types": "./src/index.mts",
       "@atlaspack::sources": "./src/index.mts",
-      "default": "./lib/index.mjs"
+      "default": "./dist/index.mjs"
     }
   },
   "imports": {
     "#worker-threads": {
       "@atlaspack::sources": "./src/threads/worker-thread-prelude.mts",
-      "default": "./lib/threads/worker-thread-prelude.mjs"
+      "default": "./dist/threads/worker-thread-prelude.mjs"
     }
   }
 }

@@ -94,6 +94,10 @@ export type FeatureFlags = {|
    * Fix a bug where the conditional manifest reporter would drop bundles that have the same condition
    */
   conditionalBundlingReporterSameConditionFix: boolean,
+  /**
+   * Use the new worker implementation
+   */
+  v2Workers: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =
