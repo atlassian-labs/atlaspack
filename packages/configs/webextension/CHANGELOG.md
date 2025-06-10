@@ -1,5 +1,12 @@
 # @atlaspack/config-webextension
 
+## 3.0.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.11
+
 ## 3.0.12
 
 ### Patch Changes

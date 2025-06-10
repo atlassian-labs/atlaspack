@@ -1,5 +1,12 @@
 # @atlaspack/core
 
+## 2.18.1
+
+### Patch Changes
+
+- Updated dependencies [[`1b52b99`](https://github.com/atlassian-labs/atlaspack/commit/1b52b99db4298b04c1a6eb0f97994d75a2d436f9)]:
+  - @atlaspack/graph@3.5.0
+
 ## 2.18.0
 
 ### Minor Changes

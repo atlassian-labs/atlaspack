@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/test-utils",
-  "version": "2.14.10",
+  "version": "2.14.11",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "private": true,
@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@atlaspack/cache": "3.2.5",
-    "@atlaspack/config-default": "3.1.10",
-    "@atlaspack/core": "2.18.0",
+    "@atlaspack/config-default": "3.1.11",
+    "@atlaspack/core": "2.18.1",
     "@atlaspack/fs": "2.15.5",
     "@atlaspack/package-manager": "2.14.10",
     "@atlaspack/utils": "2.14.10",

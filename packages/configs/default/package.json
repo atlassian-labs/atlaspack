@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/config-default",
-  "version": "3.1.10",
+  "version": "3.1.11",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -15,7 +15,7 @@
     "test-ci": "mocha"
   },
   "dependencies": {
-    "@atlaspack/bundler-default": "2.16.3",
+    "@atlaspack/bundler-default": "3.0.0",
     "@atlaspack/compressor-raw": "2.13.12",
     "@atlaspack/namer-default": "2.14.10",
     "@atlaspack/optimizer-css": "2.14.10",

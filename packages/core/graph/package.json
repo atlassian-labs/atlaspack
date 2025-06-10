@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/graph",
-  "version": "3.4.7",
+  "version": "3.5.0",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {

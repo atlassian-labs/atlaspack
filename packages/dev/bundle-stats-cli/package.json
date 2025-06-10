@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/bundle-stats",
-  "version": "2.14.10",
+  "version": "2.14.11",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -22,9 +22,9 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/core": "2.18.0",
-    "@atlaspack/query": "2.14.10",
-    "@atlaspack/reporter-bundle-stats": "2.14.10",
+    "@atlaspack/core": "2.18.1",
+    "@atlaspack/query": "2.14.11",
+    "@atlaspack/reporter-bundle-stats": "2.14.11",
     "@atlaspack/utils": "2.14.10",
     "commander": "^7.0.0"
   },
