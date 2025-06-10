@@ -1,5 +1,13 @@
 # @atlaspack/register
 
+## 2.14.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.11
+  - @atlaspack/core@2.18.1
+
 ## 2.14.10
 
 ### Patch Changes

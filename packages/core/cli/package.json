@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/cli",
-  "version": "2.13.12",
+  "version": "2.13.13",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
@@ -24,8 +24,8 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/config-default": "3.1.10",
-    "@atlaspack/core": "2.18.0",
+    "@atlaspack/config-default": "3.1.11",
+    "@atlaspack/core": "2.18.1",
     "@atlaspack/diagnostic": "2.14.1",
     "@atlaspack/events": "2.14.1",
     "@atlaspack/feature-flags": "2.16.0",

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/bundler-experimental",
-  "version": "2.13.12",
+  "version": "2.13.13",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -16,10 +16,10 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/core": "2.18.0",
+    "@atlaspack/core": "2.18.1",
     "@atlaspack/diagnostic": "2.14.1",
     "@atlaspack/feature-flags": "2.16.0",
-    "@atlaspack/graph": "3.4.7",
+    "@atlaspack/graph": "3.5.0",
     "@atlaspack/logger": "2.14.10",
     "@atlaspack/plugin": "2.14.10",
     "@atlaspack/rust": "3.3.5",
