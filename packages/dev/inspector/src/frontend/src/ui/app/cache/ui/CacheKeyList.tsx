@@ -34,8 +34,9 @@ export function CacheKeyList() {
     nextPageCursor: string | null;
   }>({
     queryFn: async ({pageParam}) => {
+      const backendUrl = process.env.ATLASPACK_INSPECTOR_BACKEND_URL;
       const {data} = await axios.get(
-        'http://localhost:3000/api/cache-keys/?' +
+        `${backendUrl}/api/cache-keys/?` +
           qs.stringify({sortBy, cursor: pageParam}),
       );
       return data;

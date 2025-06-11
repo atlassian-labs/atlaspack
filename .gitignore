@@ -31,3 +31,4 @@ debug-symbols/
 /databases
 
 mocha-cpu-profiles/
+test-results

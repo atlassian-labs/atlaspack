@@ -7,7 +7,7 @@ import cors from 'cors';
 import path from 'path';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 
-import {loadCacheData} from './services/loadCacheData';
+import {CacheData, loadCacheData} from './services/loadCacheData';
 import {logger} from './config/logger';
 import {errorHandlingMiddleware} from './config/middleware/errorHandlingMiddleware';
 import {loggingMiddleware} from './config/middleware/loggingMiddleware';
@@ -16,26 +16,48 @@ import {cacheDataMiddleware} from './config/middleware/cacheDataMiddleware';
 import {makeBundleGraphController} from './controllers/BundleGraphController';
 import {makeTreemapController} from './controllers/TreeMapController';
 import {makeCacheDataController} from './controllers/CacheDataController';
-import {findProjectRoot, findSourceCodeURL} from './services/findSourceCodeUrl';
+import {
+  findProjectRoot,
+  findSourceCodeURL,
+  SourceCodeURL,
+} from './services/findSourceCodeUrl';
+import {AddressInfo} from 'net';
 
-export async function main() {
-  const command = program
-    .requiredOption('-t, --target <path>', 'Path to the target cache')
-    .parse(process.argv);
+interface ConfigureInspectorAppParams {
+  target: string;
+}
 
+export async function configureInspectorApp({
+  target,
+}: ConfigureInspectorAppParams): Promise<BuildInspectorAppParams> {
   const flags = {
     ...DEFAULT_FEATURE_FLAGS,
     cachePerformanceImprovements: true,
   };
   setFeatureFlags(flags);
 
-  const options = command.opts();
-
-  const projectRoot =
-    findProjectRoot(options.target) ?? path.dirname(options.target);
+  const projectRoot = findProjectRoot(target) ?? path.dirname(target);
   const sourceCodeURL = findSourceCodeURL(projectRoot);
-  const cacheData = await loadCacheData(options.target, projectRoot);
+  const cacheData = await loadCacheData(target, projectRoot);
 
+  return {
+    cacheData,
+    projectRoot,
+    sourceCodeURL,
+  };
+}
+
+export interface BuildInspectorAppParams {
+  cacheData: CacheData;
+  projectRoot: string;
+  sourceCodeURL: SourceCodeURL | null;
+}
+
+export function buildInspectorApp({
+  cacheData,
+  projectRoot,
+  sourceCodeURL,
+}: BuildInspectorAppParams): express.Express {
   const app = express();
 
   app.use(loggingMiddleware());
@@ -57,7 +79,27 @@ export async function main() {
   app.use(makeCacheDataController());
   app.use(errorHandlingMiddleware);
 
-  app.listen(3000, () => {
-    logger.info('Server is running on http://localhost:3000');
+  return app;
+}
+
+export async function main() {
+  const command = program
+    .requiredOption('-t, --target <path>', 'Path to the target cache')
+    .option('-p, --port <port>', 'Port to run the server on', '3000')
+    .parse(process.argv);
+
+  const options = command.opts();
+
+  const inspectorAppParams = await configureInspectorApp({
+    target: options.target,
   });
+  const app = buildInspectorApp(inspectorAppParams);
+
+  const port = Number(options.port ?? process.env.PORT ?? 3000);
+  const server = app.listen(port, () => {
+    const address: AddressInfo = server.address() as AddressInfo;
+    logger.info(`Server is running on http://localhost:${address.port}`);
+  });
+
+  return server;
 }

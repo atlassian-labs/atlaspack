@@ -12,7 +12,8 @@ import axios from 'axios';
 import AppRoutes from './AppRoutes';
 
 const defaultQueryFn: QueryFunction = async ({queryKey}) => {
-  const {data} = await axios.get(`http://localhost:3000${queryKey[0]}`);
+  const backendUrl = process.env.ATLASPACK_INSPECTOR_BACKEND_URL;
+  const {data} = await axios.get(`${backendUrl}${queryKey[0]}`);
   return data;
 };
 
