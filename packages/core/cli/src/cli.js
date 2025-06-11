@@ -161,7 +161,7 @@ async function run(
 
     if (process.stdin.isTTY && process.stdin.isRaw) {
       // $FlowFixMe
-      // process.stdin.setRawMode(false);
+      process.stdin.setRawMode(false);
     }
 
     disposable.dispose();
