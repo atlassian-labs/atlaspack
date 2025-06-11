@@ -47,12 +47,12 @@ export const CollapsibleTableRow = observer(
                     node.isExpanded = !node.isExpanded;
                   });
                 }}
-                style={{border: 'none', background: 'none', width: '16px'}}
+                className={styles.collapsibleTableRowPathButton}
               >
                 {node.isExpanded ? '▼' : '▶'}
               </button>
             ) : (
-              <span style={{width: '16px'}} />
+              <span className={styles.collapsibleTableRowPathPlaceholder} />
             )}
 
             {node.path}
