@@ -1,5 +1,11 @@
 # @atlaspack/bundler-default
 
+## 3.0.1
+
+### Patch Changes
+
+- [#608](https://github.com/atlassian-labs/atlaspack/pull/608) [`471b99e`](https://github.com/atlassian-labs/atlaspack/commit/471b99e41b4d97328c88f65e90bea284372cb1b0) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix require of ES Module error
+
 ## 3.0.0
 
 ### Major Changes
