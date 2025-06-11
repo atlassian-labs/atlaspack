@@ -1,0 +1,290 @@
+import {useCallback, useEffect, useRef, useState} from 'react';
+// @ts-expect-error
+import CarrotSearchFoamTree from '@carrotsearch/foamtree';
+import {useSuspenseQuery} from '@tanstack/react-query';
+import {AssetTreeNode, Bundle} from '../Treemap';
+import {formatBytes} from '../../../../util/formatBytes';
+import {SetURLSearchParams, useSearchParams} from 'react-router';
+import qs from 'qs';
+import {autorun, runInAction} from 'mobx';
+import {observer} from 'mobx-react-lite';
+import {BundleData, Group, viewModel} from '../../../../model/ViewModel';
+
+function setup(
+  // bundleData: BundleData,
+  visualization: HTMLDivElement,
+  setSearchParams: SetURLSearchParams,
+  isDetailView: boolean,
+  maxLevels: number,
+  stacking: string,
+) {
+  // Foam Tree docs:
+  // https://get.carrotsearch.com/foamtree/demo/api/index.html
+  // Some options from Atlaspack 1 Visualizer:
+  // https://github.com/gregtillbrook/parcel-plugin-bundle-visualiser/blob/ca5440fc61c85e40e7abc220ad99e274c7c104c6/src/buildReportAssets/init.js#L4
+  // and Webpack Bundle Analyzer:
+  // https://github.com/webpack-contrib/webpack-bundle-analyzer/blob/4a232f0cf7bbfed907a5c554879edd5d6f4b48ce/client/components/Treemap.jsx
+  let foamtree = new CarrotSearchFoamTree({
+    element: visualization,
+    // dataObject: bundleData,
+    layout: 'squarified',
+    stacking,
+    pixelRatio: window.devicePixelRatio || 1,
+    maxGroups: Infinity,
+    groupLabelMinFontSize: 3,
+    maxGroupLevelsDrawn: maxLevels,
+    maxGroupLabelLevelsDrawn: maxLevels,
+    maxGroupLevelsAttached: maxLevels,
+    rolloutDuration: 0,
+    pullbackDuration: 0,
+    maxLabelSizeForTitleBar: 0, // disable the title bar
+    onGroupHover(e: {group: Group; xAbsolute: number; yAbsolute: number}) {
+      runInAction(() => {
+        if (
+          e.group == null ||
+          e.group.label == null ||
+          e.group.weight == null
+        ) {
+          viewModel.tooltipState = null;
+          return;
+        }
+
+        viewModel.tooltipState = {
+          group: e.group,
+        };
+      });
+    },
+    onGroupClick(e: {group: Group}) {
+      if (!isDetailView) {
+        if (e.group.type === 'bundle') {
+          runInAction(() => {
+            viewModel.focusedBundle = e.group;
+            viewModel.focusedGroup = null;
+          });
+        }
+      } else {
+        const focusGroup = e.group;
+        this.open(focusGroup);
+        this.zoom(focusGroup);
+
+        runInAction(() => {
+          viewModel.focusedGroup = focusGroup;
+        });
+      }
+    },
+    onGroupDoubleClick(e: {group: Group}) {
+      this.zoom(e.group);
+
+      if (e.group.type === 'bundle') {
+        setSearchParams((prev) => {
+          prev.set('bundle', e.group.id);
+          return prev;
+        });
+      }
+    },
+  });
+
+  const onResize = debounce(() => {
+    foamtree.resize();
+  }, 100);
+
+  const resizeObserver = new ResizeObserver(onResize);
+  resizeObserver.observe(visualization);
+
+  function debounce(fn: (...args: any[]) => void, delay: number): () => void {
+    let timeout: NodeJS.Timeout | null = null;
+
+    return function (...args: any[]) {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+
+      timeout = setTimeout(() => {
+        fn(...args);
+      }, delay);
+    };
+  }
+
+  return {
+    foamtree,
+    cleanup: () => {
+      resizeObserver.disconnect();
+      foamtree.dispose();
+    },
+  };
+}
+
+function useStableCallback(fn: (...args: any[]) => void) {
+  const ref = useRef(fn);
+  useEffect(() => {
+    ref.current = fn;
+  }, [fn]);
+  return useCallback((...args: any[]) => ref.current(...args), []);
+}
+
+function toBundleData(bundles: Array<Bundle>): BundleData {
+  function assetTreeToGroup(assetTree: AssetTreeNode): Group {
+    return {
+      id: assetTree.path,
+      type: 'asset',
+      label: assetTree.path,
+      weight: assetTree.size,
+      groups: Object.entries(assetTree.children).map(([key, child]) =>
+        assetTreeToGroup(child),
+      ),
+    };
+  }
+
+  return {
+    groups: bundles.map((bundle) => {
+      return {
+        id: bundle.id,
+        type: 'bundle',
+        label: bundle.displayName,
+        weight: bundle.size,
+        groups: Object.entries(bundle.assetTree.children).map(([key, child]) =>
+          assetTreeToGroup(child),
+        ),
+      };
+    }),
+  };
+}
+
+export const TreemapRenderer = observer(() => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const {data} = useSuspenseQuery<{
+    bundles: Array<Bundle>;
+    totalSize: number;
+  }>({
+    queryKey: [
+      '/api/treemap?' +
+        qs.stringify({
+          offset: searchParams.get('offset') ?? 0,
+          limit: searchParams.get('limit') ?? 10000,
+          bundle: searchParams.get('bundle') ?? undefined,
+        }),
+    ],
+  });
+  const visualizationRef = useRef<HTMLDivElement>(null);
+  const [mouseState, setMouseState] = useState<{x: number; y: number}>({
+    x: 0,
+    y: 0,
+  });
+
+  const setSearchParamsMemo = useStableCallback(setSearchParams);
+  const bundle = searchParams.get('bundle');
+  const foamtreeRef = useRef<CarrotSearchFoamTree | null>(null);
+  const maxLevels = Number(searchParams.get('maxLevels') ?? Infinity);
+  const stacking = searchParams.get('stacking') ?? 'hierarchical';
+  useEffect(() => {
+    if (visualizationRef.current) {
+      const {cleanup, foamtree} = setup(
+        // toBundleData(data.bundles),
+        visualizationRef.current,
+        setSearchParamsMemo,
+        bundle != null,
+        maxLevels,
+        stacking,
+      );
+      foamtreeRef.current = foamtree;
+
+      return () => {
+        cleanup();
+      };
+    }
+  }, [bundle, setSearchParamsMemo, maxLevels, stacking]);
+
+  useEffect(() => {
+    return autorun(() => {
+      if (!foamtreeRef.current) {
+        return;
+      }
+
+      if (viewModel.relatedBundles) {
+        const relatedBundlesSet = new Set(
+          viewModel.relatedBundles.childBundles.map((b: any) => b.id),
+        );
+        const bundleData = toBundleData(
+          data.bundles.filter(
+            (group) =>
+              group.id === viewModel.focusedBundle?.id ||
+              relatedBundlesSet.has(group.id),
+          ),
+        );
+        foamtreeRef.current.set({
+          dataObject: bundleData,
+        });
+        return;
+      }
+
+      const bundleData = toBundleData(data.bundles);
+      runInAction(() => {
+        if (data.bundles.length === 1) {
+          viewModel.focusedBundle = bundleData.groups[0];
+        }
+      });
+      foamtreeRef.current.set({
+        dataObject: bundleData,
+      });
+    });
+  }, [data]);
+
+  useEffect(() => {
+    return autorun(() => {
+      if (viewModel.hasDetails) {
+        return;
+      }
+
+      if (!viewModel.focusedBundle) {
+        return;
+      }
+      if (!viewModel.relatedBundles) {
+        return;
+      }
+
+      foamtreeRef.current?.expose([
+        viewModel.focusedBundle.id,
+        ...viewModel.relatedBundles.childBundles.map((b) => b.id),
+      ]);
+    });
+  }, []);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      setMouseState({x: e.clientX, y: e.clientY});
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    return () => window.removeEventListener('mousemove', onMouseMove);
+  }, []);
+
+  return (
+    <div
+      style={{height: '100%', width: '100%', flex: 1}}
+      onMouseLeave={() => runInAction(() => (viewModel.tooltipState = null))}
+    >
+      <div
+        ref={visualizationRef}
+        style={{height: '100%', width: '100%', flex: 1}}
+      />
+
+      {viewModel.tooltipState && (
+        <div
+          style={{
+            position: 'absolute',
+            left: mouseState.x + 10,
+            top: mouseState.y + 10,
+            backgroundColor: 'white',
+            padding: '10px',
+            borderRadius: '4px',
+            boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          {viewModel.tooltipState.group.label}
+          <br />
+          {formatBytes(viewModel.tooltipState.group.weight)}
+        </div>
+      )}
+    </div>
+  );
+});
