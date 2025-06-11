@@ -1,5 +1,3 @@
-import InlineMessage from '@atlaskit/inline-message';
-
 export function CacheKeysIndexPage() {
   return (
     <>

@@ -1,17 +1,17 @@
 import {Routes, Route} from 'react-router';
-import {CacheValuePage} from './app/cache/[key]/CacheValuePage';
-import {CacheKeysIndexPage} from './app/cache/CacheKeysIndexPage';
-import {Stats} from './Stats';
-import {FoamTreemapPage} from './app/treemap/FoamTreemapPage';
-import {AppLayout} from './AppLayout';
-import {CacheKeysPage} from './app/cache/CacheKeysPage';
-import {NotFoundPage} from './not-found/NotFoundPage';
+import {CacheValuePage} from './ui/app/cache/[key]/CacheValuePage';
+import {CacheKeysIndexPage} from './ui/app/cache/CacheKeysIndexPage';
+import {StatsPage} from './ui/app/StatsPage';
+import {FoamTreemapPage} from './ui/app/treemap/FoamTreemapPage';
+import {AppLayout} from './ui/AppLayout';
+import {CacheKeysPage} from './ui/app/cache/CacheKeysPage';
+import {NotFoundPage} from './ui/not-found/NotFoundPage';
 
 export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<AppLayout />}>
-        <Route index element={<Stats />} />
+        <Route index element={<StatsPage />} />
 
         <Route path="/app/cache" element={<CacheKeysPage />}>
           <Route index element={<CacheKeysIndexPage />} />

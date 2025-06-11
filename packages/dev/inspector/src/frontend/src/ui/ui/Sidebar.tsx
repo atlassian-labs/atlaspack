@@ -2,7 +2,7 @@ import {Link, useSearchParams} from 'react-router';
 import {useQuery} from '@tanstack/react-query';
 import qs from 'qs';
 import styles from './App.module.css';
-import {CacheKeyList} from './app/cache/ui/CacheKeyList';
+import {CacheKeyList} from '../app/cache/ui/CacheKeyList';
 
 export function Sidebar() {
   return (

@@ -1,7 +1,6 @@
 import './hack-feature-flags';
 import './ui/globals.css';
 import {createRoot} from 'react-dom/client';
-import AppRoutes from './ui/AppRoutes';
 import {BrowserRouter} from 'react-router';
 import {
   QueryClient,
@@ -9,6 +8,8 @@ import {
   QueryFunction,
 } from '@tanstack/react-query';
 import axios from 'axios';
+
+import AppRoutes from './AppRoutes';
 
 const defaultQueryFn: QueryFunction = async ({queryKey}) => {
   const {data} = await axios.get(`http://localhost:3000${queryKey[0]}`);

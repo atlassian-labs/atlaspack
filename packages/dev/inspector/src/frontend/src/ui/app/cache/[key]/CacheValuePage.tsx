@@ -1,6 +1,6 @@
 import {useParams} from 'react-router';
 import {useQuery} from '@tanstack/react-query';
-import {formatBytes} from '../../../formatBytes';
+import {formatBytes} from '../../../util/formatBytes';
 import {Code, CodeBlock} from '@atlaskit/code';
 import {Box, Inline, Stack} from '@atlaskit/primitives';
 

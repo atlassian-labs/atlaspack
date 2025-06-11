@@ -1,7 +1,7 @@
 import {useRef, useEffect} from 'react';
 import {useQuery} from '@tanstack/react-query';
-import {formatBytes} from './formatBytes';
-import {getRandomDarkerColor} from './getRandomDarkerColor';
+import {formatBytes} from '../../../util/formatBytes';
+import {getRandomDarkerColor} from '../../../util/getRandomDarkerColor';
 
 interface InputNodeData {
   size: number;

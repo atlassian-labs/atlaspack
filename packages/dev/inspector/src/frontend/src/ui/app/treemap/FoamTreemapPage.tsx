@@ -12,19 +12,24 @@ import {
 // @ts-expect-error
 import CarrotSearchFoamTree from '@carrotsearch/foamtree';
 import {useQuery, useSuspenseQuery} from '@tanstack/react-query';
-import {AssetTreeNode, Bundle} from '../../Treemap';
-import {formatBytes} from '../../formatBytes';
+import {AssetTreeNode, Bundle} from './ui/Treemap';
+import {formatBytes} from '../../util/formatBytes';
 import {Link, SetURLSearchParams, useSearchParams} from 'react-router';
 import qs from 'qs';
 import {autorun, makeAutoObservable, runInAction} from 'mobx';
 import {observer} from 'mobx-react-lite';
-import {Graph} from '../../Graph';
-import {SigmaGraph} from '../../SigmaGraph';
+import {Graph} from '../../types/Graph';
+import {SigmaGraph} from './ui/SigmaGraph';
 import Spinner from '@atlaskit/spinner';
 import {token} from '@atlaskit/tokens';
 import Tabs, {Tab, TabList, TabPanel} from '@atlaskit/tabs';
-import {SigmaPage} from '../../Sigma';
-import {BundleData, Group, RelatedBundles, viewModel} from '../../ViewModel';
+import {BundleGraphRenderer} from './ui/BundleGraphRenderer';
+import {
+  BundleData,
+  Group,
+  RelatedBundles,
+  viewModel,
+} from '../../model/ViewModel';
 import {BitbucketIcon} from '@atlaskit/logo';
 
 function setup(
@@ -891,7 +896,7 @@ const FocusedGroupInfo = observer(() => {
   if (!viewModel.focusedGroup || !bundle) {
     return (
       <GraphContainer fullWidth>
-        <SigmaPage />
+        <BundleGraphRenderer />
       </GraphContainer>
     );
   }

@@ -4,7 +4,7 @@ import forceAtlas2 from 'graphology-layout-forceatlas2';
 import FA2Layout from 'graphology-layout-forceatlas2/worker';
 import {useEffect} from 'react';
 import Sigma from 'sigma';
-import {Graph} from './Graph';
+import {Graph} from '../../../types/Graph';
 
 export function SigmaGraph({graph}: {graph: Graph<any>}) {
   const visualizationRef = useRef<HTMLDivElement>(null);

@@ -7,7 +7,7 @@ import Sigma from 'sigma';
 import {useSearchParams} from 'react-router';
 import {useQuery} from '@tanstack/react-query';
 import qs from 'qs';
-import {Graph} from './Graph';
+import {Graph} from '../../../types/Graph';
 import Spinner from '@atlaskit/spinner';
 
 function setup(container: HTMLDivElement, graph: Graphology) {
@@ -26,7 +26,7 @@ function setup(container: HTMLDivElement, graph: Graphology) {
 
 type BundleGraph = Graph<{size: number}>;
 
-export function SigmaPage() {
+export function BundleGraphRenderer() {
   const [searchParams] = useSearchParams();
   const rootNodeId = searchParams.get('rootNodeId');
   const visualizationRef = useRef<HTMLDivElement>(null);
