@@ -64,6 +64,8 @@ export async function loadRequestTracker(cache: LMDBLiteCache): Promise<{
 }
 
 function findCachePath(target: string): string | null {
+  target = path.resolve(process.cwd(), target);
+
   if (fs.existsSync(path.join(target, 'data.mdb'))) {
     return target;
   }

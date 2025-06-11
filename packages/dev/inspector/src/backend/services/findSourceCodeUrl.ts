@@ -3,7 +3,7 @@ import fs from 'fs';
 import childProcess from 'child_process';
 
 export function findProjectRoot(target: string): string | null {
-  let projectRoot = target;
+  let projectRoot = path.resolve(process.cwd(), target);
   let exists = false;
   while (projectRoot !== '/' && projectRoot !== '.') {
     const gitDirectory = path.join(projectRoot, '.git');
