@@ -3,7 +3,7 @@ import {CacheValuePage} from './ui/app/cache/[key]/CacheValuePage';
 import {CacheKeysIndexPage} from './ui/app/cache/CacheKeysIndexPage';
 import {StatsPage} from './ui/app/StatsPage';
 import {FoamTreemapPage} from './ui/app/treemap/FoamTreemapPage';
-import {AppLayout} from './ui/AppLayout';
+import {AppLayout} from './ui/AppLayout/AppLayout';
 import {CacheKeysPage} from './ui/app/cache/CacheKeysPage';
 import {NotFoundPage} from './ui/not-found/NotFoundPage';
 

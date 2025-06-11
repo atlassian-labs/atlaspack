@@ -1,18 +1,9 @@
 import Spinner from '@atlaskit/spinner';
+import styles from './DefaultLoadingIndicator.module.css';
 
 export function DefaultLoadingIndicator() {
   return (
-    <div
-      style={{
-        display: 'flex',
-        paddingTop: 100,
-        flexDirection: 'column',
-        gap: 8,
-        alignItems: 'center',
-        height: '100%',
-        width: '100%',
-      }}
-    >
+    <div className={styles.defaultLoadingIndicator}>
       <Spinner size="xlarge" />
       <h2>Loading cache stats...</h2>
     </div>
