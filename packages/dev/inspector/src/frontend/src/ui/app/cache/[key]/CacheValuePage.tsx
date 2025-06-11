@@ -1,8 +1,14 @@
 import {useParams} from 'react-router';
-import {useQuery} from '@tanstack/react-query';
-import {formatBytes} from '../../../util/formatBytes';
+import {useSuspenseQuery} from '@tanstack/react-query';
 import {Code, CodeBlock} from '@atlaskit/code';
 import {Box, Inline, Stack} from '@atlaskit/primitives';
+
+import {formatBytes} from '../../../util/formatBytes';
+
+interface CacheValueResponse {
+  size: number;
+  value: string;
+}
 
 export function CacheValuePage() {
   const key = useParams().key;
@@ -10,41 +16,9 @@ export function CacheValuePage() {
     throw new Error('No key');
   }
 
-  const {
-    data: cacheValue,
-    isLoading,
-    error,
-  } = useQuery<{
-    size: number;
-    value: string;
-  }>({
+  const {data: cacheValue} = useSuspenseQuery<CacheValueResponse>({
     queryKey: [`/api/cache-value/${encodeURIComponent(key)}`],
   });
-
-  const content = () => {
-    if (isLoading) {
-      return <div>Loading...</div>;
-    }
-
-    if (error) {
-      return <div>Error: {error.message}</div>;
-    }
-
-    if (!cacheValue) {
-      throw new Error('No cache value');
-    }
-
-    return (
-      <>
-        <Inline space="space.100">
-          <Box>Cache entry size</Box>
-          <Code>{formatBytes(cacheValue.size)}</Code>
-        </Inline>
-
-        <CodeBlock text={cacheValue.value} />
-      </>
-    );
-  };
 
   return (
     <Stack space="space.100">
@@ -55,7 +29,12 @@ export function CacheValuePage() {
         <Code>{key}</Code>
       </Box>
 
-      {content()}
+      <Inline space="space.100">
+        <Box>Cache entry size</Box>
+        <Code>{formatBytes(cacheValue.size)}</Code>
+      </Inline>
+
+      <CodeBlock text={cacheValue.value} />
     </Stack>
   );
 }

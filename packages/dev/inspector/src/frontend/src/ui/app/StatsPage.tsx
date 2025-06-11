@@ -1,6 +1,7 @@
 import {useSuspenseQuery} from '@tanstack/react-query';
-import {formatBytes} from '../util/formatBytes';
 import {Box, Stack} from '@atlaskit/primitives';
+
+import {formatBytes} from '../util/formatBytes';
 
 export function StatsPage() {
   const {data} = useSuspenseQuery<{

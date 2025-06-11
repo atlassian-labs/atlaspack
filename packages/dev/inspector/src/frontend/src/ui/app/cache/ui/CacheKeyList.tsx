@@ -1,5 +1,4 @@
 import {useNavigate, useSearchParams} from 'react-router';
-import styles from '../../../App.module.css';
 import {useVirtualizer} from '@tanstack/react-virtual';
 import {useEffect, useMemo, useRef} from 'react';
 import {token} from '@atlaskit/tokens';
@@ -7,7 +6,9 @@ import {useInfiniteQuery} from '@tanstack/react-query';
 import qs from 'qs';
 import axios from 'axios';
 import Button, {LinkButton} from '@atlaskit/button/new';
-import { Box } from '@atlaskit/primitives';
+import {Box} from '@atlaskit/primitives';
+
+import styles from '../../../App.module.css';
 
 export function CacheKeyList() {
   // sort by in querystring URL

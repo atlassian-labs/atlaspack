@@ -1,6 +1,9 @@
 import {Outlet} from 'react-router';
-import {CacheKeyList} from './ui/CacheKeyList';
 import {Box} from '@atlaskit/primitives';
+import {Suspense} from 'react';
+
+import {CacheKeyList} from './ui/CacheKeyList';
+import {DefaultLoadingIndicator} from '../../ui/DefaultLoadingIndicator';
 
 export function CacheKeysPage() {
   return (
@@ -15,7 +18,9 @@ export function CacheKeysPage() {
 
       <div style={{overflow: 'auto', flex: 1, maxHeight: '100%'}}>
         <Box padding="space.200">
-          <Outlet />
+          <Suspense fallback={<DefaultLoadingIndicator />}>
+            <Outlet />
+          </Suspense>
         </Box>
       </div>
     </div>
