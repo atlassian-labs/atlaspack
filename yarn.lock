@@ -11407,10 +11407,10 @@ make-iterator@^1.0.0:
   dependencies:
     kind-of "^6.0.2"
 
-many-keys-map@^2.0.1:
-  version "2.0.1"
-  resolved "https://packages.atlassian.com/api/npm/npm-remote/many-keys-map/-/many-keys-map-2.0.1.tgz#3ae9f97cff78e08f79311d4e9c42fb3cc583f61e"
-  integrity sha512-DHnZAD4phTbZ+qnJdjoNEVU1NecYoSdbOOoVmTDH46AuxDkEVh3MxTVpXq10GtcTC6mndN9dkv1rNfpjRcLnOw==
+many-keys-map@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/many-keys-map/-/many-keys-map-1.0.3.tgz#718f407dea882c23ab75d48280c7d5be2fbf57a0"
+  integrity sha512-Iguobalgc8YO1kbN1U9R/j6u3QFf6bwIh37HKYFgEtUJNJd79INgLwtdiiOgBPoBqZ/ZVc4zziRaVg0EiJ+82g==
 
 map-cache@^0.2.0, map-cache@^0.2.2:
   version "0.2.2"
