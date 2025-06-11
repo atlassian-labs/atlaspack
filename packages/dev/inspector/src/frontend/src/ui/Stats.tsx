@@ -16,12 +16,9 @@ export function Stats() {
   });
 
   return (
-    // @ts-ignore
     <Box padding="space.100">
-      {/* @ts-ignore */}
       <Stack space="space.100">
-        {/* @ts-ignore */}
-        <Box space="space.100">
+        <Box>
           <h1>Atlaspack cache stats</h1>
         </Box>
 

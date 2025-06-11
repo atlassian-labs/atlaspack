@@ -56,7 +56,7 @@ export function buildTreemap(
       const assetTree: AssetTreeNode = {path: '', children: {}, size: 0};
 
       const assets: any[] = [];
-      // @ts-ignore
+      // @ts-expect-error
       bundleGraph.traverseAssets(node.value, (asset) => {
         assets.push(asset);
       });

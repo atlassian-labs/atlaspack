@@ -1,5 +1,5 @@
 import 'flexlayout-react/style/light.css';
-import * as styles from './App.module.css';
+import styles from './App.module.css';
 import {
   Fragment,
   Suspense,
@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
-// @ts-ignore
+// @ts-expect-error
 import CarrotSearchFoamTree from '@carrotsearch/foamtree';
 import {useQuery, useSuspenseQuery} from '@tanstack/react-query';
 import {AssetTreeNode, Bundle} from './Treemap';
@@ -18,32 +18,13 @@ import {Link, SetURLSearchParams, useSearchParams} from 'react-router';
 import qs from 'qs';
 import {autorun, makeAutoObservable, runInAction} from 'mobx';
 import {observer} from 'mobx-react-lite';
-import {
-  Action,
-  Actions,
-  DockLocation,
-  IJsonModel,
-  IJsonRowNode,
-  Layout,
-  Model,
-  TabNode,
-} from 'flexlayout-react';
 import {Graph} from './Graph';
 import {SigmaGraph} from './SigmaGraph';
-import {Sidebar} from './Sidebar';
-import {CacheKeyList} from './CacheKeyList';
 import Spinner from '@atlaskit/spinner';
 import {token} from '@atlaskit/tokens';
 import Tabs, {Tab, TabList, TabPanel} from '@atlaskit/tabs';
 import {SigmaPage} from './Sigma';
-import {
-  BundleData,
-  Group,
-  RelatedBundles,
-  TooltipState,
-  viewModel,
-} from './ViewModel';
-import {Stack, Inline} from '@atlaskit/primitives';
+import {BundleData, Group, RelatedBundles, viewModel} from './ViewModel';
 import {BitbucketIcon} from '@atlaskit/logo';
 
 function setup(
@@ -505,7 +486,7 @@ function limit(value: number, len: number) {
   return value % len;
 }
 
-const CollapsibleTable = observer(({model}: {model: any}) => {
+const CollapsibleTable = observer(({model}: {model: AssetTableModel}) => {
   function focusOnNode(nodeId: string) {
     runInAction(() => {
       model.focusedNodeId = nodeId;
@@ -532,7 +513,7 @@ const CollapsibleTable = observer(({model}: {model: any}) => {
 
             runInAction(() => {
               const current = model.flatNodeList.findIndex(
-                (node) => node.id === model.focusedNodeId,
+                (node: any) => node.id === model.focusedNodeId,
               );
               if (current === -1) {
                 focusOnNode(model.flatNodeList[0].id);
@@ -583,7 +564,6 @@ const CollapsibleTable = observer(({model}: {model: any}) => {
         }}
         onFocus={(e) => {
           let current = e.target as HTMLElement;
-          // @ts-ignore
           while (current && !current.getAttribute('data-nodeid')) {
             current = current.parentElement as HTMLElement;
           }
@@ -603,14 +583,30 @@ const CollapsibleTable = observer(({model}: {model: any}) => {
   );
 });
 
+interface AssetTableModel {
+  nodes: AssetTableNode[];
+  focusedNodeId: string | null;
+  flatNodeList: AssetTableNode[];
+}
+
+interface AssetTableNode {
+  id: string;
+  path: string;
+  isExpanded: boolean;
+  children: AssetTableNode[];
+  parent: string | null;
+  level: number;
+}
+
 const AssetTable = observer(
   ({
     data,
     isBottomUp,
   }: {
-    data: {relevantPaths: string[][]; isBottomUp: boolean};
+    data: {relevantPaths: string[][]};
+    isBottomUp: boolean;
   }) => {
-    const model = useMemo(() => {
+    const model: AssetTableModel = useMemo(() => {
       // this is horrible ; but let's just hope there aren't that many children
       // anyway things won't perform properly in that case
       const expanded = (node: any) => {
@@ -622,9 +618,9 @@ const AssetTable = observer(
         }
         return [node];
       };
-      const model = makeAutoObservable({
-        nodes: [] as any[],
-        focusedNodeId: null as string | null,
+      const model: AssetTableModel = makeAutoObservable({
+        nodes: [],
+        focusedNodeId: null,
         get flatNodeList() {
           return this.nodes.flatMap((node) => {
             return expanded(node);
@@ -643,15 +639,15 @@ const AssetTable = observer(
           }
           seenRoots.add(node[0]);
 
-          const root = makeAutoObservable({
+          const root: AssetTableNode = makeAutoObservable({
             id: node[0],
             path: node[0],
             isExpanded: false,
-            children: [] as any[],
+            children: [],
             parent: null,
             level: 0,
           });
-          let current = root;
+          let current: AssetTableNode = root;
 
           for (let i = 1; i < node.length; i++) {
             const newNode = makeAutoObservable({
@@ -819,14 +815,10 @@ const FocusedGroupInfoInner = observer(
           height: '100%',
         }}
       >
-        {/* @ts-ignore */}
-        <Tabs>
+        <Tabs id="focused-group-info-tabs">
           <TabList>
-            {/* @ts-ignore */}
             <Tab>Bottom-up</Tab>
-            {/* @ts-ignore */}
             <Tab>Top-down</Tab>
-            {/* @ts-ignore */}
             <Tab>Importers</Tab>
           </TabList>
 
@@ -942,7 +934,6 @@ function RightSidebar() {
                 width: '100%',
               }}
             >
-              {/* @ts-ignore */}
               <Spinner size="large" />
               <h2>Loading bundle graph data...</h2>
             </div>

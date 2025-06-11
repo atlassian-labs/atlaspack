@@ -44,7 +44,7 @@ export async function loadRequestTracker(cache: LMDBLiteCache): Promise<{
       requestGraphKey,
     );
 
-    // @ts-ignore
+    // @ts-expect-error
     const requestTracker = new RequestTracker({
       graph: requestGraph,
       farm: null,

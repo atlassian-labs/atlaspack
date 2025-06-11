@@ -13,7 +13,6 @@ export default function App() {
       <div className={styles.content}>
         <div className={styles.contentInner}>
           <Suspense fallback={<DefaultLoadingIndicator />}>
-            {/* @ts-ignore */}
             <Outlet />
           </Suspense>
         </div>

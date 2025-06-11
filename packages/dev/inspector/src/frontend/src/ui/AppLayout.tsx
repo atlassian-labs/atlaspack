@@ -9,7 +9,6 @@ import {
 import AppProvider from '@atlaskit/app-provider';
 import {HomeActions, NavLogo} from '@atlassian/navigation-system/top-nav';
 import {Main, MenuLinkItem, PanelSplitter} from '@atlassian/navigation-system';
-// @ts-ignore
 import atlaspackBadge from './badge-light.png';
 import {Outlet, useNavigate} from 'react-router';
 import HomeIcon from '@atlaskit/icon/glyph/home';
@@ -45,7 +44,6 @@ function LinkItem({
 }) {
   const navigate = useNavigate();
   return (
-    // @ts-ignore
     <MenuLinkItem
       href={href}
       onClick={(e) => {
@@ -92,11 +90,9 @@ export function AppLayout() {
 
         {sidebarCollapsed ? null : (
           <SideNav>
-            {/* @ts-ignore */}
             <SideNavContent>
               <LinkItem
                 elemBefore={
-                  // @ts-ignore
                   <HomeIcon label="Home" />
                 }
                 href="/"
@@ -106,7 +102,6 @@ export function AppLayout() {
 
               <LinkItem
                 elemBefore={
-                  // @ts-ignore
                   <CacheData label="Cache data" />
                 }
                 href="/app/cache"
@@ -116,7 +111,6 @@ export function AppLayout() {
 
               <LinkItem
                 elemBefore={
-                  // @ts-ignore
                   <PageIcon label="Page" />
                 }
                 href="/app/foamtreemap"

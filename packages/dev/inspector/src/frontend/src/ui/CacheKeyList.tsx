@@ -172,7 +172,6 @@ export function CacheKeyList() {
                   transform: `translateY(${virtualItem.start}px)`,
                 }}
               >
-                {/* @ts-ignore */}
                 <MenuLinkItem
                   href={`/app/cache/${encodeURIComponent(
                     key,
@@ -190,7 +189,6 @@ export function CacheKeyList() {
 
   return (
     <>
-      {/* @ts-ignore */}
       <MenuButtonItem
         onClick={() => {
           if (sortBy === 'order') {

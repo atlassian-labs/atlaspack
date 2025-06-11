@@ -4,7 +4,7 @@ import {useSearchParams} from 'react-router';
 import {useQuery} from '@tanstack/react-query';
 import qs from 'qs';
 import {Graph} from './Graph';
-// @ts-ignore
+// @ts-expect-error
 import dagre from 'cytoscape-dagre';
 
 export function CytoscapePage() {
@@ -96,7 +96,7 @@ export function CytoscapePage() {
 
       cy.layout({
         name: 'dagre',
-        // @ts-ignore
+        // @ts-expect-error
         align: 'DR',
       }).run();
 

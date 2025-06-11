@@ -1,12 +1,8 @@
-// @ts-ignore
 import Graphology from 'graphology';
 import {useRef} from 'react';
-// @ts-ignore
 import forceAtlas2 from 'graphology-layout-forceatlas2';
-// @ts-ignore
 import FA2Layout from 'graphology-layout-forceatlas2/worker';
 import {useEffect} from 'react';
-// @ts-ignore
 import Sigma from 'sigma';
 import {Graph} from './Graph';
 
@@ -57,7 +53,7 @@ export function SigmaGraph({graph}: {graph: Graph<any>}) {
       });
       fa2Layout.start();
 
-      const renderer: any = new Sigma(graphology, visualizationRef.current, {
+      const renderer = new Sigma(graphology, visualizationRef.current, {
         allowInvalidContainer: true,
         defaultDrawNodeHover: () => {},
         labelRenderedSizeThreshold: 0,
@@ -66,6 +62,7 @@ export function SigmaGraph({graph}: {graph: Graph<any>}) {
       renderer.on('enterNode', (e) => {
         console.log(e);
       });
+
       renderer.on('leaveNode', (e) => {
         console.log(e);
       });

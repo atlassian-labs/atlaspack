@@ -1,18 +1,13 @@
-// @ts-ignore
 import Graphology from 'graphology';
 import {useRef} from 'react';
-// @ts-ignore
 import forceAtlas2 from 'graphology-layout-forceatlas2';
-// @ts-ignore
 import FA2Layout from 'graphology-layout-forceatlas2/worker';
 import {useEffect} from 'react';
-// @ts-ignore
 import Sigma from 'sigma';
 import {useSearchParams} from 'react-router';
 import {useQuery} from '@tanstack/react-query';
 import qs from 'qs';
 import {Graph} from './Graph';
-import {getRandomDarkerColor} from './getRandomDarkerColor';
 import Spinner from '@atlaskit/spinner';
 
 function setup(container: HTMLDivElement, graph: Graphology) {
@@ -87,7 +82,6 @@ export function SigmaPage() {
           width: '100%',
         }}
       >
-        {/* @ts-ignore */}
         <Spinner size="large" />
       </div>
     );
