@@ -70,17 +70,17 @@ export function buildTreemapBundle(
     const parts = filePath.split('/');
     const assetSize = asset.stats.size;
     let current = assetTree;
+
     for (let part of parts) {
+      current.size += assetSize;
       current.children[part] = current.children[part] ?? {
         path: parts.slice(0, parts.indexOf(part) + 1).join('/'),
         children: {},
         size: 0,
       };
-
-      current.children[part].size += assetSize;
-      current.size += assetSize;
       current = current.children[part];
     }
+    current.size += assetSize;
   }
 
   const treemapBundle = {
