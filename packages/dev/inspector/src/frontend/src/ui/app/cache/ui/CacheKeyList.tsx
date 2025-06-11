@@ -1,11 +1,13 @@
-import {Link, useSearchParams} from 'react-router';
-import styles from './App.module.css';
+import {useNavigate, useSearchParams} from 'react-router';
+import styles from '../../../App.module.css';
 import {useVirtualizer} from '@tanstack/react-virtual';
 import {useEffect, useMemo, useRef} from 'react';
-import {useInfiniteQuery, useQuery} from '@tanstack/react-query';
+import {token} from '@atlaskit/tokens';
+import {useInfiniteQuery} from '@tanstack/react-query';
 import qs from 'qs';
 import axios from 'axios';
-import {MenuButtonItem, MenuLinkItem} from '@atlassian/navigation-system';
+import Button, {LinkButton} from '@atlaskit/button/new';
+import { Box } from '@atlaskit/primitives';
 
 export function CacheKeyList() {
   // sort by in querystring URL
@@ -73,6 +75,8 @@ export function CacheKeyList() {
     virtualItems,
   ]);
 
+  const navigate = useNavigate();
+
   const renderItems = () => {
     if (isLoading) {
       return (
@@ -123,7 +127,7 @@ export function CacheKeyList() {
       <div
         style={{
           flex: 1,
-          height: '80vh',
+          height: '100%',
           width: '100%',
           overflowY: 'auto',
           position: 'relative',
@@ -158,6 +162,9 @@ export function CacheKeyList() {
                 </div>
               );
             }
+            const href = `/app/cache/${encodeURIComponent(
+              key,
+            )}?${searchParams.toString()}`;
 
             return (
               <div
@@ -172,13 +179,16 @@ export function CacheKeyList() {
                   transform: `translateY(${virtualItem.start}px)`,
                 }}
               >
-                <MenuLinkItem
-                  href={`/app/cache/${encodeURIComponent(
-                    key,
-                  )}?${searchParams.toString()}`}
+                <LinkButton
+                  appearance="subtle"
+                  href={href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate(href);
+                  }}
                 >
                   {key}
-                </MenuLinkItem>
+                </LinkButton>
               </div>
             );
           })}
@@ -188,20 +198,47 @@ export function CacheKeyList() {
   };
 
   return (
-    <>
-      <MenuButtonItem
-        onClick={() => {
-          if (sortBy === 'order') {
-            setSortBy('size');
-          } else {
-            setSortBy('order');
-          }
+    <div
+      style={{
+        padding: 8,
+        height: '100%',
+        gap: 8,
+        display: 'flex',
+        backgroundColor: token('elevation.surface.sunken'),
+        flexDirection: 'column',
+        border: '1px solid var(--ds-border)',
+        width: 300,
+        flexShrink: 0,
+      }}
+    >
+      <Box>
+        <Button
+          appearance="subtle"
+          onClick={() => {
+            if (sortBy === 'order') {
+              setSortBy('size');
+            } else {
+              setSortBy('order');
+            }
+          }}
+        >
+          Sorting by {sortBy}
+        </Button>
+      </Box>
+
+      <div
+        style={{
+          backgroundColor: 'var(--ds-background-input)',
+          padding: 4,
+          border: '1px solid var(--ds-border)',
+          borderRadius: 4,
+          flex: 1,
+          overflow: 'hidden',
+          gap: 4,
         }}
       >
-        Sorting by {sortBy}
-      </MenuButtonItem>
-
-      {renderItems()}
-    </>
+        {renderItems()}
+      </div>
+    </div>
   );
 }

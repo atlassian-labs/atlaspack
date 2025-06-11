@@ -1,8 +1,8 @@
 import React, {useMemo, useRef} from 'react';
 import {Link} from 'react-router';
-import {ArrowRenderer} from './ArrowRenderer';
-import {Graph, Node} from './Graph';
-import {GraphNode} from './GraphNode';
+import {ArrowRenderer} from './ui/ArrowRenderer';
+import {Graph, Node} from '../Graph';
+import {GraphNode} from '../GraphNode';
 
 export function GraphRenderer({
   graph,

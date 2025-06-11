@@ -2,7 +2,7 @@ import {useSearchParams} from 'react-router';
 import {useQuery} from '@tanstack/react-query';
 import qs from 'qs';
 import {Graph} from './Graph';
-import {GraphRenderer} from './GraphRenderer';
+import {GraphRenderer} from './GraphRenderer/GraphRenderer';
 
 export function Bundles() {
   const [searchParams] = useSearchParams();

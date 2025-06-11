@@ -1,6 +1,5 @@
 import './hack-feature-flags';
 import './ui/globals.css';
-import React from 'react';
 import {createRoot} from 'react-dom/client';
 import AppRoutes from './ui/AppRoutes';
 import {BrowserRouter} from 'react-router';

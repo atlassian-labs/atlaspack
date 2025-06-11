@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@atlaskit/css-reset": "*",
+    "@atlaskit/code": "*",
     "@atlaskit/app-provider": "*",
     "@atlassian/navigation-system": "*",
     "@atlaskit/logo": "*",

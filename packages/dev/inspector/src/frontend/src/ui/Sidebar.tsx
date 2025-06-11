@@ -2,7 +2,7 @@ import {Link, useSearchParams} from 'react-router';
 import {useQuery} from '@tanstack/react-query';
 import qs from 'qs';
 import styles from './App.module.css';
-import {CacheKeyList} from './CacheKeyList';
+import {CacheKeyList} from './app/cache/ui/CacheKeyList';
 
 export function Sidebar() {
   return (
@@ -19,7 +19,7 @@ export function Sidebar() {
           <Link to="/app/treemap">treemap</Link>
         </li>
         <li className={styles.sidebarItem}>
-          <Link to="/app/foamtreemap">foamtreemap</Link>
+          <Link to="/app/treemap">foamtreemap</Link>
         </li>
       </ul>
 

@@ -1,4 +1,4 @@
-import {useRef, useEffect, useState} from 'react';
+import {useRef, useEffect} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {formatBytes} from './formatBytes';
 import {getRandomDarkerColor} from './getRandomDarkerColor';

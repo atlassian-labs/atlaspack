@@ -1,5 +1,5 @@
 import 'flexlayout-react/style/light.css';
-import styles from './App.module.css';
+import styles from '../../App.module.css';
 import {
   Fragment,
   Suspense,
@@ -12,19 +12,19 @@ import {
 // @ts-expect-error
 import CarrotSearchFoamTree from '@carrotsearch/foamtree';
 import {useQuery, useSuspenseQuery} from '@tanstack/react-query';
-import {AssetTreeNode, Bundle} from './Treemap';
-import {formatBytes} from './formatBytes';
+import {AssetTreeNode, Bundle} from '../../Treemap';
+import {formatBytes} from '../../formatBytes';
 import {Link, SetURLSearchParams, useSearchParams} from 'react-router';
 import qs from 'qs';
 import {autorun, makeAutoObservable, runInAction} from 'mobx';
 import {observer} from 'mobx-react-lite';
-import {Graph} from './Graph';
-import {SigmaGraph} from './SigmaGraph';
+import {Graph} from '../../Graph';
+import {SigmaGraph} from '../../SigmaGraph';
 import Spinner from '@atlaskit/spinner';
 import {token} from '@atlaskit/tokens';
 import Tabs, {Tab, TabList, TabPanel} from '@atlaskit/tabs';
-import {SigmaPage} from './Sigma';
-import {BundleData, Group, RelatedBundles, viewModel} from './ViewModel';
+import {SigmaPage} from '../../Sigma';
+import {BundleData, Group, RelatedBundles, viewModel} from '../../ViewModel';
 import {BitbucketIcon} from '@atlaskit/logo';
 
 function setup(
@@ -979,7 +979,7 @@ const RelatedBundlesController = observer(() => {
 
 const FocusBreadcrumbs = observer(() => {
   const bundleEl = viewModel.focusedBundle ? (
-    <Link to={`/app/foamtreemap?bundle=${viewModel.focusedBundle.id}`}>
+    <Link to={`/app/treemap?bundle=${viewModel.focusedBundle.id}`}>
       {viewModel.focusedBundle.label}
     </Link>
   ) : null;
@@ -989,7 +989,7 @@ const FocusBreadcrumbs = observer(() => {
         return (
           <div key={i}>
             <Link
-              to={`/app/foamtreemap?bundle=${viewModel.focusedBundle?.id}&path=${candidatePath}`}
+              to={`/app/treemap?bundle=${viewModel.focusedBundle?.id}&path=${candidatePath}`}
               onClick={(e) => {
                 // TODO: Make this work
                 e.preventDefault();
@@ -1006,7 +1006,7 @@ const FocusBreadcrumbs = observer(() => {
       })
     : [];
   const breadcrumEls = [
-    <Link to="/app/foamtreemap">Root</Link>,
+    <Link to="/app/treemap">Root</Link>,
     bundleEl,
     ...focusedGroup,
   ];
@@ -1028,7 +1028,7 @@ const FocusBreadcrumbs = observer(() => {
   );
 });
 
-export const FoamTreemap = observer(() => {
+export const FoamTreemapPage = observer(() => {
   return (
     <div
       style={{

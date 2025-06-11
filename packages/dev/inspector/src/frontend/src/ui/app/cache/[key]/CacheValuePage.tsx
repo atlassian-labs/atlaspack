@@ -1,8 +1,10 @@
 import {useParams} from 'react-router';
 import {useQuery} from '@tanstack/react-query';
-import {formatBytes} from './formatBytes';
+import {formatBytes} from '../../../formatBytes';
+import {Code, CodeBlock} from '@atlaskit/code';
+import {Box, Inline, Stack} from '@atlaskit/primitives';
 
-export function CacheValue() {
+export function CacheValuePage() {
   const key = useParams().key;
   if (!key) {
     throw new Error('No key');
@@ -34,21 +36,26 @@ export function CacheValue() {
 
     return (
       <>
-        <p>size: {formatBytes(cacheValue.size)}</p>
+        <Inline space="space.100">
+          <Box>Cache entry size</Box>
+          <Code>{formatBytes(cacheValue.size)}</Code>
+        </Inline>
 
-        <pre>
-          <code>{cacheValue.value}</code>
-        </pre>
+        <CodeBlock text={cacheValue.value} />
       </>
     );
   };
 
   return (
-    <div>
-      <h2>cache value</h2>
-      <h3>key: {key}</h3>
+    <Stack space="space.100">
+      <Box>
+        <strong>Cache entry</strong>
+      </Box>
+      <Box>
+        <Code>{key}</Code>
+      </Box>
 
       {content()}
-    </div>
+    </Stack>
   );
 }

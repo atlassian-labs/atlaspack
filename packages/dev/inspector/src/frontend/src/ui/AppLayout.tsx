@@ -113,7 +113,7 @@ export function AppLayout() {
                 elemBefore={
                   <PageIcon label="Page" />
                 }
-                href="/app/foamtreemap"
+                href="/app/treemap"
               >
                 Bundle size data
               </LinkItem>
