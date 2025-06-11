@@ -22,6 +22,18 @@ export interface CacheData {
   cache: LMDBLiteCache;
 }
 
+/**
+ * Similar to `@atlaspack/query`.
+ *
+ * Since query is using a different approach to determine valid BundleGraph/AssetGraph in
+ * the cache it was easier to rewrite this here.
+ *
+ * This will find the first `RequestGraph` entry in the cache and load it.
+ *
+ * We should be keeping meta-data about the builds that correspond to these entries so as
+ * to load the most relevant one (for example the most recent) as well as performing
+ * clean-up in other areas of the `atlaspack` codebase.
+ */
 export async function loadRequestTracker(cache: LMDBLiteCache): Promise<{
   requestTracker: RequestTracker | null;
 }> {
@@ -63,7 +75,17 @@ export async function loadRequestTracker(cache: LMDBLiteCache): Promise<{
   }
 }
 
-function findCachePath(target: string): string | null {
+/**
+ * Find the cache path from the `--target` flag.
+ *
+ * This is meant to make the tool nicer to use by forgiving a developer if they specify
+ * `--target` as the path to their project root or to a sub-directory, instead of the
+ * cache.
+ *
+ * It will also prevent creating caches where there were none, since opening a non-existent
+ * cache would create a new empty cache.
+ */
+export function findCachePath(target: string): string | null {
   target = path.resolve(process.cwd(), target);
 
   if (fs.existsSync(path.join(target, 'data.mdb'))) {

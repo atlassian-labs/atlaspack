@@ -2,6 +2,10 @@ import path from 'path';
 import fs from 'fs';
 import childProcess from 'child_process';
 
+/**
+ * A project root is the directory over the cache directory that contains a `.git`
+ * directory.
+ */
 export function findProjectRoot(target: string): string | null {
   let projectRoot = path.resolve(process.cwd(), target);
   let exists = false;
@@ -29,6 +33,17 @@ export interface SourceCodeURL {
 
 /**
  * Based on the directory path, find a source code URL for this project.
+ *
+ * This is based on parsing `git remote` URLs.
+ *
+ * Both SSH and HTTP URLs should be supported for both GitHub and BitBucket
+ * Cloud.
+ *
+ * If a repository has multiple remotes, the first GitHub/BitBucket remote
+ * will be used.
+ *
+ * This might not work for repositories using BitBucket Server, or mirror
+ * URLs as remotes.
  */
 export function findSourceCodeURL(target: string): SourceCodeURL | null {
   const projectRoot = findProjectRoot(target);

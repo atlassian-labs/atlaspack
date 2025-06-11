@@ -23,10 +23,33 @@ import {
 } from './services/findSourceCodeUrl';
 import {AddressInfo} from 'net';
 
+/**
+ * We split preparing cache data and building the app.
+ *
+ * The cache is opened once and some models are created from it.
+ *
+ * These models are shared through the application on the `res.locals` express field.
+ */
 interface ConfigureInspectorAppParams {
+  /**
+   * A path to the cache directory or a path to a project.
+   *
+   * If a cache isn't found in this path, the tool will traverse up until it finds
+   * a suitable root.
+   *
+   * Once a cache is found, a `.git` directory will be looked-up to find a "project root".
+   *
+   * This will be used to find files and to find source code URLs on GitHub or BitBucket
+   * cloud.
+   */
   target: string;
 }
 
+/**
+ * - Find paths for the source repository, project and cache.
+ * - Open the cache and deserialize bundler data out of it.
+ * - Build the tree-map model.
+ */
 export async function configureInspectorApp({
   target,
 }: ConfigureInspectorAppParams): Promise<BuildInspectorAppParams> {
@@ -53,6 +76,9 @@ export interface BuildInspectorAppParams {
   sourceCodeURL: SourceCodeURL | null;
 }
 
+/**
+ * Wire-up the express server app.
+ */
 export function buildInspectorApp({
   cacheData,
   projectRoot,

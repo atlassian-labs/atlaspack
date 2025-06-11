@@ -2,20 +2,14 @@ import path from 'path';
 import fs from 'fs';
 
 import {Router} from 'express';
-import {requestTypes} from '@atlaspack/core/lib/RequestTracker.js';
-import {RequestGraphNode} from '@atlaspack/core/lib/RequestTracker.js';
 import {Node} from '@atlaspack/core/lib/types.js';
 
 import {buildJsonGraph} from '../services/buildJsonGraph';
 import {
   getBundleGraph,
   getRequestTracker,
-  getTreemap,
 } from '../config/middleware/cacheDataMiddleware';
-import {
-  getWriteBundleRequestsByBundleId,
-  Treemap,
-} from '../services/buildTreemap';
+import {getWriteBundleRequestsByBundleId} from '../services/buildTreemap';
 
 export interface BundleGraphControllerParams {
   projectRoot: string;

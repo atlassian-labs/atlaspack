@@ -26,6 +26,10 @@ export interface Treemap {
   totalSize: number;
 }
 
+/**
+ * In order to find the sizes of bundles, we look-up write bundle requests for each bundle
+ * in this build, then read the sizes of each file from disk.
+ */
 export function getWriteBundleRequestsByBundleId(
   requestTracker: RequestTracker,
 ): Map<string, RequestGraphNode> {
@@ -44,6 +48,19 @@ export function getWriteBundleRequestsByBundleId(
   );
 }
 
+/**
+ * Builds a tree-map model for a bundle graph.
+ *
+ * The tree-map is a tree structure starting at the bundle and having layers for
+ * each asset sub-directory in its asset tree.
+ *
+ * Asset sizes are calculated from the asset size stats, which should represent
+ * sizes post-transformation, but before minification.
+ *
+ * Bundle sizes are read from the bundle files on disk.
+ *
+ * The sub-directories are sized to the size of their children.
+ */
 export function buildTreemapBundle(
   writeBundleRequestsByBundleId: Map<string, RequestGraphNode>,
   node: Node,

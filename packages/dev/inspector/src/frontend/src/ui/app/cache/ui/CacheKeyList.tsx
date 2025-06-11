@@ -1,7 +1,6 @@
 import {useNavigate, useSearchParams} from 'react-router';
 import {useVirtualizer} from '@tanstack/react-virtual';
 import {useEffect, useMemo, useRef} from 'react';
-import {token} from '@atlaskit/tokens';
 import {useInfiniteQuery} from '@tanstack/react-query';
 import qs from 'qs';
 import axios from 'axios';
@@ -11,6 +10,11 @@ import {Box} from '@atlaskit/primitives';
 import styles from './CacheKeyList.module.css';
 import appStyles from '../../../App.module.css';
 
+/**
+ * The list of cache keys is an infinite paginated, virtualized list.
+ *
+ * That is because there might be a very large amount of keys to render.
+ */
 export function CacheKeyList() {
   // sort by in querystring URL
   const [searchParams, setSearchParams] = useSearchParams();

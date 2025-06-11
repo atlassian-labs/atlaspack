@@ -14,6 +14,14 @@ export interface JsonGraph<T> {
   }>;
 }
 
+/**
+ * Build a simplified representation of a graph for a front-end to render.
+ *
+ * The graph is simplified by:
+ * - being a JSON serialisable object
+ * - filtering out unnecessary nodes
+ * - limiting the depth of nodes returned from the root
+ */
 export function buildJsonGraph<T>(
   graph: Graph<Node>,
   rootNodeId: string | null,
