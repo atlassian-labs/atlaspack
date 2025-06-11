@@ -1,14 +1,17 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 // @ts-expect-error
 import CarrotSearchFoamTree from '@carrotsearch/foamtree';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {AssetTreeNode, Bundle} from '../Treemap';
-import {formatBytes} from '../../../../util/formatBytes';
 import {SetURLSearchParams, useSearchParams} from 'react-router';
 import qs from 'qs';
 import {autorun, runInAction} from 'mobx';
 import {observer} from 'mobx-react-lite';
 import {BundleData, Group, viewModel} from '../../../../model/ViewModel';
+import {TreemapTooltip} from './TreemapTooltip';
+import styles from './TreemapRenderer.module.css';
+import {useStableCallback} from './controllers/useStableCallback';
+import {useMouseMoveController} from './useMouseMoveController';
 
 function setup(
   // bundleData: BundleData,
@@ -114,14 +117,6 @@ function setup(
   };
 }
 
-function useStableCallback(fn: (...args: any[]) => void) {
-  const ref = useRef(fn);
-  useEffect(() => {
-    ref.current = fn;
-  }, [fn]);
-  return useCallback((...args: any[]) => ref.current(...args), []);
-}
-
 function toBundleData(bundles: Array<Bundle>): BundleData {
   function assetTreeToGroup(assetTree: AssetTreeNode): Group {
     return {
@@ -166,12 +161,8 @@ export const TreemapRenderer = observer(() => {
         }),
     ],
   });
-  const visualizationRef = useRef<HTMLDivElement>(null);
-  const [mouseState, setMouseState] = useState<{x: number; y: number}>({
-    x: 0,
-    y: 0,
-  });
 
+  const visualizationRef = useRef<HTMLDivElement>(null);
   const setSearchParamsMemo = useStableCallback(setSearchParams);
   const bundle = searchParams.get('bundle');
   const foamtreeRef = useRef<CarrotSearchFoamTree | null>(null);
@@ -250,41 +241,19 @@ export const TreemapRenderer = observer(() => {
     });
   }, []);
 
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      setMouseState({x: e.clientX, y: e.clientY});
-    };
-    window.addEventListener('mousemove', onMouseMove);
-    return () => window.removeEventListener('mousemove', onMouseMove);
+  useMouseMoveController();
+
+  const onMouseLeave = useCallback(() => {
+    runInAction(() => {
+      viewModel.tooltipState = null;
+    });
   }, []);
 
   return (
-    <div
-      style={{height: '100%', width: '100%', flex: 1}}
-      onMouseLeave={() => runInAction(() => (viewModel.tooltipState = null))}
-    >
-      <div
-        ref={visualizationRef}
-        style={{height: '100%', width: '100%', flex: 1}}
-      />
+    <div className={styles.expander} onMouseLeave={onMouseLeave}>
+      <div ref={visualizationRef} className={styles.expander} />
 
-      {viewModel.tooltipState && (
-        <div
-          style={{
-            position: 'absolute',
-            left: mouseState.x + 10,
-            top: mouseState.y + 10,
-            backgroundColor: 'white',
-            padding: '10px',
-            borderRadius: '4px',
-            boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.1)',
-          }}
-        >
-          {viewModel.tooltipState.group.label}
-          <br />
-          {formatBytes(viewModel.tooltipState.group.weight)}
-        </div>
-      )}
+      <TreemapTooltip />
     </div>
   );
 });

@@ -4,10 +4,16 @@ import forceAtlas2 from 'graphology-layout-forceatlas2';
 import FA2Layout from 'graphology-layout-forceatlas2/worker';
 import {useEffect} from 'react';
 import Sigma from 'sigma';
-import {Graph} from '../../../types/Graph';
 
-export function SigmaGraph({graph}: {graph: Graph<any>}) {
+import {Graph} from '../../../types/Graph';
+import styles from './SigmaGraph.module.css';
+
+/**
+ * Renders `Graph` visualisation using Sigma.js.
+ */
+export function SigmaGraph<T>({graph}: {graph: Graph<T>}) {
   const visualizationRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (visualizationRef.current) {
       const graphology = new Graphology();
@@ -21,7 +27,6 @@ export function SigmaGraph({graph}: {graph: Graph<any>}) {
 
         graphology.addNode(node.id, {
           label: node.displayName,
-          // color: getRandomDarkerColor(node.displayName).family[2],
           x: Math.random() * 10000,
           y: Math.random() * 10000,
           size: 6,
@@ -37,10 +42,7 @@ export function SigmaGraph({graph}: {graph: Graph<any>}) {
 
             edges.add(`${node.id} -> ${edge}`);
 
-            graphology.addEdge(node.id, edge, {
-              // color: 'red',
-              // size: 0.1,
-            });
+            graphology.addEdge(node.id, edge, {});
           }
         }
       }
@@ -59,13 +61,13 @@ export function SigmaGraph({graph}: {graph: Graph<any>}) {
         labelRenderedSizeThreshold: 0,
       });
 
-      renderer.on('enterNode', (e) => {
-        console.log(e);
-      });
-
-      renderer.on('leaveNode', (e) => {
-        console.log(e);
-      });
+      // TODO: Listen to enter/leave and highlight the rows
+      // renderer.on('enterNode', (e) => {
+      //   console.log(e);
+      // });
+      // renderer.on('leaveNode', (e) => {
+      //   console.log(e);
+      // });
 
       return () => {
         fa2Layout.stop();
@@ -74,10 +76,5 @@ export function SigmaGraph({graph}: {graph: Graph<any>}) {
     }
   }, [graph]);
 
-  return (
-    <div
-      style={{height: '100%', width: '100%', flex: 1, position: 'relative'}}
-      ref={visualizationRef}
-    />
-  );
+  return <div className={styles.expander} ref={visualizationRef} />;
 }

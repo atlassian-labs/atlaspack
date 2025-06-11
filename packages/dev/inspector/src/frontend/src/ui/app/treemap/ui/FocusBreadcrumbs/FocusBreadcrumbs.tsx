@@ -2,6 +2,7 @@ import {observer} from 'mobx-react-lite';
 import {Link} from 'react-router';
 import {runInAction} from 'mobx';
 import {viewModel} from '../../../../model/ViewModel';
+import styles from './FocusBreadcrumbs.module.css';
 
 export const FocusBreadcrumbs = observer(() => {
   const bundleEl = viewModel.focusedBundle ? (
@@ -40,14 +41,7 @@ export const FocusBreadcrumbs = observer(() => {
   ];
 
   return (
-    <div
-      style={{
-        padding: '4px',
-        display: 'flex',
-        flexDirection: 'row',
-        gap: '4px',
-      }}
-    >
+    <div className={styles.focusBreadcrumbs}>
       {breadcrumEls.flatMap((el, i) => [
         <div key={i}>{el}</div>,
         i < breadcrumEls.length - 1 && <div>&gt;</div>,

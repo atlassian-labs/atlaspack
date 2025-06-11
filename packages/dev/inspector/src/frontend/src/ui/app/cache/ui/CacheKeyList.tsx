@@ -8,7 +8,8 @@ import axios from 'axios';
 import Button, {LinkButton} from '@atlaskit/button/new';
 import {Box} from '@atlaskit/primitives';
 
-import styles from '../../../App.module.css';
+import styles from './CacheKeyList.module.css';
+import appStyles from '../../../App.module.css';
 
 export function CacheKeyList() {
   // sort by in querystring URL
@@ -81,29 +82,13 @@ export function CacheKeyList() {
   const renderItems = () => {
     if (isLoading) {
       return (
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          Loading...
-        </div>
+        <div className={styles.cacheKeyPlaceholderContainer}>Loading...</div>
       );
     }
 
     if (error) {
       return (
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
+        <div className={styles.cacheKeyPlaceholderContainer}>
           Error: {error.message}
         </div>
       );
@@ -111,53 +96,36 @@ export function CacheKeyList() {
 
     if (!allKeys.length) {
       return (
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          No cache keys
-        </div>
+        <div className={styles.cacheKeyPlaceholderContainer}>No cache keys</div>
       );
     }
 
     return (
-      <div
-        style={{
-          flex: 1,
-          height: '100%',
-          width: '100%',
-          overflowY: 'auto',
-          position: 'relative',
-        }}
-        ref={parentRef}
-      >
+      <div className={styles.cacheKeyListItemsContainer} ref={parentRef}>
         <div
+          className={styles.cacheKeyListItemsContainerInner}
           style={{
-            width: '100%',
             height: `${rowVirtualizer.getTotalSize()}px`,
           }}
         >
           {rowVirtualizer.getVirtualItems().map((virtualItem) => {
             const key = allKeys[virtualItem.index];
             const isLoaderRow = key == null && lastPage?.hasNextPage;
+            const rowStyle = {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: `${virtualItem.size}px`,
+              transform: `translateY(${virtualItem.start}px)`,
+            } as const;
 
             if (isLoaderRow) {
               return (
                 <div
                   key="loader"
-                  className={styles.sidebarItem}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${virtualItem.size}px`,
-                    transform: `translateY(${virtualItem.start}px)`,
-                  }}
+                  className={appStyles.sidebarItem}
+                  style={rowStyle}
                 >
                   Loading...
                 </div>
@@ -170,15 +138,8 @@ export function CacheKeyList() {
             return (
               <div
                 key={virtualItem.index}
-                className={styles.sidebarItem}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: `${virtualItem.size}px`,
-                  transform: `translateY(${virtualItem.start}px)`,
-                }}
+                className={appStyles.sidebarItem}
+                style={rowStyle}
               >
                 <LinkButton
                   appearance="subtle"
@@ -199,19 +160,7 @@ export function CacheKeyList() {
   };
 
   return (
-    <div
-      style={{
-        padding: 8,
-        height: '100%',
-        gap: 8,
-        display: 'flex',
-        backgroundColor: token('elevation.surface.sunken'),
-        flexDirection: 'column',
-        border: '1px solid var(--ds-border)',
-        width: 300,
-        flexShrink: 0,
-      }}
-    >
+    <div className={styles.cacheKeyList}>
       <Box>
         <Button
           appearance="subtle"
@@ -227,19 +176,7 @@ export function CacheKeyList() {
         </Button>
       </Box>
 
-      <div
-        style={{
-          backgroundColor: 'var(--ds-background-input)',
-          padding: 4,
-          border: '1px solid var(--ds-border)',
-          borderRadius: 4,
-          flex: 1,
-          overflow: 'hidden',
-          gap: 4,
-        }}
-      >
-        {renderItems()}
-      </div>
+      <div className={styles.cacheKeyListInner}>{renderItems()}</div>
     </div>
   );
 }

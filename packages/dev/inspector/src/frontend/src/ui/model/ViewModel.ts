@@ -8,6 +8,7 @@ export interface ViewModel {
   showLeftSidebar: boolean;
   showRightSidebar: boolean;
   tooltipState: TooltipState | null;
+  mouseState: {x: number; y: number};
 }
 
 export const viewModel: ViewModel = makeAutoObservable({
@@ -18,6 +19,7 @@ export const viewModel: ViewModel = makeAutoObservable({
   showLeftSidebar: true,
   showRightSidebar: false,
   tooltipState: null,
+  mouseState: {x: 0, y: 0},
 });
 
 export interface BundleData {

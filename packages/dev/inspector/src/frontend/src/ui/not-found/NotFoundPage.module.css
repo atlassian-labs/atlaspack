@@ -1,9 +1,7 @@
-.defaultLoadingIndicator {
+.notFoundPage {
   display: flex;
   padding-top: 100px;
   flex-direction: column;
   gap: 8px;
   align-items: center;
-  height: 100%;
-  width: 100%;
 }

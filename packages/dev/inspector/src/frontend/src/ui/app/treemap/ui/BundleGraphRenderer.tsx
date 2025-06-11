@@ -7,8 +7,10 @@ import Sigma from 'sigma';
 import {useSearchParams} from 'react-router';
 import {useQuery} from '@tanstack/react-query';
 import qs from 'qs';
-import {Graph} from '../../../types/Graph';
 import Spinner from '@atlaskit/spinner';
+
+import {Graph} from '../../../types/Graph';
+import styles from './BundleGraphRenderer.module.css';
 
 function setup(container: HTMLDivElement, graph: Graphology) {
   const sensibleSettings = forceAtlas2.inferSettings(graph);
@@ -73,15 +75,7 @@ export function BundleGraphRenderer() {
 
   if (isLoadingBundleGraph) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          width: '100%',
-        }}
-      >
+      <div className={styles.loadingIndicator}>
         <Spinner size="large" />
       </div>
     );
@@ -95,10 +89,5 @@ export function BundleGraphRenderer() {
     throw new Error('No bundle graph');
   }
 
-  return (
-    <div
-      style={{height: '100%', width: '100%', flex: 1}}
-      ref={visualizationRef}
-    />
-  );
+  return <div className={styles.expander} ref={visualizationRef} />;
 }
