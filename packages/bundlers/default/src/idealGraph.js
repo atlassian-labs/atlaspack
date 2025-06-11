@@ -659,6 +659,13 @@ export function createIdealGraph(
         }
         let assetIndex = nullthrows(assetToIndex.get(node.value));
         reachable.add(assetIndex);
+        /**
+         * This is where `index.js` is being added as a reachableRoot
+         * for `two.js`.
+         *
+         *  Without the unused export, `three.js` is added. We may need
+         * a traversal which will skipUnusedAssets if they have no side-effects?
+         */
         reachableRoots[assetIndex].add(bundleRootId);
 
         if (asset.meta.isConstantModule === true) {

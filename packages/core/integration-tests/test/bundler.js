@@ -2712,4 +2712,66 @@ describe('bundler', function () {
       await run(b);
     });
   });
+
+  /**
+   * The expectation is that `export { two } from "./two";` will
+   * be ignored while bundling because it's an unused export with
+   * no side-effects.
+   *
+   * We should ignore the export and create an idealBundleGraph with
+   * `two.js` in `three.js`
+   */
+  it('should handle unused exports', async () => {
+    await fsFixture(overlayFS, __dirname)`
+        unused-exports
+          one.js:
+            export { two } from "./two";
+            export function one() {
+              return 1;
+            };
+          two.js:
+            export function two() {
+              return 2;
+            }
+          three.js:
+            import { one } from "./one";
+            import { two } from "./two";
+            export function three() {
+              return one() + two();
+            }
+          index.js:
+            import { one } from './one';
+
+            import('./three').then(({ three }) => {
+              one() + three();
+            });
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "minBundleSize": 0
+              }
+            }
+      `;
+    let b = await bundle([path.join(__dirname, 'unused-exports/index.js')], {
+      inputFS: overlayFS,
+    });
+
+    assertBundles(b, [
+      {
+        assets: [
+          'bundle-url.js',
+          'cacheLoader.js',
+          'esmodule-helpers.js',
+          'index.js',
+          'js-loader.js',
+          'one.js',
+        ],
+      },
+      {
+        assets: ['two.js', 'three.js'],
+      },
+    ]);
+
+    await run(b);
+  });
 });
