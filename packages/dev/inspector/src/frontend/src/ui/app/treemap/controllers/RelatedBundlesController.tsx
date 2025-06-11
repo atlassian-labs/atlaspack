@@ -8,16 +8,19 @@ import qs from 'qs';
 
 export const RelatedBundlesController = observer(() => {
   const [searchParams] = useSearchParams();
+  const focusedBundleId = searchParams.get('focusedBundleId');
   const {data} = useQuery<RelatedBundles>({
     queryKey: [
       '/api/bundle-graph/related-bundles?' +
-        qs.stringify({bundle: viewModel.focusedBundle?.id}),
+        qs.stringify({
+          bundle: focusedBundleId,
+        }),
     ],
-    enabled: viewModel.focusedBundle != null,
+    enabled: focusedBundleId != null,
   });
 
   useEffect(() => {
-    if (data) {
+    if (data && data.childBundles.length > 0) {
       runInAction(() => {
         viewModel.relatedBundles = data;
       });

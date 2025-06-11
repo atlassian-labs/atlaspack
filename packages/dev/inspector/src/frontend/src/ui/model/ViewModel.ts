@@ -1,6 +1,7 @@
 import {makeAutoObservable} from 'mobx';
 
 export interface ViewModel {
+  data: BundleData | null;
   focusedBundle: Group | null;
   focusedGroup: Group | null;
   relatedBundles: RelatedBundles | null;
@@ -9,9 +10,11 @@ export interface ViewModel {
   showRightSidebar: boolean;
   tooltipState: TooltipState | null;
   mouseState: {x: number; y: number};
+  groupsById: Map<string, Group>;
 }
 
 export const viewModel: ViewModel = makeAutoObservable({
+  data: null,
   focusedBundle: null,
   focusedGroup: null,
   relatedBundles: null,
@@ -20,7 +23,24 @@ export const viewModel: ViewModel = makeAutoObservable({
   showRightSidebar: false,
   tooltipState: null,
   mouseState: {x: 0, y: 0},
-});
+
+  get groupsById(): Map<string, Group> {
+    const groupsById = new Map<string, Group>();
+
+    function collectGroups(group: Group) {
+      groupsById.set(group.id, group);
+      for (const childGroup of group.groups ?? []) {
+        collectGroups(childGroup);
+      }
+    }
+
+    for (const group of this.data?.groups ?? []) {
+      collectGroups(group);
+    }
+
+    return groupsById;
+  },
+} as ViewModel);
 
 export interface BundleData {
   groups: Array<Group>;

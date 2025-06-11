@@ -5,7 +5,7 @@ import {useSuspenseQuery} from '@tanstack/react-query';
 import {AssetTreeNode, Bundle} from '../Treemap';
 import {SetURLSearchParams, useSearchParams} from 'react-router';
 import qs from 'qs';
-import {autorun, runInAction} from 'mobx';
+import {autorun, makeAutoObservable, runInAction} from 'mobx';
 import {observer} from 'mobx-react-lite';
 import {BundleData, Group, viewModel} from '../../../../model/ViewModel';
 import {TreemapTooltip} from './TreemapTooltip';
@@ -14,7 +14,6 @@ import {useStableCallback} from './controllers/useStableCallback';
 import {useMouseMoveController} from './useMouseMoveController';
 
 function setup(
-  // bundleData: BundleData,
   visualization: HTMLDivElement,
   setSearchParams: SetURLSearchParams,
   isDetailView: boolean,
@@ -60,18 +59,20 @@ function setup(
     onGroupClick(e: {group: Group}) {
       if (!isDetailView) {
         if (e.group.type === 'bundle') {
-          runInAction(() => {
-            viewModel.focusedBundle = e.group;
-            viewModel.focusedGroup = null;
+          setSearchParams((prev) => {
+            prev.set('focusedBundleId', e.group.id);
+            prev.delete('focusedGroupId');
+            return prev;
           });
         }
-      } else {
+      } else if (e.group) {
         const focusGroup = e.group;
         this.open(focusGroup);
         this.zoom(focusGroup);
 
-        runInAction(() => {
-          viewModel.focusedGroup = focusGroup;
+        setSearchParams((prev) => {
+          prev.set('focusedGroupId', focusGroup.id);
+          return prev;
         });
       }
     },
@@ -171,7 +172,6 @@ export const TreemapRenderer = observer(() => {
   useEffect(() => {
     if (visualizationRef.current) {
       const {cleanup, foamtree} = setup(
-        // toBundleData(data.bundles),
         visualizationRef.current,
         setSearchParamsMemo,
         bundle != null,
@@ -203,6 +203,9 @@ export const TreemapRenderer = observer(() => {
               relatedBundlesSet.has(group.id),
           ),
         );
+        runInAction(() => {
+          viewModel.data = bundleData;
+        });
         foamtreeRef.current.set({
           dataObject: bundleData,
         });
@@ -211,10 +214,14 @@ export const TreemapRenderer = observer(() => {
 
       const bundleData = toBundleData(data.bundles);
       runInAction(() => {
-        if (data.bundles.length === 1) {
-          viewModel.focusedBundle = bundleData.groups[0];
-        }
+        viewModel.data = bundleData;
       });
+      if (data.bundles.length === 1) {
+        setSearchParams((prev) => {
+          prev.set('focusedBundleId', bundleData.groups[0].id);
+          return prev;
+        });
+      }
       foamtreeRef.current.set({
         dataObject: bundleData,
       });

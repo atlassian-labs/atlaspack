@@ -1,10 +1,11 @@
 import {observer} from 'mobx-react-lite';
-import {Link} from 'react-router';
-import {runInAction} from 'mobx';
+import {Link, useSearchParams} from 'react-router';
 import {viewModel} from '../../../../model/ViewModel';
 import styles from './FocusBreadcrumbs.module.css';
+import qs from 'qs';
 
 export const FocusBreadcrumbs = observer(() => {
+  const [searchParams] = useSearchParams();
   const bundleEl = viewModel.focusedBundle ? (
     <Link to={`/app/treemap?bundle=${viewModel.focusedBundle.id}`}>
       {viewModel.focusedBundle.label}
@@ -17,15 +18,12 @@ export const FocusBreadcrumbs = observer(() => {
         return (
           <div key={i}>
             <Link
-              to={`/app/treemap?bundle=${viewModel.focusedBundle?.id}&path=${candidatePath}`}
-              onClick={(e) => {
-                // TODO: Make this work
-                e.preventDefault();
-
-                runInAction(() => {
-                  viewModel.focusedGroup = null;
-                });
-              }}
+              to={`/app/treemap?${qs.stringify({
+                bundle:
+                  viewModel.focusedBundle?.id ?? searchParams.get('bundle'),
+                focusedBundleId: viewModel.focusedBundle?.id,
+                focusedGroupId: candidatePath,
+              })}`}
             >
               {part}
             </Link>

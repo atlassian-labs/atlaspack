@@ -3,6 +3,7 @@ import {RelatedBundlesController} from './controllers/RelatedBundlesController';
 import {BottomPanel} from './ui/BottomPanel/BottomPanel';
 import {FocusBreadcrumbs} from './ui/FocusBreadcrumbs/FocusBreadcrumbs';
 import {TreemapRenderer} from './ui/TreemapRenderer/TreemapRenderer';
+import {UrlFocusController} from './controllers/UrlFocusController';
 
 import styles from './FoamTreemapPage.module.css';
 
@@ -20,6 +21,7 @@ export const FoamTreemapPage = observer(() => {
       </div>
 
       <RelatedBundlesController />
+      <UrlFocusController />
     </div>
   );
 });
