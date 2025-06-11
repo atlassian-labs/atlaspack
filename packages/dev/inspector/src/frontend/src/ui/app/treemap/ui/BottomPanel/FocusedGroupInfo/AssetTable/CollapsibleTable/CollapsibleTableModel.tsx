@@ -7,6 +7,7 @@ export interface CollapsibleTableModel {
 export interface CollapsibleTableNode {
   id: string;
   path: string;
+  sourceCodeUrl: string;
   isExpanded: boolean;
   children: CollapsibleTableNode[];
   parent: string | null;

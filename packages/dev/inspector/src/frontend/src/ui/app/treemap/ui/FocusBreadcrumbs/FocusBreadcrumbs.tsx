@@ -44,7 +44,7 @@ export const FocusBreadcrumbs = observer(() => {
     <div className={styles.focusBreadcrumbs}>
       {breadcrumEls.flatMap((el, i) => [
         <div key={i}>{el}</div>,
-        i < breadcrumEls.length - 1 && <div>&gt;</div>,
+        i < breadcrumEls.length - 1 && <div key={i + '-separator'}>&gt;</div>,
       ])}
     </div>
   );

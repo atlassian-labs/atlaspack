@@ -51,6 +51,8 @@ export const AssetTable = observer(
           const root: CollapsibleTableNode = makeAutoObservable({
             id: node[0],
             path: node[0],
+            // TODO: get source code url
+            sourceCodeUrl: node[0],
             isExpanded: false,
             children: [],
             parent: null,
@@ -62,6 +64,8 @@ export const AssetTable = observer(
             const newNode = makeAutoObservable({
               id: current.id + '--->>>>' + node[i],
               path: node[i],
+              // TODO: get source code url
+              sourceCodeUrl: node[i],
               isExpanded: false,
               children: [],
               parent: current.id,
@@ -82,6 +86,8 @@ export const AssetTable = observer(
             const root = makeAutoObservable({
               id: node[0],
               path: node[0],
+              // TODO: get source code url
+              sourceCodeUrl: node[0],
               isExpanded: false,
               children: [] as any[],
               parent: null,

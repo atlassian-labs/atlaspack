@@ -1,5 +1,7 @@
 import {useSearchParams} from 'react-router';
 
+import styles from './AdvancedSettings.module.css';
+
 export function AdvancedSettings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const bundle = searchParams.get('bundle');
@@ -8,9 +10,12 @@ export function AdvancedSettings() {
   const stacking = searchParams.get('stacking') ?? 'hierarchical';
 
   return (
-    <div style={{padding: '8px'}}>
-      <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-        <label style={{fontWeight: 'bold'}}>Max levels: {maxLevels}</label>
+    <div className={styles.advancedSettings}>
+      <div className={styles.advancedSettingsInner}>
+        <label className={styles.advancedSettingsLabel}>
+          Max levels: {maxLevels}
+        </label>
+
         <input
           disabled={!isDetailView}
           type="range"
@@ -26,8 +31,9 @@ export function AdvancedSettings() {
         />
       </div>
 
-      <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-        <label style={{fontWeight: 'bold'}}>Stacking</label>
+      <div className={styles.advancedSettingsInner}>
+        <label className={styles.advancedSettingsLabel}>Stacking</label>
+
         <select
           disabled={!isDetailView}
           value={stacking}

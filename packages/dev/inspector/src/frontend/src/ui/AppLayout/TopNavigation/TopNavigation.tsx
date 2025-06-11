@@ -5,6 +5,7 @@ import {HomeActions, NavLogo} from '@atlassian/navigation-system/top-nav';
 import {useNavigate} from 'react-router';
 import {useCallback} from 'react';
 import {Logo} from './Logo';
+import styles from './TopNavigation.module.css';
 
 interface TopNavigationProps {
   setSidebarCollapsed: (update: (collapsed: boolean) => boolean) => void;
@@ -34,13 +35,15 @@ export function TopNavigation({setSidebarCollapsed}: TopNavigationProps) {
           onClick={onClickSideNavToggleButton}
         />
 
-        <NavLogo
-          href="/"
-          onClick={onClickLogo}
-          logo={Logo}
-          icon={Logo}
-          label={''}
-        />
+        <div className={styles.logoContainer}>
+          <NavLogo
+            href="/"
+            onClick={onClickLogo}
+            logo={Logo}
+            icon={Logo}
+            label={''}
+          />
+        </div>
       </HomeActions>
     </TopBar>
   );

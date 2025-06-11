@@ -4,28 +4,18 @@ import {BottomPanel} from './ui/BottomPanel/BottomPanel';
 import {FocusBreadcrumbs} from './ui/FocusBreadcrumbs/FocusBreadcrumbs';
 import {TreemapRenderer} from './ui/TreemapRenderer/TreemapRenderer';
 
+import styles from './FoamTreemapPage.module.css';
+
 export const FoamTreemapPage = observer(() => {
   return (
-    <div
-      style={{
-        height: '100%',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <div className={styles.foamTreemapPage}>
       <FocusBreadcrumbs />
 
-      <div style={{flex: 1}}>
+      <div className={styles.foamTreemapPageRenderer}>
         <TreemapRenderer />
       </div>
 
-      <div
-        style={{
-          height: 400,
-          borderTop: '1px solid var(--ds-border)',
-        }}
-      >
+      <div className={styles.foamTreemapPageBottomPanel}>
         <BottomPanel />
       </div>
 

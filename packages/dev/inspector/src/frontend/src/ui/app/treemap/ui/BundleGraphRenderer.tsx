@@ -19,7 +19,9 @@ function setup(container: HTMLDivElement, graph: Graphology) {
   });
   fa2Layout.start();
 
-  const renderer: any = new Sigma(graph, container);
+  const renderer: any = new Sigma(graph, container, {
+    allowInvalidContainer: true,
+  });
 
   return () => {
     renderer.kill();
