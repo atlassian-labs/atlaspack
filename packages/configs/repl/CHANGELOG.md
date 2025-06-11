@@ -1,5 +1,12 @@
 # @atlaspack/config-repl
 
+## 2.13.14
+
+### Patch Changes
+
+- Updated dependencies [[`471b99e`](https://github.com/atlassian-labs/atlaspack/commit/471b99e41b4d97328c88f65e90bea284372cb1b0)]:
+  - @atlaspack/bundler-default@3.0.1
+
 ## 2.13.13
 
 ### Patch Changes

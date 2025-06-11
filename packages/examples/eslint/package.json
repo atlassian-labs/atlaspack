@@ -7,8 +7,8 @@
     "build": "atlaspack build src/index.js"
   },
   "devDependencies": {
-    "@atlaspack/cli": "^2.13.13",
-    "@atlaspack/config-default": "^3.1.11",
+    "@atlaspack/cli": "^2.13.14",
+    "@atlaspack/config-default": "^3.1.12",
     "@atlaspack/validator-eslint": "^2.14.10"
   },
   "type": "commonjs"
