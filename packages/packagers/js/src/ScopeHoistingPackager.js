@@ -388,6 +388,14 @@ export class ScopeHoistingPackager {
     });
 
     for (let wrappedAssetRoot of [...wrapped]) {
+      let scopeHoistCandidates = new Map<Asset, number>();
+      let hasCircularDependency = false;
+      const wrappedAssetDependencies = new Set(
+        this.bundleGraph.getDependencies(wrappedAssetRoot),
+      );
+      const wrappedAssetIncomingDependencies = new Set(
+        this.bundleGraph.getIncomingDependencies(wrappedAssetRoot),
+      );
       this.bundle.traverseAssets((asset, _, actions) => {
         if (asset === wrappedAssetRoot) {
           return;
@@ -419,10 +427,59 @@ export class ScopeHoistingPackager {
           return;
         }
         if (!asset.meta.isConstantModule) {
+          // TODO: This can be optimized
+          hasCircularDependency ||= this.bundleGraph
+            .getDependencies(asset)
+            .some((dep) => wrappedAssetIncomingDependencies.has(dep));
+
+          const otherIncomingDeps = this.bundleGraph
+            .getIncomingDependencies(asset)
+            .filter((dep) => !wrappedAssetDependencies.has(dep));
+
+          scopeHoistCandidates.set(asset, otherIncomingDeps.length);
+        }
+      }, wrappedAssetRoot);
+
+      /**
+       * Sort scopeHoistCandidates by least numOtherIncomingDeps. This will
+       * allow more modules to be hoisted. numOtherIncomingDeps will be decreased
+       * for assets that were originally required by the hoisted asset.
+       */
+      scopeHoistCandidates = new Map(
+        [...scopeHoistCandidates.entries()].sort((a, b) => a[1] - b[1]),
+      );
+
+      for (const [
+        asset,
+        numOtherIncomingDeps,
+      ] of scopeHoistCandidates.entries()) {
+        if (!hasCircularDependency && numOtherIncomingDeps === 0) {
+          /**
+           * Decrease numOtherIncomingDeps for all dependencies of the `asset`.
+           * `asset` will be hoisted.
+           *
+           * We might need code somewhere else to tell the assetGraph that the
+           * asset (which could be defined in another bundle) has now be hoisted
+           * to `wrappedAssetRoot` and can be deleted.
+           */
+          for (const dep of this.bundleGraph.getDependencies(asset)) {
+            const assetDependency = this.bundleGraph.getResolvedAsset(dep);
+            if (assetDependency) {
+              const previousNumIncomingDependencies =
+                scopeHoistCandidates.get(assetDependency);
+              if (previousNumIncomingDependencies !== undefined) {
+                scopeHoistCandidates.set(
+                  assetDependency,
+                  previousNumIncomingDependencies - 1,
+                );
+              }
+            }
+          }
+        } else {
           this.wrappedAssets.add(asset.id);
           wrapped.push(asset);
         }
-      }, wrappedAssetRoot);
+      }
     }
 
     this.assetOutputs = new Map(await queue.run());
