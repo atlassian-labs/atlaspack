@@ -12,6 +12,10 @@ import {
   getRequestTracker,
   getTreemap,
 } from '../config/middleware/cacheDataMiddleware';
+import {
+  getWriteBundleRequestsByBundleId,
+  Treemap,
+} from '../services/buildTreemap';
 
 export interface BundleGraphControllerParams {
   projectRoot: string;
@@ -22,31 +26,12 @@ export function makeBundleGraphController({
 }: BundleGraphControllerParams): Router {
   const router = Router();
 
-  router.get('/api/bundle-graph/bundles', (req, res) => {
-    const treemap = getTreemap(res);
-    const bundles = treemap.bundles.map((bundle) => ({
-      id: bundle.id,
-      displayName: bundle.displayName,
-      size: bundle.size,
-      filePath: bundle.filePath,
-    }));
-
-    res.json({bundles, count: bundles.length});
-  });
-
   router.get('/api/bundle-graph', (req, res) => {
     const bundleGraph = getBundleGraph(res);
     const requestTracker = getRequestTracker(res);
 
-    const writeBundleRequests: any[] = requestTracker.graph.nodes.filter(
-      (requestNode: RequestGraphNode) =>
-        requestNode &&
-        requestNode.type === 1 &&
-        requestNode.requestType === requestTypes.write_bundle_request,
-    );
-    const writeBundleRequestsByBundleId = new Map(
-      writeBundleRequests.map((request) => [request.result?.bundleId, request]),
-    );
+    const writeBundleRequestsByBundleId =
+      getWriteBundleRequestsByBundleId(requestTracker);
 
     const jsonGraph = buildJsonGraph(
       bundleGraph._graph,
@@ -66,28 +51,6 @@ export function makeBundleGraphController({
     );
 
     res.json(jsonGraph);
-  });
-
-  router.get('/api/bundle-graph/node/:nodeId', (req, res) => {
-    const nodeId = req.params.nodeId;
-    const bundleGraph = getBundleGraph(res);
-    const requestTracker = getRequestTracker(res);
-
-    const node = bundleGraph._graph.getNode(
-      bundleGraph._graph.getNodeIdByContentKey(nodeId),
-    );
-    const writeBundleRequest = requestTracker.graph.nodes.find(
-      (requestNode: RequestGraphNode) =>
-        requestNode &&
-        requestNode.type === 1 &&
-        requestNode.requestType === requestTypes.write_bundle_request &&
-        requestNode.result?.bundleId === node.id,
-    );
-
-    res.json({
-      bundleGraphNode: node,
-      writeBundleRequest,
-    });
   });
 
   router.get('/api/bundle-graph/related-bundles', (req, res) => {
