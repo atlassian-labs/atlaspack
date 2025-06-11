@@ -23,6 +23,6 @@
     "@atlaspack/rust": "3.3.5",
     "@atlaspack/utils": "2.14.10",
     "nullthrows": "^1.1.1",
-    "many-keys-map": "^2.0.1"
+    "many-keys-map": "^1.0.3"
   }
 }
