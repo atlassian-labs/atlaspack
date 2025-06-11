@@ -9,6 +9,7 @@ import {
   requestTypes,
   readAndDeserializeRequestGraph,
 } from '@atlaspack/core/lib/RequestTracker.js';
+import fs from 'fs';
 
 import {buildTreemap, Treemap} from './buildTreemap';
 import {logger} from '../config/logger';
@@ -62,13 +63,47 @@ export async function loadRequestTracker(cache: LMDBLiteCache): Promise<{
   }
 }
 
+function findCachePath(target: string): string | null {
+  if (fs.existsSync(path.join(target, 'data.mdb'))) {
+    return target;
+  }
+
+  if (fs.existsSync(path.join(target, '.parcel-cache'))) {
+    return path.join(target, '.parcel-cache');
+  }
+
+  if (fs.existsSync(path.join(target, '.atlaspack-cache'))) {
+    return path.join(target, '.atlaspack-cache');
+  }
+
+  if (
+    path.dirname(target) !== target &&
+    target &&
+    target !== '/' &&
+    target !== '.'
+  ) {
+    return findCachePath(path.dirname(target));
+  }
+
+  return null;
+}
+
 /**
  * Loads the cache and pre-processes some data.
  */
-export async function loadCacheData(target: string): Promise<CacheData> {
-  const cache = new LMDBLiteCache(target);
+export async function loadCacheData(
+  target: string,
+  projectRoot: string,
+): Promise<CacheData> {
+  const cachePath = findCachePath(target);
+  if (!cachePath) {
+    throw new Error(
+      'Invalid cache path provided, could not find cache in any directory above the path provided',
+    );
+  }
+  const cache = new LMDBLiteCache(cachePath);
 
-  logger.info('Loading graphs...');
+  logger.info({cachePath, projectRoot}, 'Loading graphs...');
   const {requestTracker} = await loadRequestTracker(cache);
   if (!requestTracker) {
     throw new Error('Failed to load request tracker');
@@ -112,7 +147,7 @@ export async function loadCacheData(target: string): Promise<CacheData> {
   logger.info('Building treemap...');
   const treemap =
     bundleGraph && requestTracker
-      ? buildTreemap(path.dirname(target), bundleGraph, requestTracker)
+      ? buildTreemap(projectRoot, bundleGraph, requestTracker)
       : null;
 
   return {

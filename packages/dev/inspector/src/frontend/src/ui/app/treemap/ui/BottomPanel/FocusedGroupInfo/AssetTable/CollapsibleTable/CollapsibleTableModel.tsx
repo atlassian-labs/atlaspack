@@ -7,7 +7,10 @@ export interface CollapsibleTableModel {
 export interface CollapsibleTableNode {
   id: string;
   path: string;
-  sourceCodeUrl: string;
+  sourceCodeUrl: {
+    url: string;
+    type: 'github' | 'bitbucket';
+  } | null;
   isExpanded: boolean;
   children: CollapsibleTableNode[];
   parent: string | null;

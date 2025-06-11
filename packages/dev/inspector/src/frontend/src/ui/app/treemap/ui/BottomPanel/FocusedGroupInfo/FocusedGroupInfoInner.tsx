@@ -13,12 +13,13 @@ import qs from 'qs';
 import {Stack} from '@atlaskit/primitives';
 
 import styles from './FocusedGroupInfoInner.module.css';
+import {SourceCodeURL} from './SourceCodeURL';
 
 export const FocusedGroupInfoInner = observer(
   ({group, bundle}: {group: Group; bundle: string}) => {
     const {data} = useSuspenseQuery<{
       relevantPaths: string[][];
-      importers: string[];
+      sourceCodeURL: SourceCodeURL | null;
     }>({
       queryKey: [
         '/api/treemap/reasons?' +

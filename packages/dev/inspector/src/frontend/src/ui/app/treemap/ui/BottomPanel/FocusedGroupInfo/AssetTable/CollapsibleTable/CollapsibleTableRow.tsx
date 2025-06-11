@@ -57,15 +57,21 @@ export const CollapsibleTableRow = observer(
 
             {node.path}
           </td>
-          <td>
-            <a
-              href={node.sourceCodeUrl}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <BitbucketIcon size="small" />
-            </a>
-          </td>
+          {node.sourceCodeUrl && (
+            <td>
+              <a
+                href={node.sourceCodeUrl.url}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                {node.sourceCodeUrl.type === 'github' ? (
+                  <>GitHub link</>
+                ) : (
+                  <BitbucketIcon size="small" />
+                )}
+              </a>
+            </td>
+          )}
         </tr>
       </Fragment>
     );

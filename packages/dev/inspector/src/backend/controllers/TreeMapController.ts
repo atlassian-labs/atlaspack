@@ -5,8 +5,15 @@ import {
 } from '../config/middleware/cacheDataMiddleware';
 import {Node} from '@atlaspack/core/lib/types.js';
 import {ALL_EDGE_TYPES} from '@atlaspack/graph';
+import {SourceCodeURL} from '../services/findSourceCodeUrl';
 
-export function makeTreemapController(): Router {
+interface MakeTreemapControllerParams {
+  sourceCodeURL: SourceCodeURL | null;
+}
+
+export function makeTreemapController({
+  sourceCodeURL,
+}: MakeTreemapControllerParams): Router {
   const router = Router();
 
   router.get('/api/treemap/reasons', (req, res) => {
@@ -20,7 +27,6 @@ export function makeTreemapController(): Router {
     );
 
     const relevantPaths: string[][] = [];
-    const importers = new Set<string>();
     let tooManyPaths = false;
     bundleGraph.traverseBundle(bundleNode.value, {
       enter(
@@ -62,7 +68,6 @@ export function makeTreemapController(): Router {
             // it.
             if (isParent && context.length > 1) {
               relevantPaths.push(context.slice());
-              importers.add(context[context.length - 1]);
 
               if (relevantPaths.length > 50) {
                 tooManyPaths = true;
@@ -87,7 +92,7 @@ export function makeTreemapController(): Router {
     res.json({
       tooManyPaths,
       relevantPaths,
-      importers: Array.from(importers),
+      sourceCodeURL,
     });
   });
 

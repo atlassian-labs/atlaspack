@@ -16,6 +16,7 @@ import {cacheDataMiddleware} from './config/middleware/cacheDataMiddleware';
 import {makeBundleGraphController} from './controllers/BundleGraphController';
 import {makeTreemapController} from './controllers/TreeMapController';
 import {makeCacheDataController} from './controllers/CacheDataController';
+import {findProjectRoot, findSourceCodeURL} from './services/findSourceCodeUrl';
 
 export async function main() {
   const command = program
@@ -30,8 +31,10 @@ export async function main() {
 
   const options = command.opts();
 
-  const cacheData = await loadCacheData(options.target);
-  const projectRoot = path.dirname(options.target);
+  const projectRoot =
+    findProjectRoot(options.target) ?? path.dirname(options.target);
+  const sourceCodeURL = findSourceCodeURL(projectRoot);
+  const cacheData = await loadCacheData(options.target, projectRoot);
 
   const app = express();
 
@@ -46,7 +49,11 @@ export async function main() {
   app.use(cacheDataMiddleware(cacheData));
   app.use(makeFrontendAssetsController());
   app.use(makeBundleGraphController({projectRoot}));
-  app.use(makeTreemapController());
+  app.use(
+    makeTreemapController({
+      sourceCodeURL,
+    }),
+  );
   app.use(makeCacheDataController());
   app.use(errorHandlingMiddleware);
 

@@ -8,3 +8,13 @@
   display: flex;
   gap: 8px;
 }
+
+.collapsibleTableRowPathButton {
+  border: none;
+  background: none;
+  width: 16px;
+}
+
+.collapsibleTableRowPathPlaceholder {
+  width: 16px;
+}
