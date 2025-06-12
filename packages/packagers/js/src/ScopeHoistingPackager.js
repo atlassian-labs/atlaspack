@@ -156,8 +156,14 @@ export class ScopeHoistingPackager {
     let res = '';
     let lineCount = 0;
     let sourceMap = null;
+    /**
+     * This change is needed to so that we don't wind up with
+     * parcelRequire within another parcelRequire. We need to
+     * move adding depContent to the toplevel (outside of the recursion).
+     */
+    let depContent = [];
     let processAsset = (asset) => {
-      let [content, map, lines] = this.visitAsset(asset);
+      let [content, map, lines] = this.visitAsset(asset, depContent);
       if (sourceMap && map) {
         sourceMap.addSourceMap(map, lineCount);
       } else if (this.bundle.env.sourceMap) {
@@ -189,7 +195,7 @@ export class ScopeHoistingPackager {
     });
 
     let [prelude, preludeLines] = this.buildBundlePrelude();
-    res = prelude + res;
+    res = prelude + depContent.join('') + res;
     lineCount += preludeLines;
     sourceMap?.offsetLines(1, preludeLines);
 
@@ -397,6 +403,14 @@ export class ScopeHoistingPackager {
           actions.skipChildren();
           return;
         }
+
+        /**
+         * If the asset should be inlined then it
+         * shouldn't be wrapped
+         */
+        if (asset.meta.inline) {
+          return;
+        }
         // This prevents children of a wrapped asset also being wrapped - it's an "unsafe" optimisation
         // that should only be used when you know (or think you know) what you're doing.
         //
@@ -519,18 +533,19 @@ export class ScopeHoistingPackager {
     return `${obj}[${JSON.stringify(property)}]`;
   }
 
-  visitAsset(asset: Asset): [string, ?SourceMap, number] {
+  visitAsset(asset: Asset, depContent: string[]): [string, ?SourceMap, number] {
     invariant(!this.seenAssets.has(asset.id), 'Already visited asset');
     this.seenAssets.add(asset.id);
 
     let {code, map} = nullthrows(this.assetOutputs.get(asset.id));
-    return this.buildAsset(asset, code, map);
+    return this.buildAsset(asset, code, map, depContent);
   }
 
   buildAsset(
     asset: Asset,
     code: string,
     map: ?Buffer,
+    depContent: string[],
   ): [string, ?SourceMap, number] {
     let shouldWrap = this.wrappedAssets.has(asset.id);
     let deps = this.bundleGraph.getDependencies(asset);
@@ -563,7 +578,7 @@ export class ScopeHoistingPackager {
           this.bundle.hasAsset(resolved) &&
           !this.seenAssets.has(resolved.id)
         ) {
-          let [code, map, lines] = this.visitAsset(resolved);
+          let [code, map, lines] = this.visitAsset(resolved, depContent);
           depCode += code + '\n';
           if (sourceMap && map) {
             sourceMap.addSourceMap(map, lineCount);
@@ -602,7 +617,7 @@ export class ScopeHoistingPackager {
     code += append;
 
     let lineCount = 0;
-    let depContent = [];
+    let inlinedContent = [];
     if (depMap.size === 0 && replacements.size === 0) {
       // If there are no dependencies or replacements, use a simple function to count the number of lines.
       lineCount = countLines(code) - 1;
@@ -662,9 +677,32 @@ export class ScopeHoistingPackager {
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
                   if (shouldWrap) {
-                    depContent.push(this.visitAsset(resolved));
+                    /**
+                     * If the resolved dependency should be inlined into the wrapped asset. The inlined
+                     * content must be added to the beginning of the content.
+                     */
+                    if (resolved.meta.inline) {
+                      inlinedContent.push(
+                        this.visitAsset(resolved, depContent),
+                      );
+                    } else {
+                      const [depCode, map, lines] = this.visitAsset(
+                        resolved,
+                        depContent,
+                      );
+                      if (depCode) {
+                        depContent.push(`${depCode}\n`);
+                        if (sourceMap && map) {
+                          sourceMap.addSourceMap(map, lineCount);
+                        }
+                        lineCount += lines + 1;
+                      }
+                    }
                   } else {
-                    let [depCode, depMap, depLines] = this.visitAsset(resolved);
+                    let [depCode, depMap, depLines] = this.visitAsset(
+                      resolved,
+                      depContent,
+                    );
                     res = depCode + '\n' + res;
                     lines += 1 + depLines;
                     map = depMap;
@@ -717,6 +755,19 @@ export class ScopeHoistingPackager {
       sourceMap?.offsetLines(1, 1);
       lineCount++;
 
+      const inlinedCode = [];
+      for (let [depCode, map, lines] of inlinedContent) {
+        if (!depCode) continue;
+        inlinedCode.push(`${depCode}\n`);
+        // FIXME: sourceMaps need to be setup correctly
+        // code = depCode + '\n' + code;
+        // if (sourceMap && map) {
+        //   sourceMap.addSourceMap(map, lineCount);
+        // }
+        // lineCount += lines + 1;
+      }
+      code = inlinedCode.join('') + code;
+
       code = `parcelRegister(${JSON.stringify(
         this.bundleGraph.getAssetPublicId(asset),
       )}, function(module, exports) {
@@ -725,15 +776,6 @@ ${code}
 `;
 
       lineCount += 2;
-
-      for (let [depCode, map, lines] of depContent) {
-        if (!depCode) continue;
-        code += depCode + '\n';
-        if (sourceMap && map) {
-          sourceMap.addSourceMap(map, lineCount);
-        }
-        lineCount += lines + 1;
-      }
 
       this.needsPrelude = true;
     }
