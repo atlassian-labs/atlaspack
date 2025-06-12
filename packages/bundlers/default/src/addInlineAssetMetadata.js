@@ -42,6 +42,18 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
     }
   }
 
+  function getResolvedAssetDependencies(asset: Asset) {
+    const resolvedAssets: Set<Asset> = new Set();
+
+    let resolvedAsset;
+    for (const dependency of assetGraph.getDependencies(asset)) {
+      if ((resolvedAsset = assetGraph.getResolvedAsset(dependency))) {
+        resolvedAssets.add(resolvedAsset);
+      }
+    }
+    return resolvedAssets;
+  }
+
   assetGraph.traverse(({type, value}) => {
     if (type === 'asset') {
       const incomingDependencies = assetGraph.getIncomingDependencies(value);
@@ -60,28 +72,21 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
      */
     from.meta.inline = true;
 
-    const assetToScopeHoistDependencies = new Set(
-      assetGraph.getDependencies(from),
-    );
-    const assetToScopeHoistIntoDependencyAssets = new Set(
-      assetGraph.getDependencies(to).map((dependency) => {
-        return assetGraph.getResolvedAsset(dependency);
-      }),
-    );
+    const assetToScopeHoistAssetDependencies =
+      getResolvedAssetDependencies(from);
+    const assetToScopeHoistIntoAssetDependencies =
+      getResolvedAssetDependencies(to);
 
     /**
-     * Dependencies which are shared by `from` and `to` are removed from
-     * the incoming dependency counts for their resolved assets.
+     * All assets which are used in both `from` and `to` should have their
+     * incomingDependencies updated.
      */
-    for (const dependency of assetToScopeHoistDependencies) {
-      const asset = assetGraph.getResolvedAsset(dependency);
-      if (asset && assetToScopeHoistIntoDependencyAssets.has(asset)) {
+    for (const asset of assetToScopeHoistAssetDependencies) {
+      if (assetToScopeHoistIntoAssetDependencies.has(asset)) {
         const previousIncomingDependencies = incomingDependencyMap.get(asset);
         if (previousIncomingDependencies !== undefined) {
           const incomingDependencies = previousIncomingDependencies.filter(
-            (dep) => {
-              return !assetToScopeHoistDependencies.has(dep);
-            },
+            (dep) => dep.sourceAssetId !== from.id,
           );
           incomingDependencyMap.set(asset, incomingDependencies);
           queueAssetIfOneIncomingDependency(asset, incomingDependencies);
