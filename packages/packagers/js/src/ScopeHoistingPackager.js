@@ -676,7 +676,7 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (shouldWrap) {
+                  if (this.isWrapped(resolved, asset)) {
                     /**
                      * If the resolved dependency should be inlined into the wrapped asset. The inlined
                      * content must be added to the beginning of the content.
