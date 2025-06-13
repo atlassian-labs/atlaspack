@@ -30,7 +30,13 @@ import {ATLASPACK_VERSION} from './constants';
 import {createAsset, createAssetIdFromOptions} from './assetUtils';
 import {BundleBehaviorNames} from './types';
 import {invalidateOnFileCreateToInternal, createInvalidations} from './utils';
-import {type ProjectPath, fromProjectPath} from './projectPath';
+import {
+  type ProjectPath,
+  fromProjectPath,
+  fromProjectPathRelative,
+} from './projectPath';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {fromEnvironmentId} from './EnvironmentManager';
 
 type UncommittedAssetOptions = {|
   value: Asset,
@@ -153,7 +159,9 @@ export default class UncommittedAsset {
       size = content.length;
     }
 
+    // Maybe we should just store this in a file instead of LMDB
     await this.options.cache.setBlob(contentKey, content);
+
     return {size, hash};
   }
 
@@ -214,6 +222,9 @@ export default class UncommittedAsset {
     this.clearAST();
   }
 
+  /**
+   * @deprecated This has been broken on any cache other than FSCache for a long time.
+   */
   setStream(stream: Readable) {
     this.content = stream;
     this.clearAST();
@@ -296,6 +307,11 @@ export default class UncommittedAsset {
   }
 
   getCacheKey(key: string): string {
+    if (getFeatureFlag('cachePerformanceImprovements')) {
+      const filePath = fromProjectPathRelative(this.value.filePath);
+      return `Asset/${ATLASPACK_VERSION}/${filePath}/${this.value.id}/${key}`;
+    }
+
     return hashString(ATLASPACK_VERSION + key + this.value.id);
   }
 
@@ -306,7 +322,11 @@ export default class UncommittedAsset {
       ...rest,
       // $FlowFixMe "convert" the $ReadOnlyMaps to the interal mutable one
       symbols,
-      env: mergeEnvironments(this.options.projectRoot, this.value.env, env),
+      env: mergeEnvironments(
+        this.options.projectRoot,
+        fromEnvironmentId(this.value.env),
+        env,
+      ),
       sourceAssetId: this.value.id,
       sourcePath: fromProjectPath(
         this.options.projectRoot,
@@ -371,7 +391,7 @@ export default class UncommittedAsset {
         isSource: this.value.isSource,
         env: mergeEnvironments(
           this.options.projectRoot,
-          this.value.env,
+          fromEnvironmentId(this.value.env),
           result.env,
         ),
         dependencies:
