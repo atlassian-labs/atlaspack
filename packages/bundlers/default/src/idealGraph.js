@@ -204,17 +204,16 @@ export function createIdealGraph(
             config.projectRoot,
             node.value.filePath,
           );
-          if (!assetRegexes.some((regex) => regex.test(projectRelativePath))) {
-            return;
-          }
 
           // We track all matching MSB's for constant modules as they are never duplicated
           // and need to be assigned to all matching bundles
           if (node.value.meta.isConstantModule === true) {
             constantModuleToMSB.get(node.value).push(c);
           }
-          manualAssetToConfig.set(node.value, c);
-          return;
+
+          if (assetRegexes.some((regex) => regex.test(projectRelativePath))) {
+            manualAssetToConfig.set(node.value, c);
+          }
         }
 
         if (
