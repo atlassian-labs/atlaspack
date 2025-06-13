@@ -129,8 +129,11 @@ fn create_bin(node_modules_bin_atlaspack: &Path) -> std::io::Result<()> {
       r#"#!/usr/bin/env node
 
 if (process.env.ATLASPACK_DEV === 'true') {{
+  if (typeof process.env.APVM_ATLASPACK_LOCAL === 'undefined') {{
+    throw new Error('APVM_ATLASPACK_LOCAL must be set when ATLASPACK_DEV is true')
+  }}
   console.log('USING ATLASPACK SOURCES')
-  require('@atlaspack/babel-register')
+  require(require('path').join(process.env.APVM_ATLASPACK_LOCAL, 'packages/dev/babel-register'))
   require('@atlaspack/cli/src/bin.js')
 }} else {{
   require('@atlaspack/cli/bin/atlaspack.js')
