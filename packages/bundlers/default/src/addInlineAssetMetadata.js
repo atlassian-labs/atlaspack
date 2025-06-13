@@ -17,11 +17,20 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
   const incomingDependencyMap = new Map();
   const scopeHoistQueue: ScopeHoist[] = [];
 
+  function hasReExport(asset: Asset, dependency: Dependency) {
+    for (const [, {local}] of dependency.symbols) {
+      if (local.includes('re_export')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function queueAssetIfOneIncomingDependency(
     asset: Asset,
     incomingDependencies: Dependency[],
   ) {
-    if (incomingDependencies.length === 1) {
+    if (!asset.meta.shouldWrap && incomingDependencies.length === 1) {
       const [dependency] = incomingDependencies;
       if (dependency.priority !== 'lazy') {
         const assetToScopeHoistInto =
@@ -31,7 +40,7 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
           const isCircularDependency = assetGraph
             .getIncomingDependencies(assetToScopeHoistInto)
             .some((dep) => dep.sourceAssetId === asset.id);
-          if (!isCircularDependency) {
+          if (!isCircularDependency && !hasReExport(asset, dependency)) {
             scopeHoistQueue.push({
               from: asset,
               to: assetToScopeHoistInto,
@@ -70,7 +79,7 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
      * line will disable inlining within wrapped assets. All tests
      * will pass except for the inline wrapped test with this disabled.
      */
-    from.meta.inline = true;
+    from.meta.inline = to.id;
 
     const assetToScopeHoistAssetDependencies =
       getResolvedAssetDependencies(from);

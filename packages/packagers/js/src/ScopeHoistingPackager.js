@@ -1085,6 +1085,14 @@ ${code}
       symbol,
     } = this.bundleGraph.getSymbolResolution(resolved, imported, this.bundle);
 
+    let hoistedId = resolvedAsset.id;
+    if (
+      resolvedAsset.meta.inline &&
+      resolvedAsset.meta.inline !== parentAsset.id
+    ) {
+      resolvedAsset = resolved;
+    }
+
     if (
       resolvedAsset.type !== 'js' ||
       (dep && this.bundleGraph.isDependencySkipped(dep))
@@ -1125,7 +1133,7 @@ ${code}
       }
 
       hoisted.set(
-        resolvedAsset.id,
+        hoistedId,
         `var $${publicId} = parcelRequire(${JSON.stringify(publicId)});`,
       );
     }
