@@ -11,6 +11,7 @@ import nullthrows from 'nullthrows';
 import Environment from './Environment';
 import {fromProjectPath} from '../projectPath';
 import {fromInternalSourceLocation} from '../utils';
+import {fromEnvironmentId} from '../EnvironmentManager';
 
 const inspect = Symbol.for('nodejs.util.inspect.custom');
 
@@ -46,7 +47,7 @@ export default class Target implements ITarget {
   }
 
   get env(): IEnvironment {
-    return new Environment(this.#target.env, this.#options);
+    return new Environment(fromEnvironmentId(this.#target.env), this.#options);
   }
 
   get name(): string {

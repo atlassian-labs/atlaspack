@@ -1,5 +1,11 @@
 # @atlaspack/conditional-import-types
 
+## 2.13.4
+
+### Patch Changes
+
+- [#573](https://github.com/atlassian-labs/atlaspack/pull/573) [`73cfd8c`](https://github.com/atlassian-labs/atlaspack/commit/73cfd8cf89cd02a8c64893d7342dc00b2edc5c81) Thanks [@dddlr](https://github.com/dddlr)! - Update documentation for importCond
+
 ## 2.13.3
 
 ### Patch Changes

@@ -38,12 +38,20 @@ export type FeatureFlags = {|
    */
   vcsMode: ConsistencyCheckFeatureFlagValue,
   /**
+   * Enable granular TS config invalidation
+   */
+  granularTsConfigInvalidation: boolean,
+  /**
    * Refactor cache to:
    * - Split writes into multiple entries
    * - Remove "large file blob" writes
    * - Reduce size of the caches by deduplicating data
    */
   cachePerformanceImprovements: boolean,
+  /**
+   * Deduplicates environments across cache / memory entities
+   */
+  environmentDeduplication: boolean,
   /**
    * Enable scanning for the presence of loadable to determine side effects
    */
@@ -97,3 +105,5 @@ export type ConsistencyCheckFeatureFlagValue =
   | 'OLD'
   | 'NEW_AND_CHECK'
   | 'OLD_AND_CHECK';
+
+declare export var DEFAULT_FEATURE_FLAGS: FeatureFlags;

@@ -3,7 +3,6 @@
 import type {PackageName, ConfigResult} from '@atlaspack/types';
 import type {
   Config,
-  Environment,
   InternalFileCreateInvalidation,
   InternalDevDepOptions,
 } from './types';
@@ -13,17 +12,19 @@ import {fromProjectPathRelative} from './projectPath';
 import {createEnvironment} from './Environment';
 import {hashString} from '@atlaspack/rust';
 import {identifierRegistry} from './IdentifierRegistry';
+import type {EnvironmentRef} from './EnvironmentManager';
+import {toEnvironmentId} from './EnvironmentManager';
 
 type ConfigOpts = {|
   plugin: PackageName,
   searchPath: ProjectPath,
   isSource?: boolean,
-  env?: Environment,
+  env?: EnvironmentRef,
   result?: ConfigResult,
   invalidateOnFileChange?: Set<ProjectPath>,
   invalidateOnConfigKeyChange?: Array<{|
     filePath: ProjectPath,
-    configKey: string,
+    configKey: string[],
   |}>,
   invalidateOnFileCreate?: Array<InternalFileCreateInvalidation>,
   invalidateOnEnvChange?: Set<string>,
@@ -52,13 +53,13 @@ export function createConfig({
   const configId = hashString(
     plugin +
       fromProjectPathRelative(searchPath) +
-      environment.id +
+      toEnvironmentId(environment) +
       String(isSource),
   );
   identifierRegistry.addIdentifier('config_request', configId, {
     plugin,
     searchPath,
-    environmentId: environment.id,
+    environmentId: toEnvironmentId(environment),
     isSource,
   });
   return {

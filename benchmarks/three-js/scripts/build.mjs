@@ -119,9 +119,21 @@ async function main() {
 
     // Patch .parcelrc to include plugins
     for (let i = 0; i < PLUGINS; i++) {
-      parcelRc['transformers']['*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}'].push(
-        './plugins/transformer.js',
+      await fs.cp(
+        path.join(__dirname, '..', 'plugins', 'transformer.js'),
+        path.join(tmpDir, 'plugins', `transformer_${i}.js`),
       );
+
+      await fs.cp(
+        path.join(__dirname, '..', 'plugins', 'resolver.js'),
+        path.join(tmpDir, 'plugins', `resolver_${i}.js`),
+      );
+
+      parcelRc['transformers']['*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}'].unshift(
+        `./plugins/transformer_${i}.js`,
+      );
+
+      parcelRc['resolvers'].unshift(`./plugins/resolver_${i}.js`);
     }
 
     await Promise.all([
@@ -184,15 +196,26 @@ async function main() {
 
       // Atlaspack must be run in it's own process
       // because it currently cannot be spawned multiple times in the same process
-      child_process.execFileSync('npx', [
-        'atlaspack',
-        'build',
-        '--no-autoinstall',
-        '--no-cache',
-        '--dist-dir=./dist',
-        ...(MODE === 'V3' ? ['--feature-flag', 'atlaspackV3=true'] : []),
-        './src/index.js',
-      ]);
+      try {
+        child_process.execFileSync(
+          'npx',
+          [
+            'atlaspack',
+            'build',
+            '--no-autoinstall',
+            '--no-cache',
+            '--dist-dir=./dist',
+            ...(MODE === 'V3' ? ['--feature-flag', 'atlaspackV3=true'] : []),
+            './src/index.js',
+          ],
+          {
+            cwd: tmpDir,
+            stdio: 'inherit',
+          },
+        );
+      } catch (error) {
+        return;
+      }
 
       const buildTime = Date.now() - startTime;
       console.log(`Build ${i + 1}: ${buildTime}ms`);

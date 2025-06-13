@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-webmanifest",
-  "version": "2.14.8",
+  "version": "2.14.10",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -15,8 +15,8 @@
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",
     "@atlaspack/diagnostic": "2.14.1",
-    "@atlaspack/plugin": "2.14.8",
-    "@atlaspack/utils": "2.14.8"
+    "@atlaspack/plugin": "2.14.10",
+    "@atlaspack/utils": "2.14.10"
   },
   "type": "commonjs"
 }

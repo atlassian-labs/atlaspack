@@ -15,7 +15,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     })
     .unwrap()
   };
-  let mut txn = input.environment().write_txn().unwrap();
+  let mut txn = input.write_txn().unwrap();
   c.bench_function("inserting entries", |b| {
     b.iter(|| {
       input
