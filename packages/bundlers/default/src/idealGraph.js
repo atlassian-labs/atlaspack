@@ -211,11 +211,9 @@ export function createIdealGraph(
             constantModuleToMSB.get(node.value).push(c);
           }
 
-          if (!assetRegexes.some((regex) => regex.test(projectRelativePath))) {
-            return;
+          if (assetRegexes.some((regex) => regex.test(projectRelativePath))) {
+            manualAssetToConfig.set(node.value, c);
           }
-          manualAssetToConfig.set(node.value, c);
-          return;
         }
 
         if (
