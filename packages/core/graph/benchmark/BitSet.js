@@ -4,6 +4,8 @@
  *
  * This file exists as a ready-made playground for benchmarking changes you may
  * want to make to the BitSet implementation.
+ *
+ * Run with `yarn workspace @atlaspack/graph benchmark` from the root
  */
 
 // Needed to make Flow work in the benchmarks

@@ -15,6 +15,9 @@
   "engines": {
     "node": ">= 16.0.0"
   },
+  "scripts": {
+    "benchmark": "node ./benchmark/BitSet.js"
+  },
   "dependencies": {
     "@atlaspack/feature-flags": "2.16.0",
     "nullthrows": "^1.1.1"
