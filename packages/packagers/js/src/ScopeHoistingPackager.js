@@ -676,28 +676,12 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (this.isWrapped(resolved, asset)) {
+                  if (this.isWrapped(resolved, asset) && resolved.meta.inline) {
                     /**
                      * If the resolved dependency should be inlined into the wrapped asset. The inlined
                      * content must be added to the beginning of the content.
                      */
-                    if (resolved.meta.inline) {
-                      inlinedContent.push(
-                        this.visitAsset(resolved, depContent),
-                      );
-                    } else {
-                      const [depCode, map, lines] = this.visitAsset(
-                        resolved,
-                        depContent,
-                      );
-                      if (depCode) {
-                        depContent.push(`${depCode}\n`);
-                        if (sourceMap && map) {
-                          sourceMap.addSourceMap(map, lineCount);
-                        }
-                        lineCount += lines + 1;
-                      }
-                    }
+                    inlinedContent.push(this.visitAsset(resolved, depContent));
                   } else {
                     let [depCode, depMap, depLines] = this.visitAsset(
                       resolved,
@@ -788,7 +772,12 @@ ${code}
       code = this.runWhenReady(this.bundle, code);
     }
 
-    return [code, sourceMap, lineCount];
+    if (shouldWrap) {
+      depContent.push(code);
+      return ['', sourceMap, lineCount];
+    } else {
+      return [code, sourceMap, lineCount];
+    }
   }
 
   buildReplacements(
