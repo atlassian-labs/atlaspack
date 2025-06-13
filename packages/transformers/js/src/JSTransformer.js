@@ -173,7 +173,7 @@ type MacroContext = {|
 
 export default (new Transformer({
   async loadConfig({config, options}) {
-    let pkg = await config.getPackage();
+    let packageJson = await config.getPackage();
     let isJSX,
       pragma,
       pragmaFrag,
@@ -184,16 +184,16 @@ export default (new Transformer({
       useDefineForClassFields;
     if (config.isSource) {
       let reactLib;
-      if (pkg?.alias && pkg.alias['react']) {
+      if (packageJson?.alias && packageJson.alias['react']) {
         // e.g.: `{ alias: { "react": "preact/compat" } }`
         reactLib = 'react';
       } else {
         // Find a dependency that we can map to a JSX pragma
         reactLib = Object.keys(JSX_PRAGMA).find(
           (libName) =>
-            pkg?.dependencies?.[libName] ||
-            pkg?.devDependencies?.[libName] ||
-            pkg?.peerDependencies?.[libName],
+            packageJson?.dependencies?.[libName] ||
+            packageJson?.devDependencies?.[libName] ||
+            packageJson?.peerDependencies?.[libName],
         );
       }
 
@@ -201,16 +201,20 @@ export default (new Transformer({
         options.hmrOptions &&
         options.mode === 'development' &&
         Boolean(
-          pkg?.dependencies?.react ||
-            pkg?.devDependencies?.react ||
-            pkg?.peerDependencies?.react,
+          packageJson?.dependencies?.react ||
+            packageJson?.devDependencies?.react ||
+            packageJson?.peerDependencies?.react,
         );
 
-      let tsconfig = await config.getConfigFrom<TSConfig>(
-        options.projectRoot + '/index',
-        ['tsconfig.json', 'jsconfig.json'],
-      );
-      let compilerOptions = tsconfig?.contents?.compilerOptions;
+      const compilerOptions: TSConfig['compilerOptions'] = (
+        await config.getConfigFrom<TSConfig>(
+          options.projectRoot + '/index',
+          ['tsconfig.json', 'jsconfig.json'],
+          {
+            readTracking: getFeatureFlag('granularTsConfigInvalidation'),
+          },
+        )
+      )?.contents?.compilerOptions;
 
       // Use explicitly defined JSX options in tsconfig.json over inferred values from dependencies.
       pragma =
@@ -229,14 +233,14 @@ export default (new Transformer({
         automaticJSXRuntime = true;
       } else if (reactLib) {
         let effectiveReactLib =
-          pkg?.alias && pkg.alias['react'] === 'preact/compat'
+          packageJson?.alias && packageJson.alias['react'] === 'preact/compat'
             ? 'preact'
             : reactLib;
         let automaticVersion = JSX_PRAGMA[effectiveReactLib]?.automatic;
         let reactLibVersion =
-          pkg?.dependencies?.[effectiveReactLib] ||
-          pkg?.devDependencies?.[effectiveReactLib] ||
-          pkg?.peerDependencies?.[effectiveReactLib];
+          packageJson?.dependencies?.[effectiveReactLib] ||
+          packageJson?.devDependencies?.[effectiveReactLib] ||
+          packageJson?.peerDependencies?.[effectiveReactLib];
         reactLibVersion = reactLibVersion
           ? semver.validRange(reactLibVersion)
           : null;
@@ -278,10 +282,10 @@ export default (new Transformer({
     // Check if we should ignore fs calls
     // See https://github.com/defunctzombie/node-browser-resolve#skip
     let ignoreFS =
-      pkg &&
-      pkg.browser &&
-      typeof pkg.browser === 'object' &&
-      pkg.browser.fs === false;
+      packageJson &&
+      packageJson.browser &&
+      typeof packageJson.browser === 'object' &&
+      packageJson.browser.fs === false;
 
     let conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
       packageKey: '@atlaspack/transformer-js',

@@ -100,11 +100,15 @@ export class PluginConfig implements IPluginConfig {
     // eslint-disable-next-line no-unused-vars
     filePaths: Array<FilePath>,
     // eslint-disable-next-line no-unused-vars
-    options?: {|
-      packageKey?: string,
-      parse?: boolean,
-      exclude?: boolean,
-    |},
+    options?:
+      | {|
+          packageKey?: string,
+          parse?: boolean,
+          exclude?: boolean,
+        |}
+      | {|
+          readTracking?: boolean,
+        |},
   ): Promise<?ConfigResultWithFilePath<T>> {
     return this.#inner.getConfigFrom(searchPath, filePaths, options);
   }
