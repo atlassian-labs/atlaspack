@@ -2272,7 +2272,7 @@ describe('bundler', function () {
         },
         {
           // Shared bundle
-          assets: ['shared.js'],
+          assets: ['shared.js', 'constants.js'],
         },
       ]);
 
