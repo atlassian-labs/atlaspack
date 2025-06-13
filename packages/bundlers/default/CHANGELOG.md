@@ -1,5 +1,11 @@
 # @atlaspack/bundler-default
 
+## 3.0.2
+
+### Patch Changes
+
+- [#613](https://github.com/atlassian-labs/atlaspack/pull/613) [`4ca19d8`](https://github.com/atlassian-labs/atlaspack/commit/4ca19d8060dfcd279183e4039f2ecb43334ac44c) Thanks [@marcins](https://github.com/marcins)! - Ensure that constant modules are correctly included in MSBs even if they wouldn't otherwise be.
+
 ## 3.0.1
 
 ### Patch Changes

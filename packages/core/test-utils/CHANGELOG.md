@@ -1,5 +1,12 @@
 # @atlaspack/test-utils
 
+## 2.14.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.13
+
 ## 2.14.12
 
 ### Patch Changes

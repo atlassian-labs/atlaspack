@@ -1,5 +1,12 @@
 # @atlaspack/cli
 
+## 2.13.15
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.13
+
 ## 2.13.14
 
 ### Patch Changes
