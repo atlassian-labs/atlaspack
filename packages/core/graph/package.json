@@ -19,5 +19,8 @@
     "@atlaspack/feature-flags": "2.16.0",
     "nullthrows": "^1.1.1"
   },
+  "devDependencies": {
+    "benny": "^3.7.1"
+  },
   "type": "commonjs"
 }
