@@ -15,9 +15,16 @@
   "engines": {
     "node": ">= 16.0.0"
   },
+  "scripts": {
+    "benchmark": "node ./benchmark/BitSet.js"
+  },
   "dependencies": {
     "@atlaspack/feature-flags": "2.16.0",
     "nullthrows": "^1.1.1"
+  },
+  "devDependencies": {
+    "@atlaspack/babel-register": "2.14.1",
+    "benny": "^3.7.1"
   },
   "type": "commonjs"
 }
