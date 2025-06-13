@@ -23,6 +23,7 @@
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {
+    "@atlaspack/babel-register": "2.14.1",
     "benny": "^3.7.1"
   },
   "type": "commonjs"
