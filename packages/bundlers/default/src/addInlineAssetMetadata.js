@@ -10,7 +10,7 @@ interface ScopeHoist {
 }
 
 /**
- * Add `asset.meta.inline = true` for all assets which have only one incomingDependency until
+ * Add `asset.meta.inline = parentAsset.Id` for all assets which have only one incomingDependency until
  * no more assets have one incomingDependency.
  *
  * Adds `dep.meta.duplicate = true` to dependencies which are duplicated after an asset has been
@@ -100,6 +100,8 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
     /**
      * All assets which are used in both `from` and `to` should have their
      * incomingDependencies updated.
+     *
+     * Duplicate deps created from hoisting should be removed.
      */
     let isPastScopeHoist = false;
     for (const [asset, dep] of assetToScopeHoistIntoAssetDependencies) {
@@ -108,28 +110,28 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
         continue;
       }
 
-      const depToScopeHoist = assetToScopeHoistAssetDependencies.get(asset);
+      const depFromScopeHoist = assetToScopeHoistAssetDependencies.get(asset);
 
       // Asset is not contained in the dep being scope hoisted (`from`)
-      if (!depToScopeHoist) {
+      if (!depFromScopeHoist) {
         continue;
       }
 
       /** dep from assetToScopeHoistInto has the duplicate if it's not an inline require */
       if (isPastScopeHoist) {
-        if (!depToScopeHoist.meta.shouldWrap) {
+        if (!depFromScopeHoist.meta.shouldWrap) {
           dep.meta.duplicate = true;
         }
-        /** dep from assetToScopeHoist has the duplicate if it's not an inline require */
+        /** depFromScopeHoist has the duplicate if it's not an inline require */
       } else if (!dep.meta.shouldWrap) {
-        depToScopeHoist.meta.duplicate = true;
+        depFromScopeHoist.meta.duplicate = true;
       }
 
       const previousIncomingDependencies = nullthrows(
         incomingDependencyMap.get(asset),
       );
       const incomingDependencies = previousIncomingDependencies.filter(
-        (incomingDep) => incomingDep !== depToScopeHoist,
+        (incomingDep) => incomingDep !== depFromScopeHoist,
       );
       incomingDependencyMap.set(asset, incomingDependencies);
       queueAssetIfOneIncomingDependency(asset, incomingDependencies);
