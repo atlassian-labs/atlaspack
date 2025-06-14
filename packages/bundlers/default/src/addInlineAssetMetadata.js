@@ -46,6 +46,12 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
           if (
             dependency.sourceAssetType === 'js' &&
             !isCircularDependency &&
+            /**
+             * If the dependency we're inlining has a re-export we'll have
+             * to handle renames of the export within `assetToScopeHoistInto`
+             *
+             * Skip that case for now.
+             */
             !hasReExport(dependency)
           ) {
             scopeHoistQueue.push({

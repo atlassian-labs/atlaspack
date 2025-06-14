@@ -1081,6 +1081,11 @@ ${code}
       symbol,
     } = this.bundleGraph.getSymbolResolution(resolved, imported, this.bundle);
     /**
+     * This handles the case where we inline an asset into its re-export.
+     *
+     * NOTE: This is different from the `re-exports` we skip in addInlineAssetMetadata.
+     * In that case we skip if the inlined asset has a re-export.
+     *
      * If `resolvedAsset` should be inlined we don't want to use the resolution,
      * we should use the asset it's being inlined into. The asset it's being inlined
      * into will always be `resolved` because in order to inline an asset it must have
