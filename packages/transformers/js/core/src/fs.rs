@@ -3,12 +3,12 @@ use std::path::PathBuf;
 
 use data_encoding::BASE64;
 use data_encoding::HEXLOWER;
+use swc_core::atoms::Atom;
 use swc_core::common::Mark;
 use swc_core::common::Span;
 use swc_core::common::SyntaxContext;
 use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
 use swc_core::ecma::visit::VisitWith;
@@ -81,7 +81,7 @@ impl VisitMut for InlineFS<'_> {
 }
 
 impl InlineFS<'_> {
-  fn match_module_reference(&self, node: &Expr) -> Option<(JsWord, JsWord)> {
+  fn match_module_reference(&self, node: &Expr) -> Option<(Atom, Atom)> {
     match node {
       Expr::Ident(ident) => {
         if let Some(Import {
