@@ -40,7 +40,11 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
           const isCircularDependency = assetGraph
             .getIncomingDependencies(assetToScopeHoistInto)
             .some((dep) => dep.sourceAssetId === asset.id);
-          if (!isCircularDependency && !hasReExport(dependency)) {
+          if (
+            dependency.sourceAssetType === 'js' &&
+            !isCircularDependency &&
+            !hasReExport(dependency)
+          ) {
             scopeHoistQueue.push({
               from: asset,
               to: assetToScopeHoistInto,
@@ -93,39 +97,30 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
      * All assets which are used in both `from` and `to` should have their
      * incomingDependencies updated.
      */
-    for (const [
-      assetToScopeHoist,
-      depToScopeHoist,
-    ] of assetToScopeHoistAssetDependencies) {
-      const duplicateDep =
-        assetToScopeHoistIntoAssetDependencies.get(assetToScopeHoist);
-      if (duplicateDep !== undefined) {
-        duplicateDep.meta.duplicate = true;
-        depToScopeHoist.meta.real = true;
-        console.log(
-          duplicateDep.specifier,
-          'in',
-          path.basename(
-            assetGraph.getAssetById(duplicateDep.sourceAssetId).filePath,
-          ),
-          'is a duplicate of',
-          depToScopeHoist.specifier,
-          'in',
-          path.basename(
-            assetGraph.getAssetById(depToScopeHoist.sourceAssetId).filePath,
-          ),
-        );
+    let isPastScopeHoist = false;
+    for (const [asset, dep] of assetToScopeHoistIntoAssetDependencies) {
+      if (asset.id === from.id) {
+        isPastScopeHoist = true;
+        continue;
+      }
 
-        const previousIncomingDependencies =
-          incomingDependencyMap.get(assetToScopeHoist);
+      const depToScopeHoist = assetToScopeHoistAssetDependencies.get(asset);
+
+      if (depToScopeHoist) {
+        if (isPastScopeHoist) {
+          if (!depToScopeHoist.meta.shouldWrap) {
+            dep.meta.duplicate = true;
+          }
+        } else if (!dep.meta.shouldWrap) {
+          depToScopeHoist.meta.duplicate = true;
+        }
+
+        const previousIncomingDependencies = incomingDependencyMap.get(asset);
         const incomingDependencies = previousIncomingDependencies.filter(
           (incomingDep) => incomingDep !== depToScopeHoist,
         );
-        incomingDependencyMap.set(assetToScopeHoist, incomingDependencies);
-        queueAssetIfOneIncomingDependency(
-          assetToScopeHoist,
-          incomingDependencies,
-        );
+        incomingDependencyMap.set(asset, incomingDependencies);
+        queueAssetIfOneIncomingDependency(asset, incomingDependencies);
       }
     }
   }

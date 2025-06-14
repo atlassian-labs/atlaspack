@@ -6556,6 +6556,19 @@ describe('scope hoisting', function () {
         fiveBundleContents.includes(threeExportSymbol),
     );
 
+    const oneAsset = nullthrows(findAsset(b, 'one.js'));
+    const oneAssetPublicId = b.getAssetPublicId(oneAsset);
+
+    const indexBundle = findBundle(b, 'index.js');
+    const indexBundleContents = await overlayFS.readFile(
+      indexBundle.filePath,
+      'utf-8',
+    );
+    const numOneAssetOccurances =
+      indexBundleContents.split(`parcelRequire("${oneAssetPublicId}")`).length -
+      1;
+    assert(numOneAssetOccurances === 1);
+
     await run(b);
   });
 });

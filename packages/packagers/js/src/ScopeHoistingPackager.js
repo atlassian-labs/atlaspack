@@ -656,6 +656,9 @@ export class ScopeHoistingPackager {
                 dep,
                 this.bundle,
               );
+              if (dep.meta.duplicate) {
+                continue;
+              }
               let skipped = this.bundleGraph.isDependencySkipped(dep);
               if (resolved && !skipped) {
                 // Hoist variable declarations for the referenced parcelRequire dependencies
@@ -676,7 +679,11 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (this.isWrapped(resolved, asset) && resolved.meta.inline) {
+                  if (
+                    this.isWrapped(resolved, asset) &&
+                    resolved.meta.inline &&
+                    !dep.meta.shouldWrap
+                  ) {
                     /**
                      * If the resolved dependency should be inlined into the wrapped asset. The inlined
                      * content must be added to the beginning of the content.
