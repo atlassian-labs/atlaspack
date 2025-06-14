@@ -17,7 +17,7 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
   const incomingDependencyMap = new Map();
   const scopeHoistQueue: ScopeHoist[] = [];
 
-  function hasReExport(asset: Asset, dependency: Dependency) {
+  function hasReExport(dependency: Dependency) {
     for (const [, {local}] of dependency.symbols) {
       if (local.includes('re_export')) {
         return true;
@@ -40,7 +40,7 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
           const isCircularDependency = assetGraph
             .getIncomingDependencies(assetToScopeHoistInto)
             .some((dep) => dep.sourceAssetId === asset.id);
-          if (!isCircularDependency && !hasReExport(asset, dependency)) {
+          if (!isCircularDependency && !hasReExport(dependency)) {
             scopeHoistQueue.push({
               from: asset,
               to: assetToScopeHoistInto,
@@ -51,13 +51,16 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
     }
   }
 
-  function getResolvedAssetDependencies(asset: Asset) {
-    const resolvedAssets: Set<Asset> = new Set();
+  function getSyncResolvedAssetDependencies(asset: Asset) {
+    const resolvedAssets: Map<Asset, Dependency> = new Map();
 
     let resolvedAsset;
     for (const dependency of assetGraph.getDependencies(asset)) {
-      if ((resolvedAsset = assetGraph.getResolvedAsset(dependency))) {
-        resolvedAssets.add(resolvedAsset);
+      if (
+        dependency.priority !== 'lazy' &&
+        (resolvedAsset = assetGraph.getResolvedAsset(dependency))
+      ) {
+        resolvedAssets.set(resolvedAsset, dependency);
       }
     }
     return resolvedAssets;
@@ -82,24 +85,47 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
     from.meta.inline = to.id;
 
     const assetToScopeHoistAssetDependencies =
-      getResolvedAssetDependencies(from);
+      getSyncResolvedAssetDependencies(from);
     const assetToScopeHoistIntoAssetDependencies =
-      getResolvedAssetDependencies(to);
+      getSyncResolvedAssetDependencies(to);
 
     /**
      * All assets which are used in both `from` and `to` should have their
      * incomingDependencies updated.
      */
-    for (const asset of assetToScopeHoistAssetDependencies) {
-      if (assetToScopeHoistIntoAssetDependencies.has(asset)) {
-        const previousIncomingDependencies = incomingDependencyMap.get(asset);
-        if (previousIncomingDependencies !== undefined) {
-          const incomingDependencies = previousIncomingDependencies.filter(
-            (dep) => dep.sourceAssetId !== from.id,
-          );
-          incomingDependencyMap.set(asset, incomingDependencies);
-          queueAssetIfOneIncomingDependency(asset, incomingDependencies);
-        }
+    for (const [
+      assetToScopeHoist,
+      depToScopeHoist,
+    ] of assetToScopeHoistAssetDependencies) {
+      const duplicateDep =
+        assetToScopeHoistIntoAssetDependencies.get(assetToScopeHoist);
+      if (duplicateDep !== undefined) {
+        duplicateDep.meta.duplicate = true;
+        depToScopeHoist.meta.real = true;
+        console.log(
+          duplicateDep.specifier,
+          'in',
+          path.basename(
+            assetGraph.getAssetById(duplicateDep.sourceAssetId).filePath,
+          ),
+          'is a duplicate of',
+          depToScopeHoist.specifier,
+          'in',
+          path.basename(
+            assetGraph.getAssetById(depToScopeHoist.sourceAssetId).filePath,
+          ),
+        );
+
+        const previousIncomingDependencies =
+          incomingDependencyMap.get(assetToScopeHoist);
+        const incomingDependencies = previousIncomingDependencies.filter(
+          (incomingDep) => incomingDep !== depToScopeHoist,
+        );
+        incomingDependencyMap.set(assetToScopeHoist, incomingDependencies);
+        queueAssetIfOneIncomingDependency(
+          assetToScopeHoist,
+          incomingDependencies,
+        );
       }
     }
   }
