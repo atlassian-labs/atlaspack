@@ -9,6 +9,7 @@ import {loadBundlerConfig} from './bundlerConfig';
 import {decorateLegacyGraph} from './decorateLegacyGraph';
 import {createIdealGraph} from './idealGraph';
 import {addJSMonolithBundle} from './MonolithicBundler';
+import {addInlineAssetMetadata} from './addInlineAssetMetadata';
 
 /**
  *
@@ -62,6 +63,8 @@ export default (new Bundler({
     for (let g of graphs) {
       decorateLegacyGraph(g, bundleGraph); //mutate original graph
     }
+
+    addInlineAssetMetadata(bundleGraph);
   },
   optimize() {},
 }): Bundler);

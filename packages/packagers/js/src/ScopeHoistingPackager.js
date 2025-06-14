@@ -156,8 +156,14 @@ export class ScopeHoistingPackager {
     let res = '';
     let lineCount = 0;
     let sourceMap = null;
+    /**
+     * This change is needed to so that we don't wind up with
+     * parcelRequire within another parcelRequire. We need to
+     * move adding depContent to the toplevel (outside of the recursion).
+     */
+    let depContent = [];
     let processAsset = (asset) => {
-      let [content, map, lines] = this.visitAsset(asset);
+      let [content, map, lines] = this.visitAsset(asset, depContent);
       if (sourceMap && map) {
         sourceMap.addSourceMap(map, lineCount);
       } else if (this.bundle.env.sourceMap) {
@@ -189,7 +195,7 @@ export class ScopeHoistingPackager {
     });
 
     let [prelude, preludeLines] = this.buildBundlePrelude();
-    res = prelude + res;
+    res = prelude + depContent.join('') + res;
     lineCount += preludeLines;
     sourceMap?.offsetLines(1, preludeLines);
 
@@ -397,6 +403,14 @@ export class ScopeHoistingPackager {
           actions.skipChildren();
           return;
         }
+
+        /**
+         * If the asset should be inlined then it
+         * shouldn't be wrapped
+         */
+        if (asset.meta.inline) {
+          return;
+        }
         // This prevents children of a wrapped asset also being wrapped - it's an "unsafe" optimisation
         // that should only be used when you know (or think you know) what you're doing.
         //
@@ -519,18 +533,19 @@ export class ScopeHoistingPackager {
     return `${obj}[${JSON.stringify(property)}]`;
   }
 
-  visitAsset(asset: Asset): [string, ?SourceMap, number] {
+  visitAsset(asset: Asset, depContent: string[]): [string, ?SourceMap, number] {
     invariant(!this.seenAssets.has(asset.id), 'Already visited asset');
     this.seenAssets.add(asset.id);
 
     let {code, map} = nullthrows(this.assetOutputs.get(asset.id));
-    return this.buildAsset(asset, code, map);
+    return this.buildAsset(asset, code, map, depContent);
   }
 
   buildAsset(
     asset: Asset,
     code: string,
     map: ?Buffer,
+    depContent: string[],
   ): [string, ?SourceMap, number] {
     let shouldWrap = this.wrappedAssets.has(asset.id);
     let deps = this.bundleGraph.getDependencies(asset);
@@ -563,7 +578,7 @@ export class ScopeHoistingPackager {
           this.bundle.hasAsset(resolved) &&
           !this.seenAssets.has(resolved.id)
         ) {
-          let [code, map, lines] = this.visitAsset(resolved);
+          let [code, map, lines] = this.visitAsset(resolved, depContent);
           depCode += code + '\n';
           if (sourceMap && map) {
             sourceMap.addSourceMap(map, lineCount);
@@ -602,7 +617,7 @@ export class ScopeHoistingPackager {
     code += append;
 
     let lineCount = 0;
-    let depContent = [];
+    let inlinedContent = [];
     if (depMap.size === 0 && replacements.size === 0) {
       // If there are no dependencies or replacements, use a simple function to count the number of lines.
       lineCount = countLines(code) - 1;
@@ -641,6 +656,9 @@ export class ScopeHoistingPackager {
                 dep,
                 this.bundle,
               );
+              if (dep.meta.duplicate) {
+                continue;
+              }
               let skipped = this.bundleGraph.isDependencySkipped(dep);
               if (resolved && !skipped) {
                 // Hoist variable declarations for the referenced parcelRequire dependencies
@@ -661,10 +679,21 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (shouldWrap) {
-                    depContent.push(this.visitAsset(resolved));
+                  if (
+                    this.isWrapped(resolved, asset) &&
+                    resolved.meta.inline &&
+                    !dep.meta.shouldWrap
+                  ) {
+                    /**
+                     * If the resolved dependency should be inlined into the wrapped asset. The inlined
+                     * content must be added to the beginning of the content.
+                     */
+                    inlinedContent.push(this.visitAsset(resolved, depContent));
                   } else {
-                    let [depCode, depMap, depLines] = this.visitAsset(resolved);
+                    let [depCode, depMap, depLines] = this.visitAsset(
+                      resolved,
+                      depContent,
+                    );
                     res = depCode + '\n' + res;
                     lines += 1 + depLines;
                     map = depMap;
@@ -717,6 +746,19 @@ export class ScopeHoistingPackager {
       sourceMap?.offsetLines(1, 1);
       lineCount++;
 
+      const inlinedCode = [];
+      for (let [depCode, map, lines] of inlinedContent) {
+        if (!depCode) continue;
+        inlinedCode.push(`${depCode}\n`);
+        // FIXME: sourceMaps need to be setup correctly
+        // code = depCode + '\n' + code;
+        // if (sourceMap && map) {
+        //   sourceMap.addSourceMap(map, lineCount);
+        // }
+        // lineCount += lines + 1;
+      }
+      code = inlinedCode.join('') + code;
+
       code = `parcelRegister(${JSON.stringify(
         this.bundleGraph.getAssetPublicId(asset),
       )}, function(module, exports) {
@@ -725,15 +767,6 @@ ${code}
 `;
 
       lineCount += 2;
-
-      for (let [depCode, map, lines] of depContent) {
-        if (!depCode) continue;
-        code += depCode + '\n';
-        if (sourceMap && map) {
-          sourceMap.addSourceMap(map, lineCount);
-        }
-        lineCount += lines + 1;
-      }
 
       this.needsPrelude = true;
     }
@@ -746,7 +779,12 @@ ${code}
       code = this.runWhenReady(this.bundle, code);
     }
 
-    return [code, sourceMap, lineCount];
+    if (shouldWrap) {
+      depContent.push(code);
+      return ['', sourceMap, lineCount];
+    } else {
+      return [code, sourceMap, lineCount];
+    }
   }
 
   buildReplacements(
@@ -1042,6 +1080,26 @@ ${code}
       exportSymbol,
       symbol,
     } = this.bundleGraph.getSymbolResolution(resolved, imported, this.bundle);
+    /**
+     * This handles the case where we inline an asset into its re-export.
+     *
+     * NOTE: This is different from the `re-exports` we skip in addInlineAssetMetadata.
+     * In that case we skip if the inlined asset has a re-export.
+     *
+     * If `resolvedAsset` should be inlined we don't want to use the resolution,
+     * we should use the asset it's being inlined into. The asset it's being inlined
+     * into will always be `resolved` because in order to inline an asset it must have
+     * one incoming dependency.
+     *
+     * If `resolvedAsset` is being inlined and we're resolving from `parentAsset` then
+     * we shouldn't change the resolution, we need the original symbols.
+     */
+    if (
+      resolvedAsset.meta.inline &&
+      resolvedAsset.meta.inline !== parentAsset.id
+    ) {
+      resolvedAsset = resolved;
+    }
 
     if (
       resolvedAsset.type !== 'js' ||
