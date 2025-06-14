@@ -10,8 +10,11 @@ interface ScopeHoist {
 }
 
 /**
- * Add `meta.inline = true` for all assets which have only one incomingDependency until
- * no more assets have one incomingDependency
+ * Add `asset.meta.inline = true` for all assets which have only one incomingDependency until
+ * no more assets have one incomingDependency.
+ *
+ * Adds `dep.meta.duplicate = true` to dependencies which are duplicated after an asset has been
+ * inlined.
  */
 export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
   const incomingDependencyMap = new Map();
@@ -81,11 +84,6 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
   let scopeHoist, from, to;
   while ((scopeHoist = scopeHoistQueue.pop())) {
     ({from, to} = scopeHoist);
-    /**
-     * This metadata is used by ScopehoistingPackager. Removing this
-     * line will disable inlining within wrapped assets. All tests
-     * will pass except for the inline wrapped test with this disabled.
-     */
     from.meta.inline = to.id;
 
     const assetToScopeHoistAssetDependencies =
@@ -106,22 +104,29 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
 
       const depToScopeHoist = assetToScopeHoistAssetDependencies.get(asset);
 
-      if (depToScopeHoist) {
-        if (isPastScopeHoist) {
-          if (!depToScopeHoist.meta.shouldWrap) {
-            dep.meta.duplicate = true;
-          }
-        } else if (!dep.meta.shouldWrap) {
-          depToScopeHoist.meta.duplicate = true;
-        }
-
-        const previousIncomingDependencies = incomingDependencyMap.get(asset);
-        const incomingDependencies = previousIncomingDependencies.filter(
-          (incomingDep) => incomingDep !== depToScopeHoist,
-        );
-        incomingDependencyMap.set(asset, incomingDependencies);
-        queueAssetIfOneIncomingDependency(asset, incomingDependencies);
+      // Asset is not contained in the dep being scope hoisted (`from`)
+      if (!depToScopeHoist) {
+        continue;
       }
+
+      /** dep from assetToScopeHoistInto has the duplicate if it's not an inline require */
+      if (isPastScopeHoist) {
+        if (!depToScopeHoist.meta.shouldWrap) {
+          dep.meta.duplicate = true;
+        }
+        /** dep from assetToScopeHoist has the duplicate if it's not an inline require */
+      } else if (!dep.meta.shouldWrap) {
+        depToScopeHoist.meta.duplicate = true;
+      }
+
+      const previousIncomingDependencies = nullthrows(
+        incomingDependencyMap.get(asset),
+      );
+      const incomingDependencies = previousIncomingDependencies.filter(
+        (incomingDep) => incomingDep !== depToScopeHoist,
+      );
+      incomingDependencyMap.set(asset, incomingDependencies);
+      queueAssetIfOneIncomingDependency(asset, incomingDependencies);
     }
   }
 }
