@@ -1080,8 +1080,15 @@ ${code}
       exportSymbol,
       symbol,
     } = this.bundleGraph.getSymbolResolution(resolved, imported, this.bundle);
-
-    let hoistedId = resolvedAsset.id;
+    /**
+     * If `resolvedAsset` should be inlined we don't want to use the resolution,
+     * we should use the asset it's being inlined into. The asset it's being inlined
+     * into will always be `resolved` because in order to inline an asset it must have
+     * one incoming dependency.
+     *
+     * If `resolvedAsset` is being inlined and we're resolving from `parentAsset` then
+     * we shouldn't change the resolution, we need the original symbols.
+     */
     if (
       resolvedAsset.meta.inline &&
       resolvedAsset.meta.inline !== parentAsset.id
@@ -1129,7 +1136,7 @@ ${code}
       }
 
       hoisted.set(
-        hoistedId,
+        resolvedAsset.id,
         `var $${publicId} = parcelRequire(${JSON.stringify(publicId)});`,
       );
     }
