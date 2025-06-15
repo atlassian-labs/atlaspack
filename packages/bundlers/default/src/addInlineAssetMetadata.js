@@ -33,7 +33,11 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
     asset: Asset,
     incomingDependencies: Dependency[],
   ) {
-    if (incomingDependencies.length === 1 && !asset.meta.shouldWrap) {
+    if (
+      incomingDependencies.length === 1 &&
+      asset.type === 'js' &&
+      !asset.meta.shouldWrap
+    ) {
       const [dependency] = incomingDependencies;
       // TODO: Support inline requires
       if (dependency.priority !== 'lazy' && !dependency.meta.shouldWrap) {
@@ -92,6 +96,19 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
   while ((scopeHoist = scopeHoistQueue.pop())) {
     ({from, to} = scopeHoist);
     from.meta.inline = to.id;
+
+    const bundlesToInlineInto = new Set(assetGraph.getBundlesWithAsset(to));
+    for (const bundle of assetGraph.getBundlesWithAsset(from)) {
+      if (!bundlesToInlineInto.has(bundle)) {
+        assetGraph.removeAssetGraphFromBundle(from, bundle);
+      }
+    }
+
+    for (const bundle of bundlesToInlineInto) {
+      if (!bundle.hasAsset(from)) {
+        assetGraph.addAssetToBundle(from, bundle);
+      }
+    }
 
     const assetToScopeHoistAssetDependencies =
       getSyncResolvedAssetDependencies(from);
