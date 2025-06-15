@@ -2216,6 +2216,68 @@ describe('bundler', function () {
 
       await run(b);
     });
+
+    it('should support constant inlining in manual shared bundles', async function () {
+      await fsFixture(overlayFS, dir)`
+      yarn.lock: {}
+
+      package.json:
+        {
+          "@atlaspack/transformer-js": {
+            "unstable_inlineConstants": true
+          },
+          "@atlaspack/bundler-default": {
+            "minBundleSize": 0,
+            "manualSharedBundles": [{
+              "name": "shared",
+              "assets": ["shared.js"]
+            }]
+          }
+        }
+
+      index.html:
+        <script type="module" src="./index.js"></script>
+
+      index.js:
+        import {sharedFn} from './shared';
+        import {constant} from './constants';
+        sideEffectNoop(sharedFn() + constant);
+
+      shared.js:
+        import {constant} from './constants.js';
+        export function sharedFn() {
+          return constant;
+        }
+
+      constants.js:
+        export const constant = 'constant';
+    `;
+
+      let b = await bundle(path.join(dir, 'index.html'), {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: true,
+          sourceMaps: false,
+          shouldOptimize: false,
+        },
+        inputFS: overlayFS,
+      });
+
+      assertBundles(b, [
+        {
+          assets: ['index.html'],
+        },
+        {
+          assets: ['index.js', 'constants.js'],
+        },
+        {
+          // Shared bundle
+          assets: ['shared.js', 'constants.js'],
+        },
+      ]);
+
+      await run(b);
+    });
   });
 
   it.v2(
