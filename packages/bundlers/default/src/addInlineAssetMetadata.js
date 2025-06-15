@@ -98,11 +98,12 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
     from.meta.inline = to.id;
 
     const bundlesToInlineInto = new Set(assetGraph.getBundlesWithAsset(to));
-    for (const bundle of assetGraph.getBundlesWithAsset(from)) {
-      if (!bundlesToInlineInto.has(bundle)) {
-        assetGraph.removeAssetGraphFromBundle(from, bundle);
-      }
-    }
+    // TODO: Remove from bundles the asset isn't inlined into!
+    // for (const bundle of assetGraph.getBundlesWithAsset(from)) {
+    //   if (!bundlesToInlineInto.has(bundle)) {
+    //     assetGraph.removeAssetGraphFromBundle(from, bundle);
+    //   }
+    // }
 
     for (const bundle of bundlesToInlineInto) {
       if (!bundle.hasAsset(from)) {
