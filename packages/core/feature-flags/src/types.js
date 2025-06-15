@@ -100,10 +100,10 @@ export type FeatureFlags = {|
   conditionalBundlingReporterSameConditionFix: boolean,
 |};
 
-export type ConsistencyCheckFeatureFlagValue =
-  | 'NEW'
-  | 'OLD'
-  | 'NEW_AND_CHECK'
-  | 'OLD_AND_CHECK';
+declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
+export type ConsistencyCheckFeatureFlagValue = $ElementType<
+  typeof CONSISTENCY_CHECK_VALUES,
+  number,
+>;
 
 declare export var DEFAULT_FEATURE_FLAGS: FeatureFlags;
