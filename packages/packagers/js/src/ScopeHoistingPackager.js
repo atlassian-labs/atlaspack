@@ -161,17 +161,20 @@ export class ScopeHoistingPackager {
      * parcelRequire within another parcelRequire. We need to
      * move adding depContent to the toplevel (outside of the recursion).
      */
-    let depContent = [];
+    let wrappedContent = [];
     let processAsset = (asset) => {
-      let [content, map, lines] = this.visitAsset(asset, depContent);
-      if (sourceMap && map) {
-        sourceMap.addSourceMap(map, lineCount);
-      } else if (this.bundle.env.sourceMap) {
-        sourceMap = map;
-      }
+      let unwrappedContent = this.visitAsset(asset, wrappedContent);
+      if (unwrappedContent) {
+        let [content, map, lines] = unwrappedContent;
+        if (sourceMap && map) {
+          sourceMap.addSourceMap(map, lineCount);
+        } else if (this.bundle.env.sourceMap) {
+          sourceMap = map;
+        }
 
-      res += content + '\n';
-      lineCount += lines + 1;
+        res += content + '\n';
+        lineCount += lines + 1;
+      }
     };
 
     // Hoist wrapped asset to the top of the bundle to ensure that they are registered
@@ -185,7 +188,7 @@ export class ScopeHoistingPackager {
     // Add each asset that is directly connected to the bundle. Dependencies will be handled
     // by replacing `import` statements in the code.
     this.bundle.traverseAssets((asset, _, actions) => {
-      if (this.seenAssets.has(asset.id)) {
+      if (this.seenAssets.has(asset.id) || asset.meta.inline) {
         actions.skipChildren();
         return;
       }
@@ -194,8 +197,18 @@ export class ScopeHoistingPackager {
       actions.skipChildren();
     });
 
+    for (let [content, map, lines] of wrappedContent) {
+      if (sourceMap && map) {
+        sourceMap.addSourceMap(map, lineCount);
+      } else if (this.bundle.env.sourceMap) {
+        sourceMap = map;
+      }
+      res = content + '\n' + res;
+      lineCount += lines + 1;
+    }
+
     let [prelude, preludeLines] = this.buildBundlePrelude();
-    res = prelude + depContent.join('') + res;
+    res = prelude + res;
     lineCount += preludeLines;
     sourceMap?.offsetLines(1, preludeLines);
 
@@ -373,12 +386,13 @@ export class ScopeHoistingPackager {
       });
 
       if (
-        asset.meta.shouldWrap ||
-        this.bundle.env.sourceType === 'script' ||
-        this.bundleGraph.isAssetReferenced(this.bundle, asset) ||
-        this.bundleGraph
-          .getIncomingDependencies(asset)
-          .some((dep) => dep.meta.shouldWrap && dep.specifierType !== 'url')
+        !asset.meta.inline &&
+        (asset.meta.shouldWrap ||
+          this.bundle.env.sourceType === 'script' ||
+          this.bundleGraph.isAssetReferenced(this.bundle, asset) ||
+          this.bundleGraph
+            .getIncomingDependencies(asset)
+            .some((dep) => dep.meta.shouldWrap && dep.specifierType !== 'url'))
       ) {
         // Don't wrap constant "entry" modules _except_ if they are referenced by any lazy dependency
         if (
@@ -533,20 +547,23 @@ export class ScopeHoistingPackager {
     return `${obj}[${JSON.stringify(property)}]`;
   }
 
-  visitAsset(asset: Asset, depContent: string[]): [string, ?SourceMap, number] {
+  visitAsset(
+    asset: Asset,
+    wrappedContent: [string, ?SourceMap, number][],
+  ): ?[string, ?SourceMap, number] {
     invariant(!this.seenAssets.has(asset.id), 'Already visited asset');
     this.seenAssets.add(asset.id);
 
     let {code, map} = nullthrows(this.assetOutputs.get(asset.id));
-    return this.buildAsset(asset, code, map, depContent);
+    return this.buildAsset(asset, code, map, wrappedContent);
   }
 
   buildAsset(
     asset: Asset,
     code: string,
     map: ?Buffer,
-    depContent: string[],
-  ): [string, ?SourceMap, number] {
+    wrappedContent: [string, ?SourceMap, number][],
+  ): ?[string, ?SourceMap, number] {
     let shouldWrap = this.wrappedAssets.has(asset.id);
     let deps = this.bundleGraph.getDependencies(asset);
 
@@ -578,12 +595,15 @@ export class ScopeHoistingPackager {
           this.bundle.hasAsset(resolved) &&
           !this.seenAssets.has(resolved.id)
         ) {
-          let [code, map, lines] = this.visitAsset(resolved, depContent);
-          depCode += code + '\n';
-          if (sourceMap && map) {
-            sourceMap.addSourceMap(map, lineCount);
+          let unwrappedContent = this.visitAsset(resolved, wrappedContent);
+          if (unwrappedContent) {
+            let [code, map, lines] = unwrappedContent;
+            if (sourceMap && map) {
+              sourceMap.addSourceMap(map, lineCount);
+            }
+            depCode += code + '\n';
+            lineCount += lines + 1;
           }
-          lineCount += lines + 1;
         }
       }
 
@@ -679,21 +699,9 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (
-                    this.isWrapped(resolved, asset) &&
-                    resolved.meta.inline &&
-                    !dep.meta.shouldWrap
-                  ) {
-                    /**
-                     * If the resolved dependency should be inlined into the wrapped asset. The inlined
-                     * content must be added to the beginning of the content.
-                     */
-                    inlinedContent.push(this.visitAsset(resolved, depContent));
-                  } else {
-                    let [depCode, depMap, depLines] = this.visitAsset(
-                      resolved,
-                      depContent,
-                    );
+                  let result = this.visitAsset(resolved, wrappedContent);
+                  if (result) {
+                    let [depCode, depMap, depLines] = result;
                     res = depCode + '\n' + res;
                     lines += 1 + depLines;
                     map = depMap;
@@ -746,18 +754,14 @@ export class ScopeHoistingPackager {
       sourceMap?.offsetLines(1, 1);
       lineCount++;
 
-      const inlinedCode = [];
-      for (let [depCode, map, lines] of inlinedContent) {
-        if (!depCode) continue;
-        inlinedCode.push(`${depCode}\n`);
-        // FIXME: sourceMaps need to be setup correctly
-        // code = depCode + '\n' + code;
-        // if (sourceMap && map) {
-        //   sourceMap.addSourceMap(map, lineCount);
-        // }
-        // lineCount += lines + 1;
+      for (let unwrappedContent of inlinedContent) {
+        if (unwrappedContent) {
+          let [depCode, depMap, depLines] = unwrappedContent;
+          code = depCode + '\n' + code;
+          lineCount += 1 + depLines;
+          map = depMap;
+        }
       }
-      code = inlinedCode.join('') + code;
 
       code = `parcelRegister(${JSON.stringify(
         this.bundleGraph.getAssetPublicId(asset),
@@ -780,8 +784,9 @@ ${code}
     }
 
     if (shouldWrap) {
-      depContent.push(code);
-      return ['', sourceMap, lineCount];
+      invariant(!asset.meta.inline, 'Inlined asset should not be wrapped');
+      wrappedContent.push([code, sourceMap, lineCount]);
+      return undefined;
     } else {
       return [code, sourceMap, lineCount];
     }
@@ -1060,6 +1065,8 @@ ${code}
           )} not found in bundle ${this.bundle.name}`,
         });
       }
+      return false;
+    } else if (resolved.meta.inline === parentAsset.id) {
       return false;
     }
     return (
