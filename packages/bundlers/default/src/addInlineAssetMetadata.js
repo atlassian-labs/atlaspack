@@ -33,9 +33,10 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
     asset: Asset,
     incomingDependencies: Dependency[],
   ) {
-    if (!asset.meta.shouldWrap && incomingDependencies.length === 1) {
+    if (incomingDependencies.length === 1 && !asset.meta.shouldWrap) {
       const [dependency] = incomingDependencies;
-      if (dependency.priority !== 'lazy') {
+      // TODO: Support inline requires
+      if (dependency.priority !== 'lazy' && !dependency.meta.shouldWrap) {
         const assetToScopeHoistInto =
           assetGraph.getAssetWithDependency(dependency);
         // TODO: When is this undefined?
