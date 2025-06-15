@@ -598,10 +598,10 @@ export class ScopeHoistingPackager {
           let unwrappedContent = this.visitAsset(resolved, wrappedContent);
           if (unwrappedContent) {
             let [code, map, lines] = unwrappedContent;
+            depCode += code + '\n';
             if (sourceMap && map) {
               sourceMap.addSourceMap(map, lineCount);
             }
-            depCode += code + '\n';
             lineCount += lines + 1;
           }
         }
@@ -699,9 +699,12 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  let result = this.visitAsset(resolved, wrappedContent);
-                  if (result) {
-                    let [depCode, depMap, depLines] = result;
+                  let unwrappedContent = this.visitAsset(
+                    resolved,
+                    wrappedContent,
+                  );
+                  if (unwrappedContent) {
+                    let [depCode, depMap, depLines] = unwrappedContent;
                     res = depCode + '\n' + res;
                     lines += 1 + depLines;
                     map = depMap;
@@ -756,10 +759,12 @@ export class ScopeHoistingPackager {
 
       for (let unwrappedContent of inlinedContent) {
         if (unwrappedContent) {
-          let [depCode, depMap, depLines] = unwrappedContent;
+          let [depCode, map, lines] = unwrappedContent;
           code = depCode + '\n' + code;
-          lineCount += 1 + depLines;
-          map = depMap;
+          if (sourceMap && map) {
+            sourceMap.addSourceMap(map, lines);
+          }
+          lineCount += 1 + lines;
         }
       }
 
