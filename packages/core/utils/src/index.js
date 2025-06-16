@@ -39,6 +39,7 @@ export {
   setSymmetricDifference,
   setEqual,
   setIntersect,
+  setIntersectStatic,
   setUnion,
 } from './collection';
 export {
