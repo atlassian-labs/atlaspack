@@ -136,24 +136,30 @@ export function addInlineAssetMetadata(assetGraph: MutableBundleGraph): void {
         continue;
       }
 
+      let duplicateDependency: Dependency;
+
       /** dep from assetToScopeHoistInto has the duplicate if it's not an inline require */
       if (isPastScopeHoist) {
         if (!depFromScopeHoist.meta.shouldWrap) {
           dep.meta.duplicate = true;
+          duplicateDependency = dep;
         }
         /** depFromScopeHoist has the duplicate if it's not an inline require */
       } else if (!dep.meta.shouldWrap) {
         depFromScopeHoist.meta.duplicate = true;
+        duplicateDependency = depFromScopeHoist;
       }
 
-      const previousIncomingDependencies = nullthrows(
-        incomingDependencyMap.get(asset),
-      );
-      const incomingDependencies = previousIncomingDependencies.filter(
-        (incomingDep) => incomingDep !== depFromScopeHoist,
-      );
-      incomingDependencyMap.set(asset, incomingDependencies);
-      queueAssetIfOneIncomingDependency(asset, incomingDependencies);
+      if (duplicateDependency) {
+        const previousIncomingDependencies = nullthrows(
+          incomingDependencyMap.get(asset),
+        );
+        const incomingDependencies = previousIncomingDependencies.filter(
+          (incomingDep) => incomingDep !== duplicateDependency,
+        );
+        incomingDependencyMap.set(asset, incomingDependencies);
+        queueAssetIfOneIncomingDependency(asset, incomingDependencies);
+      }
     }
   }
 }
