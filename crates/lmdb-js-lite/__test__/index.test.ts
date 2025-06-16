@@ -25,12 +25,17 @@ describe("lmdb", () => {
   const numEntriesToTest = 100000;
   const MAP_SIZE = 1024 * 1024 * 1024;
 
+  afterEach(() => {
+    db?.close();
+  });
+
   it("can be opened", () => {
     db = new Lmdb({
       path: "./databases/test.db",
       asyncWrites,
       mapSize: MAP_SIZE,
     });
+    db.close();
     db = null;
   });
 
@@ -109,6 +114,10 @@ describe("lmdb", () => {
         await db.put(`${i}`, v8.serialize(i));
       }
       await db.commitWriteTransaction();
+    });
+
+    afterEach(() => {
+      db?.close();
     });
 
     it("read many entries, no transaction", async () => {

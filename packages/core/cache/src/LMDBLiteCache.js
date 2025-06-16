@@ -19,7 +19,6 @@ import {NodeFS} from '@atlaspack/fs';
 // $FlowFixMe
 import packageJson from '../package.json';
 import {FSCache} from './FSCache';
-import {instrumentAsync} from '@atlaspack/logger';
 
 const ncpAsync = promisify(ncp);
 
@@ -36,6 +35,11 @@ export class LmdbWrapper {
 
   constructor(lmdb: Lmdb) {
     this.lmdb = lmdb;
+
+    // $FlowFixMe
+    this[Symbol.dispose] = () => {
+      this.lmdb.close();
+    };
   }
 
   has(key: string): boolean {
@@ -103,15 +107,10 @@ export class LMDBLiteCache implements Cache {
   dir: FilePath;
   store: LmdbWrapper;
   fsCache: FSCache;
-  /**
-   * Directory where we store raw files.
-   */
-  cacheFilesDirectory: FilePath;
 
   constructor(cacheDir: FilePath) {
     this.fs = new NodeFS();
     this.dir = cacheDir;
-    this.cacheFilesDirectory = path.join(cacheDir, 'files');
     this.fsCache = new FSCache(this.fs, cacheDir);
 
     this.store = open(cacheDir, {
@@ -132,7 +131,6 @@ export class LMDBLiteCache implements Cache {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       await this.fsCache.ensure();
     }
-    await this.fs.mkdirp(this.cacheFilesDirectory);
     return Promise.resolve();
   }
 
@@ -164,24 +162,14 @@ export class LMDBLiteCache implements Cache {
   }
 
   getStream(key: string): Readable {
-    if (!getFeatureFlag('cachePerformanceImprovements')) {
-      return this.fs.createReadStream(path.join(this.dir, key));
-    }
-
-    return fs.createReadStream(this.getFileKey(key));
+    return this.fs.createReadStream(path.join(this.dir, key));
   }
 
-  async setStream(key: string, stream: Readable): Promise<void> {
-    if (!getFeatureFlag('cachePerformanceImprovements')) {
-      return pipeline(
-        stream,
-        this.fs.createWriteStream(path.join(this.dir, key)),
-      );
-    }
-
-    const filePath = this.getFileKey(key);
-    await fs.promises.mkdir(path.dirname(filePath), {recursive: true});
-    return pipeline(stream, fs.createWriteStream(filePath));
+  setStream(key: string, stream: Readable): Promise<void> {
+    return pipeline(
+      stream,
+      this.fs.createWriteStream(path.join(this.dir, key)),
+    );
   }
 
   // eslint-disable-next-line require-await
@@ -205,25 +193,31 @@ export class LMDBLiteCache implements Cache {
     return Promise.resolve(this.store.get(key));
   }
 
+  #getFilePath(key: string, index: number): string {
+    return path.join(this.dir, `${key}-${index}`);
+  }
+
   hasLargeBlob(key: string): Promise<boolean> {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.hasLargeBlob(key);
     }
-
-    return fs.promises
-      .access(this.getFileKey(key), fs.constants.F_OK)
-      .then(() => true)
-      .catch(() => false);
+    return this.has(key);
   }
 
+  /**
+   * @deprecated Use getBlob instead.
+   */
   getLargeBlob(key: string): Promise<Buffer> {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.getLargeBlob(key);
     }
-    return fs.promises.readFile(this.getFileKey(key));
+    return Promise.resolve(this.getBlobSync(key));
   }
 
-  async setLargeBlob(
+  /**
+   * @deprecated Use setBlob instead.
+   */
+  setLargeBlob(
     key: string,
     contents: Buffer | string,
     options?: {|signal?: AbortSignal|},
@@ -231,10 +225,7 @@ export class LMDBLiteCache implements Cache {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.setLargeBlob(key, contents, options);
     }
-
-    const targetPath = this.getFileKey(key);
-    await fs.promises.mkdir(path.dirname(targetPath), {recursive: true});
-    return fs.promises.writeFile(targetPath, contents);
+    return this.setBlob(key, contents);
   }
 
   /**
@@ -271,42 +262,6 @@ export class LMDBLiteCache implements Cache {
   }
 
   refresh(): void {}
-
-  /**
-   * Streams, packages are stored in files instead of LMDB.
-   *
-   * On this case, if a cache key happens to have a parent traversal, ../..
-   * it is treated specially
-   *
-   * That is, something/../something and something are meant to be different
-   * keys.
-   *
-   * Plus we do not want to store values outside of the cache directory.
-   */
-  getFileKey(key: string): string {
-    const cleanKey = key
-      .split('/')
-      .map((part) => {
-        if (part === '..') {
-          return '$$__parent_dir$$';
-        }
-        return part;
-      })
-      .join('/');
-    return path.join(this.cacheFilesDirectory, cleanKey);
-  }
-
-  async clear(): Promise<void> {
-    await instrumentAsync('LMDBLiteCache::clear', async () => {
-      const keys = await this.keys();
-      for (const key of keys) {
-        await this.store.delete(key);
-      }
-
-      await this.fs.rimraf(this.cacheFilesDirectory);
-      await this.fs.mkdirp(this.cacheFilesDirectory);
-    });
-  }
 }
 
 registerSerializableClass(

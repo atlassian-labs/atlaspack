@@ -16,6 +16,7 @@ import type {
   Asset,
   RequestInvalidation,
   Dependency,
+  Environment,
   AtlaspackOptions,
 } from './types';
 
@@ -39,8 +40,6 @@ import {hashString, createAssetId as createAssetIdRust} from '@atlaspack/rust';
 import {BundleBehavior as BundleBehaviorMap} from './types';
 import {PluginTracer} from '@atlaspack/profiler';
 import {identifierRegistry} from './IdentifierRegistry';
-import type {EnvironmentRef} from './EnvironmentManager';
-import {toEnvironmentId} from './EnvironmentManager';
 
 export type AssetOptions = {|
   id?: string,
@@ -57,7 +56,7 @@ export type AssetOptions = {|
   bundleBehavior?: ?BundleBehavior,
   isBundleSplittable?: ?boolean,
   isSource: boolean,
-  env: EnvironmentRef,
+  env: Environment,
   meta?: Meta,
   outputHash?: ?string,
   pipeline?: ?string,
@@ -72,7 +71,7 @@ export type AssetOptions = {|
 
 export function createAssetIdFromOptions(options: AssetOptions): string {
   const data = {
-    environmentId: toEnvironmentId(options.env),
+    environmentId: options.env.id,
     filePath: options.filePath,
     code: options.code,
     pipeline: options.pipeline,

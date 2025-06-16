@@ -9,7 +9,7 @@ use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_filesystem::{os_file_system::OsFileSystem, FileSystemRef};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
-use lmdb_js_lite::DatabaseHandle;
+use lmdb_js_lite::writer::DatabaseWriter;
 use tokio::runtime::Runtime;
 use tokio::sync::RwLock;
 
@@ -20,7 +20,7 @@ use crate::requests::{AssetGraphRequest, RequestResult};
 use crate::WatchEvents;
 
 pub struct AtlaspackInitOptions {
-  pub db: Arc<DatabaseHandle>,
+  pub db: Arc<DatabaseWriter>,
   pub fs: Option<FileSystemRef>,
   pub options: AtlaspackOptions,
   pub package_manager: Option<PackageManagerRef>,
@@ -28,7 +28,7 @@ pub struct AtlaspackInitOptions {
 }
 
 pub struct Atlaspack {
-  pub db: Arc<DatabaseHandle>,
+  pub db: Arc<DatabaseWriter>,
   pub fs: FileSystemRef,
   pub options: AtlaspackOptions,
   pub package_manager: PackageManagerRef,
@@ -161,20 +161,17 @@ impl Atlaspack {
   }
 
   fn commit_assets(&self, assets: Vec<&AssetGraphNode>) -> anyhow::Result<()> {
-    let mut txn = self.db.database().write_txn()?;
+    let mut txn = self.db.write_txn()?;
 
     for asset_node in assets {
       let AssetGraphNode::Asset(AssetNode { asset, .. }) = asset_node else {
         continue;
       };
 
-      self
-        .db
-        .database()
-        .put(&mut txn, &asset.id, asset.code.bytes())?;
+      self.db.put(&mut txn, &asset.id, asset.code.bytes())?;
       if let Some(map) = &asset.map {
         // TODO: For some reason to_buffer strips data when rkyv was upgraded, so now we use json
-        self.db.database().put(
+        self.db.put(
           &mut txn,
           &format!("map:{}", asset.id),
           map.to_json()?.as_bytes(),
@@ -195,14 +192,14 @@ mod tests {
   use atlaspack_core::types::{Asset, Code};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_plugin_rpc::{MockRpcFactory, MockRpcWorker};
-  use lmdb_js_lite::{get_database, LMDBOptions};
+  use lmdb_js_lite::{writer::DatabaseWriterError, LMDBOptions};
 
   use super::*;
 
   #[test]
   fn build_asset_graph_commits_assets_to_lmdb() -> Result<(), anyhow::Error> {
     // TODO: Create overlay fs for integration test
-    let db = create_db()?;
+    let db = Arc::new(create_db()?);
     let fs = InMemoryFileSystem::default();
 
     fs.write_file(
@@ -243,20 +240,20 @@ mod tests {
 
     atlaspack.commit_assets(assets.iter().collect())?;
 
-    let txn = db.database().read_txn()?;
+    let txn = db.read_txn()?;
     for (idx, asset) in assets_names.iter().enumerate() {
-      let entry = db.database().get(&txn, &idx.to_string())?;
+      let entry = db.get(&txn, &idx.to_string())?;
       assert_eq!(entry, Some(asset.to_string().into()));
     }
 
     Ok(())
   }
 
-  fn create_db() -> anyhow::Result<Arc<DatabaseHandle>> {
+  fn create_db() -> Result<DatabaseWriter, DatabaseWriterError> {
     let path = temp_dir().join("atlaspack").join("asset-graph-tests");
     let _ = std::fs::remove_dir_all(&path);
 
-    let lmdb = get_database(LMDBOptions {
+    let lmdb = DatabaseWriter::new(&LMDBOptions {
       path: path.to_string_lossy().to_string(),
       async_writes: false,
       map_size: None,

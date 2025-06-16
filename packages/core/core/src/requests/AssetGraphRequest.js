@@ -20,7 +20,6 @@ import logger from '@atlaspack/logger';
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {PromiseQueue, setEqual} from '@atlaspack/utils';
 import {hashString} from '@atlaspack/rust';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
@@ -162,21 +161,12 @@ export class AssetGraphBuilder {
     this.shouldBuildLazily = shouldBuildLazily ?? false;
     this.lazyIncludes = lazyIncludes ?? [];
     this.lazyExcludes = lazyExcludes ?? [];
-    if (getFeatureFlag('cachePerformanceImprovements')) {
-      const key = hashString(
+    this.cacheKey =
+      hashString(
         `${ATLASPACK_VERSION}${name}${JSON.stringify(entries) ?? ''}${
           options.mode
         }${options.shouldBuildLazily ? 'lazy' : 'eager'}`,
-      );
-      this.cacheKey = `AssetGraph/${ATLASPACK_VERSION}/${options.mode}/${key}`;
-    } else {
-      this.cacheKey =
-        hashString(
-          `${ATLASPACK_VERSION}${name}${JSON.stringify(entries) ?? ''}${
-            options.mode
-          }${options.shouldBuildLazily ? 'lazy' : 'eager'}`,
-        ) + '-AssetGraph';
-    }
+      ) + '-AssetGraph';
 
     this.isSingleChangeRebuild =
       api

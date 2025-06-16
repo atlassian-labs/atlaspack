@@ -309,7 +309,6 @@ jobs:
       - run: yarn test:integration
         env:
           ATLASPACK_V3: true
-          RUST_BACKTRACE: full
 
   end_to_end_tests:
     name: E2E tests

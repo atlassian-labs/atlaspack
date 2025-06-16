@@ -87,6 +87,11 @@ impl LMDB {
   }
 
   #[napi]
+  pub fn close(&mut self) {
+    self.inner.close()
+  }
+
+  #[napi]
   pub fn compact(&self, target_path: String) -> napi::Result<()> {
     self.inner.compact(target_path)
   }

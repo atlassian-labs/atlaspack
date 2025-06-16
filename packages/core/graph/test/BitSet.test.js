@@ -107,46 +107,4 @@ describe('BitSet', () => {
     assertValues(set2, [3, 5]);
     assertValues(set3, [1, 3, 5]);
   });
-
-  it('BitSet.intersect should create a new BitSet with the intersect', () => {
-    let set1 = new BitSet(5);
-    set1.add(1);
-    set1.add(3);
-
-    let set2 = new BitSet(5);
-    set2.add(3);
-    set2.add(5);
-
-    let set3 = BitSet.intersect(set1, set2);
-    assertValues(set1, [1, 3]);
-    assertValues(set2, [3, 5]);
-    assertValues(set3, [3]);
-  });
-
-  it('should identify equality with another BitSet', () => {
-    let set1 = new BitSet(5);
-    set1.add(1);
-    set1.add(3);
-
-    let set2 = new BitSet(5);
-    set2.add(3);
-    set2.add(5);
-
-    let set3 = set1.clone();
-
-    assert(set1.equals(set3));
-    assert(!set1.equals(set2));
-  });
-
-  it('should calculate size of BitSet', () => {
-    let set1 = new BitSet(5);
-    set1.add(1);
-    set1.add(3);
-
-    assert.equal(set1.size(), 2);
-
-    set1.add(3);
-    set1.add(4);
-    assert.equal(set1.size(), 3);
-  });
 });

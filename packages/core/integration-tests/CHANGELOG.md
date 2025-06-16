@@ -1,11 +1,5 @@
 # @atlaspack/integration-tests
 
-## 2.14.2
-
-### Patch Changes
-
-- [#503](https://github.com/atlassian-labs/atlaspack/pull/503) [`209692f`](https://github.com/atlassian-labs/atlaspack/commit/209692ffb11eae103a0d65c5e1118a5aa1625818) Thanks [@JakeLane](https://github.com/JakeLane)! - Fix conditional bundling reporter when condition is reused
-
 ## 2.14.1
 
 ### Patch Changes
