@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.17.0
+
+### Minor Changes
+
+- [#619](https://github.com/atlassian-labs/atlaspack/pull/619) [`73ea3c4`](https://github.com/atlassian-labs/atlaspack/commit/73ea3c4d85d4401fdd15abcbf988237e890e7ad3) Thanks [@matt-koko](https://github.com/matt-koko)! - export `CONSISTENCY_CHECK_VALUES` for consumption in other products
+
 ## 2.16.0
 
 ### Minor Changes
