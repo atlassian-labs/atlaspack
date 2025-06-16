@@ -2,7 +2,6 @@
 import {validateConfig} from './validateConfig';
 import {Transformer} from '@atlaspack/plugin';
 import nullthrows from 'nullthrows';
-import WorkerFarm from '@atlaspack/workers';
 import loadSharp from './loadSharp';
 
 // from https://github.com/lovell/sharp/blob/df7b8ba73808fc494be413e88cfb621b6279218c/lib/output.js#L6-L17
@@ -17,8 +16,6 @@ const FORMATS = new Map([
   ['heic', 'heif'],
   ['heif', 'heif'],
 ]);
-
-let isSharpLoadedOnMainThread = false;
 
 export default (new Transformer({
   async loadConfig({config}) {
@@ -65,22 +62,6 @@ export default (new Transformer({
     const outputOptions = config[format];
 
     if (width || height || quality || targetFormat || outputOptions) {
-      // Sharp must be required from the main thread as well to prevent errors when workers exit
-      // See https://sharp.pixelplumbing.com/install#worker-threads and https://github.com/lovell/sharp/issues/2263
-      if (WorkerFarm.isWorker() && !isSharpLoadedOnMainThread) {
-        let api = WorkerFarm.getWorkerApi();
-        await api.callMaster({
-          location: __dirname + '/loadSharp.js',
-          args: [
-            options.packageManager,
-            asset.filePath,
-            options.shouldAutoInstall,
-          ],
-        });
-
-        isSharpLoadedOnMainThread = true;
-      }
-
       let inputBuffer = await asset.getBuffer();
       let sharp = await loadSharp(
         options.packageManager,

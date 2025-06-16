@@ -21,6 +21,9 @@
     "lib",
     "src"
   ],
+  "atlaspackReferences": [
+    "src/esmodule-helpers.js"
+  ],
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.1",
     "@atlaspack/feature-flags": "2.16.0",

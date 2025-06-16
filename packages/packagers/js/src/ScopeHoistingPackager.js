@@ -149,6 +149,13 @@ export class ScopeHoistingPackager {
       for (let b of this.bundleGraph.getReferencedBundles(this.bundle, {
         recursive: false,
       })) {
+        // If the referenced bundle is a native node bundle then don't require it as
+        // an external as we don't want to require native node bundles from other
+        // OS architectures
+        if (process.env.ATLASPACK_SUPER_BUILD === 'true' && b.type === 'node') {
+          continue;
+        }
+
         this.externals.set(relativeBundlePath(this.bundle, b), new Map());
       }
     }
@@ -807,6 +814,21 @@ ${code}
         ) {
           this.addExternal(dep, replacements, referencedBundle);
           this.externalAssets.add(resolved);
+          continue;
+        }
+
+        // If the referencedBundle is a native node import then require it
+        // directly
+        // Only enabled for internal builds for now
+        if (
+          process.env.ATLASPACK_SUPER_BUILD === 'true' &&
+          referencedBundle &&
+          referencedBundle.type === 'node'
+        ) {
+          replacements.set(
+            nullthrows(dep.symbols.get('*')).local,
+            `require('${relativeBundlePath(this.bundle, referencedBundle)}')`,
+          );
           continue;
         }
       }

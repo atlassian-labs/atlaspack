@@ -36,6 +36,7 @@ pub struct EsmToCjsReplacer {
   mark: Mark,
   unresolved_mark: Mark,
   versions: Option<Versions>,
+  esm_helpers_specifier: String,
 }
 
 fn local_name_for_src(src: &JsWord) -> JsWord {
@@ -47,7 +48,11 @@ fn local_name_for_src(src: &JsWord) -> JsWord {
 }
 
 impl EsmToCjsReplacer {
-  pub fn new(unresolved_mark: Mark, versions: Option<Versions>) -> Self {
+  pub fn new(
+    unresolved_mark: Mark,
+    versions: Option<Versions>,
+    esm_helpers_specifier: String,
+  ) -> Self {
     EsmToCjsReplacer {
       imports: HashMap::new(),
       require_names: HashMap::new(),
@@ -60,6 +65,7 @@ impl EsmToCjsReplacer {
       mark: Mark::fresh(Mark::root()),
       unresolved_mark,
       versions,
+      esm_helpers_specifier,
     }
   }
 
@@ -580,7 +586,7 @@ impl VisitMut for EsmToCjsReplacer {
               .into(),
             ),
             init: Some(Box::new(Expr::Call(crate::utils::create_require(
-              "@atlaspack/transformer-js/src/esmodule-helpers.js".into(),
+              self.esm_helpers_specifier.clone().into(),
               self.unresolved_mark,
             )))),
             definite: false,
@@ -655,10 +661,12 @@ mod tests {
   use std::str::FromStr;
 
   use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
-  use indoc::indoc;
+  use indoc::{formatdoc, indoc};
   use swc_core::ecma::preset_env::{BrowserData, Version};
 
   use super::*;
+
+  const ESM_HELPERS_SPECIFIER: &str = "esm_helpers.js";
 
   #[test]
   fn transforms_imports_to_cjs() {
@@ -672,7 +680,13 @@ mod tests {
 
         useEffect(() => {});
       "#,
-      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          None,
+          ESM_HELPERS_SPECIFIER.to_string(),
+        )
+      },
     );
 
     assert_eq!(
@@ -698,7 +712,13 @@ mod tests {
 
         const obj = { a, b };
       "#,
-      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          None,
+          ESM_HELPERS_SPECIFIER.to_string(),
+        )
+      },
     );
 
     assert_eq!(
@@ -727,7 +747,13 @@ mod tests {
 
         const obj = { [a]: 1, [b]: 2 };
       "#,
-      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          None,
+          ESM_HELPERS_SPECIFIER.to_string(),
+        )
+      },
     );
 
     assert_eq!(
@@ -756,7 +782,13 @@ mod tests {
 
         const obj = { hello: a, world: b };
       "#,
-      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          None,
+          ESM_HELPERS_SPECIFIER.to_string(),
+        )
+      },
     );
 
     assert_eq!(
@@ -785,7 +817,13 @@ mod tests {
 
         const obj = foo[bar]();
       "#,
-      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          None,
+          ESM_HELPERS_SPECIFIER.to_string(),
+        )
+      },
     );
 
     assert_eq!(
@@ -809,13 +847,19 @@ mod tests {
       r#"
         export * from './main';
       "#,
-      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          None,
+          ESM_HELPERS_SPECIFIER.to_string(),
+        )
+      },
     );
 
     assert_eq!(
       output_code,
-      indoc! {r#"
-        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+      formatdoc! {r#"
+        var parcelHelpers = require("{ESM_HELPERS_SPECIFIER}");
         parcelHelpers.defineInteropFlag(exports);
         var _main = require("./main");
         parcelHelpers.exportAll(_main, exports);
@@ -835,16 +879,22 @@ mod tests {
       r#"
         export default function main() {}
       "#,
-      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          None,
+          ESM_HELPERS_SPECIFIER.to_string(),
+        )
+      },
     );
 
     assert_eq!(
       output_code,
-      indoc! {r#"
-        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+      formatdoc! {r#"
+        var parcelHelpers = require("{ESM_HELPERS_SPECIFIER}");
         parcelHelpers.defineInteropFlag(exports);
         parcelHelpers.export(exports, "default", ()=>main);
-        function main() {}
+        function main() {{}}
       "#}
     );
 
@@ -861,16 +911,22 @@ mod tests {
       r#"
         export function main() {}
       "#,
-      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          None,
+          ESM_HELPERS_SPECIFIER.to_string(),
+        )
+      },
     );
 
     assert_eq!(
       output_code,
-      indoc! {r#"
-        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+      formatdoc! {r#"
+        var parcelHelpers = require("{ESM_HELPERS_SPECIFIER}");
         parcelHelpers.defineInteropFlag(exports);
         parcelHelpers.export(exports, "main", ()=>main);
-        function main() {}
+        function main() {{}}
       "#}
     );
 
@@ -887,16 +943,22 @@ mod tests {
       r#"
         export const { main } = obj;
       "#,
-      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          None,
+          ESM_HELPERS_SPECIFIER.to_string(),
+        )
+      },
     );
 
     assert_eq!(
       output_code,
-      indoc! {r#"
-        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+      formatdoc! {r#"
+        var parcelHelpers = require("{ESM_HELPERS_SPECIFIER}");
         parcelHelpers.defineInteropFlag(exports);
         parcelHelpers.export(exports, "main", ()=>main);
-        const { main } = obj;
+        const {{ main }} = obj;
       "#}
     );
 
@@ -916,7 +978,13 @@ mod tests {
         exports = function main3() {}
         exports.main = function main4() {}
       "#,
-      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          None,
+          ESM_HELPERS_SPECIFIER.to_string(),
+        )
+      },
     );
 
     assert_eq!(
@@ -945,19 +1013,25 @@ mod tests {
           useEffect(() => {}, []);
         }
       "#,
-      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+      |context| {
+        EsmToCjsReplacer::new(
+          context.unresolved_mark,
+          None,
+          ESM_HELPERS_SPECIFIER.to_string(),
+        )
+      },
     );
 
     assert_eq!(
       output_code,
-      indoc! {r#"
-        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+      formatdoc! {r#"
+        var parcelHelpers = require("{ESM_HELPERS_SPECIFIER}");
         parcelHelpers.defineInteropFlag(exports);
         parcelHelpers.export(exports, "main", ()=>main);
         var _react = require("react");
-        function main() {
-            0, _react.useEffect(()=>{}, []);
-        }
+        function main() {{
+            0, _react.useEffect(()=>{{}}, []);
+        }}
       "#}
     );
 
@@ -982,6 +1056,7 @@ mod tests {
             chrome: Some(Version::from_str("1.0.0").unwrap()),
             ..BrowserData::default()
           }),
+          ESM_HELPERS_SPECIFIER.to_string(),
         )
       },
     );
@@ -989,14 +1064,14 @@ mod tests {
     // TODO: Should main1 and main2 not include an arrow function?
     assert_eq!(
       output_code,
-      indoc! {r#"
-        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
+      formatdoc! {r#"
+        var parcelHelpers = require("{ESM_HELPERS_SPECIFIER}");
         parcelHelpers.defineInteropFlag(exports);
-        parcelHelpers.export(exports, "main1", function() {
+        parcelHelpers.export(exports, "main1", function() {{
             return main1;
-        });
-        const main1 = ()=>{};
-        const main2 = ()=>{};
+        }});
+        const main1 = ()=>{{}};
+        const main2 = ()=>{{}};
       "#}
     );
 

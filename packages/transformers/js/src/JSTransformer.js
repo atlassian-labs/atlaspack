@@ -12,6 +12,7 @@ import type {Diagnostic} from '@atlaspack/diagnostic';
 import SourceMap from '@parcel/source-map';
 import {Transformer} from '@atlaspack/plugin';
 import {transform, transformAsync} from '@atlaspack/rust';
+import {isSuperPackage} from '@atlaspack/core';
 import browserslist from 'browserslist';
 import semver from 'semver';
 import nullthrows from 'nullthrows';
@@ -22,6 +23,10 @@ import ThrowableDiagnostic, {
 import {validateSchema, remapSourceLocation, globMatch} from '@atlaspack/utils';
 import pkg from '../package.json';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+
+const esm_helpers_specifier = isSuperPackage()
+  ? './esmodule-helpers.js'
+  : '@atlaspack/transformer-js/src/esmodule-helpers.js';
 
 const JSX_EXTENSIONS = {
   jsx: true,
@@ -439,7 +444,9 @@ export default (new Transformer({
       module_id: asset.id,
       project_root: options.projectRoot,
       replace_env: !asset.env.isNode(),
-      inline_fs: Boolean(config?.inlineFS) && !asset.env.isNode(),
+      inline_fs:
+        process.env.ATLASPACK_SUPER_BUILD === 'true' ||
+        (Boolean(config?.inlineFS) && !asset.env.isNode()),
       insert_node_globals:
         !asset.env.isNode() && asset.env.sourceType !== 'script',
       node_replacer: asset.env.isNode(),
@@ -475,6 +482,7 @@ export default (new Transformer({
       inline_constants: config.inlineConstants,
       conditional_bundling: options.featureFlags.conditionalBundlingApi,
       magic_comments: Boolean(config?.magicComments),
+      esm_helpers_specifier,
       callMacro: asset.isSource
         ? async (err, src, exportName, args, loc) => {
             let mod;
@@ -578,7 +586,7 @@ export default (new Transformer({
               let stack = (err.stack || '').split('\n').slice(1);
               let message = err.message;
               for (let line of stack) {
-                if (line.includes(__filename)) {
+                if (line.includes(/*#__ATLASPACK_IGNORE__*/ __filename)) {
                   break;
                 }
                 message += '\n' + line;
@@ -882,7 +890,9 @@ export default (new Transformer({
               : 'sync',
           isOptional: dep.is_optional,
           meta,
-          resolveFrom: isHelper ? __filename : undefined,
+          resolveFrom: isHelper
+            ? /*#__ATLASPACK_IGNORE__*/ __filename
+            : undefined,
           range,
           env,
         });
@@ -1070,16 +1080,29 @@ export default (new Transformer({
       }
 
       if (needs_esm_helpers) {
-        asset.addDependency({
-          specifier: '@atlaspack/transformer-js/src/esmodule-helpers.js',
-          specifierType: 'esm',
-          resolveFrom: __filename,
-          env: {
-            includeNodeModules: {
-              '@atlaspack/transformer-js': true,
+        if (isSuperPackage()) {
+          asset.addDependency({
+            specifier: esm_helpers_specifier,
+            specifierType: 'esm',
+            resolveFrom: /*#__ATLASPACK_IGNORE__*/ __filename,
+            env: {
+              includeNodeModules: {
+                atlaspack: true,
+              },
             },
-          },
-        });
+          });
+        } else {
+          asset.addDependency({
+            specifier: esm_helpers_specifier,
+            specifierType: 'esm',
+            resolveFrom: /*#__ATLASPACK_IGNORE__*/ __filename,
+            env: {
+              includeNodeModules: {
+                '@atlaspack/transformer-js': true,
+              },
+            },
+          });
+        }
       }
     }
 
