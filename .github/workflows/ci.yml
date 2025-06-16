@@ -90,6 +90,37 @@ jobs:
           path: packages/**/*
           retention-days: 1
 
+  # Build and store super package
+  build_super_package:
+    strategy:
+      matrix:
+        include:
+          # Linux AMD64
+          - name: 🦸 Build Super package
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+
+    needs: build_native
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      - name: Build super package
+        run: yarn build-super
+      # Upload artifacts for use later in pipeline
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-super
+          path: packages/**/*
+          retention-days: 1
+
   lint_javascript:
     name: 🐵 Lint JavaScript
     runs-on: ubuntu-24.04
@@ -183,6 +214,8 @@ jobs:
           - os: macos-15
             node: 20
     runs-on: ${{ matrix.os }}
+    env:
+      CI: true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-watchman
@@ -197,9 +230,47 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
-      - run: yarn test:integration-ci
+      - run: yarn test:integration
+
+  integration_tests_super:
+    name: Integration tests (Super, ${{ matrix.atlaspackV3 == true && 'v3, ' || '' }}${{ matrix.os }}, Node ${{ matrix.node }})
+    needs:
+      - build_native
+      - build_super_package
+    timeout-minutes: 35
+    strategy:
+      # These tend to be quite flakey, so one failed instance shouldn't stop
+      # others from potentially succeeding
+      fail-fast: false
+      matrix:
+        include:
+          # Linux AMD64
+          - os: ubuntu-22.04
+            node: 20
+            atlaspackV3: false
+          - os: ubuntu-22.04
+            node: 20
+            atlaspackV3: true
+    runs-on: ${{ matrix.os }}
+    env:
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-watchman
+      - uses: ./.github/actions/setup-node
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      - name: Bump max inotify watches (Linux only)
+        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+        if: ${{ runner.os == 'Linux' }}
+      - run: yarn test:integration:super
         env:
-          RUST_BACKTRACE: full
+          ATLASPACK_V3: ${{ matrix.atlaspackV3 }}
 
   integration_tests_v3:
     name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }})
@@ -220,6 +291,8 @@ jobs:
           - os: macos-15
             node: 20
     runs-on: ${{ matrix.os }}
+    env:
+      CI: true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-node
@@ -233,10 +306,9 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
-      - run: yarn test:integration-ci
+      - run: yarn test:integration
         env:
           ATLASPACK_V3: true
-          RUST_BACKTRACE: full
 
   end_to_end_tests:
     name: E2E tests

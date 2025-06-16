@@ -103,7 +103,12 @@ describe.v2('postcss', () => {
     assert(css.includes('url("data:image/gif;base64,quotes")'));
   });
 
-  it('should automatically install postcss plugins if needed', async () => {
+  it('should automatically install postcss plugins if needed', async function () {
+    if (process.env.SUPER_PACKAGE === 'true') {
+      // Auto install not supported in super package
+      return this.skip();
+    }
+
     let inputDir = path.join(__dirname, '/input');
     await outputFS.rimraf(inputDir);
     await ncp(

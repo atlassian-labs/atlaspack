@@ -69,7 +69,10 @@ registerCoreWithSerializer();
 
 export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
-export const WORKER_PATH: string = path.join(__dirname, 'worker.js');
+export const WORKER_PATH: string = path.join(
+  /*#__ATLASPACK_IGNORE__*/ __dirname,
+  'worker.js',
+);
 
 export default class Atlaspack {
   #requestTracker /*: RequestTracker*/;
@@ -174,7 +177,6 @@ export default class Atlaspack {
 
       rustAtlaspack = await AtlaspackV3.create({
         ...options,
-        corePath: path.join(__dirname, '..'),
         threads,
         entries: Array.isArray(entries)
           ? entries
@@ -533,11 +535,10 @@ export default class Atlaspack {
           nativeInvalid = await this.rustAtlaspack.respondToFsEvents(events);
         }
 
-        let {didInvalidate: isInvalid} =
-          await this.#requestTracker.respondToFSEvents(
-            events,
-            Number.POSITIVE_INFINITY,
-          );
+        let isInvalid = await this.#requestTracker.respondToFSEvents(
+          events,
+          Number.POSITIVE_INFINITY,
+        );
 
         if (
           (nativeInvalid || isInvalid) &&
