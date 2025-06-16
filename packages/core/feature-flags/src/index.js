@@ -5,6 +5,13 @@ import type {FeatureFlags as _FeatureFlags} from './types';
 // but we want to export FeatureFlags for Flow
 export type FeatureFlags = _FeatureFlags;
 
+export const CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string> = Object.freeze([
+  'NEW',
+  'OLD',
+  'NEW_AND_CHECK',
+  'OLD_AND_CHECK',
+]);
+
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   exampleConsistencyCheckFeature: 'OLD',
   exampleFeature: false,
