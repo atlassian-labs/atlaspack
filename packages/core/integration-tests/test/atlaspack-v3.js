@@ -22,9 +22,15 @@ async function assertOutputIsIdentical(
   entry: string,
   options?: InitialAtlaspackOptions,
 ) {
+  // Default these tests to scope hoist mode
+  let defaultTargetOptions = {
+    shouldScopeHoist: true,
+    ...options?.defaultTargetOptions,
+  };
   let bundlesV3 = await bundle(entry, {
     ...options,
     inputFS: overlayFS,
+    defaultTargetOptions,
   }).then((b) => b.getBundles());
 
   let bundlesV2 = await bundle(entry, {
@@ -33,6 +39,7 @@ async function assertOutputIsIdentical(
     featureFlags: {
       atlaspackV3: false,
     },
+    defaultTargetOptions,
   }).then((b) => b.getBundles());
 
   assert.equal(bundlesV3.length, bundlesV2.length);
@@ -63,7 +70,6 @@ describe.v3('AtlaspackV3', function () {
     `;
 
     let atlaspack = await AtlaspackV3.create({
-      corePath: '',
       entries: [join(__dirname, 'index.js')],
       fs: new FileSystemV3(overlayFS),
       napiWorkerPool,
@@ -128,11 +134,7 @@ describe.v3('AtlaspackV3', function () {
             <script type="module" src="./index.js" />
       `;
 
-      await assertOutputIsIdentical(join(__dirname, 'scope-hoist/index.html'), {
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
-        },
-      });
+      await assertOutputIsIdentical(join(__dirname, 'scope-hoist/index.html'));
     });
 
     it('with Assets that change type', async () => {
@@ -200,7 +202,6 @@ describe.v3('AtlaspackV3', function () {
     it('should not throw if feature flag is bool', async () => {
       await assert.rejects(() =>
         AtlaspackV3.create({
-          corePath: '',
           entries: [join(__dirname, 'index.js')],
           fs: new FileSystemV3(overlayFS),
           lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
@@ -215,7 +216,6 @@ describe.v3('AtlaspackV3', function () {
     it('should not throw if feature flag is string', async () => {
       await assert.rejects(() =>
         AtlaspackV3.create({
-          corePath: '',
           entries: [join(__dirname, 'index.js')],
           fs: new FileSystemV3(overlayFS),
           napiWorkerPool,

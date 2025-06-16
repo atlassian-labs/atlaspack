@@ -8,8 +8,14 @@ import ThrowableDiagnostic, {
   generateJSONCodeHighlights,
   md,
 } from '@atlaspack/diagnostic';
+import {version as ATLASPACK_VERSION} from '../package.json';
+import atlaspackInternalPlugins from './internal-plugins';
 import {findAlternativeNodeModules} from '@atlaspack/utils';
-import {type ProjectPath, toProjectPath} from './projectPath';
+import {
+  type ProjectPath,
+  toProjectPath,
+  toProjectPathUnsafe,
+} from './projectPath';
 
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
 const CONFIG = Symbol.for('parcel-plugin-config');
@@ -24,6 +30,22 @@ export default async function loadPlugin<T>(
   version: Semver,
   resolveFrom: ProjectPath,
 |}> {
+  if (atlaspackInternalPlugins && atlaspackInternalPlugins[pluginName]) {
+    let plugin = atlaspackInternalPlugins[pluginName]();
+    plugin = plugin.default || plugin;
+    plugin = plugin[CONFIG];
+    if (!plugin) {
+      throw new Error(
+        `Plugin ${pluginName} is not a valid Atlaspack plugin, should export an instance of a Atlaspack plugin ex. "export default new Reporter({ ... })".`,
+      );
+    }
+    return {
+      plugin,
+      version: ATLASPACK_VERSION,
+      resolveFrom: toProjectPathUnsafe(options.projectRoot),
+    };
+  }
+
   let resolveFrom = configPath;
 
   // Config packages can reference plugins, but cannot contain other plugins within them.

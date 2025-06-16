@@ -20,6 +20,9 @@
   "files": [
     "lib"
   ],
+  "atlaspackReferences": [
+    "src/_empty.js"
+  ],
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",
     "@atlaspack/diagnostic": "2.14.1",

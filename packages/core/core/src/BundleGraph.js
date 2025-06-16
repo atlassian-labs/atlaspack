@@ -1316,7 +1316,14 @@ export default class BundleGraph {
     }
 
     let dependencies = this._graph
-      .getNodeIdsConnectedTo(assetNodeId)
+      .getNodeIdsConnectedTo(
+        assetNodeId,
+        // TODO: This seems like bug with library builds when assets are present
+        // in other files. Guarding the fix for now exclusively for super builds
+        process.env.ATLASPACK_SUPER_BUILD === 'true'
+          ? ALL_EDGE_TYPES
+          : undefined,
+      )
       .map((id) => nullthrows(this._graph.getNode(id)))
       .filter((node) => node.type === 'dependency')
       .map((node) => {

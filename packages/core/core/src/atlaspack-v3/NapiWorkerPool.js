@@ -6,7 +6,11 @@ import process from 'process';
 import type {Transferable} from '@atlaspack/rust';
 import {getAvailableThreads} from '@atlaspack/rust';
 
-const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
+const WORKER_PATH = path.join(
+  /*#__ATLASPACK_IGNORE__*/ __dirname,
+  'worker',
+  'napi-worker.js',
+);
 const ATLASPACK_NAPI_WORKERS =
   process.env.ATLASPACK_NAPI_WORKERS &&
   parseInt(process.env.ATLASPACK_NAPI_WORKERS, 10);

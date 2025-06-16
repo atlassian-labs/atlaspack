@@ -12,6 +12,8 @@ import {NapiWorkerPool} from './NapiWorkerPool';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Event} from '@parcel/watcher';
 import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
+import {isSuperPackage} from '../isSuperPackage';
+import path from 'path';
 
 export type AtlaspackV3Options = {|
   fs?: AtlaspackNapiOptions['fs'],
@@ -23,8 +25,53 @@ export type AtlaspackV3Options = {|
   lmdb: Lmdb,
   featureFlags?: {[string]: string | boolean},
   napiWorkerPool?: INapiWorkerPool,
-  ...AtlaspackNapiOptions['options'],
+  ...$Diff<
+    AtlaspackNapiOptions['options'],
+    {|
+      jsPaths: AtlaspackNapiOptions['options']['jsPaths'],
+      useBuiltinConfigs: AtlaspackNapiOptions['options']['useBuiltinConfigs'],
+    |},
+  >,
 |};
+
+function getJsPaths(): AtlaspackNapiOptions['options']['jsPaths'] {
+  const dirname = /*#__ATLASPACK_IGNORE__*/ __dirname;
+
+  if (isSuperPackage()) {
+    // dirname: atlaspack/lib/core/core/atlaspack-v3
+    // core: atlaspack/lib/core/core/index.js
+    const corePath = path.join(dirname, '..');
+    // esmodule helpers: atlaspack/lib/transformers/js/esmodule-helpers.js
+    const esmoduleHelpersPath = path.join(
+      dirname,
+      '../../../transformers/js/esmodule-helpers.js',
+    );
+
+    // empty file: atlaspack/lib/core/core/_empty.js
+    const emptyFile = path.join(dirname, '_empty.js');
+
+    return {
+      corePath,
+      esmoduleHelpersSpecifier: path.relative(corePath, esmoduleHelpersPath),
+      esmoduleHelpersIncludeNodeModules: 'atlaspack',
+      emptyFile,
+    };
+  }
+
+  // dirname: @atlaspack/core/lib/atlaspack-v3
+  // core: @atlaspack/core
+  const corePath = path.join(dirname, '../..');
+  // empty file: atlaspack/lib/core/core/_empty.js
+  const emptyFile = path.join(dirname, '_empty.js');
+
+  return {
+    corePath,
+    esmoduleHelpersSpecifier:
+      '@atlaspack/transformer-js/src/esmodule-helpers.js',
+    esmoduleHelpersIncludeNodeModules: '@atlaspack/transformer-js',
+    emptyFile,
+  };
+}
 
 export class AtlaspackV3 {
   _atlaspack_napi: AtlaspackNapi;
@@ -52,7 +99,11 @@ export class AtlaspackV3 {
         fs,
         packageManager,
         threads,
-        options,
+        options: {
+          ...options,
+          jsPaths: getJsPaths(),
+          useBuiltinConfigs: isSuperPackage(),
+        },
         napiWorkerPool,
       },
       lmdb,

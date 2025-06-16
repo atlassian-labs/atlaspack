@@ -446,18 +446,21 @@ fn make_esm_helpers_dependency(
 ) -> Dependency {
   Dependency {
     source_asset_id: Some(asset_id.to_string()),
-    specifier: "@atlaspack/transformer-js/src/esmodule-helpers.js".into(),
+    specifier: options.js_paths.esmodule_helpers_specifier.clone(),
     specifier_type: SpecifierType::Esm,
     source_path: Some(asset_file_path.clone()),
     env: Environment {
       include_node_modules: IncludeNodeModules::Map(BTreeMap::from([(
-        "@atlaspack/transformer-js".into(),
+        options
+          .js_paths
+          .esmodule_helpers_include_node_modules
+          .clone(),
         true,
       )])),
       ..asset_environment.clone()
     }
     .into(),
-    resolve_from: Some(options.core_path.as_path().into()),
+    resolve_from: Some(options.js_paths.core_path.join("index").clone()),
     ..Default::default()
   }
 }

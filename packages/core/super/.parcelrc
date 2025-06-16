@@ -1,0 +1,9 @@
+{
+    "extends":  "@atlaspack/config-default",
+    "transformers": {
+        "*.node": ["@atlaspack/transformer-raw"],
+        "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": ["./plugins/transformer.js", "@atlaspack/transformer-babel", "..."]
+    },
+    "bundler": "@atlaspack/bundler-library",
+    "namers": ["./plugins/namer.js"]
+}

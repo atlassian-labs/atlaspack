@@ -64,8 +64,11 @@ impl Atlaspack {
 
     let rpc_worker = rpc.start()?;
 
-    let rc_config_loader =
-      AtlaspackRcConfigLoader::new(Arc::clone(&fs), Arc::clone(&package_manager));
+    let rc_config_loader = AtlaspackRcConfigLoader::new(
+      Arc::clone(&fs),
+      Arc::clone(&package_manager),
+      options.use_builtin_configs,
+    );
 
     let (config, _files) = rc_config_loader.load(
       &project_root,
@@ -89,7 +92,7 @@ impl Atlaspack {
         config: Arc::clone(&config_loader),
         file_system: fs.clone(),
         options: Arc::new(PluginOptions {
-          core_path: options.core_path.clone(),
+          js_paths: options.js_paths.clone(),
           env: options.env.clone(),
           log_level: options.log_level.clone(),
           mode: options.mode.clone(),
