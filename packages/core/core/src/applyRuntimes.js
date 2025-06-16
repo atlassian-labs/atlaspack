@@ -34,7 +34,6 @@ import {createDevDependency, runDevDepRequest} from './requests/DevDepRequest';
 import {toProjectPath, fromProjectPathRelative} from './projectPath';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {DefaultMap} from '@atlaspack/utils';
-import {fromEnvironmentId} from './EnvironmentManager';
 
 type RuntimeConnection = {|
   bundle: InternalBundle,
@@ -160,11 +159,7 @@ export default async function applyRuntimes<TResult: RequestResult>({
             let assetGroup = {
               code,
               filePath: toProjectPath(options.projectRoot, sourceName),
-              env: mergeEnvironments(
-                options.projectRoot,
-                fromEnvironmentId(bundle.env),
-                env,
-              ),
+              env: mergeEnvironments(options.projectRoot, bundle.env, env),
               // Runtime assets should be considered source, as they should be
               // e.g. compiled to run in the target environment
               isSource: true,

@@ -5,36 +5,19 @@ import nullthrows from 'nullthrows';
 import RequestTracker, {
   type RunAPI,
   cleanUpOrphans,
-  runInvalidation,
-  getBiggestFSEventsInvalidations,
-  invalidateRequestGraphFSEvents,
 } from '../src/RequestTracker';
 import {Graph} from '@atlaspack/graph';
-import {LMDBLiteCache} from '@atlaspack/cache';
 import WorkerFarm from '@atlaspack/workers';
 import {DEFAULT_OPTIONS} from './test-utils';
 import {FILE_CREATE, FILE_UPDATE, INITIAL_BUILD} from '../src/constants';
 import {makeDeferredWithPromise} from '@atlaspack/utils';
 import {toProjectPath} from '../src/projectPath';
 import {DEFAULT_FEATURE_FLAGS, setFeatureFlags} from '../../feature-flags/src';
-import sinon from 'sinon';
-import type {AtlaspackOptions} from '../src/types';
 
-const options = {
-  ...DEFAULT_OPTIONS,
-  cache: new LMDBLiteCache(DEFAULT_OPTIONS.cacheDir),
-};
+const options = DEFAULT_OPTIONS;
 const farm = new WorkerFarm({workerPath: require.resolve('../src/worker')});
 
 describe('RequestTracker', () => {
-  beforeEach(async () => {
-    await options.cache.ensure();
-
-    for (const key of options.cache.keys()) {
-      await options.cache.getNativeRef().delete(key);
-    }
-  });
-
   it('should not run requests that have not been invalidated', async () => {
     let tracker = new RequestTracker({farm, options});
     await tracker.runRequest({
@@ -499,7 +482,7 @@ describe('RequestTracker', () => {
             input: null,
           });
           const requestId = tracker.graph.getNodeIdByContentKey('abc');
-          const {didInvalidate: invalidated} = await tracker.respondToFSEvents(
+          const invalidated = await tracker.respondToFSEvents(
             [
               {
                 type: 'update',
@@ -538,7 +521,7 @@ describe('RequestTracker', () => {
             input: null,
           });
           const requestId = tracker.graph.getNodeIdByContentKey('abc');
-          const {didInvalidate: invalidated} = await tracker.respondToFSEvents(
+          const invalidated = await tracker.respondToFSEvents(
             [
               {
                 type: 'create',
@@ -599,100 +582,5 @@ root --- node1 --- node2 ----------- orphan1 --- orphan2
     assert.deepEqual(cleanUpOrphans(graph), [orphan1, orphan2]);
     assert.equal(getNonNullNodes(graph).length, 4);
     assert.equal(Array.from(graph.getAllEdges()).length, 3);
-  });
-});
-
-describe('runInvalidation', () => {
-  it('calls an invalidationFn and tracks the number of invalidated nodes', async () => {
-    const mockRequestTracker = {
-      getInvalidNodeCount: sinon.stub(),
-    };
-
-    mockRequestTracker.getInvalidNodeCount.returns(10000);
-    const result = await runInvalidation(mockRequestTracker, {
-      key: 'fsEvents',
-      fn: () => {
-        mockRequestTracker.getInvalidNodeCount.returns(30000);
-        return {
-          biggestInvalidations: [{path: 'my-file', count: 10000}],
-        };
-      },
-    });
-
-    assert.equal(result.key, 'fsEvents');
-    assert.equal(result.count, 20000);
-    assert.deepEqual(result.detail, {
-      biggestInvalidations: [{path: 'my-file', count: 10000}],
-    });
-    assert(result.duration > 0, 'Duration was not reported');
-  });
-});
-
-describe('invalidateRequestGraphFSEvents', () => {
-  it('calls requestGraph.respondToFSEvents and returns the biggest invalidations', async () => {
-    const requestGraph = {
-      respondToFSEvents: sinon.stub(),
-    };
-
-    requestGraph.respondToFSEvents.returns({
-      invalidationsByPath: new Map([
-        ['file-1', 10],
-        ['file-2', 5000],
-        ['file-3', 8000],
-      ]),
-    });
-    // $FlowFixMe
-    const options: AtlaspackOptions = {
-      unstableFileInvalidations: undefined,
-    };
-
-    const result = await invalidateRequestGraphFSEvents(requestGraph, options, [
-      {
-        path: 'file-1',
-        type: 'create',
-      },
-      {
-        path: 'file-2',
-        type: 'update',
-      },
-      {
-        path: 'file-3',
-        type: 'delete',
-      },
-    ]);
-
-    assert.deepEqual(result.biggestInvalidations, [
-      {path: 'file-3', count: 8000},
-      {path: 'file-2', count: 5000},
-      {path: 'file-1', count: 10},
-    ]);
-    assert.equal(requestGraph.respondToFSEvents.callCount, 1);
-    assert.deepEqual(requestGraph.respondToFSEvents.args[0], [
-      [
-        {path: 'file-1', type: 'create'},
-        {path: 'file-2', type: 'update'},
-        {path: 'file-3', type: 'delete'},
-      ],
-      options,
-      10000,
-      true,
-    ]);
-  });
-});
-
-describe('getBiggestFSEventsInvalidations', () => {
-  it('returns the paths that invalidated the most nodes', () => {
-    const invalidationsByPath = new Map([
-      ['file-1', 10],
-      ['file-2', 5000],
-      ['file-3', 8000],
-      ['file-4', 1000],
-      ['file-5', 1000],
-    ]);
-
-    assert.deepEqual(getBiggestFSEventsInvalidations(invalidationsByPath, 2), [
-      {path: 'file-3', count: 8000},
-      {path: 'file-2', count: 5000},
-    ]);
   });
 });

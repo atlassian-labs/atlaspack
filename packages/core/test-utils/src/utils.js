@@ -32,17 +32,10 @@ import {parser as postHtmlParse} from 'posthtml-parser';
 import postHtml from 'posthtml';
 import EventEmitter from 'events';
 import https from 'https';
-import childProcess from 'child_process';
 
 import {makeDeferredWithPromise, normalizeSeparators} from '@atlaspack/utils';
 import _chalk from 'chalk';
 import resolve from 'resolve';
-import {LMDBLiteCache} from '@atlaspack/cache';
-import tempy from 'tempy';
-
-export let cacheDir: string = tempy.directory();
-export let cache: LMDBLiteCache = new LMDBLiteCache(cacheDir);
-cache.ensure();
 
 export {fsFixture} from './fsFixture';
 export * from './stubs';
@@ -52,41 +45,14 @@ export const inputFS: NodeFS = new NodeFS();
 export let outputFS: MemoryFS = new MemoryFS(workerFarm);
 export let overlayFS: OverlayFS = new OverlayFS(outputFS, inputFS);
 
-before(() => {
-  try {
-    childProcess.execSync('watchman shutdown-server');
-  } catch (err) {
-    /* empty */
-  }
-});
-
-beforeEach(async () => {
+beforeEach(() => {
   outputFS = new MemoryFS(workerFarm);
   overlayFS = new OverlayFS(outputFS, inputFS);
-
-  for (let i = 0; i < 5; i++) {
-    try {
-      cacheDir = tempy.directory();
-      cache = new LMDBLiteCache(cacheDir);
-    } catch (err) {
-      if (
-        err.message.includes('temporarily unavailable') ||
-        err.message.includes('close it to be able to open it again')
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        continue;
-      }
-      throw err;
-    }
-  }
-  cache.ensure();
 });
 
 // Recursively copies a directory from the inputFS to the outputFS
 export async function ncp(source: FilePath, destination: FilePath) {
-  await _ncp(inputFS, source, outputFS, destination, (filePath) => {
-    return !filePath.includes('.parcel-cache');
-  });
+  await _ncp(inputFS, source, outputFS, destination);
 }
 
 // Mocha is currently run with exit: true because of this issue preventing us
@@ -160,8 +126,6 @@ export function getParcelOptions(
   return mergeParcelOptions(
     {
       entries,
-      cache,
-      cacheDir,
       shouldDisableCache: true,
       logLevel: 'none',
       shouldBundleIncrementally:
@@ -664,9 +628,7 @@ export function assertBundles(
   assert.equal(
     actualBundles.length,
     expectedBundles.length,
-    `Expected number of bundles mismatched\n\nActual bundles: \n\n${util.inspect(
-      actualBundles,
-    )}`,
+    'expected number of bundles mismatched',
   );
 
   for (let expectedBundle of expectedBundles) {

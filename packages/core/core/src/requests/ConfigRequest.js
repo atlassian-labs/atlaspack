@@ -63,7 +63,7 @@ export type ConfigRequest = {
   invalidateOnFileChange: Set<ProjectPath>,
   invalidateOnConfigKeyChange: Array<{|
     filePath: ProjectPath,
-    configKey: string[],
+    configKey: string,
   |}>,
   invalidateOnFileCreate: Array<InternalFileCreateInvalidation>,
   invalidateOnEnvChange: Set<string>,
@@ -108,58 +108,34 @@ export async function loadPluginConfig<T: PluginWithLoadConfig>(
   }
 }
 
-/**
- * Return value at a given key path within an object.
- *
- * @example
- *     const obj = { a: { b: { c: 'd' } } };
- *     getValueAtPath(obj, ['a', 'b', 'c']);        // 'd'
- *     getValueAtPath(obj, ['a', 'b', 'd']);        // undefined
- *     getValueAtPath(obj, ['a', 'b']);             // { c: 'd' }
- *     getValueAtPath(obj, ['a', 'b', 'c', 'd']);   // undefined
- */
-export function getValueAtPath(obj: Object, key: string[]): any {
-  let current = obj;
-  for (let part of key) {
-    if (current == null) {
-      return undefined;
-    }
-    current = current[part];
-  }
-  return current;
-}
-
 const configKeyCache = createBuildCache();
 
 export async function getConfigKeyContentHash(
   filePath: ProjectPath,
-  configKey: string[],
+  configKey: string,
   options: AtlaspackOptions,
 ): Async<string> {
-  let cacheKey = `${fromProjectPathRelative(filePath)}:${JSON.stringify(
-    configKey,
-  )}`;
+  let cacheKey = `${fromProjectPathRelative(filePath)}:${configKey}`;
   let cachedValue = configKeyCache.get(cacheKey);
 
   if (cachedValue) {
     return cachedValue;
   }
 
-  const conf = await readConfig(
+  let conf = await readConfig(
     options.inputFS,
     fromProjectPath(options.projectRoot, filePath),
   );
 
-  const value = getValueAtPath(conf?.config, configKey);
-  if (conf == null || value == null) {
+  if (conf == null || conf.config[configKey] == null) {
     // This can occur when a config key has been removed entirely during `respondToFSEvents`
     return '';
   }
 
-  const contentHash =
-    typeof value === 'object'
-      ? hashObject(value)
-      : hashString(JSON.stringify(value));
+  let contentHash =
+    typeof conf.config[configKey] === 'object'
+      ? hashObject(conf.config[configKey])
+      : hashString(JSON.stringify(conf.config[configKey]));
 
   configKeyCache.set(cacheKey, contentHash);
 

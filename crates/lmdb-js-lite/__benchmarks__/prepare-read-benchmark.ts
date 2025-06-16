@@ -48,6 +48,7 @@ async function main() {
     }),
   );
   await safeDB.commitWriteTransaction();
+  safeDB.close();
 }
 
 main().catch((err) => {

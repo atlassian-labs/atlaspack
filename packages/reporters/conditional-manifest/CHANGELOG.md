@@ -1,22 +1,5 @@
 # @atlaspack/reporter-conditional-manifest
 
-## 2.14.10
-
-### Patch Changes
-
-- Updated dependencies []:
-  - @atlaspack/plugin@2.14.10
-
-## 2.14.9
-
-### Patch Changes
-
-- [#503](https://github.com/atlassian-labs/atlaspack/pull/503) [`209692f`](https://github.com/atlassian-labs/atlaspack/commit/209692ffb11eae103a0d65c5e1118a5aa1625818) Thanks [@JakeLane](https://github.com/JakeLane)! - Fix conditional bundling reporter when condition is reused
-
-- Updated dependencies [[`209692f`](https://github.com/atlassian-labs/atlaspack/commit/209692ffb11eae103a0d65c5e1118a5aa1625818), [`f4da1e1`](https://github.com/atlassian-labs/atlaspack/commit/f4da1e120e73eeb5e8b8927f05e88f04d6148c7b)]:
-  - @atlaspack/feature-flags@2.16.0
-  - @atlaspack/plugin@2.14.9
-
 ## 2.14.8
 
 ### Patch Changes

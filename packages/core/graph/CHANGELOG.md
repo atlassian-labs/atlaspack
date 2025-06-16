@@ -1,18 +1,5 @@
 # @atlaspack/graph
 
-## 3.5.0
-
-### Minor Changes
-
-- [#600](https://github.com/atlassian-labs/atlaspack/pull/600) [`1b52b99`](https://github.com/atlassian-labs/atlaspack/commit/1b52b99db4298b04c1a6eb0f97994d75a2d436f9) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add static intersect, size and equals methods to BitSet
-
-## 3.4.7
-
-### Patch Changes
-
-- Updated dependencies [[`209692f`](https://github.com/atlassian-labs/atlaspack/commit/209692ffb11eae103a0d65c5e1118a5aa1625818), [`f4da1e1`](https://github.com/atlassian-labs/atlaspack/commit/f4da1e120e73eeb5e8b8927f05e88f04d6148c7b)]:
-  - @atlaspack/feature-flags@2.16.0
-
 ## 3.4.6
 
 ### Patch Changes

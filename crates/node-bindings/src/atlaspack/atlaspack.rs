@@ -10,7 +10,7 @@ use atlaspack::AtlaspackInitOptions;
 use atlaspack::WatchEvents;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use atlaspack_napi_helpers::JsTransferable;
-use lmdb_js_lite::DatabaseHandle;
+use lmdb_js_lite::writer::DatabaseWriter;
 use lmdb_js_lite::LMDB;
 use napi::bindgen_prelude::External;
 use napi::bindgen_prelude::FromNapiValue;
@@ -67,15 +67,16 @@ pub fn atlaspack_napi_create(
   };
 
   // Get access to LMDB reference
-  let db_handle = lmdb.get_database().clone();
-  atlaspack_napi_run_db_health_check(&db_handle)?;
+  let db_handle = lmdb.get_database_napi()?.clone();
+  let db_writer = db_handle.database();
+  atlaspack_napi_run_db_health_check(db_writer)?;
 
   // Get Atlaspack Options
   let options = env.from_js_value(napi_options.options)?;
   let get_workers = JsCallable::new_method_bound("getWorkers", &napi_options.napi_worker_pool)?;
 
   thread::spawn({
-    let db = db_handle.clone();
+    let db = db_writer.clone();
     move || {
       let workers = get_workers
         .call_blocking(
@@ -184,11 +185,10 @@ pub fn atlaspack_napi_respond_to_fs_events(
 /// to sequence writes with the JavaScript writes, we should be using the
 /// [`lmdb_js_lite::writer::DatabaseWriterHandle`] instead.
 #[tracing::instrument(level = "info", skip_all)]
-pub fn atlaspack_napi_run_db_health_check(db: &DatabaseHandle) -> napi::Result<()> {
+pub fn atlaspack_napi_run_db_health_check(db: &Arc<DatabaseWriter>) -> napi::Result<()> {
   let run_healthcheck = || -> anyhow::Result<()> {
-    let txn = db.database().read_txn()?;
+    let txn = db.read_txn()?;
     let value = db
-      .database()
       .get(&txn, "current_session_version")?
       .ok_or(anyhow!("Missing 'current_session_version' key in LMDB"))?;
     let value = str::from_utf8(&value)?;

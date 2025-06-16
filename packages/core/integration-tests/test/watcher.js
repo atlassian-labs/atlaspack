@@ -553,7 +553,7 @@ describe.v2('watcher', function () {
     }
 
     if (process.platform === 'darwin') {
-      it.skip('macOS - fs-events - fails to pick-up changes in a directory', async () => {
+      it('macOS - fs-events - fails to pick-up changes in a directory', async () => {
         const tempDir = tempy.directory();
         await nodeFS.promises.mkdir(tempDir, {recursive: true});
 

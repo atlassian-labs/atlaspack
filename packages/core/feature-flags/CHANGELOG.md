@@ -1,22 +1,5 @@
 # @atlaspack/feature-flags
 
-## 2.16.0
-
-### Minor Changes
-
-- [#582](https://github.com/atlassian-labs/atlaspack/pull/582) [`f4da1e1`](https://github.com/atlassian-labs/atlaspack/commit/f4da1e120e73eeb5e8b8927f05e88f04d6148c7b) Thanks [@matt-koko](https://github.com/matt-koko)! - Export DEFAULT_FEATURE_FLAGS so it will be included in the associate type declaration file and able to be imported elsewhere.
-
-  This will enable patterns like:
-
-  ```
-  import type { FeatureFlags } from '@atlaspack/feature-flags';
-  import { DEFAULT_FEATURE_FLAGS } from '@atlaspack/feature-flags';
-  ```
-
-### Patch Changes
-
-- [#503](https://github.com/atlassian-labs/atlaspack/pull/503) [`209692f`](https://github.com/atlassian-labs/atlaspack/commit/209692ffb11eae103a0d65c5e1118a5aa1625818) Thanks [@JakeLane](https://github.com/JakeLane)! - Fix conditional bundling reporter when condition is reused
-
 ## 2.15.1
 
 ### Patch Changes

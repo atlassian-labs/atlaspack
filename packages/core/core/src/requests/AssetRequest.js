@@ -21,7 +21,6 @@ import {fromProjectPath, fromProjectPathRelative} from '../projectPath';
 import {report} from '../ReporterRunner';
 import {requestTypes} from '../RequestTracker';
 import type {DevDepRequestResult} from './DevDepRequest';
-import {toEnvironmentId} from '../EnvironmentManager';
 
 type RunInput<TResult> = {|
   input: AssetRequestInput,
@@ -52,7 +51,7 @@ function getId(input: AssetRequestInput) {
   return hashString(
     type +
       fromProjectPathRelative(input.filePath) +
-      toEnvironmentId(input.env) +
+      input.env.id +
       String(input.isSource) +
       String(input.sideEffects) +
       (input.code ?? '') +

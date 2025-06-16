@@ -18,16 +18,16 @@ type Result<R> = std::result::Result<R, DatabaseWriterError>;
 #[derive(thiserror::Error, Debug)]
 pub enum DatabaseWriterError {
   #[error("heed error: {0}")]
-  Heed(#[from] heed::Error),
+  HeedError(#[from] heed::Error),
   #[error("IO error: {0}")]
-  IO(#[from] std::io::Error),
+  IOError(#[from] std::io::Error),
   #[error("Failed to decompress entry {0}")]
-  Decompress(#[from] lz4_flex::block::DecompressError),
+  DecompressError(#[from] lz4_flex::block::DecompressError),
   #[error("Failed to compress entry {0}")]
-  Compress(#[from] lz4_flex::block::CompressError),
+  CompressError(#[from] lz4_flex::block::CompressError),
 }
 
-#[derive(Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Clone, PartialOrd, PartialEq)]
 #[napi(object)]
 pub struct LMDBOptions {
   /// The database directory path
@@ -50,7 +50,8 @@ pub struct LMDBOptions {
 /// There is always a single writer thread per database.
 pub struct DatabaseWriterHandle {
   tx: Sender<DatabaseWriterMessage>,
-  thread_handle: Option<JoinHandle<()>>,
+  #[allow(unused)]
+  thread_handle: JoinHandle<()>,
 }
 
 impl DatabaseWriterHandle {
@@ -61,24 +62,11 @@ impl DatabaseWriterHandle {
   ) -> std::result::Result<(), crossbeam::channel::SendError<DatabaseWriterMessage>> {
     self.tx.send(message)
   }
-
-  pub fn thread_id(&self) -> std::thread::ThreadId {
-    self.thread_handle.as_ref().unwrap().thread().id()
-  }
-
-  pub fn join(&mut self) -> std::thread::Result<()> {
-    if let Some(thread_handle) = self.thread_handle.take() {
-      thread_handle.join()
-    } else {
-      Ok(())
-    }
-  }
 }
 
 impl Drop for DatabaseWriterHandle {
   fn drop(&mut self) {
     let _ = self.tx.send(DatabaseWriterMessage::Stop);
-    let _ = self.join();
   }
 }
 
@@ -102,21 +90,12 @@ pub fn start_make_database_writer(
     }
   });
 
-  Ok((
-    DatabaseWriterHandle {
-      tx,
-      thread_handle: Some(thread_handle),
-    },
-    writer,
-  ))
+  Ok((DatabaseWriterHandle { tx, thread_handle }, writer))
 }
 
 /// Main-loop for the database writer thread
 fn run_database_writer(rx: Receiver<DatabaseWriterMessage>, writer: Arc<DatabaseWriter>) {
-  tracing::debug!(
-    "Starting database writer thread {:?}",
-    std::thread::current().id()
-  );
+  tracing::debug!("Starting database writer thread");
   let mut current_transaction: Option<RwTxn> = None;
 
   while let Ok(msg) = rx.recv() {
@@ -128,11 +107,6 @@ fn run_database_writer(rx: Receiver<DatabaseWriterMessage>, writer: Arc<Database
   if let Some(txn) = current_transaction {
     let _ = txn.commit();
   }
-
-  tracing::debug!(
-    "Database writer thread {:?} exited",
-    std::thread::current().id()
-  );
 }
 
 #[allow(clippy::needless_lifetimes)]
@@ -177,16 +151,7 @@ fn handle_message<'a, 'b>(
       resolve(result);
     }
     DatabaseWriterMessage::Stop => {
-      tracing::debug!(
-        "Stopping writer thread {:?}...",
-        std::thread::current().id()
-      );
-
-      if let Some(txn) = current_transaction.take() {
-        if let Err(e) = txn.commit() {
-          tracing::error!("Failed to commit trailing transaction on shutdown: {e}");
-        }
-      }
+      tracing::debug!("Stopping writer thread");
       return true;
     }
     DatabaseWriterMessage::StartTransaction { resolve } => {
@@ -375,11 +340,6 @@ impl DatabaseWriter {
       env
     }?;
 
-    // If processes are terminated, they might leave stale readers on the DB
-    // the database will be unusable after it reaches a certain number of
-    // readers, so clean-up is useful on start-up.
-    environment.clear_stale_readers()?;
-
     let mut write_txn = environment.write_txn()?;
     let database = environment.create_database(&mut write_txn, None)?;
 
@@ -451,10 +411,6 @@ impl DatabaseWriter {
       .copy_to_file(target_path, heed::CompactionOption::Enabled)?;
 
     Ok(())
-  }
-
-  pub fn path(&self) -> &Path {
-    self.environment.path()
   }
 }
 
@@ -687,7 +643,8 @@ mod tests {
         write_txn.commit()?;
         Ok(())
       })();
-      if let Err(DatabaseWriterError::Heed(heed::Error::Mdb(heed::MdbError::MapFull))) = error {
+      if let Err(DatabaseWriterError::HeedError(heed::Error::Mdb(heed::MdbError::MapFull))) = error
+      {
         current_size *= 2;
         tracing::info!("Resizing database {current_size}");
         unsafe { read.environment.resize(current_size).unwrap() }

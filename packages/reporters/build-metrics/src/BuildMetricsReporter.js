@@ -63,7 +63,6 @@ export default (new Reporter({
         }),
       };
 
-      await options.outputFS.mkdirp(path.dirname(metricsFilePath));
       await options.outputFS.writeFile(
         metricsFilePath,
         JSON.stringify(metrics),

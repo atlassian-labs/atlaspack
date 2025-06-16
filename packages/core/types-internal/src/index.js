@@ -976,22 +976,11 @@ export interface Config {
   getConfigFrom<T>(
     searchPath: FilePath,
     filePaths: Array<FilePath>,
-    options?:
-      | {|
-          /**
-           * @deprecated Use `readTracking` instead.
-           */
-          packageKey?: string,
-          parse?: boolean,
-          exclude?: boolean,
-        |}
-      | {|
-          /**
-           * If specified, this function will return a proxy object that will track reads to
-           * config fields and only register invalidations for when those keys change.
-           */
-          readTracking?: boolean,
-        |},
+    options?: {|
+      packageKey?: string,
+      parse?: boolean,
+      exclude?: boolean,
+    |},
   ): Promise<?ConfigResultWithFilePath<T>>;
   /** Finds the nearest package.json from the config's searchPath. */
   getPackage(): Promise<?PackageJSON>;

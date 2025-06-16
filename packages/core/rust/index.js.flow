@@ -143,49 +143,39 @@ declare export class Hash {
   finish(): string;
 }
 
-export type Engines = {
-  +atlaspack?: string,
-  +browsers?: string | string[],
-  +electron?: string,
-  +node?: string,
-  +parcel?: string,
-  ...
-};
+export type Engines = {|
+  atlaspack?: string,
+  browsers?: string | string[],
+  electron?: string,
+  node?: string,
+|};
 
 export type Environment = {|
-  +context:
-    | 'browser'
-    | 'node'
-    | 'electron-main'
-    | 'electron-renderer'
-    | 'web-worker'
-    | 'worklet'
-    | 'service-worker',
-  +engines: Engines,
-  +includeNodeModules: IncludeNodeModules,
-  +isLibrary: boolean,
-  +loc: ?SourceLocation,
-  +outputFormat: 'esmodule' | 'commonjs' | 'global',
-  +shouldScopeHoist: boolean,
-  +shouldOptimize: boolean,
-  +sourceMap: ?{|
-    +inline?: boolean,
-    +inlineSources?: boolean,
-    +sourceRoot?: string,
+  context: string,
+  engines: Engines,
+  includeNodeModules: IncludeNodeModules,
+  isLibrary: boolean,
+  loc?: SourceLocation,
+  outputFormat: string,
+  shouldScopeHoist: boolean,
+  shouldOptimize: boolean,
+  sourceMap?: {|
+    inline?: boolean,
+    inlineSources?: boolean,
+    sourceRoot?: string,
   |},
-  +sourceType: 'script' | 'module',
-  +unstableSingleFileOutput: boolean,
+  sourceType: string,
 |};
 
 export type SourceLocation = {|
-  +filePath: ProjectPath,
-  +start: {|
-    +line: number,
-    +column: number,
+  filePath: string,
+  start: {|
+    line: number,
+    column: number,
   |},
-  +end: {|
-    +line: number,
-    +column: number,
+  end: {|
+    line: number,
+    column: number,
   |},
 |};
 
@@ -355,6 +345,7 @@ declare export class Lmdb {
   startWriteTransaction(): Promise<void>;
   commitWriteTransaction(): Promise<void>;
   delete(key: string): Promise<void>;
+  close(): void;
   compact(targetPath: string): void;
 }
 
@@ -452,25 +443,3 @@ declare export class AtlaspackTracer {
   enter(label: string): number;
   exit(id: number): void;
 }
-
-declare export function setAllEnvironments(
-  environments: Array<{|
-    ...Environment,
-    id: string,
-  |}>,
-): void;
-
-declare export function getAllEnvironments(): Array<{|
-  ...Environment,
-  id: string,
-|}>;
-
-declare export function getEnvironment(id: string): {|
-  ...Environment,
-  id: string,
-|};
-
-declare export function addEnvironment(environment: {|
-  ...Environment,
-  id: string,
-|}): void;

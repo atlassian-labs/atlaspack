@@ -21,13 +21,6 @@ type ManualSharedBundles = Array<{|
   split?: number,
 |}>;
 
-export type MergeCandidates = Array<{|
-  overlapThreshold?: number,
-  maxBundleSize?: number,
-  sourceBundles?: Array<string>,
-  minBundlesInGroup?: number,
-|}>;
-
 type BaseBundlerConfig = {|
   http?: number,
   minBundles?: number,
@@ -36,7 +29,7 @@ type BaseBundlerConfig = {|
   disableSharedBundles?: boolean,
   manualSharedBundles?: ManualSharedBundles,
   loadConditionalBundlesInParallel?: boolean,
-  sharedBundleMerge?: MergeCandidates,
+  sharedBundleMergeThreshold?: number,
 |};
 
 type BundlerConfig = {|
@@ -51,7 +44,7 @@ export type ResolvedBundlerConfig = {|
   disableSharedBundles: boolean,
   manualSharedBundles: ManualSharedBundles,
   loadConditionalBundlesInParallel?: boolean,
-  sharedBundleMerge?: MergeCandidates,
+  sharedBundleMergeThreshold: number,
 |};
 
 function resolveModeConfig(
@@ -86,7 +79,7 @@ const HTTP_OPTIONS = {
     minBundleSize: 30000,
     maxParallelRequests: 6,
     disableSharedBundles: false,
-    sharedBundleMerge: [],
+    sharedBundleMergeThreshold: 1,
   },
   '2': {
     minBundles: 1,
@@ -94,7 +87,7 @@ const HTTP_OPTIONS = {
     minBundleSize: 20000,
     maxParallelRequests: 25,
     disableSharedBundles: false,
-    sharedBundleMerge: [],
+    sharedBundleMergeThreshold: 1,
   },
 };
 
@@ -133,30 +126,6 @@ const CONFIG_SCHEMA: SchemaEntity = {
           },
         },
         required: ['name', 'assets'],
-        additionalProperties: false,
-      },
-    },
-    sharedBundleMerge: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          overlapThreshold: {
-            type: 'number',
-          },
-          maxBundleSize: {
-            type: 'number',
-          },
-          sourceBundles: {
-            type: 'array',
-            items: {
-              type: 'string',
-            },
-          },
-          minBundlesInGroup: {
-            type: 'number',
-          },
-        },
         additionalProperties: false,
       },
     },
@@ -271,8 +240,9 @@ export async function loadBundlerConfig(
   return {
     minBundles: modeConfig.minBundles ?? defaults.minBundles,
     minBundleSize: modeConfig.minBundleSize ?? defaults.minBundleSize,
-    sharedBundleMerge:
-      modeConfig.sharedBundleMerge ?? defaults.sharedBundleMerge,
+    sharedBundleMergeThreshold:
+      modeConfig.sharedBundleMergeThreshold ??
+      defaults.sharedBundleMergeThreshold,
     maxParallelRequests:
       modeConfig.maxParallelRequests ?? defaults.maxParallelRequests,
     projectRoot: options.projectRoot,

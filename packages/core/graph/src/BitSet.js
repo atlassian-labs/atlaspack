@@ -28,12 +28,6 @@ export class BitSet {
     return res;
   }
 
-  static intersect(a: BitSet, b: BitSet): BitSet {
-    let res = a.clone();
-    res.intersect(b);
-    return res;
-  }
-
   get capacity(): number {
     return this.bits.length * 32;
   }
@@ -86,31 +80,6 @@ export class BitSet {
     for (let i = 0; i < this.bits.length; i++) {
       this.bits[i] &= ~other.bits[i];
     }
-  }
-
-  size(): number {
-    let bits = this.bits;
-    let setBitsCount = 0;
-
-    for (let k = 0; k < bits.length; k++) {
-      let chunk = bits[k];
-
-      while (chunk !== 0) {
-        chunk &= chunk - 1; // Clear the least significant bit set
-        setBitsCount++;
-      }
-    }
-
-    return setBitsCount;
-  }
-
-  equals(other: BitSet): boolean {
-    for (let i = 0; i < this.bits.length; i++) {
-      if (this.bits[i] !== other.bits[i]) {
-        return false;
-      }
-    }
-    return true;
   }
 
   forEach(fn: (bit: number) => void) {

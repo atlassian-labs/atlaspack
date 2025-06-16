@@ -1,32 +1,5 @@
 # @atlaspack/fs
 
-## 2.15.5
-
-### Patch Changes
-
-- [#597](https://github.com/atlassian-labs/atlaspack/pull/597) [`0999fb7`](https://github.com/atlassian-labs/atlaspack/commit/0999fb78da519a6c7582d212883e515fcf6c1252) Thanks [@yamadapc](https://github.com/yamadapc)! - Reduce verbosity of logging
-
-- Updated dependencies [[`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b), [`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c), [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca)]:
-  - @atlaspack/types-internal@2.14.8
-  - @atlaspack/rust@3.3.5
-  - @atlaspack/workers@2.14.10
-  - @atlaspack/logger@2.14.10
-  - @atlaspack/utils@2.14.10
-
-## 2.15.4
-
-### Patch Changes
-
-- [#591](https://github.com/atlassian-labs/atlaspack/pull/591) [`e4d966c`](https://github.com/atlassian-labs/atlaspack/commit/e4d966c3c9c4292c5013372ae65b10d19d4bacc6) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix bug where renames would not get handled correctly
-
-- Updated dependencies [[`124b7ff`](https://github.com/atlassian-labs/atlaspack/commit/124b7fff44f71aac9fbad289a9a9509b3dfc9aaa), [`e052521`](https://github.com/atlassian-labs/atlaspack/commit/e0525210850ed1606146eb86991049cf567c5dec), [`15c6d70`](https://github.com/atlassian-labs/atlaspack/commit/15c6d7000bd89da876bc590aa75b17a619a41896), [`e4d966c`](https://github.com/atlassian-labs/atlaspack/commit/e4d966c3c9c4292c5013372ae65b10d19d4bacc6), [`209692f`](https://github.com/atlassian-labs/atlaspack/commit/209692ffb11eae103a0d65c5e1118a5aa1625818), [`42a775d`](https://github.com/atlassian-labs/atlaspack/commit/42a775de8eec638ad188f3271964170d8c04d84b), [`29c2f10`](https://github.com/atlassian-labs/atlaspack/commit/29c2f106de9679adfb5afa04e1910471dc65a427), [`f4da1e1`](https://github.com/atlassian-labs/atlaspack/commit/f4da1e120e73eeb5e8b8927f05e88f04d6148c7b), [`1ef91fc`](https://github.com/atlassian-labs/atlaspack/commit/1ef91fcc863fdd2831511937083dbbc1263b3d9d)]:
-  - @atlaspack/rust@3.3.4
-  - @atlaspack/feature-flags@2.16.0
-  - @atlaspack/logger@2.14.9
-  - @atlaspack/utils@2.14.9
-  - @atlaspack/types-internal@2.14.7
-  - @atlaspack/workers@2.14.9
-
 ## 2.15.3
 
 ### Patch Changes

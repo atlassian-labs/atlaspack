@@ -1,37 +1,5 @@
 # @atlaspack/rust
 
-## 3.3.5
-
-### Patch Changes
-
-- [#594](https://github.com/atlassian-labs/atlaspack/pull/594) [`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix issue where cache database could become invalid due to stale readers
-
-- [#572](https://github.com/atlassian-labs/atlaspack/pull/572) [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca) Thanks [@yamadapc](https://github.com/yamadapc)! - Add feature-flagged change which removes all environment duplication around objects
-
-## 3.3.4
-
-### Patch Changes
-
-- [#583](https://github.com/atlassian-labs/atlaspack/pull/583) [`124b7ff`](https://github.com/atlassian-labs/atlaspack/commit/124b7fff44f71aac9fbad289a9a9509b3dfc9aaa) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix problem where cache writes could start to fail during a V3 build
-
-- [#568](https://github.com/atlassian-labs/atlaspack/pull/568) [`e052521`](https://github.com/atlassian-labs/atlaspack/commit/e0525210850ed1606146eb86991049cf567c5dec) Thanks [@yamadapc](https://github.com/yamadapc)! - Migrate to parking_lot locks to prevent crashes
-
-- [#564](https://github.com/atlassian-labs/atlaspack/pull/564) [`15c6d70`](https://github.com/atlassian-labs/atlaspack/commit/15c6d7000bd89da876bc590aa75b17a619a41896) Thanks [@benjervis](https://github.com/benjervis)! - The `SourceField` enum in package.json parsing is now marked as "untagged", allowing it to be parsed properly.
-
-- [#591](https://github.com/atlassian-labs/atlaspack/pull/591) [`e4d966c`](https://github.com/atlassian-labs/atlaspack/commit/e4d966c3c9c4292c5013372ae65b10d19d4bacc6) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix bug where renames would not get handled correctly
-
-- [#569](https://github.com/atlassian-labs/atlaspack/pull/569) [`42a775d`](https://github.com/atlassian-labs/atlaspack/commit/42a775de8eec638ad188f3271964170d8c04d84b) Thanks [@benjervis](https://github.com/benjervis)! - There are three types of results that a resolver can return:
-
-  - A successful resolution
-  - "Unresolved" when the resolver could not find a match
-  - "Excluded" when the result should not be included in the bundle
-
-  This last case wasn't being handle in the NAPI conversion layer, and so was falling through as a successful resolution with no details.
-
-- [#589](https://github.com/atlassian-labs/atlaspack/pull/589) [`29c2f10`](https://github.com/atlassian-labs/atlaspack/commit/29c2f106de9679adfb5afa04e1910471dc65a427) Thanks [@yamadapc](https://github.com/yamadapc)! - Do not use libgit
-
-- [#586](https://github.com/atlassian-labs/atlaspack/pull/586) [`1ef91fc`](https://github.com/atlassian-labs/atlaspack/commit/1ef91fcc863fdd2831511937083dbbc1263b3d9d) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix issue where LMDB database handle could become invalid
-
 ## 3.3.3
 
 ### Patch Changes
