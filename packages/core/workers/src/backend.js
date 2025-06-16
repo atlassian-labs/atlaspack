@@ -11,12 +11,8 @@ export function detectBackend(): BackendType {
       return process.env.ATLASPACK_WORKER_BACKEND;
   }
 
-  try {
-    require('worker_threads');
-    return 'threads';
-  } catch (err) {
-    return 'process';
-  }
+  // default to threads if no explicit option has been passed
+  return 'threads';
 }
 
 export function getWorkerBackend(backend: BackendType): Class<WorkerImpl> {
@@ -25,8 +21,6 @@ export function getWorkerBackend(backend: BackendType): Class<WorkerImpl> {
       return require('./threads/ThreadsWorker').default;
     case 'process':
       return require('./process/ProcessWorker').default;
-    case 'web':
-      return require('./web/WebWorker').default;
     default:
       throw new Error(`Invalid backend: ${backend}`);
   }

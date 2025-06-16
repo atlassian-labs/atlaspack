@@ -25,6 +25,7 @@ import {
   bundleBehaviorMap,
   dependencyPriorityMap,
 } from './compat';
+import atlaspackInternalPlugins from '../../internal-plugins';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 
@@ -41,10 +42,16 @@ export class AtlaspackWorker {
 
   loadPlugin: JsCallable<[LoadPluginOptions], Promise<void>> = jsCallable(
     async ({kind, specifier, resolveFrom}) => {
-      let customRequire = module.createRequire(resolveFrom);
-      let resolvedPath = customRequire.resolve(specifier);
-      // $FlowFixMe
-      let resolvedModule = await import(resolvedPath);
+      let resolvedModule;
+      if (atlaspackInternalPlugins && atlaspackInternalPlugins[specifier]) {
+        // If the plugin is available inside the package then use it
+        resolvedModule = atlaspackInternalPlugins[specifier]();
+      } else {
+        let customRequire = module.createRequire(resolveFrom);
+        let resolvedPath = customRequire.resolve(specifier);
+        // $FlowFixMe
+        resolvedModule = await import(resolvedPath);
+      }
 
       let instance = undefined;
       if (resolvedModule.default && resolvedModule.default[CONFIG]) {

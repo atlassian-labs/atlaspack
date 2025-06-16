@@ -30,6 +30,19 @@ import Logger from '@atlaspack/logger';
 import nullthrows from 'nullthrows';
 import {md} from '@atlaspack/diagnostic';
 
+const paths =
+  process.env.SUPER_PACKAGE === 'true'
+    ? {
+        jsTransformer: normalizePath(
+          require.resolve('atlaspack/lib/transformers/js/JSTransformer.js'),
+        ),
+      }
+    : {
+        jsTransformer: normalizePath(
+          require.resolve('@atlaspack/transformer-js/src/JSTransformer.js'),
+        ),
+      };
+
 describe('javascript', function () {
   beforeEach(async () => {
     await removeDistDirectory();
@@ -3980,11 +3993,9 @@ describe('javascript', function () {
           name: 'BuildError',
           diagnostics: [
             {
-              message: md`Failed to resolve '${'@swc/helpers/cjs/_class_call_check.cjs'}' from '${normalizePath(
-                require.resolve(
-                  '@atlaspack/transformer-js/src/JSTransformer.js',
-                ),
-              )}'`,
+              message: md`Failed to resolve '${'@swc/helpers/cjs/_class_call_check.cjs'}' from '${
+                paths.jsTransformer
+              }'`,
               origin: '@atlaspack/core',
               codeFrames: [
                 {
@@ -4074,11 +4085,9 @@ describe('javascript', function () {
           name: 'BuildError',
           diagnostics: [
             {
-              message: md`Failed to resolve '${'@swc/helpers/cjs/_class_call_check.cjs'}' from '${normalizePath(
-                require.resolve(
-                  '@atlaspack/transformer-js/src/JSTransformer.js',
-                ),
-              )}'`,
+              message: md`Failed to resolve '${'@swc/helpers/cjs/_class_call_check.cjs'}' from '${
+                paths.jsTransformer
+              }'`,
               origin: '@atlaspack/core',
               codeFrames: [
                 {

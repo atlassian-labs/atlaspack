@@ -30,6 +30,7 @@ import {detectBackend} from './backend';
 import {SamplingProfiler, Trace} from '@atlaspack/profiler';
 import fs from 'fs';
 import logger from '@atlaspack/logger';
+import {isSuperPackage} from '@atlaspack/core';
 
 let referenceId = 1;
 
@@ -343,8 +344,15 @@ export default class WorkerFarm extends EventEmitter {
     if (handleId != null) {
       mod = nullthrows(this.handles.get(handleId)?.fn);
     } else if (location) {
-      // $FlowFixMe
-      if (process.browser) {
+      if (isSuperPackage()) {
+        // Fixes for super package builds as they require static requires
+        if (location.endsWith('core/workers/bus.js')) {
+          mod = (bus: any);
+        } else {
+          throw new Error('No dynamic require possible: ' + location);
+        }
+        // $FlowFixMe
+      } else if (process.browser) {
         if (location === '@atlaspack/workers/bus') {
           mod = (bus: any);
         } else {

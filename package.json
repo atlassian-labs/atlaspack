@@ -22,6 +22,7 @@
     "build": "yarn build-bundles && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production gulp",
     "build-bundles": "rimraf --glob packages/*/*/lib && lerna run dev:prepare && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SELF_BUILD=true atlaspack build --feature-flag cachePerformanceImprovements=true --no-cache packages/core/{eslint-plugin,fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}",
     "build-ts": "lerna run build-ts && lerna run check-ts",
+    "build-super": "yarn workspace atlaspack build",
     "build-native": "node scripts/build-native.js",
     "build-native-release": "cross-env CARGO_PROFILE=release node scripts/build-native.js",
     "build-native-wasm": "cross-env CARGO_PROFILE=release RUSTUP_TARGET=wasm32-unknown-unknown scripts/build-native.js",
@@ -35,21 +36,21 @@
     "check": "flow check",
     "lint": "node ./scripts/lint-all.mjs",
     "prepublishOnly": "yarn pre-publish",
-    "pre-publish": "yarn build && yarn build-ts",
+    "pre-publish": "yarn build && yarn build-ts && yarn build-super && yarn workspace atlaspack upload-sourcemaps",
     "changesets-publish": "yarn pre-publish && yarn changeset publish",
     "test": "yarn test:unit && yarn test:integration",
     "test:e2e": "yarn workspace @atlaspack/e2e-tests test",
     "test:e2e:ci": "yarn workspace @atlaspack/e2e-tests test-ci",
     "test:integration": "yarn workspace @atlaspack/integration-tests test",
     "test:integration:v3": "ATLASPACK_V3=true yarn workspace @atlaspack/integration-tests test",
-    "test:integration-ci": "yarn workspace @atlaspack/integration-tests test-ci",
+    "test:integration:super": "SUPER_PACKAGE=true yarn workspace @atlaspack/integration-tests test:super",
     "test:js": "yarn test:js:unit && yarn test:integration",
     "test:js:coverage": "yarn nyc yarn test:js:unit",
     "test:js:coverage:report": "yarn nyc report --reporter=html-spa",
     "test:js:unit": "cross-env NODE_ENV=test mocha --conditions=\"@atlaspack::sources\" --timeout 5000",
     "test:unit": "yarn test:js:unit && cargo test",
     "dev:release": "lerna publish -y --canary --preid dev --dist-tag=dev --exact --force-publish=* --no-git-tag-version --no-push",
-    "canary:release": "lerna publish -y --canary --preid canary --dist-tag=canary --exact --force-publish=* --no-push",
+    "canary:release": "lerna publish -y --canary --preid canary --dist-tag=canary --exact --force-publish=* --no-git-tag-version --no-push",
     "tag:prerelease": "lerna version --exact --force-publish=* --no-git-tag-version --no-push",
     "tag:release": "lerna version --exact --force-publish=* --no-git-tag-version --no-push",
     "release": "lerna publish -y from-package --pre-dist-tag=next --no-git-tag-version --no-push",
@@ -102,5 +103,10 @@
   "dependencies": {
     "nodemon": "^3.1.9",
     "patch-package": "^8.0.0"
+  },
+  "alias": {
+    "@swc/wasm": false,
+    "@atlaspack/babel-register": false,
+    "lmdb": false
   }
 }

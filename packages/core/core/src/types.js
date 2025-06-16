@@ -285,6 +285,7 @@ export type AtlaspackOptions = {|
   defaultConfig?: DependencySpecifier,
   env: EnvMap,
   parcelVersion: string,
+  isAtlaspackSuper?: boolean,
   targets: ?(Array<string> | {+[string]: TargetDescriptor, ...}),
   shouldDisableCache: boolean,
   cacheDir: FilePath,

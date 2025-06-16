@@ -1,6 +1,7 @@
 // @flow strict-local
 
 import type {FileSystem} from '@atlaspack/fs';
+import * as babel from '@babel/core';
 
 import assert from 'assert';
 import nullthrows from 'nullthrows';
@@ -136,7 +137,27 @@ export async function applyFixture(
       break;
     }
     case 'file': {
-      await fs.writeFile(path.join(dir, node.name), node.content);
+      let content = node.content;
+      if (node.name.endsWith('.js')) {
+        try {
+          let {code: transformed} = babel.transformSync(content, {
+            configFile: false,
+            plugins: [
+              [
+                '@atlaspack/babel-register/babel-plugin-module-translate',
+                {superPackage: process.env.SUPER_PACKAGE === 'true'},
+              ],
+            ],
+            generatorOpts: {
+              retainLines: true,
+            },
+          });
+          content = transformed;
+        } catch (e) {
+          // Ignore parser errors as some tests intentionally have invalid syntax
+        }
+      }
+      await fs.writeFile(path.join(dir, node.name), content);
       break;
     }
     case 'link': {

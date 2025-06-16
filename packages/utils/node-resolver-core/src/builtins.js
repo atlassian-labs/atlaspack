@@ -1,11 +1,15 @@
 // @flow strict-local
 // $FlowFixMe this is untyped
 import {builtinModules} from 'module';
+import path from 'path';
 import nullthrows from 'nullthrows';
 // flowlint-next-line untyped-import:off
 import packageJson from '../package.json';
 
-export const empty: string = require.resolve('./_empty.js');
+export const empty: string = path.join(
+  /*#__ATLASPACK_IGNORE__*/ __dirname,
+  './_empty.js',
+);
 
 let builtins: {[string]: {|name: string, range: ?string|}, ...} =
   // $FlowFixMe

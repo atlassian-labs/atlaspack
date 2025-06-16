@@ -10,4 +10,6 @@ export {
   INTERNAL_TRANSFORM,
 } from './Atlaspack';
 
+export {isSuperPackage} from './isSuperPackage';
+
 export * from './atlaspack-v3';

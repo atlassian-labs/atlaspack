@@ -19,6 +19,20 @@ import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
 import path from 'path';
 import nullthrows from 'nullthrows';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {isSuperPackage} from '@atlaspack/core';
+
+const domainShardingImports = isSuperPackage()
+  ? {
+      specifier: 'atlaspack/lib/domain-sharding.js',
+      helper: './helpers/browser/esm-js-loader-shards-super.js',
+    }
+  : {
+      specifier: '@atlaspack/domain-sharding',
+      helper: './helpers/browser/esm-js-loader-shards.js',
+    };
+
+const filename = /*#__ATLASPACK_IGNORE__*/ __filename;
+const dirname = /*#__ATLASPACK_IGNORE__*/ __dirname;
 
 // Used for as="" in preload/prefetch
 const TYPE_TO_RESOURCE_PRIORITY = {
@@ -157,7 +171,7 @@ export default (new Runtime({
           // return a simple runtime of `Promise.resolve(internalRequire(assetId))`.
           // The linker handles this for scope-hoisting.
           assets.push({
-            filePath: __filename,
+            filePath: filename,
             code: `module.exports = Promise.resolve(module.bundle.root(${JSON.stringify(
               bundleGraph.getAssetPublicId(resolved.value),
             )}))`,
@@ -174,10 +188,7 @@ export default (new Runtime({
         );
         if (referencedBundle?.bundleBehavior === 'inline') {
           assets.push({
-            filePath: path.join(
-              __dirname,
-              `/bundles/${referencedBundle.id}.js`,
-            ),
+            filePath: path.join(dirname, `/bundles/${referencedBundle.id}.js`),
             code: `module.exports = Promise.resolve(${JSON.stringify(
               dependency.id,
             )});`,
@@ -222,7 +233,7 @@ export default (new Runtime({
         }')}, function (){return ${requireName}('${cond.ifFalseAssetId}')})`;
 
         assets.push({
-          filePath: path.join(__dirname, `/conditions/${cond.publicId}.js`),
+          filePath: path.join(dirname, `/conditions/${cond.publicId}.js`),
           code: assetCode,
           // This dependency is important, as it's the last symbol handled in scope hoisting.
           // That means that scope hoisting will use the module id for this asset to replace the symbol
@@ -242,7 +253,7 @@ export default (new Runtime({
       );
       if (referencedBundle?.bundleBehavior === 'inline') {
         assets.push({
-          filePath: path.join(__dirname, `/bundles/${referencedBundle.id}.js`),
+          filePath: path.join(dirname, `/bundles/${referencedBundle.id}.js`),
           code: `module.exports = ${JSON.stringify(dependency.id)};`,
           dependency,
           env: {sourceType: 'module'},
@@ -257,7 +268,7 @@ export default (new Runtime({
         // If a URL dependency was not able to be resolved, add a runtime that
         // exports the original specifier.
         assets.push({
-          filePath: __filename,
+          filePath: filename,
           code: `module.exports = ${JSON.stringify(dependency.specifier)}`,
           dependency,
           env: {sourceType: 'module'},
@@ -276,6 +287,19 @@ export default (new Runtime({
           return entries.some((e) => bundleGroup.entryAssetId === e.id);
         }),
       );
+
+      // Skip URL runtime for native node imports as they need to be require
+      // directly
+      // Currently enabled only for internal builds
+      if (process.env.ATLASPACK_SUPER_BUILD === 'true') {
+        if (
+          mainBundle.bundleBehavior === 'isolated' &&
+          mainBundle.env.context === 'node' &&
+          mainBundle.type === 'node'
+        ) {
+          continue;
+        }
+      }
 
       // Skip URL runtimes for library builds. This is handled in packaging so that
       // the url is inlined and statically analyzable.
@@ -324,7 +348,7 @@ export default (new Runtime({
           config.domainSharding,
         )})`;
         assets.push({
-          filePath: __filename,
+          filePath: filename,
           code: loaderCode,
           isEntry: true,
           env: {sourceType: 'module'},
@@ -340,7 +364,7 @@ export default (new Runtime({
       isNewContext(bundle, bundleGraph)
     ) {
       assets.push({
-        filePath: __filename,
+        filePath: filename,
         code: getRegisterCode(bundle, bundleGraph),
         isEntry: true,
         env: {sourceType: 'module'},
@@ -489,7 +513,7 @@ function getLoaderRuntime({
       absoluteUrlExpr = `require('./helpers/bundle-manifest').resolve(${publicId})`;
 
       if (shardingConfig) {
-        absoluteUrlExpr = `require('@atlaspack/domain-sharding').shardUrl(${absoluteUrlExpr}, ${shardingConfig.maxShards})`;
+        absoluteUrlExpr = `require('${domainShardingImports.specifier}').shardUrl(${absoluteUrlExpr}, ${shardingConfig.maxShards})`;
       }
     } else {
       absoluteUrlExpr = getAbsoluteUrlExpr(
@@ -685,7 +709,7 @@ function getLoaderRuntime({
       }})`;
 
     return {
-      filePath: __filename,
+      filePath: filename,
       code: loaderCode,
       dependency,
       env: {sourceType: 'module'},
@@ -696,7 +720,7 @@ function getLoaderRuntime({
 
   if (needsEsmLoadPrelude) {
     let preludeLoad = shardingConfig
-      ? `let load = require('./helpers/browser/esm-js-loader-shards')(${shardingConfig.maxShards});`
+      ? `let load = require('${domainShardingImports.helper}')(${shardingConfig.maxShards});`
       : `let load = require('./helpers/browser/esm-js-loader');`;
 
     code.push(preludeLoad);
@@ -705,7 +729,7 @@ function getLoaderRuntime({
   code.push(`module.exports = ${loaderCode};`);
 
   return {
-    filePath: __filename,
+    filePath: filename,
     code: code.join('\n'),
     dependency,
     env: {sourceType: 'module'},
@@ -818,7 +842,7 @@ function getURLRuntime(
       code += `let bundleURL = require('./helpers/bundle-url');\n`;
       code += `let url = bundleURL.getBundleURL('${from.publicId}') + ${relativePathExpr};`;
       if (shardingConfig) {
-        code += `url = require('@atlaspack/domain-sharding').shardUrl(url, ${shardingConfig.maxShards});`;
+        code += `url = require('${domainShardingImports.specifier}').shardUrl(url, ${shardingConfig.maxShards});`;
       }
       code += `module.exports = workerURL(url, bundleURL.getOrigin(url), ${String(
         from.env.outputFormat === 'esmodule',
@@ -833,7 +857,7 @@ function getURLRuntime(
   }
 
   return {
-    filePath: __filename,
+    filePath: filename,
     code,
     dependency,
     env: {sourceType: 'module'},
@@ -919,7 +943,7 @@ function getAbsoluteUrlExpr(
     return regularBundleUrl;
   }
 
-  return `require('@atlaspack/domain-sharding').shardUrl(${regularBundleUrl}, ${shardingConfig.maxShards})`;
+  return `require('${domainShardingImports.specifier}').shardUrl(${regularBundleUrl}, ${shardingConfig.maxShards})`;
 }
 
 function shouldUseRuntimeManifest(
