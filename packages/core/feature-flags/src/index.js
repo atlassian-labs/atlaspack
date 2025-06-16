@@ -37,6 +37,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   conditionalBundlingReporterDuplicateFix: false,
   resolveBundlerConfigFromCwd: false,
   conditionalBundlingReporterSameConditionFix: false,
+  condbHtmlPackagerChange: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
