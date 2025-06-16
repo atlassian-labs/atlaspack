@@ -535,10 +535,11 @@ export default class Atlaspack {
           nativeInvalid = await this.rustAtlaspack.respondToFsEvents(events);
         }
 
-        let isInvalid = await this.#requestTracker.respondToFSEvents(
-          events,
-          Number.POSITIVE_INFINITY,
-        );
+        let {didInvalidate: isInvalid} =
+          await this.#requestTracker.respondToFSEvents(
+            events,
+            Number.POSITIVE_INFINITY,
+          );
 
         if (
           (nativeInvalid || isInvalid) &&
