@@ -637,7 +637,6 @@ export class ScopeHoistingPackager {
     code += append;
 
     let lineCount = 0;
-    let inlinedContent = [];
     if (depMap.size === 0 && replacements.size === 0) {
       // If there are no dependencies or replacements, use a simple function to count the number of lines.
       lineCount = countLines(code) - 1;
@@ -756,17 +755,6 @@ export class ScopeHoistingPackager {
       // Offset by one line for the parcelRequire.register wrapper.
       sourceMap?.offsetLines(1, 1);
       lineCount++;
-
-      for (let unwrappedContent of inlinedContent) {
-        if (unwrappedContent) {
-          let [depCode, map, lines] = unwrappedContent;
-          code = depCode + '\n' + code;
-          if (sourceMap && map) {
-            sourceMap.addSourceMap(map, lines);
-          }
-          lineCount += 1 + lines;
-        }
-      }
 
       code = `parcelRegister(${JSON.stringify(
         this.bundleGraph.getAssetPublicId(asset),
