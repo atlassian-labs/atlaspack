@@ -1,5 +1,15 @@
 # @atlaspack/packager-js
 
+## 2.14.11
+
+### Patch Changes
+
+- Updated dependencies [[`73ea3c4`](https://github.com/atlassian-labs/atlaspack/commit/73ea3c4d85d4401fdd15abcbf988237e890e7ad3)]:
+  - @atlaspack/feature-flags@2.17.0
+  - @atlaspack/utils@2.14.11
+  - @atlaspack/types@2.15.1
+  - @atlaspack/plugin@2.14.11
+
 ## 2.14.10
 
 ### Patch Changes
