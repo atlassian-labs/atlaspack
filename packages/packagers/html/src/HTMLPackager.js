@@ -13,6 +13,7 @@ import {
   urlJoin,
 } from '@atlaspack/utils';
 import nullthrows from 'nullthrows';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 // https://www.w3.org/TR/html5/dom.html#metadata-content-2
 const metadataContent = new Set([
@@ -76,16 +77,23 @@ export default (new Packager({
     ];
 
     let conditionalBundles = config.evaluateRootConditionalBundles
-      ? setDifference(
-          new Set([
-            ...referencedBundlesRecursive.flatMap((referencedBundle) =>
-              bundleGraph.getReferencedConditionalBundles(referencedBundle),
+      ? getFeatureFlag('condbHtmlPackagerChange')
+        ? setDifference(
+            getReferencedConditionalScripts(
+              bundleGraph,
+              referencedBundlesRecursive,
             ),
-          ]),
-          new Set(referencedBundles),
-        )
+            new Set(referencedBundles),
+          )
+        : setDifference(
+            new Set([
+              ...referencedBundlesRecursive.flatMap((referencedBundle) =>
+                bundleGraph.getReferencedConditionalBundles(referencedBundle),
+              ),
+            ]),
+            new Set(referencedBundles),
+          )
       : new Set();
-
     let renderConfig = config?.render;
 
     let {html} = await posthtml([
@@ -283,4 +291,29 @@ function findBundleInsertIndex(content) {
   }
 
   return doctypeIndex ? doctypeIndex + 1 : 0;
+}
+
+function getReferencedConditionalScripts(
+  bundleGraph: BundleGraph<NamedBundle>,
+  referencedBundles: NamedBundle[],
+): Set<NamedBundle> {
+  const conditionalBundleMapping = bundleGraph.getConditionalBundleMapping();
+
+  const bundles = [];
+  for (const bundle of referencedBundles) {
+    const conditions = conditionalBundleMapping.get(bundle.id);
+    if (conditions) {
+      for (const [, cond] of conditions) {
+        // Reverse so dependent bundles are loaded first
+        const dependentBundles = [
+          ...cond.ifTrueBundles.reverse(),
+          ...cond.ifFalseBundles.reverse(),
+        ];
+        bundles.push(...dependentBundles);
+        referencedBundles.push(...dependentBundles);
+      }
+    }
+  }
+
+  return new Set(bundles);
 }
