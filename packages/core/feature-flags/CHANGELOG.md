@@ -1,5 +1,15 @@
 # @atlaspack/feature-flags
 
+## 2.17.0
+
+### Minor Changes
+
+- [#619](https://github.com/atlassian-labs/atlaspack/pull/619) [`73ea3c4`](https://github.com/atlassian-labs/atlaspack/commit/73ea3c4d85d4401fdd15abcbf988237e890e7ad3) Thanks [@matt-koko](https://github.com/matt-koko)! - export `CONSISTENCY_CHECK_VALUES` for consumption in other products
+
+### Patch Changes
+
+- [#623](https://github.com/atlassian-labs/atlaspack/pull/623) [`b1b3693`](https://github.com/atlassian-labs/atlaspack/commit/b1b369317c66f8a431c170df2ebba4fa5b2e38ef) Thanks [@JakeLane](https://github.com/JakeLane)! - Load same conditional bundles as conditional manifest in HTML
+
 ## 2.16.0
 
 ### Minor Changes
