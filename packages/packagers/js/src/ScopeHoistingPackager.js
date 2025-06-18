@@ -418,6 +418,20 @@ export class ScopeHoistingPackager {
           actions.skipChildren();
           return;
         }
+
+        let incomingDeps =
+          this.bundleGraph.getIncomingDependencies(asset).length;
+
+        if (incomingDeps === 1) {
+          let outgoingDeps = this.bundleGraph.getDependencies(asset).length;
+
+          if (outgoingDeps === 0) {
+            // If an asset is only used in one place, and has no dependencies, it's
+            // safe to hoist
+            return;
+          }
+        }
+
         if (!asset.meta.isConstantModule) {
           this.wrappedAssets.add(asset.id);
           wrapped.push(asset);
