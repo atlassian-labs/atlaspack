@@ -63,6 +63,8 @@ const GLOBALS_BY_CONTEXT = {
     ...Object.keys(globals.browser),
   ]),
 };
+/** Dependencies injected after packaging is done should be exempt from scope hoisting */
+const SCOPE_HOIST_BLOCKLIST = new Set(['@atlaspack/domain-sharding']);
 
 const OUTPUT_FORMATS = {
   esmodule: ESMOutputFormat,
@@ -188,7 +190,7 @@ export class ScopeHoistingPackager {
     // Add each asset that is directly connected to the bundle. Dependencies will be handled
     // by replacing `import` statements in the code.
     this.bundle.traverseAssets((asset, _, actions) => {
-      if (this.seenAssets.has(asset.id)) {
+      if (this.seenAssets.has(asset.id) || asset.meta.inline) {
         actions.skipChildren();
         return;
       }
@@ -377,6 +379,51 @@ export class ScopeHoistingPackager {
     let queue = new PromiseQueue({maxConcurrent: 32});
     let wrapped = [];
     this.bundle.traverseAssets((asset) => {
+      const incomingDependencies =
+        this.bundleGraph.getIncomingDependencies(asset);
+      if (incomingDependencies.length === 1) {
+        const [dependency] = incomingDependencies;
+        if (
+          dependency.priority !== 'lazy' &&
+          !dependency.meta.shouldWrap &&
+          this.bundle.hasDependency(dependency) &&
+          !SCOPE_HOIST_BLOCKLIST.has(dependency.specifier)
+        ) {
+          const assetToScopeHoistInto =
+            this.bundleGraph.getAssetWithDependency(dependency);
+          if (
+            assetToScopeHoistInto &&
+            !this.shouldSkipAsset(assetToScopeHoistInto)
+          ) {
+            const isCircularDependency = this.bundleGraph
+              .getIncomingDependencies(assetToScopeHoistInto)
+              .some((dep) => dep.sourceAssetId === asset.id);
+            const willCreateNewCircularDependency =
+              assetToScopeHoistInto.meta.inline &&
+              this.bundleGraph
+                .getAssetById(assetToScopeHoistInto.meta.inline)
+                .getDependencies()
+                .some((dep) => {
+                  return (
+                    this.bundleGraph.getResolvedAsset(dep)?.id ===
+                    assetToScopeHoistInto.id
+                  );
+                });
+
+            if (!isCircularDependency && !willCreateNewCircularDependency) {
+              console.log(
+                `should inline ${path.basename(
+                  asset.filePath,
+                )} in ${path.basename(assetToScopeHoistInto.filePath)}`,
+              );
+              asset.meta.inline = assetToScopeHoistInto.id;
+            }
+          }
+        }
+      }
+    });
+
+    this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
         let [code, map] = await Promise.all([
           asset.getCode(),
@@ -386,12 +433,13 @@ export class ScopeHoistingPackager {
       });
 
       if (
-        asset.meta.shouldWrap ||
-        this.bundle.env.sourceType === 'script' ||
-        this.bundleGraph.isAssetReferenced(this.bundle, asset) ||
-        this.bundleGraph
-          .getIncomingDependencies(asset)
-          .some((dep) => dep.meta.shouldWrap && dep.specifierType !== 'url')
+        !asset.meta.inline &&
+        (asset.meta.shouldWrap ||
+          this.bundle.env.sourceType === 'script' ||
+          this.bundleGraph.isAssetReferenced(this.bundle, asset) ||
+          this.bundleGraph
+            .getIncomingDependencies(asset)
+            .some((dep) => dep.meta.shouldWrap && dep.specifierType !== 'url'))
       ) {
         // Don't wrap constant "entry" modules _except_ if they are referenced by any lazy dependency
         if (
@@ -414,6 +462,10 @@ export class ScopeHoistingPackager {
 
         if (this.wrappedAssets.has(asset.id)) {
           actions.skipChildren();
+          return;
+        }
+
+        if (asset.meta.inline) {
           return;
         }
         // This prevents children of a wrapped asset also being wrapped - it's an "unsafe" optimisation
@@ -1046,7 +1098,12 @@ ${code}
           )} not found in bundle ${this.bundle.name}`,
         });
       }
-      return false;
+    } else if (resolved.meta.inline) {
+      if (resolved.meta.inline === parentAsset.id) {
+        return false;
+      } else {
+        resolved = this.bundleGraph.getAssetById(resolved.meta.inline);
+      }
     }
     return (
       (!this.bundle.hasAsset(resolved) && !this.externalAssets.has(resolved)) ||
@@ -1066,6 +1123,31 @@ ${code}
       exportSymbol,
       symbol,
     } = this.bundleGraph.getSymbolResolution(resolved, imported, this.bundle);
+
+    /**
+     * This code is supposed to handle re-exports - it needs some work. The strategy is:
+     *
+     * asset.meta.inline means that the asset is unwrapped, unless we're resolving it from
+     * someonewhere other than where it's being inlined to. This only happens in the case
+     * of re-exports where the inlined asset technically has one incoming dependency but the
+     * underlying symbol is actually used across multiple assets.
+     *
+     * Another approach could be to only inline if an asset contains symbols which are used in
+     * only one other asset. That approach may be less effective.
+     */
+    if (
+      // If resolving within the same asset, use the default resolution
+      resolved.id !== parentAsset.id &&
+      resolvedAsset.meta.inline &&
+      // If resolving from the asset we should inline into, use default resolution
+      resolvedAsset.meta.inline !== parentAsset.id &&
+      // Only change the resolution to a re-export if the resolvedAsset is wrapped
+      this.isWrapped(resolvedAsset, parentAsset)
+    ) {
+      resolvedAsset = this.bundleGraph.getAssetById(resolvedAsset.meta.inline);
+      symbol = nullthrows(resolvedAsset.symbols.get(imported)).local;
+      exportSymbol = imported;
+    }
 
     if (
       resolvedAsset.type !== 'js' ||

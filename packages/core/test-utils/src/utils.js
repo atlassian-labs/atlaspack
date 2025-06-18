@@ -208,6 +208,26 @@ export function findAsset(
   });
 }
 
+export function findBundle(
+  bundleGraph: BundleGraph<PackagedBundle>,
+  mainEntryAssetFileName: string,
+): PackagedBundle {
+  let asset = nullthrows(
+    findAsset(bundleGraph, mainEntryAssetFileName),
+    `Couldn't find asset ${mainEntryAssetFileName}`,
+  );
+
+  const bundle = bundleGraph
+    .getBundles()
+    .find((b) => b.getMainEntry() === asset);
+
+  invariant(
+    bundle != null,
+    `Couldn't find bundle with mainEntryAsset ${mainEntryAssetFileName}`,
+  );
+  return bundle;
+}
+
 export function findDependency(
   bundleGraph: BundleGraph<PackagedBundle>,
   assetFileName: string,
