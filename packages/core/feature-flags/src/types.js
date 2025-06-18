@@ -102,6 +102,11 @@ export type FeatureFlags = {|
    * Enable a change to the html packager to load more bundles when conditional bundling fallback mode is enabled
    */
   condbHtmlPackagerChange: boolean,
+  /**
+   * Enable a setting that allows for more assets to be scope hoisted, if
+   * they're safe to do so.
+   */
+  applyScopeHoistingImprovement: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
