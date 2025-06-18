@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - grant/add-docs-spike # temporary, TODO: remove this when PR ready
   workflow_dispatch: # Manual trigger
     inputs:
       files-to-sync:
