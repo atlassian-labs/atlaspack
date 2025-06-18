@@ -156,16 +156,25 @@ export class ScopeHoistingPackager {
     let res = '';
     let lineCount = 0;
     let sourceMap = null;
+    /**
+     * This change is needed to so that we don't wind up with
+     * parcelRequire within another parcelRequire. We need to
+     * move adding depContent to the toplevel (outside of the recursion).
+     */
+    let wrappedContent = [];
     let processAsset = (asset) => {
-      let [content, map, lines] = this.visitAsset(asset);
-      if (sourceMap && map) {
-        sourceMap.addSourceMap(map, lineCount);
-      } else if (this.bundle.env.sourceMap) {
-        sourceMap = map;
-      }
+      let unwrappedContent = this.visitAsset(asset, wrappedContent);
+      if (unwrappedContent) {
+        let [content, map, lines] = unwrappedContent;
+        if (sourceMap && map) {
+          sourceMap.addSourceMap(map, lineCount);
+        } else if (this.bundle.env.sourceMap) {
+          sourceMap = map;
+        }
 
-      res += content + '\n';
-      lineCount += lines + 1;
+        res += content + '\n';
+        lineCount += lines + 1;
+      }
     };
 
     // Hoist wrapped asset to the top of the bundle to ensure that they are registered
@@ -188,8 +197,19 @@ export class ScopeHoistingPackager {
       actions.skipChildren();
     });
 
+    let wrappedCode = '';
+    for (let [content, map, lines] of wrappedContent) {
+      if (sourceMap && map) {
+        sourceMap.addSourceMap(map, lineCount);
+      } else if (this.bundle.env.sourceMap) {
+        sourceMap = map;
+      }
+      wrappedCode += `${content}\n`;
+      lineCount += lines + 1;
+    }
+
     let [prelude, preludeLines] = this.buildBundlePrelude();
-    res = prelude + res;
+    res = prelude + wrappedCode + res;
     lineCount += preludeLines;
     sourceMap?.offsetLines(1, preludeLines);
 
@@ -519,19 +539,23 @@ export class ScopeHoistingPackager {
     return `${obj}[${JSON.stringify(property)}]`;
   }
 
-  visitAsset(asset: Asset): [string, ?SourceMap, number] {
+  visitAsset(
+    asset: Asset,
+    wrappedContent: [string, ?SourceMap, number][],
+  ): ?[string, ?SourceMap, number] {
     invariant(!this.seenAssets.has(asset.id), 'Already visited asset');
     this.seenAssets.add(asset.id);
 
     let {code, map} = nullthrows(this.assetOutputs.get(asset.id));
-    return this.buildAsset(asset, code, map);
+    return this.buildAsset(asset, code, map, wrappedContent);
   }
 
   buildAsset(
     asset: Asset,
     code: string,
     map: ?Buffer,
-  ): [string, ?SourceMap, number] {
+    wrappedContent: [string, ?SourceMap, number][],
+  ): ?[string, ?SourceMap, number] {
     let shouldWrap = this.wrappedAssets.has(asset.id);
     let deps = this.bundleGraph.getDependencies(asset);
 
@@ -563,12 +587,15 @@ export class ScopeHoistingPackager {
           this.bundle.hasAsset(resolved) &&
           !this.seenAssets.has(resolved.id)
         ) {
-          let [code, map, lines] = this.visitAsset(resolved);
-          depCode += code + '\n';
-          if (sourceMap && map) {
-            sourceMap.addSourceMap(map, lineCount);
+          let unwrappedContent = this.visitAsset(resolved, wrappedContent);
+          if (unwrappedContent) {
+            let [code, map, lines] = unwrappedContent;
+            depCode += code + '\n';
+            if (sourceMap && map) {
+              sourceMap.addSourceMap(map, lineCount);
+            }
+            lineCount += lines + 1;
           }
-          lineCount += lines + 1;
         }
       }
 
@@ -602,7 +629,6 @@ export class ScopeHoistingPackager {
     code += append;
 
     let lineCount = 0;
-    let depContent = [];
     if (depMap.size === 0 && replacements.size === 0) {
       // If there are no dependencies or replacements, use a simple function to count the number of lines.
       lineCount = countLines(code) - 1;
@@ -661,10 +687,12 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (shouldWrap) {
-                    depContent.push(this.visitAsset(resolved));
-                  } else {
-                    let [depCode, depMap, depLines] = this.visitAsset(resolved);
+                  let unwrappedContent = this.visitAsset(
+                    resolved,
+                    wrappedContent,
+                  );
+                  if (unwrappedContent) {
+                    let [depCode, depMap, depLines] = unwrappedContent;
                     res = depCode + '\n' + res;
                     lines += 1 + depLines;
                     map = depMap;
@@ -726,15 +754,6 @@ ${code}
 
       lineCount += 2;
 
-      for (let [depCode, map, lines] of depContent) {
-        if (!depCode) continue;
-        code += depCode + '\n';
-        if (sourceMap && map) {
-          sourceMap.addSourceMap(map, lineCount);
-        }
-        lineCount += lines + 1;
-      }
-
       this.needsPrelude = true;
     }
 
@@ -746,7 +765,12 @@ ${code}
       code = this.runWhenReady(this.bundle, code);
     }
 
-    return [code, sourceMap, lineCount];
+    if (shouldWrap) {
+      wrappedContent.push([code, sourceMap, lineCount]);
+      return undefined;
+    } else {
+      return [code, sourceMap, lineCount];
+    }
   }
 
   buildReplacements(
