@@ -29,7 +29,7 @@ jobs:
         with:
           wiki-base-url: https://hello.atlassian.net/
           user: gwong2@atlassian.com
-          token: ${{ secrets.TOKEN }}
+          token: ${{ secrets.CONFLUENCE_TOKEN }}
           modified-files: ${{ env.MODIFIED_FILES }}
           space-name: GTS4
           root-page-title: Root page
