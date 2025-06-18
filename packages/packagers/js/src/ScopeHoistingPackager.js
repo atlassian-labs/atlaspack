@@ -419,16 +419,18 @@ export class ScopeHoistingPackager {
           return;
         }
 
-        let incomingDeps =
-          this.bundleGraph.getIncomingDependencies(asset).length;
+        if (getFeatureFlag('applyScopeHoistingImprovement')) {
+          let incomingDeps =
+            this.bundleGraph.getIncomingDependencies(asset).length;
 
-        if (incomingDeps === 1) {
-          let outgoingDeps = this.bundleGraph.getDependencies(asset).length;
+          if (incomingDeps === 1) {
+            let outgoingDeps = this.bundleGraph.getDependencies(asset).length;
 
-          if (outgoingDeps === 0) {
-            // If an asset is only used in one place, and has no dependencies, it's
-            // safe to hoist
-            return;
+            if (outgoingDeps === 0) {
+              // If an asset is only used in one place, and has no dependencies, it's
+              // safe to hoist
+              return;
+            }
           }
         }
 
