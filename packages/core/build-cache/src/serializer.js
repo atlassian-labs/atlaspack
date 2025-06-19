@@ -226,6 +226,7 @@ export function restoreDeserializedObject(object: any): any {
 const serializeCache = createBuildCache();
 
 export function serialize(object: any): Buffer {
+  console.log('serialize', object)
   let cached = serializeCache.get(object);
   if (cached) {
     return cached;

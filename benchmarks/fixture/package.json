@@ -1,0 +1,6 @@
+{
+  "name": "fixture",
+  "version": "true",
+  "main": "dist/index.js"
+
+}
