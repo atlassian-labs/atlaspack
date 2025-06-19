@@ -63,6 +63,8 @@ const GLOBALS_BY_CONTEXT = {
     ...Object.keys(globals.browser),
   ]),
 };
+/** Dependencies injected after packaging is done should be exempt from scope hoisting */
+const SCOPE_HOIST_BLOCKLIST = new Set(['@atlaspack/domain-sharding']);
 
 const OUTPUT_FORMATS = {
   esmodule: ESMOutputFormat,
@@ -190,6 +192,10 @@ export class ScopeHoistingPackager {
     this.bundle.traverseAssets((asset, _, actions) => {
       if (this.seenAssets.has(asset.id)) {
         actions.skipChildren();
+        return;
+      }
+
+      if (asset.meta.inline) {
         return;
       }
 
@@ -374,9 +380,91 @@ export class ScopeHoistingPackager {
     return `$parcel$global.rwr(${params.join(', ')});`;
   }
 
+  addInlineAssetMetadata(asset: Asset) {
+    if (asset.meta.shouldWrap) {
+      return;
+    }
+
+    const incomingDependencies =
+      this.bundleGraph.getIncomingDependencies(asset);
+    // TODO: Handle multiple incoming dependencies of the same asset
+    if (incomingDependencies.length !== 1) {
+      return;
+    }
+
+    const [dependency] = incomingDependencies;
+    if (
+      dependency.priority === 'lazy' ||
+      dependency.meta.shouldWrap ||
+      SCOPE_HOIST_BLOCKLIST.has(dependency.specifier)
+    ) {
+      return;
+    }
+
+    const assetToScopeHoistInto = nullthrows(
+      this.bundleGraph.getAssetWithDependency(dependency),
+    );
+    // TODO: handle inlines within inlines
+    const isCircularDependency = this.bundleGraph
+      .getIncomingDependencies(assetToScopeHoistInto)
+      .some((dep) => dep.sourceAssetId === asset.id);
+
+    if (!isCircularDependency) {
+      console.log(
+        `should inline ${path.basename(
+          asset.filePath,
+        )} ${this.bundleGraph.getAssetPublicId(asset)} in ${path.basename(
+          assetToScopeHoistInto.filePath,
+        )} ${this.bundleGraph.getAssetPublicId(assetToScopeHoistInto)}`,
+      );
+      asset.meta.inline = true;
+    }
+  }
+
+  addAllInlineAssetMetadata() {
+    const assetsLimitedToThisBundle = [];
+
+    /** Counts the number of times one of an asset's exported symbols appears in another asset */
+    const assetSymbolUsageCountMap = new Map<Asset, number>();
+    this.bundle.traverseAssets((asset) => {
+      if (!this.bundleGraph.isAssetReferenced(this.bundle, asset)) {
+        assetsLimitedToThisBundle.push(asset);
+      }
+
+      const visitedAssets = new Set();
+      for (const dep of asset.getDependencies()) {
+        const resolved = this.bundleGraph.getResolvedAsset(dep, this.bundle);
+        if (resolved) {
+          for (let [symbol] of dep.symbols) {
+            symbol = this.bundleGraph.getSymbolResolution(
+              resolved,
+              symbol,
+              this.bundle,
+            );
+            visitedAssets.add(symbol.asset);
+          }
+        }
+      }
+
+      for (const asset of visitedAssets) {
+        const count = assetSymbolUsageCountMap.get(asset) ?? 0;
+        assetSymbolUsageCountMap.set(asset, count + 1);
+      }
+    });
+
+    for (const asset of assetsLimitedToThisBundle) {
+      if (assetSymbolUsageCountMap.get(asset) === 1) {
+        this.addInlineAssetMetadata(asset);
+      }
+    }
+  }
+
   async loadAssets(): Promise<Array<Asset>> {
     let queue = new PromiseQueue({maxConcurrent: 32});
     let wrapped = [];
+
+    this.addAllInlineAssetMetadata();
+
     this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
         let [code, map] = await Promise.all([
@@ -415,6 +503,10 @@ export class ScopeHoistingPackager {
 
         if (this.wrappedAssets.has(asset.id)) {
           actions.skipChildren();
+          return;
+        }
+
+        if (asset.meta.inline) {
           return;
         }
         // This prevents children of a wrapped asset also being wrapped - it's an "unsafe" optimisation

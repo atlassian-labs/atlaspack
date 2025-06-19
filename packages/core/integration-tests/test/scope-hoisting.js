@@ -22,6 +22,7 @@ import {
   runBundle,
   fsFixture,
 } from '@atlaspack/test-utils';
+import {writeFile} from 'fs/promises';
 
 const bundle = (name, opts = {}) => {
   return _bundle(
@@ -6488,6 +6489,60 @@ describe('scope hoisting', function () {
       },
       inputFS: overlayFS,
     });
+
+    await run(b);
+  });
+
+  it('Should hoist single-use modules into async bundles', async () => {
+    await fsFixture(overlayFS, __dirname)`
+        concat-async
+          one.js:
+            export function one() {
+              return 1;
+            };
+          two.js:
+            export function two() {
+              return 2;
+            }
+          three.js:
+            export function three() {
+              return 3;
+            }
+          reexport.js:
+            export { three } from "./three.js"
+          five.js:
+            import { two } from "./two";
+            import { three } from  "./reexport.js";
+            export function five() {
+              return two() + three();
+            }
+          four.js:
+            import { one } from "./one";
+            export function four() {
+              return one() + one() + one() + one();
+            }
+          index.js:
+            import { one } from './one';
+            import { four } from './four';
+            import { three } from './reexport.js'
+            import('./five').then(({ five }) => {
+              one() + three() + four() + five();
+            });
+      `;
+    const distDir = path.join(__dirname, 'concat-async/dist');
+    let b = await bundle([path.join(__dirname, 'concat-async/index.js')], {
+      inputFS: overlayFS,
+      outputFS: overlayFS,
+      defaultTargetOptions: {
+        shouldScopeHoist: true,
+        distDir,
+      },
+    });
+    for (const file of await overlayFS.readdir(distDir)) {
+      const filePath = path.join(distDir, file);
+      const contents = await overlayFS.readFile(filePath, 'utf-8');
+      await writeFile(filePath, contents);
+    }
 
     await run(b);
   });
