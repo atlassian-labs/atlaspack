@@ -132,6 +132,49 @@ jobs:
           name: packages-${{ matrix.target }}
           path: packages/**/*
 
+  build-and-github-release:
+    name: Github Release
+    runs-on: ubuntu-22.04
+    needs:
+      - build-native-linux
+      - build-native-macos
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: ./.github/actions/setup-node
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      - run: yarn
+      - run: yarn build
+      - run: node ./scripts/build-gh-release.mjs
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          export TAG="${GITHUB_SHA::10}"
+          echo $TAG
+
+          gh release create $TAG  --draft --notes $TAG
+          gh release edit $TAG --title $TAG --prerelease
+
+          cd release
+          for name in *.tar.gz; do
+              [ -f "$name" ] || break
+              echo Uploading $name
+              gh release upload $TAG $name
+          done
+
+          for name in *.integrity; do
+              [ -f "$name" ] || break
+              echo Uploading $name
+              gh release upload $TAG $name
+          done
+
+          gh release edit $TAG --draft=false
+
   build-and-release:
     name: Build and release
     needs:
