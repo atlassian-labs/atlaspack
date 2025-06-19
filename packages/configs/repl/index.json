@@ -16,7 +16,11 @@
     "url:*": ["@atlaspack/transformer-raw"]
   },
   "namers": ["@atlaspack/namer-default"],
-  "runtimes": ["@atlaspack/runtime-js", "@atlaspack/runtime-browser-hmr"],
+  "runtimes": [
+    "@atlaspack/runtime-js",
+    "@atlaspack/runtime-browser-hmr",
+    "@atlaspack/runtime-react-refresh"
+  ],
   "optimizers": {
     "*.{js,mjs,cjs}": ["@atlaspack/optimizer-terser"],
     "*.css": ["@atlaspack/optimizer-css"]

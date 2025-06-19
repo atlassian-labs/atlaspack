@@ -15,6 +15,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
+    "@atlaspack/feature-flags": "2.14.0",
     "@atlaspack/plugin": "2.14.0",
     "@atlaspack/utils": "2.14.0",
     "react-error-overlay": "6.0.9",

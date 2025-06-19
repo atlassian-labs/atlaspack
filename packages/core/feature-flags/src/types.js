@@ -71,6 +71,10 @@ export type FeatureFlags = {|
    * Enable support for the async bundle runtime (unstable_asyncBundleRuntime) in conditional bundling
    */
   conditionalBundlingAsyncRuntime: boolean,
+  /**
+   * Moves the functionality of the react-refresh runtime into the react-refresh-wrap transformer
+   */
+  mergeReactRefreshRuntimeIntoTransformer: boolean,
 |};
 
 export type ConsistencyCheckFeatureFlagValue =

@@ -2,6 +2,7 @@
 
 import path from 'path';
 import {Transformer} from '@atlaspack/plugin';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 function shouldExclude(asset, options) {
   return (
@@ -32,16 +33,26 @@ export default (new Transformer({
       return [asset];
     }
 
+    const helperFilename = getFeatureFlag(
+      'mergeReactRefreshRuntimeIntoTransformer',
+    )
+      ? 'helpers-new.js'
+      : 'helpers.js';
+
     let wrapperPath = `@atlaspack/transformer-react-refresh-wrap/${path.basename(
       __dirname,
-    )}/helpers/helpers.js`;
+    )}/helpers/${helperFilename}`;
 
     let code = await asset.getCode();
     let map = await asset.getMap();
     let name = `$parcel$ReactRefreshHelpers$${asset.id.slice(-4)}`;
 
     code = `var ${name} = require(${JSON.stringify(wrapperPath)});
-${name}.init();
+${
+  getFeatureFlag('mergeReactRefreshRuntimeIntoTransformer')
+    ? `${name}.init();`
+    : ''
+}
 var prevRefreshReg = window.$RefreshReg$;
 var prevRefreshSig = window.$RefreshSig$;
 ${name}.prelude(module);

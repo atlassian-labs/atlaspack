@@ -23,6 +23,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   enableRustWorkerThreadDylibHack: true,
   inlineStringReplacementPerf: false,
   conditionalBundlingAsyncRuntime: false,
+  mergeReactRefreshRuntimeIntoTransformer: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
