@@ -48,7 +48,6 @@
       "@atlaspack/fs",
       "@atlaspack/graph",
       "@atlaspack/html-example",
-      "@atlaspack/inspector",
       "@atlaspack/integration-tests",
       "@atlaspack/kitchen-sink-example",
       "@atlaspack/link",
