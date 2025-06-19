@@ -20,12 +20,12 @@ pub fn install_from_release(
 
   println!("Downloading");
   let url_tarball = format!(
-    "{}/v{}/{}.tar.gz",
+    "{}/{}/{}.tar.xz",
     ctx.env.atlaspack_release_url,
     version.version(),
-    c::RELEASE_NAME
+    c::RELEASE_NAME_UNIVERSAL
   );
-  let url_checksum = format!("{}.integrity", url_tarball);
+  let url_checksum = format!("{}.sha512", url_tarball);
   let bytes_archive = http::download_bytes(&url_tarball)?;
   let checksum = http::download_string(&url_checksum)?;
 
@@ -35,7 +35,7 @@ pub fn install_from_release(
 
   println!("Extracting");
   fs_ext::create_dir_if_not_exists(pkg.contents())?;
-  archive::tar_gz(bytes_archive.as_slice()).unpack(pkg.contents())?;
+  archive::tar_xz(bytes_archive.as_slice()).unpack(pkg.contents())?;
 
   PackageMeta::write_to_file(
     &PackageMeta {
