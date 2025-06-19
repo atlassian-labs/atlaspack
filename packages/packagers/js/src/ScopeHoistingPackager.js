@@ -363,6 +363,19 @@ export class ScopeHoistingPackager {
           asset.getCode(),
           this.bundle.env.sourceMap ? asset.getMapBuffer() : null,
         ]);
+
+        // There are some assets in the tree that are empty, but can't be
+        // removed. If these are hoisted, it causes a reference is not defined
+        // error, as there is a * export pointing to no actual code.
+        // To get around this, we wrap these assets, which will result in an empty
+        // parcelRegister call
+        if (getFeatureFlag('applyScopeHoistingImprovement')) {
+          if (code.length === 0) {
+            this.wrappedAssets.add(asset.id);
+            wrapped.push(asset);
+          }
+        }
+
         return [asset.id, {code, map}];
       });
 
@@ -420,17 +433,11 @@ export class ScopeHoistingPackager {
         }
 
         if (getFeatureFlag('applyScopeHoistingImprovement')) {
-          let incomingDeps =
-            this.bundleGraph.getIncomingDependencies(asset).length;
-
-          if (incomingDeps === 1) {
-            let outgoingDeps = this.bundleGraph.getDependencies(asset).length;
-
-            if (outgoingDeps === 0) {
-              // If an asset is only used in one place, and has no dependencies, it's
-              // safe to hoist
-              return;
-            }
+          let outgoingDeps = this.bundleGraph.getDependencies(asset).length;
+          if (outgoingDeps === 0) {
+            // If an asset has no dependencies, then there are no deps to worry
+            // about loading first, so it's safe to hoist
+            return;
           }
         }
 
