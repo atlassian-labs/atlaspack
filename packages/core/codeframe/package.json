@@ -3,7 +3,7 @@
   "version": "2.13.3",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
-  "type": "commonjs",
+  "type": "module",
   "publishConfig": {
     "access": "public"
   },
@@ -11,17 +11,27 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/codeframe.js",
-  "source": "src/codeframe.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.mts",
   "engines": {
     "node": ">= 16.0.0"
   },
-  "targets": {
-    "main": {
-      "includeNodeModules": {
-        "chalk": false
-      }
-    }
+  "exports": {
+    ".": {
+      "atlaspack::sources": "./src/index.mts",
+      "types": [
+        "./lib/index.d.mts",
+        "./src/index.mts"
+      ],
+      "import": "./lib/index.mjs",
+      "module-sync": "./lib/index.mjs",
+      "require": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./*": "./*"
+  },
+  "scripts": {
+    "build-tsc": "node ../../../scripts/build-tsc.mjs"
   },
   "dependencies": {
     "chalk": "^4.1.0",

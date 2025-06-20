@@ -1,0 +1,81 @@
+// @flow strict-local
+
+import type {
+  IDisposable,
+  LogEvent,
+  PluginLogger as IPluginLogger,
+} from '@atlaspack/types';
+import type {
+  Diagnostic,
+  Diagnostifiable,
+  DiagnosticWithoutOrigin,
+} from '@atlaspack/diagnostic';
+
+declare class Logger {
+  onLog(cb: (event: LogEvent) => mixed): IDisposable;
+  verbose(diagnostic: Diagnostic | Array<Diagnostic>): void;
+  info(diagnostic: Diagnostic | Array<Diagnostic>): void;
+  log(diagnostic: Diagnostic | Array<Diagnostic>): void;
+  warn(diagnostic: Diagnostic | Array<Diagnostic>): void;
+  error(input: Diagnostifiable, realOrigin?: string): void;
+  progress(message: string): void;
+}
+
+declare export default Logger;
+
+/** @private */
+export type PluginLoggerOpts = {|
+  origin: string,
+|};
+
+declare export class PluginLogger implements IPluginLogger {
+  /** @private */
+  origin: string;
+
+  /** @private */
+  constructor(opts: PluginLoggerOpts): PluginLogger;
+
+  /** @private */
+  updateOrigin(
+    diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
+  ): Diagnostic | Array<Diagnostic> ;
+
+  verbose(
+    diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
+  ): void ;
+
+  info(
+    diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
+  ): void;
+
+  log(
+    diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
+  ): void;
+
+  warn(
+    diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
+  ): void;
+
+  error(
+    input:
+      | Diagnostifiable
+      | DiagnosticWithoutOrigin
+      | Array<DiagnosticWithoutOrigin>,
+  ): void;
+
+  /** @private */
+  progress(message: string): void;
+}
+
+/** @private */
+declare export var INTERNAL_ORIGINAL_CONSOLE: Console
+
+/**
+ * Patch `console` APIs within workers to forward their messages to the Logger
+ * at the appropriate levels.
+ * @private
+ */
+declare export function patchConsole():void;
+
+/** @private */
+declare export function unpatchConsole(): void;

@@ -1,0 +1,47 @@
+// @flow
+import type {Session} from 'inspector';
+import invariant from 'assert';
+// @ts-expect-error TSMIGRATION
+import ThrowableDiagnostic from '@atlaspack/diagnostic';
+
+// https://chromedevtools.github.io/devtools-protocol/tot/Profiler#type-Profile
+export type Profile = {|
+  nodes: Array<ProfileNode>,
+  startTime: number,
+  endTime: number,
+  samples?: Array<number>,
+  timeDeltas?: Array<number>,
+|};
+
+// https://chromedevtools.github.io/devtools-protocol/tot/Profiler#type-ProfileNode
+type ProfileNode = {|
+  id: number,
+  callFrame: CallFrame,
+  hitCount?: number,
+  children?: Array<number>,
+  deoptReason?: string,
+  positionTicks?: PositionTickInfo,
+|};
+
+// https://chromedevtools.github.io/devtools-protocol/tot/Runtime#type-CallFrame
+type CallFrame = {|
+  functionName: string,
+  scriptId: string,
+  url: string,
+  lineNumber: string,
+  columnNumber: string,
+|};
+
+// https://chromedevtools.github.io/devtools-protocol/tot/Profiler#type-PositionTickInfo
+type PositionTickInfo = {|
+  line: number,
+  ticks: number,
+|};
+
+declare export default class SamplingProfiler {
+  session: Session;
+  startProfiling(): Promise<mixed>;
+  sendCommand(method: string, params?: any): Promise<{profile: Profile, ...}>;
+  destroy(): void;
+  stopProfiling(): Promise<Profile>;
+}

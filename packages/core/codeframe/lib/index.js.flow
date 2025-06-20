@@ -1,0 +1,24 @@
+// @flow
+import type {DiagnosticCodeHighlight} from '@atlaspack/diagnostic';
+
+type CodeFramePadding = {|
+  before: number,
+  after: number,
+|};
+
+type CodeFrameOptionsInput = $Shape<CodeFrameOptions>;
+
+type CodeFrameOptions = {|
+  useColor: boolean,
+  syntaxHighlighting: boolean,
+  maxLines: number,
+  padding: CodeFramePadding,
+  terminalWidth: number,
+  language?: string,
+|};
+
+declare export default function codeFrame(
+  code: string,
+  highlights: Array<DiagnosticCodeHighlight>,
+  inputOpts?: CodeFrameOptionsInput,
+): string;

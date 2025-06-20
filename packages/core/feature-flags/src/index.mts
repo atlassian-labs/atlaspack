@@ -1,0 +1,124 @@
+import type {FeatureFlags} from './types.mts';
+
+export type { FeatureFlags }
+
+export const CONSISTENCY_CHECK_VALUES = Object.freeze([
+  'NEW',
+  'OLD',
+  'NEW_AND_CHECK',
+  'OLD_AND_CHECK',
+] as const);
+
+export type ConsistencyCheckFeatureFlagValue = typeof CONSISTENCY_CHECK_VALUES[number]
+
+export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
+  exampleConsistencyCheckFeature: 'OLD',
+  exampleFeature: false,
+  atlaspackV3: false,
+  useWatchmanWatcher: false,
+  importRetry: false,
+  fixQuadraticCacheInvalidation: 'OLD',
+  conditionalBundlingApi: false,
+  inlineRequiresMultiThreading: false,
+  vcsMode: 'OLD',
+  loadableSideEffects: false,
+  reduceResolverStringCreation: false,
+  inlineBundlesSourceMapFixes: false,
+  patchProjectPaths: false,
+  cachePerformanceImprovements: process.env.NODE_ENV === 'test',
+  environmentDeduplication: false,
+  inlineStringReplacementPerf: false,
+  fixBuildAbortCorruption: false,
+  // Default to true as it's a monitoring change. Can be turned off if necessary.
+  verboseRequestInvalidationStats: true,
+  resolveBundlerConfigFromCwd: false,
+  applyScopeHoistingImprovement: false,
+  inlineConstOptimisationFix: false,
+  hmrImprovements: false,
+  atlaspackV3CleanShutdown: false,
+  unusedComputedPropertyFix: process.env.NODE_ENV === 'test',
+  emptyFileStarRexportFix: process.env.NODE_ENV === 'test',
+  cliProgressReportingImprovements: false,
+};
+
+let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
+
+export function setFeatureFlags(flags: FeatureFlags) {
+  featureFlagValues = flags;
+}
+
+export function getFeatureFlag(flagName: keyof FeatureFlags): boolean {
+  const value = featureFlagValues[flagName];
+  return value === true || value === 'NEW';
+}
+
+export function getFeatureFlagValue(
+  flagName: keyof FeatureFlags,
+): boolean | string | number {
+  return featureFlagValues[flagName];
+}
+
+export type DiffResult<CustomDiagnostic> = {
+  isDifferent: boolean,
+  custom: CustomDiagnostic,
+};
+
+export type Diagnostic<CustomDiagnostic> = {
+  isDifferent: boolean,
+  oldExecutionTimeMs: number,
+  newExecutionTimeMs: number,
+  custom: CustomDiagnostic,
+};
+
+/**
+ * Run a function with a consistency check.
+ */
+export function runWithConsistencyCheck<Result, CustomDiagnostic>(
+  flag: keyof FeatureFlags,
+  oldFn: () => Result,
+  newFn: () => Result,
+  diffFn: (
+    oldResult: Result,
+    newResult: Result,
+  ) => DiffResult<CustomDiagnostic>,
+  report: (
+    diagnostic: Diagnostic<CustomDiagnostic>,
+    oldResult: Result,
+    newResult: Result,
+  ) => void,
+): Result {
+  const value = featureFlagValues[flag];
+  if (!value || value === 'OLD') {
+    return oldFn();
+  }
+  if (value === true || value === 'NEW') {
+    return newFn();
+  }
+
+  const oldStartTime = performance.now();
+  const oldResult = oldFn();
+  const oldExecutionTimeMs = performance.now() - oldStartTime;
+
+  const newStartTime = performance.now();
+  const newResult = newFn();
+  const newExecutionTimeMs = performance.now() - newStartTime;
+
+  const diff = diffFn(oldResult, newResult);
+
+  report(
+    {
+      isDifferent: diff.isDifferent,
+      oldExecutionTimeMs,
+      newExecutionTimeMs,
+      custom: diff.custom,
+    },
+    oldResult,
+    newResult,
+  );
+
+  if (value === 'NEW_AND_CHECK') {
+    return newResult;
+  }
+
+  return oldResult;
+}

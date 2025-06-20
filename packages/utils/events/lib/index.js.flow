@@ -1,0 +1,26 @@
+// @flow
+
+export interface IDisposable {
+  /** This can return a Promise, as dispose() of all inner disposables are
+   * awaited in Disposable#dispose()
+   */
+  dispose(): mixed;
+}
+
+export type DisposableLike = IDisposable | (() => mixed);
+
+declare export class Disposable implements IDisposable {
+  disposed: boolean;
+  add(...disposables: Array<DisposableLike>): void;
+  dispose(): Promise<void> ;
+}
+
+declare export class AlreadyDisposedError extends Error {
+  name: string
+}
+
+declare export class ValueEmitter<TValue> implements IDisposable {
+  addListener(listener: (value: TValue) => mixed): IDisposable;
+  emit(value: TValue): void;
+  dispose(): void;
+}
