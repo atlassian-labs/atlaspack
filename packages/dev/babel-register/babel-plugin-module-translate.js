@@ -2,7 +2,9 @@ const resolve = require('resolve');
 const path = require('path');
 
 // This list is resolved with Nodejs's resolver
-const ignoreList = {};
+const ignoreList = {
+  '@atlaspack/diagnostic': true,
+};
 
 function resolveSource(specifier, from) {
   if (ignoreList[specifier]) {
