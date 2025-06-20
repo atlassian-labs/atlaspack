@@ -1,9 +1,7 @@
-import type {PluginObj, NodePath, types as BabelTypes} from '@babel/core';
+import type {PluginObj, types as BabelTypes} from '@babel/core';
 import {declare} from '@babel/helper-plugin-utils';
 
 interface Opts {
-  /** @deprecated Use "node" instead */
-  server?: boolean;
   /** Use node safe import cond syntax */
   node?: boolean;
 }
@@ -11,18 +9,11 @@ interface Opts {
 interface State {
   /** Plugin options */
   opts: Opts;
-  /** @deprecated Statement types didn't work so using any */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  importNodes?: any[];
   /** Set of identifier names that need to be mutated after import was transformed */
   conditionalImportIdentifiers?: Set<string>;
   /** Set of identifiers that have been visited in the exit pass, to avoid adding the load property multiple times */
   visitedIdentifiers?: Set<BabelTypes.Identifier>;
 }
-
-const isServer = (opts: Opts) => {
-  return 'server' in opts && opts.server;
-};
 
 const isNode = (opts: Opts): boolean => !!('node' in opts && opts.node);
 
@@ -158,124 +149,11 @@ export default declare((api): PluginObj<State> => {
     ),
   ];
 
-  const buildServerObject = (
-    identUid: string,
-    cond: BabelTypes.StringLiteral,
-    ifTrue: BabelTypes.StringLiteral,
-    ifFalse: BabelTypes.StringLiteral,
-  ) => [
-    // Create object containing imports
-    t.variableDeclaration('const', [
-      t.variableDeclarator(
-        t.identifier(identUid),
-        t.objectExpression([
-          t.objectProperty(
-            t.identifier('ifTrue'),
-            t.memberExpression(
-              t.callExpression(t.identifier('require'), [ifTrue]),
-              t.identifier('default'),
-            ),
-          ),
-          t.objectProperty(
-            t.identifier('ifFalse'),
-            t.memberExpression(
-              t.callExpression(t.identifier('require'), [ifFalse]),
-              t.identifier('default'),
-            ),
-          ),
-        ]),
-      ),
-    ]),
-
-    // Create lazy getter via the load property on the object
-    t.expressionStatement(
-      t.callExpression(
-        t.memberExpression(
-          t.identifier('Object'),
-          t.identifier('defineProperty'),
-        ),
-        [
-          t.identifier(identUid),
-          t.stringLiteral('load'),
-          t.objectExpression([
-            t.objectProperty(
-              t.identifier('get'),
-              t.arrowFunctionExpression(
-                [],
-                t.conditionalExpression(
-                  t.logicalExpression(
-                    '&&',
-                    t.memberExpression(
-                      t.identifier('globalThis'),
-                      t.identifier('__MCOND'),
-                    ),
-                    t.callExpression(
-                      t.memberExpression(
-                        t.identifier('globalThis'),
-                        t.identifier('__MCOND'),
-                      ),
-                      [cond],
-                    ),
-                  ),
-                  t.memberExpression(
-                    t.identifier(identUid),
-                    t.identifier('ifTrue'),
-                  ),
-                  t.memberExpression(
-                    t.identifier(identUid),
-                    t.identifier('ifFalse'),
-                  ),
-                ),
-              ),
-            ),
-          ]),
-        ],
-      ),
-    ),
-  ];
-
-  const checkIsServer = (
-    path: NodePath<BabelTypes.CallExpression>,
-    state: State,
-  ) => {
-    if (
-      path.node.callee.type === 'Identifier' &&
-      path.node.callee.name === 'importCond'
-    ) {
-      if (
-        path.node.arguments.length == 3 &&
-        path.node.arguments.every((arg) => arg.type === 'StringLiteral')
-      ) {
-        const [cond, ifTrue, ifFalse] = path.node.arguments;
-
-        if (isServer(state.opts)) {
-          // Make module pass lazy in ssr
-          const identUid = path.scope.generateUid(
-            `${cond.value}$${ifTrue.value}$${ifFalse.value}`,
-          );
-
-          state.importNodes ??= [];
-          state.importNodes.push(
-            ...buildServerObject(identUid, cond, ifTrue, ifFalse),
-          );
-
-          // Replace call expression with reference to lazy object getter
-          path.replaceWith(
-            t.memberExpression(t.identifier(identUid), t.identifier('load')),
-          );
-        }
-      }
-    }
-  };
-
   return {
     name: '@atlaspack/babel-plugin-transform-contextual-imports',
     visitor: {
       CallExpression: {
         enter(path, state) {
-          // Preserve server behaviour in deletable code
-          checkIsServer(path, state);
-
           const node = path.node;
           if (isImportCondCallExpression(node)) {
             const [cond, ifTrue, ifFalse] = node.arguments;
@@ -334,12 +212,6 @@ export default declare((api): PluginObj<State> => {
         enter(_, state) {
           state.conditionalImportIdentifiers = new Set();
           state.visitedIdentifiers = new Set();
-        },
-        exit(path, state) {
-          if (state.importNodes) {
-            // If there's an import node, add it to the top of the body
-            path.unshiftContainer('body', state.importNodes);
-          }
         },
       },
     },

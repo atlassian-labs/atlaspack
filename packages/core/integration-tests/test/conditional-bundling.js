@@ -769,7 +769,6 @@ describe('conditional bundling', function () {
       inputFS: overlayFS,
       featureFlags: {
         conditionalBundlingApi: true,
-        condbHtmlPackagerChange: true,
       },
     });
 
@@ -906,7 +905,6 @@ describe('conditional bundling', function () {
       outputFS: overlayFS,
       featureFlags: {
         conditionalBundlingApi: true,
-        conditionalBundlingNestedRuntime: true,
       },
       defaultConfig: path.join(dir, '.parcelrc'),
     });
@@ -936,84 +934,6 @@ describe('conditional bundling', function () {
       typeof lazyImported === 'object' && lazyImported?.default,
       'module-c',
     );
-  });
-
-  it(`should support async bundle runtime`, async function () {
-    const dir = path.join(__dirname, 'import-cond-async-bundle-runtime');
-    await overlayFS.mkdirp(dir);
-
-    await fsFixture(overlayFS, dir)`
-      cond-a.js:
-        export default 'cond-a';
-
-      cond-b.js:
-        export default 'cond-b';
-
-      cond-a.html:
-        <script type="module" src="./cond-a.js"></script>
-
-      index.html:
-        <script type="module" src="./index.js"></script>
-
-      index.js:
-        globalThis.__MCOND = (key) => ({ 'cond': true })[key];
-        const condResult = importCond('cond', './cond-a', './cond-b');
-
-        result([condResult]);
-
-      package.json:
-        {
-            "@atlaspack/bundler-default": {
-                "minBundleSize": 0
-            },
-            "@atlaspack/packager-js": {
-              "unstable_asyncBundleRuntime": true
-            },
-            "@atlaspack/packager-html": {
-              "evaluateRootConditionalBundles": true
-            }
-        }
-      yarn.lock:`;
-
-    let b = await bundle(
-      [
-        path.join(__dirname, 'import-cond-async-bundle-runtime/cond-a.html'),
-        path.join(__dirname, 'import-cond-async-bundle-runtime/index.html'),
-      ],
-      {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
-          shouldOptimize: false,
-          outputFormat: 'esmodule',
-        },
-        featureFlags: {
-          conditionalBundlingApi: true,
-          conditionalBundlingAsyncRuntime: true,
-        },
-        inputFS: overlayFS,
-      },
-    );
-
-    let indexBundle = b
-      .getBundles()
-      .find((b) => /index.*\.js/.test(b.filePath));
-    if (!indexBundle) return assert.fail();
-
-    let contents = await overlayFS.readFile(indexBundle.filePath, 'utf8');
-    assert(contents.includes('$parcel$global.rwr('));
-
-    let indexHtmlBundle = nullthrows(
-      b.getBundles().find((b) => /index.*\.html/.test(b.filePath)),
-    );
-    let result;
-    await runBundle(b, indexHtmlBundle, {
-      result: (r) => {
-        result = r;
-      },
-    });
-
-    assert.deepEqual(await result, ['cond-a']);
   });
 
   it(`should have all deps as bundles in conditional manifest when same condition is used multiple times`, async function () {
@@ -1056,7 +976,6 @@ describe('conditional bundling', function () {
       inputFS: overlayFS,
       featureFlags: {
         conditionalBundlingApi: true,
-        conditionalBundlingReporterSameConditionFix: true,
       },
       defaultConfig: path.join(dir, '.parcelrc'),
     });
