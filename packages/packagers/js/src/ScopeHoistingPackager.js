@@ -98,6 +98,7 @@ export class ScopeHoistingPackager {
   topLevelNames: Map<string, number> = new Map();
   seenAssets: Set<string> = new Set();
   wrappedAssets: Set<string> = new Set();
+  assetInlineableCache: Map<Asset, boolean> = new Map();
   hoistedRequires: Map<string, Map<string, string>> = new Map();
   needsPrelude: boolean = false;
   usedHelpers: Set<string> = new Set();
@@ -363,6 +364,19 @@ export class ScopeHoistingPackager {
           asset.getCode(),
           this.bundle.env.sourceMap ? asset.getMapBuffer() : null,
         ]);
+
+        // There are some assets in the tree that are empty, but can't be
+        // removed. If these are hoisted, it causes a reference is not defined
+        // error, as there is a * export pointing to no actual code.
+        // To get around this, we wrap these assets, which will result in an empty
+        // parcelRegister call
+        if (getFeatureFlag('applyScopeHoistingImprovement')) {
+          if (code.length === 0) {
+            this.wrappedAssets.add(asset.id);
+            wrapped.push(asset);
+          }
+        }
+
         return [asset.id, {code, map}];
       });
 
@@ -418,6 +432,13 @@ export class ScopeHoistingPackager {
           actions.skipChildren();
           return;
         }
+
+        if (getFeatureFlag('applyScopeHoistingImprovement')) {
+          if (this.assetIsInlineable(asset)) {
+            return;
+          }
+        }
+
         if (!asset.meta.isConstantModule) {
           this.wrappedAssets.add(asset.id);
           wrapped.push(asset);
@@ -426,7 +447,92 @@ export class ScopeHoistingPackager {
     }
 
     this.assetOutputs = new Map(await queue.run());
+
     return wrapped;
+  }
+
+  assetIsInlineable(asset: Asset): boolean {
+    let cacheResult = this.assetInlineableCache.get(asset);
+    if (cacheResult != null) {
+      return cacheResult;
+    }
+
+    let check = () => {
+      // If the asset is wrapped, it is not inlineable.
+      if (this.wrappedAssets.has(asset.id)) {
+        return false;
+      }
+
+      // If the asset is depended on by more than one other asset, it is not
+      // inlineable.
+      let incomingDeps = this.bundleGraph.getIncomingDependencies(asset);
+      if (incomingDeps.length !== 1) {
+        return false;
+      }
+
+      // If the asset has no dependencies, it is inlineable.
+      let outgoingDeps = this.bundleGraph.getDependencies(asset);
+      if (outgoingDeps.length === 0) {
+        return true;
+      }
+
+      // If the asset does have dependencies, but all those dependencies are also
+      // inlineable, then it is inlineable.
+      let allDepsInlineable = outgoingDeps.every((dep) => {
+        let resolved = this.bundleGraph.getResolvedAsset(dep, this.bundle);
+        if (!resolved) {
+          // If the dependency is not resolved, it is not inlineable.
+          return false;
+        }
+        return this.assetIsInlineable(resolved);
+      });
+      return allDepsInlineable;
+    };
+
+    let result = check();
+    this.assetInlineableCache.set(asset, result);
+
+    return result;
+  }
+
+  isInlineScopeHoistable(
+    asset: Asset,
+    alreadyInlinedOutgoingDeps: Array<Dependency> = [],
+  ): boolean {
+    let incomingDeps = this.bundleGraph.getIncomingDependencies(asset);
+    if (incomingDeps.length !== 1) {
+      return false;
+    }
+
+    let dep = incomingDeps[0];
+    let parentAsset = this.bundleGraph.getAssetWithDependency(dep);
+    let assetSymbols = this.bundleGraph.getExportedSymbols(asset, this.bundle);
+    let parentSymbols = this.bundleGraph.getExportedSymbols(
+      parentAsset,
+      this.bundle,
+    );
+    let hasReExports = assetSymbols.some((assetSymbol) =>
+      parentSymbols.some(
+        (parentSymbol) => parentSymbol.symbol === assetSymbol.symbol,
+      ),
+    );
+
+    if (hasReExports) {
+      return false;
+    }
+
+    let outgoingDeps = this.bundleGraph.getDependencies(asset);
+    let unseenOutgoingDeps = outgoingDeps.filter(
+      (outgoingDep) =>
+        !alreadyInlinedOutgoingDeps.some(
+          (knownDep) => knownDep === outgoingDep,
+        ),
+    );
+    if (unseenOutgoingDeps.length !== 0) {
+      return false;
+    }
+
+    return true;
   }
 
   buildExportedSymbols() {
@@ -661,7 +767,10 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (shouldWrap) {
+                  if (
+                    (shouldWrap && !this.isInlineScopeHoistable(resolved)) ||
+                    this.wrappedAssets.has(resolved.id)
+                  ) {
                     depContent.push(this.visitAsset(resolved));
                   } else {
                     let [depCode, depMap, depLines] = this.visitAsset(resolved);
