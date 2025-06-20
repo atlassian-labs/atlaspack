@@ -1,5 +1,11 @@
 # @atlaspack/utils
 
+## 2.15.0
+
+### Minor Changes
+
+- [#622](https://github.com/atlassian-labs/atlaspack/pull/622) [`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c) Thanks [@benjervis](https://github.com/benjervis)! - Add the `setIntersectStatic` method that doesn't mutate the passed in Sets
+
 ## 2.14.11
 
 ### Patch Changes
