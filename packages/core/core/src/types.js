@@ -34,6 +34,7 @@ import type {ProjectPath} from './projectPath';
 import type {Event} from '@parcel/watcher';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
 import type {BackendType} from '@parcel/watcher';
+import type {EnvironmentRef} from './EnvironmentManager';
 
 export type AtlaspackPluginNode = {|
   packageName: PackageName,
@@ -97,7 +98,7 @@ export type InternalSourceLocation = {|
 export type Target = {|
   distEntry?: ?FilePath,
   distDir: ProjectPath,
-  env: Environment,
+  env: EnvironmentRef,
   name: string,
   publicUrl: string,
   loc?: ?InternalSourceLocation,
@@ -139,7 +140,7 @@ export type Dependency = {|
   isEntry: boolean,
   isOptional: boolean,
   loc: ?InternalSourceLocation,
-  env: Environment,
+  env: EnvironmentRef,
   packageConditions?: number,
   customPackageConditions?: Array<string>,
   meta: Meta,
@@ -181,7 +182,7 @@ export type Asset = {|
   bundleBehavior: ?$Values<typeof BundleBehavior>,
   isBundleSplittable: boolean,
   isSource: boolean,
-  env: Environment,
+  env: EnvironmentRef,
   meta: Meta,
   stats: Stats,
   contentKey: ?string,
@@ -389,7 +390,7 @@ export type RootNode = {|id: ContentKey, +type: 'root', value: string | null|};
 export type AssetRequestInput = {|
   name?: string, // AssetGraph name, needed so that different graphs can isolated requests since the results are not stored
   filePath: ProjectPath,
-  env: Environment,
+  env: EnvironmentRef,
   isSource?: boolean,
   canDefer?: boolean,
   sideEffects?: boolean,
@@ -493,13 +494,13 @@ export type Config = {|
   id: string,
   isSource: boolean,
   searchPath: ProjectPath,
-  env: Environment,
+  env: EnvironmentRef,
   cacheKey: ?string,
   result: ConfigResult,
   invalidateOnFileChange: Set<ProjectPath>,
   invalidateOnConfigKeyChange: Array<{|
     filePath: ProjectPath,
-    configKey: string,
+    configKey: string[],
   |}>,
   invalidateOnFileCreate: Array<InternalFileCreateInvalidation>,
   invalidateOnEnvChange: Set<string>,
@@ -540,7 +541,7 @@ export type Bundle = {|
   publicId: ?string,
   hashReference: string,
   type: string,
-  env: Environment,
+  env: EnvironmentRef,
   entryAssetIds: Array<ContentKey>,
   mainEntryId: ?ContentKey,
   needsStableName: ?boolean,
@@ -574,6 +575,7 @@ export type BundleGroupNode = {|
 
 export type PackagedBundleInfo = {|
   filePath: ProjectPath,
+  bundleId: ContentKey,
   type: string,
   stats: Stats,
 |};

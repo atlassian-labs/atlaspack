@@ -5,7 +5,7 @@
 
 export interface LmdbOptions {
   /** The database directory path */
-  path: string;
+  path: string
   /**
    * If enabled, the database writer will set the following flags:
    *
@@ -15,30 +15,33 @@ export interface LmdbOptions {
    *
    * `MDB_WRITEMAP` is on by default.
    */
-  asyncWrites: boolean;
+  asyncWrites: boolean
   /**
    * The mmap size, this corresponds to [`mdb_env_set_mapsize`](http://www.lmdb.tech/doc/group__mdb.html#gaa2506ec8dab3d969b0e609cd82e619e5)
    * if this isn't set it'll default to around 10MB.
    */
-  mapSize?: number;
+  mapSize?: number
 }
-function initTracingSubscriber(): void;
+export declare function initTracingSubscriber(): void
 export interface Entry {
-  key: string;
-  value: Buffer;
+  key: string
+  value: Buffer
 }
-export type LMDB = Lmdb;
+export type LMDB = Lmdb
 export declare class Lmdb {
-  constructor(options: LmdbOptions);
-  get(key: string): Promise<Buffer | null | undefined>;
-  getSync(key: string): Buffer | null;
-  getManySync(keys: Array<string>): Array<Buffer | undefined | null>;
-  putMany(entries: Array<Entry>): Promise<void>;
-  put(key: string, data: Buffer): Promise<void>;
-  putNoConfirm(key: string, data: Buffer): void;
-  startReadTransaction(): void;
-  commitReadTransaction(): void;
-  startWriteTransaction(): Promise<void>;
-  commitWriteTransaction(): Promise<void>;
-  close(): void;
+  constructor(options: LmdbOptions)
+  get(key: string): Promise<Buffer | null | undefined>
+  hasSync(key: string): boolean
+  keysSync(skip: number, limit: number): Array<string>
+  getSync(key: string): Buffer | null
+  getManySync(keys: Array<string>): Array<Buffer | undefined | null>
+  putMany(entries: Array<Entry>): Promise<void>
+  put(key: string, data: Buffer): Promise<void>
+  putNoConfirm(key: string, data: Buffer): void
+  delete(key: string): Promise<void>
+  startReadTransaction(): void
+  commitReadTransaction(): void
+  startWriteTransaction(): Promise<void>
+  commitWriteTransaction(): Promise<void>
+  close(): void
 }

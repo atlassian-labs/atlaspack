@@ -1,4 +1,5 @@
-use std::{borrow::Borrow, collections::HashMap, hash::BuildHasher, sync::RwLock};
+use parking_lot::RwLock;
+use std::{borrow::Borrow, collections::HashMap, hash::BuildHasher};
 
 /// A HashMap that allows sharing of values between threads
 /// It is currently implemented using RwLock
@@ -41,25 +42,25 @@ where
     K: Borrow<KR>,
     KR: Eq + std::hash::Hash,
   {
-    let map_cell = self.inner.read().unwrap();
+    let map_cell = self.inner.read();
     let map = map_cell;
     map.get(key).cloned()
   }
 
   pub fn insert(&self, key: K, value: V) {
-    let map_cell = self.inner.write().unwrap();
+    let map_cell = self.inner.write();
     let mut map = map_cell;
     map.insert(key, value);
   }
 
   pub fn len(&self) -> usize {
-    let map_cell = self.inner.read().unwrap();
+    let map_cell = self.inner.read();
     let map = map_cell;
     map.len()
   }
 
   pub fn is_empty(&self) -> bool {
-    let map_cell = self.inner.read().unwrap();
+    let map_cell = self.inner.read();
     let map = map_cell;
     map.is_empty()
   }

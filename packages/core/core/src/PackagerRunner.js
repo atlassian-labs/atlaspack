@@ -63,6 +63,8 @@ import {getInvalidationId, getInvalidationHash} from './assetUtils';
 import {optionsProxy} from './utils';
 import {invalidateDevDeps} from './requests/DevDepRequest';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
+import {fromEnvironmentId} from './EnvironmentManager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type Opts = {|
   config: AtlaspackConfig,
@@ -577,32 +579,32 @@ export default class PackagerRunner {
     );
     let inlineSources = false;
 
+    const bundleEnv = fromEnvironmentId(bundle.env);
     if (bundle.target) {
-      if (
-        bundle.env.sourceMap &&
-        bundle.env.sourceMap.sourceRoot !== undefined
-      ) {
-        sourceRoot = bundle.env.sourceMap.sourceRoot;
+      const bundleTargetEnv = fromEnvironmentId(bundle.target.env);
+
+      if (bundleEnv.sourceMap && bundleEnv.sourceMap.sourceRoot !== undefined) {
+        sourceRoot = bundleEnv.sourceMap.sourceRoot;
       } else if (
         this.options.serveOptions &&
-        bundle.target.env.context === 'browser'
+        bundleTargetEnv.context === 'browser'
       ) {
         sourceRoot = '/__parcel_source_root';
       }
 
       if (
-        bundle.env.sourceMap &&
-        bundle.env.sourceMap.inlineSources !== undefined
+        bundleEnv.sourceMap &&
+        bundleEnv.sourceMap.inlineSources !== undefined
       ) {
-        inlineSources = bundle.env.sourceMap.inlineSources;
-      } else if (bundle.target.env.context !== 'node') {
+        inlineSources = bundleEnv.sourceMap.inlineSources;
+      } else if (bundleTargetEnv.context !== 'node') {
         // inlining should only happen in production for browser targets by default
         inlineSources = this.options.mode === 'production';
       }
     }
 
     let mapFilename = fullPath + '.map';
-    let isInlineMap = bundle.env.sourceMap && bundle.env.sourceMap.inline;
+    let isInlineMap = bundleEnv.sourceMap && bundleEnv.sourceMap.inline;
 
     let stringified = await map.stringify({
       file: path.basename(mapFilename),
@@ -658,6 +660,21 @@ export default class PackagerRunner {
       this.options,
     );
 
+    if (getFeatureFlag('cachePerformanceImprovements')) {
+      const hash = hashString(
+        ATLASPACK_VERSION +
+          devDepHashes +
+          invalidationHash +
+          bundle.target.publicUrl +
+          bundleGraph.getHash(bundle) +
+          JSON.stringify(configResults) +
+          JSON.stringify(globalInfoResults) +
+          this.options.mode +
+          (this.options.shouldBuildLazily ? 'lazy' : 'eager'),
+      );
+      return path.join(bundle.displayName ?? bundle.name ?? bundle.id, hash);
+    }
+
     return hashString(
       ATLASPACK_VERSION +
         devDepHashes +
@@ -700,20 +717,27 @@ export default class PackagerRunner {
     let mapKey = PackagerRunner.getMapKey(cacheKey);
 
     let isLargeBlob = await this.options.cache.hasLargeBlob(contentKey);
-    let contentExists =
-      isLargeBlob || (await this.options.cache.has(contentKey));
+    let contentExists = getFeatureFlag('cachePerformanceImprovements')
+      ? isLargeBlob
+      : isLargeBlob || (await this.options.cache.has(contentKey));
     if (!contentExists) {
       return null;
     }
 
-    let mapExists = await this.options.cache.has(mapKey);
+    let mapExists = getFeatureFlag('cachePerformanceImprovements')
+      ? await this.options.cache.hasLargeBlob(mapKey)
+      : await this.options.cache.has(mapKey);
 
     return {
       contents: isLargeBlob
         ? this.options.cache.getStream(contentKey)
         : blobToStream(await this.options.cache.getBlob(contentKey)),
       map: mapExists
-        ? blobToStream(await this.options.cache.getBlob(mapKey))
+        ? blobToStream(
+            getFeatureFlag('cachePerformanceImprovements')
+              ? await this.options.cache.getLargeBlob(mapKey)
+              : await this.options.cache.getBlob(mapKey),
+          )
         : null,
     };
   }
@@ -727,11 +751,14 @@ export default class PackagerRunner {
     let size = 0;
     let hash;
     let hashReferences = [];
-    let isLargeBlob = false;
+    let isLargeBlob = getFeatureFlag('cachePerformanceImprovements');
 
     // TODO: don't replace hash references in binary files??
     if (contents instanceof Readable) {
-      isLargeBlob = true;
+      if (!getFeatureFlag('cachePerformanceImprovements')) {
+        isLargeBlob = true;
+      }
+
       let boundaryStr = '';
       let h = new Hash();
       await this.options.cache.setStream(
@@ -754,17 +781,32 @@ export default class PackagerRunner {
       size = buffer.byteLength;
       hash = hashBuffer(buffer);
       hashReferences = contents.match(HASH_REF_REGEX) ?? [];
-      await this.options.cache.setBlob(cacheKeys.content, buffer);
+
+      if (getFeatureFlag('cachePerformanceImprovements')) {
+        await this.options.cache.setLargeBlob(cacheKeys.content, buffer);
+      } else {
+        await this.options.cache.setBlob(cacheKeys.content, buffer);
+      }
     } else {
       size = contents.length;
       hash = hashBuffer(contents);
       hashReferences = contents.toString().match(HASH_REF_REGEX) ?? [];
-      await this.options.cache.setBlob(cacheKeys.content, contents);
+
+      if (getFeatureFlag('cachePerformanceImprovements')) {
+        await this.options.cache.setLargeBlob(cacheKeys.content, contents);
+      } else {
+        await this.options.cache.setBlob(cacheKeys.content, contents);
+      }
     }
 
     if (map != null) {
-      await this.options.cache.setBlob(cacheKeys.map, map);
+      if (getFeatureFlag('cachePerformanceImprovements')) {
+        await this.options.cache.setLargeBlob(cacheKeys.map, map);
+      } else {
+        await this.options.cache.setBlob(cacheKeys.map, map);
+      }
     }
+
     let info = {
       type,
       size,
@@ -773,19 +815,29 @@ export default class PackagerRunner {
       cacheKeys,
       isLargeBlob,
     };
+
     await this.options.cache.set(cacheKeys.info, info);
     return info;
   }
 
   static getContentKey(cacheKey: string): string {
+    if (getFeatureFlag('cachePerformanceImprovements')) {
+      return `PackagerRunner/${ATLASPACK_VERSION}/${cacheKey}/content`;
+    }
     return hashString(`${cacheKey}:content`);
   }
 
   static getMapKey(cacheKey: string): string {
+    if (getFeatureFlag('cachePerformanceImprovements')) {
+      return `PackagerRunner/${ATLASPACK_VERSION}/${cacheKey}/map`;
+    }
     return hashString(`${cacheKey}:map`);
   }
 
   static getInfoKey(cacheKey: string): string {
+    if (getFeatureFlag('cachePerformanceImprovements')) {
+      return `PackagerRunner/${ATLASPACK_VERSION}/${cacheKey}/info`;
+    }
     return hashString(`${cacheKey}:info`);
   }
 }

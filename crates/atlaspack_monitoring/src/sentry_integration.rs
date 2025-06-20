@@ -61,6 +61,9 @@ pub fn init_sentry(options: SentryOptions) -> anyhow::Result<ClientInitGuard> {
   tracing::info!("Initialising Sentry in rust...");
 
   let mut sentry_client_options = sentry::ClientOptions {
+    traces_sample_rate: std::env::var("ATLASPACK_SENTRY_TRACES_SAMPLE_RATE")
+      .map(|v| v.parse::<f32>().unwrap())
+      .unwrap_or(0.0),
     ..Default::default()
   };
 
@@ -71,7 +74,7 @@ pub fn init_sentry(options: SentryOptions) -> anyhow::Result<ClientInitGuard> {
     sentry_client_options.environment = Some(environment.to_string().into());
   }
   if let Some(debug) = options.sentry_tags.get("debug") {
-    sentry_client_options.debug = debug.to_string() == "true";
+    sentry_client_options.debug = debug == "true";
   }
 
   let guard = sentry::init((options.sentry_dsn, sentry_client_options));
@@ -93,9 +96,11 @@ pub fn init_sentry(options: SentryOptions) -> anyhow::Result<ClientInitGuard> {
 
 #[cfg(test)]
 mod tests {
+  use parking_lot::Mutex;
+
   use super::*;
 
-  static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+  static TEST_LOCK: Mutex<()> = Mutex::new(());
 
   #[test]
   fn test_sentry_options_from_env_if_disabled_returns_none() {

@@ -1,5 +1,115 @@
 # @atlaspack/reporter-bundle-stats
 
+## 2.14.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.18.2
+  - @atlaspack/utils@2.14.11
+  - @atlaspack/plugin@2.14.11
+
+## 2.14.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.18.1
+
+## 2.14.10
+
+### Patch Changes
+
+- Updated dependencies [[`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b), [`1e32d4e`](https://github.com/atlassian-labs/atlaspack/commit/1e32d4eae6b3af3968e8a0ef97d35b4347fd4196), [`0b2f6f5`](https://github.com/atlassian-labs/atlaspack/commit/0b2f6f55794d3ff6e2f5a41f963e7e5dd8ad9f8d), [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca)]:
+  - @atlaspack/core@2.18.0
+  - @atlaspack/plugin@2.14.10
+  - @atlaspack/utils@2.14.10
+
+## 2.14.9
+
+### Patch Changes
+
+- Updated dependencies [[`1940859`](https://github.com/atlassian-labs/atlaspack/commit/194085942f0e86532e9d039fc3f8039badce4594), [`15b6155`](https://github.com/atlassian-labs/atlaspack/commit/15b61556e9114203ebbc9de94b864118ca764598), [`209692f`](https://github.com/atlassian-labs/atlaspack/commit/209692ffb11eae103a0d65c5e1118a5aa1625818), [`d04de26`](https://github.com/atlassian-labs/atlaspack/commit/d04de26af684d7abfba5091fbe3df16a12cd0ebc)]:
+  - @atlaspack/core@2.17.4
+  - @atlaspack/utils@2.14.9
+  - @atlaspack/plugin@2.14.9
+
+## 2.14.8
+
+### Patch Changes
+
+- Updated dependencies [[`30f6017`](https://github.com/atlassian-labs/atlaspack/commit/30f60175ba4d272c5fc193973c63bc298584775b), [`3a3e8e7`](https://github.com/atlassian-labs/atlaspack/commit/3a3e8e7be9e2dffd7304436d792f0f595d59665a), [`15c1e3c`](https://github.com/atlassian-labs/atlaspack/commit/15c1e3c0628bae4c768d76cf3afc53d6d0d7ce7c)]:
+  - @atlaspack/core@2.17.3
+  - @atlaspack/utils@2.14.8
+  - @atlaspack/plugin@2.14.8
+
+## 2.14.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.17.2
+  - @atlaspack/utils@2.14.7
+  - @atlaspack/plugin@2.14.7
+
+## 2.14.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.17.1
+  - @atlaspack/utils@2.14.6
+  - @atlaspack/plugin@2.14.6
+
+## 2.14.5
+
+### Patch Changes
+
+- Updated dependencies [[`2e90c9b`](https://github.com/atlassian-labs/atlaspack/commit/2e90c9bd07d7eb52645f9d84ccbb7f82685cbc8c), [`11d6f16`](https://github.com/atlassian-labs/atlaspack/commit/11d6f16b6397dee2f217167e5c98b39edb63f7a7), [`e2ba0f6`](https://github.com/atlassian-labs/atlaspack/commit/e2ba0f69702656f3d1ce95ab1454e35062b13b39)]:
+  - @atlaspack/core@2.17.0
+  - @atlaspack/utils@2.14.5
+  - @atlaspack/plugin@2.14.5
+
+## 2.14.4
+
+### Patch Changes
+
+- Updated dependencies [[`cb9da16`](https://github.com/atlassian-labs/atlaspack/commit/cb9da16fb2648e7f53c64df0313f60d5fb8970cc)]:
+  - @atlaspack/core@2.16.1
+  - @atlaspack/utils@2.14.4
+  - @atlaspack/plugin@2.14.4
+
+## 2.14.3
+
+### Patch Changes
+
+- Updated dependencies [[`90150df`](https://github.com/atlassian-labs/atlaspack/commit/90150dfb68236e1d1c11813108ecabd92cff9366)]:
+  - @atlaspack/core@2.16.0
+  - @atlaspack/utils@2.14.3
+  - @atlaspack/plugin@2.14.3
+
+## 2.14.2
+
+### Patch Changes
+
+- Updated dependencies [[`8f4e6c1`](https://github.com/atlassian-labs/atlaspack/commit/8f4e6c1b0e7c1fd48624afda48c1dcc599f1460f)]:
+  - @atlaspack/core@2.15.1
+  - @atlaspack/utils@2.14.2
+  - @atlaspack/plugin@2.14.2
+
+## 2.14.1
+
+### Patch Changes
+
+- [#450](https://github.com/atlassian-labs/atlaspack/pull/450) [`b9d41b1`](https://github.com/atlassian-labs/atlaspack/commit/b9d41b175ad5771651a5b0278a5a0147e669234a) Thanks [@benjervis](https://github.com/benjervis)! - Remove the Atlaspack engines compatibility check
+
+- [#478](https://github.com/atlassian-labs/atlaspack/pull/478) [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b) Thanks [@yamadapc](https://github.com/yamadapc)! - The first attempt at Version Packages didn't include the built artifacts.
+  This has hopefully been fixed, so this change will force those packages to re-release.
+- Updated dependencies [[`b9d41b1`](https://github.com/atlassian-labs/atlaspack/commit/b9d41b175ad5771651a5b0278a5a0147e669234a), [`ce13d5e`](https://github.com/atlassian-labs/atlaspack/commit/ce13d5e885d55518ee6318e7a72e3a6e4e5126f2), [`87087f4`](https://github.com/atlassian-labs/atlaspack/commit/87087f44f348ac583a27ea0819122e191ba80f8d), [`e1422ad`](https://github.com/atlassian-labs/atlaspack/commit/e1422ad0a801faaa4bc4f1023bed042ffe236e9b), [`7e357fb`](https://github.com/atlassian-labs/atlaspack/commit/7e357fb173e7958da330e3721667fa5749420952), [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b)]:
+  - @atlaspack/core@2.15.0
+  - @atlaspack/utils@2.14.1
+  - @atlaspack/plugin@2.14.1
+
 ## 2.14.0
 
 ### Minor Changes

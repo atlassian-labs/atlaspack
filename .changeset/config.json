@@ -5,15 +5,13 @@
     {"repo": "atlassian-labs/atlaspack"}
   ],
   "commit": false,
-  "fixed": [],
-  "linked": [
+  "fixed": [
     [
       "@atlaspack/apvm",
       "@atlaspack/apvm-linux-amd64",
       "@atlaspack/apvm-linux-arm64",
       "@atlaspack/apvm-macos-amd64",
-      "@atlaspack/apvm-macos-arm64",
-      "@atlaspack/apvm-windows-amd64"
+      "@atlaspack/apvm-macos-arm64"
     ]
   ],
   "access": "public",

@@ -1,52 +1,47 @@
 /* eslint-disable no-console */
 
-import {execSync as $} from 'node:child_process';
-import {
-  appendFile,
-  cp,
-  mkdtemp,
-  readdir,
-  readFile,
-  rm,
-  writeFile,
-} from 'node:fs/promises';
-import {createRequire} from 'node:module';
-import {tmpdir} from 'node:os';
-import {dirname, join} from 'node:path';
+import * as child_process from 'node:child_process';
+import * as fs from 'node:fs/promises';
+import * as fsSync from 'node:fs';
+import * as url from 'node:url';
+import * as module from 'node:module';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
-import {Atlaspack} from '@atlaspack/core';
 import {printTable} from '@oclif/table';
 import chalk from 'chalk';
+
+const THREE_JS_BRANCH = process.env.THREE_JS_BRANCH || 'r108';
+const THREE_JS_REPO_URL =
+  process.env.THREE_JS_REPO_URL || 'https://github.com/mrdoob/three.js.git';
 
 let headers = 0;
 
 const MODE = process.env.ATLASPACK_BENCH_MODE;
 if (MODE === undefined) {
   console.error('env:ATLASPACK_BENCH_MODE not specified');
+  console.error('  options:');
+  console.error('    * V2');
+  console.error('    * V3');
   process.exit(1);
 }
 
 const PLUGINS = process.env.ATLASPACK_BENCH_PLUGINS
   ? parseInt(process.env.ATLASPACK_BENCH_PLUGINS, 10)
-  : undefined;
-
-if (PLUGINS === undefined) {
-  console.error('env:ATLASPACK_BENCH_USE_PLUGINS not specified');
-  process.exit(1);
-}
+  : 10;
 
 const COPIES =
   process.env.ATLASPACK_BENCH_COPIES !== undefined
     ? parseInt(process.env.ATLASPACK_BENCH_COPIES, 10)
     : 30;
 
-const __dirname = import.meta.dirname;
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+const benchDir = path.normalize(path.join(__dirname, '..'));
+const vendorDir = path.join(benchDir, 'three-js');
 
 const RUNS = process.env.ATLASPACK_BENCH_RUNS
   ? parseInt(process.env.ATLASPACK_BENCH_RUNS, 10)
   : 10;
-
-const FUNCTION = process.env.ATLASPACK_BENCH_FUNCTION ?? 'run';
 
 async function main() {
   writeHeader('Settings');
@@ -63,10 +58,6 @@ async function main() {
       {
         key: 'mode',
         value: chalk.green(`'${MODE}'`),
-      },
-      {
-        key: 'function',
-        value: chalk.green(`'${FUNCTION}'`),
       },
       {
         key: 'plugins',
@@ -93,7 +84,7 @@ async function main() {
   // copies the benchmark to a temporary directory and links Atlaspack in
   let tmpDir;
   try {
-    tmpDir = await mkdtemp(join(tmpdir(), 'atlaspack-bench'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'atlaspack-bench'));
   } catch (error) {
     console.error('Failed to create temp directory for benchmark', error);
     process.exit(1);
@@ -101,52 +92,59 @@ async function main() {
 
   console.log('Created temporary directory', tmpDir);
 
-  const benchDir = join(__dirname, '..');
-
   try {
     // Copy files to a temporary directory
     console.log('Copying benchmark...');
 
     await Promise.all([
-      rmrf(join(benchDir, 'dist')),
-      rmrf(join(benchDir, '.parcel-cache')),
+      rmrf(path.join(benchDir, 'dist')),
+      rmrf(path.join(benchDir, '.parcel-cache')),
     ]);
 
-    await cp(benchDir, tmpDir, {recursive: true});
-    await rmrf(join(tmpDir, 'node_modules'));
+    await fs.cp(benchDir, tmpDir, {recursive: true});
+    await rmrf(path.join(tmpDir, 'node_modules'));
 
     const [packageJson, parcelRc] = await Promise.all([
-      readJson(join(tmpDir, 'package.json')),
-      readJson(join(tmpDir, '.parcelrc')),
+      readJson(path.join(tmpDir, 'package.json')),
+      readJson(path.join(tmpDir, '.parcelrc')),
     ]);
 
     // Patch the package.json to link the files to the workspace files
-    const require = createRequire(import.meta.url);
+    const require = module.createRequire(import.meta.url);
     for (const dependency of Object.keys(packageJson.dependencies)) {
       if (!dependency.startsWith('@atlaspack')) continue;
-      const resolved = require.resolve(join(dependency, 'package.json'));
-      packageJson.dependencies[dependency] = `file:${dirname(resolved)}`;
+      const resolved = require.resolve(path.join(dependency, 'package.json'));
+      packageJson.dependencies[dependency] = `file:${path.dirname(resolved)}`;
     }
 
     // Patch .parcelrc to include plugins
     for (let i = 0; i < PLUGINS; i++) {
-      parcelRc['transformers']['*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}'].push(
-        './plugins/transformer.js',
+      await fs.cp(
+        path.join(__dirname, '..', 'plugins', 'transformer.js'),
+        path.join(tmpDir, 'plugins', `transformer_${i}.js`),
       );
+
+      await fs.cp(
+        path.join(__dirname, '..', 'plugins', 'resolver.js'),
+        path.join(tmpDir, 'plugins', `resolver_${i}.js`),
+      );
+
+      parcelRc['transformers']['*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}'].unshift(
+        `./plugins/transformer_${i}.js`,
+      );
+
+      parcelRc['resolvers'].unshift(`./plugins/resolver_${i}.js`);
     }
 
     await Promise.all([
-      writeJson(join(tmpDir, 'package.json'), packageJson),
-      writeJson(join(tmpDir, '.parcelrc'), parcelRc),
+      writeJson(path.join(tmpDir, 'package.json'), packageJson),
+      writeJson(path.join(tmpDir, '.parcelrc'), parcelRc),
     ]);
 
     // Get three-js
-    if ((await readdir(join(benchDir, 'three-js')).length) === 0) {
+    if (!fsSync.existsSync(vendorDir)) {
       console.log('Pulling three-js...');
-      $('git submodule update --init ./three-js', {
-        cwd: benchDir,
-        shell: true,
-      });
+      fetchThreeJs();
     }
 
     // Copy three-js to bench directory
@@ -158,9 +156,9 @@ async function main() {
 
     for (let i = 0; i < COPIES; i++) {
       copies.push(
-        cp(
-          join(benchDir, 'three-js', 'src'),
-          join(tmpDir, 'src', `copy-${i}`),
+        fs.cp(
+          path.join(benchDir, 'three-js', 'src'),
+          path.join(tmpDir, 'src', `copy-${i}`),
           {
             recursive: true,
           },
@@ -173,8 +171,8 @@ async function main() {
 
     await Promise.all([
       ...copies,
-      appendFile(
-        join(tmpDir, 'src', 'index.js'),
+      fs.appendFile(
+        path.join(tmpDir, 'src', 'index.js'),
         [...imports, ...code].join('\n'),
         'utf8',
       ),
@@ -182,7 +180,11 @@ async function main() {
 
     // Link node_modules
     console.log('Linking node_modules...');
-    $('npm install', {cwd: tmpDir, shell: true, stdio: 'inherit'});
+    child_process.execFileSync('npm', ['install'], {
+      cwd: tmpDir,
+      shell: true,
+      stdio: 'inherit',
+    });
 
     // Start the benchmark
     writeHeader('Running');
@@ -192,27 +194,35 @@ async function main() {
     for (let i = 0; i < RUNS; i++) {
       const startTime = Date.now();
 
-      const atlaspack = new Atlaspack({
-        shouldDisableCache: true,
-        cacheDir: join(tmpDir, '.parcel-cache'),
-        config: join(tmpDir, '.parcelrc'),
-        entries: join(tmpDir, 'src', 'index.js'),
-        targets: {
-          default: {
-            distDir: join(tmpDir, 'dist'),
+      // Atlaspack must be run in it's own process
+      // because it currently cannot be spawned multiple times in the same process
+      try {
+        child_process.execFileSync(
+          'npx',
+          [
+            'atlaspack',
+            'build',
+            '--no-autoinstall',
+            '--no-cache',
+            '--dist-dir=./dist',
+            ...(MODE === 'V3' ? ['--feature-flag', 'atlaspackV3=true'] : []),
+            './src/index.js',
+          ],
+          {
+            cwd: tmpDir,
+            stdio: 'inherit',
           },
-        },
-        shouldAutoInstall: false,
-        featureFlags: {
-          atlaspackV3: MODE === 'V3',
-        },
-      });
-
-      await atlaspack[FUNCTION]();
+        );
+      } catch (error) {
+        return;
+      }
 
       const buildTime = Date.now() - startTime;
       console.log(`Build ${i + 1}: ${buildTime}ms`);
       buildTimes.push(buildTime);
+
+      await rmrf(path.join(tmpDir, '.parcel-cache'));
+      await rmrf(path.join(tmpDir, 'dist'));
     }
 
     const average =
@@ -220,7 +230,7 @@ async function main() {
 
     console.log(`Benchmarks completed with an average time of ${average}ms`);
 
-    await writeJson(join(benchDir, 'report.json'), {
+    await writeJson(path.join(benchDir, 'report.json'), {
       average,
       buildTimes,
     });
@@ -233,16 +243,34 @@ async function main() {
 
 main();
 
+function fetchThreeJs() {
+  child_process.execFileSync(
+    'git',
+    [
+      'clone',
+      '--depth=1',
+      '--branch',
+      THREE_JS_BRANCH,
+      THREE_JS_REPO_URL,
+      vendorDir,
+    ],
+    {
+      stdio: 'inherit',
+      shell: true,
+    },
+  );
+}
+
 function rmrf(target) {
-  return rm(target, {force: true, recursive: true});
+  return fs.rm(target, {force: true, recursive: true});
 }
 
 async function readJson(target) {
-  return JSON.parse(await readFile(target, 'utf8'));
+  return JSON.parse(await fs.readFile(target, 'utf8'));
 }
 
 function writeJson(target, data) {
-  return writeFile(target, JSON.stringify(data, null, 2));
+  return fs.writeFile(target, JSON.stringify(data, null, 2));
 }
 
 function writeHeader(header) {

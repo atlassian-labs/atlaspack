@@ -58,11 +58,7 @@ import {
   fromProjectPathRelative,
 } from './projectPath';
 import {tracer} from '@atlaspack/profiler';
-import {
-  getFeatureFlag,
-  setFeatureFlags,
-  DEFAULT_FEATURE_FLAGS,
-} from '@atlaspack/feature-flags';
+import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
@@ -122,9 +118,7 @@ export default class Atlaspack {
     };
     setFeatureFlags(featureFlags);
 
-    if (getFeatureFlag('enableRustWorkerThreadDylibHack')) {
-      loadRustWorkerThreadDylibHack();
-    }
+    loadRustWorkerThreadDylibHack();
 
     await initSourcemaps;
     await initRust?.();
@@ -171,10 +165,17 @@ export default class Atlaspack {
       const version = require('../package.json').version;
       await lmdb.put('current_session_version', Buffer.from(version));
 
+      let threads = undefined;
+      if (process.env.ATLASPACK_NATIVE_THREADS !== undefined) {
+        threads = parseInt(process.env.ATLASPACK_NATIVE_THREADS, 10);
+      } else if (process.env.NODE_ENV === 'test') {
+        threads = 2;
+      }
+
       rustAtlaspack = await AtlaspackV3.create({
         ...options,
         corePath: path.join(__dirname, '..'),
-        threads: process.env.NODE_ENV === 'test' ? 2 : undefined,
+        threads,
         entries: Array.isArray(entries)
           ? entries
           : entries == null
@@ -532,10 +533,11 @@ export default class Atlaspack {
           nativeInvalid = await this.rustAtlaspack.respondToFsEvents(events);
         }
 
-        let isInvalid = await this.#requestTracker.respondToFSEvents(
-          events,
-          Number.POSITIVE_INFINITY,
-        );
+        let {didInvalidate: isInvalid} =
+          await this.#requestTracker.respondToFSEvents(
+            events,
+            Number.POSITIVE_INFINITY,
+          );
 
         if (
           (nativeInvalid || isInvalid) &&
@@ -643,6 +645,20 @@ export default class Atlaspack {
     }
 
     return result;
+  }
+
+  /**
+   * Copy the cache to a new directory and compact it.
+   */
+  async unstable_compactCache(): Promise<void> {
+    await this._init();
+
+    const cache = nullthrows(this.#resolvedOptions).cache;
+    if (cache instanceof LMDBLiteCache) {
+      await cache.compact('parcel-cache-compacted');
+    } else {
+      throw new Error('Cache is not an LMDBLiteCache');
+    }
   }
 
   async unstable_transform(

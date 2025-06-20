@@ -70,16 +70,22 @@ export type AtlaspackNapiOptions = {|
 
 // AtlaspackNapi
 export type AtlaspackNapi = {||};
-declare export function atlaspackNapiCreate(options: AtlaspackNapiOptions, lmdb: mixed): Promise<AtlaspackNapi>;
-declare export function atlaspackNapiBuildAssetGraph(atlaspack: AtlaspackNapi): Promise<any>;
-declare export function atlaspackNapiRespondToFsEvents(atlaspack: AtlaspackNapi, events: WatchEvents): boolean;
+declare export function atlaspackNapiCreate(
+  options: AtlaspackNapiOptions,
+  lmdb: mixed,
+): Promise<AtlaspackNapi>;
+declare export function atlaspackNapiBuildAssetGraph(
+  atlaspack: AtlaspackNapi,
+): Promise<any>;
+declare export function atlaspackNapiRespondToFsEvents(
+  atlaspack: AtlaspackNapi,
+  events: WatchEvents,
+): boolean;
 // AtlaspackNapi
 
 declare export function getAvailableThreads(): number;
 
-declare export function newNodejsWorker(
-  delegate: any,
-): Transferable;
+declare export function newNodejsWorker(delegate: any): Transferable;
 
 declare export function initializeMonitoring(): void;
 declare export function closeMonitoring(): void;
@@ -131,39 +137,49 @@ declare export class Hash {
   finish(): string;
 }
 
-export type Engines = {|
-  atlaspack?: string,
-  browsers?: string | string[],
-  electron?: string,
-  node?: string,
-|};
+export type Engines = {
+  +atlaspack?: string,
+  +browsers?: string | string[],
+  +electron?: string,
+  +node?: string,
+  +parcel?: string,
+  ...
+};
 
 export type Environment = {|
-  context: string,
-  engines: Engines,
-  includeNodeModules: IncludeNodeModules,
-  isLibrary: boolean,
-  loc?: SourceLocation,
-  outputFormat: string,
-  shouldScopeHoist: boolean,
-  shouldOptimize: boolean,
-  sourceMap?: {|
-    inline?: boolean,
-    inlineSources?: boolean,
-    sourceRoot?: string,
+  +context:
+    | 'browser'
+    | 'node'
+    | 'electron-main'
+    | 'electron-renderer'
+    | 'web-worker'
+    | 'worklet'
+    | 'service-worker',
+  +engines: Engines,
+  +includeNodeModules: IncludeNodeModules,
+  +isLibrary: boolean,
+  +loc: ?SourceLocation,
+  +outputFormat: 'esmodule' | 'commonjs' | 'global',
+  +shouldScopeHoist: boolean,
+  +shouldOptimize: boolean,
+  +sourceMap: ?{|
+    +inline?: boolean,
+    +inlineSources?: boolean,
+    +sourceRoot?: string,
   |},
-  sourceType: string,
+  +sourceType: 'script' | 'module',
+  +unstableSingleFileOutput: boolean,
 |};
 
 export type SourceLocation = {|
-  filePath: string,
-  start: {|
-    line: number,
-    column: number,
+  +filePath: ProjectPath,
+  +start: {|
+    +line: number,
+    +column: number,
   |},
-  end: {|
-    line: number,
-    column: number,
+  +end: {|
+    +line: number,
+    +column: number,
   |},
 |};
 
@@ -321,6 +337,8 @@ declare export function performStringReplacements(
 declare export class Lmdb {
   constructor(options: LmdbOptions): Lmdb;
   get(key: string): Promise<Buffer | null | void>;
+  keysSync(skip: number, limit: number): Array<string>;
+  hasSync(key: string): boolean;
   getSync(key: string): Buffer | null;
   getManySync(keys: Array<string>): Array<Buffer | void | null>;
   putMany(entries: Array<LmdbEntry>): Promise<void>;
@@ -330,7 +348,8 @@ declare export class Lmdb {
   commitReadTransaction(): void;
   startWriteTransaction(): Promise<void>;
   commitWriteTransaction(): Promise<void>;
-  close(): void;
+  delete(key: string): Promise<void>;
+  compact(targetPath: string): void;
 }
 
 export interface InlineRequiresOptimizerInput {
@@ -347,9 +366,13 @@ declare export function runInlineRequiresOptimizer(
   input: InlineRequiresOptimizerInput,
 ): InlineRequiresOptimizerResult;
 
+declare export function runInlineRequiresOptimizerAsync(
+  input: InlineRequiresOptimizerInput,
+): Promise<InlineRequiresOptimizerResult>;
+
 export interface VCSFile {
   path: string;
-  hash: number;
+  hash?: string | null;
 }
 
 export interface YarnState {
@@ -363,6 +386,8 @@ export interface VCSState {
   // Files that have been modified since the last commit
   dirtyFiles: VCSFile[];
   yarnStates: YarnState[];
+  dirtyFilesExecutionTime: number;
+  yarnStatesExecutionTime: number;
 }
 
 declare export function getVcsStateSnapshot(
@@ -421,3 +446,25 @@ declare export class AtlaspackTracer {
   enter(label: string): number;
   exit(id: number): void;
 }
+
+declare export function setAllEnvironments(
+  environments: Array<{|
+    ...Environment,
+    id: string,
+  |}>,
+): void;
+
+declare export function getAllEnvironments(): Array<{|
+  ...Environment,
+  id: string,
+|}>;
+
+declare export function getEnvironment(id: string): {|
+  ...Environment,
+  id: string,
+|};
+
+declare export function addEnvironment(environment: {|
+  ...Environment,
+  id: string,
+|}): void;

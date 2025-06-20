@@ -1,5 +1,96 @@
 # @atlaspack/link
 
+## 2.14.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.6
+  - @atlaspack/utils@2.14.11
+
+## 2.14.10
+
+### Patch Changes
+
+- Updated dependencies [[`0999fb7`](https://github.com/atlassian-labs/atlaspack/commit/0999fb78da519a6c7582d212883e515fcf6c1252)]:
+  - @atlaspack/fs@2.15.5
+  - @atlaspack/utils@2.14.10
+
+## 2.14.9
+
+### Patch Changes
+
+- Updated dependencies [[`e4d966c`](https://github.com/atlassian-labs/atlaspack/commit/e4d966c3c9c4292c5013372ae65b10d19d4bacc6)]:
+  - @atlaspack/fs@2.15.4
+  - @atlaspack/utils@2.14.9
+
+## 2.14.8
+
+### Patch Changes
+
+- Updated dependencies [[`3a3e8e7`](https://github.com/atlassian-labs/atlaspack/commit/3a3e8e7be9e2dffd7304436d792f0f595d59665a), [`1ab0a27`](https://github.com/atlassian-labs/atlaspack/commit/1ab0a275aeca40350415e2b03e7440d1dddc6228), [`b8a4ae8`](https://github.com/atlassian-labs/atlaspack/commit/b8a4ae8f83dc0a83d8b145c5f729936ce52080a3)]:
+  - @atlaspack/fs@2.15.3
+  - @atlaspack/utils@2.14.8
+
+## 2.14.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.2
+  - @atlaspack/utils@2.14.7
+
+## 2.14.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.1
+  - @atlaspack/utils@2.14.6
+
+## 2.14.5
+
+### Patch Changes
+
+- Updated dependencies [[`4c17141`](https://github.com/atlassian-labs/atlaspack/commit/4c1714103dab2aa9039c488f381551d2b65d1d01)]:
+  - @atlaspack/fs@2.15.0
+  - @atlaspack/utils@2.14.5
+
+## 2.14.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.14.4
+  - @atlaspack/utils@2.14.4
+
+## 2.14.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.14.3
+  - @atlaspack/utils@2.14.3
+
+## 2.14.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.14.2
+  - @atlaspack/utils@2.14.2
+
+## 2.14.1
+
+### Patch Changes
+
+- [#478](https://github.com/atlassian-labs/atlaspack/pull/478) [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b) Thanks [@yamadapc](https://github.com/yamadapc)! - The first attempt at Version Packages didn't include the built artifacts.
+  This has hopefully been fixed, so this change will force those packages to re-release.
+- Updated dependencies [[`80bd57b`](https://github.com/atlassian-labs/atlaspack/commit/80bd57b9f9e966563957dee0780d956a682eb2d4), [`ce13d5e`](https://github.com/atlassian-labs/atlaspack/commit/ce13d5e885d55518ee6318e7a72e3a6e4e5126f2), [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b)]:
+  - @atlaspack/fs@2.14.1
+  - @atlaspack/utils@2.14.1
+  - @atlaspack/babel-register@2.14.1
+
 ## 2.14.0
 
 ### Minor Changes

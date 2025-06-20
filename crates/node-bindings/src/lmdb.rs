@@ -2,6 +2,7 @@ use napi::bindgen_prelude::Buffer;
 use napi::bindgen_prelude::Env;
 use napi::JsUnknown;
 use napi_derive::napi;
+
 #[napi]
 pub struct LMDB {
   inner: lmdb_js_lite::LMDB,
@@ -19,6 +20,16 @@ impl LMDB {
   #[napi(ts_return_type = "Promise<Buffer | null | undefined>")]
   pub fn get(&self, env: Env, key: String) -> napi::Result<napi::JsObject> {
     self.inner.get(env, key)
+  }
+
+  #[napi(ts_return_type = "boolean")]
+  pub fn has_sync(&self, key: String) -> napi::Result<bool> {
+    self.inner.has_sync(key)
+  }
+
+  #[napi]
+  pub fn keys_sync(&self, skip: i32, limit: i32) -> napi::Result<Vec<String>> {
+    self.inner.keys_sync(skip, limit)
   }
 
   #[napi(ts_return_type = "Buffer | null")]
@@ -43,6 +54,11 @@ impl LMDB {
   #[napi(ts_return_type = "Promise<void>")]
   pub fn put(&self, env: Env, key: String, data: Buffer) -> napi::Result<napi::JsObject> {
     self.inner.put(env, key, data)
+  }
+
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn delete(&self, env: Env, key: String) -> napi::Result<napi::JsObject> {
+    self.inner.delete(env, key)
   }
 
   #[napi]
@@ -71,7 +87,7 @@ impl LMDB {
   }
 
   #[napi]
-  pub fn close(&mut self) {
-    self.inner.close()
+  pub fn compact(&self, target_path: String) -> napi::Result<()> {
+    self.inner.compact(target_path)
   }
 }

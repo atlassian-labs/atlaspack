@@ -11,13 +11,14 @@ on:
         description: 'The type of release, usually corresponds to the dist-tag'
         required: true
         type: string
-      profile:
-        description: 'The profile to use when building the native binaries'
-        required: false
-        default: 'release'
-        type: string
     secrets:
       NPM_TOKEN:
+        required: true
+      SENTRY_ORG:
+        required: true
+      SENTRY_PROJECT:
+        required: true
+      SENTRY_AUTH_TOKEN:
         required: true
 
 permissions:
@@ -63,21 +64,25 @@ jobs:
         uses: ./.github/actions/rust-toolchain
         with:
           targets: ${{ matrix.target }}
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-node
         with:
-          cache: yarn
           node-version: 22
       - uses: Swatinem/rust-cache@v2
-        if: ${{ inputs.type != 'latest' }}
-        with: { shared-key: "${{ matrix.name }}" }
-      - run: yarn install --frozen-lockfile
+        with:
+          shared-key: '${{ matrix.name }}'
+          # Only store new caches on main
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Build native packages
         env:
           RUSTUP_TARGET: ${{ matrix.target }}
-          CARGO_PROFILE: ${{ inputs.profile }}
+          CARGO_PROFILE: release
         run: yarn build-native
-      - name: Extract debug symbols
-        run: node "./scripts/debug-symbols.mjs"
+      - name: Upload debug symbols to sentry
+        run: node "./scripts/debug-symbols.mjs" --upload-to-sentry --rm
+        env:
+          SENTRY_ORG: ${{secrets.SENTRY_ORG}}
+          SENTRY_PROJECT: ${{secrets.SENTRY_PROJECT}}
+          SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -104,19 +109,23 @@ jobs:
         uses: ./.github/actions/rust-toolchain
         with:
           targets: ${{ matrix.target }}
-      - uses: actions/setup-node@v4
-        with: { cache: yarn }
+      - uses: ./.github/actions/setup-node
       - uses: Swatinem/rust-cache@v2
-        if: ${{ inputs.type != 'latest' }}
-        with: { shared-key: "${{ matrix.name }}" }
-      - run: yarn install --frozen-lockfile
+        with:
+          shared-key: '${{ matrix.name }}'
+          # Only store new caches on main
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Build native packages
         env:
           RUSTUP_TARGET: ${{ matrix.target }}
-          CARGO_PROFILE: ${{ inputs.profile }}
+          CARGO_PROFILE: release
         run: yarn build-native
-      - name: Extract debug symbols
-        run: node "./scripts/debug-symbols.mjs"
+      - name: Upload debug symbols to sentry
+        run: node "./scripts/debug-symbols.mjs" --upload-to-sentry --rm
+        env:
+          SENTRY_ORG: ${{secrets.SENTRY_ORG}}
+          SENTRY_PROJECT: ${{secrets.SENTRY_PROJECT}}
+          SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -131,28 +140,13 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - uses: actions/setup-node@v4
-        with: { cache: yarn }
+        with: {fetch-depth: 0}
+      - uses: ./.github/actions/setup-node
       - uses: actions/download-artifact@v4
         with:
           pattern: packages-*
           path: packages
           merge-multiple: true
-      - run: yarn install --frozen-lockfile
-      - name: Move debug symbols
-        if: ${{ inputs.profile == 'canary' }}
-        run: |
-          mkdir debug-symbols
-          find packages -name "*.debug" -exec cp {} debug-symbols/ \;
-          find packages -name "*.node" -path "**/DWARF/**" -exec cp {} debug-symbols/ \;
-          ls -l debug-symbols
-      - name: Upload combined debug symbols artifact
-        uses: actions/upload-artifact@v4
-        if: ${{ inputs.profile == 'canary' }}
-        with:
-          name: debug-symbols
-          path: debug-symbols/**
       - name: Debug
         run: ls -l packages/*/*/*.node
       - name: Npm
@@ -160,45 +154,32 @@ jobs:
           npm config set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
           npm config set registry https://registry.npmjs.org/
       - run: ${{ inputs.release-command }}
-      - name: Get canary version
-        if: ${{ inputs.type == 'canary' }}
-        id: canary-version
-        run: echo "VERSION_TAG=$(npm show @atlaspack/cli@canary --json | jq .version -r)" >> "$GITHUB_OUTPUT"
-      - name: Create tag
-        uses: actions/github-script@v5
-        if: ${{ inputs.type == 'canary' }}
-        with:
-          script: |
-            github.rest.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: 'refs/tags/${{ steps.canary-version.outputs.VERSION_TAG }}'.trim(),
-              sha: context.sha
-            })
 
   build-and-release-changesets:
     name: Build and release Changesets
     if: github.ref_name == 'main'
-    permissions: write-all
-    needs:
-      - build-native-linux
-      - build-native-macos
+    needs: build-and-release
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with: { cache: yarn }
+          persist-credentials: false
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.ATLASPACK_CI_APP_ID }}
+          private-key: ${{ secrets.ATLASPACK_CI_PRIVATE_KEY }}
+      - uses: ./.github/actions/setup-node
       - uses: actions/download-artifact@v4
         with:
           pattern: packages-*
           path: packages
           merge-multiple: true
-      - run: yarn install --frozen-lockfile
       - uses: changesets/action@v1
         with:
           publish: yarn changesets-publish
+          createGithubReleases: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

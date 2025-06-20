@@ -7,6 +7,7 @@ import type {
   BuildMode,
   PluginLogger,
 } from '@atlaspack/types';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {type SchemaEntity, validateSchema} from '@atlaspack/utils';
 import invariant from 'assert';
 
@@ -20,6 +21,13 @@ type ManualSharedBundles = Array<{|
   split?: number,
 |}>;
 
+export type MergeCandidates = Array<{|
+  overlapThreshold?: number,
+  maxBundleSize?: number,
+  sourceBundles?: Array<string>,
+  minBundlesInGroup?: number,
+|}>;
+
 type BaseBundlerConfig = {|
   http?: number,
   minBundles?: number,
@@ -28,6 +36,7 @@ type BaseBundlerConfig = {|
   disableSharedBundles?: boolean,
   manualSharedBundles?: ManualSharedBundles,
   loadConditionalBundlesInParallel?: boolean,
+  sharedBundleMerge?: MergeCandidates,
 |};
 
 type BundlerConfig = {|
@@ -42,6 +51,7 @@ export type ResolvedBundlerConfig = {|
   disableSharedBundles: boolean,
   manualSharedBundles: ManualSharedBundles,
   loadConditionalBundlesInParallel?: boolean,
+  sharedBundleMerge?: MergeCandidates,
 |};
 
 function resolveModeConfig(
@@ -76,6 +86,7 @@ const HTTP_OPTIONS = {
     minBundleSize: 30000,
     maxParallelRequests: 6,
     disableSharedBundles: false,
+    sharedBundleMerge: [],
   },
   '2': {
     minBundles: 1,
@@ -83,6 +94,7 @@ const HTTP_OPTIONS = {
     minBundleSize: 20000,
     maxParallelRequests: 25,
     disableSharedBundles: false,
+    sharedBundleMerge: [],
   },
 };
 
@@ -124,6 +136,30 @@ const CONFIG_SCHEMA: SchemaEntity = {
         additionalProperties: false,
       },
     },
+    sharedBundleMerge: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          overlapThreshold: {
+            type: 'number',
+          },
+          maxBundleSize: {
+            type: 'number',
+          },
+          sourceBundles: {
+            type: 'array',
+            items: {
+              type: 'string',
+            },
+          },
+          minBundlesInGroup: {
+            type: 'number',
+          },
+        },
+        additionalProperties: false,
+      },
+    },
     minBundles: {
       type: 'number',
     },
@@ -139,6 +175,9 @@ const CONFIG_SCHEMA: SchemaEntity = {
     loadConditionalBundlesInParallel: {
       type: 'boolean',
     },
+    sharedBundleMergeThreshold: {
+      type: 'number',
+    },
   },
   additionalProperties: false,
 };
@@ -148,9 +187,17 @@ export async function loadBundlerConfig(
   options: PluginOptions,
   logger: PluginLogger,
 ): Promise<ResolvedBundlerConfig> {
-  let conf = await config.getConfig<BundlerConfig>([], {
-    packageKey: '@atlaspack/bundler-default',
-  });
+  let conf;
+
+  if (getFeatureFlag('resolveBundlerConfigFromCwd')) {
+    conf = await config.getConfigFrom(`${process.cwd()}/index`, [], {
+      packageKey: '@atlaspack/bundler-default',
+    });
+  } else {
+    conf = await config.getConfig<BundlerConfig>([], {
+      packageKey: '@atlaspack/bundler-default',
+    });
+  }
 
   if (!conf) {
     const modDefault = {
@@ -224,6 +271,8 @@ export async function loadBundlerConfig(
   return {
     minBundles: modeConfig.minBundles ?? defaults.minBundles,
     minBundleSize: modeConfig.minBundleSize ?? defaults.minBundleSize,
+    sharedBundleMerge:
+      modeConfig.sharedBundleMerge ?? defaults.sharedBundleMerge,
     maxParallelRequests:
       modeConfig.maxParallelRequests ?? defaults.maxParallelRequests,
     projectRoot: options.projectRoot,

@@ -1,5 +1,86 @@
 # @atlaspack/compressor-gzip
 
+## 2.13.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.11
+
+## 2.13.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.10
+
+## 2.13.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.9
+
+## 2.13.10
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.8
+
+## 2.13.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.7
+
+## 2.13.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.6
+
+## 2.13.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.5
+
+## 2.13.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.4
+
+## 2.13.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.3
+
+## 2.13.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.2
+
+## 2.13.3
+
+### Patch Changes
+
+- [#450](https://github.com/atlassian-labs/atlaspack/pull/450) [`b9d41b1`](https://github.com/atlassian-labs/atlaspack/commit/b9d41b175ad5771651a5b0278a5a0147e669234a) Thanks [@benjervis](https://github.com/benjervis)! - Remove the Atlaspack engines compatibility check
+
+- [#478](https://github.com/atlassian-labs/atlaspack/pull/478) [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b) Thanks [@yamadapc](https://github.com/yamadapc)! - The first attempt at Version Packages didn't include the built artifacts.
+  This has hopefully been fixed, so this change will force those packages to re-release.
+- Updated dependencies [[`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b)]:
+  - @atlaspack/plugin@2.14.1
+
 ## 2.13.2
 
 ### Patch Changes

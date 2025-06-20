@@ -718,6 +718,72 @@ describe('conditional bundling', function () {
     );
   });
 
+  it(`should load more conditional bundles in entry html when enabled`, async function () {
+    const dir = path.join(__dirname, 'import-cond-entry-html-more-enabled');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      package.json:
+        {
+          "@atlaspack/packager-html": {
+            "evaluateRootConditionalBundles": true
+          }
+        }
+
+      yarn.lock: {}
+
+      index.html:
+        <!doctype html>
+        <html>
+        <head>
+          <title>Test</title>
+        </head>
+        <body>
+          <script type="module" src="./index.js"></script>
+        </body>
+        </html>
+
+      index.js:
+        const conditions = { 'cond1': true, 'cond2': true };
+        globalThis.__MCOND = function(key) { return conditions[key]; }
+
+        const imported1 = importCond('cond1', './a', './b');
+
+        export default imported1;
+
+      a.js:
+        const imported2 = importCond('cond2', './c', './d');
+        export default 'module-a';
+
+      b.js:
+        export default 'module-b';
+
+      c.js:
+        export default 'module-c';
+
+      d.js:
+        export default 'module-d';
+    `;
+
+    let bundleGraph = await bundle(path.join(dir, '/index.html'), {
+      inputFS: overlayFS,
+      featureFlags: {
+        conditionalBundlingApi: true,
+        condbHtmlPackagerChange: true,
+      },
+    });
+
+    let entry = nullthrows(
+      bundleGraph.getBundles().find((b) => b.name === 'index.html'),
+      'index.html bundle not found',
+    );
+
+    let entryContents = overlayFS.readFileSync(entry.filePath).toString();
+
+    // There should be all four bundles loaded in the html
+    assert.equal(entryContents.match(/data-conditional/g)?.length, 4);
+  });
+
   it(`should have correct deps as bundles in conditional manifest when nested`, async function () {
     const dir = path.join(__dirname, 'import-cond-cond-manifest');
     await overlayFS.mkdirp(dir);
@@ -948,5 +1014,80 @@ describe('conditional bundling', function () {
     });
 
     assert.deepEqual(await result, ['cond-a']);
+  });
+
+  it(`should have all deps as bundles in conditional manifest when same condition is used multiple times`, async function () {
+    const dir = path.join(
+      __dirname,
+      'import-cond-cond-manifest-same-condition',
+    );
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "reporters": [
+              "@atlaspack/reporter-conditional-manifest",
+              "..."
+            ]
+          }
+
+        index.js:
+          const imported1 = importCond('cond', './a', './b');
+          const imported2 = importCond('cond', './c', './d');
+
+          export const result = imported.default;
+
+        a.js:
+          export default 'module-a';
+
+        b.js:
+          export default 'module-b';
+
+        c.js:
+          export default 'module-c';
+
+        d.js:
+          export default 'module-d';
+      `;
+
+    let bundleGraph = await bundle(path.join(dir, '/index.js'), {
+      inputFS: overlayFS,
+      featureFlags: {
+        conditionalBundlingApi: true,
+        conditionalBundlingReporterSameConditionFix: true,
+      },
+      defaultConfig: path.join(dir, '.parcelrc'),
+    });
+
+    // Get the generated bundle names
+    let bundleNames = new Map<string, string>(
+      bundleGraph
+        .getBundles()
+        .map((b) => [b.displayName, b.filePath.slice(distDir.length + 1)]),
+    );
+
+    // Load the generated manifest
+    let conditionalManifest = JSON.parse(
+      overlayFS
+        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+        .toString(),
+    );
+
+    assert.deepEqual(conditionalManifest, {
+      'index.js': {
+        cond: {
+          ifFalseBundles: [
+            nullthrows(bundleNames.get('b.[hash].js')),
+            nullthrows(bundleNames.get('d.[hash].js')),
+          ],
+          ifTrueBundles: [
+            nullthrows(bundleNames.get('a.[hash].js')),
+            nullthrows(bundleNames.get('c.[hash].js')),
+          ],
+        },
+      },
+    });
   });
 });

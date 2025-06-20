@@ -1,5 +1,94 @@
 # @atlaspack/watcher-watchman-js
 
+## 2.14.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.11
+
+## 2.14.10
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.10
+  - @atlaspack/utils@2.14.10
+
+## 2.14.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.9
+  - @atlaspack/utils@2.14.9
+
+## 2.14.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.8
+  - @atlaspack/logger@2.14.8
+
+## 2.14.7
+
+### Patch Changes
+
+- Updated dependencies [[`556d6ab`](https://github.com/atlassian-labs/atlaspack/commit/556d6ab8ede759fa7f37fcd3f4da336ef1c55e8f)]:
+  - @atlaspack/logger@2.14.7
+  - @atlaspack/utils@2.14.7
+
+## 2.14.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.6
+  - @atlaspack/logger@2.14.6
+
+## 2.14.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.5
+  - @atlaspack/logger@2.14.5
+
+## 2.14.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.4
+  - @atlaspack/utils@2.14.4
+
+## 2.14.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.3
+  - @atlaspack/utils@2.14.3
+
+## 2.14.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.2
+  - @atlaspack/logger@2.14.2
+
+## 2.14.1
+
+### Patch Changes
+
+- [#478](https://github.com/atlassian-labs/atlaspack/pull/478) [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b) Thanks [@yamadapc](https://github.com/yamadapc)! - The first attempt at Version Packages didn't include the built artifacts.
+  This has hopefully been fixed, so this change will force those packages to re-release.
+- Updated dependencies [[`ce13d5e`](https://github.com/atlassian-labs/atlaspack/commit/ce13d5e885d55518ee6318e7a72e3a6e4e5126f2), [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b)]:
+  - @atlaspack/utils@2.14.1
+  - @atlaspack/logger@2.14.1
+
 ## 2.14.0
 
 ### Minor Changes

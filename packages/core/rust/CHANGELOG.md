@@ -1,5 +1,122 @@
 # @atlaspack/rust
 
+## 3.3.5
+
+### Patch Changes
+
+- [#594](https://github.com/atlassian-labs/atlaspack/pull/594) [`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix issue where cache database could become invalid due to stale readers
+
+- [#572](https://github.com/atlassian-labs/atlaspack/pull/572) [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca) Thanks [@yamadapc](https://github.com/yamadapc)! - Add feature-flagged change which removes all environment duplication around objects
+
+## 3.3.4
+
+### Patch Changes
+
+- [#583](https://github.com/atlassian-labs/atlaspack/pull/583) [`124b7ff`](https://github.com/atlassian-labs/atlaspack/commit/124b7fff44f71aac9fbad289a9a9509b3dfc9aaa) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix problem where cache writes could start to fail during a V3 build
+
+- [#568](https://github.com/atlassian-labs/atlaspack/pull/568) [`e052521`](https://github.com/atlassian-labs/atlaspack/commit/e0525210850ed1606146eb86991049cf567c5dec) Thanks [@yamadapc](https://github.com/yamadapc)! - Migrate to parking_lot locks to prevent crashes
+
+- [#564](https://github.com/atlassian-labs/atlaspack/pull/564) [`15c6d70`](https://github.com/atlassian-labs/atlaspack/commit/15c6d7000bd89da876bc590aa75b17a619a41896) Thanks [@benjervis](https://github.com/benjervis)! - The `SourceField` enum in package.json parsing is now marked as "untagged", allowing it to be parsed properly.
+
+- [#591](https://github.com/atlassian-labs/atlaspack/pull/591) [`e4d966c`](https://github.com/atlassian-labs/atlaspack/commit/e4d966c3c9c4292c5013372ae65b10d19d4bacc6) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix bug where renames would not get handled correctly
+
+- [#569](https://github.com/atlassian-labs/atlaspack/pull/569) [`42a775d`](https://github.com/atlassian-labs/atlaspack/commit/42a775de8eec638ad188f3271964170d8c04d84b) Thanks [@benjervis](https://github.com/benjervis)! - There are three types of results that a resolver can return:
+
+  - A successful resolution
+  - "Unresolved" when the resolver could not find a match
+  - "Excluded" when the result should not be included in the bundle
+
+  This last case wasn't being handle in the NAPI conversion layer, and so was falling through as a successful resolution with no details.
+
+- [#589](https://github.com/atlassian-labs/atlaspack/pull/589) [`29c2f10`](https://github.com/atlassian-labs/atlaspack/commit/29c2f106de9679adfb5afa04e1910471dc65a427) Thanks [@yamadapc](https://github.com/yamadapc)! - Do not use libgit
+
+- [#586](https://github.com/atlassian-labs/atlaspack/pull/586) [`1ef91fc`](https://github.com/atlassian-labs/atlaspack/commit/1ef91fcc863fdd2831511937083dbbc1263b3d9d) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix issue where LMDB database handle could become invalid
+
+## 3.3.3
+
+### Patch Changes
+
+- [#558](https://github.com/atlassian-labs/atlaspack/pull/558) [`1ab0a27`](https://github.com/atlassian-labs/atlaspack/commit/1ab0a275aeca40350415e2b03e7440d1dddc6228) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix bug handling dirty deleted git files
+
+- [#559](https://github.com/atlassian-labs/atlaspack/pull/559) [`b8a4ae8`](https://github.com/atlassian-labs/atlaspack/commit/b8a4ae8f83dc0a83d8b145c5f729936ce52080a3) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix bugs in VCS cache invalidation
+
+## 3.3.2
+
+### Patch Changes
+
+- [#549](https://github.com/atlassian-labs/atlaspack/pull/549) [`556d6ab`](https://github.com/atlassian-labs/atlaspack/commit/556d6ab8ede759fa7f37fcd3f4da336ef1c55e8f) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix log file RUST_LOG levels
+
+## 3.3.1
+
+### Patch Changes
+
+- [#542](https://github.com/atlassian-labs/atlaspack/pull/542) [`e0f5337`](https://github.com/atlassian-labs/atlaspack/commit/e0f533757bd1019dbd108a04952c87da15286e09) Thanks [@yamadapc](https://github.com/yamadapc)! - Add feature-flagged option to use rayon thread-pool to optimize inline requires
+
+## 3.3.0
+
+### Minor Changes
+
+- [#541](https://github.com/atlassian-labs/atlaspack/pull/541) [`e2ba0f6`](https://github.com/atlassian-labs/atlaspack/commit/e2ba0f69702656f3d1ce95ab1454e35062b13b39) Thanks [@yamadapc](https://github.com/yamadapc)! - Add database compaction debug command
+
+- [#531](https://github.com/atlassian-labs/atlaspack/pull/531) [`d2c50c2`](https://github.com/atlassian-labs/atlaspack/commit/d2c50c2c020888b33bb25b8690d9320c2b69e2a6) Thanks [@yamadapc](https://github.com/yamadapc)! - Add way to iterate LMDB cache keys
+
+### Patch Changes
+
+- [#540](https://github.com/atlassian-labs/atlaspack/pull/540) [`46a90dc`](https://github.com/atlassian-labs/atlaspack/commit/46a90dccd019a26b222c878a92d23acc75dc67c5) Thanks [@yamadapc](https://github.com/yamadapc)! - Log verbose errors when failing to read VCS files
+
+## 3.2.0
+
+### Minor Changes
+
+- [#525](https://github.com/atlassian-labs/atlaspack/pull/525) [`cb9da16`](https://github.com/atlassian-labs/atlaspack/commit/cb9da16fb2648e7f53c64df0313f60d5fb8970cc) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix issues with large blob cache writes, run cache writes in a write transaction
+
+### Patch Changes
+
+- [#527](https://github.com/atlassian-labs/atlaspack/pull/527) [`1a2c14c`](https://github.com/atlassian-labs/atlaspack/commit/1a2c14c3cd4587551cc12e94d0680c8b71ea12bf) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix warnings when creating multiple instances on a process
+
+## 3.1.1
+
+### Patch Changes
+
+- [#458](https://github.com/atlassian-labs/atlaspack/pull/458) [`f27d39e`](https://github.com/atlassian-labs/atlaspack/commit/f27d39e767b06def059944b3bc5fd50797eaea96) Thanks [@yamadapc](https://github.com/yamadapc)! - Migrate to LazyLock from lazy_static
+
+## 3.1.0
+
+### Minor Changes
+
+- [#491](https://github.com/atlassian-labs/atlaspack/pull/491) [`a891d65`](https://github.com/atlassian-labs/atlaspack/commit/a891d652bc4eb3d757d381adf65c5083f706effc) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Support ignore comments for node replacements
+
+  Adding `#__ATLASPACK_IGNORE__` before `__filename` and `__dirname` will now disable the default node replacement behaviour of these variables. This is useful when you want your compiled output to be aware of it's runtime directory rather than it's pre-compiled source directory.
+
+  ```js
+  const dirname = /*#__ATLASPACK_IGNORE__*/ __dirname;
+  ```
+
+### Patch Changes
+
+- [#495](https://github.com/atlassian-labs/atlaspack/pull/495) [`d02eab9`](https://github.com/atlassian-labs/atlaspack/commit/d02eab95eb60bf7457e0869af0b773608592c0e6) Thanks [@yamadapc](https://github.com/yamadapc)! - Update with sentry tracing support
+
+- [#514](https://github.com/atlassian-labs/atlaspack/pull/514) [`fb87a90`](https://github.com/atlassian-labs/atlaspack/commit/fb87a901973776b33ca4ce530e9d71669a9bd36d) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix reading file contents on certain sparse checkouts
+
+- [#498](https://github.com/atlassian-labs/atlaspack/pull/498) [`7b9e8cf`](https://github.com/atlassian-labs/atlaspack/commit/7b9e8cf29e01a98e72e46b2b2fb74ccc514f4463) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix compile time flags (sentry integration, crash reporting, memory allocator)
+
+## 3.0.1
+
+### Patch Changes
+
+- [#444](https://github.com/atlassian-labs/atlaspack/pull/444) [`80bd57b`](https://github.com/atlassian-labs/atlaspack/commit/80bd57b9f9e966563957dee0780d956a682eb2d4) Thanks [@yamadapc](https://github.com/yamadapc)! - Allow missing .yarn-state.yml files without throwing on VCS file change reads
+
+- [#448](https://github.com/atlassian-labs/atlaspack/pull/448) [`ae70b81`](https://github.com/atlassian-labs/atlaspack/commit/ae70b810384cf58f9c57d341ab4c925c7bb2060c) Thanks [@yamadapc](https://github.com/yamadapc)! - Upgrade GLIBC to 2.35
+
+- [#487](https://github.com/atlassian-labs/atlaspack/pull/487) [`c0a61a9`](https://github.com/atlassian-labs/atlaspack/commit/c0a61a92405b6830fe39cc17622cc2e97bf02dd7) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix listing diff for VCS filesystem on sparse checkouts
+
+- [#488](https://github.com/atlassian-labs/atlaspack/pull/488) [`cb35e7d`](https://github.com/atlassian-labs/atlaspack/commit/cb35e7d2b90b372de8401792915f12f410508d24) Thanks [@yamadapc](https://github.com/yamadapc)! - Binaries are now built on debian bullseye
+
+- [#459](https://github.com/atlassian-labs/atlaspack/pull/459) [`6ec11f1`](https://github.com/atlassian-labs/atlaspack/commit/6ec11f10a9366fb8a9fc0475c7678235056bd80e) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix segmentation faults on exit
+
+- [#478](https://github.com/atlassian-labs/atlaspack/pull/478) [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b) Thanks [@yamadapc](https://github.com/yamadapc)! - The first attempt at Version Packages didn't include the built artifacts.
+  This has hopefully been fixed, so this change will force those packages to re-release.
+
 ## 3.0.0
 
 ### Major Changes

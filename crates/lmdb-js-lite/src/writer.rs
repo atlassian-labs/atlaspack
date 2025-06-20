@@ -18,16 +18,16 @@ type Result<R> = std::result::Result<R, DatabaseWriterError>;
 #[derive(thiserror::Error, Debug)]
 pub enum DatabaseWriterError {
   #[error("heed error: {0}")]
-  HeedError(#[from] heed::Error),
+  Heed(#[from] heed::Error),
   #[error("IO error: {0}")]
-  IOError(#[from] std::io::Error),
+  IO(#[from] std::io::Error),
   #[error("Failed to decompress entry {0}")]
-  DecompressError(#[from] lz4_flex::block::DecompressError),
+  Decompress(#[from] lz4_flex::block::DecompressError),
   #[error("Failed to compress entry {0}")]
-  CompressError(#[from] lz4_flex::block::CompressError),
+  Compress(#[from] lz4_flex::block::CompressError),
 }
 
-#[derive(Clone, PartialOrd, PartialEq)]
+#[derive(Clone, Debug, PartialOrd, PartialEq)]
 #[napi(object)]
 pub struct LMDBOptions {
   /// The database directory path
@@ -50,8 +50,7 @@ pub struct LMDBOptions {
 /// There is always a single writer thread per database.
 pub struct DatabaseWriterHandle {
   tx: Sender<DatabaseWriterMessage>,
-  #[allow(unused)]
-  thread_handle: JoinHandle<()>,
+  thread_handle: Option<JoinHandle<()>>,
 }
 
 impl DatabaseWriterHandle {
@@ -62,11 +61,24 @@ impl DatabaseWriterHandle {
   ) -> std::result::Result<(), crossbeam::channel::SendError<DatabaseWriterMessage>> {
     self.tx.send(message)
   }
+
+  pub fn thread_id(&self) -> std::thread::ThreadId {
+    self.thread_handle.as_ref().unwrap().thread().id()
+  }
+
+  pub fn join(&mut self) -> std::thread::Result<()> {
+    if let Some(thread_handle) = self.thread_handle.take() {
+      thread_handle.join()
+    } else {
+      Ok(())
+    }
+  }
 }
 
 impl Drop for DatabaseWriterHandle {
   fn drop(&mut self) {
     let _ = self.tx.send(DatabaseWriterMessage::Stop);
+    let _ = self.join();
   }
 }
 
@@ -90,12 +102,21 @@ pub fn start_make_database_writer(
     }
   });
 
-  Ok((DatabaseWriterHandle { tx, thread_handle }, writer))
+  Ok((
+    DatabaseWriterHandle {
+      tx,
+      thread_handle: Some(thread_handle),
+    },
+    writer,
+  ))
 }
 
 /// Main-loop for the database writer thread
 fn run_database_writer(rx: Receiver<DatabaseWriterMessage>, writer: Arc<DatabaseWriter>) {
-  tracing::debug!("Starting database writer thread");
+  tracing::debug!(
+    "Starting database writer thread {:?}",
+    std::thread::current().id()
+  );
   let mut current_transaction: Option<RwTxn> = None;
 
   while let Ok(msg) = rx.recv() {
@@ -107,6 +128,11 @@ fn run_database_writer(rx: Receiver<DatabaseWriterMessage>, writer: Arc<Database
   if let Some(txn) = current_transaction {
     let _ = txn.commit();
   }
+
+  tracing::debug!(
+    "Database writer thread {:?} exited",
+    std::thread::current().id()
+  );
 }
 
 #[allow(clippy::needless_lifetimes)]
@@ -151,7 +177,16 @@ fn handle_message<'a, 'b>(
       resolve(result);
     }
     DatabaseWriterMessage::Stop => {
-      tracing::debug!("Stopping writer thread");
+      tracing::debug!(
+        "Stopping writer thread {:?}...",
+        std::thread::current().id()
+      );
+
+      if let Some(txn) = current_transaction.take() {
+        if let Err(e) = txn.commit() {
+          tracing::error!("Failed to commit trailing transaction on shutdown: {e}");
+        }
+      }
       return true;
     }
     DatabaseWriterMessage::StartTransaction { resolve } => {
@@ -168,6 +203,8 @@ fn handle_message<'a, 'b>(
     DatabaseWriterMessage::CommitTransaction { resolve } => {
       if let Some(txn) = current_transaction.take() {
         resolve(txn.commit().map_err(DatabaseWriterError::from))
+      } else {
+        resolve(Ok(()))
       }
     }
     DatabaseWriterMessage::PutMany { entries, resolve } => {
@@ -199,6 +236,26 @@ fn handle_message<'a, 'b>(
       let result = run();
       resolve(result);
     }
+    DatabaseWriterMessage::Delete { key, resolve } => {
+      let mut run = || {
+        let mut txn = if let Some(txn) = current_transaction {
+          RwTransaction::Borrowed(txn)
+        } else {
+          let txn = writer.environment.write_txn()?;
+          RwTransaction::Owned(txn)
+        };
+
+        writer.delete(txn.deref_mut(), &key)?;
+
+        if let RwTransaction::Owned(txn) = txn {
+          txn.commit()?;
+        }
+
+        Ok(())
+      };
+
+      resolve(run());
+    }
   }
   false
 }
@@ -217,6 +274,10 @@ pub enum DatabaseWriterMessage {
   },
   PutMany {
     entries: Vec<NativeEntry>,
+    resolve: ResolveCallback<()>,
+  },
+  Delete {
+    key: String,
     resolve: ResolveCallback<()>,
   },
   StartTransaction {
@@ -278,12 +339,6 @@ pub struct DatabaseWriter {
 }
 
 impl DatabaseWriter {
-  pub fn environment(&self) -> &Env {
-    &self.environment
-  }
-}
-
-impl DatabaseWriter {
   /// Create a new [`DatabaseWriter`] handle see [`LMDBOptions`] for
   /// documentation on the settings.
   pub fn new(options: &LMDBOptions) -> Result<Self> {
@@ -320,6 +375,11 @@ impl DatabaseWriter {
       env
     }?;
 
+    // If processes are terminated, they might leave stale readers on the DB
+    // the database will be unusable after it reaches a certain number of
+    // readers, so clean-up is useful on start-up.
+    environment.clear_stale_readers()?;
+
     let mut write_txn = environment.write_txn()?;
     let database = environment.create_database(&mut write_txn, None)?;
 
@@ -329,6 +389,21 @@ impl DatabaseWriter {
       database,
       environment,
     })
+  }
+
+  /// Check if an entry exists in the database
+  pub fn has(&self, txn: &RoTxn, key: &str) -> Result<bool> {
+    Ok(self.database.get(txn, key)?.is_some())
+  }
+
+  pub fn keys(&self, txn: &RoTxn, skip: usize, limit: usize) -> Result<Vec<String>> {
+    self
+      .database
+      .iter(txn)?
+      .skip(skip)
+      .take(limit)
+      .map(|entry| -> Result<_> { Ok(entry?.0.to_string()) })
+      .collect()
   }
 
   /// Read an entry and decompress it
@@ -348,6 +423,16 @@ impl DatabaseWriter {
     Ok(())
   }
 
+  pub fn delete(&self, txn: &mut RwTxn, key: &str) -> Result<()> {
+    self.database.delete(txn, key)?;
+    Ok(())
+  }
+
+  /// Create a write transaction
+  pub fn write_txn(&self) -> heed::Result<RwTxn> {
+    self.environment.write_txn()
+  }
+
   /// Create a read transaction
   pub fn read_txn(&self) -> heed::Result<RoTxn> {
     self.environment.read_txn()
@@ -357,6 +442,19 @@ impl DatabaseWriter {
   /// the database environment
   pub fn static_read_txn(&self) -> heed::Result<RoTxn<'static>> {
     self.environment.clone().static_read_txn()
+  }
+
+  /// Compact the database to the target path
+  pub fn compact(&self, target_path: &Path) -> Result<()> {
+    self
+      .environment
+      .copy_to_file(target_path, heed::CompactionOption::Enabled)?;
+
+    Ok(())
+  }
+
+  pub fn path(&self) -> &Path {
+    self.environment.path()
   }
 }
 
@@ -387,17 +485,17 @@ mod tests {
     };
 
     let writer = DatabaseWriter::new(&options).unwrap();
-    let mut write_txn = writer.environment().write_txn().unwrap();
+    let mut write_txn = writer.environment.write_txn().unwrap();
     writer
       .put(&mut write_txn, "key", &[1, 2, 3, 3, 3, 3, 3, 3, 4])
       .unwrap();
     write_txn.commit().unwrap();
 
-    let read_txn = writer.environment().read_txn().unwrap();
+    let read_txn = writer.environment.read_txn().unwrap();
     let value = writer.get(&read_txn, "key").unwrap().unwrap();
     assert_eq!(&value, &vec![1, 2, 3, 3, 3, 3, 3, 3, 4]);
     drop(read_txn);
-    let read_txn = writer.environment().read_txn().unwrap();
+    let read_txn = writer.environment.read_txn().unwrap();
     let value = writer.get(&read_txn, "other-key").unwrap();
     assert_eq!(&value, &None);
   }
@@ -557,5 +655,43 @@ mod tests {
       })
       .unwrap();
     rx.recv().unwrap().unwrap()
+  }
+
+  #[test]
+  fn test_filling_up_the_database() {
+    let _ = tracing_subscriber::fmt::try_init();
+    let db_path = temp_dir()
+      .join("lmdb-js-lite")
+      .join("test_filling_up_the_database")
+      .join("lmdb-cache-tests.db");
+    tracing::info!("db_path={db_path:?}");
+    let _ = std::fs::remove_dir_all(&db_path);
+    let mut current_size = 10485760;
+    let options = LMDBOptions {
+      path: db_path.to_str().unwrap().to_string(),
+      async_writes: false,
+      map_size: None,
+    };
+    let (_, read) = start_make_database_writer(&options).unwrap();
+
+    // 1MB entry
+    let mut buffer: Vec<u8> = vec![];
+    for _j in 0..(1024 * 1024) {
+      buffer.push(rand::random());
+    }
+    // 1GB writes +/-
+    for i in 0..1024 {
+      let mut write_txn = read.environment.write_txn().unwrap();
+      let error = (|| -> std::result::Result<(), DatabaseWriterError> {
+        read.put(&mut write_txn, &format!("{i}"), &buffer)?;
+        write_txn.commit()?;
+        Ok(())
+      })();
+      if let Err(DatabaseWriterError::Heed(heed::Error::Mdb(heed::MdbError::MapFull))) = error {
+        current_size *= 2;
+        tracing::info!("Resizing database {current_size}");
+        unsafe { read.environment.resize(current_size).unwrap() }
+      }
+    }
   }
 }

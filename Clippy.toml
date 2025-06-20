@@ -1,0 +1,13 @@
+disallowed-methods = [
+  # use parking_lot
+  "std::sync::Mutex::new",
+  "std::sync::RwLock::new",
+  "std::sync::Condvar::new",
+  "std::sync::Once::new",
+]
+disallowed-types = [
+  "std::sync::Mutex",
+  "std::sync::RwLock",
+  "std::sync::Condvar",
+  "std::sync::Once",
+]

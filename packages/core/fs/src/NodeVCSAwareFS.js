@@ -139,6 +139,7 @@ export class NodeVCSAwareFS extends NodeFS {
     }
 
     const snapshotDirectory = path.dirname(snapshot);
+    await this.mkdirp(snapshotDirectory);
     const filename = path.basename(snapshot, '.txt');
     const nativeSnapshotPath = path.join(
       snapshotDirectory,
@@ -160,6 +161,16 @@ export class NodeVCSAwareFS extends NodeFS {
         'NodeVCSAwareFS::getVcsStateSnapshot',
         () => getVcsStateSnapshot(gitRepoPath, this.#excludePatterns),
       );
+
+      logger.verbose({
+        origin: '@atlaspack/fs',
+        message: 'Expose VCS timing metrics',
+        meta: {
+          trackableEvent: 'vcs_timing_metrics',
+          dirtyFilesExecutionTime: vcsState?.dirtyFilesExecutionTime,
+          yarnStatesExecutionTime: vcsState?.yarnStatesExecutionTime,
+        },
+      });
     } catch (err) {
       logger.error({
         origin: '@atlaspack/fs',

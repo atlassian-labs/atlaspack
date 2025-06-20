@@ -6,6 +6,7 @@ import nullthrows from 'nullthrows';
 import {ncp, overlayFS, outputFS} from '@atlaspack/test-utils';
 import {loadConfig as configCache} from '@atlaspack/utils';
 import {createEnvironment} from '@atlaspack/core/src/Environment';
+import {fromEnvironmentId} from '@atlaspack/core/src/EnvironmentManager';
 import Environment from '@atlaspack/core/src/public/Environment';
 import {DEFAULT_OPTIONS} from '@atlaspack/core/test/test-utils';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
@@ -13,26 +14,32 @@ import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 const rootDir = path.join(__dirname, 'fixture');
 
 const NODE_ENV = new Environment(
-  createEnvironment({
-    context: 'node',
-    includeNodeModules: false,
-  }),
+  fromEnvironmentId(
+    createEnvironment({
+      context: 'node',
+      includeNodeModules: false,
+    }),
+  ),
   DEFAULT_OPTIONS,
 );
 
 const NODE_INCLUDE_ENV = new Environment(
-  createEnvironment({
-    context: 'node',
-    includeNodeModules: true,
-  }),
+  fromEnvironmentId(
+    createEnvironment({
+      context: 'node',
+      includeNodeModules: true,
+    }),
+  ),
   DEFAULT_OPTIONS,
 );
 
 const BROWSER_ENV = new Environment(
-  createEnvironment({
-    context: 'browser',
-    includeNodeModules: true,
-  }),
+  fromEnvironmentId(
+    createEnvironment({
+      context: 'browser',
+      includeNodeModules: true,
+    }),
+  ),
   DEFAULT_OPTIONS,
 );
 
@@ -419,11 +426,13 @@ describe('resolver', function () {
     it('should exclude the electron module in electron environments', async function () {
       let resolved = await resolver.resolve({
         env: new Environment(
-          createEnvironment({
-            context: 'electron-main',
-            isLibrary: true,
-            includeNodeModules: true,
-          }),
+          fromEnvironmentId(
+            createEnvironment({
+              context: 'electron-main',
+              isLibrary: true,
+              includeNodeModules: true,
+            }),
+          ),
           DEFAULT_OPTIONS,
         ),
         filename: 'electron',
@@ -2469,11 +2478,13 @@ describe('resolver', function () {
     it('should error when a library is missing an external dependency', async function () {
       let result = await resolver.resolve({
         env: new Environment(
-          createEnvironment({
-            context: 'browser',
-            isLibrary: true,
-            includeNodeModules: false,
-          }),
+          fromEnvironmentId(
+            createEnvironment({
+              context: 'browser',
+              isLibrary: true,
+              includeNodeModules: false,
+            }),
+          ),
           DEFAULT_OPTIONS,
         ),
         filename: 'test',
@@ -2491,11 +2502,13 @@ describe('resolver', function () {
     it('should not error when external dependencies are declared', async function () {
       let result = await resolver.resolve({
         env: new Environment(
-          createEnvironment({
-            context: 'browser',
-            isLibrary: true,
-            includeNodeModules: false,
-          }),
+          fromEnvironmentId(
+            createEnvironment({
+              context: 'browser',
+              isLibrary: true,
+              includeNodeModules: false,
+            }),
+          ),
           DEFAULT_OPTIONS,
         ),
         filename: 'foo',
@@ -2514,11 +2527,13 @@ describe('resolver', function () {
     it('should not error when external dependencies are declared in peerDependencies', async function () {
       let result = await resolver.resolve({
         env: new Environment(
-          createEnvironment({
-            context: 'browser',
-            isLibrary: true,
-            includeNodeModules: false,
-          }),
+          fromEnvironmentId(
+            createEnvironment({
+              context: 'browser',
+              isLibrary: true,
+              includeNodeModules: false,
+            }),
+          ),
           DEFAULT_OPTIONS,
         ),
         filename: 'bar',
@@ -2537,11 +2552,13 @@ describe('resolver', function () {
     it('should not error on missing dependencies for environment builtins', async function () {
       let result = await resolver.resolve({
         env: new Environment(
-          createEnvironment({
-            context: 'browser',
-            isLibrary: true,
-            includeNodeModules: false,
-          }),
+          fromEnvironmentId(
+            createEnvironment({
+              context: 'browser',
+              isLibrary: true,
+              includeNodeModules: false,
+            }),
+          ),
           DEFAULT_OPTIONS,
         ),
         filename: 'atom',
@@ -2560,11 +2577,13 @@ describe('resolver', function () {
     it('should not error on builtin node modules', async function () {
       let result = await resolver.resolve({
         env: new Environment(
-          createEnvironment({
-            context: 'browser',
-            isLibrary: true,
-            includeNodeModules: false,
-          }),
+          fromEnvironmentId(
+            createEnvironment({
+              context: 'browser',
+              isLibrary: true,
+              includeNodeModules: false,
+            }),
+          ),
           DEFAULT_OPTIONS,
         ),
         filename: 'buffer',
@@ -2579,11 +2598,13 @@ describe('resolver', function () {
     it('should error when a library has an incorrect external dependency version', async function () {
       let result = await resolver.resolve({
         env: new Environment(
-          createEnvironment({
-            context: 'browser',
-            isLibrary: true,
-            includeNodeModules: false,
-          }),
+          fromEnvironmentId(
+            createEnvironment({
+              context: 'browser',
+              isLibrary: true,
+              includeNodeModules: false,
+            }),
+          ),
           DEFAULT_OPTIONS,
         ),
         filename: 'foo',

@@ -4,7 +4,7 @@ import invariant, {AssertionError} from 'assert';
 import path from 'path';
 
 import {deserialize, serialize} from '@atlaspack/build-cache';
-import type {Cache} from '@atlaspack/cache';
+import {LMDBLiteCache, type Cache} from '@atlaspack/cache';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {ContentGraph} from '@atlaspack/graph';
 import type {
@@ -14,7 +14,7 @@ import type {
   SerializedContentGraph,
   Graph,
 } from '@atlaspack/graph';
-import logger from '@atlaspack/logger';
+import logger, {instrument} from '@atlaspack/logger';
 import {hashString} from '@atlaspack/rust';
 import type {Async, EnvMap} from '@atlaspack/types';
 import {
@@ -30,15 +30,15 @@ import nullthrows from 'nullthrows';
 
 import {
   ATLASPACK_VERSION,
-  VALID,
-  INITIAL_BUILD,
   FILE_CREATE,
-  FILE_UPDATE,
   FILE_DELETE,
+  FILE_UPDATE,
   ENV_CHANGE,
+  ERROR,
+  INITIAL_BUILD,
   OPTION_CHANGE,
   STARTUP,
-  ERROR,
+  VALID,
 } from './constants';
 import type {AtlaspackV3} from './atlaspack-v3/AtlaspackV3';
 import {
@@ -69,6 +69,12 @@ import type {
   InternalGlob,
 } from './types';
 import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
+import {performance} from 'perf_hooks';
+
+import {
+  loadEnvironmentsFromCache,
+  writeEnvironmentsToCache,
+} from './EnvironmentManager';
 
 export const requestGraphEdgeTypes = {
   subrequest: 2,
@@ -143,7 +149,7 @@ type OptionNode = {|
 type ConfigKeyNode = {|
   id: ContentKey,
   +type: typeof CONFIG_KEY,
-  configKey: string,
+  configKey: string[],
   contentHash: string,
 |};
 
@@ -215,7 +221,7 @@ export type RunAPI<TResult: RequestResult> = {|
   invalidateOnFileUpdate: (ProjectPath) => void,
   invalidateOnConfigKeyChange: (
     filePath: ProjectPath,
-    configKey: string,
+    configKey: string[],
     contentHash: string,
   ) => void,
   invalidateOnStartup: () => void,
@@ -282,10 +288,12 @@ const nodeFromOption = (option: string, value: mixed): RequestGraphNode => ({
 
 const nodeFromConfigKey = (
   fileName: ProjectPath,
-  configKey: string,
+  configKey: string[],
   contentHash: string,
 ): RequestGraphNode => ({
-  id: `config_key:${fromProjectPathRelative(fileName)}:${configKey}`,
+  id: `config_key:${fromProjectPathRelative(fileName)}:${JSON.stringify(
+    configKey,
+  )}`,
   type: CONFIG_KEY,
   configKey,
   contentHash,
@@ -446,6 +454,11 @@ export class RequestGraph extends ContentGraph<
     this.removeCachedRequestChunkForNode(nodeId);
   }
 
+  /**
+   * Nodes that are invalidated on start-up, such as JavaScript babel configuration files which are
+   * imported when the build kicks-off and might doing arbitrary work such as reading from the file
+   * system.
+   */
   invalidateUnpredictableNodes() {
     for (let nodeId of this.unpredicatableNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
@@ -454,6 +467,9 @@ export class RequestGraph extends ContentGraph<
     }
   }
 
+  /**
+   * Effectively uncacheable nodes.
+   */
   invalidateOnBuildNodes() {
     for (let nodeId of this.invalidateOnBuildNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
@@ -462,11 +478,20 @@ export class RequestGraph extends ContentGraph<
     }
   }
 
-  invalidateEnvNodes(env: EnvMap) {
+  /**
+   * Nodes invalidated by environment changes, corresponds to `env: ...` inputs.
+   */
+  invalidateEnvNodes(env: EnvMap): string[] {
+    const invalidatedKeys = [];
+
     for (let nodeId of this.envNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === ENV);
-      if (env[keyFromEnvContentKey(node.id)] !== node.value) {
+
+      const key = keyFromEnvContentKey(node.id);
+      if (env[key] !== node.value) {
+        invalidatedKeys.push(key);
+
         let parentNodes = this.getNodeIdsConnectedTo(
           nodeId,
           requestGraphEdgeTypes.invalidated_by_update,
@@ -476,15 +501,23 @@ export class RequestGraph extends ContentGraph<
         }
       }
     }
+
+    return invalidatedKeys;
   }
 
-  invalidateOptionNodes(options: AtlaspackOptions) {
+  /**
+   * Nodes invalidated by option changes.
+   */
+  invalidateOptionNodes(options: AtlaspackOptions): string[] {
+    const invalidatedKeys = [];
+
     for (let nodeId of this.optionNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === OPTION);
-      if (
-        hashFromOption(options[keyFromOptionContentKey(node.id)]) !== node.hash
-      ) {
+      const key = keyFromOptionContentKey(node.id);
+
+      if (hashFromOption(options[key]) !== node.hash) {
+        invalidatedKeys.push(key);
         let parentNodes = this.getNodeIdsConnectedTo(
           nodeId,
           requestGraphEdgeTypes.invalidated_by_update,
@@ -494,12 +527,14 @@ export class RequestGraph extends ContentGraph<
         }
       }
     }
+
+    return invalidatedKeys;
   }
 
   invalidateOnConfigKeyChange(
     requestNodeId: NodeId,
     filePath: ProjectPath,
-    configKey: string,
+    configKey: string[],
     contentHash: string,
   ) {
     let configKeyNodeId = this.addNode(
@@ -686,8 +721,8 @@ export class RequestGraph extends ContentGraph<
     env: string,
     value: string | void,
   ) {
-    let envNode = nodeFromEnv(env, value);
-    let envNodeId = this.addNode(envNode);
+    const envNode = nodeFromEnv(env, value);
+    const envNodeId = this.addNode(envNode);
 
     if (
       !this.hasEdge(
@@ -907,7 +942,10 @@ export class RequestGraph extends ContentGraph<
      * True if this is the start-up (loading phase) invalidation.
      */
     isInitialBuild: boolean = false,
-  ): Async<boolean> {
+  ): Promise<{|
+    didInvalidate: boolean,
+    invalidationsByPath: Map<string, number>,
+  |}> {
     let didInvalidate = false;
     let count = 0;
     let predictedTime = 0;
@@ -945,7 +983,10 @@ export class RequestGraph extends ContentGraph<
       return above;
     };
 
+    const invalidationsByPath = new Map();
     for (let {path: _path, type} of events) {
+      const invalidationsBefore = this.getInvalidNodeCount();
+
       if (
         !enableOptimization &&
         process.env.ATLASPACK_DISABLE_CACHE_TIMEOUT !== 'true' &&
@@ -991,7 +1032,10 @@ export class RequestGraph extends ContentGraph<
             this.invalidNodeIds.add(id);
           }
         }
-        return true;
+        return {
+          didInvalidate: true,
+          invalidationsByPath: new Map(),
+        };
       }
 
       // sometimes mac os reports update events as create events.
@@ -1072,11 +1116,22 @@ export class RequestGraph extends ContentGraph<
       }
 
       let configKeyNodes = this.configKeyNodes.get(_filePath);
-      if (configKeyNodes && (type === 'delete' || type === 'update')) {
+
+      // With granular invalidations we will always run this block,
+      // so even if we get a create event (for whatever reason), we will still
+      // try to limit invalidations from config key changes through hashing.
+      //
+      // Currently create events can invalidate a large number of nodes due to
+      // "create above" invalidations.
+      const isConfigKeyChange =
+        getFeatureFlag('granularTsConfigInvalidation') ||
+        type === 'delete' ||
+        type === 'update';
+      if (configKeyNodes && isConfigKeyChange) {
         for (let nodeId of configKeyNodes) {
           let isInvalid = type === 'delete';
 
-          if (type === 'update') {
+          if (type !== 'delete') {
             let node = this.getNode(nodeId);
             invariant(node && node.type === CONFIG_KEY);
 
@@ -1104,6 +1159,13 @@ export class RequestGraph extends ContentGraph<
           }
         }
       }
+
+      const invalidationsAfter = this.getInvalidNodeCount();
+      const invalidationsForEvent = invalidationsAfter - invalidationsBefore;
+      invalidationsByPath.set(
+        _path,
+        (invalidationsByPath.get(_path) ?? 0) + invalidationsForEvent,
+      );
     }
 
     if (getFeatureFlag('fixQuadraticCacheInvalidation')) {
@@ -1124,7 +1186,10 @@ export class RequestGraph extends ContentGraph<
       },
     });
 
-    return didInvalidate && this.invalidNodeIds.size > 0;
+    return {
+      didInvalidate,
+      invalidationsByPath,
+    };
   }
 
   hasCachedRequestChunk(index: number): boolean {
@@ -1137,6 +1202,13 @@ export class RequestGraph extends ContentGraph<
 
   removeCachedRequestChunkForNode(nodeId: number): void {
     this.cachedRequestChunks.delete(Math.floor(nodeId / this.nodesPerBlob));
+  }
+
+  /**
+   * Returns the number of invalidated nodes in the graph.
+   */
+  getInvalidNodeCount(): number {
+    return this.invalidNodeIds.size;
   }
 }
 
@@ -1228,10 +1300,13 @@ export default class RequestTracker {
       return result;
     } else if (node.resultCacheKey != null && ifMatch == null) {
       let key = node.resultCacheKey;
-      invariant(this.options.cache.hasLargeBlob(key));
-      let cachedResult: T = deserialize(
-        await this.options.cache.getLargeBlob(key),
-      );
+      if (!getFeatureFlag('cachePerformanceImprovements')) {
+        invariant(this.options.cache.hasLargeBlob(key));
+      }
+
+      let cachedResult: T = getFeatureFlag('cachePerformanceImprovements')
+        ? nullthrows(await this.options.cache.get<T>(key))
+        : deserialize(await this.options.cache.getLargeBlob(key));
       node.result = cachedResult;
       return cachedResult;
     }
@@ -1258,7 +1333,13 @@ export default class RequestTracker {
     }
   }
 
-  respondToFSEvents(events: Array<Event>, threshold: number): Async<boolean> {
+  respondToFSEvents(
+    events: Array<Event>,
+    threshold: number,
+  ): Promise<{|
+    didInvalidate: boolean,
+    invalidationsByPath: Map<string, number>,
+  |}> {
     return this.graph.respondToFSEvents(events, this.options, threshold);
   }
 
@@ -1454,113 +1535,158 @@ export default class RequestTracker {
   }
 
   async writeToCache(signal?: AbortSignal) {
+    const options = this.options;
+    async function runCacheImprovements<T>(
+      newPath: (cache: LMDBLiteCache) => Promise<T>,
+      oldPath: () => Promise<T>,
+    ): Promise<T> {
+      if (getFeatureFlag('cachePerformanceImprovements')) {
+        invariant(options.cache instanceof LMDBLiteCache);
+        const result = await newPath(options.cache);
+        return result;
+      } else {
+        const result = await oldPath();
+        return result;
+      }
+    }
+
     let cacheKey = getCacheKey(this.options);
-    let requestGraphKey = `requestGraph-${cacheKey}`;
-    let snapshotKey = `snapshot-${cacheKey}`;
+    let requestGraphKey = getFeatureFlag('cachePerformanceImprovements')
+      ? `${cacheKey}/RequestGraph`
+      : `requestGraph-${cacheKey}`;
+    let snapshotKey = getFeatureFlag('cachePerformanceImprovements')
+      ? `${cacheKey}/snapshot`
+      : `snapshot-${cacheKey}`;
 
     if (this.options.shouldDisableCache) {
       return;
     }
 
     let total = 0;
-    report({
-      type: 'cache',
-      phase: 'start',
-      total,
-      size: this.graph.nodes.length,
-    });
-
-    let serialisedGraph = this.graph.serialize();
-
-    // Delete an existing request graph cache, to prevent invalid states
-    await this.options.cache.deleteLargeBlob(requestGraphKey);
-
-    const serialiseAndSet = async (
-      key: string,
-      // $FlowFixMe serialise input is any type
-      contents: any,
-    ): Promise<void> => {
-      if (signal?.aborted) {
-        throw new Error('Serialization was aborted');
-      }
-
-      await this.options.cache.setLargeBlob(
-        key,
-        serialize(contents),
-        signal
-          ? {
-              signal: signal,
-            }
-          : undefined,
-      );
-
-      total += 1;
-
+    await runCacheImprovements(
+      async (cache) => {
+        await cache.getNativeRef().startWriteTransaction();
+      },
+      () => Promise.resolve(),
+    );
+    try {
       report({
         type: 'cache',
-        phase: 'write',
+        phase: 'start',
         total,
         size: this.graph.nodes.length,
       });
-    };
 
-    let queue = new PromiseQueue({
-      maxConcurrent: 32,
-    });
-
-    // Preallocating a sparse array is faster than pushing when N is high enough
-    let cacheableNodes = new Array(serialisedGraph.nodes.length);
-    for (let i = 0; i < serialisedGraph.nodes.length; i += 1) {
-      let node = serialisedGraph.nodes[i];
-
-      let resultCacheKey = node?.resultCacheKey;
-      if (
-        node?.type === REQUEST &&
-        resultCacheKey != null &&
-        node?.result != null
-      ) {
-        queue.add(() => serialiseAndSet(resultCacheKey, node.result));
-
-        // eslint-disable-next-line no-unused-vars
-        let {result: _, ...newNode} = node;
-        cacheableNodes[i] = newNode;
-      } else {
-        cacheableNodes[i] = node;
+      if (getFeatureFlag('environmentDeduplication')) {
+        await writeEnvironmentsToCache(options.cache);
       }
-    }
 
-    let nodeCountsPerBlob = [];
+      let serialisedGraph = this.graph.serialize();
 
-    for (
-      let i = 0;
-      i * this.graph.nodesPerBlob < cacheableNodes.length;
-      i += 1
-    ) {
-      let nodesStartIndex = i * this.graph.nodesPerBlob;
-      let nodesEndIndex = Math.min(
-        (i + 1) * this.graph.nodesPerBlob,
-        cacheableNodes.length,
-      );
+      // Delete an existing request graph cache, to prevent invalid states
+      await this.options.cache.deleteLargeBlob(requestGraphKey);
 
-      nodeCountsPerBlob.push(nodesEndIndex - nodesStartIndex);
+      const serialiseAndSet = async (
+        key: string,
+        // $FlowFixMe serialise input is any type
+        contents: any,
+      ): Promise<void> => {
+        if (signal?.aborted) {
+          throw new Error('Serialization was aborted');
+        }
 
-      if (!this.graph.hasCachedRequestChunk(i)) {
-        // We assume the request graph nodes are immutable and won't change
-        let nodesToCache = cacheableNodes.slice(nodesStartIndex, nodesEndIndex);
-
-        queue.add(() =>
-          serialiseAndSet(
-            getRequestGraphNodeKey(i, cacheKey),
-            nodesToCache,
-          ).then(() => {
-            // Succeeded in writing to disk, save that we have completed this chunk
-            this.graph.setCachedRequestChunk(i);
-          }),
+        await runCacheImprovements(
+          (cache) => {
+            instrument(
+              `RequestTracker::writeToCache::cache.put(${key})`,
+              () => {
+                cache.getNativeRef().putNoConfirm(key, serialize(contents));
+              },
+            );
+            return Promise.resolve();
+          },
+          async () => {
+            await this.options.cache.setLargeBlob(
+              key,
+              serialize(contents),
+              signal
+                ? {
+                    signal: signal,
+                  }
+                : undefined,
+            );
+          },
         );
-      }
-    }
 
-    try {
+        total += 1;
+
+        report({
+          type: 'cache',
+          phase: 'write',
+          total,
+          size: this.graph.nodes.length,
+        });
+      };
+
+      let queue = new PromiseQueue({
+        maxConcurrent: 32,
+      });
+
+      // Preallocating a sparse array is faster than pushing when N is high enough
+      let cacheableNodes = new Array(serialisedGraph.nodes.length);
+      for (let i = 0; i < serialisedGraph.nodes.length; i += 1) {
+        let node = serialisedGraph.nodes[i];
+
+        let resultCacheKey = node?.resultCacheKey;
+        if (
+          node?.type === REQUEST &&
+          resultCacheKey != null &&
+          node?.result != null
+        ) {
+          queue.add(() => serialiseAndSet(resultCacheKey, node.result));
+
+          // eslint-disable-next-line no-unused-vars
+          let {result: _, ...newNode} = node;
+          cacheableNodes[i] = newNode;
+        } else {
+          cacheableNodes[i] = node;
+        }
+      }
+
+      let nodeCountsPerBlob = [];
+
+      for (
+        let i = 0;
+        i * this.graph.nodesPerBlob < cacheableNodes.length;
+        i += 1
+      ) {
+        let nodesStartIndex = i * this.graph.nodesPerBlob;
+        let nodesEndIndex = Math.min(
+          (i + 1) * this.graph.nodesPerBlob,
+          cacheableNodes.length,
+        );
+
+        nodeCountsPerBlob.push(nodesEndIndex - nodesStartIndex);
+
+        if (!this.graph.hasCachedRequestChunk(i)) {
+          // We assume the request graph nodes are immutable and won't change
+          let nodesToCache = cacheableNodes.slice(
+            nodesStartIndex,
+            nodesEndIndex,
+          );
+
+          queue.add(() =>
+            serialiseAndSet(
+              getRequestGraphNodeKey(i, cacheKey),
+              nodesToCache,
+            ).then(() => {
+              // Succeeded in writing to disk, save that we have completed this chunk
+              this.graph.setCachedRequestChunk(i);
+            }),
+          );
+        }
+      }
+
       await queue.run();
 
       // Set the request graph after the queue is flushed to avoid writing an invalid state
@@ -1569,6 +1695,18 @@ export default class RequestTracker {
         nodeCountsPerBlob,
         nodes: undefined,
       });
+
+      await runCacheImprovements(
+        () =>
+          serialiseAndSet(`${cacheKey}/cache_metadata`, {
+            version: ATLASPACK_VERSION,
+            entries: this.options.entries,
+            mode: this.options.mode,
+            shouldBuildLazily: this.options.shouldBuildLazily,
+            watchBackend: this.options.watchBackend,
+          }),
+        () => Promise.resolve(),
+      );
 
       let opts = getWatcherOptions(this.options);
       let snapshotPath = path.join(this.options.cacheDir, snapshotKey + '.txt');
@@ -1581,6 +1719,13 @@ export default class RequestTracker {
     } catch (err) {
       // If we have aborted, ignore the error and continue
       if (!signal?.aborted) throw err;
+    } finally {
+      await runCacheImprovements(
+        async (cache) => {
+          await cache.getNativeRef().commitWriteTransaction();
+        },
+        () => Promise.resolve(),
+      );
     }
 
     report({type: 'cache', phase: 'end', total, size: this.graph.nodes.length});
@@ -1614,6 +1759,18 @@ export function getWatcherOptions({
 }
 
 function getCacheKey(options) {
+  if (getFeatureFlag('cachePerformanceImprovements')) {
+    const hash = hashString(
+      `${ATLASPACK_VERSION}:${JSON.stringify(options.entries)}:${
+        options.mode
+      }:${options.shouldBuildLazily ? 'lazy' : 'eager'}:${
+        options.watchBackend ?? ''
+      }`,
+    );
+
+    return `RequestTracker/${ATLASPACK_VERSION}/${hash}`;
+  }
+
   return hashString(
     `${ATLASPACK_VERSION}:${JSON.stringify(options.entries)}:${options.mode}:${
       options.shouldBuildLazily ? 'lazy' : 'eager'
@@ -1622,6 +1779,10 @@ function getCacheKey(options) {
 }
 
 function getRequestGraphNodeKey(index: number, cacheKey: string) {
+  if (getFeatureFlag('cachePerformanceImprovements')) {
+    return `${cacheKey}/RequestGraph/nodes/${index}`;
+  }
+
   return `requestGraph-nodes-${index}-${cacheKey}`;
 }
 
@@ -1631,10 +1792,17 @@ export async function readAndDeserializeRequestGraph(
   cacheKey: string,
 ): Async<{|requestGraph: RequestGraph, bufferLength: number|}> {
   let bufferLength = 0;
+
   const getAndDeserialize = async (key: string) => {
-    let buffer = await cache.getLargeBlob(key);
-    bufferLength += Buffer.byteLength(buffer);
-    return deserialize(buffer);
+    if (getFeatureFlag('cachePerformanceImprovements')) {
+      const buffer = await cache.getBlob(key);
+      bufferLength += Buffer.byteLength(buffer);
+      return deserialize(buffer);
+    } else {
+      const buffer = await cache.getLargeBlob(key);
+      bufferLength += Buffer.byteLength(buffer);
+      return deserialize(buffer);
+    }
   };
 
   let serializedRequestGraph = await getAndDeserialize(requestGraphKey);
@@ -1667,20 +1835,45 @@ async function loadRequestGraph(options): Async<RequestGraph> {
   }
 
   let cacheKey = getCacheKey(options);
-  let requestGraphKey = `requestGraph-${cacheKey}`;
+  let requestGraphKey = getFeatureFlag('cachePerformanceImprovements')
+    ? `${cacheKey}/RequestGraph`
+    : `requestGraph-${cacheKey}`;
+
   let timeout;
-  const snapshotKey = `snapshot-${cacheKey}`;
+  const snapshotKey = getFeatureFlag('cachePerformanceImprovements')
+    ? `${cacheKey}/snapshot`
+    : `snapshot-${cacheKey}`;
   const snapshotPath = path.join(options.cacheDir, snapshotKey + '.txt');
+
+  const commonMeta = {
+    cacheKey,
+    snapshotKey,
+    cacheKeyOptions: {
+      version: ATLASPACK_VERSION,
+      entries: options.entries,
+      mode: options.mode,
+      shouldBuildLazily: options.shouldBuildLazily,
+      watchBackend: options.watchBackend,
+    },
+  };
 
   logger.verbose({
     origin: '@atlaspack/core',
     message: 'Loading request graph',
     meta: {
-      cacheKey,
-      snapshotKey,
+      ...commonMeta,
     },
   });
-  if (await options.cache.hasLargeBlob(requestGraphKey)) {
+
+  if (getFeatureFlag('environmentDeduplication')) {
+    await loadEnvironmentsFromCache(options.cache);
+  }
+
+  const hasRequestGraphInCache = getFeatureFlag('cachePerformanceImprovements')
+    ? await options.cache.has(requestGraphKey)
+    : await options.cache.hasLargeBlob(requestGraphKey);
+
+  if (hasRequestGraphInCache) {
     try {
       let {requestGraph} = await readAndDeserializeRequestGraph(
         options.cache,
@@ -1711,23 +1904,36 @@ async function loadRequestGraph(options): Async<RequestGraph> {
         origin: '@atlaspack/core',
         message: `File system event count: ${events.length}`,
         meta: {
+          ...commonMeta,
           trackableEvent: 'watcher_events_count',
           watcherEventCount: events.length,
           duration: Date.now() - startTime,
         },
       });
 
-      requestGraph.invalidateUnpredictableNodes();
-      requestGraph.invalidateOnBuildNodes();
-      requestGraph.invalidateEnvNodes(options.env);
-      requestGraph.invalidateOptionNodes(options);
+      if (getFeatureFlag('verboseRequestInvalidationStats')) {
+        const invalidationStats = await invalidateRequestGraph(
+          requestGraph,
+          options,
+          events,
+        );
 
-      await requestGraph.respondToFSEvents(
-        options.unstableFileInvalidations || events,
-        options,
-        10000,
-        true,
-      );
+        logger.verbose({
+          origin: '@atlaspack/core',
+          message: 'Request track loaded from cache',
+          meta: {
+            ...commonMeta,
+            trackableEvent: 'request_tracker_cache_key_hit',
+            invalidationStats,
+          },
+        });
+      } else {
+        requestGraph.invalidateUnpredictableNodes();
+        requestGraph.invalidateOnBuildNodes();
+        requestGraph.invalidateEnvNodes(options.env);
+        requestGraph.invalidateOptionNodes(options);
+      }
+
       return requestGraph;
     } catch (e) {
       // Prevent logging fs events took too long warning
@@ -1744,11 +1950,225 @@ async function loadRequestGraph(options): Async<RequestGraph> {
     message:
       'Cache entry for request tracker was not found, initializing a clean cache.',
     meta: {
-      cacheKey,
-      snapshotKey,
+      ...commonMeta,
+      trackableEvent: 'request_tracker_cache_key_miss',
     },
   });
   return new RequestGraph();
+}
+
+/**
+ * A wrapper around an invalidation type / method
+ */
+type InvalidationFn = {|
+  key: string,
+  fn: () =>
+    | InvalidationDetail
+    | Promise<InvalidationDetail>
+    | void
+    | Promise<void>,
+|};
+
+type InvalidationStats = {|
+  /**
+   * Total number of request graph nodes
+   */
+  nodeCount: number,
+  /**
+   * Number of requests in RequestGraph
+   */
+  requestCount: number,
+  /**
+   * Number of nodes that have been invalidated.
+   */
+  invalidatedCount: number,
+  /**
+   * Percentage of requests that have been invalidated
+   */
+  requestInvalidationRatio: number,
+  /**
+   * Percentage of nodes that have been invalidated
+   */
+  nodeInvalidationRatio: number,
+  /**
+   * Details for each invalidation type
+   */
+  invalidations: InvalidationFnStats[],
+|};
+
+/**
+ * Details about an invalidation.
+ *
+ * If this is a fs events invalidation, this key will contain statistics about invalidations
+ * by path.
+ *
+ * If this is a env or option invalidation, this key will contain the list of changed environment
+ * variables or options.
+ */
+type InvalidationDetail = string[] | FSInvalidationStats;
+
+/**
+ * Number of invalidations for a given file-system event.
+ */
+type FSInvalidation = {|
+  path: string,
+  count: number,
+|};
+
+type FSInvalidationStats = {|
+  /**
+   * This list will be sorted by the number of nodes invalidated and only the top 10 will be
+   * included.
+   */
+  biggestInvalidations: FSInvalidation[],
+|};
+
+/**
+ * Information about a certain cache invalidation type.
+ */
+type InvalidationFnStats = {|
+  /**
+   * Invalidation type, one of:
+   *
+   * - unpredictable
+   * - onBuild
+   * - env
+   * - option
+   * - fsEvents
+   */
+  key: string,
+  /**
+   * Number of invalidated nodes coming from this invalidation type.
+   */
+  count: number,
+  /**
+   * If this is a env or option invalidation, this key will contain the list of changed values.
+   *
+   * If this is a fs events invalidation, this key will contain statistics about invalidations
+   */
+  detail: null | InvalidationDetail,
+  /**
+   * Time in milliseconds it took to run the invalidation.
+   */
+  duration: number,
+|};
+
+/**
+ * Respond to unpredictable, build, environment changes, option changes and file-system events
+ * invalidating RequestGraph nodes.
+ *
+ * Returns the count of nodes invalidated by each invalidation type.
+ */
+export async function invalidateRequestGraph(
+  requestGraph: RequestGraph,
+  options: AtlaspackOptions,
+  events: Event[],
+): Promise<InvalidationStats> {
+  const invalidationFns: InvalidationFn[] = [
+    {
+      key: 'unpredictable',
+      fn: () => requestGraph.invalidateUnpredictableNodes(),
+    },
+    {
+      key: 'onBuild',
+      fn: () => requestGraph.invalidateOnBuildNodes(),
+    },
+    {
+      key: 'env',
+      fn: () => requestGraph.invalidateEnvNodes(options.env),
+    },
+    {
+      key: 'option',
+      fn: () => requestGraph.invalidateOptionNodes(options),
+    },
+    {
+      key: 'fsEvents',
+      fn: () => invalidateRequestGraphFSEvents(requestGraph, options, events),
+    },
+  ];
+
+  const invalidations = [];
+  for (const invalidation of invalidationFns) {
+    invalidations.push(await runInvalidation(requestGraph, invalidation));
+  }
+  const invalidatedCount = invalidations.reduce(
+    (acc, invalidation) => acc + invalidation.count,
+    0,
+  );
+  const requestCount = requestGraph.nodes.reduce(
+    (acc, node) => acc + (node?.type === REQUEST ? 1 : 0),
+    0,
+  );
+  const nodeCount = requestGraph.nodes.length;
+  const nodeInvalidationRatio = invalidatedCount / nodeCount;
+  const requestInvalidationRatio = invalidatedCount / requestCount;
+
+  return {
+    invalidations,
+    nodeCount,
+    requestCount,
+    invalidatedCount,
+    nodeInvalidationRatio,
+    requestInvalidationRatio,
+  };
+}
+
+interface InvalidateRequestGraphFSEventsInput {
+  respondToFSEvents(
+    events: Event[],
+    options: AtlaspackOptions,
+    timeout: number,
+    shouldLog: boolean,
+  ): Promise<{invalidationsByPath: Map<string, number>, ...}>;
+}
+
+/**
+ * Invalidate the request graph based on file-system events.
+ *
+ * Returns statistics about the invalidations.
+ */
+export async function invalidateRequestGraphFSEvents(
+  requestGraph: InvalidateRequestGraphFSEventsInput,
+  options: AtlaspackOptions,
+  events: Event[],
+): Promise<FSInvalidationStats> {
+  const {invalidationsByPath} = await requestGraph.respondToFSEvents(
+    options.unstableFileInvalidations || events,
+    options,
+    10000,
+    true,
+  );
+  const biggestInvalidations =
+    getBiggestFSEventsInvalidations(invalidationsByPath);
+
+  return {
+    biggestInvalidations,
+  };
+}
+
+interface RunInvalidationInput {
+  getInvalidNodeCount(): number;
+}
+
+/**
+ * Runs an invalidation function and reports metrics.
+ */
+export async function runInvalidation(
+  requestGraph: RunInvalidationInput,
+  invalidationFn: InvalidationFn,
+): Promise<InvalidationFnStats> {
+  const start = performance.now();
+  const startInvalidationCount = requestGraph.getInvalidNodeCount();
+  const result = await invalidationFn.fn();
+  const count = requestGraph.getInvalidNodeCount() - startInvalidationCount;
+  const duration = performance.now() - start;
+
+  return {
+    key: invalidationFn.key,
+    count,
+    detail: result ?? null,
+    duration,
+  };
 }
 
 function logErrorOnBailout(
@@ -1801,4 +2221,20 @@ export function cleanUpOrphans<N, E: number>(graph: Graph<N, E>): NodeId[] {
   });
 
   return removedNodeIds;
+}
+
+/**
+ * Returns paths that invalidated the most nodes
+ */
+export function getBiggestFSEventsInvalidations(
+  invalidationsByPath: Map<string, number>,
+  limit: number = 10,
+): Array<FSInvalidation> {
+  const invalidations = [];
+  for (const [path, count] of invalidationsByPath) {
+    invalidations.push({path, count});
+  }
+  invalidations.sort((a, b) => b.count - a.count);
+
+  return invalidations.slice(0, limit);
 }

@@ -5,6 +5,13 @@ import type {FeatureFlags as _FeatureFlags} from './types';
 // but we want to export FeatureFlags for Flow
 export type FeatureFlags = _FeatureFlags;
 
+export const CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string> = Object.freeze([
+  'NEW',
+  'OLD',
+  'NEW_AND_CHECK',
+  'OLD_AND_CHECK',
+]);
+
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   exampleConsistencyCheckFeature: 'OLD',
   exampleFeature: false,
@@ -12,17 +19,25 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   useWatchmanWatcher: false,
   importRetry: false,
   fixQuadraticCacheInvalidation: 'OLD',
-  useLmdbJsLite: true,
   conditionalBundlingApi: false,
+  inlineRequiresMultiThreading: false,
   vcsMode: 'OLD',
   loadableSideEffects: false,
   reduceResolverStringCreation: false,
   inlineBundlesSourceMapFixes: false,
   conditionalBundlingNestedRuntime: false,
   patchProjectPaths: false,
-  enableRustWorkerThreadDylibHack: true,
+  cachePerformanceImprovements: process.env.NODE_ENV === 'test',
+  environmentDeduplication: false,
+  granularTsConfigInvalidation: false,
   inlineStringReplacementPerf: false,
   conditionalBundlingAsyncRuntime: false,
+  // Default to true as it's a monitoring change. Can be turned off if necessary.
+  verboseRequestInvalidationStats: true,
+  conditionalBundlingReporterDuplicateFix: false,
+  resolveBundlerConfigFromCwd: false,
+  conditionalBundlingReporterSameConditionFix: false,
+  condbHtmlPackagerChange: false,
   mergeReactRefreshRuntimeIntoTransformer: false,
 };
 

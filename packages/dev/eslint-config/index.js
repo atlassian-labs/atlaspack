@@ -7,7 +7,14 @@ module.exports = {
     'prettier',
   ],
   parser: '@babel/eslint-parser',
-  plugins: ['@atlaspack', 'flowtype', 'import', 'monorepo', 'react', 'mocha'],
+  plugins: [
+    '@atlaspack/internal',
+    'flowtype',
+    'import',
+    'monorepo',
+    'react',
+    'mocha',
+  ],
   parserOptions: {
     ecmaVersion: 2018,
     ecmaFeatures: {
@@ -34,14 +41,14 @@ module.exports = {
       rules: {
         'import/no-extraneous-dependencies': 'off',
         'monorepo/no-internal-import': 'off',
-        '@atlaspack/no-relative-import': 'off',
+        '@atlaspack/internal/no-relative-import': 'off',
         'mocha/no-exclusive-tests': 'error',
       },
     },
   ],
   rules: {
-    '@atlaspack/no-self-package-imports': 'error',
-    '@atlaspack/no-ff-module-level-eval': 'error',
+    '@atlaspack/internal/no-self-package-imports': 'error',
+    '@atlaspack/internal/no-ff-module-level-eval': 'error',
     'import/first': 'error',
     'import/newline-after-import': 'error',
     'import/no-extraneous-dependencies': 'error',
@@ -53,7 +60,7 @@ module.exports = {
     'require-await': 'error',
     // Use internal rule
     'monorepo/no-relative-import': 'off',
-    '@atlaspack/no-relative-import': 'error'
+    '@atlaspack/internal/no-relative-import': 'error',
   },
   settings: {
     flowtype: {

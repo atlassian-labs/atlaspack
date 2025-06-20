@@ -23,7 +23,8 @@ import {DefaultMap, globToRegex} from '@atlaspack/utils';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
 
-import type {ResolvedBundlerConfig} from './bundlerConfig';
+import {findMergeCandidates, type MergeGroup} from './bundleMerge';
+import type {ResolvedBundlerConfig, MergeCandidates} from './bundlerConfig';
 
 /* BundleRoot - An asset that is the main entry of a Bundle. */
 type BundleRoot = Asset;
@@ -67,7 +68,7 @@ export const idealBundleGraphEdges = Object.freeze({
   conditional: 2,
 });
 
-type IdealBundleGraph = Graph<
+export type IdealBundleGraph = Graph<
   Bundle | 'root',
   $Values<typeof idealBundleGraphEdges>,
 >;
@@ -203,17 +204,16 @@ export function createIdealGraph(
             config.projectRoot,
             node.value.filePath,
           );
-          if (!assetRegexes.some((regex) => regex.test(projectRelativePath))) {
-            return;
-          }
 
           // We track all matching MSB's for constant modules as they are never duplicated
           // and need to be assigned to all matching bundles
           if (node.value.meta.isConstantModule === true) {
             constantModuleToMSB.get(node.value).push(c);
           }
-          manualAssetToConfig.set(node.value, c);
-          return;
+
+          if (assetRegexes.some((regex) => regex.test(projectRelativePath))) {
+            manualAssetToConfig.set(node.value, c);
+          }
         }
 
         if (
@@ -243,6 +243,16 @@ export function createIdealGraph(
     NodeId,
     Array<Asset>,
   > = new DefaultMap(() => []);
+
+  let mergeSourceBundleLookup = new Map<string, NodeId>();
+  let mergeSourceBundleAssets = new Set(
+    config.sharedBundleMerge?.flatMap(
+      (c) =>
+        c.sourceBundles?.map((assetMatch) =>
+          path.join(config.projectRoot, assetMatch),
+        ) ?? [],
+    ),
+  );
 
   /**
    * Step Create Bundles: Traverse the assetGraph (aka MutableBundleGraph) and create bundles
@@ -334,6 +344,14 @@ export function createIdealGraph(
                 bundleRoots.set(childAsset, [bundleId, bundleId]);
                 bundleGroupBundleIds.add(bundleId);
                 bundleGraph.addEdge(bundleGraphRootNodeId, bundleId);
+                // If this asset is relevant for merging then track it's source
+                // bundle id for later
+                if (mergeSourceBundleAssets.has(childAsset.filePath)) {
+                  mergeSourceBundleLookup.set(
+                    path.relative(config.projectRoot, childAsset.filePath),
+                    bundleId,
+                  );
+                }
                 if (manualSharedObject) {
                   // MSB Step 4: If this was the first instance of a match, mark mainAsset for internalization
                   // since MSBs should not have main entry assets
@@ -1128,6 +1146,12 @@ export function createIdealGraph(
     }
   }
 
+  // Step merge shared bundles that meet the overlap threshold
+  // This step is skipped by default as the threshold defaults to 1
+  if (config.sharedBundleMerge && config.sharedBundleMerge.length > 0) {
+    mergeOverlapBundles(config.sharedBundleMerge);
+  }
+
   // Step Merge Share Bundles: Merge any shared bundles under the minimum bundle size back into
   // their source bundles, and remove the bundle.
   // We should include "bundle reuse" as shared bundles that may be removed but the bundle itself would have to be retained
@@ -1143,9 +1167,9 @@ export function createIdealGraph(
     }
   }
 
+  // Step Remove Shared Bundles: Remove shared bundles from bundle groups that hit the parallel request limit.
   let modifiedSourceBundles = new Set();
 
-  // Step Remove Shared Bundles: Remove shared bundles from bundle groups that hit the parallel request limit.
   if (config.disableSharedBundles === false) {
     for (let bundleGroupId of bundleGraph.getNodeIdsConnectedFrom(rootNodeId)) {
       // Find shared bundles in this bundle group.
@@ -1245,6 +1269,102 @@ export function createIdealGraph(
           }
           numBundlesContributingToPRL--;
         }
+      }
+    }
+  }
+
+  function mergeBundles(
+    bundleGraph: IdealBundleGraph,
+    bundleToKeepId: NodeId,
+    bundleToRemoveId: NodeId,
+    assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
+  ) {
+    let bundleToKeep = nullthrows(bundleGraph.getNode(bundleToKeepId));
+    let bundleToRemove = nullthrows(bundleGraph.getNode(bundleToRemoveId));
+    invariant(bundleToKeep !== 'root' && bundleToRemove !== 'root');
+    for (let asset of bundleToRemove.assets) {
+      bundleToKeep.assets.add(asset);
+      bundleToKeep.size += asset.stats.size;
+
+      let newAssetReference = assetReference
+        .get(asset)
+        .map(([dep, bundle]) =>
+          bundle === bundleToRemove ? [dep, bundleToKeep] : [dep, bundle],
+        );
+
+      assetReference.set(asset, newAssetReference);
+    }
+
+    // Merge any internalized assets
+    invariant(
+      bundleToKeep.internalizedAssets && bundleToRemove.internalizedAssets,
+      'All shared bundles should have internalized assets',
+    );
+    bundleToKeep.internalizedAssets.union(bundleToRemove.internalizedAssets);
+
+    for (let sourceBundleId of bundleToRemove.sourceBundles) {
+      if (bundleToKeep.sourceBundles.has(sourceBundleId)) {
+        continue;
+      }
+
+      bundleToKeep.sourceBundles.add(sourceBundleId);
+      bundleGraph.addEdge(sourceBundleId, bundleToKeepId);
+    }
+
+    bundleGraph.removeNode(bundleToRemoveId);
+  }
+
+  function mergeOverlapBundles(mergeConfig: MergeCandidates) {
+    // Find all shared bundles
+    let sharedBundles = new Set<NodeId>();
+    bundleGraph.traverse((nodeId) => {
+      let bundle = bundleGraph.getNode(nodeId);
+
+      if (!bundle) {
+        throw new Error(`Unable to find bundle ${nodeId} in bundle graph`);
+      }
+
+      if (bundle === 'root') {
+        return;
+      }
+
+      // Only consider JS shared bundles and non-reused bundles.
+      // These count potentially be considered for merging in future but they're
+      // more complicated to merge
+      if (
+        bundle.sourceBundles.size > 0 &&
+        bundle.manualSharedBundle == null &&
+        !bundle.mainEntryAsset &&
+        bundle.type === 'js'
+      ) {
+        sharedBundles.add(nodeId);
+      }
+    });
+
+    let clusters = findMergeCandidates(
+      bundleGraph,
+      Array.from(sharedBundles),
+      mergeConfig.map((config): MergeGroup => ({
+        ...config,
+        sourceBundles: config.sourceBundles?.map((assetMatch) => {
+          let sourceBundleNodeId = mergeSourceBundleLookup.get(assetMatch);
+
+          if (sourceBundleNodeId == null) {
+            throw new Error(
+              `Source bundle ${assetMatch} not found in merge source bundle lookup`,
+            );
+          }
+
+          return sourceBundleNodeId;
+        }),
+      })),
+    );
+
+    for (let cluster of clusters) {
+      let [mergeTarget, ...rest] = cluster;
+
+      for (let bundleIdToMerge of rest) {
+        mergeBundles(bundleGraph, mergeTarget, bundleIdToMerge, assetReference);
       }
     }
   }

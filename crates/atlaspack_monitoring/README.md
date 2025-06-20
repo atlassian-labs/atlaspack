@@ -20,10 +20,9 @@ Tracing is turned off by default.
 Atlaspack uses [`tracing`](https://github.com/tokio-rs/tracing) for logging and traces. This aims to aid debugging and bug
 fixing.
 
-- By default, traces/logs won't be written
-- `ATLASPACK_TRACING_MODE=stdout` will write to standard-output
-- `ATLASPACK_TRACING_MODE=file` will write to a temporary log file, with log rotation this file will be under
+- By default, traces/logs will be written to a temporary log file, with log rotation this file will be under
   `$TMPDIR/atlaspack_trace`
+- `ATLASPACK_TRACING_MODE=stdout` will write to standard-output
 
 ## Sentry integration
 

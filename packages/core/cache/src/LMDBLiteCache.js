@@ -5,21 +5,23 @@ import {
   registerSerializableClass,
   serialize,
 } from '@atlaspack/build-cache';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Lmdb} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types';
 import type {Cache} from './types';
 import type {Readable, Writable} from 'stream';
-
+import fs from 'fs';
+import ncp from 'ncp';
+import {promisify} from 'util';
 import stream from 'stream';
 import path from 'path';
-import {promisify} from 'util';
-
 import {NodeFS} from '@atlaspack/fs';
-
 // $FlowFixMe
 import packageJson from '../package.json';
-
 import {FSCache} from './FSCache';
+import {instrumentAsync} from '@atlaspack/logger';
+
+const ncpAsync = promisify(ncp);
 
 interface DBOpenOptions {
   name: string;
@@ -34,11 +36,14 @@ export class LmdbWrapper {
 
   constructor(lmdb: Lmdb) {
     this.lmdb = lmdb;
+  }
 
-    // $FlowFixMe
-    this[Symbol.dispose] = () => {
-      this.lmdb.close();
-    };
+  has(key: string): boolean {
+    return this.lmdb.hasSync(key);
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.lmdb.delete(key);
   }
 
   get(key: string): Buffer | null {
@@ -51,7 +56,21 @@ export class LmdbWrapper {
     await this.lmdb.put(key, buffer);
   }
 
-  resetReadTxn() {}
+  *keys(): Iterable<string> {
+    const PAGE_SIZE = 10000000;
+
+    let currentKeys = this.lmdb.keysSync(0, PAGE_SIZE);
+    while (currentKeys.length > 0) {
+      for (const key of currentKeys) {
+        yield key;
+      }
+      currentKeys = this.lmdb.keysSync(currentKeys.length, PAGE_SIZE);
+    }
+  }
+
+  compact(targetPath: string) {
+    this.lmdb.compact(targetPath);
+  }
 }
 
 export function open(
@@ -84,10 +103,15 @@ export class LMDBLiteCache implements Cache {
   dir: FilePath;
   store: LmdbWrapper;
   fsCache: FSCache;
+  /**
+   * Directory where we store raw files.
+   */
+  cacheFilesDirectory: FilePath;
 
   constructor(cacheDir: FilePath) {
     this.fs = new NodeFS();
     this.dir = cacheDir;
+    this.cacheFilesDirectory = path.join(cacheDir, 'files');
     this.fsCache = new FSCache(this.fs, cacheDir);
 
     this.store = open(cacheDir, {
@@ -105,7 +129,10 @@ export class LMDBLiteCache implements Cache {
   }
 
   async ensure(): Promise<void> {
-    await this.fsCache.ensure();
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      await this.fsCache.ensure();
+    }
+    await this.fs.mkdirp(this.cacheFilesDirectory);
     return Promise.resolve();
   }
 
@@ -120,7 +147,7 @@ export class LMDBLiteCache implements Cache {
   }
 
   has(key: string): Promise<boolean> {
-    return Promise.resolve(this.store.get(key) != null);
+    return Promise.resolve(this.store.has(key));
   }
 
   get<T>(key: string): Promise<?T> {
@@ -137,14 +164,24 @@ export class LMDBLiteCache implements Cache {
   }
 
   getStream(key: string): Readable {
-    return this.fs.createReadStream(path.join(this.dir, key));
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fs.createReadStream(path.join(this.dir, key));
+    }
+
+    return fs.createReadStream(this.getFileKey(key));
   }
 
-  setStream(key: string, stream: Readable): Promise<void> {
-    return pipeline(
-      stream,
-      this.fs.createWriteStream(path.join(this.dir, key)),
-    );
+  async setStream(key: string, stream: Readable): Promise<void> {
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return pipeline(
+        stream,
+        this.fs.createWriteStream(path.join(this.dir, key)),
+      );
+    }
+
+    const filePath = this.getFileKey(key);
+    await fs.promises.mkdir(path.dirname(filePath), {recursive: true});
+    return pipeline(stream, fs.createWriteStream(filePath));
   }
 
   // eslint-disable-next-line require-await
@@ -168,38 +205,107 @@ export class LMDBLiteCache implements Cache {
     return Promise.resolve(this.store.get(key));
   }
 
-  #getFilePath(key: string, index: number): string {
-    return path.join(this.dir, `${key}-${index}`);
-  }
-
   hasLargeBlob(key: string): Promise<boolean> {
-    return this.fs.exists(this.#getFilePath(key, 0));
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fsCache.hasLargeBlob(key);
+    }
+
+    return fs.promises
+      .access(this.getFileKey(key), fs.constants.F_OK)
+      .then(() => true)
+      .catch(() => false);
   }
 
-  // eslint-disable-next-line require-await
-  async getLargeBlob(key: string): Promise<Buffer> {
-    return this.fsCache.getLargeBlob(key);
+  getLargeBlob(key: string): Promise<Buffer> {
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fsCache.getLargeBlob(key);
+    }
+    return fs.promises.readFile(this.getFileKey(key));
   }
 
-  // eslint-disable-next-line require-await
   async setLargeBlob(
     key: string,
     contents: Buffer | string,
     options?: {|signal?: AbortSignal|},
   ): Promise<void> {
-    return this.fsCache.setLargeBlob(key, contents, options);
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fsCache.setLargeBlob(key, contents, options);
+    }
+
+    const targetPath = this.getFileKey(key);
+    await fs.promises.mkdir(path.dirname(targetPath), {recursive: true});
+    return fs.promises.writeFile(targetPath, contents);
   }
 
+  /**
+   * @deprecated Use store.delete instead.
+   */
   deleteLargeBlob(key: string): Promise<void> {
-    return this.fsCache.deleteLargeBlob(key);
+    if (!getFeatureFlag('cachePerformanceImprovements')) {
+      return this.fsCache.deleteLargeBlob(key);
+    }
+
+    return this.store.delete(key);
   }
 
-  refresh(): void {
-    // Reset the read transaction for the store. This guarantees that
-    // the next read will see the latest changes to the store.
-    // Useful in scenarios where reads and writes are multi-threaded.
-    // See https://github.com/kriszyp/lmdb-js#resetreadtxn-void
-    this.store.resetReadTxn();
+  keys(): Iterable<string> {
+    return this.store.keys();
+  }
+
+  async compact(targetPath: string): Promise<void> {
+    await fs.promises.mkdir(targetPath, {recursive: true});
+
+    const files = await fs.promises.readdir(this.dir);
+    // copy all files except data.mdb and lock.mdb to the target path (recursive)
+    for (const file of files) {
+      const filePath = path.join(this.dir, file);
+
+      if (file === 'data.mdb' || file === 'lock.mdb') {
+        continue;
+      }
+
+      await ncpAsync(filePath, path.join(targetPath, file));
+    }
+
+    this.store.compact(path.join(targetPath, 'data.mdb'));
+  }
+
+  refresh(): void {}
+
+  /**
+   * Streams, packages are stored in files instead of LMDB.
+   *
+   * On this case, if a cache key happens to have a parent traversal, ../..
+   * it is treated specially
+   *
+   * That is, something/../something and something are meant to be different
+   * keys.
+   *
+   * Plus we do not want to store values outside of the cache directory.
+   */
+  getFileKey(key: string): string {
+    const cleanKey = key
+      .split('/')
+      .map((part) => {
+        if (part === '..') {
+          return '$$__parent_dir$$';
+        }
+        return part;
+      })
+      .join('/');
+    return path.join(this.cacheFilesDirectory, cleanKey);
+  }
+
+  async clear(): Promise<void> {
+    await instrumentAsync('LMDBLiteCache::clear', async () => {
+      const keys = await this.keys();
+      for (const key of keys) {
+        await this.store.delete(key);
+      }
+
+      await this.fs.rimraf(this.cacheFilesDirectory);
+      await this.fs.mkdirp(this.cacheFilesDirectory);
+    });
   }
 }
 

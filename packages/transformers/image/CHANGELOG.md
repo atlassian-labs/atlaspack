@@ -1,5 +1,108 @@
 # @atlaspack/transformer-image
 
+## 3.1.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.11
+  - @atlaspack/workers@2.14.11
+  - @atlaspack/plugin@2.14.11
+
+## 3.1.10
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/workers@2.14.10
+  - @atlaspack/plugin@2.14.10
+  - @atlaspack/utils@2.14.10
+
+## 3.1.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.9
+  - @atlaspack/workers@2.14.9
+  - @atlaspack/plugin@2.14.9
+
+## 3.1.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.8
+  - @atlaspack/workers@2.14.8
+  - @atlaspack/plugin@2.14.8
+
+## 3.1.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.7
+  - @atlaspack/workers@2.14.7
+  - @atlaspack/plugin@2.14.7
+
+## 3.1.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.6
+  - @atlaspack/workers@2.14.6
+  - @atlaspack/plugin@2.14.6
+
+## 3.1.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.5
+  - @atlaspack/workers@2.14.5
+  - @atlaspack/plugin@2.14.5
+
+## 3.1.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.4
+  - @atlaspack/workers@2.14.4
+  - @atlaspack/plugin@2.14.4
+
+## 3.1.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.3
+  - @atlaspack/workers@2.14.3
+  - @atlaspack/plugin@2.14.3
+
+## 3.1.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.2
+  - @atlaspack/workers@2.14.2
+  - @atlaspack/plugin@2.14.2
+
+## 3.1.1
+
+### Patch Changes
+
+- [#450](https://github.com/atlassian-labs/atlaspack/pull/450) [`b9d41b1`](https://github.com/atlassian-labs/atlaspack/commit/b9d41b175ad5771651a5b0278a5a0147e669234a) Thanks [@benjervis](https://github.com/benjervis)! - Remove the Atlaspack engines compatibility check
+
+- [#478](https://github.com/atlassian-labs/atlaspack/pull/478) [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b) Thanks [@yamadapc](https://github.com/yamadapc)! - The first attempt at Version Packages didn't include the built artifacts.
+  This has hopefully been fixed, so this change will force those packages to re-release.
+- Updated dependencies [[`ce13d5e`](https://github.com/atlassian-labs/atlaspack/commit/ce13d5e885d55518ee6318e7a72e3a6e4e5126f2), [`570493b`](https://github.com/atlassian-labs/atlaspack/commit/570493beaf754e7985aebc7daaaf6dfcfa8fe56b)]:
+  - @atlaspack/utils@2.14.1
+  - @atlaspack/plugin@2.14.1
+  - @atlaspack/workers@2.14.1
+
 ## 3.1.0
 
 ### Minor Changes
