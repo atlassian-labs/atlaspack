@@ -381,7 +381,7 @@ export class ScopeHoistingPackager {
   }
 
   addInlineAssetMetadata(asset: Asset) {
-    if (asset.meta.shouldWrap) {
+    if (asset.meta.shouldWrap || this.shouldSkipAsset(asset)) {
       return;
     }
 
@@ -404,6 +404,11 @@ export class ScopeHoistingPackager {
     const assetToScopeHoistInto = nullthrows(
       this.bundleGraph.getAssetWithDependency(dependency),
     );
+
+    if (this.shouldSkipAsset(assetToScopeHoistInto)) {
+      return;
+    }
+
     // TODO: handle inlines within inlines
     const isCircularDependency = this.bundleGraph
       .getIncomingDependencies(assetToScopeHoistInto)
@@ -424,31 +429,30 @@ export class ScopeHoistingPackager {
   addAllInlineAssetMetadata() {
     const assetsLimitedToThisBundle = [];
 
-    /** Counts the number of times one of an asset's exported symbols appears in another asset */
-    const assetSymbolUsageCountMap = new Map<Asset, number>();
     this.bundle.traverseAssets((asset) => {
       if (!this.bundleGraph.isAssetReferenced(this.bundle, asset)) {
         assetsLimitedToThisBundle.push(asset);
       }
+    });
 
-      const visitedAssets = new Set();
-      for (const dep of asset.getDependencies()) {
-        const resolved = this.bundleGraph.getResolvedAsset(dep, this.bundle);
-        if (resolved) {
-          for (let [symbol] of dep.symbols) {
-            symbol = this.bundleGraph.getSymbolResolution(
-              resolved,
-              symbol,
-              this.bundle,
-            );
-            visitedAssets.add(symbol.asset);
-          }
-        }
+    /** Counts the number of times one of an asset's exported symbols appears in another asset */
+    const assetSymbolUsageCountMap = new Map<Asset, number>();
+    this.bundle.traverse(({value, type}) => {
+      if (type === 'asset' || this.bundleGraph.isDependencySkipped(value)) {
+        return;
       }
 
-      for (const asset of visitedAssets) {
-        const count = assetSymbolUsageCountMap.get(asset) ?? 0;
-        assetSymbolUsageCountMap.set(asset, count + 1);
+      const resolved = this.bundleGraph.getResolvedAsset(value, this.bundle);
+      if (resolved) {
+        for (let [symbol] of value.symbols) {
+          symbol = this.bundleGraph.getSymbolResolution(
+            resolved,
+            symbol,
+            this.bundle,
+          );
+          const count = assetSymbolUsageCountMap.get(symbol.asset) ?? 0;
+          assetSymbolUsageCountMap.set(symbol.asset, count + 1);
+        }
       }
     });
 
