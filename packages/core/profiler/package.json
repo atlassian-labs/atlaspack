@@ -12,6 +12,13 @@
   },
   "main": "lib/index.js",
   "source": "src/index.js",
+  "exports": {
+    ".": {
+      "@atlaspack::sources": "./src/index.js",
+      "default": "./lib/index.js"
+    },
+    "./*": "./*"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },

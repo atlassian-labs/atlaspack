@@ -4,6 +4,14 @@
   "license": "(MIT OR Apache-2.0)",
   "main": "src/index.js",
   "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "@atlaspack::sources": "./src/index.js",
+      "types": "./lib/index.d.ts",
+      "default": "./index.js"
+    },
+    "./*": "./*"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"

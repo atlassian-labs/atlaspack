@@ -14,19 +14,13 @@
   "bin": {
     "atlaspack": "bin/atlaspack.js"
   },
-  "imports": {
-    "#bin": {
-      "@atlaspack::sources": "./src/cli-dev.mts",
-      "default": "./lib/cli.mjs"
-    }
-  },
   "exports": {
     ".": {
       "@atlaspack::sources": "./src/cli-dev.mts",
       "types": "./src/cli.mts",
       "default": "./lib/cli.mjs"
     },
-    "./package.json": "./package.json"
+    "./*": "./*"
   },
   "scripts": {
     "build-tsc": "yarn tsc --noCheck",

@@ -13,6 +13,14 @@
   "main": "lib/index.js",
   "source": "src/index.js",
   "types": "lib/types.d.ts",
+  "exports": {
+    ".": {
+      "@atlaspack::sources": "./src/index.js",
+      "types": "./lib/types.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./*": "./*"
+  },
   "scripts": {
     "build-ts": "mkdir -p lib && flow-to-ts src/types.js > lib/types.d.ts",
     "check-ts": "tsc --noEmit lib/types.d.ts"

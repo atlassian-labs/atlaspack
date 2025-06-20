@@ -12,6 +12,13 @@
   },
   "main": "lib/markdown-ansi.js",
   "source": "src/markdown-ansi.js",
+  "exports": {
+    ".": {
+      "@atlaspack::sources": "./src/markdown-ansi.js",
+      "default": "./lib/markdown-ansi.js"
+    },
+    "./*": "./*"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },

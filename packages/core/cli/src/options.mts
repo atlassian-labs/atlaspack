@@ -1,12 +1,14 @@
 import commander from 'commander';
 // @ts-ignore TS:MIGRATE
-import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
+import atlaspackFeatureFlags from '@atlaspack/feature-flags';
 // @ts-ignore TS:MIGRATE
 import atlaspackLogger from '@atlaspack/logger';
 import type {OptionsDefinition} from './applyOptions.mts';
 
 // @ts-ignore TS:MIGRATE
 const {INTERNAL_ORIGINAL_CONSOLE} = atlaspackLogger;
+// @ts-ignore TS:MIGRATE
+const {DEFAULT_FEATURE_FLAGS} = atlaspackFeatureFlags;
 
 // Only display choices available to callers OS
 export let watcherBackendChoices: string[] = ['brute-force'];

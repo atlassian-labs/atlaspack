@@ -13,6 +13,14 @@
   "main": "lib/PluginAPI.js",
   "source": "src/PluginAPI.js",
   "types": "src/PluginAPI.d.ts",
+  "exports": {
+    ".": {
+      "@atlaspack::sources": "./src/PluginAPI.js",
+      "types": "./src/PluginAPI.d.ts",
+      "default": "./lib/PluginAPI.js"
+    },
+    "./*": "./*"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },

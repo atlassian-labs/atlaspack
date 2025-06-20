@@ -13,6 +13,14 @@
   "main": "lib/index.js",
   "source": "src/index.js",
   "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "@atlaspack::sources": "./src/index.js",
+      "types": "./index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./*": "./*"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },

@@ -2,13 +2,13 @@ import path from 'node:path';
 import fs from 'node:fs';
 import url from 'node:url';
 // @ts-ignore TS:MIGRATE Missing types
-import {BuildError} from '@atlaspack/core';
+import atlaspackCore from '@atlaspack/core';
 // @ts-ignore TS:MIGRATE Missing types
-import {NodeFS} from '@atlaspack/fs';
+import atlaspackFs from '@atlaspack/fs';
 // @ts-ignore TS:MIGRATE Missing types
-import {openInBrowser} from '@atlaspack/utils';
+import atlaspackUtils from '@atlaspack/utils';
 // @ts-ignore TS:MIGRATE Missing types
-import {Disposable} from '@atlaspack/events';
+import atlaspackEvents from '@atlaspack/events';
 // @ts-ignore TS:MIGRATE Missing types
 import atlaspackLogger from '@atlaspack/logger';
 import chalk from 'chalk';
@@ -24,6 +24,14 @@ import {commonOptions, hmrOptions} from './options.mts';
 
 // @ts-ignore TS:MIGRATE cjs imports fail. Will remove this when all packages have been migrated
 const {INTERNAL_ORIGINAL_CONSOLE} = atlaspackLogger;
+// @ts-ignore TS:MIGRATE Missing types
+const {BuildError} = atlaspackCore;
+// @ts-ignore TS:MIGRATE Missing types
+const {NodeFS} = atlaspackFs;
+// @ts-ignore TS:MIGRATE Missing types
+const {Disposable} = atlaspackEvents;
+// @ts-ignore TS:MIGRATE Missing types
+const {openInBrowser} = atlaspackUtils;
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -146,14 +154,23 @@ async function run(
 
   entries = entries.map((entry) => path.resolve(entry));
 
-  let Atlaspack = require('@atlaspack/core').default;
+  let {Atlaspack} = (await import('@atlaspack/core')).default;
   let fs = new NodeFS();
+
+  let defaultConfig: string;
+  try {
+    defaultConfig = import.meta.resolve('@atlaspack/config-default', fs.cwd());
+  } catch (error) {
+    defaultConfig = import.meta.resolve(
+      '@atlaspack/config-default',
+      __filename,
+    );
+  }
+
   let options = await normalizeOptions(command, fs);
   let atlaspack = new Atlaspack({
     entries,
-    defaultConfig: require.resolve('@atlaspack/config-default', {
-      paths: [fs.cwd(), __dirname],
-    }),
+    defaultConfig,
     shouldPatchConsole: false,
     ...options,
   });
@@ -169,7 +186,9 @@ async function run(
     isExiting = true;
     if (unsubscribe != null) {
       await unsubscribe();
+      // @ts-ignore TS:MIGRATION Missing type
     } else if (atlaspack.isProfiling) {
+      // @ts-ignore TS:MIGRATION Missing type
       await atlaspack.stopProfiling();
     }
 
@@ -186,7 +205,7 @@ async function run(
   if (process.stdin.isTTY) {
     // $FlowFixMe
     process.stdin.setRawMode(true);
-    require('readline').emitKeypressEvents(process.stdin);
+    (await import('readline')).emitKeypressEvents(process.stdin);
 
     let stream = process.stdin.on('keypress', async (char, key) => {
       if (!key.ctrl) {
@@ -210,11 +229,15 @@ async function run(
           await exit(isWatching ? 0 : SIGINT_EXIT_CODE);
           break;
         case 'e':
+          // @ts-ignore TS:MIGRATION Missing type
           await (atlaspack.isProfiling
-            ? atlaspack.stopProfiling()
-            : atlaspack.startProfiling());
+            ? // @ts-ignore TS:MIGRATION Missing type
+              atlaspack.stopProfiling()
+            : // @ts-ignore TS:MIGRATION Missing type
+              atlaspack.startProfiling());
           break;
         case 'y':
+          // @ts-ignore TS:MIGRATION Missing type
           await atlaspack.takeHeapSnapshot();
           break;
       }
@@ -227,7 +250,7 @@ async function run(
 
   if (isWatching) {
     ({unsubscribe} = await atlaspack.watch(
-      // @ts-expect-error
+      // @ts-ignore TS:MIGRATION Missing type
       (err) => {
         if (err) {
           throw err;

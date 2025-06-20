@@ -13,6 +13,14 @@
   "main": "lib/diagnostic.js",
   "source": "src/diagnostic.js",
   "types": "lib/diagnostic.d.ts",
+  "exports": {
+    ".": {
+      "@atlaspack::sources": "./src/diagnostic.js",
+      "types": "./lib/diagnostic.d.ts",
+      "default": "./lib/diagnostic.js"
+    },
+    "./*": "./*"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },

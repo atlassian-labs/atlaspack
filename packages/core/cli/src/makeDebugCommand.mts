@@ -1,5 +1,5 @@
 // @ts-ignore TS:MIGRATE
-import {NodeFS} from '@atlaspack/fs';
+import atlaspackFs from '@atlaspack/fs';
 // @ts-ignore TS:MIGRATE
 import logger from '@atlaspack/logger';
 import commander from 'commander';
@@ -9,6 +9,9 @@ import type {CommandExt, Options} from './normalizeOptions.mts';
 import {applyOptions} from './applyOptions.mts';
 import {commonOptions} from './options.mts';
 import {handleUncaughtException} from './handleUncaughtException.mts';
+
+// @ts-ignore TS:MIGRATE
+const {NodeFS} = atlaspackFs;
 
 export function makeDebugCommand(): commander.Command {
   const debug = new commander.Command('debug').description(

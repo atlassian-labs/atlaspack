@@ -21,7 +21,8 @@
       "types": "./index.d.ts",
       "@atlaspack::sources": "./src/index.js",
       "default": "./lib/index.js"
-    }
+    },
+    "./*": "./*"
   },
   "dependencies": {
     "@atlaspack/build-cache": "2.13.3",

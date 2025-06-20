@@ -1,4 +1,5 @@
 import path from 'node:path';
+import url from 'node:url';
 import commander from 'commander';
 import getPort from 'get-port';
 // @ts-ignore TS:MIGRATE
@@ -15,6 +16,8 @@ import type {InitialAtlaspackOptions, LogLevel} from '@atlaspack/types';
 const {INTERNAL_ORIGINAL_CONSOLE} = atlaspackLogger;
 // @ts-ignore TS:MIGRATE
 const ThrowableDiagnostic = atlaspackDiagnostic.default;
+
+const __filename = url.fileURLToPath(import.meta.url);
 
 function parsePort(portValue: string): number {
   let parsedPort = Number(portValue);

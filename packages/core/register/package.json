@@ -12,6 +12,13 @@
   },
   "main": "lib/register.js",
   "source": "src/register.js",
+  "exports": {
+    ".": {
+      "@atlaspack::sources": "./src/register.js",
+      "default": "./lib/register.js"
+    },
+    "./*": "./*"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },

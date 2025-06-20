@@ -13,6 +13,13 @@
   },
   "main": "lib/codeframe.js",
   "source": "src/codeframe.js",
+  "exports": {
+    ".": {
+      "@atlaspack::sources": "./src/codeframe.js",
+      "default": "./lib/codeframe.js"
+    },
+    "./*": "./*"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },

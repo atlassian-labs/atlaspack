@@ -3,15 +3,19 @@ import atlaspackDiagnostic from '@atlaspack/diagnostic';
 // @ts-ignore TS:MIGRATE
 import atlaspackLogger from '@atlaspack/logger';
 // @ts-ignore TS:MIGRATE
-import {prettyDiagnostic} from '@atlaspack/utils';
+import atlaspackUtils from '@atlaspack/utils';
 import chalk from 'chalk';
 
 // @ts-ignore TS:MIGRATE
 const ThrowableDiagnostic = atlaspackDiagnostic.default;
 // @ts-ignore TS:MIGRATE
 const {INTERNAL_ORIGINAL_CONSOLE} = atlaspackLogger;
+// @ts-ignore TS:MIGRATE
+const {prettyDiagnostic} = atlaspackUtils;
 
-export async function logUncaughtError(e: typeof ThrowableDiagnostic | unknown) {
+export async function logUncaughtError(
+  e: typeof ThrowableDiagnostic | unknown,
+) {
   if (e instanceof ThrowableDiagnostic) {
     for (let diagnostic of e.diagnostics) {
       let {message, codeframe, stack, hints, documentation} =
