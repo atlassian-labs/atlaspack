@@ -17,7 +17,7 @@
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "check-ts": "tsc --noEmit src/PluginAPI.d.ts"
+    "check-ts": "tsc  --module node16 --moduleResolution node16 --noEmit src/PluginAPI.d.ts"
   },
   "dependencies": {
     "@atlaspack/types": "2.15.1"

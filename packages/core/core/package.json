@@ -18,7 +18,7 @@
   "scripts": {
     "test": "mocha",
     "test-ci": "mocha",
-    "check-ts": "tsc --noEmit index.d.ts"
+    "check-ts": "tsc --module node16 --moduleResolution node16 --noEmit index.d.ts"
   },
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",

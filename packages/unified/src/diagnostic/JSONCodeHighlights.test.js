@@ -1,7 +1,7 @@
 // @flow strict-local
 import assert from 'assert';
 
-import {generateJSONCodeHighlights} from '../src/diagnostic';
+import {generateJSONCodeHighlights} from './index.js';
 
 describe('generateJSONCodeHighlights', () => {
   it('returns an escaped string 01', () => {

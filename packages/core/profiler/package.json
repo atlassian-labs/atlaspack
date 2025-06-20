@@ -17,7 +17,7 @@
   },
   "scripts": {
     "build-ts": "flow-to-ts src/*.js --write && rm -f ./src/*.d.ts && tsc --emitDeclarationOnly --declaration --esModuleInterop --target es2015 --moduleResolution node16 --module node16 src/*.ts && mkdir -p lib && mv src/*.d.ts lib/. && rm src/*.ts && node build-ts.js",
-    "check-ts": "tsc --noEmit lib/index.d.ts"
+    "check-ts": "tsc  --module node16 --moduleResolution node16 --noEmit lib/index.d.ts"
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.1",
