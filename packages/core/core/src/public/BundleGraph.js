@@ -31,7 +31,6 @@ import Dependency, {
 import {targetToInternalTarget} from './Target';
 import {fromInternalSourceLocation} from '../utils';
 import BundleGroup, {bundleGroupToInternalBundleGroup} from './BundleGroup';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 // Friendly access for other modules within this package that need access
 // to the internal bundle.
@@ -492,25 +491,17 @@ export default class BundleGraph<TBundle: IBundle>
 
         const currentCondition = conditions.get(cond.key);
 
-        if (getFeatureFlag('conditionalBundlingReporterSameConditionFix')) {
-          conditions.set(cond.key, {
-            bundle,
-            ifTrueBundles: [
-              ...(currentCondition?.ifTrueBundles ?? []),
-              ...ifTrueBundles,
-            ],
-            ifFalseBundles: [
-              ...(currentCondition?.ifFalseBundles ?? []),
-              ...ifFalseBundles,
-            ],
-          });
-        } else {
-          conditions.set(cond.key, {
-            bundle,
-            ifTrueBundles,
-            ifFalseBundles,
-          });
-        }
+        conditions.set(cond.key, {
+          bundle,
+          ifTrueBundles: [
+            ...(currentCondition?.ifTrueBundles ?? []),
+            ...ifTrueBundles,
+          ],
+          ifFalseBundles: [
+            ...(currentCondition?.ifFalseBundles ?? []),
+            ...ifFalseBundles,
+          ],
+        });
 
         bundleConditions.set(bundle.id, conditions);
       }
