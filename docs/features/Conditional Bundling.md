@@ -8,7 +8,7 @@ If you wish to use conditional imports in Jira, you should use our adoption guid
 
 ### The problem
 
-Take the following example code:
+Take the following example code that uses synchronous imports:
 
 ```tsx
 // my-component.js
@@ -34,7 +34,9 @@ then the user will end up downloading code that they never need to execute. For 
 
 ### The solution
 
-Atlaspack's conditional imports API solve this problem by providing a way to notify the Atlaspack bundler that there is conditional code. At build time, Atlaspack will then ensure that `TrueComponent` and `FalseComponent` are separate bundles in the build output, and it will generate a **conditional manifest** which is a JSON file that details which bundle(s) should be loaded for each value of `fg('my-feature-gate-name')`. The web server (e.g. Bifrost) would then check the conditional manifest to determine which bundles to serve to any given user, depending on the value of `fg('my-feature-gate-name')`.
+Atlaspack's conditional imports API solve this problem by providing a way to hint to the Atlaspack bundler that there is conditional code. At build time, Atlaspack will then ensure that `TrueComponent` and `FalseComponent` are separate bundles in the build output, and it will generate a **conditional manifest** which is a JSON file that details which bundle(s) should be loaded for each value of `fg('my-feature-gate-name')`. The web server (e.g. Bifrost) would then check the conditional manifest to determine which bundles to serve to any given user, depending on the value of `fg('my-feature-gate-name')`. (The conditional manifest is also checked at runtime when loading an async chunk.)
+
+All of the bundles are still loaded _synchronously_, making conditional imports more versatile and performant than dynamic imports. We discuss the benefits of conditional imports compared to dynamic imports in the "How are conditional imports better than dynamic imports?" section below.
 
 ### Syntax
 
@@ -70,27 +72,38 @@ Caveats:
 >
 > **Bundling complexity:** Simplifying to default export means we can simplify the runtime code. If we don't, that means we have to handle a bunch of bundling edge cases to make sure we get optimised code (e.g. dead code removal, side-effects etc.)
 
-At runtime, the `importCond` function call will be converted to something like this:
+At build time, the `importCond` function call will be converted to something like this:
 
 ```js
 // index.js
-const MyComponent = globalThis.__MCOND('my-feature-gate-name')
-  ? require('./true-component.tsx').default
-  : require('./false-component.tsx').default;
+
+register("avM1e", function(e, t) {
+  e.exports = function(e, ifTrue, ifFalse) {
+      return globalThis.__MCOND && globalThis.__MCOND(e) ? ifTrue() : ifFalse()
+  }
+}),
+register("4qbUE", function(e, t) {
+    e.exports = parcelRequire("avM1e")("my-feature-gate-name", function() {
+        return parcelRequire("esWld");
+    }, function() {
+        return parcelRequire("dqBV0");
+    })
+}),
+// ...
+const MyComponent = parcelRequire("4qbUE");
 ```
 
-`globalThis.__MCOND` is the feature gate function that the user evaluates at runtime. More about this later...
+`globalThis.__MCOND` ("**m**odule **cond**ition") is the feature gate function that the user evaluates at runtime. More about this later...
 
-## How are conditional imports better?
+## How are conditional imports better than dynamic imports?
 
 Before conditional imports, there were two main approaches used in Jira for feature gating different modules:
 
 - Conventional imports, e.g. `componentWithFG`
 - Dynamic imports
 
-The `componentWithFG` function call has the same impact to bundle size and load time as typing `fg('...') ? TrueComponent : FalseComponent` (with a bit of magic to make it work). It uses synchronous imports so there will be no impact to the idle time, but there will be a bundle size impact as the user will always load both versions of a component synchronously:
-
 ```tsx
+// Conventional imports
 import TrueComponent from './true-component.tsx';
 import FalseComponent from './false-component.tsx';
 
@@ -103,15 +116,21 @@ const MyComponent = componentWithFG(
 const MyComponent = fg('my-feature-gate-name') ? TrueComponent : FalseComponent;
 ```
 
-Meanwhile, dynamic imports have no impact to bundle size, as the user will only load the bundle that matches their feature gate value. However, the asynchronous imports will increase idle time due to the user needing to download the bundle at runtime without being able to take advantage of preloading:
+In the above **conventional imports** example, the `componentWithFG` function call has the same impact to bundle size and load time as typing `fg('...') ? TrueComponent : FalseComponent` (with a bit of magic to make it work). It uses synchronous imports so there will be no impact to the idle time, but there will be a bundle size impact as the user will always load both versions of a component synchronously:
 
 ```tsx
+// Dynamic imports
+
 const MyComponent = fg('my-feature-gate-name')
   ? import('./true-component.tsx')
   : import('./false-component.tsx');
 ```
 
-Conditional imports give the best of both worlds, as it allows us to continue using **synchronous imports** (like `componentWithFG`) but without the impact to bundle size. The user only loads the code that they actually need to run. Below is a diagram comparing the three approaches:
+Meanwhile, **dynamic imports** (or asynchronous imports) have no impact to bundle size, as the user will only load the bundle that matches their feature gate value. However, dynamic imports are not feasible for cases where the feature gated component is part of the initial render of the page, where the component must be available synchronously and cannot be loaded dynamically.
+
+Even setting this aside, the dynamic imports aren't ideal performance-wise either: they increase the client-side load time, due to the user needing to download the bundle at runtime without being able to take advantage of preloading:
+
+**Conditional imports** give the best of both worlds, as it allows us to continue using **synchronous imports** (like `componentWithFG`) but without the impact to bundle size. The user only loads the code that they actually need to run. Below is a diagram comparing the three approaches:
 
 ![Comparison of conditional bundling approaches. Conventional imports do not increase the idle time but increase the bundle size; dynamic imports do not increase the bundle size but increase the idle size. Conditional imports will not increase either of these.](conditional-bundling-comparison.png)
 
@@ -226,31 +245,25 @@ Now that we have set up the correct bundles to be loaded from the server side, w
 Recall that `importCond` is converted to this in the build output:
 
 ```js
-const MyComponent = globalThis.__MCOND('my-feature-gate-name')
-  ? require('./true-component.tsx').default
-  : require('./false-component.tsx').default;
+// index.js
+
+register("avM1e", function(e, t) {
+  e.exports = function(e, ifTrue, ifFalse) {
+      return globalThis.__MCOND && globalThis.__MCOND(e) ? ifTrue() : ifFalse()
+  }
+}),
+register("4qbUE", function(e, t) {
+    e.exports = parcelRequire("avM1e")("my-feature-gate-name", function() {
+        return parcelRequire("esWld");
+    }, function() {
+        return parcelRequire("dqBV0");
+    })
+}),
+// ...
+const MyComponent = parcelRequire("4qbUE");
 ```
 
-> **Sidenote**
->
-> Technically, it is converted to this when `server: true`, to prevent `__MCOND` from being evaluated too early:
->
-> ```js
-> const MyComponent = {
->   ifTrue: require('./true-component.tsx').default,
->   ifFalse: require('./false-component.tsx').default,
-> };
->
-> Object.defineProperty(MyComponent, 'load', {
->   get: () =>
->     globalThis.__MCOND && globalThis.__MCOND('my-feature-gate-name')
->       ? conditionab.ifTrue
->       : conditionab.ifFalse,
-> });
-> MyComponent.load;
-> ```
-
-You will need to update the web server to add an implementation for `__MCOND`. If your feature gate function is called `fg`, it is as simple as:
+You will need to update the web server to add an implementation for the runtime feature gate function, `__MCOND`. If your feature gate function is called `fg`, it is as simple as:
 
 ```tsx
 // somewhere in your client-side code
