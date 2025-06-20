@@ -433,8 +433,7 @@ export class ScopeHoistingPackager {
         }
 
         if (getFeatureFlag('applyScopeHoistingImprovement')) {
-          let outgoingDeps = this.bundleGraph.getDependencies(asset).length;
-          if (outgoingDeps === 0) {
+          if (this.isInlineScopeHoistable(asset)) {
             // If an asset has no dependencies, then there are no deps to worry
             // about loading first, so it's safe to hoist
             return;
@@ -450,6 +449,37 @@ export class ScopeHoistingPackager {
 
     this.assetOutputs = new Map(await queue.run());
     return wrapped;
+  }
+
+  isInlineScopeHoistable(asset: Asset): boolean {
+    let incomingDeps = this.bundleGraph.getIncomingDependencies(asset);
+    if (incomingDeps.length !== 1) {
+      return false;
+    }
+
+    let dep = incomingDeps[0];
+    let parentAsset = this.bundleGraph.getAssetWithDependency(dep);
+    let assetSymbols = this.bundleGraph.getExportedSymbols(asset, this.bundle);
+    let parentSymbols = this.bundleGraph.getExportedSymbols(
+      parentAsset,
+      this.bundle,
+    );
+    let hasReExports = assetSymbols.some((assetSymbol) =>
+      parentSymbols.some(
+        (parentSymbol) => parentSymbol.symbol === assetSymbol.symbol,
+      ),
+    );
+
+    if (hasReExports) {
+      return false;
+    }
+
+    let outgoingDeps = this.bundleGraph.getDependencies(asset);
+    if (outgoingDeps.length !== 0) {
+      return false;
+    }
+
+    return true;
   }
 
   buildExportedSymbols() {
@@ -684,7 +714,10 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (shouldWrap) {
+                  if (
+                    (shouldWrap && !this.isInlineScopeHoistable(resolved)) ||
+                    this.wrappedAssets.has(resolved.id)
+                  ) {
                     depContent.push(this.visitAsset(resolved));
                   } else {
                     let [depCode, depMap, depLines] = this.visitAsset(resolved);
