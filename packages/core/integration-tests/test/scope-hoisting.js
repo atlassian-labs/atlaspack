@@ -21,6 +21,7 @@ import {
   run,
   runBundle,
   fsFixture,
+  getBundleContents,
 } from '@atlaspack/test-utils';
 
 const bundle = (name, opts = {}) => {
@@ -3674,6 +3675,82 @@ describe('scope hoisting', function () {
       }
 
       // Run the bundle to make sure it's valid
+      await run(b);
+    });
+
+    it('only creates a namespace object for a constant module if the current bundle needs it', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        inline-constants-namespaces
+
+          yarn.lock: {}
+        
+          package.json: 
+            {
+              "@atlaspack/transformer-js": { "unstable_inlineConstants": true }
+            }
+          
+          index.html:
+            <script type="module" src="./index.js"></script>
+          
+          index.js:
+            import { CONSTANT } from './constants';
+            async function bar() {
+              await import('./async.js')
+            }
+            function foo() {
+              return \`The constant is \${CONSTANT}\`;
+            }
+            global.result = foo();
+          
+          async.js:
+            import * as consts from './constants.js';
+            console.log("namespaced", consts);
+
+          constants.js:
+            export const CONSTANT = 42;
+            export const OTHER = "other";
+      `;
+      let b = await bundle(
+        path.join(__dirname, 'inline-constants-namespaces', 'index.html'),
+        {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+            sourceMaps: false,
+            shouldOptimize: true,
+          },
+          inputFS: overlayFS,
+          featureFlags: {
+            inlineConstNamespaceFix: true,
+          },
+        },
+      );
+
+      const indexBundle = nullthrows(
+        await getBundleContents(b, outputFS, (name) =>
+          /index.*\.js/.test(name),
+        ),
+        'Expected the index bundle to exist',
+      );
+      // Expect the index bundle to inline the constant properly
+      assert(
+        indexBundle.includes('The constant is 42'),
+        'Expected the constant to have been inlined in the index bundle',
+      );
+
+      const asyncBundle = nullthrows(
+        await getBundleContents(b, outputFS, (name) =>
+          /async.*\.js/.test(name),
+        ),
+        'Expected the async bundle to exist',
+      );
+      // Expect the asyncBundle to contain a namespacing for the constant
+      assert(
+        /[a-z]\([a-z],"CONSTANT",\(\)=>/.test(asyncBundle),
+        'Expected the async bundle to contain a namespacing',
+      );
+
+      // Make sure it still runs
       await run(b);
     });
   });
