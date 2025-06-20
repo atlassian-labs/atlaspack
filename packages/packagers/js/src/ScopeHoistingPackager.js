@@ -400,6 +400,9 @@ export class ScopeHoistingPackager {
       }
     });
 
+    let wrappedChildren = new Set();
+    let inlineableLeaves = [];
+
     for (let wrappedAssetRoot of [...wrapped]) {
       this.bundle.traverseAssets((asset, _, actions) => {
         if (asset === wrappedAssetRoot) {
@@ -436,22 +439,65 @@ export class ScopeHoistingPackager {
           if (this.isInlineScopeHoistable(asset)) {
             // If an asset has no dependencies, then there are no deps to worry
             // about loading first, so it's safe to hoist
+            inlineableLeaves.push(asset);
             return;
           }
         }
 
         if (!asset.meta.isConstantModule) {
-          this.wrappedAssets.add(asset.id);
-          wrapped.push(asset);
+          wrappedChildren.add(asset);
         }
       }, wrappedAssetRoot);
     }
 
+    for (let leaf of inlineableLeaves) {
+      let knownDeps = [];
+      let currentAsset = leaf;
+
+      while (true) {
+        // Get the parent asset, of which there should only be one.
+        let incomingDeps =
+          this.bundleGraph.getIncomingDependencies(currentAsset);
+        if (incomingDeps.length !== 1) {
+          break;
+        }
+
+        let dep = incomingDeps[0];
+        knownDeps.push(dep);
+
+        let parentAsset = this.bundleGraph.getAssetWithDependency(dep);
+        if (!parentAsset) {
+          break;
+        }
+
+        if (this.wrappedAssets.has(parentAsset.id)) {
+          break;
+        }
+
+        if (!this.isInlineScopeHoistable(parentAsset, knownDeps)) {
+          break;
+        }
+
+        wrappedChildren.delete(parentAsset);
+        currentAsset = parentAsset;
+      }
+    }
+
+    for (let child of wrappedChildren) {
+      wrapped.push(child);
+      this.wrappedAssets.add(child.id);
+    }
+
     this.assetOutputs = new Map(await queue.run());
+
+    csv.logRow(this.bundle.publicId, wrapped.length, this.assetOutputs.size);
     return wrapped;
   }
 
-  isInlineScopeHoistable(asset: Asset): boolean {
+  isInlineScopeHoistable(
+    asset: Asset,
+    alreadyInlinedOutgoingDeps: Array<Dependency> = [],
+  ): boolean {
     let incomingDeps = this.bundleGraph.getIncomingDependencies(asset);
     if (incomingDeps.length !== 1) {
       return false;
@@ -475,7 +521,13 @@ export class ScopeHoistingPackager {
     }
 
     let outgoingDeps = this.bundleGraph.getDependencies(asset);
-    if (outgoingDeps.length !== 0) {
+    let unseenOutgoingDeps = outgoingDeps.filter(
+      (outgoingDep) =>
+        !alreadyInlinedOutgoingDeps.some(
+          (knownDep) => knownDep === outgoingDep,
+        ),
+    );
+    if (unseenOutgoingDeps.length !== 0) {
       return false;
     }
 
