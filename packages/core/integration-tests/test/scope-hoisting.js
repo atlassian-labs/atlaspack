@@ -12,6 +12,7 @@ import {
   describe,
   distDir,
   findAsset,
+  findBundle,
   findDependency,
   getNextBuild,
   it,
@@ -6488,6 +6489,85 @@ describe('scope hoisting', function () {
       },
       inputFS: overlayFS,
     });
+
+    await run(b);
+  });
+
+  it('Should hoist single-use modules into async bundles', async () => {
+    await fsFixture(overlayFS, __dirname)`
+        concat-async
+          one.js:
+            export function one() {
+              return 1;
+            };
+          two.js:
+            export function two() {
+              return 2;
+            }
+          three.js:
+            import { one } from "./one";
+            import { two } from "./two";
+            export function three() {
+              return one() + two();
+            }
+          five.js:
+            import { two } from "./two";
+            import { three } from  "./three";
+            export function five() {
+              return two() + three();
+            }
+          four.js:
+            import { one } from "./one";
+            export function four() {
+              return one() + one() + one() + one();
+            }
+          index.js:
+            import { one } from './one';
+            import { four } from './four';
+
+            import('./five').then(({ five }) => {
+              one() + four() + five();
+            });
+      `;
+    let b = await bundle([path.join(__dirname, 'concat-async/index.js')], {
+      inputFS: overlayFS,
+    });
+
+    const twoAsset = nullthrows(findAsset(b, 'two.js'));
+    const twoPublicId = b.getAssetPublicId(twoAsset);
+    const twoExportSymbol = b.getExportedSymbols(twoAsset)[0].symbol;
+
+    const threeAsset = nullthrows(findAsset(b, 'three.js'));
+    const threePublicId = b.getAssetPublicId(threeAsset);
+    const threeExportSymbol = b.getExportedSymbols(threeAsset)[0].symbol;
+
+    const fiveBundle = findBundle(b, 'five.js');
+    const fiveBundleContents = await overlayFS.readFile(
+      fiveBundle.filePath,
+      'utf-8',
+    );
+
+    assert(
+      !fiveBundleContents.includes(twoPublicId) &&
+        fiveBundleContents.includes(twoExportSymbol),
+    );
+    assert(
+      !fiveBundleContents.includes(threePublicId) &&
+        fiveBundleContents.includes(threeExportSymbol),
+    );
+
+    const oneAsset = nullthrows(findAsset(b, 'one.js'));
+    const oneAssetPublicId = b.getAssetPublicId(oneAsset);
+
+    const indexBundle = findBundle(b, 'index.js');
+    const indexBundleContents = await overlayFS.readFile(
+      indexBundle.filePath,
+      'utf-8',
+    );
+    const numOneAssetOccurances =
+      indexBundleContents.split(`parcelRequire("${oneAssetPublicId}")`).length -
+      1;
+    assert(numOneAssetOccurances === 1);
 
     await run(b);
   });
