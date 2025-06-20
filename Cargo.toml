@@ -137,6 +137,7 @@ url-search-params = "12.0.0"
 which = "7.0.3"
 whoami = "1.5.2"
 xxhash-rust = "0.8.15"
+xz = "0.1.0"
 
 # DEPRECATED
 serde_yaml = "0.9.34+deprecated"

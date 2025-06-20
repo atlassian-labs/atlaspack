@@ -14,6 +14,7 @@ tmp
 .atlaspack-cache
 .parcel-cache
 target
+release
 crates
 
 # Ignoring main README for now because generated Table of Contents adds a line that prettier removes

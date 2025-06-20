@@ -29,5 +29,6 @@ yarn-error.log*
 artifacts/
 debug-symbols/
 /databases
+release/
 
 mocha-cpu-profiles/
