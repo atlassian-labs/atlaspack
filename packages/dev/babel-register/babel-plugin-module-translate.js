@@ -1,7 +1,13 @@
 const resolve = require('resolve');
 const path = require('path');
 
+// This list is resolved with Nodejs's resolver
+const ignoreList = {};
+
 function resolveSource(specifier, from) {
+  if (ignoreList[specifier]) {
+    return require.resolve(specifier);
+  }
   return resolve.sync(specifier, {
     basedir: path.dirname(from),
     packageFilter(pkg) {
