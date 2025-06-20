@@ -102,6 +102,10 @@ export type FeatureFlags = {|
    * Enable a change to the html packager to load more bundles when conditional bundling fallback mode is enabled
    */
   condbHtmlPackagerChange: boolean,
+  /**
+   * Moves the functionality of the react-refresh runtime into the react-refresh-wrap transformer
+   */
+  mergeReactRefreshRuntimeIntoTransformer: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
