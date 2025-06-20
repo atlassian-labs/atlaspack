@@ -36,20 +36,22 @@ var parcelRegister = parcelRequire.register;
 `;
 
 export const fnExpr = (
-  env: Environment,
+  supportsArrowFunctions: boolean,
   params: Array<string>,
   body: Array<string>,
 ): string => {
   let block = `{ ${body.join(' ')} }`;
 
-  if (env.supports('arrow-functions')) {
+  if (supportsArrowFunctions) {
     return `(${params.join(', ')}) => ${block}`;
   }
 
   return `function (${params.join(', ')}) ${block}`;
 };
 
-export const bundleQueuePrelude = (env: Environment): string => `
+export const bundleQueuePrelude = (env: Environment): string => {
+  const supportsArrowFunctions = env.supports('arrow-functions');
+  return `
 if (!$parcel$global.lb) {
   // Set of loaded bundles
   $parcel$global.lb = new Set();
@@ -58,14 +60,14 @@ if (!$parcel$global.lb) {
 
   // Register loaded bundle
   $parcel$global.rlb = ${fnExpr(
-    env,
+    supportsArrowFunctions,
     ['bundle'],
     ['$parcel$global.lb.add(bundle);', '$parcel$global.pq();'],
   )}
 
   // Run when ready
   $parcel$global.rwr = ${fnExpr(
-    env,
+    supportsArrowFunctions,
     // b = bundle public id
     // r = run function to execute the bundle entry
     // d = list of dependent bundles this bundle requires before executing
@@ -75,15 +77,15 @@ if (!$parcel$global.lb) {
 
   // Process queue
   $parcel$global.pq = ${fnExpr(
-    env,
+    supportsArrowFunctions,
     [],
     [
       `var runnableEntry = $parcel$global.bq.find(${fnExpr(
-        env,
+        supportsArrowFunctions,
         ['i'],
         [
           `return i.d.every(${fnExpr(
-            env,
+            supportsArrowFunctions,
             ['dep'],
             ['return $parcel$global.lb.has(dep);'],
           )});`,
@@ -91,7 +93,7 @@ if (!$parcel$global.lb) {
       )});`,
       'if (runnableEntry) {',
       `$parcel$global.bq = $parcel$global.bq.filter(${fnExpr(
-        env,
+        supportsArrowFunctions,
         ['i'],
         ['return i.b !== runnableEntry.b;'],
       )});`,
@@ -102,6 +104,7 @@ if (!$parcel$global.lb) {
   )}
 }
 `;
+};
 
 const $parcel$export = `
 function $parcel$export(e, n, v, s) {
