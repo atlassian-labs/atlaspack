@@ -1,8 +1,0 @@
-{
-  "extension": ["js", "mjs", "cjs", "ts", "cts", "mts"],
-  "require": [
-    "@atlaspack/babel-register",
-    "@atlaspack/test-utils/src/mochaSetup.js"
-  ],
-  "timeout": 50000
-}
