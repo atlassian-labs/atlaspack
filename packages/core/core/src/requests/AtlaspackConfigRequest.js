@@ -30,15 +30,17 @@ import ThrowableDiagnostic, {
   md,
   errorToDiagnostic,
 } from '@atlaspack/diagnostic';
-import {parse} from 'json5';
+import json5 from 'json5';
 import path from 'path';
 import invariant from 'assert';
 
+import atlaspackInternalPlugins from '../internal-plugins';
 import {AtlaspackConfig} from '../AtlaspackConfig';
 import AtlaspackConfigSchema from '../AtlaspackConfig.schema';
 import {toProjectPath} from '../projectPath';
 import {requestTypes} from '../RequestTracker';
 import {optionsProxy} from '../utils';
+import {isSuperPackage} from '../isSuperPackage';
 
 type ConfigMap<K, V> = {[K]: V, ...};
 
@@ -159,34 +161,60 @@ export async function resolveAtlaspackConfig(
         );
 
   let usedDefault = false;
-  if (configPath == null && options.defaultConfig != null) {
+  let config, extendedFiles;
+
+  if (
+    configPath == null &&
+    options.defaultConfig != null &&
+    isSuperPackage() &&
+    options.defaultConfig.endsWith('.js')
+  ) {
     usedDefault = true;
-    configPath = (
-      await options.packageManager.resolve(options.defaultConfig, resolveFrom)
-    ).resolved;
-  }
+    // Load the super package default config
+    let result: AtlaspackConfigChain = await processConfigChain(
+      atlaspackInternalPlugins['@atlaspack/config-default'](),
+      // $FlowFixMe
+      options.defaultConfig,
+      options,
+    );
+    config = result.config;
+    extendedFiles = result.extendedFiles;
+  } else {
+    if (configPath == null && options.defaultConfig != null) {
+      usedDefault = true;
 
-  if (configPath == null) {
-    return null;
-  }
+      configPath = (
+        await options.packageManager.resolve(options.defaultConfig, resolveFrom)
+      ).resolved;
+    }
 
-  let contents;
-  try {
-    contents = await options.inputFS.readFile(configPath, 'utf8');
-  } catch (e) {
-    throw new ThrowableDiagnostic({
-      diagnostic: {
-        message: md`Could not find parcel config at ${path.relative(
-          options.projectRoot,
-          configPath,
-        )}`,
-        origin: '@atlaspack/core',
-      },
-    });
-  }
+    if (configPath == null) {
+      return null;
+    }
 
-  let {config, extendedFiles}: AtlaspackConfigChain =
-    await parseAndProcessConfig(configPath, contents, options);
+    let contents;
+    try {
+      contents = await options.inputFS.readFile(configPath, 'utf8');
+    } catch (e) {
+      throw new ThrowableDiagnostic({
+        diagnostic: {
+          message: md`Could not find parcel config at ${path.relative(
+            options.projectRoot,
+            configPath,
+          )}`,
+          origin: '@atlaspack/core',
+        },
+      });
+    }
+
+    let result: AtlaspackConfigChain = await parseAndProcessConfig(
+      configPath,
+      contents,
+      options,
+    );
+    config = result.config;
+    extendedFiles = result.extendedFiles;
+  }
 
   if (options.additionalReporters.length > 0) {
     config.reporters = [
@@ -216,7 +244,7 @@ export async function parseAndProcessConfig(
 ): Promise<AtlaspackConfigChain> {
   let config: RawAtlaspackConfig;
   try {
-    config = parse(contents);
+    config = json5.parse(contents);
   } catch (e) {
     let pos = {
       line: e.lineNumber,
@@ -446,11 +474,29 @@ export async function processConfigChain(
           let key = Array.isArray(configFile.extends)
             ? `/extends/${i}`
             : '/extends';
-          let resolved = await resolveExtends(ext, filePath, key, options);
-          extendedFiles.push(resolved);
-          let {extendedFiles: moreExtendedFiles, config: nextConfig} =
-            await processExtendedConfig(filePath, key, ext, resolved, options);
-          extendedFiles = extendedFiles.concat(moreExtendedFiles);
+
+          let nextConfig;
+          if (atlaspackInternalPlugins[ext]) {
+            nextConfig = (
+              await processConfigChain(
+                atlaspackInternalPlugins[ext](),
+                /*#__ATLASPACK_IGNORE__*/ __dirname,
+                options,
+              )
+            ).config;
+          } else {
+            let resolved = await resolveExtends(ext, filePath, key, options);
+            extendedFiles.push(resolved);
+            let result = await processExtendedConfig(
+              filePath,
+              key,
+              ext,
+              resolved,
+              options,
+            );
+            extendedFiles = extendedFiles.concat(result.extendedFiles);
+            nextConfig = result.config;
+          }
           extStartConfig = extStartConfig
             ? mergeConfigs(extStartConfig, nextConfig)
             : nextConfig;

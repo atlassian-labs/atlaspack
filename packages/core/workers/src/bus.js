@@ -8,7 +8,9 @@ class Bus extends EventEmitter {
       child.workerApi.callMaster(
         {
           // $FlowFixMe
-          location: process.browser ? '@atlaspack/workers/bus' : __filename,
+          location: process.browser
+            ? '@atlaspack/workers/bus'
+            : /*#__ATLASPACK_IGNORE__*/ __filename,
           method: 'emit',
           args: [event, ...args],
         },

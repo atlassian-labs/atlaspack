@@ -19,6 +19,7 @@
     "@atlaspack/fs": "2.15.6",
     "@atlaspack/package-manager": "2.14.11",
     "@atlaspack/utils": "2.14.11",
+    "@babel/core": "^7.22.11",
     "chalk": "^4.1.0",
     "expect": "^29.7.0",
     "ncp": "^2.0.0",

@@ -523,7 +523,7 @@ mod tests {
   use std::sync::Arc;
 
   use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
-  use atlaspack_core::types::{AtlaspackOptions, Code};
+  use atlaspack_core::types::{AtlaspackOptions, Code, JsPaths};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
   use petgraph::visit::Bfs;
@@ -636,7 +636,6 @@ mod tests {
     #[cfg(target_os = "windows")]
     let temporary_dir = PathBuf::from("C:\\windows\\atlaspack_tests");
 
-    let core_path = temporary_dir.join("atlaspack_core");
     let fs = InMemoryFileSystem::default();
 
     fs.create_directory(&temporary_dir).unwrap();
@@ -673,12 +672,12 @@ mod tests {
 
     fs.write_file(&temporary_dir.join("package.json"), String::from("{}"));
 
-    setup_core_modules(&fs, &core_path);
+    let js_paths = setup_js_paths(&fs);
 
     let mut request_tracker = request_tracker(RequestTrackerTestOptions {
       fs: Arc::new(fs),
       atlaspack_options: AtlaspackOptions {
-        core_path,
+        js_paths,
         entries: vec![temporary_dir.join("entry.js").to_str().unwrap().to_string()],
         ..AtlaspackOptions::default()
       },
@@ -715,8 +714,15 @@ mod tests {
     assert_eq!(first_asset.file_path, temporary_dir.join("entry.js"));
   }
 
-  fn setup_core_modules(fs: &InMemoryFileSystem, core_path: &Path) {
-    let transformer_path = core_path
+  fn setup_js_paths(fs: &InMemoryFileSystem) -> JsPaths {
+    let js_paths = JsPaths {
+      core_path: PathBuf::from("atlaspack_core"),
+      esmodule_helpers_specifier: String::from("@atlaspack/transformer-js/src/esmodule-helpers.js"),
+      ..Default::default()
+    };
+
+    let transformer_path = js_paths
+      .core_path
       .join("node_modules")
       .join("@atlaspack/transformer-js");
 
@@ -725,6 +731,8 @@ mod tests {
       &transformer_path.join("src").join("esmodule-helpers.js"),
       String::from("/* helpers */"),
     );
+
+    js_paths
   }
 
   /// Do a BFS traversal of the the graph until the first AssetNode
