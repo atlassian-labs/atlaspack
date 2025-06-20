@@ -1220,34 +1220,49 @@ ${code}
       usedSymbols.has('default') &&
       !asset.symbols.hasExportSymbol('__esModule');
 
-    let usedNamespace =
-      // If the asset has * in its used symbols, we might need the exports namespace.
-      // The one case where this isn't true is in ESM library entries, where the only
-      // dependency on * is the entry dependency. In this case, we will use ESM exports
-      // instead of the namespace object.
-      (usedSymbols.has('*') &&
-        (this.bundle.env.outputFormat !== 'esmodule' ||
-          !this.bundle.env.isLibrary ||
-          asset !== this.bundle.getMainEntry() ||
-          this.bundleGraph
-            .getIncomingDependencies(asset)
-            .some(
-              (dep) =>
-                !dep.isEntry &&
-                this.bundle.hasDependency(dep) &&
-                nullthrows(this.bundleGraph.getUsedSymbols(dep)).has('*'),
-            ))) ||
-      // If a symbol is imported (used) from a CJS asset but isn't listed in the symbols,
-      // we fallback on the namespace object.
-      (asset.symbols.hasExportSymbol('*') &&
-        [...usedSymbols].some((s) => !asset.symbols.hasExportSymbol(s))) ||
-      // If the exports has this asset's namespace (e.g. ESM output from CJS input),
-      // include the namespace object for the default export.
-      this.exportedSymbols.has(`$${assetId}$exports`) ||
-      // CommonJS library bundle entries always need a namespace.
-      (this.bundle.env.isLibrary &&
-        this.bundle.env.outputFormat === 'commonjs' &&
-        asset === this.bundle.getMainEntry());
+    let usedNamespace;
+    if (
+      asset.meta.isConstantModule &&
+      getFeatureFlag('inlineConstNamespaceFix')
+    ) {
+      // Only set usedNamespace if there is an incoming dependency in the current bundle that uses '*'
+      usedNamespace = this.bundleGraph
+        .getIncomingDependencies(asset)
+        .some(
+          (dep) =>
+            this.bundle.hasDependency(dep) &&
+            nullthrows(this.bundleGraph.getUsedSymbols(dep)).has('*'),
+        );
+    } else {
+      usedNamespace =
+        // If the asset has * in its used symbols, we might need the exports namespace.
+        // The one case where this isn't true is in ESM library entries, where the only
+        // dependency on * is the entry dependency. In this case, we will use ESM exports
+        // instead of the namespace object.
+        (usedSymbols.has('*') &&
+          (this.bundle.env.outputFormat !== 'esmodule' ||
+            !this.bundle.env.isLibrary ||
+            asset !== this.bundle.getMainEntry() ||
+            this.bundleGraph
+              .getIncomingDependencies(asset)
+              .some(
+                (dep) =>
+                  !dep.isEntry &&
+                  this.bundle.hasDependency(dep) &&
+                  nullthrows(this.bundleGraph.getUsedSymbols(dep)).has('*'),
+              ))) ||
+        // If a symbol is imported (used) from a CJS asset but isn't listed in the symbols,
+        // we fallback on the namespace object.
+        (asset.symbols.hasExportSymbol('*') &&
+          [...usedSymbols].some((s) => !asset.symbols.hasExportSymbol(s))) ||
+        // If the exports has this asset's namespace (e.g. ESM output from CJS input),
+        // include the namespace object for the default export.
+        this.exportedSymbols.has(`$${assetId}$exports`) ||
+        // CommonJS library bundle entries always need a namespace.
+        (this.bundle.env.isLibrary &&
+          this.bundle.env.outputFormat === 'commonjs' &&
+          asset === this.bundle.getMainEntry());
+    }
 
     // If the asset doesn't have static exports, should wrap, the namespace is used,
     // or we need default interop, then we need to synthesize a namespace object for
