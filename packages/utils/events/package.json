@@ -2,6 +2,7 @@
   "name": "@atlaspack/events",
   "version": "2.14.1",
   "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "publishConfig": {
     "access": "public"
   },
@@ -10,9 +11,25 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/index.js",
-  "source": "src/index.js",
+  "types": "lib/index.d.mts",
   "engines": {
     "node": ">= 16.0.0"
   },
-  "type": "commonjs"
+  "exports": {
+    ".": {
+      "atlaspack::sources": "./src/index.mts",
+      "types": [
+        "./lib/index.d.mts",
+        "./src/index.mts"
+      ],
+      "import": "./lib/index.mjs",
+      "module-sync": "./lib/index.mjs",
+      "require": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./*": "./*"
+  },
+  "scripts": {
+    "build-tsc": "node ../../../scripts/build-tsc.mjs"
+  }
 }

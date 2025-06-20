@@ -3,7 +3,7 @@
 import {type PostHTMLNode, render} from 'posthtml-render';
 import {parseHTML, transformerOpts} from '../src/HTMLTransformer';
 import assert from 'assert';
-import type {PluginOptions} from '../../../core/types-internal/src';
+import type {PluginOptions} from '@atlaspack/types-internal';
 
 function normalizeHTML(code: string): string {
   const ast = parseHTML(code, true);

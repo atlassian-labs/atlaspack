@@ -23,14 +23,15 @@ new RuleTester({
       output: "import Logger from '@atlaspack/logger/src/Logger';",
     },
     {
-      code: `import type { PluginOptions } from '../../../../core/types-internal/src';`,
+      code: `import type { PluginOptions } from '../../../../core/types-internal';`,
       errors: [
         {
           message: `Import for monorepo package '@atlaspack/types-internal' should be absolute.`,
         },
       ],
       filename,
-      output: "import type { PluginOptions } from '@atlaspack/types-internal';",
+      output:
+        "import type { PluginOptions } from '@atlaspack/types-internal/';",
     },
   ],
 });
