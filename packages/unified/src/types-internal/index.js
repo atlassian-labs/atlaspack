@@ -1,16 +1,16 @@
 // @flow strict-local
 
 import type {Readable} from 'stream';
-import type SourceMap from '@parcel/source-map';
+import type SourceMap from '../vendor/parcel_source-map/index.js';
 import type {
   Diagnostic,
   Diagnostifiable,
   DiagnosticWithoutOrigin,
-} from '@atlaspack/diagnostic';
-import type {FeatureFlags} from '@atlaspack/feature-flags';
-import type {Event, BackendType} from '@parcel/watcher';
+} from '../diagnostic/index.js';
+import type {FeatureFlags} from '../feature-flags/index.js';
+import type {Event, BackendType} from '../vendor/parcel_watcher/index.js';
 
-import type {Cache} from './Cache';
+import type {Cache} from './Cache.js';
 import type {
   FileSystem,
   FileOptions,
@@ -18,11 +18,11 @@ import type {
   ReaddirOptions,
   Encoding,
   Dirent,
-} from './FileSystem';
-import type {AST as _AST, ConfigResult as _ConfigResult} from './unsafe';
-import type {FilePath} from './FilePath';
-import type {Glob} from './Glob';
-import type {PackageName} from './PackageName';
+} from './FileSystem.js';
+import type {AST as _AST, ConfigResult as _ConfigResult} from './unsafe.js';
+import type {FilePath} from './FilePath.js';
+import type {Glob} from './Glob.js';
+import type {PackageName} from './PackageName.js';
 import type {
   PackageManager,
   PackageManagerResolveResult,
@@ -31,16 +31,16 @@ import type {
   ModuleRequest,
   InstallOptions,
   InstallerOptions,
-} from './PackageManager';
-import type {SemverRange} from './SemverRange';
-import type {DependencySpecifier} from './DependencySpecifier';
+} from './PackageManager.js';
+import type {SemverRange} from './SemverRange.js';
+import type {DependencySpecifier} from './DependencySpecifier.js';
 import type {
   FileCreateInvalidation,
   GlobInvalidation,
   FileInvalidation,
   FileAboveInvalidation,
-} from './FileCreateInvalidation';
-import type {NapiWorkerPool} from './NapiWorkerPool';
+} from './FileCreateInvalidation.js';
+import type {NapiWorkerPool} from './NapiWorkerPool.js';
 
 export interface TraceMeasurement {
   end(): void;
