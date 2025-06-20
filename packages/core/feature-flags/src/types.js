@@ -102,6 +102,10 @@ export type FeatureFlags = {|
    * Enable a change to the html packager to load more bundles when conditional bundling fallback mode is enabled
    */
   condbHtmlPackagerChange: boolean,
+  /**
+   * Enable a change where a constant module only have the namespacing object added in bundles where it is required
+   */
+  inlineConstNamespaceFix: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;

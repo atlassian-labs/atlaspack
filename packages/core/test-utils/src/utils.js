@@ -689,6 +689,18 @@ export function assertBundles(
   }
 }
 
+export async function getBundleContents(
+  bundleGraph: BundleGraph<PackagedBundle>,
+  fs: FileSystem,
+  filter: (string) => boolean,
+): Promise<string | null> {
+  const bundle = bundleGraph.getBundles().find((b) => filter(b.name));
+  if (!bundle) {
+    return null;
+  }
+  return await fs.readFile(bundle.filePath, 'utf8');
+}
+
 export function normaliseNewlines(text: string): string {
   return text.replace(/(\r\n|\n|\r)/g, '\n');
 }
