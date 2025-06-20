@@ -98,6 +98,7 @@ export class ScopeHoistingPackager {
   topLevelNames: Map<string, number> = new Map();
   seenAssets: Set<string> = new Set();
   wrappedAssets: Set<string> = new Set();
+  assetInlineableCache: Map<Asset, boolean> = new Map();
   hoistedRequires: Map<string, Map<string, string>> = new Map();
   needsPrelude: boolean = false;
   usedHelpers: Set<string> = new Set();
@@ -400,9 +401,6 @@ export class ScopeHoistingPackager {
       }
     });
 
-    let wrappedChildren = new Set();
-    let inlineableLeaves = [];
-
     for (let wrappedAssetRoot of [...wrapped]) {
       this.bundle.traverseAssets((asset, _, actions) => {
         if (asset === wrappedAssetRoot) {
@@ -436,62 +434,65 @@ export class ScopeHoistingPackager {
         }
 
         if (getFeatureFlag('applyScopeHoistingImprovement')) {
-          if (this.isInlineScopeHoistable(asset)) {
-            // If an asset has no dependencies, then there are no deps to worry
-            // about loading first, so it's safe to hoist
-            inlineableLeaves.push(asset);
+          if (this.assetIsInlineable(asset)) {
             return;
           }
         }
 
         if (!asset.meta.isConstantModule) {
-          wrappedChildren.add(asset);
+          this.wrappedAssets.add(asset.id);
+          wrapped.push(asset);
         }
       }, wrappedAssetRoot);
     }
 
-    for (let leaf of inlineableLeaves) {
-      let knownDeps = [];
-      let currentAsset = leaf;
-
-      while (true) {
-        // Get the parent asset, of which there should only be one.
-        let incomingDeps =
-          this.bundleGraph.getIncomingDependencies(currentAsset);
-        if (incomingDeps.length !== 1) {
-          break;
-        }
-
-        let dep = incomingDeps[0];
-        knownDeps.push(dep);
-
-        let parentAsset = this.bundleGraph.getAssetWithDependency(dep);
-        if (!parentAsset) {
-          break;
-        }
-
-        if (this.wrappedAssets.has(parentAsset.id)) {
-          break;
-        }
-
-        if (!this.isInlineScopeHoistable(parentAsset, knownDeps)) {
-          break;
-        }
-
-        wrappedChildren.delete(parentAsset);
-        currentAsset = parentAsset;
-      }
-    }
-
-    for (let child of wrappedChildren) {
-      wrapped.push(child);
-      this.wrappedAssets.add(child.id);
-    }
-
     this.assetOutputs = new Map(await queue.run());
 
-    csv.logRow(this.bundle.publicId, wrapped.length, this.assetOutputs.size);
     return wrapped;
+  }
+
+  assetIsInlineable(asset: Asset): boolean {
+    let cacheResult = this.assetInlineableCache.get(asset);
+    if (cacheResult != null) {
+      return cacheResult;
+    }
+
+    let check = () => {
+      // If the asset is wrapped, it is not inlineable.
+      if (this.wrappedAssets.has(asset.id)) {
+        return false;
+      }
+
+      // If the asset is depended on by more than one other asset, it is not
+      // inlineable.
+      let incomingDeps = this.bundleGraph.getIncomingDependencies(asset);
+      if (incomingDeps.length !== 1) {
+        return false;
+      }
+
+      // If the asset has no dependencies, it is inlineable.
+      let outgoingDeps = this.bundleGraph.getDependencies(asset);
+      if (outgoingDeps.length === 0) {
+        return true;
+      }
+
+      // If the asset does have dependencies, but all those dependencies are also
+      // inlineable, then it is inlineable.
+      let allDepsInlineable = outgoingDeps.every((dep) => {
+        let resolved = this.bundleGraph.getResolvedAsset(dep, this.bundle);
+        if (!resolved) {
+          // If the dependency is not resolved, it is not inlineable.
+          return false;
+        }
+        return this.assetIsInlineable(resolved);
+      });
+      return allDepsInlineable;
+    };
+
+    let result = check();
+    this.assetInlineableCache.set(asset, result);
+
+    return result;
   }
 
   isInlineScopeHoistable(
