@@ -32,7 +32,7 @@ interface InitialAtlaspackOptions {
   lazyExcludes?: string[];
   shouldBundleIncrementally?: boolean;
 
-  // Development options
+  // Dev server options
   hmrOptions?: HMROptions | null;
   serveOptions?: InitialServerOptions | false;
 
