@@ -211,7 +211,7 @@ export default (new Transformer({
           options.projectRoot + '/index',
           ['tsconfig.json', 'jsconfig.json'],
           {
-            readTracking: getFeatureFlag('granularTsConfigInvalidation'),
+            readTracking: true,
           },
         )
       )?.contents?.compilerOptions;

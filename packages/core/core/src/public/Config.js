@@ -20,7 +20,6 @@ import {
 } from '@atlaspack/utils';
 import Environment from './Environment';
 import {fromProjectPath, toProjectPath} from '../projectPath';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {fromEnvironmentId} from '../EnvironmentManager';
 
 const internalConfigToConfig: DefaultWeakMap<
@@ -362,7 +361,7 @@ export default class PublicConfig implements IConfig {
     }
 
     let pkgConfig = await this.getConfig<PackageJSON>(['package.json'], {
-      readTracking: getFeatureFlag('granularTsConfigInvalidation'),
+      readTracking: true,
     });
     if (!pkgConfig) {
       return null;
