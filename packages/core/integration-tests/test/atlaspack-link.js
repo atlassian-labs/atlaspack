@@ -104,7 +104,7 @@ describe('@atlaspack/link', () => {
 
       assert.equal(
         overlayFS.realpathSync('node_modules/.bin/atlaspack'),
-        path.resolve(__dirname, '../../cli/src/bin.js'),
+        path.resolve(__dirname, '../../cli/src/cli.mts'),
       );
     });
 
@@ -119,7 +119,7 @@ describe('@atlaspack/link', () => {
           core
             cli
               package.json: ${{name: '@atlaspack/cli'}}
-              src/bin.js:
+              src/cli.mts:
             core/package.json: ${{name: '@atlaspack/core'}}
       `;
 
@@ -142,7 +142,7 @@ describe('@atlaspack/link', () => {
 
       assert.equal(
         overlayFS.realpathSync('node_modules/.bin/atlaspack'),
-        path.resolve(overlayFS.cwd(), '../package-root/core/cli/src/bin.js'),
+        path.resolve(overlayFS.cwd(), '../package-root/core/cli/src/cli.mts'),
       );
     });
 
@@ -163,7 +163,7 @@ describe('@atlaspack/link', () => {
 
       assert.equal(
         overlayFS.realpathSync('node_modules/.bin/atlaspack'),
-        path.resolve(__dirname, '../../cli/src/bin.js'),
+        path.resolve(__dirname, '../../cli/src/cli.mts'),
       );
 
       assert.equal(
@@ -188,7 +188,7 @@ describe('@atlaspack/link', () => {
 
       assert.equal(
         overlayFS.realpathSync('node_modules/.bin/atlaspack'),
-        path.resolve(__dirname, '../../cli/src/bin.js'),
+        path.resolve(__dirname, '../../cli/src/cli.mts'),
       );
     });
 
@@ -271,7 +271,7 @@ describe('@atlaspack/link', () => {
 
       assert.equal(
         overlayFS.realpathSync('node_modules/.bin/atlaspack'),
-        path.resolve(__dirname, '../../cli/src/bin.js'),
+        path.resolve(__dirname, '../../cli/src/cli.mts'),
       );
 
       assert.equal(
@@ -353,7 +353,7 @@ describe('@atlaspack/link', () => {
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules
-          .bin/atlaspack -> ${path.resolve(__dirname, '../../cli/src/bin.js')}
+          .bin/atlaspack -> ${path.resolve(__dirname, '../../cli/src/cli.mts')}
           @atlaspack/cli -> ${path.resolve(__dirname, '../../cli')}
           @atlaspack/core -> ${path.resolve(__dirname, '../../core')}
         .atlaspack-link: ${{
@@ -386,14 +386,14 @@ describe('@atlaspack/link', () => {
           nodeModulesGlobs: ['node_modules'],
           namespace: '@atlaspack',
         }}
-        node_modules/.bin/atlaspack -> package-root/core/cli/src/bin.js
+        node_modules/.bin/atlaspack -> package-root/core/cli/src/cli.mts
         node_modules/@atlaspack/cli -> package-root/core/cli
         node_modules/@atlaspack/core -> package-root/core/core
       `;
 
       await fsFixture(overlayFS, '/')`
         package-root/core/cli/package.json: ${{name: '@atlaspack/cli'}}
-        package-root/core/cli/src/bin.js:
+        package-root/core/cli/src/cli.mts:
         package-root/core/core/package.json: ${{name: '@atlaspack/core'}}
       `;
 
@@ -416,7 +416,7 @@ describe('@atlaspack/link', () => {
           namespace: '@namespace',
         }}
         node_modules
-          .bin/atlaspack -> ${path.resolve(__dirname, '../../cli/src/bin.js')}
+          .bin/atlaspack -> ${path.resolve(__dirname, '../../cli/src/cli.mts')}
           @atlaspack/cli -> ${path.resolve(__dirname, '../../cli')}
           @namespace/atlaspack-cli -> ${path.resolve(__dirname, '../../cli')}
           @atlaspack/core -> ${path.resolve(__dirname, '../../core')}
@@ -504,7 +504,7 @@ describe('@atlaspack/link', () => {
           namespace: '@atlaspack',
         }}
         node_modules
-          .bin/atlaspack -> ${path.resolve(__dirname, '../../cli/src/bin.js')}
+          .bin/atlaspack -> ${path.resolve(__dirname, '../../cli/src/cli.mts')}
           @atlaspack/cli -> ${path.resolve(__dirname, '../../cli')}
           @atlaspack/core -> ${path.resolve(__dirname, '../../core')}
         tools
@@ -532,7 +532,7 @@ describe('@atlaspack/link', () => {
       await fsFixture(overlayFS)`
         yarn.lock:
         node_modules
-          .bin/atlaspack -> ${path.resolve(__dirname, '../../cli/src/bin.js')}
+          .bin/atlaspack -> ${path.resolve(__dirname, '../../cli/src/cli.mts')}
           @atlaspack/cli -> ${path.resolve(__dirname, '../../cli')}
           @atlaspack/core -> ${path.resolve(__dirname, '../../core')}
         .atlaspack-link: ${{
@@ -560,7 +560,7 @@ describe('@atlaspack/link', () => {
 
       assert.equal(
         overlayFS.realpathSync('node_modules/.bin/atlaspack'),
-        path.resolve(__dirname, '../../cli/src/bin.js'),
+        path.resolve(__dirname, '../../cli/src/cli.mts'),
       );
     });
   });

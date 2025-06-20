@@ -1,11 +1,17 @@
-// @flow strict-local
-
-import ThrowableDiagnostic from '@atlaspack/diagnostic';
+// @ts-ignore TS:MIGRATE
+import atlaspackDiagnostic from '@atlaspack/diagnostic';
+// @ts-ignore TS:MIGRATE
+import atlaspackLogger from '@atlaspack/logger';
+// @ts-ignore TS:MIGRATE
 import {prettyDiagnostic} from '@atlaspack/utils';
-import {INTERNAL_ORIGINAL_CONSOLE} from '@atlaspack/logger';
 import chalk from 'chalk';
 
-export async function logUncaughtError(e: mixed) {
+// @ts-ignore TS:MIGRATE
+const ThrowableDiagnostic = atlaspackDiagnostic.default;
+// @ts-ignore TS:MIGRATE
+const {INTERNAL_ORIGINAL_CONSOLE} = atlaspackLogger;
+
+export async function logUncaughtError(e: typeof ThrowableDiagnostic | unknown) {
   if (e instanceof ThrowableDiagnostic) {
     for (let diagnostic of e.diagnostics) {
       let {message, codeframe, stack, hints, documentation} =
@@ -34,7 +40,7 @@ export async function logUncaughtError(e: mixed) {
   await new Promise((resolve) => setTimeout(resolve, 100));
 }
 
-export async function handleUncaughtException(exception: mixed) {
+export async function handleUncaughtException(exception: unknown) {
   try {
     await logUncaughtError(exception);
   } catch (err) {

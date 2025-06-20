@@ -1,16 +1,11 @@
-// @flow strict-local
-
-import commander, {
-  type commander$Command,
-  type commander$Option,
-} from 'commander';
+import commander from 'commander';
 
 export interface OptionsDefinition {
-  [key: string]: string | mixed[] | commander$Option;
+  [key: string]: string | any[] | commander.Option;
 }
 
 export function applyOptions(
-  cmd: commander$Command,
+  cmd: commander.Command,
   options: OptionsDefinition,
 ) {
   for (let opt in options) {

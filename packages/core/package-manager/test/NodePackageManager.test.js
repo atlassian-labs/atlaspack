@@ -11,6 +11,7 @@ import WorkerFarm from '@atlaspack/workers';
 import {MockPackageInstaller, NodePackageManager} from '../src';
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
+const ROOT_DIR = path.normalize(path.join(__dirname, '..', '..', '..', '..'));
 
 function normalize(res) {
   return {
@@ -75,6 +76,7 @@ describe('NodePackageManager', function () {
         type: 1,
         invalidateOnFileChange: new Set([
           path.join(FIXTURES_DIR, 'has-foo/node_modules/foo/package.json'),
+          path.join(ROOT_DIR, 'tsconfig.json'),
         ]),
         invalidateOnFileCreate: [
           {
@@ -129,6 +131,7 @@ describe('NodePackageManager', function () {
         type: 1,
         invalidateOnFileChange: new Set([
           path.join(FIXTURES_DIR, 'has-foo/node_modules/a/package.json'),
+          path.join(ROOT_DIR, 'tsconfig.json'),
         ]),
         invalidateOnFileCreate: [
           {
@@ -301,6 +304,7 @@ describe('NodePackageManager', function () {
               FIXTURES_DIR,
               'has-foo/subpackage/node_modules/foo/package.json',
             ),
+            path.join(ROOT_DIR, 'tsconfig.json'),
           ]),
           invalidateOnFileCreate: [
             {

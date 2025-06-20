@@ -19,8 +19,8 @@
     "@swc/core": "1.11.18"
   },
   "scripts": {
-    "build": "rimraf --glob packages/*/*/lib && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production gulp",
-    "build-ts": "lerna run build-ts && lerna run check-ts",
+    "build": "rimraf --glob packages/*/*/lib && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production gulp && lerna run build-ts && lerna run build-tsc",
+    "build-ts": "lerna run check-ts",
     "build-native": "node scripts/build-native.js",
     "build-native-release": "cross-env CARGO_PROFILE=release node scripts/build-native.js",
     "build-native-wasm": "cross-env CARGO_PROFILE=release RUSTUP_TARGET=wasm32-unknown-unknown scripts/build-native.js",
@@ -32,6 +32,7 @@
     "link-all": "node scripts/link-all.js packages",
     "unlink-all": "node scripts/unlink-all.js packages",
     "check": "flow check",
+    "check-ts": "lerna run check-ts",
     "lint": "node ./scripts/lint-all.mjs",
     "prepublishOnly": "yarn pre-publish",
     "pre-publish": "yarn build && yarn build-ts",
@@ -45,7 +46,7 @@
     "test:js": "yarn test:js:unit && yarn test:integration",
     "test:js:coverage": "yarn nyc yarn test:js:unit",
     "test:js:coverage:report": "yarn nyc report --reporter=html-spa",
-    "test:js:unit": "cross-env NODE_ENV=test mocha --conditions=\"@atlaspack::sources\" --timeout 5000",
+    "test:js:unit": "cross-env NODE_ENV=test mocha --disable-warning=ExperimentalWarning --conditions=@atlaspack::sources --experimental-strip-types --timeout 5000",
     "test:unit": "yarn test:js:unit && cargo test",
     "dev:release": "lerna publish -y --canary --preid dev --dist-tag=dev --exact --force-publish=* --no-git-tag-version --no-push",
     "canary:release": "lerna publish -y --canary --preid canary --dist-tag=canary --exact --force-publish=* --no-push",

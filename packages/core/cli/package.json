@@ -3,7 +3,7 @@
   "version": "2.13.15",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
-  "type": "commonjs",
+  "type": "module",
   "publishConfig": {
     "access": "public"
   },
@@ -14,14 +14,23 @@
   "bin": {
     "atlaspack": "bin/atlaspack.js"
   },
-  "main": "lib/bin.js",
-  "source": "src/bin.js",
-  "scripts": {
-    "prepack": "./ensure-no-dev-lib.sh",
-    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
+  "imports": {
+    "#bin": {
+      "@atlaspack::sources": "./src/cli-dev.mts",
+      "default": "./lib/cli.mjs"
+    }
   },
-  "engines": {
-    "node": ">= 16.0.0"
+  "exports": {
+    ".": {
+      "@atlaspack::sources": "./src/cli-dev.mts",
+      "types": "./src/cli.mts",
+      "default": "./lib/cli.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build-tsc": "yarn tsc --noCheck",
+    "check-ts": "yarn tsc --noEmit"
   },
   "dependencies": {
     "@atlaspack/config-default": "3.1.13",
@@ -42,7 +51,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.22.11",
-    "@atlaspack/babel-register": "2.14.1",
-    "rimraf": "^5.0.5"
+    "@atlaspack/babel-register": "2.14.1"
   }
 }

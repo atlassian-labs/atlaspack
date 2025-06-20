@@ -1,13 +1,20 @@
-// @flow strict-local
-
-import ThrowableDiagnostic from '@atlaspack/diagnostic';
+import path from 'node:path';
 import commander from 'commander';
 import getPort from 'get-port';
+// @ts-ignore TS:MIGRATE
+import atlaspackDiagnostic from '@atlaspack/diagnostic';
+// @ts-ignore TS:MIGRATE
+import atlaspackLogger from '@atlaspack/logger';
 import type {FileSystem} from '@atlaspack/fs';
+// @ts-ignore TS:MIGRATE
 import type {FeatureFlags} from '@atlaspack/feature-flags';
+// @ts-ignore TS:MIGRATE
 import type {InitialAtlaspackOptions, LogLevel} from '@atlaspack/types';
-import {INTERNAL_ORIGINAL_CONSOLE} from '@atlaspack/logger';
-import path from 'path';
+
+// @ts-ignore TS:MIGRATE
+const {INTERNAL_ORIGINAL_CONSOLE} = atlaspackLogger;
+// @ts-ignore TS:MIGRATE
+const ThrowableDiagnostic = atlaspackDiagnostic.default;
 
 function parsePort(portValue: string): number {
   let parsedPort = Number(portValue);
@@ -49,7 +56,7 @@ export interface Options {
   logLevel?: LogLevel;
   profile?: boolean;
   contentHash?: boolean;
-  featureFlag?: $Partial<FeatureFlags>;
+  featureFlag?: Partial<FeatureFlags>;
   optimize?: boolean;
   sourceMaps?: boolean;
   scopeHoist?: boolean;
@@ -59,10 +66,20 @@ export interface Options {
   target: string[];
 }
 
-// $FlowFixMe
+export type HttpsOptions = {
+  cert: string;
+  key: string;
+};
+
+export type ServeOptions = {
+  https: HttpsOptions | boolean;
+  port: number;
+  host: string;
+  publicUrl?: string;
+};
+
 export interface CommandExt extends commander.Command, Options {}
 
-// $FlowFixMe
 function shouldUseProductionDefaults(command: CommandExt) {
   return command.name() === 'build' || command.production === true;
 }
@@ -84,7 +101,7 @@ export async function normalizeOptions(
   // available in JS configs and plugins.
   process.env.NODE_ENV = nodeEnv;
 
-  let https = !!command.https;
+  let https: HttpsOptions | boolean = !!command.https;
   if (command.cert != null && command.key != null) {
     https = {
       cert: command.cert,
@@ -92,7 +109,7 @@ export async function normalizeOptions(
     };
   }
 
-  let serveOptions = false;
+  let serveOptions: ServeOptions | false = false;
   let {host} = command;
 
   // Ensure port is valid and available
@@ -103,8 +120,8 @@ export async function normalizeOptions(
     (command.name() === 'serve' || Boolean(command.hmr))
   ) {
     try {
-      port = await getPort({port, host});
-    } catch (err) {
+      port = await getPort.default({port, host});
+    } catch (err: any) {
       throw new ThrowableDiagnostic({
         diagnostic: {
           message: `Could not get available port: ${err.message}`,
@@ -154,7 +171,7 @@ export async function normalizeOptions(
 
   let additionalReporters = [
     {packageName: '@atlaspack/reporter-cli', resolveFrom: __filename},
-    ...(command.reporter: Array<string>).map((packageName) => ({
+    ...(command.reporter as Array<string>).map((packageName) => ({
       packageName,
       resolveFrom: path.join(inputFS.cwd(), 'index'),
     })),
@@ -200,7 +217,9 @@ export async function normalizeOptions(
     detailedReport:
       command.detailedReport != null
         ? {
-            assetsPerBundle: parseInt(command.detailedReport, 10),
+            assetsPerBundle:
+              // @ts-expect-error this can be a string or boolean, not sure what the valid logic is here
+              parseInt(command.detailedReport, 10),
           }
         : null,
     env: {

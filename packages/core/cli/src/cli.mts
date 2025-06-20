@@ -1,22 +1,34 @@
-// @flow
-
+import path from 'node:path';
+import fs from 'node:fs';
+import url from 'node:url';
+// @ts-ignore TS:MIGRATE Missing types
 import {BuildError} from '@atlaspack/core';
+// @ts-ignore TS:MIGRATE Missing types
 import {NodeFS} from '@atlaspack/fs';
+// @ts-ignore TS:MIGRATE Missing types
 import {openInBrowser} from '@atlaspack/utils';
+// @ts-ignore TS:MIGRATE Missing types
 import {Disposable} from '@atlaspack/events';
-import {INTERNAL_ORIGINAL_CONSOLE} from '@atlaspack/logger';
+// @ts-ignore TS:MIGRATE Missing types
+import atlaspackLogger from '@atlaspack/logger';
 import chalk from 'chalk';
 import commander from 'commander';
-import path from 'path';
-import {version} from '../package.json';
-import {applyOptions} from './applyOptions';
-import {makeDebugCommand} from './makeDebugCommand';
-import {normalizeOptions} from './normalizeOptions';
+import {applyOptions} from './applyOptions.mts';
+import {makeDebugCommand} from './makeDebugCommand.mts';
+import {normalizeOptions} from './normalizeOptions.mts';
 import {
   handleUncaughtException,
   logUncaughtError,
-} from './handleUncaughtException';
-import {commonOptions, hmrOptions} from './options';
+} from './handleUncaughtException.mts';
+import {commonOptions, hmrOptions} from './options.mts';
+
+// @ts-ignore TS:MIGRATE cjs imports fail. Will remove this when all packages have been migrated
+const {INTERNAL_ORIGINAL_CONSOLE} = atlaspackLogger;
+
+const __filename = url.fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const packageJsonPath = path.join(__dirname, '..', 'package.json');
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
 const program = new commander.Command();
 
@@ -28,7 +40,7 @@ const SIGINT_EXIT_CODE = 130;
 process.on('unhandledRejection', handleUncaughtException);
 
 program.storeOptionsAsProperties();
-program.version(version);
+program.version(packageJson.version);
 
 let serve = program
   .command('serve [input...]')
@@ -98,7 +110,9 @@ program.on('--help', function () {
 
 // Override to output option description if argument was missing
 // $FlowFixMe[prop-missing]
-commander.Command.prototype.optionMissingArgument = function (option) {
+commander.Command.prototype.optionMissingArgument = function (
+  option: commander.Option,
+) {
   INTERNAL_ORIGINAL_CONSOLE.error(
     "error: option `%s' argument missing",
     option.flags,
@@ -117,7 +131,7 @@ if (!args[2] || !program.commands.some((c) => c.name() === args[2])) {
 
 program.parse(args);
 
-function runCommand(...args) {
+function runCommand(...args: Parameters<typeof run>) {
   run(...args).catch(handleUncaughtException);
 }
 
@@ -145,8 +159,8 @@ async function run(
   });
 
   let disposable = new Disposable();
-  let unsubscribe: () => Promise<mixed>;
-  let isExiting;
+  let unsubscribe: () => Promise<any>;
+  let isExiting: boolean;
   async function exit(exitCode: number = 0) {
     if (isExiting) {
       return;
@@ -212,11 +226,14 @@ async function run(
   }
 
   if (isWatching) {
-    ({unsubscribe} = await atlaspack.watch((err) => {
-      if (err) {
-        throw err;
-      }
-    }));
+    ({unsubscribe} = await atlaspack.watch(
+      // @ts-expect-error
+      (err) => {
+        if (err) {
+          throw err;
+        }
+      },
+    ));
 
     if (command.open && options.serveOptions) {
       await openInBrowser(

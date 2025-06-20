@@ -26,7 +26,7 @@ require('@babel/register')({
 // This only support transpiling TypeScript to CJS
 // eslint-disable-next-line import/no-extraneous-dependencies
 require('esbuild-register/dist/node').register({
-  extensions: ['.ts', '.cts', '.mts'],
+  extensions: ['.ts'],
 });
 
 // This adds the registration to the Node args, which are passed

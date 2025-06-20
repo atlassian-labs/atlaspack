@@ -71,7 +71,7 @@ export async function link(
   // --------------------------------------------------------------------------------
 
   await fsSymlink(
-    path.join(packageRoot, 'core/cli/src/bin.js'),
+    path.join(packageRoot, 'core/cli/src/cli.mts'),
     path.join(appRoot, 'node_modules/.bin/atlaspack'),
     opts,
   );

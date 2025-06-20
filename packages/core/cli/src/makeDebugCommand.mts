@@ -1,20 +1,24 @@
-// @flow strict-local
-
+// @ts-ignore TS:MIGRATE
 import {NodeFS} from '@atlaspack/fs';
+// @ts-ignore TS:MIGRATE
 import logger from '@atlaspack/logger';
-import commander, {type commander$Command} from 'commander';
+import commander from 'commander';
 import path from 'path';
-import {normalizeOptions, type Options} from './normalizeOptions';
-import type {CommandExt} from './normalizeOptions';
-import {applyOptions} from './applyOptions';
-import {commonOptions} from './options';
-import {handleUncaughtException} from './handleUncaughtException';
+import {normalizeOptions} from './normalizeOptions.mts';
+import type {CommandExt, Options} from './normalizeOptions.mts';
+import {applyOptions} from './applyOptions.mts';
+import {commonOptions} from './options.mts';
+import {handleUncaughtException} from './handleUncaughtException.mts';
 
-export function makeDebugCommand(): commander$Command {
+export function makeDebugCommand(): commander.Command {
   const debug = new commander.Command('debug').description(
     'Debug commands for atlaspack',
   );
-  const getInstance = async (args, opts, command) => {
+  const getInstance = async (
+    args: string[],
+    opts: Options,
+    command: CommandExt,
+  ) => {
     let entries = args;
 
     if (entries.length === 0) {

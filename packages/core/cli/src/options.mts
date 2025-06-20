@@ -1,9 +1,12 @@
-// @flow strict-local
-
-import {INTERNAL_ORIGINAL_CONSOLE} from '@atlaspack/logger';
 import commander from 'commander';
+// @ts-ignore TS:MIGRATE
 import {DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
-import type {OptionsDefinition} from './applyOptions';
+// @ts-ignore TS:MIGRATE
+import atlaspackLogger from '@atlaspack/logger';
+import type {OptionsDefinition} from './applyOptions.mts';
+
+// @ts-ignore TS:MIGRATE
+const {INTERNAL_ORIGINAL_CONSOLE} = atlaspackLogger;
 
 // Only display choices available to callers OS
 export let watcherBackendChoices: string[] = ['brute-force'];
@@ -20,7 +23,11 @@ switch (process.platform) {
     watcherBackendChoices.push('watchman', 'windows');
     break;
   }
-  case 'freebsd' || 'openbsd': {
+  case 'freebsd': {
+    watcherBackendChoices.push('watchman');
+    break;
+  }
+  case 'openbsd': {
     watcherBackendChoices.push('watchman');
     break;
   }
@@ -48,7 +55,7 @@ export const commonOptions: OptionsDefinition = {
   '--no-source-maps': 'disable sourcemaps',
   '--target [name]': [
     'only build given target(s)',
-    (val, list) => list.concat([val]),
+    (val: string, list: string[]) => list.concat([val]),
     [],
   ],
   '--log-level <level>': new commander.Option(
@@ -67,7 +74,7 @@ export const commonOptions: OptionsDefinition = {
   ],
   '--reporter <name>': [
     'additional reporters to run',
-    (val, acc) => {
+    (val: string, acc: string[]) => {
       acc.push(val);
       return acc;
     },
@@ -75,11 +82,11 @@ export const commonOptions: OptionsDefinition = {
   ],
   '--feature-flag <name=value>': [
     'sets the value of a feature flag',
-    (value, previousValue) => {
+    (value: string, previousValue: Record<string, boolean | string>) => {
       let [name, val] = value.split('=');
       if (name in DEFAULT_FEATURE_FLAGS) {
-        let featureFlagValue;
-        if (typeof DEFAULT_FEATURE_FLAGS[name] === 'boolean') {
+        let featureFlagValue: string | boolean | undefined;
+        if (typeof (DEFAULT_FEATURE_FLAGS as any)[name] === 'boolean') {
           if (val !== 'true' && val !== 'false') {
             throw new Error(
               `Feature flag ${name} must be set to true or false`,
