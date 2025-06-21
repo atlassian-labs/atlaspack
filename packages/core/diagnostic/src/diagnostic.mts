@@ -1,14 +1,12 @@
-// @flow strict-local
-
-import invariant from 'assert';
+import assert from 'node:assert';
 import nullthrows from 'nullthrows';
-import {parse, type Mapping} from '@mischnic/json-sourcemap';
+import * as jsonSourcemap from '@mischnic/json-sourcemap';
 
 /** These positions are 1-based (so <code>1</code> is the first line/column) */
-export type DiagnosticHighlightLocation = {|
-  +line: number,
-  +column: number,
-|};
+export type DiagnosticHighlightLocation = {
+  line: number;
+  column: number;
+};
 
 export type DiagnosticSeverity = 'error' | 'warn' | 'info';
 
@@ -16,21 +14,21 @@ export type DiagnosticSeverity = 'error' | 'warn' | 'info';
  * Note: A tab character is always counted as a single character
  * This is to prevent any mismatch of highlighting across machines
  */
-export type DiagnosticCodeHighlight = {|
+export type DiagnosticCodeHighlight = {
   /** Location of the first character that should get highlighted for this highlight. */
-  start: DiagnosticHighlightLocation,
+  start: DiagnosticHighlightLocation;
   /** Location of the last character that should get highlighted for this highlight. */
-  end: DiagnosticHighlightLocation,
+  end: DiagnosticHighlightLocation;
   /** A message that should be displayed at this location in the code (optional). */
-  message?: string,
-|};
+  message?: string;
+};
 
 /**
  * Describes how to format a code frame.
  * A code frame is a visualization of a piece of code with a certain amount of
  * code highlights that point to certain chunk(s) inside the code.
  */
-export type DiagnosticCodeFrame = {|
+export type DiagnosticCodeFrame = {
   /**
    * The contents of the source file.
    *
@@ -38,50 +36,50 @@ export type DiagnosticCodeFrame = {|
    * the asset's current code could be different from the input contents.
    *
    */
-  code?: string,
+  code?: string;
   /** Path to the file this code frame is about (optional, absolute or relative to the project root) */
-  filePath?: string,
+  filePath?: string;
   /** Language of the file this code frame is about (optional) */
-  language?: string,
-  codeHighlights: Array<DiagnosticCodeHighlight>,
-|};
+  language?: string;
+  codeHighlights: Array<DiagnosticCodeHighlight>;
+};
 
 /** A JSON object (as in "map") */
-type JSONObject = {
+export type JSONObject = {
   // $FlowFixMe
-  [key: string]: any,
+  [key: string]: any;
 };
 
 /**
  * A style agnostic way of emitting errors, warnings and info.
  * Reporters are responsible for rendering the message, codeframes, hints, ...
  */
-export type Diagnostic = {|
+export type Diagnostic = {
   /** This is the message you want to log. */
-  message: string,
+  message: string;
   /** Name of plugin or file that threw this error */
-  origin?: string,
+  origin?: string;
 
   /** A stacktrace of the error (optional) */
-  stack?: string,
+  stack?: string;
   /** Name of the error (optional) */
-  name?: string,
+  name?: string;
 
   /** A code frame points to a certain location(s) in the file this diagnostic is linked to (optional) */
-  codeFrames?: ?Array<DiagnosticCodeFrame>,
+  codeFrames?: Array<DiagnosticCodeFrame>;
 
   /** An optional list of strings that suggest ways to resolve this issue */
-  hints?: Array<string>,
+  hints?: Array<string>;
 
   /** @private */
-  skipFormatting?: boolean,
+  skipFormatting?: boolean;
 
   /** A URL to documentation to learn more about the diagnostic. */
-  documentationURL?: string,
+  documentationURL?: string;
 
   /** Diagnostic specific metadata (optional) */
-  meta?: JSONObject,
-|};
+  meta?: JSONObject;
+};
 
 // This type should represent all error formats Atlaspack can encounter...
 export interface PrintableError extends Error {
@@ -89,18 +87,16 @@ export interface PrintableError extends Error {
   filePath?: string;
   codeFrame?: string;
   highlightedCodeFrame?: string;
-  loc?: ?{
-    column: number,
-    line: number,
-    ...
+  loc?: {
+    column: number;
+    line: number;
   };
   source?: string;
 }
 
-export type DiagnosticWithoutOrigin = {|
-  ...Diagnostic,
-  origin?: string,
-|};
+export type DiagnosticWithoutOrigin = Diagnostic & {
+  origin?: string;
+};
 
 /** Something that can be turned into a diagnostic. */
 export type Diagnostifiable =
@@ -131,12 +127,12 @@ export function anyToDiagnostic(input: Diagnostifiable): Array<Diagnostic> {
 /** Normalize the given error into a diagnostic. */
 export function errorToDiagnostic(
   error: ThrowableDiagnostic | PrintableError | string,
-  defaultValues?: {|
-    origin?: ?string,
-    filePath?: ?string,
-  |},
+  defaultValues?: {
+    origin?: string;
+    filePath?: string;
+  },
 ): Array<Diagnostic> {
-  let codeFrames: ?Array<DiagnosticCodeFrame> = undefined;
+  let codeFrames: Array<DiagnosticCodeFrame> | undefined = undefined;
 
   if (typeof error === 'string') {
     return [
@@ -195,9 +191,8 @@ export function errorToDiagnostic(
   ];
 }
 
-type ThrowableDiagnosticOpts = {
-  diagnostic: Diagnostic | Array<Diagnostic>,
-  ...
+export type ThrowableDiagnosticOpts = {
+  diagnostic: Diagnostic | Array<Diagnostic>;
 };
 
 /**
@@ -234,18 +229,18 @@ export default class ThrowableDiagnostic extends Error {
 export function generateJSONCodeHighlights(
   data:
     | string
-    | {|
-        data: mixed,
-        pointers: {|[key: string]: Mapping|},
-      |},
-  ids: Array<{|key: string, type?: ?'key' | 'value', message?: string|}>,
+    | {
+        data: any;
+        pointers: {[key: string]: jsonSourcemap.Mapping};
+      },
+  ids: Array<{key: string; type?: 'key' | 'value'; message?: string}>,
 ): Array<DiagnosticCodeHighlight> {
   let map =
     typeof data == 'string'
-      ? parse(data, undefined, {dialect: 'JSON5', tabWidth: 1})
+      ? jsonSourcemap.parse(data, undefined, {dialect: 'JSON5', tabWidth: 1})
       : data;
   return ids.map(({key, type, message}) => {
-    let pos = nullthrows(map.pointers[key]);
+    let pos = nullthrows.default(map.pointers[key]);
     return {
       ...getJSONHighlightLocation(pos, type),
       message,
@@ -258,12 +253,12 @@ export function generateJSONCodeHighlights(
  * <code>result.pointers</code> array.
  */
 export function getJSONHighlightLocation(
-  pos: Mapping,
-  type?: ?'key' | 'value',
-): {|
-  start: DiagnosticHighlightLocation,
-  end: DiagnosticHighlightLocation,
-|} {
+  pos: jsonSourcemap.Mapping,
+  type?: 'key' | 'value',
+): {
+  start: DiagnosticHighlightLocation;
+  end: DiagnosticHighlightLocation;
+} {
   let key = 'key' in pos ? pos.key : undefined;
   let keyEnd = 'keyEnd' in pos ? pos.keyEnd : undefined;
   if (!type && key && pos.value) {
@@ -273,7 +268,7 @@ export function getJSONHighlightLocation(
       end: {line: pos.valueEnd.line + 1, column: pos.valueEnd.column},
     };
   } else if (type == 'key' || !pos.value) {
-    invariant(key && keyEnd);
+    assert(key && keyEnd);
     return {
       start: {line: key.line + 1, column: key.column + 1},
       end: {line: keyEnd.line + 1, column: keyEnd.column},
@@ -288,35 +283,34 @@ export function getJSONHighlightLocation(
 
 /** Result is 1-based, but end is exclusive */
 export function getJSONSourceLocation(
-  pos: Mapping,
-  type?: ?'key' | 'value',
-): {|
-  start: {|
-    +line: number,
-    +column: number,
-  |},
-  end: {|
-    +line: number,
-    +column: number,
-  |},
-|} {
+  pos: jsonSourcemap.Mapping,
+  type?: 'key' | 'value',
+): {
+  start: {
+    line: number;
+    column: number;
+  };
+  end: {
+    line: number;
+    column: number;
+  };
+} {
   let v = getJSONHighlightLocation(pos, type);
   return {start: v.start, end: {line: v.end.line, column: v.end.column + 1}};
 }
 
 export function convertSourceLocationToHighlight<
-  Location: {
+  Location extends {
     /** 1-based, inclusive */
-    +start: {|
-      +line: number,
-      +column: number,
-    |},
+    start: {
+      line: number;
+      column: number;
+    };
     /** 1-based, exclusive */
-    +end: {|
-      +line: number,
-      +column: number,
-    |},
-    ...
+    end: {
+      line: number;
+      column: number;
+    };
   },
 >({start, end}: Location, message?: string): DiagnosticCodeHighlight {
   return {message, start, end: {line: end.line, column: end.column - 1}};
@@ -338,10 +332,19 @@ export function escapeMarkdown(s: string): string {
   return result;
 }
 
-type TemplateInput = $FlowFixMe;
+export type TemplateInput = any;
 
 const mdVerbatim = Symbol();
-export function md(
+
+export interface MdFunction {
+  (strings: Array<string>, ...params: Array<TemplateInput>): string;
+  bold: (s: TemplateInput) => TemplateInput
+  italic: (s: TemplateInput) => TemplateInput
+  underline: (s: TemplateInput) => TemplateInput
+  strikethrough: (s: TemplateInput) => TemplateInput
+}
+
+export const md: MdFunction = function (
   strings: Array<string>,
   ...params: Array<TemplateInput>
 ): string {
@@ -362,7 +365,7 @@ export function md(
     }
   }
   return result.join('') + strings[strings.length - 1];
-}
+};
 
 md.bold = function (s: TemplateInput): TemplateInput {
   // $FlowFixMe[invalid-computed-prop]
