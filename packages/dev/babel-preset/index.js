@@ -39,25 +39,7 @@ module.exports = (api) => {
     ],
     env: {
       production: {
-        plugins: [
-          // Inline the value of ATLASPACK_BUILD_ENV during production builds so that
-          // it can be removed through dead code elimination below
-          [
-            'babel-plugin-transform-inline-environment-variables',
-            {
-              include: [
-                'ATLASPACK_BUILD_ENV',
-                'SKIP_PLUGIN_COMPATIBILITY_CHECK',
-                // Eliminate the ATLASPACK_SELF_BUILD environment variable to get
-                //  rid of @babel/register in bin.js, when compiling with gulp.
-                ...(!process.env.ATLASPACK_SELF_BUILD
-                  ? ['ATLASPACK_SELF_BUILD']
-                  : []),
-              ],
-            },
-          ],
-          'babel-plugin-minify-dead-code-elimination',
-        ],
+        plugins: ['babel-plugin-minify-dead-code-elimination'],
       },
     },
   };

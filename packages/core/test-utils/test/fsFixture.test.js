@@ -13,6 +13,7 @@ import {
 } from '../src/fsFixture';
 import {MemoryFS} from '@atlaspack/fs';
 import WorkerFarm from '@atlaspack/workers';
+import {WORKER_PATH} from '@atlaspack/core';
 
 import assert from 'assert';
 import path from 'path';
@@ -496,7 +497,7 @@ describe('fsFixture', () => {
 
   beforeEach(() => {
     workerFarm = new WorkerFarm({
-      workerPath: require.resolve('@atlaspack/core/worker'),
+      workerPath: WORKER_PATH,
     });
     fs = new MemoryFS(workerFarm);
   });
@@ -608,7 +609,7 @@ describe('toFixture', () => {
 
   beforeEach(() => {
     workerFarm = new WorkerFarm({
-      workerPath: require.resolve('@atlaspack/core/worker'),
+      workerPath: WORKER_PATH,
     });
     fs = new MemoryFS(workerFarm);
   });

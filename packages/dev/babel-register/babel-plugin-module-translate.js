@@ -1,6 +1,8 @@
 const resolve = require('resolve');
 const path = require('path');
 
+const useLib = process.env.ATLASPACK_REGISTER_USE_LIB === 'true';
+
 function resolveSource(specifier, from) {
   return resolve.sync(specifier, {
     basedir: path.dirname(from),
@@ -34,6 +36,9 @@ module.exports = ({types: t}) => ({
   name: 'module-translate',
   visitor: {
     ImportDeclaration({node}, state) {
+      if (useLib) {
+        return;
+      }
       let source = node.source;
       if (
         t.isStringLiteral(source) &&
@@ -47,6 +52,9 @@ module.exports = ({types: t}) => ({
       }
     },
     CallExpression(path, state) {
+      if (useLib) {
+        return;
+      }
       let {node} = path;
       if (
         t.isIdentifier(node.callee, {name: 'require'}) &&

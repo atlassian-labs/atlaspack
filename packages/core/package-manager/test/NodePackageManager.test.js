@@ -8,6 +8,7 @@ import sinon from 'sinon';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import {loadConfig} from '@atlaspack/utils';
 import WorkerFarm from '@atlaspack/workers';
+import {WORKER_PATH} from '@atlaspack/core';
 import {MockPackageInstaller, NodePackageManager} from '../src';
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
@@ -49,7 +50,7 @@ describe('NodePackageManager', function () {
 
   beforeEach(() => {
     workerFarm = new WorkerFarm({
-      workerPath: require.resolve('@atlaspack/core/worker'),
+      workerPath: WORKER_PATH,
     });
     fs = new OverlayFS(new MemoryFS(workerFarm), new NodeFS());
     packageInstaller = new MockPackageInstaller();

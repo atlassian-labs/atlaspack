@@ -58,13 +58,12 @@ describe('domain-sharding', () => {
       if (!mainBundle) return assert(mainBundle);
 
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
+      const re =
+        /require\((.*?)\)\(require\((.*?)\)\.shardUrl\(require\((.*?)\)\.resolve\((.*?)\),(.*?)\)\)/gm;
+      const matches = Array.from(code.matchAll(re));
 
-      assert.ok(
-        code.includes(
-          `require("85e3bc75ab94a411")(require("f41955f5cc01151").shardUrl(require("40cc202a4c7abf8d").resolve("aVRxe"), ${maxShards}))`,
-          'Expected generated code for shardUrl was not found',
-        ),
-      );
+      assert(matches.length > 0);
+      assert.equal(parseInt(matches[0][5].trim(), 10), maxShards);
     });
 
     it('for all other urls', async () => {
@@ -114,12 +113,16 @@ describe('domain-sharding', () => {
       if (!mainBundle) return assert(mainBundle);
 
       const code = await overlayFS.readFile(mainBundle.filePath, 'utf-8');
-      assert.ok(
-        code.includes(
-          `require("e480067c5bab431e")(require("5091f5df3a0c51b6").shardUrl(require("5e2c91749d676db2").getBundleURL('d8wEr') + "${commonFileName}", ${maxShards})`,
-        ),
-        'Expected generated code for shardUrl was not found',
+
+      const re =
+        /require\((.*?)\)\(require\((.*?)\)\.shardUrl\(require\((.*?)\)\.getBundleURL\((.*?)\).*?\+(.*?),(.*?)\)/gm;
+      const matches = Array.from(code.matchAll(re));
+      assert(matches.length > 0);
+      assert.equal(
+        matches[1][5].trim().replaceAll('"', '').replaceAll("'", ''),
+        commonFileName,
       );
+      assert.equal(parseInt(matches[1][6].trim(), 10), maxShards);
     });
 
     it('for ESM loaded bundle manifest', async () => {

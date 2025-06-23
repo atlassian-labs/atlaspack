@@ -24,6 +24,7 @@ import {
   run,
   runBundle,
   runBundles,
+  USE_LIB,
 } from '@atlaspack/test-utils';
 import {makeDeferredWithPromise, normalizePath} from '@atlaspack/utils';
 import Logger from '@atlaspack/logger';
@@ -3968,6 +3969,12 @@ describe('javascript', function () {
         __dirname,
         'integration/undeclared-external/package.json',
       );
+
+      // TS-MIGRATION: Replace with conditional exports
+      let helperPath = USE_LIB
+        ? '@atlaspack/transformer-js/lib/JSTransformer.js'
+        : '@atlaspack/transformer-js/src/JSTransformer.js';
+
       await assert.rejects(
         () =>
           bundle(fixture, {
@@ -3981,9 +3988,7 @@ describe('javascript', function () {
           diagnostics: [
             {
               message: md`Failed to resolve '${'@swc/helpers/cjs/_class_call_check.cjs'}' from '${normalizePath(
-                require.resolve(
-                  '@atlaspack/transformer-js/src/JSTransformer.js',
-                ),
+                require.resolve(helperPath),
               )}'`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -4061,6 +4066,12 @@ describe('javascript', function () {
       );
       await overlayFS.mkdirp(path.dirname(pkg));
       await overlayFS.writeFile(pkg, pkgContents);
+
+      // TS-MIGRATION: Replace with conditional exports
+      let helperPath = USE_LIB
+        ? '@atlaspack/transformer-js/lib/JSTransformer.js'
+        : '@atlaspack/transformer-js/src/JSTransformer.js';
+
       await assert.rejects(
         () =>
           bundle(fixture, {
@@ -4075,9 +4086,7 @@ describe('javascript', function () {
           diagnostics: [
             {
               message: md`Failed to resolve '${'@swc/helpers/cjs/_class_call_check.cjs'}' from '${normalizePath(
-                require.resolve(
-                  '@atlaspack/transformer-js/src/JSTransformer.js',
-                ),
+                require.resolve(helperPath),
               )}'`,
               origin: '@atlaspack/core',
               codeFrames: [

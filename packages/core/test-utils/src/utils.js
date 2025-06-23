@@ -46,6 +46,7 @@ cache.ensure();
 
 export {fsFixture} from './fsFixture';
 export * from './stubs';
+export {USE_LIB, USE_SOURCES} from './useLib';
 
 export const workerFarm = (createWorkerFarm(): WorkerFarm);
 export const inputFS: NodeFS = new NodeFS();
