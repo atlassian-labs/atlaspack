@@ -103,9 +103,11 @@ export type FeatureFlags = {|
    */
   condbHtmlPackagerChange: boolean,
   /**
-   * Moves the functionality of the react-refresh runtime into the react-refresh-wrap transformer
+   * Improves/fixes HMR behaviour by:
+   * - Fixing HMR behaviour with lazy bundle edges
+   * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer
    */
-  mergeReactRefreshRuntimeIntoTransformer: boolean,
+  hmrImprovements: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;

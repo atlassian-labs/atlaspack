@@ -33,9 +33,7 @@ export default (new Transformer({
       return [asset];
     }
 
-    const helperFilename = getFeatureFlag(
-      'mergeReactRefreshRuntimeIntoTransformer',
-    )
+    const helperFilename = getFeatureFlag('hmrImprovements')
       ? 'helpers-new.js'
       : 'helpers.js';
 
@@ -48,11 +46,7 @@ export default (new Transformer({
     let name = `$parcel$ReactRefreshHelpers$${asset.id.slice(-4)}`;
 
     code = `var ${name} = require(${JSON.stringify(wrapperPath)});
-${
-  getFeatureFlag('mergeReactRefreshRuntimeIntoTransformer')
-    ? `${name}.init();`
-    : ''
-}
+${getFeatureFlag('hmrImprovements') ? `${name}.init();` : ''}
 var prevRefreshReg = window.$RefreshReg$;
 var prevRefreshSig = window.$RefreshSig$;
 ${name}.prelude(module);

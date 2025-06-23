@@ -35,7 +35,7 @@ window.addEventListener('parcelhmraccept', () => {
 
 export default (new Runtime({
   async apply({bundle, options}) {
-    if (getFeatureFlag('mergeReactRefreshRuntimeIntoTransformer')) {
+    if (getFeatureFlag('hmrImprovements')) {
       // Note for https://jplat.atlassian.net/browse/JFP-3539:
       // When cleaning up this feature flag, delete the entire
       // @atlaspack/runtime-react-refresh package and remove all references to it
