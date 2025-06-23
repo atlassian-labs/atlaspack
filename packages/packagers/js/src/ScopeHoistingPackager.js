@@ -603,6 +603,7 @@ export class ScopeHoistingPackager {
 
     let lineCount = 0;
     let depContent = [];
+    let earlyDepContent = [];
     if (depMap.size === 0 && replacements.size === 0) {
       // If there are no dependencies or replacements, use a simple function to count the number of lines.
       lineCount = countLines(code) - 1;
@@ -662,7 +663,17 @@ export class ScopeHoistingPackager {
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
                   if (shouldWrap) {
-                    depContent.push(this.visitAsset(resolved));
+                    // If the dependency is a constant module then it should be
+                    // rendered before the wrapped asset so the constants can be
+                    // referenced when minifying.
+                    if (
+                      getFeatureFlag('inlineConstOptimisationFix') &&
+                      resolved.meta.isConstantModule
+                    ) {
+                      earlyDepContent.push(this.visitAsset(resolved));
+                    } else {
+                      depContent.push(this.visitAsset(resolved));
+                    }
                   } else {
                     let [depCode, depMap, depLines] = this.visitAsset(resolved);
                     res = depCode + '\n' + res;
@@ -717,7 +728,17 @@ export class ScopeHoistingPackager {
       sourceMap?.offsetLines(1, 1);
       lineCount++;
 
-      code = `parcelRegister(${JSON.stringify(
+      let earlyCode = '';
+      for (let [depCode, map, lines] of earlyDepContent) {
+        if (!depCode) continue;
+        earlyCode += depCode + '\n';
+        if (sourceMap && map) {
+          sourceMap.addSourceMap(map, lineCount);
+        }
+        lineCount += lines + 1;
+      }
+
+      code = `${earlyCode}parcelRegister(${JSON.stringify(
         this.bundleGraph.getAssetPublicId(asset),
       )}, function(module, exports) {
 ${code}
@@ -1222,8 +1243,8 @@ ${code}
 
     let usedNamespace;
     if (
-      asset.meta.isConstantModule &&
-      getFeatureFlag('inlineConstNamespaceFix')
+      getFeatureFlag('inlineConstOptimisationFix') &&
+      asset.meta.isConstantModule
     ) {
       // Only set usedNamespace if there is an incoming dependency in the current bundle that uses '*'
       usedNamespace = this.bundleGraph
