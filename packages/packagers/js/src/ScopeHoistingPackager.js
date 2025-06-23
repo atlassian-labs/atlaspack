@@ -365,6 +365,7 @@ export class ScopeHoistingPackager {
   async loadAssets(): Promise<Array<Asset>> {
     let queue = new PromiseQueue({maxConcurrent: 32});
     let wrapped = [];
+
     this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
         let [code, map] = await Promise.all([
@@ -408,138 +409,30 @@ export class ScopeHoistingPackager {
       }
     });
 
-    let assetQueue: Array<Asset> = [];
-    let processedAssets = new Set();
+    // maps each asset to its wrapped asset
+    let groups = new Map<Asset, Asset>();
 
-    // Put the existing known wrapped assets into the queue.
     for (let wrappedAsset of wrapped) {
-      let wrapGroupId = this.newWrapGroupId();
-      this.wrapGroupsByAsset.set(wrappedAsset, wrapGroupId);
-      assetQueue.push(wrappedAsset);
-    }
-
-    const hasUnassignedParents = (parents: Array<Dependency>) => {
-      // If there are any parents that haven't been assigned to a wrap group,
-      // return to this asset later.
-      for (let parentDep of parents) {
-        let parentAsset = this.bundleGraph.getAssetWithDependency(parentDep);
-        if (parentAsset == null) {
-          throw new Error('wot');
+      this.bundle.traverseAssets((asset, _, actions) => {
+        if (asset === wrappedAsset) {
+          return;
         }
 
-        if (
-          !this.wrapGroupsByAsset.has(parentAsset) &&
-          !this.bundleGraph.isDependencySkipped(parentDep)
-        ) {
-          return true;
-        }
-      }
-
-      return false;
-    };
-
-    const enqueueDeps = (asset: Asset) => {
-      // Collect the outgoing dependencies of this asset.
-      let depAssets = [];
-
-      for (let dep of this.bundleGraph.getDependencies(asset)) {
-        if (this.bundleGraph.isDependencySkipped(dep)) {
-          continue;
+        if (this.wrappedAssets.has(asset.id)) {
+          actions.skipChildren();
+          return;
         }
 
-        let resolved = this.bundleGraph.getResolvedAsset(dep, this.bundle);
+        if (groups.has(asset) || this.isReExported(asset)) {
+          wrapped.push(asset);
+          this.wrappedAssets.add(asset.id);
 
-        if (resolved != null) {
-          depAssets.push(resolved);
-        }
-      }
-
-      // Add each of the outgoing dependencies to the queue.
-      for (let depAsset of depAssets) {
-        if (!this.wrapGroupsByAsset.has(depAsset)) {
-          console.log(`Enqueueing ${this.getFileName(depAsset)}`);
-          assetQueue.push(depAsset);
-        }
-      }
-    };
-
-    while (assetQueue.length > 0) {
-      let thisAsset = assetQueue.shift();
-      console.log(`Processing ${this.getFileName(thisAsset)}`);
-      invariant(
-        thisAsset != null,
-        'Asset queue should not contain null values',
-      );
-
-      if (processedAssets.has(thisAsset)) {
-        console.log(
-          `Skipping ${this.getFileName(thisAsset)} - already processed`,
-        );
-        continue;
-      }
-
-      if (this.wrappedAssets.has(thisAsset.id)) {
-        console.log(`Only enqueuing deps for ${this.getFileName(thisAsset)}`);
-        enqueueDeps(thisAsset);
-        continue;
-      }
-
-      if (this.wrapGroupsByAsset.has(thisAsset)) {
-        console.log(
-          `Skipping ${this.getFileName(
-            thisAsset,
-          )} - already assigned to a wrap group`,
-        );
-        continue;
-      }
-
-      let parentDeps = this.bundleGraph.getIncomingDependencies(thisAsset);
-      // If there are any parents that haven't been assigned to a wrap group,
-      // return to this asset later.
-      if (hasUnassignedParents(parentDeps)) {
-        // If any of the parent assets are not wrapped, skip this asset.
-        console.log(`Requeueing ${this.getFileName(thisAsset)}`);
-        assetQueue.push(thisAsset);
-        continue;
-      }
-
-      processedAssets.add(thisAsset);
-
-      let parentWrapGroups = new Set();
-
-      for (let parentDep of parentDeps) {
-        let parentAsset = this.bundleGraph.getAssetWithDependency(parentDep);
-        if (parentAsset == null) {
-          throw new Error('wot');
+          actions.skipChildren();
+          return;
         }
 
-        let parentWrapGroupId = this.wrapGroupsByAsset.get(parentAsset);
-
-        if (parentWrapGroupId != null) {
-          parentWrapGroups.add(parentWrapGroupId);
-        }
-      }
-
-      if (parentWrapGroups.size !== 1) {
-        // If the asset has parents in multiple wrap groups, we need to create a
-        // new wrap group
-        let newWrapGroupId = this.newWrapGroupId();
-        this.wrapGroupsByAsset.set(thisAsset, newWrapGroupId);
-        this.wrappedAssets.add(thisAsset.id);
-        wrapped.push(thisAsset);
-      } else {
-        // If the asset has parents in a single wrap group, assign it to that wrap
-        // group.
-        let wrapGroupId = nullthrows(parentWrapGroups.values().next().value);
-        this.wrapGroupsByAsset.set(thisAsset, wrapGroupId);
-        console.log(
-          `Assigning ${this.getFileName(
-            thisAsset,
-          )} to wrap group ${wrapGroupId}`,
-        );
-      }
-
-      enqueueDeps(thisAsset);
+        groups.set(asset, wrappedAsset);
+      }, wrappedAsset);
     }
 
     this.assetOutputs = new Map(await queue.run());
@@ -592,14 +485,31 @@ export class ScopeHoistingPackager {
     return result;
   }
 
+  isReExported(asset: Asset): boolean {
+    let parentSymbols = this.bundleGraph
+      .getIncomingDependencies(asset)
+      .map((dep) => this.bundleGraph.getAssetWithDependency(dep))
+      .flatMap((parent) => {
+        if (parent == null) {
+          return [];
+        }
+        return this.bundleGraph.getExportedSymbols(parent, this.bundle);
+      });
+
+    let assetSymbols = this.bundleGraph.getExportedSymbols(asset, this.bundle);
+
+    return assetSymbols.some((assetSymbol) =>
+      parentSymbols.some(
+        (parentSymbol) => parentSymbol.symbol === assetSymbol.symbol,
+      ),
+    );
+  }
+
   isInlineScopeHoistable(
     asset: Asset,
     alreadyInlinedOutgoingDeps: Array<Dependency> = [],
   ): boolean {
     let incomingDeps = this.bundleGraph.getIncomingDependencies(asset);
-    if (incomingDeps.length !== 1) {
-      return false;
-    }
 
     let dep = incomingDeps[0];
     let parentAsset = this.bundleGraph.getAssetWithDependency(dep);
