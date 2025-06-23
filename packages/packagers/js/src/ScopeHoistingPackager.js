@@ -422,7 +422,7 @@ export class ScopeHoistingPackager {
           assetToScopeHoistInto.filePath,
         )} ${this.bundleGraph.getAssetPublicId(assetToScopeHoistInto)}`,
       );
-      asset.meta.inline = true;
+      asset.meta.inline = assetToScopeHoistInto.id;
     }
   }
 
@@ -436,7 +436,7 @@ export class ScopeHoistingPackager {
     });
 
     /** Counts the number of times one of an asset's exported symbols appears in another asset */
-    const assetSymbolUsageCountMap = new Map<Asset, number>();
+    const assetSymbolUsageCountMap = new Map<Asset, Set<string>>();
     this.bundle.traverse(({value, type}) => {
       if (type === 'asset' || this.bundleGraph.isDependencySkipped(value)) {
         return;
@@ -450,14 +450,17 @@ export class ScopeHoistingPackager {
             symbol,
             this.bundle,
           );
-          const count = assetSymbolUsageCountMap.get(symbol.asset) ?? 0;
-          assetSymbolUsageCountMap.set(symbol.asset, count + 1);
+          const assetUsageSet =
+            assetSymbolUsageCountMap.get(symbol.asset) ?? new Set();
+          assetUsageSet.add(nullthrows(value.sourceAssetId));
+          assetSymbolUsageCountMap.set(symbol.asset, assetUsageSet);
         }
       }
     });
 
     for (const asset of assetsLimitedToThisBundle) {
-      if (assetSymbolUsageCountMap.get(asset) === 1) {
+      const assetUsageSet = assetSymbolUsageCountMap.get(asset);
+      if (assetUsageSet?.size === 1) {
         this.addInlineAssetMetadata(asset);
       }
     }
@@ -510,7 +513,7 @@ export class ScopeHoistingPackager {
           return;
         }
 
-        if (asset.meta.inline) {
+        if (asset.meta.inline === wrappedAssetRoot.id) {
           return;
         }
         // This prevents children of a wrapped asset also being wrapped - it's an "unsafe" optimisation
