@@ -98,7 +98,6 @@ export class ScopeHoistingPackager {
   topLevelNames: Map<string, number> = new Map();
   seenAssets: Set<string> = new Set();
   wrappedAssets: Set<string> = new Set();
-  assetInlineableCache: Map<Asset, boolean> = new Map();
   hoistedRequires: Map<string, Map<string, string>> = new Map();
   needsPrelude: boolean = false;
   usedHelpers: Set<string> = new Set();
@@ -353,11 +352,6 @@ export class ScopeHoistingPackager {
     ];
 
     return `$parcel$global.rwr(${params.join(', ')});`;
-  }
-
-  newWrapGroupId(): number {
-    this.wrapGroupsCount++;
-    return this.wrapGroupsCount;
   }
 
   async loadAssets(): Promise<Array<Asset>> {
@@ -1108,10 +1102,6 @@ ${code}
       (!this.bundle.hasAsset(resolved) && !this.externalAssets.has(resolved)) ||
       (this.wrappedAssets.has(resolved.id) && resolved !== parentAsset)
     );
-  }
-
-  getFileName(asset: Asset): string {
-    return require('path').basename(asset.filePath);
   }
 
   getSymbolResolution(
