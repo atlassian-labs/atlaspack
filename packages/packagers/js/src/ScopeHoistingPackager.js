@@ -99,6 +99,8 @@ export class ScopeHoistingPackager {
   seenAssets: Set<string> = new Set();
   wrappedAssets: Set<string> = new Set();
   assetInlineableCache: Map<Asset, boolean> = new Map();
+  wrapGroupsByAsset: Map<Asset, number> = new Map();
+  wrapGroupsCount: number = 0;
   hoistedRequires: Map<string, Map<string, string>> = new Map();
   needsPrelude: boolean = false;
   usedHelpers: Set<string> = new Set();
@@ -355,6 +357,11 @@ export class ScopeHoistingPackager {
     return `$parcel$global.rwr(${params.join(', ')});`;
   }
 
+  newWrapGroupId(): number {
+    this.wrapGroupsCount++;
+    return this.wrapGroupsCount;
+  }
+
   async loadAssets(): Promise<Array<Asset>> {
     let queue = new PromiseQueue({maxConcurrent: 32});
     let wrapped = [];
@@ -401,53 +408,143 @@ export class ScopeHoistingPackager {
       }
     });
 
-    for (let wrappedAssetRoot of [...wrapped]) {
-      this.bundle.traverseAssets((asset, _, actions) => {
-        if (asset === wrappedAssetRoot) {
-          return;
+    let assetQueue: Array<Asset> = [];
+    let processedAssets = new Set();
+
+    // Put the existing known wrapped assets into the queue.
+    for (let wrappedAsset of wrapped) {
+      let wrapGroupId = this.newWrapGroupId();
+      this.wrapGroupsByAsset.set(wrappedAsset, wrapGroupId);
+      assetQueue.push(wrappedAsset);
+    }
+
+    const hasUnassignedParents = (parents: Array<Dependency>) => {
+      // If there are any parents that haven't been assigned to a wrap group,
+      // return to this asset later.
+      for (let parentDep of parents) {
+        let parentAsset = this.bundleGraph.getAssetWithDependency(parentDep);
+        if (parentAsset == null) {
+          throw new Error('wot');
         }
 
-        if (this.wrappedAssets.has(asset.id)) {
-          actions.skipChildren();
-          return;
-        }
-        // This prevents children of a wrapped asset also being wrapped - it's an "unsafe" optimisation
-        // that should only be used when you know (or think you know) what you're doing.
-        //
-        // In particular this can force an async bundle to be scope hoisted where it previously would not be
-        // due to the entry asset being wrapped.
         if (
-          this.forceSkipWrapAssets.length > 0 &&
-          this.forceSkipWrapAssets.some(
-            (p) =>
-              p === path.relative(this.options.projectRoot, asset.filePath),
-          )
+          !this.wrapGroupsByAsset.has(parentAsset) &&
+          !this.bundleGraph.isDependencySkipped(parentDep)
         ) {
-          this.logger.verbose({
-            message: `Force skipping wrapping of ${path.relative(
-              this.options.projectRoot,
-              asset.filePath,
-            )}`,
-          });
-          actions.skipChildren();
-          return;
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    const enqueueDeps = (asset: Asset) => {
+      // Collect the outgoing dependencies of this asset.
+      let depAssets = [];
+
+      for (let dep of this.bundleGraph.getDependencies(asset)) {
+        if (this.bundleGraph.isDependencySkipped(dep)) {
+          continue;
         }
 
-        if (getFeatureFlag('applyScopeHoistingImprovement')) {
-          if (this.assetIsInlineable(asset)) {
-            return;
-          }
+        let resolved = this.bundleGraph.getResolvedAsset(dep, this.bundle);
+
+        if (resolved != null) {
+          depAssets.push(resolved);
+        }
+      }
+
+      // Add each of the outgoing dependencies to the queue.
+      for (let depAsset of depAssets) {
+        if (!this.wrapGroupsByAsset.has(depAsset)) {
+          console.log(`Enqueueing ${this.getFileName(depAsset)}`);
+          assetQueue.push(depAsset);
+        }
+      }
+    };
+
+    while (assetQueue.length > 0) {
+      let thisAsset = assetQueue.shift();
+      console.log(`Processing ${this.getFileName(thisAsset)}`);
+      invariant(
+        thisAsset != null,
+        'Asset queue should not contain null values',
+      );
+
+      if (processedAssets.has(thisAsset)) {
+        console.log(
+          `Skipping ${this.getFileName(thisAsset)} - already processed`,
+        );
+        continue;
+      }
+
+      if (this.wrappedAssets.has(thisAsset.id)) {
+        console.log(`Only enqueuing deps for ${this.getFileName(thisAsset)}`);
+        enqueueDeps(thisAsset);
+        continue;
+      }
+
+      if (this.wrapGroupsByAsset.has(thisAsset)) {
+        console.log(
+          `Skipping ${this.getFileName(
+            thisAsset,
+          )} - already assigned to a wrap group`,
+        );
+        continue;
+      }
+
+      let parentDeps = this.bundleGraph.getIncomingDependencies(thisAsset);
+      // If there are any parents that haven't been assigned to a wrap group,
+      // return to this asset later.
+      if (hasUnassignedParents(parentDeps)) {
+        // If any of the parent assets are not wrapped, skip this asset.
+        console.log(`Requeueing ${this.getFileName(thisAsset)}`);
+        assetQueue.push(thisAsset);
+        continue;
+      }
+
+      processedAssets.add(thisAsset);
+
+      let parentWrapGroups = new Set();
+
+      for (let parentDep of parentDeps) {
+        let parentAsset = this.bundleGraph.getAssetWithDependency(parentDep);
+        if (parentAsset == null) {
+          throw new Error('wot');
         }
 
-        if (!asset.meta.isConstantModule) {
-          this.wrappedAssets.add(asset.id);
-          wrapped.push(asset);
+        let parentWrapGroupId = this.wrapGroupsByAsset.get(parentAsset);
+
+        if (parentWrapGroupId != null) {
+          parentWrapGroups.add(parentWrapGroupId);
         }
-      }, wrappedAssetRoot);
+      }
+
+      if (parentWrapGroups.size !== 1) {
+        // If the asset has parents in multiple wrap groups, we need to create a
+        // new wrap group
+        let newWrapGroupId = this.newWrapGroupId();
+        this.wrapGroupsByAsset.set(thisAsset, newWrapGroupId);
+        this.wrappedAssets.add(thisAsset.id);
+        wrapped.push(thisAsset);
+      } else {
+        // If the asset has parents in a single wrap group, assign it to that wrap
+        // group.
+        let wrapGroupId = nullthrows(parentWrapGroups.values().next().value);
+        this.wrapGroupsByAsset.set(thisAsset, wrapGroupId);
+        console.log(
+          `Assigning ${this.getFileName(
+            thisAsset,
+          )} to wrap group ${wrapGroupId}`,
+        );
+      }
+
+      enqueueDeps(thisAsset);
     }
 
     this.assetOutputs = new Map(await queue.run());
 
+    csv.logRow(this.bundle.publicId, wrapped.length, this.assetOutputs.size);
     return wrapped;
   }
 
@@ -767,12 +864,7 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (
-                    (shouldWrap && !this.isInlineScopeHoistable(resolved)) ||
-                    this.wrappedAssets.has(resolved.id)
-                  ) {
-                    depContent.push(this.visitAsset(resolved));
-                  } else {
+                  if (!this.wrappedAssets.has(resolved.id)) {
                     let [depCode, depMap, depLines] = this.visitAsset(resolved);
                     res = depCode + '\n' + res;
                     lines += 1 + depLines;
@@ -1137,6 +1229,10 @@ ${code}
       (!this.bundle.hasAsset(resolved) && !this.externalAssets.has(resolved)) ||
       (this.wrappedAssets.has(resolved.id) && resolved !== parentAsset)
     );
+  }
+
+  getFileName(asset: Asset): string {
+    return require('path').basename(asset.filePath);
   }
 
   getSymbolResolution(
