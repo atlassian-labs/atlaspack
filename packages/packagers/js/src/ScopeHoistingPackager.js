@@ -409,80 +409,75 @@ export class ScopeHoistingPackager {
       }
     });
 
-    // maps each asset to its wrapped asset
-    let groups = new Map<Asset, Asset>();
+    if (getFeatureFlag('applyScopeHoistingImprovement')) {
+      // Tracks which assets have been assigned to a wrap group
+      let assignedAssets = new Set<Asset>();
 
-    for (let wrappedAsset of wrapped) {
-      this.bundle.traverseAssets((asset, _, actions) => {
-        if (asset === wrappedAsset) {
-          return;
-        }
+      for (let wrappedAsset of wrapped) {
+        this.bundle.traverseAssets((asset, _, actions) => {
+          if (asset === wrappedAsset) {
+            return;
+          }
 
-        if (this.wrappedAssets.has(asset.id)) {
-          actions.skipChildren();
-          return;
-        }
+          if (this.wrappedAssets.has(asset.id)) {
+            actions.skipChildren();
+            return;
+          }
 
-        if (groups.has(asset) || this.isReExported(asset)) {
-          wrapped.push(asset);
-          this.wrappedAssets.add(asset.id);
+          if (assignedAssets.has(asset) || this.isReExported(asset)) {
+            wrapped.push(asset);
+            this.wrappedAssets.add(asset.id);
 
-          actions.skipChildren();
-          return;
-        }
+            actions.skipChildren();
+            return;
+          }
 
-        groups.set(asset, wrappedAsset);
-      }, wrappedAsset);
+          assignedAssets.add(asset);
+        }, wrappedAsset);
+      }
+    } else {
+      for (let wrappedAssetRoot of [...wrapped]) {
+        this.bundle.traverseAssets((asset, _, actions) => {
+          if (asset === wrappedAssetRoot) {
+            return;
+          }
+
+          if (this.wrappedAssets.has(asset.id)) {
+            actions.skipChildren();
+            return;
+          }
+          // This prevents children of a wrapped asset also being wrapped - it's an "unsafe" optimisation
+          // that should only be used when you know (or think you know) what you're doing.
+          //
+          // In particular this can force an async bundle to be scope hoisted where it previously would not be
+          // due to the entry asset being wrapped.
+          if (
+            this.forceSkipWrapAssets.length > 0 &&
+            this.forceSkipWrapAssets.some(
+              (p) =>
+                p === path.relative(this.options.projectRoot, asset.filePath),
+            )
+          ) {
+            this.logger.verbose({
+              message: `Force skipping wrapping of ${path.relative(
+                this.options.projectRoot,
+                asset.filePath,
+              )}`,
+            });
+            actions.skipChildren();
+            return;
+          }
+          if (!asset.meta.isConstantModule) {
+            this.wrappedAssets.add(asset.id);
+            wrapped.push(asset);
+          }
+        }, wrappedAssetRoot);
+      }
     }
 
     this.assetOutputs = new Map(await queue.run());
 
-    csv.logRow(this.bundle.publicId, wrapped.length, this.assetOutputs.size);
     return wrapped;
-  }
-
-  assetIsInlineable(asset: Asset): boolean {
-    let cacheResult = this.assetInlineableCache.get(asset);
-    if (cacheResult != null) {
-      return cacheResult;
-    }
-
-    let check = () => {
-      // If the asset is wrapped, it is not inlineable.
-      if (this.wrappedAssets.has(asset.id)) {
-        return false;
-      }
-
-      // If the asset is depended on by more than one other asset, it is not
-      // inlineable.
-      let incomingDeps = this.bundleGraph.getIncomingDependencies(asset);
-      if (incomingDeps.length !== 1) {
-        return false;
-      }
-
-      // If the asset has no dependencies, it is inlineable.
-      let outgoingDeps = this.bundleGraph.getDependencies(asset);
-      if (outgoingDeps.length === 0) {
-        return true;
-      }
-
-      // If the asset does have dependencies, but all those dependencies are also
-      // inlineable, then it is inlineable.
-      let allDepsInlineable = outgoingDeps.every((dep) => {
-        let resolved = this.bundleGraph.getResolvedAsset(dep, this.bundle);
-        if (!resolved) {
-          // If the dependency is not resolved, it is not inlineable.
-          return false;
-        }
-        return this.assetIsInlineable(resolved);
-      });
-      return allDepsInlineable;
-    };
-
-    let result = check();
-    this.assetInlineableCache.set(asset, result);
-
-    return result;
   }
 
   isReExported(asset: Asset): boolean {
@@ -503,43 +498,6 @@ export class ScopeHoistingPackager {
         (parentSymbol) => parentSymbol.symbol === assetSymbol.symbol,
       ),
     );
-  }
-
-  isInlineScopeHoistable(
-    asset: Asset,
-    alreadyInlinedOutgoingDeps: Array<Dependency> = [],
-  ): boolean {
-    let incomingDeps = this.bundleGraph.getIncomingDependencies(asset);
-
-    let dep = incomingDeps[0];
-    let parentAsset = this.bundleGraph.getAssetWithDependency(dep);
-    let assetSymbols = this.bundleGraph.getExportedSymbols(asset, this.bundle);
-    let parentSymbols = this.bundleGraph.getExportedSymbols(
-      parentAsset,
-      this.bundle,
-    );
-    let hasReExports = assetSymbols.some((assetSymbol) =>
-      parentSymbols.some(
-        (parentSymbol) => parentSymbol.symbol === assetSymbol.symbol,
-      ),
-    );
-
-    if (hasReExports) {
-      return false;
-    }
-
-    let outgoingDeps = this.bundleGraph.getDependencies(asset);
-    let unseenOutgoingDeps = outgoingDeps.filter(
-      (outgoingDep) =>
-        !alreadyInlinedOutgoingDeps.some(
-          (knownDep) => knownDep === outgoingDep,
-        ),
-    );
-    if (unseenOutgoingDeps.length !== 0) {
-      return false;
-    }
-
-    return true;
   }
 
   buildExportedSymbols() {
@@ -774,11 +732,24 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (!this.wrappedAssets.has(resolved.id)) {
-                    let [depCode, depMap, depLines] = this.visitAsset(resolved);
-                    res = depCode + '\n' + res;
-                    lines += 1 + depLines;
-                    map = depMap;
+                  if (getFeatureFlag('applyScopeHoistingImprovement')) {
+                    if (!this.wrappedAssets.has(resolved.id)) {
+                      let [depCode, depMap, depLines] =
+                        this.visitAsset(resolved);
+                      res = depCode + '\n' + res;
+                      lines += 1 + depLines;
+                      map = depMap;
+                    }
+                  } else {
+                    if (shouldWrap) {
+                      depContent.push(this.visitAsset(resolved));
+                    } else {
+                      let [depCode, depMap, depLines] =
+                        this.visitAsset(resolved);
+                      res = depCode + '\n' + res;
+                      lines += 1 + depLines;
+                      map = depMap;
+                    }
                   }
                 }
 

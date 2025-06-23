@@ -1,4 +1,5 @@
 // @flow
+import type {BundleGraph, PackagedBundle} from '@atlaspack/types';
 import assert from 'assert';
 import path from 'path';
 import nullthrows from 'nullthrows';
@@ -4688,89 +4689,6 @@ describe('scope hoisting', function () {
       console.log('Output:', outputs);
     });
 
-    it.only('should wrapped asset group', async function () {
-      await fsFixture(overlayFS, __dirname)`
-        wrapped-asset-groups
-          index.html:
-            <script type="module" src="./index.js"></script>
-
-          index.js:
-            const [root, shared] = await Promise.all([
-              import('./root.js'),
-              import('./shared.js'),
-            ]);
-
-            result([root.default, shared.default].join('---'));
-
-          root.js:
-            import a from './a';
-            import b from './b';
-
-            export const circle = 'circ-u-later alligator';
-
-            export default a + b;
-
-          a.js:
-            import leaf from './leaf';
-            export default 'a' + leaf;
-
-          b.js:
-            import leaf from './leaf';
-            export default 'b' + leaf;
-
-          leaf.js:
-            import shared from './shared';
-            import { common } from './common';
-
-            export default 'leaf' + shared + common;
-
-          shared.js:
-            import { common } from './q';
-            export default 'shared' + common;
-
-          q.js:
-            export { common } from './common';
-
-          common.js:
-            export const common = 'common';
-
-          package.json:
-            {
-              "@atlaspack/packager-js": {
-                  "unstable_asyncBundleRuntime": true
-              }
-            }
-          yarn.lock:`;
-
-      let b = await bundle(
-        [path.join(__dirname, 'wrapped-asset-groups/index.html')],
-        {
-          mode: 'production',
-          defaultTargetOptions: {
-            shouldScopeHoist: true,
-            shouldOptimize: false,
-            outputFormat: 'esmodule',
-          },
-          inputFS: overlayFS,
-          outputFS: inputFS,
-        },
-      );
-
-      console.log('\n\nBundling complete\n\n');
-
-      let result;
-      await run(b, {
-        result: (r) => {
-          result = r;
-        },
-      });
-
-      assert.equal(
-        result,
-        'aleafsharedcommoncommonbleafsharedcommoncommon---sharedcommon',
-      );
-    });
-
     it('supports requiring a CSS asset', async function () {
       let b = await bundle(
         path.join(
@@ -6635,5 +6553,193 @@ describe('scope hoisting', function () {
     });
 
     await run(b);
+  });
+
+  describe.only('scope hoisting within wrapped assets', function () {
+    function assetWrappedAssets(
+      bundleGraph: BundleGraph<PackagedBundle>,
+      bundle: PackagedBundle,
+      assets: string[],
+    ) {
+      let bundleCode = outputFS.readFileSync(bundle.filePath, 'utf8');
+      assert.equal(bundleCode.match(/parcelRegister\(/g).length, assets.length);
+
+      for (let assetName of assets) {
+        let sharedPublicId = bundleGraph.getAssetPublicId(
+          nullthrows(findAsset(bundleGraph, assetName)),
+        );
+        assert(bundleCode.includes(`parcelRegister("${sharedPublicId}",`));
+      }
+    }
+
+    it('should inline assets inside wrapped assets if possible', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        wrapped-asset-groups
+          index.html:
+            <script type="module" src="./index.js"></script>
+
+          index.js:
+            import root from './root';
+            import shared from './shared';
+
+            result([root, shared].join('---'));
+
+          root.js:
+            import a from './a';
+            import b from './b';
+
+            export default a + b;
+
+          a.js:
+            import leaf from './leaf';
+            export default 'a' + leaf;
+
+          b.js:
+            import leaf from './leaf';
+            export default 'b' + leaf;
+
+          leaf.js:
+            import shared from './shared';
+            import { common } from './common';
+
+            export default 'leaf' + shared + common;
+
+          shared.js:
+            import c from './c';
+            export default 'shared' + c;
+
+          c.js:
+            import { common } from './common';
+            export default 'c' + common;
+
+          common.js:
+            export const common = 'common';
+
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [{
+                  "name": "shared",
+                  "assets": ["!index.js"]
+                }]
+              }
+            }
+          yarn.lock:`;
+
+      let b = await bundle(
+        [path.join(__dirname, 'wrapped-asset-groups/index.html')],
+        {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+            shouldOptimize: false,
+            outputFormat: 'esmodule',
+          },
+          inputFS: overlayFS,
+          featureFlags: {
+            applyScopeHoistingImprovement: true,
+          },
+        },
+      );
+
+      let sharedBundle = nullthrows(
+        b.getBundles().find((b) => b.manualSharedBundle === 'shared'),
+      );
+      assetWrappedAssets(b, sharedBundle, [
+        'shared.js',
+        'root.js',
+        'common.js',
+      ]);
+
+      let result;
+      await run(b, {
+        result: (r) => {
+          result = r;
+        },
+      });
+      assert.equal(
+        result,
+        'aleafsharedccommoncommonbleafsharedccommoncommon---sharedccommon',
+      );
+    });
+
+    // Ideally we'll remove this test once we can handle inlining re-exported symbols
+    it('should wrap assets with re-exported symbols', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        reexported-symbols
+          index.html:
+            <script type="module" src="./index.js"></script>
+
+          index.js:
+            import root from './root';
+            result(root);
+
+          root.js:
+            import a from './a';
+            import b from './b';
+
+            export default a + b;
+
+          a.js:
+            import leaf from './leaf';
+            export default 'a' + leaf;
+
+          b.js:
+            import leaf from './leaf';
+            export default 'b' + leaf;
+
+          leaf.js:
+            import { shared } from './shared';
+
+            export default 'leaf' + shared;
+
+          shared.js:
+            export * from './shared-internal';
+
+          shared-internal.js:
+            export const shared = 'shared';
+
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [{
+                  "name": "shared",
+                  "assets": ["!index.js"]
+                }]
+              }
+            }
+          yarn.lock:`;
+
+      let b = await bundle(
+        [path.join(__dirname, 'reexported-symbols/index.html')],
+        {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+            shouldOptimize: false,
+            outputFormat: 'esmodule',
+          },
+          inputFS: overlayFS,
+          featureFlags: {
+            applyScopeHoistingImprovement: true,
+          },
+        },
+      );
+
+      let sharedBundle = nullthrows(
+        b.getBundles().find((b) => b.manualSharedBundle === 'shared'),
+      );
+      // shared-internal is wrapped as it exports symbols that become
+      // re-exported
+      assetWrappedAssets(b, sharedBundle, ['shared-internal.js', 'root.js']);
+
+      let result;
+      await run(b, {
+        result: (r) => {
+          result = r;
+        },
+      });
+      assert.equal(result, 'aleafsharedbleafshared');
+    });
   });
 });
