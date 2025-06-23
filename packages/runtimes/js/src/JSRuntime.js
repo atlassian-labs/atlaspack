@@ -156,9 +156,14 @@ export default (new Runtime({
           // If this bundle already has the asset this dependency references,
           // return a simple runtime of `Promise.resolve(internalRequire(assetId))`.
           // The linker handles this for scope-hoisting.
+
+          const requireName = getFeatureFlag('hmrImprovements')
+            ? 'parcelRequire'
+            : 'module.bundle.root';
+
           assets.push({
             filePath: __filename,
-            code: `module.exports = Promise.resolve(parcelRequire(${JSON.stringify(
+            code: `module.exports = Promise.resolve(${requireName}(${JSON.stringify(
               bundleGraph.getAssetPublicId(resolved.value),
             )}))`,
             dependency,
@@ -211,11 +216,16 @@ export default (new Runtime({
         bundle,
       );
       for (const cond of conditions) {
+        const requireName =
+          getFeatureFlag('hmrImprovements') || bundle.env.shouldScopeHoist
+            ? 'parcelRequire'
+            : '__parcel__require__';
+
         const assetCode = `module.exports = require('../helpers/conditional-loader${
           options.mode === 'development' ? '-dev' : ''
-        }')('${cond.key}', function (){return parcelRequire('${
+        }')('${cond.key}', function (){return ${requireName}('${
           cond.ifTrueAssetId
-        }')}, function (){return parcelRequire('${cond.ifFalseAssetId}')})`;
+        }')}, function (){return ${requireName}('${cond.ifFalseAssetId}')})`;
 
         assets.push({
           filePath: path.join(__dirname, `/conditions/${cond.publicId}.js`),
@@ -662,7 +672,12 @@ function getLoaderRuntime({
   }
 
   if (mainBundle.type === 'js') {
-    loaderCode += `.then(() => parcelRequire('${bundleGraph.getAssetPublicId(
+    let parcelRequire =
+      getFeatureFlag('hmrImprovements') || bundle.env.shouldScopeHoist
+        ? 'parcelRequire'
+        : 'module.bundle.root';
+
+    loaderCode += `.then(() => ${parcelRequire}('${bundleGraph.getAssetPublicId(
       bundleGraph.getAssetById(bundleGroup.entryAssetId),
     )}'))`;
   }
@@ -794,7 +809,12 @@ function getURLRuntime(
   options: PluginOptions,
   shardingConfig: JSRuntimeConfig['domainSharding'],
 ): RuntimeAsset {
-  let relativePathExpr = getRelativePathExpr(from, to, options, true);
+  let relativePathExpr;
+  if (getFeatureFlag('hmrImprovements')) {
+    relativePathExpr = getRelativePathExpr(from, to, options, true);
+  } else {
+    relativePathExpr = getRelativePathExpr(from, to, options);
+  }
   let code;
 
   if (dependency.meta.webworker === true && !from.env.isLibrary) {
@@ -886,8 +906,14 @@ function getRelativePathExpr(
 ): string {
   let relativePath = relativeBundlePath(from, to, {leadingDotSlash: false});
   let res = JSON.stringify(relativePath);
-  if (isURL && options.hmrOptions) {
-    res += ' + "?" + Date.now()';
+  if (getFeatureFlag('hmrImprovements')) {
+    if (isURL && options.hmrOptions) {
+      res += ' + "?" + Date.now()';
+    }
+  } else {
+    if (options.hmrOptions) {
+      res += ' + "?" + Date.now()';
+    }
   }
 
   return res;
