@@ -77,7 +77,7 @@ interface InitialAtlaspackOptions {
 3. [Cache Configuration](#cache-configuration)
 4. [Watch Configuration](#watch-configuration)
 5. [Build Configuration](#build-configuration)
-6. [Development Configuration](#development-configuration)
+6. [Dev server Configuration](#dev-server-configuration)
 7. [System Configuration](#system-configuration)
 8. [Target Configuration](#target-configuration)
 9. [Other Configuration](#other-configuration)
@@ -212,7 +212,7 @@ const atlaspack = new Atlaspack({
 
 **Default**: `false`
 
-**Description**: Disable caching for faster builds (useful for CI environments).
+**Description**: Disable caching during build.
 
 **Examples**:
 
@@ -385,7 +385,7 @@ const atlaspack = new Atlaspack({
 });
 ```
 
-## Development Configuration
+## Dev server Configuration
 
 ### `hmrOptions`
 
