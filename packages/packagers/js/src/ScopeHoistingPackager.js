@@ -99,8 +99,6 @@ export class ScopeHoistingPackager {
   seenAssets: Set<string> = new Set();
   wrappedAssets: Set<string> = new Set();
   assetInlineableCache: Map<Asset, boolean> = new Map();
-  wrapGroupsByAsset: Map<Asset, number> = new Map();
-  wrapGroupsCount: number = 0;
   hoistedRequires: Map<string, Map<string, string>> = new Map();
   needsPrelude: boolean = false;
   usedHelpers: Set<string> = new Set();
