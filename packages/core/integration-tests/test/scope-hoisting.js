@@ -19,7 +19,6 @@ import {
   mergeParcelOptions,
   outputFS,
   overlayFS,
-  inputFS,
   run,
   runBundle,
   fsFixture,
@@ -551,17 +550,17 @@ describe('scope hoisting', function () {
           }
         }),
       );
-      // assert.equal(
-      //   [
-      //     ...contents.matchAll(
-      //       new RegExp(
-      //         'parcelRequires*\\(s*"' + b.getAssetPublicId(assetB) + '"s*\\)',
-      //         'g',
-      //       ),
-      //     ),
-      //   ].length,
-      //   1,
-      // );
+      assert.equal(
+        [
+          ...contents.matchAll(
+            new RegExp(
+              'parcelRequires*\\(s*"' + b.getAssetPublicId(assetB) + '"s*\\)',
+              'g',
+            ),
+          ),
+        ].length,
+        1,
+      );
 
       let output = await run(b);
       assert.equal(output, 15);
@@ -1182,10 +1181,10 @@ describe('scope hoisting', function () {
         b.getBundles()[0].filePath,
         'utf8',
       );
-      // assert.strictEqual(
-      //   contents.match(/parcelRegister\(/g).length,
-      //   2 /* once for parent asset, once for child wrapped asset */,
-      // );
+      assert.strictEqual(
+        contents.match(/parcelRegister\(/g).length,
+        2 /* once for parent asset, once for child wrapped asset */,
+      );
 
       let output = await run(b);
       assert.deepEqual(output, [42, 43]);
@@ -4605,7 +4604,6 @@ describe('scope hoisting', function () {
           __dirname,
           '/integration/scope-hoisting/commonjs/require-conditional/a.js',
         ),
-        {outputFS: inputFS},
       );
 
       let out = [];
@@ -4627,66 +4625,6 @@ describe('scope hoisting', function () {
       });
 
       assert.deepEqual(out, ['a', 'b', 'c', 'd']);
-    });
-
-    it('should handle barrels of barrels', async function () {
-      await fsFixture(overlayFS, __dirname)`
-        stacked-barrels
-          index.js:
-            import('./first-barrel.js').then(( {valueOne, valueTwo}) => {
-              const newValue = {valueOne, valueTwo};
-              sideEffect(newValue);
-            });
-
-          first-barrel.js:
-            export {twig} from './twig-thing.js';
-            export {valueOne, valueTwo} from './second-barrel.js';
-
-          second-barrel.js:
-            export {valueOne} from './leaf-one.js';
-            export {valueTwo} from './leaf-two.js';
-
-          leaf-one.js:
-            export const valueOne = 'leaf-one';
-
-          leaf-two.js:
-            export const valueTwo = 'leaf-two';
-
-          leaf-three.js:
-            export const valueThree = 'leaf-three';
-
-          twig-thing.js:
-            import { valueThree } from './leaf-three.js';
-            export const twig = [valueThree, 'twiggy-do'].join(',');
-
-          package.json:
-            {
-              "name": "scope-hosting-test",
-              "targets": {
-                "production": {
-                  "optimize": false,
-                  "sourceMap": false,
-                  "context": "node"
-                }
-              }
-            }
-          yarn.lock:
-      `;
-
-      let b = await bundle(path.join(__dirname, 'stacked-barrels/index.js'), {
-        inputFS: overlayFS,
-        outputFS: inputFS,
-      });
-
-      let outputs = [];
-
-      let output = await run(b, {
-        sideEffect(o) {
-          outputs.push(o);
-        },
-      });
-
-      console.log('Output:', outputs);
     });
 
     it('supports requiring a CSS asset', async function () {
@@ -6555,7 +6493,7 @@ describe('scope hoisting', function () {
     await run(b);
   });
 
-  describe.only('scope hoisting within wrapped assets', function () {
+  describe('scope hoisting within wrapped assets', function () {
     function assetWrappedAssets(
       bundleGraph: BundleGraph<PackagedBundle>,
       bundle: PackagedBundle,
@@ -6740,6 +6678,67 @@ describe('scope hoisting', function () {
         },
       });
       assert.equal(result, 'aleafsharedbleafshared');
+    });
+
+    it('should handle barrels of barrels', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        stacked-barrels
+          index.js:
+            import('./first-barrel.js').then(( {valueOne, valueTwo}) => {
+              const newValue = {valueOne, valueTwo};
+              result(newValue);
+            });
+
+          first-barrel.js:
+            export {twig} from './twig-thing.js';
+            export {valueOne, valueTwo} from './second-barrel.js';
+
+          second-barrel.js:
+            export {valueOne} from './leaf-one.js';
+            export {valueTwo} from './leaf-two.js';
+
+          leaf-one.js:
+            export const valueOne = 'leaf-one';
+
+          leaf-two.js:
+            export const valueTwo = 'leaf-two';
+
+          leaf-three.js:
+            export const valueThree = 'leaf-three';
+
+          twig-thing.js:
+            import { valueThree } from './leaf-three.js';
+            export const twig = [valueThree, 'twiggy-do'].join(',');
+
+          package.json:
+            {
+              "name": "scope-hosting-test",
+              "targets": {
+                "production": {
+                  "optimize": false,
+                  "sourceMap": false,
+                  "context": "node"
+                }
+              }
+            }
+          yarn.lock:
+      `;
+
+      let b = await bundle(path.join(__dirname, 'stacked-barrels/index.js'), {
+        inputFS: overlayFS,
+        featureFlags: {
+          applyScopeHoistingImprovement: true,
+        },
+      });
+
+      let result;
+      await run(b, {
+        result(o) {
+          result = o;
+        },
+      });
+
+      assert.deepEqual(result, {valueOne: 'leaf-one', valueTwo: 'leaf-two'});
     });
   });
 });
