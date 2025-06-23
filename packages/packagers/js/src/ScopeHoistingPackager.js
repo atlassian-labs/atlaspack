@@ -357,25 +357,12 @@ export class ScopeHoistingPackager {
   async loadAssets(): Promise<Array<Asset>> {
     let queue = new PromiseQueue({maxConcurrent: 32});
     let wrapped = [];
-
     this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
         let [code, map] = await Promise.all([
           asset.getCode(),
           this.bundle.env.sourceMap ? asset.getMapBuffer() : null,
         ]);
-
-        // There are some assets in the tree that are empty, but can't be
-        // removed. If these are hoisted, it causes a reference is not defined
-        // error, as there is a * export pointing to no actual code.
-        // To get around this, we wrap these assets, which will result in an empty
-        // parcelRegister call
-        if (getFeatureFlag('applyScopeHoistingImprovement')) {
-          if (code.length === 0) {
-            this.wrappedAssets.add(asset.id);
-            wrapped.push(asset);
-          }
-        }
 
         return [asset.id, {code, map}];
       });
