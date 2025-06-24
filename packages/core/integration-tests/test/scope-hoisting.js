@@ -6494,7 +6494,7 @@ describe('scope hoisting', function () {
   });
 
   describe('scope hoisting within wrapped assets', function () {
-    function assetWrappedAssets(
+    function assertWrappedAssets(
       bundleGraph: BundleGraph<PackagedBundle>,
       bundle: PackagedBundle,
       assets: string[],
@@ -6583,7 +6583,7 @@ describe('scope hoisting', function () {
       let sharedBundle = nullthrows(
         b.getBundles().find((b) => b.manualSharedBundle === 'shared'),
       );
-      assetWrappedAssets(b, sharedBundle, [
+      assertWrappedAssets(b, sharedBundle, [
         'shared.js',
         'root.js',
         'common.js',
@@ -6669,7 +6669,7 @@ describe('scope hoisting', function () {
       );
       // shared-internal is wrapped as it exports symbols that become
       // re-exported
-      assetWrappedAssets(b, sharedBundle, ['shared-internal.js', 'root.js']);
+      assertWrappedAssets(b, sharedBundle, ['shared-internal.js', 'root.js']);
 
       let result;
       await run(b, {
@@ -6739,6 +6739,64 @@ describe('scope hoisting', function () {
       });
 
       assert.deepEqual(result, {valueOne: 'leaf-one', valueTwo: 'leaf-two'});
+    });
+
+    it.only('should handle complex re-exports', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        stacked-barrels
+          index.js:
+            import('./first-barrel.js').then(( {one, four}) => {
+              const newValue = {one, four: four()};
+              result(newValue);
+            }).catch((err) => {onError(err)});
+
+          first-barrel.js:
+            export {one, four} from './second-barrel.js';
+
+          second-barrel.js:
+            import {valueOne as one} from './leaf-one';
+            export {one};
+            // Force this file to exclusive re-export
+            export function four() { return 'four' + one; }
+
+          leaf-one.js:
+            export const valueOne = 'leaf-one';
+
+          package.json:
+            {
+              "name": "scope-hosting-test",
+              "targets": {
+                "production": {
+                  "optimize": false,
+                  "sourceMap": false,
+                  "context": "node"
+                }
+              },
+              "type": "module",
+              "sideEffects": ["index.js"]
+            }
+          yarn.lock:
+      `;
+
+      let b = await bundle(path.join(__dirname, 'stacked-barrels/index.js'), {
+        inputFS: overlayFS,
+        featureFlags: {
+          applyScopeHoistingImprovement: true,
+        },
+      });
+
+      let result, error;
+      await run(b, {
+        result(o) {
+          result = o;
+        },
+        onError(e) {
+          error = e;
+        },
+      });
+
+      assert(!error);
+      assert.deepEqual(result, {one: 'leaf-one', four: 'fourleaf-one'});
     });
   });
 });
