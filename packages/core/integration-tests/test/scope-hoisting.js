@@ -6731,5 +6731,72 @@ describe('scope hoisting', function () {
 
       assert.deepEqual(result, ['leaf-one', 'fourleaf-one']);
     });
+
+    it('should handle * re-exports in wrapped groups', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        star-reexports-in-wrapped-groups
+          index.html:
+            <script type="module" src="./index.js"></script>
+
+          index.js:
+            import {one} from './first-barrel';
+            import {four} from './second-barrel.js';
+            result([one, four()]);
+
+          first-barrel.js:
+            export * from './second-barrel.js';
+
+          second-barrel.js:
+            import {valueOne as one} from './leaf-one';
+            export {one};
+            // Force this file to exclusive re-export
+            export function four() { return 'four' + one; }
+
+          leaf-one.js:
+            export const valueOne = 'leaf-one';
+
+          package.json:
+            {
+              "name": "scope-hosting-test",
+              "sideEffects": ["index.js"],
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [{
+                  "name": "shared",
+                  "assets": ["!index.js"]
+                }]
+              }
+            }
+          yarn.lock:
+      `;
+
+      let b = await bundle(
+        path.join(__dirname, 'star-reexports-in-wrapped-groups/index.html'),
+        {
+          inputFS: overlayFS,
+          featureFlags: {
+            applyScopeHoistingImprovement: true,
+          },
+        },
+      );
+
+      let sharedBundle = nullthrows(
+        b.getBundles().find((b) => b.manualSharedBundle === 'shared'),
+      );
+
+      assertWrappedAssets(b, sharedBundle, [
+        'first-barrel.js',
+        'second-barrel.js',
+        'leaf-one.js',
+      ]);
+
+      let result;
+      await run(b, {
+        result(o) {
+          result = o;
+        },
+      });
+
+      assert.deepEqual(result, ['leaf-one', 'fourleaf-one']);
+    });
   });
 });
