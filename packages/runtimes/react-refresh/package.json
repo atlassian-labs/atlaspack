@@ -19,7 +19,7 @@
     "@atlaspack/plugin": "2.14.11",
     "@atlaspack/utils": "2.14.11",
     "react-error-overlay": "6.0.9",
-    "react-refresh": ">=0.9 <=0.14"
+    "react-refresh": ">=0.9 <=0.16"
   },
   "type": "commonjs"
 }
