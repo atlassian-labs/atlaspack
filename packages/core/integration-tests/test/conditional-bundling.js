@@ -1090,4 +1090,81 @@ describe('conditional bundling', function () {
       },
     });
   });
+
+  it(`should de-duplicate bundles, if the same arguments are passed in two conditional bundling usages`, async function () {
+    const dir = path.join(
+      __dirname,
+      'import-cond-cond-manifest-same-condition-and-paths',
+    );
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "reporters": [
+              "@atlaspack/reporter-conditional-manifest",
+              "..."
+            ]
+          }
+
+        index.js:
+          import { Component1 } from './c';
+          import { Component2 } from './d';
+
+          export const App = (props) => {
+            Component1;
+            Component2;
+          };
+
+        a.js:
+          export default 'module-a';
+
+        b.js:
+          export default 'module-b';
+
+        c.js:
+          import React from 'react';
+          const Imported1 = importCond('cond', './a', './b');
+          export const Component1 = () => { return Imported1 };
+
+        d.js:
+          import React from 'react';
+          const Imported2 = importCond('cond', './a', './b');
+          export const Component2 = () => { return Imported2 };
+      `;
+
+    let bundleGraph = await bundle(path.join(dir, '/index.js'), {
+      inputFS: overlayFS,
+      featureFlags: {
+        conditionalBundlingApi: true,
+        conditionalBundlingReporterSameConditionFix: true,
+        conditionalBundlingDeduplicateBundles: true,
+      },
+      defaultConfig: path.join(dir, '.parcelrc'),
+    });
+
+    // Get the generated bundle names
+    let bundleNames = new Map<string, string>(
+      bundleGraph
+        .getBundles()
+        .map((b) => [b.displayName, b.filePath.slice(distDir.length + 1)]),
+    );
+
+    // Load the generated manifest
+    let conditionalManifest = JSON.parse(
+      overlayFS
+        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+        .toString(),
+    );
+
+    assert.deepEqual(conditionalManifest, {
+      'index.js': {
+        cond: {
+          ifFalseBundles: [nullthrows(bundleNames.get('b.[hash].js'))],
+          ifTrueBundles: [nullthrows(bundleNames.get('a.[hash].js'))],
+        },
+      },
+    });
+  });
 });

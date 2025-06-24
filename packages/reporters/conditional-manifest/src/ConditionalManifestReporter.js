@@ -72,14 +72,33 @@ export async function report({
           const bundleInfo =
             manifest[bundle.target.name]?.[relativeBundlePath] ?? {};
 
-          bundleInfo[key] = {
-            ifTrueBundles: mapBundles(cond.ifTrueBundles)
-              .concat(bundleInfo[key]?.ifTrueBundles ?? [])
-              .sort(),
-            ifFalseBundles: mapBundles(cond.ifFalseBundles)
-              .concat(bundleInfo[key]?.ifFalseBundles ?? [])
-              .sort(),
-          };
+          if (getFeatureFlag('conditionalBundlingDeduplicateBundles')) {
+            bundleInfo[key] = {
+              ifTrueBundles: [
+                ...new Set(
+                  mapBundles(cond.ifTrueBundles)
+                    .concat(bundleInfo[key]?.ifTrueBundles ?? [])
+                    .sort(),
+                ),
+              ],
+              ifFalseBundles: [
+                ...new Set(
+                  mapBundles(cond.ifFalseBundles)
+                    .concat(bundleInfo[key]?.ifFalseBundles ?? [])
+                    .sort(),
+                ),
+              ],
+            };
+          } else {
+            bundleInfo[key] = {
+              ifTrueBundles: mapBundles(cond.ifTrueBundles)
+                .concat(bundleInfo[key]?.ifTrueBundles ?? [])
+                .sort(),
+              ifFalseBundles: mapBundles(cond.ifFalseBundles)
+                .concat(bundleInfo[key]?.ifFalseBundles ?? [])
+                .sort(),
+            };
+          }
 
           manifest[bundle.target.name] ??= {};
           manifest[bundle.target.name][relativeBundlePath] = bundleInfo;
