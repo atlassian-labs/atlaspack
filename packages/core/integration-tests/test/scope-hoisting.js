@@ -1,4 +1,5 @@
 // @flow
+import type {BundleGraph, PackagedBundle} from '@atlaspack/types';
 import assert from 'assert';
 import path from 'path';
 import nullthrows from 'nullthrows';
@@ -6652,5 +6653,312 @@ describe('scope hoisting', function () {
     });
 
     await run(b);
+  });
+
+  describe('scope hoisting within wrapped assets', function () {
+    function assertWrappedAssets(
+      bundleGraph: BundleGraph<PackagedBundle>,
+      bundle: PackagedBundle,
+      assets: string[],
+    ) {
+      let bundleCode = outputFS.readFileSync(bundle.filePath, 'utf8');
+      assert.equal(bundleCode.match(/parcelRegister\(/g).length, assets.length);
+
+      for (let assetName of assets) {
+        let sharedPublicId = bundleGraph.getAssetPublicId(
+          nullthrows(findAsset(bundleGraph, assetName)),
+        );
+        assert(
+          bundleCode.includes(`parcelRegister("${sharedPublicId}",`),
+          `Should have registered ${assetName} in ${bundle.filePath}`,
+        );
+      }
+    }
+
+    it('should inline assets inside wrapped assets if possible', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        wrapped-asset-groups
+          index.html:
+            <script type="module" src="./index.js"></script>
+
+          index.js:
+            import root from './root';
+            import shared from './shared';
+
+            result([root, shared].join('---'));
+
+          root.js:
+            import a from './a';
+            import b from './b';
+
+            export default a + b;
+
+          a.js:
+            import leaf from './leaf';
+            export default 'a' + leaf;
+
+          b.js:
+            import leaf from './leaf';
+            export default 'b' + leaf;
+
+          leaf.js:
+            import shared from './shared';
+            import { common } from './common';
+
+            export default 'leaf' + shared + common;
+
+          shared.js:
+            import c from './c';
+            export default 'shared' + c;
+
+          c.js:
+            import { common } from './common';
+            export default 'c' + common;
+
+          common.js:
+            export const common = 'common';
+
+          package.json:
+            {
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [{
+                  "name": "shared",
+                  "assets": ["!index.js"]
+                }]
+              }
+            }
+          yarn.lock:`;
+
+      let b = await bundle(
+        [path.join(__dirname, 'wrapped-asset-groups/index.html')],
+        {
+          mode: 'production',
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+            shouldOptimize: false,
+            outputFormat: 'esmodule',
+          },
+          inputFS: overlayFS,
+          featureFlags: {
+            applyScopeHoistingImprovement: true,
+          },
+        },
+      );
+
+      let sharedBundle = nullthrows(
+        b.getBundles().find((b) => b.manualSharedBundle === 'shared'),
+      );
+      assertWrappedAssets(b, sharedBundle, [
+        'shared.js',
+        'root.js',
+        'common.js',
+      ]);
+
+      let result;
+      await run(b, {
+        result: (r) => {
+          result = r;
+        },
+      });
+      assert.equal(
+        result,
+        'aleafsharedccommoncommonbleafsharedccommoncommon---sharedccommon',
+      );
+    });
+
+    it('should handle barrels of barrels', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        stacked-barrels
+          index.js:
+            import('./first-barrel.js').then(( {valueOne, valueTwo}) => {
+              const newValue = {valueOne, valueTwo};
+              result(newValue);
+            });
+
+          first-barrel.js:
+            export {twig} from './twig-thing.js';
+            export {valueOne, valueTwo} from './second-barrel.js';
+
+          second-barrel.js:
+            export {valueOne} from './leaf-one.js';
+            export {valueTwo} from './leaf-two.js';
+
+          leaf-one.js:
+            export const valueOne = 'leaf-one';
+
+          leaf-two.js:
+            export const valueTwo = 'leaf-two';
+
+          leaf-three.js:
+            export const valueThree = 'leaf-three';
+
+          twig-thing.js:
+            import { valueThree } from './leaf-three.js';
+            export const twig = [valueThree, 'twiggy-do'].join(',');
+
+          package.json:
+            {
+              "name": "scope-hosting-test",
+              "targets": {
+                "production": {
+                  "optimize": false,
+                  "sourceMap": false,
+                  "context": "node"
+                }
+              }
+            }
+          yarn.lock:
+      `;
+
+      let b = await bundle(path.join(__dirname, 'stacked-barrels/index.js'), {
+        inputFS: overlayFS,
+        featureFlags: {
+          applyScopeHoistingImprovement: true,
+        },
+      });
+
+      let result;
+      await run(b, {
+        result(o) {
+          result = o;
+        },
+      });
+
+      assert.deepEqual(result, {valueOne: 'leaf-one', valueTwo: 'leaf-two'});
+    });
+
+    it('should handle re-exports in wrapped groups', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        reexports-in-wrapped-groups
+          index.html:
+            <script type="module" src="./index.js"></script>
+
+          index.js:
+            import {one} from './first-barrel';
+            import {four} from './second-barrel.js';
+            result([one, four()]);
+
+          first-barrel.js:
+            export {one, four} from './second-barrel.js';
+
+          second-barrel.js:
+            import {valueOne as one} from './leaf-one';
+            export {one};
+            // Force this file to exclusive re-export
+            export function four() { return 'four' + one; }
+
+          leaf-one.js:
+            export const valueOne = 'leaf-one';
+
+          package.json:
+            {
+              "name": "scope-hosting-test",
+              "sideEffects": ["index.js"],
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [{
+                  "name": "shared",
+                  "assets": ["!index.js"]
+                }]
+              }
+            }
+          yarn.lock:
+      `;
+
+      let b = await bundle(
+        path.join(__dirname, 'reexports-in-wrapped-groups/index.html'),
+        {
+          inputFS: overlayFS,
+          featureFlags: {
+            applyScopeHoistingImprovement: true,
+          },
+        },
+      );
+
+      let sharedBundle = nullthrows(
+        b.getBundles().find((b) => b.manualSharedBundle === 'shared'),
+      );
+
+      assertWrappedAssets(b, sharedBundle, [
+        'first-barrel.js',
+        'second-barrel.js',
+        'leaf-one.js',
+      ]);
+
+      let result;
+      await run(b, {
+        result(o) {
+          result = o;
+        },
+      });
+
+      assert.deepEqual(result, ['leaf-one', 'fourleaf-one']);
+    });
+
+    it('should handle * re-exports in wrapped groups', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        star-reexports-in-wrapped-groups
+          index.html:
+            <script type="module" src="./index.js"></script>
+
+          index.js:
+            import {one} from './first-barrel';
+            import {four} from './second-barrel.js';
+            result([one, four()]);
+
+          first-barrel.js:
+            export * from './second-barrel.js';
+
+          second-barrel.js:
+            import {valueOne as one} from './leaf-one';
+            export {one};
+            // Force this file to exclusive re-export
+            export function four() { return 'four' + one; }
+
+          leaf-one.js:
+            export const valueOne = 'leaf-one';
+
+          package.json:
+            {
+              "name": "scope-hosting-test",
+              "sideEffects": ["index.js"],
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [{
+                  "name": "shared",
+                  "assets": ["!index.js"]
+                }]
+              }
+            }
+          yarn.lock:
+      `;
+
+      let b = await bundle(
+        path.join(__dirname, 'star-reexports-in-wrapped-groups/index.html'),
+        {
+          inputFS: overlayFS,
+          featureFlags: {
+            applyScopeHoistingImprovement: true,
+          },
+        },
+      );
+
+      let sharedBundle = nullthrows(
+        b.getBundles().find((b) => b.manualSharedBundle === 'shared'),
+      );
+
+      assertWrappedAssets(b, sharedBundle, [
+        'first-barrel.js',
+        'second-barrel.js',
+        'leaf-one.js',
+      ]);
+
+      let result;
+      await run(b, {
+        result(o) {
+          result = o;
+        },
+      });
+
+      assert.deepEqual(result, ['leaf-one', 'fourleaf-one']);
+    });
   });
 });
