@@ -1108,33 +1108,41 @@ describe('conditional bundling', function () {
             ]
           }
 
-        index.js:
+        index.jsx:
           import { Component1 } from './c';
           import { Component2 } from './d';
 
           export const App = (props) => {
-            Component1;
-            Component2;
+            return (
+              <>
+                <Component1 {...props} />
+                <Component2 {...props} />
+              </>
+            );
           };
 
-        a.js:
-          export default 'module-a';
+        a.jsx:
+          import React from 'react';
+          const ModuleA = <p>module-a</p>;
+          export default ModuleA;
 
-        b.js:
-          export default 'module-b';
+        b.jsx:
+          import React from 'react';
+          const ModuleB = <p>module-b</p>;
+          export default ModuleB;
 
-        c.js:
+        c.jsx:
           import React from 'react';
           const Imported1 = importCond('cond', './a', './b');
-          export const Component1 = () => { return Imported1 };
+          export const Component1 = (props) => { return <Imported1 {...props} />; };
 
-        d.js:
+        d.jsx:
           import React from 'react';
           const Imported2 = importCond('cond', './a', './b');
-          export const Component2 = () => { return Imported2 };
+          export const Component2 = (props) => { return <Imported2 {...props} />; };
       `;
 
-    let bundleGraph = await bundle(path.join(dir, '/index.js'), {
+    let bundleGraph = await bundle(path.join(dir, '/index.jsx'), {
       inputFS: overlayFS,
       featureFlags: {
         conditionalBundlingApi: true,
@@ -1161,6 +1169,7 @@ describe('conditional bundling', function () {
     assert.deepEqual(conditionalManifest, {
       'index.js': {
         cond: {
+          // a.js and b.js should only appear once each
           ifFalseBundles: [nullthrows(bundleNames.get('b.[hash].js'))],
           ifTrueBundles: [nullthrows(bundleNames.get('a.[hash].js'))],
         },
