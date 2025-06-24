@@ -6,9 +6,13 @@ This directory contains comprehensive documentation for all Atlaspack CLI comman
 
 ### Build Commands
 
-- [`atlaspack serve`](build.md#atlaspack-serve) - Start development server with hot reloading
-- [`atlaspack watch`](build.md#atlaspack-watch) - Start bundler in watch mode (HMR only)
-- [`atlaspack build`](build.md#atlaspack-build) - Bundle for production with optimizations
+- [`atlaspack serve`](build-commands.md#atlaspack-serve) - Start development server with hot reloading
+- [`atlaspack watch`](build-commands.md#atlaspack-watch) - Start bundler in watch mode (HMR only)
+- [`atlaspack build`](build-commands.md#atlaspack-build) - Bundle for production with optimizations
+
+### Configuration
+
+- [Environment Variables](environment-variables.md) - Configure Atlaspack behavior via environment variables
 
 ### Other
 
