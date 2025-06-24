@@ -110,7 +110,7 @@ Enable identifier debugging and logging.
 
 ### `ATLASPACK_DUMP_GRAPHVIZ`
 
-Enable GraphViz graph dumping for debugging.
+Enable GraphViz graph dumping for debugging. Also see [`BundlerExamples`](../../docs/BundlerExamples.md)
 
 - **Values**: `'true'` | `'symbols'` | `'false'`
 - **Default**: `'false'`
