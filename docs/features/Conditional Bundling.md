@@ -34,19 +34,17 @@ then the user will end up downloading code that they never need to execute. For 
 
 ### The solution
 
-Atlaspack's conditional imports API solves this problem by providing a way to hint to the Atlaspack bundler that there is conditional code, and providing the means for the web server to only serve the bundles to the user that correspond to the feature gate values for that user.
-
-At build time, Atlaspack will parse all `importCond` function calls, then ensure that `TrueComponent` and `FalseComponent` are separate bundles in the build output. It will then generate a **conditional manifest** which is a JSON file that details which bundle(s) should be loaded for each value of `fg('my-feature-gate-name')`. The web server (e.g. Bifrost) would then check the conditional manifest to determine which bundles to serve to any given user, depending on the value of `fg('my-feature-gate-name')`.
+Atlaspack's conditional imports API solves this problem by giving a way for the Atlaspack bundler to recognise conditional code. It allows for the web server to then only deliver specific bundles to the user, based on their feature gate values.
 
 > **Note on async bundles**
 >
 > This document covers the case where conditional imports are used in a synchronous bundle. In this case, the web server needs to ensure the correct bundles are loaded on the page, using the bundles listed in the conditional manifest.
 >
-> However, when conditional imports are used in an asynchronous bundle (most of Jira's bundles are asynchronous), Atlaspack will load the conditional bundles asynchronously alongside the asynchronous bundle.
+> However, when conditional imports are used in an asynchronous bundle (most of Jira's bundles are asynchronous), Atlaspack will load the conditional bundles as a dependency alongside the asynchronous bundle.
 >
 > Scroll down to see an example of this.
 
-All of the bundles are still loaded _synchronously_, making conditional imports more versatile and performant than dynamic imports. We discuss the benefits of conditional imports compared to dynamic imports in the "How are conditional imports better than dynamic imports?" section below.
+All of the bundles are still loaded _synchronously_, making conditional imports more versatile and performant than dynamic imports. We discuss the benefits of conditional imports compared to dynamic imports in the "How do conditional imports differ from dynamic imports?" section below.
 
 ### Syntax
 
@@ -82,20 +80,23 @@ Caveats:
 >
 > **Bundling complexity:** Simplifying to default export means we can simplify the runtime code. If we don't, that means we have to handle a bunch of bundling edge cases to make sure we get optimised code (e.g. dead code removal, side-effects etc.)
 
-At build time, the `importCond` function call will be converted to something like this:
+At build time, Atlaspack will parse all `importCond` function calls, then ensure that `TrueComponent` and `FalseComponent` are separate bundles in the build output:
 
 ```js
 // index.js
 
 register("avM1e", function(e, t) {
   e.exports = function(e, ifTrue, ifFalse) {
+      // runtime feature gate function
       return globalThis.__MCOND && globalThis.__MCOND(e) ? ifTrue() : ifFalse()
   }
 }),
 register("4qbUE", function(e, t) {
     e.exports = parcelRequire("avM1e")("my-feature-gate-name", function() {
+        // TrueComponent
         return parcelRequire("esWld");
     }, function() {
+        // FalseComponent
         return parcelRequire("dqBV0");
     })
 }),
@@ -103,9 +104,9 @@ register("4qbUE", function(e, t) {
 const MyComponent = parcelRequire("4qbUE");
 ```
 
-`globalThis.__MCOND` ("**m**odule **cond**ition") is the feature gate function that the user evaluates at runtime. More about this later...
+It will then generate a **conditional manifest** which is a JSON file that details which bundle(s) should be loaded for each value of `fg('my-feature-gate-name')`. The web server (e.g. Bifrost) would then check the conditional manifest to determine which bundles to serve to any given user, depending on the value of `fg('my-feature-gate-name')`. In the above example, the web server would serve either the bundle containing `esWld`, or the bundle containing `dqBV0`. At runtime, the user would then run the feature gate function `globalThis.__MCOND` ("**m**odule **cond**ition") and execute the correct bundle, which we require to match the bundle the web server sends to the user. (More about `__MCOND` later...)
 
-## How are conditional imports better than dynamic imports?
+## How do conditional imports differ from dynamic imports?
 
 Before conditional imports, there were two main approaches used in Jira for feature gating different modules:
 
@@ -273,7 +274,7 @@ register("4qbUE", function(e, t) {
 const MyComponent = parcelRequire("4qbUE");
 ```
 
-You will need to update the web server to add an implementation for the runtime feature gate function, `__MCOND`. If your feature gate function is called `fg`, it is as simple as:
+You will need to update the web server to add an implementation for the runtime feature gate function, `__MCOND`. This function **must return the same output** as the server-side feature gate function that the web server uses for parsing the conditional manifest. If your feature gate function is called `fg`, it is as simple as:
 
 ```tsx
 // somewhere in your client-side code
@@ -284,7 +285,7 @@ You will also need to add this for your Jest configuration so that `importCond` 
 
 ### Aside: how conditional imports inside asynchronous bundles are handled
 
-As noted earlier, when conditional imports are used in an asynchronous bundle, Atlaspack will add a special loader to load the conditional bundles asynchronously alongside the asynchronous bundle.
+As noted earlier, when conditional imports are used in an asynchronous bundle, Atlaspack will add a special loader to load the conditional bundles as a dependency alongside the asynchronous bundle.
 
 If we imagine our source code looking like this:
 
