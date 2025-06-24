@@ -136,6 +136,7 @@ pub struct Config {
   pub standalone: bool,
   pub inline_constants: bool,
   pub conditional_bundling: bool,
+  pub hmr_improvements: bool,
   pub magic_comments: bool,
 }
 

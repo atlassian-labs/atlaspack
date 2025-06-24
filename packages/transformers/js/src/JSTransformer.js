@@ -475,6 +475,7 @@ export default (new Transformer({
       standalone: asset.query.has('standalone'),
       inline_constants: config.inlineConstants,
       conditional_bundling: options.featureFlags.conditionalBundlingApi,
+      hmr_improvements: options.featureFlags.hmrImprovements,
       magic_comments: Boolean(config?.magicComments),
       callMacro: asset.isSource
         ? async (err, src, exportName, args, loc) => {

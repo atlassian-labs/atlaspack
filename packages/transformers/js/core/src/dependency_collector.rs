@@ -526,31 +526,37 @@ impl VisitMut for DependencyCollector<'_> {
                 return;
               }
               "parcelRequire" => {
-                if let Some(ExprOrSpread { expr, .. }) = node.args.first() {
-                  if let Some((id, span)) = match_str(expr) {
-                    self.items.push(DependencyDescriptor {
-                      kind: DependencyKind::Id,
-                      loc: SourceLocation::from(&self.source_map, span),
-                      specifier: id,
-                      attributes: None,
-                      is_optional: false,
-                      is_helper: false,
-                      source_type: None,
-                      placeholder: None,
-                    });
+                if self.config.hmr_improvements {
+                  if let Some(ExprOrSpread { expr, .. }) = node.args.first() {
+                    if let Some((id, span)) = match_str(expr) {
+                      self.items.push(DependencyDescriptor {
+                        kind: DependencyKind::Id,
+                        loc: SourceLocation::from(&self.source_map, span),
+                        specifier: id,
+                        attributes: None,
+                        is_optional: false,
+                        is_helper: false,
+                        source_type: None,
+                        placeholder: None,
+                      });
+                    }
                   }
-                }
-                node.visit_mut_children_with(self);
+                  node.visit_mut_children_with(self);
 
-                if !self.config.scope_hoist {
-                  node.callee = Callee::Expr(Box::new(Expr::Member(member_expr!(
-                    Default::default(),
-                    node.span,
-                    module.bundle.root
-                  ))));
-                }
+                  if !self.config.scope_hoist {
+                    node.callee = Callee::Expr(Box::new(Expr::Member(member_expr!(
+                      Default::default(),
+                      node.span,
+                      module.bundle.root
+                    ))));
+                  }
 
-                return;
+                  return;
+                } else {
+                  // Mimic the behaviour of the default case
+                  node.visit_mut_children_with(self);
+                  return;
+                }
               }
               _ => {
                 node.visit_mut_children_with(self);
