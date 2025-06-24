@@ -134,7 +134,8 @@ export class ScopeHoistingPackager {
   }
 
   async package(): Promise<{|contents: string, map: ?SourceMap|}> {
-    let wrappedAssets = await this.loadAssets();
+    let {wrapped: wrappedAssets, constant: constantAssets} =
+      await this.loadAssets();
     this.buildExportedSymbols();
 
     // If building a library, the target is actually another bundler rather
@@ -167,6 +168,15 @@ export class ScopeHoistingPackager {
       res += content + '\n';
       lineCount += lines + 1;
     };
+
+    if (getFeatureFlag('inlineConstOptimisationFix')) {
+      // Write out all constant modules used by this bundle
+      for (let asset of constantAssets) {
+        if (!this.seenAssets.has(asset.id)) {
+          processAsset(asset);
+        }
+      }
+    }
 
     // Hoist wrapped asset to the top of the bundle to ensure that they are registered
     // before they are used.
@@ -354,9 +364,13 @@ export class ScopeHoistingPackager {
     return `$parcel$global.rwr(${params.join(', ')});`;
   }
 
-  async loadAssets(): Promise<Array<Asset>> {
+  async loadAssets(): Promise<{|
+    wrapped: Array<Asset>,
+    constant: Array<Asset>,
+  |}> {
     let queue = new PromiseQueue({maxConcurrent: 32});
     let wrapped = [];
+    let constant = [];
     this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
         let [code, map] = await Promise.all([
@@ -384,6 +398,11 @@ export class ScopeHoistingPackager {
         ) {
           this.wrappedAssets.add(asset.id);
           wrapped.push(asset);
+        } else if (
+          getFeatureFlag('inlineConstOptimisationFix') &&
+          asset.meta.isConstantModule
+        ) {
+          constant.push(asset);
         }
       }
     });
@@ -455,8 +474,7 @@ export class ScopeHoistingPackager {
     }
 
     this.assetOutputs = new Map(await queue.run());
-
-    return wrapped;
+    return {wrapped, constant};
   }
 
   isReExported(asset: Asset): boolean {
@@ -653,7 +671,6 @@ export class ScopeHoistingPackager {
 
     let lineCount = 0;
     let depContent = [];
-    let earlyDepContent = [];
     if (depMap.size === 0 && replacements.size === 0) {
       // If there are no dependencies or replacements, use a simple function to count the number of lines.
       lineCount = countLines(code) - 1;
@@ -722,17 +739,7 @@ export class ScopeHoistingPackager {
                     }
                   } else {
                     if (shouldWrap) {
-                      // If the dependency is a constant module then it should be
-                      // rendered before the wrapped asset so the constants can be
-                      // referenced when minifying.
-                      if (
-                        getFeatureFlag('inlineConstOptimisationFix') &&
-                        resolved.meta.isConstantModule
-                      ) {
-                        earlyDepContent.push(this.visitAsset(resolved));
-                      } else {
-                        depContent.push(this.visitAsset(resolved));
-                      }
+                      depContent.push(this.visitAsset(resolved));
                     } else {
                       let [depCode, depMap, depLines] =
                         this.visitAsset(resolved);
@@ -789,17 +796,7 @@ export class ScopeHoistingPackager {
       sourceMap?.offsetLines(1, 1);
       lineCount++;
 
-      let earlyCode = '';
-      for (let [depCode, map, lines] of earlyDepContent) {
-        if (!depCode) continue;
-        earlyCode += depCode + '\n';
-        if (sourceMap && map) {
-          sourceMap.addSourceMap(map, lineCount);
-        }
-        lineCount += lines + 1;
-      }
-
-      code = `${earlyCode}parcelRegister(${JSON.stringify(
+      code = `parcelRegister(${JSON.stringify(
         this.bundleGraph.getAssetPublicId(asset),
       )}, function(module, exports) {
 ${code}
