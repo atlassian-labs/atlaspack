@@ -363,6 +363,7 @@ export class ScopeHoistingPackager {
           asset.getCode(),
           this.bundle.env.sourceMap ? asset.getMapBuffer() : null,
         ]);
+
         return [asset.id, {code, map}];
       });
 
@@ -387,46 +388,95 @@ export class ScopeHoistingPackager {
       }
     });
 
-    for (let wrappedAssetRoot of [...wrapped]) {
-      this.bundle.traverseAssets((asset, _, actions) => {
-        if (asset === wrappedAssetRoot) {
-          return;
-        }
+    if (getFeatureFlag('applyScopeHoistingImprovement')) {
+      // Tracks which assets have been assigned to a wrap group
+      let assignedAssets = new Set<Asset>();
 
-        if (this.wrappedAssets.has(asset.id)) {
-          actions.skipChildren();
-          return;
-        }
-        // This prevents children of a wrapped asset also being wrapped - it's an "unsafe" optimisation
-        // that should only be used when you know (or think you know) what you're doing.
-        //
-        // In particular this can force an async bundle to be scope hoisted where it previously would not be
-        // due to the entry asset being wrapped.
-        if (
-          this.forceSkipWrapAssets.length > 0 &&
-          this.forceSkipWrapAssets.some(
-            (p) =>
-              p === path.relative(this.options.projectRoot, asset.filePath),
-          )
-        ) {
-          this.logger.verbose({
-            message: `Force skipping wrapping of ${path.relative(
-              this.options.projectRoot,
-              asset.filePath,
-            )}`,
-          });
-          actions.skipChildren();
-          return;
-        }
-        if (!asset.meta.isConstantModule) {
-          this.wrappedAssets.add(asset.id);
-          wrapped.push(asset);
-        }
-      }, wrappedAssetRoot);
+      for (let wrappedAsset of wrapped) {
+        this.bundle.traverseAssets((asset, _, actions) => {
+          if (asset === wrappedAsset) {
+            return;
+          }
+
+          if (this.wrappedAssets.has(asset.id)) {
+            actions.skipChildren();
+            return;
+          }
+
+          if (assignedAssets.has(asset) || this.isReExported(asset)) {
+            wrapped.push(asset);
+            this.wrappedAssets.add(asset.id);
+
+            actions.skipChildren();
+            return;
+          }
+
+          assignedAssets.add(asset);
+        }, wrappedAsset);
+      }
+    } else {
+      for (let wrappedAssetRoot of [...wrapped]) {
+        this.bundle.traverseAssets((asset, _, actions) => {
+          if (asset === wrappedAssetRoot) {
+            return;
+          }
+
+          if (this.wrappedAssets.has(asset.id)) {
+            actions.skipChildren();
+            return;
+          }
+          // This prevents children of a wrapped asset also being wrapped - it's an "unsafe" optimisation
+          // that should only be used when you know (or think you know) what you're doing.
+          //
+          // In particular this can force an async bundle to be scope hoisted where it previously would not be
+          // due to the entry asset being wrapped.
+          if (
+            this.forceSkipWrapAssets.length > 0 &&
+            this.forceSkipWrapAssets.some(
+              (p) =>
+                p === path.relative(this.options.projectRoot, asset.filePath),
+            )
+          ) {
+            this.logger.verbose({
+              message: `Force skipping wrapping of ${path.relative(
+                this.options.projectRoot,
+                asset.filePath,
+              )}`,
+            });
+            actions.skipChildren();
+            return;
+          }
+          if (!asset.meta.isConstantModule) {
+            this.wrappedAssets.add(asset.id);
+            wrapped.push(asset);
+          }
+        }, wrappedAssetRoot);
+      }
     }
 
     this.assetOutputs = new Map(await queue.run());
+
     return wrapped;
+  }
+
+  isReExported(asset: Asset): boolean {
+    let parentSymbols = this.bundleGraph
+      .getIncomingDependencies(asset)
+      .map((dep) => this.bundleGraph.getAssetWithDependency(dep))
+      .flatMap((parent) => {
+        if (parent == null) {
+          return [];
+        }
+        return this.bundleGraph.getExportedSymbols(parent, this.bundle);
+      });
+
+    let assetSymbols = this.bundleGraph.getExportedSymbols(asset, this.bundle);
+
+    return assetSymbols.some((assetSymbol) =>
+      parentSymbols.some(
+        (parentSymbol) => parentSymbol.symbol === assetSymbol.symbol,
+      ),
+    );
   }
 
   buildExportedSymbols() {
@@ -661,13 +711,24 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (shouldWrap) {
-                    depContent.push(this.visitAsset(resolved));
+                  if (getFeatureFlag('applyScopeHoistingImprovement')) {
+                    if (!this.wrappedAssets.has(resolved.id)) {
+                      let [depCode, depMap, depLines] =
+                        this.visitAsset(resolved);
+                      res = depCode + '\n' + res;
+                      lines += 1 + depLines;
+                      map = depMap;
+                    }
                   } else {
-                    let [depCode, depMap, depLines] = this.visitAsset(resolved);
-                    res = depCode + '\n' + res;
-                    lines += 1 + depLines;
-                    map = depMap;
+                    if (shouldWrap) {
+                      depContent.push(this.visitAsset(resolved));
+                    } else {
+                      let [depCode, depMap, depLines] =
+                        this.visitAsset(resolved);
+                      res = depCode + '\n' + res;
+                      lines += 1 + depLines;
+                      map = depMap;
+                    }
                   }
                 }
 

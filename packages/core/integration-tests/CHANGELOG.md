@@ -1,5 +1,13 @@
 # @atlaspack/integration-tests
 
+## 2.14.3
+
+### Patch Changes
+
+- [#613](https://github.com/atlassian-labs/atlaspack/pull/613) [`4ca19d8`](https://github.com/atlassian-labs/atlaspack/commit/4ca19d8060dfcd279183e4039f2ecb43334ac44c) Thanks [@marcins](https://github.com/marcins)! - Ensure that constant modules are correctly included in MSBs even if they wouldn't otherwise be.
+
+- [#623](https://github.com/atlassian-labs/atlaspack/pull/623) [`b1b3693`](https://github.com/atlassian-labs/atlaspack/commit/b1b369317c66f8a431c170df2ebba4fa5b2e38ef) Thanks [@JakeLane](https://github.com/JakeLane)! - Load same conditional bundles as conditional manifest in HTML
+
 ## 2.14.2
 
 ### Patch Changes

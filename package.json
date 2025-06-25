@@ -15,6 +15,9 @@
     "packages/*/*",
     "scripts"
   ],
+  "resolutions": {
+    "@swc/core": "1.11.18"
+  },
   "scripts": {
     "build": "yarn build-bundles && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production gulp",
     "build-bundles": "rimraf --glob packages/*/*/lib && lerna run dev:prepare && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SELF_BUILD=true atlaspack build --feature-flag cachePerformanceImprovements=true --no-cache packages/core/{eslint-plugin,fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}",
@@ -87,7 +90,11 @@
     "node": ">= 16.0.0"
   },
   "lint-staged": {
-    "*.{js,json,md,ts}": "prettier --write",
+    "*.{js,ts,jsx,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md}": "prettier --write",
     "*.rs": "rustfmt"
   },
   "packageManager": "yarn@1.22.19",

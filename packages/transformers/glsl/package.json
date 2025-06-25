@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-glsl",
-  "version": "2.14.10",
+  "version": "2.14.11",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -15,7 +15,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.10",
+    "@atlaspack/plugin": "2.14.11",
     "glslify-bundle": "^5.1.1",
     "glslify-deps": "^1.3.2"
   },

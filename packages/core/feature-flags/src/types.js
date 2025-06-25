@@ -94,12 +94,21 @@ export type FeatureFlags = {|
    * Fix a bug where the conditional manifest reporter would drop bundles that have the same condition
    */
   conditionalBundlingReporterSameConditionFix: boolean,
+  /**
+   * Enable a change to the html packager to load more bundles when conditional bundling fallback mode is enabled
+   */
+  condbHtmlPackagerChange: boolean,
+  /**
+   * Enable a setting that allows for more assets to be scope hoisted, if
+   * they're safe to do so.
+   */
+  applyScopeHoistingImprovement: boolean,
 |};
 
-export type ConsistencyCheckFeatureFlagValue =
-  | 'NEW'
-  | 'OLD'
-  | 'NEW_AND_CHECK'
-  | 'OLD_AND_CHECK';
+declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
+export type ConsistencyCheckFeatureFlagValue = $ElementType<
+  typeof CONSISTENCY_CHECK_VALUES,
+  number,
+>;
 
 declare export var DEFAULT_FEATURE_FLAGS: FeatureFlags;

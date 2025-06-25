@@ -12,6 +12,8 @@ For pull requests, please:
 - Follow the existing style
 - Separate unrelated changes into multiple pull requests
 
+You should also add documentation to `docs/` if you are adding new features or adding new API options. Note that our documentation is currently very barebones, so every little bit helps!
+
 <!-- See the existing issues for things to start contributing.
 
 For bigger changes, please make sure you start a discussion first by creating an issue and explaining the intended change. -->

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/utils",
-  "version": "2.14.10",
+  "version": "2.14.11",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -32,7 +32,7 @@
   "dependencies": {
     "@atlaspack/codeframe": "2.13.3",
     "@atlaspack/diagnostic": "2.14.1",
-    "@atlaspack/feature-flags": "2.16.0",
+    "@atlaspack/feature-flags": "2.17.0",
     "@atlaspack/logger": "2.14.10",
     "@atlaspack/markdown-ansi": "2.14.1",
     "@atlaspack/rust": "3.3.5",
@@ -41,8 +41,10 @@
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {
+    "@atlaspack/babel-register": "2.14.1",
     "@iarna/toml": "^2.2.0",
     "ansi-html-community": "0.0.8",
+    "benny": "^3.7.1",
     "clone": "^2.1.1",
     "fast-glob": "^3.2.12",
     "fastest-levenshtein": "^1.0.16",

@@ -2,8 +2,9 @@
 
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
-import {ContentGraph, BitSet} from '@atlaspack/graph';
+import {ContentGraph} from '@atlaspack/graph';
 import type {NodeId} from '@atlaspack/graph';
+import {setUnion, setIntersectStatic} from '@atlaspack/utils';
 import type {Bundle, IdealBundleGraph} from './idealGraph';
 import {memoize, clearCaches} from './memoize';
 
@@ -20,14 +21,14 @@ function getBundlesForBundleGroup(
   return count;
 }
 
-let getBundleOverlapBitSet = (
-  sourceBundlesA: BitSet,
-  sourceBundlesB: BitSet,
+let getBundleOverlap = (
+  sourceBundlesA: Set<NodeId>,
+  sourceBundlesB: Set<NodeId>,
 ): number => {
-  let allSourceBundles = BitSet.union(sourceBundlesA, sourceBundlesB);
-  let sharedSourceBundles = BitSet.intersect(sourceBundlesA, sourceBundlesB);
+  let allSourceBundles = setUnion(sourceBundlesA, sourceBundlesB);
+  let sharedSourceBundles = setIntersectStatic(sourceBundlesA, sourceBundlesB);
 
-  return sharedSourceBundles.size() / allSourceBundles.size();
+  return sharedSourceBundles.size / allSourceBundles.size;
 };
 
 // Returns a decimal showing the proportion source bundles are common to
@@ -38,9 +39,9 @@ function checkBundleThreshold(
   threshold: number,
 ): boolean {
   return (
-    getBundleOverlapBitSet(
-      bundleA.sourceBundleBitSet,
-      bundleB.sourceBundleBitSet,
+    getBundleOverlap(
+      bundleA.bundle.sourceBundles,
+      bundleB.bundle.sourceBundles,
     ) >= threshold
   );
 }
@@ -147,7 +148,6 @@ function getMergeClusters(
 type MergeCandidate = {|
   bundle: Bundle,
   id: NodeId,
-  sourceBundleBitSet: BitSet,
   contentKey: string,
 |};
 function getPossibleMergeCandidates(
@@ -158,15 +158,9 @@ function getPossibleMergeCandidates(
     let bundle = bundleGraph.getNode(bundleId);
     invariant(bundle && bundle !== 'root', 'Bundle should exist');
 
-    let sourceBundleBitSet = new BitSet(bundleGraph.nodes.length);
-    for (let sourceBundle of bundle.sourceBundles) {
-      sourceBundleBitSet.add(sourceBundle);
-    }
-
     return {
       id: bundleId,
       bundle,
-      sourceBundleBitSet,
       contentKey: bundleId.toString(),
     };
   });
