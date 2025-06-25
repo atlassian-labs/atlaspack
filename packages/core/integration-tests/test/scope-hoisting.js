@@ -22,6 +22,7 @@ import {
   run,
   runBundle,
   fsFixture,
+  getBundleContents,
 } from '@atlaspack/test-utils';
 
 const bundle = (name, opts = {}) => {
@@ -3676,6 +3677,176 @@ describe('scope hoisting', function () {
 
       // Run the bundle to make sure it's valid
       await run(b);
+    });
+
+    describe('constant inlining', function () {
+      [
+        {applyScopeHoistingImprovement: true},
+        {applyScopeHoistingImprovement: false},
+      ].forEach(({applyScopeHoistingImprovement}) => {
+        it(`only creates a namespace object for a constant module if the current bundle needs it (applyScopeHoistingImprovement: ${applyScopeHoistingImprovement.toString()})`, async function () {
+          await fsFixture(overlayFS, __dirname)`
+            inline-constants-namespaces
+    
+              yarn.lock: {}
+            
+              package.json: 
+                {
+                  "@atlaspack/transformer-js": { "unstable_inlineConstants": true }
+                }
+              
+              index.html:
+                <script type="module" src="./index.js"></script>
+              
+              index.js:
+                import { CONSTANT } from './constants';
+                async function bar() {
+                  await import('./async.js')
+                }
+                function foo() {
+                  return \`The constant is \${CONSTANT}\`;
+                }
+                global.result = foo();
+              
+              async.js:
+                import * as consts from './constants.js';
+                console.log("namespaced", consts);
+    
+              constants.js:
+                export const CONSTANT = 42;
+                export const OTHER = "other";
+          `;
+          let b = await bundle(
+            path.join(__dirname, 'inline-constants-namespaces', 'index.html'),
+            {
+              mode: 'production',
+              defaultTargetOptions: {
+                shouldScopeHoist: true,
+                sourceMaps: false,
+                shouldOptimize: true,
+              },
+              inputFS: overlayFS,
+              featureFlags: {
+                inlineConstOptimisationFix: true,
+                applyScopeHoistingImprovement,
+              },
+            },
+          );
+
+          const indexBundle = nullthrows(
+            await getBundleContents(b, outputFS, (name) =>
+              /index.*\.js/.test(name),
+            ),
+            'Expected the index bundle to exist',
+          );
+          // Expect the index bundle to inline the constant properly
+          assert(
+            indexBundle.includes('The constant is 42'),
+            'Expected the constant to have been inlined in the index bundle',
+          );
+
+          const asyncBundle = nullthrows(
+            await getBundleContents(b, outputFS, (name) =>
+              /async.*\.js/.test(name),
+            ),
+            'Expected the async bundle to exist',
+          );
+          // Expect the asyncBundle to contain a namespacing for the constant
+          assert(
+            /[a-z]\([a-z],"CONSTANT",\(\)=>/.test(asyncBundle),
+            'Expected the async bundle to contain a namespacing',
+          );
+
+          // Make sure it still runs
+          await run(b);
+        });
+
+        it(`inserts constant modules in the right place to ensure proper minification (applyScopeHoistingImprovement: ${applyScopeHoistingImprovement.toString()})`, async function () {
+          // This fixture attempts to trigger a bug where constant modules are inserted after the wrapped module that
+          // references them, preventing optimisation by the minifier. This is done by having two entry points
+          // both of which use the same module that uses a constant to ensure that the module is wrapped.
+          await fsFixture(overlayFS, __dirname)`
+            inline-constants-order
+    
+              yarn.lock: {}
+            
+              package.json: 
+                {
+                  "@atlaspack/transformer-js": { "unstable_inlineConstants": true }
+                }
+              
+              index.html:
+                <script type="module" src="./index.js"></script>
+              
+              index2.html:
+                <script type="module" src="./index2.js"></script>
+    
+              module.js:
+                import { CONSTANT } from './constants';
+                export default function foo() {
+                  return \`The constant is \${CONSTANT}\`;
+                }
+              
+              index.js:
+                import foo from './module.js';
+                import { OTHER } from './constants';
+    
+                export async function main() {
+                  console.log(foo(), \`\${OTHER}\`);
+                }
+                
+                main();
+    
+              index2.js:
+                import foo from './module.js';
+                import { OTHER } from './constants';
+    
+                export async function main() {
+                  console.log(foo(), \`\${OTHER}\`);
+                }
+                
+                main();
+    
+              constants.js:
+                export const CONSTANT = 42;
+                export const OTHER = "other";
+          `;
+          let b = await bundle(
+            [
+              path.join(__dirname, 'inline-constants-order', 'index.html'),
+              path.join(__dirname, 'inline-constants-order', 'index2.html'),
+            ],
+            {
+              mode: 'production',
+              defaultTargetOptions: {
+                shouldScopeHoist: true,
+                sourceMaps: false,
+                shouldOptimize: true,
+              },
+              inputFS: overlayFS,
+              featureFlags: {
+                inlineConstOptimisationFix: true,
+                applyScopeHoistingImprovement,
+              },
+            },
+          );
+
+          const indexBundle = nullthrows(
+            await getBundleContents(b, outputFS, (name) =>
+              /index.*\.js/.test(name),
+            ),
+            'Expected the index bundle to exist',
+          );
+          // Expect the index bundle to inline the constant properly
+          assert(
+            indexBundle.includes('The constant is 42'),
+            'Expected the constant to have been inlined in the index bundle',
+          );
+
+          // Make sure it still runs
+          await run(b);
+        });
+      });
     });
   });
 

@@ -39,6 +39,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   conditionalBundlingReporterSameConditionFix: false,
   condbHtmlPackagerChange: false,
   applyScopeHoistingImprovement: false,
+  inlineConstOptimisationFix: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

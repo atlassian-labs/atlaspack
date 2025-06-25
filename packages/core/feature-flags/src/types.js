@@ -107,6 +107,10 @@ export type FeatureFlags = {|
    * they're safe to do so.
    */
   applyScopeHoistingImprovement: boolean,
+  /**
+   * Enable a change where a constant module only have the namespacing object added in bundles where it is required
+   */
+  inlineConstOptimisationFix: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
