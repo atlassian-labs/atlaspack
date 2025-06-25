@@ -30,7 +30,7 @@ Worker backend type for parallel processing.
 
 Number of native threads for Rust operations.
 
-- **Default**: `2` (in test environment), auto-detected otherwise
+- **Default**: auto-detected based on execution environment
 - **Usage**: `ATLASPACK_NATIVE_THREADS=4 atlaspack build src/index.html`
 
 ### `ATLASPACK_NAPI_WORKERS`
