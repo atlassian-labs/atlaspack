@@ -45,6 +45,7 @@ export let cache: LMDBLiteCache = new LMDBLiteCache(cacheDir);
 cache.ensure();
 
 export {fsFixture} from './fsFixture';
+export {USE_LIB} from './useLib';
 export * from './stubs';
 
 export const workerFarm = (createWorkerFarm(): WorkerFarm);
