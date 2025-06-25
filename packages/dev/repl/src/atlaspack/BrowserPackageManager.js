@@ -33,7 +33,6 @@ import resolverDefault from '@atlaspack/resolver-default';
 import resolverREPLRuntimes from '@atlaspack/resolver-repl-runtimes';
 import runtimeHMR from '@atlaspack/runtime-browser-hmr';
 import runtimeJs from '@atlaspack/runtime-js';
-import runtimeReactRefresh from '@atlaspack/runtime-react-refresh';
 import transformerBabel from '@atlaspack/transformer-babel';
 import transformerCss from '@atlaspack/transformer-css';
 import transformerHtml from '@atlaspack/transformer-html';
@@ -61,7 +60,6 @@ export const BUILTINS = {
   '@atlaspack/resolver-repl-runtimes': resolverREPLRuntimes,
   '@atlaspack/runtime-browser-hmr': runtimeHMR,
   '@atlaspack/runtime-js': runtimeJs,
-  '@atlaspack/runtime-react-refresh': runtimeReactRefresh,
   '@atlaspack/transformer-babel': transformerBabel,
   '@atlaspack/transformer-css': transformerCss,
   '@atlaspack/transformer-html': transformerHtml,

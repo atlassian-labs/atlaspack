@@ -107,6 +107,12 @@ export type FeatureFlags = {|
    * Enable a change where a constant module only have the namespacing object added in bundles where it is required
    */
   inlineConstOptimisationFix: boolean,
+  /**
+   * Improves/fixes HMR behaviour by:
+   * - Fixing HMR behaviour with lazy bundle edges
+   * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer
+   */
+  hmrImprovements: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
