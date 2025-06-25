@@ -21,7 +21,8 @@ dist
 /test/dist
 /test/input
 *.min.js
-packages/core/rust/index.js
+packages/core/rust/index.*
+packages/core/integration-tests/dist/**
 
 coverage
 node_modules

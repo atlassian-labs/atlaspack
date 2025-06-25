@@ -14,7 +14,7 @@
   "source": "src/Logger.js",
   "exports": {
     ".": {
-      "@atlaspack::sources": "./src/Logger.js",
+      "atlaspack::sources": "./src/Logger.js",
       "default": "./lib/Logger.js"
     }
   },

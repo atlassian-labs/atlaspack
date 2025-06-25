@@ -11,6 +11,12 @@
   },
   "main": "lib/BabelTransformer.js",
   "source": "src/BabelTransformer.js",
+  "exports": {
+    ".": {
+      "atlaspack::sources": "./src/BabelTransformer.js",
+      "default": "./lib/BabelTransformer.js"
+    }
+  },
   "engines": {
     "node": ">= 16.0.0"
   },

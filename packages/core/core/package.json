@@ -63,7 +63,7 @@
       "default": "./lib/index.js"
     },
     "./worker": {
-      "@atlaspack::sources": "./src/worker.js",
+      "atlaspack::sources": "./src/worker.js",
       "default": "./lib/worker.js"
     }
   },
