@@ -6,6 +6,7 @@ mod esm_to_cjs_replacer;
 mod fs;
 mod global_replacer;
 mod hoist;
+mod loadable_replacer;
 mod magic_comments;
 mod node_replacer;
 pub mod test_utils;
@@ -426,6 +427,10 @@ pub fn transform(
 
                 module.apply(&mut passes)
               };
+
+
+              let mut loadable_replacer = loadable_replacer::LoadableTypeReplacer::new(vec!["LoadableBackground".into(), "LoadableLazy".into()]);
+              module.visit_mut_with(&mut loadable_replacer);
 
               module.visit_mut_with(
                 // Replace __dirname and __filename with placeholders in Node env
