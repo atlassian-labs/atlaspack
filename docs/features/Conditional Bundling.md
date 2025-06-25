@@ -285,7 +285,7 @@ You will also need to add this for your Jest configuration so that `importCond` 
 
 ### Aside: how conditional imports inside asynchronous bundles are handled
 
-As noted earlier, when conditional imports are used in an asynchronous bundle, Atlaspack will add a special loader to load the conditional bundles as a dependency alongside the asynchronous bundle.
+As noted earlier, when conditional imports are used in an asynchronous bundle, Atlaspack will add to the loader the conditional bundles as a dependency alongside the asynchronous bundle.
 
 If we imagine our source code looking like this:
 
