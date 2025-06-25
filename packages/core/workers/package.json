@@ -16,13 +16,6 @@
   "engines": {
     "node": ">= 16.0.0"
   },
-  "exports": {
-    ".": {
-      "types": "./index.d.ts",
-      "@atlaspack::sources": "./src/index.js",
-      "default": "./lib/index.js"
-    }
-  },
   "dependencies": {
     "@atlaspack/build-cache": "2.13.3",
     "@atlaspack/diagnostic": "2.14.1",
