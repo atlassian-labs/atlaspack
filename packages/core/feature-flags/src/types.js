@@ -103,6 +103,15 @@ export type FeatureFlags = {|
    */
   condbHtmlPackagerChange: boolean,
   /**
+   * Enable a setting that allows for more assets to be scope hoisted, if
+   * they're safe to do so.
+   */
+  applyScopeHoistingImprovement: boolean,
+  /**
+   * Enable a change where a constant module only have the namespacing object added in bundles where it is required
+   */
+  inlineConstOptimisationFix: boolean,
+  /**
    * Improves/fixes HMR behaviour by:
    * - Fixing HMR behaviour with lazy bundle edges
    * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer

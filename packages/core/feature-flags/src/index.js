@@ -38,6 +38,8 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   resolveBundlerConfigFromCwd: false,
   conditionalBundlingReporterSameConditionFix: false,
   condbHtmlPackagerChange: false,
+  applyScopeHoistingImprovement: false,
+  inlineConstOptimisationFix: false,
   hmrImprovements: false,
 };
 

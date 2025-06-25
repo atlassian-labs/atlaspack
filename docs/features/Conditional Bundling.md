@@ -8,7 +8,7 @@ If you wish to use conditional imports in Jira, you should use our adoption guid
 
 ### The problem
 
-Take the following example code:
+Take the following example code that uses synchronous imports:
 
 ```tsx
 // my-component.js
@@ -34,7 +34,17 @@ then the user will end up downloading code that they never need to execute. For 
 
 ### The solution
 
-Atlaspack's conditional imports API solve this problem by providing a way to notify the Atlaspack bundler that there is conditional code. At build time, Atlaspack will then ensure that `TrueComponent` and `FalseComponent` are separate bundles in the build output, and it will generate a **conditional manifest** which is a JSON file that details which bundle(s) should be loaded for each value of `fg('my-feature-gate-name')`. The web server (e.g. Bifrost) would then check the conditional manifest to determine which bundles to serve to any given user, depending on the value of `fg('my-feature-gate-name')`.
+Atlaspack's conditional imports API solves this problem by giving a way for the Atlaspack bundler to recognise conditional code. It allows for the web server to then only deliver specific bundles to the user, based on their feature gate values.
+
+> **Note on async bundles**
+>
+> This document covers the case where conditional imports are used in a synchronous bundle. In this case, the web server needs to ensure the correct bundles are loaded on the page, using the bundles listed in the conditional manifest.
+>
+> However, when conditional imports are used in an asynchronous bundle (most of Jira's bundles are asynchronous), Atlaspack will load the conditional bundles as a dependency alongside the asynchronous bundle.
+>
+> Scroll down to see an example of this.
+
+All of the bundles are still loaded _synchronously_, making conditional imports more versatile and performant than dynamic imports. We discuss the benefits of conditional imports compared to dynamic imports in the "How do conditional imports differ from dynamic imports?" section below.
 
 ### Syntax
 
@@ -70,27 +80,41 @@ Caveats:
 >
 > **Bundling complexity:** Simplifying to default export means we can simplify the runtime code. If we don't, that means we have to handle a bunch of bundling edge cases to make sure we get optimised code (e.g. dead code removal, side-effects etc.)
 
-At runtime, the `importCond` function call will be converted to something like this:
+At build time, Atlaspack will parse all `importCond` function calls, then ensure that `TrueComponent` and `FalseComponent` are separate bundles in the build output:
 
 ```js
 // index.js
-const MyComponent = globalThis.__MCOND('my-feature-gate-name')
-  ? require('./true-component.tsx').default
-  : require('./false-component.tsx').default;
+
+register("avM1e", function(e, t) {
+  e.exports = function(e, ifTrue, ifFalse) {
+      // runtime feature gate function
+      return globalThis.__MCOND && globalThis.__MCOND(e) ? ifTrue() : ifFalse()
+  }
+}),
+register("4qbUE", function(e, t) {
+    e.exports = parcelRequire("avM1e")("my-feature-gate-name", function() {
+        // TrueComponent
+        return parcelRequire("esWld");
+    }, function() {
+        // FalseComponent
+        return parcelRequire("dqBV0");
+    })
+}),
+// ...
+const MyComponent = parcelRequire("4qbUE");
 ```
 
-`globalThis.__MCOND` is the feature gate function that the user evaluates at runtime. More about this later...
+It will then generate a **conditional manifest** which is a JSON file that details which bundle(s) should be loaded for each value of `fg('my-feature-gate-name')`. The web server (e.g. Bifrost) would then check the conditional manifest to determine which bundles to serve to any given user, depending on the value of `fg('my-feature-gate-name')`. In the above example, the web server would serve either the bundle containing `esWld`, or the bundle containing `dqBV0`. At runtime, the user would then run the feature gate function `globalThis.__MCOND` ("**m**odule **cond**ition") and execute the correct bundle, which we require to match the bundle the web server sends to the user. (More about `__MCOND` later...)
 
-## How are conditional imports better?
+## How do conditional imports differ from dynamic imports?
 
 Before conditional imports, there were two main approaches used in Jira for feature gating different modules:
 
 - Conventional imports, e.g. `componentWithFG`
 - Dynamic imports
 
-The `componentWithFG` function call has the same impact to bundle size and load time as typing `fg('...') ? TrueComponent : FalseComponent` (with a bit of magic to make it work). It uses synchronous imports so there will be no impact to the idle time, but there will be a bundle size impact as the user will always load both versions of a component synchronously:
-
 ```tsx
+// Conventional imports
 import TrueComponent from './true-component.tsx';
 import FalseComponent from './false-component.tsx';
 
@@ -103,15 +127,21 @@ const MyComponent = componentWithFG(
 const MyComponent = fg('my-feature-gate-name') ? TrueComponent : FalseComponent;
 ```
 
-Meanwhile, dynamic imports have no impact to bundle size, as the user will only load the bundle that matches their feature gate value. However, the asynchronous imports will increase idle time due to the user needing to download the bundle at runtime without being able to take advantage of preloading:
+In the above **conventional imports** example, the `componentWithFG` function call has the same impact to bundle size and load time as typing `fg('...') ? TrueComponent : FalseComponent` (with a bit of magic to make it work). It uses synchronous imports so there will be no impact to the idle time, but there will be a bundle size impact as the user will always load both versions of a component synchronously:
 
 ```tsx
+// Dynamic imports
+
 const MyComponent = fg('my-feature-gate-name')
   ? import('./true-component.tsx')
   : import('./false-component.tsx');
 ```
 
-Conditional imports give the best of both worlds, as it allows us to continue using **synchronous imports** (like `componentWithFG`) but without the impact to bundle size. The user only loads the code that they actually need to run. Below is a diagram comparing the three approaches:
+Meanwhile, **dynamic imports** (or asynchronous imports) have no impact to bundle size, as the user will only load the bundle that matches their feature gate value. However, dynamic imports are not feasible for cases where the feature gated component is part of the initial render of the page, where the component must be available synchronously and cannot be loaded dynamically.
+
+Even setting this aside, the dynamic imports aren't ideal performance-wise either: they increase the client-side load time, due to the user needing to download the bundle at runtime without being able to take advantage of preloading:
+
+**Conditional imports** give the best of both worlds, as it allows us to continue using **synchronous imports** (like `componentWithFG`) but without the impact to bundle size. The user only loads the code that they actually need to run. Below is a diagram comparing the three approaches:
 
 ![Comparison of conditional bundling approaches. Conventional imports do not increase the idle time but increase the bundle size; dynamic imports do not increase the bundle size but increase the idle size. Conditional imports will not increase either of these.](conditional-bundling-comparison.png)
 
@@ -226,31 +256,25 @@ Now that we have set up the correct bundles to be loaded from the server side, w
 Recall that `importCond` is converted to this in the build output:
 
 ```js
-const MyComponent = globalThis.__MCOND('my-feature-gate-name')
-  ? require('./true-component.tsx').default
-  : require('./false-component.tsx').default;
+// index.js
+
+register("avM1e", function(e, t) {
+  e.exports = function(e, ifTrue, ifFalse) {
+      return globalThis.__MCOND && globalThis.__MCOND(e) ? ifTrue() : ifFalse()
+  }
+}),
+register("4qbUE", function(e, t) {
+    e.exports = parcelRequire("avM1e")("my-feature-gate-name", function() {
+        return parcelRequire("esWld");
+    }, function() {
+        return parcelRequire("dqBV0");
+    })
+}),
+// ...
+const MyComponent = parcelRequire("4qbUE");
 ```
 
-> **Sidenote**
->
-> Technically, it is converted to this when `server: true`, to prevent `__MCOND` from being evaluated too early:
->
-> ```js
-> const MyComponent = {
->   ifTrue: require('./true-component.tsx').default,
->   ifFalse: require('./false-component.tsx').default,
-> };
->
-> Object.defineProperty(MyComponent, 'load', {
->   get: () =>
->     globalThis.__MCOND && globalThis.__MCOND('my-feature-gate-name')
->       ? conditionab.ifTrue
->       : conditionab.ifFalse,
-> });
-> MyComponent.load;
-> ```
-
-You will need to update the web server to add an implementation for `__MCOND`. If your feature gate function is called `fg`, it is as simple as:
+You will need to update the web server to add an implementation for the runtime feature gate function, `__MCOND`. This function **must return the same output** as the server-side feature gate function that the web server uses for parsing the conditional manifest. If your feature gate function is called `fg`, it is as simple as:
 
 ```tsx
 // somewhere in your client-side code
@@ -258,3 +282,86 @@ globalThis.__MCOND = (cond: string) => fg(cond);
 ```
 
 You will also need to add this for your Jest configuration so that `importCond` works in unit tests.
+
+### Aside: how conditional imports inside asynchronous bundles are handled
+
+As noted earlier, when conditional imports are used in an asynchronous bundle, Atlaspack will add to the loader the conditional bundles as a dependency alongside the asynchronous bundle.
+
+If we imagine our source code looking like this:
+
+```tsx
+// index.tsx
+
+const LazyComponent = lazy(() => import('./lazy-component'));
+
+// lazy-component.tsx
+
+import React from 'react';
+
+const Button = importCond<
+  typeof import('@atlaskit/button/new'),
+  typeof import('@atlaskit/button')
+>('my.feature.button', '@atlaskit/button', '@atlaskit/button/new');
+
+export default function LazyComponent() {
+  return (
+    <p>
+      This is a lazy component. It has a button. <Button>Lazy button</Button>
+    </p>
+  );
+}
+```
+
+Then the output of `index.tsx` will look something like this:
+
+```js
+// index.js
+
+// this is the function that will run MCOND (the feature gate function) at runtime
+parcelRegister('59IBW', function (module, exports) {
+  'use strict';
+  module.exports = function (cond, ifTrue, ifFalse) {
+    return globalThis.__MCOND && globalThis.__MCOND(cond)
+      ? ifTrue()
+      : ifFalse();
+  };
+});
+parcelRegister('e2VvX', function (module, exports) {
+  // function that resolves bundles
+  // see `packages/runtimes/js/src/helpers/bundle-manifest.js`
+  var $dgmOi = parcelRequire('dgmOi');
+
+  module.exports = Promise.all([
+    // load the conditional bundles that LazyComponent contained
+    parcelRequire('59IBW')(
+      'my.feature.button',
+      function () {
+        // bundles to load when feature gate `my.feature.button` is true
+        return Promise.all([$dgmOi('1pPgB'), $dgmOi('3iyWa')]);
+      },
+      function () {
+        // bundles to load when feature gate `my.feature.button` is false
+        return Promise.all([$dgmOi('63Gye'), $dgmOi('7ml4E'), $dgmOi('3iyWa')]);
+      },
+    ),
+    $dgmOi('9XYbX'), // this resolves LazyComponent
+  ]).then(
+    // execute LazyComponent
+    () => parcelRequire('1Jo9T'),
+  );
+});
+$parcel$global.rwr('5ahOM', () => {
+  // ...
+  const $b4004c4361ac9f08$var$LazyComponent = /*#__PURE__*/ (0, $ktSyt.lazy)(
+    () => parcelRequire('e2VvX'),
+  );
+  // ...
+});
+```
+
+Notable parts of the build output:
+
+- `59IBW`: We evaluate `__MCOND` at runtime to ensure that the user requests the correct bundle at runtime.
+- `e2VvX`: Atlaspack adds [special loading logic](https://github.com/atlassian-labs/atlaspack/blob/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c/packages/runtimes/js/src/JSRuntime.js#L516) via `Promise.all` to ensure that `LazyComponent` and the conditional bundles (the bundles that we wish to load through `importCond`) are loaded in parallel.
+
+Also see [`packages/examples/conditional-bundling`](https://github.com/atlassian-labs/atlaspack/tree/main/packages/examples/conditional-bundling) for more examples (refer to the `package.json` for commands you can run).
