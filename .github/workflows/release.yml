@@ -132,6 +132,55 @@ jobs:
           name: packages-${{ matrix.target }}
           path: packages/**/*
 
+  build-and-github-release:
+    name: Github Release
+    runs-on: ubuntu-22.04
+    needs:
+      - build-native-linux
+      - build-native-macos
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: ./.github/actions/setup-node
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      - run: yarn
+      - run: yarn build
+      - run: |
+          set -e
+          SHA="$(git rev-parse --short HEAD)"
+          DATE="$(date -u +"%Y-%m-%dT%H:%MZ")"
+          VERSION="$(echo $DATE | tr -d "-" | tr -d ":")"
+          TAG="$VERSION.$SHA"
+
+          echo SHA="$SHA" >> $GITHUB_ENV
+          echo DATE="$DATE" >> $GITHUB_ENV
+          echo VERSION="$VERSION" >> $GITHUB_ENV
+          echo TAG="$TAG" >> $GITHUB_ENV
+      - run: echo $SHA $DATE $TAG $VERSION
+      - run: node ./scripts/build-github-release.mjs
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          gh release create $TAG  --draft --notes $TAG
+
+          if ! [ "${{github.ref_name}}" = "main" ]; then
+            gh release edit $TAG --title $TAG --prerelease
+          fi
+
+          cd release
+          for name in *; do
+            [ -f "$name" ] || continue
+            echo Uploading $name
+            gh release upload $TAG $name
+          done
+
+          gh release edit $TAG --draft=false
+
   build-and-release:
     name: Build and release
     needs:

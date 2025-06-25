@@ -12,14 +12,23 @@ pub enum Integrity {
 }
 
 impl Integrity {
+  /// Parse a hash with the type encoded
+  ///
+  /// sha256:xxxx
+  /// sha512-xxxx
   pub fn parse(input: impl AsRef<str>) -> anyhow::Result<Self> {
     let input = input.as_ref();
     log::info!("parse:hash {}", input);
 
-    let Some((tag, hash)) = input.split_once("-") else {
-      return Err(anyhow::anyhow!("Unable to parse hash"));
+    let (tag, hash) = match input.split_once("-") {
+      Some(res) => res,
+      None => match input.split_once(":") {
+        Some(res) => res,
+        None => return Err(anyhow::anyhow!("Unable to parse hash")),
+      },
     };
-    match tag {
+
+    match input {
       "sha512" => Ok(Self::Sha512(hash.to_string())),
       "sha256" => Ok(Self::Sha256(hash.to_string())),
       "sha1" => Ok(Self::Sha1(hash.to_string())),

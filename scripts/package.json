@@ -4,6 +4,8 @@
   "version": "0.0.1-local",
   "devDependencies": {
     "glob": "^7.1.6",
-    "zx": "^8.1.9"
+    "zx": "^8.1.9",
+    "temp-dir": "^1.0.0",
+    "fs-extra": "^11.3.0"
   }
 }

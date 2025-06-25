@@ -128,7 +128,7 @@ fn create_bin(node_modules_bin_atlaspack: &Path) -> std::io::Result<()> {
     use std::os::unix::fs::PermissionsExt;
     fs::write(
       node_modules_bin_atlaspack,
-      "#!/usr/bin/env node\nrequire('@atlaspack/cli/bin/atlaspack.js\n",
+      "#!/usr/bin/env node\nrequire('@atlaspack/cli/bin/atlaspack.js');\n",
     )?;
     fs::set_permissions(node_modules_bin_atlaspack, Permissions::from_mode(0o777))?;
   }
