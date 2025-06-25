@@ -2806,4 +2806,81 @@ mod tests {
       "importCond requires unique dependencies"
     );
   }
+
+  #[test]
+  fn test_parcel_require() {
+    let mut conditions = HashSet::new();
+    let mut diagnostics = vec![];
+    let mut items = vec![];
+
+    let config = make_config();
+
+    let input_code = r#"
+      const x = parcelRequire('foo');
+    "#;
+
+    let RunVisitResult { output_code, .. } = run_test_visit(input_code, |context| {
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
+    });
+
+    let expected_code = formatdoc! {r#"
+      const x = parcelRequire('foo');
+    "#};
+
+    assert_eq!(output_code, expected_code);
+    assert_eq!(diagnostics, []);
+    assert_eq!(items, []);
+    assert_eq!(conditions, HashSet::new(),);
+  }
+
+  #[test]
+  fn test_parcel_require_with_hmr_improvements_ff_on() {
+    let mut conditions = HashSet::new();
+    let mut diagnostics = vec![];
+    let mut items = vec![];
+
+    let mut config = make_config();
+    config.hmr_improvements = true;
+
+    let input_code = r#"
+      const x = parcelRequire('foo');
+    "#;
+
+    let RunVisitResult { output_code, .. } = run_test_visit(input_code, |context| {
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
+    });
+
+    let expected_code = formatdoc! {r#"
+      const x = module.bundle.root('foo');
+    "#};
+
+    assert_eq!(output_code, expected_code);
+    assert_eq!(diagnostics, []);
+    assert_eq!(
+      items,
+      [DependencyDescriptor {
+        kind: DependencyKind::Id,
+        specifier: "foo".into(),
+        attributes: None,
+        is_optional: false,
+        is_helper: false,
+        source_type: None,
+        placeholder: None,
+        ..items[0].clone()
+      },]
+    );
+    assert_eq!(conditions, HashSet::new(),);
+  }
 }
