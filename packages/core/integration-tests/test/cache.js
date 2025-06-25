@@ -33,13 +33,12 @@ import {md} from '@atlaspack/diagnostic';
 import fs from 'fs';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {createWorkerFarm} from '@atlaspack/core';
-import resolveOptions from '@atlaspack/core/src/resolveOptions';
+import {resolveOptions, ATLASPACK_VERSION} from '@atlaspack/core';
 import logger from '@atlaspack/logger';
 import sinon from 'sinon';
 import {version} from '@atlaspack/core/package.json';
 import {deserialize} from '@atlaspack/build-cache';
 import {hashString} from '@atlaspack/rust';
-import {ATLASPACK_VERSION} from '@atlaspack/core/src/constants';
 import {getAllEnvironments} from '@atlaspack/rust';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
 
@@ -7077,7 +7076,7 @@ let packageManager = new NodePackageManager(inputFS, '/');
 
   describe('environment caching', function () {
     it('should cache and load environments between builds', async function () {
-      const EnvironmentManager = require('@atlaspack/core/src/EnvironmentManager');
+      const {EnvironmentManager} = require('@atlaspack/core');
       const loadEnvironmentsSpy = sinon.spy(
         EnvironmentManager,
         'loadEnvironmentsFromCache',
