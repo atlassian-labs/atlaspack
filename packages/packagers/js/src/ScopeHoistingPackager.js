@@ -102,7 +102,6 @@ export class ScopeHoistingPackager {
   needsPrelude: boolean = false;
   usedHelpers: Set<string> = new Set();
   externalAssets: Set<Asset> = new Set();
-  forceSkipWrapAssets: Array<string> = [];
   logger: PluginLogger;
 
   constructor(
@@ -111,7 +110,6 @@ export class ScopeHoistingPackager {
     bundle: NamedBundle,
     parcelRequireName: string,
     useAsyncBundleRuntime: boolean,
-    forceSkipWrapAssets: Array<string>,
     logger: PluginLogger,
   ) {
     this.options = options;
@@ -119,7 +117,6 @@ export class ScopeHoistingPackager {
     this.bundle = bundle;
     this.parcelRequireName = parcelRequireName;
     this.useAsyncBundleRuntime = useAsyncBundleRuntime;
-    this.forceSkipWrapAssets = forceSkipWrapAssets ?? [];
     this.logger = logger;
 
     let OutputFormat = OUTPUT_FORMATS[this.bundle.env.outputFormat];
@@ -444,27 +441,7 @@ export class ScopeHoistingPackager {
             actions.skipChildren();
             return;
           }
-          // This prevents children of a wrapped asset also being wrapped - it's an "unsafe" optimisation
-          // that should only be used when you know (or think you know) what you're doing.
-          //
-          // In particular this can force an async bundle to be scope hoisted where it previously would not be
-          // due to the entry asset being wrapped.
-          if (
-            this.forceSkipWrapAssets.length > 0 &&
-            this.forceSkipWrapAssets.some(
-              (p) =>
-                p === path.relative(this.options.projectRoot, asset.filePath),
-            )
-          ) {
-            this.logger.verbose({
-              message: `Force skipping wrapping of ${path.relative(
-                this.options.projectRoot,
-                asset.filePath,
-              )}`,
-            });
-            actions.skipChildren();
-            return;
-          }
+
           if (!asset.meta.isConstantModule) {
             this.wrappedAssets.add(asset.id);
             wrapped.push(asset);
