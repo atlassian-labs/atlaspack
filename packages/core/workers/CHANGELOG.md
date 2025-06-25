@@ -1,5 +1,17 @@
 # @atlaspack/workers
 
+## 2.14.13
+
+### Patch Changes
+
+- [#650](https://github.com/atlassian-labs/atlaspack/pull/650) [`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb) Thanks [@alshdavid](https://github.com/alshdavid)! - Remove package.json#exports
+
+- Updated dependencies [[`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb)]:
+  - @atlaspack/logger@2.14.11
+  - @atlaspack/utils@2.15.1
+  - @atlaspack/types-internal@2.14.11
+  - @atlaspack/profiler@2.14.11
+
 ## 2.14.12
 
 ### Patch Changes
