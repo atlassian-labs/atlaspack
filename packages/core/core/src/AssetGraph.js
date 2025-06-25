@@ -538,14 +538,19 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
           ...depNode.value.meta,
           ...existing.value.resolverMeta,
         };
-        depNode.value.resolverMeta = existing.value.resolverMeta;
+
+        if (getFeatureFlag('hmrImprovements')) {
+          depNode.value.resolverMeta = existing.value.resolverMeta;
+        }
       }
-      if (
-        existing?.type === 'dependency' &&
-        existing.value.resolverPriority != null
-      ) {
-        depNode.value.priority = existing.value.resolverPriority;
-        depNode.value.resolverPriority = existing.value.resolverPriority;
+      if (getFeatureFlag('hmrImprovements')) {
+        if (
+          existing?.type === 'dependency' &&
+          existing.value.resolverPriority != null
+        ) {
+          depNode.value.priority = existing.value.resolverPriority;
+          depNode.value.resolverPriority = existing.value.resolverPriority;
+        }
       }
       let dependentAsset = dependentAssets.find(
         (a) => a.uniqueKey === dep.specifier,
