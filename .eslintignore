@@ -23,6 +23,8 @@ dist
 *.min.js
 packages/core/rust/index.js
 
+**/**/*.ts
+
 coverage
 node_modules
 tmp
