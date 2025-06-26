@@ -7,6 +7,7 @@ import {deserialize, serialize} from '@atlaspack/build-cache';
 import {LMDBLiteCache, type Cache} from '@atlaspack/cache';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {ContentGraph} from '@atlaspack/graph';
+import {getValueAtPath} from './requests/ConfigRequest';
 import type {
   ContentGraphOpts,
   ContentKey,
@@ -144,6 +145,7 @@ type OptionNode = {|
   id: ContentKey,
   +type: typeof OPTION,
   hash: string,
+  originalValue?: mixed, // Store the original value for comparison
 |};
 
 type ConfigKeyNode = {|
@@ -227,7 +229,7 @@ export type RunAPI<TResult: RequestResult> = {|
   invalidateOnStartup: () => void,
   invalidateOnBuild: () => void,
   invalidateOnEnvChange: (string) => void,
-  invalidateOnOptionChange: (string) => void,
+  invalidateOnOptionChange: (string[] | string) => void,
   getInvalidations(): Array<RequestInvalidation>,
   storeResult(result: TResult, cacheKey?: string): void,
   getRequestResult<T: RequestResult>(contentKey: ContentKey): Async<?T>,
@@ -280,11 +282,19 @@ const nodeFromEnv = (env: string, value: string | void): RequestGraphNode => ({
   value,
 });
 
-const nodeFromOption = (option: string, value: mixed): RequestGraphNode => ({
-  id: 'option:' + option,
-  type: OPTION,
-  hash: hashFromOption(value),
-});
+const nodeFromOption = (
+  option: string[] | string,
+  value: mixed,
+): RequestGraphNode => {
+  // Normalize option to string format for node ID
+  const optionKey = Array.isArray(option) ? option.join('.') : option;
+  return {
+    id: 'option:' + optionKey,
+    type: OPTION,
+    hash: hashFromOption(value),
+    originalValue: value, // Store the original value for comparison
+  };
+};
 
 const nodeFromConfigKey = (
   fileName: ProjectPath,
@@ -507,28 +517,144 @@ export class RequestGraph extends ContentGraph<
 
   /**
    * Nodes invalidated by option changes.
+   * @returns {Array<{option: string, count: number, ...}>} Array of top invalidating options and their counts
    */
-  invalidateOptionNodes(options: AtlaspackOptions): string[] {
-    const invalidatedKeys = [];
+  invalidateOptionNodes(
+    options: AtlaspackOptions,
+  ): Array<{option: string, count: number, ...}> {
+    // Get invalidation configuration
+    const invalidationConfig = options.optionInvalidation || {};
+    const configuredBlocklist = invalidationConfig.blocklist || [];
+
+    // Define default blocklist for commonly noisy options
+    const defaultBlocklist = ['instanceId', 'env', 'cacheDir', 'config'];
+    const defaultBlocklistPrefixes = ['serveOptions.', 'defaultTargetOptions.']; // 'featureFlags.'
+
+    // Feature flags to control invalidation behavior
+    const useBlocklist =
+      getFeatureFlag('enableOptionInvalidationBlocklist') !== false;
+    const useGranularPaths =
+      getFeatureFlag('granularOptionInvalidation') !== false ||
+      invalidationConfig.useGranularPaths === true;
+
+    // Track invalidation metrics if enabled
+    const trackInvalidationMetrics = !!invalidationConfig.trackMetrics;
+    const invalidationCounts = new Map(); // Always track counts for return value
+    const skippedOptions = trackInvalidationMetrics ? new Set() : null;
 
     for (let nodeId of this.optionNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === OPTION);
-      const key = keyFromOptionContentKey(node.id);
+      const optionKey = keyFromOptionContentKey(node.id);
+      // Split into path array for granular checking
+      const optionPath = optionKey.split('.');
 
-      if (hashFromOption(options[key]) !== node.hash) {
-        invalidatedKeys.push(key);
+      // Check if this option should be skipped from invalidation
+      const shouldSkip =
+        useBlocklist &&
+        (defaultBlocklist.includes(optionKey) ||
+          configuredBlocklist.includes(optionKey) ||
+          defaultBlocklistPrefixes.some((prefix) =>
+            optionKey.startsWith(prefix),
+          ) ||
+          configuredBlocklist.some(
+            (prefix) =>
+              prefix.endsWith('*') && optionKey.startsWith(prefix.slice(0, -1)),
+          ));
+
+      // If this option should be skipped, track it for reporting and skip invalidation
+      if (shouldSkip) {
+        // Only add to skipped options if we're tracking metrics
+        if (skippedOptions) {
+          skippedOptions.add(optionKey);
+        }
+
+        // Always skip invalidation for blocklisted options, regardless of metrics tracking
+        continue;
+      }
+
+      // Get the option value using the path array for more precise access
+      const value = getValueAtPath(options, optionPath);
+
+      if (hashFromOption(value) !== node.hash) {
         let parentNodes = this.getNodeIdsConnectedTo(
           nodeId,
           requestGraphEdgeTypes.invalidated_by_update,
         );
+
+        // Track invalidation counts for return value
+        invalidationCounts.set(
+          optionKey,
+          (invalidationCounts.get(optionKey) || 0) + parentNodes.length,
+        );
+
+        // If granular paths are enabled, log more detailed information about which options changed
+        if (useGranularPaths) {
+          logger.verbose({
+            origin: '@atlaspack/core',
+            message: `Option change detected: ${optionKey}`,
+            meta: {
+              optionPath,
+              oldHash: node.hash,
+              newHash: hashFromOption(value),
+              trackableEvent: 'option_change_detected',
+            },
+          });
+        }
+
         for (let parentNode of parentNodes) {
           this.invalidateNode(parentNode, OPTION_CHANGE);
         }
       }
     }
 
-    return invalidatedKeys;
+    // Log invalidation metrics if enabled
+    if (trackInvalidationMetrics) {
+      // Log skipped options
+      if (skippedOptions && skippedOptions.size > 0) {
+        const skippedList = Array.from(skippedOptions);
+        logger.verbose({
+          origin: '@atlaspack/core',
+          message: 'Skipped option invalidations',
+          meta: {
+            trackableEvent: 'option_invalidation_skipped',
+            skippedOptions: skippedList,
+            skippedCount: skippedList.length,
+          },
+        });
+      }
+
+      // Log invalidations if there were any
+      if (invalidationCounts.size > 0) {
+        const sortedInvalidations = Array.from(
+          invalidationCounts.entries(),
+        ).sort((a, b) => b[1] - a[1]);
+
+        const topInvalidations = sortedInvalidations.slice(0, 10);
+        const totalInvalidationCount = sortedInvalidations.reduce(
+          (acc, [, count]) => acc + count,
+          0,
+        );
+
+        logger.verbose({
+          origin: '@atlaspack/core',
+          message: 'Option invalidation metrics',
+          meta: {
+            trackableEvent: 'option_invalidation_metrics',
+            invalidations: topInvalidations,
+            totalOptionsChecked: this.optionNodeIds.size,
+            totalInvalidationCount: totalInvalidationCount,
+            totalInvalidatingOptions: sortedInvalidations.length,
+          },
+        });
+      }
+    }
+
+    // Return the top invalidating options (up to 20) to be used in diagnostics
+    return Array.from(invalidationCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([option, count]) => ({option, count}));
   }
 
   invalidateOnConfigKeyChange(
@@ -741,11 +867,21 @@ export class RequestGraph extends ContentGraph<
 
   invalidateOnOptionChange(
     requestNodeId: NodeId,
-    option: string,
+    option: string[] | string,
     value: mixed,
   ) {
-    let optionNode = nodeFromOption(option, value);
-    let optionNodeId = this.addNode(optionNode);
+    // Normalize to array form for consistency
+    const optionPath = Array.isArray(option) ? option : option.split('.');
+
+    // Simple validation to prevent empty keys
+    if (optionPath.length === 0) {
+      return;
+    }
+
+    // For backward compatibility and node lookup, we still need the dot-string form
+    const optionKey = optionPath.join('.');
+
+    let optionNodeId = this.addNode(nodeFromOption(optionKey, value));
 
     if (
       !this.hasEdge(
@@ -760,6 +896,124 @@ export class RequestGraph extends ContentGraph<
         requestGraphEdgeTypes.invalidated_by_update,
       );
     }
+  }
+
+  /**
+   * Cleans up excess option nodes when they accumulate beyond a threshold.
+   * This helps prevent memory bloat and excessive invalidations.
+   *
+   * @param {number} threshold - Maximum number of option nodes to allow before cleanup
+   * @returns {number} - Number of nodes removed
+   */
+  cleanupExcessOptionNodes(threshold: number = 10000): number {
+    // Skip if we're under the threshold
+    if (this.optionNodeIds.size <= threshold) {
+      return 0;
+    }
+
+    const startCount = this.optionNodeIds.size;
+    const startTime = performance.now();
+    const nodesToRemove = [];
+
+    // Get all option nodes
+    const optionNodes = Array.from(this.optionNodeIds).map((id) => ({
+      id,
+      node: this.getNode(id),
+      connectionCount: 0,
+    }));
+
+    // Count connections for each node
+    for (const {id, node} of optionNodes) {
+      // Skip if the node is not an option node or is null
+      if (!node || node.type !== OPTION) continue;
+
+      // Get connected nodes
+      const connectedNodes = this.getNodeIdsConnectedTo(
+        id,
+        requestGraphEdgeTypes.invalidated_by_update,
+      );
+
+      // Update connection count
+      const item = optionNodes.find((n) => n.id === id);
+      if (item) {
+        item.connectionCount = connectedNodes.length;
+      }
+    }
+
+    // Sort by connection count (ascending) so we remove least-connected nodes first
+    optionNodes.sort((a, b) => a.connectionCount - b.connectionCount);
+
+    // Calculate how many nodes to remove to get below threshold
+    const toRemoveCount = this.optionNodeIds.size - threshold;
+
+    // Get nodes to remove (prioritize least-connected nodes)
+    for (let i = 0; i < toRemoveCount && i < optionNodes.length; i++) {
+      const {id, node} = optionNodes[i];
+
+      // Additional safety check for blocklisted options
+      if (node && node.type === OPTION) {
+        // Prioritize removing nodes that have few connections
+        if (optionNodes[i].connectionCount === 0) {
+          nodesToRemove.push(id);
+        }
+      }
+    }
+
+    // If we still need to remove more nodes, take additional nodes from the sorted list
+    if (nodesToRemove.length < toRemoveCount) {
+      for (
+        let i = 0;
+        i < optionNodes.length && nodesToRemove.length < toRemoveCount;
+        i++
+      ) {
+        if (!nodesToRemove.includes(optionNodes[i].id)) {
+          nodesToRemove.push(optionNodes[i].id);
+        }
+      }
+    }
+
+    // Remove the nodes
+    for (const nodeId of nodesToRemove) {
+      this.removeNode(nodeId);
+    }
+
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+
+    // Log the cleanup results
+    logger.verbose({
+      origin: '@atlaspack/core',
+      message: `Cleaned up ${
+        nodesToRemove.length
+      } option nodes in ${duration.toFixed(2)}ms (${startCount} → ${
+        this.optionNodeIds.size
+      })`,
+      meta: {
+        startCount,
+        endCount: this.optionNodeIds.size,
+        removedCount: nodesToRemove.length,
+        duration,
+        threshold,
+        trackableEvent: 'option_nodes_cleanup',
+      },
+    });
+
+    return nodesToRemove.length;
+  }
+
+  /**
+   * Gets nodes whose content key starts with the given prefix
+   */
+  getNodesByPrefix(prefix: string): Array<RequestGraphNode> {
+    const results = [];
+
+    for (const [, node] of this.nodes.entries()) {
+      if (node && node.id && node.id.startsWith(prefix)) {
+        results.push(node);
+      }
+    }
+
+    return results;
   }
 
   clearInvalidations(nodeId: NodeId) {
@@ -1493,12 +1747,25 @@ export default class RequestTracker {
       invalidateOnBuild: () => this.graph.invalidateOnBuild(requestId),
       invalidateOnEnvChange: (env) =>
         this.graph.invalidateOnEnvChange(requestId, env, this.options.env[env]),
-      invalidateOnOptionChange: (option) =>
+      invalidateOnOptionChange: (option) => {
+        // Basic validation to prevent null/empty options
+        if (
+          option == null ||
+          option === '' ||
+          (Array.isArray(option) && option.length === 0)
+        ) {
+          return;
+        }
+
+        // Normalize to array form for consistent handling
+        const optionPath = Array.isArray(option) ? option : option.split('.');
+
         this.graph.invalidateOnOptionChange(
           requestId,
-          option,
-          this.options[option],
-        ),
+          optionPath,
+          getValueAtPath(this.options, optionPath),
+        );
+      },
       getInvalidations: () => previousInvalidations,
       storeResult: (result, cacheKey) => {
         this.storeResult(requestId, result, cacheKey);
@@ -2005,7 +2272,10 @@ type InvalidationStats = {|
  * If this is a env or option invalidation, this key will contain the list of changed environment
  * variables or options.
  */
-type InvalidationDetail = string[] | FSInvalidationStats;
+type InvalidationDetail =
+  | string[]
+  | FSInvalidationStats
+  | Array<{option: string, count: number, ...}>;
 
 /**
  * Number of invalidations for a given file-system event.
@@ -2043,6 +2313,7 @@ type InvalidationFnStats = {|
   count: number,
   /**
    * If this is a env or option invalidation, this key will contain the list of changed values.
+   * For option invalidation, it will contain an array of objects with option paths and invalidation counts.
    *
    * If this is a fs events invalidation, this key will contain statistics about invalidations
    */
@@ -2159,7 +2430,10 @@ export async function runInvalidation(
 ): Promise<InvalidationFnStats> {
   const start = performance.now();
   const startInvalidationCount = requestGraph.getInvalidNodeCount();
+
+  // Simply run the invalidation function
   const result = await invalidationFn.fn();
+
   const count = requestGraph.getInvalidNodeCount() - startInvalidationCount;
   const duration = performance.now() - start;
 

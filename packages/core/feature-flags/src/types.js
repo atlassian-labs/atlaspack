@@ -102,6 +102,15 @@ export type FeatureFlags = {|
    * Enable a change to the html packager to load more bundles when conditional bundling fallback mode is enabled
    */
   condbHtmlPackagerChange: boolean,
+  /**
+   * Enables option invalidation blocklist to reduce unnecessary cache invalidations.
+   * When enabled, certain options like instanceId, featureFlags, etc. won't trigger
+   * invalidations. Can be set to false to restore the original behavior.
+   */
+  enableOptionInvalidationBlocklist: boolean,
+
+  // Enable granular path-based invalidation of options
+  granularOptionInvalidation: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;

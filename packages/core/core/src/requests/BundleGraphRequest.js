@@ -281,7 +281,10 @@ class BundlerRunner {
     this.devDepRequests = new Map();
     this.configs = new Map();
     this.pluginOptions = new PluginOptions(
-      optionsProxy(this.options, api.invalidateOnOptionChange),
+      optionsProxy(this.options, (path) => {
+        // Pass the path array directly to the API
+        api.invalidateOnOptionChange(path);
+      }),
     );
     if (getFeatureFlag('cachePerformanceImprovements')) {
       const key = hashString(

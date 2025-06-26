@@ -130,12 +130,11 @@ export default class PackagerRunner {
     this.previousInvalidations = previousInvalidations;
     this.invalidations = new Map();
     this.pluginOptions = new PluginOptions(
-      optionsProxy(this.options, (option) => {
-        let invalidation: RequestInvalidation = {
+      optionsProxy(this.options, (path) => {
+        let invalidation = {
           type: 'option',
-          key: option,
+          key: path,
         };
-
         this.invalidations.set(getInvalidationId(invalidation), invalidation);
       }),
     );

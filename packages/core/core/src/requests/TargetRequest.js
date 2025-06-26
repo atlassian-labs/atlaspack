@@ -126,7 +126,10 @@ export function skipTarget(
 async function run({input, api, options}) {
   let targetResolver = new TargetResolver(
     api,
-    optionsProxy(options, api.invalidateOnOptionChange),
+    optionsProxy(options, (path) => {
+      // Pass the path array directly to the API
+      api.invalidateOnOptionChange(path);
+    }),
   );
   let targets: TargetRequestResult = await targetResolver.resolve(
     fromProjectPath(options.projectRoot, input.packagePath),

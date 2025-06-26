@@ -221,7 +221,7 @@ export type EnvInvalidation = {|
 
 export type OptionInvalidation = {|
   type: 'option',
-  key: string,
+  key: string[] | string, // Support both array and dot-string formats for backward compatibility
 |};
 
 export type RequestInvalidation =
@@ -331,6 +331,22 @@ export type AtlaspackOptions = {|
   |},
 
   +featureFlags: FeatureFlags,
+
+  // Configuration for option invalidation
+  optionInvalidation?: {|
+    // Complete list of options to block from invalidation
+    blocklist?: Array<string>,
+    // Options that should be deep-compared instead of just hash-compared
+    deepCompare?: Array<string>,
+    // Maximum number of parent nodes to invalidate per option change
+    maxInvalidationsPerOption?: number,
+    // Batch option invalidations together
+    batchInvalidations?: boolean,
+    // Track and log invalidation metrics
+    trackMetrics?: boolean,
+    // Use granular path-based invalidation
+    useGranularPaths?: boolean,
+  |},
 |};
 export type ParcelOptions = AtlaspackOptions;
 

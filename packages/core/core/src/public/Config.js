@@ -12,6 +12,7 @@ import type {Config, AtlaspackOptions} from '../types';
 
 import invariant from 'assert';
 import path from 'path';
+import logger from '@atlaspack/logger';
 import {
   DefaultWeakMap,
   resolveConfig,
@@ -43,8 +44,10 @@ const internalConfigToConfig: DefaultWeakMap<
  *
  * In case the value is null or an array, we will track the read as well.
  *
- * Iterating over `Object.keys(obj.field)` will register a read for the `['field']` path.
- * Other reads work normally.
+ * NOTE: We intentionally DO NOT track or register Object.keys()/ownKeys operations
+ * because they would create invalidations for the entire object tree rather than
+ * specific properties. This avoids unnecessary cache invalidations when code is simply
+ * enumerating options rather than depending on specific values.
  *
  * @example
  *
@@ -66,17 +69,36 @@ export function makeConfigProxy<T>(
 ): T {
   const reportedPaths = new Set();
   const reportPath = (path) => {
-    if (reportedPaths.has(path)) {
+    // Always do the path check first
+    if (path.length === 0) {
+      const error = new Error('Empty path in makeConfigProxy');
+      logger.verbose({
+        origin: '@atlaspack/core',
+        message: 'Empty path detected in makeConfigProxy',
+        meta: {
+          stack: error.stack,
+          operation: 'reportPath', // Track which operation triggered this
+          trackableEvent: 'empty_path_in_config_proxy',
+        },
+      });
+      // Don't continue with empty paths - don't register them for invalidation
       return;
     }
-    reportedPaths.add(path);
+
+    if (reportedPaths.has(path.join('.'))) {
+      return;
+    }
+
+    reportedPaths.add(path.join('.'));
     onRead(path);
   };
 
   const makeProxy = (target, path) => {
     return new Proxy(target, {
       ownKeys(target) {
-        reportPath(path);
+        // Skip invoking reportPath for ownKeys entirely
+        // This prevents spurious invalidations and excessive logging
+        // from Object.keys() calls
 
         // $FlowFixMe
         return Object.getOwnPropertyNames(target);

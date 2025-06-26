@@ -123,7 +123,8 @@ export default class Transformation {
       optionsProxy(
         this.options,
         (option) => {
-          this.invalidations.invalidateOnOptionChange.add(option);
+          // Convert array paths to dot-notation for compatibility with Set<string>
+          this.invalidations.invalidateOnOptionChange.add(option.join('.'));
         },
         (devDep) => {
           this.pluginDevDeps.push(devDep);
