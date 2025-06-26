@@ -1,5 +1,14 @@
 # @atlaspack/optimizer-inline-requires
 
+## 2.14.13
+
+### Patch Changes
+
+- Updated dependencies [[`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b), [`0501255`](https://github.com/atlassian-labs/atlaspack/commit/05012550da35b05ce7d356a8cc29311e7f9afdca)]:
+  - @atlaspack/feature-flags@2.18.1
+  - @atlaspack/types@2.15.3
+  - @atlaspack/plugin@2.14.13
+
 ## 2.14.12
 
 ### Patch Changes
