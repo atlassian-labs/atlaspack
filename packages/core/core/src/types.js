@@ -221,6 +221,10 @@ export type EnvInvalidation = {|
 
 export type OptionInvalidation = {|
   type: 'option',
+  /**
+   * The option key that changed. Can be either a string in dot notation or an array
+   * of path segments for more granular invalidation.
+   */
   key: string[] | string, // Support both array and dot-string formats for backward compatibility
 |};
 
@@ -344,7 +348,9 @@ export type AtlaspackOptions = {|
     batchInvalidations?: boolean,
     // Track and log invalidation metrics
     trackMetrics?: boolean,
-    // Use granular path-based invalidation
+    // Enable blocklist feature (alternative to using feature flag)
+    useBlocklist?: boolean,
+    // Enable granular path tracking (alternative to using feature flag)
     useGranularPaths?: boolean,
   |},
 |};

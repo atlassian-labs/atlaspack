@@ -145,7 +145,6 @@ type OptionNode = {|
   id: ContentKey,
   +type: typeof OPTION,
   hash: string,
-  originalValue?: mixed, // Store the original value for comparison
 |};
 
 type ConfigKeyNode = {|
@@ -282,6 +281,14 @@ const nodeFromEnv = (env: string, value: string | void): RequestGraphNode => ({
   value,
 });
 
+/**
+ * Creates a node to represent an option and its current value.
+ * Supports both string and array path formats for backwards compatibility.
+ *
+ * @param {string[] | string} option - Option path as an array or dot-notation string
+ * @param {mixed} value - The current value of the option
+ * @returns {RequestGraphNode} The created node
+ */
 const nodeFromOption = (
   option: string[] | string,
   value: mixed,
@@ -292,7 +299,6 @@ const nodeFromOption = (
     id: 'option:' + optionKey,
     type: OPTION,
     hash: hashFromOption(value),
-    originalValue: value, // Store the original value for comparison
   };
 };
 
@@ -516,8 +522,11 @@ export class RequestGraph extends ContentGraph<
   }
 
   /**
-   * Nodes invalidated by option changes.
-   * @returns {Array<{option: string, count: number, ...}>} Array of top invalidating options and their counts
+   * Invalidates nodes that depend on option changes.
+   * This function handles option invalidation with configurable blocklists and granular path tracking.
+   *
+   * @param {AtlaspackOptions} options - The current Atlaspack options object
+   * @returns {Array<{option: string, count: number, ...}>} Array of invalidating options and their counts
    */
   invalidateOptionNodes(
     options: AtlaspackOptions,
@@ -526,15 +535,17 @@ export class RequestGraph extends ContentGraph<
     const invalidationConfig = options.optionInvalidation || {};
     const configuredBlocklist = invalidationConfig.blocklist || [];
 
-    // Define default blocklist for commonly noisy options
-    const defaultBlocklist = ['instanceId', 'env', 'cacheDir', 'config'];
-    const defaultBlocklistPrefixes = ['serveOptions.', 'defaultTargetOptions.']; // 'featureFlags.'
+    // Define a minimal default blocklist for non-impactful options
+    // Only include options that very rarely affect build output
+    const defaultBlocklist = ['instanceId'];
+    const defaultBlocklistPrefixes = [];
 
-    // Feature flags to control invalidation behavior
+    // Feature flags to control invalidation behavior (defaulting to false for backward compatibility)
     const useBlocklist =
-      getFeatureFlag('enableOptionInvalidationBlocklist') !== false;
+      getFeatureFlag('enableOptionInvalidationBlocklist') ||
+      invalidationConfig.useBlocklist === true;
     const useGranularPaths =
-      getFeatureFlag('granularOptionInvalidation') !== false ||
+      getFeatureFlag('granularOptionInvalidation') ||
       invalidationConfig.useGranularPaths === true;
 
     // Track invalidation metrics if enabled
@@ -865,6 +876,14 @@ export class RequestGraph extends ContentGraph<
     }
   }
 
+  /**
+   * Registers that a request depends on a specific option.
+   * When this option changes, the request will be invalidated.
+   *
+   * @param {NodeId} requestNodeId - The ID of the request node
+   * @param {string[] | string} option - The option path as an array or dot-notation string
+   * @param {mixed} value - The current value of the option
+   */
   invalidateOnOptionChange(
     requestNodeId: NodeId,
     option: string[] | string,
@@ -900,7 +919,7 @@ export class RequestGraph extends ContentGraph<
 
   /**
    * Cleans up excess option nodes when they accumulate beyond a threshold.
-   * This helps prevent memory bloat and excessive invalidations.
+   * This helps prevent memory bloat in long-running builds.
    *
    * @param {number} threshold - Maximum number of option nodes to allow before cleanup
    * @returns {number} - Number of nodes removed
@@ -948,14 +967,8 @@ export class RequestGraph extends ContentGraph<
 
     // Get nodes to remove (prioritize least-connected nodes)
     for (let i = 0; i < toRemoveCount && i < optionNodes.length; i++) {
-      const {id, node} = optionNodes[i];
-
-      // Additional safety check for blocklisted options
-      if (node && node.type === OPTION) {
-        // Prioritize removing nodes that have few connections
-        if (optionNodes[i].connectionCount === 0) {
-          nodesToRemove.push(id);
-        }
+      if (optionNodes[i].connectionCount === 0) {
+        nodesToRemove.push(optionNodes[i].id);
       }
     }
 
@@ -1002,7 +1015,11 @@ export class RequestGraph extends ContentGraph<
   }
 
   /**
-   * Gets nodes whose content key starts with the given prefix
+   * Gets nodes whose content key starts with the given prefix.
+   * Useful for finding all nodes of a certain type.
+   *
+   * @param {string} prefix - The prefix to search for
+   * @returns {Array<RequestGraphNode>} Array of matching nodes
    */
   getNodesByPrefix(prefix: string): Array<RequestGraphNode> {
     const results = [];
@@ -1747,6 +1764,12 @@ export default class RequestTracker {
       invalidateOnBuild: () => this.graph.invalidateOnBuild(requestId),
       invalidateOnEnvChange: (env) =>
         this.graph.invalidateOnEnvChange(requestId, env, this.options.env[env]),
+      /**
+       * Register that this request depends on a specific option.
+       * When this option changes, the request will be invalidated.
+       *
+       * @param {string[] | string} option - Option path as array or dot-notation string
+       */
       invalidateOnOptionChange: (option) => {
         // Basic validation to prevent null/empty options
         if (

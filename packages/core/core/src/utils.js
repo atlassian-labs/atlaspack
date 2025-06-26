@@ -19,7 +19,6 @@ import invariant from 'assert';
 import baseX from 'base-x';
 import {hashObject} from '@atlaspack/utils';
 import {hashString} from '@atlaspack/rust';
-import logger from '@atlaspack/logger';
 import {fromProjectPath, toProjectPath} from './projectPath';
 import {makeConfigProxy} from './public/Config';
 
@@ -75,6 +74,19 @@ const ignoreOptions = new Set([
   'additionalReporters',
 ]);
 
+/**
+ * Creates a proxy around AtlaspackOptions to track when options are accessed.
+ * This allows us to know which options are used by a specific request and invalidate
+ * only the necessary work when those options change.
+ *
+ * Uses path arrays (e.g. ['featureFlags', 'granularOptionInvalidation']) for granular
+ * option tracking, allowing for more precise invalidation.
+ *
+ * @param {AtlaspackOptions} options - The options object to proxy
+ * @param {Function} invalidateOnOptionChange - Function called with the path array when an option is accessed
+ * @param {Function} [addDevDependency] - Optional function to track dev dependencies
+ * @returns {AtlaspackOptions} A proxy around the options object
+ */
 export function optionsProxy(
   options: AtlaspackOptions,
   invalidateOnOptionChange: (path: string[]) => void,
@@ -139,6 +151,13 @@ function proxyPackageManager(
   });
 }
 
+/**
+ * Creates a hash value for an option to detect changes between builds.
+ * Optimized to handle common types of options efficiently.
+ *
+ * @param {mixed} value - The option value to hash
+ * @returns {string} A string hash representing the value
+ */
 export function hashFromOption(value: mixed): string {
   if (value == null) {
     return String(value);
@@ -157,22 +176,7 @@ export function hashFromOption(value: mixed): string {
       }
     }
 
-    // For objects with conditionalBundlingApi, use a simplified hash
-    if (
-      typeof value === 'object' &&
-      value !== null &&
-      'conditionalBundlingApi' in value
-    ) {
-      const api = value.conditionalBundlingApi;
-      // Create a simplified representation with just the essential properties
-      return hashString(
-        `conditionalBundlingApi:${api != null ? 'true' : 'false'}:${
-          api != null && typeof api === 'object' ? Object.keys(api).length : 0
-        }`,
-      );
-    }
-
-    // For other objects, use regular object hashing
+    // For all objects, use regular object hashing
     return hashObject(value);
   }
 
@@ -254,87 +258,4 @@ export function toInternalSymbols<T: {|loc: ?SourceLocation|}>(
       },
     ]),
   );
-}
-
-/**
- * Throttling mechanism to prevent excessive resource consumption
- * during option invalidation.
- */
-export class ResourceThrottler {
-  static instance: ?ResourceThrottler;
-  lastCleanupTime: number = 0;
-  processingCount: number = 0;
-  maxConcurrent: number = 10;
-  cleanupInterval: number = 30000; // 30 seconds
-
-  static getInstance(): ResourceThrottler {
-    if (!ResourceThrottler.instance) {
-      ResourceThrottler.instance = new ResourceThrottler();
-    }
-    return ResourceThrottler.instance;
-  }
-
-  /**
-   * Check if we should throttle processing to avoid resource exhaustion
-   */
-  shouldThrottle(): boolean {
-    const now = Date.now();
-
-    // If we're over the concurrent limit
-    if (this.processingCount >= this.maxConcurrent) {
-      return true;
-    }
-
-    // Periodically reset the counter to recover from leaks
-    if (now - this.lastCleanupTime > this.cleanupInterval) {
-      this.processingCount = 0;
-      this.lastCleanupTime = now;
-    }
-
-    return false;
-  }
-
-  /**
-   * Increment the processing counter
-   */
-  startProcessing(): void {
-    this.processingCount++;
-  }
-
-  /**
-   * Decrement the processing counter
-   */
-  endProcessing(): void {
-    this.processingCount = Math.max(0, this.processingCount - 1);
-  }
-
-  /**
-   * Run an operation with throttling
-   * @param {Function} operation - The operation to run
-   * @returns {Promise<T>} - The result of the operation
-   */
-  async runWithThrottling<T>(operation: () => Promise<T>): Promise<T> {
-    if (this.shouldThrottle()) {
-      logger.verbose({
-        origin: '@atlaspack/core',
-        message: 'Throttling operation due to resource constraints',
-        meta: {
-          processingCount: this.processingCount,
-          maxConcurrent: this.maxConcurrent,
-          trackableEvent: 'resource_throttling',
-        },
-      });
-
-      // Wait a bit before trying again
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      return this.runWithThrottling(operation);
-    }
-
-    this.startProcessing();
-    try {
-      return await operation();
-    } finally {
-      this.endProcessing();
-    }
-  }
 }

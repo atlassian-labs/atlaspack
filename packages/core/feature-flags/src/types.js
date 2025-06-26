@@ -104,12 +104,20 @@ export type FeatureFlags = {|
   condbHtmlPackagerChange: boolean,
   /**
    * Enables option invalidation blocklist to reduce unnecessary cache invalidations.
-   * When enabled, certain options like instanceId, featureFlags, etc. won't trigger
-   * invalidations. Can be set to false to restore the original behavior.
+   * When enabled, certain options that don't affect build output (like instanceId)
+   * won't trigger invalidations. Can be explicitly disabled by setting to false.
+   *
+   * This can be configured per-project via options.optionInvalidation.useBlocklist.
    */
   enableOptionInvalidationBlocklist: boolean,
 
-  // Enable granular path-based invalidation of options
+  /**
+   * Enable path-based granular invalidation of options.
+   * This provides more detailed tracking of which specific option properties
+   * are being accessed, which can reduce unnecessary cache invalidations.
+   *
+   * This can be configured per-project via options.optionInvalidation.useGranularPaths.
+   */
   granularOptionInvalidation: boolean,
 |};
 

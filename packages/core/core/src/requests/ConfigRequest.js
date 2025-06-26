@@ -110,6 +110,7 @@ export async function loadPluginConfig<T: PluginWithLoadConfig>(
 
 /**
  * Return value at a given key path within an object.
+ * Used for accessing nested options in a granular way for option invalidation.
  *
  * @example
  *     const obj = { a: { b: { c: 'd' } } };
