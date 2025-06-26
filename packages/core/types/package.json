@@ -2,7 +2,7 @@
   "name": "@atlaspack/types",
   "version": "2.15.3",
   "license": "(MIT OR Apache-2.0)",
-  "main": "src/index.js",
+  "main": "src/index.ts",
   "types": "lib/index.d.ts",
   "repository": {
     "type": "git",

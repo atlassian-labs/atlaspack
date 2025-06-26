@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/cli.js",
-  "source": "src/cli.js",
+  "source": "src/cli.ts",
   "bin": {
     "atlaspack-bundle-stats": "bin/bundle-stats.js"
   },

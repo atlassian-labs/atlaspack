@@ -11,7 +11,7 @@
   },
   "main": "lib/index.js",
   "types": "index.d.ts",
-  "source": "src/index.js",
+  "source": "src/index.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

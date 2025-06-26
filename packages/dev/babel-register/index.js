@@ -20,7 +20,7 @@ require('@babel/register')({
   only: [path.join(__dirname, '../../..')],
   presets: [parcelBabelPreset],
   plugins: [require('./babel-plugin-module-translate')],
-  extensions: ['.js', '.jsx'],
+  extensions: ['.js', '.jsx', '.ts'],
 });
 
 // This adds the registration to the Node args, which are passed
