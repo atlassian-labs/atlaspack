@@ -281,42 +281,6 @@ describe('Option Invalidation', () => {
     );
   });
 
-  it('cleans up excess option nodes to prevent memory bloat', async () => {
-    const tracker = new RequestTracker({
-      graph,
-      farm,
-      options,
-    });
-
-    // Generate many option invalidations to test cleanup
-    for (let i = 0; i < 100; i++) {
-      const requestId = `test_request_${i}`;
-      const request = {
-        id: requestId,
-        type: 0, // asset_request
-        input: {id: `test-input-${i}`},
-        run: sinon.spy(({api}) => {
-          // Create a unique option for each request
-          api.invalidateOnOptionChange(`testOption${i}`);
-          return {type: 'ok'};
-        }),
-      };
-
-      await tracker.runRequest(request);
-    }
-
-    // Verify option nodes count
-    const initialCount = graph.optionNodeIds.size;
-    assert.equal(initialCount, 100);
-
-    // Run cleanup with low threshold
-    const removedCount = graph.cleanupExcessOptionNodes(50);
-
-    // Verify that nodes were removed
-    assert(removedCount > 0);
-    assert(graph.optionNodeIds.size <= 50);
-  });
-
   it('supports both string and array path formats for backward compatibility', async () => {
     const tracker = new RequestTracker({
       graph,

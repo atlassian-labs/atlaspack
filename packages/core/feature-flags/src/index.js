@@ -40,6 +40,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   condbHtmlPackagerChange: false,
   enableOptionInvalidationBlocklist: false,
   granularOptionInvalidation: false,
+  skipEnumerationTracking: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

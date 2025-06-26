@@ -44,10 +44,10 @@ const internalConfigToConfig: DefaultWeakMap<
  *
  * In case the value is null or an array, we will track the read as well.
  *
- * NOTE: We intentionally DO NOT track or register Object.keys()/ownKeys operations
- * because they would create invalidations for the entire object tree rather than
- * specific properties. This avoids unnecessary cache invalidations when code is simply
- * enumerating options rather than depending on specific values.
+ * NOTE: By default, we DO track Object.keys()/ownKeys operations for backward compatibility,
+ * but this can be disabled with the 'skipEnumerationTracking' feature flag. When disabled,
+ * property enumeration won't trigger cache invalidation, which prevents unnecessary invalidations
+ * when code is just enumerating options rather than depending on specific values.
  *
  * @example
  *
@@ -96,9 +96,20 @@ export function makeConfigProxy<T>(
   const makeProxy = (target, path) => {
     return new Proxy(target, {
       ownKeys(target) {
-        // Skip invoking reportPath for ownKeys entirely
-        // This prevents spurious invalidations and excessive logging
-        // from Object.keys() calls
+        // Check if we should track object enumeration operations
+        // This is controlled by a feature flag - the previous behavior was to track these
+        // but it can cause over-invalidation
+        const skipEnumerationTracking = getFeatureFlag(
+          'skipEnumerationTracking',
+        );
+
+        if (!skipEnumerationTracking) {
+          // Legacy behavior: Track object enumeration
+          // (Object.keys, for...in loops, etc.)
+          reportPath(path);
+        }
+        // Otherwise, skip invoking reportPath for ownKeys
+        // This prevents spurious invalidations from Object.keys() calls
 
         // $FlowFixMe
         return Object.getOwnPropertyNames(target);

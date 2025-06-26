@@ -119,6 +119,15 @@ export type FeatureFlags = {|
    * This can be configured per-project via options.optionInvalidation.useGranularPaths.
    */
   granularOptionInvalidation: boolean,
+
+  /**
+   * Skip tracking of Object.keys() and similar operations on config/options objects.
+   * When enabled, property enumeration won't trigger cache invalidation.
+   *
+   * WARNING: This is a breaking change from the previous behavior where enumeration
+   * would register dependencies and potentially trigger invalidation.
+   */
+  skipEnumerationTracking: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;

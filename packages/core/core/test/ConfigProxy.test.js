@@ -3,6 +3,7 @@
 import sinon from 'sinon';
 import {makeConfigProxy} from '../src/public/Config';
 import assert from 'assert';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 describe('makeConfigProxy with path tracking improvements', () => {
   it('tracks reads to nested fields with path arrays', () => {
@@ -14,7 +15,7 @@ describe('makeConfigProxy with path tracking improvements', () => {
     assert.ok(onRead.calledOnce);
   });
 
-  it('avoids tracking Object.keys() operations', () => {
+  it('handles Object.keys() operations based on the skipEnumerationTracking feature flag', () => {
     const onRead = sinon.spy();
     const target = {
       options: {
@@ -30,14 +31,26 @@ describe('makeConfigProxy with path tracking improvements', () => {
 
     const config = makeConfigProxy(onRead, target);
 
-    // This should not trigger a read on 'options.featureFlags'
+    // Object.keys() on a proxy object
     const keys = Object.keys(config.options.featureFlags);
     assert.deepEqual(keys, ['flag1', 'flag2']);
 
-    // Verify we didn't track the Object.keys() operation
-    assert.equal(onRead.callCount, 0);
+    // The default behavior is to track enumeration operations (for backward compatibility)
+    // So the call count should be 1 unless skipEnumerationTracking is enabled
+    const skipEnumerationEnabled = getFeatureFlag('skipEnumerationTracking');
+    const expectedCallCount = skipEnumerationEnabled ? 0 : 1;
+    assert.equal(
+      onRead.callCount,
+      expectedCallCount,
+      `Expected ${expectedCallCount} calls with skipEnumerationTracking=${String(
+        skipEnumerationEnabled,
+      )}`,
+    );
 
-    // But reading a specific property should still be tracked
+    // Reset the spy
+    onRead.resetHistory();
+
+    // Reading a specific property should still be tracked
     assert.equal(config.options.featureFlags.flag1, true);
     assert.ok(onRead.calledWith(['options', 'featureFlags', 'flag1']));
     assert.equal(onRead.callCount, 1);
