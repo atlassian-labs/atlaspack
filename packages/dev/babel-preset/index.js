@@ -2,7 +2,10 @@ module.exports = (api) => {
   let name = api.caller((caller) => caller && caller.name);
   if (name === 'parcel') {
     return {
-      presets: [require('@babel/preset-flow')],
+      presets: [
+        require('@babel/preset-flow'),
+        require('@babel/preset-typescript'),
+      ],
       plugins: [
         // Inline the value of ATLASPACK_BUILD_ENV during self builds.
         // Parcel does not do this itself for node targets...
@@ -26,6 +29,7 @@ module.exports = (api) => {
           },
         },
       ],
+      require('@babel/preset-typescript'),
       require('@babel/preset-react'),
       require('@babel/preset-flow'),
     ],

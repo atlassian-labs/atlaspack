@@ -23,12 +23,6 @@ require('@babel/register')({
   extensions: ['.js', '.jsx'],
 });
 
-// This only support transpiling TypeScript to CJS
-// eslint-disable-next-line import/no-extraneous-dependencies
-require('esbuild-register/dist/node').register({
-  extensions: ['.ts'],
-});
-
 // This adds the registration to the Node args, which are passed
 // to child processes by Node when we fork to create workers.
 process.execArgv.push('-r', __filename);
