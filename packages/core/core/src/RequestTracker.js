@@ -1235,6 +1235,9 @@ export default class RequestTracker {
 
   // TODO: refactor (abortcontroller should be created by RequestTracker)
   setSignal(signal?: AbortSignal) {
+    if (getFeatureFlag('fixBuildAbortCorruption')) {
+      return;
+    }
     this.signal = signal;
   }
 
@@ -1418,7 +1421,10 @@ export default class RequestTracker {
         rustAtlaspack: this.rustAtlaspack,
       });
 
-      assertSignalNotAborted(this.signal);
+      if (!getFeatureFlag('fixBuildAbortCorruption')) {
+        assertSignalNotAborted(this.signal);
+      }
+
       this.completeRequest(requestNodeId);
 
       deferred.resolve(true);
@@ -1587,7 +1593,7 @@ export default class RequestTracker {
         // $FlowFixMe serialise input is any type
         contents: any,
       ): Promise<void> => {
-        if (signal?.aborted) {
+        if (signal?.aborted && !getFeatureFlag('fixBuildAbortCorruption')) {
           throw new Error('Serialization was aborted');
         }
 
@@ -1605,7 +1611,7 @@ export default class RequestTracker {
             await this.options.cache.setLargeBlob(
               key,
               serialize(contents),
-              signal
+              !getFeatureFlag('fixBuildAbortCorruption') && signal
                 ? {
                     signal: signal,
                   }
@@ -1713,6 +1719,10 @@ export default class RequestTracker {
         opts,
       );
     } catch (err) {
+      if (getFeatureFlag('fixBuildAbortCorruption')) {
+        throw err;
+      }
+
       // If we have aborted, ignore the error and continue
       if (!signal?.aborted) throw err;
     } finally {
