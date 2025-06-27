@@ -12,9 +12,14 @@ type FixtureToken = {
 type Fixture = FixtureRoot | FixtureChild;
 type FixtureChild = FixtureDir | FixtureFile | FixtureLink;
 
-export function fsFixture(fs: FileSystem, cwd: string = fs.cwd()): (
+export function fsFixture(
+  fs: FileSystem,
+  cwd: string = fs.cwd(),
+): (
   strings: Array<string>,
-  ...exprs: Array<null | string | number | boolean | Record<any, any> | ReadonlyArray<unknown>>
+  ...exprs: Array<
+    null | string | number | boolean | Record<any, any> | ReadonlyArray<unknown>
+  >
 ) => Promise<void> {
   return async function apply(strings: Array<string>, ...exprs) {
     let src = dedentRaw(strings, ...exprs);
@@ -24,13 +29,11 @@ export function fsFixture(fs: FileSystem, cwd: string = fs.cwd()): (
   };
 }
 
-declare function toFixture: (fs: FileSystem, dir?: string) => Promise<FixtureRoot | FixtureDir>;
-
-// eslint-disable-next-line no-redeclare
-declare function toFixture: (fs: FileSystem, dir: string, includeDir?: boolean) => Promise<FixtureRoot | FixtureDir>;
-
-// eslint-disable-next-line no-redeclare
-declare function toFixture: <T>(fs: FileSystem, dir: string, parent: T) => Promise<T>;
+// declare function toFixture: (fs: FileSystem, dir?: string) => Promise<FixtureRoot | FixtureDir>;
+// // eslint-disable-next-line no-redeclare
+// declare function toFixture: (fs: FileSystem, dir: string, includeDir?: boolean) => Promise<FixtureRoot | FixtureDir>;
+// // eslint-disable-next-line no-redeclare
+// declare function toFixture: <T>(fs: FileSystem, dir: string, parent: T) => Promise<T>;
 
 const DISALLOWED_FILETYPES = new Set([
   '.crt',
@@ -100,7 +103,11 @@ export async function toFixture(
   return fixture;
 }
 
-export async function applyFixture(fs: FileSystem, node: Fixture, dir: string): Promise<void> {
+export async function applyFixture(
+  fs: FileSystem,
+  node: Fixture,
+  dir: string,
+): Promise<void> {
   switch (node.type) {
     case 'root': {
       for (let child of node.children) {
@@ -237,7 +244,8 @@ export class FixtureParser {
   #cwd: FixtureRoot | FixtureDir;
   #dirStack: Array<FixtureRoot | FixtureDir>;
 
-  #peek = (type: string) => this.#tokens[this.#tokens.length - 1]?.type === type;
+  #peek = (type: string) =>
+    this.#tokens[this.#tokens.length - 1]?.type === type;
 
   #consume = (type: string) => {
     let token = this.#tokens.pop();
@@ -393,7 +401,9 @@ export function escapeFixtureContent(content: string): string {
 
 export function dedentRaw(
   strings: Array<string>,
-  ...exprs: Array<null | string | number | boolean | Record<any, any> | ReadonlyArray<unknown>>
+  ...exprs: Array<
+    null | string | number | boolean | Record<any, any> | ReadonlyArray<unknown>
+  >
 ): string {
   let src = '';
   for (let i = 0; i < strings.length; i++) {
