@@ -15,7 +15,7 @@ describe('makeConfigProxy with path tracking improvements', () => {
     assert.ok(onRead.calledOnce);
   });
 
-  it('handles Object.keys() operations based on the skipEnumerationTracking feature flag', () => {
+  it('handles Object.keys() operations based on the granularOptionInvalidation feature flag', () => {
     const onRead = sinon.spy();
     const target = {
       options: {
@@ -36,14 +36,16 @@ describe('makeConfigProxy with path tracking improvements', () => {
     assert.deepEqual(keys, ['flag1', 'flag2']);
 
     // The default behavior is to track enumeration operations (for backward compatibility)
-    // So the call count should be 1 unless skipEnumerationTracking is enabled
-    const skipEnumerationEnabled = getFeatureFlag('skipEnumerationTracking');
-    const expectedCallCount = skipEnumerationEnabled ? 0 : 1;
+    // So the call count should be 1 unless granularOptionInvalidation is enabled
+    const granularOptionInvalidationEnabled = getFeatureFlag(
+      'granularOptionInvalidation',
+    );
+    const expectedCallCount = granularOptionInvalidationEnabled ? 0 : 1;
     assert.equal(
       onRead.callCount,
       expectedCallCount,
-      `Expected ${expectedCallCount} calls with skipEnumerationTracking=${String(
-        skipEnumerationEnabled,
+      `Expected ${expectedCallCount} calls with granularOptionInvalidation=${String(
+        granularOptionInvalidationEnabled,
       )}`,
     );
 

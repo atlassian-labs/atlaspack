@@ -45,7 +45,7 @@ const internalConfigToConfig: DefaultWeakMap<
  * In case the value is null or an array, we will track the read as well.
  *
  * NOTE: By default, we DO track Object.keys()/ownKeys operations for backward compatibility,
- * but this can be disabled with the 'skipEnumerationTracking' feature flag. When disabled,
+ * but this can be disabled with the 'granularOptionInvalidation' feature flag. When disabled,
  * property enumeration won't trigger cache invalidation, which prevents unnecessary invalidations
  * when code is just enumerating options rather than depending on specific values.
  *
@@ -99,11 +99,11 @@ export function makeConfigProxy<T>(
         // Check if we should track object enumeration operations
         // This is controlled by a feature flag - the previous behavior was to track these
         // but it can cause over-invalidation
-        const skipEnumerationTracking = getFeatureFlag(
-          'skipEnumerationTracking',
+        const granularOptionInvalidationEnabled = getFeatureFlag(
+          'granularOptionInvalidation',
         );
 
-        if (!skipEnumerationTracking) {
+        if (!granularOptionInvalidationEnabled) {
           // Legacy behavior: Track object enumeration
           // (Object.keys, for...in loops, etc.)
           reportPath(path);

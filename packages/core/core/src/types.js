@@ -348,10 +348,6 @@ export type AtlaspackOptions = {|
     batchInvalidations?: boolean,
     // Track and log invalidation metrics
     trackMetrics?: boolean,
-    // Enable blocklist feature (alternative to using feature flag)
-    useBlocklist?: boolean,
-    // Enable granular path tracking (alternative to using feature flag)
-    useGranularPaths?: boolean,
   |},
 |};
 export type ParcelOptions = AtlaspackOptions;

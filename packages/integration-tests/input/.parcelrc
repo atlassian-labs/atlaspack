@@ -1,1 +1,1 @@
-{"extends":"@atlaspack/config-default"}
+{"extends":"@parcel/config-default","transformers":{"*.js":["@parcel/transformer-js"]}}

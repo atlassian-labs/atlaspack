@@ -102,32 +102,18 @@ export type FeatureFlags = {|
    * Enable a change to the html packager to load more bundles when conditional bundling fallback mode is enabled
    */
   condbHtmlPackagerChange: boolean,
-  /**
-   * Enables option invalidation blocklist to reduce unnecessary cache invalidations.
-   * When enabled, certain options that don't affect build output (like instanceId)
-   * won't trigger invalidations. Can be explicitly disabled by setting to false.
-   *
-   * This can be configured per-project via options.optionInvalidation.useBlocklist.
-   */
-  enableOptionInvalidationBlocklist: boolean,
 
   /**
    * Enable path-based granular invalidation of options.
    * This provides more detailed tracking of which specific option properties
    * are being accessed, which can reduce unnecessary cache invalidations.
    *
-   * This can be configured per-project via options.optionInvalidation.useGranularPaths.
+   * When enabled, this flag:
+   * - Tracks nested object paths granularly for more precise invalidations
+   * - Skips tracking of Object.keys() and similar operations on config/options objects
+   * - Enables option invalidation blocklist to reduce unnecessary cache invalidations
    */
   granularOptionInvalidation: boolean,
-
-  /**
-   * Skip tracking of Object.keys() and similar operations on config/options objects.
-   * When enabled, property enumeration won't trigger cache invalidation.
-   *
-   * WARNING: This is a breaking change from the previous behavior where enumeration
-   * would register dependencies and potentially trigger invalidation.
-   */
-  skipEnumerationTracking: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;

@@ -532,10 +532,11 @@ export class RequestGraph extends ContentGraph<
     options: AtlaspackOptions,
   ): Array<{option: string, count: number, ...}> | string[] {
     // Check if we should use the new granular option invalidation
-    const useGranularTracking = getFeatureFlag('granularOptionInvalidation');
-    const useBlocklist = getFeatureFlag('enableOptionInvalidationBlocklist');
+    const granularOptionInvalidationEnabled = getFeatureFlag(
+      'granularOptionInvalidation',
+    );
 
-    if (!useGranularTracking) {
+    if (!granularOptionInvalidationEnabled) {
       // Original behavior for backward compatibility
       const invalidatedKeys: string[] = [];
 
@@ -583,7 +584,7 @@ export class RequestGraph extends ContentGraph<
 
       // Check if this option should be skipped from invalidation
       const shouldSkip =
-        useBlocklist &&
+        granularOptionInvalidationEnabled &&
         (defaultBlocklist.includes(optionKey) ||
           configuredBlocklist.includes(optionKey) ||
           defaultBlocklistPrefixes.some((prefix) =>
@@ -621,7 +622,7 @@ export class RequestGraph extends ContentGraph<
         );
 
         // If granular paths are enabled, log more detailed information about which options changed
-        if (useGranularTracking) {
+        if (granularOptionInvalidationEnabled) {
           logger.verbose({
             origin: '@atlaspack/core',
             message: `Option change detected: ${optionKey}`,

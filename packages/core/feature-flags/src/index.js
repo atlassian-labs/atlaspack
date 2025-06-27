@@ -38,9 +38,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   resolveBundlerConfigFromCwd: false,
   conditionalBundlingReporterSameConditionFix: false,
   condbHtmlPackagerChange: false,
-  enableOptionInvalidationBlocklist: false,
-  granularOptionInvalidation: false,
-  skipEnumerationTracking: false,
+  granularOptionInvalidation: false, // Controls all option invalidation features
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

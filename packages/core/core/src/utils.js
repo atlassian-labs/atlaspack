@@ -101,9 +101,11 @@ export function optionsProxy(
       )
     : options.packageManager;
 
-  const useGranularTracking = getFeatureFlag('granularOptionInvalidation');
+  const granularOptionInvalidationEnabled = getFeatureFlag(
+    'granularOptionInvalidation',
+  );
 
-  if (useGranularTracking) {
+  if (granularOptionInvalidationEnabled) {
     // New behavior with granular path tracking
     // Create options object without packageManager to avoid proxying it
     // eslint-disable-next-line no-unused-vars
@@ -117,7 +119,8 @@ export function optionsProxy(
       const [prop] = path;
 
       if (!ignoreOptions.has(prop)) {
-        // Always pass the full path array - this enables granular path tracking
+        // Important: Always pass the full path array for granular path tracking
+        // This ensures we're passing an array to invalidateOnOptionChange, not a string
         invalidateOnOptionChange(path);
       }
     }, optionsWithoutPackageManager);

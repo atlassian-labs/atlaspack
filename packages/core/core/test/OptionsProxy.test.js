@@ -43,7 +43,6 @@ describe('optionsProxy with path tracking', () => {
     const options = {
       mode: 'development',
       featureFlags: {
-        enableOptionInvalidationBlocklist: false,
         granularOptionInvalidation: true,
       },
       defaultTargetOptions: {
