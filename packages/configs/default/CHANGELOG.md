@@ -1,5 +1,41 @@
 # @atlaspack/config-default
 
+## 3.1.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/bundler-default@3.0.5
+  - @atlaspack/packager-html@2.14.14
+  - @atlaspack/packager-js@2.16.1
+  - @atlaspack/runtime-js@2.14.14
+  - @atlaspack/runtime-react-refresh@2.14.14
+  - @atlaspack/transformer-js@3.3.4
+  - @atlaspack/transformer-react-refresh-wrap@2.14.14
+  - @atlaspack/transformer-html@2.14.14
+  - @atlaspack/optimizer-css@2.14.14
+  - @atlaspack/optimizer-image@3.1.14
+  - @atlaspack/optimizer-svgo@2.14.14
+  - @atlaspack/optimizer-swc@2.14.14
+  - @atlaspack/packager-css@2.14.14
+  - @atlaspack/packager-svg@2.14.14
+  - @atlaspack/reporter-dev-server@2.14.14
+  - @atlaspack/runtime-browser-hmr@2.14.14
+  - @atlaspack/runtime-service-worker@2.14.14
+  - @atlaspack/transformer-css@2.14.14
+  - @atlaspack/transformer-image@3.1.14
+  - @atlaspack/transformer-postcss@2.14.14
+  - @atlaspack/transformer-posthtml@2.14.14
+  - @atlaspack/resolver-default@2.14.14
+  - @atlaspack/compressor-raw@2.13.16
+  - @atlaspack/namer-default@2.14.14
+  - @atlaspack/optimizer-htmlnano@2.14.14
+  - @atlaspack/packager-raw@2.14.14
+  - @atlaspack/packager-wasm@2.14.14
+  - @atlaspack/transformer-json@2.14.14
+  - @atlaspack/transformer-raw@2.14.14
+  - @atlaspack/transformer-svg@2.14.14
+
 ## 3.1.15
 
 ### Patch Changes
