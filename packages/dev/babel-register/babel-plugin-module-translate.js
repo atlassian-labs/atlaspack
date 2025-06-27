@@ -33,6 +33,7 @@ function getSourceField(specifier, from) {
 module.exports = ({types: t}) => ({
   name: 'module-translate',
   visitor: {
+    Program() {},
     ImportDeclaration({node}, state) {
       let source = node.source;
       if (
