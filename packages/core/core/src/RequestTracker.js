@@ -526,11 +526,40 @@ export class RequestGraph extends ContentGraph<
    * This function handles option invalidation with configurable blocklists and granular path tracking.
    *
    * @param {AtlaspackOptions} options - The current Atlaspack options object
-   * @returns {Array<{option: string, count: number, ...}>} Array of invalidating options and their counts
+   * @returns {Array<{option: string, count: number, ...}> | string[]} Array of invalidating options with counts or just option keys
    */
   invalidateOptionNodes(
     options: AtlaspackOptions,
-  ): Array<{option: string, count: number, ...}> {
+  ): Array<{option: string, count: number, ...}> | string[] {
+    // Check if we should use the new granular option invalidation
+    const useGranularTracking = getFeatureFlag('granularOptionInvalidation');
+    const useBlocklist = getFeatureFlag('enableOptionInvalidationBlocklist');
+
+    if (!useGranularTracking) {
+      // Original behavior for backward compatibility
+      const invalidatedKeys: string[] = [];
+
+      for (let nodeId of this.optionNodeIds) {
+        let node = nullthrows(this.getNode(nodeId));
+        invariant(node.type === OPTION);
+        const key = keyFromOptionContentKey(node.id);
+
+        if (hashFromOption(options[key]) !== node.hash) {
+          invalidatedKeys.push(key);
+          let parentNodes = this.getNodeIdsConnectedTo(
+            nodeId,
+            requestGraphEdgeTypes.invalidated_by_update,
+          );
+          for (let parentNode of parentNodes) {
+            this.invalidateNode(parentNode, OPTION_CHANGE);
+          }
+        }
+      }
+
+      return invalidatedKeys;
+    }
+
+    // New behavior with granular path tracking and blocklist
     // Get invalidation configuration
     const invalidationConfig = options.optionInvalidation || {};
     const configuredBlocklist = invalidationConfig.blocklist || [];
@@ -539,14 +568,6 @@ export class RequestGraph extends ContentGraph<
     // Only include options that very rarely affect build output
     const defaultBlocklist = ['instanceId'];
     const defaultBlocklistPrefixes = [];
-
-    // Feature flags to control invalidation behavior (defaulting to false for backward compatibility)
-    const useBlocklist =
-      getFeatureFlag('enableOptionInvalidationBlocklist') ||
-      invalidationConfig.useBlocklist === true;
-    const useGranularPaths =
-      getFeatureFlag('granularOptionInvalidation') ||
-      invalidationConfig.useGranularPaths === true;
 
     // Track invalidation metrics if enabled
     const trackInvalidationMetrics = !!invalidationConfig.trackMetrics;
@@ -600,7 +621,7 @@ export class RequestGraph extends ContentGraph<
         );
 
         // If granular paths are enabled, log more detailed information about which options changed
-        if (useGranularPaths) {
+        if (useGranularTracking) {
           logger.verbose({
             origin: '@atlaspack/core',
             message: `Option change detected: ${optionKey}`,
@@ -889,31 +910,57 @@ export class RequestGraph extends ContentGraph<
     option: string[] | string,
     value: mixed,
   ) {
-    // Normalize to array form for consistency
-    const optionPath = Array.isArray(option) ? option : option.split('.');
+    const useGranularTracking = getFeatureFlag('granularOptionInvalidation');
 
-    // Simple validation to prevent empty keys
-    if (optionPath.length === 0) {
-      return;
-    }
+    if (useGranularTracking) {
+      // New behavior with granular path tracking
+      // Normalize to array form for consistency
+      const optionPath = Array.isArray(option) ? option : option.split('.');
 
-    // For backward compatibility and node lookup, we still need the dot-string form
-    const optionKey = optionPath.join('.');
+      // Simple validation to prevent empty keys
+      if (optionPath.length === 0) {
+        return;
+      }
 
-    let optionNodeId = this.addNode(nodeFromOption(optionKey, value));
+      // For backward compatibility and node lookup, we still need the dot-string form
+      const optionKey = optionPath.join('.');
 
-    if (
-      !this.hasEdge(
-        requestNodeId,
-        optionNodeId,
-        requestGraphEdgeTypes.invalidated_by_update,
-      )
-    ) {
-      this.addEdge(
-        requestNodeId,
-        optionNodeId,
-        requestGraphEdgeTypes.invalidated_by_update,
-      );
+      let optionNodeId = this.addNode(nodeFromOption(optionKey, value));
+
+      if (
+        !this.hasEdge(
+          requestNodeId,
+          optionNodeId,
+          requestGraphEdgeTypes.invalidated_by_update,
+        )
+      ) {
+        this.addEdge(
+          requestNodeId,
+          optionNodeId,
+          requestGraphEdgeTypes.invalidated_by_update,
+        );
+      }
+    } else {
+      // Original behavior for backward compatibility
+      // Ensure option is a string for backward compatibility
+      const optionKey = Array.isArray(option) ? option.join('.') : option;
+
+      let optionNode = nodeFromOption(optionKey, value);
+      let optionNodeId = this.addNode(optionNode);
+
+      if (
+        !this.hasEdge(
+          requestNodeId,
+          optionNodeId,
+          requestGraphEdgeTypes.invalidated_by_update,
+        )
+      ) {
+        this.addEdge(
+          requestNodeId,
+          optionNodeId,
+          requestGraphEdgeTypes.invalidated_by_update,
+        );
+      }
     }
   }
 
@@ -1683,14 +1730,32 @@ export default class RequestTracker {
           return;
         }
 
-        // Normalize to array form for consistent handling
-        const optionPath = Array.isArray(option) ? option : option.split('.');
-
-        this.graph.invalidateOnOptionChange(
-          requestId,
-          optionPath,
-          getValueAtPath(this.options, optionPath),
+        const useGranularTracking = getFeatureFlag(
+          'granularOptionInvalidation',
         );
+
+        if (useGranularTracking) {
+          // New behavior with granular path tracking
+          // Normalize to array form for consistent handling
+          const optionPath = Array.isArray(option) ? option : option.split('.');
+
+          this.graph.invalidateOnOptionChange(
+            requestId,
+            optionPath,
+            getValueAtPath(this.options, optionPath),
+          );
+        } else {
+          // Original behavior for backward compatibility
+          // When not using granular tracking, option should always be a string
+          // but we'll handle array format too for robustness
+          const optionKey = Array.isArray(option) ? option.join('.') : option;
+
+          this.graph.invalidateOnOptionChange(
+            requestId,
+            optionKey,
+            this.options[optionKey], // Original behavior only supported top-level options
+          );
+        }
       },
       getInvalidations: () => previousInvalidations,
       storeResult: (result, cacheKey) => {

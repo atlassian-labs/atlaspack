@@ -21,6 +21,7 @@ import {hashObject} from '@atlaspack/utils';
 import {hashString} from '@atlaspack/rust';
 import {fromProjectPath, toProjectPath} from './projectPath';
 import {makeConfigProxy} from './public/Config';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 const base62 = baseX(
   '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -79,8 +80,8 @@ const ignoreOptions = new Set([
  * This allows us to know which options are used by a specific request and invalidate
  * only the necessary work when those options change.
  *
- * Uses path arrays (e.g. ['featureFlags', 'granularOptionInvalidation']) for granular
- * option tracking, allowing for more precise invalidation.
+ * When granularOptionInvalidation is enabled, uses path arrays (e.g. ['featureFlags', 'granularOptionInvalidation'])
+ * for more precise invalidation. Otherwise, falls back to original string-based option tracking.
  *
  * @param {AtlaspackOptions} options - The options object to proxy
  * @param {Function} invalidateOnOptionChange - Function called with the path array when an option is accessed
@@ -89,7 +90,7 @@ const ignoreOptions = new Set([
  */
 export function optionsProxy(
   options: AtlaspackOptions,
-  invalidateOnOptionChange: (path: string[]) => void,
+  invalidateOnOptionChange: (path: string[] | string) => void,
   addDevDependency?: (devDep: InternalDevDepOptions) => void,
 ): AtlaspackOptions {
   let packageManager = addDevDependency
@@ -100,29 +101,49 @@ export function optionsProxy(
       )
     : options.packageManager;
 
-  // Create options object without packageManager to avoid proxying it
-  // eslint-disable-next-line no-unused-vars
-  const {packageManager: _packageManager, ...optionsWithoutPackageManager} =
-    options;
+  const useGranularTracking = getFeatureFlag('granularOptionInvalidation');
 
-  // Use makeConfigProxy from Config.js which is designed to track property reads
-  // and provide the accessed property paths as arrays
-  const proxiedOptions = makeConfigProxy((path) => {
-    // Ignore specified options
+  if (useGranularTracking) {
+    // New behavior with granular path tracking
+    // Create options object without packageManager to avoid proxying it
+    // eslint-disable-next-line no-unused-vars
+    const {packageManager: _packageManager, ...optionsWithoutPackageManager} =
+      options;
 
-    const [prop] = path;
+    // Use makeConfigProxy from Config.js which is designed to track property reads
+    // and provide the accessed property paths as arrays
+    const proxiedOptions = makeConfigProxy((path) => {
+      // Ignore specified options
+      const [prop] = path;
 
-    if (!ignoreOptions.has(prop)) {
-      // Always pass the full path array - this enables granular path tracking
-      invalidateOnOptionChange(path);
-    }
-  }, optionsWithoutPackageManager);
+      if (!ignoreOptions.has(prop)) {
+        // Always pass the full path array - this enables granular path tracking
+        invalidateOnOptionChange(path);
+      }
+    }, optionsWithoutPackageManager);
 
-  // Return the proxied options with the original or proxied packageManager
-  return {
-    ...proxiedOptions,
-    packageManager,
-  };
+    // Return the proxied options with the original or proxied packageManager
+    return {
+      ...proxiedOptions,
+      packageManager,
+    };
+  } else {
+    // Original behavior for backward compatibility
+    return new Proxy(options, {
+      get(target, prop) {
+        if (prop === 'packageManager') {
+          return packageManager;
+        }
+
+        if (!ignoreOptions.has(prop)) {
+          // Original behavior: pass the prop as a string
+          invalidateOnOptionChange(prop);
+        }
+
+        return target[prop];
+      },
+    });
+  }
 }
 
 function proxyPackageManager(

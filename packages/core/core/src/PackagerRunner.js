@@ -131,10 +131,22 @@ export default class PackagerRunner {
     this.invalidations = new Map();
     this.pluginOptions = new PluginOptions(
       optionsProxy(this.options, (path) => {
-        let invalidation = {
-          type: 'option',
-          key: path,
-        };
+        let invalidation;
+
+        // Check if we're using the new granular option tracking (path arrays)
+        if (Array.isArray(path)) {
+          invalidation = {
+            type: 'option',
+            key: path,
+          };
+        } else {
+          // Original behavior for string paths
+          invalidation = {
+            type: 'option',
+            key: path,
+          };
+        }
+
         this.invalidations.set(getInvalidationId(invalidation), invalidation);
       }),
     );
