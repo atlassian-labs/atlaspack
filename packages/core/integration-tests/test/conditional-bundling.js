@@ -12,10 +12,10 @@ import {
   overlayFS,
   removeDistDirectory,
   runBundles,
+  runBundle,
   distDir,
 } from '@atlaspack/test-utils';
 import sinon from 'sinon';
-import {runBundle} from '../../test-utils/src/utils';
 
 describe('conditional bundling', function () {
   beforeEach(async () => {

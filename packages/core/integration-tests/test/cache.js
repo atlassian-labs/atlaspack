@@ -33,13 +33,12 @@ import {md} from '@atlaspack/diagnostic';
 import fs from 'fs';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {createWorkerFarm} from '@atlaspack/core';
-import resolveOptions from '@atlaspack/core/src/resolveOptions';
+import {resolveOptions, ATLASPACK_VERSION} from '@atlaspack/core';
 import logger from '@atlaspack/logger';
 import sinon from 'sinon';
 import {version} from '@atlaspack/core/package.json';
 import {deserialize} from '@atlaspack/build-cache';
 import {hashString} from '@atlaspack/rust';
-import {ATLASPACK_VERSION} from '@atlaspack/core/src/constants';
 import {getAllEnvironments} from '@atlaspack/rust';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
 
@@ -6568,157 +6567,46 @@ let packageManager = new NodePackageManager(inputFS, '/');
         });
       });
 
-      [true, false].forEach((granularTsConfigInvalidation) => {
-        describe(`tsconfig.json granularTsConfigInvalidation=${String(
-          granularTsConfigInvalidation,
-        )}`, () => {
-          it('should react to changes in tsconfig.json compilerOptions', async () => {
-            await inputFS.ncp(
-              path.join(__dirname, '/integration/typescript-config'),
-              inputDir,
-            );
-            // Without package JSON the tsconfig.json isn't found at all
-            await fs.promises.writeFile(
-              path.join(inputDir, 'package.json'),
-              JSON.stringify({
-                name: 'test',
-              }),
-            );
-            await fs.promises.writeFile(
-              path.join(inputDir, 'yarn.lock'),
-              JSON.stringify({}),
-            );
-            await fs.promises.writeFile(
-              path.join(inputDir, '.parcelrc'),
-              JSON.stringify({
-                extends: '@atlaspack/config-default',
-              }),
-            );
-            await fs.promises.writeFile(
-              path.join(inputDir, 'tsconfig.json'),
-              JSON.stringify({compilerOptions: {jsx: 'react'}}),
-            );
-            await fs.promises.unlink(path.join(inputDir, 'index.ts'));
-            await fs.promises.writeFile(
-              path.join(inputDir, 'index.tsx'),
-              'export const a = () => <h1>Hello cache tsconfig</h1>',
-            );
+      describe(`tsconfig.json`, () => {
+        it('should react to changes in tsconfig.json compilerOptions', async () => {
+          await inputFS.ncp(
+            path.join(__dirname, '/integration/typescript-config'),
+            inputDir,
+          );
+          // Without package JSON the tsconfig.json isn't found at all
+          await fs.promises.writeFile(
+            path.join(inputDir, 'package.json'),
+            JSON.stringify({
+              name: 'test',
+            }),
+          );
+          await fs.promises.writeFile(
+            path.join(inputDir, 'yarn.lock'),
+            JSON.stringify({}),
+          );
+          await fs.promises.writeFile(
+            path.join(inputDir, '.parcelrc'),
+            JSON.stringify({
+              extends: '@atlaspack/config-default',
+            }),
+          );
+          await fs.promises.writeFile(
+            path.join(inputDir, 'tsconfig.json'),
+            JSON.stringify({compilerOptions: {jsx: 'react'}}),
+          );
+          await fs.promises.unlink(path.join(inputDir, 'index.ts'));
+          await fs.promises.writeFile(
+            path.join(inputDir, 'index.tsx'),
+            'export const a = () => <h1>Hello cache tsconfig</h1>',
+          );
 
-            const b = await testCache({
-              inputFS,
-              outputFS: inputFS,
-              config: path.join(inputDir, '.parcelrc'),
-              entries: ['index.tsx'],
-              featureFlags: {
-                granularTsConfigInvalidation,
-              },
-              async setup() {},
-              async update(b) {
-                const filePath = b.bundleGraph.getBundles()[0].filePath;
-                const js = await fs.promises.readFile(filePath, 'utf8');
-                assert(
-                  js.includes('Hello cache tsconfig'),
-                  'Expected "Hello cache tsconfig"',
-                );
-                assert(
-                  js.includes('React.createElement("h1"'),
-                  'Expected React.createElement("h1"',
-                );
-
-                await fs.promises.writeFile(
-                  path.join(inputDir, 'tsconfig.json'),
-                  JSON.stringify({compilerOptions: {jsx: 'react-jsx'}}),
-                );
-
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-              },
-            });
-
-            assert(
-              b.changedAssets.size >= 1,
-              'Expected at least 1 changed asset',
-            );
-
-            const filePath = b.bundleGraph.getBundles()[0].filePath;
-            const js = await fs.promises.readFile(filePath, 'utf8');
-            assert(
-              js.includes('children: "Hello cache tsconfig"'),
-              'Expected "Hello cache tsconfig"',
-            );
-            assert(
-              !js.includes('React.createElement("h1"'),
-              'Expected no React.createElement("h1"',
-            );
-          });
-
-          it('should react correctly to changes in tsconfig.json other than compiler options', async () => {
-            await inputFS.ncp(
-              path.join(__dirname, '/integration/typescript-config'),
-              inputDir,
-            );
-            // Without package JSON the tsconfig.json isn't found at all
-            await fs.promises.writeFile(
-              path.join(inputDir, 'package.json'),
-              JSON.stringify({
-                name: 'test',
-              }),
-            );
-            await fs.promises.writeFile(
-              path.join(inputDir, 'yarn.lock'),
-              JSON.stringify({}),
-            );
-            await fs.promises.writeFile(
-              path.join(inputDir, '.parcelrc'),
-              JSON.stringify({
-                extends: '@atlaspack/config-default',
-              }),
-            );
-            await fs.promises.unlink(path.join(inputDir, 'index.ts'));
-            await fs.promises.writeFile(
-              path.join(inputDir, 'index.tsx'),
-              'export const a = () => <h1>Hello cache tsconfig</h1>',
-            );
-            await fs.promises.writeFile(
-              path.join(inputDir, 'tsconfig.json'),
-              JSON.stringify({
-                compilerOptions: {jsx: 'react'},
-              }),
-            );
-
-            const b = await testCache({
-              inputFS,
-              outputFS: inputFS,
-              config: path.join(inputDir, '.parcelrc'),
-              entries: ['index.tsx'],
-              featureFlags: {
-                granularTsConfigInvalidation,
-              },
-              async update(b) {
-                const filePath = b.bundleGraph.getBundles()[0].filePath;
-                const js = await fs.promises.readFile(filePath, 'utf8');
-                assert(
-                  js.includes('Hello cache tsconfig'),
-                  'Expected "Hello cache tsconfig"',
-                );
-                assert(
-                  js.includes('React.createElement("h1"'),
-                  'Expected React.createElement("h1"',
-                );
-
-                await fs.promises.writeFile(
-                  path.join(inputDir, 'tsconfig.json'),
-                  JSON.stringify({
-                    compilerOptions: {jsx: 'react'},
-                    include: ['index.tsx'],
-                  }),
-                );
-
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-              },
-            });
-
-            if (granularTsConfigInvalidation) {
-              assert.equal(b.changedAssets.size, 0, 'Expected 0 changed asset');
+          const b = await testCache({
+            inputFS,
+            outputFS: inputFS,
+            config: path.join(inputDir, '.parcelrc'),
+            entries: ['index.tsx'],
+            async setup() {},
+            async update(b) {
               const filePath = b.bundleGraph.getBundles()[0].filePath;
               const js = await fs.promises.readFile(filePath, 'utf8');
               assert(
@@ -6726,14 +6614,76 @@ let packageManager = new NodePackageManager(inputFS, '/');
                 'Expected "Hello cache tsconfig"',
               );
               assert(
-                js.includes('React.createElement'),
-                'Expected React.createElement',
+                js.includes('React.createElement("h1"'),
+                'Expected React.createElement("h1"',
               );
-            } else {
-              assert(
-                b.changedAssets.size >= 1,
-                'Expected at least 1 changed asset',
+
+              await fs.promises.writeFile(
+                path.join(inputDir, 'tsconfig.json'),
+                JSON.stringify({compilerOptions: {jsx: 'react-jsx'}}),
               );
+
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            },
+          });
+
+          assert(
+            b.changedAssets.size >= 1,
+            'Expected at least 1 changed asset',
+          );
+
+          const filePath = b.bundleGraph.getBundles()[0].filePath;
+          const js = await fs.promises.readFile(filePath, 'utf8');
+          assert(
+            js.includes('children: "Hello cache tsconfig"'),
+            'Expected "Hello cache tsconfig"',
+          );
+          assert(
+            !js.includes('React.createElement("h1"'),
+            'Expected no React.createElement("h1"',
+          );
+        });
+
+        it('should react correctly to changes in tsconfig.json other than compiler options', async () => {
+          await inputFS.ncp(
+            path.join(__dirname, '/integration/typescript-config'),
+            inputDir,
+          );
+          // Without package JSON the tsconfig.json isn't found at all
+          await fs.promises.writeFile(
+            path.join(inputDir, 'package.json'),
+            JSON.stringify({
+              name: 'test',
+            }),
+          );
+          await fs.promises.writeFile(
+            path.join(inputDir, 'yarn.lock'),
+            JSON.stringify({}),
+          );
+          await fs.promises.writeFile(
+            path.join(inputDir, '.parcelrc'),
+            JSON.stringify({
+              extends: '@atlaspack/config-default',
+            }),
+          );
+          await fs.promises.unlink(path.join(inputDir, 'index.ts'));
+          await fs.promises.writeFile(
+            path.join(inputDir, 'index.tsx'),
+            'export const a = () => <h1>Hello cache tsconfig</h1>',
+          );
+          await fs.promises.writeFile(
+            path.join(inputDir, 'tsconfig.json'),
+            JSON.stringify({
+              compilerOptions: {jsx: 'react'},
+            }),
+          );
+
+          const b = await testCache({
+            inputFS,
+            outputFS: inputFS,
+            config: path.join(inputDir, '.parcelrc'),
+            entries: ['index.tsx'],
+            async update(b) {
               const filePath = b.bundleGraph.getBundles()[0].filePath;
               const js = await fs.promises.readFile(filePath, 'utf8');
               assert(
@@ -6741,11 +6691,33 @@ let packageManager = new NodePackageManager(inputFS, '/');
                 'Expected "Hello cache tsconfig"',
               );
               assert(
-                js.includes('React.createElement'),
-                'Expected React.createElement',
+                js.includes('React.createElement("h1"'),
+                'Expected React.createElement("h1"',
               );
-            }
+
+              await fs.promises.writeFile(
+                path.join(inputDir, 'tsconfig.json'),
+                JSON.stringify({
+                  compilerOptions: {jsx: 'react'},
+                  include: ['index.tsx'],
+                }),
+              );
+
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            },
           });
+
+          assert.equal(b.changedAssets.size, 0, 'Expected 0 changed asset');
+          const filePath = b.bundleGraph.getBundles()[0].filePath;
+          const js = await fs.promises.readFile(filePath, 'utf8');
+          assert(
+            js.includes('Hello cache tsconfig'),
+            'Expected "Hello cache tsconfig"',
+          );
+          assert(
+            js.includes('React.createElement'),
+            'Expected React.createElement',
+          );
         });
       });
 
@@ -7104,7 +7076,7 @@ let packageManager = new NodePackageManager(inputFS, '/');
 
   describe('environment caching', function () {
     it('should cache and load environments between builds', async function () {
-      const EnvironmentManager = require('@atlaspack/core/src/EnvironmentManager');
+      const {EnvironmentManager} = require('@atlaspack/core');
       const loadEnvironmentsSpy = sinon.spy(
         EnvironmentManager,
         'loadEnvironmentsFromCache',

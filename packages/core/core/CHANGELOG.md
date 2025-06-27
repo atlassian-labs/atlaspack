@@ -1,5 +1,66 @@
 # @atlaspack/core
 
+## 2.18.5
+
+### Patch Changes
+
+- [#652](https://github.com/atlassian-labs/atlaspack/pull/652) [`644b157`](https://github.com/atlassian-labs/atlaspack/commit/644b157dee72a871acc2d0facf0b87b8eea51956) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix bugs related to build aborts. Builds and cache writes will no longer be aborted.
+
+- Updated dependencies [[`644b157`](https://github.com/atlassian-labs/atlaspack/commit/644b157dee72a871acc2d0facf0b87b8eea51956)]:
+  - @atlaspack/feature-flags@2.18.2
+  - @atlaspack/cache@3.2.9
+  - @atlaspack/fs@2.15.9
+  - @atlaspack/graph@3.5.4
+  - @atlaspack/utils@2.15.2
+  - @atlaspack/package-manager@2.14.14
+  - @atlaspack/profiler@2.14.12
+  - @atlaspack/types@2.15.4
+  - @atlaspack/workers@2.14.14
+  - @atlaspack/plugin@2.14.14
+
+## 2.18.4
+
+### Patch Changes
+
+- [#650](https://github.com/atlassian-labs/atlaspack/pull/650) [`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb) Thanks [@alshdavid](https://github.com/alshdavid)! - Remove package.json#exports
+
+- [#646](https://github.com/atlassian-labs/atlaspack/pull/646) [`6b1f5ff`](https://github.com/atlassian-labs/atlaspack/commit/6b1f5fff68d7131fae075e14f4d2c02606dc6058) Thanks [@alshdavid](https://github.com/alshdavid)! - Export WORKER_PATH from @atlaspack/core
+
+- [#633](https://github.com/atlassian-labs/atlaspack/pull/633) [`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b) Thanks [@sbhuiyan-atlassian](https://github.com/sbhuiyan-atlassian)! - Ported various HMR changes from Parcel
+
+- [#648](https://github.com/atlassian-labs/atlaspack/pull/648) [`c8f7df4`](https://github.com/atlassian-labs/atlaspack/commit/c8f7df4eadfc4718040fceb065dae6e96a4051e7) Thanks [@alshdavid](https://github.com/alshdavid)! - Export ATLASPACK_VERSION and other internals
+
+- [#626](https://github.com/atlassian-labs/atlaspack/pull/626) [`0501255`](https://github.com/atlassian-labs/atlaspack/commit/05012550da35b05ce7d356a8cc29311e7f9afdca) Thanks [@yamadapc](https://github.com/yamadapc)! - Clean-up tsconfig invalidation improvements feature-flag
+
+- Updated dependencies [[`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb), [`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b), [`0501255`](https://github.com/atlassian-labs/atlaspack/commit/05012550da35b05ce7d356a8cc29311e7f9afdca)]:
+  - @atlaspack/workers@2.14.13
+  - @atlaspack/logger@2.14.11
+  - @atlaspack/feature-flags@2.18.1
+  - @atlaspack/fs@2.15.8
+  - @atlaspack/package-manager@2.14.13
+  - @atlaspack/types@2.15.3
+  - @atlaspack/cache@3.2.8
+  - @atlaspack/utils@2.15.1
+  - @atlaspack/graph@3.5.3
+  - @atlaspack/plugin@2.14.13
+  - @atlaspack/profiler@2.14.11
+
+## 2.18.3
+
+### Patch Changes
+
+- Updated dependencies [[`10fbcfb`](https://github.com/atlassian-labs/atlaspack/commit/10fbcfbfa49c7a83da5d7c40983e36e87f524a75), [`85c52d3`](https://github.com/atlassian-labs/atlaspack/commit/85c52d3f7717b3c84a118d18ab98cfbfd71dcbd2), [`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c)]:
+  - @atlaspack/feature-flags@2.18.0
+  - @atlaspack/utils@2.15.0
+  - @atlaspack/cache@3.2.7
+  - @atlaspack/fs@2.15.7
+  - @atlaspack/graph@3.5.2
+  - @atlaspack/package-manager@2.14.12
+  - @atlaspack/workers@2.14.12
+  - @atlaspack/profiler@2.14.10
+  - @atlaspack/types@2.15.2
+  - @atlaspack/plugin@2.14.12
+
 ## 2.18.2
 
 ### Patch Changes

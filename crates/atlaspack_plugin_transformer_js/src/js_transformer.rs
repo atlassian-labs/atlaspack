@@ -202,6 +202,8 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       .feature_flags
       .bool_enabled("conditionalBundlingApi");
 
+    let feature_flag_hmr_improvements = self.options.feature_flags.bool_enabled("hmrImprovements");
+
     let mut targets: HashMap<String, String> = HashMap::new();
     if env.context.is_browser() {
       let browsers = env.engines.browsers.clone().unwrap_or_default();
@@ -313,6 +315,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         })
         .unwrap_or_default(),
       conditional_bundling: feature_flag_conditional_bundling,
+      hmr_improvements: feature_flag_hmr_improvements,
       ..atlaspack_js_swc_core::Config::default()
     };
 

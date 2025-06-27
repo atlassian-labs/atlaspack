@@ -1,4 +1,5 @@
-// @flow
+// @flow strict-local
+
 import type {
   DependencySpecifier,
   SemverRange,
@@ -24,6 +25,7 @@ import {
   toProjectPath,
 } from '../projectPath';
 import {requestTypes} from '../RequestTracker';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 // A cache of dev dep requests keyed by invalidations.
 // If the package manager returns the same invalidation object, then
@@ -116,17 +118,47 @@ type DevDepRequests = {|
 export async function getDevDepRequests<TResult: RequestResult>(
   api: RunAPI<TResult>,
 ): Promise<DevDepRequests> {
-  let previousDevDepRequests: Map<string, DevDepRequestResult> = new Map(
-    await Promise.all(
-      api
-        .getSubRequests()
-        .filter((req) => req.requestType === requestTypes.dev_dep_request)
-        .map(async (req) => [
-          req.id,
-          nullthrows(await api.getRequestResult<DevDepRequestResult>(req.id)),
-        ]),
-    ),
-  );
+  async function getPreviousDevDepRequests() {
+    if (getFeatureFlag('fixBuildAbortCorruption')) {
+      const allDevDepRequests = await Promise.all(
+        api
+          .getSubRequests()
+          .filter((req) => req.requestType === requestTypes.dev_dep_request)
+          .map(
+            async (
+              req,
+            ): Promise<[string, DevDepRequestResult | null | void]> => [
+              req.id,
+              await api.getRequestResult<DevDepRequestResult>(req.id),
+            ],
+          ),
+      );
+      const nonNullDevDepRequests = [];
+      for (const [id, result] of allDevDepRequests) {
+        if (result != null) {
+          nonNullDevDepRequests.push([id, result]);
+        }
+      }
+
+      return new Map(nonNullDevDepRequests);
+    } else {
+      return new Map(
+        await Promise.all(
+          api
+            .getSubRequests()
+            .filter((req) => req.requestType === requestTypes.dev_dep_request)
+            .map(async (req) => [
+              req.id,
+              nullthrows(
+                await api.getRequestResult<DevDepRequestResult>(req.id),
+              ),
+            ]),
+        ),
+      );
+    }
+  }
+
+  const previousDevDepRequests = await getPreviousDevDepRequests();
 
   return {
     devDeps: new Map(

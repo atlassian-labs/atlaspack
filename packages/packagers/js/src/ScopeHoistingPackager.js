@@ -102,7 +102,6 @@ export class ScopeHoistingPackager {
   needsPrelude: boolean = false;
   usedHelpers: Set<string> = new Set();
   externalAssets: Set<Asset> = new Set();
-  forceSkipWrapAssets: Array<string> = [];
   logger: PluginLogger;
 
   constructor(
@@ -111,7 +110,6 @@ export class ScopeHoistingPackager {
     bundle: NamedBundle,
     parcelRequireName: string,
     useAsyncBundleRuntime: boolean,
-    forceSkipWrapAssets: Array<string>,
     logger: PluginLogger,
   ) {
     this.options = options;
@@ -119,7 +117,6 @@ export class ScopeHoistingPackager {
     this.bundle = bundle;
     this.parcelRequireName = parcelRequireName;
     this.useAsyncBundleRuntime = useAsyncBundleRuntime;
-    this.forceSkipWrapAssets = forceSkipWrapAssets ?? [];
     this.logger = logger;
 
     let OutputFormat = OUTPUT_FORMATS[this.bundle.env.outputFormat];
@@ -134,7 +131,8 @@ export class ScopeHoistingPackager {
   }
 
   async package(): Promise<{|contents: string, map: ?SourceMap|}> {
-    let wrappedAssets = await this.loadAssets();
+    let {wrapped: wrappedAssets, constant: constantAssets} =
+      await this.loadAssets();
     this.buildExportedSymbols();
 
     // If building a library, the target is actually another bundler rather
@@ -167,6 +165,15 @@ export class ScopeHoistingPackager {
       res += content + '\n';
       lineCount += lines + 1;
     };
+
+    if (getFeatureFlag('inlineConstOptimisationFix')) {
+      // Write out all constant modules used by this bundle
+      for (let asset of constantAssets) {
+        if (!this.seenAssets.has(asset.id)) {
+          processAsset(asset);
+        }
+      }
+    }
 
     // Hoist wrapped asset to the top of the bundle to ensure that they are registered
     // before they are used.
@@ -354,15 +361,20 @@ export class ScopeHoistingPackager {
     return `$parcel$global.rwr(${params.join(', ')});`;
   }
 
-  async loadAssets(): Promise<Array<Asset>> {
+  async loadAssets(): Promise<{|
+    wrapped: Array<Asset>,
+    constant: Array<Asset>,
+  |}> {
     let queue = new PromiseQueue({maxConcurrent: 32});
     let wrapped = [];
+    let constant = [];
     this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
         let [code, map] = await Promise.all([
           asset.getCode(),
           this.bundle.env.sourceMap ? asset.getMapBuffer() : null,
         ]);
+
         return [asset.id, {code, map}];
       });
 
@@ -383,50 +395,83 @@ export class ScopeHoistingPackager {
         ) {
           this.wrappedAssets.add(asset.id);
           wrapped.push(asset);
+        } else if (
+          getFeatureFlag('inlineConstOptimisationFix') &&
+          asset.meta.isConstantModule
+        ) {
+          constant.push(asset);
         }
       }
     });
 
-    for (let wrappedAssetRoot of [...wrapped]) {
-      this.bundle.traverseAssets((asset, _, actions) => {
-        if (asset === wrappedAssetRoot) {
-          return;
-        }
+    if (getFeatureFlag('applyScopeHoistingImprovement')) {
+      // Tracks which assets have been assigned to a wrap group
+      let assignedAssets = new Set<Asset>();
 
-        if (this.wrappedAssets.has(asset.id)) {
-          actions.skipChildren();
-          return;
-        }
-        // This prevents children of a wrapped asset also being wrapped - it's an "unsafe" optimisation
-        // that should only be used when you know (or think you know) what you're doing.
-        //
-        // In particular this can force an async bundle to be scope hoisted where it previously would not be
-        // due to the entry asset being wrapped.
-        if (
-          this.forceSkipWrapAssets.length > 0 &&
-          this.forceSkipWrapAssets.some(
-            (p) =>
-              p === path.relative(this.options.projectRoot, asset.filePath),
-          )
-        ) {
-          this.logger.verbose({
-            message: `Force skipping wrapping of ${path.relative(
-              this.options.projectRoot,
-              asset.filePath,
-            )}`,
-          });
-          actions.skipChildren();
-          return;
-        }
-        if (!asset.meta.isConstantModule) {
-          this.wrappedAssets.add(asset.id);
-          wrapped.push(asset);
-        }
-      }, wrappedAssetRoot);
+      for (let wrappedAsset of wrapped) {
+        this.bundle.traverseAssets((asset, _, actions) => {
+          if (asset === wrappedAsset) {
+            return;
+          }
+
+          if (this.wrappedAssets.has(asset.id)) {
+            actions.skipChildren();
+            return;
+          }
+
+          if (assignedAssets.has(asset) || this.isReExported(asset)) {
+            wrapped.push(asset);
+            this.wrappedAssets.add(asset.id);
+
+            actions.skipChildren();
+            return;
+          }
+
+          assignedAssets.add(asset);
+        }, wrappedAsset);
+      }
+    } else {
+      for (let wrappedAssetRoot of [...wrapped]) {
+        this.bundle.traverseAssets((asset, _, actions) => {
+          if (asset === wrappedAssetRoot) {
+            return;
+          }
+
+          if (this.wrappedAssets.has(asset.id)) {
+            actions.skipChildren();
+            return;
+          }
+
+          if (!asset.meta.isConstantModule) {
+            this.wrappedAssets.add(asset.id);
+            wrapped.push(asset);
+          }
+        }, wrappedAssetRoot);
+      }
     }
 
     this.assetOutputs = new Map(await queue.run());
-    return wrapped;
+    return {wrapped, constant};
+  }
+
+  isReExported(asset: Asset): boolean {
+    let parentSymbols = this.bundleGraph
+      .getIncomingDependencies(asset)
+      .map((dep) => this.bundleGraph.getAssetWithDependency(dep))
+      .flatMap((parent) => {
+        if (parent == null) {
+          return [];
+        }
+        return this.bundleGraph.getExportedSymbols(parent, this.bundle);
+      });
+
+    let assetSymbols = this.bundleGraph.getExportedSymbols(asset, this.bundle);
+
+    return assetSymbols.some((assetSymbol) =>
+      parentSymbols.some(
+        (parentSymbol) => parentSymbol.symbol === assetSymbol.symbol,
+      ),
+    );
   }
 
   buildExportedSymbols() {
@@ -661,13 +706,24 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (shouldWrap) {
-                    depContent.push(this.visitAsset(resolved));
+                  if (getFeatureFlag('applyScopeHoistingImprovement')) {
+                    if (!this.wrappedAssets.has(resolved.id)) {
+                      let [depCode, depMap, depLines] =
+                        this.visitAsset(resolved);
+                      res = depCode + '\n' + res;
+                      lines += 1 + depLines;
+                      map = depMap;
+                    }
                   } else {
-                    let [depCode, depMap, depLines] = this.visitAsset(resolved);
-                    res = depCode + '\n' + res;
-                    lines += 1 + depLines;
-                    map = depMap;
+                    if (shouldWrap) {
+                      depContent.push(this.visitAsset(resolved));
+                    } else {
+                      let [depCode, depMap, depLines] =
+                        this.visitAsset(resolved);
+                      res = depCode + '\n' + res;
+                      lines += 1 + depLines;
+                      map = depMap;
+                    }
                   }
                 }
 
@@ -1220,34 +1276,49 @@ ${code}
       usedSymbols.has('default') &&
       !asset.symbols.hasExportSymbol('__esModule');
 
-    let usedNamespace =
-      // If the asset has * in its used symbols, we might need the exports namespace.
-      // The one case where this isn't true is in ESM library entries, where the only
-      // dependency on * is the entry dependency. In this case, we will use ESM exports
-      // instead of the namespace object.
-      (usedSymbols.has('*') &&
-        (this.bundle.env.outputFormat !== 'esmodule' ||
-          !this.bundle.env.isLibrary ||
-          asset !== this.bundle.getMainEntry() ||
-          this.bundleGraph
-            .getIncomingDependencies(asset)
-            .some(
-              (dep) =>
-                !dep.isEntry &&
-                this.bundle.hasDependency(dep) &&
-                nullthrows(this.bundleGraph.getUsedSymbols(dep)).has('*'),
-            ))) ||
-      // If a symbol is imported (used) from a CJS asset but isn't listed in the symbols,
-      // we fallback on the namespace object.
-      (asset.symbols.hasExportSymbol('*') &&
-        [...usedSymbols].some((s) => !asset.symbols.hasExportSymbol(s))) ||
-      // If the exports has this asset's namespace (e.g. ESM output from CJS input),
-      // include the namespace object for the default export.
-      this.exportedSymbols.has(`$${assetId}$exports`) ||
-      // CommonJS library bundle entries always need a namespace.
-      (this.bundle.env.isLibrary &&
-        this.bundle.env.outputFormat === 'commonjs' &&
-        asset === this.bundle.getMainEntry());
+    let usedNamespace;
+    if (
+      getFeatureFlag('inlineConstOptimisationFix') &&
+      asset.meta.isConstantModule
+    ) {
+      // Only set usedNamespace if there is an incoming dependency in the current bundle that uses '*'
+      usedNamespace = this.bundleGraph
+        .getIncomingDependencies(asset)
+        .some(
+          (dep) =>
+            this.bundle.hasDependency(dep) &&
+            nullthrows(this.bundleGraph.getUsedSymbols(dep)).has('*'),
+        );
+    } else {
+      usedNamespace =
+        // If the asset has * in its used symbols, we might need the exports namespace.
+        // The one case where this isn't true is in ESM library entries, where the only
+        // dependency on * is the entry dependency. In this case, we will use ESM exports
+        // instead of the namespace object.
+        (usedSymbols.has('*') &&
+          (this.bundle.env.outputFormat !== 'esmodule' ||
+            !this.bundle.env.isLibrary ||
+            asset !== this.bundle.getMainEntry() ||
+            this.bundleGraph
+              .getIncomingDependencies(asset)
+              .some(
+                (dep) =>
+                  !dep.isEntry &&
+                  this.bundle.hasDependency(dep) &&
+                  nullthrows(this.bundleGraph.getUsedSymbols(dep)).has('*'),
+              ))) ||
+        // If a symbol is imported (used) from a CJS asset but isn't listed in the symbols,
+        // we fallback on the namespace object.
+        (asset.symbols.hasExportSymbol('*') &&
+          [...usedSymbols].some((s) => !asset.symbols.hasExportSymbol(s))) ||
+        // If the exports has this asset's namespace (e.g. ESM output from CJS input),
+        // include the namespace object for the default export.
+        this.exportedSymbols.has(`$${assetId}$exports`) ||
+        // CommonJS library bundle entries always need a namespace.
+        (this.bundle.env.isLibrary &&
+          this.bundle.env.outputFormat === 'commonjs' &&
+          asset === this.bundle.getMainEntry());
+    }
 
     // If the asset doesn't have static exports, should wrap, the namespace is used,
     // or we need default interop, then we need to synthesize a namespace object for

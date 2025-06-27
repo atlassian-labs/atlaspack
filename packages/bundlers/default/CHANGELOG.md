@@ -1,5 +1,37 @@
 # @atlaspack/bundler-default
 
+## 3.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`644b157`](https://github.com/atlassian-labs/atlaspack/commit/644b157dee72a871acc2d0facf0b87b8eea51956)]:
+  - @atlaspack/feature-flags@2.18.2
+  - @atlaspack/graph@3.5.4
+  - @atlaspack/utils@2.15.2
+  - @atlaspack/plugin@2.14.14
+
+## 3.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b), [`0501255`](https://github.com/atlassian-labs/atlaspack/commit/05012550da35b05ce7d356a8cc29311e7f9afdca)]:
+  - @atlaspack/feature-flags@2.18.1
+  - @atlaspack/utils@2.15.1
+  - @atlaspack/graph@3.5.3
+  - @atlaspack/plugin@2.14.13
+
+## 3.0.3
+
+### Patch Changes
+
+- [#622](https://github.com/atlassian-labs/atlaspack/pull/622) [`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c) Thanks [@benjervis](https://github.com/benjervis)! - Change the overlap calculation system in findMergeCandidates to improve performance
+
+- Updated dependencies [[`10fbcfb`](https://github.com/atlassian-labs/atlaspack/commit/10fbcfbfa49c7a83da5d7c40983e36e87f524a75), [`85c52d3`](https://github.com/atlassian-labs/atlaspack/commit/85c52d3f7717b3c84a118d18ab98cfbfd71dcbd2), [`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c)]:
+  - @atlaspack/feature-flags@2.18.0
+  - @atlaspack/utils@2.15.0
+  - @atlaspack/graph@3.5.2
+  - @atlaspack/plugin@2.14.12
+
 ## 3.0.2
 
 ### Patch Changes

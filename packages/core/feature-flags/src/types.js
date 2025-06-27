@@ -31,16 +31,16 @@ export type FeatureFlags = {|
    */
   inlineRequiresMultiThreading: boolean,
   /**
+   * Disables aborting of builds and fixes bugs related to state corruption on abort.
+   */
+  fixBuildAbortCorruption: boolean,
+  /**
    * Enable VCS mode. Expected values are:
    * - OLD - default value, return watchman result
    * - NEW_AND_CHECK - Return VCS result but still call watchman
    * - NEW: Return VCS result, but don't call watchman
    */
   vcsMode: ConsistencyCheckFeatureFlagValue,
-  /**
-   * Enable granular TS config invalidation
-   */
-  granularTsConfigInvalidation: boolean,
   /**
    * Refactor cache to:
    * - Split writes into multiple entries
@@ -102,6 +102,21 @@ export type FeatureFlags = {|
    * Enable a change to the html packager to load more bundles when conditional bundling fallback mode is enabled
    */
   condbHtmlPackagerChange: boolean,
+  /**
+   * Enable a setting that allows for more assets to be scope hoisted, if
+   * they're safe to do so.
+   */
+  applyScopeHoistingImprovement: boolean,
+  /**
+   * Enable a change where a constant module only have the namespacing object added in bundles where it is required
+   */
+  inlineConstOptimisationFix: boolean,
+  /**
+   * Improves/fixes HMR behaviour by:
+   * - Fixing HMR behaviour with lazy bundle edges
+   * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer
+   */
+  hmrImprovements: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
