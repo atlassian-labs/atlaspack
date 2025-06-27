@@ -1,5 +1,23 @@
 # @atlaspack/core
 
+## 2.18.5
+
+### Patch Changes
+
+- [#652](https://github.com/atlassian-labs/atlaspack/pull/652) [`644b157`](https://github.com/atlassian-labs/atlaspack/commit/644b157dee72a871acc2d0facf0b87b8eea51956) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix bugs related to build aborts. Builds and cache writes will no longer be aborted.
+
+- Updated dependencies [[`644b157`](https://github.com/atlassian-labs/atlaspack/commit/644b157dee72a871acc2d0facf0b87b8eea51956)]:
+  - @atlaspack/feature-flags@2.18.2
+  - @atlaspack/cache@3.2.9
+  - @atlaspack/fs@2.15.9
+  - @atlaspack/graph@3.5.4
+  - @atlaspack/utils@2.15.2
+  - @atlaspack/package-manager@2.14.14
+  - @atlaspack/profiler@2.14.12
+  - @atlaspack/types@2.15.4
+  - @atlaspack/workers@2.14.14
+  - @atlaspack/plugin@2.14.14
+
 ## 2.18.4
 
 ### Patch Changes

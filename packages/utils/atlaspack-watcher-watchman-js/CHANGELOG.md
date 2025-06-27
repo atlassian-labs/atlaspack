@@ -1,5 +1,12 @@
 # @atlaspack/watcher-watchman-js
 
+## 2.14.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.15.2
+
 ## 2.14.13
 
 ### Patch Changes
