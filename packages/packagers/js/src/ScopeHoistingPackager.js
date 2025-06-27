@@ -166,7 +166,10 @@ export class ScopeHoistingPackager {
       lineCount += lines + 1;
     };
 
-    if (getFeatureFlag('inlineConstOptimisationFix')) {
+    if (
+      getFeatureFlag('inlineConstOptimisationFix') ||
+      getFeatureFlag('applyScopeHoistingImprovement')
+    ) {
       // Write out all constant modules used by this bundle
       for (let asset of constantAssets) {
         if (!this.seenAssets.has(asset.id)) {
@@ -396,7 +399,8 @@ export class ScopeHoistingPackager {
           this.wrappedAssets.add(asset.id);
           wrapped.push(asset);
         } else if (
-          getFeatureFlag('inlineConstOptimisationFix') &&
+          (getFeatureFlag('inlineConstOptimisationFix') ||
+            getFeatureFlag('applyScopeHoistingImprovement')) &&
           asset.meta.isConstantModule
         ) {
           constant.push(asset);
@@ -419,7 +423,10 @@ export class ScopeHoistingPackager {
             return;
           }
 
-          if (assignedAssets.has(asset) || this.isReExported(asset)) {
+          if (
+            !asset.meta.isConstantModule &&
+            (assignedAssets.has(asset) || this.isReExported(asset))
+          ) {
             wrapped.push(asset);
             this.wrappedAssets.add(asset.id);
 
@@ -707,7 +714,10 @@ export class ScopeHoistingPackager {
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
                   if (getFeatureFlag('applyScopeHoistingImprovement')) {
-                    if (!this.wrappedAssets.has(resolved.id)) {
+                    if (
+                      !resolved.meta.isConstantModule &&
+                      !this.wrappedAssets.has(resolved.id)
+                    ) {
                       let [depCode, depMap, depLines] =
                         this.visitAsset(resolved);
                       res = depCode + '\n' + res;
