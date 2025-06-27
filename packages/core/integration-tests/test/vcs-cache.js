@@ -12,7 +12,7 @@ import {
   workerFarm,
   cacheDir,
 } from '@atlaspack/test-utils';
-import {ATLASPACK_VERSION} from '@atlaspack/core/src/constants.js';
+import {ATLASPACK_VERSION} from '@atlaspack/core';
 
 it('can parse a git commit message hash', () => {
   const example = '[master (root-commit) e997505] Initial commit';

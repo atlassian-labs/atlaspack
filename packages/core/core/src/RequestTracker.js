@@ -1593,7 +1593,7 @@ export default class RequestTracker {
         // $FlowFixMe serialise input is any type
         contents: any,
       ): Promise<void> => {
-        if (signal?.aborted && !getFeatureFlag('fixBuildAbortCorruption')) {
+        if (signal?.aborted) {
           throw new Error('Serialization was aborted');
         }
 
@@ -1611,7 +1611,7 @@ export default class RequestTracker {
             await this.options.cache.setLargeBlob(
               key,
               serialize(contents),
-              !getFeatureFlag('fixBuildAbortCorruption') && signal
+              signal
                 ? {
                     signal: signal,
                   }
@@ -1719,10 +1719,6 @@ export default class RequestTracker {
         opts,
       );
     } catch (err) {
-      if (getFeatureFlag('fixBuildAbortCorruption')) {
-        throw err;
-      }
-
       // If we have aborted, ignore the error and continue
       if (!signal?.aborted) throw err;
     } finally {

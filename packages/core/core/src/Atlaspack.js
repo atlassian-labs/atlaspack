@@ -64,7 +64,6 @@ import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
 import {loadRustWorkerThreadDylibHack} from './rustWorkerThreadDylibHack';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 registerCoreWithSerializer();
 
@@ -279,11 +278,7 @@ export default class Atlaspack {
       });
 
       try {
-        if (getFeatureFlag('fixBuildAbortCorruption')) {
-          await this.#requestTracker.writeToCache();
-        } else {
-          await this.#requestTracker.writeToCache(abortController.signal);
-        }
+        await this.#requestTracker.writeToCache(abortController.signal);
       } catch (err) {
         if (!abortController.signal.aborted) {
           // We expect abort errors if we interrupt the cache write

@@ -1,5 +1,16 @@
 # @atlaspack/fs
 
+## 2.15.8
+
+### Patch Changes
+
+- Updated dependencies [[`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb), [`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b), [`0501255`](https://github.com/atlassian-labs/atlaspack/commit/05012550da35b05ce7d356a8cc29311e7f9afdca)]:
+  - @atlaspack/workers@2.14.13
+  - @atlaspack/logger@2.14.11
+  - @atlaspack/feature-flags@2.18.1
+  - @atlaspack/utils@2.15.1
+  - @atlaspack/types-internal@2.14.11
+
 ## 2.15.7
 
 ### Patch Changes

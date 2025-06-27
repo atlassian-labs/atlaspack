@@ -1,5 +1,11 @@
 # @atlaspack/logger
 
+## 2.14.11
+
+### Patch Changes
+
+- [#650](https://github.com/atlassian-labs/atlaspack/pull/650) [`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb) Thanks [@alshdavid](https://github.com/alshdavid)! - Remove package.json#exports
+
 ## 2.14.10
 
 ### Patch Changes
