@@ -7,6 +7,13 @@
  * that Flow cannot statically analyze. These errors are expected and marked with
  * $FlowFixMe comments. The tests validate the runtime behavior which works correctly
  * despite Flow's inability to type-check the proxy operations.
+ *
+ * We use `any` type for proxied objects because:
+ * 1. The proxy's structure is dynamic and cannot be statically typed
+ * 2. The test is specifically validating the dynamic property access tracking
+ * 3. We're testing implementation details that Flow cannot understand
+ *
+ * These errors are expected and safe to suppress in this test context.
  */
 
 import sinon from 'sinon';
@@ -28,12 +35,14 @@ function mockOptionsProxy(options, invalidateOnOptionChange) {
     'shouldDisableCache',
   ]);
 
-  return makeConfigProxy((path) => {
+  /* $FlowFixMe[unclear-type] - Dynamic proxy return type needs 'any' */
+  return (makeConfigProxy((path) => {
     const [prop] = path;
     if (!ignoreOptions.has(prop)) {
       invalidateOnOptionChange(path);
     }
-  }, options);
+    // $FlowFixMe[unclear-type]
+  }, options): any);
 }
 
 describe('optionsProxy with path tracking', () => {
@@ -57,9 +66,11 @@ describe('optionsProxy with path tracking', () => {
     // Access various properties
     proxied.mode;
     // $FlowFixMe[prop-missing] Flow doesn't understand dynamic proxies
-    proxied.featureFlags.granularOptionInvalidation;
+    // $FlowFixMe[unclear-type] Flow requires explicit types but proxy needs any
+    (proxied: any).featureFlags.granularOptionInvalidation;
     // $FlowFixMe[prop-missing] Flow doesn't understand dynamic proxies
-    proxied.defaultTargetOptions.sourceMaps;
+    // $FlowFixMe[unclear-type] Flow requires explicit types but proxy needs any
+    (proxied: any).defaultTargetOptions.sourceMaps;
 
     // Verify correct paths were passed to invalidateOnOptionChange
     assert(invalidateOnOptionChange.calledWith(['mode']));
@@ -153,7 +164,8 @@ describe('optionsProxy with path tracking', () => {
 
     // Deep properties should be accessible
     // $FlowFixMe[prop-missing] Flow doesn't understand dynamic proxies
-    const browsers = proxied.targets.browsers;
+    // $FlowFixMe[unclear-type] Flow requires explicit types but proxy needs any
+    const browsers = (proxied: any).targets.browsers;
     assert.equal(browsers[0], 'Chrome > 80');
 
     // Methods on objects should work
@@ -177,7 +189,8 @@ describe('optionsProxy with path tracking', () => {
 
     // Access array element and nested property
     // $FlowFixMe[prop-missing] Flow doesn't understand dynamic proxies
-    const plugins = proxied.plugins;
+    // $FlowFixMe[unclear-type] Flow requires explicit types but proxy needs any
+    const plugins = (proxied: any).plugins;
     const plugin = plugins[0];
     const enabled = plugin.options.enabled;
 

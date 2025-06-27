@@ -14,7 +14,7 @@ import {
 } from '@atlaspack/feature-flags';
 import {getValueAtPath} from '../src/requests/ConfigRequest';
 // Flow can't handle this dynamic import properly, so we need to be more explicit
-// $FlowFixMe - Dynamic import for WorkerFarm
+// $FlowFixMe[unclear-type] - Dynamic import for WorkerFarm
 const WorkerFarm = require('@atlaspack/workers').default;
 
 // This file contains tests for the option invalidation functionality
@@ -27,7 +27,8 @@ describe('Option Invalidation', () => {
     maxConcurrentWorkers: 1,
   });
   let fs;
-  let options;
+  // $FlowFixMe[unclear-type] - This is a test file with incomplete AtlaspackOptions
+  let options: any;
   let graph;
   let originalFeatureFlags;
 
@@ -38,6 +39,7 @@ describe('Option Invalidation', () => {
     };
 
     fs = new MemoryFS(farm);
+    // This is a test file and we're only setting the properties needed for tests
     options = {
       inputFS: fs,
       outputFS: fs,
@@ -62,6 +64,8 @@ describe('Option Invalidation', () => {
         sourceMaps: true,
         publicUrl: '/',
       },
+      // Adding missing properties to satisfy Flow
+      featureFlags: {...DEFAULT_FEATURE_FLAGS},
     };
 
     graph = new RequestGraph();
@@ -82,7 +86,7 @@ describe('Option Invalidation', () => {
   });
 
   it('tracks options that are accessed via RequestTracker API', async () => {
-    // $FlowFixMe - Test mocking
+    // $FlowFixMe[incompatible-call] - Test mocking with incomplete options
     const tracker = new RequestTracker({
       graph,
       farm,
@@ -119,7 +123,7 @@ describe('Option Invalidation', () => {
   });
 
   it('invalidates nodes when tracked options change', async () => {
-    // $FlowFixMe - Test mocking
+    // $FlowFixMe[incompatible-call] - Test mocking with incomplete options
     const tracker = new RequestTracker({
       graph,
       farm,
