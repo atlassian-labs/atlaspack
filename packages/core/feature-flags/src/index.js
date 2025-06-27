@@ -31,6 +31,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   environmentDeduplication: false,
   inlineStringReplacementPerf: false,
   conditionalBundlingAsyncRuntime: false,
+  fixBuildAbortCorruption: false,
   // Default to true as it's a monitoring change. Can be turned off if necessary.
   verboseRequestInvalidationStats: true,
   conditionalBundlingReporterDuplicateFix: false,
