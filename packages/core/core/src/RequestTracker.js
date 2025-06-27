@@ -1345,11 +1345,7 @@ export class RequestGraph extends ContentGraph<
       //
       // Currently create events can invalidate a large number of nodes due to
       // "create above" invalidations.
-      const isConfigKeyChange =
-        getFeatureFlag('granularTsConfigInvalidation') ||
-        type === 'delete' ||
-        type === 'update';
-      if (configKeyNodes && isConfigKeyChange) {
+      if (configKeyNodes) {
         for (let nodeId of configKeyNodes) {
           let isInvalid = type === 'delete';
 
@@ -1461,6 +1457,9 @@ export default class RequestTracker {
 
   // TODO: refactor (abortcontroller should be created by RequestTracker)
   setSignal(signal?: AbortSignal) {
+    if (getFeatureFlag('fixBuildAbortCorruption')) {
+      return;
+    }
     this.signal = signal;
   }
 
@@ -1644,7 +1643,10 @@ export default class RequestTracker {
         rustAtlaspack: this.rustAtlaspack,
       });
 
-      assertSignalNotAborted(this.signal);
+      if (!getFeatureFlag('fixBuildAbortCorruption')) {
+        assertSignalNotAborted(this.signal);
+      }
+
       this.completeRequest(requestNodeId);
 
       deferred.resolve(true);

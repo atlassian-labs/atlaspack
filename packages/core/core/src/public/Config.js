@@ -395,7 +395,7 @@ export default class PublicConfig implements IConfig {
     }
 
     let pkgConfig = await this.getConfig<PackageJSON>(['package.json'], {
-      readTracking: getFeatureFlag('granularTsConfigInvalidation'),
+      readTracking: true,
     });
     if (!pkgConfig) {
       return null;

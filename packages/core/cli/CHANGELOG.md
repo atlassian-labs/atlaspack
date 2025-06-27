@@ -1,5 +1,51 @@
 # @atlaspack/cli
 
+## 2.13.18
+
+### Patch Changes
+
+- Updated dependencies [[`644b157`](https://github.com/atlassian-labs/atlaspack/commit/644b157dee72a871acc2d0facf0b87b8eea51956)]:
+  - @atlaspack/feature-flags@2.18.2
+  - @atlaspack/core@2.18.5
+  - @atlaspack/fs@2.15.9
+  - @atlaspack/utils@2.15.2
+  - @atlaspack/reporter-cli@2.15.10
+  - @atlaspack/config-default@3.1.16
+  - @atlaspack/package-manager@2.14.14
+  - @atlaspack/reporter-dev-server@2.14.14
+  - @atlaspack/reporter-tracer@2.14.14
+
+## 2.13.17
+
+### Patch Changes
+
+- Updated dependencies [[`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb), [`6b1f5ff`](https://github.com/atlassian-labs/atlaspack/commit/6b1f5fff68d7131fae075e14f4d2c02606dc6058), [`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b), [`c8f7df4`](https://github.com/atlassian-labs/atlaspack/commit/c8f7df4eadfc4718040fceb065dae6e96a4051e7), [`0501255`](https://github.com/atlassian-labs/atlaspack/commit/05012550da35b05ce7d356a8cc29311e7f9afdca)]:
+  - @atlaspack/logger@2.14.11
+  - @atlaspack/core@2.18.4
+  - @atlaspack/feature-flags@2.18.1
+  - @atlaspack/fs@2.15.8
+  - @atlaspack/package-manager@2.14.13
+  - @atlaspack/utils@2.15.1
+  - @atlaspack/config-default@3.1.15
+  - @atlaspack/reporter-cli@2.15.9
+  - @atlaspack/reporter-dev-server@2.14.13
+  - @atlaspack/reporter-tracer@2.14.13
+
+## 2.13.16
+
+### Patch Changes
+
+- Updated dependencies [[`10fbcfb`](https://github.com/atlassian-labs/atlaspack/commit/10fbcfbfa49c7a83da5d7c40983e36e87f524a75), [`85c52d3`](https://github.com/atlassian-labs/atlaspack/commit/85c52d3f7717b3c84a118d18ab98cfbfd71dcbd2), [`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c)]:
+  - @atlaspack/feature-flags@2.18.0
+  - @atlaspack/utils@2.15.0
+  - @atlaspack/core@2.18.3
+  - @atlaspack/fs@2.15.7
+  - @atlaspack/reporter-cli@2.15.8
+  - @atlaspack/config-default@3.1.14
+  - @atlaspack/package-manager@2.14.12
+  - @atlaspack/reporter-dev-server@2.14.12
+  - @atlaspack/reporter-tracer@2.14.12
+
 ## 2.13.15
 
 ### Patch Changes

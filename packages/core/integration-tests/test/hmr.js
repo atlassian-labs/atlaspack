@@ -77,6 +77,7 @@ describe.v2('hmr', function () {
       },
       inputFS: overlayFS,
       config,
+      featureFlags: {hmrImprovements: true},
     });
 
     subscription = await b.watch();
@@ -520,15 +521,70 @@ module.hot.dispose((data) => {
     });
 
     it('should work across bundles', async function () {
-      let {reloaded} = await testHMRClient('hmr-dynamic', (outputs) => {
-        assert.deepEqual(outputs, [3]);
-        return {
-          'local.js': 'exports.a = 5; exports.b = 5;',
-        };
-      });
+      let {reloaded, outputs} = await testHMRClient(
+        'hmr-dynamic',
+        (outputs) => {
+          assert.deepEqual(outputs, [3]);
+          return {
+            'local.js': 'exports.a = 5; exports.b = 5;',
+          };
+        },
+      );
 
-      // assert.deepEqual(outputs, [3, 10]);
-      assert(reloaded); // TODO: this should eventually not reload...
+      assert.deepEqual(outputs, [3, 10]);
+      assert(!reloaded);
+    });
+
+    it('should work when an asset is duplicated', async function () {
+      let {reloaded, outputs} = await testHMRClient(
+        'hmr-duplicate',
+        (outputs) => {
+          assert.deepEqual(outputs, [7]);
+          return {
+            'shared.js': 'exports.a = 5;',
+          };
+        },
+      );
+
+      assert.deepEqual(outputs, [7, 13]);
+      assert(!reloaded);
+    });
+
+    it('should bubble to parents if child returns additional parents', async function () {
+      let {reloaded, outputs} = await testHMRClient(
+        'hmr-parents',
+        (outputs) => {
+          assert.deepEqual(outputs, ['child 2', 'root']);
+          return {
+            'updated.js': 'exports.a = 3;',
+          };
+        },
+      );
+
+      assert.deepEqual(outputs, [
+        'child 2',
+        'root',
+        'child 3',
+        'accept child',
+        'root',
+        'accept root',
+      ]);
+      assert(!reloaded);
+    });
+
+    it('should bubble to parents and reload if they do not accept', async function () {
+      let {reloaded, outputs} = await testHMRClient(
+        'hmr-parents-reload',
+        (outputs) => {
+          assert.deepEqual(outputs, ['child 2', 'root']);
+          return {
+            'updated.js': 'exports.a = 3;',
+          };
+        },
+      );
+
+      assert.deepEqual(outputs, []);
+      assert(reloaded);
     });
 
     it('should work with urls', async function () {

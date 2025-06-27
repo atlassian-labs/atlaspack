@@ -29,16 +29,19 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   patchProjectPaths: false,
   cachePerformanceImprovements: process.env.NODE_ENV === 'test',
   environmentDeduplication: false,
-  granularTsConfigInvalidation: false,
   inlineStringReplacementPerf: false,
   conditionalBundlingAsyncRuntime: false,
+  fixBuildAbortCorruption: false,
   // Default to true as it's a monitoring change. Can be turned off if necessary.
   verboseRequestInvalidationStats: true,
   conditionalBundlingReporterDuplicateFix: false,
   resolveBundlerConfigFromCwd: false,
   conditionalBundlingReporterSameConditionFix: false,
   condbHtmlPackagerChange: false,
-  granularOptionInvalidation: false, // Controls all option invalidation features
+  granularOptionInvalidation: false,
+  applyScopeHoistingImprovement: false,
+  inlineConstOptimisationFix: false,
+  hmrImprovements: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

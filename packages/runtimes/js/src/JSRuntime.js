@@ -156,9 +156,14 @@ export default (new Runtime({
           // If this bundle already has the asset this dependency references,
           // return a simple runtime of `Promise.resolve(internalRequire(assetId))`.
           // The linker handles this for scope-hoisting.
+
+          const requireName = getFeatureFlag('hmrImprovements')
+            ? 'parcelRequire'
+            : 'module.bundle.root';
+
           assets.push({
             filePath: __filename,
-            code: `module.exports = Promise.resolve(module.bundle.root(${JSON.stringify(
+            code: `module.exports = Promise.resolve(${requireName}(${JSON.stringify(
               bundleGraph.getAssetPublicId(resolved.value),
             )}))`,
             dependency,
@@ -211,9 +216,10 @@ export default (new Runtime({
         bundle,
       );
       for (const cond of conditions) {
-        const requireName = bundle.env.shouldScopeHoist
-          ? 'parcelRequire'
-          : '__parcel__require__';
+        const requireName =
+          getFeatureFlag('hmrImprovements') || bundle.env.shouldScopeHoist
+            ? 'parcelRequire'
+            : '__parcel__require__';
 
         const assetCode = `module.exports = require('../helpers/conditional-loader${
           options.mode === 'development' ? '-dev' : ''
@@ -666,9 +672,11 @@ function getLoaderRuntime({
   }
 
   if (mainBundle.type === 'js') {
-    let parcelRequire = bundle.env.shouldScopeHoist
-      ? 'parcelRequire'
-      : 'module.bundle.root';
+    let parcelRequire =
+      getFeatureFlag('hmrImprovements') || bundle.env.shouldScopeHoist
+        ? 'parcelRequire'
+        : 'module.bundle.root';
+
     loaderCode += `.then(() => ${parcelRequire}('${bundleGraph.getAssetPublicId(
       bundleGraph.getAssetById(bundleGroup.entryAssetId),
     )}'))`;
@@ -801,7 +809,12 @@ function getURLRuntime(
   options: PluginOptions,
   shardingConfig: JSRuntimeConfig['domainSharding'],
 ): RuntimeAsset {
-  let relativePathExpr = getRelativePathExpr(from, to, options);
+  let relativePathExpr;
+  if (getFeatureFlag('hmrImprovements')) {
+    relativePathExpr = getRelativePathExpr(from, to, options, true);
+  } else {
+    relativePathExpr = getRelativePathExpr(from, to, options);
+  }
   let code;
 
   if (dependency.meta.webworker === true && !from.env.isLibrary) {
@@ -889,11 +902,18 @@ function getRelativePathExpr(
   from: NamedBundle,
   to: NamedBundle,
   options: PluginOptions,
+  isURL = to.type !== 'js',
 ): string {
   let relativePath = relativeBundlePath(from, to, {leadingDotSlash: false});
   let res = JSON.stringify(relativePath);
-  if (options.hmrOptions) {
-    res += ' + "?" + Date.now()';
+  if (getFeatureFlag('hmrImprovements')) {
+    if (isURL && options.hmrOptions) {
+      res += ' + "?" + Date.now()';
+    }
+  } else {
+    if (options.hmrOptions) {
+      res += ' + "?" + Date.now()';
+    }
   }
 
   return res;

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-webextension",
-  "version": "2.14.11",
+  "version": "2.14.14",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -15,8 +15,8 @@
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",
     "@atlaspack/diagnostic": "2.14.1",
-    "@atlaspack/plugin": "2.14.11",
-    "@atlaspack/utils": "2.14.11",
+    "@atlaspack/plugin": "2.14.14",
+    "@atlaspack/utils": "2.15.2",
     "content-security-policy-parser": "^0.3.0"
   },
   "type": "commonjs"

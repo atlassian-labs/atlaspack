@@ -8,6 +8,7 @@ import {
   normalizeSeparators,
 } from '@atlaspack/utils';
 import SourceMap from '@parcel/source-map';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import invariant from 'assert';
 import path from 'path';
 import fs from 'fs';
@@ -109,6 +110,18 @@ export class DevPackager {
           } else {
             // An external module - map placeholder to original specifier.
             deps[specifier] = dep.specifier;
+          }
+        }
+
+        if (getFeatureFlag('hmrImprovements')) {
+          // Add dependencies for parcelRequire calls added by runtimes
+          // so that the HMR runtime can correctly traverse parents.
+          let hmrDeps = asset.meta.hmrDeps;
+          if (this.options.hmrOptions && Array.isArray(hmrDeps)) {
+            for (let id of hmrDeps) {
+              invariant(typeof id === 'string');
+              deps[id] = id;
+            }
           }
         }
 
