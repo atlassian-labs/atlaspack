@@ -1235,6 +1235,9 @@ export default class RequestTracker {
 
   // TODO: refactor (abortcontroller should be created by RequestTracker)
   setSignal(signal?: AbortSignal) {
+    if (getFeatureFlag('fixBuildAbortCorruption')) {
+      return;
+    }
     this.signal = signal;
   }
 
@@ -1418,7 +1421,10 @@ export default class RequestTracker {
         rustAtlaspack: this.rustAtlaspack,
       });
 
-      assertSignalNotAborted(this.signal);
+      if (!getFeatureFlag('fixBuildAbortCorruption')) {
+        assertSignalNotAborted(this.signal);
+      }
+
       this.completeRequest(requestNodeId);
 
       deferred.resolve(true);
