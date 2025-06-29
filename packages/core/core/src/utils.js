@@ -18,7 +18,6 @@ import type {PackageManager} from '@atlaspack/package-manager';
 import invariant from 'assert';
 import baseX from 'base-x';
 import {hashObject} from '@atlaspack/utils';
-import {hashString} from '@atlaspack/rust';
 import {fromProjectPath, toProjectPath} from './projectPath';
 import {makeConfigProxy} from './public/Config';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
@@ -188,18 +187,6 @@ export function hashFromOption(value: mixed): string {
   }
 
   if (typeof value === 'object') {
-    // For arrays, only hash the length and a sample of elements
-    if (Array.isArray(value)) {
-      if (value.length > 100) {
-        // For large arrays, just hash the length and sample a few elements
-        return hashString(
-          `array:${value.length}:${String(value[0])}:${String(
-            value[Math.floor(value.length / 2)],
-          )}:${String(value[value.length - 1])}`,
-        );
-      }
-    }
-
     // For all objects, use regular object hashing
     return hashObject(value);
   }

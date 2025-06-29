@@ -99,11 +99,7 @@ export function makeConfigProxy<T>(
         // Check if we should track object enumeration operations
         // This is controlled by a feature flag - the previous behavior was to track these
         // but it can cause over-invalidation
-        const granularOptionInvalidationEnabled = getFeatureFlag(
-          'granularOptionInvalidation',
-        );
-
-        if (!granularOptionInvalidationEnabled) {
+        if (!getFeatureFlag('granularOptionInvalidation')) {
           // Legacy behavior: Track object enumeration
           // (Object.keys, for...in loops, etc.)
           reportPath(path);
