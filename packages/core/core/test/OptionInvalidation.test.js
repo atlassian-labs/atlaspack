@@ -64,7 +64,6 @@ describe('Option Invalidation', () => {
         sourceMaps: true,
         publicUrl: '/',
       },
-      // Adding missing properties to satisfy Flow
       featureFlags: {...DEFAULT_FEATURE_FLAGS},
     };
 
