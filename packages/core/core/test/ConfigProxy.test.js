@@ -3,7 +3,6 @@
 import sinon from 'sinon';
 import {makeConfigProxy} from '../src/public/Config';
 import assert from 'assert';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 describe('makeConfigProxy with path tracking improvements', () => {
   it('tracks reads to nested fields with path arrays', () => {
@@ -15,47 +14,68 @@ describe('makeConfigProxy with path tracking improvements', () => {
     assert.ok(onRead.calledOnce);
   });
 
-  it('handles Object.keys() operations based on the granularOptionInvalidation feature flag', () => {
-    const onRead = sinon.spy();
-    const target = {
-      options: {
-        featureFlags: {
-          flag1: true,
-          flag2: false,
+  // Test Object.keys() operations with different granularOptionInvalidation flag values
+  [
+    {granularOptionInvalidation: true},
+    {granularOptionInvalidation: false},
+  ].forEach(({granularOptionInvalidation}) => {
+    it(`handles Object.keys() operations (granularOptionInvalidation: ${granularOptionInvalidation.toString()})`, () => {
+      const onRead = sinon.spy();
+      const target = {
+        options: {
+          featureFlags: {
+            flag1: true,
+            flag2: false,
+          },
+          settings: {
+            mode: 'development',
+          },
         },
-        settings: {
-          mode: 'development',
-        },
-      },
-    };
+      };
 
-    const config = makeConfigProxy(onRead, target);
+      // Save current feature flags
+      // $FlowFixMe - We need to access the internal feature flags
+      const originalFlags =
+        require('@atlaspack/feature-flags').DEFAULT_FEATURE_FLAGS;
 
-    // Object.keys() on a proxy object
-    const keys = Object.keys(config.options.featureFlags);
-    assert.deepEqual(keys, ['flag1', 'flag2']);
+      try {
+        // Override the feature flag for this test only
+        // $FlowFixMe - We know this import has the setFeatureFlags method
+        const featureFlags = require('@atlaspack/feature-flags');
+        featureFlags.setFeatureFlags({
+          ...originalFlags,
+          granularOptionInvalidation,
+        });
 
-    // The default behavior is to track enumeration operations (for backward compatibility)
-    // So the call count should be 1 unless granularOptionInvalidation is enabled
-    const granularOptionInvalidationEnabled = getFeatureFlag(
-      'granularOptionInvalidation',
-    );
-    const expectedCallCount = granularOptionInvalidationEnabled ? 0 : 1;
-    assert.equal(
-      onRead.callCount,
-      expectedCallCount,
-      `Expected ${expectedCallCount} calls with granularOptionInvalidation=${String(
-        granularOptionInvalidationEnabled,
-      )}`,
-    );
+        const config = makeConfigProxy(onRead, target);
 
-    // Reset the spy
-    onRead.resetHistory();
+        // Object.keys() on a proxy object
+        const keys = Object.keys(config.options.featureFlags);
+        assert.deepEqual(keys, ['flag1', 'flag2']);
 
-    // Reading a specific property should still be tracked
-    assert.equal(config.options.featureFlags.flag1, true);
-    assert.ok(onRead.calledWith(['options', 'featureFlags', 'flag1']));
-    assert.equal(onRead.callCount, 1);
+        // The call count depends on the feature flag:
+        // - With granularOptionInvalidation=true: enumeration operations are not tracked (0 calls)
+        // - With granularOptionInvalidation=false: enumeration operations are tracked (1 call)
+        const expectedCallCount = granularOptionInvalidation ? 0 : 1;
+        assert.equal(
+          onRead.callCount,
+          expectedCallCount,
+          `Expected ${expectedCallCount} calls with granularOptionInvalidation=${granularOptionInvalidation.toString()}`,
+        );
+
+        // Reset the spy
+        onRead.resetHistory();
+
+        // Reading a specific property should still be tracked regardless of the flag
+        assert.equal(config.options.featureFlags.flag1, true);
+        assert.ok(onRead.calledWith(['options', 'featureFlags', 'flag1']));
+        assert.equal(onRead.callCount, 1);
+      } finally {
+        // Restore original feature flags
+        // $FlowFixMe - We know this import has the setFeatureFlags method
+        require('@atlaspack/feature-flags').setFeatureFlags(originalFlags);
+      }
+    });
   });
 
   it('joins path segments with dots when tracking paths', () => {
