@@ -12,14 +12,6 @@ const IGNORED_PACKAGES = [
   '!packages/core/test-utils/**',
   '!packages/core/types/**',
   '!packages/core/types-internal/**',
-
-  // These packages are bundled.
-  '!packages/core/codeframe/**',
-  '!packages/core/fs/**',
-  '!packages/core/package-manager/**',
-  '!packages/core/utils/**',
-  '!packages/reporters/cli/**',
-  '!packages/reporters/dev-server/**',
 ];
 
 const paths = {
