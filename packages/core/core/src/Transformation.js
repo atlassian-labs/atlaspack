@@ -123,7 +123,14 @@ export default class Transformation {
       optionsProxy(
         this.options,
         (option) => {
-          this.invalidations.invalidateOnOptionChange.add(option);
+          // Check if we're using the new granular option tracking (path arrays)
+          if (Array.isArray(option)) {
+            // Convert array paths to dot-notation for compatibility with Set<string>
+            this.invalidations.invalidateOnOptionChange.add(option.join('.'));
+          } else {
+            // Original behavior for string paths
+            this.invalidations.invalidateOnOptionChange.add(option);
+          }
         },
         (devDep) => {
           this.pluginDevDeps.push(devDep);

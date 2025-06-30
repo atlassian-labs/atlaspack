@@ -18,7 +18,10 @@ import type {PackageManager} from '@atlaspack/package-manager';
 import invariant from 'assert';
 import baseX from 'base-x';
 import {hashObject} from '@atlaspack/utils';
+import {hashString} from '@atlaspack/rust';
 import {fromProjectPath, toProjectPath} from './projectPath';
+import {makeConfigProxy} from './public/Config';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 const base62 = baseX(
   '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -72,9 +75,22 @@ const ignoreOptions = new Set([
   'additionalReporters',
 ]);
 
+/**
+ * Creates a proxy around AtlaspackOptions to track when options are accessed.
+ * This allows us to know which options are used by a specific request and invalidate
+ * only the necessary work when those options change.
+ *
+ * When granularOptionInvalidation is enabled, uses path arrays (e.g. ['featureFlags', 'granularOptionInvalidation'])
+ * for more precise invalidation. Otherwise, falls back to original string-based option tracking.
+ *
+ * @param {AtlaspackOptions} options - The options object to proxy
+ * @param {Function} invalidateOnOptionChange - Function called with the path array when an option is accessed
+ * @param {Function} [addDevDependency] - Optional function to track dev dependencies
+ * @returns {AtlaspackOptions} A proxy around the options object
+ */
 export function optionsProxy(
   options: AtlaspackOptions,
-  invalidateOnOptionChange: (string) => void,
+  invalidateOnOptionChange: (path: string[] | string) => void,
   addDevDependency?: (devDep: InternalDevDepOptions) => void,
 ): AtlaspackOptions {
   let packageManager = addDevDependency
@@ -84,19 +100,53 @@ export function optionsProxy(
         addDevDependency,
       )
     : options.packageManager;
-  return new Proxy(options, {
-    get(target, prop) {
-      if (prop === 'packageManager') {
-        return packageManager;
-      }
+
+  const granularOptionInvalidationEnabled = getFeatureFlag(
+    'granularOptionInvalidation',
+  );
+
+  if (granularOptionInvalidationEnabled) {
+    // New behavior with granular path tracking
+    // Create options object without packageManager to avoid proxying it
+    // eslint-disable-next-line no-unused-vars
+    const {packageManager: _packageManager, ...optionsWithoutPackageManager} =
+      options;
+
+    // Use makeConfigProxy from Config.js which is designed to track property reads
+    // and provide the accessed property paths as arrays
+    const proxiedOptions = makeConfigProxy((path) => {
+      // Ignore specified options
+      const [prop] = path;
 
       if (!ignoreOptions.has(prop)) {
-        invalidateOnOptionChange(prop);
+        // Important: Always pass the full path array for granular path tracking
+        // This ensures we're passing an array to invalidateOnOptionChange, not a string
+        invalidateOnOptionChange(path);
       }
+    }, optionsWithoutPackageManager);
 
-      return target[prop];
-    },
-  });
+    // Return the proxied options with the original or proxied packageManager
+    return {
+      ...proxiedOptions,
+      packageManager,
+    };
+  } else {
+    // Original behavior for backward compatibility
+    return new Proxy(options, {
+      get(target, prop) {
+        if (prop === 'packageManager') {
+          return packageManager;
+        }
+
+        if (!ignoreOptions.has(prop)) {
+          // Original behavior: pass the prop as a string
+          invalidateOnOptionChange(prop);
+        }
+
+        return target[prop];
+      },
+    });
+  }
 }
 
 function proxyPackageManager(
@@ -125,8 +175,32 @@ function proxyPackageManager(
   });
 }
 
+/**
+ * Creates a hash value for an option to detect changes between builds.
+ * Optimized to handle common types of options efficiently.
+ *
+ * @param {mixed} value - The option value to hash
+ * @returns {string} A string hash representing the value
+ */
 export function hashFromOption(value: mixed): string {
-  if (typeof value === 'object' && value != null) {
+  if (value == null) {
+    return String(value);
+  }
+
+  if (typeof value === 'object') {
+    // For arrays, only hash the length and a sample of elements
+    if (Array.isArray(value)) {
+      if (value.length > 100) {
+        // For large arrays, just hash the length and sample a few elements
+        return hashString(
+          `array:${value.length}:${String(value[0])}:${String(
+            value[Math.floor(value.length / 2)],
+          )}:${String(value[value.length - 1])}`,
+        );
+      }
+    }
+
+    // For all objects, use regular object hashing
     return hashObject(value);
   }
 
