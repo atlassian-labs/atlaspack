@@ -9,6 +9,7 @@ import {
   prettifyTime,
   prettyDiagnostic,
   throttle,
+  debugTools,
 } from '@atlaspack/utils';
 import chalk from 'chalk';
 
@@ -134,12 +135,18 @@ export async function _report(
       );
 
       if (options.mode === 'production') {
-        await bundleReport(
-          event.bundleGraph,
-          options.outputFS,
-          options.projectRoot,
-          options.detailedReport?.assetsPerBundle,
-        );
+        if (debugTools['simple-cli-reporter']) {
+          writeOut(
+            `🛠️ Built ${event.bundleGraph.getBundles().length} bundles.`,
+          );
+        } else {
+          await bundleReport(
+            event.bundleGraph,
+            options.outputFS,
+            options.projectRoot,
+            options.detailedReport?.assetsPerBundle,
+          );
+        }
       } else {
         pendingIncrementalBuild = true;
       }
