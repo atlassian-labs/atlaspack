@@ -53,14 +53,10 @@ describe('makeConfigProxy with path tracking improvements', () => {
         const keys = Object.keys(config.options.featureFlags);
         assert.deepEqual(keys, ['flag1', 'flag2']);
 
-        // The call count depends on the feature flag:
-        // - With granularOptionInvalidation=true: enumeration operations are not tracked (0 calls)
-        // - With granularOptionInvalidation=false: enumeration operations are tracked (1 call)
-        const expectedCallCount = granularOptionInvalidation ? 0 : 1;
         assert.equal(
           onRead.callCount,
-          expectedCallCount,
-          `Expected ${expectedCallCount} calls with granularOptionInvalidation=${granularOptionInvalidation.toString()}`,
+          1,
+          `Object.keys() should always be tracked (granularOptionInvalidation=${granularOptionInvalidation.toString()})`,
         );
 
         // Reset the spy
@@ -108,20 +104,55 @@ describe('makeConfigProxy with path tracking improvements', () => {
     assert.equal(onRead.callCount, 1);
   });
 
-  it('handles empty paths safely', () => {
-    const onRead = sinon.spy();
-    const config = makeConfigProxy(onRead, {});
+  // Test root enumeration with different granularOptionInvalidation flag values
+  [
+    {granularOptionInvalidation: true},
+    {granularOptionInvalidation: false},
+  ].forEach(({granularOptionInvalidation}) => {
+    it(`handles empty paths safely (granularOptionInvalidation: ${granularOptionInvalidation.toString()})`, () => {
+      const onRead = sinon.spy();
 
-    // Force an empty path (not normal usage, but should be handled)
-    const proxy = config;
+      // Save current feature flags
+      // $FlowFixMe - We need to access the internal feature flags
+      const originalFlags =
+        require('@atlaspack/feature-flags').DEFAULT_FEATURE_FLAGS;
 
-    // This should not cause errors or call onRead with empty path
-    assert.doesNotThrow(() => {
-      Object.keys(proxy);
+      try {
+        // Override the feature flag for this test only
+        // $FlowFixMe - We know this import has the setFeatureFlags method
+        const featureFlags = require('@atlaspack/feature-flags');
+        featureFlags.setFeatureFlags({
+          ...originalFlags,
+          granularOptionInvalidation,
+        });
+
+        const config = makeConfigProxy(onRead, {});
+
+        // Force an empty path (not normal usage, but should be handled)
+        const proxy = config;
+
+        // This should not cause errors or call onRead with empty path
+        assert.doesNotThrow(() => {
+          Object.keys(proxy);
+        });
+
+        // Root enumeration behavior depends on the feature flag
+        if (granularOptionInvalidation) {
+          // When granularOptionInvalidation is enabled, root enumeration should be tracked with __root__ marker
+          assert.equal(onRead.callCount, 1);
+          assert.ok(onRead.calledWith(['__root__']));
+        } else {
+          // When granularOptionInvalidation is disabled, root enumeration be tracked as an empty array
+          assert.equal(onRead.callCount, 1);
+          assert.ok(onRead.calledWith([]));
+        }
+      } finally {
+        // Restore original feature flags
+        // $FlowFixMe - We know this import has the setFeatureFlags method
+        const featureFlags = require('@atlaspack/feature-flags');
+        featureFlags.setFeatureFlags(originalFlags);
+      }
     });
-
-    // Empty paths should not be tracked
-    assert.equal(onRead.callCount, 0);
   });
 
   it('does not leak memory by repeatedly tracking the same paths', () => {

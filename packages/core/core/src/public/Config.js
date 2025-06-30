@@ -12,7 +12,6 @@ import type {Config, AtlaspackOptions} from '../types';
 
 import invariant from 'assert';
 import path from 'path';
-import logger from '@atlaspack/logger';
 import {
   DefaultWeakMap,
   resolveConfig,
@@ -44,10 +43,10 @@ const internalConfigToConfig: DefaultWeakMap<
  *
  * In case the value is null or an array, we will track the read as well.
  *
- * NOTE: By default, we DO track Object.keys()/ownKeys operations for backward compatibility,
- * but this can be disabled with the 'granularOptionInvalidation' feature flag. When disabled,
- * property enumeration won't trigger cache invalidation, which prevents unnecessary invalidations
- * when code is just enumerating options rather than depending on specific values.
+ * NOTE: We track Object.keys()/ownKeys operations because code that enumerates properties
+ * may depend on the set of available keys and should be invalidated when keys are added/removed.
+ * Root enumeration (Object.keys() on the config object itself) is only tracked when the
+ * granularOptionInvalidation feature flag is enabled.
  *
  * @example
  *
@@ -67,46 +66,47 @@ export function makeConfigProxy<T>(
   onRead: (path: string[]) => void,
   config: T,
 ): T {
+  const granularOptionInvalidationEnabled = getFeatureFlag(
+    'granularOptionInvalidation',
+  );
   const reportedPaths = new Set();
+
   const reportPath = (path) => {
-    // Always do the path check first
-    if (path.length === 0) {
-      const error = new Error('Empty path in makeConfigProxy');
-      logger.verbose({
-        origin: '@atlaspack/core',
-        message: 'Empty path detected in makeConfigProxy',
-        meta: {
-          stack: error.stack,
-          operation: 'reportPath', // Track which operation triggered this
-          trackableEvent: 'empty_path_in_config_proxy',
-        },
-      });
-      // Don't continue with empty paths - don't register them for invalidation
+    let pathKey;
+
+    if (granularOptionInvalidationEnabled) {
+      // New behavior: Handle root enumeration with a special marker
+      pathKey =
+        path.length === 0 || (path.length === 1 && path[0] === '__root__')
+          ? '__root__'
+          : path.join('.');
+    } else {
+      // Original behavior: Simple path joining
+      pathKey = path.join('.');
+    }
+
+    if (reportedPaths.has(pathKey)) {
       return;
     }
 
-    if (reportedPaths.has(path.join('.'))) {
-      return;
-    }
-
-    reportedPaths.add(path.join('.'));
+    reportedPaths.add(pathKey);
     onRead(path);
   };
 
   const makeProxy = (target, path) => {
     return new Proxy(target, {
       ownKeys(target) {
-        // Check if we should track object enumeration operations
-        // This is controlled by a feature flag - the previous behavior was to track these
-        // but it can cause over-invalidation
         if (!getFeatureFlag('granularOptionInvalidation')) {
-          // Legacy behavior: Track object enumeration
-          // (Object.keys, for...in loops, etc.)
           reportPath(path);
+        } else {
+          if (path.length === 0) {
+            // Track root enumeration with __root__ marker
+            // ensures that when someone enumerates the root config object, the system knows to invalidate cached results if the set of root-level properties changes.
+            reportPath(['__root__']);
+          } else {
+            reportPath(path);
+          }
         }
-        // Otherwise, skip invoking reportPath for ownKeys
-        // This prevents spurious invalidations from Object.keys() calls
-
         // $FlowFixMe
         return Object.getOwnPropertyNames(target);
       },

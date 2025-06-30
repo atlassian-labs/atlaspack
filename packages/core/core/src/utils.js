@@ -100,21 +100,19 @@ export function optionsProxy(
       )
     : options.packageManager;
 
-  const granularOptionInvalidationEnabled = getFeatureFlag(
-    'granularOptionInvalidation',
-  );
-
-  if (granularOptionInvalidationEnabled) {
-    // New behavior with granular path tracking
+  if (getFeatureFlag('granularOptionInvalidation')) {
     // Create options object without packageManager to avoid proxying it
-    // eslint-disable-next-line no-unused-vars
-    const {packageManager: _packageManager, ...optionsWithoutPackageManager} =
-      options;
+    // Avoid destructuring which triggers Object.keys() enumeration
+    const optionsWithoutPackageManager = {};
+    for (const key in options) {
+      if (key !== 'packageManager') {
+        optionsWithoutPackageManager[key] = options[key];
+      }
+    }
 
     // Use makeConfigProxy from Config.js which is designed to track property reads
     // and provide the accessed property paths as arrays
     const proxiedOptions = makeConfigProxy((path) => {
-      // Ignore specified options
       const [prop] = path;
 
       if (!ignoreOptions.has(prop)) {
@@ -124,11 +122,18 @@ export function optionsProxy(
       }
     }, optionsWithoutPackageManager);
 
-    // Return the proxied options with the original or proxied packageManager
-    return {
-      ...proxiedOptions,
-      packageManager,
-    };
+    // Return the proxied options with the original packageManager
+    // NOTE:
+    // return {...proxiedOptions, packageManager};
+    // This would trigger Object.keys() enumeration on the proxy object.
+    // (The ownKeys trap is defined in the makeConfigProxy function in Config.js)
+    //
+    // The spread operator (...) internally calls Object.keys() which triggers the ownKeys trap
+    // on proxied objects. For proxies that track property access, this can cause performance
+    // issues when done repeatedly, as it enumerates all properties instead of accessing specific ones.
+    // Object.assign() uses getOwnPropertyDescriptor() instead, avoiding the ownKeys trap.
+    // $FlowFixMe[incompatible-exact] - Object.assign creates inexact type, but proxy contains all AtlaspackOptions properties
+    return Object.assign({}, proxiedOptions, {packageManager});
   } else {
     // Original behavior for backward compatibility
     return new Proxy(options, {
