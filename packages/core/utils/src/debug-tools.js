@@ -11,7 +11,12 @@
  * You can enable all tools by setting `ATLASPACK_DEBUG_TOOLS=all`.
  */
 
-export let debugTools = {
+type DebugTools = {|
+  'asset-file-names-in-output': boolean,
+  'simple-cli-reporter': boolean,
+|};
+
+export let debugTools: DebugTools = {
   'asset-file-names-in-output': false,
   'simple-cli-reporter': false,
 };
