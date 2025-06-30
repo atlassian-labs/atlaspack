@@ -1,5 +1,14 @@
 # @atlaspack/optimizer-image
 
+## 3.1.15
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.15.3
+  - @atlaspack/workers@2.14.15
+  - @atlaspack/plugin@2.14.15
+
 ## 3.1.14
 
 ### Patch Changes

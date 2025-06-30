@@ -1,5 +1,17 @@
 # @atlaspack/packager-js
 
+## 2.16.2
+
+### Patch Changes
+
+- [#654](https://github.com/atlassian-labs/atlaspack/pull/654) [`4d7abde`](https://github.com/atlassian-labs/atlaspack/commit/4d7abde0a6faa148bcf330b08d820f171f853b76) Thanks [@marcins](https://github.com/marcins)! - Fixes constant inlining to work correctly with scope hoisting optimisations
+
+- Updated dependencies [[`5ded263`](https://github.com/atlassian-labs/atlaspack/commit/5ded263c7f11b866e8885b81c73e20dd060b25be)]:
+  - @atlaspack/feature-flags@2.18.3
+  - @atlaspack/utils@2.15.3
+  - @atlaspack/types@2.15.5
+  - @atlaspack/plugin@2.14.15
+
 ## 2.16.1
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @atlaspack/packager-svg
 
+## 2.14.15
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.15.3
+  - @atlaspack/types@2.15.5
+  - @atlaspack/plugin@2.14.15
+
 ## 2.14.14
 
 ### Patch Changes
