@@ -284,6 +284,7 @@ const nodeFromEnv = (env: string, value: string | void): RequestGraphNode => ({
 /**
  * Creates a node to represent an option and its current value.
  * Supports both string and array path formats for backwards compatibility.
+ * Uses JSON.stringify for array paths to handle keys containing dots properly.
  *
  * @param {string[] | string} option - Option path as an array or dot-notation string
  * @param {mixed} value - The current value of the option
@@ -293,8 +294,10 @@ const nodeFromOption = (
   option: string[] | string,
   value: mixed,
 ): RequestGraphNode => {
-  // Normalize option to string format for node ID
-  const optionKey = Array.isArray(option) ? option.join('.') : option;
+  // Preserve original behavior for strings, only prefix arrays to handle dots
+  const optionKey = Array.isArray(option)
+    ? `array:${JSON.stringify(option)}`
+    : option;
   return {
     id: 'option:' + optionKey,
     type: OPTION,
@@ -320,6 +323,27 @@ const keyFromEnvContentKey = (contentKey: ContentKey): string =>
 
 const keyFromOptionContentKey = (contentKey: ContentKey): string =>
   contentKey.slice('option:'.length);
+
+/**
+ * Extracts the original option from a prefixed option key.
+ * Handles both new format (with array prefix) and legacy format (strings).
+ *
+ * @param {string} key - The option key from the content key
+ * @returns {string[] | string} The original option path
+ */
+const extractOptionFromKey = (key: string): string[] | string => {
+  if (key.startsWith('array:')) {
+    try {
+      return JSON.parse(key.slice(6));
+    } catch (e) {
+      // Fallback to legacy behavior if JSON parsing fails
+      return key.slice(6);
+    }
+  } else {
+    // No prefix means it's a string option (preserves original behavior)
+    return key;
+  }
+};
 
 // This constant is chosen by local profiling the time to serialise n nodes and tuning until an average time of ~50 ms per blob.
 // The goal is to free up the event loop periodically to allow interruption by the user.
@@ -543,10 +567,16 @@ export class RequestGraph extends ContentGraph<
       for (let nodeId of this.optionNodeIds) {
         let node = nullthrows(this.getNode(nodeId));
         invariant(node.type === OPTION);
-        const key = keyFromOptionContentKey(node.id);
+        const rawKey = keyFromOptionContentKey(node.id);
+        const extractedOption = extractOptionFromKey(rawKey);
 
-        if (hashFromOption(options[key]) !== node.hash) {
-          invalidatedKeys.push(key);
+        // For legacy behavior, convert to string representation for lookup
+        const lookupKey = Array.isArray(extractedOption)
+          ? extractedOption.join('.')
+          : extractedOption;
+
+        if (hashFromOption(options[lookupKey]) !== node.hash) {
+          invalidatedKeys.push(lookupKey);
           let parentNodes = this.getNodeIdsConnectedTo(
             nodeId,
             requestGraphEdgeTypes.invalidated_by_update,
@@ -578,9 +608,18 @@ export class RequestGraph extends ContentGraph<
     for (let nodeId of this.optionNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === OPTION);
-      const optionKey = keyFromOptionContentKey(node.id);
-      // Split into path array for granular checking
-      const optionPath = optionKey.split('.');
+      const rawKey = keyFromOptionContentKey(node.id);
+      const extractedOption = extractOptionFromKey(rawKey);
+
+      // Convert to path array for granular checking
+      const optionPath = Array.isArray(extractedOption)
+        ? extractedOption
+        : extractedOption.split('.');
+
+      // Use string representation for blocklist checking and logging
+      const optionKey = Array.isArray(extractedOption)
+        ? extractedOption.join('.')
+        : extractedOption;
 
       // Check if this option should be skipped from invalidation
       const shouldSkip =
