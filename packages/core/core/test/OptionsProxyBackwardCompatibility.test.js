@@ -1,9 +1,10 @@
 // @noflow
 
 import sinon from 'sinon';
-import {optionsProxy} from '../src/utils';
 import assert from 'assert';
 import * as featureFlags from '@atlaspack/feature-flags';
+
+import {optionsProxy} from '../src/utils';
 
 describe('optionsProxy backward compatibility', () => {
   let getFeatureFlagStub;
