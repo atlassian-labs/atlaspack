@@ -23,7 +23,8 @@
     "@atlaspack/types": "2.15.4",
     "@atlaspack/utils": "2.15.2",
     "globals": "^13.2.0",
-    "nullthrows": "^1.1.1"
+    "nullthrows": "^1.1.1",
+    "outdent": "^0.8.0"
   },
   "type": "commonjs"
 }
