@@ -140,7 +140,7 @@ export function mergeEnvironments(
   });
 }
 
-function getEnvironmentHash(env: Environment): string {
+export function getEnvironmentHash(env: Environment): string {
   const data = {
     context: env.context,
     engines: env.engines,

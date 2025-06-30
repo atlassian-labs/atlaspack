@@ -21,7 +21,7 @@ export opaque type EnvironmentId = string;
 /**
  * When deduplication is cleaned-up this will always be a string.
  */
-export type EnvironmentRef = EnvironmentId | CoreEnvironment;
+export opaque type EnvironmentRef = EnvironmentId | CoreEnvironment;
 
 /**
  * Convert environment to a ref.
