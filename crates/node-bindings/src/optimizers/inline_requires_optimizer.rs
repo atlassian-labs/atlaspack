@@ -49,6 +49,7 @@ pub fn run_inline_requires_optimizer(
   })
 }
 
+/// Runs in the rayon thread pool
 #[napi]
 pub fn run_inline_requires_optimizer_async(
   env: Env,
