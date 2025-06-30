@@ -68,11 +68,6 @@ describe('Option Invalidation', () => {
     };
 
     graph = new RequestGraph();
-
-    // Set granularOptionInvalidation for the test
-    const flags = {...DEFAULT_FEATURE_FLAGS};
-    flags.granularOptionInvalidation = false;
-    setFeatureFlags(flags);
   });
 
   afterEach(() => {
@@ -121,60 +116,71 @@ describe('Option Invalidation', () => {
     assert(optionKeys.includes('instanceId'));
   });
 
-  it('invalidates nodes when tracked options change', async () => {
-    // $FlowFixMe[incompatible-call] - Test mocking with incomplete options
-    const tracker = new RequestTracker({
-      graph,
-      farm,
-      options,
+  // Test with both feature flag values
+  [
+    {granularOptionInvalidation: true},
+    {granularOptionInvalidation: false},
+  ].forEach(({granularOptionInvalidation}) => {
+    it(`invalidates nodes when tracked options change (granularOptionInvalidation: ${granularOptionInvalidation.toString()})`, async () => {
+      // Set the feature flag for this test
+      const flags = {...DEFAULT_FEATURE_FLAGS};
+      flags.granularOptionInvalidation = granularOptionInvalidation;
+      setFeatureFlags(flags);
+
+      // $FlowFixMe[incompatible-call] - Test mocking with incomplete options
+      const tracker = new RequestTracker({
+        graph,
+        farm,
+        options,
+      });
+
+      // Create a mock request
+      const request = {
+        id: 'test_request',
+        type: 0, // asset_request
+        input: {id: 'test-input'},
+        run: sinon.spy(({api}) => {
+          api.invalidateOnOptionChange('mode');
+          return {type: 'ok'};
+        }),
+      };
+
+      // Run the request
+      await tracker.runRequest(request);
+
+      // Modify the options and check for invalidation
+      const modifiedOptions = {
+        ...options,
+        mode: 'production', // Changed from 'development'
+      };
+
+      // Run invalidation and get the results
+      // $FlowFixMe - Test mocking
+      const invalidatedOptions = graph.invalidateOptionNodes(modifiedOptions);
+
+      // Check that the 'mode' option was invalidated
+      assert.equal(invalidatedOptions.length, 1);
+
+      // The return format depends on the granularOptionInvalidation flag:
+      // - When false: string array of option keys like ['mode']
+      // - When true: array of objects like [{option: 'mode', count: 1}]
+      const firstInvalidated = invalidatedOptions[0];
+
+      if (typeof firstInvalidated === 'string') {
+        // When granularOptionInvalidation is false
+        assert.equal(firstInvalidated, 'mode');
+      } else {
+        // When granularOptionInvalidation is true
+        assert.equal(firstInvalidated.option, 'mode');
+        assert(firstInvalidated.count > 0);
+      }
+
+      // Verify the node was actually marked as invalid
+      assert(graph.invalidNodeIds.size > 0);
     });
-
-    // Create a mock request
-    const request = {
-      id: 'test_request',
-      type: 0, // asset_request
-      input: {id: 'test-input'},
-      run: sinon.spy(({api}) => {
-        api.invalidateOnOptionChange('mode');
-        return {type: 'ok'};
-      }),
-    };
-
-    // Run the request
-    await tracker.runRequest(request);
-
-    // Modify the options and check for invalidation
-    const modifiedOptions = {
-      ...options,
-      mode: 'production', // Changed from 'development'
-    };
-
-    // Run invalidation and get the results
-    // $FlowFixMe - Test mocking
-    const invalidatedOptions = graph.invalidateOptionNodes(modifiedOptions);
-
-    // Check that the 'mode' option was invalidated
-    assert.equal(invalidatedOptions.length, 1);
-
-    // The return format depends on the granularOptionInvalidation flag:
-    // - When false: string array of option keys like ['mode']
-    // - When true: array of objects like [{option: 'mode', count: 1}]
-    const firstInvalidated = invalidatedOptions[0];
-
-    if (typeof firstInvalidated === 'string') {
-      // When granularOptionInvalidation is false
-      assert.equal(firstInvalidated, 'mode');
-    } else {
-      // When granularOptionInvalidation is true
-      assert.equal(firstInvalidated.option, 'mode');
-      assert(firstInvalidated.count > 0);
-    }
-
-    // Verify the node was actually marked as invalid
-    assert(graph.invalidNodeIds.size > 0);
   });
 
-  it('respects the blocklist when feature flag is enabled', async () => {
+  it('respects the blocklist when granularOptionInvalidation is enabled', async () => {
     // Enable the blocklist feature flag
     const flags = {...DEFAULT_FEATURE_FLAGS};
     flags.granularOptionInvalidation = true;
@@ -222,9 +228,6 @@ describe('Option Invalidation', () => {
     // Check that only the 'mode' option was invalidated
     // $FlowFixMe - Test mocking, raw type checking
     assert.equal(invalidatedOptions.length, 1);
-    // Don't check the specific option names as they might have changed with new format
-    // $FlowFixMe - Test mocking, raw type checking
-    // assert.equal(invalidatedOptions[0].option, 'mode');
 
     // instanceId should not cause invalidation since it's blocklisted
     // We now just check that there's only one item in the array, which means
@@ -232,7 +235,7 @@ describe('Option Invalidation', () => {
     assert.equal(invalidatedOptions.length, 1);
   });
 
-  it('supports granular path tracking when feature flag is enabled', async () => {
+  it('supports granular path tracking when granularOptionInvalidation is enabled', async () => {
     // Enable the granular option invalidation feature flag
     const flags = {...DEFAULT_FEATURE_FLAGS};
     flags.granularOptionInvalidation = true;
@@ -303,48 +306,53 @@ describe('Option Invalidation', () => {
     // Check that the specific nested path was invalidated
     // $FlowFixMe - Test mocking, raw type checking
     assert.equal(invalidatedOptions.length, 1);
-    // We've changed how options are represented, so we don't check the specific path string
-    // $FlowFixMe - Test mocking, raw type checking
-    // assert.equal(
-    //   invalidatedOptions[0].option,
-    //   'nestedOptions.level1.level2.setting1',
-    // );
   });
 
-  it('supports both string and array path formats for backward compatibility', async () => {
-    // $FlowFixMe - Test mocking with incomplete options
-    const tracker = new RequestTracker({
-      graph,
-      farm,
-      options,
+  // Test with both feature flag values
+  [
+    {granularOptionInvalidation: true},
+    {granularOptionInvalidation: false},
+  ].forEach(({granularOptionInvalidation}) => {
+    it(`supports both string and array path formats (granularOptionInvalidation: ${granularOptionInvalidation.toString()})`, async () => {
+      // Set the feature flag for this test
+      const flags = {...DEFAULT_FEATURE_FLAGS};
+      flags.granularOptionInvalidation = granularOptionInvalidation;
+      setFeatureFlags(flags);
+
+      // $FlowFixMe - Test mocking with incomplete options
+      const tracker = new RequestTracker({
+        graph,
+        farm,
+        options,
+      });
+
+      // Create a mock request
+      const request = {
+        id: 'test_request',
+        type: 0, // asset_request
+        input: {id: 'test-input'},
+        run: sinon.spy(({api}) => {
+          // Test both formats
+          api.invalidateOnOptionChange('mode'); // String format
+          api.invalidateOnOptionChange(['defaultTargetOptions', 'sourceMaps']); // Array format
+          return {type: 'ok'};
+        }),
+      };
+
+      // Run the request
+      await tracker.runRequest(request);
+
+      // Check that option nodes were created with both formats
+      const optionNodes = graph.getNodesByPrefix('option:');
+      // $FlowFixMe - Test mocking, raw type checking
+      assert.equal(optionNodes.length, 2);
+
+      const optionKeys = optionNodes.map((node) =>
+        node.id.slice('option:'.length),
+      );
+      assert(optionKeys.includes('mode'));
+      assert(optionKeys.includes('defaultTargetOptions.sourceMaps'));
     });
-
-    // Create a mock request
-    const request = {
-      id: 'test_request',
-      type: 0, // asset_request
-      input: {id: 'test-input'},
-      run: sinon.spy(({api}) => {
-        // Test both formats
-        api.invalidateOnOptionChange('mode'); // String format
-        api.invalidateOnOptionChange(['defaultTargetOptions', 'sourceMaps']); // Array format
-        return {type: 'ok'};
-      }),
-    };
-
-    // Run the request
-    await tracker.runRequest(request);
-
-    // Check that option nodes were created with both formats
-    const optionNodes = graph.getNodesByPrefix('option:');
-    // $FlowFixMe - Test mocking, raw type checking
-    assert.equal(optionNodes.length, 2);
-
-    const optionKeys = optionNodes.map((node) =>
-      node.id.slice('option:'.length),
-    );
-    assert(optionKeys.includes('mode'));
-    assert(optionKeys.includes('defaultTargetOptions.sourceMaps'));
   });
 
   it('getValueAtPath correctly navigates nested paths', () => {
