@@ -11,6 +11,7 @@ import type {
 } from '@atlaspack/types';
 import type {
   AtlaspackOptions,
+  BundleGraphNode,
   BundleGroup as InternalBundleGroup,
   BundleNode,
 } from '../types';
@@ -207,7 +208,8 @@ export default class MutableBundleGraph
       bundleBehavior: opts.bundleBehavior ?? null,
     });
 
-    let existing = this.#graph._graph.getNodeByContentKey(bundleId);
+    let existing: ?BundleGraphNode =
+      this.#graph._graph.getNodeByContentKey(bundleId);
     if (existing != null) {
       invariant(existing.type === 'bundle');
       return Bundle.get(existing.value, this.#graph, this.#options);
