@@ -168,7 +168,8 @@ jobs:
     name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
       - build_native
-    timeout-minutes: 35
+    # https://github.com/actions/runner/issues/409#issuecomment-727565588 for conditional syntax
+    timeout-minutes: ${{ matrix.os == 'macos-15' && 45 || 35 }}
     strategy:
       # These tend to be quite flakey, so one failed instance shouldn't stop
       # others from potentially succeeding
