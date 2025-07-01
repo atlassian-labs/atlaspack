@@ -2,28 +2,38 @@
 
 import sinon from 'sinon';
 import assert from 'assert';
-import * as featureFlags from '@atlaspack/feature-flags';
+import {
+  setFeatureFlags,
+  getFeatureFlag,
+  DEFAULT_FEATURE_FLAGS,
+} from '@atlaspack/feature-flags';
 
 import {optionsProxy} from '../src/utils';
 
 describe('optionsProxy backward compatibility', () => {
-  let getFeatureFlagStub;
+  let originalFeatureFlags;
 
   beforeEach(() => {
-    // Stub the getFeatureFlag function
-    getFeatureFlagStub = sinon.stub(featureFlags, 'getFeatureFlag');
-    // Default to returning false
-    getFeatureFlagStub.returns(false);
+    // Save original feature flag values
+    originalFeatureFlags = {
+      granularOptionInvalidation: getFeatureFlag('granularOptionInvalidation'),
+    };
   });
 
   afterEach(() => {
-    // Restore the original function
-    getFeatureFlagStub.restore();
+    // Restore original feature flag values
+    setFeatureFlags({
+      ...DEFAULT_FEATURE_FLAGS,
+      ...originalFeatureFlags,
+    });
   });
 
   it('behaves like original implementation when feature flag is off', () => {
-    // Ensure feature flag is off
-    getFeatureFlagStub.withArgs('granularOptionInvalidation').returns(false);
+    // Set feature flag to false
+    setFeatureFlags({
+      ...DEFAULT_FEATURE_FLAGS,
+      granularOptionInvalidation: false,
+    });
 
     const invalidateOnOptionChange = sinon.spy();
 
@@ -64,8 +74,11 @@ describe('optionsProxy backward compatibility', () => {
   });
 
   it('maintains backward compatibility when feature flag is on', () => {
-    // Enable feature flag
-    getFeatureFlagStub.withArgs('granularOptionInvalidation').returns(true);
+    // Set feature flag to true
+    setFeatureFlags({
+      ...DEFAULT_FEATURE_FLAGS,
+      granularOptionInvalidation: true,
+    });
 
     const invalidateOnOptionChange = sinon.spy();
 
