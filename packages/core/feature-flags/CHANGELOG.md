@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.18.3
+
+### Patch Changes
+
+- [#655](https://github.com/atlassian-labs/atlaspack/pull/655) [`5ded263`](https://github.com/atlassian-labs/atlaspack/commit/5ded263c7f11b866e8885b81c73e20dd060b25be) Thanks [@yamadapc](https://github.com/yamadapc)! - Clean-up inline requires multi-threading feature-flag
+
 ## 2.18.2
 
 ### Patch Changes
