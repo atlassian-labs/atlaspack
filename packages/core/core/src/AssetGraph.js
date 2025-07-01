@@ -29,7 +29,11 @@ import nullthrows from 'nullthrows';
 import {ContentGraph} from '@atlaspack/graph';
 import {createDependency} from './Dependency';
 import {type ProjectPath, fromProjectPathRelative} from './projectPath';
-import {fromEnvironmentId, toEnvironmentId} from './EnvironmentManager';
+import {
+  fromEnvironmentId,
+  toEnvironmentId,
+  toEnvironmentRef,
+} from './EnvironmentManager';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type InitOpts = {|
@@ -160,7 +164,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
 
     let env = this.envCache.get(idAndContext);
     if (env) {
-      input.env = env;
+      input.env = toEnvironmentRef(env);
     } else {
       this.envCache.set(idAndContext, fromEnvironmentId(input.env));
     }
