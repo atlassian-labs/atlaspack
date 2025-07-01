@@ -24,15 +24,23 @@ const options = {
   ...DEFAULT_OPTIONS,
   cache: new LMDBLiteCache(DEFAULT_OPTIONS.cacheDir),
 };
-const farm = new WorkerFarm({workerPath: require.resolve('../src/worker')});
 
 describe('RequestTracker', () => {
+  let farm;
+  before(() => {
+    farm = new WorkerFarm({workerPath: require.resolve('../src/worker')});
+  });
+
   beforeEach(async () => {
     await options.cache.ensure();
 
     for (const key of options.cache.keys()) {
       await options.cache.getNativeRef().delete(key);
     }
+  });
+
+  after(() => {
+    farm.end();
   });
 
   it('should not run requests that have not been invalidated', async () => {

@@ -18,6 +18,4 @@ module.exports = {
     '@atlaspack/babel-register',
     '@atlaspack/test-utils/src/mochaSetup.js',
   ],
-  // TODO: Remove this when https://github.com/nodejs/node/pull/28788 is resolved
-  exit: true,
 };

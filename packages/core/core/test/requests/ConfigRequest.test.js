@@ -23,13 +23,21 @@ const mockCast = (f: any): any => f;
 
 describe('ConfigRequest tests', () => {
   const projectRoot = 'project_root';
-  const farm = new WorkerFarm({
-    workerPath: require.resolve('../../src/worker'),
-    maxConcurrentWorkers: 1,
+  let farm;
+  let fs;
+  before(() => {
+    farm = new WorkerFarm({
+      workerPath: require.resolve('../../src/worker'),
+      maxConcurrentWorkers: 1,
+    });
   });
-  let fs = new MemoryFS(farm);
+
   beforeEach(() => {
     fs = new MemoryFS(farm);
+  });
+
+  after(() => {
+    farm.end();
   });
 
   const getMockRunApi = (

@@ -27,6 +27,7 @@
     "posthtml-parser": "^0.10.1",
     "resolve": "^1.12.0",
     "ws": "^7.0.0",
-    "tempy": "^0.2.1"
+    "tempy": "^0.2.1",
+    "why-is-node-running": "^3.2.2"
   }
 }
