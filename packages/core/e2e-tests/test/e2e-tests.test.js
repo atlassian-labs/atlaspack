@@ -19,7 +19,7 @@ async function runPlaywrightTest(
   });
 
   await atlaspack.run();
-  await atlaspack.watch();
+  const subscription = await atlaspack.watch();
 
   const browser = await chromium.launch();
   const context = await browser.newContext();
@@ -27,10 +27,13 @@ async function runPlaywrightTest(
 
   await page.goto('http://localhost:1234');
 
-  await fn({page});
-
-  await context.close();
-  await browser.close();
+  try {
+    await fn({page});
+  } finally {
+    await context.close();
+    await browser.close();
+    await subscription.unsubscribe();
+  }
 }
 
 describe('Atlaspack Playwright E2E tests', () => {
