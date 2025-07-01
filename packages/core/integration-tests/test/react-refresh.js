@@ -37,12 +37,7 @@ if (MessageChannel) {
         '/integration/react-refresh-automatic',
       );
 
-      let b,
-        root,
-        randoms,
-        subscription,
-        ports,
-        window = {};
+      let b, root, randoms, subscription, ports, window;
 
       beforeEach(async () => {
         ({b, root, randoms, subscription, window, ports} = await setup(
@@ -78,12 +73,7 @@ if (MessageChannel) {
     describe('synchronous', () => {
       const testDir = path.join(__dirname, '/integration/react-refresh');
 
-      let b,
-        root,
-        window,
-        subscription,
-        ports,
-        randoms = {};
+      let b, root, window, subscription, ports, randoms;
 
       beforeEach(async () => {
         ({b, root, window, subscription, randoms, ports} = await setup(
@@ -164,12 +154,7 @@ if (MessageChannel) {
         '/integration/react-refresh-lazy-child',
       );
 
-      let b,
-        root,
-        window,
-        subscription,
-        ports,
-        randoms = {};
+      let b, root, window, subscription, ports, randoms;
 
       beforeEach(async () => {
         ({b, root, window, subscription, randoms, ports} = await setup(
@@ -210,11 +195,7 @@ if (MessageChannel) {
         '/integration/react-refresh-circular',
       );
 
-      let b,
-        root,
-        subscription,
-        window,
-        ports = {};
+      let b, root, subscription, ports, window;
 
       beforeEach(async () => {
         ({b, root, subscription, window, ports} = await setup(
