@@ -29,10 +29,16 @@ export type AtlaspackV3Options = {|
 export class AtlaspackV3 {
   _atlaspack_napi: AtlaspackNapi;
   _napiWorkerPool: INapiWorkerPool;
+  _isDefaultNapiWorkerPool: boolean;
 
-  constructor(atlaspack_napi: AtlaspackNapi, napiWorkerPool: INapiWorkerPool) {
+  constructor(
+    atlaspack_napi: AtlaspackNapi,
+    napiWorkerPool: INapiWorkerPool,
+    isDefaultNapiWorkerPool: boolean,
+  ) {
     this._atlaspack_napi = atlaspack_napi;
     this._napiWorkerPool = napiWorkerPool;
+    this._isDefaultNapiWorkerPool = isDefaultNapiWorkerPool;
   }
 
   static async create({
@@ -40,7 +46,7 @@ export class AtlaspackV3 {
     packageManager,
     threads,
     lmdb,
-    napiWorkerPool = new NapiWorkerPool(),
+    napiWorkerPool,
     ...options
   }: AtlaspackV3Options): Promise<AtlaspackV3> {
     options.logLevel = options.logLevel || 'error';
@@ -48,6 +54,12 @@ export class AtlaspackV3 {
     // $FlowFixMe "engines" are readonly
     options.defaultTargetOptions.engines =
       options.defaultTargetOptions.engines || {};
+
+    let isDefaultNapiWorkerPool = false;
+    if (!napiWorkerPool) {
+      napiWorkerPool = new NapiWorkerPool();
+      isDefaultNapiWorkerPool = true;
+    }
 
     const [internal, error] = await atlaspackNapiCreate(
       {
@@ -66,11 +78,14 @@ export class AtlaspackV3 {
       });
     }
 
-    return new AtlaspackV3(internal, napiWorkerPool);
+    return new AtlaspackV3(internal, napiWorkerPool, isDefaultNapiWorkerPool);
   }
 
   end(): void {
-    this._napiWorkerPool.shutdown();
+    // If the worker pool was provided to us, don't shut it down, it's up to the provider.
+    if (this._isDefaultNapiWorkerPool) {
+      this._napiWorkerPool.shutdown();
+    }
   }
 
   async buildAssetGraph(): Promise<any> {
