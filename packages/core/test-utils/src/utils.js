@@ -92,7 +92,9 @@ export async function ncp(source: FilePath, destination: FilePath) {
 after(async () => {
   // Spin down the worker farm to stop it from preventing the main process from exiting
   await workerFarm.end();
-  napiWorkerPool.shutdown();
+  if (isAtlaspackV3) {
+    napiWorkerPool.shutdown();
+  }
 });
 
 const chalk = new _chalk.Instance();
