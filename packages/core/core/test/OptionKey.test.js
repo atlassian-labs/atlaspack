@@ -1,12 +1,21 @@
+// @flow strict-local
+/* eslint-disable flowtype/no-flow-fix-me-comments */
+
 // Quick test to verify the option key changes work correctly
-const assert = require('assert');
+import assert from 'assert';
 
 describe('Option Key Handling', () => {
   // Mock the functions we want to test
-  const mockHashFromOption = () => 'test-hash';
+  // $FlowFixMe[unclear-type]
+  const mockHashFromOption = (value: any) => {
+    // eslint-disable-next-line no-unused-vars
+    const _ = value;
+    return 'test-hash';
+  };
 
   // Create a simple version of nodeFromOption for testing
-  const nodeFromOption = (option, value) => {
+  // $FlowFixMe[unclear-type]
+  const nodeFromOption = (option: any, value: any) => {
     const optionKey = Array.isArray(option)
       ? `array:${JSON.stringify(option)}`
       : option;
@@ -17,7 +26,8 @@ describe('Option Key Handling', () => {
     };
   };
 
-  const extractOptionFromKey = (key) => {
+  // $FlowFixMe[unclear-type]
+  const extractOptionFromKey = (key: any) => {
     if (key.startsWith('array:')) {
       try {
         return JSON.parse(key.slice(6));

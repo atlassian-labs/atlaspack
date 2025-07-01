@@ -1,4 +1,5 @@
-// @noflow
+// @flow strict-local
+/* eslint-disable flowtype/no-flow-fix-me-comments */
 
 import sinon from 'sinon';
 import assert from 'assert';

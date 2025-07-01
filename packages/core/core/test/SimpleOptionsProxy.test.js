@@ -1,6 +1,8 @@
-// @noflow
-const assert = require('assert');
-const {optionsProxy} = require('../src/utils');
+// @flow strict-local
+/* eslint-disable flowtype/no-flow-fix-me-comments */
+
+import assert from 'assert';
+import {optionsProxy} from '../src/utils';
 
 describe('Basic optionsProxy test', () => {
   it('should behave correctly with string paths', () => {
@@ -22,10 +24,12 @@ describe('Basic optionsProxy test', () => {
       );
     };
 
-    const proxy = optionsProxy(options, invalidateOnOptionChange);
+    // $FlowFixMe[unclear-type]
+    const proxy = optionsProxy((options: any), invalidateOnOptionChange);
 
     // Access a property to trigger invalidation
-    const value = proxy.hello;
+    // $FlowFixMe[unclear-type]
+    const value = (proxy: any).hello;
 
     // Assert that the path is 'hello' and the value is 'world'
     assert.strictEqual(pathReceived, 'hello');
