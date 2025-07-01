@@ -736,10 +736,7 @@ export class ScopeHoistingPackager {
                         `;
                         lines += 3 + depLines;
                       } else {
-                        res = outdent`
-                          ${depCode}
-                          ${res}
-                        `;
+                        res = depCode + '\n' + res;
                         lines += 1 + depLines;
                       }
                       map = depMap;
