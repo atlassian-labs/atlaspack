@@ -1480,3 +1480,9 @@ it.v3.only = function (...args: mixed[]) {
     origIt.only.apply(this, args);
   }
 };
+
+// If no tests run, then `after()` is not called, and so worker farms are never cleaned up.
+// This test ensures that at least one test runs, and so `after()` is called.
+it('dummy test to ensure there is at least one test', () => {
+  assert(true);
+});
