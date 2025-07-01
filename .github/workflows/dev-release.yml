@@ -5,6 +5,12 @@ name: Development Release
 
 on:
   workflow_dispatch:
+    inputs:
+      release-tag:
+        description: 'The tag used to release the packages under'
+        required: false
+        default: 'dev'
+        type: string
 
 jobs:
   build-and-release:
@@ -12,5 +18,6 @@ jobs:
     uses: ./.github/workflows/release.yml
     secrets: inherit
     with:
-      release-command: yarn dev:release
+      release-command: node ./scripts/dev-release.mjs
+      release-tag: '${{ inputs.release-tag }}'
       type: dev
