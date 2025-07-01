@@ -89,14 +89,11 @@ export async function ncp(source: FilePath, destination: FilePath) {
   });
 }
 
-// Mocha is currently run with exit: true because of this issue preventing us
-// from properly ending the workerfarm after the test run:
-// https://github.com/nodejs/node/pull/28788
-//
-// TODO: Remove exit: true in .mocharc.json and instead add the following in this file:
-//   // Spin down the worker farm to stop it from preventing the main process from exiting
-//   await workerFarm.end();
-// when https://github.com/nodejs/node/pull/28788 is resolved.
+after(async () => {
+  // Spin down the worker farm to stop it from preventing the main process from exiting
+  await workerFarm.end();
+  napiWorkerPool.shutdown();
+});
 
 const chalk = new _chalk.Instance();
 const warning = chalk.keyword('orange');
