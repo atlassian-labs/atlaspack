@@ -1,8 +1,8 @@
 // @flow
 
 /*
- * These tools are intended for Atlaspack developers, to provide extra tools to
- * make debugging Atlaspack issues more straightforward.
+ * These tools are intended for Atlaspack developers, to provide extra utilities
+ * to make debugging Atlaspack issues more straightforward.
  *
  * To enable a tool, set the `ATLASPACK_DEBUG_TOOLS` environment variable to a
  * comma-separated list of tool names. For example:
