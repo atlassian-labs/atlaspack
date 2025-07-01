@@ -28,9 +28,11 @@ export type AtlaspackV3Options = {|
 
 export class AtlaspackV3 {
   _atlaspack_napi: AtlaspackNapi;
+  _napiWorkerPool: INapiWorkerPool;
 
-  constructor(atlaspack_napi: AtlaspackNapi) {
+  constructor(atlaspack_napi: AtlaspackNapi, napiWorkerPool: INapiWorkerPool) {
     this._atlaspack_napi = atlaspack_napi;
+    this._napiWorkerPool = napiWorkerPool;
   }
 
   static async create({
@@ -64,7 +66,11 @@ export class AtlaspackV3 {
       });
     }
 
-    return new AtlaspackV3(internal);
+    return new AtlaspackV3(internal, napiWorkerPool);
+  }
+
+  end(): void {
+    this._napiWorkerPool.shutdown();
   }
 
   async buildAssetGraph(): Promise<any> {
