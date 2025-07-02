@@ -5,15 +5,7 @@
     {"repo": "atlassian-labs/atlaspack"}
   ],
   "commit": false,
-  "fixed": [
-    [
-      "@atlaspack/apvm",
-      "@atlaspack/apvm-linux-amd64",
-      "@atlaspack/apvm-linux-arm64",
-      "@atlaspack/apvm-macos-amd64",
-      "@atlaspack/apvm-macos-arm64"
-    ]
-  ],
+  "fixed": [["@atlaspack/*"]],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
