@@ -27,6 +27,7 @@ jobs:
           - name: 🍎 Build MacOS ARM64
             os: macos-15
             target: aarch64-apple-darwin
+            build_js: true
 
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -53,10 +54,8 @@ jobs:
           CARGO_PROFILE: release
           SCCACHE_GHA_ENABLED: 'true'
           RUSTC_WRAPPER: 'sccache'
-        run: yarn build-native
+        run: yarn build-native && yarn build
 
-      - if: ${{ matrix.build_js }}
-        run: yarn build
       # Upload artifacts for use later in pipeline
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
