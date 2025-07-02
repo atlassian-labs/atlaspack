@@ -57,6 +57,8 @@ let packageManager = new NodePackageManager(inputFS, '/');
       {
         inputFS: overlayFS,
         shouldDisableCache: false,
+        // Force FSEvents on macOS as it's significantly faster than watchman for these tests
+        watchBackend: process.platform === 'darwin' ? 'fs-events' : 'watchman',
         featureFlags: {
           ...featureFlags,
           cachePerformanceImprovements,
@@ -106,7 +108,6 @@ let packageManager = new NodePackageManager(inputFS, '/');
       getOptions(options),
     );
     let resolvedOptions = await resolveOptions(initialOptions);
-
     let b = await runBundle(entries, options, featureFlags);
 
     await assertNoFilePathInCache(
