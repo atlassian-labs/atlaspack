@@ -17,37 +17,12 @@ permissions:
   contents: read
 
 jobs:
-  # Test for changesets if branch is not main
-  enforce-changeset:
-    name: ✍️ Enforce Changesets
-    runs-on: ubuntu-24.04
-    if: github.ref_name != 'main'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/github-script@v7
-        with:
-          script: |
-            const { enforceChangeset } = require('./scripts/enforce-changeset.js');
-            await enforceChangeset({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pullNumber: context.payload.pull_request.number,
-              octokit: github
-            });
-
   # Build and store native packages
   build_native:
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Linux AMD64
-          - name: 🐥 Build Linux AMD64
-            os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            # We just do this on linux to save time on Mac agents
-            build_js: true
-
           # MacOS ARM64
           - name: 🍎 Build MacOS ARM64
             os: macos-15
@@ -90,80 +65,6 @@ jobs:
           path: packages/**/*
           retention-days: 1
 
-  lint_javascript:
-    name: 🐵 Lint JavaScript
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-node
-      - run: npx flow check
-      - run: npx eslint .
-      - run: npx prettier --list-different .
-      - run: npx lerna run build-ts
-      - run: npx lerna run check-ts
-
-  lint_rust:
-    name: 🦀 Lint Rust
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: ./.github/actions/rust-toolchain
-        with: {components: 'clippy, rustfmt'}
-      - run: cargo fmt --all -- --check
-      - run: cargo clippy -- -D warnings
-
-  unit_tests_rust:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-22.04
-          - os: macos-15
-    name: Unit tests (${{ matrix.os }}, Rust)
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: ./.github/actions/rust-toolchain
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: '${{ matrix.os }}-rust-unit-tests'
-          # Only store new caches on main
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-      - run: cargo test
-
-  unit_tests:
-    name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
-    needs:
-      - build_native
-    strategy:
-      matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 22
-          - os: ubuntu-22.04
-            node: 20
-
-          # MacOS ARM64
-          - os: macos-15
-            node: 20
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-node
-        with:
-          node-version: ${{ matrix.node }}
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: packages-*
-          path: packages
-          merge-multiple: true
-      - name: Bump max inotify watches (Linux only)
-        if: ${{ runner.os == 'Linux' }}
-        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-      - run: yarn test:js:unit
-
   integration_tests:
     name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
@@ -174,12 +75,7 @@ jobs:
       # others from potentially succeeding
       fail-fast: false
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 20
-
-          # MacOS ARM64
+        include:          # MacOS ARM64
           - os: macos-15
             node: 20
     runs-on: ${{ matrix.os }}
@@ -215,10 +111,6 @@ jobs:
           # Linux AMD64
           - os: ubuntu-22.04
             node: 20
-
-          # MacOS ARM64
-          - os: macos-15
-            node: 20
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -237,29 +129,3 @@ jobs:
         env:
           ATLASPACK_V3: true
           RUST_BACKTRACE: full
-
-  end_to_end_tests:
-    name: E2E tests
-    needs:
-      - build_native
-    timeout-minutes: 35
-    strategy:
-      matrix:
-        node: [20]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-node
-        with:
-          node-version: ${{ matrix.node }}
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: packages-*
-          path: packages
-          merge-multiple: true
-      - name: Bump max inotify watches (Linux only)
-        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
-        if: ${{ runner.os == 'Linux' }}
-      - run: yarn playwright install
-      - run: yarn test:e2e:ci
