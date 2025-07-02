@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "cross-env NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha --conditions=\"@atlaspack::sources\" --experimental-vm-modules",
-    "test-ci": "ATLASPACK_INTEGRATION_TESTS_CI=true yarn test",
+    "test-ci": "ATLASPACK_REGISTER_USE_LIB=true ATLASPACK_INTEGRATION_TESTS_CI=true yarn test",
     "check-ts": "tsc --noEmit --project ."
   },
   "devDependencies": {
