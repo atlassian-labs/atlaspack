@@ -1,5 +1,19 @@
 # @atlaspack/packager-js
 
+## 2.17.0
+
+### Minor Changes
+
+- [#659](https://github.com/atlassian-labs/atlaspack/pull/659) [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529) Thanks [@benjervis](https://github.com/benjervis)! - Add the `asset-file-names-in-output` debug tool, which adds a comment to each asset inserted into a bundle that help identify it
+
+### Patch Changes
+
+- Updated dependencies [[`e8a60ff`](https://github.com/atlassian-labs/atlaspack/commit/e8a60ffbea41caef265786bbf73349771760081c), [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529)]:
+  - @atlaspack/feature-flags@2.18.4
+  - @atlaspack/utils@2.16.0
+  - @atlaspack/types@2.15.6
+  - @atlaspack/plugin@2.14.16
+
 ## 2.16.2
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @atlaspack/fs
 
+## 2.15.11
+
+### Patch Changes
+
+- Updated dependencies [[`e8a60ff`](https://github.com/atlassian-labs/atlaspack/commit/e8a60ffbea41caef265786bbf73349771760081c), [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529)]:
+  - @atlaspack/feature-flags@2.18.4
+  - @atlaspack/utils@2.16.0
+  - @atlaspack/types-internal@2.14.14
+  - @atlaspack/workers@2.14.16
+
 ## 2.15.10
 
 ### Patch Changes

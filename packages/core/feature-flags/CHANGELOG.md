@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.18.4
+
+### Patch Changes
+
+- [#661](https://github.com/atlassian-labs/atlaspack/pull/661) [`e8a60ff`](https://github.com/atlassian-labs/atlaspack/commit/e8a60ffbea41caef265786bbf73349771760081c) Thanks [@marcins](https://github.com/marcins)! - Add new feature flag atlaspackV3CleanShutdown which will dispose of the NAPI worker pool when disposing of the Atlaspack class
+
 ## 2.18.3
 
 ### Patch Changes

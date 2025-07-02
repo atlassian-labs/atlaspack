@@ -1,5 +1,16 @@
 # @atlaspack/config-webextension
 
+## 3.0.20
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.18
+  - @atlaspack/packager-webextension@2.14.16
+  - @atlaspack/runtime-webextension@2.14.16
+  - @atlaspack/transformer-webextension@2.14.16
+  - @atlaspack/transformer-raw@2.14.16
+
 ## 3.0.19
 
 ### Patch Changes

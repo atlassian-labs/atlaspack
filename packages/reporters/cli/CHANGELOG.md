@@ -1,5 +1,18 @@
 # @atlaspack/reporter-cli
 
+## 2.16.0
+
+### Minor Changes
+
+- [#659](https://github.com/atlassian-labs/atlaspack/pull/659) [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529) Thanks [@benjervis](https://github.com/benjervis)! - Add the `simple-cli-reporter` debug tool, which turns off the "print every bundle" output of the CLI reporter.
+
+### Patch Changes
+
+- Updated dependencies [[`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529)]:
+  - @atlaspack/utils@2.16.0
+  - @atlaspack/types@2.15.6
+  - @atlaspack/plugin@2.14.16
+
 ## 2.15.11
 
 ### Patch Changes

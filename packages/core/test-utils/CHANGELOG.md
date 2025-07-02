@@ -1,5 +1,20 @@
 # @atlaspack/test-utils
 
+## 2.14.18
+
+### Patch Changes
+
+- [#663](https://github.com/atlassian-labs/atlaspack/pull/663) [`f609bf4`](https://github.com/atlassian-labs/atlaspack/commit/f609bf49ffa3984c0ff81d4853a5c850aaee5fce) Thanks [@marcins](https://github.com/marcins)! - - Add ATLASPACK_MOCHA_HANG_DEBUG for debugging hanging tests
+  - Ensure at least one test always runs to clean up worker farms
+  - Cleanup AtlaspackV3 worker farm
+- Updated dependencies [[`1ff31f1`](https://github.com/atlassian-labs/atlaspack/commit/1ff31f10391c48780c9fcfc243b4e828a1b285e0), [`e8a60ff`](https://github.com/atlassian-labs/atlaspack/commit/e8a60ffbea41caef265786bbf73349771760081c), [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529)]:
+  - @atlaspack/core@2.18.7
+  - @atlaspack/utils@2.16.0
+  - @atlaspack/cache@3.2.11
+  - @atlaspack/fs@2.15.11
+  - @atlaspack/config-default@3.1.18
+  - @atlaspack/package-manager@2.14.16
+
 ## 2.14.17
 
 ### Patch Changes

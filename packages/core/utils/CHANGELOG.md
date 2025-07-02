@@ -1,5 +1,16 @@
 # @atlaspack/utils
 
+## 2.16.0
+
+### Minor Changes
+
+- [#659](https://github.com/atlassian-labs/atlaspack/pull/659) [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529) Thanks [@benjervis](https://github.com/benjervis)! - Add the debug-tools system for altering the behaviour when attempting to identify issues.
+
+### Patch Changes
+
+- Updated dependencies [[`e8a60ff`](https://github.com/atlassian-labs/atlaspack/commit/e8a60ffbea41caef265786bbf73349771760081c)]:
+  - @atlaspack/feature-flags@2.18.4
+
 ## 2.15.3
 
 ### Patch Changes
