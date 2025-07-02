@@ -1,4 +1,3 @@
-// @flow strict-local
 import path from 'path';
 import assert from 'assert';
 import {
@@ -11,7 +10,6 @@ import {
   outputFS,
   overlayFS,
 } from '@atlaspack/test-utils';
-
 import {ATLASPACK_VERSION} from '@atlaspack/core';
 
 describe('JS API', function () {
@@ -67,6 +65,7 @@ describe('JS API', function () {
 
       overlayFS.mkdirp(dir);
 
+      // @ts-expect-error: Remove this once `packages/core/types-internal/src/FileSystem.js` is migrated to TypeScript
       await fsFixture(overlayFS, dir)`
       index.js:
         export default 'Hi';
