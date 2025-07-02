@@ -386,6 +386,11 @@ export default class Atlaspack {
       }
       if (options.shouldTrace) {
         tracer.enable();
+        // We need to ensure the tracer is disabled when Atlaspack is disposed as it is a module level object.
+        // While rare (except for tests), if another instance is created later it should not have tracing enabled.
+        this.#disposable.add(() => {
+          tracer.disable();
+        });
       }
       await this.#reporterRunner.report({
         type: 'buildStart',
