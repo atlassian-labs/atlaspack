@@ -1,10 +1,8 @@
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 import type {FileSystem, FilePath} from '@atlaspack/types-internal';
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
+
 import type {Event} from '@parcel/watcher';
 import type WorkerFarm from '@atlaspack/workers';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type {
   FileSystem,
   FileOptions,

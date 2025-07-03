@@ -1,6 +1,5 @@
 import {ESLintUtils} from '@typescript-eslint/utils';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export interface PluginDocs {
   description: string;
   recommended?: boolean;

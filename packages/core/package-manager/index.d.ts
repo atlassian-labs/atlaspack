@@ -1,4 +1,3 @@
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 import type {
   FilePath,
   PackageInstaller,

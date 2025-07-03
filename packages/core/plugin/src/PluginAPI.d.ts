@@ -1,4 +1,3 @@
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 import type {
   Transformer as TransformerOpts,
   Resolver as ResolverOpts,
@@ -12,28 +11,20 @@ import type {
   Validator as ValidatorOpts,
 } from '@atlaspack/types';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type {Transformer as TransformerOpts} from '@atlaspack/types';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type {Resolver as ResolverOpts} from '@atlaspack/types';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type {Reporter as ReporterOpts} from '@atlaspack/types';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type {Validator as ValidatorOpts} from '@atlaspack/types';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type {Optimizer as OptimizerOpts} from '@atlaspack/types';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type {Packager as PackagerOpts} from '@atlaspack/types';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type {Namer as NamerOpts} from '@atlaspack/types';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type {Runtime as RuntimeOpts} from '@atlaspack/types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
