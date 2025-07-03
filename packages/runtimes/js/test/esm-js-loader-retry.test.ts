@@ -4,9 +4,6 @@ import {mock} from 'node:test';
 import type {Mock} from 'node:test';
 import assert from 'node:assert';
 
-// eslint-disable-next-line no-var, @typescript-eslint/no-explicit-any
-var globalThis: Window & {[key: string]: any};
-
 describe('esm-js-loader-retry', () => {
   let mockSetTimeout: Mock<Window['setTimeout']>;
   let mockParcelImport: Mock<() => Promise<void>>;
@@ -25,7 +22,8 @@ describe('esm-js-loader-retry', () => {
     mockSetTimeout = mock.fn((callback: any, duration: any, ...args: any[]) =>
       callback(),
     );
-    globalThis.setTimeout = mockSetTimeout;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    globalThis.setTimeout = mockSetTimeout as any;
 
     mockParcelImport = mock.fn(() => Promise.resolve());
     globalThis.__parcel__import__ = mockParcelImport;

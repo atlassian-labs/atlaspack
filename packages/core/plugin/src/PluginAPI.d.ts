@@ -36,30 +36,6 @@ export type {Namer as NamerOpts} from '@atlaspack/types';
 // eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type {Runtime as RuntimeOpts} from '@atlaspack/types';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
-export type {Transformer} from '@atlaspack/types';
-
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
-export type {Resolver} from '@atlaspack/types';
-
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
-export type {Reporter} from '@atlaspack/types';
-
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
-export type {Validator} from '@atlaspack/types';
-
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
-export type {Optimizer} from '@atlaspack/types';
-
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
-export type {Packager} from '@atlaspack/types';
-
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
-export type {Namer} from '@atlaspack/types';
-
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
-export type {Runtime} from '@atlaspack/types';
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type SomeType = any; // replace with actual type
 
