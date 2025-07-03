@@ -9,6 +9,7 @@ import {
   it,
   outputFS,
   overlayFS,
+  // @ts-expect-error: Missing declaration file for @atlaspack/test-utils
 } from '@atlaspack/test-utils';
 import {ATLASPACK_VERSION} from '@atlaspack/core';
 
@@ -16,7 +17,7 @@ describe('JS API', function () {
   it.v2('should respect distEntry', async function () {
     const NAME = 'custom-name.js';
 
-    let b = await bundle(
+    const b = await bundle(
       path.join(__dirname, '/integration/js-comment/index.js'),
       {
         targets: {
@@ -37,7 +38,7 @@ describe('JS API', function () {
   });
 
   it('should run additional reports from the options', async function () {
-    let b = await bundle(
+    const b = await bundle(
       path.join(__dirname, '/integration/js-comment/index.js'),
       {
         additionalReporters: [
@@ -65,7 +66,6 @@ describe('JS API', function () {
 
       overlayFS.mkdirp(dir);
 
-      // @ts-expect-error: Remove this once `packages/core/types-internal/src/FileSystem.js` is migrated to TypeScript
       await fsFixture(overlayFS, dir)`
       index.js:
         export default 'Hi';

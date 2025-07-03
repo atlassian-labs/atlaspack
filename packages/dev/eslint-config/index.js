@@ -45,6 +45,66 @@ module.exports = {
         'mocha/no-exclusive-tests': 'error',
       },
     },
+    {
+      files: ['**/*.ts', '**/*.tsx'],
+      parser: '@typescript-eslint/parser',
+      plugins: [
+        '@atlaspack/internal',
+        '@typescript-eslint',
+        'import',
+        'monorepo',
+        'react',
+        'mocha',
+      ],
+      extends: [
+        'eslint:recommended',
+        'plugin:@typescript-eslint/recommended',
+        'plugin:monorepo/recommended',
+        'plugin:react/recommended',
+        'prettier',
+      ],
+      parserOptions: {
+        ecmaVersion: 2018,
+        ecmaFeatures: {
+          jsx: true,
+        },
+        sourceType: 'module',
+      },
+      env: {
+        es2020: true,
+        node: true,
+      },
+      globals: {
+        parcelRequire: true,
+        define: true,
+        SharedArrayBuffer: true,
+      },
+      rules: {
+        '@atlaspack/internal/no-self-package-imports': 'error',
+        '@atlaspack/internal/no-ff-module-level-eval': 'error',
+        'import/first': 'error',
+        'import/newline-after-import': 'error',
+        'import/no-extraneous-dependencies': 'error',
+        'import/no-self-import': 'error',
+        'no-prototype-builtins': 'off',
+        'no-console': 'error',
+        'no-return-await': 'error',
+        'require-atomic-updates': 'off',
+        'require-await': 'error',
+        'monorepo/no-relative-import': 'off',
+        '@atlaspack/internal/no-relative-import': 'error',
+        // TypeScript-specific rules
+        '@typescript-eslint/no-unused-vars': 'error',
+        '@typescript-eslint/no-explicit-any': 'warn',
+        '@typescript-eslint/explicit-function-return-type': 'off',
+        '@typescript-eslint/explicit-module-boundary-types': 'off',
+      },
+      settings: {
+        react: {
+          version: 'detect',
+        },
+      },
+    },
   ],
   rules: {
     '@atlaspack/internal/no-self-package-imports': 'error',

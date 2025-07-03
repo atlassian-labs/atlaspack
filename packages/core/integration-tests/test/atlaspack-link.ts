@@ -1,16 +1,14 @@
-// @flow strict-local
-
-import type {ProgramOptions} from '@atlaspack/link';
-
+// @ts-expect-error: Missing declaration file for @atlaspack/link
 import {createProgram as _createProgram} from '@atlaspack/link';
+// @ts-expect-error: Missing declaration file for @atlaspack/test-utils
 import {describe, fsFixture, it, overlayFS} from '@atlaspack/test-utils';
 
 import assert from 'assert';
 import path from 'path';
 import sinon from 'sinon';
 
-function createProgram(opts: ProgramOptions) {
-  let program = _createProgram(opts).exitOverride();
+function createProgram(opts: any) {
+  const program = _createProgram(opts).exitOverride();
 
   function cli(command: string = ''): Promise<void> {
     return program.parseAsync(command.split(/\s+/), {from: 'user'});
@@ -20,14 +18,13 @@ function createProgram(opts: ProgramOptions) {
 }
 
 describe('@atlaspack/link', () => {
-  let _cwd;
-  let _stdout;
+  let _cwd: sinon.SinonStub | null = null;
+  let _stdout: sinon.SinonStub | null = null;
 
   beforeEach(async function () {
     await overlayFS.mkdirp('/app');
     overlayFS.chdir('/app');
 
-    // $FlowFixMe[incompatible-call]
     _cwd = sinon.stub(process, 'cwd').callsFake(() => overlayFS.cwd());
     _stdout = sinon.stub(process.stdout, 'write');
   });
@@ -40,22 +37,21 @@ describe('@atlaspack/link', () => {
   });
 
   it('prints help text', async () => {
-    let cli = createProgram({fs: overlayFS});
+    const cli = createProgram({fs: overlayFS});
     await assert.throws(() => cli('--help'), /\(outputHelp\)/);
   });
 
   it('links by default', async () => {
-    let link = sinon.stub();
-    let cli = createProgram({fs: overlayFS, link});
+    const link = sinon.stub();
+    const cli = createProgram({fs: overlayFS, link});
     await cli();
     assert(link.called);
   });
 
   describe('link', () => {
     it('errors for invalid app root', async () => {
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
 
-      // $FlowFixMe[prop-missing]
       await assert.rejects(() => cli('link'), /Not a project root/);
     });
 
@@ -64,19 +60,17 @@ describe('@atlaspack/link', () => {
 
       assert(overlayFS.existsSync('/app/yarn.lock'));
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
 
-      // $FlowFixMe[prop-missing]
       await assert.rejects(() => cli('link /fake'), /Not a package root/);
     });
 
     it('errors when a link exists', async () => {
       await fsFixture(overlayFS)`yarn.lock:`;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli(`link`);
 
-      // $FlowFixMe[prop-missing]
       await assert.rejects(() => cli('link'), /link already exists/);
     });
 
@@ -87,7 +81,7 @@ describe('@atlaspack/link', () => {
           @atlaspack/cli
           @atlaspack/core`;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli('link');
 
       assert(overlayFS.existsSync('.atlaspack-link'));
@@ -125,7 +119,7 @@ describe('@atlaspack/link', () => {
 
       overlayFS.chdir('/app');
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli(`link ../package-root`);
 
       assert(overlayFS.existsSync('.atlaspack-link'));
@@ -156,7 +150,7 @@ describe('@atlaspack/link', () => {
             atlaspack-core
       `;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli('link --namespace @namespace');
 
       assert(overlayFS.existsSync('.atlaspack-link'));
@@ -218,7 +212,7 @@ describe('@atlaspack/link', () => {
 
       overlayFS.chdir('/app');
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli('link --namespace @namespace');
 
       assert(overlayFS.existsSync('.atlaspack-link'));
@@ -226,10 +220,10 @@ describe('@atlaspack/link', () => {
       assert.equal(
         overlayFS.readFileSync('.parcelrc', 'utf8'),
         JSON.stringify({
-          extends: '@atlaspack/config-namespace',
+          extends: '@namespace/atlaspack-config-namespace',
           transformers: {
             '*': [
-              '@atlaspack/transformer-js',
+              '@namespace/atlaspack-transformer-js',
               '@namespace/atlaspack-transformer-local',
             ],
           },
@@ -239,7 +233,7 @@ describe('@atlaspack/link', () => {
       assert.equal(
         overlayFS.readFileSync('package.json', 'utf8'),
         JSON.stringify({
-          ['@atlaspack/transformer-js']: {},
+          ['@namespace/atlaspack-transformer-js']: {},
           ['@namespace/atlaspack-transformer-local']: {},
         }),
       );
@@ -253,7 +247,7 @@ describe('@atlaspack/link', () => {
           test2/node_modules/@atlaspack/core
       `;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli('link --node-modules-glob "tools/*/node_modules"');
 
       assert(overlayFS.existsSync('.atlaspack-link'));
@@ -288,7 +282,7 @@ describe('@atlaspack/link', () => {
           @atlaspack/core
       `;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli('link --dry-run');
 
       assert(!overlayFS.existsSync('.atlaspack-link'));
@@ -311,9 +305,8 @@ describe('@atlaspack/link', () => {
     it('errors without a link config', async () => {
       await fsFixture(overlayFS)`yarn.lock:`;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
 
-      // $FlowFixMe[prop-missing]
       await assert.rejects(() => cli('unlink'), /link could not be found/);
     });
 
@@ -327,9 +320,8 @@ describe('@atlaspack/link', () => {
           namespace: '@atlaspack',
         }}`;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
 
-      // $FlowFixMe[prop-missing]
       await assert.rejects(() => cli('unlink'), /Not a project root/);
     });
 
@@ -343,9 +335,8 @@ describe('@atlaspack/link', () => {
           namespace: '@atlaspack',
         }}`;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
 
-      // $FlowFixMe[prop-missing]
       await assert.rejects(() => cli('unlink'), /Not a package root/);
     });
 
@@ -368,7 +359,7 @@ describe('@atlaspack/link', () => {
       assert(overlayFS.existsSync('node_modules/@atlaspack/cli'));
       assert(overlayFS.existsSync('node_modules/@atlaspack/core'));
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli('unlink');
 
       assert(!overlayFS.existsSync('.atlaspack-link'));
@@ -397,7 +388,7 @@ describe('@atlaspack/link', () => {
         package-root/core/core/package.json: ${{name: '@atlaspack/core'}}
       `;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli('unlink');
 
       assert(!overlayFS.existsSync('.atlaspack-link'));
@@ -425,7 +416,7 @@ describe('@atlaspack/link', () => {
             '../../core',
           )}`;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli('unlink');
 
       assert(!overlayFS.existsSync('.atlaspack-link'));
@@ -467,7 +458,7 @@ describe('@atlaspack/link', () => {
         name: '@atlaspack/config-namespace',
       }}`;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli('unlink');
 
       assert(!overlayFS.existsSync('.atlaspack-link'));
@@ -517,7 +508,7 @@ describe('@atlaspack/link', () => {
             '../../core',
           )}`;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli('unlink');
 
       assert(!overlayFS.existsSync('.atlaspack-link'));
@@ -543,7 +534,7 @@ describe('@atlaspack/link', () => {
         }}
       `;
 
-      let cli = createProgram({fs: overlayFS});
+      const cli = createProgram({fs: overlayFS});
       await cli('unlink --dry-run');
 
       assert(overlayFS.existsSync('.atlaspack-link'));
