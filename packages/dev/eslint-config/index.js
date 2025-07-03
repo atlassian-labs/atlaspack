@@ -34,26 +34,13 @@ module.exports = {
   // https://eslint.org/docs/user-guide/configuring#configuration-based-on-glob-patterns
   overrides: [
     {
-      files: ['**/test/**', '*.test.js', 'packages/core/integration-tests/**'],
-      env: {
-        mocha: true,
-      },
-      rules: {
-        'import/no-extraneous-dependencies': 'off',
-        'monorepo/no-internal-import': 'off',
-        '@atlaspack/internal/no-relative-import': 'off',
-        'mocha/no-exclusive-tests': 'error',
-      },
-    },
-    {
-      files: ['**/*.ts', '**/*.tsx'],
+      files: ['**/*.ts'],
       parser: '@typescript-eslint/parser',
       plugins: [
         '@atlaspack/internal',
         '@typescript-eslint',
         'import',
         'monorepo',
-        'react',
         'mocha',
       ],
       extends: [
@@ -63,46 +50,24 @@ module.exports = {
         'plugin:react/recommended',
         'prettier',
       ],
-      parserOptions: {
-        ecmaVersion: 2018,
-        ecmaFeatures: {
-          jsx: true,
-        },
-        sourceType: 'module',
-      },
-      env: {
-        es2020: true,
-        node: true,
-      },
-      globals: {
-        parcelRequire: true,
-        define: true,
-        SharedArrayBuffer: true,
-      },
       rules: {
+        // internal rules
         '@atlaspack/internal/no-self-package-imports': 'error',
         '@atlaspack/internal/no-ff-module-level-eval': 'error',
-        'import/first': 'error',
-        'import/newline-after-import': 'error',
-        'import/no-extraneous-dependencies': 'error',
-        'import/no-self-import': 'error',
-        'no-prototype-builtins': 'off',
-        'no-console': 'error',
-        'no-return-await': 'error',
-        'require-atomic-updates': 'off',
-        'require-await': 'error',
-        'monorepo/no-relative-import': 'off',
         '@atlaspack/internal/no-relative-import': 'error',
-        // TypeScript-specific rules
-        '@typescript-eslint/no-unused-vars': 'error',
-        '@typescript-eslint/no-explicit-any': 'warn',
-        '@typescript-eslint/explicit-function-return-type': 'off',
-        '@typescript-eslint/explicit-module-boundary-types': 'off',
+        'flowtype/no-types-missing-file-annotation': 'off',
       },
-      settings: {
-        react: {
-          version: 'detect',
-        },
+    },
+    {
+      files: ['**/test/**', '*.test.js', 'packages/core/integration-tests/**'],
+      env: {
+        mocha: true,
+      },
+      rules: {
+        'import/no-extraneous-dependencies': 'off',
+        'monorepo/no-internal-import': 'off',
+        '@atlaspack/internal/no-relative-import': 'off',
+        'mocha/no-exclusive-tests': 'error',
       },
     },
   ],

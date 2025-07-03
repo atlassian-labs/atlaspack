@@ -1,6 +1,5 @@
 module.exports = {
   extends: '@atlaspack/eslint-config',
-  parser: '@babel/eslint-parser',
   parserOptions: {
     ecmaVersion: 5,
   },
