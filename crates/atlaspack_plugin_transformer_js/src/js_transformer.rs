@@ -316,6 +316,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         .unwrap_or_default(),
       conditional_bundling: feature_flag_conditional_bundling,
       hmr_improvements: feature_flag_hmr_improvements,
+      secret_extra_prop: Some(String::from("This one came from Rust")),
       ..atlaspack_js_swc_core::Config::default()
     };
 

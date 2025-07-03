@@ -138,6 +138,7 @@ pub struct Config {
   pub conditional_bundling: bool,
   pub hmr_improvements: bool,
   pub magic_comments: bool,
+  pub secret_extra_prop: Option<String>,
 }
 
 #[derive(Serialize, Debug, Default)]

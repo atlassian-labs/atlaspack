@@ -526,7 +526,12 @@ impl VisitMut for DependencyCollector<'_> {
                 return;
               }
               "parcelRequire" => {
+                println!(
+                  "self.config.hmr_improvements: {} ({:?})",
+                  self.config.hmr_improvements, self.config.secret_extra_prop
+                );
                 if self.config.hmr_improvements {
+                  println!("HMR Improvements triggered");
                   if let Some(ExprOrSpread { expr, .. }) = node.args.first() {
                     if let Some((id, span)) = match_str(expr) {
                       self.items.push(DependencyDescriptor {
