@@ -190,6 +190,12 @@ export default class Atlaspack {
     }
     this.rustAtlaspack = rustAtlaspack;
 
+    if (featureFlags.atlaspackV3CleanShutdown) {
+      this.#disposable.add(() => {
+        rustAtlaspack.end();
+      });
+    }
+
     let {config} = await loadAtlaspackConfig(resolvedOptions);
     this.#config = new AtlaspackConfig(config, resolvedOptions);
 
@@ -386,6 +392,11 @@ export default class Atlaspack {
       }
       if (options.shouldTrace) {
         tracer.enable();
+        // We need to ensure the tracer is disabled when Atlaspack is disposed as it is a module level object.
+        // While rare (except for tests), if another instance is created later it should not have tracing enabled.
+        this.#disposable.add(() => {
+          tracer.disable();
+        });
       }
       await this.#reporterRunner.report({
         type: 'buildStart',

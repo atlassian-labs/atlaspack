@@ -168,7 +168,7 @@ jobs:
     name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
       - build_native
-    timeout-minutes: 35
+    timeout-minutes: 45
     strategy:
       # These tend to be quite flakey, so one failed instance shouldn't stop
       # others from potentially succeeding

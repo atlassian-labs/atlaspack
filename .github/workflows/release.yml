@@ -7,6 +7,10 @@ on:
         description: 'The command that will release packages as part of the final step'
         required: true
         type: string
+      release-tag:
+        description: 'The tag used to release the packages under'
+        required: false
+        type: string
       type:
         description: 'The type of release, usually corresponds to the dist-tag'
         required: true
@@ -20,6 +24,9 @@ on:
         required: true
       SENTRY_AUTH_TOKEN:
         required: true
+
+env:
+  ATLASPACK_RELEASE_TAG: '${{ inputs.release-tag }}'
 
 permissions:
   contents: write # for actions/checkout and adding tag

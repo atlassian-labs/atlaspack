@@ -129,6 +129,10 @@ export type FeatureFlags = {|
    * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer
    */
   hmrImprovements: boolean,
+  /**
+   * Adds an end() method to AtlaspckV3 to cleanly shutdown the NAPI worker pool
+   */
+  atlaspackV3CleanShutdown: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
