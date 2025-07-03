@@ -1,5 +1,4 @@
 import type {FileSystem, FilePath} from '@atlaspack/types-internal';
-
 import type {Event} from '@parcel/watcher';
 import type WorkerFarm from '@atlaspack/workers';
 
@@ -33,6 +32,3 @@ interface NodeVCSAwareFSOptions {
 export const NodeVCSAwareFS: {
   new (options: NodeVCSAwareFSOptions): FileSystem;
 };
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type SomeType = any; // replace with actual type export
