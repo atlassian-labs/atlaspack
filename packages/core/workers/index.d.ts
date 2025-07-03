@@ -22,6 +22,3 @@ declare class WorkerFarm {
 }
 
 export default WorkerFarm;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type SomeType = any; // replace with actual type export

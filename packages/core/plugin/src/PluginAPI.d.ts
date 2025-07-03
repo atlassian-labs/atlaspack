@@ -11,28 +11,6 @@ import type {
   Validator as ValidatorOpts,
 } from '@atlaspack/types';
 
-export type {Transformer as TransformerOpts} from '@atlaspack/types';
-
-export type {Resolver as ResolverOpts} from '@atlaspack/types';
-
-export type {Reporter as ReporterOpts} from '@atlaspack/types';
-
-export type {Validator as ValidatorOpts} from '@atlaspack/types';
-
-export type {Optimizer as OptimizerOpts} from '@atlaspack/types';
-
-export type {Packager as PackagerOpts} from '@atlaspack/types';
-
-export type {Namer as NamerOpts} from '@atlaspack/types';
-
-export type {Runtime as RuntimeOpts} from '@atlaspack/types';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type SomeType = any; // replace with actual type
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type SomeOtherType = any; // replace with actual type
-
 export declare class Transformer<T> {
   constructor(opts: TransformerOpts<T>);
 }
