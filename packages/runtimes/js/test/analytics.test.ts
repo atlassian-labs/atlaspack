@@ -1,5 +1,6 @@
 import {sendAnalyticsEvent} from '../src/helpers/browser/analytics/analytics.js';
 import {mock} from 'node:test';
+// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 import type {Mock} from 'node:test';
 import assert from 'node:assert';
 
@@ -7,7 +8,7 @@ describe('@atlaspack/analytics', () => {
   let dispatchEventMock: Mock<Window['dispatchEvent']>;
 
   beforeEach(() => {
-    // @ts-expect-error
+    // @ts-expect-error - Mocking CustomEvent for testing
     globalThis.CustomEvent = MockCustomEvent;
     dispatchEventMock = mock.fn();
     globalThis.dispatchEvent = dispatchEventMock;
@@ -38,8 +39,10 @@ describe('@atlaspack/analytics', () => {
 
 class MockCustomEvent {
   eventName: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   detail: any;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(eventName: string, options: any = {}) {
     this.eventName = eventName;
     this.detail = options.detail;

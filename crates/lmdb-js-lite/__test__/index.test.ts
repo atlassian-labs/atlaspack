@@ -21,6 +21,7 @@ beforeEach(() => {
 describe("lmdb", () => {
   let db: Lmdb | null = null;
   const asyncWrites = true;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const compression = false;
   const numEntriesToTest = 100000;
   const MAP_SIZE = 1024 * 1024 * 1024;
@@ -119,6 +120,7 @@ describe("lmdb", () => {
       }
     });
 
+    // eslint-disable-next-line require-await
     it("read many entries, synchronous, no transaction", async () => {
       for (let i = 0; i < numEntriesToTest; i += 1) {
         const result = db?.getSync(`${i}`);
@@ -130,6 +132,7 @@ describe("lmdb", () => {
   });
 
   describe('keys', () => {
+    // eslint-disable-next-line require-await
     it('can iterate over keys', async () => {
       db = new Lmdb({
         path: "./databases/keys_test.db",

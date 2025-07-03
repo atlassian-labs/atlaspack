@@ -1,9 +1,12 @@
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type ModuleRef<_PhantomModuleType> = string;
 
 type NoImportErrorMessage =
   "You must annotate type with \"<typeof import('a'), typeof import('b')>\"";
 type NoDefaultErrorMessage = 'Conditional imports must have a default export';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ESModuleWithDefaultExport = {[key: string]: any; default: any};
 
 type ConditionalImport<

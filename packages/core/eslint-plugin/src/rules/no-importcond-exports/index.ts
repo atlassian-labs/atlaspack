@@ -12,6 +12,7 @@ export const messages = {
     'Does your use case require exporting the component? Reach out to #atlaspack-contextual-imports so we can help find a workaround.',
 }; // satisfies Record<string, string>;   // Uncomment this line once prettier is updated to a version that supports it
 
+// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type Options = [];
 
 const rule = createRule<Options, keyof typeof messages>({
@@ -47,6 +48,7 @@ const rule = createRule<Options, keyof typeof messages>({
           importCondVariables.add(node.id.name);
         }
       },
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       'Program:exit'(_node) {
         // Check if any named export references a tracked variable
         for (const exportStatement of namedExportStatements) {

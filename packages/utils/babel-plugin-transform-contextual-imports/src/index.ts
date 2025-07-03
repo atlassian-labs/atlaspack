@@ -1,3 +1,4 @@
+// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 import type {PluginObj, NodePath, types as BabelTypes} from '@babel/core';
 import {declare} from '@babel/helper-plugin-utils';
 
@@ -12,6 +13,7 @@ interface State {
   /** Plugin options */
   opts: Opts;
   /** @deprecated Statement types didn't work so using any */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   importNodes?: any[];
   /** Set of identifier names that need to be mutated after import was transformed */
   conditionalImportIdentifiers?: Set<string>;

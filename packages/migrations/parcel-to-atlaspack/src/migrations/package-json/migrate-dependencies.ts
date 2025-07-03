@@ -51,6 +51,7 @@ function getVersion(name: string, range: string, tag: string): string {
   return version;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function migrateDependencies(packageJson: any, tag: string): boolean {
   let didDependenciesChange = false;
   const skipPackages = new Set([

@@ -1,13 +1,11 @@
-// @ts-expect-error: Missing declaration file for @atlaspack/link
 import {createProgram as _createProgram} from '@atlaspack/link';
-// @ts-expect-error: Missing declaration file for @atlaspack/test-utils
 import {describe, fsFixture, it, overlayFS} from '@atlaspack/test-utils';
 
 import assert from 'assert';
 import path from 'path';
 import sinon from 'sinon';
 
-function createProgram(opts: any) {
+function createProgram(opts) {
   const program = _createProgram(opts).exitOverride();
 
   function cli(command: string = ''): Promise<void> {
@@ -197,16 +195,16 @@ describe('@atlaspack/link', () => {
         app
           yarn.lock:
           .parcelrc: ${{
-            extends: '@namespace/atlaspack-config-namespace',
+            extends: '@atlaspack/config-namespace',
             transformers: {
               '*': [
-                '@namespace/atlaspack-transformer-js',
+                '@atlaspack/transformer-js',
                 '@namespace/atlaspack-transformer-local',
               ],
             },
           }}
           package.json: ${{
-            ['@namespace/atlaspack-transformer-js']: {},
+            ['@atlaspack/transformer-js']: {},
             ['@namespace/atlaspack-transformer-local']: {},
           }}`;
 
@@ -220,10 +218,10 @@ describe('@atlaspack/link', () => {
       assert.equal(
         overlayFS.readFileSync('.parcelrc', 'utf8'),
         JSON.stringify({
-          extends: '@namespace/atlaspack-config-namespace',
+          extends: '@atlaspack/config-namespace',
           transformers: {
             '*': [
-              '@namespace/atlaspack-transformer-js',
+              '@atlaspack/transformer-js',
               '@namespace/atlaspack-transformer-local',
             ],
           },

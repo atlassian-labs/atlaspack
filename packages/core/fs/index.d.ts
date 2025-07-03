@@ -1,7 +1,10 @@
+// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 import type {FileSystem, FilePath} from '@atlaspack/types-internal';
+// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 import type {Event} from '@parcel/watcher';
 import type WorkerFarm from '@atlaspack/workers';
 
+// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type {
   FileSystem,
   FileOptions,
@@ -32,3 +35,6 @@ interface NodeVCSAwareFSOptions {
 export const NodeVCSAwareFS: {
   new (options: NodeVCSAwareFSOptions): FileSystem;
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type SomeType = any; // replace with actual type export

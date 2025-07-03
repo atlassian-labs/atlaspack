@@ -1,4 +1,5 @@
-import {FilePath} from '@atlaspack/types';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import type {FilePath} from '@atlaspack/types';
 
 type BackendType = 'process' | 'threads';
 
@@ -21,3 +22,6 @@ declare class WorkerFarm {
 }
 
 export default WorkerFarm;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type SomeType = any; // replace with actual type export

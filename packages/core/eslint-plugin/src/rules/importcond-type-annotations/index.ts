@@ -1,7 +1,8 @@
 /**
  * @file Automatically adds type annotations for conditional import (importCond) usages
  */
-import type {TSESTree} from '@typescript-eslint/utils';
+// eslint-disable-next-line flowtype/no-types-missing-file-annotation
+import type {TSESTree} from '@typescript-eslint/types';
 import {createRule} from '../../utils/index';
 
 export const RULE_NAME = 'importcond-type-annotations';
@@ -15,6 +16,7 @@ export const messages = {
     'Fix the type annotation for this conditional import usage.',
 }; // satisfies Record<string, string>;   // Uncomment this line once prettier is updated to a version that supports it
 
+// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type Options = [];
 
 const generateFix = (
@@ -70,6 +72,7 @@ const rule = createRule<Options, keyof typeof messages>({
           // Whether it's called typeArguments or typeParameters depends on the version of typescript-eslint
           const typeArguments:
             | TSESTree.TSTypeParameterInstantiation
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             | undefined = node.typeArguments ?? (node as any).typeParameters;
           if (!typeArguments) {
             // No type annotation exists at all

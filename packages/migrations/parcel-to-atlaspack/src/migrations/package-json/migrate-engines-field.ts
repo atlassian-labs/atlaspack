@@ -1,5 +1,6 @@
 import {sortPackageJsonField} from './sort-package-json-field';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function migrateEnginesField(packageJson: any): boolean {
   if (!packageJson.engines?.parcel) {
     return false;

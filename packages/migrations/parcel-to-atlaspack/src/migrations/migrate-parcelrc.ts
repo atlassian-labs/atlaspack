@@ -5,6 +5,7 @@ import {fdir} from 'fdir';
 
 import {diff} from './diff';
 
+// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type MigrateParcelRcOptions = {
   cwd: string;
   dryRun: string;
@@ -14,6 +15,7 @@ export type MigrateParcelRcOptions = {
 export async function migrateParcelRc({cwd, dryRun}: MigrateParcelRcOptions) {
   const {default: chalk} = await import('chalk');
 
+  // eslint-disable-next-line no-console
   console.log(chalk.blue('[INFO]'), 'Searching for .parcelrc files');
 
   const parcelrcPaths = await new fdir()
@@ -31,6 +33,7 @@ export async function migrateParcelRc({cwd, dryRun}: MigrateParcelRcOptions) {
       const atlaspckrc = parcelrc.replace(/@parcel\//g, '@atlaspack/');
       if (atlaspckrc !== parcelrc) {
         if (dryRun) {
+          // eslint-disable-next-line no-console
           console.log(
             chalk.blue('[INFO]'),
             `Updated ${relative(cwd, parcelrcPath)}\n${diff(
@@ -50,6 +53,7 @@ export async function migrateParcelRc({cwd, dryRun}: MigrateParcelRcOptions) {
       );
 
       if (dryRun) {
+        // eslint-disable-next-line no-console
         console.log(
           chalk.blue('[INFO]'),
           `Renamed ${relative(cwd, parcelrcPath)}`,
@@ -62,6 +66,7 @@ export async function migrateParcelRc({cwd, dryRun}: MigrateParcelRcOptions) {
     }),
   );
 
+  // eslint-disable-next-line no-console
   console.log(
     chalk.blue('[INFO]'),
     `Migrated ${modifiedFiles.length} .parcelrc files`,
