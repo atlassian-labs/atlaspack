@@ -195,16 +195,16 @@ describe('@atlaspack/link', () => {
         app
           yarn.lock:
           .parcelrc: ${{
-            extends: '@atlaspack/config-namespace',
+            extends: '@namespace/atlaspack-config-namespace',
             transformers: {
               '*': [
-                '@atlaspack/transformer-js',
+                '@namespace/atlaspack-transformer-js',
                 '@namespace/atlaspack-transformer-local',
               ],
             },
           }}
           package.json: ${{
-            ['@atlaspack/transformer-js']: {},
+            ['@namespace/atlaspack-transformer-js']: {},
             ['@namespace/atlaspack-transformer-local']: {},
           }}`;
 
@@ -231,7 +231,7 @@ describe('@atlaspack/link', () => {
       assert.equal(
         overlayFS.readFileSync('package.json', 'utf8'),
         JSON.stringify({
-          ['@namespace/atlaspack-transformer-js']: {},
+          ['@atlaspack/transformer-js']: {},
           ['@namespace/atlaspack-transformer-local']: {},
         }),
       );
