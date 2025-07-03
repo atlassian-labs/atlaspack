@@ -6,7 +6,6 @@ type NoImportErrorMessage =
 type NoDefaultErrorMessage = 'Conditional imports must have a default export';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ESModuleWithDefaultExport = {[key: string]: any; default: any};
 
 type ConditionalImport<

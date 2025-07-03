@@ -5,8 +5,7 @@ const MAX_TIME = 10000;
 const ASYNC_WRITES = true;
 const MAP_SIZE = 1024 * 1024 * 1024 * 10;
 
-// eslint-disable-next-line require-await
-async function main() {
+function main() {
   const safeDB = new Lmdb({
     path: './databases/safe/read',
     asyncWrites: ASYNC_WRITES,
@@ -63,8 +62,4 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  // eslint-disable-next-line no-console
-  console.error(err);
-  process.exitCode = 1;
-});
+main();
