@@ -1,4 +1,3 @@
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 import type {PluginObj, NodePath, types as BabelTypes} from '@babel/core';
 import {declare} from '@babel/helper-plugin-utils';
 

@@ -1,6 +1,6 @@
 import {sendAnalyticsEvent} from '../src/helpers/browser/analytics/analytics.js';
 import {mock} from 'node:test';
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
+
 import type {Mock} from 'node:test';
 import assert from 'node:assert';
 

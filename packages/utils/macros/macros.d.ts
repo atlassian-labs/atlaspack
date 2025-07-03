@@ -1,4 +1,3 @@
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export interface MacroContext {
   /** Adds an asset as a dependency of the JS module that called this macro. */
   addAsset(asset: MacroAsset): void;

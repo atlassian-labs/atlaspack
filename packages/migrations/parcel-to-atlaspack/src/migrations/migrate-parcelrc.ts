@@ -5,7 +5,6 @@ import {fdir} from 'fdir';
 
 import {diff} from './diff';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type MigrateParcelRcOptions = {
   cwd: string;
   dryRun: string;

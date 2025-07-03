@@ -8,7 +8,6 @@ import {migrateConfigFields} from './package-json/migrate-config-fields';
 import {migrateDependencies} from './package-json/migrate-dependencies';
 import {migrateEnginesField} from './package-json/migrate-engines-field';
 
-// eslint-disable-next-line flowtype/no-types-missing-file-annotation
 export type MigratePackageJsonOptions = {
   cwd: string;
   dryRun: string;
