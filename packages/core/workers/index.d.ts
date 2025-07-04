@@ -1,4 +1,5 @@
-import {FilePath} from '@atlaspack/types';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import type {FilePath} from '@atlaspack/types';
 
 type BackendType = 'process' | 'threads';
 

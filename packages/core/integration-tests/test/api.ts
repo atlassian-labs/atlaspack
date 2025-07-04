@@ -1,4 +1,3 @@
-// @flow strict-local
 import path from 'path';
 import assert from 'assert';
 import {
@@ -11,14 +10,13 @@ import {
   outputFS,
   overlayFS,
 } from '@atlaspack/test-utils';
-
 import {ATLASPACK_VERSION} from '@atlaspack/core';
 
 describe('JS API', function () {
   it.v2('should respect distEntry', async function () {
     const NAME = 'custom-name.js';
 
-    let b = await bundle(
+    const b = await bundle(
       path.join(__dirname, '/integration/js-comment/index.js'),
       {
         targets: {
@@ -39,7 +37,7 @@ describe('JS API', function () {
   });
 
   it('should run additional reports from the options', async function () {
-    let b = await bundle(
+    const b = await bundle(
       path.join(__dirname, '/integration/js-comment/index.js'),
       {
         additionalReporters: [

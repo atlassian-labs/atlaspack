@@ -4,8 +4,12 @@ import type {
   BuildSuccessEvent,
   AsyncSubscription,
 } from '@atlaspack/types';
+
 import type {FarmOptions} from '@atlaspack/workers';
+
 import type WorkerFarm from '@atlaspack/workers';
+
+export declare const ATLASPACK_VERSION: string;
 
 export class Atlaspack {
   constructor(options: InitialAtlaspackOptions);
