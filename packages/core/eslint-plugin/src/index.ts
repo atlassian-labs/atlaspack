@@ -2,7 +2,7 @@ import importCondTypeAnnotationsRule from './rules/importcond-type-annotations';
 import noImportCondExportsRule from './rules/no-importcond-exports';
 
 export const {name, version} =
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
   require('../package.json') as typeof import('../package.json');
 
 export const rules = {
