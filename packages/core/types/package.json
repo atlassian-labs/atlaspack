@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/types",
-  "version": "2.15.6",
+  "version": "2.15.7",
   "license": "(MIT OR Apache-2.0)",
   "main": "src/index.js",
   "types": "lib/index.d.ts",
@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@atlaspack/types-internal": "2.14.14",
-    "@atlaspack/workers": "2.14.16"
+    "@atlaspack/workers": "2.14.17"
   },
   "type": "commonjs"
 }
