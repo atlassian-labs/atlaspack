@@ -9,7 +9,6 @@ import {
   it,
   outputFS,
   overlayFS,
-  // @ts-expect-error: Missing declaration file for @atlaspack/test-utils
 } from '@atlaspack/test-utils';
 import {ATLASPACK_VERSION} from '@atlaspack/core';
 
