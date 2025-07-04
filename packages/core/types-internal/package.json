@@ -2,7 +2,8 @@
   "name": "@atlaspack/types-internal",
   "version": "2.14.14",
   "license": "(MIT OR Apache-2.0)",
-  "main": "src/index.js",
+  "main": "lib/index.js",
+  "source": "src/index.js",
   "types": "lib/index.d.ts",
   "repository": {
     "type": "git",
@@ -12,6 +13,7 @@
     "access": "public"
   },
   "scripts": {
+    "dev:prepare": "rimraf ./lib/ && mkdir lib && echo \"module.exports = {}\" > lib/index.js",
     "build-ts": "./scripts/build-ts.sh",
     "check-ts": "tsc --noEmit lib/index.d.ts"
   },

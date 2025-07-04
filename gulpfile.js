@@ -13,6 +13,9 @@ const IGNORED_PACKAGES = [
   '!packages/core/types/**',
   '!packages/core/types-internal/**',
 
+  // Static packages that doesn't need to be build
+  '!packages/core/atlaspack/**',
+
   // These packages are bundled.
   '!packages/core/codeframe/**',
   '!packages/core/fs/**',
