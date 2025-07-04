@@ -1,5 +1,3 @@
-// @flow strict-local
-
 import {
   getParcelOptions,
   overlayFS,
@@ -37,8 +35,10 @@ describe('dev dep request bug', () => {
       `;
 
       const atlaspack = new Atlaspack(options);
-      await atlaspack.clearBuildCaches();
-      await atlaspack.unstable_buildAssetGraph(false);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (atlaspack as any).clearBuildCaches();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (atlaspack as any).unstable_buildAssetGraph(false);
     }
 
     {
@@ -53,8 +53,10 @@ describe('dev dep request bug', () => {
       `;
 
       const atlaspack = new Atlaspack(options);
-      await atlaspack.clearBuildCaches();
-      await atlaspack.unstable_buildAssetGraph(false);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (atlaspack as any).clearBuildCaches();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (atlaspack as any).unstable_buildAssetGraph(false);
     }
   });
 });
