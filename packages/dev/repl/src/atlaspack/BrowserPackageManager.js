@@ -76,11 +76,13 @@ export const BUILTINS = {
 const MAIN = 1 << 0;
 const SOURCE = 1 << 2;
 const ENTRIES =
-  MAIN |
-  (process.env.ATLASPACK_BUILD_ENV !== 'production' ||
-  process.env.ATLASPACK_SELF_BUILD
-    ? SOURCE
-    : 0);
+  process.env.ATLASPACK_REGISTER_USE_LIB === 'true'
+    ? MAIN
+    : MAIN |
+      (process.env.ATLASPACK_BUILD_ENV !== 'production' ||
+      process.env.ATLASPACK_SELF_BUILD
+        ? SOURCE
+        : 0);
 
 export class BrowserPackageManager implements PackageManager {
   resolver: ?ResolverBase;
