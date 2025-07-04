@@ -24,6 +24,7 @@ import {
 } from 'vscode-jsonrpc/node';
 import * as invariant from 'assert';
 import * as url from 'url';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 import commonPathPrefix = require('common-path-prefix');
 
 // import {TextDocument} from 'vscode-languageserver-textdocument';
