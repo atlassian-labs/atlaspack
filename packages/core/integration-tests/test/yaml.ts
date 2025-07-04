@@ -1,4 +1,3 @@
-// @flow
 import assert from 'assert';
 import {join} from 'path';
 import {
@@ -34,7 +33,7 @@ describe('yaml', function () {
           c: 2
     `;
 
-    let b = await bundle(join(__dirname, 'index.js'), {inputFS: overlayFS});
+    const b = await bundle(join(__dirname, 'index.js'), {inputFS: overlayFS});
 
     assertBundles(b, [
       {
@@ -48,7 +47,7 @@ describe('yaml', function () {
       },
     ]);
 
-    let output = await run(b);
+    const output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(output(), 3);
   });
@@ -69,7 +68,7 @@ describe('yaml', function () {
       inputFS: overlayFS,
     });
 
-    let dist = await outputFS.readFile(join(distDir, 'index.js'), 'utf8');
+    const dist = await outputFS.readFile(join(distDir, 'index.js'), 'utf8');
     assert(dist.includes('{a:1,b:{c:2}}'));
   });
 });

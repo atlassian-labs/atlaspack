@@ -1,5 +1,3 @@
-// @flow strict-local
-
 import {execSync} from 'child_process';
 import assert from 'assert';
 import path from 'path';
@@ -14,7 +12,7 @@ describe.skip('@atlaspack/register', () => {
           'atlaspack-register',
           'entry.js',
         )}`,
-      ),
+      ).toString(),
       '123',
     );
   });
@@ -28,13 +26,13 @@ describe.skip('@atlaspack/register', () => {
           'atlaspack-register',
           'index.js',
         )}`,
-      ),
+      ).toString(),
       '123',
     );
   });
 
   it("enables Atlaspacks's resolver in node", () => {
-    let [foo, resolved] = execSync(
+    const [foo, resolved] = execSync(
       `node -r @atlaspack/register ${path.join(
         __dirname,
         'integration',
@@ -68,16 +66,16 @@ describe.skip('@atlaspack/register', () => {
       )
         .toString()
         .split('\n');
-    } catch (e) {
+    } catch (e: unknown) {
+      const error = e as {stdout: {toString: () => string}; stderr: string};
       assert.equal(
-        e.stdout.toString().trim(),
+        error.stdout.toString().trim(),
         path.join(__dirname, 'integration', 'atlaspack-register', 'foo.js'),
       );
-      assert(e.stderr.includes("Error: Cannot find module '~foo.js'"));
+      assert(error.stderr.includes("Error: Cannot find module '~foo.js'"));
       return;
     }
 
-    // $FlowFixMe
     assert.fail();
   });
 
@@ -97,13 +95,13 @@ describe.skip('@atlaspack/register', () => {
       )
         .toString()
         .split('\n');
-    } catch (e) {
-      assert.equal(e.stdout.toString().trim(), '123');
-      assert(e.stderr.includes('SyntaxError: Unexpected identifier'));
+    } catch (e: unknown) {
+      const error = e as {stdout: {toString: () => string}; stderr: string};
+      assert.equal(error.stdout.toString().trim(), '123');
+      assert(error.stderr.includes('SyntaxError: Unexpected identifier'));
       return;
     }
 
-    // $FlowFixMe
     assert.fail();
   });
 });

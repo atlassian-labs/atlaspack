@@ -1,4 +1,3 @@
-// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -13,7 +12,7 @@ import {md} from '@atlaspack/diagnostic';
 
 describe.v2('webmanifest', function () {
   it('should support .webmanifest', async function () {
-    let b = await bundle(
+    const b = await bundle(
       path.join(__dirname, '/integration/webmanifest/index.html'),
     );
 
@@ -60,7 +59,7 @@ describe.v2('webmanifest', function () {
   });
 
   it('should support .json', async function () {
-    let b = await bundle(
+    const b = await bundle(
       path.join(__dirname, '/integration/webmanifest-json/index.html'),
     );
 
@@ -107,11 +106,11 @@ describe.v2('webmanifest', function () {
   });
 
   it('should throw on malformed icons, screenshots, shortcuts, and file handlers', async function () {
-    let manifestPath = path.join(
+    const manifestPath = path.join(
       __dirname,
       '/integration/webmanifest-schema/manifest.webmanifest',
     );
-    let manifest = await inputFS.readFileSync(manifestPath, 'utf8');
+    const manifest = await inputFS.readFileSync(manifestPath, 'utf8');
 
     await assert.rejects(
       () =>
@@ -218,12 +217,13 @@ describe.v2('webmanifest', function () {
   });
 
   it('should throw on missing dependency', async function () {
-    let manifestPathRelative =
+    const manifestPathRelative =
       './integration/webmanifest-not-found/manifest.webmanifest';
-    let manifestPath = path.join(__dirname, manifestPathRelative);
-    let manifest = await inputFS.readFileSync(manifestPath, 'utf8');
+    const manifestPath = path.join(__dirname, manifestPathRelative);
+    const manifest = await inputFS.readFileSync(manifestPath, 'utf8');
 
-    let message = md`Failed to resolve 'icon.png' from '${manifestPathRelative}'`;
+    // @ts-expect-error - md template literal type issue
+    const message = md`Failed to resolve 'icon.png' from '${manifestPathRelative}'`;
 
     await assert.rejects(
       () =>
@@ -270,7 +270,7 @@ describe.v2('webmanifest', function () {
   });
 
   it('should work when there is a target in package.json', async function () {
-    let b = await bundle(
+    const b = await bundle(
       path.join(__dirname, '/integration/webmanifest-targets/index.html'),
     );
 
