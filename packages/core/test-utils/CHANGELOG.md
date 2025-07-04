@@ -1,5 +1,19 @@
 # @atlaspack/test-utils
 
+## 2.14.20
+
+### Patch Changes
+
+- [#645](https://github.com/atlassian-labs/atlaspack/pull/645) [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3) Thanks [@alshdavid](https://github.com/alshdavid)! - Updated build system and added some extra test-specific code
+
+- Updated dependencies [[`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3)]:
+  - @atlaspack/package-manager@2.14.18
+  - @atlaspack/fs@2.15.13
+  - @atlaspack/utils@2.16.2
+  - @atlaspack/core@2.18.9
+  - @atlaspack/config-default@3.1.20
+  - @atlaspack/cache@3.2.13
+
 ## 2.14.19
 
 ### Patch Changes

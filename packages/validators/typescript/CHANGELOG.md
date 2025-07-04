@@ -1,5 +1,14 @@
 # @atlaspack/validator-typescript
 
+## 2.14.18
+
+### Patch Changes
+
+- Updated dependencies [[`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3)]:
+  - @atlaspack/utils@2.16.2
+  - @atlaspack/types@2.15.8
+  - @atlaspack/plugin@2.14.18
+
 ## 2.14.17
 
 ### Patch Changes
