@@ -102,6 +102,18 @@ export type FeatureFlags = {|
    * Enable a change to the html packager to load more bundles when conditional bundling fallback mode is enabled
    */
   condbHtmlPackagerChange: boolean,
+
+  /**
+   * Enable path-based granular invalidation of options.
+   * This provides more detailed tracking of which specific option properties
+   * are being accessed, which can reduce unnecessary cache invalidations.
+   *
+   * When enabled, this flag:
+   * - Tracks nested object paths granularly for more precise invalidations
+   * - Skips tracking of Object.keys() and similar operations on config/options objects
+   * - Enables option invalidation blocklist to reduce unnecessary cache invalidations
+   */
+  granularOptionInvalidation: boolean,
   /**
    * Enable a setting that allows for more assets to be scope hoisted, if
    * they're safe to do so.
