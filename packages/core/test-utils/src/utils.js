@@ -61,7 +61,7 @@ before(() => {
   }
 });
 
-beforeEach(async () => {
+beforeEach(() => {
   outputFS = new MemoryFS(workerFarm);
   overlayFS = new OverlayFS(outputFS, inputFS);
 
@@ -69,12 +69,12 @@ beforeEach(async () => {
     try {
       cacheDir = tempy.directory();
       cache = new LMDBLiteCache(cacheDir);
+      break;
     } catch (err) {
       if (
         err.message.includes('temporarily unavailable') ||
         err.message.includes('close it to be able to open it again')
       ) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
         continue;
       }
       throw err;
