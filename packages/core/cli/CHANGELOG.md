@@ -1,5 +1,20 @@
 # @atlaspack/cli
 
+## 2.13.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.18.8
+  - @atlaspack/fs@2.15.12
+  - @atlaspack/logger@2.14.12
+  - @atlaspack/utils@2.16.1
+  - @atlaspack/config-default@3.1.19
+  - @atlaspack/package-manager@2.14.17
+  - @atlaspack/reporter-cli@2.16.1
+  - @atlaspack/reporter-dev-server@2.14.17
+  - @atlaspack/reporter-tracer@2.14.17
+
 ## 2.13.20
 
 ### Patch Changes

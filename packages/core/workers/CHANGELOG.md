@@ -1,5 +1,13 @@
 # @atlaspack/workers
 
+## 2.14.17
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.12
+  - @atlaspack/utils@2.16.1
+
 ## 2.14.16
 
 ### Patch Changes

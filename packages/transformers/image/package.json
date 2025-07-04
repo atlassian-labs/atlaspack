@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-image",
-  "version": "3.1.16",
+  "version": "3.1.17",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -15,9 +15,9 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.16",
-    "@atlaspack/utils": "2.16.0",
-    "@atlaspack/workers": "2.14.16",
+    "@atlaspack/plugin": "2.14.17",
+    "@atlaspack/utils": "2.16.1",
+    "@atlaspack/workers": "2.14.17",
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {
