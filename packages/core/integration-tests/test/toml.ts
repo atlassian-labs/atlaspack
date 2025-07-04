@@ -1,4 +1,3 @@
-// @flow
 import assert from 'assert';
 import {join} from 'path';
 import {
@@ -35,7 +34,7 @@ describe.v2('toml', function () {
         c = 2
     `;
 
-    let b = await bundle('index.js', {inputFS: overlayFS});
+    const b = await bundle('index.js', {inputFS: overlayFS});
 
     assertBundles(b, [
       {
@@ -49,7 +48,7 @@ describe.v2('toml', function () {
       },
     ]);
 
-    let output = await run(b);
+    const output = await run(b);
     assert.equal(typeof output, 'function');
     assert.equal(output(), 3);
   });
@@ -71,7 +70,7 @@ describe.v2('toml', function () {
       inputFS: overlayFS,
     });
 
-    let toml = await outputFS.readFile(join(distDir, 'index.js'), 'utf8');
+    const toml = await outputFS.readFile(join(distDir, 'index.js'), 'utf8');
     assert(toml.includes('{a:1,b:{c:2}}'));
   });
 });

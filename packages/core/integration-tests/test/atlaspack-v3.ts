@@ -1,10 +1,10 @@
-// @flow
-
 import assert from 'assert';
 import {join} from 'path';
 
 import {
+  // @ts-expect-error: AtlaspackV3 and FileSystemV3 are missing from the TypeScript type definitions but are available at runtime.
   AtlaspackV3,
+  // @ts-expect-error: AtlaspackV3 and FileSystemV3 are missing from the TypeScript type definitions but are available at runtime.
   FileSystemV3,
   Atlaspack,
   createWorkerFarm,
@@ -27,12 +27,12 @@ async function assertOutputIsIdentical(
   entry: string,
   options?: InitialAtlaspackOptions,
 ) {
-  let bundlesV3 = await bundle(entry, {
+  const bundlesV3 = await bundle(entry, {
     ...options,
     inputFS: overlayFS,
   }).then((b) => b.getBundles());
 
-  let bundlesV2 = await bundle(entry, {
+  const bundlesV2 = await bundle(entry, {
     ...options,
     inputFS: overlayFS,
     featureFlags: {
@@ -43,8 +43,8 @@ async function assertOutputIsIdentical(
   assert.equal(bundlesV3.length, bundlesV2.length);
 
   for (let i = 0; i < bundlesV2.length; i++) {
-    let v2Code = await outputFS.readFile(bundlesV2[i].filePath, 'utf8');
-    let v3Code = await outputFS.readFile(bundlesV3[i].filePath, 'utf8');
+    const v2Code = await outputFS.readFile(bundlesV2[i].filePath, 'utf8');
+    const v3Code = await outputFS.readFile(bundlesV3[i].filePath, 'utf8');
 
     assert.equal(v3Code, v2Code);
   }
@@ -67,13 +67,14 @@ describe.v3('AtlaspackV3', function () {
       yarn.lock: {}
     `;
 
-    let atlaspack = await AtlaspackV3.create({
+    const atlaspack = await AtlaspackV3.create({
       corePath: '',
       entries: [join(__dirname, 'index.js')],
       fs: new FileSystemV3(overlayFS),
       napiWorkerPool,
       packageManager: new NodePackageManager(inputFS, __dirname),
-      lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      lmdb: (new LMDBLiteCache('.parcel-cache') as any).getNativeRef(),
     });
 
     await atlaspack.buildAssetGraph();
@@ -91,14 +92,17 @@ describe.v3('AtlaspackV3', function () {
             <script type="module" src="./index.ts" />
       `;
 
-    let bundleGraph = await bundle(join(__dirname, 'dependencies/index.html'), {
-      inputFS: overlayFS,
-      defaultTargetOptions: {
-        shouldScopeHoist: true,
+    const bundleGraph = await bundle(
+      join(__dirname, 'dependencies/index.html'),
+      {
+        inputFS: overlayFS,
+        defaultTargetOptions: {
+          shouldScopeHoist: true,
+        },
       },
-    });
+    );
 
-    let jsBundle = bundleGraph.getBundles().find((b) => b.type === 'js');
+    const jsBundle = bundleGraph.getBundles().find((b) => b.type === 'js');
 
     let indexAsset;
     jsBundle?.traverseAssets((asset) => {
@@ -208,16 +212,16 @@ describe.v3('AtlaspackV3', function () {
       shutdown
         index.js:
           console.log('hello world');
-                    
+
         yarn.lock: {}
     `;
 
-    let workerFarm = createWorkerFarm({
+    const workerFarm = createWorkerFarm({
       maxConcurrentWorkers: 0,
       useLocalWorker: true,
     });
     try {
-      let atlaspack = new Atlaspack({
+      const atlaspack = new Atlaspack({
         workerFarm,
         entries: [join(__dirname, 'shutdown/index.js')],
         inputFS: overlayFS,
@@ -244,7 +248,8 @@ describe.v3('AtlaspackV3', function () {
           corePath: '',
           entries: [join(__dirname, 'index.js')],
           fs: new FileSystemV3(overlayFS),
-          lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          lmdb: (new LMDBLiteCache('.parcel-cache') as any).getNativeRef(),
           napiWorkerPool,
           featureFlags: {
             testFlag: true,
@@ -260,7 +265,8 @@ describe.v3('AtlaspackV3', function () {
           entries: [join(__dirname, 'index.js')],
           fs: new FileSystemV3(overlayFS),
           napiWorkerPool,
-          lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          lmdb: (new LMDBLiteCache('.parcel-cache') as any).getNativeRef(),
           featureFlags: {
             testFlag: 'testFlagValue',
           },

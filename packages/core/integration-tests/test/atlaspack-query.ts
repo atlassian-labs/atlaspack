@@ -1,4 +1,3 @@
-// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -8,13 +7,13 @@ import {
   overlayFS,
   inputFS,
 } from '@atlaspack/test-utils';
-import {loadGraphs} from '../../../dev/query/src';
+import {loadGraphs} from '@atlaspack/query';
 
 describe.skip('atlaspack-query', () => {
   it('loadGraphs', async function () {
-    let entries = 'index.js';
-    let options = {
-      mode: 'production',
+    const entries = 'index.js';
+    const options = {
+      mode: 'production' as const,
       defaultTargetOptions: {
         shouldScopeHoist: false,
       },

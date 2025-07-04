@@ -1,4 +1,3 @@
-// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -20,7 +19,7 @@ describe.v2('symbol propagation', () => {
         index.js:
             module.exports = require('./broken.js');`;
 
-    let b = bundler(path.join(__dirname, 'index.js'), {
+    const b = bundler(path.join(__dirname, 'index.js'), {
       inputFS: overlayFS,
       shouldDisableCache: false,
     });
@@ -34,7 +33,7 @@ describe.v2('symbol propagation', () => {
       `module.exports = require('./working.js');`,
     );
 
-    let {bundleGraph} = await b.run();
+    const {bundleGraph} = await b.run();
 
     assert(await run(bundleGraph), 'ITS WORKING');
   });

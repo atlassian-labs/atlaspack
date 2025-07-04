@@ -1,4 +1,3 @@
-// @flow
 import assert from 'assert';
 import path from 'path';
 import fs from 'fs';
@@ -12,18 +11,18 @@ import {
 
 describe('glsl', function () {
   it('should support requiring GLSL files via glslify', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/glsl/index.js'));
+    const b = await bundle(path.join(__dirname, '/integration/glsl/index.js'));
 
-    let shader = fs.readFileSync(
+    const shader = fs.readFileSync(
       path.join(__dirname, '/integration/glsl/compiled.glsl'),
       'utf8',
     );
 
-    let output = await run(b);
+    const output = await run(b);
 
     assert.equal(typeof output, 'function');
     assert.ok(
-      output().reduce((acc, requiredShader) => {
+      output().reduce((acc: boolean, requiredShader: string) => {
         return (
           acc && normaliseNewlines(shader) === normaliseNewlines(requiredShader)
         );
@@ -32,11 +31,11 @@ describe('glsl', function () {
   });
 
   it.v2('should correctly resolve relative GLSL imports', async function () {
-    let b = await bundle(
+    const b = await bundle(
       path.join(__dirname, '/integration/glsl-relative-import/index.js'),
     );
 
-    let output = (await run(b)).trim();
+    const output = (await run(b)).trim();
 
     assert.strictEqual(
       output,
