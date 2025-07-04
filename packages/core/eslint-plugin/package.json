@@ -9,6 +9,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "scripts": {
+    "check-ts": "tsc --noEmit --project ."
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -19,6 +22,7 @@
     "@typescript-eslint/utils": "^8.31.1"
   },
   "devDependencies": {
+    "@typescript-eslint/types": "^8.31.1",
     "typescript-eslint": "^8.31.1",
     "@typescript-eslint/rule-tester": "^8.31.1"
   },
