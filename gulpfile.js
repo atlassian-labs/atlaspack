@@ -14,6 +14,7 @@ const IGNORED_PACKAGES = [
   '!packages/core/types-internal/**',
 
   // These packages are bundled.
+  '!packages/core/atlaspack/**',
   '!packages/core/codeframe/**',
   '!packages/core/fs/**',
   '!packages/core/package-manager/**',
