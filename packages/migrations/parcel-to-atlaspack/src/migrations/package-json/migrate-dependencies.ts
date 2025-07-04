@@ -9,6 +9,7 @@ const versions = new Map<string, string>();
 function isValidRange(range: string): boolean {
   try {
     return !!minVersion(range);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (err) {
     return false;
   }
