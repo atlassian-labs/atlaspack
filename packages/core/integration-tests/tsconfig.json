@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "types": ["node", "mocha"]
+  },
+  "include": ["test/*"]
+}

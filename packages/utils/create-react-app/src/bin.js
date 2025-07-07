@@ -2,7 +2,10 @@
 
 'use strict';
 
-if (process.env.ATLASPACK_BUILD_ENV !== 'production') {
+if (
+  process.env.ATLASPACK_SOURCES === 'true' ||
+  process.env.ATLASPACK_BUILD_ENV === 'test'
+) {
   require('@atlaspack/babel-register');
 }
 

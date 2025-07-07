@@ -16,7 +16,8 @@
   },
   "peerDependencies": {
     "@babel/core": "^7.22.11",
-    "eslint": ">= 7.0.0"
+    "eslint": ">= 7.0.0",
+    "typescript": ">= 4.0.0"
   },
   "type": "commonjs"
 }

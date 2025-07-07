@@ -26,6 +26,7 @@ export async function migratePackageJson({
 }: MigratePackageJsonOptions) {
   const {default: chalk} = await import('chalk');
 
+  // eslint-disable-next-line no-console
   console.log(chalk.blue('[INFO]'), 'Searching for package.json files');
 
   const packageJsonPaths = await new fdir()
@@ -63,6 +64,7 @@ export async function migratePackageJson({
         JSON.stringify(packageJson, null, space) + '\n';
 
       if (dryRun) {
+        // eslint-disable-next-line no-console
         console.log(
           chalk.blue('[INFO]'),
           `Updated ${relative(cwd, packageJsonPath)}\n${diff(
@@ -79,6 +81,7 @@ export async function migratePackageJson({
     }),
   );
 
+  // eslint-disable-next-line no-console
   console.log(
     chalk.blue('[INFO]'),
     `Migrated ${modifiedFiles.length} package.json files`,
