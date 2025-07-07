@@ -187,14 +187,13 @@ export default class Atlaspack {
         defaultTargetOptions: resolvedOptions.defaultTargetOptions,
         lmdb,
       });
+      if (featureFlags.atlaspackV3CleanShutdown) {
+        this.#disposable.add(() => {
+          rustAtlaspack.end();
+        });
+      }
     }
     this.rustAtlaspack = rustAtlaspack;
-
-    if (featureFlags.atlaspackV3CleanShutdown) {
-      this.#disposable.add(() => {
-        rustAtlaspack.end();
-      });
-    }
 
     let {config} = await loadAtlaspackConfig(resolvedOptions);
     this.#config = new AtlaspackConfig(config, resolvedOptions);
