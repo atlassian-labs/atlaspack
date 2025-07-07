@@ -24,7 +24,7 @@ describe('utils', () => {
     it('identifies requires', () => {
       assert.equal(
         isStaticRequire(
-          getFirstExpression(parse("require('@atlaspack/core')"), opts),
+          getFirstExpression(parse("require('@atlaspack/core')", opts), opts),
         ),
         true,
       );
@@ -32,7 +32,9 @@ describe('utils', () => {
 
     it("doesn't handle dynamic requires", () => {
       assert.equal(
-        isStaticRequire(getFirstExpression(parse('require(dynamic)'), opts)),
+        isStaticRequire(
+          getFirstExpression(parse('require(dynamic)', opts), opts),
+        ),
         false,
       );
     });
@@ -42,7 +44,10 @@ describe('utils', () => {
     it('identifies built-in require.resolve', () => {
       assert.equal(
         isStaticResolve(
-          getFirstExpression(parse("require.resolve('@atlaspack/core')"), opts),
+          getFirstExpression(
+            parse("require.resolve('@atlaspack/core')", opts),
+            opts,
+          ),
         ),
         true,
       );
