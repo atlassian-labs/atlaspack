@@ -502,9 +502,17 @@ export async function runBundle(
         if (src.hostname == null) {
           let p = path.join(distDir, nullthrows(src.pathname));
           let b = nullthrows(
-            bundles.find(
-              (b) => b.bundleBehavior !== 'inline' && b.filePath === p,
-            ),
+            bundles.find((b) => {
+              // This is not right.
+              // What is happening is that the bundle distDir is set to a relative path as of `patchProjectPaths`
+              // However, the bundle filePath is still set to an absolute path, just a non-resolved one.
+              //
+              // We should make sure that the bundle file-paths stored are also stored as relative to the project root
+              // not as absolute paths.
+              return (
+                b.bundleBehavior !== 'inline' && path.resolve(b.filePath) === p
+              );
+            }),
           );
           scripts.push([overlayFS.readFileSync(b.filePath, 'utf8'), b]);
         }
