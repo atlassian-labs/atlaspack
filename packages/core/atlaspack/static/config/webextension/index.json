@@ -1,0 +1,11 @@
+{
+  "extends": "atlaspack/config/default",
+  "transformers": {
+    "manifest.json": ["atlaspack/transformer/webextension"],
+    "raw:*": ["atlaspack/transformer/raw"]
+  },
+  "runtimes": ["...", "atlaspack/runtime/webextension"],
+  "packagers": {
+    "manifest.json": "atlaspack/packager/webextension"
+  }
+}
