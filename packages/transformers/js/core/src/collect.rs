@@ -723,14 +723,15 @@ impl Visit for Collect {
           self.static_cjs_exports = false;
           self.should_wrap = true;
           self.add_bailout(node.span, BailoutReason::FreeModule);
-        } else if match_property_name(node).is_none() {
-          self
-            .non_static_access
-            .entry(id!(ident))
-            .or_default()
-            .push(node.span);
         } else if self.imports.contains_key(&id!(ident)) {
           self.used_imports.insert(id!(ident));
+          if match_property_name(node).is_none() {
+            self
+              .non_static_access
+              .entry(id!(ident))
+              .or_default()
+              .push(node.span);
+          }
         }
         return;
       }
@@ -1495,6 +1496,19 @@ mod tests {
         js_word!("x"),
         js_word!("y")
       ])
+    );
+
+    assert_eq!(
+      map_used_imports(
+        run_collect(
+          "
+            import { SOURCES_CONFIG } from 'sources';
+            export const getSource = (key) => SOURCES_CONFIG['static' + 'key'];
+          "
+        )
+        .used_imports
+      ),
+      HashSet::from([js_word!("SOURCES_CONFIG")]),
     );
 
     assert_eq!(
