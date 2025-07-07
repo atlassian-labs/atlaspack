@@ -1503,7 +1503,7 @@ mod tests {
         run_collect(
           "
             import { SOURCES_CONFIG } from 'sources';
-            export const getSource = (key) => SOURCES_CONFIG['static' + 'key'];
+            export const getSource = SOURCES_CONFIG['static' + 'key'];
           "
         )
         .used_imports
