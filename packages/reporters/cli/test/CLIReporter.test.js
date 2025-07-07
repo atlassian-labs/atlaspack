@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it, after, beforeEach, afterEach} from 'node:test';
 import assert from 'assert';
 import sinon from 'sinon';
 import {PassThrough} from 'stream';

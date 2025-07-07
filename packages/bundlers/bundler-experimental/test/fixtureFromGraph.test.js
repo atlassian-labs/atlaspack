@@ -1,18 +1,19 @@
 // @flow strict-local
 
-import {MemoryFS} from '@atlaspack/fs';
+import {describe, it, before} from 'node:test';
 import assert from 'assert';
+import {MemoryFS} from '@atlaspack/fs';
 import {workerFarm} from '@atlaspack/test-utils';
 import {asset, fixtureFromGraph, dotFromGraph} from './fixtureFromGraph';
 
-describe('fixtureFromGraph', () => {
-  before(async function () {
-    this.timeout(10000);
+describe('fixtureFromGraph', async () => {
+  await before(async function () {
+    // this.timeout(10000);
     // Warm up worker farm so that the first test doesn't account for this time.
     await workerFarm.callAllWorkers('ping', []);
   });
 
-  it('can create fixtures for single files', async () => {
+  await it('can create fixtures for single files', async () => {
     const fs = new MemoryFS(workerFarm);
     await fixtureFromGraph('dir', fs, [
       asset('file1.js'),
@@ -31,7 +32,7 @@ describe('fixtureFromGraph', () => {
     );
   });
 
-  it('will create files with imports between themselves', async () => {
+  await it('will create files with imports between themselves', async () => {
     const fs = new MemoryFS(workerFarm);
     await fixtureFromGraph('dir', fs, [
       asset('file1.js', ['file2.js', 'file3.js']),
@@ -54,7 +55,7 @@ export default function run() { return [d0, d1] }
     );
   });
 
-  it('will create files with async imports between themselves', async () => {
+  await it('will create files with async imports between themselves', async () => {
     const fs = new MemoryFS(workerFarm);
     await fixtureFromGraph('dir', fs, [
       asset('file1.js', ['file2.js', {to: 'file3.js', type: 'async'}]),

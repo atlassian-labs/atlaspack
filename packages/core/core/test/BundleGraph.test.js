@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it} from 'node:test';
 import assert from 'assert';
 import BundleGraph from '../src/BundleGraph';
 import {DEFAULT_ENV, DEFAULT_TARGETS} from './test-utils';

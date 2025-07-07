@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it} from 'node:test';
 import assert from 'assert';
 import sinon from 'sinon';
 import path from 'path';
@@ -487,8 +488,6 @@ describe('AdjacencyList', () => {
   });
 
   describe('deserialize', function () {
-    this.timeout(10000);
-
     it('should share the underlying data across worker threads', async () => {
       let graph = new AdjacencyList();
       let n0 = graph.addNode();

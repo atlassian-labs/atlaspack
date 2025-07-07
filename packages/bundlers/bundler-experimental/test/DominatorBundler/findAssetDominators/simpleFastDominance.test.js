@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it} from 'node:test';
 import assert from 'assert';
 import {Graph} from '@atlaspack/graph';
 import {simpleFastDominance} from '../../../src/DominatorBundler/findAssetDominators/simpleFastDominance';

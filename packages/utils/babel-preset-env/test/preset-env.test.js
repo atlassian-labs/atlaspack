@@ -1,6 +1,7 @@
 // @flow
 
 import * as babel from '@babel/core';
+import {describe, it} from 'node:test';
 import assert from 'assert';
 
 const input = `

@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it, beforeEach} from 'node:test';
 import {clearBuildCaches} from '@atlaspack/build-cache';
 import {resolveDevDepRequestRef} from '../../src/requests/DevDepRequest';
 import type {DevDepRequest, DevDepRequestRef} from '../../src/types';

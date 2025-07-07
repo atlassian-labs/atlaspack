@@ -2,6 +2,7 @@
 
 import type {NamedBundle, Dependency} from '@atlaspack/types';
 
+import {describe, it} from 'node:test';
 import assert from 'assert';
 import {getURLReplacement} from '../src/replaceBundleReferences';
 

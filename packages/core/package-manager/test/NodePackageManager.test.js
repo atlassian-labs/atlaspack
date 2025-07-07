@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it, beforeEach, afterEach} from 'node:test';
 import {MemoryFS, NodeFS, OverlayFS} from '@atlaspack/fs';
 import assert from 'assert';
 import invariant from 'assert';
@@ -44,9 +45,6 @@ describe('NodePackageManager', function () {
   let packageManager;
   let packageInstaller;
   let workerFarm;
-
-  // These can sometimes take a lil while
-  this.timeout(20000);
 
   beforeEach(() => {
     workerFarm = new WorkerFarm({

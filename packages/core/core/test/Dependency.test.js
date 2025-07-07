@@ -1,4 +1,5 @@
 // @flow
+import {describe, it} from 'node:test';
 import expect from 'expect';
 import {createDependencyId} from '../src/Dependency';
 import {createEnvironment} from '../src/Environment';

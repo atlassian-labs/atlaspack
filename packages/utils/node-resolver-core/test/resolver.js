@@ -1,6 +1,7 @@
 // @flow strict-local
 import NodeResolver from '../src/Wrapper';
 import path from 'path';
+import {describe, it, beforeEach, afterEach} from 'node:test';
 import assert from 'assert';
 import nullthrows from 'nullthrows';
 import {ncp, overlayFS, outputFS} from '@atlaspack/test-utils';

@@ -2,6 +2,7 @@ import {sendAnalyticsEvent} from '../src/helpers/browser/analytics/analytics.js'
 import {mock} from 'node:test';
 
 import type {Mock} from 'node:test';
+import {describe, it, beforeEach} from 'node:test';
 import assert from 'node:assert';
 
 describe('@atlaspack/analytics', () => {

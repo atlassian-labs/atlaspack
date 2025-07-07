@@ -1,4 +1,5 @@
 // @flow
+import {describe, it, beforeEach, afterEach} from 'node:test';
 import {tracer, PluginTracer} from '../src/Tracer';
 import sinon from 'sinon';
 import assert from 'assert';

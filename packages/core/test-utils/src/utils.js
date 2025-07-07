@@ -18,6 +18,7 @@ import http from 'http';
 // $FlowFixMe
 import expect from 'expect';
 
+import * as nodeTest from 'node:test';
 import invariant from 'assert';
 import assert from 'assert';
 import util from 'util';
@@ -53,7 +54,7 @@ export const inputFS: NodeFS = new NodeFS();
 export let outputFS: MemoryFS = new MemoryFS(workerFarm);
 export let overlayFS: OverlayFS = new OverlayFS(outputFS, inputFS);
 
-before(() => {
+(globalThis.before || nodeTest.before)(() => {
   try {
     childProcess.execSync('watchman shutdown-server');
   } catch (err) {
@@ -61,7 +62,7 @@ before(() => {
   }
 });
 
-beforeEach(async () => {
+(globalThis.beforeEach || nodeTest.beforeEach)(async () => {
   outputFS = new MemoryFS(workerFarm);
   overlayFS = new OverlayFS(outputFS, inputFS);
 
@@ -90,7 +91,7 @@ export async function ncp(source: FilePath, destination: FilePath) {
   });
 }
 
-after(async () => {
+(globalThis.after || nodeTest.after)(async () => {
   // Spin down the worker farm to stop it from preventing the main process from exiting
   await workerFarm.end();
   if (isAtlaspackV3) {
@@ -1438,7 +1439,7 @@ describe.v3.only = function (...args: mixed[]) {
   });
 };
 
-let origIt = globalThis.it;
+let origIt = globalThis.it || nodeTest.it;
 
 export function it(...args: mixed[]) {
   if (

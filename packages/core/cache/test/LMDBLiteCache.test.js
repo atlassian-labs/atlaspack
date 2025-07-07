@@ -1,5 +1,6 @@
 // @flow
 
+import {describe, it, beforeEach} from 'node:test';
 import * as fs from 'fs';
 import * as path from 'path';
 import {tmpdir} from 'os';
@@ -11,10 +12,10 @@ import {initializeMonitoring} from '@atlaspack/rust';
 
 const cacheDir = path.join(tmpdir(), 'lmdb-lite-cache-tests');
 
-describe('LMDBLiteCache', () => {
+describe('LMDBLiteCache', async () => {
   let cache;
 
-  beforeEach(async () => {
+  await beforeEach(async () => {
     await fs.promises.rm(cacheDir, {recursive: true, force: true});
   });
 
@@ -140,8 +141,6 @@ describe('LMDBLiteCache', () => {
   });
 
   it('should work when there are multiple node.js worker threads accessing the same database', async function () {
-    this.timeout(40000);
-
     try {
       initializeMonitoring();
     } catch (error) {

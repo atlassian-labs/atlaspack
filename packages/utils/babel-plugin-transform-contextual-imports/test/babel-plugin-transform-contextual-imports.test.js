@@ -1,5 +1,6 @@
 // @flow
 
+import {describe, it} from 'node:test';
 import * as babel from '@babel/core';
 import assert from 'assert';
 

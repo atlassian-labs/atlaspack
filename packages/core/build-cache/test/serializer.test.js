@@ -1,5 +1,6 @@
 // @flow
 
+import {describe, it, beforeEach, afterEach} from 'node:test';
 import assert from 'assert';
 import sinon from 'sinon';
 

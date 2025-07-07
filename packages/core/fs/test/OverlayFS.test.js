@@ -1,5 +1,6 @@
 // @flow
 
+import {describe, it, beforeEach, afterEach} from 'node:test';
 import {OverlayFS} from '../src/OverlayFS';
 import {fsFixture} from '@atlaspack/test-utils/src/fsFixture';
 import {MemoryFS} from '../src/MemoryFS';

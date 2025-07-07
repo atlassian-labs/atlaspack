@@ -1,4 +1,5 @@
 // @flow
+import {describe, it} from 'node:test';
 import assert from 'assert';
 import getCurrentPackageManager from '../src/getCurrentPackageManager';
 

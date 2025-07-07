@@ -3,6 +3,7 @@ import bundleManifest from '../src/helpers/bundle-manifest.js';
 import {mock} from 'node:test';
 import type {Mock} from 'node:test';
 import assert from 'node:assert';
+import {describe, it, before, beforeEach} from 'node:test';
 
 describe('esm-js-loader-retry', () => {
   let mockSetTimeout: Mock<Window['setTimeout']>;

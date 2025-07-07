@@ -1,4 +1,6 @@
 // @flow
+
+import {describe, it} from 'node:test';
 import assert from 'assert';
 import {readFileSync} from 'fs';
 import {join as joinPath} from 'path';

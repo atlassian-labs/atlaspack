@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it, beforeEach} from 'node:test';
 import assert from 'assert';
 import {Asset, MutableAsset} from '../src/public/Asset';
 import UncommittedAsset from '../src/UncommittedAsset';

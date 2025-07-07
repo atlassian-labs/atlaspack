@@ -2,6 +2,7 @@
 
 import WorkerFarm from '@atlaspack/workers';
 import path from 'path';
+import {describe, it, before, beforeEach, after} from 'node:test';
 import assert from 'assert';
 import sinon from 'sinon';
 import {MemoryFS} from '@atlaspack/fs';
@@ -21,7 +22,7 @@ import {toProjectPath} from '../../src/projectPath';
 // $FlowFixMe unclear-type forgive me
 const mockCast = (f: any): any => f;
 
-describe('ConfigRequest tests', () => {
+describe('ConfigRequest tests', async () => {
   const projectRoot = 'project_root';
   let farm;
   let fs;
@@ -36,7 +37,7 @@ describe('ConfigRequest tests', () => {
     fs = new MemoryFS(farm);
   });
 
-  after(() => {
+  await after(() => {
     farm.end();
   });
 

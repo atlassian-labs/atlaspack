@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it, before, beforeEach, after, afterEach} from 'node:test';
 import type {InitialAtlaspackOptions} from '@atlaspack/types';
 import WorkerFarm from '@atlaspack/workers';
 // flowlint-next-line untyped-import:off
@@ -9,7 +10,7 @@ import path from 'path';
 import Atlaspack, {createWorkerFarm} from '../src/Atlaspack';
 
 describe('Atlaspack', function () {
-  this.timeout(75000);
+  // this.timeout(75000);
 
   let workerFarm;
   before(() => {
@@ -76,7 +77,7 @@ describe('Atlaspack', function () {
 });
 
 describe('AtlaspackAPI', function () {
-  this.timeout(75000);
+  // this.timeout(75000);
 
   let workerFarm;
   beforeEach(() => {

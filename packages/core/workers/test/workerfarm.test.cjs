@@ -1,15 +1,17 @@
 // NOTE: @atlaspack/logger exports object instances from the module.
 // If there are issues, check all imports are using the same module instance/path
 const Logger = require('@atlaspack/logger').default;
+const { describe, it, before, after, beforeEach, afterEach } = require('node:test')
 const assert = require('assert');
+const os = require('os');
 // eslint-disable-next-line @atlaspack/no-self-package-imports
 const WorkerFarm = require('@atlaspack/workers').default;
 
 describe('WorkerFarm', function () {
-  this.timeout(30000);
-
   it('Should start up workers', async () => {
     let workerfarm = new WorkerFarm({
+      // Tests fail if this is not specified
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: false,
       useLocalWorker: false,
       workerPath: require.resolve('./integration/workerfarm/ping.js'),
@@ -22,6 +24,7 @@ describe('WorkerFarm', function () {
 
   it('Should handle 1000 requests without any issue', async () => {
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: false,
       useLocalWorker: false,
       workerPath: require.resolve('./integration/workerfarm/echo.js'),
@@ -38,6 +41,7 @@ describe('WorkerFarm', function () {
 
   it('Should warm up workers', async () => {
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: true,
       useLocalWorker: true,
       workerPath: require.resolve('./integration/workerfarm/echo.js'),
@@ -60,6 +64,7 @@ describe('WorkerFarm', function () {
 
   it('Should use the local worker', async () => {
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: true,
       useLocalWorker: true,
       workerPath: require.resolve('./integration/workerfarm/echo.js'),
@@ -73,6 +78,7 @@ describe('WorkerFarm', function () {
 
   it('Should be able to use bi-directional communication', async () => {
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: false,
       useLocalWorker: false,
       workerPath: require.resolve('./integration/workerfarm/ipc.js'),
@@ -85,6 +91,7 @@ describe('WorkerFarm', function () {
 
   it('Should be able to handle 1000 bi-directional calls', async () => {
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: false,
       useLocalWorker: false,
       workerPath: require.resolve('./integration/workerfarm/ipc.js'),
@@ -100,6 +107,7 @@ describe('WorkerFarm', function () {
   it.skip('Bi-directional call should return masters pid', async () => {
     // TODO: this test is only good for processes not threads
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: false,
       useLocalWorker: false,
       workerPath: require.resolve('./integration/workerfarm/ipc-pid.js'),
@@ -116,6 +124,7 @@ describe('WorkerFarm', function () {
   it('Should handle 10 big concurrent requests without any issue', async () => {
     // This emulates the node.js ipc bug for win32
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: false,
       useLocalWorker: false,
       workerPath: require.resolve('./integration/workerfarm/echo.js'),
@@ -140,6 +149,7 @@ describe('WorkerFarm', function () {
     let logDisposable = Logger.onLog((event) => events.push(event));
 
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: true,
       useLocalWorker: false,
       workerPath: require.resolve('./integration/workerfarm/console.js'),
@@ -215,6 +225,7 @@ describe('WorkerFarm', function () {
     let logDisposable = Logger.onLog((event) => events.push(event));
 
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: true,
       useLocalWorker: false,
       workerPath: require.resolve('./integration/workerfarm/logging.js'),
@@ -252,6 +263,7 @@ describe('WorkerFarm', function () {
 
   it('Should support reverse handle functions in main process that can be called in workers', async () => {
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: true,
       useLocalWorker: false,
       workerPath: require.resolve('./integration/workerfarm/reverse-handle.js'),
@@ -265,6 +277,7 @@ describe('WorkerFarm', function () {
 
   it('Should dispose of handle objects when ending', async () => {
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: true,
       useLocalWorker: false,
       workerPath: require.resolve('./integration/workerfarm/reverse-handle.js'),
@@ -278,6 +291,7 @@ describe('WorkerFarm', function () {
 
   it('Should support shared references in workers', async () => {
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: true,
       useLocalWorker: false,
       workerPath: require.resolve(
@@ -297,6 +311,7 @@ describe('WorkerFarm', function () {
 
   it('Should resolve shared references in workers', async () => {
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: true,
       useLocalWorker: false,
       workerPath: require.resolve(
@@ -317,6 +332,7 @@ describe('WorkerFarm', function () {
 
   it('Should support shared references in local worker', async () => {
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: true,
       useLocalWorker: true,
       workerPath: require.resolve(
@@ -336,6 +352,7 @@ describe('WorkerFarm', function () {
 
   it('should resolve shared references in local worker', async () => {
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: true,
       useLocalWorker: true,
       workerPath: require.resolve(
@@ -356,6 +373,7 @@ describe('WorkerFarm', function () {
 
   it('Should dispose of shared references when ending', async () => {
     let workerfarm = new WorkerFarm({
+      maxConcurrentWorkers: os.cpus().length,
       warmWorkers: true,
       useLocalWorker: false,
       workerPath: require.resolve('./integration/workerfarm/reverse-handle.js'),

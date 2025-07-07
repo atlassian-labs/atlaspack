@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it} from 'node:test';
 import assert from 'assert';
 // $FlowFixMe
 import expect from 'expect';

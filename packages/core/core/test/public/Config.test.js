@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it} from 'node:test';
 import sinon from 'sinon';
 import {makeConfigProxy} from '../../src/public/Config';
 import assert from 'assert';

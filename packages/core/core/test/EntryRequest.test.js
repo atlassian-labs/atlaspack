@@ -1,4 +1,5 @@
 // @flow strict-local
+import {describe, it} from 'node:test';
 import assert from 'assert';
 import path from 'path';
 import {md} from '@atlaspack/diagnostic';
@@ -43,7 +44,6 @@ describe('EntryResolver', function () {
   let entryResolver = new EntryResolver({...DEFAULT_OPTIONS});
 
   it('rejects missing source in package.json', async function () {
-    this.timeout(10000);
     // $FlowFixMe assert.rejects is Node 10+
     await assert.rejects(
       () => entryResolver.resolveEntry(INVALID_SOURCE_MISSING_FIXTURE_PATH),
@@ -83,7 +83,6 @@ describe('EntryResolver', function () {
     );
   });
   it('rejects non-file source in package.json', async function () {
-    this.timeout(10000);
     // $FlowFixMe assert.rejects is Node 10+
     await assert.rejects(
       () => entryResolver.resolveEntry(INVALID_SOURCE_NOT_FILE_FIXTURE_PATH),
@@ -122,7 +121,6 @@ describe('EntryResolver', function () {
     );
   });
   it('rejects missing target source in package.json', async function () {
-    this.timeout(10000);
     // $FlowFixMe assert.rejects is Node 10+
     await assert.rejects(
       () =>
@@ -166,7 +164,6 @@ describe('EntryResolver', function () {
     );
   });
   it('rejects non-file target source in package.json', async function () {
-    this.timeout(10000);
     // $FlowFixMe assert.rejects is Node 10+
     await assert.rejects(
       () =>
@@ -209,7 +206,6 @@ describe('EntryResolver', function () {
     );
   });
   it('does not time out on glob-like entry', async function () {
-    this.timeout(10000);
     await entryResolver.resolveEntry(GLOB_LIKE_FIXTURE_PATH);
   });
 });

@@ -4,6 +4,7 @@ import {
   updateManifest,
 } from '../src/ConditionalManifestReporter';
 import sinon from 'sinon';
+import {describe, it, beforeEach} from 'node:test';
 import assert from 'assert';
 
 let createMockOverlayFS = () => ({

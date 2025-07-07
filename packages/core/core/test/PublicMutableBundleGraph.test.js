@@ -2,6 +2,7 @@
 
 import type {Dependency} from '@atlaspack/types';
 
+import {describe, it} from 'node:test';
 import assert from 'assert';
 import invariant from 'assert';
 import InternalBundleGraph from '../src/BundleGraph';

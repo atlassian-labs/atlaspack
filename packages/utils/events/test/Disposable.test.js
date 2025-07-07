@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it} from 'node:test';
 import assert from 'assert';
 import Disposable from '../src/Disposable';
 import {AlreadyDisposedError} from '../src/errors';

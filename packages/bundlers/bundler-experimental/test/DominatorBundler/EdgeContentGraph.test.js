@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it} from 'node:test';
 import assert from 'assert';
 import {EdgeContentGraph} from '../../src/DominatorBundler/EdgeContentGraph';
 

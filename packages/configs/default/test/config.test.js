@@ -1,6 +1,7 @@
 // @flow
 
 import assert from 'assert';
+import {describe, it, before} from 'node:test';
 
 import config from '../';
 import packageJson from '../package.json';

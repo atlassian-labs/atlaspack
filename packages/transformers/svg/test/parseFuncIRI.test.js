@@ -1,5 +1,6 @@
 // @flow
 import {parseFuncIRI} from '../src/dependencies';
+import {describe, it} from 'node:test';
 import assert from 'assert';
 
 describe('parseFuncIRI', () => {

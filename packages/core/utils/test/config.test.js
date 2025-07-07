@@ -1,5 +1,6 @@
 // @flow strict-local
 
+import {describe, it} from 'node:test';
 import assert from 'assert';
 import {loadConfig} from '../src/config';
 import {inputFS as fs} from '@atlaspack/test-utils';

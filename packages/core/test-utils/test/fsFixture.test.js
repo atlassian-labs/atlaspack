@@ -14,6 +14,7 @@ import {
 import {MemoryFS} from '@atlaspack/fs';
 import WorkerFarm from '@atlaspack/workers';
 import {WORKER_PATH} from '@atlaspack/core';
+import {describe, it, beforeEach, afterEach} from 'node:test';
 import assert from 'assert';
 import path from 'path';
 
