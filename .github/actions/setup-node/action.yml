@@ -9,10 +9,10 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/setup-node@v4
-      with:
-        node-version: ${{ inputs.node-version }}
-        node-version-file: .nvmrc
+    - run: eval $(sh ./.github/actions/setup-node/nodejs.sh)
+      shell: bash
+      env:
+        NODE_VERSION: ${{ inputs.node-version }}
 
     - name: Get yarn cache directory path
       id: yarn-cache-dir-path
