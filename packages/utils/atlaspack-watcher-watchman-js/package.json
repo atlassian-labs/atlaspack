@@ -10,10 +10,8 @@
   "dependencies": {
     "@atlaspack/logger": "2.14.12",
     "@atlaspack/utils": "2.16.1",
+    "@parcel/watcher": "^2.4.1",
     "fb-watchman": "^2.0.2"
-  },
-  "devDependencies": {
-    "@parcel/watcher": "^2.4.1"
   },
   "type": "commonjs"
 }

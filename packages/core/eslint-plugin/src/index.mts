@@ -1,9 +1,14 @@
-import importCondTypeAnnotationsRule from './rules/importcond-type-annotations';
-import noImportCondExportsRule from './rules/no-importcond-exports';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as url from 'node:url';
+import importCondTypeAnnotationsRule from './rules/importcond-type-annotations/index.mts';
+import noImportCondExportsRule from './rules/no-importcond-exports/index.mts';
 
-export const {name, version} =
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-  require('../package.json') as typeof import('../package.json');
+const dirname = path.dirname(url.fileURLToPath(import.meta.url));
+
+export const {name, version} = JSON.parse(
+  fs.readFileSync(path.join(dirname, '..', 'package.json'), 'utf8'),
+);
 
 export const rules = {
   'importcond-type-annotations': importCondTypeAnnotationsRule,

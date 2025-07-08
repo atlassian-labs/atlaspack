@@ -34,7 +34,7 @@ module.exports = {
   // https://eslint.org/docs/user-guide/configuring#configuration-based-on-glob-patterns
   overrides: [
     {
-      files: ['**/*.ts'],
+      files: ['**/*.ts', '**/*.mts'],
       parser: '@typescript-eslint/parser',
       plugins: [
         '@atlaspack/internal',

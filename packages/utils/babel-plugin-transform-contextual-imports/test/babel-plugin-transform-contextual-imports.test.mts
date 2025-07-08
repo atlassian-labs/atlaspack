@@ -1,20 +1,26 @@
-// @flow
-
 import * as babel from '@babel/core';
 import assert from 'assert';
+import path from 'path';
+import url from 'url';
 
-const plugin = require.resolve('../src/index.ts');
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
+
+const plugin = path.normalize(path.join(__dirname, '..', 'src', 'index.mts'));
 
 describe('@atlaspack/babel-plugin-transform-contextual-imports', () => {
   it('should transform importCond to inline requires', () => {
     const input = `
       const Imported = importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
     `;
-    const {code: transformed} = babel.transformSync(input, {
+    const result = babel.transformSync(input, {
       configFile: false,
       presets: [],
       plugins: [plugin],
     });
+    if (!result) {
+      throw new Error('Unable to produce result');
+    }
+    const {code: transformed} = result;
 
     assert.equal(
       transformed,
@@ -28,11 +34,15 @@ describe('@atlaspack/babel-plugin-transform-contextual-imports', () => {
 
       console.log(Imported, Imported.someProperty);
     `;
-    const {code: transformed} = babel.transformSync(input, {
+    const result = babel.transformSync(input, {
       configFile: false,
       presets: [],
       plugins: [[plugin, {node: true}]],
     });
+    if (!result) {
+      throw new Error('Unable to produce result');
+    }
+    const {code: transformed} = result;
 
     assert.equal(
       transformed,

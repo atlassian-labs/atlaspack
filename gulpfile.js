@@ -13,16 +13,8 @@ const IGNORED_PACKAGES = [
   '!packages/core/types/**',
   '!packages/core/types-internal/**',
 
-  // Static packages that doesn't need to be build
+  // Static packages that don't need to be build
   '!packages/core/atlaspack/**',
-
-  // These packages are bundled.
-  '!packages/core/codeframe/**',
-  '!packages/core/fs/**',
-  '!packages/core/package-manager/**',
-  '!packages/core/utils/**',
-  '!packages/reporters/cli/**',
-  '!packages/reporters/dev-server/**',
 ];
 
 const paths = {

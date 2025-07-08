@@ -2,29 +2,43 @@
   "name": "@atlaspack/eslint-plugin",
   "version": "2.14.1",
   "license": "(MIT OR Apache-2.0)",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
-  "source": "src/index.ts",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "scripts": {
-    "check-ts": "tsc --noEmit --project ."
-  },
-  "publishConfig": {
-    "access": "public"
+  "main": "lib/index.js",
+  "types": "lib/index.d.mts",
+  "exports": {
+    ".": {
+      "atlaspack::sources": "./src/index.mts",
+      "types": [
+        "./lib/index.d.mts",
+        "./src/index.mts"
+      ],
+      "import": "./lib/index.mjs",
+      "module-sync": "./lib/index.mjs",
+      "require": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./*": "./*"
   },
   "engines": {
     "node": ">= 16.0.0"
   },
+  "scripts": {
+    "build-tsc": "node ../../../scripts/build-tsc.mjs"
+  },
   "dependencies": {
-    "@typescript-eslint/utils": "^8.31.1"
+    "@typescript-eslint/types": "8.35.1",
+    "@typescript-eslint/utils": "8.31.1",
+    "typescript-eslint": "8.31.1"
   },
   "devDependencies": {
-    "@typescript-eslint/types": "^8.31.1",
-    "typescript-eslint": "^8.31.1",
-    "@typescript-eslint/rule-tester": "^8.31.1"
+    "@typescript-eslint/rule-tester": "8.31.1"
   },
   "peerDependencies": {
     "eslint": "^8.57.0 || ^9.0.0"

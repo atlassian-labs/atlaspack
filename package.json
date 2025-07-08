@@ -19,12 +19,11 @@
     "@swc/core": "1.11.18"
   },
   "scripts": {
-    "build": "yarn build:clean && yarn build:prepare && yarn build:tsc && yarn build:self && yarn build:gulp && yarn build-ts",
+    "build": "yarn build:clean && yarn build:prepare && yarn build:tsc && yarn build:gulp && yarn build-ts",
     "build:clean": "node ./scripts/clean.mjs",
     "build:prepare": "lerna run dev:prepare",
-    "build:tsc": "lerna run build-tsc",
+    "build:tsc": "lerna run --parallel build-tsc",
     "build:gulp": "cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_REGISTER_USE_SRC=true gulp",
-    "build:self": "cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_REGISTER_USE_SRC=true ATLASPACK_SELF_BUILD=true node packages/core/cli/bin/atlaspack.js build --feature-flag cachePerformanceImprovements=true --no-cache packages/core/{eslint-plugin,fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}",
     "build-ts": "lerna run build-ts && lerna run check-ts",
     "build-native": "node scripts/build-native.js",
     "build-native-release": "cross-env CARGO_PROFILE=release node scripts/build-native.js",
