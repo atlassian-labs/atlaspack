@@ -1,11 +1,8 @@
-// @flow strict-local
-
-import type {IDisposable} from './types';
-
+import {IDisposable} from './types';
 import invariant from 'assert';
 import {AlreadyDisposedError} from './errors';
 
-type DisposableLike = IDisposable | (() => mixed);
+type DisposableLike = IDisposable | (() => void | Promise<void>);
 
 /*
  * A general-purpose disposable class. It can normalize disposable-like values
@@ -14,7 +11,7 @@ type DisposableLike = IDisposable | (() => mixed);
  */
 export default class Disposable implements IDisposable {
   disposed: boolean = false;
-  #disposables /*: ?Set<DisposableLike> */;
+  #disposables?: Set<DisposableLike>;
 
   constructor(...disposables: Array<DisposableLike>) {
     this.#disposables = new Set(disposables);
@@ -28,7 +25,7 @@ export default class Disposable implements IDisposable {
     }
 
     invariant(this.#disposables != null);
-    for (let disposable of disposables) {
+    for (const disposable of disposables) {
       this.#disposables.add(disposable);
     }
   }
@@ -47,6 +44,6 @@ export default class Disposable implements IDisposable {
       ),
     );
 
-    this.#disposables = null;
+    this.#disposables = undefined;
   }
 }

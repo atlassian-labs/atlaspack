@@ -1,5 +1,3 @@
-// @flow strict-local
-
 import assert from 'assert';
 import ValueEmitter from '../src/ValueEmitter';
 import {AlreadyDisposedError} from '../src/errors';
@@ -22,7 +20,7 @@ describe('ValueEmitter', () => {
   }
 
   it('registers new listeners and can dispose of them', () => {
-    let disposable = emitter.addListener(numberListener);
+    const disposable = emitter.addListener(numberListener);
     assert.deepEqual(emitter._listeners, [numberListener]);
 
     disposable.dispose();
@@ -30,7 +28,7 @@ describe('ValueEmitter', () => {
   });
 
   it('emits values to registered listeners', () => {
-    let disposable = emitter.addListener(numberListener);
+    const disposable = emitter.addListener(numberListener);
     emitter.emit(42);
     assert.deepEqual(values, [42]);
 
@@ -38,8 +36,8 @@ describe('ValueEmitter', () => {
   });
 
   it('does not emit to listeners that were just registered', () => {
-    let innerDisposable;
-    let disposable = emitter.addListener(() => {
+    let innerDisposable: ReturnType<typeof emitter.addListener> | undefined;
+    const disposable = emitter.addListener(() => {
       innerDisposable = emitter.addListener(numberListener);
     });
 
@@ -50,15 +48,17 @@ describe('ValueEmitter', () => {
     assert.deepEqual(values, [27]);
 
     disposable.dispose();
-    innerDisposable && innerDisposable.dispose();
+    if (innerDisposable) {
+      innerDisposable.dispose();
+    }
   });
 
   it('finishes emitting even if a listener disposes of the emitter mid-emit', () => {
-    let disposableA = emitter.addListener(() => {
+    const disposableA = emitter.addListener(() => {
       emitter.dispose();
     });
 
-    let disposableB = emitter.addListener(numberListener);
+    const disposableB = emitter.addListener(numberListener);
 
     emitter.emit(42);
     assert.deepEqual(values, [42]);
@@ -68,7 +68,7 @@ describe('ValueEmitter', () => {
   });
 
   it('clears listeners when disposed', () => {
-    let disposable = emitter.addListener(numberListener);
+    const disposable = emitter.addListener(numberListener);
     assert.deepEqual(emitter._listeners, [numberListener]);
 
     emitter.dispose();

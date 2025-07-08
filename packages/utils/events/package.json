@@ -10,9 +10,24 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/index.js",
-  "source": "src/index.js",
+  "types": "lib/index.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
-  "type": "commonjs"
+  "exports": {
+    ".": {
+      "atlaspack::sources": "./src/index.mts",
+      "types": [
+        "./lib/index.d.ts",
+        "./src/index.mts"
+      ],
+      "import": "./lib/index.mjs",
+      "require": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./*": "./*"
+  },
+  "scripts": {
+    "build-tsc": "node ../../../scripts/build-tsc.mjs"
+  }
 }

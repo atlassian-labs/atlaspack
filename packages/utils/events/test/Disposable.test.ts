@@ -1,12 +1,10 @@
-// @flow strict-local
-
 import assert from 'assert';
 import Disposable from '../src/Disposable';
 import {AlreadyDisposedError} from '../src/errors';
 
 describe('Disposable', () => {
   it('can wrap an IDisposable', () => {
-    let disposed;
+    let disposed: boolean | undefined;
 
     new Disposable({
       dispose() {
@@ -17,7 +15,7 @@ describe('Disposable', () => {
   });
 
   it('can wrap a function to dispose', () => {
-    let disposed;
+    let disposed: boolean | undefined;
     new Disposable(() => {
       disposed = true;
     }).dispose();
@@ -25,8 +23,8 @@ describe('Disposable', () => {
   });
 
   it('can wrap many disposable-likes', () => {
-    let disposed1;
-    let disposed2;
+    let disposed1: boolean | undefined;
+    let disposed2: boolean | undefined;
 
     new Disposable(
       {
@@ -43,12 +41,12 @@ describe('Disposable', () => {
   });
 
   it('can add disposables after construction', () => {
-    let disposed1;
-    let disposed2;
-    let disposed3;
-    let disposed4;
+    let disposed1: boolean | undefined;
+    let disposed2: boolean | undefined;
+    let disposed3: boolean | undefined;
+    let disposed4: boolean | undefined;
 
-    let disposable = new Disposable(
+    const disposable = new Disposable(
       {
         dispose() {
           disposed1 = true;
@@ -87,8 +85,8 @@ describe('Disposable', () => {
     'does not dispose inner disposables more than once,' +
       ' and does not throw on subsequent disposals',
     () => {
-      let disposed;
-      let disposable = new Disposable(() => {
+      let disposed: boolean | undefined;
+      const disposable = new Disposable(() => {
         if (disposed) {
           // $FlowFixMe
           assert.fail();
@@ -102,7 +100,7 @@ describe('Disposable', () => {
   );
 
   it('throws if `add` is called after it has been disposed', () => {
-    let disposable = new Disposable();
+    const disposable = new Disposable();
     disposable.dispose();
     assert.throws(() => {
       disposable.add(() => {});
@@ -110,7 +108,7 @@ describe('Disposable', () => {
   });
 
   it('can be checked for disposal state', () => {
-    let disposable = new Disposable();
+    const disposable = new Disposable();
     assert.equal(disposable.disposed, false);
     disposable.dispose();
     assert.equal(disposable.disposed, true);
