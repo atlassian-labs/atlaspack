@@ -28,6 +28,8 @@ const bins = {
   swc: path.join(__root, 'node_modules', '.bin', 'swc'),
 };
 
+const LINK_LIB = process.env.LINK_LIB;
+
 let [, , input = './src', output = './lib'] = process.argv;
 
 if (!input || !output) {
