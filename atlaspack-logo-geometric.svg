@@ -1,0 +1,27 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Geometric bundling concept with interlocking hexagons -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0052CC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0065FF;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF5630;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF8F73;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle for containment -->
+  <circle cx="60" cy="60" r="55" fill="none" stroke="#E3E8F0" stroke-width="2" opacity="0.3"/>
+  
+  <!-- Main hexagon (representing the bundle) -->
+  <polygon points="60,20 85,35 85,65 60,80 35,65 35,35" fill="url(#grad1)" opacity="0.9"/>
+  
+  <!-- Smaller interlocking hexagons (representing individual modules) -->
+  <polygon points="40,35 52.5,28 52.5,42 40,49 27.5,42 27.5,28" fill="url(#grad2)" opacity="0.8"/>
+  <polygon points="80,35 92.5,28 92.5,42 80,49 67.5,42 67.5,28" fill="url(#grad2)" opacity="0.8"/>
+  <polygon points="60,75 72.5,68 72.5,82 60,89 47.5,82 47.5,68" fill="url(#grad2)" opacity="0.8"/>
+  
+  <!-- Central connection point -->
+  <circle cx="60" cy="50" r="4" fill="#FFFFFF" opacity="0.9"/>
+</svg>

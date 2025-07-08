@@ -1,0 +1,39 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Atlas/Globe concept with bundling layers -->
+  <defs>
+    <linearGradient id="atlasGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0052CC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0065FF;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="atlasGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#36B37E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#57D9A3;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Outer ring representing global scale -->
+  <circle cx="60" cy="60" r="50" fill="none" stroke="url(#atlasGrad1)" stroke-width="3" opacity="0.6"/>
+  
+  <!-- Main sphere/globe -->
+  <circle cx="60" cy="60" r="35" fill="url(#atlasGrad1)" opacity="0.8"/>
+  
+  <!-- Bundling layers/meridians -->
+  <ellipse cx="60" cy="60" rx="35" ry="15" fill="none" stroke="url(#atlasGrad2)" stroke-width="2.5" opacity="0.7"/>
+  <ellipse cx="60" cy="60" rx="15" ry="35" fill="none" stroke="url(#atlasGrad2)" stroke-width="2.5" opacity="0.7"/>
+  
+  <!-- Horizontal equator line -->
+  <line x1="25" y1="60" x2="95" y2="60" stroke="url(#atlasGrad2)" stroke-width="2" opacity="0.6"/>
+  
+  <!-- Central glow effect -->
+  <circle cx="60" cy="60" r="20" fill="url(#centerGlow)"/>
+  
+  <!-- Connection nodes representing bundled modules -->
+  <circle cx="45" cy="45" r="3" fill="#FF5630" opacity="0.8"/>
+  <circle cx="75" cy="45" r="3" fill="#FF5630" opacity="0.8"/>
+  <circle cx="45" cy="75" r="3" fill="#FF5630" opacity="0.8"/>
+  <circle cx="75" cy="75" r="3" fill="#FF5630" opacity="0.8"/>
+</svg>

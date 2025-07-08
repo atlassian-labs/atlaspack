@@ -1,5 +1,9 @@
 # Atlaspack
 
+<img src="atlaspack-logo-geometric.svg" alt="Atlaspack Logo - Geometric" width="80" height="80" style="margin-right: 20px;">
+<img src="atlaspack-logo-atlas.svg" alt="Atlaspack Logo - Atlas" width="80" height="80" style="margin-right: 20px;">
+<img src="atlaspack-logo-modular.svg" alt="Atlaspack Logo - Modular" width="80" height="80">
+
 [![Atlassian license](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
 
 <!-- [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](CONTRIBUTING.md) -->
