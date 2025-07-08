@@ -17,7 +17,7 @@ import {setEqual} from '@atlaspack/utils';
 import logger from '@atlaspack/logger';
 import {md, convertSourceLocationToHighlight} from '@atlaspack/diagnostic';
 import {instrument} from '@atlaspack/logger';
-import {BundleBehavior, Priority} from './types';
+import {BundleBehavior, Priority, SpecifierType} from './types';
 import {fromProjectPathRelative, fromProjectPath} from './projectPath';
 
 export function propagateSymbols({
@@ -62,6 +62,13 @@ export function propagateSymbols({
       changedAssets,
       assetGroupsWithRemovedParents,
       (assetNode, incomingDeps, outgoingDeps) => {
+        if (
+          assetNode.value.meta.emptyFileStarReexport &&
+          incomingDeps.every((d) => d.value.specifierType === SpecifierType.esm)
+        ) {
+          assetNode.value.symbols?.delete('*');
+        }
+
         // exportSymbol -> identifier
         let assetSymbols: ?$ReadOnlyMap<
           Symbol,
