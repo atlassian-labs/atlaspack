@@ -90,8 +90,10 @@ const rule = createRule<Options, keyof typeof messages>({
             });
           } else if (
             typeArguments.params.length !== 2 ||
+            // @ts-expect-error Argument of type 'TypeNode' is not assignable to parameter of type 'Node | Token | undefined'.
             sourceCode.getText(typeArguments.params[0]) !==
               `typeof import(${secondArgText})` ||
+            // @ts-expect-error Argument of type 'TypeNode' is not assignable to parameter of type 'Node | Token | undefined'.
             sourceCode.getText(typeArguments.params[1]) !==
               `typeof import(${thirdArgText})`
           ) {
