@@ -1,4 +1,3 @@
-// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -11,7 +10,7 @@ import {
 
 describe.v2('xml', function () {
   it('should transform an atom feed', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/xml/atom.xml'), {
+    const b = await bundle(path.join(__dirname, '/integration/xml/atom.xml'), {
       defaultTargetOptions: {
         publicUrl: 'http://example.org/',
       },
@@ -40,9 +39,12 @@ describe.v2('xml', function () {
       },
     ]);
 
-    let contents = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    const contents = await outputFS.readFile(
+      b.getBundles()[0].filePath,
+      'utf8',
+    );
 
-    let xslBundle = b.getBundles().find((b) => b.type === 'xsl');
+    const xslBundle = b.getBundles().find((b) => b.type === 'xsl');
     if (!xslBundle) return assert.fail();
 
     assert(
@@ -53,7 +55,7 @@ describe.v2('xml', function () {
       ),
     );
 
-    let pngBundle = b.getBundles().find((b) => b.type === 'png');
+    const pngBundle = b.getBundles().find((b) => b.type === 'png');
     if (!pngBundle) return assert.fail();
 
     assert(
@@ -65,7 +67,7 @@ describe.v2('xml', function () {
   });
 
   it('should transform an atom feed with namespaced elements', async function () {
-    let b = await bundle(
+    const b = await bundle(
       path.join(__dirname, '/integration/xml/atom-namespace.xml'),
       {
         defaultTargetOptions: {
@@ -97,9 +99,12 @@ describe.v2('xml', function () {
       },
     ]);
 
-    let contents = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    const contents = await outputFS.readFile(
+      b.getBundles()[0].filePath,
+      'utf8',
+    );
 
-    let xslBundle = b.getBundles().find((b) => b.type === 'xsl');
+    const xslBundle = b.getBundles().find((b) => b.type === 'xsl');
     if (!xslBundle) return assert.fail();
 
     assert(
@@ -110,7 +115,7 @@ describe.v2('xml', function () {
       ),
     );
 
-    let pngBundle = b.getBundles().find((b) => b.type === 'png');
+    const pngBundle = b.getBundles().find((b) => b.type === 'png');
     if (!pngBundle) return assert.fail();
 
     assert(
@@ -124,7 +129,7 @@ describe.v2('xml', function () {
   });
 
   it('should transform an rss feed', async function () {
-    let b = await bundle(path.join(__dirname, '/integration/xml/rss.xml'), {
+    const b = await bundle(path.join(__dirname, '/integration/xml/rss.xml'), {
       defaultTargetOptions: {
         publicUrl: 'http://example.org/',
       },
@@ -153,9 +158,12 @@ describe.v2('xml', function () {
       },
     ]);
 
-    let contents = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+    const contents = await outputFS.readFile(
+      b.getBundles()[0].filePath,
+      'utf8',
+    );
 
-    let pngBundle = b.getBundles().find((b) => b.type === 'png');
+    const pngBundle = b.getBundles().find((b) => b.type === 'png');
     if (!pngBundle) return assert.fail();
 
     assert(

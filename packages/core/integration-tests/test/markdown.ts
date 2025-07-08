@@ -1,4 +1,3 @@
-// @flow
 import assert from 'assert';
 import path from 'path';
 import {
@@ -11,7 +10,7 @@ import {
 
 describe.skip('markdown', function () {
   it('should support bundling Markdown', async function () {
-    let b = await bundle(
+    const b = await bundle(
       path.join(__dirname, '/integration/markdown/index.md'),
     );
 
@@ -27,12 +26,12 @@ describe.skip('markdown', function () {
       ],
     });
 
-    let files = await outputFS.readdir(path.join(__dirname, '/dist'));
-    let html = await outputFS.readFile(
+    const files = await outputFS.readdir(path.join(__dirname, '/dist'));
+    const html = await outputFS.readFile(
       path.join(__dirname, '/dist/index.html'),
     );
-    for (let file of files) {
-      let ext = file.match(/\.([0-9a-z]+)(?:[?#]|$)/i)[0];
+    for (const file of files) {
+      const ext = file.match(/\.([0-9a-z]+)(?:[?#]|$)/i)?.[0];
       if (file !== 'index.html' && ext !== '.map') {
         assert(html.includes(file));
       }

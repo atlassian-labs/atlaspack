@@ -1,4 +1,3 @@
-// @flow
 import assert from 'assert';
 import path from 'path';
 import {bundle, describe, it, outputFS, distDir} from '@atlaspack/test-utils';
