@@ -8,7 +8,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "scripts": {
-    "test": "ATLASPACK_REGISTER_USE_LIB=true node --experimental-strip-types ./main.mts",
+    "test": "node --experimental-strip-types ./main.mts",
     "test-ci": "yarn test"
   },
   "devDependencies": {

@@ -52,7 +52,7 @@
     "test:js": "yarn test:js:unit && yarn test:integration",
     "test:js:coverage": "yarn nyc yarn test:js:unit",
     "test:js:coverage:report": "yarn nyc report --reporter=html-spa",
-    "test:js:unit": "cross-env NODE_ENV=test mocha --conditions=atlaspack::sources --timeout 5000 --experimental-strip-types --disable-warning=ExperimentalWarning",
+    "test:js:unit": "cross-env NODE_ENV=test ATLASPACK_REGISTER_USE_SRC=true mocha --conditions=atlaspack::sources --timeout 5000 --experimental-strip-types --disable-warning=ExperimentalWarning",
     "test:unit": "yarn test:js:unit && cargo test",
     "canary:release": "lerna publish -y --canary --preid canary --dist-tag=canary --exact --force-publish=* --no-push",
     "tag:prerelease": "lerna version --exact --force-publish=* --no-git-tag-version --no-push",

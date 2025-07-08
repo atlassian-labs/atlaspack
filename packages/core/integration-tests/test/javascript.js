@@ -24,7 +24,6 @@ import {
   run,
   runBundle,
   runBundles,
-  USE_LIB,
 } from '@atlaspack/test-utils';
 import {makeDeferredWithPromise, normalizePath} from '@atlaspack/utils';
 import Logger from '@atlaspack/logger';
@@ -32,9 +31,10 @@ import nullthrows from 'nullthrows';
 import {md} from '@atlaspack/diagnostic';
 
 // TS-MIGRATION: Replace with conditional exports
-let helperPath = USE_LIB
-  ? '@atlaspack/transformer-js/lib/JSTransformer.js'
-  : '@atlaspack/transformer-js/src/JSTransformer.js';
+let helperPath =
+  process.env.ATLASPACK_REGISTER_USE_SRC === 'true'
+    ? '@atlaspack/transformer-js/src/JSTransformer.js'
+    : '@atlaspack/transformer-js/lib/JSTransformer.js';
 
 describe('javascript', function () {
   beforeEach(async () => {
