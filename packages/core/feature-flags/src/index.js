@@ -42,6 +42,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   inlineConstOptimisationFix: false,
   hmrImprovements: false,
   atlaspackV3CleanShutdown: false,
+  unusedComputedPropertyFix: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
