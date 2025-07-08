@@ -6,7 +6,7 @@ import {buildFixture} from '../utils/build-fixture.mts';
 import {serve} from '../utils/server.mts';
 import type {ServeContext} from '../utils/server.mts';
 
-describe('Atlaspack Playwright E2E tests', async () => {
+describe('Atlaspack Playwright E2E tests', () => {
   let server: ServeContext | undefined;
   let browser: Browser;
   let context: BrowserContext;

@@ -48,9 +48,7 @@
     "@atlaspack/utils": "2.16.1",
     "@atlaspack/workers": "2.14.17",
     "@swc/core": "^1.10.0",
-    "semver": "^7.5.2"
-  },
-  "devDependencies": {
+    "semver": "^7.5.2",
     "command-exists": "^1.2.6",
     "cross-spawn": "^6.0.4",
     "nullthrows": "^1.1.1",
