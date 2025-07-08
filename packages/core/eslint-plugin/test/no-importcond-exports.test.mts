@@ -1,5 +1,5 @@
-import {tsRuleTester} from './utils';
-import rule, {RULE_NAME} from '../src/rules/no-importcond-exports/index';
+import {tsRuleTester} from './utils.mts';
+import rule, {RULE_NAME} from '../src/rules/no-importcond-exports/index.mts';
 
 tsRuleTester.run(RULE_NAME, rule, {
   valid: [

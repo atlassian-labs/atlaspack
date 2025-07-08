@@ -1,7 +1,7 @@
-import rule, {RULE_NAME} from '../src/rules/importcond-type-annotations/index';
+import rule, {RULE_NAME} from '../src/rules/importcond-type-annotations/index.mts';
 
 import {outdent} from 'outdent';
-import {tsRuleTester} from './utils';
+import {tsRuleTester} from './utils.mts';
 
 tsRuleTester.run(RULE_NAME, rule, {
   valid: [

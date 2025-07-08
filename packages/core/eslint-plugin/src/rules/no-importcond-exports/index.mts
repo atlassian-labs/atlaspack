@@ -1,7 +1,7 @@
 /**
  * @file Bans directly exporting Atlaspack conditional imports (importCond) from a file, as this is not expressly supported and will break in tests.
  */
-import {createRule} from '../../utils/index';
+import {createRule} from '../../utils/index.mts';
 import {TSESTree} from '@typescript-eslint/utils';
 
 export const RULE_NAME = 'no-importcond-exports';

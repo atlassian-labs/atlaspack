@@ -3,7 +3,7 @@
  */
 
 import type {TSESTree} from '@typescript-eslint/types';
-import {createRule} from '../../utils/index';
+import {createRule} from '../../utils/index.mts';
 
 export const RULE_NAME = 'importcond-type-annotations';
 
