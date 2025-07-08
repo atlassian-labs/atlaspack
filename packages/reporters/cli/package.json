@@ -30,15 +30,15 @@
     "@atlaspack/types": "2.15.7",
     "@atlaspack/utils": "2.16.1",
     "chalk": "^4.1.0",
-    "term-size": "^2.2.1"
-  },
-  "devDependencies": {
-    "@atlaspack/feature-flags": "2.18.4",
+    "term-size": "^2.2.1",
     "filesize": "^6.1.0",
     "nullthrows": "^1.1.1",
     "ora": "^5.2.0",
     "string-width": "^4.2.0",
     "wrap-ansi": "^7.0.0"
+  },
+  "devDependencies": {
+    "@atlaspack/feature-flags": "2.18.4"
   },
   "type": "commonjs"
 }

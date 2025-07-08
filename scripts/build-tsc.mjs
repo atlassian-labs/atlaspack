@@ -26,7 +26,6 @@ const __root = path.dirname(__dirname);
 const bins = {
   tsc: path.join(__root, 'node_modules', '.bin', 'tsc'),
   swc: path.join(__root, 'node_modules', '.bin', 'swc'),
-  prettier: path.join(__root, 'node_modules', '.bin', 'prettier'),
 };
 
 let [, , input = './src', output = './lib'] = process.argv;
@@ -45,6 +44,9 @@ if (!path.isAbsolute(output)) {
   output = path.join(process.cwd(), output);
 }
 
+const packageJsonPath = path.join(process.cwd(), 'package.json');
+const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
 if (fs.existsSync(output)) {
   console.log('Resetting ./lib');
   execFileSync('git', ['clean', '-xdf', output], {
@@ -53,6 +55,7 @@ if (fs.existsSync(output)) {
     stdio: 'inherit',
   });
 }
+fs.mkdirSync(output, {recursive: true});
 
 console.log('Building TypeScript');
 execFileSync('node', [bins.tsc], {
@@ -61,22 +64,41 @@ execFileSync('node', [bins.tsc], {
   shell: true,
 });
 
-for (const entry of glob.sync('**/*.d.*', {cwd: output})) {
-  const {name} = path.parse(entry);
-  fs.renameSync(path.join(output, entry), path.join(output, `${name}.ts`));
+// Maintaining a CJS build is only required when there
+// are consumers on Node.js <= 20.15.1
+// Versions above that automatically load ESM (unless there are top level awaits)
+console.log('Building Commonjs');
+
+// Required to force .js files emitted to be
+// interpretted as CommonJS files
+fs.writeFileSync(
+  path.join(output, 'package.json'),
+  '{ "type": "commonjs" }',
+  'utf8',
+);
+
+// For the SWC plugin cache, not important
+const pluginCacheDir = path.join(
+  __root,
+  'node_modules',
+  '.cache',
+  'swc',
+  pkg.name,
+);
+
+if (fs.existsSync(pluginCacheDir)) {
+  fs.rmSync(pluginCacheDir, {recursive: true, force: true});
 }
 
-console.log('Building Commonjs');
 execFileSync(
   'node',
   [
     bins.swc,
-    ...glob.sync('**/*.mjs', {cwd: output}).map((v) => `./lib/${v}`),
     ...['-d', '.'],
     ...['--out-file-extension', 'js'],
-    ...['-C', 'module.type=commonjs'],
-    ...['-C', 'isModule=true'],
-    ...['-C', 'jsc.target=es2024'],
+    ...['--config-file', path.join(__dirname, 'build-tsc.swcrc.json')],
+    ...['-C', `jsc.experimental.cacheRoot=${pluginCacheDir}`],
+    ...glob.sync('**/*.mjs', {cwd: output}).map((v) => `./lib/${v}`),
   ],
   {
     cwd: process.cwd(),
@@ -84,10 +106,3 @@ execFileSync(
     shell: true,
   },
 );
-
-console.log('Tidy up');
-execFileSync('node', [bins.prettier, './lib/**/*.js', './lib/**/*.mjs', '-w'], {
-  cwd: process.cwd(),
-  stdio: 'inherit',
-  shell: true,
-});
