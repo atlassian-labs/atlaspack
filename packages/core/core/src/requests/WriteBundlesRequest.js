@@ -9,6 +9,7 @@ import {requestTypes} from '../RequestTracker';
 import type {PackagedBundleInfo} from '../types';
 import type BundleGraph from '../BundleGraph';
 import type {BundleInfo} from '../PackagerRunner';
+import {report} from '../ReporterRunner';
 
 import {HASH_REF_PREFIX} from '../constants';
 import {joinProjectPath} from '../projectPath';
@@ -105,6 +106,14 @@ async function run({input, api, farm, options}) {
       .length === 1;
 
   try {
+    let completeBundles = 0;
+    report({
+      type: 'buildProgress',
+      phase: 'packagingAndOptimizing',
+      totalBundles: bundles.length,
+      completeBundles,
+    });
+
     await Promise.all(
       bundles.map(async (bundle) => {
         let request = createPackageRequest({
@@ -116,6 +125,15 @@ async function run({input, api, farm, options}) {
         });
 
         let info = await api.runRequest(request);
+
+        completeBundles++;
+
+        report({
+          type: 'buildProgress',
+          phase: 'packagingAndOptimizing',
+          totalBundles: bundles.length,
+          completeBundles,
+        });
 
         if (!useMainThread) {
           // Force a refresh of the cache to avoid a race condition

@@ -2014,6 +2014,17 @@ export type PackagingProgressEvent = {|
 |};
 
 /**
+ * A new Bundle is being packaged.
+ * @section reporter
+ */
+export type PackagingAndOptimizingProgressEvent = {|
+  +type: 'buildProgress',
+  +phase: 'packagingAndOptimizing',
+  +totalBundles: number,
+  +completeBundles: number,
+|};
+
+/**
  * A new Bundle is being optimized.
  * @section reporter
  */
@@ -2032,7 +2043,8 @@ export type BuildProgressEvent =
   | BundlingProgressEvent
   | BundledProgressEvent
   | PackagingProgressEvent
-  | OptimizingProgressEvent;
+  | OptimizingProgressEvent
+  | PackagingAndOptimizingProgressEvent;
 
 /**
  * The build was successful.

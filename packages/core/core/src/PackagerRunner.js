@@ -124,7 +124,7 @@ export default class PackagerRunner {
   }: Opts) {
     this.config = config;
     this.options = options;
-    this.report = report;
+    this.report = () => {};
     this.previousDevDeps = previousDevDeps;
     this.devDepRequests = new Map();
     this.previousInvalidations = previousInvalidations;
