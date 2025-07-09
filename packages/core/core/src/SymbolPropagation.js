@@ -3,6 +3,7 @@
 import type {ContentKey, NodeId} from '@atlaspack/graph';
 import type {Meta, Symbol} from '@atlaspack/types';
 import type {Diagnostic} from '@atlaspack/diagnostic';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import type {
   AssetNode,
   DependencyNode,
@@ -62,11 +63,15 @@ export function propagateSymbols({
       changedAssets,
       assetGroupsWithRemovedParents,
       (assetNode, incomingDeps, outgoingDeps) => {
-        if (
-          assetNode.value.meta.emptyFileStarReexport &&
-          incomingDeps.every((d) => d.value.specifierType === SpecifierType.esm)
-        ) {
-          assetNode.value.symbols?.delete('*');
+        if (getFeatureFlag('emptyFileStarRexportFix')) {
+          if (
+            assetNode.value.meta.emptyFileStarReexport &&
+            incomingDeps.every(
+              (d) => d.value.specifierType === SpecifierType.esm,
+            )
+          ) {
+            assetNode.value.symbols?.delete('*');
+          }
         }
 
         // exportSymbol -> identifier

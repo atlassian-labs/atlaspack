@@ -121,6 +121,12 @@ export type FeatureFlags = {|
    * Adds an end() method to AtlaspckV3 to cleanly shutdown the NAPI worker pool
    */
   atlaspackV3CleanShutdown: boolean,
+
+  /**
+   * Fixes an issue where star re-exports of empty files (usually occuring in compiled typescript libraries)
+   * could cause exports to undefined at runtime.
+   */
+  emptyFileStarRexportFix: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
