@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.1-local",
   "devDependencies": {
+    "flowgen": "^1.21.0",
     "glob": "^7.1.6",
     "zx": "^8.1.9"
   }

@@ -3,6 +3,7 @@
 import type {ContentKey, NodeId} from '@atlaspack/graph';
 import type {Meta, Symbol} from '@atlaspack/types';
 import type {Diagnostic} from '@atlaspack/diagnostic';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import type {
   AssetNode,
   DependencyNode,
@@ -17,7 +18,7 @@ import {setEqual} from '@atlaspack/utils';
 import logger from '@atlaspack/logger';
 import {md, convertSourceLocationToHighlight} from '@atlaspack/diagnostic';
 import {instrument} from '@atlaspack/logger';
-import {BundleBehavior, Priority} from './types';
+import {BundleBehavior, Priority, SpecifierType} from './types';
 import {fromProjectPathRelative, fromProjectPath} from './projectPath';
 
 export function propagateSymbols({
@@ -62,6 +63,17 @@ export function propagateSymbols({
       changedAssets,
       assetGroupsWithRemovedParents,
       (assetNode, incomingDeps, outgoingDeps) => {
+        if (getFeatureFlag('emptyFileStarRexportFix')) {
+          if (
+            assetNode.value.meta.emptyFileStarReexport &&
+            incomingDeps.every(
+              (d) => d.value.specifierType === SpecifierType.esm,
+            )
+          ) {
+            assetNode.value.symbols?.delete('*');
+          }
+        }
+
         // exportSymbol -> identifier
         let assetSymbols: ?$ReadOnlyMap<
           Symbol,

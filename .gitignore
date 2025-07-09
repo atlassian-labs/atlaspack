@@ -8,7 +8,8 @@
 !.vscode/settings.json
 coverage/
 dist/
-lib/
+**/lib/**
+!**/lib/**/*.js.flow
 logs/
 node_modules/
 tmp

@@ -3692,17 +3692,17 @@ describe('scope hoisting', function () {
         it(`only creates a namespace object for a constant module if the current bundle needs it (applyScopeHoistingImprovement: ${applyScopeHoistingImprovement.toString()})`, async function () {
           await fsFixture(overlayFS, __dirname)`
             inline-constants-namespaces
-    
+
               yarn.lock: {}
-            
-              package.json: 
+
+              package.json:
                 {
                   "@atlaspack/transformer-js": { "unstable_inlineConstants": true }
                 }
-              
+
               index.html:
                 <script type="module" src="./index.js"></script>
-              
+
               index.js:
                 import { CONSTANT } from './constants';
                 async function bar() {
@@ -3712,11 +3712,11 @@ describe('scope hoisting', function () {
                   return \`The constant is \${CONSTANT}\`;
                 }
                 global.result = foo();
-              
+
               async.js:
                 import * as consts from './constants.js';
                 console.log("namespaced", consts);
-    
+
               constants.js:
                 export const CONSTANT = 42;
                 export const OTHER = "other";
@@ -3772,20 +3772,20 @@ describe('scope hoisting', function () {
           // both of which use the same module that uses a constant to ensure that the module is wrapped.
           await fsFixture(overlayFS, __dirname)`
             inline-constants-order
-    
+
               yarn.lock: {}
-            
-              package.json: 
+
+              package.json:
                 {
                   "@atlaspack/transformer-js": { "unstable_inlineConstants": true }
                 }
-              
+
               index.html:
                 <script type="module" src="./index.js"></script>
-              
+
               index2.html:
                 <script type="module" src="./index2.js"></script>
-    
+
               something.js:
                 export function somethingOnlyUsedHere() {
                   return global.exists ? 'nothing' : 'something only used here';
@@ -3797,27 +3797,27 @@ describe('scope hoisting', function () {
                 export default function foo() {
                   return \`The constant is \${CONSTANT}, something only used here is \${somethingOnlyUsedHere()}\`;
                 }
-              
+
               index.js:
                 import foo from './module.js';
                 import { OTHER } from './constants';
-    
+
                 export async function main() {
                   console.log(foo(), \`\${OTHER}\`);
                 }
-                
+
                 main();
-    
+
               index2.js:
                 import foo from './module.js';
                 import { OTHER } from './constants';
-    
+
                 export async function main() {
                   console.log(foo(), \`\${OTHER}\`);
                 }
-                
+
                 main();
-    
+
               constants.js:
                 export const CONSTANT = 42;
                 export const OTHER = "other";
@@ -6590,6 +6590,70 @@ describe('scope hoisting', function () {
     await run(b);
   });
 
+  it('should not re-export * from empty files if all deps are esm', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      empty-files
+        empty.js:
+          // empty file
+
+        one.js:
+          export const one = 'one';
+
+        two.js:
+          export const two = 'two';
+
+        barrel-one.js:
+          export {one} from './one';
+
+        barrel-two.js:
+          export {two} from './two';
+          export * from './empty';
+
+        library.js:
+          // barrel-two contains a * re-export of an empty file, causing it to
+          // potentially override the named export (one) from barrel-one.
+          export * from './barrel-one';
+          export * from './barrel-two';
+
+        index.js:
+          import {one, two} from './library';
+          result(one + two);
+
+        index.html:
+          <script type="module" src="./index.js"></script>
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "manualSharedBundles": [{
+                "name": "shared",
+                "assets": ["!index.js"]
+              }]
+            }
+          }
+        yarn.lock:
+        `;
+
+    let b = await bundle([path.join(__dirname, 'empty-files/index.html')], {
+      mode: 'production',
+      defaultTargetOptions: {
+        shouldOptimize: false,
+        shouldScopeHoist: true,
+        outputFormat: 'esmodule',
+      },
+      inputFS: overlayFS,
+    });
+
+    let result;
+    await run(b, {
+      result: (r) => {
+        result = r;
+      },
+    });
+
+    assert.equal(result, 'onetwo');
+  });
+
   describe('scope hoisting within wrapped assets', function () {
     function assertWrappedAssets(
       bundleGraph: BundleGraph<PackagedBundle>,
@@ -6617,44 +6681,44 @@ describe('scope hoisting', function () {
             wrapped-asset-groups
               index.html:
                 <script type="module" src="./index.js"></script>
-    
+
               index.js:
                 import root from './root';
                 import shared from './shared';
-    
+
                 result([root, shared].join('---'));
-    
+
               root.js:
                 import a from './a';
                 import b from './b';
-    
+
                 export default a + b;
-    
+
               a.js:
                 import leaf from './leaf';
                 export default 'a' + leaf;
-    
+
               b.js:
                 import leaf from './leaf';
                 export default 'b' + leaf;
-    
+
               leaf.js:
                 import shared from './shared';
                 import { common } from './common';
-    
+
                 export default 'leaf' + shared + common;
-    
+
               shared.js:
                 import c from './c';
                 export default 'shared' + c;
-    
+
               c.js:
                 import { common } from './common';
                 export default 'c' + common;
-    
+
               common.js:
                 export const common = 'common';
-    
+
               package.json:
                 {
                   "@atlaspack/transformer-js": {
