@@ -114,15 +114,17 @@ async function run({input, api, farm, options}) {
       return true;
     });
 
+  let cachedBundles = new Set(
+    bundles.filter((b) => api.canSkipSubrequest(bundleGraph.getHash(b))),
+  );
+
   // Package on the main thread if there is only one bundle to package.
   // This avoids the cost of serializing the bundle graph for single file change builds.
   let useMainThread =
-    bundles.length === 1 ||
-    bundles.filter((b) => !api.canSkipSubrequest(bundleGraph.getHash(b)))
-      .length === 1;
+    bundles.length === 1 || bundles.length - cachedBundles.size <= 1;
 
   try {
-    let completeBundles = 0;
+    let completeBundles = cachedBundles.size;
     reportPackagingProgress(completeBundles, bundles.length);
 
     await Promise.all(
@@ -137,8 +139,10 @@ async function run({input, api, farm, options}) {
 
         let info = await api.runRequest(request);
 
-        completeBundles++;
-        reportPackagingProgress(completeBundles, bundles.length);
+        if (!cachedBundles.has(bundle)) {
+          completeBundles++;
+          reportPackagingProgress(completeBundles, bundles.length);
+        }
 
         if (!useMainThread) {
           // Force a refresh of the cache to avoid a race condition
