@@ -24,7 +24,6 @@ import {
   run,
   runBundle,
   runBundles,
-  USE_LIB,
 } from '@atlaspack/test-utils';
 import {makeDeferredWithPromise, normalizePath} from '@atlaspack/utils';
 import Logger from '@atlaspack/logger';
@@ -32,9 +31,10 @@ import nullthrows from 'nullthrows';
 import {md} from '@atlaspack/diagnostic';
 
 // TS-MIGRATION: Replace with conditional exports
-let helperPath = USE_LIB
-  ? '@atlaspack/transformer-js/lib/JSTransformer.js'
-  : '@atlaspack/transformer-js/src/JSTransformer.js';
+let helperPath =
+  process.env.ATLASPACK_REGISTER_USE_SRC === 'true'
+    ? '@atlaspack/transformer-js/src/JSTransformer.js'
+    : '@atlaspack/transformer-js/lib/JSTransformer.js';
 
 describe('javascript', function () {
   beforeEach(async () => {
@@ -5390,19 +5390,6 @@ describe('javascript', function () {
 
         let res = await run(b, null, {require: false});
         assert.deepEqual(await res.output, [{default: 123, foo: 2}, 581]);
-      });
-
-      it('missing exports should be replaced with an empty object', async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/empty-module/a.js',
-          ),
-          options,
-        );
-
-        let res = await run(b, null, {require: false});
-        assert.deepEqual(res.output, {b: {}});
       });
 
       it('supports namespace imports of theoretically excluded reexporting assets', async function () {

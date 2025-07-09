@@ -5,7 +5,7 @@ import typeof {getBundleStats} from '@atlaspack/reporter-bundle-stats/src/Bundle
 import typeof {PackagedBundle as PackagedBundleClass} from '@atlaspack/core/src/public/Bundle';
 
 module.exports = ((process.env.ATLASPACK_BUILD_ENV === 'production' ||
-process.env.ATLASPACK_REGISTER_USE_LIB === 'true'
+process.env.ATLASPACK_REGISTER_USE_SRC !== 'true'
   ? {
       // Split up require specifier to outsmart packages/dev/babel-register/babel-plugin-module-translate.js
       // $FlowFixMe(unsupported-syntax)

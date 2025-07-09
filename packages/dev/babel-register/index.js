@@ -2,8 +2,6 @@ const parcelBabelPreset = require('@atlaspack/babel-preset');
 const path = require('path');
 const fs = require('fs');
 
-const useLib = process.env.ATLASPACK_REGISTER_USE_LIB === 'true';
-
 require('@babel/register')({
   cwd: path.join(__dirname, '../../..'),
   ignore: [
@@ -21,7 +19,11 @@ require('@babel/register')({
   ],
   only: [path.join(__dirname, '../../..')],
   presets: [parcelBabelPreset],
-  plugins: [...(useLib ? [] : [require('./babel-plugin-module-translate')])],
+  plugins: [
+    ...(process.env.ATLASPACK_REGISTER_USE_SRC === 'true'
+      ? [require('./babel-plugin-module-translate')]
+      : []),
+  ],
   extensions: ['.js', '.jsx'],
 });
 
