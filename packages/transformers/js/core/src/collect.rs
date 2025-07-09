@@ -719,23 +719,36 @@ impl Visit for Collect {
         }
       }
       Expr::Ident(ident) => {
-        if &*ident.sym == "exports" && is_unresolved(ident, self.unresolved_mark) {
-          handle_export!();
-        } else if ident.sym == js_word!("module") && is_unresolved(ident, self.unresolved_mark) {
-          self.has_cjs_exports = true;
-          self.static_cjs_exports = false;
-          self.should_wrap = true;
-          self.add_bailout(node.span, BailoutReason::FreeModule);
-        } else if self.imports.contains_key(&id!(ident)) {
-          self.used_imports.insert(id!(ident));
+        let mut handle_ident = || {
+          if &*ident.sym == "exports" && is_unresolved(ident, self.unresolved_mark) {
+            handle_export!();
+            return;
+          }
+
+          if ident.sym == js_word!("module") && is_unresolved(ident, self.unresolved_mark) {
+            self.has_cjs_exports = true;
+            self.static_cjs_exports = false;
+            self.should_wrap = true;
+            self.add_bailout(node.span, BailoutReason::FreeModule);
+            return;
+          }
+
           if match_property_name(node).is_none() {
             self
               .non_static_access
               .entry(id!(ident))
               .or_default()
               .push(node.span);
+
+            return;
           }
-        }
+
+          if self.imports.contains_key(&id!(ident)) {
+            self.used_imports.insert(id!(ident));
+          }
+        };
+
+        handle_ident();
         return;
       }
       Expr::This(_this) => {
