@@ -92,6 +92,7 @@ pub struct Collect {
   pub wrapped_requires: HashSet<String>,
   pub bailouts: Option<Vec<Bailout>>,
   pub is_empty_or_empty_export: bool,
+  pub computed_properties_fix: bool,
   in_module_this: bool,
   in_top_level: bool,
   in_export_decl: bool,
@@ -148,6 +149,7 @@ impl Collect {
     trace_bailouts: bool,
     is_module: bool,
     conditional_bundling: bool,
+    computed_properties_fix: bool,
   ) -> Self {
     Collect {
       source_map,
@@ -178,6 +180,7 @@ impl Collect {
       bailouts: if trace_bailouts { Some(vec![]) } else { None },
       conditional_bundling,
       is_empty_or_empty_export: false,
+      computed_properties_fix,
     }
   }
 }
@@ -2146,6 +2149,7 @@ mod tests {
         context.global_mark,
         true,
         context.is_module,
+        false,
         false,
       )
     });

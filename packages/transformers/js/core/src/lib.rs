@@ -137,6 +137,7 @@ pub struct Config {
   pub inline_constants: bool,
   pub conditional_bundling: bool,
   pub hmr_improvements: bool,
+  pub computed_properties_fix: bool,
   pub magic_comments: bool,
 }
 
@@ -530,6 +531,7 @@ pub fn transform(
                 config.trace_bailouts,
                 is_module,
                 config.conditional_bundling,
+                config.computed_properties_fix,
               );
 
               module.visit_with(&mut collect);
