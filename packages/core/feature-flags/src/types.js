@@ -121,6 +121,12 @@ export type FeatureFlags = {|
    * Adds an end() method to AtlaspckV3 to cleanly shutdown the NAPI worker pool
    */
   atlaspackV3CleanShutdown: boolean,
+  /**
+   * Fixes a bug where imported objects that are accessed with non-static
+   * properties (e.g. `CONSTANTS['api_' + endpoint`]) would not be recognised as
+   * being used, and thus not included in the bundle.
+   */
+  unusedComputedPropertyFix: boolean,
 
   /**
    * Fixes an issue where star re-exports of empty files (usually occuring in compiled typescript libraries)

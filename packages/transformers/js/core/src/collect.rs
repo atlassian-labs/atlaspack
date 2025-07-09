@@ -92,6 +92,7 @@ pub struct Collect {
   pub wrapped_requires: HashSet<String>,
   pub bailouts: Option<Vec<Bailout>>,
   pub is_empty_or_empty_export: bool,
+  pub computed_properties_fix: bool,
   in_module_this: bool,
   in_top_level: bool,
   in_export_decl: bool,
@@ -140,6 +141,10 @@ pub struct CollectResult {
 }
 
 impl Collect {
+  // An extra argument has been added here for the computed_properties_fix, but it bumps the
+  // function up over the arguments limit. Rather than reworking how feature flags work, just
+  // setting this to ignore the lint warning for now.
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     source_map: Lrc<swc_core::common::SourceMap>,
     unresolved_mark: Mark,
@@ -148,6 +153,7 @@ impl Collect {
     trace_bailouts: bool,
     is_module: bool,
     conditional_bundling: bool,
+    computed_properties_fix: bool,
   ) -> Self {
     Collect {
       source_map,
@@ -178,6 +184,7 @@ impl Collect {
       bailouts: if trace_bailouts { Some(vec![]) } else { None },
       conditional_bundling,
       is_empty_or_empty_export: false,
+      computed_properties_fix,
     }
   }
 }
@@ -718,20 +725,39 @@ impl Visit for Collect {
       Expr::Ident(ident) => {
         if &*ident.sym == "exports" && is_unresolved(ident, self.unresolved_mark) {
           handle_export!();
-        } else if ident.sym == js_word!("module") && is_unresolved(ident, self.unresolved_mark) {
+          return;
+        }
+
+        if ident.sym == js_word!("module") && is_unresolved(ident, self.unresolved_mark) {
           self.has_cjs_exports = true;
           self.static_cjs_exports = false;
           self.should_wrap = true;
           self.add_bailout(node.span, BailoutReason::FreeModule);
-        } else if match_property_name(node).is_none() {
+          return;
+        }
+
+        if !self.computed_properties_fix && match_property_name(node).is_none() {
           self
             .non_static_access
             .entry(id!(ident))
             .or_default()
             .push(node.span);
-        } else if self.imports.contains_key(&id!(ident)) {
-          self.used_imports.insert(id!(ident));
+
+          return;
         }
+
+        if self.imports.contains_key(&id!(ident)) {
+          self.used_imports.insert(id!(ident));
+
+          if self.computed_properties_fix && match_property_name(node).is_none() {
+            self
+              .non_static_access
+              .entry(id!(ident))
+              .or_default()
+              .push(node.span);
+          }
+        }
+
         return;
       }
       Expr::This(_this) => {
@@ -1501,6 +1527,19 @@ mod tests {
       map_used_imports(
         run_collect(
           "
+            import { SOURCES_CONFIG } from 'sources';
+            export const getSource = SOURCES_CONFIG['static' + 'key'];
+          "
+        )
+        .used_imports
+      ),
+      HashSet::from([js_word!("SOURCES_CONFIG")]),
+    );
+
+    assert_eq!(
+      map_used_imports(
+        run_collect(
+          "
             import {bar} from 'source';
 
             export function thing(props) {
@@ -2133,6 +2172,7 @@ mod tests {
         true,
         context.is_module,
         false,
+        true,
       )
     });
 

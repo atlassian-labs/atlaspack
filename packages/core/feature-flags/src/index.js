@@ -42,6 +42,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   inlineConstOptimisationFix: false,
   hmrImprovements: false,
   atlaspackV3CleanShutdown: false,
+  unusedComputedPropertyFix: process.env.NODE_ENV === 'test',
   emptyFileStarRexportFix: process.env.NODE_ENV === 'test',
 };
 
