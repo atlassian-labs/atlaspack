@@ -133,6 +133,11 @@ export type FeatureFlags = {|
    * could cause exports to undefined at runtime.
    */
   emptyFileStarRexportFix: boolean,
+
+  /**
+   * Enables the new packaging progress CLI experience
+   */
+  cliProgressReportingImprovements: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;

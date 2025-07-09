@@ -39,6 +39,22 @@ export type WriteBundlesRequest = {|
   input: WriteBundlesRequestInput,
 |};
 
+function reportPackagingProgress(
+  completeBundles: number,
+  totalBundles: number,
+) {
+  if (!getFeatureFlag('cliProgressReportingImprovements')) {
+    return;
+  }
+
+  report({
+    type: 'buildProgress',
+    phase: 'packagingAndOptimizing',
+    totalBundles,
+    completeBundles,
+  });
+}
+
 /**
  * Packages, optimizes, and writes all bundles to the dist directory.
  */
@@ -107,12 +123,7 @@ async function run({input, api, farm, options}) {
 
   try {
     let completeBundles = 0;
-    report({
-      type: 'buildProgress',
-      phase: 'packagingAndOptimizing',
-      totalBundles: bundles.length,
-      completeBundles,
-    });
+    reportPackagingProgress(completeBundles, bundles.length);
 
     await Promise.all(
       bundles.map(async (bundle) => {
@@ -127,13 +138,7 @@ async function run({input, api, farm, options}) {
         let info = await api.runRequest(request);
 
         completeBundles++;
-
-        report({
-          type: 'buildProgress',
-          phase: 'packagingAndOptimizing',
-          totalBundles: bundles.length,
-          completeBundles,
-        });
+        reportPackagingProgress(completeBundles, bundles.length);
 
         if (!useMainThread) {
           // Force a refresh of the cache to avoid a race condition
