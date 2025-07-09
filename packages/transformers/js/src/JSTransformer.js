@@ -428,6 +428,7 @@ export default (new Transformer({
       shebang,
       hoist_result,
       symbol_result,
+      is_empty_or_empty_export,
       needs_esm_helpers,
       diagnostics,
       used_env,
@@ -1004,6 +1005,9 @@ export default (new Transformer({
           Object.keys(hoist_result.exported_symbols).length === 0) ||
         (hoist_result.should_wrap && !asset.symbols.hasExportSymbol('*'))
       ) {
+        if (is_empty_or_empty_export) {
+          asset.meta.emptyFileStarReexport = true;
+        }
         asset.symbols.set('*', `$${asset.id}$exports`);
       }
 

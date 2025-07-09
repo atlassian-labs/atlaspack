@@ -157,6 +157,7 @@ pub struct TransformResult {
   pub is_constant_module: bool,
   pub conditions: HashSet<Condition>,
   pub magic_comments: HashMap<String, String>,
+  pub is_empty_or_empty_export: bool,
 }
 
 fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Versions> {
@@ -549,6 +550,8 @@ pub fn transform(
                   tracing::warn!("You are attempting to import '{source_file}' which is an empty file and may be causing a build error.");
                 }
               }
+
+              result.is_empty_or_empty_export = collect.is_empty_or_empty_export;
 
               if let Some(bailouts) = &collect.bailouts {
                 diagnostics.extend(bailouts.iter().map(|bailout| bailout.to_diagnostic()));
