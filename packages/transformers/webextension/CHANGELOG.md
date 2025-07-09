@@ -1,5 +1,13 @@
 # @atlaspack/transformer-webextension
 
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3)]:
+  - @atlaspack/utils@4.0.0
+  - @atlaspack/plugin@4.0.0
+
 ## 2.14.17
 
 ### Patch Changes

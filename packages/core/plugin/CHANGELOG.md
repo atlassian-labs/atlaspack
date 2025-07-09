@@ -1,5 +1,12 @@
 # @atlaspack/plugin
 
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types@4.0.0
+
 ## 2.14.17
 
 ### Patch Changes

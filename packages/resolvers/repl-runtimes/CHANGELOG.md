@@ -1,5 +1,12 @@
 # @atlaspack/resolver-repl-runtimes
 
+## 2.14.18
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@4.0.0
+
 ## 2.14.17
 
 ### Patch Changes

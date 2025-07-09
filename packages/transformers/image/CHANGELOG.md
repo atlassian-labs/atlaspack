@@ -1,5 +1,15 @@
 # @atlaspack/transformer-image
 
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5), [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3), [`3ba1aee`](https://github.com/atlassian-labs/atlaspack/commit/3ba1aee6a794a26b2f0255aaf6d003981532d0ae)]:
+  - @atlaspack/core@4.0.0
+  - @atlaspack/utils@4.0.0
+  - @atlaspack/workers@4.0.0
+  - @atlaspack/plugin@4.0.0
+
 ## 3.1.17
 
 ### Patch Changes

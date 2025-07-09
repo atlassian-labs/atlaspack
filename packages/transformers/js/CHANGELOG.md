@@ -1,5 +1,19 @@
 # @atlaspack/transformer-js
 
+## 4.0.0
+
+### Patch Changes
+
+- [#686](https://github.com/atlassian-labs/atlaspack/pull/686) [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0) Thanks [@benjervis](https://github.com/benjervis)! - Fix (behind a feature flag) the bug where non-static property access of an imported object was not being considered used by the collector.
+
+- Updated dependencies [[`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5), [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3), [`3ba1aee`](https://github.com/atlassian-labs/atlaspack/commit/3ba1aee6a794a26b2f0255aaf6d003981532d0ae)]:
+  - @atlaspack/rust@4.0.0
+  - @atlaspack/feature-flags@4.0.0
+  - @atlaspack/core@4.0.0
+  - @atlaspack/utils@4.0.0
+  - @atlaspack/workers@4.0.0
+  - @atlaspack/plugin@4.0.0
+
 ## 3.3.7
 
 ### Patch Changes

@@ -1,5 +1,19 @@
 # @atlaspack/package-manager
 
+## 4.0.0
+
+### Patch Changes
+
+- [#645](https://github.com/atlassian-labs/atlaspack/pull/645) [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3) Thanks [@alshdavid](https://github.com/alshdavid)! - Updated build system and added some extra test-specific code
+
+- Updated dependencies [[`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3)]:
+  - @atlaspack/fs@4.0.0
+  - @atlaspack/utils@4.0.0
+  - @atlaspack/logger@4.0.0
+  - @atlaspack/node-resolver-core@4.0.0
+  - @atlaspack/workers@4.0.0
+  - @atlaspack/types@4.0.0
+
 ## 2.14.17
 
 ### Patch Changes

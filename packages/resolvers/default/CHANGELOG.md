@@ -1,5 +1,13 @@
 # @atlaspack/resolver-default
 
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/node-resolver-core@4.0.0
+  - @atlaspack/plugin@4.0.0
+
 ## 2.14.17
 
 ### Patch Changes
