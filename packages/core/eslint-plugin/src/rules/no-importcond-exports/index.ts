@@ -47,6 +47,7 @@ const rule = createRule<Options, keyof typeof messages>({
           importCondVariables.add(node.id.name);
         }
       },
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       'Program:exit'(_node) {
         // Check if any named export references a tracked variable
         for (const exportStatement of namedExportStatements) {

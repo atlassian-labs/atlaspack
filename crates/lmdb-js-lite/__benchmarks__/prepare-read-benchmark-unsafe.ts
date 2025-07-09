@@ -31,13 +31,15 @@ async function main() {
     eventTurnBatching: true,
   });
 
+  // eslint-disable-next-line no-console
   console.log('Generating entries for testing');
   const entries = [...Array(NUM_ENTRIES)].map(() => {
     return generateEntry();
   });
   await unsafeDB.transaction(() => {
+    // eslint-disable-next-line no-console
     console.log('Writing entries');
-    for (let entry of entries) {
+    for (const entry of entries) {
       unsafeDB.put(entry.key, entry.value);
     }
     unsafeDB.put(
@@ -50,6 +52,7 @@ async function main() {
 }
 
 main().catch((err) => {
+  // eslint-disable-next-line no-console
   console.error(err);
   process.exitCode = 1;
 });

@@ -41,12 +41,10 @@ import {transformSync} from '@swc/core';
 // Package.json fields. Must match package_json.rs.
 const MAIN = 1 << 0;
 const SOURCE = 1 << 2;
-const ENTRIES =
-  MAIN |
-  (process.env.ATLASPACK_BUILD_ENV !== 'production' ||
-  process.env.ATLASPACK_SELF_BUILD
-    ? SOURCE
-    : 0);
+let ENTRIES = MAIN;
+if (process.env.ATLASPACK_REGISTER_USE_SRC === 'true') {
+  ENTRIES |= SOURCE;
+}
 
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
 
@@ -552,6 +550,18 @@ export class NodePackageManager implements PackageManager {
       seen.add(key);
       let resolved = cache.get(key);
       if (!resolved || !path.isAbsolute(resolved.resolved)) {
+        return;
+      }
+
+      // During testing don't invalidate Atlaspack modules because
+      // this causes failures due to multiple instances of the same module
+      // existing simultaniously. This is fine when using babe;-register because
+      // it has an internal module cache that NodePacakageManager does not invalidate
+      // but fails when using compiled Atlaspack packages in integration tests
+      if (
+        process.env.ATLASPACK_BUILD_ENV === 'test' &&
+        name.startsWith('@atlaspack/')
+      ) {
         return;
       }
 

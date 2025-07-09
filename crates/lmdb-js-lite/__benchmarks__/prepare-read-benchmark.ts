@@ -32,13 +32,15 @@ async function main() {
     mapSize: MAP_SIZE,
   });
 
+  // eslint-disable-next-line no-console
   console.log('Generating entries for testing');
   const entries = [...Array(NUM_ENTRIES)].map(() => {
     return generateEntry();
   });
+  // eslint-disable-next-line no-console
   console.log('Writing entries');
   await safeDB.startWriteTransaction();
-  for (let entry of entries) {
+  for (const entry of entries) {
     await safeDB.put(entry.key, entry.value);
   }
   await safeDB.put(
@@ -51,6 +53,7 @@ async function main() {
 }
 
 main().catch((err) => {
+  // eslint-disable-next-line no-console
   console.error(err);
   process.exitCode = 1;
 });

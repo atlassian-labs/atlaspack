@@ -187,6 +187,11 @@ export default class Atlaspack {
         defaultTargetOptions: resolvedOptions.defaultTargetOptions,
         lmdb,
       });
+      if (featureFlags.atlaspackV3CleanShutdown) {
+        this.#disposable.add(() => {
+          rustAtlaspack.end();
+        });
+      }
     }
     this.rustAtlaspack = rustAtlaspack;
 

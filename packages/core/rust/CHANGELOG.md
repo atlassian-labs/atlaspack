@@ -1,5 +1,13 @@
 # @atlaspack/rust
 
+## 3.4.0
+
+### Minor Changes
+
+- [#671](https://github.com/atlassian-labs/atlaspack/pull/671) [`c75bf55`](https://github.com/atlassian-labs/atlaspack/commit/c75bf553fff4decc285b5fd499a275853b18f8f2) Thanks [@matt-koko](https://github.com/matt-koko)! - The @atlaspack/rust package should have been bumped in [pull request 633](https://github.com/atlassian-labs/atlaspack/pull/633). This has resulted in the JS half of those changes being released, but not the Rust half.
+
+  Rectifying by creating a new changeset now.
+
 ## 3.3.5
 
 ### Patch Changes

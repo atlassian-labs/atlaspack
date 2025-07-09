@@ -32,6 +32,7 @@ export class LmdbWrapper {
 
 export function open(
   directory: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   openOptions: DBOpenOptions,
 ): LmdbWrapper {
   return new LmdbWrapper(

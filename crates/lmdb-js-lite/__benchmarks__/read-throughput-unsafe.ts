@@ -3,6 +3,7 @@ import v8 from 'node:v8';
 
 const MAX_TIME = 10000;
 
+// eslint-disable-next-line require-await
 async function main() {
   const unsafeDB = openLMDBUnsafe({
     path: './databases/unsafe/read',
@@ -14,9 +15,11 @@ async function main() {
   const value = unsafeDB.get('benchmarkInfo');
   if (!value) throw new Error('Run prepare-read-benchmark.ts');
   const benchmarkInfo = v8.deserialize(value);
+  // eslint-disable-next-line no-console
   console.log(benchmarkInfo);
   const {NUM_ENTRIES} = benchmarkInfo;
 
+  // eslint-disable-next-line no-console
   console.log('Reading all entries out');
   {
     const start = Date.now();
@@ -28,11 +31,13 @@ async function main() {
     }
     const duration = Date.now() - start;
     const throughput = readEntries.length / duration;
+    // eslint-disable-next-line no-console
     console.log('Unsafe Throughput:', throughput, 'entries / second');
   }
 }
 
 main().catch((err) => {
+  // eslint-disable-next-line no-console
   console.error(err);
   process.exitCode = 1;
 });

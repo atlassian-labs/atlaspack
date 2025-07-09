@@ -19,8 +19,12 @@
     "@swc/core": "1.11.18"
   },
   "scripts": {
-    "build": "yarn build-bundles && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production gulp",
-    "build-bundles": "rimraf --glob packages/*/*/lib && lerna run dev:prepare && cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_SELF_BUILD=true atlaspack build --feature-flag cachePerformanceImprovements=true --no-cache packages/core/{eslint-plugin,fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}",
+    "build": "yarn build:clean && yarn build:prepare && yarn build:tsc && yarn build:self && yarn build:gulp && yarn build-ts",
+    "build:clean": "node ./scripts/clean.mjs",
+    "build:prepare": "lerna run dev:prepare",
+    "build:tsc": "lerna run build-tsc",
+    "build:gulp": "cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_REGISTER_USE_SRC=true gulp",
+    "build:self": "cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_REGISTER_USE_SRC=true ATLASPACK_SELF_BUILD=true node packages/core/cli/bin/atlaspack.js build --feature-flag cachePerformanceImprovements=true --no-cache packages/core/{eslint-plugin,fs,codeframe,package-manager,utils} packages/reporters/{cli,dev-server} packages/utils/{atlaspack-lsp,atlaspack-lsp-protocol,atlaspack-watcher-watchman-js,babel-plugin-transform-contextual-imports}",
     "build-ts": "lerna run build-ts && lerna run check-ts",
     "build-native": "node scripts/build-native.js",
     "build-native-release": "cross-env CARGO_PROFILE=release node scripts/build-native.js",
@@ -33,6 +37,7 @@
     "link-all": "node scripts/link-all.js packages",
     "unlink-all": "node scripts/unlink-all.js packages",
     "check": "flow check",
+    "check-ts": "lerna run check-ts",
     "lint": "node ./scripts/lint-all.mjs",
     "prepublishOnly": "yarn pre-publish",
     "pre-publish": "yarn build && yarn build-ts",
@@ -43,12 +48,12 @@
     "test:integration": "yarn workspace @atlaspack/integration-tests test",
     "test:integration:v3": "ATLASPACK_V3=true yarn workspace @atlaspack/integration-tests test",
     "test:integration-ci": "yarn workspace @atlaspack/integration-tests test-ci",
+    "test:integration-ci:v3": "ATLASPACK_V3=true yarn workspace @atlaspack/integration-tests test-ci",
     "test:js": "yarn test:js:unit && yarn test:integration",
     "test:js:coverage": "yarn nyc yarn test:js:unit",
     "test:js:coverage:report": "yarn nyc report --reporter=html-spa",
-    "test:js:unit": "cross-env NODE_ENV=test mocha --conditions=\"@atlaspack::sources\" --timeout 5000",
+    "test:js:unit": "cross-env NODE_ENV=test ATLASPACK_REGISTER_USE_SRC=true mocha --conditions=atlaspack::sources --timeout 5000 --experimental-strip-types --disable-warning=ExperimentalWarning",
     "test:unit": "yarn test:js:unit && cargo test",
-    "dev:release": "lerna publish -y --canary --preid dev --dist-tag=dev --exact --force-publish=* --no-git-tag-version --no-push",
     "canary:release": "lerna publish -y --canary --preid canary --dist-tag=canary --exact --force-publish=* --no-push",
     "tag:prerelease": "lerna version --exact --force-publish=* --no-git-tag-version --no-push",
     "tag:release": "lerna version --exact --force-publish=* --no-git-tag-version --no-push",
@@ -64,7 +69,11 @@
     "@khanacademy/flow-to-ts": "^0.5.2",
     "@napi-rs/cli": "^2.18.3",
     "@sentry/cli": "^2.45.0",
+    "@types/mocha": "^10.0.10",
     "@types/node": ">= 18",
+    "@types/sinon": "^17.0.4",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
     "buffer": "mischnic/buffer#b8a4fa94",
     "cross-env": "^7.0.0",
     "eslint": "^8.57.0",
@@ -83,7 +92,7 @@
     "rimraf": "^5.0.5",
     "semver": "^7.5.2",
     "sinon": "^7.3.1",
-    "typescript": "^5.6.2",
+    "typescript": "^5.8.3",
     "zx": "^8.1.9"
   },
   "engines": {
@@ -104,6 +113,7 @@
     "scheduler": false
   },
   "dependencies": {
+    "@swc/cli": "^0.7.7",
     "nodemon": "^3.1.9",
     "patch-package": "^8.0.0"
   }
