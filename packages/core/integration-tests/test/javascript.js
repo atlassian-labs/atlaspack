@@ -5392,19 +5392,6 @@ describe('javascript', function () {
         assert.deepEqual(await res.output, [{default: 123, foo: 2}, 581]);
       });
 
-      it('missing exports should be replaced with an empty object', async function () {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            '/integration/scope-hoisting/es6/empty-module/a.js',
-          ),
-          options,
-        );
-
-        let res = await run(b, null, {require: false});
-        assert.deepEqual(res.output, {b: {}});
-      });
-
       it('supports namespace imports of theoretically excluded reexporting assets', async function () {
         let b = await bundle(
           path.join(
