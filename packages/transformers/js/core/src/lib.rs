@@ -420,7 +420,8 @@ pub fn transform(
                       &config.project_root,
                       &mut fs_deps,
                       is_module,
-                      config.conditional_bundling
+                      config.conditional_bundling,
+                      config.computed_properties_fix
                     )),
                     should_inline_fs
                   ),

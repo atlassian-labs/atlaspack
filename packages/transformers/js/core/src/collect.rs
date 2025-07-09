@@ -141,6 +141,10 @@ pub struct CollectResult {
 }
 
 impl Collect {
+  // An extra argument has been added here for the computed_properties_fix, but it bumps the
+  // function up over the arguments limit. Rather than reworking how feature flags work, just
+  // setting this to ignore the lint warning for now.
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     source_map: Lrc<swc_core::common::SourceMap>,
     unresolved_mark: Mark,
