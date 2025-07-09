@@ -445,7 +445,7 @@ mod tests {
         &mut deps,
         true,
         false,
-        false,
+        true,
       )
     });
 

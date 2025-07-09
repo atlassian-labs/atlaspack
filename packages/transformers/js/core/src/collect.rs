@@ -2172,7 +2172,7 @@ mod tests {
         true,
         context.is_module,
         false,
-        false,
+        true,
       )
     });
 

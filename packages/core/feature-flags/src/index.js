@@ -42,7 +42,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   inlineConstOptimisationFix: false,
   hmrImprovements: false,
   atlaspackV3CleanShutdown: false,
-  unusedComputedPropertyFix: false,
+  unusedComputedPropertyFix: process.env.NODE_ENV === 'test',
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
