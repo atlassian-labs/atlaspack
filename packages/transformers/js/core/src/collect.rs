@@ -732,7 +732,7 @@ impl Visit for Collect {
           return;
         }
 
-        if match_property_name(node).is_none() {
+        if !self.computed_properties_fix && match_property_name(node).is_none() {
           self
             .non_static_access
             .entry(id!(ident))
@@ -744,6 +744,14 @@ impl Visit for Collect {
 
         if self.imports.contains_key(&id!(ident)) {
           self.used_imports.insert(id!(ident));
+
+          if self.computed_properties_fix && match_property_name(node).is_none() {
+            self
+              .non_static_access
+              .entry(id!(ident))
+              .or_default()
+              .push(node.span);
+          }
         }
 
         return;
