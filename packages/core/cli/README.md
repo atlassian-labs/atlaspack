@@ -1,5 +1,11 @@
 # Atlaspack
 
+<div align="center">
+  <img src="atlaspack-logo-atlas-geometric.svg" alt="Atlaspack Logo - Atlas Geometric" width="120" height="120" />
+  <img src="atlaspack-logo-modular-hexagons.svg" alt="Atlaspack Logo - Modular Hexagons" width="120" height="120" />
+  <img src="atlaspack-logo-atlas-arrow.svg" alt="Atlaspack Logo - Atlas Arrow" width="120" height="120" />
+</div>
+
 [![Atlassian license](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
 
 <!-- [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](CONTRIBUTING.md) -->
