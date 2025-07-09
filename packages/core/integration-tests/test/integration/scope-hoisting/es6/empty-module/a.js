@@ -1,3 +1,3 @@
-import b from './b';
+let b = require('./b');
 
 output = {b};
