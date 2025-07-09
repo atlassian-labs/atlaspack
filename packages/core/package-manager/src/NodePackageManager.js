@@ -41,14 +41,10 @@ import {transformSync} from '@swc/core';
 // Package.json fields. Must match package_json.rs.
 const MAIN = 1 << 0;
 const SOURCE = 1 << 2;
-const additionalEntries =
-  process.env.ATLASPACK_BUILD_ENV !== 'production' ||
-  process.env.ATLASPACK_SELF_BUILD
-    ? SOURCE
-    : 0;
-const mainWithAdditional = MAIN | additionalEntries;
-const ENTRIES =
-  process.env.ATLASPACK_REGISTER_USE_SRC === 'true' ? mainWithAdditional : MAIN;
+let ENTRIES = MAIN;
+if (process.env.ATLASPACK_REGISTER_USE_SRC === 'true') {
+  ENTRIES |= SOURCE;
+}
 
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
 

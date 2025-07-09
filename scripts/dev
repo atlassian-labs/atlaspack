@@ -32,6 +32,7 @@ function build-js() {
   export NODE_ENV=production
   export ATLASPACK_BUILD_ENV=production
   export ATLASPACK_SELF_BUILD=true
+  export ATLASPACK_REGISTER_USE_SRC=true
 
   node "${PATH_ROOT_DIR}/node_modules/.bin/rimraf" --glob packages/*/*/lib
   node "${PATH_ROOT_DIR}/node_modules/.bin/lerna"  run dev:prepare
