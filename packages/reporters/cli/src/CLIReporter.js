@@ -6,6 +6,7 @@ import type {Color} from 'chalk';
 import {Reporter} from '@atlaspack/plugin';
 import {
   getProgressMessage,
+  getPackageProgressMessage,
   prettifyTime,
   prettyDiagnostic,
   throttle,
@@ -35,6 +36,27 @@ const seenPhasesGen = new Set();
 
 let phaseStartTimes = {};
 let pendingIncrementalBuild = false;
+let packagingProgress = 0;
+
+let updatePackageProgress = (completeBundles: number, totalBundles: number) => {
+  let updateThreshold = 0;
+  if (totalBundles > 5000) {
+    // If more than 5000 bundles, update every 5%
+    updateThreshold = 5;
+  } else if (totalBundles > 1000) {
+    // If more than 1000 bundles, update every 10%
+    updateThreshold = 10;
+  } else {
+    // othewise update every 25%
+    updateThreshold = 25;
+  }
+
+  let percent = Math.floor((completeBundles / totalBundles) * 100);
+  if (percent - packagingProgress >= updateThreshold) {
+    packagingProgress = percent;
+    updateSpinner(getPackageProgressMessage(completeBundles, totalBundles));
+  }
+};
 
 let statusThrottle = throttle((message: string) => {
   updateSpinner(message);
@@ -100,6 +122,8 @@ export async function _report(
           updateSpinner('Building...');
         } else if (event.phase == 'bundling' && !seenPhases.has('bundling')) {
           updateSpinner('Bundling...');
+        } else if (event.phase === 'packagingAndOptimizing') {
+          updatePackageProgress(event.completeBundles, event.totalBundles);
         } else if (
           (event.phase == 'packaging' || event.phase == 'optimizing') &&
           !seenPhases.has('packaging') &&
