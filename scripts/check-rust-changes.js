@@ -89,10 +89,19 @@ async function checkForRustPackageBump({octokit, owner, repo, pullNumber}) {
     }),
   );
 
-  // Check if any changeset contains a bump for @atlaspack/rust
-  const hasRustBump = changesetContents.some((content) =>
-    content.includes('@atlaspack/rust'),
-  );
+  // Check if any changeset contains a bump for @atlaspack/rust in the frontmatter
+  const hasRustBump = changesetContents.some((content) => {
+    // Extract the frontmatter section (between --- markers)
+    const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n/);
+    if (!frontmatterMatch) {
+      return false;
+    }
+
+    const frontmatter = frontmatterMatch[1];
+
+    // Look for @atlaspack/rust in the frontmatter only
+    return frontmatter.includes('@atlaspack/rust');
+  });
 
   if (hasRustBump) {
     console.log('@atlaspack/rust bump found in changeset files');
@@ -107,13 +116,12 @@ async function checkForRustPackageBump({octokit, owner, repo, pullNumber}) {
  * Check if Rust files have been changed and if the @atlaspack/rust package is bumped
  * @param CheckRustChangesOptions options
  */
-export async function checkRustChanges(prOptions) {
+async function checkRustChanges(prOptions) {
   const {octokit, owner, repo, pullNumber} = prOptions;
 
-  const [hasRustFiles, commentId, hasRustBump] = await Promise.all([
+  const [hasRustFiles, commentId] = await Promise.all([
     checkForRustFileChanges(prOptions),
     getCommentId(prOptions),
-    checkForRustPackageBump(prOptions),
   ]);
 
   // If no Rust files changed, we don't need to do anything
@@ -136,11 +144,13 @@ export async function checkRustChanges(prOptions) {
     return;
   }
 
+  const hasRustBump = await checkForRustPackageBump(prOptions);
+
   // If Rust files changed and rust package is bumped, no need for PR comment
   if (hasRustBump) {
     process.exitCode = 0;
 
-    // If we previously left a PR comment, delete it
+    // If we previously left a PR comment, update it
     if (commentId) {
       await octokit.rest.issues.updateComment({
         owner,
@@ -167,6 +177,8 @@ Now I'm a [happy crab](https://youtu.be/LDU_Txk06tM?si=L80HlbKGtjXAmi6R&t=71) ðŸ
     console.log(
       'Rust files changed but @atlaspack/rust package not bumped. Comment already exists.',
     );
+
+    return;
   }
 
   // Add the comment
@@ -186,3 +198,8 @@ If you want your Rust changes published, you will need to bump the \`@atlaspack/
     'Rust files changed but @atlaspack/rust package not bumped. Left a comment.',
   );
 }
+
+module.exports = {
+  checkForRustPackageBump,
+  checkRustChanges,
+};
