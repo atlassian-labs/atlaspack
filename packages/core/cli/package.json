@@ -17,8 +17,7 @@
   "main": "lib/bin.js",
   "source": "src/bin.js",
   "scripts": {
-    "prepack": "./ensure-no-dev-lib.sh",
-    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
+    "prepack": "./ensure-no-dev-lib.sh"
   },
   "engines": {
     "node": ">= 16.0.0"
