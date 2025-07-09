@@ -1,0 +1,34 @@
+// @flow strict-local
+
+declare export interface IDisposable {
+  /** This can return a Promise, as dispose() of all inner disposables are
+   * awaited in Disposable#dispose()
+   */
+  dispose(): mixed;
+}
+
+declare export class AlreadyDisposedError extends Error {
+  constructor(message?: string): void;
+}
+
+declare type DisposableLike = IDisposable | (() => mixed);
+
+declare export default class Disposable implements IDisposable {
+  disposed: boolean;
+
+  constructor(...disposables: Array<DisposableLike>): void;
+  add(...disposables: Array<DisposableLike>): void;
+  dispose(): Promise<void>;
+}
+
+declare export default class ValueEmitter<TValue> implements IDisposable {
+  _listeners: Array<(value: TValue) => mixed>;
+  _disposed: boolean;
+
+  constructor(): void;
+  addListener(listener: (value: TValue) => mixed): IDisposable;
+  emit(value: TValue): void;
+  dispose(): void;
+}
+
+declare export { Disposable, ValueEmitter, AlreadyDisposedError };
