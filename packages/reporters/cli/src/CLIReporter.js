@@ -3,6 +3,7 @@ import type {ReporterEvent, PluginOptions} from '@atlaspack/types';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import type {Color} from 'chalk';
 
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Reporter} from '@atlaspack/plugin';
 import {
   getProgressMessage,
@@ -125,6 +126,7 @@ export async function _report(
         } else if (event.phase === 'packagingAndOptimizing') {
           updatePackageProgress(event.completeBundles, event.totalBundles);
         } else if (
+          !getFeatureFlag('cliProgressReportingImprovements') &&
           (event.phase == 'packaging' || event.phase == 'optimizing') &&
           !seenPhases.has('packaging') &&
           !seenPhases.has('optimizing')

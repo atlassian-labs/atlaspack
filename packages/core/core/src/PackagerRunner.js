@@ -124,13 +124,7 @@ export default class PackagerRunner {
   }: Opts) {
     this.config = config;
     this.options = options;
-
-    // If we're using the new CLI progress reporting improvements, we don't
-    // want to send reporter events from here, they're in WriteBundlesRequest
-    // instead
-    this.report = getFeatureFlag('cliProgressReportingImprovements')
-      ? () => {}
-      : report;
+    this.report = report;
     this.previousDevDeps = previousDevDeps;
     this.devDepRequests = new Map();
     this.previousInvalidations = previousInvalidations;
