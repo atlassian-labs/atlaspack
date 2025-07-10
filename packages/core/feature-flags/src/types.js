@@ -73,10 +73,6 @@ export type FeatureFlags = {|
    * Enable nested loading of bundles in the runtime with conditional bundling
    */
   conditionalBundlingNestedRuntime: boolean,
-  /** Enable patch project paths. This will patch the project paths to be relative to the project root.
-   * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
-   */
-  patchProjectPaths: boolean,
   /**
    * Enables optimized inline string replacement perf for the packager.
    * Used heavily for inline bundles.

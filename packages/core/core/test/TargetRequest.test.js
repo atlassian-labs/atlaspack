@@ -5,7 +5,7 @@ import path from 'path';
 import tempy from 'tempy';
 import {inputFS as fs} from '@atlaspack/test-utils';
 import {md} from '@atlaspack/diagnostic';
-import {normalizeSeparators} from '@atlaspack/utils';
+import {relativePath} from '@atlaspack/utils';
 import {TargetResolver} from '../src/requests/TargetRequest';
 import {DEFAULT_OPTIONS as _DEFAULT_OPTIONS, relative} from './test-utils';
 
@@ -123,7 +123,10 @@ describe('TargetResolver', () => {
         {
           name: 'customA',
           publicUrl: '/',
-          distDir: normalizeSeparators(path.resolve('customA')),
+          distDir: relativePath(
+            DEFAULT_OPTIONS.projectRoot,
+            path.resolve('customA'),
+          ),
           env: {
             id: 'd821e85f6b50315e',
             context: 'browser',
@@ -145,7 +148,10 @@ describe('TargetResolver', () => {
           name: 'customB',
           publicUrl: '/',
           distEntry: 'b.js',
-          distDir: normalizeSeparators(path.resolve('customB')),
+          distDir: relativePath(
+            DEFAULT_OPTIONS.projectRoot,
+            path.resolve('customB'),
+          ),
           env: {
             id: 'e45cc12216f7857d',
             context: 'node',
@@ -631,7 +637,10 @@ describe('TargetResolver', () => {
       [
         {
           name: 'customB',
-          distDir: normalizeSeparators(path.resolve('customB')),
+          distDir: relativePath(
+            DEFAULT_OPTIONS.projectRoot,
+            path.resolve('customB'),
+          ),
           publicUrl: '/',
           env: {
             id: 'd821e85f6b50315e',
@@ -674,7 +683,10 @@ describe('TargetResolver', () => {
       [
         {
           name: 'customA',
-          distDir: normalizeSeparators(path.resolve('customA')),
+          distDir: relativePath(
+            DEFAULT_OPTIONS.projectRoot,
+            path.resolve('customA'),
+          ),
           publicUrl: '/',
           env: {
             id: 'd821e85f6b50315e',
@@ -1263,7 +1275,7 @@ describe('TargetResolver', () => {
       [
         {
           name: 'default',
-          distDir: serveDistDir,
+          distDir: relativePath(DEFAULT_OPTIONS.projectRoot, serveDistDir),
           publicUrl: '/',
           env: {
             id: '858b9b5a5dca37d4',

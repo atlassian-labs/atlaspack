@@ -1,8 +1,7 @@
 // @flow strict-local
 import type {FilePath} from '@atlaspack/types';
 import path from 'path';
-import {relativePath, normalizeSeparators} from '@atlaspack/utils';
-import {getFeatureFlagValue} from '@atlaspack/feature-flags';
+import {relativePath} from '@atlaspack/utils';
 
 /**
  * A path that's relative to the project root.
@@ -30,19 +29,9 @@ function toProjectPath_(projectRoot: FilePath, p: FilePath): ProjectPath {
     return p;
   }
 
-  // If the file is outside the project root, store an absolute path rather than a relative one.
-  // This way if the project root is moved, the file references still work. Accessing files outside
-  // the project root is not portable anyway.
+  // If the file is outside the project root, we store a relative path.
+  // Relative paths make the cache portable across machines.
   let relative = relativePath(projectRoot, p, false);
-  if (relative.startsWith('..')) {
-    // e.g given projectRoot = '/Users/monorepo/project' and p = '/Users/monorepo/other-project/src/index.js' --> relative = '../other-project/src/index.js'
-    if (getFeatureFlagValue('patchProjectPaths')) {
-      return relative;
-    }
-
-    return process.platform === 'win32' ? normalizeSeparators(p) : p;
-  }
-
   return relative;
 }
 
