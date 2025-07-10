@@ -19,6 +19,8 @@ import invariant from 'assert';
 import baseX from 'base-x';
 import {hashObject} from '@atlaspack/utils';
 import {fromProjectPath, toProjectPath} from './projectPath';
+import {makeConfigProxy} from './public/Config';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 const base62 = baseX(
   '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -72,9 +74,22 @@ const ignoreOptions = new Set([
   'additionalReporters',
 ]);
 
+/**
+ * Creates a proxy around AtlaspackOptions to track when options are accessed.
+ * This allows us to know which options are used by a specific request and invalidate
+ * only the necessary work when those options change.
+ *
+ * When granularOptionInvalidation is enabled, uses path arrays (e.g. ['featureFlags', 'granularOptionInvalidation'])
+ * for more precise invalidation. Otherwise, falls back to original string-based option tracking.
+ *
+ * @param {AtlaspackOptions} options - The options object to proxy
+ * @param {Function} invalidateOnOptionChange - Function called with the path array when an option is accessed
+ * @param {Function} [addDevDependency] - Optional function to track dev dependencies
+ * @returns {AtlaspackOptions} A proxy around the options object
+ */
 export function optionsProxy(
   options: AtlaspackOptions,
-  invalidateOnOptionChange: (string) => void,
+  invalidateOnOptionChange: (path: string[] | string) => void,
   addDevDependency?: (devDep: InternalDevDepOptions) => void,
 ): AtlaspackOptions {
   let packageManager = addDevDependency
@@ -84,19 +99,58 @@ export function optionsProxy(
         addDevDependency,
       )
     : options.packageManager;
-  return new Proxy(options, {
-    get(target, prop) {
-      if (prop === 'packageManager') {
-        return packageManager;
+
+  if (getFeatureFlag('granularOptionInvalidation')) {
+    // Create options object without packageManager to avoid proxying it
+    // Avoid destructuring which triggers Object.keys() enumeration
+    const optionsWithoutPackageManager = {};
+    for (const key in options) {
+      if (key !== 'packageManager') {
+        optionsWithoutPackageManager[key] = options[key];
       }
+    }
+
+    // Use makeConfigProxy from Config.js which is designed to track property reads
+    // and provide the accessed property paths as arrays
+    const proxiedOptions = makeConfigProxy((path) => {
+      const [prop] = path;
 
       if (!ignoreOptions.has(prop)) {
-        invalidateOnOptionChange(prop);
+        // Important: Always pass the full path array for granular path tracking
+        // This ensures we're passing an array to invalidateOnOptionChange, not a string
+        invalidateOnOptionChange(path);
       }
+    }, optionsWithoutPackageManager);
 
-      return target[prop];
-    },
-  });
+    // Return the proxied options with the original packageManager
+    // NOTE:
+    // return {...proxiedOptions, packageManager};
+    // This would trigger Object.keys() enumeration on the proxy object.
+    // (The ownKeys trap is defined in the makeConfigProxy function in Config.js)
+    //
+    // The spread operator (...) internally calls Object.keys() which triggers the ownKeys trap
+    // on proxied objects. For proxies that track property access, this can cause performance
+    // issues when done repeatedly, as it enumerates all properties instead of accessing specific ones.
+    // Object.assign() uses getOwnPropertyDescriptor() instead, avoiding the ownKeys trap.
+    // $FlowFixMe[incompatible-exact] - Object.assign creates inexact type, but proxy contains all AtlaspackOptions properties
+    return Object.assign({}, proxiedOptions, {packageManager});
+  } else {
+    // Original behavior for backward compatibility
+    return new Proxy(options, {
+      get(target, prop) {
+        if (prop === 'packageManager') {
+          return packageManager;
+        }
+
+        if (!ignoreOptions.has(prop)) {
+          // Original behavior: pass the prop as a string
+          invalidateOnOptionChange(prop);
+        }
+
+        return target[prop];
+      },
+    });
+  }
 }
 
 function proxyPackageManager(
@@ -125,8 +179,20 @@ function proxyPackageManager(
   });
 }
 
+/**
+ * Creates a hash value for an option to detect changes between builds.
+ * Optimized to handle common types of options efficiently.
+ *
+ * @param {mixed} value - The option value to hash
+ * @returns {string} A string hash representing the value
+ */
 export function hashFromOption(value: mixed): string {
-  if (typeof value === 'object' && value != null) {
+  if (value == null) {
+    return String(value);
+  }
+
+  if (typeof value === 'object') {
+    // For all objects, use regular object hashing
     return hashObject(value);
   }
 
