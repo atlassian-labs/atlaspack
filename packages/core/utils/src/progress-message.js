@@ -16,7 +16,22 @@ export function getProgressMessage(event: BuildProgressEvent): ?string {
 
     case 'optimizing':
       return `Optimizing ${event.bundle.displayName}...`;
+
+    case 'packagingAndOptimizing': {
+      return getPackageProgressMessage(
+        event.completeBundles,
+        event.totalBundles,
+      );
+    }
   }
 
   return null;
+}
+
+export function getPackageProgressMessage(
+  completeBundles: number,
+  totalBundles: number,
+): string {
+  let percent = Math.floor((completeBundles / totalBundles) * 100);
+  return `Packaging bundles ${completeBundles}/${totalBundles} (${percent}%)`;
 }

@@ -44,6 +44,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   atlaspackV3CleanShutdown: false,
   unusedComputedPropertyFix: process.env.NODE_ENV === 'test',
   emptyFileStarRexportFix: process.env.NODE_ENV === 'test',
+  cliProgressReportingImprovements: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
