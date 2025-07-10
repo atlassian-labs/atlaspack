@@ -12,7 +12,6 @@ import {
   overlayFS,
   removeDistDirectory,
   runBundles,
-  runBundle,
   distDir,
 } from '@atlaspack/test-utils';
 import sinon from 'sinon';
