@@ -6,4 +6,6 @@
 '@atlaspack/reporter-cli': minor
 ---
 
-Add new packaging CLI experience
+These packages should have been bumped in [pull request 691](https://github.com/atlassian-labs/atlaspack/pull/691).
+
+Rectifying by creating a new changeset now.
