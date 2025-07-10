@@ -434,7 +434,9 @@ describe('conditional bundling', function () {
 
       sinon.assert.calledWith(
         consoleStub,
-        sinon.match('Conditional dependency was missing'),
+        sinon.match(
+          'Conditional dependency was not registered when executing.',
+        ),
       );
     } finally {
       consoleStub.restore();
@@ -782,6 +784,93 @@ describe('conditional bundling', function () {
 
     // There should be all four bundles loaded in the html
     assert.equal(entryContents.match(/data-conditional/g)?.length, 4);
+  });
+
+  it(`should fallback to loading conditional bundles sync if missing`, async function () {
+    const dir = path.join(__dirname, 'import-cond-fallback-if-missing');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      yarn.lock: {}
+      index.js:
+        const conditions = { 'cond1': true, 'cond2': true };
+        globalThis.__MCOND = function(key) { return conditions[key]; }
+
+        const imported1 = importCond('cond1', './a', './b');
+
+        export default imported1;
+
+      a.js:
+        export default 'module-a';
+
+      b.js:
+        export default 'module-b';
+    `;
+
+    let bundleGraph = await bundle(path.join(dir, '/index.js'), {
+      inputFS: overlayFS,
+      featureFlags: {
+        conditionalBundlingApi: true,
+        condbDevFallbackDev: true,
+      },
+    });
+
+    let entry = nullthrows(
+      bundleGraph.getBundles().find((b) => b.name === 'index.js'),
+      'index.js bundle not found',
+    );
+
+    const mockXMLHttpRequest = function () {
+      this.open = function (method, url, async) {
+        this.method = method;
+        this.url = new URL(url);
+        this.async = async;
+      };
+      this.send = function () {
+        const matchedBundle = bundleGraph.getBundles().find((b) => {
+          return (
+            b.filePath.slice(distDir.length + 1) ===
+            this.url.pathname.replace(/^\//, '')
+          );
+        });
+        if (matchedBundle) {
+          // Simulate successful response
+          this.status = 200;
+          this.responseText = overlayFS
+            .readFileSync(matchedBundle.filePath)
+            .toString();
+        } else {
+          this.status = 404;
+          this.responseText = '';
+        }
+      };
+      this.status = 0;
+      this.responseText = '';
+    };
+
+    // Patch setTimeout to be synchronous for this test
+    const origSetTimeout = global.setTimeout;
+    global.setTimeout = (fn) => fn();
+
+    let output;
+    try {
+      output = await runBundles(
+        bundleGraph,
+        entry,
+        [[overlayFS.readFileSync(entry.filePath).toString(), entry]],
+        {
+          XMLHttpRequest: mockXMLHttpRequest,
+        },
+        {
+          entryAsset: nullthrows(entry.getMainEntry()),
+        },
+      );
+    } finally {
+      // Restore setTimeout
+      global.setTimeout = origSetTimeout;
+    }
+
+    assert.deepEqual(typeof output === 'object' && output?.default, 'module-a');
   });
 
   it(`should have correct deps as bundles in conditional manifest when nested`, async function () {
