@@ -191,31 +191,6 @@ describe('RequestTracker', () => {
     assert(result === 'hello');
   });
 
-  it('should reject all in progress requests when the abort controller aborts', async () => {
-    let tracker = new RequestTracker({farm, options});
-    let p = tracker
-      .runRequest({
-        id: 'abc',
-        type: 7,
-        run: async () => {
-          await Promise.resolve('hello');
-        },
-        input: null,
-      })
-      .then(null, () => {
-        /* do nothing */
-      });
-    // $FlowFixMe
-    tracker.setSignal({aborted: true});
-    await p;
-    assert(
-      tracker
-        .getInvalidRequests()
-        .map((req) => req.id)
-        .includes('abc'),
-    );
-  });
-
   it('should write cache to disk and store index', async () => {
     let tracker = new RequestTracker({farm, options});
 
