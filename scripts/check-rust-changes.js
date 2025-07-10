@@ -9,6 +9,13 @@
  */
 
 const commentTitle = `## ðŸ¦€ Ferris' Rust Changeset Check`;
+const debugMode = process.env.DEBUG_CHECK_RUST_CHANGES === 'true';
+
+function debugLog(message) {
+  if (debugMode) {
+    console.log(message);
+  }
+}
 
 async function getCommentId({octokit, owner, repo, pullNumber}) {
   const comments = await octokit.rest.issues.listComments({
@@ -24,9 +31,9 @@ async function getCommentId({octokit, owner, repo, pullNumber}) {
   );
 
   if (comment) {
-    console.log('Existing ferris-atlaspack-bot comment found in PR');
+    debugLog('Existing ferris-atlaspack-bot comment found in PR');
   } else {
-    console.log('No ferris-atlaspack-bot comment found in PR');
+    debugLog('No ferris-atlaspack-bot comment found in PR');
   }
 
   return comment?.id;
@@ -44,9 +51,9 @@ async function checkForRustFileChanges({octokit, owner, repo, pullNumber}) {
   );
 
   if (hasRustFiles) {
-    console.log('Rust files found in PR');
+    debugLog('Rust files found in PR');
   } else {
-    console.log('No Rust files found in PR');
+    debugLog('No Rust files found in PR');
   }
 
   return hasRustFiles;
@@ -66,7 +73,7 @@ async function checkForRustPackageBump({octokit, owner, repo, pullNumber}) {
   );
 
   if (changesetFiles.length === 0) {
-    console.log('No changeset files found in PR');
+    debugLog('No changeset files found in PR');
     return false;
   }
 
@@ -104,9 +111,9 @@ async function checkForRustPackageBump({octokit, owner, repo, pullNumber}) {
   });
 
   if (hasRustBump) {
-    console.log('@atlaspack/rust bump found in changeset files');
+    debugLog('@atlaspack/rust bump found in changeset files');
   } else {
-    console.log('No @atlaspack/rust bump found in changeset files');
+    debugLog('No @atlaspack/rust bump found in changeset files');
   }
 
   return hasRustBump;
@@ -136,7 +143,7 @@ async function checkRustChanges(prOptions) {
         comment_id: commentId,
       });
 
-      console.log(
+      debugLog(
         'Detected existing ferris-atlaspack-bot comment in PR but now there are no Rust files, so deleting it',
       );
     }
@@ -163,7 +170,7 @@ Now I'm a [happy crab](https://youtu.be/LDU_Txk06tM?si=L80HlbKGtjXAmi6R&t=71) ðŸ
 `.trim(),
       });
 
-      console.log(
+      debugLog(
         'Detected existing ferris-atlaspack-bot comment in PR but now there is a Rust bump, so updating it',
       );
     }
@@ -174,7 +181,7 @@ Now I'm a [happy crab](https://youtu.be/LDU_Txk06tM?si=L80HlbKGtjXAmi6R&t=71) ðŸ
   // If comment already exists, just leave it in place
   if (commentId) {
     process.exitCode = 1;
-    console.log(
+    debugLog(
       'Rust files changed but @atlaspack/rust package not bumped. Comment already exists.',
     );
 
@@ -194,7 +201,7 @@ If you want your Rust changes published, you will need to bump the \`@atlaspack/
 `.trim(),
   });
 
-  console.log(
+  debugLog(
     'Rust files changed but @atlaspack/rust package not bumped. Left a comment.',
   );
 }
