@@ -608,7 +608,7 @@ export default class WorkerFarm extends EventEmitter {
       );
     }
 
-    var profiles = await Promise.all(promises);
+    let profiles = await Promise.all(promises);
     let trace = new Trace();
     let filename = `profile-${getTimeId()}.trace`;
     let stream = trace.pipe(fs.createWriteStream(filename));

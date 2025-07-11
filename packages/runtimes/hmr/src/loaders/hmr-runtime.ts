@@ -48,9 +48,9 @@ declare var globalThis: typeof self;
 declare var ServiceWorkerGlobalScope: Object;
 */
 
-var OVERLAY_ID = '__parcel__error__overlay__';
+let OVERLAY_ID = '__parcel__error__overlay__';
 
-var OldModule = module.bundle.Module;
+let OldModule = module.bundle.Module;
 
 function Module(moduleName: any) {
   OldModule.call(this, moduleName);
@@ -70,7 +70,7 @@ function Module(moduleName: any) {
 module.bundle.Module = Module;
 module.bundle.hotData = {};
 
-var checkedAssets /*: {|[string]: boolean|} */,
+let checkedAssets /*: {|[string]: boolean|} */,
   disposedAssets /*: {|[string]: boolean|} */,
   assetsToDispose /*: Array<[ParcelRequire, string]> */,
   assetsToAccept /*: Array<[ParcelRequire, string]> */;
@@ -87,18 +87,18 @@ function getPort() {
 }
 
 // eslint-disable-next-line no-redeclare
-var parent = module.bundle.parent;
+let parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
-  var hostname = getHostname();
-  var port = getPort();
-  var protocol =
+  let hostname = getHostname();
+  let port = getPort();
+  let protocol =
     HMR_SECURE ||
     (location.protocol == 'https:' &&
       !['localhost', '127.0.0.1', '0.0.0.0'].includes(hostname))
       ? 'wss'
       : 'ws';
 
-  var ws;
+  let ws;
   if (HMR_USE_SSE) {
     ws = new EventSource('/__parcel_hmr');
   } else {
@@ -141,7 +141,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
     assetsToAccept = [];
     assetsToDispose = [];
 
-    var data /*: HMRMessage */ = JSON.parse(event.data);
+    let data /*: HMRMessage */ = JSON.parse(event.data);
 
     if (data.type === 'reload') {
       fullReload();
@@ -212,7 +212,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
       if (typeof document !== 'undefined') {
         // Render the fancy html overlay
         removeErrorOverlay();
-        var overlay = createErrorOverlay(data.diagnostics.html);
+        let overlay = createErrorOverlay(data.diagnostics.html);
         document.body.appendChild(overlay);
       }
     }
@@ -232,7 +232,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
 }
 
 function removeErrorOverlay() {
-  var overlay = document.getElementById(OVERLAY_ID);
+  let overlay = document.getElementById(OVERLAY_ID);
   if (overlay) {
     overlay.remove();
     console.log('[parcel] ✨ Error resolved');
@@ -240,7 +240,7 @@ function removeErrorOverlay() {
 }
 
 function createErrorOverlay(diagnostics: any) {
-  var overlay = document.createElement('div');
+  let overlay = document.createElement('div');
   overlay.id = OVERLAY_ID;
 
   let errorHTML =
@@ -298,13 +298,13 @@ function getParents(
   bundle: ParcelRequire,
   id: string,
 ) /*: Array<[ParcelRequire, string]> */ {
-  var modules = bundle.modules;
+  let modules = bundle.modules;
   if (!modules) {
     return [];
   }
 
-  var parents: Array<[ParcelRequire, string]> = [];
-  var k, d, dep;
+  let parents: Array<[ParcelRequire, string]> = [];
+  let k, d, dep;
 
   for (k in modules) {
     for (d in modules[k][1]) {
@@ -324,12 +324,12 @@ function getParents(
 }
 
 function updateLink(link: HTMLElement) {
-  var href = link.getAttribute('href');
+  let href = link.getAttribute('href');
 
   if (!href) {
     return;
   }
-  var newLink = link.cloneNode();
+  let newLink = link.cloneNode();
   newLink.onload = function () {
     if (link.parentNode !== null) {
       link.parentNode.removeChild(link);
@@ -339,24 +339,24 @@ function updateLink(link: HTMLElement) {
   link.parentNode.insertBefore(newLink, link.nextSibling);
 }
 
-var cssTimeout = null;
+let cssTimeout = null;
 function reloadCSS() {
   if (cssTimeout) {
     return;
   }
 
   cssTimeout = setTimeout(function () {
-    var links = document.querySelectorAll('link[rel="stylesheet"]');
-    for (var i = 0; i < links.length; i++) {
-      var href /*: string */ = links[i].getAttribute('href');
-      var hostname = getHostname();
-      var servedFromHMRServer =
+    let links = document.querySelectorAll('link[rel="stylesheet"]');
+    for (let i = 0; i < links.length; i++) {
+      let href /*: string */ = links[i].getAttribute('href');
+      let hostname = getHostname();
+      let servedFromHMRServer =
         hostname === 'localhost'
           ? new RegExp(
               '^(https?:\\/\\/(0.0.0.0|127.0.0.1)|localhost):' + getPort(),
             ).test(href)
           : href.indexOf(hostname + ':' + getPort());
-      var absolute =
+      let absolute =
         /^https?:\/\//i.test(href) &&
         href.indexOf(location.origin) !== 0 &&
         !servedFromHMRServer;
@@ -464,7 +464,7 @@ function hmrApply(
   bundle: ParcelRequire /*: ParcelRequire */,
   asset: any /*:  HMRAsset */,
 ) {
-  var modules = bundle.modules;
+  let modules = bundle.modules;
   if (!modules) {
     return;
   }
@@ -589,7 +589,7 @@ function hmrAcceptCheckOne(
     | null
     | undefined /*: ?{ [string]: { [string]: string } }*/,
 ) {
-  var modules = bundle.modules;
+  let modules = bundle.modules;
   if (!modules) {
     return;
   }
@@ -610,7 +610,7 @@ function hmrAcceptCheckOne(
 
   checkedAssets[id] = true;
 
-  var cached = bundle.cache[id];
+  let cached = bundle.cache[id];
   assetsToDispose.push([bundle, id]);
 
   if (!cached || (cached.hot && cached.hot._acceptCallbacks.length)) {
@@ -637,7 +637,7 @@ function hmrDispose(
   bundle: ParcelRequire /*: ParcelRequire */,
   id: string /*: string */,
 ) {
-  var cached = bundle.cache[id];
+  let cached = bundle.cache[id];
   bundle.hotData[id] = {};
   if (cached && cached.hot) {
     cached.hot.data = bundle.hotData[id];
@@ -660,7 +660,7 @@ function hmrAccept(
   bundle(id);
 
   // Run the accept callbacks in the new version of the module.
-  var cached = bundle.cache[id];
+  let cached = bundle.cache[id];
   if (cached && cached.hot && cached.hot._acceptCallbacks.length) {
     let assetsToAlsoAccept: Array<never> = [];
     cached.hot._acceptCallbacks.forEach(function (cb) {

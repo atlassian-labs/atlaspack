@@ -790,7 +790,7 @@ function prepareBrowserContext(
     currentScript: null,
   } as const;
 
-  var exports: Record<string, any> = {};
+  let exports: Record<string, any> = {};
 
   function PatchedError(message: any) {
     const patchedError = new Error(message);
@@ -929,7 +929,7 @@ function prepareWorkerContext(
 } {
   let promises: Array<Promise<unknown>> = [];
 
-  var exports: Record<string, any> = {};
+  let exports: Record<string, any> = {};
   var ctx = Object.assign(
     {
       exports,
