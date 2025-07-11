@@ -383,7 +383,6 @@ export default class Atlaspack {
   |} = {
     /*::...null*/
   }): Promise<BuildEvent> {
-    this.#requestTracker.setSignal(signal);
     let options = nullthrows(this.#resolvedOptions);
     try {
       if (options.shouldProfile) {

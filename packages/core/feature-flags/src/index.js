@@ -29,7 +29,6 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   cachePerformanceImprovements: process.env.NODE_ENV === 'test',
   environmentDeduplication: false,
   inlineStringReplacementPerf: false,
-  fixBuildAbortCorruption: false,
   // Default to true as it's a monitoring change. Can be turned off if necessary.
   verboseRequestInvalidationStats: true,
   resolveBundlerConfigFromCwd: false,

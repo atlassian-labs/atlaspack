@@ -31,10 +31,6 @@ export type FeatureFlags = {|
    */
   inlineRequiresMultiThreading: boolean,
   /**
-   * Disables aborting of builds and fixes bugs related to state corruption on abort.
-   */
-  fixBuildAbortCorruption: boolean,
-  /**
    * Enable VCS mode. Expected values are:
    * - OLD - default value, return watchman result
    * - NEW_AND_CHECK - Return VCS result but still call watchman
