@@ -1,5 +1,13 @@
 # @atlaspack/reporter-dev-server-sw
 
+## 2.14.18
+
+### Patch Changes
+
+- Updated dependencies [[`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d), [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3), [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417)]:
+  - @atlaspack/utils@2.17.0
+  - @atlaspack/plugin@2.14.18
+
 ## 2.14.17
 
 ### Patch Changes
