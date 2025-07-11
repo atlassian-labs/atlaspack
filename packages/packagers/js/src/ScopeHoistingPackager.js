@@ -293,10 +293,7 @@ export class ScopeHoistingPackager {
 
     let hasConditionalReference = false;
     let isConditionalBundle = false;
-    if (
-      getFeatureFlag('conditionalBundlingApi') &&
-      getFeatureFlag('conditionalBundlingAsyncRuntime')
-    ) {
+    if (getFeatureFlag('conditionalBundlingApi')) {
       // If the bundle has a conditional bundle reference (has an importCond)
       hasConditionalReference =
         this.bundleGraph.getReferencedConditionalBundles(bundle).length > 0;
@@ -322,10 +319,7 @@ export class ScopeHoistingPackager {
       .map((b) => b.publicId);
 
     const conditions = [];
-    if (
-      getFeatureFlag('conditionalBundlingApi') &&
-      getFeatureFlag('conditionalBundlingAsyncRuntime')
-    ) {
+    if (getFeatureFlag('conditionalBundlingApi')) {
       const conditionSet = this.bundleGraph
         .getConditionalBundleMapping()
         .get(bundle.id);

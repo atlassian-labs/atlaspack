@@ -12,7 +12,6 @@ import type {
   FilePath,
 } from '@atlaspack/types-internal';
 import {getConfig} from './Config';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 export const manifestHashes: Map<FilePath, string> = new Map();
 
@@ -60,41 +59,27 @@ export async function report({
 
     const manifest = {};
     for (const conditions of bundles.values()) {
-      const oldBundleInfo = {};
       for (const [key, cond] of conditions) {
-        if (getFeatureFlag('conditionalBundlingReporterSameConditionFix')) {
-          const bundle = cond.bundle;
-          const relativeBundlePath = relative(
-            bundle.target.distDir,
-            bundle.filePath,
-          );
+        const bundle = cond.bundle;
+        const relativeBundlePath = relative(
+          bundle.target.distDir,
+          bundle.filePath,
+        );
 
-          const bundleInfo =
-            manifest[bundle.target.name]?.[relativeBundlePath] ?? {};
+        const bundleInfo =
+          manifest[bundle.target.name]?.[relativeBundlePath] ?? {};
 
-          bundleInfo[key] = {
-            ifTrueBundles: mapBundles(cond.ifTrueBundles)
-              .concat(bundleInfo[key]?.ifTrueBundles ?? [])
-              .sort(),
-            ifFalseBundles: mapBundles(cond.ifFalseBundles)
-              .concat(bundleInfo[key]?.ifFalseBundles ?? [])
-              .sort(),
-          };
+        bundleInfo[key] = {
+          ifTrueBundles: mapBundles(cond.ifTrueBundles)
+            .concat(bundleInfo[key]?.ifTrueBundles ?? [])
+            .sort(),
+          ifFalseBundles: mapBundles(cond.ifFalseBundles)
+            .concat(bundleInfo[key]?.ifFalseBundles ?? [])
+            .sort(),
+        };
 
-          manifest[bundle.target.name] ??= {};
-          manifest[bundle.target.name][relativeBundlePath] = bundleInfo;
-        } else {
-          const bundle = cond.bundle;
-          oldBundleInfo[key] = {
-            // Reverse bundles so we load children bundles first
-            ifTrueBundles: mapBundles(cond.ifTrueBundles).reverse(),
-            ifFalseBundles: mapBundles(cond.ifFalseBundles).reverse(),
-          };
-          manifest[bundle.target.name] ??= {};
-          manifest[bundle.target.name][
-            relative(bundle.target.distDir, bundle.filePath)
-          ] = oldBundleInfo;
-        }
+        manifest[bundle.target.name] ??= {};
+        manifest[bundle.target.name][relativeBundlePath] = bundleInfo;
       }
     }
 
@@ -113,26 +98,12 @@ export async function report({
         2,
       );
 
-      if (getFeatureFlag('conditionalBundlingReporterDuplicateFix')) {
-        await updateManifest(
-          options.outputFS,
-          logger,
-          conditionalManifestFilename,
-          conditionalManifest,
-        );
-      } else {
-        await options.outputFS.mkdirp(dirname(conditionalManifestFilename));
-        await options.outputFS.writeFile(
-          conditionalManifestFilename,
-          conditionalManifest,
-          {mode: 0o666},
-        );
-
-        logger.info({
-          message:
-            'Wrote conditional manifest to ' + conditionalManifestFilename,
-        });
-      }
+      await updateManifest(
+        options.outputFS,
+        logger,
+        conditionalManifestFilename,
+        conditionalManifest,
+      );
     }
   }
 }
