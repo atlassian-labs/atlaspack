@@ -24,13 +24,7 @@ require('@babel/register')({
       ? [require('./babel-plugin-module-translate')]
       : []),
   ],
-  extensions: ['.js', '.jsx'],
-});
-
-// This only support transpiling TypeScript to CJS
-// eslint-disable-next-line import/no-extraneous-dependencies
-require('esbuild-register/dist/node').register({
-  extensions: ['.ts'],
+  extensions: ['.js', '.jsx', '.ts', '.tsx'],
 });
 
 // This adds the registration to the Node args, which are passed
