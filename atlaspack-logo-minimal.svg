@@ -1,0 +1,20 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="minimalist" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0052CC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0065FF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Outer container representing the bundle -->
+  <rect x="25" y="25" width="70" height="70" rx="8" fill="none" stroke="url(#minimalist)" stroke-width="3"/>
+  
+  <!-- Inner elements representing bundled assets -->
+  <rect x="35" y="35" width="20" height="20" rx="2" fill="url(#minimalist)" opacity="0.8"/>
+  <rect x="65" y="35" width="20" height="20" rx="2" fill="url(#minimalist)" opacity="0.6"/>
+  <rect x="35" y="65" width="20" height="20" rx="2" fill="url(#minimalist)" opacity="0.4"/>
+  <rect x="65" y="65" width="20" height="20" rx="2" fill="url(#minimalist)" opacity="0.2"/>
+  
+  <!-- Subtle connection indicator -->
+  <circle cx="60" cy="60" r="2" fill="url(#minimalist)"/>
+</svg>
