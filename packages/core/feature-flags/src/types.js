@@ -65,10 +65,6 @@ export type FeatureFlags = {|
    * Fixes source maps for inline bundles
    */
   inlineBundlesSourceMapFixes: boolean,
-  /**
-   * Enable nested loading of bundles in the runtime with conditional bundling
-   */
-  conditionalBundlingNestedRuntime: boolean,
   /** Enable patch project paths. This will patch the project paths to be relative to the project root.
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    */
@@ -79,25 +75,9 @@ export type FeatureFlags = {|
    */
   inlineStringReplacementPerf: boolean,
   /**
-   * Enable support for the async bundle runtime (unstable_asyncBundleRuntime) in conditional bundling
-   */
-  conditionalBundlingAsyncRuntime: boolean,
-  /**
-   * Fix a bug where the conditional manifest reporter would report and write the same manifest multiple times
-   */
-  conditionalBundlingReporterDuplicateFix: boolean,
-  /**
    * Enable resolution of bundler config starting from the CWD
    */
   resolveBundlerConfigFromCwd: boolean,
-  /**
-   * Fix a bug where the conditional manifest reporter would drop bundles that have the same condition
-   */
-  conditionalBundlingReporterSameConditionFix: boolean,
-  /**
-   * Enable a change to the html packager to load more bundles when conditional bundling fallback mode is enabled
-   */
-  condbHtmlPackagerChange: boolean,
   /**
    * Enable a setting that allows for more assets to be scope hoisted, if
    * they're safe to do so.
@@ -129,6 +109,11 @@ export type FeatureFlags = {|
    * could cause exports to undefined at runtime.
    */
   emptyFileStarRexportFix: boolean,
+
+  /**
+   * Enables the new packaging progress CLI experience
+   */
+  cliProgressReportingImprovements: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;

@@ -9,6 +9,7 @@ import {requestTypes} from '../RequestTracker';
 import type {PackagedBundleInfo} from '../types';
 import type BundleGraph from '../BundleGraph';
 import type {BundleInfo} from '../PackagerRunner';
+import {report} from '../ReporterRunner';
 
 import {HASH_REF_PREFIX} from '../constants';
 import {joinProjectPath} from '../projectPath';
@@ -37,6 +38,22 @@ export type WriteBundlesRequest = {|
   ) => Async<WriteBundlesRequestResult>,
   input: WriteBundlesRequestInput,
 |};
+
+function reportPackagingProgress(
+  completeBundles: number,
+  totalBundles: number,
+) {
+  if (!getFeatureFlag('cliProgressReportingImprovements')) {
+    return;
+  }
+
+  report({
+    type: 'buildProgress',
+    phase: 'packagingAndOptimizing',
+    totalBundles,
+    completeBundles,
+  });
+}
 
 /**
  * Packages, optimizes, and writes all bundles to the dist directory.
@@ -97,14 +114,19 @@ async function run({input, api, farm, options}) {
       return true;
     });
 
+  let cachedBundles = new Set(
+    bundles.filter((b) => api.canSkipSubrequest(bundleGraph.getHash(b))),
+  );
+
   // Package on the main thread if there is only one bundle to package.
   // This avoids the cost of serializing the bundle graph for single file change builds.
   let useMainThread =
-    bundles.length === 1 ||
-    bundles.filter((b) => !api.canSkipSubrequest(bundleGraph.getHash(b)))
-      .length === 1;
+    bundles.length === 1 || bundles.length - cachedBundles.size <= 1;
 
   try {
+    let completeBundles = cachedBundles.size;
+    reportPackagingProgress(completeBundles, bundles.length);
+
     await Promise.all(
       bundles.map(async (bundle) => {
         let request = createPackageRequest({
@@ -116,6 +138,11 @@ async function run({input, api, farm, options}) {
         });
 
         let info = await api.runRequest(request);
+
+        if (!cachedBundles.has(bundle)) {
+          completeBundles++;
+          reportPackagingProgress(completeBundles, bundles.length);
+        }
 
         if (!useMainThread) {
           // Force a refresh of the cache to avoid a race condition

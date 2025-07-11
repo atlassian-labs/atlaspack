@@ -25,7 +25,6 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   loadableSideEffects: false,
   reduceResolverStringCreation: false,
   inlineBundlesSourceMapFixes: false,
-  conditionalBundlingNestedRuntime: false,
   patchProjectPaths: false,
   cachePerformanceImprovements: process.env.NODE_ENV === 'test',
   environmentDeduplication: false,
@@ -33,16 +32,14 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   conditionalBundlingAsyncRuntime: false,
   // Default to true as it's a monitoring change. Can be turned off if necessary.
   verboseRequestInvalidationStats: true,
-  conditionalBundlingReporterDuplicateFix: false,
   resolveBundlerConfigFromCwd: false,
-  conditionalBundlingReporterSameConditionFix: false,
-  condbHtmlPackagerChange: false,
   applyScopeHoistingImprovement: false,
   inlineConstOptimisationFix: false,
   hmrImprovements: false,
   atlaspackV3CleanShutdown: false,
   unusedComputedPropertyFix: process.env.NODE_ENV === 'test',
   emptyFileStarRexportFix: process.env.NODE_ENV === 'test',
+  cliProgressReportingImprovements: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
