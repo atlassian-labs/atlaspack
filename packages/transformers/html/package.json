@@ -1,21 +1,17 @@
 {
   "name": "@atlaspack/transformer-html",
   "version": "2.14.17",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "test": "mocha"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "main": "lib/HTMLTransformer.js",
-  "source": "src/HTMLTransformer.js",
-  "engines": {
-    "node": ">= 16.0.0"
+  "source": "src/HTMLTransformer.ts",
+  "types": "src/HTMLTransformer.ts",
+  "scripts": {
+    "test": "mocha"
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.1",
@@ -31,5 +27,10 @@
   "devDependencies": {
     "@atlaspack/core": "2.18.8"
   },
-  "type": "commonjs"
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

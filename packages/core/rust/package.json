@@ -2,6 +2,7 @@
   "name": "@atlaspack/rust",
   "version": "3.4.0",
   "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "publishConfig": {
     "access": "public"
   },
@@ -10,6 +11,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "index.js",
+  "types": "types.d.ts",
   "browser": "browser.js",
   "napi": {
     "name": "atlaspack-node-bindings",
@@ -32,6 +34,5 @@
   },
   "scripts": {
     "test": "mocha"
-  },
-  "type": "commonjs"
+  }
 }
