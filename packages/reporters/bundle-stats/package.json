@@ -1,16 +1,12 @@
 {
   "name": "@atlaspack/reporter-bundle-stats",
   "version": "2.14.18",
-  "publishConfig": {
-    "access": "public"
-  },
+  "type": "commonjs",
   "main": "lib/BundleStatsReporter.js",
-  "source": "src/BundleStatsReporter.js",
+  "source": "src/BundleStatsReporter.ts",
+  "types": "src/BundleStatsReporter.ts",
   "bin": {
     "atlaspack-bundle-stats": "bin.js"
-  },
-  "engines": {
-    "node": ">= 16.0.0"
   },
   "dependencies": {
     "@atlaspack/core": "2.18.8",
@@ -20,5 +16,10 @@
   "devDependencies": {
     "@atlaspack/types": "2.15.7"
   },
-  "type": "commonjs"
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

@@ -1,14 +1,16 @@
-import type {FeatureFlags as _FeatureFlags} from './types';
-// We need to do these gymnastics as we don't want flow-to-ts to touch DEFAULT_FEATURE_FLAGS,
-// but we want to export FeatureFlags for Flow
-export type FeatureFlags = _FeatureFlags;
+import type {FeatureFlags} from './types';
 
-export const CONSISTENCY_CHECK_VALUES: ReadonlyArray<string> = Object.freeze([
+export type {FeatureFlags};
+
+export const CONSISTENCY_CHECK_VALUES = Object.freeze([
   'NEW',
   'OLD',
   'NEW_AND_CHECK',
   'OLD_AND_CHECK',
-]);
+] as const);
+
+export type ConsistencyCheckFeatureFlagValue =
+  typeof CONSISTENCY_CHECK_VALUES[number];
 
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   exampleConsistencyCheckFeature: 'OLD',
@@ -72,7 +74,7 @@ export type Diagnostic<CustomDiagnostic> = {
  * Run a function with a consistency check.
  */
 export function runWithConsistencyCheck<Result, CustomDiagnostic>(
-  flag: string,
+  flag: keyof FeatureFlags,
   oldFn: () => Result,
   newFn: () => Result,
   diffFn: (
@@ -86,7 +88,7 @@ export function runWithConsistencyCheck<Result, CustomDiagnostic>(
   ) => void,
 ): Result {
   const value = featureFlagValues[flag];
-  if (!value || value === false || value === 'OLD') {
+  if (!value || value === 'OLD') {
     return oldFn();
   }
   if (value === true || value === 'NEW') {

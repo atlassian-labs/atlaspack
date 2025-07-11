@@ -1,22 +1,23 @@
 {
   "name": "@atlaspack/transformer-toml",
   "version": "2.14.17",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "main": "lib/TOMLTransformer.js",
-  "source": "src/TOMLTransformer.js",
+  "source": "src/TOMLTransformer.ts",
+  "types": "src/TOMLTransformer.ts",
+  "dependencies": {
+    "@atlaspack/plugin": "2.14.17",
+    "@iarna/toml": "^2.2.3"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },
-  "dependencies": {
-    "@iarna/toml": "^2.2.3",
-    "@atlaspack/plugin": "2.14.17"
-  },
-  "type": "commonjs"
+  "publishConfig": {
+    "access": "public"
+  }
 }
