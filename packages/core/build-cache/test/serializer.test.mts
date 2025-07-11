@@ -1,5 +1,3 @@
-// @flow
-
 import assert from 'assert';
 import sinon from 'sinon';
 
@@ -8,44 +6,44 @@ import {
   deserialize,
   registerSerializableClass,
   unregisterSerializableClass,
-} from '../src/serializer';
+} from '../src/serializer.mts';
 
 describe('serializer', () => {
   it('should serialize a basic object', () => {
-    let serialized = serialize({foo: 2, bar: 3});
+    const serialized = serialize({foo: 2, bar: 3});
     assert(Buffer.isBuffer(serialized));
-    let deserialized = deserialize(serialized);
+    const deserialized = deserialize(serialized);
     assert.equal(typeof deserialized, 'object');
     assert.deepEqual(deserialized, {foo: 2, bar: 3});
   });
 
   it('should serialize an object with multiple references', () => {
-    let a = {foo: 2};
-    let b = {bar: a, baz: a};
-    let res = deserialize(serialize(b));
+    const a = {foo: 2};
+    const b = {bar: a, baz: a};
+    const res = deserialize(serialize(b));
     assert.deepEqual(res, b);
     assert.equal(res.bar, res.baz);
   });
 
   it('should serialize a cyclic object', () => {
-    let a = {foo: 2, bar: {}};
+    const a = {foo: 2, bar: {}};
     a.bar = a;
-    let res = deserialize(serialize(a));
+    const res = deserialize(serialize(a));
     assert.deepEqual(res, a);
     assert.equal(res.bar, res);
     assert.equal(a.bar, a);
   });
 
   it('should serialize a Map', () => {
-    let a = new Map([[2, 3]]);
-    let res = deserialize(serialize(a));
+    const a = new Map([[2, 3]]);
+    const res = deserialize(serialize(a));
     assert(res instanceof Map);
     assert.equal(res.get(2), 3);
   });
 
   it('should serialize a Set', () => {
-    let a = new Set([2, 3]);
-    let res = deserialize(serialize(a));
+    const a = new Set([2, 3]);
+    const res = deserialize(serialize(a));
     assert(res instanceof Set);
     assert(res.has(2));
     assert(res.has(3));
@@ -61,8 +59,8 @@ describe('serializer', () => {
 
     registerSerializableClass('Test', Test);
 
-    let x = new Test(2);
-    let res = deserialize(serialize(x));
+    const x = new Test(2);
+    const res = deserialize(serialize(x));
     assert(res instanceof Test);
     assert.equal(res.x, x.x);
 
@@ -86,10 +84,11 @@ describe('serializer', () => {
 
     registerSerializableClass('Test', Test);
 
-    let x = new Test(2);
-    let res = deserialize(serialize(x));
+    const x = new Test(2);
+    const res = deserialize(serialize(x));
     assert(res instanceof Test);
     assert.equal(res.x, x.x);
+    // @ts-expect-error no type
     assert.equal(res.serialized, true);
 
     unregisterSerializableClass('Test', Test);
@@ -102,6 +101,7 @@ describe('serializer', () => {
         this.x = x;
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       static deserialize(x: any) {
         return {
           deserialized: true,
@@ -112,8 +112,8 @@ describe('serializer', () => {
 
     registerSerializableClass('Test', Test);
 
-    let x = new Test(2);
-    let res = deserialize(serialize(x));
+    const x = new Test(2);
+    const res = deserialize(serialize(x));
     assert(!(res instanceof Test));
     assert.equal(res.value.x, x.x);
     assert.equal(res.deserialized, true);
@@ -139,8 +139,8 @@ describe('serializer', () => {
     registerSerializableClass('Foo', Foo);
     registerSerializableClass('Bar', Bar);
 
-    let x = new Bar(new Foo(2));
-    let res = deserialize(serialize(x));
+    const x = new Bar(new Foo(2));
+    const res = deserialize(serialize(x));
     assert(res instanceof Bar);
     assert(res.foo instanceof Foo);
     assert.equal(res.foo.x, 2);
@@ -151,18 +151,18 @@ describe('serializer', () => {
 
   it('should serialize a cyclic class', () => {
     class Foo {
-      x: ?Foo;
-      constructor(x: ?Foo) {
+      x?: Foo;
+      constructor(x?: Foo) {
         this.x = x;
       }
     }
 
     registerSerializableClass('Foo', Foo);
 
-    let x = new Foo();
+    const x = new Foo();
     x.x = x;
 
-    let res = deserialize(serialize(x));
+    const res = deserialize(serialize(x));
     assert(res instanceof Foo);
     assert(res.x instanceof Foo);
     assert.equal(res.x, res);
@@ -182,9 +182,9 @@ describe('serializer', () => {
 
     registerSerializableClass('Foo', Foo);
 
-    let x = {y: {foo: new Foo(2)}};
+    const x = {y: {foo: new Foo(2)}};
 
-    let res = deserialize(serialize(x));
+    const res = deserialize(serialize(x));
     assert(res.y.foo instanceof Foo);
     assert(x.y.foo instanceof Foo);
 
@@ -193,19 +193,19 @@ describe('serializer', () => {
 
   it('should serialize a cyclic class and copy on write', () => {
     class Foo {
-      x: ?Foo;
-      constructor(x: ?Foo) {
+      x?: Foo;
+      constructor(x?: Foo) {
         this.x = x;
       }
     }
 
     registerSerializableClass('Foo', Foo);
 
-    let x = new Foo();
+    const x = new Foo();
     x.x = x;
-    let y = {x: {y: x}};
+    const y = {x: {y: x}};
 
-    let res = deserialize(serialize(y));
+    const res = deserialize(serialize(y));
     assert(res.x.y instanceof Foo);
     assert(res.x.y.x instanceof Foo);
     assert(y.x.y instanceof Foo);
@@ -227,8 +227,8 @@ describe('serializer', () => {
 
     registerSerializableClass('Test', Test);
 
-    let x = new Map([[2, new Test(2)]]);
-    let res = deserialize(serialize(x));
+    const x = new Map([[2, new Test(2)]]);
+    const res = deserialize(serialize(x));
     assert(res instanceof Map);
     assert(res.get(2) instanceof Test);
 
@@ -245,8 +245,8 @@ describe('serializer', () => {
 
     registerSerializableClass('Test', Test);
 
-    let x = new Set([new Test(2)]);
-    let res = deserialize(serialize(x));
+    const x = new Set([new Test(2)]);
+    const res = deserialize(serialize(x));
     assert(res instanceof Set);
     assert(res.values().next().value instanceof Test);
 
@@ -257,7 +257,7 @@ describe('serializer', () => {
     class Outer {
       inner: Inner;
 
-      constructor(inner) {
+      constructor(inner: Inner) {
         this.inner = inner;
       }
 
@@ -272,7 +272,7 @@ describe('serializer', () => {
     class Inner {
       x: number;
 
-      constructor(x) {
+      constructor(x: number) {
         this.x = x;
       }
 
@@ -290,9 +290,10 @@ describe('serializer', () => {
     });
 
     it('should not recursively serialize raw values', () => {
-      let res = deserialize(serialize(new Outer(new Inner(42))));
+      const res = deserialize(serialize(new Outer(new Inner(42))));
       assert(res instanceof Outer);
       assert(!(res.inner instanceof Inner));
+      // @ts-expect-error type
       assert.equal(res.inner.x, 42);
     });
 
