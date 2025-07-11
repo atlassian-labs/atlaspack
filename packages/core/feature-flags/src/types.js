@@ -129,7 +129,7 @@ export type FeatureFlags = {|
   unusedComputedPropertyFix: boolean,
 
   /**
-   * Fixes an issue where star re-exports of empty files (usually occuring in compiled typescript libraries)
+   * Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries)
    * could cause exports to undefined at runtime.
    */
   emptyFileStarRexportFix: boolean,
@@ -138,6 +138,13 @@ export type FeatureFlags = {|
    * Enables the new packaging progress CLI experience
    */
   cliProgressReportingImprovements: boolean,
+  /**
+   * Enable a change to the conditional bundling loader to use a fallback bundle loading if the expected scripts aren't found
+   *
+   * Split into two flags, to allow usage in the dev or prod packagers separately
+   */
+  condbDevFallbackDev: boolean,
+  condbDevFallbackProd: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
