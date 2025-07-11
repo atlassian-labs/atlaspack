@@ -105,7 +105,7 @@ commander.Command.prototype.optionMissingArgument = function (option: any) {
 };
 
 // Make serve the default command except for --help
-var args = process.argv;
+let args = process.argv;
 if (args[2] === '--help' || args[2] === '-h') args[2] = 'help';
 
 if (!args[2] || !program.commands.some((c) => c.name() === args[2])) {

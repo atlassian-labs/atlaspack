@@ -57,6 +57,7 @@ module.exports = {
         '@atlaspack/internal/no-relative-import': 'error',
         'flowtype/no-types-missing-file-annotation': 'off',
         'prefer-const': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
       },
     },
     {
