@@ -1,0 +1,225 @@
+/* tslint:disable */
+/* eslint-disable */
+
+export type AtlaspackNapi = any;
+export type JsTransferable = any;
+export type NapiSideEffectsVariants = any;
+export type LMDBOptions = any;
+export type SpanId = any;
+
+export interface LmdbOptions {
+  /** The database directory path */
+  path: string;
+  /**
+   * If enabled, the database writer will set the following flags:
+   *
+   * * MAP_ASYNC - "use asynchronous msync when MDB_WRITEMAP is used"
+   * * NO_SYNC - "don't fsync after commit"
+   * * NO_META_SYNC - "don't fsync metapage after commit"
+   *
+   * `MDB_WRITEMAP` is on by default.
+   */
+  asyncWrites: boolean;
+  /**
+   * The mmap size, this corresponds to [`mdb_env_set_mapsize`](http://www.lmdb.tech/doc/group__mdb.html#gaa2506ec8dab3d969b0e609cd82e619e5)
+   * if this isn't set it'll default to around 10MB.
+   */
+  mapSize?: number;
+}
+export declare function initTracingSubscriber(): void;
+export interface Entry {
+  key: string;
+  value: Buffer;
+}
+export declare function findAncestorFile(
+  filenames: Array<string>,
+  from: string,
+  root: string,
+): string | null;
+export declare function findFirstFile(names: Array<string>): string | null;
+export declare function findNodeModule(
+  module: string,
+  from: string,
+): string | null;
+export declare function hashString(s: string): string;
+export declare function hashBuffer(buf: Buffer): string;
+export declare function optimizeImage(kind: string, buf: Buffer): Buffer;
+export declare function createAssetId(params: unknown): string;
+export interface AtlaspackNapiOptions {
+  fs?: object;
+  options: object;
+  packageManager?: object;
+  threads?: number;
+  napiWorkerPool: object;
+}
+export declare function atlaspackNapiCreate(
+  napiOptions: AtlaspackNapiOptions,
+  lmdb: LMDB,
+): object;
+export declare function atlaspackNapiBuildAssetGraph(
+  atlaspackNapi: AtlaspackNapi,
+): object;
+export declare function atlaspackNapiRespondToFsEvents(
+  atlaspackNapi: AtlaspackNapi,
+  options: object,
+): object;
+export declare function createDependencyId(params: unknown): string;
+export declare function createEnvironmentId(params: unknown): string;
+/** Overwrite all environments with a new set of environments */
+export declare function setAllEnvironments(environments: unknown): void;
+/** Get an array of all environments */
+export declare function getAllEnvironments(): Array<unknown>;
+/** Get environment by ID */
+export declare function getEnvironment(id: string): unknown;
+/** Add an environment to the global manager */
+export declare function addEnvironment(environment: unknown): void;
+export declare function getAvailableThreads(): number;
+export declare function initializeMonitoring(): void;
+export declare function closeMonitoring(): void;
+/** Called on the worker thread to create a reference to the NodeJs worker */
+export declare function newNodejsWorker(worker: object): JsTransferable;
+export interface InlineRequiresOptimizerInput {
+  code: string;
+  sourceMaps: boolean;
+  ignoreModuleIds: Array<string>;
+}
+export interface InlineRequiresOptimizerResult {
+  code: string;
+  sourceMap?: string;
+}
+export declare function runInlineRequiresOptimizer(
+  input: InlineRequiresOptimizerInput,
+): InlineRequiresOptimizerResult;
+/** Runs in the rayon thread pool */
+export declare function runInlineRequiresOptimizerAsync(
+  input: InlineRequiresOptimizerInput,
+): object;
+export interface JsFileSystemOptions {
+  canonicalize: (...args: any[]) => any;
+  read: (...args: any[]) => any;
+  isFile: (...args: any[]) => any;
+  isDir: (...args: any[]) => any;
+  includeNodeModules?: NapiSideEffectsVariants;
+}
+export interface FileSystem {
+  fs?: JsFileSystemOptions;
+  includeNodeModules?: NapiSideEffectsVariants;
+  conditions?: number;
+  moduleDirResolver?: (...args: any[]) => any;
+  mode: number;
+  entries?: number;
+  extensions?: Array<string>;
+  packageExports: boolean;
+  typescript?: boolean;
+  reduceStringCreation?: boolean;
+}
+export interface ResolveOptions {
+  filename: string;
+  specifierType: string;
+  parent: string;
+  packageConditions?: Array<string>;
+}
+export interface FilePathCreateInvalidation {
+  filePath: string;
+}
+export interface FileNameCreateInvalidation {
+  fileName: string;
+  aboveFilePath: string;
+}
+export interface GlobCreateInvalidation {
+  glob: string;
+}
+export interface ResolveResult {
+  resolution: unknown;
+  invalidateOnFileChange: Array<string>;
+  invalidateOnFileCreate: Array<
+    | FilePathCreateInvalidation
+    | FileNameCreateInvalidation
+    | GlobCreateInvalidation
+  >;
+  query?: string;
+  sideEffects: boolean;
+  error: unknown;
+  moduleType: number;
+}
+export interface JsInvalidations {
+  invalidateOnFileChange: Array<string>;
+  invalidateOnFileCreate: Array<
+    | FilePathCreateInvalidation
+    | FileNameCreateInvalidation
+    | GlobCreateInvalidation
+  >;
+  invalidateOnStartup: boolean;
+}
+export interface Replacement {
+  from: string;
+  to: string;
+}
+export declare function performStringReplacements(
+  input: string,
+  replacements: Array<Replacement>,
+): string;
+export declare function transform(opts: object): unknown;
+export declare function transformAsync(opts: object): object;
+export declare function getVcsStateSnapshot(
+  path: string,
+  excludePatterns: Array<string>,
+): object;
+export declare function getEventsSince(
+  repoPath: string,
+  vcsStateSnapshot: unknown,
+  newRev?: string | undefined | null,
+): object;
+export type LMDB = Lmdb;
+export class Lmdb {
+  constructor(options: LmdbOptions);
+  get(key: string): Promise<Buffer | null | undefined>;
+  hasSync(key: string): boolean;
+  keysSync(skip: number, limit: number): Array<string>;
+  getSync(key: string): Buffer | null;
+  getManySync(keys: Array<string>): Array<Buffer | undefined | null>;
+  putMany(entries: Array<Entry>): Promise<void>;
+  put(key: string, data: Buffer): Promise<void>;
+  putNoConfirm(key: string, data: Buffer): void;
+  delete(key: string): Promise<void>;
+  startReadTransaction(): void;
+  commitReadTransaction(): void;
+  startWriteTransaction(): Promise<void>;
+  commitWriteTransaction(): Promise<void>;
+  /** Compact the database to the target path */
+  compact(targetPath: string): void;
+  constructor(options: LMDBOptions);
+  get(key: string): Promise<Buffer | null | undefined>;
+  hasSync(key: string): boolean;
+  keysSync(skip: number, limit: number): Array<string>;
+  getSync(key: string): Buffer | null;
+  getManySync(keys: Array<string>): Array<Buffer | undefined | null>;
+  putMany(entries: Array<Entry>): Promise<void>;
+  put(key: string, data: Buffer): Promise<void>;
+  delete(key: string): Promise<void>;
+  putNoConfirm(key: string, data: Buffer): void;
+  startReadTransaction(): void;
+  commitReadTransaction(): void;
+  startWriteTransaction(): Promise<void>;
+  commitWriteTransaction(): Promise<void>;
+  compact(targetPath: string): void;
+}
+export class Hash {
+  constructor();
+  writeString(s: string): void;
+  writeBuffer(buf: Buffer): void;
+  finish(): string;
+}
+export class AtlaspackTracer {
+  constructor();
+  enter(label: string): SpanId;
+  exit(id: SpanId): void;
+}
+export class Resolver {
+  constructor(projectRoot: string, options: FileSystem);
+  resolve(options: ResolveOptions): ResolveResult;
+  resolveAsync(): object;
+  resolveAsync(options: ResolveOptions): object;
+  getInvalidations(path: string): JsInvalidations;
+  getInvalidations(path: string): JsInvalidations;
+}

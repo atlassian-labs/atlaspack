@@ -2,21 +2,22 @@
   "name": "@atlaspack/markdown-ansi",
   "version": "2.14.1",
   "description": "Blazing fast, zero configuration web application bundler",
-  "publishConfig": {
-    "access": "public"
-  },
-  "license": "(MIT OR Apache-2.0)",
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "main": "lib/markdown-ansi.js",
-  "source": "src/markdown-ansi.js",
-  "engines": {
-    "node": ">= 16.0.0"
-  },
+  "source": "src/markdown-ansi.ts",
+  "types": "src/markdown-ansi.ts",
   "dependencies": {
     "chalk": "^4.1.0"
   },
-  "type": "commonjs"
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
