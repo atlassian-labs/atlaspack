@@ -1,4 +1,3 @@
-// @flow
 import chalk from 'chalk';
 
 // double char markdown matchers
@@ -10,12 +9,12 @@ const STRIKETHROUGH_REGEX = /~{2}([^~]+)~{2}/g;
 const ITALIC_REGEX = /(?<!\\)\*(.+)(?<!\\)\*|(?<!\\)_(.+)(?<!\\)_/g;
 
 export default function markdownParser(input: string): string {
-  input = input.replace(BOLD_REGEX, (...args) => chalk.bold(args[1]));
-  input = input.replace(UNDERLINE_REGEX, (...args) => chalk.underline(args[1]));
-  input = input.replace(STRIKETHROUGH_REGEX, (...args) =>
+  input = input.replace(BOLD_REGEX, (...args: string[]) => chalk.bold(args[1]));
+  input = input.replace(UNDERLINE_REGEX, (...args: string[]) => chalk.underline(args[1]));
+  input = input.replace(STRIKETHROUGH_REGEX, (...args: string[]) =>
     chalk.strikethrough(args[1]),
   );
-  input = input.replace(ITALIC_REGEX, (...args) =>
+  input = input.replace(ITALIC_REGEX, (...args: string[]) =>
     chalk.italic(args[1] || args[2]),
   );
   input = input.replace(/(?<!\\)\\/g, '');

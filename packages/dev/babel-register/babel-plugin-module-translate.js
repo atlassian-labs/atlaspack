@@ -8,6 +8,7 @@ const ignoreList = {
   '@atlaspack/feature-flags': true,
   '@atlaspack/types-internal': true,
   '@atlaspack/profiler': true,
+  '@atlaspack/markdown-ansi': true,
 };
 
 function resolveSource(specifier, from) {
