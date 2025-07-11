@@ -1,6 +1,4 @@
-// @flow strict-local
-
-import {ContentGraph, type NodeId} from '@atlaspack/graph';
+import {ContentGraph, NodeId} from '@atlaspack/graph';
 import nullthrows from 'nullthrows';
 
 /**
@@ -19,7 +17,6 @@ export class EdgeContentGraph<N, EW> extends ContentGraph<N, number> {
       const contentKey = this._nodeIdToContentKey.get(nodeId);
       if (node == null) {
         // Add null node to preserve node ids
-        // $FlowFixMe
         newGraph.addNode(null);
       } else if (contentKey == null) {
         newGraph.addNode(node);
