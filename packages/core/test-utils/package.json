@@ -10,6 +10,7 @@
   },
   "main": "lib/utils.js",
   "source": "src/utils.ts",
+  "types": "src/utils.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
