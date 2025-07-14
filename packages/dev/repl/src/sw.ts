@@ -1,5 +1,4 @@
 /* eslint-disable no-restricted-globals */
-// @flow strict
 
 import nullthrows from 'nullthrows';
 
@@ -11,7 +10,7 @@ type ClientId = string;
 type ParentId = string;
 
 let sendToIFrame = new Map<ClientId, (data: string) => void>();
-let pages = new Map<ParentId, {|[string]: string|}>();
+let pages = new Map<ParentId, {[string]: string}>();
 let parentPorts = new Map<ParentId, MessagePort>();
 let parentToIframe = new Map<ParentId, ClientId>();
 let iframeToParent = new Map<ClientId, ParentId>();
@@ -231,11 +230,9 @@ function sendMsg(target, type, data, transfer) {
 function uuidv4() {
   return (String(1e7) + -1e3 + -4e3 + -8e3 + -1e11).replace(
     /[018]/g,
-    // $FlowFixMe
     (c: number) =>
       (
         c ^
-        // $FlowFixMe
         (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
       ).toString(16),
   );

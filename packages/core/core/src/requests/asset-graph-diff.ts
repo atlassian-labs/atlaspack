@@ -1,15 +1,13 @@
 /* eslint-disable no-console */
-// @flow strict-local
 
-// $FlowFixMe
+// @ts-expect-error no types
 import deepClone from 'rfdc/default';
-// $FlowFixMe
 import {diff} from 'jest-diff';
 import AssetGraph from '../AssetGraph';
 import type {AssetGraphNode} from '../types';
 import {fromProjectPathRelative, toProjectPath} from '../projectPath';
 
-function filterNode(node) {
+function filterNode(node: any) {
   let clone = deepClone(node);
 
   // Clean up anything you don't want to see in the diff
@@ -36,12 +34,12 @@ function filterNode(node) {
 }
 
 function compactDeep(
-  obj: mixed,
+  obj: any,
   ignoredPatterns: Array<string> = [],
   currentPath: string = '$',
-) {
+): any {
   if (obj instanceof Map) {
-    const copy = {};
+    const copy: Record<any, any> = {};
     Array.from(obj.entries()).forEach(([k, v]) => {
       if (v != null) {
         copy[k] = compactDeep(v, ignoredPatterns, `${currentPath}.${k}`);
@@ -63,6 +61,7 @@ function compactDeep(
       }
 
       if (value != null) {
+        // @ts-expect-error invalid type
         copy[key] = compactDeep(value, ignoredPatterns, path);
       }
     });
@@ -73,19 +72,23 @@ function compactDeep(
 }
 
 function assetGraphDiff(jsAssetGraph: AssetGraph, rustAssetGraph: AssetGraph) {
+  // @ts-expect-error invalid type
   const getNodes = (graph) => {
     let nodes = {};
 
+    // @ts-expect-error invalid type
     graph.traverse((nodeId) => {
       let node: AssetGraphNode | null = graph.getNode(nodeId) ?? null;
       if (!node) return;
 
       if (node.type === 'dependency') {
         let sourcePath = node.value.sourcePath ?? toProjectPath('', 'entry');
+        // @ts-expect-error invalid type
         nodes[
           `dep:${fromProjectPathRelative(sourcePath)}:${node.value.specifier}`
         ] = filterNode(node);
       } else if (node.type === 'asset') {
+        // @ts-expect-error invalid type
         nodes[`asset:${fromProjectPathRelative(node.value.filePath)}`] =
           filterNode(node);
       }
@@ -105,7 +108,9 @@ function assetGraphDiff(jsAssetGraph: AssetGraph, rustAssetGraph: AssetGraph) {
     if (process.env.NATIVE_COMPARE !== 'true') {
       continue;
     }
+    // @ts-expect-error invalid type
     let jsNode = jsNodes[key];
+    // @ts-expect-error invalid type
     let rustNode = rustNodes[key];
 
     if (!rustNode) {

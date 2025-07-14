@@ -1,4 +1,3 @@
-//@flow
 import {inflate} from '@mischnic/pako';
 
 function gunzip(arrayBuffer) {

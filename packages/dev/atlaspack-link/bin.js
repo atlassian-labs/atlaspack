@@ -1,11 +1,6 @@
 #! /usr/bin/env node
-
-// @flow strict-local
 /* eslint-disable no-console */
-
 'use strict';
-
-// $FlowFixMe[untyped-import]
 require('@atlaspack/babel-register');
 
 let program = require('./src/cli').createProgram();

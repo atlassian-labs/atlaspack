@@ -24,7 +24,7 @@ module.exports = (
           .PackagedBundle,
       }
 ) as {
-  loadGraphs: loadGraphs;
-  getBundleStats: getBundleStats;
+  loadGraphs: typeof loadGraphs;
+  getBundleStats: typeof getBundleStats;
   PackagedBundleClass: PackagedBundleClass;
 };

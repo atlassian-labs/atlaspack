@@ -1,16 +1,15 @@
 /* eslint-disable no-console, monorepo/no-internal-import */
-// @flow strict-local
 import type {PackagedBundle} from '@atlaspack/types';
 import type {ParcelOptions} from '@atlaspack/core/src/types';
-import type {commander$Command} from 'commander';
-
-// $FlowFixMe[untyped-import]
-import {version} from '../package.json';
 
 import commander from 'commander';
 import fs from 'fs';
 import path from 'path';
 import {DefaultMap} from '@atlaspack/utils';
+
+const {version}: {version: string} = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'),
+);
 
 const {
   loadGraphs,
@@ -18,7 +17,7 @@ const {
   PackagedBundleClass,
 } = require('./deep-imports.js');
 
-async function run({cacheDir, outDir}) {
+async function run({cacheDir, outDir}: any) {
   // 1. load bundle graph and info via parcel~query
   let {bundleGraph, bundleInfo} = await loadGraphs(cacheDir);
 
@@ -39,12 +38,11 @@ async function run({cacheDir, outDir}) {
 
   let projectRoot = process.cwd();
 
-  // $FlowFixMe[unclear-type]
-  let parcelOptions: ParcelOptions = ({projectRoot}: any);
+  let parcelOptions: ParcelOptions = {projectRoot} as any;
 
   let bundlesByTarget: DefaultMap<
     string /* target name */,
-    Array<PackagedBundle>,
+    Array<PackagedBundle>
   > = new DefaultMap(() => []);
   for (let bundle of bundleGraph.getBundles()) {
     bundlesByTarget
@@ -67,7 +65,7 @@ async function run({cacheDir, outDir}) {
   }
 }
 
-export const command: commander$Command = new commander.Command()
+export const command: any = new commander.Command()
   .version(version, '-V, --version')
   .description('Generate a stats report for a Parcel build')
   .option('-v, --verbose', 'Print verbose output')

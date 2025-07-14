@@ -1,5 +1,4 @@
 'use strict';
-// @flow
 
 const {RuleTester} = require('eslint');
 const rule = require('../../src/rules/no-relative-import');
