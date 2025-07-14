@@ -1430,6 +1430,16 @@ export function createIdealGraph(
 
     if (bundleToRemove.mainEntryAsset != null) {
       invariant(bundleToKeep.mainEntryAsset != null);
+      console.log(
+        bundleToRemoveId,
+        'Bundle to remove source bundles',
+        bundleToRemove.sourceBundles,
+      );
+      console.log(
+        bundleToKeepId,
+        'Bundle to keep source bundles',
+        bundleToKeep.sourceBundles,
+      );
 
       // Merge the bundles in bundle group
       let bundlesInRemoveBundleGroup =
@@ -1442,31 +1452,59 @@ export function createIdealGraph(
         bundleGraph.addEdge(bundleToKeepId, bundleIdInGroup);
       }
 
+      // Remove old bundle group
+      bundleGroupBundleIds.delete(bundleToRemoveId);
+
       // Clean up bundle roots
-      bundleRoots.set(nullthrows(bundleToRemove.mainEntryAsset), [
-        bundleToKeepId,
-        bundleToKeepId,
-      ]);
+      let bundleRootToRemoveNodeId = nullthrows(
+        assetToBundleRootNodeId.get(nullthrows(bundleToRemove.mainEntryAsset)),
+      );
+      let bundleRootToKeepNodeId = nullthrows(
+        assetToBundleRootNodeId.get(nullthrows(bundleToKeep.mainEntryAsset)),
+      );
+
+      for (let nodeId of bundleRootGraph.getNodeIdsConnectedTo(
+        bundleRootToRemoveNodeId,
+      )) {
+        bundleRootGraph.addEdge(nodeId, bundleRootToKeepNodeId);
+        bundleRootGraph.removeEdge(nodeId, bundleRootToRemoveNodeId);
+      }
+
+      for (let nodeId of bundleRootGraph.getNodeIdsConnectedFrom(
+        bundleRootToRemoveNodeId,
+      )) {
+        bundleRootGraph.addEdge(bundleRootToKeepNodeId, nodeId);
+        bundleRootGraph.removeEdge(bundleRootToRemoveNodeId, nodeId);
+      }
+
+      bundleRoots.delete(nullthrows(bundleToRemove.mainEntryAsset));
+      // [
+      //   bundleToKeepId,
+      //   bundleToKeepId,
+      // ]);
 
       // Merge dependency bundle graph
       for (let dependencyNodeId of dependencyBundleGraph.getNodeIdsConnectedTo(
         dependencyBundleGraph.getNodeIdByContentKey(String(bundleToRemoveId)),
+        ALL_EDGE_TYPES,
       )) {
+        console.log('Merging dependency node', dependencyNodeId);
         let dependencyNode = nullthrows(
           dependencyBundleGraph.getNode(dependencyNodeId),
         );
         invariant(dependencyNode.type === 'dependency');
 
         // Add dependency to the bundle to keep
-        dependencyBundleGraph.addEdge(
-          dependencyNodeId,
-          dependencyBundleGraph.getNodeIdByContentKey(String(bundleToKeepId)),
-          dependencyPriorityEdges[dependencyNode.value.priority],
-        );
+        // dependencyBundleGraph.addEdge(
+        //   dependencyNodeId,
+        //   dependencyBundleGraph.getNodeIdByContentKey(String(bundleToKeepId)),
+        //   dependencyPriorityEdges[dependencyNode.value.priority],
+        // );
         // Remove dependency from the bundle to remove
         dependencyBundleGraph.removeEdge(
           dependencyNodeId,
           dependencyBundleGraph.getNodeIdByContentKey(String(bundleToRemoveId)),
+          dependencyPriorityEdges[dependencyNode.value.priority],
         );
       }
     }
