@@ -26,6 +26,7 @@ packages/core/integration-tests/dist/**
 
 coverage
 node_modules
+packages/*/*/node_modules/**
 tmp
 fixtures
 /target/**/*

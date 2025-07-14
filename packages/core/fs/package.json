@@ -15,10 +15,6 @@
     "./src/NodeFS.js": "./src/NodeFS.browser.js"
   },
   "types": "src/index.ts",
-  "scripts": {
-    "build-ts": "mkdir -p lib && flow-to-ts src/types.js > lib/types.d.ts",
-    "check-ts": "tsc --noEmit index.d.ts"
-  },
   "dependencies": {
     "@atlaspack/build-cache": "2.13.3",
     "@atlaspack/feature-flags": "2.18.4",

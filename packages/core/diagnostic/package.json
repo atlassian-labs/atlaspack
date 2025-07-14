@@ -11,10 +11,6 @@
   "main": "lib/diagnostic.js",
   "source": "src/diagnostic.ts",
   "types": "src/diagnostic.ts",
-  "scripts": {
-    "build-ts": "flow-to-ts src/*.js --write && tsc --emitDeclarationOnly --declaration --esModuleInterop src/*.ts && mkdir -p lib && mv src/*.d.ts lib/. && rm src/*.ts",
-    "check-ts": "tsc --noEmit lib/diagnostic.d.ts"
-  },
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",
     "nullthrows": "^1.1.1"

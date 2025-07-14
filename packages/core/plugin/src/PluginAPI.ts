@@ -15,61 +15,81 @@ import type {
 // parcel plugins.
 const CONFIG = Symbol.for('parcel-plugin-config');
 
-export class Transformer {
-  constructor<T>(opts: TransformerOpts<T>) {
+export class Transformer<T> {
+  [CONFIG]: TransformerOpts<T>;
+
+  constructor(opts: TransformerOpts<T>) {
     this[CONFIG] = opts;
   }
 }
 
-export class Resolver {
-  constructor<T>(opts: ResolverOpts<T>) {
+export class Resolver<T> {
+  [CONFIG]: ResolverOpts<T>;
+
+  constructor(opts: ResolverOpts<T>) {
     this[CONFIG] = opts;
   }
 }
 
-export class Bundler {
-  constructor<T>(opts: BundlerOpts<T>) {
+export class Bundler<T> {
+  [CONFIG]: BundlerOpts<T>;
+
+  constructor(opts: BundlerOpts<T>) {
     this[CONFIG] = opts;
   }
 }
 
-export class Namer {
-  constructor<T>(opts: NamerOpts<T>) {
+export class Namer<T> {
+  [CONFIG]: NamerOpts<T>;
+
+  constructor(opts: NamerOpts<T>) {
     this[CONFIG] = opts;
   }
 }
 
-export class Runtime {
-  constructor<T>(opts: RuntimeOpts<T>) {
+export class Runtime<T> {
+  [CONFIG]: RuntimeOpts<T>;
+
+  constructor(opts: RuntimeOpts<T>) {
     this[CONFIG] = opts;
   }
 }
 
 export class Validator {
+  [CONFIG]: ValidatorOpts;
+
   constructor(opts: ValidatorOpts) {
     this[CONFIG] = opts;
   }
 }
 
-export class Packager {
-  constructor<T, U>(opts: PackagerOpts<T, U>) {
+export class Packager<T, U> {
+  [CONFIG]: PackagerOpts<T, U>;
+
+  constructor(opts: PackagerOpts<T, U>) {
     this[CONFIG] = opts;
   }
 }
 
-export class Optimizer {
-  constructor<T, U>(opts: OptimizerOpts<T, U>) {
+export class Optimizer<T, U> {
+  [CONFIG]: OptimizerOpts<T, U>;
+
+  constructor(opts: OptimizerOpts<T, U>) {
     this[CONFIG] = opts;
   }
 }
 
 export class Compressor {
+  [CONFIG]: CompressorOpts;
+
   constructor(opts: CompressorOpts) {
     this[CONFIG] = opts;
   }
 }
 
 export class Reporter {
+  [CONFIG]: ReporterOpts;
+
   constructor(opts: ReporterOpts) {
     this[CONFIG] = opts;
   }

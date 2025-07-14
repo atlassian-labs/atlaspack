@@ -1,9 +1,13 @@
-import {typeof default as Less} from 'less';
 import path from 'path';
 import {Transformer} from '@atlaspack/plugin';
+import type {
+  ConfigResult,
+  Transformer as TransformerOpts,
+} from '@atlaspack/types';
 import SourceMap from '@parcel/source-map';
+import type {VLQMap} from '@parcel/source-map';
+// @ts-expect-error no types
 import less from 'less';
-
 import {load} from './loadConfig';
 
 // E.g: ~library/file.less
@@ -14,6 +18,8 @@ type LessConfig = {
   filename: string;
   plugins: Array<any>;
 };
+
+type TransformOpts = Parameters<TransformerOpts<ConfigResult>['transform']>[0];
 
 export default new Transformer({
   loadConfig({config}) {
@@ -53,7 +59,8 @@ export default new Transformer({
 
     if (result.map != null) {
       let map = new SourceMap(options.projectRoot);
-      let rawMap = JSON.parse(result.map);
+      let rawMap: VLQMap = JSON.parse(result.map);
+
       map.addVLQMap({
         ...rawMap,
         sources: rawMap.sources.map((s) =>
@@ -67,11 +74,11 @@ export default new Transformer({
 
     return [asset];
   },
-}) as Transformer;
+});
 
-function urlPlugin({asset}) {
+function urlPlugin({asset}: Pick<TransformOpts, 'asset'>) {
   return {
-    install(less: Less, pluginManager: any) {
+    install(less: any, pluginManager: any) {
       // This is a hack; no such interface exists, even conceptually, in Less.
       type LessNodeWithValue = React.ReactNode & {
         value: any;
@@ -79,8 +86,8 @@ function urlPlugin({asset}) {
 
       const visitor = new less.visitors.Visitor({
         visitUrl(node: URL) {
-          const valueNode = (node.value as LessNodeWithValue);
-          const stringValue = (valueNode.value as string);
+          const valueNode = (node as any as LessNodeWithValue).value;
+          const stringValue = valueNode.value as string;
           if (
             !stringValue.startsWith('#') // IE's `behavior: url(#default#VML)`)
           ) {
@@ -96,7 +103,10 @@ function urlPlugin({asset}) {
   };
 }
 
-function resolvePathPlugin({asset, resolve}) {
+function resolvePathPlugin({
+  asset,
+  resolve,
+}: Pick<TransformOpts, 'asset'> & Pick<TransformOpts, 'resolve'>) {
   return {
     install(less: any, pluginManager: any) {
       class LessFileManager extends less.FileManager {
@@ -145,7 +155,7 @@ function resolvePathPlugin({asset, resolve}) {
                 try {
                   contents = await asset.fs.readFile(filePath, 'utf8');
                   break outer;
-                } catch (err: any) {
+                } catch {
                   asset.invalidateOnFileCreate({filePath});
                 }
               }

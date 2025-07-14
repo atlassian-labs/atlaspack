@@ -4,11 +4,13 @@ import type {
   BuildSuccessEvent,
   BundleGraph,
   Dependency,
+  Encoding,
   FilePath,
   InitialAtlaspackOptions,
   PackagedBundle,
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
+import type {GraphTraversalCallback} from '@atlaspack/types';
 import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '@atlaspack/fs';
 import type WorkerFarm from '@atlaspack/workers';
 import type {IncomingMessage} from 'http';
@@ -52,7 +54,7 @@ export let overlayFS: OverlayFS = new OverlayFS(outputFS, inputFS);
 before(() => {
   try {
     childProcess.execSync('watchman shutdown-server');
-  } catch (err: any) {
+  } catch {
     /* empty */
   }
 });
@@ -197,8 +199,8 @@ export function findAsset(
   bundleGraph: BundleGraph<PackagedBundle>,
   assetFileName: string,
 ): Asset | null | undefined {
-  return bundleGraph.traverseBundles((bundle, context, actions) => {
-    let asset = bundle.traverseAssets((asset, context, actions) => {
+  return bundleGraph.traverseBundles(((bundle, _context, actions) => {
+    let asset = bundle.traverseAssets((asset, _context, actions) => {
       if (path.basename(asset.filePath) === assetFileName) {
         actions.stop();
         return asset;
@@ -208,7 +210,7 @@ export function findAsset(
       actions.stop();
       return asset;
     }
-  });
+  }) as GraphTraversalCallback<PackagedBundle, Asset>);
 }
 
 export function findDependency(
@@ -281,34 +283,29 @@ export async function bundle(
 }
 
 export function getNextBuild(b: Atlaspack): Promise<BuildEvent> {
-  return new Promise(
-    (
-      resolve: (result: Promise<never>) => void,
-      reject: (error?: any) => void,
-    ) => {
-      let subscriptionPromise = b
-        .watch((err, buildEvent) => {
-          if (err) {
-            reject(err);
-            return;
-          }
+  return new Promise<BuildEvent>((resolve, reject) => {
+    let subscriptionPromise = b
+      .watch((err, buildEvent) => {
+        if (err) {
+          reject(err);
+          return;
+        }
 
-          subscriptionPromise
-            .then((subscription) => {
-              // If the watch callback was reached, subscription must have been successful
-              invariant(subscription != null);
-              return subscription.unsubscribe();
-            })
-            .then(() => {
-              // If the build promise hasn't been rejected, buildEvent must exist
-              invariant(buildEvent != null);
-              resolve(buildEvent);
-            })
-            .catch(reject);
-        })
-        .catch(reject);
-    },
-  );
+        subscriptionPromise
+          .then((subscription) => {
+            // If the watch callback was reached, subscription must have been successful
+            invariant(subscription != null);
+            return subscription.unsubscribe();
+          })
+          .then(() => {
+            // If the build promise hasn't been rejected, buildEvent must exist
+            invariant(buildEvent != null);
+            resolve(buildEvent);
+          })
+          .catch(reject);
+      })
+      .catch(reject);
+  });
 }
 
 export async function getNextBuildSuccess(
@@ -332,6 +329,7 @@ export function shallowEqual(
   }
 
   for (let [key, value] of Object.entries(a)) {
+    // eslint-disable-next-line no-prototype-builtins
     if (!b.hasOwnProperty(key) || b[key] !== value) {
       return false;
     }
@@ -435,6 +433,7 @@ export async function runBundles(
           b.bundleBehavior === 'inline'
             ? b.name
             : normalizeSeparators(path.relative(b.target.distDir, b.filePath)),
+        // @ts-expect-error invalid type
         async importModuleDynamically(specifier: any) {
           let filePath = path.resolve(path.dirname(parent.filePath), specifier);
           let code = await overlayFS.readFile(filePath, 'utf8');
@@ -499,6 +498,7 @@ export async function runBundle(
 
     let bundles = bundleGraph.getBundles({includeInline: true});
     let scripts: Array<[string, PackagedBundle]> = [];
+    // @ts-expect-error invalid type
     postHtml().walk.call(ast, (node) => {
       if (node.attrs?.nomodule != null) {
         return node;
@@ -732,23 +732,23 @@ function prepareBrowserContext(
     remove() {},
   } as const;
 
-  const head = {
+  const head: any = {
     children: [],
     appendChild(el: any) {
       head.children.push(el);
 
       if (el.tag === 'script') {
-        let {deferred, promise} = makeDeferredWithPromise();
+        let {deferred, promise} = makeDeferredWithPromise<void>();
         promises.push(promise);
         setTimeout(function () {
           let pathname = url.parse(el.src).pathname;
-          let file = path.join(bundle.target.distDir, pathname);
+          let file = path.join(bundle.target.distDir, pathname!);
 
           new vm.Script(
             // '"use strict";\n' +
             overlayFS.readFileSync(file, 'utf8'),
             {
-              filename: pathname.slice(1),
+              filename: pathname!.slice(1),
             },
           ).runInContext(ctx);
 
@@ -794,11 +794,11 @@ function prepareBrowserContext(
 
   function PatchedError(message: any) {
     const patchedError = new Error(message);
-    const stackStart = patchedError.stack.match(/at (new )?Error/)?.index;
-    const stackEnd = patchedError.stack.includes('at Script.runInContext')
-      ? patchedError.stack.indexOf('at Script.runInContext')
-      : patchedError.stack.indexOf('at runNextTicks');
-    const stack = patchedError.stack.slice(stackStart, stackEnd).split('\n');
+    const stackStart = patchedError.stack!.match(/at (new )?Error/)?.index;
+    const stackEnd = patchedError.stack!.includes('at Script.runInContext')
+      ? patchedError.stack!.indexOf('at Script.runInContext')
+      : patchedError.stack!.indexOf('at runNextTicks');
+    const stack = patchedError.stack!.slice(stackStart, stackEnd).split('\n');
     stack.shift();
     stack.pop();
     for (let [i, line] of stack.entries()) {
@@ -812,7 +812,7 @@ function prepareBrowserContext(
       );
     }
     patchedError.stack =
-      patchedError.stack.slice(0, stackStart).replace(/ +$/, '') +
+      patchedError.stack!.slice(0, stackStart).replace(/ +$/, '') +
       stack.join('\n');
 
     return patchedError;
@@ -825,6 +825,7 @@ function prepareBrowserContext(
   });
   PatchedError.prototype.constructor = PatchedError;
 
+  // eslint-disable-next-line no-var
   var ctx = Object.assign(
     {
       Error: PatchedError,
@@ -879,6 +880,7 @@ function prepareBrowserContext(
     globals,
   );
 
+  // @ts-expect-error invalid type
   ctx.window = ctx.self = ctx;
   return {ctx, promises};
 }
@@ -894,7 +896,7 @@ function createWorkerClass(filePath: FilePath) {
       let u = new URL(url);
       let filename = path.join(path.dirname(filePath), u.pathname);
       let {ctx, promises} = prepareWorkerContext(filename, {
-        postMessage: (msg) => {
+        postMessage: (msg: any) => {
           this.emit('message', msg);
         },
       });
@@ -930,6 +932,7 @@ function prepareWorkerContext(
   let promises: Array<Promise<unknown>> = [];
 
   let exports: Record<string, any> = {};
+  // eslint-disable-next-line no-var
   var ctx = Object.assign(
     {
       exports,
@@ -939,15 +942,15 @@ function prepareWorkerContext(
       TextEncoder,
       TextDecoder,
       location: {hostname: 'localhost', origin: 'http://localhost'},
-      importScripts(...urls) {
+      importScripts(...urls: any[]) {
         for (let u of urls) {
           new vm.Script(
             overlayFS.readFileSync(
-              path.join(path.dirname(filePath), url.parse(u).pathname),
+              path.join(path.dirname(filePath), url.parse(u).pathname!),
               'utf8',
             ),
             {
-              filename: path.basename(url.parse(u).pathname),
+              filename: path.basename(url.parse(u).pathname!),
             },
           ).runInContext(ctx);
         }
@@ -983,6 +986,7 @@ function prepareWorkerContext(
     globals,
   );
 
+  // @ts-expect-error invalid type
   ctx.window = ctx.self = ctx;
   return {ctx, promises};
 }
@@ -991,8 +995,8 @@ const nodeCache = new Map();
 
 // no filepath = ESM
 function prepareNodeContext(
-  filePath,
-  globals: unknown,
+  filePath: any,
+  globals: any,
   ctx: any = {},
   externalModules?: ExternalModules,
 ) {
@@ -1013,16 +1017,18 @@ function prepareNodeContext(
         },
         isFile: (file) => {
           try {
+            // eslint-disable-next-line no-var
             var stat = overlayFS.statSync(file);
-          } catch (err: any) {
+          } catch {
             return false;
           }
           return stat.isFile();
         },
         isDirectory: (file) => {
           try {
+            // eslint-disable-next-line no-var
             var stat = overlayFS.statSync(file);
-          } catch (err: any) {
+          } catch {
             return false;
           }
           return stat.isDirectory();
@@ -1032,17 +1038,22 @@ function prepareNodeContext(
       // Shim FS module using overlayFS
       if (res === 'fs') {
         return {
-          readFile: async (file, encoding, cb) => {
+          readFile: async (
+            file: string,
+            encoding: Encoding,
+            cb: (err: any, value: any) => any,
+          ) => {
             let res = await overlayFS.readFile(file, encoding);
             cb(null, res);
           },
-          readFileSync: (file, encoding) => {
+          readFileSync: (file: string, encoding: Encoding) => {
             return overlayFS.readFileSync(file, encoding);
           },
         };
       }
 
       if (res === specifier) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         return require(specifier);
       }
 
@@ -1116,13 +1127,17 @@ export async function runESM(
   requireExtensions: boolean = false,
 ): Promise<
   Array<{
-    [key: string]: unknown;
+    [key: string]: any;
   }>
 > {
   let id = instanceId++;
   let cache = new Map();
 
-  function load(inputSpecifier, referrer, code = null) {
+  function load(
+    inputSpecifier: string,
+    referrer: {identifier: string},
+    code: string | null = null,
+  ) {
     // ESM can request bundles with an absolute URL. Normalize this to the baseDir.
     // Any digits after the - can be ignored, for domain sharding tests
     let specifier = inputSpecifier.replace(
@@ -1203,7 +1218,9 @@ export async function runESM(
 
   async function _entry(m: any) {
     if (m.status === 'unlinked') {
-      await m.link((specifier, referrer) => load(specifier, referrer));
+      await m.link((specifier: string, referrer: {identifier: string}) =>
+        load(specifier, referrer),
+      );
     }
     if (m.status === 'linked') {
       await m.evaluate();
@@ -1218,7 +1235,7 @@ export async function runESM(
     referrer: {
       identifier: string;
     },
-    code: undefined | string,
+    code?: undefined | string,
   ) {
     let m = load(specifier, referrer, code);
     let promise = entryPromises.get(m);
@@ -1229,7 +1246,7 @@ export async function runESM(
     return promise;
   }
 
-  let modules: Array<never> = [];
+  let modules: Array<any> = [];
   for (let [code, f] of entries) {
     modules.push(await entry(f, {identifier: ''}, code));
   }
@@ -1247,7 +1264,7 @@ export async function assertESMExports(
   b: BundleGraph<PackagedBundle>,
   expected: unknown,
   externalModules?: ExternalModules,
-  evaluate?: ((arg1: {[key: string]: any}) => unknown) | null,
+  evaluate?: ((arg1: {[key: string]: any}) => any) | null,
 ) {
   let parcelResult = await run(b, undefined, undefined, externalModules);
 
@@ -1308,7 +1325,7 @@ export async function assertNoFilePathInCache(
           let deserialized;
           try {
             deserialized = v8.deserialize(contents);
-          } catch (err: any) {
+          } catch {
             // rudimentary detection of binary files
             if (!contents.includes(0)) {
               deserialized = contents.toString();
@@ -1324,6 +1341,7 @@ export async function assertNoFilePathInCache(
             );
             // eslint-disable-next-line no-console
             console.log(
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
               require('util').inspect(deserialized, {depth: 50, colors: true}),
             );
           }
@@ -1341,7 +1359,7 @@ export async function assertNoFilePathInCache(
 export function requestRaw(
   file: string,
   port: number,
-  options?: requestOptions | null,
+  options?: http.RequestOptions | null,
   client: typeof http | typeof https = http,
 ): Promise<{
   res: IncomingMessage;
@@ -1419,28 +1437,34 @@ function applyVersion(version: string | undefined, fn: () => void) {
 }
 
 export function describe(...args: unknown[]) {
+  // @ts-expect-error patch
   applyVersion(undefined, origDescribe.bind(this, ...args));
 }
 
 describe.only = function (...args: unknown[]) {
+  // @ts-expect-error patch
   applyVersion(undefined, origDescribe.only.bind(this, ...args));
 };
 
 describe.skip = function (...args: unknown[]) {
+  // @ts-expect-error patch
   applyVersion(undefined, origDescribe.skip.bind(this, ...args));
 };
 
 describe.v2 = function (...args: unknown[]) {
   applyVersion('v2', () => {
     if (!isAtlaspackV3) {
+      // @ts-expect-error patch
       origDescribe.apply(this, args);
     }
   });
 };
 
+// @ts-expect-error patch
 describe.v2.only = function (...args: unknown[]) {
   applyVersion('v2', () => {
     if (!isAtlaspackV3) {
+      // @ts-expect-error patch
       origDescribe.only.apply(this, args);
     }
   });
@@ -1449,14 +1473,17 @@ describe.v2.only = function (...args: unknown[]) {
 describe.v3 = function (...args: unknown[]) {
   applyVersion('v3', () => {
     if (isAtlaspackV3) {
+      // @ts-expect-error patch
       origDescribe.apply(this, args);
     }
   });
 };
 
+// @ts-expect-error patch
 describe.v3.only = function (...args: unknown[]) {
   applyVersion('v3', () => {
     if (isAtlaspackV3) {
+      // @ts-expect-error patch
       origDescribe.only.apply(this, args);
     }
   });
@@ -1470,38 +1497,47 @@ export function it(...args: unknown[]) {
     (atlaspackVersion == 'v2' && !isAtlaspackV3) ||
     (atlaspackVersion == 'v3' && isAtlaspackV3)
   ) {
+    // @ts-expect-error patch
     origIt.apply(this, args);
   }
 }
 
 it.only = function (...args: unknown[]) {
+  // @ts-expect-error patch
   origIt.only.apply(this, args);
 };
 
 it.skip = function (...args: unknown[]) {
+  // @ts-expect-error patch
   origIt.skip.apply(this, args);
 };
 
 it.v2 = function (...args: unknown[]) {
   if (!isAtlaspackV3) {
+    // @ts-expect-error patch
     origIt.apply(this, args);
   }
 };
 
+// @ts-expect-error patch
 it.v2.only = function (...args: unknown[]) {
   if (!isAtlaspackV3) {
+    // @ts-expect-error patch
     origIt.only.apply(this, args);
   }
 };
 
 it.v3 = function (...args: unknown[]) {
   if (isAtlaspackV3) {
+    // @ts-expect-error patch
     origIt.apply(this, args);
   }
 };
 
+// @ts-expect-error patch
 it.v3.only = function (...args: unknown[]) {
   if (isAtlaspackV3) {
+    // @ts-expect-error patch
     origIt.only.apply(this, args);
   }
 };

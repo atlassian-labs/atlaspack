@@ -19,12 +19,11 @@
     "@swc/core": "1.11.18"
   },
   "scripts": {
-    "build": "yarn build:clean && yarn build:prepare && yarn build:tsc && yarn build:gulp && yarn build-ts",
+    "build": "yarn build:clean && yarn build:prepare && yarn build:tsc && yarn build:gulp",
     "build:clean": "node ./scripts/clean.mjs",
     "build:prepare": "lerna run dev:prepare",
     "build:tsc": "lerna run --parallel build-tsc",
     "build:gulp": "cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_REGISTER_USE_SRC=true gulp",
-    "build-ts": "lerna run build-ts",
     "build-native": "node scripts/build-native.js",
     "build-native-release": "cross-env CARGO_PROFILE=release node scripts/build-native.js",
     "build-native-wasm": "cross-env CARGO_PROFILE=release RUSTUP_TARGET=wasm32-unknown-unknown scripts/build-native.js",
