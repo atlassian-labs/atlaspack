@@ -19,7 +19,11 @@ require('@babel/register')({
   ],
   only: [path.join(__dirname, '../../..')],
   presets: [parcelBabelPreset],
-  plugins: [require('./babel-plugin-module-translate')],
+  plugins: [
+    ...(process.env.ATLASPACK_REGISTER_USE_SRC === 'true'
+      ? [require('./babel-plugin-module-translate')]
+      : []),
+  ],
   extensions: ['.js', '.jsx'],
 });
 

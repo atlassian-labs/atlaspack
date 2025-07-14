@@ -8,9 +8,15 @@ function isFileArg(file) {
   );
 }
 
+const TEST_FILE_PATTERN =
+  '{*.{js,ts,cts,mts,cjs,mjs},**/*.{test,spec}.{js,ts,mts,cts,cjs,mjs}}';
+
 const spec = args.some(isFileArg)
   ? args.filter(isFileArg)
-  : 'packages/*/!(integration-tests|e2e-tests)/test/{*.{js,ts,cts,mts,cjs,mjs},**/*.{test,spec}.{js,ts,mts,cts,cjs,mjs}}';
+  : [
+      `packages/*/!(integration-tests|e2e-tests)/test/${TEST_FILE_PATTERN}`,
+      `scripts/test/${TEST_FILE_PATTERN}`,
+    ];
 
 module.exports = {
   spec,
@@ -18,6 +24,4 @@ module.exports = {
     '@atlaspack/babel-register',
     '@atlaspack/test-utils/src/mochaSetup.js',
   ],
-  // TODO: Remove this when https://github.com/nodejs/node/pull/28788 is resolved
-  exit: true,
 };

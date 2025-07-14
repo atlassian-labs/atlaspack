@@ -1,7 +1,8 @@
 /**
  * @file Automatically adds type annotations for conditional import (importCond) usages
  */
-import type {TSESTree} from '@typescript-eslint/utils';
+
+import type {TSESTree} from '@typescript-eslint/types';
 import {createRule} from '../../utils/index';
 
 export const RULE_NAME = 'importcond-type-annotations';
@@ -70,6 +71,7 @@ const rule = createRule<Options, keyof typeof messages>({
           // Whether it's called typeArguments or typeParameters depends on the version of typescript-eslint
           const typeArguments:
             | TSESTree.TSTypeParameterInstantiation
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             | undefined = node.typeArguments ?? (node as any).typeParameters;
           if (!typeArguments) {
             // No type annotation exists at all

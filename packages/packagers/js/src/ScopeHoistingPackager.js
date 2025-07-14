@@ -15,6 +15,7 @@ import {
   relativeBundlePath,
   countLines,
   normalizeSeparators,
+  debugTools,
 } from '@atlaspack/utils';
 import SourceMap from '@parcel/source-map';
 import nullthrows from 'nullthrows';
@@ -25,6 +26,7 @@ import ThrowableDiagnostic, {
 import globals from 'globals';
 import path from 'path';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {outdent} from 'outdent';
 
 import {ESMOutputFormat} from './ESMOutputFormat';
 import {CJSOutputFormat} from './CJSOutputFormat';
@@ -291,10 +293,7 @@ export class ScopeHoistingPackager {
 
     let hasConditionalReference = false;
     let isConditionalBundle = false;
-    if (
-      getFeatureFlag('conditionalBundlingApi') &&
-      getFeatureFlag('conditionalBundlingAsyncRuntime')
-    ) {
+    if (getFeatureFlag('conditionalBundlingApi')) {
       // If the bundle has a conditional bundle reference (has an importCond)
       hasConditionalReference =
         this.bundleGraph.getReferencedConditionalBundles(bundle).length > 0;
@@ -320,10 +319,7 @@ export class ScopeHoistingPackager {
       .map((b) => b.publicId);
 
     const conditions = [];
-    if (
-      getFeatureFlag('conditionalBundlingApi') &&
-      getFeatureFlag('conditionalBundlingAsyncRuntime')
-    ) {
+    if (getFeatureFlag('conditionalBundlingApi')) {
       const conditionSet = this.bundleGraph
         .getConditionalBundleMapping()
         .get(bundle.id);
@@ -579,6 +575,10 @@ export class ScopeHoistingPackager {
     return this.buildAsset(asset, code, map);
   }
 
+  getAssetFilePath(asset: Asset): string {
+    return path.relative(this.options.projectRoot, asset.filePath);
+  }
+
   buildAsset(
     asset: Asset,
     code: string,
@@ -720,8 +720,19 @@ export class ScopeHoistingPackager {
                     ) {
                       let [depCode, depMap, depLines] =
                         this.visitAsset(resolved);
-                      res = depCode + '\n' + res;
-                      lines += 1 + depLines;
+                      if (debugTools['asset-file-names-in-output']) {
+                        let resolvedPath = this.getAssetFilePath(resolved);
+                        res = outdent`
+                          /* Scope hoisted asset: ${resolvedPath} */
+                          ${depCode}
+                          /* End: ${resolvedPath} */
+                          ${res}
+                        `;
+                        lines += 3 + depLines;
+                      } else {
+                        res = depCode + '\n' + res;
+                        lines += 1 + depLines;
+                      }
                       map = depMap;
                     }
                   } else {
@@ -791,6 +802,11 @@ ${code}
 `;
 
       lineCount += 2;
+
+      if (debugTools['asset-file-names-in-output']) {
+        code = `/* ${this.getAssetFilePath(asset)} */\n` + code;
+        lineCount += 1;
+      }
 
       for (let [depCode, map, lines] of depContent) {
         if (!depCode) continue;

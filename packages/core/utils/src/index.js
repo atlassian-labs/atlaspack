@@ -48,9 +48,13 @@ export {
   loadConfig,
   readConfig,
 } from './config';
+export {debugTools} from './debug-tools';
 export {DefaultMap, DefaultWeakMap} from './DefaultMap';
 export {makeDeferredWithPromise} from './Deferred';
-export {getProgressMessage} from './progress-message';
+export {
+  getProgressMessage,
+  getPackageProgressMessage,
+} from './progress-message';
 export {
   isGlob,
   isGlobMatch,

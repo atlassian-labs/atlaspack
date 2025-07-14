@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/graph",
-  "version": "3.5.5",
+  "version": "3.5.6",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -19,7 +19,7 @@
     "benchmark": "node ./benchmark/BitSet.js"
   },
   "dependencies": {
-    "@atlaspack/feature-flags": "2.18.3",
+    "@atlaspack/feature-flags": "2.18.4",
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {

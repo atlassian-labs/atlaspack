@@ -203,6 +203,11 @@ pub(crate) fn convert_result(
       || hoist_result.should_wrap)
       && !asset_symbols.as_slice().iter().any(|s| s.exported == "*")
     {
+      if result.is_empty_or_empty_export {
+        asset
+          .meta
+          .insert("emptyFileStarReexport".to_string(), true.into());
+      }
       asset_symbols.push(make_export_star_symbol(&asset.id));
     }
 

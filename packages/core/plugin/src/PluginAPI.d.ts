@@ -31,7 +31,7 @@ export declare class Runtime<T> {
   constructor(opts: RuntimeOpts<T>);
 }
 
-export declare class Validator<T> {
+export declare class Validator {
   constructor(opts: ValidatorOpts);
 }
 

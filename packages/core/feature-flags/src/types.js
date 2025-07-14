@@ -31,10 +31,6 @@ export type FeatureFlags = {|
    */
   inlineRequiresMultiThreading: boolean,
   /**
-   * Disables aborting of builds and fixes bugs related to state corruption on abort.
-   */
-  fixBuildAbortCorruption: boolean,
-  /**
    * Enable VCS mode. Expected values are:
    * - OLD - default value, return watchman result
    * - NEW_AND_CHECK - Return VCS result but still call watchman
@@ -69,10 +65,6 @@ export type FeatureFlags = {|
    * Fixes source maps for inline bundles
    */
   inlineBundlesSourceMapFixes: boolean,
-  /**
-   * Enable nested loading of bundles in the runtime with conditional bundling
-   */
-  conditionalBundlingNestedRuntime: boolean,
   /** Enable patch project paths. This will patch the project paths to be relative to the project root.
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    */
@@ -83,37 +75,9 @@ export type FeatureFlags = {|
    */
   inlineStringReplacementPerf: boolean,
   /**
-   * Enable support for the async bundle runtime (unstable_asyncBundleRuntime) in conditional bundling
-   */
-  conditionalBundlingAsyncRuntime: boolean,
-  /**
-   * Fix a bug where the conditional manifest reporter would report and write the same manifest multiple times
-   */
-  conditionalBundlingReporterDuplicateFix: boolean,
-  /**
    * Enable resolution of bundler config starting from the CWD
    */
   resolveBundlerConfigFromCwd: boolean,
-  /**
-   * Fix a bug where the conditional manifest reporter would drop bundles that have the same condition
-   */
-  conditionalBundlingReporterSameConditionFix: boolean,
-  /**
-   * Enable a change to the html packager to load more bundles when conditional bundling fallback mode is enabled
-   */
-  condbHtmlPackagerChange: boolean,
-
-  /**
-   * Enable path-based granular invalidation of options.
-   * This provides more detailed tracking of which specific option properties
-   * are being accessed, which can reduce unnecessary cache invalidations.
-   *
-   * When enabled, this flag:
-   * - Tracks nested object paths granularly for more precise invalidations
-   * - Skips tracking of Object.keys() and similar operations on config/options objects
-   * - Enables option invalidation blocklist to reduce unnecessary cache invalidations
-   */
-  granularOptionInvalidation: boolean,
   /**
    * Enable a setting that allows for more assets to be scope hoisted, if
    * they're safe to do so.
@@ -129,6 +93,38 @@ export type FeatureFlags = {|
    * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer
    */
   hmrImprovements: boolean,
+  /**
+   * Adds an end() method to AtlaspckV3 to cleanly shutdown the NAPI worker pool
+   */
+  atlaspackV3CleanShutdown: boolean,
+  /**
+   * Fixes a bug where imported objects that are accessed with non-static
+   * properties (e.g. `CONSTANTS['api_' + endpoint`]) would not be recognised as
+   * being used, and thus not included in the bundle.
+   */
+  unusedComputedPropertyFix: boolean,
+
+  /**
+   * Fixes an issue where star re-exports of empty files (usually occuring in compiled typescript libraries)
+   * could cause exports to undefined at runtime.
+   */
+  emptyFileStarRexportFix: boolean,
+
+  /**
+   * Enables the new packaging progress CLI experience
+   */
+  cliProgressReportingImprovements: boolean,
+  /**
+   * Enable path-based granular invalidation of options.
+   * This provides more detailed tracking of which specific option properties
+   * are being accessed, which can reduce unnecessary cache invalidations.
+   *
+   * When enabled, this flag:
+   * - Tracks nested object paths granularly for more precise invalidations
+   * - Skips tracking of Object.keys() and similar operations on config/options objects
+   * - Enables option invalidation blocklist to reduce unnecessary cache invalidations
+   */
+  granularOptionInvalidation: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;

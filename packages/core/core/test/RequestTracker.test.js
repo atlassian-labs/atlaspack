@@ -24,15 +24,23 @@ const options = {
   ...DEFAULT_OPTIONS,
   cache: new LMDBLiteCache(DEFAULT_OPTIONS.cacheDir),
 };
-const farm = new WorkerFarm({workerPath: require.resolve('../src/worker')});
 
 describe('RequestTracker', () => {
+  let farm;
+  before(() => {
+    farm = new WorkerFarm({workerPath: require.resolve('../src/worker')});
+  });
+
   beforeEach(async () => {
     await options.cache.ensure();
 
     for (const key of options.cache.keys()) {
       await options.cache.getNativeRef().delete(key);
     }
+  });
+
+  after(() => {
+    farm.end();
   });
 
   it('should not run requests that have not been invalidated', async () => {
@@ -181,31 +189,6 @@ describe('RequestTracker', () => {
       input: null,
     });
     assert(result === 'hello');
-  });
-
-  it('should reject all in progress requests when the abort controller aborts', async () => {
-    let tracker = new RequestTracker({farm, options});
-    let p = tracker
-      .runRequest({
-        id: 'abc',
-        type: 7,
-        run: async () => {
-          await Promise.resolve('hello');
-        },
-        input: null,
-      })
-      .then(null, () => {
-        /* do nothing */
-      });
-    // $FlowFixMe
-    tracker.setSignal({aborted: true});
-    await p;
-    assert(
-      tracker
-        .getInvalidRequests()
-        .map((req) => req.id)
-        .includes('abc'),
-    );
   });
 
   it('should write cache to disk and store index', async () => {

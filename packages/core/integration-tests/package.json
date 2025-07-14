@@ -8,11 +8,12 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "scripts": {
-    "test": "cross-env NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha --conditions=\"@atlaspack::sources\" --experimental-vm-modules",
-    "test-ci": "ATLASPACK_INTEGRATION_TESTS_CI=true yarn test"
+    "test": "cross-env NODE_ENV=test ATLASPACK_REGISTER_USE_SRC=true ATLASPACK_BUILD_ENV=test mocha --conditions=atlaspack::sources --experimental-vm-modules",
+    "test-ci": "ATLASPACK_INTEGRATION_TESTS_CI=true NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha --experimental-vm-modules",
+    "check-ts": "tsc --noEmit --project ."
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.13.19",
+    "@atlaspack/cli": "2.13.21",
     "@atlaspack/mocha-profiler": "*",
     "@babel/core": "^7.22.11",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
@@ -49,6 +50,7 @@
     "preact": "^10.5.9",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "rimraf": "^5.0.5",
     "source-map": "^0.5.1",
     "tailwindcss": "^3.0.2",
     "tempy": "^0.3.0",
