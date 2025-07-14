@@ -42,19 +42,26 @@ describe('plugin', function () {
     assert.deepEqual(fs.readdirSync(distDir), ['index.test']);
   });
 
-  it('should allow resolver plugins to disable deferring', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/resolver-canDefer/index.js'),
-      {mode: 'production'},
-    );
+  /*
+    TypeError [ERR_UNKNOWN_FILE_EXTENSION]: Unknown file extension ".ts" for
+    ~/atlaspack/packages/core/integration-tests/test/integration/resolver-canDefer/node_modules/atlaspack-resolver-no-defer/index.ts
+  */
+  it.v2(
+    'should allow resolver plugins to disable deferring',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/resolver-canDefer/index.js'),
+        {mode: 'production'},
+      );
 
-    assertBundles(b, [
-      {
-        type: 'js',
-        assets: ['index.js', 'index.js', 'a.js', 'b.js'],
-      },
-    ]);
-  });
+      assertBundles(b, [
+        {
+          type: 'js',
+          assets: ['index.js', 'index.js', 'a.js', 'b.js'],
+        },
+      ]);
+    },
+  );
 
   it.v2(
     'should allow resolvers to return changes for dependency.meta',

@@ -34,7 +34,7 @@
     "format": "prettier --write \"./packages/*/*/{src,bin,test}/**/*.{js,json,md}\" && cargo +nightly fmt --all",
     "link-all": "node scripts/link-all.js packages",
     "unlink-all": "node scripts/unlink-all.js packages",
-    "check-ts": "lerna run check-ts",
+    "check-ts": "yarn tsc --noEmit ./packages/*/*/src/**/*.ts",
     "lint": "node ./scripts/lint-all.mjs",
     "prepublishOnly": "yarn pre-publish",
     "pre-publish": "yarn build && yarn build-ts",
