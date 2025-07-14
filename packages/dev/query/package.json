@@ -5,10 +5,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "scripts": {
-    "prepack": "./ensure-no-dev-lib.sh",
-    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
@@ -16,7 +12,8 @@
   "bin": {
     "atlaspack-query": "bin/atlaspack-query.js"
   },
-  "main": "src/index.js",
+  "main": "lib/index.js",
+  "source": "src/index.ts",
   "dependencies": {
     "@atlaspack/cache": "3.2.12",
     "@atlaspack/core": "2.18.8",
