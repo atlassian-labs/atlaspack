@@ -126,7 +126,6 @@ jobs:
       - run: npx prettier --list-different .
       - run: npx lerna run --parallel build-tsc
       - run: npx lerna run build-ts
-      - run: npx lerna run check-ts
 
   lint_rust:
     name: 🦀 Lint Rust

@@ -14,7 +14,6 @@
   },
   "types": "src/index.ts",
   "scripts": {
-    "check-ts": "tsc --noEmit index.d.ts",
     "test": "mocha",
     "test-ci": "mocha"
   },

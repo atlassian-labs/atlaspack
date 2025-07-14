@@ -130,7 +130,8 @@ function createAtlaspack(opts?: InitialAtlaspackOptions) {
     entries: [path.join(__dirname, 'fixtures/atlaspack/index.js')],
     logLevel: 'info',
     defaultConfig: path.join(
-      path.dirname(require.resolve('@atlaspack/test-utils')),
+      path.dirname(path.dirname(require.resolve('@atlaspack/test-utils'))),
+      'configs',
       '.parcelrc-no-reporters',
     ),
     shouldDisableCache: true,

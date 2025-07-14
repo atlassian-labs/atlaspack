@@ -10,9 +10,6 @@
   "main": "lib/PluginAPI.js",
   "source": "src/PluginAPI.ts",
   "types": "src/PluginAPI.ts",
-  "scripts": {
-    "check-ts": "tsc --noEmit src/PluginAPI.d.ts"
-  },
   "dependencies": {
     "@atlaspack/types": "2.15.7"
   },
