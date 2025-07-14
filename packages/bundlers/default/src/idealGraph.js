@@ -149,6 +149,10 @@ export function createIdealGraph(
   let assets = [];
   let assetToIndex = new Map<Asset, number>();
 
+  function shortFilePath(filePath) {
+    return require('path').relative(config.projectRoot, filePath);
+  }
+
   function makeManualAssetToConfigLookup() {
     let manualAssetToConfig = new Map();
     let constantModuleToMSB = new DefaultMap(() => []);
@@ -1073,6 +1077,119 @@ export function createIdealGraph(
     }
   }
 
+  let bundleRootParents = new Map();
+  bundleRootGraph.traverse(
+    (nodeId) => {
+      let node = bundleRootGraph.getNode(nodeId);
+      if (node === -1) {
+        return;
+      }
+
+      let nodeAsset = assets[nullthrows(node)];
+
+      if (!nodeAsset) {
+        throw new Error(`Asset not found for node: ${node}`);
+      }
+
+      let parents = bundleRootGraph
+        .getNodeIdsConnectedTo(nodeId, bundleRootEdgeTypes.lazy)
+        .filter((node) => node !== -1)
+        .map(
+          (parentId) => assets[nullthrows(bundleRootGraph.getNode(parentId))],
+        );
+
+      bundleRootParents.set(nodeAsset, parents);
+    },
+    undefined,
+    ALL_EDGE_TYPES,
+  );
+
+  /**
+   * Ideas
+   * - Remove/merge bundle roots that don't save much size
+   * - Merge bundle roots that have very similar bundle groups
+   * - Merge language bundle together
+   */
+
+  let costs = [];
+  for (let [rootAsset, parents] of bundleRootParents.entries()) {
+    if (bundleRoots.has(rootAsset) === false) {
+      throw new Error(`Bundle root not found for asset: ${rootAsset.filePath}`);
+    }
+    let bundleGraphNodeId = nullthrows(bundleRoots.get(rootAsset))[0];
+    // let rootBundle = getBundleFromBundleRoot(rootAsset);
+    let bundleIdsInGroup = getBundlesForBundleGroup(bundleGraphNodeId);
+
+    let bundleGroupCost = bundleIdsInGroup.reduce((cost, bundleId) => {
+      if (bundleId === bundleGraphRootNodeId) {
+        return cost;
+      }
+      let bundle = nullthrows(bundleGraph.getNode(bundleId));
+      invariant(bundle !== 'root');
+      return cost + bundle.size;
+    }, 0);
+
+    // calculate cost of the bundle group without the root bundle
+    let rootNodeCost = nullthrows(bundleGraph.getNode(bundleGraphNodeId)).size;
+    let bundle = nullthrows(bundleGraph.getNode(bundleGraphNodeId));
+
+    if (
+      rootNodeCost < 3000 &&
+      bundleIdsInGroup.length === 1 &&
+      bundle.sourceBundles.size === 0 &&
+      rootAsset.filePath.includes('i18n') === false
+    ) {
+      costs.push({
+        asset: shortFilePath(rootAsset.filePath),
+        cost: rootNodeCost,
+        parents: parents.length,
+      });
+    }
+  }
+
+  costs.sort((a, b) => a.cost - b.cost);
+
+  // console.table(costs);
+
+  let chartPie = nullthrows(
+    bundleGraph.traverse((node, _, actions) => {
+      let bundle = bundleGraph.getNode(node);
+      if (bundle === 'root' || bundle == null) {
+        return;
+      }
+
+      if (
+        bundle.mainEntryAsset?.filePath.includes(
+          'platform/packages/design-system/icon/core/chart-pie.js',
+        )
+      ) {
+        actions.stop();
+        return node;
+      }
+    }),
+  );
+  let minimize = nullthrows(
+    bundleGraph.traverse((node, _, actions) => {
+      let bundle = bundleGraph.getNode(node);
+      if (bundle === 'root' || bundle == null) {
+        return;
+      }
+
+      if (
+        bundle.mainEntryAsset?.filePath.includes(
+          'platform/packages/design-system/icon/core/minimize.js',
+        )
+      ) {
+        actions.stop();
+        return node;
+      }
+    }),
+  );
+
+  console.log('Merge chart-pie and minimize');
+  mergeBundles(bundleGraph, chartPie, minimize, assetReference);
+  console.log('End merge chart-pie and minimize');
+
   let manualSharedBundleIds = new Set([...manualSharedMap.values()]);
   // Step split manual shared bundles for those that have the "split" property set
   let remainderMap = new DefaultMap(() => []);
@@ -1296,11 +1413,11 @@ export function createIdealGraph(
     }
 
     // Merge any internalized assets
-    invariant(
-      bundleToKeep.internalizedAssets && bundleToRemove.internalizedAssets,
-      'All shared bundles should have internalized assets',
-    );
-    bundleToKeep.internalizedAssets.union(bundleToRemove.internalizedAssets);
+    if (bundleToKeep.internalizedAssets == null) {
+      bundleToKeep.internalizedAssets = bundleToRemove.internalizedAssets;
+    } else if (bundleToRemove.internalizedAssets != null) {
+      bundleToKeep.internalizedAssets.union(bundleToRemove.internalizedAssets);
+    }
 
     for (let sourceBundleId of bundleToRemove.sourceBundles) {
       if (bundleToKeep.sourceBundles.has(sourceBundleId)) {
@@ -1309,6 +1426,49 @@ export function createIdealGraph(
 
       bundleToKeep.sourceBundles.add(sourceBundleId);
       bundleGraph.addEdge(sourceBundleId, bundleToKeepId);
+    }
+
+    if (bundleToRemove.mainEntryAsset != null) {
+      invariant(bundleToKeep.mainEntryAsset != null);
+
+      // Merge the bundles in bundle group
+      let bundlesInRemoveBundleGroup =
+        getBundlesForBundleGroup(bundleToRemoveId);
+
+      for (let bundleIdInGroup of bundlesInRemoveBundleGroup) {
+        if (bundleIdInGroup === bundleToRemoveId) {
+          continue;
+        }
+        bundleGraph.addEdge(bundleToKeepId, bundleIdInGroup);
+      }
+
+      // Clean up bundle roots
+      bundleRoots.set(nullthrows(bundleToRemove.mainEntryAsset), [
+        bundleToKeepId,
+        bundleToKeepId,
+      ]);
+
+      // Merge dependency bundle graph
+      for (let dependencyNodeId of dependencyBundleGraph.getNodeIdsConnectedTo(
+        dependencyBundleGraph.getNodeIdByContentKey(String(bundleToRemoveId)),
+      )) {
+        let dependencyNode = nullthrows(
+          dependencyBundleGraph.getNode(dependencyNodeId),
+        );
+        invariant(dependencyNode.type === 'dependency');
+
+        // Add dependency to the bundle to keep
+        dependencyBundleGraph.addEdge(
+          dependencyNodeId,
+          dependencyBundleGraph.getNodeIdByContentKey(String(bundleToKeepId)),
+          dependencyPriorityEdges[dependencyNode.value.priority],
+        );
+        // Remove dependency from the bundle to remove
+        dependencyBundleGraph.removeEdge(
+          dependencyNodeId,
+          dependencyBundleGraph.getNodeIdByContentKey(String(bundleToRemoveId)),
+        );
+      }
     }
 
     bundleGraph.removeNode(bundleToRemoveId);
@@ -1360,13 +1520,18 @@ export function createIdealGraph(
       })),
     );
 
+    let mergedBundles = new Set();
+
     for (let cluster of clusters) {
       let [mergeTarget, ...rest] = cluster;
 
       for (let bundleIdToMerge of rest) {
         mergeBundles(bundleGraph, mergeTarget, bundleIdToMerge, assetReference);
       }
+
+      mergedBundles.add(mergeTarget);
     }
+    return mergedBundles;
   }
 
   function getBigIntFromContentKey(contentKey) {
