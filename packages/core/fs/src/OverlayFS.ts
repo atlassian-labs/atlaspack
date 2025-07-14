@@ -339,7 +339,7 @@ export class OverlayFS implements FileSystem {
     let entries = new Map();
 
     try {
-      for (let entry: any of this.writable.readdirSync(dir, opts)) {
+      for (let entry of this.writable.readdirSync(dir, opts)) {
         let filePath = path.join(dir, entry.name ?? entry);
         if (this.deleted.has(filePath)) continue;
         entries.set(filePath, entry);
@@ -349,7 +349,7 @@ export class OverlayFS implements FileSystem {
     }
 
     try {
-      for (let entry: any of this.readable.readdirSync(dir, opts)) {
+      for (let entry of this.readable.readdirSync(dir, opts)) {
         let filePath = path.join(dir, entry.name ?? entry);
         if (this.deleted.has(filePath)) continue;
         if (entries.has(filePath)) continue;

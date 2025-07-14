@@ -48,6 +48,7 @@ describe('ValueEmitter', () => {
     assert.deepEqual(values, [27]);
 
     disposable.dispose();
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     innerDisposable && innerDisposable.dispose();
   });
 

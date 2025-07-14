@@ -142,7 +142,7 @@ describe('LMDBLiteCache', () => {
 
     try {
       initializeMonitoring();
-    } catch (error: any) {
+    } catch {
       /* empty */
     }
 

@@ -1,4 +1,4 @@
-import commander, {commander$Command, commander$Option} from 'commander';
+import commander from 'commander';
 
 export interface OptionsDefinition {
   [key: string]: string | unknown[] | commander.Option;

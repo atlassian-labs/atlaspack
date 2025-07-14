@@ -33,10 +33,10 @@ import '@atlaspack/package-manager';
 import '@atlaspack/fs';
 
 if (process.env.ATLASPACK_BUILD_REPL && process.browser) {
-  /* eslint-disable import/no-extraneous-dependencies, monorepo/no-internal-import */
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@atlaspack/repl/src/atlaspack/BrowserPackageManager.js');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@atlaspack/repl/src/atlaspack/ExtendedMemoryFS.js');
-  /* eslint-enable import/no-extraneous-dependencies, monorepo/no-internal-import */
 }
 
 registerCoreWithSerializer();

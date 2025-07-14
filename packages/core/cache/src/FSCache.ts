@@ -104,7 +104,7 @@ export class FSCache implements Cache {
     try {
       await this.fs.unlink(this.#getFilePath(key, index));
       await this.#unlinkChunks(key, index + 1);
-    } catch (err: any) {
+    } catch {
       // If there's an error, no more chunks are left to delete
     }
   }

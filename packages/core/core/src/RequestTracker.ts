@@ -1244,8 +1244,8 @@ export default class RequestTracker {
   }
 
   startRequest(request: RequestNode): {
-    requestNodeId: NodeId,
-    deferred: Deferred<boolean>,
+    requestNodeId: NodeId;
+    deferred: Deferred<boolean>;
   } {
     let didPreviouslyExist = this.graph.hasContentKey(request.id);
     let requestNodeId;

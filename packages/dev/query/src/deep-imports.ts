@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable monorepo/no-internal-import */
 import AssetGraph from '@atlaspack/core/src/AssetGraph';
 import BundleGraph, {

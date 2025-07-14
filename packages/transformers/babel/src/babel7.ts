@@ -9,11 +9,14 @@ import * as BabelCore from '@babel/core';
 
 import invariant from 'assert';
 import path from 'path';
+import fs from 'fs';
 import {md} from '@atlaspack/diagnostic';
 import {relativeUrl} from '@atlaspack/utils';
 import {remapAstLocations} from './remapAstLocations';
 
-import packageJson from '../package.json';
+const packageJson: any = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'),
+);
 
 const transformerVersion: unknown = packageJson.version;
 invariant(typeof transformerVersion === 'string');
@@ -90,7 +93,9 @@ export default async function babel7(
           nodeType,
           path.relative(options.projectRoot, asset.filePath),
         );
+        // eslint-disable-next-line prefer-rest-params
         fn.apply(this, arguments);
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         measurement && measurement.end();
       };
     };

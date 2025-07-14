@@ -57,7 +57,16 @@ module.exports = {
         '@atlaspack/internal/no-relative-import': 'error',
         'flowtype/no-types-missing-file-annotation': 'off',
         'prefer-const': 'off',
+        // Temporary
         '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-unused-vars': 'off',
+        '@typescript-eslint/no-require-imports': 'off',
+        '@typescript-eslint/no-misused-new': 'off',
+        '@typescript-eslint/prefer-as-const': 'off',
+        '@typescript-eslint/no-empty-object-type': 'off',
+        '@typescript-eslint/no-unused-expressions': 'off',
+        'no-prototype-builtins': 'off',
+        'prefer-rest-params': 'off',
       },
     },
     {

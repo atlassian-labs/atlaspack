@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable monorepo/no-internal-import */
 import {loadGraphs} from '@atlaspack/query/src/index';
 import {getBundleStats} from '@atlaspack/reporter-bundle-stats/src/BundleStatsReporter';

@@ -998,8 +998,7 @@ export interface Config {
    */
   getConfigFrom/**
    * @deprecated Use `readTracking` instead.
-   */
-  /**
+   */ /**
    * If specified, this function will return a proxy object that will track reads to
    * config fields and only register invalidations for when those keys change.
    */ <T>(

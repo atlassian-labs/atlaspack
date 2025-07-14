@@ -27,6 +27,7 @@ export default class ValueEmitter<TValue> implements IDisposable {
     // slicing out the listener.
     // This prevents anyone holding onto the disposable after disposal from
     // unintentionally retaining a reference to this emitter.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     let emitter = this;
     return {
       dispose() {

@@ -96,7 +96,8 @@ export const createImportDeclaration: (
       modifiers: undefined | Array<Modifier>,
       importClause: undefined | ImportClause,
       moduleSpecifier: Expression,
-      assertClause: AssertClause,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _assertClause: AssertClause,
     ) =>
       factory.createImportDeclaration(
         undefined /* decorators */,
@@ -188,7 +189,8 @@ export const updateExportDeclaration: (
       isTypeOnly: boolean,
       exportClause: undefined | NamedExportBindings,
       moduleSpecifier: undefined | Expression,
-      assertClause: undefined | AssertClause,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _assertClause: undefined | AssertClause,
     ) =>
       factory.updateExportDeclaration(
         node,
@@ -206,7 +208,8 @@ export const updateExportDeclaration: (
       isTypeOnly: boolean,
       exportClause: undefined | NamedExportBindings,
       moduleSpecifier: undefined | Expression,
-      assertClause: undefined | AssertClause,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _assertClause: undefined | AssertClause,
     ) =>
       factory.updateExportDeclaration(
         node,
@@ -224,7 +227,8 @@ export const updateExportDeclaration: (
       isTypeOnly: boolean,
       exportClause: undefined | NamedExportBindings,
       moduleSpecifier: undefined | Expression,
-      assertClause: undefined | AssertClause,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _assertClause: undefined | AssertClause,
     ) =>
       factory.updateExportDeclaration(
         node,

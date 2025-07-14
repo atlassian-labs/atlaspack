@@ -7,6 +7,7 @@ describe('makeConfigProxy', () => {
     const onRead = sinon.spy();
     const target = {a: {b: {c: 'd'}}} as const;
     const config = makeConfigProxy(onRead, target);
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     config.a.b.c;
     assert.ok(onRead.calledWith(['a', 'b', 'c']));
     assert.ok(onRead.calledOnce);

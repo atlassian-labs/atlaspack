@@ -22,13 +22,16 @@ import {registerSerializableClass} from '@atlaspack/build-cache';
 import {hashFile} from '@atlaspack/utils';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import watcher from '@parcel/watcher';
-import packageJSON from '../package.json';
 
 import * as searchNative from '@atlaspack/rust';
 import * as searchJS from './find';
 
 // Most of this can go away once we only support Node 10+, which includes
 // require('fs').promises
+
+const packageJSON: any = JSON.parse(
+  nativeFS.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'),
+);
 
 const realpath = promisify(
   process.platform === 'win32' ? fs.realpath : fs.realpath.native,
@@ -39,6 +42,7 @@ function getWatchmanWatcher(): typeof watcher {
   // This is here to trick atlaspack into ignoring this require...
   const packageName = ['@atlaspack', 'watcher-watchman-js'].join('/');
 
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   return require(packageName);
 }
 
@@ -134,7 +138,7 @@ export class NodeFS implements FileSystem {
       failed = true;
       try {
         fs.unlinkSync(tmpFilePath);
-      } catch (_err: any) {
+      } catch {
         // ignore
       }
     });
@@ -162,7 +166,7 @@ export class NodeFS implements FileSystem {
   async realpath(originalPath: string): Promise<string> {
     try {
       return await realpath(originalPath, 'utf8');
-    } catch (e: any) {
+    } catch {
       // do nothing
     }
 
@@ -222,7 +226,7 @@ export class NodeFS implements FileSystem {
     let stat;
     try {
       stat = await this.stat(filePath);
-    } catch (err: any) {
+    } catch {
       return;
     }
 
@@ -240,6 +244,7 @@ let writeStreamCalls = 0;
 
 let threadId;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   ({threadId} = require('worker_threads'));
 } catch {
   //
@@ -262,7 +267,7 @@ function shouldUseOsTmpDir(filePath: FilePath) {
     // Check the tmpdir is on the same partition as the target directory.
     // This is required to ensure renaming is an atomic operation.
     useOsTmpDir = tmpDirStats.dev === filePathStats.dev;
-  } catch (e: any) {
+  } catch {
     // We don't have read/write access to the OS tmp directory
     useOsTmpDir = false;
   }

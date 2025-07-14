@@ -115,6 +115,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   }
 
   // Web extension context
+  // eslint-disable-next-line no-var
   var extCtx =
     typeof browser === 'undefined'
       ? typeof chrome === 'undefined'
@@ -124,6 +125,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
 
   // Safari doesn't support sourceURL in error stacks.
   // eval may also be disabled via CSP, so do a quick check.
+  // eslint-disable-next-line no-var
   var supportsSourceURL = false;
   try {
     (0, eval)('throw new Error("test"); //# sourceURL=test.js');
@@ -223,7 +225,8 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
         console.error(e.message);
       }
     };
-    ws.onclose = function (e: CloseEvent) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    ws.onclose = function (_e: CloseEvent) {
       if (process.env.ATLASPACK_BUILD_ENV !== 'test') {
         console.warn('[parcel] 🚨 Connection to the HMR server was lost');
       }

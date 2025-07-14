@@ -12,6 +12,8 @@ import SourceMap from '@parcel/source-map';
 import {Transformer} from '@atlaspack/plugin';
 import {transform, transformAsync} from '@atlaspack/rust';
 import invariant from 'assert';
+import path from 'path';
+import fs from 'fs';
 import browserslist from 'browserslist';
 import semver from 'semver';
 import nullthrows from 'nullthrows';
@@ -20,8 +22,11 @@ import ThrowableDiagnostic, {
   convertSourceLocationToHighlight,
 } from '@atlaspack/diagnostic';
 import {validateSchema, remapSourceLocation, globMatch} from '@atlaspack/utils';
-import pkg from '../package.json';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+
+const pkg: any = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'),
+);
 
 const JSX_EXTENSIONS = {
   jsx: true,
@@ -358,6 +363,7 @@ export default new Transformer({
       browsers = browserslist(browsers);
       for (let browser of browsers) {
         let [name, version] = browser.split(' ');
+        // eslint-disable-next-line no-prototype-builtins
         if (BROWSER_MAPPING.hasOwnProperty(name)) {
           name = BROWSER_MAPPING[name];
           if (!name) {

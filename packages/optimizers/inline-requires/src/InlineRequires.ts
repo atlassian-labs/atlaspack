@@ -35,6 +35,7 @@ module.exports = new Optimizer<never, BundleConfig>({
       }
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     measurement && measurement.end();
 
     return {assetPublicIdsWithSideEffects};

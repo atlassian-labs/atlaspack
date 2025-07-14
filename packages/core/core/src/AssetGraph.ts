@@ -199,6 +199,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
 
   removeNode(nodeId: NodeId): void {
     this.hash = null;
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     this.onNodeRemoved && this.onNodeRemoved(nodeId);
     return super.removeNode(nodeId);
   }

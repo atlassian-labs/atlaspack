@@ -94,7 +94,7 @@ async function assertFile(
   let stat;
   try {
     stat = await fs.stat(source);
-  } catch (err: any) {
+  } catch {
     let contents = await fs.readFile(pkgFilePath, 'utf8');
     let alternatives = await findAlternativeFiles(
       fs,
@@ -158,7 +158,7 @@ export class EntryResolver {
     let stat;
     try {
       stat = await this.options.inputFS.stat(entry);
-    } catch (err: any) {
+    } catch {
       if (!isGlob(entry)) {
         throw new ThrowableDiagnostic({
           diagnostic: {
@@ -362,7 +362,7 @@ export class EntryResolver {
     let pkgFile = path.join(entry, 'package.json');
     try {
       content = await this.options.inputFS.readFile(pkgFile, 'utf8');
-    } catch (err: any) {
+    } catch {
       return null;
     }
 

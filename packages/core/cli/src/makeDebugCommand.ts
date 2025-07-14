@@ -1,6 +1,6 @@
 import {NodeFS} from '@atlaspack/fs';
 import logger from '@atlaspack/logger';
-import commander, {commander$Command} from 'commander';
+import commander from 'commander';
 import path from 'path';
 import {normalizeOptions, Options} from './normalizeOptions';
 import type {CommandExt} from './normalizeOptions';

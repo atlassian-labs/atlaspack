@@ -59,6 +59,7 @@ export function enginesToBabelTargets(env: Environment): BabelTargets {
       targets[engineName] = engineValue;
     } else {
       invariant(typeof engineValue === 'string');
+      // eslint-disable-next-line no-prototype-builtins
       if (!TargetNames.hasOwnProperty(engineName)) continue;
       let minVersion = semver.minVersion(engineValue)?.toString();
       targets[engineName] = minVersion ?? engineValue;

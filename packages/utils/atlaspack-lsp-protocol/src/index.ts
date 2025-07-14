@@ -3,6 +3,7 @@ const {
   NotificationType0,
   NotificationType2,
   RequestType,
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
 } = require('vscode-jsonrpc/node');
 
 // -------------------------------- Typescript-specific definitions

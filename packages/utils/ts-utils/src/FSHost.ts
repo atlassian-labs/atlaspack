@@ -19,7 +19,7 @@ export class FSHost {
   fileExists(filePath: FilePath): boolean {
     try {
       return this.fs.statSync(filePath).isFile();
-    } catch (err: any) {
+    } catch {
       return false;
     }
   }
@@ -39,7 +39,7 @@ export class FSHost {
   directoryExists(filePath: FilePath): boolean {
     try {
       return this.fs.statSync(filePath).isDirectory();
-    } catch (err: any) {
+    } catch {
       return false;
     }
   }
@@ -47,7 +47,7 @@ export class FSHost {
   realpath(filePath: FilePath): FilePath {
     try {
       return this.fs.realpathSync(filePath);
-    } catch (err: any) {
+    } catch {
       return filePath;
     }
   }
@@ -66,7 +66,7 @@ export class FSHost {
         let stat;
         try {
           stat = this.fs.statSync(filePath);
-        } catch (e: any) {
+        } catch {
           continue;
         }
 
@@ -78,7 +78,7 @@ export class FSHost {
       }
 
       return {files, directories};
-    } catch (err: any) {
+    } catch {
       return {files: [], directories: []};
     }
   }

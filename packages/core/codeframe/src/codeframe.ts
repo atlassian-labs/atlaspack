@@ -30,7 +30,7 @@ const highlightSyntax = (txt: string, lang?: string): string => {
   if (lang) {
     try {
       return emphasize.highlight(lang, txt).value;
-    } catch (e: any) {
+    } catch {
       // fallback for unknown languages...
     }
   }

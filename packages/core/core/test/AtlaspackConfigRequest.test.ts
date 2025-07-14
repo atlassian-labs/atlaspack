@@ -540,6 +540,7 @@ describe('AtlaspackConfigRequest', () => {
       let defaultConfigPath = require.resolve('@atlaspack/config-default');
       let defaultConfig = await processConfig(
         {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
           ...require('@atlaspack/config-default'),
           filePath: defaultConfigPath,
         },

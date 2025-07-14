@@ -15,6 +15,7 @@ const {
     requestGraphEdgeTypes,
   },
   LMDBLiteCache,
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
 } = require('./deep-imports.js');
 
 export async function loadGraphs(cacheDir: string): Promise<{

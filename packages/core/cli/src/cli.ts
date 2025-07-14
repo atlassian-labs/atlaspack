@@ -5,8 +5,8 @@ import {Disposable} from '@atlaspack/events';
 import {INTERNAL_ORIGINAL_CONSOLE} from '@atlaspack/logger';
 import chalk from 'chalk';
 import commander from 'commander';
-import path from 'path';
-import {version} from '../package.json';
+import path from 'node:path';
+import fs from 'node:fs';
 import {applyOptions} from './applyOptions';
 import {makeDebugCommand} from './makeDebugCommand';
 import {normalizeOptions} from './normalizeOptions';
@@ -15,6 +15,10 @@ import {
   logUncaughtError,
 } from './handleUncaughtException';
 import {commonOptions, hmrOptions} from './options';
+
+const {version}: {version: string} = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'),
+);
 
 const program = new commander.Command();
 
@@ -114,7 +118,7 @@ if (!args[2] || !program.commands.some((c) => c.name() === args[2])) {
 
 program.parse(args);
 
-function runCommand(...args) {
+function runCommand(...args: any[]) {
   run(...args).catch(handleUncaughtException);
 }
 

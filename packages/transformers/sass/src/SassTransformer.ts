@@ -158,7 +158,7 @@ function resolvePathImporter({asset, resolve, includePaths, options}) {
               filePath,
               contents,
             };
-          } catch (err: any) {
+          } catch {
             asset.invalidateOnFileCreate({filePath});
           }
         }
@@ -178,7 +178,7 @@ function resolvePathImporter({asset, resolve, includePaths, options}) {
           const contents = await asset.fs.readFile(filePath, 'utf8');
           return {filePath, contents};
         }
-      } catch (err: any) {
+      } catch {
         continue;
       }
     }

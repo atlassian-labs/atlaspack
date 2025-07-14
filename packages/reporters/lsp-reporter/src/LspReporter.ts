@@ -41,7 +41,7 @@ const lookupPid: (arg1: Query) => Program[] = promisify(ps.lookup);
 const ignoreFail = (func: () => void) => {
   try {
     func();
-  } catch (e: any) {
+  } catch {
     /**/
   }
 };

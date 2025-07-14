@@ -103,7 +103,7 @@ export async function cleanupBin(root: string, opts: CmdOptions) {
   let binSymlink = path.join(root, '.bin/atlaspack');
   try {
     await fsDelete(binSymlink, opts);
-  } catch (e: any) {
+  } catch {
     // noop
   }
 }
@@ -142,7 +142,7 @@ export async function cleanupNodeModules(
     let stat;
     try {
       stat = fs.statSync(packageNodeModules);
-    } catch (e: any) {
+    } catch {
       // noop
     }
     if (stat?.isDirectory()) {

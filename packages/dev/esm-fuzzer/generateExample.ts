@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const invariant = require('assert');
 const nullthrows = require('nullthrows');
 const t = require('@babel/types');

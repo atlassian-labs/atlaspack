@@ -87,7 +87,7 @@ export default class Server {
     this.options = options;
     try {
       this.rootPath = new URL(options.publicUrl).pathname;
-    } catch (e: any) {
+    } catch {
       this.rootPath = options.publicUrl;
     }
     this.pending = true;
@@ -286,7 +286,7 @@ export default class Server {
       invariant(this.requestBundle != null);
       try {
         await this.requestBundle(bundle);
-      } catch (err: any) {
+      } catch {
         this.send500(req, res);
         return;
       }
@@ -328,9 +328,10 @@ export default class Server {
     }
 
     try {
+      // eslint-disable-next-line no-var
       var filePath = url.parse(req.url).pathname || '';
       filePath = decodeURIComponent(filePath);
-    } catch (err: any) {
+    } catch {
       return this.sendError(res, 400);
     }
 
@@ -347,6 +348,7 @@ export default class Server {
     }
 
     try {
+      // eslint-disable-next-line no-var
       var stat = await fs.stat(filePath);
     } catch (err: any) {
       if (err.code === 'ENOENT') {

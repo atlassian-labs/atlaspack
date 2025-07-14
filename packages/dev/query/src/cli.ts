@@ -18,6 +18,7 @@ const {
   BundleGraph: {bundleGraphEdgeTypes: bundleGraphEdgeTypes},
   Priority,
   fromProjectPathRelative,
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
 } = require('./deep-imports');
 
 export async function run(input: string[]) {
@@ -31,7 +32,7 @@ export async function run(input: string[]) {
 
   try {
     fs.accessSync(cacheDir);
-  } catch (e: any) {
+  } catch {
     console.error("Can't find cache dir", cacheDir);
     process.exit(1);
   }
@@ -149,7 +150,7 @@ export async function run(input: string[]) {
         let asset = bundleGraph.getAssetById(id);
         console.log('Public id', bundleGraph.getAssetPublicId(asset));
         console.log(asset);
-      } catch (e: any) {
+      } catch {
         if (!hasAssetGraph()) {
           return;
         }
@@ -190,7 +191,7 @@ export async function run(input: string[]) {
             bundleGraph.getAssetById(node.id),
           )} ${fromProjectPathRelative(node.value.filePath)}`,
         );
-      } catch (e: any) {
+      } catch {
         console.log(fromProjectPathRelative(node.value.filePath));
       }
     }
@@ -244,7 +245,7 @@ export async function run(input: string[]) {
           bundleGraph.getAssetById(asset.id),
         )} ${fromProjectPathRelative(asset.value.filePath)}`,
       );
-    } catch (e: any) {
+    } catch {
       console.log(fromProjectPathRelative(asset.value.filePath));
     }
     if (binding === 'export' && asset.value.symbols) {
@@ -260,7 +261,7 @@ export async function run(input: string[]) {
                     bundleGraph.getAssetById(locAsset.id),
                   )} ${fromProjectPathRelative(locAsset.value.filePath)}`,
                 );
-              } catch (e: any) {
+              } catch {
                 console.log(
                   `imported as ${symbolName} from ${fromProjectPathRelative(
                     locAsset.value.filePath,
@@ -444,8 +445,8 @@ export async function run(input: string[]) {
     }
   }
 
-  // eslint-disable-next-line no-unused-vars
-  function getBundles(_: any) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function getBundles(_v: any) {
     if (!hasBundleGraph()) {
       return;
     }
@@ -743,8 +744,8 @@ export async function run(input: string[]) {
 
     return entryBundleGroup;
   }
-  // eslint-disable-next-line no-unused-vars
-  function inspectCache(_: any) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function inspectCache(_v: any) {
     // displays sizing of various entries of the cache
     let table: Array<Array<string | number>> = [];
     table.push([
@@ -814,8 +815,8 @@ export async function run(input: string[]) {
     console.log(table(data, config));
   }
 
-  // eslint-disable-next-line no-unused-vars
-  function stats(_: any) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function stats(_v: any) {
     let ag = {
       asset: 0,
       dependency: 0,
