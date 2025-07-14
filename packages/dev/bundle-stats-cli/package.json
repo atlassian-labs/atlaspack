@@ -13,10 +13,6 @@
   "bin": {
     "atlaspack-bundle-stats": "bin/bundle-stats.js"
   },
-  "scripts": {
-    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js",
-    "prepack": "./ensure-no-dev-lib.sh"
-  },
   "dependencies": {
     "@atlaspack/core": "2.18.8",
     "@atlaspack/query": "2.14.18",
