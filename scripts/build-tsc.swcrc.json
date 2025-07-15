@@ -1,0 +1,25 @@
+{
+  "module": {
+    "type": "commonjs"
+  },
+  "isModule": true,
+  "jsc": {
+    "target": "es2024",
+    "experimental": {
+      "plugins": [
+        [
+          "@swc/plugin-transform-imports",
+          {
+            "^(.*?)(\\.mjs)$": {
+              "skipDefaultConversion": true,
+              "preventFullImport": true,
+              "handleDefaultImport": true,
+              "handleNamespaceImport": true,
+              "transform": "{{matches.[1]}}.js"
+            }
+          }
+        ]
+      ]
+    }
+  }
+}
