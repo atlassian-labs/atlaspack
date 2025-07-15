@@ -12,7 +12,6 @@ void (async function () {
     isolation: 'none',
   })
     .on('test:fail', () => {
-      // @ts-ignore
       exitCode = 1;
     })
     .compose(new reporter.spec());

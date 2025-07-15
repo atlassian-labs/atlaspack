@@ -12,6 +12,7 @@
     "test-ci": "yarn test"
   },
   "devDependencies": {
+    "@atlaspack/core": "2.18.8",
     "playwright": "1.50.0"
   }
 }
