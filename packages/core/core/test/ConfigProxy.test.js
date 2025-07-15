@@ -138,9 +138,9 @@ describe('makeConfigProxy with path tracking improvements', () => {
 
         // Root enumeration behavior depends on the feature flag
         if (granularOptionInvalidation) {
-          // When granularOptionInvalidation is enabled, root enumeration should be tracked with __root__ marker
+          // When granularOptionInvalidation is enabled, root enumeration should be tracked as empty array
           assert.equal(onRead.callCount, 1);
-          assert.ok(onRead.calledWith(['__root__']));
+          assert.ok(onRead.calledWith([]));
         } else {
           // When granularOptionInvalidation is disabled, root enumeration be tracked as an empty array
           assert.equal(onRead.callCount, 1);
