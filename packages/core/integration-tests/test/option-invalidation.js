@@ -63,7 +63,7 @@ describe('Option invalidation in cache integration test', () => {
     assert(secondBuild, 'Second build should have completed successfully');
   });
 
-  it('should NOT invalidate cache when blocklisted options change', async function () {
+  it('should NOT invalidate cache when ignored options change', async function () {
     setFeatureFlags({
       ...DEFAULT_FEATURE_FLAGS,
       granularOptionInvalidation: true,
@@ -91,23 +91,22 @@ describe('Option invalidation in cache integration test', () => {
       shouldProfile: false,
     }).run();
 
-    // Second build with changed blocklisted options -- these should NOT invalidate cache
+    // Second build with changed ignored options -- should NOT invalidate cache
     const secondBuild = await bundler([path.join(dir, 'index.js')], {
       inputFS: overlayFS,
       shouldDisableCache: false,
       defaultConfig: path.join(dir, '.parcelrc'),
       logLevel: 'error',
-      shouldProfile: true,
     }).run();
 
     assert.equal(
       secondBuild.changedAssets.size,
       0,
-      'Blocklisted options should not invalidate cache',
+      'Ignored options should not invalidate cache',
     );
   });
 
-  it('should invalidate cache when non-blocklisted options change', async function () {
+  it('should invalidate cache when non-blocklisted options change and granularOptionInvalidation is enabled', async function () {
     setFeatureFlags({
       ...DEFAULT_FEATURE_FLAGS,
       granularOptionInvalidation: true,
@@ -138,17 +137,17 @@ describe('Option invalidation in cache integration test', () => {
       inputFS: overlayFS,
       shouldDisableCache: false,
       defaultConfig: path.join(dir, '.parcelrc'),
-      // This is not in the blocklist
+      // mode is not in the blocklist, so it should invalidate cache
       mode: 'production',
     }).run();
 
     assert(
       secondBuild.changedAssets.size > 0,
-      'Non-blocklisted options should invalidate cache',
+      'Non-blocklisted options should invalidate cache when granularOptionInvalidation is enabled',
     );
   });
 
-  it('should work correctly when granularOptionInvalidation is disabled', async function () {
+  it('should invalidate cache for mode changes regardless of granularOptionInvalidation setting', async function () {
     setFeatureFlags({
       ...DEFAULT_FEATURE_FLAGS,
       granularOptionInvalidation: false,
@@ -187,7 +186,7 @@ describe('Option invalidation in cache integration test', () => {
 
     assert(
       secondBuild.changedAssets.size > 0,
-      'Option changes should invalidate cache when feature is disabled',
+      'Mode changes should always invalidate cache regardless of granularOptionInvalidation setting',
     );
   });
 });
