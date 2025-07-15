@@ -256,7 +256,7 @@ export type Invalidations = {|
   invalidateOnFileChange: Set<ProjectPath>,
   invalidateOnFileCreate: Array<InternalFileCreateInvalidation>,
   invalidateOnEnvChange: Set<string>,
-  invalidateOnOptionChange: Set<string>,
+  invalidateOnOptionChange: Set<string[] | string>,
   invalidateOnStartup: boolean,
   invalidateOnBuild: boolean,
 |};
@@ -337,17 +337,8 @@ export type AtlaspackOptions = {|
 
   +featureFlags: FeatureFlags,
 
-  // Configuration for option invalidation
   optionInvalidation?: {|
-    // Complete list of options to block from invalidation
     blocklist?: Array<string>,
-    // Options that should be deep-compared instead of just hash-compared
-    deepCompare?: Array<string>,
-    // Maximum number of parent nodes to invalidate per option change
-    maxInvalidationsPerOption?: number,
-    // Batch option invalidations together
-    batchInvalidations?: boolean,
-    // Track and log invalidation metrics
     trackMetrics?: boolean,
   |},
 |};
@@ -522,7 +513,7 @@ export type Config = {|
   |}>,
   invalidateOnFileCreate: Array<InternalFileCreateInvalidation>,
   invalidateOnEnvChange: Set<string>,
-  invalidateOnOptionChange: Set<string>,
+  invalidateOnOptionChange: Set<string[] | string>,
   devDeps: Array<InternalDevDepOptions>,
   invalidateOnStartup: boolean,
   invalidateOnBuild: boolean,

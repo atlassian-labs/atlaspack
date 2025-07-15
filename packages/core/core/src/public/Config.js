@@ -65,16 +65,14 @@ const internalConfigToConfig: DefaultWeakMap<
 export function makeConfigProxy<T>(
   onRead: (path: string[]) => void,
   config: T,
+  ignoreSet?: Set<string> = new Set(),
 ): T {
-  const granularOptionInvalidationEnabled = getFeatureFlag(
-    'granularOptionInvalidation',
-  );
   const reportedPaths = new Set();
 
   const reportPath = (path) => {
     let pathKey;
 
-    if (granularOptionInvalidationEnabled) {
+    if (getFeatureFlag('granularOptionInvalidation')) {
       // New behavior: Handle root enumeration with a special marker
       pathKey =
         path.length === 0 || (path.length === 1 && path[0] === '__root__')
@@ -100,9 +98,8 @@ export function makeConfigProxy<T>(
           reportPath(path);
         } else {
           if (path.length === 0) {
-            // Track root enumeration with __root__ marker
-            // ensures that when someone enumerates the root config object, the system knows to invalidate cached results if the set of root-level properties changes.
-            reportPath(['__root__']);
+            // Root enumeration
+            reportPath([]);
           } else {
             reportPath(path);
           }
@@ -113,6 +110,11 @@ export function makeConfigProxy<T>(
       get(target, prop) {
         // $FlowFixMe
         const value = target[prop];
+
+        if (path.length === 0 && ignoreSet && ignoreSet.has(prop)) {
+          // Return the original value without proxying - this preserves method binding
+          return value;
+        }
 
         if (
           typeof value === 'object' &&

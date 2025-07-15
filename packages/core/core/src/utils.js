@@ -101,41 +101,20 @@ export function optionsProxy(
     : options.packageManager;
 
   if (getFeatureFlag('granularOptionInvalidation')) {
-    // Create options object without packageManager to avoid proxying it
-    // Avoid destructuring which triggers Object.keys() enumeration
-    const optionsWithoutPackageManager = {};
-    for (const key in options) {
-      if (key !== 'packageManager') {
-        optionsWithoutPackageManager[key] = options[key];
-      }
-    }
-
-    // Use makeConfigProxy from Config.js which is designed to track property reads
-    // and provide the accessed property paths as arrays
-    const proxiedOptions = makeConfigProxy((path) => {
-      const [prop] = path;
-
-      if (!ignoreOptions.has(prop)) {
-        // Important: Always pass the full path array for granular path tracking
-        // This ensures we're passing an array to invalidateOnOptionChange, not a string
-        invalidateOnOptionChange(path);
-      }
-    }, optionsWithoutPackageManager);
-
-    // Return the proxied options with the original packageManager
-    // NOTE:
-    // return {...proxiedOptions, packageManager};
-    // This would trigger Object.keys() enumeration on the proxy object.
-    // (The ownKeys trap is defined in the makeConfigProxy function in Config.js)
-    //
-    // The spread operator (...) internally calls Object.keys() which triggers the ownKeys trap
-    // on proxied objects. For proxies that track property access, this can cause performance
-    // issues when done repeatedly, as it enumerates all properties instead of accessing specific ones.
-    // Object.assign() uses getOwnPropertyDescriptor() instead, avoiding the ownKeys trap.
-    // $FlowFixMe[incompatible-exact] - Object.assign creates inexact type, but proxy contains all AtlaspackOptions properties
-    return Object.assign({}, proxiedOptions, {packageManager});
+    return makeConfigProxy(
+      (path) => {
+        const [prop] = path;
+        if (!ignoreOptions.has(prop)) {
+          invalidateOnOptionChange(path);
+        }
+      },
+      {
+        ...options,
+        packageManager,
+      },
+      ignoreOptions,
+    );
   } else {
-    // Original behavior for backward compatibility
     return new Proxy(options, {
       get(target, prop) {
         if (prop === 'packageManager') {
@@ -143,7 +122,6 @@ export function optionsProxy(
         }
 
         if (!ignoreOptions.has(prop)) {
-          // Original behavior: pass the prop as a string
           invalidateOnOptionChange(prop);
         }
 

@@ -67,7 +67,7 @@ export type ConfigRequest = {
   |}>,
   invalidateOnFileCreate: Array<InternalFileCreateInvalidation>,
   invalidateOnEnvChange: Set<string>,
-  invalidateOnOptionChange: Set<string>,
+  invalidateOnOptionChange: Set<string[] | string>,
   invalidateOnStartup: boolean,
   invalidateOnBuild: boolean,
   ...
@@ -90,13 +90,7 @@ export async function loadPluginConfig<T: PluginWithLoadConfig>(
       config: new PublicConfig(config, options),
       options: new PluginOptions(
         optionsProxy(options, (optionPath) => {
-          // Check if we're using the new granular option tracking (path arrays)
-          if (Array.isArray(optionPath)) {
-            config.invalidateOnOptionChange.add(optionPath.join('.'));
-          } else {
-            // Original behavior for string paths
-            config.invalidateOnOptionChange.add(optionPath);
-          }
+          config.invalidateOnOptionChange.add(optionPath);
         }),
       ),
       logger: new PluginLogger({origin: loadedPlugin.name}),

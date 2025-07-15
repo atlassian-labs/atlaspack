@@ -1,7 +1,7 @@
 // @flow
 import assert from 'assert';
 import path from 'path';
-import {bundle, overlayFS, fsFixture} from '@atlaspack/test-utils';
+import {bundle, overlayFS, fsFixture, bundler} from '@atlaspack/test-utils';
 import {
   setFeatureFlags,
   getFeatureFlag,
@@ -61,5 +61,133 @@ describe('Option invalidation in cache integration test', () => {
     // Both builds should have completed successfully
     assert(firstBuild, 'First build should have completed successfully');
     assert(secondBuild, 'Second build should have completed successfully');
+  });
+
+  it('should NOT invalidate cache when blocklisted options change', async function () {
+    setFeatureFlags({
+      ...DEFAULT_FEATURE_FLAGS,
+      granularOptionInvalidation: true,
+    });
+
+    const dir = path.join(__dirname, 'option-invalidation-test-blocklist');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "reporters": []
+        }
+      index.js:
+        export const value = "test";
+    `;
+
+    // First build with original options
+    await bundler([path.join(dir, 'index.js')], {
+      inputFS: overlayFS,
+      shouldDisableCache: false,
+      defaultConfig: path.join(dir, '.parcelrc'),
+      logLevel: 'info',
+      shouldProfile: false,
+    }).run();
+
+    // Second build with changed blocklisted options -- these should NOT invalidate cache
+    const secondBuild = await bundler([path.join(dir, 'index.js')], {
+      inputFS: overlayFS,
+      shouldDisableCache: false,
+      defaultConfig: path.join(dir, '.parcelrc'),
+      logLevel: 'error',
+      shouldProfile: true,
+    }).run();
+
+    assert.equal(
+      secondBuild.changedAssets.size,
+      0,
+      'Blocklisted options should not invalidate cache',
+    );
+  });
+
+  it('should invalidate cache when non-blocklisted options change', async function () {
+    setFeatureFlags({
+      ...DEFAULT_FEATURE_FLAGS,
+      granularOptionInvalidation: true,
+    });
+
+    const dir = path.join(__dirname, 'option-invalidation-test-2');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "reporters": []
+        }
+      index.js:
+        export const value = "test";
+    `;
+
+    await bundler([path.join(dir, 'index.js')], {
+      inputFS: overlayFS,
+      shouldDisableCache: false,
+      defaultConfig: path.join(dir, '.parcelrc'),
+      mode: 'development',
+    }).run();
+
+    // Second build with production mode (should invalidate cache)
+    const secondBuild = await bundler([path.join(dir, 'index.js')], {
+      inputFS: overlayFS,
+      shouldDisableCache: false,
+      defaultConfig: path.join(dir, '.parcelrc'),
+      // This is not in the blocklist
+      mode: 'production',
+    }).run();
+
+    assert(
+      secondBuild.changedAssets.size > 0,
+      'Non-blocklisted options should invalidate cache',
+    );
+  });
+
+  it('should work correctly when granularOptionInvalidation is disabled', async function () {
+    setFeatureFlags({
+      ...DEFAULT_FEATURE_FLAGS,
+      granularOptionInvalidation: false,
+    });
+
+    const dir = path.join(
+      __dirname,
+      'option-invalidation-test-disabled-feature',
+    );
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "reporters": []
+        }
+      index.js:
+        export const value = "test";
+    `;
+
+    await bundler([path.join(dir, 'index.js')], {
+      inputFS: overlayFS,
+      shouldDisableCache: false,
+      defaultConfig: path.join(dir, '.parcelrc'),
+      mode: 'development',
+    }).run();
+
+    // Second build with production mode -- should invalidate cache
+    const secondBuild = await bundler([path.join(dir, 'index.js')], {
+      inputFS: overlayFS,
+      shouldDisableCache: false,
+      defaultConfig: path.join(dir, '.parcelrc'),
+      mode: 'production', // This should cause invalidation
+    }).run();
+
+    assert(
+      secondBuild.changedAssets.size > 0,
+      'Option changes should invalidate cache when feature is disabled',
+    );
   });
 });
