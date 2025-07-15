@@ -245,7 +245,7 @@ export default class BundleGraph<TBundle extends IBundle>
 
   getSymbolResolution(
     asset: IAsset,
-    symbol: symbol,
+    symbol: Symbol,
     boundary?: IBundle | null,
   ): SymbolResolution {
     let res = this.#graph.getSymbolResolution(
@@ -286,6 +286,7 @@ export default class BundleGraph<TBundle extends IBundle>
     } | null,
   ): TContext | null | undefined {
     return this.#graph.traverse(
+      // @ts-expect-error TS migration
       mapVisitor((node, actions) => {
         // Skipping unused dependencies here is faster than doing an isDependencySkipped check inside the visitor
         // because the node needs to be re-looked up by id from the hashmap.
@@ -335,7 +336,7 @@ export default class BundleGraph<TBundle extends IBundle>
 
   getUsedSymbols(
     v: IAsset | IDependency,
-  ): ReadonlySet<symbol> | null | undefined {
+  ): ReadonlySet<Symbol> | null | undefined {
     if (v instanceof Asset) {
       return this.#graph.getUsedSymbolsAsset(assetToAssetValue(v));
     } else {
@@ -369,7 +370,16 @@ export default class BundleGraph<TBundle extends IBundle>
     ifTrueAssetId: string;
     ifFalseAssetId: string;
   }> {
-    const conditions = new Set();
+    const conditions = new Set<{
+      publicId: string;
+      key: string;
+      ifTrueDependency: IDependency;
+      ifFalseDependency: IDependency;
+      ifTrueBundles: Array<TBundle>;
+      ifFalseBundles: Array<TBundle>;
+      ifTrueAssetId: string;
+      ifFalseAssetId: string;
+    }>();
     const depIds = deps.map((dep) => dep.id);
     for (const condition of this.#graph._conditions.values()) {
       if (

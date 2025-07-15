@@ -636,7 +636,7 @@ export default class AdjacencyList<TEdgeType extends number = NullEdgeType> {
 
   forEachNodeIdConnectedTo(
     to: NodeId,
-    fn: (nodeId: NodeId) => boolean | undefined,
+    fn: (nodeId: NodeId) => boolean | undefined | void,
     type: AllEdgeTypes | TEdgeType | NullEdgeType = NULL_EDGE_TYPE,
   ) {
     const matches = (node: number) =>

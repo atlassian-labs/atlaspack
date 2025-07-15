@@ -167,7 +167,7 @@ export default class Graph<TNode, TEdgeType extends number = NullEdgeType> {
 
   forEachNodeIdConnectedTo(
     to: NodeId,
-    fn: (nodeId: NodeId) => boolean | undefined,
+    fn: (nodeId: NodeId) => boolean | undefined | void,
     type: AllEdgeTypes | TEdgeType | NullEdgeType = NULL_EDGE_TYPE,
   ) {
     this._assertHasNodeId(to);
@@ -435,7 +435,11 @@ export default class Graph<TNode, TEdgeType extends number = NullEdgeType> {
 
     let queue = [{nodeId: traversalStartNode, context: null}];
     while (queue.length !== 0) {
-      let {nodeId, context} = queue.pop();
+      let next = queue.pop();
+      if (next == null) {
+        continue;
+      }
+      let {nodeId, context} = next;
       if (!this.hasNode(nodeId) || visited.has(nodeId)) continue;
       visited.add(nodeId);
 

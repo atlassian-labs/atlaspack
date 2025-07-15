@@ -157,9 +157,9 @@ export type Dependency = {
   range: SemverRange | null | undefined;
   symbols:
     | Map<
-        symbol,
+        Symbol,
         {
-          local: symbol;
+          local: Symbol;
           loc: InternalSourceLocation | null | undefined;
           isWeak: boolean;
           meta?: Meta | null | undefined;
@@ -202,9 +202,9 @@ export type Asset = {
   astGenerator: ASTGenerator | null | undefined;
   symbols:
     | Map<
-        symbol,
+        Symbol,
         {
-          local: symbol;
+          local: Symbol;
           loc: InternalSourceLocation | null | undefined;
           meta?: Meta | null | undefined;
         }
@@ -357,7 +357,7 @@ export type AssetNode = {
   id: ContentKey;
   readonly type: 'asset';
   value: Asset;
-  usedSymbols: Set<symbol>;
+  usedSymbols: Set<Symbol>;
   hasDeferred?: boolean;
   usedSymbolsDownDirty: boolean;
   usedSymbolsUpDirty: boolean;
@@ -373,7 +373,7 @@ export type DependencyNode = {
   deferred: boolean;
   /** dependency was deferred (= no used symbols (in immediate parents) & side-effect free) */
   hasDeferred?: boolean;
-  usedSymbolsDown: Set<symbol>;
+  usedSymbolsDown: Set<Symbol>;
   /**
    * a requested symbol -> either
    *  - if ambiguous (e.g. dependency to asset group with both CSS modules and JS asset): undefined
@@ -381,10 +381,10 @@ export type DependencyNode = {
    *  - the asset it resolved to, and the potentially renamed export name
    */
   usedSymbolsUp: Map<
-    symbol,
+    Symbol,
     | {
         asset: ContentKey;
-        symbol: symbol | null | undefined;
+        symbol: Symbol | null | undefined;
       }
     | undefined
     | null
