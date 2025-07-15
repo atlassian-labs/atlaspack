@@ -1,16 +1,14 @@
-// @flow
 import assert from 'assert';
 import {
   shardUrlUnchecked,
   shardUrl,
   domainShardingKey,
   applyShardToDomain,
-} from '../src/index.js';
+} from '../src/index.ts';
 
 describe('domain sharding helpers', () => {
   beforeEach(() => {
-    // $FlowFixMe
-    delete globalThis[domainShardingKey];
+    delete (globalThis as Record<string, unknown>)[domainShardingKey];
   });
 
   describe('applyShardToDomain', () => {
@@ -110,7 +108,7 @@ describe('domain sharding helpers', () => {
 
   describe('shardUrl', () => {
     it('should add a shard if the window property is set', () => {
-      globalThis[domainShardingKey] = true;
+      (globalThis as Record<string, unknown>)[domainShardingKey] = true;
       const testBundle =
         'https://bundle-shard.assets.example.com/assets/test-bundle.123abc.js';
 
