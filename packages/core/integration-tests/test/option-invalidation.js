@@ -97,6 +97,7 @@ describe('Option invalidation in cache integration test', () => {
       shouldDisableCache: false,
       defaultConfig: path.join(dir, '.parcelrc'),
       logLevel: 'error',
+      shouldProfile: false,
     }).run();
 
     assert.equal(
