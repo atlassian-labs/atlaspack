@@ -18,7 +18,7 @@ let parcelOptionsToPluginOptions: WeakMap<AtlaspackOptions, PluginOptions> =
   new WeakMap();
 
 export default class PluginOptions implements IPluginOptions {
-  #options /*: AtlaspackOptions */;
+  #options: AtlaspackOptions;
 
   constructor(options: AtlaspackOptions): PluginOptions {
     let existing = parcelOptionsToPluginOptions.get(options);

@@ -104,10 +104,10 @@ export function makeConfigProxy<T>(
 }
 
 export default class PublicConfig implements IConfig {
-  #config /*: Config */;
-  #pkg /*: ?PackageJSON */;
-  #pkgFilePath /*: ?FilePath */;
-  #options /*: AtlaspackOptions */;
+  #config: Config;
+  #pkg: ?PackageJSON;
+  #pkgFilePath: ?FilePath;
+  #options: AtlaspackOptions;
 
   constructor(config: Config, options: AtlaspackOptions): PublicConfig {
     let existing = internalConfigToConfig.get(options).get(config);
