@@ -22,4 +22,4 @@ export default (new Packager({
 
     return {contents: code, map};
   },
-}): Packager);
+}): Packager<mixed, mixed>);

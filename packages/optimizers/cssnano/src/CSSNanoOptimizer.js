@@ -44,6 +44,7 @@ export default (new Optimizer({
     }
 
     const result = await postcss([
+      // $FlowFixMe
       cssnano((config ?? {}: CSSNanoOptions)),
     ]).process(prevContents, {
       // Suppress postcss's warning about a missing `from` property. In this
@@ -75,4 +76,4 @@ export default (new Optimizer({
       map,
     };
   },
-}): Optimizer);
+}): Optimizer<mixed, mixed>);

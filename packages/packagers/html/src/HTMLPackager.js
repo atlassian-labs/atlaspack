@@ -75,6 +75,7 @@ export default (new Packager({
       ),
     ];
 
+    // $FlowFixMe
     let conditionalBundles = config.evaluateRootConditionalBundles
       ? setDifference(
           getReferencedConditionalScripts(
@@ -84,6 +85,7 @@ export default (new Packager({
           new Set(referencedBundles),
         )
       : new Set();
+    // $FlowFixMe
     let renderConfig = config?.render;
 
     let {html} = await posthtml([
@@ -121,7 +123,7 @@ export default (new Packager({
       map,
     });
   },
-}): Packager);
+}): Packager<mixed, mixed>);
 
 async function getAssetContent(
   bundleGraph: BundleGraph<NamedBundle>,

@@ -39,17 +39,22 @@ export default (new Optimizer({
       );
     }
 
-    const clonedConfig = config || {};
+    // $FlowFixMe
+    const clonedConfig: {} = config || {};
 
     // $FlowFixMe
     const presets = htmlnano.presets;
-    const preset =
+    // $FlowFixMe
+    const preset: {} =
+      // $FlowFixMe
       typeof clonedConfig.preset === 'string'
         ? presets[clonedConfig.preset]
         : {};
+    // $FlowFixMe
     delete clonedConfig.preset;
 
-    const htmlNanoConfig = {
+    // $FlowFixMe
+    const htmlNanoConfig: mixed = {
       // Inline <script> and <style> elements, and style attributes are already
       // minified before they are re-inserted by the packager.
       minifyJs: false,
@@ -87,6 +92,7 @@ export default (new Optimizer({
       // skipConfigLoading: true,
     };
 
+    // $FlowFixMe
     let plugins = [htmlnano(htmlNanoConfig)];
 
     // $FlowFixMe
@@ -103,7 +109,7 @@ export default (new Optimizer({
       ).html,
     };
   },
-}): Optimizer);
+}): Optimizer<mixed, mixed>);
 
 // HTML tags and attributes are case insensitive. The HTML transformer normalizes them so it can
 // more easily process any case. But SVGO requires case sensitive tags and attributes to work correctly.

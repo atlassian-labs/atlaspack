@@ -34,7 +34,7 @@ export default (new Transformer({
     asset.setCode(JSON.stringify(jsonCode));
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);
 
 function extractUrlsFrom(data, asset) {
   if (!data) return null;

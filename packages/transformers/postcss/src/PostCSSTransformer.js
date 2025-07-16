@@ -81,22 +81,27 @@ export default (new Transformer({
     let ast = nullthrows(await asset.getAST());
     let program = postcss.fromJSON(ast.program);
 
+    // $FlowFixMe
     let plugins = [...config.hydrated.plugins];
     let cssModules: ?{|[string]: string|} = null;
+    // $FlowFixMe
     if (config.hydrated.modules) {
       asset.meta.cssModulesCompiled = 'postcss';
 
       let code = asset.isASTDirty() ? null : await asset.getCode();
       if (
+        // $FlowFixMe
         Object.keys(config.hydrated.modules).length === 0 &&
         code &&
         !isLegacy &&
         !LEGACY_MODULE_RE.test(code)
       ) {
+        // $FlowFixMe
         let filename = path.basename(config.filePath);
         let message;
         let configKey;
         let hint;
+        // $FlowFixMe
         if (config.raw.modules) {
           message = md`The "modules" option in __${filename}__ can be replaced with configuration for @atlaspack/transformer-css to improve build performance.`;
           configKey = '/modules';
@@ -122,10 +127,12 @@ export default (new Transformer({
 
         let codeFrames;
         if (path.extname(filename) !== '.js') {
+          // $FlowFixMe
           let contents = await asset.fs.readFile(config.filePath, 'utf8');
           codeFrames = [
             {
               language: 'json',
+              // $FlowFixMe
               filePath: config.filePath,
               code: contents,
               codeHighlights: generateJSONCodeHighlights(contents, [
@@ -139,6 +146,7 @@ export default (new Transformer({
         } else {
           codeFrames = [
             {
+              // $FlowFixMe
               filePath: config.filePath,
               codeHighlights: [
                 {
@@ -178,6 +186,7 @@ export default (new Transformer({
             `${name}_${hashString(
               path.relative(options.projectRoot, filename),
             ).substr(0, 6)}`,
+          // $FlowFixMe
           ...config.hydrated.modules,
         }),
       );
@@ -212,6 +221,7 @@ export default (new Transformer({
     // $FlowFixMe Added in Flow 0.121.0 upgrade in #4381
     let {messages, root} = await postcss(plugins).process(
       program,
+      // $FlowFixMe
       config.hydrated,
     );
     asset.setAST({
@@ -286,7 +296,7 @@ export default (new Transformer({
       content: code,
     };
   },
-}): Transformer);
+}): Transformer<mixed>);
 
 async function createLoader(
   asset: MutableAsset,

@@ -102,7 +102,7 @@ export default (new Namer({
 
     return name + '.' + bundle.type;
   },
-}): Namer);
+}): Namer<void>);
 
 function nameFromContent(
   bundle: Bundle,
