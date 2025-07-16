@@ -1,5 +1,24 @@
 # @atlaspack/feature-flags
 
+## 2.19.0
+
+### Minor Changes
+
+- [#640](https://github.com/atlassian-labs/atlaspack/pull/640) [`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d) Thanks [@JakeLane](https://github.com/JakeLane)! - Clean up conditional bundling feature flags
+
+- [#686](https://github.com/atlassian-labs/atlaspack/pull/686) [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0) Thanks [@benjervis](https://github.com/benjervis)! - Adds a feature flag for unusedComputedPropertyFix, to enable the fix for computed keys accessed on imports not being marked as used
+
+- [#693](https://github.com/atlassian-labs/atlaspack/pull/693) [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417) Thanks [@mattcompiles](https://github.com/mattcompiles)! - These packages should have been bumped in [pull request 691](https://github.com/atlassian-labs/atlaspack/pull/691).
+
+  Rectifying by creating a new changeset now.
+
+### Patch Changes
+
+- [#690](https://github.com/atlassian-labs/atlaspack/pull/690) [`c4415a4`](https://github.com/atlassian-labs/atlaspack/commit/c4415a455543d984ca28452c2cb87a794d22497c) Thanks [@yamadapc](https://github.com/yamadapc)! - Bug fix for build abort state corruption
+
+- [#685](https://github.com/atlassian-labs/atlaspack/pull/685) [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries) could cause exports to undefined at runtime.
+  Fix is behind the feature-flag `emptyFileStarRexportFix`.
+
 ## 2.18.4
 
 ### Patch Changes

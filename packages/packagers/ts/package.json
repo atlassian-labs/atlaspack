@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/packager-ts",
-  "version": "2.14.17",
+  "version": "2.14.18",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -15,7 +15,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.17"
+    "@atlaspack/plugin": "2.14.18"
   },
   "type": "commonjs"
 }
