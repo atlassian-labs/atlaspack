@@ -221,14 +221,47 @@ export default (new Runtime({
             ? 'parcelRequire'
             : '__parcel__require__';
 
-        const assetCode = `module.exports = require('../helpers/conditional-loader${
+        const fallbackUrls = (cond) => {
+          return `[${[...cond.ifTrueBundles, ...cond.ifFalseBundles]
+            .map((target) => {
+              let relativePathExpr = getRelativePathExpr(
+                bundle,
+                target,
+                options,
+              );
+              return getAbsoluteUrlExpr(
+                relativePathExpr,
+                bundle,
+                config.domainSharding,
+              );
+            })
+            .join(',')}]`;
+        };
+
+        const shouldUseFallback =
+          options.mode === 'development'
+            ? getFeatureFlag('condbDevFallbackDev')
+            : getFeatureFlag('condbDevFallbackProd');
+
+        const loaderPath = `./helpers/conditional-loader${
           options.mode === 'development' ? '-dev' : ''
-        }')('${cond.key}', function (){return ${requireName}('${
-          cond.ifTrueAssetId
-        }')}, function (){return ${requireName}('${cond.ifFalseAssetId}')})`;
+        }`;
+
+        const ifTrue = `function (){return ${requireName}('${cond.ifTrueAssetId}')}`;
+        const ifFalse = `function (){return ${requireName}('${cond.ifFalseAssetId}')}`;
+
+        const assetCode = `module.exports = require('${loaderPath}')('${
+          cond.key
+        }', ${ifTrue}, ${ifFalse}${
+          shouldUseFallback
+            ? `, {loader: require('./helpers/browser/sync-js-loader'), urls: ${fallbackUrls(
+                cond,
+              )}}`
+            : ''
+        })`;
 
         assets.push({
-          filePath: path.join(__dirname, `/conditions/${cond.publicId}.js`),
+          filePath: path.join(__dirname, `/conditions-${cond.publicId}.js`),
           code: assetCode,
           // This dependency is important, as it's the last symbol handled in scope hoisting.
           // That means that scope hoisting will use the module id for this asset to replace the symbol

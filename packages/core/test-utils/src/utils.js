@@ -724,21 +724,28 @@ function prepareBrowserContext(
       if (el.tag === 'script') {
         let {deferred, promise} = makeDeferredWithPromise();
         promises.push(promise);
-        setTimeout(function () {
-          let pathname = url.parse(el.src).pathname;
-          let file = path.join(bundle.target.distDir, pathname);
+        if (el.src) {
+          setTimeout(function () {
+            let pathname = url.parse(el.src).pathname;
+            let file = path.join(bundle.target.distDir, pathname);
 
-          new vm.Script(
-            // '"use strict";\n' +
-            overlayFS.readFileSync(file, 'utf8'),
-            {
-              filename: pathname.slice(1),
-            },
-          ).runInContext(ctx);
+            new vm.Script(
+              // '"use strict";\n' +
+              overlayFS.readFileSync(file, 'utf8'),
+              {
+                filename: pathname.slice(1),
+              },
+            ).runInContext(ctx);
 
-          el.onload();
+            el.onload();
+            deferred.resolve();
+          }, 0);
+        } else if (el.text) {
+          new vm.Script(el.text, {
+            filename: 'inline-script.js',
+          }).runInContext(ctx);
           deferred.resolve();
-        }, 0);
+        }
       } else if (typeof el.onload === 'function') {
         el.onload();
       }
