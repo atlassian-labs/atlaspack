@@ -3,7 +3,6 @@
 '@atlaspack/watcher-watchman-js': patch
 '@atlaspack/package-manager': patch
 '@atlaspack/reporter-dev-server': patch
-'@atlaspack/eslint-plugin': patch
 '@atlaspack/codeframe': patch
 '@atlaspack/eslint-plugin': patch
 '@atlaspack/reporter-cli': patch
