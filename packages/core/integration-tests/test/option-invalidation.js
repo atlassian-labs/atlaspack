@@ -42,7 +42,7 @@ describe('Option invalidation in cache integration test', () => {
     assert(secondBuild, 'Second build should have completed successfully');
   });
 
-  it('should NOT invalidate cache when ignored options change', async function () {
+  it('should NOT invalidate cache when instanceId changes (blocklisted option)', async function () {
     const dir = path.join(__dirname, 'option-invalidation-test-blocklist');
     await overlayFS.mkdirp(dir);
 
@@ -56,25 +56,23 @@ describe('Option invalidation in cache integration test', () => {
         export const value = "test";
     `;
 
-    // First build with original options
+    // First build
     await bundler([path.join(dir, 'index.js')], {
       inputFS: overlayFS,
       shouldDisableCache: false,
       defaultConfig: path.join(dir, '.parcelrc'),
       logLevel: 'info',
-      shouldProfile: false,
       featureFlags: {
         granularOptionInvalidation: true,
       },
     }).run();
 
-    // Second build with changed ignored options -- should NOT invalidate cache
+    // Second build with SAME logLevel -- should NOT invalidate cache
     const secondBuild = await bundler([path.join(dir, 'index.js')], {
       inputFS: overlayFS,
       shouldDisableCache: false,
       defaultConfig: path.join(dir, '.parcelrc'),
-      logLevel: 'error',
-      shouldProfile: false,
+      logLevel: 'info',
       featureFlags: {
         granularOptionInvalidation: true,
       },
@@ -101,7 +99,6 @@ describe('Option invalidation in cache integration test', () => {
         ),
         atlaspackV3: getFeatureFlag('atlaspackV3'),
       },
-
       atlaspackEnv: Object.keys(process.env)
         .filter(
           (key) => key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
@@ -111,12 +108,11 @@ describe('Option invalidation in cache integration test', () => {
           return acc;
         }, {}),
       optionComparison: {
-        changedOptions: {
-          logLevel: {from: 'info', to: 'error'},
-          shouldProfile: {from: false, to: false},
+        unchangedOptions: {
+          logLevel: {value: 'info'},
         },
         expectedBehavior:
-          'These options should be ignored and not cause cache invalidation',
+          'Same option values should NOT cause cache invalidation',
       },
       filesystem: {
         cwd: process.cwd(),
@@ -138,8 +134,107 @@ describe('Option invalidation in cache integration test', () => {
     assert.equal(
       secondBuild.changedAssets.size,
       0,
-      `Ignored options should not invalidate cache.\n\nDEBUG INFO:\n${JSON.stringify(
+      `Same option values should NOT invalidate cache.\n\nDEBUG INFO:\n${JSON.stringify(
         debugInfo,
+        null,
+        2,
+      )}`,
+    );
+  });
+
+  it('should NOT invalidate cache when logLevel changes (ignored by optionsProxy)', async function () {
+    const dir = path.join(__dirname, 'option-invalidation-test-changes');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "reporters": []
+        }
+      index.js:
+        export const value = "test";
+    `;
+
+    // First build
+    await bundler([path.join(dir, 'index.js')], {
+      inputFS: overlayFS,
+      shouldDisableCache: false,
+      defaultConfig: path.join(dir, '.parcelrc'),
+      logLevel: 'info',
+      featureFlags: {
+        granularOptionInvalidation: true,
+      },
+    }).run();
+
+    // Second build with DIFFERENT logLevel -- should NOT invalidate because logLevel is in ignoreOptions
+    const secondBuild = await bundler([path.join(dir, 'index.js')], {
+      inputFS: overlayFS,
+      shouldDisableCache: false,
+      defaultConfig: path.join(dir, '.parcelrc'),
+      logLevel: 'error',
+      featureFlags: {
+        granularOptionInvalidation: true,
+      },
+    }).run();
+
+    const debugInfo2 = {
+      changedAssetsCount: secondBuild.changedAssets.size,
+      changedAssetsList: Array.from(secondBuild.changedAssets.keys()),
+      environment: {
+        isCI: !!process.env.CI,
+        platform: process.platform,
+        nodeVersion: process.version,
+        nodeEnv: process.env.NODE_ENV,
+        ciProvider: process.env.GITHUB_ACTIONS
+          ? 'GitHub Actions'
+          : process.env.CI_NAME || (process.env.CI ? 'Unknown CI' : 'Local'),
+      },
+      featureFlags: {
+        granularOptionInvalidation: getFeatureFlag(
+          'granularOptionInvalidation',
+        ),
+        cachePerformanceImprovements: getFeatureFlag(
+          'cachePerformanceImprovements',
+        ),
+        atlaspackV3: getFeatureFlag('atlaspackV3'),
+      },
+      atlaspackEnv: Object.keys(process.env)
+        .filter(
+          (key) => key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
+        )
+        .reduce((acc, key) => {
+          acc[key] = process.env[key];
+          return acc;
+        }, {}),
+      optionComparison: {
+        changedOptions: {
+          logLevel: {from: 'info', to: 'error'},
+        },
+        expectedBehavior: 'logLevel changes should be ignored by optionsProxy',
+      },
+      filesystem: {
+        cwd: process.cwd(),
+        testDir: dir,
+        configExists: require('fs').existsSync(path.join(dir, '.parcelrc')),
+        indexExists: require('fs').existsSync(path.join(dir, 'index.js')),
+      },
+      runtime: {
+        memoryUsage: process.memoryUsage(),
+        uptime: process.uptime(),
+        buildTimestamp: Date.now(),
+      },
+      testConfig: {
+        timeout: this.timeout?.() || 'unknown',
+        testFile: __filename,
+      },
+    };
+
+    assert.equal(
+      secondBuild.changedAssets.size,
+      0,
+      `logLevel changes should NOT invalidate cache because logLevel is in ignoreOptions set.\n\nDEBUG INFO:\n${JSON.stringify(
+        debugInfo2,
         null,
         2,
       )}`,
