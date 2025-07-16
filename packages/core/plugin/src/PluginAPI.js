@@ -17,72 +17,82 @@ import type {
 // parcel plugins.
 const CONFIG = Symbol.for('parcel-plugin-config');
 
-export class Transformer {
-  constructor<T>(opts: TransformerOpts<T>) {
-    // $FlowFixMe
+export class Transformer<T> {
+  [CONFIG]: TransformerOpts<T>;
+
+  constructor(opts: TransformerOpts<T>) {
     this[CONFIG] = opts;
   }
 }
 
-export class Resolver {
-  constructor<T>(opts: ResolverOpts<T>) {
-    // $FlowFixMe
+export class Resolver<T> {
+  [CONFIG]: ResolverOpts<T>;
+
+  constructor(opts: ResolverOpts<T>) {
     this[CONFIG] = opts;
   }
 }
 
-export class Bundler {
-  constructor<T>(opts: BundlerOpts<T>) {
-    // $FlowFixMe
+export class Bundler<T> {
+  [CONFIG]: BundlerOpts<T>;
+
+  constructor(opts: BundlerOpts<T>) {
     this[CONFIG] = opts;
   }
 }
 
-export class Namer {
-  constructor<T>(opts: NamerOpts<T>) {
-    // $FlowFixMe
+export class Namer<T> {
+  [CONFIG]: NamerOpts<T>;
+
+  constructor(opts: NamerOpts<T>) {
     this[CONFIG] = opts;
   }
 }
 
-export class Runtime {
-  constructor<T>(opts: RuntimeOpts<T>) {
-    // $FlowFixMe
+export class Runtime<T> {
+  [CONFIG]: RuntimeOpts<T>;
+
+  constructor(opts: RuntimeOpts<T>) {
     this[CONFIG] = opts;
   }
 }
 
 export class Validator {
+  [CONFIG]: ValidatorOpts;
+
   constructor(opts: ValidatorOpts) {
-    // $FlowFixMe
     this[CONFIG] = opts;
   }
 }
 
-export class Packager {
-  constructor<T, U>(opts: PackagerOpts<T, U>) {
-    // $FlowFixMe
+export class Packager<T, U> {
+  [CONFIG]: PackagerOpts<T, U>;
+
+  constructor(opts: PackagerOpts<T, U>) {
     this[CONFIG] = opts;
   }
 }
 
-export class Optimizer {
-  constructor<T, U>(opts: OptimizerOpts<T, U>) {
-    // $FlowFixMe
+export class Optimizer<T, U> {
+  [CONFIG]: OptimizerOpts<T, U>;
+
+  constructor(opts: OptimizerOpts<T, U>) {
     this[CONFIG] = opts;
   }
 }
 
 export class Compressor {
+  [CONFIG]: CompressorOpts;
+
   constructor(opts: CompressorOpts) {
-    // $FlowFixMe
     this[CONFIG] = opts;
   }
 }
 
 export class Reporter {
+  [CONFIG]: ReporterOpts;
+
   constructor(opts: ReporterOpts) {
-    // $FlowFixMe
     this[CONFIG] = opts;
   }
 }
