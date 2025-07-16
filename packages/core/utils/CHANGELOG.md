@@ -1,5 +1,12 @@
 # @atlaspack/utils
 
+## 2.17.1
+
+### Patch Changes
+
+- Updated dependencies [[`13aef17`](https://github.com/atlassian-labs/atlaspack/commit/13aef177eea289a6e40d2113b5ec1ac9be18a33d)]:
+  - @atlaspack/feature-flags@2.19.1
+
 ## 2.17.0
 
 ### Minor Changes
