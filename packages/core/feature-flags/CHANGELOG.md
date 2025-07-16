@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.19.1
+
+### Patch Changes
+
+- [#692](https://github.com/atlassian-labs/atlaspack/pull/692) [`13aef17`](https://github.com/atlassian-labs/atlaspack/commit/13aef177eea289a6e40d2113b5ec1ac9be18a33d) Thanks [@JakeLane](https://github.com/JakeLane)! - Add fallback behaviour when conditional bundle is missing
+
 ## 2.19.0
 
 ### Minor Changes

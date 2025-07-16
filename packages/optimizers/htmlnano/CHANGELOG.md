@@ -1,5 +1,12 @@
 # @atlaspack/optimizer-htmlnano
 
+## 2.14.19
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.19
+
 ## 2.14.18
 
 ### Patch Changes
