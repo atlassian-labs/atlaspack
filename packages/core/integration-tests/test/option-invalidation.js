@@ -339,89 +339,116 @@ describe('Option invalidation in cache integration test', () => {
     );
   });
 
-  it('should invalidate cache when non-blocklisted options change and granularOptionInvalidation is enabled', async function () {
-    const dir = path.join(__dirname, 'option-invalidation-test-2');
-    await overlayFS.mkdirp(dir);
-
-    await fsFixture(overlayFS, dir)`
-      .parcelrc:
-        {
-          "extends": "@atlaspack/config-default",
-          "reporters": []
-        }
-      index.js:
-        export const value = "test";
-    `;
-
-    await bundler([path.join(dir, 'index.js')], {
-      inputFS: overlayFS,
-      shouldDisableCache: false,
-      defaultConfig: path.join(dir, '.parcelrc'),
-      mode: 'development',
-      featureFlags: {
-        granularOptionInvalidation: true,
+  it('should invalidate cache when featureFlags change (granular off)', async function () {
+    let b = await testCache({
+      async setup() {
+        await overlayFS.mkdirp(inputDir);
+        await overlayFS.mkdirp(path.join(inputDir, 'src'));
+        await overlayFS.writeFile(
+          path.join(inputDir, '.parcelrc'),
+          JSON.stringify({
+            extends: '@atlaspack/config-default',
+            reporters: [],
+          }),
+        );
+        await overlayFS.writeFile(
+          path.join(inputDir, 'src/index.js'),
+          'export const value = "test";',
+        );
       },
-    }).run();
-
-    // Second build with production mode (should invalidate cache)
-    const secondBuild = await bundler([path.join(dir, 'index.js')], {
-      inputFS: overlayFS,
-      shouldDisableCache: false,
-      defaultConfig: path.join(dir, '.parcelrc'),
-      // mode is not in the blocklist, so it should invalidate cache
-      mode: 'production',
       featureFlags: {
-        granularOptionInvalidation: true,
+        granularOptionInvalidation: false,
+        exampleFeature: true,
       },
-    }).run();
+      update() {
+        return {
+          featureFlags: {
+            granularOptionInvalidation: false,
+            exampleFeature: false, // Changed!
+          },
+        };
+      },
+    });
 
     assert(
-      secondBuild.changedAssets.size > 0,
-      'Non-blocklisted options should invalidate cache when granularOptionInvalidation is enabled',
+      b.changedAssets.size > 0,
+      'Feature flag changes should cause cache invalidation because featureFlags are tracked options.',
     );
   });
 
-  it('should invalidate cache for mode changes regardless of granularOptionInvalidation setting', async function () {
-    const dir = path.join(
-      __dirname,
-      'option-invalidation-test-disabled-feature',
+  it('should NOT invalidate cache when featureFlags change (granular on)', async function () {
+    let b = await testCache({
+      async setup() {
+        await overlayFS.mkdirp(inputDir);
+        await overlayFS.mkdirp(path.join(inputDir, 'src'));
+        await overlayFS.writeFile(
+          path.join(inputDir, '.parcelrc'),
+          JSON.stringify({
+            extends: '@atlaspack/config-default',
+            reporters: [],
+          }),
+        );
+        await overlayFS.writeFile(
+          path.join(inputDir, 'src/index.js'),
+          'export const value = "test";',
+        );
+      },
+      featureFlags: {
+        granularOptionInvalidation: true,
+        exampleFeature: true,
+      },
+      update() {
+        return {
+          featureFlags: {
+            granularOptionInvalidation: true,
+            exampleFeature: false, // Changed!
+          },
+        };
+      },
+    });
+
+    assert.equal(
+      b.changedAssets.size,
+      0,
+      'Feature flag changes should NOT cause cache invalidation when granularOptionInvalidation is enabled.',
     );
-    await overlayFS.mkdirp(dir);
+  });
 
-    await fsFixture(overlayFS, dir)`
-      .parcelrc:
-        {
-          "extends": "@atlaspack/config-default",
-          "reporters": []
-        }
-      index.js:
-        export const value = "test";
-    `;
-
-    await bundler([path.join(dir, 'index.js')], {
-      inputFS: overlayFS,
-      shouldDisableCache: false,
-      defaultConfig: path.join(dir, '.parcelrc'),
-      mode: 'development',
+  it('should NOT invalidate cache when feature flags are same (granular off)', async function () {
+    let b = await testCache({
+      async setup() {
+        await overlayFS.mkdirp(inputDir);
+        await overlayFS.mkdirp(path.join(inputDir, 'src'));
+        await overlayFS.writeFile(
+          path.join(inputDir, '.parcelrc'),
+          JSON.stringify({
+            extends: '@atlaspack/config-default',
+            reporters: [],
+          }),
+        );
+        await overlayFS.writeFile(
+          path.join(inputDir, 'src/index.js'),
+          'export const value = "test";',
+        );
+      },
       featureFlags: {
         granularOptionInvalidation: false,
+        exampleFeature: true,
       },
-    }).run();
-
-    // Second build with production mode -- should invalidate cache
-    const secondBuild = await bundler([path.join(dir, 'index.js')], {
-      inputFS: overlayFS,
-      shouldDisableCache: false,
-      defaultConfig: path.join(dir, '.parcelrc'),
-      mode: 'production', // This should cause invalidation
-      featureFlags: {
-        granularOptionInvalidation: false,
+      update() {
+        return {
+          featureFlags: {
+            granularOptionInvalidation: false,
+            exampleFeature: true, // Same!
+          },
+        };
       },
-    }).run();
+    });
 
-    assert(
-      secondBuild.changedAssets.size > 0,
-      'Mode changes should always invalidate cache regardless of granularOptionInvalidation setting',
+    assert.equal(
+      b.changedAssets.size,
+      0,
+      'Same feature flag values should NOT cause cache invalidation.',
     );
   });
 });
