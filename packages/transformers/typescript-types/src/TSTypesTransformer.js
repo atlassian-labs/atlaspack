@@ -182,4 +182,4 @@ export default (new Transformer({
     asset.setMap(sourceMap);
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);

@@ -81,4 +81,4 @@ export default (new Runtime({
       }
     }
   },
-}): Runtime);
+}): Runtime<mixed>);

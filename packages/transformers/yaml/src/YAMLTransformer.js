@@ -15,4 +15,4 @@ export default (new Transformer({
     );
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);

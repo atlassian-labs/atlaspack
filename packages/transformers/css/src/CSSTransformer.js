@@ -69,6 +69,7 @@ export default (new Transformer({
         res = transformStyleAttribute({
           code,
           analyzeDependencies: true,
+          // $FlowFixMe
           errorRecovery: config?.errorRecovery || false,
           targets,
         });
@@ -78,6 +79,7 @@ export default (new Transformer({
           asset.meta.type !== 'tag' &&
           asset.meta.cssModulesCompiled == null
         ) {
+          // $FlowFixMe
           let cssModulesConfig = config?.cssModules;
           let isCSSModule = /\.module\./.test(asset.filePath);
           if (asset.isSource) {
@@ -126,8 +128,11 @@ export default (new Transformer({
                 }
               : false,
           sourceMap: !!asset.env.sourceMap,
+          // $FlowFixMe
           drafts: config?.drafts,
+          // $FlowFixMe
           pseudoClasses: config?.pseudoClasses,
+          // $FlowFixMe
           errorRecovery: config?.errorRecovery || false,
           targets,
         });
@@ -361,7 +366,7 @@ export default (new Transformer({
     asset.setBuffer(buffer);
     return assets;
   },
-}): Transformer);
+}): Transformer<mixed>);
 
 let cache = new Map();
 

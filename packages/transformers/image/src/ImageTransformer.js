@@ -53,7 +53,8 @@ export default (new Transformer({
       : null;
     const quality = asset.query.has('quality')
       ? parseInt(asset.query.get('quality'), 10)
-      : config.quality;
+      : // $FlowFixMe
+        config.quality;
     let targetFormat = asset.query.get('as')?.toLowerCase().trim();
     if (targetFormat && !FORMATS.has(targetFormat)) {
       throw new Error(
@@ -62,6 +63,7 @@ export default (new Transformer({
     }
 
     const format = nullthrows(FORMATS.get(targetFormat || originalFormat));
+    // $FlowFixMe
     const outputOptions = config[format];
 
     if (width || height || quality || targetFormat || outputOptions) {
@@ -117,4 +119,4 @@ export default (new Transformer({
 
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);

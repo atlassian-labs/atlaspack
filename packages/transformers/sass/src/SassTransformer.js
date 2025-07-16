@@ -59,12 +59,15 @@ export default (new Transformer({
       let result = await sassRender({
         ...rawConfig,
         file: asset.filePath,
+        // $FlowFixMe
         data: rawConfig.data ? rawConfig.data + EOL + code : code,
         importer: [
+          // $FlowFixMe
           ...rawConfig.importer,
           resolvePathImporter({
             asset,
             resolve,
+            // $FlowFixMe
             includePaths: rawConfig.includePaths,
             options,
           }),
@@ -102,7 +105,7 @@ export default (new Transformer({
     asset.setCode(css);
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);
 
 function resolvePathImporter({asset, resolve, includePaths, options}) {
   // This is a reimplementation of the Sass resolution algorithm that uses Atlaspack's

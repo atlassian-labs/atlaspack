@@ -35,8 +35,9 @@ export default (new Transformer({
     }
 
     asset.type = 'html';
+    // $FlowFixMe
     asset.setCode(render(pugConfig.locals));
 
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);

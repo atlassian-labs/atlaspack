@@ -105,4 +105,4 @@ export default (new Packager({
     });
     return {contents};
   },
-}): Packager);
+}): Packager<mixed, mixed>);

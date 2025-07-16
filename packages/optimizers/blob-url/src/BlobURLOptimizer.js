@@ -18,4 +18,4 @@ export default (new Optimizer({
       )}]))`,
     };
   },
-}): Optimizer);
+}): Optimizer<void>);

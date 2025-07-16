@@ -8,4 +8,4 @@ export default (new Transformer({
     asset.meta.inlineType = 'string';
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);
