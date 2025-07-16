@@ -81,7 +81,7 @@ export function assetFromValue(
 
 class BaseAsset {
   #asset: CommittedAsset | UncommittedAsset;
-  #query /*: ?URLSearchParams */;
+  #query: ?URLSearchParams;
 
   constructor(asset: CommittedAsset | UncommittedAsset) {
     this.#asset = asset;
@@ -195,8 +195,8 @@ class BaseAsset {
 }
 
 export class Asset extends BaseAsset implements IAsset {
-  #asset /*: CommittedAsset | UncommittedAsset */;
-  #env /*: ?Environment */;
+  #asset: CommittedAsset | UncommittedAsset;
+  #env: ?Environment;
 
   constructor(asset: CommittedAsset | UncommittedAsset): Asset {
     let assetValueToAsset = asset.value.committed
@@ -227,7 +227,7 @@ export class Asset extends BaseAsset implements IAsset {
 }
 
 export class MutableAsset extends BaseAsset implements IMutableAsset {
-  #asset /*: UncommittedAsset */;
+  #asset: UncommittedAsset;
 
   constructor(asset: UncommittedAsset): MutableAsset {
     let existing = assetValueToMutableAsset.get(asset.value);
