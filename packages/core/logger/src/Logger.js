@@ -18,7 +18,7 @@ import {errorToDiagnostic, anyToDiagnostic} from '@atlaspack/diagnostic';
 export {instrument, instrumentAsync} from './tracer';
 
 class Logger {
-  #logEmitter /*: ValueEmitter<LogEvent> */ = new ValueEmitter();
+  #logEmitter: ValueEmitter<LogEvent> = new ValueEmitter();
 
   onLog(cb: (event: LogEvent) => mixed): IDisposable {
     return this.#logEmitter.addListener(cb);

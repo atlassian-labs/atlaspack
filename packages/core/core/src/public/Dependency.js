@@ -59,8 +59,8 @@ export function getPublicDependency(
 }
 
 export default class Dependency implements IDependency {
-  #dep /*: InternalDependency */;
-  #options /*: AtlaspackOptions */;
+  #dep: InternalDependency;
+  #options: AtlaspackOptions;
 
   constructor(dep: InternalDependency, options: AtlaspackOptions): Dependency {
     this.#dep = dep;
