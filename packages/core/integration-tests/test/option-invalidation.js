@@ -2,37 +2,9 @@
 import assert from 'assert';
 import path from 'path';
 import {bundle, overlayFS, fsFixture, bundler} from '@atlaspack/test-utils';
-import {
-  setFeatureFlags,
-  getFeatureFlag,
-  DEFAULT_FEATURE_FLAGS,
-} from '@atlaspack/feature-flags';
 
 describe('Option invalidation in cache integration test', () => {
-  let originalFeatureFlags;
-
-  beforeEach(() => {
-    // Save original feature flags
-    originalFeatureFlags = {
-      granularOptionInvalidation: getFeatureFlag('granularOptionInvalidation'),
-    };
-  });
-
-  afterEach(() => {
-    // Restore original feature flags
-    setFeatureFlags({
-      ...DEFAULT_FEATURE_FLAGS,
-      ...originalFeatureFlags,
-    });
-  });
-
   it('respects blocklist with granularOptionInvalidation=true', async function () {
-    // Set the feature flag for this test
-    setFeatureFlags({
-      ...DEFAULT_FEATURE_FLAGS,
-      granularOptionInvalidation: true,
-    });
-
     const dir = path.join(__dirname, 'option-invalidation-test');
     await overlayFS.mkdirp(dir);
 
@@ -51,11 +23,17 @@ describe('Option invalidation in cache integration test', () => {
     const firstBuild = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       defaultConfig: path.join(dir, '.parcelrc'),
+      featureFlags: {
+        granularOptionInvalidation: true,
+      },
     });
 
     const secondBuild = await bundle(path.join(dir, '/index.js'), {
       inputFS: overlayFS,
       defaultConfig: path.join(dir, '.parcelrc'),
+      featureFlags: {
+        granularOptionInvalidation: true,
+      },
     });
 
     // Both builds should have completed successfully
@@ -64,11 +42,6 @@ describe('Option invalidation in cache integration test', () => {
   });
 
   it('should NOT invalidate cache when ignored options change', async function () {
-    setFeatureFlags({
-      ...DEFAULT_FEATURE_FLAGS,
-      granularOptionInvalidation: true,
-    });
-
     const dir = path.join(__dirname, 'option-invalidation-test-blocklist');
     await overlayFS.mkdirp(dir);
 
@@ -89,105 +62,31 @@ describe('Option invalidation in cache integration test', () => {
       defaultConfig: path.join(dir, '.parcelrc'),
       logLevel: 'info',
       shouldProfile: false,
+      featureFlags: {
+        granularOptionInvalidation: true,
+      },
     }).run();
 
-    // Second build with changed ignored options
+    // Second build with changed ignored options -- should NOT invalidate cache
     const secondBuild = await bundler([path.join(dir, 'index.js')], {
       inputFS: overlayFS,
       shouldDisableCache: false,
       defaultConfig: path.join(dir, '.parcelrc'),
       logLevel: 'error',
       shouldProfile: false,
-    }).run();
-
-    // Gather comprehensive debug info
-    const debugInfo = {
-      // Test results
-      changedAssetsCount: secondBuild.changedAssets.size,
-      changedAssetsList: Array.from(secondBuild.changedAssets.keys()),
-
-      // Environment detection
-      environment: {
-        isCI: !!process.env.CI,
-        platform: process.platform,
-        nodeVersion: process.version,
-        nodeEnv: process.env.NODE_ENV,
-        ciProvider: process.env.GITHUB_ACTIONS
-          ? 'GitHub Actions'
-          : process.env.CI_NAME || (process.env.CI ? 'Unknown CI' : 'Local'),
-      },
-
-      // Feature flags state
       featureFlags: {
-        granularOptionInvalidation: getFeatureFlag(
-          'granularOptionInvalidation',
-        ),
-        // Get a few key feature flags
-        cachePerformanceImprovements: getFeatureFlag(
-          'cachePerformanceImprovements',
-        ),
-        atlaspackV3: getFeatureFlag('atlaspackV3'),
+        granularOptionInvalidation: true,
       },
-
-      // Atlaspack-specific environment
-      atlaspackEnv: Object.keys(process.env)
-        .filter(
-          (key) => key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
-        )
-        .reduce((acc, key) => {
-          acc[key] = process.env[key];
-          return acc;
-        }, {}),
-
-      // Options that we expect to be ignored
-      optionComparison: {
-        changedOptions: {
-          logLevel: {from: 'info', to: 'error'},
-          shouldProfile: {from: false, to: false},
-        },
-        expectedBehavior:
-          'These options should be ignored and not cause cache invalidation',
-      },
-
-      // File system context
-      filesystem: {
-        cwd: process.cwd(),
-        testDir: dir,
-        configExists: require('fs').existsSync(path.join(dir, '.parcelrc')),
-        indexExists: require('fs').existsSync(path.join(dir, 'index.js')),
-      },
-
-      // Runtime context
-      runtime: {
-        memoryUsage: process.memoryUsage(),
-        uptime: process.uptime(),
-        buildTimestamp: Date.now(),
-      },
-
-      // Test configuration
-      testConfig: {
-        timeout: this.timeout?.() || 'unknown',
-        testFile: __filename,
-      },
-    };
+    }).run();
 
     assert.equal(
       secondBuild.changedAssets.size,
       0,
-      `Ignored options should not invalidate cache.\n\nDEBUG INFO:\n${JSON.stringify(
-        debugInfo,
-        null,
-        2,
-      )}`,
+      'Ignored options should not invalidate cache',
     );
   });
 
   it('should invalidate cache when non-blocklisted options change and granularOptionInvalidation is enabled', async function () {
-    setFeatureFlags({
-      ...DEFAULT_FEATURE_FLAGS,
-      granularOptionInvalidation: true,
-    });
-
     const dir = path.join(__dirname, 'option-invalidation-test-2');
     await overlayFS.mkdirp(dir);
 
@@ -206,6 +105,9 @@ describe('Option invalidation in cache integration test', () => {
       shouldDisableCache: false,
       defaultConfig: path.join(dir, '.parcelrc'),
       mode: 'development',
+      featureFlags: {
+        granularOptionInvalidation: true,
+      },
     }).run();
 
     // Second build with production mode (should invalidate cache)
@@ -215,6 +117,9 @@ describe('Option invalidation in cache integration test', () => {
       defaultConfig: path.join(dir, '.parcelrc'),
       // mode is not in the blocklist, so it should invalidate cache
       mode: 'production',
+      featureFlags: {
+        granularOptionInvalidation: true,
+      },
     }).run();
 
     assert(
@@ -224,11 +129,6 @@ describe('Option invalidation in cache integration test', () => {
   });
 
   it('should invalidate cache for mode changes regardless of granularOptionInvalidation setting', async function () {
-    setFeatureFlags({
-      ...DEFAULT_FEATURE_FLAGS,
-      granularOptionInvalidation: false,
-    });
-
     const dir = path.join(
       __dirname,
       'option-invalidation-test-disabled-feature',
@@ -250,6 +150,9 @@ describe('Option invalidation in cache integration test', () => {
       shouldDisableCache: false,
       defaultConfig: path.join(dir, '.parcelrc'),
       mode: 'development',
+      featureFlags: {
+        granularOptionInvalidation: false,
+      },
     }).run();
 
     // Second build with production mode -- should invalidate cache
@@ -258,6 +161,9 @@ describe('Option invalidation in cache integration test', () => {
       shouldDisableCache: false,
       defaultConfig: path.join(dir, '.parcelrc'),
       mode: 'production', // This should cause invalidation
+      featureFlags: {
+        granularOptionInvalidation: false,
+      },
     }).run();
 
     assert(
