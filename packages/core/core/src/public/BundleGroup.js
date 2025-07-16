@@ -28,8 +28,8 @@ export function bundleGroupToInternalBundleGroup(
 const inspect = Symbol.for('nodejs.util.inspect.custom');
 
 export default class BundleGroup implements IBundleGroup {
-  #bundleGroup /*: InternalBundleGroup */;
-  #options /*: AtlaspackOptions */;
+  #bundleGroup: InternalBundleGroup;
+  #options: AtlaspackOptions;
 
   constructor(
     bundleGroup: InternalBundleGroup,

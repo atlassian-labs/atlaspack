@@ -105,7 +105,7 @@ export type FeatureFlags = {|
   unusedComputedPropertyFix: boolean,
 
   /**
-   * Fixes an issue where star re-exports of empty files (usually occuring in compiled typescript libraries)
+   * Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries)
    * could cause exports to undefined at runtime.
    */
   emptyFileStarRexportFix: boolean,
@@ -115,13 +115,19 @@ export type FeatureFlags = {|
    */
   cliProgressReportingImprovements: boolean,
   /**
+   * Enable a change to the conditional bundling loader to use a fallback bundle loading if the expected scripts aren't found
+   *
+   * Split into two flags, to allow usage in the dev or prod packagers separately
+   */
+  condbDevFallbackDev: boolean,
+  condbDevFallbackProd: boolean,
+  /**
    * Enable path-based granular invalidation of options.
    * This provides more detailed tracking of which specific option properties
    * are being accessed, which can reduce unnecessary cache invalidations.
    *
    * When enabled, this flag:
    * - Tracks nested object paths granularly for more precise invalidations
-   * - Skips tracking of Object.keys() and similar operations on config/options objects
    * - Enables option invalidation blocklist to reduce unnecessary cache invalidations
    */
   granularOptionInvalidation: boolean,
