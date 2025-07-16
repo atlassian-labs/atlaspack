@@ -2,6 +2,7 @@
 import assert from 'assert';
 import path from 'path';
 import {bundle, overlayFS, fsFixture, bundler} from '@atlaspack/test-utils';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 describe('Option invalidation in cache integration test', () => {
   it('respects blocklist with granularOptionInvalidation=true', async function () {
@@ -79,10 +80,69 @@ describe('Option invalidation in cache integration test', () => {
       },
     }).run();
 
+    const debugInfo = {
+      changedAssetsCount: secondBuild.changedAssets.size,
+      changedAssetsList: Array.from(secondBuild.changedAssets.keys()),
+      environment: {
+        isCI: !!process.env.CI,
+        platform: process.platform,
+        nodeVersion: process.version,
+        nodeEnv: process.env.NODE_ENV,
+        ciProvider: process.env.GITHUB_ACTIONS
+          ? 'GitHub Actions'
+          : process.env.CI_NAME || (process.env.CI ? 'Unknown CI' : 'Local'),
+      },
+      featureFlags: {
+        granularOptionInvalidation: getFeatureFlag(
+          'granularOptionInvalidation',
+        ),
+        cachePerformanceImprovements: getFeatureFlag(
+          'cachePerformanceImprovements',
+        ),
+        atlaspackV3: getFeatureFlag('atlaspackV3'),
+      },
+
+      atlaspackEnv: Object.keys(process.env)
+        .filter(
+          (key) => key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
+        )
+        .reduce((acc, key) => {
+          acc[key] = process.env[key];
+          return acc;
+        }, {}),
+      optionComparison: {
+        changedOptions: {
+          logLevel: {from: 'info', to: 'error'},
+          shouldProfile: {from: false, to: false},
+        },
+        expectedBehavior:
+          'These options should be ignored and not cause cache invalidation',
+      },
+      filesystem: {
+        cwd: process.cwd(),
+        testDir: dir,
+        configExists: require('fs').existsSync(path.join(dir, '.parcelrc')),
+        indexExists: require('fs').existsSync(path.join(dir, 'index.js')),
+      },
+      runtime: {
+        memoryUsage: process.memoryUsage(),
+        uptime: process.uptime(),
+        buildTimestamp: Date.now(),
+      },
+      testConfig: {
+        timeout: this.timeout?.() || 'unknown',
+        testFile: __filename,
+      },
+    };
+
     assert.equal(
       secondBuild.changedAssets.size,
       0,
-      'Ignored options should not invalidate cache',
+      `Ignored options should not invalidate cache.\n\nDEBUG INFO:\n${JSON.stringify(
+        debugInfo,
+        null,
+        2,
+      )}`,
     );
   });
 
