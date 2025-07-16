@@ -1,5 +1,25 @@
 # @atlaspack/cli
 
+## 2.13.22
+
+### Patch Changes
+
+- [#682](https://github.com/atlassian-labs/atlaspack/pull/682) [`a5ed1b4`](https://github.com/atlassian-labs/atlaspack/commit/a5ed1b414498560f393ff491af4da25b6e8dde56) Thanks [@alshdavid](https://github.com/alshdavid)! - Updating build system
+
+- [#687](https://github.com/atlassian-labs/atlaspack/pull/687) [`26070c8`](https://github.com/atlassian-labs/atlaspack/commit/26070c871d2700daf4501051dd87b58b414912c0) Thanks [@alshdavid](https://github.com/alshdavid)! - Fixes for atlaspack link
+
+- Updated dependencies [[`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d), [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`c4415a4`](https://github.com/atlassian-labs/atlaspack/commit/c4415a455543d984ca28452c2cb87a794d22497c), [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5), [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3), [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417), [`a5ed1b4`](https://github.com/atlassian-labs/atlaspack/commit/a5ed1b414498560f393ff491af4da25b6e8dde56), [`3ba1aee`](https://github.com/atlassian-labs/atlaspack/commit/3ba1aee6a794a26b2f0255aaf6d003981532d0ae)]:
+  - @atlaspack/feature-flags@2.19.0
+  - @atlaspack/utils@2.17.0
+  - @atlaspack/core@2.19.0
+  - @atlaspack/package-manager@2.14.18
+  - @atlaspack/reporter-dev-server@2.14.18
+  - @atlaspack/fs@2.15.13
+  - @atlaspack/reporter-cli@2.17.0
+  - @atlaspack/config-default@3.1.20
+  - @atlaspack/reporter-tracer@2.14.18
+  - @atlaspack/logger@2.14.13
+
 ## 2.13.21
 
 ### Patch Changes

@@ -1,5 +1,0 @@
----
-'atlaspack': patch
----
-
-Initial commit
