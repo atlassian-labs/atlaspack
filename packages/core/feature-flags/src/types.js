@@ -117,6 +117,16 @@ export type FeatureFlags = {|
    */
   condbDevFallbackDev: boolean,
   condbDevFallbackProd: boolean,
+  /**
+   * Enable path-based granular invalidation of options.
+   * This provides more detailed tracking of which specific option properties
+   * are being accessed, which can reduce unnecessary cache invalidations.
+   *
+   * When enabled, this flag:
+   * - Tracks nested object paths granularly for more precise invalidations
+   * - Enables option invalidation blocklist to reduce unnecessary cache invalidations
+   */
+  granularOptionInvalidation: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;

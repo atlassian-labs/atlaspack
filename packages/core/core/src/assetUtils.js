@@ -23,6 +23,7 @@ import {Readable} from 'stream';
 import {createBuildCache} from '@atlaspack/build-cache';
 import {PluginLogger} from '@atlaspack/logger';
 import nullthrows from 'nullthrows';
+import {getValueAtPath} from './requests/ConfigRequest';
 import CommittedAsset from './CommittedAsset';
 import UncommittedAsset from './UncommittedAsset';
 import loadPlugin from './loadAtlaspackPlugin';
@@ -199,7 +200,12 @@ export function getInvalidationId(invalidation: RequestInvalidation): string {
     case 'env':
       return 'env:' + invalidation.key;
     case 'option':
-      return 'option:' + invalidation.key;
+      return (
+        'option:' +
+        (Array.isArray(invalidation.key)
+          ? invalidation.key.join('.')
+          : invalidation.key)
+      );
     default:
       throw new Error('Unknown invalidation type: ' + invalidation.type);
   }
@@ -239,10 +245,19 @@ export async function getInvalidationHash(
         hashes +=
           invalidation.key + ':' + (options.env[invalidation.key] || '');
         break;
-      case 'option':
+      case 'option': {
+        // Handle both string and array keys
+        const optionKey = invalidation.key;
+        const optionValue = Array.isArray(optionKey)
+          ? getValueAtPath(options, optionKey)
+          : options[optionKey];
+
         hashes +=
-          invalidation.key + ':' + hashFromOption(options[invalidation.key]);
+          (Array.isArray(optionKey) ? optionKey.join('.') : optionKey) +
+          ':' +
+          hashFromOption(optionValue);
         break;
+      }
       default:
         throw new Error('Unknown invalidation type: ' + invalidation.type);
     }

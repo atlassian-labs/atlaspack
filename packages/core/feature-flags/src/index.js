@@ -40,6 +40,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   cliProgressReportingImprovements: false,
   condbDevFallbackDev: false,
   condbDevFallbackProd: false,
+  granularOptionInvalidation: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

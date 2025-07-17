@@ -222,7 +222,11 @@ export type EnvInvalidation = {|
 
 export type OptionInvalidation = {|
   type: 'option',
-  key: string,
+  /**
+   * The option key that changed. Can be either a string in dot notation or an array
+   * of path segments for more granular invalidation.
+   */
+  key: string[] | string, // Support both array and dot-string formats for backward compatibility
 |};
 
 export type RequestInvalidation =
@@ -252,7 +256,7 @@ export type Invalidations = {|
   invalidateOnFileChange: Set<ProjectPath>,
   invalidateOnFileCreate: Array<InternalFileCreateInvalidation>,
   invalidateOnEnvChange: Set<string>,
-  invalidateOnOptionChange: Set<string>,
+  invalidateOnOptionChange: Set<string[] | string>,
   invalidateOnStartup: boolean,
   invalidateOnBuild: boolean,
 |};
@@ -332,6 +336,11 @@ export type AtlaspackOptions = {|
   |},
 
   +featureFlags: FeatureFlags,
+
+  optionInvalidation?: {|
+    blocklist?: Array<string>,
+    trackMetrics?: boolean,
+  |},
 |};
 export type ParcelOptions = AtlaspackOptions;
 
@@ -504,7 +513,7 @@ export type Config = {|
   |}>,
   invalidateOnFileCreate: Array<InternalFileCreateInvalidation>,
   invalidateOnEnvChange: Set<string>,
-  invalidateOnOptionChange: Set<string>,
+  invalidateOnOptionChange: Set<string[] | string>,
   devDeps: Array<InternalDevDepOptions>,
   invalidateOnStartup: boolean,
   invalidateOnBuild: boolean,

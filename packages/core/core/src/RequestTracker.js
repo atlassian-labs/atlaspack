@@ -7,6 +7,7 @@ import {deserialize, serialize} from '@atlaspack/build-cache';
 import {LMDBLiteCache, type Cache} from '@atlaspack/cache';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {ContentGraph} from '@atlaspack/graph';
+import {getValueAtPath} from './requests/ConfigRequest';
 import type {
   ContentGraphOpts,
   ContentKey,
@@ -227,7 +228,7 @@ export type RunAPI<TResult: RequestResult> = {|
   invalidateOnStartup: () => void,
   invalidateOnBuild: () => void,
   invalidateOnEnvChange: (string) => void,
-  invalidateOnOptionChange: (string) => void,
+  invalidateOnOptionChange: (string[] | string) => void,
   getInvalidations(): Array<RequestInvalidation>,
   storeResult(result: TResult, cacheKey?: string): void,
   getRequestResult<T: RequestResult>(contentKey: ContentKey): Async<?T>,
@@ -280,11 +281,29 @@ const nodeFromEnv = (env: string, value: string | void): RequestGraphNode => ({
   value,
 });
 
-const nodeFromOption = (option: string, value: mixed): RequestGraphNode => ({
-  id: 'option:' + option,
-  type: OPTION,
-  hash: hashFromOption(value),
-});
+/**
+ * Creates a node to represent an option and its current value.
+ * Supports both string and array path formats for backwards compatibility.
+ * Uses JSON.stringify for array paths to handle keys containing dots properly.
+ *
+ * @param {string[] | string} option - Option path as an array or dot-notation string
+ * @param {mixed} value - The current value of the option
+ * @returns {RequestGraphNode} The created node
+ */
+const nodeFromOption = (
+  option: string[] | string,
+  value: mixed,
+): RequestGraphNode => {
+  // Preserve original behavior for strings, only prefix arrays to handle dots
+  const optionKey = Array.isArray(option)
+    ? `array:${JSON.stringify(option)}`
+    : option;
+  return {
+    id: 'option:' + optionKey,
+    type: OPTION,
+    hash: hashFromOption(value),
+  };
+};
 
 const nodeFromConfigKey = (
   fileName: ProjectPath,
@@ -304,6 +323,27 @@ const keyFromEnvContentKey = (contentKey: ContentKey): string =>
 
 const keyFromOptionContentKey = (contentKey: ContentKey): string =>
   contentKey.slice('option:'.length);
+
+/**
+ * Extracts the original option from a prefixed option key.
+ * Handles both new format (with array prefix) and legacy format (strings).
+ *
+ * @param {string} key - The option key from the content key
+ * @returns {string[] | string} The original option path
+ */
+const extractOptionFromKey = (key: string): string[] | string => {
+  if (key.startsWith('array:')) {
+    try {
+      return JSON.parse(key.slice(6));
+    } catch (e) {
+      // Fallback to legacy behavior if JSON parsing fails
+      return key.slice(6);
+    }
+  } else {
+    // No prefix means it's a string option (preserves original behavior)
+    return key;
+  }
+};
 
 // This constant is chosen by local profiling the time to serialise n nodes and tuning until an average time of ~50 ms per blob.
 // The goal is to free up the event loop periodically to allow interruption by the user.
@@ -506,29 +546,187 @@ export class RequestGraph extends ContentGraph<
   }
 
   /**
-   * Nodes invalidated by option changes.
+   * Invalidates nodes that depend on option changes.
+   * This function handles option invalidation with configurable blocklists and granular path tracking.
+   *
+   * @param {AtlaspackOptions} options - The current Atlaspack options object
+   * @returns {Array<{option: string, count: number, ...}> | string[]} Array of invalidating options with counts or just option keys
    */
-  invalidateOptionNodes(options: AtlaspackOptions): string[] {
-    const invalidatedKeys = [];
+  invalidateOptionNodes(
+    options: AtlaspackOptions,
+  ): Array<{option: string, count: number, ...}> | string[] {
+    // Check if we should use the new granular option invalidation
+    const granularOptionInvalidationEnabled = getFeatureFlag(
+      'granularOptionInvalidation',
+    );
+
+    if (!granularOptionInvalidationEnabled) {
+      // Original behavior for backward compatibility
+      const invalidatedKeys: string[] = [];
+
+      for (let nodeId of this.optionNodeIds) {
+        let node = nullthrows(this.getNode(nodeId));
+        invariant(node.type === OPTION);
+        const rawKey = keyFromOptionContentKey(node.id);
+        const extractedOption = extractOptionFromKey(rawKey);
+
+        // For legacy behavior, convert to string representation for lookup
+        const lookupKey = Array.isArray(extractedOption)
+          ? extractedOption.join('.')
+          : extractedOption;
+
+        if (hashFromOption(options[lookupKey]) !== node.hash) {
+          invalidatedKeys.push(lookupKey);
+          let parentNodes = this.getNodeIdsConnectedTo(
+            nodeId,
+            requestGraphEdgeTypes.invalidated_by_update,
+          );
+          for (let parentNode of parentNodes) {
+            this.invalidateNode(parentNode, OPTION_CHANGE);
+          }
+        }
+      }
+
+      return invalidatedKeys;
+    }
+
+    // New behavior with granular path tracking and blocklist
+    // Get invalidation configuration
+    const invalidationConfig = options.optionInvalidation || {};
+    const configuredBlocklist = invalidationConfig.blocklist || [];
+
+    // Define a minimal default blocklist for non-impactful options
+    // Only include options that very rarely affect build output
+    const defaultBlocklist = ['instanceId'];
+    const defaultBlocklistPrefixes = [];
+
+    // Track invalidation metrics if enabled
+    const trackInvalidationMetrics = !!invalidationConfig.trackMetrics;
+    const invalidationCounts = new Map(); // Always track counts for return value
+    const skippedOptions = trackInvalidationMetrics ? new Set() : null;
 
     for (let nodeId of this.optionNodeIds) {
       let node = nullthrows(this.getNode(nodeId));
       invariant(node.type === OPTION);
-      const key = keyFromOptionContentKey(node.id);
+      const rawKey = keyFromOptionContentKey(node.id);
+      const extractedOption = extractOptionFromKey(rawKey);
 
-      if (hashFromOption(options[key]) !== node.hash) {
-        invalidatedKeys.push(key);
+      // Convert to path array for granular checking
+      const optionPath = Array.isArray(extractedOption)
+        ? extractedOption
+        : extractedOption.split('.');
+
+      // Use string representation for blocklist checking and logging
+      const optionKey = Array.isArray(extractedOption)
+        ? extractedOption.join('.')
+        : extractedOption;
+
+      // Check if this option should be skipped from invalidation
+      const shouldSkip =
+        granularOptionInvalidationEnabled &&
+        (defaultBlocklist.includes(optionKey) ||
+          configuredBlocklist.includes(optionKey) ||
+          defaultBlocklistPrefixes.some((prefix) =>
+            optionKey.startsWith(prefix),
+          ) ||
+          configuredBlocklist.some(
+            (prefix) =>
+              prefix.endsWith('*') && optionKey.startsWith(prefix.slice(0, -1)),
+          ));
+
+      // If this option should be skipped, track it for reporting and skip invalidation
+      if (shouldSkip) {
+        // Only add to skipped options if we're tracking metrics
+        if (skippedOptions) {
+          skippedOptions.add(optionKey);
+        }
+
+        // Always skip invalidation for blocklisted options, regardless of metrics tracking
+        continue;
+      }
+
+      // Get the option value using the path array for more precise access
+      const value = getValueAtPath(options, optionPath);
+
+      if (hashFromOption(value) !== node.hash) {
         let parentNodes = this.getNodeIdsConnectedTo(
           nodeId,
           requestGraphEdgeTypes.invalidated_by_update,
         );
+
+        // Track invalidation counts for return value
+        invalidationCounts.set(
+          optionKey,
+          (invalidationCounts.get(optionKey) || 0) + parentNodes.length,
+        );
+
+        // If granular paths are enabled, log more detailed information about which options changed
+        if (granularOptionInvalidationEnabled) {
+          logger.verbose({
+            origin: '@atlaspack/core',
+            message: `Option change detected: ${optionKey}`,
+            meta: {
+              optionPath,
+              oldHash: node.hash,
+              newHash: hashFromOption(value),
+              trackableEvent: 'option_change_detected',
+            },
+          });
+        }
+
         for (let parentNode of parentNodes) {
           this.invalidateNode(parentNode, OPTION_CHANGE);
         }
       }
     }
 
-    return invalidatedKeys;
+    // Log invalidation metrics if enabled
+    if (trackInvalidationMetrics) {
+      // Log skipped options
+      if (skippedOptions && skippedOptions.size > 0) {
+        const skippedList = Array.from(skippedOptions);
+        logger.verbose({
+          origin: '@atlaspack/core',
+          message: 'Skipped option invalidations',
+          meta: {
+            trackableEvent: 'option_invalidation_skipped',
+            skippedOptions: skippedList,
+            skippedCount: skippedList.length,
+          },
+        });
+      }
+
+      // Log invalidations if there were any
+      if (invalidationCounts.size > 0) {
+        const sortedInvalidations = Array.from(
+          invalidationCounts.entries(),
+        ).sort((a, b) => b[1] - a[1]);
+
+        const topInvalidations = sortedInvalidations.slice(0, 10);
+        const totalInvalidationCount = sortedInvalidations.reduce(
+          (acc, [, count]) => acc + count,
+          0,
+        );
+
+        logger.verbose({
+          origin: '@atlaspack/core',
+          message: 'Option invalidation metrics',
+          meta: {
+            trackableEvent: 'option_invalidation_metrics',
+            invalidations: topInvalidations,
+            totalOptionsChecked: this.optionNodeIds.size,
+            totalInvalidationCount: totalInvalidationCount,
+            totalInvalidatingOptions: sortedInvalidations.length,
+          },
+        });
+      }
+    }
+
+    // Return the top invalidating options (up to 20) to be used in diagnostics
+    return Array.from(invalidationCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([option, count]) => ({option, count}));
   }
 
   invalidateOnConfigKeyChange(
@@ -739,27 +937,90 @@ export class RequestGraph extends ContentGraph<
     }
   }
 
+  /**
+   * Registers that a request depends on a specific option.
+   * When this option changes, the request will be invalidated.
+   *
+   * @param {NodeId} requestNodeId - The ID of the request node
+   * @param {string[] | string} option - The option path as an array or dot-notation string
+   * @param {mixed} value - The current value of the option
+   */
   invalidateOnOptionChange(
     requestNodeId: NodeId,
-    option: string,
+    option: string[] | string,
     value: mixed,
   ) {
-    let optionNode = nodeFromOption(option, value);
-    let optionNodeId = this.addNode(optionNode);
+    const useGranularTracking = getFeatureFlag('granularOptionInvalidation');
 
-    if (
-      !this.hasEdge(
-        requestNodeId,
-        optionNodeId,
-        requestGraphEdgeTypes.invalidated_by_update,
-      )
-    ) {
-      this.addEdge(
-        requestNodeId,
-        optionNodeId,
-        requestGraphEdgeTypes.invalidated_by_update,
-      );
+    if (useGranularTracking) {
+      // New behavior with granular path tracking
+      // Normalize to array form for consistency
+      const optionPath = Array.isArray(option) ? option : option.split('.');
+
+      // Simple validation to prevent empty keys
+      if (optionPath.length === 0) {
+        return;
+      }
+
+      // For backward compatibility and node lookup, we still need the dot-string form
+      const optionKey = optionPath.join('.');
+
+      let optionNodeId = this.addNode(nodeFromOption(optionKey, value));
+
+      if (
+        !this.hasEdge(
+          requestNodeId,
+          optionNodeId,
+          requestGraphEdgeTypes.invalidated_by_update,
+        )
+      ) {
+        this.addEdge(
+          requestNodeId,
+          optionNodeId,
+          requestGraphEdgeTypes.invalidated_by_update,
+        );
+      }
+    } else {
+      // Original behavior for backward compatibility
+      // Ensure option is a string for backward compatibility
+      const optionKey = Array.isArray(option) ? option.join('.') : option;
+
+      let optionNode = nodeFromOption(optionKey, value);
+      let optionNodeId = this.addNode(optionNode);
+
+      if (
+        !this.hasEdge(
+          requestNodeId,
+          optionNodeId,
+          requestGraphEdgeTypes.invalidated_by_update,
+        )
+      ) {
+        this.addEdge(
+          requestNodeId,
+          optionNodeId,
+          requestGraphEdgeTypes.invalidated_by_update,
+        );
+      }
     }
+  }
+
+  /**
+   * Gets nodes whose content key starts with the given prefix.
+   * Useful for finding all nodes of a certain type.
+   *
+   * @param {string} prefix - The prefix to search for
+   * @returns {Array<RequestGraphNode>} Array of matching nodes
+   */
+  getNodesByPrefix(prefix: string): Array<RequestGraphNode> {
+    const results = [];
+
+    for (const [, node] of this.nodes.entries()) {
+      if (node && node.id && node.id.startsWith(prefix)) {
+        results.push(node);
+      }
+    }
+
+    return results;
   }
 
   clearInvalidations(nodeId: NodeId) {
@@ -1482,12 +1743,49 @@ export default class RequestTracker {
       invalidateOnBuild: () => this.graph.invalidateOnBuild(requestId),
       invalidateOnEnvChange: (env) =>
         this.graph.invalidateOnEnvChange(requestId, env, this.options.env[env]),
-      invalidateOnOptionChange: (option) =>
-        this.graph.invalidateOnOptionChange(
-          requestId,
-          option,
-          this.options[option],
-        ),
+      /**
+       * Register that this request depends on a specific option.
+       * When this option changes, the request will be invalidated.
+       *
+       * @param {string[] | string} option - Option path as array or dot-notation string
+       */
+      invalidateOnOptionChange: (option) => {
+        // Basic validation to prevent null/empty options
+        if (
+          option == null ||
+          option === '' ||
+          (Array.isArray(option) && option.length === 0)
+        ) {
+          return;
+        }
+
+        const useGranularTracking = getFeatureFlag(
+          'granularOptionInvalidation',
+        );
+
+        if (useGranularTracking) {
+          // New behavior with granular path tracking
+          // Normalize to array form for consistent handling
+          const optionPath = Array.isArray(option) ? option : option.split('.');
+
+          this.graph.invalidateOnOptionChange(
+            requestId,
+            optionPath,
+            getValueAtPath(this.options, optionPath),
+          );
+        } else {
+          // Original behavior for backward compatibility
+          // When not using granular tracking, option should always be a string
+          // but we'll handle array format too for robustness
+          const optionKey = Array.isArray(option) ? option.join('.') : option;
+
+          this.graph.invalidateOnOptionChange(
+            requestId,
+            optionKey,
+            this.options[optionKey], // Original behavior only supported top-level options
+          );
+        }
+      },
       getInvalidations: () => previousInvalidations,
       storeResult: (result, cacheKey) => {
         this.storeResult(requestId, result, cacheKey);
@@ -1994,7 +2292,10 @@ type InvalidationStats = {|
  * If this is a env or option invalidation, this key will contain the list of changed environment
  * variables or options.
  */
-type InvalidationDetail = string[] | FSInvalidationStats;
+type InvalidationDetail =
+  | string[]
+  | FSInvalidationStats
+  | Array<{option: string, count: number, ...}>;
 
 /**
  * Number of invalidations for a given file-system event.
@@ -2032,6 +2333,7 @@ type InvalidationFnStats = {|
   count: number,
   /**
    * If this is a env or option invalidation, this key will contain the list of changed values.
+   * For option invalidation, it will contain an array of objects with option paths and invalidation counts.
    *
    * If this is a fs events invalidation, this key will contain statistics about invalidations
    */
@@ -2148,7 +2450,10 @@ export async function runInvalidation(
 ): Promise<InvalidationFnStats> {
   const start = performance.now();
   const startInvalidationCount = requestGraph.getInvalidNodeCount();
+
+  // Simply run the invalidation function
   const result = await invalidationFn.fn();
+
   const count = requestGraph.getInvalidNodeCount() - startInvalidationCount;
   const duration = performance.now() - start;
 
