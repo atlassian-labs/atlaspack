@@ -18,6 +18,9 @@
     "@parcel/source-map": "^2.1.1",
     "less": "^4.1.1"
   },
+  "devDependencies": {
+    "@types/less": "^3.0.8"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },

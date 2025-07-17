@@ -9,8 +9,7 @@ import {
   EnvironmentManager,
   Environment,
 } from '@atlaspack/core';
-// @ts-expect-error extension
-import {DEFAULT_OPTIONS} from '@atlaspack/core/test/test-utils.ts';
+import {DEFAULT_OPTIONS} from '@atlaspack/core/test/test-utils';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 
 const {fromEnvironmentId} = EnvironmentManager;

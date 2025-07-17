@@ -1,10 +1,8 @@
 import type {DiagnosticCodeHighlight} from '@atlaspack/diagnostic';
 
 import chalk from 'chalk';
-// @ts-expect-error - Could not find a declaration file for module 'emphasize'
 import emphasize from 'emphasize';
 import stringWidth from 'string-width';
-// @ts-expect-error - Could not find a declaration file for module 'slice-ansi'
 import sliceAnsi from 'slice-ansi';
 
 type CodeFramePadding = {
