@@ -72,6 +72,7 @@ export function makeConfigProxy<T>(
   };
 
   const makeProxy = (target: T, path: Array<string>) => {
+    // @ts-expect-error TS2345
     return new Proxy(target, {
       ownKeys(target: T) {
         reportPath(path);
@@ -79,6 +80,7 @@ export function makeConfigProxy<T>(
         return Object.getOwnPropertyNames(target);
       },
       get(target: T, prop: string) {
+        // @ts-expect-error TS7053
         const value = target[prop];
 
         if (
@@ -96,13 +98,16 @@ export function makeConfigProxy<T>(
     });
   };
 
+  // @ts-expect-error TS2322
   return makeProxy(config, []);
 }
 
 export default class PublicConfig implements IConfig {
+  // @ts-expect-error TS2564
   #config: Config;
   #pkg: PackageJSON | null | undefined;
   #pkgFilePath: FilePath | null | undefined;
+  // @ts-expect-error TS2564
   #options: AtlaspackOptions;
 
   constructor(config: Config, options: AtlaspackOptions) {
@@ -160,8 +165,10 @@ export default class PublicConfig implements IConfig {
       resolveFrom: toProjectPath(this.#options.projectRoot, devDep.resolveFrom),
       additionalInvalidations: devDep.additionalInvalidations?.map(
         (i: {
+          // @ts-expect-error TS2304
           range?: SemverRange | null | undefined;
           resolveFrom: FilePath;
+          // @ts-expect-error TS2304
           specifier: DependencySpecifier;
         }) => ({
           ...i,
@@ -172,21 +179,27 @@ export default class PublicConfig implements IConfig {
   }
 
   invalidateOnFileCreate(invalidation: FileCreateInvalidation) {
+    // @ts-expect-error TS2339
     if (invalidation.glob != null) {
       this.#config.invalidateOnFileCreate.push(invalidation);
+      // @ts-expect-error TS2339
     } else if (invalidation.filePath != null) {
       this.#config.invalidateOnFileCreate.push({
         filePath: toProjectPath(
           this.#options.projectRoot,
+          // @ts-expect-error TS2339
           invalidation.filePath,
         ),
       });
     } else {
+      // @ts-expect-error TS2339
       invariant(invalidation.aboveFilePath != null);
       this.#config.invalidateOnFileCreate.push({
+        // @ts-expect-error TS2339
         fileName: invalidation.fileName,
         aboveFilePath: toProjectPath(
           this.#options.projectRoot,
+          // @ts-expect-error TS2339
           invalidation.aboveFilePath,
         ),
       });
@@ -229,23 +242,27 @@ export default class PublicConfig implements IConfig {
       | null
       | undefined,
   ): Promise<ConfigResultWithFilePath<T> | null | undefined> {
+    // @ts-expect-error TS2339
     let packageKey = options?.packageKey;
     if (packageKey != null) {
       let pkg = await this.getConfigFrom(searchPath, ['package.json'], {
         exclude: true,
       });
 
+      // @ts-expect-error TS18046
       if (pkg && pkg.contents[packageKey]) {
         // Invalidate only when the package key changes
         this.invalidateOnConfigKeyChange(pkg.filePath, [packageKey]);
 
         return {
+          // @ts-expect-error TS18046
           contents: pkg.contents[packageKey],
           filePath: pkg.filePath,
         };
       }
     }
 
+    // @ts-expect-error TS2339
     const readTracking = options?.readTracking;
     if (readTracking === true) {
       for (let fileName of fileNames) {
@@ -254,6 +271,7 @@ export default class PublicConfig implements IConfig {
         });
 
         if (config != null) {
+          // @ts-expect-error TS2322
           return Promise.resolve({
             contents: makeConfigProxy((keyPath) => {
               this.invalidateOnConfigKeyChange(config.filePath, keyPath);
@@ -278,6 +296,7 @@ export default class PublicConfig implements IConfig {
       });
     }
 
+    // @ts-expect-error TS2339
     let parse = options && options.parse;
     let configFilePath = await resolveConfig(
       this.#options.inputFS,
@@ -289,6 +308,7 @@ export default class PublicConfig implements IConfig {
       return null;
     }
 
+    // @ts-expect-error TS2339
     if (!options || !options.exclude) {
       this.invalidateOnFileChange(configFilePath);
     }

@@ -180,7 +180,7 @@ export function errorToDiagnostic(
       name: error.name,
       stack:
         codeFrames == null
-          ? error.highlightedCodeFrame ?? error.codeFrame ?? error.stack
+          ? (error.highlightedCodeFrame ?? error.codeFrame ?? error.stack)
           : undefined,
       codeFrames,
     },

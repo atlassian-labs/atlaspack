@@ -75,6 +75,7 @@ export default new Transformer({
       return [asset];
     }
 
+    // @ts-expect-error TS2709
     const postcss: Postcss = await loadPostcss(options, asset.filePath);
     let ast = nullthrows(await asset.getAST());
     let program = postcss.fromJSON(ast.program);
@@ -101,12 +102,16 @@ export default new Transformer({
         let configKey;
         let hint;
         if (config.raw.modules) {
+          // @ts-expect-error TS2345
           message = md`The "modules" option in __${filename}__ can be replaced with configuration for @atlaspack/transformer-css to improve build performance.`;
           configKey = '/modules';
+          // @ts-expect-error TS2345
           hint = md`Remove the "modules" option from __${filename}__`;
         } else {
+          // @ts-expect-error TS2345
           message = md`The "postcss-modules" plugin in __${filename}__ can be replaced with configuration for @atlaspack/transformer-css to improve build performance.`;
           configKey = '/plugins/postcss-modules';
+          // @ts-expect-error TS2345
           hint = md`Remove the "postcss-modules" plugin from __${filename}__`;
         }
         if (filename === 'package.json') {
@@ -117,7 +122,9 @@ export default new Transformer({
           'Enable the "cssModules" option for "@atlaspack/transformer-css" in your package.json',
         ];
         if (plugins.length === 0) {
+          // @ts-expect-error TS2345
           message += md` Since there are no other plugins, __${filename}__ can be deleted safely.`;
+          // @ts-expect-error TS2345
           hints.push(md`Delete __${filename}__`);
         } else {
           hints.push(hint);
@@ -175,8 +182,10 @@ export default new Transformer({
 
       plugins.push(
         postcssModules({
+          // @ts-expect-error TS7006
           getJSON: (filename, json) => (cssModules = json),
           Loader: await createLoader(asset, resolve, options),
+          // @ts-expect-error TS7006
           generateScopedName: (name, filename) =>
             `${name}_${hashString(
               path.relative(options.projectRoot, filename),
@@ -186,6 +195,7 @@ export default new Transformer({
       );
 
       if (code == null || COMPOSES_RE.test(code)) {
+        // @ts-expect-error TS7006
         program.walkDecls((decl) => {
           let [, importPath] = FROM_IMPORT_RE.exec(decl.value) || [];
           if (decl.prop === 'composes' && importPath != null) {
@@ -263,12 +273,15 @@ export default new Transformer({
 
       asset.symbols.ensure();
       for (let [k, v] of cssModulesList) {
+        // @ts-expect-error TS2345
         asset.symbols.set(k, v);
       }
+      // @ts-expect-error TS2345
       asset.symbols.set('default', 'default');
 
       assets.push({
         type: 'js',
+        // @ts-expect-error TS2353
         content: code,
       });
     }
@@ -276,9 +289,11 @@ export default new Transformer({
   },
 
   async generate({asset, ast, options}) {
+    // @ts-expect-error TS2709
     const postcss: Postcss = await loadPostcss(options, asset.filePath);
 
     let code = '';
+    // @ts-expect-error TS7006
     postcss.stringify(postcss.fromJSON(ast.program), (c) => {
       code += c;
     });
@@ -326,6 +341,7 @@ async function createLoader(
   };
 }
 
+// @ts-expect-error TS2709
 function loadPostcss(options: PluginOptions, from: FilePath): Promise<Postcss> {
   return options.packageManager.require('postcss', from, {
     range: POSTCSS_RANGE,

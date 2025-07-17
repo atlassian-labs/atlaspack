@@ -1,9 +1,12 @@
 import type {PackageInstaller, InstallerOptions} from '@atlaspack/types';
 
+// @ts-expect-error TS7016
 import commandExists from 'command-exists';
+// @ts-expect-error TS7016
 import spawn from 'cross-spawn';
 import {registerSerializableClass} from '@atlaspack/build-cache';
 import logger from '@atlaspack/logger';
+// @ts-expect-error TS7016
 import split from 'split2';
 import JSONParseStream from './JSONParseStream';
 import promiseFromProcess from './promiseFromProcess';
@@ -64,6 +67,7 @@ export class Yarn implements PackageInstaller {
   }: InstallerOptions): Promise<void> {
     if (yarnVersion == null) {
       let version = await exec('yarn --version');
+      // @ts-expect-error TS2345
       yarnVersion = parseInt(version.stdout, 10);
     }
 
@@ -97,7 +101,9 @@ export class Yarn implements PackageInstaller {
     installProcess.stdout
       // Invoking yarn with --json provides streaming, newline-delimited JSON output.
       .pipe(split())
+      // @ts-expect-error TS2554
       .pipe(new JSONParseStream())
+      // @ts-expect-error TS7006
       .on('error', (e) => {
         logger.error(e, '@atlaspack/package-manager');
       })
@@ -124,7 +130,9 @@ export class Yarn implements PackageInstaller {
 
     installProcess.stderr
       .pipe(split())
+      // @ts-expect-error TS2554
       .pipe(new JSONParseStream())
+      // @ts-expect-error TS7006
       .on('error', (e) => {
         logger.error(e, '@atlaspack/package-manager');
       })

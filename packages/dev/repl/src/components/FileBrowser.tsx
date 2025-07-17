@@ -1,24 +1,34 @@
 import path from 'path';
+// @ts-expect-error TS6142
 import {EditableField} from './helper';
 import {downloadZIP} from '../utils';
 
+// @ts-expect-error TS7006
 function join(a, ...b) {
   return path.join(a || '/', ...b);
 }
 
 function FileBrowserEntry({
+  // @ts-expect-error TS7031
   name,
+  // @ts-expect-error TS7031
   prefix,
   directory = false,
+  // @ts-expect-error TS7031
   isEntry,
+  // @ts-expect-error TS7031
   isEditing,
+  // @ts-expect-error TS7031
   collapsed,
+  // @ts-expect-error TS7031
   children,
+  // @ts-expect-error TS7031
   dispatch,
   ...rest
 }) {
   let p = join(prefix, name);
   return (
+    // @ts-expect-error TS17004
     <li
       draggable="true"
       onDragStart={(e) => {
@@ -27,6 +37,8 @@ function FileBrowserEntry({
       }}
       {...rest}
     >
+      {/*
+       // @ts-expect-error TS17004 */}
       <div
         className={directory ? `dir ${!collapsed ? 'expanded' : ''}` : 'file'}
         onClick={() =>
@@ -43,11 +55,18 @@ function FileBrowserEntry({
         // tabIndex="0"
         // onDblclick={(e) => console.log(e)}
       >
+        {/*
+         // @ts-expect-error TS17004 */}
         <div className="name">
+          {/*
+           // @ts-expect-error TS17004 */}
           <div className="icon" />
+          {/*
+           // @ts-expect-error TS17004 */}
           <EditableField
             value={name}
             editing={isEditing === p}
+            // @ts-expect-error TS7006
             onChange={(value) =>
               dispatch({
                 type: 'browser.setEditing',
@@ -56,8 +75,11 @@ function FileBrowserEntry({
             }
           />
         </div>
+        {/*
+         // @ts-expect-error TS17004 */}
         <div className="controls">
           {!directory && (
+            // @ts-expect-error TS17004
             <input
               title="Entrypoint"
               type="checkbox"
@@ -72,6 +94,8 @@ function FileBrowserEntry({
               }}
             />
           )}
+          {/*
+           // @ts-expect-error TS17004 */}
           <button
             className="rename"
             onClick={(e) => {
@@ -82,6 +106,8 @@ function FileBrowserEntry({
               e.stopPropagation();
             }}
           />
+          {/*
+           // @ts-expect-error TS17004 */}
           <button
             className="delete"
             onClick={(e) => {
@@ -100,14 +126,19 @@ function FileBrowserEntry({
 }
 
 function FileBrowserFolder({
+  // @ts-expect-error TS7031
   files,
+  // @ts-expect-error TS7031
   collapsed,
+  // @ts-expect-error TS7031
   dispatch,
+  // @ts-expect-error TS7031
   isEditing,
   prefix = '',
   ...props
 }) {
   return (
+    // @ts-expect-error TS17004
     <ul {...props}>
       {[...files]
         .sort(([a]: [any], [b]: [any]) => a.localeCompare(b))
@@ -115,6 +146,7 @@ function FileBrowserFolder({
           let p = join(prefix, name);
           let isCollapsed = collapsed.has(p);
           return data instanceof Map ? (
+            // @ts-expect-error TS17004
             <FileBrowserEntry
               key={name}
               directory
@@ -123,6 +155,7 @@ function FileBrowserFolder({
               dispatch={dispatch}
               isEditing={isEditing}
               collapsed={isCollapsed}
+              // @ts-expect-error TS7006
               onDrop={(e) => {
                 const data = e.dataTransfer.getData(
                   'application/x-parcel-repl-file',
@@ -137,9 +170,11 @@ function FileBrowserFolder({
                   e.stopPropagation();
                 }
               }}
+              // @ts-expect-error TS7006
               onDragOver={(e) => e.preventDefault()}
             >
               {!isCollapsed && (
+                // @ts-expect-error TS17004
                 <FileBrowserFolder
                   files={data}
                   collapsed={collapsed}
@@ -150,6 +185,7 @@ function FileBrowserFolder({
               )}
             </FileBrowserEntry>
           ) : (
+            // @ts-expect-error TS17004
             <FileBrowserEntry
               key={name}
               name={name}
@@ -172,9 +208,14 @@ export function FileBrowser({
   children,
 }: any): any {
   return (
+    // @ts-expect-error TS17004
     <div className="file-browser">
       {children}
+      {/*
+       // @ts-expect-error TS17004 */}
       <div>
+        {/*
+         // @ts-expect-error TS17004 */}
         <div className="header">
           {/*<button
           onClick={async () => {
@@ -186,18 +227,25 @@ export function FileBrowser({
         >
           Open
         </button>*/}
+          {/*
+           // @ts-expect-error TS17004 */}
           <button onClick={() => dispatch({type: 'file.addFolder'})}>
             New Folder
           </button>
+          {/*
+           // @ts-expect-error TS17004 */}
           <button onClick={() => dispatch({type: 'file.addFile'})}>
             New File
           </button>
         </div>
+        {/*
+         // @ts-expect-error TS17004 */}
         <FileBrowserFolder
           files={files}
           collapsed={collapsed}
           isEditing={isEditing}
           dispatch={dispatch}
+          // @ts-expect-error TS7006
           onDrop={(e) => {
             const data = e.dataTransfer.getData(
               'application/x-parcel-repl-file',
@@ -206,9 +254,14 @@ export function FileBrowser({
             e.preventDefault();
             e.stopPropagation();
           }}
+          // @ts-expect-error TS7006
           onDragOver={(e) => e.preventDefault()}
         />
+        {/*
+         // @ts-expect-error TS17004 */}
         <div className="download">
+          {/*
+           // @ts-expect-error TS17004 */}
           <button
             onClick={() => {
               downloadZIP(files.list());

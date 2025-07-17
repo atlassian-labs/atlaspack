@@ -33,6 +33,7 @@ export default new Transformer({
       code,
       {
         svgoConfig: config.svgo,
+        // @ts-expect-error TS2698
         ...config.svgr,
         runtimeConfig: false,
       },
@@ -45,6 +46,7 @@ export default new Transformer({
       },
     );
 
+    // @ts-expect-error TS2339
     asset.type = config.svgr?.typescript ? 'tsx' : 'jsx';
     asset.bundleBehavior = null;
     asset.setCode(jsx);

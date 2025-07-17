@@ -9,6 +9,7 @@ import {promisify} from 'util';
 
 export const exec: (
   command: string,
+  // @ts-expect-error TS2503
   options?: child_process.execOpts,
 ) => Promise<{
   stdout: string | Buffer;

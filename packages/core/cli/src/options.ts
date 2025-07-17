@@ -18,6 +18,7 @@ switch (process.platform) {
     watcherBackendChoices.push('watchman', 'windows');
     break;
   }
+  // @ts-expect-error TS2367
   case 'freebsd' || 'openbsd': {
     watcherBackendChoices.push('watchman');
     break;
@@ -77,6 +78,7 @@ export const commonOptions: OptionsDefinition = {
       let [name, val] = value.split('=');
       if (name in DEFAULT_FEATURE_FLAGS) {
         let featureFlagValue;
+        // @ts-expect-error TS7053
         if (typeof DEFAULT_FEATURE_FLAGS[name] === 'boolean') {
           if (val !== 'true' && val !== 'false') {
             throw new Error(

@@ -2,6 +2,7 @@ import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
 import {Worker} from 'worker_threads';
 import path from 'path';
 import process from 'process';
+// @ts-expect-error TS2724
 import type {Transferable} from '@atlaspack/rust';
 import {getAvailableThreads} from '@atlaspack/rust';
 
@@ -20,6 +21,7 @@ export class NapiWorkerPool implements INapiWorkerPool {
   #workerCount: number;
 
   constructor({workerCount}: NapiWorkerPoolOptions = {workerCount: undefined}) {
+    // @ts-expect-error TS2322
     this.#workerCount =
       workerCount ?? ATLASPACK_NAPI_WORKERS ?? getAvailableThreads();
     if (!this.#workerCount) {

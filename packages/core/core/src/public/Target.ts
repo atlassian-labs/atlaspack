@@ -21,7 +21,9 @@ export function targetToInternalTarget(target: ITarget): TargetValue {
 }
 
 export default class Target implements ITarget {
+  // @ts-expect-error TS2564
   #target: TargetValue;
+  // @ts-expect-error TS2564
   #options: AtlaspackOptions;
 
   constructor(target: TargetValue, options: AtlaspackOptions) {
@@ -65,6 +67,7 @@ export default class Target implements ITarget {
   }
 
   [inspect](): string {
+    // @ts-expect-error TS7053
     return `Target(${this.name} - ${this.env[inspect]()})`;
   }
 }

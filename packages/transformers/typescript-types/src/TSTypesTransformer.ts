@@ -39,6 +39,7 @@ export default new Transformer({
     };
 
     let host = new CompilerHost(options.inputFS, ts, logger);
+    // @ts-expect-error TS2345
     let program = ts.createProgram([asset.filePath], opts, host);
 
     for (let file of program.getSourceFiles()) {
@@ -51,6 +52,7 @@ export default new Transformer({
 
     let mainModuleName = normalizeSeparators(
       path
+        // @ts-expect-error TS2339
         .relative(program.getCommonSourceDirectory(), asset.filePath)
         .slice(0, -path.extname(asset.filePath).length),
     );
@@ -74,6 +76,7 @@ export default new Transformer({
       .concat(emitResult.diagnostics);
 
     let diagnosticIds = new Set();
+    // @ts-expect-error TS2304
     let deduplicatedDiagnostics: Array<Diagnostic> = [];
     for (let d of diagnostics) {
       if (d.start != null && d.length != null && d.messageText != null) {
@@ -163,6 +166,7 @@ export default new Transformer({
     code = code.substring(0, code.lastIndexOf('//# sourceMappingURL'));
 
     let map = JSON.parse(nullthrows(host.outputMap));
+    // @ts-expect-error TS7006
     map.sources = map.sources.map((source) =>
       path.join(path.dirname(asset.filePath), source),
     );

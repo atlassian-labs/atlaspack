@@ -34,6 +34,7 @@ export default new Transformer({
   },
 }) as Transformer<unknown>;
 
+// @ts-expect-error TS2304
 function extractUrlsFrom(data: any, asset: MutableAsset) {
   if (!data) return null;
 
@@ -47,6 +48,7 @@ function extractUrlsFrom(data: any, asset: MutableAsset) {
   return iterateThroughObject(data, asset);
 }
 
+// @ts-expect-error TS2304
 function iterateThroughObject(jsonObject: any, asset: MutableAsset) {
   Object.keys(jsonObject)
     .filter((k) => SCHEMA_ATTRS.includes(k))
@@ -58,6 +60,7 @@ function iterateThroughObject(jsonObject: any, asset: MutableAsset) {
   return jsonObject;
 }
 
+// @ts-expect-error TS2304
 function iterateThroughArray(jsonArray: any, asset: MutableAsset) {
   Object.keys(jsonArray).forEach((i) => {
     let value = jsonArray[i];

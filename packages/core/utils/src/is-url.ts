@@ -1,3 +1,4 @@
+// @ts-expect-error TS7016
 import _isURL from 'is-url';
 
 // Matches anchor (ie: #raptors)

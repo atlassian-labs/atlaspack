@@ -40,6 +40,7 @@ export class Child {
   tracerDisposable: IDisposable;
   child: ChildImpl;
   profiler: SamplingProfiler | null | undefined;
+  // @ts-expect-error TS2749
   handles: Map<number, Handle> = new Map();
   sharedReferences: Map<SharedReference, unknown> = new Map();
   sharedReferencesByValue: Map<unknown, SharedReference> = new Map();
@@ -68,17 +69,21 @@ export class Child {
       request: CallRequest,
       awaitResponse?: boolean | null | undefined,
     ) => Promise<unknown>;
+    // @ts-expect-error TS2749
     createReverseHandle: (fn: (...args: Array<any>) => unknown) => Handle;
     getSharedReference: (ref: SharedReference) => unknown;
     resolveSharedReference: (value: unknown) => undefined | SharedReference;
+    // @ts-expect-error TS2749
     runHandle: (handle: Handle, args: Array<any>) => Promise<unknown>;
   } = {
     callMaster: (
       request: CallRequest,
       awaitResponse: boolean | null = true,
     ): Promise<unknown> => this.addCall(request, awaitResponse),
+    // @ts-expect-error TS2749
     createReverseHandle: (fn: (...args: Array<any>) => unknown): Handle =>
       this.createReverseHandle(fn),
+    // @ts-expect-error TS2749
     runHandle: (handle: Handle, args: Array<any>): Promise<unknown> =>
       this.workerApi.callMaster({handle: handle.id, args}, true),
     getSharedReference: (ref: SharedReference) =>
@@ -202,6 +207,7 @@ export class Child {
     } else {
       try {
         result = responseFromContent(
+          // @ts-expect-error TS2538
           await this.module[method](this.workerApi, ...args),
         );
       } catch (e: any) {
@@ -244,6 +250,7 @@ export class Child {
       ...request,
       type: 'request',
       child: this.childId,
+      // @ts-expect-error TS2322
       awaitResponse,
       resolve: () => {},
       reject: () => {},
@@ -293,6 +300,7 @@ export class Child {
     }
 
     if (this.responseQueue.size < this.maxConcurrentCalls) {
+      // @ts-expect-error TS2345
       this.sendRequest(this.callQueue.shift());
     }
   }
@@ -302,6 +310,7 @@ export class Child {
     this.tracerDisposable.dispose();
   }
 
+  // @ts-expect-error TS2749
   createReverseHandle(fn: (...args: Array<any>) => unknown): Handle {
     let handle = new Handle({
       fn,

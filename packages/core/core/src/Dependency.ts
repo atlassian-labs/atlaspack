@@ -181,7 +181,9 @@ function convertConditions(conditions: Array<string>, dep: Dependency) {
   let packageConditions = 0;
   let customConditions: Array<string> = [];
   for (let condition of conditions) {
+    // @ts-expect-error TS7053
     if (ExportsCondition[condition]) {
+      // @ts-expect-error TS7053
       packageConditions |= ExportsCondition[condition];
     } else {
       customConditions.push(condition);

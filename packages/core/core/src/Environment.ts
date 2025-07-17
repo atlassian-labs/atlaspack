@@ -59,6 +59,7 @@ export function createEnvironment({
       case 'service-worker':
       case 'electron-renderer':
         engines = {
+          // @ts-expect-error TS2322
           browsers: DEFAULT_ENGINES.browsers,
         };
         break;
@@ -99,6 +100,7 @@ export function createEnvironment({
   let res: Environment = {
     id: '',
     context,
+    // @ts-expect-error TS2322
     engines,
     includeNodeModules,
     outputFormat,

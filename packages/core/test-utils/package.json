@@ -8,9 +8,14 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "src/utils.js",
+  "main": "lib/utils.js",
+  "source": "src/utils.ts",
+  "types": "src/utils.ts",
   "engines": {
     "node": ">= 16.0.0"
+  },
+  "scripts": {
+    "check-ts": "tsc --noEmit"
   },
   "dependencies": {
     "@atlaspack/cache": "3.2.15",
@@ -19,6 +24,8 @@
     "@atlaspack/fs": "2.15.15",
     "@atlaspack/package-manager": "2.14.20",
     "@atlaspack/utils": "2.17.2",
+    "@types/ws": "^8.18.1",
+    "@types/resolve": "^1.20.6",
     "chalk": "^4.1.0",
     "expect": "^29.7.0",
     "ncp": "^2.0.0",
@@ -27,7 +34,7 @@
     "posthtml-parser": "^0.10.1",
     "resolve": "^1.12.0",
     "ws": "^7.0.0",
-    "tempy": "^0.2.1",
+    "tempy": "^1.0.0",
     "why-is-node-running": "^3.2.2"
   }
 }

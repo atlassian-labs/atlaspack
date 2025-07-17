@@ -214,8 +214,8 @@ export function restoreDeserializedObject(object: any): any {
         );
       }
 
-      if (typeof ctor.deserialize === 'function') {
-        return ctor.deserialize(value.value);
+      if (typeof (ctor as any).deserialize === 'function') {
+        return (ctor as any).deserialize(value.value);
       }
 
       value = value.value;
@@ -226,7 +226,7 @@ export function restoreDeserializedObject(object: any): any {
   });
 }
 
-const serializeCache = createBuildCache();
+const serializeCache = createBuildCache<any, Buffer>();
 
 export function serialize(object: any): Buffer {
   let cached = serializeCache.get(object);

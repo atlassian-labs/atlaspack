@@ -28,6 +28,7 @@ type WorkerOpts = {
 let WORKER_ID = 0;
 export default class Worker extends EventEmitter {
   readonly options: WorkerOpts;
+  // @ts-expect-error TS2564
   worker: WorkerImpl;
   id: number = WORKER_ID++;
   sentSharedReferences: Set<SharedReference> = new Set();
@@ -134,6 +135,7 @@ export default class Worker extends EventEmitter {
     while (refsShared.size < sharedRefs.size) {
       await Promise.all(
         [...sharedRefs]
+          // @ts-expect-error TS2769
           .filter(([ref]: [any]) => !refsShared.has(ref))
           .map(async ([ref, value]: [any, any]) => {
             await this.sendSharedReference(ref, value);
@@ -187,8 +189,10 @@ export default class Worker extends EventEmitter {
     };
 
     if (this.ready || call.skipReadyCheck === true) {
+      // @ts-expect-error TS2345
       this.send(msg);
     } else {
+      // @ts-expect-error TS2345
       this.once('ready', () => this.send(msg));
     }
   }

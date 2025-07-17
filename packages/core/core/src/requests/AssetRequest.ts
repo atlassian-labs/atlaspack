@@ -60,6 +60,7 @@ function getId(input: AssetRequestInput) {
   );
 }
 
+// @ts-expect-error TS7031
 async function run({input, api, farm, invalidateReason, options}) {
   report({
     type: 'buildProgress',
@@ -71,6 +72,7 @@ async function run({input, api, farm, invalidateReason, options}) {
   let start = Date.now();
   let {optionsRef, ...rest} = input;
   let {cachePath} = nullthrows(
+    // @ts-expect-error TS2347
     await api.runRequest<null, ConfigAndCachePath>(
       createAtlaspackConfigRequest(),
     ),
@@ -80,9 +82,12 @@ async function run({input, api, farm, invalidateReason, options}) {
     await Promise.all(
       api
         .getSubRequests()
+        // @ts-expect-error TS7006
         .filter((req) => req.requestType === requestTypes.dev_dep_request)
+        // @ts-expect-error TS7006
         .map(async (req) => [
           req.id,
+          // @ts-expect-error TS2347
           nullthrows(await api.getRequestResult<DevDepRequestResult>(req.id)),
         ]),
     ),
@@ -93,6 +98,7 @@ async function run({input, api, farm, invalidateReason, options}) {
     invalidateReason,
     devDeps: new Map(
       [...previousDevDepRequests.entries()]
+        // @ts-expect-error TS2769
         .filter(([id]: [any]) => api.canSkipSubrequest(id))
         .map(([, req]: [any, any]) => [
           `${req.specifier}:${fromProjectPathRelative(req.resolveFrom)}`,
@@ -101,6 +107,7 @@ async function run({input, api, farm, invalidateReason, options}) {
     ),
     invalidDevDeps: await Promise.all(
       [...previousDevDepRequests.entries()]
+        // @ts-expect-error TS2769
         .filter(([id]: [any]) => !api.canSkipSubrequest(id))
         .flatMap(([, req]: [any, any]) => {
           return [
@@ -108,6 +115,7 @@ async function run({input, api, farm, invalidateReason, options}) {
               specifier: req.specifier,
               resolveFrom: req.resolveFrom,
             },
+            // @ts-expect-error TS7006
             ...(req.additionalInvalidations ?? []).map((i) => ({
               specifier: i.specifier,
               resolveFrom: i.resolveFrom,

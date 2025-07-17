@@ -4,6 +4,7 @@ export let SharedBuffer:
   | Flow.Class<ArrayBuffer>
   | Flow.Class<SharedArrayBuffer>;
 
+// @ts-expect-error TS2339
 if (process.browser) {
   SharedBuffer = ArrayBuffer;
   // Safari has removed the constructor

@@ -53,9 +53,11 @@ export default async function dumpGraphToGraphViz(
   }
 
   let mode: string | null | undefined = process.env.ATLASPACK_BUILD_REPL
-    ? globalThis.ATLASPACK_DUMP_GRAPHVIZ?.mode
+    ? // @ts-expect-error TS7017
+      globalThis.ATLASPACK_DUMP_GRAPHVIZ?.mode
     : process.env.ATLASPACK_DUMP_GRAPHVIZ;
 
+  // @ts-expect-error TS2367
   if (mode == null || mode == false) {
     return;
   }
@@ -68,40 +70,58 @@ export default async function dumpGraphToGraphViz(
   for (let [id, node] of graph.nodes.entries()) {
     if (node == null) continue;
     let n = g.addNode(nodeId(id));
+    // @ts-expect-error TS7053
     n.set('color', COLORS[node.type || 'default']);
     n.set('shape', 'box');
     n.set('style', 'filled');
     let label;
     if (typeof node === 'string') {
       label = node;
+      // @ts-expect-error TS2339
     } else if (node.assets) {
+      // @ts-expect-error TS2339
       label = `(${nodeId(id)}), (assetIds: ${[...node.assets]
         .map((a) => {
           let arr = a.filePath.split('/');
           return arr[arr.length - 1];
         })
+        // @ts-expect-error TS2339
         .join(', ')}) (sourceBundles: ${[...node.sourceBundles].join(
         ', ',
+        // @ts-expect-error TS2339
       )}) (bb ${node.bundleBehavior ?? 'none'})`;
+      // @ts-expect-error TS2339
     } else if (node.type) {
+      // @ts-expect-error TS2339
       label = `[${fromNodeId(id)}] ${node.type || 'No Type'}: [${node.id}]: `;
+      // @ts-expect-error TS2339
       if (node.type === 'dependency') {
+        // @ts-expect-error TS2339
         label += node.value.specifier;
         let parts: Array<undefined | string> = [];
+        // @ts-expect-error TS2339
         if (node.value.priority !== Priority.sync) {
           parts.push(
             Object.entries(Priority).find(
+              // @ts-expect-error TS2339
               ([, v]: [any, any]) => v === node.value.priority,
             )?.[0],
           );
         }
+        // @ts-expect-error TS2339
         if (node.value.isOptional) parts.push('optional');
+        // @ts-expect-error TS2339
         if (node.value.specifierType === SpecifierType.url) parts.push('url');
+        // @ts-expect-error TS2339
         if (node.hasDeferred) parts.push('deferred');
+        // @ts-expect-error TS2339
         if (node.deferred) parts.push('deferred');
+        // @ts-expect-error TS2339
         if (node.excluded) parts.push('excluded');
         if (parts.length) label += ' (' + parts.join(', ') + ')';
+        // @ts-expect-error TS2339
         if (node.value.env) label += ` (${getEnvDescription(node.value.env)})`;
+        // @ts-expect-error TS2339
         let depSymbols = node.value.symbols;
         if (detailedSymbols) {
           if (depSymbols) {
@@ -118,21 +138,25 @@ export default async function dumpGraphToGraphViz(
             if (weakSymbols.length) {
               label += '\\nweakSymbols: ' + weakSymbols.join(',');
             }
+            // @ts-expect-error TS2339
             if (node.usedSymbolsUp.size > 0) {
               label +=
                 '\\nusedSymbolsUp: ' +
+                // @ts-expect-error TS2339
                 [...node.usedSymbolsUp]
                   .map(([s, sAsset]: [any, any]) =>
                     sAsset
                       ? `${s}(${sAsset.asset}.${sAsset.symbol ?? ''})`
                       : sAsset === null
-                      ? `${s}(external)`
-                      : `${s}(ambiguous)`,
+                        ? `${s}(external)`
+                        : `${s}(ambiguous)`,
                   )
                   .join(',');
             }
+            // @ts-expect-error TS2339
             if (node.usedSymbolsDown.size > 0) {
               label +=
+                // @ts-expect-error TS2339
                 '\\nusedSymbolsDown: ' + [...node.usedSymbolsDown].join(',');
             }
             // if (node.usedSymbolsDownDirty) label += '\\nusedSymbolsDownDirty';
@@ -143,22 +167,30 @@ export default async function dumpGraphToGraphViz(
             label += '\\nsymbols: cleared';
           }
         }
+        // @ts-expect-error TS2339
       } else if (node.type === 'asset') {
         label +=
+          // @ts-expect-error TS2339
           path.basename(fromProjectPathRelative(node.value.filePath)) +
           '#' +
+          // @ts-expect-error TS2339
           node.value.type;
         if (detailedSymbols) {
+          // @ts-expect-error TS2339
           if (!node.value.symbols) {
             label += '\\nsymbols: cleared';
+            // @ts-expect-error TS2339
           } else if (node.value.symbols.size) {
             label +=
               '\\nsymbols: ' +
+              // @ts-expect-error TS2339
               [...node.value.symbols]
                 .map(([e, {local}]: [any, any]) => [e, local])
                 .join(';');
           }
+          // @ts-expect-error TS2339
           if (node.usedSymbols.size) {
+            // @ts-expect-error TS2339
             label += '\\nusedSymbols: ' + [...node.usedSymbols].join(',');
           }
           // if (node.usedSymbolsDownDirty) label += '\\nusedSymbolsDownDirty';
@@ -166,23 +198,38 @@ export default async function dumpGraphToGraphViz(
         } else {
           label += '\\nsymbols: cleared';
         }
+        // @ts-expect-error TS2339
       } else if (node.type === 'asset_group') {
+        // @ts-expect-error TS2339
         if (node.deferred) label += '(deferred)';
+        // @ts-expect-error TS2339
       } else if (node.type === 'file') {
+        // @ts-expect-error TS2339
         label += path.basename(node.id);
+        // @ts-expect-error TS2339
       } else if (node.type === 'transformer_request') {
         label +=
+          // @ts-expect-error TS2339
           path.basename(node.value.filePath) +
+          // @ts-expect-error TS2339
           ` (${getEnvDescription(node.value.env)})`;
+        // @ts-expect-error TS2339
       } else if (node.type === 'bundle') {
         let parts: Array<string> = [];
+        // @ts-expect-error TS2339
         if (node.value.needsStableName) parts.push('stable name');
+        // @ts-expect-error TS2339
         parts.push(node.value.name);
+        // @ts-expect-error TS2339
         parts.push('bb:' + (node.value.bundleBehavior ?? 'null'));
+        // @ts-expect-error TS2339
         if (node.value.isPlaceholder) parts.push('placeholder');
         if (parts.length) label += ' (' + parts.join(', ') + ')';
+        // @ts-expect-error TS2339
         if (node.value.env) label += ` (${getEnvDescription(node.value.env)})`;
+        // @ts-expect-error TS2339
       } else if (node.type === 'request') {
+        // @ts-expect-error TS2339
         label = node.requestType + ':' + node.id;
       }
     }
@@ -196,10 +243,12 @@ export default async function dumpGraphToGraphViz(
     );
   }
 
+  // @ts-expect-error TS2488
   for (let edge of graph.getAllEdges()) {
     let gEdge = g.addEdge(nodeId(edge.from), nodeId(edge.to));
     let color = null;
     if (edge.type != 1 && edgeNames) {
+      // @ts-expect-error TS7053
       color = TYPE_COLORS[edgeNames[edge.type]];
     }
     if (color != null) {
@@ -208,6 +257,7 @@ export default async function dumpGraphToGraphViz(
   }
 
   if (process.env.ATLASPACK_BUILD_REPL) {
+    // @ts-expect-error TS7017
     globalThis.ATLASPACK_DUMP_GRAPHVIZ?.(name, g.to_dot());
   } else {
     const tempy = require('tempy');
@@ -218,6 +268,7 @@ export default async function dumpGraphToGraphViz(
   }
 }
 
+// @ts-expect-error TS2552
 function nodeId(id: NodeId | number) {
   return `node${id}`;
 }

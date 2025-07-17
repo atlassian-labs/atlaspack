@@ -2,6 +2,7 @@ import path from 'path';
 import {Transformer} from '@atlaspack/plugin';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 
+// @ts-expect-error TS2304
 function shouldExclude(asset: MutableAsset, options: PluginOptions) {
   return (
     !asset.isSource ||
@@ -11,17 +12,16 @@ function shouldExclude(asset: MutableAsset, options: PluginOptions) {
     asset.env.isWorker() ||
     asset.env.isWorklet() ||
     options.mode !== 'development' ||
-    !asset
-      .getDependencies()
-      .find(
-        (v) =>
-          v.specifier === 'react' ||
-          v.specifier === 'react/jsx-runtime' ||
-          v.specifier === 'react/jsx-dev-runtime' ||
-          v.specifier === '@emotion/react' ||
-          v.specifier === '@emotion/react/jsx-runtime' ||
-          v.specifier === '@emotion/react/jsx-dev-runtime',
-      )
+    !asset.getDependencies().find(
+      // @ts-expect-error TS7006
+      (v) =>
+        v.specifier === 'react' ||
+        v.specifier === 'react/jsx-runtime' ||
+        v.specifier === 'react/jsx-dev-runtime' ||
+        v.specifier === '@emotion/react' ||
+        v.specifier === '@emotion/react/jsx-runtime' ||
+        v.specifier === '@emotion/react/jsx-dev-runtime',
+    )
   );
 }
 

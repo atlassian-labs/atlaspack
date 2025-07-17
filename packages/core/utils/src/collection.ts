@@ -5,9 +5,7 @@ export function unique<T>(array: Array<T>): Array<T> {
 export function objectSortedEntries(obj: {
   readonly [key: string]: unknown;
 }): Array<[string, unknown]> {
-  return Object.entries(obj).sort(([keyA]: [any], [keyB]: [any]) =>
-    keyA.localeCompare(keyB),
-  );
+  return Object.entries(obj).sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
 }
 
 export function objectSortedEntriesDeep(object: {
@@ -20,13 +18,13 @@ export function objectSortedEntriesDeep(object: {
   return sortedEntries;
 }
 
-function sortEntry(entry: unknown) {
+function sortEntry(entry: unknown): unknown {
   if (Array.isArray(entry)) {
     return entry.map(sortEntry);
   }
 
   if (typeof entry === 'object' && entry != null) {
-    return objectSortedEntriesDeep(entry);
+    return objectSortedEntriesDeep(entry as {readonly [key: string]: unknown});
   }
 
   return entry;
@@ -43,7 +41,7 @@ function sortEntry(entry: unknown) {
  * @returns A \ B
  */
 export function setDifference<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): Set<T> {
-  let difference = new Set();
+  let difference = new Set<T>();
   for (let e of a) {
     if (!b.has(e)) {
       difference.add(e);
@@ -67,7 +65,7 @@ export function setSymmetricDifference<T>(
   a: ReadonlySet<T>,
   b: ReadonlySet<T>,
 ): Set<T> {
-  let difference = new Set();
+  let difference = new Set<T>();
   for (let e of a) {
     if (!b.has(e)) {
       difference.add(e);
@@ -90,7 +88,7 @@ export function setIntersect<T>(a: Set<T>, b: ReadonlySet<T>): void {
 }
 
 export function setIntersectStatic<T>(a: Set<T>, b: Set<T>): Set<T> {
-  let intersection = new Set();
+  let intersection = new Set<T>();
   for (let entry of a) {
     if (b.has(entry)) {
       intersection.add(entry);

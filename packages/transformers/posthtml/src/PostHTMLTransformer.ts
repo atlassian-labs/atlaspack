@@ -42,15 +42,19 @@ export default new Transformer({
 
       // Load plugins. This must be done before adding dev dependencies so we auto install.
       let plugins = await loadPlugins(
+        // @ts-expect-error TS18046
         configFile.contents.plugins,
         config.searchPath,
         options,
       );
 
       // Now add dev dependencies so we invalidate when they change.
+      // @ts-expect-error TS18046
       let pluginArray = Array.isArray(configFile.contents.plugins)
-        ? configFile.contents.plugins
-        : Object.keys(configFile.contents.plugins);
+        ? // @ts-expect-error TS18046
+          configFile.contents.plugins
+        : // @ts-expect-error TS18046
+          Object.keys(configFile.contents.plugins);
       for (let p of pluginArray) {
         if (typeof p === 'string') {
           config.addDevDependency({
@@ -60,10 +64,13 @@ export default new Transformer({
         }
       }
 
+      // @ts-expect-error TS18046
       configFile.contents.plugins = plugins;
 
       // tells posthtml that we have already called parse
+      // @ts-expect-error TS18046
       configFile.contents.skipParse = true;
+      // @ts-expect-error TS18046
       delete configFile.contents.render;
 
       return configFile.contents;
@@ -97,12 +104,15 @@ export default new Transformer({
     }
 
     let ast = nullthrows(await asset.getAST());
+    // @ts-expect-error TS2339
     let res = await posthtml(config.plugins).process(ast.program, {
       ...config,
+      // @ts-expect-error TS2353
       plugins: config.plugins,
     });
 
     if (res.messages) {
+      // @ts-expect-error TS2339
       for (let {type, file: filePath} of res.messages) {
         if (type === 'dependency') {
           asset.invalidateOnFileChange(filePath);
@@ -122,6 +132,7 @@ export default new Transformer({
   generate({ast, asset}) {
     return {
       content: render(ast.program, {
+        // @ts-expect-error TS2322
         closingSingleTag: asset.type === 'xhtml' ? 'slash' : undefined,
       }),
     };

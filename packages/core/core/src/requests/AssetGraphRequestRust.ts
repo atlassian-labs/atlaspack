@@ -39,6 +39,7 @@ export function createAssetGraphRequestRust(
       let options = input.options;
       let serializedAssetGraph = await rustAtlaspack.buildAssetGraph();
 
+      // @ts-expect-error TS7006
       serializedAssetGraph.nodes = serializedAssetGraph.nodes.map((node) =>
         JSON.parse(node),
       );
@@ -90,6 +91,7 @@ export function getAssetGraph(serializedGraph: any): {
 
   graph.safeToIncrementallyBundle = false;
 
+  // @ts-expect-error TS7031
   function mapSymbols({exported, ...symbol}) {
     let jsSymbol = {
       local: symbol.local ?? undefined,
@@ -99,10 +101,12 @@ export function getAssetGraph(serializedGraph: any): {
     };
 
     if (symbol.exported) {
+      // @ts-expect-error TS2339
       jsSymbol.exported = symbol.exported;
     }
 
     if (symbol.isEsmExport) {
+      // @ts-expect-error TS2322
       jsSymbol.meta = {
         isEsm: true,
       };
@@ -220,6 +224,7 @@ export function getAssetGraph(serializedGraph: any): {
         deferred: false,
         excluded: false,
         hasDeferred: node.has_deferred,
+        // @ts-expect-error TS2322
         usedSymbolsDown,
         usedSymbolsDownDirty: true,
         usedSymbolsUp,

@@ -9,6 +9,7 @@ export default new Reporter({
       let bundles: Array<{
         content: string;
         mappings: any;
+        // @ts-expect-error TS2304
         name: FilePath;
         names: any;
         sources: never;
@@ -24,6 +25,7 @@ export default new Reporter({
             );
 
             let mappedSources = await Promise.all(
+              // @ts-expect-error TS7006
               map.sources.map(async (sourceName, index) => {
                 let sourceContent = map.sourcesContent?.[index];
                 if (sourceContent != null) {
@@ -51,6 +53,7 @@ export default new Reporter({
               name: fileName,
               mappings: map.mappings,
               names: map.names,
+              // @ts-expect-error TS2322
               sources: mappedSources,
               content: await options.outputFS.readFile(
                 nullthrows(bundle.filePath),

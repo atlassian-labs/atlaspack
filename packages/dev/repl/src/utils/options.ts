@@ -47,6 +47,7 @@ export function generatePackageJson(options: REPLOptions): string {
     dependencies: Object.fromEntries(
       options.dependencies
         .filter(([a, b]: [any, any]) => a && b)
+        // @ts-expect-error TS2345
         .sort(([a]: [any], [b]: [any]) => a.localeCompare(b)),
     ),
   };

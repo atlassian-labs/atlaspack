@@ -16,6 +16,7 @@ import nullthrows from 'nullthrows';
 import {Child} from '../child';
 import {setChild} from '../childState';
 
+// @ts-expect-error TS2420
 export default class ThreadsChild implements ChildImpl {
   onMessage: MessageHandler;
   onExit: ExitHandler;
@@ -40,4 +41,5 @@ export default class ThreadsChild implements ChildImpl {
   }
 }
 
+// @ts-expect-error TS2345
 setChild(new Child(ThreadsChild));

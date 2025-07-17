@@ -1,4 +1,5 @@
 import {Transformer} from '@atlaspack/plugin';
+// @ts-expect-error TS7016
 import mdx from '@mdx-js/mdx';
 
 export default new Transformer({

@@ -3,6 +3,7 @@ import {runInlineRequiresOptimizerAsync} from '@atlaspack/rust';
 import nullthrows from 'nullthrows';
 import SourceMap from '@parcel/source-map';
 
+// @ts-expect-error TS7034
 let assetPublicIdsWithSideEffects = null;
 
 type BundleConfig = {
@@ -11,7 +12,9 @@ type BundleConfig = {
 
 module.exports = new Optimizer<never, BundleConfig>({
   loadBundleConfig({bundle, bundleGraph, tracer}): BundleConfig {
+    // @ts-expect-error TS7005
     if (assetPublicIdsWithSideEffects !== null) {
+      // @ts-expect-error TS7005
       return {assetPublicIdsWithSideEffects};
     }
 
@@ -30,6 +33,7 @@ module.exports = new Optimizer<never, BundleConfig>({
     bundleGraph.traverse((node) => {
       if (node.type === 'asset' && node.value.sideEffects) {
         const publicId = bundleGraph.getAssetPublicId(node.value);
+        // @ts-expect-error TS7005
         let sideEffectsMap = nullthrows(assetPublicIdsWithSideEffects);
         sideEffectsMap.add(publicId);
       }
@@ -60,14 +64,17 @@ module.exports = new Optimizer<never, BundleConfig>({
         ignoreModuleIds: Array.from(bundleConfig.assetPublicIdsWithSideEffects),
       });
 
+      // @ts-expect-error TS2339
       const sourceMapResult = result.sourceMap;
       if (sourceMapResult != null) {
         sourceMap = new SourceMap(options.projectRoot);
         sourceMap.addVLQMap(JSON.parse(sourceMapResult));
         if (originalMap) {
+          // @ts-expect-error TS2345
           sourceMap.extends(originalMap);
         }
       }
+      // @ts-expect-error TS2339
       return {contents: result.code, map: sourceMap};
     } catch (err: any) {
       logger.warn({

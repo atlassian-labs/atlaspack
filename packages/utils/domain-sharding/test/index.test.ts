@@ -4,10 +4,11 @@ import {
   shardUrl,
   domainShardingKey,
   applyShardToDomain,
-} from '../src/index.js';
+} from '../src/index.ts';
 
 describe('domain sharding helpers', () => {
   beforeEach(() => {
+    // @ts-expect-error - Element implicitly has an 'any' type because expression of type '"__ATLASPACK_ENABLE_DOMAIN_SHARDS"' can't be used to index type 'typeof globalThis'
     delete globalThis[domainShardingKey];
   });
 
@@ -108,6 +109,7 @@ describe('domain sharding helpers', () => {
 
   describe('shardUrl', () => {
     it('should add a shard if the window property is set', () => {
+      // @ts-expect-error - Element implicitly has an 'any' type because expression of type '"__ATLASPACK_ENABLE_DOMAIN_SHARDS"' can't be used to index type 'typeof globalThis'
       globalThis[domainShardingKey] = true;
       const testBundle =
         'https://bundle-shard.assets.example.com/assets/test-bundle.123abc.js';

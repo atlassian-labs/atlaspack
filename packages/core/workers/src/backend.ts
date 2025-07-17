@@ -2,6 +2,7 @@ import {Flow} from 'flow-to-typescript-codemod';
 import type {BackendType, WorkerImpl} from './types';
 
 export function detectBackend(): BackendType {
+  // @ts-expect-error TS2339
   if (process.browser) return 'web';
 
   switch (process.env.ATLASPACK_WORKER_BACKEND) {

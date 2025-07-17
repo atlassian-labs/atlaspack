@@ -4,6 +4,7 @@ export let SharedBuffer:
   | Flow.Class<ArrayBuffer>
   | Flow.Class<SharedArrayBuffer>;
 
+// @ts-expect-error process.browser is a browser-specific property
 if (process.browser) {
   SharedBuffer = ArrayBuffer;
   // Safari has removed the constructor

@@ -1,9 +1,11 @@
 // NOTE: @atlaspack/logger exports object instances from the module.
 // If there are issues, check all imports are using the same module instance/path
+//
+// NOTE2: @atlaspack/babel-register needs to run on the fixtures under ./integration
+// otherwise the fixtures will import "package.json#main" files rather than "package.json#source"
 const Logger = require('@atlaspack/logger').default;
 const assert = require('assert');
-// eslint-disable-next-line @atlaspack/no-self-package-imports
-const WorkerFarm = require('@atlaspack/workers').default;
+const WorkerFarm = require('../src/index.ts').default;
 
 describe('WorkerFarm', function () {
   this.timeout(30000);

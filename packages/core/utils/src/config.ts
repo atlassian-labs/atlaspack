@@ -2,6 +2,7 @@ import type {ConfigResult, File, FilePath} from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import path from 'path';
+// @ts-expect-error TS7016
 import clone from 'clone';
 import json5 from 'json5';
 import {parse as toml} from '@iarna/toml';
@@ -17,6 +18,7 @@ export type ConfigOptions = {
   parser?: (arg1: string) => any;
 };
 
+// @ts-expect-error TS2351
 const configCache = new LRU<FilePath, ConfigOutput>({max: 500});
 const resolveCache = new Map();
 

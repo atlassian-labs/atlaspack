@@ -40,6 +40,7 @@ export default new Runtime({
         nullthrows(
           entry
             ?.getDependencies()
+            // @ts-expect-error TS2304
             .find((dep: Dependency) => dep.id === insertDep),
         ),
         nullthrows(manifest),

@@ -42,6 +42,7 @@ export default function createValidationRequest(
 
       let config = new AtlaspackConfig(processedConfig, options);
       let trackedRequestsDesc = assetRequests.filter((request) => {
+        // @ts-expect-error TS2345
         return config.getValidatorNames(request.filePath).length > 0;
       });
 
@@ -62,10 +63,12 @@ export default function createValidationRequest(
 
       // Schedule validations on the main thread for all validation plugins that implement "validateAll".
       promises.push(
+        // @ts-expect-error TS2345
         new Validation({
           requests: trackedRequestsDesc,
           options,
           config,
+          // @ts-expect-error TS2322
           report,
           dedicatedThread: true,
         }).run(),

@@ -4,6 +4,7 @@ import {replaceURLReferences} from '@atlaspack/utils';
 
 export default new Packager({
   async package({bundle, bundleGraph}) {
+    // @ts-expect-error TS2552
     let assets: Array<Asset> = [];
     bundle.traverseAssets((asset) => {
       assets.push(asset);

@@ -1,15 +1,20 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import NodeResolver from '../src/Wrapper';
 import path from 'path';
 import assert from 'assert';
 import nullthrows from 'nullthrows';
 import {ncp, overlayFS, outputFS} from '@atlaspack/test-utils';
 import {loadConfig as configCache} from '@atlaspack/utils';
-import {createEnvironment} from '@atlaspack/core/src/Environment';
-import {fromEnvironmentId} from '@atlaspack/core/src/EnvironmentManager';
-import Environment from '@atlaspack/core/src/public/Environment';
-import {DEFAULT_OPTIONS} from '@atlaspack/core/test/test-utils';
+import {
+  createEnvironment,
+  EnvironmentManager,
+  Environment,
+} from '@atlaspack/core';
+import {DEFAULT_OPTIONS} from '@atlaspack/core/test/test-utils.ts';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 
+const {fromEnvironmentId} = EnvironmentManager;
 const rootDir = path.join(__dirname, 'fixture');
 
 const NODE_ENV = new Environment(
@@ -53,7 +58,9 @@ afterEach(() => {
   });
 });
 
+// @ts-nocheck
 describe('resolver', function () {
+  // @ts-expect-error TS7006
   let resolver, prodResolver;
 
   beforeEach(async function () {
@@ -110,12 +117,14 @@ describe('resolver', function () {
     configCache.clear();
   });
 
+  // @ts-expect-error TS7006
   function normalize(res) {
     return {
       filePath: res?.filePath,
       invalidateOnFileCreate:
         res?.invalidateOnFileCreate?.sort(
           (
+            // @ts-expect-error TS2304
             a:
               | FileCreateInvalidation
               | {
@@ -125,6 +134,7 @@ describe('resolver', function () {
               | {
                   filePath: string;
                 },
+            // @ts-expect-error TS2304
             b:
               | FileCreateInvalidation
               | {
@@ -155,15 +165,19 @@ describe('resolver', function () {
     };
   }
 
+  // @ts-expect-error TS7006
   function check(
+    // @ts-expect-error TS2304
     resolved:
       | ResolveResult
       | null
       | undefined
       | {
+          // @ts-expect-error TS2304
           filePath: undefined | FilePath;
           sideEffects: undefined | boolean;
         },
+    // @ts-expect-error TS7006
     expected,
   ) {
     assert.deepEqual(normalize(resolved), normalize(expected));

@@ -15,6 +15,7 @@ export default function promiseFromProcess(
           return;
         }
 
+        // @ts-expect-error TS2794
         resolve();
       });
     },

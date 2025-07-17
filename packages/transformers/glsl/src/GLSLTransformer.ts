@@ -1,7 +1,9 @@
 import path from 'path';
 import {promisify} from 'util';
 import {Transformer} from '@atlaspack/plugin';
+// @ts-expect-error TS7016
 import glslifyDeps from 'glslify-deps';
+// @ts-expect-error TS7016
 import glslifyBundle from 'glslify-bundle';
 
 export default new Transformer({
@@ -10,6 +12,7 @@ export default new Transformer({
     let cwd = path.dirname(asset.filePath);
     let depper = glslifyDeps({
       cwd,
+      // @ts-expect-error TS7006
       resolve: async (target, opts, next) => {
         try {
           let filePath = await resolve(
@@ -41,6 +44,7 @@ export default new Transformer({
   },
 }) as Transformer<unknown>;
 
+// @ts-expect-error TS2304
 function collectDependencies(asset: MutableAsset, ast: any) {
   for (let dep of ast) {
     if (!dep.entry) {

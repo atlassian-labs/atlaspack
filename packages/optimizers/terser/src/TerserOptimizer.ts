@@ -1,4 +1,5 @@
 import nullthrows from 'nullthrows';
+// @ts-expect-error TS2307
 import {minify} from 'terser';
 import {Optimizer} from '@atlaspack/plugin';
 import {blobToString} from '@atlaspack/utils';
@@ -32,6 +33,7 @@ export default new Optimizer({
 
     let originalMap = map ? await map.stringify({}) : null;
     let config = {
+      // @ts-expect-error TS2698
       ...userConfig,
       sourceMap: bundle.env.sourceMap
         ? {
@@ -56,6 +58,7 @@ export default new Optimizer({
       let {message, line, col} = error;
       if (line != null && col != null) {
         message = escapeMarkdown(message);
+        // @ts-expect-error TS2304
         let diagnostics: Array<Diagnostic> = [];
         let mapping = map?.findClosestMapping(line, col);
         if (mapping && mapping.original && mapping.source) {

@@ -1,6 +1,7 @@
 import {AtlaspackWatcherWatchmanJS} from './wrapper';
+import type {Watcher} from './wrapper';
 
-const wrapper = new AtlaspackWatcherWatchmanJS();
+const wrapper: Watcher = new AtlaspackWatcherWatchmanJS();
 
 export const writeSnapshot = wrapper.writeSnapshot.bind(wrapper);
 export const getEventsSince = wrapper.getEventsSince.bind(wrapper);

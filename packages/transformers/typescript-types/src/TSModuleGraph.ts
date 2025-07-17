@@ -84,16 +84,20 @@ export class TSModuleGraph {
       }
     | null
     | undefined {
+    // @ts-expect-error TS2339
     invariant(e.name != null);
+    // @ts-expect-error TS2339
     let exportName = e.name;
 
     // Re-export
+    // @ts-expect-error TS2339
     if (e.specifier && e.imported) {
       let m = this.getModule(e.specifier);
       if (!m) {
         return null;
       }
 
+      // @ts-expect-error TS2339
       let exp = this.resolveExport(m, e.imported);
       if (!exp) {
         return null;
@@ -120,6 +124,7 @@ export class TSModuleGraph {
     return {
       module: m,
       name: exportName,
+      // @ts-expect-error TS2339
       imported: e.imported != null ? m.getName(e.imported) : exportName,
     };
   }
@@ -162,6 +167,7 @@ export class TSModuleGraph {
     | null
     | undefined {
     for (let e of module.exports) {
+      // @ts-expect-error TS2339
       if (e.name === name) {
         return this.getExport(module, e);
       } else if (e.specifier) {
@@ -190,6 +196,7 @@ export class TSModuleGraph {
       name: string;
     }> = [];
     for (let e of module.exports) {
+      // @ts-expect-error TS2339
       if (e.name && (!excludeDefault || e.name !== 'default')) {
         let exp = this.getExport(module, e);
         if (exp) {
@@ -268,11 +275,14 @@ export class TSModuleGraph {
     let imports = new Map();
 
     for (let [m, orig] of importedSymbolsToUpdate) {
+      // @ts-expect-error TS2339
       let imp = nullthrows(m.imports.get(orig));
+      // @ts-expect-error TS2345
       let imported = nullthrows(this.resolveImport(m, orig));
 
       // If the module is bundled, map the local name to the original exported name.
       if (this.modules.has(imp.specifier)) {
+        // @ts-expect-error TS2339
         m.names.set(orig, imported.imported);
         continue;
       }
@@ -297,6 +307,7 @@ export class TSModuleGraph {
         importedNames.set(imported.imported, name);
       }
 
+      // @ts-expect-error TS2339
       m.names.set(orig, name);
     }
 

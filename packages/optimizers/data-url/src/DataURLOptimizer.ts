@@ -1,5 +1,6 @@
 import {Optimizer} from '@atlaspack/plugin';
 import {blobToBuffer} from '@atlaspack/utils';
+// @ts-expect-error TS7016
 import mime from 'mime';
 import {isBinaryFile} from 'isbinaryfile';
 

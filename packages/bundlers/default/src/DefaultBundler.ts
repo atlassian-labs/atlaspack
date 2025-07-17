@@ -30,6 +30,7 @@ export default new Bundler({
 
   bundle({bundleGraph, config, logger}) {
     let targetMap = getEntryByTarget(bundleGraph); // Organize entries by target output folder/ distDir
+    // @ts-expect-error TS2304
     let graphs: Array<IdealGraph> = [];
 
     for (let entries of targetMap.values()) {
@@ -73,6 +74,7 @@ function getEntryByTarget(
   );
   bundleGraph.traverse({
     enter(
+      // @ts-expect-error TS2304
       node: BundleGraphTraversable,
       context:
         | {
@@ -85,6 +87,7 @@ function getEntryByTarget(
             readonly type: 'dependency';
             value: Dependency;
           },
+      // @ts-expect-error TS2304
       actions: TraversalActions,
     ) {
       if (node.type !== 'asset') {
