@@ -12,6 +12,7 @@ import Atlaspack, {INTERNAL_RESOLVE, INTERNAL_TRANSFORM} from '@atlaspack/core';
 import syncPromise from './syncPromise';
 
 let hooks: Record<string, any> = {};
+// @ts-expect-error TS7034
 let lastDisposable;
 let packageManager = new NodePackageManager(new NodeFS(), '/');
 let defaultConfig = {
@@ -27,6 +28,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
   };
 
   // Replace old hook, as this one likely contains options.
+  // @ts-expect-error TS7005
   if (lastDisposable) {
     lastDisposable.dispose();
   }
@@ -55,6 +57,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
 
     try {
       isProcessing = true;
+      // @ts-expect-error TS7053
       let result = await atlaspack[INTERNAL_TRANSFORM]({
         filePath,
         env,
@@ -62,6 +65,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
 
       if (result.assets && result.assets.length >= 1) {
         let output = '';
+        // @ts-expect-error TS7006
         let asset = result.assets.find((a) => a.type === 'js');
         if (asset) {
           output = await asset.getCode();
@@ -80,6 +84,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
     return '';
   }
 
+  // @ts-expect-error TS7019
   let hookFunction = (...args) => syncPromise(fileProcessor(...args));
 
   function resolveFile(currFile: any, targetFile: any) {
@@ -87,6 +92,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
       isProcessing = true;
 
       let resolved = syncPromise(
+        // @ts-expect-error TS7053
         atlaspack[INTERNAL_RESOLVE]({
           specifier: targetFile,
           sourcePath: currFile,
@@ -94,6 +100,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
         }),
       );
 
+      // @ts-expect-error TS2345
       let targetFileExtension = path.extname(resolved);
       if (!hooks[targetFileExtension]) {
         hooks[targetFileExtension] = addHook(hookFunction, {
@@ -113,17 +120,22 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
     ignoreNodeModules: false,
   });
 
+  // @ts-expect-error TS7034
   let disposed;
 
   // Patching Module._resolveFilename takes care of patching the underlying
   // resolver in both `require` and `require.resolve`:
   // https://github.com/nodejs/node-v0.x-archive/issues/1125#issuecomment-10748203
+  // @ts-expect-error TS2339
   const originalResolveFilename = Module._resolveFilename;
+  // @ts-expect-error TS2339
   Module._resolveFilename = function atlaspackResolveFilename(
     to: any,
     from: any,
+    // @ts-expect-error TS7019
     ...rest
   ) {
+    // @ts-expect-error TS7005
     return isProcessing || disposed
       ? originalResolveFilename(to, from, ...rest)
       : resolveFile(from?.filename, to);
@@ -131,6 +143,7 @@ function register(inputOpts?: InitialAtlaspackOptions): IDisposable {
 
   let disposable = (lastDisposable = {
     dispose() {
+      // @ts-expect-error TS7005
       if (disposed) {
         return;
       }

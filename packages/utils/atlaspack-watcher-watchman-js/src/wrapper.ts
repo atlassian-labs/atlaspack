@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+// @ts-expect-error TS7016
 import * as watchman from 'fb-watchman';
 import {isGlob} from '@atlaspack/utils';
 import logger from '@atlaspack/logger';
@@ -41,14 +42,14 @@ export interface Watcher {
 export class AtlaspackWatcherWatchmanJS implements Watcher {
   subscriptionName: string;
   client: watchman.Client;
-  initPromise: Promise<undefined> | undefined;
+  initPromise: Promise<void> | undefined;
 
   constructor() {
     this.subscriptionName = 'parcel-watcher-subscription-' + Date.now();
     this.client = new watchman.Client();
   }
 
-  commandAsync(args: any[]): Promise<any> {
+  commandAsync(args: WatchmanArgs): Promise<any> {
     return new Promise(
       (
         resolve: (result: Promise<never>) => void,
@@ -196,7 +197,7 @@ export class AtlaspackWatcherWatchmanJS implements Watcher {
       },
     ]);
 
-    this.client.on('subscription', function (resp) {
+    this.client.on('subscription', function (resp: any) {
       if (!resp.files || resp.subscription !== subscriptionName) {
         return;
       }

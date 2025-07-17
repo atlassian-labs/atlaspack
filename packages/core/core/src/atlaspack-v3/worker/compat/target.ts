@@ -1,3 +1,4 @@
+// @ts-expect-error TS2305
 import type {Target as NapiTarget} from '@atlaspack/rust';
 import type {
   Target as ITarget,

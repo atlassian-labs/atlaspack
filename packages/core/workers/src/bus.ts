@@ -6,6 +6,7 @@ class Bus extends EventEmitter {
     if (child) {
       child.workerApi.callMaster(
         {
+          // @ts-expect-error TS2339
           location: process.browser ? '@atlaspack/workers/bus' : __filename,
           method: 'emit',
           args: [event, ...args],

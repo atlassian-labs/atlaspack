@@ -1,5 +1,6 @@
 import type {Diagnostic as ParcelDiagnostic} from '@atlaspack/diagnostic';
 import type {BundleGraph, FilePath, PackagedBundle} from '@atlaspack/types';
+// @ts-expect-error TS7016
 import type {Program, Query} from 'ps-node';
 import type {Diagnostic, DocumentUri} from 'vscode-languageserver';
 import type {MessageConnection} from 'vscode-jsonrpc/node';
@@ -16,11 +17,13 @@ import os from 'os';
 import url from 'url';
 import fs from 'fs';
 import nullthrows from 'nullthrows';
+// @ts-expect-error TS7016
 import * as ps from 'ps-node';
 import {promisify} from 'util';
 
 import {createServer} from './ipc';
 import {
+  // @ts-expect-error TS2305
   PublishDiagnostic,
   NotificationBuildStatus,
   NotificationWorkspaceDiagnostics,
@@ -61,6 +64,7 @@ const getWorkspaceDiagnostics = (): Array<PublishDiagnostic> =>
     diagnostics,
   }));
 
+// @ts-expect-error TS7034
 let server;
 let connections: Array<MessageConnection> = [];
 
@@ -72,6 +76,7 @@ let bundleGraph: Promise<BundleGraph<PackagedBundle> | null | undefined> =
 
 let watchStarted = false;
 let lspStarted = false;
+// @ts-expect-error TS7034
 let watchStartPromise;
 
 const LSP_SENTINEL_FILENAME = 'lsp-server';
@@ -86,6 +91,7 @@ async function watchLspActive(): Promise<FSWatcher> {
     //
   }
 
+  // @ts-expect-error TS2769
   return fs.watch(BASEDIR, (eventType: string, filename: string) => {
     switch (eventType) {
       case 'rename':
@@ -102,6 +108,7 @@ async function watchLspActive(): Promise<FSWatcher> {
   });
 }
 
+// @ts-expect-error TS2552
 async function doWatchStart(options: PluginOptions) {
   await fs.promises.mkdir(BASEDIR, {recursive: true});
 
@@ -128,6 +135,7 @@ async function doWatchStart(options: PluginOptions) {
       let graph = await bundleGraph;
       if (!graph) return;
 
+      // @ts-expect-error TS2345
       return getDiagnosticsUnusedExports(graph, uri);
     });
 
@@ -135,6 +143,7 @@ async function doWatchStart(options: PluginOptions) {
       let graph = await bundleGraph;
       if (!graph) return null;
 
+      // @ts-expect-error TS2345
       return getImporters(graph, params);
     });
 
@@ -159,6 +168,7 @@ export default new Reporter({
     }
 
     if (watchStarted && lspStarted) {
+      // @ts-expect-error TS7005
       if (!watchStartPromise) {
         watchStartPromise = doWatchStart(options);
       }
@@ -191,6 +201,7 @@ export default new Reporter({
       }
       case 'log':
         if (
+          // @ts-expect-error TS2339
           event.diagnostics != null &&
           (event.level === 'error' ||
             event.level === 'warn' ||
@@ -213,6 +224,7 @@ export default new Reporter({
       }
       case 'watchEnd':
         connections.forEach((c) => c.end());
+        // @ts-expect-error TS7005
         await server.close();
         ignoreFail(() => fs.unlinkSync(META_FILE));
         break;
@@ -268,6 +280,7 @@ function updateDiagnostics(
       continue;
     }
 
+    // @ts-expect-error TS2304
     const relatedInformation: Array<DiagnosticRelatedInformation> = [];
     for (const codeFrame of codeFrames) {
       for (const highlight of codeFrame.codeHighlights) {
@@ -335,6 +348,7 @@ function getDiagnosticsUnusedExports(
   });
 
   if (asset) {
+    // @ts-expect-error TS2304
     const generateDiagnostic = (loc: SourceLocation, type: string) => ({
       range: {
         start: {
@@ -352,8 +366,10 @@ function getDiagnosticsUnusedExports(
       tags: [DiagnosticTag.Unnecessary],
     });
 
+    // @ts-expect-error TS2345
     let usedSymbols = bundleGraph.getUsedSymbols(asset);
     if (usedSymbols) {
+      // @ts-expect-error TS2339
       for (let [exported, symbol] of asset.symbols) {
         if (!usedSymbols.has(exported)) {
           if (symbol.loc) {
@@ -380,6 +396,7 @@ function getDiagnosticsUnusedExports(
       // }
     }
 
+    // @ts-expect-error TS2339
     for (let dep of asset.getDependencies()) {
       let usedSymbols = bundleGraph.getUsedSymbols(dep);
       if (usedSymbols) {
@@ -448,6 +465,7 @@ function getImporters(
   });
 
   if (asset) {
+    // @ts-expect-error TS2345
     let incoming = bundleGraph.getIncomingDependencies(asset);
     return incoming
       .filter((dep) => dep.sourcePath != null)

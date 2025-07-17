@@ -24,6 +24,7 @@ import {AtlaspackConfig} from './AtlaspackConfig';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {clearBuildCaches} from '@atlaspack/build-cache';
 import {init as initSourcemaps} from '@parcel/source-map';
+// @ts-expect-error TS2305
 import {init as initRust} from '@atlaspack/rust';
 import WorkerFarm from '@atlaspack/workers';
 import {setFeatureFlags} from '@atlaspack/feature-flags';
@@ -32,6 +33,7 @@ import '@atlaspack/cache'; // register with serializer
 import '@atlaspack/package-manager';
 import '@atlaspack/fs';
 
+// @ts-expect-error TS2339
 if (process.env.ATLASPACK_BUILD_REPL && process.browser) {
   /* eslint-disable import/no-extraneous-dependencies, monorepo/no-internal-import */
   require('@atlaspack/repl/src/atlaspack/BrowserPackageManager.js');
@@ -54,6 +56,7 @@ type WorkerTransformationOpts = Flow.Diff<
   configCachePath: string;
 };
 type WorkerValidationOpts = Flow.Diff<
+  // @ts-expect-error TS2344
   ValidationOpts,
   {
     workerApi: unknown;
@@ -104,6 +107,7 @@ export async function runTransform(
   return new Transformation({
     workerApi,
     options,
+    // @ts-expect-error TS2783
     config,
     ...rest,
   }).run();
@@ -119,8 +123,10 @@ export async function runValidate(
 
   return new Validation({
     workerApi,
+    // @ts-expect-error TS2783
     report: reportWorker.bind(null, workerApi),
     options,
+    // @ts-expect-error TS2783
     config,
     ...rest,
   }).run();
@@ -154,6 +160,7 @@ export async function runPackage(
   let runner = new PackagerRunner({
     config: atlaspackConfig,
     options,
+    // @ts-expect-error TS2322
     report: WorkerFarm.isWorker() ? reportWorker.bind(null, workerApi) : report,
     previousDevDeps,
     previousInvalidations,

@@ -40,8 +40,10 @@ export default new Packager({
     let queue = new PromiseQueue({
       maxConcurrent: 32,
     });
+    // @ts-expect-error TS2304
     let hoistedImports: Array<DependencySpecifier> = [];
     let assetsByPlaceholder = new Map();
+    // @ts-expect-error TS7034
     let entry = null;
     let entryContents = '';
 
@@ -50,6 +52,7 @@ export default new Packager({
         if (node.type === 'asset' && !context) {
           // If there is only one entry, we'll use it directly.
           // Otherwise, we'll create a fake bundle entry with @import rules for each root asset.
+          // @ts-expect-error TS7005
           if (entry == null) {
             entry = node.value.id;
           } else {
@@ -142,6 +145,7 @@ export default new Packager({
     });
 
     let outputs = new Map(
+      // @ts-expect-error TS2345
       (await queue.run()).map(([asset, code, map]: [any, any, any]) => [
         asset,
         [code, map],
@@ -149,11 +153,14 @@ export default new Packager({
     );
     let map = new SourceMap(options.projectRoot);
 
+    // @ts-expect-error TS2339
     if (process.browser) {
+      // @ts-expect-error TS2349
       await init();
     }
 
     let res = await bundleAsync({
+      // @ts-expect-error TS2322
       filename: nullthrows(entry),
       sourceMap: !!bundle.env.sourceMap,
       resolver: {
@@ -218,13 +225,19 @@ export default new Packager({
 }) as Packager<unknown, unknown>;
 
 function replaceReferences(
+  // @ts-expect-error TS2304
   bundle: NamedBundle,
+  // @ts-expect-error TS2304
   bundleGraph: BundleGraph<NamedBundle>,
   contents: string,
+  // @ts-expect-error TS2552
   map: NodeSourceMap | null | undefined,
   getInlineBundleContents: (
+    // @ts-expect-error TS2304
     arg1: Bundle,
+    // @ts-expect-error TS2304
     arg2: BundleGraph<NamedBundle>,
+    // @ts-expect-error TS2304
   ) => Async<{
     contents: Blob;
   }>,
@@ -263,12 +276,17 @@ function escapeString(contents: string): string {
 }
 
 async function processCSSModule(
+  // @ts-expect-error TS2552
   options: PluginOptions,
+  // @ts-expect-error TS2304
   logger: PluginLogger,
+  // @ts-expect-error TS2304
   bundleGraph: BundleGraph<NamedBundle>,
+  // @ts-expect-error TS2304
   bundle: NamedBundle,
   asset: Asset,
 ): Promise<[Asset, string, SourceMap | null | undefined]> {
+  // @ts-expect-error TS2709
   let postcss: PostCSS = await options.packageManager.require(
     'postcss',
     options.projectRoot + '/index',
@@ -290,6 +308,7 @@ async function processCSSModule(
     let defaultImport = null;
     if (usedSymbols.has('default')) {
       let incoming = bundleGraph.getIncomingDependencies(asset);
+      // @ts-expect-error TS7006
       defaultImport = incoming.find((d) =>
         d.symbols.hasExportSymbol('default'),
       );
@@ -318,6 +337,7 @@ async function processCSSModule(
       let usedLocalSymbols = new Set(
         [...usedSymbols].map(
           (exportSymbol) =>
+            // @ts-expect-error TS2731
             `.${nullthrows(asset.symbols.get(exportSymbol)).local}`,
         ),
       );
@@ -356,6 +376,7 @@ async function processCSSModule(
 function escapeDashedIdent(name: symbol | string) {
   // https://drafts.csswg.org/cssom/#serialize-an-identifier
   let res = '';
+  // @ts-expect-error TS2488
   for (let c of name) {
     let code = c.codePointAt(0);
     if (code === 0) {

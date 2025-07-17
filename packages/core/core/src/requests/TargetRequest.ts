@@ -119,6 +119,7 @@ export function skipTarget(
     : targetName !== exclusiveTarget;
 }
 
+// @ts-expect-error TS7031
 async function run({input, api, options}) {
   let targetResolver = new TargetResolver(
     api,
@@ -132,6 +133,7 @@ async function run({input, api, options}) {
   assertTargetsAreNotEntries(targets, input, options);
 
   let configResult = nullthrows(
+    // @ts-expect-error TS2347
     await api.runRequest<null, ConfigAndCachePath>(
       createAtlaspackConfigRequest(),
     ),
@@ -228,12 +230,14 @@ export class TargetResolver {
 
         // If an array of strings is passed, it's a filter on the resolved package
         // targets. Load them, and find the matching targets.
+        // @ts-expect-error TS2322
         targets = optionTargets
           .map((target) => {
             // null means skipped.
             if (!packageTargets.has(target)) {
               throw new ThrowableDiagnostic({
                 diagnostic: {
+                  // @ts-expect-error TS2345
                   message: md`Could not find target with name "${target}"`,
                   origin: '@atlaspack/core',
                 },
@@ -261,6 +265,7 @@ export class TargetResolver {
               );
               throw new ThrowableDiagnostic({
                 diagnostic: {
+                  // @ts-expect-error TS2345
                   message: md`Missing distDir for target "${name}"`,
                   origin: '@atlaspack/core',
                   codeFrames: [
@@ -372,6 +377,7 @@ export class TargetResolver {
             env: createEnvironment({
               context: 'browser',
               engines: {
+                // @ts-expect-error TS2322
                 browsers: DEFAULT_ENGINES.browsers,
               },
               shouldOptimize: this.options.defaultTargetOptions.shouldOptimize,
@@ -385,6 +391,7 @@ export class TargetResolver {
           },
         ];
       } else {
+        // @ts-expect-error TS2322
         targets = Array.from(packageTargets.values())
           .filter(Boolean)
           .filter((descriptor) => {
@@ -430,6 +437,7 @@ export class TargetResolver {
       if (pkgFile == null) {
         throw new ThrowableDiagnostic({
           diagnostic: {
+            // @ts-expect-error TS2345
             message: md`Expected package.json file in ${rootDir}`,
             origin: '@atlaspack/core',
           },
@@ -509,6 +517,7 @@ export class TargetResolver {
             };
 
             browsersLoc = {
+              // @ts-expect-error TS2353
               message: `(defined in ${path.relative(
                 process.cwd(),
                 browserslistConfig,
@@ -530,25 +539,28 @@ export class TargetResolver {
     let browsers = pkgEngines.browsers;
 
     let defaultEngines = this.options.defaultTargetOptions.engines;
-    let context = browsers ?? node == null ? 'browser' : 'node';
+    let context = (browsers ?? node == null) ? 'browser' : 'node';
     if (context === 'browser' && pkgEngines.browsers == null) {
       pkgEngines = {
         ...pkgEngines,
+        // @ts-expect-error TS2322
         browsers: defaultEngines?.browsers ?? DEFAULT_ENGINES.browsers,
       };
+      // @ts-expect-error TS2353
       browsersLoc = {message: '(default)'};
     } else if (context === 'node' && pkgEngines.node == null) {
       pkgEngines = {
         ...pkgEngines,
         node: defaultEngines?.node ?? DEFAULT_ENGINES.node,
       };
+      // @ts-expect-error TS2353
       nodeLoc = {message: '(default)'};
     }
 
     // If there is a separate `browser` target, or an `engines.node` field but no browser targets, then
     // the `main` and `module` targets refer to node, otherwise browser.
     let mainContext =
-      pkg.browser ?? pkgTargets.browser ?? (node != null && browsers == null)
+      (pkg.browser ?? pkgTargets.browser ?? (node != null && browsers == null))
         ? 'node'
         : 'browser';
     let mainContextLoc: TargetKeyInfo =
@@ -559,22 +571,22 @@ export class TargetResolver {
             type: 'key',
           }
         : pkgTargets.browser
-        ? {
-            inferred: '/targets/browser',
-            message: '(because a browser target also exists)',
-            type: 'key',
-          }
-        : node != null && browsers == null
-        ? nodeLoc.path
           ? {
-              inferred: nodeLoc.path,
-              message: '(because node engines were defined)',
+              inferred: '/targets/browser',
+              message: '(because a browser target also exists)',
               type: 'key',
             }
-          : nodeLoc
-        : {message: '(default)'};
+          : node != null && browsers == null
+            ? nodeLoc.path
+              ? {
+                  inferred: nodeLoc.path,
+                  message: '(because node engines were defined)',
+                  type: 'key',
+                }
+              : nodeLoc
+            : {message: '(default)'};
     let moduleContext =
-      pkg.browser ?? pkgTargets.browser ? 'browser' : mainContext;
+      (pkg.browser ?? pkgTargets.browser) ? 'browser' : mainContext;
     let moduleContextLoc: TargetKeyInfo =
       pkg.browser != null
         ? {
@@ -583,12 +595,12 @@ export class TargetResolver {
             type: 'key',
           }
         : pkgTargets.browser
-        ? {
-            inferred: '/targets/browser',
-            message: '(becausea browser target also exists)',
-            type: 'key',
-          }
-        : mainContextLoc;
+          ? {
+              inferred: '/targets/browser',
+              message: '(becausea browser target also exists)',
+              type: 'key',
+            }
+          : mainContextLoc;
 
     let getEnginesLoc = (
       targetName: string,
@@ -639,6 +651,7 @@ export class TargetResolver {
         _targetDist = pkg[targetName][pkg.name];
         pointer = `/${targetName}/${encodeJSONKeyComponent(pkg.name)}`;
       } else {
+        // @ts-expect-error TS7053
         _targetDist = pkg[targetName];
         pointer = `/${targetName}`;
       }
@@ -690,6 +703,7 @@ export class TargetResolver {
 
         if (
           distEntry != null &&
+          // @ts-expect-error TS7053
           !COMMON_TARGETS[targetName].match.test(distEntry)
         ) {
           let contents: string =
@@ -698,11 +712,13 @@ export class TargetResolver {
               : JSON.stringify(pkgContents, null, '\t');
           let listFormat = new Intl.ListFormat('en-US', {type: 'disjunction'});
           let extensions = listFormat.format(
+            // @ts-expect-error TS7053
             COMMON_TARGETS[targetName].extensions,
           );
           let ext = path.extname(distEntry);
           throw new ThrowableDiagnostic({
             diagnostic: {
+              // @ts-expect-error TS2345
               message: md`Unexpected output file type ${ext} in target "${targetName}"`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -735,6 +751,7 @@ export class TargetResolver {
               : JSON.stringify(pkgContents, null, '\t');
           throw new ThrowableDiagnostic({
             diagnostic: {
+              // @ts-expect-error TS2345
               message: md`The "global" output format is not supported in the "${targetName}" target.`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -764,6 +781,7 @@ export class TargetResolver {
             distEntry,
             descriptor,
             targetName,
+            // @ts-expect-error TS2345
             pkg,
             pkgFilePath,
             pkgContents,
@@ -788,6 +806,7 @@ export class TargetResolver {
           throw new ThrowableDiagnostic({
             diagnostic: {
               // prettier-ignore
+              // @ts-expect-error TS2345
               message: md`Output format "esmodule" cannot be used in the "main" target without a .mjs extension or "type": "module" field.`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -854,8 +873,8 @@ export class TargetResolver {
           (targetName === 'browser'
             ? 'browser'
             : isModule
-            ? moduleContext
-            : mainContext);
+              ? moduleContext
+              : mainContext);
 
         targets.set(targetName, {
           name: targetName,
@@ -865,6 +884,7 @@ export class TargetResolver {
             descriptor.publicUrl ?? this.options.defaultTargetOptions.publicUrl,
           env: createEnvironment({
             engines: descriptor.engines ?? pkgEngines,
+            // @ts-expect-error TS2322
             context,
             includeNodeModules: descriptor.includeNodeModules ?? false,
             outputFormat,
@@ -884,30 +904,30 @@ export class TargetResolver {
           context: descriptor.context
             ? {path: `/targets/${targetName}/context`}
             : targetName === 'browser'
-            ? {
-                message: '(inferred from target name)',
-                inferred: pointer,
-                type: 'key',
-              }
-            : isModule
-            ? moduleContextLoc
-            : mainContextLoc,
+              ? {
+                  message: '(inferred from target name)',
+                  inferred: pointer,
+                  type: 'key',
+                }
+              : isModule
+                ? moduleContextLoc
+                : mainContextLoc,
           includeNodeModules: descriptor.includeNodeModules
             ? {path: `/targets/${targetName}/includeNodeModules`, type: 'key'}
             : {message: '(default)'},
           outputFormat: descriptor.outputFormat
             ? {path: `/targets/${targetName}/outputFormat`}
             : inferredOutputFormatField === '/type'
-            ? {
-                message: `(inferred from package.json#type)`,
-                inferred: inferredOutputFormatField,
-              }
-            : inferredOutputFormatField != null
-            ? {
-                message: `(inferred from file extension)`,
-                inferred: inferredOutputFormatField,
-              }
-            : {message: '(default)'},
+              ? {
+                  message: `(inferred from package.json#type)`,
+                  inferred: inferredOutputFormatField,
+                }
+              : inferredOutputFormatField != null
+                ? {
+                    message: `(inferred from file extension)`,
+                    inferred: inferredOutputFormatField,
+                  }
+                : {message: '(default)'},
           isLibrary: {message: '(default)'},
           shouldOptimize: descriptor.optimize
             ? {path: `/targets/${targetName}/optimize`}
@@ -918,11 +938,13 @@ export class TargetResolver {
     }
 
     let customTargets = (Object.keys(pkgTargets) as Array<string>).filter(
+      // @ts-expect-error TS7053
       (targetName) => !COMMON_TARGETS[targetName],
     );
 
     // Custom targets
     for (let targetName of customTargets) {
+      // @ts-expect-error TS7053
       let distPath: unknown = pkg[targetName];
       let distDir;
       let distEntry;
@@ -954,6 +976,7 @@ export class TargetResolver {
               : JSON.stringify(pkgContents, null, '\t');
           throw new ThrowableDiagnostic({
             diagnostic: {
+              // @ts-expect-error TS2345
               message: md`Invalid distPath for target "${targetName}"`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -1003,6 +1026,7 @@ export class TargetResolver {
             distEntry,
             descriptor,
             targetName,
+            // @ts-expect-error TS2345
             pkg,
             pkgFilePath,
             pkgContents,
@@ -1096,16 +1120,16 @@ export class TargetResolver {
           outputFormat: descriptor.outputFormat
             ? {path: `/targets/${targetName}/outputFormat`}
             : inferredOutputFormatField === '/type'
-            ? {
-                message: `(inferred from package.json#type)`,
-                inferred: inferredOutputFormatField,
-              }
-            : inferredOutputFormatField != null
-            ? {
-                message: `(inferred from file extension)`,
-                inferred: inferredOutputFormatField,
-              }
-            : {message: '(default)'},
+              ? {
+                  message: `(inferred from package.json#type)`,
+                  inferred: inferredOutputFormatField,
+                }
+              : inferredOutputFormatField != null
+                ? {
+                    message: `(inferred from file extension)`,
+                    inferred: inferredOutputFormatField,
+                  }
+                : {message: '(default)'},
           isLibrary:
             descriptor.isLibrary != null
               ? {path: `/targets/${targetName}/isLibrary`}
@@ -1135,6 +1159,7 @@ export class TargetResolver {
         publicUrl: this.options.defaultTargetOptions.publicUrl,
         env: createEnvironment({
           engines: pkgEngines,
+          // @ts-expect-error TS2322
           context,
           outputFormat: this.options.defaultTargetOptions.outputFormat,
           isLibrary: this.options.defaultTargetOptions.isLibrary,
@@ -1210,6 +1235,7 @@ export class TargetResolver {
       let listFormat = new Intl.ListFormat('en-US', {type: 'disjunction'});
       throw new ThrowableDiagnostic({
         diagnostic: {
+          // @ts-expect-error TS2345
           message: md`Declared output format "${descriptor.outputFormat}" does not match expected output format "${inferredOutputFormat}".`,
           origin: '@atlaspack/core',
           codeFrames: [
@@ -1244,6 +1270,7 @@ export class TargetResolver {
       });
     }
 
+    // @ts-expect-error TS2322
     return [inferredOutputFormat, inferredOutputFormatField];
   }
 }
@@ -1264,6 +1291,7 @@ function parseEngines(
       '@atlaspack/core',
       message,
     );
+    // @ts-expect-error TS2322
     return engines;
   }
 }
@@ -1286,6 +1314,7 @@ function parseDescriptor(
     `Invalid target descriptor for target "${targetName}"`,
   );
 
+  // @ts-expect-error TS2322
   return descriptor;
 }
 
@@ -1306,6 +1335,7 @@ function parsePackageDescriptor(
     '@atlaspack/core',
     `Invalid target descriptor for target "${targetName}"`,
   );
+  // @ts-expect-error TS2322
   return descriptor;
 }
 
@@ -1327,6 +1357,7 @@ function parseCommonTargetDescriptor(
     `Invalid target descriptor for target "${targetName}"`,
   );
 
+  // @ts-expect-error TS2322
   return descriptor;
 }
 
@@ -1361,6 +1392,7 @@ function assertNoDuplicateTargets(
   for (let [targetPath, targetNames] of targetsByPath) {
     if (targetNames.length > 1 && pkgContents != null && pkgFilePath != null) {
       diagnostics.push({
+        // @ts-expect-error TS2345
         message: md`Multiple targets have the same destination path "${path.relative(
           path.dirname(pkgFilePath),
           targetPath,
@@ -1398,6 +1430,7 @@ function assertNoDuplicateTargets(
 
 function normalizeSourceMap(
   options: AtlaspackOptions,
+  // @ts-expect-error TS2304
   sourceMap: undefined | TargetSourceMapOptions | boolean,
 ) {
   if (options.defaultTargetOptions.sourceMaps) {
@@ -1426,6 +1459,7 @@ function assertTargetsAreNotEntries(
         process.cwd(),
         fromProjectPath(options.projectRoot, input.filePath),
       );
+      // @ts-expect-error TS2304
       let codeFrames: Array<DiagnosticCodeFrame> = [];
       if (loc) {
         codeFrames.push({
@@ -1459,6 +1493,7 @@ function assertTargetsAreNotEntries(
           message: `Target "${target.name}" is configured to overwrite entry "${relativeEntry}".`,
           codeFrames,
           hints: [
+            // @ts-expect-error TS7053
             (COMMON_TARGETS[target.name]
               ? `The "${target.name}" field is an _output_ file path so that your build can be consumed by other tools. `
               : '') +
@@ -1510,6 +1545,7 @@ async function debugResolvedTargets(
         break;
     }
 
+    // @ts-expect-error TS2304
     let highlights: Array<DiagnosticCodeHighlight> = [];
     if (input.loc) {
       highlights.push(
@@ -1524,6 +1560,7 @@ async function debugResolvedTargets(
     // Builds up map of code highlights for each defined/inferred path in the package.json.
     let jsonHighlights = new Map();
     for (let key in info) {
+      // @ts-expect-error TS7053
       let keyInfo = info[key];
       let path = keyInfo.path || keyInfo.inferred;
       if (!path) {
@@ -1544,10 +1581,12 @@ async function debugResolvedTargets(
       }
 
       if (keyInfo.path) {
+        // @ts-expect-error TS2345
         highlight.defined = md`${key} defined here`;
       }
 
       if (keyInfo.inferred) {
+        // @ts-expect-error TS2345
         highlight.inferred.push(md`${key} to be ${JSON.stringify(env[key])}`);
       }
     }
@@ -1593,14 +1632,17 @@ async function debugResolvedTargets(
         listFormat.format(
           Object.entries(env.includeNodeModules)
             .filter(([, v]: [any, any]) => v === false)
+            // @ts-expect-error TS2345
             .map(([k]: [any]) => JSON.stringify(k)),
         );
     }
 
     let format = (v: TargetKeyInfo) =>
+      // @ts-expect-error TS2339
       v.message != null ? md.italic(v.message) : '';
     logger.verbose({
       origin: '@atlaspack/core',
+      // @ts-expect-error TS2345
       message: md`**Target** "${target.name}"
 
                **Entry**: ${path.relative(
@@ -1616,8 +1658,8 @@ async function debugResolvedTargets(
         info.includeNodeModules,
       )}
             **Optimize**: ${String(env.shouldOptimize)} ${format(
-        info.shouldOptimize,
-      )}`,
+              info.shouldOptimize,
+            )}`,
       codeFrames: target.loc
         ? [
             {

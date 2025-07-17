@@ -69,7 +69,7 @@ export const idealBundleGraphEdges = Object.freeze({
 
 export type IdealBundleGraph = Graph<
   Bundle | 'root',
-  typeof idealBundleGraphEdges[keyof typeof idealBundleGraphEdges]
+  (typeof idealBundleGraphEdges)[keyof typeof idealBundleGraphEdges]
 >;
 
 // IdealGraph is the structure we will pass to decorate,
@@ -122,7 +122,7 @@ export function createIdealGraph(
   let bundleRootGraph: Graph<
     // asset index
     number,
-    typeof bundleRootEdgeTypes[keyof typeof bundleRootEdgeTypes]
+    (typeof bundleRootEdgeTypes)[keyof typeof bundleRootEdgeTypes]
   > = new Graph();
   let assetToBundleRootNodeId = new Map<BundleRoot, number>();
 
@@ -171,6 +171,7 @@ export function createIdealGraph(
 
     for (let c of config.manualSharedBundles) {
       if (c.root != null) {
+        // @ts-expect-error TS2345
         parentsToConfig.get(path.join(config.projectRoot, c.root)).push(c);
       }
     }
@@ -218,6 +219,7 @@ export function createIdealGraph(
           // We track all matching MSB's for constant modules as they are never duplicated
           // and need to be assigned to all matching bundles
           if (node.value.meta.isConstantModule === true) {
+            // @ts-expect-error TS2345
             constantModuleToMSB.get(node.value).push(c);
           }
 
@@ -272,8 +274,8 @@ export function createIdealGraph(
   assetGraph.traverse(
     {
       enter(
-        node:
-          | BundleGraphTraversable
+        node: // @ts-expect-error TS2304
+        | BundleGraphTraversable
           | {
               readonly type: 'dependency';
               value: Dependency;
@@ -289,6 +291,7 @@ export function createIdealGraph(
               readonly type: 'dependency';
               value: Dependency;
             },
+        // @ts-expect-error TS2304
         actions: TraversalActions,
       ) {
         if (node.type === 'asset') {
@@ -417,6 +420,7 @@ export function createIdealGraph(
                     type: 'bundle',
                   },
                 ),
+                // @ts-expect-error TS7053
                 dependencyPriorityEdges[dependency.priority],
               );
 
@@ -528,6 +532,7 @@ export function createIdealGraph(
 
               assetReference.get(childAsset).push([dependency, bundle]);
             } else {
+              // @ts-expect-error TS2322
               bundleId = null;
             }
             if (manualSharedObject && bundleId != null) {
@@ -535,6 +540,7 @@ export function createIdealGraph(
               // add the asset if it doesn't already have it and set key
 
               invariant(
+                // @ts-expect-error TS2367
                 bundle !== 'root' && bundle != null && bundleId != null,
               );
 
@@ -561,6 +567,7 @@ export function createIdealGraph(
         }
         return node;
       },
+      // @ts-expect-error TS2322
       exit(node: BundleGraphTraversable) {
         if (stack[stack.length - 1]?.[0] === node.value) {
           stack.pop();
@@ -852,8 +859,11 @@ export function createIdealGraph(
 
   function assignInlineConstants(parentAsset: Asset, bundle: Bundle) {
     for (let inlineConstant of inlineConstantDeps.get(parentAsset)) {
+      // @ts-expect-error TS2345
       if (!bundle.assets.has(inlineConstant)) {
+        // @ts-expect-error TS2345
         bundle.assets.add(inlineConstant);
+        // @ts-expect-error TS18046
         bundle.size += inlineConstant.stats.size;
       }
     }
@@ -1125,6 +1135,7 @@ export function createIdealGraph(
           let numRep = getBigIntFromContentKey(a.id);
           let r = Number(numRep % BigInt(modNum));
 
+          // @ts-expect-error TS2345
           remainderMap.get(r).push(a);
         }
 
@@ -1147,8 +1158,10 @@ export function createIdealGraph(
           }
           for (let sp of remainderMap.get(i)) {
             bundle.assets.add(sp);
+            // @ts-expect-error TS2339
             bundle.size += sp.stats.size;
             manualBundle.assets.delete(sp);
+            // @ts-expect-error TS2339
             manualBundle.size -= sp.stats.size;
           }
         }
@@ -1161,6 +1174,7 @@ export function createIdealGraph(
   // match multiple MSB's
   for (let [asset, msbs] of constantModuleToMSB.entries()) {
     for (let manualSharedObject of msbs) {
+      // @ts-expect-error TS2339
       let bundleId = manualSharedMap.get(manualSharedObject.name + ',js');
       if (bundleId == null) continue;
       let bundle = nullthrows(bundleGraph.getNode(bundleId));
@@ -1169,8 +1183,11 @@ export function createIdealGraph(
         'We tried to use the root incorrectly',
       );
 
+      // @ts-expect-error TS2345
       if (!bundle.assets.has(asset)) {
+        // @ts-expect-error TS2345
         bundle.assets.add(asset);
+        // @ts-expect-error TS18046
         bundle.size += asset.stats.size;
       }
     }
@@ -1284,6 +1301,7 @@ export function createIdealGraph(
       let numBundlesContributingToPRL = bundleIdsInGroup.reduce((count, b) => {
         let bundle = nullthrows(bundleGraph.getNode(b));
         invariant(bundle !== 'root');
+        // @ts-expect-error TS2365
         return count + (bundle.bundleBehavior !== 'inline');
       }, 0);
 
@@ -1319,7 +1337,9 @@ export function createIdealGraph(
           numBundlesContributingToPRL > config.maxParallelRequests
         ) {
           let bundleTuple = sharedBundlesInGroup.pop();
+          // @ts-expect-error TS18048
           let bundleToRemove = bundleTuple.bundle;
+          // @ts-expect-error TS18048
           let bundleIdToRemove = bundleTuple.id;
           //TODO add integration test where bundles in bunlde group > max parallel request limit & only remove a couple shared bundles
           // but total # bundles still exceeds limit due to non shared bundles
@@ -1395,6 +1415,7 @@ export function createIdealGraph(
           bundle === bundleToRemove ? [dep, bundleToKeep] : [dep, bundle],
         );
 
+      // @ts-expect-error TS2345
       assetReference.set(asset, newAssetReference);
     }
 
@@ -1603,7 +1624,9 @@ export function createIdealGraph(
     let assetOrderMap = new Map(assets.map((a, index) => [a, index]));
 
     for (let bundle of modifiedSourceBundles) {
+      // @ts-expect-error TS18046
       bundle.assets = new Set(
+        // @ts-expect-error TS18046
         [...bundle.assets].sort((a, b) => {
           let aIndex = nullthrows(assetOrderMap.get(a));
           let bIndex = nullthrows(assetOrderMap.get(b));

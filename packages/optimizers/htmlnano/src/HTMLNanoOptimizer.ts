@@ -1,5 +1,7 @@
+// @ts-expect-error TS2724
 import type {PostHTMLNode} from 'posthtml';
 
+// @ts-expect-error TS7016
 import htmlnano from 'htmlnano';
 import {Optimizer} from '@atlaspack/plugin';
 import posthtml from 'posthtml';
@@ -87,6 +89,7 @@ export default new Optimizer({
 
     let plugins = [htmlnano(htmlNanoConfig)];
 
+    // @ts-expect-error TS18046
     if (htmlNanoConfig.minifySvg !== false) {
       plugins.unshift(mapSVG);
     }
@@ -94,6 +97,7 @@ export default new Optimizer({
     return {
       contents: (
         await posthtml(plugins).process(contents, {
+          // @ts-expect-error TS2353
           xmlMode: bundle.type === 'xhtml',
           closingSingleTag: bundle.type === 'xhtml' ? 'slash' : undefined,
         })

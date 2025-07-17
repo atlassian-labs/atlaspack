@@ -13,7 +13,6 @@
     "access": "public"
   },
   "scripts": {
-    "dev:prepare": "rimraf ./lib/ && mkdir lib && echo \"module.exports = {}\" > lib/index.js",
     "check-ts": "tsc --noEmit"
   },
   "dependencies": {

@@ -12,7 +12,9 @@ export default function serverErrors(err: ServerError, port: number): string {
     err.code
   } occurred while setting up server on port ${port.toString()}.`;
 
+  // @ts-expect-error TS7053
   if (serverErrorList[err.code]) {
+    // @ts-expect-error TS7053
     desc = serverErrorList[err.code].replace(/{port}/g, port);
   }
 

@@ -1,4 +1,5 @@
 import type {FileSystem} from '@atlaspack/fs';
+// @ts-expect-error TS7016
 import forge from 'node-forge';
 import path from 'path';
 import logger from '@atlaspack/logger';
@@ -136,7 +137,7 @@ export default async function generateCertificate(
   await fs.writeFile(certPath, certPem);
 
   return {
-    key: privPem,
-    cert: certPem,
+    key: privPem as unknown as Buffer,
+    cert: certPem as unknown as Buffer,
   };
 }

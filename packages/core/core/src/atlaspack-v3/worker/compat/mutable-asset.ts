@@ -19,6 +19,7 @@ import type {
 import {bundleBehaviorMap} from './bitflags';
 import {MutableAssetSymbols} from './asset-symbols';
 
+// @ts-expect-error TS2694
 export type InnerAsset = napi.Asset;
 
 export class MutableAsset implements IMutableAsset {
@@ -28,6 +29,7 @@ export class MutableAsset implements IMutableAsset {
   fs: FileSystem;
   id: string;
   isBundleSplittable: boolean;
+  // @ts-expect-error TS2564
   isMapDirty: boolean;
   isSource: boolean;
   meta: Meta;
@@ -35,6 +37,7 @@ export class MutableAsset implements IMutableAsset {
   query: URLSearchParams;
   sideEffects: boolean;
   stats: Stats;
+  // @ts-expect-error TS2416
   symbols: MutableAssetSymbols;
   type: string;
   uniqueKey: string | null | undefined;
@@ -51,6 +54,7 @@ export class MutableAsset implements IMutableAsset {
     throw new Error('get MutableAsset.astGenerator');
   }
 
+  // @ts-expect-error TS1051
   set astGenerator(value?: ASTGenerator | null) {
     throw new Error('set MutableAsset.astGenerator');
   }

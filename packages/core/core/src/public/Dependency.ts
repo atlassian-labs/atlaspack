@@ -82,10 +82,12 @@ export default class Dependency implements IDependency {
   }
 
   get specifierType(): SpecifierType {
+    // @ts-expect-error TS2322
     return SpecifierTypeNames[this.#dep.specifierType];
   }
 
   get priority(): DependencyPriority {
+    // @ts-expect-error TS2322
     return PriorityNames[this.#dep.priority];
   }
 
@@ -122,6 +124,7 @@ export default class Dependency implements IDependency {
     if (this.#dep.packageConditions) {
       conditions = conditions ? [...conditions] : [];
       for (let key in ExportsCondition) {
+        // @ts-expect-error TS7053
         if (this.#dep.packageConditions & ExportsCondition[key]) {
           conditions.push(key);
         }
@@ -136,6 +139,7 @@ export default class Dependency implements IDependency {
   }
 
   get symbols(): IMutableDependencySymbols {
+    // @ts-expect-error TS2322
     return new MutableDependencySymbols(this.#options, this.#dep);
   }
 

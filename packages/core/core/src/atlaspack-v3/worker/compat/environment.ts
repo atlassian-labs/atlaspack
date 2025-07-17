@@ -1,3 +1,4 @@
+// @ts-expect-error TS2724
 import type {Environment as NapiEnvironment} from '@atlaspack/rust';
 import type {
   Environment as IEnvironment,

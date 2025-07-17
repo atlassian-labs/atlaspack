@@ -199,7 +199,7 @@ export type Diagnostic<CustomDiagnostic> = {
  * Run a function with a consistency check.
  */
 export function runWithConsistencyCheck<Result, CustomDiagnostic>(
-  flag: string,
+  flag: keyof FeatureFlags,
   oldFn: () => Result,
   newFn: () => Result,
   diffFn: (
@@ -213,6 +213,7 @@ export function runWithConsistencyCheck<Result, CustomDiagnostic>(
   ) => void,
 ): Result {
   const value = featureFlagValues[flag];
+  // @ts-expect-error - TypeScript doesn't understand the union type comparison
   if (!value || value === false || value === 'OLD') {
     return oldFn();
   }

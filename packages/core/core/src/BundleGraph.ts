@@ -78,7 +78,7 @@ export const bundleGraphEdgeTypes = {
 } as const;
 
 export type BundleGraphEdgeType =
-  typeof bundleGraphEdgeTypes[keyof typeof bundleGraphEdgeTypes];
+  (typeof bundleGraphEdgeTypes)[keyof typeof bundleGraphEdgeTypes];
 
 type InternalSymbolResolution = {
   asset: Asset;
@@ -114,6 +114,7 @@ function makeReadOnlySet<T>(set: Set<T>): ReadonlySet<T> {
       if (property === 'delete' || property === 'add' || property === 'clear') {
         return undefined;
       } else {
+        // @ts-expect-error TS7053
         let value = target[property];
         return typeof value === 'function' ? value.bind(target) : value;
       }
@@ -217,6 +218,7 @@ export default class BundleGraph {
         // code need to be mapped to the "real" dependencies, so we need access to a map of placeholders
         // to dependencies
         const dep = node.value;
+        // @ts-expect-error TS2322
         const placeholder: string | undefined = dep.meta?.placeholder;
         if (placeholder != null) {
           placeholderToDependency.set(placeholder, dep);
@@ -315,6 +317,7 @@ export default class BundleGraph {
           // It doesn't make sense to retarget dependencies where `*` is used, because the
           // retargeting won't enable any benefits in that case (apart from potentially even more
           // code being generated).
+          // @ts-expect-error TS2345
           !node.usedSymbolsUp.has('*') &&
           // TODO We currently can't rename imports in async imports, e.g. from
           //      (parcelRequire("...")).then(({ a }) => a);
@@ -331,9 +334,11 @@ export default class BundleGraph {
             ([, t]: [any, any]) => new Set([...t.values()]).size === t.size,
           )
         ) {
+          // @ts-expect-error TS2367
           let isReexportAll = nodeValueSymbols.get('*')?.local === '*';
           let reexportAllLoc = isReexportAll
-            ? nullthrows(nodeValueSymbols.get('*')).loc
+            ? // @ts-expect-error TS2345
+              nullthrows(nodeValueSymbols.get('*')).loc
             : undefined;
 
           // TODO adjust sourceAssetIdNode.value.dependencies ?
@@ -346,12 +351,14 @@ export default class BundleGraph {
                 value: {
                   ...node.value,
                   symbols: new Map(
+                    // @ts-expect-error TS2769
                     [...nodeValueSymbols].filter(([k]: [any]) =>
                       externalSymbols.has(k),
                     ),
                   ),
                 },
                 usedSymbolsUp: new Map(
+                  // @ts-expect-error TS2769
                   [...node.usedSymbolsUp].filter(([k]: [any]) =>
                     externalSymbols.has(k),
                   ),
@@ -407,6 +414,7 @@ export default class BundleGraph {
                         invariant(!sourceAssetSymbols.has(as));
                         sourceAssetSymbols.set(as, {
                           loc: reexportAllLoc,
+                          // @ts-expect-error TS2322
                           local: local,
                         });
                       }
@@ -416,6 +424,7 @@ export default class BundleGraph {
               }
               let usedSymbolsUp = new Map(
                 [...node.usedSymbolsUp]
+                  // @ts-expect-error TS2769
                   .filter(([k]: [any]) => target.has(k) || k === '*')
                   .map(([k, v]: [any, any]) => [target.get(k) ?? k, v]),
               );
@@ -473,6 +482,7 @@ export default class BundleGraph {
     }
     walk(nullthrows(assetGraph.rootNodeId));
 
+    // @ts-expect-error TS2488
     for (let edge of assetGraph.getAllEdges()) {
       if (assetGroupIds.has(edge.from)) {
         continue;
@@ -577,9 +587,11 @@ export default class BundleGraph {
           readonly shouldContentHash: boolean;
         },
   ): Bundle {
+    // @ts-expect-error TS2339
     let {entryAsset, target} = opts;
     let bundleId = hashString(
       'bundle:' +
+        // @ts-expect-error TS2339
         (opts.entryAsset ? opts.entryAsset.id : opts.uniqueKey) +
         fromProjectPathRelative(target.distDir) +
         (opts.bundleBehavior ?? ''),
@@ -611,19 +623,24 @@ export default class BundleGraph {
         hashReference: opts.shouldContentHash
           ? HASH_REF_PREFIX + bundleId
           : bundleId.slice(-8),
+        // @ts-expect-error TS2339
         type: opts.entryAsset ? opts.entryAsset.type : opts.type,
         env: opts.env,
         entryAssetIds: entryAsset ? [entryAsset.id] : [],
         mainEntryId: entryAsset?.id,
+        // @ts-expect-error TS2339
         pipeline: opts.entryAsset ? opts.entryAsset.pipeline : opts.pipeline,
         needsStableName: opts.needsStableName,
         bundleBehavior:
           opts.bundleBehavior != null
             ? BundleBehavior[opts.bundleBehavior]
             : null,
+        // @ts-expect-error TS2339
         isSplittable: opts.entryAsset
-          ? opts.entryAsset.isBundleSplittable
-          : opts.isSplittable,
+          ? // @ts-expect-error TS2339
+            opts.entryAsset.isBundleSplittable
+          : // @ts-expect-error TS2339
+            opts.isSplittable,
         isPlaceholder,
         target,
         name: null,
@@ -634,9 +651,11 @@ export default class BundleGraph {
 
     let bundleNodeId = this._graph.addNodeByContentKey(bundleId, bundleNode);
 
+    // @ts-expect-error TS2339
     if (opts.entryAsset) {
       this._graph.addEdge(
         bundleNodeId,
+        // @ts-expect-error TS2339
         this._graph.getNodeIdByContentKey(opts.entryAsset.id),
       );
     }
@@ -669,10 +688,13 @@ export default class BundleGraph {
       for (let [bundleGroupNodeId, bundleGroupNode] of this._graph
         .getNodeIdsConnectedFrom(dependencyNodeId)
         .map((id) => [id, nullthrows(this._graph.getNode(id))])
+        // @ts-expect-error TS2769
         .filter(([, node]: [any, any]) => node.type === 'bundle_group')) {
+        // @ts-expect-error TS2339
         invariant(bundleGroupNode.type === 'bundle_group');
         this._graph.addEdge(
           bundleNodeId,
+          // @ts-expect-error TS2345
           bundleGroupNodeId,
           bundleGraphEdgeTypes.bundle,
         );
@@ -734,10 +756,13 @@ export default class BundleGraph {
         for (let [bundleGroupNodeId, bundleGroupNode] of this._graph
           .getNodeIdsConnectedFrom(nodeId)
           .map((id) => [id, nullthrows(this._graph.getNode(id))])
+          // @ts-expect-error TS2769
           .filter(([, node]: [any, any]) => node.type === 'bundle_group')) {
+          // @ts-expect-error TS2339
           invariant(bundleGroupNode.type === 'bundle_group');
           this._graph.addEdge(
             bundleNodeId,
+            // @ts-expect-error TS2345
             bundleGroupNodeId,
             bundleGraphEdgeTypes.bundle,
           );
@@ -1280,6 +1305,7 @@ export default class BundleGraph {
       );
 
       if (bundle) {
+        // @ts-expect-error TS2322
         resolved = potential.find((a) => a.type === bundle.type);
       }
       resolved ||= potential[0];
@@ -1558,7 +1584,8 @@ export default class BundleGraph {
 
         let sorted =
           entries && bundle.entryAssetIds.length > 0
-            ? children.sort(([, a]: [any, any], [, b]: [any, any]) => {
+            ? // @ts-expect-error TS2345
+              children.sort(([, a]: [any, any], [, b]: [any, any]) => {
                 let aIndex = bundle.entryAssetIds.indexOf(a.id);
                 let bIndex = bundle.entryAssetIds.indexOf(b.id);
 
@@ -1577,6 +1604,7 @@ export default class BundleGraph {
             : children;
 
         entries = false;
+        // @ts-expect-error TS2345
         return sorted.map(([id]: [any]) => id);
       },
     });
@@ -1778,6 +1806,7 @@ export default class BundleGraph {
         ),
     });
 
+    // @ts-expect-error TS2322
     return [...referencedBundles];
   }
 
@@ -1809,6 +1838,7 @@ export default class BundleGraph {
     let count = 0;
     this._graph.forEachNodeIdConnectedTo(
       this._graph.getNodeIdByContentKey(dep.id),
+      // @ts-expect-error TS2345
       (node) => {
         res = node;
         count += 1;
@@ -1863,6 +1893,7 @@ export default class BundleGraph {
     let assetOutside = boundary && !this.bundleHasAsset(boundary, asset);
 
     let identifier = asset.symbols?.get(symbol)?.local;
+    // @ts-expect-error TS2367
     if (symbol === '*') {
       return {
         asset,
@@ -1894,6 +1925,7 @@ export default class BundleGraph {
           // External module or self-reference
           return {
             asset,
+            // @ts-expect-error TS2322
             exportSymbol: symbol,
             symbol: identifier,
             loc: asset.symbols?.get(symbol)?.loc,
@@ -1936,7 +1968,9 @@ export default class BundleGraph {
       // Wildcard reexports are never listed in the reexporting asset's symbols.
       if (
         identifier == null &&
+        // @ts-expect-error TS2367
         depSymbols.get('*')?.local === '*' &&
+        // @ts-expect-error TS2367
         symbol !== 'default'
       ) {
         let resolved = this.getResolvedAsset(dep, boundary);
@@ -2003,17 +2037,21 @@ export default class BundleGraph {
       let result = identifier;
       if (skipped) {
         // ... and it was excluded (by symbol propagation) or deferred.
+        // @ts-expect-error TS2322
         result = false;
       } else {
         // ... and there is no single reexport, but it might still be exported:
         if (found) {
           // Fallback to namespace access, because of a bundle boundary.
+          // @ts-expect-error TS2322
           result = null;
         } else if (result === undefined) {
           // If not exported explicitly by the asset (= would have to be in * or a reexport-all) ...
+          // @ts-expect-error TS2345
           if (nonStaticDependency || asset.symbols?.has('*')) {
             // ... and if there are non-statically analyzable dependencies or it's a CJS asset,
             // fallback to namespace access.
+            // @ts-expect-error TS2322
             result = null;
           }
           // (It shouldn't be possible for the symbol to be in a reexport-all and to end up here).
@@ -2023,6 +2061,7 @@ export default class BundleGraph {
 
       return {
         asset,
+        // @ts-expect-error TS2322
         exportSymbol: symbol,
         symbol: result,
         loc: asset.symbols?.get(symbol)?.loc,
@@ -2071,6 +2110,7 @@ export default class BundleGraph {
       let depSymbols = dep.symbols;
       if (!depSymbols) continue;
 
+      // @ts-expect-error TS2367
       if (depSymbols.get('*')?.local === '*') {
         let resolved = this.getResolvedAsset(dep, boundary);
         if (!resolved) continue;
@@ -2264,6 +2304,7 @@ export default class BundleGraph {
       }
     }
 
+    // @ts-expect-error TS2488
     for (let edge of other._graph.getAllEdges()) {
       this._graph.addEdge(
         nullthrows(otherGraphIdToThisNodeId.get(edge.from)),
@@ -2348,6 +2389,7 @@ export default class BundleGraph {
         ),
     });
 
+    // @ts-expect-error TS2322
     return [...referencedBundles];
   }
 }

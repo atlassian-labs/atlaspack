@@ -1,6 +1,7 @@
 import {useCallback, useMemo, memo} from 'react';
 import path from 'path';
 
+// @ts-expect-error TS7016
 import {CodemirrorEditor} from '../codemirror';
 
 import {
@@ -11,7 +12,9 @@ import {
   keymap,
   lineNumbers,
   rectangularSelection,
+  // @ts-expect-error TS7016
 } from '@codemirror/view';
+// @ts-expect-error TS7016
 import {EditorState} from '@codemirror/state';
 import {
   bracketMatching,
@@ -20,6 +23,7 @@ import {
   foldKeymap,
   indentOnInput,
   syntaxHighlighting,
+  // @ts-expect-error TS7016
 } from '@codemirror/language';
 import {
   defaultKeymap,
@@ -27,20 +31,28 @@ import {
   indentLess,
   history,
   historyKeymap,
+  // @ts-expect-error TS7016
 } from '@codemirror/commands';
+// @ts-expect-error TS7016
 import {searchKeymap, highlightSelectionMatches} from '@codemirror/search';
 import {
   autocompletion,
   completionKeymap,
   closeBrackets,
   closeBracketsKeymap,
+  // @ts-expect-error TS7016
 } from '@codemirror/autocomplete';
+// @ts-expect-error TS7016
 import {lintKeymap} from '@codemirror/lint';
 // import {oneDark} from '@codemirror/theme-one-dark';
 
+// @ts-expect-error TS7016
 import {html} from '@codemirror/lang-html';
+// @ts-expect-error TS7016
 import {javascript} from '@codemirror/lang-javascript';
+// @ts-expect-error TS7016
 import {css} from '@codemirror/lang-css';
+// @ts-expect-error TS7016
 import {json} from '@codemirror/lang-json';
 
 const theme = EditorView.theme({
@@ -56,10 +68,15 @@ const theme = EditorView.theme({
 
 const CONFIG_FILE = /^\.\w*rc$/;
 const Editor: any = memo(function Editor({
+  // @ts-expect-error TS2339
   filename,
+  // @ts-expect-error TS2339
   readOnly,
+  // @ts-expect-error TS2339
   content,
+  // @ts-expect-error TS2339
   onChange,
+  // @ts-expect-error TS2339
   diagnostics,
 }) {
   const extension = path.extname(filename).slice(1);
@@ -105,21 +122,22 @@ const Editor: any = memo(function Editor({
         extension === 'json' || CONFIG_FILE.test(path.basename(filename))
           ? json()
           : extension.startsWith('js') || extension.startsWith('ts')
-          ? javascript({
-              jsx: extension.endsWith('x'),
-              typescript: extension.includes('ts'),
-            })
-          : extension === 'html'
-          ? html()
-          : extension === 'css'
-          ? css()
-          : null,
+            ? javascript({
+                jsx: extension.endsWith('x'),
+                typescript: extension.includes('ts'),
+              })
+            : extension === 'html'
+              ? html()
+              : extension === 'css'
+                ? css()
+                : null,
       ].filter(Boolean),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [extension],
   );
 
   return (
+    // @ts-expect-error TS17004
     <CodemirrorEditor
       value={content}
       onChange={onChange}
@@ -143,6 +161,7 @@ function EditorWrapper({
   );
 
   return (
+    // @ts-expect-error TS17004
     <Editor
       filename={name}
       content={value}

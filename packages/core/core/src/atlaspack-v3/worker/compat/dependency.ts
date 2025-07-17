@@ -1,3 +1,4 @@
+// @ts-expect-error TS2305
 import type {Dependency as NapiDependency} from '@atlaspack/rust';
 import type {
   Dependency as IDependency,
@@ -60,6 +61,7 @@ export class Dependency implements IDependency {
       this.bundleBehavior = bundleBehaviorMap.from(inner.bundleBehavior);
     }
     this.bundleBehavior = undefined;
+    // @ts-expect-error TS2322
     this.symbols = new MutableDependencySymbols(inner.symbols || []);
     this.specifier = inner.specifier;
     this.specifierType = specifierTypeMap.from(inner.specifierType);

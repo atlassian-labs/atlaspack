@@ -39,6 +39,7 @@ export default new Transformer({
       collectDependencies(asset, ast);
     } catch (errors: any) {
       throw new ThrowableDiagnostic({
+        // @ts-expect-error TS7006
         diagnostic: errors.map((error) => ({
           message: error.message,
           origin: '@atlaspack/transformer-svg',

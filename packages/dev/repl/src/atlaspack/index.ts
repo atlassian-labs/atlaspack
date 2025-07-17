@@ -4,6 +4,7 @@ import type {BundleOutput} from './AtlaspackWorker';
 import {proxy, wrap, transfer} from 'comlink';
 
 const worker = wrap(
+  // @ts-expect-error TS1470
   new Worker(new URL('./AtlaspackWorker.js', import /*:: ("") */.meta.url), {
     name: 'Atlaspack Worker Main',
     type: 'module',
@@ -48,10 +49,12 @@ const worker = wrap(
 // };
 
 export function workerReady(numWorkers?: number | null): Promise<void> {
+  // @ts-expect-error TS2339
   return worker.ready(numWorkers);
 }
 
 export function waitForFS(): Promise<void> {
+  // @ts-expect-error TS2339
   return worker.waitForFS();
 }
 
@@ -60,6 +63,7 @@ export function bundle(
   options: REPLOptions,
   progress: (arg1: string) => void,
 ): Promise<BundleOutput> {
+  // @ts-expect-error TS2339
   return worker.bundle(files.toJSON(), options, proxy(progress));
 }
 
@@ -72,6 +76,7 @@ export async function watch(
   unsubscribe: () => Promise<unknown>;
   writeAssets: (arg1: FS) => Promise<unknown>;
 }> {
+  // @ts-expect-error TS2339
   let result = await worker.watch(
     files.toJSON(),
     options,
@@ -91,12 +96,15 @@ class MessageTarget {
     this.receive = receive;
     this.post = post;
   }
+  // @ts-expect-error TS7019
   postMessage(...args) {
     this.post.postMessage(...args);
   }
+  // @ts-expect-error TS7019
   addEventListener(...args) {
     this.receive.addEventListener(...args);
   }
+  // @ts-expect-error TS7019
   removeEventListener(...args) {
     this.receive.removeEventListener(...args);
   }
@@ -118,6 +126,7 @@ class MessageTarget {
 function uuidv4() {
   return (String(1e7) + -1e3 + -4e3 + -8e3 + -1e11).replace(
     /[018]/g,
+    // @ts-expect-error TS2769
     (c: number) =>
       (
         c ^
@@ -147,8 +156,10 @@ if (navigator.serviceWorker) {
     });
 
     port2.start();
+    // @ts-expect-error TS2339
     await worker.setServiceWorker(transfer(port1, [port1]));
 
+    // @ts-expect-error TS2554
     return sw.sendMsg('getID');
   })();
 }

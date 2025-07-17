@@ -17,6 +17,7 @@ export class EdgeContentGraph<N, EW> extends ContentGraph<N, number> {
       const contentKey = this._nodeIdToContentKey.get(nodeId);
       if (node == null) {
         // Add null node to preserve node ids
+        // @ts-expect-error TS2345
         newGraph.addNode(null);
       } else if (contentKey == null) {
         newGraph.addNode(node);
@@ -25,6 +26,7 @@ export class EdgeContentGraph<N, EW> extends ContentGraph<N, number> {
       }
       nodeId += 1;
     }
+    // @ts-expect-error TS2488
     for (let edge of this.getAllEdges()) {
       const weight = this.getEdgeWeight(edge.from, edge.to);
       newGraph.addWeightedEdge(edge.from, edge.to, edge.type, weight);

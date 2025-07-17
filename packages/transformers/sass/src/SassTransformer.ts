@@ -2,6 +2,7 @@ import {Transformer} from '@atlaspack/plugin';
 import path from 'path';
 import {EOL} from 'os';
 import SourceMap from '@parcel/source-map';
+// @ts-expect-error TS7016
 import sass from 'sass';
 import {promisify} from 'util';
 
@@ -27,23 +28,33 @@ export default new Transformer({
     }
 
     // Resolve relative paths from config file
+    // @ts-expect-error TS18046
     if (configFile && configResult.includePaths) {
+      // @ts-expect-error TS18046
       configResult.includePaths = configResult.includePaths.map((p) =>
         path.resolve(path.dirname(configFile.filePath), p),
       );
     }
 
+    // @ts-expect-error TS18046
     if (configResult.importer === undefined) {
+      // @ts-expect-error TS18046
       configResult.importer = [];
+      // @ts-expect-error TS18046
     } else if (!Array.isArray(configResult.importer)) {
+      // @ts-expect-error TS18046
       configResult.importer = [configResult.importer];
     }
 
     // Always emit sourcemap
+    // @ts-expect-error TS18046
     configResult.sourceMap = true;
     // sources are created relative to the directory of outFile
+    // @ts-expect-error TS18046
     configResult.outFile = path.join(options.projectRoot, 'style.css.map');
+    // @ts-expect-error TS18046
     configResult.omitSourceMapUrl = true;
+    // @ts-expect-error TS18046
     configResult.sourceMapContents = false;
 
     return configResult;
@@ -58,19 +69,24 @@ export default new Transformer({
       let result = await sassRender({
         ...rawConfig,
         file: asset.filePath,
+        // @ts-expect-error TS2339
         data: rawConfig.data ? rawConfig.data + EOL + code : code,
         importer: [
+          // @ts-expect-error TS2339
           ...rawConfig.importer,
           resolvePathImporter({
             asset,
             resolve,
+            // @ts-expect-error TS2339
             includePaths: rawConfig.includePaths,
             options,
           }),
         ],
         indentedSyntax:
+          // @ts-expect-error TS2339
           typeof rawConfig.indentedSyntax === 'boolean'
-            ? rawConfig.indentedSyntax
+            ? // @ts-expect-error TS2339
+              rawConfig.indentedSyntax
             : asset.type === 'sass',
       });
 
@@ -103,6 +119,7 @@ export default new Transformer({
   },
 }) as Transformer<unknown>;
 
+// @ts-expect-error TS7031
 function resolvePathImporter({asset, resolve, includePaths, options}) {
   // This is a reimplementation of the Sass resolution algorithm that uses Atlaspack's
   // FS and tracks all tried files so they are watched for creation.
@@ -138,6 +155,7 @@ function resolvePathImporter({asset, resolve, includePaths, options}) {
       paths.push(
         ...options.env.SASS_PATH.split(
           process.platform === 'win32' ? ';' : ':',
+          // @ts-expect-error TS7006
         ).map((p) => path.resolve(options.projectRoot, p)),
       );
     }

@@ -61,8 +61,10 @@ export default new Packager({
 
     let name = packageName?.contents ?? '';
     return {
+      // @ts-expect-error TS2345
       parcelRequireName: 'parcelRequire' + hashString(name).slice(-4),
       unstable_asyncBundleRuntime: Boolean(
+        // @ts-expect-error TS2339
         conf?.contents?.unstable_asyncBundleRuntime,
       ),
     };

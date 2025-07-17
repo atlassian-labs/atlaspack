@@ -27,6 +27,7 @@ import {
   persistMessage,
 } from './render';
 import * as emoji from './emoji';
+// @ts-expect-error TS7016
 import wrapAnsi from 'wrap-ansi';
 
 const THROTTLE_DELAY = 100;
@@ -246,6 +247,7 @@ export async function _report(
           await writeDiagnostic(options, event.diagnostics, 'red', true);
           break;
         default:
+          // @ts-expect-error TS2339
           throw new Error('Unknown log level ' + event.level);
       }
     }
@@ -255,6 +257,7 @@ export async function _report(
 async function writeDiagnostic(
   options: PluginOptions,
   diagnostics: Array<Diagnostic>,
+  // @ts-expect-error TS2749
   color: Color,
   isError: boolean = false,
 ) {
@@ -264,6 +267,7 @@ async function writeDiagnostic(
   for (let diagnostic of diagnostics) {
     let {message, stack, codeframe, hints, documentation} =
       await prettyDiagnostic(diagnostic, options, columns - indent);
+    // @ts-expect-error TS7053
     message = chalk[color](message);
 
     if (spaceAfter) {
@@ -312,6 +316,7 @@ async function writeDiagnostic(
       );
     }
 
+    // @ts-expect-error TS2322
     spaceAfter = stack || codeframe || hints.length > 0 || documentation;
   }
 
@@ -329,6 +334,7 @@ function wrapWithIndent(string: string, indent = 0, initialIndent = indent) {
   );
 }
 
+// @ts-expect-error TS7006
 function indentString(string, indent = 0, initialIndent = indent) {
   return (
     ' '.repeat(initialIndent) + string.replace(/\n/g, '\n' + ' '.repeat(indent))

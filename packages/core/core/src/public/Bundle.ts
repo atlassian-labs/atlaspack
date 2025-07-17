@@ -182,6 +182,7 @@ export class Bundle implements IBundle {
   ): TContext | null | undefined {
     return this.#bundleGraph.traverseBundle(
       this.#bundle,
+      // @ts-expect-error TS2345
       mapVisitor((node) => {
         if (node.type === 'asset') {
           return {

@@ -136,6 +136,7 @@ export class AtlaspackConfig {
 
   async loadPlugin<T>(node: AtlaspackPluginNode): Promise<LoadedPlugin<T>> {
     let plugin = await this._loadPlugin(node);
+    // @ts-expect-error TS2322
     return {
       ...plugin,
       name: node.packageName,
@@ -207,6 +208,7 @@ export class AtlaspackConfig {
 
       throw await this.missingPluginError(
         this.transformers,
+        // @ts-expect-error TS2345
         md`No transformers found for __${fromProjectPathRelative(filePath)}__` +
           (pipeline != null ? ` with pipeline: '${pipeline}'` : '') +
           '.',
@@ -259,6 +261,7 @@ export class AtlaspackConfig {
     if (!packager) {
       throw await this.missingPluginError(
         this.packagers,
+        // @ts-expect-error TS2345
         md`No packager found for __${filePath}__.`,
         '/packagers',
       );
@@ -322,6 +325,7 @@ export class AtlaspackConfig {
     if (compressors.length === 0) {
       throw await this.missingPluginError(
         this.compressors,
+        // @ts-expect-error TS2345
         md`No compressors found for __${filePath}__.`,
         '/compressors',
       );
@@ -345,6 +349,7 @@ export class AtlaspackConfig {
     let [patternPipeline, patternGlob] = pattern.split(':');
     if (!patternGlob) {
       patternGlob = patternPipeline;
+      // @ts-expect-error TS2322
       patternPipeline = null;
     }
 
@@ -397,6 +402,7 @@ export class AtlaspackConfig {
 
     for (let pattern in globMap) {
       if (this.isGlobMatch(filePath, pattern)) {
+        // @ts-expect-error TS2345
         matches.push(globMap[pattern]);
       }
     }
@@ -422,6 +428,7 @@ export class AtlaspackConfig {
     };
 
     let res = flatten();
+    // @ts-expect-error TS2322
     return res;
   }
 
@@ -439,9 +446,12 @@ export class AtlaspackConfig {
     } else {
       configsWithPlugin = new Set(
         Object.keys(plugins).flatMap((k) =>
+          // @ts-expect-error TS7053
           Array.isArray(plugins[k])
-            ? getConfigPaths(this.options, plugins[k])
-            : [getConfigPath(this.options, plugins[k])],
+            ? // @ts-expect-error TS7053
+              getConfigPaths(this.options, plugins[k])
+            : // @ts-expect-error TS7053
+              [getConfigPath(this.options, plugins[k])],
         ),
       );
     }
@@ -489,14 +499,18 @@ function getConfigPaths(
     | PureAtlaspackConfigPipeline
     | ExtendableAtlaspackConfigPipeline,
 ) {
-  return nodes
-    .map((node) => (node !== '...' ? getConfigPath(options, node) : null))
-    .filter(Boolean);
+  return (
+    nodes
+      // @ts-expect-error TS2339
+      .map((node) => (node !== '...' ? getConfigPath(options, node) : null))
+      .filter(Boolean)
+  );
 }
 
 function getConfigPath(
   options: AtlaspackOptions,
   node: AtlaspackPluginNode | ExtendableAtlaspackConfigPipeline,
 ) {
+  // @ts-expect-error TS2339
   return fromProjectPath(options.projectRoot, node.resolveFrom);
 }

@@ -339,10 +339,13 @@ async function testPropagation(
         | null
         | undefined
       ),
-      /* usedSymbols */ Array<
-        | [symbol, [FilePath, symbol | null | undefined] | null | undefined]
-        | [symbol]
-      > | /* excluded */ null,
+      /* usedSymbols */ (
+        | Array<
+            | [symbol, [FilePath, symbol | null | undefined] | null | undefined]
+            | [symbol]
+          >
+        | /* excluded */ null
+      ),
     ]
   >,
   isLibrary?: boolean,

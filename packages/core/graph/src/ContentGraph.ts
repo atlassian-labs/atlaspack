@@ -47,6 +47,7 @@ export default class ContentGraph<
     return {
       ...super.serialize(),
       _contentKeyToNodeId: this._contentKeyToNodeId,
+      // @ts-expect-error TS2353
       _nodeIdToContentKey: this._nodeIdToContentKey,
     };
   }

@@ -33,6 +33,7 @@ export default new Optimizer({
       let codeHighlights;
       let message;
       if (filename === 'package.json') {
+        // @ts-expect-error TS2345
         message = md`
 Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cssnano" key was found in **package.json**. Either remove this configuration, or configure Parcel to use @atlaspack/optimizer-cssnano instead.
         `;
@@ -44,6 +45,7 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
           {key: '/cssnano', type: 'key'},
         ]);
       } else {
+        // @ts-expect-error TS2345
         message = md`Parcel\'s default CSS minifer changed from cssnano to lightningcss, but a __${filename}__ config file was found. Either remove this config file, or configure Parcel to use @atlaspack/optimizer-cssnano instead.`;
         codeHighlights = [
           {
@@ -98,12 +100,15 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
         }
 
         let defaultImport = null;
+        // @ts-expect-error TS2345
         if (usedSymbols.has('default')) {
           let incoming = bundleGraph.getIncomingDependencies(asset);
           defaultImport = incoming.find((d) =>
+            // @ts-expect-error TS2345
             d.symbols.hasExportSymbol('default'),
           );
           if (defaultImport) {
+            // @ts-expect-error TS2345
             let loc = defaultImport.symbols.get('default')?.loc;
             logger.warn({
               message:
@@ -127,8 +132,10 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
           }
         }
 
+        // @ts-expect-error TS2345
         if (!defaultImport && !usedSymbols.has('*')) {
           for (let [symbol, {local}] of asset.symbols) {
+            // @ts-expect-error TS2367
             if (local !== 'default' && !usedSymbols.has(symbol)) {
               unusedSymbols.push(local);
             }
@@ -153,7 +160,9 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
       }
     }
 
+    // @ts-expect-error TS2339
     if (process.browser) {
+      // @ts-expect-error TS2349
       await init();
     }
 
@@ -172,6 +181,7 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
       map = new SourceMap(options.projectRoot);
       map.addVLQMap(vlqMap);
       if (prevMap) {
+        // @ts-expect-error TS2345
         map.extends(prevMap);
       }
     }
@@ -180,6 +190,7 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
     if (bundle.env.sourceMap) {
       let reference = await getSourceMapReference(map);
       if (reference != null) {
+        // @ts-expect-error TS2322
         contents =
           contents.toString() +
           '\n' +

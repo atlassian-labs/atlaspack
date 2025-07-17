@@ -93,6 +93,7 @@ function fromCwd(input: string): string {
 
 function getNodeName(node: AssetGraphNode): string {
   if (node.type === 'asset_group') {
+    // @ts-expect-error TS2345
     return [`asset_group`, node.id, fromCwd(node.value.filePath)].join('\\n');
   } else if (node.type === 'asset') {
     return [`asset`, node.id, fromCwd(node.value.filePath)].join('\\n');

@@ -18,6 +18,7 @@ const jsAssetTypes = new Set(['jsx', 'ts', 'tsx', 'mjs', 'mts', 'cts']);
 
 function errorToThrowableDiagnostic(
   error: string,
+  // @ts-expect-error TS2304
   dependency: Dependency,
 ): ThrowableDiagnostic {
   return new ThrowableDiagnostic({
@@ -37,6 +38,7 @@ function errorToThrowableDiagnostic(
 }
 
 export default new Resolver({
+  // @ts-expect-error TS2322
   async resolve({dependency, options, specifier, pipeline, logger}) {
     if (!isGlob(specifier)) {
       return;
@@ -67,6 +69,7 @@ export default new Resolver({
       throw errorToThrowableDiagnostic(error, dependency);
     }
 
+    // @ts-expect-error TS2304
     let invalidateOnFileCreate: Array<FileCreateInvalidation> = [];
     let invalidateOnFileChange = new Set();
 
@@ -227,8 +230,10 @@ export default new Resolver({
 }) as Resolver<unknown>;
 
 function set(
+  // @ts-expect-error TS7006
   obj,
   path: Array<never> | Array<string>,
+  // @ts-expect-error TS2304
   value: FilePath | string,
 ) {
   for (let i = 0; i < path.length - 1; i++) {
@@ -244,6 +249,7 @@ function set(
   obj[path[path.length - 1]] = value;
 }
 
+// @ts-expect-error TS7006
 function generate(matches, isAsync: boolean, indent = '', count = 0) {
   if (typeof matches === 'string') {
     if (isAsync) {

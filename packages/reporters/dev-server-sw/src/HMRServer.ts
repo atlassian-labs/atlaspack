@@ -115,6 +115,7 @@ export default class HMRServer {
 
         if (isOnlyReferencedByRuntimes) {
           for (let runtime of runtimes) {
+            // @ts-expect-error TS2345
             changedAssets.add(runtime);
           }
 
@@ -155,6 +156,7 @@ export default class HMRServer {
     let assets = await queue.run();
     this.broadcast({
       type: 'update',
+      // @ts-expect-error TS2322
       assets: assets,
     });
   }

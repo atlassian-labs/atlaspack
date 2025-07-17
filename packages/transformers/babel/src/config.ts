@@ -66,6 +66,7 @@ export async function load(
     return buildDefaultBabelConfig(options, config);
   }
 
+  // @ts-expect-error TS2709
   const babelCore: BabelCore = await options.packageManager.require(
     '@babel/core',
     config.searchPath,
@@ -286,6 +287,7 @@ const redundantPresets = new Set([
 ]);
 
 async function warnOnRedundantPlugins(
+  // @ts-expect-error TS2345
   fs: FileSystem,
   babelConfig: {
     [key: string]: any;
@@ -305,6 +307,7 @@ async function warnOnRedundantPlugins(
   let plugins = babelConfig.options.plugins || [];
   let foundRedundantPresets = new Set();
 
+  // @ts-expect-error TS7006
   let filteredPresets = presets.filter((preset) => {
     if (redundantPresets.has(preset.file.request)) {
       foundRedundantPresets.add(preset.file.request);
@@ -323,6 +326,7 @@ async function warnOnRedundantPlugins(
     plugins.length === 0
   ) {
     diagnostics.push({
+      // @ts-expect-error TS2345
       message: md`Parcel includes transpilation by default. Babel config __${filePath}__ contains only redundant presets. Deleting it may significantly improve build performance.`,
       codeFrames: [
         {
@@ -334,12 +338,14 @@ async function warnOnRedundantPlugins(
           ),
         },
       ],
+      // @ts-expect-error TS2345
       hints: [md`Delete __${filePath}__`],
       documentationURL:
         'https://parceljs.org/languages/javascript/#default-presets',
     });
   } else if (foundRedundantPresets.size > 0) {
     diagnostics.push({
+      // @ts-expect-error TS2345
       message: md`Parcel includes transpilation by default. Babel config __${filePath}__ includes the following redundant presets: ${[
         ...foundRedundantPresets,
       ].map((p) =>
@@ -355,6 +361,7 @@ async function warnOnRedundantPlugins(
           ),
         },
       ],
+      // @ts-expect-error TS2345
       hints: [md`Remove the above presets from __${filePath}__`],
       documentationURL:
         'https://parceljs.org/languages/javascript/#default-presets',
@@ -389,6 +396,7 @@ async function warnOnRedundantPlugins(
 }
 
 async function getCodeHighlights(
+  // @ts-expect-error TS2339
   fs: FileSystem,
   filePath: any,
   redundantPresets: Set<any | string>,

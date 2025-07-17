@@ -211,11 +211,13 @@ export function decorateLegacyGraph(
     }
   }
 
+  // @ts-expect-error TS2488
   for (let {type, from, to} of idealBundleGraph.getAllEdges()) {
     let sourceBundle = nullthrows(idealBundleGraph.getNode(from));
     if (sourceBundle === 'root') {
       continue;
     }
+    // @ts-expect-error TS2367
     invariant(sourceBundle !== 'root');
 
     let legacySourceBundle = nullthrows(
@@ -226,6 +228,7 @@ export function decorateLegacyGraph(
     if (targetBundle === 'root') {
       continue;
     }
+    // @ts-expect-error TS2367
     invariant(targetBundle !== 'root');
     let legacyTargetBundle = nullthrows(
       idealBundleToLegacyBundle.get(targetBundle),

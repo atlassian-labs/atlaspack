@@ -44,6 +44,7 @@ export default new Transformer({
       let map = new SourceMap(options.projectRoot);
       map.addVLQMap(JSON.parse(sourceMapText));
       if (originalMap) {
+        // @ts-expect-error TS2345
         map.extends(originalMap);
       }
       asset.setMap(map);

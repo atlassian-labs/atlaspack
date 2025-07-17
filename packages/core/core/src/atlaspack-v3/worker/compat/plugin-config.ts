@@ -24,6 +24,7 @@ export type PluginConfigOptions = {
 export class PluginConfig implements IPluginConfig {
   isSource: boolean;
   searchPath: FilePath;
+  // @ts-expect-error TS2564
   #projectRoot: FilePath;
   env: Environment;
   #inner: ClassicPublicConfig;
@@ -41,6 +42,7 @@ export class PluginConfig implements IPluginConfig {
     this.searchPath = searchPath;
 
     this.#inner = new ClassicPublicConfig(
+      // @ts-expect-error TS2345
       {
         invalidateOnConfigKeyChange: [],
         invalidateOnFileCreate: [],

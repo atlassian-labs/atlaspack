@@ -54,10 +54,10 @@ async function collectDependencies(
     let err = !(await fs.exists(locales))
       ? 'key'
       : !(await fs.exists(
-          path.join(locales, program.default_locale, 'messages.json'),
-        ))
-      ? 'value'
-      : null;
+            path.join(locales, program.default_locale, 'messages.json'),
+          ))
+        ? 'value'
+        : null;
     if (err) {
       throw new ThrowableDiagnostic({
         diagnostic: [
@@ -69,7 +69,9 @@ async function collectDependencies(
                 filePath,
                 codeHighlights: [
                   {
+                    // @ts-expect-error TS2345
                     ...getJSONHighlightLocation(ptrs['/default_locale'], err),
+                    // @ts-expect-error TS2345
                     message: md`Localization ${
                       err == 'value'
                         ? 'file for ' + program.default_locale

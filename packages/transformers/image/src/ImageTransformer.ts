@@ -2,6 +2,7 @@ import {validateConfig} from './validateConfig';
 import {Transformer} from '@atlaspack/plugin';
 import nullthrows from 'nullthrows';
 import WorkerFarm from '@atlaspack/workers';
+// @ts-expect-error TS1192
 import loadSharp from './loadSharp';
 
 // from https://github.com/lovell/sharp/blob/df7b8ba73808fc494be413e88cfb621b6279218c/lib/output.js#L6-L17
@@ -45,13 +46,16 @@ export default new Transformer({
     }
 
     const width = asset.query.has('width')
-      ? parseInt(asset.query.get('width'), 10)
+      ? // @ts-expect-error TS2345
+        parseInt(asset.query.get('width'), 10)
       : null;
     const height = asset.query.has('height')
-      ? parseInt(asset.query.get('height'), 10)
+      ? // @ts-expect-error TS2345
+        parseInt(asset.query.get('height'), 10)
       : null;
     const quality = asset.query.has('quality')
-      ? parseInt(asset.query.get('quality'), 10)
+      ? // @ts-expect-error TS2345
+        parseInt(asset.query.get('quality'), 10)
       : config.quality;
     let targetFormat = asset.query.get('as')?.toLowerCase().trim();
     if (targetFormat && !FORMATS.has(targetFormat)) {

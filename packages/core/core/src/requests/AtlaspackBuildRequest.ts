@@ -58,6 +58,7 @@ export default function createAtlaspackBuildRequest(
   };
 }
 
+// @ts-expect-error TS7031
 async function run({input, api, options, rustAtlaspack}) {
   let {optionsRef, requestedAssetIds, signal} = input;
 
@@ -74,6 +75,7 @@ async function run({input, api, options, rustAtlaspack}) {
         (options.shouldBuildLazily && requestedAssetIds.size > 0),
     });
 
+  // @ts-expect-error TS2345
   dumpGraphToGraphViz(bundleGraph._graph, 'BundleGraph', bundleGraphEdgeTypes);
 
   await report({
@@ -81,6 +83,7 @@ async function run({input, api, options, rustAtlaspack}) {
     phase: 'bundled',
     bundleGraph: new IBundleGraph(
       bundleGraph,
+      // @ts-expect-error TS2304
       (bundle: Bundle, bundleGraph: BundleGraph, options: AtlaspackOptions) =>
         NamedBundle.get(bundle, bundleGraph, options),
       options,

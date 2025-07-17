@@ -286,6 +286,7 @@ export default class BundleGraph<TBundle extends IBundle>
     } | null,
   ): TContext | null | undefined {
     return this.#graph.traverse(
+      // @ts-expect-error TS2345
       mapVisitor((node, actions) => {
         // Skipping unused dependencies here is faster than doing an isDependencySkipped check inside the visitor
         // because the node needs to be re-looked up by id from the hashmap.
@@ -456,6 +457,7 @@ export default class BundleGraph<TBundle extends IBundle>
       }
     }
 
+    // @ts-expect-error TS2322
     return conditions;
   }
 
@@ -501,7 +503,9 @@ export default class BundleGraph<TBundle extends IBundle>
           invariant(resolved.type === 'bundle_group');
           return this.getBundlesInBundleGroup(resolved.value);
         };
+        // @ts-expect-error TS2345
         ifTrueBundles.push(...depToBundles(cond.ifTrueDependency));
+        // @ts-expect-error TS2345
         ifFalseBundles.push(...depToBundles(cond.ifFalseDependency));
       }
 

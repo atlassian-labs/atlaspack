@@ -43,6 +43,7 @@ export class FSCache implements Cache {
     let dirPromises: Array<Promise<undefined>> = [];
     for (let i = 0; i < 256; i++) {
       dirPromises.push(
+        // @ts-expect-error TS2345
         this.fs.mkdirp(path.join(this.dir, ('00' + i.toString(16)).slice(-2))),
       );
     }
@@ -137,13 +138,16 @@ export class FSCache implements Cache {
     if (chunks === 1) {
       // If there's one chunk, don't slice the content
       writePromises.push(
+        // @ts-expect-error TS2345
         this.fs.writeFile(this.#getFilePath(key, 0), contents, {
+          // @ts-expect-error TS2353
           signal: options?.signal,
         }),
       );
     } else {
       for (let i = 0; i < chunks; i += 1) {
         writePromises.push(
+          // @ts-expect-error TS2345
           this.fs.writeFile(
             this.#getFilePath(key, i),
             typeof contents === 'string'
@@ -155,6 +159,7 @@ export class FSCache implements Cache {
                   i * WRITE_LIMIT_CHUNK,
                   (i + 1) * WRITE_LIMIT_CHUNK,
                 ),
+            // @ts-expect-error TS2353
             {signal: options?.signal},
           ),
         );
@@ -174,6 +179,7 @@ export class FSCache implements Cache {
     let filePath = this.#getFilePath(key, i);
 
     while (await this.fs.exists(filePath)) {
+      // @ts-expect-error TS2345
       deletePromises.push(this.fs.rimraf(filePath));
       i += 1;
       filePath = this.#getFilePath(key, i);

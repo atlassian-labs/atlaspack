@@ -107,6 +107,7 @@ export default class WorkerFarm extends EventEmitter {
 
     this.localWorker = require(this.options.workerPath);
 
+    // @ts-expect-error TS2322
     this.localWorkerInit =
       this.localWorker.childInit != null ? this.localWorker.childInit() : null;
 
@@ -150,6 +151,7 @@ export default class WorkerFarm extends EventEmitter {
     ): Promise<unknown> => {
       let result = await this.processRequest({
         ...request,
+        // @ts-expect-error TS2322
         awaitResponse,
       });
       return deserialize(serialize(result));
@@ -252,6 +254,7 @@ export default class WorkerFarm extends EventEmitter {
   ): undefined | Promise<undefined> {
     // Handle ipc errors
     if (error.code === 'ERR_IPC_CHANNEL_CLOSED') {
+      // @ts-expect-error TS2322
       return this.stopWorker(worker);
     } else {
       logger.error(error, '@atlaspack/workers');
@@ -329,6 +332,7 @@ export default class WorkerFarm extends EventEmitter {
       }
 
       if (worker.calls.size < this.options.maxConcurrentCallsPerWorker) {
+        // @ts-expect-error TS2345
         this.callWorker(worker, this.callQueue.shift());
       }
     }
@@ -358,6 +362,7 @@ export default class WorkerFarm extends EventEmitter {
     if (handleId != null) {
       mod = nullthrows(this.handles.get(handleId)?.fn);
     } else if (location) {
+      // @ts-expect-error TS2339
       if (process.browser) {
         if (location === '@atlaspack/workers/bus') {
           mod = bus as any;
@@ -388,6 +393,7 @@ export default class WorkerFarm extends EventEmitter {
     let result;
     if (method == null) {
       try {
+        // @ts-expect-error TS2488
         result = responseFromContent(await mod(...args));
       } catch (e: any) {
         result = errorResponseFromError(e);
@@ -545,9 +551,11 @@ export default class WorkerFarm extends EventEmitter {
     // If the reference was created with the isCacheable option set to false,
     // serializedSharedReferences will contain `null` as the value.
     if (cached !== null) {
+      // @ts-expect-error TS2345
       this.serializedSharedReferences.set(ref, buf);
     }
 
+    // @ts-expect-error TS2322
     return buf;
   }
 
@@ -614,6 +622,7 @@ export default class WorkerFarm extends EventEmitter {
     let stream = trace.pipe(fs.createWriteStream(filename));
 
     for (let profile of profiles) {
+      // @ts-expect-error TS2345
       trace.addCPUProfile(names.shift(), profile);
     }
 
@@ -624,6 +633,7 @@ export default class WorkerFarm extends EventEmitter {
 
     logger.info({
       origin: '@atlaspack/workers',
+      // @ts-expect-error TS2345
       message: md`Wrote profile to ${filename}`,
     });
   }
@@ -680,6 +690,7 @@ export default class WorkerFarm extends EventEmitter {
 
       logger.info({
         origin: '@atlaspack/workers',
+        // @ts-expect-error TS2345
         message: md`Wrote heap snapshots to the following paths:\n${snapshotPaths.join(
           '\n',
         )}`,
@@ -723,6 +734,7 @@ export default class WorkerFarm extends EventEmitter {
     defaultValue: number = DEFAULT_MAX_CONCURRENT_CALLS,
   ): number {
     return (
+      // @ts-expect-error TS2345
       parseInt(process.env.ATLASPACK_MAX_CONCURRENT_CALLS, 10) || defaultValue
     );
   }

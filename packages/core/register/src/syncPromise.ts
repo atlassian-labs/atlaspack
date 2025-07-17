@@ -1,3 +1,4 @@
+// @ts-expect-error TS2307
 import deasync from 'deasync';
 
 /**
@@ -25,5 +26,6 @@ export default function syncPromise<T>(promise: Promise<T>): T {
     throw err;
   }
 
+  // @ts-expect-error TS2322
   return res;
 }

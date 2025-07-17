@@ -6,9 +6,12 @@ import type {
 
 /// BitFlags is used to map number/string types from napi types
 export class BitFlags<K, V> {
+  // @ts-expect-error TS2344
   #kv: Partial<Record<K, V>>;
+  // @ts-expect-error TS2344
   #vk: Partial<Record<V, K>>;
 
+  // @ts-expect-error TS2344
   constructor(source: Partial<Record<K, V>>) {
     this.#kv = source;
     this.#vk = Object.fromEntries(

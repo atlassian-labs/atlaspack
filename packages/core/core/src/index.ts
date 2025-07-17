@@ -12,5 +12,7 @@ export {
 } from './Atlaspack';
 export {ATLASPACK_VERSION} from './constants';
 export {default as resolveOptions} from './resolveOptions';
+export {createEnvironment} from './Environment';
+export {default as Environment} from './public/Environment';
 export * from './atlaspack-v3';
 export {EnvironmentManager};

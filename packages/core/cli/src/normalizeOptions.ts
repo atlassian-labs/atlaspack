@@ -82,6 +82,7 @@ export async function normalizeOptions(
 
   let https = !!command.https;
   if (command.cert != null && command.key != null) {
+    // @ts-expect-error TS2322
     https = {
       cert: command.cert,
       key: command.key,
@@ -125,6 +126,7 @@ export async function normalizeOptions(
   if (command.name() === 'serve') {
     let {publicUrl} = command;
 
+    // @ts-expect-error TS2322
     serveOptions = {
       https,
       port,
@@ -182,6 +184,7 @@ export async function normalizeOptions(
     mode,
     hmrOptions,
     shouldContentHash: hmrOptions ? false : command.contentHash,
+    // @ts-expect-error TS2322
     serveOptions,
     targets: command.target.length > 0 ? command.target : null,
     shouldAutoInstall: command.autoinstall ?? true,
@@ -196,6 +199,7 @@ export async function normalizeOptions(
     detailedReport:
       command.detailedReport != null
         ? {
+            // @ts-expect-error TS2345
             assetsPerBundle: parseInt(command.detailedReport, 10),
           }
         : null,

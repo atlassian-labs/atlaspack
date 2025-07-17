@@ -36,6 +36,7 @@ export default new Optimizer({
           minify: {
             mangle: true,
             compress: true,
+            // @ts-expect-error TS2698
             ...userConfig,
             toplevel:
               bundle.env.outputFormat === 'esmodule' ||
@@ -113,6 +114,7 @@ export default new Optimizer({
       sourceMap = new SourceMap(options.projectRoot);
       sourceMap.addVLQMap(JSON.parse(resultMap));
       if (originalMap) {
+        // @ts-expect-error TS2345
         sourceMap.extends(originalMap);
       }
       let sourcemapReference = await getSourceMapReference(sourceMap);

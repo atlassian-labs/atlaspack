@@ -61,6 +61,7 @@ function resolveModeConfig(
   for (const key of Object.keys(config)) {
     if (key === 'development' || key === 'production') {
       if (key === mode) {
+        // @ts-expect-error TS2322
         modeConfig = config[key];
       }
     } else {
@@ -200,6 +201,7 @@ export async function loadBundlerConfig(
       ...HTTP_OPTIONS['2'],
       projectRoot: options.projectRoot,
     } as const;
+    // @ts-expect-error TS2322
     return modDefault;
   }
 
@@ -262,6 +264,7 @@ export async function loadBundlerConfig(
   );
 
   let http = modeConfig.http ?? 2;
+  // @ts-expect-error TS7053
   let defaults = HTTP_OPTIONS[http];
 
   return {

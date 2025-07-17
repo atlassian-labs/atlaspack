@@ -37,6 +37,7 @@ export default class Validation {
     [validatorName: string]: Validator;
   } = {};
   dedicatedThread: boolean;
+  // @ts-expect-error TS2564
   impactfulOptions: Partial<AtlaspackOptions>;
   options: AtlaspackOptions;
   atlaspackConfig: AtlaspackConfig;
@@ -76,7 +77,9 @@ export default class Validation {
           let validatorResults: Array<ValidateResult | null | undefined> = [];
           try {
             // If the plugin supports the single-threading validateAll method, pass all assets to it.
+            // @ts-expect-error TS2339
             if (plugin.validateAll && this.dedicatedThread) {
+              // @ts-expect-error TS2339
               validatorResults = await plugin.validateAll({
                 assets: assets.map((asset) => new Asset(asset)),
                 options: pluginOptions,
@@ -96,12 +99,15 @@ export default class Validation {
             }
 
             // Otherwise, pass the assets one-at-a-time
+            // @ts-expect-error TS2339
             else if (plugin.validate && !this.dedicatedThread) {
               await Promise.all(
                 assets.map(async (input) => {
                   let config = null;
                   let publicAsset = new Asset(input);
+                  // @ts-expect-error TS2339
                   if (plugin.getConfig) {
+                    // @ts-expect-error TS2339
                     config = await plugin.getConfig({
                       asset: publicAsset,
                       options: pluginOptions,
@@ -117,6 +123,7 @@ export default class Validation {
                     });
                   }
 
+                  // @ts-expect-error TS2339
                   let validatorResult = await plugin.validate({
                     asset: publicAsset,
                     options: pluginOptions,
@@ -147,12 +154,14 @@ export default class Validation {
       this.requests.map(async (request) => {
         this.report({
           type: 'validation',
+          // @ts-expect-error TS2322
           filePath: fromProjectPath(this.options.projectRoot, request.filePath),
         });
 
         let asset = await this.loadAsset(request);
 
         let validators = await this.atlaspackConfig.getValidators(
+          // @ts-expect-error TS2345
           request.filePath,
         );
 
@@ -194,6 +203,7 @@ export default class Validation {
     let {content, size, isSource} = await summarizeRequest(
       this.options.inputFS,
       {
+        // @ts-expect-error TS2322
         filePath: fromProjectPath(this.options.projectRoot, request.filePath),
       },
     );
@@ -201,10 +211,13 @@ export default class Validation {
     return new UncommittedAsset({
       value: createAsset(this.options.projectRoot, {
         code,
+        // @ts-expect-error TS2322
         filePath: filePath,
         isSource,
+        // @ts-expect-error TS2345
         type: path.extname(fromProjectPathRelative(filePath)).slice(1),
         query,
+        // @ts-expect-error TS2322
         env: env,
         stats: {
           time: 0,

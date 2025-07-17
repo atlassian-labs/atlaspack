@@ -1,5 +1,6 @@
 import assert from 'assert';
 import * as napi from '@atlaspack/rust';
+// @ts-expect-error TS2305
 import type {JsCallable} from '@atlaspack/rust';
 import {NodeFS} from '@atlaspack/fs';
 import {NodePackageManager} from '@atlaspack/package-manager';
@@ -111,6 +112,7 @@ export class AtlaspackWorker {
       } as const;
 
       if (!('config' in state)) {
+        // @ts-expect-error TS2345
         state.config = await state.resolver.loadConfig?.({
           config: new PluginConfig({
             env,
@@ -124,6 +126,7 @@ export class AtlaspackWorker {
         });
       }
 
+      // @ts-expect-error TS2345
       const result = await state.resolver.resolve({
         specifier,
         dependency,
@@ -190,6 +193,7 @@ export class AtlaspackWorker {
       const env = new Environment(napiEnv);
       const mutableAsset = new MutableAsset(
         innerAsset,
+        // @ts-expect-error TS2345
         contents,
         env,
         this.#fs,
@@ -209,6 +213,7 @@ export class AtlaspackWorker {
         }),
       } as const;
 
+      // @ts-expect-error TS2345
       const config = await transformer.loadConfig?.({
         config: new PluginConfig({
           env,
@@ -223,6 +228,7 @@ export class AtlaspackWorker {
 
       if (transformer.parse) {
         const ast = await transformer.parse({
+          // @ts-expect-error TS2322
           asset: mutableAsset,
           config,
           resolve: resolveFunc,
@@ -234,6 +240,7 @@ export class AtlaspackWorker {
       }
 
       const result = await state.transformer.transform({
+        // @ts-expect-error TS2322
         asset: mutableAsset,
         config,
         resolve: resolveFunc,
@@ -244,6 +251,7 @@ export class AtlaspackWorker {
         const ast = await mutableAsset.getAST();
         if (ast) {
           const output = await transformer.generate({
+            // @ts-expect-error TS2322
             asset: mutableAsset,
             ast,
             ...defaultOptions,
@@ -254,6 +262,7 @@ export class AtlaspackWorker {
           } else if (output.content instanceof Buffer) {
             mutableAsset.setBuffer(output.content);
           } else {
+            // @ts-expect-error TS2345
             mutableAsset.setStream(output.content);
           }
 
@@ -295,7 +304,8 @@ export class AtlaspackWorker {
         await mutableAsset.getBuffer(),
         // Only send back the map if it has changed
         mutableAsset.isMapDirty
-          ? JSON.stringify((await mutableAsset.getMap()).toVLQ())
+          ? // @ts-expect-error TS2533
+            JSON.stringify((await mutableAsset.getMap()).toVLQ())
           : '',
       ];
     },
@@ -331,6 +341,7 @@ type RpcPluginOptions = {
 
 type RunResolverResolveOptions = {
   key: string;
+  // @ts-expect-error TS2694
   dependency: napi.Dependency;
   specifier: FilePath;
   pipeline: string | null | undefined;
@@ -361,9 +372,12 @@ type RunResolverResolveResult = {
 
 type RunTransformerTransformOptions = {
   key: string;
+  // @ts-expect-error TS2724
   env: napi.Environment;
   options: RpcPluginOptions;
+  // @ts-expect-error TS2694
   asset: napi.Asset;
 };
 
+// @ts-expect-error TS2694
 type RunTransformerTransformResult = [napi.RpcAssetResult, Buffer, string];

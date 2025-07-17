@@ -17,6 +17,7 @@ let parcelOptionsToPluginOptions: WeakMap<AtlaspackOptions, PluginOptions> =
   new WeakMap();
 
 export default class PluginOptions implements IPluginOptions {
+  // @ts-expect-error TS2564
   #options: AtlaspackOptions;
 
   constructor(options: AtlaspackOptions) {

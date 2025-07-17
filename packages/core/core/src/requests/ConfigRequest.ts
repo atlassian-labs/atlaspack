@@ -138,6 +138,7 @@ export async function getConfigKeyContentHash(
   let cachedValue = configKeyCache.get(cacheKey);
 
   if (cachedValue) {
+    // @ts-expect-error TS2322
     return cachedValue;
   }
 

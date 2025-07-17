@@ -217,9 +217,11 @@ export default new Transformer({
       // Use explicitly defined JSX options in tsconfig.json over inferred values from dependencies.
       pragma =
         compilerOptions?.jsxFactory ||
+        // @ts-expect-error TS7053
         (reactLib ? JSX_PRAGMA[reactLib].pragma : undefined);
       pragmaFrag =
         compilerOptions?.jsxFragmentFactory ||
+        // @ts-expect-error TS7053
         (reactLib ? JSX_PRAGMA[reactLib].pragmaFrag : undefined);
 
       if (
@@ -234,17 +236,20 @@ export default new Transformer({
           packageJson?.alias && packageJson.alias['react'] === 'preact/compat'
             ? 'preact'
             : reactLib;
+        // @ts-expect-error TS7053
         let automaticVersion = JSX_PRAGMA[effectiveReactLib]?.automatic;
         let reactLibVersion =
           packageJson?.dependencies?.[effectiveReactLib] ||
           packageJson?.devDependencies?.[effectiveReactLib] ||
           packageJson?.peerDependencies?.[effectiveReactLib];
+        // @ts-expect-error TS2322
         reactLibVersion = reactLibVersion
           ? semver.validRange(reactLibVersion)
           : null;
         let minReactLibVersion =
           reactLibVersion !== null && reactLibVersion !== '*'
-            ? semver.minVersion(reactLibVersion)?.toString()
+            ? // @ts-expect-error TS2345
+              semver.minVersion(reactLibVersion)?.toString()
             : null;
 
         automaticJSXRuntime =
@@ -309,10 +314,14 @@ export default new Transformer({
         'Invalid config for @atlaspack/transformer-js',
       );
 
+      // @ts-expect-error TS2339
       magicComments = conf.contents?.magicComments ?? magicComments;
+      // @ts-expect-error TS2339
       inlineEnvironment = conf.contents?.inlineEnvironment ?? inlineEnvironment;
+      // @ts-expect-error TS2339
       inlineFS = conf.contents?.inlineFS ?? inlineFS;
       inlineConstants =
+        // @ts-expect-error TS2339
         conf.contents?.unstable_inlineConstants ?? inlineConstants;
     }
 
@@ -359,6 +368,7 @@ export default new Transformer({
       for (let browser of browsers) {
         let [name, version] = browser.split(' ');
         if (BROWSER_MAPPING.hasOwnProperty(name)) {
+          // @ts-expect-error TS7053
           name = BROWSER_MAPPING[name];
           if (!name) {
             continue;
@@ -368,12 +378,15 @@ export default new Transformer({
         let [major, minor = '0', patch = '0'] = version
           .split('-')[0]
           .split('.');
+        // @ts-expect-error TS2345
         if (isNaN(major) || isNaN(minor) || isNaN(patch)) {
           continue;
         }
         let semverVersion = `${major}.${minor}.${patch}`;
 
+        // @ts-expect-error TS2345
         if (targets[name] == null || semver.gt(targets[name], semverVersion)) {
+          // @ts-expect-error TS7053
           targets[name] = semverVersion;
         }
       }
@@ -413,29 +426,44 @@ export default new Transformer({
       if (asset.type === 'ts') {
         isJSX = false;
       } else if (!isJSX) {
+        // @ts-expect-error TS7053
         isJSX = Boolean(JSX_EXTENSIONS[asset.type]);
       }
     }
 
     let macroAssets: Array<{
       content: string;
+      // @ts-expect-error TS2552
       map: undefined | NodeSourceMap;
       type: string;
       uniqueKey: string;
     }> = [];
     let {
+      // @ts-expect-error TS2339
       dependencies,
+      // @ts-expect-error TS2339
       code: compiledCode,
+      // @ts-expect-error TS2339
       map,
+      // @ts-expect-error TS2339
       shebang,
+      // @ts-expect-error TS2339
       hoist_result,
+      // @ts-expect-error TS2339
       symbol_result,
+      // @ts-expect-error TS2339
       is_empty_or_empty_export,
+      // @ts-expect-error TS2339
       needs_esm_helpers,
+      // @ts-expect-error TS2339
       diagnostics,
+      // @ts-expect-error TS2339
       used_env,
+      // @ts-expect-error TS2339
       has_node_replacements,
+      // @ts-expect-error TS2339
       is_constant_module,
+      // @ts-expect-error TS2339
       conditions,
       magic_comments,
     } = await (transformAsync || transform)({
@@ -519,6 +547,7 @@ export default new Transformer({
                     if (asset.env.sourceMap) {
                       // Generate a source map that maps each line of the asset to the original macro call.
                       map = new SourceMap(options.projectRoot);
+                      // @ts-expect-error TS2304
                       let mappings: Array<IndexedMapping<string>> = [];
                       let line = 1;
                       for (let i = 0; i <= a.content.length; i++) {
@@ -540,6 +569,7 @@ export default new Transformer({
 
                       map.addIndexedMappings(mappings);
                       if (originalMap) {
+                        // @ts-expect-error TS2345
                         map.extends(originalMap);
                       } else {
                         map.setSourceContent(asset.filePath, code.toString());
@@ -602,6 +632,7 @@ export default new Transformer({
 
     if (getFeatureFlag('conditionalBundlingApi')) {
       asset.meta.conditions = conditions.map(
+        // @ts-expect-error TS7006
         (c): ConditionMeta => ({
           key: c.key,
           ifTruePlaceholder: c.if_true_placeholder,
@@ -637,11 +668,13 @@ export default new Transformer({
 
     if (diagnostics) {
       let errors = diagnostics.filter(
+        // @ts-expect-error TS7006
         (d) =>
           d.severity === 'Error' ||
           (d.severity === 'SourceError' && asset.isSource),
       );
       let warnings = diagnostics.filter(
+        // @ts-expect-error TS7006
         (d) =>
           d.severity === 'Warning' ||
           (d.severity === 'SourceError' && !asset.isSource),
@@ -649,6 +682,7 @@ export default new Transformer({
       let convertDiagnostic = (diagnostic: any) => {
         let message = diagnostic.message;
         if (message === 'SCRIPT_ERROR') {
+          // @ts-expect-error TS7053
           let err = SCRIPT_ERRORS[asset.env.context as string];
           message = err?.message || SCRIPT_ERRORS.browser.message;
         }
@@ -687,6 +721,7 @@ export default new Transformer({
             });
           }
 
+          // @ts-expect-error TS7053
           let err = SCRIPT_ERRORS[asset.env.context as string];
           if (err) {
             if (!res.hints) {
@@ -744,6 +779,7 @@ export default new Transformer({
           env: {
             context: 'web-worker',
             sourceType: dep.source_type === 'Module' ? 'module' : 'script',
+            // @ts-expect-error TS2322
             outputFormat,
             loc,
           },
@@ -892,6 +928,7 @@ export default new Transformer({
             idx = dep.specifier.indexOf('/', idx + 1);
           }
           let module = idx >= 0 ? dep.specifier.slice(0, idx) : dep.specifier;
+          // @ts-expect-error TS7053
           range = pkg.dependencies[module];
         }
 
@@ -903,12 +940,13 @@ export default new Transformer({
             dep.kind === 'DynamicImport'
               ? 'lazy'
               : dep.kind === 'ConditionalImport'
-              ? 'conditional'
-              : 'sync',
+                ? 'conditional'
+                : 'sync',
           isOptional: dep.is_optional,
           meta,
           resolveFrom: isHelper ? __filename : undefined,
           range,
+          // @ts-expect-error TS2322
           env,
         });
       }
@@ -955,12 +993,15 @@ export default new Transformer({
         let dep = deps.get(source);
         if (!dep) continue;
         if (local === '*' && imported === '*') {
+          // @ts-expect-error TS2345
           dep.symbols.set('*', '*', convertLoc(loc), true);
         } else {
           let reExportName =
             dep.symbols.get(imported)?.local ??
             `$${asset.id}$re_export$${local}`;
+          // @ts-expect-error TS2345
           asset.symbols.set(local, reExportName);
+          // @ts-expect-error TS2345
           dep.symbols.set(imported, reExportName, convertLoc(loc), true);
         }
       }
@@ -983,6 +1024,7 @@ export default new Transformer({
           // Do not create a self-reference for the `default` symbol unless we have seen an __esModule flag.
           if (
             name === 'default' &&
+            // @ts-expect-error TS2345
             !asset.symbols.hasExportSymbol('__esModule')
           ) {
             continue;
@@ -1018,11 +1060,13 @@ export default new Transformer({
           asset.sideEffects &&
           deps.size === 0 &&
           Object.keys(hoist_result.exported_symbols).length === 0) ||
+        // @ts-expect-error TS2345
         (hoist_result.should_wrap && !asset.symbols.hasExportSymbol('*'))
       ) {
         if (is_empty_or_empty_export) {
           asset.meta.emptyFileStarReexport = true;
         }
+        // @ts-expect-error TS2345
         asset.symbols.set('*', `$${asset.id}$exports`);
       }
 
@@ -1042,6 +1086,7 @@ export default new Transformer({
           let dep = source ? deps.get(source) : undefined;
           asset.symbols.set(
             exported,
+            // @ts-expect-error TS2345
             `${dep?.id ?? ''}$${local}`,
             convertLoc(loc),
           );
@@ -1049,6 +1094,7 @@ export default new Transformer({
             dep.symbols.ensure();
             dep.symbols.set(
               local,
+              // @ts-expect-error TS2345
               `${dep?.id ?? ''}$${local}`,
               convertLoc(loc),
               true,
@@ -1067,6 +1113,7 @@ export default new Transformer({
           let dep = deps.get(source);
           if (!dep) continue;
           dep.symbols.ensure();
+          // @ts-expect-error TS2345
           dep.symbols.set('*', '*', convertLoc(loc), true);
         }
 
@@ -1077,14 +1124,17 @@ export default new Transformer({
           (!symbol_result.is_esm &&
             deps.size === 0 &&
             symbol_result.exports.length === 0) ||
+          // @ts-expect-error TS2345
           (symbol_result.should_wrap && !asset.symbols.hasExportSymbol('*'))
         ) {
           asset.symbols.ensure();
+          // @ts-expect-error TS2345
           asset.symbols.set('*', `$${asset.id}$exports`);
         }
       } else {
         // If the asset is wrapped, add * as a fallback
         asset.symbols.ensure();
+        // @ts-expect-error TS2345
         asset.symbols.set('*', `$${asset.id}$exports`);
       }
 
@@ -1093,6 +1143,7 @@ export default new Transformer({
       for (let dep of asset.getDependencies()) {
         if (dep.symbols.isCleared) {
           dep.symbols.ensure();
+          // @ts-expect-error TS2345
           dep.symbols.set('*', `${dep.id}$`);
         }
       }
@@ -1118,6 +1169,7 @@ export default new Transformer({
       let sourceMap = new SourceMap(options.projectRoot);
       sourceMap.addVLQMap(JSON.parse(map));
       if (originalMap) {
+        // @ts-expect-error TS2345
         sourceMap.extends(originalMap);
       }
       asset.setMap(sourceMap);

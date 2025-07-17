@@ -29,13 +29,13 @@ declare function importCond<CondT, CondF>(
   ifTrueDependency: CondT extends void
     ? NoImportErrorMessage
     : CondT extends ESModuleWithDefaultExport
-    ? ModuleRef<CondT>
-    : NoDefaultErrorMessage,
+      ? ModuleRef<CondT>
+      : NoDefaultErrorMessage,
   ifFalseDependency: CondF extends void
     ? NoImportErrorMessage
     : CondF extends ESModuleWithDefaultExport
-    ? ModuleRef<CondF>
-    : NoDefaultErrorMessage,
+      ? ModuleRef<CondF>
+      : NoDefaultErrorMessage,
 ): CondT extends ESModuleWithDefaultExport
   ? CondF extends ESModuleWithDefaultExport
     ? ConditionalImport<CondT, CondF>

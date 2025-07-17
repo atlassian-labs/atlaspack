@@ -39,8 +39,8 @@ const commonPathPrefix = require('common-path-prefix');
 
 type Metafile = {
   projectRoot: string;
-  pid: typeof process['pid'];
-  argv: typeof process['argv'];
+  pid: (typeof process)['pid'];
+  argv: (typeof process)['argv'];
 };
 
 const connection = createConnection(ProposedFeatures.all);
@@ -113,6 +113,7 @@ connection.onInitialized(() => {
 
 // Proxy
 connection.onRequest(RequestImporters, async (params) => {
+  // @ts-expect-error TS2345
   const client = findClient(params);
   if (client) {
     const result = await client.connection.sendRequest(
@@ -158,6 +159,7 @@ connection.onRequest(
     return {
       kind: DocumentDiagnosticReportKind.Full,
       resultId: client?.lastBuild,
+      // @ts-expect-error TS2740
       items: result ?? [],
     };
   },
@@ -185,7 +187,9 @@ class ProgressReporter {
     if (this.progressReporterPromise == null) {
       this.begin();
     }
+    // @ts-expect-error TS2349
     invariant(this.progressReporterPromise != null);
+    // @ts-expect-error TS2533
     (await this.progressReporterPromise).done();
     this.progressReporterPromise = null;
   }
@@ -254,6 +258,7 @@ function createClient(metafilepath: string, metafile: Metafile) {
     lastBuild: '0',
   };
 
+  // @ts-expect-error TS7006
   client.onNotification(NotificationBuildStatus, (state, message) => {
     // console.log('got NotificationBuildStatus', state, message);
     if (state === 'start') {
@@ -271,6 +276,7 @@ function createClient(metafilepath: string, metafile: Metafile) {
     }
   });
 
+  // @ts-expect-error TS7006
   client.onNotification(NotificationWorkspaceDiagnostics, (diagnostics) => {
     // console.log('got NotificationWorkspaceDiagnostics', diagnostics);
     for (const d of diagnostics) {

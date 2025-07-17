@@ -8,6 +8,7 @@ import {Lmdb} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types';
 import type {Cache} from './types';
 import type {Readable, Writable} from 'stream';
+// @ts-expect-error TS7016
 import ncp from 'ncp';
 import {promisify} from 'util';
 import stream from 'stream';
@@ -171,12 +172,14 @@ export class LMDBLiteCache implements Cache {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return pipeline(
         stream,
+        // @ts-expect-error TS2554
         this.fs.createWriteStream(path.join(this.dir, key)),
       );
     }
 
     const filePath = this.getFileKey(key);
     await this.fs.mkdirp(path.dirname(filePath));
+    // @ts-expect-error TS2554
     return pipeline(stream, this.fs.createWriteStream(filePath));
   }
 

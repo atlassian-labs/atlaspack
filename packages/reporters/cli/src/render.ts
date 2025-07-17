@@ -31,7 +31,9 @@ let errorLineCount = 0;
 let statusPersisted = false;
 
 export function _setStdio(stdoutLike: Writable, stderrLike: Writable) {
+  // @ts-expect-error TS2322
   stdout = stdoutLike;
+  // @ts-expect-error TS2322
   stderr = stderrLike;
 }
 

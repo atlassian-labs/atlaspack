@@ -65,7 +65,9 @@ export function findStronglyConnectedComponents<T, E extends number>(
 
       do {
         member = stack.pop();
+        // @ts-expect-error TS2538
         state[member].onStack = false;
+        // @ts-expect-error TS2345
         component.push(member);
       } while (member !== nodeId);
 

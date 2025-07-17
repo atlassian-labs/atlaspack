@@ -52,13 +52,16 @@ const LOADERS = {
 
 function getLoaders(ctx: Environment):
   | {
+      // @ts-expect-error TS2411
       IMPORT_POLYFILL: null | false | string;
       [key: string]: string;
     }
   | null
   | undefined {
+  // @ts-expect-error TS2322
   if (ctx.isWorker()) return LOADERS.worker;
   if (ctx.isBrowser()) return LOADERS.browser;
+  // @ts-expect-error TS2322
   if (ctx.isNode()) return LOADERS.node;
   return null;
 }
@@ -224,6 +227,7 @@ export default new Runtime({
             ? 'parcelRequire'
             : '__parcel__require__';
 
+        // @ts-expect-error TS7006
         const fallbackUrls = (cond) => {
           return `[${[...cond.ifTrueBundles, ...cond.ifFalseBundles]
             .map((target) => {
@@ -504,6 +508,7 @@ function getLoaderRuntime({
     to: NamedBundle,
     shardingConfig: JSRuntimeConfig['domainSharding'],
   ): string | undefined {
+    // @ts-expect-error TS18049
     let loader = loaders[to.type];
     if (!loader) {
       return;
@@ -527,7 +532,9 @@ function getLoaderRuntime({
         return `__parcel__import__("./" + ${relativePathExpr})`;
       }
 
+      // @ts-expect-error TS2322
       loader = nullthrows(
+        // @ts-expect-error TS18049
         loaders.IMPORT_POLYFILL,
         `No import() polyfill available for context '${bundle.env.context}'`,
       );
@@ -591,7 +598,9 @@ function getLoaderRuntime({
           ),
         )
         .concat(
+          // @ts-expect-error TS2769
           cond.ifTrueBundles.map((targetBundle) =>
+            // @ts-expect-error TS2554
             getLoaderForBundle(sourceBundle, targetBundle),
           ),
         );
@@ -604,7 +613,9 @@ function getLoaderRuntime({
           ),
         )
         .concat(
+          // @ts-expect-error TS2769
           cond.ifFalseBundles.map((targetBundle) =>
+            // @ts-expect-error TS2554
             getLoaderForBundle(sourceBundle, targetBundle),
           ),
         );
@@ -748,14 +759,17 @@ function getHintedBundleGroups(
     if (
       typeof attributes === 'object' &&
       attributes != null &&
+      // @ts-expect-error TS2339
       (attributes.preload || attributes.prefetch)
     ) {
       let resolved = bundleGraph.resolveAsyncDependency(dependency, bundle);
       if (resolved?.type === 'bundle_group') {
         // === true for flow
+        // @ts-expect-error TS2339
         if (attributes.preload === true) {
           preload.push(resolved.value);
         }
+        // @ts-expect-error TS2339
         if (attributes.prefetch === true) {
           prefetch.push(resolved.value);
         }
@@ -784,8 +798,10 @@ function getHintLoaders(
         bundleToPreload,
         options,
       );
+      // @ts-expect-error TS7053
       let priority = TYPE_TO_RESOURCE_PRIORITY[bundleToPreload.type];
       hintLoaders.push(
+        // @ts-expect-error TS2554
         `require(${JSON.stringify(loader)})(${getAbsoluteUrlExpr(
           relativePathExpr,
           from,
@@ -872,6 +888,7 @@ function getRegisterCode(
   entryBundle: NamedBundle,
   bundleGraph: BundleGraph<NamedBundle>,
 ): string {
+  // @ts-expect-error TS2304
   let mappings: Array<FilePath | string> = [];
   bundleGraph.traverseBundles((bundle, _, actions) => {
     if (bundle.bundleBehavior === 'inline') {
