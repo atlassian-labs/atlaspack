@@ -8,6 +8,7 @@ import RequestTracker, {
   runInvalidation,
   getBiggestFSEventsInvalidations,
   invalidateRequestGraphFSEvents,
+  requestTypes,
 } from '../src/RequestTracker';
 import {Graph} from '@atlaspack/graph';
 import {LMDBLiteCache} from '@atlaspack/cache';
@@ -19,6 +20,12 @@ import {toProjectPath} from '../src/projectPath';
 import {DEFAULT_FEATURE_FLAGS, setFeatureFlags} from '../../feature-flags/src';
 import sinon from 'sinon';
 import type {AtlaspackOptions} from '../src/types';
+import createAtlaspackBuildRequest from '../src/requests/AtlaspackBuildRequest';
+import Atlaspack from '../src/Atlaspack';
+import {MemoryFS, NodeFS} from '@atlaspack/fs';
+import {OverlayFS} from '../../fs/src/OverlayFS';
+import path from 'path';
+import createAssetGraphRequest from '../src/requests/AssetGraphRequest';
 
 const options = {
   ...DEFAULT_OPTIONS,
@@ -540,6 +547,144 @@ describe('RequestTracker', () => {
           ]);
         });
       });
+    });
+  });
+
+  describe('incremental bundling', () => {
+    it('works', async () => {
+      const fs = new OverlayFS(new MemoryFS(farm), new NodeFS());
+      const appRoot = __dirname;
+      await fs.mkdirp(path.join(appRoot, 'app'));
+      await fs.writeFile(path.join(appRoot, 'app', 'package.json'), '{}');
+      await fs.writeFile(path.join(appRoot, 'app', '.git'), '');
+      await fs.writeFile(
+        path.join(appRoot, 'app', '.parcelrc'),
+        '{"extends":"@atlaspack/config-default"}',
+      );
+      await fs.writeFile(
+        path.join(appRoot, 'app', 'target.js'),
+        'console.log("hello")',
+      );
+
+      const atlaspack = new Atlaspack({
+        workerFarm: farm,
+        entries: [path.join(appRoot, 'app', 'target.js')],
+        cache: new LMDBLiteCache(DEFAULT_OPTIONS.cacheDir),
+        inputFS: fs,
+        outputFS: fs,
+      });
+      await atlaspack._init();
+      const options = atlaspack._getResolvedAtlaspackOptions();
+      const tracker = new RequestTracker({farm, options});
+      let {ref: optionsRef} = await farm.createSharedReference(options, false);
+
+      const getAssetRequests = () =>
+        runRequestSpy
+          .getCalls()
+          .map((call) => call.args[0])
+          .filter((request) => request.type === requestTypes.asset_request);
+
+      // Running the build once builds one asset
+      const runRequestSpy = sinon.spy(tracker, 'runRequest');
+      await tracker.runRequest(
+        createAtlaspackBuildRequest({
+          optionsRef,
+          requestedAssetIds: new Set(),
+        }),
+      );
+      assert.equal(getAssetRequests().length, 1);
+      runRequestSpy.resetHistory();
+
+      // Running the build again with no invalidations does not build any assets
+      await tracker.runRequest(
+        createAtlaspackBuildRequest({
+          optionsRef,
+          requestedAssetIds: new Set(),
+        }),
+      );
+      assert.equal(getAssetRequests().length, 0);
+      runRequestSpy.resetHistory();
+
+      // Running the build again with a file change builds the asset again
+      tracker.respondToFSEvents(
+        [
+          {
+            type: 'update',
+            path: path.join(appRoot, 'app', 'target.js'),
+          },
+        ],
+        Number.MAX_VALUE,
+      );
+      await tracker.runRequest(
+        createAtlaspackBuildRequest({
+          optionsRef,
+          requestedAssetIds: new Set(),
+        }),
+      );
+      assert.equal(getAssetRequests().length, 1);
+      runRequestSpy.resetHistory();
+
+      // Run the asset graph request, but not bundling
+      await fs.writeFile(
+        path.join(appRoot, 'app', 'target.js'),
+        'require("./dep.js")',
+      );
+      await fs.writeFile(
+        path.join(appRoot, 'app', 'dep.js'),
+        'console.log("dep")',
+      );
+      tracker.respondToFSEvents(
+        [
+          {
+            type: 'update',
+            path: path.join(appRoot, 'app', 'target.js'),
+          },
+        ],
+        Number.MAX_VALUE,
+      );
+      const assetGraphRequestResult = await tracker.runRequest(
+        createAssetGraphRequest({
+          name: 'Main',
+          entries: [
+            toProjectPath(
+              path.join(appRoot, 'app'),
+              path.join(appRoot, 'app', 'target.js'),
+            ),
+          ],
+          optionsRef,
+          shouldBuildLazily: false,
+          lazyIncludes: [],
+          lazyExcludes: [],
+          requestedAssetIds: new Set(),
+        }),
+      );
+      assert.equal(getAssetRequests().length, 2);
+      assert.equal(
+        assetGraphRequestResult.assetGraph.safeToIncrementallyBundle,
+        false,
+      );
+
+      // Now make another change
+      tracker.respondToFSEvents(
+        [
+          {
+            type: 'update',
+            path: path.join(appRoot, 'app', 'target.js'),
+          },
+          {
+            type: 'update',
+            path: path.join(appRoot, 'app', 'dep.js'),
+          },
+        ],
+        Number.MAX_VALUE,
+      );
+      // And run the build again
+      await tracker.runRequest(
+        createAtlaspackBuildRequest({
+          optionsRef,
+          requestedAssetIds: new Set(),
+        }),
+      );
     });
   });
 });
