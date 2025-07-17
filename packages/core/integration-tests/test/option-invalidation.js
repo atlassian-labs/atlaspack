@@ -1,6 +1,7 @@
 // @flow
 import assert from 'assert';
 import path from 'path';
+import {rimraf} from 'rimraf';
 import {
   bundle,
   overlayFS,
@@ -19,7 +20,7 @@ import type {
 
 let inputDir: string;
 
-function getEntries(entries = 'src/index.js') {
+function getEntries(entries = 'index.js') {
   return (Array.isArray(entries) ? entries : [entries]).map((entry) =>
     path.resolve(inputDir, entry),
   );
@@ -38,7 +39,7 @@ function getOptions(opts, featureFlags) {
   );
 }
 
-function runBundle(entries = 'src/index.js', opts, featureFlags) {
+function runBundle(entries = 'index.js', opts, featureFlags) {
   return bundler(getEntries(entries), getOptions(opts, featureFlags)).run();
 }
 
@@ -74,6 +75,10 @@ async function testCache(
   );
   let resolvedOptions = await resolveOptions(initialOptions);
 
+  // Clear any existing files before first build
+  await overlayFS.rimraf(resolvedOptions.cacheDir);
+  await overlayFS.rimraf(resolvedOptions.outputFS.cwd());
+
   let b = await runBundle(entries, options, featureFlags);
 
   await assertNoFilePathInCache(
@@ -102,18 +107,14 @@ async function testCache(
 }
 
 describe('Option invalidation in cache integration test', () => {
-  beforeEach(() => {
-    inputDir = path.join(
-      __dirname,
-      '/input',
-      Math.random().toString(36).slice(2),
-    );
+  beforeEach(async () => {
+    inputDir = path.join(__dirname, 'option-invalidation-fixture');
+    await rimraf(inputDir);
+    await overlayFS.mkdirp(inputDir);
   });
-  it('respects blocklist with granularOptionInvalidation=true', async function () {
-    const dir = path.join(__dirname, 'option-invalidation-test');
-    await overlayFS.mkdirp(dir);
 
-    await fsFixture(overlayFS, dir)`
+  it('respects blocklist with granularOptionInvalidation=true', async function () {
+    await fsFixture(overlayFS, inputDir)`
       .parcelrc:
         {
           "extends": "@atlaspack/config-default",
@@ -125,17 +126,17 @@ describe('Option invalidation in cache integration test', () => {
     `;
 
     // Test that the basic setup works with feature flag enabled
-    const firstBuild = await bundle(path.join(dir, '/index.js'), {
+    const firstBuild = await bundle(path.join(inputDir, 'index.js'), {
       inputFS: overlayFS,
-      defaultConfig: path.join(dir, '.parcelrc'),
+      defaultConfig: path.join(inputDir, '.parcelrc'),
       featureFlags: {
         granularOptionInvalidation: true,
       },
     });
 
-    const secondBuild = await bundle(path.join(dir, '/index.js'), {
+    const secondBuild = await bundle(path.join(inputDir, 'index.js'), {
       inputFS: overlayFS,
-      defaultConfig: path.join(dir, '.parcelrc'),
+      defaultConfig: path.join(inputDir, '.parcelrc'),
       featureFlags: {
         granularOptionInvalidation: true,
       },
@@ -147,96 +148,90 @@ describe('Option invalidation in cache integration test', () => {
   });
 
   it('should NOT invalidate cache when instanceId changes (blocklisted option)', async function () {
+    await fsFixture(overlayFS, inputDir)`
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "reporters": []
+        }
+
+      index.js:
+        export const value = "test";
+    `;
+
     let b = await testCache({
-      async setup() {
-        await overlayFS.mkdirp(inputDir);
-        await overlayFS.mkdirp(path.join(inputDir, 'src'));
-        await overlayFS.writeFile(
-          path.join(inputDir, '.parcelrc'),
-          JSON.stringify({
-            extends: '@atlaspack/config-default',
-            reporters: [],
-          }),
-        );
-        await overlayFS.writeFile(
-          path.join(inputDir, 'src/index.js'),
-          'export const value = "test";',
-        );
-      },
       featureFlags: {
         granularOptionInvalidation: true,
       },
       update() {
-        // First build completed with logLevel: 'info' (default)
-        // Return same options to test no invalidation
         return {
           logLevel: 'info', // Same value as first build
         };
       },
     });
 
-    const debugInfo = {
-      changedAssetsCount: b.changedAssets.size,
-      changedAssetsList: Array.from(b.changedAssets.keys()),
-      environment: {
-        isCI: !!process.env.CI,
-        platform: process.platform,
-        nodeVersion: process.version,
-        nodeEnv: process.env.NODE_ENV,
-        ciProvider: process.env.GITHUB_ACTIONS
-          ? 'GitHub Actions'
-          : process.env.CI_NAME || (process.env.CI ? 'Unknown CI' : 'Local'),
-      },
-      featureFlags: {
-        granularOptionInvalidation: getFeatureFlag(
-          'granularOptionInvalidation',
-        ),
-        cachePerformanceImprovements: getFeatureFlag(
-          'cachePerformanceImprovements',
-        ),
-        atlaspackV3: getFeatureFlag('atlaspackV3'),
-      },
-      atlaspackEnv: Object.keys(process.env)
-        .filter(
-          (key) => key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
-        )
-        .reduce((acc, key) => {
-          acc[key] = process.env[key];
-          return acc;
-        }, {}),
-      optionComparison: {
-        unchangedOptions: {
-          logLevel: {value: 'info'},
-        },
-        expectedBehavior:
-          'Same option values should NOT cause cache invalidation',
-      },
-      filesystem: {
-        cwd: process.cwd(),
-        testDir: inputDir,
-        configExists: require('fs').existsSync(
-          path.join(inputDir, '.parcelrc'),
-        ),
-        indexExists: require('fs').existsSync(
-          path.join(inputDir, 'src/index.js'),
-        ),
-      },
-      runtime: {
-        memoryUsage: process.memoryUsage(),
-        uptime: process.uptime(),
-        buildTimestamp: Date.now(),
-      },
-      testConfig: {
-        timeout: this.timeout?.() || 'unknown',
-        testFile: __filename,
-      },
-    };
-
     assert.equal(
       b.changedAssets.size,
       0,
       `Same option values should NOT invalidate cache.\n\nDEBUG INFO:\n${JSON.stringify(
-        debugInfo,
+        {
+          changedAssetsCount: b.changedAssets.size,
+          changedAssetsList: Array.from(b.changedAssets.keys()),
+          environment: {
+            isCI: !!process.env.CI,
+            platform: process.platform,
+            nodeVersion: process.version,
+            nodeEnv: process.env.NODE_ENV,
+            ciProvider: process.env.GITHUB_ACTIONS
+              ? 'GitHub Actions'
+              : process.env.CI_NAME ||
+                (process.env.CI ? 'Unknown CI' : 'Local'),
+          },
+          featureFlags: {
+            granularOptionInvalidation: getFeatureFlag(
+              'granularOptionInvalidation',
+            ),
+            cachePerformanceImprovements: getFeatureFlag(
+              'cachePerformanceImprovements',
+            ),
+            atlaspackV3: getFeatureFlag('atlaspackV3'),
+          },
+          atlaspackEnv: Object.keys(process.env)
+            .filter(
+              (key) =>
+                key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
+            )
+            .reduce((acc, key) => {
+              acc[key] = process.env[key];
+              return acc;
+            }, {}),
+          optionComparison: {
+            unchangedOptions: {
+              logLevel: {value: 'info'},
+            },
+            expectedBehavior:
+              'Same option values should NOT cause cache invalidation',
+          },
+          filesystem: {
+            cwd: process.cwd(),
+            testDir: inputDir,
+            configExists: require('fs').existsSync(
+              path.join(inputDir, '.parcelrc'),
+            ),
+            indexExists: require('fs').existsSync(
+              path.join(inputDir, 'index.js'),
+            ),
+          },
+          runtime: {
+            memoryUsage: process.memoryUsage(),
+            uptime: process.uptime(),
+            buildTimestamp: Date.now(),
+          },
+          testConfig: {
+            timeout: this.timeout?.() || 'unknown',
+            testFile: __filename,
+          },
+        },
         null,
         2,
       )}`,
@@ -244,95 +239,91 @@ describe('Option invalidation in cache integration test', () => {
   });
 
   it('should NOT invalidate cache when logLevel changes (ignored by optionsProxy)', async function () {
+    await fsFixture(overlayFS, inputDir)`
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "reporters": []
+        }
+
+      index.js:
+        export const value = "test";
+    `;
+
     let b = await testCache({
-      async setup() {
-        await overlayFS.mkdirp(inputDir);
-        await overlayFS.mkdirp(path.join(inputDir, 'src'));
-        await overlayFS.writeFile(
-          path.join(inputDir, '.parcelrc'),
-          JSON.stringify({
-            extends: '@atlaspack/config-default',
-            reporters: [],
-          }),
-        );
-        await overlayFS.writeFile(
-          path.join(inputDir, 'src/index.js'),
-          'export const value = "test";',
-        );
-      },
       logLevel: 'info', // First build uses 'info'
       featureFlags: {
         granularOptionInvalidation: true,
       },
       update() {
-        // Second build with DIFFERENT logLevel -- should NOT invalidate because logLevel is in ignoreOptions
         return {
           logLevel: 'error', // Different value from first build
         };
       },
     });
 
-    const debugInfo2 = {
-      changedAssetsCount: b.changedAssets.size,
-      changedAssetsList: Array.from(b.changedAssets.keys()),
-      environment: {
-        isCI: !!process.env.CI,
-        platform: process.platform,
-        nodeVersion: process.version,
-        nodeEnv: process.env.NODE_ENV,
-        ciProvider: process.env.GITHUB_ACTIONS
-          ? 'GitHub Actions'
-          : process.env.CI_NAME || (process.env.CI ? 'Unknown CI' : 'Local'),
-      },
-      featureFlags: {
-        granularOptionInvalidation: getFeatureFlag(
-          'granularOptionInvalidation',
-        ),
-        cachePerformanceImprovements: getFeatureFlag(
-          'cachePerformanceImprovements',
-        ),
-        atlaspackV3: getFeatureFlag('atlaspackV3'),
-      },
-      atlaspackEnv: Object.keys(process.env)
-        .filter(
-          (key) => key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
-        )
-        .reduce((acc, key) => {
-          acc[key] = process.env[key];
-          return acc;
-        }, {}),
-      optionComparison: {
-        changedOptions: {
-          logLevel: {from: 'info', to: 'error'},
-        },
-        expectedBehavior: 'logLevel changes should be ignored by optionsProxy',
-      },
-      filesystem: {
-        cwd: process.cwd(),
-        testDir: inputDir,
-        configExists: require('fs').existsSync(
-          path.join(inputDir, '.parcelrc'),
-        ),
-        indexExists: require('fs').existsSync(
-          path.join(inputDir, 'src/index.js'),
-        ),
-      },
-      runtime: {
-        memoryUsage: process.memoryUsage(),
-        uptime: process.uptime(),
-        buildTimestamp: Date.now(),
-      },
-      testConfig: {
-        timeout: this.timeout?.() || 'unknown',
-        testFile: __filename,
-      },
-    };
-
     assert.equal(
       b.changedAssets.size,
       0,
       `logLevel changes should NOT invalidate cache because logLevel is in ignoreOptions set.\n\nDEBUG INFO:\n${JSON.stringify(
-        debugInfo2,
+        {
+          changedAssetsCount: b.changedAssets.size,
+          changedAssetsList: Array.from(b.changedAssets.keys()),
+          environment: {
+            isCI: !!process.env.CI,
+            platform: process.platform,
+            nodeVersion: process.version,
+            nodeEnv: process.env.NODE_ENV,
+            ciProvider: process.env.GITHUB_ACTIONS
+              ? 'GitHub Actions'
+              : process.env.CI_NAME ||
+                (process.env.CI ? 'Unknown CI' : 'Local'),
+          },
+          featureFlags: {
+            granularOptionInvalidation: getFeatureFlag(
+              'granularOptionInvalidation',
+            ),
+            cachePerformanceImprovements: getFeatureFlag(
+              'cachePerformanceImprovements',
+            ),
+            atlaspackV3: getFeatureFlag('atlaspackV3'),
+          },
+          atlaspackEnv: Object.keys(process.env)
+            .filter(
+              (key) =>
+                key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
+            )
+            .reduce((acc, key) => {
+              acc[key] = process.env[key];
+              return acc;
+            }, {}),
+          optionComparison: {
+            changedOptions: {
+              logLevel: {from: 'info', to: 'error'},
+            },
+            expectedBehavior:
+              'logLevel changes should be ignored by optionsProxy',
+          },
+          filesystem: {
+            cwd: process.cwd(),
+            testDir: inputDir,
+            configExists: require('fs').existsSync(
+              path.join(inputDir, '.parcelrc'),
+            ),
+            indexExists: require('fs').existsSync(
+              path.join(inputDir, 'index.js'),
+            ),
+          },
+          runtime: {
+            memoryUsage: process.memoryUsage(),
+            uptime: process.uptime(),
+            buildTimestamp: Date.now(),
+          },
+          testConfig: {
+            timeout: this.timeout?.() || 'unknown',
+            testFile: __filename,
+          },
+        },
         null,
         2,
       )}`,
@@ -340,22 +331,18 @@ describe('Option invalidation in cache integration test', () => {
   });
 
   it('should invalidate cache when featureFlags change (granular off)', async function () {
+    await fsFixture(overlayFS, inputDir)`
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "reporters": []
+        }
+
+      index.js:
+        export const value = "test";
+    `;
+
     let b = await testCache({
-      async setup() {
-        await overlayFS.mkdirp(inputDir);
-        await overlayFS.mkdirp(path.join(inputDir, 'src'));
-        await overlayFS.writeFile(
-          path.join(inputDir, '.parcelrc'),
-          JSON.stringify({
-            extends: '@atlaspack/config-default',
-            reporters: [],
-          }),
-        );
-        await overlayFS.writeFile(
-          path.join(inputDir, 'src/index.js'),
-          'export const value = "test";',
-        );
-      },
       featureFlags: {
         granularOptionInvalidation: false,
         exampleFeature: true,
@@ -372,27 +359,87 @@ describe('Option invalidation in cache integration test', () => {
 
     assert(
       b.changedAssets.size > 0,
-      'Feature flag changes should cause cache invalidation because featureFlags are tracked options.',
+      `Feature flag changes should cause cache invalidation because featureFlags are tracked options.\n\nDEBUG INFO:\n${JSON.stringify(
+        {
+          changedAssetsCount: b.changedAssets.size,
+          changedAssetsList: Array.from(b.changedAssets.keys()),
+          environment: {
+            isCI: !!process.env.CI,
+            platform: process.platform,
+            nodeVersion: process.version,
+            nodeEnv: process.env.NODE_ENV,
+            ciProvider: process.env.GITHUB_ACTIONS
+              ? 'GitHub Actions'
+              : process.env.CI_NAME ||
+                (process.env.CI ? 'Unknown CI' : 'Local'),
+          },
+          featureFlags: {
+            granularOptionInvalidation: getFeatureFlag(
+              'granularOptionInvalidation',
+            ),
+            cachePerformanceImprovements: getFeatureFlag(
+              'cachePerformanceImprovements',
+            ),
+            atlaspackV3: getFeatureFlag('atlaspackV3'),
+          },
+          atlaspackEnv: Object.keys(process.env)
+            .filter(
+              (key) =>
+                key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
+            )
+            .reduce((acc, key) => {
+              acc[key] = process.env[key];
+              return acc;
+            }, {}),
+          optionComparison: {
+            changedOptions: {
+              featureFlags: {
+                from: {granularOptionInvalidation: false, exampleFeature: true},
+                to: {granularOptionInvalidation: false, exampleFeature: false},
+              },
+            },
+            expectedBehavior:
+              'Feature flag changes should cause cache invalidation',
+          },
+          filesystem: {
+            cwd: process.cwd(),
+            testDir: inputDir,
+            configExists: require('fs').existsSync(
+              path.join(inputDir, '.parcelrc'),
+            ),
+            indexExists: require('fs').existsSync(
+              path.join(inputDir, 'index.js'),
+            ),
+          },
+          runtime: {
+            memoryUsage: process.memoryUsage(),
+            uptime: process.uptime(),
+            buildTimestamp: Date.now(),
+          },
+          testConfig: {
+            timeout: this.timeout?.() || 'unknown',
+            testFile: __filename,
+          },
+        },
+        null,
+        2,
+      )}`,
     );
   });
 
   it('should NOT invalidate cache when featureFlags change (granular on)', async function () {
+    await fsFixture(overlayFS, inputDir)`
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "reporters": []
+        }
+
+      index.js:
+        export const value = "test";
+    `;
+
     let b = await testCache({
-      async setup() {
-        await overlayFS.mkdirp(inputDir);
-        await overlayFS.mkdirp(path.join(inputDir, 'src'));
-        await overlayFS.writeFile(
-          path.join(inputDir, '.parcelrc'),
-          JSON.stringify({
-            extends: '@atlaspack/config-default',
-            reporters: [],
-          }),
-        );
-        await overlayFS.writeFile(
-          path.join(inputDir, 'src/index.js'),
-          'export const value = "test";',
-        );
-      },
       featureFlags: {
         granularOptionInvalidation: true,
         exampleFeature: true,
@@ -410,27 +457,87 @@ describe('Option invalidation in cache integration test', () => {
     assert.equal(
       b.changedAssets.size,
       0,
-      'Feature flag changes should NOT cause cache invalidation when granularOptionInvalidation is enabled.',
+      `Feature flag changes should NOT cause cache invalidation when granularOptionInvalidation is enabled.\n\nDEBUG INFO:\n${JSON.stringify(
+        {
+          changedAssetsCount: b.changedAssets.size,
+          changedAssetsList: Array.from(b.changedAssets.keys()),
+          environment: {
+            isCI: !!process.env.CI,
+            platform: process.platform,
+            nodeVersion: process.version,
+            nodeEnv: process.env.NODE_ENV,
+            ciProvider: process.env.GITHUB_ACTIONS
+              ? 'GitHub Actions'
+              : process.env.CI_NAME ||
+                (process.env.CI ? 'Unknown CI' : 'Local'),
+          },
+          featureFlags: {
+            granularOptionInvalidation: getFeatureFlag(
+              'granularOptionInvalidation',
+            ),
+            cachePerformanceImprovements: getFeatureFlag(
+              'cachePerformanceImprovements',
+            ),
+            atlaspackV3: getFeatureFlag('atlaspackV3'),
+          },
+          atlaspackEnv: Object.keys(process.env)
+            .filter(
+              (key) =>
+                key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
+            )
+            .reduce((acc, key) => {
+              acc[key] = process.env[key];
+              return acc;
+            }, {}),
+          optionComparison: {
+            changedOptions: {
+              featureFlags: {
+                from: {granularOptionInvalidation: true, exampleFeature: true},
+                to: {granularOptionInvalidation: true, exampleFeature: false},
+              },
+            },
+            expectedBehavior:
+              'Feature flag changes should NOT cause cache invalidation when granularOptionInvalidation is enabled',
+          },
+          filesystem: {
+            cwd: process.cwd(),
+            testDir: inputDir,
+            configExists: require('fs').existsSync(
+              path.join(inputDir, '.parcelrc'),
+            ),
+            indexExists: require('fs').existsSync(
+              path.join(inputDir, 'index.js'),
+            ),
+          },
+          runtime: {
+            memoryUsage: process.memoryUsage(),
+            uptime: process.uptime(),
+            buildTimestamp: Date.now(),
+          },
+          testConfig: {
+            timeout: this.timeout?.() || 'unknown',
+            testFile: __filename,
+          },
+        },
+        null,
+        2,
+      )}`,
     );
   });
 
   it('should NOT invalidate cache when feature flags are same (granular off)', async function () {
+    await fsFixture(overlayFS, inputDir)`
+      .parcelrc:
+        {
+          "extends": "@atlaspack/config-default",
+          "reporters": []
+        }
+
+      index.js:
+        export const value = "test";
+    `;
+
     let b = await testCache({
-      async setup() {
-        await overlayFS.mkdirp(inputDir);
-        await overlayFS.mkdirp(path.join(inputDir, 'src'));
-        await overlayFS.writeFile(
-          path.join(inputDir, '.parcelrc'),
-          JSON.stringify({
-            extends: '@atlaspack/config-default',
-            reporters: [],
-          }),
-        );
-        await overlayFS.writeFile(
-          path.join(inputDir, 'src/index.js'),
-          'export const value = "test";',
-        );
-      },
       featureFlags: {
         granularOptionInvalidation: false,
         exampleFeature: true,
@@ -448,7 +555,73 @@ describe('Option invalidation in cache integration test', () => {
     assert.equal(
       b.changedAssets.size,
       0,
-      'Same feature flag values should NOT cause cache invalidation.',
+      `Same feature flag values should NOT cause cache invalidation.\n\nDEBUG INFO:\n${JSON.stringify(
+        {
+          changedAssetsCount: b.changedAssets.size,
+          changedAssetsList: Array.from(b.changedAssets.keys()),
+          environment: {
+            isCI: !!process.env.CI,
+            platform: process.platform,
+            nodeVersion: process.version,
+            nodeEnv: process.env.NODE_ENV,
+            ciProvider: process.env.GITHUB_ACTIONS
+              ? 'GitHub Actions'
+              : process.env.CI_NAME ||
+                (process.env.CI ? 'Unknown CI' : 'Local'),
+          },
+          featureFlags: {
+            granularOptionInvalidation: getFeatureFlag(
+              'granularOptionInvalidation',
+            ),
+            cachePerformanceImprovements: getFeatureFlag(
+              'cachePerformanceImprovements',
+            ),
+            atlaspackV3: getFeatureFlag('atlaspackV3'),
+          },
+          atlaspackEnv: Object.keys(process.env)
+            .filter(
+              (key) =>
+                key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
+            )
+            .reduce((acc, key) => {
+              acc[key] = process.env[key];
+              return acc;
+            }, {}),
+          optionComparison: {
+            unchangedOptions: {
+              featureFlags: {
+                value: {
+                  granularOptionInvalidation: false,
+                  exampleFeature: true,
+                },
+              },
+            },
+            expectedBehavior:
+              'Same feature flag values should NOT cause cache invalidation',
+          },
+          filesystem: {
+            cwd: process.cwd(),
+            testDir: inputDir,
+            configExists: require('fs').existsSync(
+              path.join(inputDir, '.parcelrc'),
+            ),
+            indexExists: require('fs').existsSync(
+              path.join(inputDir, 'index.js'),
+            ),
+          },
+          runtime: {
+            memoryUsage: process.memoryUsage(),
+            uptime: process.uptime(),
+            buildTimestamp: Date.now(),
+          },
+          testConfig: {
+            timeout: this.timeout?.() || 'unknown',
+            testFile: __filename,
+          },
+        },
+        null,
+        2,
+      )}`,
     );
   });
 });
