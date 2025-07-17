@@ -68,7 +68,10 @@ registerCoreWithSerializer();
 
 export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
-export const WORKER_PATH: string = path.join(__dirname, 'worker.js');
+export let WORKER_PATH: string = path.join(__dirname, 'worker.js');
+if (process.env.ATLASPACK_REGISTER_USE_SRC === 'true') {
+  WORKER_PATH = path.join(__dirname, 'worker.ts');
+}
 
 export default class Atlaspack {
   #requestTracker: RequestTracker;

@@ -1,5 +1,5 @@
 import {OverlayFS} from '../src/OverlayFS';
-import {fsFixture} from '@atlaspack/test-utils/src/fsFixture';
+import {fsFixture} from '@atlaspack/test-utils';
 import {MemoryFS} from '../src/MemoryFS';
 import WorkerFarm from '@atlaspack/workers';
 import {WORKER_PATH} from '@atlaspack/core';
