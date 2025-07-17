@@ -84,6 +84,11 @@ export default function createAssetGraphRequest(
       let assetGraphRequest = await await builder.build();
 
       // early break for incremental bundling if production or flag is off;
+      assetGraphRequest.assetGraph.setDisableIncrementalBundling(
+        !input.options.shouldBundleIncrementally ||
+          input.options.mode === 'production',
+      );
+
       if (
         !input.options.shouldBundleIncrementally ||
         input.options.mode === 'production'
@@ -511,6 +516,7 @@ export class AssetGraphBuilder {
 
       if (didEntriesChange) {
         this.assetGraph.safeToIncrementallyBundle = false;
+        this.assetGraph.setNeedsBundling();
       }
     }
   }
@@ -554,10 +560,12 @@ export class AssetGraphBuilder {
             invariant(otherAsset.type === 'asset');
             if (!this._areDependenciesEqualForAssets(asset, otherAsset.value)) {
               this.assetGraph.safeToIncrementallyBundle = false;
+              this.assetGraph.setNeedsBundling();
             }
           } else {
             // adding a new entry or dependency
             this.assetGraph.safeToIncrementallyBundle = false;
+            this.assetGraph.setNeedsBundling();
           }
         }
         this.changedAssets.set(asset.id, asset);
@@ -566,6 +574,7 @@ export class AssetGraphBuilder {
       this.assetGraph.resolveAssetGroup(input, assets, request.id);
     } else {
       this.assetGraph.safeToIncrementallyBundle = false;
+      this.assetGraph.setNeedsBundling();
     }
 
     this.isSingleChangeRebuild = false;
