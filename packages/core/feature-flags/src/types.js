@@ -27,10 +27,6 @@ export type FeatureFlags = {|
    */
   conditionalBundlingApi: boolean,
   /**
-   * Run inline requires optimizer in the rayon thread pool.
-   */
-  inlineRequiresMultiThreading: boolean,
-  /**
    * Enable VCS mode. Expected values are:
    * - OLD - default value, return watchman result
    * - NEW_AND_CHECK - Return VCS result but still call watchman

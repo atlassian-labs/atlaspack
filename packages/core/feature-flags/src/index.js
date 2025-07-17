@@ -20,7 +20,6 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   importRetry: false,
   fixQuadraticCacheInvalidation: 'OLD',
   conditionalBundlingApi: false,
-  inlineRequiresMultiThreading: false,
   vcsMode: 'OLD',
   loadableSideEffects: false,
   reduceResolverStringCreation: false,
