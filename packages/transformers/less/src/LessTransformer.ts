@@ -77,7 +77,7 @@ function urlPlugin({asset}) {
       };
 
       const visitor = new less.visitors.Visitor({
-        visitUrl(node: URL) {
+        visitUrl(node: any) {
           const valueNode = node.value as LessNodeWithValue;
           const stringValue = valueNode.value as string;
           if (

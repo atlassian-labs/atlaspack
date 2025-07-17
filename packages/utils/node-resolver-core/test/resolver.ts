@@ -4,12 +4,15 @@ import assert from 'assert';
 import nullthrows from 'nullthrows';
 import {ncp, overlayFS, outputFS} from '@atlaspack/test-utils';
 import {loadConfig as configCache} from '@atlaspack/utils';
-import {createEnvironment} from '@atlaspack/core/src/Environment';
-import {fromEnvironmentId} from '@atlaspack/core/src/EnvironmentManager';
-import Environment from '@atlaspack/core/src/public/Environment';
-import {DEFAULT_OPTIONS} from '@atlaspack/core/test/test-utils';
+import {
+  createEnvironment,
+  EnvironmentManager,
+  Environment,
+} from '@atlaspack/core';
+import {DEFAULT_OPTIONS} from '@atlaspack/core/test/test-utils.ts';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 
+const {fromEnvironmentId} = EnvironmentManager;
 const rootDir = path.join(__dirname, 'fixture');
 
 const NODE_ENV = new Environment(

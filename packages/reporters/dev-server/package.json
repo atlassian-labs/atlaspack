@@ -39,7 +39,8 @@
     "ws": "^7.0.0"
   },
   "devDependencies": {
-    "@atlaspack/babel-preset": "2.14.1"
+    "@atlaspack/babel-preset": "2.14.1",
+    "flow-to-typescript-codemod": "^0.0.1"
   },
   "scripts": {
     "check-ts": "tsc --noEmit"
