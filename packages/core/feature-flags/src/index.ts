@@ -192,7 +192,7 @@ export type Diagnostic<CustomDiagnostic> = {
  * Run a function with a consistency check.
  */
 export function runWithConsistencyCheck<Result, CustomDiagnostic>(
-  flag: string,
+  flag: keyof FeatureFlags,
   oldFn: () => Result,
   newFn: () => Result,
   diffFn: (
@@ -205,8 +205,8 @@ export function runWithConsistencyCheck<Result, CustomDiagnostic>(
     newResult: Result,
   ) => void,
 ): Result {
-  // @ts-expect-error - Suppress error: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'FeatureFlags'.
   const value = featureFlagValues[flag];
+  // @ts-expect-error - TypeScript doesn't understand the union type comparison
   if (!value || value === false || value === 'OLD') {
     return oldFn();
   }

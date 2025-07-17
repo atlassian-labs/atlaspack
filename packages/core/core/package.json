@@ -49,6 +49,7 @@
   "devDependencies": {
     "@atlaspack/babel-register": "2.14.1",
     "@types/node": ">= 18",
+    "flow-to-typescript-codemod": "^0.0.1",
     "graphviz": "^0.0.9",
     "jest-diff": "*",
     "rfdc": "1",

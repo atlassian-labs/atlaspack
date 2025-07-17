@@ -21,7 +21,8 @@
   },
   "devDependencies": {
     "@atlaspack/babel-register": "2.14.1",
-    "benny": "^3.7.1"
+    "benny": "^3.7.1",
+    "flow-to-typescript-codemod": "^0.0.1"
   },
   "engines": {
     "node": ">= 16.0.0"

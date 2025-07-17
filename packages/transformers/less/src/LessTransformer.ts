@@ -1,7 +1,6 @@
 import path from 'path';
 import {Transformer} from '@atlaspack/plugin';
 import SourceMap from '@parcel/source-map';
-// @ts-expect-error No types
 import less from 'less';
 
 import {load} from './loadConfig';
@@ -82,8 +81,7 @@ function urlPlugin({asset}: Pick<TransformOptions, 'asset'>) {
       };
 
       const visitor = new less.visitors.Visitor({
-        visitUrl(node: URL) {
-          // @ts-expect-error No less types
+        visitUrl(node: any) {
           const valueNode = node.value as LessNodeWithValue;
           const stringValue = valueNode.value as string;
           if (

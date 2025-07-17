@@ -14,6 +14,9 @@
   "scripts": {
     "check-ts": "tsc --noEmit"
   },
+  "devDependencies": {
+    "flow-to-typescript-codemod": "^0.0.1"
+  },
   "engines": {
     "node": ">= 16.0.0"
   },

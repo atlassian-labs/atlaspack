@@ -1,4 +1,3 @@
-// @ts-expect-error - Cannot find module 'flow-to-typescript-codemod' or its corresponding type declarations.
 import {Flow} from 'flow-to-typescript-codemod';
 import {createBuildCache} from './buildCache';
 import {serializeRaw, deserializeRaw} from './serializerCore';
@@ -227,12 +226,11 @@ export function restoreDeserializedObject(object: any): any {
   });
 }
 
-const serializeCache = createBuildCache();
+const serializeCache = createBuildCache<any, Buffer>();
 
 export function serialize(object: any): Buffer {
   let cached = serializeCache.get(object);
   if (cached) {
-    // @ts-expect-error - Type '{}' is missing the following properties from type 'Buffer<ArrayBufferLike>': slice, subarray, write, toJSON, and 102 more.
     return cached;
   }
 
