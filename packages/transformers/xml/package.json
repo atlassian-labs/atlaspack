@@ -1,22 +1,26 @@
 {
   "name": "@atlaspack/transformer-xml",
   "version": "2.14.19",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "main": "lib/XMLTransformer.js",
-  "source": "src/XMLTransformer.js",
-  "engines": {
-    "node": ">= 16.0.0"
+  "source": "src/XMLTransformer.ts",
+  "types": "src/XMLTransformer.ts",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
   },
   "dependencies": {
     "@atlaspack/plugin": "2.14.19",
     "@xmldom/xmldom": "^0.7.9"
   },
-  "type": "commonjs"
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

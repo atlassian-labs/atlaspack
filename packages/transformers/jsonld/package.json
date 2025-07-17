@@ -1,20 +1,17 @@
 {
   "name": "@atlaspack/transformer-jsonld",
   "version": "2.14.19",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "main": "lib/JSONLDTransformer.js",
-  "source": "src/JSONLDTransformer.js",
-  "engines": {
-    "node": ">= 16.0.0"
-  },
+  "source": "src/JSONLDTransformer.ts",
+  "types": "src/JSONLDTransformer.ts",
   "scripts": {
+    "check-ts": "tsc --noEmit",
     "test": "yarn workspace @atlaspack/integration-tests test -g jsonld"
   },
   "dependencies": {
@@ -22,5 +19,10 @@
     "@atlaspack/types": "2.15.9",
     "json5": "^2.2.0"
   },
-  "type": "commonjs"
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

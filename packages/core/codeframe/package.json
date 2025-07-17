@@ -2,19 +2,29 @@
   "name": "@atlaspack/codeframe",
   "version": "2.13.4",
   "description": "Blazing fast, zero configuration web application bundler",
-  "license": "(MIT OR Apache-2.0)",
-  "type": "commonjs",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "main": "lib/codeframe.js",
-  "source": "src/codeframe.js",
+  "source": "src/codeframe.ts",
+  "types": "src/codeframe.ts",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "dependencies": {
+    "chalk": "^4.1.0",
+    "emphasize": "^4.2.0",
+    "slice-ansi": "^4.0.0",
+    "string-width": "^4.2.0"
+  },
   "engines": {
     "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "targets": {
     "main": {
@@ -22,11 +32,5 @@
         "chalk": false
       }
     }
-  },
-  "dependencies": {
-    "chalk": "^4.1.0",
-    "emphasize": "^4.2.0",
-    "slice-ansi": "^4.0.0",
-    "string-width": "^4.2.0"
   }
 }
