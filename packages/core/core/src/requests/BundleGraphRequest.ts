@@ -361,8 +361,10 @@ class BundlerRunner {
     let {plugin: bundler, name, resolveFrom} = plugin;
 
     // if a previous asset graph hash is passed in, check if the bundle graph is also available
-    const previousBundleGraphResult: BundleGraphRequestResult | null | undefined =
-      await this.api.getPreviousResult();
+    const previousBundleGraphResult:
+      | BundleGraphRequestResult
+      | null
+      | undefined = await this.api.getPreviousResult();
 
     const canIncrementallyBundle =
       previousBundleGraphResult?.assetGraphBundlingVersion != null &&

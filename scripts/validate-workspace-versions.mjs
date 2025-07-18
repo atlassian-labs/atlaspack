@@ -39,7 +39,9 @@ for (const [pkgPath, pkg] of packages.entries()) {
     }
   }
 
-  for (const [packageName, version] of Object.entries(pkg.devDependencies || {})) {
+  for (const [packageName, version] of Object.entries(
+    pkg.devDependencies || {},
+  )) {
     const current = packagesVersions.get(packageName);
     if (current && version !== '*' && version != current) {
       console.log(
@@ -48,7 +50,9 @@ for (const [pkgPath, pkg] of packages.entries()) {
     }
   }
 
-  for (const [packageName, version] of Object.entries(pkg.optionalDependencies || {})) {
+  for (const [packageName, version] of Object.entries(
+    pkg.optionalDependencies || {},
+  )) {
     const current = packagesVersions.get(packageName);
     if (current && version !== '*' && version != current) {
       console.log(

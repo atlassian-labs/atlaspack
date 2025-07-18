@@ -10,10 +10,10 @@ const FILENAME =
     ? '/' + __filename
     : __filename;
 
-const HMR_RUNTIME = fs.readFileSync(
-  path.join(__dirname, './loaders/hmr-runtime.js'),
-  'utf8',
-);
+const HMR_RUNTIME =
+  process.env.ATLASPACK_REGISTER_USE_SRC === 'true'
+    ? fs.readFileSync(path.join(__dirname, './loaders/hmr-runtime.ts'), 'utf8')
+    : fs.readFileSync(path.join(__dirname, './loaders/hmr-runtime.js'), 'utf8');
 
 export default new Runtime({
   apply({bundle, options}) {

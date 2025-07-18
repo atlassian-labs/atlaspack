@@ -41,14 +41,14 @@ type InitOpts = {
 };
 
 type AssetGraphOpts = ContentGraphOpts<AssetGraphNode> & {
-  bundlingVersion?: number,
-  disableIncrementalBundling?: boolean,
+  bundlingVersion?: number;
+  disableIncrementalBundling?: boolean;
   hash?: string | null | undefined;
 };
 
 type SerializedAssetGraph = SerializedContentGraph<AssetGraphNode> & {
-  bundlingVersion: number,
-  disableIncrementalBundling: boolean,
+  bundlingVersion: number;
+  disableIncrementalBundling: boolean;
   hash?: string | null | undefined;
 };
 
