@@ -551,7 +551,9 @@ describe('RequestTracker', () => {
   });
 
   describe('incremental bundling', () => {
-    it('works', async () => {
+    async function runIncrementalBundlingScenario(
+      incrementalBundlingVersioning: boolean,
+    ) {
       const fs = new OverlayFS(new MemoryFS(farm), new NodeFS());
       const appRoot = __dirname;
       await fs.mkdirp(path.join(appRoot, 'app'));
@@ -567,6 +569,9 @@ describe('RequestTracker', () => {
       );
 
       const atlaspack = new Atlaspack({
+        featureFlags: {
+          incrementalBundlingVersioning,
+        },
         workerFarm: farm,
         entries: [path.join(appRoot, 'app', 'target.js')],
         cache: new LMDBLiteCache(DEFAULT_OPTIONS.cacheDir),
@@ -679,12 +684,32 @@ describe('RequestTracker', () => {
         Number.MAX_VALUE,
       );
       // And run the build again
-      await tracker.runRequest(
-        createAtlaspackBuildRequest({
-          optionsRef,
-          requestedAssetIds: new Set(),
-        }),
-      );
+
+      if (!incrementalBundlingVersioning) {
+        await assert.rejects(async () => {
+          await tracker.runRequest(
+            createAtlaspackBuildRequest({
+              optionsRef,
+              requestedAssetIds: new Set(),
+            }),
+          );
+        });
+      } else {
+        await tracker.runRequest(
+          createAtlaspackBuildRequest({
+            optionsRef,
+            requestedAssetIds: new Set(),
+          }),
+        );
+      }
+    }
+
+    it('throws a content key not found exception without bundling versioning', async () => {
+      await runIncrementalBundlingScenario(false);
+    });
+
+    it('works fine with bundling versioning', async () => {
+      await runIncrementalBundlingScenario(true);
     });
   });
 });

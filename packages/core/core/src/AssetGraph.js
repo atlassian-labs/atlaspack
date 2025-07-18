@@ -180,10 +180,18 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
   }
 
   setNeedsBundling() {
+    if (!getFeatureFlag('incrementalBundlingVersioning')) {
+      // In legacy mode, we rely solely on safeToIncrementallyBundle to
+      // invalidate incremental bundling, so we skip bumping the version.
+      return;
+    }
     this.#bundlingVersion += 1;
   }
 
   getBundlingVersion(): number {
+    if (!getFeatureFlag('incrementalBundlingVersioning')) {
+      return 0;
+    }
     return this.#bundlingVersion;
   }
 
@@ -193,6 +201,11 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
    * but just update assets into the bundle graph output.
    */
   canIncrementallyBundle(lastVersion: number): boolean {
+    if (!getFeatureFlag('incrementalBundlingVersioning')) {
+      return (
+        this.safeToIncrementallyBundle && !this.#disableIncrementalBundling
+      );
+    }
     return (
       this.safeToIncrementallyBundle &&
       this.#bundlingVersion === lastVersion &&
