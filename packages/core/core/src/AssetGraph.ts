@@ -41,10 +41,14 @@ type InitOpts = {
 };
 
 type AssetGraphOpts = ContentGraphOpts<AssetGraphNode> & {
+  bundlingVersion?: number,
+  disableIncrementalBundling?: boolean,
   hash?: string | null | undefined;
 };
 
 type SerializedAssetGraph = SerializedContentGraph<AssetGraphNode> & {
+  bundlingVersion: number,
+  disableIncrementalBundling: boolean,
   hash?: string | null | undefined;
 };
 
@@ -113,14 +117,30 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
   onNodeRemoved: ((nodeId: NodeId) => unknown) | null | undefined;
   hash: string | null | undefined;
   envCache: Map<string, Environment>;
+
+  /**
+   * Incremented when the asset graph is modified such that it requires a bundling pass.
+   */
+  #bundlingVersion: number = 0;
+  /**
+   * Force incremental bundling to be disabled.
+   */
+  #disableIncrementalBundling: boolean = false;
+
+  /**
+   * @deprecated
+   */
   safeToIncrementallyBundle: boolean = true;
+
   undeferredDependencies: Set<Dependency>;
 
   constructor(opts?: AssetGraphOpts | null) {
     if (opts) {
-      let {hash, ...rest} = opts;
+      let {hash, bundlingVersion, disableIncrementalBundling, ...rest} = opts;
       super(rest);
       this.hash = hash;
+      this.#bundlingVersion = bundlingVersion ?? 0;
+      this.#disableIncrementalBundling = disableIncrementalBundling ?? false;
     } else {
       super();
       this.setRootNodeId(
@@ -143,8 +163,64 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
   serialize(): SerializedAssetGraph {
     return {
       ...super.serialize(),
+      bundlingVersion: this.#bundlingVersion,
+      disableIncrementalBundling: this.#disableIncrementalBundling,
       hash: this.hash,
     };
+  }
+
+  /**
+   * Force incremental bundling to be disabled.
+   */
+  setDisableIncrementalBundling(disable: boolean) {
+    this.#disableIncrementalBundling = disable;
+  }
+
+  testing_getDisableIncrementalBundling(): boolean {
+    return this.#disableIncrementalBundling;
+  }
+
+  /**
+   * Make sure this asset graph is marked as needing a full bundling pass.
+   */
+  setNeedsBundling() {
+    if (!getFeatureFlag('incrementalBundlingVersioning')) {
+      // In legacy mode, we rely solely on safeToIncrementallyBundle to
+      // invalidate incremental bundling, so we skip bumping the version.
+      return;
+    }
+    this.#bundlingVersion += 1;
+  }
+
+  /**
+   * Get the current bundling version.
+   *
+   * Each bundle pass should keep this version around. Whenever an asset graph has a new version,
+   * bundling should be re-run.
+   */
+  getBundlingVersion(): number {
+    if (!getFeatureFlag('incrementalBundlingVersioning')) {
+      return 0;
+    }
+    return this.#bundlingVersion;
+  }
+
+  /**
+   * If the `bundlingVersion` has not changed since the last bundling pass,
+   * we can incrementally bundle, which will not require a full bundling pass
+   * but just update assets into the bundle graph output.
+   */
+  canIncrementallyBundle(lastVersion: number): boolean {
+    if (!getFeatureFlag('incrementalBundlingVersioning')) {
+      return (
+        this.safeToIncrementallyBundle && !this.#disableIncrementalBundling
+      );
+    }
+    return (
+      this.safeToIncrementallyBundle &&
+      this.#bundlingVersion === lastVersion &&
+      !this.#disableIncrementalBundling
+    );
   }
 
   // Deduplicates Environments by making them referentially equal
@@ -361,11 +437,13 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
       ) {
         if (!ctx?.hasDeferred) {
           this.safeToIncrementallyBundle = false;
+          this.setNeedsBundling();
           delete traversedNode.hasDeferred;
         }
         actions.skipChildren();
       } else if (traversedNode.type === 'dependency') {
         this.safeToIncrementallyBundle = false;
+        this.setNeedsBundling();
         traversedNode.hasDeferred = false;
       } else if (nodeId !== traversedNodeId) {
         actions.skipChildren();

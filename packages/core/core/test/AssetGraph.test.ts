@@ -1,6 +1,7 @@
 import assert from 'assert';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
+import {serialize, deserialize} from '@atlaspack/build-cache';
 import AssetGraph, {
   nodeFromAssetGroup,
   nodeFromDep,
@@ -685,5 +686,37 @@ describe('AssetGraph', () => {
     node = nullthrows(graph.getNodeByContentKey(barAssetGroupNode.id));
     invariant(node.type === 'asset_group');
     assert(!node.hasDeferred);
+  });
+
+  it('should serialize the bundling version and incremental bundling flag', () => {
+    const graph = new AssetGraph();
+    graph.setDisableIncrementalBundling(true);
+    graph.setNeedsBundling();
+    const serialized = serialize(graph);
+    const deserialized = deserialize(serialized);
+
+    assert.equal(deserialized.getBundlingVersion(), 1);
+    assert.equal(deserialized.testing_getDisableIncrementalBundling(), true);
+  });
+
+  describe('setNeedsBundling', () => {
+    it('should increment the bundling version', () => {
+      const graph = new AssetGraph();
+      assert.equal(graph.getBundlingVersion(), 0);
+      graph.setNeedsBundling();
+      assert.equal(graph.getBundlingVersion(), 1);
+      graph.setNeedsBundling();
+      assert.equal(graph.getBundlingVersion(), 2);
+    });
+  });
+
+  describe('canIncrementallyBundle', () => {
+    it('should return true if the bundling version has changed', () => {
+      const graph = new AssetGraph();
+      const lastVersion = graph.getBundlingVersion();
+      assert.equal(graph.canIncrementallyBundle(lastVersion), true);
+      graph.setNeedsBundling();
+      assert.equal(graph.canIncrementallyBundle(lastVersion), false);
+    });
   });
 });
