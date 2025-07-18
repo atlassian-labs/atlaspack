@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-// This package goes through an ensures all versions of local packages
+// This package goes through and ensures all versions of local packages
 // in the workspace package.json files point to the local version of those
 // packages.
 //
