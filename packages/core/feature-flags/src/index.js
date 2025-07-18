@@ -40,6 +40,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   cliProgressReportingImprovements: false,
   condbDevFallbackDev: false,
   condbDevFallbackProd: false,
+  incrementalBundlingVersioning: process.env.NODE_ENV === 'test',
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
