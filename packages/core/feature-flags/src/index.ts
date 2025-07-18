@@ -121,7 +121,7 @@ export type FeatureFlags = {
    * Enable the new incremental bundling versioning logic which determines whether
    * a full bundling pass is required based on the AssetGraph's bundlingVersion.
    */
-  incrementalBundlingVersioning: boolean,
+  incrementalBundlingVersioning: boolean;
 };
 
 export type ConsistencyCheckFeatureFlagValue =
