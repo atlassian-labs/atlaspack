@@ -34,6 +34,32 @@ module.exports = {
   // https://eslint.org/docs/user-guide/configuring#configuration-based-on-glob-patterns
   overrides: [
     {
+      files: ['**/*.ts', '**/*.mts'],
+      parser: '@typescript-eslint/parser',
+      plugins: [
+        '@atlaspack/internal',
+        '@typescript-eslint',
+        'import',
+        'monorepo',
+        'mocha',
+      ],
+      extends: [
+        'eslint:recommended',
+        'plugin:@typescript-eslint/recommended',
+        'plugin:monorepo/recommended',
+        'plugin:react/recommended',
+        'prettier',
+      ],
+      rules: {
+        // internal rules
+        '@atlaspack/internal/no-self-package-imports': 'error',
+        '@atlaspack/internal/no-ff-module-level-eval': 'error',
+        '@atlaspack/internal/no-relative-import': 'error',
+        'flowtype/no-types-missing-file-annotation': 'off',
+        'prefer-const': 'off',
+      },
+    },
+    {
       files: ['**/test/**', '*.test.js', 'packages/core/integration-tests/**'],
       env: {
         mocha: true,

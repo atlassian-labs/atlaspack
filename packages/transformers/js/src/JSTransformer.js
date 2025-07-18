@@ -12,6 +12,7 @@ import type {Diagnostic} from '@atlaspack/diagnostic';
 import SourceMap from '@parcel/source-map';
 import {Transformer} from '@atlaspack/plugin';
 import {transform, transformAsync} from '@atlaspack/rust';
+import invariant from 'assert';
 import browserslist from 'browserslist';
 import semver from 'semver';
 import nullthrows from 'nullthrows';
@@ -173,7 +174,7 @@ type MacroContext = {|
 
 export default (new Transformer({
   async loadConfig({config, options}) {
-    let pkg = await config.getPackage();
+    let packageJson = await config.getPackage();
     let isJSX,
       pragma,
       pragmaFrag,
@@ -184,16 +185,16 @@ export default (new Transformer({
       useDefineForClassFields;
     if (config.isSource) {
       let reactLib;
-      if (pkg?.alias && pkg.alias['react']) {
+      if (packageJson?.alias && packageJson.alias['react']) {
         // e.g.: `{ alias: { "react": "preact/compat" } }`
         reactLib = 'react';
       } else {
         // Find a dependency that we can map to a JSX pragma
         reactLib = Object.keys(JSX_PRAGMA).find(
           (libName) =>
-            pkg?.dependencies?.[libName] ||
-            pkg?.devDependencies?.[libName] ||
-            pkg?.peerDependencies?.[libName],
+            packageJson?.dependencies?.[libName] ||
+            packageJson?.devDependencies?.[libName] ||
+            packageJson?.peerDependencies?.[libName],
         );
       }
 
@@ -201,27 +202,20 @@ export default (new Transformer({
         options.hmrOptions &&
         options.mode === 'development' &&
         Boolean(
-          pkg?.dependencies?.react ||
-            pkg?.devDependencies?.react ||
-            pkg?.peerDependencies?.react,
+          packageJson?.dependencies?.react ||
+            packageJson?.devDependencies?.react ||
+            packageJson?.peerDependencies?.react,
         );
 
-      const compilerOptions: TSConfig['compilerOptions'] = getFeatureFlag(
-        'granularTsConfigInvalidation',
-      )
-        ? (
-            await config.getConfigFrom<TSConfig['compilerOptions']>(
-              options.projectRoot + '/index',
-              ['tsconfig.json', 'jsconfig.json'],
-              {configKey: 'compilerOptions'},
-            )
-          )?.contents
-        : (
-            await config.getConfigFrom<TSConfig>(
-              options.projectRoot + '/index',
-              ['tsconfig.json', 'jsconfig.json'],
-            )
-          )?.contents?.compilerOptions;
+      const compilerOptions: TSConfig['compilerOptions'] = (
+        await config.getConfigFrom<TSConfig>(
+          options.projectRoot + '/index',
+          ['tsconfig.json', 'jsconfig.json'],
+          {
+            readTracking: true,
+          },
+        )
+      )?.contents?.compilerOptions;
 
       // Use explicitly defined JSX options in tsconfig.json over inferred values from dependencies.
       pragma =
@@ -240,14 +234,14 @@ export default (new Transformer({
         automaticJSXRuntime = true;
       } else if (reactLib) {
         let effectiveReactLib =
-          pkg?.alias && pkg.alias['react'] === 'preact/compat'
+          packageJson?.alias && packageJson.alias['react'] === 'preact/compat'
             ? 'preact'
             : reactLib;
         let automaticVersion = JSX_PRAGMA[effectiveReactLib]?.automatic;
         let reactLibVersion =
-          pkg?.dependencies?.[effectiveReactLib] ||
-          pkg?.devDependencies?.[effectiveReactLib] ||
-          pkg?.peerDependencies?.[effectiveReactLib];
+          packageJson?.dependencies?.[effectiveReactLib] ||
+          packageJson?.devDependencies?.[effectiveReactLib] ||
+          packageJson?.peerDependencies?.[effectiveReactLib];
         reactLibVersion = reactLibVersion
           ? semver.validRange(reactLibVersion)
           : null;
@@ -289,10 +283,10 @@ export default (new Transformer({
     // Check if we should ignore fs calls
     // See https://github.com/defunctzombie/node-browser-resolve#skip
     let ignoreFS =
-      pkg &&
-      pkg.browser &&
-      typeof pkg.browser === 'object' &&
-      pkg.browser.fs === false;
+      packageJson &&
+      packageJson.browser &&
+      typeof packageJson.browser === 'object' &&
+      packageJson.browser.fs === false;
 
     let conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
       packageKey: '@atlaspack/transformer-js',
@@ -392,6 +386,7 @@ export default (new Transformer({
 
     let env: EnvMap = {};
 
+    // $FlowFixMe
     if (!config?.inlineEnvironment) {
       if (options.env.NODE_ENV != null) {
         env.NODE_ENV = options.env.NODE_ENV;
@@ -403,6 +398,7 @@ export default (new Transformer({
     } else if (Array.isArray(config?.inlineEnvironment)) {
       for (let match of globMatch(
         Object.keys(options.env),
+        // $FlowFixMe
         config.inlineEnvironment,
       )) {
         env[match] = String(options.env[match]);
@@ -417,6 +413,7 @@ export default (new Transformer({
 
     let supportsModuleWorkers =
       asset.env.shouldScopeHoist && asset.env.supports('worker-module', true);
+    // $FlowFixMe
     let isJSX = Boolean(config?.isJSX);
     if (asset.isSource) {
       if (asset.type === 'ts') {
@@ -434,6 +431,7 @@ export default (new Transformer({
       shebang,
       hoist_result,
       symbol_result,
+      is_empty_or_empty_export,
       needs_esm_helpers,
       diagnostics,
       used_env,
@@ -446,6 +444,7 @@ export default (new Transformer({
       module_id: asset.id,
       project_root: options.projectRoot,
       replace_env: !asset.env.isNode(),
+      // $FlowFixMe
       inline_fs: Boolean(config?.inlineFS) && !asset.env.isNode(),
       insert_node_globals:
         !asset.env.isNode() && asset.env.sourceType !== 'script',
@@ -455,9 +454,13 @@ export default (new Transformer({
       env,
       is_type_script: asset.type === 'ts' || asset.type === 'tsx',
       is_jsx: isJSX,
+      // $FlowFixMe
       jsx_pragma: config?.pragma,
+      // $FlowFixMe
       jsx_pragma_frag: config?.pragmaFrag,
+      // $FlowFixMe
       automatic_jsx_runtime: Boolean(config?.automaticJSXRuntime),
+      // $FlowFixMe
       jsx_import_source: config?.jsxImportSource,
       is_development: options.mode === 'development',
       react_refresh:
@@ -465,8 +468,11 @@ export default (new Transformer({
         !asset.env.isLibrary &&
         !asset.env.isWorker() &&
         !asset.env.isWorklet() &&
+        // $FlowFixMe
         Boolean(config?.reactRefresh),
+      // $FlowFixMe
       decorators: Boolean(config?.decorators),
+      // $FlowFixMe
       use_define_for_class_fields: Boolean(config?.useDefineForClassFields),
       targets,
       source_maps: !!asset.env.sourceMap,
@@ -479,8 +485,12 @@ export default (new Transformer({
       trace_bailouts: options.logLevel === 'verbose',
       is_swc_helpers: /@swc[/\\]helpers/.test(asset.filePath),
       standalone: asset.query.has('standalone'),
+      // $FlowFixMe
       inline_constants: config.inlineConstants,
       conditional_bundling: options.featureFlags.conditionalBundlingApi,
+      hmr_improvements: options.featureFlags.hmrImprovements,
+      computed_properties_fix: options.featureFlags.unusedComputedPropertyFix,
+      // $FlowFixMe
       magic_comments: Boolean(config?.magicComments),
       callMacro: asset.isSource
         ? async (err, src, exportName, args, loc) => {
@@ -787,6 +797,13 @@ export default (new Transformer({
         });
       } else if (dep.kind === 'File') {
         asset.invalidateOnFileChange(dep.specifier);
+      } else if (dep.kind === 'Id') {
+        // Record parcelRequire calls so that the dev packager can add them as dependencies.
+        // This allows the HMR runtime to collect parents across async boundaries (through runtimes).
+        // TODO: ideally this would result as an actual dep in the graph rather than asset.meta.
+        asset.meta.hmrDeps ??= [];
+        invariant(Array.isArray(asset.meta.hmrDeps));
+        asset.meta.hmrDeps.push(dep.specifier);
       } else {
         let meta: JSONObject = {kind: dep.kind};
         if (dep.attributes) {
@@ -1002,6 +1019,9 @@ export default (new Transformer({
           Object.keys(hoist_result.exported_symbols).length === 0) ||
         (hoist_result.should_wrap && !asset.symbols.hasExportSymbol('*'))
       ) {
+        if (is_empty_or_empty_export) {
+          asset.meta.emptyFileStarReexport = true;
+        }
         asset.symbols.set('*', `$${asset.id}$exports`);
       }
 
@@ -1104,4 +1124,4 @@ export default (new Transformer({
 
     return [asset, ...macroAssets];
   },
-}): Transformer);
+}): Transformer<mixed>);

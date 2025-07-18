@@ -156,9 +156,14 @@ export default (new Runtime({
           // If this bundle already has the asset this dependency references,
           // return a simple runtime of `Promise.resolve(internalRequire(assetId))`.
           // The linker handles this for scope-hoisting.
+
+          const requireName = getFeatureFlag('hmrImprovements')
+            ? 'parcelRequire'
+            : 'module.bundle.root';
+
           assets.push({
             filePath: __filename,
-            code: `module.exports = Promise.resolve(module.bundle.root(${JSON.stringify(
+            code: `module.exports = Promise.resolve(${requireName}(${JSON.stringify(
               bundleGraph.getAssetPublicId(resolved.value),
             )}))`,
             dependency,
@@ -211,18 +216,52 @@ export default (new Runtime({
         bundle,
       );
       for (const cond of conditions) {
-        const requireName = bundle.env.shouldScopeHoist
-          ? 'parcelRequire'
-          : '__parcel__require__';
+        const requireName =
+          getFeatureFlag('hmrImprovements') || bundle.env.shouldScopeHoist
+            ? 'parcelRequire'
+            : '__parcel__require__';
 
-        const assetCode = `module.exports = require('../helpers/conditional-loader${
+        const fallbackUrls = (cond) => {
+          return `[${[...cond.ifTrueBundles, ...cond.ifFalseBundles]
+            .map((target) => {
+              let relativePathExpr = getRelativePathExpr(
+                bundle,
+                target,
+                options,
+              );
+              return getAbsoluteUrlExpr(
+                relativePathExpr,
+                bundle,
+                config.domainSharding,
+              );
+            })
+            .join(',')}]`;
+        };
+
+        const shouldUseFallback =
+          options.mode === 'development'
+            ? getFeatureFlag('condbDevFallbackDev')
+            : getFeatureFlag('condbDevFallbackProd');
+
+        const loaderPath = `./helpers/conditional-loader${
           options.mode === 'development' ? '-dev' : ''
-        }')('${cond.key}', function (){return ${requireName}('${
-          cond.ifTrueAssetId
-        }')}, function (){return ${requireName}('${cond.ifFalseAssetId}')})`;
+        }`;
+
+        const ifTrue = `function (){return ${requireName}('${cond.ifTrueAssetId}')}`;
+        const ifFalse = `function (){return ${requireName}('${cond.ifFalseAssetId}')}`;
+
+        const assetCode = `module.exports = require('${loaderPath}')('${
+          cond.key
+        }', ${ifTrue}, ${ifFalse}${
+          shouldUseFallback
+            ? `, {loader: require('./helpers/browser/sync-js-loader'), urls: ${fallbackUrls(
+                cond,
+              )}}`
+            : ''
+        })`;
 
         assets.push({
-          filePath: path.join(__dirname, `/conditions/${cond.publicId}.js`),
+          filePath: path.join(__dirname, `/conditions-${cond.publicId}.js`),
           code: assetCode,
           // This dependency is important, as it's the last symbol handled in scope hoisting.
           // That means that scope hoisting will use the module id for this asset to replace the symbol
@@ -290,6 +329,7 @@ export default (new Runtime({
           bundle,
           mainBundle,
           options,
+          // $FlowFixMe
           config.domainSharding,
         ),
       );
@@ -321,6 +361,7 @@ export default (new Runtime({
         )})(${getAbsoluteUrlExpr(
           relativePathExpr,
           bundle,
+          // $FlowFixMe
           config.domainSharding,
         )})`;
         assets.push({
@@ -347,6 +388,7 @@ export default (new Runtime({
         priority: getManifestBundlePriority(
           bundleGraph,
           bundle,
+          // $FlowFixMe
           config.splitManifestThreshold,
         ),
       });
@@ -354,7 +396,7 @@ export default (new Runtime({
 
     return assets;
   },
-}): Runtime);
+}): Runtime<JSRuntimeConfig>);
 
 function getDependencies(bundle: NamedBundle): {|
   asyncDependencies: Array<Dependency>,
@@ -577,46 +619,13 @@ function getLoaderRuntime({
   }
 
   if (getFeatureFlag('conditionalBundlingApi')) {
-    if (getFeatureFlag('conditionalBundlingNestedRuntime')) {
-      let conditionalDependencies = externalBundles.flatMap(
-        (to) => getDependencies(to).conditionalDependencies,
-      );
+    let conditionalDependencies = externalBundles.flatMap(
+      (to) => getDependencies(to).conditionalDependencies,
+    );
 
-      loaderModules.push(
-        ...getConditionalLoadersForCondition(conditionalDependencies, bundle),
-      );
-    } else {
-      let conditionalDependencies = externalBundles.flatMap(
-        (to) => getDependencies(to).conditionalDependencies,
-      );
-      for (const cond of bundleGraph.getConditionsForDependencies(
-        conditionalDependencies,
-        bundle,
-      )) {
-        // This bundle has a conditional dependency, we need to load the bundle group
-        const ifTrueLoaders = cond.ifTrueBundles.map((targetBundle) =>
-          getLoaderForBundle(bundle, targetBundle),
-        );
-        const ifFalseLoaders = cond.ifFalseBundles.map((targetBundle) =>
-          getLoaderForBundle(bundle, targetBundle),
-        );
-
-        if (ifTrueLoaders.length > 0 || ifFalseLoaders.length > 0) {
-          // Load conditional bundles with helper (and a dev mode with additional hints)
-          loaderModules.push(
-            `require('./helpers/conditional-loader${
-              options.mode === 'development' ? '-dev' : ''
-            }')('${
-              cond.key
-            }', function (){return Promise.all([${ifTrueLoaders.join(
-              ',',
-            )}]);}, function (){return Promise.all([${ifFalseLoaders.join(
-              ',',
-            )}]);})`,
-          );
-        }
-      }
-    }
+    loaderModules.push(
+      ...getConditionalLoadersForCondition(conditionalDependencies, bundle),
+    );
   }
 
   for (let to of externalBundles) {
@@ -666,9 +675,11 @@ function getLoaderRuntime({
   }
 
   if (mainBundle.type === 'js') {
-    let parcelRequire = bundle.env.shouldScopeHoist
-      ? 'parcelRequire'
-      : 'module.bundle.root';
+    let parcelRequire =
+      getFeatureFlag('hmrImprovements') || bundle.env.shouldScopeHoist
+        ? 'parcelRequire'
+        : 'module.bundle.root';
+
     loaderCode += `.then(() => ${parcelRequire}('${bundleGraph.getAssetPublicId(
       bundleGraph.getAssetById(bundleGroup.entryAssetId),
     )}'))`;
@@ -801,7 +812,12 @@ function getURLRuntime(
   options: PluginOptions,
   shardingConfig: JSRuntimeConfig['domainSharding'],
 ): RuntimeAsset {
-  let relativePathExpr = getRelativePathExpr(from, to, options);
+  let relativePathExpr;
+  if (getFeatureFlag('hmrImprovements')) {
+    relativePathExpr = getRelativePathExpr(from, to, options, true);
+  } else {
+    relativePathExpr = getRelativePathExpr(from, to, options);
+  }
   let code;
 
   if (dependency.meta.webworker === true && !from.env.isLibrary) {
@@ -889,11 +905,18 @@ function getRelativePathExpr(
   from: NamedBundle,
   to: NamedBundle,
   options: PluginOptions,
+  isURL = to.type !== 'js',
 ): string {
   let relativePath = relativeBundlePath(from, to, {leadingDotSlash: false});
   let res = JSON.stringify(relativePath);
-  if (options.hmrOptions) {
-    res += ' + "?" + Date.now()';
+  if (getFeatureFlag('hmrImprovements')) {
+    if (isURL && options.hmrOptions) {
+      res += ' + "?" + Date.now()';
+    }
+  } else {
+    if (options.hmrOptions) {
+      res += ' + "?" + Date.now()';
+    }
   }
 
   return res;

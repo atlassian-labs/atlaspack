@@ -24,6 +24,7 @@ import ThrowableDiagnostic, {
   md,
 } from '@atlaspack/diagnostic';
 import {PluginLogger} from '@atlaspack/logger';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import nullthrows from 'nullthrows';
 import path from 'path';
 import {normalizePath} from '@atlaspack/utils';
@@ -320,6 +321,9 @@ export class ResolverRunner {
 
           if (result.priority != null) {
             dependency.priority = Priority[result.priority];
+            if (getFeatureFlag('hmrImprovements')) {
+              dependency.resolverPriority = dependency.priority;
+            }
           }
 
           if (result.invalidateOnEnvChange) {

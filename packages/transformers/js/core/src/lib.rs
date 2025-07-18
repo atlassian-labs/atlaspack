@@ -136,6 +136,8 @@ pub struct Config {
   pub standalone: bool,
   pub inline_constants: bool,
   pub conditional_bundling: bool,
+  pub hmr_improvements: bool,
+  pub computed_properties_fix: bool,
   pub magic_comments: bool,
 }
 
@@ -156,6 +158,7 @@ pub struct TransformResult {
   pub is_constant_module: bool,
   pub conditions: HashSet<Condition>,
   pub magic_comments: HashMap<String, String>,
+  pub is_empty_or_empty_export: bool,
 }
 
 fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Versions> {
@@ -418,7 +421,8 @@ pub fn transform(
                       &config.project_root,
                       &mut fs_deps,
                       is_module,
-                      config.conditional_bundling
+                      config.conditional_bundling,
+                      config.computed_properties_fix
                     )),
                     should_inline_fs
                   ),
@@ -529,6 +533,7 @@ pub fn transform(
                 config.trace_bailouts,
                 is_module,
                 config.conditional_bundling,
+                config.computed_properties_fix,
               );
 
               module.visit_with(&mut collect);
@@ -548,6 +553,8 @@ pub fn transform(
                   tracing::warn!("You are attempting to import '{source_file}' which is an empty file and may be causing a build error.");
                 }
               }
+
+              result.is_empty_or_empty_export = collect.is_empty_or_empty_export;
 
               if let Some(bailouts) = &collect.bailouts {
                 diagnostics.extend(bailouts.iter().map(|bailout| bailout.to_diagnostic()));

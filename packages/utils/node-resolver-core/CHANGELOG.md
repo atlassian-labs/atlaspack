@@ -1,5 +1,96 @@
 # @atlaspack/node-resolver-core
 
+## 3.5.19
+
+### Patch Changes
+
+- Updated dependencies [[`13aef17`](https://github.com/atlassian-labs/atlaspack/commit/13aef177eea289a6e40d2113b5ec1ac9be18a33d)]:
+  - @atlaspack/feature-flags@2.19.1
+  - @atlaspack/fs@2.15.14
+  - @atlaspack/utils@2.17.1
+
+## 3.5.18
+
+### Patch Changes
+
+- Updated dependencies [[`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d), [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`c4415a4`](https://github.com/atlassian-labs/atlaspack/commit/c4415a455543d984ca28452c2cb87a794d22497c), [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5), [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3), [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417), [`a5ed1b4`](https://github.com/atlassian-labs/atlaspack/commit/a5ed1b414498560f393ff491af4da25b6e8dde56)]:
+  - @atlaspack/feature-flags@2.19.0
+  - @atlaspack/utils@2.17.0
+  - @atlaspack/rust@3.4.1
+  - @atlaspack/fs@2.15.13
+
+## 3.5.17
+
+### Patch Changes
+
+- Updated dependencies [[`c75bf55`](https://github.com/atlassian-labs/atlaspack/commit/c75bf553fff4decc285b5fd499a275853b18f8f2)]:
+  - @atlaspack/rust@3.4.0
+  - @atlaspack/fs@2.15.12
+  - @atlaspack/utils@2.16.1
+
+## 3.5.16
+
+### Patch Changes
+
+- Updated dependencies [[`e8a60ff`](https://github.com/atlassian-labs/atlaspack/commit/e8a60ffbea41caef265786bbf73349771760081c), [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529)]:
+  - @atlaspack/feature-flags@2.18.4
+  - @atlaspack/utils@2.16.0
+  - @atlaspack/fs@2.15.11
+
+## 3.5.15
+
+### Patch Changes
+
+- Updated dependencies [[`5ded263`](https://github.com/atlassian-labs/atlaspack/commit/5ded263c7f11b866e8885b81c73e20dd060b25be)]:
+  - @atlaspack/feature-flags@2.18.3
+  - @atlaspack/fs@2.15.10
+  - @atlaspack/utils@2.15.3
+
+## 3.5.14
+
+### Patch Changes
+
+- Updated dependencies [[`644b157`](https://github.com/atlassian-labs/atlaspack/commit/644b157dee72a871acc2d0facf0b87b8eea51956)]:
+  - @atlaspack/feature-flags@2.18.2
+  - @atlaspack/fs@2.15.9
+  - @atlaspack/utils@2.15.2
+
+## 3.5.13
+
+### Patch Changes
+
+- Updated dependencies [[`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b), [`0501255`](https://github.com/atlassian-labs/atlaspack/commit/05012550da35b05ce7d356a8cc29311e7f9afdca)]:
+  - @atlaspack/feature-flags@2.18.1
+  - @atlaspack/fs@2.15.8
+  - @atlaspack/utils@2.15.1
+
+## 3.5.12
+
+### Patch Changes
+
+- Updated dependencies [[`10fbcfb`](https://github.com/atlassian-labs/atlaspack/commit/10fbcfbfa49c7a83da5d7c40983e36e87f524a75), [`85c52d3`](https://github.com/atlassian-labs/atlaspack/commit/85c52d3f7717b3c84a118d18ab98cfbfd71dcbd2), [`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c)]:
+  - @atlaspack/feature-flags@2.18.0
+  - @atlaspack/utils@2.15.0
+  - @atlaspack/fs@2.15.7
+
+## 3.5.11
+
+### Patch Changes
+
+- Updated dependencies [[`73ea3c4`](https://github.com/atlassian-labs/atlaspack/commit/73ea3c4d85d4401fdd15abcbf988237e890e7ad3), [`b1b3693`](https://github.com/atlassian-labs/atlaspack/commit/b1b369317c66f8a431c170df2ebba4fa5b2e38ef)]:
+  - @atlaspack/feature-flags@2.17.0
+  - @atlaspack/fs@2.15.6
+  - @atlaspack/utils@2.14.11
+
+## 3.5.10
+
+### Patch Changes
+
+- Updated dependencies [[`0999fb7`](https://github.com/atlassian-labs/atlaspack/commit/0999fb78da519a6c7582d212883e515fcf6c1252), [`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c), [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca)]:
+  - @atlaspack/fs@2.15.5
+  - @atlaspack/rust@3.3.5
+  - @atlaspack/utils@2.14.10
+
 ## 3.5.9
 
 ### Patch Changes

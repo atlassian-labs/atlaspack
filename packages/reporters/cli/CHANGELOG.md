@@ -1,5 +1,109 @@
 # @atlaspack/reporter-cli
 
+## 2.17.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.17.1
+  - @atlaspack/types@2.15.9
+  - @atlaspack/plugin@2.14.19
+
+## 2.17.0
+
+### Minor Changes
+
+- [#693](https://github.com/atlassian-labs/atlaspack/pull/693) [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417) Thanks [@mattcompiles](https://github.com/mattcompiles)! - These packages should have been bumped in [pull request 691](https://github.com/atlassian-labs/atlaspack/pull/691).
+
+  Rectifying by creating a new changeset now.
+
+### Patch Changes
+
+- [#645](https://github.com/atlassian-labs/atlaspack/pull/645) [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3) Thanks [@alshdavid](https://github.com/alshdavid)! - Updated build system and added some extra test-specific code
+
+- [#682](https://github.com/atlassian-labs/atlaspack/pull/682) [`a5ed1b4`](https://github.com/atlassian-labs/atlaspack/commit/a5ed1b414498560f393ff491af4da25b6e8dde56) Thanks [@alshdavid](https://github.com/alshdavid)! - Updating build system
+
+- Updated dependencies [[`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d), [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3), [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417), [`a5ed1b4`](https://github.com/atlassian-labs/atlaspack/commit/a5ed1b414498560f393ff491af4da25b6e8dde56)]:
+  - @atlaspack/utils@2.17.0
+  - @atlaspack/types@2.15.8
+  - @atlaspack/plugin@2.14.18
+
+## 2.16.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.16.1
+  - @atlaspack/types@2.15.7
+  - @atlaspack/plugin@2.14.17
+
+## 2.16.0
+
+### Minor Changes
+
+- [#659](https://github.com/atlassian-labs/atlaspack/pull/659) [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529) Thanks [@benjervis](https://github.com/benjervis)! - Add the `simple-cli-reporter` debug tool, which turns off the "print every bundle" output of the CLI reporter.
+
+### Patch Changes
+
+- Updated dependencies [[`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529)]:
+  - @atlaspack/utils@2.16.0
+  - @atlaspack/types@2.15.6
+  - @atlaspack/plugin@2.14.16
+
+## 2.15.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.15.3
+  - @atlaspack/types@2.15.5
+  - @atlaspack/plugin@2.14.15
+
+## 2.15.10
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.15.2
+  - @atlaspack/types@2.15.4
+  - @atlaspack/plugin@2.14.14
+
+## 2.15.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types@2.15.3
+  - @atlaspack/utils@2.15.1
+  - @atlaspack/plugin@2.14.13
+
+## 2.15.8
+
+### Patch Changes
+
+- Updated dependencies [[`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c)]:
+  - @atlaspack/utils@2.15.0
+  - @atlaspack/types@2.15.2
+  - @atlaspack/plugin@2.14.12
+
+## 2.15.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.14.11
+  - @atlaspack/types@2.15.1
+  - @atlaspack/plugin@2.14.11
+
+## 2.15.6
+
+### Patch Changes
+
+- Updated dependencies [[`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b), [`1e32d4e`](https://github.com/atlassian-labs/atlaspack/commit/1e32d4eae6b3af3968e8a0ef97d35b4347fd4196)]:
+  - @atlaspack/types@2.15.0
+  - @atlaspack/plugin@2.14.10
+  - @atlaspack/utils@2.14.10
+
 ## 2.15.5
 
 ### Patch Changes

@@ -94,6 +94,16 @@ export function setIntersect<T>(a: Set<T>, b: $ReadOnlySet<T>): void {
   }
 }
 
+export function setIntersectStatic<T>(a: Set<T>, b: Set<T>): Set<T> {
+  let intersection = new Set();
+  for (let entry of a) {
+    if (b.has(entry)) {
+      intersection.add(entry);
+    }
+  }
+  return intersection;
+}
+
 export function setUnion<T>(a: Iterable<T>, b: Iterable<T>): Set<T> {
   return new Set([...a, ...b]);
 }

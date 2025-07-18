@@ -10,6 +10,8 @@ import {toInternalSourceLocation} from './utils';
 import PublicEnvironment from './public/Environment';
 import {environmentToInternalEnvironment} from './public/Environment';
 import {identifierRegistry} from './IdentifierRegistry';
+import {toEnvironmentRef} from './EnvironmentManager';
+import type {EnvironmentRef} from './EnvironmentManager';
 
 const DEFAULT_ENGINES = {
   browsers: ['> 0.25%'],
@@ -35,7 +37,7 @@ export function createEnvironment({
   loc,
 }: EnvironmentOpts = {
   /*::...null*/
-}): Environment {
+}): EnvironmentRef {
   if (context == null) {
     if (engines?.node) {
       context = 'node';
@@ -112,21 +114,22 @@ export function createEnvironment({
   };
 
   res.id = getEnvironmentHash(res);
-  return Object.freeze(res);
+
+  return toEnvironmentRef(Object.freeze(res));
 }
 
 export function mergeEnvironments(
   projectRoot: FilePath,
   a: Environment,
   b: ?(EnvironmentOptions | IEnvironment),
-): Environment {
+): EnvironmentRef {
   // If merging the same object, avoid copying.
   if (a === b || !b) {
-    return a;
+    return toEnvironmentRef(a);
   }
 
   if (b instanceof PublicEnvironment) {
-    return environmentToInternalEnvironment(b);
+    return toEnvironmentRef(environmentToInternalEnvironment(b));
   }
 
   // $FlowFixMe - ignore the `id` that is already on a
@@ -137,7 +140,7 @@ export function mergeEnvironments(
   });
 }
 
-function getEnvironmentHash(env: Environment): string {
+export function getEnvironmentHash(env: Environment): string {
   const data = {
     context: env.context,
     engines: env.engines,

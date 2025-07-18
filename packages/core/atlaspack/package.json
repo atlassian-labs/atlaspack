@@ -1,0 +1,261 @@
+{
+  "name": "atlaspack",
+  "description": "Blazing fast, zero configuration web application bundler",
+  "version": "2.0.2",
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
+  },
+  "bin": {
+    "atlaspack": "./static/cli/index.js"
+  },
+  "main": "./static/core/index.js",
+  "types": "./static/core/index.d.ts",
+  "files": [
+    "static",
+    "scripts",
+    "pacakge.json",
+    "GIT_SHA"
+  ],
+  "exports": {
+    ".": {
+      "types": "./static/core/index.d.ts",
+      "default": "./static/core/index.js"
+    },
+    "./package.json": "./package.json",
+    "./build-cache": {
+      "types": "./static/build-cache/index.d.ts",
+      "default": "./static/build-cache/index.js"
+    },
+    "./cache": {
+      "types": "./static/cache/index.d.ts",
+      "default": "./static/cache/index.js"
+    },
+    "./cli": {
+      "types": "./static/cli/index.d.ts",
+      "default": "./static/cli/index.js"
+    },
+    "./codeframe": {
+      "types": "./static/codeframe/index.d.ts",
+      "default": "./static/codeframe/index.js"
+    },
+    "./conditional-import-types": {
+      "types": "./static/conditional-import-types/index.d.ts",
+      "default": "./static/conditional-import-types/index.js"
+    },
+    "./core": {
+      "types": "./static/core/index.d.ts",
+      "default": "./static/core/index.js"
+    },
+    "./diagnostic": {
+      "types": "./static/diagnostic/index.d.ts",
+      "default": "./static/diagnostic/index.js"
+    },
+    "./feature-flags": {
+      "types": "./static/feature-flags/index.d.ts",
+      "default": "./static/feature-flags/index.js"
+    },
+    "./fs": {
+      "types": "./static/fs/index.d.ts",
+      "default": "./static/fs/index.js"
+    },
+    "./graph": {
+      "types": "./static/graph/index.d.ts",
+      "default": "./static/graph/index.js"
+    },
+    "./logger": {
+      "types": "./static/logger/index.d.ts",
+      "default": "./static/logger/index.js"
+    },
+    "./markdown-ansi": {
+      "types": "./static/markdown-ansi/index.d.ts",
+      "default": "./static/markdown-ansi/index.js"
+    },
+    "./package-manager": {
+      "types": "./static/package-manager/index.d.ts",
+      "default": "./static/package-manager/index.js"
+    },
+    "./plugin": {
+      "types": "./static/plugin/index.d.ts",
+      "default": "./static/plugin/index.js"
+    },
+    "./profiler": {
+      "types": "./static/profiler/index.d.ts",
+      "default": "./static/profiler/index.js"
+    },
+    "./rust": {
+      "types": "./static/rust/index.d.ts",
+      "default": "./static/rust/index.js"
+    },
+    "./types-internal": {
+      "types": "./static/types-internal/index.d.ts",
+      "default": "./static/types-internal/index.js"
+    },
+    "./types": {
+      "types": "./static/types/index.d.ts",
+      "default": "./static/types/index.js"
+    },
+    "./utils": {
+      "types": "./static/utils/index.d.ts",
+      "default": "./static/utils/index.js"
+    },
+    "./workers": {
+      "types": "./static/workers/index.d.ts",
+      "default": "./static/workers/index.js"
+    },
+    "./*": {
+      "default": "./static/*"
+    },
+    "./bundler/*": {
+      "default": "./static/bundler/*/index.js"
+    },
+    "./compressor/*": {
+      "default": "./static/compressor/*/index.js"
+    },
+    "./config/*": {
+      "default": "./static/config/*/index.json"
+    },
+    "./namer/*": {
+      "default": "./static/namer/*/index.js"
+    },
+    "./packager/*": {
+      "default": "./static/packager/*/index.js"
+    },
+    "./reporter/*": {
+      "default": "./static/reporter/*/index.js"
+    },
+    "./resolver/*": {
+      "default": "./static/resolver/*/index.js"
+    },
+    "./optimizer/*": {
+      "default": "./static/optimizer/*/index.js"
+    },
+    "./runtime/*": {
+      "default": "./static/runtime/*/index.js"
+    },
+    "./transformer/*": {
+      "default": "./static/transformer/*/index.js"
+    },
+    "./validator/*": {
+      "default": "./static/validator/*/index.js"
+    }
+  },
+  "dependencies": {
+    "@atlaspack/build-cache": "2.13.3",
+    "@atlaspack/cache": "3.2.14",
+    "@atlaspack/cli": "2.13.23",
+    "@atlaspack/codeframe": "2.13.4",
+    "@atlaspack/conditional-import-types": "2.13.4",
+    "@atlaspack/core": "2.19.1",
+    "@atlaspack/diagnostic": "2.14.1",
+    "@atlaspack/feature-flags": "2.19.1",
+    "@atlaspack/fs": "2.15.14",
+    "@atlaspack/graph": "3.5.8",
+    "@atlaspack/logger": "2.14.13",
+    "@atlaspack/markdown-ansi": "2.14.1",
+    "@atlaspack/package-manager": "2.14.19",
+    "@atlaspack/plugin": "2.14.19",
+    "@atlaspack/profiler": "2.14.16",
+    "@atlaspack/rust": "3.4.1",
+    "@atlaspack/types-internal": "2.15.1",
+    "@atlaspack/types": "2.15.9",
+    "@atlaspack/utils": "2.17.1",
+    "@atlaspack/workers": "2.14.19",
+    "@atlaspack/watcher-watchman-js": "2.14.19",
+    "@atlaspack/babel-plugin-transform-contextual-imports": "2.15.0",
+    "@atlaspack/babel-plugin-transform-runtime": "2.14.1",
+    "@atlaspack/babel-preset-env": "2.14.1",
+    "@atlaspack/swc-plugin-contextual-imports": "2.14.1",
+    "@atlaspack/domain-sharding": "2.14.1",
+    "@atlaspack/events": "2.14.1",
+    "@atlaspack/macros": "2.14.1",
+    "@atlaspack/node-resolver-core": "3.5.19",
+    "@atlaspack/service-worker": "2.14.1",
+    "@atlaspack/bundler-default": "3.1.1",
+    "@atlaspack/bundler-library": "2.12.21",
+    "@atlaspack/compressor-brotli": "2.13.21",
+    "@atlaspack/compressor-gzip": "2.13.21",
+    "@atlaspack/compressor-raw": "2.13.21",
+    "@atlaspack/config-default": "3.1.21",
+    "@atlaspack/config-webextension": "3.0.23",
+    "@atlaspack/namer-default": "2.14.19",
+    "@atlaspack/optimizer-blob-url": "2.14.19",
+    "@atlaspack/optimizer-css": "2.14.19",
+    "@atlaspack/optimizer-cssnano": "2.14.19",
+    "@atlaspack/optimizer-data-url": "2.14.19",
+    "@atlaspack/optimizer-htmlnano": "2.14.19",
+    "@atlaspack/optimizer-image": "3.1.19",
+    "@atlaspack/optimizer-inline-requires": "2.14.19",
+    "@atlaspack/optimizer-svgo": "2.14.19",
+    "@atlaspack/optimizer-swc": "2.14.19",
+    "@atlaspack/optimizer-terser": "2.14.19",
+    "@atlaspack/packager-css": "2.14.19",
+    "@atlaspack/packager-html": "2.15.1",
+    "@atlaspack/packager-js": "2.18.1",
+    "@atlaspack/packager-raw-url": "2.14.19",
+    "@atlaspack/packager-raw": "2.14.19",
+    "@atlaspack/packager-svg": "2.14.19",
+    "@atlaspack/packager-ts": "2.14.19",
+    "@atlaspack/packager-wasm": "2.14.19",
+    "@atlaspack/packager-webextension": "2.14.19",
+    "@atlaspack/packager-xml": "2.14.19",
+    "@atlaspack/reporter-build-metrics": "2.14.19",
+    "@atlaspack/reporter-bundle-analyzer": "2.14.19",
+    "@atlaspack/reporter-bundle-buddy": "2.14.19",
+    "@atlaspack/reporter-bundle-stats": "2.14.20",
+    "@atlaspack/reporter-cli": "2.17.1",
+    "@atlaspack/reporter-conditional-manifest": "2.15.1",
+    "@atlaspack/reporter-dev-server": "2.14.19",
+    "@atlaspack/reporter-json": "2.14.19",
+    "@atlaspack/reporter-lsp": "2.14.19",
+    "@atlaspack/reporter-sourcemap-visualiser": "2.14.19",
+    "@atlaspack/reporter-tracer": "2.14.19",
+    "@atlaspack/resolver-default": "2.14.19",
+    "@atlaspack/resolver-glob": "2.14.19",
+    "@atlaspack/runtime-browser-hmr": "2.14.19",
+    "@atlaspack/runtime-js": "2.15.1",
+    "@atlaspack/runtime-react-refresh": "2.14.19",
+    "@atlaspack/runtime-service-worker": "2.14.19",
+    "@atlaspack/runtime-webextension": "2.14.19",
+    "@atlaspack/transformer-babel": "2.14.19",
+    "@atlaspack/transformer-css": "2.14.19",
+    "@atlaspack/transformer-glsl": "2.14.19",
+    "@atlaspack/transformer-graphql": "2.14.19",
+    "@atlaspack/transformer-html": "2.14.19",
+    "@atlaspack/transformer-image": "3.1.19",
+    "@atlaspack/transformer-inline-string": "2.14.19",
+    "@atlaspack/transformer-inline": "2.14.19",
+    "@atlaspack/transformer-js": "3.3.9",
+    "@atlaspack/transformer-json": "2.14.19",
+    "@atlaspack/transformer-jsonld": "2.14.19",
+    "@atlaspack/transformer-less": "2.14.19",
+    "@atlaspack/transformer-mdx": "2.14.19",
+    "@atlaspack/transformer-postcss": "2.14.19",
+    "@atlaspack/transformer-posthtml": "2.14.19",
+    "@atlaspack/transformer-pug": "2.14.19",
+    "@atlaspack/transformer-raw": "2.14.19",
+    "@atlaspack/transformer-react-refresh-wrap": "2.14.19",
+    "@atlaspack/transformer-sass": "2.14.19",
+    "@atlaspack/transformer-svg-react": "2.14.19",
+    "@atlaspack/transformer-svg": "2.14.19",
+    "@atlaspack/transformer-toml": "2.14.19",
+    "@atlaspack/transformer-typescript-tsc": "2.14.19",
+    "@atlaspack/transformer-typescript-types": "2.14.19",
+    "@atlaspack/transformer-webextension": "2.14.19",
+    "@atlaspack/transformer-webmanifest": "2.14.19",
+    "@atlaspack/transformer-worklet": "2.14.19",
+    "@atlaspack/transformer-xml": "2.14.19",
+    "@atlaspack/transformer-yaml": "2.14.19",
+    "@atlaspack/validator-eslint": "2.14.19",
+    "@atlaspack/validator-typescript": "2.14.19"
+  },
+  "scripts": {
+    "dev:prepare": "node ./scripts/dev-prepare.mjs",
+    "prepublishOnly": "node ./scripts/prepublish.mjs"
+  }
+}

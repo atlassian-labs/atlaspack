@@ -15,7 +15,6 @@ import {
   distDir,
 } from '@atlaspack/test-utils';
 import sinon from 'sinon';
-import {runBundle} from '../../test-utils/src/utils';
 
 describe('conditional bundling', function () {
   beforeEach(async () => {
@@ -79,7 +78,8 @@ describe('conditional bundling', function () {
   });
 
   it(`should have true and false deps as bundles in conditional manifest`, async function () {
-    const dir = path.join(__dirname, 'import-cond-cond-manifest');
+    const workingDir = 'import-cond-cond-manifest';
+    const dir = path.join(__dirname, workingDir);
     await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
@@ -91,6 +91,17 @@ describe('conditional bundling', function () {
               "..."
             ]
           }
+        package.json:
+          {
+            "@atlaspack/reporter-conditional-manifest": {
+              "filename": "${path.join(
+                workingDir,
+                'conditional-manifest.json',
+              )}"
+            }
+          }
+
+        yarn.lock: {}
 
         index.js:
           const imported = importCond('cond', './a', './b');
@@ -113,7 +124,9 @@ describe('conditional bundling', function () {
     // Load the generated manifest
     let conditionalManifest = JSON.parse(
       overlayFS
-        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+        .readFileSync(
+          path.join(distDir, workingDir, 'conditional-manifest.json'),
+        )
         .toString(),
     );
 
@@ -136,7 +149,8 @@ describe('conditional bundling', function () {
   });
 
   it(`should use true bundle when condition is true`, async function () {
-    const dir = path.join(__dirname, 'import-cond-true');
+    const workingDir = 'import-cond-true';
+    const dir = path.join(__dirname, workingDir);
     await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
@@ -148,6 +162,17 @@ describe('conditional bundling', function () {
               "..."
             ]
           }
+        package.json:
+          {
+            "@atlaspack/reporter-conditional-manifest": {
+              "filename": "${path.join(
+                workingDir,
+                'conditional-manifest.json',
+              )}"
+            }
+          }
+
+        yarn.lock: {}
 
         index.js:
           const conditions = { 'cond': true };
@@ -178,7 +203,9 @@ describe('conditional bundling', function () {
     // Load the generated manifest
     let conditionalManifest = JSON.parse(
       overlayFS
-        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+        .readFileSync(
+          path.join(distDir, workingDir, 'conditional-manifest.json'),
+        )
         .toString(),
     );
 
@@ -215,7 +242,8 @@ describe('conditional bundling', function () {
   });
 
   it(`should use both conditional bundles correctly`, async function () {
-    const dir = path.join(__dirname, 'import-cond-both');
+    const workingDir = 'import-cond-both';
+    const dir = path.join(__dirname, workingDir);
     await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
@@ -227,6 +255,17 @@ describe('conditional bundling', function () {
               "..."
             ]
           }
+        package.json:
+          {
+            "@atlaspack/reporter-conditional-manifest": {
+              "filename": "${path.join(
+                workingDir,
+                'conditional-manifest.json',
+              )}"
+            }
+          }
+
+        yarn.lock: {}
         index.js:
           const conditions = { 'cond1': true, 'cond2': false };
           globalThis.__MCOND = function(key) { return conditions[key]; }
@@ -263,7 +302,9 @@ describe('conditional bundling', function () {
     // Load the generated manifest
     let conditionalManifest = JSON.parse(
       overlayFS
-        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+        .readFileSync(
+          path.join(distDir, workingDir, 'conditional-manifest.json'),
+        )
         .toString(),
     );
 
@@ -320,7 +361,8 @@ describe('conditional bundling', function () {
   });
 
   it(`should load false bundle when importing dynamic bundles`, async function () {
-    const dir = path.join(__dirname, 'import-cond-false-dynamic');
+    const workingDir = 'import-cond-false-dynamic';
+    const dir = path.join(__dirname, workingDir);
     await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
@@ -332,6 +374,14 @@ describe('conditional bundling', function () {
             "..."
           ]
         }
+      package.json:
+        {
+          "@atlaspack/reporter-conditional-manifest": {
+            "filename": "${path.join(workingDir, 'conditional-manifest.json')}"
+          }
+        }
+
+      yarn.lock: {}
       index.js:
         const conditions = { 'cond': false };
         globalThis.__MCOND = function(key) { return conditions[key]; }
@@ -434,7 +484,9 @@ describe('conditional bundling', function () {
 
       sinon.assert.calledWith(
         consoleStub,
-        sinon.match('Conditional dependency was missing'),
+        sinon.match(
+          'Conditional dependency was not registered when executing.',
+        ),
       );
     } finally {
       consoleStub.restore();
@@ -442,7 +494,8 @@ describe('conditional bundling', function () {
   });
 
   it(`should handle loading conditional bundles when imported in different bundles`, async function () {
-    const dir = path.join(__dirname, 'import-cond-different-bundles');
+    const workingDir = 'import-cond-different-bundles';
+    const dir = path.join(__dirname, workingDir);
     await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
@@ -454,6 +507,17 @@ describe('conditional bundling', function () {
               "..."
             ]
           }
+        package.json:
+          {
+            "@atlaspack/reporter-conditional-manifest": {
+              "filename": "${path.join(
+                workingDir,
+                'conditional-manifest.json',
+              )}"
+            }
+          }
+
+        yarn.lock: {}
         index.js:
           const conditions = { 'cond1': true, 'cond2': true };
           globalThis.__MCOND = function(key) { return conditions[key]; }
@@ -492,7 +556,9 @@ describe('conditional bundling', function () {
     // Load the generated manifest
     let conditionalManifest = JSON.parse(
       overlayFS
-        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+        .readFileSync(
+          path.join(distDir, workingDir, 'conditional-manifest.json'),
+        )
         .toString(),
     );
 
@@ -526,7 +592,8 @@ describe('conditional bundling', function () {
   });
 
   it(`should load bundles in parallel when config enabled`, async function () {
-    const dir = path.join(__dirname, 'import-cond-parallel-enabled');
+    const workingDir = 'import-cond-parallel-enabled';
+    const dir = path.join(__dirname, workingDir);
     await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
@@ -545,6 +612,9 @@ describe('conditional bundling', function () {
         {
           "@atlaspack/bundler-default": {
             "loadConditionalBundlesInParallel": true
+          },
+          "@atlaspack/reporter-conditional-manifest": {
+            "filename": "${path.join(workingDir, 'conditional-manifest.json')}"
           }
         }
 
@@ -593,7 +663,9 @@ describe('conditional bundling', function () {
     // Load the generated manifest
     let conditionalManifest = JSON.parse(
       overlayFS
-        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+        .readFileSync(
+          path.join(distDir, workingDir, 'conditional-manifest.json'),
+        )
         .toString(),
     );
 
@@ -623,7 +695,8 @@ describe('conditional bundling', function () {
   });
 
   it(`should load conditional bundles in entry html when enabled`, async function () {
-    const dir = path.join(__dirname, 'import-cond-entry-html-enabled');
+    const workingDir = 'import-cond-entry-html-enabled';
+    const dir = path.join(__dirname, workingDir);
     await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
@@ -639,6 +712,9 @@ describe('conditional bundling', function () {
         {
           "@atlaspack/packager-html": {
             "evaluateRootConditionalBundles": true
+          },
+          "@atlaspack/reporter-conditional-manifest": {
+            "filename": "${path.join(workingDir, 'conditional-manifest.json')}"
           }
         }
 
@@ -689,7 +765,9 @@ describe('conditional bundling', function () {
     // Load the generated manifest
     let conditionalManifest = JSON.parse(
       overlayFS
-        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+        .readFileSync(
+          path.join(distDir, workingDir, 'conditional-manifest.json'),
+        )
         .toString(),
     );
 
@@ -718,8 +796,161 @@ describe('conditional bundling', function () {
     );
   });
 
+  it(`should load more conditional bundles in entry html when enabled`, async function () {
+    const dir = path.join(__dirname, 'import-cond-entry-html-more-enabled');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      package.json:
+        {
+          "@atlaspack/packager-html": {
+            "evaluateRootConditionalBundles": true
+          }
+        }
+
+      yarn.lock: {}
+
+      index.html:
+        <!doctype html>
+        <html>
+        <head>
+          <title>Test</title>
+        </head>
+        <body>
+          <script type="module" src="./index.js"></script>
+        </body>
+        </html>
+
+      index.js:
+        const conditions = { 'cond1': true, 'cond2': true };
+        globalThis.__MCOND = function(key) { return conditions[key]; }
+
+        const imported1 = importCond('cond1', './a', './b');
+
+        export default imported1;
+
+      a.js:
+        const imported2 = importCond('cond2', './c', './d');
+        export default 'module-a';
+
+      b.js:
+        export default 'module-b';
+
+      c.js:
+        export default 'module-c';
+
+      d.js:
+        export default 'module-d';
+    `;
+
+    let bundleGraph = await bundle(path.join(dir, '/index.html'), {
+      inputFS: overlayFS,
+      featureFlags: {
+        conditionalBundlingApi: true,
+      },
+    });
+
+    let entry = nullthrows(
+      bundleGraph.getBundles().find((b) => b.name === 'index.html'),
+      'index.html bundle not found',
+    );
+
+    let entryContents = overlayFS.readFileSync(entry.filePath).toString();
+
+    // There should be all four bundles loaded in the html
+    assert.equal(entryContents.match(/data-conditional/g)?.length, 4);
+  });
+
+  it(`should fallback to loading conditional bundles sync if missing`, async function () {
+    const dir = path.join(__dirname, 'import-cond-fallback-if-missing');
+    await overlayFS.mkdirp(dir);
+
+    await fsFixture(overlayFS, dir)`
+      yarn.lock: {}
+      index.js:
+        const conditions = { 'cond1': true, 'cond2': true };
+        globalThis.__MCOND = function(key) { return conditions[key]; }
+
+        const imported1 = importCond('cond1', './a', './b');
+
+        export default imported1;
+
+      a.js:
+        export default 'module-a';
+
+      b.js:
+        export default 'module-b';
+    `;
+
+    let bundleGraph = await bundle(path.join(dir, '/index.js'), {
+      inputFS: overlayFS,
+      featureFlags: {
+        conditionalBundlingApi: true,
+        condbDevFallbackDev: true,
+      },
+    });
+
+    let entry = nullthrows(
+      bundleGraph.getBundles().find((b) => b.name === 'index.js'),
+      'index.js bundle not found',
+    );
+
+    const mockXMLHttpRequest = function () {
+      this.open = function (method, url, async) {
+        this.method = method;
+        this.url = new URL(url);
+        this.async = async;
+      };
+      this.send = function () {
+        const matchedBundle = bundleGraph.getBundles().find((b) => {
+          return (
+            b.filePath.slice(distDir.length + 1) ===
+            this.url.pathname.replace(/^\//, '')
+          );
+        });
+        if (matchedBundle) {
+          // Simulate successful response
+          this.status = 200;
+          this.responseText = overlayFS
+            .readFileSync(matchedBundle.filePath)
+            .toString();
+        } else {
+          this.status = 404;
+          this.responseText = '';
+        }
+      };
+      this.status = 0;
+      this.responseText = '';
+    };
+
+    // Patch setTimeout to be synchronous for this test
+    const origSetTimeout = global.setTimeout;
+    global.setTimeout = (fn) => fn();
+
+    let output;
+    try {
+      output = await runBundles(
+        bundleGraph,
+        entry,
+        [[overlayFS.readFileSync(entry.filePath).toString(), entry]],
+        {
+          XMLHttpRequest: mockXMLHttpRequest,
+        },
+        {
+          entryAsset: nullthrows(entry.getMainEntry()),
+        },
+      );
+    } finally {
+      // Restore setTimeout
+      global.setTimeout = origSetTimeout;
+    }
+
+    assert.deepEqual(typeof output === 'object' && output?.default, 'module-a');
+  });
+
   it(`should have correct deps as bundles in conditional manifest when nested`, async function () {
-    const dir = path.join(__dirname, 'import-cond-cond-manifest');
+    const workingDir = 'import-cond-cond-manifest-nested';
+    const dir = path.join(__dirname, workingDir);
     await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
@@ -731,6 +962,17 @@ describe('conditional bundling', function () {
               "..."
             ]
           }
+        package.json:
+          {
+            "@atlaspack/reporter-conditional-manifest": {
+              "filename": "${path.join(
+                workingDir,
+                'conditional-manifest.json',
+              )}"
+            }
+          }
+
+        yarn.lock: {}
 
         index.js:
           const imported = importCond('cond', './a', './b');
@@ -770,7 +1012,9 @@ describe('conditional bundling', function () {
     // Load the generated manifest
     let conditionalManifest = JSON.parse(
       overlayFS
-        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+        .readFileSync(
+          path.join(distDir, workingDir, 'conditional-manifest.json'),
+        )
         .toString(),
     );
 
@@ -797,7 +1041,8 @@ describe('conditional bundling', function () {
   });
 
   it(`should use load nested bundles when in an async bundle`, async function () {
-    const dir = path.join(__dirname, 'import-cond-false-dynamic');
+    const workingDir = 'import-cond-false-dynamic-nested';
+    const dir = path.join(__dirname, workingDir);
     await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
@@ -809,6 +1054,14 @@ describe('conditional bundling', function () {
             "..."
           ]
         }
+      package.json:
+        {
+          "@atlaspack/reporter-conditional-manifest": {
+            "filename": "${path.join(workingDir, 'conditional-manifest.json')}"
+          }
+        }
+
+      yarn.lock: {}
       index.js:
         const conditions = { 'cond1': false, 'cond2': true };
         globalThis.__MCOND = function(key) { return conditions[key]; }
@@ -840,7 +1093,6 @@ describe('conditional bundling', function () {
       outputFS: overlayFS,
       featureFlags: {
         conditionalBundlingApi: true,
-        conditionalBundlingNestedRuntime: true,
       },
       defaultConfig: path.join(dir, '.parcelrc'),
     });
@@ -872,89 +1124,9 @@ describe('conditional bundling', function () {
     );
   });
 
-  it(`should support async bundle runtime`, async function () {
-    const dir = path.join(__dirname, 'import-cond-async-bundle-runtime');
-    await overlayFS.mkdirp(dir);
-
-    await fsFixture(overlayFS, dir)`
-      cond-a.js:
-        export default 'cond-a';
-
-      cond-b.js:
-        export default 'cond-b';
-
-      cond-a.html:
-        <script type="module" src="./cond-a.js"></script>
-
-      index.html:
-        <script type="module" src="./index.js"></script>
-
-      index.js:
-        globalThis.__MCOND = (key) => ({ 'cond': true })[key];
-        const condResult = importCond('cond', './cond-a', './cond-b');
-
-        result([condResult]);
-
-      package.json:
-        {
-            "@atlaspack/bundler-default": {
-                "minBundleSize": 0
-            },
-            "@atlaspack/packager-js": {
-              "unstable_asyncBundleRuntime": true
-            },
-            "@atlaspack/packager-html": {
-              "evaluateRootConditionalBundles": true
-            }
-        }
-      yarn.lock:`;
-
-    let b = await bundle(
-      [
-        path.join(__dirname, 'import-cond-async-bundle-runtime/cond-a.html'),
-        path.join(__dirname, 'import-cond-async-bundle-runtime/index.html'),
-      ],
-      {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
-          shouldOptimize: false,
-          outputFormat: 'esmodule',
-        },
-        featureFlags: {
-          conditionalBundlingApi: true,
-          conditionalBundlingAsyncRuntime: true,
-        },
-        inputFS: overlayFS,
-      },
-    );
-
-    let indexBundle = b
-      .getBundles()
-      .find((b) => /index.*\.js/.test(b.filePath));
-    if (!indexBundle) return assert.fail();
-
-    let contents = await overlayFS.readFile(indexBundle.filePath, 'utf8');
-    assert(contents.includes('$parcel$global.rwr('));
-
-    let indexHtmlBundle = nullthrows(
-      b.getBundles().find((b) => /index.*\.html/.test(b.filePath)),
-    );
-    let result;
-    await runBundle(b, indexHtmlBundle, {
-      result: (r) => {
-        result = r;
-      },
-    });
-
-    assert.deepEqual(await result, ['cond-a']);
-  });
-
   it(`should have all deps as bundles in conditional manifest when same condition is used multiple times`, async function () {
-    const dir = path.join(
-      __dirname,
-      'import-cond-cond-manifest-same-condition',
-    );
+    const workingDir = 'import-cond-cond-manifest-same-condition';
+    const dir = path.join(__dirname, workingDir);
     await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
@@ -966,6 +1138,17 @@ describe('conditional bundling', function () {
               "..."
             ]
           }
+        package.json:
+          {
+            "@atlaspack/reporter-conditional-manifest": {
+              "filename": "${path.join(
+                workingDir,
+                'conditional-manifest.json',
+              )}"
+            }
+          }
+
+        yarn.lock: {}
 
         index.js:
           const imported1 = importCond('cond', './a', './b');
@@ -990,7 +1173,6 @@ describe('conditional bundling', function () {
       inputFS: overlayFS,
       featureFlags: {
         conditionalBundlingApi: true,
-        conditionalBundlingReporterSameConditionFix: true,
       },
       defaultConfig: path.join(dir, '.parcelrc'),
     });
@@ -1005,7 +1187,9 @@ describe('conditional bundling', function () {
     // Load the generated manifest
     let conditionalManifest = JSON.parse(
       overlayFS
-        .readFileSync(path.join(distDir, 'conditional-manifest.json'))
+        .readFileSync(
+          path.join(distDir, workingDir, 'conditional-manifest.json'),
+        )
         .toString(),
     );
 

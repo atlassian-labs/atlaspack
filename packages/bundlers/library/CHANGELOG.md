@@ -1,5 +1,75 @@
 # @atlaspack/bundler-library
 
+## 2.12.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.19
+
+## 2.12.20
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.18
+
+## 2.12.19
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.17
+
+## 2.12.18
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.16
+
+## 2.12.17
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.15
+
+## 2.12.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.14
+
+## 2.12.15
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.13
+
+## 2.12.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.12
+
+## 2.12.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.11
+
+## 2.12.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.10
+
 ## 2.12.11
 
 ### Patch Changes

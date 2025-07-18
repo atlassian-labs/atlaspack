@@ -1,5 +1,13 @@
 # @atlaspack/codeframe
 
+## 2.13.4
+
+### Patch Changes
+
+- [#645](https://github.com/atlassian-labs/atlaspack/pull/645) [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3) Thanks [@alshdavid](https://github.com/alshdavid)! - Updated build system and added some extra test-specific code
+
+- [#682](https://github.com/atlassian-labs/atlaspack/pull/682) [`a5ed1b4`](https://github.com/atlassian-labs/atlaspack/commit/a5ed1b414498560f393ff491af4da25b6e8dde56) Thanks [@alshdavid](https://github.com/alshdavid)! - Updating build system
+
 ## 2.13.3
 
 ### Patch Changes

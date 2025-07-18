@@ -7,4 +7,4 @@ export default (new Transformer({
     asset.bundleBehavior = 'isolated';
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);

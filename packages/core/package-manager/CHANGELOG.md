@@ -1,5 +1,123 @@
 # @atlaspack/package-manager
 
+## 2.14.19
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.14
+  - @atlaspack/utils@2.17.1
+  - @atlaspack/node-resolver-core@3.5.19
+  - @atlaspack/types@2.15.9
+  - @atlaspack/workers@2.14.19
+
+## 2.14.18
+
+### Patch Changes
+
+- [#645](https://github.com/atlassian-labs/atlaspack/pull/645) [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3) Thanks [@alshdavid](https://github.com/alshdavid)! - Updated build system and added some extra test-specific code
+
+- [#682](https://github.com/atlassian-labs/atlaspack/pull/682) [`a5ed1b4`](https://github.com/atlassian-labs/atlaspack/commit/a5ed1b414498560f393ff491af4da25b6e8dde56) Thanks [@alshdavid](https://github.com/alshdavid)! - Updating build system
+
+- Updated dependencies [[`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d), [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3), [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417), [`a5ed1b4`](https://github.com/atlassian-labs/atlaspack/commit/a5ed1b414498560f393ff491af4da25b6e8dde56)]:
+  - @atlaspack/utils@2.17.0
+  - @atlaspack/fs@2.15.13
+  - @atlaspack/node-resolver-core@3.5.18
+  - @atlaspack/workers@2.14.18
+  - @atlaspack/logger@2.14.13
+  - @atlaspack/types@2.15.8
+
+## 2.14.17
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.12
+  - @atlaspack/logger@2.14.12
+  - @atlaspack/utils@2.16.1
+  - @atlaspack/node-resolver-core@3.5.17
+  - @atlaspack/workers@2.14.17
+  - @atlaspack/types@2.15.7
+
+## 2.14.16
+
+### Patch Changes
+
+- Updated dependencies [[`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529)]:
+  - @atlaspack/utils@2.16.0
+  - @atlaspack/fs@2.15.11
+  - @atlaspack/node-resolver-core@3.5.16
+  - @atlaspack/workers@2.14.16
+  - @atlaspack/types@2.15.6
+
+## 2.14.15
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.10
+  - @atlaspack/utils@2.15.3
+  - @atlaspack/node-resolver-core@3.5.15
+  - @atlaspack/types@2.15.5
+  - @atlaspack/workers@2.14.15
+
+## 2.14.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.9
+  - @atlaspack/utils@2.15.2
+  - @atlaspack/node-resolver-core@3.5.14
+  - @atlaspack/types@2.15.4
+  - @atlaspack/workers@2.14.14
+
+## 2.14.13
+
+### Patch Changes
+
+- Updated dependencies [[`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb)]:
+  - @atlaspack/workers@2.14.13
+  - @atlaspack/logger@2.14.11
+  - @atlaspack/fs@2.15.8
+  - @atlaspack/types@2.15.3
+  - @atlaspack/utils@2.15.1
+  - @atlaspack/node-resolver-core@3.5.13
+
+## 2.14.12
+
+### Patch Changes
+
+- Updated dependencies [[`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c)]:
+  - @atlaspack/utils@2.15.0
+  - @atlaspack/fs@2.15.7
+  - @atlaspack/node-resolver-core@3.5.12
+  - @atlaspack/workers@2.14.12
+  - @atlaspack/types@2.15.2
+
+## 2.14.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.6
+  - @atlaspack/utils@2.14.11
+  - @atlaspack/node-resolver-core@3.5.11
+  - @atlaspack/types@2.15.1
+  - @atlaspack/workers@2.14.11
+
+## 2.14.10
+
+### Patch Changes
+
+- Updated dependencies [[`0999fb7`](https://github.com/atlassian-labs/atlaspack/commit/0999fb78da519a6c7582d212883e515fcf6c1252), [`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b), [`1e32d4e`](https://github.com/atlassian-labs/atlaspack/commit/1e32d4eae6b3af3968e8a0ef97d35b4347fd4196)]:
+  - @atlaspack/fs@2.15.5
+  - @atlaspack/types@2.15.0
+  - @atlaspack/node-resolver-core@3.5.10
+  - @atlaspack/workers@2.14.10
+  - @atlaspack/logger@2.14.10
+  - @atlaspack/utils@2.14.10
+
 ## 2.14.9
 
 ### Patch Changes

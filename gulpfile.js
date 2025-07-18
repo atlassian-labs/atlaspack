@@ -13,18 +13,14 @@ const IGNORED_PACKAGES = [
   '!packages/core/types/**',
   '!packages/core/types-internal/**',
 
-  // These packages are bundled.
-  '!packages/core/codeframe/**',
-  '!packages/core/fs/**',
-  '!packages/core/package-manager/**',
-  '!packages/core/utils/**',
-  '!packages/reporters/cli/**',
-  '!packages/reporters/dev-server/**',
+  // Static packages that don't need to be build
+  '!packages/core/atlaspack/**',
 ];
 
 const paths = {
   packageSrc: [
     'packages/*/*/src/**/*.js',
+    'packages/*/*/src/**/*.ts',
     '!**/dev-prelude.js',
     ...IGNORED_PACKAGES,
   ],

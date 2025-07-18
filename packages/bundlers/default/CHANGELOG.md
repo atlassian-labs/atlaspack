@@ -1,5 +1,222 @@
 # @atlaspack/bundler-default
 
+## 3.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`13aef17`](https://github.com/atlassian-labs/atlaspack/commit/13aef177eea289a6e40d2113b5ec1ac9be18a33d)]:
+  - @atlaspack/feature-flags@2.19.1
+  - @atlaspack/graph@3.5.8
+  - @atlaspack/utils@2.17.1
+  - @atlaspack/plugin@2.14.19
+
+## 3.1.0
+
+### Minor Changes
+
+- [#640](https://github.com/atlassian-labs/atlaspack/pull/640) [`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d) Thanks [@JakeLane](https://github.com/JakeLane)! - Clean up conditional bundling feature flags
+
+### Patch Changes
+
+- Updated dependencies [[`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d), [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`c4415a4`](https://github.com/atlassian-labs/atlaspack/commit/c4415a455543d984ca28452c2cb87a794d22497c), [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5), [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3), [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417), [`a5ed1b4`](https://github.com/atlassian-labs/atlaspack/commit/a5ed1b414498560f393ff491af4da25b6e8dde56)]:
+  - @atlaspack/feature-flags@2.19.0
+  - @atlaspack/utils@2.17.0
+  - @atlaspack/rust@3.4.1
+  - @atlaspack/graph@3.5.7
+  - @atlaspack/plugin@2.14.18
+
+## 3.0.8
+
+### Patch Changes
+
+- Updated dependencies [[`c75bf55`](https://github.com/atlassian-labs/atlaspack/commit/c75bf553fff4decc285b5fd499a275853b18f8f2)]:
+  - @atlaspack/rust@3.4.0
+  - @atlaspack/utils@2.16.1
+  - @atlaspack/plugin@2.14.17
+
+## 3.0.7
+
+### Patch Changes
+
+- Updated dependencies [[`e8a60ff`](https://github.com/atlassian-labs/atlaspack/commit/e8a60ffbea41caef265786bbf73349771760081c), [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529)]:
+  - @atlaspack/feature-flags@2.18.4
+  - @atlaspack/utils@2.16.0
+  - @atlaspack/graph@3.5.6
+  - @atlaspack/plugin@2.14.16
+
+## 3.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`5ded263`](https://github.com/atlassian-labs/atlaspack/commit/5ded263c7f11b866e8885b81c73e20dd060b25be)]:
+  - @atlaspack/feature-flags@2.18.3
+  - @atlaspack/graph@3.5.5
+  - @atlaspack/utils@2.15.3
+  - @atlaspack/plugin@2.14.15
+
+## 3.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`644b157`](https://github.com/atlassian-labs/atlaspack/commit/644b157dee72a871acc2d0facf0b87b8eea51956)]:
+  - @atlaspack/feature-flags@2.18.2
+  - @atlaspack/graph@3.5.4
+  - @atlaspack/utils@2.15.2
+  - @atlaspack/plugin@2.14.14
+
+## 3.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b), [`0501255`](https://github.com/atlassian-labs/atlaspack/commit/05012550da35b05ce7d356a8cc29311e7f9afdca)]:
+  - @atlaspack/feature-flags@2.18.1
+  - @atlaspack/utils@2.15.1
+  - @atlaspack/graph@3.5.3
+  - @atlaspack/plugin@2.14.13
+
+## 3.0.3
+
+### Patch Changes
+
+- [#622](https://github.com/atlassian-labs/atlaspack/pull/622) [`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c) Thanks [@benjervis](https://github.com/benjervis)! - Change the overlap calculation system in findMergeCandidates to improve performance
+
+- Updated dependencies [[`10fbcfb`](https://github.com/atlassian-labs/atlaspack/commit/10fbcfbfa49c7a83da5d7c40983e36e87f524a75), [`85c52d3`](https://github.com/atlassian-labs/atlaspack/commit/85c52d3f7717b3c84a118d18ab98cfbfd71dcbd2), [`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c)]:
+  - @atlaspack/feature-flags@2.18.0
+  - @atlaspack/utils@2.15.0
+  - @atlaspack/graph@3.5.2
+  - @atlaspack/plugin@2.14.12
+
+## 3.0.2
+
+### Patch Changes
+
+- [#613](https://github.com/atlassian-labs/atlaspack/pull/613) [`4ca19d8`](https://github.com/atlassian-labs/atlaspack/commit/4ca19d8060dfcd279183e4039f2ecb43334ac44c) Thanks [@marcins](https://github.com/marcins)! - Ensure that constant modules are correctly included in MSBs even if they wouldn't otherwise be.
+
+- Updated dependencies [[`73ea3c4`](https://github.com/atlassian-labs/atlaspack/commit/73ea3c4d85d4401fdd15abcbf988237e890e7ad3), [`b1b3693`](https://github.com/atlassian-labs/atlaspack/commit/b1b369317c66f8a431c170df2ebba4fa5b2e38ef)]:
+  - @atlaspack/feature-flags@2.17.0
+  - @atlaspack/graph@3.5.1
+  - @atlaspack/utils@2.14.11
+  - @atlaspack/plugin@2.14.11
+
+## 3.0.1
+
+### Patch Changes
+
+- [#608](https://github.com/atlassian-labs/atlaspack/pull/608) [`471b99e`](https://github.com/atlassian-labs/atlaspack/commit/471b99e41b4d97328c88f65e90bea284372cb1b0) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix require of ES Module error
+
+## 3.0.0
+
+### Major Changes
+
+- [#600](https://github.com/atlassian-labs/atlaspack/pull/600) [`1b52b99`](https://github.com/atlassian-labs/atlaspack/commit/1b52b99db4298b04c1a6eb0f97994d75a2d436f9) Thanks [@mattcompiles](https://github.com/mattcompiles)! - ### Breaking change
+
+  This new config replaces the previously released `sharedBundleMergeThreshold`.
+
+  The following options are available for each merge group.
+
+  ### Options
+
+  #### overlapThreshold
+
+  > The same as `sharedBundleMergeThreshold` from #535
+
+  Merge bundles share a percentage of source bundles
+
+  ```json
+  "@atlaspack/bundler-default": {
+    "sharedBundleMerge": [{
+      "overlapThreshold": 0.75
+    }]
+  }
+  ```
+
+  #### maxBundleSize
+
+  Merge bundles that are smaller than a configured amount of bytes.
+
+  > Keep in mind these bytes are pre-optimisation
+
+  ```json
+  "@atlaspack/bundler-default": {
+    "sharedBundleMerge": [{
+      "maxBundleSize": 20000
+    }]
+  }
+  ```
+
+  #### sourceBundles
+
+  Merge bundles that share a set of source bundles. The matching is relative to the project root, like how manual shared bundle roots work.
+
+  ```json
+  "@atlaspack/bundler-default": {
+    "sharedBundleMerge": [{
+      "sourceBundles": ["src/important-route", "src/important-route-2"]
+    }]
+  }
+  ```
+
+  #### minBundlesInGroup
+
+  Merge bundles that belong to a bundle group that's larger than a set amount. This is useful for targetting bundles that would be deleted by the `maxParallelRequests` option.
+
+  ```json
+  "@atlaspack/bundler-default": {
+    "maxParallelRequests": 30,
+    "sharedBundleMerge": [{
+      "minBundlesInGroup": 30
+    }]
+  }
+  ```
+
+  ## Combining options
+
+  When multiple options are provided, all must be true for a merge to be relevant.
+
+  For example, merge bundles that are smaller than 20kb and share at least 50% of the same source bundles.
+
+  ```json
+  "@atlaspack/bundler-default": {
+    "sharedBundleMerge": [{
+      "overlapThreshold": 0.5,
+      "maxBundleSize": 20000
+    }]
+  }
+  ```
+
+  ## Multiple merges
+
+  You can also have multiple merge configs.
+
+  ```json
+  "@atlaspack/bundler-default": {
+    "sharedBundleMerge": [
+       {
+          "overlapThreshold": 0.75,
+          "maxBundleSize": 20000
+       },
+       {
+          "minBundlesInGroup": 30
+          "sourceBundles": ["src/important-route", "src/important-route-2"]
+       }
+    ]
+  }
+  ```
+
+### Patch Changes
+
+- Updated dependencies [[`1b52b99`](https://github.com/atlassian-labs/atlaspack/commit/1b52b99db4298b04c1a6eb0f97994d75a2d436f9)]:
+  - @atlaspack/graph@3.5.0
+
+## 2.16.3
+
+### Patch Changes
+
+- Updated dependencies [[`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c), [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca)]:
+  - @atlaspack/rust@3.3.5
+  - @atlaspack/plugin@2.14.10
+  - @atlaspack/utils@2.14.10
+
 ## 2.16.2
 
 ### Patch Changes

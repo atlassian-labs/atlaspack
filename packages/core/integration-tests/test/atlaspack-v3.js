@@ -3,7 +3,12 @@
 import assert from 'assert';
 import {join} from 'path';
 
-import {AtlaspackV3, FileSystemV3} from '@atlaspack/core';
+import {
+  AtlaspackV3,
+  FileSystemV3,
+  Atlaspack,
+  createWorkerFarm,
+} from '@atlaspack/core';
 import {NodePackageManager} from '@atlaspack/package-manager';
 import {
   describe,
@@ -194,6 +199,42 @@ describe.v3('AtlaspackV3', function () {
 
       await assertOutputIsIdentical(join(__dirname, 'css-modules/index.html'));
     });
+  });
+
+  // This test is a bit weird in that if it "fails" it will hang and stop Mocha from exiting.
+  // I'm not sure there's actually any way to test for that any other way.
+  it('cleanly shuts down when used via the Atlaspack API', async () => {
+    await fsFixture(overlayFS, __dirname)`
+      shutdown
+        index.js:
+          console.log('hello world');
+                    
+        yarn.lock: {}
+    `;
+
+    let workerFarm = createWorkerFarm({
+      maxConcurrentWorkers: 0,
+      useLocalWorker: true,
+    });
+    try {
+      let atlaspack = new Atlaspack({
+        workerFarm,
+        entries: [join(__dirname, 'shutdown/index.js')],
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+        config: '@atlaspack/config-default',
+        shouldDisableCache: true,
+        featureFlags: {
+          atlaspackV3: true,
+          atlaspackV3CleanShutdown: true,
+        },
+      });
+      const buildResult = await atlaspack.run();
+      assert.equal(buildResult.type, 'buildSuccess');
+    } finally {
+      // We clean this one up because we created it
+      await workerFarm.end();
+    }
   });
 
   describe('featureFlags', () => {

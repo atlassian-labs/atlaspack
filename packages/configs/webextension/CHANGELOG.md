@@ -1,5 +1,129 @@
 # @atlaspack/config-webextension
 
+## 3.0.23
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.21
+  - @atlaspack/packager-webextension@2.14.19
+  - @atlaspack/runtime-webextension@2.14.19
+  - @atlaspack/transformer-webextension@2.14.19
+  - @atlaspack/transformer-raw@2.14.19
+
+## 3.0.22
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.20
+  - @atlaspack/packager-webextension@2.14.18
+  - @atlaspack/runtime-webextension@2.14.18
+  - @atlaspack/transformer-webextension@2.14.18
+  - @atlaspack/transformer-raw@2.14.18
+
+## 3.0.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.19
+  - @atlaspack/packager-webextension@2.14.17
+  - @atlaspack/runtime-webextension@2.14.17
+  - @atlaspack/transformer-webextension@2.14.17
+  - @atlaspack/transformer-raw@2.14.17
+
+## 3.0.20
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.18
+  - @atlaspack/packager-webextension@2.14.16
+  - @atlaspack/runtime-webextension@2.14.16
+  - @atlaspack/transformer-webextension@2.14.16
+  - @atlaspack/transformer-raw@2.14.16
+
+## 3.0.19
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.17
+  - @atlaspack/packager-webextension@2.14.15
+  - @atlaspack/runtime-webextension@2.14.15
+  - @atlaspack/transformer-webextension@2.14.15
+  - @atlaspack/transformer-raw@2.14.15
+
+## 3.0.18
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.16
+  - @atlaspack/packager-webextension@2.14.14
+  - @atlaspack/runtime-webextension@2.14.14
+  - @atlaspack/transformer-webextension@2.14.14
+  - @atlaspack/transformer-raw@2.14.14
+
+## 3.0.17
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.15
+  - @atlaspack/packager-webextension@2.14.13
+  - @atlaspack/runtime-webextension@2.14.13
+  - @atlaspack/transformer-webextension@2.14.13
+  - @atlaspack/transformer-raw@2.14.13
+
+## 3.0.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.14
+  - @atlaspack/packager-webextension@2.14.12
+  - @atlaspack/runtime-webextension@2.14.12
+  - @atlaspack/transformer-webextension@2.14.12
+  - @atlaspack/transformer-raw@2.14.12
+
+## 3.0.15
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.13
+  - @atlaspack/packager-webextension@2.14.11
+  - @atlaspack/runtime-webextension@2.14.11
+  - @atlaspack/transformer-webextension@2.14.11
+  - @atlaspack/transformer-raw@2.14.11
+
+## 3.0.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.12
+
+## 3.0.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.11
+
+## 3.0.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/config-default@3.1.10
+  - @atlaspack/packager-webextension@2.14.10
+  - @atlaspack/runtime-webextension@2.14.10
+  - @atlaspack/transformer-raw@2.14.10
+  - @atlaspack/transformer-webextension@2.14.10
+
 ## 3.0.11
 
 ### Patch Changes

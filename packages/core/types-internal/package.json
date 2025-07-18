@@ -1,8 +1,9 @@
 {
   "name": "@atlaspack/types-internal",
-  "version": "2.14.7",
+  "version": "2.15.1",
   "license": "(MIT OR Apache-2.0)",
-  "main": "src/index.js",
+  "main": "lib/index.js",
+  "source": "src/index.js",
   "types": "lib/index.d.ts",
   "repository": {
     "type": "git",
@@ -12,12 +13,13 @@
     "access": "public"
   },
   "scripts": {
+    "dev:prepare": "rimraf ./lib/ && mkdir lib && echo \"module.exports = {}\" > lib/index.js",
     "build-ts": "./scripts/build-ts.sh",
     "check-ts": "tsc --noEmit lib/index.d.ts"
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.1",
-    "@atlaspack/feature-flags": "2.16.0",
+    "@atlaspack/feature-flags": "2.19.1",
     "@parcel/source-map": "^2.1.1",
     "utility-types": "^3.10.0"
   },

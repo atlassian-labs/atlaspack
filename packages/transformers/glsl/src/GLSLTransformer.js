@@ -40,7 +40,7 @@ export default (new Transformer({
 
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);
 
 function collectDependencies(asset, ast) {
   for (let dep of ast) {

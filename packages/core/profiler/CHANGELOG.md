@@ -1,5 +1,68 @@
 # @atlaspack/profiler
 
+## 2.14.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.15.1
+
+## 2.14.15
+
+### Patch Changes
+
+- Updated dependencies [[`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417)]:
+  - @atlaspack/types-internal@2.15.0
+
+## 2.14.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.14.14
+
+## 2.14.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.14.13
+
+## 2.14.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.14.12
+
+## 2.14.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.14.11
+
+## 2.14.10
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.14.10
+
+## 2.14.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.14.9
+
+## 2.14.8
+
+### Patch Changes
+
+- Updated dependencies [[`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b)]:
+  - @atlaspack/types-internal@2.14.8
+
 ## 2.14.7
 
 ### Patch Changes

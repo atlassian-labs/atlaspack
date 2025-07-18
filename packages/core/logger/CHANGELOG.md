@@ -1,5 +1,32 @@
 # @atlaspack/logger
 
+## 2.14.13
+
+### Patch Changes
+
+- Updated dependencies [[`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5)]:
+  - @atlaspack/rust@3.4.1
+
+## 2.14.12
+
+### Patch Changes
+
+- Updated dependencies [[`c75bf55`](https://github.com/atlassian-labs/atlaspack/commit/c75bf553fff4decc285b5fd499a275853b18f8f2)]:
+  - @atlaspack/rust@3.4.0
+
+## 2.14.11
+
+### Patch Changes
+
+- [#650](https://github.com/atlassian-labs/atlaspack/pull/650) [`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb) Thanks [@alshdavid](https://github.com/alshdavid)! - Remove package.json#exports
+
+## 2.14.10
+
+### Patch Changes
+
+- Updated dependencies [[`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c), [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca)]:
+  - @atlaspack/rust@3.3.5
+
 ## 2.14.9
 
 ### Patch Changes

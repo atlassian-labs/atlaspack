@@ -2,6 +2,7 @@
 import assert from 'assert';
 import path from 'path';
 import {bundle, describe, distDir, it, outputFS} from '@atlaspack/test-utils';
+import {tracer} from '@atlaspack/profiler';
 
 describe('tracing', function () {
   it('should produce a trace', async function () {
@@ -32,5 +33,9 @@ describe('tracing', function () {
     );
     const profileContent = JSON.parse(content + ']'); // Traces don't contain a closing ] as an optimisation for partial writes
     assert(profileContent.length > 0);
+    assert(
+      !tracer.enabled,
+      'Tracer should be disabled when Atlaspack is shut down',
+    );
   });
 });

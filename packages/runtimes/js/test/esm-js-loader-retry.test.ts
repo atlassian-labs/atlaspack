@@ -1,12 +1,8 @@
-// @flow strict-local
-
 import load from '../src/helpers/browser/esm-js-loader-retry.js';
 import bundleManifest from '../src/helpers/bundle-manifest.js';
 import {mock} from 'node:test';
 import type {Mock} from 'node:test';
 import assert from 'node:assert';
-
-declare var globalThis: Window & {[key: string]: any};
 
 describe('esm-js-loader-retry', () => {
   let mockSetTimeout: Mock<Window['setTimeout']>;
@@ -22,17 +18,18 @@ describe('esm-js-loader-retry', () => {
   });
 
   beforeEach(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
     mockSetTimeout = mock.fn((callback: any, duration: any, ...args: any[]) =>
       callback(),
     );
-    globalThis.setTimeout = mockSetTimeout;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    globalThis.setTimeout = mockSetTimeout as any;
 
     mockParcelImport = mock.fn(() => Promise.resolve());
     globalThis.__parcel__import__ = mockParcelImport;
 
     globalThis.parcelRequire = mock.fn();
-    // @ts-expect-error
-    globalThis.navigator = {onLine: true};
+    Object.defineProperty(globalThis, 'navigator', {value: {onLine: true}});
     globalThis.CustomEvent = globalThis.CustomEvent || class {};
     globalThis.dispatchEvent = mock.fn();
 

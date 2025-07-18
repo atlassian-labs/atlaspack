@@ -1,5 +1,78 @@
 # @atlaspack/transformer-html
 
+## 2.14.19
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.19
+
+## 2.14.18
+
+### Patch Changes
+
+- Updated dependencies [[`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5)]:
+  - @atlaspack/rust@3.4.1
+  - @atlaspack/plugin@2.14.18
+
+## 2.14.17
+
+### Patch Changes
+
+- Updated dependencies [[`c75bf55`](https://github.com/atlassian-labs/atlaspack/commit/c75bf553fff4decc285b5fd499a275853b18f8f2)]:
+  - @atlaspack/rust@3.4.0
+  - @atlaspack/plugin@2.14.17
+
+## 2.14.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.16
+
+## 2.14.15
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.15
+
+## 2.14.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.14
+
+## 2.14.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.13
+
+## 2.14.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.12
+
+## 2.14.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.11
+
+## 2.14.10
+
+### Patch Changes
+
+- Updated dependencies [[`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c), [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca)]:
+  - @atlaspack/rust@3.3.5
+  - @atlaspack/plugin@2.14.10
+
 ## 2.14.9
 
 ### Patch Changes

@@ -34,6 +34,7 @@ import {
 import Target from './Target';
 import {BundleBehaviorNames} from '../types';
 import {fromProjectPath} from '../projectPath';
+import {fromEnvironmentId} from '../EnvironmentManager';
 
 const inspect = Symbol.for('nodejs.util.inspect.custom');
 
@@ -67,9 +68,9 @@ export function bundleToInternalBundleGraph(bundle: IBundle): BundleGraph {
 let _private = {};
 
 export class Bundle implements IBundle {
-  #bundle /*: InternalBundle */;
-  #bundleGraph /*: BundleGraph */;
-  #options /*: AtlaspackOptions */;
+  #bundle: InternalBundle;
+  #bundleGraph: BundleGraph;
+  #options: AtlaspackOptions;
 
   // $FlowFixMe
   [inspect]() {
@@ -123,7 +124,7 @@ export class Bundle implements IBundle {
   }
 
   get env(): IEnvironment {
-    return new Environment(this.#bundle.env, this.#options);
+    return new Environment(fromEnvironmentId(this.#bundle.env), this.#options);
   }
 
   get needsStableName(): ?boolean {
@@ -213,9 +214,9 @@ export class Bundle implements IBundle {
 }
 
 export class NamedBundle extends Bundle implements INamedBundle {
-  #bundle /*: InternalBundle */;
-  #bundleGraph /*: BundleGraph */;
-  #options /*: AtlaspackOptions */;
+  #bundle: InternalBundle;
+  #bundleGraph: BundleGraph;
+  #options: AtlaspackOptions;
 
   constructor(
     sentinel: mixed,
@@ -267,10 +268,10 @@ export class NamedBundle extends Bundle implements INamedBundle {
 }
 
 export class PackagedBundle extends NamedBundle implements IPackagedBundle {
-  #bundle /*: InternalBundle */;
-  #bundleGraph /*: BundleGraph */;
-  #options /*: AtlaspackOptions */;
-  #bundleInfo /*: ?PackagedBundleInfo */;
+  #bundle: InternalBundle;
+  #bundleGraph: BundleGraph;
+  #options: AtlaspackOptions;
+  #bundleInfo: ?PackagedBundleInfo;
 
   constructor(
     sentinel: mixed,

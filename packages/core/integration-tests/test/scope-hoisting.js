@@ -1,4 +1,5 @@
 // @flow
+import type {BundleGraph, PackagedBundle} from '@atlaspack/types';
 import assert from 'assert';
 import path from 'path';
 import nullthrows from 'nullthrows';
@@ -21,6 +22,7 @@ import {
   run,
   runBundle,
   fsFixture,
+  getBundleContents,
 } from '@atlaspack/test-utils';
 
 const bundle = (name, opts = {}) => {
@@ -3614,67 +3616,248 @@ describe('scope hoisting', function () {
       assert.deepEqual(res, {foo: 2});
     });
 
-    it('supports constant inlining', async function () {
-      let b = await bundle(
-        path.join(__dirname, 'integration/inline-constants/index.js'),
-        {
-          mode: 'production',
-          defaultTargetOptions: {
-            sourceMaps: false,
-          },
-        },
-      );
+    describe('constant inlining', function () {
+      [
+        {applyScopeHoistingImprovement: true},
+        {applyScopeHoistingImprovement: false},
+      ].forEach(({applyScopeHoistingImprovement}) => {
+        it(`supports constant inlining (applyScopeHoistingImprovement: ${applyScopeHoistingImprovement.toString()})`, async function () {
+          let b = await bundle(
+            path.join(__dirname, 'integration/inline-constants/index.js'),
+            {
+              mode: 'production',
+              defaultTargetOptions: {
+                sourceMaps: false,
+              },
+              featureFlags: {
+                applyScopeHoistingImprovement,
+              },
+            },
+          );
 
-      let constants = ['BLOGGER', 'PREMIUM', 'MONTHS_IN_YEAR'];
+          let constants = ['BLOGGER', 'PREMIUM', 'MONTHS_IN_YEAR'];
 
-      for (let bundle of b.getBundles()) {
-        let contents = await outputFS.readFile(bundle.filePath, 'utf8');
+          for (let bundle of b.getBundles()) {
+            let contents = await outputFS.readFile(bundle.filePath, 'utf8');
 
-        // Check constant export names are NOT present in the bundles
-        assert(
-          constants.every((constant) => !contents.includes(constant)),
-          `Bundle didn't inline constant values`,
-        );
-      }
+            // Check constant export names are NOT present in the bundles
+            assert(
+              constants.every((constant) => !contents.includes(constant)),
+              `Bundle didn't inline constant values`,
+            );
+          }
 
-      // Run the bundle to make sure it's valid
-      await run(b);
-    });
+          // Run the bundle to make sure it's valid
+          await run(b);
+        });
 
-    it('supports constant inlining with shared bundles', async function () {
-      let b = await bundle(
-        [
-          path.join(
-            __dirname,
-            'integration/inline-constants-shared-bundles/a.html',
-          ),
-          path.join(
-            __dirname,
-            'integration/inline-constants-shared-bundles/b.html',
-          ),
-        ],
-        {
-          mode: 'production',
-          defaultTargetOptions: {
-            sourceMaps: false,
-          },
-        },
-      );
+        it(`supports constant inlining with shared bundles (applyScopeHoistingImprovement: ${applyScopeHoistingImprovement.toString()})`, async function () {
+          let b = await bundle(
+            [
+              path.join(
+                __dirname,
+                'integration/inline-constants-shared-bundles/a.html',
+              ),
+              path.join(
+                __dirname,
+                'integration/inline-constants-shared-bundles/b.html',
+              ),
+            ],
+            {
+              mode: 'production',
+              defaultTargetOptions: {
+                sourceMaps: false,
+              },
+              featureFlags: {
+                applyScopeHoistingImprovement,
+              },
+            },
+          );
 
-      let constants = ['BLOGGER', 'PREMIUM', 'MONTHS_IN_YEAR'];
+          let constants = ['BLOGGER', 'PREMIUM', 'MONTHS_IN_YEAR'];
 
-      for (let bundle of b.getBundles()) {
-        let contents = await outputFS.readFile(bundle.filePath, 'utf8');
+          for (let bundle of b.getBundles()) {
+            let contents = await outputFS.readFile(bundle.filePath, 'utf8');
 
-        // Check constant export names are NOT present in the bundles
-        assert(
-          constants.every((constant) => !contents.includes(constant)),
-          `Bundle didn't inline constant values`,
-        );
-      }
+            // Check constant export names are NOT present in the bundles
+            assert(
+              constants.every((constant) => !contents.includes(constant)),
+              `Bundle didn't inline constant values`,
+            );
+          }
 
-      // Run the bundle to make sure it's valid
-      await run(b);
+          // Run the bundle to make sure it's valid
+          await run(b);
+        });
+        it(`only creates a namespace object for a constant module if the current bundle needs it (applyScopeHoistingImprovement: ${applyScopeHoistingImprovement.toString()})`, async function () {
+          await fsFixture(overlayFS, __dirname)`
+            inline-constants-namespaces
+
+              yarn.lock: {}
+
+              package.json:
+                {
+                  "@atlaspack/transformer-js": { "unstable_inlineConstants": true }
+                }
+
+              index.html:
+                <script type="module" src="./index.js"></script>
+
+              index.js:
+                import { CONSTANT } from './constants';
+                async function bar() {
+                  await import('./async.js')
+                }
+                function foo() {
+                  return \`The constant is \${CONSTANT}\`;
+                }
+                global.result = foo();
+
+              async.js:
+                import * as consts from './constants.js';
+                console.log("namespaced", consts);
+
+              constants.js:
+                export const CONSTANT = 42;
+                export const OTHER = "other";
+          `;
+          let b = await bundle(
+            path.join(__dirname, 'inline-constants-namespaces', 'index.html'),
+            {
+              mode: 'production',
+              defaultTargetOptions: {
+                shouldScopeHoist: true,
+                sourceMaps: false,
+                shouldOptimize: true,
+              },
+              inputFS: overlayFS,
+              featureFlags: {
+                inlineConstOptimisationFix: true,
+                applyScopeHoistingImprovement,
+              },
+            },
+          );
+
+          const indexBundle = nullthrows(
+            await getBundleContents(b, outputFS, (name) =>
+              /index.*\.js/.test(name),
+            ),
+            'Expected the index bundle to exist',
+          );
+          // Expect the index bundle to inline the constant properly
+          assert(
+            indexBundle.includes('The constant is 42'),
+            'Expected the constant to have been inlined in the index bundle',
+          );
+
+          const asyncBundle = nullthrows(
+            await getBundleContents(b, outputFS, (name) =>
+              /async.*\.js/.test(name),
+            ),
+            'Expected the async bundle to exist',
+          );
+          // Expect the asyncBundle to contain a namespacing for the constant
+          assert(
+            /[a-z]\([a-z],"CONSTANT",\(\)=>/.test(asyncBundle),
+            'Expected the async bundle to contain a namespacing',
+          );
+
+          // Make sure it still runs
+          await run(b);
+        });
+
+        it(`inserts constant modules in the right place to ensure proper minification (applyScopeHoistingImprovement: ${applyScopeHoistingImprovement.toString()})`, async function () {
+          // This fixture attempts to trigger a bug where constant modules are inserted after the wrapped module that
+          // references them, preventing optimisation by the minifier. This is done by having two entry points
+          // both of which use the same module that uses a constant to ensure that the module is wrapped.
+          await fsFixture(overlayFS, __dirname)`
+            inline-constants-order
+
+              yarn.lock: {}
+
+              package.json:
+                {
+                  "@atlaspack/transformer-js": { "unstable_inlineConstants": true }
+                }
+
+              index.html:
+                <script type="module" src="./index.js"></script>
+
+              index2.html:
+                <script type="module" src="./index2.js"></script>
+
+              something.js:
+                export function somethingOnlyUsedHere() {
+                  return global.exists ? 'nothing' : 'something only used here';
+                }
+
+              module.js:
+                import { CONSTANT } from './constants';
+                import { somethingOnlyUsedHere } from './something';
+                export default function foo() {
+                  return \`The constant is \${CONSTANT}, something only used here is \${somethingOnlyUsedHere()}\`;
+                }
+
+              index.js:
+                import foo from './module.js';
+                import { OTHER } from './constants';
+
+                export async function main() {
+                  console.log(foo(), \`\${OTHER}\`);
+                }
+
+                main();
+
+              index2.js:
+                import foo from './module.js';
+                import { OTHER } from './constants';
+
+                export async function main() {
+                  console.log(foo(), \`\${OTHER}\`);
+                }
+
+                main();
+
+              constants.js:
+                export const CONSTANT = 42;
+                export const OTHER = "other";
+          `;
+          let b = await bundle(
+            [
+              path.join(__dirname, 'inline-constants-order', 'index.html'),
+              path.join(__dirname, 'inline-constants-order', 'index2.html'),
+            ],
+            {
+              mode: 'production',
+              defaultTargetOptions: {
+                shouldScopeHoist: true,
+                sourceMaps: false,
+                shouldOptimize: true,
+              },
+              inputFS: overlayFS,
+              featureFlags: {
+                inlineConstOptimisationFix: true,
+                applyScopeHoistingImprovement,
+              },
+            },
+          );
+
+          const indexBundle = nullthrows(
+            await getBundleContents(b, outputFS, (name) =>
+              /index.*\.js/.test(name),
+            ),
+            'Expected the index bundle to exist',
+          );
+          // Expect the index bundle to inline the constant properly
+          assert(
+            indexBundle.includes('The constant is 42'),
+            'Expected the constant to have been inlined in the index bundle',
+          );
+
+          // Make sure it still runs
+          await run(b);
+        });
+      });
     });
   });
 
@@ -6319,91 +6502,6 @@ describe('scope hoisting', function () {
     }
   });
 
-  it('should allow force skipping of wrapping assets in async bundles', async function () {
-    await fsFixture(overlayFS, __dirname)`
-      force-skip-wrap
-        one.js:
-          export default { name: 'one', value: 1 };
-        two.js:
-          export default { name: 'two', value: 2 };
-        obj-factory.js:
-          import one from './one';
-          import two from './two';
-          const obj = {
-            one,
-            two,
-          }
-          export default () => obj;
-        async-root.js:
-          import getObj from './obj-factory';
-          export default () => getObj();
-        index.js:
-          async function main() {
-            const asyncRoot = await import('./async-root');
-            result(asyncRoot.default());
-          }
-          main();
-
-        package.json:
-          {
-              "@atlaspack/packager-js": {
-                  "unstable_forceSkipWrapAssets": [
-                    "obj-factory.js"
-                  ]
-              }
-          }
-        yarn.lock:`;
-
-    let b = await bundle([path.join(__dirname, 'force-skip-wrap/index.js')], {
-      mode: 'production',
-      defaultTargetOptions: {
-        shouldScopeHoist: true,
-        shouldOptimize: true,
-        outputFormat: 'esmodule',
-      },
-      inputFS: overlayFS,
-    });
-    function hasAsset(bundle, assetName) {
-      let result = false;
-
-      bundle.traverseAssets((asset) => {
-        if (asset.filePath.includes(assetName)) {
-          result = true;
-        }
-      });
-
-      return result;
-    }
-    let asyncBundleContents = await outputFS.readFile(
-      nullthrows(
-        b.getBundles().find((b) => hasAsset(b, 'async-root.js')),
-        'No async bundle',
-      ).filePath,
-      'utf8',
-    );
-    assert(
-      asyncBundleContents.includes(
-        '{one:{name:"one",value:1},two:{name:"two",value:2}}',
-      ),
-      "Async bundle should directly reference the 'one' asset into the base asset",
-    );
-
-    let resolve;
-    let p = new Promise((r) => {
-      resolve = r;
-    });
-    await run(b, {
-      result: (r) => {
-        resolve(r);
-      },
-    });
-    const result = await p;
-    assert.deepEqual(result, {
-      one: {name: 'one', value: 1},
-      two: {name: 'two', value: 2},
-    });
-  });
-
   it('should handle exports where incoming dep is HTML', async function () {
     await fsFixture(overlayFS, __dirname)`
       exports-incoming-dep-html
@@ -6490,5 +6588,410 @@ describe('scope hoisting', function () {
     });
 
     await run(b);
+  });
+
+  it('should not re-export * from empty files if all deps are esm', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      empty-files
+        empty.js:
+          // empty file
+
+        one.js:
+          export const one = 'one';
+
+        two.js:
+          export const two = 'two';
+
+        barrel-one.js:
+          export {one} from './one';
+
+        barrel-two.js:
+          export {two} from './two';
+          export * from './empty';
+
+        library.js:
+          // barrel-two contains a * re-export of an empty file, causing it to
+          // potentially override the named export (one) from barrel-one.
+          export * from './barrel-one';
+          export * from './barrel-two';
+
+        index.js:
+          import {one, two} from './library';
+          result(one + two);
+
+        index.html:
+          <script type="module" src="./index.js"></script>
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "manualSharedBundles": [{
+                "name": "shared",
+                "assets": ["!index.js"]
+              }]
+            }
+          }
+        yarn.lock:
+        `;
+
+    let b = await bundle([path.join(__dirname, 'empty-files/index.html')], {
+      mode: 'production',
+      defaultTargetOptions: {
+        shouldOptimize: false,
+        shouldScopeHoist: true,
+        outputFormat: 'esmodule',
+      },
+      inputFS: overlayFS,
+    });
+
+    let result;
+    await run(b, {
+      result: (r) => {
+        result = r;
+      },
+    });
+
+    assert.equal(result, 'onetwo');
+  });
+
+  describe('scope hoisting within wrapped assets', function () {
+    function assertWrappedAssets(
+      bundleGraph: BundleGraph<PackagedBundle>,
+      bundle: PackagedBundle,
+      assets: string[],
+    ) {
+      let bundleCode = outputFS.readFileSync(bundle.filePath, 'utf8');
+      assert.equal(bundleCode.match(/parcelRegister\(/g).length, assets.length);
+
+      for (let assetName of assets) {
+        let sharedPublicId = bundleGraph.getAssetPublicId(
+          nullthrows(findAsset(bundleGraph, assetName)),
+        );
+        assert(
+          bundleCode.includes(`parcelRegister("${sharedPublicId}",`),
+          `Should have registered ${assetName} in ${bundle.filePath}`,
+        );
+      }
+    }
+
+    [{inlineConstants: true}, {inlineConstants: false}].forEach(
+      ({inlineConstants}) => {
+        it(`should inline assets inside wrapped assets if possible (inlineConstants: ${inlineConstants.toString()})`, async function () {
+          await fsFixture(overlayFS, __dirname)`
+            wrapped-asset-groups
+              index.html:
+                <script type="module" src="./index.js"></script>
+
+              index.js:
+                import root from './root';
+                import shared from './shared';
+
+                result([root, shared].join('---'));
+
+              root.js:
+                import a from './a';
+                import b from './b';
+
+                export default a + b;
+
+              a.js:
+                import leaf from './leaf';
+                export default 'a' + leaf;
+
+              b.js:
+                import leaf from './leaf';
+                export default 'b' + leaf;
+
+              leaf.js:
+                import shared from './shared';
+                import { common } from './common';
+
+                export default 'leaf' + shared + common;
+
+              shared.js:
+                import c from './c';
+                export default 'shared' + c;
+
+              c.js:
+                import { common } from './common';
+                export default 'c' + common;
+
+              common.js:
+                export const common = 'common';
+
+              package.json:
+                {
+                  "@atlaspack/transformer-js": {
+                    "unstable_inlineConstants": ${inlineConstants.toString()}
+                  },
+                  "@atlaspack/bundler-default": {
+                    "manualSharedBundles": [{
+                      "name": "shared",
+                      "assets": ["!index.js"]
+                    }]
+                  }
+                }
+              yarn.lock:`;
+
+          let b = await bundle(
+            [path.join(__dirname, 'wrapped-asset-groups/index.html')],
+            {
+              mode: 'production',
+              defaultTargetOptions: {
+                shouldScopeHoist: true,
+                shouldOptimize: false,
+                outputFormat: 'esmodule',
+              },
+              inputFS: overlayFS,
+              featureFlags: {
+                applyScopeHoistingImprovement: true,
+              },
+            },
+          );
+
+          let sharedBundle = nullthrows(
+            b.getBundles().find((b) => b.manualSharedBundle === 'shared'),
+          );
+          assertWrappedAssets(
+            b,
+            sharedBundle,
+            [
+              'shared.js',
+              'root.js',
+              !inlineConstants ? 'common.js' : '',
+            ].filter((a) => a !== ''),
+          );
+
+          let result;
+          await run(b, {
+            result: (r) => {
+              result = r;
+            },
+          });
+          assert.equal(
+            result,
+            'aleafsharedccommoncommonbleafsharedccommoncommon---sharedccommon',
+          );
+        });
+
+        it(`should handle barrels of barrels (inlineConstants: ${inlineConstants.toString()})`, async function () {
+          await fsFixture(overlayFS, __dirname)`
+        stacked-barrels
+          index.js:
+            import('./first-barrel.js').then(( {valueOne, valueTwo}) => {
+              const newValue = {valueOne, valueTwo};
+              result(newValue);
+            });
+
+          first-barrel.js:
+            export {twig} from './twig-thing.js';
+            export {valueOne, valueTwo} from './second-barrel.js';
+
+          second-barrel.js:
+            export {valueOne} from './leaf-one.js';
+            export {valueTwo} from './leaf-two.js';
+
+          leaf-one.js:
+            export const valueOne = 'leaf-one';
+
+          leaf-two.js:
+            export const valueTwo = 'leaf-two';
+
+          leaf-three.js:
+            export const valueThree = 'leaf-three';
+
+          twig-thing.js:
+            import { valueThree } from './leaf-three.js';
+            export const twig = [valueThree, 'twiggy-do'].join(',');
+
+          package.json:
+            {
+              "name": "scope-hosting-test",
+              "targets": {
+                "production": {
+                  "optimize": false,
+                  "sourceMap": false,
+                  "context": "node"
+                }
+              },
+              "@atlaspack/transformer-js": {
+                  "unstable_inlineConstants": ${inlineConstants.toString()}
+              }
+            }
+          yarn.lock:
+      `;
+
+          let b = await bundle(
+            path.join(__dirname, 'stacked-barrels/index.js'),
+            {
+              inputFS: overlayFS,
+              featureFlags: {
+                applyScopeHoistingImprovement: true,
+              },
+            },
+          );
+
+          let result;
+          await run(b, {
+            result(o) {
+              result = o;
+            },
+          });
+
+          assert.deepEqual(result, {
+            valueOne: 'leaf-one',
+            valueTwo: 'leaf-two',
+          });
+        });
+
+        it(`should handle re-exports in wrapped groups (inlineConstants: ${inlineConstants.toString()})`, async function () {
+          await fsFixture(overlayFS, __dirname)`
+        reexports-in-wrapped-groups
+          index.html:
+            <script type="module" src="./index.js"></script>
+
+          index.js:
+            import {one} from './first-barrel';
+            import {four} from './second-barrel.js';
+            result([one, four()]);
+
+          first-barrel.js:
+            export {one, four} from './second-barrel.js';
+
+          second-barrel.js:
+            import {valueOne as one} from './leaf-one';
+            export {one};
+            // Force this file to exclusive re-export
+            export function four() { return 'four' + one; }
+
+          leaf-one.js:
+            export const valueOne = 'leaf-one';
+
+          package.json:
+            {
+              "name": "scope-hosting-test",
+              "sideEffects": ["index.js"],
+              "@atlaspack/transformer-js": {
+                  "unstable_inlineConstants": ${inlineConstants.toString()}
+              },
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [{
+                  "name": "shared",
+                  "assets": ["!index.js"]
+                }]
+              }
+            }
+          yarn.lock:
+      `;
+
+          let b = await bundle(
+            path.join(__dirname, 'reexports-in-wrapped-groups/index.html'),
+            {
+              inputFS: overlayFS,
+              featureFlags: {
+                applyScopeHoistingImprovement: true,
+              },
+            },
+          );
+
+          let sharedBundle = nullthrows(
+            b.getBundles().find((b) => b.manualSharedBundle === 'shared'),
+          );
+
+          assertWrappedAssets(
+            b,
+            sharedBundle,
+            [
+              'first-barrel.js',
+              'second-barrel.js',
+              !inlineConstants ? 'leaf-one.js' : '',
+            ].filter((a) => a !== ''),
+          );
+
+          let result;
+          await run(b, {
+            result(o) {
+              result = o;
+            },
+          });
+
+          assert.deepEqual(result, ['leaf-one', 'fourleaf-one']);
+        });
+
+        it(`should handle * re-exports in wrapped groups (inlineConstants: ${inlineConstants.toString()})`, async function () {
+          await fsFixture(overlayFS, __dirname)`
+        star-reexports-in-wrapped-groups
+          index.html:
+            <script type="module" src="./index.js"></script>
+
+          index.js:
+            import {one} from './first-barrel';
+            import {four} from './second-barrel.js';
+            result([one, four()]);
+
+          first-barrel.js:
+            export * from './second-barrel.js';
+
+          second-barrel.js:
+            import {valueOne as one} from './leaf-one';
+            export {one};
+            // Force this file to exclusive re-export
+            export function four() { return 'four' + one; }
+
+          leaf-one.js:
+            export const valueOne = 'leaf-one';
+
+          package.json:
+            {
+              "name": "scope-hosting-test",
+              "sideEffects": ["index.js"],
+              "@atlaspack/transformer-js": {
+                  "unstable_inlineConstants": ${inlineConstants.toString()}
+              },
+              "@atlaspack/bundler-default": {
+                "manualSharedBundles": [{
+                  "name": "shared",
+                  "assets": ["!index.js"]
+                }]
+              }
+            }
+          yarn.lock:
+      `;
+
+          let b = await bundle(
+            path.join(__dirname, 'star-reexports-in-wrapped-groups/index.html'),
+            {
+              inputFS: overlayFS,
+              featureFlags: {
+                applyScopeHoistingImprovement: true,
+              },
+            },
+          );
+
+          let sharedBundle = nullthrows(
+            b.getBundles().find((b) => b.manualSharedBundle === 'shared'),
+          );
+
+          assertWrappedAssets(
+            b,
+            sharedBundle,
+            [
+              'first-barrel.js',
+              'second-barrel.js',
+              !inlineConstants ? 'leaf-one.js' : '',
+            ].filter((a) => a !== ''),
+          );
+
+          let result;
+          await run(b, {
+            result(o) {
+              result = o;
+            },
+          });
+
+          assert.deepEqual(result, ['leaf-one', 'fourleaf-one']);
+        });
+      },
+    );
   });
 });

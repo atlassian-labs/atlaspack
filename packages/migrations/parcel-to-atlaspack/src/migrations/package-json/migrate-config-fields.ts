@@ -1,4 +1,5 @@
 // TODO Preserve order?
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function migrateConfigFields(packageJson: any): boolean {
   let didConfigChange = false;
 

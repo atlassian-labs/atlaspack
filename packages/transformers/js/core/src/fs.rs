@@ -30,6 +30,7 @@ pub fn inline_fs<'a>(
   deps: &'a mut Vec<DependencyDescriptor>,
   is_module: bool,
   conditional_bundling: bool,
+  computed_properties_fix: bool,
 ) -> impl VisitMut + 'a {
   InlineFS {
     filename: Path::new(filename).to_path_buf(),
@@ -41,6 +42,7 @@ pub fn inline_fs<'a>(
       false,
       is_module,
       conditional_bundling,
+      computed_properties_fix,
     ),
     project_root,
     deps,
@@ -443,6 +445,7 @@ mod tests {
         &mut deps,
         true,
         false,
+        true,
       )
     });
 

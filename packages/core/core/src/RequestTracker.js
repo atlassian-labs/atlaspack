@@ -30,15 +30,15 @@ import nullthrows from 'nullthrows';
 
 import {
   ATLASPACK_VERSION,
-  VALID,
-  INITIAL_BUILD,
   FILE_CREATE,
-  FILE_UPDATE,
   FILE_DELETE,
+  FILE_UPDATE,
   ENV_CHANGE,
+  ERROR,
+  INITIAL_BUILD,
   OPTION_CHANGE,
   STARTUP,
-  ERROR,
+  VALID,
 } from './constants';
 import type {AtlaspackV3} from './atlaspack-v3/AtlaspackV3';
 import {
@@ -68,8 +68,13 @@ import type {
   InternalFileCreateInvalidation,
   InternalGlob,
 } from './types';
-import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
+import {BuildAbortError, hashFromOption} from './utils';
 import {performance} from 'perf_hooks';
+
+import {
+  loadEnvironmentsFromCache,
+  writeEnvironmentsToCache,
+} from './EnvironmentManager';
 
 export const requestGraphEdgeTypes = {
   subrequest: 2,
@@ -144,7 +149,7 @@ type OptionNode = {|
 type ConfigKeyNode = {|
   id: ContentKey,
   +type: typeof CONFIG_KEY,
-  configKey: string,
+  configKey: string[],
   contentHash: string,
 |};
 
@@ -216,7 +221,7 @@ export type RunAPI<TResult: RequestResult> = {|
   invalidateOnFileUpdate: (ProjectPath) => void,
   invalidateOnConfigKeyChange: (
     filePath: ProjectPath,
-    configKey: string,
+    configKey: string[],
     contentHash: string,
   ) => void,
   invalidateOnStartup: () => void,
@@ -283,10 +288,12 @@ const nodeFromOption = (option: string, value: mixed): RequestGraphNode => ({
 
 const nodeFromConfigKey = (
   fileName: ProjectPath,
-  configKey: string,
+  configKey: string[],
   contentHash: string,
 ): RequestGraphNode => ({
-  id: `config_key:${fromProjectPathRelative(fileName)}:${configKey}`,
+  id: `config_key:${fromProjectPathRelative(fileName)}:${JSON.stringify(
+    configKey,
+  )}`,
   type: CONFIG_KEY,
   configKey,
   contentHash,
@@ -527,7 +534,7 @@ export class RequestGraph extends ContentGraph<
   invalidateOnConfigKeyChange(
     requestNodeId: NodeId,
     filePath: ProjectPath,
-    configKey: string,
+    configKey: string[],
     contentHash: string,
   ) {
     let configKeyNodeId = this.addNode(
@@ -714,8 +721,8 @@ export class RequestGraph extends ContentGraph<
     env: string,
     value: string | void,
   ) {
-    let envNode = nodeFromEnv(env, value);
-    let envNodeId = this.addNode(envNode);
+    const envNode = nodeFromEnv(env, value);
+    const envNodeId = this.addNode(envNode);
 
     if (
       !this.hasEdge(
@@ -1109,11 +1116,18 @@ export class RequestGraph extends ContentGraph<
       }
 
       let configKeyNodes = this.configKeyNodes.get(_filePath);
-      if (configKeyNodes && (type === 'delete' || type === 'update')) {
+
+      // With granular invalidations we will always run this block,
+      // so even if we get a create event (for whatever reason), we will still
+      // try to limit invalidations from config key changes through hashing.
+      //
+      // Currently create events can invalidate a large number of nodes due to
+      // "create above" invalidations.
+      if (configKeyNodes) {
         for (let nodeId of configKeyNodes) {
           let isInvalid = type === 'delete';
 
-          if (type === 'update') {
+          if (type !== 'delete') {
             let node = this.getNode(nodeId);
             invariant(node && node.type === CONFIG_KEY);
 
@@ -1199,7 +1213,6 @@ export default class RequestTracker {
   farm: WorkerFarm;
   options: AtlaspackOptions;
   rustAtlaspack: ?AtlaspackV3;
-  signal: ?AbortSignal;
   stats: Map<RequestType, number> = new Map();
 
   constructor({
@@ -1217,11 +1230,6 @@ export default class RequestTracker {
     this.farm = farm;
     this.options = options;
     this.rustAtlaspack = rustAtlaspack;
-  }
-
-  // TODO: refactor (abortcontroller should be created by RequestTracker)
-  setSignal(signal?: AbortSignal) {
-    this.signal = signal;
   }
 
   startRequest(request: RequestNode): {|
@@ -1404,7 +1412,6 @@ export default class RequestTracker {
         rustAtlaspack: this.rustAtlaspack,
       });
 
-      assertSignalNotAborted(this.signal);
       this.completeRequest(requestNodeId);
 
       deferred.resolve(true);
@@ -1558,6 +1565,10 @@ export default class RequestTracker {
         total,
         size: this.graph.nodes.length,
       });
+
+      if (getFeatureFlag('environmentDeduplication')) {
+        await writeEnvironmentsToCache(options.cache);
+      }
 
       let serialisedGraph = this.graph.serialize();
 
@@ -1842,6 +1853,10 @@ async function loadRequestGraph(options): Async<RequestGraph> {
       ...commonMeta,
     },
   });
+
+  if (getFeatureFlag('environmentDeduplication')) {
+    await loadEnvironmentsFromCache(options.cache);
+  }
 
   const hasRequestGraphInCache = getFeatureFlag('cachePerformanceImprovements')
     ? await options.cache.has(requestGraphKey)

@@ -1,5 +1,133 @@
 # @atlaspack/packager-js
 
+## 2.18.1
+
+### Patch Changes
+
+- Updated dependencies [[`13aef17`](https://github.com/atlassian-labs/atlaspack/commit/13aef177eea289a6e40d2113b5ec1ac9be18a33d)]:
+  - @atlaspack/feature-flags@2.19.1
+  - @atlaspack/utils@2.17.1
+  - @atlaspack/types@2.15.9
+  - @atlaspack/plugin@2.14.19
+
+## 2.18.0
+
+### Minor Changes
+
+- [#640](https://github.com/atlassian-labs/atlaspack/pull/640) [`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d) Thanks [@JakeLane](https://github.com/JakeLane)! - Clean up conditional bundling feature flags
+
+### Patch Changes
+
+- Updated dependencies [[`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d), [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`c4415a4`](https://github.com/atlassian-labs/atlaspack/commit/c4415a455543d984ca28452c2cb87a794d22497c), [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5), [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3), [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417), [`a5ed1b4`](https://github.com/atlassian-labs/atlaspack/commit/a5ed1b414498560f393ff491af4da25b6e8dde56)]:
+  - @atlaspack/feature-flags@2.19.0
+  - @atlaspack/utils@2.17.0
+  - @atlaspack/rust@3.4.1
+  - @atlaspack/types@2.15.8
+  - @atlaspack/plugin@2.14.18
+
+## 2.17.1
+
+### Patch Changes
+
+- Updated dependencies [[`c75bf55`](https://github.com/atlassian-labs/atlaspack/commit/c75bf553fff4decc285b5fd499a275853b18f8f2)]:
+  - @atlaspack/rust@3.4.0
+  - @atlaspack/utils@2.16.1
+  - @atlaspack/types@2.15.7
+  - @atlaspack/plugin@2.14.17
+
+## 2.17.0
+
+### Minor Changes
+
+- [#659](https://github.com/atlassian-labs/atlaspack/pull/659) [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529) Thanks [@benjervis](https://github.com/benjervis)! - Add the `asset-file-names-in-output` debug tool, which adds a comment to each asset inserted into a bundle that help identify it
+
+### Patch Changes
+
+- Updated dependencies [[`e8a60ff`](https://github.com/atlassian-labs/atlaspack/commit/e8a60ffbea41caef265786bbf73349771760081c), [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529)]:
+  - @atlaspack/feature-flags@2.18.4
+  - @atlaspack/utils@2.16.0
+  - @atlaspack/types@2.15.6
+  - @atlaspack/plugin@2.14.16
+
+## 2.16.2
+
+### Patch Changes
+
+- [#654](https://github.com/atlassian-labs/atlaspack/pull/654) [`4d7abde`](https://github.com/atlassian-labs/atlaspack/commit/4d7abde0a6faa148bcf330b08d820f171f853b76) Thanks [@marcins](https://github.com/marcins)! - Fixes constant inlining to work correctly with scope hoisting optimisations
+
+- Updated dependencies [[`5ded263`](https://github.com/atlassian-labs/atlaspack/commit/5ded263c7f11b866e8885b81c73e20dd060b25be)]:
+  - @atlaspack/feature-flags@2.18.3
+  - @atlaspack/utils@2.15.3
+  - @atlaspack/types@2.15.5
+  - @atlaspack/plugin@2.14.15
+
+## 2.16.1
+
+### Patch Changes
+
+- Updated dependencies [[`644b157`](https://github.com/atlassian-labs/atlaspack/commit/644b157dee72a871acc2d0facf0b87b8eea51956)]:
+  - @atlaspack/feature-flags@2.18.2
+  - @atlaspack/utils@2.15.2
+  - @atlaspack/types@2.15.4
+  - @atlaspack/plugin@2.14.14
+
+## 2.16.0
+
+### Minor Changes
+
+- [#644](https://github.com/atlassian-labs/atlaspack/pull/644) [`fc59be7`](https://github.com/atlassian-labs/atlaspack/commit/fc59be71f43dd87d3e6fb7f3f50c424d2b664858) Thanks [@marcins](https://github.com/marcins)! - Removes the unused unstable `forceSkipWrapAssets` feature
+
+### Patch Changes
+
+- [#633](https://github.com/atlassian-labs/atlaspack/pull/633) [`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b) Thanks [@sbhuiyan-atlassian](https://github.com/sbhuiyan-atlassian)! - Ported various HMR changes from Parcel
+
+- Updated dependencies [[`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b), [`0501255`](https://github.com/atlassian-labs/atlaspack/commit/05012550da35b05ce7d356a8cc29311e7f9afdca)]:
+  - @atlaspack/feature-flags@2.18.1
+  - @atlaspack/types@2.15.3
+  - @atlaspack/utils@2.15.1
+  - @atlaspack/plugin@2.14.13
+
+## 2.15.0
+
+### Minor Changes
+
+- [#627](https://github.com/atlassian-labs/atlaspack/pull/627) [`85c52d3`](https://github.com/atlassian-labs/atlaspack/commit/85c52d3f7717b3c84a118d18ab98cfbfd71dcbd2) Thanks [@benjervis](https://github.com/benjervis)! - Expands the situations where scope hoisting may be applied to include assets with no dependencies, regardless of whether if they have a wrapped ancestor.
+
+  Can be enabled with the `applyScopeHoistingImprovement` feature flag.
+
+### Patch Changes
+
+- [#632](https://github.com/atlassian-labs/atlaspack/pull/632) [`10fbcfb`](https://github.com/atlassian-labs/atlaspack/commit/10fbcfbfa49c7a83da5d7c40983e36e87f524a75) Thanks [@marcins](https://github.com/marcins)! - Added a new feature flag `inlineConstOptimisationFix` which when enabled changes the behaviour for output of constant modules. This fixes two issues with constant modules:
+
+  - Previously constant modules, if they needed a namespace anywhere, would have a namespace everywhere, with this change they only have a namespace in the bundles where needed.
+  - Previously in the case of wrapped assets, a constant module dependnecy of that wrapped asset would be rendered after the module - which meant the minifier would not be able to inline the constants safely. With this flag all constant modules are rendered at the top of the bundle.
+
+- Updated dependencies [[`10fbcfb`](https://github.com/atlassian-labs/atlaspack/commit/10fbcfbfa49c7a83da5d7c40983e36e87f524a75), [`85c52d3`](https://github.com/atlassian-labs/atlaspack/commit/85c52d3f7717b3c84a118d18ab98cfbfd71dcbd2), [`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c)]:
+  - @atlaspack/feature-flags@2.18.0
+  - @atlaspack/utils@2.15.0
+  - @atlaspack/types@2.15.2
+  - @atlaspack/plugin@2.14.12
+
+## 2.14.11
+
+### Patch Changes
+
+- Updated dependencies [[`73ea3c4`](https://github.com/atlassian-labs/atlaspack/commit/73ea3c4d85d4401fdd15abcbf988237e890e7ad3), [`b1b3693`](https://github.com/atlassian-labs/atlaspack/commit/b1b369317c66f8a431c170df2ebba4fa5b2e38ef)]:
+  - @atlaspack/feature-flags@2.17.0
+  - @atlaspack/utils@2.14.11
+  - @atlaspack/types@2.15.1
+  - @atlaspack/plugin@2.14.11
+
+## 2.14.10
+
+### Patch Changes
+
+- Updated dependencies [[`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b), [`1e32d4e`](https://github.com/atlassian-labs/atlaspack/commit/1e32d4eae6b3af3968e8a0ef97d35b4347fd4196), [`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c), [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca)]:
+  - @atlaspack/types@2.15.0
+  - @atlaspack/rust@3.3.5
+  - @atlaspack/plugin@2.14.10
+  - @atlaspack/utils@2.14.10
+
 ## 2.14.9
 
 ### Patch Changes

@@ -1,4 +1,5 @@
-// @flow
+// @flow strict-local
+
 import type {
   DependencySpecifier,
   SemverRange,
@@ -116,17 +117,29 @@ type DevDepRequests = {|
 export async function getDevDepRequests<TResult: RequestResult>(
   api: RunAPI<TResult>,
 ): Promise<DevDepRequests> {
-  let previousDevDepRequests: Map<string, DevDepRequestResult> = new Map(
-    await Promise.all(
+  async function getPreviousDevDepRequests() {
+    const allDevDepRequests = await Promise.all(
       api
         .getSubRequests()
         .filter((req) => req.requestType === requestTypes.dev_dep_request)
-        .map(async (req) => [
-          req.id,
-          nullthrows(await api.getRequestResult<DevDepRequestResult>(req.id)),
-        ]),
-    ),
-  );
+        .map(
+          async (req): Promise<[string, DevDepRequestResult | null | void]> => [
+            req.id,
+            await api.getRequestResult<DevDepRequestResult>(req.id),
+          ],
+        ),
+    );
+    const nonNullDevDepRequests = [];
+    for (const [id, result] of allDevDepRequests) {
+      if (result != null) {
+        nonNullDevDepRequests.push([id, result]);
+      }
+    }
+
+    return new Map(nonNullDevDepRequests);
+  }
+
+  const previousDevDepRequests = await getPreviousDevDepRequests();
 
   return {
     devDeps: new Map(

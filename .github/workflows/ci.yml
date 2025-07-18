@@ -35,6 +35,32 @@ jobs:
               octokit: github
             });
 
+  # Check if Rust files changed and rust package is bumped
+  check-rust-changes:
+    name: 🦀 Rust Changeset Check (ferris-atlaspack-bot)
+    runs-on: ubuntu-24.04
+    if: github.ref_name != 'main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate token for Ferris bot
+        id: ferris_token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.FERRIS_APP_ID }}
+          private-key: ${{ secrets.FERRIS_APP_PRIVATE_KEY }}
+      - name: Run Rust Changeset Check (ferris-atlaspack-bot)
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.ferris_token.outputs.token }}
+          script: |
+            const { checkRustChanges } = require('./scripts/check-rust-changes.js');
+            await checkRustChanges({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pullNumber: context.payload.pull_request.number,
+              octokit: github
+            });
+
   # Build and store native packages
   build_native:
     strategy:
@@ -99,6 +125,7 @@ jobs:
       - run: npx flow check
       - run: npx eslint .
       - run: npx prettier --list-different .
+      - run: npx lerna run --parallel build-tsc
       - run: npx lerna run build-ts
       - run: npx lerna run check-ts
 
@@ -142,12 +169,10 @@ jobs:
           # Linux AMD64
           - os: ubuntu-22.04
             node: 22
-          - os: ubuntu-22.04
-            node: 20
 
           # MacOS ARM64
           - os: macos-15
-            node: 20
+            node: 22
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -168,7 +193,7 @@ jobs:
     name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
       - build_native
-    timeout-minutes: 35
+    timeout-minutes: 45
     strategy:
       # These tend to be quite flakey, so one failed instance shouldn't stop
       # others from potentially succeeding
@@ -251,7 +276,7 @@ jobs:
     timeout-minutes: 35
     strategy:
       matrix:
-        node: [20]
+        node: [22]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:

@@ -29,4 +29,4 @@ export default (new Optimizer({
       contents: `data:${mimeType}${encoding},${content}`,
     };
   },
-}): Optimizer);
+}): Optimizer<mixed, mixed>);

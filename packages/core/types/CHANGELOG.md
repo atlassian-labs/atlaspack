@@ -1,5 +1,90 @@
 # @atlaspack/types
 
+## 2.15.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.15.1
+  - @atlaspack/workers@2.14.19
+
+## 2.15.8
+
+### Patch Changes
+
+- Updated dependencies [[`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417)]:
+  - @atlaspack/types-internal@2.15.0
+  - @atlaspack/workers@2.14.18
+
+## 2.15.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/workers@2.14.17
+
+## 2.15.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.14.14
+  - @atlaspack/workers@2.14.16
+
+## 2.15.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.14.13
+  - @atlaspack/workers@2.14.15
+
+## 2.15.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.14.12
+  - @atlaspack/workers@2.14.14
+
+## 2.15.3
+
+### Patch Changes
+
+- Updated dependencies [[`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb)]:
+  - @atlaspack/workers@2.14.13
+  - @atlaspack/types-internal@2.14.11
+
+## 2.15.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.14.10
+  - @atlaspack/workers@2.14.12
+
+## 2.15.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.14.9
+  - @atlaspack/workers@2.14.11
+
+## 2.15.0
+
+### Minor Changes
+
+- [#601](https://github.com/atlassian-labs/atlaspack/pull/601) [`1e32d4e`](https://github.com/atlassian-labs/atlaspack/commit/1e32d4eae6b3af3968e8a0ef97d35b4347fd4196) Thanks [@yamadapc](https://github.com/yamadapc)! - Improve granular configuration file invalidations
+
+### Patch Changes
+
+- [#595](https://github.com/atlassian-labs/atlaspack/pull/595) [`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b) Thanks [@yamadapc](https://github.com/yamadapc)! - Add bundleId to write bundle request results
+
+- Updated dependencies [[`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b)]:
+  - @atlaspack/types-internal@2.14.8
+  - @atlaspack/workers@2.14.10
+
 ## 2.14.9
 
 ### Patch Changes

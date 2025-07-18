@@ -30,12 +30,14 @@ async function main() {
     eventTurnBatching: true,
   });
 
+  // eslint-disable-next-line no-console
   console.log('Generating 1 million entries for testing');
   const entries = [...Array(NUM_ENTRIES)].map(() => {
     return generateEntry();
   });
 
   {
+    // eslint-disable-next-line no-console
     console.log(
       'Without transaction wrapper (atlaspack usage)',
       MAX_TIME,
@@ -52,10 +54,12 @@ async function main() {
     }
     const duration = Date.now() - start;
     const throughput = numEntriesInserted / duration;
+    // eslint-disable-next-line no-console
     console.log('Throughput:', throughput, 'entries / second');
   }
 
   {
+    // eslint-disable-next-line no-console
     console.log('Writing entries for', MAX_TIME, 'ms');
     const start = Date.now();
     let numEntriesInserted = 0;
@@ -70,11 +74,13 @@ async function main() {
     });
     const duration = Date.now() - start;
     const throughput = numEntriesInserted / duration;
+    // eslint-disable-next-line no-console
     console.log('Unsafe Throughput:', throughput, 'entries / second');
   }
 }
 
 main().catch((err) => {
+  // eslint-disable-next-line no-console
   console.error(err);
   process.exitCode = 1;
 });

@@ -20,18 +20,94 @@ import {
 } from '@atlaspack/utils';
 import Environment from './Environment';
 import {fromProjectPath, toProjectPath} from '../projectPath';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {fromEnvironmentId} from '../EnvironmentManager';
 
 const internalConfigToConfig: DefaultWeakMap<
   AtlaspackOptions,
   WeakMap<Config, PublicConfig>,
 > = new DefaultWeakMap(() => new WeakMap());
 
+/**
+ * Implements read tracking over an object.
+ *
+ * Calling this function with a non-trivial object like a class instance will fail to work.
+ *
+ * We track reads to fields that resolve to:
+ *
+ * - primitive values
+ * - arrays
+ *
+ * That is, reading a nested field `a.b.c` will make a single call to `onRead` with the path
+ * `['a', 'b', 'c']`.
+ *
+ * In case the value is null or an array, we will track the read as well.
+ *
+ * Iterating over `Object.keys(obj.field)` will register a read for the `['field']` path.
+ * Other reads work normally.
+ *
+ * @example
+ *
+ *     const usedPaths = new Set();
+ *     const onRead = (path) => {
+ *        usedPaths.add(path);
+ *     };
+ *
+ *     const config = makeConfigProxy(onRead, {a: {b: {c: 'd'}}})
+ *     console.log(config.a.b.c);
+ *     console.log(Array.from(usedPaths));
+ *     // We get a single read for the path
+ *     // ['a', 'b', 'c']
+ *
+ */
+export function makeConfigProxy<T>(
+  onRead: (path: string[]) => void,
+  config: T,
+): T {
+  const reportedPaths = new Set();
+  const reportPath = (path) => {
+    if (reportedPaths.has(path)) {
+      return;
+    }
+    reportedPaths.add(path);
+    onRead(path);
+  };
+
+  const makeProxy = (target, path) => {
+    return new Proxy(target, {
+      ownKeys(target) {
+        reportPath(path);
+
+        // $FlowFixMe
+        return Object.getOwnPropertyNames(target);
+      },
+      get(target, prop) {
+        // $FlowFixMe
+        const value = target[prop];
+
+        if (
+          typeof value === 'object' &&
+          value != null &&
+          !Array.isArray(value)
+        ) {
+          return makeProxy(value, [...path, prop]);
+        }
+
+        reportPath([...path, prop]);
+
+        return value;
+      },
+    });
+  };
+
+  // $FlowFixMe
+  return makeProxy(config, []);
+}
+
 export default class PublicConfig implements IConfig {
-  #config /*: Config */;
-  #pkg /*: ?PackageJSON */;
-  #pkgFilePath /*: ?FilePath */;
-  #options /*: AtlaspackOptions */;
+  #config: Config;
+  #pkg: ?PackageJSON;
+  #pkgFilePath: ?FilePath;
+  #options: AtlaspackOptions;
 
   constructor(config: Config, options: AtlaspackOptions): PublicConfig {
     let existing = internalConfigToConfig.get(options).get(config);
@@ -46,7 +122,7 @@ export default class PublicConfig implements IConfig {
   }
 
   get env(): Environment {
-    return new Environment(this.#config.env, this.#options);
+    return new Environment(fromEnvironmentId(this.#config.env), this.#options);
   }
 
   get searchPath(): FilePath {
@@ -76,7 +152,7 @@ export default class PublicConfig implements IConfig {
     );
   }
 
-  invalidateOnConfigKeyChange(filePath: FilePath, configKey: string) {
+  invalidateOnConfigKeyChange(filePath: FilePath, configKey: string[]) {
     this.#config.invalidateOnConfigKeyChange.push({
       filePath: toProjectPath(this.#options.projectRoot, filePath),
       configKey,
@@ -144,9 +220,10 @@ export default class PublicConfig implements IConfig {
         |}
       | ?{|
           /**
-           * If specified, only invalidate when this config key changes.
+           * If specified, this function will return a proxy object that will track reads to
+           * config fields and only register invalidations for when those keys change.
            */
-          configKey?: string,
+          readTracking?: boolean,
         |},
   ): Promise<?ConfigResultWithFilePath<T>> {
     let packageKey = options?.packageKey;
@@ -157,7 +234,7 @@ export default class PublicConfig implements IConfig {
 
       if (pkg && pkg.contents[packageKey]) {
         // Invalidate only when the package key changes
-        this.invalidateOnConfigKeyChange(pkg.filePath, packageKey);
+        this.invalidateOnConfigKeyChange(pkg.filePath, [packageKey]);
 
         return {
           contents: pkg.contents[packageKey],
@@ -166,27 +243,24 @@ export default class PublicConfig implements IConfig {
       }
     }
 
-    if (getFeatureFlag('granularTsConfigInvalidation')) {
-      const configKey = options?.configKey;
-      if (configKey != null) {
-        for (let fileName of fileNames) {
-          let config = await this.getConfigFrom(searchPath, [fileName], {
-            exclude: true,
+    const readTracking = options?.readTracking;
+    if (readTracking === true) {
+      for (let fileName of fileNames) {
+        const config = await this.getConfigFrom(searchPath, [fileName], {
+          exclude: true,
+        });
+
+        if (config != null) {
+          return Promise.resolve({
+            contents: makeConfigProxy((keyPath) => {
+              this.invalidateOnConfigKeyChange(config.filePath, keyPath);
+            }, config.contents),
+            filePath: config.filePath,
           });
-
-          if (config && config.contents[configKey]) {
-            // Invalidate only when the package key changes
-            this.invalidateOnConfigKeyChange(config.filePath, configKey);
-
-            return {
-              contents: config.contents[configKey],
-              filePath: config.filePath,
-            };
-          }
         }
-
-        // fall through so that file above invalidations are registered
       }
+
+      // fall through so that file above invalidations are registered
     }
 
     if (fileNames.length === 0) {
@@ -268,11 +342,15 @@ export default class PublicConfig implements IConfig {
 
   getConfig<T>(
     filePaths: Array<FilePath>,
-    options: ?{|
-      packageKey?: string,
-      parse?: boolean,
-      exclude?: boolean,
-    |},
+    options:
+      | ?{|
+          packageKey?: string,
+          parse?: boolean,
+          exclude?: boolean,
+        |}
+      | {|
+          readTracking?: boolean,
+        |},
   ): Promise<?ConfigResultWithFilePath<T>> {
     return this.getConfigFrom(this.searchPath, filePaths, options);
   }
@@ -282,7 +360,9 @@ export default class PublicConfig implements IConfig {
       return this.#pkg;
     }
 
-    let pkgConfig = await this.getConfig<PackageJSON>(['package.json']);
+    let pkgConfig = await this.getConfig<PackageJSON>(['package.json'], {
+      readTracking: true,
+    });
     if (!pkgConfig) {
       return null;
     }

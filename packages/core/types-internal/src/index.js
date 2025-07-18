@@ -978,7 +978,7 @@ export interface Config {
     options?:
       | {|
           /**
-           * @deprecated Use `configKey` instead.
+           * @deprecated Use `readTracking` instead.
            */
           packageKey?: string,
           parse?: boolean,
@@ -986,9 +986,10 @@ export interface Config {
         |}
       | {|
           /**
-           * If specified, only invalidate when this config key changes.
+           * If specified, this function will return a proxy object that will track reads to
+           * config fields and only register invalidations for when those keys change.
            */
-          configKey?: string,
+          readTracking?: boolean,
         |},
   ): Promise<?ConfigResultWithFilePath<T>>;
   /** Finds the nearest package.json from the config's searchPath. */
@@ -2013,6 +2014,17 @@ export type PackagingProgressEvent = {|
 |};
 
 /**
+ * A new Bundle is being packaged.
+ * @section reporter
+ */
+export type PackagingAndOptimizingProgressEvent = {|
+  +type: 'buildProgress',
+  +phase: 'packagingAndOptimizing',
+  +totalBundles: number,
+  +completeBundles: number,
+|};
+
+/**
  * A new Bundle is being optimized.
  * @section reporter
  */
@@ -2031,7 +2043,8 @@ export type BuildProgressEvent =
   | BundlingProgressEvent
   | BundledProgressEvent
   | PackagingProgressEvent
-  | OptimizingProgressEvent;
+  | OptimizingProgressEvent
+  | PackagingAndOptimizingProgressEvent;
 
 /**
  * The build was successful.

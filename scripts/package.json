@@ -3,6 +3,8 @@
   "private": true,
   "version": "0.0.1-local",
   "devDependencies": {
+    "@swc/plugin-transform-imports": "^8.0.4",
+    "flowgen": "^1.21.0",
     "glob": "^7.1.6",
     "zx": "^8.1.9"
   }

@@ -1,6 +1,7 @@
 import {diff as jestDiff} from 'jest-diff';
 
 export function diff(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   chalk: any,
   original: string,
   modified: string,

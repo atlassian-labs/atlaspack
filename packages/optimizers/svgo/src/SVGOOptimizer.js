@@ -52,4 +52,4 @@ export default (new Optimizer({
 
     return {contents: result.data};
   },
-}): Optimizer);
+}): Optimizer<mixed, mixed>);

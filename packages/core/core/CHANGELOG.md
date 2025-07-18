@@ -1,5 +1,219 @@
 # @atlaspack/core
 
+## 2.19.1
+
+### Patch Changes
+
+- Updated dependencies [[`13aef17`](https://github.com/atlassian-labs/atlaspack/commit/13aef177eea289a6e40d2113b5ec1ac9be18a33d)]:
+  - @atlaspack/feature-flags@2.19.1
+  - @atlaspack/cache@3.2.14
+  - @atlaspack/fs@2.15.14
+  - @atlaspack/graph@3.5.8
+  - @atlaspack/utils@2.17.1
+  - @atlaspack/package-manager@2.14.19
+  - @atlaspack/profiler@2.14.16
+  - @atlaspack/types@2.15.9
+  - @atlaspack/workers@2.14.19
+  - @atlaspack/plugin@2.14.19
+
+## 2.19.0
+
+### Minor Changes
+
+- [#640](https://github.com/atlassian-labs/atlaspack/pull/640) [`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d) Thanks [@JakeLane](https://github.com/JakeLane)! - Clean up conditional bundling feature flags
+
+- [#693](https://github.com/atlassian-labs/atlaspack/pull/693) [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417) Thanks [@mattcompiles](https://github.com/mattcompiles)! - These packages should have been bumped in [pull request 691](https://github.com/atlassian-labs/atlaspack/pull/691).
+
+  Rectifying by creating a new changeset now.
+
+### Patch Changes
+
+- [#690](https://github.com/atlassian-labs/atlaspack/pull/690) [`c4415a4`](https://github.com/atlassian-labs/atlaspack/commit/c4415a455543d984ca28452c2cb87a794d22497c) Thanks [@yamadapc](https://github.com/yamadapc)! - Bug fix for build abort state corruption
+
+- [#685](https://github.com/atlassian-labs/atlaspack/pull/685) [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries) could cause exports to undefined at runtime.
+  Fix is behind the feature-flag `emptyFileStarRexportFix`.
+
+- [#678](https://github.com/atlassian-labs/atlaspack/pull/678) [`3ba1aee`](https://github.com/atlassian-labs/atlaspack/commit/3ba1aee6a794a26b2f0255aaf6d003981532d0ae) Thanks [@marcins](https://github.com/marcins)! - Move adding of Atlaspack V3 disposable to be conditional on Atlaspack V3
+
+- Updated dependencies [[`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d), [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0), [`c4415a4`](https://github.com/atlassian-labs/atlaspack/commit/c4415a455543d984ca28452c2cb87a794d22497c), [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5), [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3), [`c9631af`](https://github.com/atlassian-labs/atlaspack/commit/c9631aff284b2c1c27e8a52f9da392ce65d666e8), [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417), [`a5ed1b4`](https://github.com/atlassian-labs/atlaspack/commit/a5ed1b414498560f393ff491af4da25b6e8dde56)]:
+  - @atlaspack/feature-flags@2.19.0
+  - @atlaspack/utils@2.17.0
+  - @atlaspack/rust@3.4.1
+  - @atlaspack/package-manager@2.14.18
+  - @atlaspack/fs@2.15.13
+  - @atlaspack/cache@3.2.13
+  - @atlaspack/graph@3.5.7
+  - @atlaspack/workers@2.14.18
+  - @atlaspack/logger@2.14.13
+  - @atlaspack/profiler@2.14.15
+  - @atlaspack/types@2.15.8
+  - @atlaspack/plugin@2.14.18
+
+## 2.18.8
+
+### Patch Changes
+
+- Updated dependencies [[`c75bf55`](https://github.com/atlassian-labs/atlaspack/commit/c75bf553fff4decc285b5fd499a275853b18f8f2)]:
+  - @atlaspack/rust@3.4.0
+  - @atlaspack/cache@3.2.12
+  - @atlaspack/fs@2.15.12
+  - @atlaspack/logger@2.14.12
+  - @atlaspack/utils@2.16.1
+  - @atlaspack/package-manager@2.14.17
+  - @atlaspack/workers@2.14.17
+  - @atlaspack/types@2.15.7
+  - @atlaspack/plugin@2.14.17
+
+## 2.18.7
+
+### Patch Changes
+
+- [#666](https://github.com/atlassian-labs/atlaspack/pull/666) [`1ff31f1`](https://github.com/atlassian-labs/atlaspack/commit/1ff31f10391c48780c9fcfc243b4e828a1b285e0) Thanks [@marcins](https://github.com/marcins)! - Ensure tracer is disabled if it was enabled on teardown
+
+- [#661](https://github.com/atlassian-labs/atlaspack/pull/661) [`e8a60ff`](https://github.com/atlassian-labs/atlaspack/commit/e8a60ffbea41caef265786bbf73349771760081c) Thanks [@marcins](https://github.com/marcins)! - Add new feature flag atlaspackV3CleanShutdown which will dispose of the NAPI worker pool when disposing of the Atlaspack class
+
+- Updated dependencies [[`e8a60ff`](https://github.com/atlassian-labs/atlaspack/commit/e8a60ffbea41caef265786bbf73349771760081c), [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529)]:
+  - @atlaspack/feature-flags@2.18.4
+  - @atlaspack/utils@2.16.0
+  - @atlaspack/cache@3.2.11
+  - @atlaspack/fs@2.15.11
+  - @atlaspack/graph@3.5.6
+  - @atlaspack/package-manager@2.14.16
+  - @atlaspack/workers@2.14.16
+  - @atlaspack/profiler@2.14.14
+  - @atlaspack/types@2.15.6
+  - @atlaspack/plugin@2.14.16
+
+## 2.18.6
+
+### Patch Changes
+
+- [#655](https://github.com/atlassian-labs/atlaspack/pull/655) [`5ded263`](https://github.com/atlassian-labs/atlaspack/commit/5ded263c7f11b866e8885b81c73e20dd060b25be) Thanks [@yamadapc](https://github.com/yamadapc)! - Clean-up inline requires multi-threading feature-flag
+
+- [#658](https://github.com/atlassian-labs/atlaspack/pull/658) [`74fd942`](https://github.com/atlassian-labs/atlaspack/commit/74fd94236ac697207082c4b755b079e56f5564fb) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix environment deduplication issues
+
+- Updated dependencies [[`5ded263`](https://github.com/atlassian-labs/atlaspack/commit/5ded263c7f11b866e8885b81c73e20dd060b25be)]:
+  - @atlaspack/feature-flags@2.18.3
+  - @atlaspack/cache@3.2.10
+  - @atlaspack/fs@2.15.10
+  - @atlaspack/graph@3.5.5
+  - @atlaspack/utils@2.15.3
+  - @atlaspack/package-manager@2.14.15
+  - @atlaspack/profiler@2.14.13
+  - @atlaspack/types@2.15.5
+  - @atlaspack/workers@2.14.15
+  - @atlaspack/plugin@2.14.15
+
+## 2.18.5
+
+### Patch Changes
+
+- [#652](https://github.com/atlassian-labs/atlaspack/pull/652) [`644b157`](https://github.com/atlassian-labs/atlaspack/commit/644b157dee72a871acc2d0facf0b87b8eea51956) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix bugs related to build aborts. Builds and cache writes will no longer be aborted.
+
+- Updated dependencies [[`644b157`](https://github.com/atlassian-labs/atlaspack/commit/644b157dee72a871acc2d0facf0b87b8eea51956)]:
+  - @atlaspack/feature-flags@2.18.2
+  - @atlaspack/cache@3.2.9
+  - @atlaspack/fs@2.15.9
+  - @atlaspack/graph@3.5.4
+  - @atlaspack/utils@2.15.2
+  - @atlaspack/package-manager@2.14.14
+  - @atlaspack/profiler@2.14.12
+  - @atlaspack/types@2.15.4
+  - @atlaspack/workers@2.14.14
+  - @atlaspack/plugin@2.14.14
+
+## 2.18.4
+
+### Patch Changes
+
+- [#650](https://github.com/atlassian-labs/atlaspack/pull/650) [`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb) Thanks [@alshdavid](https://github.com/alshdavid)! - Remove package.json#exports
+
+- [#646](https://github.com/atlassian-labs/atlaspack/pull/646) [`6b1f5ff`](https://github.com/atlassian-labs/atlaspack/commit/6b1f5fff68d7131fae075e14f4d2c02606dc6058) Thanks [@alshdavid](https://github.com/alshdavid)! - Export WORKER_PATH from @atlaspack/core
+
+- [#633](https://github.com/atlassian-labs/atlaspack/pull/633) [`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b) Thanks [@sbhuiyan-atlassian](https://github.com/sbhuiyan-atlassian)! - Ported various HMR changes from Parcel
+
+- [#648](https://github.com/atlassian-labs/atlaspack/pull/648) [`c8f7df4`](https://github.com/atlassian-labs/atlaspack/commit/c8f7df4eadfc4718040fceb065dae6e96a4051e7) Thanks [@alshdavid](https://github.com/alshdavid)! - Export ATLASPACK_VERSION and other internals
+
+- [#626](https://github.com/atlassian-labs/atlaspack/pull/626) [`0501255`](https://github.com/atlassian-labs/atlaspack/commit/05012550da35b05ce7d356a8cc29311e7f9afdca) Thanks [@yamadapc](https://github.com/yamadapc)! - Clean-up tsconfig invalidation improvements feature-flag
+
+- Updated dependencies [[`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb), [`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b), [`0501255`](https://github.com/atlassian-labs/atlaspack/commit/05012550da35b05ce7d356a8cc29311e7f9afdca)]:
+  - @atlaspack/workers@2.14.13
+  - @atlaspack/logger@2.14.11
+  - @atlaspack/feature-flags@2.18.1
+  - @atlaspack/fs@2.15.8
+  - @atlaspack/package-manager@2.14.13
+  - @atlaspack/types@2.15.3
+  - @atlaspack/cache@3.2.8
+  - @atlaspack/utils@2.15.1
+  - @atlaspack/graph@3.5.3
+  - @atlaspack/plugin@2.14.13
+  - @atlaspack/profiler@2.14.11
+
+## 2.18.3
+
+### Patch Changes
+
+- Updated dependencies [[`10fbcfb`](https://github.com/atlassian-labs/atlaspack/commit/10fbcfbfa49c7a83da5d7c40983e36e87f524a75), [`85c52d3`](https://github.com/atlassian-labs/atlaspack/commit/85c52d3f7717b3c84a118d18ab98cfbfd71dcbd2), [`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c)]:
+  - @atlaspack/feature-flags@2.18.0
+  - @atlaspack/utils@2.15.0
+  - @atlaspack/cache@3.2.7
+  - @atlaspack/fs@2.15.7
+  - @atlaspack/graph@3.5.2
+  - @atlaspack/package-manager@2.14.12
+  - @atlaspack/workers@2.14.12
+  - @atlaspack/profiler@2.14.10
+  - @atlaspack/types@2.15.2
+  - @atlaspack/plugin@2.14.12
+
+## 2.18.2
+
+### Patch Changes
+
+- Updated dependencies [[`73ea3c4`](https://github.com/atlassian-labs/atlaspack/commit/73ea3c4d85d4401fdd15abcbf988237e890e7ad3), [`b1b3693`](https://github.com/atlassian-labs/atlaspack/commit/b1b369317c66f8a431c170df2ebba4fa5b2e38ef)]:
+  - @atlaspack/feature-flags@2.17.0
+  - @atlaspack/cache@3.2.6
+  - @atlaspack/fs@2.15.6
+  - @atlaspack/graph@3.5.1
+  - @atlaspack/utils@2.14.11
+  - @atlaspack/package-manager@2.14.11
+  - @atlaspack/profiler@2.14.9
+  - @atlaspack/types@2.15.1
+  - @atlaspack/workers@2.14.11
+  - @atlaspack/plugin@2.14.11
+
+## 2.18.1
+
+### Patch Changes
+
+- Updated dependencies [[`1b52b99`](https://github.com/atlassian-labs/atlaspack/commit/1b52b99db4298b04c1a6eb0f97994d75a2d436f9)]:
+  - @atlaspack/graph@3.5.0
+
+## 2.18.0
+
+### Minor Changes
+
+- [#601](https://github.com/atlassian-labs/atlaspack/pull/601) [`1e32d4e`](https://github.com/atlassian-labs/atlaspack/commit/1e32d4eae6b3af3968e8a0ef97d35b4347fd4196) Thanks [@yamadapc](https://github.com/yamadapc)! - Improve granular configuration file invalidations
+
+- [#599](https://github.com/atlassian-labs/atlaspack/pull/599) [`0b2f6f5`](https://github.com/atlassian-labs/atlaspack/commit/0b2f6f55794d3ff6e2f5a41f963e7e5dd8ad9f8d) Thanks [@pancaspe87](https://github.com/pancaspe87)! - load and write env to cache - change is feature flagged
+
+### Patch Changes
+
+- [#595](https://github.com/atlassian-labs/atlaspack/pull/595) [`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b) Thanks [@yamadapc](https://github.com/yamadapc)! - Add bundleId to write bundle request results
+
+- [#572](https://github.com/atlassian-labs/atlaspack/pull/572) [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca) Thanks [@yamadapc](https://github.com/yamadapc)! - Add feature-flagged change which removes all environment duplication around objects
+
+- Updated dependencies [[`0999fb7`](https://github.com/atlassian-labs/atlaspack/commit/0999fb78da519a6c7582d212883e515fcf6c1252), [`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b), [`1e32d4e`](https://github.com/atlassian-labs/atlaspack/commit/1e32d4eae6b3af3968e8a0ef97d35b4347fd4196), [`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c), [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca)]:
+  - @atlaspack/fs@2.15.5
+  - @atlaspack/types@2.15.0
+  - @atlaspack/rust@3.3.5
+  - @atlaspack/cache@3.2.5
+  - @atlaspack/package-manager@2.14.10
+  - @atlaspack/profiler@2.14.8
+  - @atlaspack/workers@2.14.10
+  - @atlaspack/plugin@2.14.10
+  - @atlaspack/logger@2.14.10
+  - @atlaspack/utils@2.14.10
+
 ## 2.17.4
 
 ### Patch Changes

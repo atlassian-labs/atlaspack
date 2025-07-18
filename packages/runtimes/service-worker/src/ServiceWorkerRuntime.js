@@ -47,4 +47,4 @@ _register(manifest, version);
       },
     ];
   },
-}): Runtime);
+}): Runtime<mixed>);

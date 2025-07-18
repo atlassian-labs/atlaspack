@@ -17,4 +17,4 @@ ${compiled}
 
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);

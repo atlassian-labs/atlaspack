@@ -7,4 +7,4 @@ export default (new Transformer({
     asset.bundleBehavior = 'inline';
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);

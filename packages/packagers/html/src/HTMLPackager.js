@@ -75,17 +75,17 @@ export default (new Packager({
       ),
     ];
 
+    // $FlowFixMe
     let conditionalBundles = config.evaluateRootConditionalBundles
       ? setDifference(
-          new Set([
-            ...referencedBundlesRecursive.flatMap((referencedBundle) =>
-              bundleGraph.getReferencedConditionalBundles(referencedBundle),
-            ),
-          ]),
+          getReferencedConditionalScripts(
+            bundleGraph,
+            referencedBundlesRecursive,
+          ),
           new Set(referencedBundles),
         )
       : new Set();
-
+    // $FlowFixMe
     let renderConfig = config?.render;
 
     let {html} = await posthtml([
@@ -123,7 +123,7 @@ export default (new Packager({
       map,
     });
   },
-}): Packager);
+}): Packager<mixed, mixed>);
 
 async function getAssetContent(
   bundleGraph: BundleGraph<NamedBundle>,
@@ -283,4 +283,29 @@ function findBundleInsertIndex(content) {
   }
 
   return doctypeIndex ? doctypeIndex + 1 : 0;
+}
+
+function getReferencedConditionalScripts(
+  bundleGraph: BundleGraph<NamedBundle>,
+  referencedBundles: NamedBundle[],
+): Set<NamedBundle> {
+  const conditionalBundleMapping = bundleGraph.getConditionalBundleMapping();
+
+  const bundles = [];
+  for (const bundle of referencedBundles) {
+    const conditions = conditionalBundleMapping.get(bundle.id);
+    if (conditions) {
+      for (const [, cond] of conditions) {
+        // Reverse so dependent bundles are loaded first
+        const dependentBundles = [
+          ...cond.ifTrueBundles.reverse(),
+          ...cond.ifFalseBundles.reverse(),
+        ];
+        bundles.push(...dependentBundles);
+        referencedBundles.push(...dependentBundles);
+      }
+    }
+  }
+
+  return new Set(bundles);
 }

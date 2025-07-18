@@ -11,6 +11,7 @@ import type {
 } from '@atlaspack/types';
 import type {
   AtlaspackOptions,
+  BundleGraphNode,
   BundleGroup as InternalBundleGroup,
   BundleNode,
 } from '../types';
@@ -32,6 +33,7 @@ import {BundleBehavior} from '../types';
 import BundleGroup, {bundleGroupToInternalBundleGroup} from './BundleGroup';
 import type {ProjectPath} from '../projectPath';
 import {identifierRegistry} from '../IdentifierRegistry';
+import {toEnvironmentRef} from '../EnvironmentManager';
 
 function createBundleId(data: {|
   entryAssetId: string | null,
@@ -53,9 +55,9 @@ export default class MutableBundleGraph
   extends BundleGraph<IBundle>
   implements IMutableBundleGraph
 {
-  #graph /*: InternalBundleGraph */;
-  #options /*: AtlaspackOptions */;
-  #bundlePublicIds /*: Set<string> */ = new Set<string>();
+  #graph: InternalBundleGraph;
+  #options: AtlaspackOptions;
+  #bundlePublicIds: Set<string> = new Set<string>();
 
   constructor(graph: InternalBundleGraph, options: AtlaspackOptions) {
     super(graph, Bundle.get.bind(Bundle), options);
@@ -206,7 +208,8 @@ export default class MutableBundleGraph
       bundleBehavior: opts.bundleBehavior ?? null,
     });
 
-    let existing = this.#graph._graph.getNodeByContentKey(bundleId);
+    let existing: ?BundleGraphNode =
+      this.#graph._graph.getNodeByContentKey(bundleId);
     if (existing != null) {
       invariant(existing.type === 'bundle');
       return Bundle.get(existing.value, this.#graph, this.#options);
@@ -236,7 +239,7 @@ export default class MutableBundleGraph
           : bundleId.slice(-8),
         type: opts.entryAsset ? opts.entryAsset.type : opts.type,
         env: opts.env
-          ? environmentToInternalEnvironment(opts.env)
+          ? toEnvironmentRef(environmentToInternalEnvironment(opts.env))
           : nullthrows(entryAsset).env,
         entryAssetIds: entryAsset ? [entryAsset.id] : [],
         mainEntryId: entryAsset?.id,

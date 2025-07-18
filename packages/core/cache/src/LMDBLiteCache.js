@@ -10,7 +10,6 @@ import {Lmdb} from '@atlaspack/rust';
 import type {FilePath} from '@atlaspack/types';
 import type {Cache} from './types';
 import type {Readable, Writable} from 'stream';
-import fs from 'fs';
 import ncp from 'ncp';
 import {promisify} from 'util';
 import stream from 'stream';
@@ -168,7 +167,7 @@ export class LMDBLiteCache implements Cache {
       return this.fs.createReadStream(path.join(this.dir, key));
     }
 
-    return fs.createReadStream(this.getFileKey(key));
+    return this.fs.createReadStream(this.getFileKey(key));
   }
 
   async setStream(key: string, stream: Readable): Promise<void> {
@@ -180,8 +179,8 @@ export class LMDBLiteCache implements Cache {
     }
 
     const filePath = this.getFileKey(key);
-    await fs.promises.mkdir(path.dirname(filePath), {recursive: true});
-    return pipeline(stream, fs.createWriteStream(filePath));
+    await this.fs.mkdirp(path.dirname(filePath));
+    return pipeline(stream, this.fs.createWriteStream(filePath));
   }
 
   // eslint-disable-next-line require-await
@@ -210,17 +209,14 @@ export class LMDBLiteCache implements Cache {
       return this.fsCache.hasLargeBlob(key);
     }
 
-    return fs.promises
-      .access(this.getFileKey(key), fs.constants.F_OK)
-      .then(() => true)
-      .catch(() => false);
+    return this.fs.exists(this.getFileKey(key));
   }
 
   getLargeBlob(key: string): Promise<Buffer> {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return this.fsCache.getLargeBlob(key);
     }
-    return fs.promises.readFile(this.getFileKey(key));
+    return this.fs.readFile(this.getFileKey(key));
   }
 
   async setLargeBlob(
@@ -233,8 +229,8 @@ export class LMDBLiteCache implements Cache {
     }
 
     const targetPath = this.getFileKey(key);
-    await fs.promises.mkdir(path.dirname(targetPath), {recursive: true});
-    return fs.promises.writeFile(targetPath, contents);
+    await this.fs.mkdirp(path.dirname(targetPath));
+    return this.fs.writeFile(targetPath, contents);
   }
 
   /**
@@ -253,9 +249,9 @@ export class LMDBLiteCache implements Cache {
   }
 
   async compact(targetPath: string): Promise<void> {
-    await fs.promises.mkdir(targetPath, {recursive: true});
+    await this.fs.mkdirp(targetPath);
 
-    const files = await fs.promises.readdir(this.dir);
+    const files = await this.fs.readdir(this.dir);
     // copy all files except data.mdb and lock.mdb to the target path (recursive)
     for (const file of files) {
       const filePath = path.join(this.dir, file);

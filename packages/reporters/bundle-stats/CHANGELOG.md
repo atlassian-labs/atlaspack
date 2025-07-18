@@ -1,5 +1,102 @@
 # @atlaspack/reporter-bundle-stats
 
+## 2.14.20
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.19.1
+  - @atlaspack/utils@2.17.1
+  - @atlaspack/plugin@2.14.19
+
+## 2.14.19
+
+### Patch Changes
+
+- Updated dependencies [[`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d), [`c4415a4`](https://github.com/atlassian-labs/atlaspack/commit/c4415a455543d984ca28452c2cb87a794d22497c), [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5), [`de23e0c`](https://github.com/atlassian-labs/atlaspack/commit/de23e0ce49d5504fe3947ac26640a3d951087da3), [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417), [`a5ed1b4`](https://github.com/atlassian-labs/atlaspack/commit/a5ed1b414498560f393ff491af4da25b6e8dde56), [`3ba1aee`](https://github.com/atlassian-labs/atlaspack/commit/3ba1aee6a794a26b2f0255aaf6d003981532d0ae)]:
+  - @atlaspack/utils@2.17.0
+  - @atlaspack/core@2.19.0
+  - @atlaspack/plugin@2.14.18
+
+## 2.14.18
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.18.8
+  - @atlaspack/utils@2.16.1
+  - @atlaspack/plugin@2.14.17
+
+## 2.14.17
+
+### Patch Changes
+
+- Updated dependencies [[`1ff31f1`](https://github.com/atlassian-labs/atlaspack/commit/1ff31f10391c48780c9fcfc243b4e828a1b285e0), [`e8a60ff`](https://github.com/atlassian-labs/atlaspack/commit/e8a60ffbea41caef265786bbf73349771760081c), [`30ee2cf`](https://github.com/atlassian-labs/atlaspack/commit/30ee2cfcd34cf2646ded0eda13fdb80a2a5de529)]:
+  - @atlaspack/core@2.18.7
+  - @atlaspack/utils@2.16.0
+  - @atlaspack/plugin@2.14.16
+
+## 2.14.16
+
+### Patch Changes
+
+- Updated dependencies [[`5ded263`](https://github.com/atlassian-labs/atlaspack/commit/5ded263c7f11b866e8885b81c73e20dd060b25be), [`74fd942`](https://github.com/atlassian-labs/atlaspack/commit/74fd94236ac697207082c4b755b079e56f5564fb)]:
+  - @atlaspack/core@2.18.6
+  - @atlaspack/utils@2.15.3
+  - @atlaspack/plugin@2.14.15
+
+## 2.14.15
+
+### Patch Changes
+
+- Updated dependencies [[`644b157`](https://github.com/atlassian-labs/atlaspack/commit/644b157dee72a871acc2d0facf0b87b8eea51956)]:
+  - @atlaspack/core@2.18.5
+  - @atlaspack/utils@2.15.2
+  - @atlaspack/plugin@2.14.14
+
+## 2.14.14
+
+### Patch Changes
+
+- Updated dependencies [[`ef3d622`](https://github.com/atlassian-labs/atlaspack/commit/ef3d6228f4e006702198a19c61e051d194d325cb), [`6b1f5ff`](https://github.com/atlassian-labs/atlaspack/commit/6b1f5fff68d7131fae075e14f4d2c02606dc6058), [`26aa9c5`](https://github.com/atlassian-labs/atlaspack/commit/26aa9c599d2be45ce1438a74c5fa22f39b9b554b), [`c8f7df4`](https://github.com/atlassian-labs/atlaspack/commit/c8f7df4eadfc4718040fceb065dae6e96a4051e7), [`0501255`](https://github.com/atlassian-labs/atlaspack/commit/05012550da35b05ce7d356a8cc29311e7f9afdca)]:
+  - @atlaspack/core@2.18.4
+  - @atlaspack/utils@2.15.1
+  - @atlaspack/plugin@2.14.13
+
+## 2.14.13
+
+### Patch Changes
+
+- Updated dependencies [[`e39c6cf`](https://github.com/atlassian-labs/atlaspack/commit/e39c6cf05f7e95ce5420dbcea66f401b1cbd397c)]:
+  - @atlaspack/utils@2.15.0
+  - @atlaspack/core@2.18.3
+  - @atlaspack/plugin@2.14.12
+
+## 2.14.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.18.2
+  - @atlaspack/utils@2.14.11
+  - @atlaspack/plugin@2.14.11
+
+## 2.14.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.18.1
+
+## 2.14.10
+
+### Patch Changes
+
+- Updated dependencies [[`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b), [`1e32d4e`](https://github.com/atlassian-labs/atlaspack/commit/1e32d4eae6b3af3968e8a0ef97d35b4347fd4196), [`0b2f6f5`](https://github.com/atlassian-labs/atlaspack/commit/0b2f6f55794d3ff6e2f5a41f963e7e5dd8ad9f8d), [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca)]:
+  - @atlaspack/core@2.18.0
+  - @atlaspack/plugin@2.14.10
+  - @atlaspack/utils@2.14.10
+
 ## 2.14.9
 
 ### Patch Changes

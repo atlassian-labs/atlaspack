@@ -1,5 +1,75 @@
 # @atlaspack/plugin
 
+## 2.14.19
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types@2.15.9
+
+## 2.14.18
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types@2.15.8
+
+## 2.14.17
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types@2.15.7
+
+## 2.14.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types@2.15.6
+
+## 2.14.15
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types@2.15.5
+
+## 2.14.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types@2.15.4
+
+## 2.14.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types@2.15.3
+
+## 2.14.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types@2.15.2
+
+## 2.14.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types@2.15.1
+
+## 2.14.10
+
+### Patch Changes
+
+- Updated dependencies [[`51aba5f`](https://github.com/atlassian-labs/atlaspack/commit/51aba5fc0e49235ee06bbc3c376f48c3e7da5c4b), [`1e32d4e`](https://github.com/atlassian-labs/atlaspack/commit/1e32d4eae6b3af3968e8a0ef97d35b4347fd4196)]:
+  - @atlaspack/types@2.15.0
+
 ## 2.14.9
 
 ### Patch Changes

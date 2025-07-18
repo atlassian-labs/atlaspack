@@ -99,8 +99,10 @@ export default (new Transformer({
     }
 
     let ast = nullthrows(await asset.getAST());
+    // $FlowFixMe
     let res = await posthtml(config.plugins).process(ast.program, {
       ...config,
+      // $FlowFixMe
       plugins: config.plugins,
     });
 
@@ -128,4 +130,4 @@ export default (new Transformer({
       }),
     };
   },
-}): Transformer);
+}): Transformer<mixed>);

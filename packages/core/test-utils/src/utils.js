@@ -89,14 +89,13 @@ export async function ncp(source: FilePath, destination: FilePath) {
   });
 }
 
-// Mocha is currently run with exit: true because of this issue preventing us
-// from properly ending the workerfarm after the test run:
-// https://github.com/nodejs/node/pull/28788
-//
-// TODO: Remove exit: true in .mocharc.json and instead add the following in this file:
-//   // Spin down the worker farm to stop it from preventing the main process from exiting
-//   await workerFarm.end();
-// when https://github.com/nodejs/node/pull/28788 is resolved.
+after(async () => {
+  // Spin down the worker farm to stop it from preventing the main process from exiting
+  await workerFarm.end();
+  if (isAtlaspackV3) {
+    napiWorkerPool.shutdown();
+  }
+});
 
 const chalk = new _chalk.Instance();
 const warning = chalk.keyword('orange');
@@ -641,7 +640,9 @@ export function assertBundles(
   assert.equal(
     actualBundles.length,
     expectedBundles.length,
-    'expected number of bundles mismatched',
+    `Expected number of bundles mismatched\n\nActual bundles: \n\n${util.inspect(
+      actualBundles,
+    )}`,
   );
 
   for (let expectedBundle of expectedBundles) {
@@ -687,6 +688,18 @@ export function assertBundles(
   }
 }
 
+export function getBundleContents(
+  bundleGraph: BundleGraph<PackagedBundle>,
+  fs: FileSystem,
+  filter: (string) => boolean,
+): Promise<string | null> {
+  const bundle = bundleGraph.getBundles().find((b) => filter(b.name));
+  if (!bundle) {
+    return Promise.resolve(null);
+  }
+  return fs.readFile(bundle.filePath, 'utf8');
+}
+
 export function normaliseNewlines(text: string): string {
   return text.replace(/(\r\n|\n|\r)/g, '\n');
 }
@@ -711,21 +724,28 @@ function prepareBrowserContext(
       if (el.tag === 'script') {
         let {deferred, promise} = makeDeferredWithPromise();
         promises.push(promise);
-        setTimeout(function () {
-          let pathname = url.parse(el.src).pathname;
-          let file = path.join(bundle.target.distDir, pathname);
+        if (el.src) {
+          setTimeout(function () {
+            let pathname = url.parse(el.src).pathname;
+            let file = path.join(bundle.target.distDir, pathname);
 
-          new vm.Script(
-            // '"use strict";\n' +
-            overlayFS.readFileSync(file, 'utf8'),
-            {
-              filename: pathname.slice(1),
-            },
-          ).runInContext(ctx);
+            new vm.Script(
+              // '"use strict";\n' +
+              overlayFS.readFileSync(file, 'utf8'),
+              {
+                filename: pathname.slice(1),
+              },
+            ).runInContext(ctx);
 
-          el.onload();
+            el.onload();
+            deferred.resolve();
+          }, 0);
+        } else if (el.text) {
+          new vm.Script(el.text, {
+            filename: 'inline-script.js',
+          }).runInContext(ctx);
           deferred.resolve();
-        }, 0);
+        }
       } else if (typeof el.onload === 'function') {
         el.onload();
       }
@@ -1467,3 +1487,9 @@ it.v3.only = function (...args: mixed[]) {
     origIt.only.apply(this, args);
   }
 };
+
+// If no tests run, then `after()` is not called, and so worker farms are never cleaned up.
+// This test ensures that at least one test runs, and so `after()` is called.
+it('dummy test to ensure there is at least one test', () => {
+  assert(true);
+});

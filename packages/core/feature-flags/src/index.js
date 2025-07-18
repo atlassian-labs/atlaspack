@@ -5,6 +5,13 @@ import type {FeatureFlags as _FeatureFlags} from './types';
 // but we want to export FeatureFlags for Flow
 export type FeatureFlags = _FeatureFlags;
 
+export const CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string> = Object.freeze([
+  'NEW',
+  'OLD',
+  'NEW_AND_CHECK',
+  'OLD_AND_CHECK',
+]);
+
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   exampleConsistencyCheckFeature: 'OLD',
   exampleFeature: false,
@@ -13,22 +20,27 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   importRetry: false,
   fixQuadraticCacheInvalidation: 'OLD',
   conditionalBundlingApi: false,
-  inlineRequiresMultiThreading: false,
   vcsMode: 'OLD',
   loadableSideEffects: false,
   reduceResolverStringCreation: false,
   inlineBundlesSourceMapFixes: false,
-  conditionalBundlingNestedRuntime: false,
   patchProjectPaths: false,
   cachePerformanceImprovements: process.env.NODE_ENV === 'test',
-  granularTsConfigInvalidation: false,
+  environmentDeduplication: false,
   inlineStringReplacementPerf: false,
-  conditionalBundlingAsyncRuntime: false,
   // Default to true as it's a monitoring change. Can be turned off if necessary.
   verboseRequestInvalidationStats: true,
-  conditionalBundlingReporterDuplicateFix: false,
   resolveBundlerConfigFromCwd: false,
-  conditionalBundlingReporterSameConditionFix: false,
+  applyScopeHoistingImprovement: false,
+  inlineConstOptimisationFix: false,
+  hmrImprovements: false,
+  atlaspackV3CleanShutdown: false,
+  unusedComputedPropertyFix: process.env.NODE_ENV === 'test',
+  emptyFileStarRexportFix: process.env.NODE_ENV === 'test',
+  cliProgressReportingImprovements: false,
+  condbDevFallbackDev: false,
+  condbDevFallbackProd: false,
+  incrementalBundlingVersioning: process.env.NODE_ENV === 'test',
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

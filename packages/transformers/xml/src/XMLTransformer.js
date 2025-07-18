@@ -44,7 +44,7 @@ export default (new Transformer({
 
     return [asset, ...parts];
   },
-}): Transformer);
+}): Transformer<mixed>);
 
 function walk(element, visit) {
   visit(element);

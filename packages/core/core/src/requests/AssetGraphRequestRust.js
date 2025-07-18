@@ -5,6 +5,7 @@ import invariant from 'assert';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Async} from '@atlaspack/types';
 import {instrument} from '@atlaspack/logger';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
@@ -16,6 +17,8 @@ import type {
   AssetGraphRequestInput,
   AssetGraphRequestResult,
 } from './AssetGraphRequest';
+import {toEnvironmentRef} from '../EnvironmentManager';
+import {getEnvironmentHash} from '../Environment';
 
 type RunInput = {|
   input: AssetGraphRequestInput,
@@ -166,8 +169,13 @@ export function getAssetGraph(serializedGraph: any): {
 
       asset.committed = true;
       asset.contentKey = id;
-      asset.env.id = getEnvId(asset.env);
+      asset.env.id = getFeatureFlag('environmentDeduplication')
+        ? // TODO: Rust can do this and avoid copying a significant amount of data over
+          getEnvironmentHash(asset.env)
+        : getEnvId(asset.env);
       asset.mapKey = `map:${asset.id}`;
+
+      asset.env = toEnvironmentRef(asset.env);
 
       // This is populated later when we map the edges between assets and dependencies
       asset.dependencies = new Map();
@@ -195,7 +203,11 @@ export function getAssetGraph(serializedGraph: any): {
       let dependency = node.value.dependency;
 
       dependency.id = id;
-      dependency.env.id = getEnvId(dependency.env);
+      dependency.env.id = getFeatureFlag('environmentDeduplication')
+        ? // TODO: Rust can do this and avoid copying a significant amount of data over
+          getEnvironmentHash(dependency.env)
+        : getEnvId(dependency.env);
+      dependency.env = toEnvironmentRef(dependency.env);
 
       if (dependency.symbols != null) {
         dependency.symbols = new Map(dependency.symbols?.map(mapSymbols));

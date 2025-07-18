@@ -24,8 +24,6 @@ import {
 } from 'vscode-jsonrpc/node';
 import * as invariant from 'assert';
 import * as url from 'url';
-import commonPathPrefix = require('common-path-prefix');
-
 // import {TextDocument} from 'vscode-languageserver-textdocument';
 import * as watcher from '@parcel/watcher';
 import {
@@ -35,6 +33,9 @@ import {
   RequestDocumentDiagnostics,
   RequestImporters,
 } from '@atlaspack/lsp-protocol';
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const commonPathPrefix = require('common-path-prefix');
 
 type Metafile = {
   projectRoot: string;
@@ -103,6 +104,7 @@ connection.onInitialized(() => {
     );
   }
   if (hasWorkspaceFolderCapability) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     connection.workspace.onDidChangeWorkspaceFolders((_event) => {
       connection.console.log('Workspace folder change event received.');
     });
@@ -111,9 +113,12 @@ connection.onInitialized(() => {
 
 // Proxy
 connection.onRequest(RequestImporters, async (params) => {
-  let client = findClient(params);
+  const client = findClient(params);
   if (client) {
-    let result = await client.connection.sendRequest(RequestImporters, params);
+    const result = await client.connection.sendRequest(
+      RequestImporters,
+      params,
+    );
     return result;
   }
   return null;
@@ -124,7 +129,7 @@ connection.onRequest(
   async (
     params: DocumentDiagnosticParams,
   ): Promise<DocumentDiagnosticReport> => {
-    let client = findClient(params.textDocument.uri);
+    const client = findClient(params.textDocument.uri);
     let result;
     if (client) {
       // console.log(
@@ -165,6 +170,7 @@ class ProgressReporter {
   lastMessage?: string;
   begin() {
     this.progressReporterPromise = (async () => {
+      // eslint-disable-next-line prefer-const
       let reporter = await connection.window.createWorkDoneProgress();
       reporter.begin('Atlaspack');
       return reporter;
@@ -188,7 +194,7 @@ class ProgressReporter {
       this.lastMessage = message;
       this.begin();
     } else {
-      let r = await this.progressReporterPromise;
+      const r = await this.progressReporterPromise;
       r.report(message);
     }
   }
@@ -207,20 +213,21 @@ type Client = {
   lastBuild: string;
 };
 
-let progressReporter = new ProgressReporter();
-let clients: Map<string, Client> = new Map();
+const progressReporter = new ProgressReporter();
+const clients: Map<string, Client> = new Map();
 
 function findClient(document: DocumentUri): Client | undefined {
-  let filepath = url.fileURLToPath(document);
+  const filepath = url.fileURLToPath(document);
 
   let longestPrefix = 0;
   let bestClient;
-  for (let [, client] of clients) {
-    let prefix = commonPathPrefix([client.projectRoot, filepath]).length;
+  for (const [, client] of clients) {
+    const prefix = commonPathPrefix([client.projectRoot, filepath]).length;
     if (longestPrefix < prefix) {
       longestPrefix = prefix;
       bestClient = client;
     } else if (longestPrefix === prefix) {
+      // eslint-disable-next-line no-console
       console.warn('Ambiguous client for ' + filepath);
     }
   }
@@ -233,14 +240,14 @@ function loadMetafile(filepath: string) {
 }
 
 function createClient(metafilepath: string, metafile: Metafile) {
-  let socketfilepath = metafilepath.slice(0, -5);
-  let [reader, writer] = createServerPipeTransport(socketfilepath);
-  let client = createMessageConnection(reader, writer);
+  const socketfilepath = metafilepath.slice(0, -5);
+  const [reader, writer] = createServerPipeTransport(socketfilepath);
+  const client = createMessageConnection(reader, writer);
   client.listen();
 
-  let uris = new Set<DocumentUri>();
+  const uris = new Set<DocumentUri>();
 
-  let result = {
+  const result = {
     connection: client,
     uris,
     projectRoot: metafile.projectRoot,
@@ -251,7 +258,7 @@ function createClient(metafilepath: string, metafile: Metafile) {
     // console.log('got NotificationBuildStatus', state, message);
     if (state === 'start') {
       progressReporter.begin();
-      for (let uri of uris) {
+      for (const uri of uris) {
         connection.sendDiagnostics({uri, diagnostics: []});
       }
     } else if (state === 'progress' && message != null) {
@@ -266,7 +273,7 @@ function createClient(metafilepath: string, metafile: Metafile) {
 
   client.onNotification(NotificationWorkspaceDiagnostics, (diagnostics) => {
     // console.log('got NotificationWorkspaceDiagnostics', diagnostics);
-    for (let d of diagnostics) {
+    for (const d of diagnostics) {
       uris.add(d.uri);
       connection.sendDiagnostics(d);
     }
@@ -294,9 +301,9 @@ fs.writeFileSync(path.join(BASEDIR, LSP_SENTINEL_FILENAME), '');
 
 // Search for currently running Atlaspack processes in the parcel-lsp dir.
 // Create an IPC client connection for each running process.
-for (let filename of fs.readdirSync(BASEDIR)) {
+for (const filename of fs.readdirSync(BASEDIR)) {
   if (!filename.endsWith('.json')) continue;
-  let filepath = path.join(BASEDIR, filename);
+  const filepath = path.join(BASEDIR, filename);
   const contents = loadMetafile(filepath);
   const {projectRoot} = contents;
 
@@ -307,12 +314,13 @@ for (let filename of fs.readdirSync(BASEDIR)) {
 
 // Watch for new Atlaspack processes in the parcel-lsp dir, and disconnect the
 // client for each corresponding connection when a Atlaspack process ends
+// eslint-disable-next-line require-await
 watcher.subscribe(BASEDIR, async (err, events) => {
   if (err) {
     throw err;
   }
 
-  for (let event of events) {
+  for (const event of events) {
     if (event.type === 'create' && event.path.endsWith('.json')) {
       const contents = loadMetafile(event.path);
       const {projectRoot} = contents;
@@ -321,7 +329,8 @@ watcher.subscribe(BASEDIR, async (err, events) => {
         createClient(event.path, contents);
       }
     } else if (event.type === 'delete' && event.path.endsWith('.json')) {
-      let existing = clients.get(event.path);
+      const existing = clients.get(event.path);
+      // eslint-disable-next-line no-console
       console.log('existing', event.path, existing);
       if (existing) {
         clients.delete(event.path);

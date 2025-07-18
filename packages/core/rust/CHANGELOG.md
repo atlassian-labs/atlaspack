@@ -1,5 +1,30 @@
 # @atlaspack/rust
 
+## 3.4.1
+
+### Patch Changes
+
+- [#686](https://github.com/atlassian-labs/atlaspack/pull/686) [`becf977`](https://github.com/atlassian-labs/atlaspack/commit/becf977f625d5ee46dae3d4c679f173bf5f40cc0) Thanks [@benjervis](https://github.com/benjervis)! - Fix (behind a feature flag) the bug where non-static property access of an imported object was not being considered used by the collector.
+
+- [#685](https://github.com/atlassian-labs/atlaspack/pull/685) [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries) could cause exports to undefined at runtime.
+  Fix is behind the feature-flag `emptyFileStarRexportFix`.
+
+## 3.4.0
+
+### Minor Changes
+
+- [#671](https://github.com/atlassian-labs/atlaspack/pull/671) [`c75bf55`](https://github.com/atlassian-labs/atlaspack/commit/c75bf553fff4decc285b5fd499a275853b18f8f2) Thanks [@matt-koko](https://github.com/matt-koko)! - The @atlaspack/rust package should have been bumped in [pull request 633](https://github.com/atlassian-labs/atlaspack/pull/633). This has resulted in the JS half of those changes being released, but not the Rust half.
+
+  Rectifying by creating a new changeset now.
+
+## 3.3.5
+
+### Patch Changes
+
+- [#594](https://github.com/atlassian-labs/atlaspack/pull/594) [`35fdd4b`](https://github.com/atlassian-labs/atlaspack/commit/35fdd4b52da0af20f74667f7b8adfb2f90279b7c) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix issue where cache database could become invalid due to stale readers
+
+- [#572](https://github.com/atlassian-labs/atlaspack/pull/572) [`6dd4ccb`](https://github.com/atlassian-labs/atlaspack/commit/6dd4ccb753541de32322d881f973d571dd57e4ca) Thanks [@yamadapc](https://github.com/yamadapc)! - Add feature-flagged change which removes all environment duplication around objects
+
 ## 3.3.4
 
 ### Patch Changes

@@ -17,7 +17,6 @@ import {ScopeHoistingPackager} from './ScopeHoistingPackager';
 type JSPackagerConfig = {|
   parcelRequireName: string,
   unstable_asyncBundleRuntime: boolean,
-  unstable_forceSkipWrapAssets: Array<string>,
 |};
 
 const CONFIG_SCHEMA: SchemaEntity = {
@@ -25,12 +24,6 @@ const CONFIG_SCHEMA: SchemaEntity = {
   properties: {
     unstable_asyncBundleRuntime: {
       type: 'boolean',
-    },
-    unstable_forceSkipWrapAssets: {
-      type: 'array',
-      items: {
-        type: 'string',
-      },
     },
   },
   additionalProperties: false,
@@ -73,8 +66,6 @@ export default (new Packager({
       unstable_asyncBundleRuntime: Boolean(
         conf?.contents?.unstable_asyncBundleRuntime,
       ),
-      unstable_forceSkipWrapAssets:
-        conf?.contents?.unstable_forceSkipWrapAssets ?? [],
     };
   },
   async package({
@@ -106,15 +97,19 @@ export default (new Packager({
             options,
             bundleGraph,
             bundle,
+            // $FlowFixMe
+            // $FlowFixMe
             nullthrows(config).parcelRequireName,
+            // $FlowFixMe
             nullthrows(config).unstable_asyncBundleRuntime,
-            nullthrows(config).unstable_forceSkipWrapAssets,
             logger,
           )
         : new DevPackager(
             options,
             bundleGraph,
             bundle,
+            // $FlowFixMe
+            // $FlowFixMe
             nullthrows(config).parcelRequireName,
           );
 
@@ -147,7 +142,7 @@ export default (new Packager({
       map,
     });
   },
-}): Packager);
+}): Packager<mixed, mixed>);
 
 async function getSourceMapSuffix(
   getSourceMapReference: (?SourceMap) => Async<?string>,

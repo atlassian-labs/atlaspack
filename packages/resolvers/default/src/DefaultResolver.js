@@ -30,6 +30,7 @@ export default (new Resolver({
       );
     }
 
+    // $FlowFixMe
     return resolver.resolve({
       filename: specifier,
       specifierType: dependency.specifierType,
@@ -41,4 +42,4 @@ export default (new Resolver({
       packageConditions: dependency.packageConditions,
     });
   },
-}): Resolver);
+}): Resolver<mixed>);

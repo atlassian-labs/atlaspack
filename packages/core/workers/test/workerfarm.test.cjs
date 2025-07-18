@@ -292,6 +292,7 @@ describe('WorkerFarm', function () {
     await dispose();
     result = await workerfarm.run(ref);
     assert.equal(result, 'Shared reference does not exist');
+    await workerfarm.end();
   });
 
   it('Should resolve shared references in workers', async () => {
@@ -311,6 +312,7 @@ describe('WorkerFarm', function () {
 
     await dispose();
     assert(workerfarm.workerApi.resolveSharedReference(sharedValue) == null);
+    await workerfarm.end();
   });
 
   it('Should support shared references in local worker', async () => {
@@ -329,6 +331,7 @@ describe('WorkerFarm', function () {
     await dispose();
     result = await workerfarm.run(ref);
     assert.equal(result, 'Shared reference does not exist');
+    await workerfarm.end();
   });
 
   it('should resolve shared references in local worker', async () => {
@@ -348,6 +351,7 @@ describe('WorkerFarm', function () {
 
     await dispose();
     assert(workerfarm.workerApi.resolveSharedReference(sharedValue) == null);
+    await workerfarm.end();
   });
 
   it('Should dispose of shared references when ending', async () => {
@@ -361,5 +365,6 @@ describe('WorkerFarm', function () {
     assert.equal(workerfarm.sharedReferences.size, 1);
     await workerfarm.end();
     assert.equal(workerfarm.sharedReferences.size, 0);
+    await workerfarm.end();
   });
 });

@@ -29,6 +29,12 @@ import nullthrows from 'nullthrows';
 import {ContentGraph} from '@atlaspack/graph';
 import {createDependency} from './Dependency';
 import {type ProjectPath, fromProjectPathRelative} from './projectPath';
+import {
+  fromEnvironmentId,
+  toEnvironmentId,
+  toEnvironmentRef,
+} from './EnvironmentManager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type InitOpts = {|
   entries?: Array<ProjectPath>,
@@ -38,11 +44,15 @@ type InitOpts = {|
 
 type AssetGraphOpts = {|
   ...ContentGraphOpts<AssetGraphNode>,
+  bundlingVersion?: number,
+  disableIncrementalBundling?: boolean,
   hash?: ?string,
 |};
 
 type SerializedAssetGraph = {|
   ...SerializedContentGraph<AssetGraphNode>,
+  bundlingVersion: number,
+  disableIncrementalBundling: boolean,
   hash?: ?string,
 |};
 
@@ -65,7 +75,7 @@ export function nodeFromAssetGroup(assetGroup: AssetGroup): AssetGroupNode {
   return {
     id: hashString(
       fromProjectPathRelative(assetGroup.filePath) +
-        assetGroup.env.id +
+        toEnvironmentId(assetGroup.env) +
         String(assetGroup.isSource) +
         String(assetGroup.sideEffects) +
         (assetGroup.code ?? '') +
@@ -111,14 +121,30 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
   onNodeRemoved: ?(nodeId: NodeId) => mixed;
   hash: ?string;
   envCache: Map<string, Environment>;
+
+  /**
+   * Incremented when the asset graph is modified such that it requires a bundling pass.
+   */
+  #bundlingVersion: number = 0;
+  /**
+   * Force incremental bundling to be disabled.
+   */
+  #disableIncrementalBundling: boolean = false;
+
+  /**
+   * @deprecated
+   */
   safeToIncrementallyBundle: boolean = true;
+
   undeferredDependencies: Set<Dependency>;
 
   constructor(opts: ?AssetGraphOpts) {
     if (opts) {
-      let {hash, ...rest} = opts;
+      let {hash, bundlingVersion, disableIncrementalBundling, ...rest} = opts;
       super(rest);
       this.hash = hash;
+      this.#bundlingVersion = bundlingVersion ?? 0;
+      this.#disableIncrementalBundling = disableIncrementalBundling ?? false;
     } else {
       super();
       this.setRootNodeId(
@@ -143,20 +169,80 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
   serialize(): SerializedAssetGraph {
     return {
       ...super.serialize(),
+      bundlingVersion: this.#bundlingVersion,
+      disableIncrementalBundling: this.#disableIncrementalBundling,
       hash: this.hash,
     };
   }
 
+  /**
+   * Force incremental bundling to be disabled.
+   */
+  setDisableIncrementalBundling(disable: boolean) {
+    this.#disableIncrementalBundling = disable;
+  }
+
+  testing_getDisableIncrementalBundling(): boolean {
+    return this.#disableIncrementalBundling;
+  }
+
+  /**
+   * Make sure this asset graph is marked as needing a full bundling pass.
+   */
+  setNeedsBundling() {
+    if (!getFeatureFlag('incrementalBundlingVersioning')) {
+      // In legacy mode, we rely solely on safeToIncrementallyBundle to
+      // invalidate incremental bundling, so we skip bumping the version.
+      return;
+    }
+    this.#bundlingVersion += 1;
+  }
+
+  /**
+   * Get the current bundling version.
+   *
+   * Each bundle pass should keep this version around. Whenever an asset graph has a new version,
+   * bundling should be re-run.
+   */
+  getBundlingVersion(): number {
+    if (!getFeatureFlag('incrementalBundlingVersioning')) {
+      return 0;
+    }
+    return this.#bundlingVersion;
+  }
+
+  /**
+   * If the `bundlingVersion` has not changed since the last bundling pass,
+   * we can incrementally bundle, which will not require a full bundling pass
+   * but just update assets into the bundle graph output.
+   */
+  canIncrementallyBundle(lastVersion: number): boolean {
+    if (!getFeatureFlag('incrementalBundlingVersioning')) {
+      return (
+        this.safeToIncrementallyBundle && !this.#disableIncrementalBundling
+      );
+    }
+    return (
+      this.safeToIncrementallyBundle &&
+      this.#bundlingVersion === lastVersion &&
+      !this.#disableIncrementalBundling
+    );
+  }
+
   // Deduplicates Environments by making them referentially equal
   normalizeEnvironment(input: Asset | Dependency | AssetGroup) {
-    let {id, context} = input.env;
+    if (getFeatureFlag('environmentDeduplication')) {
+      return;
+    }
+
+    let {id, context} = fromEnvironmentId(input.env);
     let idAndContext = `${id}-${context}`;
 
     let env = this.envCache.get(idAndContext);
     if (env) {
-      input.env = env;
+      input.env = toEnvironmentRef(env);
     } else {
-      this.envCache.set(idAndContext, input.env);
+      this.envCache.set(idAndContext, fromEnvironmentId(input.env));
     }
   }
 
@@ -235,13 +321,13 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
           env: target.env,
           isEntry: true,
           needsStableName: true,
-          symbols: target.env.isLibrary
+          symbols: fromEnvironmentId(target.env).isLibrary
             ? new Map([['*', {local: '*', isWeak: true, loc: null}]])
             : undefined,
         }),
       );
 
-      if (node.value.env.isLibrary) {
+      if (fromEnvironmentId(node.value.env).isLibrary) {
         // in library mode, all of the entry's symbols are "used"
         node.usedSymbolsDown.add('*');
         node.usedSymbolsUp.set('*', undefined);
@@ -359,11 +445,13 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
       ) {
         if (!ctx?.hasDeferred) {
           this.safeToIncrementallyBundle = false;
+          this.setNeedsBundling();
           delete traversedNode.hasDeferred;
         }
         actions.skipChildren();
       } else if (traversedNode.type === 'dependency') {
         this.safeToIncrementallyBundle = false;
+        this.setNeedsBundling();
         traversedNode.hasDeferred = false;
       } else if (nodeId !== traversedNodeId) {
         actions.skipChildren();
@@ -428,7 +516,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
 
       let depIsDeferrable =
         d.symbols &&
-        !(d.env.isLibrary && d.isEntry) &&
+        !(fromEnvironmentId(d.env).isLibrary && d.isEntry) &&
         !d.symbols.has('*') &&
         ![...d.symbols.keys()].some((symbol) => {
           let assetSymbol = resolvedAsset.symbols?.get(symbol)?.local;
@@ -532,6 +620,19 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
           ...depNode.value.meta,
           ...existing.value.resolverMeta,
         };
+
+        if (getFeatureFlag('hmrImprovements')) {
+          depNode.value.resolverMeta = existing.value.resolverMeta;
+        }
+      }
+      if (getFeatureFlag('hmrImprovements')) {
+        if (
+          existing?.type === 'dependency' &&
+          existing.value.resolverPriority != null
+        ) {
+          depNode.value.priority = existing.value.resolverPriority;
+          depNode.value.resolverPriority = existing.value.resolverPriority;
+        }
       }
       let dependentAsset = dependentAssets.find(
         (a) => a.uniqueKey === dep.specifier,

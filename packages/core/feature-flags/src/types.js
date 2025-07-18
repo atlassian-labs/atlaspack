@@ -27,10 +27,6 @@ export type FeatureFlags = {|
    */
   conditionalBundlingApi: boolean,
   /**
-   * Run inline requires optimizer in the rayon thread pool.
-   */
-  inlineRequiresMultiThreading: boolean,
-  /**
    * Enable VCS mode. Expected values are:
    * - OLD - default value, return watchman result
    * - NEW_AND_CHECK - Return VCS result but still call watchman
@@ -38,16 +34,16 @@ export type FeatureFlags = {|
    */
   vcsMode: ConsistencyCheckFeatureFlagValue,
   /**
-   * Enable granular TS config invalidation
-   */
-  granularTsConfigInvalidation: boolean,
-  /**
    * Refactor cache to:
    * - Split writes into multiple entries
    * - Remove "large file blob" writes
    * - Reduce size of the caches by deduplicating data
    */
   cachePerformanceImprovements: boolean,
+  /**
+   * Deduplicates environments across cache / memory entities
+   */
+  environmentDeduplication: boolean,
   /**
    * Enable scanning for the presence of loadable to determine side effects
    */
@@ -65,10 +61,6 @@ export type FeatureFlags = {|
    * Fixes source maps for inline bundles
    */
   inlineBundlesSourceMapFixes: boolean,
-  /**
-   * Enable nested loading of bundles in the runtime with conditional bundling
-   */
-  conditionalBundlingNestedRuntime: boolean,
   /** Enable patch project paths. This will patch the project paths to be relative to the project root.
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    */
@@ -79,27 +71,63 @@ export type FeatureFlags = {|
    */
   inlineStringReplacementPerf: boolean,
   /**
-   * Enable support for the async bundle runtime (unstable_asyncBundleRuntime) in conditional bundling
-   */
-  conditionalBundlingAsyncRuntime: boolean,
-  /**
-   * Fix a bug where the conditional manifest reporter would report and write the same manifest multiple times
-   */
-  conditionalBundlingReporterDuplicateFix: boolean,
-  /**
    * Enable resolution of bundler config starting from the CWD
    */
   resolveBundlerConfigFromCwd: boolean,
   /**
-   * Fix a bug where the conditional manifest reporter would drop bundles that have the same condition
+   * Enable a setting that allows for more assets to be scope hoisted, if
+   * they're safe to do so.
    */
-  conditionalBundlingReporterSameConditionFix: boolean,
+  applyScopeHoistingImprovement: boolean,
+  /**
+   * Enable a change where a constant module only have the namespacing object added in bundles where it is required
+   */
+  inlineConstOptimisationFix: boolean,
+  /**
+   * Improves/fixes HMR behaviour by:
+   * - Fixing HMR behaviour with lazy bundle edges
+   * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer
+   */
+  hmrImprovements: boolean,
+  /**
+   * Adds an end() method to AtlaspckV3 to cleanly shutdown the NAPI worker pool
+   */
+  atlaspackV3CleanShutdown: boolean,
+  /**
+   * Fixes a bug where imported objects that are accessed with non-static
+   * properties (e.g. `CONSTANTS['api_' + endpoint`]) would not be recognised as
+   * being used, and thus not included in the bundle.
+   */
+  unusedComputedPropertyFix: boolean,
+
+  /**
+   * Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries)
+   * could cause exports to undefined at runtime.
+   */
+  emptyFileStarRexportFix: boolean,
+
+  /**
+   * Enables the new packaging progress CLI experience
+   */
+  cliProgressReportingImprovements: boolean,
+  /**
+   * Enable a change to the conditional bundling loader to use a fallback bundle loading if the expected scripts aren't found
+   *
+   * Split into two flags, to allow usage in the dev or prod packagers separately
+   */
+  condbDevFallbackDev: boolean,
+  condbDevFallbackProd: boolean,
+  /**
+   * Enable the new incremental bundling versioning logic which determines whether
+   * a full bundling pass is required based on the AssetGraph's bundlingVersion.
+   */
+  incrementalBundlingVersioning: boolean,
 |};
 
-export type ConsistencyCheckFeatureFlagValue =
-  | 'NEW'
-  | 'OLD'
-  | 'NEW_AND_CHECK'
-  | 'OLD_AND_CHECK';
+declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
+export type ConsistencyCheckFeatureFlagValue = $ElementType<
+  typeof CONSISTENCY_CHECK_VALUES,
+  number,
+>;
 
 declare export var DEFAULT_FEATURE_FLAGS: FeatureFlags;

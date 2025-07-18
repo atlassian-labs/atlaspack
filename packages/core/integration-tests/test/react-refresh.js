@@ -37,14 +37,10 @@ if (MessageChannel) {
         '/integration/react-refresh-automatic',
       );
 
-      let b,
-        root,
-        randoms,
-        subscription,
-        window = {};
+      let b, root, randoms, subscription, ports, window;
 
       beforeEach(async () => {
-        ({b, root, randoms, subscription, window} = await setup(
+        ({b, root, randoms, subscription, window, ports} = await setup(
           path.join(testDir, 'index.html'),
         ));
       });
@@ -70,21 +66,17 @@ if (MessageChannel) {
       });
 
       afterEach(async () => {
-        await cleanup({subscription, window});
+        await cleanup({subscription, window, ports});
       });
     });
 
     describe('synchronous', () => {
       const testDir = path.join(__dirname, '/integration/react-refresh');
 
-      let b,
-        root,
-        window,
-        subscription,
-        randoms = {};
+      let b, root, window, subscription, ports, randoms;
 
       beforeEach(async () => {
-        ({b, root, window, subscription, randoms} = await setup(
+        ({b, root, window, subscription, randoms, ports} = await setup(
           path.join(testDir, 'index.html'),
         ));
       });
@@ -152,7 +144,7 @@ if (MessageChannel) {
       });
 
       afterEach(async () => {
-        await cleanup({subscription, window});
+        await cleanup({subscription, window, ports});
       });
     });
 
@@ -162,14 +154,10 @@ if (MessageChannel) {
         '/integration/react-refresh-lazy-child',
       );
 
-      let b,
-        root,
-        window,
-        subscription,
-        randoms = {};
+      let b, root, window, subscription, ports, randoms;
 
       beforeEach(async () => {
-        ({b, root, window, subscription, randoms} = await setup(
+        ({b, root, window, subscription, randoms, ports} = await setup(
           path.join(testDir, 'index.html'),
         ));
       });
@@ -197,7 +185,7 @@ if (MessageChannel) {
       });
 
       afterEach(async () => {
-        await cleanup({subscription, window});
+        await cleanup({subscription, window, ports});
       });
     });
 
@@ -207,13 +195,10 @@ if (MessageChannel) {
         '/integration/react-refresh-circular',
       );
 
-      let b,
-        root,
-        subscription,
-        window = {};
+      let b, root, subscription, ports, window;
 
       beforeEach(async () => {
-        ({b, root, subscription, window} = await setup(
+        ({b, root, subscription, window, ports} = await setup(
           path.join(testDir, 'index.html'),
         ));
       });
@@ -246,7 +231,7 @@ if (MessageChannel) {
       });
 
       afterEach(async () => {
-        await cleanup({subscription, window});
+        await cleanup({subscription, window, ports});
       });
     });
 
@@ -314,7 +299,8 @@ async function setup(entry) {
     window,
     randoms,
     subscription,
-    root;
+    root,
+    ports = new Set();
 
   b = bundler(entry, {
     inputFS: fs,
@@ -352,7 +338,15 @@ async function setup(entry) {
     }),
   );
   window.console.clear = () => {};
-  window.MessageChannel = MessageChannel;
+
+  window.MessageChannel = class MessageChannelWrapper {
+    constructor() {
+      const {port1, port2} = new MessageChannel();
+      ports.add(port1);
+      ports.add(port2);
+      return {port1, port2};
+    }
+  };
   root = window.document.getElementById('root');
 
   let bundle = nullthrows(
@@ -376,10 +370,16 @@ async function setup(entry) {
 
     randoms = {indexNum, appNum, fooText, fooNum};
   }
-  return {port, b, window, randoms, subscription, root};
+  return {port, b, window, randoms, subscription, root, ports};
 }
 
-async function cleanup({window, subscription}) {
+async function cleanup({window, ports, subscription}) {
+  if (ports instanceof Set) {
+    for (let port of ports) {
+      port.close();
+    }
+    ports.clear();
+  }
   if (window) {
     window.close();
   }

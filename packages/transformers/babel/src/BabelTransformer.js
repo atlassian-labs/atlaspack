@@ -19,6 +19,7 @@ export default (new Transformer({
 
   async transform({asset, config, logger, options, tracer}) {
     try {
+      // $FlowFixMe
       if (config?.config) {
         if (
           asset.meta.babelPlugins != null &&
@@ -99,4 +100,4 @@ export default (new Transformer({
       map,
     };
   },
-}): Transformer);
+}): Transformer<mixed>);

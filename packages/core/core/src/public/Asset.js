@@ -36,6 +36,7 @@ import {
   BundleBehaviorNames,
 } from '../types';
 import {toInternalSourceLocation} from '../utils';
+import {fromEnvironmentId} from '../EnvironmentManager';
 
 const inspect = Symbol.for('nodejs.util.inspect.custom');
 
@@ -80,7 +81,7 @@ export function assetFromValue(
 
 class BaseAsset {
   #asset: CommittedAsset | UncommittedAsset;
-  #query /*: ?URLSearchParams */;
+  #query: ?URLSearchParams;
 
   constructor(asset: CommittedAsset | UncommittedAsset) {
     this.#asset = asset;
@@ -101,7 +102,10 @@ class BaseAsset {
   }
 
   get env(): IEnvironment {
-    return new Environment(this.#asset.value.env, this.#asset.options);
+    return new Environment(
+      fromEnvironmentId(this.#asset.value.env),
+      this.#asset.options,
+    );
   }
 
   get fs(): FileSystem {
@@ -191,8 +195,8 @@ class BaseAsset {
 }
 
 export class Asset extends BaseAsset implements IAsset {
-  #asset /*: CommittedAsset | UncommittedAsset */;
-  #env /*: ?Environment */;
+  #asset: CommittedAsset | UncommittedAsset;
+  #env: ?Environment;
 
   constructor(asset: CommittedAsset | UncommittedAsset): Asset {
     let assetValueToAsset = asset.value.committed
@@ -210,7 +214,10 @@ export class Asset extends BaseAsset implements IAsset {
   }
 
   get env(): IEnvironment {
-    this.#env ??= new Environment(this.#asset.value.env, this.#asset.options);
+    this.#env ??= new Environment(
+      fromEnvironmentId(this.#asset.value.env),
+      this.#asset.options,
+    );
     return this.#env;
   }
 
@@ -220,7 +227,7 @@ export class Asset extends BaseAsset implements IAsset {
 }
 
 export class MutableAsset extends BaseAsset implements IMutableAsset {
-  #asset /*: UncommittedAsset */;
+  #asset: UncommittedAsset;
 
   constructor(asset: UncommittedAsset): MutableAsset {
     let existing = assetValueToMutableAsset.get(asset.value);
