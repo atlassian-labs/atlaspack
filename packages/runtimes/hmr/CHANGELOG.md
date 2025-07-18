@@ -1,5 +1,15 @@
 # @atlaspack/runtime-browser-hmr
 
+## 2.14.20
+
+### Patch Changes
+
+- [#702](https://github.com/atlassian-labs/atlaspack/pull/702) [`daaa768`](https://github.com/atlassian-labs/atlaspack/commit/daaa7688786772d7e3713b71c5bba6b89ec704aa) Thanks [@alshdavid](https://github.com/alshdavid)! - Fixes to Flow types
+
+- Updated dependencies [[`daaa768`](https://github.com/atlassian-labs/atlaspack/commit/daaa7688786772d7e3713b71c5bba6b89ec704aa)]:
+  - @atlaspack/plugin@2.14.20
+  - @atlaspack/utils@2.17.2
+
 ## 2.14.19
 
 ### Patch Changes
