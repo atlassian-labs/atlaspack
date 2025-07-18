@@ -1,5 +1,12 @@
 # @atlaspack/reporter-bundle-buddy
 
+## 2.14.20
+
+### Patch Changes
+
+- Updated dependencies [[`daaa768`](https://github.com/atlassian-labs/atlaspack/commit/daaa7688786772d7e3713b71c5bba6b89ec704aa)]:
+  - @atlaspack/plugin@2.14.20
+
 ## 2.14.19
 
 ### Patch Changes
