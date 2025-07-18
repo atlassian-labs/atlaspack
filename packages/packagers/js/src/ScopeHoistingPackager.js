@@ -210,7 +210,7 @@ export class ScopeHoistingPackager {
     if (this.isAsyncBundle) {
       // In async bundles we don't want the main entry to execute until we require it
       // as there might be dependencies in a sibling bundle that hasn't loaded yet.
-      entries = entries.filter((a) => a.id !== mainEntry?.id);
+      entries = [];
       mainEntry = null;
     }
 
