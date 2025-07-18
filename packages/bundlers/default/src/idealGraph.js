@@ -1193,6 +1193,7 @@ export function createIdealGraph(
       .add(bundleNodeId);
   }
 
+  let modifiedSourceBundles = new Set();
   for (let [chunkName, bundleIds] of chunkNameBundles.entries()) {
     if (bundleIds.size <= 1 || chunkName.includes('[request]')) {
       continue; // Nothing to merge
@@ -1233,7 +1234,6 @@ export function createIdealGraph(
   }
 
   // Step Remove Shared Bundles: Remove shared bundles from bundle groups that hit the parallel request limit.
-  let modifiedSourceBundles = new Set();
 
   if (config.disableSharedBundles === false) {
     for (let bundleGroupId of bundleGraph.getNodeIdsConnectedFrom(rootNodeId)) {
@@ -1347,6 +1347,7 @@ export function createIdealGraph(
       bundleGraph.getNode(bundleToRemoveId),
       `Bundle ${bundleToRemoveId} not found`,
     );
+    modifiedSourceBundles.add(bundleToKeep);
     invariant(bundleToKeep !== 'root' && bundleToRemove !== 'root');
     for (let asset of bundleToRemove.assets) {
       bundleToKeep.assets.add(asset);
