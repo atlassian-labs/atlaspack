@@ -122,7 +122,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-node
-      - run: npx flow check
       - run: npx eslint .
       - run: npx prettier --list-different .
       - run: npx lerna run --parallel build-tsc

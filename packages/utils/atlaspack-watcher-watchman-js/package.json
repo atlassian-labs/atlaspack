@@ -2,10 +2,12 @@
   "name": "@atlaspack/watcher-watchman-js",
   "version": "2.14.19",
   "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "main": "lib/index.js",
-  "source": "src/index.js",
-  "publishConfig": {
-    "access": "public"
+  "source": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
   },
   "dependencies": {
     "@atlaspack/logger": "2.14.13",
@@ -13,5 +15,7 @@
     "@parcel/watcher": "^2.4.1",
     "fb-watchman": "^2.0.2"
   },
-  "type": "commonjs"
+  "publishConfig": {
+    "access": "public"
+  }
 }

@@ -1,25 +1,29 @@
 {
   "name": "@atlaspack/transformer-mdx",
   "version": "2.14.19",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "main": "lib/MDXTransformer.js",
-  "source": "src/MDXTransformer.js",
-  "engines": {
-    "node": ">= 16.0.0"
+  "source": "src/MDXTransformer.ts",
+  "types": "src/MDXTransformer.ts",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
   },
   "dependencies": {
-    "@mdx-js/mdx": "^1.6.22",
-    "@atlaspack/plugin": "2.14.19"
+    "@atlaspack/plugin": "2.14.19",
+    "@mdx-js/mdx": "^1.6.22"
   },
   "peerDependencies": {
     "@mdx-js/react": "^1.6.22"
   },
-  "type": "commonjs"
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
