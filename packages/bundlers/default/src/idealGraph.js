@@ -1078,33 +1078,6 @@ export function createIdealGraph(
     }
   }
 
-  let bundleRootParents = new Map();
-  bundleRootGraph.traverse(
-    (nodeId) => {
-      let node = bundleRootGraph.getNode(nodeId);
-      if (node === -1) {
-        return;
-      }
-
-      let nodeAsset = assets[nullthrows(node)];
-
-      if (!nodeAsset) {
-        throw new Error(`Asset not found for node: ${node}`);
-      }
-
-      let parents = bundleRootGraph
-        .getNodeIdsConnectedTo(nodeId, bundleRootEdgeTypes.lazy)
-        .filter((node) => node !== -1)
-        .map(
-          (parentId) => assets[nullthrows(bundleRootGraph.getNode(parentId))],
-        );
-
-      bundleRootParents.set(nodeAsset, parents);
-    },
-    undefined,
-    ALL_EDGE_TYPES,
-  );
-
   let manualSharedBundleIds = new Set([...manualSharedMap.values()]);
   // Step split manual shared bundles for those that have the "split" property set
   let remainderMap = new DefaultMap(() => []);
