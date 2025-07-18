@@ -14,6 +14,13 @@ import {makeDeferredWithPromise} from '@atlaspack/utils';
 
 let id = 0;
 
+// @ts-expect-error This is actually a module
+export let WORKER_PATH = new URL('./WebChild.js', import.meta.url);
+if (process.env.ATLASPACK_REGISTER_USE_SRC === 'true') {
+  // @ts-expect-error This is actually a module
+  WORKER_PATH = new URL('./WebChild.ts', import.meta.url);
+}
+
 export default class WebWorker implements WorkerImpl {
   execArgv: any;
   onMessage: MessageHandler;

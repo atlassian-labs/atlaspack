@@ -1,5 +1,6 @@
 import type {InitialAtlaspackOptions} from '@atlaspack/types';
 import WorkerFarm from '@atlaspack/workers';
+import {FILE_CONFIG_NO_REPORTERS} from '@atlaspack/test-utils';
 // flowlint-next-line untyped-import:off
 import sinon from 'sinon';
 import assert from 'assert';
@@ -129,11 +130,7 @@ function createAtlaspack(opts?: InitialAtlaspackOptions) {
   return new Atlaspack({
     entries: [path.join(__dirname, 'fixtures/atlaspack/index.js')],
     logLevel: 'info',
-    defaultConfig: path.join(
-      path.dirname(require.resolve('@atlaspack/test-utils/package.json')),
-      'configs',
-      '.parcelrc-no-reporters',
-    ),
+    defaultConfig: FILE_CONFIG_NO_REPORTERS,
     shouldDisableCache: true,
     ...opts,
   });
