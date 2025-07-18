@@ -81,6 +81,7 @@ type RunInput = {
 // TODO: Rename to BundleGraphRequestResult
 export type BundleGraphResult = {
   bundleGraph: InternalBundleGraph;
+  assetGraphBundlingVersion: number;
   changedAssets: Map<string, Asset>;
   assetRequests: Array<AssetGroup>;
 };
@@ -212,6 +213,7 @@ export default function createBundleGraphRequest(
 
       if (subRequestsInvalid) {
         assetGraph.safeToIncrementallyBundle = false;
+        assetGraph.setNeedsBundling();
       }
 
       let configResult = nullthrows(
@@ -359,16 +361,18 @@ class BundlerRunner {
     let {plugin: bundler, name, resolveFrom} = plugin;
 
     // if a previous asset graph hash is passed in, check if the bundle graph is also available
-    let previousBundleGraphResult: BundleGraphRequestResult | null | undefined;
-    if (graph.safeToIncrementallyBundle) {
-      try {
-        previousBundleGraphResult = await this.api.getPreviousResult();
-      } catch {
-        // if the bundle graph had an error or was removed, don't fail the build
-      }
-    }
-    if (previousBundleGraphResult == null) {
+    const previousBundleGraphResult: BundleGraphRequestResult | null | undefined =
+      await this.api.getPreviousResult();
+
+    const canIncrementallyBundle =
+      previousBundleGraphResult?.assetGraphBundlingVersion != null &&
+      graph.canIncrementallyBundle(
+        previousBundleGraphResult.assetGraphBundlingVersion,
+      );
+
+    if (graph.safeToIncrementallyBundle && previousBundleGraphResult == null) {
       graph.safeToIncrementallyBundle = false;
+      graph.setNeedsBundling();
     }
 
     let internalBundleGraph;
@@ -379,7 +383,7 @@ class BundlerRunner {
       category: 'bundle',
     });
     try {
-      if (previousBundleGraphResult) {
+      if (canIncrementallyBundle && previousBundleGraphResult) {
         internalBundleGraph = previousBundleGraphResult.bundleGraph;
         for (let changedAssetId of changedAssets.keys()) {
           // Copy over the whole node to also have correct symbol data
@@ -479,6 +483,7 @@ class BundlerRunner {
         this.api.storeResult(
           {
             bundleGraph: internalBundleGraph,
+            assetGraphBundlingVersion: graph.getBundlingVersion(),
             changedAssets: new Map(),
             assetRequests: [],
           },
@@ -502,7 +507,7 @@ class BundlerRunner {
     }
 
     let changedRuntimes = new Map();
-    if (!previousBundleGraphResult) {
+    if (!previousBundleGraphResult || !canIncrementallyBundle) {
       let namers = await this.config.getNamers();
       // inline bundles must still be named so the PackagerRunner
       // can match them to the correct packager/optimizer plugins.
@@ -553,6 +558,7 @@ class BundlerRunner {
     this.api.storeResult(
       {
         bundleGraph: internalBundleGraph,
+        assetGraphBundlingVersion: graph.getBundlingVersion(),
         changedAssets: new Map(),
         assetRequests: [],
       },
@@ -561,6 +567,7 @@ class BundlerRunner {
 
     return {
       bundleGraph: internalBundleGraph,
+      assetGraphBundlingVersion: graph.getBundlingVersion(),
       changedAssets: changedRuntimes,
       assetRequests,
     };
