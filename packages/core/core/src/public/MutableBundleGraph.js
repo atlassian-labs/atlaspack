@@ -230,7 +230,12 @@ export default class MutableBundleGraph
     }
 
     let entryAssetIds = entryAsset
-      ? [entryAsset.id, ...(opts.bundleRoots?.map((asset) => asset.id) ?? [])]
+      ? [
+          entryAsset.id,
+          ...(opts.bundleRoots
+            ?.map((asset) => asset.id)
+            .filter((id) => id !== entryAsset.id) ?? []),
+        ]
       : [];
     let bundleNode: BundleNode = {
       type: 'bundle',

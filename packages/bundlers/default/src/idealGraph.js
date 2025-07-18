@@ -1105,92 +1105,6 @@ export function createIdealGraph(
     ALL_EDGE_TYPES,
   );
 
-  /**
-   * Ideas
-   * - Remove/merge bundle roots that don't save much size
-   * - Merge bundle roots that have very similar bundle groups
-   * - Merge language bundle together
-   */
-
-  let costs = [];
-  for (let [rootAsset, parents] of bundleRootParents.entries()) {
-    if (bundleRoots.has(rootAsset) === false) {
-      throw new Error(`Bundle root not found for asset: ${rootAsset.filePath}`);
-    }
-    let bundleGraphNodeId = nullthrows(bundleRoots.get(rootAsset))[0];
-    // let rootBundle = getBundleFromBundleRoot(rootAsset);
-    let bundleIdsInGroup = getBundlesForBundleGroup(bundleGraphNodeId);
-
-    let bundleGroupCost = bundleIdsInGroup.reduce((cost, bundleId) => {
-      if (bundleId === bundleGraphRootNodeId) {
-        return cost;
-      }
-      let bundle = nullthrows(bundleGraph.getNode(bundleId));
-      invariant(bundle !== 'root');
-      return cost + bundle.size;
-    }, 0);
-
-    // calculate cost of the bundle group without the root bundle
-    let rootNodeCost = nullthrows(bundleGraph.getNode(bundleGraphNodeId)).size;
-    let bundle = nullthrows(bundleGraph.getNode(bundleGraphNodeId));
-
-    if (
-      rootNodeCost < 3000 &&
-      bundleIdsInGroup.length === 1 &&
-      bundle.sourceBundles.size === 0 &&
-      rootAsset.filePath.includes('i18n') === false
-    ) {
-      costs.push({
-        asset: shortFilePath(rootAsset.filePath),
-        cost: rootNodeCost,
-        parents: parents.length,
-      });
-    }
-  }
-
-  costs.sort((a, b) => a.cost - b.cost);
-
-  // console.table(costs);
-
-  let chartPie = nullthrows(
-    bundleGraph.traverse((node, _, actions) => {
-      let bundle = bundleGraph.getNode(node);
-      if (bundle === 'root' || bundle == null) {
-        return;
-      }
-
-      if (
-        bundle.mainEntryAsset?.filePath.includes(
-          'platform/packages/design-system/icon/core/chart-pie.js',
-        )
-      ) {
-        actions.stop();
-        return node;
-      }
-    }),
-  );
-  let minimize = nullthrows(
-    bundleGraph.traverse((node, _, actions) => {
-      let bundle = bundleGraph.getNode(node);
-      if (bundle === 'root' || bundle == null) {
-        return;
-      }
-
-      if (
-        bundle.mainEntryAsset?.filePath.includes(
-          'platform/packages/design-system/icon/core/minimize.js',
-        )
-      ) {
-        actions.stop();
-        return node;
-      }
-    }),
-  );
-
-  console.log('Merge chart-pie and minimize');
-  mergeBundles(bundleGraph, chartPie, minimize, assetReference);
-  console.log('End merge chart-pie and minimize');
-
   let manualSharedBundleIds = new Set([...manualSharedMap.values()]);
   // Step split manual shared bundles for those that have the "split" property set
   let remainderMap = new DefaultMap(() => []);
@@ -1261,6 +1175,66 @@ export function createIdealGraph(
         bundle.assets.add(asset);
         bundle.size += asset.stats.size;
       }
+    }
+  }
+
+  // Merge webpack chunk name bundles
+  let chunkNameBundles = new DefaultMap(() => new Set());
+  for (let [nodeId, node] of dependencyBundleGraph.nodes.entries()) {
+    if (
+      !node ||
+      node.type !== 'dependency' ||
+      node.value.meta.chunkName == null
+    ) {
+      continue;
+    }
+
+    let connectedBundles = dependencyBundleGraph.getNodeIdsConnectedFrom(
+      nodeId,
+      dependencyPriorityEdges[node.value.priority],
+    );
+
+    if (connectedBundles.length === 0) {
+      continue;
+    }
+
+    invariant(connectedBundles.length === 1);
+    let bundleId = connectedBundles[0];
+    let bundleNode = dependencyBundleGraph.getNode(bundleId);
+    invariant(bundleNode != null && bundleNode.type === 'bundle');
+
+    if (bundleNode.value.mainEntryAsset == null) {
+      continue;
+    }
+
+    let bundleNodeId = bundles.get(bundleNode.value.mainEntryAsset.id);
+
+    if (bundleNodeId == null) {
+      continue;
+    }
+
+    chunkNameBundles
+      .get(node.value.meta.chunkName)
+      // DependencyBundleGraph uses content keys as node ids, so we can use that
+      // to get the bundle id.
+      .add(bundleNodeId);
+  }
+
+  for (let [chunkName, bundleIds] of chunkNameBundles.entries()) {
+    if (bundleIds.size <= 1 || chunkName.includes('[request]')) {
+      continue; // Nothing to merge
+    }
+
+    console.log(
+      'Merging bundles',
+      bundleIds.size,
+      'with chunk name:',
+      chunkName,
+    );
+    // Merge all bundles with the same chunk name into the first one.
+    let [firstBundleId, ...rest] = Array.from(bundleIds);
+    for (let bundleId of rest) {
+      mergeBundles(firstBundleId, bundleId);
     }
   }
 
@@ -1391,14 +1365,15 @@ export function createIdealGraph(
     }
   }
 
-  function mergeBundles(
-    bundleGraph: IdealBundleGraph,
-    bundleToKeepId: NodeId,
-    bundleToRemoveId: NodeId,
-    assetReference: DefaultMap<Asset, Array<[Dependency, Bundle]>>,
-  ) {
-    let bundleToKeep = nullthrows(bundleGraph.getNode(bundleToKeepId));
-    let bundleToRemove = nullthrows(bundleGraph.getNode(bundleToRemoveId));
+  function mergeBundles(bundleToKeepId: NodeId, bundleToRemoveId: NodeId) {
+    let bundleToKeep = nullthrows(
+      bundleGraph.getNode(bundleToKeepId),
+      `Bundle ${bundleToKeepId} not found`,
+    );
+    let bundleToRemove = nullthrows(
+      bundleGraph.getNode(bundleToRemoveId),
+      `Bundle ${bundleToRemoveId} not found`,
+    );
     invariant(bundleToKeep !== 'root' && bundleToRemove !== 'root');
     for (let asset of bundleToRemove.assets) {
       bundleToKeep.assets.add(asset);
@@ -1414,12 +1389,17 @@ export function createIdealGraph(
     }
 
     // Merge any internalized assets
-    if (bundleToKeep.internalizedAssets == null) {
-      bundleToKeep.internalizedAssets = bundleToRemove.internalizedAssets;
-    } else if (bundleToRemove.internalizedAssets != null) {
-      bundleToKeep.internalizedAssets.union(bundleToRemove.internalizedAssets);
+    if (bundleToKeep.internalizedAssets != null) {
+      if (bundleToRemove.internalizedAssets != null) {
+        bundleToKeep.internalizedAssets.intersect(
+          bundleToRemove.internalizedAssets,
+        );
+      } else {
+        bundleToKeep.internalizedAssets.clear();
+      }
     }
 
+    // Merge and clean up source bundles
     for (let sourceBundleId of bundleToRemove.sourceBundles) {
       if (bundleToKeep.sourceBundles.has(sourceBundleId)) {
         continue;
@@ -1427,6 +1407,22 @@ export function createIdealGraph(
 
       bundleToKeep.sourceBundles.add(sourceBundleId);
       bundleGraph.addEdge(sourceBundleId, bundleToKeepId);
+    }
+
+    bundleToKeep.sourceBundles.delete(bundleToRemoveId);
+
+    for (let bundle of bundleGraph.getNodeIdsConnectedFrom(bundleToRemoveId)) {
+      let bundleNode = nullthrows(bundleGraph.getNode(bundle));
+      if (bundleNode === 'root') {
+        continue;
+      }
+
+      // If the bundle is a source bundle, add it to the bundle to keep
+      if (bundleNode.sourceBundles.has(bundleToRemoveId)) {
+        bundleNode.sourceBundles.add(bundleToKeepId);
+        bundleNode.sourceBundles.delete(bundleToRemoveId);
+        bundleGraph.addEdge(bundleToKeepId, bundle);
+      }
     }
 
     // Merge bundle roots
@@ -1483,7 +1479,6 @@ export function createIdealGraph(
         dependencyBundleGraph.getNodeIdByContentKey(String(bundleToRemoveId)),
         ALL_EDGE_TYPES,
       )) {
-        console.log('Merging dependency node', dependencyNodeId);
         let dependencyNode = nullthrows(
           dependencyBundleGraph.getNode(dependencyNodeId),
         );
@@ -1559,7 +1554,7 @@ export function createIdealGraph(
       let [mergeTarget, ...rest] = cluster;
 
       for (let bundleIdToMerge of rest) {
-        mergeBundles(bundleGraph, mergeTarget, bundleIdToMerge, assetReference);
+        mergeBundles(mergeTarget, bundleIdToMerge);
       }
 
       mergedBundles.add(mergeTarget);
