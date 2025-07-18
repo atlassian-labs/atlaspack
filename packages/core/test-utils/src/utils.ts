@@ -36,6 +36,7 @@ import _chalk from 'chalk';
 import resolve from 'resolve';
 import {LMDBLiteCache} from '@atlaspack/cache';
 import tempy from 'tempy';
+import {FILE_CONFIG_NO_REPORTERS} from './paths';
 
 export let cacheDir: string = tempy.directory();
 export let cache: LMDBLiteCache = new LMDBLiteCache(cacheDir);
@@ -43,6 +44,7 @@ cache.ensure();
 
 export {fsFixture} from './fsFixture';
 export * from './stubs';
+export * from './paths';
 
 export const workerFarm = createWorkerFarm() as WorkerFarm;
 export const inputFS: NodeFS = new NodeFS();
@@ -169,12 +171,7 @@ export function getParcelOptions(
       logLevel: 'none',
       shouldBundleIncrementally:
         process.env.NO_INCREMENTAL == null ? true : false,
-      defaultConfig: path.join(
-        __dirname,
-        '..',
-        'config',
-        '.parcelrc-no-reporters',
-      ),
+      defaultConfig: FILE_CONFIG_NO_REPORTERS,
       inputFS,
       outputFS,
       workerFarm,
