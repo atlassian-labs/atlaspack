@@ -11,7 +11,10 @@ import path from 'path';
 
 import {serialize, deserialize} from '@atlaspack/build-cache';
 
-const WORKER_PATH = path.join(__dirname, './ProcessChild.js');
+export let WORKER_PATH: string = path.join(__dirname, 'ProcessChild.js');
+if (process.env.ATLASPACK_REGISTER_USE_SRC === 'true') {
+  WORKER_PATH = path.join(__dirname, 'ProcessChild.ts');
+}
 
 export default class ProcessWorker implements WorkerImpl {
   execArgv: any;
