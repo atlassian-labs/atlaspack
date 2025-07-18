@@ -36,6 +36,7 @@ export type Bundle = {|
   bundleBehavior?: ?BundleBehavior,
   needsStableName: boolean,
   mainEntryAsset: ?Asset,
+  bundleRoots: Set<Asset>,
   size: number,
   sourceBundles: Set<NodeId>,
   target: Target,
@@ -1428,18 +1429,13 @@ export function createIdealGraph(
       bundleGraph.addEdge(sourceBundleId, bundleToKeepId);
     }
 
+    // Merge bundle roots
+    for (let bundleRoot of bundleToRemove.bundleRoots) {
+      bundleToKeep.bundleRoots.add(bundleRoot);
+    }
+
     if (bundleToRemove.mainEntryAsset != null) {
       invariant(bundleToKeep.mainEntryAsset != null);
-      console.log(
-        bundleToRemoveId,
-        'Bundle to remove source bundles',
-        bundleToRemove.sourceBundles,
-      );
-      console.log(
-        bundleToKeepId,
-        'Bundle to keep source bundles',
-        bundleToKeep.sourceBundles,
-      );
 
       // Merge the bundles in bundle group
       let bundlesInRemoveBundleGroup =
@@ -1477,11 +1473,10 @@ export function createIdealGraph(
         bundleRootGraph.removeEdge(bundleRootToRemoveNodeId, nodeId);
       }
 
-      bundleRoots.delete(nullthrows(bundleToRemove.mainEntryAsset));
-      // [
-      //   bundleToKeepId,
-      //   bundleToKeepId,
-      // ]);
+      bundleRoots.set(nullthrows(bundleToRemove.mainEntryAsset), [
+        bundleToKeepId,
+        bundleToKeepId,
+      ]);
 
       // Merge dependency bundle graph
       for (let dependencyNodeId of dependencyBundleGraph.getNodeIdsConnectedTo(
@@ -1495,11 +1490,11 @@ export function createIdealGraph(
         invariant(dependencyNode.type === 'dependency');
 
         // Add dependency to the bundle to keep
-        // dependencyBundleGraph.addEdge(
-        //   dependencyNodeId,
-        //   dependencyBundleGraph.getNodeIdByContentKey(String(bundleToKeepId)),
-        //   dependencyPriorityEdges[dependencyNode.value.priority],
-        // );
+        dependencyBundleGraph.addEdge(
+          dependencyNodeId,
+          dependencyBundleGraph.getNodeIdByContentKey(String(bundleToKeepId)),
+          dependencyPriorityEdges[dependencyNode.value.priority],
+        );
         // Remove dependency from the bundle to remove
         dependencyBundleGraph.removeEdge(
           dependencyNodeId,
@@ -1701,6 +1696,7 @@ function createBundle(opts: {|
       bundleBehavior: opts.bundleBehavior,
       env: nullthrows(opts.env),
       mainEntryAsset: null,
+      bundleRoots: new Set(),
       manualSharedBundle: opts.manualSharedBundle,
       needsStableName: Boolean(opts.needsStableName),
       size: 0,
@@ -1717,6 +1713,7 @@ function createBundle(opts: {|
     bundleBehavior: opts.bundleBehavior ?? asset.bundleBehavior,
     env: opts.env ?? asset.env,
     mainEntryAsset: asset,
+    bundleRoots: new Set([asset]),
     manualSharedBundle: opts.manualSharedBundle,
     needsStableName: Boolean(opts.needsStableName),
     size: asset.stats.size,

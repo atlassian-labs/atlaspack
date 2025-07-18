@@ -229,6 +229,9 @@ export default class MutableBundleGraph
       isPlaceholder = entryAssetNode.requested === false;
     }
 
+    let entryAssetIds = entryAsset
+      ? [entryAsset.id, ...(opts.bundleRoots?.map((asset) => asset.id) ?? [])]
+      : [];
     let bundleNode: BundleNode = {
       type: 'bundle',
       id: bundleId,
@@ -241,7 +244,7 @@ export default class MutableBundleGraph
         env: opts.env
           ? toEnvironmentRef(environmentToInternalEnvironment(opts.env))
           : nullthrows(entryAsset).env,
-        entryAssetIds: entryAsset ? [entryAsset.id] : [],
+        entryAssetIds,
         mainEntryId: entryAsset?.id,
         pipeline: opts.entryAsset ? opts.entryAsset.pipeline : opts.pipeline,
         needsStableName: opts.needsStableName,
@@ -266,10 +269,10 @@ export default class MutableBundleGraph
       bundleNode,
     );
 
-    if (opts.entryAsset) {
+    for (let assetId of entryAssetIds) {
       this.#graph._graph.addEdge(
         bundleNodeId,
-        this.#graph._graph.getNodeIdByContentKey(opts.entryAsset.id),
+        this.#graph._graph.getNodeIdByContentKey(assetId),
       );
     }
     return Bundle.get(bundleNode.value, this.#graph, this.#options);

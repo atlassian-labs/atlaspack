@@ -1308,6 +1308,9 @@ export type CreateBundleOpts =
   | {|
       /** The entry asset of the bundle. If provided, many bundle properties will be inferred from it. */
       +entryAsset: Asset,
+
+      /** TODO: What is this? */
+      +bundleRoots: $ReadOnlyArray<Asset>,
       /** The target of the bundle. Should come from the dependency that created the bundle. */
       +target: Target,
       /**

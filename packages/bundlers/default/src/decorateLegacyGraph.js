@@ -1,9 +1,8 @@
 // @flow strict-local
 
-import {ALL_EDGE_TYPES, type NodeId} from '@atlaspack/graph';
+import {ALL_EDGE_TYPES} from '@atlaspack/graph';
 import type {
   Bundle as LegacyBundle,
-  BundleGroup,
   MutableBundleGraph,
 } from '@atlaspack/types';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
@@ -25,12 +24,10 @@ export function decorateLegacyGraph(
     bundleGroupBundleIds,
     manualAssetToBundle,
   } = idealGraph;
-  let entryBundleToBundleGroup: Map<NodeId, BundleGroup> = new Map();
   // Step Create Bundles: Create bundle groups, bundles, and shared bundles and add assets to them
   for (let [bundleNodeId, idealBundle] of idealBundleGraph.nodes.entries()) {
     if (!idealBundle || idealBundle === 'root') continue;
     let entryAsset = idealBundle.mainEntryAsset;
-    let bundleGroup;
     let bundle;
 
     if (bundleGroupBundleIds.has(bundleNodeId)) {
@@ -52,18 +49,21 @@ export function decorateLegacyGraph(
         entryAsset != null,
         'Processing a bundleGroup with no entry asset',
       );
+
+      let bundleGroups = new Map();
       for (let dependency of dependencies) {
-        bundleGroup = bundleGraph.createBundleGroup(
+        let bundleGroup = bundleGraph.createBundleGroup(
           dependency,
           idealBundle.target,
         );
+        bundleGroups.set(bundleGroup.entryAssetId, bundleGroup);
       }
-      invariant(bundleGroup);
-      entryBundleToBundleGroup.set(bundleNodeId, bundleGroup);
+      invariant(bundleGroups.size > 0, 'No bundle groups created');
 
       bundle = nullthrows(
         bundleGraph.createBundle({
           entryAsset: nullthrows(entryAsset),
+          bundleRoots: Array.from(idealBundle.bundleRoots),
           needsStableName: idealBundle.needsStableName,
           bundleBehavior: idealBundle.bundleBehavior,
           target: idealBundle.target,
@@ -71,7 +71,9 @@ export function decorateLegacyGraph(
         }),
       );
 
-      bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+      for (let bundleGroup of bundleGroups.values()) {
+        bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+      }
     } else if (
       idealBundle.sourceBundles.size > 0 &&
       !idealBundle.mainEntryAsset
@@ -109,6 +111,7 @@ export function decorateLegacyGraph(
       bundle = nullthrows(
         bundleGraph.createBundle({
           entryAsset,
+          bundleRoots: Array.from(idealBundle.bundleRoots),
           needsStableName: idealBundle.needsStableName,
           bundleBehavior: idealBundle.bundleBehavior,
           target: idealBundle.target,
