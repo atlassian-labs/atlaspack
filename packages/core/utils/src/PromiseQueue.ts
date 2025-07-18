@@ -76,9 +76,9 @@ export default class PromiseQueue<T> {
       return Promise.resolve([]);
     }
 
-    let {deferred, promise} = makeDeferredWithPromise();
+    let {deferred, promise} = makeDeferredWithPromise<Array<T>>();
     this._deferred = deferred;
-    this._runPromise = promise;
+    this._runPromise = promise as Promise<Array<T>>;
 
     while (this._queue.length && this._numRunning < this._maxConcurrent) {
       this._next();
@@ -89,7 +89,7 @@ export default class PromiseQueue<T> {
 
   async _next(): Promise<void> {
     let fn = this._queue.shift();
-    await this._runFn(fn);
+    await this._runFn(fn as () => unknown);
     if (this._queue.length) {
       this._next();
     } else if (this._numRunning === 0) {
