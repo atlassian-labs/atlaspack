@@ -182,6 +182,10 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     this.#disableIncrementalBundling = disable;
   }
 
+  testing_getDisableIncrementalBundling(): boolean {
+    return this.#disableIncrementalBundling;
+  }
+
   /**
    * Make sure this asset graph is marked as needing a full bundling pass.
    */
