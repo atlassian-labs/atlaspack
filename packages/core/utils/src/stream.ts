@@ -70,7 +70,7 @@ export function fallbackStream(
 ): Readable {
   const res = new PassThrough();
   stream.on('error', (err) => {
-    if (err.code === 'ENOENT') {
+    if ((err as any).code === 'ENOENT') {
       fallback().pipe(res);
     } else {
       res.emit('error', err);

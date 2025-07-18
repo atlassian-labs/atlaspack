@@ -10,7 +10,7 @@ export function blobToBuffer(blob: Blob): Promise<Buffer> {
   } else if (blob instanceof Buffer) {
     return Promise.resolve(Buffer.from(blob));
   } else {
-    return Promise.resolve(Buffer.from(blob, 'utf8'));
+    return Promise.resolve(Buffer.from(blob as string, 'utf8'));
   }
 }
 
@@ -20,6 +20,6 @@ export async function blobToString(blob: Blob): Promise<string> {
   } else if (blob instanceof Buffer) {
     return blob.toString();
   } else {
-    return blob;
+    return blob as string;
   }
 }

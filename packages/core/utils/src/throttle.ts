@@ -1,10 +1,10 @@
-export default function throttle<TArgs extends Iterable<unknown>>(
+export default function throttle<TArgs extends Array<unknown>>(
   fn: (...args: TArgs) => unknown,
   delay: number,
 ): (...args: TArgs) => void {
   let lastCalled: number | null | undefined;
 
-  return function throttled(...args: TArgs) {
+  return function throttled(this: any, ...args: TArgs) {
     if (lastCalled == null || lastCalled + delay <= Date.now()) {
       fn.call(this, ...args);
       lastCalled = Date.now();

@@ -13,9 +13,6 @@
   "scripts": {
     "check-ts": "tsc --noEmit"
   },
-  "devDependencies": {
-    "typescript": "^4.4.3"
-  },
   "engines": {
     "node": ">= 16.0.0"
   },

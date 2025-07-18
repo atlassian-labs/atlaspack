@@ -15,6 +15,9 @@
     "@parcel/watcher": "^2.4.1",
     "fb-watchman": "^2.0.2"
   },
+  "devDependencies": {
+    "@types/fb-watchman": "^2.0.5"
+  },
   "publishConfig": {
     "access": "public"
   }
