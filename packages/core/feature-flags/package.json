@@ -12,7 +12,6 @@
   "source": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "build-ts": "mkdir -p lib && flow-to-ts src/types.js > lib/types.d.ts",
     "check-ts": "tsc --noEmit"
   },
   "engines": {
