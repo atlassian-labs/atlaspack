@@ -11,9 +11,7 @@
   "source": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "build-ts": "mkdir -p lib ; flow-to-ts src/index.js > lib/index.d.ts",
-    "check-ts": "tsc --noEmit",
-    "dev:prepare": "rimraf ./lib/ && mkdir lib && echo \"module.exports = {}\" > lib/index.js"
+    "check-ts": "tsc --noEmit"
   },
   "dependencies": {
     "@atlaspack/types-internal": "2.15.1",
