@@ -34,7 +34,7 @@ for (const [pkgPath, pkg] of packages.entries()) {
     const current = packagesVersions.get(packageName);
     if (current && version !== '*' && version != current) {
       console.log(
-        `Miss\n\tExpected ${packageName}@${version}\n\tGot      ${packageName}@${current}\n\t${pkgPath}`,
+        `Miss\n\tExpected ${packageName}@${current}\n\tGot      ${packageName}@${version}\n\t${pkgPath}`,
       );
     }
   }
@@ -43,7 +43,7 @@ for (const [pkgPath, pkg] of packages.entries()) {
     const current = packagesVersions.get(packageName);
     if (current && version !== '*' && version != current) {
       console.log(
-        `Miss\n\tExpected ${packageName}@${version}\n\tGot      ${packageName}@${current}\n\t${pkgPath}`,
+        `Miss\n\tExpected ${packageName}@${current}\n\tGot      ${packageName}@${version}\n\t${pkgPath}`,
       );
     }
   }
@@ -52,7 +52,7 @@ for (const [pkgPath, pkg] of packages.entries()) {
     const current = packagesVersions.get(packageName);
     if (current && version !== '*' && version != current) {
       console.log(
-        `Miss\n\tExpected ${packageName}@${version}\n\tGot      ${packageName}@${current}\n\t${pkgPath}`,
+        `Miss\n\tExpected ${packageName}@${current}\n\tGot      ${packageName}@${version}\n\t${pkgPath}`,
       );
     }
   }
