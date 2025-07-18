@@ -175,10 +175,16 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     };
   }
 
+  /**
+   * Force incremental bundling to be disabled.
+   */
   setDisableIncrementalBundling(disable: boolean) {
     this.#disableIncrementalBundling = disable;
   }
 
+  /**
+   * Make sure this asset graph is marked as needing a full bundling pass.
+   */
   setNeedsBundling() {
     if (!getFeatureFlag('incrementalBundlingVersioning')) {
       // In legacy mode, we rely solely on safeToIncrementallyBundle to
@@ -188,6 +194,12 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     this.#bundlingVersion += 1;
   }
 
+  /**
+   * Get the current bundling version.
+   *
+   * Each bundle pass should keep this version around. Whenever an asset graph has a new version,
+   * bundling should be re-run.
+   */
   getBundlingVersion(): number {
     if (!getFeatureFlag('incrementalBundlingVersioning')) {
       return 0;
