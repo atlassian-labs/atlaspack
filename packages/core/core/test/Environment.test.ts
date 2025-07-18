@@ -1,7 +1,7 @@
 import assert from 'assert';
 import expect from 'expect';
 import {createEnvironment} from '../src/Environment';
-import {initializeMonitoring} from '../../rust';
+import {initializeMonitoring} from '@atlaspack/rust';
 import {fromEnvironmentId} from '../src/EnvironmentManager';
 
 describe('Environment', () => {

@@ -14,7 +14,10 @@ import {
   restoreDeserializedObject,
 } from '@atlaspack/build-cache';
 
-const WORKER_PATH = path.join(__dirname, './ThreadsChild.js');
+export let WORKER_PATH: string = path.join(__dirname, 'ThreadsChild.js');
+if (process.env.ATLASPACK_REGISTER_USE_SRC === 'true') {
+  WORKER_PATH = path.join(__dirname, 'ThreadsChild.ts');
+}
 
 export default class ThreadsWorker implements WorkerImpl {
   execArgv: any;
