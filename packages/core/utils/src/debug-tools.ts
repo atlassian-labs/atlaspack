@@ -26,11 +26,11 @@ for (let tool of envVarValue.split(',')) {
 
   if (tool === 'all') {
     for (let key in debugTools) {
-      debugTools[key] = true;
+      debugTools[key as keyof DebugTools] = true;
     }
     break;
   } else if (debugTools.hasOwnProperty(tool)) {
-    debugTools[tool] = true;
+    debugTools[tool as keyof DebugTools] = true;
   } else if (tool === '') {
     continue;
   } else {

@@ -60,12 +60,12 @@ export default async function prettyDiagnostic(
       ? _chalk
       : {
           gray: {
-            underline: (v) =>
+            underline: (v: string) =>
               `<span style="color: grey; text-decoration: underline;">${v}</span>`,
           },
         };
 
-  let result = {
+  let result: AnsiDiagnosticResult = {
     message:
       md(`**${origin ?? 'unknown'}**: `) +
       (skipFormatting ? message : md(message)),
@@ -134,7 +134,7 @@ export default async function prettyDiagnostic(
 
   if (documentationURL != null) {
     result.documentation = terminalLink('Learn more', documentationURL, {
-      fallback: (text, url) => `${text}: ${url}`,
+      fallback: (text: string, url: string) => `${text}: ${url}`,
     });
   }
 

@@ -51,7 +51,7 @@ class Logger {
   }
 
   error(input: Diagnostifiable, realOrigin?: string): void {
-    let diagnostic = anyToDiagnostic(input);
+    let diagnostic = anyToDiagnostic(input) as Diagnostic | Array<Diagnostic>;
     if (typeof realOrigin === 'string') {
       diagnostic = Array.isArray(diagnostic)
         ? diagnostic.map((d) => {
@@ -104,7 +104,7 @@ export class PluginLogger implements IPluginLogger {
       ? diagnostic.map((d) => {
           return {...d, origin: this.origin};
         })
-      : {...diagnostic, origin: this.origin};
+      : ({...diagnostic, origin: this.origin} as Diagnostic);
   }
 
   verbose(
@@ -206,7 +206,7 @@ function messagesToDiagnostic(
 ): Diagnostic | Array<Diagnostic> {
   if (messages.length === 1 && messages[0] instanceof Error) {
     let error: Error = messages[0];
-    let diagnostic = errorToDiagnostic(error);
+    let diagnostic = errorToDiagnostic(error) as Diagnostic | Array<Diagnostic>;
 
     if (Array.isArray(diagnostic)) {
       return diagnostic.map((d) => {

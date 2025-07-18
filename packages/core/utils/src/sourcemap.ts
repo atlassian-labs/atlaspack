@@ -20,7 +20,7 @@ export const SOURCEMAP_EXTENSIONS: Set<string> = new Set<string>([
 
 export function matchSourceMappingURL(
   contents: string,
-): null | RegExp.matchResult {
+): RegExpMatchArray | null {
   return contents.match(SOURCEMAP_RE);
 }
 
@@ -85,7 +85,7 @@ export async function loadSourceMap(
     let sourcemapInstance = new SourceMap(options.projectRoot);
     sourcemapInstance.addVLQMap({
       ...foundMap.map,
-      sources: foundMap.map.sources.map((s) => {
+      sources: foundMap.map.sources.map((s: string) => {
         return path.join(mapSourceRoot, s);
       }),
     });
