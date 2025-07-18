@@ -3,11 +3,7 @@ import type {
   IncomingMessage as HTTPRequest,
   ServerResponse as HTTPResponse,
 } from 'http';
-import type {
-  Server as HTTPSServer,
-  IncomingMessage as HTTPSRequest,
-  ServerResponse as HTTPSResponse,
-} from 'https';
+import type {Server as HTTPSServer} from 'https';
 import type {Socket} from 'net';
 import type {FilePath, HTTPSOptions} from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
@@ -18,10 +14,7 @@ import nullthrows from 'nullthrows';
 import {getCertificate, generateCertificate} from './';
 
 type CreateHTTPServerOpts = {
-  listener?: (
-    arg1: HTTPRequest | HTTPSRequest,
-    arg2: HTTPResponse | HTTPSResponse,
-  ) => void;
+  listener?: (arg1: HTTPRequest, arg2: HTTPResponse) => void;
   host?: string;
 } & (
   | {
@@ -73,10 +66,7 @@ export async function createHTTPServer(options: CreateHTTPServerOpts): Promise<{
     server,
     stop() {
       return new Promise(
-        (
-          resolve: (result: Promise<undefined> | undefined) => void,
-          reject: (error?: any) => void,
-        ) => {
+        (resolve: () => void, reject: (error?: any) => void) => {
           for (let socket of nullthrows(sockets)) {
             socket.destroy();
           }

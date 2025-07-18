@@ -136,7 +136,7 @@ export default async function generateCertificate(
   await fs.writeFile(certPath, certPem);
 
   return {
-    key: privPem,
-    cert: certPem,
+    key: privPem as unknown as Buffer,
+    cert: certPem as unknown as Buffer,
   };
 }

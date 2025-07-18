@@ -50,7 +50,7 @@ export function replaceURLReferences({
   readonly map: SourceMap | null | undefined;
 } {
   let replacements = new Map();
-  let urlDependencies: Array<never> = [];
+  let urlDependencies: Array<Dependency> = [];
   bundle.traverse((node) => {
     if (node.type === 'dependency' && node.value.specifierType === 'url') {
       urlDependencies.push(node.value);
@@ -131,7 +131,7 @@ export async function replaceInlineReferences({
 }> {
   let replacements = new Map();
 
-  let dependencies: Array<never> = [];
+  let dependencies: Array<Dependency> = [];
   bundle.traverse((node) => {
     if (node.type === 'dependency') {
       dependencies.push(node.value);

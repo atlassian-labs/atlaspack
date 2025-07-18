@@ -15,7 +15,7 @@ export class DefaultMap<K, V> extends Map<K, V> {
       this.set(key, ret);
     }
 
-    return ret;
+    return ret as V;
   }
 }
 
@@ -27,7 +27,7 @@ export class DefaultWeakMap<K extends Key, V> extends WeakMap<K, V> {
   _getDefault: (arg1: K) => V;
 
   constructor(getDefault: (arg1: K) => V, entries?: Iterable<[K, V]>) {
-    super(entries);
+    super(entries as Iterable<readonly [K, V]>);
     this._getDefault = getDefault;
   }
 
@@ -40,6 +40,6 @@ export class DefaultWeakMap<K extends Key, V> extends WeakMap<K, V> {
       this.set(key, ret);
     }
 
-    return ret;
+    return ret as V;
   }
 }
