@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/ReactRefreshWrapTransformer.js",
-  "source": "src/ReactRefreshWrapTransformer.js",
+  "source": "src/ReactRefreshWrapTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -21,5 +21,9 @@
     "react-error-overlay": "6.0.9",
     "react-refresh": ">=0.9 <=0.16"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/ReactRefreshWrapTransformer.ts"
 }

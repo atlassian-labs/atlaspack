@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/TSTypesTransformer.js",
-  "source": "src/TSTypesTransformer.js",
+  "source": "src/TSTypesTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -28,5 +28,9 @@
   "peerDependencies": {
     "typescript": ">=3.0.0"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/TSTypesTransformer.ts"
 }

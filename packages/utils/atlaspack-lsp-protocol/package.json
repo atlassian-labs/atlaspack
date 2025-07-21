@@ -10,10 +10,11 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/index.js",
-  "source": "src/index.js",
-  "types": "src/index.js",
+  "source": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "check-ts": "tsc --noEmit"
   },
   "engines": {
     "node": ">= 16.0.0"

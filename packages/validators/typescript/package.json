@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/TypeScriptValidator.js",
-  "source": "src/TypeScriptValidator.js",
+  "source": "src/TypeScriptValidator.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -27,5 +27,9 @@
   "peerDependencies": {
     "typescript": ">=3.0.0"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/TypeScriptValidator.ts"
 }

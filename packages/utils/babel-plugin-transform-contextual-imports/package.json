@@ -23,5 +23,8 @@
     "@types/babel__core": "^7.12.2",
     "@types/babel__helper-plugin-utils": "^7.10.3"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  }
 }

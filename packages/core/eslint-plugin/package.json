@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "scripts": {
-    "check-ts": "tsc --noEmit --project ."
+    "check-ts": "tsc --noEmit"
   },
   "publishConfig": {
     "access": "public"

@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "./lib/ServiceWorkerRuntime.js",
-  "source": "./src/ServiceWorkerRuntime.js",
+  "source": "./src/ServiceWorkerRuntime.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -19,5 +19,9 @@
     "@atlaspack/utils": "2.17.2",
     "nullthrows": "^1.1.1"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "./src/ServiceWorkerRuntime.ts"
 }

@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/PostCSSTransformer.js",
-  "source": "src/PostCSSTransformer.js",
+  "source": "src/PostCSSTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -28,5 +28,9 @@
     "postcss": "^8.4.5",
     "postcss-modules": "^4.3.1"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/PostCSSTransformer.ts"
 }

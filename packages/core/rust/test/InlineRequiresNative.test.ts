@@ -1,0 +1,28 @@
+import assert from 'assert';
+import {runInlineRequiresOptimizer} from '..';
+
+describe('runInlineRequiresOptimizer', () => {
+  it('replaces inline code on source', () => {
+    const result = runInlineRequiresOptimizer({
+      code: `
+const fs = require('fs');
+
+function main() {
+    return fs.readFile('./something');
+}`,
+      ignoreModuleIds: [],
+      sourceMaps: true,
+    });
+
+    assert.equal(
+      result.code,
+      `
+function main() {
+    return (0, require('fs')).readFile('./something');
+}
+`.trimStart(),
+    );
+    const sourceMap = JSON.parse(result.sourceMap);
+    assert.ok(sourceMap);
+  });
+});
