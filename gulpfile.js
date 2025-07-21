@@ -9,10 +9,6 @@ const IGNORED_PACKAGES = [
   '!packages/examples/**',
   '!packages/core/integration-tests/**',
   '!packages/core/workers/test/integration/**',
-  '!packages/core/test-utils/**',
-  '!packages/core/types/**',
-  '!packages/core/types-internal/**',
-
   // Static packages that don't need to be build
   '!packages/core/atlaspack/**',
 ];
