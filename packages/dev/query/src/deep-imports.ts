@@ -13,7 +13,8 @@ import {Priority} from '@atlaspack/core/src/types';
 import {fromProjectPathRelative} from '@atlaspack/core/src/projectPath';
 
 const v =
-  process.env.ATLASPACK_BUILD_ENV === 'production'
+  process.env.ATLASPACK_BUILD_ENV === 'production' ||
+  process.env.ATLASPACK_REGISTER_USE_SRC !== 'true'
     ? {
         // Split up require specifier to outsmart packages/dev/babel-register/babel-plugin-module-translate.js
         AssetGraph: require('@atlaspack/core' + '/lib/AssetGraph').default,

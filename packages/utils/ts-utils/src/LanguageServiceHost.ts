@@ -26,6 +26,7 @@ export class LanguageServiceHost
     >
   >;
 
+  // @ts-expect-error Cannot use namespace 'TypeScriptModule' as a type.
   constructor(fs: FileSystem, ts: TypeScriptModule, config: ParsedCommandLine) {
     super(fs, ts);
     this.config = config;
@@ -51,6 +52,7 @@ export class LanguageServiceHost
   }
 
   getScriptVersion(fileName: FilePath): string {
+    // @ts-expect-error string | undefined
     return this.files[fileName] && this.files[fileName].version.toString();
   }
 

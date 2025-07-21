@@ -15,7 +15,9 @@ const {
     requestGraphEdgeTypes,
   },
   LMDBLiteCache,
-} = require('./deep-imports.js');
+} = process.env.ATLASPACK_REGISTER_USE_SRC === 'true'
+  ? require('./deep-imports.js')
+  : require('./deep-imports.ts');
 
 export async function loadGraphs(cacheDir: string): Promise<{
   assetGraph: AssetGraph | null | undefined;

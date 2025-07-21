@@ -17,7 +17,6 @@
   "main": "lib/bin.js",
   "source": "src/bin.ts",
   "scripts": {
-    "prepack": "./ensure-no-dev-lib.sh",
     "check-ts": "tsc --noEmit"
   },
   "engines": {

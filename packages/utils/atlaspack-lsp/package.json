@@ -14,8 +14,7 @@
   "types": "src/LspServer.ts",
   "scripts": {
     "watch": "tsc -watch -p ./",
-    "lint": "eslint src --ext ts",
-    "check-ts": "tsc --noEmit"
+    "lint": "eslint src --ext ts"
   },
   "engines": {
     "node": ">= 16.0.0"

@@ -37,6 +37,7 @@ type PositionTickInfo = {
 };
 
 export default class SamplingProfiler {
+  // @ts-expect-error not initialized
   session: Session;
 
   startProfiling(): Promise<unknown> {
