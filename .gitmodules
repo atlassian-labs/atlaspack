@@ -1,0 +1,3 @@
+[submodule "flow-to-typescript-codemod"]
+	path = flow-to-typescript-codemod
+	url = https://github.com/atlassian-forks/flow-to-typescript-codemod
