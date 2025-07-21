@@ -996,17 +996,16 @@ export interface Config {
    * Searches for config files with the given names in all parent directories
    * of the passed searchPath.
    */
-  getConfigFrom
-  /**
-   * @deprecated Use `readTracking` instead.
-   *//**
-   * If specified, this function will return a proxy object that will track reads to
-   * config fields and only register invalidations for when those keys change.
-   */ <T>(
+  getConfigFrom<T>(
     searchPath: FilePath,
     filePaths: Array<FilePath>,
     options?:
       | {
+          /**
+           * @deprecated Use `readTracking` instead.
+           * If specified, this function will return a proxy object that will track reads to
+           * config fields and only register invalidations for when those keys change.
+           */
           packageKey?: string;
           parse?: boolean;
           exclude?: boolean;

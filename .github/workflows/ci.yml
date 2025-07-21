@@ -117,7 +117,7 @@ jobs:
           retention-days: 1
 
   lint_javascript:
-    name: 🐵 Lint JavaScript
+    name: 🔎 Lint TypeScript
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -126,6 +126,13 @@ jobs:
       - run: npx eslint .
       - run: npx prettier --list-different .
       - run: npx lerna run --parallel build-tsc
+
+  check_typescript:
+    name: 📋 Check TypeScript
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node
       - run: npx lerna run build-ts
       - run: npx lerna run check-ts
 

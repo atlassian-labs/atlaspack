@@ -9,7 +9,8 @@
   "scripts": {
     "test": "cd ../../.. && yarn test:integration --grep @atlaspack/link"
   },
-  "main": "src/index.js",
+  "main": "lib/index.js",
+  "source": "src/index.ts",
   "dependencies": {
     "@babel/core": "^7.22.11",
     "@atlaspack/babel-register": "2.14.1",
