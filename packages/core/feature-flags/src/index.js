@@ -45,6 +45,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   unusedComputedPropertyFix: process.env.NODE_ENV === 'test',
   emptyFileStarRexportFix: process.env.NODE_ENV === 'test',
   cliProgressReportingImprovements: false,
+  supportWebpackChunkName: process.env.NODE_ENV === 'test',
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

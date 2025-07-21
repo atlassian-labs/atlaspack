@@ -138,6 +138,12 @@ export type FeatureFlags = {|
    * Enables the new packaging progress CLI experience
    */
   cliProgressReportingImprovements: boolean,
+
+  /**
+   * Adds support for `webpackChunkName` comments in dynamic imports.
+   * Imports with the same `webpackChunkName` will be bundled together.
+   */
+  supportWebpackChunkName: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
