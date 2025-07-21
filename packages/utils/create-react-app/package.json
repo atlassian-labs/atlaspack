@@ -18,8 +18,7 @@
   ],
   "scripts": {
     "prepack": "./ensure-no-dev-lib.sh",
-    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js",
-    "check-ts": "tsc --noEmit"
+    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
   },
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {

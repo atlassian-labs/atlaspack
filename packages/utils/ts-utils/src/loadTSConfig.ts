@@ -7,7 +7,7 @@ import ts from 'typescript';
 export async function loadTSConfig(
   config: Config,
   options: PluginOptions,
-): any {
+): Promise<any> {
   let configResult = await config.getConfig(['tsconfig.json']);
   if (!configResult) {
     return;

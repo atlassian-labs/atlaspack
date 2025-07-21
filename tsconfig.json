@@ -11,7 +11,8 @@
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
     "declarationDir": "${configDir}/lib",
-    "outDir": "${configDir}/lib"
+    "outDir": "${configDir}/lib",
+    "resolveJsonModule": true
   },
   "files": [
     "./types/ansi-html-community.d.ts",
