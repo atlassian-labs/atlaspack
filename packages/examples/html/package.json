@@ -7,7 +7,7 @@
     "start": "atlaspack src/index.html --open"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.13.23"
+    "@atlaspack/cli": "2.13.24"
   },
   "dependencies": {
     "lodash": "^4.17.11",

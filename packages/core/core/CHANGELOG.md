@@ -1,5 +1,23 @@
 # @atlaspack/core
 
+## 2.19.2
+
+### Patch Changes
+
+- [#707](https://github.com/atlassian-labs/atlaspack/pull/707) [`a0b959f`](https://github.com/atlassian-labs/atlaspack/commit/a0b959fbf61fc3f820ff03c7e8988945fe40a91a) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix content key not found exceptions when bundling is aborted after a unsafe to incrementally bundle asset graph request
+
+- Updated dependencies [[`daaa768`](https://github.com/atlassian-labs/atlaspack/commit/daaa7688786772d7e3713b71c5bba6b89ec704aa), [`1c7865a`](https://github.com/atlassian-labs/atlaspack/commit/1c7865a64451116d94015e248302435839d347c0), [`a0b959f`](https://github.com/atlassian-labs/atlaspack/commit/a0b959fbf61fc3f820ff03c7e8988945fe40a91a)]:
+  - @atlaspack/plugin@2.14.20
+  - @atlaspack/feature-flags@2.19.2
+  - @atlaspack/cache@3.2.15
+  - @atlaspack/fs@2.15.15
+  - @atlaspack/graph@3.5.9
+  - @atlaspack/utils@2.17.2
+  - @atlaspack/package-manager@2.14.20
+  - @atlaspack/profiler@2.14.17
+  - @atlaspack/types@2.15.10
+  - @atlaspack/workers@2.14.20
+
 ## 2.19.1
 
 ### Patch Changes
