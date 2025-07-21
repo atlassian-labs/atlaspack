@@ -1,23 +1,27 @@
 {
   "name": "@atlaspack/transformer-sass",
   "version": "2.14.19",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "main": "lib/SassTransformer.js",
-  "source": "src/SassTransformer.js",
-  "engines": {
-    "node": ">= 16.0.0"
+  "source": "src/SassTransformer.ts",
+  "types": "src/SassTransformer.ts",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
   },
   "dependencies": {
     "@atlaspack/plugin": "2.14.19",
     "@parcel/source-map": "^2.1.1",
     "sass": "^1.38.0"
   },
-  "type": "commonjs"
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

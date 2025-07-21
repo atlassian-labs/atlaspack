@@ -2,21 +2,18 @@
   "name": "@atlaspack/graph",
   "version": "3.5.8",
   "description": "Blazing fast, zero configuration web application bundler",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "main": "lib/index.js",
-  "source": "src/index.js",
-  "engines": {
-    "node": ">= 16.0.0"
-  },
+  "source": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
-    "benchmark": "node ./benchmark/BitSet.js"
+    "benchmark": "node ./benchmark/BitSet.js",
+    "check-ts": "tsc --noEmit"
   },
   "dependencies": {
     "@atlaspack/feature-flags": "2.19.1",
@@ -26,5 +23,10 @@
     "@atlaspack/babel-register": "2.14.1",
     "benny": "^3.7.1"
   },
-  "type": "commonjs"
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

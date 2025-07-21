@@ -1,18 +1,17 @@
 {
   "name": "@atlaspack/transformer-react-refresh-wrap",
   "version": "2.14.19",
-  "license": "(MIT OR Apache-2.0)",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
   "main": "lib/ReactRefreshWrapTransformer.js",
-  "source": "src/ReactRefreshWrapTransformer.js",
-  "engines": {
-    "node": ">= 16.0.0"
+  "source": "src/ReactRefreshWrapTransformer.ts",
+  "types": "src/ReactRefreshWrapTransformer.ts",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
   },
   "dependencies": {
     "@atlaspack/feature-flags": "2.19.1",
@@ -21,5 +20,10 @@
     "react-error-overlay": "6.0.9",
     "react-refresh": ">=0.9 <=0.16"
   },
-  "type": "commonjs"
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
