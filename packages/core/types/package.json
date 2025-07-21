@@ -3,8 +3,8 @@
   "version": "2.15.10",
   "license": "(MIT OR Apache-2.0)",
   "main": "lib/index.js",
-  "source": "src/index.js",
-  "types": "lib/index.d.ts",
+  "source": "src/index.ts",
+  "types": "src/index.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
@@ -14,8 +14,7 @@
   },
   "scripts": {
     "dev:prepare": "rimraf ./lib/ && mkdir lib && echo \"module.exports = {}\" > lib/index.js",
-    "build-ts": "mkdir -p lib ; flow-to-ts src/index.js > lib/index.d.ts",
-    "check-ts": "tsc --noEmit lib/index.d.ts"
+    "check-ts": "tsc --noEmit"
   },
   "dependencies": {
     "@atlaspack/types-internal": "2.15.2",

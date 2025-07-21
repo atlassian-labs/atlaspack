@@ -15,9 +15,10 @@
     "atlaspack": "bin/atlaspack.js"
   },
   "main": "lib/bin.js",
-  "source": "src/bin.js",
+  "source": "src/bin.ts",
   "scripts": {
-    "prepack": "./ensure-no-dev-lib.sh"
+    "prepack": "./ensure-no-dev-lib.sh",
+    "check-ts": "tsc --noEmit"
   },
   "engines": {
     "node": ">= 16.0.0"
@@ -43,5 +44,6 @@
     "@babel/core": "^7.22.11",
     "@atlaspack/babel-register": "2.14.1",
     "rimraf": "^5.0.5"
-  }
+  },
+  "types": "src/bin.ts"
 }

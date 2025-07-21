@@ -1,8 +1,4 @@
 {
-  "compilerOptions": {
-    "jsx": "react",
-    "typeRoots": ["./types.d.ts"],
-    "esModuleInterop": true,
-    "lib": ["ESNext", "DOM"]
-  }
+  "extends": "../../../tsconfig.json",
+  "include": ["src"]
 }

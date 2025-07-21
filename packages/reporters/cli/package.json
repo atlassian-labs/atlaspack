@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/CLIReporter.js",
-  "source": "src/CLIReporter.js",
+  "source": "src/CLIReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -40,5 +40,9 @@
   "devDependencies": {
     "@atlaspack/feature-flags": "2.19.2"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/CLIReporter.ts"
 }

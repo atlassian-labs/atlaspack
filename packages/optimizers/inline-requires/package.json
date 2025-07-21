@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/InlineRequires.js",
-  "source": "src/InlineRequires.js",
+  "source": "src/InlineRequires.ts",
   "engines": {
     "node": ">= 14.0.0"
   },
@@ -23,5 +23,9 @@
     "@swc/core": "^1.10.0",
     "nullthrows": "^1.1.1"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/InlineRequires.ts"
 }

@@ -11,12 +11,13 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/index.js",
-  "source": "src/index.js",
+  "source": "src/index.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "benchmark": "node ./benchmark/BitSet.js"
+    "benchmark": "node ./benchmark/BitSet.js",
+    "check-ts": "tsc --noEmit"
   },
   "dependencies": {
     "@atlaspack/feature-flags": "2.19.2",
@@ -26,5 +27,6 @@
     "@atlaspack/babel-register": "2.14.1",
     "benny": "^3.7.1"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "types": "src/index.ts"
 }

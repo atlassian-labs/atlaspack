@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/XMLPackager.js",
-  "source": "src/XMLPackager.js",
+  "source": "src/XMLPackager.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -20,5 +20,9 @@
     "@atlaspack/utils": "2.17.2",
     "@xmldom/xmldom": "^0.7.9"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/XMLPackager.ts"
 }

@@ -10,15 +10,15 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/index.js",
-  "types": "index.d.ts",
-  "source": "src/index.js",
+  "types": "src/index.ts",
+  "source": "src/index.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
     "test": "mocha",
     "test-ci": "mocha",
-    "check-ts": "tsc --noEmit index.d.ts"
+    "check-ts": "tsc --noEmit"
   },
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",

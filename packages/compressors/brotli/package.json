@@ -11,11 +11,15 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/BrotliCompressor.js",
-  "source": "src/BrotliCompressor.js",
+  "source": "src/BrotliCompressor.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "dependencies": {
     "@atlaspack/plugin": "2.14.20"
-  }
+  },
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/BrotliCompressor.ts"
 }

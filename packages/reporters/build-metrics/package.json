@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/BuildMetricsReporter.js",
-  "source": "src/BuildMetricsReporter.js",
+  "source": "src/BuildMetricsReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -18,5 +18,9 @@
     "@atlaspack/plugin": "2.14.20",
     "@atlaspack/utils": "2.17.2"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/BuildMetricsReporter.ts"
 }
