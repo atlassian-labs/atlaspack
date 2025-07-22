@@ -2,10 +2,13 @@ import type {PackageInstaller, InstallerOptions} from '@atlaspack/types';
 
 import path from 'path';
 import fs from 'fs';
+// @ts-expect-error TS7016
 import commandExists from 'command-exists';
+// @ts-expect-error TS7016
 import spawn from 'cross-spawn';
 import {registerSerializableClass} from '@atlaspack/build-cache';
 import logger from '@atlaspack/logger';
+// @ts-expect-error TS7016
 import split from 'split2';
 import JSONParseStream from './JSONParseStream';
 import promiseFromProcess from './promiseFromProcess';
@@ -98,6 +101,7 @@ export class Pnpm implements PackageInstaller {
   }: InstallerOptions): Promise<void> {
     if (pnpmVersion == null) {
       let version = await exec('pnpm --version');
+      // @ts-expect-error TS2345
       pnpmVersion = parseInt(version.stdout, 10);
     }
 
@@ -132,7 +136,9 @@ export class Pnpm implements PackageInstaller {
     });
     installProcess.stdout
       .pipe(split())
+      // @ts-expect-error TS2554
       .pipe(new JSONParseStream())
+      // @ts-expect-error TS7006
       .on('error', (e) => {
         logger.warn({
           origin: '@atlaspack/package-manager',
@@ -160,9 +166,11 @@ export class Pnpm implements PackageInstaller {
 
     let stderr: Array<any> = [];
     installProcess.stderr
+      // @ts-expect-error TS7006
       .on('data', (str) => {
         stderr.push(str.toString());
       })
+      // @ts-expect-error TS7006
       .on('error', (e) => {
         logger.warn({
           origin: '@atlaspack/package-manager',

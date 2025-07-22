@@ -84,8 +84,10 @@ export default function createPathRequest(
   };
 }
 
+// @ts-expect-error TS7031
 async function run({input, api, options}): Promise<PathRequestResult> {
   let configResult = nullthrows(
+    // @ts-expect-error TS2347
     await api.runRequest<null, ConfigAndCachePath>(
       createAtlaspackConfigRequest(),
     ),
@@ -137,6 +139,7 @@ async function run({input, api, options}): Promise<PathRequestResult> {
 
   if (result.diagnostics && result.diagnostics.length > 0) {
     let err = new ThrowableDiagnostic({diagnostic: result.diagnostics});
+    // @ts-expect-error TS2339
     err.code = 'MODULE_NOT_FOUND';
     throw err;
   }
@@ -217,12 +220,15 @@ export class ResolverRunner {
           searchPath: toProjectPathUnsafe('index'),
         });
 
+        // @ts-expect-error TS2345
         await loadPluginConfig(plugin, config, this.options);
         configCache.set(plugin.name, config);
+        // @ts-expect-error TS2345
         this.configs.set(plugin.name, config);
       }
 
       if (config) {
+        // @ts-expect-error TS2339
         for (let devDep of config.devDeps) {
           let devDepRequest = await createDevDependency(
             devDep,
@@ -232,15 +238,18 @@ export class ResolverRunner {
           this.runDevDepRequest(devDepRequest);
         }
 
+        // @ts-expect-error TS2345
         this.configs.set(plugin.name, config);
       }
     }
   }
 
   runDevDepRequest(devDepRequest: DevDepRequest | DevDepRequestRef) {
+    // @ts-expect-error TS2339
     if (devDepRequest.type !== 'ref') {
       let {specifier, resolveFrom} = devDepRequest;
       let key = `${specifier}:${fromProjectPathRelative(resolveFrom)}`;
+      // @ts-expect-error TS2345
       this.devDepRequests.set(key, devDepRequest);
     }
   }
@@ -348,6 +357,7 @@ export class ResolverRunner {
             let resultFilePath = result.filePath;
             if (!path.isAbsolute(resultFilePath)) {
               throw new Error(
+                // @ts-expect-error TS2345
                 md`Resolvers must return an absolute path, ${resolver.name} returned: ${resultFilePath}`,
               );
             }
@@ -365,7 +375,7 @@ export class ResolverRunner {
                 env: dependency.env,
                 pipeline:
                   result.pipeline === undefined
-                    ? pipeline ?? dependency.pipeline
+                    ? (pipeline ?? dependency.pipeline)
                     : result.pipeline,
                 isURL: dep.specifierType === 'url',
               },
@@ -439,6 +449,7 @@ export class ResolverRunner {
 
     let diagnostic = await this.getDiagnostic(
       dependency,
+      // @ts-expect-error TS2345
       md`Failed to resolve '${dependency.specifier}' ${
         dir ? `from '${dir}'` : ''
       }`,

@@ -1,7 +1,9 @@
 import SourceMap from '@parcel/source-map';
 import {Optimizer} from '@atlaspack/plugin';
 import postcss from 'postcss';
+// @ts-expect-error TS7016
 import cssnano from 'cssnano';
+// @ts-expect-error TS7016
 import type {CSSNanoOptions} from 'cssnano'; // TODO the type is based on cssnano 4
 
 export default new Optimizer({
@@ -50,6 +52,7 @@ export default new Optimizer({
       map: {
         annotation: false,
         inline: false,
+        // @ts-expect-error TS2322
         prev: prevMap ? await prevMap.stringify({}) : null,
       },
     });
@@ -57,6 +60,7 @@ export default new Optimizer({
     let map;
     if (result.map != null) {
       map = new SourceMap(options.projectRoot);
+      // @ts-expect-error TS2345
       map.addVLQMap(result.map.toJSON());
     }
 

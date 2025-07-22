@@ -15,6 +15,11 @@ import {
 import {Child} from '../child';
 import {setChild} from '../childState';
 
+// Type declarations for Web Worker environment
+declare const WorkerGlobalScope: any;
+declare const self: any;
+
+// @ts-expect-error TS2420
 export default class WebChild implements ChildImpl {
   onMessage: MessageHandler;
   onExit: ExitHandler;
@@ -50,4 +55,5 @@ export default class WebChild implements ChildImpl {
   }
 }
 
+// @ts-expect-error TS2345
 setChild(new Child(WebChild));

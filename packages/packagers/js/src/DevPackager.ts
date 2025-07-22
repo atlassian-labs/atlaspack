@@ -102,6 +102,7 @@ export class DevPackager {
           this.bundle.env.sourceType === 'script' &&
           asset === this.bundle.getMainEntry()
         ) {
+          // @ts-expect-error TS2322
           script = results[i++];
           return;
         }
@@ -133,6 +134,7 @@ export class DevPackager {
           }
         }
 
+        // @ts-expect-error TS2339
         let {code, mapBuffer} = results[i];
         let output = code || '';
         wrapped +=
@@ -213,6 +215,7 @@ export class DevPackager {
     // runtimes with a parcelRequire call.
     if (this.bundle.env.sourceType === 'script' && script) {
       let entryMap;
+      // @ts-expect-error TS2339
       let mapBuffer = script.mapBuffer;
       if (mapBuffer) {
         entryMap = new SourceMap(this.options.projectRoot, mapBuffer);
@@ -220,11 +223,13 @@ export class DevPackager {
       contents += replaceScriptDependencies(
         this.bundleGraph,
         this.bundle,
+        // @ts-expect-error TS2339
         script.code,
         entryMap,
         this.parcelRequireName,
       );
       if (this.bundle.env.sourceMap && entryMap) {
+        // @ts-expect-error TS2551
         map.addSourceMap(entryMap, lineOffset);
       }
     }

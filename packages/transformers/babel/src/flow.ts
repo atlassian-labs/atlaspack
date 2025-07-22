@@ -30,6 +30,7 @@ export default async function getFlowOptions(
     return null;
   }
 
+  // @ts-expect-error TS2709
   const babelCore: BabelCore = await options.packageManager.require(
     '@babel/core',
     config.searchPath,

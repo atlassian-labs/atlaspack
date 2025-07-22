@@ -105,8 +105,10 @@ export default async function applyRuntimes<TResult extends RequestResult>({
    * order), so that children will always be available when parents try to reference
    * them.
    */
+  // @ts-expect-error TS2304
   let bundles: Array<Bundle> = [];
   bundleGraph.traverseBundles({
+    // @ts-expect-error TS2304
     exit(bundle: Bundle) {
       bundles.push(bundle);
     },
@@ -203,6 +205,7 @@ export default async function applyRuntimes<TResult extends RequestResult>({
               nameRuntimeBundle(connectionBundle, bundle);
             }
 
+            // @ts-expect-error TS2345
             connectionMap.get(connectionBundle).push({
               bundle: connectionBundle,
               assetGroup,
@@ -241,6 +244,7 @@ export default async function applyRuntimes<TResult extends RequestResult>({
    */
   let connections: Array<RuntimeConnection> = [];
   bundleGraph.traverseBundles({
+    // @ts-expect-error TS2304
     enter(bundle: Bundle) {
       connections.push(...connectionMap.get(bundle));
     },

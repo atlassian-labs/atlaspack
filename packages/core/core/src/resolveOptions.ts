@@ -313,7 +313,7 @@ function determinePort(
 
   if (!initialServerOptions) {
     return typeof portInEnv !== 'undefined'
-      ? parsePort(portInEnv) ?? defaultPort
+      ? (parsePort(portInEnv) ?? defaultPort)
       : defaultPort;
   }
 
@@ -323,6 +323,6 @@ function determinePort(
   }
 
   return typeof portInEnv !== 'undefined'
-    ? parsePort(portInEnv) ?? defaultPort
+    ? (parsePort(portInEnv) ?? defaultPort)
     : defaultPort;
 }

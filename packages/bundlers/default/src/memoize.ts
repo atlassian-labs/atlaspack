@@ -23,6 +23,7 @@ export function memoize<Args extends Array<unknown>, Return>(
     }
 
     // Calculate the result and cache it
+    // @ts-expect-error TS2683
     const result = fn.apply(this, args);
     cache.set(args, result);
 

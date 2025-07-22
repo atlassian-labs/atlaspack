@@ -105,7 +105,9 @@ export default class PackagerRunner {
   config: AtlaspackConfig;
   options: AtlaspackOptions;
   pluginOptions: PluginOptions;
+  // @ts-expect-error TS2564
   distDir: FilePath;
+  // @ts-expect-error TS2564
   distExists: Set<FilePath>;
   report: ReportFn;
   previousDevDeps: Map<string, string>;
@@ -229,6 +231,7 @@ export default class PackagerRunner {
       // Only load config for a plugin once per build.
       let existing = pluginConfigs.get(plugin.name);
       if (existing != null) {
+        // @ts-expect-error TS2345
         configs.set(plugin.name, existing);
       } else {
         if (plugin.plugin.loadConfig != null) {
@@ -753,6 +756,7 @@ export default class PackagerRunner {
   ): Promise<BundleInfo> {
     let size = 0;
     let hash;
+    // @ts-expect-error TS2702
     let hashReferences: RegExp.matchResult | Array<string> = [];
     let isLargeBlob = getFeatureFlag('cachePerformanceImprovements');
 
@@ -767,6 +771,7 @@ export default class PackagerRunner {
       await this.options.cache.setStream(
         cacheKeys.content,
         blobToStream(contents).pipe(
+          // @ts-expect-error TS2554
           new TapStream((buf: Buffer) => {
             let str = boundaryStr + buf.toString();
             hashReferences = hashReferences.concat(

@@ -3,6 +3,7 @@ import {Packager} from '@atlaspack/plugin';
 
 export default new Packager({
   package({bundle}) {
+    // @ts-expect-error TS2552
     let assets: Array<Asset> = [];
     bundle.traverseAssets((asset) => {
       assets.push(asset);

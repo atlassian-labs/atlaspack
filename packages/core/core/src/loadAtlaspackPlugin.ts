@@ -31,6 +31,7 @@ export default async function loadPlugin<T>(
     let configContents = await options.inputFS.readFile(configPath, 'utf8');
     throw new ThrowableDiagnostic({
       diagnostic: {
+        // @ts-expect-error TS2345
         message: md`Local plugins are not supported in Atlaspack config packages. Please publish "${pluginName}" as a separate npm package.`,
         origin: '@atlaspack/core',
         codeFrames: keyPath
@@ -70,6 +71,7 @@ export default async function loadPlugin<T>(
     );
     throw new ThrowableDiagnostic({
       diagnostic: {
+        // @ts-expect-error TS2345
         message: md`Cannot find Atlaspack plugin "${pluginName}"`,
         origin: '@atlaspack/core',
         codeFrames: keyPath
@@ -82,6 +84,7 @@ export default async function loadPlugin<T>(
                   {
                     key: keyPath,
                     type: 'value',
+                    // @ts-expect-error TS2345
                     message: md`Cannot find module "${pluginName}"${
                       alternatives[0]
                         ? `, did you mean "${alternatives[0]}"?`

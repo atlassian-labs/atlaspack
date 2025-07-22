@@ -130,6 +130,7 @@ export class PluginOptions implements IPluginOptions {
   }
 
   constructor(options: Partial<IPluginOptions>) {
+    // @ts-expect-error TS2322
     this.#options = options;
   }
 }

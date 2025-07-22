@@ -1,3 +1,4 @@
+// @ts-expect-error TS2305
 import type {FileSystem, JsCallable} from '@atlaspack/rust';
 import type {
   Encoding,
@@ -7,6 +8,7 @@ import type {
 
 import {jsCallable} from './jsCallable';
 
+// @ts-expect-error TS2420
 export class FileSystemV3 implements FileSystem {
   #fs: IFileSystem;
 

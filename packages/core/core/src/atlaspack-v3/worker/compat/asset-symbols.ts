@@ -1,3 +1,4 @@
+// @ts-expect-error TS2305
 import type {Symbol as NapiSymbol} from '@atlaspack/rust';
 import type {
   AssetSymbols as IAssetSymbols,
@@ -67,6 +68,7 @@ export class MutableDependencySymbols implements IMutableDependencySymbols {
   }
 
   /*::  @@iterator(): Iterator<[Symbol, DependencyAssetSymbol]> { return ({}: any); } */
+  // @ts-expect-error TS2416
   [Symbol.iterator]() {
     return this.#symbols.values();
   }
@@ -122,6 +124,7 @@ export class AssetSymbols implements IAssetSymbols {
   }
 
   /*::  @@iterator(): Iterator<[Symbol, AssetSymbol]> { return ({}: any); } */
+  // @ts-expect-error TS2416
   [Symbol.iterator]() {
     return this.#symbols.values();
   }
@@ -216,6 +219,7 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
   }
 
   /*::  @@iterator(): Iterator<[Symbol, AssetSymbol]> { return ({}: any); } */
+  // @ts-expect-error TS2416
   [Symbol.iterator]() {
     return this.#symbols.values();
   }

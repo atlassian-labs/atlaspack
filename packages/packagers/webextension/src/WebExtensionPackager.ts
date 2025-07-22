@@ -5,6 +5,7 @@ import {replaceURLReferences, relativeBundlePath} from '@atlaspack/utils';
 
 export default new Packager({
   async package({bundle, bundleGraph}) {
+    // @ts-expect-error TS2552
     let assets: Array<Asset> = [];
     bundle.traverseAssets((asset) => {
       assets.push(asset);
@@ -17,6 +18,7 @@ export default new Packager({
     );
     const asset = manifestAssets[0];
 
+    // @ts-expect-error TS2304
     const relPath = (b: NamedBundle) =>
       relativeBundlePath(bundle, b, {leadingDotSlash: false});
 
@@ -33,22 +35,27 @@ export default new Packager({
       | any
       | {
           matches: never;
+          // @ts-expect-error TS2304
           resources: Array<FilePath>;
         }
     > = [];
     for (const contentScript of manifest.content_scripts || []) {
       const srcBundles = deps
         .filter(
+          // @ts-expect-error TS7006
           (d) =>
             contentScript.js?.includes(d.id) ||
             contentScript.css?.includes(d.id),
         )
+        // @ts-expect-error TS7006
         .map((d) => nullthrows(bundleGraph.getReferencedBundle(d, bundle)));
 
       contentScript.css = [
         ...new Set(
           srcBundles
+            // @ts-expect-error TS7006
             .flatMap((b) => bundleGraph.getReferencedBundles(b))
+            // @ts-expect-error TS7006
             .filter((b) => b.type == 'css')
             .map(relPath)
             .concat(contentScript.css || []),
@@ -58,7 +65,9 @@ export default new Packager({
       contentScript.js = [
         ...new Set(
           srcBundles
+            // @ts-expect-error TS7006
             .flatMap((b) => bundleGraph.getReferencedBundles(b))
+            // @ts-expect-error TS7006
             .filter((b) => b.type == 'js')
             .map(relPath)
             .concat(contentScript.js || []),
@@ -66,7 +75,9 @@ export default new Packager({
       ];
 
       const resources = srcBundles
+        // @ts-expect-error TS7006
         .flatMap((b) => {
+          // @ts-expect-error TS2304
           const children: Array<NamedBundle> = [];
           const siblings = bundleGraph.getReferencedBundles(b);
           bundleGraph.traverseBundles((child) => {
@@ -80,6 +91,7 @@ export default new Packager({
 
       if (resources.length > 0) {
         war.push({
+          // @ts-expect-error TS7006
           matches: contentScript.matches.map((match) => {
             if (/^(((http|ws)s?)|ftp|\*):\/\//.test(match)) {
               let pathIndex = match.indexOf('/', match.indexOf('://') + 3);

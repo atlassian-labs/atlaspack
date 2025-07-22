@@ -12,6 +12,7 @@ import {
 
 export default new Packager({
   async package({bundle, bundleGraph, getInlineBundleContents}) {
+    // @ts-expect-error TS2552
     const assets: Array<Asset> = [];
     bundle.traverseAssets((asset) => {
       assets.push(asset);
@@ -49,6 +50,7 @@ export default new Packager({
       (tree: any) => insertBundleReferences(referencedBundles, tree),
       (tree: any) =>
         replaceInlineAssetContent(bundleGraph, getInlineBundleContents, tree),
+      // @ts-expect-error TS2559
     ]).process(code, options);
 
     const {contents, map} = replaceURLReferences({
@@ -78,12 +80,14 @@ async function replaceInlineAssetContent(
   getInlineBundleContents: (
     arg1: Bundle,
     arg2: BundleGraph<NamedBundle>,
+    // @ts-expect-error TS2304
   ) => Async<{
     contents: Blob;
   }>,
   tree: any,
 ) {
   const inlineNodes: Array<any> = [];
+  // @ts-expect-error TS7006
   tree.walk((node) => {
     if (node.attrs && node.attrs['data-parcel-key']) {
       inlineNodes.push(node);
@@ -124,6 +128,7 @@ async function getAssetContent(
   getInlineBundleContents: (
     arg1: Bundle,
     arg2: BundleGraph<NamedBundle>,
+    // @ts-expect-error TS2304
   ) => Async<{
     contents: Blob;
   }>,
@@ -178,6 +183,7 @@ function insertBundleReferences(siblingBundles: Array<NamedBundle>, tree: any) {
 
   tree.unshift(...stylesheets);
   if (scripts.length > 0) {
+    // @ts-expect-error TS7006
     tree.match({tag: 'svg'}, (node) => {
       node.content.unshift(...scripts);
     });

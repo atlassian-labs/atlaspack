@@ -45,6 +45,7 @@ export default new Reporter({
               port: serveOptions.port,
               host: hmrOptions.host,
               devServer,
+              // @ts-expect-error TS7006
               addMiddleware: (handler) => {
                 server?.middleware.push(handler);
               },
@@ -91,6 +92,7 @@ export default new Reporter({
         }
         if (hmrOptions && hmrServer) {
           await hmrServer.stop();
+          // @ts-expect-error TS2345
           hmrServers.delete(hmrServer.wss.options.port);
         }
         break;

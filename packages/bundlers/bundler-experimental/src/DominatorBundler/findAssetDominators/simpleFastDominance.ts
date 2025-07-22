@@ -38,10 +38,13 @@ export function simpleFastDominance<T>(graph: Graph<T, number>): NodeId[] {
     for (let node of reversedPostOrder) {
       if (node === graph.rootNodeId) continue;
 
+      // @ts-expect-error TS7034
       let newImmediateDominator = null;
       graph.forEachNodeIdConnectedTo(
         node,
+        // @ts-expect-error TS2345
         (predecessor) => {
+          // @ts-expect-error TS7005
           if (newImmediateDominator == null) {
             newImmediateDominator = predecessor;
           } else {
@@ -53,6 +56,7 @@ export function simpleFastDominance<T>(graph: Graph<T, number>): NodeId[] {
               postOrderIndexes,
               dominators,
               predecessor,
+              // @ts-expect-error TS7005
               newImmediateDominator,
             );
           }
@@ -138,9 +142,11 @@ export function intersect(
   let n2: number = newImmediateDominator;
   while (n1 !== n2) {
     while (postOrderIndexes[n1] < postOrderIndexes[n2]) {
+      // @ts-expect-error TS7053
       n1 = Number(dominators[n1]);
     }
     while (postOrderIndexes[n2] < postOrderIndexes[n1]) {
+      // @ts-expect-error TS7053
       n2 = Number(dominators[n2]);
     }
   }

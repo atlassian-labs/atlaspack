@@ -91,8 +91,8 @@ export function mapNamespacePackageAliases(
       packageName === '@atlaspack/cli'
         ? `${ns}/atlaspack-cli`
         : packageName === 'atlaspackforvscode'
-        ? `${ns}/atlaspackforvscode`
-        : packageName.replace(/^@atlaspack\//, `${ns}/atlaspack-`),
+          ? `${ns}/atlaspackforvscode`
+          : packageName.replace(/^@atlaspack\//, `${ns}/atlaspack-`),
       packageName,
     );
   }

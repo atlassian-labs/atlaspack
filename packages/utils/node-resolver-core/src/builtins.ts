@@ -44,9 +44,11 @@ let polyfills = {
 };
 
 for (let k in polyfills) {
+  // @ts-expect-error TS7053
   let polyfill = polyfills[k];
   builtins[k] = {
     name: polyfill + (builtinModules.includes(polyfill) ? '/' : ''),
+    // @ts-expect-error TS7053
     range: nullthrows(packageJson.devDependencies[polyfill]),
   };
 }

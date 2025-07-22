@@ -12,6 +12,7 @@ import type {FileSystem} from '@atlaspack/fs';
 import type {PackageManager} from '@atlaspack/package-manager';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import {NodeFS} from '@atlaspack/fs';
+// @ts-expect-error TS2305
 import {init, Resolver} from '@atlaspack/rust';
 import builtins, {empty} from './builtins';
 import path from 'path';
@@ -120,6 +121,7 @@ export default class NodeResolver {
         moduleDirResolver:
           process.versions.pnp != null
             ? (module: any, from: any) => {
+                // @ts-expect-error TS2339
                 let pnp = _Module.findPnpApi(path.dirname(from));
 
                 return pnp.resolveToUnqualified(
@@ -162,6 +164,7 @@ export default class NodeResolver {
       options.parent &&
       res.invalidateOnFileChange
     ) {
+      // @ts-expect-error TS2339
       let pnp = _Module.findPnpApi(path.dirname(options.parent));
       res.invalidateOnFileChange.push(pnp.resolveToUnqualified('pnpapi', null));
     }
@@ -172,8 +175,8 @@ export default class NodeResolver {
         diagnostics: Array.isArray(diagnostic)
           ? diagnostic
           : diagnostic
-          ? [diagnostic]
-          : undefined,
+            ? [diagnostic]
+            : undefined,
         invalidateOnFileCreate: res.invalidateOnFileCreate,
         invalidateOnFileChange: res.invalidateOnFileChange,
       };
@@ -274,6 +277,7 @@ export default class NodeResolver {
         // Auto install the Node builtin polyfills
         if (this.options.shouldAutoInstall && packageManager) {
           this.options.logger?.warn({
+            // @ts-expect-error TS2345
             message: md`Auto installing polyfill for Node builtin module "${packageName}"...`,
             codeFrames: options.loc
               ? [
@@ -316,6 +320,7 @@ export default class NodeResolver {
         } else {
           throw new ThrowableDiagnostic({
             diagnostic: {
+              // @ts-expect-error TS2345
               message: md`Node builtin polyfill "${packageName}" is not installed, but auto install is disabled.`,
               codeFrames: options.loc
                 ? [
@@ -333,6 +338,7 @@ export default class NodeResolver {
               documentationURL:
                 'https://parceljs.org/features/node-emulation/#polyfilling-%26-excluding-builtin-node-modules',
               hints: [
+                // @ts-expect-error TS2345
                 md`Install the "${packageName}" package with your package manager, and run Parcel again.`,
               ],
             },
@@ -406,6 +412,7 @@ export default class NodeResolver {
         );
 
         return {
+          // @ts-expect-error TS2345
           message: md`Cannot load file '${relative}' in '${relativePath(
             this.options.projectRoot,
             dir,
@@ -425,6 +432,7 @@ export default class NodeResolver {
         );
 
         return {
+          // @ts-expect-error TS2345
           message: md`Cannot find module '${error.module}'`,
           hints: alternativeModules.map((r) => {
             return `Did you mean '__${r}__'?`;
@@ -447,6 +455,7 @@ export default class NodeResolver {
           'utf8',
         );
         return {
+          // @ts-expect-error TS2345
           message: md`Could not load '${fileSpecifier}' from module '${error.module}' found in package.json#${error.field}`,
           codeFrames: [
             {
@@ -457,6 +466,7 @@ export default class NodeResolver {
                 {
                   key: `/${error.field}`,
                   type: 'value',
+                  // @ts-expect-error TS2345
                   message: md`'${fileSpecifier}' does not exist${
                     alternative ? `, did you mean '${alternative}'?` : ''
                   }'`,
@@ -490,6 +500,7 @@ export default class NodeResolver {
         }
 
         return {
+          // @ts-expect-error TS2345
           message: md`Cannot load file '${relative}' from module '${error.module}'`,
           hints: potentialFiles.map((r) => {
             return `Did you mean '__${error.module}/${r}__'?`;
@@ -546,6 +557,7 @@ export default class NodeResolver {
       }
       case 'UnknownScheme': {
         return {
+          // @ts-expect-error TS2345
           message: md`Unknown url scheme or pipeline '${error.scheme}:'`,
         };
       }
@@ -555,6 +567,7 @@ export default class NodeResolver {
         switch (error.error) {
           case 'PackagePathNotExported': {
             return {
+              // @ts-expect-error TS2345
               message: md`Module '${options.filename}' is not exported from the '${error.module}' package`,
               codeFrames: [
                 {
@@ -574,6 +587,7 @@ export default class NodeResolver {
           case 'ImportNotDefined': {
             let parsed = parse(pkgContent);
             return {
+              // @ts-expect-error TS2345
               message: md`Package import '${options.filename}' is not defined in the '${error.module}' package`,
               codeFrames: [
                 {
@@ -594,6 +608,7 @@ export default class NodeResolver {
           }
           case 'InvalidPackageTarget': {
             return {
+              // @ts-expect-error TS2345
               message: md`Invalid package target in the '${error.module} package. Targets may not refer to files outside the package.`,
               codeFrames: [
                 {
@@ -613,6 +628,7 @@ export default class NodeResolver {
           }
           case 'InvalidSpecifier': {
             return {
+              // @ts-expect-error TS2345
               message: md`Invalid package import specifier '${options.filename}'.`,
             };
           }
@@ -621,6 +637,7 @@ export default class NodeResolver {
       }
       case 'PackageJsonNotFound': {
         return {
+          // @ts-expect-error TS2345
           message: md`Cannot find a package.json above '${relativePath(
             this.options.projectRoot,
             options.parent
@@ -689,6 +706,7 @@ export default class NodeResolver {
     ) {
       let pkgContent = await this.options.fs.readFile(pkgfile, 'utf8');
       return {
+        // @ts-expect-error TS2345
         message: md`External dependency "${moduleName}" is not declared in package.json.`,
         codeFrames: [
           {
@@ -730,6 +748,7 @@ export default class NodeResolver {
           ? 'dependencies'
           : 'peerDependencies';
         return {
+          // @ts-expect-error TS2345
           message: md`External dependency "${moduleName}" does not satisfy required semver range "${range}".`,
           codeFrames: [
             {

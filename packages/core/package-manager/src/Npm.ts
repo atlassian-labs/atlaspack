@@ -1,6 +1,7 @@
 import type {PackageInstaller, InstallerOptions} from '@atlaspack/types';
 
 import path from 'path';
+// @ts-expect-error TS7016
 import spawn from 'cross-spawn';
 import logger from '@atlaspack/logger';
 import {registerSerializableClass} from '@atlaspack/build-cache';

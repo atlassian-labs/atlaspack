@@ -62,7 +62,9 @@ export default class ReporterRunner {
       (event.phase === 'optimizing' || event.phase === 'packaging') &&
       !(event.bundle instanceof NamedBundle)
     ) {
+      // @ts-expect-error TS2339
       let bundleGraphRef = event.bundleGraphRef;
+      // @ts-expect-error TS2739
       let bundle: InternalBundle = event.bundle;
       // Convert any internal bundles back to their public equivalents as reporting
       // is public api
@@ -81,10 +83,12 @@ export default class ReporterRunner {
 
   async report(unsanitisedEvent: ReporterEvent) {
     let event: ReporterEvent = unsanitisedEvent;
+    // @ts-expect-error TS2339
     if (event.diagnostics) {
       // Sanitise input before passing to reporters
       event = {
         ...event,
+        // @ts-expect-error TS2322
         diagnostics: anyToDiagnostic(event.diagnostics),
       };
     }

@@ -79,6 +79,7 @@ if (process.env.ATLASPACK_REGISTER_USE_SRC === 'true') {
 }
 
 export class BrowserPackageManager implements PackageManager {
+  // @ts-expect-error TS2749
   resolver: ResolverBase | null | undefined;
   fs: FileSystem;
   projectRoot: FilePath;
@@ -89,6 +90,7 @@ export class BrowserPackageManager implements PackageManager {
     this.projectRoot = projectRoot;
   }
 
+  // @ts-expect-error TS2749
   async getResolver(): Promise<ResolverBase> {
     if (this.resolver != null) return this.resolver;
     await init?.();
@@ -134,6 +136,7 @@ export class BrowserPackageManager implements PackageManager {
     let {resolved} = await this.resolve(name, from, opts);
 
     if (resolved in BUILTINS) {
+      // @ts-expect-error TS7053
       return BUILTINS[resolved];
     }
 
@@ -177,9 +180,11 @@ export class BrowserPackageManager implements PackageManager {
       });
       if (res.error) {
         let e = new Error(`Could not resolve module "${name}" from "${from}"`);
+        // @ts-expect-error TS2339
         e.code = 'MODULE_NOT_FOUND';
         throw e;
       }
+      // @ts-expect-error TS7034
       let getPkg;
       switch (res.resolution.type) {
         case 'Path':
@@ -201,6 +206,7 @@ export class BrowserPackageManager implements PackageManager {
             invalidateOnFileCreate: res.invalidateOnFileCreate,
             type: res.moduleType,
             get pkg() {
+              // @ts-expect-error TS7005
               return getPkg();
             },
           };

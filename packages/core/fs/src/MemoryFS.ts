@@ -49,10 +49,12 @@ export class MemoryFS implements FileSystem {
   watchers: Map<FilePath, Set<Watcher>>;
   events: Array<Event>;
   id: number;
+  // @ts-expect-error TS2564
   handle: Handle;
   farm: WorkerFarm;
   _cwd: FilePath;
   _eventQueue: Array<Event>;
+  // @ts-expect-error TS2564
   _watcherTimer: number;
   _numWorkerInstances: number = 0;
   _workerHandles: Array<Handle>;
@@ -101,6 +103,7 @@ export class MemoryFS implements FileSystem {
     if (!this.handle) {
       this.handle = this.farm.createReverseHandle(
         (fn: string, args: Array<unknown>) => {
+          // @ts-expect-error TS7053
           return this[fn](...args);
         },
       );
@@ -110,6 +113,7 @@ export class MemoryFS implements FileSystem {
     this._numWorkerInstances++;
 
     return {
+      // @ts-expect-error TS2353
       $$raw: false,
       id: this.id,
       handle: this.handle,
@@ -540,6 +544,7 @@ export class MemoryFS implements FileSystem {
     this._eventQueue.push(event);
     clearTimeout(this._watcherTimer);
 
+    // @ts-expect-error TS2322
     this._watcherTimer = setTimeout(() => {
       let events = this._eventQueue;
       this._eventQueue = [];
@@ -573,6 +578,7 @@ export class MemoryFS implements FileSystem {
     while (this._workerHandles.length < this._numWorkerInstances) {
       await new Promise(
         (resolve: (result: Promise<undefined> | undefined) => void) =>
+          // @ts-expect-error TS2345
           this._workerRegisterResolves.push(resolve),
       );
     }
@@ -757,6 +763,7 @@ class WriteStream extends Writable {
   _final(callback: (error?: Error) => void) {
     this.fs
       .writeFile(this.filePath, this.buffer, this.options)
+      // @ts-expect-error TS2345
       .then(callback)
       .catch(callback);
   }
@@ -942,6 +949,7 @@ export function makeShared(contents: Buffer | string): Buffer {
   }
 
   let contentsBuffer: Buffer | string = contents;
+  // @ts-expect-error TS2339
   if (process.browser) {
     // For the polyfilled buffer module, it's faster to always convert once so that the subsequent
     // operations are fast (.byteLength and using .set instead of .write)
@@ -971,6 +979,7 @@ class WorkerFS extends MemoryFS {
 
   constructor(id: number, handle: Handle) {
     // TODO Make this not a subclass
+    // @ts-expect-error TS2554
     super();
     this.id = id;
     this.handleFn = (methodName: any, args: any) =>
@@ -1003,6 +1012,7 @@ class WorkerFS extends MemoryFS {
   }
 
   serialize(): SerializedMemoryFS {
+    // @ts-expect-error TS2739
     return {
       id: this.id,
     };

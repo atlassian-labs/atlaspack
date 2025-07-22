@@ -3424,9 +3424,10 @@ let packageManager = new NodePackageManager(inputFS, '/');
               );
               await overlayFS.writeFile(
                 resolver,
-                (
-                  await overlayFS.readFile(resolver, 'utf8')
-                ).replace(/\.js/g, '.ts'),
+                (await overlayFS.readFile(resolver, 'utf8')).replace(
+                  /\.js/g,
+                  '.ts',
+                ),
               );
             },
           });
@@ -4918,9 +4919,10 @@ let packageManager = new NodePackageManager(inputFS, '/');
               );
               await overlayFS.writeFile(
                 bundler,
-                (
-                  await overlayFS.readFile(bundler, 'utf8')
-                ).replace('Boolean(dependency.isEntry)', 'false'),
+                (await overlayFS.readFile(bundler, 'utf8')).replace(
+                  'Boolean(dependency.isEntry)',
+                  'false',
+                ),
               );
             },
           });
@@ -4978,9 +4980,10 @@ let packageManager = new NodePackageManager(inputFS, '/');
               );
               await overlayFS.writeFile(
                 namer,
-                (
-                  await overlayFS.readFile(namer, 'utf8')
-                ).replace('bundle.id', 'bundle.id.slice(-8)'),
+                (await overlayFS.readFile(namer, 'utf8')).replace(
+                  'bundle.id',
+                  'bundle.id.slice(-8)',
+                ),
               );
             },
           });
@@ -5036,9 +5039,10 @@ let packageManager = new NodePackageManager(inputFS, '/');
               );
               await overlayFS.writeFile(
                 namer,
-                (
-                  await overlayFS.readFile(namer, 'utf8')
-                ).replace('runtime_test', 'test_runtime'),
+                (await overlayFS.readFile(namer, 'utf8')).replace(
+                  'runtime_test',
+                  'test_runtime',
+                ),
               );
             },
           });
@@ -5373,9 +5377,10 @@ let packageManager = new NodePackageManager(inputFS, '/');
               );
               await overlayFS.writeFile(
                 packager,
-                (
-                  await overlayFS.readFile(packager, 'utf8')
-                ).replace('packaged', 'updated'),
+                (await overlayFS.readFile(packager, 'utf8')).replace(
+                  'packaged',
+                  'updated',
+                ),
               );
             },
           });
@@ -5591,9 +5596,10 @@ let packageManager = new NodePackageManager(inputFS, '/');
               );
               await overlayFS.writeFile(
                 optimizer,
-                (
-                  await overlayFS.readFile(optimizer, 'utf8')
-                ).replace('optimized', 'updated'),
+                (await overlayFS.readFile(optimizer, 'utf8')).replace(
+                  'optimized',
+                  'updated',
+                ),
               );
             },
           });
@@ -5822,9 +5828,10 @@ let packageManager = new NodePackageManager(inputFS, '/');
               );
               await overlayFS.writeFile(
                 packager,
-                (
-                  await overlayFS.readFile(packager, 'utf8')
-                ).replace('packaged', 'updated'),
+                (await overlayFS.readFile(packager, 'utf8')).replace(
+                  'packaged',
+                  'updated',
+                ),
               );
             },
           });
@@ -6022,9 +6029,10 @@ let packageManager = new NodePackageManager(inputFS, '/');
               );
               await overlayFS.writeFile(
                 optimizer,
-                (
-                  await overlayFS.readFile(optimizer, 'utf8')
-                ).replace('optimized', 'updated'),
+                (await overlayFS.readFile(optimizer, 'utf8')).replace(
+                  'optimized',
+                  'updated',
+                ),
               );
             },
           });
@@ -6432,9 +6440,10 @@ let packageManager = new NodePackageManager(inputFS, '/');
               );
               await overlayFS.writeFile(
                 compressor,
-                (
-                  await overlayFS.readFile(compressor, 'utf8')
-                ).replace('abc', 'def'),
+                (await overlayFS.readFile(compressor, 'utf8')).replace(
+                  'abc',
+                  'def',
+                ),
               );
             },
           });

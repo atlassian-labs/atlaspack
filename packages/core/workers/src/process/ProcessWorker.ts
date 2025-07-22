@@ -16,11 +16,13 @@ if (process.env.ATLASPACK_REGISTER_USE_SRC === 'true') {
   WORKER_PATH = path.join(__dirname, 'ProcessChild.ts');
 }
 
+// @ts-expect-error TS2420
 export default class ProcessWorker implements WorkerImpl {
   execArgv: any;
   onMessage: MessageHandler;
   onError: ErrorHandler;
   onExit: ExitHandler;
+  // @ts-expect-error TS2564
   child: ChildProcess;
   processQueue: boolean = true;
   sendQueue: Array<any> = [];

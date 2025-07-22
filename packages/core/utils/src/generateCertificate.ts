@@ -1,4 +1,5 @@
 import type {FileSystem} from '@atlaspack/fs';
+// @ts-expect-error TS7016
 import forge from 'node-forge';
 import path from 'path';
 import logger from '@atlaspack/logger';

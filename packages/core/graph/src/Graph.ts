@@ -435,6 +435,7 @@ export default class Graph<TNode, TEdgeType extends number = NullEdgeType> {
 
     let queue = [{nodeId: traversalStartNode, context: null}];
     while (queue.length !== 0) {
+      // @ts-expect-error TS2339
       let {nodeId, context} = queue.pop();
       if (!this.hasNode(nodeId) || visited.has(nodeId)) continue;
       visited.add(nodeId);
@@ -575,8 +576,11 @@ export default class Graph<TNode, TEdgeType extends number = NullEdgeType> {
     while (queue.length !== 0) {
       const command = queue.pop();
 
+      // @ts-expect-error TS18048
       if (command.exit != null) {
+        // @ts-expect-error TS2339
         let {nodeId, context, exit} = command;
+        // @ts-expect-error TS18048
         let newContext = exit(nodeId, command.context, actions);
         if (typeof newContext !== 'undefined') {
           context = newContext;
@@ -591,6 +595,7 @@ export default class Graph<TNode, TEdgeType extends number = NullEdgeType> {
           return context;
         }
       } else {
+        // @ts-expect-error TS2339
         let {nodeId, context} = command;
         if (!this.hasNode(nodeId) || visited.has(nodeId)) continue;
         visited.add(nodeId);
@@ -654,6 +659,7 @@ export default class Graph<TNode, TEdgeType extends number = NullEdgeType> {
         return node;
       }
 
+      // @ts-expect-error TS2345
       for (let child of this.getNodeIdsConnectedFrom(node)) {
         if (!visited.has(child)) {
           visited.add(child);

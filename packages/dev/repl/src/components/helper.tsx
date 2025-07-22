@@ -12,8 +12,13 @@ export function ParcelError({
   output: BundleOutputError;
 }): any {
   return (
+    // @ts-expect-error TS17004
     <div className="build-error">
+      {/*
+       // @ts-expect-error TS17004 */}
       <span>A build error occured:</span>
+      {/*
+       // @ts-expect-error TS17004 */}
       <div className="content" dangerouslySetInnerHTML={{__html: error}} />
     </div>
   );
@@ -21,10 +26,19 @@ export function ParcelError({
 
 export function Notes(): any {
   return (
+    // @ts-expect-error TS17004
     <div className="help">
+      {/*
+       // @ts-expect-error TS17004 */}
       <div>
+        {/*
+         // @ts-expect-error TS17004 */}
         <p>{ctrlKey} + B to bundle</p>
+        {/*
+         // @ts-expect-error TS17004 */}
         <p>{ctrlKey} + S to save</p>
+        {/*
+         // @ts-expect-error TS17004 */}
         <p>Ctrl + W to close a tab</p>
         {/* Note:
         <ul>
@@ -47,6 +61,7 @@ export function Notes(): any {
 //   return `data:${mime};charset=utf-8;base64,${btoa(data)}`;
 // }
 
+// @ts-expect-error TS2339
 export const Graphs: any = memo(function Graphs({graphs}) {
   let [rendered, setRendered] = useState();
 
@@ -54,8 +69,10 @@ export const Graphs: any = memo(function Graphs({graphs}) {
     renderGraph().then(async (render) => {
       setRendered(
         await Promise.all(
+          // @ts-expect-error TS7031
           graphs.map(async ({name, content}) => ({
             name,
+            // @ts-expect-error TS2695
             content: /*toDataURI*/ ('image/svg+xml', await render(content)),
           })),
         ),
@@ -64,15 +81,21 @@ export const Graphs: any = memo(function Graphs({graphs}) {
   }, [graphs]);
 
   return (
+    // @ts-expect-error TS17004
     <div className="graphs">
       Graphs (will open in a new tab)
       {rendered && (
+        // @ts-expect-error TS17004
         <div>
+          {/*
+           // @ts-expect-error TS2339 */}
           {rendered.map(({name, content}, i) => (
+            // @ts-expect-error TS17004
             <button
               key={i}
               onClick={() => {
                 var win = window.open();
+                // @ts-expect-error TS18047
                 win.document.write(content);
                 // win.document.write(
                 //   '<iframe src="' +
@@ -112,9 +135,15 @@ export function Tabs({
   }, [children, selected, setSelected]);
 
   return (
+    // @ts-expect-error TS17004
     <div {...props} className={'tabs ' + (className || '')}>
+      {/*
+       // @ts-expect-error TS17004 */}
       <div className="switcher">
+        {/*
+         // @ts-expect-error TS7006 */}
         {names.map((n, i) => (
+          // @ts-expect-error TS17004
           <div
             onClick={() => setSelected(i)}
             key={i}
@@ -127,8 +156,11 @@ export function Tabs({
         ))}
       </div>
       {mode === 'remove'
-        ? children.find((_, i) => i === selected)
-        : children.map((c, i) => (
+        ? // @ts-expect-error TS7006
+          children.find((_, i) => i === selected)
+        : // @ts-expect-error TS7006
+          children.map((c, i) => (
+            // @ts-expect-error TS17004
             <div
               key={i}
               className="content"
@@ -166,6 +198,7 @@ export function EditableField({value, editing, onChange}: any): any {
   }, [editing, value]);
 
   return editing ? (
+    // @ts-expect-error TS17004
     <form
       onSubmit={(e) => {
         e.preventDefault();
@@ -173,16 +206,20 @@ export function EditableField({value, editing, onChange}: any): any {
       }}
       style={{display: 'inline'}}
     >
+      {/*
+       // @ts-expect-error TS17004 */}
       <input
         type="text"
         value={v}
         onInput={(e) => {
+          // @ts-expect-error TS2339
           setV(e.target.value);
         }}
         onClick={(e) => e.stopPropagation()}
       />
     </form>
   ) : (
+    // @ts-expect-error TS17004
     <span>{value}</span>
   );
 }
@@ -192,7 +229,8 @@ export function PresetSelector({dispatch}: any): any {
     async (preset) => {
       if (preset === 'Three.js Benchmark') {
         try {
-          let data = await (
+          let data = await // @ts-expect-error TS1470
+          (
             await fetch(new URL('../assets/three.zip', import.meta.url))
           ).arrayBuffer();
           let files: FSMap = await extractZIP(data);
@@ -204,6 +242,7 @@ export function PresetSelector({dispatch}: any): any {
             [
               'index.js',
               {
+                // @ts-expect-error TS2769
                 isEntry: true,
                 value: `import * as copy1 from './copy1/Three.js'; export {copy1};
         import * as copy2 from './copy2/Three.js'; export {copy2};
@@ -224,16 +263,24 @@ export function PresetSelector({dispatch}: any): any {
   );
 
   return (
+    // @ts-expect-error TS17004
     <label className="presets">
+      {/*
+       // @ts-expect-error TS17004 */}
       <span>Preset:</span>
+      {/*
+       // @ts-expect-error TS17004 */}
       <select
         onChange={(e) => {
           onChange(e.target.value);
         }}
         value={''}
       >
+        {/*
+         // @ts-expect-error TS17004 */}
         <option value=""></option>
         {[...ASSET_PRESETS.keys()].map((n) => (
+          // @ts-expect-error TS17004
           <option key={n} value={n}>
             {n}
           </option>
@@ -278,6 +325,7 @@ export function useSessionStorage(
   const setValue = (value: undefined) => {
     try {
       const valueToStore =
+        // @ts-expect-error TS2358
         value instanceof Function ? value(storedValue) : value;
       setStoredValue(valueToStore);
       window.sessionStorage.setItem(key, JSON.stringify(valueToStore));
@@ -286,6 +334,7 @@ export function useSessionStorage(
     }
   };
 
+  // @ts-expect-error TS2322
   return [storedValue, setValue];
 }
 
@@ -305,11 +354,14 @@ export function usePromise<T>(
 
   useEffect(() => {
     promise.then(
+      // @ts-expect-error TS2353
       (v) => mountedRef.current && setState({resolved: v}),
+      // @ts-expect-error TS2353
       (v) => mountedRef.current && setState({rejected: v}),
     );
   }, [promise]);
 
+  // @ts-expect-error TS2339
   return [state?.resolved, state?.rejected, state != null];
 }
 

@@ -39,6 +39,7 @@ import {toProjectPath} from '../projectPath';
 import {requestTypes} from '../RequestTracker';
 import {optionsProxy} from '../utils';
 
+// @ts-expect-error TS2344
 type ConfigMap<K, V> = Partial<Record<K, V>>;
 
 export type ConfigAndCachePath = {
@@ -119,12 +120,14 @@ export function getCachedAtlaspackConfig(
   let {config: processedConfig, cachePath} = result;
   let config = atlaspackConfigCache.get(cachePath);
   if (config) {
+    // @ts-expect-error TS2740
     return config;
   }
 
   config = new AtlaspackConfig(processedConfig, options);
 
   atlaspackConfigCache.set(cachePath, config);
+  // @ts-expect-error TS2322
   return config;
 }
 
@@ -181,6 +184,7 @@ export async function resolveAtlaspackConfig(
   } catch (e: any) {
     throw new ThrowableDiagnostic({
       diagnostic: {
+        // @ts-expect-error TS2345
         message: md`Could not find parcel config at ${path.relative(
           options.projectRoot,
           configPath,
@@ -347,6 +351,7 @@ export async function processConfig(
       : {
           /*::...null*/
         }),
+    // @ts-expect-error TS2322
     resolvers: processPipeline(
       options,
       configFile.resolvers,
@@ -370,12 +375,14 @@ export async function processConfig(
             keyPath: '/bundler',
           }
         : undefined,
+    // @ts-expect-error TS2322
     namers: processPipeline(
       options,
       configFile.namers,
       '/namers',
       configFile.filePath,
     ),
+    // @ts-expect-error TS2322
     runtimes: processPipeline(
       options,
       configFile.runtimes,
@@ -400,6 +407,7 @@ export async function processConfig(
       configFile.filePath,
       options,
     ),
+    // @ts-expect-error TS2322
     reporters: processPipeline(
       options,
       configFile.reporters,
@@ -512,6 +520,7 @@ export async function resolveExtends(
                 {
                   key: extendsKey,
                   type: 'value',
+                  // @ts-expect-error TS2345
                   message: md`Cannot find module "${ext}"${
                     alternatives[0]
                       ? `, did you mean "${alternatives[0]}"?`
@@ -561,6 +570,7 @@ async function processExtendedConfig(
               {
                 key: extendsKey,
                 type: 'value',
+                // @ts-expect-error TS2345
                 message: md`"${extendsSpecifier}" does not exist${
                   alternatives[0] ? `, did you mean "${alternatives[0]}"?` : ''
                 }`,
@@ -695,6 +705,7 @@ export function mergeMaps<K extends string, V>(
   for (let k in ext) {
     let key: K = k as any;
     res[key] =
+      // @ts-expect-error TS2345
       merger && base[key] != null ? merger(base[key], ext[key]) : ext[key];
   }
 

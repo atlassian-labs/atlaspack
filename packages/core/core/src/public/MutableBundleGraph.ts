@@ -78,8 +78,10 @@ export default class MutableBundleGraph
     this.#graph.addAssetGraphToBundle(
       assetToAssetValue(asset),
       bundleToInternalBundle(bundle),
+      // @ts-expect-error TS2345
       shouldSkipDependency
         ? (d: Dependency) =>
+            // @ts-expect-error TS2345
             shouldSkipDependency(new Dependency(d, this.#options))
         : undefined,
     );
@@ -93,8 +95,10 @@ export default class MutableBundleGraph
     this.#graph.addEntryToBundle(
       assetToAssetValue(asset),
       bundleToInternalBundle(bundle),
+      // @ts-expect-error TS2345
       shouldSkipDependency
         ? (d: Dependency) =>
+            // @ts-expect-error TS2345
             shouldSkipDependency(new Dependency(d, this.#options))
         : undefined,
     );
@@ -196,13 +200,16 @@ export default class MutableBundleGraph
   }
 
   createBundle(opts: CreateBundleOpts): Bundle {
+    // @ts-expect-error TS2339
     let entryAsset = opts.entryAsset
-      ? assetToAssetValue(opts.entryAsset)
+      ? // @ts-expect-error TS2339
+        assetToAssetValue(opts.entryAsset)
       : null;
 
     let target = targetToInternalTarget(opts.target);
     let bundleId = createBundleId({
       entryAssetId: entryAsset?.id ?? null,
+      // @ts-expect-error TS2339
       uniqueKey: opts.uniqueKey ?? null,
       distDir: target.distDir,
       bundleBehavior: opts.bundleBehavior ?? null,
@@ -237,21 +244,28 @@ export default class MutableBundleGraph
         hashReference: this.#options.shouldContentHash
           ? HASH_REF_PREFIX + bundleId
           : bundleId.slice(-8),
+        // @ts-expect-error TS2339
         type: opts.entryAsset ? opts.entryAsset.type : opts.type,
+        // @ts-expect-error TS2339
         env: opts.env
-          ? toEnvironmentRef(environmentToInternalEnvironment(opts.env))
+          ? // @ts-expect-error TS2339
+            toEnvironmentRef(environmentToInternalEnvironment(opts.env))
           : nullthrows(entryAsset).env,
         entryAssetIds: entryAsset ? [entryAsset.id] : [],
         mainEntryId: entryAsset?.id,
+        // @ts-expect-error TS2339
         pipeline: opts.entryAsset ? opts.entryAsset.pipeline : opts.pipeline,
         needsStableName: opts.needsStableName,
         bundleBehavior:
           opts.bundleBehavior != null
             ? BundleBehavior[opts.bundleBehavior]
             : null,
+        // @ts-expect-error TS2339
         isSplittable: opts.entryAsset
-          ? opts.entryAsset.isBundleSplittable
-          : opts.isSplittable,
+          ? // @ts-expect-error TS2339
+            opts.entryAsset.isBundleSplittable
+          : // @ts-expect-error TS2339
+            opts.isSplittable,
         isPlaceholder,
         target,
         name: null,
@@ -266,9 +280,11 @@ export default class MutableBundleGraph
       bundleNode,
     );
 
+    // @ts-expect-error TS2339
     if (opts.entryAsset) {
       this.#graph._graph.addEdge(
         bundleNodeId,
+        // @ts-expect-error TS2339
         this.#graph._graph.getNodeIdByContentKey(opts.entryAsset.id),
       );
     }

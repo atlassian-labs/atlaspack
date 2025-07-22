@@ -137,6 +137,7 @@ export async function getDevDepRequests<TResult extends RequestResult>(
       }
     }
 
+    // @ts-expect-error TS2769
     return new Map(nonNullDevDepRequests);
   }
 
@@ -145,6 +146,7 @@ export async function getDevDepRequests<TResult extends RequestResult>(
   return {
     devDeps: new Map(
       [...previousDevDepRequests.entries()]
+        // @ts-expect-error TS2769
         .filter(([id]: [any]) => api.canSkipSubrequest(id))
         .map(([, req]: [any, any]) => [
           `${req.specifier}:${fromProjectPathRelative(req.resolveFrom)}`,
@@ -153,6 +155,7 @@ export async function getDevDepRequests<TResult extends RequestResult>(
     ),
     invalidDevDeps: await Promise.all(
       [...previousDevDepRequests.entries()]
+        // @ts-expect-error TS2769
         .filter(([id]: [any]) => !api.canSkipSubrequest(id))
         .flatMap(([, req]: [any, any]) => {
           return [
@@ -160,6 +163,7 @@ export async function getDevDepRequests<TResult extends RequestResult>(
               specifier: req.specifier,
               resolveFrom: req.resolveFrom,
             },
+            // @ts-expect-error TS7006
             ...(req.additionalInvalidations ?? []).map((i) => ({
               specifier: i.specifier,
               resolveFrom: i.resolveFrom,
@@ -210,6 +214,7 @@ export function resolveDevDepRequestRef(
   devDepRequestRef: DevDepRequest | DevDepRequestRef,
 ): DevDepRequest {
   const devDepRequest =
+    // @ts-expect-error TS2339
     devDepRequestRef.type === 'ref'
       ? devDepRequests.get(devDepRequestRef.hash)
       : devDepRequestRef;
@@ -229,10 +234,13 @@ This is a bug in Atlaspack.`,
     );
   }
 
+  // @ts-expect-error TS2339
   if (devDepRequestRef.type !== 'ref') {
+    // @ts-expect-error TS2345
     devDepRequests.set(devDepRequest.hash, devDepRequest);
   }
 
+  // @ts-expect-error TS2322
   return devDepRequest;
 }
 
@@ -247,6 +255,7 @@ export async function runDevDepRequest<TResult extends RequestResult>(
       ':' +
       devDepRequestRef.hash,
     type: requestTypes.dev_dep_request,
+    // @ts-expect-error TS2322
     run: ({api}) => {
       const devDepRequest = resolveDevDepRequestRef(devDepRequestRef);
 

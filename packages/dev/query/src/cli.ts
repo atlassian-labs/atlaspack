@@ -560,6 +560,7 @@ export async function run(input: string[]) {
       'Node is not a bundle, but a ' + node.type,
     );
 
+    // @ts-expect-error TS7006
     bundleGraph.traverseAssets(node.value, (asset) => {
       console.log(asset.id, asset.filePath);
     });
@@ -579,6 +580,7 @@ export async function run(input: string[]) {
       'Node is not a bundle, but a ' + node.type,
     );
 
+    // @ts-expect-error TS7006
     bundleGraph.traverseBundle(node.value, (node) => {
       if (node.type === 'asset') {
         console.log(node.id, node.value.filePath);
@@ -678,6 +680,7 @@ export async function run(input: string[]) {
       assetNodeId,
     )) {
       if (
+        // @ts-expect-error TS7006
         referencingBundles.some((ref) =>
           bundleGraph._graph.hasEdge(
             bundleGraph._graph.getNodeIdByContentKey(ref.id),
@@ -692,7 +695,9 @@ export async function run(input: string[]) {
   }
 
   function _getIncomingNodeOfType(
+    // @ts-expect-error TS2304
     bundleGraph: BundleGraph,
+    // @ts-expect-error TS7006
     node,
     type: string,
   ) {
@@ -701,15 +706,20 @@ export async function run(input: string[]) {
     }
     invariant(bundleGraph != null);
     const bundleGraphNodeId = bundleGraph._graph.getNodeIdByContentKey(node.id);
-    return bundleGraph._graph
-      .getNodeIdsConnectedTo(bundleGraphNodeId, -1)
-      .map((id) => nullthrows(bundleGraph._graph.getNode(id)))
-      .find((node) => node.type == type);
+    return (
+      bundleGraph._graph
+        .getNodeIdsConnectedTo(bundleGraphNodeId, -1)
+        // @ts-expect-error TS7006
+        .map((id) => nullthrows(bundleGraph._graph.getNode(id)))
+        // @ts-expect-error TS7006
+        .find((node) => node.type == type)
+    );
   }
 
   // We find the priority of a Bundle or BundleGroup by looking at its incoming dependencies.
   // If a Bundle does not have an incoming dependency, we look for an incoming BundleGroup and its dependency
   // e.g. Dep(priority = 1) -> BundleGroup -> Bundle means that the Bundle has priority 1.
+  // @ts-expect-error TS2304
   function _getBundlePriority(bundleGraph: BundleGraph, bundle: BundleNode) {
     if (!hasBundleGraph()) {
       return;
@@ -730,6 +740,7 @@ export async function run(input: string[]) {
     return node.value.priority;
   }
 
+  // @ts-expect-error TS2304
   function _findEntryBundle(bundleGraph: BundleGraph, node: BundleNode) {
     if (!hasBundleGraph()) {
       return;
@@ -738,8 +749,10 @@ export async function run(input: string[]) {
     const bundleGraphNodeId = bundleGraph._graph.getNodeIdByContentKey(node.id);
     const entryBundleGroup = bundleGraph._graph
       .getNodeIdsConnectedTo(bundleGraphNodeId, -1)
+      // @ts-expect-error TS7006
       .map((id) => nullthrows(bundleGraph._graph.getNode(id)))
       .find(
+        // @ts-expect-error TS7006
         (node) =>
           node.type === 'bundle_group' &&
           bundleGraph.isEntryBundleGroup(node.value),
@@ -782,6 +795,7 @@ export async function run(input: string[]) {
       column.shift();
       invariant(column != null);
       return column.reduce(
+        // @ts-expect-error TS2365
         (accumulator, currentValue) => accumulator + currentValue,
         initialValue,
       );
@@ -796,6 +810,7 @@ export async function run(input: string[]) {
   }
 
   function timeSerialize(
+    // @ts-expect-error TS2304
     graph: AssetGraph | null | undefined | BundleGraph | RequestTracker,
   ) {
     let date = Date.now();
@@ -832,6 +847,7 @@ export async function run(input: string[]) {
       invariant(assetGraph != null);
       for (let n of assetGraph.nodes) {
         if (n && n.type in ag) {
+          // @ts-expect-error TS7053
           ag[n.type]++;
         }
       }
@@ -915,6 +931,7 @@ export async function run(input: string[]) {
 
     let sum_b_type = 0;
     for (let k in b_type) {
+      // @ts-expect-error TS7053
       sum_b_type += b_type[k];
     }
 
@@ -1071,6 +1088,7 @@ export async function run(input: string[]) {
         'findBundleReason',
         {
           help: 'args: <bundle> <asset>. Why is the asset in the bundle',
+          // @ts-expect-error TS2556
           action: (v) => findBundleReason(...v.split(' ')),
         },
       ],

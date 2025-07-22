@@ -66,6 +66,7 @@ export default function createWriteBundlesRequest(
   };
 }
 
+// @ts-expect-error TS7031
 async function run({input, api, farm, options}) {
   let {bundleGraph, optionsRef} = input;
   let {ref, dispose} = await farm.createSharedReference(bundleGraph);
@@ -85,7 +86,9 @@ async function run({input, api, farm, options}) {
     includeInline: getFeatureFlag('inlineBundlesSourceMapFixes'),
   });
   const bundles = allBundles
+    // @ts-expect-error TS7006
     .filter((bundle) => bundle.bundleBehavior !== 'inline')
+    // @ts-expect-error TS7006
     .filter((bundle) => {
       // Do not package and write placeholder bundles to disk. We just
       // need to update the name so other bundles can reference it.
@@ -112,6 +115,7 @@ async function run({input, api, farm, options}) {
     });
 
   let cachedBundles = new Set(
+    // @ts-expect-error TS7006
     bundles.filter((b) => api.canSkipSubrequest(bundleGraph.getHash(b))),
   );
 
@@ -125,6 +129,7 @@ async function run({input, api, farm, options}) {
     reportPackagingProgress(completeBundles, bundles.length);
 
     await Promise.all(
+      // @ts-expect-error TS7006
       bundles.map(async (bundle) => {
         let request = createPackageRequest({
           bundle,
@@ -176,6 +181,7 @@ async function run({input, api, farm, options}) {
     );
     assignComplexNameHashes(hashRefToNameHash, bundles, bundleInfoMap, options);
     await Promise.all(
+      // @ts-expect-error TS7006
       bundles.map((bundle) => {
         let promise =
           writeEarlyPromises[bundle.id] ??
@@ -188,6 +194,7 @@ async function run({input, api, farm, options}) {
             }),
           );
 
+        // @ts-expect-error TS7006
         return promise.then((r) => res.set(bundle.id, r));
       }),
     );
@@ -201,10 +208,12 @@ async function run({input, api, farm, options}) {
 
 function assignComplexNameHashes(
   hashRefToNameHash: Map<string, string>,
+  // @ts-expect-error TS2304
   bundles: Array<Bundle>,
   bundleInfoMap: {
     [key: string]: BundleInfo;
   },
+  // @ts-expect-error TS2304
   options: AtlaspackOptions,
 ) {
   for (let bundle of bundles) {
@@ -216,6 +225,7 @@ function assignComplexNameHashes(
       options.shouldContentHash
         ? hashString(
             [...getBundlesIncludedInHash(bundle.id, bundleInfoMap)]
+              // @ts-expect-error TS2538
               .map((bundleId) => bundleInfoMap[bundleId].hash)
               .join(':'),
           ).slice(-8)

@@ -2,6 +2,7 @@ import {Transformer} from '@atlaspack/plugin';
 import type {AST, Transformer as TransformerOpts} from '@atlaspack/types';
 import {parser as parse} from 'posthtml-parser';
 import nullthrows from 'nullthrows';
+// @ts-expect-error TS2305
 import type {PostHTMLExpression, PostHTMLNode} from 'posthtml';
 import PostHTML from 'posthtml';
 import {render} from 'posthtml-render';
@@ -106,6 +107,7 @@ export const transformerOpts: TransformerOpts<undefined> = {
   generate({ast, asset}) {
     return {
       content: render(ast.program, {
+        // @ts-expect-error TS2322
         closingSingleTag: asset.type === 'xhtml' ? 'slash' : undefined,
       }),
     };
@@ -121,6 +123,7 @@ function findFirstMatch(
   let found;
 
   for (const expression of expressions) {
+    // @ts-expect-error TS2339
     PostHTML().match.call(ast.program, expression, (node) => {
       found = node;
       return node;

@@ -27,7 +27,9 @@ export function bundleGroupToInternalBundleGroup(
 const inspect = Symbol.for('nodejs.util.inspect.custom');
 
 export default class BundleGroup implements IBundleGroup {
+  // @ts-expect-error TS2564
   #bundleGroup: InternalBundleGroup;
+  // @ts-expect-error TS2564
   #options: AtlaspackOptions;
 
   constructor(bundleGroup: InternalBundleGroup, options: AtlaspackOptions) {

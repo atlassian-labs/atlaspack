@@ -20,18 +20,21 @@ export default new Transformer({
 
     let parts: Array<any> = [];
     let nonNamespacedHandlers = !dom.documentElement.namespaceURI
-      ? NON_NAMESPACED_HANDLERS[dom.documentElement.nodeName] || {}
+      ? // @ts-expect-error TS7053
+        NON_NAMESPACED_HANDLERS[dom.documentElement.nodeName] || {}
       : {};
 
     walk(dom, (node) => {
       let handler =
         node.nodeType === node.ELEMENT_NODE
           ? node.namespaceURI
-            ? HANDLERS[node.namespaceURI]?.[node.localName]
+            ? // @ts-expect-error TS7053
+              HANDLERS[node.namespaceURI]?.[node.localName]
             : nonNamespacedHandlers[node.nodeName]
           : node.nodeType === node.PROCESSING_INSTRUCTION_NODE
-          ? processingInstruction[node.target]
-          : undefined;
+            ? // @ts-expect-error TS7053
+              processingInstruction[node.target]
+            : undefined;
 
       if (handler) {
         handler(node, asset, parts);

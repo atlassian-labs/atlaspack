@@ -1,5 +1,6 @@
 import {NodeFS} from '@atlaspack/fs';
 import logger from '@atlaspack/logger';
+// @ts-expect-error TS2305
 import commander, {commander$Command} from 'commander';
 import path from 'path';
 import {normalizeOptions, Options} from './normalizeOptions';

@@ -70,7 +70,9 @@ export function nodeFromDep(dep: Dependency): DependencyNode {
 export function nodeFromAssetGroup(assetGroup: AssetGroup): AssetGroupNode {
   return {
     id: hashString(
+      // @ts-expect-error TS2345
       fromProjectPathRelative(assetGroup.filePath) +
+        // @ts-expect-error TS2345
         toEnvironmentId(assetGroup.env) +
         String(assetGroup.isSource) +
         String(assetGroup.sideEffects) +
@@ -113,6 +115,7 @@ export function nodeFromEntryFile(entry: Entry): EntryFileNode {
   };
 }
 
+// @ts-expect-error TS2417
 export default class AssetGraph extends ContentGraph<AssetGraphNode> {
   onNodeRemoved: ((nodeId: NodeId) => unknown) | null | undefined;
   hash: string | null | undefined;
@@ -229,6 +232,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
       return;
     }
 
+    // @ts-expect-error TS2345
     let {id, context} = fromEnvironmentId(input.env);
     let idAndContext = `${id}-${context}`;
 
@@ -236,6 +240,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
     if (env) {
       input.env = toEnvironmentRef(env);
     } else {
+      // @ts-expect-error TS2345
       this.envCache.set(idAndContext, fromEnvironmentId(input.env));
     }
   }
@@ -313,6 +318,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
           env: target.env,
           isEntry: true,
           needsStableName: true,
+          // @ts-expect-error TS2322
           symbols: fromEnvironmentId(target.env).isLibrary
             ? new Map([['*', {local: '*', isWeak: true, loc: null}]])
             : undefined,
@@ -321,7 +327,9 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
 
       if (fromEnvironmentId(node.value.env).isLibrary) {
         // in library mode, all of the entry's symbols are "used"
+        // @ts-expect-error TS2345
         node.usedSymbolsDown.add('*');
+        // @ts-expect-error TS2345
         node.usedSymbolsUp.set('*', undefined);
       }
       return node;
@@ -422,9 +430,11 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
         let hasDeferred = this.getNodeIdsConnectedFrom(traversedNodeId).some(
           (childNodeId) => {
             let childNode = nullthrows(this.getNode(childNodeId));
+            // @ts-expect-error TS2339
             return childNode.hasDeferred == null
               ? false
-              : childNode.hasDeferred;
+              : // @ts-expect-error TS2339
+                childNode.hasDeferred;
           },
         );
         if (!hasDeferred) {
@@ -435,6 +445,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
         traversedNode.type === 'asset_group' &&
         nodeId !== traversedNodeId
       ) {
+        // @ts-expect-error TS2339
         if (!ctx?.hasDeferred) {
           this.safeToIncrementallyBundle = false;
           this.setNeedsBundling();
@@ -472,6 +483,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
       [...dependencySymbols].every(([, {isWeak}]: [any, any]) => isWeak) &&
       sideEffects === false &&
       canDefer &&
+      // @ts-expect-error TS2345
       !dependencySymbols.has('*');
 
     if (!isDeferrable) {
@@ -509,6 +521,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
       let depIsDeferrable =
         d.symbols &&
         !(fromEnvironmentId(d.env).isLibrary && d.isEntry) &&
+        // @ts-expect-error TS2345
         !d.symbols.has('*') &&
         ![...d.symbols.keys()].some((symbol) => {
           let assetSymbol = resolvedAsset.symbols?.get(symbol)?.local;
@@ -530,6 +543,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
   ) {
     this.normalizeEnvironment(assetGroup);
     let assetGroupNode = nodeFromAssetGroup(assetGroup);
+    // @ts-expect-error TS2322
     assetGroupNode = this.getNodeByContentKey(assetGroupNode.id);
     if (!assetGroupNode) {
       return;

@@ -140,6 +140,7 @@ export async function applyFixture(
     }
     default: {
       /*:: ((node: empty) => void 0)(node); */
+      // @ts-expect-error TS2339
       throw new Error(`Unexpected node type "${node.type}"`);
     }
   }
@@ -185,12 +186,14 @@ function checkIteration(i: number, str: string) {
   return i + 1;
 }
 
+// @ts-expect-error TS2304
 function toPosixPath(str: FilePath | string) {
   return str.replace(/^[A-Z]:\\/, '/').replace(/\\/g, '/');
 }
 
 export class FixtureTokenizer {
   #src: string;
+  // @ts-expect-error TS2564
   #tokens: Array<FixtureToken>;
 
   #tokenizeNext = (src: string, types: Array<RegExp>) => {
@@ -247,8 +250,11 @@ export class FixtureTokenizer {
 
 export class FixtureParser {
   #tokens: Array<FixtureToken>;
+  // @ts-expect-error TS2564
   #root: FixtureRoot;
+  // @ts-expect-error TS2564
   #cwd: FixtureRoot | FixtureDir;
+  // @ts-expect-error TS2564
   #dirStack: Array<FixtureRoot | FixtureDir>;
 
   #peek = (type: string) =>

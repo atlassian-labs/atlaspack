@@ -78,7 +78,9 @@ export function fromEnvironmentId(id: EnvironmentRef): CoreEnvironment {
   }
 
   const env = Object.freeze(getEnvironment(id));
+  // @ts-expect-error TS2345
   localEnvironmentCache.set(id, env);
+  // @ts-expect-error TS2322
   return env;
 }
 
@@ -93,7 +95,9 @@ export async function writeEnvironmentsToCache(cache: Cache): Promise<void> {
 
   // Store each environment individually
   for (const env of environments) {
+    // @ts-expect-error TS18046
     environmentIds.add(env.id);
+    // @ts-expect-error TS18046
     const envKey = `Environment/${ATLASPACK_VERSION}/${env.id}`;
 
     await instrument(
@@ -131,10 +135,12 @@ export async function loadEnvironmentsFromCache(cache: Cache): Promise<void> {
   }
 
   const environments: Array<
+    // @ts-expect-error TS2552
     Environment & {
       id: string;
     }
   > = [];
+  // @ts-expect-error TS2488
   for (const envId of cachedEnvIds) {
     const envKey = `Environment/${ATLASPACK_VERSION}/${envId}`;
     const cachedEnv = await cache.get(envKey);

@@ -10,6 +10,7 @@ import {DOMParser, XMLSerializer} from '@xmldom/xmldom';
 
 export default new Packager({
   async package({bundle, bundleGraph, getInlineBundleContents}) {
+    // @ts-expect-error TS2552
     const assets: Array<Asset> = [];
     bundle.traverseAssets((asset) => {
       assets.push(asset);
@@ -53,10 +54,13 @@ export default new Packager({
           );
           if (parsed.documentElement != null) {
             let parent = element.parentNode;
+            // @ts-expect-error TS18047
             parent.removeChild(element);
+            // @ts-expect-error TS18047
             parent.appendChild(parsed.documentElement);
           }
         } else {
+          // @ts-expect-error TS18047
           element.parentNode.textContent = contents;
         }
       }
@@ -91,6 +95,7 @@ async function getAssetContent(
   getInlineBundleContents: (
     arg1: Bundle,
     arg2: BundleGraph<NamedBundle>,
+    // @ts-expect-error TS2304
   ) => Async<{
     contents: Blob;
   }>,

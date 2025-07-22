@@ -1,4 +1,5 @@
 import type {DiagnosticLogEvent, FilePath} from '@atlaspack/types';
+// @ts-expect-error TS2724
 import type {ODiagnosticSeverity} from 'vscode-languageserver';
 
 import path from 'path';
@@ -60,12 +61,14 @@ export const DiagnosticTag = {
    * Clients are allowed to render diagnostics with this tag faded out instead of having
    * an error squiggle.
    */
+  // @ts-expect-error TS2304
   Unnecessary: 1 as ODiagnosticTag,
   /**
    * Deprecated or obsolete code.
    *
    * Clients are allowed to rendered diagnostics with this tag strike through.
    */
+  // @ts-expect-error TS2304
   Deprecated: 2 as ODiagnosticTag,
 } as const;
 export const DiagnosticSeverity = {

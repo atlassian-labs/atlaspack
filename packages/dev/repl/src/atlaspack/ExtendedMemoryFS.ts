@@ -32,6 +32,7 @@ const CONSTANTS = {
   O_NONBLOCK: 2048,
 } as const;
 
+// @ts-expect-error TS7006
 function asyncToNode(args: any, num: number, f) {
   let cb, params;
   if (args.length === num) {
@@ -86,30 +87,39 @@ function parseOpenFlags(flags: number) {
   if (typeof flags === 'number') {
     flagsBits = flags;
   } else {
+    // @ts-expect-error TS2322
     flags = [...flags].filter((c) => c !== 's').join('');
+    // @ts-expect-error TS2339
     if (flags.includes('a')) {
       flagsBits |= CONSTANTS.O_APPEND | CONSTANTS.O_CREAT;
+      // @ts-expect-error TS2339
       if (flags.includes('+')) {
         flagsBits |= CONSTANTS.O_RDWR;
       } else {
         flagsBits |= CONSTANTS.O_RDONLY;
       }
+      // @ts-expect-error TS2339
       if (flags.includes('x')) {
         flagsBits |= CONSTANTS.O_EXCL;
       }
+      // @ts-expect-error TS2339
     } else if (flags.includes('r')) {
+      // @ts-expect-error TS2339
       if (flags.includes('+')) {
         flagsBits |= CONSTANTS.O_RDWR;
       } else {
         flagsBits |= CONSTANTS.O_RDONLY;
       }
+      // @ts-expect-error TS2339
     } else if (flags.includes('w')) {
       flagsBits |= CONSTANTS.O_CREAT;
+      // @ts-expect-error TS2339
       if (flags.includes('+')) {
         flagsBits |= CONSTANTS.O_RDWR;
       } else {
         flagsBits |= CONSTANTS.O_WRONLY;
       }
+      // @ts-expect-error TS2339
       if (flags.includes('x')) {
         flagsBits |= CONSTANTS.O_EXCL;
       } else {
@@ -182,36 +192,47 @@ export class ExtendedMemoryFS extends MemoryFS {
   // --------------------------------
 
   rmdir(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 3, (...p) => this._rmdir(...p));
   }
   mkdir(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 3, (...p) => this._mkdir(...p));
   }
   readdir(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 3, (...p) => super.readdir(...p));
   }
   unlink(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 2, (...p) => super.unlink(...p));
   }
   copyFile(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 3, (...p) => super.copyFile(...p));
   }
   realpath(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 3, (...p) => super.realpath(...p));
   }
   readFile(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 3, (...p) => super.readFile(...p));
   }
   symlink(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 4, (...p) => super.symlink(...p));
   }
   writeFile(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 4, (...p) => super.writeFile(...p));
   }
   stat(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 2, (...p) => super.stat(...p));
   }
   lstat(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 2, (...p) => super.stat(...p));
   }
   lstatSync(filePath: FilePath): any {
@@ -368,6 +389,7 @@ export class ExtendedMemoryFS extends MemoryFS {
     }
 
     for (let i = 0; i < length; i++) {
+      // @ts-expect-error TS2322
       file.buffer[position] = buffer[offset];
       offset++;
       position++;
@@ -394,39 +416,53 @@ export class ExtendedMemoryFS extends MemoryFS {
 
   /* eslint-disable require-await */
   open(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 2, async (...p) =>
+      // @ts-expect-error TS2556
       Promise.resolve(this.openSync(...p)),
     );
   }
   read(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 6, async (...p) =>
+      // @ts-expect-error TS2556
       Promise.resolve(this.readSync(...p)),
     );
   }
   write(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 6, async (...p) =>
+      // @ts-expect-error TS2556
       Promise.resolve(this.writeSync(...p)),
     );
   }
   close(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 2, async (...p) =>
+      // @ts-expect-error TS2556
       Promise.resolve(this.closeSync(...p)),
     );
   }
   fstat(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 2, async (...p) =>
+      // @ts-expect-error TS2556
       Promise.resolve(this.fstatSync(...p)),
     );
   }
 
   rename(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 2, async (...p) =>
+      // @ts-expect-error TS2556
       Promise.resolve(this.renameSync(...p)),
     );
   }
 
   chmod(...args: any): any {
+    // @ts-expect-error TS7019
     return asyncToNode(args, 3, async (...p) =>
+      // @ts-expect-error TS2556
       Promise.resolve(this.chmodSync(...p)),
     );
   }

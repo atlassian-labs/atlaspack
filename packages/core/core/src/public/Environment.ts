@@ -155,7 +155,9 @@ export function environmentToInternalEnvironment(
 }
 
 export default class Environment implements IEnvironment {
+  // @ts-expect-error TS2564
   #environment: InternalEnvironment;
+  // @ts-expect-error TS2564
   #options: AtlaspackOptions;
 
   constructor(env: InternalEnvironment, options: AtlaspackOptions) {

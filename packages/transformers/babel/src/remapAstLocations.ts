@@ -4,6 +4,7 @@ import type {Node} from '@babel/types';
 import * as BabelTypes from '@babel/types';
 
 export function remapAstLocations(
+  // @ts-expect-error TS2709
   t: BabelTypes,
   ast: BabelNodeFile,
   map: SourceMap,
@@ -27,6 +28,7 @@ export function remapAstLocations(
           node.loc.end.line = mapping.original.line;
           node.loc.end.column = mapping.original.column + length;
 
+          // @ts-expect-error TS2322
           node.loc.filename = mapping.source;
         } else {
           // Maintain null mappings?
@@ -38,6 +40,7 @@ export function remapAstLocations(
 }
 
 function traverseAll(
+  // @ts-expect-error TS2709
   t: BabelTypes,
   node: Node,
   visitor: (node: Node) => void,
@@ -49,6 +52,7 @@ function traverseAll(
   visitor(node);
 
   for (let key of t.VISITOR_KEYS[node.type] || []) {
+    // @ts-expect-error TS7053
     let subNode: Node | Array<Node> = node[key];
     if (Array.isArray(subNode)) {
       for (let i = 0; i < subNode.length; i++) {

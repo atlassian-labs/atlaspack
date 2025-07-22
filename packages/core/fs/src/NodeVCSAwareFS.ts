@@ -49,6 +49,7 @@ export class NodeVCSAwareFS extends NodeFS {
     return fs;
   }
 
+  // @ts-expect-error TS2416
   serialize(): SerializedNodeVCSAwareFS {
     return {
       excludePatterns: this.#excludePatterns,
@@ -84,14 +85,18 @@ export class NodeVCSAwareFS extends NodeFS {
 
     const vcsEventsSince =
       vcsState != null
-        ? (
+        ? // @ts-expect-error TS2571
+          (
             await instrumentAsync('NodeVCSAwareFS::rust.getEventsSince', () =>
+              // @ts-expect-error TS2739
               getEventsSince(gitRepoPath, vcsState, null),
             )
-          ).map((e) => ({
-            path: e.path,
-            type: e.changeType,
-          }))
+          )
+            // @ts-expect-error TS7006
+            .map((e) => ({
+              path: e.path,
+              type: e.changeType,
+            }))
         : null;
 
     if (getFeatureFlagValue('vcsMode') !== 'NEW' && vcsEventsSince != null) {
@@ -102,6 +107,7 @@ export class NodeVCSAwareFS extends NodeFS {
       this.#logEventDiff?.(watcherEventsSince, vcsEventsSince);
     }
 
+    // @ts-expect-error TS2345
     if (['NEW_AND_CHECK', 'NEW'].includes(getFeatureFlagValue('vcsMode'))) {
       if (vcsEventsSince == null) {
         logger.error({
@@ -154,6 +160,7 @@ export class NodeVCSAwareFS extends NodeFS {
     try {
       vcsState = await instrumentAsync(
         'NodeVCSAwareFS::getVcsStateSnapshot',
+        // @ts-expect-error TS2322
         () => getVcsStateSnapshot(gitRepoPath, this.#excludePatterns),
       );
 
@@ -162,7 +169,9 @@ export class NodeVCSAwareFS extends NodeFS {
         message: 'Expose VCS timing metrics',
         meta: {
           trackableEvent: 'vcs_timing_metrics',
+          // @ts-expect-error TS2339
           dirtyFilesExecutionTime: vcsState?.dirtyFilesExecutionTime,
+          // @ts-expect-error TS2339
           yarnStatesExecutionTime: vcsState?.yarnStatesExecutionTime,
         },
       });

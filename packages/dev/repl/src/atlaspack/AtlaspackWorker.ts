@@ -51,6 +51,7 @@ export type BundleOutput =
 let workerFarm: WorkerFarm;
 let fs: MemoryFS;
 function startWorkerFarm(numWorkers?: number | null) {
+  // @ts-expect-error TS2339
   if (!workerFarm || workerFarm.maxConcurrentWorkers !== numWorkers) {
     workerFarm?.end();
     workerFarm = createWorkerFarm(
@@ -59,11 +60,14 @@ function startWorkerFarm(numWorkers?: number | null) {
     fs = new ExtendedMemoryFS(workerFarm);
     fs.chdir('/app');
 
+    // @ts-expect-error TS7017
     globalThis.fs = fs;
+    // @ts-expect-error TS7017
     globalThis.workerFarm = workerFarm;
   }
 }
 
+// @ts-expect-error TS7034
 let swFSPromise, resolveSWFSPromise;
 function resetSWPromise() {
   ({
@@ -73,13 +77,18 @@ function resetSWPromise() {
 }
 
 let sw: MessagePort;
+// @ts-expect-error TS7017
 global.ATLASPACK_SERVICE_WORKER = async (type: any, data: any) => {
+  // @ts-expect-error TS2554
   await sendMsg(sw, type, data);
   if (type === 'setFS') {
+    // @ts-expect-error TS7005
     resolveSWFSPromise();
   }
 };
+// @ts-expect-error TS7017
 global.ATLASPACK_SERVICE_WORKER_REGISTER = (type: any, cb: any) => {
+  // @ts-expect-error TS2304
   let wrapper: EventHandler = async (evt: ExtendableMessageEvent) => {
     if (evt.data.type === type) {
       let response = await cb(evt.data.data);
@@ -98,6 +107,7 @@ global.ATLASPACK_SERVICE_WORKER_REGISTER = (type: any, cb: any) => {
 expose({
   bundle,
   watch,
+  // @ts-expect-error TS7006
   ready: (numWorkers) =>
     new Promise((res: (result: Promise<boolean> | boolean) => void) => {
       startWorkerFarm(numWorkers);
@@ -107,7 +117,9 @@ expose({
         workerFarm.once('ready', () => res(true));
       }
     }),
+  // @ts-expect-error TS7005
   waitForFS: () => proxy(swFSPromise),
+  // @ts-expect-error TS7006
   setServiceWorker: (v) => {
     sw = v;
     sw.start();
@@ -121,6 +133,7 @@ const PathUtils = {
   fromAssetPath(str: string) {
     return path.join('/app', str);
   },
+  // @ts-expect-error TS2304
   toAssetPath(str: string | FilePath) {
     return str.startsWith('/app/') ? str.slice(5) : str;
   },
@@ -200,6 +213,7 @@ async function renderDiagnostics(
         let {message, stack, codeframe, hints, documentation} =
           await prettyDiagnostic(
             diagnostic,
+            // @ts-expect-error TS2345
             {
               projectRoot: '/',
               inputFS,
@@ -236,6 +250,7 @@ async function renderDiagnostics(
   ).join(`\n${'-'.repeat(80)}\n\n`);
 }
 
+// @ts-expect-error TS7006
 async function setup(assets: FSList, options) {
   if (!(await fs.exists('/.parcelrc'))) {
     await fs.writeFile('/.parcelrc', JSON.stringify(configRepl, null, 2));
@@ -247,14 +262,18 @@ async function setup(assets: FSList, options) {
 
   let graphs = options.renderGraphs ? [] : null;
   if (graphs && options.renderGraphs) {
+    // @ts-expect-error TS7017
     globalThis.ATLASPACK_DUMP_GRAPHVIZ = (name: any, content: any) =>
+      // @ts-expect-error TS2345
       graphs.push({name, content});
+    // @ts-expect-error TS7017
     globalThis.ATLASPACK_DUMP_GRAPHVIZ.mode = options.renderGraphs;
   }
 
   // TODO only create new instance if options/entries changed
   let entries = assets
     .filter(([, data]: [any, any]) => data.isEntry)
+    // @ts-expect-error TS2345
     .map(([name]: [any]) => PathUtils.fromAssetPath(name));
   const bundler = new Atlaspack({
     entries,
@@ -343,6 +362,7 @@ async function syncAssetsToFS(assets: FSList, options: REPLOptions) {
     '/app/node_modules',
     '/app/yarn.lock',
     '/app/package.json',
+    // @ts-expect-error TS2345
     ...assets.map(([name]: [any]) => PathUtils.fromAssetPath(name)),
   ]);
 
@@ -359,6 +379,7 @@ async function syncAssetsToFS(assets: FSList, options: REPLOptions) {
     ? await fs.readFile('/app/package.json', 'utf8')
     : null;
   let newPackageJson =
+    // @ts-expect-error TS2769
     assets.find(([name]: [any]) => name === '/package.json')?.[1].value ??
     generatePackageJson(options);
 
@@ -443,6 +464,7 @@ async function watch(
 
   progress('building');
 
+  // @ts-expect-error TS2322
   return proxy({
     unsubscribe: (
       await bundler.watch(async (err, event) => {
@@ -477,6 +499,7 @@ async function watch(
 function uuidv4() {
   return (String(1e7) + -1e3 + -4e3 + -8e3 + -1e11).replace(
     /[018]/g,
+    // @ts-expect-error TS2769
     (c: number) =>
       (
         c ^

@@ -240,6 +240,7 @@ export default function createBundleGraphRequest(
       }
 
       await dumpGraphToGraphViz(
+        // @ts-expect-error TS2345
         res.bundleGraph._graph,
         'BundleGraph',
         bundleGraphEdgeTypes,
@@ -396,6 +397,7 @@ class BundlerRunner {
         invariant(internalBundleGraph != null); // ensures the graph was created
 
         await dumpGraphToGraphViz(
+          // @ts-expect-error TS2345
           internalBundleGraph._graph,
           'before_bundle',
           bundleGraphEdgeTypes,
@@ -455,6 +457,7 @@ class BundlerRunner {
           } finally {
             optimizeMeasurement && optimizeMeasurement.end();
             await dumpGraphToGraphViz(
+              // @ts-expect-error TS2345
               internalBundleGraph._graph,
               'after_optimize',
             );
@@ -494,6 +497,7 @@ class BundlerRunner {
     } finally {
       if (internalBundleGraph != null) {
         await dumpGraphToGraphViz(
+          // @ts-expect-error TS2345
           internalBundleGraph._graph,
           'after_bundle',
           bundleGraphEdgeTypes,
@@ -545,6 +549,7 @@ class BundlerRunner {
     }
 
     await dumpGraphToGraphViz(
+      // @ts-expect-error TS2345
       internalBundleGraph._graph,
       'after_runtimes',
       bundleGraphEdgeTypes,

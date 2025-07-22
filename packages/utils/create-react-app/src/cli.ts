@@ -5,12 +5,16 @@ import {version} from '../package.json';
 import simpleGit from 'simple-git';
 import fs from 'fs';
 import path from 'path';
+// @ts-expect-error TS7016
 import _ncp from 'ncp';
 import {promisify} from 'util';
+// @ts-expect-error TS7016
 import commandExists from 'command-exists';
 // flowlint-next-line untyped-import:off
+// @ts-expect-error TS7016
 import _spawn from '@npmcli/promise-spawn';
 import rimraf from 'rimraf';
+// @ts-expect-error TS7016
 import tempy from 'tempy';
 import chalk from 'chalk';
 import * as emoji from './emoji';
@@ -47,6 +51,7 @@ async function run(packagePath: string) {
   try {
     await createApp(path.basename(packagePath), tempPath);
   } catch (e: any) {
+    // @ts-expect-error TS2349
     await rimraf(tempPath);
     throw e;
   }
@@ -60,6 +65,7 @@ async function run(packagePath: string) {
     chalk`${
       emoji.info
     }  {dim Run} {bold cd ${packagePath}} {dim and then} {bold ${
+      // @ts-expect-error TS7005
       usesYarn ? 'yarn' : 'npm run'
     } start} {dim to start developing with Parcel.}`,
   );
@@ -117,6 +123,7 @@ async function fsExists(filePath: string): Promise<boolean> {
   }
 }
 
+// @ts-expect-error TS7034
 let usesYarn;
 async function installPackages(
   packageExpressions: Array<string>,
@@ -131,6 +138,7 @@ async function installPackages(
     chalk.bold(...packageExpressions),
   );
 
+  // @ts-expect-error TS7005
   if (usesYarn == null) {
     usesYarn = await commandExists('yarn');
     if (!usesYarn && !(await commandExists('npm'))) {
@@ -138,6 +146,7 @@ async function installPackages(
     }
   }
 
+  // @ts-expect-error TS7005
   if (usesYarn) {
     return spawn(
       'yarn',
