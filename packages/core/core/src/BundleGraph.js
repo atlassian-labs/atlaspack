@@ -1285,6 +1285,143 @@ export default class BundleGraph {
     );
   }
 
+  getReferencedAssets(
+    bundle: Bundle,
+    cache: Map<Bundle, Set<string>>,
+  ): Set<string> {
+    const result = new Set();
+
+    const siblingBundles = new Set(
+      this.getBundleGroupsContainingBundle(bundle).flatMap((bundleGroup) =>
+        this.getBundlesInBundleGroup(bundleGroup, {includeInline: true}),
+      ),
+    );
+
+    const candidates = new Map();
+
+    this.traverseAssets(bundle, (asset) => {
+      // If the asset is available in multiple bundles in the same target, it's referenced.
+      const bundlesWithAsset = this.getBundlesWithAsset(asset);
+      if (
+        bundlesWithAsset.filter(
+          (b) =>
+            b.target.name === bundle.target.name &&
+            b.target.distDir === bundle.target.distDir,
+        ).length > 1
+      ) {
+        result.add(asset.id);
+        return;
+      }
+
+      const assetNodeId = nullthrows(
+        this._graph.getNodeIdByContentKey(asset.id),
+      );
+
+      if (
+        this._graph
+          .getNodeIdsConnectedTo(assetNodeId, bundleGraphEdgeTypes.references)
+          .map((id) => this._graph.getNode(id))
+          .some(
+            (node) =>
+              node?.type === 'dependency' &&
+              (node.value.priority === Priority.lazy ||
+                node.value.priority === Priority.conditional) &&
+              node.value.specifierType !== SpecifierType.url,
+          )
+      ) {
+        // If this asset is referenced by any async dependency, it's referenced.
+        result.add(asset.id);
+        return;
+      }
+
+      const dependencies = this._graph
+        .getNodeIdsConnectedTo(assetNodeId)
+        .map((id) => nullthrows(this._graph.getNode(id)))
+        .filter((node) => node.type === 'dependency')
+        .map((node) => {
+          invariant(node.type === 'dependency');
+          return node.value;
+        });
+
+      candidates.set(asset.id, {
+        asset,
+        dependencies,
+        bundlesWithAsset,
+      });
+    });
+
+    const visitedBundles: Set<Bundle> = new Set();
+
+    // Check if any of this bundle's descendants, referencers, bundles referenced
+    // by referencers, or descendants of its referencers use the asset without
+    // an explicit reference edge. This can happen if e.g. the asset has been
+    // deduplicated.
+    [...siblingBundles].forEach((referencer) => {
+      this.traverseBundles((descendant, _, actions) => {
+        if (descendant.id === bundle.id) {
+          return;
+        }
+
+        if (visitedBundles.has(descendant)) {
+          actions.skipChildren();
+          return;
+        }
+
+        visitedBundles.add(descendant);
+
+        if (
+          descendant.type !== bundle.type ||
+          descendant.env.context !== bundle.env.context
+        ) {
+          actions.skipChildren();
+          return;
+        }
+
+        for (let assetId of this.getBundleDirectReferences(descendant, cache)) {
+          if (candidates.has(assetId)) {
+            result.add(assetId);
+          }
+        }
+      }, referencer);
+    });
+
+    return result;
+  }
+
+  getBundleDirectReferences(
+    bundle: Bundle,
+    cache: Map<Bundle, Set<string>>,
+  ): Set<string> {
+    const cachedResult = cache.get(bundle);
+    if (cachedResult != null) {
+      return cachedResult;
+    }
+
+    const directReferences = new Set();
+    const bundleAssets = this.getBundleContainedAssets(bundle);
+    const bundleDependencies = this.getBundleContainedDependencies(bundle);
+
+    for (const dependency of bundleDependencies) {
+      this._graph.forEachNodeIdConnectedFrom(
+        this._graph.getNodeIdByContentKey(dependency),
+        (assetId) => {
+          const asset = nullthrows(this._graph.getNode(assetId));
+          if (asset.type !== 'asset') {
+            return;
+          }
+
+          if (!bundleAssets.has(asset.id)) {
+            directReferences.add(asset.id);
+          }
+        },
+      );
+    }
+
+    cache.set(bundle, directReferences);
+
+    return directReferences;
+  }
+
   isAssetReferenced(bundle: Bundle, asset: Asset): boolean {
     // If the asset is available in multiple bundles in the same target, it's referenced.
     if (
@@ -1816,6 +1953,36 @@ export default class BundleGraph {
       dependencyNodeId,
       bundleGraphEdgeTypes.contains,
     );
+  }
+
+  getBundleContainedAssets(bundle: Bundle): Set<string> {
+    const assets = new Set();
+    this._graph.forEachNodeIdConnectedFrom(
+      this._graph.getNodeIdByContentKey(bundle.id),
+      (nodeId) => {
+        const node = nullthrows(this._graph.getNode(nodeId));
+        if (node.type === 'asset') {
+          assets.add(node.value.id);
+        }
+      },
+      bundleGraphEdgeTypes.contains,
+    );
+    return assets;
+  }
+
+  getBundleContainedDependencies(bundle: Bundle): Set<string> {
+    const dependencies = new Set();
+    this._graph.forEachNodeIdConnectedFrom(
+      this._graph.getNodeIdByContentKey(bundle.id),
+      (nodeId) => {
+        const node = nullthrows(this._graph.getNode(nodeId));
+        if (node.type === 'dependency') {
+          dependencies.add(node.value.id);
+        }
+      },
+      bundleGraphEdgeTypes.contains,
+    );
+    return dependencies;
   }
 
   filteredTraverse<TValue, TContext>(
