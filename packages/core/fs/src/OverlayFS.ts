@@ -279,8 +279,10 @@ export class OverlayFS implements FileSystem {
   readFileSync(filePath: FilePath, encoding?: Encoding): any {
     filePath = this.realpathSync(filePath);
     try {
+      // @ts-expect-error TS2345
       return this.writable.readFileSync(filePath, encoding);
     } catch (err: any) {
+      // @ts-expect-error TS2345
       return this.readable.readFileSync(filePath, encoding);
     }
   }
@@ -339,6 +341,7 @@ export class OverlayFS implements FileSystem {
     let entries = new Map();
 
     try {
+      // @ts-expect-error TS2769
       for (let entry of this.writable.readdirSync(dir, opts)) {
         let filePath = path.join(dir, entry.name ?? entry);
         if (this.deleted.has(filePath)) continue;
@@ -349,6 +352,7 @@ export class OverlayFS implements FileSystem {
     }
 
     try {
+      // @ts-expect-error TS2769
       for (let entry of this.readable.readdirSync(dir, opts)) {
         let filePath = path.join(dir, entry.name ?? entry);
         if (this.deleted.has(filePath)) continue;

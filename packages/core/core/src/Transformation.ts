@@ -142,6 +142,7 @@ export default class Transformation {
         logger.verbose([
           {
             origin: '@atlaspack/core',
+            // @ts-expect-error TS2345
             message: md`Could not load existing source map for ${fromProjectPathRelative(
               asset.value.filePath,
             )}`,
@@ -173,6 +174,7 @@ export default class Transformation {
     );
 
     let pipeline = await this.loadPipeline(
+      // @ts-expect-error TS2345
       this.request.filePath,
       asset.value.isSource,
       asset.value.pipeline,
@@ -196,6 +198,7 @@ export default class Transformation {
     ]);
 
     return {
+      // @ts-expect-error TS2353
       $$raw: true,
       assets,
       configRequests,
@@ -221,6 +224,7 @@ export default class Transformation {
       size,
       isSource: summarizedIsSource,
     } = await summarizeRequest(this.options.inputFS, {
+      // @ts-expect-error TS2322
       filePath: fromProjectPath(this.options.projectRoot, filePath),
       code,
     });
@@ -231,10 +235,13 @@ export default class Transformation {
     return new UncommittedAsset({
       value: createAsset(this.options.projectRoot, {
         code,
+        // @ts-expect-error TS2322
         filePath,
         isSource,
+        // @ts-expect-error TS2345
         type: path.extname(fromProjectPathRelative(filePath)).slice(1),
         pipeline,
+        // @ts-expect-error TS2322
         env,
         query,
         stats: {
@@ -537,6 +544,7 @@ export default class Transformation {
     let config = createConfig({
       plugin: transformer.name,
       isSource,
+      // @ts-expect-error TS2322
       searchPath: this.request.filePath,
       env: this.request.env,
     });
@@ -600,6 +608,7 @@ export default class Transformation {
         throw new ThrowableDiagnostic({diagnostic: result.diagnostics});
       }
 
+      // @ts-expect-error TS2322
       return fromProjectPath(
         this.options.projectRoot,
         nullthrows(result.assetGroup).filePath,
@@ -646,6 +655,7 @@ export default class Transformation {
     }
 
     // Transform.
+    // @ts-expect-error TS2322
     let transfomerResult: Array<TransformerResult | MutableAsset> =
       await transformer.transform({
         asset: new MutableAsset(asset),

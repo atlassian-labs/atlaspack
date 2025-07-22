@@ -1,5 +1,6 @@
 import path from 'path';
 import {Transformer} from '@atlaspack/plugin';
+// @ts-expect-error TS7016
 import pug from 'pug';
 
 export default new Transformer({
@@ -25,6 +26,7 @@ export default new Transformer({
       basedir: path.dirname(asset.filePath),
       filename: asset.filePath,
       ...pugConfig,
+      // @ts-expect-error TS2339
       pretty: pugConfig.pretty || false,
     });
 
@@ -33,6 +35,7 @@ export default new Transformer({
     }
 
     asset.type = 'html';
+    // @ts-expect-error TS2339
     asset.setCode(render(pugConfig.locals));
 
     return [asset];

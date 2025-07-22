@@ -145,6 +145,7 @@ class BaseAsset {
   }
 
   get symbols(): IAssetSymbols {
+    // @ts-expect-error TS2322
     return new AssetSymbols(this.#asset.options, this.#asset.value);
   }
 
@@ -192,6 +193,7 @@ class BaseAsset {
 }
 
 export class Asset extends BaseAsset implements IAsset {
+  // @ts-expect-error TS2564
   #asset: CommittedAsset | UncommittedAsset;
   #env: Environment | null | undefined;
 
@@ -224,6 +226,7 @@ export class Asset extends BaseAsset implements IAsset {
 }
 
 export class MutableAsset extends BaseAsset implements IMutableAsset {
+  // @ts-expect-error TS2564
   #asset: UncommittedAsset;
 
   constructor(asset: UncommittedAsset) {
@@ -247,6 +250,7 @@ export class MutableAsset extends BaseAsset implements IMutableAsset {
     return this.#asset.value.type;
   }
 
+  // @ts-expect-error TS1095
   set type(type: string): void {
     if (type !== this.#asset.value.type) {
       this.#asset.value.type = type;
@@ -259,6 +263,7 @@ export class MutableAsset extends BaseAsset implements IMutableAsset {
     return bundleBehavior == null ? null : BundleBehaviorNames[bundleBehavior];
   }
 
+  // @ts-expect-error TS1095
   set bundleBehavior(bundleBehavior?: BundleBehavior | null): void {
     this.#asset.value.bundleBehavior = bundleBehavior
       ? BundleBehaviorMap[bundleBehavior]
@@ -269,6 +274,7 @@ export class MutableAsset extends BaseAsset implements IMutableAsset {
     return this.#asset.value.isBundleSplittable;
   }
 
+  // @ts-expect-error TS1095
   set isBundleSplittable(isBundleSplittable: boolean): void {
     this.#asset.value.isBundleSplittable = isBundleSplittable;
   }
@@ -277,6 +283,7 @@ export class MutableAsset extends BaseAsset implements IMutableAsset {
     return this.#asset.value.sideEffects;
   }
 
+  // @ts-expect-error TS1095
   set sideEffects(sideEffects: boolean): void {
     this.#asset.value.sideEffects = sideEffects;
   }
@@ -285,6 +292,7 @@ export class MutableAsset extends BaseAsset implements IMutableAsset {
     return this.#asset.value.uniqueKey;
   }
 
+  // @ts-expect-error TS1095
   set uniqueKey(uniqueKey?: string | null): void {
     if (this.#asset.value.uniqueKey != null) {
       throw new Error(
@@ -295,6 +303,7 @@ export class MutableAsset extends BaseAsset implements IMutableAsset {
   }
 
   get symbols(): IMutableAssetSymbols {
+    // @ts-expect-error TS2322
     return new MutableAssetSymbols(this.#asset.options, this.#asset.value);
   }
 

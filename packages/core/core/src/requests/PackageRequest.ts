@@ -46,6 +46,7 @@ export function createPackageRequest(
   };
 }
 
+// @ts-expect-error TS7031
 async function run({input, api, farm}) {
   let {bundleGraphReference, optionsRef, bundle, useMainThread} = input;
   let runPackage = farm.createHandle('runPackage', useMainThread);
@@ -53,6 +54,7 @@ async function run({input, api, farm}) {
   let start = Date.now();
   let {devDeps, invalidDevDeps} = await getDevDepRequests(api);
   let {cachePath} = nullthrows(
+    // @ts-expect-error TS2347
     await api.runRequest<null, ConfigAndCachePath>(
       createAtlaspackConfigRequest(),
     ),
@@ -90,10 +92,12 @@ async function run({input, api, farm}) {
         api.invalidateOnOptionChange(invalidation.key);
         break;
       default:
+        // @ts-expect-error TS2339
         throw new Error(`Unknown invalidation type: ${invalidation.type}`);
     }
   }
 
+  // @ts-expect-error TS2540
   bundleInfo.time = Date.now() - start;
 
   api.storeResult(bundleInfo);

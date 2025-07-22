@@ -8,8 +8,10 @@ module.exports = {
   'xml-stylesheet': (node: ProcessingInstruction, asset: MutableAsset) => {
     const pseudo = new DOMParser().parseFromString(`<ψ ${node.data} />`);
 
+    // @ts-expect-error TS18047
     const input = pseudo.firstChild.getAttribute('href');
     const output = asset.addURLDependency(input, {priority: 'parallel'});
+    // @ts-expect-error TS18047
     pseudo.firstChild.setAttribute('href', output);
 
     node.data = new XMLSerializer().serializeToString(pseudo).slice(2, -2);

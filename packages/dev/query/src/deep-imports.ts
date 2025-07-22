@@ -41,15 +41,20 @@ module.exports = v as {
   AssetGraph: AssetGraph;
   BundleGraph: {
     default: BundleGraph;
+    // @ts-expect-error TS2749
     bundleGraphEdgeTypes: bundleGraphEdgeTypes;
   };
   RequestTracker: {
     default: RequestTracker;
+    // @ts-expect-error TS2749
     readAndDeserializeRequestGraph: readAndDeserializeRequestGraph;
     RequestGraph: RequestGraph;
+    // @ts-expect-error TS2749
     requestGraphEdgeTypes: requestGraphEdgeTypes;
   };
   LMDBLiteCache: LMDBLiteCache;
+  // @ts-expect-error TS2749
   Priority: Priority;
+  // @ts-expect-error TS2749
   fromProjectPathRelative: fromProjectPathRelative;
 };

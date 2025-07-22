@@ -12,7 +12,8 @@
     "erasableSyntaxOnly": true,
     "declarationDir": "${configDir}/lib",
     "outDir": "${configDir}/lib",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "skipLibCheck": true
   },
   "files": [
     "./types/ansi-html-community.d.ts",

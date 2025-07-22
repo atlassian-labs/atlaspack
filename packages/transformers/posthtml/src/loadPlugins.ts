@@ -49,6 +49,7 @@ async function loadPlugin(
   options: unknown | null | undefined = {},
   packageManager: PackageManager,
   shouldAutoInstall: boolean,
+  // @ts-expect-error TS1064
 ): unknown {
   if (typeof pluginArg !== 'string') {
     return pluginArg;

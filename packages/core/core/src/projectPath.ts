@@ -45,6 +45,7 @@ function toProjectPath_(projectRoot: FilePath, p: FilePath): ProjectPath {
   return relative;
 }
 
+// @ts-expect-error TS2322
 export const toProjectPath: ((
   projectRoot: FilePath,
   p: FilePath,
@@ -83,6 +84,7 @@ function fromProjectPath_(
   return projectRoot + projectPath;
 }
 
+// @ts-expect-error TS2322
 export const fromProjectPath: ((
   projectRoot: FilePath,
   p: ProjectPath,

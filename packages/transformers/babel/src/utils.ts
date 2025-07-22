@@ -1,4 +1,5 @@
 import type {Environment} from '@atlaspack/types';
+// @ts-expect-error TS7016
 import type {Targets as BabelTargets} from '@babel/preset-env';
 
 import invariant from 'assert';
@@ -51,6 +52,7 @@ export function enginesToBabelTargets(env: Environment): BabelTargets {
   // versions, not semver ranges, of its targets.
   let targets: Record<string, any> = {};
   for (let engineName of Object.keys(env.engines)) {
+    // @ts-expect-error TS7053
     let engineValue = env.engines[engineName];
 
     // if the engineValue is a string, it might be a semver range. Use the minimum

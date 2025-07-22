@@ -1,9 +1,11 @@
 import assert from 'assert';
 import {Packager} from '@atlaspack/plugin';
+// @ts-expect-error TS7016
 import * as wasmmap from './wasm-sourcemap';
 
 export default new Packager({
   async package({bundle, getSourceMapReference}) {
+    // @ts-expect-error TS2552
     let assets: Array<Asset> = [];
     bundle.traverseAssets((asset) => {
       assets.push(asset);

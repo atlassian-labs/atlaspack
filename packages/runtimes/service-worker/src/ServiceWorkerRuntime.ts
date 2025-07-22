@@ -39,6 +39,7 @@ _register(manifest, version);
 
     return [
       {
+        // @ts-expect-error TS2339
         filePath: asset.filePath,
         code,
         isEntry: true,

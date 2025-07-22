@@ -133,11 +133,11 @@ export const ExportsCondition = {
 export type Dependency = {
   id: string;
   specifier: DependencySpecifier;
-  specifierType: typeof SpecifierType[keyof typeof SpecifierType];
-  priority: typeof Priority[keyof typeof Priority];
+  specifierType: (typeof SpecifierType)[keyof typeof SpecifierType];
+  priority: (typeof Priority)[keyof typeof Priority];
   needsStableName: boolean;
   bundleBehavior:
-    | typeof BundleBehavior[keyof typeof BundleBehavior]
+    | (typeof BundleBehavior)[keyof typeof BundleBehavior]
     | null
     | undefined;
   isEntry: boolean;
@@ -148,7 +148,7 @@ export type Dependency = {
   customPackageConditions?: Array<string>;
   meta: Meta;
   resolverMeta?: Meta | null | undefined;
-  resolverPriority?: typeof Priority[keyof typeof Priority];
+  resolverPriority?: (typeof Priority)[keyof typeof Priority];
   target: Target | null | undefined;
   sourceAssetId: string | null | undefined;
   sourcePath: ProjectPath | null | undefined;
@@ -175,6 +175,7 @@ export const BundleBehavior = {
   isolated: 1,
 } as const;
 
+// @ts-expect-error TS2322
 export const BundleBehaviorNames: Array<keyof typeof BundleBehavior> =
   Object.keys(BundleBehavior);
 
@@ -186,7 +187,7 @@ export type Asset = {
   type: string;
   dependencies: Map<string, Dependency>;
   bundleBehavior:
-    | typeof BundleBehavior[keyof typeof BundleBehavior]
+    | (typeof BundleBehavior)[keyof typeof BundleBehavior]
     | null
     | undefined;
   isBundleSplittable: boolean;
@@ -576,7 +577,7 @@ export type Bundle = {
   mainEntryId: ContentKey | null | undefined;
   needsStableName: boolean | null | undefined;
   bundleBehavior:
-    | typeof BundleBehavior[keyof typeof BundleBehavior]
+    | (typeof BundleBehavior)[keyof typeof BundleBehavior]
     | null
     | undefined;
   isSplittable: boolean | null | undefined;

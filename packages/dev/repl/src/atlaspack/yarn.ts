@@ -3,6 +3,7 @@ import type {MemoryFS} from '@atlaspack/fs';
 import {openDB} from 'idb';
 import {Buffer} from 'buffer';
 
+// @ts-expect-error TS2307
 import {run} from '@mischnic/yarn-browser';
 
 let previousDependencies: REPLOptions['dependencies'] | null | undefined;
@@ -103,6 +104,7 @@ const YARN_LOCKFILE = '/app/yarn.lock';
 // const YARN_CACHE_STALE = /* 7 Days: */ 7 * 24 * 60 * 60 * 1000;
 const Cache = {
   async saveCache(fs: MemoryFS) {
+    // @ts-expect-error TS7006
     const files = (await fs.readdir(YARN_CACHE_DIR)).map((name) => [
       name,
       fs.readFileSync(YARN_CACHE_DIR + '/' + name),

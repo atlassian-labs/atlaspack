@@ -61,8 +61,11 @@ export class IDBCache implements Cache {
 
   getStream(key: string): Readable {
     let dataPromise = this.store
+      // @ts-expect-error TS7006
       .then((s) => s.get(STORE_NAME, key))
+      // @ts-expect-error TS7006
       .then((d) => Buffer.from(d))
+      // @ts-expect-error TS7006
       .catch((e) => e);
     const stream = new Readable({
       async read() {

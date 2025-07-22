@@ -1,6 +1,8 @@
 import os from 'os';
 import {execSync} from 'child_process';
 
+declare const navigator: {hardwareConcurrency: number} | undefined;
+
 const exec = (command: string): string => {
   try {
     let stdout = execSync(command, {
@@ -39,18 +41,21 @@ export function detectRealCores(): number {
   return amount;
 }
 
+// @ts-expect-error TS7034
 let cores;
 export default function getCores(bypassCache: boolean = false): number {
   // Do not re-run commands if we already have the count...
+  // @ts-expect-error TS7005
   if (cores && !bypassCache) {
     return cores;
   }
 
+  // @ts-expect-error TS2339
   if (process.browser) {
-    // eslint-disable-next-line no-undef
-    cores = navigator.hardwareConcurrency / 2;
+    cores = (navigator as any).hardwareConcurrency / 2;
   }
 
+  // @ts-expect-error TS7005
   if (!cores) {
     try {
       cores = detectRealCores();

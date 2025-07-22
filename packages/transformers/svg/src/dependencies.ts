@@ -77,7 +77,9 @@ const OPTIONS = {
 
 export default function collectDependencies(asset: MutableAsset, ast: AST) {
   let isDirty = false;
+  // @ts-expect-error TS7034
   const errors = [];
+  // @ts-expect-error TS2339
   PostHTML().walk.call(ast.program, (node) => {
     // Ideally we'd have location information for specific attributes...
     let getLoc = () =>
@@ -107,6 +109,7 @@ export default function collectDependencies(asset: MutableAsset, ast: AST) {
         continue;
       }
 
+      // @ts-expect-error TS7053
       const elements = ATTRS[attr];
       if (elements && elements.includes(node.tag)) {
         // Check for empty string
@@ -118,6 +121,7 @@ export default function collectDependencies(asset: MutableAsset, ast: AST) {
           });
         }
 
+        // @ts-expect-error TS7053
         let options = OPTIONS[tag]?.[attr];
         if (node.tag === 'script') {
           options = {
@@ -154,6 +158,7 @@ export default function collectDependencies(asset: MutableAsset, ast: AST) {
   });
 
   if (errors.length > 0) {
+    // @ts-expect-error TS7005
     throw errors;
   }
 

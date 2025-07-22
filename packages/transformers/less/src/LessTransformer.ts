@@ -1,6 +1,7 @@
 import path from 'path';
 import {Transformer} from '@atlaspack/plugin';
 import SourceMap from '@parcel/source-map';
+// @ts-expect-error TS7016
 import less from 'less';
 
 import {load} from './loadConfig';
@@ -55,6 +56,7 @@ export default new Transformer({
       let rawMap = JSON.parse(result.map);
       map.addVLQMap({
         ...rawMap,
+        // @ts-expect-error TS7006
         sources: rawMap.sources.map((s) =>
           path.relative(options.projectRoot, s),
         ),
@@ -68,8 +70,10 @@ export default new Transformer({
   },
 }) as Transformer<unknown>;
 
+// @ts-expect-error TS7031
 function urlPlugin({asset}) {
   return {
+    // @ts-expect-error TS2304
     install(less: Less, pluginManager: any) {
       // This is a hack; no such interface exists, even conceptually, in Less.
       type LessNodeWithValue = React.ReactNode & {
@@ -95,6 +99,7 @@ function urlPlugin({asset}) {
   };
 }
 
+// @ts-expect-error TS7031
 function resolvePathPlugin({asset, resolve}) {
   return {
     install(less: any, pluginManager: any) {

@@ -14,11 +14,13 @@ import type {
   HMRServerOptions,
   Request,
   Response,
+  // @ts-expect-error TS2307
 } from './types.js.flow';
 import {setHeaders, SOURCES_ENDPOINT} from './Server';
 
 import nullthrows from 'nullthrows';
 import url from 'url';
+// @ts-expect-error TS7016
 import mime from 'mime-types';
 import WebSocket from 'ws';
 import invariant from 'assert';
@@ -73,6 +75,7 @@ const HMR_ENDPOINT = '/__parcel_hmr';
 const BROADCAST_MAX_ASSETS = 10000;
 
 export default class HMRServer {
+  // @ts-expect-error TS2564
   wss: WebSocket.Server;
   unresolvedError: HMRMessage | null = null;
   options: HMRServerOptions;
@@ -202,6 +205,7 @@ export default class HMRServer {
 
         if (isOnlyReferencedByRuntimes) {
           for (let runtime of runtimes) {
+            // @ts-expect-error TS2345
             changedAssets.add(runtime);
           }
 
@@ -246,6 +250,7 @@ export default class HMRServer {
     } else {
       this.broadcast({
         type: 'update',
+        // @ts-expect-error TS2322
         assets,
       });
     }

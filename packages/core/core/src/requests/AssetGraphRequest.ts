@@ -186,6 +186,7 @@ export class AssetGraphBuilder {
     this.isSingleChangeRebuild =
       api
         .getInvalidSubRequests()
+        // @ts-expect-error TS2367
         .filter((req) => req.requestType === 'asset_request').length === 1;
     this.queue = new PromiseQueue();
 
@@ -239,6 +240,7 @@ export class AssetGraphBuilder {
       for (let childNodeId of this.assetGraph.getNodeIdsConnectedFrom(nodeId)) {
         let child = nullthrows(this.assetGraph.getNode(childNodeId));
         if (
+          // @ts-expect-error TS2339
           (!visited.has(childNodeId) || child.hasDeferred) &&
           this.shouldVisitChild(nodeId, childNodeId)
         ) {
@@ -443,9 +445,12 @@ export class AssetGraphBuilder {
   shouldSkipRequest(nodeId: NodeId): boolean {
     let node = nullthrows(this.assetGraph.getNode(nodeId));
     return (
+      // @ts-expect-error TS2339
       node.complete === true ||
       !typesWithRequests.has(node.type) ||
+      // @ts-expect-error TS2339
       (node.correspondingRequest != null &&
+        // @ts-expect-error TS2339
         this.api.canSkipSubrequest(node.correspondingRequest))
     );
   }
@@ -540,6 +545,7 @@ export class AssetGraphBuilder {
 
   async runAssetRequest(input: AssetGroup) {
     this.assetRequests.push(input);
+    // @ts-expect-error TS2345
     let request = createAssetRequest({
       ...input,
       name: this.name,

@@ -6,6 +6,7 @@ import path from 'path';
 // lives in `/app/packages/runtimes/...` and thus the `config` in the JSTransformer is actually the
 // user's package.json, and hmr-runtime.js is transpiled as a JSX asset.
 const FILENAME =
+  // @ts-expect-error TS2339
   process.env.ATLASPACK_BUILD_REPL && process.browser
     ? '/' + __filename
     : __filename;
@@ -47,6 +48,7 @@ export default new Runtime({
         )};` +
         `var HMR_ENV_HASH = "${bundle.env.id}";` +
         `var HMR_USE_SSE = ${JSON.stringify(
+          // @ts-expect-error TS2339
           !!(process.env.ATLASPACK_BUILD_REPL && process.browser),
         )};` +
         `module.bundle.HMR_BUNDLE_ID = ${JSON.stringify(bundle.id)};` +

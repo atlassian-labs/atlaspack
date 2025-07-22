@@ -1,4 +1,5 @@
 import {useRef, useState} from 'react';
+// @ts-expect-error TS6142
 import {usePromise} from './helper';
 
 export function Preview({clientID}: {clientID: Promise<string>}): any {
@@ -13,15 +14,22 @@ export function Preview({clientID}: {clientID: Promise<string>}): any {
 
   return (
     url && (
+      // @ts-expect-error TS17004
       <div className="preview">
+        {/*
+         // @ts-expect-error TS17004 */}
         <div className="controls">
           {!popover && (
+            // @ts-expect-error TS17004
             <button
               onClick={() => {
                 let w = window.open(url);
                 // window.open(url, '_blank', 'toolbar=0,location=0,menubar=0'),
+                // @ts-expect-error TS2345
                 setPopover(w);
+                // @ts-expect-error TS18047
                 w.onload = function () {
+                  // @ts-expect-error TS2339
                   this.onbeforeunload = function () {
                     setPopover(null);
                   };
@@ -33,8 +41,10 @@ export function Preview({clientID}: {clientID: Promise<string>}): any {
             </button>
           )}
           {popover && (
+            // @ts-expect-error TS17004
             <button
               onClick={() => {
+                // @ts-expect-error TS2339
                 popover.close();
                 setPopover(null);
               }}
@@ -44,8 +54,10 @@ export function Preview({clientID}: {clientID: Promise<string>}): any {
             </button>
           )}
           {!popover && (
+            // @ts-expect-error TS17004
             <button
               className="reload"
+              // @ts-expect-error TS18047
               onClick={() => (iframeRef.current.src = url)}
             >
               Reload
@@ -54,6 +66,7 @@ export function Preview({clientID}: {clientID: Promise<string>}): any {
         </div>
         {!popover && (
           //<Box>
+          // @ts-expect-error TS17004
           <iframe title="Preview" ref={iframeRef} src={url} />
           //</Box>
         )}

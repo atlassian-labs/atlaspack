@@ -11,8 +11,10 @@ import BundleGraph from './BundleGraph';
 import Config from './public/Config';
 import {RequestGraph} from './RequestTracker';
 
+// @ts-expect-error TS7034
 let coreRegistered;
 export function registerCoreWithSerializer() {
+  // @ts-expect-error TS7005
   if (coreRegistered) {
     return;
   }

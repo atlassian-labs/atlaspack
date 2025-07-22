@@ -46,6 +46,7 @@ import {Disposable} from '@atlaspack/events';
 import {init as initSourcemaps} from '@parcel/source-map';
 import {LMDBLiteCache} from '@atlaspack/cache';
 import {
+  // @ts-expect-error TS2305
   init as initRust,
   initializeMonitoring,
   closeMonitoring,
@@ -74,21 +75,29 @@ if (process.env.ATLASPACK_REGISTER_USE_SRC === 'true') {
 }
 
 export default class Atlaspack {
+  // @ts-expect-error TS2564
   #requestTracker: RequestTracker;
+  // @ts-expect-error TS2564
   #config: AtlaspackConfig;
+  // @ts-expect-error TS2564
   #farm: WorkerFarm;
   #initialized: boolean = false;
+  // @ts-expect-error TS2564
   #disposable: Disposable;
   #initialOptions: InitialAtlaspackOptions;
+  // @ts-expect-error TS2564
   #reporterRunner: ReporterRunner;
   #resolvedOptions: AtlaspackOptions | null | undefined = null;
+  // @ts-expect-error TS2564
   #optionsRef: SharedReference;
+  // @ts-expect-error TS2564
   #watchAbortController: AbortController;
   #watchQueue: PromiseQueue<BuildEvent | null | undefined> = new PromiseQueue<
     BuildEvent | null | undefined
   >({
     maxConcurrent: 1,
   });
+  // @ts-expect-error TS2564
   #watchEvents: ValueEmitter<
     | {
         readonly error: Error;
@@ -105,6 +114,7 @@ export default class Atlaspack {
 
   rustAtlaspack: AtlaspackV3 | null | undefined;
 
+  // @ts-expect-error TS2564
   isProfiling: boolean;
 
   constructor(options: InitialAtlaspackOptions) {
@@ -177,13 +187,14 @@ export default class Atlaspack {
 
       rustAtlaspack = await AtlaspackV3.create({
         ...options,
+        // @ts-expect-error TS2353
         corePath: path.join(__dirname, '..'),
         threads,
         entries: Array.isArray(entries)
           ? entries
           : entries == null
-          ? undefined
-          : [entries],
+            ? undefined
+            : [entries],
         env: resolvedOptions.env,
         fs: inputFS && new FileSystemV3(inputFS),
         defaultTargetOptions: resolvedOptions.defaultTargetOptions,
@@ -195,6 +206,7 @@ export default class Atlaspack {
         });
       }
     }
+    // @ts-expect-error TS2454
     this.rustAtlaspack = rustAtlaspack;
 
     let {config} = await loadAtlaspackConfig(resolvedOptions);
@@ -245,6 +257,7 @@ export default class Atlaspack {
     this.#requestTracker = await RequestTracker.init({
       farm: this.#farm,
       options: resolvedOptions,
+      // @ts-expect-error TS2454
       rustAtlaspack,
     });
 
@@ -329,6 +342,7 @@ export default class Atlaspack {
       await this._init();
     }
 
+    // @ts-expect-error TS7034
     let watchEventsDisposable;
     if (cb) {
       watchEventsDisposable = this.#watchEvents.addListener(
@@ -348,8 +362,10 @@ export default class Atlaspack {
 
     this.#watcherCount++;
 
+    // @ts-expect-error TS7034
     let unsubscribePromise;
     const unsubscribe = async () => {
+      // @ts-expect-error TS7005
       if (watchEventsDisposable) {
         watchEventsDisposable.dispose();
       }
@@ -367,10 +383,12 @@ export default class Atlaspack {
 
     return {
       unsubscribe() {
+        // @ts-expect-error TS7005
         if (unsubscribePromise == null) {
           unsubscribePromise = unsubscribe();
         }
 
+        // @ts-expect-error TS7005
         return unsubscribePromise;
       },
     };
@@ -416,6 +434,7 @@ export default class Atlaspack {
       this.#requestedAssetIds.clear();
 
       await dumpGraphToGraphViz(
+        // @ts-expect-error TS2345
         this.#requestTracker.graph,
         'RequestGraph',
         requestGraphEdgeTypes,
@@ -432,7 +451,9 @@ export default class Atlaspack {
         bundleGraph: new BundleGraph<IPackagedBundle>(
           bundleGraph,
           (
+            // @ts-expect-error TS2304
             bundle: Bundle,
+            // @ts-expect-error TS2314
             bundleGraph: BundleGraph,
             options: AtlaspackOptions,
           ) =>
@@ -445,6 +466,7 @@ export default class Atlaspack {
           options,
         ),
         buildTime: Date.now() - startTime,
+        // @ts-expect-error TS7006
         requestBundle: async (bundle) => {
           let bundleNode = bundleGraph._graph.getNodeByContentKey(bundle.id);
           invariant(bundleNode?.type === 'bundle', 'Bundle does not exist');
@@ -475,7 +497,9 @@ export default class Atlaspack {
 
           let results = await this.#watchQueue.run();
           let result = results.filter(Boolean).pop();
+          // @ts-expect-error TS18049
           if (result.type === 'buildFailure') {
+            // @ts-expect-error TS18049
             throw new BuildError(result.diagnostics);
           }
 
@@ -484,8 +508,10 @@ export default class Atlaspack {
         unstable_requestStats: this.#requestTracker.flushStats(),
       };
 
+      // @ts-expect-error TS2345
       await this.#reporterRunner.report(event);
       await this.#requestTracker.runRequest(
+        // @ts-expect-error TS2345
         createValidationRequest({optionsRef: this.#optionsRef, assetRequests}),
         {force: assetRequests.length > 0},
       );
@@ -494,6 +520,7 @@ export default class Atlaspack {
         throw this.#reporterRunner.errors;
       }
 
+      // @ts-expect-error TS2322
       return event;
     } catch (e: any) {
       if (e instanceof BuildAbortError) {
@@ -507,7 +534,9 @@ export default class Atlaspack {
         unstable_requestStats: this.#requestTracker.flushStats(),
       };
 
+      // @ts-expect-error TS2345
       await this.#reporterRunner.report(event);
+      // @ts-expect-error TS2322
       return event;
     } finally {
       if (this.isProfiling) {
@@ -640,8 +669,10 @@ export default class Atlaspack {
     const start = Date.now();
     const result = await this.#requestTracker.runRequest(
       this.rustAtlaspack != null
-        ? createAssetGraphRequestRust(this.rustAtlaspack)(input)
-        : createAssetGraphRequestJS(input),
+        ? // @ts-expect-error TS2345
+          createAssetGraphRequestRust(this.rustAtlaspack)(input)
+        : // @ts-expect-error TS2345
+          createAssetGraphRequestJS(input),
       {force: true},
     );
 
@@ -748,6 +779,7 @@ export default class Atlaspack {
     }
 
     return {
+      // @ts-expect-error TS2322
       filePath: fromProjectPath(projectRoot, res.filePath),
       code: res.code,
       query: res.query,

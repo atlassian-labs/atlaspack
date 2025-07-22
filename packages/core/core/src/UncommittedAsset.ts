@@ -139,6 +139,7 @@ export default class UncommittedAsset {
       await this.options.cache.setStream(
         contentKey,
         content.pipe(
+          // @ts-expect-error TS2554
           new TapStream((buf: Buffer) => {
             hash.writeBuffer(buf);
             size += buf.length;
@@ -175,6 +176,7 @@ export default class UncommittedAsset {
     if (typeof content === 'string' || content instanceof Buffer) {
       return content.toString();
     } else if (content != null) {
+      // @ts-expect-error TS2345
       this.content = bufferStream(content);
       return (await this.content).toString();
     }
@@ -192,6 +194,7 @@ export default class UncommittedAsset {
       return Buffer.from(content);
     }
 
+    // @ts-expect-error TS2345
     this.content = bufferStream(content);
     return this.content;
   }
@@ -318,6 +321,7 @@ export default class UncommittedAsset {
     let {env, symbols, ...rest} = opts;
     let dep = createDependency(this.options.projectRoot, {
       ...rest,
+      // @ts-expect-error TS2322
       symbols,
       env: mergeEnvironments(
         this.options.projectRoot,
@@ -406,6 +410,7 @@ export default class UncommittedAsset {
           time: 0,
           size: this.value.stats.size,
         },
+        // @ts-expect-error TS2322
         symbols: result.symbols,
         sideEffects: result.sideEffects ?? this.value.sideEffects,
         uniqueKey: result.uniqueKey,
@@ -436,6 +441,7 @@ export default class UncommittedAsset {
   }
 
   updateId() {
+    // @ts-expect-error TS2345
     this.value.id = createAssetIdFromOptions(this.value);
   }
 }

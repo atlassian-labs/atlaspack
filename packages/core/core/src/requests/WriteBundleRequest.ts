@@ -82,6 +82,7 @@ export default function createWriteBundleRequest(
   };
 }
 
+// @ts-expect-error TS7031
 async function run({input, options, api}) {
   let {bundleGraph, bundle, info, hashRefToNameHash} = input;
   let {inputFS, outputFS} = options;
@@ -140,12 +141,14 @@ async function run({input, options, api}) {
   }
   let size = 0;
   contentStream = contentStream.pipe(
+    // @ts-expect-error TS2554
     new TapStream((buf: Buffer) => {
       size += buf.length;
     }),
   );
 
   let configResult = nullthrows(
+    // @ts-expect-error TS2347
     await api.runRequest<null, ConfigAndCachePath>(
       createAtlaspackConfigRequest(),
     ),
@@ -204,6 +207,7 @@ async function run({input, options, api}) {
 }
 
 async function writeFiles(
+  // @ts-expect-error TS2503
   inputStream: stream.Readable,
   info: BundleInfo,
   hashRefToNameHash: Map<string, string>,
@@ -227,6 +231,7 @@ async function writeFiles(
   let promises: Array<Promise<undefined>> = [];
   for (let compressor of compressors) {
     promises.push(
+      // @ts-expect-error TS2345
       runCompressor(
         compressor,
         cloneStream(stream),
@@ -245,6 +250,7 @@ async function writeFiles(
 
 async function runCompressor(
   compressor: LoadedPlugin<Compressor>,
+  // @ts-expect-error TS2503
   stream: stream.Readable,
   options: AtlaspackOptions,
   outputFS: FileSystem,
@@ -281,6 +287,7 @@ async function runCompressor(
             ),
             (err) => {
               if (err) reject(err);
+              // @ts-expect-error TS2794
               else resolve();
             },
           ),
@@ -370,11 +377,14 @@ function replaceStream(hashRefToNameHash: Map<string, string>) {
   });
 }
 
+// @ts-expect-error TS2503
 function cloneStream(readable: stream.Readable | stream.Transform) {
   let res = new Readable();
   res._read = () => {};
+  // @ts-expect-error TS7006
   readable.on('data', (chunk) => res.push(chunk));
   readable.on('end', () => res.push(null));
+  // @ts-expect-error TS7006
   readable.on('error', (err) => res.emit('error', err));
   return res;
 }

@@ -14,6 +14,7 @@ const RESOURCES_SCHEMA = {
     properties: {
       src: {
         type: 'string',
+        // @ts-expect-error TS7006
         __validate: (s) => {
           if (s.length === 0) {
             return 'Must not be empty';

@@ -125,7 +125,7 @@ export type FeatureFlags = {
 };
 
 export type ConsistencyCheckFeatureFlagValue =
-  typeof CONSISTENCY_CHECK_VALUES[number];
+  (typeof CONSISTENCY_CHECK_VALUES)[number];
 
 export const CONSISTENCY_CHECK_VALUES: ReadonlyArray<string> = Object.freeze([
   'NEW',

@@ -9,10 +9,12 @@ module.exports = (
     ? {
         // Split up require specifier to outsmart packages/dev/babel-register/babel-plugin-module-translate.js
         loadGraphs: require('@atlaspack/query' + '/lib/index.js').loadGraphs,
-        getBundleStats: require('@atlaspack/reporter-bundle-stats' +
-          '/lib/BundleStatsReporter.js').getBundleStats,
-        PackagedBundleClass: require('@atlaspack/core' +
-          '/lib/public/Bundle.js').PackagedBundle,
+        getBundleStats: require(
+          '@atlaspack/reporter-bundle-stats' + '/lib/BundleStatsReporter.js',
+        ).getBundleStats,
+        PackagedBundleClass: require(
+          '@atlaspack/core' + '/lib/public/Bundle.js',
+        ).PackagedBundle,
       }
     : {
         loadGraphs: require('@atlaspack/query/src/index.js').loadGraphs,
@@ -23,7 +25,9 @@ module.exports = (
           .PackagedBundle,
       }
 ) as {
+  // @ts-expect-error TS2749
   loadGraphs: loadGraphs;
+  // @ts-expect-error TS2749
   getBundleStats: getBundleStats;
   PackagedBundleClass: PackagedBundleClass;
 };

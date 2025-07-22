@@ -20,8 +20,11 @@ const {
   : require('./deep-imports.ts');
 
 export async function loadGraphs(cacheDir: string): Promise<{
+  // @ts-expect-error TS2749
   assetGraph: AssetGraph | null | undefined;
+  // @ts-expect-error TS2749
   bundleGraph: BundleGraph | null | undefined;
+  // @ts-expect-error TS2749
   requestTracker: RequestTracker | null | undefined;
   bundleInfo: Map<ContentKey, PackagedBundleInfo> | null | undefined;
   cacheInfo: Map<string, Array<string | number>> | null | undefined;
@@ -55,6 +58,7 @@ export async function loadGraphs(cacheDir: string): Promise<{
   console.log({requestGraphBlob, bundleGraphBlob, assetGraphBlob});
 
   // Get requestTracker
+  // @ts-expect-error TS7034
   let requestTracker;
   if (requestGraphBlob != null && requestGraphKey != null) {
     try {
@@ -126,9 +130,13 @@ export async function loadGraphs(cacheDir: string): Promise<{
   }
 
   function getSubRequests(id: NodeId) {
-    return requestTracker.graph
-      .getNodeIdsConnectedFrom(id, requestGraphEdgeTypes.subrequest)
-      .map((n) => nullthrows(requestTracker.graph.getNode(n)));
+    return (
+      // @ts-expect-error TS7005
+      requestTracker.graph
+        .getNodeIdsConnectedFrom(id, requestGraphEdgeTypes.subrequest)
+        // @ts-expect-error TS7006
+        .map((n) => nullthrows(requestTracker.graph.getNode(n)))
+    );
   }
 
   // Load graphs by finding the main subrequests and loading their results
@@ -147,6 +155,7 @@ export async function loadGraphs(cacheDir: string): Promise<{
     let buildRequestSubRequests = getSubRequests(buildRequestId);
 
     let writeBundlesRequest = buildRequestSubRequests.find(
+      // @ts-expect-error TS7006
       (n) => n.type === 1 && n.requestType === 11,
     );
     if (writeBundlesRequest != null) {

@@ -139,7 +139,9 @@ export default class AdjacencyList<TEdgeType extends number = NullEdgeType> {
     let nodes;
     let edges;
 
+    // @ts-expect-error TS2339
     if (opts?.nodes) {
+      // @ts-expect-error TS2339
       ({nodes, edges} = opts);
       this.#nodes = new NodeTypeMap(nodes);
       this.#edges = new EdgeTypeMap(edges);
@@ -224,6 +226,7 @@ export default class AdjacencyList<TEdgeType extends number = NullEdgeType> {
   } {
     let edgeTypes = new Set();
     let buckets = new Map();
+    // @ts-expect-error TS2488
     for (let {from, to, type} of this.getAllEdges()) {
       let hash = this.#edges.hash(from, to, type);
       let bucket = buckets.get(hash) || new Set();
@@ -310,6 +313,7 @@ export default class AdjacencyList<TEdgeType extends number = NullEdgeType> {
           this.#edges.from(edge),
           this.#edges.to(edge),
           this.#edges.typeOf(edge),
+          // @ts-expect-error TS2345
           edges,
           nodes,
           this.#params.unloadFactor,
@@ -323,7 +327,9 @@ export default class AdjacencyList<TEdgeType extends number = NullEdgeType> {
     );
 
     // Finally, copy the new data arrays over to this graph.
+    // @ts-expect-error TS2322
     this.#nodes = nodes;
+    // @ts-expect-error TS2322
     this.#edges = edges;
   }
 
@@ -786,6 +792,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
   static #TYPE: 1 = 1;
 
   /** The largest possible capacity. */
+  // @ts-expect-error TS1094
   static get MAX_CAPACITY<TItemType, THash, TAddress extends number>(): number {
     return Math.floor(
       // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Invalid_array_length#what_went_wrong
@@ -824,6 +831,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
 
   /** The address of the first item in the map. */
   get addressableLimit(): number {
+    // @ts-expect-error TS2339
     return this.constructor.HEADER_SIZE + this.capacity;
   }
 
@@ -862,6 +870,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
    * and is expected to be of equal or smaller capacity to this map.
    */
   set(data: Uint32Array): void {
+    // @ts-expect-error TS2339
     let {HEADER_SIZE, ITEM_SIZE} = this.constructor;
     let NEXT = SharedTypeMap.#NEXT;
     let COUNT = SharedTypeMap.#COUNT;
@@ -910,18 +919,21 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
    * get the length of the map, in bytes.
    */
   getLength(capacity: number = this.capacity): number {
+    // @ts-expect-error TS2339
     let {HEADER_SIZE, ITEM_SIZE} = this.constructor;
     return capacity + HEADER_SIZE + ITEM_SIZE * capacity;
   }
 
   /** Get the next available address in the map. */
   getNextAddress(): TAddress {
+    // @ts-expect-error TS2339
     let {HEADER_SIZE, ITEM_SIZE} = this.constructor;
     return (HEADER_SIZE + this.capacity + this.count * ITEM_SIZE) as any;
   }
 
   /** Get the address of the first item with the given hash. */
   head(hash: THash): TAddress | null {
+    // @ts-expect-error TS2339
     let {HEADER_SIZE} = this.constructor;
     return (this.data[HEADER_SIZE + (hash as any)] as any) || null;
   }
@@ -945,6 +957,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
     let COUNT = SharedTypeMap.#COUNT;
     let NEXT = SharedTypeMap.#NEXT;
     let TYPE = SharedTypeMap.#TYPE;
+    // @ts-expect-error TS2339
     let {HEADER_SIZE} = this.constructor;
 
     this.data[item + TYPE] = type as any;
@@ -971,6 +984,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
     let COUNT = SharedTypeMap.#COUNT;
     let NEXT = SharedTypeMap.#NEXT;
     let TYPE = SharedTypeMap.#TYPE;
+    // @ts-expect-error TS2339
     let {HEADER_SIZE} = this.constructor;
 
     this.data[item + TYPE] = 0;
@@ -984,6 +998,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
     let candidate = head;
     while (candidate !== null && candidate !== item) {
       prev = candidate;
+      // @ts-expect-error TS2322
       candidate = this.next(candidate);
     }
     if (prev !== null && next !== null) {
@@ -1002,6 +1017,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
   forEach(cb: (item: TAddress) => void): void {
     let max = this.count;
     let len = this.length;
+    // @ts-expect-error TS2339
     let {ITEM_SIZE} = this.constructor;
     for (
       let i = this.addressableLimit, count = 0;
@@ -1023,6 +1039,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
   *[Symbol.iterator](): Iterator<TAddress> {
     let max = this.count;
     let len = this.length;
+    // @ts-expect-error TS2339
     let {ITEM_SIZE} = this.constructor;
     for (
       let i = this.addressableLimit, count = 0;
@@ -1041,6 +1058,7 @@ export class SharedTypeMap<TItemType, THash, TAddress extends number>
     table: Uint32Array;
     data: Uint32Array;
   } {
+    // @ts-expect-error TS2339
     const {HEADER_SIZE} = this.constructor;
     let min = this.addressableLimit;
 
@@ -1383,6 +1401,7 @@ export class EdgeTypeMap<TEdgeType> extends SharedTypeMap<
 
   /** Get the next available address in the map. */
   getNextAddress(): EdgeAddress {
+    // @ts-expect-error TS2339
     let {ITEM_SIZE} = this.constructor;
     return this.addressableLimit + (this.count + this.deletes) * ITEM_SIZE;
   }
@@ -1568,7 +1587,7 @@ function link<TEdgeType extends number>(
   edges: EdgeTypeMap<TEdgeType | NullEdgeType>,
   nodes: NodeTypeMap<TEdgeType | NullEdgeType>,
   unloadFactor: number = DEFAULT_PARAMS.unloadFactor,
-): typeof LinkResult[keyof typeof LinkResult] {
+): (typeof LinkResult)[keyof typeof LinkResult] {
   let hash = edges.hash(from, to, type);
   let edge = edges.addressOf(hash, from, to, type);
 

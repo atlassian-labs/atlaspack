@@ -47,13 +47,16 @@ export default new Packager({
     });
 
     return {
+      // @ts-expect-error TS2339
       render: posthtmlConfig?.contents?.render,
       evaluateRootConditionalBundles: Boolean(
+        // @ts-expect-error TS2339
         conf?.contents?.evaluateRootConditionalBundles,
       ),
     };
   },
   async package({bundle, bundleGraph, getInlineBundleContents, config}) {
+    // @ts-expect-error TS2552
     let assets: Array<Asset> = [];
     bundle.traverseAssets((asset) => {
       assets.push(asset);
@@ -88,6 +91,7 @@ export default new Packager({
     let {html} = await posthtml([
       (tree: any) =>
         insertBundleReferences(
+          // @ts-expect-error TS2345
           [...conditionalBundles, ...referencedBundles],
           tree,
           conditionalBundles,
@@ -127,6 +131,7 @@ async function getAssetContent(
   getInlineBundleContents: (
     arg1: Bundle,
     arg2: BundleGraph<NamedBundle>,
+    // @ts-expect-error TS2304
   ) => Async<{
     contents: Blob;
   }>,
@@ -158,12 +163,14 @@ async function replaceInlineAssetContent(
   getInlineBundleContents: (
     arg1: Bundle,
     arg2: BundleGraph<NamedBundle>,
+    // @ts-expect-error TS2304
   ) => Async<{
     contents: Blob;
   }>,
   tree: any,
 ) {
   const inlineNodes: Array<any> = [];
+  // @ts-expect-error TS7006
   tree.walk((node) => {
     if (node.attrs && node.attrs['data-parcel-key']) {
       inlineNodes.push(node);
@@ -251,8 +258,10 @@ function insertBundleReferences(
   addBundlesToTree(bundles, tree);
 }
 
+// @ts-expect-error TS7006
 function addBundlesToTree(bundles, tree: any) {
   const main = find(tree, 'head') || find(tree, 'html');
+  // @ts-expect-error TS2339
   const content = main ? main.content || (main.content = []) : tree;
   const index = findBundleInsertIndex(content);
 
@@ -261,6 +270,7 @@ function addBundlesToTree(bundles, tree: any) {
 
 function find(tree: any, tag: string) {
   let res;
+  // @ts-expect-error TS7006
   tree.match({tag}, (node) => {
     res = node;
     return node;

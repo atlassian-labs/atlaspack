@@ -114,7 +114,9 @@ if (!args[2] || !program.commands.some((c) => c.name() === args[2])) {
 
 program.parse(args);
 
+// @ts-expect-error TS7019
 function runCommand(...args) {
+  // @ts-expect-error TS2556
   run(...args).catch(handleUncaughtException);
 }
 
@@ -143,8 +145,10 @@ async function run(
 
   let disposable = new Disposable();
   let unsubscribe: () => Promise<unknown>;
+  // @ts-expect-error TS7034
   let isExiting;
   async function exit(exitCode: number = 0) {
+    // @ts-expect-error TS7005
     if (isExiting) {
       return;
     }
@@ -207,6 +211,7 @@ async function run(
   }
 
   if (isWatching) {
+    // @ts-expect-error TS7006
     ({unsubscribe} = await atlaspack.watch((err) => {
       if (err) {
         throw err;

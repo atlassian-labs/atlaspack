@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import NodeResolver from '../src/Wrapper';
 import path from 'path';
 import assert from 'assert';
@@ -56,7 +58,9 @@ afterEach(() => {
   });
 });
 
+// @ts-nocheck
 describe('resolver', function () {
+  // @ts-expect-error TS7006
   let resolver, prodResolver;
 
   beforeEach(async function () {
@@ -113,12 +117,14 @@ describe('resolver', function () {
     configCache.clear();
   });
 
+  // @ts-expect-error TS7006
   function normalize(res) {
     return {
       filePath: res?.filePath,
       invalidateOnFileCreate:
         res?.invalidateOnFileCreate?.sort(
           (
+            // @ts-expect-error TS2304
             a:
               | FileCreateInvalidation
               | {
@@ -128,6 +134,7 @@ describe('resolver', function () {
               | {
                   filePath: string;
                 },
+            // @ts-expect-error TS2304
             b:
               | FileCreateInvalidation
               | {
@@ -158,15 +165,19 @@ describe('resolver', function () {
     };
   }
 
+  // @ts-expect-error TS7006
   function check(
+    // @ts-expect-error TS2304
     resolved:
       | ResolveResult
       | null
       | undefined
       | {
+          // @ts-expect-error TS2304
           filePath: undefined | FilePath;
           sideEffects: undefined | boolean;
         },
+    // @ts-expect-error TS7006
     expected,
   ) {
     assert.deepEqual(normalize(resolved), normalize(expected));

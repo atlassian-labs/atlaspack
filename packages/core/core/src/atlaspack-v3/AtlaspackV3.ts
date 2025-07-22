@@ -48,9 +48,13 @@ export class AtlaspackV3 {
     napiWorkerPool,
     ...options
   }: AtlaspackV3Options): Promise<AtlaspackV3> {
+    // @ts-expect-error TS2339
     options.logLevel = options.logLevel || 'error';
+    // @ts-expect-error TS2339
     options.defaultTargetOptions = options.defaultTargetOptions || {};
+    // @ts-expect-error TS2339
     options.defaultTargetOptions.engines =
+      // @ts-expect-error TS2339
       options.defaultTargetOptions.engines || {};
 
     let isDefaultNapiWorkerPool = false;
@@ -59,6 +63,7 @@ export class AtlaspackV3 {
       isDefaultNapiWorkerPool = true;
     }
 
+    // @ts-expect-error TS2488
     const [internal, error] = await atlaspackNapiCreate(
       {
         fs,
@@ -87,6 +92,7 @@ export class AtlaspackV3 {
   }
 
   async buildAssetGraph(): Promise<any> {
+    // @ts-expect-error TS2488
     let [graph, error] = await atlaspackNapiBuildAssetGraph(
       this._atlaspack_napi,
     );
@@ -101,6 +107,7 @@ export class AtlaspackV3 {
   }
 
   respondToFsEvents(events: Array<Event>): boolean {
+    // @ts-expect-error TS2322
     return atlaspackNapiRespondToFsEvents(this._atlaspack_napi, events);
   }
 }

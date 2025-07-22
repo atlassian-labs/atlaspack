@@ -18,6 +18,7 @@ export default new Resolver({
       shouldAutoInstall: options.shouldAutoInstall,
       mode: options.mode,
       logger,
+      // @ts-expect-error TS2339
       packageExports: conf?.contents?.packageExports ?? false,
     });
   },

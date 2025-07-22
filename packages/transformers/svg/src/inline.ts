@@ -1,5 +1,6 @@
 import type {AST, MutableAsset, TransformerResult} from '@atlaspack/types';
 import {hashString} from '@atlaspack/rust';
+// @ts-expect-error TS2724
 import type {PostHTMLNode} from 'posthtml';
 
 import PostHTML from 'posthtml';
@@ -20,6 +21,7 @@ export default function extractInlineAssets(
 
   // Extract <style> elements for processing.
   const parts: Array<TransformerResult> = [];
+  // @ts-expect-error TS2339
   PostHTML().walk.call(program, (node: PostHTMLNode) => {
     if (node.tag === 'style' || node.tag === 'script') {
       const value = node.content && node.content.join('');
@@ -35,7 +37,9 @@ export default function extractInlineAssets(
           type = 'css';
         }
       } else if (node.tag === 'script') {
+        // @ts-expect-error TS7053
         if (node.attrs && SCRIPT_TYPES[node.attrs.type]) {
+          // @ts-expect-error TS7053
           type = SCRIPT_TYPES[node.attrs.type];
         } else if (node.attrs) {
           type = node.attrs.type.split('/')[1];
@@ -93,6 +97,7 @@ export default function extractInlineAssets(
         content: value,
         uniqueKey: parcelKey,
         bundleBehavior: 'inline',
+        // @ts-expect-error TS2322
         env,
         meta: {
           type: 'tag',

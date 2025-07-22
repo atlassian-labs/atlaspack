@@ -11,6 +11,7 @@ import {ValueEmitter} from '@atlaspack/events';
 
 import {performance} from 'perf_hooks';
 
+// @ts-expect-error TS7034
 let tid;
 try {
   tid = require('worker_threads').threadId;
@@ -94,6 +95,7 @@ export default class Tracer {
       args = {name: argumentName};
     }
     if (typeof otherArgs === 'object') {
+      // @ts-expect-error TS2454
       if (typeof args == 'undefined') {
         args = {};
       }
@@ -104,9 +106,11 @@ export default class Tracer {
 
     const data: TraceMeasurementData = {
       categories: [category],
+      // @ts-expect-error TS2454
       args,
     };
 
+    // @ts-expect-error TS7005
     return new TraceMeasurement(this, name, pid, tid, data);
   }
 

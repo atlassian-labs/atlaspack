@@ -23,18 +23,30 @@ export default new Transformer({
       packageKey: '@atlaspack/transformer-css',
     });
     let contents = conf?.contents;
+    // @ts-expect-error TS2339
     if (typeof contents?.cssModules?.include === 'string') {
+      // @ts-expect-error TS2339
       contents.cssModules.include = [globToRegex(contents.cssModules.include)];
+      // @ts-expect-error TS2339
     } else if (Array.isArray(contents?.cssModules?.include)) {
-      contents.cssModules.include = contents.cssModules.include.map((include) =>
-        typeof include === 'string' ? globToRegex(include) : include,
+      // @ts-expect-error TS2339
+      contents.cssModules.include = contents.cssModules.include.map(
+        // @ts-expect-error TS7006
+        (include) =>
+          typeof include === 'string' ? globToRegex(include) : include,
       );
     }
+    // @ts-expect-error TS2339
     if (typeof contents?.cssModules?.exclude === 'string') {
+      // @ts-expect-error TS2339
       contents.cssModules.exclude = [globToRegex(contents.cssModules.exclude)];
+      // @ts-expect-error TS2339
     } else if (Array.isArray(contents?.cssModules?.exclude)) {
-      contents.cssModules.exclude = contents.cssModules.exclude.map((exclude) =>
-        typeof exclude === 'string' ? globToRegex(exclude) : exclude,
+      // @ts-expect-error TS2339
+      contents.cssModules.exclude = contents.cssModules.exclude.map(
+        // @ts-expect-error TS7006
+        (exclude) =>
+          typeof exclude === 'string' ? globToRegex(exclude) : exclude,
       );
     }
     return contents;
@@ -56,6 +68,7 @@ export default new Transformer({
     let [code, originalMap] = await Promise.all([
       asset.getBuffer(),
       asset.getMap(),
+      // @ts-expect-error TS2339
       process.browser && native.default(),
     ]);
 
@@ -66,6 +79,7 @@ export default new Transformer({
         res = transformStyleAttribute({
           code,
           analyzeDependencies: true,
+          // @ts-expect-error TS2339
           errorRecovery: config?.errorRecovery || false,
           targets,
         });
@@ -75,6 +89,7 @@ export default new Transformer({
           asset.meta.type !== 'tag' &&
           asset.meta.cssModulesCompiled == null
         ) {
+          // @ts-expect-error TS2339
           let cssModulesConfig = config?.cssModules;
           let isCSSModule = /\.module\./.test(asset.filePath);
           if (asset.isSource) {
@@ -85,6 +100,7 @@ export default new Transformer({
             if (typeof cssModulesConfig === 'boolean') {
               isCSSModule = true;
             } else if (cssModulesConfig?.include) {
+              // @ts-expect-error TS7006
               isCSSModule = cssModulesConfig.include.some((include) =>
                 include.test(projectRootPath),
               );
@@ -123,8 +139,11 @@ export default new Transformer({
                 }
               : false,
           sourceMap: !!asset.env.sourceMap,
+          // @ts-expect-error TS2339
           drafts: config?.drafts,
+          // @ts-expect-error TS2339
           pseudoClasses: config?.pseudoClasses,
+          // @ts-expect-error TS2339
           errorRecovery: config?.errorRecovery || false,
           targets,
         });
@@ -177,7 +196,9 @@ export default new Transformer({
       }
     }
 
+    // @ts-expect-error TS2339
     if (res.map != null) {
+      // @ts-expect-error TS2339
       let vlqMap = JSON.parse(Buffer.from(res.map).toString());
       let map = new SourceMap(options.projectRoot);
       map.addVLQMap(vlqMap);
@@ -196,6 +217,7 @@ export default new Transformer({
           loc = remapSourceLocation(loc, originalMap);
         }
 
+        // @ts-expect-error TS2339
         if (dep.type === 'import' && !res.exports) {
           asset.addDependency({
             specifier: dep.url,
@@ -223,9 +245,12 @@ export default new Transformer({
     let assets = [asset];
     let buffer = Buffer.from(res.code);
 
+    // @ts-expect-error TS2339
     if (res.exports != null) {
+      // @ts-expect-error TS2339
       let exports = res.exports;
       asset.symbols.ensure();
+      // @ts-expect-error TS2345
       asset.symbols.set('default', 'default');
 
       let dependencies = new Map();
@@ -296,6 +321,7 @@ export default new Transformer({
           asset.addDependency({
             specifier: nullthrows(asset.uniqueKey),
             specifierType: 'esm',
+            // @ts-expect-error TS2322
             symbols: new Map([
               [key, {local: exports[key].name, isWeak: false, loc: null}],
             ]),
@@ -308,6 +334,7 @@ export default new Transformer({
       // It's possible that the exports can be ordered differently between builds.
       // Sorting by key is safe as the order is irrelevant but needs to be deterministic.
       for (let key of Object.keys(exports).sort()) {
+        // @ts-expect-error TS2345
         asset.symbols.set(key, exports[key].name);
         add(key);
       }
@@ -319,12 +346,15 @@ export default new Transformer({
             let d = `dep_$${c++}`;
             depjs += `import * as ${d} from ${JSON.stringify(dep.url)};\n`;
             js += `for (let key in ${d}) { if (key in module.exports) module.exports[key] += ' ' + ${d}[key]; else module.exports[key] = ${d}[key]; }\n`;
+            // @ts-expect-error TS2345
             asset.symbols.set('*', '*');
           }
         }
       }
 
+      // @ts-expect-error TS2339
       if (res.references != null) {
+        // @ts-expect-error TS2339
         let references = res.references;
         for (let symbol in references) {
           let reference = references[symbol];
@@ -332,6 +362,7 @@ export default new Transformer({
             specifier: reference.specifier,
             specifierType: 'esm',
             packageConditions: ['style'],
+            // @ts-expect-error TS2322
             symbols: new Map([
               [reference.name, {local: symbol, isWeak: false, loc: null}],
             ]),
@@ -344,6 +375,7 @@ export default new Transformer({
 
       assets.push({
         type: 'js',
+        // @ts-expect-error TS2353
         content: depjs + js,
         dependencies: jsDeps,
         env,

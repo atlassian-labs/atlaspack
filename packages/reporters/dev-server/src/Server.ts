@@ -1,3 +1,4 @@
+// @ts-expect-error TS2307
 import type {DevServerOptions, Request, Response} from './types.js.flow';
 import type {
   BuildSuccessEvent,
@@ -23,12 +24,17 @@ import {
 } from '@atlaspack/utils';
 import serverErrors from './serverErrors';
 import fs from 'fs';
+// @ts-expect-error TS7016
 import ejs from 'ejs';
+// @ts-expect-error TS7016
 import connect from 'connect';
+// @ts-expect-error TS7016
 import serveHandler from 'serve-handler';
 import {createProxyMiddleware} from 'http-proxy-middleware';
 import {URL, URLSearchParams} from 'url';
+// @ts-expect-error TS7016
 import launchEditor from 'launch-editor';
+// @ts-expect-error TS7016
 import fresh from 'fresh';
 
 export function setHeaders(res: Response) {
@@ -375,9 +381,13 @@ export default class Server {
         cleanUrls: false,
       },
       {
+        // @ts-expect-error TS7006
         lstat: (path) => fs.stat(path),
+        // @ts-expect-error TS7006
         realpath: (path) => fs.realpath(path),
+        // @ts-expect-error TS7006
         createReadStream: (path, options) => fs.createReadStream(path, options),
+        // @ts-expect-error TS7006
         readdir: (path) => fs.readdir(path),
       },
     );
@@ -457,6 +467,7 @@ export default class Server {
       }
       for (const [context, options] of Object.entries(cfg)) {
         // each key is interpreted as context, and value as middleware options
+        // @ts-expect-error TS2345
         app.use(createProxyMiddleware(context, options));
       }
     } else {
@@ -493,11 +504,13 @@ export default class Server {
     };
 
     const app = connect();
+    // @ts-expect-error TS7006
     app.use((req, res, next) => {
       setHeaders(res);
       next();
     });
 
+    // @ts-expect-error TS7006
     app.use((req, res, next) => {
       if (req.url === '/__parcel_healthcheck') {
         res.statusCode = 200;
@@ -522,6 +535,7 @@ export default class Server {
     this.stopServer = stop;
 
     server.listen(this.options.port, this.options.host);
+    // @ts-expect-error TS2322
     return new Promise(
       (
         resolve: (result: Promise<Server> | Server) => void,
@@ -529,12 +543,14 @@ export default class Server {
       ) => {
         server.once('error', (err) => {
           this.options.logger.error({
+            // @ts-expect-error TS2345
             message: serverErrors(err, this.options.port),
           } as Diagnostic);
           reject(err);
         });
 
         server.once('listening', () => {
+          // @ts-expect-error TS2345
           resolve(server);
         });
       },

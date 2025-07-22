@@ -1,4 +1,5 @@
 import type {AST, MutableAsset, FilePath} from '@atlaspack/types';
+// @ts-expect-error TS2724
 import type {PostHTMLNode} from 'posthtml';
 import PostHTML from 'posthtml';
 import {parse, stringify} from 'srcset';
@@ -116,6 +117,7 @@ export default function collectDependencies(
     filePath: FilePath;
     loc: PostHTMLNode['location'];
   }> = [];
+  // @ts-expect-error TS2339
   PostHTML().walk.call(ast.program, (node) => {
     let {tag, attrs} = node;
     if (!attrs || seen.has(node)) {
@@ -126,6 +128,7 @@ export default function collectDependencies(
 
     if (tag === 'meta') {
       const isMetaDependency = Object.keys(attrs).some((attr) => {
+        // @ts-expect-error TS7053
         let values = META[attr];
         return (
           values &&
@@ -218,6 +221,7 @@ export default function collectDependencies(
               ? 'isolated'
               : undefined,
           env: {
+            // @ts-expect-error TS2322
             sourceType,
             outputFormat: 'global',
             loc,
@@ -239,7 +243,9 @@ export default function collectDependencies(
             ? 'isolated'
             : undefined,
         env: {
+          // @ts-expect-error TS2322
           sourceType,
+          // @ts-expect-error TS2322
           outputFormat,
           loc,
         },
@@ -261,6 +267,7 @@ export default function collectDependencies(
         continue;
       }
 
+      // @ts-expect-error TS7053
       let elements = ATTRS[attr];
       if (elements && elements.includes(node.tag)) {
         // Check for empty string
@@ -273,6 +280,7 @@ export default function collectDependencies(
         }
 
         let depHandler = getAttrDepHandler(attr);
+        // @ts-expect-error TS7053
         let depOptionsHandler = OPTIONS[node.tag];
         let depOptions =
           typeof depOptionsHandler === 'function'

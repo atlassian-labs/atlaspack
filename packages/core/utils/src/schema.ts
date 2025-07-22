@@ -114,6 +114,7 @@ function validateSchema(
   data: unknown,
 ): Array<SchemaError> {
   function walk(
+    // @ts-expect-error TS7006
     schemaAncestors,
     dataNode: unknown,
     dataPath: string,
@@ -136,9 +137,11 @@ function validateSchema(
           case 'array': {
             if (schemaNode.items) {
               let results: Array<SchemaError | Array<SchemaError>> = [];
+              // @ts-expect-error TS18046
               for (let i = 0; i < dataNode.length; i++) {
                 let result = walk(
                   [schemaNode.items].concat(schemaAncestors),
+                  // @ts-expect-error TS18046
                   dataNode[i],
                   dataPath + '/' + i,
                 );
@@ -153,6 +156,7 @@ function validateSchema(
             break;
           }
           case 'string': {
+            // @ts-expect-error TS2322
             let value: string = dataNode;
             if (schemaNode.enum) {
               if (!schemaNode.enum.includes(value)) {
@@ -181,6 +185,7 @@ function validateSchema(
             break;
           }
           case 'number': {
+            // @ts-expect-error TS2322
             let value: number = dataNode;
             if (schemaNode.enum) {
               if (!schemaNode.enum.includes(value)) {
@@ -200,12 +205,15 @@ function validateSchema(
             let results: Array<Array<SchemaError> | SchemaError> = [];
             let invalidProps;
             if (schemaNode.__forbiddenProperties) {
+              // @ts-expect-error TS2769
               let keys = Object.keys(dataNode);
+              // @ts-expect-error TS7006
               invalidProps = schemaNode.__forbiddenProperties.filter((val) =>
                 keys.includes(val),
               );
               results.push(
                 ...invalidProps.map(
+                  // @ts-expect-error TS7006
                   (k) =>
                     ({
                       type: 'forbidden-prop',
@@ -215,17 +223,20 @@ function validateSchema(
                       expectedProps: Object.keys(schemaNode.properties),
                       actualProps: keys,
                       ancestors: schemaAncestors,
-                    } as SchemaError),
+                    }) as SchemaError,
                 ),
               );
             }
             if (schemaNode.required) {
+              // @ts-expect-error TS2769
               let keys = Object.keys(dataNode);
               let missingKeys = schemaNode.required.filter(
+                // @ts-expect-error TS7006
                 (val) => !keys.includes(val),
               );
               results.push(
                 ...missingKeys.map(
+                  // @ts-expect-error TS7006
                   (k) =>
                     ({
                       type: 'missing-prop',
@@ -235,12 +246,13 @@ function validateSchema(
                       expectedProps: schemaNode.required,
                       actualProps: keys,
                       ancestors: schemaAncestors,
-                    } as SchemaError),
+                    }) as SchemaError,
                 ),
               );
             }
             if (schemaNode.properties) {
               let {additionalProperties = true} = schemaNode;
+              // @ts-expect-error TS2407
               for (let k in dataNode) {
                 if (invalidProps && invalidProps.includes(k)) {
                   // Don't check type on forbidden props
@@ -248,6 +260,7 @@ function validateSchema(
                 } else if (k in schemaNode.properties) {
                   let result = walk(
                     [schemaNode.properties[k]].concat(schemaAncestors),
+                    // @ts-expect-error TS18046
                     dataNode[k],
                     dataPath + '/' + encodeJSONKeyComponent(k),
                   );
@@ -261,6 +274,7 @@ function validateSchema(
                         dataPath: dataPath + '/' + encodeJSONKeyComponent(k),
                         expectedValues: Object.keys(
                           schemaNode.properties,
+                          // @ts-expect-error TS18046
                         ).filter((p) => !(p in dataNode)),
                         actualValue: k,
                         ancestors: schemaAncestors,
@@ -270,6 +284,7 @@ function validateSchema(
                   } else {
                     let result = walk(
                       [additionalProperties].concat(schemaAncestors),
+                      // @ts-expect-error TS18046
                       dataNode[k],
                       dataPath + '/' + encodeJSONKeyComponent(k),
                     );
@@ -319,10 +334,10 @@ function validateSchema(
               ? Array.isArray(a) && !Array.isArray(b)
                 ? -1
                 : !Array.isArray(a) && Array.isArray(b)
-                ? 1
-                : Array.isArray(a) && Array.isArray(b)
-                ? b.length - a.length
-                : 0
+                  ? 1
+                  : Array.isArray(a) && Array.isArray(b)
+                    ? b.length - a.length
+                    : 0
               : b.dataPath.length - a.dataPath.length,
           );
           return results[0];
@@ -333,6 +348,7 @@ function validateSchema(
           dataNode,
           dataPath,
         );
+        // @ts-expect-error TS2339
         if (!result || result.length == 0) {
           return {
             type: 'other',
@@ -362,9 +378,12 @@ export function fuzzySearch(
     .map((exp) => [exp, levenshtein.distance(exp, actualValue)])
     .filter(
       // Remove if more than half of the string would need to be changed
+      // @ts-expect-error TS2769
       ([, d]: [any, any]) => d * 2 < actualValue.length,
     );
+  // @ts-expect-error TS2345
   result.sort(([, a]: [any, any], [, b]: [any, any]) => a - b);
+  // @ts-expect-error TS2345
   return result.map(([v]: [any]) => v);
 }
 
@@ -401,7 +420,12 @@ validateSchema.diagnostic = function (
       'At least one of data.source and data.data must be defined!',
     );
   }
-  let object = data.map ? data.map.data : data.data ?? JSON.parse(data.source);
+  // @ts-expect-error TS2339
+  let object = data.map
+    ? // @ts-expect-error TS2339
+      data.map.data
+    : // @ts-expect-error TS2339
+      (data.data ?? JSON.parse(data.source));
   let errors = validateSchema(schema, object);
   if (errors.length) {
     let keys = errors.map((e) => {
@@ -459,10 +483,13 @@ validateSchema.diagnostic = function (
       return {key: e.dataPath, type: e.dataType, message};
     });
     let map, code;
+    // @ts-expect-error TS2339
     if (data.map) {
+      // @ts-expect-error TS2339
       map = data.map;
       code = data.source;
     } else {
+      // @ts-expect-error TS2339
       map = data.source ?? JSON.stringify(nullthrows(data.data), 0, '\t');
       code = map;
     }
@@ -486,6 +513,7 @@ validateSchema.diagnostic = function (
       diagnostic: {
         message: message,
         origin,
+        // @ts-expect-error TS2322
         codeFrames,
       },
     });

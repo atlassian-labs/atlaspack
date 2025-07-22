@@ -53,6 +53,7 @@ export async function report({
     const bundles = event.bundleGraph.getConditionalBundleMapping();
 
     // Replace bundles with file paths
+    // @ts-expect-error TS2304
     const mapBundles = (bundles: Array<PackagedBundle>) =>
       bundles.map((bundle) => relative(bundle.target.distDir, bundle.filePath));
 
@@ -107,4 +108,5 @@ export async function report({
   }
 }
 
+// @ts-expect-error TS2322
 export default new Reporter({report}) as Reporter;

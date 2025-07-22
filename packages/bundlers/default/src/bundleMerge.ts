@@ -12,6 +12,7 @@ function getBundlesForBundleGroup(
 ): number {
   let count = 0;
   bundleGraph.traverse((nodeId) => {
+    // @ts-expect-error TS2339
     if (bundleGraph.getNode(nodeId)?.bundleBehavior !== 'inline') {
       count++;
     }
@@ -170,6 +171,7 @@ function getPossibleMergeCandidates(
       let a = mergeCandidates[i];
       let b = mergeCandidates[j];
 
+      // @ts-expect-error TS18048
       if (a.bundle.internalizedAssets.equals(b.bundle.internalizedAssets)) {
         uniquePairs.push([a, b]);
       }

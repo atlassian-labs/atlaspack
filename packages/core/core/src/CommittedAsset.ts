@@ -61,6 +61,7 @@ export default class CommittedAsset {
     if (typeof content === 'string' || content instanceof Buffer) {
       return content.toString();
     } else if (content != null) {
+      // @ts-expect-error TS2345
       this.content = bufferStream(content);
       return (await this.content).toString();
     }
@@ -77,7 +78,9 @@ export default class CommittedAsset {
       return Buffer.from(content);
     }
 
+    // @ts-expect-error TS2345
     this.content = bufferStream(content);
+    // @ts-expect-error TS2322
     return this.content;
   }
 
@@ -124,6 +127,7 @@ export default class CommittedAsset {
       })();
     }
 
+    // @ts-expect-error TS2322
     return this.mapBuffer ?? Promise.resolve();
   }
 

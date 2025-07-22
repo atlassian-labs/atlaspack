@@ -2,6 +2,7 @@ import {Optimizer} from '@atlaspack/plugin';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import {blobToString} from '@atlaspack/utils';
 
+// @ts-expect-error TS7016
 import * as svgo from 'svgo';
 
 export default new Optimizer({
@@ -37,6 +38,7 @@ export default new Optimizer({
           },
         },
       ],
+      // @ts-expect-error TS2698
       ...config,
     });
 

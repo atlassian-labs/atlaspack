@@ -28,6 +28,7 @@ export default async function loadEnv(
       const envPath = await resolveConfig(
         fs,
         filePath,
+        // @ts-expect-error TS2322
         [dotenvFile],
         projectRoot,
       );
@@ -39,6 +40,7 @@ export default async function loadEnv(
       // https://github.com/motdotla/dotenv-expand/blob/ddb73d02322fe8522b4e05b73e1c1ad24ea7c14a/lib/main.js#L5
       let output = variableExpansion({
         parsed: dotenv.parse(await fs.readFile(envPath)),
+        // @ts-expect-error TS2353
         ignoreProcessEnv: true,
       });
 

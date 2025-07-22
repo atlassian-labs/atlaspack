@@ -47,6 +47,7 @@ function createClientPipeTransport(
               ) => {
                 server.close((e) => {
                   if (e) rej(e);
+                  // @ts-expect-error TS2794
                   else res();
                 });
               },

@@ -12,8 +12,10 @@ import type {
   AsyncSubscription,
 } from '@parcel/watcher';
 
+// @ts-expect-error TS7016
 import fs from 'graceful-fs';
 import nativeFS from 'fs';
+// @ts-expect-error TS7016
 import ncp from 'ncp';
 import path from 'path';
 import {tmpdir} from 'os';
@@ -62,13 +64,16 @@ export class NodeFS implements FileSystem {
   existsSync: (path: string) => boolean = fs.existsSync;
   readdirSync: any = fs.readdirSync as any;
   findAncestorFile: any = isPnP
-    ? (...args) => searchJS.findAncestorFile(this, ...args)
+    ? // @ts-expect-error TS7019
+      (...args) => searchJS.findAncestorFile(this, ...args)
     : searchNative.findAncestorFile;
   findNodeModule: any = isPnP
-    ? (...args) => searchJS.findNodeModule(this, ...args)
+    ? // @ts-expect-error TS7019
+      (...args) => searchJS.findNodeModule(this, ...args)
     : searchNative.findNodeModule;
   findFirstFile: any = isPnP
-    ? (...args) => searchJS.findFirstFile(this, ...args)
+    ? // @ts-expect-error TS7019
+      (...args) => searchJS.findFirstFile(this, ...args)
     : searchNative.findFirstFile;
 
   watcher(): typeof watcher {
@@ -115,7 +120,9 @@ export class NodeFS implements FileSystem {
       ...options,
       fs: {
         ...fs,
+        // @ts-expect-error TS7006
         close: (fd, cb) => {
+          // @ts-expect-error TS7006
           fs.close(fd, (err) => {
             if (err) {
               cb(err);
@@ -238,6 +245,7 @@ registerSerializableClass(`${packageJSON.version}:NodeFS`, NodeFS);
 
 let writeStreamCalls = 0;
 
+// @ts-expect-error TS7034
 let threadId;
 try {
   ({threadId} = require('worker_threads'));
@@ -245,10 +253,13 @@ try {
   //
 }
 
+// @ts-expect-error TS7034
 let useOsTmpDir;
 
 function shouldUseOsTmpDir(filePath: FilePath) {
+  // @ts-expect-error TS7005
   if (useOsTmpDir != null) {
+    // @ts-expect-error TS7005
     return useOsTmpDir;
   }
   try {
@@ -285,6 +296,7 @@ function getTempFilePath(filePath: FilePath) {
     tmpFilePath +
     '.' +
     process.pid +
+    // @ts-expect-error TS7005
     (threadId != null ? '.' + threadId : '') +
     '.' +
     (writeStreamCalls++).toString(36)

@@ -1,6 +1,7 @@
 import {Reporter} from '@atlaspack/plugin';
 import HMRServer, {getHotAssetContents} from './HMRServer';
 
+// @ts-expect-error TS7034
 let hmrServer;
 let hmrAssetSourceCleanup: (() => void) | undefined;
 
@@ -10,7 +11,9 @@ export default new Reporter({
     switch (event.type) {
       case 'watchStart': {
         if (hmrOptions) {
+          // @ts-expect-error TS2304
           hmrServer = new HMRServer((data: HMRMessage) =>
+            // @ts-expect-error TS7017
             globalThis.ATLASPACK_SERVICE_WORKER('hmrUpdate', data),
           );
         }
@@ -31,11 +34,14 @@ export default new Reporter({
               'utf8',
             );
           }
+          // @ts-expect-error TS7017
           await globalThis.ATLASPACK_SERVICE_WORKER('setFS', files);
 
           hmrAssetSourceCleanup?.();
+          // @ts-expect-error TS7017
           hmrAssetSourceCleanup = globalThis.ATLASPACK_SERVICE_WORKER_REGISTER(
             'hmrAssetSource',
+            // @ts-expect-error TS7006
             async (id) => {
               let bundleGraph = event.bundleGraph;
               let asset = bundleGraph.getAssetById(id);
@@ -46,6 +52,7 @@ export default new Reporter({
             },
           );
 
+          // @ts-expect-error TS7005
           if (hmrServer) {
             await hmrServer?.emitUpdate(event);
           }

@@ -29,8 +29,10 @@ type Babel7TransformOptions = {
 
 export default async function babel7(
   opts: Babel7TransformOptions,
+  // @ts-expect-error TS2355
 ): Promise<AST | null | undefined> {
   let {asset, options, babelOptions, additionalPlugins = [], tracer} = opts;
+  // @ts-expect-error TS2709
   const babelCore: BabelCore = await options.packageManager.require(
     '@babel/core',
     asset.filePath,
@@ -90,6 +92,7 @@ export default async function babel7(
           nodeType,
           path.relative(options.projectRoot, asset.filePath),
         );
+        // @ts-expect-error TS2683
         fn.apply(this, arguments);
         measurement && measurement.end();
       };
@@ -116,6 +119,7 @@ export default async function babel7(
       for (let f of res.externalDependencies) {
         if (!path.isAbsolute(f)) {
           opts.logger.warn({
+            // @ts-expect-error TS2345
             message: md`Ignoring non-absolute Babel external dependency: ${f}`,
             hints: [
               'Please report this to the corresponding Babel plugin and/or to Parcel.',

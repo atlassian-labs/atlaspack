@@ -79,6 +79,7 @@ export default new Validator({
 async function getConfig(
   asset: Asset,
   options: PluginOptions,
+  // @ts-expect-error TS2304
   resolveConfigWithPath: ResolveConfigWithPathFn,
 ): Promise<TSValidatorConfig> {
   let configNames = ['tsconfig.json'];
@@ -201,6 +202,7 @@ function getValidateResultFromDiagnostics(
         }
       }
 
+      // @ts-expect-error TS2345
       validatorResult.errors.push({
         origin: '@atlaspack/validator-typescript',
         message: diagnosticMessage,

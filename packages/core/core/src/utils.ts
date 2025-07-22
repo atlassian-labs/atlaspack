@@ -94,6 +94,7 @@ export function optionsProxy(
         invalidateOnOptionChange(prop);
       }
 
+      // @ts-expect-error TS7053
       return target[prop];
     },
   });
@@ -119,6 +120,7 @@ function proxyPackageManager(
         return require;
       }
 
+      // @ts-expect-error TS7053
       return target[prop];
     },
   });
@@ -126,6 +128,7 @@ function proxyPackageManager(
 
 export function hashFromOption(value: unknown): string {
   if (typeof value === 'object' && value != null) {
+    // @ts-expect-error TS2345
     return hashObject(value);
   }
 
@@ -136,18 +139,25 @@ export function invalidateOnFileCreateToInternal(
   projectRoot: FilePath,
   invalidation: FileCreateInvalidation,
 ): InternalFileCreateInvalidation {
+  // @ts-expect-error TS2339
   if (invalidation.glob != null) {
+    // @ts-expect-error TS2339
     return {glob: toProjectPath(projectRoot, invalidation.glob)};
+    // @ts-expect-error TS2339
   } else if (invalidation.filePath != null) {
     return {
+      // @ts-expect-error TS2339
       filePath: toProjectPath(projectRoot, invalidation.filePath),
     };
   } else {
     invariant(
+      // @ts-expect-error TS2339
       invalidation.aboveFilePath != null && invalidation.fileName != null,
     );
     return {
+      // @ts-expect-error TS2339
       fileName: invalidation.fileName,
+      // @ts-expect-error TS2339
       aboveFilePath: toProjectPath(projectRoot, invalidation.aboveFilePath),
     };
   }
