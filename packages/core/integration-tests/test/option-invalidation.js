@@ -11,7 +11,6 @@ import {
   getParcelOptions,
   assertNoFilePathInCache,
 } from '@atlaspack/test-utils';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {resolveOptions} from '@atlaspack/core';
 import type {
   InitialAtlaspackOptions,
@@ -173,68 +172,7 @@ describe('Option invalidation in cache integration test', () => {
     assert.equal(
       b.changedAssets.size,
       0,
-      `Same option values should NOT invalidate cache.\n\nDEBUG INFO:\n${JSON.stringify(
-        {
-          changedAssetsCount: b.changedAssets.size,
-          changedAssetsList: Array.from(b.changedAssets.keys()),
-          environment: {
-            isCI: !!process.env.CI,
-            platform: process.platform,
-            nodeVersion: process.version,
-            nodeEnv: process.env.NODE_ENV,
-            ciProvider: process.env.GITHUB_ACTIONS
-              ? 'GitHub Actions'
-              : process.env.CI_NAME ||
-                (process.env.CI ? 'Unknown CI' : 'Local'),
-          },
-          featureFlags: {
-            granularOptionInvalidation: getFeatureFlag(
-              'granularOptionInvalidation',
-            ),
-            cachePerformanceImprovements: getFeatureFlag(
-              'cachePerformanceImprovements',
-            ),
-            atlaspackV3: getFeatureFlag('atlaspackV3'),
-          },
-          atlaspackEnv: Object.keys(process.env)
-            .filter(
-              (key) =>
-                key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
-            )
-            .reduce((acc, key) => {
-              acc[key] = process.env[key];
-              return acc;
-            }, {}),
-          optionComparison: {
-            unchangedOptions: {
-              logLevel: {value: 'info'},
-            },
-            expectedBehavior:
-              'Same option values should NOT cause cache invalidation',
-          },
-          filesystem: {
-            cwd: process.cwd(),
-            testDir: inputDir,
-            configExists: require('fs').existsSync(
-              path.join(inputDir, '.parcelrc'),
-            ),
-            indexExists: require('fs').existsSync(
-              path.join(inputDir, 'index.js'),
-            ),
-          },
-          runtime: {
-            memoryUsage: process.memoryUsage(),
-            uptime: process.uptime(),
-            buildTimestamp: Date.now(),
-          },
-          testConfig: {
-            timeout: this.timeout?.() || 'unknown',
-            testFile: __filename,
-          },
-        },
-        null,
-        2,
-      )}`,
+      'Same option values should NOT invalidate cache',
     );
   });
 
@@ -265,68 +203,7 @@ describe('Option invalidation in cache integration test', () => {
     assert.equal(
       b.changedAssets.size,
       0,
-      `logLevel changes should NOT invalidate cache because logLevel is in ignoreOptions set.\n\nDEBUG INFO:\n${JSON.stringify(
-        {
-          changedAssetsCount: b.changedAssets.size,
-          changedAssetsList: Array.from(b.changedAssets.keys()),
-          environment: {
-            isCI: !!process.env.CI,
-            platform: process.platform,
-            nodeVersion: process.version,
-            nodeEnv: process.env.NODE_ENV,
-            ciProvider: process.env.GITHUB_ACTIONS
-              ? 'GitHub Actions'
-              : process.env.CI_NAME ||
-                (process.env.CI ? 'Unknown CI' : 'Local'),
-          },
-          featureFlags: {
-            granularOptionInvalidation: getFeatureFlag(
-              'granularOptionInvalidation',
-            ),
-            cachePerformanceImprovements: getFeatureFlag(
-              'cachePerformanceImprovements',
-            ),
-            atlaspackV3: getFeatureFlag('atlaspackV3'),
-          },
-          atlaspackEnv: Object.keys(process.env)
-            .filter(
-              (key) =>
-                key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
-            )
-            .reduce((acc, key) => {
-              acc[key] = process.env[key];
-              return acc;
-            }, {}),
-          optionComparison: {
-            changedOptions: {
-              logLevel: {from: 'info', to: 'error'},
-            },
-            expectedBehavior:
-              'logLevel changes should be ignored by optionsProxy',
-          },
-          filesystem: {
-            cwd: process.cwd(),
-            testDir: inputDir,
-            configExists: require('fs').existsSync(
-              path.join(inputDir, '.parcelrc'),
-            ),
-            indexExists: require('fs').existsSync(
-              path.join(inputDir, 'index.js'),
-            ),
-          },
-          runtime: {
-            memoryUsage: process.memoryUsage(),
-            uptime: process.uptime(),
-            buildTimestamp: Date.now(),
-          },
-          testConfig: {
-            timeout: this.timeout?.() || 'unknown',
-            testFile: __filename,
-          },
-        },
-        null,
-        2,
-      )}`,
+      'logLevel changes should NOT invalidate cache because logLevel is in ignoreOptions set',
     );
   });
 
@@ -359,71 +236,7 @@ describe('Option invalidation in cache integration test', () => {
 
     assert(
       b.changedAssets.size > 0,
-      `Feature flag changes should cause cache invalidation because featureFlags are tracked options.\n\nDEBUG INFO:\n${JSON.stringify(
-        {
-          changedAssetsCount: b.changedAssets.size,
-          changedAssetsList: Array.from(b.changedAssets.keys()),
-          environment: {
-            isCI: !!process.env.CI,
-            platform: process.platform,
-            nodeVersion: process.version,
-            nodeEnv: process.env.NODE_ENV,
-            ciProvider: process.env.GITHUB_ACTIONS
-              ? 'GitHub Actions'
-              : process.env.CI_NAME ||
-                (process.env.CI ? 'Unknown CI' : 'Local'),
-          },
-          featureFlags: {
-            granularOptionInvalidation: getFeatureFlag(
-              'granularOptionInvalidation',
-            ),
-            cachePerformanceImprovements: getFeatureFlag(
-              'cachePerformanceImprovements',
-            ),
-            atlaspackV3: getFeatureFlag('atlaspackV3'),
-          },
-          atlaspackEnv: Object.keys(process.env)
-            .filter(
-              (key) =>
-                key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
-            )
-            .reduce((acc, key) => {
-              acc[key] = process.env[key];
-              return acc;
-            }, {}),
-          optionComparison: {
-            changedOptions: {
-              featureFlags: {
-                from: {granularOptionInvalidation: false, exampleFeature: true},
-                to: {granularOptionInvalidation: false, exampleFeature: false},
-              },
-            },
-            expectedBehavior:
-              'Feature flag changes should cause cache invalidation',
-          },
-          filesystem: {
-            cwd: process.cwd(),
-            testDir: inputDir,
-            configExists: require('fs').existsSync(
-              path.join(inputDir, '.parcelrc'),
-            ),
-            indexExists: require('fs').existsSync(
-              path.join(inputDir, 'index.js'),
-            ),
-          },
-          runtime: {
-            memoryUsage: process.memoryUsage(),
-            uptime: process.uptime(),
-            buildTimestamp: Date.now(),
-          },
-          testConfig: {
-            timeout: this.timeout?.() || 'unknown',
-            testFile: __filename,
-          },
-        },
-        null,
-        2,
-      )}`,
+      'Feature flag changes should cause cache invalidation because featureFlags are tracked options',
     );
   });
 
@@ -457,71 +270,7 @@ describe('Option invalidation in cache integration test', () => {
     assert.equal(
       b.changedAssets.size,
       0,
-      `Feature flag changes should NOT cause cache invalidation when granularOptionInvalidation is enabled.\n\nDEBUG INFO:\n${JSON.stringify(
-        {
-          changedAssetsCount: b.changedAssets.size,
-          changedAssetsList: Array.from(b.changedAssets.keys()),
-          environment: {
-            isCI: !!process.env.CI,
-            platform: process.platform,
-            nodeVersion: process.version,
-            nodeEnv: process.env.NODE_ENV,
-            ciProvider: process.env.GITHUB_ACTIONS
-              ? 'GitHub Actions'
-              : process.env.CI_NAME ||
-                (process.env.CI ? 'Unknown CI' : 'Local'),
-          },
-          featureFlags: {
-            granularOptionInvalidation: getFeatureFlag(
-              'granularOptionInvalidation',
-            ),
-            cachePerformanceImprovements: getFeatureFlag(
-              'cachePerformanceImprovements',
-            ),
-            atlaspackV3: getFeatureFlag('atlaspackV3'),
-          },
-          atlaspackEnv: Object.keys(process.env)
-            .filter(
-              (key) =>
-                key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
-            )
-            .reduce((acc, key) => {
-              acc[key] = process.env[key];
-              return acc;
-            }, {}),
-          optionComparison: {
-            changedOptions: {
-              featureFlags: {
-                from: {granularOptionInvalidation: true, exampleFeature: true},
-                to: {granularOptionInvalidation: true, exampleFeature: false},
-              },
-            },
-            expectedBehavior:
-              'Feature flag changes should NOT cause cache invalidation when granularOptionInvalidation is enabled',
-          },
-          filesystem: {
-            cwd: process.cwd(),
-            testDir: inputDir,
-            configExists: require('fs').existsSync(
-              path.join(inputDir, '.parcelrc'),
-            ),
-            indexExists: require('fs').existsSync(
-              path.join(inputDir, 'index.js'),
-            ),
-          },
-          runtime: {
-            memoryUsage: process.memoryUsage(),
-            uptime: process.uptime(),
-            buildTimestamp: Date.now(),
-          },
-          testConfig: {
-            timeout: this.timeout?.() || 'unknown',
-            testFile: __filename,
-          },
-        },
-        null,
-        2,
-      )}`,
+      'Feature flag changes should NOT cause cache invalidation when granularOptionInvalidation is enabled',
     );
   });
 
@@ -555,73 +304,7 @@ describe('Option invalidation in cache integration test', () => {
     assert.equal(
       b.changedAssets.size,
       0,
-      `Same feature flag values should NOT cause cache invalidation.\n\nDEBUG INFO:\n${JSON.stringify(
-        {
-          changedAssetsCount: b.changedAssets.size,
-          changedAssetsList: Array.from(b.changedAssets.keys()),
-          environment: {
-            isCI: !!process.env.CI,
-            platform: process.platform,
-            nodeVersion: process.version,
-            nodeEnv: process.env.NODE_ENV,
-            ciProvider: process.env.GITHUB_ACTIONS
-              ? 'GitHub Actions'
-              : process.env.CI_NAME ||
-                (process.env.CI ? 'Unknown CI' : 'Local'),
-          },
-          featureFlags: {
-            granularOptionInvalidation: getFeatureFlag(
-              'granularOptionInvalidation',
-            ),
-            cachePerformanceImprovements: getFeatureFlag(
-              'cachePerformanceImprovements',
-            ),
-            atlaspackV3: getFeatureFlag('atlaspackV3'),
-          },
-          atlaspackEnv: Object.keys(process.env)
-            .filter(
-              (key) =>
-                key.startsWith('ATLASPACK_') || key.startsWith('PARCEL_'),
-            )
-            .reduce((acc, key) => {
-              acc[key] = process.env[key];
-              return acc;
-            }, {}),
-          optionComparison: {
-            unchangedOptions: {
-              featureFlags: {
-                value: {
-                  granularOptionInvalidation: false,
-                  exampleFeature: true,
-                },
-              },
-            },
-            expectedBehavior:
-              'Same feature flag values should NOT cause cache invalidation',
-          },
-          filesystem: {
-            cwd: process.cwd(),
-            testDir: inputDir,
-            configExists: require('fs').existsSync(
-              path.join(inputDir, '.parcelrc'),
-            ),
-            indexExists: require('fs').existsSync(
-              path.join(inputDir, 'index.js'),
-            ),
-          },
-          runtime: {
-            memoryUsage: process.memoryUsage(),
-            uptime: process.uptime(),
-            buildTimestamp: Date.now(),
-          },
-          testConfig: {
-            timeout: this.timeout?.() || 'unknown',
-            testFile: __filename,
-          },
-        },
-        null,
-        2,
-      )}`,
+      'Same feature flag values should NOT cause cache invalidation',
     );
   });
 });
