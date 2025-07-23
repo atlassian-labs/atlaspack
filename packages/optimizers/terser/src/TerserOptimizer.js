@@ -118,4 +118,4 @@ export default (new Optimizer({
 
     return {contents: minifiedContents, map: sourceMap};
   },
-}): Optimizer);
+}): Optimizer<mixed, mixed>);

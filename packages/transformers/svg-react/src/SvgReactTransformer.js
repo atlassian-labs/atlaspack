@@ -33,6 +33,7 @@ export default (new Transformer({
 
     const jsx = await transform(
       code,
+      // $FlowFixMe
       {svgoConfig: config.svgo, ...config.svgr, runtimeConfig: false},
       {
         caller: {
@@ -43,10 +44,11 @@ export default (new Transformer({
       },
     );
 
+    // $FlowFixMe
     asset.type = config.svgr?.typescript ? 'tsx' : 'jsx';
     asset.bundleBehavior = null;
     asset.setCode(jsx);
 
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);

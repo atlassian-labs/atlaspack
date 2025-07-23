@@ -202,4 +202,4 @@ export default (new Resolver({
       }
     }
   },
-}): Resolver);
+}): Resolver<mixed>);

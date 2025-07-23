@@ -73,7 +73,7 @@ export default (new Packager({
       map,
     });
   },
-}): Packager);
+}): Packager<mixed, mixed>);
 
 async function replaceInlineAssetContent(
   bundleGraph: BundleGraph<NamedBundle>,

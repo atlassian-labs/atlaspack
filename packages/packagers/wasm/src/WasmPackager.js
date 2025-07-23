@@ -36,4 +36,4 @@ export default (new Packager({
       return {contents, map};
     }
   },
-}): Packager);
+}): Packager<mixed, mixed>);

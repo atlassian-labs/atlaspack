@@ -33,4 +33,4 @@ export default (new Optimizer({
 
     return {contents: buffer};
   },
-}): Optimizer);
+}): Optimizer<mixed, mixed>);

@@ -216,7 +216,7 @@ export default (new Packager({
       getInlineBundleContents,
     );
   },
-}): Packager);
+}): Packager<mixed, mixed>);
 
 function replaceReferences(
   bundle,

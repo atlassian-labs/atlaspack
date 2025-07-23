@@ -29,6 +29,7 @@ export default (new Transformer({
     let code = await asset.getCode();
     let result;
     try {
+      // $FlowFixMe
       let lessConfig: LessConfig = config ? {...config.config} : {};
 
       if (asset.env.sourceMap) {
@@ -69,7 +70,7 @@ export default (new Transformer({
 
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);
 
 function urlPlugin({asset}) {
   return {

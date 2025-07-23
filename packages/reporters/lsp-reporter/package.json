@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/reporter-lsp",
-  "version": "2.14.18",
+  "version": "2.14.20",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,8 +16,8 @@
   },
   "dependencies": {
     "@atlaspack/lsp-protocol": "2.14.1",
-    "@atlaspack/plugin": "2.14.18",
-    "@atlaspack/utils": "2.17.0",
+    "@atlaspack/plugin": "2.14.20",
+    "@atlaspack/utils": "2.17.2",
     "node-ipc": "^9.1.4",
     "nullthrows": "^1.1.1",
     "ps-node": "^0.1.6",

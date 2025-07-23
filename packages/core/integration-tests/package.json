@@ -13,7 +13,7 @@
     "check-ts": "tsc --noEmit --project ."
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.13.22",
+    "@atlaspack/cli": "2.13.24",
     "@atlaspack/mocha-profiler": "*",
     "@babel/core": "^7.22.11",
     "@babel/plugin-syntax-class-properties": "^7.12.13",

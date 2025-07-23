@@ -329,6 +329,7 @@ export default (new Runtime({
           bundle,
           mainBundle,
           options,
+          // $FlowFixMe
           config.domainSharding,
         ),
       );
@@ -360,6 +361,7 @@ export default (new Runtime({
         )})(${getAbsoluteUrlExpr(
           relativePathExpr,
           bundle,
+          // $FlowFixMe
           config.domainSharding,
         )})`;
         assets.push({
@@ -386,6 +388,7 @@ export default (new Runtime({
         priority: getManifestBundlePriority(
           bundleGraph,
           bundle,
+          // $FlowFixMe
           config.splitManifestThreshold,
         ),
       });
@@ -393,7 +396,7 @@ export default (new Runtime({
 
     return assets;
   },
-}): Runtime);
+}): Runtime<JSRuntimeConfig>);
 
 function getDependencies(bundle: NamedBundle): {|
   asyncDependencies: Array<Dependency>,

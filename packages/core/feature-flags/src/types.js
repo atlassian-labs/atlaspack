@@ -27,10 +27,6 @@ export type FeatureFlags = {|
    */
   conditionalBundlingApi: boolean,
   /**
-   * Run inline requires optimizer in the rayon thread pool.
-   */
-  inlineRequiresMultiThreading: boolean,
-  /**
    * Enable VCS mode. Expected values are:
    * - OLD - default value, return watchman result
    * - NEW_AND_CHECK - Return VCS result but still call watchman
@@ -131,6 +127,11 @@ export type FeatureFlags = {|
    * - Enables option invalidation blocklist to reduce unnecessary cache invalidations
    */
   granularOptionInvalidation: boolean,
+  /**
+   * Enable the new incremental bundling versioning logic which determines whether
+   * a full bundling pass is required based on the AssetGraph's bundlingVersion.
+   */
+  incrementalBundlingVersioning: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;

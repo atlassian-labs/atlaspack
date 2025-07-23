@@ -97,7 +97,10 @@ export default (new Packager({
             options,
             bundleGraph,
             bundle,
+            // $FlowFixMe
+            // $FlowFixMe
             nullthrows(config).parcelRequireName,
+            // $FlowFixMe
             nullthrows(config).unstable_asyncBundleRuntime,
             logger,
           )
@@ -105,6 +108,8 @@ export default (new Packager({
             options,
             bundleGraph,
             bundle,
+            // $FlowFixMe
+            // $FlowFixMe
             nullthrows(config).parcelRequireName,
           );
 
@@ -137,7 +142,7 @@ export default (new Packager({
       map,
     });
   },
-}): Packager);
+}): Packager<mixed, mixed>);
 
 async function getSourceMapSuffix(
   getSourceMapReference: (?SourceMap) => Async<?string>,

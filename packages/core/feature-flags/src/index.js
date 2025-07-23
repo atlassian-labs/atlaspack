@@ -20,7 +20,6 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   importRetry: false,
   fixQuadraticCacheInvalidation: 'OLD',
   conditionalBundlingApi: false,
-  inlineRequiresMultiThreading: false,
   vcsMode: 'OLD',
   loadableSideEffects: false,
   reduceResolverStringCreation: false,
@@ -42,6 +41,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   condbDevFallbackDev: false,
   condbDevFallbackProd: false,
   granularOptionInvalidation: false,
+  incrementalBundlingVersioning: process.env.NODE_ENV === 'test',
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
