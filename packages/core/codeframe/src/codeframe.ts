@@ -1,8 +1,10 @@
 import type {DiagnosticCodeHighlight} from '@atlaspack/diagnostic';
 
 import chalk from 'chalk';
+// @ts-expect-error emphasize is not typed
 import emphasize from 'emphasize';
 import stringWidth from 'string-width';
+// @ts-expect-error slice-ansi is not typed
 import sliceAnsi from 'slice-ansi';
 
 type CodeFramePadding = {

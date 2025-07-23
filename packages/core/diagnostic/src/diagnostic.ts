@@ -205,8 +205,8 @@ export default class ThrowableDiagnostic extends Error {
 
     // Construct error from diagnostics
     super(diagnostics[0].message);
-    this.stack = diagnostics[0].stack ?? super.stack;
-    this.name = diagnostics[0].name ?? super.name;
+    this.stack = diagnostics[0].stack ?? this.stack;
+    this.name = diagnostics[0].name ?? this.name;
 
     this.diagnostics = diagnostics;
   }

@@ -172,14 +172,12 @@ export class LMDBLiteCache implements Cache {
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       return pipeline(
         stream,
-        // @ts-expect-error TS2554
         this.fs.createWriteStream(path.join(this.dir, key)),
       );
     }
 
     const filePath = this.getFileKey(key);
     await this.fs.mkdirp(path.dirname(filePath));
-    // @ts-expect-error TS2554
     return pipeline(stream, this.fs.createWriteStream(filePath));
   }
 

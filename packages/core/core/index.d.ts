@@ -11,6 +11,18 @@ import type WorkerFarm from '@atlaspack/workers';
 
 export declare const ATLASPACK_VERSION: string;
 
+export type Transferable = any;
+
+export class NapiWorkerPool {
+  constructor({workerCount}: {workerCount: number});
+
+  workerCount(): number;
+
+  getWorkers(): Promise<Array<Transferable>>;
+
+  shutdown(): void;
+}
+
 export class Atlaspack {
   constructor(options: InitialAtlaspackOptions);
   run(): Promise<BuildSuccessEvent>;
