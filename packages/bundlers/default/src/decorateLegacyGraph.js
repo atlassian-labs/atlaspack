@@ -1,8 +1,9 @@
 // @flow strict-local
 
-import {ALL_EDGE_TYPES} from '@atlaspack/graph';
+import {ALL_EDGE_TYPES, type NodeId} from '@atlaspack/graph';
 import type {
   Bundle as LegacyBundle,
+  BundleGroup,
   MutableBundleGraph,
 } from '@atlaspack/types';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
@@ -24,10 +25,14 @@ export function decorateLegacyGraph(
     bundleGroupBundleIds,
     manualAssetToBundle,
   } = idealGraph;
+  // This line can be deleted once supportWebpackChunkName feature flag is removed.
+  let entryBundleToBundleGroup: Map<NodeId, BundleGroup> = new Map();
   // Step Create Bundles: Create bundle groups, bundles, and shared bundles and add assets to them
   for (let [bundleNodeId, idealBundle] of idealBundleGraph.nodes.entries()) {
     if (!idealBundle || idealBundle === 'root') continue;
     let entryAsset = idealBundle.mainEntryAsset;
+    // This line can be deleted once supportWebpackChunkName feature flag is removed.
+    let bundleGroup;
     let bundle;
 
     if (bundleGroupBundleIds.has(bundleNodeId)) {
@@ -52,13 +57,18 @@ export function decorateLegacyGraph(
 
       let bundleGroups = new Map();
       for (let dependency of dependencies) {
-        let bundleGroup = bundleGraph.createBundleGroup(
+        bundleGroup = bundleGraph.createBundleGroup(
           dependency,
           idealBundle.target,
         );
         bundleGroups.set(bundleGroup.entryAssetId, bundleGroup);
       }
-      invariant(bundleGroups.size > 0, 'No bundle groups created');
+      if (getFeatureFlag('supportWebpackChunkName')) {
+        invariant(bundleGroups.size > 0, 'No bundle groups created');
+      } else {
+        invariant(bundleGroup);
+        entryBundleToBundleGroup.set(bundleNodeId, bundleGroup);
+      }
 
       bundle = nullthrows(
         bundleGraph.createBundle({
@@ -71,7 +81,12 @@ export function decorateLegacyGraph(
         }),
       );
 
-      for (let bundleGroup of bundleGroups.values()) {
+      if (getFeatureFlag('supportWebpackChunkName')) {
+        for (let bundleGroup of bundleGroups.values()) {
+          bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+        }
+      } else {
+        invariant(bundleGroup);
         bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
       }
     } else if (

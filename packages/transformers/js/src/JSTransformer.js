@@ -479,7 +479,7 @@ export default (new Transformer({
       conditional_bundling: options.featureFlags.conditionalBundlingApi,
       hmr_improvements: options.featureFlags.hmrImprovements,
       computed_properties_fix: options.featureFlags.unusedComputedPropertyFix,
-      magic_comments: true,
+      magic_comments: getFeatureFlag('supportWebpackChunkName'),
       callMacro: asset.isSource
         ? async (err, src, exportName, args, loc) => {
             let mod;
