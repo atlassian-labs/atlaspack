@@ -34,6 +34,7 @@ import BundleGroup, {bundleGroupToInternalBundleGroup} from './BundleGroup';
 import type {ProjectPath} from '../projectPath';
 import {identifierRegistry} from '../IdentifierRegistry';
 import {toEnvironmentRef} from '../EnvironmentManager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 function createBundleId(data: {|
   entryAssetId: string | null,
@@ -229,14 +230,19 @@ export default class MutableBundleGraph
       isPlaceholder = entryAssetNode.requested === false;
     }
 
-    let entryAssetIds = entryAsset
-      ? [
+    let entryAssetIds = [];
+    if (entryAsset) {
+      if (getFeatureFlag('supportWebpackChunkName')) {
+        entryAssetIds = [
           entryAsset.id,
           ...(opts.bundleRoots
             ?.map((asset) => asset.id)
             .filter((id) => id !== entryAsset.id) ?? []),
-        ]
-      : [];
+        ];
+      } else {
+        entryAssetIds = [entryAsset.id];
+      }
+    }
     let bundleNode: BundleNode = {
       type: 'bundle',
       id: bundleId,

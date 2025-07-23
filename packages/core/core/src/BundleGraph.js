@@ -932,9 +932,14 @@ export default class BundleGraph {
       invariant(node.type === 'bundle_group');
       return this.getBundlesInBundleGroup(node.value, {
         includeInline: true,
-      }).find((b) =>
-        b.entryAssetIds.some((id) => id === node.value.entryAssetId),
-      );
+      }).find((b) => {
+        if (getFeatureFlag('supportWebpackChunkName')) {
+          return b.entryAssetIds.some((id) => id === node.value.entryAssetId);
+        } else {
+          let mainEntryId = b.entryAssetIds[b.entryAssetIds.length - 1];
+          return mainEntryId != null && node.value.entryAssetId === mainEntryId;
+        }
+      });
     }
   }
 
