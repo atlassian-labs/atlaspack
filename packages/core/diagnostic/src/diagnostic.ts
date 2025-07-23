@@ -1,6 +1,6 @@
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
-import {parse, Mapping} from '@mischnic/json-sourcemap';
+import {parse, type Mapping} from '@mischnic/json-sourcemap';
 
 /** These positions are 1-based (so <code>1</code> is the first line/column) */
 export type DiagnosticHighlightLocation = {
