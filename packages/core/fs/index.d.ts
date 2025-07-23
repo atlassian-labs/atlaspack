@@ -375,4 +375,5 @@ export class NodeVCSAwareFS implements FileSystem {
     fromDir: FilePath,
   ): FilePath | null | undefined;
   findFirstFile(filePaths: Array<FilePath>): FilePath | null | undefined;
+  setGitRepoPath(gitRepoPath: FilePath | null): void;
 }
