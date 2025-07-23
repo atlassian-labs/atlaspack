@@ -112,6 +112,17 @@ describe('Option invalidation in cache integration test', () => {
     await overlayFS.mkdirp(inputDir);
   });
 
+  afterEach(async () => {
+    // Clean up after each test to help with memory management
+    if (inputDir) {
+      await rimraf(inputDir);
+    }
+    // Force garbage collection if available (following pattern from cache tests)
+    if (global.gc) {
+      global.gc();
+    }
+  });
+
   it('respects blocklist with granularOptionInvalidation=true', async function () {
     await fsFixture(overlayFS, inputDir)`
       .parcelrc:
