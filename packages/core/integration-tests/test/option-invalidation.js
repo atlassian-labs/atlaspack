@@ -113,14 +113,16 @@ describe('Option invalidation in cache integration test', () => {
   });
 
   afterEach(async () => {
-    // Clean up after each test to help with memory management
+    // Aggressive cleanup to help with memory management
     if (inputDir) {
       await rimraf(inputDir);
     }
-    // Force garbage collection if available (following pattern from cache tests)
+    // Force garbage collection if available
     if (global.gc) {
       global.gc();
     }
+    // Clear the directory reference by reassigning
+    inputDir = '';
   });
 
   it('respects blocklist with granularOptionInvalidation=true', async function () {
