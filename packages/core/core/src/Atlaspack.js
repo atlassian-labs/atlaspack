@@ -72,20 +72,20 @@ export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
 export const WORKER_PATH: string = path.join(__dirname, 'worker.js');
 
 export default class Atlaspack {
-  #requestTracker /*: RequestTracker*/;
-  #config /*: AtlaspackConfig*/;
-  #farm /*: WorkerFarm*/;
-  #initialized /*: boolean*/ = false;
-  #disposable /*: Disposable */;
-  #initialOptions /*: InitialAtlaspackOptions */;
-  #reporterRunner /*: ReporterRunner*/;
-  #resolvedOptions /*: ?AtlaspackOptions*/ = null;
-  #optionsRef /*: SharedReference */;
-  #watchAbortController /*: AbortController*/;
-  #watchQueue /*: PromiseQueue<?BuildEvent>*/ = new PromiseQueue<?BuildEvent>({
+  #requestTracker: RequestTracker;
+  #config: AtlaspackConfig;
+  #farm: WorkerFarm;
+  #initialized: boolean = false;
+  #disposable: Disposable;
+  #initialOptions: InitialAtlaspackOptions;
+  #reporterRunner: ReporterRunner;
+  #resolvedOptions: ?AtlaspackOptions = null;
+  #optionsRef: SharedReference;
+  #watchAbortController: AbortController;
+  #watchQueue: PromiseQueue<?BuildEvent> = new PromiseQueue<?BuildEvent>({
     maxConcurrent: 1,
   });
-  #watchEvents /*: ValueEmitter<
+  #watchEvents: ValueEmitter<
     | {|
         +error: Error,
         +buildEvent?: void,
@@ -94,14 +94,14 @@ export default class Atlaspack {
         +buildEvent: BuildEvent,
         +error?: void,
       |},
-  > */;
-  #watcherSubscription /*: ?AsyncSubscription*/;
-  #watcherCount /*: number*/ = 0;
-  #requestedAssetIds /*: Set<string>*/ = new Set();
+  >;
+  #watcherSubscription: ?AsyncSubscription;
+  #watcherCount: number = 0;
+  #requestedAssetIds: Set<string> = new Set();
 
   rustAtlaspack: AtlaspackV3 | null | void;
 
-  isProfiling /*: boolean */;
+  isProfiling: boolean;
 
   constructor(options: InitialAtlaspackOptions) {
     this.#initialOptions = options;
@@ -383,7 +383,6 @@ export default class Atlaspack {
   |} = {
     /*::...null*/
   }): Promise<BuildEvent> {
-    this.#requestTracker.setSignal(signal);
     let options = nullthrows(this.#resolvedOptions);
     try {
       if (options.shouldProfile) {

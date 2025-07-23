@@ -1,4 +1,4 @@
-module.exports = function loadCond(cond, ifTrue, ifFalse) {
+module.exports = function loadCond(cond, ifTrue, ifFalse, fallback) {
   if (typeof globalThis.__MCOND !== 'function') {
     throw new TypeError(
       '"globalThis.__MCOND" was not set to an object. Ensure the function is set to return the key condition for conditional bundles to load with.',
@@ -15,9 +15,17 @@ module.exports = function loadCond(cond, ifTrue, ifFalse) {
     return globalThis.__MCOND(cond) ? ifTrue() : ifFalse();
   } catch (err) {
     console.error(
-      'Conditional dependency was missing. Ensure the server sends the correct scripts to the client ("conditional-manifest.json").',
+      'Conditional dependency was not registered when executing. Ensure the server sends the correct scripts to the client. Falling back to synchronous bundle loading.',
     );
 
-    throw err;
+    if (fallback) {
+      for (const url of fallback.urls) {
+        fallback.loader(url);
+      }
+
+      return globalThis.__MCOND(cond) ? ifTrue() : ifFalse();
+    } else {
+      throw new Error('No fallback urls specified, cannot fallback safely');
+    }
   }
 };

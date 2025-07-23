@@ -35,6 +35,32 @@ jobs:
               octokit: github
             });
 
+  # Check if Rust files changed and rust package is bumped
+  check-rust-changes:
+    name: 🦀 Rust Changeset Check (ferris-atlaspack-bot)
+    runs-on: ubuntu-24.04
+    if: github.ref_name != 'main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate token for Ferris bot
+        id: ferris_token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.FERRIS_APP_ID }}
+          private-key: ${{ secrets.FERRIS_APP_PRIVATE_KEY }}
+      - name: Run Rust Changeset Check (ferris-atlaspack-bot)
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.ferris_token.outputs.token }}
+          script: |
+            const { checkRustChanges } = require('./scripts/check-rust-changes.js');
+            await checkRustChanges({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pullNumber: context.payload.pull_request.number,
+              octokit: github
+            });
+
   # Build and store native packages
   build_native:
     strategy:
@@ -99,7 +125,7 @@ jobs:
       - run: npx flow check
       - run: npx eslint .
       - run: npx prettier --list-different .
-      - run: npx lerna run build-tsc
+      - run: npx lerna run --parallel build-tsc
       - run: npx lerna run build-ts
       - run: npx lerna run check-ts
 

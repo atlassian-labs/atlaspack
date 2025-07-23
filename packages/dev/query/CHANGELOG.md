@@ -1,5 +1,32 @@
 # @atlaspack/query
 
+## 2.14.21
+
+### Patch Changes
+
+- Updated dependencies [[`a0b959f`](https://github.com/atlassian-labs/atlaspack/commit/a0b959fbf61fc3f820ff03c7e8988945fe40a91a)]:
+  - @atlaspack/core@2.19.2
+  - @atlaspack/cache@3.2.15
+  - @atlaspack/graph@3.5.9
+
+## 2.14.20
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/cache@3.2.14
+  - @atlaspack/core@2.19.1
+  - @atlaspack/graph@3.5.8
+
+## 2.14.19
+
+### Patch Changes
+
+- Updated dependencies [[`dbb4072`](https://github.com/atlassian-labs/atlaspack/commit/dbb40721ebeb45990a14ba04e6b44e7f836fb32d), [`c4415a4`](https://github.com/atlassian-labs/atlaspack/commit/c4415a455543d984ca28452c2cb87a794d22497c), [`f0f7c71`](https://github.com/atlassian-labs/atlaspack/commit/f0f7c7168a1d3d18c6f30d2daed611275692b7c5), [`c9631af`](https://github.com/atlassian-labs/atlaspack/commit/c9631aff284b2c1c27e8a52f9da392ce65d666e8), [`18a57cf`](https://github.com/atlassian-labs/atlaspack/commit/18a57cf8a4789b2de5ad8e2676f317a26cc91417), [`3ba1aee`](https://github.com/atlassian-labs/atlaspack/commit/3ba1aee6a794a26b2f0255aaf6d003981532d0ae)]:
+  - @atlaspack/core@2.19.0
+  - @atlaspack/cache@3.2.13
+  - @atlaspack/graph@3.5.7
+
 ## 2.14.18
 
 ### Patch Changes

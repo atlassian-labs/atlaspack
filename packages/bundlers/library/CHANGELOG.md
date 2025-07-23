@@ -1,5 +1,28 @@
 # @atlaspack/bundler-library
 
+## 2.12.22
+
+### Patch Changes
+
+- [#702](https://github.com/atlassian-labs/atlaspack/pull/702) [`daaa768`](https://github.com/atlassian-labs/atlaspack/commit/daaa7688786772d7e3713b71c5bba6b89ec704aa) Thanks [@alshdavid](https://github.com/alshdavid)! - Fixes to Flow types
+
+- Updated dependencies [[`daaa768`](https://github.com/atlassian-labs/atlaspack/commit/daaa7688786772d7e3713b71c5bba6b89ec704aa)]:
+  - @atlaspack/plugin@2.14.20
+
+## 2.12.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.19
+
+## 2.12.20
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.18
+
 ## 2.12.19
 
 ### Patch Changes

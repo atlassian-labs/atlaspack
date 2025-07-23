@@ -49,6 +49,7 @@ export default (new Bundler({
 
       // Create separate bundleGraphs per distDir
       graphs.push(
+        // $FlowFixMe
         createIdealGraph(bundleGraph, config, idealGraphEntries, logger),
       );
 
@@ -64,7 +65,7 @@ export default (new Bundler({
     }
   },
   optimize() {},
-}): Bundler);
+}): Bundler<mixed>);
 
 function getEntryByTarget(
   bundleGraph: MutableBundleGraph,

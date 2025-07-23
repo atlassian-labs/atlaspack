@@ -68,7 +68,7 @@ import type {
   InternalFileCreateInvalidation,
   InternalGlob,
 } from './types';
-import {BuildAbortError, assertSignalNotAborted, hashFromOption} from './utils';
+import {BuildAbortError, hashFromOption} from './utils';
 import {performance} from 'perf_hooks';
 
 import {
@@ -1213,7 +1213,6 @@ export default class RequestTracker {
   farm: WorkerFarm;
   options: AtlaspackOptions;
   rustAtlaspack: ?AtlaspackV3;
-  signal: ?AbortSignal;
   stats: Map<RequestType, number> = new Map();
 
   constructor({
@@ -1231,14 +1230,6 @@ export default class RequestTracker {
     this.farm = farm;
     this.options = options;
     this.rustAtlaspack = rustAtlaspack;
-  }
-
-  // TODO: refactor (abortcontroller should be created by RequestTracker)
-  setSignal(signal?: AbortSignal) {
-    if (getFeatureFlag('fixBuildAbortCorruption')) {
-      return;
-    }
-    this.signal = signal;
   }
 
   startRequest(request: RequestNode): {|
@@ -1420,10 +1411,6 @@ export default class RequestTracker {
         options: this.options,
         rustAtlaspack: this.rustAtlaspack,
       });
-
-      if (!getFeatureFlag('fixBuildAbortCorruption')) {
-        assertSignalNotAborted(this.signal);
-      }
 
       this.completeRequest(requestNodeId);
 

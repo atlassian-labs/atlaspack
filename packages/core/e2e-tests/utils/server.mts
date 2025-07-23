@@ -19,7 +19,7 @@ export type ServeContext = {
 
 export async function serve(directory: string): Promise<ServeContext> {
   const server = createServer((req, res) => {
-    let relPath = !req.url || req.url === '/' ? 'index.html' : req.url;
+    const relPath = !req.url || req.url === '/' ? 'index.html' : req.url;
     const target = path.join(directory, path.normalize(relPath));
     const extname = path.extname(target);
     const contentType = contentTypes[extname] || 'application/octet-stream';
@@ -29,9 +29,14 @@ export async function serve(directory: string): Promise<ServeContext> {
 
   await new Promise<void>((res) => server.listen(0, '127.0.0.1', res));
 
+  const address = server.address();
+  if (!address || typeof address === 'string') {
+    throw new Error('Invalid server type');
+  }
+
   return {
-    address: `http://localhost:${(server.address() as any).port}`,
-    port: (server.address() as any).port,
+    address: `http://localhost:${address.port}`,
+    port: address.port,
     close() {
       server.close();
     },

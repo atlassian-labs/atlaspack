@@ -198,7 +198,7 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
       map,
     };
   },
-}): Optimizer);
+}): Optimizer<mixed, mixed>);
 
 let cache = new Map();
 

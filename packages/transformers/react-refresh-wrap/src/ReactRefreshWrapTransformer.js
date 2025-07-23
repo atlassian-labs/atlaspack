@@ -74,4 +74,4 @@ ${code}
 
     return [asset];
   },
-}): Transformer);
+}): Transformer<mixed>);

@@ -113,7 +113,8 @@ export const transformerOpts: TransformerOpts<void> = {
     };
   },
 };
-export default (new Transformer(transformerOpts): Transformer);
+
+export default (new Transformer(transformerOpts): Transformer<void>);
 
 function findFirstMatch(
   ast: AST,

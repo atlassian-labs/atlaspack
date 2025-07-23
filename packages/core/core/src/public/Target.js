@@ -22,8 +22,8 @@ export function targetToInternalTarget(target: ITarget): TargetValue {
 }
 
 export default class Target implements ITarget {
-  #target /*: TargetValue */;
-  #options /*: AtlaspackOptions */;
+  #target: TargetValue;
+  #options: AtlaspackOptions;
 
   constructor(target: TargetValue, options: AtlaspackOptions): Target {
     let existing = internalTargetToTarget.get(target);

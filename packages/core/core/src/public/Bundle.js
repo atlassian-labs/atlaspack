@@ -68,9 +68,9 @@ export function bundleToInternalBundleGraph(bundle: IBundle): BundleGraph {
 let _private = {};
 
 export class Bundle implements IBundle {
-  #bundle /*: InternalBundle */;
-  #bundleGraph /*: BundleGraph */;
-  #options /*: AtlaspackOptions */;
+  #bundle: InternalBundle;
+  #bundleGraph: BundleGraph;
+  #options: AtlaspackOptions;
 
   // $FlowFixMe
   [inspect]() {
@@ -214,9 +214,9 @@ export class Bundle implements IBundle {
 }
 
 export class NamedBundle extends Bundle implements INamedBundle {
-  #bundle /*: InternalBundle */;
-  #bundleGraph /*: BundleGraph */;
-  #options /*: AtlaspackOptions */;
+  #bundle: InternalBundle;
+  #bundleGraph: BundleGraph;
+  #options: AtlaspackOptions;
 
   constructor(
     sentinel: mixed,
@@ -268,10 +268,10 @@ export class NamedBundle extends Bundle implements INamedBundle {
 }
 
 export class PackagedBundle extends NamedBundle implements IPackagedBundle {
-  #bundle /*: InternalBundle */;
-  #bundleGraph /*: BundleGraph */;
-  #options /*: AtlaspackOptions */;
-  #bundleInfo /*: ?PackagedBundleInfo */;
+  #bundle: InternalBundle;
+  #bundleGraph: BundleGraph;
+  #options: AtlaspackOptions;
+  #bundleInfo: ?PackagedBundleInfo;
 
   constructor(
     sentinel: mixed,

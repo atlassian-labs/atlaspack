@@ -13,7 +13,6 @@ import {
   urlJoin,
 } from '@atlaspack/utils';
 import nullthrows from 'nullthrows';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 // https://www.w3.org/TR/html5/dom.html#metadata-content-2
 const metadataContent = new Set([
@@ -76,24 +75,17 @@ export default (new Packager({
       ),
     ];
 
+    // $FlowFixMe
     let conditionalBundles = config.evaluateRootConditionalBundles
-      ? getFeatureFlag('condbHtmlPackagerChange')
-        ? setDifference(
-            getReferencedConditionalScripts(
-              bundleGraph,
-              referencedBundlesRecursive,
-            ),
-            new Set(referencedBundles),
-          )
-        : setDifference(
-            new Set([
-              ...referencedBundlesRecursive.flatMap((referencedBundle) =>
-                bundleGraph.getReferencedConditionalBundles(referencedBundle),
-              ),
-            ]),
-            new Set(referencedBundles),
-          )
+      ? setDifference(
+          getReferencedConditionalScripts(
+            bundleGraph,
+            referencedBundlesRecursive,
+          ),
+          new Set(referencedBundles),
+        )
       : new Set();
+    // $FlowFixMe
     let renderConfig = config?.render;
 
     let {html} = await posthtml([
@@ -131,7 +123,7 @@ export default (new Packager({
       map,
     });
   },
-}): Packager);
+}): Packager<mixed, mixed>);
 
 async function getAssetContent(
   bundleGraph: BundleGraph<NamedBundle>,

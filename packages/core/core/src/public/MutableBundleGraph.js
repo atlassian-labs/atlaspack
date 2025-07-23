@@ -56,9 +56,9 @@ export default class MutableBundleGraph
   extends BundleGraph<IBundle>
   implements IMutableBundleGraph
 {
-  #graph /*: InternalBundleGraph */;
-  #options /*: AtlaspackOptions */;
-  #bundlePublicIds /*: Set<string> */ = new Set<string>();
+  #graph: InternalBundleGraph;
+  #options: AtlaspackOptions;
+  #bundlePublicIds: Set<string> = new Set<string>();
 
   constructor(graph: InternalBundleGraph, options: AtlaspackOptions) {
     super(graph, Bundle.get.bind(Bundle), options);

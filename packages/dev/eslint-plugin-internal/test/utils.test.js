@@ -22,30 +22,23 @@ describe('utils', () => {
 
   describe('isRequire', () => {
     it('identifies requires', () => {
-      assert.equal(
-        isStaticRequire(
-          getFirstExpression(parse("require('@atlaspack/core')"), opts),
-        ),
-        true,
-      );
+      const parsed = parse("require('@atlaspack/core')", opts);
+      const expr = getFirstExpression(parsed, opts);
+      assert.equal(isStaticRequire(expr), true);
     });
 
     it("doesn't handle dynamic requires", () => {
-      assert.equal(
-        isStaticRequire(getFirstExpression(parse('require(dynamic)'), opts)),
-        false,
-      );
+      const parsed = parse('require(dynamic)', opts);
+      const expr = getFirstExpression(parsed, opts);
+      assert.equal(isStaticRequire(expr), false);
     });
   });
 
   describe('isResolve', () => {
     it('identifies built-in require.resolve', () => {
-      assert.equal(
-        isStaticResolve(
-          getFirstExpression(parse("require.resolve('@atlaspack/core')"), opts),
-        ),
-        true,
-      );
+      const parsed = parse("require.resolve('@atlaspack/core')", opts);
+      const expr = getFirstExpression(parsed, opts);
+      assert.equal(isStaticResolve(expr), true);
     });
   });
 
