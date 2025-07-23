@@ -86,6 +86,16 @@ export type IdealGraph = {|
   manualAssetToBundle: Map<Asset, NodeId>,
 |};
 
+function isNonRootBundle(
+  bundle?: Bundle | 'root' | null,
+  message?: string,
+): Bundle {
+  let existingBundle = nullthrows(bundle, message);
+  invariant(existingBundle !== 'root', "Bundle cannot be 'root'");
+
+  return existingBundle;
+}
+
 export function createIdealGraph(
   assetGraph: MutableBundleGraph,
   config: ResolvedBundlerConfig,
@@ -149,10 +159,6 @@ export function createIdealGraph(
 
   let assets = [];
   let assetToIndex = new Map<Asset, number>();
-
-  function shortFilePath(filePath) {
-    return require('path').relative(config.projectRoot, filePath);
-  }
 
   function makeManualAssetToConfigLookup() {
     let manualAssetToConfig = new Map();
@@ -1151,64 +1157,76 @@ export function createIdealGraph(
     }
   }
 
-  // Merge webpack chunk name bundles
-  let chunkNameBundles = new DefaultMap(() => new Set());
-  for (let [nodeId, node] of dependencyBundleGraph.nodes.entries()) {
-    if (
-      !node ||
-      node.type !== 'dependency' ||
-      node.value.meta.chunkName == null
-    ) {
-      continue;
+  if (getFeatureFlag('supportWebpackChunkName')) {
+    // Merge webpack chunk name bundles
+    let chunkNameBundles = new DefaultMap(() => new Set());
+    for (let [nodeId, node] of dependencyBundleGraph.nodes.entries()) {
+      // meta.chunkName is set by the Rust transformer, so we just need to find
+      // bundles that have a chunkName set.
+      if (
+        !node ||
+        node.type !== 'dependency' ||
+        node.value.meta.chunkName == null
+      ) {
+        continue;
+      }
+
+      let connectedBundles = dependencyBundleGraph.getNodeIdsConnectedFrom(
+        nodeId,
+        dependencyPriorityEdges[node.value.priority],
+      );
+
+      if (connectedBundles.length === 0) {
+        continue;
+      }
+
+      invariant(
+        connectedBundles.length === 1,
+        'Expected webpackChunkName dependency to be connected to no more than one bundle',
+      );
+
+      let bundleId = connectedBundles[0];
+      let bundleNode = dependencyBundleGraph.getNode(bundleId);
+      invariant(bundleNode != null && bundleNode.type === 'bundle');
+
+      // If a bundle does not have a main entry asset, it's somehow just a
+      // shared bundle, and will be merged/deleted by other means.
+      if (bundleNode.value.mainEntryAsset == null) {
+        continue;
+      }
+
+      let bundleNodeId = null;
+      let mainEntryAssetId = bundleNode.value.mainEntryAsset?.id;
+
+      if (mainEntryAssetId != null) {
+        bundleNodeId = bundles.get(mainEntryAssetId);
+      }
+
+      if (bundleNodeId == null) {
+        continue;
+      }
+
+      chunkNameBundles
+        .get(node.value.meta.chunkName)
+        // DependencyBundleGraph uses content keys as node ids, so we can use that
+        // to get the bundle id.
+        .add(bundleNodeId);
     }
 
-    let connectedBundles = dependencyBundleGraph.getNodeIdsConnectedFrom(
-      nodeId,
-      dependencyPriorityEdges[node.value.priority],
-    );
+    for (let [chunkName, bundleIds] of chunkNameBundles.entries()) {
+      // The `[request]` placeholder is not yet supported
+      if (
+        bundleIds.size <= 1 ||
+        (typeof chunkName === 'string' && chunkName.includes('[request]'))
+      ) {
+        continue; // Nothing to merge
+      }
 
-    if (connectedBundles.length === 0) {
-      continue;
-    }
-
-    invariant(connectedBundles.length === 1);
-    let bundleId = connectedBundles[0];
-    let bundleNode = dependencyBundleGraph.getNode(bundleId);
-    invariant(bundleNode != null && bundleNode.type === 'bundle');
-
-    if (bundleNode.value.mainEntryAsset == null) {
-      continue;
-    }
-
-    let bundleNodeId = bundles.get(bundleNode.value.mainEntryAsset.id);
-
-    if (bundleNodeId == null) {
-      continue;
-    }
-
-    chunkNameBundles
-      .get(node.value.meta.chunkName)
-      // DependencyBundleGraph uses content keys as node ids, so we can use that
-      // to get the bundle id.
-      .add(bundleNodeId);
-  }
-
-  let modifiedSourceBundles = new Set();
-  for (let [chunkName, bundleIds] of chunkNameBundles.entries()) {
-    if (bundleIds.size <= 1 || chunkName.includes('[request]')) {
-      continue; // Nothing to merge
-    }
-
-    console.log(
-      'Merging bundles',
-      bundleIds.size,
-      'with chunk name:',
-      chunkName,
-    );
-    // Merge all bundles with the same chunk name into the first one.
-    let [firstBundleId, ...rest] = Array.from(bundleIds);
-    for (let bundleId of rest) {
-      mergeBundles(firstBundleId, bundleId);
+      // Merge all bundles with the same chunk name into the first one.
+      let [firstBundleId, ...rest] = Array.from(bundleIds);
+      for (let bundleId of rest) {
+        mergeBundles(firstBundleId, bundleId);
+      }
     }
   }
 
@@ -1234,6 +1252,7 @@ export function createIdealGraph(
   }
 
   // Step Remove Shared Bundles: Remove shared bundles from bundle groups that hit the parallel request limit.
+  let modifiedSourceBundles = new Set<Bundle>();
 
   if (config.disableSharedBundles === false) {
     for (let bundleGroupId of bundleGraph.getNodeIdsConnectedFrom(rootNodeId)) {
@@ -1339,16 +1358,15 @@ export function createIdealGraph(
   }
 
   function mergeBundles(bundleToKeepId: NodeId, bundleToRemoveId: NodeId) {
-    let bundleToKeep = nullthrows(
+    let bundleToKeep = isNonRootBundle(
       bundleGraph.getNode(bundleToKeepId),
       `Bundle ${bundleToKeepId} not found`,
     );
-    let bundleToRemove = nullthrows(
+    let bundleToRemove = isNonRootBundle(
       bundleGraph.getNode(bundleToRemoveId),
       `Bundle ${bundleToRemoveId} not found`,
     );
     modifiedSourceBundles.add(bundleToKeep);
-    invariant(bundleToKeep !== 'root' && bundleToRemove !== 'root');
     for (let asset of bundleToRemove.assets) {
       bundleToKeep.assets.add(asset);
       bundleToKeep.size += asset.stats.size;
@@ -1363,14 +1381,22 @@ export function createIdealGraph(
     }
 
     // Merge any internalized assets
-    if (bundleToKeep.internalizedAssets != null) {
-      if (bundleToRemove.internalizedAssets != null) {
-        bundleToKeep.internalizedAssets.intersect(
-          bundleToRemove.internalizedAssets,
-        );
-      } else {
-        bundleToKeep.internalizedAssets.clear();
+    if (getFeatureFlag('supportWebpackChunkName')) {
+      if (bundleToKeep.internalizedAssets != null) {
+        if (bundleToRemove.internalizedAssets != null) {
+          bundleToKeep.internalizedAssets.intersect(
+            bundleToRemove.internalizedAssets,
+          );
+        } else {
+          bundleToKeep.internalizedAssets.clear();
+        }
       }
+    } else {
+      invariant(
+        bundleToKeep.internalizedAssets && bundleToRemove.internalizedAssets,
+        'All shared bundles should have internalized assets',
+      );
+      bundleToKeep.internalizedAssets.union(bundleToRemove.internalizedAssets);
     }
 
     // Merge and clean up source bundles
@@ -1383,93 +1409,101 @@ export function createIdealGraph(
       bundleGraph.addEdge(sourceBundleId, bundleToKeepId);
     }
 
-    bundleToKeep.sourceBundles.delete(bundleToRemoveId);
+    if (getFeatureFlag('supportWebpackChunkName')) {
+      bundleToKeep.sourceBundles.delete(bundleToRemoveId);
 
-    for (let bundle of bundleGraph.getNodeIdsConnectedFrom(bundleToRemoveId)) {
-      let bundleNode = nullthrows(bundleGraph.getNode(bundle));
-      if (bundleNode === 'root') {
-        continue;
-      }
-
-      // If the bundle is a source bundle, add it to the bundle to keep
-      if (bundleNode.sourceBundles.has(bundleToRemoveId)) {
-        bundleNode.sourceBundles.add(bundleToKeepId);
-        bundleNode.sourceBundles.delete(bundleToRemoveId);
-        bundleGraph.addEdge(bundleToKeepId, bundle);
-      }
-    }
-
-    // Merge bundle roots
-    for (let bundleRoot of bundleToRemove.bundleRoots) {
-      bundleToKeep.bundleRoots.add(bundleRoot);
-    }
-
-    if (bundleToRemove.mainEntryAsset != null) {
-      invariant(bundleToKeep.mainEntryAsset != null);
-
-      // Merge the bundles in bundle group
-      let bundlesInRemoveBundleGroup =
-        getBundlesForBundleGroup(bundleToRemoveId);
-
-      for (let bundleIdInGroup of bundlesInRemoveBundleGroup) {
-        if (bundleIdInGroup === bundleToRemoveId) {
+      for (let bundle of bundleGraph.getNodeIdsConnectedFrom(
+        bundleToRemoveId,
+      )) {
+        let bundleNode = nullthrows(bundleGraph.getNode(bundle));
+        if (bundleNode === 'root') {
           continue;
         }
-        bundleGraph.addEdge(bundleToKeepId, bundleIdInGroup);
+
+        // If the bundle is a source bundle, add it to the bundle to keep
+        if (bundleNode.sourceBundles.has(bundleToRemoveId)) {
+          bundleNode.sourceBundles.add(bundleToKeepId);
+          bundleNode.sourceBundles.delete(bundleToRemoveId);
+          bundleGraph.addEdge(bundleToKeepId, bundle);
+        }
       }
 
-      // Remove old bundle group
-      bundleGroupBundleIds.delete(bundleToRemoveId);
-
-      // Clean up bundle roots
-      let bundleRootToRemoveNodeId = nullthrows(
-        assetToBundleRootNodeId.get(nullthrows(bundleToRemove.mainEntryAsset)),
-      );
-      let bundleRootToKeepNodeId = nullthrows(
-        assetToBundleRootNodeId.get(nullthrows(bundleToKeep.mainEntryAsset)),
-      );
-
-      for (let nodeId of bundleRootGraph.getNodeIdsConnectedTo(
-        bundleRootToRemoveNodeId,
-      )) {
-        bundleRootGraph.addEdge(nodeId, bundleRootToKeepNodeId);
-        bundleRootGraph.removeEdge(nodeId, bundleRootToRemoveNodeId);
+      // Merge bundle roots
+      for (let bundleRoot of bundleToRemove.bundleRoots) {
+        bundleToKeep.bundleRoots.add(bundleRoot);
       }
 
-      for (let nodeId of bundleRootGraph.getNodeIdsConnectedFrom(
-        bundleRootToRemoveNodeId,
-      )) {
-        bundleRootGraph.addEdge(bundleRootToKeepNodeId, nodeId);
-        bundleRootGraph.removeEdge(bundleRootToRemoveNodeId, nodeId);
-      }
+      if (bundleToRemove.mainEntryAsset != null) {
+        invariant(bundleToKeep.mainEntryAsset != null);
 
-      bundleRoots.set(nullthrows(bundleToRemove.mainEntryAsset), [
-        bundleToKeepId,
-        bundleToKeepId,
-      ]);
+        // Merge the bundles in bundle group
+        let bundlesInRemoveBundleGroup =
+          getBundlesForBundleGroup(bundleToRemoveId);
 
-      // Merge dependency bundle graph
-      for (let dependencyNodeId of dependencyBundleGraph.getNodeIdsConnectedTo(
-        dependencyBundleGraph.getNodeIdByContentKey(String(bundleToRemoveId)),
-        ALL_EDGE_TYPES,
-      )) {
-        let dependencyNode = nullthrows(
-          dependencyBundleGraph.getNode(dependencyNodeId),
+        for (let bundleIdInGroup of bundlesInRemoveBundleGroup) {
+          if (bundleIdInGroup === bundleToRemoveId) {
+            continue;
+          }
+          bundleGraph.addEdge(bundleToKeepId, bundleIdInGroup);
+        }
+
+        // Remove old bundle group
+        bundleGroupBundleIds.delete(bundleToRemoveId);
+
+        // Clean up bundle roots
+        let bundleRootToRemoveNodeId = nullthrows(
+          assetToBundleRootNodeId.get(
+            nullthrows(bundleToRemove.mainEntryAsset),
+          ),
         );
-        invariant(dependencyNode.type === 'dependency');
-
-        // Add dependency to the bundle to keep
-        dependencyBundleGraph.addEdge(
-          dependencyNodeId,
-          dependencyBundleGraph.getNodeIdByContentKey(String(bundleToKeepId)),
-          dependencyPriorityEdges[dependencyNode.value.priority],
+        let bundleRootToKeepNodeId = nullthrows(
+          assetToBundleRootNodeId.get(nullthrows(bundleToKeep.mainEntryAsset)),
         );
-        // Remove dependency from the bundle to remove
-        dependencyBundleGraph.removeEdge(
-          dependencyNodeId,
+
+        for (let nodeId of bundleRootGraph.getNodeIdsConnectedTo(
+          bundleRootToRemoveNodeId,
+        )) {
+          bundleRootGraph.addEdge(nodeId, bundleRootToKeepNodeId);
+          bundleRootGraph.removeEdge(nodeId, bundleRootToRemoveNodeId);
+        }
+
+        for (let nodeId of bundleRootGraph.getNodeIdsConnectedFrom(
+          bundleRootToRemoveNodeId,
+        )) {
+          bundleRootGraph.addEdge(bundleRootToKeepNodeId, nodeId);
+          bundleRootGraph.removeEdge(bundleRootToRemoveNodeId, nodeId);
+        }
+
+        bundleRoots.set(nullthrows(bundleToRemove.mainEntryAsset), [
+          bundleToKeepId,
+          bundleToKeepId,
+        ]);
+
+        // Merge dependency bundle graph
+        for (let dependencyNodeId of dependencyBundleGraph.getNodeIdsConnectedTo(
           dependencyBundleGraph.getNodeIdByContentKey(String(bundleToRemoveId)),
-          dependencyPriorityEdges[dependencyNode.value.priority],
-        );
+          ALL_EDGE_TYPES,
+        )) {
+          let dependencyNode = nullthrows(
+            dependencyBundleGraph.getNode(dependencyNodeId),
+          );
+          invariant(dependencyNode.type === 'dependency');
+
+          // Add dependency to the bundle to keep
+          dependencyBundleGraph.addEdge(
+            dependencyNodeId,
+            dependencyBundleGraph.getNodeIdByContentKey(String(bundleToKeepId)),
+            dependencyPriorityEdges[dependencyNode.value.priority],
+          );
+          // Remove dependency from the bundle to remove
+          dependencyBundleGraph.removeEdge(
+            dependencyNodeId,
+            dependencyBundleGraph.getNodeIdByContentKey(
+              String(bundleToRemoveId),
+            ),
+            dependencyPriorityEdges[dependencyNode.value.priority],
+          );
+        }
       }
     }
 
@@ -1533,7 +1567,10 @@ export function createIdealGraph(
 
       mergedBundles.add(mergeTarget);
     }
-    return mergedBundles;
+
+    if (getFeatureFlag('supportWebpackChunkName')) {
+      return mergedBundles;
+    }
   }
 
   function getBigIntFromContentKey(contentKey) {
