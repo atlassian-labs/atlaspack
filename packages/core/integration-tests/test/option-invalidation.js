@@ -112,18 +112,16 @@ describe('Option invalidation in cache integration test', () => {
     await overlayFS.mkdirp(inputDir);
   });
 
-  afterEach(async () => {
-    // Aggressive cleanup to help with memory management
-    if (inputDir) {
-      await rimraf(inputDir);
-    }
-    // Force garbage collection if available
-    if (global.gc) {
-      global.gc();
-    }
-    // Clear the directory reference by reassigning
-    inputDir = '';
-  });
+  // Remove the afterEach completely - let's see if that's causing the issue
+  // afterEach(async () => {
+  //   if (inputDir) {
+  //     await rimraf(inputDir);
+  //   }
+  //   if (global.gc) {
+  //     global.gc();
+  //   }
+  //   inputDir = '';
+  // });
 
   it('respects blocklist with granularOptionInvalidation=true', async function () {
     await fsFixture(overlayFS, inputDir)`
