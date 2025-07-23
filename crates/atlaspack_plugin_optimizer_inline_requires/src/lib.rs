@@ -330,6 +330,13 @@ impl VisitMut for InlineRequiresReplacer {
     node.visit_mut_children_with(self);
   }
 
+  fn visit_mut_block_stmt(&mut self, node: &mut swc_core::ecma::ast::BlockStmt) {
+    self
+      .identifier_replacement_visitor
+      .visit_mut_block_stmt(node);
+    node.visit_mut_children_with(self);
+  }
+
   fn visit_mut_stmt(&mut self, stmt: &mut Stmt) {
     stmt.visit_mut_children_with(self);
 
@@ -621,6 +628,81 @@ function run() {
     return (0, parcelHelpers.interopDefault((0, require("./App")))).test();
 }
     "#
+    .trim();
+    assert_eq!(output_code.trim(), expected_output);
+  }
+
+  #[test]
+  fn it_reuses_require_statements_in_the_same_scope() {
+    let code = r#"
+const app1 = require("./App");
+const app2 = require("./App2");
+const app3 = require("./App3");
+
+function run() {
+    console.log('Some code');
+    const Component1 = app1.component1;
+    const Component2 = app1.component2;
+    const Component3 = app2.component3;
+    const Component4 = app2.component4;
+    const Component5 = app3.component5;
+}
+        "#
+    .trim();
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    let expected_output = r#"
+function run() {
+    const __inlineRequire = (0, require("./App"));
+    const __inlineRequire1 = (0, require("./App2"));
+    console.log('Some code');
+    const Component1 = __inlineRequire.component1;
+    const Component2 = __inlineRequire.component2;
+    const Component3 = __inlineRequire1.component3;
+    const Component4 = __inlineRequire1.component4;
+    const Component5 = (0, require("./App3")).component5;
+}
+        "#
+    .trim();
+    assert_eq!(output_code.trim(), expected_output);
+  }
+
+  #[test]
+  fn it_reuses_require_statements_in_the_different_scopes() {
+    let code = r#"
+const app = require("./App");
+
+function run1() {
+    console.log('Some code');
+    const Component1 = app.component1;
+    const Component2 = app.component2;
+}
+
+console.log('Some code');
+const Component1 = app.component1;
+const Component2 = app.component2;
+    "#
+    .trim();
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    let expected_output = r#"
+const __inlineRequire = (0, require("./App"));
+function run1() {
+    const __inlineRequire = (0, require("./App"));
+    console.log('Some code');
+    const Component1 = __inlineRequire.component1;
+    const Component2 = __inlineRequire.component2;
+}
+console.log('Some code');
+const Component1 = __inlineRequire.component1;
+const Component2 = __inlineRequire.component2;
+     "#
     .trim();
     assert_eq!(output_code.trim(), expected_output);
   }

@@ -9,6 +9,7 @@ use swc_core::ecma::codegen::text_writer::JsWriter;
 use swc_core::ecma::codegen::Config;
 use swc_core::ecma::parser::lexer::Lexer;
 use swc_core::ecma::parser::Parser;
+use swc_core::ecma::transforms::base::hygiene::hygiene;
 use swc_core::ecma::transforms::base::resolver;
 use swc_core::ecma::visit::{Fold, FoldWith, Visit, VisitMut, VisitMutWith, VisitWith};
 
@@ -156,6 +157,9 @@ fn run_with_transformation<R>(
       };
 
       let result = transform(context, &mut module);
+
+      // Apply hygiene pass to rename private identifiers if there are conflicts
+      module.visit_mut_with(&mut hygiene());
 
       let mut line_pos_buffer = vec![];
       let mut output_buffer = vec![];
