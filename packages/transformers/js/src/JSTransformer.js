@@ -386,7 +386,6 @@ export default (new Transformer({
 
     let env: EnvMap = {};
 
-    // $FlowFixMe
     if (!config?.inlineEnvironment) {
       if (options.env.NODE_ENV != null) {
         env.NODE_ENV = options.env.NODE_ENV;
@@ -398,7 +397,6 @@ export default (new Transformer({
     } else if (Array.isArray(config?.inlineEnvironment)) {
       for (let match of globMatch(
         Object.keys(options.env),
-        // $FlowFixMe
         config.inlineEnvironment,
       )) {
         env[match] = String(options.env[match]);
@@ -413,7 +411,6 @@ export default (new Transformer({
 
     let supportsModuleWorkers =
       asset.env.shouldScopeHoist && asset.env.supports('worker-module', true);
-    // $FlowFixMe
     let isJSX = Boolean(config?.isJSX);
     if (asset.isSource) {
       if (asset.type === 'ts') {
@@ -445,7 +442,6 @@ export default (new Transformer({
       module_id: asset.id,
       project_root: options.projectRoot,
       replace_env: !asset.env.isNode(),
-      // $FlowFixMe
       inline_fs: Boolean(config?.inlineFS) && !asset.env.isNode(),
       insert_node_globals:
         !asset.env.isNode() && asset.env.sourceType !== 'script',
@@ -455,13 +451,9 @@ export default (new Transformer({
       env,
       is_type_script: asset.type === 'ts' || asset.type === 'tsx',
       is_jsx: isJSX,
-      // $FlowFixMe
       jsx_pragma: config?.pragma,
-      // $FlowFixMe
       jsx_pragma_frag: config?.pragmaFrag,
-      // $FlowFixMe
       automatic_jsx_runtime: Boolean(config?.automaticJSXRuntime),
-      // $FlowFixMe
       jsx_import_source: config?.jsxImportSource,
       is_development: options.mode === 'development',
       react_refresh:
@@ -469,11 +461,8 @@ export default (new Transformer({
         !asset.env.isLibrary &&
         !asset.env.isWorker() &&
         !asset.env.isWorklet() &&
-        // $FlowFixMe
         Boolean(config?.reactRefresh),
-      // $FlowFixMe
       decorators: Boolean(config?.decorators),
-      // $FlowFixMe
       use_define_for_class_fields: Boolean(config?.useDefineForClassFields),
       targets,
       source_maps: !!asset.env.sourceMap,
@@ -486,12 +475,10 @@ export default (new Transformer({
       trace_bailouts: options.logLevel === 'verbose',
       is_swc_helpers: /@swc[/\\]helpers/.test(asset.filePath),
       standalone: asset.query.has('standalone'),
-      // $FlowFixMe
       inline_constants: config.inlineConstants,
       conditional_bundling: options.featureFlags.conditionalBundlingApi,
       hmr_improvements: options.featureFlags.hmrImprovements,
       computed_properties_fix: options.featureFlags.unusedComputedPropertyFix,
-      // $FlowFixMe
       magic_comments: true,
       callMacro: asset.isSource
         ? async (err, src, exportName, args, loc) => {
@@ -869,9 +856,11 @@ export default (new Transformer({
             loc: convertLoc(dep.loc),
           };
 
-          let chunkName = magic_comments[dep.specifier];
-          if (chunkName) {
-            meta.chunkName = chunkName;
+          if (getFeatureFlag('supportWebpackChunkName')) {
+            let chunkName = magic_comments[dep.specifier];
+            if (chunkName) {
+              meta.chunkName = chunkName;
+            }
           }
         }
 
@@ -1130,4 +1119,4 @@ export default (new Transformer({
 
     return [asset, ...macroAssets];
   },
-}): Transformer<mixed>);
+}): Transformer);
