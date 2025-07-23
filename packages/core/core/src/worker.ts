@@ -1,5 +1,3 @@
-import {Flow} from 'flow-to-typescript-codemod';
-
 import type {
   Bundle,
   AtlaspackOptions,
@@ -33,6 +31,14 @@ import '@atlaspack/cache'; // register with serializer
 import '@atlaspack/package-manager';
 import '@atlaspack/fs';
 
+// flow-to-ts helpers
+export type SetComplement<A, B extends A> = A extends B ? never : A;
+export type Diff<T extends U, U extends object> = Pick<
+  T,
+  SetComplement<keyof T, keyof U>
+>;
+// /flow-to-ts helpers
+
 // @ts-expect-error TS2339
 if (process.env.ATLASPACK_BUILD_REPL && process.browser) {
   /* eslint-disable import/no-extraneous-dependencies, monorepo/no-internal-import */
@@ -45,7 +51,7 @@ registerCoreWithSerializer();
 
 // Remove the workerApi type from the TransformationOpts and ValidationOpts types:
 // https://github.com/facebook/flow/issues/2835
-type WorkerTransformationOpts = Flow.Diff<
+type WorkerTransformationOpts = Diff<
   TransformationOpts,
   {
     workerApi: unknown;
@@ -55,7 +61,7 @@ type WorkerTransformationOpts = Flow.Diff<
   optionsRef: SharedReference;
   configCachePath: string;
 };
-type WorkerValidationOpts = Flow.Diff<
+type WorkerValidationOpts = Diff<
   // @ts-expect-error TS2344
   ValidationOpts,
   {

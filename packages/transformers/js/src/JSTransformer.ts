@@ -465,6 +465,7 @@ export default new Transformer({
       is_constant_module,
       // @ts-expect-error TS2339
       conditions,
+      // @ts-expect-error TS2339
       magic_comments,
     } = await (transformAsync || transform)({
       filename: asset.filePath,

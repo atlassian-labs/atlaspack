@@ -5,8 +5,7 @@ import type {FileSystem} from '@atlaspack/fs';
 import _isGlob from 'is-glob';
 // @ts-expect-error TS2305
 import fastGlob, {FastGlobOptions} from 'fast-glob';
-// @ts-expect-error TS7016
-import micromatch, {isMatch, makeRe, Options} from 'micromatch';
+import micromatch, {isMatch, makeRe, type Options} from 'micromatch';
 import {normalizeSeparators} from './path';
 
 export function isGlob(p: FilePath): any {

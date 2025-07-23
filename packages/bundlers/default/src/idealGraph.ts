@@ -1261,6 +1261,7 @@ export function createIdealGraph(
       // Merge all bundles with the same chunk name into the first one.
       let [firstBundleId, ...rest] = Array.from(bundleIds);
       for (let bundleId of rest) {
+        // @ts-expect-error TS2345
         mergeBundles(firstBundleId, bundleId);
       }
     }
@@ -1624,9 +1625,7 @@ export function createIdealGraph(
     let assetOrderMap = new Map(assets.map((a, index) => [a, index]));
 
     for (let bundle of modifiedSourceBundles) {
-      // @ts-expect-error TS18046
       bundle.assets = new Set(
-        // @ts-expect-error TS18046
         [...bundle.assets].sort((a, b) => {
           let aIndex = nullthrows(assetOrderMap.get(a));
           let bIndex = nullthrows(assetOrderMap.get(b));

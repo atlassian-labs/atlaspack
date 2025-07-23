@@ -1,6 +1,4 @@
 /* eslint-disable no-restricted-globals */
-// @flow strict
-
 import nullthrows from 'nullthrows';
 
 let isSafari =
@@ -11,7 +9,12 @@ type ClientId = string;
 type ParentId = string;
 
 let sendToIFrame = new Map<ClientId, (data: string) => void>();
-let pages = new Map<ParentId, {|[string]: string|}>();
+let pages = new Map<
+  ParentId,
+  {
+    [key: string]: string;
+  }
+>();
 let parentPorts = new Map<ParentId, MessagePort>();
 let parentToIframe = new Map<ParentId, ClientId>();
 let iframeToParent = new Map<ClientId, ParentId>();
@@ -23,7 +26,7 @@ global.iframeToParent = iframeToParent;
 const SECURITY_HEADERS = {
   'Cross-Origin-Embedder-Policy': 'require-corp',
   'Cross-Origin-Opener-Policy': 'same-origin',
-};
+} as const;
 
 const MIME = new Map([
   ['html', 'text/html'],
@@ -94,7 +97,6 @@ self.addEventListener('message', (evt) => {
     evt.source.postMessage({id});
   } else {
     let wrapper = new Event(evt.type);
-    // $FlowFixMe
     wrapper.data = evt.data;
     messageProxy.dispatchEvent(wrapper);
   }
@@ -191,11 +193,11 @@ self.addEventListener('fetch', (evt) => {
   }
 });
 
-function extname(filename) {
+function extname(filename: string) {
   return filename.slice(filename.lastIndexOf('.') + 1);
 }
 
-function removeNonExistingKeys(existing, map) {
+function removeNonExistingKeys(existing: Set<ClientId | ParentId>, map) {
   for (let id of map.keys()) {
     if (!existing.has(id)) {
       map.delete(id);
@@ -213,14 +215,17 @@ setInterval(async () => {
   removeNonExistingKeys(existingClients, iframeToParent);
 }, 20000);
 
-function sendMsg(target, type, data, transfer) {
+function sendMsg(
+  target: MessagePort,
+  type: string,
+  data: string,
+  transfer: undefined,
+) {
   let id = uuidv4();
-  return new Promise((res) => {
+  return new Promise((res: (result: Promise<never>) => void) => {
     let handler = (evt: MessageEvent) => {
-      // $FlowFixMe
       if (evt.data.id === id) {
         messageProxy.removeEventListener('message', handler);
-        // $FlowFixMe
         res(evt.data.data);
       }
     };
@@ -231,11 +236,9 @@ function sendMsg(target, type, data, transfer) {
 function uuidv4() {
   return (String(1e7) + -1e3 + -4e3 + -8e3 + -1e11).replace(
     /[018]/g,
-    // $FlowFixMe
     (c: number) =>
       (
         c ^
-        // $FlowFixMe
         (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
       ).toString(16),
   );

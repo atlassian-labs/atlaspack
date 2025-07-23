@@ -1,4 +1,3 @@
-import {Flow} from 'flow-to-typescript-codemod';
 import type {
   Asset,
   BundleGraph,
@@ -22,6 +21,7 @@ import nullthrows from 'nullthrows';
 import url from 'url';
 // @ts-expect-error TS7016
 import mime from 'mime-types';
+// @ts-expect-error TS7016
 import WebSocket from 'ws';
 import invariant from 'assert';
 import {
@@ -30,6 +30,14 @@ import {
   prettyDiagnostic,
   PromiseQueue,
 } from '@atlaspack/utils';
+
+// flow-to-ts helpers
+export type SetComplement<A, B extends A> = A extends B ? never : A;
+export type Diff<T extends U, U extends object> = Pick<
+  T,
+  SetComplement<keyof T, keyof U>
+>;
+// /flow-to-ts helpers
 
 export type HMRAsset = {
   id: string;
@@ -59,7 +67,7 @@ export type HMRMessage =
         ansi: Array<AnsiDiagnosticResult>;
         html: Array<
           Partial<
-            Flow.Diff<
+            Diff<
               AnsiDiagnosticResult,
               {
                 codeframe: string;
@@ -75,7 +83,6 @@ const HMR_ENDPOINT = '/__parcel_hmr';
 const BROADCAST_MAX_ASSETS = 10000;
 
 export default class HMRServer {
-  // @ts-expect-error TS2564
   wss: WebSocket.Server;
   unresolvedError: HMRMessage | null = null;
   options: HMRServerOptions;
@@ -113,13 +120,13 @@ export default class HMRServer {
     }
     this.wss = new WebSocket.Server({server});
 
-    this.wss.on('connection', (ws) => {
+    this.wss.on('connection', (ws: any) => {
       if (this.unresolvedError) {
         ws.send(JSON.stringify(this.unresolvedError));
       }
     });
 
-    this.wss.on('error', (err) => this.handleSocketError(err));
+    this.wss.on('error', (err: any) => this.handleSocketError(err));
   }
 
   handle(req: Request, res: Response): boolean {

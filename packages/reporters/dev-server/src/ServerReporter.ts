@@ -92,7 +92,6 @@ export default new Reporter({
         }
         if (hmrOptions && hmrServer) {
           await hmrServer.stop();
-          // @ts-expect-error TS2345
           hmrServers.delete(hmrServer.wss.options.port);
         }
         break;

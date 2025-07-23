@@ -33,6 +33,7 @@ import type {ProjectPath} from '../projectPath';
 import {identifierRegistry} from '../IdentifierRegistry';
 import {toEnvironmentRef} from '../EnvironmentManager';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import type {ContentKey} from '@atlaspack/graph';
 
 function createBundleId(data: {
   entryAssetId: string | null;
@@ -241,10 +242,11 @@ export default class MutableBundleGraph
     if (entryAsset) {
       entryAssetIds = [entryAsset.id];
       if (getFeatureFlag('supportWebpackChunkName')) {
+        // @ts-expect-error TS2339
         let bundleRoots = opts.bundleRoots ?? [entryAsset];
         let bundleRootIds = bundleRoots
-          .map(({id}) => id)
-          .filter((assetId) => assetId !== entryAsset.id);
+          .map(({id}: any) => id)
+          .filter((assetId: any) => assetId !== entryAsset.id);
         entryAssetIds.push(...bundleRootIds);
       }
     }

@@ -1,5 +1,3 @@
-import {Flow} from 'flow-to-typescript-codemod';
-
 import type {
   BuildSuccessEvent,
   Dependency,
@@ -13,6 +11,14 @@ import type {AnsiDiagnosticResult} from '@atlaspack/utils';
 
 import invariant from 'assert';
 import {ansiHtml, prettyDiagnostic, PromiseQueue} from '@atlaspack/utils';
+
+// flow-to-ts helpers
+export type SetComplement<A, B extends A> = A extends B ? never : A;
+export type Diff<T extends U, U extends object> = Pick<
+  T,
+  SetComplement<keyof T, keyof U>
+>;
+// /flow-to-ts helpers
 
 const HMR_ENDPOINT = '/__parcel_hmr/';
 
@@ -40,7 +46,7 @@ export type HMRMessage =
         ansi: Array<AnsiDiagnosticResult>;
         html: Array<
           Partial<
-            Flow.Diff<
+            Diff<
               AnsiDiagnosticResult,
               {
                 codeframe: string;

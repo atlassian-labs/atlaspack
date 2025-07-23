@@ -23,6 +23,7 @@ import vm from 'vm';
 import v8 from 'v8';
 import path from 'path';
 import url from 'url';
+// @ts-expect-error TS7016
 import WebSocket from 'ws';
 import nullthrows from 'nullthrows';
 import {parser as postHtmlParse} from 'posthtml-parser';
@@ -33,6 +34,7 @@ import childProcess from 'child_process';
 
 import {makeDeferredWithPromise, normalizeSeparators} from '@atlaspack/utils';
 import _chalk from 'chalk';
+// @ts-expect-error TS7016
 import resolve from 'resolve';
 import {LMDBLiteCache} from '@atlaspack/cache';
 import tempy from 'tempy';
@@ -1035,10 +1037,11 @@ function prepareNodeContext(
         basedir: path.dirname(filePath),
         preserveSymlinks: true,
         extensions: ['.js', '.json'],
-        readFileSync: (...args) => {
+        readFileSync: (...args: any[]) => {
+          // @ts-expect-error TS2556
           return overlayFS.readFileSync(...args);
         },
-        isFile: (file) => {
+        isFile: (file: any) => {
           try {
             var stat = overlayFS.statSync(file);
           } catch (err: any) {
@@ -1046,7 +1049,7 @@ function prepareNodeContext(
           }
           return stat.isFile();
         },
-        isDirectory: (file) => {
+        isDirectory: (file: any) => {
           try {
             var stat = overlayFS.statSync(file);
           } catch (err: any) {

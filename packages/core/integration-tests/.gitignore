@@ -1,4 +1,3 @@
-lib
 test/dist
 test/input
 !test/**/node_modules

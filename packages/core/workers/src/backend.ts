@@ -1,5 +1,8 @@
-import {Flow} from 'flow-to-typescript-codemod';
 import type {BackendType, WorkerImpl} from './types';
+
+// flow-to-ts helpers
+export type Class<T> = new (...args: any[]) => T;
+// /flow-to-ts helpers
 
 export function detectBackend(): BackendType {
   // @ts-expect-error TS2339
@@ -19,7 +22,7 @@ export function detectBackend(): BackendType {
   }
 }
 
-export function getWorkerBackend(backend: BackendType): Flow.Class<WorkerImpl> {
+export function getWorkerBackend(backend: BackendType): Class<WorkerImpl> {
   switch (backend) {
     case 'threads':
       return require('./threads/ThreadsWorker').default;

@@ -1,5 +1,3 @@
-import {Flow} from 'flow-to-typescript-codemod';
-
 import type {ContentKey} from '@atlaspack/graph';
 import type {
   ASTGenerator,
@@ -35,6 +33,14 @@ import type {Event} from '@parcel/watcher';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
 import type {BackendType} from '@parcel/watcher';
 import type {EnvironmentRef} from './EnvironmentManager';
+
+// flow-to-ts helpers
+export type SetComplement<A, B extends A> = A extends B ? never : A;
+export type Diff<T extends U, U extends object> = Pick<
+  T,
+  SetComplement<keyof T, keyof U>
+>;
+// /flow-to-ts helpers
 
 export type AtlaspackPluginNode = {
   packageName: PackageName;
@@ -431,9 +437,10 @@ export type AssetRequestInput = {
 };
 
 export type AssetRequestResult = Array<Asset>;
+
 // Asset group nodes are essentially used as placeholders for the results of an asset request
 export type AssetGroup = Partial<
-  Flow.Diff<
+  Diff<
     AssetRequestInput,
     {
       optionsRef: SharedReference;

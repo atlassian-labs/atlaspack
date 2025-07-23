@@ -1,15 +1,12 @@
 /* eslint-disable no-console */
-// @flow strict-local
-
-// $FlowFixMe
+// @ts-expect-error missing types
 import deepClone from 'rfdc/default';
-// $FlowFixMe
 import {diff} from 'jest-diff';
 import AssetGraph from '../AssetGraph';
 import type {AssetGraphNode} from '../types';
 import {fromProjectPathRelative, toProjectPath} from '../projectPath';
 
-function filterNode(node) {
+function filterNode(node: any) {
   let clone = deepClone(node);
 
   // Clean up anything you don't want to see in the diff
@@ -35,24 +32,26 @@ function filterNode(node) {
   return clone;
 }
 
+// @ts-expect-error missing return type
 function compactDeep(
-  obj: mixed,
+  obj: unknown,
   ignoredPatterns: Array<string> = [],
   currentPath: string = '$',
 ) {
   if (obj instanceof Map) {
-    const copy = {};
-    Array.from(obj.entries()).forEach(([k, v]) => {
+    const copy: Record<string, any> = {};
+    Array.from(obj.entries()).forEach(([k, v]: [any, any]) => {
       if (v != null) {
         copy[k] = compactDeep(v, ignoredPatterns, `${currentPath}.${k}`);
       }
     });
     return copy;
   } else if (Array.isArray(obj)) {
+    // @ts-expect-error implicit any
     return obj.map((v) => compactDeep(v, ignoredPatterns, `${currentPath}[]`));
   } else if (typeof obj === 'object') {
-    const copy = {};
-    Object.entries(obj ?? {}).forEach(([key, value]) => {
+    const copy: Record<string, any> = {};
+    Object.entries(obj ?? {}).forEach(([key, value]: [any, any]) => {
       const path = `${currentPath}.${key}`;
       if (ignoredPatterns.some((pattern) => path.includes(pattern))) {
         return;
@@ -73,9 +72,10 @@ function compactDeep(
 }
 
 function assetGraphDiff(jsAssetGraph: AssetGraph, rustAssetGraph: AssetGraph) {
-  const getNodes = (graph) => {
-    let nodes = {};
+  const getNodes = (graph: any) => {
+    let nodes: Record<string, any> = {};
 
+    // @ts-expect-error implicit any
     graph.traverse((nodeId) => {
       let node: AssetGraphNode | null = graph.getNode(nodeId) ?? null;
       if (!node) return;
@@ -98,8 +98,8 @@ function assetGraphDiff(jsAssetGraph: AssetGraph, rustAssetGraph: AssetGraph) {
   const rustNodes = getNodes(rustAssetGraph);
 
   const all = new Set([...Object.keys(jsNodes), ...Object.keys(rustNodes)]);
-  const missing = [];
-  const extra = [];
+  const missing: Array<any | string> = [];
+  const extra: Array<any | string> = [];
 
   for (const key of all.keys()) {
     if (process.env.NATIVE_COMPARE !== 'true') {

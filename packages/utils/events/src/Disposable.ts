@@ -12,10 +12,10 @@ type DisposableLike = IDisposable | (() => unknown);
  */
 export default class Disposable implements IDisposable {
   disposed: boolean = false;
-  #disposables: Set<DisposableLike> | null | undefined;
+  disposables: Set<DisposableLike> | null | undefined;
 
   constructor(...disposables: Array<DisposableLike>) {
-    this.#disposables = new Set(disposables);
+    this.disposables = new Set(disposables);
   }
 
   add(...disposables: Array<DisposableLike>): void {
@@ -25,9 +25,9 @@ export default class Disposable implements IDisposable {
       );
     }
 
-    invariant(this.#disposables != null);
+    invariant(this.disposables != null);
     for (let disposable of disposables) {
-      this.#disposables.add(disposable);
+      this.disposables.add(disposable);
     }
   }
 
@@ -38,13 +38,13 @@ export default class Disposable implements IDisposable {
 
     this.disposed = true;
 
-    invariant(this.#disposables != null);
+    invariant(this.disposables != null);
     await Promise.all(
-      [...this.#disposables].map((disposable) =>
+      [...this.disposables].map((disposable) =>
         typeof disposable === 'function' ? disposable() : disposable.dispose(),
       ),
     );
 
-    this.#disposables = null;
+    this.disposables = null;
   }
 }

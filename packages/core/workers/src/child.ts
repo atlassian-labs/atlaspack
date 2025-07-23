@@ -1,5 +1,3 @@
-import {Flow} from 'flow-to-typescript-codemod';
-
 import type {
   CallRequest,
   WorkerDataResponse,
@@ -20,6 +18,10 @@ import ThrowableDiagnostic, {anyToDiagnostic} from '@atlaspack/diagnostic';
 import bus from './bus';
 import {SamplingProfiler, tracer} from '@atlaspack/profiler';
 import _Handle from './Handle';
+
+// flow-to-ts helpers
+export type Class<T> = new (...args: any[]) => T;
+// /flow-to-ts helpers
 
 // The import of './Handle' should really be imported eagerly (with @babel/plugin-transform-modules-commonjs's lazy mode).
 const Handle = _Handle;
@@ -45,7 +47,7 @@ export class Child {
   sharedReferences: Map<SharedReference, unknown> = new Map();
   sharedReferencesByValue: Map<unknown, SharedReference> = new Map();
 
-  constructor(ChildBackend: Flow.Class<ChildImpl>) {
+  constructor(ChildBackend: Class<ChildImpl>) {
     this.child = new ChildBackend(
       (m: WorkerMessage) => {
         this.messageListener(m);
