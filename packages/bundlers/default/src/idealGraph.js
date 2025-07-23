@@ -1085,6 +1085,8 @@ export function createIdealGraph(
   }
 
   let manualSharedBundleIds = new Set([...manualSharedMap.values()]);
+  let modifiedSourceBundles = new Set<Bundle>();
+
   // Step split manual shared bundles for those that have the "split" property set
   let remainderMap = new DefaultMap(() => []);
   for (let id of manualSharedMap.values()) {
@@ -1252,7 +1254,6 @@ export function createIdealGraph(
   }
 
   // Step Remove Shared Bundles: Remove shared bundles from bundle groups that hit the parallel request limit.
-  let modifiedSourceBundles = new Set<Bundle>();
 
   if (config.disableSharedBundles === false) {
     for (let bundleGroupId of bundleGraph.getNodeIdsConnectedFrom(rootNodeId)) {
