@@ -16,14 +16,14 @@ import {errorToDiagnostic, anyToDiagnostic} from '@atlaspack/diagnostic';
 export {instrument, instrumentAsync} from './tracer';
 
 class Logger {
-  #logEmitter: ValueEmitter<LogEvent> = new ValueEmitter();
+  logEmitter: ValueEmitter<LogEvent> = new ValueEmitter();
 
   onLog(cb: (event: LogEvent) => unknown): IDisposable {
-    return this.#logEmitter.addListener(cb);
+    return this.logEmitter.addListener(cb);
   }
 
   verbose(diagnostic: Diagnostic | Array<Diagnostic>): void {
-    this.#logEmitter.emit({
+    this.logEmitter.emit({
       type: 'log',
       level: 'verbose',
       diagnostics: Array.isArray(diagnostic) ? diagnostic : [diagnostic],
@@ -35,7 +35,7 @@ class Logger {
   }
 
   log(diagnostic: Diagnostic | Array<Diagnostic>): void {
-    this.#logEmitter.emit({
+    this.logEmitter.emit({
       type: 'log',
       level: 'info',
       diagnostics: Array.isArray(diagnostic) ? diagnostic : [diagnostic],
@@ -43,7 +43,7 @@ class Logger {
   }
 
   warn(diagnostic: Diagnostic | Array<Diagnostic>): void {
-    this.#logEmitter.emit({
+    this.logEmitter.emit({
       type: 'log',
       level: 'warn',
       diagnostics: Array.isArray(diagnostic) ? diagnostic : [diagnostic],
@@ -63,7 +63,7 @@ class Logger {
           };
     }
 
-    this.#logEmitter.emit({
+    this.logEmitter.emit({
       type: 'log',
       level: 'error',
       diagnostics: Array.isArray(diagnostic) ? diagnostic : [diagnostic],
@@ -71,7 +71,7 @@ class Logger {
   }
 
   progress(message: string): void {
-    this.#logEmitter.emit({
+    this.logEmitter.emit({
       type: 'log',
       level: 'progress',
       message,

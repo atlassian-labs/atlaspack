@@ -4087,6 +4087,11 @@
   dependencies:
     "@babel/types" "^7.20.7"
 
+"@types/braces@*":
+  version "3.0.5"
+  resolved "https://registry.yarnpkg.com/@types/braces/-/braces-3.0.5.tgz#91159f97e516630c7946d8b0d5bf60245986e04c"
+  integrity sha512-SQFof9H+LXeWNz8wDe7oN5zu7ket0qwMu5vZubW4GCJ8Kkeh6nBWUz87+KTz/G3Kqsrp0j/W253XJb3KMEeg3w==
+
 "@types/color-name@^1.1.1":
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/@types/color-name/-/color-name-1.1.1.tgz#1c1261bbeaa10a8055bbc5d8ab84b7b2afc846a0"
@@ -4175,6 +4180,13 @@
   dependencies:
     "@types/unist" "*"
 
+"@types/micromatch@^4.0.9":
+  version "4.0.9"
+  resolved "https://registry.yarnpkg.com/@types/micromatch/-/micromatch-4.0.9.tgz#8e5763a8c1fc7fbf26144d9215a01ab0ff702dbb"
+  integrity sha512-7V+8ncr22h4UoYRLnLXSpTxjQrNUXtWHGeMPRJt1nULXI57G9bIcpyrHlmrQ7QK24EyyuXvYcSSWAM8GA9nqCg==
+  dependencies:
+    "@types/braces" "*"
+
 "@types/minimatch@*", "@types/minimatch@^3.0.3":
   version "3.0.5"
   resolved "https://registry.yarnpkg.com/@types/minimatch/-/minimatch-3.0.5.tgz#1001cc5e6a3704b83c236027e77f2f58ea010f40"
@@ -4194,6 +4206,13 @@
   version "8.2.2"
   resolved "https://registry.npmjs.org/@types/mocha/-/mocha-8.2.2.tgz#91daa226eb8c2ff261e6a8cbf8c7304641e095e0"
   integrity sha512-Lwh0lzzqT5Pqh6z61P3c3P5nm6fzQK/MMHl9UKeneAeInVflBSz1O2EkX6gM6xfJd7FBXBY5purtLx7fUiZ7Hw==
+
+"@types/node-forge@^1.3.13":
+  version "1.3.13"
+  resolved "https://registry.yarnpkg.com/@types/node-forge/-/node-forge-1.3.13.tgz#1797af20f7eccaf5f37b4d1739923bb0519d95b6"
+  integrity sha512-zePQJSW5QkwSHKRApqWCVKeKoSOt4xvEnLENZPjyvm9Ezdf/EyDeJM7jqLzOwjVICQQzvLZ63T55MKdJB5H6ww==
+  dependencies:
+    "@types/node" "*"
 
 "@types/node@*", "@types/node@>= 18", "@types/node@>=20":
   version "24.0.10"
