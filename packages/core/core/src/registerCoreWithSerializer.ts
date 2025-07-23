@@ -1,5 +1,3 @@
-import {Flow} from 'flow-to-typescript-codemod';
-
 import {registerSerializableClass} from '@atlaspack/build-cache';
 import {Graph} from '@atlaspack/graph';
 
@@ -10,6 +8,10 @@ import AssetGraph from './AssetGraph';
 import BundleGraph from './BundleGraph';
 import Config from './public/Config';
 import {RequestGraph} from './RequestTracker';
+
+// flow-to-ts helpers
+export type Class<T> = new (...args: any[]) => T;
+// /flow-to-ts helpers
 
 // @ts-expect-error TS7034
 let coreRegistered;
@@ -30,7 +32,7 @@ export function registerCoreWithSerializer() {
     Graph,
     AtlaspackConfig,
     RequestGraph,
-  }) as Array<[string, Flow.Class<any>]>) {
+  }) as Array<[string, Class<any>]>) {
     registerSerializableClass(packageVersion + ':' + name, ctor);
   }
   coreRegistered = true;

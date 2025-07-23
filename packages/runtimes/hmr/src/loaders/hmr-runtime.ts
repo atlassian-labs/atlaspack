@@ -1,4 +1,3 @@
-import {Flow} from 'flow-to-typescript-codemod';
 /* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __parcel__import__, __parcel__importScripts__, ServiceWorkerGlobalScope */
 
 /*::
@@ -48,6 +47,14 @@ declare var __parcel__importScripts__: (string) => Promise<void>;
 declare var globalThis: typeof self;
 declare var ServiceWorkerGlobalScope: Object;
 */
+
+// flow-to-ts helpers
+export type SetComplement<A, B extends A> = A extends B ? never : A;
+export type Diff<T extends U, U extends object> = Pick<
+  T,
+  SetComplement<keyof T, keyof U>
+>;
+// /flow-to-ts helpers
 
 var OVERLAY_ID = '__parcel__error__overlay__';
 
@@ -279,7 +286,7 @@ function removeErrorOverlay() {
 function createErrorOverlay(
   diagnostics: Array<
     Partial<
-      Flow.Diff<
+      Diff<
         // @ts-expect-error TS2304
         AnsiDiagnosticResult,
         {

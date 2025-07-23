@@ -1,8 +1,8 @@
-import {Flow} from 'flow-to-typescript-codemod';
+// flow-to-ts helpers
+export type Class<T> = new (...args: any[]) => T;
+// /flow-to-ts helpers
 
-export let SharedBuffer:
-  | Flow.Class<ArrayBuffer>
-  | Flow.Class<SharedArrayBuffer>;
+export let SharedBuffer: Class<ArrayBuffer> | Class<SharedArrayBuffer>;
 
 // @ts-expect-error process.browser is a browser-specific property
 if (process.browser) {

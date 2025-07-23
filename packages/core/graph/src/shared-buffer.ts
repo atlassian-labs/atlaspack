@@ -1,8 +1,9 @@
-import {Flow} from 'flow-to-typescript-codemod';
+// flow-to-ts helpers
+export type Class<T> = new (...args: any[]) => T;
+// /flow-to-ts helpers
+
 // Copy from @atlaspack/utils to fix: https://github.com/stackblitz/core/issues/1855
-export let SharedBuffer:
-  | Flow.Class<ArrayBuffer>
-  | Flow.Class<SharedArrayBuffer>;
+export let SharedBuffer: Class<ArrayBuffer> | Class<SharedArrayBuffer>;
 
 // @ts-expect-error TS2339
 if (process.browser) {

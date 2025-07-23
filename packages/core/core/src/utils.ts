@@ -1,5 +1,3 @@
-import {Flow} from 'flow-to-typescript-codemod';
-
 import type {
   FilePath,
   FileCreateInvalidation,
@@ -19,6 +17,14 @@ import invariant from 'assert';
 import baseX from 'base-x';
 import {hashObject} from '@atlaspack/utils';
 import {fromProjectPath, toProjectPath} from './projectPath';
+
+// flow-to-ts helpers
+export type SetComplement<A, B extends A> = A extends B ? never : A;
+export type Diff<T extends U, U extends object> = Pick<
+  T,
+  SetComplement<keyof T, keyof U>
+>;
+// /flow-to-ts helpers
 
 const base62 = baseX(
   '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -212,7 +218,7 @@ export function toInternalSymbols<
       {
         loc: InternalSourceLocation | null | undefined;
       } & Partial<
-        Flow.Diff<
+        Diff<
           T,
           {
             loc: SourceLocation | null | undefined;
