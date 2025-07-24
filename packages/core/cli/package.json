@@ -14,10 +14,11 @@
   "bin": {
     "atlaspack": "bin/atlaspack.js"
   },
-  "main": "lib/bin.js",
-  "source": "src/bin.ts",
+  "main": "./lib/bin.js",
+  "source": "./src/bin.ts",
+  "types": "./src/bin.ts",
   "scripts": {
-    "check-ts": "tsc --noEmit"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   },
   "engines": {
     "node": ">= 16.0.0"
@@ -43,6 +44,5 @@
     "@babel/core": "^7.22.11",
     "@atlaspack/babel-register": "2.14.1",
     "rimraf": "^5.0.5"
-  },
-  "types": "src/bin.ts"
+  }
 }

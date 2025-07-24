@@ -9,8 +9,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/JSRuntime.js",
-  "source": "src/JSRuntime.ts",
+  "main": "./lib/JSRuntime.js",
+  "source": "./src/JSRuntime.ts",
+  "types": "./src/JSRuntime.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -24,7 +25,6 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --noEmit"
-  },
-  "types": "src/JSRuntime.ts"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

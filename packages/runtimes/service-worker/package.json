@@ -11,6 +11,7 @@
   },
   "main": "./lib/ServiceWorkerRuntime.js",
   "source": "./src/ServiceWorkerRuntime.ts",
+  "types": "./src/ServiceWorkerRuntime.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -21,7 +22,6 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --noEmit"
-  },
-  "types": "./src/ServiceWorkerRuntime.ts"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

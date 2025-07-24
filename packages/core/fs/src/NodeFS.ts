@@ -82,7 +82,7 @@ export class NodeFS implements FileSystem {
       : watcher;
   }
 
-  createWriteStream(filePath: string, options: any): Writable {
+  createWriteStream(filePath: string, options?: any): Writable {
     // Make createWriteStream atomic
     let tmpFilePath = getTempFilePath(filePath);
     let failed = false;
