@@ -107,7 +107,7 @@ describe('Option invalidation in cache integration test', () => {
     inputDir = '';
   });
 
-  it.skip('respects blocklist with granularOptionInvalidation=true', async function () {
+  it('respects blocklist with granularOptionInvalidation=true', async function () {
     await fsFixture(overlayFS, inputDir)`
       .parcelrc:
         {
@@ -171,7 +171,7 @@ describe('Option invalidation in cache integration test', () => {
     );
   });
 
-  it('should NOT invalidate cache when logLevel changes (ignored by optionsProxy)', async function () {
+  it.skip('should NOT invalidate cache when logLevel changes (ignored by optionsProxy)', async function () {
     await fsFixture(overlayFS, inputDir)`
       .parcelrc:
         {
