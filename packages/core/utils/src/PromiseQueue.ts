@@ -1,4 +1,4 @@
-import {makeDeferredWithPromise, Deferred} from './Deferred';
+import {makeDeferredWithPromise, type Deferred} from './Deferred';
 
 type PromiseQueueOpts = {
   maxConcurrent: number;
