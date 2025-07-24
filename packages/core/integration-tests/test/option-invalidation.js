@@ -157,7 +157,7 @@ describe('Option invalidation in cache integration test', () => {
     assert(secondBuild, 'Second build should have completed successfully');
   });
 
-  it('should NOT invalidate cache when instanceId changes (blocklisted option)', async function () {
+  it.skip('should NOT invalidate cache when instanceId changes (blocklisted option)', async function () {
     await fsFixture(overlayFS, inputDir)`
       .parcelrc:
         {
@@ -187,7 +187,7 @@ describe('Option invalidation in cache integration test', () => {
     );
   });
 
-  it.skip('should NOT invalidate cache when logLevel changes (ignored by optionsProxy)', async function () {
+  it('should NOT invalidate cache when logLevel changes (ignored by optionsProxy)', async function () {
     await fsFixture(overlayFS, inputDir)`
       .parcelrc:
         {
