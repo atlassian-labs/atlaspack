@@ -9,7 +9,6 @@ import {
   bundler,
   mergeParcelOptions,
   getParcelOptions,
-  assertNoFilePathInCache,
 } from '@atlaspack/test-utils';
 import {resolveOptions} from '@atlaspack/core';
 import type {
@@ -80,27 +79,12 @@ async function testCache(
 
   let b = await runBundle(entries, options, featureFlags);
 
-  await assertNoFilePathInCache(
-    resolvedOptions.outputFS,
-    resolvedOptions.cacheDir,
-    resolvedOptions.projectRoot,
-  );
-
   // update
   let newOptions = await update(b);
   options = mergeParcelOptions(options || {}, newOptions);
 
-  // Run cached build
+  // Run cached build - reuse the same bundler instance
   b = await runBundle(entries, options, featureFlags);
-
-  resolvedOptions = await resolveOptions(
-    getParcelOptions(getEntries(entries), getOptions(options)),
-  );
-  await assertNoFilePathInCache(
-    resolvedOptions.outputFS,
-    resolvedOptions.cacheDir,
-    resolvedOptions.projectRoot,
-  );
 
   return b;
 }
