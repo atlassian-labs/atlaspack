@@ -41,6 +41,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   supportWebpackChunkName: process.env.NODE_ENV === 'test',
   condbDevFallbackDev: false,
   condbDevFallbackProd: false,
+  granularOptionInvalidation: false,
   incrementalBundlingVersioning: process.env.NODE_ENV === 'test',
 };
 

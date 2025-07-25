@@ -20,6 +20,7 @@ import {
 } from '@atlaspack/utils';
 import Environment from './Environment';
 import {fromProjectPath, toProjectPath} from '../projectPath';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {fromEnvironmentId} from '../EnvironmentManager';
 
 const internalConfigToConfig: DefaultWeakMap<
@@ -42,8 +43,10 @@ const internalConfigToConfig: DefaultWeakMap<
  *
  * In case the value is null or an array, we will track the read as well.
  *
- * Iterating over `Object.keys(obj.field)` will register a read for the `['field']` path.
- * Other reads work normally.
+ * NOTE: We track Object.keys()/ownKeys operations because code that enumerates properties
+ * may depend on the set of available keys and should be invalidated when keys are added/removed.
+ * Root enumeration (Object.keys() on the config object itself) is only tracked when the
+ * granularOptionInvalidation feature flag is enabled.
  *
  * @example
  *
@@ -62,27 +65,56 @@ const internalConfigToConfig: DefaultWeakMap<
 export function makeConfigProxy<T>(
   onRead: (path: string[]) => void,
   config: T,
+  ignoreSet?: Set<string> = new Set(),
 ): T {
   const reportedPaths = new Set();
+
   const reportPath = (path) => {
-    if (reportedPaths.has(path)) {
+    let pathKey;
+
+    if (getFeatureFlag('granularOptionInvalidation')) {
+      // New behavior: Handle root enumeration with a special marker
+      pathKey =
+        path.length === 0 || (path.length === 1 && path[0] === '__root__')
+          ? '__root__'
+          : path.join('.');
+    } else {
+      // Original behavior: Simple path joining
+      pathKey = path.join('.');
+    }
+
+    if (reportedPaths.has(pathKey)) {
       return;
     }
-    reportedPaths.add(path);
+
+    reportedPaths.add(pathKey);
     onRead(path);
   };
 
   const makeProxy = (target, path) => {
     return new Proxy(target, {
       ownKeys(target) {
-        reportPath(path);
-
+        if (!getFeatureFlag('granularOptionInvalidation')) {
+          reportPath(path);
+        } else {
+          if (path.length === 0) {
+            // Root enumeration
+            reportPath([]);
+          } else {
+            reportPath(path);
+          }
+        }
         // $FlowFixMe
         return Object.getOwnPropertyNames(target);
       },
       get(target, prop) {
         // $FlowFixMe
         const value = target[prop];
+
+        if (path.length === 0 && ignoreSet && ignoreSet.has(prop)) {
+          // Return the original value without proxying - this preserves method binding
+          return value;
+        }
 
         if (
           typeof value === 'object' &&

@@ -67,7 +67,7 @@ export type ConfigRequest = {
   |}>,
   invalidateOnFileCreate: Array<InternalFileCreateInvalidation>,
   invalidateOnEnvChange: Set<string>,
-  invalidateOnOptionChange: Set<string>,
+  invalidateOnOptionChange: Set<string[] | string>,
   invalidateOnStartup: boolean,
   invalidateOnBuild: boolean,
   ...
@@ -89,8 +89,8 @@ export async function loadPluginConfig<T: PluginWithLoadConfig>(
     config.result = await loadConfig({
       config: new PublicConfig(config, options),
       options: new PluginOptions(
-        optionsProxy(options, (option) => {
-          config.invalidateOnOptionChange.add(option);
+        optionsProxy(options, (optionPath) => {
+          config.invalidateOnOptionChange.add(optionPath);
         }),
       ),
       logger: new PluginLogger({origin: loadedPlugin.name}),
@@ -110,6 +110,7 @@ export async function loadPluginConfig<T: PluginWithLoadConfig>(
 
 /**
  * Return value at a given key path within an object.
+ * Used for accessing nested options in a granular way for option invalidation.
  *
  * @example
  *     const obj = { a: { b: { c: 'd' } } };

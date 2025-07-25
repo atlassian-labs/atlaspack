@@ -28,7 +28,7 @@ type ConfigOpts = {|
   |}>,
   invalidateOnFileCreate?: Array<InternalFileCreateInvalidation>,
   invalidateOnEnvChange?: Set<string>,
-  invalidateOnOptionChange?: Set<string>,
+  invalidateOnOptionChange?: Set<string[] | string>,
   devDeps?: Array<InternalDevDepOptions>,
   invalidateOnStartup?: boolean,
   invalidateOnBuild?: boolean,
