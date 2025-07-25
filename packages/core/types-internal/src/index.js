@@ -357,6 +357,8 @@ export type InitialAtlaspackOptionsInternal<WorkerFarm> = {|
 
   +shouldDisableCache?: boolean,
   +cacheDir?: FilePath,
+  +projectRoot?: FilePath,
+  +gitRoot?: FilePath,
   +watchDir?: FilePath,
   +watchBackend?: BackendType,
   +watchIgnore?: Array<FilePath | GlobPattern>,
