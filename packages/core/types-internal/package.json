@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/types-internal",
-  "version": "2.15.2",
+  "version": "2.16.0",
   "license": "(MIT OR Apache-2.0)",
   "main": "lib/index.js",
   "source": "src/index.js",
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.1",
-    "@atlaspack/feature-flags": "2.19.2",
+    "@atlaspack/feature-flags": "2.20.0",
     "@parcel/source-map": "^2.1.1",
     "utility-types": "^3.10.0"
   },
