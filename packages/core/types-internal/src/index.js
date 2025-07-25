@@ -1310,7 +1310,7 @@ export type CreateBundleOpts =
       +entryAsset: Asset,
 
       /** TODO: What is this? */
-      +bundleRoots: $ReadOnlyArray<Asset>,
+      +bundleRoots?: $ReadOnlyArray<Asset>,
       /** The target of the bundle. Should come from the dependency that created the bundle. */
       +target: Target,
       /**

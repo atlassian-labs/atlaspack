@@ -552,7 +552,7 @@ export default class BundleGraph {
     opts:
       | {|
           +entryAsset: Asset,
-          +bundleRoots: Array<Asset>,
+          +bundleRoots?: Array<Asset>,
           +target: Target,
           +needsStableName?: ?boolean,
           +bundleBehavior?: ?IBundleBehavior,

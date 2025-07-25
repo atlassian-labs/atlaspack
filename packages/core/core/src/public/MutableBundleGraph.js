@@ -232,15 +232,13 @@ export default class MutableBundleGraph
 
     let entryAssetIds = [];
     if (entryAsset) {
+      entryAssetIds = [entryAsset.id];
       if (getFeatureFlag('supportWebpackChunkName')) {
-        entryAssetIds = [
-          entryAsset.id,
-          ...(opts.bundleRoots
-            ?.map((asset) => asset.id)
-            .filter((id) => id !== entryAsset.id) ?? []),
-        ];
-      } else {
-        entryAssetIds = [entryAsset.id];
+        let bundleRoots = opts.bundleRoots ?? [entryAsset];
+        let bundleRootIds = bundleRoots
+          .map(({id}) => id)
+          .filter((assetId) => assetId !== entryAsset.id);
+        entryAssetIds.push(...bundleRootIds);
       }
     }
     let bundleNode: BundleNode = {
