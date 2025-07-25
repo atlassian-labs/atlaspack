@@ -40,7 +40,7 @@
     "check-ts": "lerna run --concurrency 4 check-ts",
     "lint": "node ./scripts/lint-all.mjs",
     "prepublishOnly": "yarn pre-publish",
-    "pre-publish": "yarn build && node ./scripts/rewrite-package-types.mjs && yarn build-ts",
+    "pre-publish": "yarn build && yarn build-dts && node ./scripts/rewrite-package-types.mjs && yarn build-ts",
     "changesets-publish": "yarn pre-publish && yarn changeset publish",
     "test": "yarn test:unit && yarn test:integration",
     "test:e2e": "yarn workspace @atlaspack/e2e-tests test",
