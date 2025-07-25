@@ -1,0 +1,14 @@
+diff --git a/node_modules/mocha/lib/reporters/base.js b/node_modules/mocha/lib/reporters/base.js
+index 1f97e31..8b86b65 100644
+--- a/node_modules/mocha/lib/reporters/base.js
++++ b/node_modules/mocha/lib/reporters/base.js
+@@ -379,6 +379,9 @@ Base.prototype.epilogue = function() {
+   }
+ 
+   Base.consoleLog();
++  setTimeout(() => {
++    require('why-is-node-running').default();
++  }, 1000);
+ };
+ 
+ /**
