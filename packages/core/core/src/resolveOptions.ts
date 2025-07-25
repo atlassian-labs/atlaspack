@@ -101,22 +101,38 @@ export default async function resolveOptions(
     }
   }
 
-  // getRootDir treats the input as files, so getRootDir(["/home/user/myproject"]) returns "/home/user".
-  // Instead we need to make the the entry refer to some file inside the specified folders if entries refers to the directory.
-  let entryRoot = getRootDir(
-    shouldMakeEntryReferFolder ? [path.join(entries[0], 'index')] : entries,
-  );
-  let projectRootFile =
-    (await resolveConfig(
-      inputFS,
-      path.join(entryRoot, 'index'),
-      [...LOCK_FILE_NAMES, '.git', '.hg'],
-      path.parse(entryRoot).root,
-    )) || path.join(inputCwd, 'index'); // ? Should this just be rootDir
+  let projectRoot;
+  if (initialOptions.projectRoot) {
+    // Use explicitly provided projectRoot, resolving relative paths to cwd
+    projectRoot = path.isAbsolute(initialOptions.projectRoot)
+      ? initialOptions.projectRoot
+      : path.resolve(inputCwd, initialOptions.projectRoot);
+  } else {
+    // getRootDir treats the input as files, so getRootDir(["/home/user/myproject"]) returns "/home/user".
+    // Instead we need to make the the entry refer to some file inside the specified folders if entries refers to the directory.
+    let entryRoot = getRootDir(
+      shouldMakeEntryReferFolder ? [path.join(entries[0], 'index')] : entries,
+    );
+    let projectRootFile =
+      (await resolveConfig(
+        inputFS,
+        path.join(entryRoot, 'index'),
+        [...LOCK_FILE_NAMES, '.git', '.hg'],
+        path.parse(entryRoot).root,
+      )) || path.join(inputCwd, 'index'); // ? Should this just be rootDir
 
-  let projectRoot = path.dirname(projectRootFile);
+    projectRoot = path.dirname(projectRootFile);
+  }
 
-  const gitRoot = await findGitRepositoryRoot(inputFS, projectRoot);
+  let gitRoot;
+  if (initialOptions.gitRoot) {
+    gitRoot = path.isAbsolute(initialOptions.gitRoot)
+      ? initialOptions.gitRoot
+      : path.resolve(inputCwd, initialOptions.gitRoot);
+  } else {
+    gitRoot = await findGitRepositoryRoot(inputFS, projectRoot);
+  }
+
   if (inputFS instanceof NodeVCSAwareFS) {
     inputFS.setGitRepoPath(gitRoot);
   }
