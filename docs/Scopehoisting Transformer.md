@@ -127,7 +127,6 @@ Then, various replacements happen:
 - [fold_ident](https://github.com/parcel-bundler/parcel/blob/9e2d5d0d60d08d65b5ae6cd765c907a8753bbf39/packages/transformers/js/core/src/hoist.rs#L756) looks up in `collect.imports` whether that identifier refers to an import (this renames expressions that refer to the variable as well as the names of the variable declarations themselves)
 
 - fold_assign_expr
-
   - replace `module.exports = ...;` with `$id$exports = ...;`
   - replace `module.exports.foo = ...;` with `$id$exports$foo = ...;` and generate a corresponding hoisted `var $id$exports$x;` declaration.
 

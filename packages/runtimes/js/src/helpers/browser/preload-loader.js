@@ -15,5 +15,4 @@ module.exports = cacheLoader(function preloadJSBundle(
 
   document.getElementsByTagName('head')[0].appendChild(link);
   return Promise.resolve();
-},
-'preload');
+}, 'preload');

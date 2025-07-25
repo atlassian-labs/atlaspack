@@ -29,7 +29,7 @@ const moduleVisitor = require('eslint-module-utils/moduleVisitor');
 const getPackages = require('get-monorepo-packages');
 const isInside = require('path-is-inside');
 const minimatch = require('minimatch');
-const {join, relative, parse} = require('path');
+const {join, relative, parse, sep} = require('path');
 const resolve = require('eslint-module-utils/resolve');
 
 const getPackageDir = (filePath, packages) => {
@@ -58,7 +58,10 @@ module.exports = {
     const packages = getPackages(process.cwd());
 
     return moduleVisitor.default((node) => {
-      const resolvedPath = resolve.default(node.value, context);
+      const resolvedPath =
+        resolve.default(node.value, context) ||
+        resolve.default(node.value + '.ts', context) ||
+        resolve.default(node.value + sep + 'index.ts', context);
       if (!resolvedPath) {
         return;
       }

@@ -15,6 +15,7 @@ require('@babel/register')({
     // Include tests
     (filepath) =>
       filepath.endsWith('.js') &&
+      !filepath.includes('/core/workers/test') &&
       !fs.readFileSync(filepath, 'utf8').trim().startsWith('// @flow'),
   ],
   only: [path.join(__dirname, '../../..')],

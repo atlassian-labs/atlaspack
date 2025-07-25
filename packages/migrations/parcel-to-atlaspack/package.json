@@ -6,15 +6,15 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "license": "(MIT OR Apache-2.0)",
-  "main": "dist/cli.js",
+  "main": "./lib/cli.js",
   "bin": {
-    "parcel-to-atlaspack": "dist/bin.js"
+    "parcel-to-atlaspack": "lib/bin.js"
   },
   "files": [
-    "dist"
+    "lib"
   ],
   "scripts": {
-    "prepack": "tsc --project src/tsconfig.json && chmod +x dist/bin.js",
+    "prepack": "chmod +x lib/bin.js",
     "start": "ts-node src/bin.ts"
   },
   "dependencies": {

@@ -11,6 +11,7 @@
   },
   "main": "index.js",
   "browser": "browser.js",
+  "types": "./types.d.ts",
   "napi": {
     "name": "atlaspack-node-bindings",
     "permittedTargets": "*"
@@ -20,7 +21,8 @@
   },
   "files": [
     "browser.js",
-    "index.d.ts",
+    "types.d.ts",
+    "*.d.ts",
     "index.js",
     "index.js.flow",
     "*.node",

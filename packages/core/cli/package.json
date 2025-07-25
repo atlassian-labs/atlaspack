@@ -14,10 +14,11 @@
   "bin": {
     "atlaspack": "bin/atlaspack.js"
   },
-  "main": "lib/bin.js",
-  "source": "src/bin.js",
+  "main": "./lib/bin.js",
+  "source": "./src/bin.ts",
+  "types": "./src/bin.ts",
   "scripts": {
-    "prepack": "./ensure-no-dev-lib.sh"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   },
   "engines": {
     "node": ">= 16.0.0"

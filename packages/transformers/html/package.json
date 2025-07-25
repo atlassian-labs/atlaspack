@@ -6,14 +6,16 @@
     "access": "public"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/HTMLTransformer.js",
-  "source": "src/HTMLTransformer.js",
+  "main": "./lib/HTMLTransformer.js",
+  "source": "./src/HTMLTransformer.ts",
+  "types": "./src/HTMLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

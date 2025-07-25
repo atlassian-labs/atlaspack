@@ -163,7 +163,6 @@ If some outgoing dependency was changed by these steps, it's marked as dirty:
 
 1. Go through outgoing dependencies and collect all symbols that are reexported from them in `usedSymbolsUp`.
 2. Go through incoming dependencies:
-
    1. Each symbol that is requested by that dependency (`usedSymbolsDown`) has to be exported by the asset or reexported by some outgoing dependency.
 
       If a requested symbol cannot be found as a (re)export, then an error "x.js does not export y" is generated. (Unless the incoming dependency is a `export *`, then throwing here would could cause an error for a symbol that was only speculatively added as described above.)

@@ -190,8 +190,8 @@ describe('@atlaspack/link', () => {
         ${path.resolve(
           path.join(__dirname, '../../../configs/namespace/package.json'),
         )}: ${{
-        name: '@atlaspack/config-namespace',
-      }}
+          name: '@atlaspack/config-namespace',
+        }}
         app
           yarn.lock:
           .parcelrc: ${{
@@ -453,8 +453,8 @@ describe('@atlaspack/link', () => {
         ${path.resolve(
           path.join(__dirname, '../../../configs/namespace/package.json'),
         )}: ${{
-        name: '@atlaspack/config-namespace',
-      }}`;
+          name: '@atlaspack/config-namespace',
+        }}`;
 
       const cli = createProgram({fs: overlayFS});
       await cli('unlink');

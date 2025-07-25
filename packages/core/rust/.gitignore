@@ -1,5 +1,7 @@
+index.d.ts
 index.*
 *.node
 *.wasm
 !*.flow
+!*.d.ts
 atlaspack-node-bindings.*
