@@ -34,6 +34,7 @@ import BundleGroup, {bundleGroupToInternalBundleGroup} from './BundleGroup';
 import type {ProjectPath} from '../projectPath';
 import {identifierRegistry} from '../IdentifierRegistry';
 import {toEnvironmentRef} from '../EnvironmentManager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 function createBundleId(data: {|
   entryAssetId: string | null,
@@ -229,6 +230,17 @@ export default class MutableBundleGraph
       isPlaceholder = entryAssetNode.requested === false;
     }
 
+    let entryAssetIds = [];
+    if (entryAsset) {
+      entryAssetIds = [entryAsset.id];
+      if (getFeatureFlag('supportWebpackChunkName')) {
+        let bundleRoots = opts.bundleRoots ?? [entryAsset];
+        let bundleRootIds = bundleRoots
+          .map(({id}) => id)
+          .filter((assetId) => assetId !== entryAsset.id);
+        entryAssetIds.push(...bundleRootIds);
+      }
+    }
     let bundleNode: BundleNode = {
       type: 'bundle',
       id: bundleId,
@@ -241,7 +253,7 @@ export default class MutableBundleGraph
         env: opts.env
           ? toEnvironmentRef(environmentToInternalEnvironment(opts.env))
           : nullthrows(entryAsset).env,
-        entryAssetIds: entryAsset ? [entryAsset.id] : [],
+        entryAssetIds,
         mainEntryId: entryAsset?.id,
         pipeline: opts.entryAsset ? opts.entryAsset.pipeline : opts.pipeline,
         needsStableName: opts.needsStableName,
@@ -266,10 +278,10 @@ export default class MutableBundleGraph
       bundleNode,
     );
 
-    if (opts.entryAsset) {
+    for (let assetId of entryAssetIds) {
       this.#graph._graph.addEdge(
         bundleNodeId,
-        this.#graph._graph.getNodeIdByContentKey(opts.entryAsset.id),
+        this.#graph._graph.getNodeIdByContentKey(assetId),
       );
     }
     return Bundle.get(bundleNode.value, this.#graph, this.#options);

@@ -438,6 +438,7 @@ export default (new Transformer({
       has_node_replacements,
       is_constant_module,
       conditions,
+      magic_comments,
     } = await (transformAsync || transform)({
       filename: asset.filePath,
       code,
@@ -490,8 +491,10 @@ export default (new Transformer({
       conditional_bundling: options.featureFlags.conditionalBundlingApi,
       hmr_improvements: options.featureFlags.hmrImprovements,
       computed_properties_fix: options.featureFlags.unusedComputedPropertyFix,
-      // $FlowFixMe
-      magic_comments: Boolean(config?.magicComments),
+      magic_comments:
+        // $FlowFixMe
+        Boolean(config?.magicComments) ||
+        getFeatureFlag('supportWebpackChunkName'),
       callMacro: asset.isSource
         ? async (err, src, exportName, args, loc) => {
             let mod;
@@ -867,6 +870,13 @@ export default (new Transformer({
             outputFormat,
             loc: convertLoc(dep.loc),
           };
+
+          if (getFeatureFlag('supportWebpackChunkName')) {
+            let chunkName = magic_comments[dep.specifier];
+            if (chunkName) {
+              meta.chunkName = chunkName;
+            }
+          }
         }
 
         // Always bundle helpers, even with includeNodeModules: false, except if this is a library.

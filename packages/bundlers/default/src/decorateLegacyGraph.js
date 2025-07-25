@@ -25,11 +25,13 @@ export function decorateLegacyGraph(
     bundleGroupBundleIds,
     manualAssetToBundle,
   } = idealGraph;
+  // This line can be deleted once supportWebpackChunkName feature flag is removed.
   let entryBundleToBundleGroup: Map<NodeId, BundleGroup> = new Map();
   // Step Create Bundles: Create bundle groups, bundles, and shared bundles and add assets to them
   for (let [bundleNodeId, idealBundle] of idealBundleGraph.nodes.entries()) {
     if (!idealBundle || idealBundle === 'root') continue;
     let entryAsset = idealBundle.mainEntryAsset;
+    // This line can be deleted once supportWebpackChunkName feature flag is removed.
     let bundleGroup;
     let bundle;
 
@@ -52,18 +54,26 @@ export function decorateLegacyGraph(
         entryAsset != null,
         'Processing a bundleGroup with no entry asset',
       );
+
+      let bundleGroups = new Map();
       for (let dependency of dependencies) {
         bundleGroup = bundleGraph.createBundleGroup(
           dependency,
           idealBundle.target,
         );
+        bundleGroups.set(bundleGroup.entryAssetId, bundleGroup);
       }
-      invariant(bundleGroup);
-      entryBundleToBundleGroup.set(bundleNodeId, bundleGroup);
+      if (getFeatureFlag('supportWebpackChunkName')) {
+        invariant(bundleGroups.size > 0, 'No bundle groups created');
+      } else {
+        invariant(bundleGroup);
+        entryBundleToBundleGroup.set(bundleNodeId, bundleGroup);
+      }
 
       bundle = nullthrows(
         bundleGraph.createBundle({
           entryAsset: nullthrows(entryAsset),
+          bundleRoots: Array.from(idealBundle.bundleRoots),
           needsStableName: idealBundle.needsStableName,
           bundleBehavior: idealBundle.bundleBehavior,
           target: idealBundle.target,
@@ -71,7 +81,14 @@ export function decorateLegacyGraph(
         }),
       );
 
-      bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+      if (getFeatureFlag('supportWebpackChunkName')) {
+        for (let bundleGroup of bundleGroups.values()) {
+          bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+        }
+      } else {
+        invariant(bundleGroup);
+        bundleGraph.addBundleToBundleGroup(bundle, bundleGroup);
+      }
     } else if (
       idealBundle.sourceBundles.size > 0 &&
       !idealBundle.mainEntryAsset
@@ -109,6 +126,7 @@ export function decorateLegacyGraph(
       bundle = nullthrows(
         bundleGraph.createBundle({
           entryAsset,
+          bundleRoots: Array.from(idealBundle.bundleRoots),
           needsStableName: idealBundle.needsStableName,
           bundleBehavior: idealBundle.bundleBehavior,
           target: idealBundle.target,

@@ -110,6 +110,12 @@ export type FeatureFlags = {|
    * Enables the new packaging progress CLI experience
    */
   cliProgressReportingImprovements: boolean,
+
+  /**
+   * Adds support for `webpackChunkName` comments in dynamic imports.
+   * Imports with the same `webpackChunkName` will be bundled together.
+   */
+  supportWebpackChunkName: boolean,
   /**
    * Enable a change to the conditional bundling loader to use a fallback bundle loading if the expected scripts aren't found
    *

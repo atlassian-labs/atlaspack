@@ -2774,4 +2774,55 @@ describe('bundler', function () {
       await run(b);
     });
   });
+
+  it.v2(
+    'should merge dynamic imports with the same webpackChunkName',
+    async () => {
+      await fsFixture(overlayFS, __dirname)`
+      merge-webpack-chunk-name
+        index.js:
+          import(/* webpackChunkName: "shared" */ './async-1.js');
+          import(/* webpackChunkName: "shared" */ './async-2.js');
+          import(/* webpackChunkName: "shared-two" */ './async-3.js');
+
+        async-1.js:
+          export const async1 = 'async1';
+
+        async-2.js:
+          export const async2 = 'async2';
+
+        async-3.js:
+          export const async3 = 'async3';
+    `;
+
+      const b = await bundle(
+        [path.join(__dirname, 'merge-webpack-chunk-name/index.js')],
+        {
+          inputFS: overlayFS,
+          featureFlags: {
+            supportWebpackChunkName: true,
+          },
+        },
+      );
+
+      assertBundles(b, [
+        {
+          assets: [
+            'index.js',
+            'bundle-url.js',
+            'cacheLoader.js',
+            'js-loader.js',
+          ],
+        },
+        {
+          assets: ['async-1.js', 'async-2.js', 'esmodule-helpers.js'],
+        },
+        {
+          assets: ['async-3.js', 'esmodule-helpers.js'],
+        },
+      ]);
+
+      await run(b);
+    },
+  );
 });
