@@ -368,8 +368,14 @@ export default class NodeResolver {
     {includeNodeModules}: Environment,
     name: string,
   ): ?boolean {
-    if (includeNodeModules === false) {
-      return false;
+    if (getFeatureFlag('libraryBuiltinsFix')) {
+      if (typeof includeNodeModules === 'boolean') {
+        return includeNodeModules;
+      }
+    } else {
+      if (includeNodeModules === false) {
+        return false;
+      }
     }
 
     if (Array.isArray(includeNodeModules)) {
