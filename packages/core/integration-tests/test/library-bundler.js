@@ -627,4 +627,45 @@ describe.v2('library bundler', function () {
     );
     assert.equal(cjs.test(), 'test:foo');
   });
+
+  it('should polyfill Node.js globals', async () => {
+    await fsFixture(overlayFS, dir)`
+      index.js:
+        import {Buffer} from 'buffer';
+        export function test() {
+          return Buffer.from('test').toString('base64');
+        }
+
+      package.json:
+        {
+          "targets": {
+            "production": {
+              "isLibrary": true,
+              "includeNodeModules": true,
+              "outputFormat": "commonjs"
+            }
+          }
+        }
+      yarn.lock:
+    `;
+
+    let b = await bundle(path.join(dir, '/index.js'), {
+      inputFS: overlayFS,
+      mode: 'production',
+      targets: ['production'],
+    });
+
+    let bufferDep;
+    b.traverse((node) => {
+      if (node.type === 'dependency' && node.value.specifier === 'buffer') {
+        bufferDep = node.value;
+      }
+    });
+
+    bufferDep = nullthrows(bufferDep, 'Buffer dependency should be present');
+    assert(
+      b.getResolvedAsset(bufferDep),
+      'Buffer dependency should resolve to an asset, not external',
+    );
+  });
 });
