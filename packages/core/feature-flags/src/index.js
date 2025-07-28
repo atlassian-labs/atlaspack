@@ -42,6 +42,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   condbDevFallbackDev: false,
   condbDevFallbackProd: false,
   incrementalBundlingVersioning: process.env.NODE_ENV === 'test',
+  libraryBuiltinsFix: process.env.NODE_ENV === 'test',
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};

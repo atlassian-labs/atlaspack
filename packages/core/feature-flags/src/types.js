@@ -128,6 +128,11 @@ export type FeatureFlags = {|
    * a full bundling pass is required based on the AssetGraph's bundlingVersion.
    */
   incrementalBundlingVersioning: boolean,
+  /**
+   * Fixes a bug where node builtins were not being correctly polyfilled for
+   * library builds.
+   */
+  libraryBuiltinsFix: boolean,
 |};
 
 declare export var CONSISTENCY_CHECK_VALUES: $ReadOnlyArray<string>;
