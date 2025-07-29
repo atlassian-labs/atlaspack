@@ -108,7 +108,6 @@ export type FeatureFlags = {
    */
   hmrImprovements: boolean;
 
-
   /**
    * Fixes a bug where imported objects that are accessed with non-static
    * properties (e.g. `CONSTANTS['api_' + endpoint`]) would not be recognised as
