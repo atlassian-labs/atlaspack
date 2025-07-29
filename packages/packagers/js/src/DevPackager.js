@@ -6,6 +6,7 @@ import {
   relativeBundlePath,
   countLines,
   normalizeSeparators,
+  debugTools,
 } from '@atlaspack/utils';
 import SourceMap from '@parcel/source-map';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
@@ -127,11 +128,20 @@ export class DevPackager {
 
         let {code, mapBuffer} = results[i];
         let output = code || '';
+
         wrapped +=
           JSON.stringify(this.bundleGraph.getAssetPublicId(asset)) +
-          ':[function(require,module,exports,__globalThis) {\n' +
-          output +
-          '\n},';
+          ':[function(require,module,exports,__globalThis) {\n';
+
+        if (debugTools['asset-file-names-in-output']) {
+          let assetPath = path.relative(
+            this.options.projectRoot,
+            asset.filePath,
+          );
+          wrapped += `/* ${assetPath} */\n`;
+        }
+
+        wrapped += output + '\n},';
         wrapped += JSON.stringify(deps);
         wrapped += ']';
 
