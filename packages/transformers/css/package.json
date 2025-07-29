@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/CSSTransformer.js",
-  "source": "src/CSSTransformer.js",
+  "source": "src/CSSTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -29,5 +29,9 @@
   "browser": {
     "lightningcss": "lightningcss-wasm"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/CSSTransformer.ts"
 }

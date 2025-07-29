@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/JSRuntime.js",
-  "source": "src/JSRuntime.js",
+  "source": "src/JSRuntime.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -22,5 +22,9 @@
     "@atlaspack/utils": "2.17.3",
     "nullthrows": "^1.1.1"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/JSRuntime.ts"
 }

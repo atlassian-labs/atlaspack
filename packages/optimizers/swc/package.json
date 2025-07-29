@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/SwcOptimizer.js",
-  "source": "src/SwcOptimizer.js",
+  "source": "src/SwcOptimizer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -22,5 +22,9 @@
     "@swc/core": "^1.10.0",
     "nullthrows": "^1.1.1"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/SwcOptimizer.ts"
 }

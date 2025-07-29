@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/LspReporter.js",
-  "source": "src/LspReporter.js",
+  "source": "src/LspReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -23,5 +23,9 @@
     "ps-node": "^0.1.6",
     "vscode-jsonrpc": "^8.0.2"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/LspReporter.ts"
 }

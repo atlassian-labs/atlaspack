@@ -11,12 +11,16 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/LibraryBundler.js",
-  "source": "src/LibraryBundler.js",
+  "source": "src/LibraryBundler.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "dependencies": {
     "@atlaspack/plugin": "2.14.21",
     "nullthrows": "^1.1.1"
-  }
+  },
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/LibraryBundler.ts"
 }

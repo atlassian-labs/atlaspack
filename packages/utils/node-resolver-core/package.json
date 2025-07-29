@@ -10,12 +10,13 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/index.js",
-  "source": "src/index.js",
+  "source": "src/index.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "test": "mocha test"
+    "test": "mocha test",
+    "check-ts": "tsc --noEmit"
   },
   "files": [
     "lib"
@@ -57,5 +58,6 @@
   "browser": {
     "./src/builtins.js": "./src/builtins.browser.js"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "types": "src/index.ts"
 }

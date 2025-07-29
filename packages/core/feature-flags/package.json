@@ -11,11 +11,10 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/index.js",
-  "source": "src/index.js",
-  "types": "lib/types.d.ts",
+  "source": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
-    "build-ts": "mkdir -p lib && flow-to-ts src/types.js > lib/types.d.ts",
-    "check-ts": "tsc --noEmit lib/types.d.ts"
+    "check-ts": "tsc --noEmit"
   },
   "engines": {
     "node": ">= 16.0.0"

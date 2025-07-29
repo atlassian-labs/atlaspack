@@ -10,7 +10,7 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "lib/ConditionalManifestReporter.js",
-  "source": "src/ConditionalManifestReporter.js",
+  "source": "src/ConditionalManifestReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -19,5 +19,9 @@
     "@atlaspack/feature-flags": "2.20.0",
     "nullthrows": "^1.1.1"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --noEmit"
+  },
+  "types": "src/ConditionalManifestReporter.ts"
 }
