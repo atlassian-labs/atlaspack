@@ -2,8 +2,9 @@
   "name": "@atlaspack/optimizer-image",
   "version": "3.1.21",
   "license": "(MIT OR Apache-2.0)",
-  "main": "lib/ImageOptimizer.js",
-  "source": "src/ImageOptimizer.ts",
+  "main": "./lib/ImageOptimizer.js",
+  "source": "./src/ImageOptimizer.ts",
+  "types": "./src/ImageOptimizer.ts",
   "publishConfig": {
     "access": "public"
   },
@@ -29,7 +30,6 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --noEmit"
-  },
-  "types": "src/ImageOptimizer.ts"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

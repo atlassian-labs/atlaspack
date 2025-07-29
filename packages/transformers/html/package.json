@@ -7,14 +7,15 @@
   },
   "scripts": {
     "test": "mocha",
-    "check-ts": "tsc --noEmit"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/HTMLTransformer.js",
-  "source": "src/HTMLTransformer.ts",
+  "main": "./lib/HTMLTransformer.js",
+  "source": "./src/HTMLTransformer.ts",
+  "types": "./src/HTMLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -32,6 +33,5 @@
   "devDependencies": {
     "@atlaspack/core": "2.20.0"
   },
-  "type": "commonjs",
-  "types": "src/HTMLTransformer.ts"
+  "type": "commonjs"
 }

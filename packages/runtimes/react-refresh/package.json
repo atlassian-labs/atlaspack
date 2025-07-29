@@ -9,8 +9,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/ReactRefreshRuntime.js",
-  "source": "src/ReactRefreshRuntime.ts",
+  "main": "./lib/ReactRefreshRuntime.js",
+  "source": "./src/ReactRefreshRuntime.ts",
+  "types": "./src/ReactRefreshRuntime.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -23,7 +24,6 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --noEmit"
-  },
-  "types": "src/ReactRefreshRuntime.ts"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

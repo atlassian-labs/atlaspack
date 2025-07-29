@@ -10,8 +10,8 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "./lib/LspServer.js",
-  "source": "src/LspServer.ts",
-  "types": "src/LspServer.ts",
+  "source": "./src/LspServer.ts",
+  "types": "./src/LspServer.ts",
   "scripts": {
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts"

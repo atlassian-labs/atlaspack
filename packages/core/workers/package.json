@@ -10,9 +10,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/index.js",
-  "source": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "./lib/index.js",
+  "source": "./src/index.ts",
+  "types": "./src/index.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -31,6 +31,6 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --noEmit"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   }
 }

@@ -4,8 +4,9 @@
   "publishConfig": {
     "access": "public"
   },
-  "main": "lib/BundleStatsReporter.js",
-  "source": "src/BundleStatsReporter.ts",
+  "main": "./lib/BundleStatsReporter.js",
+  "source": "./src/BundleStatsReporter.ts",
+  "types": "./src/BundleStatsReporter.ts",
   "bin": {
     "atlaspack-bundle-stats": "bin.js"
   },
@@ -22,7 +23,6 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --noEmit"
-  },
-  "types": "src/BundleStatsReporter.ts"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

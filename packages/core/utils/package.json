@@ -10,8 +10,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/index.js",
-  "source": "src/index.ts",
+  "main": "./lib/index.js",
+  "source": "./src/index.ts",
+  "types": "./src/index.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -37,6 +38,8 @@
     "@atlaspack/markdown-ansi": "2.14.1",
     "@atlaspack/rust": "3.4.1",
     "@parcel/source-map": "^2.1.1",
+    "@types/micromatch": "^4.0.9",
+    "@types/node-forge": "^1.3.13",
     "chalk": "^4.1.0",
     "nullthrows": "^1.1.1",
     "@iarna/toml": "^2.2.0",
@@ -68,7 +71,6 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --noEmit"
-  },
-  "types": "src/index.ts"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

@@ -9,8 +9,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/DataURLOptimizer.js",
-  "source": "src/DataURLOptimizer.ts",
+  "main": "./lib/DataURLOptimizer.js",
+  "source": "./src/DataURLOptimizer.ts",
+  "types": "./src/DataURLOptimizer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -22,7 +23,6 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --noEmit"
-  },
-  "types": "src/DataURLOptimizer.ts"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

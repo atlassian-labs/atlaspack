@@ -2,8 +2,9 @@
   "name": "@atlaspack/watcher-watchman-js",
   "version": "2.14.21",
   "license": "(MIT OR Apache-2.0)",
-  "main": "lib/index.js",
-  "source": "src/index.ts",
+  "main": "./lib/index.js",
+  "source": "./src/index.ts",
+  "types": "./src/index.ts",
   "publishConfig": {
     "access": "public"
   },
@@ -15,7 +16,6 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --noEmit"
-  },
-  "types": "src/index.ts"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

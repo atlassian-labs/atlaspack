@@ -25,6 +25,6 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --noEmit"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   }
 }
