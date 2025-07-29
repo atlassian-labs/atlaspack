@@ -200,11 +200,9 @@ export default class Atlaspack {
         defaultTargetOptions: resolvedOptions.defaultTargetOptions,
         lmdb,
       });
-      if (featureFlags.atlaspackV3CleanShutdown) {
-        this.#disposable.add(() => {
-          rustAtlaspack.end();
-        });
-      }
+      this.#disposable.add(() => {
+        rustAtlaspack.end();
+      });
     }
     // @ts-expect-error TS2454
     this.rustAtlaspack = rustAtlaspack;
