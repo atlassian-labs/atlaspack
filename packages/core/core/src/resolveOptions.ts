@@ -102,11 +102,12 @@ export default async function resolveOptions(
   }
 
   let projectRoot;
-  if (initialOptions.projectRoot) {
+  if (initialOptions.projectRoot != null) {
     // Use explicitly provided projectRoot, resolving relative paths to cwd
-    projectRoot = path.isAbsolute(initialOptions.projectRoot)
-      ? initialOptions.projectRoot
-      : path.resolve(inputCwd, initialOptions.projectRoot);
+    const providedProjectRoot = initialOptions.projectRoot;
+    projectRoot = path.isAbsolute(providedProjectRoot)
+      ? providedProjectRoot
+      : path.resolve(inputCwd, providedProjectRoot);
   } else {
     // getRootDir treats the input as files, so getRootDir(["/home/user/myproject"]) returns "/home/user".
     // Instead we need to make the the entry refer to some file inside the specified folders if entries refers to the directory.
@@ -125,10 +126,11 @@ export default async function resolveOptions(
   }
 
   let gitRoot;
-  if (initialOptions.gitRoot) {
-    gitRoot = path.isAbsolute(initialOptions.gitRoot)
-      ? initialOptions.gitRoot
-      : path.resolve(inputCwd, initialOptions.gitRoot);
+  if (initialOptions.gitRoot != null) {
+    const providedGitRoot = initialOptions.gitRoot;
+    gitRoot = path.isAbsolute(providedGitRoot)
+      ? providedGitRoot
+      : path.resolve(inputCwd, providedGitRoot);
   } else {
     gitRoot = await findGitRepositoryRoot(inputFS, projectRoot);
   }
