@@ -9,8 +9,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/WebExtensionPackager.js",
-  "source": "src/WebExtensionPackager.js",
+  "main": "./lib/WebExtensionPackager.js",
+  "source": "./src/WebExtensionPackager.ts",
+  "types": "./src/WebExtensionPackager.ts",
   "engines": {
     "node": ">=16.0.0"
   },
@@ -19,5 +20,8 @@
     "@atlaspack/utils": "2.17.3",
     "nullthrows": "^1.1.1"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

@@ -9,13 +9,15 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/index.js",
-  "source": "src/index.js",
+  "main": "./lib/index.js",
+  "source": "./src/index.ts",
+  "types": "./src/index.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "test": "mocha test"
+    "test": "mocha test",
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   },
   "files": [
     "lib"

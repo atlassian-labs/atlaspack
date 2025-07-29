@@ -9,8 +9,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/WebManifestTransformer.js",
-  "source": "src/WebManifestTransformer.js",
+  "main": "./lib/WebManifestTransformer.js",
+  "source": "./src/WebManifestTransformer.ts",
+  "types": "./src/WebManifestTransformer.ts",
   "engines": {},
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",
@@ -18,5 +19,8 @@
     "@atlaspack/plugin": "2.14.21",
     "@atlaspack/utils": "2.17.3"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

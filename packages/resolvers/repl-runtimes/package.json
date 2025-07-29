@@ -7,7 +7,8 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "source": "src/REPLRuntimesResolver.js",
+  "source": "./src/REPLRuntimesResolver.ts",
+  "types": "./src/REPLRuntimesResolver.ts",
   "dependencies": {
     "@atlaspack/plugin": "2.14.21",
     "nullthrows": "^1.1.1"
@@ -15,5 +16,8 @@
   "devDependencies": {
     "@babel/core": "^7.12.2"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

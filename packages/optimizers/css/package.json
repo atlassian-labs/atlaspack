@@ -9,8 +9,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/CSSOptimizer.js",
-  "source": "src/CSSOptimizer.js",
+  "main": "./lib/CSSOptimizer.js",
+  "source": "./src/CSSOptimizer.ts",
+  "types": "./src/CSSOptimizer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -29,5 +30,8 @@
   "browser": {
     "lightningcss": "lightningcss-wasm"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

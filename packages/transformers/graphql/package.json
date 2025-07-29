@@ -9,8 +9,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/GraphQLTransformer.js",
-  "source": "src/GraphQLTransformer.js",
+  "main": "./lib/GraphQLTransformer.js",
+  "source": "./src/GraphQLTransformer.ts",
+  "types": "./src/GraphQLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -19,5 +20,8 @@
     "graphql": "^15.0.0",
     "graphql-import-macro": "^1.0.0"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

@@ -9,8 +9,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/SvgReactTransformer.js",
-  "source": "src/SvgReactTransformer.js",
+  "main": "./lib/SvgReactTransformer.js",
+  "source": "./src/SvgReactTransformer.ts",
+  "types": "./src/SvgReactTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -20,5 +21,8 @@
     "@svgr/plugin-jsx": "^6.2.0",
     "@svgr/plugin-svgo": "^6.2.0"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

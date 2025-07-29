@@ -10,14 +10,14 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/PluginAPI.js",
-  "source": "src/PluginAPI.js",
-  "types": "src/PluginAPI.d.ts",
+  "main": "./lib/PluginAPI.js",
+  "source": "./src/PluginAPI.ts",
+  "types": "./src/PluginAPI.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "check-ts": "tsc --noEmit src/PluginAPI.d.ts"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   },
   "dependencies": {
     "@atlaspack/types": "2.15.11"

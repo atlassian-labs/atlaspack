@@ -8,8 +8,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/ServerReporter.js",
-  "source": "src/ServerReporter.js",
+  "main": "./lib/ServerReporter.js",
+  "source": "./src/ServerReporter.ts",
+  "types": "./src/ServerReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -20,5 +21,8 @@
   "devDependencies": {
     "@atlaspack/types": "2.15.11"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

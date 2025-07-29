@@ -9,8 +9,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/TOMLTransformer.js",
-  "source": "src/TOMLTransformer.js",
+  "main": "./lib/TOMLTransformer.js",
+  "source": "./src/TOMLTransformer.ts",
+  "types": "./src/TOMLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -18,5 +19,8 @@
     "@iarna/toml": "^2.2.3",
     "@atlaspack/plugin": "2.14.21"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

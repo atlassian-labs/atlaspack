@@ -9,8 +9,9 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/TracerReporter.js",
-  "source": "src/TracerReporter.js",
+  "main": "./lib/TracerReporter.js",
+  "source": "./src/TracerReporter.ts",
+  "types": "./src/TracerReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -20,5 +21,8 @@
     "chrome-trace-event": "^1.0.3",
     "nullthrows": "^1.1.1"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

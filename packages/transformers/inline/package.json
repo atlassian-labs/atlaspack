@@ -9,13 +9,17 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/InlineTransformer.js",
-  "source": "src/InlineTransformer.js",
+  "main": "./lib/InlineTransformer.js",
+  "source": "./src/InlineTransformer.ts",
+  "types": "./src/InlineTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "dependencies": {
     "@atlaspack/plugin": "2.14.21"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }
