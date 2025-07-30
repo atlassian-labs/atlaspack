@@ -35,6 +35,7 @@ export interface Options {
   trace?: boolean;
   cache?: boolean;
   cacheDir?: string;
+  projectRoot?: string;
   watchDir?: string;
   watchBackend?:
     | 'watchman'
@@ -177,6 +178,7 @@ export async function normalizeOptions(
   return {
     shouldDisableCache: command.cache === false,
     cacheDir: command.cacheDir,
+    projectRoot: command.projectRoot,
     watchDir: command.watchDir,
     watchBackend: command.watchBackend,
     watchIgnore: command.watchIgnore,
