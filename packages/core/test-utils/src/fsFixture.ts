@@ -16,12 +16,12 @@ export function fsFixture(
   fs: FileSystem,
   cwd: string = fs.cwd(),
 ): (
-  strings: Array<string>,
+  strings: TemplateStringsArray,
   ...exprs: Array<
     null | string | number | boolean | Record<any, any> | ReadonlyArray<unknown>
   >
 ) => Promise<void> {
-  return async function apply(strings: Array<string>, ...exprs) {
+  return async function apply(strings: TemplateStringsArray, ...exprs) {
     let src = dedentRaw(strings, ...exprs);
     let tokens = new FixtureTokenizer(src).tokenize();
     let fixture = new FixtureParser(tokens).parse();
@@ -413,7 +413,7 @@ export function escapeFixtureContent(content: string): string {
 }
 
 export function dedentRaw(
-  strings: Array<string>,
+  strings: TemplateStringsArray,
   ...exprs: Array<
     null | string | number | boolean | Record<any, any> | ReadonlyArray<unknown>
   >
