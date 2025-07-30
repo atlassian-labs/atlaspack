@@ -366,8 +366,7 @@ export type InitialAtlaspackOptionsInternal<WorkerFarm> = {
     | undefined;
   readonly shouldDisableCache?: boolean;
   readonly cacheDir?: FilePath;
-  readonly projectRoot?: FilePath,
-  readonly gitRoot?: FilePath,
+  readonly projectRoot?: FilePath;
   readonly watchDir?: FilePath;
   readonly watchBackend?: BackendType;
   readonly watchIgnore?: Array<FilePath | GlobPattern>;

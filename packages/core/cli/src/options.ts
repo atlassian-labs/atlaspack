@@ -36,8 +36,6 @@ export const commonOptions: OptionsDefinition = {
   '--cache-dir <path>': 'set the cache directory. defaults to ".parcel-cache"',
   '--project-root <path>':
     'set the project root directory. defaults to nearest directory with lockfiles or version control, falls back to cwd',
-  '--git-root <path>':
-    'set the git repository root directory. defaults to nearest directory with .git folder, falls back to null if not found',
   '--watch-dir <path>':
     'set the root watch directory. defaults to nearest lockfile or source control dir.',
   '--watch-ignore [path]': [

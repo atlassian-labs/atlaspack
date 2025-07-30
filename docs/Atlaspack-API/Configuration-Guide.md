@@ -21,7 +21,6 @@ interface InitialAtlaspackOptions {
 
   // Project options
   projectRoot?: FilePath;
-  gitRoot?: FilePath;
 
   // Watch options
   watchDir?: FilePath;

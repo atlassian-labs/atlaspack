@@ -5,4 +5,4 @@
 '@atlaspack/cli': minor
 ---
 
-adding projectRoot and gitRoot options
+adding projectRoot option
