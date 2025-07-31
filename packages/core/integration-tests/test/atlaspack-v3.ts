@@ -224,7 +224,6 @@ describe.v3('AtlaspackV3', function () {
         shouldDisableCache: true,
         featureFlags: {
           atlaspackV3: true,
-          atlaspackV3CleanShutdown: true,
         },
       });
       const buildResult = await atlaspack.run();

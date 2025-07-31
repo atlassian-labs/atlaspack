@@ -109,11 +109,6 @@ export type FeatureFlags = {
   hmrImprovements: boolean;
 
   /**
-   * Adds an end() method to AtlaspckV3 to cleanly shutdown the NAPI worker pool
-   */
-  atlaspackV3CleanShutdown: boolean;
-
-  /**
    * Fixes a bug where imported objects that are accessed with non-static
    * properties (e.g. `CONSTANTS['api_' + endpoint`]) would not be recognised as
    * being used, and thus not included in the bundle.
@@ -184,7 +179,6 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   applyScopeHoistingImprovement: false,
   inlineConstOptimisationFix: false,
   hmrImprovements: false,
-  atlaspackV3CleanShutdown: false,
   unusedComputedPropertyFix: process.env.NODE_ENV === 'test',
   emptyFileStarRexportFix: process.env.NODE_ENV === 'test',
   cliProgressReportingImprovements: false,
