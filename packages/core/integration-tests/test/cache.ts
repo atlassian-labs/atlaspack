@@ -57,7 +57,7 @@ let packageManager = new NodePackageManager(inputFS, '/');
       {
         inputFS: overlayFS,
         shouldDisableCache: false,
-        watchBackend: os.platform() === 'darwin' ? 'fs-events' : undefined,
+        watchBackend: os.platform() === 'darwin' ? 'brute-force' : undefined,
         featureFlags: {
           ...featureFlags,
           cachePerformanceImprovements,
