@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/types-internal",
-  "version": "2.16.0",
+  "version": "2.17.0",
   "license": "(MIT OR Apache-2.0)",
   "main": "./lib/index.js",
   "source": "./src/index.ts",
@@ -16,8 +16,8 @@
     "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.1",
-    "@atlaspack/feature-flags": "2.20.0",
+    "@atlaspack/diagnostic": "2.14.2",
+    "@atlaspack/feature-flags": "2.20.1",
     "@parcel/source-map": "^2.1.1",
     "utility-types": "^3.10.0"
   },

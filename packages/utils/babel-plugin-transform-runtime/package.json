@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/babel-plugin-transform-runtime",
-  "version": "2.14.1",
+  "version": "2.14.2",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.22.11",
-    "@atlaspack/babel-preset-env": "2.14.1"
+    "@atlaspack/babel-preset-env": "2.14.2"
   },
   "type": "commonjs"
 }

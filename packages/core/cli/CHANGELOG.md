@@ -1,5 +1,29 @@
 # @atlaspack/cli
 
+## 2.14.0
+
+### Minor Changes
+
+- [#723](https://github.com/atlassian-labs/atlaspack/pull/723) [`43fdd22`](https://github.com/atlassian-labs/atlaspack/commit/43fdd223860fbc97af17d68c65419b97412cb888) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - adding projectRoot option
+
+### Patch Changes
+
+- [#720](https://github.com/atlassian-labs/atlaspack/pull/720) [`d2fd849`](https://github.com/atlassian-labs/atlaspack/commit/d2fd849770fe6305e9c694bd97b1bd905abd9d94) Thanks [@alshdavid](https://github.com/alshdavid)! - Migrate to TypeScript
+
+- Updated dependencies [[`d2fd849`](https://github.com/atlassian-labs/atlaspack/commit/d2fd849770fe6305e9c694bd97b1bd905abd9d94), [`43fdd22`](https://github.com/atlassian-labs/atlaspack/commit/43fdd223860fbc97af17d68c65419b97412cb888), [`12bee0e`](https://github.com/atlassian-labs/atlaspack/commit/12bee0e23f0464d7f6bd3e24fbe0d19c126d587d)]:
+  - @atlaspack/package-manager@2.14.22
+  - @atlaspack/reporter-dev-server@2.14.22
+  - @atlaspack/feature-flags@2.20.1
+  - @atlaspack/reporter-tracer@2.14.22
+  - @atlaspack/config-default@3.1.24
+  - @atlaspack/diagnostic@2.14.2
+  - @atlaspack/reporter-cli@2.17.4
+  - @atlaspack/events@2.14.2
+  - @atlaspack/logger@2.14.14
+  - @atlaspack/utils@2.17.4
+  - @atlaspack/core@2.21.0
+  - @atlaspack/fs@2.15.17
+
 ## 2.13.25
 
 ### Patch Changes
