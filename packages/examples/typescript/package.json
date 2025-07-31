@@ -7,7 +7,7 @@
     "build": "atlaspack build src/index.ts"
   },
   "devDependencies": {
-    "@atlaspack/cli": "^2.13.24"
+    "@atlaspack/cli": "2.13.25"
   },
   "main": "dist/main.js",
   "module": "dist/module.js",

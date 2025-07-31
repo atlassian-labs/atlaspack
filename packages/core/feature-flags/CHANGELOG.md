@@ -1,5 +1,22 @@
 # @atlaspack/feature-flags
 
+## 2.20.0
+
+### Minor Changes
+
+- [#721](https://github.com/atlassian-labs/atlaspack/pull/721) [`069de47`](https://github.com/atlassian-labs/atlaspack/commit/069de478e64fb5889f6f2ce023eb510782767fbd) Thanks [@benjervis](https://github.com/benjervis)! - Add support for bundle merging based on `webpackChunkName` comments.
+
+  Adding a `webpackChunkName` comment to an import will allow the bundler to merge multiple imports into a single bundle.
+
+  e.g.:
+
+  ```ts
+  import(/* webpackChunkName: "my-chunk" */ './my-module');
+  import(/* webpackChunkName: "my-chunk" */ './another-module');
+  ```
+
+  This can be enabled with the feature flag `supportWebpackChunkName`.
+
 ## 2.19.2
 
 ### Patch Changes
@@ -68,7 +85,6 @@
 ### Patch Changes
 
 - [#632](https://github.com/atlassian-labs/atlaspack/pull/632) [`10fbcfb`](https://github.com/atlassian-labs/atlaspack/commit/10fbcfbfa49c7a83da5d7c40983e36e87f524a75) Thanks [@marcins](https://github.com/marcins)! - Added a new feature flag `inlineConstOptimisationFix` which when enabled changes the behaviour for output of constant modules. This fixes two issues with constant modules:
-
   - Previously constant modules, if they needed a namespace anywhere, would have a namespace everywhere, with this change they only have a namespace in the bundles where needed.
   - Previously in the case of wrapped assets, a constant module dependnecy of that wrapped asset would be rendered after the module - which meant the minifier would not be able to inline the constants safely. With this flag all constant modules are rendered at the top of the bundle.
 

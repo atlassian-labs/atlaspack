@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/reporter-sourcemap-visualiser",
-  "version": "2.14.20",
+  "version": "2.14.21",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -9,18 +9,22 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/SourceMapVisualiser.js",
-  "source": "src/SourceMapVisualiser.js",
+  "main": "./lib/SourceMapVisualiser.js",
+  "source": "./src/SourceMapVisualiser.ts",
+  "types": "./src/SourceMapVisualiser.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.20",
-    "@atlaspack/utils": "2.17.2",
+    "@atlaspack/plugin": "2.14.21",
+    "@atlaspack/utils": "2.17.3",
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {
-    "@atlaspack/types": "2.15.10"
+    "@atlaspack/types": "2.15.11"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

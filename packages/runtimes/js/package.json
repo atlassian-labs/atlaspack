@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/runtime-js",
-  "version": "2.15.2",
+  "version": "2.16.0",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -9,18 +9,22 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/JSRuntime.js",
-  "source": "src/JSRuntime.js",
+  "main": "./lib/JSRuntime.js",
+  "source": "./src/JSRuntime.ts",
+  "types": "./src/JSRuntime.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.1",
     "@atlaspack/domain-sharding": "2.14.1",
-    "@atlaspack/feature-flags": "2.19.2",
-    "@atlaspack/plugin": "2.14.20",
-    "@atlaspack/utils": "2.17.2",
+    "@atlaspack/feature-flags": "2.20.0",
+    "@atlaspack/plugin": "2.14.21",
+    "@atlaspack/utils": "2.17.3",
     "nullthrows": "^1.1.1"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

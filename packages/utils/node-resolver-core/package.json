@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/node-resolver-core",
-  "version": "3.5.20",
+  "version": "3.5.21",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -9,13 +9,15 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/index.js",
-  "source": "src/index.js",
+  "main": "./lib/index.js",
+  "source": "./src/index.ts",
+  "types": "./src/index.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "test": "mocha test"
+    "test": "mocha test",
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   },
   "files": [
     "lib"
@@ -23,10 +25,10 @@
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",
     "@atlaspack/diagnostic": "2.14.1",
-    "@atlaspack/feature-flags": "2.19.2",
-    "@atlaspack/fs": "2.15.15",
+    "@atlaspack/feature-flags": "2.20.0",
+    "@atlaspack/fs": "2.15.16",
     "@atlaspack/rust": "3.4.1",
-    "@atlaspack/utils": "2.17.2",
+    "@atlaspack/utils": "2.17.3",
     "nullthrows": "^1.1.1",
     "semver": "^7.5.2"
   },

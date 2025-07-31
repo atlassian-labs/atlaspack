@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/packager-webextension",
-  "version": "2.14.20",
+  "version": "2.14.21",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -9,15 +9,19 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/WebExtensionPackager.js",
-  "source": "src/WebExtensionPackager.js",
+  "main": "./lib/WebExtensionPackager.js",
+  "source": "./src/WebExtensionPackager.ts",
+  "types": "./src/WebExtensionPackager.ts",
   "engines": {
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.20",
-    "@atlaspack/utils": "2.17.2",
+    "@atlaspack/plugin": "2.14.21",
+    "@atlaspack/utils": "2.17.3",
     "nullthrows": "^1.1.1"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

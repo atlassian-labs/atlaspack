@@ -84,7 +84,6 @@ This step creates bundles for explicit code split points. These are…
 - Asynchronous: this bundle does not need to load automatically, it can load in tandem with others
 
 - Isolated: Cannot share any assets with other bundles
-
   - Example: A URL import import url from 'url:./resource.txt';
 
   - A key difference between bundlers (past and present) here is that we’ve implicitly created a relationship of one asset to one bundle, and so if a dependency is isolated for example, then we mark that bundle isolated for all purposes. This means it cannot share any assets with other bundles.
@@ -94,7 +93,6 @@ This step creates bundles for explicit code split points. These are…
 - Parallel: Separate bundle but loaded with the parent.
 
 - Inline: Separate bundle, which is placed into the parent bundle before writing to dist.
-
   - SVG image inlined into html: `<img src="data-url:./img.svg"/>`
 
 More on code splitting: [Code Splitting](https://parceljs.org/features/code-splitting/).
@@ -344,7 +342,6 @@ BundleGraph decoration takes an idealGraph and mutates the passed-in assetGraph 
 - **Bundle:** A grouping of assets which are loaded together and within the same location
 
 - **BundleGroup:** Group of bundles which will load together, which has an entry bundle (the first bundle to load out of the group)
-
   - _Note the existence of LegacyBundle which refers to the old Bundle structure_
 
 - **AssetGraph:** A Graph representing Assets and their Dependencies as they appear in a user’s project
@@ -366,7 +363,6 @@ BundleGraph decoration takes an idealGraph and mutates the passed-in assetGraph 
 - **BundleRootGraph:** A graph maintaining Async and Parallel relationships between bundleRoots
 
 - **Entries**
-
   - **Entry to Project:** A file the user points Atlaspack at, in the bundler, this is a set of assets
 
   - **Entry to A Bundle:** The main or first asset in a bundle

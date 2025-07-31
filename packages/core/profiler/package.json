@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/profiler",
-  "version": "2.14.17",
+  "version": "2.14.18",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -10,19 +10,19 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/index.js",
-  "source": "src/index.js",
+  "main": "./lib/index.js",
+  "source": "./src/index.ts",
+  "types": "./src/index.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "build-ts": "flow-to-ts src/*.js --write && rm -f ./src/*.d.ts && tsc --emitDeclarationOnly --declaration --esModuleInterop --target es2015 --moduleResolution node16 --module node16 src/*.ts && mkdir -p lib && mv src/*.d.ts lib/. && rm src/*.ts && node build-ts.js",
-    "check-ts": "tsc --noEmit lib/index.d.ts"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.1",
     "@atlaspack/events": "2.14.1",
-    "@atlaspack/types-internal": "2.15.2",
+    "@atlaspack/types-internal": "2.16.0",
     "chrome-trace-event": "^1.0.2"
   },
   "type": "commonjs"

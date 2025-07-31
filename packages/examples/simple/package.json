@@ -7,7 +7,7 @@
     "build": "atlaspack build src/index.js"
   },
   "devDependencies": {
-    "@atlaspack/cli": "^2.13.24"
+    "@atlaspack/cli": "2.13.25"
   },
   "type": "commonjs"
 }

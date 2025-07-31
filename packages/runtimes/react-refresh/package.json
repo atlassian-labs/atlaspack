@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/runtime-react-refresh",
-  "version": "2.14.20",
+  "version": "2.14.21",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -9,17 +9,21 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/ReactRefreshRuntime.js",
-  "source": "src/ReactRefreshRuntime.js",
+  "main": "./lib/ReactRefreshRuntime.js",
+  "source": "./src/ReactRefreshRuntime.ts",
+  "types": "./src/ReactRefreshRuntime.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/feature-flags": "2.19.2",
-    "@atlaspack/plugin": "2.14.20",
-    "@atlaspack/utils": "2.17.2",
+    "@atlaspack/feature-flags": "2.20.0",
+    "@atlaspack/plugin": "2.14.21",
+    "@atlaspack/utils": "2.17.3",
     "react-error-overlay": "6.0.9",
     "react-refresh": ">=0.9 <=0.16"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  }
 }

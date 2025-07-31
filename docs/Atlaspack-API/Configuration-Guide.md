@@ -19,6 +19,9 @@ interface InitialAtlaspackOptions {
   shouldDisableCache?: boolean;
   cacheDir?: FilePath;
 
+  // Project options
+  projectRoot?: FilePath;
+
   // Watch options
   watchDir?: FilePath;
   watchBackend?: BackendType;

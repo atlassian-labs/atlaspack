@@ -1,5 +1,103 @@
 # atlaspack
 
+## 2.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`069de47`](https://github.com/atlassian-labs/atlaspack/commit/069de478e64fb5889f6f2ce023eb510782767fbd)]:
+  - @atlaspack/types-internal@2.16.0
+  - @atlaspack/feature-flags@2.20.0
+  - @atlaspack/bundler-default@3.2.0
+  - @atlaspack/transformer-js@3.4.0
+  - @atlaspack/packager-js@2.19.0
+  - @atlaspack/runtime-js@2.16.0
+  - @atlaspack/core@2.20.0
+  - @atlaspack/fs@2.15.16
+  - @atlaspack/profiler@2.14.18
+  - @atlaspack/types@2.15.11
+  - @atlaspack/workers@2.14.21
+  - @atlaspack/cache@3.2.16
+  - @atlaspack/cli@2.13.25
+  - @atlaspack/graph@3.5.10
+  - @atlaspack/utils@2.17.3
+  - @atlaspack/optimizer-inline-requires@2.14.21
+  - @atlaspack/packager-html@2.15.3
+  - @atlaspack/reporter-cli@2.17.3
+  - @atlaspack/reporter-conditional-manifest@2.15.3
+  - @atlaspack/runtime-react-refresh@2.14.21
+  - @atlaspack/transformer-react-refresh-wrap@2.14.21
+  - @atlaspack/node-resolver-core@3.5.21
+  - @atlaspack/config-default@3.1.23
+  - @atlaspack/reporter-bundle-stats@2.14.22
+  - @atlaspack/transformer-html@2.14.21
+  - @atlaspack/package-manager@2.14.21
+  - @atlaspack/plugin@2.14.21
+  - @atlaspack/packager-svg@2.14.21
+  - @atlaspack/packager-xml@2.14.21
+  - @atlaspack/reporter-bundle-analyzer@2.14.21
+  - @atlaspack/reporter-dev-server@2.14.21
+  - @atlaspack/reporter-json@2.14.21
+  - @atlaspack/reporter-sourcemap-visualiser@2.14.21
+  - @atlaspack/transformer-babel@2.14.21
+  - @atlaspack/transformer-jsonld@2.14.21
+  - @atlaspack/validator-typescript@2.14.21
+  - @atlaspack/optimizer-image@3.1.21
+  - @atlaspack/transformer-image@3.1.21
+  - @atlaspack/optimizer-blob-url@2.14.21
+  - @atlaspack/optimizer-css@2.14.21
+  - @atlaspack/optimizer-data-url@2.14.21
+  - @atlaspack/optimizer-svgo@2.14.21
+  - @atlaspack/optimizer-swc@2.14.21
+  - @atlaspack/optimizer-terser@2.14.21
+  - @atlaspack/packager-css@2.14.21
+  - @atlaspack/packager-raw-url@2.14.21
+  - @atlaspack/packager-webextension@2.14.21
+  - @atlaspack/reporter-build-metrics@2.14.21
+  - @atlaspack/reporter-lsp@2.14.21
+  - @atlaspack/reporter-tracer@2.14.21
+  - @atlaspack/resolver-glob@2.14.21
+  - @atlaspack/runtime-browser-hmr@2.14.21
+  - @atlaspack/runtime-service-worker@2.14.21
+  - @atlaspack/runtime-webextension@2.14.21
+  - @atlaspack/transformer-css@2.14.21
+  - @atlaspack/transformer-postcss@2.14.21
+  - @atlaspack/transformer-posthtml@2.14.21
+  - @atlaspack/transformer-typescript-types@2.14.21
+  - @atlaspack/transformer-webextension@2.14.21
+  - @atlaspack/transformer-webmanifest@2.14.21
+  - @atlaspack/watcher-watchman-js@2.14.21
+  - @atlaspack/validator-eslint@2.14.21
+  - @atlaspack/resolver-default@2.14.21
+  - @atlaspack/config-webextension@3.0.25
+  - @atlaspack/bundler-library@2.12.23
+  - @atlaspack/compressor-brotli@2.13.23
+  - @atlaspack/compressor-gzip@2.13.23
+  - @atlaspack/compressor-raw@2.13.23
+  - @atlaspack/namer-default@2.14.21
+  - @atlaspack/optimizer-cssnano@2.14.21
+  - @atlaspack/optimizer-htmlnano@2.14.21
+  - @atlaspack/packager-raw@2.14.21
+  - @atlaspack/packager-ts@2.14.21
+  - @atlaspack/packager-wasm@2.14.21
+  - @atlaspack/reporter-bundle-buddy@2.14.21
+  - @atlaspack/transformer-glsl@2.14.21
+  - @atlaspack/transformer-graphql@2.14.21
+  - @atlaspack/transformer-inline@2.14.21
+  - @atlaspack/transformer-inline-string@2.14.21
+  - @atlaspack/transformer-json@2.14.21
+  - @atlaspack/transformer-less@2.14.21
+  - @atlaspack/transformer-mdx@2.14.21
+  - @atlaspack/transformer-pug@2.14.21
+  - @atlaspack/transformer-raw@2.14.21
+  - @atlaspack/transformer-sass@2.14.21
+  - @atlaspack/transformer-svg@2.14.21
+  - @atlaspack/transformer-svg-react@2.14.21
+  - @atlaspack/transformer-toml@2.14.21
+  - @atlaspack/transformer-typescript-tsc@2.14.21
+  - @atlaspack/transformer-worklet@2.14.21
+  - @atlaspack/transformer-xml@2.14.21
+  - @atlaspack/transformer-yaml@2.14.21
+
 ## 2.0.3
 
 ### Patch Changes

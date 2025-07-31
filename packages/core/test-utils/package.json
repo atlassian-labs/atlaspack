@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/test-utils",
-  "version": "2.14.22",
+  "version": "2.14.23",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "private": true,
@@ -8,17 +8,23 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "src/utils.js",
+  "main": "./lib/utils.js",
+  "source": "./src/utils.ts",
+  "types": "./src/utils.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
+  "scripts": {
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+  },
   "dependencies": {
-    "@atlaspack/cache": "3.2.15",
-    "@atlaspack/config-default": "3.1.22",
-    "@atlaspack/core": "2.19.2",
-    "@atlaspack/fs": "2.15.15",
-    "@atlaspack/package-manager": "2.14.20",
-    "@atlaspack/utils": "2.17.2",
+    "@atlaspack/cache": "3.2.16",
+    "@atlaspack/config-default": "3.1.23",
+    "@atlaspack/core": "2.20.0",
+    "@atlaspack/fs": "2.15.16",
+    "@atlaspack/package-manager": "2.14.21",
+    "@atlaspack/utils": "2.17.3",
+    "async": "^3.2.6",
     "chalk": "^4.1.0",
     "expect": "^29.7.0",
     "ncp": "^2.0.0",
@@ -26,8 +32,10 @@
     "posthtml": "^0.16.5",
     "posthtml-parser": "^0.10.1",
     "resolve": "^1.12.0",
+    "rimraf": "^5.0.5",
     "ws": "^7.0.0",
-    "tempy": "^0.2.1",
+    "@types/async": "^3.2.6",
+    "tempy": "^1.0.0",
     "why-is-node-running": "^3.2.2"
   }
 }

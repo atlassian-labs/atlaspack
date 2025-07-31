@@ -1,5 +1,36 @@
 # @atlaspack/core
 
+## 2.20.0
+
+### Minor Changes
+
+- [#721](https://github.com/atlassian-labs/atlaspack/pull/721) [`069de47`](https://github.com/atlassian-labs/atlaspack/commit/069de478e64fb5889f6f2ce023eb510782767fbd) Thanks [@benjervis](https://github.com/benjervis)! - Add support for bundle merging based on `webpackChunkName` comments.
+
+  Adding a `webpackChunkName` comment to an import will allow the bundler to merge multiple imports into a single bundle.
+
+  e.g.:
+
+  ```ts
+  import(/* webpackChunkName: "my-chunk" */ './my-module');
+  import(/* webpackChunkName: "my-chunk" */ './another-module');
+  ```
+
+  This can be enabled with the feature flag `supportWebpackChunkName`.
+
+### Patch Changes
+
+- Updated dependencies [[`069de47`](https://github.com/atlassian-labs/atlaspack/commit/069de478e64fb5889f6f2ce023eb510782767fbd)]:
+  - @atlaspack/feature-flags@2.20.0
+  - @atlaspack/fs@2.15.16
+  - @atlaspack/profiler@2.14.18
+  - @atlaspack/types@2.15.11
+  - @atlaspack/workers@2.14.21
+  - @atlaspack/cache@3.2.16
+  - @atlaspack/graph@3.5.10
+  - @atlaspack/utils@2.17.3
+  - @atlaspack/package-manager@2.14.21
+  - @atlaspack/plugin@2.14.21
+
 ## 2.19.2
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/feature-flags",
-  "version": "2.19.2",
+  "version": "2.20.0",
   "description": "Provides internal feature-flags for the atlaspack codebase.",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -10,12 +10,11 @@
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
-  "main": "lib/index.js",
-  "source": "src/index.js",
-  "types": "lib/types.d.ts",
+  "main": "./lib/index.js",
+  "source": "./src/index.ts",
+  "types": "./src/index.ts",
   "scripts": {
-    "build-ts": "mkdir -p lib && flow-to-ts src/types.js > lib/types.d.ts",
-    "check-ts": "tsc --noEmit lib/types.d.ts"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   },
   "engines": {
     "node": ">= 16.0.0"

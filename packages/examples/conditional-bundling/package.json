@@ -19,8 +19,8 @@
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@atlaspack/cli": "^2.13.24",
-    "@atlaspack/reporter-conditional-manifest": "^2.15.2",
+    "@atlaspack/cli": "2.13.25",
+    "@atlaspack/reporter-conditional-manifest": "2.15.3",
     "@types/react-dom": "^17.0.2",
     "express": "*"
   },

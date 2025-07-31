@@ -74,7 +74,8 @@
   "server": "./lib/server.js",
   "targets": {
     "main": {
-      "source": "src/extension.ts",
+      "source": "./src/extension.ts",
+      "types": "./src/extension.ts",
       "outputFormat": "commonjs",
       "isLibrary": false,
       "optimize": false,
@@ -84,7 +85,8 @@
       "context": "node"
     },
     "server": {
-      "source": "src/server.ts",
+      "source": "./src/server.ts",
+      "types": "./src/server.ts",
       "outputFormat": "commonjs",
       "isLibrary": false,
       "optimize": false,

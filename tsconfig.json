@@ -11,6 +11,13 @@
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
     "declarationDir": "${configDir}/lib",
-    "outDir": "${configDir}/lib"
-  }
+    "outDir": "${configDir}/lib",
+    "resolveJsonModule": true,
+    "skipLibCheck": true
+  },
+  "files": [
+    "./types/ansi-html-community.d.ts",
+    "./types/emphasize.d.ts",
+    "./types/slice-ansi.d.ts"
+  ]
 }
