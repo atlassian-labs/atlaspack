@@ -23,5 +23,6 @@ module.exports = {
   require: [
     '@atlaspack/babel-register',
     '@atlaspack/test-utils/src/mochaSetup.js',
+    '@atlaspack/test-utils/src/feature-flag-override.js',
   ],
 };

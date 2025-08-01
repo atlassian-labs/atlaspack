@@ -18,6 +18,7 @@
     "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   },
   "dependencies": {
+    "@atlaspack/feature-flags": "2.20.1",
     "@atlaspack/cache": "3.2.17",
     "@atlaspack/config-default": "3.1.24",
     "@atlaspack/core": "2.21.0",
