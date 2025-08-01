@@ -15,12 +15,13 @@ pub struct LinkCommand {
   /// Target version to link
   #[clap(default_value = "default")]
   pub version: String,
-
   /// Add version as an alias in the apvm.json
-  #[clap(long = "set-alias")]
   pub set_alias: Option<String>,
-
-  #[clap(long = "strict")]
+  /// Exclude node_modules when linking, reusing node_modules in the target
+  pub exclude_node_modules: bool,
+  /// Skip postinstall steps when downloading
+  pub install_skip_postinstall: bool,
+  /// Ensure linked version matches checksum in apvm.json
   pub strict: bool,
 }
 
@@ -43,7 +44,7 @@ pub fn main(ctx: Context, cmd: LinkCommand) -> anyhow::Result<()> {
         InstallCommand {
           version: cmd.version.clone(),
           force: true,
-          skip_postinstall: false,
+          skip_postinstall: cmd.install_skip_postinstall,
         },
       )?;
       let Some(package) = ctx.resolver.resolve(&specifier)? else {

@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
-pub fn resolve_runtime<S: AsRef<str>>(runtime: S) -> anyhow::Result<PathBuf> {
-  let runtime = if runtime.as_ref().starts_with("/") {
-    PathBuf::from(runtime.as_ref())
+pub fn resolve_executable<S: AsRef<str>>(executable: S) -> anyhow::Result<PathBuf> {
+  let runtime = if executable.as_ref().starts_with("/") {
+    PathBuf::from(executable.as_ref())
   } else {
-    which::CanonicalPath::new(runtime.as_ref())?.to_path_buf()
+    which::CanonicalPath::new(executable.as_ref())?.to_path_buf()
   };
   if !std::fs::exists(&runtime)? {
     return Err(anyhow::anyhow!("Cannot find runtime executable"));

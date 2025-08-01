@@ -36,7 +36,7 @@ pub fn release_bin_path<P: AsRef<Path>>(base: P) -> PathBuf {
 }
 
 pub fn npm_bin_path<P: AsRef<Path>>(base: P) -> PathBuf {
-  base.as_ref().join("lib").join("cli.js")
+  base.as_ref().join("static").join("cli").join("index.js")
 }
 
 pub fn unmanaged_bin_path<P: AsRef<Path>>(base: P) -> PathBuf {
