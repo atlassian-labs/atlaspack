@@ -1,5 +1,15 @@
 # @atlaspack/transformer-typescript-tsc
 
+## 2.14.22
+
+### Patch Changes
+
+- [#720](https://github.com/atlassian-labs/atlaspack/pull/720) [`d2fd849`](https://github.com/atlassian-labs/atlaspack/commit/d2fd849770fe6305e9c694bd97b1bd905abd9d94) Thanks [@alshdavid](https://github.com/alshdavid)! - Migrate to TypeScript
+
+- Updated dependencies [[`d2fd849`](https://github.com/atlassian-labs/atlaspack/commit/d2fd849770fe6305e9c694bd97b1bd905abd9d94)]:
+  - @atlaspack/ts-utils@2.14.2
+  - @atlaspack/plugin@2.14.22
+
 ## 2.14.21
 
 ### Patch Changes

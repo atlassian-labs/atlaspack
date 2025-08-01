@@ -1,5 +1,11 @@
 # @atlaspack/babel-plugin-transform-contextual-imports
 
+## 2.15.1
+
+### Patch Changes
+
+- [#720](https://github.com/atlassian-labs/atlaspack/pull/720) [`d2fd849`](https://github.com/atlassian-labs/atlaspack/commit/d2fd849770fe6305e9c694bd97b1bd905abd9d94) Thanks [@alshdavid](https://github.com/alshdavid)! - Migrate to TypeScript
+
 ## 2.15.0
 
 ### Minor Changes

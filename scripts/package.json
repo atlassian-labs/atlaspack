@@ -1,7 +1,7 @@
 {
   "name": "@workspace/scripts",
   "private": true,
-  "version": "0.0.1-local",
+  "version": "0.0.1",
   "devDependencies": {
     "@swc/plugin-transform-imports": "^8.0.4",
     "flowgen": "^1.21.0",

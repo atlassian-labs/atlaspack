@@ -1,5 +1,34 @@
 # @atlaspack/core
 
+## 2.21.0
+
+### Minor Changes
+
+- [#723](https://github.com/atlassian-labs/atlaspack/pull/723) [`43fdd22`](https://github.com/atlassian-labs/atlaspack/commit/43fdd223860fbc97af17d68c65419b97412cb888) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - adding projectRoot option
+
+### Patch Changes
+
+- [#720](https://github.com/atlassian-labs/atlaspack/pull/720) [`d2fd849`](https://github.com/atlassian-labs/atlaspack/commit/d2fd849770fe6305e9c694bd97b1bd905abd9d94) Thanks [@alshdavid](https://github.com/alshdavid)! - Migrate to TypeScript
+
+- [#725](https://github.com/atlassian-labs/atlaspack/pull/725) [`12bee0e`](https://github.com/atlassian-labs/atlaspack/commit/12bee0e23f0464d7f6bd3e24fbe0d19c126d587d) Thanks [@marcins](https://github.com/marcins)! - Clean up `atlaspackV3CleanShutdown` feature flag.
+
+- Updated dependencies [[`d2fd849`](https://github.com/atlassian-labs/atlaspack/commit/d2fd849770fe6305e9c694bd97b1bd905abd9d94), [`12bee0e`](https://github.com/atlassian-labs/atlaspack/commit/12bee0e23f0464d7f6bd3e24fbe0d19c126d587d)]:
+  - @atlaspack/package-manager@2.14.22
+  - @atlaspack/feature-flags@2.20.1
+  - @atlaspack/build-cache@2.13.4
+  - @atlaspack/diagnostic@2.14.2
+  - @atlaspack/profiler@2.14.19
+  - @atlaspack/workers@2.14.22
+  - @atlaspack/events@2.14.2
+  - @atlaspack/logger@2.14.14
+  - @atlaspack/plugin@2.14.22
+  - @atlaspack/cache@3.2.17
+  - @atlaspack/graph@3.5.11
+  - @atlaspack/types@2.15.12
+  - @atlaspack/utils@2.17.4
+  - @atlaspack/rust@3.4.2
+  - @atlaspack/fs@2.15.17
+
 ## 2.20.0
 
 ### Minor Changes
