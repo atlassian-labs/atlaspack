@@ -80,6 +80,7 @@ fn main() -> anyhow::Result<()> {
     versions,
     apvmrc,
     env,
+    debug: log::log_enabled!(log::Level::Debug),
     paths,
     resolver,
     validator,

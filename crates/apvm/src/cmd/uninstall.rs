@@ -3,8 +3,10 @@ use std::time::SystemTime;
 
 use clap::Parser;
 
+use crate::cmd::install_npm::resolve_from_npm;
 use crate::context::Context;
 use crate::platform::package::ManagedPackage;
+use crate::platform::specifier::Specifier;
 
 #[derive(Debug, Parser)]
 pub struct UninstallCommand {
@@ -16,7 +18,16 @@ pub struct UninstallCommand {
 pub fn main(ctx: Context, cmd: UninstallCommand) -> anyhow::Result<()> {
   let start_time = SystemTime::now();
 
-  let specifier = ctx.resolver.resolve_specifier(&cmd.version)?;
+  let specifier_raw = ctx.resolver.resolve_specifier(&cmd.version)?;
+
+  let specifier = match &specifier_raw {
+    Specifier::Npm { version } => Specifier::Npm {
+      version: resolve_from_npm(&ctx, version)?,
+    },
+    Specifier::Git { version: _ } => specifier_raw,
+    Specifier::Release { version: _ } => specifier_raw,
+    Specifier::Local => specifier_raw,
+  };
 
   if let Some(package) = ctx.resolver.resolve(&specifier)? {
     let path = match &package {
