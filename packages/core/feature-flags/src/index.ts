@@ -145,6 +145,12 @@ export type FeatureFlags = {
    * a full bundling pass is required based on the AssetGraph's bundlingVersion.
    */
   incrementalBundlingVersioning: boolean;
+
+  /**
+   * Allow for the use of `data-atlaspack-isolated` on script tags in HTML to produce
+   * inline scripts that are build as "isolated" bundles.
+   */
+  inlineIsolatedScripts: boolean;
 };
 
 export type ConsistencyCheckFeatureFlagValue =
@@ -186,6 +192,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   condbDevFallbackDev: false,
   condbDevFallbackProd: false,
   incrementalBundlingVersioning: process.env.NODE_ENV === 'test',
+  inlineIsolatedScripts: process.env.NODE_ENV === 'test',
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
