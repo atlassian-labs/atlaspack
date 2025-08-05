@@ -22,14 +22,14 @@ use crate::html_dependencies_visitor::HtmlDependenciesVisitor;
 #[derive(Debug)]
 pub struct AtlaspackHtmlTransformerPlugin {
   project_root: PathBuf,
-  enabled_inline_isolated: bool,
+  enable_inline_isolated: bool,
 }
 
 impl AtlaspackHtmlTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Self {
     AtlaspackHtmlTransformerPlugin {
       project_root: ctx.options.project_root.clone(),
-      enabled_inline_isolated: ctx.options.feature_flags.bool_enabled("inlineIsolated"),
+      enable_inline_isolated: ctx.options.feature_flags.bool_enabled("inlineIsolated"),
     }
   }
 }
@@ -51,7 +51,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
       side_effects: input.side_effects,
       source_asset_id: input.id.clone(),
       source_path: Some(input.file_path.clone()),
-      enabled_inline_isolated: self.enabled_inline_isolated,
+      enable_inline_isolated: self.enable_inline_isolated,
     };
 
     let HtmlTransformation {
@@ -99,7 +99,7 @@ pub struct HTMLTransformationContext {
   pub side_effects: bool,
   pub source_asset_id: AssetId,
   pub source_path: Option<PathBuf>,
-  pub enabled_inline_isolated: bool,
+  pub enable_inline_isolated: bool,
 }
 
 #[derive(Debug, PartialEq)]
@@ -431,7 +431,7 @@ mod test {
     context.source_path = Some(PathBuf::from("main.html"));
     context.source_asset_id = String::from("test");
     // Remove this when cleaning up feature flag
-    context.enabled_inline_isolated = true;
+    context.enable_inline_isolated = true;
 
     context
   }
