@@ -541,6 +541,7 @@ mod tests {
       &project_root,
       false,
       None,
+      Some(BundleBehavior::Inline),
     );
 
     assert_eq!(
