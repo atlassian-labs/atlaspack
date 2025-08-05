@@ -3236,8 +3236,8 @@ describe('html', function () {
 
   it('should support isolated inline scripts', async function () {
     const dir = path.join(__dirname, 'html-inline-isolated');
-    await inputFS.mkdirp(dir);
-    await fsFixture(inputFS, dir)`
+    await overlayFS.mkdirp(dir);
+    await fsFixture(overlayFS, dir)`
       yarn.lock: {}
 
       shared.js: 
@@ -3267,8 +3267,8 @@ describe('html', function () {
       path.join(dir, 'index2.html'),
     ];
     const b = await bundle(entries, {
-      inputFS,
-      outputFS,
+      inputFS: overlayFS,
+      outputFS: overlayFS,
       mode: 'production',
     });
     const outdir = outputFS.readdirSync(distDir);
