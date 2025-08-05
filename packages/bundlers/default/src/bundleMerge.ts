@@ -15,9 +15,9 @@ function getBundlesForBundleGroup(
     const node = bundleGraph.getNode(nodeId);
     if (
       node &&
-      node !== 'root' &&
-      node.bundleBehavior !== 'inline' &&
-      node.bundleBehavior !== 'inlineIsolated'
+      (node === 'root' ||
+        (node.bundleBehavior !== 'inline' &&
+          node.bundleBehavior !== 'inlineIsolated'))
     ) {
       count++;
     }
