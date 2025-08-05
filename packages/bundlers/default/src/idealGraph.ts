@@ -1313,11 +1313,12 @@ export function createIdealGraph(
       let numBundlesContributingToPRL = bundleIdsInGroup.reduce((count, b) => {
         let bundle = nullthrows(bundleGraph.getNode(b));
         invariant(bundle !== 'root');
-        // @ts-expect-error TS2365
         return (
           count +
-          (bundle.bundleBehavior !== 'inline' &&
-            bundle.bundleBehavior !== 'inlineIsolated')
+          Number(
+            bundle.bundleBehavior !== 'inline' &&
+              bundle.bundleBehavior !== 'inlineIsolated',
+          )
         );
       }, 0);
 
