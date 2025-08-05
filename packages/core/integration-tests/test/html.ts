@@ -3233,4 +3233,49 @@ describe('html', function () {
 
     await run(b, {output: null}, {require: false});
   });
+
+  it('should support isolated inline scripts', async function () {
+    const dir = path.join(__dirname, 'html-inline-isolated');
+    await inputFS.mkdirp(dir);
+    await fsFixture(inputFS, dir)`
+      yarn.lock: {}
+
+      shared.js: 
+        // Something meaty to trigger a separate bundle
+        import {createHash } from 'crypto';
+
+        export function shared(a) {
+          const h = createHash('sha256');
+          h.update(a);
+          return h.digest('hex');
+        }
+
+      index.html:
+        <script type="module" data-atlaspack-isolated>
+          import { shared } from './shared.js';
+          console.log(shared());
+        </script>
+
+      index2.html:
+        <script type="module" data-atlaspack-isolated>
+          import { shared } from './shared.js';
+          console.log(shared());
+        </script>
+    `;
+    const entries = [
+      path.join(dir, 'index.html'),
+      path.join(dir, 'index2.html'),
+    ];
+    const b = await bundle(entries, {
+      inputFS,
+      outputFS,
+      mode: 'production',
+    });
+    const outdir = outputFS.readdirSync(distDir);
+    // We expect to only produce HTML files
+    assert(
+      outdir.every((f) => f.endsWith('.html')),
+      `Expected only HTML files: ${outdir.join(', ')}`,
+    );
+  });
 });
