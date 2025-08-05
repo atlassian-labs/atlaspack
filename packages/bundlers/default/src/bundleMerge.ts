@@ -12,8 +12,13 @@ function getBundlesForBundleGroup(
 ): number {
   let count = 0;
   bundleGraph.traverse((nodeId) => {
-    // @ts-expect-error TS2339
-    if (bundleGraph.getNode(nodeId)?.bundleBehavior !== 'inline') {
+    const node = bundleGraph.getNode(nodeId);
+    if (
+      node &&
+      node !== 'root' &&
+      node.bundleBehavior !== 'inline' &&
+      node.bundleBehavior !== 'inlineIsolated'
+    ) {
       count++;
     }
   }, bundleGroupId);

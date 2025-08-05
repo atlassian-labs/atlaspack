@@ -353,7 +353,8 @@ export function createIdealGraph(
               dependency.priority === 'lazy' ||
               (getFeatureFlag('conditionalBundlingApi') &&
                 node.value.priority === 'conditional') ||
-              childAsset.bundleBehavior === 'isolated' // An isolated Dependency, or Bundle must contain all assets it needs to load.
+              childAsset.bundleBehavior === 'isolated' || // An isolated Dependency, or Bundle must contain all assets it needs to load.
+              childAsset.bundleBehavior === 'inlineIsolated'
             ) {
               if (bundleId == null) {
                 let firstBundleGroup = nullthrows(
@@ -366,7 +367,9 @@ export function createIdealGraph(
                     dependency.bundleBehavior ?? childAsset.bundleBehavior,
                   needsStableName:
                     dependency.bundleBehavior === 'inline' ||
-                    childAsset.bundleBehavior === 'inline'
+                    childAsset.bundleBehavior === 'inline' ||
+                    dependency.bundleBehavior === 'inlineIsolated' ||
+                    childAsset.bundleBehavior === 'inlineIsolated'
                       ? false
                       : dependency.isEntry || dependency.needsStableName,
                   target: firstBundleGroup.target,
@@ -398,7 +401,8 @@ export function createIdealGraph(
                 if (
                   // If this dependency requests isolated, but the bundle is not,
                   // make the bundle isolated for all uses.
-                  dependency.bundleBehavior === 'isolated' &&
+                  (dependency.bundleBehavior === 'isolated' ||
+                    dependency.bundleBehavior === 'inlineIsolated') &&
                   bundle.bundleBehavior == null
                 ) {
                   bundle.bundleBehavior = dependency.bundleBehavior;
@@ -482,6 +486,7 @@ export function createIdealGraph(
                   needsStableName:
                     childAsset.bundleBehavior === 'inline' ||
                     dependency.bundleBehavior === 'inline' ||
+                    dependency.bundleBehavior === 'inlineIsolated' ||
                     (dependency.priority === 'parallel' &&
                       !dependency.needsStableName)
                       ? false
@@ -495,7 +500,8 @@ export function createIdealGraph(
                 if (
                   // If this dependency requests isolated, but the bundle is not,
                   // make the bundle isolated for all uses.
-                  dependency.bundleBehavior === 'isolated' &&
+                  (dependency.bundleBehavior === 'isolated' ||
+                    dependency.bundleBehavior === 'inlineIsolated') &&
                   bundle.bundleBehavior == null
                 ) {
                   bundle.bundleBehavior = dependency.bundleBehavior;
@@ -741,7 +747,10 @@ export function createIdealGraph(
     // not true that a bundle's available assets = all assets of all the bundleGroups
     // it belongs to. It's the intersection of those sets.
     let available;
-    if (bundleRoot.bundleBehavior === 'isolated') {
+    if (
+      bundleRoot.bundleBehavior === 'isolated' ||
+      bundleRoot.bundleBehavior === 'inlineIsolated'
+    ) {
       available = new BitSet(assets.length);
     } else {
       available = nullthrows(ancestorAssets[nodeId]).clone();
@@ -825,7 +834,8 @@ export function createIdealGraph(
 
     let parentRoots = bundleRootGraph.getNodeIdsConnectedTo(id, ALL_EDGE_TYPES);
     let canDelete =
-      getBundleFromBundleRoot(bundleRoot).bundleBehavior !== 'isolated';
+      getBundleFromBundleRoot(bundleRoot).bundleBehavior !== 'isolated' &&
+      getBundleFromBundleRoot(bundleRoot).bundleBehavior !== 'inlineIsolated';
     if (parentRoots.length === 0) continue;
     for (let parentId of parentRoots) {
       if (parentId === rootNodeId) {
@@ -905,7 +915,8 @@ export function createIdealGraph(
         !a.isBundleSplittable ||
         (bundleRoots.get(a) &&
           (getBundleFromBundleRoot(a).needsStableName ||
-            getBundleFromBundleRoot(a).bundleBehavior === 'isolated'))
+            getBundleFromBundleRoot(a).bundleBehavior === 'isolated' ||
+            getBundleFromBundleRoot(a).bundleBehavior === 'inlineIsolated'))
       ) {
         // Add asset to non-splittable bundles.
         addAssetToBundleRoot(asset, a);
@@ -1303,7 +1314,11 @@ export function createIdealGraph(
         let bundle = nullthrows(bundleGraph.getNode(b));
         invariant(bundle !== 'root');
         // @ts-expect-error TS2365
-        return count + (bundle.bundleBehavior !== 'inline');
+        return (
+          count +
+          (bundle.bundleBehavior !== 'inline' &&
+            bundle.bundleBehavior !== 'inlineIsolated')
+        );
       }, 0);
 
       if (numBundlesContributingToPRL > config.maxParallelRequests) {
