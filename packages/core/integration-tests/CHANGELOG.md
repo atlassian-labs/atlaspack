@@ -1,5 +1,15 @@
 # @atlaspack/integration-tests
 
+## 2.16.0
+
+### Minor Changes
+
+- [#723](https://github.com/atlassian-labs/atlaspack/pull/723) [`43fdd22`](https://github.com/atlassian-labs/atlaspack/commit/43fdd223860fbc97af17d68c65419b97412cb888) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - adding projectRoot option
+
+### Patch Changes
+
+- [#720](https://github.com/atlassian-labs/atlaspack/pull/720) [`d2fd849`](https://github.com/atlassian-labs/atlaspack/commit/d2fd849770fe6305e9c694bd97b1bd905abd9d94) Thanks [@alshdavid](https://github.com/alshdavid)! - Migrate to TypeScript
+
 ## 2.15.0
 
 ### Minor Changes

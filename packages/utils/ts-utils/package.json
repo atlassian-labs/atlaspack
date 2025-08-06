@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/ts-utils",
-  "version": "2.14.1",
+  "version": "2.14.2",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
