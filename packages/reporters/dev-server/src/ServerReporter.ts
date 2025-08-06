@@ -1,9 +1,11 @@
 import {Reporter} from '@atlaspack/plugin';
 import HMRServer from './HMRServer';
 import Server from './Server';
+import {StaticServerDataProvider} from './StaticServerDataProvider';
 
 let servers: Map<number, Server> = new Map();
 let hmrServers: Map<number, HMRServer> = new Map();
+
 export default new Reporter({
   async report({event, options, logger}) {
     let {serveOptions, hmrOptions} = options;
@@ -11,6 +13,11 @@ export default new Reporter({
     let hmrPort =
       (hmrOptions && hmrOptions.port) || (serveOptions && serveOptions.port);
     let hmrServer = hmrPort ? hmrServers.get(hmrPort) : undefined;
+
+    const dataProvider = new StaticServerDataProvider(
+      serveOptions ? serveOptions.distDir : '',
+    );
+
     switch (event.type) {
       case 'watchStart': {
         if (serveOptions) {
@@ -36,7 +43,7 @@ export default new Reporter({
             hmrOptions,
           };
 
-          server = new Server(serverOptions);
+          server = new Server(serverOptions, dataProvider);
           servers.set(serveOptions.port, server);
           const devServer = await server.start();
 
@@ -120,7 +127,8 @@ export default new Reporter({
             });
           }
 
-          server.buildSuccess(event.bundleGraph, event.requestBundle);
+          dataProvider.update(event.bundleGraph, event.requestBundle);
+          server.buildSuccess();
         }
         if (hmrServer && options.serveOptions === false) {
           await hmrServer.emitUpdate(event);
