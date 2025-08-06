@@ -26,11 +26,12 @@ export const BROWSER_ENVS: Set<string> = new Set<string>([
   'web-worker',
   'service-worker',
   'worklet',
+  'tesseract',
   'electron-renderer',
 ]);
 const ELECTRON_ENVS = new Set(['electron-main', 'electron-renderer']);
 const NODE_ENVS = new Set(['node', ...ELECTRON_ENVS]);
-const WORKER_ENVS = new Set(['web-worker', 'service-worker']);
+const WORKER_ENVS = new Set(['web-worker', 'service-worker', 'tesseract']);
 export const ISOLATED_ENVS: Set<string> = new Set([...WORKER_ENVS, 'worklet']);
 
 const ALL_BROWSERS = [
@@ -253,6 +254,10 @@ export default class Environment implements IEnvironment {
 
   isWorklet(): boolean {
     return this.#environment.context === 'worklet';
+  }
+
+  isTesseract(): boolean {
+    return this.#environment.context === 'tesseract';
   }
 
   matchesEngines(

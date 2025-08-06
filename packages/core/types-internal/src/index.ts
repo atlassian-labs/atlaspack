@@ -170,7 +170,8 @@ export type EnvironmentContext =
   | 'worklet'
   | 'node'
   | 'electron-main'
-  | 'electron-renderer';
+  | 'electron-renderer'
+  | 'tesseract';
 
 /** The JS module format for the bundle output */
 export type OutputFormat = 'esmodule' | 'commonjs' | 'global';
@@ -291,6 +292,8 @@ export interface Environment {
   isWorker(): boolean;
   /** Whether <code>context</code> specifies a worklet context. */
   isWorklet(): boolean;
+  /** Whether <code>context</code> specifies a tesseract context. */
+  isTesseract(): boolean;
   /** Whether <code>context</code> specifies an isolated context (can't access other loaded ancestor bundles). */
   isIsolated(): boolean;
   matchesEngines(minVersions: VersionMap, defaultValue?: boolean): boolean;
