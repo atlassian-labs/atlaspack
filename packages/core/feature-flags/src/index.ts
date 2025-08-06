@@ -1,5 +1,3 @@
-// Converted from Flow to TypeScript
-
 export type FeatureFlags = {
   // This feature flag mostly exists to test the feature flag system, and doesn't have any build/runtime effect
   readonly exampleFeature: boolean;
@@ -24,6 +22,11 @@ export type FeatureFlags = {
    * Fixes quadratic cache invalidation issue
    */
   fixQuadraticCacheInvalidation: ConsistencyCheckFeatureFlagValue;
+
+  /**
+   * Enable rust HTTP dev server
+   */
+  rustDevServer: boolean;
 
   /**
    * Enables an experimental "conditional bundling" API - this allows the use of `importCond` syntax
@@ -186,6 +189,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   condbDevFallbackDev: false,
   condbDevFallbackProd: false,
   incrementalBundlingVersioning: process.env.NODE_ENV === 'test',
+  rustDevServer: false,
 };
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
