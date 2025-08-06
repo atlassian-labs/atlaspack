@@ -1,9 +1,13 @@
 import {Reporter} from '@atlaspack/plugin';
 import HMRServer from './HMRServer';
 import Server from './Server';
+import {StaticServerDataProvider} from './StaticServerDataProvider';
+import assert from 'node:assert';
 
 let servers: Map<number, Server> = new Map();
+let dataProviders: Map<string, StaticServerDataProvider> = new Map();
 let hmrServers: Map<number, HMRServer> = new Map();
+
 export default new Reporter({
   async report({event, options, logger}) {
     let {serveOptions, hmrOptions} = options;
@@ -11,6 +15,16 @@ export default new Reporter({
     let hmrPort =
       (hmrOptions && hmrOptions.port) || (serveOptions && serveOptions.port);
     let hmrServer = hmrPort ? hmrServers.get(hmrPort) : undefined;
+
+    let dataProvider = serveOptions
+      ? dataProviders.get(serveOptions.distDir)
+      : undefined;
+    if (!dataProvider && serveOptions) {
+      dataProvider = new StaticServerDataProvider(serveOptions.distDir);
+      dataProviders.set(serveOptions.distDir, dataProvider);
+    }
+    assert(dataProvider, 'dataProvider is required');
+
     switch (event.type) {
       case 'watchStart': {
         if (serveOptions) {
@@ -36,7 +50,7 @@ export default new Reporter({
             hmrOptions,
           };
 
-          server = new Server(serverOptions);
+          server = new Server(serverOptions, dataProvider);
           servers.set(serveOptions.port, server);
           const devServer = await server.start();
 
@@ -112,6 +126,8 @@ export default new Reporter({
         }
         break;
       case 'buildSuccess':
+        dataProvider?.update(event.bundleGraph, event.requestBundle);
+
         if (serveOptions) {
           if (!server) {
             return logger.warn({
@@ -120,7 +136,7 @@ export default new Reporter({
             });
           }
 
-          server.buildSuccess(event.bundleGraph, event.requestBundle);
+          server.buildSuccess();
         }
         if (hmrServer && options.serveOptions === false) {
           await hmrServer.emitUpdate(event);
