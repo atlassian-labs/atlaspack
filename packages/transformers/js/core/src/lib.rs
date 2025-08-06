@@ -1,3 +1,4 @@
+mod add_display_name;
 mod collect;
 mod constant_module;
 mod dependency_collector;
@@ -116,6 +117,7 @@ pub struct Config {
   pub is_worker: bool,
   pub is_type_script: bool,
   pub is_jsx: bool,
+  pub add_display_name: Option<bool>,
   pub jsx_pragma: Option<String>,
   pub jsx_pragma_frag: Option<String>,
   pub automatic_jsx_runtime: bool,
@@ -326,6 +328,10 @@ pub fn transform(
               };
 
               if config.is_jsx {
+                if config.add_display_name.unwrap_or(false) {
+                  module.visit_mut_with(&mut add_display_name::AddDisplayNameVisitor::default());
+                }
+
                 module = module.apply(&mut react::react(
                     source_map.clone(),
                     Some(&comments),
