@@ -29,7 +29,10 @@ impl AtlaspackHtmlTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Self {
     AtlaspackHtmlTransformerPlugin {
       project_root: ctx.options.project_root.clone(),
-      enable_inline_isolated: ctx.options.feature_flags.bool_enabled("inlineIsolated"),
+      enable_inline_isolated: ctx
+        .options
+        .feature_flags
+        .bool_enabled("inlineIsolatedScripts"),
     }
   }
 }

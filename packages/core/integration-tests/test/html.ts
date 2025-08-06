@@ -3240,14 +3240,16 @@ describe('html', function () {
     await fsFixture(overlayFS, dir)`
       yarn.lock: {}
 
-      shared.js: 
-        // Something meaty to trigger a separate bundle
-        import {createHash } from 'crypto';
+      package.json:
+        {
+          "@atlaspack/bundler-default": {
+            "minBundleSize": 0
+          }
+        }
 
+      shared.js: 
         export function shared(a) {
-          const h = createHash('sha256');
-          h.update(a);
-          return h.digest('hex');
+          return "This is some shared stuff " + a;
         }
 
       index.html:
@@ -3270,6 +3272,9 @@ describe('html', function () {
       inputFS: overlayFS,
       outputFS: overlayFS,
       mode: 'production',
+      featureFlags: {
+        inlineIsolatedScripts: true,
+      },
     });
     const outdir = outputFS.readdirSync(distDir);
     // We expect to only produce HTML files

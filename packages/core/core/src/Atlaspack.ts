@@ -199,6 +199,7 @@ export default class Atlaspack {
         fs: inputFS && new FileSystemV3(inputFS),
         defaultTargetOptions: resolvedOptions.defaultTargetOptions,
         lmdb,
+        featureFlags: resolvedOptions.featureFlags,
       });
       this.#disposable.add(() => {
         rustAtlaspack.end();
