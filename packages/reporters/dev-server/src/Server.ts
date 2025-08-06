@@ -1,5 +1,3 @@
-// @ts-expect-error TS2307
-import type {DevServerOptions, Request, Response} from './types.js.flow';
 import type {FilePath, PluginOptions} from '@atlaspack/types';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import type {FileSystem} from '@atlaspack/fs';
@@ -17,19 +15,16 @@ import {
 } from '@atlaspack/utils';
 import serverErrors from './serverErrors';
 import fs from 'fs';
-// @ts-expect-error TS7016
 import ejs from 'ejs';
-// @ts-expect-error TS7016
 import connect from 'connect';
-// @ts-expect-error TS7016
 import serveHandler from 'serve-handler';
 import {createProxyMiddleware} from 'http-proxy-middleware';
 import {URL, URLSearchParams} from 'url';
-// @ts-expect-error TS7016
 import launchEditor from 'launch-editor';
-// @ts-expect-error TS7016
 import fresh from 'fresh';
+
 import {ServerDataProvider} from './ServerDataProvider';
+import type {DevServerOptions, Request, Response} from './types';
 
 export function setHeaders(res: Response) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -132,7 +127,7 @@ export default class Server {
 
   respond(req: Request, res: Response): unknown {
     if (this.middleware.some((handler) => handler(req, res))) return;
-    let {pathname, search} = url.parse(req.originalUrl || req.url);
+    let {pathname, search} = url.parse(req.originalUrl || req.url || '');
     if (pathname == null) {
       pathname = '/';
     }
@@ -181,7 +176,7 @@ export default class Server {
     let htmlBundleFilePaths = this.dataProvider.getHTMLBundleFilePaths();
 
     let indexFilePath = null;
-    let {pathname: reqURL} = url.parse(req.originalUrl || req.url);
+    let {pathname: reqURL} = url.parse(req.originalUrl || req.url || '');
 
     if (!reqURL) {
       reqURL = '/';
@@ -240,7 +235,7 @@ export default class Server {
     res: Response,
     next: NextFunction,
   ): Promise<void> {
-    const {pathname} = url.parse(req.url);
+    const {pathname} = url.parse(req.url || '');
 
     if (!pathname) {
       this.send500(req, res);
@@ -288,7 +283,7 @@ export default class Server {
     }
 
     try {
-      var filePath = url.parse(req.url).pathname || '';
+      var filePath = url.parse(req.url || '').pathname || '';
       filePath = decodeURIComponent(filePath);
     } catch (err: any) {
       return this.sendError(res, 400);
@@ -458,13 +453,11 @@ export default class Server {
     };
 
     const app = connect();
-    // @ts-expect-error TS7006
     app.use((req, res, next) => {
       setHeaders(res);
       next();
     });
 
-    // @ts-expect-error TS7006
     app.use((req, res, next) => {
       if (req.url === '/__parcel_healthcheck') {
         res.statusCode = 200;
