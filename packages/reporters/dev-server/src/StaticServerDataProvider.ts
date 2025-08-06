@@ -34,9 +34,10 @@ export class StaticServerDataProvider implements ServerDataProvider {
   async requestBundle(
     requestedPath: string,
   ): Promise<'requested' | 'not-found'> {
-    const bundle = this.bundleGraph
-      ?.getBundles()
-      .find((b) => path.relative(this.distDir, b.filePath) === requestedPath);
+    const bundle = this.bundleGraph?.getBundles().find((b) => {
+      const relativePath = path.relative(this.distDir, b.filePath);
+      return relativePath === requestedPath;
+    });
 
     if (!bundle) {
       return 'not-found';

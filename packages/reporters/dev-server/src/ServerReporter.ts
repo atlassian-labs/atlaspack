@@ -2,8 +2,10 @@ import {Reporter} from '@atlaspack/plugin';
 import HMRServer from './HMRServer';
 import Server from './Server';
 import {StaticServerDataProvider} from './StaticServerDataProvider';
+import assert from 'node:assert';
 
 let servers: Map<number, Server> = new Map();
+let dataProviders: Map<string, StaticServerDataProvider> = new Map();
 let hmrServers: Map<number, HMRServer> = new Map();
 
 export default new Reporter({
@@ -14,9 +16,14 @@ export default new Reporter({
       (hmrOptions && hmrOptions.port) || (serveOptions && serveOptions.port);
     let hmrServer = hmrPort ? hmrServers.get(hmrPort) : undefined;
 
-    const dataProvider = new StaticServerDataProvider(
-      serveOptions ? serveOptions.distDir : '',
-    );
+    let dataProvider = serveOptions
+      ? dataProviders.get(serveOptions.distDir)
+      : undefined;
+    if (!dataProvider && serveOptions) {
+      dataProvider = new StaticServerDataProvider(serveOptions.distDir);
+      dataProviders.set(serveOptions.distDir, dataProvider);
+    }
+    assert(dataProvider, 'dataProvider is required');
 
     switch (event.type) {
       case 'watchStart': {
@@ -119,6 +126,8 @@ export default new Reporter({
         }
         break;
       case 'buildSuccess':
+        dataProvider?.update(event.bundleGraph, event.requestBundle);
+
         if (serveOptions) {
           if (!server) {
             return logger.warn({
@@ -127,7 +136,6 @@ export default new Reporter({
             });
           }
 
-          dataProvider.update(event.bundleGraph, event.requestBundle);
           server.buildSuccess();
         }
         if (hmrServer && options.serveOptions === false) {
