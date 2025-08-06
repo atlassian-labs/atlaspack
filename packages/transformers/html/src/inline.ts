@@ -132,6 +132,7 @@ export default function extractInlineAssets(
           typeof node.attrs['data-atlaspack-isolated'] !== 'undefined'
         ) {
           bundleBehavior = 'inlineIsolated';
+          delete node.attrs['data-atlaspack-isolated'];
         }
 
         // insert parcelId to allow us to retrieve node during packaging

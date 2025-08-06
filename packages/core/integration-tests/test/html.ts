@@ -3272,9 +3272,6 @@ describe('html', function () {
       inputFS: overlayFS,
       outputFS: overlayFS,
       mode: 'production',
-      featureFlags: {
-        inlineIsolatedScripts: true,
-      },
     });
     const outdir = outputFS.readdirSync(distDir);
     // We expect to only produce HTML files
@@ -3282,5 +3279,14 @@ describe('html', function () {
       outdir.every((f) => f.endsWith('.html')),
       `Expected only HTML files: ${outdir.join(', ')}`,
     );
+    outdir
+      .filter((f) => f.endsWith('.html'))
+      .forEach((f) => {
+        const html = outputFS.readFileSync(path.join(distDir, f), 'utf8');
+        assert(
+          !html.includes('data-atlaspack-isolated'),
+          `Expected data-atlaspack-isolated to be stripped from ${f}`,
+        );
+      });
   });
 });
