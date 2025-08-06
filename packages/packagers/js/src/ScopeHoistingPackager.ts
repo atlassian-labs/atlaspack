@@ -54,6 +54,7 @@ const GLOBALS_BY_CONTEXT = {
     ...Object.keys(globals.serviceworker),
   ]),
   worklet: new Set([...BUILTINS]),
+  tesseract: new Set([...BUILTINS, ...Object.keys(globals.worker)]),
   node: new Set([...BUILTINS, ...Object.keys(globals.node)]),
   'electron-main': new Set([...BUILTINS, ...Object.keys(globals.node)]),
   'electron-renderer': new Set([

@@ -66,11 +66,19 @@ export class Environment implements IEnvironment {
   }
 
   isWorker(): boolean {
-    return this.context === 'web-worker' || this.context === 'service-worker';
+    return (
+      this.context === 'web-worker' ||
+      this.context === 'service-worker' ||
+      this.context === 'tesseract'
+    );
   }
 
   isWorklet(): boolean {
     return this.context === 'worklet';
+  }
+
+  isTesseract(): boolean {
+    return this.context === 'tesseract';
   }
 
   isIsolated(): boolean {
