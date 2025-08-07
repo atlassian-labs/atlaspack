@@ -1,110 +1,64 @@
 import {Reporter} from '@atlaspack/plugin';
-import {ServerOptions} from '@atlaspack/types';
 import HMRServer from './HMRServer';
 import Server from './Server';
-import {StaticServerDataProvider} from './StaticServerDataProvider';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
-import {
-  atlaspackDevServerCreate,
-  atlaspackDevServerStart,
-  atlaspackDevServerStop,
-  JsDevServer,
-} from '@atlaspack/rust';
 
-let rustServers: Map<number, JsDevServer> = new Map();
 let servers: Map<number, Server> = new Map();
-let dataProviders: Map<string, StaticServerDataProvider> = new Map();
 let hmrServers: Map<number, HMRServer> = new Map();
-
-function getDataProvider(
-  serveOptions: ServerOptions,
-): StaticServerDataProvider {
-  let dataProvider = dataProviders.get(serveOptions.distDir);
-
-  if (!dataProvider) {
-    dataProvider = new StaticServerDataProvider(serveOptions.distDir);
-    dataProviders.set(serveOptions.distDir, dataProvider);
-  }
-
-  return dataProvider;
-}
-
 export default new Reporter({
   async report({event, options, logger}) {
     let {serveOptions, hmrOptions} = options;
-    let rustServer = serveOptions
-      ? rustServers.get(serveOptions.port)
-      : undefined;
     let server = serveOptions ? servers.get(serveOptions.port) : undefined;
     let hmrPort =
       (hmrOptions && hmrOptions.port) || (serveOptions && serveOptions.port);
     let hmrServer = hmrPort ? hmrServers.get(hmrPort) : undefined;
-
     switch (event.type) {
       case 'watchStart': {
         if (serveOptions) {
           // If there's already a server when watching has just started, something
           // is wrong.
-          if (server || rustServer) {
+          if (server) {
             return logger.warn({
               message: 'Trying to create the devserver but it already exists.',
             });
           }
 
-          if (getFeatureFlag('rustDevServer')) {
-            const devServer = atlaspackDevServerCreate(
-              {
-                host: serveOptions.host ?? 'localhost',
-                port: serveOptions.port,
-                distDir: serveOptions.distDir,
-                publicUrl: serveOptions.publicUrl ?? '/',
+          let serverOptions = {
+            ...serveOptions,
+            projectRoot: options.projectRoot,
+            cacheDir: options.cacheDir,
+            // Override the target's publicUrl as that is likely meant for production.
+            // This could be configurable in the future.
+            publicUrl: serveOptions.publicUrl ?? '/',
+            inputFS: options.inputFS,
+            outputFS: options.outputFS,
+            packageManager: options.packageManager,
+            logger,
+            hmrOptions,
+          };
+
+          server = new Server(serverOptions);
+          servers.set(serveOptions.port, server);
+          const devServer = await server.start();
+
+          if (hmrOptions && hmrOptions.port === serveOptions.port) {
+            let hmrServerOptions = {
+              port: serveOptions.port,
+              host: hmrOptions.host,
+              devServer,
+              // @ts-expect-error TS7006
+              addMiddleware: (handler) => {
+                server?.middleware.push(handler);
               },
-              getDataProvider(serveOptions),
-            );
-            await atlaspackDevServerStart(devServer);
-            rustServers.set(serveOptions.port, devServer);
-            rustServer = devServer;
-          } else {
-            let serverOptions = {
-              ...serveOptions,
-              projectRoot: options.projectRoot,
+              logger,
+              https: options.serveOptions ? options.serveOptions.https : false,
               cacheDir: options.cacheDir,
-              // Override the target's publicUrl as that is likely meant for production.
-              // This could be configurable in the future.
-              publicUrl: serveOptions.publicUrl ?? '/',
               inputFS: options.inputFS,
               outputFS: options.outputFS,
-              packageManager: options.packageManager,
-              logger,
-              hmrOptions,
             };
-
-            server = new Server(serverOptions, getDataProvider(serveOptions));
-            servers.set(serveOptions.port, server);
-            const devServer = await server.start();
-
-            if (hmrOptions && hmrOptions.port === serveOptions.port) {
-              let hmrServerOptions = {
-                port: serveOptions.port,
-                host: hmrOptions.host,
-                devServer,
-                // @ts-expect-error TS7006
-                addMiddleware: (handler) => {
-                  server?.middleware.push(handler);
-                },
-                logger,
-                https: options.serveOptions
-                  ? options.serveOptions.https
-                  : false,
-                cacheDir: options.cacheDir,
-                inputFS: options.inputFS,
-                outputFS: options.outputFS,
-              };
-              hmrServer = new HMRServer(hmrServerOptions);
-              hmrServers.set(serveOptions.port, hmrServer);
-              await hmrServer.start();
-              return;
-            }
+            hmrServer = new HMRServer(hmrServerOptions);
+            hmrServers.set(serveOptions.port, hmrServer);
+            await hmrServer.start();
+            return;
           }
         }
 
@@ -127,11 +81,6 @@ export default new Reporter({
       }
       case 'watchEnd':
         if (serveOptions) {
-          if (rustServer) {
-            await atlaspackDevServerStop(rustServer);
-            rustServers.delete(serveOptions.port);
-          }
-
           if (!server) {
             return logger.warn({
               message:
@@ -164,11 +113,6 @@ export default new Reporter({
         break;
       case 'buildSuccess':
         if (serveOptions) {
-          getDataProvider(serveOptions).update(
-            event.bundleGraph,
-            event.requestBundle,
-          );
-
           if (!server) {
             return logger.warn({
               message:
@@ -176,7 +120,7 @@ export default new Reporter({
             });
           }
 
-          server.buildSuccess();
+          server.buildSuccess(event.bundleGraph, event.requestBundle);
         }
         if (hmrServer && options.serveOptions === false) {
           await hmrServer.emitUpdate(event);
