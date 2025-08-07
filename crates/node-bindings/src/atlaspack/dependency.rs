@@ -17,6 +17,7 @@ enum JSBundleBehavior {
 enum BundleBehaviorStr {
   Inline,
   Isolated,
+  InlineIsolated,
 }
 
 impl From<JSBundleBehavior> for BundleBehavior {
@@ -24,6 +25,7 @@ impl From<JSBundleBehavior> for BundleBehavior {
     match value {
       JSBundleBehavior::String(BundleBehaviorStr::Inline) => BundleBehavior::Inline,
       JSBundleBehavior::String(BundleBehaviorStr::Isolated) => BundleBehavior::Isolated,
+      JSBundleBehavior::String(BundleBehaviorStr::InlineIsolated) => BundleBehavior::InlineIsolated,
       JSBundleBehavior::Int(value) => value,
     }
   }
