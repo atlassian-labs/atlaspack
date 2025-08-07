@@ -5,7 +5,7 @@ use crate::platform::bin_path::get_bin_path;
 use crate::platform::exec::exec_blocking;
 use crate::platform::exec::ExecOptions;
 use crate::platform::path_ext::PathExt;
-use crate::platform::runtime::resolve_runtime;
+use crate::platform::runtime::resolve_executable;
 
 #[derive(Debug, Parser)]
 pub struct AtlaspackCommand {
@@ -28,7 +28,7 @@ pub fn main(ctx: Context, cmd: AtlaspackCommand) -> anyhow::Result<()> {
   let package = ctx.resolver.resolve_or_default(&cmd.version)?;
   let bin_path = get_bin_path(&package);
 
-  let runtime = resolve_runtime(&ctx.env.runtime)?.try_to_string()?;
+  let runtime = resolve_executable(&ctx.env.runtime)?.try_to_string()?;
   log::info!("runtime: {:?}", runtime);
 
   let mut argv = Vec::<String>::new();
