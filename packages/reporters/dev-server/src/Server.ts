@@ -1,4 +1,12 @@
-import type {FilePath, PluginOptions} from '@atlaspack/types';
+// @ts-expect-error TS2307
+import type {DevServerOptions, Request, Response} from './types.js.flow';
+import type {
+  BuildSuccessEvent,
+  BundleGraph,
+  FilePath,
+  PluginOptions,
+  PackagedBundle,
+} from '@atlaspack/types';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import type {FileSystem} from '@atlaspack/fs';
 import type {HTTPServer, FormattedCodeFrame} from '@atlaspack/utils';
@@ -12,6 +20,7 @@ import {
   resolveConfig,
   readConfig,
   prettyDiagnostic,
+  relativePath,
 } from '@atlaspack/utils';
 import serverErrors from './serverErrors';
 import fs from 'fs';
@@ -22,9 +31,6 @@ import {createProxyMiddleware} from 'http-proxy-middleware';
 import {URL, URLSearchParams} from 'url';
 import launchEditor from 'launch-editor';
 import fresh from 'fresh';
-
-import {ServerDataProvider} from './ServerDataProvider';
-import type {DevServerOptions, Request, Response} from './types';
 
 export function setHeaders(res: Response) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -64,7 +70,11 @@ export default class Server {
   middleware: Array<(req: Request, res: Response) => boolean>;
   options: DevServerOptions;
   rootPath: string;
-  dataProvider: ServerDataProvider;
+  bundleGraph: BundleGraph<PackagedBundle> | null;
+  requestBundle:
+    | ((bundle: PackagedBundle) => Promise<BuildSuccessEvent>)
+    | null
+    | undefined;
   errors: Array<{
     message: string;
     stack: string | null | undefined;
@@ -74,7 +84,7 @@ export default class Server {
   }> | null;
   stopServer: (() => Promise<void>) | null | undefined;
 
-  constructor(options: DevServerOptions, dataProvider: ServerDataProvider) {
+  constructor(options: DevServerOptions) {
     this.options = options;
     try {
       this.rootPath = new URL(options.publicUrl).pathname;
@@ -83,8 +93,9 @@ export default class Server {
     }
     this.pending = true;
     this.pendingRequests = [];
-    this.dataProvider = dataProvider;
     this.middleware = [];
+    this.bundleGraph = null;
+    this.requestBundle = null;
     this.errors = null;
   }
 
@@ -92,7 +103,12 @@ export default class Server {
     this.pending = true;
   }
 
-  buildSuccess() {
+  buildSuccess(
+    bundleGraph: BundleGraph<PackagedBundle>,
+    requestBundle: (bundle: PackagedBundle) => Promise<BuildSuccessEvent>,
+  ) {
+    this.bundleGraph = bundleGraph;
+    this.requestBundle = requestBundle;
     this.errors = null;
     this.pending = false;
 
@@ -127,7 +143,7 @@ export default class Server {
 
   respond(req: Request, res: Response): unknown {
     if (this.middleware.some((handler) => handler(req, res))) return;
-    let {pathname, search} = url.parse(req.originalUrl || req.url || '');
+    let {pathname, search} = url.parse(req.originalUrl || req.url);
     if (pathname == null) {
       pathname = '/';
     }
@@ -172,59 +188,72 @@ export default class Server {
   }
 
   sendIndex(req: Request, res: Response) {
-    // If the main asset is an HTML file, serve it
-    let htmlBundleFilePaths = this.dataProvider.getHTMLBundleFilePaths();
+    if (this.bundleGraph) {
+      // If the main asset is an HTML file, serve it
+      let htmlBundleFilePaths = this.bundleGraph
+        .getBundles()
+        .filter((bundle) => path.posix.extname(bundle.name) === '.html')
+        .map((bundle) => {
+          return `/${relativePath(
+            this.options.distDir,
+            bundle.filePath,
+            false,
+          )}`;
+        });
 
-    let indexFilePath = null;
-    let {pathname: reqURL} = url.parse(req.originalUrl || req.url || '');
+      let indexFilePath = null;
+      let {pathname: reqURL} = url.parse(req.originalUrl || req.url);
 
-    if (!reqURL) {
-      reqURL = '/';
-    }
+      if (!reqURL) {
+        reqURL = '/';
+      }
 
-    if (htmlBundleFilePaths.length === 1) {
-      indexFilePath = htmlBundleFilePaths[0];
-    } else {
-      let bestMatch = null;
-      for (let bundle of htmlBundleFilePaths) {
-        let bundleDir = path.posix.dirname(bundle);
-        let bundleDirSubdir = bundleDir === '/' ? bundleDir : bundleDir + '/';
-        let withoutExtension = path.posix.basename(
-          bundle,
-          path.posix.extname(bundle),
-        );
-        let isIndex = withoutExtension === 'index';
+      if (htmlBundleFilePaths.length === 1) {
+        indexFilePath = htmlBundleFilePaths[0];
+      } else {
+        let bestMatch = null;
+        for (let bundle of htmlBundleFilePaths) {
+          let bundleDir = path.posix.dirname(bundle);
+          let bundleDirSubdir = bundleDir === '/' ? bundleDir : bundleDir + '/';
+          let withoutExtension = path.posix.basename(
+            bundle,
+            path.posix.extname(bundle),
+          );
+          let isIndex = withoutExtension === 'index';
 
-        let matchesIsIndex = null;
-        if (
-          isIndex &&
-          (reqURL.startsWith(bundleDirSubdir) || reqURL === bundleDir)
-        ) {
-          // bundle is /bar/index.html and (/bar or something inside of /bar/** was requested was requested)
-          matchesIsIndex = true;
-        } else if (reqURL == path.posix.join(bundleDir, withoutExtension)) {
-          // bundle is /bar/foo.html and /bar/foo was requested
-          matchesIsIndex = false;
-        }
-        if (matchesIsIndex != null) {
-          let depth = bundle.match(SLASH_REGEX)?.length ?? 0;
+          let matchesIsIndex = null;
           if (
-            bestMatch == null ||
-            // This one is more specific (deeper)
-            bestMatch.depth < depth ||
-            // This one is just as deep, but the bundle name matches and not just index.html
-            (bestMatch.depth === depth && bestMatch.isIndex)
+            isIndex &&
+            (reqURL.startsWith(bundleDirSubdir) || reqURL === bundleDir)
           ) {
-            bestMatch = {bundle, depth, isIndex: matchesIsIndex};
+            // bundle is /bar/index.html and (/bar or something inside of /bar/** was requested was requested)
+            matchesIsIndex = true;
+          } else if (reqURL == path.posix.join(bundleDir, withoutExtension)) {
+            // bundle is /bar/foo.html and /bar/foo was requested
+            matchesIsIndex = false;
+          }
+          if (matchesIsIndex != null) {
+            let depth = bundle.match(SLASH_REGEX)?.length ?? 0;
+            if (
+              bestMatch == null ||
+              // This one is more specific (deeper)
+              bestMatch.depth < depth ||
+              // This one is just as deep, but the bundle name matches and not just index.html
+              (bestMatch.depth === depth && bestMatch.isIndex)
+            ) {
+              bestMatch = {bundle, depth, isIndex: matchesIsIndex};
+            }
           }
         }
+        indexFilePath = bestMatch?.['bundle'] ?? htmlBundleFilePaths[0];
       }
-      indexFilePath = bestMatch?.['bundle'] ?? htmlBundleFilePaths[0];
-    }
 
-    if (indexFilePath) {
-      req.url = indexFilePath;
-      this.serveBundle(req, res, () => this.send404(req, res));
+      if (indexFilePath) {
+        req.url = indexFilePath;
+        this.serveBundle(req, res, () => this.send404(req, res));
+      } else {
+        this.send404(req, res);
+      }
     } else {
       this.send404(req, res);
     }
@@ -235,20 +264,37 @@ export default class Server {
     res: Response,
     next: NextFunction,
   ): Promise<void> {
-    const {pathname} = url.parse(req.url || '');
+    let bundleGraph = this.bundleGraph;
+    if (bundleGraph) {
+      let {pathname} = url.parse(req.url);
+      if (!pathname) {
+        this.send500(req, res);
+        return;
+      }
 
-    if (!pathname) {
-      this.send500(req, res);
-      return;
-    }
+      let requestedPath = path.normalize(pathname.slice(1));
+      let bundle = bundleGraph
+        .getBundles()
+        .find(
+          (b) =>
+            path.relative(this.options.distDir, b.filePath) === requestedPath,
+        );
+      if (!bundle) {
+        this.serveDist(req, res, next);
+        return;
+      }
 
-    const requestedPath = path.normalize(pathname.slice(1));
+      invariant(this.requestBundle != null);
+      try {
+        await this.requestBundle(bundle);
+      } catch (err: any) {
+        this.send500(req, res);
+        return;
+      }
 
-    try {
-      await this.dataProvider.requestBundle(requestedPath);
-      await this.serveDist(req, res, next);
-    } catch (err: unknown) {
-      this.send500(req, res);
+      this.serveDist(req, res, next);
+    } else {
+      this.send404(req, res);
     }
   }
 
@@ -283,7 +329,7 @@ export default class Server {
     }
 
     try {
-      var filePath = url.parse(req.url || '').pathname || '';
+      var filePath = url.parse(req.url).pathname || '';
       filePath = decodeURIComponent(filePath);
     } catch (err: any) {
       return this.sendError(res, 400);

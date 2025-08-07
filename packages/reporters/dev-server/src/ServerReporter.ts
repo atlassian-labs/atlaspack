@@ -1,26 +1,9 @@
 import {Reporter} from '@atlaspack/plugin';
-import {ServerOptions} from '@atlaspack/types';
 import HMRServer from './HMRServer';
 import Server from './Server';
-import {StaticServerDataProvider} from './StaticServerDataProvider';
 
 let servers: Map<number, Server> = new Map();
-let dataProviders: Map<string, StaticServerDataProvider> = new Map();
 let hmrServers: Map<number, HMRServer> = new Map();
-
-function getDataProvider(
-  serveOptions: ServerOptions,
-): StaticServerDataProvider {
-  let dataProvider = dataProviders.get(serveOptions.distDir);
-
-  if (!dataProvider) {
-    dataProvider = new StaticServerDataProvider(serveOptions.distDir);
-    dataProviders.set(serveOptions.distDir, dataProvider);
-  }
-
-  return dataProvider;
-}
-
 export default new Reporter({
   async report({event, options, logger}) {
     let {serveOptions, hmrOptions} = options;
@@ -28,7 +11,6 @@ export default new Reporter({
     let hmrPort =
       (hmrOptions && hmrOptions.port) || (serveOptions && serveOptions.port);
     let hmrServer = hmrPort ? hmrServers.get(hmrPort) : undefined;
-
     switch (event.type) {
       case 'watchStart': {
         if (serveOptions) {
@@ -54,7 +36,7 @@ export default new Reporter({
             hmrOptions,
           };
 
-          server = new Server(serverOptions, getDataProvider(serveOptions));
+          server = new Server(serverOptions);
           servers.set(serveOptions.port, server);
           const devServer = await server.start();
 
@@ -131,11 +113,6 @@ export default new Reporter({
         break;
       case 'buildSuccess':
         if (serveOptions) {
-          getDataProvider(serveOptions).update(
-            event.bundleGraph,
-            event.requestBundle,
-          );
-
           if (!server) {
             return logger.warn({
               message:
@@ -143,7 +120,7 @@ export default new Reporter({
             });
           }
 
-          server.buildSuccess();
+          server.buildSuccess(event.bundleGraph, event.requestBundle);
         }
         if (hmrServer && options.serveOptions === false) {
           await hmrServer.emitUpdate(event);
