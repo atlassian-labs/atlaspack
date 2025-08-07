@@ -10,6 +10,7 @@
   "scripts": {
     "test": "cross-env NODE_ENV=test ATLASPACK_REGISTER_USE_SRC=true ATLASPACK_BUILD_ENV=test mocha --conditions=atlaspack::sources --experimental-vm-modules",
     "test-ci": "ATLASPACK_INTEGRATION_TESTS_CI=true NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha --experimental-vm-modules",
+    "test:integration": "yarn run test",
     "check-ts": "echo 'No TypeScript check for integration tests yet'"
   },
   "devDependencies": {

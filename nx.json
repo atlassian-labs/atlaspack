@@ -30,6 +30,12 @@
       ],
       "outputs": ["{projectRoot}/lib/**/*.js", "{projectRoot}/bin/**/*.js"],
       "cache": true
+    },
+    "test:integration": {
+      "dependsOn": ["^check-ts"]
+    },
+    "test:integration:ci": {
+      "dependsOn": ["^build:lib", "^check-ts"]
     }
   }
 }
