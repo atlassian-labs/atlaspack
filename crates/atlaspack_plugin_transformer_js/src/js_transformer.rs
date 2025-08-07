@@ -288,7 +288,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       jsx_pragma: compiler_options.and_then(|co| co.jsx_factory.clone()),
       jsx_pragma_frag: compiler_options.and_then(|co| co.jsx_fragment_factory.clone()),
       magic_comments: self.config.magic_comments.unwrap_or_default(),
-      add_display_name: self.config.add_react_display_name.unwrap_or_default(),
+      add_display_name: self.config.add_react_display_name,
       module_id: asset.id.to_string(),
       node_replacer: is_node,
       project_root: self.options.project_root.to_string_lossy().into_owned(),
