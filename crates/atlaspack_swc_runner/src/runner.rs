@@ -42,12 +42,22 @@ pub fn run_visit<V: VisitMut>(
   code: &str,
   make_visit: impl FnOnce(RunContext) -> V,
 ) -> Result<RunVisitResult<V>, RunWithTransformationError> {
-  let (output_code, visitor, source_map) =
-    run_with_transformation(code, |run_test_context: RunContext, module: &mut Module| {
+  let options = RunWithTransformationOptions {
+    code,
+    ..RunWithTransformationOptions::default()
+  };
+  let RunWithTransformationOutput {
+    output_code,
+    transform_result: visitor,
+    source_map,
+  } = run_with_transformation(
+    options,
+    |run_test_context: RunContext, module: &mut Module| {
       let mut visit = make_visit(run_test_context);
       module.visit_mut_with(&mut visit);
       visit
-    })?;
+    },
+  )?;
   Ok(RunVisitResult {
     output_code,
     visitor,
@@ -60,12 +70,22 @@ pub fn run_visit_const<V: Visit>(
   code: &str,
   make_visit: impl FnOnce(RunContext) -> V,
 ) -> Result<RunVisitResult<V>, RunWithTransformationError> {
-  let (output_code, visitor, source_map) =
-    run_with_transformation(code, |run_test_context: RunContext, module: &mut Module| {
+  let options = RunWithTransformationOptions {
+    code,
+    ..RunWithTransformationOptions::default()
+  };
+  let RunWithTransformationOutput {
+    output_code,
+    transform_result: visitor,
+    source_map,
+  } = run_with_transformation(
+    options,
+    |run_test_context: RunContext, module: &mut Module| {
       let mut visit = make_visit(run_test_context);
       module.visit_with(&mut visit);
       visit
-    })?;
+    },
+  )?;
 
   Ok(RunVisitResult {
     output_code,
@@ -79,12 +99,22 @@ pub fn run_fold<V: Fold>(
   code: &str,
   make_fold: impl FnOnce(RunContext) -> V,
 ) -> Result<RunVisitResult<V>, RunWithTransformationError> {
-  let (output_code, visitor, source_map) =
-    run_with_transformation(code, |run_test_context: RunContext, module: &mut Module| {
+  let options = RunWithTransformationOptions {
+    code,
+    ..RunWithTransformationOptions::default()
+  };
+  let RunWithTransformationOutput {
+    output_code,
+    transform_result: visitor,
+    source_map,
+  } = run_with_transformation(
+    options,
+    |run_test_context: RunContext, module: &mut Module| {
       let mut visit = make_fold(run_test_context);
       *module = module.take().fold_with(&mut visit);
       visit
-    })?;
+    },
+  )?;
 
   Ok(RunVisitResult {
     output_code,
@@ -105,20 +135,32 @@ pub enum RunWithTransformationError {
   SourceMap(#[from] sourcemap::Error),
 }
 
-type RunWithTransformationOutput<R> = (String, R, Vec<u8>);
+pub struct RunWithTransformationOutput<R> {
+  pub output_code: String,
+  pub transform_result: R,
+  pub source_map: Vec<u8>,
+}
+
+#[derive(Default, Debug)]
+pub struct RunWithTransformationOptions<'a> {
+  pub code: &'a str,
+  pub syntax: Option<swc_ecma_parser::Syntax>,
+}
 
 /// Parse code, run resolver over it, then run the `tranform` function with the parsed module
 /// codegen and return the results.
-fn run_with_transformation<R>(
-  code: &str,
+pub fn run_with_transformation<R>(
+  options: RunWithTransformationOptions<'_>,
   transform: impl FnOnce(RunContext, &mut Module) -> R,
 ) -> Result<RunWithTransformationOutput<R>, RunWithTransformationError> {
   let source_map = Lrc::new(SourceMap::default());
-  let source_file = source_map.new_source_file(Lrc::new(FileName::Anon), code.into());
+  let source_file = source_map.new_source_file(Lrc::new(FileName::Anon), options.code.into());
 
   let comments = SingleThreadedComments::default();
+  let syntax = options.syntax.unwrap_or_default();
+
   let lexer = Lexer::new(
-    Default::default(),
+    syntax,
     Default::default(),
     StringInput::from(&*source_file),
     Some(&comments),
@@ -181,7 +223,11 @@ fn run_with_transformation<R>(
 
       source_map.to_writer(&mut output_map_buffer)?;
 
-      Ok((output_code, result, output_map_buffer))
+      Ok(RunWithTransformationOutput {
+        output_code,
+        transform_result: result,
+        source_map: output_map_buffer,
+      })
     },
   )
 }

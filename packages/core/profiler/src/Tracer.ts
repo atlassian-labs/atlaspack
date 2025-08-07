@@ -2,7 +2,7 @@ import type {
   TraceEvent,
   IDisposable,
   PluginTracer as IPluginTracer,
-} from '@atlaspack/types';
+} from '@atlaspack/types-internal';
 import type {
   TraceMeasurement as ITraceMeasurement,
   TraceMeasurementData,

@@ -7,7 +7,8 @@
   },
   "scripts": {
     "test": "mocha",
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "repository": {
     "type": "git",
@@ -15,7 +16,7 @@
   },
   "main": "./lib/HTMLTransformer.js",
   "source": "./src/HTMLTransformer.ts",
-  "types": "./src/HTMLTransformer.ts",
+  "types": "./lib/types/HTMLTransformer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

@@ -23,5 +23,8 @@
   "peerDependencies": {
     "@babel/core": "^7.22.11"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  }
 }

@@ -12,9 +12,9 @@ const contentTypes: Record<string, string> = {
 
 export type ServeContext = {
   address: string;
-  port: number;
   close(): void;
-  server: Server;
+  port?: number;
+  server?: Server;
 };
 
 export async function serve(directory: string): Promise<ServeContext> {

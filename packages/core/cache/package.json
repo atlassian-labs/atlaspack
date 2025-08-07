@@ -13,13 +13,14 @@
   },
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./lib/types/index.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
     "test": "mocha",
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
     "@atlaspack/build-cache": "2.13.4",

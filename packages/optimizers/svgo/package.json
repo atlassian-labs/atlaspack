@@ -11,7 +11,7 @@
   },
   "main": "./lib/SVGOOptimizer.js",
   "source": "./src/SVGOOptimizer.ts",
-  "types": "./src/SVGOOptimizer.ts",
+  "types": "./lib/types/SVGOOptimizer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -23,6 +23,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

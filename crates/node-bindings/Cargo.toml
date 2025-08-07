@@ -13,6 +13,7 @@ crate-type = ["cdylib"]
 [dependencies]
 atlaspack = { path = "../atlaspack" }
 atlaspack_core = { path = "../atlaspack_core" }
+atlaspack_dev_server = { path = "../atlaspack_dev_server" }
 atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 atlaspack_monitoring = { path = "../atlaspack_monitoring" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
@@ -24,6 +25,7 @@ atlaspack_vcs = { path = "../atlaspack_vcs" }
 atlaspack_swc_runner = { path = "../atlaspack_swc_runner" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
 
+async-trait = { workspace = true }
 aho-corasick = { workspace = true }
 anyhow = { workspace = true }
 glob = { workspace = true }

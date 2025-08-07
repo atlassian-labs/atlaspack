@@ -12,15 +12,17 @@
   },
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./lib/types/index.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
     "benchmark": "node ./benchmark/BitSet.js",
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
+    "@atlaspack/types-internal": "2.17.0",
     "@atlaspack/feature-flags": "2.20.1",
     "nullthrows": "^1.1.1"
   },

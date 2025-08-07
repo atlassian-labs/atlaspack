@@ -11,7 +11,7 @@
   },
   "main": "./lib/BabelTransformer.js",
   "source": "./src/BabelTransformer.ts",
-  "types": "./src/BabelTransformer.ts",
+  "types": "./lib/types/BabelTransformer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -33,6 +33,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

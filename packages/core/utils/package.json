@@ -12,7 +12,7 @@
   },
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./lib/types/index.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -36,6 +36,7 @@
     "@atlaspack/feature-flags": "2.20.1",
     "@atlaspack/logger": "2.14.14",
     "@atlaspack/markdown-ansi": "2.14.2",
+    "@atlaspack/types-internal": "2.17.0",
     "@atlaspack/rust": "3.4.2",
     "@parcel/source-map": "^2.1.1",
     "@types/micromatch": "^4.0.9",
@@ -71,6 +72,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

@@ -13,7 +13,7 @@
   },
   "main": "./lib/codeframe.js",
   "source": "./src/codeframe.ts",
-  "types": "./src/codeframe.ts",
+  "types": "./lib/types/codeframe.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -25,12 +25,14 @@
     }
   },
   "dependencies": {
+    "@atlaspack/types-internal": "2.17.0",
     "chalk": "^4.1.0",
     "emphasize": "^4.2.0",
     "slice-ansi": "^4.0.0",
     "string-width": "^4.2.0"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

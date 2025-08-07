@@ -11,7 +11,7 @@
   },
   "main": "./lib/WebExtensionPackager.js",
   "source": "./src/WebExtensionPackager.ts",
-  "types": "./src/WebExtensionPackager.ts",
+  "types": "./lib/types/WebExtensionPackager.d.ts",
   "engines": {
     "node": ">=16.0.0"
   },
@@ -22,6 +22,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

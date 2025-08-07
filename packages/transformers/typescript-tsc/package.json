@@ -11,7 +11,7 @@
   },
   "main": "./lib/TSCTransformer.js",
   "source": "./src/TSCTransformer.ts",
-  "types": "./src/TSCTransformer.ts",
+  "types": "./lib/types/TSCTransformer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -28,6 +28,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

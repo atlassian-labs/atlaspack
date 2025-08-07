@@ -11,7 +11,7 @@
   },
   "main": "./lib/RawUrlPackager.js",
   "source": "./src/RawUrlPackager.ts",
-  "types": "./src/RawUrlPackager.ts",
+  "types": "./lib/types/RawUrlPackager.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -21,6 +21,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

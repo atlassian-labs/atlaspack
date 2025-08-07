@@ -12,7 +12,7 @@
   },
   "main": "./lib/RawCompressor.js",
   "source": "./src/RawCompressor.ts",
-  "types": "./src/RawCompressor.ts",
+  "types": "./lib/types/RawCompressor.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -20,6 +20,7 @@
     "@atlaspack/plugin": "2.14.22"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

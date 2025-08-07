@@ -11,7 +11,7 @@
   },
   "main": "./lib/TerserOptimizer.js",
   "source": "./src/TerserOptimizer.ts",
-  "types": "./src/TerserOptimizer.ts",
+  "types": "./lib/types/TerserOptimizer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -25,6 +25,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

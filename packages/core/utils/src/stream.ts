@@ -1,5 +1,5 @@
 import {Readable, PassThrough} from 'stream';
-import type {Blob} from '@atlaspack/types';
+import type {Blob} from '@atlaspack/types-internal';
 
 export function measureStreamLength(stream: Readable): Promise<number> {
   return new Promise(

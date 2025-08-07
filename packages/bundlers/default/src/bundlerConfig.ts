@@ -4,7 +4,7 @@ import type {
   PluginOptions,
   BuildMode,
   PluginLogger,
-} from '@atlaspack/types';
+} from '@atlaspack/types-internal';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {SchemaEntity, validateSchema} from '@atlaspack/utils';
 import invariant from 'assert';

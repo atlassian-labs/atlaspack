@@ -16,9 +16,10 @@
   },
   "main": "./lib/bin.js",
   "source": "./src/bin.ts",
-  "types": "./src/bin.ts",
+  "types": "./lib/types/bin.d.ts",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "engines": {
     "node": ">= 16.0.0"

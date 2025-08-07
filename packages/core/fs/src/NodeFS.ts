@@ -21,7 +21,6 @@ import path from 'path';
 import {tmpdir} from 'os';
 import {promisify} from 'util';
 import {registerSerializableClass} from '@atlaspack/build-cache';
-import {hashFile} from '@atlaspack/utils';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import watcher from '@parcel/watcher';
 import packageJSON from '../package.json';
@@ -89,30 +88,7 @@ export class NodeFS implements FileSystem {
 
     const move = async () => {
       if (!failed) {
-        try {
-          await fs.promises.rename(tmpFilePath, filePath);
-        } catch (e: any) {
-          // This is adapted from fs-write-stream-atomic. Apparently
-          // Windows doesn't like renaming when the target already exists.
-          if (
-            process.platform === 'win32' &&
-            e.syscall &&
-            e.syscall === 'rename' &&
-            e.code &&
-            e.code === 'EPERM'
-          ) {
-            let [hashTmp, hashTarget] = await Promise.all([
-              hashFile(this, tmpFilePath),
-              hashFile(this, filePath),
-            ]);
-
-            await this.unlink(tmpFilePath);
-
-            if (hashTmp != hashTarget) {
-              throw e;
-            }
-          }
-        }
+        await fs.promises.rename(tmpFilePath, filePath);
       }
     };
 

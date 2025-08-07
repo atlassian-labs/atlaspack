@@ -14,7 +14,6 @@ import type {
 import path from 'path';
 import {Readable, Writable} from 'stream';
 import {registerSerializableClass} from '@atlaspack/build-cache';
-import {SharedBuffer} from '@atlaspack/utils';
 import packageJSON from '../package.json';
 import WorkerFarm, {Handle} from '@atlaspack/workers';
 import nullthrows from 'nullthrows';
@@ -944,7 +943,10 @@ class Directory extends Entry {
 }
 
 export function makeShared(contents: Buffer | string): Buffer {
-  if (typeof contents !== 'string' && contents.buffer instanceof SharedBuffer) {
+  if (
+    typeof contents !== 'string' &&
+    contents.buffer instanceof SharedArrayBuffer
+  ) {
     return contents;
   }
 
@@ -960,7 +962,7 @@ export function makeShared(contents: Buffer | string): Buffer {
   }
 
   let length = Buffer.byteLength(contentsBuffer);
-  let shared = new SharedBuffer(length);
+  let shared = new SharedArrayBuffer(length);
   let buffer = Buffer.from(shared);
   if (length > 0) {
     if (typeof contentsBuffer === 'string') {

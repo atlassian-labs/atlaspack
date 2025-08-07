@@ -1,5 +1,4 @@
-import type {FileSystem} from '@atlaspack/fs';
-import type {FilePath} from '@atlaspack/types';
+import type {FileSystem, FilePath} from '@atlaspack/types-internal';
 import TypeScriptModule from 'typescript'; // eslint-disable-line import/no-extraneous-dependencies
 import path from 'path';
 

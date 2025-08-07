@@ -1,4 +1,4 @@
-import type {FilePath} from '@atlaspack/types';
+import type {FilePath} from '@atlaspack/types-internal';
 import path from 'path';
 
 export default function isDirectoryInside(

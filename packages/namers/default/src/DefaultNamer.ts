@@ -1,4 +1,4 @@
-import type {Bundle, FilePath} from '@atlaspack/types';
+import type {Bundle, FilePath} from '@atlaspack/types-internal';
 
 import {Namer} from '@atlaspack/plugin';
 import ThrowableDiagnostic, {

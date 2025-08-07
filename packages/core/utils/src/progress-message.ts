@@ -1,4 +1,4 @@
-import type {BuildProgressEvent} from '@atlaspack/types';
+import type {BuildProgressEvent} from '@atlaspack/types-internal';
 
 import path from 'path';
 

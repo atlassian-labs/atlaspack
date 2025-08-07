@@ -11,7 +11,7 @@
   },
   "main": "./lib/XMLTransformer.js",
   "source": "./src/XMLTransformer.ts",
-  "types": "./src/XMLTransformer.ts",
+  "types": "./lib/types/XMLTransformer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -21,6 +21,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

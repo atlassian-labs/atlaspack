@@ -11,7 +11,7 @@
   },
   "main": "./lib/HTMLPackager.js",
   "source": "./src/HTMLPackager.ts",
-  "types": "./src/HTMLPackager.ts",
+  "types": "./lib/types/HTMLPackager.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -25,6 +25,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

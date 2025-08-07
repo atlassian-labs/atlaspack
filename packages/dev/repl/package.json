@@ -7,7 +7,8 @@
     "start": "ATLASPACK_BUILD_REPL=1 atlaspack src/index.html --no-source-maps",
     "build": "yarn prepare && ATLASPACK_BUILD_REPL=1 atlaspack build src/index.html --no-source-maps",
     "serve": "serve dist/ -c ../serve.json",
-    "prepare": "node write-commit.js"
+    "prepare": "node write-commit.js",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.7.1",

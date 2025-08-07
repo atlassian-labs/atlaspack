@@ -11,13 +11,14 @@
   },
   "main": "./lib/JSONLDTransformer.js",
   "source": "./src/JSONLDTransformer.ts",
-  "types": "./src/JSONLDTransformer.ts",
+  "types": "./lib/types/JSONLDTransformer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
     "test": "yarn workspace @atlaspack/integration-tests test -g jsonld",
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
     "@atlaspack/plugin": "2.14.22",

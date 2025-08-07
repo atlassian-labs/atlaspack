@@ -3,7 +3,7 @@ import type {
   Bundle as LegacyBundle,
   BundleGroup,
   MutableBundleGraph,
-} from '@atlaspack/types';
+} from '@atlaspack/types-internal';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';

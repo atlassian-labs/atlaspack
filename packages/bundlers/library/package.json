@@ -12,7 +12,7 @@
   },
   "main": "./lib/LibraryBundler.js",
   "source": "./src/LibraryBundler.ts",
-  "types": "./src/LibraryBundler.ts",
+  "types": "./lib/types/LibraryBundler.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -21,6 +21,7 @@
     "nullthrows": "^1.1.1"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

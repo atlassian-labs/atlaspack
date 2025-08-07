@@ -11,10 +11,11 @@
   },
   "main": "./lib/JSTransformer.js",
   "source": "./src/JSTransformer.ts",
-  "types": "./src/JSTransformer.ts",
+  "types": "./lib/types/JSTransformer.d.ts",
   "scripts": {
     "test": "mocha",
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "engines": {
     "node": ">= 16.0.0"

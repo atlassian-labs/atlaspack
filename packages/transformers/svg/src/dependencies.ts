@@ -1,4 +1,4 @@
-import type {AST, MutableAsset} from '@atlaspack/types';
+import type {AST, MutableAsset} from '@atlaspack/types-internal';
 import PostHTML from 'posthtml';
 
 // A list of all attributes that may produce a dependency
