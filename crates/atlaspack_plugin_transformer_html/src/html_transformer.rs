@@ -22,12 +22,17 @@ use crate::html_dependencies_visitor::HtmlDependenciesVisitor;
 #[derive(Debug)]
 pub struct AtlaspackHtmlTransformerPlugin {
   project_root: PathBuf,
+  enable_inline_isolated: bool,
 }
 
 impl AtlaspackHtmlTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Self {
     AtlaspackHtmlTransformerPlugin {
       project_root: ctx.options.project_root.clone(),
+      enable_inline_isolated: ctx
+        .options
+        .feature_flags
+        .bool_enabled("inlineIsolatedScripts"),
     }
   }
 }
@@ -49,6 +54,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
       side_effects: input.side_effects,
       source_asset_id: input.id.clone(),
       source_path: Some(input.file_path.clone()),
+      enable_inline_isolated: self.enable_inline_isolated,
     };
 
     let HtmlTransformation {
@@ -96,6 +102,7 @@ pub struct HTMLTransformationContext {
   pub side_effects: bool,
   pub source_asset_id: AssetId,
   pub source_path: Option<PathBuf>,
+  pub enable_inline_isolated: bool,
 }
 
 #[derive(Debug, PartialEq)]
@@ -274,6 +281,76 @@ mod test {
   }
 
   #[test]
+  fn transforms_inline_isolated_script_tag() {
+    let script = String::from(
+      "
+        const main = () => {
+          console.log('test');
+        }
+      ",
+    )
+    .trim()
+    .to_string();
+
+    let bytes = html_body(&format!(
+      r#"
+        <script type="text/javascript" data-atlaspack-isolated>{script}</script>
+      "#,
+    ));
+
+    let mut dom = parse_html(bytes.as_bytes()).unwrap();
+    let context = transformation_context();
+
+    let transformation = run_html_transformations(context.clone(), &mut dom);
+    let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+
+    assert_eq!(
+      &normalize_html(&html),
+      &normalize_html(&html_body(&format!(
+        r#"
+          <script data-parcel-key="16f87d7beed96467">{script}</script>
+        "#
+      )))
+    );
+
+    let env = Arc::new(Environment {
+      source_type: SourceType::Script,
+      ..Environment::default()
+    });
+
+    assert_eq!(
+      transformation,
+      HtmlTransformation {
+        dependencies: vec![Dependency {
+          bundle_behavior: Some(BundleBehavior::InlineIsolated),
+          env: env.clone(),
+          source_asset_id: Some(String::from("test")),
+          source_asset_type: Some(FileType::Html),
+          source_path: Some(PathBuf::from("main.html")),
+          specifier: String::from("16f87d7beed96467"),
+          ..Dependency::default()
+        }],
+        discovered_assets: vec![AssetWithDependencies {
+          asset: Asset {
+            bundle_behavior: Some(BundleBehavior::InlineIsolated),
+            code: Code::from(script),
+            env: env.clone(),
+            file_path: PathBuf::from("main.html"),
+            file_type: FileType::Js,
+            id: String::from("b0deada2a458cc5f"),
+            is_bundle_splittable: true,
+            is_source: true,
+            meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
+            unique_key: Some(String::from("16f87d7beed96467")),
+            ..Asset::default()
+          },
+          dependencies: Vec::new()
+        }],
+      }
+    );
+  }
+
+  #[test]
   fn transforms_inline_style_tag() {
     let bytes = html_body(
       "
@@ -356,6 +433,8 @@ mod test {
     Arc::get_mut(&mut context.env).unwrap().should_scope_hoist = false;
     context.source_path = Some(PathBuf::from("main.html"));
     context.source_asset_id = String::from("test");
+    // Remove this when cleaning up feature flag
+    context.enable_inline_isolated = true;
 
     context
   }

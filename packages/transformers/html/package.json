@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.2",
+    "@atlaspack/feature-flags": "2.20.1",
     "@atlaspack/plugin": "2.14.22",
     "@atlaspack/rust": "3.4.2",
     "nullthrows": "^1.1.1",

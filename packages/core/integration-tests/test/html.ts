@@ -3233,4 +3233,60 @@ describe('html', function () {
 
     await run(b, {output: null}, {require: false});
   });
+
+  it('should support isolated inline scripts', async function () {
+    const dir = path.join(__dirname, 'html-inline-isolated');
+    await overlayFS.mkdirp(dir);
+    await fsFixture(overlayFS, dir)`
+      yarn.lock: {}
+
+      package.json:
+        {
+          "@atlaspack/bundler-default": {
+            "minBundleSize": 0
+          }
+        }
+
+      shared.js: 
+        export function shared(a) {
+          return "This is some shared stuff " + a;
+        }
+
+      index.html:
+        <script type="module" data-atlaspack-isolated>
+          import { shared } from './shared.js';
+          console.log(shared());
+        </script>
+
+      index2.html:
+        <script type="module" data-atlaspack-isolated>
+          import { shared } from './shared.js';
+          console.log(shared());
+        </script>
+    `;
+    const entries = [
+      path.join(dir, 'index.html'),
+      path.join(dir, 'index2.html'),
+    ];
+    const b = await bundle(entries, {
+      inputFS: overlayFS,
+      outputFS: overlayFS,
+      mode: 'production',
+    });
+    const outdir = outputFS.readdirSync(distDir);
+    // We expect to only produce HTML files
+    assert(
+      outdir.every((f) => f.endsWith('.html')),
+      `Expected only HTML files: ${outdir.join(', ')}`,
+    );
+    outdir
+      .filter((f) => f.endsWith('.html'))
+      .forEach((f) => {
+        const html = outputFS.readFileSync(path.join(distDir, f), 'utf8');
+        assert(
+          !html.includes('data-atlaspack-isolated'),
+          `Expected data-atlaspack-isolated to be stripped from ${f}`,
+        );
+      });
+  });
 });
