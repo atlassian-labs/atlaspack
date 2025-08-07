@@ -40,6 +40,7 @@ import {deserialize} from '@atlaspack/build-cache';
 import {hashString} from '@atlaspack/rust';
 import {getAllEnvironments} from '@atlaspack/rust';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
+import os from 'os';
 
 let inputDir: string;
 let packageManager = new NodePackageManager(inputFS, '/');
@@ -56,6 +57,7 @@ let packageManager = new NodePackageManager(inputFS, '/');
       {
         inputFS: overlayFS,
         shouldDisableCache: false,
+        watchBackend: os.platform() === 'darwin' ? 'brute-force' : undefined,
         featureFlags: {
           ...featureFlags,
           cachePerformanceImprovements,

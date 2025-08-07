@@ -40,6 +40,8 @@ import {LMDBLiteCache} from '@atlaspack/cache';
 import tempy from 'tempy';
 import {FILE_CONFIG_NO_REPORTERS} from './paths';
 
+import {queue} from 'async';
+
 export let cacheDir: string = tempy.directory();
 export let cache: LMDBLiteCache = new LMDBLiteCache(cacheDir);
 cache.ensure();
@@ -1329,6 +1331,52 @@ export async function assertNoFilePathInCache(
   dir: string,
   projectRoot: string,
 ) {
+  // For debugging purposes, log all instances of the projectRoot in the cache.
+  // Otherwise, fail the test if one is found.
+  if (process.env.ATLASPACK_DEBUG_CACHE_FILEPATH != null)
+    return assertNoFilePathInCacheDebug(fs, dir, projectRoot);
+
+  const processFile = async (filePath: string) => {
+    let contents = await fs.readFile(filePath);
+    if (contents.includes(projectRoot)) {
+      throw new Error(
+        `Found projectRoot ${projectRoot} in cache file ${filePath}`,
+      );
+    }
+  };
+  // This "optimal" concurrency value was determined by using hyperfine locally on a subset of tests
+  // that use the cache.
+  const q = queue(processFile, 50);
+
+  const queueDir = async (dir: string) => {
+    const files = await fs.readdir(dir);
+    for (const file of files) {
+      const fullPath = path.join(dir, file);
+      const stat = await fs.stat(fullPath);
+      if (stat.isFile() && !file.endsWith('.txt')) {
+        q.push(fullPath);
+      } else if (stat.isDirectory()) {
+        await queueDir(fullPath);
+      }
+    }
+  };
+  await queueDir(dir);
+
+  q.error((err: Error) => {
+    assert.fail(err);
+  });
+  if (q.length() > 0) {
+    await q.drain();
+  }
+}
+
+// This function is called from the assertNoFilePathInCache function when the
+// ATLASPACK_DEBUG_CACHE_FILEPATH environment variable is set.
+async function assertNoFilePathInCacheDebug(
+  fs: FileSystem,
+  dir: string,
+  projectRoot: string,
+) {
   let entries = await fs.readdir(dir);
   for (let entry of entries) {
     // Skip watcher snapshots for linux/windows, which contain full file paths.
@@ -1343,38 +1391,29 @@ export async function assertNoFilePathInCache(
     } else if (stat.isFile()) {
       let contents = await fs.readFile(fullPath);
 
-      // For debugging purposes, log all instances of the projectRoot in the cache.
-      // Otherwise, fail the test if one is found.
-      if (process.env.ATLASPACK_DEBUG_CACHE_FILEPATH != null) {
-        if (contents.includes(projectRoot)) {
-          let deserialized;
-          try {
-            deserialized = v8.deserialize(contents);
-          } catch (err: any) {
-            // rudimentary detection of binary files
-            if (!contents.includes(0)) {
-              deserialized = contents.toString();
-            } else {
-              deserialized = contents;
-            }
-          }
-
-          if (deserialized != null) {
-            // eslint-disable-next-line no-console
-            console.log(
-              `Found projectRoot ${projectRoot} in cache file ${fullPath}`,
-            );
-            // eslint-disable-next-line no-console
-            console.log(
-              require('util').inspect(deserialized, {depth: 50, colors: true}),
-            );
+      if (contents.includes(projectRoot)) {
+        let deserialized;
+        try {
+          deserialized = v8.deserialize(contents);
+        } catch (err: any) {
+          // rudimentary detection of binary files
+          if (!contents.includes(0)) {
+            deserialized = contents.toString();
+          } else {
+            deserialized = contents;
           }
         }
-      } else {
-        assert(
-          !contents.includes(projectRoot),
-          `Found projectRoot ${projectRoot} in cache file ${fullPath}`,
-        );
+
+        if (deserialized != null) {
+          // eslint-disable-next-line no-console
+          console.log(
+            `Found projectRoot ${projectRoot} in cache file ${fullPath}`,
+          );
+          // eslint-disable-next-line no-console
+          console.log(
+            require('util').inspect(deserialized, {depth: 50, colors: true}),
+          );
+        }
       }
     }
   }

@@ -1,10 +1,11 @@
 {
   "name": "@atlaspack/mocha-profiler",
-  "version": "2.14.1",
+  "version": "2.14.2",
   "description": "Profile mocha tests",
   "license": "(MIT OR Apache-2.0)",
   "private": true,
-  "main": "src/index.js",
+  "main": "./lib/index.js",
+  "source": "./src/index.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
