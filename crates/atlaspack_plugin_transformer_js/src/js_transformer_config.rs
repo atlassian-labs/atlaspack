@@ -18,6 +18,8 @@ pub struct JsTransformerConfig {
   pub inline_fs: Option<bool>,
 
   pub magic_comments: Option<bool>,
+
+  pub add_react_display_name: Option<bool>,
 }
 
 #[derive(Deserialize)]
