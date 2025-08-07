@@ -1,158 +1,5 @@
 // Converted from Flow to TypeScript
 
-export type FeatureFlags = {
-  // This feature flag mostly exists to test the feature flag system, and doesn't have any build/runtime effect
-  readonly exampleFeature: boolean;
-  readonly exampleConsistencyCheckFeature: ConsistencyCheckFeatureFlagValue;
-
-  /**
-   * Rust backed requests
-   */
-  readonly atlaspackV3: boolean;
-
-  /**
-   * Use node.js implementation of @parcel/watcher watchman backend
-   */
-  readonly useWatchmanWatcher: boolean;
-
-  /**
-   * Configure runtime to enable retriable dynamic imports
-   */
-  importRetry: boolean;
-
-  /**
-   * Fixes quadratic cache invalidation issue
-   */
-  fixQuadraticCacheInvalidation: ConsistencyCheckFeatureFlagValue;
-
-  /**
-   * Enables an experimental "conditional bundling" API - this allows the use of `importCond` syntax
-   * in order to have (consumer) feature flag driven bundling. This feature is very experimental,
-   * and requires server-side support.
-   */
-  conditionalBundlingApi: boolean;
-
-  /**
-   * Enable VCS mode. Expected values are:
-   * - OLD - default value, return watchman result
-   * - NEW_AND_CHECK - Return VCS result but still call watchman
-   * - NEW: Return VCS result, but don't call watchman
-   */
-  vcsMode: ConsistencyCheckFeatureFlagValue;
-
-  /**
-   * Refactor cache to:
-   * - Split writes into multiple entries
-   * - Remove "large file blob" writes
-   * - Reduce size of the caches by deduplicating data
-   */
-  cachePerformanceImprovements: boolean;
-
-  /**
-   * Deduplicates environments across cache / memory entities
-   */
-  environmentDeduplication: boolean;
-
-  /**
-   * Enable scanning for the presence of loadable to determine side effects
-   */
-  loadableSideEffects: boolean;
-
-  /**
-   * Enable performance optimization for the resolver specifier to_string
-   * conversions
-   */
-  reduceResolverStringCreation: boolean;
-
-  /**
-   * Add verbose metrics for request tracker invalidation
-   */
-  verboseRequestInvalidationStats: boolean;
-
-  /**
-   * Fixes source maps for inline bundles
-   */
-  inlineBundlesSourceMapFixes: boolean;
-
-  /** Enable patch project paths. This will patch the project paths to be relative to the project root.
-   * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
-   */
-  patchProjectPaths: boolean;
-
-  /**
-   * Enables optimized inline string replacement perf for the packager.
-   * Used heavily for inline bundles.
-   */
-  inlineStringReplacementPerf: boolean;
-
-  /**
-   * Enable resolution of bundler config starting from the CWD
-   */
-  resolveBundlerConfigFromCwd: boolean;
-
-  /**
-   * Enable a setting that allows for more assets to be scope hoisted, if
-   * they're safe to do so.
-   */
-  applyScopeHoistingImprovement: boolean;
-
-  /**
-   * Enable a change where a constant module only have the namespacing object added in bundles where it is required
-   */
-  inlineConstOptimisationFix: boolean;
-
-  /**
-   * Improves/fixes HMR behaviour by:
-   * - Fixing HMR behaviour with lazy bundle edges
-   * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer
-   */
-  hmrImprovements: boolean;
-
-  /**
-   * Fixes a bug where imported objects that are accessed with non-static
-   * properties (e.g. `CONSTANTS['api_' + endpoint`]) would not be recognised as
-   * being used, and thus not included in the bundle.
-   */
-  unusedComputedPropertyFix: boolean;
-
-  /**
-   * Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries)
-   * could cause exports to undefined at runtime.
-   */
-  emptyFileStarRexportFix: boolean;
-
-  /**
-   * Enables the new packaging progress CLI experience
-   */
-  cliProgressReportingImprovements: boolean;
-
-  /**
-   * Adds support for `webpackChunkName` comments in dynamic imports.
-   * Imports with the same `webpackChunkName` will be bundled together.
-   */
-  supportWebpackChunkName: boolean;
-
-  /**
-   * Enable a change to the conditional bundling loader to use a fallback bundle loading if the expected scripts aren't found
-   *
-   * Split into two flags, to allow usage in the dev or prod packagers separately
-   */
-  condbDevFallbackDev: boolean;
-  condbDevFallbackProd: boolean;
-
-  /**
-   * Enable the new incremental bundling versioning logic which determines whether
-   * a full bundling pass is required based on the AssetGraph's bundlingVersion.
-   */
-  incrementalBundlingVersioning: boolean;
-
-  /**
-   * Allow for the use of `data-atlaspack-isolated` on script tags in HTML to produce
-   * inline scripts that are build as "isolated" bundles.
-   */
-  inlineIsolatedScripts: boolean;
-};
-
 export type ConsistencyCheckFeatureFlagValue =
   (typeof CONSISTENCY_CHECK_VALUES)[number];
 
@@ -163,37 +10,160 @@ export const CONSISTENCY_CHECK_VALUES: ReadonlyArray<string> = Object.freeze([
   'OLD_AND_CHECK',
 ]);
 
-export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
-  exampleConsistencyCheckFeature: 'OLD',
+export const DEFAULT_FEATURE_FLAGS = {
+  // This feature flag mostly exists to test the feature flag system, and doesn't have any build/runtime effect
   exampleFeature: false,
+  exampleConsistencyCheckFeature: 'OLD' as ConsistencyCheckFeatureFlagValue,
+
+  /**
+   * Rust backed requests
+   */
   atlaspackV3: false,
+
+  /**
+   * Use node.js implementation of @parcel/watcher watchman backend
+   */
   useWatchmanWatcher: false,
+
+  /**
+   * Configure runtime to enable retriable dynamic imports
+   */
   importRetry: false,
-  fixQuadraticCacheInvalidation: 'OLD',
+
+  /**
+   * Fixes quadratic cache invalidation issue
+   */
+  fixQuadraticCacheInvalidation: 'OLD' as ConsistencyCheckFeatureFlagValue,
+
+  /**
+   * Enables an experimental "conditional bundling" API - this allows the use of `importCond` syntax
+   * in order to have (consumer) feature flag driven bundling. This feature is very experimental,
+   * and requires server-side support.
+   */
   conditionalBundlingApi: false,
-  vcsMode: 'OLD',
-  loadableSideEffects: false,
-  reduceResolverStringCreation: false,
-  inlineBundlesSourceMapFixes: false,
-  patchProjectPaths: false,
+
+  /**
+   * Enable VCS mode. Expected values are:
+   * - OLD - default value, return watchman result
+   * - NEW_AND_CHECK - Return VCS result but still call watchman
+   * - NEW: Return VCS result, but don't call watchman
+   */
+  vcsMode: 'OLD' as ConsistencyCheckFeatureFlagValue,
+
+  /**
+   * Refactor cache to:
+   * - Split writes into multiple entries
+   * - Remove "large file blob" writes
+   * - Reduce size of the caches by deduplicating data
+   */
   cachePerformanceImprovements: process.env.NODE_ENV === 'test',
+
+  /**
+   * Deduplicates environments across cache / memory entities
+   */
   environmentDeduplication: false,
-  inlineStringReplacementPerf: false,
-  // Default to true as it's a monitoring change. Can be turned off if necessary.
+
+  /**
+   * Enable scanning for the presence of loadable to determine side effects
+   */
+  loadableSideEffects: false,
+
+  /**
+   * Enable performance optimization for the resolver specifier to_string
+   * conversions
+   */
+  reduceResolverStringCreation: false,
+
+  /**
+   * Add verbose metrics for request tracker invalidation.
+   * Default to true as it's a monitoring change. Can be turned off if necessary.
+   */
   verboseRequestInvalidationStats: true,
+
+  /**
+   * Fixes source maps for inline bundles
+   */
+  inlineBundlesSourceMapFixes: false,
+
+  /** Enable patch project paths. This will patch the project paths to be relative to the project root.
+   * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
+   */
+  patchProjectPaths: false,
+
+  /**
+   * Enables optimized inline string replacement perf for the packager.
+   * Used heavily for inline bundles.
+   */
+  inlineStringReplacementPerf: false,
+
+  /**
+   * Enable resolution of bundler config starting from the CWD
+   */
   resolveBundlerConfigFromCwd: false,
+
+  /**
+   * Enable a setting that allows for more assets to be scope hoisted, if
+   * they're safe to do so.
+   */
   applyScopeHoistingImprovement: false,
+
+  /**
+   * Enable a change where a constant module only have the namespacing object added in bundles where it is required
+   */
   inlineConstOptimisationFix: false,
+
+  /**
+   * Improves/fixes HMR behaviour by:
+   * - Fixing HMR behaviour with lazy bundle edges
+   * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer
+   */
   hmrImprovements: false,
+
+  /**
+   * Fixes a bug where imported objects that are accessed with non-static
+   * properties (e.g. `CONSTANTS['api_' + endpoint`]) would not be recognised as
+   * being used, and thus not included in the bundle.
+   */
   unusedComputedPropertyFix: process.env.NODE_ENV === 'test',
+
+  /**
+   * Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries)
+   * could cause exports to undefined at runtime.
+   */
   emptyFileStarRexportFix: process.env.NODE_ENV === 'test',
+
+  /**
+   * Enables the new packaging progress CLI experience
+   */
   cliProgressReportingImprovements: false,
+
+  /**
+   * Adds support for `webpackChunkName` comments in dynamic imports.
+   * Imports with the same `webpackChunkName` will be bundled together.
+   */
   supportWebpackChunkName: process.env.NODE_ENV === 'test',
+
+  /**
+   * Enable a change to the conditional bundling loader to use a fallback bundle loading if the expected scripts aren't found
+   *
+   * Split into two flags, to allow usage in the dev or prod packagers separately
+   */
   condbDevFallbackDev: false,
   condbDevFallbackProd: false,
+
+  /**
+   * Enable the new incremental bundling versioning logic which determines whether
+   * a full bundling pass is required based on the AssetGraph's bundlingVersion.
+   */
   incrementalBundlingVersioning: process.env.NODE_ENV === 'test',
+  /**
+   * Allow for the use of `data-atlaspack-isolated` on script tags in HTML to produce
+   * inline scripts that are build as "isolated" bundles.
+   */
   inlineIsolatedScripts: process.env.NODE_ENV === 'test',
-};
+} as const;
+
+export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
 
 let featureFlagValues: FeatureFlags = {...DEFAULT_FEATURE_FLAGS};
 
