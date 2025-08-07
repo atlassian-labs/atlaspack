@@ -223,30 +223,3 @@ export class Resolver {
   getInvalidations(path: string): JsInvalidations;
   getInvalidations(path: string): JsInvalidations;
 }
-
-export interface JsDevServerOptions {
-  host: string;
-  port: number;
-  distDir: string;
-  publicUrl: string;
-}
-/** Create a new atlaspack dev-server instance. */
-export declare function atlaspackDevServerCreate(
-  options: JsDevServerOptions,
-  dataProvider: object,
-): JsDevServer;
-
-export interface JsDevServerStartResult {
-  host: string;
-  port: number;
-}
-
-export declare function atlaspackDevServerStart(
-  server: JsDevServer,
-): Promise<JsDevServerStartResult>;
-
-export declare function atlaspackDevServerStop(
-  server: JsDevServer,
-): Promise<void>;
-
-export type JsDevServer = object;
