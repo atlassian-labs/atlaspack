@@ -1,12 +1,25 @@
 import {Reporter} from '@atlaspack/plugin';
+import {ServerOptions} from '@atlaspack/types';
 import HMRServer from './HMRServer';
 import Server from './Server';
 import {StaticServerDataProvider} from './StaticServerDataProvider';
-import assert from 'node:assert';
 
 let servers: Map<number, Server> = new Map();
 let dataProviders: Map<string, StaticServerDataProvider> = new Map();
 let hmrServers: Map<number, HMRServer> = new Map();
+
+function getDataProvider(
+  serveOptions: ServerOptions,
+): StaticServerDataProvider {
+  let dataProvider = dataProviders.get(serveOptions.distDir);
+
+  if (!dataProvider) {
+    dataProvider = new StaticServerDataProvider(serveOptions.distDir);
+    dataProviders.set(serveOptions.distDir, dataProvider);
+  }
+
+  return dataProvider;
+}
 
 export default new Reporter({
   async report({event, options, logger}) {
@@ -15,15 +28,6 @@ export default new Reporter({
     let hmrPort =
       (hmrOptions && hmrOptions.port) || (serveOptions && serveOptions.port);
     let hmrServer = hmrPort ? hmrServers.get(hmrPort) : undefined;
-
-    let dataProvider = serveOptions
-      ? dataProviders.get(serveOptions.distDir)
-      : undefined;
-    if (!dataProvider && serveOptions) {
-      dataProvider = new StaticServerDataProvider(serveOptions.distDir);
-      dataProviders.set(serveOptions.distDir, dataProvider);
-    }
-    assert(dataProvider, 'dataProvider is required');
 
     switch (event.type) {
       case 'watchStart': {
@@ -63,16 +67,58 @@ export default new Reporter({
               addMiddleware: (handler) => {
                 server?.middleware.push(handler);
               },
+<<<<<<< HEAD
               logger,
               https: options.serveOptions ? options.serveOptions.https : false,
+=======
+              getDataProvider(serveOptions),
+            );
+            await atlaspackDevServerStart(devServer);
+            rustServers.set(serveOptions.port, devServer);
+            rustServer = devServer;
+          } else {
+            let serverOptions = {
+              ...serveOptions,
+              projectRoot: options.projectRoot,
+>>>>>>> 073028cb4 (fixup issue in server reporter)
               cacheDir: options.cacheDir,
               inputFS: options.inputFS,
               outputFS: options.outputFS,
             };
+<<<<<<< HEAD
             hmrServer = new HMRServer(hmrServerOptions);
             hmrServers.set(serveOptions.port, hmrServer);
             await hmrServer.start();
             return;
+=======
+
+            server = new Server(serverOptions, getDataProvider(serveOptions));
+            servers.set(serveOptions.port, server);
+            const devServer = await server.start();
+
+            if (hmrOptions && hmrOptions.port === serveOptions.port) {
+              let hmrServerOptions = {
+                port: serveOptions.port,
+                host: hmrOptions.host,
+                devServer,
+                // @ts-expect-error TS7006
+                addMiddleware: (handler) => {
+                  server?.middleware.push(handler);
+                },
+                logger,
+                https: options.serveOptions
+                  ? options.serveOptions.https
+                  : false,
+                cacheDir: options.cacheDir,
+                inputFS: options.inputFS,
+                outputFS: options.outputFS,
+              };
+              hmrServer = new HMRServer(hmrServerOptions);
+              hmrServers.set(serveOptions.port, hmrServer);
+              await hmrServer.start();
+              return;
+            }
+>>>>>>> 073028cb4 (fixup issue in server reporter)
           }
         }
 
@@ -126,9 +172,12 @@ export default new Reporter({
         }
         break;
       case 'buildSuccess':
-        dataProvider?.update(event.bundleGraph, event.requestBundle);
-
         if (serveOptions) {
+          getDataProvider(serveOptions).update(
+            event.bundleGraph,
+            event.requestBundle,
+          );
+
           if (!server) {
             return logger.warn({
               message:
