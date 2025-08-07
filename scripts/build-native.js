@@ -30,8 +30,8 @@ if (rustProfile !== 'dev') {
 }
 
 // eslint-disable-next-line no-console
-// console.log(cargoCommand.join(' '));
-// child_process.execSync(cargoCommand.join(' '), {stdio: 'inherit', cwd: __root});
+console.log(cargoCommand.join(' '));
+child_process.execSync(cargoCommand.join(' '), {stdio: 'inherit', cwd: __root});
 
 // Go through npm packages and run custom native commands on them
 const {workspaces} = JSON.parse(

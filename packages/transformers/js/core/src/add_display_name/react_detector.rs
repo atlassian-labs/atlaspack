@@ -1,7 +1,7 @@
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{Visit, VisitWith};
 
-/// Visitor that flips `0` to `true` once JSX or a hook call is encountered.
+/// Visitor that sets `is_react` to `true` once JSX or a hook call is encountered.
 #[derive(Default)]
 pub struct ReactDetector {
   is_react: bool,

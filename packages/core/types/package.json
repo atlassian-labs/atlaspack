@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/types",
-  "version": "2.15.12",
+  "version": "2.15.13",
   "license": "(MIT OR Apache-2.0)",
   "main": "./lib/index.js",
   "source": "./src/index.ts",
@@ -16,8 +16,8 @@
     "check-ts": "tsc --emitDeclarationOnly --rootDir src"
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.17.0",
-    "@atlaspack/workers": "2.14.22"
+    "@atlaspack/types-internal": "2.18.0",
+    "@atlaspack/workers": "2.14.23"
   },
   "type": "commonjs"
 }

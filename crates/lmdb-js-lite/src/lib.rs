@@ -466,7 +466,7 @@ mod tests {
       async_writes: false,
       map_size: None,
     };
-    let mut lmdb = LMDB::new(options).unwrap();
+    let lmdb = LMDB::new(options).unwrap();
     drop(lmdb);
   }
 

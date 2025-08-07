@@ -31,7 +31,7 @@ mod react_detector;
 /// ```rust,no_run
 /// use swc_core::ecma::visit::VisitMutWith;
 /// # let mut module: swc_core::ecma::ast::Module = todo!();
-/// module.visit_mut_with(&mut atlaspack_js_swc_core::AddDisplayNameVisitor::default());
+/// module.visit_mut_with(&mut atlaspack_js_swc_core::add_display_name::AddDisplayNameVisitor::default());
 /// ```
 #[derive(Default)]
 pub struct AddDisplayNameVisitor {}
