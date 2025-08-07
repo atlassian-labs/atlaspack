@@ -3,7 +3,7 @@ import type {
   FilePath,
   PluginOptions,
   PluginLogger,
-} from '@atlaspack/types';
+} from '@atlaspack/types-internal';
 import path from 'path';
 import {md, generateJSONCodeHighlights} from '@atlaspack/diagnostic';
 import nullthrows from 'nullthrows';
