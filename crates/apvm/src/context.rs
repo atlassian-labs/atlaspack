@@ -12,6 +12,7 @@ pub struct Context {
   pub env: Env,
   pub paths: Paths,
   pub apvmrc: ApvmRcRef,
+  pub debug: bool,
   pub versions: Versions,
   #[serde(skip)]
   pub resolver: PackageResolver,

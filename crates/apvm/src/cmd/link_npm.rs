@@ -11,7 +11,6 @@ use crate::platform::path_ext::*;
 use crate::platform::specifier::Specifier;
 use crate::public::json_serde::JsonSerde;
 use crate::public::linked_meta::LinkedMeta;
-use crate::public::package_json::PackageJson;
 use crate::public::package_kind::PackageKind;
 
 pub fn link_npm(
@@ -21,7 +20,8 @@ pub fn link_npm(
   package: NpmPackage,
 ) -> anyhow::Result<()> {
   let package_contents = package.contents();
-  let package_lib_contents = package_contents.join("lib");
+  let package_node_modules = package_contents.join("node_modules");
+  let package_node_modules_atlaspack = package_node_modules.join("@atlaspack");
 
   // node_modules
   let node_modules = ctx.env.pwd.join("node_modules");
@@ -30,6 +30,7 @@ pub fn link_npm(
   let node_modules_bin_atlaspack = node_modules_bin.join(c::NM_BIN_NAME);
   let node_modules_super = node_modules.join("atlaspack");
   let node_modules_atlaspack = node_modules.join("@atlaspack");
+  let node_modules_atlaspack_node_modules = node_modules_atlaspack.join("node_modules");
 
   // Create the following folder structure
   //   /node_modules
@@ -67,80 +68,33 @@ pub fn link_npm(
   }
 
   // Map super package to target directory
-  for entry in fs::read_dir(&package_lib_contents)? {
+  for entry in fs::read_dir(&package_node_modules_atlaspack)? {
     let entry = entry?;
     let entry_path = entry.path();
 
     log::info!("Entry: {:?}", entry_path);
 
-    if fs::metadata(&entry_path)?.is_dir() {
-      continue;
-    }
-
-    // Skip non .js files
-    if entry_path.extension().is_some_and(|ext| ext != "js") {
+    if !fs::metadata(&entry_path)?.is_dir() {
       continue;
     }
 
     let file_stem = entry_path.try_file_stem()?;
-    if file_stem.starts_with("vendor.") {
-      continue;
-    }
-
     let node_modules_atlaspack_pkg = node_modules_atlaspack.join(&file_stem);
     log::info!(
       "Linking: {:?} -> {:?}",
       entry_path,
       node_modules_atlaspack_pkg
     );
+
     fs_ext::remove_if_exists(&node_modules_atlaspack_pkg)?;
+    fs_ext::create_dir_if_not_exists(&node_modules_atlaspack_pkg)?;
+    fs_ext::cp_dir_recursive(&entry_path, &node_modules_atlaspack_pkg)?;
+  }
 
-    fs::create_dir(&node_modules_atlaspack_pkg)?;
-    PackageJson::write_to_file(
-      &PackageJson {
-        name: Some(format!("@atlaspack/{file_stem}")),
-        version: Some(specifier.to_string()),
-        main: Some("./index.js".to_string()),
-        types: Some("./index.d.ts".to_string()),
-        r#type: Some("commonjs".to_string()),
-        private: None,
-      },
-      node_modules_atlaspack_pkg.join("package.json"),
-    )?;
-
-    // TODO: Remove this. One of our consumer packages imports this path directly.
-    // This path should not be imported by consumers and will be fixed there.
-    // In the interim, this workaround unblocks the roll out but will eventually be removed.
-    if file_stem == "runtime-js" {
-      fs::create_dir_all(node_modules_atlaspack_pkg.join("lib").join("helpers"))?;
-      fs_ext::soft_link(
-        &package_lib_contents
-          .join("runtimes")
-          .join("js")
-          .join("helpers")
-          .join("bundle-manifest.js"),
-        &node_modules_atlaspack_pkg
-          .join("lib")
-          .join("helpers")
-          .join("bundle-manifest.js"),
-      )?;
-    }
-
-    fs::write(
-      node_modules_atlaspack_pkg.join("index.js"),
-      format!("module.exports = require('atlaspack/lib/{file_stem}.js')\n"),
-    )?;
-
-    fs::write(
-      node_modules_atlaspack_pkg.join("index.d.ts"),
-      format!(
-        r#"// @ts-ignore
-export * from "atlaspack/{file_stem}";
-// @ts-ignore
-export {{ default }} from "atlaspack/{file_stem}";
-"#
-      ),
-    )?;
+  if !cmd.exclude_node_modules {
+    fs_ext::create_dir_if_not_exists(&node_modules_atlaspack_node_modules)?;
+    fs_ext::cp_dir_recursive(&package_node_modules, &node_modules_atlaspack_node_modules)?;
+    fs_ext::remove_if_exists(node_modules_atlaspack_node_modules.join("@atlaspack"))?;
   }
 
   let meta = LinkedMeta {
@@ -174,7 +128,7 @@ fn create_bin(node_modules_bin_atlaspack: &Path) -> std::io::Result<()> {
     log::info!("Creating: node_modules/.bin/atlaspack");
     fs::write(
       node_modules_bin_atlaspack,
-      "#!/usr/bin/env node\nrequire('atlaspack/lib/cli.js')\n",
+      "#!/usr/bin/env node\nrequire('@atlaspack/cli')\n",
     )?;
     fs::set_permissions(node_modules_bin_atlaspack, Permissions::from_mode(0o777))?;
   }
