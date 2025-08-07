@@ -1,8 +1,8 @@
 import {Reporter} from '@atlaspack/plugin';
+import {ServerOptions} from '@atlaspack/types';
 import HMRServer from './HMRServer';
 import Server from './Server';
 import {StaticServerDataProvider} from './StaticServerDataProvider';
-import assert from 'node:assert';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {
   atlaspackDevServerCreate,
@@ -16,6 +16,19 @@ let servers: Map<number, Server> = new Map();
 let dataProviders: Map<string, StaticServerDataProvider> = new Map();
 let hmrServers: Map<number, HMRServer> = new Map();
 
+function getDataProvider(
+  serveOptions: ServerOptions,
+): StaticServerDataProvider {
+  let dataProvider = dataProviders.get(serveOptions.distDir);
+
+  if (!dataProvider) {
+    dataProvider = new StaticServerDataProvider(serveOptions.distDir);
+    dataProviders.set(serveOptions.distDir, dataProvider);
+  }
+
+  return dataProvider;
+}
+
 export default new Reporter({
   async report({event, options, logger}) {
     let {serveOptions, hmrOptions} = options;
@@ -26,15 +39,6 @@ export default new Reporter({
     let hmrPort =
       (hmrOptions && hmrOptions.port) || (serveOptions && serveOptions.port);
     let hmrServer = hmrPort ? hmrServers.get(hmrPort) : undefined;
-
-    let dataProvider = serveOptions
-      ? dataProviders.get(serveOptions.distDir)
-      : undefined;
-    if (!dataProvider && serveOptions) {
-      dataProvider = new StaticServerDataProvider(serveOptions.distDir);
-      dataProviders.set(serveOptions.distDir, dataProvider);
-    }
-    assert(dataProvider, 'dataProvider is required');
 
     switch (event.type) {
       case 'watchStart': {
@@ -55,7 +59,7 @@ export default new Reporter({
                 distDir: serveOptions.distDir,
                 publicUrl: serveOptions.publicUrl ?? '/',
               },
-              dataProvider!,
+              getDataProvider(serveOptions),
             );
             await atlaspackDevServerStart(devServer);
             rustServers.set(serveOptions.port, devServer);
@@ -75,7 +79,7 @@ export default new Reporter({
               hmrOptions,
             };
 
-            server = new Server(serverOptions, dataProvider!);
+            server = new Server(serverOptions, getDataProvider(serveOptions));
             servers.set(serveOptions.port, server);
             const devServer = await server.start();
 
@@ -159,9 +163,12 @@ export default new Reporter({
         }
         break;
       case 'buildSuccess':
-        dataProvider?.update(event.bundleGraph, event.requestBundle);
-
         if (serveOptions) {
+          getDataProvider(serveOptions).update(
+            event.bundleGraph,
+            event.requestBundle,
+          );
+
           if (!server) {
             return logger.warn({
               message:

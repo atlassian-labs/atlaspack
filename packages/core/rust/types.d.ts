@@ -245,4 +245,8 @@ export declare function atlaspackDevServerStart(
   server: JsDevServer,
 ): Promise<JsDevServerStartResult>;
 
+export declare function atlaspackDevServerStop(
+  server: JsDevServer,
+): Promise<void>;
+
 export type JsDevServer = object;
