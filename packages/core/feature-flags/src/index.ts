@@ -161,7 +161,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * inline scripts that are build as "isolated" bundles.
    */
   inlineIsolatedScripts: process.env.NODE_ENV === 'test',
-} as const;
+};
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
 
