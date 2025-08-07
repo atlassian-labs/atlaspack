@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/compressor-gzip",
-  "version": "2.13.24",
+  "version": "2.13.25",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -17,7 +17,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.22"
+    "@atlaspack/plugin": "2.14.23"
   },
   "scripts": {
     "check-ts": "tsc --emitDeclarationOnly --rootDir src",

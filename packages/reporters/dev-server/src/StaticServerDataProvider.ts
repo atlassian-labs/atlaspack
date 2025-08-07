@@ -12,9 +12,11 @@ import {ServerDataProvider} from './ServerDataProvider';
  * and `requestBundle` function.
  */
 export class StaticServerDataProvider implements ServerDataProvider {
-  distDir: string;
-  bundleGraph: BundleGraph<PackagedBundle> | null = null;
-  requestBundleFn:
+  private distDir: string;
+
+  private bundleGraph: BundleGraph<PackagedBundle> | null = null;
+
+  private requestBundleFn:
     | ((bundle: PackagedBundle) => Promise<BuildSuccessEvent>)
     | null = null;
 
@@ -52,6 +54,14 @@ export class StaticServerDataProvider implements ServerDataProvider {
     return 'requested';
   }
 
+  /**
+   * Update the provider with the latest bundle graph and request function.
+   *
+   * This should be called after every successful build so that subsequent requests operate on fresh data.
+   *
+   * @param bundleGraph The most recent bundle graph representing the output of a build.
+   * @param requestBundleFn Function that will be called to (re)build a specific bundle on demand.
+   */
   update(
     bundleGraph: BundleGraph<PackagedBundle>,
     requestBundleFn: (bundle: PackagedBundle) => Promise<BuildSuccessEvent>,
