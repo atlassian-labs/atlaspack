@@ -1,9 +1,15 @@
-import type {AST, MutableAsset, TransformerResult} from '@atlaspack/types';
+import type {
+  AST,
+  BundleBehavior,
+  MutableAsset,
+  TransformerResult,
+} from '@atlaspack/types';
 import {hashString} from '@atlaspack/rust';
 // @ts-expect-error TS2724
 import type {PostHTMLNode} from 'posthtml';
 
 import PostHTML from 'posthtml';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 const SCRIPT_TYPES = {
   'application/javascript': 'js',
@@ -120,6 +126,15 @@ export default function extractInlineAssets(
           delete node.attrs.type;
         }
 
+        let bundleBehavior: BundleBehavior = 'inline';
+        if (
+          getFeatureFlag('inlineIsolatedScripts') &&
+          typeof node.attrs['data-atlaspack-isolated'] !== 'undefined'
+        ) {
+          bundleBehavior = 'inlineIsolated';
+          delete node.attrs['data-atlaspack-isolated'];
+        }
+
         // insert parcelId to allow us to retrieve node during packaging
         node.attrs['data-parcel-key'] = parcelKey;
         asset.setAST(ast); // mark dirty
@@ -133,7 +148,7 @@ export default function extractInlineAssets(
           type,
           content: value,
           uniqueKey: parcelKey,
-          bundleBehavior: 'inline',
+          bundleBehavior,
           // @ts-expect-error TS2322
           env,
           meta: {

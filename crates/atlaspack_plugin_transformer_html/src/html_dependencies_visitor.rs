@@ -146,8 +146,21 @@ impl DomVisitor for HtmlDependenciesVisitor {
             ..*self.context.env.clone()
           });
 
+          let isolated_attr = ExpandedName {
+            ns: &ns!(),
+            local: &LocalName::from("data-atlaspack-isolated"),
+          };
+          let mut inline_bundle_behavior = None;
           let dependency = Dependency {
-            bundle_behavior: if src_attr.is_none() {
+            bundle_behavior: if self.context.enable_inline_isolated
+              && src_attr.is_none()
+              && attrs.get(isolated_attr).is_some()
+            {
+              attrs.delete(isolated_attr);
+              inline_bundle_behavior = Some(BundleBehavior::InlineIsolated);
+              Some(BundleBehavior::InlineIsolated)
+            } else if src_attr.is_none() {
+              inline_bundle_behavior = Some(BundleBehavior::Inline);
               Some(BundleBehavior::Inline)
             } else if source_type == SourceType::Script
               && attrs.get(expanded_name!("", "async")).is_some()
@@ -172,7 +185,6 @@ impl DomVisitor for HtmlDependenciesVisitor {
             },
             ..Default::default()
           };
-
           let dependency_id = dependency.id();
           self.dependencies.push(dependency);
 
@@ -214,6 +226,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
                 &self.context.project_root,
                 self.context.side_effects,
                 Some(specifier),
+                inline_bundle_behavior,
               ),
               dependencies: Vec::new(),
             });
@@ -258,6 +271,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
               &self.context.project_root,
               self.context.side_effects,
               Some(specifier),
+              Some(BundleBehavior::Inline),
             ),
             dependencies: Vec::new(),
           });

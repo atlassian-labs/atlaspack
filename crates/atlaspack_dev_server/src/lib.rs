@@ -48,7 +48,7 @@ impl DevServer {
       .public_url
       .as_ref()
       .map(|url| {
-        Url::parse(&url)
+        Url::parse(url)
           .map(|url| url.path().to_string())
           .unwrap_or_else(|_| "/".to_string())
       })

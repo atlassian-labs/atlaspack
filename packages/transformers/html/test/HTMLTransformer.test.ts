@@ -351,4 +351,25 @@ describe('HTMLTransformer', () => {
       },
     ]);
   });
+
+  it('transforms simple inline script with data-atlaspack-isolated', async () => {
+    const code = `
+<html>
+  <body>
+    <script data-atlaspack-isolated>console.log('blah'); require('path');</script>
+  </body>
+</html>
+    `;
+    const {transformResult, inputAsset} = await runTestTransform(code);
+    assert(transformResult.includes(inputAsset));
+    const assets = normalizeAssets(transformResult);
+    assert.deepEqual(assets[1], {
+      type: 'js',
+      content: "console.log('blah'); require('path');",
+      uniqueKey: 'a8a37984d2e520b9',
+      bundleBehavior: 'inlineIsolated',
+      env: null,
+      meta: null,
+    });
+  });
 });
