@@ -328,6 +328,7 @@ impl Asset {
     project_root: &Path,
     side_effects: bool,
     unique_key: Option<String>,
+    bundle_behavior: Option<BundleBehavior>,
   ) -> Self {
     let id = create_asset_id(CreateAssetIdParams {
       code: None,
@@ -344,7 +345,7 @@ impl Asset {
       .any(|p| p.file_name() == Some(OsStr::new("node_modules")));
 
     Self {
-      bundle_behavior: Some(BundleBehavior::Inline),
+      bundle_behavior,
       code,
       env,
       file_path,
@@ -540,6 +541,7 @@ mod tests {
       &project_root,
       false,
       None,
+      Some(BundleBehavior::Inline),
     );
 
     assert_eq!(

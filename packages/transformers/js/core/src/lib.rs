@@ -1,4 +1,4 @@
-mod add_display_name;
+pub mod add_display_name;
 mod collect;
 mod constant_module;
 mod dependency_collector;

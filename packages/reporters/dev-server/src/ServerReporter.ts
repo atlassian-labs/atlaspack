@@ -54,7 +54,7 @@ export default new Reporter({
             hmrOptions,
           };
 
-          server = new Server(serverOptions, dataProvider);
+          server = new Server(serverOptions, getDataProvider(serveOptions));
           servers.set(serveOptions.port, server);
           const devServer = await server.start();
 
@@ -67,58 +67,16 @@ export default new Reporter({
               addMiddleware: (handler) => {
                 server?.middleware.push(handler);
               },
-<<<<<<< HEAD
               logger,
               https: options.serveOptions ? options.serveOptions.https : false,
-=======
-              getDataProvider(serveOptions),
-            );
-            await atlaspackDevServerStart(devServer);
-            rustServers.set(serveOptions.port, devServer);
-            rustServer = devServer;
-          } else {
-            let serverOptions = {
-              ...serveOptions,
-              projectRoot: options.projectRoot,
->>>>>>> 073028cb4 (fixup issue in server reporter)
               cacheDir: options.cacheDir,
               inputFS: options.inputFS,
               outputFS: options.outputFS,
             };
-<<<<<<< HEAD
             hmrServer = new HMRServer(hmrServerOptions);
             hmrServers.set(serveOptions.port, hmrServer);
             await hmrServer.start();
             return;
-=======
-
-            server = new Server(serverOptions, getDataProvider(serveOptions));
-            servers.set(serveOptions.port, server);
-            const devServer = await server.start();
-
-            if (hmrOptions && hmrOptions.port === serveOptions.port) {
-              let hmrServerOptions = {
-                port: serveOptions.port,
-                host: hmrOptions.host,
-                devServer,
-                // @ts-expect-error TS7006
-                addMiddleware: (handler) => {
-                  server?.middleware.push(handler);
-                },
-                logger,
-                https: options.serveOptions
-                  ? options.serveOptions.https
-                  : false,
-                cacheDir: options.cacheDir,
-                inputFS: options.inputFS,
-                outputFS: options.outputFS,
-              };
-              hmrServer = new HMRServer(hmrServerOptions);
-              hmrServers.set(serveOptions.port, hmrServer);
-              await hmrServer.start();
-              return;
-            }
->>>>>>> 073028cb4 (fixup issue in server reporter)
           }
         }
 

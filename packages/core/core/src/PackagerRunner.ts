@@ -377,7 +377,12 @@ export default class PackagerRunner {
     bundle: NamedBundle,
     map?: SourceMap | null,
   ): Async<string | null | undefined> {
-    if (map && bundle.env.sourceMap && bundle.bundleBehavior !== 'inline') {
+    if (
+      map &&
+      bundle.env.sourceMap &&
+      bundle.bundleBehavior !== 'inline' &&
+      bundle.bundleBehavior !== 'inlineIsolated'
+    ) {
       if (bundle.env.sourceMap && bundle.env.sourceMap.inline) {
         return this.generateSourceMap(bundleToInternalBundle(bundle), map);
       } else {
@@ -427,7 +432,10 @@ export default class PackagerRunner {
           bundle: BundleType,
           bundleGraph: BundleGraphType<NamedBundleType>,
         ) => {
-          if (bundle.bundleBehavior !== 'inline') {
+          if (
+            bundle.bundleBehavior !== 'inline' &&
+            bundle.bundleBehavior !== 'inlineIsolated'
+          ) {
             throw new Error(
               'Bundle is not inline and unable to retrieve contents',
             );

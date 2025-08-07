@@ -80,6 +80,9 @@ pub enum BundleBehavior {
 
   /// The asset will be isolated from its parents in a separate bundle, and shared assets will be duplicated
   Isolated,
+
+  /// An Inline asset that is also isolated
+  InlineIsolated,
 }
 
 pub type MaybeBundleBehavior = Option<BundleBehavior>;

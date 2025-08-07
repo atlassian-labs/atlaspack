@@ -179,6 +179,7 @@ export type Dependency = {
 export const BundleBehavior = {
   inline: 0,
   isolated: 1,
+  inlineIsolated: 2,
 } as const;
 
 // @ts-expect-error TS2322
