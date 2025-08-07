@@ -131,7 +131,8 @@ export class ScopeHoistingPackager {
     this.isAsyncBundle =
       this.bundleGraph.hasParentBundleOfType(this.bundle, 'js') &&
       !this.bundle.env.isIsolated() &&
-      this.bundle.bundleBehavior !== 'isolated';
+      this.bundle.bundleBehavior !== 'isolated' &&
+      this.bundle.bundleBehavior !== 'inlineIsolated';
 
     this.globalNames = GLOBALS_BY_CONTEXT[bundle.env.context];
   }
@@ -323,6 +324,7 @@ export class ScopeHoistingPackager {
       this.useAsyncBundleRuntime &&
       bundle.type === 'js' &&
       bundle.bundleBehavior !== 'inline' &&
+      bundle.bundleBehavior !== 'inlineIsolated' &&
       bundle.env.outputFormat === 'esmodule' &&
       !bundle.env.isIsolated() &&
       bundle.bundleBehavior !== 'isolated' &&
@@ -1651,6 +1653,7 @@ ${code}
           .some((g) => this.bundleGraph.isEntryBundleGroup(g)) ||
         this.bundle.env.isIsolated() ||
         this.bundle.bundleBehavior === 'isolated' ||
+        this.bundle.bundleBehavior === 'inlineIsolated' ||
         // Conditional deps may be loaded before entrypoints on the server
         this.hasConditionalDependency();
 

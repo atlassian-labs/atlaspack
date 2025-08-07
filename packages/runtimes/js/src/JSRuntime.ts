@@ -183,7 +183,10 @@ export default new Runtime({
           dependency,
           bundle,
         );
-        if (referencedBundle?.bundleBehavior === 'inline') {
+        if (
+          referencedBundle?.bundleBehavior === 'inline' ||
+          referencedBundle?.bundleBehavior === 'inlineIsolated'
+        ) {
           assets.push({
             filePath: path.join(
               __dirname,
@@ -286,7 +289,10 @@ export default new Runtime({
         dependency,
         bundle,
       );
-      if (referencedBundle?.bundleBehavior === 'inline') {
+      if (
+        referencedBundle?.bundleBehavior === 'inline' ||
+        referencedBundle?.bundleBehavior === 'inlineIsolated'
+      ) {
         assets.push({
           filePath: path.join(__dirname, `/bundles/${referencedBundle.id}.js`),
           code: `module.exports = ${JSON.stringify(dependency.id)};`,
@@ -325,7 +331,11 @@ export default new Runtime({
 
       // Skip URL runtimes for library builds. This is handled in packaging so that
       // the url is inlined and statically analyzable.
-      if (bundle.env.isLibrary && mainBundle.bundleBehavior !== 'isolated') {
+      if (
+        bundle.env.isLibrary &&
+        mainBundle.bundleBehavior !== 'isolated' &&
+        mainBundle.bundleBehavior !== 'inlineIsolated'
+      ) {
         continue;
       }
 
@@ -382,7 +392,11 @@ export default new Runtime({
       shouldUseRuntimeManifest(bundle, options) &&
       bundleGraph
         .getChildBundles(bundle)
-        .some((b) => b.bundleBehavior !== 'inline') &&
+        .some(
+          (b) =>
+            b.bundleBehavior !== 'inline' &&
+            b.bundleBehavior !== 'inlineIsolated',
+        ) &&
       isNewContext(bundle, bundleGraph)
     ) {
       assets.push({
@@ -891,7 +905,10 @@ function getRegisterCode(
   // @ts-expect-error TS2304
   let mappings: Array<FilePath | string> = [];
   bundleGraph.traverseBundles((bundle, _, actions) => {
-    if (bundle.bundleBehavior === 'inline') {
+    if (
+      bundle.bundleBehavior === 'inline' ||
+      bundle.bundleBehavior === 'inlineIsolated'
+    ) {
       return;
     }
 
@@ -982,6 +999,7 @@ function shouldUseRuntimeManifest(
   return (
     !env.isLibrary &&
     bundle.bundleBehavior !== 'inline' &&
+    bundle.bundleBehavior !== 'inlineIsolated' &&
     env.isBrowser() &&
     options.mode === 'production'
   );

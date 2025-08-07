@@ -1455,7 +1455,8 @@ export default class BundleGraph {
       ISOLATED_ENVS.has(fromEnvironmentId(bundle.env).context) ||
       !bundle.isSplittable ||
       bundle.bundleBehavior === BundleBehavior.isolated ||
-      bundle.bundleBehavior === BundleBehavior.inline
+      bundle.bundleBehavior === BundleBehavior.inline ||
+      bundle.bundleBehavior === BundleBehavior.inlineIsolated
     ) {
       return false;
     }
@@ -1472,6 +1473,7 @@ export default class BundleGraph {
             b.id !== bundle.id &&
             b.bundleBehavior !== BundleBehavior.isolated &&
             b.bundleBehavior !== BundleBehavior.inline &&
+            b.bundleBehavior !== BundleBehavior.inlineIsolated &&
             this.bundleHasAsset(b, asset),
         )
       ) {
@@ -1490,7 +1492,8 @@ export default class BundleGraph {
         if (
           bundleNode.type !== 'bundle' ||
           bundleNode.value.bundleBehavior === BundleBehavior.isolated ||
-          bundleNode.value.bundleBehavior === BundleBehavior.inline
+          bundleNode.value.bundleBehavior === BundleBehavior.inline ||
+          bundleNode.value.bundleBehavior === BundleBehavior.inlineIsolated
         ) {
           return false;
         }
@@ -1522,6 +1525,7 @@ export default class BundleGraph {
                     b.id !== bundle.id &&
                     b.bundleBehavior !== BundleBehavior.isolated &&
                     b.bundleBehavior !== BundleBehavior.inline &&
+                    b.bundleBehavior !== BundleBehavior.inlineIsolated &&
                     this.bundleHasAsset(b, asset),
                 )
               ) {
@@ -1664,7 +1668,8 @@ export default class BundleGraph {
     this.traverseBundles((bundle) => {
       if (
         opts?.includeInline ||
-        bundle.bundleBehavior !== BundleBehavior.inline
+        (bundle.bundleBehavior !== BundleBehavior.inline &&
+          bundle.bundleBehavior !== BundleBehavior.inlineIsolated)
       ) {
         bundles.push(bundle);
       }
@@ -1748,7 +1753,8 @@ export default class BundleGraph {
       let bundle = bundleNode.value;
       if (
         opts?.includeInline ||
-        bundle.bundleBehavior !== BundleBehavior.inline
+        (bundle.bundleBehavior !== BundleBehavior.inline &&
+          bundle.bundleBehavior !== BundleBehavior.inlineIsolated)
       ) {
         bundles.add(bundle);
       }
@@ -1786,7 +1792,8 @@ export default class BundleGraph {
 
         if (
           includeInline ||
-          node.value.bundleBehavior !== BundleBehavior.inline
+          (node.value.bundleBehavior !== BundleBehavior.inline &&
+            node.value.bundleBehavior !== BundleBehavior.inlineIsolated)
         ) {
           referencedBundles.add(node.value);
         }
@@ -2161,7 +2168,10 @@ export default class BundleGraph {
         includeInline: true,
       });
       for (let referenced of referencedBundles) {
-        if (referenced.bundleBehavior === BundleBehavior.inline) {
+        if (
+          referenced.bundleBehavior === BundleBehavior.inline ||
+          referenced.bundleBehavior === BundleBehavior.inlineIsolated
+        ) {
           bundles.push(referenced);
           addReferencedBundles(referenced);
         }
@@ -2171,7 +2181,10 @@ export default class BundleGraph {
     addReferencedBundles(bundle);
 
     this.traverseBundles((childBundle, _, traversal) => {
-      if (childBundle.bundleBehavior === BundleBehavior.inline) {
+      if (
+        childBundle.bundleBehavior === BundleBehavior.inline ||
+        childBundle.bundleBehavior === BundleBehavior.inlineIsolated
+      ) {
         bundles.push(childBundle);
       } else if (childBundle.id !== bundle.id) {
         traversal.skipChildren();

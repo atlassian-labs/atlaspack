@@ -86,8 +86,12 @@ async function run({input, api, farm, options}) {
     includeInline: getFeatureFlag('inlineBundlesSourceMapFixes'),
   });
   const bundles = allBundles
-    // @ts-expect-error TS7006
-    .filter((bundle) => bundle.bundleBehavior !== 'inline')
+    .filter(
+      // @ts-expect-error TS7006
+      (bundle) =>
+        bundle.bundleBehavior !== 'inline' &&
+        bundle.bundleBehavior !== 'inline-isolated',
+    )
     // @ts-expect-error TS7006
     .filter((bundle) => {
       // Do not package and write placeholder bundles to disk. We just

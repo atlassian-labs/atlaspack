@@ -74,7 +74,10 @@ export function replaceURLReferences({
       continue;
     }
 
-    if (resolved.bundleBehavior === 'inline') {
+    if (
+      resolved.bundleBehavior === 'inline' ||
+      resolved.bundleBehavior === 'inlineIsolated'
+    ) {
       // If a bundle is inline, it should be replaced with inline contents,
       // not a URL.
       continue;
@@ -140,7 +143,10 @@ export async function replaceInlineReferences({
 
   for (let dependency of dependencies) {
     let entryBundle = bundleGraph.getReferencedBundle(dependency, bundle);
-    if (entryBundle?.bundleBehavior !== 'inline') {
+    if (
+      entryBundle?.bundleBehavior !== 'inline' &&
+      entryBundle?.bundleBehavior !== 'inlineIsolated'
+    ) {
       continue;
     }
 

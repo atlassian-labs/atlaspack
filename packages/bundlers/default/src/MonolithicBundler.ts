@@ -38,9 +38,12 @@ export function addJSMonolithBundle(
       let assets = bundleGraph.getDependencyAssets(dependency);
 
       for (const asset of assets) {
-        if (asset.bundleBehavior === 'isolated') {
+        if (
+          asset.bundleBehavior === 'isolated' ||
+          asset.bundleBehavior === 'inlineIsolated'
+        ) {
           throw new Error(
-            'Isolated assets are not supported for single file output builds',
+            `${asset.bundleBehavior === 'isolated' ? 'Isolated' : 'Inline isolated'} assets are not supported for single file output builds`,
           );
         }
 
