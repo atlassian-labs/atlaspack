@@ -71,7 +71,6 @@ async function collectDependencies(
                   {
                     // @ts-expect-error TS2345
                     ...getJSONHighlightLocation(ptrs['/default_locale'], err),
-                    // @ts-expect-error TS2345
                     message: md`Localization ${
                       err == 'value'
                         ? 'file for ' + program.default_locale

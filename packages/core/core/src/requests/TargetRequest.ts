@@ -237,7 +237,6 @@ export class TargetResolver {
             if (!packageTargets.has(target)) {
               throw new ThrowableDiagnostic({
                 diagnostic: {
-                  // @ts-expect-error TS2345
                   message: md`Could not find target with name "${target}"`,
                   origin: '@atlaspack/core',
                 },
@@ -265,7 +264,6 @@ export class TargetResolver {
               );
               throw new ThrowableDiagnostic({
                 diagnostic: {
-                  // @ts-expect-error TS2345
                   message: md`Missing distDir for target "${name}"`,
                   origin: '@atlaspack/core',
                   codeFrames: [
@@ -437,7 +435,6 @@ export class TargetResolver {
       if (pkgFile == null) {
         throw new ThrowableDiagnostic({
           diagnostic: {
-            // @ts-expect-error TS2345
             message: md`Expected package.json file in ${rootDir}`,
             origin: '@atlaspack/core',
           },
@@ -718,7 +715,6 @@ export class TargetResolver {
           let ext = path.extname(distEntry);
           throw new ThrowableDiagnostic({
             diagnostic: {
-              // @ts-expect-error TS2345
               message: md`Unexpected output file type ${ext} in target "${targetName}"`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -751,7 +747,6 @@ export class TargetResolver {
               : JSON.stringify(pkgContents, null, '\t');
           throw new ThrowableDiagnostic({
             diagnostic: {
-              // @ts-expect-error TS2345
               message: md`The "global" output format is not supported in the "${targetName}" target.`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -806,7 +801,6 @@ export class TargetResolver {
           throw new ThrowableDiagnostic({
             diagnostic: {
               // prettier-ignore
-              // @ts-expect-error TS2345
               message: md`Output format "esmodule" cannot be used in the "main" target without a .mjs extension or "type": "module" field.`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -976,7 +970,6 @@ export class TargetResolver {
               : JSON.stringify(pkgContents, null, '\t');
           throw new ThrowableDiagnostic({
             diagnostic: {
-              // @ts-expect-error TS2345
               message: md`Invalid distPath for target "${targetName}"`,
               origin: '@atlaspack/core',
               codeFrames: [
@@ -1235,7 +1228,6 @@ export class TargetResolver {
       let listFormat = new Intl.ListFormat('en-US', {type: 'disjunction'});
       throw new ThrowableDiagnostic({
         diagnostic: {
-          // @ts-expect-error TS2345
           message: md`Declared output format "${descriptor.outputFormat}" does not match expected output format "${inferredOutputFormat}".`,
           origin: '@atlaspack/core',
           codeFrames: [
@@ -1392,7 +1384,6 @@ function assertNoDuplicateTargets(
   for (let [targetPath, targetNames] of targetsByPath) {
     if (targetNames.length > 1 && pkgContents != null && pkgFilePath != null) {
       diagnostics.push({
-        // @ts-expect-error TS2345
         message: md`Multiple targets have the same destination path "${path.relative(
           path.dirname(pkgFilePath),
           targetPath,
@@ -1581,7 +1572,6 @@ async function debugResolvedTargets(
       }
 
       if (keyInfo.path) {
-        // @ts-expect-error TS2345
         highlight.defined = md`${key} defined here`;
       }
 
@@ -1642,7 +1632,6 @@ async function debugResolvedTargets(
       v.message != null ? md.italic(v.message) : '';
     logger.verbose({
       origin: '@atlaspack/core',
-      // @ts-expect-error TS2345
       message: md`**Target** "${target.name}"
 
                **Entry**: ${path.relative(

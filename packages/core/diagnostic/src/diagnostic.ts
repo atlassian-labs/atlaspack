@@ -336,7 +336,7 @@ type TemplateInput = any;
 
 const mdVerbatim = Symbol();
 export function md(
-  strings: Array<string>,
+  strings: TemplateStringsArray,
   ...params: Array<TemplateInput>
 ): string {
   let result: Array<any | string> = [];

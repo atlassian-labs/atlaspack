@@ -326,7 +326,6 @@ async function warnOnRedundantPlugins(
     plugins.length === 0
   ) {
     diagnostics.push({
-      // @ts-expect-error TS2345
       message: md`Parcel includes transpilation by default. Babel config __${filePath}__ contains only redundant presets. Deleting it may significantly improve build performance.`,
       codeFrames: [
         {
@@ -338,14 +337,12 @@ async function warnOnRedundantPlugins(
           ),
         },
       ],
-      // @ts-expect-error TS2345
       hints: [md`Delete __${filePath}__`],
       documentationURL:
         'https://parceljs.org/languages/javascript/#default-presets',
     });
   } else if (foundRedundantPresets.size > 0) {
     diagnostics.push({
-      // @ts-expect-error TS2345
       message: md`Parcel includes transpilation by default. Babel config __${filePath}__ includes the following redundant presets: ${[
         ...foundRedundantPresets,
       ].map((p) =>
@@ -361,7 +358,6 @@ async function warnOnRedundantPlugins(
           ),
         },
       ],
-      // @ts-expect-error TS2345
       hints: [md`Remove the above presets from __${filePath}__`],
       documentationURL:
         'https://parceljs.org/languages/javascript/#default-presets',

@@ -1,4 +1,6 @@
 import assert from 'assert';
+import {createEnvironment} from '../../core/src/Environment';
+import {fromEnvironmentId} from '../../core/src/EnvironmentManager';
 import {
   getAllEnvironments,
   setAllEnvironments,
@@ -7,38 +9,40 @@ import {
 } from '..';
 
 describe('EnvironmentManager', () => {
-  const environment1 = {
-    id: 'd821e85f6b50315e',
-    context: 'browser',
-    engines: {
-      browsers: ['> 0.25%'],
-    },
-    includeNodeModules: true,
-    outputFormat: 'global',
-    isLibrary: false,
-    shouldOptimize: false,
-    shouldScopeHoist: false,
-    sourceMap: undefined,
-    loc: undefined,
-    sourceType: 'module',
-    unstableSingleFileOutput: false,
-  } as const;
-  const environment2 = {
-    id: '23e9eb4debbdc50e',
-    context: 'browser',
-    engines: {
-      browsers: ['> 0.25%'],
-    },
-    includeNodeModules: true,
-    outputFormat: 'global',
-    isLibrary: true,
-    shouldOptimize: true,
-    shouldScopeHoist: false,
-    sourceMap: undefined,
-    loc: undefined,
-    sourceType: 'module',
-    unstableSingleFileOutput: false,
-  } as const;
+  const environment1 = fromEnvironmentId(
+    createEnvironment({
+      context: 'browser',
+      engines: {
+        browsers: ['> 0.25%'],
+      },
+      includeNodeModules: true,
+      outputFormat: 'global',
+      isLibrary: false,
+      shouldOptimize: false,
+      shouldScopeHoist: false,
+      sourceMap: null,
+      loc: null,
+      sourceType: 'module',
+      unstableSingleFileOutput: false,
+    }),
+  );
+  const environment2 = fromEnvironmentId(
+    createEnvironment({
+      context: 'browser',
+      engines: {
+        browsers: ['> 0.25%'],
+      },
+      includeNodeModules: true,
+      outputFormat: 'global',
+      isLibrary: true,
+      shouldOptimize: true,
+      shouldScopeHoist: false,
+      sourceMap: null,
+      loc: null,
+      sourceType: 'module',
+      unstableSingleFileOutput: false,
+    }),
+  );
 
   it('we can add and get environments', () => {
     setAllEnvironments([]);
@@ -52,7 +56,12 @@ describe('EnvironmentManager', () => {
 
     const environments = getAllEnvironments();
     environments.sort((a: any, b: any) => a.id.localeCompare(b.id));
-    assert.deepEqual(environments, [environment2, environment1]);
+    assert.deepEqual(
+      environments.sort((a: any, b: any) => a.id.localeCompare(b.id)),
+      [environment2, environment1].sort((a: any, b: any) =>
+        a.id.localeCompare(b.id),
+      ),
+    );
 
     setAllEnvironments([]);
     const noEnvironments = getAllEnvironments();

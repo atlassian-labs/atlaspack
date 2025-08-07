@@ -16,8 +16,8 @@ const {
   },
   LMDBLiteCache,
 } = process.env.ATLASPACK_REGISTER_USE_SRC === 'true'
-  ? require('./deep-imports.js')
-  : require('./deep-imports.ts');
+  ? require('./deep-imports.ts')
+  : require('./deep-imports.js');
 
 export async function loadGraphs(cacheDir: string): Promise<{
   // @ts-expect-error TS2749
