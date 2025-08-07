@@ -11,7 +11,7 @@
   },
   "main": "./lib/PostHTMLTransformer.js",
   "source": "./src/PostHTMLTransformer.ts",
-  "types": "./src/PostHTMLTransformer.ts",
+  "types": "./lib/types/PostHTMLTransformer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -26,6 +26,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

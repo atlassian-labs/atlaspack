@@ -9,7 +9,8 @@
   },
   "scripts": {
     "test": "node --experimental-strip-types ./main.mts",
-    "test-ci": "yarn test"
+    "test-ci": "yarn test",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "devDependencies": {
     "@atlaspack/core": "2.22.0",

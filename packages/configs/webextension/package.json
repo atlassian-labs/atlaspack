@@ -19,6 +19,9 @@
     "@atlaspack/transformer-webextension": "2.14.23"
   },
   "peerDependencies": {
-    "@atlaspack/core": "^2.13.1"
+    "@atlaspack/core": "2.22.0"
+  },
+  "scripts": {
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

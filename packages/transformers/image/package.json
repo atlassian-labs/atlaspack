@@ -11,7 +11,7 @@
   },
   "main": "./lib/ImageTransformer.js",
   "source": "./src/ImageTransformer.ts",
-  "types": "./src/ImageTransformer.ts",
+  "types": "./lib/types/ImageTransformer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -25,10 +25,11 @@
     "sharp": "^0.31.1"
   },
   "peerDependencies": {
-    "@atlaspack/core": "^2.13.1"
+    "@atlaspack/core": "2.22.0"
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

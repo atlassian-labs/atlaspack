@@ -5,8 +5,8 @@ import type {
 } from 'http';
 import type {Server as HTTPSServer} from 'https';
 import type {Socket} from 'net';
-import type {FilePath, HTTPSOptions} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
+import type {FilePath, HTTPSOptions} from '@atlaspack/types-internal';
+import type {FileSystem} from '@atlaspack/types-internal';
 
 import http from 'http';
 import https from 'https';

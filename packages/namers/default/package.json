@@ -11,7 +11,7 @@
   },
   "main": "./lib/DefaultNamer.js",
   "source": "./src/DefaultNamer.ts",
-  "types": "./src/DefaultNamer.ts",
+  "types": "./lib/types/DefaultNamer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -22,6 +22,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

@@ -1,4 +1,8 @@
-import type {AST, MutableAsset, TransformerResult} from '@atlaspack/types';
+import type {
+  AST,
+  MutableAsset,
+  TransformerResult,
+} from '@atlaspack/types-internal';
 import {hashString} from '@atlaspack/rust';
 // @ts-expect-error TS2724
 import type {PostHTMLNode} from 'posthtml';

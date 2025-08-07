@@ -4,10 +4,10 @@ import type {
   HMROptions,
   HTTPSOptions,
   FilePath,
+  PackageManager,
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
 import type {HTTPServer} from '@atlaspack/utils';
-import type {PackageManager} from '@atlaspack/package-manager';
 import {IncomingMessage, ServerResponse} from 'http';
 
 interface HTTPRequest extends IncomingMessage {

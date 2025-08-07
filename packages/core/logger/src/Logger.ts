@@ -2,7 +2,7 @@ import type {
   IDisposable,
   LogEvent,
   PluginLogger as IPluginLogger,
-} from '@atlaspack/types';
+} from '@atlaspack/types-internal';
 import type {
   Diagnostic,
   Diagnostifiable,

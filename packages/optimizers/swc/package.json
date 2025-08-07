@@ -11,7 +11,7 @@
   },
   "main": "./lib/SwcOptimizer.js",
   "source": "./src/SwcOptimizer.ts",
-  "types": "./src/SwcOptimizer.ts",
+  "types": "./lib/types/SwcOptimizer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -25,6 +25,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

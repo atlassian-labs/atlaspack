@@ -7,9 +7,9 @@ import type {
   BuildMode,
   ResolveResult,
   PluginLogger,
+  FileSystem,
+  PackageManager,
 } from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
-import type {PackageManager} from '@atlaspack/package-manager';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import {NodeFS} from '@atlaspack/fs';
 // @ts-expect-error TS2305

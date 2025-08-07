@@ -1,5 +1,5 @@
-import type {FilePath, PackagedBundle} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
+import type {FilePath, PackagedBundle} from '@atlaspack/types-internal';
+import type {FileSystem} from '@atlaspack/types-internal';
 import SourceMap from '@parcel/source-map';
 import nullthrows from 'nullthrows';
 import path from 'path';

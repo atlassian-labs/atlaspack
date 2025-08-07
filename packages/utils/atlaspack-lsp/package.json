@@ -11,10 +11,11 @@
   },
   "main": "./lib/LspServer.js",
   "source": "./src/LspServer.ts",
-  "types": "./src/LspServer.ts",
+  "types": "./lib/types/LspServer.d.ts",
   "scripts": {
     "watch": "tsc -watch -p ./",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "engines": {
     "node": ">= 16.0.0"

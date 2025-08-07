@@ -1,4 +1,4 @@
-import type {Blob} from '@atlaspack/types';
+import type {Blob} from '@atlaspack/types-internal';
 
 import {Buffer} from 'buffer';
 import {bufferStream} from './';

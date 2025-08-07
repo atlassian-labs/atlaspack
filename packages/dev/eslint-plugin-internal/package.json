@@ -3,7 +3,9 @@
   "private": true,
   "version": "2.14.2",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  },
   "dependencies": {
     "eslint-module-utils": "^2.1.1",
     "get-monorepo-packages": "^1.1.0",

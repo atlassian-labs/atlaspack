@@ -1,4 +1,4 @@
-import type {FileSystem} from '@atlaspack/fs';
+import type {FileSystem} from '@atlaspack/types-internal';
 import forge from 'node-forge';
 import path from 'path';
 import logger from '@atlaspack/logger';
