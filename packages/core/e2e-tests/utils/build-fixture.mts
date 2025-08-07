@@ -4,7 +4,6 @@ import * as fs from 'node:fs';
 import * as url from 'node:url';
 import {Atlaspack} from '@atlaspack/core';
 import type {ServeContext} from './server.mts';
-import type {AsyncSubscription} from '@atlaspack/types';
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,9 +51,6 @@ export async function serveFixture(target: string): Promise<ServeContext> {
     defaultTargetOptions: {
       distDir: outputDir,
     },
-    featureFlags: {
-      rustDevServer: true,
-    },
     serveOptions: {
       port: randomPort,
     },
@@ -63,26 +59,12 @@ export async function serveFixture(target: string): Promise<ServeContext> {
     ),
   });
 
-  const subscription = await new Promise<AsyncSubscription | null>(
-    (resolve, reject) => {
-      let sub: AsyncSubscription | null = null;
-      atlaspack
-        .watch((err, event) => {
-          if (err) reject(err);
-          if (event?.type === 'buildSuccess') {
-            resolve(sub);
-          }
-        })
-        .then((s) => {
-          sub = s;
-        });
-    },
-  );
+  const subscription = await atlaspack.watch();
 
   return {
     address: `http://localhost:${randomPort}`,
     close() {
-      subscription?.unsubscribe();
+      subscription.unsubscribe();
     },
   };
 }

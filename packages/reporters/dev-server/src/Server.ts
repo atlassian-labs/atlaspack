@@ -82,7 +82,7 @@ export default class Server {
     hints: Array<string>;
     documentation: string;
   }> | null;
-  private stopServer: (() => Promise<void>) | null | undefined;
+  stopServer: (() => Promise<void>) | null | undefined;
 
   constructor(options: DevServerOptions) {
     this.options = options;

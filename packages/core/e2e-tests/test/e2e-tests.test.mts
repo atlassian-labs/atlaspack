@@ -13,9 +13,7 @@ describe('Atlaspack Playwright E2E tests', () => {
   let page: Page;
 
   before(async () => {
-    browser = await chromium.launch({
-      headless: false,
-    });
+    browser = await chromium.launch();
   });
 
   after(async () => {
@@ -43,10 +41,7 @@ describe('Atlaspack Playwright E2E tests', () => {
 
   it('can serve a simple project', async () => {
     server = await serveFixture('simple-project/index.html');
-    await page.goto(`${server.address}/index.html`, {
-      waitUntil: 'networkidle',
-    });
-    await page.waitForTimeout(10000);
+    await page.goto(`${server.address}/index.html`);
     const element = await page.getByTestId('content');
     assert.equal(await element.innerText(), 'Hello, world!');
   });
