@@ -59,20 +59,21 @@ type NextFunction = (
 ) => any;
 
 export default class Server {
-  pending: boolean;
-  pendingRequests: Array<[Request, Response]>;
-  middleware: Array<(req: Request, res: Response) => boolean>;
-  options: DevServerOptions;
-  rootPath: string;
-  dataProvider: ServerDataProvider;
-  errors: Array<{
+  readonly middleware: Array<(req: Request, res: Response) => boolean>;
+  readonly options: DevServerOptions;
+  readonly dataProvider: ServerDataProvider;
+
+  private pending: boolean;
+  private pendingRequests: Array<[Request, Response]>;
+  private rootPath: string;
+  private errors: Array<{
     message: string;
     stack: string | null | undefined;
     frames: Array<FormattedCodeFrame>;
     hints: Array<string>;
     documentation: string;
   }> | null;
-  stopServer: (() => Promise<void>) | null | undefined;
+  private stopServer: (() => Promise<void>) | null | undefined;
 
   constructor(options: DevServerOptions, dataProvider: ServerDataProvider) {
     this.options = options;
