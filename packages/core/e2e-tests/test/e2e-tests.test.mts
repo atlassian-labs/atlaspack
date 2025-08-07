@@ -2,7 +2,7 @@ import assert from 'node:assert';
 import {describe, it, before, after, beforeEach, afterEach} from 'node:test';
 import {chromium} from 'playwright';
 import type {Browser, Page, BrowserContext} from 'playwright';
-import {buildFixture} from '../utils/build-fixture.mts';
+import {buildFixture, serveFixture} from '../utils/build-fixture.mts';
 import {serve} from '../utils/server.mts';
 import type {ServeContext} from '../utils/server.mts';
 
@@ -34,7 +34,14 @@ describe('Atlaspack Playwright E2E tests', () => {
     const filePath = await buildFixture('simple-project/index.html');
     server = await serve(filePath);
 
-    await page.goto(server.address);
+    await page.goto(`${server.address}`);
+    const element = await page.getByTestId('content');
+    assert.equal(await element.innerText(), 'Hello, world!');
+  });
+
+  it('can serve a simple project', async () => {
+    server = await serveFixture('simple-project/index.html');
+    await page.goto(`${server.address}/index.html`);
     const element = await page.getByTestId('content');
     assert.equal(await element.innerText(), 'Hello, world!');
   });

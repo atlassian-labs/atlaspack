@@ -24,17 +24,12 @@ import {
 } from '@atlaspack/utils';
 import serverErrors from './serverErrors';
 import fs from 'fs';
-// @ts-expect-error TS7016
 import ejs from 'ejs';
-// @ts-expect-error TS7016
 import connect from 'connect';
-// @ts-expect-error TS7016
 import serveHandler from 'serve-handler';
 import {createProxyMiddleware} from 'http-proxy-middleware';
 import {URL, URLSearchParams} from 'url';
-// @ts-expect-error TS7016
 import launchEditor from 'launch-editor';
-// @ts-expect-error TS7016
 import fresh from 'fresh';
 
 export function setHeaders(res: Response) {
@@ -504,13 +499,11 @@ export default class Server {
     };
 
     const app = connect();
-    // @ts-expect-error TS7006
     app.use((req, res, next) => {
       setHeaders(res);
       next();
     });
 
-    // @ts-expect-error TS7006
     app.use((req, res, next) => {
       if (req.url === '/__parcel_healthcheck') {
         res.statusCode = 200;
