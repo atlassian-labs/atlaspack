@@ -248,7 +248,7 @@ export function findDependency(
 
 export function mergeParcelOptions(
   optsOne: InitialAtlaspackOptions,
-  optsTwo?: InitialAtlaspackOptions | null,
+  optsTwo?: InitialAtlaspackOptions | null | undefined | void,
 ): InitialAtlaspackOptions {
   if (!optsTwo) {
     return optsOne;
@@ -552,7 +552,7 @@ export async function runBundle(
 
 export function run(
   bundleGraph: BundleGraph<PackagedBundle>,
-  globals: unknown,
+  globals?: unknown,
   opts: RunOpts = {},
   externalModules?: ExternalModules,
 ): Promise<any> {
