@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.22.0
+
+### Minor Changes
+
+- [#741](https://github.com/atlassian-labs/atlaspack/pull/741) [`73dd7ba`](https://github.com/atlassian-labs/atlaspack/commit/73dd7baab69456ef2f6e4a0cc7dbb04f407eb148) Thanks [@matt-koko](https://github.com/matt-koko)! - combine FeatureFlags and DEFAULT_FEATURE_FLAGS into one object
+
 ## 2.21.0
 
 ### Minor Changes

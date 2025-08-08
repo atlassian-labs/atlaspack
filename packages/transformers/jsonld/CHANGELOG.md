@@ -1,5 +1,13 @@
 # @atlaspack/transformer-jsonld
 
+## 2.14.24
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.24
+  - @atlaspack/types@2.15.14
+
 ## 2.14.23
 
 ### Patch Changes

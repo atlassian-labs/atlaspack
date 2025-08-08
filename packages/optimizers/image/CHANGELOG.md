@@ -1,5 +1,16 @@
 # @atlaspack/optimizer-image
 
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`ad26146`](https://github.com/atlassian-labs/atlaspack/commit/ad26146f13b4c1cc65d4a0f9c67060b90ef14ff3), [`f1b48e7`](https://github.com/atlassian-labs/atlaspack/commit/f1b48e7a04e005cef0f36a3e692087a9ecdb6f7a), [`7f5841c`](https://github.com/atlassian-labs/atlaspack/commit/7f5841c39df049f9546cccbeea2a7337e0337b45)]:
+  - @atlaspack/rust@3.6.0
+  - @atlaspack/core@2.23.0
+  - @atlaspack/utils@2.18.1
+  - @atlaspack/plugin@2.14.24
+  - @atlaspack/workers@2.14.24
+
 ## 3.1.23
 
 ### Patch Changes
