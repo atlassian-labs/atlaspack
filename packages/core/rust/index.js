@@ -310,7 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { initTracingSubscriber, Lmdb, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, Resolver, performStringReplacements, transform, transformAsync, getVcsStateSnapshot, getEventsSince } = nativeBinding
+const { initTracingSubscriber, Lmdb, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, createDependencyId, atlaspackDevServerCreate, atlaspackDevServerStart, atlaspackDevServerStop, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, Resolver, performStringReplacements, transform, transformAsync, getVcsStateSnapshot, getEventsSince } = nativeBinding
 
 module.exports.initTracingSubscriber = initTracingSubscriber
 module.exports.Lmdb = Lmdb
@@ -327,6 +327,9 @@ module.exports.atlaspackNapiCreate = atlaspackNapiCreate
 module.exports.atlaspackNapiBuildAssetGraph = atlaspackNapiBuildAssetGraph
 module.exports.atlaspackNapiRespondToFsEvents = atlaspackNapiRespondToFsEvents
 module.exports.createDependencyId = createDependencyId
+module.exports.atlaspackDevServerCreate = atlaspackDevServerCreate
+module.exports.atlaspackDevServerStart = atlaspackDevServerStart
+module.exports.atlaspackDevServerStop = atlaspackDevServerStop
 module.exports.createEnvironmentId = createEnvironmentId
 module.exports.setAllEnvironments = setAllEnvironments
 module.exports.getAllEnvironments = getAllEnvironments
