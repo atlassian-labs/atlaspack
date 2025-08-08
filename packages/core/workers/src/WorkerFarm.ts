@@ -633,7 +633,6 @@ export default class WorkerFarm extends EventEmitter {
 
     logger.info({
       origin: '@atlaspack/workers',
-      // @ts-expect-error TS2345
       message: md`Wrote profile to ${filename}`,
     });
   }
@@ -690,7 +689,6 @@ export default class WorkerFarm extends EventEmitter {
 
       logger.info({
         origin: '@atlaspack/workers',
-        // @ts-expect-error TS2345
         message: md`Wrote heap snapshots to the following paths:\n${snapshotPaths.join(
           '\n',
         )}`,

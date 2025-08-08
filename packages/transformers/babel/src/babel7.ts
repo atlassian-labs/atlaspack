@@ -119,7 +119,6 @@ export default async function babel7(
       for (let f of res.externalDependencies) {
         if (!path.isAbsolute(f)) {
           opts.logger.warn({
-            // @ts-expect-error TS2345
             message: md`Ignoring non-absolute Babel external dependency: ${f}`,
             hints: [
               'Please report this to the corresponding Babel plugin and/or to Parcel.',

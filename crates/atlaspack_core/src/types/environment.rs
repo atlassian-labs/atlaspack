@@ -94,7 +94,7 @@ pub fn create_environment_id(
   is_library.hash(&mut hasher);
   should_optimize.hash(&mut hasher);
   should_scope_hoist.hash(&mut hasher);
-  flatten_source_map(source_map).hash(&mut hasher);
+  source_map.hash(&mut hasher);
   let hash = hasher.finish(); // We can simply expose this as a nº too
   format!("{:016x}", hash)
 }
@@ -221,11 +221,6 @@ pub struct TargetSourceMapOptions {
   source_root: Option<String>,
 }
 
-/// We must consider { None, None, None } equal to None for all intents and purposes
-pub fn flatten_source_map(source_map: &Option<TargetSourceMapOptions>) -> TargetSourceMapOptions {
-  source_map.clone().unwrap_or_default()
-}
-
 #[cfg(test)]
 mod test {
   use std::str::FromStr;
@@ -241,7 +236,7 @@ mod test {
     tracing_subscriber::fmt::init();
     let environment = Environment::default();
     let id = environment.id();
-    assert_eq!(id, "fe4d1585daa1b9c5");
+    assert_eq!(id, "fc35ae2593e4b7c2");
 
     let environment = Environment {
       context: EnvironmentContext::Node,
@@ -254,6 +249,6 @@ mod test {
       ..Default::default()
     };
     let id = environment.id();
-    assert_eq!(id, "9602bef6237ef34c");
+    assert_eq!(id, "327dd83811d586b6");
   }
 }

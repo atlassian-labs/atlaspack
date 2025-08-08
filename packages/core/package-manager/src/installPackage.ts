@@ -110,7 +110,6 @@ async function installPeerDependencies(
       if (!semver.satisfies(pkg.version, range)) {
         throw new ThrowableDiagnostic({
           diagnostic: {
-            // @ts-expect-error TS2345
             message: md`Could not install the peer dependency "${name}" for "${module.name}", installed version ${pkg.version} is incompatible with ${range}`,
             origin: '@atlaspack/package-manager',
             codeFrames: [

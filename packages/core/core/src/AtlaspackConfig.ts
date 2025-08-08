@@ -208,7 +208,6 @@ export class AtlaspackConfig {
 
       throw await this.missingPluginError(
         this.transformers,
-        // @ts-expect-error TS2345
         md`No transformers found for __${fromProjectPathRelative(filePath)}__` +
           (pipeline != null ? ` with pipeline: '${pipeline}'` : '') +
           '.',
@@ -261,7 +260,6 @@ export class AtlaspackConfig {
     if (!packager) {
       throw await this.missingPluginError(
         this.packagers,
-        // @ts-expect-error TS2345
         md`No packager found for __${filePath}__.`,
         '/packagers',
       );
@@ -325,7 +323,6 @@ export class AtlaspackConfig {
     if (compressors.length === 0) {
       throw await this.missingPluginError(
         this.compressors,
-        // @ts-expect-error TS2345
         md`No compressors found for __${filePath}__.`,
         '/compressors',
       );

@@ -38,8 +38,22 @@
         {"projects": ["*"], "target": "check-ts"}
       ]
     },
+    "build-native-release": {
+      "inputs": [
+        "{workspaceRoot}/scripts/build-native.js",
+        "{workspaceRoot}/crates/**/*.rs",
+        "{workspaceRoot}/crates/**/*.toml",
+        "{workspaceRoot}/packages/**/*.rs",
+        "{workspaceRoot}/packages/**/*.toml",
+        "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/Cargo.toml"
+      ],
+      "outputs": ["{workspaceRoot}/target/**/*"],
+      "cache": true
+    },
     "test:integration:ci": {
       "dependsOn": [
+        {"projects": ["*"], "target": "build-native-release"},
         {"projects": ["*"], "target": "build:lib"},
         {"projects": ["*"], "target": "check-ts"}
       ]

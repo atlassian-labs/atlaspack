@@ -184,7 +184,6 @@ export async function resolveAtlaspackConfig(
   } catch (e: any) {
     throw new ThrowableDiagnostic({
       diagnostic: {
-        // @ts-expect-error TS2345
         message: md`Could not find parcel config at ${path.relative(
           options.projectRoot,
           configPath,
@@ -520,7 +519,6 @@ export async function resolveExtends(
                 {
                   key: extendsKey,
                   type: 'value',
-                  // @ts-expect-error TS2345
                   message: md`Cannot find module "${ext}"${
                     alternatives[0]
                       ? `, did you mean "${alternatives[0]}"?`
@@ -570,7 +568,6 @@ async function processExtendedConfig(
               {
                 key: extendsKey,
                 type: 'value',
-                // @ts-expect-error TS2345
                 message: md`"${extendsSpecifier}" does not exist${
                   alternatives[0] ? `, did you mean "${alternatives[0]}"?` : ''
                 }`,

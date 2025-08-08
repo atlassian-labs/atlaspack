@@ -1,7 +1,6 @@
 import type {
   GraphVisitor,
   FilePath,
-  Symbol,
   TraversalActions,
   BundleBehavior as IBundleBehavior,
   ConditionMeta,

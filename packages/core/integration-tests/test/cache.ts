@@ -134,7 +134,7 @@ let packageManager = new NodePackageManager(inputFS, '/');
 
     // update
     let newOptions = await update(b);
-    options = mergeParcelOptions(options || {}, newOptions);
+    options = mergeParcelOptions(options || {}, newOptions || {});
 
     // Run cached build
     b = await runBundle(entries, options, featureFlags);

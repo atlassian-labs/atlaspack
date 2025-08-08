@@ -102,16 +102,12 @@ export default new Transformer({
         let configKey;
         let hint;
         if (config.raw.modules) {
-          // @ts-expect-error TS2345
           message = md`The "modules" option in __${filename}__ can be replaced with configuration for @atlaspack/transformer-css to improve build performance.`;
           configKey = '/modules';
-          // @ts-expect-error TS2345
           hint = md`Remove the "modules" option from __${filename}__`;
         } else {
-          // @ts-expect-error TS2345
           message = md`The "postcss-modules" plugin in __${filename}__ can be replaced with configuration for @atlaspack/transformer-css to improve build performance.`;
           configKey = '/plugins/postcss-modules';
-          // @ts-expect-error TS2345
           hint = md`Remove the "postcss-modules" plugin from __${filename}__`;
         }
         if (filename === 'package.json') {
@@ -122,9 +118,7 @@ export default new Transformer({
           'Enable the "cssModules" option for "@atlaspack/transformer-css" in your package.json',
         ];
         if (plugins.length === 0) {
-          // @ts-expect-error TS2345
           message += md` Since there are no other plugins, __${filename}__ can be deleted safely.`;
-          // @ts-expect-error TS2345
           hints.push(md`Delete __${filename}__`);
         } else {
           hints.push(hint);

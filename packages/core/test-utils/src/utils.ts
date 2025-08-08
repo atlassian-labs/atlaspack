@@ -552,7 +552,7 @@ export async function runBundle(
 
 export function run(
   bundleGraph: BundleGraph<PackagedBundle>,
-  globals?: unknown,
+  globals: unknown = undefined,
   opts: RunOpts = {},
   externalModules?: ExternalModules,
 ): Promise<any> {

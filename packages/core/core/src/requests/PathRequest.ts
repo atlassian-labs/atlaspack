@@ -357,7 +357,6 @@ export class ResolverRunner {
             let resultFilePath = result.filePath;
             if (!path.isAbsolute(resultFilePath)) {
               throw new Error(
-                // @ts-expect-error TS2345
                 md`Resolvers must return an absolute path, ${resolver.name} returned: ${resultFilePath}`,
               );
             }
@@ -449,7 +448,6 @@ export class ResolverRunner {
 
     let diagnostic = await this.getDiagnostic(
       dependency,
-      // @ts-expect-error TS2345
       md`Failed to resolve '${dependency.specifier}' ${
         dir ? `from '${dir}'` : ''
       }`,

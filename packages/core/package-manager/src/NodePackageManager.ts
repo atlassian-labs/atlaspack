@@ -322,7 +322,6 @@ export class NodePackageManager implements PackageManager {
 
         throw new ThrowableDiagnostic({
           diagnostic: conflicts.fields.map((field) => ({
-            // @ts-expect-error TS2345
             message: md`Could not find module "${name}", but it was listed in package.json. Run your package manager first.`,
             origin: '@atlaspack/package-manager',
             codeFrames: [
@@ -364,7 +363,6 @@ export class NodePackageManager implements PackageManager {
           } else if (conflicts != null) {
             throw new ThrowableDiagnostic({
               diagnostic: {
-                // @ts-expect-error TS2345
                 message: md`Could not find module "${name}" satisfying ${range}.`,
                 origin: '@atlaspack/package-manager',
                 codeFrames: [
@@ -387,10 +385,8 @@ export class NodePackageManager implements PackageManager {
           }
 
           let version = pkg?.version;
-          // @ts-expect-error TS2345
           let message = md`Could not resolve package "${name}" that satisfies ${range}.`;
           if (version != null) {
-            // @ts-expect-error TS2345
             message += md` Found ${version}.`;
           }
 
@@ -530,7 +526,6 @@ export class NodePackageManager implements PackageManager {
         res.invalidateOnStartup ||= invalidations.invalidateOnStartup;
         if (res.invalidateOnStartup) {
           logger.warn({
-            // @ts-expect-error TS2345
             message: md`${path.relative(
               this.projectRoot,
               resolved.resolved,
