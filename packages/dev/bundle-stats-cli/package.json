@@ -11,13 +11,14 @@
   },
   "main": "./lib/cli.js",
   "source": "./src/cli.ts",
-  "types": "./src/cli.ts",
+  "types": "./lib/types/cli.d.ts",
   "bin": {
     "atlaspack-bundle-stats": "bin/bundle-stats.js"
   },
   "scripts": {
     "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js",
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "engines": {
     "node": ">= 16.0.0"

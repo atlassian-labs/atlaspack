@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nrwl/nx/refs/heads/master/packages/nx/schemas/nx-schema.json",
+  "parallel": true,
+  "targetDefaults": {
+    "check-ts": {
+      "dependsOn": ["^check-ts", "^dev:prepare"],
+      "inputs": [
+        "{projectRoot}/src/**/*.{ts,tsx}",
+        "{projectRoot}/tsconfig.json",
+        "{projectRoot}/package.json"
+      ],
+      "outputs": ["{projectRoot}/lib/**/*.js", "{projectRoot}/**/*.d.ts"],
+      "cache": true
+    },
+    "dev:prepare": {
+      "inputs": [
+        "{projectRoot}/**/*.{ts,tsx}",
+        "{projectRoot}/tsconfig.json",
+        "{projectRoot}/package.json"
+      ],
+      "outputs": ["{projectRoot}/lib/**/*.js", "{projectRoot}/bin/**/*.js"],
+      "cache": true
+    },
+    "build:lib": {
+      "inputs": [
+        "{projectRoot}/src/**/*.{ts,tsx}",
+        "{projectRoot}/tsconfig.json",
+        "{projectRoot}/package.json",
+        "{workspaceRoot}/gulpfile.js"
+      ],
+      "outputs": ["{projectRoot}/lib/**/*.js", "{projectRoot}/bin/**/*.js"],
+      "cache": true
+    }
+  }
+}

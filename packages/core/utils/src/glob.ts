@@ -1,5 +1,5 @@
-import type {FilePath, Glob} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
+import type {FilePath, Glob} from '@atlaspack/types-internal';
+import type {FileSystem} from '@atlaspack/types-internal';
 
 // @ts-expect-error TS7016
 import _isGlob from 'is-glob';

@@ -12,14 +12,15 @@
   },
   "main": "./lib/register.js",
   "source": "./src/register.ts",
-  "types": "./src/register.ts",
+  "types": "./lib/types/register.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
     "run-example": "node ./example/index.js",
     "clean": "rimraf .parcel-cache",
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
     "@atlaspack/config-default": "3.1.25",

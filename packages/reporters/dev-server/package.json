@@ -13,7 +13,7 @@
   },
   "main": "./lib/ServerReporter.js",
   "source": "./src/ServerReporter.ts",
-  "types": "./src/ServerReporter.ts",
+  "types": "./lib/types/ServerReporter.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -49,6 +49,7 @@
     "@types/serve-handler": "^6.1.4"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

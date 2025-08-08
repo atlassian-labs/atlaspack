@@ -11,7 +11,7 @@
   },
   "main": "./lib/TSTypesTransformer.js",
   "source": "./src/TSTypesTransformer.ts",
-  "types": "./src/TSTypesTransformer.ts",
+  "types": "./lib/types/TSTypesTransformer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -31,6 +31,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

@@ -1,5 +1,5 @@
 import path from 'path';
-import type {FileSystem} from '@atlaspack/types';
+import type {FileSystem} from '@atlaspack/types-internal';
 import {fuzzySearch} from './schema';
 import {relativePath} from './path';
 import {resolveConfig} from './config';

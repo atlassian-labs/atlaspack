@@ -1,5 +1,5 @@
-import type {ConfigResult, File, FilePath} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
+import type {ConfigResult, File, FilePath} from '@atlaspack/types-internal';
+import type {FileSystem} from '@atlaspack/types-internal';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import path from 'path';
 // @ts-expect-error TS7016

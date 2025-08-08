@@ -1,4 +1,4 @@
-import type {FilePath} from '@atlaspack/types';
+import type {FilePath} from '@atlaspack/types-internal';
 import path from 'path';
 
 const ABSOLUTE_PATH_REGEX = /^([a-zA-Z]:){0,1}[\\/]+/;

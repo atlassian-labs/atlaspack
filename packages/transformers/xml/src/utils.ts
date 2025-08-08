@@ -1,4 +1,4 @@
-import type {MutableAsset} from '@atlaspack/types';
+import type {MutableAsset} from '@atlaspack/types-internal';
 
 export function urlHandler(element: Element, asset: MutableAsset) {
   // @ts-expect-error TS18047

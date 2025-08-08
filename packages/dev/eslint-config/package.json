@@ -19,5 +19,8 @@
     "eslint": ">= 7.0.0",
     "typescript": ">= 4.0.0"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  }
 }

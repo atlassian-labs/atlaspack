@@ -1,4 +1,4 @@
-import type {FilePath} from '@atlaspack/types';
+import type {FilePath} from '@atlaspack/types-internal';
 import {isGlob} from './glob';
 import path from 'path';
 

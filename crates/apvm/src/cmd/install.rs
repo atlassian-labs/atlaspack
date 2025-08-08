@@ -4,7 +4,7 @@ use std::time::SystemTime;
 use clap::Parser;
 
 use crate::cmd::install_git::install_from_git;
-use crate::cmd::install_npm::install_from_npm;
+use crate::cmd::install_npm::{install_from_npm, resolve_from_npm};
 use crate::cmd::install_release::install_from_release;
 use crate::context::Context;
 use crate::platform::package::ManagedPackage;
@@ -33,7 +33,17 @@ pub struct InstallCommand {
 pub fn main(ctx: Context, cmd: InstallCommand) -> anyhow::Result<()> {
   let start_time = SystemTime::now();
 
-  let specifier = ctx.resolver.resolve_specifier(&cmd.version)?;
+  let specifier_raw = ctx.resolver.resolve_specifier(&cmd.version)?;
+
+  let specifier = match &specifier_raw {
+    Specifier::Npm { version } => Specifier::Npm {
+      version: resolve_from_npm(&ctx, version)?,
+    },
+    Specifier::Git { version: _ } => specifier_raw,
+    Specifier::Release { version: _ } => specifier_raw,
+    Specifier::Local => specifier_raw,
+  };
+
   println!("Installing ({})", specifier);
 
   if let Some(package) = ctx.resolver.resolve(&specifier)? {

@@ -1,5 +1,9 @@
-import type {FileSystem} from '@atlaspack/fs';
-import type {FilePath, PackageJSON, PluginLogger} from '@atlaspack/types';
+import type {
+  FilePath,
+  FileSystem,
+  PackageJSON,
+  PluginLogger,
+} from '@atlaspack/types-internal';
 import TypeScriptModule from 'typescript'; // eslint-disable-line import/no-extraneous-dependencies
 import type {CompilerOptions, SourceFile} from 'typescript';
 import {ScriptTarget} from 'typescript'; // eslint-disable-line import/no-extraneous-dependencies

@@ -12,7 +12,7 @@
   },
   "main": "./lib/GzipCompressor.js",
   "source": "./src/GzipCompressor.ts",
-  "types": "./src/GzipCompressor.ts",
+  "types": "./lib/types/GzipCompressor.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -20,6 +20,7 @@
     "@atlaspack/plugin": "2.14.23"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

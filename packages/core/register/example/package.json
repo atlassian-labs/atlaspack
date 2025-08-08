@@ -4,7 +4,8 @@
   "main": "./index.js",
   "license": "(MIT OR Apache-2.0)",
   "scripts": {
-    "start": "node ./index.js"
+    "start": "node ./index.js",
+    "build:lib": "gulp build --gulpfile ../../../../gulpfile.js --cwd ."
   },
   "dependencies": {
     "@babel/core": "^7.22.11",

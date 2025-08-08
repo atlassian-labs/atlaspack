@@ -1,5 +1,8 @@
-import type {FilePath, PluginOptions} from '@atlaspack/types';
-import type {PackageManager} from '@atlaspack/package-manager';
+import type {
+  FilePath,
+  PluginOptions,
+  PackageManager,
+} from '@atlaspack/types-internal';
 
 export default async function loadExternalPlugins(
   plugins:

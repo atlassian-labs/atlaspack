@@ -52,10 +52,21 @@ module.exports = {
       ],
       rules: {
         // internal rules
+        'flowtype/no-types-missing-file-annotation': 'off',
         '@atlaspack/internal/no-self-package-imports': 'error',
         '@atlaspack/internal/no-ff-module-level-eval': 'error',
+        'import/first': 'error',
+        'import/newline-after-import': 'error',
+        'import/no-extraneous-dependencies': 'error',
+        'import/no-self-import': 'error',
+        'no-console': 'error',
+        'no-return-await': 'error',
+        'require-atomic-updates': 'off',
+        'require-await': 'error',
+
+        // Use internal rule
+        'monorepo/no-relative-import': 'off',
         '@atlaspack/internal/no-relative-import': 'error',
-        'flowtype/no-types-missing-file-annotation': 'off',
         // Temporary
         'prefer-const': 'off',
         'no-var': 'off',
