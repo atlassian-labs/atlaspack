@@ -11,15 +11,17 @@
   },
   "main": "./lib/BundleBuddyReporter.js",
   "source": "./src/BundleBuddyReporter.ts",
-  "types": "./src/BundleBuddyReporter.ts",
+  "types": "./lib/types/BundleBuddyReporter.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "dependencies": {
+    "@atlaspack/types-internal": "2.18.0",
     "@atlaspack/plugin": "2.14.23"
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

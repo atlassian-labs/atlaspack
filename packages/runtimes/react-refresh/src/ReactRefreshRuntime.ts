@@ -45,6 +45,7 @@ export default new Runtime({
       !bundle.env.isBrowser() ||
       bundle.env.isLibrary ||
       bundle.env.isWorker() ||
+      bundle.env.isTesseract() ||
       bundle.env.isWorklet() ||
       options.mode !== 'development' ||
       bundle.env.sourceType !== 'module'

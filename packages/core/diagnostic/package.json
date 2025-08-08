@@ -12,12 +12,13 @@
   },
   "main": "./lib/diagnostic.js",
   "source": "./src/diagnostic.ts",
-  "types": "./src/diagnostic.ts",
+  "types": "./lib/types/diagnostic.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",

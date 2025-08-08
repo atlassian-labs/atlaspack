@@ -6,7 +6,7 @@ import type {
   BundleGraph,
   Dependency,
   NamedBundle,
-} from '@atlaspack/types';
+} from '@atlaspack/types-internal';
 import {performStringReplacements} from '@atlaspack/rust';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 

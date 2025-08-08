@@ -1,5 +1,4 @@
-import type {HTTPSOptions} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
+import type {HTTPSOptions, FileSystem} from '@atlaspack/types-internal';
 
 export default async function getCertificate(
   fs: FileSystem,

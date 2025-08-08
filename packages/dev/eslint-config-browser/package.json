@@ -9,5 +9,8 @@
     "@babel/core": "^7.22.11",
     "eslint": ">= 7.0.0"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  }
 }

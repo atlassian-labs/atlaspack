@@ -12,7 +12,7 @@
   },
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./lib/types/index.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -26,7 +26,6 @@
         "@atlaspack/logger": false,
         "@atlaspack/rust": false,
         "@atlaspack/types-internal": false,
-        "@atlaspack/utils": false,
         "@atlaspack/watcher-watchman-js": false,
         "@parcel/watcher": false,
         "@atlaspack/workers": false
@@ -40,7 +39,6 @@
         "@atlaspack/logger": false,
         "@atlaspack/rust": false,
         "@atlaspack/types-internal": false,
-        "@atlaspack/utils": false,
         "@atlaspack/watcher-watchman-js": false,
         "@parcel/watcher": false,
         "@atlaspack/workers": false
@@ -48,7 +46,8 @@
     }
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
     "@atlaspack/build-cache": "2.13.4",
@@ -56,7 +55,6 @@
     "@atlaspack/logger": "2.14.15",
     "@atlaspack/rust": "3.5.0",
     "@atlaspack/types-internal": "2.18.0",
-    "@atlaspack/utils": "2.18.0",
     "@parcel/watcher": "^2.0.7",
     "@atlaspack/workers": "2.14.23",
     "@atlaspack/watcher-watchman-js": "2.14.23",

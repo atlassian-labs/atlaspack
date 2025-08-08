@@ -9,7 +9,7 @@ import type {
   Compressor as CompressorOpts,
   Reporter as ReporterOpts,
   Validator as ValidatorOpts,
-} from '@atlaspack/types';
+} from '@atlaspack/types-internal';
 
 // This uses the `parcel-plugin-config` symbol so it's backwards compatible with
 // parcel plugins.

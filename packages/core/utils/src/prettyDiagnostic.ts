@@ -1,5 +1,5 @@
 import type {Diagnostic} from '@atlaspack/diagnostic';
-import type {PluginOptions} from '@atlaspack/types';
+import type {PluginOptions} from '@atlaspack/types-internal';
 
 import formatCodeFrame from '@atlaspack/codeframe';
 import _mdAnsi from '@atlaspack/markdown-ansi';

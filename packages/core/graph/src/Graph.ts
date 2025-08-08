@@ -5,7 +5,7 @@ import type {
   TraversalActions,
   GraphVisitor,
   GraphTraversalCallback,
-} from '@atlaspack/types';
+} from '@atlaspack/types-internal';
 import {BitSet} from './BitSet';
 
 import nullthrows from 'nullthrows';

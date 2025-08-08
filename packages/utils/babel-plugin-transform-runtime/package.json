@@ -21,5 +21,8 @@
     "@babel/core": "^7.22.11",
     "@atlaspack/babel-preset-env": "2.14.2"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  }
 }

@@ -110,6 +110,28 @@ describe('Environment', () => {
       },
     );
   });
+
+  it('assigns default engines for tesseract (same as web-worker)', () => {
+    assert.deepEqual(
+      fromEnvironmentId(createEnvironment({context: 'tesseract'})),
+      {
+        id: '9917be65326c5de9',
+        context: 'tesseract',
+        engines: {
+          browsers: ['> 0.25%'],
+        },
+        includeNodeModules: true,
+        outputFormat: 'global',
+        isLibrary: false,
+        shouldOptimize: false,
+        shouldScopeHoist: false,
+        sourceMap: undefined,
+        loc: undefined,
+        sourceType: 'module',
+        unstableSingleFileOutput: false,
+      },
+    );
+  });
 });
 
 describe('createEnvironment', function () {

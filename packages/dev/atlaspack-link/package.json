@@ -7,11 +7,12 @@
     "atlaspack-link": "bin.js"
   },
   "scripts": {
-    "test": "cd ../../.. && yarn test:integration --grep @atlaspack/link"
+    "test": "cd ../../.. && yarn test:integration --grep @atlaspack/link",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./lib/types/index.d.ts",
   "dependencies": {
     "@babel/core": "^7.22.11",
     "@atlaspack/babel-register": "2.14.2",

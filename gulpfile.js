@@ -5,28 +5,41 @@ const path = require('path');
 const {rimraf} = require('rimraf');
 const babelConfig = require('./babel.config.json');
 
-const IGNORED_PACKAGES = [
-  '!packages/examples/**',
-  '!packages/core/integration-tests/**',
-  '!packages/core/workers/test/integration/**',
+const cwd = process.cwd();
+const isBuildingSinglePackage = cwd !== __dirname;
 
-  // Static packages that don't need to be build
-  '!packages/core/atlaspack/**',
-];
+const IGNORED_PACKAGES = isBuildingSinglePackage
+  ? ['!test/integration/**']
+  : [
+      '!packages/examples/**',
+      '!packages/core/integration-tests/**',
+      '!packages/core/workers/test/integration/**',
+
+      // Static packages that don't need to be build
+      '!packages/core/atlaspack/**',
+    ];
 
 const paths = {
-  packageSrc: [
-    'packages/*/*/src/**/*.js',
-    'packages/*/*/src/**/*.ts',
-    '!**/dev-prelude.js',
-    ...IGNORED_PACKAGES,
-  ],
-  packageOther: [
-    'packages/*/*/src/**/dev-prelude.js',
-    // This has to have some glob syntax so that vinyl.base will be right
-    'packages/{runtimes,}/js/src/helpers/*.ts',
-  ],
-  packages: 'packages/',
+  packageSrc: isBuildingSinglePackage
+    ? ['src/**/*.js', 'src/**/*.ts', '!**/dev-prelude.js', ...IGNORED_PACKAGES]
+    : [
+        'packages/*/*/src/**/*.js',
+        'packages/*/*/src/**/*.ts',
+        '!**/dev-prelude.js',
+        ...IGNORED_PACKAGES,
+      ],
+  packageOther: isBuildingSinglePackage
+    ? [
+        'src/**/dev-prelude.js',
+        // This has to have some glob syntax so that vinyl.base will be right
+        'src/helpers/*.ts',
+      ]
+    : [
+        'packages/*/*/src/**/dev-prelude.js',
+        // This has to have some glob syntax so that vinyl.base will be right
+        'packages/{runtimes,}/js/src/helpers/*.ts',
+      ],
+  packages: isBuildingSinglePackage ? 'lib/' : 'packages/',
 };
 
 /*

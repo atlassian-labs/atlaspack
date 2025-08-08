@@ -10,7 +10,7 @@
     "rewriteRelativeImportExtensions": true,
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
-    "declarationDir": "${configDir}/lib",
+    "declarationDir": "${configDir}/lib/types",
     "outDir": "${configDir}/lib",
     "resolveJsonModule": true,
     "skipLibCheck": true

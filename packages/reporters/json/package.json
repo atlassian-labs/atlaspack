@@ -11,7 +11,7 @@
   },
   "main": "./lib/JSONReporter.js",
   "source": "./src/JSONReporter.ts",
-  "types": "./src/JSONReporter.ts",
+  "types": "./lib/types/JSONReporter.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -23,6 +23,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

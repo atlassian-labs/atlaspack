@@ -15,7 +15,8 @@
   ],
   "scripts": {
     "prepack": "chmod +x lib/bin.js",
-    "start": "ts-node src/bin.ts"
+    "start": "ts-node src/bin.ts",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
     "chalk": "^5.3.0",

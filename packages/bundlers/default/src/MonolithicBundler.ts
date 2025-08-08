@@ -1,4 +1,8 @@
-import type {Asset, Dependency, MutableBundleGraph} from '@atlaspack/types';
+import type {
+  Asset,
+  Dependency,
+  MutableBundleGraph,
+} from '@atlaspack/types-internal';
 import nullthrows from 'nullthrows';
 
 export function addJSMonolithBundle(

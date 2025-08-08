@@ -12,13 +12,14 @@
   },
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./lib/types/index.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
     "check-ts": "tsc --emitDeclarationOnly --rootDir src",
-    "test": "mocha test"
+    "test": "mocha test",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "targets": {
     "types": false,

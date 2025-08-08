@@ -10,12 +10,13 @@
   },
   "main": "./lib/utils.js",
   "source": "./src/utils.ts",
-  "types": "./src/utils.ts",
+  "types": "./lib/types/utils.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
     "@atlaspack/cache": "3.2.18",

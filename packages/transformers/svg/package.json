@@ -11,7 +11,7 @@
   },
   "main": "./lib/SVGTransformer.js",
   "source": "./src/SVGTransformer.ts",
-  "types": "./src/SVGTransformer.ts",
+  "types": "./lib/types/SVGTransformer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
@@ -27,6 +27,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "start": "atlaspack src/index.html",
-    "build": "atlaspack build src/index.html"
+    "build": "atlaspack build src/index.html",
+    "build:lib": "gulp build --gulpfile ../../../../gulpfile.js --cwd ."
   }
 }
