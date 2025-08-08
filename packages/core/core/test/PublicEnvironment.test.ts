@@ -25,4 +25,25 @@ describe('Public Environment', () => {
     assert(env.supports('import-meta-url'));
     assert(env.supports('arrow-functions'));
   });
+
+  it('correctly identifies tesseract context', () => {
+    let env = new PublicEnvironment(
+      fromEnvironmentId(
+        createEnvironment({
+          context: 'tesseract',
+          engines: {
+            browsers: ['last 1 Chrome version'],
+          },
+        }),
+      ),
+      DEFAULT_OPTIONS,
+    );
+
+    assert(env.isTesseract());
+    assert(env.isBrowser());
+    assert(env.isIsolated());
+    assert(!env.isNode());
+    assert(!env.isElectron());
+    assert(!env.isWorklet());
+  });
 });

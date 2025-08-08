@@ -57,6 +57,7 @@ export function createEnvironment({
       case 'browser':
       case 'web-worker':
       case 'service-worker':
+      case 'tesseract':
       case 'electron-renderer':
         engines = {
           // @ts-expect-error TS2322
@@ -78,6 +79,7 @@ export function createEnvironment({
       case 'browser':
       case 'web-worker':
       case 'service-worker':
+      case 'tesseract':
       default:
         includeNodeModules = true;
         break;

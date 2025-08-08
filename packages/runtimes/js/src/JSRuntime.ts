@@ -59,7 +59,7 @@ function getLoaders(ctx: Environment):
   | null
   | undefined {
   // @ts-expect-error TS2322
-  if (ctx.isWorker()) return LOADERS.worker;
+  if (ctx.isWorker() || ctx.isTesseract()) return LOADERS.worker;
   if (ctx.isBrowser()) return LOADERS.browser;
   // @ts-expect-error TS2322
   if (ctx.isNode()) return LOADERS.node;

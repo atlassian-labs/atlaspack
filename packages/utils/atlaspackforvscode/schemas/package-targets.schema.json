@@ -36,7 +36,8 @@
             "web-worker",
             "electron-main",
             "electron-renderer",
-            "service-worker"
+            "service-worker",
+            "tesseract"
           ]
         },
         "includeNodeModules": {
