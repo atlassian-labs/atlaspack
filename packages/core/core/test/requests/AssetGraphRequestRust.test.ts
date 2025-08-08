@@ -1,5 +1,7 @@
 import assert from 'assert';
 import {getAssetGraph} from '../../src/requests/AssetGraphRequestRust';
+import {createEnvironment} from '../../src/Environment';
+import {fromEnvironmentId} from '../../src/EnvironmentManager';
 
 describe('AssetGraphRequestRust -> getAssetGraph', function () {
   it('should create a valid AssetGraph', () => {
@@ -41,25 +43,29 @@ function getSerializedGraph() {
           id: 'b01a088f112fa82f',
           dependency: {
             bundleBehavior: null,
-            env: {
-              context: 'browser',
-              engines: {
-                browsers: [
-                  'last 1 Chrome version',
-                  'last 1 Safari version',
-                  'last 1 Firefox version',
-                  'last 1 Edge version',
-                ],
-              },
-              includeNodeModules: true,
-              isLibrary: false,
-              loc: null,
-              outputFormat: 'global',
-              shouldScopeHoist: true,
-              shouldOptimize: false,
-              sourceMap: {},
-              sourceType: 'module',
-            },
+            env: structuredClone(
+              fromEnvironmentId(
+                createEnvironment({
+                  context: 'browser',
+                  engines: {
+                    browsers: [
+                      'last 1 Chrome version',
+                      'last 1 Safari version',
+                      'last 1 Firefox version',
+                      'last 1 Edge version',
+                    ],
+                  },
+                  includeNodeModules: true,
+                  isLibrary: false,
+                  loc: null,
+                  outputFormat: 'global',
+                  shouldScopeHoist: true,
+                  shouldOptimize: false,
+                  sourceMap: {},
+                  sourceType: 'module',
+                }),
+              ),
+            ),
             loc: null,
             meta: {},
             pipeline: null,
@@ -74,25 +80,29 @@ function getSerializedGraph() {
             target: {
               distDir: '/dist',
               distEntry: null,
-              env: {
-                context: 'browser',
-                engines: {
-                  browsers: [
-                    'last 1 Chrome version',
-                    'last 1 Safari version',
-                    'last 1 Firefox version',
-                    'last 1 Edge version',
-                  ],
-                },
-                includeNodeModules: true,
-                isLibrary: false,
-                loc: null,
-                outputFormat: 'global',
-                shouldScopeHoist: true,
-                shouldOptimize: false,
-                sourceMap: {},
-                sourceType: 'module',
-              },
+              env: structuredClone(
+                fromEnvironmentId(
+                  createEnvironment({
+                    context: 'browser',
+                    engines: {
+                      browsers: [
+                        'last 1 Chrome version',
+                        'last 1 Safari version',
+                        'last 1 Firefox version',
+                        'last 1 Edge version',
+                      ],
+                    },
+                    includeNodeModules: true,
+                    isLibrary: false,
+                    loc: null,
+                    outputFormat: 'global',
+                    shouldScopeHoist: true,
+                    shouldOptimize: false,
+                    sourceMap: {},
+                    sourceType: 'module',
+                  }),
+                ),
+              ),
               loc: null,
               name: 'default',
               publicUrl: '/',
@@ -112,25 +122,29 @@ function getSerializedGraph() {
         value: {
           id: 'e2056518260d7dc7',
           bundleBehavior: 1,
-          env: {
-            context: 'browser',
-            engines: {
-              browsers: [
-                'last 1 Chrome version',
-                'last 1 Safari version',
-                'last 1 Firefox version',
-                'last 1 Edge version',
-              ],
-            },
-            includeNodeModules: true,
-            isLibrary: false,
-            loc: null,
-            outputFormat: 'global',
-            shouldScopeHoist: true,
-            shouldOptimize: false,
-            sourceMap: {},
-            sourceType: 'module',
-          },
+          env: structuredClone(
+            fromEnvironmentId(
+              createEnvironment({
+                context: 'browser',
+                engines: {
+                  browsers: [
+                    'last 1 Chrome version',
+                    'last 1 Safari version',
+                    'last 1 Firefox version',
+                    'last 1 Edge version',
+                  ],
+                },
+                includeNodeModules: true,
+                isLibrary: false,
+                loc: null,
+                outputFormat: 'global',
+                shouldScopeHoist: true,
+                shouldOptimize: false,
+                sourceMap: {},
+                sourceType: 'module',
+              }),
+            ),
+          ),
           filePath: '/index.html',
           type: 'html',
           meta: {},
@@ -160,25 +174,29 @@ function getSerializedGraph() {
           id: 'aece0f57a78d1ef8',
           dependency: {
             bundleBehavior: null,
-            env: {
-              context: 'browser',
-              engines: {
-                browsers: [
-                  'last 1 Chrome version',
-                  'last 1 Safari version',
-                  'last 1 Firefox version',
-                  'last 1 Edge version',
-                ],
-              },
-              includeNodeModules: true,
-              isLibrary: false,
-              loc: null,
-              outputFormat: 'esmodule',
-              shouldScopeHoist: true,
-              shouldOptimize: false,
-              sourceMap: {},
-              sourceType: 'module',
-            },
+            env: structuredClone(
+              fromEnvironmentId(
+                createEnvironment({
+                  context: 'browser',
+                  engines: {
+                    browsers: [
+                      'last 1 Chrome version',
+                      'last 1 Safari version',
+                      'last 1 Firefox version',
+                      'last 1 Edge version',
+                    ],
+                  },
+                  includeNodeModules: true,
+                  isLibrary: false,
+                  loc: null,
+                  outputFormat: 'esmodule',
+                  shouldScopeHoist: true,
+                  shouldOptimize: false,
+                  sourceMap: {},
+                  sourceType: 'module',
+                }),
+              ),
+            ),
             loc: null,
             meta: {},
             pipeline: null,
@@ -207,25 +225,29 @@ function getSerializedGraph() {
         value: {
           id: '79c128d4f549c408',
           bundleBehavior: null,
-          env: {
-            context: 'browser',
-            engines: {
-              browsers: [
-                'last 1 Chrome version',
-                'last 1 Safari version',
-                'last 1 Firefox version',
-                'last 1 Edge version',
-              ],
-            },
-            includeNodeModules: true,
-            isLibrary: false,
-            loc: null,
-            outputFormat: 'esmodule',
-            shouldScopeHoist: true,
-            shouldOptimize: false,
-            sourceMap: {},
-            sourceType: 'module',
-          },
+          env: structuredClone(
+            fromEnvironmentId(
+              createEnvironment({
+                context: 'browser',
+                engines: {
+                  browsers: [
+                    'last 1 Chrome version',
+                    'last 1 Safari version',
+                    'last 1 Firefox version',
+                    'last 1 Edge version',
+                  ],
+                },
+                includeNodeModules: true,
+                isLibrary: false,
+                loc: null,
+                outputFormat: 'esmodule',
+                shouldScopeHoist: true,
+                shouldOptimize: false,
+                sourceMap: {},
+                sourceType: 'module',
+              }),
+            ),
+          ),
           filePath: '/index.ts',
           type: 'js',
           meta: {
@@ -260,25 +282,29 @@ function getSerializedGraph() {
           id: 'cfe74f65a41af1a7',
           dependency: {
             bundleBehavior: null,
-            env: {
-              context: 'browser',
-              engines: {
-                browsers: [
-                  'last 1 Chrome version',
-                  'last 1 Safari version',
-                  'last 1 Firefox version',
-                  'last 1 Edge version',
-                ],
-              },
-              includeNodeModules: true,
-              isLibrary: false,
-              loc: null,
-              outputFormat: 'esmodule',
-              shouldScopeHoist: true,
-              shouldOptimize: false,
-              sourceMap: {},
-              sourceType: 'module',
-            },
+            env: structuredClone(
+              fromEnvironmentId(
+                createEnvironment({
+                  context: 'browser',
+                  engines: {
+                    browsers: [
+                      'last 1 Chrome version',
+                      'last 1 Safari version',
+                      'last 1 Firefox version',
+                      'last 1 Edge version',
+                    ],
+                  },
+                  includeNodeModules: true,
+                  isLibrary: false,
+                  loc: null,
+                  outputFormat: 'esmodule',
+                  shouldScopeHoist: true,
+                  shouldOptimize: false,
+                  sourceMap: {},
+                  sourceType: 'module',
+                }),
+              ),
+            ),
             loc: {
               filePath: '/index.ts',
               start: {
@@ -339,25 +365,29 @@ function getSerializedGraph() {
         value: {
           id: '13fc7969eb974fe3',
           bundleBehavior: null,
-          env: {
-            context: 'browser',
-            engines: {
-              browsers: [
-                'last 1 Chrome version',
-                'last 1 Safari version',
-                'last 1 Firefox version',
-                'last 1 Edge version',
-              ],
-            },
-            includeNodeModules: true,
-            isLibrary: false,
-            loc: null,
-            outputFormat: 'esmodule',
-            shouldScopeHoist: true,
-            shouldOptimize: false,
-            sourceMap: {},
-            sourceType: 'module',
-          },
+          env: structuredClone(
+            fromEnvironmentId(
+              createEnvironment({
+                context: 'browser',
+                engines: {
+                  browsers: [
+                    'last 1 Chrome version',
+                    'last 1 Safari version',
+                    'last 1 Firefox version',
+                    'last 1 Edge version',
+                  ],
+                },
+                includeNodeModules: true,
+                isLibrary: false,
+                loc: null,
+                outputFormat: 'esmodule',
+                shouldScopeHoist: true,
+                shouldOptimize: false,
+                sourceMap: {},
+                sourceType: 'module',
+              }),
+            ),
+          ),
           filePath: '/library.ts',
           type: 'js',
           meta: {

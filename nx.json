@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/nrwl/nx/refs/heads/master/packages/nx/schemas/nx-schema.json",
-  "parallel": true,
+  "parallel": "200%",
   "targetDefaults": {
     "check-ts": {
       "dependsOn": ["^check-ts", "^dev:prepare"],
@@ -22,6 +22,7 @@
       "cache": true
     },
     "build:lib": {
+      "dependsOn": ["^dev:prepare"],
       "inputs": [
         "{projectRoot}/src/**/*.{ts,tsx}",
         "{projectRoot}/tsconfig.json",
@@ -30,6 +31,40 @@
       ],
       "outputs": ["{projectRoot}/lib/**/*.js", "{projectRoot}/bin/**/*.js"],
       "cache": true
+    },
+    "test": {
+      "dependsOn": [
+        {"projects": ["*"], "target": "build-native-release"},
+        {"projects": ["*"], "target": "build:lib"},
+        {"projects": ["*"], "target": "check-ts"}
+      ]
+    },
+    "test:integration": {
+      "dependsOn": [
+        {"projects": ["*"], "target": "build-native-release"},
+        {"projects": ["*"], "target": "build:lib"},
+        {"projects": ["*"], "target": "check-ts"}
+      ]
+    },
+    "build-native-release": {
+      "inputs": [
+        "{workspaceRoot}/scripts/build-native.js",
+        "{workspaceRoot}/crates/**/*.rs",
+        "{workspaceRoot}/crates/**/*.toml",
+        "{workspaceRoot}/packages/**/*.rs",
+        "{workspaceRoot}/packages/**/*.toml",
+        "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/Cargo.toml"
+      ],
+      "outputs": ["{workspaceRoot}/target/**/*"],
+      "cache": true
+    },
+    "test:integration:ci": {
+      "dependsOn": [
+        {"projects": ["*"], "target": "build-native-release"},
+        {"projects": ["*"], "target": "build:lib"},
+        {"projects": ["*"], "target": "check-ts"}
+      ]
     }
   }
 }

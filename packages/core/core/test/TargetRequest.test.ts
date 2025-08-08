@@ -6,6 +6,7 @@ import {md} from '@atlaspack/diagnostic';
 import {normalizeSeparators} from '@atlaspack/utils';
 import {TargetResolver} from '../src/requests/TargetRequest';
 import {DEFAULT_OPTIONS as _DEFAULT_OPTIONS, relative} from './test-utils';
+import {createEnvironment} from '../src/Environment';
 
 const DEFAULT_OPTIONS = {
   ..._DEFAULT_OPTIONS,
@@ -122,8 +123,7 @@ describe('TargetResolver', () => {
           name: 'customA',
           publicUrl: '/',
           distDir: normalizeSeparators(path.resolve('customA')),
-          env: {
-            id: 'd821e85f6b50315e',
+          env: createEnvironment({
             context: 'browser',
             includeNodeModules: true,
             engines: {
@@ -137,15 +137,14 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
         },
         {
           name: 'customB',
           publicUrl: '/',
           distEntry: 'b.js',
           distDir: normalizeSeparators(path.resolve('customB')),
-          env: {
-            id: 'e45cc12216f7857d',
+          env: createEnvironment({
             context: 'node',
             includeNodeModules: false,
             engines: {
@@ -159,7 +158,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
         },
       ],
     );
@@ -176,8 +175,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/common-targets/dist/main',
           distEntry: 'index.js',
           publicUrl: '/',
-          env: {
-            id: 'f628a18b9d37974c',
+          env: createEnvironment({
             context: 'node',
             engines: {
               node: '>= 8.0.0',
@@ -191,7 +189,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(COMMON_TARGETS_FIXTURE_PATH, 'package.json'),
@@ -211,8 +209,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/common-targets/dist/module',
           distEntry: 'index.js',
           publicUrl: '/',
-          env: {
-            id: 'f9afb61b20ba7ecf',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['last 1 version'],
@@ -228,7 +225,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(COMMON_TARGETS_FIXTURE_PATH, 'package.json'),
@@ -248,8 +245,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/common-targets/dist/browser',
           distEntry: 'index.js',
           publicUrl: '/assets',
-          env: {
-            id: '7c0fe07c8a3a38da',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['last 1 version'],
@@ -263,7 +259,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(COMMON_TARGETS_FIXTURE_PATH, 'package.json'),
@@ -295,8 +291,7 @@ describe('TargetResolver', () => {
           ),
           distEntry: 'index.js',
           publicUrl: '/',
-          env: {
-            id: 'e45cc12216f7857d',
+          env: createEnvironment({
             context: 'node',
             engines: {
               node: '>= 8.0.0',
@@ -310,7 +305,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(COMMON_TARGETS_IGNORE_FIXTURE_PATH, 'package.json'),
@@ -339,8 +334,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets/dist/main',
           distEntry: 'index.js',
           publicUrl: '/',
-          env: {
-            id: 'f628a18b9d37974c',
+          env: createEnvironment({
             context: 'node',
             engines: {
               node: '>= 8.0.0',
@@ -354,7 +348,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(CUSTOM_TARGETS_FIXTURE_PATH, 'package.json'),
@@ -374,8 +368,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets/dist/browserModern',
           distEntry: 'index.js',
           publicUrl: '/',
-          env: {
-            id: '75603271034eff15',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['last 1 version'],
@@ -389,7 +382,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(CUSTOM_TARGETS_FIXTURE_PATH, 'package.json'),
@@ -409,8 +402,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets/dist/browserLegacy',
           distEntry: 'index.js',
           publicUrl: '/',
-          env: {
-            id: 'a8f05066473f62d0',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['ie11'],
@@ -424,7 +416,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(CUSTOM_TARGETS_FIXTURE_PATH, 'package.json'),
@@ -461,8 +453,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets/dist/main',
           distEntry: 'index.js',
           publicUrl: '/',
-          env: {
-            id: 'f628a18b9d37974c',
+          env: createEnvironment({
             context: 'node',
             engines: {
               node: '>= 8.0.0',
@@ -476,7 +467,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(CUSTOM_TARGETS_FIXTURE_PATH, 'package.json'),
@@ -496,8 +487,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets/dist/browserModern',
           distEntry: 'index.js',
           publicUrl: '/',
-          env: {
-            id: '8a530881a691863e',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['last 1 version'],
@@ -511,7 +501,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(CUSTOM_TARGETS_FIXTURE_PATH, 'package.json'),
@@ -531,8 +521,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets/dist/browserLegacy',
           distEntry: 'index.js',
           publicUrl: '/',
-          env: {
-            id: '4dcd5bfb2f44e1a0',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['ie11'],
@@ -546,7 +535,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(CUSTOM_TARGETS_FIXTURE_PATH, 'package.json'),
@@ -575,8 +564,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/custom-targets-distdir/www',
           distEntry: undefined,
           publicUrl: 'www',
-          env: {
-            id: '073545c36b2ddaab',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: '> 0.25%',
@@ -590,7 +578,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(CUSTOM_TARGETS_DISTDIR_FIXTURE_PATH, 'package.json'),
@@ -631,8 +619,7 @@ describe('TargetResolver', () => {
           name: 'customB',
           distDir: normalizeSeparators(path.resolve('customB')),
           publicUrl: '/',
-          env: {
-            id: 'd821e85f6b50315e',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['> 0.25%'],
@@ -646,7 +633,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
         },
       ],
     );
@@ -674,8 +661,7 @@ describe('TargetResolver', () => {
           name: 'customA',
           distDir: normalizeSeparators(path.resolve('customA')),
           publicUrl: '/',
-          env: {
-            id: 'd821e85f6b50315e',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['> 0.25%'],
@@ -689,7 +675,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           source: 'customA/index.js',
         },
       ],
@@ -704,8 +690,7 @@ describe('TargetResolver', () => {
         distDir: 'fixtures/context/dist/main',
         distEntry: 'index.js',
         publicUrl: '/',
-        env: {
-          id: '4d60aebb4fbb9f8b',
+        env: createEnvironment({
           context: 'node',
           engines: {
             browsers: [
@@ -724,7 +709,7 @@ describe('TargetResolver', () => {
           loc: undefined,
           sourceType: 'module',
           unstableSingleFileOutput: false,
-        },
+        }),
         loc: {
           filePath: relative(path.join(CONTEXT_FIXTURE_PATH, 'package.json')),
           start: {
@@ -1076,8 +1061,7 @@ describe('TargetResolver', () => {
         distDir: relative(path.join(fixture, 'dist')),
         distEntry: 'index.mjs',
         publicUrl: '/',
-        env: {
-          id: 'fb14362a83d338f6',
+        env: createEnvironment({
           context: 'browser',
           engines: {
             browsers: [
@@ -1096,7 +1080,7 @@ describe('TargetResolver', () => {
           loc: undefined,
           sourceType: 'module',
           unstableSingleFileOutput: false,
-        },
+        }),
         loc: {
           filePath: relative(path.join(fixture, 'package.json')),
           start: {
@@ -1122,8 +1106,7 @@ describe('TargetResolver', () => {
         distDir: relative(path.join(fixture, 'dist')),
         distEntry: 'index.js',
         publicUrl: '/',
-        env: {
-          id: 'fb14362a83d338f6',
+        env: createEnvironment({
           context: 'browser',
           engines: {
             browsers: [
@@ -1142,7 +1125,7 @@ describe('TargetResolver', () => {
           loc: undefined,
           sourceType: 'module',
           unstableSingleFileOutput: false,
-        },
+        }),
         loc: {
           filePath: relative(path.join(fixture, 'package.json')),
           start: {
@@ -1172,8 +1155,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/common-targets/dist/main',
           distEntry: 'index.js',
           publicUrl: '/',
-          env: {
-            id: 'f628a18b9d37974c',
+          env: createEnvironment({
             context: 'node',
             engines: {
               node: '>= 8.0.0',
@@ -1187,7 +1169,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(COMMON_TARGETS_FIXTURE_PATH, 'package.json'),
@@ -1207,8 +1189,7 @@ describe('TargetResolver', () => {
           distDir: 'fixtures/common-targets/dist/browser',
           distEntry: 'index.js',
           publicUrl: '/assets',
-          env: {
-            id: '7c0fe07c8a3a38da',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['last 1 version'],
@@ -1222,7 +1203,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(COMMON_TARGETS_FIXTURE_PATH, 'package.json'),
@@ -1256,8 +1237,7 @@ describe('TargetResolver', () => {
           name: 'default',
           distDir: serveDistDir,
           publicUrl: '/',
-          env: {
-            id: '858b9b5a5dca37d4',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: [
@@ -1276,7 +1256,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
         },
       ],
     );
@@ -1294,8 +1274,7 @@ describe('TargetResolver', () => {
             path.join(DEFAULT_DISTPATH_FIXTURE_PATHS.none, 'dist'),
           ),
           publicUrl: '/',
-          env: {
-            id: '8f31176c88184c4f',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['Chrome 80'],
@@ -1309,7 +1288,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
         },
       ],
     );
@@ -1328,8 +1307,7 @@ describe('TargetResolver', () => {
           ),
           distEntry: undefined,
           publicUrl: '/',
-          env: {
-            id: '8f31176c88184c4f',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['Chrome 80'],
@@ -1343,7 +1321,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(DEFAULT_DISTPATH_FIXTURE_PATHS.one, 'package.json'),
@@ -1379,8 +1357,7 @@ describe('TargetResolver', () => {
           ),
           distEntry: undefined,
           publicUrl: '/',
-          env: {
-            id: '75603271034eff15',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['last 1 version'],
@@ -1394,7 +1371,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(DEFAULT_DISTPATH_FIXTURE_PATHS.two, 'package.json'),
@@ -1420,8 +1397,7 @@ describe('TargetResolver', () => {
           ),
           distEntry: undefined,
           publicUrl: '/',
-          env: {
-            id: 'd5ff950a2c05db56',
+          env: createEnvironment({
             context: 'browser',
             engines: {
               browsers: ['IE 11'],
@@ -1435,7 +1411,7 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
-          },
+          }),
           loc: {
             filePath: relative(
               path.join(DEFAULT_DISTPATH_FIXTURE_PATHS.two, 'package.json'),

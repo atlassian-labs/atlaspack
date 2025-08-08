@@ -70,7 +70,7 @@ registerCoreWithSerializer();
 export const INTERNAL_TRANSFORM: symbol = Symbol('internal_transform');
 export const INTERNAL_RESOLVE: symbol = Symbol('internal_resolve');
 export let WORKER_PATH: string = path.join(__dirname, 'worker.js');
-if (process.env.ATLASPACK_REGISTER_USE_SRC === 'true') {
+if (__filename.endsWith('.ts')) {
   WORKER_PATH = path.join(__dirname, 'worker.ts');
 }
 

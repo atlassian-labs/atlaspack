@@ -6,7 +6,7 @@ import type {
   PluginOptions,
   NamedBundle,
   RuntimeAsset,
-} from '@atlaspack/types';
+} from '@atlaspack/types-internal';
 
 import {Runtime} from '@atlaspack/plugin';
 import {
