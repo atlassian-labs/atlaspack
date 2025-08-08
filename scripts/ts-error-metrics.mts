@@ -1,10 +1,8 @@
 #!/usr/bin/env -S node
 
 import { $ } from 'zx';
-import glob from 'fast-glob';
-import path from 'path';
 import { parseArgs } from 'util';
-import { mkdtempSync, writeFileSync, unlinkSync } from 'fs';
+import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
