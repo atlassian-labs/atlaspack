@@ -272,7 +272,8 @@ export class DevPackager {
     return (
       !this.bundleGraph.hasParentBundleOfType(this.bundle, 'js') ||
       this.bundle.env.isIsolated() ||
-      this.bundle.bundleBehavior === 'isolated'
+      this.bundle.bundleBehavior === 'isolated' ||
+      this.bundle.bundleBehavior === 'inlineIsolated'
     );
   }
 }

@@ -1,4 +1,4 @@
-import type {MutableAsset, TransformerResult} from '@atlaspack/types';
+import type {MutableAsset, TransformerResult} from '@atlaspack/types-internal';
 import {XMLSerializer} from '@xmldom/xmldom';
 import {urlHandler} from './utils';
 

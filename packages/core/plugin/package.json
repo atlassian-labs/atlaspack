@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/plugin",
-  "version": "2.14.22",
+  "version": "2.14.23",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -12,14 +12,15 @@
   },
   "main": "./lib/PluginAPI.js",
   "source": "./src/PluginAPI.ts",
-  "types": "./src/PluginAPI.ts",
+  "types": "./lib/types/PluginAPI.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/types": "2.15.12"
+    "@atlaspack/types-internal": "2.18.0"
   }
 }

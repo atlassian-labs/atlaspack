@@ -108,6 +108,9 @@ const CONFIG_SCHEMA: SchemaEntity = {
         },
       ],
     },
+    addReactDisplayName: {
+      type: 'boolean',
+    },
     magicComments: {
       type: 'boolean',
     },
@@ -298,6 +301,7 @@ export default new Transformer({
     let inlineFS = !ignoreFS;
     let inlineConstants = false;
     let magicComments = false;
+    let addReactDisplayName = false;
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -314,6 +318,9 @@ export default new Transformer({
         'Invalid config for @atlaspack/transformer-js',
       );
 
+      addReactDisplayName =
+        // @ts-expect-error TS2339
+        conf.contents?.addReactDisplayName ?? addReactDisplayName;
       // @ts-expect-error TS2339
       magicComments = conf.contents?.magicComments ?? magicComments;
       // @ts-expect-error TS2339
@@ -334,6 +341,7 @@ export default new Transformer({
       inlineEnvironment,
       inlineFS,
       inlineConstants,
+      addReactDisplayName,
       reactRefresh,
       decorators,
       useDefineForClassFields,
@@ -511,6 +519,7 @@ export default new Transformer({
       conditional_bundling: options.featureFlags.conditionalBundlingApi,
       hmr_improvements: options.featureFlags.hmrImprovements,
       computed_properties_fix: options.featureFlags.unusedComputedPropertyFix,
+      add_display_name: Boolean(config.addReactDisplayName),
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),

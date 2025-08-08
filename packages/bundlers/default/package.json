@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/bundler-default",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -12,21 +12,23 @@
   },
   "main": "./lib/DefaultBundler.js",
   "source": "./src/DefaultBundler.ts",
-  "types": "./src/DefaultBundler.ts",
+  "types": "./lib/types/DefaultBundler.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "dependencies": {
+    "@atlaspack/types-internal": "2.18.0",
     "@atlaspack/diagnostic": "2.14.2",
-    "@atlaspack/feature-flags": "2.20.1",
-    "@atlaspack/graph": "3.5.11",
-    "@atlaspack/plugin": "2.14.22",
-    "@atlaspack/rust": "3.4.2",
-    "@atlaspack/utils": "2.17.4",
+    "@atlaspack/feature-flags": "2.21.0",
+    "@atlaspack/graph": "3.5.12",
+    "@atlaspack/plugin": "2.14.23",
+    "@atlaspack/rust": "3.5.0",
+    "@atlaspack/utils": "2.18.0",
     "nullthrows": "^1.1.1",
     "many-keys-map": "^1.0.3"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

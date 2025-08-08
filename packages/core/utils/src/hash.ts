@@ -1,5 +1,5 @@
 import type {Readable} from 'stream';
-import type {FileSystem} from '@atlaspack/fs';
+import type {FileSystem} from '@atlaspack/types-internal';
 
 import {objectSortedEntriesDeep} from './collection';
 import {hashString, Hash} from '@atlaspack/rust';

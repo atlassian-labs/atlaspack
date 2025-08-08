@@ -752,7 +752,7 @@ export type ASTGenerator = {
   version: Semver;
 };
 
-export type BundleBehavior = 'inline' | 'isolated';
+export type BundleBehavior = 'inline' | 'isolated' | 'inlineIsolated';
 
 export type AtlaspackTransformOptions = {
   filePath: FilePath;

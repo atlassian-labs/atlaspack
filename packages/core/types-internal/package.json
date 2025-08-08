@@ -1,10 +1,10 @@
 {
   "name": "@atlaspack/types-internal",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "license": "(MIT OR Apache-2.0)",
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./lib/types/index.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/atlassian-labs/atlaspack.git"
@@ -13,11 +13,12 @@
     "access": "public"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.2",
-    "@atlaspack/feature-flags": "2.20.1",
+    "@atlaspack/feature-flags": "2.21.0",
     "@parcel/source-map": "^2.1.1",
     "utility-types": "^3.10.0"
   },

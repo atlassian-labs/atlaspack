@@ -11,14 +11,15 @@
     "directory": "packages/utils/create-react-app"
   },
   "source": "./src/bin.ts",
-  "types": "./src/bin.ts",
+  "types": "./lib/types/bin.d.ts",
   "files": [
     "templates",
     "lib",
     "bin"
   ],
   "scripts": {
-    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js"
+    "dev:prepare": "rimraf ./lib/ && mkdir -p lib && cp ./bin/dev-bin.js ./lib/bin.js",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {

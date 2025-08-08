@@ -1,5 +1,4 @@
-import type {SourceLocation} from '@atlaspack/types';
-import type {FileSystem} from '@atlaspack/fs';
+import type {SourceLocation, FileSystem} from '@atlaspack/types-internal';
 import SourceMap from '@parcel/source-map';
 import path from 'path';
 import {normalizeSeparators, isAbsolute} from './path';

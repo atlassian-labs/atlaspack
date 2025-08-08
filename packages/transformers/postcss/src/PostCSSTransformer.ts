@@ -3,7 +3,7 @@ import type {
   Asset,
   MutableAsset,
   PluginOptions,
-} from '@atlaspack/types';
+} from '@atlaspack/types-internal';
 
 import {hashString} from '@atlaspack/rust';
 import {glob} from '@atlaspack/utils';

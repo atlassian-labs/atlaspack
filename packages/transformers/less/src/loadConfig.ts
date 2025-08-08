@@ -1,4 +1,4 @@
-import type {Config} from '@atlaspack/types';
+import type {Config} from '@atlaspack/types-internal';
 import path from 'path';
 
 type ConfigResult = {

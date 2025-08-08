@@ -1,10 +1,10 @@
 {
   "name": "@atlaspack/optimizer-image",
-  "version": "3.1.22",
+  "version": "3.1.23",
   "license": "(MIT OR Apache-2.0)",
   "main": "./lib/ImageOptimizer.js",
   "source": "./src/ImageOptimizer.ts",
-  "types": "./src/ImageOptimizer.ts",
+  "types": "./lib/types/ImageOptimizer.d.ts",
   "publishConfig": {
     "access": "public"
   },
@@ -20,16 +20,17 @@
   ],
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.2",
-    "@atlaspack/plugin": "2.14.22",
-    "@atlaspack/rust": "3.4.2",
-    "@atlaspack/utils": "2.17.4",
-    "@atlaspack/workers": "2.14.22"
+    "@atlaspack/plugin": "2.14.23",
+    "@atlaspack/rust": "3.5.0",
+    "@atlaspack/utils": "2.18.0",
+    "@atlaspack/workers": "2.14.23"
   },
   "peerDependencies": {
-    "@atlaspack/core": "^2.13.1"
+    "@atlaspack/core": "2.22.0"
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

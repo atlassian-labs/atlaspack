@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-svg",
-  "version": "2.14.22",
+  "version": "2.14.23",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -11,14 +11,14 @@
   },
   "main": "./lib/SVGTransformer.js",
   "source": "./src/SVGTransformer.ts",
-  "types": "./src/SVGTransformer.ts",
+  "types": "./lib/types/SVGTransformer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.2",
-    "@atlaspack/plugin": "2.14.22",
-    "@atlaspack/rust": "3.4.2",
+    "@atlaspack/plugin": "2.14.23",
+    "@atlaspack/rust": "3.5.0",
     "nullthrows": "^1.1.1",
     "posthtml": "^0.16.5",
     "posthtml-parser": "^0.10.1",
@@ -27,6 +27,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

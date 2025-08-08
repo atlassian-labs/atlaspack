@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-pug",
-  "version": "2.14.22",
+  "version": "2.14.23",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -11,16 +11,17 @@
   },
   "main": "./lib/PugTransformer.js",
   "source": "./src/PugTransformer.ts",
-  "types": "./src/PugTransformer.ts",
+  "types": "./lib/types/PugTransformer.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.22",
+    "@atlaspack/plugin": "2.14.23",
     "pug": "^3.0.2"
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

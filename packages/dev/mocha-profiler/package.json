@@ -14,5 +14,8 @@
   "peerDependencies": {
     "mocha": "^8.3.0"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  }
 }

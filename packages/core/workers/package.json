@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/workers",
-  "version": "2.14.22",
+  "version": "2.14.23",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -12,17 +12,17 @@
   },
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./lib/types/index.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "dependencies": {
     "@atlaspack/build-cache": "2.13.4",
     "@atlaspack/diagnostic": "2.14.2",
-    "@atlaspack/logger": "2.14.14",
-    "@atlaspack/profiler": "2.14.19",
-    "@atlaspack/types-internal": "2.17.0",
-    "@atlaspack/utils": "2.17.4",
+    "@atlaspack/logger": "2.14.15",
+    "@atlaspack/profiler": "2.14.20",
+    "@atlaspack/types-internal": "2.18.0",
+    "@atlaspack/utils": "2.18.0",
     "nullthrows": "^1.1.1"
   },
   "browser": {
@@ -31,6 +31,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

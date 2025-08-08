@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/reporter-conditional-manifest",
-  "version": "2.15.4",
+  "version": "2.15.5",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
@@ -11,17 +11,18 @@
   },
   "main": "./lib/ConditionalManifestReporter.js",
   "source": "./src/ConditionalManifestReporter.ts",
-  "types": "./src/ConditionalManifestReporter.ts",
+  "types": "./lib/types/ConditionalManifestReporter.d.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.22",
-    "@atlaspack/feature-flags": "2.20.1",
+    "@atlaspack/plugin": "2.14.23",
+    "@atlaspack/feature-flags": "2.21.0",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src"
+    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

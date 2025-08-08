@@ -3,15 +3,16 @@
   "version": "2.12.0",
   "private": true,
   "scripts": {
-    "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules -r @atlaspack/babel-register index.js"
+    "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules -r @atlaspack/babel-register index.js",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
     "@babel/core": "^7.22.11",
     "@babel/generator": "^7.22.10",
     "@babel/template": "^7.22.5",
     "@babel/types": "^7.22.11",
-    "@atlaspack/core": "2.21.0",
-    "@atlaspack/fs": "2.15.17",
+    "@atlaspack/core": "2.22.0",
+    "@atlaspack/fs": "2.15.18",
     "nanoid": "^3.1.12",
     "nullthrows": "^1.1.1"
   },

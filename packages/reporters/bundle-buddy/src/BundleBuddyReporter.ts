@@ -1,4 +1,4 @@
-import type {PackagedBundle} from '@atlaspack/types';
+import type {PackagedBundle} from '@atlaspack/types-internal';
 import {Reporter} from '@atlaspack/plugin';
 import path from 'path';
 

@@ -62,6 +62,7 @@ export const bundleBehaviorMap: BitFlags<BundleBehavior, number> = new BitFlags(
   {
     inline: 0,
     isolated: 1,
+    inlineIsolated: 2,
   },
 );
 

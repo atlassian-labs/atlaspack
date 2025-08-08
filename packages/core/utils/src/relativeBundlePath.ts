@@ -1,4 +1,4 @@
-import type {FilePath, NamedBundle} from '@atlaspack/types';
+import type {FilePath, NamedBundle} from '@atlaspack/types-internal';
 
 import path from 'path';
 import {relativePath} from './path';

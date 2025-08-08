@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/rust",
-  "version": "3.4.2",
+  "version": "3.5.0",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -33,7 +33,8 @@
     "napi-wasm": "^1.0.1"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "type": "commonjs"
 }

@@ -1,5 +1,5 @@
 import type {Root} from 'postcss';
-import type {Asset, Dependency} from '@atlaspack/types';
+import type {Asset, Dependency} from '@atlaspack/types-internal';
 import PostCSS from 'postcss';
 import init, {bundleAsync} from 'lightningcss';
 

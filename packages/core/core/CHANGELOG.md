@@ -1,5 +1,27 @@
 # @atlaspack/core
 
+## 2.22.0
+
+### Minor Changes
+
+- [#731](https://github.com/atlassian-labs/atlaspack/pull/731) [`23d561e`](https://github.com/atlassian-labs/atlaspack/commit/23d561e51e68b0c38fd1ff4e4fb173e5e7b01cf2) Thanks [@marcins](https://github.com/marcins)! - Implement "inline isolated" scripts
+
+### Patch Changes
+
+- Updated dependencies [[`23d561e`](https://github.com/atlassian-labs/atlaspack/commit/23d561e51e68b0c38fd1ff4e4fb173e5e7b01cf2)]:
+  - @atlaspack/feature-flags@2.21.0
+  - @atlaspack/utils@2.18.0
+  - @atlaspack/rust@3.5.0
+  - @atlaspack/cache@3.2.18
+  - @atlaspack/fs@2.15.18
+  - @atlaspack/graph@3.5.12
+  - @atlaspack/package-manager@2.14.23
+  - @atlaspack/workers@2.14.23
+  - @atlaspack/logger@2.14.15
+  - @atlaspack/profiler@2.14.20
+  - @atlaspack/types@2.15.13
+  - @atlaspack/plugin@2.14.23
+
 ## 2.21.0
 
 ### Minor Changes
