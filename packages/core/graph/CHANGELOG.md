@@ -1,5 +1,13 @@
 # @atlaspack/graph
 
+## 3.5.13
+
+### Patch Changes
+
+- Updated dependencies [[`7f5841c`](https://github.com/atlassian-labs/atlaspack/commit/7f5841c39df049f9546cccbeea2a7337e0337b45), [`73dd7ba`](https://github.com/atlassian-labs/atlaspack/commit/73dd7baab69456ef2f6e4a0cc7dbb04f407eb148)]:
+  - @atlaspack/types-internal@2.19.0
+  - @atlaspack/feature-flags@2.22.0
+
 ## 3.5.12
 
 ### Patch Changes

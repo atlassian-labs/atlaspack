@@ -1,5 +1,13 @@
 # @atlaspack/optimizer-svgo
 
+## 2.14.24
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.18.1
+  - @atlaspack/plugin@2.14.24
+
 ## 2.14.23
 
 ### Patch Changes

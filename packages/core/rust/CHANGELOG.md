@@ -1,5 +1,17 @@
 # @atlaspack/rust
 
+## 3.6.0
+
+### Minor Changes
+
+- [#733](https://github.com/atlassian-labs/atlaspack/pull/733) [`ad26146`](https://github.com/atlassian-labs/atlaspack/commit/ad26146f13b4c1cc65d4a0f9c67060b90ef14ff3) Thanks [@yamadapc](https://github.com/yamadapc)! - Add support for adding react displayName to components
+
+- [#732](https://github.com/atlassian-labs/atlaspack/pull/732) [`7f5841c`](https://github.com/atlassian-labs/atlaspack/commit/7f5841c39df049f9546cccbeea2a7337e0337b45) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - add tesseract context
+
+### Patch Changes
+
+- [#730](https://github.com/atlassian-labs/atlaspack/pull/730) [`f1b48e7`](https://github.com/atlassian-labs/atlaspack/commit/f1b48e7a04e005cef0f36a3e692087a9ecdb6f7a) Thanks [@alshdavid](https://github.com/alshdavid)! - Fixing types
+
 ## 3.5.0
 
 ### Minor Changes

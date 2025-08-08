@@ -1,5 +1,16 @@
 # @atlaspack/types-internal
 
+## 2.19.0
+
+### Minor Changes
+
+- [#732](https://github.com/atlassian-labs/atlaspack/pull/732) [`7f5841c`](https://github.com/atlassian-labs/atlaspack/commit/7f5841c39df049f9546cccbeea2a7337e0337b45) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - add tesseract context
+
+### Patch Changes
+
+- Updated dependencies [[`73dd7ba`](https://github.com/atlassian-labs/atlaspack/commit/73dd7baab69456ef2f6e4a0cc7dbb04f407eb148)]:
+  - @atlaspack/feature-flags@2.22.0
+
 ## 2.18.0
 
 ### Minor Changes

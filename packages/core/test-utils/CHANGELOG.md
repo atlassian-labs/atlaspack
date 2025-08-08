@@ -1,5 +1,19 @@
 # @atlaspack/test-utils
 
+## 2.14.26
+
+### Patch Changes
+
+- [#733](https://github.com/atlassian-labs/atlaspack/pull/733) [`ad26146`](https://github.com/atlassian-labs/atlaspack/commit/ad26146f13b4c1cc65d4a0f9c67060b90ef14ff3) Thanks [@yamadapc](https://github.com/yamadapc)! - Add support for adding react displayName to components
+
+- Updated dependencies [[`7f5841c`](https://github.com/atlassian-labs/atlaspack/commit/7f5841c39df049f9546cccbeea2a7337e0337b45)]:
+  - @atlaspack/core@2.23.0
+  - @atlaspack/config-default@4.0.0
+  - @atlaspack/cache@3.2.19
+  - @atlaspack/fs@2.15.19
+  - @atlaspack/utils@2.18.1
+  - @atlaspack/package-manager@2.14.24
+
 ## 2.14.25
 
 ### Patch Changes

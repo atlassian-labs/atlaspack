@@ -1,5 +1,11 @@
 # @atlaspack/conditional-import-types
 
+## 2.13.6
+
+### Patch Changes
+
+- [#730](https://github.com/atlassian-labs/atlaspack/pull/730) [`f1b48e7`](https://github.com/atlassian-labs/atlaspack/commit/f1b48e7a04e005cef0f36a3e692087a9ecdb6f7a) Thanks [@alshdavid](https://github.com/alshdavid)! - Fixing types
+
 ## 2.13.5
 
 ### Patch Changes
