@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/nrwl/nx/refs/heads/master/packages/nx/schemas/nx-schema.json",
-  "parallel": true,
+  "parallel": "200%",
   "targetDefaults": {
     "check-ts": {
       "dependsOn": ["^check-ts", "^dev:prepare"],
@@ -32,8 +32,16 @@
       "outputs": ["{projectRoot}/lib/**/*.js", "{projectRoot}/bin/**/*.js"],
       "cache": true
     },
+    "test": {
+      "dependsOn": [
+        {"projects": ["*"], "target": "build-native-release"},
+        {"projects": ["*"], "target": "build:lib"},
+        {"projects": ["*"], "target": "check-ts"}
+      ]
+    },
     "test:integration": {
       "dependsOn": [
+        {"projects": ["*"], "target": "build-native-release"},
         {"projects": ["*"], "target": "build:lib"},
         {"projects": ["*"], "target": "check-ts"}
       ]
