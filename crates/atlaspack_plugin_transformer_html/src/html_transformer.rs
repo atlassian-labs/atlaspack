@@ -171,7 +171,7 @@ mod test {
         r#"
           <html>
             <body>
-              <script src="966f7b31c3f6c3fc"></script>
+              <script src="3b6eb0410433bc70"></script>
             </body>
           </html>
         "#
@@ -201,7 +201,7 @@ mod test {
         r#"
           <html>
             <head>
-              <link href="492e1268e5326028" rel="manifest" />
+              <link href="8ae12e7437c8a678" rel="manifest" />
             </head>
             <body></body>
           </html>
@@ -267,7 +267,7 @@ mod test {
             env: env.clone(),
             file_path: PathBuf::from("main.html"),
             file_type: FileType::Js,
-            id: String::from("b0deada2a458cc5f"),
+            id: String::from("bc56647bed17ca84"),
             is_bundle_splittable: true,
             is_source: true,
             meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
@@ -337,7 +337,7 @@ mod test {
             env: env.clone(),
             file_path: PathBuf::from("main.html"),
             file_type: FileType::Js,
-            id: String::from("b0deada2a458cc5f"),
+            id: transformation.discovered_assets[0].asset.id.clone(),
             is_bundle_splittable: true,
             is_source: true,
             meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
@@ -393,7 +393,7 @@ mod test {
             code: Code::from(String::from("\n          a { color: blue; }\n        ")),
             file_path: PathBuf::from("main.html"),
             file_type: FileType::Css,
-            id: String::from("9ee0b2d6680a3e8d"),
+            id: transformation.discovered_assets[0].asset.id.clone(),
             is_bundle_splittable: true,
             is_source: true,
             meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
@@ -422,7 +422,7 @@ mod test {
 
     assert_eq!(
       &normalize_html(&html),
-      &normalize_html(&html_body(r#"<script src="8321472594eb517f"></script>"#))
+      &normalize_html(&html_body(r#"<script src="6c0a6668bde9f6eb"></script>"#))
     );
   }
 
