@@ -41,7 +41,7 @@ describe('Public Environment', () => {
 
     assert(env.isTesseract());
     assert(env.isBrowser());
-    assert(env.isWorker());
+    assert(env.isIsolated());
     assert(!env.isNode());
     assert(!env.isElectron());
     assert(!env.isWorklet());

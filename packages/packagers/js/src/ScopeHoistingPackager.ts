@@ -1680,7 +1680,11 @@ ${code}
     }
 
     // Add importScripts for sibling bundles in workers.
-    if (this.bundle.env.isWorker() || this.bundle.env.isWorklet()) {
+    if (
+      this.bundle.env.isWorker() ||
+      this.bundle.env.isTesseract() ||
+      this.bundle.env.isWorklet()
+    ) {
       let importScripts = '';
       let bundles = this.bundleGraph.getReferencedBundles(this.bundle);
       for (let b of bundles) {

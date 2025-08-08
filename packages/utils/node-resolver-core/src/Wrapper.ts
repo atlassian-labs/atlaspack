@@ -791,7 +791,7 @@ function environmentToExportsConditions(
     conditions |= BROWSER;
   }
 
-  if (env.isWorker()) {
+  if (env.isWorker() || env.isTesseract()) {
     conditions |= WORKER;
   }
 

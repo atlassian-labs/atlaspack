@@ -50,6 +50,7 @@ export class Environment implements IEnvironment {
     return (
       this.context === 'browser' ||
       this.isWorker() ||
+      this.isTesseract() ||
       this.isWorklet() ||
       this.context === 'electron-renderer'
     );
@@ -66,11 +67,7 @@ export class Environment implements IEnvironment {
   }
 
   isWorker(): boolean {
-    return (
-      this.context === 'web-worker' ||
-      this.context === 'service-worker' ||
-      this.context === 'tesseract'
-    );
+    return this.context === 'web-worker' || this.context === 'service-worker';
   }
 
   isWorklet(): boolean {
@@ -82,7 +79,7 @@ export class Environment implements IEnvironment {
   }
 
   isIsolated(): boolean {
-    return this.isWorker() || this.isWorklet();
+    return this.isWorker() || this.isTesseract() || this.isWorklet();
   }
 
   // TODO

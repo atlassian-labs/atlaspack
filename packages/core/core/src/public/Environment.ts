@@ -31,8 +31,12 @@ export const BROWSER_ENVS: Set<string> = new Set<string>([
 ]);
 const ELECTRON_ENVS = new Set(['electron-main', 'electron-renderer']);
 const NODE_ENVS = new Set(['node', ...ELECTRON_ENVS]);
-const WORKER_ENVS = new Set(['web-worker', 'service-worker', 'tesseract']);
-export const ISOLATED_ENVS: Set<string> = new Set([...WORKER_ENVS, 'worklet']);
+const WORKER_ENVS = new Set(['web-worker', 'service-worker']);
+export const ISOLATED_ENVS: Set<string> = new Set([
+  ...WORKER_ENVS,
+  'worklet',
+  'tesseract',
+]);
 
 const ALL_BROWSERS = [
   'chrome',

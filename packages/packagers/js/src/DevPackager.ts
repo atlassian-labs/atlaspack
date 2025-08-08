@@ -250,7 +250,7 @@ export class DevPackager {
     }
 
     let importScripts = '';
-    if (this.bundle.env.isWorker()) {
+    if (this.bundle.env.isWorker() || this.bundle.env.isTesseract()) {
       let bundles = this.bundleGraph.getReferencedBundles(this.bundle);
       for (let b of bundles) {
         importScripts += `importScripts("${relativeBundlePath(

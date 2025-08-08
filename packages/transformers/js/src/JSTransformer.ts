@@ -478,7 +478,7 @@ export default new Transformer({
         !asset.env.isNode() && asset.env.sourceType !== 'script',
       node_replacer: asset.env.isNode(),
       is_browser: asset.env.isBrowser(),
-      is_worker: asset.env.isWorker(),
+      is_worker: asset.env.isWorker() || asset.env.isTesseract(),
       env,
       is_type_script: asset.type === 'ts' || asset.type === 'tsx',
       is_jsx: isJSX,
@@ -491,6 +491,7 @@ export default new Transformer({
         asset.env.isBrowser() &&
         !asset.env.isLibrary &&
         !asset.env.isWorker() &&
+        !asset.env.isTesseract() &&
         !asset.env.isWorklet() &&
         Boolean(config?.reactRefresh),
       decorators: Boolean(config?.decorators),
