@@ -253,64 +253,90 @@ async function findTSSuppressions(basePath: string, save: boolean = false) {
     }
 }
 
-const { values, positionals } = parseArgs({
-    options: {
-        save: {
-            type: 'boolean',
-            short: 's'
-        },
-        show: {
-            type: 'boolean',
-            short: 'w'
-        },
-        backfill: {
-            type: 'boolean',
-            short: 'b'
-        },
-        days: {
-            type: 'string',
-            short: 'd',
-            default: '30'
-        }
-    },
-    allowPositionals: true
-});
-
-const basePath = positionals[0];
-
-// Check for mutually exclusive options
-const activeOptions = [values.save, values.show, values.backfill].filter(Boolean);
-if (activeOptions.length > 1) {
-    console.error('Error: --save, --show, and --backfill are mutually exclusive');
-    process.exitCode = 1;
-    process.exit(1);
+interface ParsedArgs {
+    values: {
+        save?: boolean;
+        show?: boolean;
+        backfill?: boolean;
+        days?: string;
+    };
+    positionals: string[];
+    basePath?: string;
+    days: number;
 }
 
-if (values.backfill) {
-    if (!basePath) {
+function parseArguments(): ParsedArgs {
+    const { values, positionals } = parseArgs({
+        options: {
+            save: {
+                type: 'boolean',
+                short: 's'
+            },
+            show: {
+                type: 'boolean',
+                short: 'w'
+            },
+            backfill: {
+                type: 'boolean',
+                short: 'b'
+            },
+            days: {
+                type: 'string',
+                short: 'd',
+                default: '30'
+            }
+        },
+        allowPositionals: true
+    });
+
+    const basePath = positionals[0];
+    const days = parseInt(values.days as string) || 30;
+
+    // Check for mutually exclusive options
+    const activeOptions = [values.save, values.show, values.backfill].filter(Boolean);
+    if (activeOptions.length > 1) {
+        console.error('Error: --save, --show, and --backfill are mutually exclusive');
+        process.exitCode = 1;
+        return { values, positionals, days };
+    }
+
+    // Validate base path requirements
+    if (values.backfill && !basePath) {
         console.error('Error: Base path is required for --backfill');
         process.exitCode = 1;
-        process.exit(1);
+        return { values, positionals, days };
     }
-    const days = parseInt(values.days as string) || 30;
-    backfillTSSuppressions(basePath, days).catch(err => {
-        console.error(err);
-        process.exitCode = 1;
-    });
-} else if (values.show) {
-    const days = parseInt(values.days as string) || 30;
-    showTSSuppressions(days).catch(err => {
-        console.error(err);
-        process.exitCode = 1;
-    });
-} else {
-    if (!basePath) {
+
+    if (!values.show && !values.backfill && !basePath) {
         console.error('Error: Base path is required for --save or default mode');
         process.exitCode = 1;
-        process.exit(1);
+        return { values, positionals, days };
     }
-    findTSSuppressions(basePath, values.save as boolean).catch(err => {
+
+    return { values, positionals, basePath, days };
+}
+
+async function main() {
+    const args = parseArguments();
+    
+    // Only proceed if no errors occurred during argument parsing
+    if (process.exitCode && process.exitCode !== 0) {
+        return;
+    }
+
+    try {
+        if (args.values.backfill) {
+            await backfillTSSuppressions(args.basePath!, args.days);
+        } else if (args.values.show) {
+            await showTSSuppressions(args.days);
+        } else {
+            await findTSSuppressions(args.basePath!, args.values.save as boolean);
+        }
+    } catch (err) {
         console.error(err);
         process.exitCode = 1;
-    });
+    }
 }
+
+// Start the application
+main();
