@@ -10,7 +10,7 @@ pub struct IdentifierReplacementVisitor {
   /// replacement.
   ///
   /// We could also generalise this a bit and have it handle finding the binding before inlining.
-  id_replacement: HashMap<Id, Expr>,
+  pub id_replacement: HashMap<Id, Expr>,
 }
 
 impl IdentifierReplacementVisitor {

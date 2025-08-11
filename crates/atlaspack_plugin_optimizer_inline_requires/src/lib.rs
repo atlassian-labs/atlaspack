@@ -1,21 +1,26 @@
 mod inlining_visitor;
 
 use crate::inlining_visitor::IdentifierReplacementVisitor;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use swc_core::atoms::atom;
 use swc_core::atoms::Atom;
 use swc_core::common::Mark;
 use swc_core::common::Span;
+use swc_core::ecma::ast::BlockStmt;
+use swc_core::ecma::ast::BlockStmtOrExpr;
 use swc_core::ecma::ast::Decl;
 use swc_core::ecma::ast::EmptyStmt;
 use swc_core::ecma::ast::ModuleItem;
+use swc_core::ecma::ast::ReturnStmt;
 use swc_core::ecma::ast::Stmt;
 use swc_core::ecma::ast::{CallExpr, Expr, Id, Ident, Lit, VarDecl, VarDeclarator};
 use swc_core::ecma::utils::ExprExt;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
+use swc_core::quote;
 
 /// Represents a `const i = require('module-id')` statement that has been found.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RequireInitializer {
   /// The variable `i` swc [`Id`] for matching it respecting scope
   pub variable_id: Id,
@@ -283,10 +288,51 @@ impl VisitMut for InlineRequiresCollector {
           return true;
         };
 
-        let init = init.as_expr().clone();
+        let mut init = init.as_expr().clone();
+        // Inline the require into the default initializer.
+        // So we just found:
+        //
+        //     parcelHelpers.interopDefault(x)
+        //
+        // We will inline `x` declaration into the default initializer so the expression becomes:
+        //
+        //     parcelHelpers.interopDefault(require("x"))
+        //
         self
           .identifier_replacement_visitor
-          .add_replacement(default_initializer_id, init);
+          .visit_mut_expr(&mut init);
+
+        // TODO: Do not crash if this fails, just error out
+        let require_call_expr = init.as_call().unwrap().args[0]
+          .expr
+          .as_paren()
+          .unwrap()
+          .expr
+          .as_seq()
+          .unwrap()
+          .exprs[1]
+          .as_call()
+          .unwrap()
+          .clone();
+        let imported_package = require_call_expr.args[0]
+          .expr
+          .as_lit()
+          .unwrap()
+          .as_str()
+          .unwrap()
+          .value
+          .clone();
+        let call_expr = init.as_call().unwrap().clone();
+
+        self
+          .identifier_replacement_visitor
+          .add_replacement(default_initializer_id.clone(), init);
+
+        self.require_initializers.push(RequireInitializer {
+          variable_id: default_initializer_id,
+          imported_package,
+          call_expr,
+        });
 
         return false;
       }
@@ -312,22 +358,167 @@ impl VisitMut for InlineRequiresCollector {
   }
 }
 
+struct InlineRequiesReplacerState {
+  current_replacements: HashMap<RequireInitializer, Ident>,
+}
+
 pub struct InlineRequiresReplacer {
   identifier_replacement_visitor: IdentifierReplacementVisitor,
+  state_stack: Vec<InlineRequiesReplacerState>,
+  require_initializers: Vec<RequireInitializer>,
+  current_replacements: HashMap<RequireInitializer, Ident>,
 }
 
 impl InlineRequiresReplacer {
-  fn new(identifier_replacement_visitor: IdentifierReplacementVisitor) -> Self {
+  fn new(
+    identifier_replacement_visitor: IdentifierReplacementVisitor,
+    require_initializers: Vec<RequireInitializer>,
+  ) -> Self {
     InlineRequiresReplacer {
+      state_stack: vec![],
       identifier_replacement_visitor,
+      require_initializers,
+      current_replacements: HashMap::new(),
     }
+  }
+}
+
+impl InlineRequiresReplacer {
+  fn identifier_for_require_statement(
+    &mut self,
+    require_statement: RequireInitializer,
+  ) -> Option<Ident> {
+    for state in self.state_stack.iter_mut() {
+      if let Some(id) = state.current_replacements.get(&require_statement) {
+        return Some(id.clone());
+      }
+    }
+
+    let state = self.state_stack.last_mut()?;
+    let id = Ident::new_private("$atlaspack$inline$require".into(), Span::default());
+
+    state
+      .current_replacements
+      .insert(require_statement, id.clone());
+
+    Some(id)
   }
 }
 
 impl VisitMut for InlineRequiresReplacer {
   fn visit_mut_expr(&mut self, node: &mut Expr) {
-    self.identifier_replacement_visitor.visit_mut_expr(node);
+    if let Expr::Ident(ident) = node {
+      if let Some(require_statement) = self
+        .require_initializers
+        .iter()
+        .find(|r| r.variable_id == ident.to_id())
+      {
+        let id = self
+          .identifier_for_require_statement(require_statement.clone())
+          .unwrap();
+
+        *node = Expr::Ident(id);
+      }
+    }
+
     node.visit_mut_children_with(self);
+  }
+
+  fn visit_mut_module(&mut self, node: &mut swc_core::ecma::ast::Module) {
+    self.state_stack.push(InlineRequiesReplacerState {
+      current_replacements: HashMap::new(),
+    });
+
+    node.visit_mut_children_with(self);
+
+    if let Some(state) = self.state_stack.pop() {
+      for (require_statement, id) in state.current_replacements.into_iter() {
+        let expr = Expr::Call(require_statement.call_expr.clone());
+
+        node.body.insert(
+          0,
+          quote!("const $id = $expr;" as ModuleItem, id: Ident = id, expr: Expr = expr),
+        );
+      }
+    }
+  }
+
+  fn visit_mut_script(&mut self, node: &mut swc_core::ecma::ast::Script) {
+    self.state_stack.push(InlineRequiesReplacerState {
+      current_replacements: HashMap::new(),
+    });
+
+    node.visit_mut_children_with(self);
+
+    if let Some(state) = self.state_stack.pop() {
+      for (require_statement, id) in state.current_replacements.into_iter() {
+        let expr = Expr::Call(require_statement.call_expr.clone());
+
+        node.body.insert(
+          0,
+          quote!("const $id = $expr;" as Stmt, id: Ident = id, expr: Expr = expr),
+        );
+      }
+    }
+  }
+
+  fn visit_mut_function(&mut self, node: &mut swc_core::ecma::ast::Function) {
+    self.state_stack.push(InlineRequiesReplacerState {
+      current_replacements: HashMap::new(),
+    });
+
+    node.visit_mut_children_with(self);
+
+    if let Some(state) = self.state_stack.pop() {
+      if let Some(body) = &mut node.body {
+        for (require_statement, id) in state.current_replacements.into_iter() {
+          let expr = Expr::Call(require_statement.call_expr.clone());
+
+          body.stmts.insert(
+            0,
+            quote!("const $id = $expr;" as Stmt, id: Ident = id, expr: Expr = expr),
+          );
+        }
+      }
+    }
+  }
+
+  fn visit_mut_arrow_expr(&mut self, node: &mut swc_core::ecma::ast::ArrowExpr) {
+    self.state_stack.push(InlineRequiesReplacerState {
+      current_replacements: HashMap::new(),
+    });
+
+    node.visit_mut_children_with(self);
+
+    if let Some(state) = self.state_stack.pop() {
+      if state.current_replacements.is_empty() {
+        return;
+      }
+
+      let mut body = node
+        .body
+        .as_block_stmt()
+        .cloned()
+        .unwrap_or_else(|| BlockStmt {
+          ctxt: Default::default(),
+          span: Span::default(),
+          stmts: vec![Stmt::Return(ReturnStmt {
+            span: Span::default(),
+            arg: Some(node.body.as_expr().unwrap().clone()),
+          })],
+        });
+
+      for (require_statement, id) in state.current_replacements.into_iter() {
+        let expr = Expr::Call(require_statement.call_expr.clone());
+
+        body.stmts.insert(
+          0,
+          quote!("const $id = $expr;" as Stmt, id: Ident = id, expr: Expr = expr),
+        );
+      }
+
+      *node.body = BlockStmtOrExpr::BlockStmt(body);
+    }
   }
 
   fn visit_mut_stmt(&mut self, stmt: &mut Stmt) {
@@ -413,8 +604,10 @@ impl VisitMut for InlineRequiresOptimizer {
 
     stmts.visit_mut_children_with(&mut collector_visitor);
 
-    let mut replacer_visitor =
-      InlineRequiresReplacer::new(collector_visitor.identifier_replacement_visitor);
+    let mut replacer_visitor = InlineRequiresReplacer::new(
+      collector_visitor.identifier_replacement_visitor,
+      collector_visitor.require_initializers.clone(),
+    );
 
     self.require_initializers = collector_visitor.require_initializers;
 
@@ -454,7 +647,8 @@ parcelRegister("k4tEj", function(module, exports) {
     Object.defineProperty(module.exports, "InternSet", {
         enumerable: true,
         get: function() {
-            return (0, require("internmap")).InternSet;
+            const $atlaspack$inline$require = require("internmap");
+            return $atlaspack$inline$require.InternSet;
         }
     });
 });
@@ -493,7 +687,8 @@ parcelRegister("k4tEj", function(module, exports) {
     Object.defineProperty(module.exports, "InternSet", {
         enumerable: true,
         get: function() {
-            return (0, require("internmap")).InternSet;
+            const $atlaspack$inline$require = require("internmap");
+            return $atlaspack$inline$require.InternSet;
         }
     });
 });
@@ -523,10 +718,106 @@ function doWork() {
 
     let expected_output = r#"
 function doWork() {
-    return (0, require('fs')).readFileSync('./something');
+    const $atlaspack$inline$require = require('fs');
+    return $atlaspack$inline$require.readFileSync('./something');
 }
     "#
     .trim();
+    assert_eq!(output_code.trim(), expected_output);
+  }
+
+  #[test]
+  fn it_moves_require_statements_to_the_bottommost_blocks() {
+    let code = r#"
+const fs = require('fs');
+function doWork() {
+    function run() {
+        return fs.readFileSync('./something');
+    }
+
+    run();
+}
+    "#
+    .trim();
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    let expected_output = r#"
+function doWork() {
+    function run() {
+        const $atlaspack$inline$require = require('fs');
+        return $atlaspack$inline$require.readFileSync('./something');
+    }
+    run();
+}
+    "#
+    .trim();
+    assert_eq!(output_code.trim(), expected_output);
+  }
+
+  #[test]
+  // TODO: We don't want to duplicate, but it'll be easier to write a secondary pass
+  // that removes the duplicates
+  fn it_does_duplicate_require_statements() {
+    let code = r#"
+const fs = require('fs');
+function doWork() {
+    function run() {
+        return fs.readFileSync('./something');
+    }
+
+    fs.readFileSync('./something');
+
+    run();
+}
+    "#
+    .trim();
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    let expected_output = r#"
+function doWork() {
+    const $atlaspack$inline$require = require('fs');
+    function run() {
+        const $atlaspack$inline$require = require('fs');
+        return $atlaspack$inline$require.readFileSync('./something');
+    }
+    $atlaspack$inline$require.readFileSync('./something');
+    run();
+}
+    "#
+    .trim();
+    assert_eq!(output_code.trim(), expected_output);
+  }
+
+  #[test]
+  fn it_inlines_require_statements_in_arrow_functions() {
+    let code = r#"
+const fs = require('fs');
+
+const a = () => fs.readFileSync('./something');
+    "#
+    .trim();
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    let expected_output = r#"
+const a = ()=>{
+    const $atlaspack$inline$require = require('fs');
+    return $atlaspack$inline$require.readFileSync('./something');
+};
+    "#
+    .trim();
+
     assert_eq!(output_code.trim(), expected_output);
   }
 
@@ -552,7 +843,8 @@ parcelRequire.register('moduleId', function(require, module, exports) {
     let expected_output = r#"
 parcelRequire.register('moduleId', function(require, module, exports) {
     function doWork() {
-        return (0, require('fs')).readFileSync('./something');
+        const $atlaspack$inline$require = require('fs');
+        return $atlaspack$inline$require.readFileSync('./something');
     }
 });
     "#
@@ -618,7 +910,8 @@ function run() {
 
     let expected_output = r#"
 function run() {
-    return (0, parcelHelpers.interopDefault((0, require("./App")))).test();
+    const $atlaspack$inline$require = parcelHelpers.interopDefault((0, require("./App")));
+    return $atlaspack$inline$require.test();
 }
     "#
     .trim();
