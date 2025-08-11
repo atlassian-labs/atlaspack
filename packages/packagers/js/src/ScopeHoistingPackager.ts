@@ -388,6 +388,18 @@ export class ScopeHoistingPackager {
     let queue = new PromiseQueue({maxConcurrent: 32});
     let wrapped: Array<Asset> = [];
     let constant: Array<Asset> = [];
+    let entryAssets = this.bundle.getEntryAssets();
+
+    if (getFeatureFlag('applyScopeHoistingImprovement')) {
+      // Make all entry assets wrapped, to avoid any top level hoisting
+      for (let entryAsset of entryAssets) {
+        if (!this.wrappedAssets.has(entryAsset.id)) {
+          this.wrappedAssets.add(entryAsset.id);
+          wrapped.push(entryAsset);
+        }
+      }
+    }
+
     this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
         let [code, map] = await Promise.all([
@@ -474,7 +486,6 @@ export class ScopeHoistingPackager {
       }
     }
 
-    // @ts-expect-error TS2769
     this.assetOutputs = new Map(await queue.run());
     return {wrapped, constant};
   }
@@ -834,7 +845,8 @@ ${code}
       lineCount += 2;
 
       if (debugTools['asset-file-names-in-output']) {
-        code = `/* ${this.getAssetFilePath(asset)} */\n` + code;
+        code =
+          `/* Start wrapped asset ${this.getAssetFilePath(asset)} */\n` + code;
         lineCount += 1;
       }
 
