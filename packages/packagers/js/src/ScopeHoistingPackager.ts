@@ -388,17 +388,6 @@ export class ScopeHoistingPackager {
     let queue = new PromiseQueue({maxConcurrent: 32});
     let wrapped: Array<Asset> = [];
     let constant: Array<Asset> = [];
-    let entryAssets = this.bundle.getEntryAssets();
-
-    if (getFeatureFlag('applyScopeHoistingImprovement')) {
-      // Make all entry assets wrapped, to avoid any top level hoisting
-      for (let entryAsset of entryAssets) {
-        if (!this.wrappedAssets.has(entryAsset.id)) {
-          this.wrappedAssets.add(entryAsset.id);
-          wrapped.push(entryAsset);
-        }
-      }
-    }
 
     this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
@@ -438,6 +427,14 @@ export class ScopeHoistingPackager {
     });
 
     if (getFeatureFlag('applyScopeHoistingImprovement')) {
+      // Make all entry assets wrapped, to avoid any top level hoisting
+      for (let entryAsset of this.bundle.getEntryAssets()) {
+        if (!this.wrappedAssets.has(entryAsset.id)) {
+          this.wrappedAssets.add(entryAsset.id);
+          wrapped.push(entryAsset);
+        }
+      }
+
       // Tracks which assets have been assigned to a wrap group
       let assignedAssets = new Set<Asset>();
 
