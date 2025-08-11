@@ -94,7 +94,7 @@ pub fn create_environment_id(
   is_library.hash(&mut hasher);
   should_optimize.hash(&mut hasher);
   should_scope_hoist.hash(&mut hasher);
-  source_map.hash(&mut hasher);
+  source_map.clone().unwrap_or_default().hash(&mut hasher);
   let hash = hasher.finish(); // We can simply expose this as a nº too
   format!("{:016x}", hash)
 }
