@@ -130,6 +130,7 @@ pub enum EnvironmentContext {
   ServiceWorker,
   WebWorker,
   Worklet,
+  Tesseract,
 }
 
 impl EnvironmentContext {
@@ -142,13 +143,13 @@ impl EnvironmentContext {
     use EnvironmentContext::*;
     matches!(
       self,
-      Browser | WebWorker | ServiceWorker | Worklet | ElectronRenderer
+      Browser | WebWorker | ServiceWorker | Worklet | ElectronRenderer | Tesseract
     )
   }
 
   pub fn is_worker(&self) -> bool {
     use EnvironmentContext::*;
-    matches!(self, WebWorker | ServiceWorker)
+    matches!(self, WebWorker | ServiceWorker | Tesseract)
   }
 
   pub fn is_worklet(&self) -> bool {
@@ -159,6 +160,11 @@ impl EnvironmentContext {
   pub fn is_electron(&self) -> bool {
     use EnvironmentContext::*;
     matches!(self, ElectronMain | ElectronRenderer)
+  }
+
+  pub fn is_tesseract(&self) -> bool {
+    use EnvironmentContext::*;
+    matches!(self, Tesseract)
   }
 }
 
@@ -183,6 +189,7 @@ impl From<EnvironmentContext> for IncludeNodeModules {
       EnvironmentContext::Browser => IncludeNodeModules::Bool(true),
       EnvironmentContext::ServiceWorker => IncludeNodeModules::Bool(true),
       EnvironmentContext::WebWorker => IncludeNodeModules::Bool(true),
+      EnvironmentContext::Tesseract => IncludeNodeModules::Bool(true),
       _ => IncludeNodeModules::Bool(false),
     }
   }

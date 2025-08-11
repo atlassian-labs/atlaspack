@@ -772,8 +772,8 @@ describe('atlaspack', function () {
     ]);
 
     let bundles = b.getBundles();
-    let main = bundles.find((b) => !b.env.isWorker());
-    let worker = bundles.find((b) => b.env.isWorker());
+    let main = bundles.find((b) => !b.env.isWorker() && !b.env.isTesseract());
+    let worker = bundles.find((b) => b.env.isWorker() || b.env.isTesseract());
 
     if (!main) return assert(main);
     if (!worker) return assert(worker);
@@ -805,7 +805,7 @@ describe('atlaspack', function () {
     ]);
 
     let bundles = b.getBundles();
-    let main = bundles.find((b) => !b.env.isWorker());
+    let main = bundles.find((b) => !b.env.isWorker() && !b.env.isTesseract());
     if (!main) return assert(main);
 
     let mainContents = await outputFS.readFile(main.filePath, 'utf8');
@@ -914,7 +914,7 @@ describe('atlaspack', function () {
     ]);
 
     let bundles = b.getBundles();
-    let worker = bundles.find((b) => b.env.isWorker());
+    let worker = bundles.find((b) => b.env.isWorker() || b.env.isTesseract());
     if (!worker) return assert(worker);
 
     let manifest, version;

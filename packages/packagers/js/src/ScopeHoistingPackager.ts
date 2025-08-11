@@ -54,6 +54,7 @@ const GLOBALS_BY_CONTEXT = {
     ...Object.keys(globals.serviceworker),
   ]),
   worklet: new Set([...BUILTINS]),
+  tesseract: new Set([...BUILTINS, ...Object.keys(globals.worker)]),
   node: new Set([...BUILTINS, ...Object.keys(globals.node)]),
   'electron-main': new Set([...BUILTINS, ...Object.keys(globals.node)]),
   'electron-renderer': new Set([
@@ -1682,7 +1683,11 @@ ${code}
     }
 
     // Add importScripts for sibling bundles in workers.
-    if (this.bundle.env.isWorker() || this.bundle.env.isWorklet()) {
+    if (
+      this.bundle.env.isWorker() ||
+      this.bundle.env.isTesseract() ||
+      this.bundle.env.isWorklet()
+    ) {
       let importScripts = '';
       let bundles = this.bundleGraph.getReferencedBundles(this.bundle);
       for (let b of bundles) {

@@ -10,6 +10,7 @@ function shouldExclude(asset: MutableAsset, options: PluginOptions) {
     !asset.env.isBrowser() ||
     asset.env.isLibrary ||
     asset.env.isWorker() ||
+    asset.env.isTesseract() ||
     asset.env.isWorklet() ||
     options.mode !== 'development' ||
     !asset.getDependencies().find(
