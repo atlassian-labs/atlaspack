@@ -845,8 +845,7 @@ ${code}
       lineCount += 2;
 
       if (debugTools['asset-file-names-in-output']) {
-        code =
-          `/* Start wrapped asset ${this.getAssetFilePath(asset)} */\n` + code;
+        code = `/* ${this.getAssetFilePath(asset)} */\n` + code;
         lineCount += 1;
       }
 
