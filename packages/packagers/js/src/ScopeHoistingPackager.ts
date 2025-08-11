@@ -486,6 +486,7 @@ export class ScopeHoistingPackager {
       }
     }
 
+    // @ts-expect-error TS2769
     this.assetOutputs = new Map(await queue.run());
     return {wrapped, constant};
   }
