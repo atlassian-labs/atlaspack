@@ -1,5 +1,22 @@
 # @atlaspack/packager-js
 
+## 2.21.0
+
+### Minor Changes
+
+- [#732](https://github.com/atlassian-labs/atlaspack/pull/732) [`7f5841c`](https://github.com/atlassian-labs/atlaspack/commit/7f5841c39df049f9546cccbeea2a7337e0337b45) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - add tesseract context
+
+### Patch Changes
+
+- [#744](https://github.com/atlassian-labs/atlaspack/pull/744) [`3718bff`](https://github.com/atlassian-labs/atlaspack/commit/3718bff20484138e405e321472336ac058432e10) Thanks [@benjervis](https://github.com/benjervis)! - Fix the scope hoisting improvements feature by making all entry assets of a bundle
+  wrapped, which means there is no top level scope.
+- Updated dependencies [[`ad26146`](https://github.com/atlassian-labs/atlaspack/commit/ad26146f13b4c1cc65d4a0f9c67060b90ef14ff3), [`f1b48e7`](https://github.com/atlassian-labs/atlaspack/commit/f1b48e7a04e005cef0f36a3e692087a9ecdb6f7a), [`7f5841c`](https://github.com/atlassian-labs/atlaspack/commit/7f5841c39df049f9546cccbeea2a7337e0337b45), [`73dd7ba`](https://github.com/atlassian-labs/atlaspack/commit/73dd7baab69456ef2f6e4a0cc7dbb04f407eb148)]:
+  - @atlaspack/rust@3.6.0
+  - @atlaspack/feature-flags@2.22.0
+  - @atlaspack/utils@2.18.1
+  - @atlaspack/plugin@2.14.24
+  - @atlaspack/types@2.15.14
+
 ## 2.20.0
 
 ### Minor Changes
