@@ -683,7 +683,7 @@ mod tests {
       result.discovered_assets[0],
       AssetWithDependencies {
         asset: Asset {
-          id: "d21820836c6e223b".into(),
+          id: "83301a06c27a61eb".into(),
           code: "module.exports[\"root\"] = `EcQGha_root`;\nmodule.exports[\"other\"] = `EcQGha_other ${module.exports[\"root\"]}`;\n".into(),
           file_path: "styles.module.css".into(),
           is_source: true,

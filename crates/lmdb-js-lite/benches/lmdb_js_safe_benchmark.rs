@@ -6,7 +6,7 @@ use lmdb_js_lite::writer::{DatabaseWriter, LMDBOptions};
 
 fn criterion_benchmark(c: &mut Criterion) {
   let input = {
-    std::fs::remove_dir_all("benchmark-databases").unwrap();
+    let _ = std::fs::remove_dir_all("benchmark-databases");
     std::fs::create_dir_all("benchmark-databases").unwrap();
     DatabaseWriter::new(&LMDBOptions {
       path: "benchmark-databases/test.db".to_string(),
