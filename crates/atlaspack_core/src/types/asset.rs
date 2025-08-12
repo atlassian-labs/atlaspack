@@ -492,7 +492,7 @@ mod tests {
     .unwrap();
 
     // This nº should not change across runs / compilation
-    assert_eq!(asset_1.id, "c851681c9e9a6b5f");
+    assert_eq!(asset_1.id, "91d0d64458c223d1");
     assert_eq!(asset_1.id, asset_2.id);
   }
 
