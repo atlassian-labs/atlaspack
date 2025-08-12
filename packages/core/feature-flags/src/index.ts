@@ -61,7 +61,7 @@ export const DEFAULT_FEATURE_FLAGS = {
   /**
    * Deduplicates environments across cache / memory entities
    */
-  environmentDeduplication: true,
+  environmentDeduplication: false,
 
   /**
    * Enable scanning for the presence of loadable to determine side effects
