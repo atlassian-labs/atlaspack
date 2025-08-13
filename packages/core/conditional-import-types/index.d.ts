@@ -41,5 +41,3 @@ declare function importCond<CondT, CondF>(
     ? ConditionalImport<CondT, CondF>
     : never
   : never;
-
-export {};
