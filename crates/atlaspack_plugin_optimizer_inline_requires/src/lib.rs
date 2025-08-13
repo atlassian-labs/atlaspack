@@ -156,6 +156,7 @@ pub struct InlineRequiresOptimizerBuilder {
   unresolved_mark: Mark,
   require_matchers: Vec<RequireMatcher>,
   ignore_patterns: Vec<IgnorePattern>,
+  is_reused_inline_requires_enabled: bool,
 }
 
 impl Default for InlineRequiresOptimizerBuilder {
@@ -164,6 +165,7 @@ impl Default for InlineRequiresOptimizerBuilder {
       unresolved_mark: Default::default(),
       require_matchers: default_require_matchers(),
       ignore_patterns: default_ignore_patterns(),
+      is_reused_inline_requires_enabled: false,
     }
   }
 }
@@ -197,11 +199,20 @@ impl InlineRequiresOptimizerBuilder {
     self
   }
 
+  pub fn set_reused_inline_requires_enabled(
+    mut self,
+    is_reused_inline_requires_enabled: bool,
+  ) -> Self {
+    self.is_reused_inline_requires_enabled = is_reused_inline_requires_enabled;
+    self
+  }
+
   pub fn build(self) -> InlineRequiresOptimizer {
     InlineRequiresOptimizer {
       unresolved_mark: self.unresolved_mark,
       require_matchers: self.require_matchers,
       ignore_patterns: self.ignore_patterns,
+      is_reused_inline_requires_enabled: self.is_reused_inline_requires_enabled,
       ..Default::default()
     }
   }
@@ -221,6 +232,7 @@ impl InlineRequiresCollector {
     unresolved_mark: Mark,
     require_matchers: Vec<RequireMatcher>,
     ignore_patterns: Vec<IgnorePattern>,
+    is_reused_inline_requires_enabled: bool,
   ) -> Self {
     InlineRequiresCollector {
       unresolved_mark,
@@ -228,7 +240,9 @@ impl InlineRequiresCollector {
       ignore_patterns,
       module_stack: vec![],
       require_initializers: vec![],
-      identifier_replacement_visitor: Default::default(),
+      identifier_replacement_visitor: IdentifierReplacementVisitor::new(
+        is_reused_inline_requires_enabled,
+      ),
     }
   }
 }
@@ -330,6 +344,21 @@ impl VisitMut for InlineRequiresReplacer {
     node.visit_mut_children_with(self);
   }
 
+  fn visit_mut_block_stmt(&mut self, node: &mut swc_core::ecma::ast::BlockStmt) {
+    if self
+      .identifier_replacement_visitor
+      .is_reused_inline_requires_enabled
+    {
+      node.visit_mut_children_with(self);
+      return;
+    }
+
+    self
+      .identifier_replacement_visitor
+      .visit_mut_block_stmt(node);
+    node.visit_mut_children_with(self);
+  }
+
   fn visit_mut_stmt(&mut self, stmt: &mut Stmt) {
     stmt.visit_mut_children_with(self);
 
@@ -379,6 +408,7 @@ pub struct InlineRequiresOptimizer {
   require_matchers: Vec<RequireMatcher>,
   require_initializers: Vec<RequireInitializer>,
   ignore_patterns: Vec<IgnorePattern>,
+  is_reused_inline_requires_enabled: bool,
 }
 
 impl Default for InlineRequiresOptimizer {
@@ -388,6 +418,7 @@ impl Default for InlineRequiresOptimizer {
       require_matchers: default_require_matchers(),
       ignore_patterns: default_ignore_patterns(),
       require_initializers: vec![],
+      is_reused_inline_requires_enabled: false,
     }
   }
 }
@@ -409,6 +440,7 @@ impl VisitMut for InlineRequiresOptimizer {
       self.unresolved_mark,
       self.require_matchers.clone(),
       self.ignore_patterns.clone(),
+      self.is_reused_inline_requires_enabled,
     );
 
     stmts.visit_mut_children_with(&mut collector_visitor);
@@ -621,6 +653,134 @@ function run() {
     return (0, parcelHelpers.interopDefault((0, require("./App")))).test();
 }
     "#
+    .trim();
+    assert_eq!(output_code.trim(), expected_output);
+  }
+
+  #[test]
+  fn it_reuses_require_statements_in_the_same_scope() {
+    let code = r#"
+const app1 = require("./App");
+const app2 = require("./App2");
+const app3 = require("./App3");
+
+function run() {
+    console.log('Some code');
+    const Component1 = app1.component1;
+    const Component2 = app1.component2;
+    const Component3 = app2.component3;
+    const Component4 = app2.component4;
+    const Component5 = app3.component5;
+}
+        "#
+    .trim();
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    let expected_output = r#"
+function run() {
+    console.log('Some code');
+    const __inlineRequire = (0, require("./App"));
+    const Component1 = __inlineRequire.component1;
+    const Component2 = __inlineRequire.component2;
+    const __inlineRequire1 = (0, require("./App2"));
+    const Component3 = __inlineRequire1.component3;
+    const Component4 = __inlineRequire1.component4;
+    const Component5 = (0, require("./App3")).component5;
+}
+        "#
+    .trim();
+    assert_eq!(output_code.trim(), expected_output);
+  }
+
+  #[test]
+  fn it_reuses_require_statements_in_the_different_scopes() {
+    let code = r#"
+const app = require("./App");
+
+function run1() {
+    console.log('Some code');
+    const Component1 = app.component1;
+    const Component2 = app.component2;
+    function run2() {
+       const Component3 = app.component3;
+       const Component4 = app.component4;
+    }
+    function run3() {
+        const Component5 = app.component5;
+        const Component6 = app.component6;
+    }
+}
+"#
+    .trim();
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    let expected_output = r#"
+function run1() {
+    console.log('Some code');
+    const __inlineRequire = (0, require("./App"));
+    const Component1 = __inlineRequire.component1;
+    const Component2 = __inlineRequire.component2;
+    function run2() {
+        const Component3 = __inlineRequire.component3;
+        const Component4 = __inlineRequire.component4;
+    }
+    function run3() {
+        const Component5 = __inlineRequire.component5;
+        const Component6 = __inlineRequire.component6;
+    }
+}
+"#
+    .trim();
+    assert_eq!(output_code.trim(), expected_output);
+  }
+
+  #[test]
+  fn it_reuses_require_statements_in_the_different_scopes_without_ordering_issues() {
+    let code = r#"
+const app = require("./App");
+
+function run1() {
+    function run2() {
+        const Component3 = app.component3;
+        const Component4 = app.component4;
+    }
+
+    function run3() {
+        const Component5 = app.component5;
+        const Component6 = app.component6;
+    }
+
+    const Component1 = app.component1;
+    const Component2 = app.component2;
+}
+    "#
+    .trim();
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |ctx| InlineRequiresOptimizer {
+      unresolved_mark: ctx.unresolved_mark,
+      ..Default::default()
+    });
+
+    let expected_output = r#"
+function run1() {
+    const __inlineRequire = (0, require("./App"));
+    function run2() {
+      const Component3 = __inlineRequire.component3;
+      const Component4 = __inlineRequire.component4;
+    }
+    function run3() {
+      const Component5 = __inlineRequire.component5;
+      const Component6 = __inlineRequire.component6;
+    }
+    const Component1 = __inlineRequire.component1;
+    const Component2 = __inlineRequire.component2;
+}
+     "#
     .trim();
     assert_eq!(output_code.trim(), expected_output);
   }
