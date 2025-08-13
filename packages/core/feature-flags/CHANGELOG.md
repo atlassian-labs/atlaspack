@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.23.0
+
+### Minor Changes
+
+- [#745](https://github.com/atlassian-labs/atlaspack/pull/745) [`f6b3f22`](https://github.com/atlassian-labs/atlaspack/commit/f6b3f2276c7e417580b49c4879563aab51f156b1) Thanks [@matt-koko](https://github.com/matt-koko)! - Use ATLASPACK_BUILD_ENV instead of NODE_ENV to determine if Atlaspack is being run in the context of Atlaspack tests.
+
 ## 2.22.0
 
 ### Minor Changes

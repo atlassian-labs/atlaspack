@@ -13,7 +13,7 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "devDependencies": {
-    "@atlaspack/core": "2.23.0",
+    "@atlaspack/core": "2.23.1",
     "playwright": "1.50.0"
   }
 }
