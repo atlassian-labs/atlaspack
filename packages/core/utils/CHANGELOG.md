@@ -1,5 +1,15 @@
 # @atlaspack/utils
 
+## 2.18.2
+
+### Patch Changes
+
+- Updated dependencies [[`f6b3f22`](https://github.com/atlassian-labs/atlaspack/commit/f6b3f2276c7e417580b49c4879563aab51f156b1)]:
+  - @atlaspack/feature-flags@2.23.0
+  - @atlaspack/types-internal@2.19.1
+  - @atlaspack/codeframe@2.13.7
+  - @atlaspack/logger@2.14.17
+
 ## 2.18.1
 
 ### Patch Changes
