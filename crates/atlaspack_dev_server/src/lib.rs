@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use axum::{
-  body::Body,
+  body::{Body, Bytes},
   extract::{Request, State},
   response::{IntoResponse, Json, Response},
   routing::get,
@@ -12,6 +12,7 @@ use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 use tower_http::{
+  body::Full,
   cors::CorsLayer,
   services::{ServeDir, ServeFile},
   trace::TraceLayer,
@@ -19,11 +20,12 @@ use tower_http::{
 use tracing::info;
 
 #[async_trait]
-pub trait DevServerDataProvider {
+pub trait DevServerDataProvider: std::fmt::Debug {
   async fn get_html_bundle_file_paths(&self) -> anyhow::Result<Vec<String>>;
   async fn request_bundle(&self, requested_path: String) -> anyhow::Result<()>;
 }
 
+#[derive(Debug)]
 pub struct DevServerOptions {
   pub host: String,
   pub port: u16,
@@ -54,6 +56,8 @@ impl DevServer {
       })
       .unwrap_or_else(|| "/".to_string());
 
+    info!("Dev server created with options {:?}", options);
+
     Self {
       state: Arc::new(DevServerState { root_path, options }),
       task: Mutex::new(None),
@@ -72,6 +76,8 @@ impl DevServer {
     let task = tokio::spawn(async move {
       axum::serve(listener, app).await.unwrap();
     });
+    info!("Dev server started on {}", addr);
+
     self.task.lock().await.replace(task);
 
     Ok(addr)
@@ -187,6 +193,7 @@ mod tests {
   use tempfile::TempDir;
   use tokio::time::sleep;
 
+  #[derive(Debug)]
   struct MockDevServerDataProvider {}
 
   #[async_trait]

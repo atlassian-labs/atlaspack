@@ -27,7 +27,7 @@ describe('Atlaspack Playwright E2E tests', () => {
 
   afterEach(async () => {
     await context.close();
-    if (server) server.close();
+    if (server) await server.close();
   });
 
   it('can bundle a simple project', async () => {
@@ -79,10 +79,10 @@ describe('Atlaspack Playwright E2E tests', () => {
               rustDevServer,
             },
           });
+          // await page.waitForTimeout(10000);
           await page.goto(`${server.address}/index.html`, {
             waitUntil: 'networkidle',
           });
-          await page.waitForTimeout(10000);
           const element = await page.getByTestId('content');
           assert.equal(await element.innerText(), 'Hello, world!');
         });

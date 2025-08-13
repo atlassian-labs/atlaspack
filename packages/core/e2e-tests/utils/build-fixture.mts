@@ -69,27 +69,32 @@ export async function serveFixture(
     ),
   });
 
-  const subscription = await new Promise<AsyncSubscription | null>(
-    (resolve, reject) => {
-      let sub: AsyncSubscription | null = null;
-      atlaspack
-        .watch((err, event) => {
-          if (err) reject(err);
-          if (event?.type === 'buildSuccess') {
-            resolve(sub);
-          }
-        })
-        .then((s) => {
-          sub = s;
-        });
+  let resolveReady: () => void;
+  let rejectReady: (reason?: any) => void;
+  const buildReady = new Promise<void>((resolve, reject) => {
+    resolveReady = resolve;
+    rejectReady = reject;
+  });
+
+  const subscriptionPromise: Promise<AsyncSubscription> = atlaspack.watch(
+    (err, event) => {
+      if (err) {
+        rejectReady(err);
+        return;
+      }
+      if (event?.type === 'buildSuccess') {
+        resolveReady();
+      }
     },
   );
 
+  const subscription: AsyncSubscription = await subscriptionPromise;
+  await buildReady;
+
   return {
     address: `http://localhost:${randomPort}`,
-    close() {
-      subscription?.unsubscribe();
-      atlaspack._end();
+    async close() {
+      await subscription.unsubscribe();
     },
   };
 }

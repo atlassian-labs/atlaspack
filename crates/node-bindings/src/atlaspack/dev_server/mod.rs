@@ -15,6 +15,7 @@ use napi::JsObject;
 use napi::JsString;
 use napi_derive::napi;
 
+#[derive(Debug)]
 pub struct JsDevServerDataProvider {
   get_html_bundle_file_paths: JsCallable,
   request_bundle: JsCallable,

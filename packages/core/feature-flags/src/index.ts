@@ -61,7 +61,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * - Remove "large file blob" writes
    * - Reduce size of the caches by deduplicating data
    */
-  cachePerformanceImprovements: process.env.NODE_ENV === 'test',
+  cachePerformanceImprovements: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Deduplicates environments across cache / memory entities
@@ -129,13 +129,13 @@ export const DEFAULT_FEATURE_FLAGS = {
    * properties (e.g. `CONSTANTS['api_' + endpoint`]) would not be recognised as
    * being used, and thus not included in the bundle.
    */
-  unusedComputedPropertyFix: process.env.NODE_ENV === 'test',
+  unusedComputedPropertyFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries)
    * could cause exports to undefined at runtime.
    */
-  emptyFileStarRexportFix: process.env.NODE_ENV === 'test',
+  emptyFileStarRexportFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Enables the new packaging progress CLI experience
@@ -146,7 +146,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Adds support for `webpackChunkName` comments in dynamic imports.
    * Imports with the same `webpackChunkName` will be bundled together.
    */
-  supportWebpackChunkName: process.env.NODE_ENV === 'test',
+  supportWebpackChunkName: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Enable a change to the conditional bundling loader to use a fallback bundle loading if the expected scripts aren't found
@@ -160,13 +160,12 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enable the new incremental bundling versioning logic which determines whether
    * a full bundling pass is required based on the AssetGraph's bundlingVersion.
    */
-  incrementalBundlingVersioning: process.env.NODE_ENV === 'test',
+  incrementalBundlingVersioning: process.env.ATLASPACK_BUILD_ENV === 'test',
   /**
    * Allow for the use of `data-atlaspack-isolated` on script tags in HTML to produce
    * inline scripts that are build as "isolated" bundles.
    */
-  inlineIsolatedScripts: process.env.NODE_ENV === 'test',
-  rustDevServer: false,
+  inlineIsolatedScripts: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
