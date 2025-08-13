@@ -1,5 +1,16 @@
 # @atlaspack/transformer-js
 
+## 4.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`f6b3f22`](https://github.com/atlassian-labs/atlaspack/commit/f6b3f2276c7e417580b49c4879563aab51f156b1)]:
+  - @atlaspack/feature-flags@2.23.0
+  - @atlaspack/core@2.23.1
+  - @atlaspack/utils@2.18.2
+  - @atlaspack/plugin@2.14.25
+  - @atlaspack/workers@2.14.25
+
 ## 4.0.0
 
 ### Minor Changes
