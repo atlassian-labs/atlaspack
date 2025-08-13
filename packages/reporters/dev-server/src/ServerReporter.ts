@@ -1,11 +1,130 @@
 import {Reporter} from '@atlaspack/plugin';
 import HMRServer from './HMRServer';
 import Server from './Server';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {
+  ReporterEvent,
+  PluginOptions,
+  PluginLogger,
+  PluginTracer,
+  ServerOptions,
+} from '@atlaspack/types';
+import {
+  atlaspackDevServerCreate,
+  atlaspackDevServerStart,
+  atlaspackDevServerStop,
+  JsDevServer,
+} from '@atlaspack/rust';
+import {StaticServerDataProvider} from './StaticServerDataProvider';
+
+class DevServerReporter {
+  private dataProvider: StaticServerDataProvider | null = null;
+  private serverInstances: Map<string, JsDevServer> = new Map();
+
+  constructor() {}
+
+  async report({
+    event,
+    options,
+  }: {
+    event: ReporterEvent;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }) {
+    if (event.type === 'log') {
+      return;
+    }
+
+    const {serveOptions} = options;
+    if (!serveOptions || !serveOptions.port) {
+      return;
+    }
+
+    await this.getServer(serveOptions);
+
+    switch (event.type) {
+      case 'watchStart': {
+        break;
+      }
+      case 'watchEnd': {
+        const server = await this.getServer(serveOptions);
+        atlaspackDevServerStop(server);
+        this.serverInstances.delete(serveOptions.port.toString());
+        break;
+      }
+      case 'buildStart': {
+        this.getDataProvider(serveOptions).onBuildStart();
+        break;
+      }
+      case 'buildProgress': {
+        break;
+      }
+      case 'buildSuccess': {
+        this.getDataProvider(serveOptions).onBuildSuccess(
+          event.bundleGraph,
+          event.requestBundle,
+        );
+        break;
+      }
+      case 'buildFailure': {
+        await this.getDataProvider(serveOptions).onBuildFailure(
+          options,
+          event.diagnostics,
+        );
+        break;
+      }
+    }
+  }
+
+  async getServer(serveOptions: ServerOptions) {
+    const existing = this.serverInstances.get(serveOptions.port.toString());
+    if (existing) {
+      return existing;
+    }
+
+    const server = atlaspackDevServerCreate(
+      {
+        port: serveOptions.port,
+        host: 'localhost',
+        distDir: serveOptions.distDir,
+        publicUrl: serveOptions.publicUrl ?? '/',
+      },
+      this.getDataProvider(serveOptions),
+    );
+
+    await atlaspackDevServerStart(server);
+
+    this.serverInstances.set(serveOptions.port.toString(), server);
+
+    return server;
+  }
+
+  getDataProvider(serveOptions: ServerOptions): StaticServerDataProvider {
+    if (this.dataProvider) {
+      return this.dataProvider;
+    }
+
+    this.dataProvider = new StaticServerDataProvider(serveOptions.distDir);
+
+    return this.dataProvider;
+  }
+}
+
+const reporter = new DevServerReporter();
 
 let servers: Map<number, Server> = new Map();
 let hmrServers: Map<number, HMRServer> = new Map();
+
 export default new Reporter({
-  async report({event, options, logger}) {
+  async report(params) {
+    if (getFeatureFlag('rustDevServer')) {
+      await reporter.report(params);
+      return;
+    }
+
+    const {event, options, logger} = params;
+
     let {serveOptions, hmrOptions} = options;
     let server = serveOptions ? servers.get(serveOptions.port) : undefined;
     let hmrPort =

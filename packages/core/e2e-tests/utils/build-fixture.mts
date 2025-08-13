@@ -4,6 +4,8 @@ import * as fs from 'node:fs';
 import * as url from 'node:url';
 import {Atlaspack} from '@atlaspack/core';
 import type {ServeContext} from './server.mts';
+import type {AsyncSubscription} from '@atlaspack/types';
+import type {FeatureFlags} from '@atlaspack/feature-flags';
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,7 +36,12 @@ export async function buildFixture(target: string): Promise<string> {
   return outputDir;
 }
 
-export async function serveFixture(target: string): Promise<ServeContext> {
+export async function serveFixture(
+  target: string,
+  options: {
+    featureFlags?: Partial<FeatureFlags>;
+  } = {},
+): Promise<ServeContext> {
   const output = createHash('sha256').update(target).digest('hex');
   const outputDir = path.join(__root, 'dist', output);
   const randomPort = Math.floor(Math.random() * 10000) + 10000;
@@ -51,6 +58,9 @@ export async function serveFixture(target: string): Promise<ServeContext> {
     defaultTargetOptions: {
       distDir: outputDir,
     },
+    featureFlags: {
+      ...options.featureFlags,
+    },
     serveOptions: {
       port: randomPort,
     },
@@ -59,12 +69,32 @@ export async function serveFixture(target: string): Promise<ServeContext> {
     ),
   });
 
-  const subscription = await atlaspack.watch();
+  let resolveReady: () => void;
+  let rejectReady: (reason?: any) => void;
+  const buildReady = new Promise<void>((resolve, reject) => {
+    resolveReady = resolve;
+    rejectReady = reject;
+  });
+
+  const subscriptionPromise: Promise<AsyncSubscription> = atlaspack.watch(
+    (err, event) => {
+      if (err) {
+        rejectReady(err);
+        return;
+      }
+      if (event?.type === 'buildSuccess') {
+        resolveReady();
+      }
+    },
+  );
+
+  const subscription: AsyncSubscription = await subscriptionPromise;
+  await buildReady;
 
   return {
     address: `http://localhost:${randomPort}`,
-    close() {
-      subscription.unsubscribe();
+    async close() {
+      await subscription.unsubscribe();
     },
   };
 }
