@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/runtime-react-refresh",
-  "version": "2.14.23",
+  "version": "2.15.0",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,9 +16,9 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/feature-flags": "2.21.0",
-    "@atlaspack/plugin": "2.14.23",
-    "@atlaspack/utils": "2.18.0",
+    "@atlaspack/feature-flags": "2.22.0",
+    "@atlaspack/plugin": "2.14.24",
+    "@atlaspack/utils": "2.18.1",
     "react-error-overlay": "6.0.9",
     "react-refresh": ">=0.9 <=0.16"
   },
