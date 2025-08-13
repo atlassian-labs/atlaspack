@@ -1,5 +1,11 @@
 # @atlaspack/apvm-macos-amd64
 
+## 0.0.8
+
+### Patch Changes
+
+- [#730](https://github.com/atlassian-labs/atlaspack/pull/730) [`f1b48e7`](https://github.com/atlassian-labs/atlaspack/commit/f1b48e7a04e005cef0f36a3e692087a9ecdb6f7a) Thanks [@alshdavid](https://github.com/alshdavid)! - Added support for unified Atlaspack
+
 ## 0.0.7
 
 ## 0.0.6
