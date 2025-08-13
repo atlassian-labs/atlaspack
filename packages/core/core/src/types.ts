@@ -16,7 +16,6 @@ import type {
   ServerOptions,
   SourceType,
   Stats,
-  Symbol,
   TargetSourceMapOptions,
   ConfigResult,
   OutputFormat,

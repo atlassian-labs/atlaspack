@@ -1,6 +1,9 @@
 import type {
   InitialAtlaspackOptions,
   BuildSuccessEvent,
+  BundleGraph,
+  PackagedBundle,
+  Environment,
 } from '@atlaspack/types';
 import assert from 'assert';
 import invariant from 'assert';
@@ -35,13 +38,15 @@ import {createWorkerFarm} from '@atlaspack/core';
 import {resolveOptions, ATLASPACK_VERSION} from '@atlaspack/core';
 import logger from '@atlaspack/logger';
 import sinon from 'sinon';
-import {version} from '@atlaspack/core/package.json';
 import {deserialize} from '@atlaspack/build-cache';
 import {hashString} from '@atlaspack/rust';
 import {getAllEnvironments} from '@atlaspack/rust';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
 import os from 'os';
 
+const {version} = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '../../core/package.json'), 'utf8'),
+);
 let inputDir: string;
 let packageManager = new NodePackageManager(inputFS, '/');
 
@@ -52,7 +57,10 @@ let packageManager = new NodePackageManager(inputFS, '/');
     );
   }
 
-  function getOptions(opts, featureFlags: undefined | Partial<FeatureFlags>) {
+  function getOptions(
+    opts: InitialAtlaspackOptions,
+    featureFlags?: Partial<FeatureFlags>,
+  ) {
     return mergeParcelOptions(
       {
         inputFS: overlayFS,
@@ -69,8 +77,8 @@ let packageManager = new NodePackageManager(inputFS, '/');
 
   function runBundle(
     entries = 'src/index.js',
-    opts,
-    featureFlags: undefined | Partial<FeatureFlags>,
+    opts?: InitialAtlaspackOptions,
+    featureFlags?: undefined | Partial<FeatureFlags>,
   ) {
     return bundler(getEntries(entries), getOptions(opts, featureFlags)).run();
   }
@@ -81,7 +89,8 @@ let packageManager = new NodePackageManager(inputFS, '/');
     | InitialAtlaspackOptions
     | null
     | undefined
-    | Promise<InitialAtlaspackOptions | null | undefined>;
+    | Promise<InitialAtlaspackOptions | null | undefined | void>;
+
   type TestConfig = InitialAtlaspackOptions & {
     entries?: Array<string>;
     setup?: () => undefined | Promise<undefined>;
@@ -90,7 +99,7 @@ let packageManager = new NodePackageManager(inputFS, '/');
 
   async function testCache(
     update: UpdateFn | TestConfig,
-    integration: undefined | string,
+    integration?: string,
     featureFlags?: Partial<FeatureFlags>,
   ) {
     await ncp(
@@ -125,7 +134,7 @@ let packageManager = new NodePackageManager(inputFS, '/');
 
     // update
     let newOptions = await update(b);
-    options = mergeParcelOptions(options || {}, newOptions);
+    options = mergeParcelOptions(options || {}, newOptions || {});
 
     // Run cached build
     b = await runBundle(entries, options, featureFlags);
@@ -3614,7 +3623,7 @@ let packageManager = new NodePackageManager(inputFS, '/');
                       inputDir,
                     );
 
-                    process.versions.pnp = 42;
+                    process.versions.pnp = String(42);
 
                     Module.findPnpApi = () =>
                       require(path.join(inputDir, '.pnp.js'));
@@ -4137,7 +4146,7 @@ let packageManager = new NodePackageManager(inputFS, '/');
                   inputDir,
                 );
 
-                process.versions.pnp = 42;
+                process.versions.pnp = String(42);
 
                 fs.renameSync(
                   path.join(inputDir, 'node_modules'),
@@ -7118,10 +7127,12 @@ let packageManager = new NodePackageManager(inputFS, '/');
         async setup() {
           await overlayFS.writeFile(path.join(inputDir, 'src/index.js'), '');
         },
-        update() {
-          firstBuildEnvs = getAllEnvironments();
+        update(_event: BuildSuccessEvent) {
+          firstBuildEnvs = getAllEnvironments() as Environment[];
           const env = firstBuildEnvs.find((e) => e.context === 'browser');
           assert(env, 'Browser environment should be created in first build');
+
+          return Promise.resolve(null);
         },
       });
 
@@ -7131,8 +7142,8 @@ let packageManager = new NodePackageManager(inputFS, '/');
         featureFlags: {
           environmentDeduplication: true,
         },
-        update() {
-          const secondBuildEnvs = getAllEnvironments();
+        update(_event: BuildSuccessEvent) {
+          const secondBuildEnvs = getAllEnvironments() as Environment[];
           assert(
             loadEnvironmentsSpy.called,
             'loadEnvironmentsFromCache should be called',
@@ -7150,6 +7161,8 @@ let packageManager = new NodePackageManager(inputFS, '/');
               env,
               'Loaded environment should match cached environment',
             );
+
+            return Promise.resolve(null);
           }
         },
       });

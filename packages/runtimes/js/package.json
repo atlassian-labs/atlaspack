@@ -21,6 +21,7 @@
     "@atlaspack/feature-flags": "2.23.0",
     "@atlaspack/plugin": "2.14.25",
     "@atlaspack/utils": "2.18.2",
+    "@atlaspack/types-internal": "2.19.1",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs",

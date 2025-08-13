@@ -94,7 +94,7 @@ pub fn create_environment_id(
   is_library.hash(&mut hasher);
   should_optimize.hash(&mut hasher);
   should_scope_hoist.hash(&mut hasher);
-  flatten_source_map(source_map).hash(&mut hasher);
+  source_map.clone().unwrap_or_default().hash(&mut hasher);
   let hash = hasher.finish(); // We can simply expose this as a nº too
   format!("{:016x}", hash)
 }
@@ -226,11 +226,6 @@ pub struct TargetSourceMapOptions {
   ///
   #[serde(skip_serializing_if = "Option::is_none")]
   source_root: Option<String>,
-}
-
-/// We must consider { None, None, None } equal to None for all intents and purposes
-pub fn flatten_source_map(source_map: &Option<TargetSourceMapOptions>) -> TargetSourceMapOptions {
-  source_map.clone().unwrap_or_default()
 }
 
 #[cfg(test)]

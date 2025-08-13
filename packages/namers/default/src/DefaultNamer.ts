@@ -57,7 +57,6 @@ export default new Namer({
         );
         let err = new ThrowableDiagnostic({
           diagnostic: {
-            // @ts-expect-error TS2345
             message: md`Target "${bundle.target.name}" declares an output file path of "${fullName}" which does not match the compiled bundle type "${bundle.type}".`,
             codeFrames: [
               {
@@ -65,7 +64,6 @@ export default new Namer({
                 codeHighlights: [
                   convertSourceLocationToHighlight(
                     loc,
-                    // @ts-expect-error TS2345
                     md`Did you mean "${
                       fullName.slice(0, -path.extname(fullName).length) +
                       '.' +

@@ -50,12 +50,9 @@ use napi_derive::napi;
 use tracing::Level;
 
 pub use crate::writer::LMDBOptions;
-use crate::writer::{
-  start_make_database_writer, DatabaseWriter, DatabaseWriterError, DatabaseWriterHandle,
-  DatabaseWriterMessage,
-};
-
-mod writer;
+pub mod writer;
+use crate::writer::{start_make_database_writer, DatabaseWriterError, DatabaseWriterMessage};
+pub use crate::writer::{DatabaseWriter, DatabaseWriterHandle};
 
 #[cfg(not(test))]
 type Buffer = napi::bindgen_prelude::Buffer;

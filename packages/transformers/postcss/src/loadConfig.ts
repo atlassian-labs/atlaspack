@@ -82,18 +82,14 @@ async function configHydrator(
     let message;
     let hints: Array<string> = [];
     if (!isPackageJson && redundantPlugins.length === pluginArray.length) {
-      // @ts-expect-error TS2345
       message = md`Parcel includes CSS transpilation and vendor prefixing by default. PostCSS config __${filename}__ contains only redundant plugins. Deleting it may significantly improve build performance.`;
-      // @ts-expect-error TS2345
       hints.push(md`Delete __${filename}__`);
     } else {
-      // @ts-expect-error TS2345
       message = md`Parcel includes CSS transpilation and vendor prefixing by default. PostCSS config __${filename}__ contains the following redundant plugins: ${[
         ...redundantPlugins,
       ].map((p) =>
         md.underline(p),
       )}. Removing these may improve build performance.`;
-      // @ts-expect-error TS2345
       hints.push(md`Remove the above plugins from __${filename}__`);
     }
 

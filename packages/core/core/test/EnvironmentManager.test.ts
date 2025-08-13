@@ -10,6 +10,7 @@ import {
 } from '../src/EnvironmentManager';
 import {DEFAULT_OPTIONS} from './test-utils';
 import {LMDBLiteCache} from '@atlaspack/cache';
+import {getEnvironmentHash} from '../src/Environment';
 
 const options = {
   ...DEFAULT_OPTIONS,
@@ -17,8 +18,14 @@ const options = {
 } as const;
 
 describe('EnvironmentManager', () => {
-  const env1 = {
-    id: 'd821e85f6b50315e',
+  const envWithId = (env: any) => {
+    return {
+      ...env,
+      id: getEnvironmentHash(env),
+    };
+  };
+
+  const env1 = envWithId({
     context: 'browser',
     engines: {browsers: ['> 0.25%']},
     includeNodeModules: true,
@@ -30,9 +37,8 @@ describe('EnvironmentManager', () => {
     sourceMap: undefined,
     sourceType: 'module',
     unstableSingleFileOutput: false,
-  } as const;
-  const env2 = {
-    id: 'de92f48baa8448d2',
+  } as const);
+  const env2 = envWithId({
     context: 'node',
     engines: {
       browsers: [],
@@ -47,7 +53,7 @@ describe('EnvironmentManager', () => {
     sourceMap: null,
     sourceType: 'module',
     unstableSingleFileOutput: false,
-  } as const;
+  } as const);
 
   beforeEach(async () => {
     await options.cache.ensure();
@@ -78,7 +84,7 @@ describe('EnvironmentManager', () => {
     setAllEnvironments([env1, env2]);
     await writeEnvironmentsToCache(options.cache);
 
-    const cachedEnvIds = await options.cache.get(
+    const cachedEnvIds: string[] | null | undefined = await options.cache.get(
       `EnvironmentManager/${ATLASPACK_VERSION}`,
     );
     const cachedIdsArray = nullthrows(cachedEnvIds);
@@ -104,11 +110,11 @@ describe('EnvironmentManager', () => {
     const cachedEnv2 = await options.cache.get(
       `Environment/${ATLASPACK_VERSION}/${env2.id}`,
     );
-    assert.deepEqual(cachedEnv1, env1, 'Environment 1 should be cached');
-    assert.deepEqual(cachedEnv2, env2, 'Environment 2 should be cached');
+    assert.deepEqual(cachedEnv1, env1);
+    assert.deepEqual(cachedEnv2, env2);
 
     // Verify environment IDs were stored in manager
-    const cachedEnvIds = await options.cache.get(
+    const cachedEnvIds: string[] | null | undefined = await options.cache.get(
       `EnvironmentManager/${ATLASPACK_VERSION}`,
     );
     const cachedIdsArray = nullthrows(cachedEnvIds);
@@ -136,16 +142,8 @@ describe('EnvironmentManager', () => {
     const env1Loaded = loadedEnvironments.find((e: any) => e.id === env1.id);
     const env2Loaded = loadedEnvironments.find((e: any) => e.id === env2.id);
 
-    assert.deepEqual(
-      env1Loaded,
-      env1,
-      'First environment should match cached environment',
-    );
-    assert.deepEqual(
-      env2Loaded,
-      env2,
-      'Second environment should match cached environment',
-    );
+    assert.deepEqual(env1Loaded, env1);
+    assert.deepEqual(env2Loaded, env2);
   });
 
   it('should handle empty cache gracefully without calling setAllEnvironments', async () => {

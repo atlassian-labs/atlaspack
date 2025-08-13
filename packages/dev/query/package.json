@@ -16,7 +16,8 @@
   "bin": {
     "atlaspack-query": "bin/atlaspack-query.js"
   },
-  "main": "src/index.js",
+  "main": "lib/index.js",
+  "source": "src/index.ts",
   "dependencies": {
     "@atlaspack/cache": "3.2.20",
     "@atlaspack/core": "2.23.1",

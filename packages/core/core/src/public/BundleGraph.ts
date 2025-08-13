@@ -8,7 +8,6 @@ import type {
   ExportSymbolResolution,
   FilePath,
   GraphVisitor,
-  Symbol,
   NamedBundle,
   SymbolResolution,
   Target,

@@ -25,7 +25,6 @@ export default new Optimizer({
         ? path.relative(process.cwd(), filepath)
         : 'unknown';
       logger.warn({
-        // @ts-expect-error TS2345
         message: md`Could not optimize image ${filename}: ${err.message}`,
         stack: err.stack,
       });

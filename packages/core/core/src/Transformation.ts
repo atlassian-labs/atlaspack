@@ -142,7 +142,6 @@ export default class Transformation {
         logger.verbose([
           {
             origin: '@atlaspack/core',
-            // @ts-expect-error TS2345
             message: md`Could not load existing source map for ${fromProjectPathRelative(
               asset.value.filePath,
             )}`,

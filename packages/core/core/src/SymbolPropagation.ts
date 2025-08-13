@@ -525,11 +525,9 @@ export function propagateSymbols({
               );
 
               errors.push({
-                // @ts-expect-error TS2345
                 message: md`${fromProjectPathRelative(
                   // @ts-expect-error TS2345
                   resolution.value.filePath,
-                  // @ts-expect-error TS2731
                 )} does not export '${s}'`,
                 origin: '@atlaspack/core',
                 codeFrames: loc
