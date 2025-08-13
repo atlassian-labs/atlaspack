@@ -1,5 +1,14 @@
 # @atlaspack/node-resolver-core
 
+## 3.6.1
+
+### Patch Changes
+
+- Updated dependencies [[`f6b3f22`](https://github.com/atlassian-labs/atlaspack/commit/f6b3f2276c7e417580b49c4879563aab51f156b1)]:
+  - @atlaspack/feature-flags@2.23.0
+  - @atlaspack/fs@2.15.20
+  - @atlaspack/utils@2.18.2
+
 ## 3.6.0
 
 ### Minor Changes

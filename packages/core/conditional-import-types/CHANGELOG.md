@@ -1,5 +1,11 @@
 # @atlaspack/conditional-import-types
 
+## 2.13.7
+
+### Patch Changes
+
+- [#747](https://github.com/atlassian-labs/atlaspack/pull/747) [`b4422a2`](https://github.com/atlassian-labs/atlaspack/commit/b4422a222a159ec65870c49361f6e7a749ab938b) Thanks [@alshdavid](https://github.com/alshdavid)! - Removing export from conditional-import-types package
+
 ## 2.13.6
 
 ### Patch Changes
