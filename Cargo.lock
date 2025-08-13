@@ -432,6 +432,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "atlaspack_benchmark"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "petgraph 0.7.1",
+ "rand",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "atlaspack_config"
 version = "0.1.0"
 dependencies = [
