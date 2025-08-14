@@ -558,6 +558,7 @@ name = "atlaspack_plugin_optimizer_inline_requires"
 version = "0.1.0"
 dependencies = [
  "atlaspack_swc_runner",
+ "indexmap",
  "pretty_assertions",
  "swc_core",
 ]

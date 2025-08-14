@@ -262,6 +262,664 @@
     "@babel/runtime" "^7.0.0"
     "@emotion/react" "^11.7.1"
 
+"@atlaspack/bundler-default@3.3.0":
+  version "3.3.0"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/bundler-default/-/bundler-default-3.3.0.tgz#6af7d49b3652800e7b0f61ee9e13914837119164"
+  integrity sha512-HGsANcSeMXo7v4omLe7aWwcM13SR4Be4vAizGxrBjSxFKf7hiBwLfqN6uFOx7P+Xf+9QzmITWXbx34OoZIyN4A==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/graph" "3.5.12"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/rust" "3.5.0"
+    "@atlaspack/utils" "2.18.0"
+    many-keys-map "^1.0.3"
+    nullthrows "^1.1.1"
+
+"@atlaspack/cache@3.2.18":
+  version "3.2.18"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/cache/-/cache-3.2.18.tgz#dab1fb04269e1a17c06ac14601f56a2165902f3c"
+  integrity sha512-MVoma1FZ1I1ClraXVIAd/bM0uzqK3CS789Wh2xRtBx/L1uRjVZ3+Bov5m33lZX1X+twEDZ0/nCxZsE6WeEdJZg==
+  dependencies:
+    "@atlaspack/build-cache" "2.13.4"
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/fs" "2.15.18"
+    "@atlaspack/logger" "2.14.15"
+    "@atlaspack/rust" "3.5.0"
+    "@atlaspack/utils" "2.18.0"
+    ncp "^2.0.0"
+
+"@atlaspack/cli@2.14.1":
+  version "2.14.1"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/cli/-/cli-2.14.1.tgz#a475a6d4b4cba8f3e40ec02b83c8c9d35a608c0b"
+  integrity sha512-qlE8deLT7TM6JOxrEDnqUGC80Jzke6ViseIMvEIblichd7hYcuPnLH3YsXC6cPMDcFpo7o1kjAiW/J92IxmKTA==
+  dependencies:
+    "@atlaspack/config-default" "3.1.25"
+    "@atlaspack/core" "2.22.0"
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/events" "2.14.2"
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/fs" "2.15.18"
+    "@atlaspack/logger" "2.14.15"
+    "@atlaspack/package-manager" "2.14.23"
+    "@atlaspack/reporter-cli" "2.17.5"
+    "@atlaspack/reporter-dev-server" "2.14.23"
+    "@atlaspack/reporter-tracer" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    chalk "^4.1.0"
+    commander "^7.0.0"
+    get-port "^4.2.0"
+
+"@atlaspack/codeframe@2.13.5":
+  version "2.13.5"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/codeframe/-/codeframe-2.13.5.tgz#ad05f3e1db14aade645c840aac26977d8df789bd"
+  integrity sha512-X0B9zZHrA+9mOJVo9kCMkJjvyjiGpTdizucdu4hz7EZFYjMDMkEKtuBFnbjHv0hR/TWPBT9fhrzGU7cfhK3vUQ==
+  dependencies:
+    chalk "^4.1.0"
+    emphasize "^4.2.0"
+    slice-ansi "^4.0.0"
+    string-width "^4.2.0"
+
+"@atlaspack/compressor-raw@2.13.25":
+  version "2.13.25"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/compressor-raw/-/compressor-raw-2.13.25.tgz#aa95018badab7d852993b511cc7821e84746aeb4"
+  integrity sha512-6H/u8Ac4NhZJnoaYKHaSFURh0ovQOUa9G+QAZUn2nb3IvN09Hkj2tDJZvMLrGsBH+2inVLMoRDqJFUKwkM7bOA==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+
+"@atlaspack/config-default@3.1.25":
+  version "3.1.25"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/config-default/-/config-default-3.1.25.tgz#e72481af69cdc2acf67eb74996c36139f859d64f"
+  integrity sha512-yUUgKjIHkFzbswBqwIDGe9C2KTMPT+CJb+Yk7uqg7yPApAnFD2gbT+Liojm73PZA+QT0qB2mRRb/+VoIIIUzTA==
+  dependencies:
+    "@atlaspack/bundler-default" "3.3.0"
+    "@atlaspack/compressor-raw" "2.13.25"
+    "@atlaspack/namer-default" "2.14.23"
+    "@atlaspack/optimizer-css" "2.14.23"
+    "@atlaspack/optimizer-htmlnano" "2.14.23"
+    "@atlaspack/optimizer-image" "3.1.23"
+    "@atlaspack/optimizer-svgo" "2.14.23"
+    "@atlaspack/optimizer-swc" "2.14.23"
+    "@atlaspack/packager-css" "2.14.23"
+    "@atlaspack/packager-html" "2.15.5"
+    "@atlaspack/packager-js" "2.20.0"
+    "@atlaspack/packager-raw" "2.14.23"
+    "@atlaspack/packager-svg" "2.14.23"
+    "@atlaspack/packager-wasm" "2.14.23"
+    "@atlaspack/reporter-dev-server" "2.14.23"
+    "@atlaspack/resolver-default" "2.14.23"
+    "@atlaspack/runtime-browser-hmr" "2.14.23"
+    "@atlaspack/runtime-js" "2.17.0"
+    "@atlaspack/runtime-react-refresh" "2.14.23"
+    "@atlaspack/runtime-service-worker" "2.14.23"
+    "@atlaspack/transformer-css" "2.14.23"
+    "@atlaspack/transformer-html" "2.15.0"
+    "@atlaspack/transformer-image" "3.1.23"
+    "@atlaspack/transformer-js" "3.4.2"
+    "@atlaspack/transformer-json" "2.14.23"
+    "@atlaspack/transformer-postcss" "2.14.23"
+    "@atlaspack/transformer-posthtml" "2.14.23"
+    "@atlaspack/transformer-raw" "2.14.23"
+    "@atlaspack/transformer-react-refresh-wrap" "2.14.23"
+    "@atlaspack/transformer-svg" "2.14.23"
+
+"@atlaspack/core@2.22.0":
+  version "2.22.0"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/core/-/core-2.22.0.tgz#fd3f333d51d3358fe506e687f760ca20793619d8"
+  integrity sha512-DSUjfywbbC7rBQ9k7H28ZykB16hyQUIeAqeWTrrejgIGi6y5yBrQ24JYLGVGgC8qxAU+VohMKaDEvN+M25dRZQ==
+  dependencies:
+    "@atlaspack/build-cache" "2.13.4"
+    "@atlaspack/cache" "3.2.18"
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/events" "2.14.2"
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/fs" "2.15.18"
+    "@atlaspack/graph" "3.5.12"
+    "@atlaspack/logger" "2.14.15"
+    "@atlaspack/package-manager" "2.14.23"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/profiler" "2.14.20"
+    "@atlaspack/rust" "3.5.0"
+    "@atlaspack/types" "2.15.13"
+    "@atlaspack/utils" "2.18.0"
+    "@atlaspack/workers" "2.14.23"
+    "@mischnic/json-sourcemap" "^0.1.0"
+    "@parcel/source-map" "^2.1.1"
+    base-x "^3.0.8"
+    browserslist "^4.6.6"
+    clone "^2.1.1"
+    dotenv "^7.0.0"
+    dotenv-expand "^5.1.0"
+    json5 "^2.2.0"
+    msgpackr "^1.9.9"
+    nullthrows "^1.1.1"
+    semver "^7.5.2"
+
+"@atlaspack/feature-flags@2.21.0":
+  version "2.21.0"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/feature-flags/-/feature-flags-2.21.0.tgz#1b92888ea19f5a605045ef46b1792b9a1e769aa2"
+  integrity sha512-g3nGkVFjWnRnImJYAiA+7F4v8HgSEev9OPV2Ep09uIXkQDvdTzEmdoEtUGpyHFfZEaiVJypcTCIqXf+bIspnCA==
+
+"@atlaspack/fs@2.15.18":
+  version "2.15.18"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/fs/-/fs-2.15.18.tgz#7be1193003dc56aa3e01d36cdb02e299640ced05"
+  integrity sha512-57YghW8PsnJVSV0Q2bSWWH21bHPJ5m2/Bnmf2HgvJZbRrPgPivU3iIG5XtYeFvQF4miPrgyZAOUamqWWhy83Ew==
+  dependencies:
+    "@atlaspack/build-cache" "2.13.4"
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/logger" "2.14.15"
+    "@atlaspack/rust" "3.5.0"
+    "@atlaspack/types-internal" "2.18.0"
+    "@atlaspack/utils" "2.18.0"
+    "@atlaspack/watcher-watchman-js" "2.14.23"
+    "@atlaspack/workers" "2.14.23"
+    "@parcel/watcher" "^2.0.7"
+    graceful-fs "^4.2.4"
+    ncp "^2.0.0"
+    nullthrows "^1.1.1"
+    utility-types "^3.10.0"
+
+"@atlaspack/graph@3.5.12":
+  version "3.5.12"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/graph/-/graph-3.5.12.tgz#2d1818c0092ecbfc12126d86b04f8c1f19b5cf39"
+  integrity sha512-G8loqMFnjNSBL9yKJEWtZ+Xfgnf6LUZMP+8lxZa2FJYy75m3DDEPR+7PI1qAQC6hOOaYO8HOnLm9l8GmzGjjHg==
+  dependencies:
+    "@atlaspack/feature-flags" "2.21.0"
+    nullthrows "^1.1.1"
+
+"@atlaspack/logger@2.14.15":
+  version "2.14.15"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/logger/-/logger-2.14.15.tgz#2c20e922b2077181cf424114ba473089ec77a0f9"
+  integrity sha512-p3SVANOgFsi8lEyv0JfqMYSfRtIYD57ZEygEexhgkVlz0qClpJXYyV/8SzA0QAaNR0SzPGYU3nOYZ14MbeIWcw==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/events" "2.14.2"
+    "@atlaspack/rust" "3.5.0"
+
+"@atlaspack/namer-default@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/namer-default/-/namer-default-2.14.23.tgz#9aec1767e872ad7f965c4054632bf135d32482ab"
+  integrity sha512-YIxUUWGibGZmuPCDFPnvfzjtCSVtLNpFREcq/sVy1B4liviTO4vBrq/ffq6jcMhNeU0sI/NvJe3qRO1cm9E0sg==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/plugin" "2.14.23"
+    nullthrows "^1.1.1"
+
+"@atlaspack/node-resolver-core@3.5.23":
+  version "3.5.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/node-resolver-core/-/node-resolver-core-3.5.23.tgz#558c99cd300c1152f6c0563fd2499c0e623d1ea1"
+  integrity sha512-1QWTDFk58ysb6Kz+74G8NjzilJaF+5kKtOOmBJvaYvyttBwgC6cj9b176wZseAIZxnAObvGZJCAooANlV84dLw==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/fs" "2.15.18"
+    "@atlaspack/rust" "3.5.0"
+    "@atlaspack/utils" "2.18.0"
+    "@mischnic/json-sourcemap" "^0.1.0"
+    nullthrows "^1.1.1"
+    semver "^7.5.2"
+
+"@atlaspack/optimizer-css@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/optimizer-css/-/optimizer-css-2.14.23.tgz#18b2317811aaa46050205f51cf8bdb8c820dd9a1"
+  integrity sha512-MYhAgUzuke0ahhUSrO+8XLgXQMFS7SPijkXE8pcjto8pVsGaleLjylJdyyf8bWMEzBXGswqMu6W7/7P9hw/DmQ==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    "@parcel/source-map" "^2.1.1"
+    browserslist "^4.6.6"
+    lightningcss "^1.28.2"
+    nullthrows "^1.1.1"
+
+"@atlaspack/optimizer-htmlnano@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/optimizer-htmlnano/-/optimizer-htmlnano-2.14.23.tgz#93e076e6fc0ebf72499e782472873f130b358551"
+  integrity sha512-Wjtyy1zJYMh0wsokUklZULJrOgOtuvH7b2fwFjPDZnpM2B085UewOL7N1TgvChbkSU2H83e89Q3XYfotLPhcpQ==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+    htmlnano "^2.0.0"
+    nullthrows "^1.1.1"
+    posthtml "^0.16.5"
+    svgo "^2.4.0"
+
+"@atlaspack/optimizer-image@3.1.23":
+  version "3.1.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/optimizer-image/-/optimizer-image-3.1.23.tgz#6a03501278ba9aab90ea7729124bde5e46045bae"
+  integrity sha512-IHO05P7Fjw6CNbUnj8a/5mU4OFt50Jr/0C/iv5BB+eFyx8gq78SGXJ0gk6/atGQCnOOXfYQc8l86Cn67MLlJ/w==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/rust" "3.5.0"
+    "@atlaspack/utils" "2.18.0"
+    "@atlaspack/workers" "2.14.23"
+
+"@atlaspack/optimizer-svgo@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/optimizer-svgo/-/optimizer-svgo-2.14.23.tgz#437485aef92e672e018a6930e30d4023e0c2c3e9"
+  integrity sha512-VX56t2hsBGGOvYsz7GUosK72XihULlbQ+zDF743YO8D9QUQaxi0T66dyR6hNWAVjiJhN+XLb56+7goyhNx0vLQ==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    svgo "^2.4.0"
+
+"@atlaspack/optimizer-swc@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/optimizer-swc/-/optimizer-swc-2.14.23.tgz#9e16655a2e3f32a00e0763bbe08d1a9a99b5abd5"
+  integrity sha512-6mwl9ePdF6NSrWkDXtN9DjXrYFPaVswzpF5i/jVAlEhunV+5BalsKOcT3GmRFALlGnbsUuVPxVbX17cpGWxzxQ==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    "@parcel/source-map" "^2.1.1"
+    "@swc/core" "^1.10.0"
+    nullthrows "^1.1.1"
+
+"@atlaspack/package-manager@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/package-manager/-/package-manager-2.14.23.tgz#5f67406c05bc69732fcc9084e2c231af8494a2bb"
+  integrity sha512-ct/vxVMcDkE1go4vCbJgKYnkSZVOWck+uc90PWuBR1EWZgYUuA09/bsQSBxkWxHtC5jAy1LtVAjf/zQlv/SHBQ==
+  dependencies:
+    "@atlaspack/build-cache" "2.13.4"
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/fs" "2.15.18"
+    "@atlaspack/logger" "2.14.15"
+    "@atlaspack/node-resolver-core" "3.5.23"
+    "@atlaspack/types" "2.15.13"
+    "@atlaspack/utils" "2.18.0"
+    "@atlaspack/workers" "2.14.23"
+    "@swc/core" "^1.10.0"
+    command-exists "^1.2.6"
+    cross-spawn "^6.0.4"
+    nullthrows "^1.1.1"
+    semver "^7.5.2"
+    split2 "^3.1.1"
+
+"@atlaspack/packager-css@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/packager-css/-/packager-css-2.14.23.tgz#d9c039cfb59909471ff517179de5345f097e23fc"
+  integrity sha512-nZzsZ/20pMzE3xr94t55oKSY/dpARZw/tpElbT79sXPd/vgC9ubgr9//dHcIYZIsb1k+w07qeCMD3hqaLd0+Gw==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    "@parcel/source-map" "^2.1.1"
+    lightningcss "^1.28.2"
+    nullthrows "^1.1.1"
+
+"@atlaspack/packager-html@2.15.5":
+  version "2.15.5"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/packager-html/-/packager-html-2.15.5.tgz#dafebac62854229d39a70211d5507c9f47ae4b15"
+  integrity sha512-9Wu0E/HUP2LjEcVIz3C964O2czHfOjaTQkKsIdqXR8uEubOSpWwSLkAkRKDs4tBX5Z1wtlL2IDcoA8K7dz5vtg==
+  dependencies:
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/types" "2.15.13"
+    "@atlaspack/utils" "2.18.0"
+    nullthrows "^1.1.1"
+    posthtml "^0.16.5"
+
+"@atlaspack/packager-js@2.20.0":
+  version "2.20.0"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/packager-js/-/packager-js-2.20.0.tgz#b24950399b14cd791c02c9fca54d4425bc4da5e2"
+  integrity sha512-7YCYv31V8fWh/902o4KqQiZSsBAxsNLEuX4VLCt4Kx5VRiE3U5VNOdVgi5ZvrzOsE8rlkl4pqp+SpGghDQVaUA==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/rust" "3.5.0"
+    "@atlaspack/types" "2.15.13"
+    "@atlaspack/utils" "2.18.0"
+    "@parcel/source-map" "^2.1.1"
+    globals "^13.2.0"
+    nullthrows "^1.1.1"
+    outdent "^0.8.0"
+
+"@atlaspack/packager-raw@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/packager-raw/-/packager-raw-2.14.23.tgz#05d6167efc022f23d58384aa166cd9109b7882f5"
+  integrity sha512-nlZUpnx7DcnR7qKkKm2YBwjsPEhDqUvx19JujedLrx+uP4de1wW51/q3cnOK7FGHY2pABkfR7k8QR9rZJ+PZzw==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+
+"@atlaspack/packager-svg@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/packager-svg/-/packager-svg-2.14.23.tgz#f7dc9ab2f59f0cf67f0499c79d2895dd143a37f5"
+  integrity sha512-vkL/5BEAMHu0TiImPHYBnBzHPA09Q2X95MpflACFxDNa8p8oNy3++xVbpukATdYliDLiMN1uk755bx7Fd+TRTw==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/types" "2.15.13"
+    "@atlaspack/utils" "2.18.0"
+    posthtml "^0.16.4"
+
+"@atlaspack/packager-wasm@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/packager-wasm/-/packager-wasm-2.14.23.tgz#bb4ff5bf96957ec0dccc7f71f546b378f4181e4f"
+  integrity sha512-JdNVFutOZIWlCLJoU7W5aKNCEVCi5uHYqHfV7N4H+PQQNbmgrCkChKiTk2y/hZDj/NlbyHxwnScwXUtdH4pkzA==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+
+"@atlaspack/plugin@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/plugin/-/plugin-2.14.23.tgz#8bb258c78a67d7dcd0329238bff2443334fbc3fc"
+  integrity sha512-YZpj2KpLMEd7McdmDoC75SEh0omZLQw04rI0a+g8vaT8yTSFLpD61wcHAr6rqf7BW0ppBNQ5JxGjjfrVLKvhEw==
+  dependencies:
+    "@atlaspack/types" "2.15.13"
+
+"@atlaspack/profiler@2.14.20":
+  version "2.14.20"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/profiler/-/profiler-2.14.20.tgz#8b7a67ac9f07959c1ed5f731770c5949bc4278ba"
+  integrity sha512-Rb3hIgY0BeaI8wsrhE/aCju9/eM0wvHajHdzOvlC4SuChn1ICqS/5v/wnP40ru7kUMyJJJVLTj4yuentcJhs7Q==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/events" "2.14.2"
+    "@atlaspack/types-internal" "2.18.0"
+    chrome-trace-event "^1.0.2"
+
+"@atlaspack/reporter-cli@2.17.5":
+  version "2.17.5"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/reporter-cli/-/reporter-cli-2.17.5.tgz#1c57ca19dfa88360c9cd25c252f38e07414cefe2"
+  integrity sha512-qKaJjR5FNBoRhdLHEMyxksXaKEL3+MInhanv5VbXNuLGUjECjDeAGURDGpyneZnse2EYOFC3pc3QTNuIfptAXw==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/types" "2.15.13"
+    "@atlaspack/utils" "2.18.0"
+    chalk "^4.1.0"
+    filesize "^6.1.0"
+    nullthrows "^1.1.1"
+    ora "^5.2.0"
+    string-width "^4.2.0"
+    term-size "^2.2.1"
+    wrap-ansi "^7.0.0"
+
+"@atlaspack/reporter-conditional-manifest@2.15.5":
+  version "2.15.5"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/reporter-conditional-manifest/-/reporter-conditional-manifest-2.15.5.tgz#68b9f725644902e3df0dffb4695a909e55f443ec"
+  integrity sha512-bRQ1AeJMBiL2SqYHOyHhJocvWXt/4BzF9+j0Hb9EaPn93mH8V4QZt5kF3B7HCQPi88wCXCguwRx6Dr4u8qHpIQ==
+  dependencies:
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/plugin" "2.14.23"
+    nullthrows "^1.1.1"
+
+"@atlaspack/reporter-dev-server@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/reporter-dev-server/-/reporter-dev-server-2.14.23.tgz#76009066da2f0c27ddce0600aaad10be01c5d65e"
+  integrity sha512-uLPEJZ+fpHZOYWV+53ZCUYuGgXMrbq7eg+DmBHbGKiheEzAbi+obv7oXorZRhu/QciFWgE6R4DNOlrTDjwbWcQ==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/types" "2.15.13"
+    "@atlaspack/utils" "2.18.0"
+    connect "^3.7.0"
+    ejs "^3.1.6"
+    fresh "^0.5.2"
+    http-proxy-middleware "^2.0.1"
+    launch-editor "^2.3.0"
+    mime-types "2.1.18"
+    nullthrows "^1.1.1"
+    serve-handler "^6.0.0"
+    ws "^7.0.0"
+
+"@atlaspack/reporter-tracer@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/reporter-tracer/-/reporter-tracer-2.14.23.tgz#9a6b0be93e5fe40a363dcfd0f73768d59a9df9d1"
+  integrity sha512-85BVHXtt/3U0j43VwwK6GSuKikRplINO5Kz1W/9NpoBaSLXnM/9FfvJrlt5EmtVNcKU9lAim70aqvnmAE1DF4Q==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    chrome-trace-event "^1.0.3"
+    nullthrows "^1.1.1"
+
+"@atlaspack/resolver-default@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/resolver-default/-/resolver-default-2.14.23.tgz#d159f48201b8c36147737ea294af10676790d4f3"
+  integrity sha512-PLRNdcX48BYYy4M7f1JhuJiadx/Slami3XjzSSsEXjr8JPov9oiYzQatuLs4CPz8ZWu3SIXNUejRQaviv/3ixg==
+  dependencies:
+    "@atlaspack/node-resolver-core" "3.5.23"
+    "@atlaspack/plugin" "2.14.23"
+
+"@atlaspack/runtime-browser-hmr@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/runtime-browser-hmr/-/runtime-browser-hmr-2.14.23.tgz#a04abc3c6ca8f377b13cf654570cfd6f3e1b4e53"
+  integrity sha512-JwwP6Tf5jGmMpxQ3MC8TnsnhvAyG1SML+ibcjpaWTX4i9GwzpnEp4miFBMqRRX2np8am82io2cREzMyP4lctMQ==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+
+"@atlaspack/runtime-js@2.17.0":
+  version "2.17.0"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/runtime-js/-/runtime-js-2.17.0.tgz#46930f50971fb224fda680378e64f67f807e5072"
+  integrity sha512-OM2PG2nzN3SHQTE3LXw86KNPshzXtg8Do/sFT7KdRszFSRwBnqoVGPEbeAC7J5SSRSE6fnN5wTYX21V9ANZt2A==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/domain-sharding" "2.14.2"
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    nullthrows "^1.1.1"
+
+"@atlaspack/runtime-react-refresh@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/runtime-react-refresh/-/runtime-react-refresh-2.14.23.tgz#ce9b6743c984456f32801e05da8092a330117d8a"
+  integrity sha512-EsnnaVc1h+E3wFp1Ig3STCeMno2wzk5SR9GD29OOk6d+SfPks2WoNw/HwFO1ypIJB77WtSafV4FpnYdwZbX3Yw==
+  dependencies:
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    react-error-overlay "6.0.9"
+    react-refresh ">=0.9 <=0.16"
+
+"@atlaspack/runtime-service-worker@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/runtime-service-worker/-/runtime-service-worker-2.14.23.tgz#45224a540327cb8fc8ddf452a99ca5d036499ee3"
+  integrity sha512-8QRSZZ5t2TWkYihh4nUuDsAMJG85rOlHK77Pj1OMfEygIeAwGnpC0SZ3mvm8XHgesVSrsK8+JO1VVPOh/msNxA==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    nullthrows "^1.1.1"
+
+"@atlaspack/rust@3.5.0":
+  version "3.5.0"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/rust/-/rust-3.5.0.tgz#74f084d22d19f41931946ec815b99f5f2b3edc22"
+  integrity sha512-h0xPjHCSJJjO7CN7FW9I29v9ZtiITZ/Ih5Fv5ovOVD9dhLM1/2zoYwDd+JX67xOqV5atTKwg79QEtYMOxjF84g==
+
+"@atlaspack/transformer-css@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/transformer-css/-/transformer-css-2.14.23.tgz#8b6080a748d2f83fe9e4c9dd74894180f9b7dfa4"
+  integrity sha512-mclNyoCeFMwC3m6426+LwBE/KBovPw/vyF1s24N7IBUB2W/msOynRsQmADMj2Ku7URziss0UCM9IrczsLNwpwg==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    "@parcel/source-map" "^2.1.1"
+    browserslist "^4.6.6"
+    lightningcss "^1.28.2"
+    nullthrows "^1.1.1"
+
+"@atlaspack/transformer-html@2.15.0":
+  version "2.15.0"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/transformer-html/-/transformer-html-2.15.0.tgz#8555f3aca204228fa70daf61115ac90ca3c431c3"
+  integrity sha512-Kl3Ne51uvm14n4LQx8wd+xjYzgiKRMER5vCYm1aYdHE68FS+ucOrjCNpnaivjj0nIp46c2sO+YArfq+L5S3pdw==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/rust" "3.5.0"
+    nullthrows "^1.1.1"
+    posthtml "^0.16.5"
+    posthtml-parser "^0.10.1"
+    posthtml-render "^3.0.0"
+    semver "^7.5.2"
+    srcset "4"
+
+"@atlaspack/transformer-image@3.1.23":
+  version "3.1.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/transformer-image/-/transformer-image-3.1.23.tgz#8dc16248eca51a3a29eee07a14d57bbefd69ddf1"
+  integrity sha512-rUXbzOo9RGANG013pQdXOOinBRcCXBuZXnps4KD2cZDqBagisET67/ljusz0q+Td8YE8Va6+HC8b6dj9GO5TEw==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    "@atlaspack/workers" "2.14.23"
+    nullthrows "^1.1.1"
+
+"@atlaspack/transformer-js@3.4.2":
+  version "3.4.2"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/transformer-js/-/transformer-js-3.4.2.tgz#e5ad929a82dd6f82fbbe73413097cb2f26b6a9d0"
+  integrity sha512-pLwKQztX+jI9uB0SHa3y+2rnK7GjjO3mccdfsWQ6LseivIfaT5+xEtL6fGFWP0SvDyMn+MRu/j760c+h1ih8xA==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/rust" "3.5.0"
+    "@atlaspack/utils" "2.18.0"
+    "@atlaspack/workers" "2.14.23"
+    "@parcel/source-map" "^2.1.1"
+    "@swc/helpers" "^0.5.15"
+    browserslist "^4.6.6"
+    nullthrows "^1.1.1"
+    regenerator-runtime "^0.13.7"
+    semver "^7.5.2"
+
+"@atlaspack/transformer-json@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/transformer-json/-/transformer-json-2.14.23.tgz#8ec8bef37ba4024de4af7abff3cca47436dc795c"
+  integrity sha512-1M2tT/hF4+Y5l0s/9w9cRVLbIhI7BChKjkO5OapdaLWdcf83RwQ7tdJXL6jCyBzKjgwq273mvn6GvwQkh0Hqxw==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+    json5 "^2.2.0"
+
+"@atlaspack/transformer-postcss@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/transformer-postcss/-/transformer-postcss-2.14.23.tgz#3e7077c58dc06ac7c4c7751e56c7c3a5a935125a"
+  integrity sha512-lGbfCffUUfqk54lrC6M+dMtI41QTZ4W+0aVu5vzoKroiDGH5eVfQLDjGB5fTLh0hHmxdMu1a2kXR16eaFgyQYw==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/rust" "3.5.0"
+    "@atlaspack/utils" "2.18.0"
+    clone "^2.1.1"
+    nullthrows "^1.1.1"
+    postcss-value-parser "^4.2.0"
+    semver "^7.5.2"
+
+"@atlaspack/transformer-posthtml@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/transformer-posthtml/-/transformer-posthtml-2.14.23.tgz#f43efd977b4038199d4b47684d770d4d5eb72c2e"
+  integrity sha512-A0Mi3i3IhVOb3NC7D3x2x8o/9hUlCKLFOQhaTcN+fHxKfxxNFPjFv/ZS1OLinggch5nlIsemkvGO6Rzv7MuLng==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    nullthrows "^1.1.1"
+    posthtml "^0.16.5"
+    posthtml-parser "^0.10.1"
+    posthtml-render "^3.0.0"
+    semver "^7.5.2"
+
+"@atlaspack/transformer-raw@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/transformer-raw/-/transformer-raw-2.14.23.tgz#27b5a577af781432d297230463d8da974d9e11e9"
+  integrity sha512-+C+nEIKTPcJXLV5on31aNSFPh4UynECG7eLd5W1v9uG1jpeEbokD3RwoCGGMv2PInT7YCqgCGsLCMt4nisanIQ==
+  dependencies:
+    "@atlaspack/plugin" "2.14.23"
+
+"@atlaspack/transformer-react-refresh-wrap@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/transformer-react-refresh-wrap/-/transformer-react-refresh-wrap-2.14.23.tgz#f9ce56f3e9bfa4c4b0461c565f3f58b4054bdd01"
+  integrity sha512-XX8ObgGcEkZYcL3oGI9/XPUbGF55kBeDEYsSixBBuhKfBeTLAEirhqAiXAPFLyNFOPa5cXMv0zCFxPKqFQHQgQ==
+  dependencies:
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/utils" "2.18.0"
+    react-error-overlay "6.0.9"
+    react-refresh ">=0.9 <=0.16"
+
+"@atlaspack/transformer-svg@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/transformer-svg/-/transformer-svg-2.14.23.tgz#28e6f3b3645b6aa04b232f4758e8334c917f76b6"
+  integrity sha512-ZQtFwVc/tv9ueNlvI435Pk0Amvbdm9wPAzrKsgEUZTZaSglWCMOfcznkVXYnu4SUnwcqTLHG+QGWjaAkCWDMWg==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/plugin" "2.14.23"
+    "@atlaspack/rust" "3.5.0"
+    nullthrows "^1.1.1"
+    posthtml "^0.16.5"
+    posthtml-parser "^0.10.1"
+    posthtml-render "^3.0.0"
+    semver "^7.5.2"
+
+"@atlaspack/types-internal@2.18.0":
+  version "2.18.0"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/types-internal/-/types-internal-2.18.0.tgz#8778a95955dc9f5171821fe934a2076e195b7906"
+  integrity sha512-SmgNjnak6UdA5lH+7hcnJIP5FOYk9shExkHz2ETyVdq2C62hiYESKgxzRr2Yq85IGjPqPqlrs5L15CxGq1lfdg==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/feature-flags" "2.21.0"
+    "@parcel/source-map" "^2.1.1"
+    utility-types "^3.10.0"
+
+"@atlaspack/types@2.15.13":
+  version "2.15.13"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/types/-/types-2.15.13.tgz#b586bc870f44c9ab9510b6e3643a1d1654964113"
+  integrity sha512-+zwVtAE+611xQ6VjtLg/nmvLwmRKNoWt82BTL3VVASYM2NrlG8LN+uMWohpVLkHkAuLoM1kWR60gUTeD7fuWyw==
+  dependencies:
+    "@atlaspack/types-internal" "2.18.0"
+    "@atlaspack/workers" "2.14.23"
+
+"@atlaspack/utils@2.18.0":
+  version "2.18.0"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/utils/-/utils-2.18.0.tgz#237a0c9fa2588bc22dedeaef619b5328b2e296f7"
+  integrity sha512-NQjAe2Al8k3RJ7tlaPpfR4/rxa3L/B90y3LBOpGXMixKbYkbgZrHHX6lHQtk3571AAXmaesiXWTNULnBzZxZzQ==
+  dependencies:
+    "@atlaspack/codeframe" "2.13.5"
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/feature-flags" "2.21.0"
+    "@atlaspack/logger" "2.14.15"
+    "@atlaspack/markdown-ansi" "2.14.2"
+    "@atlaspack/rust" "3.5.0"
+    "@iarna/toml" "^2.2.0"
+    "@parcel/source-map" "^2.1.1"
+    "@types/micromatch" "^4.0.9"
+    "@types/node-forge" "^1.3.13"
+    ansi-html-community "0.0.8"
+    chalk "^4.1.0"
+    clone "^2.1.1"
+    fast-glob "^3.2.12"
+    fastest-levenshtein "^1.0.16"
+    is-glob "^4.0.0"
+    is-url "^1.2.2"
+    json5 "^2.2.0"
+    lru-cache "^6.0.0"
+    micromatch "^4.0.4"
+    node-forge "^1.2.1"
+    nullthrows "^1.1.1"
+    open "^7.0.3"
+    snarkdown "^2.0.0"
+    strip-ansi "^6.0.0"
+    terminal-link "^2.1.1"
+
+"@atlaspack/watcher-watchman-js@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/watcher-watchman-js/-/watcher-watchman-js-2.14.23.tgz#5bf9b3741d068f9370994de2641701b9d7ce1498"
+  integrity sha512-LYWyWqnW7whZjQixOa+9ERg+g9tCMrXW+u6/vxqVJzg8QiCuyw7/MsSUYveKrdaa6eYjq3dKOS23cgAHnLqA6A==
+  dependencies:
+    "@atlaspack/logger" "2.14.15"
+    "@atlaspack/utils" "2.18.0"
+    "@parcel/watcher" "^2.4.1"
+    fb-watchman "^2.0.2"
+
+"@atlaspack/workers@2.14.23":
+  version "2.14.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@atlaspack/workers/-/workers-2.14.23.tgz#94f1b8caca62942f2fa99be6bafadaf2f2865a31"
+  integrity sha512-Wd14sIpum1S2in/uDwPMD/J4AZCjHqAvqV331CeOUuMHCux8wtSJBeeBrf0kG/r1yN/fkeiFtgCGW8sNBsH1rQ==
+  dependencies:
+    "@atlaspack/build-cache" "2.13.4"
+    "@atlaspack/diagnostic" "2.14.2"
+    "@atlaspack/logger" "2.14.15"
+    "@atlaspack/profiler" "2.14.20"
+    "@atlaspack/types-internal" "2.18.0"
+    "@atlaspack/utils" "2.18.0"
+    nullthrows "^1.1.1"
+
 "@babel/code-frame@^7.0.0", "@babel/code-frame@^7.10.4", "@babel/code-frame@^7.22.13", "@babel/code-frame@^7.23.4":
   version "7.23.4"
   resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.23.4.tgz#03ae5af150be94392cb5c7ccd97db5a19a5da6aa"
@@ -3322,6 +3980,22 @@
     strip-ansi "^7.1.0"
     wrap-ansi "^9.0.0"
 
+"@oclif/table@^0.3.0":
+  version "0.3.9"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@oclif/table/-/table-0.3.9.tgz#9bbdfe64c6da94da20d668bd244b3c2dabb7ae6e"
+  integrity sha512-JjWIg6kZ4of8D9++9xAkc39CWCBayPlrzI7NCEqtu8GxV39YALCNl8462JoSGcasPl85IQ9N7jiTSMFkIK7hfA==
+  dependencies:
+    "@oclif/core" "^4"
+    "@types/react" "^18.3.12"
+    change-case "^5.4.4"
+    cli-truncate "^4.0.0"
+    ink "^5.1.0"
+    natural-orderby "^3.0.2"
+    object-hash "^3.0.0"
+    react "^18.3.1"
+    strip-ansi "^7.1.0"
+    wrap-ansi "^9.0.0"
+
 "@octokit/auth-token@^4.0.0":
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/@octokit/auth-token/-/auth-token-4.0.0.tgz#40d203ea827b9f17f42a29c6afb93b7745ef80c7"
@@ -3593,6 +4267,13 @@
   version "0.11.0"
   resolved "https://registry.yarnpkg.com/@pkgjs/parseargs/-/parseargs-0.11.0.tgz#a77ea742fab25775145434eb1d2328cf5013ac33"
   integrity sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==
+
+"@playwright/test@^1.40.0":
+  version "1.54.2"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@playwright/test/-/test-1.54.2.tgz#ff0d1e5d8e26f3258ae65364e2d4d10176926b07"
+  integrity sha512-A+znathYxPf+72riFd1r1ovOLqsIIB0jKIoPjyK2kqEIe30/6jF6BC7QNluHuwUmsD2tv1XZVugN8GqfTMOxsA==
+  dependencies:
+    playwright "1.54.2"
 
 "@popperjs/core@^2.11.8":
   version "2.11.8"
@@ -4178,6 +4859,11 @@
   dependencies:
     "@types/node" "*"
 
+"@types/lodash@^4.17.0":
+  version "4.17.20"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@types/lodash/-/lodash-4.17.20.tgz#1ca77361d7363432d29f5e55950d9ec1e1c6ea93"
+  integrity sha512-H3MHACvFUEiujabxhaI/ImO6gUrd8oOurg7LQtS7mbwIXA/cUqWrvBsaeJ23aZEPk1TAYkurjfMbSELfoCXlGA==
+
 "@types/mdast@^3.0.0":
   version "3.0.3"
   resolved "https://registry.yarnpkg.com/@types/mdast/-/mdast-3.0.3.tgz#2d7d671b1cd1ea3deb306ea75036c2a0407d2deb"
@@ -4258,6 +4944,11 @@
   dependencies:
     "@types/react" "^17"
 
+"@types/react-dom@^18.2.0":
+  version "18.3.7"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@types/react-dom/-/react-dom-18.3.7.tgz#b89ddf2cd83b4feafcc4e2ea41afdfb95a0d194f"
+  integrity sha512-MEe3UeoENYVFXzoXEWsvcpg6ZvlrFNlOQ7EOsvhI3CfAXwzPfO8Qwuxd40nepsYKqyyVQnTdEfv68q91yLcKrQ==
+
 "@types/react@^17":
   version "17.0.76"
   resolved "https://registry.yarnpkg.com/@types/react/-/react-17.0.76.tgz#bfdf762046699e265655cd8f67a51beab6cd1e80"
@@ -4265,6 +4956,14 @@
   dependencies:
     "@types/prop-types" "*"
     "@types/scheduler" "*"
+    csstype "^3.0.2"
+
+"@types/react@^18.2.0":
+  version "18.3.23"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/@types/react/-/react-18.3.23.tgz#86ae6f6b95a48c418fecdaccc8069e0fbb63696a"
+  integrity sha512-/LDXMQh55EzZQ0uVAZmKKhfENivEvWz6E+EYzh+/MCjMhNsotd+ZHhBGIjFDTi6+fz0OhQQQLbTgdQIxxCsC0w==
+  dependencies:
+    "@types/prop-types" "*"
     csstype "^3.0.2"
 
 "@types/react@^18.3.12":
@@ -6820,6 +7519,11 @@ cookie@0.6.0:
   resolved "https://registry.yarnpkg.com/cookie/-/cookie-0.6.0.tgz#2798b04b071b0ecbff0dbb62a505a8efa4e19051"
   integrity sha512-U71cyTamuh1CRNCfpGY6to28lxvNwPG4Guz/EVjgf3Jmzv0vlDp1atT9eS5dDjMYHucpHbWns6Lwf3BKz6svdw==
 
+cookie@0.7.1:
+  version "0.7.1"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/cookie/-/cookie-0.7.1.tgz#2f73c42142d5d5cf71310a74fc4ae61670e5dbc9"
+  integrity sha512-6DnInpx7SJ2AK3+CTUE/ZM0vWTUboZCegxhC2xiIydHR9jNuTAASBrfEpHhiGOZw/nX51bHt6YQl8jsGo4y/0w==
+
 copy-anything@^2.0.1:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/copy-anything/-/copy-anything-2.0.3.tgz#842407ba02466b0df844819bbe3baebbe5d45d87"
@@ -7968,6 +8672,11 @@ es-to-primitive@^1.2.1:
     is-date-object "^1.0.1"
     is-symbol "^1.0.2"
 
+es-toolkit@^1.22.0:
+  version "1.39.9"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/es-toolkit/-/es-toolkit-1.39.9.tgz#6c75f868eb7b93da823de69fabf9bcd8384b8a9a"
+  integrity sha512-9OtbkZmTA2Qc9groyA1PUNeb6knVTkvB2RSdr/LcJXDL8IdEakaxwXLHXa7VX/Wj0GmdMJPR3WhnPGhiP3E+qg==
+
 es5-ext@^0.10.35, es5-ext@^0.10.46, es5-ext@^0.10.62, es5-ext@^0.10.64, es5-ext@~0.10.14:
   version "0.10.64"
   resolved "https://registry.yarnpkg.com/es5-ext/-/es5-ext-0.10.64.tgz#12e4ffb48f1ba2ea777f1fcdd1918ef73ea21714"
@@ -8551,6 +9260,43 @@ express@*:
     on-finished "2.4.1"
     parseurl "~1.3.3"
     path-to-regexp "0.1.10"
+    proxy-addr "~2.0.7"
+    qs "6.13.0"
+    range-parser "~1.2.1"
+    safe-buffer "5.2.1"
+    send "0.19.0"
+    serve-static "1.16.2"
+    setprototypeof "1.2.0"
+    statuses "2.0.1"
+    type-is "~1.6.18"
+    utils-merge "1.0.1"
+    vary "~1.1.2"
+
+express@^4.18.0:
+  version "4.21.2"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/express/-/express-4.21.2.tgz#cf250e48362174ead6cea4a566abef0162c1ec32"
+  integrity sha512-28HqgMZAmih1Czt9ny7qr6ek2qddF4FclbMzwhCREB6OFfH+rXAnuNCwo1/wFvrtbgsQDb4kSbX9de9lFbrXnA==
+  dependencies:
+    accepts "~1.3.8"
+    array-flatten "1.1.1"
+    body-parser "1.20.3"
+    content-disposition "0.5.4"
+    content-type "~1.0.4"
+    cookie "0.7.1"
+    cookie-signature "1.0.6"
+    debug "2.6.9"
+    depd "2.0.0"
+    encodeurl "~2.0.0"
+    escape-html "~1.0.3"
+    etag "~1.8.1"
+    finalhandler "1.3.1"
+    fresh "0.5.2"
+    http-errors "2.0.0"
+    merge-descriptors "1.0.3"
+    methods "~1.1.2"
+    on-finished "2.4.1"
+    parseurl "~1.3.3"
+    path-to-regexp "0.1.12"
     proxy-addr "~2.0.7"
     qs "6.13.0"
     range-parser "~1.2.1"
@@ -10445,6 +11191,36 @@ ink@^5.0.1:
     ws "^8.15.0"
     yoga-wasm-web "~0.3.3"
 
+ink@^5.1.0:
+  version "5.2.1"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/ink/-/ink-5.2.1.tgz#b9ea59f0d1eab2b4566903b35b54fd34323d1694"
+  integrity sha512-BqcUyWrG9zq5HIwW6JcfFHsIYebJkWWb4fczNah1goUO0vv5vneIlfwuS85twyJ5hYR/y18FlAYUxrO9ChIWVg==
+  dependencies:
+    "@alcalzone/ansi-tokenize" "^0.1.3"
+    ansi-escapes "^7.0.0"
+    ansi-styles "^6.2.1"
+    auto-bind "^5.0.1"
+    chalk "^5.3.0"
+    cli-boxes "^3.0.0"
+    cli-cursor "^4.0.0"
+    cli-truncate "^4.0.0"
+    code-excerpt "^4.0.0"
+    es-toolkit "^1.22.0"
+    indent-string "^5.0.0"
+    is-in-ci "^1.0.0"
+    patch-console "^2.0.0"
+    react-reconciler "^0.29.0"
+    scheduler "^0.23.0"
+    signal-exit "^3.0.7"
+    slice-ansi "^7.1.0"
+    stack-utils "^2.0.6"
+    string-width "^7.2.0"
+    type-fest "^4.27.0"
+    widest-line "^5.0.0"
+    wrap-ansi "^9.0.0"
+    ws "^8.18.0"
+    yoga-layout "~3.2.1"
+
 inline-style-parser@0.1.1:
   version "0.1.1"
   resolved "https://registry.yarnpkg.com/inline-style-parser/-/inline-style-parser-0.1.1.tgz#ec8a3b429274e9c0a1f1c4ffa9453a7fef72cea1"
@@ -10773,6 +11549,11 @@ is-in-ci@^0.1.0:
   version "0.1.0"
   resolved "https://packages.atlassian.com/api/npm/npm-remote/is-in-ci/-/is-in-ci-0.1.0.tgz#5e07d6a02ec3a8292d3f590973357efa3fceb0d3"
   integrity sha512-d9PXLEY0v1iJ64xLiQMJ51J128EYHAaOR4yZqQi8aHGfw6KgifM3/Viw1oZZ1GCVmb3gBuyhLyHj0HgR2DhSXQ==
+
+is-in-ci@^1.0.0:
+  version "1.0.0"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/is-in-ci/-/is-in-ci-1.0.0.tgz#9a86bbda7e42c6129902e0574c54b018fbb6ab88"
+  integrity sha512-eUuAjybVTHMYWm/U+vBO1sY/JOCgoPCXRxzdju0K+K0BiGW0SChEL1MLC0PoCIR1OlPo5YAp8HuQoUlsWEICwg==
 
 is-interactive@^1.0.0:
   version "1.0.0"
@@ -13975,6 +14756,11 @@ path-to-regexp@0.1.10:
   resolved "https://registry.yarnpkg.com/path-to-regexp/-/path-to-regexp-0.1.10.tgz#67e9108c5c0551b9e5326064387de4763c4d5f8b"
   integrity sha512-7lf7qcQidTku0Gu3YDPc8DJ1q7OOucfa/BSsIwjuh56VU7katFvuM8hULfkwB3Fns/rsVF7PwPKVw1sl5KQS9w==
 
+path-to-regexp@0.1.12:
+  version "0.1.12"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/path-to-regexp/-/path-to-regexp-0.1.12.tgz#d5e1a12e478a976d432ef3c58d534b9923164bb7"
+  integrity sha512-RA1GjUVMnvYFxuqovrEqZoxxW5NUZqbwKtYz/Tt7nXerk0LbLblQmrsgdeOxV5SFHf0UDggjS/bSeOZwt1pmEQ==
+
 path-to-regexp@2.2.1:
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/path-to-regexp/-/path-to-regexp-2.2.1.tgz#90b617025a16381a879bc82a38d4e8bdeb2bcf45"
@@ -14122,12 +14908,26 @@ playwright-core@1.50.0:
   resolved "https://registry.yarnpkg.com/playwright-core/-/playwright-core-1.50.0.tgz#28dd6a1488211c193933695ed337a5b44d46867c"
   integrity sha512-CXkSSlr4JaZs2tZHI40DsZUN/NIwgaUPsyLuOAaIZp2CyF2sN5MM5NJsyB188lFSSozFxQ5fPT4qM+f0tH/6wQ==
 
+playwright-core@1.54.2:
+  version "1.54.2"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/playwright-core/-/playwright-core-1.54.2.tgz#73cc5106f19ec6b9371908603d61a7f171ebd8f0"
+  integrity sha512-n5r4HFbMmWsB4twG7tJLDN9gmBUeSPcsBZiWSE4DnYz9mJMAFqr2ID7+eGC9kpEnxExJ1epttwR59LEWCk8mtA==
+
 playwright@1.50.0:
   version "1.50.0"
   resolved "https://registry.yarnpkg.com/playwright/-/playwright-1.50.0.tgz#ccaf334f948d78139922844de55a18f8ae785410"
   integrity sha512-+GinGfGTrd2IfX1TA4N2gNmeIksSb+IAe589ZH+FlmpV3MYTx6+buChGIuDLQwrGNCw2lWibqV50fU510N7S+w==
   dependencies:
     playwright-core "1.50.0"
+  optionalDependencies:
+    fsevents "2.3.2"
+
+playwright@1.54.2:
+  version "1.54.2"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/playwright/-/playwright-1.54.2.tgz#e2435abb2db3a96a276f8acc3ada1a85b587dff3"
+  integrity sha512-Hu/BMoA1NAdRUuulyvQC0pEqZ4vQbGfn8f7wPXcnqQmM+zct9UliKxsIkLNmz/ku7LElUNqmaiv1TG/aL5ACsw==
+  dependencies:
+    playwright-core "1.54.2"
   optionalDependencies:
     fsevents "2.3.2"
 
@@ -16486,7 +17286,7 @@ string-natural-compare@^3.0.1:
   resolved "https://registry.yarnpkg.com/string-natural-compare/-/string-natural-compare-3.0.1.tgz#7a42d58474454963759e8e8b7ae63d71c1e7fdf4"
   integrity sha512-n3sPwynL1nwKi3WJ6AIsClwBMa0zTi54fn2oLU6ndfTSIO05xaznjSf15PcBZU6FNWbmN5Q6cxT4V5hGvB4taw==
 
-"string-width-cjs@npm:string-width@^4.2.0":
+"string-width-cjs@npm:string-width@^4.2.0", "string-width@^1.0.2 || 2 || 3 || 4", string-width@^4.0.0, string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
   version "4.2.3"
   resolved "https://registry.yarnpkg.com/string-width/-/string-width-4.2.3.tgz#269c7117d27b05ad2e536830a8ec895ef9c6d010"
   integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
@@ -16512,15 +17312,6 @@ string-width@^1.0.1, string-width@^1.0.2:
     is-fullwidth-code-point "^2.0.0"
     strip-ansi "^4.0.0"
 
-"string-width@^1.0.2 || 2 || 3 || 4", string-width@^4.0.0, string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
-  version "4.2.3"
-  resolved "https://registry.yarnpkg.com/string-width/-/string-width-4.2.3.tgz#269c7117d27b05ad2e536830a8ec895ef9c6d010"
-  integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
-  dependencies:
-    emoji-regex "^8.0.0"
-    is-fullwidth-code-point "^3.0.0"
-    strip-ansi "^6.0.1"
-
 string-width@^5.0.1, string-width@^5.1.2:
   version "5.1.2"
   resolved "https://registry.yarnpkg.com/string-width/-/string-width-5.1.2.tgz#14f8daec6d81e7221d2a357e668cab73bdbca794"
@@ -16530,7 +17321,7 @@ string-width@^5.0.1, string-width@^5.1.2:
     emoji-regex "^9.2.2"
     strip-ansi "^7.0.1"
 
-string-width@^7.0.0:
+string-width@^7.0.0, string-width@^7.2.0:
   version "7.2.0"
   resolved "https://packages.atlassian.com/api/npm/npm-remote/string-width/-/string-width-7.2.0.tgz#b5bb8e2165ce275d4d43476dd2700ad9091db6dc"
   integrity sha512-tsaTIkKW9b4N+AEj+SVA+WhJzV7/zMhcSu78mLKWSk7cXMOSHsBKFWUs0fWwq8QyK3MgJBQRX6Gbi4kYbdvGkQ==
@@ -16608,7 +17399,7 @@ stringify-object@^3.3.0:
     is-obj "^1.0.1"
     is-regexp "^1.0.0"
 
-"strip-ansi-cjs@npm:strip-ansi@^6.0.1":
+"strip-ansi-cjs@npm:strip-ansi@^6.0.1", strip-ansi@^6.0.0, strip-ansi@^6.0.1:
   version "6.0.1"
   resolved "https://registry.yarnpkg.com/strip-ansi/-/strip-ansi-6.0.1.tgz#9e26c63d30f53443e9489495b2105d37b67a85d9"
   integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
@@ -16628,13 +17419,6 @@ strip-ansi@^4.0.0:
   integrity sha512-4XaJ2zQdCzROZDivEVIDPkcQn8LMFSa8kj8Gxb/Lnwzv9A8VctNZ+lfivC/sV3ivW8ElJTERXZoPBRrZKkNKow==
   dependencies:
     ansi-regex "^3.0.0"
-
-strip-ansi@^6.0.0, strip-ansi@^6.0.1:
-  version "6.0.1"
-  resolved "https://registry.yarnpkg.com/strip-ansi/-/strip-ansi-6.0.1.tgz#9e26c63d30f53443e9489495b2105d37b67a85d9"
-  integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
-  dependencies:
-    ansi-regex "^5.0.1"
 
 strip-ansi@^7.0.1, strip-ansi@^7.1.0:
   version "7.1.0"
@@ -17363,6 +18147,11 @@ type-fest@^0.8.0, type-fest@^0.8.1:
   version "0.8.1"
   resolved "https://registry.yarnpkg.com/type-fest/-/type-fest-0.8.1.tgz#09e249ebde851d3b1e48d27c105444667f17b83d"
   integrity sha512-4dbzIzqvjtgiM5rw1k5rEHtBANKmdudhGyBEajN01fEyhaAIhsoKNy6y7+IN93IfpFtwY9iqi7kD+xwKhQsNJA==
+
+type-fest@^4.27.0:
+  version "4.41.0"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/type-fest/-/type-fest-4.41.0.tgz#6ae1c8e5731273c2bf1f58ad39cbae2c91a46c58"
+  integrity sha512-TeTSQ6H5YHvpqVwBRcnLDCBnDOHWYu7IvGbHT6N8AOymcr9PJGjc1GTtiWZTYg0NCgYwvnYWEkVChQAr9bjfwA==
 
 type-fest@^4.8.3:
   version "4.26.1"
@@ -18266,7 +19055,7 @@ workerpool@6.1.0:
   resolved "https://registry.yarnpkg.com/workerpool/-/workerpool-6.1.0.tgz#a8e038b4c94569596852de7a8ea4228eefdeb37b"
   integrity sha512-toV7q9rWNYha963Pl/qyeZ6wG+3nnsyvolaNUS8+R5Wtw6qJPTxIlOP1ZSvcGhEJw+l3HMMmtiNo9Gl61G4GVg==
 
-"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0":
+"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0", wrap-ansi@^7.0.0:
   version "7.0.0"
   resolved "https://registry.yarnpkg.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz#67e145cff510a6a6984bdf1152911d69d2eb9e43"
   integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
@@ -18287,15 +19076,6 @@ wrap-ansi@^6.0.1, wrap-ansi@^6.2.0:
   version "6.2.0"
   resolved "https://registry.yarnpkg.com/wrap-ansi/-/wrap-ansi-6.2.0.tgz#e9393ba07102e6c91a3b221478f0257cd2856e53"
   integrity sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==
-  dependencies:
-    ansi-styles "^4.0.0"
-    string-width "^4.1.0"
-    strip-ansi "^6.0.0"
-
-wrap-ansi@^7.0.0:
-  version "7.0.0"
-  resolved "https://registry.yarnpkg.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz#67e145cff510a6a6984bdf1152911d69d2eb9e43"
-  integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
   dependencies:
     ansi-styles "^4.0.0"
     string-width "^4.1.0"
@@ -18381,6 +19161,11 @@ ws@^8.15.0, ws@^8.2.3:
   version "8.18.0"
   resolved "https://registry.yarnpkg.com/ws/-/ws-8.18.0.tgz#0d7505a6eafe2b0e712d232b42279f53bc289bbc"
   integrity sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw==
+
+ws@^8.18.0:
+  version "8.18.3"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/ws/-/ws-8.18.3.tgz#b56b88abffde62791c639170400c93dcb0c95472"
+  integrity sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg==
 
 xml-name-validator@^4.0.0:
   version "4.0.0"
@@ -18577,6 +19362,11 @@ yocto-queue@^0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz#0294eb3dee05028d31ee1a5fa2c556a6aaf10a1b"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
+
+yoga-layout@~3.2.1:
+  version "3.2.1"
+  resolved "https://packages.atlassian.com/api/npm/npm-remote/yoga-layout/-/yoga-layout-3.2.1.tgz#d2d1ba06f0e81c2eb650c3e5ad8b0b4adde1e843"
+  integrity sha512-0LPOt3AxKqMdFBZA3HBAt/t/8vIKq7VaQYbuA8WxCgung+p9TVyKRYdpvCb80HcdTN2NkbIKbhNwKUfm3tQywQ==
 
 yoga-wasm-web@~0.3.3:
   version "0.3.3"

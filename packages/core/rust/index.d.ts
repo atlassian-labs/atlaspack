@@ -63,6 +63,7 @@ export interface InlineRequiresOptimizerInput {
   code: string
   sourceMaps: boolean
   ignoreModuleIds: Array<string>
+  isReusedInlineRequiresEnabled: boolean
 }
 export interface InlineRequiresOptimizerResult {
   code: string

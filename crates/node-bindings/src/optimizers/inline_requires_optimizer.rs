@@ -9,6 +9,7 @@ pub struct InlineRequiresOptimizerInput {
   pub code: String,
   pub source_maps: bool,
   pub ignore_module_ids: Vec<String>,
+  pub is_reused_inline_requires_enabled: bool,
 }
 
 #[napi(object)]
@@ -24,6 +25,7 @@ pub fn run_inline_requires_optimizer(
   let result = run_visit(&input.code, |ctx| {
     atlaspack_plugin_optimizer_inline_requires::InlineRequiresOptimizer::builder()
       .unresolved_mark(ctx.unresolved_mark)
+      .set_reused_inline_requires_enabled(input.is_reused_inline_requires_enabled)
       .add_ignore_pattern(IgnorePattern::ModuleIdHashSet(
         input.ignore_module_ids.into_iter().map(Atom::new).collect(),
       ))

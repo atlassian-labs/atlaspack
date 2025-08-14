@@ -2,6 +2,7 @@ import {Optimizer} from '@atlaspack/plugin';
 import {runInlineRequiresOptimizerAsync} from '@atlaspack/rust';
 import nullthrows from 'nullthrows';
 import SourceMap from '@parcel/source-map';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 // @ts-expect-error TS7034
 let assetPublicIdsWithSideEffects = null;
@@ -62,6 +63,7 @@ module.exports = new Optimizer<never, BundleConfig>({
         code: contents.toString(),
         sourceMaps: !!bundle.env.sourceMap,
         ignoreModuleIds: Array.from(bundleConfig.assetPublicIdsWithSideEffects),
+        isReusedInlineRequiresEnabled: getFeatureFlag('reusedInlineRequires'),
       });
 
       // @ts-expect-error TS2339

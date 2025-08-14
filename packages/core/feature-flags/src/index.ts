@@ -161,6 +161,10 @@ export const DEFAULT_FEATURE_FLAGS = {
    * inline scripts that are build as "isolated" bundles.
    */
   inlineIsolatedScripts: process.env.ATLASPACK_BUILD_ENV === 'test',
+  /**
+   * Enable the new inline requires optimizer changes which will reuse require statements across scopes
+   */
+  reusedInlineRequires: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
