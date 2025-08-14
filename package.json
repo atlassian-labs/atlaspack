@@ -34,6 +34,7 @@
     "clean": "yarn clean-test && lerna clean --yes && lerna exec -- rimraf ./lib && yarn",
     "dev": "./scripts/dev",
     "format": "prettier --write \"./packages/*/*/{src,bin,test}/**/*.{js,json,md}\" && cargo +nightly fmt --all",
+    "format:generated": "prettier --write \"./packages/*/*/*.js\" \"./packages/*/*/lib/**/*.js\"",
     "link-all": "node scripts/link-all.js packages",
     "unlink-all": "node scripts/unlink-all.js packages",
     "check": "flow check",

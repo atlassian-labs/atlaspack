@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "cd ../../.. && yarn test:integration --grep @atlaspack/link",
+    "build": "gulp build --gulpfile ../../../gulpfile.js --cwd .",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "main": "./lib/index.js",
