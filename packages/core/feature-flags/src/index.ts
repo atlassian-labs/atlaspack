@@ -161,6 +161,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * inline scripts that are build as "isolated" bundles.
    */
   inlineIsolatedScripts: process.env.ATLASPACK_BUILD_ENV === 'test',
+
   /**
    * Remove redundant shared bundles that are no longer required after merging
    * async bundles.
