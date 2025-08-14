@@ -1731,7 +1731,7 @@ export function createIdealGraph(
         let b = mergeCandidates[j];
         if (a === b) continue; // Skip self-comparison
 
-        candidates.push(getAsyncBundleMergeOverlap(a, b, maxOverfetchSize));
+        candidates.push(scoreAsyncMerge(a, b, maxOverfetchSize));
       }
     }
 
@@ -1809,11 +1809,7 @@ export function createIdealGraph(
         continue;
       }
 
-      let candidate = getAsyncBundleMergeOverlap(
-        currentA,
-        currentB,
-        maxOverfetchSize,
-      );
+      let candidate = scoreAsyncMerge(currentA, currentB, maxOverfetchSize);
 
       if (candidate.overfetchSize <= maxOverfetchSize && candidate.score > 0) {
         sortedArray.add(candidates, candidate, sortByScore);
@@ -1876,7 +1872,7 @@ export function createIdealGraph(
     score: number;
     bundleIds: number[];
   }
-  function getAsyncBundleMergeOverlap(
+  function scoreAsyncMerge(
     bundleAId: NodeId,
     bundleBId: NodeId,
     maxOverfetchSize: number,
@@ -1887,20 +1883,12 @@ export function createIdealGraph(
     let overlapSize = 0;
     let overfetchSize = 0;
 
-    let removedBundleSharedBundlesA = new Set<NodeId>();
-    let removedBundleSharedBundlesB = new Set<NodeId>();
-
     for (let bundleId of new Set([...bundleGroupA, ...bundleGroupB])) {
       let bundle = getBundle(bundleId);
 
       if (bundleGroupA.has(bundleId) && bundleGroupB.has(bundleId)) {
         overlapSize += bundle.size;
       } else {
-        if (bundleGroupB.has(bundleId)) {
-          removedBundleSharedBundlesB.add(bundleId);
-        } else if (bundleGroupA.has(bundleId)) {
-          removedBundleSharedBundlesA.add(bundleId);
-        }
         overfetchSize += bundle.size;
       }
     }
