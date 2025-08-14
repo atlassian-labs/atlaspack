@@ -1,7 +1,6 @@
 import {Resolver} from '@atlaspack/plugin';
 import NodeResolver from '@atlaspack/node-resolver-core';
 import {basename, dirname, extname, isAbsolute, join} from 'path';
-import type {EnvMap} from '@atlaspack/types-internal';
 
 interface TesseractResolverConfig {
   /** Modules to replace with empty stubs during resolution. */
@@ -34,7 +33,10 @@ const IGNORE_PATH = join(__dirname, 'data', 'empty-module.js');
 const STATIC_FALLBACK_MODULES = ['buffer', 'stream', 'events', 'util'];
 const STATIC_FALLBACK_ALIAS: Record<string, string | undefined> = {};
 
-const getIgnoreModules = (env: EnvMap, ignoreModules: Array<string>) => {
+const getIgnoreModules = (
+  env: typeof process.env,
+  ignoreModules: Array<string>,
+) => {
   if (env.PILLAR_LOCAL_DEVELOPMENT === 'true') {
     ignoreModules.push('@atlassiansox/analytics-web-client');
   }
