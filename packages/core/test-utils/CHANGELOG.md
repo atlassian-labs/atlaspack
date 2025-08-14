@@ -1,5 +1,19 @@
 # @atlaspack/test-utils
 
+## 2.14.28
+
+### Patch Changes
+
+- [#742](https://github.com/atlassian-labs/atlaspack/pull/742) [`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd) Thanks [@yamadapc](https://github.com/yamadapc)! - Internal changes and bug fixes to environmentDeduplication flag
+
+- Updated dependencies [[`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd)]:
+  - @atlaspack/package-manager@2.14.26
+  - @atlaspack/config-default@4.0.2
+  - @atlaspack/cache@3.2.21
+  - @atlaspack/utils@2.18.3
+  - @atlaspack/core@2.23.2
+  - @atlaspack/fs@2.15.21
+
 ## 2.14.27
 
 ### Patch Changes
