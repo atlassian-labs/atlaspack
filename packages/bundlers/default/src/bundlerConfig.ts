@@ -19,12 +19,21 @@ type ManualSharedBundles = Array<{
   split?: number;
 }>;
 
-export type MergeCandidates = Array<{
+export type SharedBundleMergeCandidates = Array<{
   overlapThreshold?: number;
   maxBundleSize?: number;
   sourceBundles?: Array<string>;
   minBundlesInGroup?: number;
 }>;
+
+export interface AsyncBundleMerge {
+  /** Consider all async bundles smaller than this for merging */
+  bundleSize: number;
+  /** The max bytes allowed to be potentially overfetched due to a merge  */
+  maxOverfetchSize: number;
+  /** Bundles to ignore from merging */
+  ignore?: Array<Glob>;
+}
 
 type BaseBundlerConfig = {
   http?: number;
@@ -34,7 +43,8 @@ type BaseBundlerConfig = {
   disableSharedBundles?: boolean;
   manualSharedBundles?: ManualSharedBundles;
   loadConditionalBundlesInParallel?: boolean;
-  sharedBundleMerge?: MergeCandidates;
+  sharedBundleMerge?: SharedBundleMergeCandidates;
+  asyncBundleMerge?: AsyncBundleMerge;
 };
 
 type BundlerConfig = Partial<Record<BuildMode, BaseBundlerConfig>> &
@@ -48,7 +58,8 @@ export type ResolvedBundlerConfig = {
   disableSharedBundles: boolean;
   manualSharedBundles: ManualSharedBundles;
   loadConditionalBundlesInParallel?: boolean;
-  sharedBundleMerge?: MergeCandidates;
+  sharedBundleMerge?: SharedBundleMergeCandidates;
+  asyncBundleMerge?: AsyncBundleMerge;
 };
 
 function resolveModeConfig(
@@ -156,6 +167,26 @@ const CONFIG_SCHEMA: SchemaEntity = {
         },
         additionalProperties: false,
       },
+    },
+    asyncBundleMerge: {
+      type: 'object',
+      properties: {
+        bundleSize: {
+          type: 'number',
+          required: true,
+        },
+        maxOverfetchSize: {
+          type: 'number',
+          required: true,
+        },
+        ignore: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+        },
+      },
+      additionalProperties: false,
     },
     minBundles: {
       type: 'number',
@@ -272,6 +303,7 @@ export async function loadBundlerConfig(
     minBundleSize: modeConfig.minBundleSize ?? defaults.minBundleSize,
     sharedBundleMerge:
       modeConfig.sharedBundleMerge ?? defaults.sharedBundleMerge,
+    asyncBundleMerge: modeConfig.asyncBundleMerge,
     maxParallelRequests:
       modeConfig.maxParallelRequests ?? defaults.maxParallelRequests,
     projectRoot: options.projectRoot,

@@ -12,11 +12,13 @@
 type DebugTools = {
   ['asset-file-names-in-output']: boolean;
   ['simple-cli-reporter']: boolean;
+  ['bundle-stats']: boolean;
 };
 
 export let debugTools: DebugTools = {
   'asset-file-names-in-output': false,
   'simple-cli-reporter': false,
+  'bundle-stats': false,
 };
 
 const envVarValue = process.env.ATLASPACK_DEBUG_TOOLS ?? '';
