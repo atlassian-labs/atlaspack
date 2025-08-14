@@ -19,7 +19,7 @@
     "@swc/core": "1.11.18"
   },
   "scripts": {
-    "build": "yarn build:clean && yarn build:prepare && yarn build:tsc && yarn build:gulp && yarn build-ts && yarn format:generated",
+    "build": "yarn build:clean && yarn build:prepare && yarn build:tsc && yarn build:gulp && yarn build-ts",
     "build:clean": "node ./scripts/clean.mjs",
     "build:prepare": "lerna run dev:prepare",
     "build:tsc": "lerna run --parallel build-tsc",
