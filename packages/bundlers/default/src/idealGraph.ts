@@ -1524,35 +1524,37 @@ export function createIdealGraph(
           removedBundleSharedBundles.add(bundleIdInGroup);
         }
 
-        // Merge any shared bundles that now have the same source bundles due to
-        // the current bundle merge
-        let sharedBundles = new DefaultMap<string, Array<NodeId>>(() => []);
-        for (let bundleId of removedBundleSharedBundles) {
-          let bundleNode = nullthrows(bundleGraph.getNode(bundleId));
-          invariant(bundleNode !== 'root');
-          if (
-            bundleNode.mainEntryAsset != null ||
-            bundleNode.manualSharedBundle != null
-          ) {
-            continue;
+        if (getFeatureFlag('removeRedundantSharedBundles')) {
+          // Merge any shared bundles that now have the same source bundles due to
+          // the current bundle merge
+          let sharedBundles = new DefaultMap<string, Array<NodeId>>(() => []);
+          for (let bundleId of removedBundleSharedBundles) {
+            let bundleNode = nullthrows(bundleGraph.getNode(bundleId));
+            invariant(bundleNode !== 'root');
+            if (
+              bundleNode.mainEntryAsset != null ||
+              bundleNode.manualSharedBundle != null
+            ) {
+              continue;
+            }
+
+            let key =
+              Array.from(bundleNode.sourceBundles)
+                .filter((sourceBundle) => sourceBundle !== bundleToRemoveId)
+                .sort()
+                .join(',') +
+              '.' +
+              bundleNode.type;
+
+            sharedBundles.get(key).push(bundleId);
           }
 
-          let key =
-            Array.from(bundleNode.sourceBundles)
-              .filter((sourceBundle) => sourceBundle !== bundleToRemoveId)
-              .sort()
-              .join(',') +
-            '.' +
-            bundleNode.type;
-
-          sharedBundles.get(key).push(bundleId);
-        }
-
-        for (let sharedBundlesToMerge of sharedBundles.values()) {
-          if (sharedBundlesToMerge.length > 1) {
-            let [firstBundleId, ...rest] = sharedBundlesToMerge;
-            for (let bundleId of rest) {
-              mergeBundles(firstBundleId, bundleId, 'redundant-shared');
+          for (let sharedBundlesToMerge of sharedBundles.values()) {
+            if (sharedBundlesToMerge.length > 1) {
+              let [firstBundleId, ...rest] = sharedBundlesToMerge;
+              for (let bundleId of rest) {
+                mergeBundles(firstBundleId, bundleId, 'redundant-shared');
+              }
             }
           }
         }

@@ -156,6 +156,12 @@ export const DEFAULT_FEATURE_FLAGS = {
    * a full bundling pass is required based on the AssetGraph's bundlingVersion.
    */
   incrementalBundlingVersioning: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Remove redundant shared bundles that are no longer required after merging
+   * async bundles.
+   */
+  removeRedundantSharedBundles: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
