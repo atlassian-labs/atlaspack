@@ -24,8 +24,10 @@
     "@atlaspack/plugin": "2.14.27",
     "@atlaspack/rust": "3.6.2",
     "@atlaspack/utils": "2.18.4",
+    "@types/sorted-array-functions": "^1.0.0",
     "nullthrows": "^1.1.1",
-    "many-keys-map": "^1.0.3"
+    "many-keys-map": "^1.0.3",
+    "sorted-array-functions": "^1.0.0"
   },
   "scripts": {
     "check-ts": "tsc --emitDeclarationOnly --rootDir src",

@@ -1,4 +1,5 @@
 import path from 'path';
+import sortedArray from 'sorted-array-functions';
 
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {
@@ -22,7 +23,12 @@ import invariant from 'assert';
 import nullthrows from 'nullthrows';
 
 import {findMergeCandidates, MergeGroup} from './bundleMerge';
-import type {ResolvedBundlerConfig, MergeCandidates} from './bundlerConfig';
+import type {
+  ResolvedBundlerConfig,
+  SharedBundleMergeCandidates,
+  AsyncBundleMerge,
+} from './bundlerConfig';
+import {Stats} from './stats';
 
 /* BundleRoot - An asset that is the main entry of a Bundle. */
 type BundleRoot = Asset;
@@ -108,6 +114,7 @@ export function createIdealGraph(
     Asset,
     Array<[Dependency, Bundle]>
   > = new DefaultMap(() => []);
+  let stats = new Stats(config.projectRoot);
 
   // A Graph of Bundles and a root node (dummy string), which models only Bundles, and connections to their
   // referencing Bundle. There are no actual BundleGroup nodes, just bundles that take on that role.
@@ -1206,14 +1213,14 @@ export function createIdealGraph(
 
   if (getFeatureFlag('supportWebpackChunkName')) {
     // Merge webpack chunk name bundles
-    let chunkNameBundles = new DefaultMap(() => new Set());
+    let chunkNameBundles = new DefaultMap<string, Set<NodeId>>(() => new Set());
     for (let [nodeId, node] of dependencyBundleGraph.nodes.entries()) {
       // meta.chunkName is set by the Rust transformer, so we just need to find
       // bundles that have a chunkName set.
       if (
         !node ||
         node.type !== 'dependency' ||
-        node.value.meta.chunkName == null
+        typeof node.value.meta.chunkName !== 'string'
       ) {
         continue;
       }
@@ -1272,15 +1279,19 @@ export function createIdealGraph(
       // Merge all bundles with the same chunk name into the first one.
       let [firstBundleId, ...rest] = Array.from(bundleIds);
       for (let bundleId of rest) {
-        // @ts-expect-error TS2345
-        mergeBundles(firstBundleId, bundleId);
+        mergeBundles(firstBundleId, bundleId, 'webpack-chunk-name');
       }
     }
   }
 
-  // Step merge shared bundles that meet the overlap threshold
-  // This step is skipped by default as the threshold defaults to 1
+  if (config.asyncBundleMerge) {
+    // Step merge async bundles that meet the overlap threshold
+    mergeAsyncBundles(config.asyncBundleMerge);
+  }
+
   if (config.sharedBundleMerge && config.sharedBundleMerge.length > 0) {
+    // Step merge shared bundles that meet the overlap threshold
+    // This step is skipped by default as the threshold defaults to 1
     mergeOverlapBundles(config.sharedBundleMerge);
   }
 
@@ -1412,7 +1423,12 @@ export function createIdealGraph(
     }
   }
 
-  function mergeBundles(bundleToKeepId: NodeId, bundleToRemoveId: NodeId) {
+  function mergeBundles(
+    bundleToKeepId: NodeId,
+    bundleToRemoveId: NodeId,
+    reason: string,
+  ) {
+    stats.trackMerge(bundleToKeepId, bundleToRemoveId, reason);
     let bundleToKeep = isNonRootBundle(
       bundleGraph.getNode(bundleToKeepId),
       `Bundle ${bundleToKeepId} not found`,
@@ -1461,8 +1477,10 @@ export function createIdealGraph(
         continue;
       }
 
-      bundleToKeep.sourceBundles.add(sourceBundleId);
-      bundleGraph.addEdge(sourceBundleId, bundleToKeepId);
+      if (sourceBundleId !== bundleToKeepId) {
+        bundleToKeep.sourceBundles.add(sourceBundleId);
+        bundleGraph.addEdge(sourceBundleId, bundleToKeepId);
+      }
     }
 
     if (getFeatureFlag('supportWebpackChunkName')) {
@@ -1478,9 +1496,11 @@ export function createIdealGraph(
 
         // If the bundle is a source bundle, add it to the bundle to keep
         if (bundleNode.sourceBundles.has(bundleToRemoveId)) {
-          bundleNode.sourceBundles.add(bundleToKeepId);
           bundleNode.sourceBundles.delete(bundleToRemoveId);
-          bundleGraph.addEdge(bundleToKeepId, bundle);
+          if (bundle !== bundleToKeepId) {
+            bundleNode.sourceBundles.add(bundleToKeepId);
+            bundleGraph.addEdge(bundleToKeepId, bundle);
+          }
         }
       }
 
@@ -1496,11 +1516,46 @@ export function createIdealGraph(
         let bundlesInRemoveBundleGroup =
           getBundlesForBundleGroup(bundleToRemoveId);
 
+        let removedBundleSharedBundles = new Set<NodeId>();
         for (let bundleIdInGroup of bundlesInRemoveBundleGroup) {
           if (bundleIdInGroup === bundleToRemoveId) {
             continue;
           }
           bundleGraph.addEdge(bundleToKeepId, bundleIdInGroup);
+          removedBundleSharedBundles.add(bundleIdInGroup);
+        }
+
+        // Merge any shared bundles that now have the same source bundles due to
+        // the current bundle merge
+        let sharedBundles = new DefaultMap<string, Array<NodeId>>(() => []);
+        for (let bundleId of removedBundleSharedBundles) {
+          let bundleNode = nullthrows(bundleGraph.getNode(bundleId));
+          invariant(bundleNode !== 'root');
+          if (
+            bundleNode.mainEntryAsset != null ||
+            bundleNode.manualSharedBundle != null
+          ) {
+            continue;
+          }
+
+          let key =
+            Array.from(bundleNode.sourceBundles)
+              .filter((sourceBundle) => sourceBundle !== bundleToRemoveId)
+              .sort()
+              .join(',') +
+            '.' +
+            bundleNode.type;
+
+          sharedBundles.get(key).push(bundleId);
+        }
+
+        for (let sharedBundlesToMerge of sharedBundles.values()) {
+          if (sharedBundlesToMerge.length > 1) {
+            let [firstBundleId, ...rest] = sharedBundlesToMerge;
+            for (let bundleId of rest) {
+              mergeBundles(firstBundleId, bundleId, 'redundant-shared');
+            }
+          }
         }
 
         // Remove old bundle group
@@ -1566,7 +1621,7 @@ export function createIdealGraph(
     bundleGraph.removeNode(bundleToRemoveId);
   }
 
-  function mergeOverlapBundles(mergeConfig: MergeCandidates) {
+  function mergeOverlapBundles(mergeConfig: SharedBundleMergeCandidates) {
     // Find all shared bundles
     let sharedBundles = new Set<NodeId>();
     bundleGraph.traverse((nodeId) => {
@@ -1620,7 +1675,7 @@ export function createIdealGraph(
       let [mergeTarget, ...rest] = cluster;
 
       for (let bundleIdToMerge of rest) {
-        mergeBundles(mergeTarget, bundleIdToMerge);
+        mergeBundles(mergeTarget, bundleIdToMerge, 'shared-merge');
       }
 
       mergedBundles.add(mergeTarget);
@@ -1629,6 +1684,153 @@ export function createIdealGraph(
     if (getFeatureFlag('supportWebpackChunkName')) {
       return mergedBundles;
     }
+  }
+
+  function mergeAsyncBundles({
+    bundleSize,
+    maxOverfetchSize,
+    ignore,
+  }: AsyncBundleMerge) {
+    let mergeCandidates = [];
+    let ignoreRegexes = ignore?.map((glob) => globToRegex(glob)) ?? [];
+
+    let isIgnored = (bundle: Bundle) => {
+      if (!bundle.mainEntryAsset) {
+        return false;
+      }
+
+      let mainEntryFilePath = path.relative(
+        config.projectRoot,
+        nullthrows(bundle.mainEntryAsset).filePath,
+      );
+
+      return ignoreRegexes.some((regex) => regex.test(mainEntryFilePath));
+    };
+
+    for (let [_bundleRootAsset, [bundleRootBundleId]] of bundleRoots) {
+      let bundleRootBundle = nullthrows(
+        bundleGraph.getNode(bundleRootBundleId),
+      );
+      invariant(bundleRootBundle !== 'root');
+
+      if (
+        bundleRootBundle.type === 'js' &&
+        bundleRootBundle.bundleBehavior !== 'inline' &&
+        bundleRootBundle.size <= bundleSize &&
+        !isIgnored(bundleRootBundle)
+      ) {
+        mergeCandidates.push(bundleRootBundleId);
+      }
+    }
+
+    let candidates = [];
+    for (let i = 0; i < mergeCandidates.length; i++) {
+      for (let j = i + 1; j < mergeCandidates.length; j++) {
+        let a = mergeCandidates[i];
+        let b = mergeCandidates[j];
+        if (a === b) continue; // Skip self-comparison
+
+        candidates.push(getAsyncBundleMergeOverlap(a, b, maxOverfetchSize));
+      }
+    }
+
+    let sortByScore = (
+      a: AsyncBundleMergeCandidate,
+      b: AsyncBundleMergeCandidate,
+    ) => {
+      let diff = a.score - b.score;
+      if (diff > 0) {
+        return 1;
+      } else if (diff < 0) {
+        return -1;
+      }
+      return 0;
+    };
+
+    candidates = candidates
+      .filter(
+        ({overfetchSize, score}) =>
+          overfetchSize <= maxOverfetchSize && score > 0,
+      )
+      .sort(sortByScore);
+
+    // Tracks the bundles that have been merged
+    let merged = new Set<NodeId>();
+    // Tracks the deleted bundles to the bundle they were merged into.
+    let mergeRemap = new Map<NodeId, NodeId>();
+    // Tracks the bundles that have been rescored and added back into the
+    // candidates.
+    let rescored = new DefaultMap<NodeId, Set<NodeId>>(() => new Set());
+
+    do {
+      let [a, b] = nullthrows(candidates.pop()).bundleIds;
+
+      if (
+        bundleGraph.hasNode(a) &&
+        bundleGraph.hasNode(b) &&
+        ((!merged.has(a) && !merged.has(b)) || rescored.get(a).has(b))
+      ) {
+        mergeRemap.set(b, a);
+        merged.add(a);
+        rescored.get(a).clear();
+
+        mergeBundles(a, b, 'async-merge');
+        continue;
+      }
+
+      // One or both of the bundles have been previously merged, so we'll
+      // rescore and add the result back into the list of candidates.
+      let getMergedBundleId = (bundleId: NodeId): NodeId | undefined => {
+        let seen = new Set<NodeId>();
+        while (!bundleGraph.hasNode(bundleId) && !seen.has(bundleId)) {
+          seen.add(bundleId);
+          bundleId = nullthrows(mergeRemap.get(bundleId));
+        }
+
+        if (!bundleGraph.hasNode(bundleId)) {
+          return;
+        }
+
+        return bundleId;
+      };
+
+      // Map a and b to their merged bundle ids if they've already been merged
+      let currentA = getMergedBundleId(a);
+      let currentB = getMergedBundleId(b);
+
+      if (
+        !currentA ||
+        !currentB ||
+        // Bundles are already merged
+        currentA === currentB
+      ) {
+        // This combiniation is not valid, so we skip it.
+        continue;
+      }
+
+      let candidate = getAsyncBundleMergeOverlap(
+        currentA,
+        currentB,
+        maxOverfetchSize,
+      );
+
+      if (candidate.overfetchSize <= maxOverfetchSize && candidate.score > 0) {
+        sortedArray.add(candidates, candidate, sortByScore);
+        rescored.get(currentA).add(currentB);
+      }
+    } while (candidates.length > 0);
+  }
+
+  function getBundle(bundleId: NodeId): Bundle {
+    let bundle = bundleGraph.getNode(bundleId);
+    if (bundle === 'root') {
+      throw new Error(`Cannot access root bundle`);
+    }
+    if (bundle == null) {
+      throw new Error(`Bundle ${bundleId} not found in bundle graph`);
+    }
+
+    return bundle;
   }
 
   function getBigIntFromContentKey(contentKey: string) {
@@ -1666,6 +1868,86 @@ export function createIdealGraph(
       bundlesInABundleGroup.push(nodeId);
     }, bundleGroupId);
     return bundlesInABundleGroup;
+  }
+
+  interface AsyncBundleMergeCandidate {
+    overfetchSize: number;
+    score: number;
+    bundleIds: number[];
+  }
+  function getAsyncBundleMergeOverlap(
+    bundleAId: NodeId,
+    bundleBId: NodeId,
+    maxOverfetchSize: number,
+  ): AsyncBundleMergeCandidate {
+    let bundleGroupA = new Set(getBundlesForBundleGroup(bundleAId));
+    let bundleGroupB = new Set(getBundlesForBundleGroup(bundleBId));
+
+    let overlapSize = 0;
+    let overfetchSize = 0;
+
+    let removedBundleSharedBundlesA = new Set<NodeId>();
+    let removedBundleSharedBundlesB = new Set<NodeId>();
+
+    for (let bundleId of new Set([...bundleGroupA, ...bundleGroupB])) {
+      let bundle = getBundle(bundleId);
+
+      if (bundleGroupA.has(bundleId) && bundleGroupB.has(bundleId)) {
+        overlapSize += bundle.size;
+      } else {
+        if (bundleGroupB.has(bundleId)) {
+          removedBundleSharedBundlesB.add(bundleId);
+        } else if (bundleGroupA.has(bundleId)) {
+          removedBundleSharedBundlesA.add(bundleId);
+        }
+        overfetchSize += bundle.size;
+      }
+    }
+
+    let overlapPercent = overlapSize / (overfetchSize + overlapSize);
+
+    let bundleAParents = getBundleParents(bundleAId);
+    let bundleBParents = getBundleParents(bundleBId);
+
+    let sharedParentOverlap = 0;
+    let sharedParentMismatch = 0;
+
+    for (let bundleId of new Set([...bundleAParents, ...bundleBParents])) {
+      if (bundleAParents.has(bundleId) && bundleBParents.has(bundleId)) {
+        sharedParentOverlap++;
+      } else {
+        sharedParentMismatch++;
+      }
+    }
+
+    let overfetchScore = overfetchSize / maxOverfetchSize;
+    let sharedParentPercent =
+      sharedParentOverlap / (sharedParentOverlap + sharedParentMismatch);
+    let score = sharedParentPercent + overlapPercent + overfetchScore;
+
+    return {
+      overfetchSize,
+      score,
+      bundleIds: [bundleAId, bundleBId],
+    };
+  }
+
+  function getBundleParents(bundleId: NodeId): Set<NodeId> {
+    let parents = new Set<NodeId>();
+    let {bundleRoots} = getBundle(bundleId);
+
+    for (let bundleRoot of bundleRoots) {
+      let bundleRootNodeId = nullthrows(
+        assetToBundleRootNodeId.get(bundleRoot),
+      );
+      for (let parentId of bundleRootGraph.getNodeIdsConnectedTo(
+        bundleRootNodeId,
+        ALL_EDGE_TYPES,
+      )) {
+        parents.add(parentId);
+      }
+    }
+    return parents;
   }
 
   function getBundleFromBundleRoot(bundleRoot: BundleRoot): Bundle {
@@ -1731,6 +2013,12 @@ export function createIdealGraph(
 
     bundleGraph.removeNode(bundleId);
   }
+
+  stats.report((bundleId) => {
+    let bundle = bundleGraph.getNode(bundleId);
+    invariant(bundle !== 'root');
+    return bundle;
+  });
 
   return {
     assets,

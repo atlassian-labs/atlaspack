@@ -4316,6 +4316,11 @@
   resolved "https://registry.yarnpkg.com/@types/sinonjs__fake-timers/-/sinonjs__fake-timers-8.1.5.tgz#5fd3592ff10c1e9695d377020c033116cc2889f2"
   integrity sha512-mQkU2jY8jJEF7YHjHvsQO8+3ughTL1mcnn96igfhONmR+fUPSKIkefQYpSe8bsly2Ep7oQbn/6VG5/9/0qcArQ==
 
+"@types/sorted-array-functions@^1.0.0":
+  version "1.3.3"
+  resolved "https://registry.yarnpkg.com/@types/sorted-array-functions/-/sorted-array-functions-1.3.3.tgz#c7e9902b4677dfd0693e4658d85a3ccb35b6e091"
+  integrity sha512-Znd+o08cWzYInbmSyoeK7D1aet3zFj346zuL0QWAnKVg3Sp57azvCzbxBfnxjDPNyHqOhzvK79K9sEV97BX5iQ==
+
 "@types/stack-utils@^2.0.0":
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/@types/stack-utils/-/stack-utils-2.0.3.tgz#6209321eb2c1712a7e7466422b8cb1fc0d9dd5d8"
@@ -16200,6 +16205,11 @@ sort-keys@^2.0.0:
   integrity sha1-ZYU1WEhh7JfXMNbPQYIuH1ZoQSg=
   dependencies:
     is-plain-obj "^1.0.0"
+
+sorted-array-functions@^1.0.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/sorted-array-functions/-/sorted-array-functions-1.3.0.tgz#8605695563294dffb2c9796d602bd8459f7a0dd5"
+  integrity sha512-2sqgzeFlid6N4Z2fUQ1cvFmTOLRi/sEDzSQ0OKYchqgoPmQBVyM3959qYx3fpS6Esef80KjmpgPeEr028dP3OA==
 
 source-map-js@^1.0.2:
   version "1.0.2"
