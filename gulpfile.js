@@ -39,6 +39,14 @@ const paths = {
         // This has to have some glob syntax so that vinyl.base will be right
         'packages/{runtimes,}/js/src/helpers/*.ts',
       ],
+  // Root-level TypeScript files (excluding type declaration files)
+  packageRoot: isBuildingSinglePackage
+    ? ['*.ts', '!src/**/*.ts', '!*.d.ts']
+    : [
+        'packages/*/*/*.ts',
+        '!packages/*/*/src/**/*.ts',
+        '!packages/*/*/*.d.ts',
+      ],
   packages: isBuildingSinglePackage ? 'lib/' : 'packages/',
 };
 
@@ -69,7 +77,11 @@ exports.clean = function clean(cb) {
   );
 };
 
-exports.default = exports.build = gulp.parallel(buildBabel, copyOthers);
+exports.default = exports.build = gulp.parallel(
+  buildBabel,
+  copyOthers,
+  buildBin,
+);
 
 function buildBabel() {
   return gulp
@@ -83,6 +95,13 @@ function copyOthers() {
   return gulp
     .src(paths.packageOther)
     .pipe(renameStream((relative) => relative.replace('src', 'lib')))
+    .pipe(gulp.dest(paths.packages));
+}
+
+function buildBin() {
+  return gulp
+    .src(paths.packageRoot)
+    .pipe(babel({...babelConfig, babelrcRoots: [__dirname + '/packages/*/*']}))
     .pipe(gulp.dest(paths.packages));
 }
 
