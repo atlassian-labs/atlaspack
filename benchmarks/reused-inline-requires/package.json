@@ -2,6 +2,7 @@
   "name": "@atlaspack/benchmark-reused-inline-requires",
   "private": true,
   "version": "0.1.0",
+  "sideEffects": false,
   "description": "Benchmark to compare browser performance with reusedInlineRequires feature on/off",
   "scripts": {
     "benchmark": "node scripts/benchmark.mjs",

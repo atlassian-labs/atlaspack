@@ -457,7 +457,9 @@ class RuntimeBenchmarkRunner {
       
       console.log(chalk.bold(`\n${metric}:`));
       console.log(`  Feature OFF: ${this.average(offValues).toFixed(1)}ms ± ${this.standardDeviation(offValues).toFixed(1)}ms`);
+      console.log(`              P50: ${this.percentile(offValues, 50).toFixed(1)}ms, P90: ${this.percentile(offValues, 90).toFixed(1)}ms`);
       console.log(`  Feature ON:  ${this.average(onValues).toFixed(1)}ms ± ${this.standardDeviation(onValues).toFixed(1)}ms`);
+      console.log(`              P50: ${this.percentile(onValues, 50).toFixed(1)}ms, P90: ${this.percentile(onValues, 90).toFixed(1)}ms`);
       
       const improvement = ((this.average(offValues) - this.average(onValues)) / this.average(offValues) * 100);
       const color = improvement > 0 ? chalk.green : chalk.red;
@@ -473,10 +475,12 @@ class RuntimeBenchmarkRunner {
       bundleMetrics: this.results.bundleMetrics,
       browserMetrics: {
         off: {
+          statistics: this.calculateStatistics(this.results.browserMetrics.off),
           averages: this.calculateAverages(this.results.browserMetrics.off),
           all: this.results.browserMetrics.off
         },
         on: {
+          statistics: this.calculateStatistics(this.results.browserMetrics.on),
           averages: this.calculateAverages(this.results.browserMetrics.on),
           all: this.results.browserMetrics.on
         }
@@ -502,10 +506,32 @@ class RuntimeBenchmarkRunner {
     const averages = {};
     
     keys.forEach(key => {
-      averages[key] = this.average(metrics.map(m => m[key]));
+      const values = metrics.map(m => m[key]);
+      averages[key] = this.average(values);
     });
     
     return averages;
+  }
+
+  calculateStatistics(metrics) {
+    if (!metrics.length) return {};
+    
+    const keys = Object.keys(metrics[0]).filter(k => typeof metrics[0][k] === 'number');
+    const statistics = {};
+    
+    keys.forEach(key => {
+      const values = metrics.map(m => m[key]);
+      statistics[key] = {
+        average: this.average(values),
+        standardDeviation: this.standardDeviation(values),
+        p50: this.percentile(values, 50),
+        p90: this.percentile(values, 90),
+        min: Math.min(...values),
+        max: Math.max(...values)
+      };
+    });
+    
+    return statistics;
   }
 
   calculateImprovement(metric) {
@@ -523,6 +549,21 @@ class RuntimeBenchmarkRunner {
     const avg = this.average(array);
     const squareDiffs = array.map(value => Math.pow(value - avg, 2));
     return Math.sqrt(this.average(squareDiffs));
+  }
+
+  percentile(array, percentile) {
+    if (!array.length) return 0;
+    const sorted = [...array].sort((a, b) => a - b);
+    const index = (percentile / 100) * (sorted.length - 1);
+    
+    if (Math.floor(index) === index) {
+      return sorted[index];
+    } else {
+      const lower = sorted[Math.floor(index)];
+      const upper = sorted[Math.ceil(index)];
+      const weight = index - Math.floor(index);
+      return lower + (upper - lower) * weight;
+    }
   }
 
   async cleanDirectory(dir) {
