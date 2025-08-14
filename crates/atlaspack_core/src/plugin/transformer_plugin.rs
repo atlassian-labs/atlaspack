@@ -40,11 +40,11 @@ pub struct TransformContext {
 impl Default for TransformContext {
   fn default() -> Self {
     Self {
-      config: Arc::new(ConfigLoader {
-        fs: Arc::new(InMemoryFileSystem::default()),
-        project_root: PathBuf::default(),
-        search_path: PathBuf::default(),
-      }),
+      config: Arc::new(ConfigLoader::new(
+        Arc::new(InMemoryFileSystem::default()),
+        PathBuf::default(),
+        PathBuf::default(),
+      )),
       environment: Arc::new(Environment::default()),
     }
   }

@@ -47,7 +47,7 @@ impl Debug for AtlaspackResolver {
   }
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct ResolverConfig {
   package_exports: Option<bool>,
@@ -55,7 +55,7 @@ struct ResolverConfig {
   graphql_esm_upgrade: Option<bool>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct PackageJson {
   #[serde(rename = "@atlaspack/resolver-default")]
   config: Option<ResolverConfig>,
@@ -73,15 +73,15 @@ impl AtlaspackResolver {
 
         Ok(ResolverConfig::default())
       },
-      |config| Ok(config.contents.config.unwrap_or_default()),
+      |config| Ok(config.contents.config.clone().unwrap_or_default()),
     )?;
 
-    let cache = Cache::new(ctx.config.fs.clone());
+    let cache = Cache::new(ctx.file_system.clone());
 
     // If package deduplication is enabled, then scan node_modules for duplicate package
     // versions
     if config.deduplicate_packages.is_some_and(|v| v) {
-      cache.scan_package_duplicates(&ctx.config.project_root)?;
+      cache.scan_package_duplicates(&ctx.options.project_root)?;
     }
 
     Ok(Self {

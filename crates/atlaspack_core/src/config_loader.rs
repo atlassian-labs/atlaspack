@@ -1,5 +1,4 @@
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use atlaspack_filesystem::search::find_ancestor_file;
 use atlaspack_filesystem::FileSystemRef;
@@ -15,9 +14,9 @@ pub type ConfigLoaderRef = Arc<ConfigLoader>;
 /// Enables config to be loaded in various formats
 #[derive(Debug)]
 pub struct ConfigLoader {
-  pub fs: FileSystemRef,
-  pub project_root: PathBuf,
-  pub search_path: PathBuf,
+  fs: FileSystemRef,
+  project_root: PathBuf,
+  search_path: PathBuf,
 }
 
 #[derive(Debug, PartialEq)]
@@ -29,6 +28,14 @@ pub struct ConfigFile<T> {
 
 // TODO JavaScript configs, invalidations, dev deps, etc
 impl ConfigLoader {
+  pub fn new(fs: FileSystemRef, project_root: PathBuf, search_path: PathBuf) -> Self {
+    Self {
+      fs,
+      project_root,
+      search_path,
+    }
+  }
+
   pub fn load_json_config<Config: DeserializeOwned>(
     &self,
     filename: &str,

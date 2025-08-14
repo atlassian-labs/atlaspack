@@ -1,5 +1,6 @@
 #[cfg(feature = "nodejs")]
 pub mod nodejs;
+pub mod rust;
 pub mod testing;
 
 use std::sync::Arc;

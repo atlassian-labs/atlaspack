@@ -107,11 +107,11 @@ impl Request for AssetRequest {
       }
     }
 
-    let config_loader = Arc::new(ConfigLoader {
-      fs: request_context.file_system().clone(),
-      project_root: request_context.project_root.clone(),
-      search_path: asset.file_path.clone(),
-    });
+    let config_loader = Arc::new(ConfigLoader::new(
+      request_context.file_system().clone(),
+      request_context.project_root.clone(),
+      asset.file_path.clone(),
+    ));
 
     let transform_context = TransformContext::new(config_loader, self.env.clone());
     let mut result = run_pipelines(

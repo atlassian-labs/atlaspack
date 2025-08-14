@@ -22,11 +22,11 @@ pub(crate) fn make_test_plugin_context() -> PluginContext {
   fs.write_file(Path::new("package.json"), String::from("{}"));
 
   PluginContext {
-    config: Arc::new(ConfigLoader {
-      fs: fs.clone(),
-      project_root: PathBuf::default(),
-      search_path: PathBuf::default(),
-    }),
+    config: Arc::new(ConfigLoader::new(
+      fs.clone(),
+      PathBuf::default(),
+      PathBuf::default(),
+    )),
     file_system: fs.clone(),
     options: Arc::new(PluginOptions::default()),
     logger: PluginLogger::default(),
@@ -69,11 +69,11 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
     atlaspack_options,
   } = options;
 
-  let config_loader = Arc::new(ConfigLoader {
-    fs: fs.clone(),
-    project_root: project_root.clone(),
+  let config_loader = Arc::new(ConfigLoader::new(
+    fs.clone(),
+    project_root.clone(),
     search_path,
-  });
+  ));
 
   let plugins = plugins.unwrap_or_else(|| {
     config_plugins(PluginContext {

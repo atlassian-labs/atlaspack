@@ -102,6 +102,8 @@ impl RequestTracker {
   ///     without stalls and locks/channels
   ///   - For non-main-thread requests, do not allow enqueueing of sub-requests
   pub async fn run_request(&mut self, request: impl Request) -> anyhow::Result<RequestResult> {
+    tracing::debug!("run_request {:?}", request);
+
     let request_id = request.id();
     let (tx, rx) = std::sync::mpsc::channel();
     let tx2 = tx.clone();
@@ -114,6 +116,8 @@ impl RequestTracker {
       },
     });
     drop(tx);
+
+    let mut tasks = Vec::new();
 
     while let Ok(request_queue_message) = rx.recv() {
       match request_queue_message {
@@ -148,7 +152,7 @@ impl RequestTracker {
               }),
             );
 
-            tokio::spawn({
+            let task = tokio::spawn({
               let tx = tx.clone();
               async move {
                 let result = request.run(context).await;
@@ -160,6 +164,8 @@ impl RequestTracker {
                 });
               }
             });
+
+            tasks.push(task);
           } else {
             // Cached request
             if let Some(response_tx) = response_tx {
@@ -183,6 +189,10 @@ impl RequestTracker {
           }
         }
       }
+    }
+
+    for task in tasks {
+      task.await?;
     }
 
     self.get_request(None, request_id)

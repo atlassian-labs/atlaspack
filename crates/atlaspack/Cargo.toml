@@ -51,5 +51,7 @@ parking_lot = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 
 [dev-dependencies]
+atlaspack_benchmark = { path = "../../benchmarks/atlaspack_benchmark" }
+
 mockall = { workspace = true }
 pretty_assertions = { workspace = true }

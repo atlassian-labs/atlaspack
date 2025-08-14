@@ -42,6 +42,7 @@ pub struct AtlaspackJsTransformerPlugin {
   config: JsTransformerConfig,
   options: Arc<PluginOptions>,
   ts_config: Option<TsConfig>,
+  package_json: Option<PackageJson>,
 }
 
 #[derive(Default)]
@@ -89,11 +90,18 @@ impl AtlaspackJsTransformerPlugin {
       })
       .ok();
 
+    let package_json = ctx
+      .config
+      .load_package_json::<PackageJson>()
+      .ok()
+      .map(|c| c.contents);
+
     Ok(Self {
       cache: Default::default(),
       config,
       options: ctx.options.clone(),
       ts_config,
+      package_json,
     })
   }
 
@@ -189,7 +197,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does equivalent work to `JSTransformer::transform` in `packages/transformers/js`
   async fn transform(
     &self,
-    context: TransformContext,
+    _context: TransformContext,
     mut asset: Asset,
   ) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
@@ -245,8 +253,6 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       .as_ref()
       .and_then(|ts| ts.compiler_options.as_ref());
 
-    let package_json = context.config().load_package_json::<PackageJson>().ok();
-
     let automatic_jsx_runtime = compiler_options
       .map(|co| {
         co.jsx
@@ -255,9 +261,10 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
           || co.jsx_import_source.is_some()
       })
       .unwrap_or_else(|| {
-        package_json
+        self
+          .package_json
           .as_ref()
-          .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents))
+          .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg))
       });
 
     let transform_config = atlaspack_js_swc_core::Config {
@@ -292,7 +299,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       module_id: asset.id.to_string(),
       node_replacer: is_node,
       project_root: self.options.project_root.to_string_lossy().into_owned(),
-      react_refresh: self.options.mode == BuildMode::Development && package_json.is_some_and(|pkg| depends_on_react(&pkg.contents))
+      react_refresh: self.options.mode == BuildMode::Development && self.package_json.as_ref().is_some_and(|pkg| depends_on_react(pkg))
       // && TODO: self.options.hmr_options
       && env.context.is_browser()
       && !env.is_library
@@ -895,11 +902,11 @@ mod tests {
       .unwrap_or_else(|| default_fs(&project_root));
 
     let ctx = PluginContext {
-      config: Arc::new(ConfigLoader {
-        fs: file_system.clone(),
-        project_root: project_root.to_path_buf(),
-        search_path: project_root.to_path_buf(),
-      }),
+      config: Arc::new(ConfigLoader::new(
+        file_system.clone(),
+        project_root.to_path_buf(),
+        project_root.to_path_buf(),
+      )),
       file_system: file_system.clone(),
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
@@ -907,11 +914,11 @@ mod tests {
 
     let transformer = AtlaspackJsTransformerPlugin::new(&ctx)?;
     let context = TransformContext::new(
-      Arc::new(ConfigLoader {
-        fs: file_system,
+      Arc::new(ConfigLoader::new(
+        file_system,
         project_root,
-        search_path: asset.file_path.clone(),
-      }),
+        asset.file_path.clone(),
+      )),
       Arc::new(Environment::default()),
     );
 

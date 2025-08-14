@@ -52,6 +52,7 @@ impl Atlaspack {
   ) -> Result<Self, anyhow::Error> {
     let fs = fs.unwrap_or_else(|| Arc::new(OsFileSystem));
     let project_root = infer_project_root(Arc::clone(&fs), options.entries.clone())?;
+    tracing::debug!(?project_root, entries = ?options.entries, "Project root");
 
     let package_manager = package_manager
       .unwrap_or_else(|| Arc::new(NodePackageManager::new(project_root.clone(), fs.clone())));
@@ -66,6 +67,7 @@ impl Atlaspack {
     let rc_config_loader =
       AtlaspackRcConfigLoader::new(Arc::clone(&fs), Arc::clone(&package_manager));
 
+    tracing::debug!(?project_root, "Loading config");
     let (config, _files) = rc_config_loader.load(
       &project_root,
       LoadConfigOptions {
@@ -75,11 +77,11 @@ impl Atlaspack {
       },
     )?;
 
-    let config_loader = Arc::new(ConfigLoader {
-      fs: Arc::clone(&fs),
-      project_root: project_root.clone(),
-      search_path: project_root.join("index"),
-    });
+    let config_loader = Arc::new(ConfigLoader::new(
+      Arc::clone(&fs),
+      project_root.clone(),
+      project_root.join("index"),
+    ));
 
     let plugins = Arc::new(ConfigPlugins::new(
       rpc_worker.clone(),
@@ -125,7 +127,7 @@ impl Atlaspack {
 
 impl Atlaspack {
   pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
-    self.runtime.block_on(async move {
+    let result = self.runtime.block_on(async move {
       let request_result = self
         .request_tracker
         .write()
@@ -134,13 +136,19 @@ impl Atlaspack {
         .await?;
 
       let RequestResult::AssetGraph(asset_graph_request_output) = request_result else {
-        panic!("Something went wrong with the request tracker")
+        anyhow::bail!("Something went wrong with the request tracker")
       };
 
       let asset_graph = asset_graph_request_output.graph;
       self.commit_assets(asset_graph.nodes().collect())?;
       Ok(asset_graph)
-    })
+    });
+
+    if let Err(e) = &result {
+      tracing::error!(?e, "Error building asset graph");
+    }
+
+    result
   }
 
   pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {
@@ -185,11 +193,16 @@ impl Atlaspack {
 
 #[cfg(test)]
 mod tests {
-  use std::{collections::HashSet, env::temp_dir};
+  use std::{
+    collections::{HashMap, HashSet},
+    env::temp_dir,
+    path::Path,
+  };
 
+  use atlaspack_benchmark::GenerateMonorepoParams;
   use atlaspack_core::types::{Asset, Code};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
-  use atlaspack_plugin_rpc::{MockRpcFactory, MockRpcWorker};
+  use atlaspack_plugin_rpc::{rust::RustWorkerFactory, MockRpcFactory, MockRpcWorker};
   use lmdb_js_lite::{get_database, LMDBOptions};
 
   use super::*;
@@ -247,6 +260,174 @@ mod tests {
     Ok(())
   }
 
+  fn symlink_core(temp_dir: &Path) -> anyhow::Result<()> {
+    let repo_path = get_repo_path();
+
+    let do_link = |source, target| -> anyhow::Result<()> {
+      let source_path = repo_path.join(source);
+      let target_path = temp_dir.join(target);
+
+      tracing::debug!(?source_path, ?target_path, "Linking");
+
+      std::fs::create_dir_all(&target_path.parent().unwrap())?;
+      std::os::unix::fs::symlink(&source_path, &target_path)?;
+
+      Ok(())
+    };
+
+    do_link(
+      "packages/configs/default",
+      "node_modules/@atlaspack/config-default",
+    )?;
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_create_asset_graph_from_simple_app() -> anyhow::Result<()> {
+    let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
+      .with_max_level(tracing::Level::INFO)
+      .try_init();
+
+    let temp_dir = temp_dir()
+      .join("atlaspack")
+      .join("test-create-asset-graph-from-simple-app");
+    let _ = std::fs::remove_dir_all(&temp_dir);
+    std::fs::create_dir_all(&temp_dir)?;
+    std::fs::create_dir_all(temp_dir.join("src"))?;
+    let temp_dir = std::fs::canonicalize(&temp_dir)?;
+    symlink_core(&temp_dir)?;
+
+    std::fs::write(temp_dir.join("yarn.lock"), r#"{}"#).unwrap();
+    std::fs::write(
+      temp_dir.join(".parcelrc"),
+      r#"{"extends": "@atlaspack/config-default"}"#,
+    )
+    .unwrap();
+
+    std::fs::write(
+      temp_dir.join("src/index.ts"),
+      r#"
+      import { bar } from "./bar";
+
+      output(bar + "foo");
+      "#,
+    )
+    .unwrap();
+
+    std::fs::write(
+      temp_dir.join("src/bar.ts"),
+      r#"
+      export const bar = "bar";
+      "#,
+    )
+    .unwrap();
+
+    let atlaspack = Atlaspack::new(AtlaspackInitOptions {
+      db: create_db()?,
+      fs: Some(Arc::new(OsFileSystem)),
+      options: AtlaspackOptions {
+        entries: vec![temp_dir.join("src/index.ts").to_string_lossy().to_string()],
+        core_path: get_core_path(),
+        ..Default::default()
+      },
+      package_manager: None,
+      rpc: Arc::new(RustWorkerFactory::default()),
+    })?;
+
+    let asset_graph = atlaspack.build_asset_graph()?;
+
+    tracing::debug!("Asset graph: {:#?}", asset_graph);
+
+    let assets = asset_graph
+      .nodes()
+      .filter_map(|node| {
+        if let AssetGraphNode::Asset(node) = node {
+          Some(node)
+        } else {
+          None
+        }
+      })
+      .collect::<Vec<_>>();
+
+    let assets = assets
+      .iter()
+      .map(|asset| (asset.asset.file_path.clone(), asset.asset.clone()))
+      .collect::<HashMap<_, _>>();
+
+    tracing::debug!(test_path = ?get_repo_path().join("packages/transformers/js/src/esmodule-helpers.js"), "Assets");
+    tracing::debug!(assets = ?assets.keys().collect::<Vec<_>>(), "Assets");
+
+    assert_eq!(assets.len(), 3);
+    assert!(assets.contains_key(&temp_dir.join("src/bar.ts")));
+    assert!(assets.contains_key(&temp_dir.join("src/index.ts")));
+    assert!(assets
+      .contains_key(&get_repo_path().join("packages/transformers/js/src/esmodule-helpers.js")));
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_build_asset_graph_from_large_synthetic_project() {
+    let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
+      .with_max_level(tracing::Level::INFO)
+      .try_init();
+
+    let temp_dir = temp_dir()
+      .join("atlaspack")
+      .join("test-build-asset-graph-from-large-synthetic-project");
+    let _ = std::fs::remove_dir_all(&temp_dir);
+    std::fs::create_dir_all(&temp_dir).unwrap();
+    let temp_dir = std::fs::canonicalize(&temp_dir).unwrap();
+
+    atlaspack_benchmark::generate_monorepo(GenerateMonorepoParams {
+      num_files: 100_000,
+      avg_lines_per_file: 30,
+      depth: 50_000,
+      subtrees: 10_000,
+      target_dir: &temp_dir,
+      ..Default::default()
+    })
+    .unwrap();
+    std::fs::write(temp_dir.join("yarn.lock"), r#"{}"#).unwrap();
+    std::fs::write(
+      temp_dir.join(".parcelrc"),
+      r#"{"extends": "@atlaspack/config-default"}"#,
+    )
+    .unwrap();
+    symlink_core(&temp_dir).unwrap();
+
+    let atlaspack = Atlaspack::new(AtlaspackInitOptions {
+      db: create_db().unwrap(),
+      fs: Some(Arc::new(OsFileSystem)),
+      options: AtlaspackOptions {
+        entries: vec![temp_dir
+          .join("app-root/src/index.ts")
+          .to_string_lossy()
+          .to_string()],
+        core_path: get_core_path(),
+        ..Default::default()
+      },
+      package_manager: None,
+      rpc: Arc::new(RustWorkerFactory::default()),
+    })
+    .unwrap();
+
+    let asset_graph = atlaspack.build_asset_graph().unwrap();
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+  }
+
+  fn get_repo_path() -> PathBuf {
+    let result = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    std::fs::canonicalize(&result).unwrap()
+  }
+
+  fn get_core_path() -> PathBuf {
+    let result = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../packages/core");
+    std::fs::canonicalize(&result).unwrap()
+  }
+
   fn create_db() -> anyhow::Result<Arc<DatabaseHandle>> {
     let path = temp_dir().join("atlaspack").join("asset-graph-tests");
     let _ = std::fs::remove_dir_all(&path);
@@ -254,7 +435,7 @@ mod tests {
     let lmdb = get_database(LMDBOptions {
       path: path.to_string_lossy().to_string(),
       async_writes: false,
-      map_size: None,
+      map_size: Some((1024 * 1024 * 1024usize) as f64),
     })?;
 
     Ok(lmdb)

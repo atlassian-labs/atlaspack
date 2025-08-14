@@ -47,7 +47,7 @@ impl AtlaspackCssTransformerPlugin {
 
         Ok(CssTransformerConfig::default())
       },
-      |config| Ok(config.contents.config.unwrap_or_default()),
+      |config| Ok(config.contents.config.clone().unwrap_or_default()),
     )?;
 
     let css_modules_config = config
