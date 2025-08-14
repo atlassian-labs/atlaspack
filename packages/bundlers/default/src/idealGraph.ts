@@ -1284,15 +1284,14 @@ export function createIdealGraph(
     }
   }
 
+  // Step merge async bundles that meet the configured params
   if (config.asyncBundleMerge) {
-    // Step merge async bundles that meet the overlap threshold
     mergeAsyncBundles(config.asyncBundleMerge);
   }
 
+  // Step merge shared bundles that meet the configured params
   if (config.sharedBundleMerge && config.sharedBundleMerge.length > 0) {
-    // Step merge shared bundles that meet the overlap threshold
-    // This step is skipped by default as the threshold defaults to 1
-    mergeOverlapBundles(config.sharedBundleMerge);
+    mergeSharedBundles(config.sharedBundleMerge);
   }
 
   // Step Merge Share Bundles: Merge any shared bundles under the minimum bundle size back into
@@ -1621,7 +1620,7 @@ export function createIdealGraph(
     bundleGraph.removeNode(bundleToRemoveId);
   }
 
-  function mergeOverlapBundles(mergeConfig: SharedBundleMergeCandidates) {
+  function mergeSharedBundles(mergeConfig: SharedBundleMergeCandidates) {
     // Find all shared bundles
     let sharedBundles = new Set<NodeId>();
     bundleGraph.traverse((nodeId) => {
