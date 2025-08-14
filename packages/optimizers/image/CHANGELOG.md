@@ -1,5 +1,19 @@
 # @atlaspack/optimizer-image
 
+## 4.0.2
+
+### Patch Changes
+
+- [#742](https://github.com/atlassian-labs/atlaspack/pull/742) [`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd) Thanks [@yamadapc](https://github.com/yamadapc)! - Internal changes and bug fixes to environmentDeduplication flag
+
+- Updated dependencies [[`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd)]:
+  - @atlaspack/diagnostic@2.14.3
+  - @atlaspack/workers@2.14.26
+  - @atlaspack/plugin@2.14.26
+  - @atlaspack/utils@2.18.3
+  - @atlaspack/core@2.23.2
+  - @atlaspack/rust@3.6.1
+
 ## 4.0.1
 
 ### Patch Changes
