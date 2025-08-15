@@ -34,5 +34,10 @@ export function getPackageProgressMessage(
   totalBundles: number,
 ): string {
   let percent = Math.floor((completeBundles / totalBundles) * 100);
-  return `Packaging bundles ${completeBundles}/${totalBundles} (${percent}%)`;
+  let completeStr = completeBundles.toString();
+  let totalStr = totalBundles.toString();
+
+  let displayBundles = completeStr.padStart(totalStr.length, ' ');
+
+  return `Packaging bundles ${displayBundles}/${totalBundles} (${percent}%)`;
 }
