@@ -52,7 +52,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
       env: context.env().clone(),
       project_root: self.project_root.clone(),
       side_effects: input.side_effects,
-      source_asset_id: input.id.clone(),
+      source_asset_id: input.id().clone(),
       source_path: Some(input.file_path.clone()),
       enable_inline_isolated: self.enable_inline_isolated,
     };

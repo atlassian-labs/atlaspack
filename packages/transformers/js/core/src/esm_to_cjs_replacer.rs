@@ -13,6 +13,7 @@ use swc_core::ecma::preset_env::Feature;
 use swc_core::ecma::preset_env::Versions;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
+use swc_core::quote;
 
 use crate::id;
 use crate::utils::get_undefined_ident;
@@ -491,7 +492,6 @@ impl VisitMut for EsmToCjsReplacer {
               }
             }
             ModuleDecl::ExportDecl(export) => {
-              needs_interop_flag = true;
               match &export.decl {
                 Decl::Class(class) => {
                   self.create_export(
@@ -520,6 +520,40 @@ impl VisitMut for EsmToCjsReplacer {
                 Decl::Var(var) => {
                   let mut var = var.clone();
 
+                  if var.kind == VarDeclKind::Const {
+                    let mut exports = vec![];
+                    for decl in &var.decls {
+                      let Some(ident) = decl.name.as_ident() else {
+                        // This should never happen. And would be caused by:
+                        // export const { a } = 10;
+                        // Or similar patterns.
+                        continue;
+                      };
+                      let ident = ident.id.clone();
+
+                      exports.push(ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+                        span: DUMMY_SP,
+                        expr: Box::new(Expr::Assign(AssignExpr {
+                          op: AssignOp::Assign,
+                          left: AssignTarget::Simple(SimpleAssignTarget::Member(MemberExpr {
+                            obj: Box::new(Expr::Ident(Ident::new_no_ctxt(
+                              "exports".into(),
+                              DUMMY_SP,
+                            ))),
+                            prop: MemberProp::Ident(IdentName::new(ident.sym.clone(), DUMMY_SP)),
+                            span: DUMMY_SP,
+                          })),
+                          right: Box::new(Expr::Ident(ident.clone())),
+                          span: DUMMY_SP,
+                        })),
+                      })));
+                    }
+                    items.push(ModuleItem::Stmt(Stmt::Decl(Decl::Var(var))));
+                    items.extend(exports);
+
+                    continue;
+                  }
+
                   var.decls = var
                     .decls
                     .iter()
@@ -542,6 +576,8 @@ impl VisitMut for EsmToCjsReplacer {
                   items.push(ModuleItem::Stmt(Stmt::Decl(decl)));
                 }
               }
+
+              needs_interop_flag = true;
             }
             _ => items.push(item.clone()),
           }

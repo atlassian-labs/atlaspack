@@ -211,7 +211,7 @@ impl std::hash::Hash for AssetGraph {
     for node in self.graph.node_weights() {
       std::mem::discriminant(node).hash(state);
       match node {
-        AssetGraphNode::Asset(asset_node) => asset_node.asset.id.hash(state),
+        AssetGraphNode::Asset(asset_node) => asset_node.asset.id().hash(state),
         AssetGraphNode::Dependency(dependency_node) => dependency_node.dependency.id().hash(state),
         _ => {}
       }

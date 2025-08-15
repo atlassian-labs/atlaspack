@@ -1,6 +1,9 @@
 use crate::config_loader::{ConfigLoader, ConfigLoaderRef};
 use crate::hash::IdentifierHasher;
-use crate::types::{Asset, AssetWithDependencies, Dependency, Environment, SpecifierType};
+use crate::types::{
+  Asset, AssetWithDependencies, Dependency, Environment, FeatureFlagValue, FeatureFlags,
+  SpecifierType,
+};
 use async_trait::async_trait;
 use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 use mockall::automock;
@@ -35,11 +38,13 @@ pub struct TransformResult {
 pub struct TransformContext {
   config: ConfigLoaderRef,
   environment: Arc<Environment>,
+  feature_flags: Arc<FeatureFlags>,
 }
 
 impl Default for TransformContext {
   fn default() -> Self {
     Self {
+      feature_flags: Arc::new(FeatureFlags::default()),
       config: Arc::new(ConfigLoader::new(
         Arc::new(InMemoryFileSystem::default()),
         PathBuf::default(),
@@ -51,10 +56,15 @@ impl Default for TransformContext {
 }
 
 impl TransformContext {
-  pub fn new(config: ConfigLoaderRef, environment: Arc<Environment>) -> Self {
+  pub fn new(
+    config: ConfigLoaderRef,
+    environment: Arc<Environment>,
+    feature_flags: Arc<FeatureFlags>,
+  ) -> Self {
     Self {
       config,
       environment,
+      feature_flags,
     }
   }
 
@@ -65,6 +75,14 @@ impl TransformContext {
 
   pub fn env(&self) -> &Arc<Environment> {
     &self.environment
+  }
+
+  pub fn get_feature_flag(&self, flag: &str) -> bool {
+    self
+      .feature_flags
+      .get(flag)
+      .map(|v| matches!(v, FeatureFlagValue::Bool(true)))
+      .unwrap_or(false)
   }
 }
 

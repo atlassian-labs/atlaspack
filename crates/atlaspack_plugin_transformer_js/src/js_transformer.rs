@@ -197,7 +197,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does equivalent work to `JSTransformer::transform` in `packages/transformers/js`
   async fn transform(
     &self,
-    _context: TransformContext,
+    context: TransformContext,
     mut asset: Asset,
   ) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
@@ -329,6 +329,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       conditional_bundling: feature_flag_conditional_bundling,
       hmr_improvements: feature_flag_hmr_improvements,
       computed_properties_fix: feature_flag_computed_properties_fix,
+      is_native_packaging_enabled: context.get_feature_flag("native_everything"),
       ..atlaspack_js_swc_core::Config::default()
     };
 
@@ -377,8 +378,8 @@ mod tests {
     config_loader::ConfigLoader,
     plugin::PluginLogger,
     types::{
-      Code, Dependency, Environment, EnvironmentContext, Location, SourceLocation, SpecifierType,
-      Symbol,
+      Code, Dependency, Environment, EnvironmentContext, FeatureFlags, Location, SourceLocation,
+      SpecifierType, Symbol,
     },
   };
   use atlaspack_filesystem::{in_memory_file_system::InMemoryFileSystem, FileSystemRef};
@@ -920,6 +921,7 @@ mod tests {
         asset.file_path.clone(),
       )),
       Arc::new(Environment::default()),
+      Arc::new(FeatureFlags::default()),
     );
 
     let mut result = transformer.transform(context, asset).await?;

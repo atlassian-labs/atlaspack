@@ -49,8 +49,15 @@ pub fn hoist(
   module_id: &str,
   unresolved_mark: Mark,
   collect: &Collect,
+  is_native_packaging_enabled: bool,
 ) -> Result<(Module, HoistResult, Vec<Diagnostic>), Vec<Diagnostic>> {
-  let mut hoist = Hoist::new(module_id, unresolved_mark, collect);
+  let mut hoist = Hoist::new(
+    module_id,
+    unresolved_mark,
+    collect,
+    is_native_packaging_enabled,
+  );
+
   let module = module.fold_with(&mut hoist);
 
   if !hoist.diagnostics.is_empty() {
@@ -129,6 +136,7 @@ struct Hoist<'a> {
   in_function_scope: bool,
   diagnostics: Vec<Diagnostic>,
   unresolved_mark: Mark,
+  is_native_packaging_enabled: bool,
 }
 
 /// Data pertaining to mangled identifiers replacing import and export statements
@@ -337,7 +345,12 @@ pub struct HoistResult {
 }
 
 impl<'a> Hoist<'a> {
-  fn new(module_id: &'a str, unresolved_mark: Mark, collect: &'a Collect) -> Self {
+  fn new(
+    module_id: &'a str,
+    unresolved_mark: Mark,
+    collect: &'a Collect,
+    is_native_packaging_enabled: bool,
+  ) -> Self {
     Hoist {
       module_id,
       collect,
@@ -352,6 +365,7 @@ impl<'a> Hoist<'a> {
       in_function_scope: false,
       diagnostics: vec![],
       unresolved_mark,
+      is_native_packaging_enabled,
     }
   }
 
@@ -776,10 +790,13 @@ impl Fold for Hoist<'_> {
       }
     }
 
-    self.module_items.splice(
-      0..0,
-      std::mem::take(&mut self.hoisted_imports).into_values(),
-    );
+    if !self.is_native_packaging_enabled {
+      self.module_items.splice(
+        0..0,
+        std::mem::take(&mut self.hoisted_imports).into_values(),
+      );
+    }
+
     node.body = std::mem::take(&mut self.module_items);
     node
   }
@@ -2742,7 +2759,7 @@ mod tests {
       visitor: hoist,
       ..
     } = run_test_fold(&collect_output_code, |context| {
-      Hoist::new("abc", context.unresolved_mark, &collect)
+      Hoist::new("abc", context.unresolved_mark, &collect, false)
     });
 
     (output_code, hoist.get_result())

@@ -70,6 +70,26 @@ impl RunRequestContext {
       .expect("TODO this should be handled?")
   }
 
+  pub async fn run_request(
+    &self,
+    request: impl Request,
+  ) -> anyhow::Result<(RequestResult, RequestId)> {
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    let request: Box<dyn Request> = Box::new(request);
+    let message = RunRequestMessage {
+      request,
+      response_tx: Some(tx),
+      parent_request_id: self.parent_request_id,
+    };
+
+    (*self.run_request_fn)(message);
+
+    let result = tokio::task::spawn_blocking(move || rx.recv()).await???;
+
+    Ok(result)
+  }
+
   /// Run a child request to the current request
   pub fn queue_request(
     &mut self,

@@ -201,7 +201,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 env: asset.env.clone(),
                 package_conditions: ExportsCondition::STYLE,
                 priority: Priority::Sync,
-                source_asset_id: Some(asset.id.clone()),
+                source_asset_id: Some(asset.id().clone()),
                 source_path: Some(asset.file_path.clone()),
                 specifier: import_dependency.url.clone(),
                 specifier_type: SpecifierType::Url,
@@ -224,7 +224,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
               let mut dependency = Dependency {
                 env: asset.env.clone(),
                 priority: Priority::Sync,
-                source_asset_id: Some(asset.id.clone()),
+                source_asset_id: Some(asset.id().clone()),
                 source_asset_type: Some(FileType::Css),
                 source_path: Some(asset.file_path.clone()),
                 specifier: url_dependency.url.clone(),
@@ -250,7 +250,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
       // Set the unique key of the root asset so we can use it to assign some generated
       // dependencies to it
-      let css_unique_key = asset.id.clone();
+      let css_unique_key = asset.id().clone();
       asset.unique_key = Some(css_unique_key.clone());
 
       asset_symbols.push(Symbol {
@@ -336,7 +336,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                   specifier_type: SpecifierType::Esm,
                   symbols: Some(symbols),
                   env: asset.env.clone(),
-                  source_asset_id: Some(asset.id.clone()),
+                  source_asset_id: Some(asset.id().clone()),
                   source_path: Some(asset.file_path.clone()),
                   source_asset_type: Some(FileType::Css),
                   ..Dependency::default()
@@ -378,7 +378,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
             specifier_type: SpecifierType::Esm,
             symbols: Some(symbols),
             env: asset.env.clone(),
-            source_asset_id: Some(asset.id.clone()),
+            source_asset_id: Some(asset.id().clone()),
             source_path: Some(asset.file_path.clone()),
             source_asset_type: Some(FileType::Css),
             ..Dependency::default()
@@ -461,7 +461,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
               package_conditions: ExportsCondition::STYLE,
               symbols: Some(symbols),
               env: asset.env.clone(),
-              source_asset_id: Some(asset.id.clone()),
+              source_asset_id: Some(asset.id().clone()),
               source_path: Some(asset.file_path.clone()),
               source_asset_type: Some(FileType::Css),
               ..Dependency::default()

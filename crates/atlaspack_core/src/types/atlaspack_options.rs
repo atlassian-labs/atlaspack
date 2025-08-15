@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use serde::Deserialize;
 use serde::Deserializer;
@@ -44,7 +45,7 @@ pub struct AtlaspackOptions {
   pub targets: Option<Targets>,
 
   #[serde(default)]
-  pub feature_flags: FeatureFlags,
+  pub feature_flags: Arc<FeatureFlags>,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Deserialize, Serialize)]

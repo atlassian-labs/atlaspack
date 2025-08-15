@@ -1,81 +1,80 @@
-use std::collections::HashMap;
+use petgraph::prelude::StableDiGraph;
 
-use petgraph::{
-  prelude::StableDiGraph,
-  visit::{EdgeRef, IntoEdgeReferences},
-  Direction,
-};
+use crate::types::{AssetId, Bundle, Environment, FileType, Target};
 
-use crate::asset_graph::{AssetGraph, AssetGraphNode, AssetNode, DependencyNode};
+#[derive(Debug, Clone, PartialEq)]
+pub struct BundleGraphBundle {
+  pub bundle: Bundle,
+  // TODO: This should not be public
+  pub assets: Vec<AssetId>,
+}
 
-pub struct BundleGraph {}
+impl BundleGraphBundle {
+  pub fn empty() -> Self {
+    Self {
+      bundle: Bundle {
+        bundle_behavior: None,
+        bundle_type: FileType::Js,
+        entry_asset_ids: vec![],
+        env: Environment::default(),
+        hash_reference: "".to_string(),
+        id: "".to_string(),
+        is_splittable: true,
+        main_entry_id: None,
+        manual_shared_bundle: None,
+        name: None,
+        needs_stable_name: false,
+        pipeline: None,
+        public_id: None,
+        target: Target::default(),
+      },
+      assets: vec![],
+    }
+  }
+}
 
-pub enum SimplifiedAssetGraphNode {
+#[derive(Debug, Clone, PartialEq)]
+pub enum BundleGraphNode {
   Root,
   Entry,
-  Asset(AssetNode),
-  None,
+  Bundle(BundleGraphBundle),
 }
 
-pub enum SimplifiedAssetGraphEdge {
-  Dependency(DependencyNode),
-  None,
+#[derive(Debug, Clone, PartialEq)]
+pub enum BundleGraphEdge {
+  AsyncLoads,
+  SyncLoads,
 }
 
-pub fn simplify_graph(
-  graph: &AssetGraph,
-) -> StableDiGraph<SimplifiedAssetGraphNode, SimplifiedAssetGraphEdge> {
-  let mut simplified_graph = StableDiGraph::new();
-  let mut asset_node_index_by_id = HashMap::new();
+#[derive(Debug, Clone, Default)]
+pub struct BundleGraph {
+  graph: StableDiGraph<BundleGraphNode, BundleGraphEdge>,
+}
 
-  for node in graph.nodes() {
-    match node {
-      AssetGraphNode::Root => {
-        simplified_graph.add_node(SimplifiedAssetGraphNode::Root);
-      }
-      AssetGraphNode::Entry => {
-        simplified_graph.add_node(SimplifiedAssetGraphNode::Entry);
-      }
-      AssetGraphNode::Asset(asset_node) => {
-        let node_index =
-          simplified_graph.add_node(SimplifiedAssetGraphNode::Asset(asset_node.clone()));
-        asset_node_index_by_id.insert(asset_node.asset.id.clone(), node_index);
-      }
-      AssetGraphNode::Dependency(_dependency_node) => {
-        simplified_graph.add_node(SimplifiedAssetGraphNode::None);
-      }
-    }
+impl PartialEq for BundleGraph {
+  fn eq(&self, _other: &Self) -> bool {
+    false
+  }
+}
+
+impl BundleGraph {
+  pub fn new(graph: StableDiGraph<BundleGraphNode, BundleGraphEdge>) -> Self {
+    Self { graph }
   }
 
-  for edge in graph.graph.edge_references() {
-    let source_node_index = edge.source();
-    let target_node_index = edge.target();
-    let source_node = graph.get_node(&source_node_index).unwrap();
-    let target_node = graph.get_node(&target_node_index).unwrap();
-
-    if let AssetGraphNode::Dependency(dependency_node) = source_node {
-      assert!(matches!(target_node, AssetGraphNode::Asset(_)));
-
-      for incoming_edge in graph
-        .graph
-        .edges_directed(source_node_index, Direction::Incoming)
-      {
-        let incoming_node_index = incoming_edge.source();
-        let incoming_node = graph.get_node(&incoming_node_index).unwrap();
-
-        if let AssetGraphNode::Asset(_asset_node) = incoming_node {
-          simplified_graph.add_edge(
-            incoming_node_index,
-            target_node_index,
-            SimplifiedAssetGraphEdge::Dependency(dependency_node.clone()),
-          );
-        }
-      }
-    }
+  pub fn graph(&self) -> &StableDiGraph<BundleGraphNode, BundleGraphEdge> {
+    &self.graph
   }
 
-  simplified_graph
-}
+  pub fn num_bundles(&self) -> usize {
+    self
+      .graph
+      .node_weights()
+      .filter(|weight| matches!(weight, BundleGraphNode::Bundle(_)))
+      .count()
+  }
 
-#[cfg(test)]
-mod test {}
+  pub fn add_bundle(&mut self, bundle: BundleGraphBundle) {
+    self.graph.add_node(BundleGraphNode::Bundle(bundle));
+  }
+}

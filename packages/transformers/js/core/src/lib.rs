@@ -141,6 +141,7 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub computed_properties_fix: bool,
   pub magic_comments: bool,
+  pub is_native_packaging_enabled: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -568,7 +569,7 @@ pub fn transform(
 
               let mut module = module.module().expect("Module should be a module at this point");
               let module = if config.scope_hoist {
-                let res = hoist(module, config.module_id.as_str(), unresolved_mark, &collect);
+                let res = hoist(module, config.module_id.as_str(), unresolved_mark, &collect, config.is_native_packaging_enabled);
                 match res {
                   Ok((module, hoist_result, hoist_diagnostics)) => {
                     result.hoist_result = Some(hoist_result);

@@ -259,6 +259,12 @@ pub struct Asset {
   pub config_key_path: Option<String>,
 }
 
+impl Asset {
+  pub fn id(&self) -> &AssetId {
+    &self.id
+  }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AssetWithDependencies {
   pub asset: Asset,
@@ -385,7 +391,7 @@ impl Asset {
   }
 
   pub fn update_id(&mut self, project_root: &Path) {
-    self.id = create_asset_id(CreateAssetIdParams {
+    let id = create_asset_id(CreateAssetIdParams {
       code: None,
       environment_id: &self.env.id(),
       file_path: &to_project_path(project_root, &self.file_path).to_string_lossy(),
@@ -394,6 +400,13 @@ impl Asset {
       query: self.query.as_deref(),
       unique_key: self.unique_key.as_deref(),
     });
+
+    if self.id != id {
+      println!("Updating asset id from {} to {}", self.id, id);
+      return;
+    }
+
+    self.id = id;
   }
 
   pub fn set_interpreter(&mut self, shebang: impl Into<serde_json::Value>) {

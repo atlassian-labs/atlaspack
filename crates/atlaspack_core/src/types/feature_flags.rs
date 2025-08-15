@@ -9,9 +9,27 @@ pub enum FeatureFlagValue {
   Bool(bool),
 }
 
+impl From<bool> for FeatureFlagValue {
+  fn from(value: bool) -> Self {
+    FeatureFlagValue::Bool(value)
+  }
+}
+
+impl From<&str> for FeatureFlagValue {
+  fn from(value: &str) -> Self {
+    FeatureFlagValue::String(value.to_string())
+  }
+}
+
+impl From<String> for FeatureFlagValue {
+  fn from(value: String) -> Self {
+    FeatureFlagValue::String(value)
+  }
+}
+
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct FeatureFlags(HashMap<String, FeatureFlagValue>);
+pub struct FeatureFlags(pub HashMap<String, FeatureFlagValue>);
 
 impl FeatureFlags {
   pub fn get(&self, key: impl AsRef<str>) -> Option<&FeatureFlagValue> {

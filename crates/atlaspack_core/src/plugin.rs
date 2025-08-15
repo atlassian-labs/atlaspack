@@ -46,5 +46,5 @@ pub struct PluginOptions {
   pub log_level: LogLevel,
   pub mode: BuildMode,
   pub project_root: PathBuf,
-  pub feature_flags: FeatureFlags,
+  pub feature_flags: Arc<FeatureFlags>,
 }

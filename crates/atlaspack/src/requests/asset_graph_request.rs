@@ -25,7 +25,7 @@ type ResultReceiver = Receiver<Result<(RequestResult, u64), anyhow::Error>>;
 
 /// The AssetGraphRequest is in charge of building the AssetGraphRequest
 /// In doing so, it kicks of the EntryRequest, TargetRequest, PathRequest and AssetRequests.
-#[derive(Debug, Hash)]
+#[derive(Debug, Hash, Default)]
 pub struct AssetGraphRequest {}
 
 #[derive(Clone, Debug, PartialEq)]

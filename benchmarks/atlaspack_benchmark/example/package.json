@@ -1,0 +1,9 @@
+{
+  "main": "app-root/dist/index.js",
+  "name": "generated-app",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p app-root",
+    "test": "node app-root/dist/index.js"
+  }
+}
