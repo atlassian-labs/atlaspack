@@ -220,14 +220,28 @@ export class ScopeHoistingPackager {
     let entries = this.bundle.getEntryAssets();
     let mainEntry = this.bundle.getMainEntry();
     if (this.isAsyncBundle) {
-      // In async bundles we don't want the main entry to execute until we require it
-      // as there might be dependencies in a sibling bundle that hasn't loaded yet.
-      if (getFeatureFlag('supportWebpackChunkName')) {
-        entries = [];
+      if (
+        getFeatureFlag('applyScopeHoistingImprovement') ||
+        getFeatureFlag('supportWebpackChunkName')
+      ) {
+        // Generally speaking, async bundles should not be executed on load, as
+        // they're just collections of assets that other assets require.
+        // However, there are some special cases where a runtime asset needs to be
+        // injected, but no other asset will require it (mostly the bundle
+        // manifest).
+        // In this case, those assets need to be required on load.
+        entries = entries.filter(
+          (a) => a.meta?.runtimeAssetRequiringExecutionOnLoad,
+        );
+
+        // Unless it's a special runtime asset, null out the main entry so
+        // nothing's getting executed.
+        if (!mainEntry?.meta?.runtimeAssetRequiringExecutionOnLoad) {
+          mainEntry = null;
+        }
       } else {
         entries = entries.filter((a) => a.id !== mainEntry?.id);
       }
-      mainEntry = null;
     }
 
     let needsBundleQueue = this.shouldBundleQueue(this.bundle);
