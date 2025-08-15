@@ -13,7 +13,8 @@
     "declarationDir": "${configDir}/lib/types",
     "outDir": "${configDir}/lib",
     "resolveJsonModule": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noImplicitAny": true
   },
   "files": [
     "./types/ansi-html-community.d.ts",
