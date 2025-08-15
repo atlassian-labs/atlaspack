@@ -1,6 +1,7 @@
 import {Resolver} from '@atlaspack/plugin';
 import NodeResolver from '@atlaspack/node-resolver-core';
 import {basename, dirname, extname, isAbsolute, join} from 'path';
+import {FileSystem} from '@atlaspack/types-internal';
 
 interface TesseractResolverConfig {
   /** Modules to replace with empty stubs during resolution. */
@@ -10,7 +11,7 @@ interface TesseractResolverConfig {
   browserResolvedNodeBuiltins?: Array<string>;
 
   /** Module mappings that bypass normal resolution (e.g., for SSR compatibility). */
-  preResolved?: Record<string, string>;
+  preResolved?: Map<string, string>;
 
   /** Node.js built-in aliases for Tesseract-specific implementations. */
   builtinAliases?: Record<string, string>;
@@ -19,9 +20,7 @@ interface TesseractResolverConfig {
   serverSuffixes?: Array<string>;
 }
 
-// Throw user friendly errors on special webpack loader syntax
-// ex. `imports-loader?$=jquery!./example.js`
-const WEBPACK_IMPORT_REGEX = /\S+-loader\S*!\S+/g;
+const IGNORE_MODULES_REGEX = /(mock|mocks|\.woff|\.woff2|\.mp3|\.ogg)$/;
 
 const IGNORE_PATH = join(__dirname, 'data', 'empty-module.js');
 
@@ -44,11 +43,11 @@ const getIgnoreModules = (
   return ignoreModules;
 };
 
-const checkForServerFile = async (
-  inputFS: any,
-  resolvedPath: any,
-  suffix?: any,
-) => {
+async function checkForServerFile(
+  inputFS: FileSystem,
+  resolvedPath: string,
+  suffix?: string,
+) {
   const dir = dirname(resolvedPath);
   const ext = extname(resolvedPath);
   const base = basename(resolvedPath, ext);
@@ -61,13 +60,13 @@ const checkForServerFile = async (
     isExist,
     serverPath,
   };
-};
+}
 
-const checkForServerFileWithOptionalSuffixes = async (
-  inputFS: any,
-  resolvedPath: any,
-  suffixes: any,
-) => {
+async function checkForServerFileWithOptionalSuffixes(
+  inputFS: FileSystem,
+  resolvedPath: string,
+  suffixes: Array<string>,
+) {
   if (suffixes) {
     // if there are multiple suffixes, the left-most takes precedence
     for (const suffix of suffixes) {
@@ -82,7 +81,7 @@ const checkForServerFileWithOptionalSuffixes = async (
     }
   }
   return checkForServerFile(inputFS, resolvedPath);
-};
+}
 
 export default new Resolver({
   async loadConfig({config, options, logger}) {
@@ -92,7 +91,7 @@ export default new Resolver({
     });
     const userConfig: TesseractResolverConfig = conf?.contents || {};
 
-    const preResolved = userConfig.preResolved || {};
+    const preResolved = userConfig.preResolved || new Map<string, string>();
     const builtinAliases = userConfig.builtinAliases || {};
     const serverSuffixes = userConfig.serverSuffixes || [];
     const ignoreModules = userConfig.ignoreModules || [];
@@ -145,12 +144,6 @@ export default new Resolver({
       serverSuffixes,
     } = config;
 
-    if (WEBPACK_IMPORT_REGEX.test(dependency.specifier)) {
-      throw new Error(
-        `The import path: ${dependency.specifier} is using webpack specific loader import syntax, which isn't supported by Atlaspack.`,
-      );
-    }
-
     if (isAbsolute(specifier)) {
       return {
         filePath: specifier,
@@ -171,8 +164,8 @@ export default new Resolver({
       };
     }
 
-    // ignore all the ./mock ./mocks modules
-    if (/(mock|mocks)$/.test(specifier)) {
+    // ignore mock modules and media files
+    if (IGNORE_MODULES_REGEX.test(specifier)) {
       return {
         filePath: IGNORE_PATH,
         code: undefined,
@@ -180,27 +173,9 @@ export default new Resolver({
       };
     }
 
-    // ignore all the .woff .woff2 modules
-    if (/(\.woff|\.woff2)$/.test(specifier)) {
+    if (preResolved.has(specifier)) {
       return {
-        filePath: IGNORE_PATH,
-        code: undefined,
-        sideEffects: false,
-      };
-    }
-
-    // ignore all the .mp3 .ogg modules
-    if (/(\.mp3|\.ogg)$/.test(specifier)) {
-      return {
-        filePath: IGNORE_PATH,
-        code: undefined,
-        sideEffects: false,
-      };
-    }
-
-    if (preResolved[specifier]) {
-      return {
-        filePath: require.resolve(preResolved[specifier]),
+        filePath: require.resolve(preResolved.get(specifier)!),
         code: undefined,
         sideEffects: false,
       };
@@ -215,34 +190,13 @@ export default new Resolver({
       (options.env.STATIC_FALLBACK === 'true' &&
         STATIC_FALLBACK_MODULES.includes(specifier));
 
-    const snapvmEnv = new Proxy(dependency.env, {
-      get(target, property) {
-        if (property === 'isNode') {
-          return () => false;
-        }
-
-        if (property === 'isElectron') {
-          return () => false;
-        }
-
-        if (useBrowser && property === 'isLibrary') {
-          return false;
-        }
-
-        const value = target[property as keyof typeof target];
-        return typeof value === 'function' && value.bind
-          ? value.bind(target)
-          : value;
-      },
-    });
-
     const promise = useBrowser
       ? browserResolver.resolve({
           sourcePath: dependency.sourcePath,
           parent: dependency.resolveFrom,
           filename: aliasSpecifier || specifier,
           specifierType: dependency.specifierType,
-          env: snapvmEnv,
+          env: dependency.env,
           packageConditions: ['ssr', 'require'],
         })
       : nodeResolver.resolve({
@@ -250,7 +204,7 @@ export default new Resolver({
           parent: dependency.resolveFrom,
           filename: aliasSpecifier || specifier,
           specifierType: dependency.specifierType,
-          env: snapvmEnv,
+          env: dependency.env,
           packageConditions: ['ssr', 'require'],
         });
 
