@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/query",
-  "version": "2.14.26",
+  "version": "2.14.27",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -19,16 +19,16 @@
   "main": "lib/index.js",
   "source": "src/index.ts",
   "dependencies": {
-    "@atlaspack/cache": "3.2.20",
-    "@atlaspack/core": "2.23.1",
-    "@atlaspack/graph": "3.5.14",
+    "@atlaspack/cache": "3.2.21",
+    "@atlaspack/core": "2.23.2",
+    "@atlaspack/graph": "3.5.15",
     "nullthrows": "^1.1.1",
     "table": "^6.8.1",
     "v8-compile-cache": "^2.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.22.11",
-    "@atlaspack/babel-register": "2.14.2",
+    "@atlaspack/babel-register": "2.14.3",
     "rimraf": "^5.0.5"
   },
   "type": "commonjs"

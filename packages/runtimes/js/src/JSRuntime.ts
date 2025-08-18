@@ -404,6 +404,7 @@ export default new Runtime({
         code: getRegisterCode(bundle, bundleGraph),
         isEntry: true,
         env: {sourceType: 'module'},
+        runtimeAssetRequiringExecutionOnLoad: true,
         priority: getManifestBundlePriority(
           bundleGraph,
           bundle,

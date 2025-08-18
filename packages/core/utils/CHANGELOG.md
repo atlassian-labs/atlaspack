@@ -1,5 +1,22 @@
 # @atlaspack/utils
 
+## 2.18.3
+
+### Patch Changes
+
+- [#742](https://github.com/atlassian-labs/atlaspack/pull/742) [`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd) Thanks [@yamadapc](https://github.com/yamadapc)! - Internal changes and bug fixes to environmentDeduplication flag
+
+- [#754](https://github.com/atlassian-labs/atlaspack/pull/754) [`889c65c`](https://github.com/atlassian-labs/atlaspack/commit/889c65cd25b811045e26a117e7404f694dde77a2) Thanks [@benjervis](https://github.com/benjervis)! - Adds padding to the progress reporting improvement lines so that the numbers appear right aligned
+
+- Updated dependencies [[`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd)]:
+  - @atlaspack/types-internal@2.19.2
+  - @atlaspack/feature-flags@2.23.1
+  - @atlaspack/markdown-ansi@2.14.3
+  - @atlaspack/diagnostic@2.14.3
+  - @atlaspack/codeframe@2.13.8
+  - @atlaspack/logger@2.14.18
+  - @atlaspack/rust@3.6.1
+
 ## 2.18.2
 
 ### Patch Changes

@@ -560,6 +560,16 @@ export class AssetGraphBuilder {
 
     if (assets != null) {
       for (let asset of assets) {
+        // Pass the runtimeAssetRequiringExecutionOnLoad flag from the asset
+        // group down to the asset itself, for reading in the packager.
+        if (input.runtimeAssetRequiringExecutionOnLoad) {
+          asset.meta = {
+            ...(asset.meta ?? {}),
+            runtimeAssetRequiringExecutionOnLoad:
+              input.runtimeAssetRequiringExecutionOnLoad,
+          };
+        }
+
         if (this.assetGraph.safeToIncrementallyBundle) {
           let otherAsset = this.assetGraph.getNodeByContentKey(asset.id);
           if (otherAsset != null) {

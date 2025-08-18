@@ -1,5 +1,38 @@
 # @atlaspack/config-repl
 
+## 2.13.30
+
+### Patch Changes
+
+- [#742](https://github.com/atlassian-labs/atlaspack/pull/742) [`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd) Thanks [@yamadapc](https://github.com/yamadapc)! - Internal changes and bug fixes to environmentDeduplication flag
+
+- Updated dependencies [[`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd), [`b6e72b6`](https://github.com/atlassian-labs/atlaspack/commit/b6e72b6dd2b517cbb0e700fa69e63332d3eacb1e)]:
+  - @atlaspack/transformer-react-refresh-wrap@2.15.2
+  - @atlaspack/transformer-inline-string@2.14.26
+  - @atlaspack/reporter-dev-server-sw@2.14.26
+  - @atlaspack/resolver-repl-runtimes@2.14.26
+  - @atlaspack/runtime-react-refresh@2.15.2
+  - @atlaspack/transformer-posthtml@2.14.26
+  - @atlaspack/transformer-postcss@2.14.26
+  - @atlaspack/transformer-babel@2.14.26
+  - @atlaspack/optimizer-terser@2.14.26
+  - @atlaspack/resolver-default@2.14.26
+  - @atlaspack/transformer-html@2.15.3
+  - @atlaspack/transformer-json@2.14.26
+  - @atlaspack/bundler-default@3.3.3
+  - @atlaspack/transformer-css@2.14.26
+  - @atlaspack/transformer-raw@2.14.26
+  - @atlaspack/compressor-raw@2.13.28
+  - @atlaspack/transformer-js@4.0.2
+  - @atlaspack/namer-default@2.14.26
+  - @atlaspack/packager-html@2.15.8
+  - @atlaspack/reporter-json@2.14.26
+  - @atlaspack/packager-css@2.14.26
+  - @atlaspack/packager-raw@2.14.26
+  - @atlaspack/packager-js@2.21.2
+  - @atlaspack/runtime-browser-hmr@2.14.26
+  - @atlaspack/runtime-js@2.18.2
+
 ## 2.13.29
 
 ### Patch Changes

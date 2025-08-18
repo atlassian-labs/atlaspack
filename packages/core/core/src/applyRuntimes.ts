@@ -150,6 +150,7 @@ export default async function applyRuntimes<TResult extends RequestResult>({
             filePath,
             isEntry,
             env,
+            runtimeAssetRequiringExecutionOnLoad,
             priority,
           } of runtimeAssets) {
             let sourceName = path.join(
@@ -159,6 +160,7 @@ export default async function applyRuntimes<TResult extends RequestResult>({
 
             let assetGroup = {
               code,
+              runtimeAssetRequiringExecutionOnLoad,
               filePath: toProjectPath(options.projectRoot, sourceName),
               env: mergeEnvironments(
                 options.projectRoot,

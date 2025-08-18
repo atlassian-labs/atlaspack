@@ -428,6 +428,7 @@ export type AssetRequestInput = {
   isSource?: boolean;
   canDefer?: boolean;
   sideEffects?: boolean;
+  runtimeAssetRequiringExecutionOnLoad?: boolean;
   code?: string;
   pipeline?: string | null | undefined;
   optionsRef: SharedReference;

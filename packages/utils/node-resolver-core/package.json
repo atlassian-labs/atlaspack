@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/node-resolver-core",
-  "version": "3.6.1",
+  "version": "3.6.2",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -25,11 +25,11 @@
   ],
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",
-    "@atlaspack/diagnostic": "2.14.2",
-    "@atlaspack/feature-flags": "2.23.0",
-    "@atlaspack/fs": "2.15.20",
-    "@atlaspack/rust": "3.6.0",
-    "@atlaspack/utils": "2.18.2",
+    "@atlaspack/diagnostic": "2.14.3",
+    "@atlaspack/feature-flags": "2.23.1",
+    "@atlaspack/fs": "2.15.21",
+    "@atlaspack/rust": "3.6.1",
+    "@atlaspack/utils": "2.18.3",
     "nullthrows": "^1.1.1",
     "semver": "^7.5.2"
   },

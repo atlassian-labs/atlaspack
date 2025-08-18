@@ -1,5 +1,14 @@
 # @atlaspack/compressor-raw
 
+## 2.13.28
+
+### Patch Changes
+
+- [#742](https://github.com/atlassian-labs/atlaspack/pull/742) [`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd) Thanks [@yamadapc](https://github.com/yamadapc)! - Internal changes and bug fixes to environmentDeduplication flag
+
+- Updated dependencies [[`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd)]:
+  - @atlaspack/plugin@2.14.26
+
 ## 2.13.27
 
 ### Patch Changes
