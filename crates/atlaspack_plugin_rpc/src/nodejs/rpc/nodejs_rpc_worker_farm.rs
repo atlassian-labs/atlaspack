@@ -2,19 +2,30 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::plugin::*;
+use atlaspack_core::types::Code;
 
-use super::super::super::RpcWorker;
-use super::super::plugins::*;
-use super::nodejs_rpc_worker::NodejsWorker;
-use super::LoadPluginOptions;
+use crate::javascript_plugin_api::JavaScriptPluginAPI;
+use crate::javascript_plugin_api::LoadPluginOptions;
+use crate::javascript_plugin_api::RpcAssetResult;
+use crate::javascript_plugin_api::RpcTransformerOpts;
+use crate::javascript_plugin_api::RunResolverResolve;
+use crate::nodejs::NodejsWorker;
+use crate::nodejs::RpcNodejsResolverPlugin;
+use crate::nodejs::{
+  NodejsRpcBundlerPlugin, NodejsRpcCompressorPlugin, NodejsRpcNamerPlugin,
+  NodejsRpcOptimizerPlugin, NodejsRpcPackagerPlugin, NodejsRpcReporterPlugin,
+  NodejsRpcRuntimePlugin, NodejsRpcTransformerPlugin,
+};
+use crate::RpcWorker;
 
 /// NodejsWorkerFarm holds a collection of Nodejs worker threads
 /// and provides the ability to initialize plugins
 pub struct NodejsWorkerFarm {
-  workers: Arc<NodeJsWorkerCollection>,
+  workers: Arc<dyn JavaScriptPluginAPI + Send + Sync>,
 }
 
 impl NodejsWorkerFarm {
@@ -115,6 +126,40 @@ pub struct NodeJsWorkerCollection {
   workers: Vec<Arc<NodejsWorker>>,
 }
 
+#[async_trait]
+impl JavaScriptPluginAPI for NodeJsWorkerCollection {
+  async fn resolve(&self, opts: RunResolverResolve) -> anyhow::Result<Resolved> {
+    self.next_worker().resolve(opts).await
+  }
+
+  async fn transform(
+    &self,
+    code: Code,
+    source_map: Option<String>,
+    run_transformer_opts: RpcTransformerOpts,
+  ) -> anyhow::Result<(RpcAssetResult, Vec<u8>, Option<String>)> {
+    self
+      .next_worker()
+      .transform(code, source_map, run_transformer_opts)
+      .await
+  }
+
+  async fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
+    let mut set = vec![];
+
+    for worker in self.all_workers() {
+      let opts = opts.clone();
+      set.push(tokio::spawn(async move { worker.load_plugin(opts).await }));
+    }
+
+    while let Some(res) = set.pop() {
+      res.await??;
+    }
+
+    Ok(())
+  }
+}
+
 impl NodeJsWorkerCollection {
   fn next_index(&self) -> usize {
     self
@@ -137,20 +182,5 @@ impl NodeJsWorkerCollection {
     }
 
     workers
-  }
-
-  pub async fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
-    let mut set = vec![];
-
-    for worker in self.all_workers() {
-      let opts = opts.clone();
-      set.push(tokio::spawn(async move { worker.load_plugin(opts).await }));
-    }
-
-    while let Some(res) = set.pop() {
-      res.await??;
-    }
-
-    Ok(())
   }
 }

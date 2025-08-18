@@ -7,6 +7,8 @@ use super::environment::Environment;
 use super::file_type::FileType;
 use super::target::Target;
 
+pub type BundleId = String;
+
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Bundle {
@@ -34,7 +36,7 @@ pub struct Bundle {
   pub hash_reference: String,
 
   /// The bundle id
-  pub id: String,
+  pub id: BundleId,
 
   /// Whether the bundle can be split
   ///

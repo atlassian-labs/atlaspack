@@ -1,4 +1,4 @@
-#[cfg(feature = "nodejs")]
+pub mod javascript_plugin_api;
 pub mod nodejs;
 pub mod rust;
 pub mod testing;
@@ -21,6 +21,11 @@ pub type RpcWorkerRef = Arc<dyn RpcWorker>;
 #[allow(clippy::disallowed_methods, clippy::disallowed_types)]
 #[automock]
 pub trait RpcFactory: Send + Sync {
+  /// Start the factory and return a worker.
+  /// Called ONCE, not once per thread.
+  ///
+  /// The worker should usually hold a thread-pool to perform tasks
+  /// concurrently.
   fn start(&self) -> anyhow::Result<Arc<dyn RpcWorker>>;
 }
 

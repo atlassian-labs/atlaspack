@@ -401,11 +401,6 @@ impl Asset {
       unique_key: self.unique_key.as_deref(),
     });
 
-    if self.id != id {
-      println!("Updating asset id from {} to {}", self.id, id);
-      return;
-    }
-
     self.id = id;
   }
 

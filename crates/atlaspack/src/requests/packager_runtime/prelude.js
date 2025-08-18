@@ -16,9 +16,13 @@ function atlaspack$require(moduleId) {
   }
 
   const exports = {};
-  const module = moduleFactory(atlaspack$require, (s, value) => {
-    exports[s] = value;
-  });
+  const module = moduleFactory(
+    atlaspack$require,
+    (s, value) => {
+      exports[s] = value;
+    },
+    exports,
+  );
 
   atlaspack$modules[moduleId] = {
     exports

@@ -103,7 +103,7 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
   )
 }
 
-pub fn make_test_atlaspack(entries: &[impl AsRef<Path>]) -> anyhow::Result<Atlaspack> {
+pub async fn make_test_atlaspack(entries: &[impl AsRef<Path>]) -> anyhow::Result<Atlaspack> {
   let atlaspack = Atlaspack::new(AtlaspackInitOptions {
     db: create_db().unwrap(),
     fs: Some(Arc::new(atlaspack_resolver::OsFileSystem)),
@@ -122,7 +122,7 @@ pub fn make_test_atlaspack(entries: &[impl AsRef<Path>]) -> anyhow::Result<Atlas
       ..Default::default()
     },
     package_manager: None,
-    rpc: Arc::new(RustWorkerFactory::default()),
+    rpc: Arc::new(RustWorkerFactory::new().await?),
   })?;
 
   Ok(atlaspack)

@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -12,6 +13,7 @@ use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::DatabaseHandle;
 use tokio::runtime::Runtime;
 use tokio::sync::RwLock;
+use tracing::warn;
 
 use crate::plugins::{config_plugins::ConfigPlugins, PluginsRef};
 use crate::project_root::infer_project_root;
@@ -34,7 +36,8 @@ pub struct Atlaspack {
   pub project_root: PathBuf,
   pub rpc: RpcFactoryRef,
   pub rpc_worker: RpcWorkerRef,
-  pub runtime: Runtime,
+  /// Set to None if we were already running in an asynchronous context.
+  pub runtime: Option<Runtime>,
   pub config_loader: Arc<ConfigLoader>,
   pub plugins: PluginsRef,
   pub request_tracker: Arc<RwLock<RequestTracker>>,
@@ -57,10 +60,7 @@ impl Atlaspack {
     let package_manager = package_manager
       .unwrap_or_else(|| Arc::new(NodePackageManager::new(project_root.clone(), fs.clone())));
 
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-      .enable_all()
-      .worker_threads(options.threads.unwrap_or_else(num_cpus::get))
-      .build()?;
+    let runtime = create_tokio_runtime(&options)?;
 
     let rpc_worker = rpc.start()?;
 
@@ -123,40 +123,58 @@ impl Atlaspack {
       request_tracker: Arc::new(RwLock::new(request_tracker)),
     })
   }
+
+  #[deprecated(note = "Methods need to return futures")]
+  fn block_on<T>(&self, future: impl Future<Output = T>) -> T {
+    if let Some(runtime) = &self.runtime {
+      runtime.block_on(future)
+    } else {
+      warn!("Blocking on an asynchronous context. This will likely crash.");
+      tokio::runtime::Handle::current().block_on(future)
+    }
+  }
 }
 
 impl Atlaspack {
+  pub async fn run_request_async(
+    &self,
+    request: impl request_tracker::Request,
+  ) -> anyhow::Result<RequestResult> {
+    self
+      .request_tracker
+      .write()
+      .await
+      .run_request(request)
+      .await
+  }
+
+  /// Running this from a tokio thread will cause a crash.
   pub fn run_request(
     &self,
     request: impl request_tracker::Request,
   ) -> anyhow::Result<RequestResult> {
-    self.runtime.block_on(async move {
-      self
-        .request_tracker
-        .write()
-        .await
-        .run_request(request)
-        .await
-    })
+    self.block_on(self.run_request_async(request))
+  }
+
+  pub async fn build_asset_graph_async(&self) -> anyhow::Result<AssetGraph> {
+    let request_result = self
+      .request_tracker
+      .write()
+      .await
+      .run_request(AssetGraphRequest {})
+      .await?;
+
+    let RequestResult::AssetGraph(asset_graph_request_output) = request_result else {
+      anyhow::bail!("Something went wrong with the request tracker")
+    };
+
+    let asset_graph = asset_graph_request_output.graph;
+    self.commit_assets(asset_graph.nodes().collect())?;
+    Ok(asset_graph)
   }
 
   pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
-    let result = self.runtime.block_on(async move {
-      let request_result = self
-        .request_tracker
-        .write()
-        .await
-        .run_request(AssetGraphRequest {})
-        .await?;
-
-      let RequestResult::AssetGraph(asset_graph_request_output) = request_result else {
-        anyhow::bail!("Something went wrong with the request tracker")
-      };
-
-      let asset_graph = asset_graph_request_output.graph;
-      self.commit_assets(asset_graph.nodes().collect())?;
-      Ok(asset_graph)
-    });
+    let result = self.block_on(self.build_asset_graph_async());
 
     if let Err(e) = &result {
       tracing::error!(?e, "Error building asset graph");
@@ -166,7 +184,7 @@ impl Atlaspack {
   }
 
   pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {
-    self.runtime.block_on(async move {
+    self.block_on(async move {
       Ok(
         self
           .request_tracker
@@ -205,6 +223,20 @@ impl Atlaspack {
   }
 }
 
+/// Create a tokio runtime if running in a synchronous context.
+fn create_tokio_runtime(options: &AtlaspackOptions) -> anyhow::Result<Option<Runtime>> {
+  if tokio::runtime::Handle::try_current().is_ok() {
+    Ok(None)
+  } else {
+    Ok(Some(
+      tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .worker_threads(options.threads.unwrap_or_else(num_cpus::get))
+        .build()?,
+    ))
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use std::collections::{HashMap, HashSet};
@@ -216,6 +248,7 @@ mod tests {
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_plugin_rpc::{rust::RustWorkerFactory, MockRpcFactory, MockRpcWorker};
+  use tracing::info;
 
   use crate::{
     requests::{
@@ -280,8 +313,8 @@ mod tests {
     Ok(())
   }
 
-  #[test]
-  fn test_create_bundle_from_non_library_app() -> anyhow::Result<()> {
+  #[tokio::test]
+  async fn test_create_bundle_from_non_library_app() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
       .with_max_level(tracing::Level::INFO)
       .try_init();
@@ -344,15 +377,20 @@ export const bar = "bar";
     )
     .unwrap();
 
-    let atlaspack = test_utils::make_test_atlaspack(&[project_dir.join("src/index.ts")]).unwrap();
+    let atlaspack = test_utils::make_test_atlaspack(&[project_dir.join("src/index.ts")])
+      .await
+      .unwrap();
 
-    let asset_graph = atlaspack.build_asset_graph()?;
-    let bundle_graph = atlaspack.run_request(bundle_graph_request::BundleGraphRequest {})?;
+    let asset_graph = atlaspack.build_asset_graph_async().await?;
+    let bundle_graph = atlaspack
+      .run_request_async(bundle_graph_request::BundleGraphRequest {})
+      .await?;
     let BundleGraphRequestOutput {
       bundle_graph,
       asset_graph,
     } = atlaspack
-      .run_request(bundle_graph_request::BundleGraphRequest {})
+      .run_request_async(bundle_graph_request::BundleGraphRequest {})
+      .await
       .unwrap()
       .into_bundle_graph()
       .unwrap();
@@ -368,9 +406,7 @@ export const bar = "bar";
 
     let mut output = Vec::new();
     package_request::package_bundle(
-      package_request::PackageBundleParams {
-        bundle: bundle.clone(),
-      },
+      package_request::PackageBundleParams { bundle: &bundle },
       InMemoryAssetDataProvider::new(&asset_graph),
       &mut output,
     )?;
@@ -409,10 +445,10 @@ export const bar = "bar";
     Ok(())
   }
 
-  #[test]
-  fn test_create_asset_graph_from_simple_app() -> anyhow::Result<()> {
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_create_asset_graph_from_simple_app() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
-      .with_max_level(tracing::Level::INFO)
+      .with_max_level(tracing::Level::DEBUG)
       .try_init();
 
     let project_dir = test_utils::setup_test_directory("test-create-asset-graph-from-simple-app")?;
@@ -474,15 +510,22 @@ export const bar = "bar";
     )
     .unwrap();
 
-    let atlaspack = test_utils::make_test_atlaspack(&[project_dir.join("src/index.ts")]).unwrap();
+    info!("Creating atlaspack");
+    let atlaspack = test_utils::make_test_atlaspack(&[project_dir.join("src/index.ts")])
+      .await
+      .unwrap();
 
-    let asset_graph = atlaspack.build_asset_graph()?;
-    let bundle_graph = atlaspack.run_request(bundle_graph_request::BundleGraphRequest {})?;
+    info!("Building asset graph");
+    let asset_graph = atlaspack.build_asset_graph_async().await?;
+    let bundle_graph = atlaspack
+      .run_request_async(bundle_graph_request::BundleGraphRequest {})
+      .await?;
     let BundleGraphRequestOutput {
       bundle_graph,
       asset_graph,
     } = atlaspack
-      .run_request(bundle_graph_request::BundleGraphRequest {})
+      .run_request_async(bundle_graph_request::BundleGraphRequest {})
+      .await
       .unwrap()
       .into_bundle_graph()
       .unwrap();
@@ -498,9 +541,7 @@ export const bar = "bar";
 
     let mut output = Vec::new();
     package_request::package_bundle(
-      package_request::PackageBundleParams {
-        bundle: bundle.clone(),
-      },
+      package_request::PackageBundleParams { bundle: &bundle },
       InMemoryAssetDataProvider::new(&asset_graph),
       &mut output,
     )?;
@@ -539,8 +580,8 @@ export const bar = "bar";
     Ok(())
   }
 
-  #[test]
-  fn test_build_asset_graph_from_large_synthetic_project() {
+  #[tokio::test]
+  async fn test_build_asset_graph_from_large_synthetic_project() {
     let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
       .with_max_level(tracing::Level::INFO)
       .try_init();
@@ -559,14 +600,16 @@ export const bar = "bar";
     })
     .unwrap();
 
-    let atlaspack =
-      test_utils::make_test_atlaspack(&[project_dir.join("app-root/src/index.ts")]).unwrap();
+    let atlaspack = test_utils::make_test_atlaspack(&[project_dir.join("app-root/src/index.ts")])
+      .await
+      .unwrap();
 
     let BundleGraphRequestOutput {
       bundle_graph,
       asset_graph,
     } = atlaspack
-      .run_request(bundle_graph_request::BundleGraphRequest {})
+      .run_request_async(bundle_graph_request::BundleGraphRequest {})
+      .await
       .unwrap()
       .into_bundle_graph()
       .unwrap();
@@ -584,9 +627,7 @@ export const bar = "bar";
     let mut output = Vec::new();
 
     package_request::package_bundle(
-      package_request::PackageBundleParams {
-        bundle: bundle.clone(),
-      },
+      package_request::PackageBundleParams { bundle: &bundle },
       InMemoryAssetDataProvider::new(&asset_graph),
       &mut output,
     )

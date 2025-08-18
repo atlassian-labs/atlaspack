@@ -13,7 +13,6 @@ use swc_core::ecma::preset_env::Feature;
 use swc_core::ecma::preset_env::Versions;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
-use swc_core::quote;
 
 use crate::id;
 use crate::utils::get_undefined_ident;

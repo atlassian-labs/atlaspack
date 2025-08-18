@@ -1,36 +1,12 @@
 use petgraph::prelude::StableDiGraph;
 
-use crate::types::{AssetId, Bundle, Environment, FileType, Target};
+use crate::types::{AssetId, Bundle};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub struct BundleGraphBundle {
   pub bundle: Bundle,
   // TODO: This should not be public
   pub assets: Vec<AssetId>,
-}
-
-impl BundleGraphBundle {
-  pub fn empty() -> Self {
-    Self {
-      bundle: Bundle {
-        bundle_behavior: None,
-        bundle_type: FileType::Js,
-        entry_asset_ids: vec![],
-        env: Environment::default(),
-        hash_reference: "".to_string(),
-        id: "".to_string(),
-        is_splittable: true,
-        main_entry_id: None,
-        manual_shared_bundle: None,
-        name: None,
-        needs_stable_name: false,
-        pipeline: None,
-        public_id: None,
-        target: Target::default(),
-      },
-      assets: vec![],
-    }
-  }
 }
 
 #[derive(Debug, Clone, PartialEq)]

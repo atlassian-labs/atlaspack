@@ -1,0 +1,6 @@
+[submodule "vendor/edon"]
+	path = vendor/edon
+	url = https://github.com/alshdavid/edon
+[submodule "vendor/napi-rs"]
+	path = vendor/napi-rs
+	url = https://github.com/napi-rs/napi-rs/

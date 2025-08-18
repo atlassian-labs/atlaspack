@@ -1,32 +1,105 @@
-use std::{collections::HashMap, io::Write};
+use std::{
+  collections::HashMap,
+  hash::{Hash, Hasher},
+  io::Write,
+  path::PathBuf,
+  sync::Arc,
+};
 
+use async_trait::async_trait;
 use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode, AssetNode},
   bundle_graph::BundleGraphBundle,
+  plugin::PackageContext,
+  types::{AssetId, Bundle, BundleId, FileType},
 };
 use petgraph::{graph::NodeIndex, visit::EdgeRef};
+use tracing::info;
 
-#[derive(Default, Hash)]
-pub struct PackageRequest {}
+use crate::{
+  request_tracker::{
+    Request, RequestId, ResultAndInvalidations, RunRequestContext, RunRequestError,
+  },
+  requests::RequestResult,
+};
 
-#[derive(PartialEq, Clone)]
-pub struct PackageRequestOutput {}
-
-pub struct PackageBundleParams {
-  pub bundle: BundleGraphBundle,
+#[derive(Debug, Hash)]
+pub struct PackageRequest {
+  bundle: BundleGraphBundle,
+  asset_graph: Arc<AssetGraph>,
 }
 
-pub trait AssetDataProvider {
+impl PackageRequest {
+  pub fn new(bundle: BundleGraphBundle, asset_graph: Arc<AssetGraph>) -> Self {
+    Self {
+      bundle,
+      asset_graph,
+    }
+  }
+}
+
+#[async_trait]
+impl Request for PackageRequest {
+  async fn run(
+    &self,
+    request_context: RunRequestContext,
+  ) -> Result<ResultAndInvalidations, RunRequestError> {
+    // We should not keep all data in memory
+    let asset_data_provider = InMemoryAssetDataProvider::new(&self.asset_graph);
+
+    let output_file_path = request_context
+      .options
+      .default_target_options
+      .dist_dir
+      .clone()
+      .unwrap_or_else(|| request_context.project_root.join("dist"))
+      .join(self.bundle.bundle.name.clone().unwrap_or_else(|| {
+        format!(
+          "{}.{}",
+          self.bundle.bundle.id,
+          self.bundle.bundle.bundle_type.extension()
+        )
+      }));
+
+    info!("Packaging bundle to {}", output_file_path.display());
+    let mut writer = std::fs::File::create(&output_file_path)?;
+    package_bundle(
+      PackageBundleParams {
+        bundle: &self.bundle,
+      },
+      asset_data_provider,
+      &mut writer,
+    )?;
+
+    Ok(ResultAndInvalidations {
+      result: RequestResult::Package(PackageRequestOutput {
+        packaged_bundle: output_file_path,
+      }),
+      invalidations: vec![],
+    })
+  }
+}
+
+#[derive(PartialEq, Clone)]
+pub struct PackageRequestOutput {
+  packaged_bundle: PathBuf,
+}
+
+pub struct PackageBundleParams<'a> {
+  pub bundle: &'a BundleGraphBundle,
+}
+
+pub trait AssetDataProvider: std::fmt::Debug {
   fn get_asset_code(&self, asset_id: &str) -> anyhow::Result<Vec<u8>>;
   fn get_original_asset_code(&self, asset_id: &str) -> anyhow::Result<Vec<u8>>;
-
   fn get_imported_modules(&self, asset_id: &str) -> anyhow::Result<Vec<ImportedModule>>;
   fn get_exported_symbols(&self, asset_id: &str) -> anyhow::Result<Vec<String>>;
 }
 
+#[derive(Debug)]
 pub struct InMemoryAssetDataProvider<'a> {
   asset_graph: &'a AssetGraph,
-  asset_node_index_by_id: HashMap<String, NodeIndex>,
+  asset_node_index_by_id: HashMap<AssetId, NodeIndex>,
 }
 
 impl<'a> InMemoryAssetDataProvider<'a> {
@@ -143,7 +216,34 @@ impl AssetDataProvider for InMemoryAssetDataProvider<'_> {
 }
 
 pub fn package_bundle(
+  params: PackageBundleParams<'_>,
+  asset_data_provider: impl AssetDataProvider,
+  writer: &mut impl Write,
+) -> anyhow::Result<()> {
+  match params.bundle.bundle.bundle_type {
+    FileType::Js => package_js_bundle(params, asset_data_provider, writer),
+    FileType::Html => package_html_bundle(params, asset_data_provider, writer),
+    _ => Err(anyhow::anyhow!(
+      "Unsupported bundle type: {:?}",
+      params.bundle.bundle.bundle_type
+    )),
+  }
+}
+
+fn package_html_bundle(
   PackageBundleParams { bundle }: PackageBundleParams,
+  asset_data_provider: impl AssetDataProvider,
+  writer: &mut impl Write,
+) -> anyhow::Result<()> {
+  for asset_id in bundle.assets.iter() {
+    let code = asset_data_provider.get_asset_code(asset_id)?;
+    writer.write_all(&code)?;
+  }
+  Ok(())
+}
+
+fn package_js_bundle(
+  PackageBundleParams { bundle }: PackageBundleParams<'_>,
   asset_data_provider: impl AssetDataProvider,
   writer: &mut impl Write,
 ) -> anyhow::Result<()> {
@@ -155,7 +255,7 @@ pub fn package_bundle(
 
     writer.write_all(
       format!(
-        "atlaspack$register('{}', function(atlaspack$require, atlaspack$export) {{\n\n\n",
+        "atlaspack$register('{}', function(atlaspack$require, atlaspack$export, exports) {{\n\n\n",
         asset_id
       )
       .as_bytes(),
@@ -178,7 +278,7 @@ pub fn package_bundle(
       writer.write_all(format!("atlaspack$export('{}', {{}});\n", export_statement).as_bytes())?;
     }
 
-    writer.write_all("\n\n}});\n\n".as_bytes());
+    writer.write_all("\n\n}});\n\n".as_bytes())?;
   }
 
   Ok(())

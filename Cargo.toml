@@ -7,6 +7,7 @@ members = [
   "packages/utils/dev-dep-resolver",
   "benchmarks/atlaspack_benchmark",
 ]
+package.edition = "2024"
 
 [profile.dev]
 # Even in dev we want the fastest performance to decrease compile times when
@@ -79,9 +80,12 @@ mimalloc = { version = "0.1.43", default-features = false }
 minidumper = "0.8.3"
 mockall = "0.13.1"
 mozjpeg-sys = "2.2.2"
-napi = "2.16.13"
+
+edon = { path = "./vendor/edon/packages/edon" }
+napi = { path = "./vendor/napi-rs/crates/napi", features = ["compat-mode", "napi5", "libnode"] }
+napi-derive = { path = "./vendor/napi-rs/crates/macro" }
+
 napi-build = "2.1.4"
-napi-derive = "2.16.13"
 nodejs-semver = "4.1.0"
 nom = "7.1.3"
 num_cpus = "1.16.0"
@@ -95,6 +99,7 @@ petgraph = "0.7.1"
 pretty_assertions = "1.4.1"
 rand = "0.8.5"
 rayon = "1.10.0"
+readonly = "0.2"
 regex = "1.11.1"
 reqwest = { version = "0.12.15", default-features = false }
 sentry = { version = "0.35.0", default-features = false, features = [

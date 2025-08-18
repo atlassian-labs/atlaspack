@@ -27,10 +27,12 @@ use atlaspack_core::types::engines::Engines;
 use atlaspack_core::types::Asset;
 use atlaspack_core::types::*;
 
-use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
-use super::super::rpc::LoadPluginKind;
-use super::super::rpc::LoadPluginOptions;
-use super::plugin_options::RpcPluginOptions;
+use crate::javascript_plugin_api::plugin_options::RpcPluginOptions;
+use crate::javascript_plugin_api::JavaScriptPluginAPI;
+use crate::javascript_plugin_api::LoadPluginKind;
+use crate::javascript_plugin_api::LoadPluginOptions;
+use crate::javascript_plugin_api::RpcTransformerOpts;
+use crate::nodejs::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 
 /// Plugin state once initialized
 struct InitializedState {
@@ -38,7 +40,7 @@ struct InitializedState {
 }
 
 pub struct NodejsRpcTransformerPlugin {
-  nodejs_workers: Arc<NodeJsWorkerCollection>,
+  nodejs_workers: Arc<dyn JavaScriptPluginAPI + Send + Sync>,
   plugin_options: Arc<PluginOptions>,
   plugin_node: PluginNode,
   started: OnceCell<InitializedState>,
@@ -52,7 +54,7 @@ impl Debug for NodejsRpcTransformerPlugin {
 
 impl NodejsRpcTransformerPlugin {
   pub fn new(
-    nodejs_workers: Arc<NodeJsWorkerCollection>,
+    nodejs_workers: Arc<dyn JavaScriptPluginAPI + Send + Sync>,
     ctx: &PluginContext,
     plugin_node: &PluginNode,
   ) -> Result<Self, anyhow::Error> {
@@ -127,42 +129,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
 
     let (result, contents, map) = self
       .nodejs_workers
-      .next_worker()
-      .transformer_register_fn
-      .call(
-        move |env| {
-          let run_transformer_opts = env.to_js_value(&run_transformer_opts)?;
-
-          let mut contents = env.create_buffer(asset.code.len())?;
-          contents.copy_from_slice(&asset.code);
-
-          let map = if let Some(map) = source_map {
-            env.create_string(&map)?.into_unknown()
-          } else {
-            env.get_undefined()?.into_unknown()
-          };
-
-          Ok(vec![run_transformer_opts, contents.into_unknown(), map])
-        },
-        |env, return_value| {
-          let return_value = JsObject::from_unknown(return_value)?;
-
-          let transform_result = return_value.get_element::<JsUnknown>(0)?;
-          let transform_result = env.from_js_value::<RpcAssetResult, _>(transform_result)?;
-
-          let contents = return_value.get_element::<JsBuffer>(1)?;
-          let contents = contents.into_value()?.to_vec();
-
-          let map = return_value.get_element::<JsString>(2)?.into_utf8()?;
-          let map = if map.is_empty() {
-            None
-          } else {
-            Some(map.into_owned()?)
-          };
-
-          Ok((transform_result, contents, map))
-        },
-      )
+      .transform(asset.code, source_map, run_transformer_opts)
       .await?;
 
     let transformed_asset = Asset {
@@ -200,51 +167,4 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       ..Default::default()
     })
   }
-}
-
-/// This Asset mostly replicates the core Asset type however it only features
-/// fields that can be modified by transformers
-#[derive(PartialEq, Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RpcAssetResult {
-  pub id: String,
-  pub bundle_behavior: Option<BundleBehavior>,
-  pub file_path: PathBuf,
-  #[serde(rename = "type")]
-  pub file_type: FileType,
-  pub code: Code,
-  pub meta: JSONObject,
-  pub pipeline: Option<String>,
-  pub query: Option<String>,
-  pub symbols: Option<Vec<Symbol>>,
-  pub unique_key: Option<String>,
-  pub side_effects: bool,
-  pub is_bundle_splittable: bool,
-  pub is_source: bool,
-}
-
-// This Environment mostly replicates the core Environment but makes everything
-// optional as it is merged into the Asset Environment later.
-// Similar to packages/core/types-internal/src/index.js#EnvironmnetOptions
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RpcEnvironmentResult {
-  pub context: Option<EnvironmentContext>,
-  pub engines: Option<Engines>,
-  pub include_node_modules: Option<IncludeNodeModules>,
-  pub is_library: Option<bool>,
-  pub loc: Option<SourceLocation>,
-  pub output_format: Option<OutputFormat>,
-  pub should_scope_hoist: Option<bool>,
-  pub should_optimize: Option<bool>,
-  pub source_type: Option<SourceType>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RpcTransformerOpts {
-  pub key: String,
-  pub options: RpcPluginOptions,
-  pub env: Arc<Environment>,
-  pub asset: Asset,
 }

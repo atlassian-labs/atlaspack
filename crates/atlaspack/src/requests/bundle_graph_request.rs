@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode, AssetNode, DependencyNode},
   bundle_graph::{BundleGraph, BundleGraphBundle},
+  types::{Bundle, BundleBehavior, Environment, FileType, Target},
 };
 use petgraph::{
   graph::NodeIndex,
@@ -80,15 +81,39 @@ impl Request for BundleGraphRequest {
         petgraph::visit::DfsEvent::Finish(_, _) => {}
       });
 
-      let mut bundle_graph_bundle = BundleGraphBundle::empty();
-      if let Some(SimplifiedAssetGraphNode::Asset(entry_asset)) =
-        simplified_graph.node_weight(start_node)
-      {
-        let file_name = entry_asset.asset.file_path.file_stem().unwrap();
-        bundle_graph_bundle.bundle.id = format!("bundle_{}.js", file_name.to_string_lossy());
-        bundle_graph_bundle.bundle.name = Some(file_name.to_string_lossy().into_owned());
-      }
-      bundle_graph_bundle.assets = bundle_assets;
+      let AcyclicAssetGraphNode::Asset(entry_asset) =
+        dominator_tree.node_weight(start_node).unwrap()
+      else {
+        anyhow::bail!("Bundle entry node is not an asset");
+      };
+
+      let file_name = entry_asset.asset.file_path.file_stem().unwrap();
+      let bundle_id = format!("bundle_{}", file_name.to_string_lossy());
+      let bundle_name = Some(format!(
+        "{}.{}",
+        file_name.to_string_lossy(),
+        entry_asset.asset.file_type.extension()
+      ));
+
+      let bundle_graph_bundle = BundleGraphBundle {
+        bundle: Bundle {
+          bundle_behavior: Some(BundleBehavior::Isolated),
+          bundle_type: entry_asset.asset.file_type.clone(),
+          entry_asset_ids: vec![entry_asset.asset.id.clone()],
+          env: Environment::default(),
+          hash_reference: "".to_string(),
+          id: bundle_id,
+          is_splittable: true,
+          main_entry_id: Some(entry_asset.asset.id.clone()),
+          manual_shared_bundle: None,
+          name: bundle_name,
+          needs_stable_name: false,
+          pipeline: None,
+          public_id: None,
+          target: Target::default(),
+        },
+        assets: bundle_assets,
+      };
 
       bundle_graph.add_bundle(bundle_graph_bundle);
     }
@@ -161,11 +186,12 @@ pub fn simplify_graph(graph: &AssetGraph) -> SimplifiedAssetGraph {
   }
 
   let mut simplified_graph = StableDiGraph::new();
+  let mut root_node_index = None;
 
   for node in graph.nodes() {
     match node {
       AssetGraphNode::Root => {
-        simplified_graph.add_node(SimplifiedAssetGraphNode::Root);
+        root_node_index = Some(simplified_graph.add_node(SimplifiedAssetGraphNode::Root));
       }
       AssetGraphNode::Entry => {
         simplified_graph.add_node(SimplifiedAssetGraphNode::Entry);
@@ -178,6 +204,8 @@ pub fn simplify_graph(graph: &AssetGraph) -> SimplifiedAssetGraph {
       }
     };
   }
+  // TODO: Do not crash if there is no root node
+  let root_node_index = root_node_index.unwrap();
 
   for edge in graph.graph.edge_references() {
     let source_node_index = edge.source();
@@ -218,6 +246,15 @@ pub fn simplify_graph(graph: &AssetGraph) -> SimplifiedAssetGraph {
         ) = (graph.get_node(&incoming_node_index), target_node)
         {
           if source_asset_node.asset.file_type != target_asset_node.asset.file_type {
+            info!(
+              "Skipping dependency edge because source and target have different file types: {:?} -> {:?}",
+              source_asset_node.asset.file_path, target_asset_node.asset.file_path
+            );
+            simplified_graph.add_edge(
+              root_node_index,
+              target_node_index,
+              SimplifiedAssetGraphEdge::None,
+            );
             // TODO: We should still mark this on the simplified graph
             // but the edge types should be different so we can ignore on certain traversals.
             continue;
@@ -344,9 +381,6 @@ pub fn build_dominator_tree(
 }
 
 #[cfg(test)]
-mod test {}
-
-#[cfg(test)]
 mod tests {
   use std::{
     fs::{create_dir_all, write},
@@ -459,8 +493,8 @@ mod tests {
     )
   }
 
-  #[test]
-  fn test_simplify_graph() {
+  #[tokio::test]
+  async fn test_simplify_graph() {
     let project_dir = setup_test_directory("test_simplify_graph").unwrap();
     create_dir_all(project_dir.join("src")).unwrap();
     write(
@@ -477,7 +511,9 @@ console.log(foo);
 "#,
     )
     .unwrap();
-    let atlaspack = make_test_atlaspack(&[project_dir.join("src/index.ts")]).unwrap();
+    let atlaspack = make_test_atlaspack(&[project_dir.join("src/index.ts")])
+      .await
+      .unwrap();
     let asset_graph = atlaspack
       .run_request(AssetGraphRequest::default())
       .unwrap()
@@ -505,8 +541,8 @@ digraph {
     assert_eq!(dot.trim(), expected_dot.trim());
   }
 
-  #[test]
-  fn test_remove_cycles() {
+  #[tokio::test]
+  async fn test_remove_cycles() {
     let project_dir = setup_test_directory("test_remove_cycles").unwrap();
     create_dir_all(project_dir.join("src")).unwrap();
     write(
@@ -538,7 +574,9 @@ export const baz = "baz" + foo + bar;
     )
     .unwrap();
 
-    let atlaspack = make_test_atlaspack(&[project_dir.join("src/baz.ts")]).unwrap();
+    let atlaspack = make_test_atlaspack(&[project_dir.join("src/baz.ts")])
+      .await
+      .unwrap();
     let asset_graph = atlaspack
       .run_request(AssetGraphRequest::default())
       .unwrap()
@@ -569,8 +607,8 @@ digraph {
     // assert_eq!(dot.trim(), expected_dot.trim());
   }
 
-  #[test]
-  fn test_build_dominator_tree() {
+  #[tokio::test]
+  async fn test_build_dominator_tree() {
     let project_dir = setup_test_directory("test_build_dominator_tree").unwrap();
     create_dir_all(project_dir.join("src")).unwrap();
     write(
@@ -579,7 +617,9 @@ digraph {
     )
     .unwrap();
 
-    let atlaspack = make_test_atlaspack(&[project_dir.join("src/foo.ts")]).unwrap();
+    let atlaspack = make_test_atlaspack(&[project_dir.join("src/foo.ts")])
+      .await
+      .unwrap();
     let asset_graph = atlaspack
       .run_request(AssetGraphRequest::default())
       .unwrap()
@@ -634,8 +674,8 @@ digraph {
     assert_eq!(dot.trim(), expected_dot.trim());
   }
 
-  #[test]
-  fn test_bundle_graph_request_can_bundle_a_single_file() {
+  #[tokio::test]
+  async fn test_bundle_graph_request_can_bundle_a_single_file() {
     let project_dir = setup_test_directory("test-bundle-graph-request").unwrap();
 
     create_dir_all(project_dir.join("src")).unwrap();
@@ -645,7 +685,9 @@ digraph {
     )
     .unwrap();
 
-    let atlaspack = make_test_atlaspack(&[project_dir.join("src/index.ts")]).unwrap();
+    let atlaspack = make_test_atlaspack(&[project_dir.join("src/index.ts")])
+      .await
+      .unwrap();
     let BundleGraphRequestOutput { bundle_graph, .. } = atlaspack
       .run_request(BundleGraphRequest::default())
       .unwrap()

@@ -27,6 +27,12 @@ pub enum DatabaseWriterError {
   Compress(#[from] lz4_flex::block::CompressError),
 }
 
+impl AsRef<str> for DatabaseWriterError {
+  fn as_ref(&self) -> &str {
+    "database writer error"
+  }
+}
+
 #[derive(Clone, Debug, PartialOrd, PartialEq)]
 #[napi(object)]
 pub struct LMDBOptions {

@@ -155,7 +155,10 @@ impl RequestTracker {
             let task = tokio::spawn({
               let tx = tx.clone();
               async move {
-                let result = request.run(context).await;
+                let result = request.run(context).await.map_err(|e| {
+                  tracing::error!(?e, ?request, "Error running request");
+                  e
+                });
                 let _ = tx.send(RequestQueueMessage::RequestResult {
                   request_id,
                   parent_request_id,

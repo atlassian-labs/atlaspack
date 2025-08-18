@@ -9,24 +9,26 @@ workspace = true
 
 [features]
 nodejs = [
-  "dep:napi",
-  "dep:serde",
-  "dep:parking_lot",
-  "dep:once_cell",
-  "dep:atlaspack_napi_helpers",
+  # "dep:napi",
+  # "dep:parking_lot",
+  # "dep:once_cell",
 ]
 
 [dependencies]
 atlaspack_config = { path = "../atlaspack_config" }
 atlaspack_core = { path = "../atlaspack_core" }
-atlaspack_napi_helpers = { path = "../atlaspack_napi_helpers", optional = true }
+atlaspack_napi_helpers = { path = "../atlaspack_napi_helpers" }
+reqwest = { workspace = true, features = ["rustls-tls"] }
+edon = { workspace = true }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 mockall = { workspace = true }
-napi = { workspace = true, features = ["serde"], optional = true }
-once_cell = { workspace = true, optional = true }
-parking_lot = { workspace = true, optional = true }
-serde = { workspace = true, optional = true }
+napi = { workspace = true, features = ["serde", "compat-mode"] }
+once_cell = { workspace = true }
+parking_lot = { workspace = true }
+serde = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
+num_cpus = { workspace = true }
+home = "0.5"

@@ -13,14 +13,16 @@ use atlaspack_core::plugin::PluginOptions;
 use atlaspack_core::plugin::ResolveContext;
 use atlaspack_core::plugin::Resolved;
 use atlaspack_core::plugin::ResolverPlugin;
-use atlaspack_core::types::Dependency;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tokio::sync::OnceCell;
 
-use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
-use super::super::rpc::LoadPluginKind;
-use super::super::rpc::LoadPluginOptions;
-use super::plugin_options::RpcPluginOptions;
+use crate::javascript_plugin_api::JavaScriptPluginAPI;
+use crate::javascript_plugin_api::RunResolverResolve;
+
+use crate::javascript_plugin_api::plugin_options::RpcPluginOptions;
+use crate::javascript_plugin_api::LoadPluginKind;
+use crate::javascript_plugin_api::LoadPluginOptions;
+use crate::nodejs::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 
 /// Plugin state once initialized
 struct InitializedState {
@@ -28,7 +30,7 @@ struct InitializedState {
 }
 
 pub struct RpcNodejsResolverPlugin {
-  nodejs_workers: Arc<NodeJsWorkerCollection>,
+  nodejs_workers: Arc<dyn JavaScriptPluginAPI>,
   plugin_options: Arc<PluginOptions>,
   plugin_node: Arc<PluginNode>,
   started: OnceCell<InitializedState>,
@@ -46,7 +48,7 @@ impl Debug for RpcNodejsResolverPlugin {
 
 impl RpcNodejsResolverPlugin {
   pub fn new(
-    nodejs_workers: Arc<NodeJsWorkerCollection>,
+    nodejs_workers: Arc<dyn JavaScriptPluginAPI>,
     ctx: &PluginContext,
     plugin_node: &PluginNode,
   ) -> Result<Self, anyhow::Error> {
@@ -99,9 +101,7 @@ impl ResolverPlugin for RpcNodejsResolverPlugin {
 
     self
       .nodejs_workers
-      .next_worker()
-      .run_resolver_resolve_fn
-      .call_serde(RunResolverResolve {
+      .resolve(RunResolverResolve {
         key: self.plugin_node.package_name.clone(),
         #[allow(clippy::needless_borrow)]
         dependency: (&*ctx.dependency).clone(),
@@ -112,14 +112,4 @@ impl ResolverPlugin for RpcNodejsResolverPlugin {
       })
       .await
   }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RunResolverResolve {
-  pub key: String,
-  pub dependency: Dependency,
-  pub specifier: String,
-  pub pipeline: Option<String>,
-  pub plugin_options: RpcPluginOptions,
 }

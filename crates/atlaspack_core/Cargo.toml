@@ -23,6 +23,7 @@ derive_builder = { workspace = true }
 dyn-hash = { workspace = true }
 nodejs-semver = { workspace = true }
 mockall = { workspace = true }
+readonly = { workspace = true }
 parking_lot = { workspace = true }
 petgraph = { workspace = true, features = ["serde-1"] }
 pretty_assertions = { workspace = true }

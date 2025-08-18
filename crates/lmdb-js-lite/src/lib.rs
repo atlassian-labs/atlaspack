@@ -222,7 +222,7 @@ impl LMDB {
   }
 
   #[napi(ts_return_type = "Buffer | null")]
-  pub fn get_sync(&self, env: Env, key: String) -> napi::Result<JsUnknown> {
+  pub fn get_sync(&self, env: Env, key: String) -> napi::Result<napi::JsUnknown> {
     let database_handle = &self.inner;
     let database = &database_handle.database;
 

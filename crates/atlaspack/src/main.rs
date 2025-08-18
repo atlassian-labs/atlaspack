@@ -1,10 +1,10 @@
 use atlaspack::{
   requests::{
     bundle_graph_request::{BundleGraphRequest, BundleGraphRequestOutput},
-    package_request::{self, InMemoryAssetDataProvider},
+    package_request::{self, InMemoryAssetDataProvider, PackageRequest},
     AssetGraphRequest,
   },
-  test_utils::{create_db, get_core_path, make_test_atlaspack},
+  test_utils::{create_db, get_core_path},
   Atlaspack, AtlaspackInitOptions,
 };
 use atlaspack_core::{
@@ -22,31 +22,39 @@ struct Args {
   #[arg(short, long)]
   dev: bool,
 
+  #[arg(short, long)]
+  config: Option<PathBuf>,
+
   // atlaspack <ENTRIES>
   #[arg(trailing_var_arg = true)]
   entries: Vec<String>,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
   initialize_tracing();
 
   info!("This is a testing binary only and requires a check-out of the atlaspack repository.");
 
   let args = Args::parse();
-  run(args).unwrap_or_else(|e| {
+  run(args).await.unwrap_or_else(|e| {
     error!("Failed to run atlaspack: {}", e);
     std::process::exit(1);
   });
 }
 
-fn run(args: Args) -> anyhow::Result<()> {
-  let atlaspack = make_atlaspack(&args)?;
+async fn run(args: Args) -> anyhow::Result<()> {
+  let atlaspack = make_atlaspack(&args).await?;
 
   info!("Building asset graph");
-  atlaspack.run_request(AssetGraphRequest::default())?;
+  atlaspack
+    .run_request_async(AssetGraphRequest::default())
+    .await?;
 
   info!("Building bundle graph");
-  let result = atlaspack.run_request(BundleGraphRequest::default())?;
+  let result = atlaspack
+    .run_request_async(BundleGraphRequest::default())
+    .await?;
   let BundleGraphRequestOutput {
     bundle_graph,
     asset_graph,
@@ -54,6 +62,8 @@ fn run(args: Args) -> anyhow::Result<()> {
   } = result
     .into_bundle_graph()
     .ok_or_else(|| anyhow::anyhow!("Invalid request result from bundle graph request."))?;
+
+  let asset_graph = Arc::new(asset_graph);
 
   info!("Packaging bundles");
   let output_dir = PathBuf::from("dist");
@@ -64,24 +74,14 @@ fn run(args: Args) -> anyhow::Result<()> {
       continue;
     };
 
-    let mut output = Vec::new();
-    package_request::package_bundle(
-      package_request::PackageBundleParams {
-        bundle: bundle.clone(),
-      },
-      InMemoryAssetDataProvider::new(&asset_graph),
-      &mut output,
-    )?;
-
-    let output_path = output_dir.join(bundle.bundle.name.as_deref().unwrap_or("bundle.js"));
-    info!("Writing bundle to {}", output_path.display());
-    std::fs::write(output_path, output)?;
+    let request = PackageRequest::new(bundle.clone(), asset_graph.clone());
+    atlaspack.run_request_async(request).await?;
   }
 
   Ok(())
 }
 
-fn make_atlaspack(args: &Args) -> anyhow::Result<Atlaspack> {
+async fn make_atlaspack(args: &Args) -> anyhow::Result<Atlaspack> {
   let atlaspack = Atlaspack::new(AtlaspackInitOptions {
     db: create_db().unwrap(),
     fs: Some(Arc::new(atlaspack_resolver::OsFileSystem)),
@@ -92,6 +92,10 @@ fn make_atlaspack(args: &Args) -> anyhow::Result<Atlaspack> {
       } else {
         BuildMode::Production
       },
+      config: args
+        .config
+        .as_ref()
+        .map(|c| c.to_str().unwrap().to_string()),
       default_target_options: DefaultTargetOptions {
         should_optimize: Some(false),
         should_scope_hoist: Some(false),
@@ -107,7 +111,7 @@ fn make_atlaspack(args: &Args) -> anyhow::Result<Atlaspack> {
       ..Default::default()
     },
     package_manager: None,
-    rpc: Arc::new(RustWorkerFactory::default()),
+    rpc: Arc::new(RustWorkerFactory::new().await?),
   })?;
 
   Ok(atlaspack)

@@ -253,19 +253,20 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       .as_ref()
       .and_then(|ts| ts.compiler_options.as_ref());
 
-    let automatic_jsx_runtime = compiler_options
-      .map(|co| {
-        co.jsx
-          .as_ref()
-          .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
-          || co.jsx_import_source.is_some()
-      })
-      .unwrap_or_else(|| {
-        self
-          .package_json
-          .as_ref()
-          .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg))
-      });
+    let automatic_jsx_runtime = false;
+    //  compiler_options
+    //   .map(|co| {
+    //     co.jsx
+    //       .as_ref()
+    //       .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
+    //       || co.jsx_import_source.is_some()
+    //   })
+    //   .unwrap_or_else(|| {
+    //     self
+    //       .package_json
+    //       .as_ref()
+    //       .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg))
+    //   });
 
     let transform_config = atlaspack_js_swc_core::Config {
       automatic_jsx_runtime,
@@ -647,7 +648,6 @@ mod tests {
       "index.jsx",
       "
         /**
-         * @jsxRuntime classic
          * @jsx jsx
          */
 

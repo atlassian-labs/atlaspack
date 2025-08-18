@@ -14,9 +14,9 @@ pub type ConfigLoaderRef = Arc<ConfigLoader>;
 /// Enables config to be loaded in various formats
 #[derive(Debug)]
 pub struct ConfigLoader {
-  fs: FileSystemRef,
-  project_root: PathBuf,
-  search_path: PathBuf,
+  pub fs: FileSystemRef,
+  pub project_root: PathBuf,
+  pub search_path: PathBuf,
 }
 
 #[derive(Debug, PartialEq)]
