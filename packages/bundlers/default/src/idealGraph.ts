@@ -1717,6 +1717,7 @@ export function createIdealGraph(
       if (
         bundleRootBundle.type === 'js' &&
         bundleRootBundle.bundleBehavior !== 'inline' &&
+        bundleRootBundle.bundleBehavior !== 'inlineIsolated' &&
         bundleRootBundle.size <= bundleSize &&
         !isIgnored(bundleRootBundle)
       ) {
