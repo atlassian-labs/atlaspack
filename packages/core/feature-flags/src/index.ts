@@ -156,11 +156,6 @@ export const DEFAULT_FEATURE_FLAGS = {
    * a full bundling pass is required based on the AssetGraph's bundlingVersion.
    */
   incrementalBundlingVersioning: process.env.ATLASPACK_BUILD_ENV === 'test',
-  /**
-   * Allow for the use of `data-atlaspack-isolated` on script tags in HTML to produce
-   * inline scripts that are build as "isolated" bundles.
-   */
-  inlineIsolatedScripts: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

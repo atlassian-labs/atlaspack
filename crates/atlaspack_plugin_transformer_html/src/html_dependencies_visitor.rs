@@ -152,10 +152,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
           };
           let mut inline_bundle_behavior = None;
           let dependency = Dependency {
-            bundle_behavior: if self.context.enable_inline_isolated
-              && src_attr.is_none()
-              && attrs.get(isolated_attr).is_some()
-            {
+            bundle_behavior: if src_attr.is_none() && attrs.get(isolated_attr).is_some() {
               attrs.delete(isolated_attr);
               inline_bundle_behavior = Some(BundleBehavior::InlineIsolated);
               Some(BundleBehavior::InlineIsolated)
