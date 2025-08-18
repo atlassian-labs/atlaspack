@@ -1,5 +1,19 @@
 # @atlaspack/config-webextension
 
+## 4.0.2
+
+### Patch Changes
+
+- [#742](https://github.com/atlassian-labs/atlaspack/pull/742) [`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd) Thanks [@yamadapc](https://github.com/yamadapc)! - Internal changes and bug fixes to environmentDeduplication flag
+
+- Updated dependencies [[`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd), [`b6e72b6`](https://github.com/atlassian-labs/atlaspack/commit/b6e72b6dd2b517cbb0e700fa69e63332d3eacb1e)]:
+  - @atlaspack/transformer-webextension@2.14.26
+  - @atlaspack/packager-webextension@2.14.26
+  - @atlaspack/runtime-webextension@2.14.26
+  - @atlaspack/transformer-raw@2.14.26
+  - @atlaspack/config-default@4.0.2
+  - @atlaspack/core@2.23.2
+
 ## 4.0.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/config-webextension",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -12,14 +12,14 @@
   },
   "main": "index.json",
   "dependencies": {
-    "@atlaspack/config-default": "4.0.1",
-    "@atlaspack/packager-webextension": "2.14.25",
-    "@atlaspack/runtime-webextension": "2.14.25",
-    "@atlaspack/transformer-raw": "2.14.25",
-    "@atlaspack/transformer-webextension": "2.14.25"
+    "@atlaspack/config-default": "4.0.2",
+    "@atlaspack/packager-webextension": "2.14.26",
+    "@atlaspack/runtime-webextension": "2.14.26",
+    "@atlaspack/transformer-raw": "2.14.26",
+    "@atlaspack/transformer-webextension": "2.14.26"
   },
   "peerDependencies": {
-    "@atlaspack/core": "2.23.1"
+    "@atlaspack/core": "2.23.2"
   },
   "scripts": {
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."

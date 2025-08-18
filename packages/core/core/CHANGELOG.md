@@ -1,5 +1,30 @@
 # @atlaspack/core
 
+## 2.23.2
+
+### Patch Changes
+
+- [#742](https://github.com/atlassian-labs/atlaspack/pull/742) [`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd) Thanks [@yamadapc](https://github.com/yamadapc)! - Internal changes and bug fixes to environmentDeduplication flag
+
+- [#755](https://github.com/atlassian-labs/atlaspack/pull/755) [`b6e72b6`](https://github.com/atlassian-labs/atlaspack/commit/b6e72b6dd2b517cbb0e700fa69e63332d3eacb1e) Thanks [@benjervis](https://github.com/benjervis)! - Allow runtime assets to be marked as requiring execution on load
+
+- Updated dependencies [[`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd), [`889c65c`](https://github.com/atlassian-labs/atlaspack/commit/889c65cd25b811045e26a117e7404f694dde77a2)]:
+  - @atlaspack/package-manager@2.14.26
+  - @atlaspack/feature-flags@2.23.1
+  - @atlaspack/build-cache@2.13.5
+  - @atlaspack/diagnostic@2.14.3
+  - @atlaspack/profiler@2.14.23
+  - @atlaspack/workers@2.14.26
+  - @atlaspack/events@2.14.3
+  - @atlaspack/logger@2.14.18
+  - @atlaspack/plugin@2.14.26
+  - @atlaspack/cache@3.2.21
+  - @atlaspack/graph@3.5.15
+  - @atlaspack/types@2.15.16
+  - @atlaspack/utils@2.18.3
+  - @atlaspack/rust@3.6.1
+  - @atlaspack/fs@2.15.21
+
 ## 2.23.1
 
 ### Patch Changes

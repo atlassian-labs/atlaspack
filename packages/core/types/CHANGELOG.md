@@ -1,5 +1,15 @@
 # @atlaspack/types
 
+## 2.15.16
+
+### Patch Changes
+
+- [#742](https://github.com/atlassian-labs/atlaspack/pull/742) [`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd) Thanks [@yamadapc](https://github.com/yamadapc)! - Internal changes and bug fixes to environmentDeduplication flag
+
+- Updated dependencies [[`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd)]:
+  - @atlaspack/types-internal@2.19.2
+  - @atlaspack/workers@2.14.26
+
 ## 2.15.15
 
 ### Patch Changes
