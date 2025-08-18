@@ -233,12 +233,6 @@ export class ScopeHoistingPackager {
         entries = entries.filter(
           (a) => a.meta?.runtimeAssetRequiringExecutionOnLoad,
         );
-
-        // Unless it's a special runtime asset, null out the main entry so
-        // nothing's getting executed.
-        if (!mainEntry?.meta?.runtimeAssetRequiringExecutionOnLoad) {
-          mainEntry = null;
-        }
       } else {
         entries = entries.filter((a) => a.id !== mainEntry?.id);
       }
