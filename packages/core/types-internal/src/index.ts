@@ -1849,6 +1849,7 @@ export type RuntimeAsset = {
   readonly isEntry?: boolean;
   readonly env?: EnvironmentOptions;
   readonly priority?: RuntimeAssetPriority;
+  readonly runtimeAssetRequiringExecutionOnLoad?: boolean;
 };
 
 /**
