@@ -9,12 +9,14 @@ use std::{
 use async_trait::async_trait;
 use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode, AssetNode},
-  bundle_graph::BundleGraphBundle,
+  bundle_graph::{BundleGraph, BundleGraphBundle, BundleGraphNode},
   plugin::PackageContext,
-  types::{AssetId, Bundle, BundleId, FileType},
+  types::{AssetId, AtlaspackOptions, Bundle, BundleId, FileType},
 };
 use petgraph::{graph::NodeIndex, visit::EdgeRef};
-use tracing::info;
+use rayon::iter::IntoParallelRefIterator;
+use rayon::prelude::*;
+use tracing::{info, warn};
 
 use crate::{
   request_tracker::{
@@ -23,16 +25,22 @@ use crate::{
   requests::RequestResult,
 };
 
-#[derive(Debug, Hash)]
+#[derive(Debug)]
 pub struct PackageRequest {
-  bundle: BundleGraphBundle,
+  bundle_graph: BundleGraph,
   asset_graph: Arc<AssetGraph>,
 }
 
+impl Hash for PackageRequest {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.asset_graph.hash(state);
+  }
+}
+
 impl PackageRequest {
-  pub fn new(bundle: BundleGraphBundle, asset_graph: Arc<AssetGraph>) -> Self {
+  pub fn new(bundle_graph: BundleGraph, asset_graph: Arc<AssetGraph>) -> Self {
     Self {
-      bundle,
+      bundle_graph,
       asset_graph,
     }
   }
@@ -42,42 +50,77 @@ impl PackageRequest {
 impl Request for PackageRequest {
   async fn run(
     &self,
-    request_context: RunRequestContext,
+    mut request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
-    // We should not keep all data in memory
-    let asset_data_provider = InMemoryAssetDataProvider::new(&self.asset_graph);
+    let bundles = self
+      .bundle_graph
+      .graph()
+      .node_weights()
+      .filter_map(|weight| {
+        let BundleGraphNode::Bundle(bundle) = weight else {
+          return None;
+        };
 
-    let output_file_path = request_context
-      .options
-      .default_target_options
-      .dist_dir
-      .clone()
-      .unwrap_or_else(|| request_context.project_root.join("dist"))
-      .join(self.bundle.bundle.name.clone().unwrap_or_else(|| {
-        format!(
-          "{}.{}",
-          self.bundle.bundle.id,
-          self.bundle.bundle.bundle_type.extension()
-        )
-      }));
+        Some(bundle)
+      })
+      .collect::<Vec<_>>();
 
-    info!("Packaging bundle to {}", output_file_path.display());
-    let mut writer = std::fs::File::create(&output_file_path)?;
-    package_bundle(
-      PackageBundleParams {
-        bundle: &self.bundle,
-      },
-      asset_data_provider,
-      &mut writer,
-    )?;
+    let results = bundles
+      .into_par_iter()
+      .map(|bundle| {
+        let options = request_context.options.clone();
+        let project_root = request_context.project_root.clone();
+        let asset_graph = self.asset_graph.clone();
+
+        run_package_bundle(options, project_root, bundle.clone(), asset_graph)
+      })
+      .collect::<anyhow::Result<Vec<_>>>()?;
 
     Ok(ResultAndInvalidations {
       result: RequestResult::Package(PackageRequestOutput {
-        packaged_bundle: output_file_path,
+        packaged_bundle: PathBuf::from(""),
       }),
       invalidations: vec![],
     })
   }
+}
+
+fn run_package_bundle(
+  options: Arc<AtlaspackOptions>,
+  project_root: PathBuf,
+  bundle: BundleGraphBundle,
+  asset_graph: Arc<AssetGraph>,
+) -> Result<ResultAndInvalidations, RunRequestError> {
+  // We should not keep all data in memory
+  let asset_data_provider = InMemoryAssetDataProvider::new(&asset_graph);
+
+  let output_file_path = options
+    .default_target_options
+    .dist_dir
+    .clone()
+    .unwrap_or_else(|| project_root.join("dist"))
+    .join(bundle.bundle.name.clone().unwrap_or_else(|| {
+      format!(
+        "{}.{}",
+        bundle.bundle.id,
+        bundle.bundle.bundle_type.extension()
+      )
+    }));
+
+  info!("Packaging bundle to {}", output_file_path.display());
+  let mut writer = std::fs::File::create(&output_file_path)?;
+  package_bundle(
+    PackageBundleParams { bundle: &bundle },
+    asset_data_provider,
+    &mut writer,
+  )?;
+
+  Ok(ResultAndInvalidations {
+    result: RequestResult::Package(PackageRequestOutput {
+      packaged_bundle: output_file_path,
+    }),
+    invalidations: vec![],
+  })
 }
 
 #[derive(PartialEq, Clone)]
@@ -99,7 +142,13 @@ pub trait AssetDataProvider: std::fmt::Debug {
 #[derive(Debug)]
 pub struct InMemoryAssetDataProvider<'a> {
   asset_graph: &'a AssetGraph,
-  asset_node_index_by_id: HashMap<AssetId, NodeIndex>,
+  asset_node_index_by_id: HashMap<u64, NodeIndex>,
+}
+
+fn get_asset_id_hash(asset_id: &str) -> u64 {
+  let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
+  asset_id.hash(&mut hasher);
+  hasher.finish()
 }
 
 impl<'a> InMemoryAssetDataProvider<'a> {
@@ -109,7 +158,8 @@ impl<'a> InMemoryAssetDataProvider<'a> {
     for node_index in asset_graph.graph.node_indices() {
       let asset_node = asset_graph.get_node(&node_index).unwrap();
       if let AssetGraphNode::Asset(asset_node) = asset_node {
-        asset_node_index_by_id.insert(asset_node.asset.id.clone(), node_index);
+        let id_hash = get_asset_id_hash(&asset_node.asset.id);
+        asset_node_index_by_id.insert(id_hash, node_index);
       }
     }
 
@@ -124,7 +174,7 @@ impl InMemoryAssetDataProvider<'_> {
   fn get_asset_by_id(&self, asset_id: &str) -> anyhow::Result<&AssetNode> {
     let asset_node_index = self
       .asset_node_index_by_id
-      .get(asset_id)
+      .get(&get_asset_id_hash(asset_id))
       .ok_or_else(|| anyhow::anyhow!("Asset not found: {}", asset_id))?;
 
     let AssetGraphNode::Asset(asset_node) = self.asset_graph.get_node(asset_node_index).unwrap()
@@ -138,6 +188,7 @@ impl InMemoryAssetDataProvider<'_> {
 
 struct ImportedModule {
   target_id: String,
+  specifier: String,
   symbols: Vec<String>,
 }
 
@@ -157,7 +208,7 @@ impl AssetDataProvider for InMemoryAssetDataProvider<'_> {
   fn get_imported_modules(&self, asset_id: &str) -> anyhow::Result<Vec<ImportedModule>> {
     let asset_node_index = self
       .asset_node_index_by_id
-      .get(asset_id)
+      .get(&get_asset_id_hash(asset_id))
       .ok_or_else(|| anyhow::anyhow!("Asset not found: {}", asset_id))?;
 
     let AssetGraphNode::Asset(asset_node) = self.asset_graph.get_node(asset_node_index).unwrap()
@@ -181,7 +232,11 @@ impl AssetDataProvider for InMemoryAssetDataProvider<'_> {
           .asset_graph
           .graph
           .edges_directed(target, petgraph::Direction::Outgoing);
-        let target_index = targets.next().unwrap().target();
+        let Some(target_index) = targets.next() else {
+          warn!("Disconnected dependency: {:?}", dependency_node.dependency);
+          continue;
+        };
+        let target_index = target_index.target();
         let AssetGraphNode::Asset(target_node) =
           self.asset_graph.graph.node_weight(target_index).unwrap()
         else {
@@ -198,6 +253,7 @@ impl AssetDataProvider for InMemoryAssetDataProvider<'_> {
             .as_ref()
             .map(|symbols| symbols.iter().map(|s| s.local.clone()).collect())
             .unwrap_or_default(),
+          specifier: dependency_node.dependency.specifier.clone(),
         });
       }
     }
@@ -215,6 +271,7 @@ impl AssetDataProvider for InMemoryAssetDataProvider<'_> {
   }
 }
 
+#[tracing::instrument(skip(params, asset_data_provider, writer), fields(bundle_id = %params.bundle.bundle.id))]
 pub fn package_bundle(
   params: PackageBundleParams<'_>,
   asset_data_provider: impl AssetDataProvider,
@@ -223,10 +280,16 @@ pub fn package_bundle(
   match params.bundle.bundle.bundle_type {
     FileType::Js => package_js_bundle(params, asset_data_provider, writer),
     FileType::Html => package_html_bundle(params, asset_data_provider, writer),
-    _ => Err(anyhow::anyhow!(
-      "Unsupported bundle type: {:?}",
-      params.bundle.bundle.bundle_type
-    )),
+    _ => {
+      warn!(
+        "Unsupported bundle type: {:?}",
+        params.bundle.bundle.bundle_type
+      );
+      Ok(())
+    } // _ => Err(anyhow::anyhow!(
+      //   "Unsupported bundle type: {:?}",
+      //   params.bundle.bundle.bundle_type
+      // )),
   }
 }
 
@@ -261,24 +324,33 @@ fn package_js_bundle(
       .as_bytes(),
     )?;
 
-    for import_statement in import_statements {
-      writer.write_all(
-        format!(
-          "const {{ {} }} = atlaspack$require('{}');\n",
-          import_statement.symbols.join(", "),
-          import_statement.target_id,
-        )
-        .as_bytes(),
-      )?;
-    }
+    // If scope hoisting:
+    // for import_statement in import_statements {
+    //   writer.write_all(
+    //     format!(
+    //       "const {{ {} }} = atlaspack$require('{}');\n",
+    //       import_statement.symbols.join(", "),
+    //       import_statement.target_id,
+    //     )
+    //     .as_bytes(),
+    //   )?;
+    // }
 
     writer.write_all(code.as_bytes())?;
 
-    for export_statement in export_statements {
-      writer.write_all(format!("atlaspack$export('{}', {{}});\n", export_statement).as_bytes())?;
-    }
+    // If scope hoisting:
+    // for export_statement in export_statements {
+    //   writer.write_all(format!("atlaspack$export('{}', {{}});\n", export_statement).as_bytes())?;
+    // }
 
-    writer.write_all("\n\n}});\n\n".as_bytes())?;
+    let mut dependencies_object = HashMap::new();
+    for import_statement in import_statements {
+      dependencies_object.insert(import_statement.specifier, import_statement.target_id);
+    }
+    let dependencies_object_string = serde_json::to_string(&dependencies_object).unwrap();
+
+    let postlude = format!("\n\n}}, {dependencies_object_string});\n\n");
+    writer.write_all(postlude.as_bytes())?;
   }
 
   Ok(())

@@ -30,7 +30,7 @@ struct Args {
   entries: Vec<String>,
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() {
   initialize_tracing();
 
@@ -45,6 +45,7 @@ async fn main() {
 
 async fn run(args: Args) -> anyhow::Result<()> {
   let atlaspack = make_atlaspack(&args).await?;
+  let atlaspack = Arc::new(atlaspack);
 
   info!("Building asset graph");
   atlaspack
@@ -69,14 +70,8 @@ async fn run(args: Args) -> anyhow::Result<()> {
   let output_dir = PathBuf::from("dist");
   std::fs::create_dir_all(&output_dir)?;
 
-  for weight in bundle_graph.graph().node_weights() {
-    let BundleGraphNode::Bundle(bundle) = weight else {
-      continue;
-    };
-
-    let request = PackageRequest::new(bundle.clone(), asset_graph.clone());
-    atlaspack.run_request_async(request).await?;
-  }
+  let request = PackageRequest::new(bundle_graph, asset_graph.clone());
+  atlaspack.run_request_async(request).await?;
 
   Ok(())
 }

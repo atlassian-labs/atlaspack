@@ -197,10 +197,10 @@ impl JavaScriptPluginAPI for EdonWorkerPool {
   }
 
   async fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
-    let current = self.current.fetch_add(1, Ordering::Relaxed);
-    self.plugins[current % self.plugins.len()]
-      .load_plugin(opts)
-      .await
+    for plugin in &self.plugins {
+      plugin.load_plugin(opts.clone()).await?;
+    }
+    Ok(())
   }
 }
 
@@ -225,6 +225,39 @@ impl EdonJavaScriptPluginAPI {
           r#"
 const {AtlaspackWorker} = require('@atlaspack/core/lib/atlaspack-v3/worker/AtlaspackWorker.js');
 const worker = new AtlaspackWorker();
+
+const child_process = require('child_process');
+const loggingExports = {};
+
+for (const key of Object.keys(child_process)) {
+  loggingExports[key] = (...args) => {
+    try { throw new Error('e') } catch (e) {
+      console.log('child_process', key, args, e.stack);
+    }
+    return child_process[key](...args);
+  };
+}
+
+require.cache['child_process'] = {
+  exports: loggingExports,
+};
+
+const inspector = require('inspector');
+const session = new inspector.Session();
+session.connect();
+session.post(
+  'Profiler.enable',
+  () => session.post('Profiler.start', () => {}),
+);
+setTimeout(() => {
+  session.post('Profiler.stop', (sessionErr, data) => {
+    require('fs').writeFileSync(
+      'worker-cpu-profile-' + Date.now() + '.cpuprofile',
+      JSON.stringify(data.profile),
+      (writeErr) => {},
+    );
+  });
+}, 60000);
 
 worker
         "#,
@@ -313,11 +346,17 @@ impl JavaScriptPluginAPI for EdonJavaScriptPluginAPI {
 }
 
 async fn get_libnode_path() -> anyhow::Result<PathBuf> {
-  let response = reqwest::get("https://github.com/alshdavid/libnode-prebuilt/releases/download/v22/libnode-macos-arm64.tar.gz").await?;
-
   let home_dir =
     home::home_dir().ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?;
   let atlaspack_dir = home_dir.join(".atlaspack");
+  let libnode_path = atlaspack_dir.join("libnode.dylib");
+
+  if libnode_path.exists() {
+    return Ok(libnode_path);
+  }
+
+  let response = reqwest::get("https://github.com/alshdavid/libnode-prebuilt/releases/download/v22/libnode-macos-arm64.tar.gz").await?;
+
   std::fs::create_dir_all(&atlaspack_dir)?;
 
   let target_path = atlaspack_dir.join("libnode-macos-arm64.tar.gz");
@@ -332,8 +371,6 @@ async fn get_libnode_path() -> anyhow::Result<PathBuf> {
     .arg(&target_path)
     .current_dir(&atlaspack_dir)
     .output()?;
-
-  let libnode_path = atlaspack_dir.join("libnode.dylib");
 
   Ok(libnode_path)
 }

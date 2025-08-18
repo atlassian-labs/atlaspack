@@ -136,6 +136,7 @@ impl Atlaspack {
 }
 
 impl Atlaspack {
+  #[tracing::instrument(skip(self, request))]
   pub async fn run_request_async(
     &self,
     request: impl request_tracker::Request,
@@ -244,7 +245,7 @@ mod tests {
   use atlaspack_benchmark::GenerateMonorepoParams;
   use atlaspack_core::{
     bundle_graph::BundleGraphNode,
-    types::{Asset, Code},
+    types::{Asset, BuildMode, Code},
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_plugin_rpc::{rust::RustWorkerFactory, MockRpcFactory, MockRpcWorker};
@@ -486,7 +487,6 @@ export const bar = "bar";
       project_dir.join("package.json"),
       r#"
 {
-  "main": "dist/index.js",
   "name": "simple-app"
 }
       "#,
@@ -510,8 +510,18 @@ export const bar = "bar";
     )
     .unwrap();
 
-    info!("Creating atlaspack");
-    let atlaspack = test_utils::make_test_atlaspack(&[project_dir.join("src/index.ts")])
+    info!(?project_dir, "Creating atlaspack");
+    let atlaspack =
+      test_utils::make_test_atlaspack_with(&[project_dir.join("src/index.ts")], |init_options| {
+        init_options.options.mode = BuildMode::Development;
+        init_options.options.default_target_options.should_optimize = Some(false);
+        init_options
+          .options
+          .default_target_options
+          .should_scope_hoist = Some(false);
+        init_options.options.default_target_options.is_library = Some(false);
+        init_options.options.targets = None;
+      })
       .await
       .unwrap();
 

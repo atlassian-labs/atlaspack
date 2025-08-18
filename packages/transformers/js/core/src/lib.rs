@@ -198,6 +198,7 @@ pub fn transform(
   config: Config,
   call_macro: Option<MacroCallback>,
 ) -> Result<TransformResult, io::Error> {
+  println!("transforming {:#?}", config);
   let mut result = TransformResult::default();
   let mut map_buf = vec![];
 

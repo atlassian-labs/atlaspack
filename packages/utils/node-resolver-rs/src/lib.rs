@@ -147,7 +147,7 @@ impl<'a> Resolver<'a> {
       include_node_modules: Cow::Owned(IncludeNodeModules::default()),
       conditions: ExportsCondition::NODE,
       module_dir_resolver: None,
-      reduce_string_creation: false,
+      reduce_string_creation: true,
     }
   }
 
@@ -162,7 +162,7 @@ impl<'a> Resolver<'a> {
       include_node_modules: Cow::Owned(IncludeNodeModules::default()),
       conditions: ExportsCondition::NODE,
       module_dir_resolver: None,
-      reduce_string_creation: false,
+      reduce_string_creation: true,
     }
   }
 
@@ -180,7 +180,7 @@ impl<'a> Resolver<'a> {
       include_node_modules: Cow::Owned(IncludeNodeModules::default()),
       conditions: ExportsCondition::empty(),
       module_dir_resolver: None,
-      reduce_string_creation: false,
+      reduce_string_creation: true,
     }
   }
 

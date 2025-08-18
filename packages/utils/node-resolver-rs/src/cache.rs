@@ -118,7 +118,16 @@ impl Cache {
     }
 
     let is_file = self.fs.is_dir(path);
-    self.is_dir_cache.insert(path.to_path_buf(), is_file);
+    let mut entries = vec![(path.to_path_buf(), is_file)];
+    if is_file {
+      for parent in path.ancestors() {
+        let is_dir = self.fs.is_dir(parent);
+        entries.push((parent.to_path_buf(), is_dir));
+      }
+    }
+
+    self.is_dir_cache.insert_bulk(entries.into_iter());
+
     is_file
   }
 

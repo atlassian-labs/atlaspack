@@ -18,7 +18,7 @@ export const DEFAULT_FEATURE_FLAGS = {
   /**
    * Rust backed requests
    */
-  atlaspackV3: false,
+  atlaspackV3: true,
 
   /**
    * Use node.js implementation of @parcel/watcher watchman backend
@@ -38,7 +38,7 @@ export const DEFAULT_FEATURE_FLAGS = {
   /**
    * Enable rust dev server
    */
-  rustDevServer: false,
+  rustDevServer: true,
 
   /**
    * Enables an experimental "conditional bundling" API - this allows the use of `importCond` syntax
@@ -61,12 +61,12 @@ export const DEFAULT_FEATURE_FLAGS = {
    * - Remove "large file blob" writes
    * - Reduce size of the caches by deduplicating data
    */
-  cachePerformanceImprovements: process.env.ATLASPACK_BUILD_ENV === 'test',
+  cachePerformanceImprovements: true, // process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Deduplicates environments across cache / memory entities
    */
-  environmentDeduplication: false,
+  environmentDeduplication: true,
 
   /**
    * Enable scanning for the presence of loadable to determine side effects
@@ -77,7 +77,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enable performance optimization for the resolver specifier to_string
    * conversions
    */
-  reduceResolverStringCreation: false,
+  reduceResolverStringCreation: true,
 
   /**
    * Add verbose metrics for request tracker invalidation.
@@ -88,18 +88,18 @@ export const DEFAULT_FEATURE_FLAGS = {
   /**
    * Fixes source maps for inline bundles
    */
-  inlineBundlesSourceMapFixes: false,
+  inlineBundlesSourceMapFixes: true,
 
   /** Enable patch project paths. This will patch the project paths to be relative to the project root.
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    */
-  patchProjectPaths: false,
+  patchProjectPaths: true,
 
   /**
    * Enables optimized inline string replacement perf for the packager.
    * Used heavily for inline bundles.
    */
-  inlineStringReplacementPerf: false,
+  inlineStringReplacementPerf: true,
 
   /**
    * Enable resolution of bundler config starting from the CWD

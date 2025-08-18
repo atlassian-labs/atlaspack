@@ -102,7 +102,7 @@ impl RequestTracker {
   ///     without stalls and locks/channels
   ///   - For non-main-thread requests, do not allow enqueueing of sub-requests
   pub async fn run_request(&mut self, request: impl Request) -> anyhow::Result<RequestResult> {
-    tracing::debug!("run_request {:?}", request);
+    // tracing::debug!("run_request {:?}", request);
 
     let request_id = request.id();
     let (tx, rx) = std::sync::mpsc::channel();
@@ -156,7 +156,7 @@ impl RequestTracker {
               let tx = tx.clone();
               async move {
                 let result = request.run(context).await.map_err(|e| {
-                  tracing::error!(?e, ?request, "Error running request");
+                  tracing::error!(?e, "Error running request");
                   e
                 });
                 let _ = tx.send(RequestQueueMessage::RequestResult {

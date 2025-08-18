@@ -103,8 +103,11 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
   )
 }
 
-pub async fn make_test_atlaspack(entries: &[impl AsRef<Path>]) -> anyhow::Result<Atlaspack> {
-  let atlaspack = Atlaspack::new(AtlaspackInitOptions {
+pub async fn make_test_atlaspack_with(
+  entries: &[impl AsRef<Path>],
+  options_mutator: impl FnOnce(&mut AtlaspackInitOptions),
+) -> anyhow::Result<Atlaspack> {
+  let mut options = AtlaspackInitOptions {
     db: create_db().unwrap(),
     fs: Some(Arc::new(atlaspack_resolver::OsFileSystem)),
     options: AtlaspackOptions {
@@ -123,7 +126,16 @@ pub async fn make_test_atlaspack(entries: &[impl AsRef<Path>]) -> anyhow::Result
     },
     package_manager: None,
     rpc: Arc::new(RustWorkerFactory::new().await?),
-  })?;
+  };
+  options_mutator(&mut options);
+
+  let atlaspack = Atlaspack::new(options)?;
+
+  Ok(atlaspack)
+}
+
+pub async fn make_test_atlaspack(entries: &[impl AsRef<Path>]) -> anyhow::Result<Atlaspack> {
+  let atlaspack = make_test_atlaspack_with(entries, |options| {}).await?;
 
   Ok(atlaspack)
 }

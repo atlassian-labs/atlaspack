@@ -78,7 +78,7 @@ impl Display for Code {
 
 impl Debug for Code {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{:?}", self.as_str().unwrap())
+    write!(f, "{:?}", self.as_str().unwrap_or("Code(<bytes>)"))
   }
 }
 

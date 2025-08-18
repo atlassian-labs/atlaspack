@@ -321,6 +321,15 @@ impl AssetGraphBuilder {
     // Connect dependencies of the Asset
     let mut unique_deps: IndexMap<String, Dependency> = IndexMap::new();
 
+    // for dependency in dependencies {
+    //   self.request_context.queue_request(
+    //     PathRequest {
+    //       dependency: Arc::new(dependency.clone()),
+    //     },
+    //     self.sender.clone(),
+    //   );
+    // }
+
     for dependency in dependencies {
       unique_deps
         .entry(dependency.id())
