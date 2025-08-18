@@ -242,6 +242,7 @@ export class ScopeHoistingPackager {
       } else {
         entries = entries.filter((a) => a.id !== mainEntry?.id);
       }
+      mainEntry = null;
     }
 
     let needsBundleQueue = this.shouldBundleQueue(this.bundle);
