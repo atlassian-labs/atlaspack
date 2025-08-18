@@ -1,5 +1,17 @@
 # @atlaspack/optimizer-inline-requires
 
+## 2.14.26
+
+### Patch Changes
+
+- [#742](https://github.com/atlassian-labs/atlaspack/pull/742) [`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd) Thanks [@yamadapc](https://github.com/yamadapc)! - Internal changes and bug fixes to environmentDeduplication flag
+
+- Updated dependencies [[`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd)]:
+  - @atlaspack/feature-flags@2.23.1
+  - @atlaspack/plugin@2.14.26
+  - @atlaspack/types@2.15.16
+  - @atlaspack/rust@3.6.1
+
 ## 2.14.25
 
 ### Patch Changes

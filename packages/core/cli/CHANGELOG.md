@@ -1,5 +1,25 @@
 # @atlaspack/cli
 
+## 2.14.4
+
+### Patch Changes
+
+- [#742](https://github.com/atlassian-labs/atlaspack/pull/742) [`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd) Thanks [@yamadapc](https://github.com/yamadapc)! - Internal changes and bug fixes to environmentDeduplication flag
+
+- Updated dependencies [[`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd), [`889c65c`](https://github.com/atlassian-labs/atlaspack/commit/889c65cd25b811045e26a117e7404f694dde77a2), [`b6e72b6`](https://github.com/atlassian-labs/atlaspack/commit/b6e72b6dd2b517cbb0e700fa69e63332d3eacb1e)]:
+  - @atlaspack/package-manager@2.14.26
+  - @atlaspack/reporter-dev-server@2.14.26
+  - @atlaspack/feature-flags@2.23.1
+  - @atlaspack/reporter-tracer@2.14.26
+  - @atlaspack/config-default@4.0.2
+  - @atlaspack/diagnostic@2.14.3
+  - @atlaspack/reporter-cli@2.17.8
+  - @atlaspack/events@2.14.3
+  - @atlaspack/logger@2.14.18
+  - @atlaspack/utils@2.18.3
+  - @atlaspack/core@2.23.2
+  - @atlaspack/fs@2.15.21
+
 ## 2.14.3
 
 ### Patch Changes

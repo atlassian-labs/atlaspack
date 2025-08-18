@@ -1,5 +1,21 @@
 # @atlaspack/package-manager
 
+## 2.14.26
+
+### Patch Changes
+
+- [#742](https://github.com/atlassian-labs/atlaspack/pull/742) [`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd) Thanks [@yamadapc](https://github.com/yamadapc)! - Internal changes and bug fixes to environmentDeduplication flag
+
+- Updated dependencies [[`ee040bb`](https://github.com/atlassian-labs/atlaspack/commit/ee040bb6428f29b57d892ddd8107e29077d08ffd), [`889c65c`](https://github.com/atlassian-labs/atlaspack/commit/889c65cd25b811045e26a117e7404f694dde77a2)]:
+  - @atlaspack/node-resolver-core@3.6.2
+  - @atlaspack/build-cache@2.13.5
+  - @atlaspack/diagnostic@2.14.3
+  - @atlaspack/workers@2.14.26
+  - @atlaspack/logger@2.14.18
+  - @atlaspack/types@2.15.16
+  - @atlaspack/utils@2.18.3
+  - @atlaspack/fs@2.15.21
+
 ## 2.14.25
 
 ### Patch Changes
