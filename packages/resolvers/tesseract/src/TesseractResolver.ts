@@ -173,9 +173,10 @@ export default new Resolver({
       };
     }
 
-    if (preResolved.has(specifier)) {
+    let preResolvedValue = preResolved.get(specifier);
+    if (preResolvedValue) {
       return {
-        filePath: require.resolve(preResolved.get(specifier)!),
+        filePath: require.resolve(preResolvedValue),
         code: undefined,
         sideEffects: false,
       };
