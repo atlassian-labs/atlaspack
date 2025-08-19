@@ -1,5 +1,13 @@
 # @atlaspack/types
 
+## 2.15.17
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.19.3
+  - @atlaspack/workers@2.14.27
+
 ## 2.15.16
 
 ### Patch Changes
