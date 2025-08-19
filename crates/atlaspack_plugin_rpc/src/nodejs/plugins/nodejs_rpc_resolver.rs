@@ -13,7 +13,6 @@ use atlaspack_core::plugin::PluginOptions;
 use atlaspack_core::plugin::ResolveContext;
 use atlaspack_core::plugin::Resolved;
 use atlaspack_core::plugin::ResolverPlugin;
-use serde::Serialize;
 use tokio::sync::OnceCell;
 
 use crate::javascript_plugin_api::JavaScriptPluginAPI;
@@ -22,7 +21,6 @@ use crate::javascript_plugin_api::RunResolverResolve;
 use crate::javascript_plugin_api::plugin_options::RpcPluginOptions;
 use crate::javascript_plugin_api::LoadPluginKind;
 use crate::javascript_plugin_api::LoadPluginOptions;
-use crate::nodejs::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 
 /// Plugin state once initialized
 struct InitializedState {

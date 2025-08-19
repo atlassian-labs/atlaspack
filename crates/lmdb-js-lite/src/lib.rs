@@ -45,7 +45,6 @@ use std::sync::{Arc, Weak};
 
 use anyhow::anyhow;
 use napi::bindgen_prelude::Env;
-use napi::JsUnknown;
 use napi_derive::napi;
 use tracing::Level;
 

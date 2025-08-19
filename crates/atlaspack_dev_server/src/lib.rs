@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use axum::{
-  body::{Body, Bytes},
+  body::Body,
   extract::{Request, State},
   response::{IntoResponse, Json, Response},
   routing::get,
@@ -12,7 +12,6 @@ use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 use tower_http::{
-  body::Full,
   cors::CorsLayer,
   services::{ServeDir, ServeFile},
   trace::TraceLayer,

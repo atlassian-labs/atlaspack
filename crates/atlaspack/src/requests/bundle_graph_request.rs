@@ -139,7 +139,7 @@ impl Request for BundleGraphRequest {
       let AcyclicAssetGraphNode::Asset(entry_asset) =
         dominator_tree.node_weight(start_node).unwrap()
       else {
-        tracing::error!(?start_node, ?bundle_id, "Bundle entry node is not an asset");
+        tracing::error!(?start_node, "Bundle entry node is not an asset");
         continue;
       };
 

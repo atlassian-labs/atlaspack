@@ -21,8 +21,8 @@ use crate::js_transformer_config::{
   InlineEnvironment, JsTransformerConfig, JsTransformerPackageJson,
 };
 use crate::map_diagnostics::{map_diagnostics, MapDiagnosticOptions};
-use crate::package_json::{depends_on_react, supports_automatic_jsx_runtime, PackageJson};
-use crate::ts_config::{Jsx, Target, TsConfig};
+use crate::package_json::{depends_on_react, PackageJson};
+use crate::ts_config::{Target, TsConfig};
 
 mod conversion;
 

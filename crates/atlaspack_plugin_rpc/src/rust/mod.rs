@@ -25,7 +25,6 @@ use napi::bindgen_prelude::FromNapiValue;
 use napi::JsBuffer;
 use napi::JsString;
 use napi::JsUnknown;
-use tracing::info;
 
 use crate::javascript_plugin_api::JavaScriptPluginAPI;
 use crate::javascript_plugin_api::LoadPluginOptions;
