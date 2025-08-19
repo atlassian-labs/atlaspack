@@ -19,7 +19,7 @@ use crate::{
 };
 use crate::{Atlaspack, AtlaspackInitOptions};
 
-pub(crate) fn make_test_plugin_context() -> PluginContext {
+pub fn make_test_plugin_context() -> PluginContext {
   let fs = Arc::new(InMemoryFileSystem::default());
 
   fs.write_file(Path::new("package.json"), String::from("{}"));
@@ -36,7 +36,7 @@ pub(crate) fn make_test_plugin_context() -> PluginContext {
   }
 }
 
-pub(crate) fn config_plugins(ctx: PluginContext) -> PluginsRef {
+pub fn config_plugins(ctx: PluginContext) -> PluginsRef {
   let fixture = default_config(Arc::new(PathBuf::default()));
   let rpc_factory = TestingRpcFactory::default();
   let rpc_worker = rpc_factory.start().unwrap();
@@ -63,7 +63,7 @@ impl Default for RequestTrackerTestOptions {
   }
 }
 
-pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTracker {
+pub fn request_tracker(options: RequestTrackerTestOptions) -> RequestTracker {
   let RequestTrackerTestOptions {
     fs,
     plugins,
