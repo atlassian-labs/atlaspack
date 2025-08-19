@@ -11,7 +11,7 @@ let program = require('./src/cli').createProgram();
 (async function main() {
   try {
     await program.parseAsync();
-  } catch (e: any) {
+  } catch (e) {
     console.error(e);
     process.exit(1);
   }
