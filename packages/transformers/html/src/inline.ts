@@ -127,10 +127,7 @@ export default function extractInlineAssets(
         }
 
         let bundleBehavior: BundleBehavior = 'inline';
-        if (
-          getFeatureFlag('inlineIsolatedScripts') &&
-          typeof node.attrs['data-atlaspack-isolated'] !== 'undefined'
-        ) {
+        if (typeof node.attrs['data-atlaspack-isolated'] !== 'undefined') {
           bundleBehavior = 'inlineIsolated';
           delete node.attrs['data-atlaspack-isolated'];
         }
