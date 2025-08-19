@@ -1,0 +1,33 @@
+{
+  "name": "@atlaspack/benchmark-reused-inline-requires",
+  "private": true,
+  "version": "0.1.0",
+  "sideEffects": false,
+  "description": "Benchmark to compare browser performance with reusedInlineRequires feature on/off",
+  "scripts": {
+    "benchmark": "node scripts/benchmark.mjs",
+    "benchmark:debug": "DEBUG=true BENCHMARK_RUNS=1 node scripts/benchmark.mjs",
+    "serve": "node scripts/serve.mjs",
+    "build:off": "atlaspack build --no-cache --feature-flag reusedInlineRequires=false src/index.html --dist-dir dist-off --public-url /dist-off",
+    "build:on": "atlaspack build --no-cache --feature-flag reusedInlineRequires=true src/index.html --dist-dir dist-on --public-url /dist-on",
+    "build:both": "yarn build:off && yarn build:on"
+  },
+  "dependencies": {
+    "@atlaspack/config-default": "*",
+    "@atlaspack/core": "*",
+    "@atlaspack/cli": "*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/lodash": "^4.17.0",
+    "express": "^4.18.0",
+    "@playwright/test": "^1.40.0",
+    "chalk": "^5.3.0",
+    "@oclif/table": "^0.3.0"
+  },
+  "type": "module"
+}

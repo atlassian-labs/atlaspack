@@ -1,6 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import {FeatureFlags} from '@atlaspack/feature-flags';
+
 export type AtlaspackNapi = any;
 export type JsTransferable = any;
 export type NapiSideEffectsVariants = any;
@@ -82,6 +84,7 @@ export interface InlineRequiresOptimizerInput {
   code: string;
   sourceMaps: boolean;
   ignoreModuleIds: Array<string>;
+  isReusedInlineRequiresEnabled: boolean;
 }
 export interface InlineRequiresOptimizerResult {
   code: string;
