@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-08-13T23:38:00.286Z",
+  "timestamp": "2025-08-19T04:38:49.044Z",
   "runs": 5,
   "bundleMetrics": {
     "off": {
@@ -39,20 +39,20 @@
           "max": 0
         },
         "parseTime": {
-          "average": 0.040000003576278684,
-          "standardDeviation": 0.04898979923569345,
+          "average": 0,
+          "standardDeviation": 0,
           "p50": 0,
-          "p90": 0.10000001192092896,
+          "p90": 0,
           "min": 0,
-          "max": 0.10000002384185791
+          "max": 0
         },
         "executeTime": {
-          "average": 1332.1399999976159,
-          "standardDeviation": 7.77910019501141,
-          "p50": 1333.2999999821186,
-          "p90": 1339.1199999928474,
-          "min": 1318.2000000178814,
-          "max": 1342.199999988079
+          "average": 1325.5800000190734,
+          "standardDeviation": 1.8115187343057213,
+          "p50": 1326.4000000953674,
+          "p90": 1327.1200000286103,
+          "min": 1322.2999999523163,
+          "max": 1327.2000000476837
         },
         "totalLoadTime": {
           "average": null,
@@ -63,20 +63,20 @@
           "max": null
         },
         "firstPaint": {
-          "average": 1176,
-          "standardDeviation": 4.381780460041329,
-          "p50": 1176,
-          "p90": 1180,
-          "min": 1168,
-          "max": 1180
+          "average": 928.8,
+          "standardDeviation": 446.4215048583569,
+          "p50": 1148,
+          "p90": 1156.8,
+          "min": 36,
+          "max": 1160
         },
         "firstContentfulPaint": {
-          "average": 1176,
-          "standardDeviation": 4.381780460041329,
-          "p50": 1176,
-          "p90": 1180,
-          "min": 1168,
-          "max": 1180
+          "average": 928.8,
+          "standardDeviation": 446.4215048583569,
+          "p50": 1148,
+          "p90": 1156.8,
+          "min": 36,
+          "max": 1160
         },
         "resourceCount": {
           "average": 1,
@@ -87,20 +87,20 @@
           "max": 1
         },
         "totalResourceTime": {
-          "average": 1.4600000083446503,
-          "standardDeviation": 0.24166091592019234,
-          "p50": 1.4000000059604645,
-          "p90": 1.7400000035762786,
-          "min": 1.2000000178813934,
-          "max": 1.9000000059604645
+          "average": 1.9200000286102294,
+          "standardDeviation": 1.4413882418368227,
+          "p50": 1.2000000476837158,
+          "p90": 3.4000000715255743,
+          "min": 1.100000023841858,
+          "max": 4.800000071525574
         },
         "averageResourceTime": {
-          "average": 1.4600000083446503,
-          "standardDeviation": 0.24166091592019234,
-          "p50": 1.4000000059604645,
-          "p90": 1.7400000035762786,
-          "min": 1.2000000178813934,
-          "max": 1.9000000059604645
+          "average": 1.9200000286102294,
+          "standardDeviation": 1.4413882418368227,
+          "p50": 1.2000000476837158,
+          "p90": 3.4000000715255743,
+          "min": 1.100000023841858,
+          "max": 4.800000071525574
         },
         "jsHeapSize": {
           "average": 10000000,
@@ -119,127 +119,127 @@
           "max": 3760000000
         },
         "featureExecutionTime": {
-          "average": 1332.1399999976159,
-          "standardDeviation": 7.77910019501141,
-          "p50": 1333.2999999821186,
-          "p90": 1339.1199999928474,
-          "min": 1318.2000000178814,
-          "max": 1342.199999988079
+          "average": 1325.5800000190734,
+          "standardDeviation": 1.8115187343057213,
+          "p50": 1326.4000000953674,
+          "p90": 1327.1200000286103,
+          "min": 1322.2999999523163,
+          "max": 1327.2000000476837
         },
         "totalTime": {
-          "average": 3508.8,
-          "standardDeviation": 8.158431221748456,
-          "p50": 3512,
-          "p90": 3516.8,
-          "min": 3496,
-          "max": 3520
+          "average": 3481.6,
+          "standardDeviation": 6.681317235396026,
+          "p50": 3477,
+          "p90": 3490,
+          "min": 3475,
+          "max": 3492
         }
       },
       "averages": {
         "loadTime": 0,
-        "parseTime": 0.040000003576278684,
-        "executeTime": 1332.1399999976159,
+        "parseTime": 0,
+        "executeTime": 1325.5800000190734,
         "totalLoadTime": null,
-        "firstPaint": 1176,
-        "firstContentfulPaint": 1176,
+        "firstPaint": 928.8,
+        "firstContentfulPaint": 928.8,
         "resourceCount": 1,
-        "totalResourceTime": 1.4600000083446503,
-        "averageResourceTime": 1.4600000083446503,
+        "totalResourceTime": 1.9200000286102294,
+        "averageResourceTime": 1.9200000286102294,
         "jsHeapSize": 10000000,
         "jsHeapSizeLimit": 3760000000,
-        "featureExecutionTime": 1332.1399999976159,
-        "totalTime": 3508.8
+        "featureExecutionTime": 1325.5800000190734,
+        "totalTime": 3481.6
       },
       "all": [
         {
           "loadTime": 0,
           "parseTime": 0,
-          "executeTime": 1318.2000000178814,
+          "executeTime": 1327.2000000476837,
           "totalLoadTime": null,
-          "firstPaint": 1180,
-          "firstContentfulPaint": 1180,
+          "firstPaint": 36,
+          "firstContentfulPaint": 36,
           "resourceCount": 1,
-          "totalResourceTime": 1.9000000059604645,
-          "averageResourceTime": 1.9000000059604645,
+          "totalResourceTime": 4.800000071525574,
+          "averageResourceTime": 4.800000071525574,
           "jsHeapSize": 10000000,
           "jsHeapSizeLimit": 3760000000,
-          "featureExecutionTime": 1318.2000000178814,
-          "totalTime": 3496,
+          "featureExecutionTime": 1327.2000000476837,
+          "totalTime": 3492,
           "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
           "mode": "off",
-          "timestamp": "2025-08-13T23:37:27.636Z"
-        },
-        {
-          "loadTime": 0,
-          "parseTime": 0.10000002384185791,
-          "executeTime": 1333.2999999821186,
-          "totalLoadTime": null,
-          "firstPaint": 1168,
-          "firstContentfulPaint": 1168,
-          "resourceCount": 1,
-          "totalResourceTime": 1.5,
-          "averageResourceTime": 1.5,
-          "jsHeapSize": 10000000,
-          "jsHeapSizeLimit": 3760000000,
-          "featureExecutionTime": 1333.2999999821186,
-          "totalTime": 3504,
-          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
-          "mode": "off",
-          "timestamp": "2025-08-13T23:37:31.319Z"
+          "timestamp": "2025-08-19T04:38:16.596Z"
         },
         {
           "loadTime": 0,
           "parseTime": 0,
-          "executeTime": 1334.5,
+          "executeTime": 1326.4000000953674,
           "totalLoadTime": null,
-          "firstPaint": 1176,
-          "firstContentfulPaint": 1176,
+          "firstPaint": 1148,
+          "firstContentfulPaint": 1148,
           "resourceCount": 1,
-          "totalResourceTime": 1.4000000059604645,
-          "averageResourceTime": 1.4000000059604645,
+          "totalResourceTime": 1.2000000476837158,
+          "averageResourceTime": 1.2000000476837158,
           "jsHeapSize": 10000000,
           "jsHeapSizeLimit": 3760000000,
-          "featureExecutionTime": 1334.5,
-          "totalTime": 3512,
+          "featureExecutionTime": 1326.4000000953674,
+          "totalTime": 3477,
           "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
           "mode": "off",
-          "timestamp": "2025-08-13T23:37:35.007Z"
-        },
-        {
-          "loadTime": 0,
-          "parseTime": 0.09999999403953552,
-          "executeTime": 1332.5,
-          "totalLoadTime": null,
-          "firstPaint": 1180,
-          "firstContentfulPaint": 1180,
-          "resourceCount": 1,
-          "totalResourceTime": 1.2000000178813934,
-          "averageResourceTime": 1.2000000178813934,
-          "jsHeapSize": 10000000,
-          "jsHeapSizeLimit": 3760000000,
-          "featureExecutionTime": 1332.5,
-          "totalTime": 3512,
-          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
-          "mode": "off",
-          "timestamp": "2025-08-13T23:37:38.694Z"
+          "timestamp": "2025-08-19T04:38:20.240Z"
         },
         {
           "loadTime": 0,
           "parseTime": 0,
-          "executeTime": 1342.199999988079,
+          "executeTime": 1325,
           "totalLoadTime": null,
-          "firstPaint": 1176,
-          "firstContentfulPaint": 1176,
+          "firstPaint": 1148,
+          "firstContentfulPaint": 1148,
           "resourceCount": 1,
-          "totalResourceTime": 1.300000011920929,
-          "averageResourceTime": 1.300000011920929,
+          "totalResourceTime": 1.100000023841858,
+          "averageResourceTime": 1.100000023841858,
           "jsHeapSize": 10000000,
           "jsHeapSizeLimit": 3760000000,
-          "featureExecutionTime": 1342.199999988079,
-          "totalTime": 3520,
+          "featureExecutionTime": 1325,
+          "totalTime": 3477,
           "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
           "mode": "off",
-          "timestamp": "2025-08-13T23:37:42.396Z"
+          "timestamp": "2025-08-19T04:38:23.889Z"
+        },
+        {
+          "loadTime": 0,
+          "parseTime": 0,
+          "executeTime": 1327,
+          "totalLoadTime": null,
+          "firstPaint": 1160,
+          "firstContentfulPaint": 1160,
+          "resourceCount": 1,
+          "totalResourceTime": 1.1999999284744263,
+          "averageResourceTime": 1.1999999284744263,
+          "jsHeapSize": 10000000,
+          "jsHeapSizeLimit": 3760000000,
+          "featureExecutionTime": 1327,
+          "totalTime": 3487,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
+          "mode": "off",
+          "timestamp": "2025-08-19T04:38:27.541Z"
+        },
+        {
+          "loadTime": 0,
+          "parseTime": 0,
+          "executeTime": 1322.2999999523163,
+          "totalLoadTime": null,
+          "firstPaint": 1152,
+          "firstContentfulPaint": 1152,
+          "resourceCount": 1,
+          "totalResourceTime": 1.3000000715255737,
+          "averageResourceTime": 1.3000000715255737,
+          "jsHeapSize": 10000000,
+          "jsHeapSizeLimit": 3760000000,
+          "featureExecutionTime": 1322.2999999523163,
+          "totalTime": 3475,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
+          "mode": "off",
+          "timestamp": "2025-08-19T04:38:31.187Z"
         }
       ]
     },
@@ -254,20 +254,20 @@
           "max": 0
         },
         "parseTime": {
-          "average": 0.019999998807907104,
-          "standardDeviation": 0.03999999761581421,
+          "average": 0.020000004768371583,
+          "standardDeviation": 0.04000000953674317,
           "p50": 0,
-          "p90": 0.05999999642372132,
+          "p90": 0.06000001430511476,
           "min": 0,
-          "max": 0.09999999403953552
+          "max": 0.10000002384185791
         },
         "executeTime": {
-          "average": 1262.119999998808,
-          "standardDeviation": 7.632928664958111,
-          "p50": 1258.9000000059605,
-          "p90": 1271.339999997616,
-          "min": 1252.5999999940395,
-          "max": 1274.5
+          "average": 1262.660000038147,
+          "standardDeviation": 10.141321411182313,
+          "p50": 1264.5,
+          "p90": 1272.0000000476837,
+          "min": 1244.2000000476837,
+          "max": 1273.2000000476837
         },
         "totalLoadTime": {
           "average": null,
@@ -278,20 +278,20 @@
           "max": null
         },
         "firstPaint": {
-          "average": 1124.8,
-          "standardDeviation": 17.417232845661793,
-          "p50": 1124,
-          "p90": 1143.2,
-          "min": 1096,
-          "max": 1148
+          "average": 1115.2,
+          "standardDeviation": 9.927738916792686,
+          "p50": 1120,
+          "p90": 1124.8,
+          "min": 1100,
+          "max": 1128
         },
         "firstContentfulPaint": {
-          "average": 1124.8,
-          "standardDeviation": 17.417232845661793,
-          "p50": 1124,
-          "p90": 1143.2,
-          "min": 1096,
-          "max": 1148
+          "average": 1115.2,
+          "standardDeviation": 9.927738916792686,
+          "p50": 1120,
+          "p90": 1124.8,
+          "min": 1100,
+          "max": 1128
         },
         "resourceCount": {
           "average": 1,
@@ -302,20 +302,20 @@
           "max": 1
         },
         "totalResourceTime": {
-          "average": 1.0800000071525573,
-          "standardDeviation": 0.07483315442608421,
-          "p50": 1.0999999940395355,
-          "p90": 1.1600000202655791,
-          "min": 1,
-          "max": 1.2000000178813934
+          "average": 1.199999952316284,
+          "standardDeviation": 0.309838664618626,
+          "p50": 1.0999999046325684,
+          "p90": 1.5199999809265137,
+          "min": 0.8999999761581421,
+          "max": 1.7999999523162842
         },
         "averageResourceTime": {
-          "average": 1.0800000071525573,
-          "standardDeviation": 0.07483315442608421,
-          "p50": 1.0999999940395355,
-          "p90": 1.1600000202655791,
-          "min": 1,
-          "max": 1.2000000178813934
+          "average": 1.199999952316284,
+          "standardDeviation": 0.309838664618626,
+          "p50": 1.0999999046325684,
+          "p90": 1.5199999809265137,
+          "min": 0.8999999761581421,
+          "max": 1.7999999523162842
         },
         "jsHeapSize": {
           "average": 10000000,
@@ -334,127 +334,127 @@
           "max": 3760000000
         },
         "featureExecutionTime": {
-          "average": 1262.119999998808,
-          "standardDeviation": 7.632928664958111,
-          "p50": 1258.9000000059605,
-          "p90": 1271.339999997616,
-          "min": 1252.5999999940395,
-          "max": 1274.5
+          "average": 1262.660000038147,
+          "standardDeviation": 10.141321411182313,
+          "p50": 1264.5,
+          "p90": 1272.0000000476837,
+          "min": 1244.2000000476837,
+          "max": 1273.2000000476837
         },
         "totalTime": {
-          "average": 3395.8,
-          "standardDeviation": 14.358272876638054,
-          "p50": 3401,
-          "p90": 3410,
-          "min": 3373,
-          "max": 3412
+          "average": 3390.2,
+          "standardDeviation": 25.34087607009671,
+          "p50": 3386,
+          "p90": 3418.2,
+          "min": 3353,
+          "max": 3431
         }
       },
       "averages": {
         "loadTime": 0,
-        "parseTime": 0.019999998807907104,
-        "executeTime": 1262.119999998808,
+        "parseTime": 0.020000004768371583,
+        "executeTime": 1262.660000038147,
         "totalLoadTime": null,
-        "firstPaint": 1124.8,
-        "firstContentfulPaint": 1124.8,
+        "firstPaint": 1115.2,
+        "firstContentfulPaint": 1115.2,
         "resourceCount": 1,
-        "totalResourceTime": 1.0800000071525573,
-        "averageResourceTime": 1.0800000071525573,
+        "totalResourceTime": 1.199999952316284,
+        "averageResourceTime": 1.199999952316284,
         "jsHeapSize": 10000000,
         "jsHeapSizeLimit": 3760000000,
-        "featureExecutionTime": 1262.119999998808,
-        "totalTime": 3395.8
+        "featureExecutionTime": 1262.660000038147,
+        "totalTime": 3390.2
       },
       "all": [
         {
           "loadTime": 0,
           "parseTime": 0,
-          "executeTime": 1274.5,
+          "executeTime": 1244.2000000476837,
           "totalLoadTime": null,
-          "firstPaint": 1096,
-          "firstContentfulPaint": 1096,
-          "resourceCount": 1,
-          "totalResourceTime": 1,
-          "averageResourceTime": 1,
-          "jsHeapSize": 10000000,
-          "jsHeapSizeLimit": 3760000000,
-          "featureExecutionTime": 1274.5,
-          "totalTime": 3412,
-          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
-          "mode": "on",
-          "timestamp": "2025-08-13T23:37:45.987Z"
-        },
-        {
-          "loadTime": 0,
-          "parseTime": 0,
-          "executeTime": 1266.5999999940395,
-          "totalLoadTime": null,
-          "firstPaint": 1136,
-          "firstContentfulPaint": 1136,
-          "resourceCount": 1,
-          "totalResourceTime": 1,
-          "averageResourceTime": 1,
-          "jsHeapSize": 10000000,
-          "jsHeapSizeLimit": 3760000000,
-          "featureExecutionTime": 1266.5999999940395,
-          "totalTime": 3401,
-          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
-          "mode": "on",
-          "timestamp": "2025-08-13T23:37:49.564Z"
-        },
-        {
-          "loadTime": 0,
-          "parseTime": 0,
-          "executeTime": 1252.5999999940395,
-          "totalLoadTime": null,
-          "firstPaint": 1120,
-          "firstContentfulPaint": 1120,
-          "resourceCount": 1,
-          "totalResourceTime": 1.0999999940395355,
-          "averageResourceTime": 1.0999999940395355,
-          "jsHeapSize": 10000000,
-          "jsHeapSizeLimit": 3760000000,
-          "featureExecutionTime": 1252.5999999940395,
-          "totalTime": 3373,
-          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
-          "mode": "on",
-          "timestamp": "2025-08-13T23:37:53.119Z"
-        },
-        {
-          "loadTime": 0,
-          "parseTime": 0,
-          "executeTime": 1258,
-          "totalLoadTime": null,
-          "firstPaint": 1148,
-          "firstContentfulPaint": 1148,
-          "resourceCount": 1,
-          "totalResourceTime": 1.2000000178813934,
-          "averageResourceTime": 1.2000000178813934,
-          "jsHeapSize": 10000000,
-          "jsHeapSizeLimit": 3760000000,
-          "featureExecutionTime": 1258,
-          "totalTime": 3407,
-          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
-          "mode": "on",
-          "timestamp": "2025-08-13T23:37:56.700Z"
-        },
-        {
-          "loadTime": 0,
-          "parseTime": 0.09999999403953552,
-          "executeTime": 1258.9000000059605,
-          "totalLoadTime": null,
-          "firstPaint": 1124,
-          "firstContentfulPaint": 1124,
+          "firstPaint": 1108,
+          "firstContentfulPaint": 1108,
           "resourceCount": 1,
           "totalResourceTime": 1.100000023841858,
           "averageResourceTime": 1.100000023841858,
           "jsHeapSize": 10000000,
           "jsHeapSizeLimit": 3760000000,
-          "featureExecutionTime": 1258.9000000059605,
+          "featureExecutionTime": 1244.2000000476837,
+          "totalTime": 3353,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
+          "mode": "on",
+          "timestamp": "2025-08-19T04:38:34.707Z"
+        },
+        {
+          "loadTime": 0,
+          "parseTime": 0,
+          "executeTime": 1270.2000000476837,
+          "totalLoadTime": null,
+          "firstPaint": 1128,
+          "firstContentfulPaint": 1128,
+          "resourceCount": 1,
+          "totalResourceTime": 1.7999999523162842,
+          "averageResourceTime": 1.7999999523162842,
+          "jsHeapSize": 10000000,
+          "jsHeapSizeLimit": 3760000000,
+          "featureExecutionTime": 1270.2000000476837,
+          "totalTime": 3399,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
+          "mode": "on",
+          "timestamp": "2025-08-19T04:38:38.292Z"
+        },
+        {
+          "loadTime": 0,
+          "parseTime": 0,
+          "executeTime": 1264.5,
+          "totalLoadTime": null,
+          "firstPaint": 1120,
+          "firstContentfulPaint": 1120,
+          "resourceCount": 1,
+          "totalResourceTime": 1.0999999046325684,
+          "averageResourceTime": 1.0999999046325684,
+          "jsHeapSize": 10000000,
+          "jsHeapSizeLimit": 3760000000,
+          "featureExecutionTime": 1264.5,
           "totalTime": 3386,
           "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
           "mode": "on",
-          "timestamp": "2025-08-13T23:38:00.245Z"
+          "timestamp": "2025-08-19T04:38:41.843Z"
+        },
+        {
+          "loadTime": 0,
+          "parseTime": 0.10000002384185791,
+          "executeTime": 1261.2000000476837,
+          "totalLoadTime": null,
+          "firstPaint": 1120,
+          "firstContentfulPaint": 1120,
+          "resourceCount": 1,
+          "totalResourceTime": 0.8999999761581421,
+          "averageResourceTime": 0.8999999761581421,
+          "jsHeapSize": 10000000,
+          "jsHeapSizeLimit": 3760000000,
+          "featureExecutionTime": 1261.2000000476837,
+          "totalTime": 3382,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
+          "mode": "on",
+          "timestamp": "2025-08-19T04:38:45.397Z"
+        },
+        {
+          "loadTime": 0,
+          "parseTime": 0,
+          "executeTime": 1273.2000000476837,
+          "totalLoadTime": null,
+          "firstPaint": 1100,
+          "firstContentfulPaint": 1100,
+          "resourceCount": 1,
+          "totalResourceTime": 1.0999999046325684,
+          "averageResourceTime": 1.0999999046325684,
+          "jsHeapSize": 10000000,
+          "jsHeapSizeLimit": 3760000000,
+          "featureExecutionTime": 1273.2000000476837,
+          "totalTime": 3431,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
+          "mode": "on",
+          "timestamp": "2025-08-19T04:38:49.000Z"
         }
       ]
     }
@@ -462,7 +462,7 @@
   "summary": {
     "bundleSizeReduction": -0.143393649709804,
     "loadTimeImprovement": null,
-    "executeTimeImprovement": 5.256204302770969,
-    "fcpImprovement": 4.353741496598643
+    "executeTimeImprovement": 4.746601486143502,
+    "fcpImprovement": -20.068906115417754
   }
 }

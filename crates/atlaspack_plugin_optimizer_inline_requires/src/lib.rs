@@ -424,7 +424,6 @@ impl VisitMut for InlineRequiresReplacer {
                 .reuse_var_idents
                 .contains(ident)
               {
-                println!("visit_mut_stmts var ident: {:?}", ident.sym);
                 pending_statements.push(Stmt::Decl(Decl::Var(Box::new(VarDecl {
                   span: DUMMY_SP,
                   ctxt: Default::default(),
@@ -462,7 +461,6 @@ impl VisitMut for InlineRequiresReplacer {
               .reuse_var_idents
               .contains(&ident)
             {
-              println!("visit_mut_module_items var ident: {:?}", ident.sym);
               pending_statements.push(ModuleItem::Stmt(Stmt::Decl(Decl::Var(Box::new(VarDecl {
                 span: DUMMY_SP,
                 ctxt: Default::default(),
