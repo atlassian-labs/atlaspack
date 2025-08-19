@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-
 import * as watchman from 'fb-watchman';
 import {isGlob} from '@atlaspack/utils';
 import logger from '@atlaspack/logger';

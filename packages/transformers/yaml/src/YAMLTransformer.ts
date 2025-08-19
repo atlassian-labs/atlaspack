@@ -1,5 +1,4 @@
 import {Transformer} from '@atlaspack/plugin';
-// @ts-expect-error TS7016
 import yaml from 'js-yaml';
 
 export default new Transformer({
