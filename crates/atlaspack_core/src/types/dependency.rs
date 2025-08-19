@@ -92,6 +92,7 @@ pub struct Dependency {
   ///
   pub resolve_from: Option<PathBuf>,
 
+  // TODO: missing serialize
   /// The id of the asset with this dependency
   pub source_asset_id: Option<AssetId>,
 

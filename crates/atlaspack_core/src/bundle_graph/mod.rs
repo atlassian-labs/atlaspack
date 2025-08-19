@@ -6,7 +6,7 @@ use crate::types::{AssetId, Bundle};
 pub struct BundleGraphBundle {
   pub bundle: Bundle,
   // TODO: This should not be public
-  pub assets: StableDiGraph<AssetId, ()>,
+  pub assets: StableDiGraph<u64, ()>,
 }
 
 #[derive(Debug, Clone)]

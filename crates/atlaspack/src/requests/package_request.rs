@@ -4,6 +4,7 @@ use std::{
   io::Write,
   path::PathBuf,
   sync::Arc,
+  time::Duration,
 };
 
 use async_trait::async_trait;
@@ -11,16 +12,15 @@ use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode, AssetNode},
   bundle_graph::{BundleGraph, BundleGraphBundle, BundleGraphNode},
   plugin::PackagerPlugin,
-  types::{AtlaspackOptions, BundleId, FileType},
+  types::{AssetId, AtlaspackOptions, BundleId, FileType},
 };
 use petgraph::{graph::NodeIndex, visit::EdgeRef};
 use rayon::prelude::*;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 use crate::{
-  request_tracker::{
-    Request, ResultAndInvalidations, RunRequestContext, RunRequestError,
-  },
+  command_line::ProgressBar,
+  request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
   requests::RequestResult,
 };
 
@@ -64,26 +64,38 @@ impl Request for PackageRequest {
       })
       .collect::<Vec<_>>();
 
+    let progress_bar = ProgressBar::new("Packaging bundles...");
+    progress_bar.set_length(bundles.len());
+    let progress_bar = Arc::new(progress_bar);
+
+    let asset_data_provider = Arc::new(InMemoryAssetDataProvider::new(self.asset_graph.clone()));
+
     let results = bundles
       .into_par_iter()
-      .map(|bundle| {
-        let options = request_context.options.clone();
-        let project_root = request_context.project_root.clone();
-        let asset_graph = self.asset_graph.clone();
+      .map({
+        let asset_data_provider = asset_data_provider.clone();
+        let progress_bar = progress_bar.clone();
 
-        let output_file_path = get_bundle_file_path(&options, &project_root, &bundle);
-        let packager = request_context.plugins().packager(&output_file_path).ok();
+        move |bundle| {
+          let options = request_context.options.clone();
+          let project_root = request_context.project_root.clone();
 
-        let package_result = run_package_bundle(
-          output_file_path.clone(),
-          options,
-          project_root,
-          bundle.clone(),
-          asset_graph,
-          packager,
-        )?;
+          let output_file_path = get_bundle_file_path(&options, &project_root, &bundle);
+          let packager = request_context.plugins().packager(&output_file_path).ok();
 
-        Ok((package_result, (bundle.bundle.id.clone(), output_file_path)))
+          let package_result = run_package_bundle(
+            output_file_path.clone(),
+            options,
+            project_root,
+            bundle.clone(),
+            &*asset_data_provider,
+            packager,
+          )?;
+
+          progress_bar.inc();
+
+          Ok((package_result, (bundle.bundle.id.clone(), output_file_path)))
+        }
       })
       .collect::<anyhow::Result<Vec<_>>>()?;
 
@@ -126,13 +138,10 @@ fn run_package_bundle(
   options: Arc<AtlaspackOptions>,
   project_root: PathBuf,
   bundle: BundleGraphBundle,
-  asset_graph: Arc<AssetGraph>,
+  asset_data_provider: &impl AssetDataProvider,
   packager: Option<Box<dyn PackagerPlugin>>,
 ) -> Result<ResultAndInvalidations, RunRequestError> {
-  // We should not keep all data in memory
-  let asset_data_provider = InMemoryAssetDataProvider::new(&asset_graph);
-
-  info!("Packaging bundle to {}", output_file_path.display());
+  debug!("Packaging bundle to {}", output_file_path.display());
   std::fs::create_dir_all(&output_file_path.parent().unwrap())?;
   let mut writer = std::fs::File::create(&output_file_path)?;
   package_bundle(
@@ -160,33 +169,27 @@ pub struct PackageBundleParams<'a> {
 }
 
 pub trait AssetDataProvider: std::fmt::Debug {
-  fn get_asset_code(&self, asset_id: &str) -> anyhow::Result<Vec<u8>>;
-  fn get_original_asset_code(&self, asset_id: &str) -> anyhow::Result<Vec<u8>>;
-  fn get_imported_modules(&self, asset_id: &str) -> anyhow::Result<Vec<ImportedModule>>;
-  fn get_exported_symbols(&self, asset_id: &str) -> anyhow::Result<Vec<String>>;
+  fn get_asset_code(&self, asset_id: u64) -> anyhow::Result<Vec<u8>>;
+  fn get_original_asset_code(&self, asset_id: u64) -> anyhow::Result<Vec<u8>>;
+  fn get_imported_modules(&self, asset_id: u64) -> anyhow::Result<Vec<ImportedModule>>;
+  fn get_exported_symbols(&self, asset_id: u64) -> anyhow::Result<Vec<String>>;
 }
 
 #[derive(Debug)]
-pub struct InMemoryAssetDataProvider<'a> {
-  asset_graph: &'a AssetGraph,
+pub struct InMemoryAssetDataProvider {
+  asset_graph: Arc<AssetGraph>,
   asset_node_index_by_id: HashMap<u64, NodeIndex>,
 }
 
-fn get_asset_id_hash(asset_id: &str) -> u64 {
-  let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
-  asset_id.hash(&mut hasher);
-  hasher.finish()
-}
-
-impl<'a> InMemoryAssetDataProvider<'a> {
-  pub fn new(asset_graph: &'a AssetGraph) -> Self {
+impl InMemoryAssetDataProvider {
+  pub fn new(asset_graph: Arc<AssetGraph>) -> Self {
     let mut asset_node_index_by_id = HashMap::new();
 
     for node_index in asset_graph.graph.node_indices() {
       let asset_node = asset_graph.get_node(&node_index).unwrap();
       if let AssetGraphNode::Asset(asset_node) = asset_node {
-        let id_hash = get_asset_id_hash(&asset_node.asset.id);
-        asset_node_index_by_id.insert(id_hash, node_index);
+        let id_hash = asset_node.asset.id();
+        asset_node_index_by_id.insert(*id_hash, node_index);
       }
     }
 
@@ -197,11 +200,11 @@ impl<'a> InMemoryAssetDataProvider<'a> {
   }
 }
 
-impl InMemoryAssetDataProvider<'_> {
-  fn get_asset_by_id(&self, asset_id: &str) -> anyhow::Result<&AssetNode> {
+impl InMemoryAssetDataProvider {
+  fn get_asset_by_id(&self, asset_id: u64) -> anyhow::Result<&AssetNode> {
     let asset_node_index = self
       .asset_node_index_by_id
-      .get(&get_asset_id_hash(asset_id))
+      .get(&asset_id)
       .ok_or_else(|| anyhow::anyhow!("Asset not found: {}", asset_id))?;
 
     let AssetGraphNode::Asset(asset_node) = self.asset_graph.get_node(asset_node_index).unwrap()
@@ -214,28 +217,28 @@ impl InMemoryAssetDataProvider<'_> {
 }
 
 struct ImportedModule {
-  target_id: String,
+  target_id: AssetId,
   specifier: String,
   symbols: Vec<String>,
 }
 
-impl AssetDataProvider for InMemoryAssetDataProvider<'_> {
-  fn get_original_asset_code(&self, asset_id: &str) -> anyhow::Result<Vec<u8>> {
+impl AssetDataProvider for InMemoryAssetDataProvider {
+  fn get_original_asset_code(&self, asset_id: u64) -> anyhow::Result<Vec<u8>> {
     let asset_node = self.get_asset_by_id(asset_id)?;
     let path = asset_node.asset.file_path.clone();
     let code = std::fs::read(path)?;
     Ok(code)
   }
 
-  fn get_asset_code(&self, asset_id: &str) -> anyhow::Result<Vec<u8>> {
+  fn get_asset_code(&self, asset_id: u64) -> anyhow::Result<Vec<u8>> {
     let asset_node = self.get_asset_by_id(asset_id)?;
     Ok(asset_node.asset.code.bytes().to_vec())
   }
 
-  fn get_imported_modules(&self, asset_id: &str) -> anyhow::Result<Vec<ImportedModule>> {
+  fn get_imported_modules(&self, asset_id: u64) -> anyhow::Result<Vec<ImportedModule>> {
     let asset_node_index = self
       .asset_node_index_by_id
-      .get(&get_asset_id_hash(asset_id))
+      .get(&asset_id)
       .ok_or_else(|| anyhow::anyhow!("Asset not found: {}", asset_id))?;
 
     let AssetGraphNode::Asset(asset_node) = self.asset_graph.get_node(asset_node_index).unwrap()
@@ -288,7 +291,7 @@ impl AssetDataProvider for InMemoryAssetDataProvider<'_> {
     Ok(result)
   }
 
-  fn get_exported_symbols(&self, asset_id: &str) -> anyhow::Result<Vec<String>> {
+  fn get_exported_symbols(&self, asset_id: u64) -> anyhow::Result<Vec<String>> {
     let asset_node = self.get_asset_by_id(asset_id)?;
     let Some(symbols) = &asset_node.asset.symbols else {
       return Ok(vec![]);
@@ -298,15 +301,15 @@ impl AssetDataProvider for InMemoryAssetDataProvider<'_> {
   }
 }
 
-#[tracing::instrument(skip(params, asset_data_provider, writer), fields(bundle_id = %params.bundle.bundle.id))]
+#[tracing::instrument(skip(params, asset_data_provider, writer), fields(bundle_id = %params.bundle.bundle.id), level = "debug")]
 pub fn package_bundle(
   params: PackageBundleParams<'_>,
-  asset_data_provider: impl AssetDataProvider,
+  asset_data_provider: &impl AssetDataProvider,
   writer: &mut impl Write,
   packager: Option<Box<dyn PackagerPlugin>>,
 ) -> anyhow::Result<()> {
   if let Some(packager) = packager {
-    info!("Have packager for {:?}", params.bundle.bundle.bundle_type);
+    debug!("Have packager for {:?}", params.bundle.bundle.bundle_type);
     // packager.package(PackageContext {
     //   bundle: &params.bundle.bundle,
     //   bundle_graph: &params.bundle.assets,
@@ -319,7 +322,7 @@ pub fn package_bundle(
     FileType::Js => package_js_bundle(params, asset_data_provider, writer),
     FileType::Html => package_html_bundle(params, asset_data_provider, writer),
     _ => {
-      warn!(
+      debug!(
         "Unsupported bundle type: {:?}",
         params.bundle.bundle.bundle_type
       );
@@ -333,7 +336,7 @@ pub fn package_bundle(
 
 fn package_html_bundle(
   PackageBundleParams { bundle }: PackageBundleParams,
-  asset_data_provider: impl AssetDataProvider,
+  asset_data_provider: &impl AssetDataProvider,
   writer: &mut impl Write,
 ) -> anyhow::Result<()> {
   let mut sorted_indexes =
@@ -341,7 +344,7 @@ fn package_html_bundle(
   sorted_indexes.reverse();
 
   for node_id in sorted_indexes {
-    let asset_id = bundle.assets.node_weight(node_id).unwrap();
+    let asset_id = *bundle.assets.node_weight(node_id).unwrap();
     let code = asset_data_provider.get_asset_code(asset_id)?;
     writer.write_all(&code)?;
   }
@@ -350,7 +353,7 @@ fn package_html_bundle(
 
 fn package_js_bundle(
   PackageBundleParams { bundle }: PackageBundleParams<'_>,
-  asset_data_provider: impl AssetDataProvider,
+  asset_data_provider: &impl AssetDataProvider,
   writer: &mut impl Write,
 ) -> anyhow::Result<()> {
   let mut sorted_indexes =
@@ -360,7 +363,7 @@ fn package_js_bundle(
   writer.write_all("atlaspack$register([\n\n".as_bytes())?;
 
   for node_id in sorted_indexes {
-    let asset_id = bundle.assets.node_weight(node_id).unwrap();
+    let asset_id = *bundle.assets.node_weight(node_id).unwrap();
     let code = String::from_utf8(asset_data_provider.get_asset_code(asset_id)?)?;
 
     let import_statements = asset_data_provider.get_imported_modules(asset_id)?;

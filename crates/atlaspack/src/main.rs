@@ -1,13 +1,15 @@
 use atlaspack::{
   requests::{
     bundle_graph_request::{BundleGraphRequest, BundleGraphRequestOutput},
-    package_request::{PackageRequest},
+    package_request::PackageRequest,
     AssetGraphRequest,
   },
   test_utils::{create_db, get_core_path},
   Atlaspack, AtlaspackInitOptions,
 };
-use atlaspack_core::types::{AtlaspackOptions, BuildMode, DefaultTargetOptions, FeatureFlagValue, FeatureFlags};
+use atlaspack_core::types::{
+  AtlaspackOptions, BuildMode, DefaultTargetOptions, FeatureFlagValue, FeatureFlags,
+};
 use atlaspack_monitoring::{MonitoringOptions, TracerMode};
 use atlaspack_plugin_rpc::rust::RustWorkerFactory;
 use clap::Parser;
@@ -30,6 +32,11 @@ struct Args {
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
   initialize_tracing();
+
+  rayon::ThreadPoolBuilder::new()
+    .thread_name(|i| format!("atlaspack-rayon-{i}"))
+    .build_global()
+    .unwrap();
 
   info!("This is a testing binary only and requires a check-out of the atlaspack repository.");
 

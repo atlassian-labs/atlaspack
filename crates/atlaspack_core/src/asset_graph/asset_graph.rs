@@ -26,7 +26,6 @@ pub struct DependencyNode {
 #[derive(Clone, Debug, PartialEq)]
 pub enum DependencyState {
   New,
-  Deferred,
   Excluded,
   Resolved,
 }
@@ -135,11 +134,11 @@ impl AssetGraph {
     results
   }
 
-  pub fn add_dependency(&mut self, dependency: Dependency) -> NodeIndex {
+  pub fn add_dependency(&mut self, dependency: Arc<Dependency>) -> NodeIndex {
     self
       .graph
       .add_node(AssetGraphNode::Dependency(DependencyNode {
-        dependency: Arc::new(dependency),
+        dependency,
         requested_symbols: HashSet::default(),
         state: DependencyState::New,
       }))
@@ -172,7 +171,7 @@ impl AssetGraph {
     Some(node)
   }
 
-  pub fn add_entry_dependency(&mut self, dependency: Dependency) -> NodeIndex {
+  pub fn add_entry_dependency(&mut self, dependency: Arc<Dependency>) -> NodeIndex {
     let is_library = dependency.env.is_library;
     let dependency_idx = self.add_dependency(dependency);
 
@@ -275,7 +274,7 @@ mod tests {
       symbols: Some(symbols.iter().map(symbol).collect()),
       ..Dependency::default()
     };
-    let node_index = graph.add_dependency(dep);
+    let node_index = graph.add_dependency(Arc::new(dep));
     graph.add_edge(&parent_node, &node_index);
     node_index
   }
@@ -286,7 +285,7 @@ mod tests {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(dep);
+    let entry_dep_node = graph.add_entry_dependency(Arc::new(dep));
 
     let index_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "index.js");
     let dep_a_node = add_dependency(&mut graph, index_asset_node, vec![("a", "a", false)]);
@@ -355,7 +354,7 @@ mod tests {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(dep);
+    let entry_dep_node = graph.add_entry_dependency(Arc::new(dep));
 
     // entry.js imports "a" from library.js
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
@@ -395,7 +394,7 @@ mod tests {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(dep);
+    let entry_dep_node = graph.add_entry_dependency(Arc::new(dep));
 
     // entry.js imports "a" from library
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
@@ -439,7 +438,7 @@ mod tests {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(dep);
+    let entry_dep_node = graph.add_entry_dependency(Arc::new(dep));
 
     // entry.js imports "a" from library
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
@@ -472,7 +471,7 @@ mod tests {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(dep);
+    let entry_dep_node = graph.add_entry_dependency(Arc::new(dep));
 
     // entry.js imports "a" from library
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");

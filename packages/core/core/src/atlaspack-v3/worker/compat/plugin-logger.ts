@@ -9,28 +9,28 @@ export class PluginLogger implements IPlguinLogger {
     diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
   ): void {
     // eslint-disable-next-line no-console
-    console.log(diagnostic);
+    // console.log(diagnostic);
   }
 
   info(
     diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
   ): void {
     // eslint-disable-next-line no-console
-    console.info(diagnostic);
+    // console.info(diagnostic);
   }
 
   log(
     diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
   ): void {
     // eslint-disable-next-line no-console
-    console.log(diagnostic);
+    // console.log(diagnostic);
   }
 
   warn(
     diagnostic: DiagnosticWithoutOrigin | Array<DiagnosticWithoutOrigin>,
   ): void {
     // eslint-disable-next-line no-console
-    console.warn(diagnostic);
+    // console.warn(diagnostic);
   }
 
   error(
@@ -40,6 +40,6 @@ export class PluginLogger implements IPlguinLogger {
       | Array<DiagnosticWithoutOrigin>,
   ): void {
     // eslint-disable-next-line no-console
-    console.error(input);
+    // console.error(input);
   }
 }

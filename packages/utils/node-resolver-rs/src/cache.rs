@@ -45,6 +45,7 @@ impl fmt::Debug for Cache {
 pub enum CacheCow<'a> {
   Borrowed(&'a Cache),
   Owned(Cache),
+  Arc(Arc<Cache>),
 }
 
 impl Deref for CacheCow<'_> {
@@ -54,6 +55,7 @@ impl Deref for CacheCow<'_> {
     match self {
       CacheCow::Borrowed(c) => c,
       CacheCow::Owned(c) => c,
+      CacheCow::Arc(c) => c,
     }
   }
 }
@@ -103,7 +105,10 @@ impl Cache {
   }
 
   pub fn is_file(&self, path: &Path) -> bool {
-    if let Some(is_file) = self.is_file_cache.get(path) {
+    if let Some(is_file) = self
+      .is_file_cache
+      .try_get(path, |path| self.fs.is_file(path))
+    {
       return is_file;
     }
 
@@ -113,7 +118,7 @@ impl Cache {
   }
 
   pub fn is_dir(&self, path: &Path) -> bool {
-    if let Some(is_file) = self.is_dir_cache.get(path) {
+    if let Some(is_file) = self.is_dir_cache.try_get(path, |path| self.fs.is_dir(path)) {
       return is_file;
     }
 

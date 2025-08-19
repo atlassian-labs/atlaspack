@@ -207,12 +207,12 @@ impl Atlaspack {
       self
         .db
         .database()
-        .put(&mut txn, &asset.id, asset.code.bytes())?;
+        .put(&mut txn, &asset.id_string(), asset.code.bytes())?;
       if let Some(map) = &asset.map {
         // TODO: For some reason to_buffer strips data when rkyv was upgraded, so now we use json
         self.db.database().put(
           &mut txn,
-          &format!("map:{}", asset.id),
+          &format!("map:{}", asset.id_string()),
           map.to_json()?.as_bytes(),
         )?;
       }

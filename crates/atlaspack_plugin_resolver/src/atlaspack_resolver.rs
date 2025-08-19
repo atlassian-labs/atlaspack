@@ -30,13 +30,14 @@ use atlaspack_resolver::Flags;
 use atlaspack_resolver::IncludeNodeModules;
 use atlaspack_resolver::PackageJsonError;
 use atlaspack_resolver::ResolveOptions;
+use atlaspack_resolver::ResolveResult;
 use atlaspack_resolver::Resolver;
 use atlaspack_resolver::ResolverError;
 use atlaspack_resolver::SpecifierError;
 use serde::Deserialize;
 
 pub struct AtlaspackResolver {
-  cache: Cache,
+  cache: Arc<Cache>,
   config: ResolverConfig,
   options: Arc<PluginOptions>,
 }
@@ -76,7 +77,7 @@ impl AtlaspackResolver {
       |config| Ok(config.contents.config.clone().unwrap_or_default()),
     )?;
 
-    let cache = Cache::new(ctx.file_system.clone());
+    let cache = Arc::new(Cache::new(ctx.file_system.clone()));
 
     // If package deduplication is enabled, then scan node_modules for duplicate package
     // versions
@@ -303,8 +304,8 @@ impl Hash for AtlaspackResolver {
 impl ResolverPlugin for AtlaspackResolver {
   async fn resolve(&self, ctx: ResolveContext) -> anyhow::Result<Resolved> {
     let mut resolver = Resolver::atlaspack(
-      Cow::Borrowed(&self.options.project_root),
-      CacheCow::Borrowed(&self.cache),
+      Cow::Owned(self.options.project_root.clone()),
+      CacheCow::Arc(self.cache.clone()),
     );
 
     resolver.conditions.set(
@@ -350,7 +351,7 @@ impl ResolverPlugin for AtlaspackResolver {
       self.config.graphql_esm_upgrade.unwrap_or_default(),
     );
 
-    resolver.include_node_modules = Cow::Borrowed(&ctx.dependency.env.include_node_modules);
+    resolver.include_node_modules = Cow::Owned(ctx.dependency.env.include_node_modules.clone());
 
     let resolve_options = ResolveOptions {
       conditions: ctx.dependency.package_conditions,
@@ -362,36 +363,61 @@ impl ResolverPlugin for AtlaspackResolver {
     let resolve_from = ctx
       .dependency
       .resolve_from
-      .as_ref()
-      .or(ctx.dependency.source_path.as_ref())
-      .as_ref()
-      .map(|p| Cow::Borrowed(p.as_path()))
+      .clone()
+      .or(ctx.dependency.source_path.clone())
+      .map(|p| Cow::Owned(p))
       .unwrap_or_else(|| Cow::Owned(self.options.project_root.join("index")));
 
-    let mut res = resolver.resolve_with_options(
-      &ctx.specifier,
-      &resolve_from,
-      match ctx.dependency.specifier_type {
-        SpecifierType::CommonJS => atlaspack_resolver::SpecifierType::Cjs,
-        SpecifierType::Esm => atlaspack_resolver::SpecifierType::Esm,
-        SpecifierType::Url => atlaspack_resolver::SpecifierType::Url,
-        // TODO: what should specifier custom map to?
-        SpecifierType::Custom => atlaspack_resolver::SpecifierType::Esm,
-      },
-      resolve_options,
-    );
-
-    let side_effects = if let Ok((atlaspack_resolver::Resolution::Path(p), _)) = &res.result {
-      match resolver.resolve_side_effects(p, &res.invalidations) {
-        Ok(side_effects) => side_effects,
-        Err(err) => {
-          res.result = Err(err);
-          true
-        }
-      }
-    } else {
-      true
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    struct Response {
+      result: ResolveResult,
+      side_effects: bool,
     };
+    impl Debug for Response {
+      fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Response")
+      }
+    }
+
+    let specifier = ctx.specifier.clone();
+    let specifier_type = ctx.dependency.specifier_type.clone();
+    rayon::spawn(move || {
+      let mut res = resolver.resolve_with_options(
+        &specifier,
+        &resolve_from,
+        match specifier_type {
+          SpecifierType::CommonJS => atlaspack_resolver::SpecifierType::Cjs,
+          SpecifierType::Esm => atlaspack_resolver::SpecifierType::Esm,
+          SpecifierType::Url => atlaspack_resolver::SpecifierType::Url,
+          // TODO: what should specifier custom map to?
+          SpecifierType::Custom => atlaspack_resolver::SpecifierType::Esm,
+        },
+        resolve_options,
+      );
+
+      let side_effects = if let Ok((atlaspack_resolver::Resolution::Path(p), _)) = &res.result {
+        match resolver.resolve_side_effects(p, &res.invalidations) {
+          Ok(side_effects) => side_effects,
+          Err(err) => {
+            res.result = Err(err);
+            true
+          }
+        }
+      } else {
+        true
+      };
+
+      tx.send(Response {
+        result: res,
+        side_effects,
+      })
+      .unwrap();
+    });
+
+    let Response {
+      result: res,
+      side_effects,
+    } = rx.await.unwrap();
 
     // TODO: Handle invalidations
 

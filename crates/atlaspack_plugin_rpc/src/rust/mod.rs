@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -154,19 +155,54 @@ impl RpcWorker for RustWorker {
   }
 }
 
+fn build_git_cache() -> anyhow::Result<(PathBuf, HashMap<String, String>)> {
+  let cwd = std::env::current_dir()?;
+  let mut git_cache = HashMap::new();
+
+  let commands = [
+    "git rev-parse --short HEAD",
+    "git rev-parse --show-toplevel HEAD",
+    "git rev-parse --show-toplevel",
+    "git rev-parse --abbrev-ref HEAD",
+  ];
+
+  for command in commands {
+    let mut cmd = std::process::Command::new("git");
+    command.split(" ").skip(1).for_each(|arg| {
+      cmd.arg(arg);
+    });
+    let result = cmd.output()?;
+
+    git_cache.insert(
+      command.to_string(),
+      String::from_utf8(result.stdout)?.trim().to_string(),
+    );
+  }
+
+  tracing::info!(?git_cache, ?cwd, "Ran git commands to cache");
+
+  Ok((cwd, git_cache))
+}
+
 pub struct EdonWorkerPool {
-  plugins: Vec<EdonJavaScriptPluginAPI>,
+  plugins: Vec<Arc<EdonJavaScriptPluginAPI>>,
   current: AtomicUsize,
 }
 
 impl EdonWorkerPool {
   pub fn new(node: Arc<Nodejs>) -> anyhow::Result<Self> {
+    let git_cache = Arc::new(build_git_cache()?);
+
     let plugins = (0..num_cpus::get())
       .map(|i| {
-        let worker = Arc::new(node.spawn_worker_thread()?);
-        Ok(EdonJavaScriptPluginAPI::new(worker)?)
+        let worker = node.spawn_worker_thread()?;
+        Ok(Arc::new(EdonJavaScriptPluginAPI::new(
+          worker,
+          git_cache.clone(),
+        )?))
       })
       .collect::<anyhow::Result<Vec<_>>>()?;
+
     Ok(Self {
       plugins,
       current: AtomicUsize::new(0),
@@ -196,15 +232,26 @@ impl JavaScriptPluginAPI for EdonWorkerPool {
   }
 
   async fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
-    for plugin in &self.plugins {
-      plugin.load_plugin(opts.clone()).await?;
+    let start = std::time::Instant::now();
+    let mut join_set = tokio::task::JoinSet::new();
+    for plugin in self.plugins.iter() {
+      let plugin = plugin.clone();
+      let opts = opts.clone();
+      join_set.spawn(async move { plugin.load_plugin(opts).await });
     }
+    while let Some(result) = join_set.join_next().await {
+      result?;
+    }
+
+    let duration = start.elapsed();
+    let plugin_specifier = &opts.specifier;
+    tracing::info!(?duration, ?plugin_specifier, "Loaded plugin onto workers");
     Ok(())
   }
 }
 
 pub struct EdonJavaScriptPluginAPI {
-  nodejs: Arc<NodejsWorker>,
+  nodejs: NodejsWorker,
   callbacks: EdonCallbacks,
 }
 
@@ -215,11 +262,27 @@ struct EdonCallbacks {
 }
 
 impl EdonJavaScriptPluginAPI {
-  pub fn new(node: Arc<NodejsWorker>) -> anyhow::Result<Self> {
+  pub fn new(
+    node: NodejsWorker,
+    git_cache: Arc<(PathBuf, HashMap<String, String>)>,
+  ) -> anyhow::Result<Self> {
     let (tx, rx) = std::sync::mpsc::channel();
 
     node.exec(move |env| {
       let run = || -> edon::napi::Result<EdonCallbacks> {
+        let mut js_git_cache = env.create_object()?;
+        js_git_cache.set_property(
+          env.create_string("cwd")?,
+          env.create_string(&git_cache.0.to_str().unwrap().to_string())?,
+        )?;
+        let mut cache = env.create_object()?;
+        for (key, value) in &git_cache.1 {
+          cache.set_property(env.create_string(&key)?, env.create_string(&value)?)?;
+        }
+        js_git_cache.set_property(env.create_string("cache")?, cache)?;
+        let mut global = env.get_global()?;
+        global.set_property(env.create_string("gitCache")?, js_git_cache)?;
+
         let result: JsObject = env.run_script(
           r#"
 const {AtlaspackWorker} = require('@atlaspack/core/lib/atlaspack-v3/worker/AtlaspackWorker.js');
@@ -228,11 +291,66 @@ const worker = new AtlaspackWorker();
 const child_process = require('child_process');
 const loggingExports = {};
 
+class SpawnMock {
+  constructor(result) {
+    this.result = result;
+    this.stdout = {
+      on: (event, listener) => {
+        if (event === 'data') {
+          listener(Buffer.from(result, 'utf-8'));
+        }
+      },
+    };
+
+    this.stderr = {
+      on: (event, listener) => {}
+    };
+  }
+
+  on(event, listener) {
+    if (event === 'close') {
+      listener(0);
+    }
+
+    if (event === 'exit') {
+      listener(0);
+    }
+
+    return this;
+  }
+}
+
 for (const key of Object.keys(child_process)) {
   loggingExports[key] = (...args) => {
-    try { throw new Error('e') } catch (e) {
-      console.log('child_process', key, args, e.stack);
+    if (key === 'spawn' && args[0] === 'git' && (!args[2]?.cwd || args[2]?.cwd === gitCache.cwd)) {
+      const command = `git ${args[1].join(' ')}`;
+      const result = gitCache.cache[command];
+      if (result) {
+        return new SpawnMock(result);
+      }
     }
+
+    if (key === 'execSync' && args[0] === 'git' && (!args[2]?.cwd || args[2]?.cwd === gitCache.cwd)) {
+      const command = `git ${args[1].join(' ')}`;
+      const result = gitCache.cache[command];
+      if (result) {
+        return result;
+      }
+    }
+
+    if (key === 'execSync' && typeof args[1] === 'object' && !Array.isArray(args[1]) && (!args[1]?.cwd || args[1]?.cwd === gitCache.cwd)) {
+      const command = args[0];
+      const result = gitCache.cache[command];
+      if (result) {
+        return result;
+      }
+    }
+
+    try { throw new Error('e') } catch (e) {
+      const stackLine = e.stack.split('\n')[2];
+      console.log('child_process.' + key + '(' + JSON.stringify(args) + ') @ ' + stackLine);
+    }
+
     return child_process[key](...args);
   };
 }
@@ -241,22 +359,24 @@ require.cache['child_process'] = {
   exports: loggingExports,
 };
 
-// const inspector = require('inspector');
-// const session = new inspector.Session();
-// session.connect();
-// session.post(
-//   'Profiler.enable',
-//   () => session.post('Profiler.start', () => {}),
-// );
-// setTimeout(() => {
-//   session.post('Profiler.stop', (sessionErr, data) => {
-//     require('fs').writeFileSync(
-//       'worker-cpu-profile-' + Date.now() + '.cpuprofile',
-//       JSON.stringify(data.profile),
-//       (writeErr) => {},
-//     );
-//   });
-// }, 60000);
+const inspector = require('inspector');
+const session = new inspector.Session();
+setTimeout(() => {
+  session.connect();
+  session.post(
+    'Profiler.enable',
+    () => session.post('Profiler.start', () => {}),
+  );
+}, 10000);
+setTimeout(() => {
+  session.post('Profiler.stop', (sessionErr, data) => {
+    require('fs').writeFileSync(
+      'worker-cpu-profile-' + Date.now() + '.cpuprofile',
+      JSON.stringify(data.profile),
+      (writeErr) => {},
+    );
+  });
+}, 60000);
 
 worker
         "#,

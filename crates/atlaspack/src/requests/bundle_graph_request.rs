@@ -12,7 +12,7 @@ use petgraph::{
   visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences},
   Direction,
 };
-use tracing::info;
+use tracing::{debug, info};
 
 use crate::{
   request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
@@ -86,15 +86,15 @@ impl Request for BundleGraphRequest {
           let node_weight = dominator_tree.node_weight(node_index).unwrap();
           match node_weight {
             AcyclicAssetGraphNode::Asset(asset_node) => {
-              let node_index = bundle_assets.add_node(asset_node.asset.id.clone());
-              bundle_asset_node_index_by_id.insert(asset_node.asset.id.clone(), node_index);
+              let node_index = bundle_assets.add_node(*asset_node.asset.id());
+              bundle_asset_node_index_by_id.insert(*asset_node.asset.id(), node_index);
 
               Control::Continue
             }
             AcyclicAssetGraphNode::Cycle(assets) => {
               for asset in assets {
-                let node_index = bundle_assets.add_node(asset.asset.id.clone());
-                bundle_asset_node_index_by_id.insert(asset.asset.id.clone(), node_index);
+                let node_index = bundle_assets.add_node(*asset.asset.id());
+                bundle_asset_node_index_by_id.insert(*asset.asset.id(), node_index);
               }
 
               Control::Continue
@@ -105,11 +105,11 @@ impl Request for BundleGraphRequest {
         _ => Control::Continue,
       });
 
-      fn get_asset_ids(node_weight: &AcyclicAssetGraphNode) -> Vec<String> {
+      fn get_asset_ids(node_weight: &AcyclicAssetGraphNode) -> Vec<u64> {
         match node_weight {
-          AcyclicAssetGraphNode::Asset(asset_node) => vec![asset_node.asset.id.clone()],
+          AcyclicAssetGraphNode::Asset(asset_node) => vec![*asset_node.asset.id()],
           AcyclicAssetGraphNode::Cycle(assets) => {
-            assets.iter().map(|asset| asset.asset.id.clone()).collect()
+            assets.iter().map(|asset| *asset.asset.id()).collect()
           }
           AcyclicAssetGraphNode::Root => vec![],
           AcyclicAssetGraphNode::Entry => vec![],
@@ -138,7 +138,7 @@ impl Request for BundleGraphRequest {
       let AcyclicAssetGraphNode::Asset(entry_asset) =
         dominator_tree.node_weight(start_node).unwrap()
       else {
-        tracing::error!(?start_node, "Bundle entry node is not an asset");
+        tracing::debug!(?start_node, "Bundle entry node is not an asset");
         continue;
       };
 
@@ -154,12 +154,12 @@ impl Request for BundleGraphRequest {
         bundle: Bundle {
           bundle_behavior: Some(BundleBehavior::Isolated),
           bundle_type: entry_asset.asset.file_type.clone(),
-          entry_asset_ids: vec![entry_asset.asset.id.clone()],
+          entry_asset_ids: vec![*entry_asset.asset.id()],
           env: Environment::default(),
           hash_reference: "".to_string(),
           id: bundle_id,
           is_splittable: true,
-          main_entry_id: Some(entry_asset.asset.id.clone()),
+          main_entry_id: Some(*entry_asset.asset.id()),
           manual_shared_bundle: None,
           name: bundle_name,
           needs_stable_name: false,
@@ -305,7 +305,7 @@ pub fn simplify_graph(graph: &AssetGraph) -> SimplifiedAssetGraph {
         ) = (graph.get_node(&incoming_node_index), target_node)
         {
           if source_asset_node.asset.file_type != target_asset_node.asset.file_type {
-            info!(
+            debug!(
               "Skipping dependency edge because source and target have different file types: {:?} -> {:?}",
               source_asset_node.asset.file_path, target_asset_node.asset.file_path
             );

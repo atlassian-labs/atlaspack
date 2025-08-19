@@ -123,7 +123,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       .await?;
 
     let transformed_asset = Asset {
-      id: result.id,
+      id: Asset::asset_id_from_hex(result.id),
       code: Code::new(contents),
       bundle_behavior: result.bundle_behavior,
       env: asset_env.clone(),

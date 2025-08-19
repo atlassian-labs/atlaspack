@@ -250,8 +250,8 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
 
       // Set the unique key of the root asset so we can use it to assign some generated
       // dependencies to it
-      let css_unique_key = asset.id().clone();
-      asset.unique_key = Some(css_unique_key.clone());
+      let css_unique_key = asset.id_string();
+      asset.unique_key = Some(css_unique_key);
 
       asset_symbols.push(Symbol {
         exported: "default".into(),
