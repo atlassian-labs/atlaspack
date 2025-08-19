@@ -12,7 +12,8 @@
     "@atlaspack/logger": "2.14.19",
     "@atlaspack/utils": "2.18.4",
     "@parcel/watcher": "^2.4.1",
-    "fb-watchman": "^2.0.2"
+    "fb-watchman": "^2.0.2",
+    "@types/fb-watchman": "^2.0.2"
   },
   "type": "commonjs",
   "scripts": {

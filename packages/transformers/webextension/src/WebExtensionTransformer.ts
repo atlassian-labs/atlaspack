@@ -51,7 +51,7 @@ async function collectDependencies(
   delete program.$schema;
   if (program.default_locale) {
     const locales = path.join(assetDir, '_locales');
-    let err = !(await fs.exists(locales))
+    let err: 'key' | 'value' | null = !(await fs.exists(locales))
       ? 'key'
       : !(await fs.exists(
             path.join(locales, program.default_locale, 'messages.json'),
@@ -69,7 +69,6 @@ async function collectDependencies(
                 filePath,
                 codeHighlights: [
                   {
-                    // @ts-expect-error TS2345
                     ...getJSONHighlightLocation(ptrs['/default_locale'], err),
                     message: md`Localization ${
                       err == 'value'

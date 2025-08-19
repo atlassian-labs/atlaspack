@@ -1,5 +1,6 @@
 import {Runtime} from '@atlaspack/plugin';
 import {replaceURLReferences} from '@atlaspack/utils';
+import type {Dependency} from '@atlaspack/types';
 import nullthrows from 'nullthrows';
 import fs from 'fs';
 import path from 'path';
@@ -40,7 +41,6 @@ export default new Runtime({
         nullthrows(
           entry
             ?.getDependencies()
-            // @ts-expect-error TS2304
             .find((dep: Dependency) => dep.id === insertDep),
         ),
         nullthrows(manifest),

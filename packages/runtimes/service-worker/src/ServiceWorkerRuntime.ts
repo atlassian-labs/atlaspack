@@ -1,5 +1,6 @@
 import {Runtime} from '@atlaspack/plugin';
 import {urlJoin} from '@atlaspack/utils';
+import type {Asset} from '@atlaspack/types';
 
 export default new Runtime({
   apply({bundle, bundleGraph}) {
@@ -7,7 +8,7 @@ export default new Runtime({
       return [];
     }
 
-    let asset = bundle.traverse((node, _, actions) => {
+    let asset = bundle.traverse<Asset>((node, _, actions) => {
       if (
         node.type === 'dependency' &&
         node.value.specifier === '@atlaspack/service-worker' &&
@@ -39,7 +40,6 @@ _register(manifest, version);
 
     return [
       {
-        // @ts-expect-error TS2339
         filePath: asset.filePath,
         code,
         isEntry: true,
