@@ -10,17 +10,16 @@ use async_trait::async_trait;
 use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode, AssetNode},
   bundle_graph::{BundleGraph, BundleGraphBundle, BundleGraphNode},
-  plugin::{PackageContext, PackagerPlugin},
-  types::{AssetId, AtlaspackOptions, Bundle, BundleId, FileType},
+  plugin::PackagerPlugin,
+  types::{AtlaspackOptions, BundleId, FileType},
 };
 use petgraph::{graph::NodeIndex, visit::EdgeRef};
-use rayon::iter::IntoParallelRefIterator;
 use rayon::prelude::*;
 use tracing::{info, warn};
 
 use crate::{
   request_tracker::{
-    Request, RequestId, ResultAndInvalidations, RunRequestContext, RunRequestError,
+    Request, ResultAndInvalidations, RunRequestContext, RunRequestError,
   },
   requests::RequestResult,
 };

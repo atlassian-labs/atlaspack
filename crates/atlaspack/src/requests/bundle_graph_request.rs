@@ -4,13 +4,12 @@ use async_trait::async_trait;
 use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode, AssetNode, DependencyNode},
   bundle_graph::{BundleGraph, BundleGraphBundle},
-  hash::hash_string,
-  types::{Bundle, BundleBehavior, Environment, FileType, Priority, Target},
+  types::{Bundle, BundleBehavior, Environment, Priority, Target},
 };
 use petgraph::{
   graph::NodeIndex,
   prelude::StableDiGraph,
-  visit::{ControlFlow, EdgeRef, IntoEdgeReferences, IntoNodeReferences},
+  visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences},
   Direction,
 };
 use tracing::info;

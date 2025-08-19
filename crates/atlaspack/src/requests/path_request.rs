@@ -4,12 +4,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use atlaspack_core::diagnostic_error;
-use atlaspack_core::plugin::BuildProgressEvent;
-use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::plugin::Resolution;
 use atlaspack_core::plugin::ResolveContext;
 use atlaspack_core::plugin::ResolvedResolution;
-use atlaspack_core::plugin::ResolvingEvent;
 use atlaspack_core::types::Dependency;
 use atlaspack_resolver::parse_scheme;
 

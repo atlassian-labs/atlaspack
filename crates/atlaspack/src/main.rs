@@ -1,16 +1,13 @@
 use atlaspack::{
   requests::{
     bundle_graph_request::{BundleGraphRequest, BundleGraphRequestOutput},
-    package_request::{self, InMemoryAssetDataProvider, PackageRequest},
+    package_request::{PackageRequest},
     AssetGraphRequest,
   },
   test_utils::{create_db, get_core_path},
   Atlaspack, AtlaspackInitOptions,
 };
-use atlaspack_core::{
-  bundle_graph::BundleGraphNode,
-  types::{AtlaspackOptions, BuildMode, DefaultTargetOptions, FeatureFlagValue, FeatureFlags},
-};
+use atlaspack_core::types::{AtlaspackOptions, BuildMode, DefaultTargetOptions, FeatureFlagValue, FeatureFlags};
 use atlaspack_monitoring::{MonitoringOptions, TracerMode};
 use atlaspack_plugin_rpc::rust::RustWorkerFactory;
 use clap::Parser;

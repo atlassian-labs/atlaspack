@@ -248,7 +248,7 @@ mod tests {
     types::{Asset, BuildMode, Code},
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
-  use atlaspack_plugin_rpc::{rust::RustWorkerFactory, MockRpcFactory, MockRpcWorker};
+  use atlaspack_plugin_rpc::{MockRpcFactory, MockRpcWorker};
   use tracing::info;
 
   use crate::{
