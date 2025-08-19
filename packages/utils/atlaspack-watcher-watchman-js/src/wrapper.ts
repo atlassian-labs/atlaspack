@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-// @ts-expect-error TS7016
+
 import * as watchman from 'fb-watchman';
 import {isGlob} from '@atlaspack/utils';
 import logger from '@atlaspack/logger';
