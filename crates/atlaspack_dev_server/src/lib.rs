@@ -129,10 +129,6 @@ async fn index_handler(
 }
 
 async fn get_handler(State(state): State<Arc<DevServerState>>, request: Request<Body>) -> Response {
-  println!("get_handler {:?}", request.uri());
-  println!("state.root_path {:?}", state.root_path);
-  println!("state.options.dist_dir {:?}", state.options.dist_dir);
-
   let mut serve_dir = ServeDir::new(state.options.dist_dir.clone());
   let path = request.uri().path();
   info!("request: {:?}", path);
@@ -143,8 +139,6 @@ async fn get_handler(State(state): State<Arc<DevServerState>>, request: Request<
       .data_provider
       .request_bundle(path[1..].to_string())
       .await;
-
-    println!("request_result {:?}", request_result);
 
     let result = serve_dir.try_call(request).await.map(|r| r.into_response());
 
