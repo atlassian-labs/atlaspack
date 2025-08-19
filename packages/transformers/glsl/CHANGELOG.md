@@ -1,5 +1,12 @@
 # @atlaspack/transformer-glsl
 
+## 2.14.27
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.27
+
 ## 2.14.26
 
 ### Patch Changes

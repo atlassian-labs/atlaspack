@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-svg",
-  "version": "2.14.26",
+  "version": "2.14.27",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.3",
-    "@atlaspack/plugin": "2.14.26",
-    "@atlaspack/rust": "3.6.1",
+    "@atlaspack/plugin": "2.14.27",
+    "@atlaspack/rust": "3.6.2",
     "nullthrows": "^1.1.1",
     "posthtml": "^0.16.5",
     "posthtml-parser": "^0.10.1",
