@@ -50,6 +50,7 @@ into_variant_impl!(into_bundle_graph, BundleGraph, BundleGraphRequestOutput);
 into_variant_impl!(into_entry, Entry, EntryRequestOutput);
 into_variant_impl!(into_path, Path, PathRequestOutput);
 into_variant_impl!(into_target, Target, TargetRequestOutput);
+into_variant_impl!(into_package, Package, PackageRequestOutput);
 
 macro_rules! as_variant_impl {
   ($method:ident, $variant:ident, $output:ty) => {
@@ -70,6 +71,7 @@ as_variant_impl!(as_bundle_graph, BundleGraph, BundleGraphRequestOutput);
 as_variant_impl!(as_entry, Entry, EntryRequestOutput);
 as_variant_impl!(as_path, Path, PathRequestOutput);
 as_variant_impl!(as_target, Target, TargetRequestOutput);
+as_variant_impl!(as_package, Package, PackageRequestOutput);
 
 impl std::fmt::Debug for RequestResult {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

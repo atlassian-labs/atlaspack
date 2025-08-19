@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode, AssetNode},
   bundle_graph::{BundleGraph, BundleGraphBundle, BundleGraphNode},
-  plugin::PackageContext,
+  plugin::{PackageContext, PackagerPlugin},
   types::{AssetId, AtlaspackOptions, Bundle, BundleId, FileType},
 };
 use petgraph::{graph::NodeIndex, visit::EdgeRef};
@@ -50,7 +50,7 @@ impl PackageRequest {
 impl Request for PackageRequest {
   async fn run(
     &self,
-    mut request_context: RunRequestContext,
+    request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
     let bundles = self
       .bundle_graph
@@ -72,52 +72,80 @@ impl Request for PackageRequest {
         let project_root = request_context.project_root.clone();
         let asset_graph = self.asset_graph.clone();
 
-        run_package_bundle(options, project_root, bundle.clone(), asset_graph)
+        let output_file_path = get_bundle_file_path(&options, &project_root, &bundle);
+        let packager = request_context.plugins().packager(&output_file_path).ok();
+
+        let package_result = run_package_bundle(
+          output_file_path.clone(),
+          options,
+          project_root,
+          bundle.clone(),
+          asset_graph,
+          packager,
+        )?;
+
+        Ok((package_result, (bundle.bundle.id.clone(), output_file_path)))
       })
       .collect::<anyhow::Result<Vec<_>>>()?;
 
+    let bundle_paths = results
+      .into_iter()
+      .map(|(_, (id, path))| (id, path))
+      .collect();
+
     Ok(ResultAndInvalidations {
-      result: RequestResult::Package(PackageRequestOutput {
-        packaged_bundle: PathBuf::from(""),
-      }),
+      result: RequestResult::Package(PackageRequestOutput { bundle_paths }),
       invalidations: vec![],
     })
   }
 }
 
+fn get_bundle_file_path(
+  options: &AtlaspackOptions,
+  project_root: &PathBuf,
+  bundle: &BundleGraphBundle,
+) -> PathBuf {
+  let dist_dir = options
+    .default_target_options
+    .dist_dir
+    .clone()
+    .unwrap_or_else(|| project_root.join("dist"));
+
+  let file_name = bundle.bundle.name.clone().unwrap_or_else(|| {
+    format!(
+      "{}.{}",
+      bundle.bundle.id,
+      bundle.bundle.bundle_type.extension()
+    )
+  });
+
+  dist_dir.join(file_name)
+}
+
 fn run_package_bundle(
+  output_file_path: PathBuf,
   options: Arc<AtlaspackOptions>,
   project_root: PathBuf,
   bundle: BundleGraphBundle,
   asset_graph: Arc<AssetGraph>,
+  packager: Option<Box<dyn PackagerPlugin>>,
 ) -> Result<ResultAndInvalidations, RunRequestError> {
   // We should not keep all data in memory
   let asset_data_provider = InMemoryAssetDataProvider::new(&asset_graph);
 
-  let output_file_path = options
-    .default_target_options
-    .dist_dir
-    .clone()
-    .unwrap_or_else(|| project_root.join("dist"))
-    .join(bundle.bundle.name.clone().unwrap_or_else(|| {
-      format!(
-        "{}.{}",
-        bundle.bundle.id,
-        bundle.bundle.bundle_type.extension()
-      )
-    }));
-
   info!("Packaging bundle to {}", output_file_path.display());
+  std::fs::create_dir_all(&output_file_path.parent().unwrap())?;
   let mut writer = std::fs::File::create(&output_file_path)?;
   package_bundle(
     PackageBundleParams { bundle: &bundle },
     asset_data_provider,
     &mut writer,
+    packager,
   )?;
 
   Ok(ResultAndInvalidations {
     result: RequestResult::Package(PackageRequestOutput {
-      packaged_bundle: output_file_path,
+      bundle_paths: HashMap::from([(bundle.bundle.id, output_file_path)]),
     }),
     invalidations: vec![],
   })
@@ -125,7 +153,7 @@ fn run_package_bundle(
 
 #[derive(PartialEq, Clone)]
 pub struct PackageRequestOutput {
-  packaged_bundle: PathBuf,
+  pub bundle_paths: HashMap<BundleId, PathBuf>,
 }
 
 pub struct PackageBundleParams<'a> {
@@ -276,7 +304,18 @@ pub fn package_bundle(
   params: PackageBundleParams<'_>,
   asset_data_provider: impl AssetDataProvider,
   writer: &mut impl Write,
+  packager: Option<Box<dyn PackagerPlugin>>,
 ) -> anyhow::Result<()> {
+  if let Some(packager) = packager {
+    info!("Have packager for {:?}", params.bundle.bundle.bundle_type);
+    // packager.package(PackageContext {
+    //   bundle: &params.bundle.bundle,
+    //   bundle_graph: &params.bundle.assets,
+    //   contents: writer,
+    //   map: None,
+    // })?;
+  }
+
   match params.bundle.bundle.bundle_type {
     FileType::Js => package_js_bundle(params, asset_data_provider, writer),
     FileType::Html => package_html_bundle(params, asset_data_provider, writer),
@@ -298,7 +337,12 @@ fn package_html_bundle(
   asset_data_provider: impl AssetDataProvider,
   writer: &mut impl Write,
 ) -> anyhow::Result<()> {
-  for asset_id in bundle.assets.iter() {
+  let mut sorted_indexes =
+    petgraph::algo::toposort(&bundle.assets, None).expect("Cycle in bundle graph");
+  sorted_indexes.reverse();
+
+  for node_id in sorted_indexes {
+    let asset_id = bundle.assets.node_weight(node_id).unwrap();
     let code = asset_data_provider.get_asset_code(asset_id)?;
     writer.write_all(&code)?;
   }
@@ -310,7 +354,14 @@ fn package_js_bundle(
   asset_data_provider: impl AssetDataProvider,
   writer: &mut impl Write,
 ) -> anyhow::Result<()> {
-  for asset_id in bundle.assets.iter() {
+  let mut sorted_indexes =
+    petgraph::algo::toposort(&bundle.assets, None).expect("Cycle in bundle graph");
+  sorted_indexes.reverse();
+
+  writer.write_all("atlaspack$register([\n\n".as_bytes())?;
+
+  for node_id in sorted_indexes {
+    let asset_id = bundle.assets.node_weight(node_id).unwrap();
     let code = String::from_utf8(asset_data_provider.get_asset_code(asset_id)?)?;
 
     let import_statements = asset_data_provider.get_imported_modules(asset_id)?;
@@ -318,7 +369,7 @@ fn package_js_bundle(
 
     writer.write_all(
       format!(
-        "atlaspack$register('{}', function(atlaspack$require, atlaspack$export, exports) {{\n\n\n",
+        "'{}', (exports, require, atlaspack$require, atlaspack$export) => {{\n\n\n",
         asset_id
       )
       .as_bytes(),
@@ -349,9 +400,11 @@ fn package_js_bundle(
     }
     let dependencies_object_string = serde_json::to_string(&dependencies_object).unwrap();
 
-    let postlude = format!("\n\n}}, {dependencies_object_string});\n\n");
+    let postlude = format!("\n\n}}, {dependencies_object_string},\n\n");
     writer.write_all(postlude.as_bytes())?;
   }
+
+  writer.write_all("]);".as_bytes())?;
 
   Ok(())
 }

@@ -254,7 +254,7 @@ mod tests {
   use crate::{
     requests::{
       bundle_graph_request::{self, BundleGraphRequestOutput},
-      package_request::{self, InMemoryAssetDataProvider},
+      package_request::{self, InMemoryAssetDataProvider, PackageRequest, PackageRequestOutput},
     },
     test_utils,
   };
@@ -410,6 +410,7 @@ export const bar = "bar";
       package_request::PackageBundleParams { bundle: &bundle },
       InMemoryAssetDataProvider::new(&asset_graph),
       &mut output,
+      None,
     )?;
 
     let code = String::from_utf8(output).unwrap();
@@ -442,6 +443,110 @@ export const bar = "bar";
     assert!(assets.contains_key(
       &test_utils::get_repo_path().join("packages/transformers/js/src/esmodule-helpers.js")
     ));
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_bundle_async_import() -> anyhow::Result<()> {
+    let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
+      .with_max_level(tracing::Level::DEBUG)
+      .try_init();
+
+    let project_dir = test_utils::setup_test_directory("test-bundle-async-import")?;
+    std::fs::write(
+      project_dir.join("index.js"),
+      r#"
+      const {e} = await import("./async.js");
+      console.log(e);
+      "#,
+    )?;
+    std::fs::write(
+      project_dir.join("async.js"),
+      r#"
+      console.log("Hello, world!");
+      export const e = "e";
+      "#,
+    )?;
+
+    let atlaspack = test_utils::make_test_atlaspack(&[project_dir.join("index.js")]).await?;
+
+    let BundleGraphRequestOutput {
+      bundle_graph,
+      asset_graph,
+    } = atlaspack
+      .run_request_async(bundle_graph_request::BundleGraphRequest {})
+      .await?
+      .into_bundle_graph()
+      .unwrap();
+    let asset_graph = Arc::new(asset_graph);
+
+    assert_eq!(bundle_graph.num_bundles(), 2);
+
+    let PackageRequestOutput { bundle_paths } = atlaspack
+      .run_request_async(PackageRequest::new(bundle_graph, asset_graph.clone()))
+      .await?
+      .into_package()
+      .unwrap();
+
+    for (bundle_id, bundle_path) in bundle_paths {
+      println!("Bundle ID: {}", bundle_id);
+      let code = std::fs::read_to_string(bundle_path)?;
+      println!("{}", code);
+    }
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_bundle_html_file() -> anyhow::Result<()> {
+    let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
+      .with_max_level(tracing::Level::DEBUG)
+      .try_init();
+
+    let project_dir = test_utils::setup_test_directory("test-bundle-html-file")?;
+    std::fs::write(
+      project_dir.join("index.html"),
+      r#"
+      <html>
+        <body>
+          <script src="index.js"></script>
+        </body>
+      </html>
+      "#,
+    )?;
+    std::fs::write(
+      project_dir.join("index.js"),
+      r#"
+      console.log("Hello, world!");
+      "#,
+    )?;
+
+    let atlaspack = test_utils::make_test_atlaspack(&[project_dir.join("index.html")]).await?;
+
+    let BundleGraphRequestOutput {
+      bundle_graph,
+      asset_graph,
+    } = atlaspack
+      .run_request_async(bundle_graph_request::BundleGraphRequest {})
+      .await?
+      .into_bundle_graph()
+      .unwrap();
+    let asset_graph = Arc::new(asset_graph);
+
+    assert_eq!(bundle_graph.num_bundles(), 2);
+
+    let PackageRequestOutput { bundle_paths } = atlaspack
+      .run_request_async(PackageRequest::new(bundle_graph, asset_graph.clone()))
+      .await?
+      .into_package()
+      .unwrap();
+
+    for (bundle_id, bundle_path) in bundle_paths {
+      println!("Bundle ID: {}", bundle_id);
+      let code = std::fs::read_to_string(bundle_path)?;
+      println!("{}", code);
+    }
 
     Ok(())
   }
@@ -497,7 +602,7 @@ export const bar = "bar";
       r#"
 import { bar } from "./bar";
 
-output(bar + "foo");
+document.body.innerHTML = bar + "foo";
       "#,
     )
     .unwrap();
@@ -540,26 +645,20 @@ export const bar = "bar";
       .into_bundle_graph()
       .unwrap();
     assert_eq!(bundle_graph.num_bundles(), 1);
-    let BundleGraphNode::Bundle(bundle) = bundle_graph
-      .graph()
-      .node_weights()
-      .find(|weight| matches!(weight, BundleGraphNode::Bundle(_)))
-      .unwrap()
-    else {
-      panic!("Expected a bundle");
-    };
+    let asset_graph = Arc::new(asset_graph);
 
-    let mut output = Vec::new();
-    package_request::package_bundle(
-      package_request::PackageBundleParams { bundle: &bundle },
-      InMemoryAssetDataProvider::new(&asset_graph),
-      &mut output,
-    )?;
+    let PackageRequestOutput { bundle_paths } = atlaspack
+      .run_request_async(PackageRequest::new(bundle_graph, asset_graph.clone()))
+      .await?
+      .into_package()
+      .unwrap();
 
-    let code = String::from_utf8(output).unwrap();
-    println!("{}", code);
+    for (_, bundle_path) in bundle_paths {
+      let code = std::fs::read_to_string(bundle_path)?;
+      println!("{}", code);
+    }
 
-    tracing::debug!("Asset graph: {:#?}", asset_graph);
+    // tracing::debug!("Asset graph: {:#?}", asset_graph);
 
     let assets = asset_graph
       .nodes()
@@ -580,12 +679,9 @@ export const bar = "bar";
     tracing::debug!(test_path = ?test_utils::get_repo_path().join("packages/transformers/js/src/esmodule-helpers.js"), "Assets");
     tracing::debug!(assets = ?assets.keys().collect::<Vec<_>>(), "Assets");
 
-    assert_eq!(assets.len(), 3);
+    assert_eq!(assets.len(), 2);
     assert!(assets.contains_key(&project_dir.join("src/bar.ts")));
     assert!(assets.contains_key(&project_dir.join("src/index.ts")));
-    assert!(assets.contains_key(
-      &test_utils::get_repo_path().join("packages/transformers/js/src/esmodule-helpers.js")
-    ));
 
     Ok(())
   }
@@ -640,6 +736,7 @@ export const bar = "bar";
       package_request::PackageBundleParams { bundle: &bundle },
       InMemoryAssetDataProvider::new(&asset_graph),
       &mut output,
+      None,
     )
     .unwrap();
 

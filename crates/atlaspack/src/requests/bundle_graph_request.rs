@@ -4,12 +4,13 @@ use async_trait::async_trait;
 use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode, AssetNode, DependencyNode},
   bundle_graph::{BundleGraph, BundleGraphBundle},
-  types::{Bundle, BundleBehavior, Environment, FileType, Target},
+  hash::hash_string,
+  types::{Bundle, BundleBehavior, Environment, FileType, Priority, Target},
 };
 use petgraph::{
   graph::NodeIndex,
   prelude::StableDiGraph,
-  visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences},
+  visit::{ControlFlow, EdgeRef, IntoEdgeReferences, IntoNodeReferences},
   Direction,
 };
 use tracing::info;
@@ -60,26 +61,80 @@ impl Request for BundleGraphRequest {
 
     for edge in dominator_tree.edges(root_node) {
       let start_node = edge.target();
-      let mut bundle_assets = vec![];
+      let mut bundle_assets = StableDiGraph::new();
+      let mut bundle_asset_node_index_by_id = HashMap::new();
+
+      enum Control {
+        Continue,
+        Break,
+        Prune,
+      }
+
+      impl petgraph::visit::ControlFlow for Control {
+        fn continuing() -> Self {
+          Control::Continue
+        }
+        fn should_break(&self) -> bool {
+          matches!(self, Control::Break)
+        }
+        fn should_prune(&self) -> bool {
+          matches!(self, Control::Prune)
+        }
+      }
 
       petgraph::visit::depth_first_search(&dominator_tree, [start_node], |event| match event {
         petgraph::visit::DfsEvent::Discover(node_index, _) => {
           let node_weight = dominator_tree.node_weight(node_index).unwrap();
           match node_weight {
             AcyclicAssetGraphNode::Asset(asset_node) => {
-              bundle_assets.push(asset_node.asset.id.clone());
+              let node_index = bundle_assets.add_node(asset_node.asset.id.clone());
+              bundle_asset_node_index_by_id.insert(asset_node.asset.id.clone(), node_index);
+
+              Control::Continue
             }
             AcyclicAssetGraphNode::Cycle(assets) => {
-              bundle_assets.extend(assets.iter().map(|asset| asset.asset.id.clone()));
+              for asset in assets {
+                let node_index = bundle_assets.add_node(asset.asset.id.clone());
+                bundle_asset_node_index_by_id.insert(asset.asset.id.clone(), node_index);
+              }
+
+              Control::Continue
             }
-            _ => {}
+            _ => Control::Continue,
           }
         }
-        petgraph::visit::DfsEvent::TreeEdge(_, _) => {}
-        petgraph::visit::DfsEvent::BackEdge(_, _) => {}
-        petgraph::visit::DfsEvent::CrossForwardEdge(_, _) => {}
-        petgraph::visit::DfsEvent::Finish(_, _) => {}
+        _ => Control::Continue,
       });
+
+      fn get_asset_ids(node_weight: &AcyclicAssetGraphNode) -> Vec<String> {
+        match node_weight {
+          AcyclicAssetGraphNode::Asset(asset_node) => vec![asset_node.asset.id.clone()],
+          AcyclicAssetGraphNode::Cycle(assets) => {
+            assets.iter().map(|asset| asset.asset.id.clone()).collect()
+          }
+          AcyclicAssetGraphNode::Root => vec![],
+          AcyclicAssetGraphNode::Entry => vec![],
+          AcyclicAssetGraphNode::None => vec![],
+        }
+      }
+
+      for edge in dominator_tree.edges(start_node) {
+        let source_node_index = edge.source();
+        let target_node_index = edge.target();
+        let source_node_weight = dominator_tree.node_weight(source_node_index).unwrap();
+        let target_node_weight = dominator_tree.node_weight(target_node_index).unwrap();
+        let source_asset_ids = get_asset_ids(source_node_weight);
+        let target_asset_ids = get_asset_ids(target_node_weight);
+
+        for source_asset_id in &source_asset_ids {
+          for target_asset_id in &target_asset_ids {
+            let source_bundle_index = bundle_asset_node_index_by_id.get(source_asset_id).unwrap();
+            let target_bundle_index = bundle_asset_node_index_by_id.get(target_asset_id).unwrap();
+
+            bundle_assets.add_edge(*source_bundle_index, *target_bundle_index, ());
+          }
+        }
+      }
 
       let AcyclicAssetGraphNode::Asset(entry_asset) =
         dominator_tree.node_weight(start_node).unwrap()
@@ -88,7 +143,7 @@ impl Request for BundleGraphRequest {
       };
 
       let file_name = entry_asset.asset.file_path.file_stem().unwrap();
-      let bundle_id = format!("bundle_{}", file_name.to_string_lossy());
+      let bundle_id = format!("bundle(entry={})", entry_asset.asset.id);
       let bundle_name = Some(format!(
         "{}.{}",
         file_name.to_string_lossy(),
@@ -154,6 +209,7 @@ impl std::fmt::Debug for SimplifiedAssetGraphNode {
 #[derive(Clone, PartialEq)]
 pub enum SimplifiedAssetGraphEdge {
   Dependency(DependencyNode),
+  AsyncDependency(DependencyNode),
   None,
 }
 
@@ -165,6 +221,9 @@ impl std::fmt::Debug for SimplifiedAssetGraphEdge {
       }
       SimplifiedAssetGraphEdge::None => {
         write!(f, "None")
+      }
+      SimplifiedAssetGraphEdge::AsyncDependency(dependency_node) => {
+        write!(f, "AsyncDependency")
       }
     }
   }
@@ -259,6 +318,15 @@ pub fn simplify_graph(graph: &AssetGraph) -> SimplifiedAssetGraph {
             // but the edge types should be different so we can ignore on certain traversals.
             continue;
           }
+        }
+
+        if dependency_node.dependency.priority != Priority::Sync {
+          simplified_graph.add_edge(
+            root_node_index,
+            target_node_index,
+            SimplifiedAssetGraphEdge::None,
+          );
+          continue;
         }
 
         simplified_graph.add_edge(

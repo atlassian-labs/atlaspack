@@ -242,22 +242,22 @@ require.cache['child_process'] = {
   exports: loggingExports,
 };
 
-const inspector = require('inspector');
-const session = new inspector.Session();
-session.connect();
-session.post(
-  'Profiler.enable',
-  () => session.post('Profiler.start', () => {}),
-);
-setTimeout(() => {
-  session.post('Profiler.stop', (sessionErr, data) => {
-    require('fs').writeFileSync(
-      'worker-cpu-profile-' + Date.now() + '.cpuprofile',
-      JSON.stringify(data.profile),
-      (writeErr) => {},
-    );
-  });
-}, 60000);
+// const inspector = require('inspector');
+// const session = new inspector.Session();
+// session.connect();
+// session.post(
+//   'Profiler.enable',
+//   () => session.post('Profiler.start', () => {}),
+// );
+// setTimeout(() => {
+//   session.post('Profiler.stop', (sessionErr, data) => {
+//     require('fs').writeFileSync(
+//       'worker-cpu-profile-' + Date.now() + '.cpuprofile',
+//       JSON.stringify(data.profile),
+//       (writeErr) => {},
+//     );
+//   });
+// }, 60000);
 
 worker
         "#,

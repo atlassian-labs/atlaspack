@@ -2,14 +2,14 @@ use petgraph::prelude::StableDiGraph;
 
 use crate::types::{AssetId, Bundle};
 
-#[derive(Debug, Clone, PartialEq, Hash)]
+#[derive(Debug, Clone)]
 pub struct BundleGraphBundle {
   pub bundle: Bundle,
   // TODO: This should not be public
-  pub assets: Vec<AssetId>,
+  pub assets: StableDiGraph<AssetId, ()>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum BundleGraphNode {
   Root,
   Entry,
