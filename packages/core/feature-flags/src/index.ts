@@ -207,7 +207,7 @@ export function runWithConsistencyCheck<Result, CustomDiagnostic>(
   ) => void,
 ): Result {
   const value = featureFlagValues[flag];
-  if (value === false || value === 'OLD') {
+  if (value === false || value === '' || value === 'OLD') {
     return oldFn();
   }
   if (value === true || value === 'NEW') {
