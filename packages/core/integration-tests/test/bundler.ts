@@ -2789,10 +2789,14 @@ describe('bundler', function () {
     async () => {
       await fsFixture(overlayFS, __dirname)`
       merge-webpack-chunk-name
+        index.html:
+          <script type="module" src="./index.js"></script>
         index.js:
-          import(/* webpackChunkName: "shared" */ './async-1.js');
-          import(/* webpackChunkName: "shared" */ './async-2.js');
-          import(/* webpackChunkName: "shared-two" */ './async-3.js');
+          sideEffectNoop(Promise.all([
+            import(/* webpackChunkName: "shared" */ './async-1.js'),
+            import(/* webpackChunkName: "shared" */ './async-2.js'),
+            import(/* webpackChunkName: "shared-two" */ './async-3.js')
+          ]));
 
         async-1.js:
           export const async1 = 'async1';
@@ -2805,7 +2809,7 @@ describe('bundler', function () {
     `;
 
       const b = await bundle(
-        [path.join(__dirname, 'merge-webpack-chunk-name/index.js')],
+        [path.join(__dirname, 'merge-webpack-chunk-name/index.html')],
         {
           inputFS: overlayFS,
           featureFlags: {
@@ -2815,6 +2819,7 @@ describe('bundler', function () {
       );
 
       assertBundles(b, [
+        {assets: ['index.html']},
         {
           assets: [
             'index.js',
@@ -2834,4 +2839,121 @@ describe('bundler', function () {
       await run(b);
     },
   );
+
+  it('should merge small async bundles together when configured', async () => {
+    await fsFixture(overlayFS, __dirname)`
+      merge-async-bundles
+        index.html:
+          <script type="module" src="./index.js"></script>
+
+        index.js:
+          sideEffectNoop(Promise.all([
+            import('./async-1.js'),
+            import('./async-2.js'),
+            import('./async-3.js')
+          ]));
+
+        async-1.js:
+          export const async1 = 'async1';
+
+        async-2.js:
+          export const async2 = 'async2';
+
+        async-3.js:
+          export const async3 = 'async3';
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "asyncBundleMerge": {
+                "bundleSize": 1000,
+                "maxOverfetchSize": 2000
+              }
+            }
+          }
+        yarn.lock:
+    `;
+
+    const b = await bundle(
+      [path.join(__dirname, 'merge-async-bundles/index.html')],
+      {
+        inputFS: overlayFS,
+      },
+    );
+
+    assertBundles(b, [
+      {assets: ['index.html']},
+      {
+        assets: [
+          'index.js',
+          'async-1.js',
+          'async-2.js',
+          'async-3.js',
+          'esmodule-helpers.js',
+        ],
+      },
+    ]);
+
+    await run(b);
+  });
+
+  it('should ignore configured bundles from async merge', async () => {
+    await fsFixture(overlayFS, __dirname)`
+      merge-async-bundles-ignore
+        index.html:
+          <script type="module" src="./index.js"></script>
+
+        index.js:
+          sideEffectNoop(Promise.all([
+            import('./async-1.js'),
+            import('./async-2.js'),
+            import('./async-3.js')
+          ]));
+
+        async-1.js:
+          export const async1 = 'async1';
+
+        async-2.js:
+          export const async2 = 'async2';
+
+        async-3.js:
+          export const async3 = 'async3';
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "asyncBundleMerge": {
+                "bundleSize": 1000,
+                "maxOverfetchSize": 2000,
+                "ignore": ["index.js"]
+              }
+            }
+          }
+        yarn.lock:
+    `;
+
+    const b = await bundle(
+      [path.join(__dirname, 'merge-async-bundles-ignore/index.html')],
+      {
+        inputFS: overlayFS,
+      },
+    );
+
+    assertBundles(b, [
+      {assets: ['index.html']},
+      {
+        assets: ['index.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
+      },
+      {
+        assets: [
+          'async-1.js',
+          'async-2.js',
+          'async-3.js',
+          'esmodule-helpers.js',
+        ],
+      },
+    ]);
+
+    await run(b);
+  });
 });
