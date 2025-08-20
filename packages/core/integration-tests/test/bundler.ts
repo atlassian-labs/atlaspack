@@ -2789,10 +2789,14 @@ describe('bundler', function () {
     async () => {
       await fsFixture(overlayFS, __dirname)`
       merge-webpack-chunk-name
+        index.html:
+          <script type="module" src="./index.js"></script>
         index.js:
-          import(/* webpackChunkName: "shared" */ './async-1.js');
-          import(/* webpackChunkName: "shared" */ './async-2.js');
-          import(/* webpackChunkName: "shared-two" */ './async-3.js');
+          sideEffectNoop(Promise.all([
+            import(/* webpackChunkName: "shared" */ './async-1.js'),
+            import(/* webpackChunkName: "shared" */ './async-2.js'),
+            import(/* webpackChunkName: "shared-two" */ './async-3.js')
+          ]));
 
         async-1.js:
           export const async1 = 'async1';
@@ -2805,7 +2809,7 @@ describe('bundler', function () {
     `;
 
       const b = await bundle(
-        [path.join(__dirname, 'merge-webpack-chunk-name/index.js')],
+        [path.join(__dirname, 'merge-webpack-chunk-name/index.html')],
         {
           inputFS: overlayFS,
           featureFlags: {
@@ -2815,6 +2819,7 @@ describe('bundler', function () {
       );
 
       assertBundles(b, [
+        {assets: ['index.html']},
         {
           assets: [
             'index.js',
@@ -2838,10 +2843,15 @@ describe('bundler', function () {
   it('should merge small async bundles together when configured', async () => {
     await fsFixture(overlayFS, __dirname)`
       merge-async-bundles
+        index.html:
+          <script type="module" src="./index.js"></script>
+
         index.js:
-          import('./async-1.js');
-          import('./async-2.js');
-          import('./async-3.js');
+          sideEffectNoop(Promise.all([
+            import('./async-1.js'),
+            import('./async-2.js'),
+            import('./async-3.js')
+          ]));
 
         async-1.js:
           export const async1 = 'async1';
@@ -2865,19 +2875,17 @@ describe('bundler', function () {
     `;
 
     const b = await bundle(
-      [path.join(__dirname, 'merge-async-bundles/index.js')],
+      [path.join(__dirname, 'merge-async-bundles/index.html')],
       {
         inputFS: overlayFS,
       },
     );
 
     assertBundles(b, [
+      {assets: ['index.html']},
       {
         assets: [
           'index.js',
-          'bundle-url.js',
-          'cacheLoader.js',
-          'js-loader.js',
           'async-1.js',
           'async-2.js',
           'async-3.js',
@@ -2892,10 +2900,15 @@ describe('bundler', function () {
   it('should ignore configured bundles from async merge', async () => {
     await fsFixture(overlayFS, __dirname)`
       merge-async-bundles-ignore
+        index.html:
+          <script type="module" src="./index.js"></script>
+
         index.js:
-          import('./async-1.js');
-          import('./async-2.js');
-          import('./async-3.js');
+          sideEffectNoop(Promise.all([
+            import('./async-1.js'),
+            import('./async-2.js'),
+            import('./async-3.js')
+          ]));
 
         async-1.js:
           export const async1 = 'async1';
@@ -2920,13 +2933,14 @@ describe('bundler', function () {
     `;
 
     const b = await bundle(
-      [path.join(__dirname, 'merge-async-bundles-ignore/index.js')],
+      [path.join(__dirname, 'merge-async-bundles-ignore/index.html')],
       {
         inputFS: overlayFS,
       },
     );
 
     assertBundles(b, [
+      {assets: ['index.html']},
       {
         assets: ['index.js', 'bundle-url.js', 'cacheLoader.js', 'js-loader.js'],
       },
