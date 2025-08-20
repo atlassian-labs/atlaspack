@@ -2891,7 +2891,7 @@ describe('bundler', function () {
 
   it('should ignore configured bundles from async merge', async () => {
     await fsFixture(overlayFS, __dirname)`
-      merge-async-bundles
+      merge-async-bundles-ignore
         index.js:
           import('./async-1.js');
           import('./async-2.js');
@@ -2920,7 +2920,7 @@ describe('bundler', function () {
     `;
 
     const b = await bundle(
-      [path.join(__dirname, 'merge-async-bundles/index.js')],
+      [path.join(__dirname, 'merge-async-bundles-ignore/index.js')],
       {
         inputFS: overlayFS,
       },
