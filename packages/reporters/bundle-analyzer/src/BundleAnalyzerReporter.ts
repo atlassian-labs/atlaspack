@@ -128,10 +128,9 @@ async function getBundleNode(bundle: PackagedBundle, options: PluginOptions) {
     let dirs = parts.slice(0, parts.length - 1);
     let basename = path.basename(asset.filePath);
 
-    let map = dirMap;
+    let map: File | DirMap = dirMap;
     for (let dir of dirs) {
       invariant(map instanceof DefaultMap);
-      // @ts-expect-error TS2322
       map = map.get(dir);
     }
 

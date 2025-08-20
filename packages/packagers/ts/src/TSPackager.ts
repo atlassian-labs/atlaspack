@@ -1,9 +1,9 @@
 import assert from 'assert';
+import type {Asset} from '@atlaspack/types';
 import {Packager} from '@atlaspack/plugin';
 
 export default new Packager({
   async package({bundle, getSourceMapReference}) {
-    // @ts-expect-error TS2552
     let assets: Array<Asset> = [];
     bundle.traverseAssets((asset) => {
       assets.push(asset);
