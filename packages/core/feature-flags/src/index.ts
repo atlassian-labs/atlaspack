@@ -156,6 +156,11 @@ export const DEFAULT_FEATURE_FLAGS = {
    * a full bundling pass is required based on the AssetGraph's bundlingVersion.
    */
   incrementalBundlingVersioning: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Enable optimised prelude for the ScopeHoistingPackager.
+   */
+  useNewPrelude: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
