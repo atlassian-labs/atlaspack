@@ -41,6 +41,15 @@ impl Request for BundleGraphRequest {
       anyhow::bail!("AssetGraphRequest returned a non-AssetGraph result");
     };
 
+    info!(
+      num_assets = asset_graph
+        .graph
+        .nodes()
+        .filter(|node| matches!(node, AssetGraphNode::Asset(_)))
+        .count(),
+      "Bundling graph"
+    );
+
     let simplified_graph = simplify_graph(&asset_graph.graph);
     let root_node = NodeIndex::new(0);
     assert_eq!(
@@ -206,27 +215,17 @@ impl std::fmt::Debug for SimplifiedAssetGraphNode {
   }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum SimplifiedAssetGraphEdge {
+  /// Root to asset, means the asset is an entry-point
+  EntryAsset(DependencyNode),
+  /// Root to asset, means the asset is an async import
+  AsyncImport(DependencyNode),
+  /// Root to asset, means the asset has been split due to type change
+  TypeChange(DependencyNode),
   Dependency(DependencyNode),
   AsyncDependency(DependencyNode),
   None,
-}
-
-impl std::fmt::Debug for SimplifiedAssetGraphEdge {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      SimplifiedAssetGraphEdge::Dependency(_dependency_node) => {
-        write!(f, "Dependency")
-      }
-      SimplifiedAssetGraphEdge::None => {
-        write!(f, "None")
-      }
-      SimplifiedAssetGraphEdge::AsyncDependency(dependency_node) => {
-        write!(f, "AsyncDependency")
-      }
-    }
-  }
 }
 
 pub type SimplifiedAssetGraph = StableDiGraph<SimplifiedAssetGraphNode, SimplifiedAssetGraphEdge>;
@@ -247,6 +246,7 @@ pub fn simplify_graph(graph: &AssetGraph) -> SimplifiedAssetGraph {
   let mut simplified_graph = StableDiGraph::new();
   let mut root_node_index = None;
 
+  let mut none_indexes = Vec::new();
   for node in graph.nodes() {
     match node {
       AssetGraphNode::Root => {
@@ -259,7 +259,8 @@ pub fn simplify_graph(graph: &AssetGraph) -> SimplifiedAssetGraph {
         simplified_graph.add_node(SimplifiedAssetGraphNode::Asset(asset_node.clone()));
       }
       AssetGraphNode::Dependency(_dependency_node) => {
-        simplified_graph.add_node(SimplifiedAssetGraphNode::None);
+        let node_index = simplified_graph.add_node(SimplifiedAssetGraphNode::None);
+        none_indexes.push(node_index);
       }
     };
   }
@@ -312,7 +313,7 @@ pub fn simplify_graph(graph: &AssetGraph) -> SimplifiedAssetGraph {
             simplified_graph.add_edge(
               root_node_index,
               target_node_index,
-              SimplifiedAssetGraphEdge::None,
+              SimplifiedAssetGraphEdge::TypeChange(dependency_node.clone()),
             );
             // TODO: We should still mark this on the simplified graph
             // but the edge types should be different so we can ignore on certain traversals.
@@ -324,18 +325,30 @@ pub fn simplify_graph(graph: &AssetGraph) -> SimplifiedAssetGraph {
           simplified_graph.add_edge(
             root_node_index,
             target_node_index,
-            SimplifiedAssetGraphEdge::None,
+            SimplifiedAssetGraphEdge::AsyncImport(dependency_node.clone()),
           );
           continue;
         }
 
-        simplified_graph.add_edge(
-          incoming_node_index,
-          target_node_index,
-          SimplifiedAssetGraphEdge::Dependency(dependency_node.clone()),
-        );
+        if incoming_node_index == root_node_index {
+          simplified_graph.add_edge(
+            incoming_node_index,
+            target_node_index,
+            SimplifiedAssetGraphEdge::EntryAsset(dependency_node.clone()),
+          );
+        } else {
+          simplified_graph.add_edge(
+            incoming_node_index,
+            target_node_index,
+            SimplifiedAssetGraphEdge::Dependency(dependency_node.clone()),
+          );
+        }
       }
     } else {
+      // println!(
+      //   "Skipping edge because source-node is not a dependency: {:#?} -> {:#?}",
+      //   source_node, target_node
+      // );
       // panic!(
       //   "Invalid graph ; source-node: {:#?}, target-node: {:#?}",
       //   source_node, target_node
@@ -347,6 +360,10 @@ pub fn simplify_graph(graph: &AssetGraph) -> SimplifiedAssetGraph {
       //   SimplifiedAssetGraphEdge::None,
       // );
     }
+  }
+
+  for node_index in none_indexes {
+    simplified_graph.remove_node(node_index);
   }
 
   simplified_graph
@@ -426,22 +443,79 @@ pub fn remove_cycles(graph: &SimplifiedAssetGraph) -> AcyclicAssetGraph {
   result
 }
 
+type DominatorTreeNode = AcyclicAssetGraphNode;
+
+enum DominatorTreeEdge {
+  /// From root to asset, means the asset is an entry-point
+  EntryAsset(DependencyNode),
+  /// From root to asset, means the asset is an async import
+  AsyncImport(DependencyNode),
+  /// From root to asset, means the asset is a type change
+  TypeChange(DependencyNode),
+  /// From root to asset, means the asset is a shared bundle
+  SharedBundle,
+  /// From asset to asset, means the asset is a dependency of the other within a bundle
+  Dependency(DependencyNode),
+  /// From asset to asset, means the asset is an async dependency of the other within a bundle
+  AsyncDependency(DependencyNode),
+}
+
 pub fn build_dominator_tree(
   graph: &AcyclicAssetGraph,
   root_id: NodeIndex,
-) -> StableDiGraph<AcyclicAssetGraphNode, ()> {
+) -> StableDiGraph<DominatorTreeNode, DominatorTreeEdge> {
   let dominators = petgraph::algo::dominators::simple_fast(graph, root_id);
   let mut result = StableDiGraph::new();
 
+  let mut root_node_index: Option<NodeIndex> = None;
   for node_index in graph.node_indices() {
     let node_weight = graph.node_weight(node_index).unwrap();
-    result.add_node(node_weight.clone());
+    let node_index = result.add_node(node_weight.clone());
+    if node_weight == &AcyclicAssetGraphNode::Root {
+      root_node_index = Some(node_index);
+    }
   }
+  let root_node_index = root_node_index.unwrap();
 
   for node_index in graph.node_indices() {
     let immediate_dominator = dominators.immediate_dominator(node_index);
+
     if let Some(dominator_index) = immediate_dominator {
-      result.add_edge(dominator_index, node_index, ());
+      let edges = graph.edges_connecting(dominator_index, node_index);
+
+      let dominator_weight = graph.node_weight(dominator_index).unwrap();
+      let node_weight = graph.node_weight(node_index).unwrap();
+
+      // println!("node: {:?}", node_weight);
+      // println!("dominator: {:?}", dominator_weight);
+
+      if !graph.contains_edge(dominator_index, node_index) {
+        result.add_edge(dominator_index, node_index, DominatorTreeEdge::SharedBundle);
+        assert!(dominator_index == root_node_index);
+      } else {
+        for edge in edges {
+          let weight = edge.weight();
+          let weight = match weight {
+            SimplifiedAssetGraphEdge::EntryAsset(dependency_node) => {
+              DominatorTreeEdge::EntryAsset(dependency_node.clone())
+            }
+            SimplifiedAssetGraphEdge::AsyncImport(dependency_node) => {
+              DominatorTreeEdge::AsyncImport(dependency_node.clone())
+            }
+            SimplifiedAssetGraphEdge::TypeChange(dependency_node) => {
+              DominatorTreeEdge::TypeChange(dependency_node.clone())
+            }
+            SimplifiedAssetGraphEdge::Dependency(dependency_node) => {
+              DominatorTreeEdge::Dependency(dependency_node.clone())
+            }
+            SimplifiedAssetGraphEdge::AsyncDependency(dependency_node) => {
+              DominatorTreeEdge::AsyncDependency(dependency_node.clone())
+            }
+            SimplifiedAssetGraphEdge::None => panic!("Invalid graph"),
+          };
+          result.add_edge(dominator_index, node_index, weight);
+        }
+      }
     }
   }
 
@@ -455,13 +529,39 @@ mod tests {
     path::{Path, PathBuf},
   };
 
-  use petgraph::visit::IntoNodeReferences;
+  use atlaspack_core::types::Asset;
+  use petgraph::{
+    algo::toposort,
+    visit::{IntoEdgesDirected, IntoNodeReferences},
+  };
 
-  use crate::test_utils::{get_repo_path, make_test_atlaspack, setup_test_directory};
+  use crate::test_utils::{
+    get_repo_path, graph::expect_node, make_test_atlaspack, setup_test_directory,
+  };
 
   use super::*;
 
-  fn asset_node_label(asset_node: &AssetNode, repo_root: &Path, project_dir: &Path) -> String {
+  fn expect_asset<'a>(
+    dominator_tree: &'a StableDiGraph<DominatorTreeNode, DominatorTreeEdge>,
+    project_dir: &Path,
+    path: &str,
+  ) -> (NodeIndex, &'a DominatorTreeNode) {
+    let predicate = move |node: &DominatorTreeNode| -> bool {
+      let DominatorTreeNode::Asset(AssetNode {
+        asset: Asset { file_path, .. },
+        ..
+      }) = node
+      else {
+        return false;
+      };
+
+      file_path == &project_dir.join(path)
+    };
+
+    expect_node(&dominator_tree, predicate)
+  }
+
+  fn asset_path_label(asset_node: &AssetNode, repo_root: &Path, project_dir: &Path) -> String {
     let file_path = asset_node.asset.file_path.clone();
     let path = if file_path.starts_with(repo_root) {
       PathBuf::from("<atlaspack_repo_root>").join(file_path.strip_prefix(repo_root).unwrap())
@@ -471,7 +571,12 @@ mod tests {
       file_path.clone()
     };
 
-    format!("Asset({:?})", path)
+    format!("{}", path.display())
+  }
+
+  fn asset_node_label(asset_node: &AssetNode, repo_root: &Path, project_dir: &Path) -> String {
+    let path = asset_path_label(asset_node, repo_root, project_dir);
+    format!("Asset({})", path)
   }
 
   fn simplified_asset_graph_node_label(
@@ -497,17 +602,44 @@ mod tests {
   ) -> StableDiGraph<String, String> {
     let mut result = StableDiGraph::new();
 
-    for node in graph.node_weights() {
-      let label = node_label_fn(node);
-      result.add_node(label);
-    }
+    let mut indexes = HashMap::new();
 
-    for edge in graph.edge_references() {
-      let source_node_index = edge.source();
-      let target_node_index = edge.target();
+    if let Ok(sorted_nodes) = toposort(&graph, None) {
+      for node_index in &sorted_nodes {
+        let node = graph.node_weight(*node_index).unwrap();
+        let label = node_label_fn(node);
+        let new_index = result.add_node(label);
+        indexes.insert(*node_index, new_index);
+      }
 
-      let edge_label = edge_label_fn(edge.weight());
-      result.add_edge(source_node_index, target_node_index, edge_label);
+      for node_index in sorted_nodes {
+        for edge in graph.edges_directed(node_index, Direction::Outgoing) {
+          let source_node_index = edge.source();
+          let target_node_index = edge.target();
+          let source_node_index = *indexes.get(&source_node_index).unwrap();
+          let target_node_index = *indexes.get(&target_node_index).unwrap();
+
+          let edge_label = edge_label_fn(edge.weight());
+          result.add_edge(source_node_index, target_node_index, edge_label);
+        }
+      }
+    } else {
+      for node_index in graph.node_indices() {
+        let node = graph.node_weight(node_index).unwrap();
+        let label = node_label_fn(node);
+        let new_index = result.add_node(label);
+        indexes.insert(node_index, new_index);
+      }
+
+      for edge in graph.edge_references() {
+        let source_node_index = edge.source();
+        let target_node_index = edge.target();
+        let source_node_index = *indexes.get(&source_node_index).unwrap();
+        let target_node_index = *indexes.get(&target_node_index).unwrap();
+
+        let edge_label = edge_label_fn(edge.weight());
+        result.add_edge(source_node_index, target_node_index, edge_label);
+      }
     }
 
     for node_index in graph.node_indices() {
@@ -521,17 +653,63 @@ mod tests {
 
   type DebugGraph = StableDiGraph<String, String>;
 
+  fn simplified_asset_graph_edge_label(edge: &SimplifiedAssetGraphEdge) -> String {
+    match edge {
+      SimplifiedAssetGraphEdge::Dependency(_) => "sync".to_string(),
+      SimplifiedAssetGraphEdge::AsyncImport(_) => "async".to_string(),
+      SimplifiedAssetGraphEdge::TypeChange(_) => "type-change".to_string(),
+      SimplifiedAssetGraphEdge::EntryAsset(_) => "entry".to_string(),
+      SimplifiedAssetGraphEdge::AsyncDependency(_) => "async".to_string(),
+      SimplifiedAssetGraphEdge::None => "none".to_string(),
+    }
+  }
+
+  fn dominator_tree_edge_label(edge: &DominatorTreeEdge) -> String {
+    match edge {
+      DominatorTreeEdge::EntryAsset(_) => "entry".to_string(),
+      DominatorTreeEdge::AsyncImport(_) => "async".to_string(),
+      DominatorTreeEdge::TypeChange(_) => "type-change".to_string(),
+      DominatorTreeEdge::SharedBundle => "shared-bundle".to_string(),
+      DominatorTreeEdge::Dependency(_) => "sync".to_string(),
+      DominatorTreeEdge::AsyncDependency(_) => "async".to_string(),
+    }
+  }
+
   fn make_simplified_dot_graph(
-    project_dir: PathBuf,
-    simplified_graph: SimplifiedAssetGraph,
+    project_dir: &Path,
+    simplified_graph: &SimplifiedAssetGraph,
   ) -> DebugGraph {
     let repo_root = get_repo_path();
     make_dot_graph(
-      &simplified_graph,
+      simplified_graph,
       |node| simplified_asset_graph_node_label(node, &repo_root, &project_dir),
-      |_edge| "sync".to_string(),
+      |edge| simplified_asset_graph_edge_label(edge),
       |node| !matches!(node, SimplifiedAssetGraphNode::None),
     )
+  }
+
+  fn acyclic_asset_graph_node_label(
+    node: &AcyclicAssetGraphNode,
+    repo_root: &Path,
+    project_dir: &Path,
+  ) -> String {
+    match node {
+      AcyclicAssetGraphNode::Asset(asset_node) => {
+        asset_node_label(asset_node, &repo_root, &project_dir)
+      }
+      AcyclicAssetGraphNode::Cycle(assets) => {
+        let mut cycle_assets = assets
+          .iter()
+          .map(|asset| asset_path_label(asset, &repo_root, &project_dir))
+          .collect::<Vec<_>>();
+        cycle_assets.sort();
+
+        format!("Cycle({})", cycle_assets.join(", "))
+      }
+      AcyclicAssetGraphNode::Root => "Root".to_string(),
+      AcyclicAssetGraphNode::Entry => "Entry".to_string(),
+      AcyclicAssetGraphNode::None => "None".to_string(),
+    }
   }
 
   fn make_acyclic_dot_graph(project_dir: PathBuf, acyclic_graph: AcyclicAssetGraph) -> DebugGraph {
@@ -539,29 +717,43 @@ mod tests {
 
     make_dot_graph(
       &acyclic_graph,
-      |node| match node {
-        AcyclicAssetGraphNode::Asset(asset_node) => {
-          asset_node_label(asset_node, &repo_root, &project_dir)
-        }
-        AcyclicAssetGraphNode::Cycle(assets) => {
-          format!(
-            "Cycle({:?})",
-            assets
-              .iter()
-              .map(|asset| asset_node_label(asset, &repo_root, &project_dir))
-              .collect::<Vec<_>>()
-          )
-        }
-        AcyclicAssetGraphNode::Root => "Root".to_string(),
-        AcyclicAssetGraphNode::Entry => "Entry".to_string(),
-        AcyclicAssetGraphNode::None => "None".to_string(),
-      },
-      |_edge| "sync".to_string(),
+      |node| acyclic_asset_graph_node_label(node, &repo_root, &project_dir),
+      |edge| simplified_asset_graph_edge_label(edge),
       |node| !matches!(node, AcyclicAssetGraphNode::None),
     )
   }
 
-  #[tokio::test]
+  fn make_dominator_tree_dot_graph(
+    project_dir: PathBuf,
+    dominator_tree: StableDiGraph<DominatorTreeNode, DominatorTreeEdge>,
+  ) -> DebugGraph {
+    let repo_root = get_repo_path();
+
+    make_dot_graph(
+      &dominator_tree,
+      |node| match node {
+        AcyclicAssetGraphNode::Root => "Root".to_string(),
+        AcyclicAssetGraphNode::Entry => "Entry".to_string(),
+        AcyclicAssetGraphNode::Asset(asset_node) => {
+          asset_node_label(asset_node, &repo_root, &project_dir)
+        }
+        AcyclicAssetGraphNode::Cycle(assets) => {
+          let mut cycle_assets = assets
+            .iter()
+            .map(|asset| asset_path_label(asset, &repo_root, &project_dir))
+            .collect::<Vec<_>>();
+          cycle_assets.sort();
+
+          format!("Cycle({})", cycle_assets.join(", "))
+        }
+        AcyclicAssetGraphNode::None => "None".to_string(),
+      },
+      |edge| dominator_tree_edge_label(edge),
+      |node| !matches!(node, AcyclicAssetGraphNode::None),
+    )
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
   async fn test_simplify_graph() {
     let project_dir = setup_test_directory("test_simplify_graph").unwrap();
     create_dir_all(project_dir.join("src")).unwrap();
@@ -583,25 +775,24 @@ console.log(foo);
       .await
       .unwrap();
     let asset_graph = atlaspack
-      .run_request(AssetGraphRequest::default())
+      .run_request_async(AssetGraphRequest::default())
+      .await
       .unwrap()
       .into_asset_graph()
       .unwrap();
 
     let simplified_graph = simplify_graph(&asset_graph.graph);
 
-    let dot_graph = make_simplified_dot_graph(project_dir, simplified_graph);
+    let dot_graph = make_simplified_dot_graph(&project_dir, &simplified_graph);
     let dot = petgraph::dot::Dot::new(&dot_graph);
     let dot = format!("{}", dot);
     let expected_dot = r#"
 digraph {
     0 [ label = "Root" ]
-    2 [ label = "Asset(\"src/index.ts\")" ]
-    4 [ label = "Asset(\"src/foo.ts\")" ]
-    6 [ label = "Asset(\"<atlaspack_repo_root>/packages/transformers/js/src/esmodule-helpers.js\")" ]
-    0 -> 2 [ label = "sync" ]
-    2 -> 4 [ label = "sync" ]
-    4 -> 6 [ label = "sync" ]
+    1 [ label = "Asset(src/index.ts)" ]
+    2 [ label = "Asset(src/foo.ts)" ]
+    0 -> 1 [ label = "entry" ]
+    1 -> 2 [ label = "sync" ]
 }
     "#;
 
@@ -609,7 +800,7 @@ digraph {
     assert_eq!(dot.trim(), expected_dot.trim());
   }
 
-  #[tokio::test]
+  #[tokio::test(flavor = "multi_thread")]
   async fn test_remove_cycles() {
     let project_dir = setup_test_directory("test_remove_cycles").unwrap();
     create_dir_all(project_dir.join("src")).unwrap();
@@ -646,7 +837,8 @@ export const baz = "baz" + foo + bar;
       .await
       .unwrap();
     let asset_graph = atlaspack
-      .run_request(AssetGraphRequest::default())
+      .run_request_async(AssetGraphRequest::default())
+      .await
       .unwrap()
       .into_asset_graph()
       .unwrap();
@@ -659,90 +851,255 @@ export const baz = "baz" + foo + bar;
     let expected_dot = r#"
 digraph {
     0 [ label = "Root" ]
-    2 [ label = "Asset(\"<atlaspack_repo_root>/packages/transformers/js/src/esmodule-helpers.js\")" ]
-    3 [ label = "Cycle([\"Asset(\\\"src/foo.ts\\\")\", \"Asset(\\\"src/bar.ts\\\")\"])" ]
-    4 [ label = "Asset(\"src/baz.ts\")" ]
-    4 -> 3 [ label = "sync" ]
-    4 -> 3 [ label = "sync" ]
-    3 -> 2 [ label = "sync" ]
-    3 -> 2 [ label = "sync" ]
-    4 -> 2 [ label = "sync" ]
+    1 [ label = "Asset(src/baz.ts)" ]
+    2 [ label = "Cycle(src/bar.ts, src/foo.ts)" ]
+    0 -> 1 [ label = "entry" ]
+    1 -> 2 [ label = "sync" ]
+    1 -> 2 [ label = "sync" ]
 }
     "#;
 
     println!("dot:\n{}\n\n", dot);
 
-    // assert_eq!(dot.trim(), expected_dot.trim());
-  }
-
-  #[tokio::test]
-  async fn test_build_dominator_tree() {
-    let project_dir = setup_test_directory("test_build_dominator_tree").unwrap();
-    create_dir_all(project_dir.join("src")).unwrap();
-    write(
-      project_dir.join("src/foo.ts"),
-      r#"export const foo = "foo";"#,
-    )
-    .unwrap();
-
-    let atlaspack = make_test_atlaspack(&[project_dir.join("src/foo.ts")])
-      .await
-      .unwrap();
-    let asset_graph = atlaspack
-      .run_request(AssetGraphRequest::default())
-      .unwrap()
-      .into_asset_graph()
-      .unwrap();
-    let simplified_graph = simplify_graph(&asset_graph.graph);
-    let acyclic_graph = remove_cycles(&simplified_graph);
-    let root_node = acyclic_graph
-      .node_references()
-      .find(|(_, node)| matches!(node, AcyclicAssetGraphNode::Root))
-      .unwrap()
-      .0;
-    let dominator_tree = build_dominator_tree(&acyclic_graph, root_node);
-
-    let repo_root = get_repo_path();
-    let dot_graph = make_dot_graph(
-      &dominator_tree,
-      |node| match node {
-        AcyclicAssetGraphNode::Root => "Root".to_string(),
-        AcyclicAssetGraphNode::Entry => "Entry".to_string(),
-        AcyclicAssetGraphNode::Asset(asset_node) => {
-          asset_node_label(asset_node, &repo_root, &project_dir)
-        }
-        AcyclicAssetGraphNode::Cycle(assets) => {
-          format!(
-            "Cycle({:?})",
-            assets
-              .iter()
-              .map(|asset| asset_node_label(asset, &repo_root, &project_dir))
-              .collect::<Vec<_>>()
-          )
-        }
-        AcyclicAssetGraphNode::None => "None".to_string(),
-      },
-      |_edge| "sync".to_string(),
-      |node| !matches!(node, AcyclicAssetGraphNode::None),
-    );
-
-    let dot = petgraph::dot::Dot::new(&dot_graph);
-    let dot = format!("{}", dot);
-    let expected_dot = r#"
-digraph {
-    0 [ label = "Root" ]
-    2 [ label = "Asset(\"src/foo.ts\")" ]
-    3 [ label = "Asset(\"<atlaspack_repo_root>/packages/transformers/js/src/esmodule-helpers.js\")" ]
-    0 -> 2 [ label = "sync" ]
-    2 -> 3 [ label = "sync" ]
-}
-    "#;
-
-    println!("dot: \n{}", dot);
     assert_eq!(dot.trim(), expected_dot.trim());
   }
 
-  #[tokio::test]
+  mod test_dominator_tree {
+    use atlaspack_core::types::Asset;
+
+    use crate::test_utils::graph::{expect_edge, expect_node};
+
+    use super::*;
+
+    async fn build_test_dominator_tree(
+      project_dir: &Path,
+    ) -> StableDiGraph<DominatorTreeNode, DominatorTreeEdge> {
+      let atlaspack = make_test_atlaspack(&[project_dir.join("src/index.ts")])
+        .await
+        .unwrap();
+      let asset_graph = atlaspack
+        .run_request_async(AssetGraphRequest::default())
+        .await
+        .unwrap()
+        .into_asset_graph()
+        .unwrap();
+      let simplified_graph = simplify_graph(&asset_graph.graph);
+      let simplified_dot_graph = make_simplified_dot_graph(&project_dir, &simplified_graph);
+      let simplified_dot = petgraph::dot::Dot::new(&simplified_dot_graph);
+      let simplified_dot = format!("{}", simplified_dot);
+      println!("simplified_dot:\n{}\n\n", simplified_dot);
+
+      let acyclic_graph = remove_cycles(&simplified_graph);
+      let root_node = acyclic_graph
+        .node_references()
+        .find(|(_, node)| matches!(node, AcyclicAssetGraphNode::Root))
+        .unwrap()
+        .0;
+      let dominator_tree = build_dominator_tree(&acyclic_graph, root_node);
+
+      dominator_tree
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_build_dominator_tree_with_a_single_file() {
+      let project_dir = setup_test_directory("test_build_dominator_tree").unwrap();
+      create_dir_all(project_dir.join("src")).unwrap();
+      write(
+        project_dir.join("src/index.ts"),
+        r#"export const foo = "foo";"#,
+      )
+      .unwrap();
+
+      let dominator_tree = build_test_dominator_tree(&project_dir).await;
+      let dot_graph = make_dominator_tree_dot_graph(project_dir, dominator_tree);
+      let dot = petgraph::dot::Dot::new(&dot_graph);
+      let dot = format!("{}", dot);
+      let expected_dot = r#"
+digraph {
+    0 [ label = "Root" ]
+    1 [ label = "Asset(src/index.ts)" ]
+    0 -> 1 [ label = "entry" ]
+}
+    "#;
+
+      println!("dot: \n{}", dot);
+      assert_eq!(dot.trim(), expected_dot.trim());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_build_dominator_tree_with_a_single_file_and_a_dependency() {
+      let project_dir =
+        setup_test_directory("test_build_dominator_tree_with_a_single_file_and_a_dependency")
+          .unwrap();
+      create_dir_all(project_dir.join("src")).unwrap();
+      write(
+        project_dir.join("src/index.ts"),
+        r#"
+import { foo } from "./foo";
+
+export const index = "index" + foo;
+"#,
+      )
+      .unwrap();
+      write(
+        project_dir.join("src/foo.ts"),
+        r#"export const foo = "foo";"#,
+      )
+      .unwrap();
+
+      let dominator_tree = build_test_dominator_tree(&project_dir).await;
+
+      let dot_graph = make_dominator_tree_dot_graph(project_dir, dominator_tree);
+      let dot = petgraph::dot::Dot::new(&dot_graph);
+      let dot = format!("{}", dot);
+      let expected_dot = r#"
+digraph {
+    0 [ label = "Root" ]
+    1 [ label = "Asset(src/index.ts)" ]
+    2 [ label = "Asset(src/foo.ts)" ]
+    0 -> 1 [ label = "entry" ]
+    1 -> 2 [ label = "sync" ]
+}
+    "#;
+
+      println!("dot: \n{}", dot);
+      assert_eq!(dot.trim(), expected_dot.trim());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_build_dominator_tree_with_an_async_import() {
+      let project_dir =
+        setup_test_directory("test_build_dominator_tree_with_an_async_import").unwrap();
+      create_dir_all(project_dir.join("src")).unwrap();
+      write(
+        project_dir.join("src/index.ts"),
+        r#"
+export const index = async () => {
+  const foo = await import("./foo");
+  return "index" + foo;
+};
+"#,
+      )
+      .unwrap();
+      write(
+        project_dir.join("src/foo.ts"),
+        r#"export const foo = "foo";"#,
+      )
+      .unwrap();
+
+      let dominator_tree = build_test_dominator_tree(&project_dir).await;
+
+      let dot_graph = make_dominator_tree_dot_graph(project_dir, dominator_tree);
+      let dot = petgraph::dot::Dot::new(&dot_graph);
+      let dot = format!("{}", dot);
+      let expected_dot = r#"
+digraph {
+    0 [ label = "Root" ]
+    1 [ label = "Asset(src/index.ts)" ]
+    2 [ label = "Asset(src/foo.ts)" ]
+    0 -> 1 [ label = "entry" ]
+    0 -> 2 [ label = "async" ]
+}
+    "#;
+
+      println!("dot: \n{}", dot);
+      assert_eq!(dot.trim(), expected_dot.trim());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_build_dominator_tree_with_a_shared_bundle() {
+      let project_dir =
+        setup_test_directory("test_build_dominator_tree_with_a_shared_bundle").unwrap();
+      create_dir_all(project_dir.join("src")).unwrap();
+      write(
+        project_dir.join("src/index.ts"),
+        r#"
+
+export const index = async () => {
+  const { bar } = await import("./bar");
+  const { foo } = await import("./foo");
+  return "index" + foo + bar;
+};
+"#,
+      )
+      .unwrap();
+      write(
+        project_dir.join("src/foo.ts"),
+        r#"
+import { s } from "./s";
+
+export const foo = "foo" + s;
+        "#,
+      )
+      .unwrap();
+      write(
+        project_dir.join("src/bar.ts"),
+        r#"
+import { s } from "./s";
+import { k } from "./k";
+
+export const bar = "bar" + s + k;
+        "#,
+      )
+      .unwrap();
+      write(
+        project_dir.join("src/s.ts"),
+        r#"
+export const s = "s";
+        "#,
+      )
+      .unwrap();
+      write(
+        project_dir.join("src/k.ts"),
+        r#"
+export const k = "k";
+        "#,
+      )
+      .unwrap();
+
+      let dominator_tree = build_test_dominator_tree(&project_dir).await;
+      let (root, _) = expect_node(&dominator_tree, |node| {
+        matches!(node, DominatorTreeNode::Root)
+      });
+      let (index, _) = expect_asset(&dominator_tree, &project_dir, "src/index.ts");
+      let (bar, _) = expect_asset(&dominator_tree, &project_dir, "src/bar.ts");
+      let (foo, _) = expect_asset(&dominator_tree, &project_dir, "src/foo.ts");
+      let (s, _) = expect_asset(&dominator_tree, &project_dir, "src/s.ts");
+      let (k, _) = expect_asset(&dominator_tree, &project_dir, "src/k.ts");
+
+      expect_edge(&dominator_tree, root, index);
+      expect_edge(&dominator_tree, root, bar);
+      expect_edge(&dominator_tree, root, foo);
+      expect_edge(&dominator_tree, root, s);
+      expect_edge(&dominator_tree, bar, k);
+
+      assert_eq!(dominator_tree.node_count(), 6);
+      assert_eq!(dominator_tree.edge_count(), 5);
+
+      let dot_graph = make_dominator_tree_dot_graph(project_dir, dominator_tree);
+      let dot = petgraph::dot::Dot::new(&dot_graph);
+      let dot = format!("{}", dot);
+
+      //       let expected_dot = r#"
+      // digraph {
+      //     0 [ label = "Root" ]
+      //     1 [ label = "Asset(src/index.ts)" ]
+      //     2 [ label = "Asset(src/bar.ts)" ]
+      //     3 [ label = "Asset(src/foo.ts)" ]
+      //     4 [ label = "Asset(src/s.ts)" ]
+      //     0 -> 1 [ label = "entry" ]
+      //     0 -> 2 [ label = "async" ]
+      //     0 -> 3 [ label = "async" ]
+      //     0 -> 4 [ label = "shared-bundle" ]
+      // }
+      //     "#;
+      // assert_eq!(dot.trim(), expected_dot.trim());
+
+      println!("dot: \n{}", dot);
+    }
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
   async fn test_bundle_graph_request_can_bundle_a_single_file() {
     let project_dir = setup_test_directory("test-bundle-graph-request").unwrap();
 
@@ -757,7 +1114,8 @@ digraph {
       .await
       .unwrap();
     let BundleGraphRequestOutput { bundle_graph, .. } = atlaspack
-      .run_request(BundleGraphRequest::default())
+      .run_request_async(BundleGraphRequest::default())
+      .await
       .unwrap()
       .into_bundle_graph()
       .expect("BundleGraphRequest returned a non-BundleGraph result");

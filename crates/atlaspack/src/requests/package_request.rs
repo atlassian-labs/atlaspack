@@ -4,7 +4,6 @@ use std::{
   io::Write,
   path::PathBuf,
   sync::Arc,
-  time::Duration,
 };
 
 use async_trait::async_trait;

@@ -294,7 +294,7 @@ mod tests {
       .map(|(idx, asset)| {
         AssetGraphNode::Asset(AssetNode {
           asset: Asset {
-            id: idx.to_string(),
+            id: idx as u64,
             code: Code::from(asset.to_string()),
             ..Asset::default()
           },
@@ -406,9 +406,10 @@ export const bar = "bar";
     };
 
     let mut output = Vec::new();
+    let asset_graph = Arc::new(asset_graph);
     package_request::package_bundle(
       package_request::PackageBundleParams { bundle: &bundle },
-      InMemoryAssetDataProvider::new(&asset_graph),
+      &InMemoryAssetDataProvider::new(asset_graph.clone()),
       &mut output,
       None,
     )?;
@@ -734,7 +735,7 @@ export const bar = "bar";
 
     package_request::package_bundle(
       package_request::PackageBundleParams { bundle: &bundle },
-      InMemoryAssetDataProvider::new(&asset_graph),
+      &InMemoryAssetDataProvider::new(Arc::new(asset_graph)),
       &mut output,
       None,
     )

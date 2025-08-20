@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use atlaspack::{
   requests::{
     bundle_graph_request::{BundleGraphRequest, BundleGraphRequestOutput},
@@ -10,6 +11,7 @@ use atlaspack::{
 use atlaspack_core::types::{
   AtlaspackOptions, BuildMode, DefaultTargetOptions, FeatureFlagValue, FeatureFlags,
 };
+use atlaspack_dev_server::{DevServer, DevServerDataProvider, DevServerOptions};
 use atlaspack_monitoring::{MonitoringOptions, TracerMode};
 use atlaspack_plugin_rpc::rust::RustWorkerFactory;
 use clap::Parser;
@@ -24,7 +26,9 @@ struct Args {
   #[arg(short, long)]
   config: Option<PathBuf>,
 
-  // atlaspack <ENTRIES>
+  #[arg(short, long)]
+  server: bool,
+
   #[arg(trailing_var_arg = true)]
   entries: Vec<String>,
 }
@@ -51,6 +55,25 @@ async fn run(args: Args) -> anyhow::Result<()> {
   let atlaspack = make_atlaspack(&args).await?;
   let atlaspack = Arc::new(atlaspack);
 
+  let output_dir = atlaspack
+    .options
+    .default_target_options
+    .dist_dir
+    .clone()
+    .unwrap_or_else(|| atlaspack.project_root.join("dist"));
+  std::fs::create_dir_all(&output_dir)?;
+
+  let dev_server = DevServer::new(DevServerOptions {
+    host: "localhost".to_string(),
+    port: 2910,
+    public_url: None,
+    dist_dir: output_dir,
+    data_provider: Box::new(DefaultDevServerDataProvider::new()),
+  });
+  if args.server {
+    dev_server.start().await?;
+  }
+
   info!("Building asset graph");
   atlaspack
     .run_request_async(AssetGraphRequest::default())
@@ -71,13 +94,36 @@ async fn run(args: Args) -> anyhow::Result<()> {
   let asset_graph = Arc::new(asset_graph);
 
   info!("Packaging bundles");
-  let output_dir = PathBuf::from("dist");
-  std::fs::create_dir_all(&output_dir)?;
 
   let request = PackageRequest::new(bundle_graph, asset_graph.clone());
   atlaspack.run_request_async(request).await?;
 
+  if args.server {
+    loop {
+      tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+  }
+
   Ok(())
+}
+
+impl DefaultDevServerDataProvider {
+  pub fn new() -> Self {
+    Self {}
+  }
+}
+
+struct DefaultDevServerDataProvider {}
+
+#[async_trait]
+impl DevServerDataProvider for DefaultDevServerDataProvider {
+  async fn get_html_bundle_file_paths(&self) -> anyhow::Result<Vec<String>> {
+    Ok(vec![])
+  }
+
+  async fn request_bundle(&self, _requested_path: String) -> anyhow::Result<()> {
+    Ok(())
+  }
 }
 
 async fn make_atlaspack(args: &Args) -> anyhow::Result<Atlaspack> {

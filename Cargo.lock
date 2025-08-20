@@ -260,6 +260,7 @@ dependencies = [
  "atlaspack_benchmark",
  "atlaspack_config",
  "atlaspack_core",
+ "atlaspack_dev_server",
  "atlaspack_filesystem",
  "atlaspack_monitoring",
  "atlaspack_package_manager",

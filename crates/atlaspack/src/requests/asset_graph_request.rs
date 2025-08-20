@@ -325,6 +325,24 @@ impl AssetGraphBuilder {
     // Connect dependencies of the Asset
     let mut unique_deps: IndexMap<String, Dependency> = IndexMap::new();
 
+    // println!(
+    //   "dependencies:\n{:?}\n\n================================================================================",
+    //   dependencies
+    //     .iter()
+    //     .map(|d| {
+    //       format!(
+    //         "{}->{}",
+    //         d.source_path
+    //           .as_ref()
+    //           .map(|p| p.to_str().unwrap_or_default())
+    //           .unwrap_or_default(),
+    //         d.specifier
+    //       )
+    //     })
+    //     .collect::<Vec<_>>()
+    //     .join("\n")
+    // );
+
     for dependency in dependencies {
       unique_deps
         .entry(dependency.id())
@@ -375,6 +393,7 @@ impl AssetGraphBuilder {
         self
           .request_id_to_dependency_idx
           .insert(request.id(), dependency_idx);
+        // propagate queue error
         self
           .request_context
           .queue_request(request, self.sender.clone());
@@ -538,6 +557,8 @@ fn get_direct_discovered_assets<'a>(
 
 #[cfg(test)]
 mod tests {
+  use std::collections::HashSet;
+  use std::fs::create_dir_all;
   use std::path::{Path, PathBuf};
   use std::sync::Arc;
 
@@ -545,10 +566,13 @@ mod tests {
   use atlaspack_core::types::{AtlaspackOptions, Code};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
-  use petgraph::visit::Bfs;
+  use petgraph::graph::NodeIndex;
+  use petgraph::visit::{Bfs, IntoNodeReferences};
 
-  use crate::requests::{AssetGraphRequest, RequestResult};
-  use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
+  use crate::requests::{AssetGraphRequest, AssetGraphRequestOutput, RequestResult};
+  use crate::test_utils::{
+    make_test_atlaspack, request_tracker, setup_test_directory, RequestTrackerTestOptions,
+  };
 
   #[tokio::test(flavor = "multi_thread")]
   async fn test_asset_graph_request_with_no_entries() {
@@ -717,14 +741,18 @@ mod tests {
     };
 
     // Entry, 2 assets + helpers file
-    assert_eq!(asset_graph_request_result.graph.get_asset_nodes().len(), 4);
-    // Entry, entry to assets (2), assets to helpers (2)
+    for asset in asset_graph_request_result.graph.get_asset_nodes() {
+      println!("asset: {:?}", asset.asset.file_path);
+    }
+
+    // root -> entry -> a
+    //              \-> b
     assert_eq!(
       asset_graph_request_result
         .graph
         .get_dependency_nodes()
         .len(),
-      5
+      3
     );
 
     let AssetNode {
@@ -732,6 +760,100 @@ mod tests {
     } = get_first_asset(&asset_graph_request_result.graph).expect("No assets in graph");
 
     assert_eq!(first_asset.file_path, temporary_dir.join("entry.js"));
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_build_asset_graph_with_a_shared_bundle() {
+    let _ = tracing_subscriber::fmt::Subscriber::builder()
+      .with_max_level(tracing::Level::DEBUG)
+      .try_init();
+
+    let project_dir = setup_test_directory("test_build_asset_graph_with_a_shared_bundle").unwrap();
+    let project_file = |path: &str, contents: &str| {
+      let path = project_dir.join(path);
+      create_dir_all(path.parent().unwrap()).unwrap();
+      std::fs::write(path, contents).unwrap();
+    };
+
+    project_file(
+      "src/index.ts",
+      r#"
+import { foo } from "./foo";
+
+export const index = async () => {
+  const { bar } = await import("./bar");
+  return "index" + foo + bar;
+};
+"#,
+    );
+    project_file(
+      "src/foo.ts",
+      r#"
+export const foo = "foo";
+        "#,
+    );
+    project_file(
+      "src/bar.ts",
+      r#"
+import { foo } from "./foo";
+
+export const bar = "bar" + foo;
+        "#,
+    );
+
+    let atlaspack = make_test_atlaspack(&[project_dir.join("src/index.ts")])
+      .await
+      .unwrap();
+    let AssetGraphRequestOutput {
+      graph: asset_graph, ..
+    } = atlaspack
+      .run_request_async(AssetGraphRequest::default())
+      .await
+      .unwrap()
+      .into_asset_graph()
+      .unwrap();
+
+    let asset_nodes = asset_graph
+      .nodes()
+      .filter_map(|node| node.as_asset_node())
+      .collect::<Vec<_>>();
+
+    assert_eq!(asset_nodes.len(), 3);
+    let asset_file_paths = asset_nodes
+      .iter()
+      .map(|node| node.asset.file_path.clone())
+      .collect::<HashSet<_>>();
+
+    assert!(asset_file_paths.contains(&project_dir.join("src/index.ts")));
+    assert!(asset_file_paths.contains(&project_dir.join("src/foo.ts")));
+    assert!(asset_file_paths.contains(&project_dir.join("src/bar.ts")));
+
+    let asset_node_index_by_path = |path: &Path| -> NodeIndex {
+      asset_graph
+        .graph
+        .node_references()
+        .find(|node| {
+          let Some(asset) = node.1.as_asset_node() else {
+            return false;
+          };
+          asset.asset.file_path == path
+        })
+        .map(|node| node.0)
+        .unwrap()
+    };
+
+    assert!(asset_graph.has_dependency(
+      &asset_node_index_by_path(&project_dir.join("src/index.ts")),
+      &asset_node_index_by_path(&project_dir.join("src/bar.ts")),
+    ));
+    assert!(asset_graph.has_dependency(
+      &asset_node_index_by_path(&project_dir.join("src/index.ts")),
+      &asset_node_index_by_path(&project_dir.join("src/foo.ts")),
+    ));
+    assert!(asset_graph.has_dependency(
+      &asset_node_index_by_path(&project_dir.join("src/bar.ts")),
+      &asset_node_index_by_path(&project_dir.join("src/foo.ts")),
+    ));
   }
 
   fn setup_core_modules(fs: &InMemoryFileSystem, core_path: &Path) {

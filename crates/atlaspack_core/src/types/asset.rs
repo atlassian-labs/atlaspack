@@ -282,8 +282,8 @@ impl Asset {
     format!("{:016x}", self.id)
   }
 
-  pub fn asset_id_from_hex(hex: String) -> AssetId {
-    u64::from_str_radix(&hex, 16).unwrap()
+  pub fn asset_id_from_hex(hex: impl AsRef<str>) -> AssetId {
+    u64::from_str_radix(hex.as_ref(), 16).unwrap()
   }
 }
 
@@ -520,7 +520,7 @@ mod tests {
     .unwrap();
 
     // This nº should not change across runs / compilation
-    assert_eq!(asset_1.id, "91d0d64458c223d1");
+    assert_eq!(asset_1.id, 0x91d0d64458c223d1);
     assert_eq!(asset_1.id, asset_2.id);
   }
 
@@ -543,7 +543,7 @@ mod tests {
 
     assert_eq!(
       asset.id,
-      create_asset_id(CreateAssetIdParams {
+      create_asset_id_hash(CreateAssetIdParams {
         code: None,
         environment_id: &env.id(),
         file_path: "test.js",
@@ -574,7 +574,7 @@ mod tests {
 
     assert_eq!(
       inline_asset.id,
-      create_asset_id(CreateAssetIdParams {
+      create_asset_id_hash(CreateAssetIdParams {
         code: None,
         environment_id: &env.id(),
         file_path: "test.js",
@@ -605,7 +605,7 @@ mod tests {
 
     assert_eq!(
       discovered_asset.id,
-      create_asset_id(CreateAssetIdParams {
+      create_asset_id_hash(CreateAssetIdParams {
         code: None,
         environment_id: &source_asset.env.id(),
         file_path: "test.js",

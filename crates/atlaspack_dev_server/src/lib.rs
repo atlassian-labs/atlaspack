@@ -16,15 +16,14 @@ use tower_http::{
   services::{ServeDir, ServeFile},
   trace::TraceLayer,
 };
-use tracing::info;
+use tracing::{debug, error, info};
 
 #[async_trait]
-pub trait DevServerDataProvider: std::fmt::Debug {
+pub trait DevServerDataProvider {
   async fn get_html_bundle_file_paths(&self) -> anyhow::Result<Vec<String>>;
   async fn request_bundle(&self, requested_path: String) -> anyhow::Result<()>;
 }
 
-#[derive(Debug)]
 pub struct DevServerOptions {
   pub host: String,
   pub port: u16,
@@ -55,7 +54,13 @@ impl DevServer {
       })
       .unwrap_or_else(|| "/".to_string());
 
-    info!("Dev server created with options {:?}", options);
+    info!(
+      host = %options.host,
+      port = %options.port,
+      public_url = ?options.public_url,
+      dist_dir = ?options.dist_dir,
+      "Dev server created with options",
+    );
 
     Self {
       state: Arc::new(DevServerState { root_path, options }),
@@ -63,7 +68,7 @@ impl DevServer {
     }
   }
 
-  pub async fn start(&self) -> Result<SocketAddr, Box<dyn std::error::Error>> {
+  pub async fn start(&self) -> anyhow::Result<SocketAddr> {
     let _ = tracing_subscriber::fmt::try_init();
 
     let app = self.create_app();
@@ -82,7 +87,7 @@ impl DevServer {
     Ok(addr)
   }
 
-  pub async fn stop(&self) -> Result<(), Box<dyn std::error::Error>> {
+  pub async fn stop(&self) -> anyhow::Result<()> {
     let task = self.task.lock().await.take();
     if let Some(task) = task {
       task.abort();
@@ -131,7 +136,7 @@ async fn index_handler(
 async fn get_handler(State(state): State<Arc<DevServerState>>, request: Request<Body>) -> Response {
   let mut serve_dir = ServeDir::new(state.options.dist_dir.clone());
   let path = request.uri().path();
-  info!("request: {:?}", path);
+  debug!("request: {:?}", path);
 
   if path.starts_with(&state.root_path) {
     let request_result = state
@@ -139,6 +144,10 @@ async fn get_handler(State(state): State<Arc<DevServerState>>, request: Request<
       .data_provider
       .request_bundle(path[1..].to_string())
       .await;
+
+    if let Err(e) = request_result {
+      error!("Error requesting bundle: {:?}", e);
+    }
 
     let result = serve_dir.try_call(request).await.map(|r| r.into_response());
 

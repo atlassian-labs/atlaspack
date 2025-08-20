@@ -7,6 +7,8 @@ use petgraph::visit::EdgeRef;
 use petgraph::visit::IntoEdgeReferences;
 use petgraph::Direction;
 
+use crate::as_variant_impl;
+use crate::into_variant_impl;
 use crate::types::Asset;
 use crate::types::Dependency;
 
@@ -37,6 +39,14 @@ pub enum AssetGraphNode {
   Asset(AssetNode),
   Dependency(DependencyNode),
 }
+
+as_variant_impl!(AssetGraphNode, as_asset_node, Asset, AssetNode);
+as_variant_impl!(
+  AssetGraphNode,
+  as_dependency_node,
+  Dependency,
+  DependencyNode
+);
 
 #[derive(Clone, Debug)]
 pub struct AssetGraph {
@@ -134,7 +144,8 @@ impl AssetGraph {
     results
   }
 
-  pub fn add_dependency(&mut self, dependency: Arc<Dependency>) -> NodeIndex {
+  pub fn add_dependency(&mut self, dependency: impl Into<Arc<Dependency>>) -> NodeIndex {
+    let dependency = dependency.into();
     self
       .graph
       .add_node(AssetGraphNode::Dependency(DependencyNode {
@@ -171,7 +182,8 @@ impl AssetGraph {
     Some(node)
   }
 
-  pub fn add_entry_dependency(&mut self, dependency: Arc<Dependency>) -> NodeIndex {
+  pub fn add_entry_dependency(&mut self, dependency: impl Into<Arc<Dependency>>) -> NodeIndex {
+    let dependency = dependency.into();
     let is_library = dependency.env.is_library;
     let dependency_idx = self.add_dependency(dependency);
 
@@ -184,7 +196,30 @@ impl AssetGraph {
     dependency_idx
   }
 
-  pub fn has_edge(&mut self, from_idx: &NodeIndex, to_idx: &NodeIndex) -> bool {
+  pub fn has_dependency(&self, from_idx: &NodeIndex, to_idx: &NodeIndex) -> bool {
+    let run = || -> Option<bool> {
+      // This is checking we got assets on both sides
+      let _from_node = self.get_node(from_idx)?.as_asset_node()?;
+      let _to_node = self.get_node(to_idx)?.as_asset_node()?;
+
+      for outgoing_edge in self.graph.edges_directed(*from_idx, Direction::Outgoing) {
+        let dependency_idx = outgoing_edge.target();
+        let Some(_) = self.graph.node_weight(dependency_idx)?.as_dependency_node() else {
+          continue;
+        };
+
+        if self.graph.contains_edge(dependency_idx, *to_idx) {
+          return Some(true);
+        }
+      }
+
+      Some(false)
+    };
+
+    run().unwrap_or(false)
+  }
+
+  pub fn has_edge(&self, from_idx: &NodeIndex, to_idx: &NodeIndex) -> bool {
     self.graph.contains_edge(*from_idx, *to_idx)
   }
 
@@ -285,7 +320,7 @@ mod tests {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(Arc::new(dep));
+    let entry_dep_node = graph.add_entry_dependency(dep);
 
     let index_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "index.js");
     let dep_a_node = add_dependency(&mut graph, index_asset_node, vec![("a", "a", false)]);
@@ -354,7 +389,7 @@ mod tests {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(Arc::new(dep));
+    let entry_dep_node = graph.add_entry_dependency(dep);
 
     // entry.js imports "a" from library.js
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
@@ -394,7 +429,7 @@ mod tests {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(Arc::new(dep));
+    let entry_dep_node = graph.add_entry_dependency(dep);
 
     // entry.js imports "a" from library
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
@@ -438,7 +473,7 @@ mod tests {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(Arc::new(dep));
+    let entry_dep_node = graph.add_entry_dependency(dep);
 
     // entry.js imports "a" from library
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
@@ -471,7 +506,7 @@ mod tests {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(Arc::new(dep));
+    let entry_dep_node = graph.add_entry_dependency(dep);
 
     // entry.js imports "a" from library
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
@@ -498,5 +533,22 @@ mod tests {
     assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
     // "*" should be marked as requested on the stuff dep
     assert_requested_symbols(&graph, stuff_dep, vec!["*"]);
+  }
+
+  #[test]
+  fn test_has_dependency_edge() {
+    let mut graph = AssetGraph::new();
+    let target = Target::default();
+    let dep = Dependency::entry(String::from("index.js"), target);
+    let entry_dep_node = graph.add_entry_dependency(dep);
+
+    let index_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "index.js");
+    let dep_a_node = add_dependency(&mut graph, index_asset_node, vec![("a", "a", false)]);
+    let a_asset_node = add_asset(&mut graph, dep_a_node, vec![], "a.js");
+
+    assert!(!graph.has_dependency(&entry_dep_node, &dep_a_node));
+    assert!(graph.has_dependency(&index_asset_node, &a_asset_node));
+    assert!(!graph.has_dependency(&entry_dep_node, &a_asset_node));
+    assert!(!graph.has_dependency(&dep_a_node, &index_asset_node));
   }
 }

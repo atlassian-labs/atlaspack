@@ -19,6 +19,8 @@ use crate::{
 };
 use crate::{Atlaspack, AtlaspackInitOptions};
 
+pub mod graph;
+
 pub fn make_test_plugin_context() -> PluginContext {
   let fs = Arc::new(InMemoryFileSystem::default());
 
@@ -192,6 +194,7 @@ pub fn create_db() -> anyhow::Result<Arc<lmdb_js_lite::DatabaseHandle>> {
     .join("atlaspack")
     .join("asset-graph-tests");
   let _ = std::fs::remove_dir_all(&path);
+  let _ = std::fs::create_dir_all(&path);
 
   let lmdb = lmdb_js_lite::get_database(lmdb_js_lite::LMDBOptions {
     path: path.to_string_lossy().to_string(),

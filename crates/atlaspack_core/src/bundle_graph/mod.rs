@@ -10,6 +10,7 @@ pub struct BundleGraphBundle {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum BundleGraphNode {
   Root,
   Entry,
@@ -18,7 +19,15 @@ pub enum BundleGraphNode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BundleGraphEdge {
+  /// Root to bundle, means the bundle is an entry-point
+  EntryOf,
+  /// Root to bundle, means the bundle is a shared bundle
+  SharedBundleOf,
+  /// Root to bundle, means the bundle is an async bundle
+  AsyncBundleOf,
+  /// Bundle to bundle, means the bundle will be async loaded by the other
   AsyncLoads,
+  /// Bundle to bundle, means the bundle will be sync loaded by the other
   SyncLoads,
 }
 

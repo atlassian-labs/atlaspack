@@ -104,9 +104,8 @@ export class AtlaspackWorker {
     this.#fs = new NodeFS();
   }
 
-  // @ts-expect-error TS2305
-  loadPlugin: JsCallable<[LoadPluginOptions], Promise<undefined>> = jsCallable(
-    async ({kind, specifier, resolveFrom}) => {
+  loadPlugin = jsCallable(
+    async ({kind, specifier, resolveFrom}: LoadPluginOptions) => {
       let customRequire = module.createRequire(resolveFrom);
       let resolvedPath = customRequire.resolve(specifier);
       let resolvedModule = await import(resolvedPath);
@@ -137,18 +136,14 @@ export class AtlaspackWorker {
     },
   );
 
-  // @ts-expect-error TS2305
-  runResolverResolve: JsCallable<
-    [RunResolverResolveOptions],
-    Promise<RunResolverResolveResult>
-  > = jsCallable(
+  runResolverResolve = jsCallable(
     async ({
       key,
       dependency: napiDependency,
       specifier,
       pipeline,
       pluginOptions,
-    }) => {
+    }: RunResolverResolveOptions): Promise<RunResolverResolveResult> => {
       const state = this.#resolvers.get(key);
       if (!state) {
         throw new Error(`Resolver not found: ${key}`);
@@ -233,12 +228,17 @@ export class AtlaspackWorker {
     },
   );
 
-  // @ts-expect-error TS2305
-  runTransformerTransform: JsCallable<
-    [RunTransformerTransformOptions, Buffer, string | null | undefined],
-    Promise<RunTransformerTransformResult>
-  > = jsCallable(
-    async ({key, env: napiEnv, options, asset: innerAsset}, contents, map) => {
+  runTransformerTransform = jsCallable(
+    async (
+      {
+        key,
+        env: napiEnv,
+        options,
+        asset: innerAsset,
+      }: RunTransformerTransformOptions,
+      contents: Buffer,
+      map: string | null | undefined,
+    ) => {
       const state = this.#transformers.get(key);
       if (!state) {
         throw new Error(`Transformer not found: ${key}`);
@@ -261,7 +261,6 @@ export class AtlaspackWorker {
       const env = new Environment(napiEnv);
       const mutableAsset = new MutableAsset(
         innerAsset,
-        // @ts-expect-error TS2345
         contents,
         env,
         this.#fs,

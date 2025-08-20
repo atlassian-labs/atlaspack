@@ -13,6 +13,7 @@ nodejs = ["atlaspack_plugin_rpc/nodejs"]
 [dependencies]
 atlaspack_config = { path = "../atlaspack_config" }
 atlaspack_core = { path = "../atlaspack_core" }
+atlaspack_dev_server = { path = "../atlaspack_dev_server" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 atlaspack_monitoring = { path = "../atlaspack_monitoring" }
 atlaspack_package_manager = { path = "../atlaspack_package_manager" }
