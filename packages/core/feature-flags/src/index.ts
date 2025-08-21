@@ -218,8 +218,7 @@ export function runWithConsistencyCheck<Result, CustomDiagnostic>(
   ) => void,
 ): Result {
   const value = featureFlagValues[flag];
-  // @ts-expect-error - TypeScript doesn't understand the union type comparison
-  if (!value || value === false || value === 'OLD') {
+  if (value === false || value === '' || value === 'OLD') {
     return oldFn();
   }
   if (value === true || value === 'NEW') {

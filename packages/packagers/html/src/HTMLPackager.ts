@@ -1,4 +1,11 @@
-import type {Bundle, BundleGraph, NamedBundle} from '@atlaspack/types';
+import type {
+  Asset,
+  Async,
+  Blob,
+  Bundle,
+  BundleGraph,
+  NamedBundle,
+} from '@atlaspack/types';
 
 import assert from 'assert';
 import {Readable} from 'stream';
@@ -25,9 +32,15 @@ const metadataContent = new Set([
   'title',
 ]);
 
+type HTMLPackagerConfig = {
+  evaluateRootConditionalBundles: boolean;
+};
+
 export default new Packager({
   async loadConfig({config, options}) {
-    let posthtmlConfig = await config.getConfig(
+    let posthtmlConfig = await config.getConfig<{
+      render: any;
+    }>(
       [
         '.posthtmlrc',
         '.posthtmlrc.js',
@@ -42,21 +55,22 @@ export default new Packager({
       },
     );
 
-    let conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
-      packageKey: '@atlaspack/packager-html',
-    });
+    let conf = await config.getConfigFrom<HTMLPackagerConfig>(
+      options.projectRoot + '/index',
+      [],
+      {
+        packageKey: '@atlaspack/packager-html',
+      },
+    );
 
     return {
-      // @ts-expect-error TS2339
       render: posthtmlConfig?.contents?.render,
       evaluateRootConditionalBundles: Boolean(
-        // @ts-expect-error TS2339
         conf?.contents?.evaluateRootConditionalBundles,
       ),
     };
   },
   async package({bundle, bundleGraph, getInlineBundleContents, config}) {
-    // @ts-expect-error TS2552
     let assets: Array<Asset> = [];
     bundle.traverseAssets((asset) => {
       assets.push(asset);
@@ -85,13 +99,12 @@ export default new Packager({
           ),
           new Set(referencedBundles),
         )
-      : new Set();
+      : new Set<NamedBundle>();
     let renderConfig = config?.render;
 
     let {html} = await posthtml([
       (tree: any) =>
         insertBundleReferences(
-          // @ts-expect-error TS2345
           [...conditionalBundles, ...referencedBundles],
           tree,
           conditionalBundles,
@@ -131,7 +144,6 @@ async function getAssetContent(
   getInlineBundleContents: (
     arg1: Bundle,
     arg2: BundleGraph<NamedBundle>,
-    // @ts-expect-error TS2304
   ) => Async<{
     contents: Blob;
   }>,
@@ -163,15 +175,13 @@ async function replaceInlineAssetContent(
   getInlineBundleContents: (
     arg1: Bundle,
     arg2: BundleGraph<NamedBundle>,
-    // @ts-expect-error TS2304
   ) => Async<{
     contents: Blob;
   }>,
   tree: any,
 ) {
   const inlineNodes: Array<any> = [];
-  // @ts-expect-error TS7006
-  tree.walk((node) => {
+  tree.walk((node: any) => {
     if (node.attrs && node.attrs['data-parcel-key']) {
       inlineNodes.push(node);
     }
@@ -258,8 +268,7 @@ function insertBundleReferences(
   addBundlesToTree(bundles, tree);
 }
 
-// @ts-expect-error TS7006
-function addBundlesToTree(bundles, tree: any) {
+function addBundlesToTree(bundles: any[], tree: any) {
   const main = find(tree, 'head') || find(tree, 'html');
   // @ts-expect-error TS2339
   const content = main ? main.content || (main.content = []) : tree;
