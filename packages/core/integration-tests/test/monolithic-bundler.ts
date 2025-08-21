@@ -198,4 +198,32 @@ describe('monolithic bundler', function () {
     assert(result.output.startsWith('File text: !function('));
     assert(result.output.includes('Hello world'));
   });
+
+  it.v2('should produce a bundle with a stable name', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      stable-name
+        a.js:
+          export const a = 'a';
+        yarn.lock: {}
+    `;
+
+    let bundleResult = await bundle(path.join(__dirname, 'stable-name/a.js'), {
+      defaultTargetOptions: {shouldScopeHoist: false},
+      inputFS: overlayFS,
+      mode: 'production',
+      targets: {
+        'stable-name': {
+          distDir: 'dist-stable-name',
+          __unstable_singleFileOutput: true,
+        },
+      },
+    });
+
+    const bundles = bundleResult.getBundles();
+    assert(bundles.length === 1);
+    assert(
+      bundles[0].name === 'a.js',
+      'Expected bundle name to be a.js, but it was ' + bundles[0].name,
+    );
+  });
 });

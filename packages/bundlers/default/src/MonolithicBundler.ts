@@ -3,6 +3,8 @@ import type {
   Dependency,
   MutableBundleGraph,
 } from '@atlaspack/types-internal';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+
 import nullthrows from 'nullthrows';
 
 export function addJSMonolithBundle(
@@ -16,7 +18,11 @@ export function addJSMonolithBundle(
   );
 
   // Create a single bundle to hold all JS assets
-  let bundle = bundleGraph.createBundle({entryAsset, target});
+  let bundle = bundleGraph.createBundle({
+    entryAsset,
+    target,
+    needsStableName: getFeatureFlag('singleFileOutputStableName'),
+  });
 
   bundleGraph.traverse(
     (node, _, actions) => {

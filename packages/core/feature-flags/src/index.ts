@@ -162,6 +162,11 @@ export const DEFAULT_FEATURE_FLAGS = {
    * async bundles.
    */
   removeRedundantSharedBundles: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * When enabled, single file output bundles have a stable name
+   */
+  singleFileOutputStableName: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
