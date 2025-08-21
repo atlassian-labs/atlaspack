@@ -186,7 +186,7 @@ impl PackageJson {
     Ok(parsed)
   }
 
-  pub fn entries(&self, fields: Fields) -> EntryIter {
+  pub fn entries<'a>(&'a self, fields: Fields) -> EntryIter<'a> {
     EntryIter {
       package: self,
       fields,

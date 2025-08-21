@@ -5,7 +5,6 @@ pub use error::*;
 pub use watch::*;
 
 pub mod atlaspack;
-mod command_line;
 pub mod request_tracker;
 
 mod error;

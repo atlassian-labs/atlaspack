@@ -22,7 +22,6 @@ pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Res
     .map(|item| {
       serde_json::to_vec(&match item {
         AssetGraphNode::Root => SerializedAssetGraphNode::Root,
-        AssetGraphNode::Entry => SerializedAssetGraphNode::Entry,
         AssetGraphNode::Asset(asset_node) => SerializedAssetGraphNode::Asset {
           value: asset_node.asset.clone(),
         },

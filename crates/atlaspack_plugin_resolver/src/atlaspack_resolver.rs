@@ -372,7 +372,7 @@ impl ResolverPlugin for AtlaspackResolver {
     struct Response {
       result: ResolveResult,
       side_effects: bool,
-    };
+    }
     impl Debug for Response {
       fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Response")

@@ -154,6 +154,7 @@ impl Atlaspack {
     &self,
     request: impl request_tracker::Request,
   ) -> anyhow::Result<RequestResult> {
+    #[allow(deprecated)]
     self.block_on(self.run_request_async(request))
   }
 
@@ -175,6 +176,7 @@ impl Atlaspack {
   }
 
   pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
+    #[allow(deprecated)]
     let result = self.block_on(self.build_asset_graph_async());
 
     if let Err(e) = &result {
@@ -184,7 +186,9 @@ impl Atlaspack {
     result
   }
 
+  #[deprecated(note = "Methods need to return futures")]
   pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {
+    #[allow(deprecated)]
     self.block_on(async move {
       Ok(
         self
@@ -382,8 +386,8 @@ export const bar = "bar";
       .await
       .unwrap();
 
-    let asset_graph = atlaspack.build_asset_graph_async().await?;
-    let bundle_graph = atlaspack
+    let _asset_graph = atlaspack.build_asset_graph_async().await?;
+    let _bundle_graph = atlaspack
       .run_request_async(bundle_graph_request::BundleGraphRequest {})
       .await?;
     let BundleGraphRequestOutput {
@@ -408,9 +412,13 @@ export const bar = "bar";
     let mut output = Vec::new();
     let asset_graph = Arc::new(asset_graph);
     package_request::package_bundle(
-      package_request::PackageBundleParams { bundle: &bundle },
+      package_request::PackageBundleParams {
+        bundle: &bundle,
+        bundle_node_index: bundle_graph.graph().node_indices().next().unwrap(),
+      },
       &InMemoryAssetDataProvider::new(asset_graph.clone()),
       &mut output,
+      &bundle_graph,
       None,
     )?;
 
@@ -632,10 +640,7 @@ export const bar = "bar";
       .unwrap();
 
     info!("Building asset graph");
-    let asset_graph = atlaspack.build_asset_graph_async().await?;
-    let bundle_graph = atlaspack
-      .run_request_async(bundle_graph_request::BundleGraphRequest {})
-      .await?;
+    let _asset_graph = atlaspack.build_asset_graph_async().await?;
     let BundleGraphRequestOutput {
       bundle_graph,
       asset_graph,
@@ -734,9 +739,13 @@ export const bar = "bar";
     let mut output = Vec::new();
 
     package_request::package_bundle(
-      package_request::PackageBundleParams { bundle: &bundle },
+      package_request::PackageBundleParams {
+        bundle: &bundle,
+        bundle_node_index: bundle_graph.graph().node_indices().next().unwrap(),
+      },
       &InMemoryAssetDataProvider::new(Arc::new(asset_graph)),
       &mut output,
+      &bundle_graph,
       None,
     )
     .unwrap();

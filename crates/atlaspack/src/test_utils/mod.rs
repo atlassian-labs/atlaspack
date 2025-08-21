@@ -137,22 +137,29 @@ pub async fn make_test_atlaspack_with(
 }
 
 pub async fn make_test_atlaspack(entries: &[impl AsRef<Path>]) -> anyhow::Result<Atlaspack> {
-  let atlaspack = make_test_atlaspack_with(entries, |options| {}).await?;
+  let atlaspack = make_test_atlaspack_with(entries, |_| {}).await?;
 
   Ok(atlaspack)
 }
 
 pub fn setup_test_directory(name: &str) -> anyhow::Result<PathBuf> {
-  let temp_dir = std::env::temp_dir().join("atlaspack").join(name);
+  let temp_dir = std::env::temp_dir()
+    .join("atlaspack")
+    .join(format!("{}", std::process::id()))
+    .join(name);
   let _ = std::fs::remove_dir_all(&temp_dir);
+
   std::fs::create_dir_all(&temp_dir)?;
   let temp_dir = std::fs::canonicalize(&temp_dir)?;
+
   std::fs::write(temp_dir.join("yarn.lock"), r#"{}"#)?;
   std::fs::write(
     temp_dir.join(".parcelrc"),
     r#"{"extends": "@atlaspack/config-default"}"#,
   )?;
+
   symlink_core(&temp_dir)?;
+
   Ok(temp_dir)
 }
 
@@ -192,7 +199,11 @@ pub fn get_core_path() -> PathBuf {
 pub fn create_db() -> anyhow::Result<Arc<lmdb_js_lite::DatabaseHandle>> {
   let path = std::env::temp_dir()
     .join("atlaspack")
-    .join("asset-graph-tests");
+    .join("test-caches")
+    .join(format!("{}", std::process::id()))
+    .join(format!("{:?}", std::thread::current().id()))
+    .join(format!("{}", rand::random::<u64>()));
+
   let _ = std::fs::remove_dir_all(&path);
   let _ = std::fs::create_dir_all(&path);
 

@@ -48,11 +48,11 @@ pub fn expect_node<N, E>(
   find_node(graph, predicate).unwrap()
 }
 
-pub fn expect_edge<N: std::fmt::Debug, E>(
-  graph: &StableDiGraph<N, E>,
+pub fn expect_edge<'a, N: std::fmt::Debug, E>(
+  graph: &'a StableDiGraph<N, E>,
   source: NodeIndex,
   target: NodeIndex,
-) -> petgraph::stable_graph::EdgeReference<E> {
+) -> petgraph::stable_graph::EdgeReference<'a, E> {
   let source_weight = graph.node_weight(source).unwrap();
   let target_weight = graph.node_weight(target).unwrap();
 
@@ -60,7 +60,7 @@ pub fn expect_edge<N: std::fmt::Debug, E>(
     .edges_connecting(source, target)
     .next()
     .expect(&format!(
-      "Expected edge between source and target: {source_weight:?} -> {target_weight:?}"
+      "Expected edge between source and target: {source_weight:#?} \n  -----> {target_weight:#?}"
     ))
 }
 

@@ -1,18 +1,18 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
 use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
+use tracing::info_span;
+use tracing::span::EnteredSpan;
+use tracing_indicatif::span_ext::IndicatifSpanExt;
 
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
-use atlaspack_core::asset_graph::{
-  propagate_requested_symbols, AssetGraph, DependencyNode, DependencyState,
-};
+use atlaspack_core::asset_graph::{AssetGraph, DependencyNode, DependencyState};
 use atlaspack_core::types::{Asset, AssetId, AssetWithDependencies, Dependency};
 
 use super::asset_request::{AssetRequest, AssetRequestOutput};
@@ -57,14 +57,17 @@ struct AssetGraphBuilder {
   asset_request_to_asset_idx: HashMap<u64, NodeIndex>,
   waiting_asset_requests: HashMap<u64, HashSet<NodeIndex>>,
   entry_dependencies: Vec<(String, NodeIndex)>,
-  progress_bar: crate::command_line::ProgressBar,
+  build_asset_graph_span: EnteredSpan,
 }
 
 impl AssetGraphBuilder {
   fn new(request_context: RunRequestContext) -> Self {
     let (sender, receiver) = channel();
 
-    let progress_bar = crate::command_line::ProgressBar::new("Building asset graph...");
+    let build_asset_graph_span = info_span!("Building asset graph", indicatif.pb_show = true);
+    build_asset_graph_span.pb_set_length(0);
+    build_asset_graph_span.pb_set_message("Reading and transforming files...");
+    let build_asset_graph_span = build_asset_graph_span.entered();
 
     AssetGraphBuilder {
       request_id_to_dependency_idx: HashMap::new(),
@@ -77,7 +80,7 @@ impl AssetGraphBuilder {
       asset_request_to_asset_idx: HashMap::new(),
       waiting_asset_requests: HashMap::new(),
       entry_dependencies: Vec::new(),
-      progress_bar,
+      build_asset_graph_span,
     }
   }
 
@@ -163,8 +166,9 @@ impl AssetGraphBuilder {
 
     let DependencyNode {
       dependency,
-      requested_symbols,
       state,
+      ..
+      // requested_symbols,
     } = self.graph.get_dependency_node_mut(&dependency_idx).unwrap();
 
     let asset_request = match result {
@@ -174,7 +178,8 @@ impl AssetGraphBuilder {
         pipeline,
         side_effects,
         query,
-        can_defer,
+        // can_defer
+        ..
       } => {
         // if !side_effects
         //   && can_defer
@@ -210,7 +215,7 @@ impl AssetGraphBuilder {
         .request_context
         .queue_request(asset_request, self.sender.clone());
 
-      self.progress_bar.inc_length();
+      self.build_asset_graph_span.pb_inc_length(1);
     } else if let Some(asset_node_index) = self.asset_request_to_asset_idx.get(&id) {
       if !self.graph.has_edge(&dependency_idx, asset_node_index) {
         // We have already completed this AssetRequest so we can connect the
@@ -250,7 +255,7 @@ impl AssetGraphBuilder {
   }
 
   fn handle_asset_result(&mut self, result: AssetRequestOutput, request_id: u64) {
-    self.progress_bar.inc();
+    self.build_asset_graph_span.pb_inc(1);
 
     let AssetRequestOutput {
       asset,
@@ -393,10 +398,12 @@ impl AssetGraphBuilder {
         self
           .request_id_to_dependency_idx
           .insert(request.id(), dependency_idx);
-        // propagate queue error
-        self
+
+        // TODO: propagate queue error
+        let _ = self
           .request_context
           .queue_request(request, self.sender.clone());
+
         self.work_count += 1;
       }
 

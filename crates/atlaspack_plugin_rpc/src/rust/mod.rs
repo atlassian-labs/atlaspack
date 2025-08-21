@@ -26,6 +26,8 @@ use napi::bindgen_prelude::FromNapiValue;
 use napi::JsBuffer;
 use napi::JsString;
 use napi::JsUnknown;
+use tracing::debug_span;
+use tracing_indicatif::span_ext::IndicatifSpanExt;
 
 use crate::javascript_plugin_api::JavaScriptPluginAPI;
 use crate::javascript_plugin_api::LoadPluginOptions;
@@ -232,20 +234,28 @@ impl JavaScriptPluginAPI for EdonWorkerPool {
   }
 
   async fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
-    let start = std::time::Instant::now();
+    let load_plugin_span = debug_span!("Loading plugin onto Node.js workers", plugin_specifier = ?opts.specifier, indicatif.pb_show = true);
+    load_plugin_span.pb_set_length(self.plugins.len() as u64);
+    load_plugin_span.pb_set_message(&format!(
+      "Loading {} onto Node.js workers...",
+      opts.specifier
+    ));
+    load_plugin_span.enter();
+
     let mut join_set = tokio::task::JoinSet::new();
+
     for plugin in self.plugins.iter() {
       let plugin = plugin.clone();
       let opts = opts.clone();
       join_set.spawn(async move { plugin.load_plugin(opts).await });
     }
+
     while let Some(result) = join_set.join_next().await {
       result?;
+
+      load_plugin_span.pb_inc(1);
     }
 
-    let duration = start.elapsed();
-    let plugin_specifier = &opts.specifier;
-    tracing::info!(?duration, ?plugin_specifier, "Loaded plugin onto workers");
     Ok(())
   }
 }
@@ -391,7 +401,9 @@ worker
       };
 
       let result = run();
-      tx.send(result.map_err(|err| anyhow::anyhow!("[edon] {}", err)));
+      if let Err(_) = tx.send(result.map_err(|err| anyhow::anyhow!("[edon] {}", err))) {
+        tracing::error!("[edon] Failed to send result to channel");
+      }
 
       Ok(())
     });

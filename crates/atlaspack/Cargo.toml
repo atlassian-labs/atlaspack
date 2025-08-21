@@ -31,6 +31,7 @@ atlaspack_plugin_rpc = { path = "../atlaspack_plugin_rpc" }
 atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
+tracing-indicatif = { workspace = true }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }
@@ -39,7 +40,9 @@ dyn-hash = { workspace = true }
 indexmap = { workspace = true }
 num_cpus = { workspace = true }
 pathdiff = { workspace = true }
-petgraph = { workspace = true }
+petgraph = { workspace = true, features = ["dot_parser"] }
+dot-parser = "0.6"
+dot-parser-macros = "0.6"
 rand = { workspace = true }
 rayon = { workspace = true }
 regex = { workspace = true }
