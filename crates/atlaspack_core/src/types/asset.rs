@@ -21,7 +21,46 @@ use super::symbol::Symbol;
 use super::Dependency;
 use super::{BundleBehavior, SourceMap};
 
-pub type AssetId = u64;
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy, Default)]
+pub struct AssetId(u64);
+
+impl From<AssetId> for serde_json::Value {
+  fn from(val: AssetId) -> Self {
+    val.to_string().into()
+  }
+}
+
+// This should probably not be available unless on tests
+impl From<u64> for AssetId {
+  fn from(value: u64) -> Self {
+    AssetId(value)
+  }
+}
+
+impl Display for AssetId {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{:016x}", self.0)
+  }
+}
+
+impl Serialize for AssetId {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: serde::Serializer,
+  {
+    serializer.serialize_str(&self.to_string())
+  }
+}
+
+impl<'de> Deserialize<'de> for AssetId {
+  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+  where
+    D: serde::Deserializer<'de>,
+  {
+    let s = String::deserialize(deserializer)?;
+    Ok(AssetId(u64::from_str_radix(&s, 16).unwrap()))
+  }
+}
 
 /// The source code for an asset.
 ///
@@ -112,7 +151,7 @@ pub struct CreateAssetIdParams<'a> {
   pub unique_key: Option<&'a str>,
 }
 
-pub fn create_asset_id_hash(params: CreateAssetIdParams) -> u64 {
+pub fn create_asset_id_hash(params: CreateAssetIdParams) -> AssetId {
   let CreateAssetIdParams {
     code,
     environment_id,
@@ -133,14 +172,13 @@ pub fn create_asset_id_hash(params: CreateAssetIdParams) -> u64 {
   file_type.hash(&mut hasher);
   unique_key.hash(&mut hasher);
 
-  hasher.finish()
+  AssetId(hasher.finish())
 }
 
 pub fn create_asset_id(params: CreateAssetIdParams) -> String {
   let hash = create_asset_id_hash(params);
-
   // Ids must be 16 characters for scope hoisting to replace imports correctly in REPLACEMENT_RE
-  format!("{:016x}", hash)
+  hash.to_string()
 }
 
 pub fn serialize_asset_id<S>(id: &u64, serializer: S) -> Result<S::Ok, S::Error>
@@ -159,7 +197,6 @@ where
 pub struct Asset {
   /// The main identify hash for the asset. It is consistent for the entire
   /// build and between builds.
-  #[serde(serialize_with = "serialize_asset_id")]
   pub id: AssetId,
 
   /// Controls which bundle the asset is placed into
@@ -279,11 +316,11 @@ impl Asset {
   }
 
   pub fn id_string(&self) -> String {
-    format!("{:016x}", self.id)
+    self.id.to_string()
   }
 
   pub fn asset_id_from_hex(hex: impl AsRef<str>) -> AssetId {
-    u64::from_str_radix(hex.as_ref(), 16).unwrap()
+    AssetId(u64::from_str_radix(hex.as_ref(), 16).unwrap())
   }
 }
 
@@ -520,7 +557,7 @@ mod tests {
     .unwrap();
 
     // This nº should not change across runs / compilation
-    assert_eq!(asset_1.id, 0x91d0d64458c223d1);
+    assert_eq!(asset_1.id, AssetId(0x91d0d64458c223d1));
     assert_eq!(asset_1.id, asset_2.id);
   }
 

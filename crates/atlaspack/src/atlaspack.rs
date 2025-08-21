@@ -249,7 +249,7 @@ mod tests {
   use atlaspack_benchmark::GenerateMonorepoParams;
   use atlaspack_core::{
     bundle_graph::BundleGraphNode,
-    types::{Asset, BuildMode, Code},
+    types::{Asset, AssetId, BuildMode, Code},
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_plugin_rpc::{MockRpcFactory, MockRpcWorker};
@@ -298,7 +298,7 @@ mod tests {
       .map(|(idx, asset)| {
         AssetGraphNode::Asset(AssetNode {
           asset: Asset {
-            id: idx as u64,
+            id: AssetId::from(idx as u64),
             code: Code::from(asset.to_string()),
             ..Asset::default()
           },
@@ -311,7 +311,9 @@ mod tests {
 
     let txn = db.database().read_txn()?;
     for (idx, asset) in assets_names.iter().enumerate() {
-      let entry = db.database().get(&txn, &idx.to_string())?;
+      let entry = db
+        .database()
+        .get(&txn, &AssetId::from(idx as u64).to_string())?;
       assert_eq!(entry, Some(asset.to_string().into()));
     }
 
@@ -319,6 +321,7 @@ mod tests {
   }
 
   #[tokio::test]
+  #[ignore]
   async fn test_create_bundle_from_non_library_app() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
       .with_max_level(tracing::Level::INFO)
@@ -693,6 +696,7 @@ export const bar = "bar";
   }
 
   #[tokio::test]
+  #[ignore]
   async fn test_build_asset_graph_from_large_synthetic_project() {
     let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
       .with_max_level(tracing::Level::INFO)

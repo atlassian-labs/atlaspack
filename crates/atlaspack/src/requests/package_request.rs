@@ -182,16 +182,16 @@ pub struct PackageBundleParams<'a> {
 }
 
 pub trait AssetDataProvider: std::fmt::Debug {
-  fn get_asset_code(&self, asset_id: u64) -> anyhow::Result<Vec<u8>>;
-  fn get_original_asset_code(&self, asset_id: u64) -> anyhow::Result<Vec<u8>>;
-  fn get_imported_modules(&self, asset_id: u64) -> anyhow::Result<Vec<ImportedModule>>;
-  fn get_exported_symbols(&self, asset_id: u64) -> anyhow::Result<Vec<String>>;
+  fn get_asset_code(&self, asset_id: AssetId) -> anyhow::Result<Vec<u8>>;
+  fn get_original_asset_code(&self, asset_id: AssetId) -> anyhow::Result<Vec<u8>>;
+  fn get_imported_modules(&self, asset_id: AssetId) -> anyhow::Result<Vec<ImportedModule>>;
+  fn get_exported_symbols(&self, asset_id: AssetId) -> anyhow::Result<Vec<String>>;
 }
 
 #[derive(Debug)]
 pub struct InMemoryAssetDataProvider {
   asset_graph: Arc<AssetGraph>,
-  asset_node_index_by_id: HashMap<u64, NodeIndex>,
+  asset_node_index_by_id: HashMap<AssetId, NodeIndex>,
 }
 
 impl InMemoryAssetDataProvider {
@@ -214,7 +214,7 @@ impl InMemoryAssetDataProvider {
 }
 
 impl InMemoryAssetDataProvider {
-  fn get_asset_by_id(&self, asset_id: u64) -> anyhow::Result<&AssetNode> {
+  fn get_asset_by_id(&self, asset_id: AssetId) -> anyhow::Result<&AssetNode> {
     let asset_node_index = self
       .asset_node_index_by_id
       .get(&asset_id)
@@ -236,19 +236,19 @@ struct ImportedModule {
 }
 
 impl AssetDataProvider for InMemoryAssetDataProvider {
-  fn get_original_asset_code(&self, asset_id: u64) -> anyhow::Result<Vec<u8>> {
+  fn get_original_asset_code(&self, asset_id: AssetId) -> anyhow::Result<Vec<u8>> {
     let asset_node = self.get_asset_by_id(asset_id)?;
     let path = asset_node.asset.file_path.clone();
     let code = std::fs::read(path)?;
     Ok(code)
   }
 
-  fn get_asset_code(&self, asset_id: u64) -> anyhow::Result<Vec<u8>> {
+  fn get_asset_code(&self, asset_id: AssetId) -> anyhow::Result<Vec<u8>> {
     let asset_node = self.get_asset_by_id(asset_id)?;
     Ok(asset_node.asset.code.bytes().to_vec())
   }
 
-  fn get_imported_modules(&self, asset_id: u64) -> anyhow::Result<Vec<ImportedModule>> {
+  fn get_imported_modules(&self, asset_id: AssetId) -> anyhow::Result<Vec<ImportedModule>> {
     let asset_node_index = self
       .asset_node_index_by_id
       .get(&asset_id)
@@ -304,7 +304,7 @@ impl AssetDataProvider for InMemoryAssetDataProvider {
     Ok(result)
   }
 
-  fn get_exported_symbols(&self, asset_id: u64) -> anyhow::Result<Vec<String>> {
+  fn get_exported_symbols(&self, asset_id: AssetId) -> anyhow::Result<Vec<String>> {
     let asset_node = self.get_asset_by_id(asset_id)?;
     let Some(symbols) = &asset_node.asset.symbols else {
       return Ok(vec![]);

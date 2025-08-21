@@ -526,7 +526,7 @@ mod tests {
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::{PluginLogger, PluginOptions},
-    types::JSONObject,
+    types::{AssetId, JSONObject},
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
@@ -552,7 +552,7 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn supports_css_imports() {
     let asset = Asset {
-      id: "my-asset".into(),
+      id: AssetId::from(1234),
       file_path: "styles.css".into(),
       code: Code::from("@import './stuff.css';"),
       ..Default::default()
@@ -563,7 +563,7 @@ mod tests {
       result.unwrap().dependencies,
       vec![Dependency {
         specifier: "./stuff.css".into(),
-        source_asset_id: Some("my-asset".into()),
+        source_asset_id: Some(AssetId::from(1234)),
         source_path: Some("styles.css".into()),
         source_asset_type: Some(FileType::Css),
         specifier_type: SpecifierType::Url,
@@ -580,7 +580,7 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn supports_css_modules() {
     let asset = Asset {
-      id: "css-module".into(),
+      id: AssetId::from(1234),
       file_path: "styles.module.css".into(),
       is_source: true,
       code: Code::from(".root {display: 'block'}"),
@@ -593,7 +593,7 @@ mod tests {
       result.asset,
       Asset {
         code: ".EcQGha_root {\n  display: \"block\";\n}\n".into(),
-        unique_key: Some("css-module".into()),
+        unique_key: Some(AssetId::from(1234).to_string()),
         symbols: Some(vec![
           Symbol {
             local: "default".into(),
@@ -634,7 +634,7 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn supports_css_modules_composes_local() {
     let asset = Asset {
-      id: "css-module".into(),
+      id: AssetId::from(1234),
       file_path: "styles.module.css".into(),
       is_source: true,
       code: ".root {display: 'block'} .other {composes: root; color: red}".into(),
@@ -648,7 +648,7 @@ mod tests {
       Asset {
         code: ".EcQGha_root {\n  display: \"block\";\n}\n\n.EcQGha_other {\n  color: red;\n}\n"
           .into(),
-        unique_key: Some("css-module".into()),
+        unique_key: Some(AssetId::from(1234).to_string()),
         symbols: Some(vec![
           Symbol {
             local: "default".into(),
@@ -683,7 +683,7 @@ mod tests {
       result.discovered_assets[0],
       AssetWithDependencies {
         asset: Asset {
-          id: "83301a06c27a61eb".into(),
+          id: AssetId::from(0x83301a06c27a61eb),
           code: "module.exports[\"root\"] = `EcQGha_root`;\nmodule.exports[\"other\"] = `EcQGha_other ${module.exports[\"root\"]}`;\n".into(),
           file_path: "styles.module.css".into(),
           is_source: true,
@@ -697,7 +697,7 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn supports_css_modules_composes_global() {
     let asset = Asset {
-      id: "css-module".into(),
+      id: AssetId::from(1234),
       file_path: "styles.module.css".into(),
       is_source: true,
       code: ":global(.globalClass) {display: 'block'} .other {composes: globalClass from global; color: red}"
@@ -712,7 +712,7 @@ mod tests {
       Asset {
         code: ".globalClass {\n  display: \"block\";\n}\n\n.EcQGha_other {\n  color: red;\n}\n"
           .into(),
-        unique_key: Some("css-module".into()),
+        unique_key: Some(AssetId::from(1234).to_string()),
         symbols: Some(vec![
           Symbol {
             local: "default".into(),
