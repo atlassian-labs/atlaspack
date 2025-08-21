@@ -1,18 +1,14 @@
-use std::{collections::HashSet, sync::Arc};
-
 use atlaspack_core::{
-  asset_graph::{AssetGraph, AssetGraphNode, AssetNode, DependencyNode},
-  bundle_graph::{AssetRef, BundleGraph, BundleGraphBundle, BundleGraphEdge, BundleGraphNode},
-  into_variant_impl,
-  types::{Bundle, BundleBehavior, Environment, Priority, Target},
+  asset_graph::{AssetGraph, AssetGraphNode, DependencyNode},
+  bundle_graph::AssetRef,
+  types::Priority,
 };
 use petgraph::{
-  graph::NodeIndex,
   prelude::StableDiGraph,
-  visit::{Dfs, EdgeFiltered, EdgeFilteredEdges, EdgeRef, IntoEdgeReferences, IntoNodeReferences},
+  visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences},
   Direction,
 };
-use tracing::{debug, info};
+use tracing::debug;
 
 #[derive(Clone, PartialEq)]
 pub enum SimplifiedAssetGraphNode {

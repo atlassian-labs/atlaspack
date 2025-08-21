@@ -5,16 +5,14 @@ use std::{
 
 use async_trait::async_trait;
 use atlaspack_core::{
-  asset_graph::{AssetGraph, AssetGraphNode, AssetNode, DependencyNode},
+  asset_graph::{AssetGraph, AssetGraphNode, DependencyNode},
   bundle_graph::{AssetRef, BundleGraph, BundleGraphBundle, BundleGraphEdge, BundleGraphNode},
-  into_variant_impl,
   types::{Bundle, BundleBehavior, Environment, Priority, Target},
 };
 use petgraph::{
-  algo::toposort,
   graph::NodeIndex,
   prelude::StableDiGraph,
-  visit::{Dfs, EdgeFiltered, EdgeFilteredEdges, EdgeRef, IntoEdgeReferences, IntoNodeReferences},
+  visit::{Dfs, EdgeFiltered, EdgeRef, IntoEdgeReferences, IntoNodeReferences},
   Direction,
 };
 use tracing::{debug, info};
@@ -23,8 +21,6 @@ use crate::{
   request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
   requests::{AssetGraphRequest, RequestResult},
 };
-
-use self::simplified_graph::*;
 
 mod simplified_graph;
 
