@@ -24,6 +24,10 @@ use crate::{
   requests::{AssetGraphRequest, RequestResult},
 };
 
+use self::simplified_graph::*;
+
+mod simplified_graph;
+
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq)]
 pub struct BundleGraphRequestOutput {
@@ -718,7 +722,7 @@ mod tests {
 
   use atlaspack_core::{
     asset_graph::AssetNode,
-    bundle_graph::BundleGraphEdge,
+    bundle_graph::{BundleGraphEdge, BundleRef},
     types::{Asset, FileType},
   };
   use petgraph::{
@@ -749,21 +753,10 @@ mod tests {
 
   #[test]
   fn test_make_bundle_graph_over_single_asset_tree() {
-    let mut graph = SimplifiedAssetGraph::new();
-    let root = graph.add_node(SimplifiedAssetGraphNode::Root);
-    let asset = graph.add_node(SimplifiedAssetGraphNode::Asset(AssetRef::new(
-      AssetNode::from(Asset {
-        file_path: PathBuf::from("src/index.ts"),
-        ..Asset::default()
-      }),
-      NodeIndex::new(0),
-    )));
+    let mut graph = asset_graph_builder();
+    let asset = graph.entry_asset("src/index.ts");
+    let graph = graph.build();
 
-    graph.add_edge(
-      root,
-      asset,
-      SimplifiedAssetGraphEdge::EntryAssetRoot(DependencyNode::default()),
-    );
     let (root, acyclic_graph) = remove_cycles(&graph);
     let dominator_tree = build_dominator_tree(&acyclic_graph, root);
 
@@ -796,37 +789,11 @@ mod tests {
 
   #[test]
   fn test_make_bundle_graph_over_single_asset_tree_with_async_dependency() {
-    let mut graph = SimplifiedAssetGraph::new();
-    let root = graph.add_node(SimplifiedAssetGraphNode::Root);
-    let asset = graph.add_node(SimplifiedAssetGraphNode::Asset(AssetRef::new(
-      AssetNode::from(Asset {
-        file_path: PathBuf::from("src/index.ts"),
-        ..Asset::default()
-      }),
-      NodeIndex::new(0),
-    )));
-    graph.add_edge(
-      root,
-      asset,
-      SimplifiedAssetGraphEdge::EntryAssetRoot(DependencyNode::default()),
-    );
-    let dependency = graph.add_node(SimplifiedAssetGraphNode::Asset(AssetRef::new(
-      AssetNode::from(Asset {
-        file_path: PathBuf::from("src/dependency.ts"),
-        ..Asset::default()
-      }),
-      NodeIndex::new(1),
-    )));
-    graph.add_edge(
-      root,
-      dependency,
-      SimplifiedAssetGraphEdge::AsyncRoot(DependencyNode::default()),
-    );
-    graph.add_edge(
-      asset,
-      dependency,
-      SimplifiedAssetGraphEdge::AssetAsyncDependency(DependencyNode::default()),
-    );
+    let mut graph = asset_graph_builder();
+    let asset = graph.entry_asset("src/index.ts");
+    let dependency = graph.asset("src/dependency.ts");
+    graph.async_dependency(asset, dependency);
+    let graph = graph.build();
 
     let (root, acyclic_graph) = remove_cycles(&graph);
     let dominator_tree = build_dominator_tree(&acyclic_graph, root);
@@ -843,24 +810,8 @@ mod tests {
     );
 
     let graph = bundle_graph.graph();
-    let index_bundle = bundle_graph
-      .bundles()
-      .find(|bundle| {
-        bundle
-          .assets()
-          .find(|asset| asset.file_path() == PathBuf::from("src/index.ts"))
-          .is_some()
-      })
-      .unwrap();
-    let async_bundle = bundle_graph
-      .bundles()
-      .find(|bundle| {
-        bundle
-          .assets()
-          .find(|asset| asset.file_path() == PathBuf::from("src/dependency.ts"))
-          .is_some()
-      })
-      .unwrap();
+    let index_bundle = expect_bundle(&bundle_graph, "src/index.ts");
+    let async_bundle = expect_bundle(&bundle_graph, "src/dependency.ts");
 
     assert_eq!(index_bundle.num_assets(), 1);
     assert_eq!(async_bundle.num_assets(), 1);
@@ -882,6 +833,49 @@ mod tests {
       .collect::<Vec<_>>();
     assert_eq!(edges.len(), 1);
     assert_eq!(edges[0].weight(), &BundleGraphEdge::BundleAsyncLoads);
+  }
+
+  #[test]
+  fn test_nested_synchronous_asset_chain_is_bundled_together() {
+    let mut graph = asset_graph_builder();
+    let a = graph.entry_asset("src/a.ts");
+    let b = graph.asset("src/b.ts");
+    let c = graph.asset("src/c.ts");
+    graph.sync_dependency(a, b);
+    graph.sync_dependency(b, c);
+
+    let graph = graph.build();
+
+    let (root, acyclic_graph) = remove_cycles(&graph);
+    let dominator_tree = build_dominator_tree(&acyclic_graph, root);
+
+    let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
+      root_node: root,
+      dominator_tree: &dominator_tree,
+    });
+
+    assert_eq!(
+      bundle_graph.num_bundles(),
+      1,
+      "Bundle graph should have two bundles"
+    );
+
+    let graph = bundle_graph.graph();
+    let bundle = expect_bundle(&bundle_graph, "src/a.ts");
+    assert_eq!(bundle.num_assets(), 3);
+
+    let edges = graph
+      .edges_connecting(bundle_graph.root(), bundle.node_index())
+      .collect::<Vec<_>>();
+    assert_eq!(edges.len(), 1);
+    assert_eq!(edges[0].weight(), &BundleGraphEdge::RootEntryOf);
+
+    let mut assets = bundle.assets().collect::<Vec<_>>();
+    assets.sort_by_key(|asset| asset.file_path());
+    assert_eq!(assets.len(), 3);
+    assert_eq!(assets[0].file_path(), PathBuf::from("src/a.ts"));
+    assert_eq!(assets[1].file_path(), PathBuf::from("src/b.ts"));
+    assert_eq!(assets[2].file_path(), PathBuf::from("src/c.ts"));
   }
 
   mod unit_tests {
@@ -1174,6 +1168,18 @@ mod tests {
     expect_node(&dominator_tree, predicate)
   }
 
+  fn expect_bundle(bundle_graph: &BundleGraph, path: &str) -> BundleRef {
+    bundle_graph
+      .bundles()
+      .find(|bundle| {
+        bundle
+          .assets()
+          .find(|asset| asset.file_path() == PathBuf::from(path))
+          .is_some()
+      })
+      .unwrap()
+  }
+
   fn expect_cycle<'a, E>(
     dominator_tree: &'a StableDiGraph<DominatorTreeNode, E>,
     project_dir: &Path,
@@ -1190,6 +1196,78 @@ mod tests {
     };
 
     expect_node(&dominator_tree, predicate)
+  }
+
+  struct AssetGraphBuilder {
+    graph: SimplifiedAssetGraph,
+    root: NodeIndex,
+  }
+
+  impl AssetGraphBuilder {
+    fn entry_asset(&mut self, path: &str) -> NodeIndex {
+      let asset = self
+        .graph
+        .add_node(SimplifiedAssetGraphNode::Asset(AssetRef::new(
+          AssetNode::from(Asset {
+            file_path: PathBuf::from(path),
+            ..Asset::default()
+          }),
+          NodeIndex::new(self.graph.node_count()),
+        )));
+
+      self.graph.add_edge(
+        self.root,
+        asset,
+        SimplifiedAssetGraphEdge::EntryAssetRoot(DependencyNode::default()),
+      );
+
+      asset
+    }
+
+    fn asset(&mut self, path: &str) -> NodeIndex {
+      let asset = self
+        .graph
+        .add_node(SimplifiedAssetGraphNode::Asset(AssetRef::new(
+          AssetNode::from(Asset {
+            file_path: PathBuf::from(path),
+            ..Asset::default()
+          }),
+          NodeIndex::new(self.graph.node_count()),
+        )));
+
+      asset
+    }
+
+    fn sync_dependency(&mut self, source: NodeIndex, target: NodeIndex) {
+      self.graph.add_edge(
+        source,
+        target,
+        SimplifiedAssetGraphEdge::AssetDependency(DependencyNode::default()),
+      );
+    }
+
+    fn async_dependency(&mut self, source: NodeIndex, target: NodeIndex) {
+      self.graph.add_edge(
+        source,
+        target,
+        SimplifiedAssetGraphEdge::AssetAsyncDependency(DependencyNode::default()),
+      );
+      self.graph.add_edge(
+        self.root,
+        target,
+        SimplifiedAssetGraphEdge::AsyncRoot(DependencyNode::default()),
+      );
+    }
+
+    fn build(self) -> SimplifiedAssetGraph {
+      self.graph
+    }
+  }
+
+  fn asset_graph_builder() -> AssetGraphBuilder {
+    let mut graph = SimplifiedAssetGraph::new();
+    let root = graph.add_node(SimplifiedAssetGraphNode::Root);
+    AssetGraphBuilder { graph, root }
   }
 
   fn asset_path_label(asset_node: &AssetNode, repo_root: &Path, project_dir: &Path) -> String {
