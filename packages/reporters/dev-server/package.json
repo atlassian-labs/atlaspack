@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/reporter-dev-server",
-  "version": "2.14.27",
+  "version": "2.14.28",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
@@ -26,9 +26,9 @@
     }
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.27",
-    "@atlaspack/utils": "2.18.4",
-    "@atlaspack/types": "2.15.17",
+    "@atlaspack/plugin": "2.14.28",
+    "@atlaspack/utils": "2.19.0",
+    "@atlaspack/types": "2.15.18",
     "connect": "^3.7.0",
     "ejs": "^3.1.6",
     "fresh": "^0.5.2",

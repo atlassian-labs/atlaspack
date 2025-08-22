@@ -1,5 +1,16 @@
 # @atlaspack/fs
 
+## 2.15.23
+
+### Patch Changes
+
+- Updated dependencies [[`f0349a6`](https://github.com/atlassian-labs/atlaspack/commit/f0349a6b9b04755088f121095ca6301a2ada3767), [`c940954`](https://github.com/atlassian-labs/atlaspack/commit/c940954d27d657c3c93cd328dfb394778da46eab), [`a5081c3`](https://github.com/atlassian-labs/atlaspack/commit/a5081c3f9207d28716ee4edd3841de1830ea4b80), [`f930003`](https://github.com/atlassian-labs/atlaspack/commit/f930003364fdc31e5487520ebe256f1a9389f579), [`f930003`](https://github.com/atlassian-labs/atlaspack/commit/f930003364fdc31e5487520ebe256f1a9389f579), [`8843980`](https://github.com/atlassian-labs/atlaspack/commit/88439807be20025fd3433380204ff1205079729e)]:
+  - @atlaspack/feature-flags@2.24.0
+  - @atlaspack/watcher-watchman-js@2.14.28
+  - @atlaspack/types-internal@2.19.4
+  - @atlaspack/workers@2.14.28
+  - @atlaspack/logger@2.14.20
+
 ## 2.15.22
 
 ### Patch Changes

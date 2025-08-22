@@ -1,5 +1,12 @@
 # @atlaspack/logger
 
+## 2.14.20
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.19.4
+
 ## 2.14.19
 
 ### Patch Changes

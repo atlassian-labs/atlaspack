@@ -1,5 +1,15 @@
 # @atlaspack/link
 
+## 2.14.28
+
+### Patch Changes
+
+- [#751](https://github.com/atlassian-labs/atlaspack/pull/751) [`5da1d63`](https://github.com/atlassian-labs/atlaspack/commit/5da1d63172d51940d695a4633cef0ed4e491162b) Thanks [@matt-koko](https://github.com/matt-koko)! - Convert atlaspack-link bin.ts to bin.js with executable permissions for direct alias usage
+
+- Updated dependencies [[`f0349a6`](https://github.com/atlassian-labs/atlaspack/commit/f0349a6b9b04755088f121095ca6301a2ada3767)]:
+  - @atlaspack/utils@2.19.0
+  - @atlaspack/fs@2.15.23
+
 ## 2.14.27
 
 ### Patch Changes

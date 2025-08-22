@@ -1,5 +1,14 @@
 # @atlaspack/query
 
+## 2.14.29
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/cache@3.2.23
+  - @atlaspack/core@2.23.4
+  - @atlaspack/graph@3.5.17
+
 ## 2.14.28
 
 ### Patch Changes
