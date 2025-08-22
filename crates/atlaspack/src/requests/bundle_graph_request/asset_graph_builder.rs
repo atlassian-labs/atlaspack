@@ -11,12 +11,12 @@ use crate::requests::bundle_graph_request::{
   SimplifiedAssetGraph, SimplifiedAssetGraphEdge, SimplifiedAssetGraphNode,
 };
 
-pub struct AssetGraphBuilder {
+pub struct SimplifiedAssetGraphBuilder {
   graph: SimplifiedAssetGraph,
   root: NodeIndex,
 }
 
-impl AssetGraphBuilder {
+impl SimplifiedAssetGraphBuilder {
   pub fn entry_asset(&mut self, path: &str) -> NodeIndex {
     let asset = self
       .graph
@@ -77,10 +77,10 @@ impl AssetGraphBuilder {
   }
 }
 
-pub fn asset_graph_builder() -> AssetGraphBuilder {
+pub fn simplified_asset_graph_builder() -> SimplifiedAssetGraphBuilder {
   let mut graph = SimplifiedAssetGraph::new();
   let root = graph.add_node(SimplifiedAssetGraphNode::Root);
-  AssetGraphBuilder { graph, root }
+  SimplifiedAssetGraphBuilder { graph, root }
 }
 
 #[cfg(test)]

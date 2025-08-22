@@ -730,7 +730,7 @@ mod tests {
   };
 
   use crate::{
-    requests::bundle_graph_request::asset_graph_builder::asset_graph_builder,
+    requests::bundle_graph_request::asset_graph_builder::simplified_asset_graph_builder,
     test_utils::{
       get_repo_path,
       graph::{expect_edge, expect_node},
@@ -753,7 +753,7 @@ mod tests {
 
   #[test]
   fn test_make_bundle_graph_over_single_asset_tree() {
-    let mut graph = asset_graph_builder();
+    let mut graph = simplified_asset_graph_builder();
     let asset = graph.entry_asset("src/index.ts");
     let graph = graph.build();
 
@@ -789,7 +789,7 @@ mod tests {
 
   #[test]
   fn test_make_bundle_graph_over_single_asset_tree_with_async_dependency() {
-    let mut graph = asset_graph_builder();
+    let mut graph = simplified_asset_graph_builder();
     let asset = graph.entry_asset("src/index.ts");
     let dependency = graph.asset("src/dependency.ts");
     graph.async_dependency(asset, dependency);
@@ -837,7 +837,7 @@ mod tests {
 
   #[test]
   fn test_nested_synchronous_asset_chain_is_bundled_together() {
-    let mut graph = asset_graph_builder();
+    let mut graph = simplified_asset_graph_builder();
     let a = graph.entry_asset("src/a.ts");
     let b = graph.asset("src/b.ts");
     let c = graph.asset("src/c.ts");

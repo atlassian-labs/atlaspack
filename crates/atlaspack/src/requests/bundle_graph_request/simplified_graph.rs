@@ -493,4 +493,54 @@ mod tests {
       SimplifiedAssetGraphEdge::EntryAssetRoot(_)
     ));
   }
+
+  #[test]
+  fn test_simplify_graph_with_nested_chain_and_multiple_children() {
+    // graph {
+    //   root -> entry -> a -> dep_a_b -> b
+    //   b -> dep_b_c -> c
+    //   b -> dep_b_d -> d
+    // }
+    //
+    // becomes
+    //
+    // graph {
+    //   root -> a
+    //   a -> b
+    //   b -> c
+    //   b -> d
+    // }
+    let mut builder = asset_graph_builder();
+    let a = builder.entry_asset("src/a.ts");
+    let b = builder.asset("src/b.ts");
+    let c = builder.asset("src/c.ts");
+    let d = builder.asset("src/d.ts");
+    builder.sync_dependency(a, b);
+    builder.sync_dependency(b, c);
+    builder.sync_dependency(b, d);
+    let asset_graph = builder.build();
+    let root = asset_graph.root_node();
+
+    let simplified_graph = simplify_graph(&asset_graph);
+
+    assert_eq!(simplified_graph.node_count(), 5);
+    assert_eq!(simplified_graph.edge_count(), 4);
+
+    assert!(matches!(
+      expect_edge(&simplified_graph, root, a).weight(),
+      SimplifiedAssetGraphEdge::EntryAssetRoot(_)
+    ));
+    assert!(matches!(
+      expect_edge(&simplified_graph, a, b).weight(),
+      SimplifiedAssetGraphEdge::AssetDependency(_)
+    ));
+    assert!(matches!(
+      expect_edge(&simplified_graph, b, c).weight(),
+      SimplifiedAssetGraphEdge::AssetDependency(_)
+    ));
+    assert!(matches!(
+      expect_edge(&simplified_graph, b, d).weight(),
+      SimplifiedAssetGraphEdge::AssetDependency(_)
+    ));
+  }
 }
