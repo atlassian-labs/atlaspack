@@ -85,6 +85,9 @@ pub fn simplified_asset_graph_builder() -> SimplifiedAssetGraphBuilder {
 
 #[cfg(test)]
 mod tests {
+  use std::path::PathBuf;
+
+  use petgraph::graph::NodeIndex;
   use petgraph::visit::IntoNodeReferences;
 
   use crate::test_utils::graph::expect_edge;
