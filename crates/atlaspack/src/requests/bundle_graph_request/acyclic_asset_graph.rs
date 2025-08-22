@@ -1,25 +1,10 @@
-use std::{
-  collections::{HashMap, HashSet},
-  sync::Arc,
-};
+use std::collections::HashMap;
 
-use async_trait::async_trait;
-use atlaspack_core::{
-  asset_graph::{AssetGraph, AssetGraphNode, DependencyNode},
-  bundle_graph::{AssetRef, BundleGraph, BundleGraphBundle, BundleGraphEdge, BundleGraphNode},
-  types::{Bundle, BundleBehavior, Environment, Priority, Target},
-};
+use atlaspack_core::bundle_graph::AssetRef;
 use petgraph::{
   graph::NodeIndex,
   prelude::StableDiGraph,
-  visit::{Dfs, EdgeFiltered, EdgeRef, IntoEdgeReferences, IntoNodeReferences},
-  Direction,
-};
-use tracing::{debug, info};
-
-use crate::{
-  request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
-  requests::{AssetGraphRequest, RequestResult},
+  visit::{EdgeRef, IntoEdgeReferences},
 };
 
 use super::simplified_graph::*;

@@ -7,15 +7,15 @@ use async_trait::async_trait;
 use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode, DependencyNode},
   bundle_graph::{AssetRef, BundleGraph, BundleGraphBundle, BundleGraphEdge, BundleGraphNode},
-  types::{Bundle, BundleBehavior, Environment, Priority, Target},
+  types::{Bundle, BundleBehavior, Environment, Target},
 };
 use petgraph::{
   graph::NodeIndex,
   prelude::StableDiGraph,
-  visit::{Dfs, EdgeFiltered, EdgeRef, IntoEdgeReferences, IntoNodeReferences},
+  visit::{Dfs, EdgeFiltered, EdgeRef, IntoNodeReferences},
   Direction,
 };
-use tracing::{debug, info};
+use tracing::info;
 
 use crate::{
   request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
@@ -444,7 +444,7 @@ mod tests {
     algo::toposort,
     dot::dot_parser::{DotAttrList, DotNodeWeight, ParseFromDot},
     graph_from_str,
-    visit::IntoNodeReferences,
+    visit::{IntoEdgeReferences, IntoNodeReferences},
   };
 
   use crate::{
