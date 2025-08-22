@@ -23,10 +23,12 @@ use crate::{
 };
 
 use acyclic_asset_graph::*;
+use dominator_tree::*;
 use simplified_graph::*;
 
 mod acyclic_asset_graph;
 mod asset_graph_builder;
+mod dominator_tree;
 mod simplified_graph;
 
 #[non_exhaustive]
@@ -351,81 +353,6 @@ fn make_bundle_graph(
   let bundle_graph = bundle_graph.filter_map(|_, node| node.clone(), |_, edge| Some(edge.clone()));
 
   BundleGraph::build_from(root_node, bundle_graph)
-}
-
-type DominatorTreeNode = AcyclicAssetGraphNode;
-
-enum DominatorTreeEdge {
-  ImmediateDominator,
-  /// Root to asset, means the asset is an entry-point
-  EntryAssetRoot(DependencyNode),
-  /// Root to asset, means the asset is an async import
-  AsyncRoot(DependencyNode),
-  /// Root to asset, means the asset is a shared bundle
-  SharedBundleRoot,
-  /// Root to asset, means the asset has been split due to type change
-  TypeChangeRoot(DependencyNode),
-  /// Asset to asset, means the asset is a dependency of the other within a bundle
-  AssetDependency(DependencyNode),
-  /// Asset to asset, means the asset is an async dependency of the other within a bundle
-  AssetAsyncDependency(DependencyNode),
-}
-
-impl From<SimplifiedAssetGraphEdge> for DominatorTreeEdge {
-  fn from(edge: SimplifiedAssetGraphEdge) -> Self {
-    match edge {
-      SimplifiedAssetGraphEdge::EntryAssetRoot(dependency_node) => {
-        DominatorTreeEdge::EntryAssetRoot(dependency_node)
-      }
-      SimplifiedAssetGraphEdge::AsyncRoot(dependency_node) => {
-        DominatorTreeEdge::AsyncRoot(dependency_node)
-      }
-      SimplifiedAssetGraphEdge::TypeChangeRoot(dependency_node) => {
-        DominatorTreeEdge::TypeChangeRoot(dependency_node)
-      }
-      SimplifiedAssetGraphEdge::AssetDependency(dependency_node) => {
-        DominatorTreeEdge::AssetDependency(dependency_node)
-      }
-      SimplifiedAssetGraphEdge::AssetAsyncDependency(dependency_node) => {
-        DominatorTreeEdge::AssetAsyncDependency(dependency_node)
-      }
-    }
-  }
-}
-
-pub fn build_dominator_tree(
-  graph: &AcyclicAssetGraph,
-  root_id: NodeIndex,
-) -> StableDiGraph<DominatorTreeNode, DominatorTreeEdge> {
-  let dominators = petgraph::algo::dominators::simple_fast(graph, root_id);
-  let mut result = graph.clone().map(
-    |_, node| node.clone(),
-    |_, edge| DominatorTreeEdge::from(edge.clone()),
-  );
-
-  for node_index in graph.node_indices() {
-    let immediate_dominator = dominators.immediate_dominator(node_index);
-
-    if let Some(dominator_index) = immediate_dominator {
-      if dominator_index == root_id {
-        if !result.contains_edge(dominator_index, node_index) {
-          result.add_edge(
-            dominator_index,
-            node_index,
-            DominatorTreeEdge::SharedBundleRoot,
-          );
-        }
-      }
-
-      result.add_edge(
-        dominator_index,
-        node_index,
-        DominatorTreeEdge::ImmediateDominator,
-      );
-    }
-  }
-
-  result
 }
 
 #[cfg(test)]
