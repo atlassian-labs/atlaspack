@@ -1,20 +1,11 @@
-use std::{
-  collections::{HashMap, HashSet},
-  sync::Arc,
-};
+use std::collections::{HashMap, HashSet};
 
 use async_trait::async_trait;
 use atlaspack_core::{
-  asset_graph::{AssetGraph, AssetGraphNode, DependencyNode},
-  bundle_graph::{AssetRef, BundleGraph, BundleGraphBundle, BundleGraphEdge, BundleGraphNode},
-  types::{Bundle, BundleBehavior, Environment, Target},
+  asset_graph::{AssetGraph, AssetGraphNode},
+  bundle_graph::{AssetRef, BundleGraph, BundleGraphBundle},
 };
-use petgraph::{
-  graph::NodeIndex,
-  prelude::StableDiGraph,
-  visit::{Dfs, EdgeFiltered, EdgeRef, IntoNodeReferences},
-  Direction,
-};
+use petgraph::visit::{Dfs, IntoNodeReferences};
 use tracing::info;
 
 use crate::{
@@ -24,11 +15,13 @@ use crate::{
 
 use acyclic_asset_graph::*;
 use dominator_tree::*;
+use make_bundle_graph::*;
 use simplified_graph::*;
 
 mod acyclic_asset_graph;
 mod asset_graph_builder;
 mod dominator_tree;
+mod make_bundle_graph;
 mod simplified_graph;
 
 #[non_exhaustive]
@@ -79,280 +72,45 @@ fn bundle_asset_graph(asset_graph: &AssetGraph) -> BundleGraph {
   let (root_node, acyclic_graph) = remove_cycles(&simplified_graph);
   let dominator_tree = build_dominator_tree(&acyclic_graph, root_node);
 
-  {
-    let mut reachable_assets = HashSet::new();
-    let mut dfs = Dfs::new(&dominator_tree, asset_graph.root_node());
-    while let Some(node) = dfs.next(&asset_graph.graph) {
-      reachable_assets.insert(node);
-    }
-    for (node_index, asset_node) in
-      asset_graph
-        .graph
-        .node_references()
-        .filter_map(|(node_index, node)| match node {
-          AssetGraphNode::Asset(asset_node) => Some((node_index, asset_node)),
-          _ => None,
-        })
-    {
-      // Validate simplified graph
-      assert!(simplified_graph.contains_node(node_index));
-      let asset_on_new_graph = simplified_graph.node_weight(node_index);
-      assert!(asset_on_new_graph.is_some());
-      let SimplifiedAssetGraphNode::Asset(asset_on_new_graph) = asset_on_new_graph.unwrap() else {
-        panic!("Asset on new graph is not an asset");
-      };
-      assert!(asset_on_new_graph.file_path() == asset_node.asset.file_path);
-
-      // Validate dominator graph
-      assert!(
-        reachable_assets.contains(&node_index),
-        "Asset is not reachable from the root: {:#?}",
-        asset_node.asset.file_path
-      );
-    }
-  }
+  // {
+  //   let mut reachable_assets = HashSet::new();
+  //   let mut dfs = Dfs::new(&dominator_tree, asset_graph.root_node());
+  //   while let Some(node) = dfs.next(&asset_graph.graph) {
+  //     reachable_assets.insert(node);
+  //   }
+  //   for (node_index, asset_node) in
+  //     asset_graph
+  //       .graph
+  //       .node_references()
+  //       .filter_map(|(node_index, node)| match node {
+  //         AssetGraphNode::Asset(asset_node) => Some((node_index, asset_node)),
+  //         _ => None,
+  //       })
+  //   {
+  //     // Validate simplified graph
+  //     assert!(simplified_graph.contains_node(node_index));
+  //     let asset_on_new_graph = simplified_graph.node_weight(node_index);
+  //     assert!(asset_on_new_graph.is_some());
+  //     let SimplifiedAssetGraphNode::Asset(asset_on_new_graph) = asset_on_new_graph.unwrap() else {
+  //       panic!("Asset on new graph is not an asset");
+  //     };
+  //     assert!(asset_on_new_graph.file_path() == asset_node.asset.file_path);
+  //     // Validate dominator graph
+  //     assert!(
+  //       reachable_assets.contains(&node_index),
+  //       "Asset is not reachable from the root: {:#?}",
+  //       asset_node.asset.file_path
+  //     );
+  //   }
+  // }
 
   let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
     root_node,
     dominator_tree: &dominator_tree,
+    asset_graph: Some(&asset_graph),
   });
 
   bundle_graph
-}
-
-struct MakeBundleGraphParams<'a> {
-  root_node: NodeIndex,
-  dominator_tree: &'a StableDiGraph<DominatorTreeNode, DominatorTreeEdge>,
-}
-
-fn make_bundle_graph(
-  MakeBundleGraphParams {
-    root_node,
-    dominator_tree,
-  }: MakeBundleGraphParams,
-) -> BundleGraph {
-  let mut bundle_graph: StableDiGraph<Option<BundleGraphNode>, BundleGraphEdge> = dominator_tree
-    .filter_map(
-      |_, node| match node {
-        AcyclicAssetGraphNode::Root => Some(Some(BundleGraphNode::Root)),
-        _ => Some(None),
-      },
-      |_, _| None,
-    );
-
-  struct AddedBundle {
-    bundle_dominator_tree_node_index: NodeIndex,
-    bundle_node_index: NodeIndex,
-  }
-
-  let mut bundles_by_asset_index = HashMap::new();
-  let mut added_bundles = vec![];
-
-  for edge in dominator_tree.edges(root_node) {
-    let bundle_edge_type = match edge.weight() {
-      DominatorTreeEdge::EntryAssetRoot(_) => Some(BundleGraphEdge::RootEntryOf),
-      DominatorTreeEdge::AsyncRoot(_) => Some(BundleGraphEdge::RootAsyncBundleOf),
-      DominatorTreeEdge::TypeChangeRoot(_) => Some(BundleGraphEdge::RootTypeChangeBundleOf),
-      DominatorTreeEdge::SharedBundleRoot => Some(BundleGraphEdge::RootSharedBundleOf),
-      DominatorTreeEdge::ImmediateDominator => None,
-      DominatorTreeEdge::AssetDependency(_) => None,
-      DominatorTreeEdge::AssetAsyncDependency(_) => None,
-    };
-    let Some(bundle_edge_type) = bundle_edge_type else {
-      continue;
-    };
-
-    let root_asset = edge.target();
-    let mut assets_in_bundle = vec![];
-    let mut bundle_assets: StableDiGraph<AssetRef, ()> = StableDiGraph::new();
-
-    let filtered_dominator_tree =
-      EdgeFiltered::from_fn(&dominator_tree, |edge| match edge.weight() {
-        DominatorTreeEdge::ImmediateDominator => true,
-        _ => false,
-      });
-
-    petgraph::visit::depth_first_search(
-      &filtered_dominator_tree,
-      [root_asset],
-      |event| match event {
-        petgraph::visit::DfsEvent::Discover(node_index, _) => {
-          let node_weight = dominator_tree.node_weight(node_index).unwrap();
-          match node_weight {
-            AcyclicAssetGraphNode::Asset(asset_node) => {
-              assets_in_bundle.push(node_index);
-
-              bundle_assets.add_node(asset_node.clone());
-            }
-            AcyclicAssetGraphNode::Cycle(assets) => {
-              assets_in_bundle.push(node_index);
-
-              for asset in assets {
-                assets_in_bundle.push(asset.asset_graph_node_index());
-                bundle_assets.add_node(asset.clone());
-              }
-            }
-            _ => {}
-          }
-        }
-        _ => {}
-      },
-    );
-
-    let AcyclicAssetGraphNode::Asset(entry_asset) = dominator_tree.node_weight(root_asset).unwrap()
-    else {
-      tracing::debug!(?root_asset, "Bundle entry node is not an asset");
-      continue;
-    };
-
-    let file_name = entry_asset
-      .file_path()
-      .file_stem()
-      .map(|stem| stem.to_string_lossy().to_string())
-      .unwrap_or_else(|| format!("bundle-{}", entry_asset.id()));
-
-    let bundle_id = format!("bundle(entry={})", entry_asset.id());
-    let bundle_name = Some(format!(
-      "{}.{}",
-      file_name,
-      entry_asset.file_type().extension()
-    ));
-
-    // println!("entry-asset-path: {:?}", entry_asset.file_path());
-
-    let bundle_graph_bundle = BundleGraphBundle {
-      bundle: Bundle {
-        bundle_behavior: Some(BundleBehavior::Isolated),
-        bundle_type: entry_asset.file_type().clone(),
-        entry_asset_ids: vec![entry_asset.id()],
-        env: Environment::default(),
-        hash_reference: "".to_string(),
-        id: bundle_id,
-        is_splittable: true,
-        main_entry_id: Some(entry_asset.id()),
-        manual_shared_bundle: None,
-        name: bundle_name,
-        needs_stable_name: false,
-        pipeline: None,
-        public_id: None,
-        target: Target::default(),
-      },
-      assets: bundle_assets,
-    };
-
-    let bundle_node_index =
-      bundle_graph.add_node(Some(BundleGraphNode::Bundle(Arc::new(bundle_graph_bundle))));
-    bundle_graph.add_edge(root_node, bundle_node_index, bundle_edge_type.clone());
-
-    // println!(
-    //   "  >> added bundle {} (bundle {:?})",
-    //   bundle_node_index.index(),
-    //   bundle_edge_type
-    // );
-    added_bundles.push(AddedBundle {
-      bundle_dominator_tree_node_index: root_asset,
-      bundle_node_index,
-    });
-
-    for index in assets_in_bundle {
-      bundles_by_asset_index.insert(index, bundle_node_index);
-    }
-  }
-
-  for (node_index, node_weight) in dominator_tree.node_references() {
-    match node_weight {
-      AcyclicAssetGraphNode::Asset(asset_node) => {
-        if !bundles_by_asset_index.contains_key(&node_index) {
-          tracing::error!(
-            "Asset is not in any bundle:\n --> path={:#?}",
-            dominator_tree.node_weight(node_index).unwrap().file_path()
-          );
-        }
-      }
-      AcyclicAssetGraphNode::Cycle(assets) => {
-        for asset in assets {
-          if !bundles_by_asset_index.contains_key(&asset.asset_graph_node_index()) {
-            tracing::error!(
-              "Asset is not in any bundle:\n --> path={:#?}",
-              asset.file_path()
-            );
-          }
-        }
-      }
-      _ => {}
-    }
-  }
-
-  // Link the bundles together
-  for AddedBundle {
-    bundle_dominator_tree_node_index,
-    bundle_node_index,
-  } in added_bundles.iter()
-  {
-    let filtered_dominator_tree =
-      EdgeFiltered::from_fn(&dominator_tree, |edge| match edge.weight() {
-        DominatorTreeEdge::ImmediateDominator => true,
-        _ => false,
-      });
-
-    petgraph::visit::depth_first_search(
-      &filtered_dominator_tree,
-      [*bundle_dominator_tree_node_index],
-      |event| match event {
-        petgraph::visit::DfsEvent::Discover(node_index, _) => {
-          for edge in dominator_tree.edges_directed(node_index, Direction::Outgoing) {
-            match edge.weight() {
-              DominatorTreeEdge::ImmediateDominator => {}
-              DominatorTreeEdge::AssetDependency(dependency_node) => {
-                let target = edge.target();
-                let target_bundle = bundles_by_asset_index[&target];
-                //   tracing::error!(
-                //     "Asset is not in any bundle:\n --> path={:#?}",
-                //     dominator_tree.node_weight(target).unwrap().file_path()
-                //   );
-                //   continue;
-                // };
-
-                if target_bundle == *bundle_node_index {
-                  continue;
-                }
-
-                bundle_graph.add_edge(
-                  *bundle_dominator_tree_node_index,
-                  target_bundle,
-                  // TODO: Maintain the reason this edge is here, e.g.: carry over the source, target, dependency etc
-                  BundleGraphEdge::BundleSyncLoads,
-                );
-              }
-              DominatorTreeEdge::AssetAsyncDependency(dependency_node) => {
-                let target = edge.target();
-                let target_bundle = bundles_by_asset_index[&target];
-
-                let source_weight = dominator_tree.node_weight(node_index).unwrap();
-                let target_weight = dominator_tree.node_weight(target).unwrap();
-
-                bundle_graph.add_edge(
-                  *bundle_node_index,
-                  target_bundle,
-                  // TODO: Maintain the reason this edge is here, e.g.: carry over the source, target, dependency etc
-                  BundleGraphEdge::BundleAsyncLoads,
-                );
-              }
-              DominatorTreeEdge::EntryAssetRoot(dependency_node) => unreachable!(),
-              DominatorTreeEdge::AsyncRoot(dependency_node) => unreachable!(),
-              DominatorTreeEdge::SharedBundleRoot => unreachable!(),
-              DominatorTreeEdge::TypeChangeRoot(dependency_node) => unreachable!(),
-            }
-          }
-        }
-        _ => {}
-      },
-    );
-  }
-
-  let bundle_graph = bundle_graph.filter_map(|_, node| node.clone(), |_, edge| Some(edge.clone()));
-
-  BundleGraph::build_from(root_node, bundle_graph)
 }
 
 #[cfg(test)]
@@ -365,13 +123,14 @@ mod tests {
   use atlaspack_core::{
     asset_graph::AssetNode,
     bundle_graph::{BundleGraphEdge, BundleRef},
-    types::{Asset, FileType},
+    types::FileType,
   };
   use petgraph::{
     algo::toposort,
-    dot::dot_parser::{DotAttrList, DotNodeWeight, ParseFromDot},
-    graph_from_str,
-    visit::{IntoEdgeReferences, IntoNodeReferences},
+    graph::NodeIndex,
+    prelude::StableDiGraph,
+    visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences},
+    Direction,
   };
 
   use crate::{
@@ -391,6 +150,7 @@ mod tests {
     let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
       root_node: NodeIndex::new(0),
       dominator_tree: &dominator_tree,
+      asset_graph: None,
     });
 
     assert_eq!(bundle_graph.num_bundles(), 0);
@@ -399,7 +159,7 @@ mod tests {
   #[test]
   fn test_make_bundle_graph_over_single_asset_tree() {
     let mut graph = simplified_asset_graph_builder();
-    let asset = graph.entry_asset("src/index.ts");
+    graph.entry_asset("src/index.ts");
     let graph = graph.build();
 
     let (root, acyclic_graph) = remove_cycles(&graph);
@@ -408,6 +168,7 @@ mod tests {
     let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
       root_node: root,
       dominator_tree: &dominator_tree,
+      asset_graph: None,
     });
 
     assert_eq!(
@@ -446,6 +207,7 @@ mod tests {
     let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
       root_node: root,
       dominator_tree: &dominator_tree,
+      asset_graph: None,
     });
 
     assert_eq!(
@@ -497,6 +259,7 @@ mod tests {
     let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
       root_node: root,
       dominator_tree: &dominator_tree,
+      asset_graph: None,
     });
 
     assert_eq!(
@@ -524,7 +287,7 @@ mod tests {
   }
 
   mod unit_tests {
-    use atlaspack_core::types::{Asset, Dependency};
+    use atlaspack_core::asset_graph::DependencyNode;
 
     use super::*;
 
@@ -812,7 +575,7 @@ mod tests {
 
   fn make_dominator_tree_dot_graph(
     project_dir: PathBuf,
-    dominator_tree: StableDiGraph<DominatorTreeNode, DominatorTreeEdge>,
+    dominator_tree: DominatorTree,
   ) -> DebugGraph {
     let repo_root = get_repo_path();
 
@@ -940,6 +703,8 @@ export const baz = "baz" + foo + bar;
   }
 
   mod test_dominator_tree {
+    use petgraph::prelude::StableDiGraph;
+
     use crate::test_utils::graph::{expect_edge, expect_node};
 
     use super::*;

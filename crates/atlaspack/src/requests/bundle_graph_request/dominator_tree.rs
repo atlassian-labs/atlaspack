@@ -1,25 +1,9 @@
-use std::{
-  collections::{HashMap, HashSet},
-  sync::Arc,
-};
+use atlaspack_core::asset_graph::DependencyNode;
+use petgraph::{graph::NodeIndex, prelude::StableDiGraph};
 
-use async_trait::async_trait;
-use atlaspack_core::{
-  asset_graph::{AssetGraph, AssetGraphNode, DependencyNode},
-  bundle_graph::{AssetRef, BundleGraph, BundleGraphBundle, BundleGraphEdge, BundleGraphNode},
-  types::{Bundle, BundleBehavior, Environment, Target},
-};
-use petgraph::{
-  graph::NodeIndex,
-  prelude::StableDiGraph,
-  visit::{Dfs, EdgeFiltered, EdgeRef, IntoNodeReferences},
-  Direction,
-};
-use tracing::info;
-
-use crate::{
-  request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
-  requests::{AssetGraphRequest, RequestResult},
+use crate::requests::bundle_graph_request::{
+  acyclic_asset_graph::{AcyclicAssetGraph, AcyclicAssetGraphNode},
+  simplified_graph::SimplifiedAssetGraphEdge,
 };
 
 pub type DominatorTree = StableDiGraph<DominatorTreeNode, DominatorTreeEdge>;
@@ -40,6 +24,30 @@ pub enum DominatorTreeEdge {
   AssetDependency(DependencyNode),
   /// Asset to asset, means the asset is an async dependency of the other within a bundle
   AssetAsyncDependency(DependencyNode),
+}
+
+impl std::fmt::Display for DominatorTreeEdge {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      DominatorTreeEdge::ImmediateDominator => write!(f, "ImmediateDominator"),
+      DominatorTreeEdge::EntryAssetRoot(dependency_node) => {
+        write!(f, "EntryAssetRoot({})", dependency_node)
+      }
+      DominatorTreeEdge::AsyncRoot(dependency_node) => {
+        write!(f, "AsyncRoot({})", dependency_node)
+      }
+      DominatorTreeEdge::SharedBundleRoot => write!(f, "SharedBundleRoot"),
+      DominatorTreeEdge::TypeChangeRoot(dependency_node) => {
+        write!(f, "TypeChangeRoot({})", dependency_node)
+      }
+      DominatorTreeEdge::AssetDependency(dependency_node) => {
+        write!(f, "AssetDependency({})", dependency_node)
+      }
+      DominatorTreeEdge::AssetAsyncDependency(dependency_node) => {
+        write!(f, "AssetAsyncDependency({})", dependency_node)
+      }
+    }
+  }
 }
 
 impl From<SimplifiedAssetGraphEdge> for DominatorTreeEdge {

@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::ffi::os_str::Display;
 use std::sync::Arc;
 
 use petgraph::graph::NodeIndex;
@@ -42,6 +43,12 @@ pub struct DependencyNode {
   pub state: DependencyState,
 }
 
+impl std::fmt::Display for DependencyNode {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.dependency)
+  }
+}
+
 impl Default for DependencyNode {
   fn default() -> Self {
     Self {
@@ -66,6 +73,18 @@ pub enum AssetGraphNode {
   Dependency(DependencyNode),
 }
 
+impl std::fmt::Display for AssetGraphNode {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      AssetGraphNode::Root => write!(f, "Root"),
+      AssetGraphNode::Asset(asset_node) => write!(f, "Asset({:?})", asset_node.asset.file_path),
+      AssetGraphNode::Dependency(dependency_node) => {
+        write!(f, "Dependency({})", dependency_node.dependency.specifier)
+      }
+    }
+  }
+}
+
 as_variant_impl!(AssetGraphNode, as_asset_node, Asset, AssetNode);
 as_variant_impl!(
   AssetGraphNode,
@@ -77,7 +96,7 @@ as_variant_impl!(
 #[derive(Clone, Debug)]
 pub struct AssetGraph {
   pub graph: StableDiGraph<AssetGraphNode, ()>,
-  root_node_index: NodeIndex,
+  pub root_node_index: NodeIndex,
 }
 
 impl Default for AssetGraph {
@@ -245,12 +264,12 @@ impl AssetGraph {
     run().unwrap_or(false)
   }
 
-  pub fn has_edge(&self, from_idx: &NodeIndex, to_idx: &NodeIndex) -> bool {
-    self.graph.contains_edge(*from_idx, *to_idx)
+  pub fn has_edge(&self, from_idx: NodeIndex, to_idx: NodeIndex) -> bool {
+    self.graph.contains_edge(from_idx, to_idx)
   }
 
-  pub fn add_edge(&mut self, from_idx: &NodeIndex, to_idx: &NodeIndex) {
-    self.graph.add_edge(*from_idx, *to_idx, ());
+  pub fn add_edge(&mut self, from_idx: NodeIndex, to_idx: NodeIndex) {
+    self.graph.add_edge(from_idx, to_idx, ());
   }
 }
 

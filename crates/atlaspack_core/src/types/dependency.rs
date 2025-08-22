@@ -146,6 +146,12 @@ pub struct Dependency {
   pub placeholder: Option<String>,
 }
 
+impl std::fmt::Display for Dependency {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{} ({:?})", self.specifier, self.priority)
+  }
+}
+
 impl Dependency {
   pub fn id(&self) -> String {
     create_dependency_id(

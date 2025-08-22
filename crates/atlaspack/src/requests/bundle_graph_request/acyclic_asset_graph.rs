@@ -16,6 +16,26 @@ pub enum AcyclicAssetGraphNode {
   Cycle(Vec<AssetRef>),
 }
 
+impl std::fmt::Display for AcyclicAssetGraphNode {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      AcyclicAssetGraphNode::Root => write!(f, "Root"),
+      AcyclicAssetGraphNode::Asset(asset_ref) => write!(f, "{}", asset_ref.file_path().display()),
+      AcyclicAssetGraphNode::Cycle(assets) => {
+        write!(
+          f,
+          "Cycle({})",
+          assets
+            .iter()
+            .map(|a| a.file_path().to_str().unwrap())
+            .collect::<Vec<_>>()
+            .join(", ")
+        )
+      }
+    }
+  }
+}
+
 impl AcyclicAssetGraphNode {
   pub fn file_path(&self) -> Option<&std::path::Path> {
     match self {
