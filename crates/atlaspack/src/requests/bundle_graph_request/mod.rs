@@ -22,6 +22,7 @@ use crate::{
   requests::{AssetGraphRequest, RequestResult},
 };
 
+mod asset_graph_builder;
 mod simplified_graph;
 
 #[non_exhaustive]
@@ -728,10 +729,13 @@ mod tests {
     visit::IntoNodeReferences,
   };
 
-  use crate::test_utils::{
-    get_repo_path,
-    graph::{expect_edge, expect_node},
-    make_test_atlaspack, setup_test_directory,
+  use crate::{
+    requests::bundle_graph_request::asset_graph_builder::asset_graph_builder,
+    test_utils::{
+      get_repo_path,
+      graph::{expect_edge, expect_node},
+      make_test_atlaspack, setup_test_directory,
+    },
   };
 
   use super::*;
@@ -880,185 +884,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_simplify_graph_with_single_asset() {
-      //    root -> entry<dep> -> asset
-      // becomes
-      //    root ---- (dep) ----> asset
-      let mut asset_graph = AssetGraph::new();
-      let root = asset_graph.root_node();
-      let entry = asset_graph.add_entry_dependency(Dependency {
-        is_entry: true,
-        ..Dependency::default()
-      });
-      asset_graph.add_edge(&root, &entry);
-      let asset = asset_graph.add_asset(Asset {
-        file_path: PathBuf::from("src/index.ts"),
-        ..Asset::default()
-      });
-      asset_graph.add_edge(&entry, &asset);
-
-      let simplified_graph = simplify_graph(&asset_graph);
-      assert_eq!(simplified_graph.node_count(), 2);
-      assert_eq!(simplified_graph.edge_count(), 1);
-
-      assert_eq!(
-        simplified_graph.node_weight(root).unwrap(),
-        &SimplifiedAssetGraphNode::Root
-      );
-      assert!(matches!(
-        simplified_graph.node_weight(asset).unwrap(),
-        SimplifiedAssetGraphNode::Asset(_)
-      ));
-
-      assert!(matches!(
-        simplified_graph
-          .edges_connecting(root, asset)
-          .next()
-          .unwrap()
-          .weight(),
-        SimplifiedAssetGraphEdge::EntryAssetRoot(_)
-      ));
-    }
-
-    #[test]
-    fn test_simplify_graph_with_sync_dependencies() {
-      //    root -> entry<dep> -> a -> dep(a:b) -> b
-      // becomes
-      //    root ---- (dep) ----> a --- (dep) ---> b
-      let mut asset_graph = AssetGraph::new();
-      let root = asset_graph.root_node();
-      let entry = asset_graph.add_entry_dependency(Dependency {
-        is_entry: true,
-        ..Dependency::default()
-      });
-      asset_graph.add_edge(&root, &entry);
-      let a = asset_graph.add_asset(Asset {
-        file_path: PathBuf::from("src/index.ts"),
-        ..Asset::default()
-      });
-      asset_graph.add_edge(&entry, &a);
-      let b = asset_graph.add_asset(Asset {
-        file_path: PathBuf::from("src/index.ts"),
-        ..Asset::default()
-      });
-      let ab_dep = asset_graph.add_dependency(Dependency {
-        specifier: "b".to_string(),
-        ..Dependency::default()
-      });
-      asset_graph.add_edge(&a, &ab_dep);
-      asset_graph.add_edge(&ab_dep, &b);
-
-      let simplified_graph = simplify_graph(&asset_graph);
-
-      assert_eq!(simplified_graph.node_count(), 3);
-      assert_eq!(simplified_graph.edge_count(), 2);
-
-      assert_eq!(
-        simplified_graph.node_weight(root).unwrap(),
-        &SimplifiedAssetGraphNode::Root
-      );
-      assert!(matches!(
-        simplified_graph.node_weight(a).unwrap(),
-        SimplifiedAssetGraphNode::Asset(_)
-      ));
-      assert!(matches!(
-        simplified_graph.node_weight(b).unwrap(),
-        SimplifiedAssetGraphNode::Asset(_)
-      ));
-
-      assert!(matches!(
-        simplified_graph
-          .edges_connecting(root, a)
-          .next()
-          .unwrap()
-          .weight(),
-        SimplifiedAssetGraphEdge::EntryAssetRoot(_)
-      ));
-      assert!(matches!(
-        simplified_graph
-          .edges_connecting(a, b)
-          .next()
-          .unwrap()
-          .weight(),
-        SimplifiedAssetGraphEdge::AssetDependency(_)
-      ));
-    }
-
-    #[test]
-    fn test_simplify_graph_with_async_dependencies() {
-      //    root -> entry<dep> -> a -> asyncdep(a:b) -> b
-      // becomes
-      //    root ---- (entry) --> a ... (asyncdep) ...> b
-      //       \------(async tree)--------------------/
-      let mut asset_graph = AssetGraph::new();
-      let root = asset_graph.root_node();
-      let entry = asset_graph.add_entry_dependency(Dependency {
-        is_entry: true,
-        ..Dependency::default()
-      });
-      asset_graph.add_edge(&root, &entry);
-      let a = asset_graph.add_asset(Asset {
-        file_path: PathBuf::from("src/index.ts"),
-        ..Asset::default()
-      });
-      asset_graph.add_edge(&entry, &a);
-      let b = asset_graph.add_asset(Asset {
-        file_path: PathBuf::from("src/index.ts"),
-        ..Asset::default()
-      });
-      let ab_dep = asset_graph.add_dependency(Dependency {
-        specifier: "b".to_string(),
-        priority: Priority::Lazy,
-        ..Dependency::default()
-      });
-      asset_graph.add_edge(&a, &ab_dep);
-      asset_graph.add_edge(&ab_dep, &b);
-
-      let simplified_graph = simplify_graph(&asset_graph);
-
-      assert_eq!(simplified_graph.node_count(), 3);
-      assert_eq!(simplified_graph.edge_count(), 3);
-
-      assert_eq!(
-        simplified_graph.node_weight(root).unwrap(),
-        &SimplifiedAssetGraphNode::Root
-      );
-      assert!(matches!(
-        simplified_graph.node_weight(a).unwrap(),
-        SimplifiedAssetGraphNode::Asset(_)
-      ));
-      assert!(matches!(
-        simplified_graph.node_weight(b).unwrap(),
-        SimplifiedAssetGraphNode::Asset(_)
-      ));
-
-      assert!(matches!(
-        simplified_graph
-          .edges_connecting(root, a)
-          .next()
-          .unwrap()
-          .weight(),
-        SimplifiedAssetGraphEdge::EntryAssetRoot(_)
-      ));
-      assert!(matches!(
-        simplified_graph
-          .edges_connecting(a, b)
-          .next()
-          .unwrap()
-          .weight(),
-        SimplifiedAssetGraphEdge::AssetAsyncDependency(_)
-      ));
-      assert!(matches!(
-        simplified_graph
-          .edges_connecting(root, b)
-          .next()
-          .unwrap()
-          .weight(),
-        SimplifiedAssetGraphEdge::AsyncRoot(_)
-      ));
-    }
-
-    #[test]
     fn test_acyclic_graph_maintains_the_same_structure_as_the_original_graph() {
       //    root -> entry<dep> -> a -> dep(a:b) -> b
       // becomes
@@ -1192,78 +1017,6 @@ mod tests {
     };
 
     expect_node(&dominator_tree, predicate)
-  }
-
-  struct AssetGraphBuilder {
-    graph: SimplifiedAssetGraph,
-    root: NodeIndex,
-  }
-
-  impl AssetGraphBuilder {
-    fn entry_asset(&mut self, path: &str) -> NodeIndex {
-      let asset = self
-        .graph
-        .add_node(SimplifiedAssetGraphNode::Asset(AssetRef::new(
-          AssetNode::from(Asset {
-            file_path: PathBuf::from(path),
-            ..Asset::default()
-          }),
-          NodeIndex::new(self.graph.node_count()),
-        )));
-
-      self.graph.add_edge(
-        self.root,
-        asset,
-        SimplifiedAssetGraphEdge::EntryAssetRoot(DependencyNode::default()),
-      );
-
-      asset
-    }
-
-    fn asset(&mut self, path: &str) -> NodeIndex {
-      let asset = self
-        .graph
-        .add_node(SimplifiedAssetGraphNode::Asset(AssetRef::new(
-          AssetNode::from(Asset {
-            file_path: PathBuf::from(path),
-            ..Asset::default()
-          }),
-          NodeIndex::new(self.graph.node_count()),
-        )));
-
-      asset
-    }
-
-    fn sync_dependency(&mut self, source: NodeIndex, target: NodeIndex) {
-      self.graph.add_edge(
-        source,
-        target,
-        SimplifiedAssetGraphEdge::AssetDependency(DependencyNode::default()),
-      );
-    }
-
-    fn async_dependency(&mut self, source: NodeIndex, target: NodeIndex) {
-      self.graph.add_edge(
-        source,
-        target,
-        SimplifiedAssetGraphEdge::AssetAsyncDependency(DependencyNode::default()),
-      );
-      self.graph.add_edge(
-        self.root,
-        target,
-        SimplifiedAssetGraphEdge::AsyncRoot(DependencyNode::default()),
-      );
-    }
-
-    fn build(self) -> SimplifiedAssetGraph {
-      self.graph
-    }
-  }
-
-  fn asset_graph_builder() -> AssetGraphBuilder {
-    let mut graph = SimplifiedAssetGraph::new();
-    let root = graph.add_node(SimplifiedAssetGraphNode::Root);
-    AssetGraphBuilder { graph, root }
   }
 
   fn asset_path_label(asset_node: &AssetNode, repo_root: &Path, project_dir: &Path) -> String {
