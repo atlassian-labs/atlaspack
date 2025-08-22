@@ -1,5 +1,17 @@
 # @atlaspack/resolver-glob
 
+## 2.14.28
+
+### Patch Changes
+
+- [#760](https://github.com/atlassian-labs/atlaspack/pull/760) [`f930003`](https://github.com/atlassian-labs/atlaspack/commit/f930003364fdc31e5487520ebe256f1a9389f579) Thanks [@marcins](https://github.com/marcins)! - Fix TypeScript errors in various packages
+
+- Updated dependencies [[`f0349a6`](https://github.com/atlassian-labs/atlaspack/commit/f0349a6b9b04755088f121095ca6301a2ada3767)]:
+  - @atlaspack/utils@2.19.0
+  - @atlaspack/node-resolver-core@3.6.4
+  - @atlaspack/plugin@2.14.28
+  - @atlaspack/types@2.15.18
+
 ## 2.14.27
 
 ### Patch Changes

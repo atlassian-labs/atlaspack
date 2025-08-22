@@ -1,5 +1,15 @@
 # @atlaspack/transformer-typescript-tsc
 
+## 2.14.28
+
+### Patch Changes
+
+- [#758](https://github.com/atlassian-labs/atlaspack/pull/758) [`c940954`](https://github.com/atlassian-labs/atlaspack/commit/c940954d27d657c3c93cd328dfb394778da46eab) Thanks [@marcins](https://github.com/marcins)! - Type fixes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.28
+  - @atlaspack/ts-utils@2.14.7
+
 ## 2.14.27
 
 ### Patch Changes

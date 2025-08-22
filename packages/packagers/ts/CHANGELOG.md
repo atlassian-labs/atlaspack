@@ -1,5 +1,17 @@
 # @atlaspack/packager-ts
 
+## 2.14.28
+
+### Patch Changes
+
+- [#760](https://github.com/atlassian-labs/atlaspack/pull/760) [`f930003`](https://github.com/atlassian-labs/atlaspack/commit/f930003364fdc31e5487520ebe256f1a9389f579) Thanks [@marcins](https://github.com/marcins)! - Fix TypeScript errors in various packages
+
+- [#760](https://github.com/atlassian-labs/atlaspack/pull/760) [`f930003`](https://github.com/atlassian-labs/atlaspack/commit/f930003364fdc31e5487520ebe256f1a9389f579) Thanks [@marcins](https://github.com/marcins)! - Fix typescript errors
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.28
+  - @atlaspack/types@2.15.18
+
 ## 2.14.27
 
 ### Patch Changes

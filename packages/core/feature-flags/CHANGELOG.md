@@ -1,5 +1,21 @@
 # @atlaspack/feature-flags
 
+## 2.24.0
+
+### Minor Changes
+
+- [#753](https://github.com/atlassian-labs/atlaspack/pull/753) [`f0349a6`](https://github.com/atlassian-labs/atlaspack/commit/f0349a6b9b04755088f121095ca6301a2ada3767) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add configurable async bundle merging and redundant shared bundle removal behind a feature flag.
+
+### Patch Changes
+
+- [#762](https://github.com/atlassian-labs/atlaspack/pull/762) [`a5081c3`](https://github.com/atlassian-labs/atlaspack/commit/a5081c3f9207d28716ee4edd3841de1830ea4b80) Thanks [@JakeLane](https://github.com/JakeLane)! - Add feature flag 'useNewPrelude' which enables a micro-optimisation removing a 'for in' call and replacing with undefined check
+
+- [#760](https://github.com/atlassian-labs/atlaspack/pull/760) [`f930003`](https://github.com/atlassian-labs/atlaspack/commit/f930003364fdc31e5487520ebe256f1a9389f579) Thanks [@marcins](https://github.com/marcins)! - Fix TypeScript errors in various packages
+
+- [#760](https://github.com/atlassian-labs/atlaspack/pull/760) [`f930003`](https://github.com/atlassian-labs/atlaspack/commit/f930003364fdc31e5487520ebe256f1a9389f579) Thanks [@marcins](https://github.com/marcins)! - Fix typescript errors
+
+- [#761](https://github.com/atlassian-labs/atlaspack/pull/761) [`8843980`](https://github.com/atlassian-labs/atlaspack/commit/88439807be20025fd3433380204ff1205079729e) Thanks [@marcins](https://github.com/marcins)! - Adds a new feature flag `singleFileOutputStableName` - when enabled, bundles produced by the experimental single file output bundler will have stable names (i.e. no hash).
+
 ## 2.23.2
 
 ### Patch Changes
