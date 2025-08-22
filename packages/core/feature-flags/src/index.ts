@@ -167,6 +167,11 @@ export const DEFAULT_FEATURE_FLAGS = {
    * When enabled, single file output bundles have a stable name
    */
   singleFileOutputStableName: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Enable optimised prelude for the ScopeHoistingPackager.
+   */
+  useNewPrelude: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

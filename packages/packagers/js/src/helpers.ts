@@ -1,6 +1,6 @@
 import type {Environment} from '@atlaspack/types';
 
-export const prelude = (parcelRequireName: string): string => `
+export const preludeOld = (parcelRequireName: string): string => `
 var $parcel$modules = {};
 var $parcel$inits = {};
 
@@ -13,6 +13,41 @@ if (parcelRequire == null) {
     }
     if (id in $parcel$inits) {
       var init = $parcel$inits[id];
+      delete $parcel$inits[id];
+      var module = {id: id, exports: {}};
+      $parcel$modules[id] = module;
+      init.call(module.exports, module, module.exports);
+      return module.exports;
+    }
+    var err = new Error("Cannot find module '" + id + "'");
+    err.code = 'MODULE_NOT_FOUND';
+    throw err;
+  };
+
+  parcelRequire.register = function register(id, init) {
+    $parcel$inits[id] = init;
+  };
+
+  $parcel$global[${JSON.stringify(parcelRequireName)}] = parcelRequire;
+}
+
+var parcelRegister = parcelRequire.register;
+`;
+
+export const preludeNew = (parcelRequireName: string): string => `
+var $parcel$modules = {};
+var $parcel$inits = {};
+
+var parcelRequire = $parcel$global[${JSON.stringify(parcelRequireName)}];
+
+if (parcelRequire == null) {
+  parcelRequire = function(id) {
+    var mod = $parcel$modules[id];
+    if (mod !== undefined) {
+      return mod.exports;
+    }
+    var init = $parcel$inits[id];
+    if (init !== undefined) {
       delete $parcel$inits[id];
       var module = {id: id, exports: {}};
       $parcel$modules[id] = module;

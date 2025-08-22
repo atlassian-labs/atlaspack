@@ -29,7 +29,13 @@ import {outdent} from 'outdent';
 import {ESMOutputFormat} from './ESMOutputFormat';
 import {CJSOutputFormat} from './CJSOutputFormat';
 import {GlobalOutputFormat} from './GlobalOutputFormat';
-import {prelude, helpers, bundleQueuePrelude, fnExpr} from './helpers';
+import {
+  preludeOld,
+  preludeNew,
+  helpers,
+  bundleQueuePrelude,
+  fnExpr,
+} from './helpers';
 import {
   replaceScriptDependencies,
   getSpecifier,
@@ -1677,7 +1683,9 @@ ${code}
         this.hasConditionalDependency();
 
       if (mightBeFirstJS) {
-        let preludeCode = prelude(this.parcelRequireName);
+        let preludeCode = (
+          getFeatureFlag('useNewPrelude') ? preludeNew : preludeOld
+        )(this.parcelRequireName);
         res += preludeCode;
         if (enableSourceMaps) {
           lines += countLines(preludeCode) - 1;
