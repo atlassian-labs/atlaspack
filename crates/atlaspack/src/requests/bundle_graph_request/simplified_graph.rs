@@ -74,7 +74,7 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
     );
   }
 
-  let root_node_index = asset_graph.root_node();
+  let root = asset_graph.root_node();
 
   let mut simplified_graph: StableDiGraph<SimplifiedAssetGraphNode, SimplifiedAssetGraphEdge> =
     asset_graph.graph.filter_map(
@@ -82,23 +82,42 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
       |_, _| None,
     );
 
+  // The input graph looks like:
+  //
+  // a -> dependency_a_to_b -> b
+  // a -> dependency_a_to_c -> c
+  //
+  // We are rewriting it into:
+  //
+  // a -> b
+  // a -> c
+  //
+  // And storing the dependency as an edge weight.
+  //
+  // For each edge in the graph, we check it is connecting a dependency to an asset.
+  //
+  // If the file types are different or if this is an async dependency, we add a new edge connecting
+  // the asset directly to the root.
   for edge in asset_graph.graph.edge_references() {
-    let source_node_index = edge.source();
-    let target_node_index = edge.target();
-    let source_node = asset_graph.get_node(&source_node_index).unwrap();
-    let target_node = asset_graph.get_node(&target_node_index).unwrap();
+    let source = edge.source();
+    let target = edge.target();
+    let source_node = asset_graph.get_node(&source).unwrap();
+    let target_node = asset_graph.get_node(&target).unwrap();
 
     let AssetGraphNode::Dependency(dependency_node) = source_node else {
       continue;
     };
     assert!(matches!(target_node, AssetGraphNode::Asset(_)));
 
-    for incoming_edge in asset_graph
+    let incoming_edges = asset_graph
       .graph
-      .edges_directed(source_node_index, Direction::Incoming)
-    {
-      let incoming_node_index = incoming_edge.source();
-      let target_node = asset_graph.get_node(&target_node_index).unwrap();
+      .edges_directed(source, Direction::Incoming);
+    for incoming_edge in incoming_edges {
+      let incoming = incoming_edge.source();
+      let incoming_node = asset_graph.get_node(&incoming);
+      let Some(target_node) = asset_graph.get_node(&target) else {
+        continue;
+      };
 
       assert!(
         matches!(target_node, AssetGraphNode::Asset(_))
@@ -106,21 +125,10 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
         "Target node must be an asset or root"
       );
 
-      // The input graph looks like:
-      //
-      // a -> dependency_a_to_b -> b
-      // a -> dependency_a_to_c -> c
-      //
-      // We are rewriting it into:
-      //
-      // a -> b
-      // a -> c
-      //
-      // And storing the dependency as an edge weight.
       if let (
         Some(AssetGraphNode::Asset(source_asset_node)),
         AssetGraphNode::Asset(target_asset_node),
-      ) = (asset_graph.get_node(&incoming_node_index), target_node)
+      ) = (incoming_node, target_node)
       {
         if source_asset_node.asset.file_type != target_asset_node.asset.file_type {
           debug!(
@@ -128,8 +136,8 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
           source_asset_node.asset.file_path, target_asset_node.asset.file_path
         );
           simplified_graph.add_edge(
-            root_node_index,
-            target_node_index,
+            root,
+            target,
             SimplifiedAssetGraphEdge::TypeChangeRoot(dependency_node.clone()),
           );
           continue;
@@ -138,28 +146,28 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
 
       if dependency_node.dependency.priority != Priority::Sync {
         simplified_graph.add_edge(
-          root_node_index,
-          target_node_index,
+          root,
+          target,
           SimplifiedAssetGraphEdge::AsyncRoot(dependency_node.clone()),
         );
         simplified_graph.add_edge(
-          incoming_node_index,
-          target_node_index,
+          incoming,
+          target,
           SimplifiedAssetGraphEdge::AssetAsyncDependency(dependency_node.clone()),
         );
         continue;
       }
 
-      if incoming_node_index == root_node_index {
+      if incoming == root {
         simplified_graph.add_edge(
-          incoming_node_index,
-          target_node_index,
+          incoming,
+          target,
           SimplifiedAssetGraphEdge::EntryAssetRoot(dependency_node.clone()),
         );
       } else {
         simplified_graph.add_edge(
-          incoming_node_index,
-          target_node_index,
+          incoming,
+          target,
           SimplifiedAssetGraphEdge::AssetDependency(dependency_node.clone()),
         );
       }
