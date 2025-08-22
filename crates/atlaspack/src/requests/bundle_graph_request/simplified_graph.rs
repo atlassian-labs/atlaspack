@@ -88,79 +88,80 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
     let source_node = asset_graph.get_node(&source_node_index).unwrap();
     let target_node = asset_graph.get_node(&target_node_index).unwrap();
 
-    if let AssetGraphNode::Dependency(dependency_node) = source_node {
-      assert!(matches!(target_node, AssetGraphNode::Asset(_)));
+    let AssetGraphNode::Dependency(dependency_node) = source_node else {
+      continue;
+    };
+    assert!(matches!(target_node, AssetGraphNode::Asset(_)));
 
-      for incoming_edge in asset_graph
-        .graph
-        .edges_directed(source_node_index, Direction::Incoming)
+    for incoming_edge in asset_graph
+      .graph
+      .edges_directed(source_node_index, Direction::Incoming)
+    {
+      let incoming_node_index = incoming_edge.source();
+      let target_node = asset_graph.get_node(&target_node_index).unwrap();
+
+      assert!(
+        matches!(target_node, AssetGraphNode::Asset(_))
+          || matches!(target_node, AssetGraphNode::Root),
+        "Target node must be an asset or root"
+      );
+
+      // The input graph looks like:
+      //
+      // a -> dependency_a_to_b -> b
+      // a -> dependency_a_to_c -> c
+      //
+      // We are rewriting it into:
+      //
+      // a -> b
+      // a -> c
+      //
+      // And storing the dependency as an edge weight.
+      if let (
+        Some(AssetGraphNode::Asset(source_asset_node)),
+        AssetGraphNode::Asset(target_asset_node),
+      ) = (asset_graph.get_node(&incoming_node_index), target_node)
       {
-        let incoming_node_index = incoming_edge.source();
-        let target_node = asset_graph.get_node(&target_node_index).unwrap();
-
-        assert!(
-          matches!(target_node, AssetGraphNode::Asset(_))
-            || matches!(target_node, AssetGraphNode::Root),
-          "Target node must be an asset or root"
+        if source_asset_node.asset.file_type != target_asset_node.asset.file_type {
+          debug!(
+          "Skipping dependency edge because source and target have different file types: {:?} -> {:?}",
+          source_asset_node.asset.file_path, target_asset_node.asset.file_path
         );
-
-        // The input graph looks like:
-        //
-        // a -> dependency_a_to_b -> b
-        // a -> dependency_a_to_c -> c
-        //
-        // We are rewriting it into:
-        //
-        // a -> b
-        // a -> c
-        //
-        // And storing the dependency as an edge weight.
-        if let (
-          Some(AssetGraphNode::Asset(source_asset_node)),
-          AssetGraphNode::Asset(target_asset_node),
-        ) = (asset_graph.get_node(&incoming_node_index), target_node)
-        {
-          if source_asset_node.asset.file_type != target_asset_node.asset.file_type {
-            debug!(
-              "Skipping dependency edge because source and target have different file types: {:?} -> {:?}",
-              source_asset_node.asset.file_path, target_asset_node.asset.file_path
-            );
-            simplified_graph.add_edge(
-              root_node_index,
-              target_node_index,
-              SimplifiedAssetGraphEdge::TypeChangeRoot(dependency_node.clone()),
-            );
-            continue;
-          }
-        }
-
-        if dependency_node.dependency.priority != Priority::Sync {
           simplified_graph.add_edge(
             root_node_index,
             target_node_index,
-            SimplifiedAssetGraphEdge::AsyncRoot(dependency_node.clone()),
-          );
-          simplified_graph.add_edge(
-            incoming_node_index,
-            target_node_index,
-            SimplifiedAssetGraphEdge::AssetAsyncDependency(dependency_node.clone()),
+            SimplifiedAssetGraphEdge::TypeChangeRoot(dependency_node.clone()),
           );
           continue;
         }
+      }
 
-        if incoming_node_index == root_node_index {
-          simplified_graph.add_edge(
-            incoming_node_index,
-            target_node_index,
-            SimplifiedAssetGraphEdge::EntryAssetRoot(dependency_node.clone()),
-          );
-        } else {
-          simplified_graph.add_edge(
-            incoming_node_index,
-            target_node_index,
-            SimplifiedAssetGraphEdge::AssetDependency(dependency_node.clone()),
-          );
-        }
+      if dependency_node.dependency.priority != Priority::Sync {
+        simplified_graph.add_edge(
+          root_node_index,
+          target_node_index,
+          SimplifiedAssetGraphEdge::AsyncRoot(dependency_node.clone()),
+        );
+        simplified_graph.add_edge(
+          incoming_node_index,
+          target_node_index,
+          SimplifiedAssetGraphEdge::AssetAsyncDependency(dependency_node.clone()),
+        );
+        continue;
+      }
+
+      if incoming_node_index == root_node_index {
+        simplified_graph.add_edge(
+          incoming_node_index,
+          target_node_index,
+          SimplifiedAssetGraphEdge::EntryAssetRoot(dependency_node.clone()),
+        );
+      } else {
+        simplified_graph.add_edge(
+          incoming_node_index,
+          target_node_index,
+          SimplifiedAssetGraphEdge::AssetDependency(dependency_node.clone()),
+        );
       }
     }
   }
@@ -172,6 +173,7 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
 mod tests {
   use std::path::PathBuf;
 
+  use atlaspack_core::types::FileType;
   use atlaspack_core::types::{Asset, Dependency};
 
   use crate::test_utils::graph::expect_edge;
@@ -365,6 +367,130 @@ mod tests {
     assert!(matches!(
       expect_edge(&simplified_graph, root, b).weight(),
       SimplifiedAssetGraphEdge::AsyncRoot(_)
+    ));
+  }
+
+  #[test]
+  fn test_type_change_creates_type_change_root_edge_and_skips_dependency() {
+    // graph {
+    //   root -> entry -> a (js) -> dep_a_b -> b (css)
+    // }
+    //
+    // becomes
+    //
+    // graph {
+    //   root -> a (entry)
+    //   root -> b (type-change)
+    // }
+    let mut builder = asset_graph_builder();
+    let a = builder.entry_asset("src/a.ts");
+    let b = builder.asset("src/b.css");
+    {
+      // Force b to be CSS to trigger type-change logic (a defaults to JS)
+      let b_node = builder.graph.get_asset_node_mut(&b).unwrap();
+      b_node.asset.file_type = FileType::Css;
+    }
+    builder.sync_dependency(a, b);
+    let asset_graph = builder.build();
+    let root = asset_graph.root_node();
+
+    let simplified_graph = simplify_graph(&asset_graph);
+
+    assert_eq!(simplified_graph.node_count(), 3);
+    assert_eq!(simplified_graph.edge_count(), 2);
+
+    assert!(matches!(
+      expect_edge(&simplified_graph, root, a).weight(),
+      SimplifiedAssetGraphEdge::EntryAssetRoot(_)
+    ));
+    assert!(matches!(
+      expect_edge(&simplified_graph, root, b).weight(),
+      SimplifiedAssetGraphEdge::TypeChangeRoot(_)
+    ));
+
+    // Ensure there is no direct a -> b edge due to type change
+    assert!(
+      simplified_graph.edges_connecting(a, b).next().is_none(),
+      "Unexpected a -> b edge present"
+    );
+  }
+
+  #[test]
+  fn test_type_change_with_async_dependency_only_adds_type_change_root() {
+    // graph {
+    //   root -> entry -> a (js) -> asyncdep_a_b -> b (css)
+    // }
+    //
+    // becomes
+    //
+    // graph {
+    //   root -> a (entry)
+    //   root -> b (type-change)
+    // }
+    let mut builder = asset_graph_builder();
+    let a = builder.entry_asset("src/a.ts");
+    let b = builder.asset("src/b.css");
+    {
+      // Force b to be CSS to trigger type-change logic
+      let b_node = builder.graph.get_asset_node_mut(&b).unwrap();
+      b_node.asset.file_type = FileType::Css;
+    }
+    builder.async_dependency(a, b);
+    let asset_graph = builder.build();
+    let root = asset_graph.root_node();
+
+    let simplified_graph = simplify_graph(&asset_graph);
+
+    assert_eq!(simplified_graph.node_count(), 3);
+    assert_eq!(simplified_graph.edge_count(), 2);
+
+    assert!(matches!(
+      expect_edge(&simplified_graph, root, a).weight(),
+      SimplifiedAssetGraphEdge::EntryAssetRoot(_)
+    ));
+    assert!(matches!(
+      expect_edge(&simplified_graph, root, b).weight(),
+      SimplifiedAssetGraphEdge::TypeChangeRoot(_)
+    ));
+
+    // Ensure no async edges were added due to early continue on type change
+    assert!(
+      simplified_graph.edges_connecting(a, b).next().is_none(),
+      "Unexpected async a -> b edge present"
+    );
+    assert!(
+      simplified_graph
+        .edges_connecting(root, b)
+        .find(|e| matches!(e.weight(), SimplifiedAssetGraphEdge::AsyncRoot(_)))
+        .is_none(),
+      "Unexpected AsyncRoot edge present to b"
+    );
+  }
+
+  #[test]
+  fn test_multiple_entry_assets_create_multiple_root_entry_edges() {
+    // graph {
+    //   root -> entry -> a
+    //   root -> entry -> b
+    // }
+    let mut builder = asset_graph_builder();
+    let a = builder.entry_asset("src/a.ts");
+    let b = builder.entry_asset("src/b.ts");
+    let asset_graph = builder.build();
+    let root = asset_graph.root_node();
+
+    let simplified_graph = simplify_graph(&asset_graph);
+
+    assert_eq!(simplified_graph.node_count(), 3);
+    assert_eq!(simplified_graph.edge_count(), 2);
+
+    assert!(matches!(
+      expect_edge(&simplified_graph, root, a).weight(),
+      SimplifiedAssetGraphEdge::EntryAssetRoot(_)
+    ));
+    assert!(matches!(
+      expect_edge(&simplified_graph, root, b).weight(),
+      SimplifiedAssetGraphEdge::EntryAssetRoot(_)
     ));
   }
 }
