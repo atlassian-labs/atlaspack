@@ -53,10 +53,10 @@ pub fn make_bundle_graph(
   for (_, asset) in dominator_tree.node_references() {
     match asset {
       AcyclicAssetGraphNode::Asset(asset_node) => {
+        // println!("Asset: {} {:?}", asset_node.id(), asset_node.file_path());
         let asset_id = asset_node.id();
         if visited.contains(&asset_id) {
           panic!("Asset already visited: {:?}", asset_node.file_path());
-          continue;
         }
         visited.insert(asset_id);
       }
@@ -64,7 +64,6 @@ pub fn make_bundle_graph(
         for asset in assets {
           if visited.contains(&asset.id()) {
             panic!("Asset already visited: {:?}", asset.file_path());
-            continue;
           }
           visited.insert(asset.id());
         }
@@ -86,11 +85,6 @@ pub fn make_bundle_graph(
       DominatorTreeEdge::AssetAsyncDependency(_) => None,
     };
     let Some(bundle_edge_type) = bundle_edge_type else {
-      tracing::error!(
-        "Skipping edge: {} from root into {}",
-        edge.weight(),
-        dominator_tree.node_weight(edge.target()).unwrap()
-      );
       continue;
     };
 
@@ -111,7 +105,7 @@ pub fn make_bundle_graph(
       |event| match event {
         petgraph::visit::DfsEvent::Discover(node_index, _) => {
           let weight = dominator_tree.node_weight(node_index).unwrap();
-          println!("{:indentation$} {}", "", weight);
+          // println!("{:indentation$} {}", "", weight);
           indentation += 4;
         }
         petgraph::visit::DfsEvent::Finish(node_index, _) => {
@@ -293,10 +287,15 @@ pub fn make_bundle_graph(
       [*bundle_dominator_tree_node_index],
       |event| match event {
         petgraph::visit::DfsEvent::Discover(node_index, _) => {
+          println!(
+            "Discovering node: {}",
+            dominator_tree.node_weight(node_index).unwrap()
+          );
           for edge in dominator_tree.edges_directed(node_index, Direction::Outgoing) {
+            println!("  Discovering edge: {}", edge.weight());
             match edge.weight() {
               DominatorTreeEdge::ImmediateDominator => {}
-              DominatorTreeEdge::AssetDependency(_dependency_node) => {
+              DominatorTreeEdge::AssetDependency(dependency_node) => {
                 let target = edge.target();
                 let target_bundle = bundles_by_node_index[&target];
                 //   tracing::error!(
@@ -314,10 +313,10 @@ pub fn make_bundle_graph(
                   *bundle_dominator_tree_node_index,
                   target_bundle,
                   // TODO: Maintain the reason this edge is here, e.g.: carry over the source, target, dependency etc
-                  BundleGraphEdge::BundleSyncLoads,
+                  BundleGraphEdge::BundleSyncLoads(dependency_node.clone()),
                 );
               }
-              DominatorTreeEdge::AssetAsyncDependency(_dependency_node) => {
+              DominatorTreeEdge::AssetAsyncDependency(dependency_node) => {
                 let target = edge.target();
                 let target_bundle = bundles_by_node_index[&target];
 
@@ -328,7 +327,7 @@ pub fn make_bundle_graph(
                   *bundle_node_index,
                   target_bundle,
                   // TODO: Maintain the reason this edge is here, e.g.: carry over the source, target, dependency etc
-                  BundleGraphEdge::BundleAsyncLoads,
+                  BundleGraphEdge::BundleAsyncLoads(dependency_node.clone()),
                 );
               }
               DominatorTreeEdge::EntryAssetRoot(_) => unreachable!(),
@@ -364,10 +363,8 @@ pub fn debug_node_chain(
   dominator_tree: &StableDiGraph<DominatorTreeNode, DominatorTreeEdge>,
   node_index: NodeIndex,
 ) {
-  let mut node = node_index;
-
   println!("DOMINATOR TREE - Dependency chain up from {node_index:?}");
-  let mut asset = node;
+  let mut asset = node_index;
   let mut indentation = 2;
 
   for _ in 0..50 {

@@ -14,23 +14,40 @@ use atlaspack_core::types::{
 use atlaspack_dev_server::{DevServer, DevServerDataProvider, DevServerOptions};
 use atlaspack_monitoring::{MonitoringOptions, TracerMode};
 use atlaspack_plugin_rpc::rust::RustWorkerFactory;
-use clap::Parser;
-use std::{path::PathBuf, sync::Arc};
+use clap::{Parser, Subcommand};
+use std::{
+  env::current_dir,
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 use tracing::{error, info};
 
 #[derive(Parser)]
-struct Args {
+struct Cli {
   #[arg(short, long)]
   dev: bool,
 
   #[arg(short, long)]
   config: Option<PathBuf>,
 
-  #[arg(short, long)]
-  server: bool,
+  #[command(subcommand)]
+  command: Command,
+}
 
-  #[arg(trailing_var_arg = true)]
-  entries: Vec<String>,
+#[derive(Subcommand)]
+enum Command {
+  Build {
+    #[arg(trailing_var_arg = true)]
+    entries: Vec<String>,
+  },
+  Watch {
+    #[arg(trailing_var_arg = true)]
+    entries: Vec<String>,
+  },
+  Scan {
+    #[arg(short, long)]
+    target: Option<PathBuf>,
+  },
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -44,14 +61,14 @@ async fn main() {
 
   info!("This is a testing binary only and requires a check-out of the atlaspack repository.");
 
-  let args = Args::parse();
+  let args = Cli::parse();
   run(args).await.unwrap_or_else(|e| {
     error!("Failed to run atlaspack: {}", e);
     std::process::exit(1);
   });
 }
 
-async fn run(args: Args) -> anyhow::Result<()> {
+async fn run(args: Cli) -> anyhow::Result<()> {
   let atlaspack = make_atlaspack(&args).await?;
   let atlaspack = Arc::new(atlaspack);
 
@@ -63,44 +80,50 @@ async fn run(args: Args) -> anyhow::Result<()> {
     .unwrap_or_else(|| atlaspack.project_root.join("dist"));
   std::fs::create_dir_all(&output_dir)?;
 
-  let dev_server = DevServer::new(DevServerOptions {
-    host: "localhost".to_string(),
-    port: 2910,
-    public_url: None,
-    dist_dir: output_dir,
-    data_provider: Box::new(DefaultDevServerDataProvider::new()),
-  });
-  if args.server {
-    dev_server.start().await?;
-  }
+  let command = args.command;
+  match command {
+    Command::Build { entries } => {
+      info!("Building asset graph");
+      atlaspack
+        .run_request_async(AssetGraphRequest::default())
+        .await?;
 
-  info!("Building asset graph");
-  atlaspack
-    .run_request_async(AssetGraphRequest::default())
-    .await?;
+      info!("Building bundle graph");
+      let result = atlaspack
+        .run_request_async(BundleGraphRequest::default())
+        .await?;
+      let BundleGraphRequestOutput {
+        bundle_graph,
+        asset_graph,
+        ..
+      } = result
+        .into_bundle_graph()
+        .ok_or_else(|| anyhow::anyhow!("Invalid request result from bundle graph request."))?;
 
-  info!("Building bundle graph");
-  let result = atlaspack
-    .run_request_async(BundleGraphRequest::default())
-    .await?;
-  let BundleGraphRequestOutput {
-    bundle_graph,
-    asset_graph,
-    ..
-  } = result
-    .into_bundle_graph()
-    .ok_or_else(|| anyhow::anyhow!("Invalid request result from bundle graph request."))?;
+      let asset_graph = Arc::new(asset_graph);
 
-  let asset_graph = Arc::new(asset_graph);
+      info!("Packaging bundles");
 
-  info!("Packaging bundles");
+      let request = PackageRequest::new(bundle_graph, asset_graph.clone());
+      atlaspack.run_request_async(request).await?;
+    }
+    Command::Scan { target } => {
+      run_scan_directory(target.as_deref().unwrap_or(&current_dir()?)).await?
+    }
+    Command::Watch { entries } => {
+      let dev_server = DevServer::new(DevServerOptions {
+        host: "localhost".to_string(),
+        port: 2910,
+        public_url: None,
+        dist_dir: output_dir,
+        data_provider: Box::new(DefaultDevServerDataProvider::new()),
+      });
 
-  let request = PackageRequest::new(bundle_graph, asset_graph.clone());
-  atlaspack.run_request_async(request).await?;
+      dev_server.start().await?;
 
-  if args.server {
-    loop {
-      tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+      loop {
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+      }
     }
   }
 
@@ -126,12 +149,16 @@ impl DevServerDataProvider for DefaultDevServerDataProvider {
   }
 }
 
-async fn make_atlaspack(args: &Args) -> anyhow::Result<Atlaspack> {
+async fn make_atlaspack(args: &Cli) -> anyhow::Result<Atlaspack> {
   let atlaspack = Atlaspack::new(AtlaspackInitOptions {
     db: create_db().unwrap(),
     fs: Some(Arc::new(atlaspack_resolver::OsFileSystem)),
     options: AtlaspackOptions {
-      entries: args.entries.clone(),
+      entries: match &args.command {
+        Command::Build { entries } => entries.clone(),
+        Command::Watch { entries } => entries.clone(),
+        Command::Scan { target } => vec![],
+      },
       mode: if args.dev {
         BuildMode::Development
       } else {
@@ -174,4 +201,26 @@ fn initialize_tracing() {
     options.tracing_options.push(TracerMode::Stdout);
   }
   atlaspack_monitoring::initialize_monitoring(options).unwrap();
+}
+
+async fn run_scan_directory(target: &Path) -> anyhow::Result<()> {
+  enum FileType {
+    File,
+    Directory,
+  }
+
+  let mut cache = std::collections::HashMap::new();
+  for entry in jwalk::WalkDir::new(target) {
+    let entry = entry?;
+    let path = entry.path();
+    if path.is_file() || path.is_symlink() {
+      cache.insert(path, FileType::File);
+    } else if path.is_dir() {
+      cache.insert(path, FileType::Directory);
+    }
+  }
+
+  println!("Found {} files", cache.len());
+
+  Ok(())
 }

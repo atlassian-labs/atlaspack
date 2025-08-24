@@ -140,6 +140,20 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
             target,
             SimplifiedAssetGraphEdge::TypeChangeRoot(dependency_node.clone()),
           );
+          if dependency_node.dependency.priority != Priority::Sync {
+            simplified_graph.add_edge(
+              incoming,
+              target,
+              SimplifiedAssetGraphEdge::AssetAsyncDependency(dependency_node.clone()),
+            );
+          } else {
+            simplified_graph.add_edge(
+              incoming,
+              target,
+              SimplifiedAssetGraphEdge::AssetDependency(dependency_node.clone()),
+            );
+          }
+
           continue;
         }
       }
@@ -205,8 +219,8 @@ mod tests {
         ..Asset::default()
       });
       let dependency = self.graph.add_entry_dependency(Dependency::default());
-      self.graph.add_edge(&self.graph.root_node(), &dependency);
-      self.graph.add_edge(&dependency, &asset);
+      self.graph.add_edge(self.graph.root_node(), dependency);
+      self.graph.add_edge(dependency, asset);
       asset
     }
 
@@ -220,8 +234,8 @@ mod tests {
 
     fn sync_dependency(&mut self, source: NodeIndex, target: NodeIndex) {
       let dependency = self.graph.add_dependency(Dependency::default());
-      self.graph.add_edge(&source, &dependency);
-      self.graph.add_edge(&dependency, &target);
+      self.graph.add_edge(source, dependency);
+      self.graph.add_edge(dependency, target);
     }
 
     fn async_dependency(&mut self, source: NodeIndex, target: NodeIndex) {
@@ -229,8 +243,8 @@ mod tests {
         priority: Priority::Lazy,
         ..Dependency::default()
       });
-      self.graph.add_edge(&source, &dependency);
-      self.graph.add_edge(&dependency, &target);
+      self.graph.add_edge(source, dependency);
+      self.graph.add_edge(dependency, target);
     }
 
     fn build(self) -> AssetGraph {

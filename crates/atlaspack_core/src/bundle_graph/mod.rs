@@ -9,7 +9,7 @@ use petgraph::{
 
 use crate::{
   as_variant_impl,
-  asset_graph::AssetNode,
+  asset_graph::{AssetNode, DependencyNode},
   types::{Asset, AssetId, Bundle, FileType},
 };
 
@@ -67,6 +67,22 @@ pub struct BundleGraphBundle {
   pub assets: StableDiGraph<AssetRef, ()>,
 }
 
+impl std::fmt::Display for BundleGraphBundle {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "BundleGraphBundle(id={}, name={}, assets={})",
+      self.bundle.id,
+      self
+        .bundle
+        .name
+        .as_ref()
+        .unwrap_or(&"<unnamed>".to_string()),
+      self.assets.node_count()
+    )
+  }
+}
+
 #[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum BundleGraphNode {
@@ -76,6 +92,16 @@ pub enum BundleGraphNode {
 }
 
 as_variant_impl!(BundleGraphNode, as_bundle, Bundle, Arc<BundleGraphBundle>);
+
+impl std::fmt::Display for BundleGraphNode {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      BundleGraphNode::Root => write!(f, "Root"),
+      BundleGraphNode::Entry => write!(f, "Entry"),
+      BundleGraphNode::Bundle(bundle) => write!(f, "{}", bundle),
+    }
+  }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BundleGraphEdge {
@@ -88,9 +114,9 @@ pub enum BundleGraphEdge {
   /// Root to bundle, means the bundle is a type change bundle
   RootTypeChangeBundleOf,
   /// Bundle to bundle, means the bundle will be async loaded by the other
-  BundleAsyncLoads,
+  BundleAsyncLoads(DependencyNode),
   /// Bundle to bundle, means the bundle will be sync loaded by the other
-  BundleSyncLoads,
+  BundleSyncLoads(DependencyNode),
 }
 
 #[derive(Debug, Clone)]
@@ -227,7 +253,7 @@ impl BundleGraph {
     let mut referenced_bundles = Vec::new();
     for edge in edges {
       match edge.weight() {
-        BundleGraphEdge::BundleSyncLoads | BundleGraphEdge::BundleAsyncLoads => {
+        BundleGraphEdge::BundleSyncLoads(_) | BundleGraphEdge::BundleAsyncLoads(_) => {
           let node_index = edge.target();
           let node = self.graph.node_weight(node_index).unwrap();
           let bundle = node
@@ -239,7 +265,7 @@ impl BundleGraph {
               bundle_graph_bundle: bundle.clone(),
               bundle_node_index: node_index,
             },
-            priority: if edge.weight() == &BundleGraphEdge::BundleSyncLoads {
+            priority: if matches!(edge.weight(), BundleGraphEdge::BundleSyncLoads(_)) {
               BundlePriority::Parallel
             } else {
               BundlePriority::Lazy

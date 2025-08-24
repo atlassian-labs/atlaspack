@@ -33,6 +33,7 @@ atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
 tracing-indicatif = { workspace = true }
 
+jwalk = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 clap = { workspace = true, features = ["derive"] }

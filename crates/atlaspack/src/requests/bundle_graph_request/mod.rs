@@ -194,6 +194,55 @@ mod tests {
   }
 
   #[test]
+  fn test_make_bundle_graph_over_type_change_tree() {
+    let mut graph = simplified_asset_graph_builder();
+    let asset = graph.entry_asset("src/index.ts");
+    let dependency = graph.asset_with_type("src/dependency.css", FileType::Css);
+    graph.async_dependency(asset, dependency);
+    let graph = graph.build();
+
+    let (root, acyclic_graph) = remove_cycles(&graph);
+    let dominator_tree = build_dominator_tree(&acyclic_graph, root);
+
+    let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
+      root_node: root,
+      dominator_tree: &dominator_tree,
+      asset_graph: None,
+    });
+
+    assert_eq!(
+      bundle_graph.num_bundles(),
+      2,
+      "Bundle graph should have two bundles"
+    );
+
+    let graph = bundle_graph.graph();
+    let index_bundle = expect_bundle(&bundle_graph, "src/index.ts");
+    let async_bundle = expect_bundle(&bundle_graph, "src/dependency.css");
+
+    assert_eq!(index_bundle.num_assets(), 1);
+    assert_eq!(async_bundle.num_assets(), 1);
+
+    let edges = graph
+      .edges_connecting(bundle_graph.root(), index_bundle.node_index())
+      .collect::<Vec<_>>();
+    assert_eq!(edges.len(), 1);
+    assert_eq!(edges[0].weight(), &BundleGraphEdge::RootEntryOf);
+
+    let edges = graph
+      .edges_connecting(bundle_graph.root(), async_bundle.node_index())
+      .collect::<Vec<_>>();
+    assert_eq!(edges.len(), 1);
+    assert_eq!(edges[0].weight(), &BundleGraphEdge::RootAsyncBundleOf);
+
+    let edges = graph
+      .edges_connecting(index_bundle.node_index(), async_bundle.node_index())
+      .collect::<Vec<_>>();
+    assert_eq!(edges.len(), 1);
+    assert_eq!(edges[0].weight(), &BundleGraphEdge::BundleAsyncLoads);
+  }
+
+  #[test]
   fn test_make_bundle_graph_over_single_asset_tree_with_async_dependency() {
     let mut graph = simplified_asset_graph_builder();
     let asset = graph.entry_asset("src/index.ts");

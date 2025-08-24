@@ -43,6 +43,12 @@ pub struct DependencyNode {
   pub state: DependencyState,
 }
 
+impl DependencyNode {
+  pub fn id(&self) -> String {
+    self.dependency.id()
+  }
+}
+
 impl std::fmt::Display for DependencyNode {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(f, "{}", self.dependency)

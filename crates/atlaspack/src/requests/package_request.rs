@@ -9,7 +9,7 @@ use std::{
 use async_trait::async_trait;
 use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode, AssetNode},
-  bundle_graph::{BundleGraph, BundleGraphBundle, BundleGraphNode},
+  bundle_graph::{BundleGraph, BundleGraphBundle, BundleGraphEdge, BundleGraphNode},
   plugin::PackagerPlugin,
   types::{AssetId, AtlaspackOptions, BundleId, FileType},
 };
@@ -361,22 +361,53 @@ fn package_html_bundle(
   let bundle_asset_ref = bundle.assets.node_weights().next().unwrap();
   let bundle_asset = asset_data_provider.get_asset_code(bundle_asset_ref.id())?;
 
+  let prelude = include_str!("./packager_runtime/prelude.js");
+  writer.write_all(format!("<script>{}</script>", prelude).as_bytes())?;
+
   let referenced_bundles = bundle_graph
     .graph()
     .edges_directed(bundle_node_index, petgraph::Direction::Outgoing)
-    .map(|e| e.target())
+    .map(|e| (e.target(), e.weight()))
     .collect::<Vec<_>>();
 
-  for referenced_bundle in referenced_bundles {
-    let bundle_node = bundle_graph.graph().node_weight(referenced_bundle).unwrap();
-    let BundleGraphNode::Bundle(_bundle) = bundle_node else {
-      panic!("Referenced bundle is not a bundle: {:?}", referenced_bundle);
+  println!(
+    "referenced_bundles: {} count={}",
+    bundle,
+    referenced_bundles.len()
+  );
+
+  let mut bundle_asset_string = String::from_utf8(bundle_asset)?;
+
+  for (referenced_bundle_node_index, edge_weight) in referenced_bundles {
+    let bundle_node = bundle_graph
+      .graph()
+      .node_weight(referenced_bundle_node_index)
+      .unwrap();
+
+    println!("  referenced_bundle: {}", bundle_node);
+    let BundleGraphNode::Bundle(bundle) = bundle_node else {
+      panic!("Referenced bundle is not a bundle: {:?}", bundle_node);
+    };
+    let dependency_id = match edge_weight {
+      BundleGraphEdge::BundleSyncLoads(dependency_node) => dependency_node.id(),
+      BundleGraphEdge::BundleAsyncLoads(dependency_node) => dependency_node.id(),
+      _ => unreachable!(),
     };
 
     // find the reference ID
+    let regex = regex::Regex::new(&format!("{}", dependency_id)).unwrap();
+    let matches = regex.find(&bundle_asset_string);
+    if let Some(m) = matches {
+      println!("  found match: {}", m.as_str());
+      bundle_asset_string = bundle_asset_string.replace(
+        m.as_str(),
+        // TODO: Public path
+        &format!("{}", bundle.bundle.name.as_ref().unwrap().as_str()),
+      );
+    }
   }
 
-  writer.write_all(&bundle_asset)?;
+  writer.write_all(bundle_asset_string.as_bytes())?;
 
   Ok(())
 }
@@ -390,7 +421,7 @@ fn package_js_bundle(
     petgraph::algo::toposort(&bundle.assets, None).expect("Cycle in bundle graph");
   sorted_indexes.reverse();
 
-  writer.write_all("atlaspack$register([\n\n".as_bytes())?;
+  writer.write_all("const ms = (window.atlaspack$ms = window.atlaspack$ms || []);\n".as_bytes())?;
 
   for node_id in sorted_indexes {
     let asset_ref = bundle.assets.node_weight(node_id).unwrap();
@@ -401,7 +432,7 @@ fn package_js_bundle(
 
     writer.write_all(
       format!(
-        "'{}', (exports, require, atlaspack$require, atlaspack$export) => {{\n\n\n",
+        "ms.push(['{}', (exports, require, atlaspack$require, atlaspack$export) => {{\n\n\n",
         asset_ref.id()
       )
       .as_bytes(),
@@ -432,18 +463,21 @@ fn package_js_bundle(
     }
     let dependencies_object_string = serde_json::to_string(&dependencies_object).unwrap();
 
-    let postlude = format!("\n\n}}, {dependencies_object_string},\n\n");
+    let postlude = format!("\n\n}}, {dependencies_object_string},\n\n ]);\n\n");
     writer.write_all(postlude.as_bytes())?;
   }
 
-  writer.write_all("]);".as_bytes())?;
+  writer.write_all("atlaspack$bootstrap();".as_bytes())?;
 
   Ok(())
 }
 
 #[cfg(test)]
 mod tests {
+  use super::*;
 
   #[test]
-  fn test_package_html_bundle() {}
+  fn test_package_html_bundle() {
+    let bundle_graph = BundleGraph::new();
+  }
 }

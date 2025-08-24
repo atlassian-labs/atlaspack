@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use atlaspack_core::{
   asset_graph::{AssetNode, DependencyNode},
   bundle_graph::AssetRef,
-  types::Asset,
+  types::{Asset, AssetId, FileType},
 };
 use petgraph::graph::NodeIndex;
 
@@ -38,11 +38,17 @@ impl SimplifiedAssetGraphBuilder {
   }
 
   pub fn asset(&mut self, path: &str) -> NodeIndex {
+    self.asset_with_type(path, FileType::default())
+  }
+
+  pub fn asset_with_type(&mut self, path: &str, file_type: FileType) -> NodeIndex {
     let asset = self
       .graph
       .add_node(SimplifiedAssetGraphNode::Asset(AssetRef::new(
         AssetNode::from(Asset {
+          file_type,
           file_path: PathBuf::from(path),
+          id: AssetId::from(self.graph.node_count() as u64),
           ..Asset::default()
         }),
         NodeIndex::new(self.graph.node_count()),

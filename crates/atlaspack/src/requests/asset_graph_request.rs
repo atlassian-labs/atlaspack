@@ -8,6 +8,8 @@ use indexmap::IndexMap;
 use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 use petgraph::prelude::StableDiGraph;
+use petgraph::visit::EdgeRef;
+use petgraph::Direction;
 use tracing::info_span;
 use tracing::span::EnteredSpan;
 use tracing_indicatif::span_ext::IndicatifSpanExt;
@@ -135,7 +137,7 @@ type RequestId = u64;
 
 struct AssetGraphBuilder {
   path_requests_to_dependency_idx: HashMap<RequestId, NodeIndex>,
-  asset_requests_to_asset_idx: HashMap<RequestId, NodeIndex>,
+  asset_requests_to_asset_idx: HashMap<RequestId, Vec<NodeIndex>>,
   graph: PendingAssetGraph,
   visited: HashSet<u64>,
   work_count: u32,
@@ -300,17 +302,19 @@ impl AssetGraphBuilder {
       self.work_count += 1;
 
       let asset_idx = self.graph.add_pending_asset(id);
-      self.asset_requests_to_asset_idx.insert(id, asset_idx);
-      self.graph.graph.add_edge(dependency_idx, asset_idx, ());
+      self.asset_requests_to_asset_idx.insert(id, vec![asset_idx]);
+      self.graph.add_edge(dependency_idx, asset_idx);
 
       let _ = self
         .request_context
         .queue_request(asset_request, self.sender.clone());
 
       self.build_asset_graph_span.pb_inc_length(1);
-    } else if let Some(asset_node_index) = self.asset_requests_to_asset_idx.get(&id) {
-      if !self.graph.has_edge(dependency_idx, *asset_node_index) {
-        self.graph.add_edge(dependency_idx, *asset_node_index);
+    } else if let Some(asset_node_indexes) = self.asset_requests_to_asset_idx.get(&id) {
+      for asset_node_index in asset_node_indexes {
+        if !self.graph.has_edge(dependency_idx, *asset_node_index) {
+          self.graph.add_edge(dependency_idx, *asset_node_index);
+        }
       }
     } else {
       unreachable!()
@@ -343,10 +347,12 @@ impl AssetGraphBuilder {
       dependencies,
     } = result;
 
-    let asset_idx = *self
+    let asset_idxs = self
       .asset_requests_to_asset_idx
       .get(&request_id)
       .expect("Missing asset index for request id");
+    let asset_idx = asset_idxs[0];
+
     let pending_asset = self.graph.graph.node_weight_mut(asset_idx).unwrap();
     assert_eq!(
       pending_asset,
@@ -359,8 +365,24 @@ impl AssetGraphBuilder {
 
     // Attach the "direct" discovered assets to the graph
     let direct_discovered_assets = get_direct_discovered_assets(&discovered_assets, &dependencies);
+    let parent_idx = asset_idx;
     for discovered_asset in direct_discovered_assets {
       let asset_idx = self.graph.add_asset(discovered_asset.asset.clone());
+
+      let asset_idxs = self
+        .asset_requests_to_asset_idx
+        .get_mut(&request_id)
+        .expect("Missing asset index for request id");
+      asset_idxs.push(asset_idx);
+      for incoming_edge in self
+        .graph
+        .graph
+        .edges_directed(parent_idx, Direction::Incoming)
+        .map(|e| e.source())
+        .collect::<Vec<_>>()
+      {
+        self.graph.add_edge(incoming_edge, asset_idx);
+      }
 
       // TODO: what is this
       // self.graph.add_edge(&incoming_dependency_idx, &asset_idx);
