@@ -1543,11 +1543,13 @@ ${code}
                   ? ', ' +
                     this.buildFunctionExpression(['v'], `${resolvedSymbol} = v`)
                   : '';
-                prepend += `$parcel$export($${assetId}$exports, ${JSON.stringify(
+                // prepend += `$parcel$export($${assetId}$exports, ${JSON.stringify(
+                //   symbol,
+                // )}, ${get}${set});\n`;
+                // this.usedHelpers.add('$parcel$export');
+                append += `$${assetId}$exports[${JSON.stringify(
                   symbol,
-                )}, ${get}${set});\n`;
-                this.usedHelpers.add('$parcel$export');
-                prependLineCount++;
+                )}] = ${resolvedSymbol};\n`;
               }
             }
           }
@@ -1587,7 +1589,7 @@ ${code}
         // for the symbol so that when the value changes the object property also changes. This is
         // required to simulate ESM live bindings. It's easier to do it this way rather than inserting
         // additional assignments after each mutation of the original binding.
-        prepend += `\n${usedExports
+        append += `\n${usedExports
           .map((exp) => {
             let resolved = this.getSymbolResolution(
               asset,
@@ -1603,13 +1605,16 @@ ${code}
               !isEsmExport && asset.meta.hasCJSExports
                 ? ', ' + this.buildFunctionExpression(['v'], `${resolved} = v`)
                 : '';
-            return `$parcel$export($${assetId}$exports, ${JSON.stringify(
+            // return `$parcel$export($${assetId}$exports, ${JSON.stringify(
+            //   exp,
+            // )}, ${get}${set});`;
+            return `$${assetId}$exports[${JSON.stringify(
               exp,
-            )}, ${get}${set});`;
+            )}] = ${resolved};\n`;
           })
           .join('\n')}\n`;
-        this.usedHelpers.add('$parcel$export');
-        prependLineCount += 1 + usedExports.length;
+        // this.usedHelpers.add('$parcel$export');
+        // prependLineCount += 1 + usedExports.length;
       }
     }
 

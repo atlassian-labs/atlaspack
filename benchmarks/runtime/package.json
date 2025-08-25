@@ -1,0 +1,12 @@
+{
+  "name": "@atlaspack/benchmark-runtime",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "build": "node ../../packages/core/atlaspack/lib/cli.js build src/index.js -o dist/bundle.js",
+    "benchmark": "node benchmark.js"
+  },
+  "dependencies": {
+    "benchmark": "^2.1.4"
+  }
+}
