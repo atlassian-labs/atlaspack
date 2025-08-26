@@ -448,14 +448,27 @@ export class ScopeHoistingPackager {
       // Tracks which assets have been assigned to a wrap group
       let assignedAssets = new Set<Asset>();
 
-      // The main entry needs to be check to find assets that would have gone in
-      // the top level scope
-      let mainEntry = this.bundle.getMainEntry();
+      // In V2 scope hoisting, we iterate from the main entry, rather than
+      // wrapping the entry assets
+      if (!getFeatureFlag('applyScopeHoistingImprovementV2')) {
+        // Make all entry assets wrapped, to avoid any top level hoisting
+        for (let entryAsset of this.bundle.getEntryAssets()) {
+          if (!this.wrappedAssets.has(entryAsset.id)) {
+            this.wrappedAssets.add(entryAsset.id);
+            wrapped.push(entryAsset);
+          }
+        }
+      }
 
       let moduleGroupParents = [...wrapped];
 
-      if (getFeatureFlag('applyScopeHoistingImprovementV2') && mainEntry) {
-        moduleGroupParents.unshift(mainEntry);
+      if (getFeatureFlag('applyScopeHoistingImprovementV2')) {
+        // The main entry needs to be check to find assets that would have gone in
+        // the top level scope
+        let mainEntry = this.bundle.getMainEntry();
+        if (mainEntry) {
+          moduleGroupParents.unshift(mainEntry);
+        }
       }
 
       for (let moduleGroupParentAsset of moduleGroupParents) {
