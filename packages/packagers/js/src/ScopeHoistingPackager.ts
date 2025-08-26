@@ -777,9 +777,9 @@ export class ScopeHoistingPackager {
                 // after the dependency is declared. This handles the case where the resulting asset
                 // is wrapped, but the dependency in this asset is not marked as wrapped. This means
                 // that it was imported/required at the top-level, so its side effects should run immediately.
-                let map;
                 let res = '';
                 let lines = 0;
+                let map;
 
                 if (!getFeatureFlag('applyScopeHoistingImprovementV2')) {
                   [res, lines] = this.getHoistedParcelRequires(
@@ -1424,6 +1424,7 @@ ${code}
         lineCount += hoisted.size;
       } else {
         res += '\n' + [...hoisted.values()].join('\n');
+        lineCount += hoisted.size;
       }
     }
 
