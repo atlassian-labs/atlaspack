@@ -444,21 +444,19 @@ export class ScopeHoistingPackager {
       }
     });
 
-      // Make all entry assets wrapped, to avoid any top level hoisting
-      for (let entryAsset of this.bundle.getEntryAssets()) {
-        if (!this.wrappedAssets.has(entryAsset.id)) {
-          this.wrappedAssets.add(entryAsset.id);
-          wrapped.push(entryAsset);
-        }
-      }
-
     if (this.useBothScopeHoistingImprovements) {
       // Tracks which assets have been assigned to a wrap group
       let assignedAssets = new Set<Asset>();
 
-      for (let wrappedAsset of wrapped) {
+      // The main entry needs to be check to find assets that would have gone in
+      // the top level scope
+      let mainEntry = this.bundle.getMainEntry();
+
+      let moduleGroupParents = mainEntry ? [mainEntry, ...wrapped] : wrapped;
+
+      for (let moduleGroupParentAsset of moduleGroupParents) {
         this.bundle.traverseAssets((asset, _, actions) => {
-          if (asset === wrappedAsset) {
+          if (asset === moduleGroupParentAsset) {
             return;
           }
 
@@ -474,12 +472,16 @@ export class ScopeHoistingPackager {
             wrapped.push(asset);
             this.wrappedAssets.add(asset.id);
 
+            // This also needs to be added to the traversal so that we iterate
+            // it during this check.
+            moduleGroupParents.push(asset);
+
             actions.skipChildren();
             return;
           }
 
           assignedAssets.add(asset);
-        }, wrappedAsset);
+        }, moduleGroupParentAsset);
       }
     } else {
       for (let wrappedAssetRoot of [...wrapped]) {
