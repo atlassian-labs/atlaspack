@@ -9,6 +9,10 @@ use petgraph::{
 
 use super::simplified_graph::*;
 
+pub type AcyclicAssetGraphEdge = SimplifiedAssetGraphEdge;
+
+pub type AcyclicAssetGraph = StableDiGraph<AcyclicAssetGraphNode, AcyclicAssetGraphEdge>;
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum AcyclicAssetGraphNode {
   Root,
@@ -54,10 +58,8 @@ impl From<SimplifiedAssetGraphNode> for AcyclicAssetGraphNode {
   }
 }
 
-pub type AcyclicAssetGraph = StableDiGraph<AcyclicAssetGraphNode, SimplifiedAssetGraphEdge>;
-
 pub fn remove_cycles(graph: &SimplifiedAssetGraph) -> (NodeIndex, AcyclicAssetGraph) {
-  let mut result: StableDiGraph<Option<AcyclicAssetGraphNode>, SimplifiedAssetGraphEdge> =
+  let mut result: StableDiGraph<Option<AcyclicAssetGraphNode>, AcyclicAssetGraphEdge> =
     graph.map(|_, _| None, |_, edge| edge.clone());
 
   let sccs = petgraph::algo::tarjan_scc(graph);

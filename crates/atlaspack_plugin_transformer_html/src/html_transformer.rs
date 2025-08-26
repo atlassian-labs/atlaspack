@@ -180,6 +180,46 @@ mod test {
   }
 
   #[test]
+  fn transforms_external_script_module_tag() {
+    let bytes = r#"
+      <html>
+        <body>
+          <script type="module" src="input.js"></script>
+        </body>
+      </html>
+    "#;
+
+    let mut dom = parse_html(bytes.as_bytes()).unwrap();
+
+    run_html_transformations(
+      HTMLTransformationContext {
+        env: Arc::new(Environment {
+          should_scope_hoist: true,
+          output_format: atlaspack_core::types::OutputFormat::EsModule,
+          ..Environment::default()
+        }),
+        ..transformation_context()
+      },
+      &mut dom,
+    );
+
+    let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+
+    assert_eq!(
+      &normalize_html(&html),
+      &normalize_html(
+        r#"
+          <html>
+            <body>
+              <script type="module" src="54c79fcd274236b4"></script>
+            </body>
+          </html>
+        "#
+      )
+    );
+  }
+
+  #[test]
   fn transforms_manifest_link_tag() {
     let bytes = r#"
       <html>

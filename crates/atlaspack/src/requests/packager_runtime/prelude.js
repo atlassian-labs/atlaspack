@@ -29,7 +29,7 @@ function atlaspack$require(moduleId) {
         return result;
       }
 
-      throw new Error(`Module not found: ${specifier}`);
+      return atlaspack$require(specifier);
     },
     atlaspack$require,
     (s, value) => {

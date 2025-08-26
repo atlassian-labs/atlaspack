@@ -10,7 +10,7 @@ use petgraph::{
 use crate::{
   as_variant_impl,
   asset_graph::{AssetNode, DependencyNode},
-  types::{Asset, AssetId, Bundle, FileType},
+  types::{Asset, AssetId, Bundle, FileType, Priority},
 };
 
 /// We're hiding some of the asset on this value.
@@ -104,6 +104,29 @@ impl std::fmt::Display for BundleGraphNode {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct BundleDependency {
+  dependency_node: DependencyNode,
+  target_assets: Vec<AssetRef>,
+}
+
+impl BundleDependency {
+  pub fn new(dependency_node: &DependencyNode) -> Self {
+    Self {
+      dependency_node: dependency_node.clone(),
+      target_assets: vec![],
+    }
+  }
+
+  pub fn id(&self) -> String {
+    self.dependency_node.id()
+  }
+
+  pub fn placeholder(&self) -> Option<&str> {
+    self.dependency_node.dependency.placeholder.as_deref()
+  }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum BundleGraphEdge {
   /// Root to bundle, means the bundle is an entry-point
   RootEntryOf,
@@ -114,9 +137,9 @@ pub enum BundleGraphEdge {
   /// Root to bundle, means the bundle is a type change bundle
   RootTypeChangeBundleOf,
   /// Bundle to bundle, means the bundle will be async loaded by the other
-  BundleAsyncLoads(DependencyNode),
+  BundleAsyncLoads(BundleDependency),
   /// Bundle to bundle, means the bundle will be sync loaded by the other
-  BundleSyncLoads(DependencyNode),
+  BundleSyncLoads(BundleDependency),
 }
 
 #[derive(Debug, Clone)]

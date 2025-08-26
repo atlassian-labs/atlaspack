@@ -17,6 +17,10 @@ pub struct SimplifiedAssetGraphBuilder {
 }
 
 impl SimplifiedAssetGraphBuilder {
+  pub fn root(&self) -> NodeIndex {
+    self.root
+  }
+
   pub fn entry_asset(&mut self, path: &str) -> NodeIndex {
     let asset = self
       .graph

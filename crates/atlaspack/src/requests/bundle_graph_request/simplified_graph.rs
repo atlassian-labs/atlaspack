@@ -56,6 +56,9 @@ pub enum SimplifiedAssetGraphEdge {
   /// Asset to asset, means the asset is a dependency of the other within a bundle
   AssetDependency(DependencyNode),
   /// Asset to asset, means the asset is an async dependency of the other within a bundle
+  ///
+  /// If an asset A imports an asset B, of *different type*, then this edge is added.
+  /// Not the dependency edge.
   AssetAsyncDependency(DependencyNode),
 }
 
@@ -140,19 +143,13 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
             target,
             SimplifiedAssetGraphEdge::TypeChangeRoot(dependency_node.clone()),
           );
-          if dependency_node.dependency.priority != Priority::Sync {
-            simplified_graph.add_edge(
-              incoming,
-              target,
-              SimplifiedAssetGraphEdge::AssetAsyncDependency(dependency_node.clone()),
-            );
-          } else {
-            simplified_graph.add_edge(
-              incoming,
-              target,
-              SimplifiedAssetGraphEdge::AssetDependency(dependency_node.clone()),
-            );
-          }
+
+          // This becomes an async dependency regardless of priority
+          simplified_graph.add_edge(
+            incoming,
+            target,
+            SimplifiedAssetGraphEdge::AssetAsyncDependency(dependency_node.clone()),
+          );
 
           continue;
         }
@@ -419,7 +416,7 @@ mod tests {
     let simplified_graph = simplify_graph(&asset_graph);
 
     assert_eq!(simplified_graph.node_count(), 3);
-    assert_eq!(simplified_graph.edge_count(), 2);
+    assert_eq!(simplified_graph.edge_count(), 3);
 
     assert!(matches!(
       expect_edge(&simplified_graph, root, a).weight(),
@@ -429,12 +426,10 @@ mod tests {
       expect_edge(&simplified_graph, root, b).weight(),
       SimplifiedAssetGraphEdge::TypeChangeRoot(_)
     ));
-
-    // Ensure there is no direct a -> b edge due to type change
-    assert!(
-      simplified_graph.edges_connecting(a, b).next().is_none(),
-      "Unexpected a -> b edge present"
-    );
+    assert!(matches!(
+      expect_edge(&simplified_graph, a, b).weight(),
+      SimplifiedAssetGraphEdge::AssetAsyncDependency(_)
+    ));
   }
 
   #[test]
@@ -464,7 +459,7 @@ mod tests {
     let simplified_graph = simplify_graph(&asset_graph);
 
     assert_eq!(simplified_graph.node_count(), 3);
-    assert_eq!(simplified_graph.edge_count(), 2);
+    assert_eq!(simplified_graph.edge_count(), 3);
 
     assert!(matches!(
       expect_edge(&simplified_graph, root, a).weight(),
@@ -474,12 +469,12 @@ mod tests {
       expect_edge(&simplified_graph, root, b).weight(),
       SimplifiedAssetGraphEdge::TypeChangeRoot(_)
     ));
+    assert!(matches!(
+      expect_edge(&simplified_graph, a, b).weight(),
+      SimplifiedAssetGraphEdge::AssetAsyncDependency(_)
+    ));
 
-    // Ensure no async edges were added due to early continue on type change
-    assert!(
-      simplified_graph.edges_connecting(a, b).next().is_none(),
-      "Unexpected async a -> b edge present"
-    );
+    // Ensure no async root edge on type change
     assert!(
       simplified_graph
         .edges_connecting(root, b)

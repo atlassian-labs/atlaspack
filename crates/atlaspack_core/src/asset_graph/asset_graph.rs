@@ -346,7 +346,7 @@ mod tests {
       ..Asset::default()
     };
     let asset_nid = graph.add_asset(index_asset);
-    graph.add_edge(&parent_node, &asset_nid);
+    graph.add_edge(parent_node, asset_nid);
     asset_nid
   }
 
@@ -360,7 +360,7 @@ mod tests {
       ..Dependency::default()
     };
     let node_index = graph.add_dependency(Arc::new(dep));
-    graph.add_edge(&parent_node, &node_index);
+    graph.add_edge(parent_node, node_index);
     node_index
   }
 

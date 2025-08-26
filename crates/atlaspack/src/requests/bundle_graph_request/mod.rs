@@ -239,7 +239,10 @@ mod tests {
       .edges_connecting(index_bundle.node_index(), async_bundle.node_index())
       .collect::<Vec<_>>();
     assert_eq!(edges.len(), 1);
-    assert_eq!(edges[0].weight(), &BundleGraphEdge::BundleAsyncLoads);
+    assert!(matches!(
+      edges[0].weight(),
+      BundleGraphEdge::BundleAsyncLoads(_)
+    ));
   }
 
   #[test]
@@ -269,6 +272,13 @@ mod tests {
     let index_bundle = expect_bundle(&bundle_graph, "src/index.ts");
     let async_bundle = expect_bundle(&bundle_graph, "src/dependency.ts");
 
+    println!(
+      "index_bundle {:?}",
+      index_bundle
+        .assets()
+        .map(|a| a.file_path())
+        .collect::<Vec<_>>()
+    );
     assert_eq!(index_bundle.num_assets(), 1);
     assert_eq!(async_bundle.num_assets(), 1);
 
@@ -288,7 +298,10 @@ mod tests {
       .edges_connecting(index_bundle.node_index(), async_bundle.node_index())
       .collect::<Vec<_>>();
     assert_eq!(edges.len(), 1);
-    assert_eq!(edges[0].weight(), &BundleGraphEdge::BundleAsyncLoads);
+    assert!(matches!(
+      edges[0].weight(),
+      BundleGraphEdge::BundleAsyncLoads(_)
+    ));
   }
 
   #[test]

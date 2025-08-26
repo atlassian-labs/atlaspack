@@ -333,7 +333,7 @@ pub fn package_bundle(
   }
 
   match params.bundle.bundle.bundle_type {
-    FileType::Js => package_js_bundle(params, asset_data_provider, writer),
+    FileType::Js => package_js_bundle(params, asset_data_provider, writer, bundle_graph),
     FileType::Html => package_html_bundle(params, asset_data_provider, writer, bundle_graph),
     _ => {
       debug!(
@@ -413,9 +413,13 @@ fn package_html_bundle(
 }
 
 fn package_js_bundle(
-  PackageBundleParams { bundle, .. }: PackageBundleParams<'_>,
+  PackageBundleParams {
+    bundle,
+    bundle_node_index,
+  }: PackageBundleParams<'_>,
   asset_data_provider: &impl AssetDataProvider,
   writer: &mut impl Write,
+  bundle_graph: &BundleGraph,
 ) -> anyhow::Result<()> {
   let mut sorted_indexes =
     petgraph::algo::toposort(&bundle.assets, None).expect("Cycle in bundle graph");
@@ -465,6 +469,53 @@ fn package_js_bundle(
 
     let postlude = format!("\n\n}}, {dependencies_object_string},\n\n ]);\n\n");
     writer.write_all(postlude.as_bytes())?;
+  }
+
+  let referenced_bundles = bundle_graph
+    .graph()
+    .edges_directed(bundle_node_index, petgraph::Direction::Outgoing)
+    .map(|e| (e.target(), e.weight()))
+    .collect::<Vec<_>>();
+
+  println!(
+    "referenced_bundles: {} count={}",
+    bundle,
+    referenced_bundles.len()
+  );
+
+  for (referenced_bundle_node_index, edge_weight) in referenced_bundles {
+    let bundle_node = bundle_graph
+      .graph()
+      .node_weight(referenced_bundle_node_index)
+      .unwrap();
+
+    println!("  referenced_bundle: {}", bundle_node);
+    let BundleGraphNode::Bundle(bundle) = bundle_node else {
+      panic!("Referenced bundle is not a bundle: {:?}", bundle_node);
+    };
+    let dependency = match edge_weight {
+      BundleGraphEdge::BundleAsyncLoads(dependency_node) => dependency_node,
+      _ => continue,
+    };
+
+    writer.write_all(
+      format!(
+        "ms.push(['{}', (exports, require, atlaspack$require, atlaspack$export) => {{\n\n\n",
+        dependency.placeholder().unwrap()
+      )
+      .as_bytes(),
+    )?;
+
+    writer.write_all(
+      format!(
+        "exports.default = import(new URL('{}', import.meta.url)).then(() => atlaspack$require('{}'));\n\n",
+        bundle.bundle.name.as_ref().unwrap(),
+        dependency.id(),
+      )
+      .as_bytes(),
+    )?;
+
+    writer.write_all("}]);\n\n".as_bytes())?;
   }
 
   writer.write_all("atlaspack$bootstrap();".as_bytes())?;

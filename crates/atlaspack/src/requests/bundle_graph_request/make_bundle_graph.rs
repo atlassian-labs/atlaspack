@@ -1,14 +1,20 @@
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{
+  collections::{HashMap, HashSet},
+  path::Path,
+  sync::Arc,
+};
 
 use atlaspack_core::{
   asset_graph::AssetGraph,
-  bundle_graph::{AssetRef, BundleGraph, BundleGraphBundle, BundleGraphEdge, BundleGraphNode},
+  bundle_graph::{
+    AssetRef, BundleDependency, BundleGraph, BundleGraphBundle, BundleGraphEdge, BundleGraphNode,
+  },
   types::{Bundle, BundleBehavior, Environment, Target},
 };
 use petgraph::{
   graph::NodeIndex,
   prelude::StableDiGraph,
-  visit::{EdgeFiltered, EdgeRef, IntoNodeReferences},
+  visit::{EdgeFiltered, EdgeRef, IntoNodeReferences, NodeFiltered},
   Direction,
 };
 use serde::Serialize;
@@ -74,6 +80,20 @@ pub fn make_bundle_graph(
 
   let mut assets_discovered = 0;
 
+  let entry_node_indexes = dominator_tree
+    .edges(root_node)
+    .filter(|edge| match edge.weight() {
+      DominatorTreeEdge::EntryAssetRoot(_) => true,
+      DominatorTreeEdge::AsyncRoot(_) => true,
+      DominatorTreeEdge::SharedBundleRoot => true,
+      DominatorTreeEdge::TypeChangeRoot(_) => true,
+      DominatorTreeEdge::ImmediateDominator => false,
+      DominatorTreeEdge::AssetDependency(_) => false,
+      DominatorTreeEdge::AssetAsyncDependency(_) => false,
+    })
+    .map(|edge| edge.target())
+    .collect::<HashSet<_>>();
+
   for edge in dominator_tree.edges(root_node) {
     let bundle_edge_type = match edge.weight() {
       DominatorTreeEdge::EntryAssetRoot(_) => Some(BundleGraphEdge::RootEntryOf),
@@ -98,13 +118,17 @@ pub fn make_bundle_graph(
         _ => false,
       });
 
+    let filtered_dominator_tree = NodeFiltered::from_fn(&filtered_dominator_tree, |node| {
+      node == root_asset || !entry_node_indexes.contains(&node)
+    });
+
     let mut indentation = 0;
     petgraph::visit::depth_first_search(
       &filtered_dominator_tree,
       [root_asset],
       |event| match event {
         petgraph::visit::DfsEvent::Discover(node_index, _) => {
-          let weight = dominator_tree.node_weight(node_index).unwrap();
+          let _weight = dominator_tree.node_weight(node_index).unwrap();
           // println!("{:indentation$} {}", "", weight);
           indentation += 4;
         }
@@ -295,7 +319,7 @@ pub fn make_bundle_graph(
             println!("  Discovering edge: {}", edge.weight());
             match edge.weight() {
               DominatorTreeEdge::ImmediateDominator => {}
-              DominatorTreeEdge::AssetDependency(dependency_node) => {
+              DominatorTreeEdge::AssetDependency(edge_weight) => {
                 let target = edge.target();
                 let target_bundle = bundles_by_node_index[&target];
                 //   tracing::error!(
@@ -313,21 +337,22 @@ pub fn make_bundle_graph(
                   *bundle_dominator_tree_node_index,
                   target_bundle,
                   // TODO: Maintain the reason this edge is here, e.g.: carry over the source, target, dependency etc
-                  BundleGraphEdge::BundleSyncLoads(dependency_node.clone()),
+                  BundleGraphEdge::BundleSyncLoads(BundleDependency::new(edge_weight)),
                 );
               }
-              DominatorTreeEdge::AssetAsyncDependency(dependency_node) => {
+              DominatorTreeEdge::AssetAsyncDependency(edge_weight) => {
                 let target = edge.target();
                 let target_bundle = bundles_by_node_index[&target];
 
                 // let source_weight = dominator_tree.node_weight(node_index).unwrap();
-                // let target_weight = dominator_tree.node_weight(target).unwrap();
+                let target_weight = dominator_tree.node_weight(target).unwrap();
 
                 bundle_graph.add_edge(
                   *bundle_node_index,
                   target_bundle,
                   // TODO: Maintain the reason this edge is here, e.g.: carry over the source, target, dependency etc
-                  BundleGraphEdge::BundleAsyncLoads(dependency_node.clone()),
+                  // TODO: We need to keep track of the module ID the dependency resolves into.
+                  BundleGraphEdge::BundleAsyncLoads(BundleDependency::new(edge_weight)),
                 );
               }
               DominatorTreeEdge::EntryAssetRoot(_) => unreachable!(),
