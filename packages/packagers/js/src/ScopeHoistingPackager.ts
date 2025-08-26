@@ -112,6 +112,7 @@ export class ScopeHoistingPackager {
   seenAssets: Set<string> = new Set();
   wrappedAssets: Set<string> = new Set();
   hoistedRequires: Map<string, Map<string, string>> = new Map();
+  seenHoistedRequires: Set<string> = new Set();
   needsPrelude: boolean = false;
   usedHelpers: Set<string> = new Set();
   externalAssets: Set<Asset> = new Set();
@@ -176,7 +177,9 @@ export class ScopeHoistingPackager {
     // @ts-expect-error TS7034
     let sourceMap = null;
     let processAsset = (asset: Asset) => {
+      this.seenHoistedRequires.clear();
       let [content, map, lines] = this.visitAsset(asset);
+
       // @ts-expect-error TS7005
       if (sourceMap && map) {
         sourceMap.addSourceMap(map, lineCount);
@@ -774,12 +777,9 @@ export class ScopeHoistingPackager {
                 // after the dependency is declared. This handles the case where the resulting asset
                 // is wrapped, but the dependency in this asset is not marked as wrapped. This means
                 // that it was imported/required at the top-level, so its side effects should run immediately.
-                let [res, lines] = this.getHoistedParcelRequires(
-                  asset,
-                  dep,
-                  resolved,
-                );
                 let map;
+                let res = '';
+                let lines = 0;
                 if (
                   this.bundle.hasAsset(resolved) &&
                   !this.seenAssets.has(resolved.id)
@@ -821,6 +821,14 @@ export class ScopeHoistingPackager {
                       map = depMap;
                     }
                   }
+                }
+
+                let [requiresCode, requiresLines] =
+                  this.getHoistedParcelRequires(asset, dep, resolved);
+
+                if (requiresCode) {
+                  res = requiresCode + '\n' + res;
+                  lines += requiresLines + 1;
                 }
 
                 // Push this asset's source mappings down by the number of lines in the dependency
@@ -1391,7 +1399,15 @@ ${code}
 
     if (hoisted) {
       this.needsPrelude = true;
-      res += '\n' + [...hoisted.values()].join('\n');
+      let hoistedValues = [...hoisted.values()].filter(
+        (val) => !this.seenHoistedRequires.has(val),
+      );
+
+      for (let val of hoistedValues) {
+        this.seenHoistedRequires.add(val);
+      }
+
+      res += '\n' + hoistedValues.join('\n');
       lineCount += hoisted.size;
     }
 
