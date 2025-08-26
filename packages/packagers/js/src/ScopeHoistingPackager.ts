@@ -780,6 +780,15 @@ export class ScopeHoistingPackager {
                 let map;
                 let res = '';
                 let lines = 0;
+
+                if (!getFeatureFlag('applyScopeHoistingImprovementV2')) {
+                  [res, lines] = this.getHoistedParcelRequires(
+                    asset,
+                    dep,
+                    resolved,
+                  );
+                }
+
                 if (
                   this.bundle.hasAsset(resolved) &&
                   !this.seenAssets.has(resolved.id)
@@ -823,12 +832,14 @@ export class ScopeHoistingPackager {
                   }
                 }
 
-                let [requiresCode, requiresLines] =
-                  this.getHoistedParcelRequires(asset, dep, resolved);
+                if (getFeatureFlag('applyScopeHoistingImprovementV2')) {
+                  let [requiresCode, requiresLines] =
+                    this.getHoistedParcelRequires(asset, dep, resolved);
 
-                if (requiresCode) {
-                  res = requiresCode + '\n' + res;
-                  lines += requiresLines + 1;
+                  if (requiresCode) {
+                    res = requiresCode + '\n' + res;
+                    lines += requiresLines + 1;
+                  }
                 }
 
                 // Push this asset's source mappings down by the number of lines in the dependency
@@ -1399,16 +1410,21 @@ ${code}
 
     if (hoisted) {
       this.needsPrelude = true;
-      let hoistedValues = [...hoisted.values()].filter(
-        (val) => !this.seenHoistedRequires.has(val),
-      );
 
-      for (let val of hoistedValues) {
-        this.seenHoistedRequires.add(val);
+      if (getFeatureFlag('applyScopeHoistingImprovementV2')) {
+        let hoistedValues = [...hoisted.values()].filter(
+          (val) => !this.seenHoistedRequires.has(val),
+        );
+
+        for (let val of hoistedValues) {
+          this.seenHoistedRequires.add(val);
+        }
+
+        res += '\n' + hoistedValues.join('\n');
+        lineCount += hoisted.size;
+      } else {
+        res += '\n' + [...hoisted.values()].join('\n');
       }
-
-      res += '\n' + hoistedValues.join('\n');
-      lineCount += hoisted.size;
     }
 
     return [res, lineCount];
