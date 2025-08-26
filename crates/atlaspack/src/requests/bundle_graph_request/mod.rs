@@ -1,11 +1,8 @@
-use std::collections::{HashMap, HashSet};
-
 use async_trait::async_trait;
 use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode},
-  bundle_graph::{AssetRef, BundleGraph, BundleGraphBundle},
+  bundle_graph::BundleGraph,
 };
-use petgraph::visit::{Dfs, IntoNodeReferences};
 use tracing::info;
 
 use crate::{

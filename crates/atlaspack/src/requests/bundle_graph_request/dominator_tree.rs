@@ -1,5 +1,5 @@
 use atlaspack_core::asset_graph::DependencyNode;
-use petgraph::{graph::NodeIndex, prelude::StableDiGraph, visit::EdgeFiltered};
+use petgraph::{graph::NodeIndex, prelude::StableDiGraph};
 
 use crate::requests::bundle_graph_request::{
   acyclic_asset_graph::{AcyclicAssetGraph, AcyclicAssetGraphNode},
