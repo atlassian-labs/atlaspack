@@ -46,6 +46,7 @@ if (process.env.ATLASPACK_REGISTER_USE_SRC === 'true') {
 }
 
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
+const compileExtensions = new Set(['.ts', '.tsx', '.mts', '.cts']);
 
 // There can be more than one instance of NodePackageManager, but node has only a single module cache.
 // Therefore, the resolution cache and the map of parent to child modules should also be global.
@@ -65,6 +66,7 @@ export class NodePackageManager implements PackageManager {
   // @ts-expect-error TS2749
   resolver: ResolverBase;
   currentExtensions: Array<string>;
+  atlaspackLinkRoot: string | null;
 
   constructor(
     fs: FileSystem,
@@ -74,6 +76,12 @@ export class NodePackageManager implements PackageManager {
     this.fs = fs;
     this.projectRoot = projectRoot;
     this.installer = installer;
+
+    // If using src then assume we're linked and find the link root dir
+    this.atlaspackLinkRoot =
+      process.env.ATLASPACK_REGISTER_USE_SRC === 'true'
+        ? path.resolve(__dirname, '../../../..')
+        : null;
 
     // @ts-expect-error TS2339
     this.currentExtensions = Object.keys(Module._extensions).map((e) =>
@@ -215,32 +223,50 @@ export class NodePackageManager implements PackageManager {
       return this.fs.statSync(filename);
     };
 
-    if (!filePath.includes(NODE_MODULES)) {
-      let extname = path.extname(filePath);
-      if (
-        (extname === '.ts' ||
-          extname === '.tsx' ||
-          extname === '.mts' ||
-          extname === '.cts') &&
-        // @ts-expect-error TS2339
-        !Module._extensions[extname]
-      ) {
-        // @ts-expect-error TS2339
-        let compile = m._compile;
-        // @ts-expect-error TS2339
-        m._compile = (code: any, filename: any) => {
-          let out = transformSync(code, {filename, module: {type: 'commonjs'}});
-          compile.call(m, out.code, filename);
-        };
+    let extname = path.extname(filePath);
 
-        // @ts-expect-error TS2339
-        Module._extensions[extname] = (m: any, filename: any) => {
-          // @ts-expect-error TS2339
-          delete Module._extensions[extname];
-          // @ts-expect-error TS2339
-          Module._extensions['.js'](m, filename);
-        };
+    function shouldCompile(atlaspackLinkRoot: string | null): boolean {
+      if (filePath.includes(NODE_MODULES)) {
+        // Don't compile node_modules
+        return false;
       }
+
+      if (!compileExtensions.has(extname)) {
+        // Ignore non-TS files
+        return false;
+      }
+
+      if (atlaspackLinkRoot != null) {
+        // If we're linked, only compile files outside the linked atlaspack
+        // as those are handled by @atlaspack/babel-register
+        return !filePath.startsWith(atlaspackLinkRoot);
+      }
+
+      // @ts-expect-error TS2339
+      // Lastly make sure there's no existing loader for this extension
+      return !Module._extensions[extname];
+    }
+
+    if (shouldCompile(this.atlaspackLinkRoot)) {
+      // @ts-expect-error TS2339
+      let compile = m._compile;
+      // @ts-expect-error TS2339
+      m._compile = (code: any, filename: any) => {
+        let out = transformSync(code, {
+          filename,
+          module: {type: 'commonjs'},
+          env: {targets: {node: '18'}},
+        });
+        compile.call(m, out.code, filename);
+      };
+
+      // @ts-expect-error TS2339
+      Module._extensions[extname] = (m: any, filename: any) => {
+        // @ts-expect-error TS2339
+        delete Module._extensions[extname];
+        // @ts-expect-error TS2339
+        Module._extensions['.js'](m, filename);
+      };
     }
 
     try {
