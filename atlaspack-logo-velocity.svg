@@ -1,0 +1,8 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Performance/velocity concept: streamlined geometric shapes suggesting speed and efficiency -->
+  <path d="M8 32 L24 20 L24 26 L48 26 L48 20 L56 32 L48 44 L48 38 L24 38 L24 44 Z" fill="#0052CC"/>
+  <!-- Speed lines/trails -->
+  <rect x="4" y="28" width="8" height="2" fill="#36B37E" opacity="0.6"/>
+  <rect x="4" y="34" width="8" height="2" fill="#36B37E" opacity="0.6"/>
+  <rect x="2" y="31" width="6" height="2" fill="#FF5630" opacity="0.4"/>
+</svg>

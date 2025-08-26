@@ -1,0 +1,11 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Atlas/navigation concept: geometric compass design -->
+  <circle cx="32" cy="32" r="28" stroke="#0052CC" stroke-width="2" fill="none"/>
+  <!-- Compass points -->
+  <polygon points="32,8 36,28 32,32 28,28" fill="#36B37E"/>
+  <polygon points="56,32 36,36 32,32 36,28" fill="#0052CC"/>
+  <polygon points="32,56 28,36 32,32 36,36" fill="#FF5630"/>
+  <polygon points="8,32 28,28 32,32 28,36" fill="#253858"/>
+  <!-- Center point -->
+  <circle cx="32" cy="32" r="3" fill="#253858"/>
+</svg>

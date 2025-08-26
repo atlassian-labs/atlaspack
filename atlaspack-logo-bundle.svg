@@ -1,0 +1,8 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Bundling concept: overlapping geometric shapes representing modules coming together -->
+  <circle cx="24" cy="24" r="12" fill="#0052CC" opacity="0.8"/>
+  <circle cx="40" cy="24" r="12" fill="#36B37E" opacity="0.8"/>
+  <circle cx="32" cy="40" r="12" fill="#FF5630" opacity="0.8"/>
+  <!-- Central convergence point -->
+  <circle cx="32" cy="29" r="4" fill="#253858"/>
+</svg>
