@@ -42,6 +42,7 @@ import {
   isValidIdentifier,
   makeValidIdentifier,
 } from './utils';
+import {SymbolTracker} from './SymbolTracker';
 
 // General regex used to replace imports with the resolved code, references with resolutions,
 // and count the number of newlines in the file for source maps.
@@ -116,6 +117,10 @@ export class ScopeHoistingPackager {
   usedHelpers: Set<string> = new Set();
   externalAssets: Set<Asset> = new Set();
   logger: PluginLogger;
+  useBothScopeHoistingImprovements: boolean =
+    getFeatureFlag('applyScopeHoistingImprovementV2') ||
+    getFeatureFlag('applyScopeHoistingImprovement');
+  symbolTracker: SymbolTracker = new SymbolTracker();
 
   constructor(
     options: PluginOptions,
@@ -432,9 +437,9 @@ export class ScopeHoistingPackager {
           this.wrappedAssets.add(asset.id);
           wrapped.push(asset);
         } else if (
-          (getFeatureFlag('inlineConstOptimisationFix') ||
-            getFeatureFlag('applyScopeHoistingImprovement')) &&
-          asset.meta.isConstantModule
+          asset.meta.isConstantModule &&
+          (this.useBothScopeHoistingImprovements ||
+            getFeatureFlag('inlineConstOptimisationFix'))
         ) {
           constant.push(asset);
         }
@@ -500,6 +505,13 @@ export class ScopeHoistingPackager {
 
     // @ts-expect-error TS2769
     this.assetOutputs = new Map(await queue.run());
+
+    // Register all assets with the symbol tracker
+    this.bundle.traverseAssets((asset) => {
+      let isWrapped = this.wrappedAssets.has(asset.id);
+      this.symbolTracker.registerAsset(asset, isWrapped);
+    });
+
     return {wrapped, constant};
   }
 
@@ -1250,10 +1262,16 @@ ${code}
         this.hoistedRequires.set(dep.id, hoisted);
       }
 
-      hoisted.set(
-        resolvedAsset.id,
-        `var $${publicId} = parcelRequire(${JSON.stringify(publicId)});`,
-      );
+      // Check if this symbol is already declared in the parent asset's scope
+      let variableName = `$${publicId}`;
+      if (!this.symbolTracker.isSymbolDeclared(parentAsset, variableName)) {
+        // Only add the hoisted require if the symbol hasn't been declared yet
+        this.symbolTracker.declareSymbol(parentAsset, variableName);
+        hoisted.set(
+          resolvedAsset.id,
+          `var ${variableName} = parcelRequire(${JSON.stringify(publicId)});`,
+        );
+      }
     }
 
     if (isWrapped) {
@@ -1369,8 +1387,26 @@ ${code}
 
     if (hoisted) {
       this.needsPrelude = true;
-      res += '\n' + [...hoisted.values()].join('\n');
-      lineCount += hoisted.size;
+      // Filter out any duplicate variable declarations that might have been added
+      let uniqueDeclarations = [...hoisted.values()].filter((declaration) => {
+        // Extract variable name from declaration like "var $abc123 = ..."
+        let match = declaration.match(/^var (\$[a-zA-Z0-9]+) =/);
+        if (match) {
+          let varName = match[1];
+          // Only include if this variable hasn't been declared in this scope yet
+          if (!this.symbolTracker.isSymbolDeclared(parentAsset, varName)) {
+            this.symbolTracker.declareSymbol(parentAsset, varName);
+            return true;
+          }
+          return false;
+        }
+        return true; // Include non-variable declarations
+      });
+
+      if (uniqueDeclarations.length > 0) {
+        res += '\n' + uniqueDeclarations.join('\n');
+        lineCount += uniqueDeclarations.length;
+      }
     }
 
     return [res, lineCount];

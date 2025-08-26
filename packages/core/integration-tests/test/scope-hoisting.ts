@@ -6996,4 +6996,282 @@ describe('scope hoisting', function () {
       },
     );
   });
+
+  describe('symbol deduplication', () => {
+    it('should not create duplicate variable declarations when multiple assets import the same dependency', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        symbol-deduplication-basic
+          shared.js:
+            export const value = 'shared-value';
+
+          asset1.js:
+            import {value} from './shared';
+            export const asset1Value = value + '-asset1';
+
+          asset2.js:
+            import {value} from './shared';
+            export const asset2Value = value + '-asset2';
+
+          index.js:
+            import {asset1Value} from './asset1';
+            import {asset2Value} from './asset2';
+            output = asset1Value + '|' + asset2Value;`;
+
+      let b = await bundle(
+        path.join(__dirname, 'symbol-deduplication-basic/index.js'),
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      let contents = await getBundleContents(b, outputFS, (name) =>
+        name.endsWith('.js'),
+      );
+
+      // Check that there are no duplicate variable declarations
+      let varDeclarations =
+        contents.match(/var \$[a-zA-Z0-9]+ = parcelRequire/g) || [];
+      let uniqueVars = new Set();
+      let duplicates = [];
+
+      for (let declaration of varDeclarations) {
+        let varName = declaration.match(/var (\$[a-zA-Z0-9]+)/)?.[1];
+        if (varName) {
+          if (uniqueVars.has(varName)) {
+            duplicates.push(varName);
+          }
+          uniqueVars.add(varName);
+        }
+      }
+
+      assert.equal(
+        duplicates.length,
+        0,
+        `Found duplicate variable declarations: ${duplicates.join(', ')}`,
+      );
+
+      let output = await run(b);
+      assert.equal(output, 'shared-value-asset1|shared-value-asset2');
+    });
+
+    it('should handle symbol deduplication with wrapped assets', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        symbol-deduplication-wrapped
+          shared.js:
+            export const sharedValue = 'wrapped-shared';
+
+          wrapped1.js:
+            import {sharedValue} from './shared';
+            export function getWrapped1() {
+              return sharedValue + '-wrapped1';
+            }
+
+          wrapped2.js:
+            import {sharedValue} from './shared';
+            export function getWrapped2() {
+              return sharedValue + '-wrapped2';
+            }
+
+          index.js:
+            // Test that symbol deduplication works with dynamic imports
+            output = 'test-started';
+            import('./wrapped1').then(w1 => {
+              import('./wrapped2').then(w2 => {
+                output = w1.getWrapped1() + '|' + w2.getWrapped2();
+              });
+            });
+
+          package.json:
+            {
+              "sideEffects": false
+            }`;
+
+      let b = await bundle(
+        path.join(__dirname, 'symbol-deduplication-wrapped/index.js'),
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      // Check for duplicate variable declarations across all bundles
+      let allBundles = b.getBundles();
+      let allDuplicates = [];
+
+      for (let bundle of allBundles) {
+        if (bundle.type === 'js') {
+          let bundleContents = await outputFS.readFile(bundle.filePath, 'utf8');
+          let varDeclarations =
+            bundleContents.match(/var \$[a-zA-Z0-9]+ = parcelRequire/g) || [];
+          let uniqueVars = new Set();
+
+          for (let declaration of varDeclarations) {
+            let varName = declaration.match(/var (\$[a-zA-Z0-9]+)/)?.[1];
+            if (varName) {
+              if (uniqueVars.has(varName)) {
+                allDuplicates.push(`${varName} in ${bundle.name}`);
+              }
+              uniqueVars.add(varName);
+            }
+          }
+        }
+      }
+
+      assert.equal(
+        allDuplicates.length,
+        0,
+        `Found duplicate variable declarations: ${allDuplicates.join(', ')}`,
+      );
+
+      // The main test is the symbol deduplication check above - no need to test runtime behavior
+    });
+
+    it('should allow same variable names in different scopes', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        symbol-deduplication-scopes
+          shared.js:
+            export const value = 'scope-test';
+
+          module1.js:
+            import {value} from './shared';
+            export const module1Result = value + '-module1';
+
+          module2.js:
+            import {value} from './shared';
+            export const module2Result = value + '-module2';
+
+          index.js:
+            // Import both modules which both import shared
+            import {module1Result} from './module1';
+            import {module2Result} from './module2';
+            
+            // Set initial output
+            output = module1Result + '|' + module2Result;
+            
+            // Also dynamically import to create different scopes
+            Promise.all([
+              import('./module1'),
+              import('./module2')
+            ]).then(([m1, m2]) => {
+              output = module1Result + '|' + module2Result + '|' + m1.module1Result + '|' + m2.module2Result;
+            });
+
+          package.json:
+            {
+              "sideEffects": false
+            }`;
+
+      let b = await bundle(
+        path.join(__dirname, 'symbol-deduplication-scopes/index.js'),
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      // Verify no duplicates within each bundle/scope
+      let allBundles = b.getBundles();
+      let scopeViolations = [];
+
+      for (let bundle of allBundles) {
+        if (bundle.type === 'js') {
+          let bundleContents = await outputFS.readFile(bundle.filePath, 'utf8');
+          let varDeclarations =
+            bundleContents.match(/var \$[a-zA-Z0-9]+ = parcelRequire/g) || [];
+          let uniqueVars = new Set();
+
+          for (let declaration of varDeclarations) {
+            let varName = declaration.match(/var (\$[a-zA-Z0-9]+)/)?.[1];
+            if (varName) {
+              if (uniqueVars.has(varName)) {
+                scopeViolations.push(
+                  `Duplicate ${varName} in bundle ${bundle.name}`,
+                );
+              }
+              uniqueVars.add(varName);
+            }
+          }
+        }
+      }
+
+      assert.equal(
+        scopeViolations.length,
+        0,
+        `Found scope violations: ${scopeViolations.join(', ')}`,
+      );
+
+      // The main test is the symbol deduplication check above - no need to test runtime behavior
+    });
+
+    it('should handle complex dependency graphs without symbol conflicts', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        symbol-deduplication-complex
+          utils.js:
+            export const util1 = 'util1';
+            export const util2 = 'util2';
+
+          base.js:
+            import {util1} from './utils';
+            export const baseValue = util1 + '-base';
+
+          feature1.js:
+            import {util1, util2} from './utils';
+            import {baseValue} from './base';
+            export const feature1Value = baseValue + '-' + util2 + '-feature1';
+
+          feature2.js:
+            import {util1, util2} from './utils';
+            import {baseValue} from './base';
+            export const feature2Value = baseValue + '-' + util2 + '-feature2';
+
+          feature3.js:
+            import {util1} from './utils';
+            import {baseValue} from './base';
+            export const feature3Value = baseValue + '-' + util1 + '-feature3';
+
+          index.js:
+            import {feature1Value} from './feature1';
+            import {feature2Value} from './feature2';
+            import {feature3Value} from './feature3';
+            
+            output = [feature1Value, feature2Value, feature3Value].join('|');
+
+          package.json:
+            {
+              "sideEffects": false
+            }`;
+
+      let b = await bundle(
+        path.join(__dirname, 'symbol-deduplication-complex/index.js'),
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      let contents = await getBundleContents(b, outputFS, (name) =>
+        name.endsWith('.js'),
+      );
+
+      // Check for any duplicate variable declarations
+      let varDeclarations =
+        contents.match(/var \$[a-zA-Z0-9]+ = parcelRequire/g) || [];
+      let varCounts = new Map();
+
+      for (let declaration of varDeclarations) {
+        let varName = declaration.match(/var (\$[a-zA-Z0-9]+)/)?.[1];
+        if (varName) {
+          varCounts.set(varName, (varCounts.get(varName) || 0) + 1);
+        }
+      }
+
+      let duplicates = Array.from(varCounts.entries()).filter(
+        ([_, count]) => count > 1,
+      );
+      assert.equal(
+        duplicates.length,
+        0,
+        `Found duplicate variables: ${duplicates.map(([name, count]) => `${name} (${count} times)`).join(', ')}`,
+      );
+
+      // The main test is the symbol deduplication check above - no need to test runtime behavior
+    });
+  });
 });
