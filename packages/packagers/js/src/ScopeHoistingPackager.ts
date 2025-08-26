@@ -116,6 +116,9 @@ export class ScopeHoistingPackager {
   usedHelpers: Set<string> = new Set();
   externalAssets: Set<Asset> = new Set();
   logger: PluginLogger;
+  useBothScopeHoistingImprovements: boolean =
+    getFeatureFlag('applyScopeHoistingImprovementV2') ||
+    getFeatureFlag('applyScopeHoistingImprovement');
 
   constructor(
     options: PluginOptions,
@@ -187,7 +190,7 @@ export class ScopeHoistingPackager {
 
     if (
       getFeatureFlag('inlineConstOptimisationFix') ||
-      getFeatureFlag('applyScopeHoistingImprovement')
+      this.useBothScopeHoistingImprovements
     ) {
       // Write out all constant modules used by this bundle
       for (let asset of constantAssets) {
@@ -227,7 +230,7 @@ export class ScopeHoistingPackager {
     let mainEntry = this.bundle.getMainEntry();
     if (this.isAsyncBundle) {
       if (
-        getFeatureFlag('applyScopeHoistingImprovement') ||
+        this.useBothScopeHoistingImprovements ||
         getFeatureFlag('supportWebpackChunkName')
       ) {
         // Generally speaking, async bundles should not be executed on load, as
@@ -433,7 +436,7 @@ export class ScopeHoistingPackager {
           wrapped.push(asset);
         } else if (
           (getFeatureFlag('inlineConstOptimisationFix') ||
-            getFeatureFlag('applyScopeHoistingImprovement')) &&
+            this.useBothScopeHoistingImprovements) &&
           asset.meta.isConstantModule
         ) {
           constant.push(asset);
@@ -441,7 +444,6 @@ export class ScopeHoistingPackager {
       }
     });
 
-    if (getFeatureFlag('applyScopeHoistingImprovement')) {
       // Make all entry assets wrapped, to avoid any top level hoisting
       for (let entryAsset of this.bundle.getEntryAssets()) {
         if (!this.wrappedAssets.has(entryAsset.id)) {
@@ -450,6 +452,7 @@ export class ScopeHoistingPackager {
         }
       }
 
+    if (this.useBothScopeHoistingImprovements) {
       // Tracks which assets have been assigned to a wrap group
       let assignedAssets = new Set<Asset>();
 
@@ -766,7 +769,7 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (getFeatureFlag('applyScopeHoistingImprovement')) {
+                  if (this.useBothScopeHoistingImprovements) {
                     if (
                       !resolved.meta.isConstantModule &&
                       !this.wrappedAssets.has(resolved.id)
