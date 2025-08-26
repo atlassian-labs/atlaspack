@@ -1,0 +1,26 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="55" fill="#0052CC" opacity="0.1"/>
+  
+  <!-- Main bundling concept - interlocking hexagons representing modules being bundled -->
+  <g transform="translate(60, 60)">
+    <!-- Central hexagon -->
+    <polygon points="0,-20 17.32,-10 17.32,10 0,20 -17.32,10 -17.32,-10" 
+             fill="#0052CC" opacity="0.9"/>
+    
+    <!-- Surrounding hexagons -->
+    <polygon points="-30,-15 -12.68,-25 4.64,-15 -12.68,-5 -30,5 -47.32,-5" 
+             fill="#36B37E" opacity="0.7" transform="scale(0.8)"/>
+    
+    <polygon points="30,-15 47.32,-5 30,5 12.68,-5 -4.64,-15 12.68,-25" 
+             fill="#36B37E" opacity="0.7" transform="scale(0.8)"/>
+    
+    <polygon points="0,30 17.32,40 0,50 -17.32,40 -34.64,30 -17.32,20" 
+             fill="#36B37E" opacity="0.7" transform="scale(0.8)"/>
+    
+    <!-- Connection lines showing bundling process -->
+    <line x1="-20" y1="-10" x2="-8" y2="-5" stroke="#FF5630" stroke-width="2" opacity="0.8"/>
+    <line x1="20" y1="-10" x2="8" y2="-5" stroke="#FF5630" stroke-width="2" opacity="0.8"/>
+    <line x1="0" y1="25" x2="0" y2="12" stroke="#FF5630" stroke-width="2" opacity="0.8"/>
+  </g>
+</svg>

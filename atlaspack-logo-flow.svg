@@ -1,0 +1,31 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Flow-based design emphasizing speed and efficiency -->
+  <g transform="translate(60, 60)">
+    <!-- Central core representing the bundler -->
+    <circle cx="0" cy="0" r="18" fill="#0052CC" opacity="0.9"/>
+    <circle cx="0" cy="0" r="12" fill="#FFFFFF" opacity="0.3"/>
+    
+    <!-- Flowing streams representing code/modules being processed -->
+    <path d="M -50 -20 Q -25 -25 0 -18 Q 25 -15 50 -10" 
+          stroke="#36B37E" stroke-width="3" fill="none" opacity="0.8"/>
+    
+    <path d="M -50 0 Q -25 -5 0 0 Q 25 5 50 0" 
+          stroke="#36B37E" stroke-width="4" fill="none" opacity="0.9"/>
+    
+    <path d="M -50 20 Q -25 25 0 18 Q 25 15 50 10" 
+          stroke="#36B37E" stroke-width="3" fill="none" opacity="0.8"/>
+    
+    <!-- Input dots -->
+    <circle cx="-50" cy="-20" r="3" fill="#36B37E" opacity="0.7"/>
+    <circle cx="-50" cy="0" r="4" fill="#36B37E" opacity="0.9"/>
+    <circle cx="-50" cy="20" r="3" fill="#36B37E" opacity="0.7"/>
+    
+    <!-- Output elements showing bundled result -->
+    <rect x="45" y="-12" width="8" height="24" rx="4" fill="#FF5630" opacity="0.8"/>
+    
+    <!-- Speed lines for performance emphasis -->
+    <line x1="25" y1="-8" x2="35" y2="-6" stroke="#FF5630" stroke-width="2" opacity="0.6"/>
+    <line x1="25" y1="0" x2="35" y2="0" stroke="#FF5630" stroke-width="2" opacity="0.6"/>
+    <line x1="25" y1="8" x2="35" y2="6" stroke="#FF5630" stroke-width="2" opacity="0.6"/>
+  </g>
+</svg>

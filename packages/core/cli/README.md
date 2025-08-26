@@ -1,5 +1,9 @@
 # Atlaspack
 
+<img src="atlaspack-logo-bundler.svg" alt="Atlaspack Logo - Bundler" width="120" height="120" />
+<img src="atlaspack-logo-layers.svg" alt="Atlaspack Logo - Layers" width="120" height="120" />
+<img src="atlaspack-logo-flow.svg" alt="Atlaspack Logo - Flow" width="120" height="120" />
+
 [![Atlassian license](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
 
 <!-- [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](CONTRIBUTING.md) -->

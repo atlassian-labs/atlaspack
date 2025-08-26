@@ -1,0 +1,30 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Layered packing concept with rounded rectangles -->
+  <g transform="translate(60, 60)">
+    <!-- Bottom layer - largest -->
+    <rect x="-35" y="-8" width="70" height="16" rx="8" 
+          fill="#0052CC" opacity="0.3"/>
+    
+    <!-- Middle layer -->
+    <rect x="-28" y="-16" width="56" height="16" rx="8" 
+          fill="#0052CC" opacity="0.6"/>
+    
+    <!-- Top layer - smallest, most prominent -->
+    <rect x="-21" y="-24" width="42" height="16" rx="8" 
+          fill="#0052CC" opacity="0.9"/>
+    
+    <!-- Side elements representing modules being packed -->
+    <circle cx="-45" cy="0" r="6" fill="#36B37E" opacity="0.8"/>
+    <circle cx="45" cy="0" r="6" fill="#36B37E" opacity="0.8"/>
+    <circle cx="-38" cy="-20" r="5" fill="#36B37E" opacity="0.6"/>
+    <circle cx="38" cy="-20" r="5" fill="#36B37E" opacity="0.6"/>
+    
+    <!-- Arrow-like elements showing the packing direction -->
+    <path d="M -50 0 L -35 -5 L -35 5 Z" fill="#FF5630" opacity="0.7"/>
+    <path d="M 50 0 L 35 -5 L 35 5 Z" fill="#FF5630" opacity="0.7"/>
+    
+    <!-- Subtle connection lines -->
+    <line x1="-39" y1="0" x2="-35" y2="0" stroke="#FF5630" stroke-width="1.5" opacity="0.5"/>
+    <line x1="39" y1="0" x2="35" y2="0" stroke="#FF5630" stroke-width="1.5" opacity="0.5"/>
+  </g>
+</svg>
