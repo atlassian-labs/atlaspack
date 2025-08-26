@@ -452,7 +452,11 @@ export class ScopeHoistingPackager {
       // the top level scope
       let mainEntry = this.bundle.getMainEntry();
 
-      let moduleGroupParents = mainEntry ? [mainEntry, ...wrapped] : wrapped;
+      let moduleGroupParents = [...wrapped];
+
+      if (getFeatureFlag('applyScopeHoistingImprovementV2') && mainEntry) {
+        moduleGroupParents.unshift(mainEntry);
+      }
 
       for (let moduleGroupParentAsset of moduleGroupParents) {
         this.bundle.traverseAssets((asset, _, actions) => {
