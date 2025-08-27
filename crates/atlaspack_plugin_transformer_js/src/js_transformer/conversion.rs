@@ -511,7 +511,7 @@ fn convert_dependency(
     env: asset.env.clone(),
     loc: Some(loc.clone()),
     priority: convert_priority(&transformer_dependency),
-    source_asset_id: Some(*asset.id()),
+    source_asset_id: Some(asset.id()),
     source_asset_type: Some(asset.file_type.clone()),
     source_path: Some(asset.file_path.clone()),
     specifier: transformer_dependency.specifier.as_ref().into(),

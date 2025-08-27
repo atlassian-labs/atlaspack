@@ -55,6 +55,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
       source_asset_id: input.id().clone(),
       source_path: Some(input.file_path.clone()),
       enable_inline_isolated: self.enable_inline_isolated,
+      always_keep_es_modules: context.get_feature_flag("native_everything"),
     };
 
     let HtmlTransformation {
@@ -103,6 +104,13 @@ pub struct HTMLTransformationContext {
   pub source_asset_id: AssetId,
   pub source_path: Option<PathBuf>,
   pub enable_inline_isolated: bool,
+  pub always_keep_es_modules: bool,
+}
+
+impl HTMLTransformationContext {
+  pub fn keep_es_modules(&self) -> bool {
+    self.env.should_scope_hoist || self.always_keep_es_modules
+  }
 }
 
 #[derive(Debug, PartialEq)]

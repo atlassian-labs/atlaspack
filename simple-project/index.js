@@ -2,6 +2,10 @@ import { foo } from './foo';
 
 alert('Hello ' + foo);
 
-import('./dependency').then(({ default: depExport }) => {
+const depPromise = import('./dependency');
+
+console.log('depPromise=', depPromise);
+
+depPromise.then(({ default: depExport }) => {
   alert('Dependency exported: ' + depExport);
 });

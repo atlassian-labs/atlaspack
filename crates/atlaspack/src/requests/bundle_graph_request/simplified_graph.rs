@@ -1,7 +1,7 @@
 use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode, DependencyNode},
   bundle_graph::AssetRef,
-  types::Priority,
+  types::{AssetId, Priority},
 };
 use petgraph::{
   graph::NodeIndex,
@@ -46,6 +46,43 @@ impl std::fmt::Debug for SimplifiedAssetGraphNode {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub struct SimplifiedAssetDependency {
+  dependency_node: DependencyNode,
+  target_node_index: NodeIndex,
+}
+
+impl SimplifiedAssetDependency {
+  pub fn new(dependency_node: DependencyNode, target_node_index: NodeIndex) -> Self {
+    Self {
+      dependency_node,
+      target_node_index,
+    }
+  }
+
+  pub fn target_node_index(&self) -> NodeIndex {
+    self.target_node_index
+  }
+
+  pub fn dependency_node(&self) -> &DependencyNode {
+    &self.dependency_node
+  }
+}
+
+impl std::fmt::Display for SimplifiedAssetDependency {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.dependency_node)
+  }
+}
+
+impl std::ops::Deref for SimplifiedAssetDependency {
+  type Target = DependencyNode;
+
+  fn deref(&self) -> &Self::Target {
+    &self.dependency_node
+  }
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub enum SimplifiedAssetGraphEdge {
   /// Root to asset, means the asset is an entry-point
   EntryAssetRoot(DependencyNode),
@@ -54,12 +91,12 @@ pub enum SimplifiedAssetGraphEdge {
   /// Root to asset, means the asset has been split due to type change
   TypeChangeRoot(DependencyNode),
   /// Asset to asset, means the asset is a dependency of the other within a bundle
-  AssetDependency(DependencyNode),
+  AssetDependency(SimplifiedAssetDependency),
   /// Asset to asset, means the asset is an async dependency of the other within a bundle
   ///
   /// If an asset A imports an asset B, of *different type*, then this edge is added.
   /// Not the dependency edge.
-  AssetAsyncDependency(DependencyNode),
+  AssetAsyncDependency(SimplifiedAssetDependency),
 }
 
 pub type SimplifiedAssetGraph = StableDiGraph<SimplifiedAssetGraphNode, SimplifiedAssetGraphEdge>;
@@ -148,7 +185,10 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
           simplified_graph.add_edge(
             incoming,
             target,
-            SimplifiedAssetGraphEdge::AssetAsyncDependency(dependency_node.clone()),
+            SimplifiedAssetGraphEdge::AssetAsyncDependency(SimplifiedAssetDependency::new(
+              dependency_node.clone(),
+              target,
+            )),
           );
 
           continue;
@@ -164,7 +204,10 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
         simplified_graph.add_edge(
           incoming,
           target,
-          SimplifiedAssetGraphEdge::AssetAsyncDependency(dependency_node.clone()),
+          SimplifiedAssetGraphEdge::AssetAsyncDependency(SimplifiedAssetDependency::new(
+            dependency_node.clone(),
+            target,
+          )),
         );
         continue;
       }
@@ -179,7 +222,10 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
         simplified_graph.add_edge(
           incoming,
           target,
-          SimplifiedAssetGraphEdge::AssetDependency(dependency_node.clone()),
+          SimplifiedAssetGraphEdge::AssetDependency(SimplifiedAssetDependency::new(
+            dependency_node.clone(),
+            target,
+          )),
         );
       }
     }
@@ -230,7 +276,7 @@ mod tests {
     }
 
     fn sync_dependency(&mut self, source: NodeIndex, target: NodeIndex) {
-      let dependency = self.graph.add_dependency(Dependency::default());
+      let dependency = self.graph.add_dependency(Dependency::default(), target);
       self.graph.add_edge(source, dependency);
       self.graph.add_edge(dependency, target);
     }

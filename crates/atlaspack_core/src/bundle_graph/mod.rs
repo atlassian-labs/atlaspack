@@ -78,6 +78,16 @@ pub struct BundleGraphBundle {
   pub assets: StableDiGraph<AssetRef, ()>,
 }
 
+impl BundleGraphBundle {
+  pub fn modules_to_load_on_startup(&self) -> Vec<AssetId> {
+    let mut modules = vec![];
+    for asset_id in self.bundle.entry_asset_ids.clone() {
+      modules.push(asset_id);
+    }
+    modules
+  }
+}
+
 impl std::fmt::Display for BundleGraphBundle {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(
@@ -117,30 +127,25 @@ impl std::fmt::Display for BundleGraphNode {
 #[derive(Debug, Clone, PartialEq)]
 pub struct BundleDependency {
   dependency_node: DependencyNode,
-  target_assets: Vec<AssetRef>,
+  target_asset: NodeIndex,
 }
 
 impl std::fmt::Display for BundleDependency {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(
       f,
-      "BundleDependency(dependency={}, assets={})",
+      "BundleDependency(dependency={}, target_asset={})",
       self.dependency_node,
-      self
-        .target_assets
-        .iter()
-        .map(|asset| asset.to_string())
-        .collect::<Vec<_>>()
-        .join(", ")
+      self.target_asset.index()
     )
   }
 }
 
 impl BundleDependency {
-  pub fn new(dependency_node: &DependencyNode) -> Self {
+  pub fn new(dependency_node: &DependencyNode, target_asset: NodeIndex) -> Self {
     Self {
       dependency_node: dependency_node.clone(),
-      target_assets: vec![],
+      target_asset,
     }
   }
 
@@ -150,6 +155,10 @@ impl BundleDependency {
 
   pub fn placeholder(&self) -> Option<&str> {
     self.dependency_node.dependency.placeholder.as_deref()
+  }
+
+  pub fn target_asset(&self) -> NodeIndex {
+    self.target_asset
   }
 }
 

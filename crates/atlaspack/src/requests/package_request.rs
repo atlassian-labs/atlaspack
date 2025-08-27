@@ -8,7 +8,7 @@ use std::{
 
 use async_trait::async_trait;
 use atlaspack_core::{
-  asset_graph::{AssetGraph, AssetGraphNode, AssetNode},
+  asset_graph::{self, AssetGraph, AssetGraphNode, AssetNode},
   bundle_graph::{BundleGraph, BundleGraphBundle, BundleGraphEdge, BundleGraphNode},
   plugin::PackagerPlugin,
   types::{AssetId, AtlaspackOptions, BundleId, FileType},
@@ -182,6 +182,7 @@ pub struct PackageBundleParams<'a> {
 }
 
 pub trait AssetDataProvider: std::fmt::Debug {
+  fn get_asset_id(&self, asset_node_index: NodeIndex) -> anyhow::Result<AssetId>;
   fn get_asset_code(&self, asset_id: AssetId) -> anyhow::Result<Vec<u8>>;
   fn get_original_asset_code(&self, asset_id: AssetId) -> anyhow::Result<Vec<u8>>;
   fn get_imported_modules(&self, asset_id: AssetId) -> anyhow::Result<Vec<ImportedModule>>;
@@ -202,7 +203,7 @@ impl InMemoryAssetDataProvider {
       let asset_node = asset_graph.get_node(&node_index).unwrap();
       if let AssetGraphNode::Asset(asset_node) = asset_node {
         let id_hash = asset_node.asset.id();
-        asset_node_index_by_id.insert(*id_hash, node_index);
+        asset_node_index_by_id.insert(id_hash, node_index);
       }
     }
 
@@ -236,6 +237,14 @@ struct ImportedModule {
 }
 
 impl AssetDataProvider for InMemoryAssetDataProvider {
+  fn get_asset_id(&self, asset_node_index: NodeIndex) -> anyhow::Result<AssetId> {
+    let asset_node = self.asset_graph.get_node(&asset_node_index).unwrap();
+    let AssetGraphNode::Asset(asset_node) = asset_node else {
+      anyhow::bail!("Asset not found: {:?}", asset_node_index);
+    };
+    Ok(asset_node.asset.id())
+  }
+
   fn get_original_asset_code(&self, asset_id: AssetId) -> anyhow::Result<Vec<u8>> {
     let asset_node = self.get_asset_by_id(asset_id)?;
     let path = asset_node.asset.file_path.clone();
@@ -436,7 +445,7 @@ fn package_js_bundle(
 
     writer.write_all(
       format!(
-        "ms.push(['{}', (exports, require, atlaspack$require, atlaspack$export) => {{\n\n\n",
+        "ms.push(['{}', (module, exports, require, atlaspack$require, atlaspack$export) => {{\n\n\n",
         asset_ref.id()
       )
       .as_bytes(),
@@ -504,25 +513,32 @@ fn package_js_bundle(
       continue;
     };
 
-    // writer.write_all(
-    //   format!(
-    //     "ms.push(['{}', (exports, require, atlaspack$require, atlaspack$export) => {{\n\n\n",
-    //     placeholder
-    //   )
-    //   .as_bytes(),
-    // )?;
-    // writer.write_all(
-    //   format!(
-    //     "exports.default = import(new URL('{}', import.meta.url)).then(() => atlaspack$require('{}'));\n\n",
-    //     bundle.bundle.name.as_ref().unwrap(),
-    //     dependency.id(),
-    //   )
-    //   .as_bytes(),
-    // )?;
-    // writer.write_all("}]);\n\n".as_bytes())?;
+    writer.write_all(
+      format!(
+        "ms.push(['{}', (module, exports, require, atlaspack$require, atlaspack$export) => {{\n\n\n",
+        placeholder
+      )
+      .as_bytes(),
+    )?;
+    let target_asset = asset_data_provider
+      .get_asset_id(dependency.target_asset())
+      .unwrap();
+    writer.write_all(
+      format!(
+        "module.exports = import(new URL('{}', import.meta.url)).then(() => atlaspack$require('{}'));\n\n",
+        bundle.bundle.name.as_ref().unwrap(),
+        target_asset.to_string(),
+      )
+      .as_bytes(),
+    )?;
+    writer.write_all("}]);\n\n".as_bytes())?;
   }
 
   writer.write_all("atlaspack$bootstrap();".as_bytes())?;
+
+  for entry in bundle.modules_to_load_on_startup() {
+    writer.write_all(format!("atlaspack$require('{}');\n", entry).as_bytes())?;
+  }
 
   Ok(())
 }

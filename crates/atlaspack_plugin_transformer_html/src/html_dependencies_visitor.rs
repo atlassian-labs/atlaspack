@@ -119,7 +119,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
           };
 
           let mut output_format = OutputFormat::Global;
-          if source_type == SourceType::Module && self.context.env.should_scope_hoist {
+          if source_type == SourceType::Module && self.context.keep_es_modules() {
             output_format = OutputFormat::EsModule;
           } else {
             if source_type == SourceType::Module {

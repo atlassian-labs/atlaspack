@@ -121,7 +121,7 @@ async fn run(args: Cli) -> anyhow::Result<()> {
 
       let dev_server = DevServer::new(DevServerOptions {
         host: "localhost".to_string(),
-        port: 3310,
+        port: 9201,
         public_url: None,
         dist_dir: output_dir,
         data_provider: Box::new(DefaultDevServerDataProvider::new()),

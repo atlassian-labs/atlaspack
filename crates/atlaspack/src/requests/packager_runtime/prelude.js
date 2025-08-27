@@ -18,14 +18,15 @@ function atlaspack$require(moduleId) {
   }
 
   const exports = {};
+  const module = { exports };
+
   moduleFactory(
+    module,
     exports,
     (specifier) => {
       const moduleMap = atlaspack$moduleMaps[moduleId];
       if (moduleMap[specifier]) {
-        console.log("Requiring module", specifier, moduleMap[specifier]);
         const result = atlaspack$require(moduleMap[specifier]);
-        console.log("  -> exports", result);
         return result;
       }
 
@@ -37,11 +38,9 @@ function atlaspack$require(moduleId) {
     },
   );
 
-  atlaspack$modules[moduleId] = {
-    exports
-  };
+  atlaspack$modules[moduleId] = module;
 
-  return exports;
+  return module.exports;
 }
 
 function atlaspack$bootstrap() {
@@ -52,7 +51,6 @@ function atlaspack$bootstrap() {
 
   for (let i = 0; i < ms.length; i += 1) {
     const [moduleId, moduleFactory, moduleMap] = ms[i];
-    console.log("Registering module", moduleId, moduleFactory, moduleMap);
     atlaspack$register(moduleId, moduleFactory, moduleMap, ms);
   }
 }

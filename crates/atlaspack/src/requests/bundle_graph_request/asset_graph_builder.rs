@@ -8,7 +8,8 @@ use atlaspack_core::{
 use petgraph::graph::NodeIndex;
 
 use crate::requests::bundle_graph_request::{
-  SimplifiedAssetGraph, SimplifiedAssetGraphEdge, SimplifiedAssetGraphNode,
+  simplified_graph::SimplifiedAssetDependency, SimplifiedAssetGraph, SimplifiedAssetGraphEdge,
+  SimplifiedAssetGraphNode,
 };
 
 pub struct SimplifiedAssetGraphBuilder {
@@ -65,7 +66,10 @@ impl SimplifiedAssetGraphBuilder {
     self.graph.add_edge(
       source,
       target,
-      SimplifiedAssetGraphEdge::AssetDependency(DependencyNode::default()),
+      SimplifiedAssetGraphEdge::AssetDependency(SimplifiedAssetDependency::new(
+        DependencyNode::default(),
+        target,
+      )),
     );
   }
 
@@ -73,7 +77,10 @@ impl SimplifiedAssetGraphBuilder {
     self.graph.add_edge(
       source,
       target,
-      SimplifiedAssetGraphEdge::AssetAsyncDependency(DependencyNode::default()),
+      SimplifiedAssetGraphEdge::AssetAsyncDependency(SimplifiedAssetDependency::new(
+        DependencyNode::default(),
+        target,
+      )),
     );
     self.graph.add_edge(
       self.root,

@@ -317,8 +317,8 @@ impl std::fmt::Display for Asset {
 }
 
 impl Asset {
-  pub fn id(&self) -> &AssetId {
-    &self.id
+  pub fn id(&self) -> AssetId {
+    self.id
   }
 
   pub fn id_string(&self) -> String {

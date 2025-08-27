@@ -204,6 +204,7 @@ pub fn make_bundle_graph(
       bundle: Bundle {
         bundle_behavior: Some(BundleBehavior::Isolated),
         bundle_type: entry_asset.file_type().clone(),
+        // This isn't right ;
         entry_asset_ids: entry_assets.iter().map(|asset| asset.id()).collect(),
         env: Environment::default(),
         hash_reference: "".to_string(),
@@ -341,7 +342,10 @@ pub fn make_bundle_graph(
                   *bundle_dominator_tree_node_index,
                   target_bundle,
                   // TODO: Maintain the reason this edge is here, e.g.: carry over the source, target, dependency etc
-                  BundleGraphEdge::BundleSyncLoads(BundleDependency::new(edge_weight)),
+                  BundleGraphEdge::BundleSyncLoads(BundleDependency::new(
+                    edge_weight,
+                    edge_weight.target_node_index(),
+                  )),
                 );
               }
               DominatorTreeEdge::AssetAsyncDependency(edge_weight) => {
@@ -356,7 +360,10 @@ pub fn make_bundle_graph(
                   target_bundle,
                   // TODO: Maintain the reason this edge is here, e.g.: carry over the source, target, dependency etc
                   // TODO: We need to keep track of the module ID the dependency resolves into.
-                  BundleGraphEdge::BundleAsyncLoads(BundleDependency::new(edge_weight)),
+                  BundleGraphEdge::BundleAsyncLoads(BundleDependency::new(
+                    edge_weight,
+                    edge_weight.target_node_index(),
+                  )),
                 );
               }
               DominatorTreeEdge::EntryAssetRoot(_) => unreachable!(),

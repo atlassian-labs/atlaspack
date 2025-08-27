@@ -29,7 +29,7 @@ impl std::fmt::Display for AssetNode {
 
 impl AssetNode {
   pub fn id(&self) -> AssetId {
-    *self.asset.id()
+    self.asset.id()
   }
 }
 

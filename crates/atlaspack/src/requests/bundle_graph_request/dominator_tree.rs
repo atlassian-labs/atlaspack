@@ -3,12 +3,14 @@ use petgraph::{graph::NodeIndex, prelude::StableDiGraph};
 
 use crate::requests::bundle_graph_request::{
   acyclic_asset_graph::{AcyclicAssetGraph, AcyclicAssetGraphNode},
-  simplified_graph::SimplifiedAssetGraphEdge,
+  simplified_graph::{SimplifiedAssetDependency, SimplifiedAssetGraphEdge},
 };
 
 pub type DominatorTree = StableDiGraph<DominatorTreeNode, DominatorTreeEdge>;
 
 pub type DominatorTreeNode = AcyclicAssetGraphNode;
+
+pub type DominatorTreeAssetDependency = SimplifiedAssetDependency;
 
 #[derive(Debug, PartialEq)]
 pub enum DominatorTreeEdge {
@@ -23,9 +25,9 @@ pub enum DominatorTreeEdge {
   /// Root to asset, means the asset has been split due to type change
   TypeChangeRoot(DependencyNode),
   /// Asset to asset, means the asset is a dependency of the other within a bundle
-  AssetDependency(DependencyNode),
+  AssetDependency(DominatorTreeAssetDependency),
   /// Asset to asset, means the asset is an async dependency of the other within a bundle
-  AssetAsyncDependency(DependencyNode),
+  AssetAsyncDependency(DominatorTreeAssetDependency),
 }
 
 impl std::fmt::Display for DominatorTreeEdge {
