@@ -1,6 +1,5 @@
 ---
 '@atlaspack/node-resolver-core': minor
-'@atlaspack/node-resolver-rust': minor
 '@atlaspack/rust': minor
 ---
 
