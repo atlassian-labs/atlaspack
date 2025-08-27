@@ -172,6 +172,12 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enable optimised prelude for the ScopeHoistingPackager.
    */
   useNewPrelude: false,
+
+  /**
+   * Enable a fix for applyScopeHoistingImprovement that allows assets to still
+   * be at the top level of the bundle.
+   */
+  applyScopeHoistingImprovementV2: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

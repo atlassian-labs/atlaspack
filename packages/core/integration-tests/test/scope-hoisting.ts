@@ -6747,6 +6747,7 @@ describe('scope hoisting', function () {
               inputFS: overlayFS,
               featureFlags: {
                 applyScopeHoistingImprovement: true,
+                applyScopeHoistingImprovementV2: true,
               },
             },
           );
@@ -6829,6 +6830,7 @@ describe('scope hoisting', function () {
               inputFS: overlayFS,
               featureFlags: {
                 applyScopeHoistingImprovement: true,
+                applyScopeHoistingImprovementV2: true,
               },
             },
           );
@@ -6892,6 +6894,7 @@ describe('scope hoisting', function () {
               inputFS: overlayFS,
               featureFlags: {
                 applyScopeHoistingImprovement: true,
+                applyScopeHoistingImprovementV2: true,
               },
             },
           );
@@ -6966,6 +6969,7 @@ describe('scope hoisting', function () {
               inputFS: overlayFS,
               featureFlags: {
                 applyScopeHoistingImprovement: true,
+                applyScopeHoistingImprovementV2: true,
               },
             },
           );
