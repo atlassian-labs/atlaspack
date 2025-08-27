@@ -570,6 +570,48 @@ describe('resolver', function () {
       });
     });
 
+    it('should resolve a node_modules package.module:es2019', async function () {
+      resolver = new NodeResolver({
+        fs: overlayFS,
+        projectRoot: rootDir,
+        mode: 'development',
+        packageExports: true,
+        mainFields: ['source', 'browser', 'module:es2019', 'module', 'main'],
+      });
+      let resolved = await resolver.resolve({
+        env: BROWSER_ENV,
+        filename: 'package-module-es2019',
+        specifierType: 'esm',
+        parent: path.join(rootDir, 'foo.js'),
+      });
+      check(resolved, {
+        filePath: path.join(
+          rootDir,
+          'node_modules',
+          'package-module-es2019',
+          'module-es2019.js',
+        ),
+        sideEffects: undefined,
+        query: undefined,
+        invalidateOnFileCreate: [
+          {
+            fileName: 'node_modules/package-module-es2019',
+            aboveFilePath: rootDir,
+          },
+        ],
+        invalidateOnFileChange: [
+          path.join(rootDir, 'package.json'),
+          path.join(rootDir, 'tsconfig.json'),
+          path.join(
+            rootDir,
+            'node_modules',
+            'package-module-es2019',
+            'package.json',
+          ),
+        ],
+      });
+    });
+
     it('should resolve a node_modules package.browser main field', async function () {
       let resolved = await resolver.resolve({
         env: BROWSER_ENV,
