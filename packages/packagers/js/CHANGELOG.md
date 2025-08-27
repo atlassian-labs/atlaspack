@@ -1,5 +1,18 @@
 # @atlaspack/packager-js
 
+## 2.22.1
+
+### Patch Changes
+
+- [#763](https://github.com/atlassian-labs/atlaspack/pull/763) [`830261d`](https://github.com/atlassian-labs/atlaspack/commit/830261dcf4a40293090b61cab52fd75d5683c73f) Thanks [@benjervis](https://github.com/benjervis)! - Fixes scope hoisting by iterating from the main entry asset of a bundle when packaging. Behind the feature flag `applyScopeHoistingImprovementsV2`.
+
+- Updated dependencies [[`830261d`](https://github.com/atlassian-labs/atlaspack/commit/830261dcf4a40293090b61cab52fd75d5683c73f), [`53dd47b`](https://github.com/atlassian-labs/atlaspack/commit/53dd47bd6d23cd47f87297347f03a609ab38a03d)]:
+  - @atlaspack/feature-flags@2.24.1
+  - @atlaspack/rust@3.7.0
+  - @atlaspack/utils@2.19.1
+  - @atlaspack/plugin@2.14.29
+  - @atlaspack/types@2.15.19
+
 ## 2.22.0
 
 ### Minor Changes

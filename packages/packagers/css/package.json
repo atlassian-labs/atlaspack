@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/packager-css",
-  "version": "2.14.28",
+  "version": "2.14.29",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,11 +16,11 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.19.4",
+    "@atlaspack/types-internal": "2.19.5",
     "@atlaspack/diagnostic": "2.14.3",
-    "@atlaspack/plugin": "2.14.28",
+    "@atlaspack/plugin": "2.14.29",
     "@parcel/source-map": "^2.1.1",
-    "@atlaspack/utils": "2.19.0",
+    "@atlaspack/utils": "2.19.1",
     "lightningcss": "^1.28.2",
     "nullthrows": "^1.1.1"
   },
