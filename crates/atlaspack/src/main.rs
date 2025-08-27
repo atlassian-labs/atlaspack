@@ -80,40 +80,48 @@ async fn run(args: Cli) -> anyhow::Result<()> {
     .unwrap_or_else(|| atlaspack.project_root.join("dist"));
   std::fs::create_dir_all(&output_dir)?;
 
+  let run_build = async || -> anyhow::Result<()> {
+    info!("Building asset graph");
+    atlaspack
+      .run_request_async(AssetGraphRequest::default())
+      .await?;
+
+    info!("Building bundle graph");
+    let result = atlaspack
+      .run_request_async(BundleGraphRequest::default())
+      .await?;
+    let BundleGraphRequestOutput {
+      bundle_graph,
+      asset_graph,
+      ..
+    } = result
+      .into_bundle_graph()
+      .ok_or_else(|| anyhow::anyhow!("Invalid request result from bundle graph request."))?;
+
+    let asset_graph = Arc::new(asset_graph);
+
+    info!("Packaging bundles");
+
+    let request = PackageRequest::new(bundle_graph, asset_graph.clone());
+    atlaspack.run_request_async(request).await?;
+
+    Ok(())
+  };
+
   let command = args.command;
   match command {
     Command::Build { entries } => {
-      info!("Building asset graph");
-      atlaspack
-        .run_request_async(AssetGraphRequest::default())
-        .await?;
-
-      info!("Building bundle graph");
-      let result = atlaspack
-        .run_request_async(BundleGraphRequest::default())
-        .await?;
-      let BundleGraphRequestOutput {
-        bundle_graph,
-        asset_graph,
-        ..
-      } = result
-        .into_bundle_graph()
-        .ok_or_else(|| anyhow::anyhow!("Invalid request result from bundle graph request."))?;
-
-      let asset_graph = Arc::new(asset_graph);
-
-      info!("Packaging bundles");
-
-      let request = PackageRequest::new(bundle_graph, asset_graph.clone());
-      atlaspack.run_request_async(request).await?;
+      run_build().await?;
     }
     Command::Scan { target } => {
       run_scan_directory(target.as_deref().unwrap_or(&current_dir()?)).await?
     }
     Command::Watch { entries } => {
+      run_build().await?;
+
       let dev_server = DevServer::new(DevServerOptions {
         host: "localhost".to_string(),
-        port: 2910,
+        port: 3310,
         public_url: None,
         dist_dir: output_dir,
         data_provider: Box::new(DefaultDevServerDataProvider::new()),
