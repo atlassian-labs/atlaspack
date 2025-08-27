@@ -113,13 +113,14 @@ fn bundle_asset_graph(asset_graph: &AssetGraph) -> BundleGraph {
 #[cfg(test)]
 mod tests {
   use std::{
+    collections::HashMap,
     fs::{create_dir_all, write},
     path::{Path, PathBuf},
   };
 
   use atlaspack_core::{
     asset_graph::AssetNode,
-    bundle_graph::{BundleGraphEdge, BundleRef},
+    bundle_graph::{BundleGraphBundle, BundleGraphEdge, BundleRef},
     types::FileType,
   };
   use petgraph::{
@@ -346,7 +347,7 @@ mod tests {
   }
 
   mod unit_tests {
-    use atlaspack_core::asset_graph::DependencyNode;
+    use atlaspack_core::{asset_graph::DependencyNode, bundle_graph::AssetRef};
 
     use super::*;
 

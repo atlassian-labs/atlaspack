@@ -23,6 +23,17 @@ pub struct AssetRef {
   asset_graph_node_index: NodeIndex,
 }
 
+impl std::fmt::Display for AssetRef {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "AssetRef({}, node_index={})",
+      self.asset_graph_node,
+      self.asset_graph_node_index.index()
+    )
+  }
+}
+
 impl AssetRef {
   pub fn new(asset_graph_node: AssetNode, asset_graph_node_index: NodeIndex) -> Self {
     Self {
@@ -107,6 +118,22 @@ impl std::fmt::Display for BundleGraphNode {
 pub struct BundleDependency {
   dependency_node: DependencyNode,
   target_assets: Vec<AssetRef>,
+}
+
+impl std::fmt::Display for BundleDependency {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "BundleDependency(dependency={}, assets={})",
+      self.dependency_node,
+      self
+        .target_assets
+        .iter()
+        .map(|asset| asset.to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
+    )
+  }
 }
 
 impl BundleDependency {

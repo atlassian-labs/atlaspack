@@ -310,6 +310,12 @@ pub struct Asset {
   pub config_key_path: Option<String>,
 }
 
+impl std::fmt::Display for Asset {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "Asset(file_path={})", self.file_path.display())
+  }
+}
+
 impl Asset {
   pub fn id(&self) -> &AssetId {
     &self.id

@@ -21,6 +21,12 @@ pub struct AssetNode {
   pub requested_symbols: HashSet<String>,
 }
 
+impl std::fmt::Display for AssetNode {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.asset)
+  }
+}
+
 impl AssetNode {
   pub fn id(&self) -> AssetId {
     *self.asset.id()

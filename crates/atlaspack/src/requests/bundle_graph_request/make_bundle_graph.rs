@@ -112,12 +112,16 @@ pub fn make_bundle_graph(
     let mut node_indexes_in_bundle = vec![];
     let mut bundle_assets: StableDiGraph<AssetRef, ()> = StableDiGraph::new();
 
-    let filtered_dominator_tree =
-      EdgeFiltered::from_fn(&dominator_tree, |edge| match edge.weight() {
+    let filtered_dominator_tree = EdgeFiltered::from_fn(&dominator_tree, |edge| {
+      if entry_node_indexes.contains(&edge.target()) {
+        return false;
+      }
+
+      match edge.weight() {
         DominatorTreeEdge::ImmediateDominator => true,
         _ => false,
-      });
-
+      }
+    });
     let filtered_dominator_tree = NodeFiltered::from_fn(&filtered_dominator_tree, |node| {
       node == root_asset || !entry_node_indexes.contains(&node)
     });
@@ -311,12 +315,12 @@ pub fn make_bundle_graph(
       [*bundle_dominator_tree_node_index],
       |event| match event {
         petgraph::visit::DfsEvent::Discover(node_index, _) => {
-          println!(
-            "Discovering node: {}",
-            dominator_tree.node_weight(node_index).unwrap()
-          );
+          // println!(
+          //   "Discovering node: {}",
+          //   dominator_tree.node_weight(node_index).unwrap()
+          // );
           for edge in dominator_tree.edges_directed(node_index, Direction::Outgoing) {
-            println!("  Discovering edge: {}", edge.weight());
+            // println!("  Discovering edge: {}", edge.weight());
             match edge.weight() {
               DominatorTreeEdge::ImmediateDominator => {}
               DominatorTreeEdge::AssetDependency(edge_weight) => {
@@ -465,5 +469,92 @@ pub fn debug_asset_dependency_chain(asset_graph: &AssetGraph, file_path: &Path) 
       });
 
     indentation += 2;
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use atlaspack_core::bundle_graph::BundleRef;
+
+  use crate::requests::bundle_graph_request::{
+    acyclic_asset_graph::remove_cycles, asset_graph_builder::simplified_asset_graph_builder,
+  };
+
+  use super::*;
+
+  fn get_bundle_by_name(bundle_graph: &BundleGraph, name: &str) -> Option<BundleRef> {
+    bundle_graph.bundles().find(|bundle| {
+      bundle
+        .bundle_graph_bundle()
+        .bundle
+        .name
+        .as_ref()
+        .unwrap()
+        .contains(name)
+    })
+  }
+
+  #[test]
+  fn test_make_bundle_graph_with_nested_dependency() {
+    let mut graph = simplified_asset_graph_builder();
+    let a = graph.entry_asset("a.js");
+    let b = graph.asset("b.js");
+    let c = graph.asset("c.js");
+    let d = graph.asset("d.js");
+    graph.async_dependency(a, b);
+    graph.async_dependency(a, c);
+    graph.sync_dependency(b, d);
+    graph.sync_dependency(c, d);
+
+    let graph = graph.build();
+
+    let (root_node, graph) = remove_cycles(&graph);
+    let dominator_tree = build_dominator_tree(&graph, root_node);
+
+    let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
+      root_node: root_node,
+      dominator_tree: &dominator_tree,
+      asset_graph: None,
+    });
+
+    assert_eq!(bundle_graph.num_bundles(), 4);
+
+    let bundle_a = get_bundle_by_name(&bundle_graph, "a.js").unwrap();
+    let bundle_b = get_bundle_by_name(&bundle_graph, "b.js").unwrap();
+    let bundle_c = get_bundle_by_name(&bundle_graph, "c.js").unwrap();
+    let bundle_d = get_bundle_by_name(&bundle_graph, "d.js").unwrap();
+
+    assert_eq!(bundle_a.num_assets(), 1);
+    assert_eq!(bundle_b.num_assets(), 1);
+    assert_eq!(bundle_c.num_assets(), 1);
+    assert_eq!(bundle_d.num_assets(), 1);
+
+    let mut bundle_a_assets = bundle_a
+      .assets()
+      .map(|asset| asset.file_path().to_string_lossy().to_string())
+      .collect::<Vec<_>>();
+    bundle_a_assets.sort();
+    assert_eq!(bundle_a_assets, vec!["a.js"]);
+
+    let mut bundle_b_assets = bundle_b
+      .assets()
+      .map(|asset| asset.file_path().to_string_lossy().to_string())
+      .collect::<Vec<_>>();
+    bundle_b_assets.sort();
+    assert_eq!(bundle_b_assets, vec!["b.js"]);
+
+    let mut bundle_c_assets = bundle_c
+      .assets()
+      .map(|asset| asset.file_path().to_string_lossy().to_string())
+      .collect::<Vec<_>>();
+    bundle_c_assets.sort();
+    assert_eq!(bundle_c_assets, vec!["c.js"]);
+
+    let mut bundle_d_assets = bundle_d
+      .assets()
+      .map(|asset| asset.file_path().to_string_lossy().to_string())
+      .collect::<Vec<_>>();
+    bundle_d_assets.sort();
+    assert_eq!(bundle_d_assets, vec!["d.js"]);
   }
 }

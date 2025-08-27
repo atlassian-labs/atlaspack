@@ -370,11 +370,11 @@ fn package_html_bundle(
     .map(|e| (e.target(), e.weight()))
     .collect::<Vec<_>>();
 
-  println!(
-    "referenced_bundles: {} count={}",
-    bundle,
-    referenced_bundles.len()
-  );
+  // println!(
+  //   "referenced_bundles: {} count={}",
+  //   bundle,
+  //   referenced_bundles.len()
+  // );
 
   let mut bundle_asset_string = String::from_utf8(bundle_asset)?;
 
@@ -384,7 +384,7 @@ fn package_html_bundle(
       .node_weight(referenced_bundle_node_index)
       .unwrap();
 
-    println!("  referenced_bundle: {}", bundle_node);
+    // println!("  referenced_bundle: {}", bundle_node);
     let BundleGraphNode::Bundle(bundle) = bundle_node else {
       panic!("Referenced bundle is not a bundle: {:?}", bundle_node);
     };
@@ -398,7 +398,7 @@ fn package_html_bundle(
     let regex = regex::Regex::new(&format!("{}", dependency_id)).unwrap();
     let matches = regex.find(&bundle_asset_string);
     if let Some(m) = matches {
-      println!("  found match: {}", m.as_str());
+      // println!("  found match: {}", m.as_str());
       bundle_asset_string = bundle_asset_string.replace(
         m.as_str(),
         // TODO: Public path
@@ -477,11 +477,11 @@ fn package_js_bundle(
     .map(|e| (e.target(), e.weight()))
     .collect::<Vec<_>>();
 
-  println!(
-    "referenced_bundles: {} count={}",
-    bundle,
-    referenced_bundles.len()
-  );
+  // println!(
+  //   "referenced_bundles: {} count={}",
+  //   bundle,
+  //   referenced_bundles.len()
+  // );
 
   for (referenced_bundle_node_index, edge_weight) in referenced_bundles {
     let bundle_node = bundle_graph
@@ -489,7 +489,7 @@ fn package_js_bundle(
       .node_weight(referenced_bundle_node_index)
       .unwrap();
 
-    println!("  referenced_bundle: {}", bundle_node);
+    // println!("  referenced_bundle: {}", bundle_node);
     let BundleGraphNode::Bundle(bundle) = bundle_node else {
       panic!("Referenced bundle is not a bundle: {:?}", bundle_node);
     };
@@ -498,24 +498,28 @@ fn package_js_bundle(
       _ => continue,
     };
 
-    writer.write_all(
-      format!(
-        "ms.push(['{}', (exports, require, atlaspack$require, atlaspack$export) => {{\n\n\n",
-        dependency.placeholder().unwrap()
-      )
-      .as_bytes(),
-    )?;
+    let Some(placeholder) = dependency.placeholder() else {
+      // TODO: This is a problem, but in general it's happening with SVGs, images and so on, because that isn't handled yet.
+      tracing::debug!("Dependency has no placeholder but needed to be async imported from bundle={}: dependency={}", bundle, dependency);
+      continue;
+    };
 
-    writer.write_all(
-      format!(
-        "exports.default = import(new URL('{}', import.meta.url)).then(() => atlaspack$require('{}'));\n\n",
-        bundle.bundle.name.as_ref().unwrap(),
-        dependency.id(),
-      )
-      .as_bytes(),
-    )?;
-
-    writer.write_all("}]);\n\n".as_bytes())?;
+    // writer.write_all(
+    //   format!(
+    //     "ms.push(['{}', (exports, require, atlaspack$require, atlaspack$export) => {{\n\n\n",
+    //     placeholder
+    //   )
+    //   .as_bytes(),
+    // )?;
+    // writer.write_all(
+    //   format!(
+    //     "exports.default = import(new URL('{}', import.meta.url)).then(() => atlaspack$require('{}'));\n\n",
+    //     bundle.bundle.name.as_ref().unwrap(),
+    //     dependency.id(),
+    //   )
+    //   .as_bytes(),
+    // )?;
+    // writer.write_all("}]);\n\n".as_bytes())?;
   }
 
   writer.write_all("atlaspack$bootstrap();".as_bytes())?;

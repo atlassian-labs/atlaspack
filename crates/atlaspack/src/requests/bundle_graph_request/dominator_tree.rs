@@ -409,4 +409,200 @@ mod tests {
       assert_contains_matching!(edges, DominatorTreeEdge::AsyncRoot(_), "AsyncRoot");
     }
   }
+
+  #[test]
+  fn test_build_dominator_tree_with_nested_dependency() {
+    // here we have:
+    // graph {
+    //   root -> a[label="entry"]
+    //   root -> b[label="async root"]
+    //
+    //   a -> b[label="async"]
+    //   b -> c
+    // }
+    //
+    // The final dominator tree is
+    // graph {
+    //   root -> a
+    //   a -> b
+    //   b -> c
+    // }
+    //
+    // When bundling, the bundler will skip the immediate dominator edge between a and b,
+    // since b is also a root connected node.
+
+    let mut graph = simplified_asset_graph_builder();
+    let a = graph.entry_asset("a.js");
+    let b = graph.asset("b.js");
+    graph.async_dependency(a, b);
+    let c = graph.asset("c.js");
+    graph.sync_dependency(b, c);
+    graph.sync_dependency(a, c);
+
+    let graph = graph.build();
+    let (root, graph) = remove_cycles(&graph);
+
+    let dominator_tree = build_dominator_tree(&graph, root);
+
+    assert_eq!(dominator_tree.node_count(), 4);
+    // assert_eq!(dominator_tree.edge_count(), 9);
+    assert!(dominator_tree.contains_node(root));
+
+    // root -> a
+    {
+      let edges = dominator_tree
+        .edges_connecting(root, a)
+        .map(|e| e.weight())
+        .collect::<Vec<_>>();
+      assert_eq!(edges.len(), 2);
+      assert_contains_matching!(
+        edges,
+        DominatorTreeEdge::EntryAssetRoot(_),
+        "EntryAssetRoot"
+      );
+      assert_contains_matching!(
+        edges,
+        DominatorTreeEdge::ImmediateDominator,
+        "ImmediateDominator"
+      );
+    }
+
+    // a -> b
+    // a -> c
+    {
+      let edges = dominator_tree
+        .edges_connecting(a, b)
+        .map(|e| e.weight())
+        .collect::<Vec<_>>();
+      assert_contains_matching!(
+        edges,
+        DominatorTreeEdge::AssetAsyncDependency(_),
+        "AssetAsyncDependency"
+      );
+
+      let edges = dominator_tree
+        .edges_connecting(a, c)
+        .map(|e| e.weight())
+        .collect::<Vec<_>>();
+      // assert_eq!(edges.len(), 1);
+      assert_contains_matching!(
+        edges,
+        DominatorTreeEdge::ImmediateDominator,
+        "ImmediateDominator"
+      );
+    }
+
+    // root -> b
+    {
+      let edges = dominator_tree
+        .edges_connecting(root, b)
+        .map(|e| e.weight())
+        .collect::<Vec<_>>();
+      assert_contains_matching!(edges, DominatorTreeEdge::AsyncRoot(_), "AsyncRoot");
+    }
+  }
+
+  #[test]
+  fn test_build_dominator_tree_with_nested_dependency_shared() {
+    // here we have:
+    // graph {
+    //   root -> a[label="entry"]
+    //   root -> b[label="async root"]
+    //
+    //   a -> b[label="async"]
+    //   b -> d
+    //   a -> c[label="async"]
+    //   c -> d
+    // }
+
+    let mut graph = simplified_asset_graph_builder();
+    let a = graph.entry_asset("a.js");
+    let b = graph.asset("b.js");
+    graph.async_dependency(a, b);
+    let c = graph.asset("c.js");
+    graph.async_dependency(a, c);
+
+    let d = graph.asset("d.js");
+    graph.sync_dependency(b, d);
+    graph.sync_dependency(c, d);
+
+    let graph = graph.build();
+    let (root, graph) = remove_cycles(&graph);
+
+    let dominator_tree = build_dominator_tree(&graph, root);
+
+    assert!(dominator_tree.contains_node(root));
+
+    // root -> a
+    {
+      let edges = dominator_tree
+        .edges_connecting(root, a)
+        .map(|e| e.weight())
+        .collect::<Vec<_>>();
+      assert_eq!(edges.len(), 2);
+      assert_contains_matching!(
+        edges,
+        DominatorTreeEdge::EntryAssetRoot(_),
+        "EntryAssetRoot"
+      );
+      assert_contains_matching!(
+        edges,
+        DominatorTreeEdge::ImmediateDominator,
+        "ImmediateDominator"
+      );
+    }
+
+    // a -> b
+    // a -> c
+    {
+      let edges = dominator_tree
+        .edges_connecting(a, b)
+        .map(|e| e.weight())
+        .collect::<Vec<_>>();
+      assert_contains_matching!(
+        edges,
+        DominatorTreeEdge::AssetAsyncDependency(_),
+        "AssetAsyncDependency"
+      );
+
+      let edges = dominator_tree
+        .edges_connecting(a, c)
+        .map(|e| e.weight())
+        .collect::<Vec<_>>();
+      // assert_eq!(edges.len(), 1);
+      assert_contains_matching!(
+        edges,
+        DominatorTreeEdge::AssetAsyncDependency(_),
+        "AssetAsyncDependency"
+      );
+    }
+
+    // root -> b
+    // root -> c
+    {
+      let edges = dominator_tree
+        .edges_connecting(root, b)
+        .map(|e| e.weight())
+        .collect::<Vec<_>>();
+      assert_contains_matching!(edges, DominatorTreeEdge::AsyncRoot(_), "AsyncRoot");
+      let edges = dominator_tree
+        .edges_connecting(root, c)
+        .map(|e| e.weight())
+        .collect::<Vec<_>>();
+      assert_contains_matching!(edges, DominatorTreeEdge::AsyncRoot(_), "AsyncRoot");
+    }
+
+    // root -> d
+    {
+      let edges = dominator_tree
+        .edges_connecting(root, d)
+        .map(|e| e.weight())
+        .collect::<Vec<_>>();
+      assert_contains_matching!(
+        edges,
+        DominatorTreeEdge::SharedBundleRoot,
+        "SharedBundleRoot"
+      );
+    }
+  }
 }
