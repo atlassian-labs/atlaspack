@@ -112,10 +112,14 @@ export class ScopeHoistingPackager {
   seenAssets: Set<string> = new Set();
   wrappedAssets: Set<string> = new Set();
   hoistedRequires: Map<string, Map<string, string>> = new Map();
+  seenHoistedRequires: Set<string> = new Set();
   needsPrelude: boolean = false;
   usedHelpers: Set<string> = new Set();
   externalAssets: Set<Asset> = new Set();
   logger: PluginLogger;
+  useBothScopeHoistingImprovements: boolean =
+    getFeatureFlag('applyScopeHoistingImprovementV2') ||
+    getFeatureFlag('applyScopeHoistingImprovement');
 
   constructor(
     options: PluginOptions,
@@ -173,7 +177,9 @@ export class ScopeHoistingPackager {
     // @ts-expect-error TS7034
     let sourceMap = null;
     let processAsset = (asset: Asset) => {
+      this.seenHoistedRequires.clear();
       let [content, map, lines] = this.visitAsset(asset);
+
       // @ts-expect-error TS7005
       if (sourceMap && map) {
         sourceMap.addSourceMap(map, lineCount);
@@ -187,7 +193,7 @@ export class ScopeHoistingPackager {
 
     if (
       getFeatureFlag('inlineConstOptimisationFix') ||
-      getFeatureFlag('applyScopeHoistingImprovement')
+      this.useBothScopeHoistingImprovements
     ) {
       // Write out all constant modules used by this bundle
       for (let asset of constantAssets) {
@@ -227,7 +233,7 @@ export class ScopeHoistingPackager {
     let mainEntry = this.bundle.getMainEntry();
     if (this.isAsyncBundle) {
       if (
-        getFeatureFlag('applyScopeHoistingImprovement') ||
+        this.useBothScopeHoistingImprovements ||
         getFeatureFlag('supportWebpackChunkName')
       ) {
         // Generally speaking, async bundles should not be executed on load, as
@@ -433,7 +439,7 @@ export class ScopeHoistingPackager {
           wrapped.push(asset);
         } else if (
           (getFeatureFlag('inlineConstOptimisationFix') ||
-            getFeatureFlag('applyScopeHoistingImprovement')) &&
+            this.useBothScopeHoistingImprovements) &&
           asset.meta.isConstantModule
         ) {
           constant.push(asset);
@@ -441,21 +447,36 @@ export class ScopeHoistingPackager {
       }
     });
 
-    if (getFeatureFlag('applyScopeHoistingImprovement')) {
-      // Make all entry assets wrapped, to avoid any top level hoisting
-      for (let entryAsset of this.bundle.getEntryAssets()) {
-        if (!this.wrappedAssets.has(entryAsset.id)) {
-          this.wrappedAssets.add(entryAsset.id);
-          wrapped.push(entryAsset);
-        }
-      }
-
+    if (this.useBothScopeHoistingImprovements) {
       // Tracks which assets have been assigned to a wrap group
       let assignedAssets = new Set<Asset>();
 
-      for (let wrappedAsset of wrapped) {
+      // In V2 scope hoisting, we iterate from the main entry, rather than
+      // wrapping the entry assets
+      if (!getFeatureFlag('applyScopeHoistingImprovementV2')) {
+        // Make all entry assets wrapped, to avoid any top level hoisting
+        for (let entryAsset of this.bundle.getEntryAssets()) {
+          if (!this.wrappedAssets.has(entryAsset.id)) {
+            this.wrappedAssets.add(entryAsset.id);
+            wrapped.push(entryAsset);
+          }
+        }
+      }
+
+      let moduleGroupParents = [...wrapped];
+
+      if (getFeatureFlag('applyScopeHoistingImprovementV2')) {
+        // The main entry needs to be check to find assets that would have gone in
+        // the top level scope
+        let mainEntry = this.bundle.getMainEntry();
+        if (mainEntry) {
+          moduleGroupParents.unshift(mainEntry);
+        }
+      }
+
+      for (let moduleGroupParentAsset of moduleGroupParents) {
         this.bundle.traverseAssets((asset, _, actions) => {
-          if (asset === wrappedAsset) {
+          if (asset === moduleGroupParentAsset) {
             return;
           }
 
@@ -471,12 +492,16 @@ export class ScopeHoistingPackager {
             wrapped.push(asset);
             this.wrappedAssets.add(asset.id);
 
+            // This also needs to be added to the traversal so that we iterate
+            // it during this check.
+            moduleGroupParents.push(asset);
+
             actions.skipChildren();
             return;
           }
 
           assignedAssets.add(asset);
-        }, wrappedAsset);
+        }, moduleGroupParentAsset);
       }
     } else {
       for (let wrappedAssetRoot of [...wrapped]) {
@@ -752,12 +777,18 @@ export class ScopeHoistingPackager {
                 // after the dependency is declared. This handles the case where the resulting asset
                 // is wrapped, but the dependency in this asset is not marked as wrapped. This means
                 // that it was imported/required at the top-level, so its side effects should run immediately.
-                let [res, lines] = this.getHoistedParcelRequires(
-                  asset,
-                  dep,
-                  resolved,
-                );
+                let res = '';
+                let lines = 0;
                 let map;
+
+                if (!getFeatureFlag('applyScopeHoistingImprovementV2')) {
+                  [res, lines] = this.getHoistedParcelRequires(
+                    asset,
+                    dep,
+                    resolved,
+                  );
+                }
+
                 if (
                   this.bundle.hasAsset(resolved) &&
                   !this.seenAssets.has(resolved.id)
@@ -766,7 +797,7 @@ export class ScopeHoistingPackager {
                   // outside our parcelRequire.register wrapper. This is safe because all
                   // assets referenced by this asset will also be wrapped. Otherwise, inline the
                   // asset content where the import statement was.
-                  if (getFeatureFlag('applyScopeHoistingImprovement')) {
+                  if (this.useBothScopeHoistingImprovements) {
                     if (
                       !resolved.meta.isConstantModule &&
                       !this.wrappedAssets.has(resolved.id)
@@ -798,6 +829,16 @@ export class ScopeHoistingPackager {
                       lines += 1 + depLines;
                       map = depMap;
                     }
+                  }
+                }
+
+                if (getFeatureFlag('applyScopeHoistingImprovementV2')) {
+                  let [requiresCode, requiresLines] =
+                    this.getHoistedParcelRequires(asset, dep, resolved);
+
+                  if (requiresCode) {
+                    res = requiresCode + '\n' + res;
+                    lines += requiresLines + 1;
                   }
                 }
 
@@ -1369,8 +1410,22 @@ ${code}
 
     if (hoisted) {
       this.needsPrelude = true;
-      res += '\n' + [...hoisted.values()].join('\n');
-      lineCount += hoisted.size;
+
+      if (getFeatureFlag('applyScopeHoistingImprovementV2')) {
+        let hoistedValues = [...hoisted.values()].filter(
+          (val) => !this.seenHoistedRequires.has(val),
+        );
+
+        for (let val of hoistedValues) {
+          this.seenHoistedRequires.add(val);
+        }
+
+        res += '\n' + hoistedValues.join('\n');
+        lineCount += hoisted.size;
+      } else {
+        res += '\n' + [...hoisted.values()].join('\n');
+        lineCount += hoisted.size;
+      }
     }
 
     return [res, lineCount];
