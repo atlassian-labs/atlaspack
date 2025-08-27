@@ -28,6 +28,7 @@ bitflags! {
     const ALIAS = 1 << 4;
     const TSCONFIG = 1 << 5;
     const TYPES = 1 << 6;
+    const MODULE_ES2019 = 1 << 7;
   }
 }
 
@@ -46,6 +47,8 @@ pub struct PackageJson {
   main: Option<String>,
   #[serde(default, deserialize_with = "ok_or_default")]
   module: Option<String>,
+  #[serde(default, deserialize_with = "ok_or_default", rename = "module:es2019")]
+  module_es2019: Option<String>,
   #[serde(default, deserialize_with = "ok_or_default")]
   tsconfig: Option<String>,
   #[serde(default, deserialize_with = "ok_or_default")]
@@ -722,6 +725,16 @@ impl Iterator for EntryIter<'_> {
             return Some((resolve_path(&self.package.path, s), "browser"));
           }
         }
+      }
+    }
+
+    if self.fields.contains(Fields::MODULE_ES2019) {
+      self.fields.remove(Fields::MODULE_ES2019);
+      if let Some(module_es2019) = &self.package.module_es2019 {
+        return Some((
+          resolve_path(&self.package.path, module_es2019),
+          "module:es2019",
+        ));
       }
     }
 
