@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.7.0
+
+### Minor Changes
+
+- [#766](https://github.com/atlassian-labs/atlaspack/pull/766) [`53dd47b`](https://github.com/atlassian-labs/atlaspack/commit/53dd47bd6d23cd47f87297347f03a609ab38a03d) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add support for resolving `module:es2019` main fields
+
 ## 3.6.2
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-image",
-  "version": "4.0.4",
+  "version": "4.0.5",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,16 +16,16 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.28",
-    "@atlaspack/utils": "2.19.0",
-    "@atlaspack/workers": "2.14.28",
+    "@atlaspack/plugin": "2.14.29",
+    "@atlaspack/utils": "2.19.1",
+    "@atlaspack/workers": "2.14.29",
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {
     "sharp": "^0.31.1"
   },
   "peerDependencies": {
-    "@atlaspack/core": "2.23.4"
+    "@atlaspack/core": "2.23.5"
   },
   "type": "commonjs",
   "scripts": {

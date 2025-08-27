@@ -1,5 +1,19 @@
 # @atlaspack/package-manager
 
+## 2.14.29
+
+### Patch Changes
+
+- [#764](https://github.com/atlassian-labs/atlaspack/pull/764) [`58ddd5d`](https://github.com/atlassian-labs/atlaspack/commit/58ddd5d79adde2ac5dc4c60ca575e4705a91e592) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix using Atlaspack linked with source files
+
+- Updated dependencies [[`53dd47b`](https://github.com/atlassian-labs/atlaspack/commit/53dd47bd6d23cd47f87297347f03a609ab38a03d)]:
+  - @atlaspack/node-resolver-core@3.7.0
+  - @atlaspack/fs@2.15.24
+  - @atlaspack/utils@2.19.1
+  - @atlaspack/logger@2.14.21
+  - @atlaspack/types@2.15.19
+  - @atlaspack/workers@2.14.29
+
 ## 2.14.28
 
 ### Patch Changes

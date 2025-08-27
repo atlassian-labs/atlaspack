@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.24.1
+
+### Patch Changes
+
+- [#763](https://github.com/atlassian-labs/atlaspack/pull/763) [`830261d`](https://github.com/atlassian-labs/atlaspack/commit/830261dcf4a40293090b61cab52fd75d5683c73f) Thanks [@benjervis](https://github.com/benjervis)! - Fixes scope hoisting by iterating from the main entry asset of a bundle when packaging. Behind the feature flag `applyScopeHoistingImprovementsV2`.
+
 ## 2.24.0
 
 ### Minor Changes

@@ -1,5 +1,13 @@
 # @atlaspack/transformer-less
 
+## 2.14.29
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.19.5
+  - @atlaspack/plugin@2.14.29
+
 ## 2.14.28
 
 ### Patch Changes

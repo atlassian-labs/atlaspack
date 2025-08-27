@@ -1,5 +1,15 @@
 # @atlaspack/transformer-image
 
+## 4.0.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.23.5
+  - @atlaspack/utils@2.19.1
+  - @atlaspack/plugin@2.14.29
+  - @atlaspack/workers@2.14.29
+
 ## 4.0.4
 
 ### Patch Changes
