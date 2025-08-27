@@ -1743,6 +1743,39 @@ mod tests {
   }
 
   #[test]
+  fn module_es2019_field() {
+    let mut resolver = test_resolver();
+
+    assert_eq!(
+      resolver
+        .resolve(
+          "package-module-es2019",
+          &root().join("foo.js"),
+          SpecifierType::Esm
+        )
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/package-module-es2019/module.js"))
+    );
+
+    resolver.entries.insert(Fields::MODULE_ES2019);
+
+    assert_eq!(
+      resolver
+        .resolve(
+          "package-module-es2019",
+          &root().join("foo.js"),
+          SpecifierType::Esm
+        )
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/package-module-es2019/module-es2019.js"))
+    );
+  }
+
+  #[test]
   fn local_aliases() {
     assert_eq!(
       test_resolver()

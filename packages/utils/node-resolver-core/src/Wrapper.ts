@@ -41,6 +41,7 @@ const MODULE = 1 << 1;
 const SOURCE = 1 << 2;
 const BROWSER = 1 << 3;
 const TYPES = 1 << 6;
+const MODULE_ES2019 = 1 << 7;
 
 type Options = {
   fs: FileSystem;
@@ -809,6 +810,9 @@ function mainFieldsToEntries(mainFields: Array<string>) {
         break;
       case 'module':
         entries |= MODULE;
+        break;
+      case 'module:es2019':
+        entries |= MODULE_ES2019;
         break;
       case 'source':
         entries |= SOURCE;
