@@ -77,6 +77,7 @@ pub struct TargetDescriptor {
   pub dist_dir: Option<PathBuf>,
   pub dist_entry: Option<PathBuf>,
   pub engines: Option<Engines>,
+  pub env: Option<BTreeMap<String, String>>,
   pub include_node_modules: Option<IncludeNodeModules>,
   pub is_library: Option<bool>,
   pub optimize: Option<bool>,

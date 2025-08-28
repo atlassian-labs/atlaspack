@@ -143,6 +143,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
             output_format,
             source_map: self.context.env.source_map.clone(),
             source_type,
+            custom_env: self.context.env.custom_env.clone(),
             ..*self.context.env.clone()
           });
 
