@@ -84,6 +84,7 @@ export type Environment = {
   sourceMap: TargetSourceMapOptions | null | undefined;
   loc: InternalSourceLocation | null | undefined;
   unstableSingleFileOutput: boolean;
+  customEnv: EnvMap | null | undefined;
 };
 
 export type InternalSourceLocation = {

@@ -196,6 +196,7 @@ export type PackageTargetDescriptor = {
   readonly optimize?: boolean;
   readonly scopeHoist?: boolean;
   readonly source?: FilePath | Array<FilePath>;
+  readonly env?: EnvMap;
   readonly __unstable_singleFileOutput?: boolean;
 };
 
@@ -282,6 +283,8 @@ export interface Environment {
   readonly sourceMap: TargetSourceMapOptions | null | undefined;
   readonly loc: SourceLocation | null | undefined;
   readonly unstableSingleFileOutput: boolean;
+  /** Custom environment variables specific to this target */
+  readonly customEnv: EnvMap | null | undefined;
   /** Whether <code>context</code> specifies a browser context. */
   isBrowser(): boolean;
   /** Whether <code>context</code> specifies a node context. */

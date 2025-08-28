@@ -115,6 +115,12 @@ export const PACKAGE_DESCRIPTOR_SCHEMA: SchemaObject = {
     __unstable_singleFileOutput: {
       type: 'boolean',
     },
+    env: {
+      type: 'object',
+      additionalProperties: {
+        type: 'string',
+      },
+    },
   },
   additionalProperties: false,
 };
