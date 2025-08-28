@@ -35,4 +35,12 @@ impl FeatureFlags {
     };
     v == matches.as_ref()
   }
+
+  /// Create a new FeatureFlags instance with a single boolean flag set
+  /// This is primarily intended for testing
+  pub fn with_bool_flag(key: impl Into<String>, value: bool) -> Self {
+    let mut flags = HashMap::new();
+    flags.insert(key.into(), FeatureFlagValue::Bool(value));
+    FeatureFlags(flags)
+  }
 }
