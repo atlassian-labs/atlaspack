@@ -5,7 +5,7 @@ import path from 'path';
 
 describe('targets', () => {
   it('should support building targets with custom environment properties', async () => {
-    const targetDir = path.join(__dirname, 'targets');
+    const targetDir = path.join(__dirname, 'integration/target-envs');
     await overlayFS.mkdirp(targetDir);
 
     await fsFixture(overlayFS, targetDir)`
