@@ -573,27 +573,6 @@ export default class Transformation {
       category: 'transform',
     });
 
-    // Create custom plugin options with asset's custom environment variables
-    // Only create custom options if feature flag is enabled AND there are custom env vars
-    const assetEnv = fromEnvironmentId(asset.value.env);
-    const customPluginOptions =
-      this.options.featureFlags.customEnvInTargets &&
-      assetEnv.customEnv &&
-      Object.keys(assetEnv.customEnv).length > 0
-        ? new PluginOptions(
-            optionsProxy(
-              this.options,
-              (option) => {
-                this.invalidations.invalidateOnOptionChange.add(option);
-              },
-              (devDep) => {
-                this.pluginDevDeps.push(devDep);
-              },
-            ),
-            assetEnv.customEnv,
-          )
-        : pipeline.pluginOptions;
-
     const resolve = async (
       from: FilePath,
       to: string,
@@ -644,7 +623,7 @@ export default class Transformation {
       (!transformer.canReuseAST ||
         !transformer.canReuseAST({
           ast: asset.ast,
-          options: customPluginOptions,
+          options: pipeline.pluginOptions,
           logger,
           tracer,
         })) &&
@@ -664,7 +643,7 @@ export default class Transformation {
       let ast = await parse({
         asset: new Asset(asset),
         config,
-        options: customPluginOptions,
+        options: pipeline.pluginOptions,
         resolve,
         logger,
         tracer,
@@ -681,7 +660,7 @@ export default class Transformation {
       await transformer.transform({
         asset: new MutableAsset(asset),
         config,
-        options: customPluginOptions,
+        options: pipeline.pluginOptions,
         resolve,
         logger,
         tracer,
@@ -695,7 +674,7 @@ export default class Transformation {
         let generated = transformer.generate({
           asset: publicAsset,
           ast: asset.ast,
-          options: customPluginOptions,
+          options: pipeline.pluginOptions,
           logger,
           tracer,
         });
@@ -716,7 +695,7 @@ export default class Transformation {
         let results = await postProcess.call(transformer, {
           assets: assets.map((asset) => new MutableAsset(asset)),
           config,
-          options: customPluginOptions,
+          options: pipeline.pluginOptions,
           resolve,
           logger,
           tracer,

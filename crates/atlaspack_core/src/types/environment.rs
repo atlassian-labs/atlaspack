@@ -71,6 +71,10 @@ pub struct Environment {
   pub source_type: SourceType,
 
   pub unstable_single_file_output: bool,
+
+  /// Custom environment variables specific to this target
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub custom_env: Option<BTreeMap<String, String>>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -114,7 +118,7 @@ impl Environment {
       &self.should_optimize,
       &self.should_scope_hoist,
       &self.source_map,
-      &None, // Rust Environment struct doesn't have custom_env field yet
+      &self.custom_env,
     )
   }
 }

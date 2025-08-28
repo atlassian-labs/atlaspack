@@ -46,7 +46,7 @@ export class Environment implements IEnvironment {
     this.sourceMap = inner.sourceMap;
     this.loc = inner.loc;
     this.unstableSingleFileOutput = false;
-    this.customEnv = null; // Rust implementation doesn't support customEnv yet
+    this.customEnv = inner.customEnv;
   }
 
   isBrowser(): boolean {

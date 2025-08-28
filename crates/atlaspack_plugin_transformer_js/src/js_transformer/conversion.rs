@@ -565,6 +565,7 @@ fn convert_dependency(
           output_format,
           source_map: asset.env.source_map.clone(),
           source_type,
+          custom_env: asset.env.custom_env.clone(),
           ..*asset.env.clone()
         }),
         ..base_dependency
@@ -582,6 +583,7 @@ fn convert_dependency(
           output_format: OutputFormat::Global,
           source_map: asset.env.source_map.clone(),
           source_type,
+          custom_env: asset.env.custom_env.clone(),
           ..*asset.env.clone()
         }),
         needs_stable_name: true,
@@ -601,6 +603,7 @@ fn convert_dependency(
           output_format: OutputFormat::EsModule,
           source_map: asset.env.source_map.clone(),
           source_type: SourceType::Module,
+          custom_env: asset.env.custom_env.clone(),
           ..*asset.env.clone()
         }),
         // placeholder: dep.placeholder.map(|s| s.into()),
@@ -689,6 +692,7 @@ fn convert_dependency(
             output_format,
             source_map: env.source_map.clone(),
             source_type: SourceType::Module,
+            custom_env: env.custom_env.clone(),
             ..*env
           });
         }

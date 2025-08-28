@@ -1,4 +1,4 @@
-import {Bundle, NamedBundle, PackagedBundle} from '@atlaspack/types';
+import {PackagedBundle} from '@atlaspack/types';
 import {fsFixture, overlayFS, bundle} from '@atlaspack/test-utils';
 import assert from 'assert';
 import path from 'path';
@@ -7,29 +7,19 @@ describe('targets', () => {
   it('should support building targets with custom environment properties', async () => {
     const targetDir = path.join(__dirname, 'targets');
     await overlayFS.mkdirp(targetDir);
+
     await fsFixture(overlayFS, targetDir)`
         package.json:
           {
             "name": "targets"
           }
 
-        env-transformer.js:
-          const { Transformer } = require('@atlaspack/plugin');
-          
-          module.exports = new Transformer({
-            transform: async ({ asset, options }) => {
-              const code = await asset.getCode();
-              const newCode = code.replace(/MY_ENV/g, options.env.MY_ENV || 'MY_ENV');
-              asset.setCode(newCode);
-              return [asset];
-            }
-          });
-
         .parcelrc:
           {
             "extends": "@atlaspack/config-default",
             "transformers": {
               "*.js": [
+                // Note this exists as a real file for V3 compatibility
                 "./env-transformer.js",
                 "..."
               ]
