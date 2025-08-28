@@ -562,10 +562,11 @@ impl TargetRequest {
     }
 
     // Additional filtering for allowExplicitTargetEntries feature
-    if allow_explicit_target_entries && target_descriptor.source.is_some() {
-      if !self.entry_matches_target_source(&target_descriptor.source, project_root) {
-        return Ok(None);
-      }
+    if allow_explicit_target_entries
+      && target_descriptor.source.is_some()
+      && !self.entry_matches_target_source(&target_descriptor.source, project_root)
+    {
+      return Ok(None);
     }
 
     let mut engines = target_descriptor
