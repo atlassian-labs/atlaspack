@@ -1,10 +1,9 @@
-import {a, b, c} from './sync.js';
-import './sync2.js';
+import {a, b, c, d} from './sync.js';
 
 import('./async');
 import('./async2');
 
-const x = () => console.log(a, b, c);
+const x = () => console.log(a, b, c, d);
 
 class Test {}
 new Test();

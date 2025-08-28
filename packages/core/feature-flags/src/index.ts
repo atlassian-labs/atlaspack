@@ -156,6 +156,11 @@ export const DEFAULT_FEATURE_FLAGS = {
    * a full bundling pass is required based on the AssetGraph's bundlingVersion.
    */
   incrementalBundlingVersioning: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * When enabled, the packager will avoid using the binding helper for exports where possible.
+   */
+  exportsRebindingOptimisation: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

@@ -75,6 +75,7 @@ pub struct ExportedSymbol {
   /// The location of this export
   pub loc: SourceLocation,
   pub is_esm: bool,
+  pub requires_binding_helper: bool,
 }
 
 /// An imported identifier with its rename and original name
@@ -528,6 +529,7 @@ impl Fold for Hoist<'_> {
                         exported,
                         loc: SourceLocation::from(&self.collect.source_map, named.span),
                         is_esm: true,
+                        requires_binding_helper: true,
                       });
                     }
                   }
@@ -1124,6 +1126,11 @@ impl Fold for Hoist<'_> {
           exported: exported.clone(),
           loc: SourceLocation::from(&self.collect.source_map, node.span),
           is_esm: false,
+          requires_binding_helper: self
+            .collect
+            .exports
+            .get(exported)
+            .map_or(true, |e| e.requires_binding_helper),
         });
         return node;
       } else {
@@ -1347,11 +1354,20 @@ impl Hoist<'_> {
       Some(Export { is_esm: true, .. })
     );
 
+    let requires_binding_helper = matches!(
+      self.collect.exports.get(exported),
+      Some(Export {
+        requires_binding_helper: true,
+        ..
+      })
+    );
+
     self.exported_symbols.push(ExportedSymbol {
       local: new_name.clone(),
       exported: exported.clone(),
       loc: SourceLocation::from(&self.collect.source_map, span),
       is_esm,
+      requires_binding_helper,
     });
 
     Ident::new_no_ctxt(new_name, span)
@@ -2726,6 +2742,7 @@ mod tests {
       ..
     } = run_test_visit_const(input_code, |context| {
       Collect::new(
+        HashMap::new(),
         context.source_map.clone(),
         context.unresolved_mark,
         Mark::fresh(Mark::root()),

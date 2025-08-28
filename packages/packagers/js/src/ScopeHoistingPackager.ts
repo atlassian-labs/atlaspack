@@ -248,20 +248,17 @@ export class ScopeHoistingPackager {
           this.bundleGraph.getAssetPublicId(entry),
         )});\n`;
 
-        // @ts-expect-error TS2345
         let entryExports = entry.symbols.get('*')?.local;
 
         if (
           entryExports &&
           entry === mainEntry &&
-          // @ts-expect-error TS2345
           this.exportedSymbols.has(entryExports)
         ) {
           invariant(
             !needsBundleQueue,
             'Entry exports are not yet compaitble with async bundles',
           );
-          // @ts-expect-error TS2731
           res += `\nvar ${entryExports} = ${parcelRequire}`;
         } else {
           if (needsBundleQueue) {
@@ -528,7 +525,6 @@ export class ScopeHoistingPackager {
     // TODO: handle ESM exports of wrapped entry assets...
     let entry = this.bundle.getMainEntry();
     if (entry && !this.wrappedAssets.has(entry.id)) {
-      // @ts-expect-error TS2345
       let hasNamespace = entry.symbols.hasExportSymbol('*');
 
       for (let {
@@ -546,7 +542,6 @@ export class ScopeHoistingPackager {
           }
 
           let symbols = this.exportedSymbols.get(
-            // @ts-expect-error TS2345
             symbol === '*' ? nullthrows(entry.symbols.get('*')?.local) : symbol,
           )?.exportAs;
 
@@ -554,7 +549,7 @@ export class ScopeHoistingPackager {
             symbols = [];
             this.exportedSymbols.set(symbol, {
               asset,
-              // @ts-expect-error TS2322
+
               exportSymbol,
               local: symbol,
               exportAs: symbols,
@@ -565,7 +560,6 @@ export class ScopeHoistingPackager {
             exportAs = 'default';
           }
 
-          // @ts-expect-error TS2345
           symbols.push(exportAs);
         } else if (symbol === null) {
           // TODO `meta.exportsIdentifier[exportSymbol]` should be exported
@@ -943,12 +937,10 @@ ${code}
       }
 
       for (let [imported, {local}] of dep.symbols) {
-        // @ts-expect-error TS2367
         if (local === '*') {
           continue;
         }
 
-        // @ts-expect-error TS2345
         let symbol = this.getSymbolResolution(asset, resolved, imported, dep);
         replacements.set(
           local,
@@ -985,7 +977,6 @@ ${code}
       (this.bundle.env.outputFormat === 'commonjs' &&
         asset === this.bundle.getMainEntry())
     ) {
-      // @ts-expect-error TS2345
       let exportsName = asset.symbols.get('*')?.local || `$${assetId}$exports`;
       replacements.set(exportsName, 'module.exports');
     }
@@ -1029,11 +1020,10 @@ ${code}
 
     for (let [imported, {local}] of dep.symbols) {
       // If already imported, just add the already renamed variable to the mapping.
-      // @ts-expect-error TS2345
+
       let renamed = external.get(imported);
-      // @ts-expect-error TS2367
+
       if (renamed && local !== '*' && replacements) {
-        // @ts-expect-error TS2345
         replacements.set(local, renamed);
         continue;
       }
@@ -1045,9 +1035,8 @@ ${code}
         if (!renamed) {
           if (referencedBundle) {
             let entry = nullthrows(referencedBundle.getMainEntry());
-            // @ts-expect-error TS2322
+
             renamed =
-              // @ts-expect-error TS2345
               entry.symbols.get('*')?.local ??
               `$${String(entry.meta.id)}$exports`;
           } else {
@@ -1056,17 +1045,14 @@ ${code}
             );
           }
 
-          // @ts-expect-error TS2345
           external.set('*', renamed);
         }
 
-        // @ts-expect-error TS2367
         if (local !== '*' && replacements) {
           let replacement;
-          // @ts-expect-error TS2367
+
           if (imported === '*') {
             replacement = renamed;
-            // @ts-expect-error TS2367
           } else if (imported === 'default') {
             let needsDefaultInterop = true;
             if (referencedBundle) {
@@ -1080,43 +1066,40 @@ ${code}
               replacement = `${renamed}.default`;
             }
           } else {
-            // @ts-expect-error TS2345
             replacement = this.getPropertyAccess(renamed, imported);
           }
 
-          // @ts-expect-error TS2345
           replacements.set(local, replacement);
         }
       } else {
         let property;
         if (referencedBundle) {
           let entry = nullthrows(referencedBundle.getMainEntry());
-          // @ts-expect-error TS2345
+
           if (entry.symbols.hasExportSymbol('*')) {
             // If importing * and the referenced module has a * export (e.g. CJS), use default instead.
             // This mirrors the logic in buildExportedSymbols.
             property = imported;
-            // @ts-expect-error TS2322
+
             imported =
               referencedBundle?.env.outputFormat === 'esmodule'
                 ? 'default'
                 : '*';
           } else {
-            // @ts-expect-error TS2367
             if (imported === '*') {
               let exportedSymbols = this.bundleGraph.getExportedSymbols(entry);
-              // @ts-expect-error TS2367
+
               if (local === '*') {
                 // Re-export all symbols.
                 for (let exported of exportedSymbols) {
                   if (exported.symbol) {
-                    // @ts-expect-error TS2345
                     external.set(exported.exportSymbol, exported.symbol);
                   }
                 }
                 continue;
               }
             }
+
             // @ts-expect-error TS2322
             renamed = this.bundleGraph.getSymbolResolution(
               entry,
@@ -1130,40 +1113,33 @@ ${code}
         // are deduplicated. We have to prefix the imported name with the bundle id so that
         // local variables do not shadow it.
         if (!renamed) {
-          // @ts-expect-error TS2345
           if (this.exportedSymbols.has(local)) {
-            // @ts-expect-error TS2322
             renamed = local;
-            // @ts-expect-error TS2367
           } else if (imported === 'default' || imported === '*') {
             renamed = this.getTopLevelName(
               `$${this.bundle.publicId}$${specifier}`,
             );
           } else {
             renamed = this.getTopLevelName(
-              // @ts-expect-error TS2731
               `$${this.bundle.publicId}$${imported}`,
             );
           }
         }
 
-        // @ts-expect-error TS2345
         external.set(imported, renamed);
-        // @ts-expect-error TS2367
+
         if (local !== '*' && replacements) {
           let replacement = renamed;
-          // @ts-expect-error TS2367
+
           if (property === '*') {
             replacement = renamed;
-            // @ts-expect-error TS2367
           } else if (property === 'default') {
             replacement = `($parcel$interopDefault(${renamed}))`;
             this.usedHelpers.add('$parcel$interopDefault');
           } else if (property) {
-            // @ts-expect-error TS2345
             replacement = this.getPropertyAccess(renamed, property);
           }
-          // @ts-expect-error TS2345
+
           replacements.set(local, replacement);
         }
       }
@@ -1202,7 +1178,6 @@ ${code}
       asset: resolvedAsset,
       exportSymbol,
       symbol,
-      // @ts-expect-error TS2345
     } = this.bundleGraph.getSymbolResolution(resolved, imported, this.bundle);
 
     if (
@@ -1261,11 +1236,8 @@ ${code}
       staticExports &&
       !isWrapped &&
       (dep?.meta.kind === 'Import' || dep?.meta.kind === 'Export') &&
-      // @ts-expect-error TS2345
       resolvedAsset.symbols.hasExportSymbol('*') &&
-      // @ts-expect-error TS2345
       resolvedAsset.symbols.hasExportSymbol('default') &&
-      // @ts-expect-error TS2345
       !resolvedAsset.symbols.hasExportSymbol('__esModule');
 
     // Find the namespace object for the resolved module. If wrapped and this
@@ -1281,9 +1253,8 @@ ${code}
     } else if (isWrapped && dep) {
       obj = `$${publicId}`;
     } else {
-      // @ts-expect-error TS2345
       obj = resolvedAsset.symbols.get('*')?.local || `$${assetId}$exports`;
-      // @ts-expect-error TS2345
+
       obj = replacements?.get(obj) || obj;
     }
 
@@ -1296,7 +1267,6 @@ ${code}
         // Directly use module.exports for wrapped assets importing themselves.
         return 'module.exports';
       } else {
-        // @ts-expect-error TS2322
         return obj;
       }
     } else if (
@@ -1311,21 +1281,17 @@ ${code}
       if (
         (!dep || kind === 'Import' || kind === 'Export') &&
         exportSymbol === 'default' &&
-        // @ts-expect-error TS2345
         resolvedAsset.symbols.hasExportSymbol('*') &&
         this.needsDefaultInterop(resolvedAsset)
       ) {
         this.usedHelpers.add('$parcel$interopDefault');
-        // @ts-expect-error TS2731
         return `(/*@__PURE__*/$parcel$interopDefault(${obj}))`;
       } else {
-        // @ts-expect-error TS2345
         return this.getPropertyAccess(obj, exportSymbol);
       }
     } else if (!symbol) {
       invariant(false, 'Asset was skipped or not found.');
     } else {
-      // @ts-expect-error TS2322
       return replacements?.get(symbol) || symbol;
     }
   }
@@ -1388,11 +1354,8 @@ ${code}
     // If there's no __esModule flag, and default is a used symbol, we need
     // to insert an interop helper.
     let defaultInterop =
-      // @ts-expect-error TS2345
       asset.symbols.hasExportSymbol('*') &&
-      // @ts-expect-error TS2345
       usedSymbols.has('default') &&
-      // @ts-expect-error TS2345
       !asset.symbols.hasExportSymbol('__esModule');
 
     let usedNamespace;
@@ -1401,33 +1364,35 @@ ${code}
       asset.meta.isConstantModule
     ) {
       // Only set usedNamespace if there is an incoming dependency in the current bundle that uses '*'
-      usedNamespace = this.bundleGraph.getIncomingDependencies(asset).some(
-        (dep) =>
-          this.bundle.hasDependency(dep) &&
-          // @ts-expect-error TS2345
-          nullthrows(this.bundleGraph.getUsedSymbols(dep)).has('*'),
-      );
+      usedNamespace = this.bundleGraph
+        .getIncomingDependencies(asset)
+        .some(
+          (dep) =>
+            this.bundle.hasDependency(dep) &&
+            nullthrows(this.bundleGraph.getUsedSymbols(dep)).has('*'),
+        );
     } else {
       usedNamespace =
         // If the asset has * in its used symbols, we might need the exports namespace.
         // The one case where this isn't true is in ESM library entries, where the only
         // dependency on * is the entry dependency. In this case, we will use ESM exports
         // instead of the namespace object.
-        // @ts-expect-error TS2345
+
         (usedSymbols.has('*') &&
           (this.bundle.env.outputFormat !== 'esmodule' ||
             !this.bundle.env.isLibrary ||
             asset !== this.bundle.getMainEntry() ||
-            this.bundleGraph.getIncomingDependencies(asset).some(
-              (dep) =>
-                !dep.isEntry &&
-                this.bundle.hasDependency(dep) &&
-                // @ts-expect-error TS2345
-                nullthrows(this.bundleGraph.getUsedSymbols(dep)).has('*'),
-            ))) ||
+            this.bundleGraph
+              .getIncomingDependencies(asset)
+              .some(
+                (dep) =>
+                  !dep.isEntry &&
+                  this.bundle.hasDependency(dep) &&
+                  nullthrows(this.bundleGraph.getUsedSymbols(dep)).has('*'),
+              ))) ||
         // If a symbol is imported (used) from a CJS asset but isn't listed in the symbols,
         // we fallback on the namespace object.
-        // @ts-expect-error TS2345
+
         (asset.symbols.hasExportSymbol('*') &&
           [...usedSymbols].some((s) => !asset.symbols.hasExportSymbol(s))) ||
         // If the exports has this asset's namespace (e.g. ESM output from CJS input),
@@ -1464,7 +1429,7 @@ ${code}
       // Insert the __esModule interop flag for this module if it has a `default` export
       // and the namespace symbol is used.
       // TODO: only if required by CJS?
-      // @ts-expect-error TS2345
+
       if (asset.symbols.hasExportSymbol('default') && usedSymbols.has('*')) {
         prepend += `\n$parcel$defineInteropFlag($${assetId}$exports);\n`;
         prependLineCount += 2;
@@ -1483,7 +1448,6 @@ ${code}
         let isWrapped = resolved && resolved.meta.shouldWrap;
 
         for (let [imported, {local}] of dep.symbols) {
-          // @ts-expect-error TS2367
           if (imported === '*' && local === '*') {
             if (!resolved) {
               // Re-exporting an external module. This should have already been handled in buildReplacements.
@@ -1501,11 +1465,9 @@ ${code}
             if (
               isWrapped ||
               resolved.meta.staticExports === false ||
-              // @ts-expect-error TS2345
               nullthrows(this.bundleGraph.getUsedSymbols(resolved)).has('*') ||
               // an empty asset
               (!resolved.meta.hasCJSExports &&
-                // @ts-expect-error TS2345
                 resolved.symbols.hasExportSymbol('*'))
             ) {
               let obj = this.getSymbolResolution(
@@ -1522,9 +1484,7 @@ ${code}
                 this.bundleGraph.getUsedSymbols(dep),
               )) {
                 if (
-                  // @ts-expect-error TS2367
                   symbol === 'default' || // `export * as ...` does not include the default export
-                  // @ts-expect-error TS2367
                   symbol === '__esModule'
                 ) {
                   continue;
@@ -1533,23 +1493,33 @@ ${code}
                 let resolvedSymbol = this.getSymbolResolution(
                   asset,
                   resolved,
-                  // @ts-expect-error TS2345
+
                   symbol,
                   undefined,
                   replacements,
                 );
-                let get = this.buildFunctionExpression([], resolvedSymbol);
-                let set = asset.meta.hasCJSExports
-                  ? ', ' +
-                    this.buildFunctionExpression(['v'], `${resolvedSymbol} = v`)
-                  : '';
-                // prepend += `$parcel$export($${assetId}$exports, ${JSON.stringify(
-                //   symbol,
-                // )}, ${get}${set});\n`;
-                // this.usedHelpers.add('$parcel$export');
-                append += `$${assetId}$exports[${JSON.stringify(
-                  symbol,
-                )}] = ${resolvedSymbol};\n`;
+
+                if (
+                  getFeatureFlag('exportsRebindingOptimisation') &&
+                  !(asset.meta.noRebindingAllowed ?? true)
+                ) {
+                  append += `$${assetId}$exports[${JSON.stringify(
+                    symbol,
+                  )}] = ${resolvedSymbol};\n`;
+                } else {
+                  let get = this.buildFunctionExpression([], resolvedSymbol);
+                  let set = asset.meta.hasCJSExports
+                    ? ', ' +
+                      this.buildFunctionExpression(
+                        ['v'],
+                        `${resolvedSymbol} = v`,
+                      )
+                    : '';
+                  prepend += `$parcel$export($${assetId}$exports, ${JSON.stringify(
+                    symbol,
+                  )}, ${get}${set});\n`;
+                  this.usedHelpers.add('$parcel$export');
+                }
               }
             }
           }
@@ -1561,7 +1531,6 @@ ${code}
       // re-exported symbols rather than only symbols declared in this asset.
       let incomingDeps = this.bundleGraph.getIncomingDependencies(asset);
       let usedExports = [...asset.symbols.exportSymbols()].filter((symbol) => {
-        // @ts-expect-error TS2367
         if (symbol === '*') {
           return false;
         }
@@ -1578,7 +1547,6 @@ ${code}
           // No used symbols available for the asset, make sure we keep all of them
           if (!symbols) return false;
 
-          // @ts-expect-error TS2345
           return !symbols.has(symbol) && !symbols.has('*');
         });
         return !unused;
@@ -1589,32 +1557,36 @@ ${code}
         // for the symbol so that when the value changes the object property also changes. This is
         // required to simulate ESM live bindings. It's easier to do it this way rather than inserting
         // additional assignments after each mutation of the original binding.
-        append += `\n${usedExports
-          .map((exp) => {
-            let resolved = this.getSymbolResolution(
-              asset,
-              asset,
-              // @ts-expect-error TS2345
+        for (let exp of usedExports) {
+          let resolved = this.getSymbolResolution(
+            asset,
+            asset,
+            exp,
+            undefined,
+            replacements,
+          );
+          const meta = asset.symbols.get(exp)?.meta;
+          if (
+            getFeatureFlag('exportsRebindingOptimisation') &&
+            !(meta?.noRebindingAllowed ?? true)
+          ) {
+            append += `$${assetId}$exports[${JSON.stringify(
               exp,
-              undefined,
-              replacements,
-            );
+            )}] = ${resolved};\n`;
+          } else {
             let get = this.buildFunctionExpression([], resolved);
             let isEsmExport = !!asset.symbols.get(exp)?.meta?.isEsm;
             let set =
               !isEsmExport && asset.meta.hasCJSExports
                 ? ', ' + this.buildFunctionExpression(['v'], `${resolved} = v`)
                 : '';
-            // return `$parcel$export($${assetId}$exports, ${JSON.stringify(
-            //   exp,
-            // )}, ${get}${set});`;
-            return `$${assetId}$exports[${JSON.stringify(
+            prepend += `$parcel$export($${assetId}$exports, ${JSON.stringify(
               exp,
-            )}] = ${resolved};\n`;
-          })
-          .join('\n')}\n`;
-        // this.usedHelpers.add('$parcel$export');
-        // prependLineCount += 1 + usedExports.length;
+            )}, ${get}${set});\n`;
+            this.usedHelpers.add('$parcel$export');
+            prependLineCount += 1 + usedExports.length;
+          }
+        }
       }
     }
 
@@ -1734,9 +1706,7 @@ ${code}
 
   needsDefaultInterop(asset: Asset): boolean {
     if (
-      // @ts-expect-error TS2345
       asset.symbols.hasExportSymbol('*') &&
-      // @ts-expect-error TS2345
       !asset.symbols.hasExportSymbol('default')
     ) {
       return true;
