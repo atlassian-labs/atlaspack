@@ -7,6 +7,7 @@ use napi::{Env, JsUnknown};
 use napi_derive::napi;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -29,6 +30,8 @@ struct EnvironmentIdParams {
   should_scope_hoist: bool,
   #[serde(default)]
   source_map: Option<TargetSourceMapOptions>,
+  #[serde(default)]
+  custom_env: Option<BTreeMap<String, String>>,
 }
 
 #[napi]
@@ -44,6 +47,7 @@ pub fn create_environment_id(env: Env, params: JsUnknown) -> napi::Result<String
     should_optimize,
     should_scope_hoist,
     source_map,
+    custom_env,
   } = params;
 
   Ok(atlaspack_core::types::create_environment_id(
@@ -56,6 +60,7 @@ pub fn create_environment_id(env: Env, params: JsUnknown) -> napi::Result<String
     &should_optimize,
     &should_scope_hoist,
     &source_map,
+    &custom_env,
   ))
 }
 

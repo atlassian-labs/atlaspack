@@ -9,6 +9,7 @@ import type {
   SourceLocation,
   SourceType,
   TargetSourceMapOptions,
+  EnvMap,
 } from '@atlaspack/types';
 import type {
   Environment as InternalEnvironment,
@@ -230,6 +231,10 @@ export default class Environment implements IEnvironment {
 
   get unstableSingleFileOutput(): boolean {
     return this.#environment.unstableSingleFileOutput;
+  }
+
+  get customEnv(): EnvMap | null | undefined {
+    return this.#environment.customEnv;
   }
 
   [inspect](): string {

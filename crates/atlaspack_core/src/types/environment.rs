@@ -84,6 +84,7 @@ pub fn create_environment_id(
   should_optimize: &bool,
   should_scope_hoist: &bool,
   source_map: &Option<TargetSourceMapOptions>,
+  custom_env: &Option<BTreeMap<String, String>>,
 ) -> String {
   let mut hasher = IdentifierHasher::new();
   context.hash(&mut hasher);
@@ -95,6 +96,8 @@ pub fn create_environment_id(
   should_optimize.hash(&mut hasher);
   should_scope_hoist.hash(&mut hasher);
   source_map.clone().unwrap_or_default().hash(&mut hasher);
+  custom_env.hash(&mut hasher); // BTreeMap implements Hash with deterministic ordering
+
   let hash = hasher.finish(); // We can simply expose this as a nº too
   format!("{:016x}", hash)
 }
@@ -111,6 +114,7 @@ impl Environment {
       &self.should_optimize,
       &self.should_scope_hoist,
       &self.source_map,
+      &None, // Rust Environment struct doesn't have custom_env field yet
     )
   }
 }
