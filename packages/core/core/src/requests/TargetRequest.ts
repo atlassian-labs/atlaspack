@@ -47,6 +47,7 @@ import {optionsProxy, toInternalSourceLocation} from '../utils';
 import {fromProjectPath, toProjectPath, joinProjectPath} from '../projectPath';
 import {requestTypes} from '../RequestTracker';
 import {fromEnvironmentId} from '../EnvironmentManager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type RunOpts<TResult> = {
   input: Entry;
@@ -113,14 +114,18 @@ export function skipTarget(
   //  We skip targets if they have a descriptor.source and don't match the current exclusiveTarget
   //  They will be handled by a separate resolvePackageTargets call from their Entry point
   //  but with exclusiveTarget set.
+  //  However, when allowExplicitTargetEntries is enabled, we don't skip targets with source
+  //  as they will be filtered later based on the current entry.
 
+  const allowExplicitTargetEntries = getFeatureFlag(
+    'allowExplicitTargetEntries',
+  );
   return exclusiveTarget == null
-    ? descriptorSource != null
+    ? descriptorSource != null && !allowExplicitTargetEntries
     : targetName !== exclusiveTarget;
 }
 
-// @ts-expect-error TS7031
-async function run({input, api, options}) {
+async function run({input, api, options}: RunOpts<TargetRequestResult>) {
   let targetResolver = new TargetResolver(
     api,
     optionsProxy(options, api.invalidateOnOptionChange),
@@ -130,10 +135,44 @@ async function run({input, api, options}) {
     input.target,
   );
 
+  // Filter targets based on allowExplicitTargetEntries feature flag
+  if (
+    getFeatureFlag('allowExplicitTargetEntries') &&
+    options.targets &&
+    // Only explicit targets are allowed (i.e. an object of targets)
+    !Array.isArray(options.targets)
+  ) {
+    // Get the current entry file path relative to project root
+    const currentEntryPath = input.filePath;
+
+    // Filter targets to only include those whose source matches the current entry
+    targets = targets.filter((target) => {
+      if (!target.source) {
+        return false; // Skip targets without source property
+      }
+
+      // Handle both string and array sources
+      const sources = Array.isArray(target.source)
+        ? target.source
+        : [target.source];
+
+      // Check if current entry matches any of the target sources
+      return sources.some((source) => {
+        const targetSourcePath = toProjectPath(
+          options.projectRoot,
+          path.resolve(
+            fromProjectPath(options.projectRoot, input.packagePath),
+            source,
+          ),
+        );
+        return targetSourcePath === currentEntryPath;
+      });
+    });
+  }
+
   assertTargetsAreNotEntries(targets, input, options);
 
   let configResult = nullthrows(
-    // @ts-expect-error TS2347
     await api.runRequest<null, ConfigAndCachePath>(
       createAtlaspackConfigRequest(),
     ),
