@@ -4,27 +4,10 @@ import assert from 'assert';
 import path from 'path';
 
 describe('targets', () => {
-  it('should support overriding env in targets', async () => {
+  it('should support building targets with custom entries with a top level entry array', async () => {
     const targetDir = path.join(__dirname, 'targets');
     await overlayFS.mkdirp(targetDir);
     await fsFixture(overlayFS, targetDir)`
-        env-transformer.js:
-          const { Transformer } = require('@atlaspack/plugin');
-          module.exports = new Transformer({ 
-            transform: async ({ asset, options }) => {
-            console.log("transforming", asset.filePath, "with env", options.env.MY_ENV)
-              const code = await asset.getCode();
-              const newCode = code.replace('MY_ENV', options.env.MY_ENV);
-              asset.setCode(newCode);
-              return [asset];
-            }
-          });
-
-        .parcelrc:
-          {
-            "extends": "@atlaspack/config-default"
-          }
-          
         common.js:
           export const common = 'MY_ENV';
 
@@ -55,7 +38,7 @@ describe('targets', () => {
           one: {
             source: './input.js',
             context: 'browser',
-            distDir: './dist/one',
+            distDir: './dist',
             engines: {
               browsers: ['last 1 Chrome version'],
             },
@@ -63,7 +46,7 @@ describe('targets', () => {
           two: {
             source: ['./input2.js', './input3.js'],
             context: 'browser',
-            distDir: './dist/two',
+            distDir: './dist',
             engines: {
               browsers: ['last 1 Firefox version'],
             },
@@ -89,8 +72,6 @@ describe('targets', () => {
     ['one', 'two'].forEach((target) => {
       const bundle = bundlesByTarget[target];
       assert(bundle, `Bundle for target ${target} not found`);
-      // For now, just check that the bundle exists
-      // TODO: Add proper bundle content checking when options are working correctly
     });
   });
 });
