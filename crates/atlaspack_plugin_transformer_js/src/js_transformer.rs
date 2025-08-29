@@ -105,10 +105,17 @@ impl AtlaspackJsTransformerPlugin {
         .as_ref()
         .is_some_and(|vars| vars.is_empty())
     {
-      return HashMap::new();
+      // Still check for custom env even if global env is empty
+      if asset.env.custom_env.is_none() {
+        return HashMap::new();
+      }
     }
 
-    let env_vars = self.options.env.clone().unwrap_or_default();
+    // Merge global environment variables with asset's custom environment variables
+    let mut env_vars = self.options.env.clone().unwrap_or_default();
+    if let Some(custom_env) = &asset.env.custom_env {
+      env_vars.extend(custom_env.clone());
+    }
     let inline_environment = self
       .config
       .inline_environment
@@ -551,7 +558,7 @@ mod tests {
           file_type: FileType::Js,
           // TODO: Is this correct?
           symbols: Some(vec![Symbol {
-            local: String::from("$794b991511cb8fe6$exports"),
+            local: String::from("$e649e1a37d1ddc23$exports"),
             exported: String::from("*"),
             loc: None,
             is_weak: false,
@@ -759,7 +766,7 @@ mod tests {
       symbols: Some(vec![Symbol {
         exported: String::from("*"),
         loc: None,
-        local: String::from("a1ad9714284f3ad6$"),
+        local: String::from("78f713213cef1ff3$"),
         ..Symbol::default()
       }]),
       ..Default::default()

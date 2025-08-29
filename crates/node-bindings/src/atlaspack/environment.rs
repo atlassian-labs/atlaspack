@@ -7,8 +7,9 @@ use napi::{Env, JsUnknown};
 use napi_derive::napi;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 struct EnvironmentIdParams {
   #[serde(default)]
@@ -29,6 +30,8 @@ struct EnvironmentIdParams {
   should_scope_hoist: bool,
   #[serde(default)]
   source_map: Option<TargetSourceMapOptions>,
+  #[serde(default)]
+  custom_env: Option<BTreeMap<String, String>>,
 }
 
 #[napi]
@@ -44,6 +47,7 @@ pub fn create_environment_id(env: Env, params: JsUnknown) -> napi::Result<String
     should_optimize,
     should_scope_hoist,
     source_map,
+    custom_env,
   } = params;
 
   Ok(atlaspack_core::types::create_environment_id(
@@ -56,6 +60,7 @@ pub fn create_environment_id(env: Env, params: JsUnknown) -> napi::Result<String
     &should_optimize,
     &should_scope_hoist,
     &source_map,
+    &custom_env,
   ))
 }
 
@@ -161,5 +166,34 @@ mod test {
     manager.add_environment(environment.clone());
     let stored_environment = manager.get_environment(&environment.id()).unwrap();
     assert_eq!(environment, stored_environment);
+  }
+
+  #[test]
+  fn test_environment_id_params_with_custom_env() {
+    let mut custom_env = BTreeMap::new();
+    custom_env.insert("NODE_ENV".to_string(), "production".to_string());
+    custom_env.insert("DEBUG".to_string(), "false".to_string());
+
+    let params = EnvironmentIdParams {
+      custom_env: Some(custom_env),
+      ..Default::default()
+    };
+
+    // Test that the struct can be created and custom_env is properly set
+    assert!(params.custom_env.is_some());
+    let custom_env_ref = params.custom_env.as_ref().unwrap();
+    assert_eq!(
+      custom_env_ref.get("NODE_ENV"),
+      Some(&"production".to_string())
+    );
+    assert_eq!(custom_env_ref.get("DEBUG"), Some(&"false".to_string()));
+  }
+
+  #[test]
+  fn test_environment_id_params_default_custom_env() {
+    let params = EnvironmentIdParams::default();
+
+    // Test that default custom_env is None
+    assert!(params.custom_env.is_none());
   }
 }

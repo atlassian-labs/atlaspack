@@ -353,6 +353,7 @@ export class TargetResolver {
                 ),
                 unstableSingleFileOutput:
                   descriptor.__unstable_singleFileOutput,
+                customEnv: descriptor.env,
               }),
             };
 

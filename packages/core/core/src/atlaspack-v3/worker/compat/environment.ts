@@ -11,6 +11,7 @@ import type {
   SourceLocation,
   VersionMap,
   EnvironmentFeature,
+  EnvMap,
 } from '@atlaspack/types';
 
 export class Environment implements IEnvironment {
@@ -29,6 +30,7 @@ export class Environment implements IEnvironment {
   sourceMap: TargetSourceMapOptions | null | undefined;
   loc: SourceLocation | null | undefined;
   unstableSingleFileOutput: boolean;
+  customEnv: EnvMap | null | undefined;
 
   constructor(inner: NapiEnvironment) {
     // TODO
@@ -44,6 +46,7 @@ export class Environment implements IEnvironment {
     this.sourceMap = inner.sourceMap;
     this.loc = inner.loc;
     this.unstableSingleFileOutput = false;
+    this.customEnv = inner.customEnv;
   }
 
   isBrowser(): boolean {
