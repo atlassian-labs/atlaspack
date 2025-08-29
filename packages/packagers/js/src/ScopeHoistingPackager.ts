@@ -469,7 +469,7 @@ export class ScopeHoistingPackager {
         // The main entry needs to be check to find assets that would have gone in
         // the top level scope
         let mainEntry = this.bundle.getMainEntry();
-        if (mainEntry) {
+        if (mainEntry && !this.wrappedAssets.has(mainEntry.id)) {
           moduleGroupParents.unshift(mainEntry);
         }
       }
