@@ -1,5 +1,12 @@
 # @atlaspack/config-default
 
+## 4.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`58b9fb0`](https://github.com/atlassian-labs/atlaspack/commit/58b9fb037680a36a0b4af7890f2a03532095b88f)]:
+  - @atlaspack/packager-js@2.22.2
+
 ## 4.0.5
 
 ### Patch Changes
