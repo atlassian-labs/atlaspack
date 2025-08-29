@@ -73,7 +73,7 @@ pub struct Environment {
   pub unstable_single_file_output: bool,
 
   /// Custom environment variables specific to this target
-  #[serde(skip_serializing_if = "Option::is_none")]
+  #[serde(skip_serializing_if = "Option::is_none", rename = "customEnv")]
   pub custom_env: Option<BTreeMap<String, String>>,
 }
 

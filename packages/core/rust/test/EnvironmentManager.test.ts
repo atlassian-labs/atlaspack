@@ -24,6 +24,9 @@ describe('EnvironmentManager', () => {
       loc: null,
       sourceType: 'module',
       unstableSingleFileOutput: false,
+      customEnv: {
+        MY_ENV: 'one',
+      },
     }),
   );
   const environment2 = fromEnvironmentId(
@@ -41,6 +44,9 @@ describe('EnvironmentManager', () => {
       loc: null,
       sourceType: 'module',
       unstableSingleFileOutput: false,
+      customEnv: {
+        MY_ENV: 'two',
+      },
     }),
   );
 
