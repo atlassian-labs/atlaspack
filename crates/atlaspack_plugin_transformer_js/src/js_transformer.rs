@@ -558,7 +558,7 @@ mod tests {
           file_type: FileType::Js,
           // TODO: Is this correct?
           symbols: Some(vec![Symbol {
-            local: String::from("$794b991511cb8fe6$exports"),
+            local: String::from("$e649e1a37d1ddc23$exports"),
             exported: String::from("*"),
             loc: None,
             is_weak: false,
@@ -766,7 +766,7 @@ mod tests {
       symbols: Some(vec![Symbol {
         exported: String::from("*"),
         loc: None,
-        local: String::from("a1ad9714284f3ad6$"),
+        local: String::from("78f713213cef1ff3$"),
         ..Symbol::default()
       }]),
       ..Default::default()
