@@ -396,7 +396,7 @@ mod tests {
     assert_eq!(
       result.asset.clone(),
       Asset {
-        id: "531e3635c3398c55".into(),
+        id: "f5a14d0ffedebd25".into(),
         file_type: FileType::Js,
         ..result.asset
       }

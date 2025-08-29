@@ -164,7 +164,7 @@ mod test {
         r#"
           <html>
             <body>
-              <script src="966f7b31c3f6c3fc"></script>
+              <script src="1c59ff1aa11ff633"></script>
             </body>
           </html>
         "#
@@ -194,7 +194,7 @@ mod test {
         r#"
           <html>
             <head>
-              <link href="492e1268e5326028" rel="manifest" />
+              <link href="0df03fdb8906c0f1" rel="manifest" />
             </head>
             <body></body>
           </html>
@@ -260,7 +260,7 @@ mod test {
             env: env.clone(),
             file_path: PathBuf::from("main.html"),
             file_type: FileType::Js,
-            id: String::from("b0deada2a458cc5f"),
+            id: String::from("cdf172bf89848b79"),
             is_bundle_splittable: true,
             is_source: true,
             meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
@@ -415,7 +415,7 @@ mod test {
 
     assert_eq!(
       &normalize_html(&html),
-      &normalize_html(&html_body(r#"<script src="8321472594eb517f"></script>"#))
+      &normalize_html(&html_body(r#"<script src="9bcc4f13acf7153e"></script>"#))
     );
   }
 
