@@ -376,4 +376,43 @@ describe('plugin', function () {
       relativePath(distDir, mapPath, false),
     );
   });
+
+  describe('plugins in fsFixutre', () => {
+    it('should be able to use plugins in fsFixture', async () => {
+      const dir = path.join(__dirname, 'plugins-in-fs-fixture');
+      await overlayFS.mkdirp(dir);
+      await fsFixture(overlayFS, dir)`
+        package.json: {
+            "name": "plugins-in-fs-fixture",
+            "version": "1.0.0"          
+          }
+
+        plugin.js:
+          const {Transformer} = require('@atlaspack/plugin');
+          module.exports = new Transformer({
+            transform({asset}) {
+              return [asset];
+            }
+          });
+        
+        .parcelrc: {
+            "extends": "@atlaspack/config-default",
+            "transformers": {
+              "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": ["./plugin.js", "..."]
+            }
+          }
+
+        index.js:
+          console.log('hello world');
+
+        yarn.lock: {}
+      `;
+
+      const b = await bundle(path.join(dir, 'index.js'), {
+        inputFS: overlayFS,
+        shouldDisableCache: true,
+      });
+      assert.equal(b.getBundles().length, 1);
+    });
+  });
 });
