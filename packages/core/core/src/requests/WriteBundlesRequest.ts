@@ -4,7 +4,12 @@ import {getFeatureFlag} from '@atlaspack/feature-flags';
 import type {SharedReference} from '@atlaspack/workers';
 import type {StaticRunOpts} from '../RequestTracker';
 import {requestTypes} from '../RequestTracker';
-import {BundleBehavior, type PackagedBundleInfo} from '../types';
+import {
+  BundleBehavior,
+  type PackagedBundleInfo,
+  type Bundle,
+  type AtlaspackOptions,
+} from '../types';
 import type BundleGraph from '../BundleGraph';
 import type {BundleInfo} from '../PackagerRunner';
 import {report} from '../ReporterRunner';
@@ -81,7 +86,7 @@ async function run({
   let bundleInfoMap: {
     [key: string]: BundleInfo;
   } = {};
-  let writeEarlyPromises: Record<string, any> = {};
+  let writeEarlyPromises: Record<string, Promise<PackagedBundleInfo>> = {};
   let hashRefToNameHash = new Map();
 
   // Include inline bundles so that non-inline bundles referenced from inline bundles are written to
@@ -197,7 +202,6 @@ async function run({
             }),
           );
 
-        // @ts-expect-error TS7006
         return promise.then((r) => res.set(bundle.id, r));
       }),
     );
@@ -211,12 +215,10 @@ async function run({
 
 function assignComplexNameHashes(
   hashRefToNameHash: Map<string, string>,
-  // @ts-expect-error TS2304
   bundles: Array<Bundle>,
   bundleInfoMap: {
     [key: string]: BundleInfo;
   },
-  // @ts-expect-error TS2304
   options: AtlaspackOptions,
 ) {
   for (let bundle of bundles) {
@@ -228,7 +230,6 @@ function assignComplexNameHashes(
       options.shouldContentHash
         ? hashString(
             [...getBundlesIncludedInHash(bundle.id, bundleInfoMap)]
-              // @ts-expect-error TS2538
               .map((bundleId) => bundleInfoMap[bundleId].hash)
               .join(':'),
           ).slice(-8)
@@ -242,7 +243,7 @@ function getBundlesIncludedInHash(
   bundleInfoMap: {
     [key: string]: BundleInfo;
   },
-  included = new Set(),
+  included = new Set<string>(),
 ) {
   included.add(bundleId);
   for (let hashRef of bundleInfoMap[bundleId]?.hashReferences ?? []) {
