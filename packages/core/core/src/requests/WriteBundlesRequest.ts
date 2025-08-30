@@ -66,9 +66,12 @@ export default function createWriteBundlesRequest(
   };
 }
 
-type WriteBundlesRequestRunArgs = Parameters<WriteBundlesRequest['run']>[0];
-
-async function run({input, api, farm, options}: WriteBundlesRequestRunArgs) {
+async function run({
+  input,
+  api,
+  farm,
+  options,
+}: RunInput<WriteBundlesRequestResult>) {
   let {bundleGraph, optionsRef} = input;
   let {ref, dispose} = await farm.createSharedReference(bundleGraph);
 
