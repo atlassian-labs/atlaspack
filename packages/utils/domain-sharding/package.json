@@ -4,7 +4,7 @@
   "license": "(MIT OR Apache-2.0)",
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "types": "./lib/types/index.d.ts",
+  "types": "./src/index.ts",
   "publishConfig": {
     "access": "public"
   },

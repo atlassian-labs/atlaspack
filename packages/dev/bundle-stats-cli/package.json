@@ -11,7 +11,7 @@
   },
   "main": "./lib/cli.js",
   "source": "./src/cli.ts",
-  "types": "./lib/types/cli.d.ts",
+  "types": "./src/cli.ts",
   "bin": {
     "atlaspack-bundle-stats": "bin/bundle-stats.js"
   },

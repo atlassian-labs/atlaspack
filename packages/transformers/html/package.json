@@ -16,7 +16,7 @@
   },
   "main": "./lib/HTMLTransformer.js",
   "source": "./src/HTMLTransformer.ts",
-  "types": "./lib/types/HTMLTransformer.d.ts",
+  "types": "./src/HTMLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

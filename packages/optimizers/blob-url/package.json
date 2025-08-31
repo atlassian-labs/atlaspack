@@ -11,7 +11,7 @@
   },
   "main": "./lib/BlobURLOptimizer.js",
   "source": "./src/BlobURLOptimizer.ts",
-  "types": "./lib/types/BlobURLOptimizer.d.ts",
+  "types": "./src/BlobURLOptimizer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

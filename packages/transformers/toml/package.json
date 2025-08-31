@@ -11,7 +11,7 @@
   },
   "main": "./lib/TOMLTransformer.js",
   "source": "./src/TOMLTransformer.ts",
-  "types": "./lib/types/TOMLTransformer.d.ts",
+  "types": "./src/TOMLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

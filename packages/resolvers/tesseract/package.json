@@ -11,7 +11,7 @@
   },
   "main": "./lib/TesseractResolver.js",
   "source": "./src/TesseractResolver.ts",
-  "types": "./lib/types/TesseractResolver.d.ts",
+  "types": "./src/TesseractResolver.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

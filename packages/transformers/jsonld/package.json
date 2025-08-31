@@ -11,7 +11,7 @@
   },
   "main": "./lib/JSONLDTransformer.js",
   "source": "./src/JSONLDTransformer.ts",
-  "types": "./lib/types/JSONLDTransformer.d.ts",
+  "types": "./src/JSONLDTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

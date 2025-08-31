@@ -16,7 +16,7 @@
   },
   "main": "./lib/bin.js",
   "source": "./src/bin.ts",
-  "types": "./lib/types/bin.d.ts",
+  "types": "./src/bin.ts",
   "scripts": {
     "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."

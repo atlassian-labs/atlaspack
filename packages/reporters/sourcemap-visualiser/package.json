@@ -11,7 +11,7 @@
   },
   "main": "./lib/SourceMapVisualiser.js",
   "source": "./src/SourceMapVisualiser.ts",
-  "types": "./lib/types/SourceMapVisualiser.d.ts",
+  "types": "./src/SourceMapVisualiser.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

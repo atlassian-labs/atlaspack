@@ -12,7 +12,7 @@
   },
   "main": "./lib/BrotliCompressor.js",
   "source": "./src/BrotliCompressor.ts",
-  "types": "./lib/types/BrotliCompressor.d.ts",
+  "types": "./src/BrotliCompressor.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

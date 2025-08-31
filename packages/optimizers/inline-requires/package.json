@@ -11,7 +11,7 @@
   },
   "main": "./lib/InlineRequires.js",
   "source": "./src/InlineRequires.ts",
-  "types": "./lib/types/InlineRequires.d.ts",
+  "types": "./src/InlineRequires.ts",
   "engines": {
     "node": ">= 14.0.0"
   },

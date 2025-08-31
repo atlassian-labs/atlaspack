@@ -11,7 +11,7 @@
   },
   "main": "./lib/HMRRuntime.js",
   "source": "./src/HMRRuntime.ts",
-  "types": "./lib/types/HMRRuntime.d.ts",
+  "types": "./src/HMRRuntime.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

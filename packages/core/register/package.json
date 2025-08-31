@@ -12,7 +12,7 @@
   },
   "main": "./lib/register.js",
   "source": "./src/register.ts",
-  "types": "./lib/types/register.d.ts",
+  "types": "./src/register.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

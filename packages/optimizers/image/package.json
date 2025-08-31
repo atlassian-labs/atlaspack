@@ -4,7 +4,7 @@
   "license": "(MIT OR Apache-2.0)",
   "main": "./lib/ImageOptimizer.js",
   "source": "./src/ImageOptimizer.ts",
-  "types": "./lib/types/ImageOptimizer.d.ts",
+  "types": "./src/ImageOptimizer.ts",
   "publishConfig": {
     "access": "public"
   },

@@ -11,7 +11,7 @@
   },
   "main": "./lib/RawUrlPackager.js",
   "source": "./src/RawUrlPackager.ts",
-  "types": "./lib/types/RawUrlPackager.d.ts",
+  "types": "./src/RawUrlPackager.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

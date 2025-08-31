@@ -12,7 +12,7 @@
   },
   "main": "./lib/Logger.js",
   "source": "./src/Logger.ts",
-  "types": "./lib/types/Logger.d.ts",
+  "types": "./src/Logger.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

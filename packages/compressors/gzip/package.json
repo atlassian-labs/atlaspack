@@ -12,7 +12,7 @@
   },
   "main": "./lib/GzipCompressor.js",
   "source": "./src/GzipCompressor.ts",
-  "types": "./lib/types/GzipCompressor.d.ts",
+  "types": "./src/GzipCompressor.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

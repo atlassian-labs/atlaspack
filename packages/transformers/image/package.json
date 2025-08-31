@@ -11,7 +11,7 @@
   },
   "main": "./lib/ImageTransformer.js",
   "source": "./src/ImageTransformer.ts",
-  "types": "./lib/types/ImageTransformer.d.ts",
+  "types": "./src/ImageTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

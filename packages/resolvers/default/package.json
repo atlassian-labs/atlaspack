@@ -11,7 +11,7 @@
   },
   "main": "./lib/DefaultResolver.js",
   "source": "./src/DefaultResolver.ts",
-  "types": "./lib/types/DefaultResolver.d.ts",
+  "types": "./src/DefaultResolver.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

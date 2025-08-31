@@ -11,7 +11,7 @@
   },
   "main": "./lib/ReactRefreshWrapTransformer.js",
   "source": "./src/ReactRefreshWrapTransformer.ts",
-  "types": "./lib/types/ReactRefreshWrapTransformer.d.ts",
+  "types": "./src/ReactRefreshWrapTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

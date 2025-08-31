@@ -11,7 +11,7 @@
   },
   "main": "./lib/ConditionalManifestReporter.js",
   "source": "./src/ConditionalManifestReporter.ts",
-  "types": "./lib/types/ConditionalManifestReporter.d.ts",
+  "types": "./src/ConditionalManifestReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

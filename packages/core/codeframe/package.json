@@ -13,7 +13,7 @@
   },
   "main": "./lib/codeframe.js",
   "source": "./src/codeframe.ts",
-  "types": "./lib/types/codeframe.d.ts",
+  "types": "./src/codeframe.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

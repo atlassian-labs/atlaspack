@@ -11,7 +11,7 @@
   },
   "main": "./lib/SassTransformer.js",
   "source": "./src/SassTransformer.ts",
-  "types": "./lib/types/SassTransformer.d.ts",
+  "types": "./src/SassTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

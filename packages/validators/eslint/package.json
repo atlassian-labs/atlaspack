@@ -11,7 +11,7 @@
   },
   "main": "./lib/EslintValidator.js",
   "source": "./src/EslintValidator.ts",
-  "types": "./lib/types/EslintValidator.d.ts",
+  "types": "./src/EslintValidator.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

@@ -11,7 +11,7 @@
   },
   "main": "./lib/JSONReporter.js",
   "source": "./src/JSONReporter.ts",
-  "types": "./lib/types/JSONReporter.d.ts",
+  "types": "./src/JSONReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

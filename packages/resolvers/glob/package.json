@@ -11,7 +11,7 @@
   },
   "main": "./lib/GlobResolver.js",
   "source": "./src/GlobResolver.ts",
-  "types": "./lib/types/GlobResolver.d.ts",
+  "types": "./src/GlobResolver.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

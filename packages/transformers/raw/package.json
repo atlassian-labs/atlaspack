@@ -11,7 +11,7 @@
   },
   "main": "./lib/RawTransformer.js",
   "source": "./src/RawTransformer.ts",
-  "types": "./lib/types/RawTransformer.d.ts",
+  "types": "./src/RawTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
