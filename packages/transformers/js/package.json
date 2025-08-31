@@ -11,7 +11,7 @@
   },
   "main": "./lib/JSTransformer.js",
   "source": "./src/JSTransformer.ts",
-  "types": "./lib/types/JSTransformer.d.ts",
+  "types": "./src/JSTransformer.ts",
   "scripts": {
     "test": "mocha",
     "check-ts": "tsc --emitDeclarationOnly --rootDir src",

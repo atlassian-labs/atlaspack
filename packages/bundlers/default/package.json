@@ -12,7 +12,7 @@
   },
   "main": "./lib/DefaultBundler.js",
   "source": "./src/DefaultBundler.ts",
-  "types": "./lib/types/DefaultBundler.d.ts",
+  "types": "./src/DefaultBundler.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

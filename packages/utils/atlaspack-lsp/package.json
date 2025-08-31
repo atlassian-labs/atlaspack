@@ -11,7 +11,7 @@
   },
   "main": "./lib/LspServer.js",
   "source": "./src/LspServer.ts",
-  "types": "./lib/types/LspServer.d.ts",
+  "types": "./src/LspServer.ts",
   "scripts": {
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",

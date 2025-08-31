@@ -11,7 +11,7 @@
   },
   "main": "./lib/BabelTransformer.js",
   "source": "./src/BabelTransformer.ts",
-  "types": "./lib/types/BabelTransformer.d.ts",
+  "types": "./src/BabelTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

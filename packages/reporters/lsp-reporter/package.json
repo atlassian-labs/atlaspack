@@ -11,7 +11,7 @@
   },
   "main": "./lib/LspReporter.js",
   "source": "./src/LspReporter.ts",
-  "types": "./lib/types/LspReporter.d.ts",
+  "types": "./src/LspReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

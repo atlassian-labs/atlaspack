@@ -11,7 +11,7 @@
   },
   "main": "./lib/HTMLNanoOptimizer.js",
   "source": "./src/HTMLNanoOptimizer.ts",
-  "types": "./lib/types/HTMLNanoOptimizer.d.ts",
+  "types": "./src/HTMLNanoOptimizer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

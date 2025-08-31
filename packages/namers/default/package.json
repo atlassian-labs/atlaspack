@@ -11,7 +11,7 @@
   },
   "main": "./lib/DefaultNamer.js",
   "source": "./src/DefaultNamer.ts",
-  "types": "./lib/types/DefaultNamer.d.ts",
+  "types": "./src/DefaultNamer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

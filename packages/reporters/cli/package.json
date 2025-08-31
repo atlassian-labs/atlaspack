@@ -11,7 +11,7 @@
   },
   "main": "./lib/CLIReporter.js",
   "source": "./src/CLIReporter.ts",
-  "types": "./lib/types/CLIReporter.d.ts",
+  "types": "./src/CLIReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

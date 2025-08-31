@@ -11,7 +11,7 @@
   },
   "main": "./lib/PugTransformer.js",
   "source": "./src/PugTransformer.ts",
-  "types": "./lib/types/PugTransformer.d.ts",
+  "types": "./src/PugTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

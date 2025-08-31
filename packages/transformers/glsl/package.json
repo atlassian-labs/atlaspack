@@ -11,7 +11,7 @@
   },
   "main": "./lib/GLSLTransformer.js",
   "source": "./src/GLSLTransformer.ts",
-  "types": "./lib/types/GLSLTransformer.d.ts",
+  "types": "./src/GLSLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

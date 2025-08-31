@@ -11,7 +11,7 @@
   },
   "main": "./lib/LessTransformer.js",
   "source": "./src/LessTransformer.ts",
-  "types": "./lib/types/LessTransformer.d.ts",
+  "types": "./src/LessTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

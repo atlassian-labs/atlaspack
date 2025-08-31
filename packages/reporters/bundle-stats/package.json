@@ -6,7 +6,7 @@
   },
   "main": "./lib/BundleStatsReporter.js",
   "source": "./src/BundleStatsReporter.ts",
-  "types": "./lib/types/BundleStatsReporter.d.ts",
+  "types": "./src/BundleStatsReporter.ts",
   "bin": {
     "atlaspack-bundle-stats": "bin.js"
   },

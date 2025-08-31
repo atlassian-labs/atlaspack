@@ -11,7 +11,7 @@
   },
   "main": "./lib/MDXTransformer.js",
   "source": "./src/MDXTransformer.ts",
-  "types": "./lib/types/MDXTransformer.d.ts",
+  "types": "./src/MDXTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

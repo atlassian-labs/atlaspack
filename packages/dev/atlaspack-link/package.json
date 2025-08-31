@@ -12,7 +12,7 @@
   },
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "types": "./lib/types/index.d.ts",
+  "types": "./src/index.ts",
   "dependencies": {
     "@babel/core": "^7.22.11",
     "@atlaspack/babel-register": "2.14.3",

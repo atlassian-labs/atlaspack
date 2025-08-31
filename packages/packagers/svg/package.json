@@ -11,7 +11,7 @@
   },
   "main": "./lib/SVGPackager.js",
   "source": "./src/SVGPackager.ts",
-  "types": "./lib/types/SVGPackager.d.ts",
+  "types": "./src/SVGPackager.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

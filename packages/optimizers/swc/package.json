@@ -11,7 +11,7 @@
   },
   "main": "./lib/SwcOptimizer.js",
   "source": "./src/SwcOptimizer.ts",
-  "types": "./lib/types/SwcOptimizer.d.ts",
+  "types": "./src/SwcOptimizer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

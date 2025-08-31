@@ -12,7 +12,7 @@
   },
   "main": "./lib/RawCompressor.js",
   "source": "./src/RawCompressor.ts",
-  "types": "./lib/types/RawCompressor.d.ts",
+  "types": "./src/RawCompressor.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

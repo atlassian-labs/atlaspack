@@ -11,7 +11,7 @@
   },
   "main": "./lib/WebExtensionTransformer.js",
   "source": "./src/WebExtensionTransformer.ts",
-  "types": "./lib/types/WebExtensionTransformer.d.ts",
+  "types": "./src/WebExtensionTransformer.ts",
   "engines": {},
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",

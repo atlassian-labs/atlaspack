@@ -12,7 +12,7 @@
   },
   "main": "./lib/diagnostic.js",
   "source": "./src/diagnostic.ts",
-  "types": "./lib/types/diagnostic.d.ts",
+  "types": "./src/diagnostic.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

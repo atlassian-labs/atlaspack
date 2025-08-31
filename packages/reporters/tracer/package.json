@@ -11,7 +11,7 @@
   },
   "main": "./lib/TracerReporter.js",
   "source": "./src/TracerReporter.ts",
-  "types": "./lib/types/TracerReporter.d.ts",
+  "types": "./src/TracerReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

@@ -13,7 +13,7 @@
   },
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "types": "./lib/types/index.d.ts",
+  "types": "./src/index.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

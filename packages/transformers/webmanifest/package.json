@@ -11,7 +11,7 @@
   },
   "main": "./lib/WebManifestTransformer.js",
   "source": "./src/WebManifestTransformer.ts",
-  "types": "./lib/types/WebManifestTransformer.d.ts",
+  "types": "./src/WebManifestTransformer.ts",
   "engines": {},
   "dependencies": {
     "@mischnic/json-sourcemap": "^0.1.0",

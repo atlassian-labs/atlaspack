@@ -11,7 +11,7 @@
   },
   "main": "./lib/YAMLTransformer.js",
   "source": "./src/YAMLTransformer.ts",
-  "types": "./lib/types/YAMLTransformer.d.ts",
+  "types": "./src/YAMLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

@@ -11,7 +11,7 @@
   },
   "main": "./lib/SvgReactTransformer.js",
   "source": "./src/SvgReactTransformer.ts",
-  "types": "./lib/types/SvgReactTransformer.d.ts",
+  "types": "./src/SvgReactTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

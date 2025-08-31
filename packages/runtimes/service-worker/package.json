@@ -11,7 +11,7 @@
   },
   "main": "./lib/ServiceWorkerRuntime.js",
   "source": "./src/ServiceWorkerRuntime.ts",
-  "types": "./lib/types/ServiceWorkerRuntime.d.ts",
+  "types": "./src/ServiceWorkerRuntime.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

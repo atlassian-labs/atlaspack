@@ -11,7 +11,7 @@
   },
   "main": "./lib/PostHTMLTransformer.js",
   "source": "./src/PostHTMLTransformer.ts",
-  "types": "./lib/types/PostHTMLTransformer.d.ts",
+  "types": "./src/PostHTMLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

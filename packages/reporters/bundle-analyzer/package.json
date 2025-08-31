@@ -11,7 +11,7 @@
   },
   "main": "./lib/BundleAnalyzerReporter.js",
   "source": "./src/BundleAnalyzerReporter.ts",
-  "types": "./lib/types/BundleAnalyzerReporter.d.ts",
+  "types": "./src/BundleAnalyzerReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

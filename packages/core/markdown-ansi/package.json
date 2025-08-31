@@ -12,7 +12,7 @@
   },
   "main": "./lib/markdown-ansi.js",
   "source": "./src/markdown-ansi.ts",
-  "types": "./lib/types/markdown-ansi.d.ts",
+  "types": "./src/markdown-ansi.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

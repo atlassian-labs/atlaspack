@@ -11,7 +11,7 @@
   },
   "main": "./lib/RawPackager.js",
   "source": "./src/RawPackager.ts",
-  "types": "./lib/types/RawPackager.d.ts",
+  "types": "./src/RawPackager.ts",
   "engines": {
     "node": ">= 16.0.0"
   },
