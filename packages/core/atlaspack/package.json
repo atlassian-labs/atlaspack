@@ -1,7 +1,7 @@
 {
   "name": "atlaspack",
   "description": "Blazing fast, zero configuration web application bundler",
-  "version": "2.0.12",
+  "version": "2.0.13",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -148,7 +148,7 @@
   "dependencies": {
     "@atlaspack/build-cache": "2.13.5",
     "@atlaspack/cache": "3.2.24",
-    "@atlaspack/cli": "2.14.7",
+    "@atlaspack/cli": "2.14.8",
     "@atlaspack/codeframe": "2.13.11",
     "@atlaspack/conditional-import-types": "2.13.8",
     "@atlaspack/core": "2.23.5",
@@ -181,8 +181,8 @@
     "@atlaspack/compressor-brotli": "2.13.31",
     "@atlaspack/compressor-gzip": "2.13.31",
     "@atlaspack/compressor-raw": "2.13.31",
-    "@atlaspack/config-default": "4.0.5",
-    "@atlaspack/config-webextension": "4.0.5",
+    "@atlaspack/config-default": "4.0.6",
+    "@atlaspack/config-webextension": "4.0.6",
     "@atlaspack/namer-default": "2.14.29",
     "@atlaspack/optimizer-blob-url": "2.14.29",
     "@atlaspack/optimizer-css": "2.14.29",
@@ -196,7 +196,7 @@
     "@atlaspack/optimizer-terser": "2.14.29",
     "@atlaspack/packager-css": "2.14.29",
     "@atlaspack/packager-html": "2.15.11",
-    "@atlaspack/packager-js": "2.22.1",
+    "@atlaspack/packager-js": "2.22.2",
     "@atlaspack/packager-raw-url": "2.14.29",
     "@atlaspack/packager-raw": "2.14.29",
     "@atlaspack/packager-svg": "2.14.29",

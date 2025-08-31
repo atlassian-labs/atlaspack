@@ -28,7 +28,7 @@
     "@mischnic/pako": "^1.0.10",
     "@mischnic/yarn-browser": "^0.0.4",
     "@atlaspack/build-cache": "2.13.5",
-    "@atlaspack/config-repl": "2.13.33",
+    "@atlaspack/config-repl": "2.13.34",
     "@atlaspack/core": "2.23.5",
     "@atlaspack/fs": "2.15.24",
     "@atlaspack/package-manager": "2.14.29",
