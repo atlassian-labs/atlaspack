@@ -15,6 +15,8 @@ use swc_core::ecma::visit::noop_visit_type;
 use swc_core::ecma::visit::Visit;
 use swc_core::ecma::visit::VisitWith;
 
+use crate::esm_export_classifier::ExportKind;
+use crate::esm_export_classifier::SymbolInfo;
 use crate::id;
 use crate::utils::is_unresolved;
 use crate::utils::match_export_name;
@@ -64,6 +66,7 @@ pub struct Export {
   pub specifier: JsWord,
   pub loc: SourceLocation,
   pub is_esm: bool,
+  pub no_rebinding_allowed: bool,
 }
 
 pub struct Collect {
@@ -93,6 +96,7 @@ pub struct Collect {
   pub bailouts: Option<Vec<Bailout>>,
   pub is_empty_or_empty_export: bool,
   pub computed_properties_fix: bool,
+  pub symbol_info: HashMap<Id, SymbolInfo>,
   in_module_this: bool,
   in_top_level: bool,
   in_export_decl: bool,
@@ -146,6 +150,7 @@ impl Collect {
   // setting this to ignore the lint warning for now.
   #[allow(clippy::too_many_arguments)]
   pub fn new(
+    symbol_info: HashMap<Id, SymbolInfo>,
     source_map: Lrc<swc_core::common::SourceMap>,
     unresolved_mark: Mark,
     ignore_mark: Mark,
@@ -185,6 +190,7 @@ impl Collect {
       conditional_bundling,
       is_empty_or_empty_export: false,
       computed_properties_fix,
+      symbol_info,
     }
   }
 }
@@ -412,10 +418,11 @@ impl Visit for Collect {
       let source = node.src.as_ref().map(|s| s.value.clone());
       match specifier {
         ExportSpecifier::Named(named) => {
-          let exported = match &named.exported {
-            Some(exported) => match_export_name(exported),
-            None => match_export_name(&named.orig),
+          let exported_node = match &named.exported {
+            Some(exported) => exported,
+            None => &named.orig,
           };
+          let exported = match_export_name(exported_node);
           let orig = match_export_name_ident(&named.orig);
           let is_reexport = if source.is_none() {
             // import {foo} from "xyz";
@@ -436,6 +443,11 @@ impl Visit for Collect {
               loc: SourceLocation::from(&self.source_map, exported.1),
               source,
               is_esm: true,
+              no_rebinding_allowed: if let ModuleExportName::Ident(ident) = exported_node {
+                self.is_no_rebinding_allowed(&ident)
+              } else {
+                false
+              },
             },
           );
           if node.src.is_none() {
@@ -453,6 +465,7 @@ impl Visit for Collect {
               loc: SourceLocation::from(&self.source_map, default.exported.span),
               source,
               is_esm: true,
+              no_rebinding_allowed: false,
             },
           );
           if node.src.is_none() {
@@ -470,6 +483,7 @@ impl Visit for Collect {
               loc: SourceLocation::from(&self.source_map, namespace.span),
               source,
               is_esm: true,
+              no_rebinding_allowed: false,
             },
           );
           // Populating exports_locals with * doesn't make any sense at all
@@ -489,6 +503,7 @@ impl Visit for Collect {
             loc: SourceLocation::from(&self.source_map, class.ident.span),
             source: None,
             is_esm: true,
+            no_rebinding_allowed: self.is_no_rebinding_allowed(&class.ident),
           },
         );
         self
@@ -504,6 +519,7 @@ impl Visit for Collect {
             loc: SourceLocation::from(&self.source_map, func.ident.span),
             source: None,
             is_esm: true,
+            no_rebinding_allowed: self.is_no_rebinding_allowed(&func.ident),
           },
         );
         self
@@ -537,6 +553,7 @@ impl Visit for Collect {
               loc: SourceLocation::from(&self.source_map, node.span),
               source: None,
               is_esm: true,
+              no_rebinding_allowed: self.is_no_rebinding_allowed(&ident),
             },
           );
           self
@@ -551,6 +568,7 @@ impl Visit for Collect {
               loc: SourceLocation::from(&self.source_map, node.span),
               source: None,
               is_esm: true,
+              no_rebinding_allowed: false,
             },
           );
         }
@@ -564,6 +582,7 @@ impl Visit for Collect {
               loc: SourceLocation::from(&self.source_map, node.span),
               source: None,
               is_esm: true,
+              no_rebinding_allowed: self.is_no_rebinding_allowed(&ident),
             },
           );
           self
@@ -578,6 +597,7 @@ impl Visit for Collect {
               loc: SourceLocation::from(&self.source_map, node.span),
               source: None,
               is_esm: true,
+              no_rebinding_allowed: false,
             },
           );
         }
@@ -591,6 +611,14 @@ impl Visit for Collect {
   }
 
   fn visit_export_default_expr(&mut self, node: &ExportDefaultExpr) {
+    let mut no_rebinding_allowed = false;
+    if let Expr::Ident(ident) = &*node.expr {
+      no_rebinding_allowed = self
+        .symbol_info
+        .get(&ident.to_id())
+        .map_or(false, |s| s.export_kind == ExportKind::Const);
+    }
+
     self.exports.insert(
       js_word!("default"),
       Export {
@@ -598,6 +626,7 @@ impl Visit for Collect {
         loc: SourceLocation::from(&self.source_map, node.span),
         source: None,
         is_esm: true,
+        no_rebinding_allowed,
       },
     );
 
@@ -629,6 +658,7 @@ impl Visit for Collect {
           loc: SourceLocation::from(&self.source_map, node.id.span),
           source: None,
           is_esm: true,
+          no_rebinding_allowed: self.is_no_rebinding_allowed(&node.id),
         },
       );
       self
@@ -655,6 +685,7 @@ impl Visit for Collect {
           loc: SourceLocation::from(&self.source_map, node.key.span),
           source: None,
           is_esm: true,
+          no_rebinding_allowed: self.is_no_rebinding_allowed(&node.key),
         },
       );
       self
@@ -704,6 +735,7 @@ impl Visit for Collect {
               source: None,
               loc: SourceLocation::from(&self.source_map, span),
               is_esm: false,
+              no_rebinding_allowed: false,
             },
           );
         } else {
@@ -1201,6 +1233,22 @@ impl Collect {
       })
     }
   }
+
+  fn is_no_rebinding_allowed(&self, ident: &Ident) -> bool {
+    let symbol_info = self.symbol_info.get(&ident.to_id());
+    if let Some(symbol_info) = symbol_info {
+      match symbol_info.export_kind {
+        ExportKind::Const => true,
+        ExportKind::Let => !symbol_info.is_reassigned,
+        ExportKind::Var => !symbol_info.is_reassigned,
+        ExportKind::Function => !symbol_info.is_reassigned,
+        ExportKind::Class => !symbol_info.is_reassigned,
+      }
+    } else {
+      // If the symbol is not found, we default to safe and allow rebinding
+      false
+    }
+  }
 }
 
 fn has_binding_identifier(node: &AssignTarget, sym: &JsWord, unresolved_mark: Mark) -> bool {
@@ -1231,10 +1279,53 @@ fn has_binding_identifier(node: &AssignTarget, sym: &JsWord, unresolved_mark: Ma
 
 #[cfg(test)]
 mod tests {
+  use crate::esm_export_classifier::EsmExportClassifier;
+
   use super::*;
 
-  use atlaspack_swc_runner::test_utils::{run_test_visit_const, RunVisitResult};
-  use swc_core::common::Mark;
+  use atlaspack_swc_runner::{
+    runner::RunContext,
+    test_utils::{run_test_visit_const, RunVisitResult},
+  };
+
+  pub struct TestCollectVisitor {
+    context: RunContext,
+    collect: Option<Collect>,
+  }
+
+  impl TestCollectVisitor {
+    pub fn new(context: RunContext) -> Self {
+      Self {
+        context,
+        collect: None,
+      }
+    }
+  }
+
+  impl Visit for TestCollectVisitor {
+    fn visit_module(&mut self, module: &Module) {
+      let mut export_scanner_visitor = EsmExportClassifier::new(true);
+      module.visit_with(&mut export_scanner_visitor);
+
+      let symbol_info = export_scanner_visitor.symbol_info;
+
+      let mut collect = Collect::new(
+        symbol_info,
+        self.context.source_map.clone(),
+        self.context.unresolved_mark,
+        Mark::fresh(Mark::root()),
+        self.context.global_mark,
+        true,
+        self.context.is_module,
+        false,
+        true,
+      );
+
+      module.visit_with(&mut collect);
+
+      self.collect = Some(collect);
+    }
+  }
 
   #[test]
   fn sets_is_empty_on_empty_file() {
@@ -1300,7 +1391,7 @@ mod tests {
             import { a, b, c, d, e } from 'other';
             import * as x from 'other';
             import * as y from 'other';
-          "
+          ",
         )
         .imports
       ),
@@ -1569,7 +1660,8 @@ mod tests {
             end_line: 1,
             end_col: 21
           },
-          is_esm: true
+          is_esm: true,
+          no_rebinding_allowed: true,
         }
       )])
     );
@@ -1587,7 +1679,9 @@ mod tests {
             end_line: 1,
             end_col: 29
           },
-          is_esm: true
+          is_esm: true,
+          // Not yet implemented
+          no_rebinding_allowed: false,
         }
       )])
     );
@@ -1605,7 +1699,9 @@ mod tests {
             end_line: 1,
             end_col: 34
           },
-          is_esm: true
+          is_esm: true,
+          // Not yet implemented
+          no_rebinding_allowed: false,
         }
       )])
     );
@@ -1623,7 +1719,9 @@ mod tests {
             end_line: 1,
             end_col: 24
           },
-          is_esm: true
+          is_esm: true,
+          // Not yet implemented
+          no_rebinding_allowed: false,
         }
       )])
     );
@@ -1641,13 +1739,15 @@ mod tests {
             end_line: 1,
             end_col: 29
           },
-          is_esm: true
+          is_esm: true,
+          // Not yet implemented
+          no_rebinding_allowed: false,
         }
       )])
     );
 
     assert_eq!(
-      run_collect("export default foo;").exports,
+      run_collect("const foo = 'foo'; export default foo;").exports,
       HashMap::from([(
         js_word!("default"),
         Export {
@@ -1655,17 +1755,18 @@ mod tests {
           specifier: "default".into(),
           loc: SourceLocation {
             start_line: 1,
-            start_col: 1,
+            start_col: 20,
             end_line: 1,
-            end_col: 20
+            end_col: 39
           },
-          is_esm: true
+          is_esm: true,
+          no_rebinding_allowed: true,
         }
       )])
     );
 
     assert_eq!(
-      run_collect("export { foo as test };").exports,
+      run_collect("const foo = 'foo'; export { foo as test };").exports,
       HashMap::from([(
         js_word!("test"),
         Export {
@@ -1673,11 +1774,12 @@ mod tests {
           specifier: "foo".into(),
           loc: SourceLocation {
             start_line: 1,
-            start_col: 17,
+            start_col: 36,
             end_line: 1,
-            end_col: 21
+            end_col: 40
           },
-          is_esm: true
+          is_esm: true,
+          no_rebinding_allowed: true,
         }
       )])
     );
@@ -1695,7 +1797,8 @@ mod tests {
             end_line: 1,
             end_col: 17
           },
-          is_esm: true
+          is_esm: true,
+          no_rebinding_allowed: true,
         }
       )])
     );
@@ -1713,7 +1816,8 @@ mod tests {
             end_line: 1,
             end_col: 19
           },
-          is_esm: false
+          is_esm: false,
+          no_rebinding_allowed: false,
         }
       )])
     );
@@ -1731,7 +1835,8 @@ mod tests {
             end_line: 1,
             end_col: 21
           },
-          is_esm: false
+          is_esm: false,
+          no_rebinding_allowed: false,
         }
       )])
     );
@@ -1749,7 +1854,8 @@ mod tests {
             end_line: 1,
             end_col: 21
           },
-          is_esm: false
+          is_esm: false,
+          no_rebinding_allowed: false,
         }
       )])
     );
@@ -1767,7 +1873,8 @@ mod tests {
             end_line: 1,
             end_col: 12
           },
-          is_esm: false
+          is_esm: false,
+          no_rebinding_allowed: false,
         }
       )])
     );
@@ -1785,7 +1892,8 @@ mod tests {
             end_line: 1,
             end_col: 9
           },
-          is_esm: false
+          is_esm: false,
+          no_rebinding_allowed: false,
         }
       )])
     );
@@ -2163,20 +2271,11 @@ mod tests {
   }
 
   fn run_collect(input_code: &str) -> Collect {
-    let RunVisitResult { visitor, .. } = run_test_visit_const(input_code, |context| {
-      Collect::new(
-        context.source_map,
-        context.unresolved_mark,
-        Mark::fresh(Mark::root()),
-        context.global_mark,
-        true,
-        context.is_module,
-        false,
-        true,
-      )
-    });
+    let RunVisitResult { visitor, .. } = run_test_visit_const(input_code, TestCollectVisitor::new);
 
     visitor
+      .collect
+      .unwrap_or_else(|| panic!("No collect found"))
   }
 
   fn map_imports(imports: HashMap<Id, Import>) -> HashMap<JsWord, PartialImport> {

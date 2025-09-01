@@ -3,6 +3,7 @@ mod collect;
 mod constant_module;
 mod dependency_collector;
 mod env_replacer;
+mod esm_export_classifier;
 mod esm_to_cjs_replacer;
 mod fs;
 mod global_replacer;
@@ -99,6 +100,8 @@ use utils::ErrorBuffer;
 pub use utils::SourceLocation;
 pub use utils::SourceType;
 
+use crate::esm_export_classifier::EsmExportClassifier;
+
 type SourceMapBuffer = Vec<(swc_core::common::BytePos, swc_core::common::LineCol)>;
 
 #[derive(Default, Serialize, Debug, Deserialize)]
@@ -141,6 +144,7 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub computed_properties_fix: bool,
   pub magic_comments: bool,
+  pub exports_rebinding_optimisation: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -428,7 +432,8 @@ pub fn transform(
                       &mut fs_deps,
                       is_module,
                       config.conditional_bundling,
-                      config.computed_properties_fix
+                      config.computed_properties_fix,
+                      HashMap::new(),
                     )),
                     should_inline_fs
                   ),
@@ -531,7 +536,11 @@ pub fn transform(
                 return Ok(result);
               }
 
+              let mut esm_export_classifier = EsmExportClassifier::new(config.exports_rebinding_optimisation);
+              module.visit_with(&mut esm_export_classifier);
+
               let mut collect = Collect::new(
+                esm_export_classifier.symbol_info,
                 source_map.clone(),
                 unresolved_mark,
                 ignore_mark,
@@ -568,7 +577,7 @@ pub fn transform(
 
               let mut module = module.module().expect("Module should be a module at this point");
               let module = if config.scope_hoist {
-                let res = hoist(module, config.module_id.as_str(), unresolved_mark, &collect);
+                let res: Result<(Module, HoistResult, Vec<Diagnostic>), Vec<Diagnostic>> = hoist(module, config.module_id.as_str(), unresolved_mark, &collect);
                 match res {
                   Ok((module, hoist_result, hoist_diagnostics)) => {
                     result.hoist_result = Some(hoist_result);
