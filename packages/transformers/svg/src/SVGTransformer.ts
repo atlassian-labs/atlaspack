@@ -35,12 +35,20 @@ export default new Transformer({
 
     const ast = nullthrows(await asset.getAST());
 
+    // Check if we're running in v3 mode (where addURLDependency and addDependency are not supported)
+    const isV3 = process.env.ATLASPACK_V3 === 'true';
+
     try {
-      collectDependencies(asset, ast);
+      // Only collect dependencies if not in v3 mode, since v3 doesn't support addURLDependency yet
+      if (!isV3) {
+        collectDependencies(asset, ast);
+      }
     } catch (errors: any) {
+      // Handle both array of errors (from collectDependencies) and single errors (from v3)
+      const errorArray = Array.isArray(errors) ? errors : [errors];
+
       throw new ThrowableDiagnostic({
-        // @ts-expect-error TS7006
-        diagnostic: errors.map((error) => ({
+        diagnostic: errorArray.map((error) => ({
           message: error.message,
           origin: '@atlaspack/transformer-svg',
           codeFrames: [
@@ -54,7 +62,8 @@ export default new Transformer({
       });
     }
 
-    const inlineAssets = extractInlineAssets(asset, ast);
+    // Only extract inline assets if not in v3 mode, since v3 doesn't support addDependency yet
+    const inlineAssets = isV3 ? [] : extractInlineAssets(asset, ast);
 
     return [asset, ...inlineAssets];
   },

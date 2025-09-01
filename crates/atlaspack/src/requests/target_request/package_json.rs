@@ -151,7 +151,7 @@ fn main_field<'de, D>(deserializer: D) -> Result<Option<PathBuf>, D::Error>
 where
   D: Deserializer<'de>,
 {
-  parse_builtin_dist(deserializer, "main", vec!["cjs", "mjs", "js"])
+  parse_builtin_dist(deserializer, "main", vec!["cjs", "mjs", "js", "jsx"])
 }
 
 fn main_target<'de, D>(deserializer: D) -> Result<Option<BuiltInTargetDescriptor>, D::Error>

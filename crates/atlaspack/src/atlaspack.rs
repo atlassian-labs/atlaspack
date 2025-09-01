@@ -125,6 +125,8 @@ impl Atlaspack {
 
 impl Atlaspack {
   pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
+    println!("build_asset_graph called");
+
     self.runtime.block_on(async move {
       let request_result = self
         .request_tracker

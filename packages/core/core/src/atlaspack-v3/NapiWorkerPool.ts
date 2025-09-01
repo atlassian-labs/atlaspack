@@ -13,6 +13,7 @@ const ATLASPACK_NAPI_WORKERS =
 
 export type NapiWorkerPoolOptions = {
   workerCount?: number;
+  env?: NodeJS.ProcessEnv;
 };
 
 export class NapiWorkerPool implements INapiWorkerPool {
@@ -20,7 +21,7 @@ export class NapiWorkerPool implements INapiWorkerPool {
   #napiWorkers: Array<Promise<Transferable>>;
   #workerCount: number;
 
-  constructor({workerCount}: NapiWorkerPoolOptions = {workerCount: undefined}) {
+  constructor({workerCount, env}: NapiWorkerPoolOptions = {workerCount: undefined, env: undefined}) {
     // @ts-expect-error TS2322
     this.#workerCount =
       workerCount ?? ATLASPACK_NAPI_WORKERS ?? getAvailableThreads();
@@ -32,7 +33,9 @@ export class NapiWorkerPool implements INapiWorkerPool {
     this.#napiWorkers = [];
 
     for (let i = 0; i < this.#workerCount; i++) {
-      let worker = new Worker(WORKER_PATH);
+      let worker = new Worker(WORKER_PATH, {
+        env: env ? {...process.env, ...env} : process.env,
+      });
       this.#workers.push(worker);
       this.#napiWorkers.push(
         new Promise((res: (result: Promise<never>) => void) =>

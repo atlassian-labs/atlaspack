@@ -247,18 +247,93 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
     let package_json = context.config().load_package_json::<PackageJson>().ok();
 
-    let automatic_jsx_runtime = compiler_options
-      .map(|co| {
-        co.jsx
+    // Determine JSX configuration
+    let mut is_jsx = matches!(file_type, FileType::Jsx | FileType::Tsx);
+    let mut pragma: Option<String> = None;
+    let mut pragma_frag: Option<String> = None;
+    let mut jsx_import_source: Option<String> = None;
+    let mut automatic_jsx_runtime = false;
+
+    if asset.is_source {
+      // Check for React dependencies in package.json (equivalent to v2 logic)
+      let react_lib = if let Some(pkg) = &package_json {
+        // Check for React in dependencies using the existing helper function
+        if depends_on_react(&pkg.contents) {
+          Some("react")
+        } else {
+          // For now, we only support React. Other JSX libraries would need
+          // to be added to the DependencyList type and helper functions
+          None
+        }
+      } else {
+        None
+      };
+
+      // Set up JSX pragmas based on library (equivalent to v2 JSX_PRAGMA)
+      if let Some(lib) = react_lib {
+        match lib {
+          "react" => {
+            pragma = Some("React.createElement".to_string());
+            pragma_frag = Some("React.Fragment".to_string());
+          }
+          "preact" => {
+            pragma = Some("h".to_string());
+            pragma_frag = Some("Fragment".to_string());
+          }
+          "nervjs" => {
+            pragma = Some("Nerv.createElement".to_string());
+            pragma_frag = None;
+          }
+          "hyperapp" => {
+            pragma = Some("h".to_string());
+            pragma_frag = None;
+          }
+          _ => {}
+        }
+      }
+
+      // Check tsconfig.json/jsconfig.json for explicit JSX configuration
+      if let Some(co) = compiler_options {
+        // Override pragmas with explicit configuration
+        if let Some(factory) = &co.jsx_factory {
+          pragma = Some(factory.clone());
+        }
+        if let Some(fragment_factory) = &co.jsx_fragment_factory {
+          pragma_frag = Some(fragment_factory.clone());
+        }
+
+        // Check for automatic JSX runtime
+        if matches!(co.jsx, Some(Jsx::ReactJsx) | Some(Jsx::ReactJsxDev)) || co.jsx_import_source.is_some() {
+          automatic_jsx_runtime = true;
+          jsx_import_source = co.jsx_import_source.clone();
+        }
+      }
+
+      // Determine if JSX should be enabled (equivalent to v2 logic)
+      // For .jsx and .tsx files, always enable JSX
+      // For .js files, enable JSX if we have configuration (tsconfig or React dependencies)
+      // For .ts files, disable JSX unless explicitly configured
+      if matches!(file_type, FileType::Jsx | FileType::Tsx) {
+        // .jsx and .tsx files should always have JSX enabled
+        is_jsx = true;
+      } else if matches!(file_type, FileType::Js) {
+        // For .js files, enable JSX if we have configuration
+        is_jsx = compiler_options
           .as_ref()
-          .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
-          || co.jsx_import_source.is_some()
-      })
-      .unwrap_or_else(|| {
-        package_json
-          .as_ref()
-          .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents))
-      });
+          .and_then(|co| co.jsx.as_ref())
+          .is_some() || pragma.is_some();
+      } else if matches!(file_type, FileType::Ts) {
+        // TypeScript files without .tsx extension should not have JSX
+        is_jsx = false;
+      }
+    }
+
+    // Update automatic_jsx_runtime based on package.json if not set by tsconfig
+    if !automatic_jsx_runtime {
+      automatic_jsx_runtime = package_json
+        .as_ref()
+        .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents));
+    }
 
     let transform_config = atlaspack_js_swc_core::Config {
       automatic_jsx_runtime,
@@ -278,15 +353,13 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       is_browser: env.context.is_browser(),
       is_development: self.options.mode == BuildMode::Development,
       is_esm_output: env.output_format == OutputFormat::EsModule,
-      is_jsx: matches!(file_type, FileType::Jsx | FileType::Tsx),
+      is_jsx,
       is_library: env.is_library,
       is_type_script: matches!(file_type, FileType::Ts | FileType::Tsx),
       is_worker: env.context.is_worker(),
-      jsx_import_source: compiler_options
-        .and_then(|co| co.jsx_import_source.clone())
-        .or_else(|| automatic_jsx_runtime.then_some(String::from("react"))),
-      jsx_pragma: compiler_options.and_then(|co| co.jsx_factory.clone()),
-      jsx_pragma_frag: compiler_options.and_then(|co| co.jsx_fragment_factory.clone()),
+      jsx_import_source: jsx_import_source.or_else(|| automatic_jsx_runtime.then_some(String::from("react"))),
+      jsx_pragma: pragma,
+      jsx_pragma_frag: pragma_frag,
       magic_comments: self.config.magic_comments.unwrap_or_default(),
       add_display_name: self.config.add_react_display_name,
       module_id: asset.id.to_string(),

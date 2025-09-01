@@ -43,20 +43,20 @@ export class AtlaspackWorker {
     async ({kind, specifier, resolveFrom}) => {
       let customRequire = module.createRequire(resolveFrom);
       let resolvedPath = customRequire.resolve(specifier);
-      let resolvedModule = await import(resolvedPath);
+      let resolvedModule = customRequire(resolvedPath);
+
+      // Handle both CommonJS and ES module exports
+      let plugin = resolvedModule.default ? resolvedModule.default : resolvedModule;
+      if (!plugin) {
+        throw new Error(`Plugin ${specifier} has no exports.`);
+      }
 
       let instance = undefined;
-      if (resolvedModule.default && resolvedModule.default[CONFIG]) {
-        instance = resolvedModule.default[CONFIG];
-      } else if (
-        resolvedModule.default &&
-        resolvedModule.default.default &&
-        resolvedModule.default.default[CONFIG]
-      ) {
-        instance = resolvedModule.default.default[CONFIG];
+      if (plugin[CONFIG]) {
+        instance = plugin[CONFIG];
       } else {
         throw new Error(
-          `Plugin could not be resolved\n\t${kind}\n\t${resolveFrom}\n\t${specifier}`,
+          `Plugin ${specifier} is not a valid Atlaspack plugin, should export an instance of a Atlaspack plugin ex. "export default new Resolver({ ... })".`,
         );
       }
 

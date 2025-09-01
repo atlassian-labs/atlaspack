@@ -59,7 +59,11 @@ export class AtlaspackV3 {
 
     let isDefaultNapiWorkerPool = false;
     if (!napiWorkerPool) {
-      napiWorkerPool = new NapiWorkerPool();
+      // Set ATLASPACK_V3 environment variable for workers when atlaspackV3 is enabled
+      const env = options.featureFlags?.atlaspackV3 ? {ATLASPACK_V3: 'true'} : undefined;
+      // eslint-disable-next-line no-console
+      console.log('creating napi worker pool with env', env);
+      napiWorkerPool = new NapiWorkerPool({env});
       isDefaultNapiWorkerPool = true;
     }
 
