@@ -1236,17 +1236,15 @@ impl Collect {
 
   fn is_no_rebinding_allowed(&self, ident: &Ident) -> bool {
     let symbol_info = self.symbol_info.get(&ident.to_id());
-    if let Some(symbol_info) = symbol_info {
-      match symbol_info.export_kind {
+    match symbol_info {
+      Some(info) => match info.export_kind {
         ExportKind::Const => true,
-        ExportKind::Let => !symbol_info.is_reassigned,
-        ExportKind::Var => !symbol_info.is_reassigned,
-        ExportKind::Function => !symbol_info.is_reassigned,
-        ExportKind::Class => !symbol_info.is_reassigned,
-      }
-    } else {
+        // If the symbol is reassigned, we need to allow rebinding
+        _ => !info.is_reassigned,
+      },
       // If the symbol is not found, we default to safe and allow rebinding
-      false
+      // This is also the behaviour when the feature flag is disabled
+      None => false,
     }
   }
 }
