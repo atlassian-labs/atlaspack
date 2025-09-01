@@ -184,7 +184,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * the source properties of those targets are used as filters against the base entries.
    * This allows building only specific entries for specific targets.
    */
-  allowExplicitTargetEntries: false,
+  allowExplicitTargetEntries: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
