@@ -67,12 +67,16 @@ impl<'a> ExportScannerVisitor<'a> {
   ///
   /// For example:
   ///
-  ///     export const foo = 1;
+  /// ```javascript
+  /// export const foo = 1;
+  /// ```
   ///
   /// Will extract:
   ///
-  ///     const foo = 1;
-  ///     exports.foo = foo;
+  /// ```javascript
+  /// const foo = 1;
+  /// exports.foo = foo;
+  /// ```
   ///
   fn find_exports_from_binding_ident(
     &mut self,
@@ -93,12 +97,16 @@ impl<'a> ExportScannerVisitor<'a> {
   ///
   /// For example:
   ///
-  ///     export const { foo } = obj;
+  /// ```javascript
+  /// export const { foo } = obj;
+  /// ```
   ///
   /// Will extract:
   ///
-  ///     const { foo } = obj;
-  ///     exports.foo = foo;
+  /// ```javascript
+  /// const { foo } = obj;
+  /// exports.foo = foo;
+  /// ```
   ///
   fn find_exports_from_object_pattern(&mut self, object_pat: &ObjectPat, export_kind: &ExportKind) {
     for prop in &object_pat.props {
@@ -135,11 +143,15 @@ impl<'a> ExportScannerVisitor<'a> {
   ///
   /// This happens when we have:
   ///
-  ///     export const { foo: <PAT> } = ...;
+  /// ```javascript
+  /// export const { foo: <PAT> } = ...;
+  /// ```
   ///
   /// The issue is there are many valid patterns. For example:
   ///
-  ///     export const { foo: { bar } } = ...;
+  /// ```javascript
+  /// export const { foo: { bar } } = ...;
+  /// ```
   ///
   fn find_exports_from_pat(&mut self, pat: &Pat, export_kind: &ExportKind) {
     match pat {
@@ -169,16 +181,22 @@ impl<'a> ExportScannerVisitor<'a> {
   ///
   /// This happens when we have:
   ///
-  ///     export const [<PAT>]= ...;
+  /// ```javascript
+  /// export const [<PAT>]= ...;
+  /// ```
   ///
   /// The issue is there are many valid patterns. For example:
   ///
-  ///     export const [foo, bar, ...rest, { abc }] = ...;
+  /// ```javascript
+  /// export const [foo, bar, ...rest, { abc }] = ...;
+  /// ```
   ///
   /// We recursively extract exports from each element. Missing elements are ignored.
   /// An element is missing on this sample:
   ///
-  ///     export const [one, two, , four] = ...;
+  /// ```javascript
+  /// export const [one, two, , four] = ...;
+  /// ```
   ///
   fn find_exports_from_array_pattern(&mut self, array_pat: &ArrayPat, export_kind: &ExportKind) {
     for elem in array_pat.elems.iter().flatten() {
@@ -190,8 +208,10 @@ impl<'a> ExportScannerVisitor<'a> {
   ///
   /// This happens when we have:
   ///
-  ///     export const { ...<PAT> } = ...;
-  ///     export const [ ...<PAT> ] = ...;
+  /// ```javascript
+  /// export const { ...<PAT> } = ...;
+  /// export const [ ...<PAT> ] = ...;
+  /// ```
   ///
   /// We recursively extract exports from the `<PAT>` node.
   fn find_exports_from_rest_pattern(&mut self, rest_pat: &RestPat, export_kind: &ExportKind) {
@@ -202,8 +222,10 @@ impl<'a> ExportScannerVisitor<'a> {
   ///
   /// This happens when we have:
   ///
-  ///     export const { a = 10 } = ...;
-  ///     export const { <PAT> = <DEFAULT> } = ...;
+  /// ```javascript
+  /// export const { a = 10 } = ...;
+  /// export const { <PAT> = <DEFAULT> } = ...;
+  /// ```
   ///
   /// We recursively extract exports from `<PAT>`.
   fn find_exports_from_assign_pattern(&mut self, assign_pat: &AssignPat, export_kind: &ExportKind) {
@@ -329,11 +351,15 @@ impl Visit for BindingVisitor<'_> {
   ///
   /// For example:
   ///
-  ///     export { x };
+  /// ```javascript
+  /// export { x };
+  /// ```
   ///
   /// Gives us an identifier `x` that we can use to identify the kind of export.
   ///
-  ///     const x = 1;
+  /// ```javascript
+  /// const x = 1;
+  /// ```
   fn visit_var_decl(&mut self, node: &VarDecl) {
     let export_kind = export_kind_from_decl(node);
     for decl in &node.decls {

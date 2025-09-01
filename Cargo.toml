@@ -10,7 +10,7 @@ members = [
 [profile.dev]
 # Even in dev we want the fastest performance to decrease compile times when
 # testing or linking into products
-opt-level = 0
+opt-level = 3
 
 [profile.release]
 # The debug symbols are built for release and then sent to sentry in CI
