@@ -444,7 +444,7 @@ impl Visit for Collect {
               source,
               is_esm: true,
               no_rebinding_allowed: if let ModuleExportName::Ident(ident) = exported_node {
-                self.is_no_rebinding_allowed(&ident)
+                self.is_no_rebinding_allowed(ident)
               } else {
                 false
               },
@@ -553,7 +553,7 @@ impl Visit for Collect {
               loc: SourceLocation::from(&self.source_map, node.span),
               source: None,
               is_esm: true,
-              no_rebinding_allowed: self.is_no_rebinding_allowed(&ident),
+              no_rebinding_allowed: self.is_no_rebinding_allowed(ident),
             },
           );
           self
@@ -582,7 +582,7 @@ impl Visit for Collect {
               loc: SourceLocation::from(&self.source_map, node.span),
               source: None,
               is_esm: true,
-              no_rebinding_allowed: self.is_no_rebinding_allowed(&ident),
+              no_rebinding_allowed: self.is_no_rebinding_allowed(ident),
             },
           );
           self
