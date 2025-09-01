@@ -100,7 +100,13 @@ pub fn create_environment_id(
   should_optimize.hash(&mut hasher);
   should_scope_hoist.hash(&mut hasher);
   source_map.clone().unwrap_or_default().hash(&mut hasher);
-  custom_env.hash(&mut hasher); // BTreeMap implements Hash with deterministic ordering
+
+  // Only hash custom_env if it's Some and not empty to maintain backward compatibility
+  if let Some(ref env) = custom_env {
+    if !env.is_empty() {
+      env.hash(&mut hasher);
+    }
+  }
 
   let hash = hasher.finish(); // We can simply expose this as a nº too
   format!("{:016x}", hash)
@@ -251,7 +257,7 @@ mod test {
     tracing_subscriber::fmt::init();
     let environment = Environment::default();
     let id = environment.id();
-    assert_eq!(id, "627f0f1998db2469");
+    assert_eq!(id, "fe4d1585daa1b9c5");
 
     let environment = Environment {
       context: EnvironmentContext::Node,
@@ -264,7 +270,7 @@ mod test {
       ..Default::default()
     };
     let id = environment.id();
-    assert_eq!(id, "cf95b1192e9d098e");
+    assert_eq!(id, "9602bef6237ef34c");
   }
 
   #[test]
@@ -354,7 +360,7 @@ mod test {
       ..Default::default()
     };
 
-    // None and empty BTreeMap should produce different IDs
-    assert_ne!(environment_none.id(), environment_empty.id());
+    // None and empty BTreeMap should produce the same IDs (both don't affect the hash)
+    assert_eq!(environment_none.id(), environment_empty.id());
   }
 }

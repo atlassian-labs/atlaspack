@@ -189,7 +189,7 @@ export const DEFAULT_FEATURE_FLAGS = {
   /**
    * When enabled, allows custom per-target "env" properties to be used in transformers.
    */
-  customEnvInTargets: false,
+  customEnvInTargets: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
