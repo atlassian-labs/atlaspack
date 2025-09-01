@@ -11,7 +11,7 @@
   },
   "main": "./lib/CSSNanoOptimizer.js",
   "source": "./src/CSSNanoOptimizer.ts",
-  "types": "./lib/types/CSSNanoOptimizer.d.ts",
+  "types": "./src/CSSNanoOptimizer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

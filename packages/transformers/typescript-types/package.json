@@ -11,7 +11,7 @@
   },
   "main": "./lib/TSTypesTransformer.js",
   "source": "./src/TSTypesTransformer.ts",
-  "types": "./lib/types/TSTypesTransformer.d.ts",
+  "types": "./src/TSTypesTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

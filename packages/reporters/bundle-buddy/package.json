@@ -11,7 +11,7 @@
   },
   "main": "./lib/BundleBuddyReporter.js",
   "source": "./src/BundleBuddyReporter.ts",
-  "types": "./lib/types/BundleBuddyReporter.d.ts",
+  "types": "./src/BundleBuddyReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

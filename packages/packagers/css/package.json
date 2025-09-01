@@ -11,7 +11,7 @@
   },
   "main": "./lib/CSSPackager.js",
   "source": "./src/CSSPackager.ts",
-  "types": "./lib/types/CSSPackager.d.ts",
+  "types": "./src/CSSPackager.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

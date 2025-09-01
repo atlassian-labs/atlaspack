@@ -11,7 +11,7 @@
   },
   "main": "./lib/TerserOptimizer.js",
   "source": "./src/TerserOptimizer.ts",
-  "types": "./lib/types/TerserOptimizer.d.ts",
+  "types": "./src/TerserOptimizer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

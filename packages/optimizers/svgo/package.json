@@ -11,7 +11,7 @@
   },
   "main": "./lib/SVGOOptimizer.js",
   "source": "./src/SVGOOptimizer.ts",
-  "types": "./lib/types/SVGOOptimizer.d.ts",
+  "types": "./src/SVGOOptimizer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

@@ -11,7 +11,7 @@
   },
   "main": "./lib/WebExtensionPackager.js",
   "source": "./src/WebExtensionPackager.ts",
-  "types": "./lib/types/WebExtensionPackager.d.ts",
+  "types": "./src/WebExtensionPackager.ts",
   "engines": {
     "node": ">=16.0.0"
   },

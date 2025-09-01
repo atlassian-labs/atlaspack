@@ -11,7 +11,7 @@
   },
   "main": "./lib/JSRuntime.js",
   "source": "./src/JSRuntime.ts",
-  "types": "./lib/types/JSRuntime.d.ts",
+  "types": "./src/JSRuntime.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

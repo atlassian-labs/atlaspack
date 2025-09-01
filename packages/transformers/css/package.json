@@ -11,7 +11,7 @@
   },
   "main": "./lib/CSSTransformer.js",
   "source": "./src/CSSTransformer.ts",
-  "types": "./lib/types/CSSTransformer.d.ts",
+  "types": "./src/CSSTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

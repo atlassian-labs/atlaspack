@@ -11,7 +11,7 @@
   },
   "main": "./lib/JSONTransformer.js",
   "source": "./src/JSONTransformer.ts",
-  "types": "./lib/types/JSONTransformer.d.ts",
+  "types": "./src/JSONTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

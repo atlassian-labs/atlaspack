@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/config-repl",
-  "version": "2.13.33",
+  "version": "2.13.34",
   "license": "MIT",
   "private": true,
   "type": "commonjs",
@@ -20,7 +20,7 @@
     "@atlaspack/optimizer-terser": "2.14.29",
     "@atlaspack/packager-css": "2.14.29",
     "@atlaspack/packager-html": "2.15.11",
-    "@atlaspack/packager-js": "2.22.1",
+    "@atlaspack/packager-js": "2.22.2",
     "@atlaspack/packager-raw": "2.14.29",
     "@atlaspack/reporter-dev-server-sw": "2.14.29",
     "@atlaspack/reporter-json": "2.14.29",

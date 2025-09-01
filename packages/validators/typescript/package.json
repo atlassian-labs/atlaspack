@@ -11,7 +11,7 @@
   },
   "main": "./lib/TypeScriptValidator.js",
   "source": "./src/TypeScriptValidator.ts",
-  "types": "./lib/types/TypeScriptValidator.d.ts",
+  "types": "./src/TypeScriptValidator.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

@@ -12,7 +12,7 @@
   },
   "main": "./lib/LibraryBundler.js",
   "source": "./src/LibraryBundler.ts",
-  "types": "./lib/types/LibraryBundler.d.ts",
+  "types": "./src/LibraryBundler.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

@@ -11,7 +11,7 @@
   },
   "main": "./lib/CSSOptimizer.js",
   "source": "./src/CSSOptimizer.ts",
-  "types": "./lib/types/CSSOptimizer.d.ts",
+  "types": "./src/CSSOptimizer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

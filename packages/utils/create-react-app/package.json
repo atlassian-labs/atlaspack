@@ -11,7 +11,7 @@
     "directory": "packages/utils/create-react-app"
   },
   "source": "./src/bin.ts",
-  "types": "./lib/types/bin.d.ts",
+  "types": "./src/bin.ts",
   "files": [
     "templates",
     "lib",

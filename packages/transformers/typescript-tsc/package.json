@@ -11,7 +11,7 @@
   },
   "main": "./lib/TSCTransformer.js",
   "source": "./src/TSCTransformer.ts",
-  "types": "./lib/types/TSCTransformer.d.ts",
+  "types": "./src/TSCTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

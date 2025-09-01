@@ -13,7 +13,7 @@
   },
   "main": "./lib/ServerReporter.js",
   "source": "./src/ServerReporter.ts",
-  "types": "./lib/types/ServerReporter.d.ts",
+  "types": "./src/ServerReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

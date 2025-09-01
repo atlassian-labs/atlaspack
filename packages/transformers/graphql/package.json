@@ -11,7 +11,7 @@
   },
   "main": "./lib/GraphQLTransformer.js",
   "source": "./src/GraphQLTransformer.ts",
-  "types": "./lib/types/GraphQLTransformer.d.ts",
+  "types": "./src/GraphQLTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

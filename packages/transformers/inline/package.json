@@ -11,7 +11,7 @@
   },
   "main": "./lib/InlineTransformer.js",
   "source": "./src/InlineTransformer.ts",
-  "types": "./lib/types/InlineTransformer.d.ts",
+  "types": "./src/InlineTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

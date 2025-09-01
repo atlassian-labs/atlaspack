@@ -11,7 +11,7 @@
   },
   "main": "./lib/WorkletTransformer.js",
   "source": "./src/WorkletTransformer.ts",
-  "types": "./lib/types/WorkletTransformer.d.ts",
+  "types": "./src/WorkletTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

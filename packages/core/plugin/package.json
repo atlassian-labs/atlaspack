@@ -12,7 +12,7 @@
   },
   "main": "./lib/PluginAPI.js",
   "source": "./src/PluginAPI.ts",
-  "types": "./lib/types/PluginAPI.d.ts",
+  "types": "./src/PluginAPI.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

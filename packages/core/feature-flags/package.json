@@ -12,7 +12,7 @@
   },
   "main": "./lib/index.js",
   "source": "./src/index.ts",
-  "types": "./lib/types/index.d.ts",
+  "types": "./src/index.ts",
   "scripts": {
     "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."

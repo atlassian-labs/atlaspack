@@ -11,7 +11,7 @@
   },
   "main": "./lib/HTMLPackager.js",
   "source": "./src/HTMLPackager.ts",
-  "types": "./lib/types/HTMLPackager.d.ts",
+  "types": "./src/HTMLPackager.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

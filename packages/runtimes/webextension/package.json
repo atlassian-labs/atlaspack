@@ -11,7 +11,7 @@
   },
   "main": "./lib/WebExtensionRuntime.js",
   "source": "./src/WebExtensionRuntime.ts",
-  "types": "./lib/types/WebExtensionRuntime.d.ts",
+  "types": "./src/WebExtensionRuntime.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

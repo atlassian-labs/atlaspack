@@ -11,7 +11,7 @@
   },
   "main": "./lib/XMLPackager.js",
   "source": "./src/XMLPackager.ts",
-  "types": "./lib/types/XMLPackager.d.ts",
+  "types": "./src/XMLPackager.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

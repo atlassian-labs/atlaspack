@@ -11,7 +11,7 @@
   },
   "main": "./lib/BuildMetricsReporter.js",
   "source": "./src/BuildMetricsReporter.ts",
-  "types": "./lib/types/BuildMetricsReporter.d.ts",
+  "types": "./src/BuildMetricsReporter.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

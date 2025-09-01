@@ -11,7 +11,7 @@
   },
   "main": "./lib/PostCSSTransformer.js",
   "source": "./src/PostCSSTransformer.ts",
-  "types": "./lib/types/PostCSSTransformer.d.ts",
+  "types": "./src/PostCSSTransformer.ts",
   "engines": {
     "node": ">= 16.0.0"
   },

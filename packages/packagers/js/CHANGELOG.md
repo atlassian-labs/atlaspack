@@ -1,5 +1,11 @@
 # @atlaspack/packager-js
 
+## 2.22.2
+
+### Patch Changes
+
+- [#768](https://github.com/atlassian-labs/atlaspack/pull/768) [`58b9fb0`](https://github.com/atlassian-labs/atlaspack/commit/58b9fb037680a36a0b4af7890f2a03532095b88f) Thanks [@benjervis](https://github.com/benjervis)! - Fixes a small error in the scope hoisting V2 fixes that caused assets to be wrapped unnecessarily
+
 ## 2.22.1
 
 ### Patch Changes
