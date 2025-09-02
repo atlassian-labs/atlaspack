@@ -162,7 +162,10 @@ async function run({input, api, options}: RunOpts<TargetRequestResult>) {
             options.projectRoot,
             path.resolve(
               fromProjectPath(options.projectRoot, input.packagePath),
-              source,
+              nullthrows(
+                source,
+                'Source must be not be undefined when specified',
+              ),
             ),
           );
           return targetSourcePath === currentEntryPath;
