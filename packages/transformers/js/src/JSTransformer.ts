@@ -520,6 +520,8 @@ export default new Transformer({
       hmr_improvements: options.featureFlags.hmrImprovements,
       computed_properties_fix: options.featureFlags.unusedComputedPropertyFix,
       add_display_name: Boolean(config.addReactDisplayName),
+      exports_rebinding_optimisation:
+        options.featureFlags.exportsRebindingOptimisation,
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
