@@ -142,32 +142,36 @@ async function run({input, api, options}: RunOpts<TargetRequestResult>) {
     // Only explicit targets are allowed (i.e. an object of targets)
     !Array.isArray(options.targets)
   ) {
-    // Get the current entry file path relative to project root
-    const currentEntryPath = input.filePath;
+    // Check if ALL targets have sources - only apply new behavior if they do
+    const allTargetsHaveSources = targets.every((t) => t.source);
 
-    // Filter targets to only include those whose source matches the current entry
-    targets = targets.filter((target) => {
-      if (!target.source) {
-        return false; // Skip targets without source property
-      }
+    if (allTargetsHaveSources) {
+      // Get the current entry file path relative to project root
+      const currentEntryPath = input.filePath;
 
-      // Handle both string and array sources
-      const sources = Array.isArray(target.source)
-        ? target.source
-        : [target.source];
+      // Filter targets to only include those whose source matches the current entry
+      targets = targets.filter((target) => {
+        // Handle both string and array sources
+        const sources = Array.isArray(target.source)
+          ? target.source
+          : [target.source];
 
-      // Check if current entry matches any of the target sources
-      return sources.some((source) => {
-        const targetSourcePath = toProjectPath(
-          options.projectRoot,
-          path.resolve(
-            fromProjectPath(options.projectRoot, input.packagePath),
-            source,
-          ),
-        );
-        return targetSourcePath === currentEntryPath;
+        // Check if current entry matches any of the target sources
+        return sources.some((source) => {
+          const targetSourcePath = toProjectPath(
+            options.projectRoot,
+            path.resolve(
+              fromProjectPath(options.projectRoot, input.packagePath),
+              source,
+            ),
+          );
+          return targetSourcePath === currentEntryPath;
+        });
       });
-    });
+    } else {
+      // If not all targets have sources, fall back to old behavior (skip targets with sources)
+      targets = targets.filter((target) => !target.source);
+    }
   }
 
   assertTargetsAreNotEntries(targets, input, options);
@@ -370,6 +374,17 @@ export class TargetResolver {
             (target) =>
               !skipTarget(target.name, exclusiveTarget, target.source),
           );
+
+        // Apply allowExplicitTargetEntries filtering logic
+        if (getFeatureFlag('allowExplicitTargetEntries')) {
+          // Check if ALL targets have sources - only apply new behavior if they do
+          const allTargetsHaveSources = targets.every((t) => t.source);
+
+          if (!allTargetsHaveSources) {
+            // If not all targets have sources, fall back to old behavior (skip targets with sources)
+            targets = targets.filter((target) => !target.source);
+          }
+        }
       }
 
       let serve = this.options.serveOptions;

@@ -26,37 +26,30 @@ describe('targets', () => {
         yarn.lock: {}
         `;
 
-    const b = await bundle(
-      [
-        path.join(targetDir, './input.js'),
-        path.join(targetDir, './input2.js'),
-        path.join(targetDir, './input3.js'),
-      ],
-      {
-        inputFS: overlayFS,
-        targets: {
-          one: {
-            source: './input.js',
-            context: 'browser',
-            distDir: './dist',
-            engines: {
-              browsers: ['last 1 Chrome version'],
-            },
-          },
-          two: {
-            source: ['./input2.js', './input3.js'],
-            context: 'browser',
-            distDir: './dist',
-            engines: {
-              browsers: ['last 1 Firefox version'],
-            },
+    const b = await bundle([], {
+      inputFS: overlayFS,
+      targets: {
+        one: {
+          source: path.join(targetDir, './input.js'),
+          context: 'browser',
+          distDir: './dist',
+          engines: {
+            browsers: ['last 1 Chrome version'],
           },
         },
-        featureFlags: {
-          allowExplicitTargetEntries: true,
+        two: {
+          source: [
+            path.join(targetDir, './input2.js'),
+            path.join(targetDir, './input3.js'),
+          ],
+          context: 'browser',
+          distDir: './dist',
+          engines: {
+            browsers: ['last 1 Firefox version'],
+          },
         },
       },
-    );
+    });
 
     const bundles = b.getBundles();
     // The feature flag should filter entries per target, so we should get 3 bundles:

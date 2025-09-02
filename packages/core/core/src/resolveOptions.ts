@@ -91,6 +91,29 @@ export default async function resolveOptions(
     entries = [path.resolve(inputCwd, initialOptions.entries)];
   }
 
+  // When allowExplicitTargetEntries is enabled and no entries are provided,
+  // automatically derive entries from target sources
+  if (
+    getFeatureFlag('allowExplicitTargetEntries') &&
+    initialOptions.targets &&
+    !Array.isArray(initialOptions.targets) &&
+    entries.length === 0
+  ) {
+    const targetSources = new Set<string>();
+
+    for (const [, target] of Object.entries(initialOptions.targets)) {
+      if (target.source) {
+        const sources = Array.isArray(target.source)
+          ? target.source
+          : [target.source];
+        for (const source of sources) {
+          targetSources.add(source);
+        }
+      }
+    }
+    entries = Array.from(targetSources);
+  }
+
   let shouldMakeEntryReferFolder = false;
   if (entries.length === 1 && !isGlob(entries[0])) {
     let [entry] = entries;
