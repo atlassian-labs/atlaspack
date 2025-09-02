@@ -1580,6 +1580,7 @@ ${code}
                     symbol,
                   )}, ${get}${set});\n`;
                   this.usedHelpers.add('$parcel$export');
+                  prependLineCount++;
                 }
               }
             }
