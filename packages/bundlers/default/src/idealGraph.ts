@@ -841,6 +841,7 @@ export function createIdealGraph(
 
     let parentRoots = bundleRootGraph.getNodeIdsConnectedTo(id, ALL_EDGE_TYPES);
     let canDelete =
+      getBundleFromBundleRoot(bundleRoot).bundleBehavior !== 'inline' &&
       getBundleFromBundleRoot(bundleRoot).bundleBehavior !== 'isolated' &&
       getBundleFromBundleRoot(bundleRoot).bundleBehavior !== 'inlineIsolated';
     if (parentRoots.length === 0) continue;
@@ -1245,7 +1246,13 @@ export function createIdealGraph(
 
       // If a bundle does not have a main entry asset, it's somehow just a
       // shared bundle, and will be merged/deleted by other means.
-      if (bundleNode.value.mainEntryAsset == null) {
+      // Also skip inline bundles from merged
+      if (
+        bundleNode.value.mainEntryAsset == null ||
+        bundleNode.value.bundleBehavior === 'inline' ||
+        bundleNode.value.bundleBehavior === 'inlineIsolated' ||
+        bundleNode.value.bundleBehavior === 'isolated'
+      ) {
         continue;
       }
 
@@ -1852,7 +1859,7 @@ export function createIdealGraph(
     }
   }
   function deleteBundle(bundleRoot: BundleRoot) {
-    bundleGraph.removeNode(nullthrows(bundles.get(bundleRoot.id)));
+    bundleGraph.removeNode(nullthrows(bundles.get(bundleRoot.id)), false);
     bundleRoots.delete(bundleRoot);
     bundles.delete(bundleRoot.id);
     let bundleRootId = assetToBundleRootNodeId.get(bundleRoot);
@@ -1941,10 +1948,15 @@ export function createIdealGraph(
   }
 
   function getBundleFromBundleRoot(bundleRoot: BundleRoot): Bundle {
-    let bundle = bundleGraph.getNode(
-      nullthrows(bundleRoots.get(bundleRoot))[0],
-    );
-    invariant(bundle !== 'root' && bundle != null);
+    let nodeId = nullthrows(bundleRoots.get(bundleRoot))[0];
+    let bundle = bundleGraph.getNode(nodeId);
+
+    if (!(bundle !== 'root' && bundle != null)) {
+      throw new Error(
+        `Bundle (${nodeId}) for bundle root "${bundleRoot.filePath}" not found in bundle graph`,
+      );
+    }
+
     return bundle;
   }
 
