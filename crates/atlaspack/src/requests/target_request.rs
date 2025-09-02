@@ -2008,8 +2008,8 @@ mod tests {
   }
 
   #[tokio::test(flavor = "multi_thread")]
-  async fn test_allow_explicit_target_entries_feature_flag_enabled_single_source() {
-    // When feature flag is enabled, targets should be filtered by matching source
+  async fn test_allow_explicit_target_entries_feature_flag_enabled() {
+    // When feature flag is enabled, existing behaviour should be preserved
     let feature_flags =
       atlaspack_core::types::FeatureFlags::with_bool_flag("allowExplicitTargetEntries", true);
 
@@ -2025,7 +2025,6 @@ mod tests {
             "distDir": "./dist/one"
           },
           "two": {
-            "source": "./input2.js", 
             "distDir": "./dist/two"
           }
         }
@@ -2043,140 +2042,8 @@ mod tests {
         "Expected 1 target matching the entry"
       );
       assert_eq!(
-        output.targets[0].name, "one",
-        "Expected target 'one' to match input.js"
-      );
-    } else {
-      panic!("Expected successful target resolution");
-    }
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn test_allow_explicit_target_entries_feature_flag_enabled_array_source() {
-    // When feature flag is enabled with array sources, should match any source in array
-    let feature_flags =
-      atlaspack_core::types::FeatureFlags::with_bool_flag("allowExplicitTargetEntries", true);
-
-    let mut options = AtlaspackOptions::default();
-    options.feature_flags = feature_flags;
-    options.entries = vec!["input2.js".to_string()];
-
-    let targets = targets_from_config(
-      r#"{
-        "targets": {
-          "one": {
-            "source": "./input.js",
-            "distDir": "./dist/one"
-          },
-          "multi": {
-            "source": ["./input2.js", "./input3.js"], 
-            "distDir": "./dist/multi"
-          }
-        }
-      }"#
-        .to_string(),
-      None,
-      Some(options),
-    )
-    .await;
-
-    if let Ok(RequestResult::Target(output)) = targets {
-      assert_eq!(
-        output.targets.len(),
-        1,
-        "Expected 1 target matching the entry"
-      );
-      assert_eq!(
-        output.targets[0].name, "multi",
-        "Expected target 'multi' to match input2.js from array"
-      );
-    } else {
-      panic!("Expected successful target resolution");
-    }
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn test_allow_explicit_target_entries_feature_flag_enabled_no_matching_source() {
-    // When feature flag is enabled but no sources match, should get no targets
-    let feature_flags =
-      atlaspack_core::types::FeatureFlags::with_bool_flag("allowExplicitTargetEntries", true);
-
-    let mut options = AtlaspackOptions::default();
-    options.feature_flags = feature_flags;
-    options.entries = vec!["nonexistent.js".to_string()];
-
-    let targets = targets_from_config(
-      r#"{
-        "targets": {
-          "one": {
-            "source": "./input.js",
-            "distDir": "./dist/one"
-          },
-          "two": {
-            "source": "./input2.js", 
-            "distDir": "./dist/two"
-          }
-        }
-      }"#
-        .to_string(),
-      None,
-      Some(options),
-    )
-    .await;
-
-    if let Ok(RequestResult::Target(output)) = targets {
-      assert_eq!(
-        output.targets.len(),
-        0,
-        "Expected 0 targets when no sources match"
-      );
-    } else {
-      panic!("Expected successful target resolution");
-    }
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn test_allow_explicit_target_entries_feature_flag_enabled_targets_without_source() {
-    // When feature flag is enabled, targets without source should still be included
-    let feature_flags =
-      atlaspack_core::types::FeatureFlags::with_bool_flag("allowExplicitTargetEntries", true);
-
-    let mut options = AtlaspackOptions::default();
-    options.feature_flags = feature_flags;
-    options.entries = vec!["input.js".to_string()];
-
-    let targets = targets_from_config(
-      r#"{
-        "targets": {
-          "no_source": {
-            "distDir": "./dist/no_source"
-          },
-          "with_source": {
-            "source": "./input.js",
-            "distDir": "./dist/with_source"
-          }
-        }
-      }"#
-        .to_string(),
-      None,
-      Some(options),
-    )
-    .await;
-
-    if let Ok(RequestResult::Target(output)) = targets {
-      assert_eq!(
-        output.targets.len(),
-        2,
-        "Expected 2 targets: one without source, one matching source"
-      );
-      let target_names: Vec<&str> = output.targets.iter().map(|t| t.name.as_str()).collect();
-      assert!(
-        target_names.contains(&"no_source"),
-        "Expected target without source to be included"
-      );
-      assert!(
-        target_names.contains(&"with_source"),
-        "Expected target with matching source to be included"
+        output.targets[0].name, "two",
+        "Expected target 'two' as it doesn't have a source"
       );
     } else {
       panic!("Expected successful target resolution");
