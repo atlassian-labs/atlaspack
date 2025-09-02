@@ -114,14 +114,9 @@ export function skipTarget(
   //  We skip targets if they have a descriptor.source and don't match the current exclusiveTarget
   //  They will be handled by a separate resolvePackageTargets call from their Entry point
   //  but with exclusiveTarget set.
-  //  However, when allowExplicitTargetEntries is enabled, we don't skip targets with source
-  //  as they will be filtered later based on the current entry.
 
-  const allowExplicitTargetEntries = getFeatureFlag(
-    'allowExplicitTargetEntries',
-  );
   return exclusiveTarget == null
-    ? descriptorSource != null && !allowExplicitTargetEntries
+    ? descriptorSource != null
     : targetName !== exclusiveTarget;
 }
 
@@ -144,7 +139,6 @@ async function run({input, api, options}: RunOpts<TargetRequestResult>) {
   ) {
     // Check if ALL targets have sources - only apply new behavior if they do
     const allTargetsHaveSources = targets.every((t) => t.source);
-
     if (allTargetsHaveSources) {
       // Get the current entry file path relative to project root
       const currentEntryPath = input.filePath;
@@ -375,6 +369,8 @@ export class TargetResolver {
           })
           .filter(
             (target) =>
+              (getFeatureFlag('allowExplicitTargetEntries') &&
+                this.options.entries.length !== 0) ||
               !skipTarget(target.name, exclusiveTarget, target.source),
           );
 
