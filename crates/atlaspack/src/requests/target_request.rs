@@ -349,6 +349,13 @@ impl TargetRequest {
           target_filter = Some(target_list);
         }
         Targets::CustomTarget(custom_targets) => {
+          // Check if ALL targets have sources - only apply new behavior if they do
+          let all_targets_have_sources = if allow_explicit_target_entries {
+            custom_targets.values().all(|t| t.source.is_some())
+          } else {
+            false
+          };
+
           for (name, descriptor) in custom_targets.iter() {
             targets.push(self.target_from_descriptor(
               None,
@@ -357,6 +364,7 @@ impl TargetRequest {
               name,
               &request_context.project_root,
               allow_explicit_target_entries,
+              all_targets_have_sources,
             )?);
           }
 
@@ -381,6 +389,7 @@ impl TargetRequest {
             builtin_target.name,
             &request_context.project_root,
             allow_explicit_target_entries,
+            false, // builtin targets don't participate in the all_targets_have_sources logic
           )?);
         }
       }
@@ -420,6 +429,7 @@ impl TargetRequest {
         custom_target.name,
         &request_context.project_root,
         allow_explicit_target_entries,
+        false, // package.json custom targets don't participate in the all_targets_have_sources logic
       )?);
     }
 
@@ -532,6 +542,7 @@ impl TargetRequest {
     target_name: &str,
     source: &Option<SourceField>,
     allow_explicit_target_entries: bool,
+    all_targets_have_sources: bool,
   ) -> bool {
     // We skip targets if they have a descriptor.source that does not match the current
     // exclusiveTarget. They will be handled by a separate resolvePackageTargets call from their
@@ -539,11 +550,19 @@ impl TargetRequest {
     // However, when allowExplicitTargetEntries is enabled, we don't skip targets with source
     // as they will be filtered later based on the current entry.
     match self.entry.target.as_ref() {
-      None => source.is_some() && !allow_explicit_target_entries,
+      None => {
+        if allow_explicit_target_entries {
+          // If not all targets have sources, fall back to old behavior (skip targets with sources)
+          source.is_some() && !all_targets_have_sources
+        } else {
+          source.is_some()
+        }
+      }
       Some(exclusive_target) => target_name != exclusive_target,
     }
   }
 
+  #[allow(clippy::too_many_arguments)] // `allow_explicit_target_entries` will be removed once feature is cleaned up
   fn target_from_descriptor(
     &self,
     dist: Option<PathBuf>,
@@ -552,17 +571,20 @@ impl TargetRequest {
     target_name: &str,
     project_root: &Path,
     allow_explicit_target_entries: bool,
+    all_targets_have_sources: bool,
   ) -> Result<Option<Target>, anyhow::Error> {
     if self.skip_target(
       target_name,
       &target_descriptor.source,
       allow_explicit_target_entries,
+      all_targets_have_sources,
     ) {
       return Ok(None);
     }
 
     // Additional filtering for allowExplicitTargetEntries feature
     if allow_explicit_target_entries
+      && all_targets_have_sources
       && target_descriptor.source.is_some()
       && !self.entry_matches_target_source(&target_descriptor.source, project_root)
     {
