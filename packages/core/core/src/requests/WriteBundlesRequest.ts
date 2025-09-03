@@ -4,7 +4,12 @@ import {getFeatureFlag} from '@atlaspack/feature-flags';
 import type {SharedReference} from '@atlaspack/workers';
 import type {StaticRunOpts} from '../RequestTracker';
 import {requestTypes} from '../RequestTracker';
-import type {PackagedBundleInfo} from '../types';
+import {
+  BundleBehavior,
+  type PackagedBundleInfo,
+  type Bundle,
+  type AtlaspackOptions,
+} from '../types';
 import type BundleGraph from '../BundleGraph';
 import type {BundleInfo} from '../PackagerRunner';
 import {report} from '../ReporterRunner';
@@ -66,8 +71,12 @@ export default function createWriteBundlesRequest(
   };
 }
 
-// @ts-expect-error TS7031
-async function run({input, api, farm, options}) {
+async function run({
+  input,
+  api,
+  farm,
+  options,
+}: RunInput<WriteBundlesRequestResult>) {
   let {bundleGraph, optionsRef} = input;
   let {ref, dispose} = await farm.createSharedReference(bundleGraph);
 
@@ -77,7 +86,7 @@ async function run({input, api, farm, options}) {
   let bundleInfoMap: {
     [key: string]: BundleInfo;
   } = {};
-  let writeEarlyPromises: Record<string, any> = {};
+  let writeEarlyPromises: Record<string, Promise<PackagedBundleInfo>> = {};
   let hashRefToNameHash = new Map();
 
   // Include inline bundles so that non-inline bundles referenced from inline bundles are written to
@@ -87,12 +96,10 @@ async function run({input, api, farm, options}) {
   });
   const bundles = allBundles
     .filter(
-      // @ts-expect-error TS7006
       (bundle) =>
-        bundle.bundleBehavior !== 'inline' &&
-        bundle.bundleBehavior !== 'inline-isolated',
+        bundle.bundleBehavior !== BundleBehavior.inline &&
+        bundle.bundleBehavior !== BundleBehavior.inlineIsolated,
     )
-    // @ts-expect-error TS7006
     .filter((bundle) => {
       // Do not package and write placeholder bundles to disk. We just
       // need to update the name so other bundles can reference it.
@@ -119,7 +126,6 @@ async function run({input, api, farm, options}) {
     });
 
   let cachedBundles = new Set(
-    // @ts-expect-error TS7006
     bundles.filter((b) => api.canSkipSubrequest(bundleGraph.getHash(b))),
   );
 
@@ -133,7 +139,6 @@ async function run({input, api, farm, options}) {
     reportPackagingProgress(completeBundles, bundles.length);
 
     await Promise.all(
-      // @ts-expect-error TS7006
       bundles.map(async (bundle) => {
         let request = createPackageRequest({
           bundle,
@@ -185,7 +190,6 @@ async function run({input, api, farm, options}) {
     );
     assignComplexNameHashes(hashRefToNameHash, bundles, bundleInfoMap, options);
     await Promise.all(
-      // @ts-expect-error TS7006
       bundles.map((bundle) => {
         let promise =
           writeEarlyPromises[bundle.id] ??
@@ -198,7 +202,6 @@ async function run({input, api, farm, options}) {
             }),
           );
 
-        // @ts-expect-error TS7006
         return promise.then((r) => res.set(bundle.id, r));
       }),
     );
@@ -212,12 +215,10 @@ async function run({input, api, farm, options}) {
 
 function assignComplexNameHashes(
   hashRefToNameHash: Map<string, string>,
-  // @ts-expect-error TS2304
   bundles: Array<Bundle>,
   bundleInfoMap: {
     [key: string]: BundleInfo;
   },
-  // @ts-expect-error TS2304
   options: AtlaspackOptions,
 ) {
   for (let bundle of bundles) {
@@ -229,7 +230,6 @@ function assignComplexNameHashes(
       options.shouldContentHash
         ? hashString(
             [...getBundlesIncludedInHash(bundle.id, bundleInfoMap)]
-              // @ts-expect-error TS2538
               .map((bundleId) => bundleInfoMap[bundleId].hash)
               .join(':'),
           ).slice(-8)
@@ -243,7 +243,7 @@ function getBundlesIncludedInHash(
   bundleInfoMap: {
     [key: string]: BundleInfo;
   },
-  included = new Set(),
+  included = new Set<string>(),
 ) {
   included.add(bundleId);
   for (let hashRef of bundleInfoMap[bundleId]?.hashReferences ?? []) {
