@@ -7000,4 +7000,144 @@ describe('scope hoisting', function () {
       },
     );
   });
+
+  describe('exports rebinding optimisation', function () {
+    it(`should not use a binding helper if the export is esm`, async function () {
+      const workingDir = 'esm-export-rebinding-optimisation';
+      const dir = path.join(__dirname, workingDir);
+      await overlayFS.mkdirp(dir);
+
+      await fsFixture(overlayFS, dir)`
+        yarn.lock: {}
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "manualSharedBundles": [{
+                "name": "shared",
+                "assets": ["!index.js"]
+              }]
+            }
+          }
+
+        index.html:
+          <!doctype html>
+          <html>
+          <head>
+            <title>Test</title>
+          </head>
+          <body>
+            <script type="module" src="./index.js"></script>
+          </body>
+          </html>
+
+        index.js:
+          import {one, two} from './one';
+          result([one, two]);
+
+        one.js:
+          export const one = 'one';
+          export let two = 'two';
+      `;
+
+      let bundleGraph = await bundle(path.join(dir, '/index.html'), {
+        inputFS: overlayFS,
+        featureFlags: {exportsRebindingOptimisation: true},
+      });
+
+      let sharedBundle = nullthrows(
+        bundleGraph.getBundles().find((b) => b.manualSharedBundle === 'shared'),
+        'shared bundle not found',
+      );
+      let sharedBundleContents = await overlayFS.readFile(
+        sharedBundle.filePath,
+        'utf8',
+      );
+
+      assert.ok(
+        sharedBundleContents.includes('module.exports["one"]'),
+        'shared bundle should include one without helper',
+      );
+      assert.ok(
+        sharedBundleContents.includes('module.exports["two"]'),
+        'shared bundle should include two without helper',
+      );
+
+      let result;
+      await run(bundleGraph, {
+        result(o: any) {
+          result = o;
+        },
+      });
+
+      assert.deepEqual(result, ['one', 'two']);
+    });
+
+    it(`should use a binding helper if the export is esm`, async function () {
+      const workingDir = 'esm-export-rebinding-optimisation-helper';
+      const dir = path.join(__dirname, workingDir);
+      await overlayFS.mkdirp(dir);
+
+      await fsFixture(overlayFS, dir)`
+        yarn.lock: {}
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "manualSharedBundles": [{
+                "name": "shared",
+                "assets": ["!index.js"]
+              }]
+            }
+          }
+
+        index.html:
+          <!doctype html>
+          <html>
+          <head>
+            <title>Test</title>
+          </head>
+          <body>
+            <script type="module" src="./index.js"></script>
+          </body>
+          </html>
+
+        index.js:
+          import {one} from './one';
+          result([one]);
+
+        one.js:
+          export let one = 'one';
+          one = 'two';
+      `;
+
+      let bundleGraph = await bundle(path.join(dir, '/index.html'), {
+        inputFS: overlayFS,
+        featureFlags: {exportsRebindingOptimisation: true},
+      });
+
+      let sharedBundle = nullthrows(
+        bundleGraph.getBundles().find((b) => b.manualSharedBundle === 'shared'),
+        'shared bundle not found',
+      );
+      let sharedBundleContents = await overlayFS.readFile(
+        sharedBundle.filePath,
+        'utf8',
+      );
+
+      assert.ok(
+        sharedBundleContents.includes('$parcel$export(module.exports, "one",'),
+        'shared bundle should include one with helper',
+      );
+
+      let result;
+      await run(bundleGraph, {
+        result(o: any) {
+          result = o;
+        },
+      });
+
+      assert.deepEqual(result, ['two']);
+    });
+  });
 });

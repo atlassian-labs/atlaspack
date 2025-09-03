@@ -95,19 +95,12 @@ impl<'a> ExportScannerVisitor<'a> {
     }
   }
 
-  /// Extracts exports from a binding ident.
+  /// Finds exports in a binding ident.
   ///
   /// For example:
   ///
   /// ```javascript
   /// export const foo = 1;
-  /// ```
-  ///
-  /// Will extract:
-  ///
-  /// ```javascript
-  /// const foo = 1;
-  /// exports.foo = foo;
   /// ```
   ///
   fn find_exports_from_binding_ident(
@@ -125,19 +118,12 @@ impl<'a> ExportScannerVisitor<'a> {
     );
   }
 
-  /// Extracts exports from an object pattern.
+  /// Finds exports from an object pattern.
   ///
   /// For example:
   ///
   /// ```javascript
   /// export const { foo } = obj;
-  /// ```
-  ///
-  /// Will extract:
-  ///
-  /// ```javascript
-  /// const { foo } = obj;
-  /// exports.foo = foo;
   /// ```
   ///
   fn find_exports_from_object_pattern(&mut self, object_pat: &ObjectPat, export_kind: &ExportKind) {
@@ -171,7 +157,7 @@ impl<'a> ExportScannerVisitor<'a> {
     }
   }
 
-  /// Extracts exports from a pattern.
+  /// Finds exports from a pattern.
   ///
   /// This happens when we have:
   ///
@@ -179,7 +165,7 @@ impl<'a> ExportScannerVisitor<'a> {
   /// export const { foo: <PAT> } = ...;
   /// ```
   ///
-  /// The issue is there are many valid patterns. For example:
+  /// There are many valid patterns, for example:
   ///
   /// ```javascript
   /// export const { foo: { bar } } = ...;
@@ -209,7 +195,7 @@ impl<'a> ExportScannerVisitor<'a> {
     }
   }
 
-  /// Extracts exports from a pattern.
+  /// Finds exports from a pattern.
   ///
   /// This happens when we have:
   ///
@@ -217,7 +203,7 @@ impl<'a> ExportScannerVisitor<'a> {
   /// export const [<PAT>]= ...;
   /// ```
   ///
-  /// The issue is there are many valid patterns. For example:
+  /// There are many valid patterns, for example:
   ///
   /// ```javascript
   /// export const [foo, bar, ...rest, { abc }] = ...;
@@ -236,7 +222,7 @@ impl<'a> ExportScannerVisitor<'a> {
     }
   }
 
-  /// Extracts exports from a rest pattern.
+  /// Finds exports from a rest pattern.
   ///
   /// This happens when we have:
   ///
@@ -250,7 +236,7 @@ impl<'a> ExportScannerVisitor<'a> {
     self.find_exports_from_pat(&rest_pat.arg, export_kind);
   }
 
-  /// Extracts exports from an assign pattern.
+  /// Finds exports from an assign pattern.
   ///
   /// This happens when we have:
   ///
@@ -264,6 +250,14 @@ impl<'a> ExportScannerVisitor<'a> {
     self.find_exports_from_pat(&assign_pat.left, export_kind);
   }
 
+  /// Finds exports from an expression.
+  ///
+  /// This happens when we have an identifier:
+  ///
+  /// ```javascript
+  /// export default foo;
+  /// ```
+  ///
   fn find_exports_from_expr(&mut self, expr: &Expr) {
     if let Expr::Ident(ident) = &expr {
       self
@@ -274,6 +268,20 @@ impl<'a> ExportScannerVisitor<'a> {
     }
   }
 
+  /// Finds exports from a specifier.
+  ///
+  /// This happens when we have a named export:
+  ///
+  /// ```javascript
+  /// export { foo };
+  /// ```
+  ///
+  /// Or a renamed export:
+  ///
+  /// ```javascript
+  /// export { foo as bar };
+  /// ```
+  ///
   fn find_exports_from_specifier(&mut self, specifier: &ExportSpecifier) {
     if let ExportSpecifier::Named(named_specifier) = specifier {
       if let ModuleExportName::Ident(orig_ident) = named_specifier.orig.clone() {
@@ -292,6 +300,14 @@ impl<'a> ExportScannerVisitor<'a> {
     }
   }
 
+  /// Finds exports from a function declaration.
+  ///
+  /// This happens when we have a function declaration:
+  ///
+  /// ```javascript
+  /// export function foo() { ... }
+  /// ```
+  ///
   fn find_exports_from_function_decl(&mut self, func: &FnDecl) {
     self.symbols_info.id_to_symbol_info.insert(
       func.ident.to_id(),
@@ -302,6 +318,14 @@ impl<'a> ExportScannerVisitor<'a> {
     );
   }
 
+  /// Finds exports from a class declaration.
+  ///
+  /// This happens when we have a class declaration:
+  ///
+  /// ```javascript
+  /// export class Foo { ... }
+  /// ```
+  ///
   fn find_exports_from_class_decl(&mut self, class: &ClassDecl) {
     self.symbols_info.id_to_symbol_info.insert(
       class.ident.to_id(),
@@ -417,23 +441,52 @@ impl Visit for BindingVisitor<'_> {
     }
   }
 
+  /// If we find an exported identifier for a function, we need to track it
+  ///
+  /// For example:
+  ///
+  /// ```javascript
+  /// function foo() { ... }
+  ///
+  /// export { foo };
+  /// ```
   fn visit_fn_decl(&mut self, node: &FnDecl) {
     let ident = node.ident.to_id();
-    if self.exported_identifiers.contains_key(&ident) {
-      self
-        .exported_identifiers
-        .get(&ident)
-        .unwrap()
-        .iter()
-        .for_each(|exported_ident| {
-          self.symbols_info.id_to_symbol_info.insert(
-            exported_ident.to_id(),
-            SymbolInfo {
-              export_kind: ExportKind::Function,
-              is_reassigned: self.reassignments.contains(&ident),
-            },
-          );
-        });
+
+    if let Some(exported_idents) = self.exported_identifiers.get(&ident) {
+      exported_idents.iter().for_each(|exported_ident| {
+        self.symbols_info.id_to_symbol_info.insert(
+          exported_ident.to_id(),
+          SymbolInfo {
+            export_kind: ExportKind::Function,
+            is_reassigned: self.reassignments.contains(&ident),
+          },
+        );
+      });
+    }
+  }
+
+  /// If we find an exported identifier for a class, we need to track it
+  ///
+  /// For example:
+  ///
+  /// ```javascript
+  /// class Foo { ... }
+  ///
+  /// export { Foo };
+  /// ```
+  fn visit_class_decl(&mut self, node: &ClassDecl) {
+    let ident = node.ident.to_id();
+    if let Some(exported_idents) = self.exported_identifiers.get(&ident) {
+      exported_idents.iter().for_each(|exported_ident| {
+        self.symbols_info.id_to_symbol_info.insert(
+          exported_ident.to_id(),
+          SymbolInfo {
+            export_kind: ExportKind::Class,
+            is_reassigned: self.reassignments.contains(&ident),
+          },
+        );
+      });
     }
   }
 }
@@ -872,6 +925,34 @@ mod tests {
       r#"
         export class Foo {}
         Foo = 'Foo';
+      "#,
+      |_context| EsmExportClassifier::new(true),
+    );
+
+    let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
+      .symbols_info
+      .id_to_symbol_info
+      .iter()
+      .map(|(key, value)| (key.0.clone(), value))
+      .collect::<HashMap<_, _>>();
+
+    assert_eq!(
+      (symbol_info.get(&Atom::from("Foo")).unwrap()),
+      (&&SymbolInfo {
+        export_kind: ExportKind::Class,
+        is_reassigned: true,
+      })
+    );
+  }
+
+  #[test]
+  fn marks_classes_and_tracks_reassignments_when_exported_after() {
+    let RunVisitResult { visitor, .. } = run_test_visit_const(
+      r#"
+        class Foo {}
+        Foo = 'Foo';
+
+        export { Foo };
       "#,
       |_context| EsmExportClassifier::new(true),
     );
