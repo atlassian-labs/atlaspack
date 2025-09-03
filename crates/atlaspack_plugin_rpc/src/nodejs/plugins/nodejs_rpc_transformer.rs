@@ -133,8 +133,15 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
         move |env| {
           let run_transformer_opts = env.to_js_value(&run_transformer_opts)?;
 
-          let mut contents = env.create_buffer(asset.code.len())?;
-          contents.copy_from_slice(&asset.code);
+          // Passing in an empty buffer causes napi to panic. If asset has no
+          // code, we pass an empty Vec instead.
+          let contents = if asset.code.len() == 0 {
+            env.create_buffer_with_data(Vec::new())?
+          } else {
+            let mut contents = env.create_buffer(asset.code.len())?;
+            contents.copy_from_slice(&asset.code);
+            contents
+          };
 
           let map = if let Some(map) = source_map {
             env.create_string(&map)?.into_unknown()
@@ -150,8 +157,17 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
           let transform_result = return_value.get_element::<JsUnknown>(0)?;
           let transform_result = env.from_js_value::<RpcAssetResult, _>(transform_result)?;
 
-          let contents = return_value.get_element::<JsBuffer>(1)?;
-          let contents = contents.into_value()?.to_vec();
+          let contents = return_value.get_element::<JsUnknown>(1)?;
+
+          // If there was nothing returned from an asset transform, then the
+          // buffer will be empty, which causes napi to panic. If it is empty,
+          // the worker will return `null` instead of an empty buffer, which
+          // means we can check for it here and use an empty Vec.
+          let contents = if contents.is_buffer()? {
+            JsBuffer::from_unknown(contents)?.into_value()?.to_vec()
+          } else {
+            vec![]
+          };
 
           let map = return_value.get_element::<JsString>(2)?.into_utf8()?;
           let map = if map.is_empty() {
