@@ -21,7 +21,6 @@ import type {
   OutputFormat,
   TargetDescriptor,
   HMROptions,
-  Symbol,
   DetailedReportOptions,
 } from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
@@ -211,9 +210,9 @@ export type Asset = {
   astGenerator: ASTGenerator | null | undefined;
   symbols:
     | Map<
-        Symbol,
+        symbol,
         {
-          local: Symbol;
+          local: symbol;
           loc: InternalSourceLocation | null | undefined;
           meta?: Meta | null | undefined;
         }
@@ -366,7 +365,7 @@ export type AssetNode = {
   id: ContentKey;
   readonly type: 'asset';
   value: Asset;
-  usedSymbols: Set<Symbol>;
+  usedSymbols: Set<symbol>;
   hasDeferred?: boolean;
   usedSymbolsDownDirty: boolean;
   usedSymbolsUpDirty: boolean;
@@ -382,7 +381,7 @@ export type DependencyNode = {
   deferred: boolean;
   /** dependency was deferred (= no used symbols (in immediate parents) & side-effect free) */
   hasDeferred?: boolean;
-  usedSymbolsDown: Set<Symbol>;
+  usedSymbolsDown: Set<symbol>;
   /**
    * a requested symbol -> either
    *  - if ambiguous (e.g. dependency to asset group with both CSS modules and JS asset): undefined
@@ -390,10 +389,10 @@ export type DependencyNode = {
    *  - the asset it resolved to, and the potentially renamed export name
    */
   usedSymbolsUp: Map<
-    Symbol,
+    symbol,
     | {
         asset: ContentKey;
-        symbol: Symbol | null | undefined;
+        symbol: symbol | null | undefined;
       }
     | undefined
     | null

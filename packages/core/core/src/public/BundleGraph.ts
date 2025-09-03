@@ -11,7 +11,6 @@ import type {
   NamedBundle,
   SymbolResolution,
   Target,
-  Symbol,
 } from '@atlaspack/types';
 import type {Bundle as InternalBundle, AtlaspackOptions} from '../types';
 import type InternalBundleGraph from '../BundleGraph';
@@ -245,7 +244,7 @@ export default class BundleGraph<TBundle extends IBundle>
 
   getSymbolResolution(
     asset: IAsset,
-    symbol: Symbol,
+    symbol: symbol,
     boundary?: IBundle | null,
   ): SymbolResolution {
     let res = this.#graph.getSymbolResolution(
@@ -336,7 +335,7 @@ export default class BundleGraph<TBundle extends IBundle>
 
   getUsedSymbols(
     v: IAsset | IDependency,
-  ): ReadonlySet<Symbol> | null | undefined {
+  ): ReadonlySet<symbol> | null | undefined {
     if (v instanceof Asset) {
       return this.#graph.getUsedSymbolsAsset(assetToAssetValue(v));
     } else {

@@ -267,8 +267,10 @@ export default new Transformer({
 
       asset.symbols.ensure();
       for (let [k, v] of cssModulesList) {
+        // @ts-expect-error TS2345
         asset.symbols.set(k, v);
       }
+      // @ts-expect-error TS2345
       asset.symbols.set('default', 'default');
 
       assets.push({

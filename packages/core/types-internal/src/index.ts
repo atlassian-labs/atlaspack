@@ -491,9 +491,9 @@ export type Symbol = string;
 export interface AssetSymbols
   extends Iterable<
     [
-      Symbol,
+      symbol,
       {
-        local: Symbol;
+        local: symbol;
         loc: SourceLocation | null | undefined;
         meta?: Meta | null | undefined;
       },
@@ -504,17 +504,17 @@ export interface AssetSymbols
    * This is the default state.
    */
   readonly isCleared: boolean;
-  get(exportSymbol: Symbol):
+  get(exportSymbol: symbol):
     | {
-        local: Symbol;
+        local: symbol;
         loc: SourceLocation | null | undefined;
         meta?: Meta | null | undefined;
       }
     | null
     | undefined;
-  hasExportSymbol(exportSymbol: Symbol): boolean;
-  hasLocalSymbol(local: Symbol): boolean;
-  exportSymbols(): Iterable<Symbol>;
+  hasExportSymbol(exportSymbol: symbol): boolean;
+  hasLocalSymbol(local: symbol): boolean;
+  exportSymbols(): Iterable<symbol>;
 }
 
 export interface MutableAssetSymbols extends AssetSymbols {
@@ -523,12 +523,12 @@ export interface MutableAssetSymbols extends AssetSymbols {
    */
   ensure(): void;
   set(
-    exportSymbol: Symbol,
-    local: Symbol,
+    exportSymbol: symbol,
+    local: symbol,
     loc?: SourceLocation | null | undefined,
     meta?: Meta | null | undefined,
   ): void;
-  delete(exportSymbol: Symbol): void;
+  delete(exportSymbol: symbol): void;
 }
 
 /**
@@ -537,9 +537,9 @@ export interface MutableAssetSymbols extends AssetSymbols {
 export interface MutableDependencySymbols
   extends Iterable<
     [
-      Symbol,
+      symbol,
       {
-        local: Symbol;
+        local: symbol;
         loc: SourceLocation | null | undefined;
         isWeak: boolean;
         meta?: Meta | null | undefined;
@@ -555,25 +555,25 @@ export interface MutableDependencySymbols
    * This is the default state.
    */
   readonly isCleared: boolean;
-  get(exportSymbol: Symbol):
+  get(exportSymbol: symbol):
     | {
-        local: Symbol;
+        local: symbol;
         loc: SourceLocation | null | undefined;
         isWeak: boolean;
         meta?: Meta | null | undefined;
       }
     | null
     | undefined;
-  hasExportSymbol(exportSymbol: Symbol): boolean;
-  hasLocalSymbol(local: Symbol): boolean;
-  exportSymbols(): Iterable<Symbol>;
+  hasExportSymbol(exportSymbol: symbol): boolean;
+  hasLocalSymbol(local: symbol): boolean;
+  exportSymbols(): Iterable<symbol>;
   set(
-    exportSymbol: Symbol,
-    local: Symbol,
+    exportSymbol: symbol,
+    local: symbol,
     loc?: SourceLocation | null | undefined,
     isWeak?: boolean | null | undefined,
   ): void;
-  delete(exportSymbol: Symbol): void;
+  delete(exportSymbol: symbol): void;
 }
 
 export type DependencyPriority = 'sync' | 'parallel' | 'lazy' | 'conditional';
@@ -647,9 +647,9 @@ export type DependencyOptions = {
   readonly range?: SemverRange;
   /** The symbols within the resolved module that the source file depends on. */
   readonly symbols?: ReadonlyMap<
-    Symbol,
+    symbol,
     {
-      local: Symbol;
+      local: symbol;
       loc: SourceLocation | null | undefined;
       isWeak: boolean;
       meta?: Meta;
@@ -1084,9 +1084,9 @@ export type TransformerResult = {
   readonly sideEffects?: boolean;
   /** The symbols that the asset exports. */
   readonly symbols?: ReadonlyMap<
-    Symbol,
+    symbol,
     {
-      local: Symbol;
+      local: symbol;
       loc: SourceLocation | null | undefined;
     }
   >;
@@ -1418,9 +1418,9 @@ export type SymbolResolution = {
   /** The Asset which exports the symbol. */
   readonly asset: Asset;
   /** under which name the symbol is exported */
-  readonly exportSymbol: Symbol | string;
+  readonly exportSymbol: symbol | string;
   /** The identifier under which the symbol can be referenced. */
-  readonly symbol: undefined | null | false | Symbol;
+  readonly symbol: undefined | null | false | symbol;
   /** The location of the specifier that lead to this result. */
   readonly loc: SourceLocation | null | undefined;
 };
@@ -1429,7 +1429,7 @@ export type SymbolResolution = {
  * @section packager
  */
 export type ExportSymbolResolution = SymbolResolution & {
-  readonly exportAs: Symbol | string;
+  readonly exportAs: symbol | string;
 };
 
 /**
@@ -1703,7 +1703,7 @@ export interface BundleGraph<TBundle extends Bundle> {
    */
   getSymbolResolution(
     asset: Asset,
-    symbol: Symbol,
+    symbol: symbol,
     boundary?: Bundle | null | undefined,
   ): SymbolResolution;
   /** Returns a list of symbols that are exported by the asset, including re-exports. */
@@ -1718,7 +1718,7 @@ export interface BundleGraph<TBundle extends Bundle> {
    */
   getUsedSymbols(
     arg1: Asset | Dependency,
-  ): ReadonlySet<Symbol> | null | undefined;
+  ): ReadonlySet<symbol> | null | undefined;
   /** Returns the common root directory for the entry assets of a target. */
   getEntryRoot(target: Target): FilePath;
   getConditionalBundleMapping(): Map<
