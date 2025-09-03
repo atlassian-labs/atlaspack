@@ -192,29 +192,28 @@ export default new Resolver({
       (options.env.STATIC_FALLBACK === 'true' &&
         STATIC_FALLBACK_MODULES.includes(specifier));
 
-    const snapvmEnv = new Proxy(dependency.env, {
-      get(target, property) {
-        if (useBrowser && property === 'isLibrary') {
-          return false;
-        }
-
-        if (typeof property === 'string') {
-          const value = target[property as keyof typeof target];
-          const ret = typeof value === 'function' ? value.bind(target) : value;
-          return ret;
-        }
-
-        return Reflect.get(target, property);
-      },
-    });
-
     const promise = useBrowser
       ? browserResolver.resolve({
           sourcePath: dependency.sourcePath,
           parent: dependency.resolveFrom,
           filename: aliasSpecifier || specifier,
           specifierType: dependency.specifierType,
-          env: snapvmEnv,
+          env: new Proxy(dependency.env, {
+            get(target, property) {
+              if (property === 'isLibrary') {
+                return false;
+              }
+
+              if (typeof property === 'string') {
+                const value = target[property as keyof typeof target];
+                const ret =
+                  typeof value === 'function' ? value.bind(target) : value;
+                return ret;
+              }
+
+              return Reflect.get(target, property);
+            },
+          }),
           packageConditions: ['ssr', 'require'],
         })
       : nodeResolver.resolve({
@@ -222,7 +221,7 @@ export default new Resolver({
           parent: dependency.resolveFrom,
           filename: aliasSpecifier || specifier,
           specifierType: dependency.specifierType,
-          env: snapvmEnv,
+          env: dependency.env,
           packageConditions: ['ssr', 'require'],
         });
 
