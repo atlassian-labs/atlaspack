@@ -1288,7 +1288,7 @@ mod tests {
 
   impl Visit for TestCollectVisitor {
     fn visit_module(&mut self, module: &Module) {
-      let mut export_scanner_visitor = EsmExportClassifier::new(true);
+      let mut export_scanner_visitor = EsmExportClassifier::new(true, Mark::fresh(Mark::root()));
       module.visit_with(&mut export_scanner_visitor);
 
       let symbol_info = export_scanner_visitor.symbols_info;
@@ -2184,6 +2184,7 @@ output = getExports() === exports && getExports().foo
           &SymbolInfo {
             export_kind: ExportKind::Const,
             is_reassigned: false,
+            is_cjs_module: true,
           },
         ),
         (
@@ -2191,12 +2192,11 @@ output = getExports() === exports && getExports().foo
           &SymbolInfo {
             export_kind: ExportKind::Function,
             is_reassigned: false,
+            is_cjs_module: true,
           },
         )
       ])
     );
-
-    assert_eq!(collect.has_cjs_exports, true);
   }
 
   #[test]

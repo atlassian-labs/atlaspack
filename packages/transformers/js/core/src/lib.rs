@@ -537,7 +537,7 @@ pub fn transform(
                 return Ok(result);
               }
 
-              let mut esm_export_classifier = EsmExportClassifier::new(config.exports_rebinding_optimisation);
+              let mut esm_export_classifier = EsmExportClassifier::new(config.exports_rebinding_optimisation, unresolved_mark);
               module.visit_with(&mut esm_export_classifier);
 
 
