@@ -20,11 +20,43 @@ pub struct SymbolInfo {
   pub is_reassigned: bool,
 }
 
+pub struct SymbolsInfo {
+  pub id_to_symbol_info: HashMap<Id, SymbolInfo>,
+}
+
+impl SymbolsInfo {
+  fn new() -> Self {
+    Self {
+      id_to_symbol_info: HashMap::new(),
+    }
+  }
+
+  pub fn is_static_binding_safe(&self, id: &Id) -> bool {
+    let symbol_info = self.id_to_symbol_info.get(id);
+    match symbol_info {
+      Some(info) => match info.export_kind {
+        ExportKind::Const => true,
+        // If the symbol is reassigned, we need to allow rebinding
+        _ => !info.is_reassigned,
+      },
+      // If the symbol is not found, we default to safe and allow rebinding
+      // This is also the behaviour when the feature flag is disabled
+      None => false,
+    }
+  }
+}
+
+impl Default for SymbolsInfo {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 pub struct ExportScannerVisitor<'a> {
   // Keep track of exported idenifiers (values are the export names)
   exported_identifiers: HashMap<Id, HashSet<Id>>,
   reassignments: HashSet<Id>,
-  symbol_info: &'a mut HashMap<Id, SymbolInfo>,
+  symbols_info: &'a mut SymbolsInfo,
 }
 
 fn export_kind_from_decl(decl: &VarDecl) -> ExportKind {
@@ -36,11 +68,11 @@ fn export_kind_from_decl(decl: &VarDecl) -> ExportKind {
 }
 
 impl<'a> ExportScannerVisitor<'a> {
-  fn new(symbol_info: &'a mut HashMap<Id, SymbolInfo>) -> ExportScannerVisitor<'a> {
+  fn new(symbols_info: &'a mut SymbolsInfo) -> ExportScannerVisitor<'a> {
     Self {
       exported_identifiers: HashMap::new(),
       reassignments: HashSet::new(),
-      symbol_info,
+      symbols_info,
     }
   }
 
@@ -84,7 +116,7 @@ impl<'a> ExportScannerVisitor<'a> {
     export_kind: &ExportKind,
   ) {
     let ident = binding_ident.id.clone();
-    self.symbol_info.insert(
+    self.symbols_info.id_to_symbol_info.insert(
       ident.to_id(),
       SymbolInfo {
         export_kind: *export_kind,
@@ -116,7 +148,7 @@ impl<'a> ExportScannerVisitor<'a> {
         ObjectPatProp::Assign(prop) => {
           let key = prop.key.clone();
           assert!(prop.value.is_none());
-          self.symbol_info.insert(
+          self.symbols_info.id_to_symbol_info.insert(
             key.to_id(),
             SymbolInfo {
               export_kind: *export_kind,
@@ -261,7 +293,7 @@ impl<'a> ExportScannerVisitor<'a> {
   }
 
   fn find_exports_from_function_decl(&mut self, func: &FnDecl) {
-    self.symbol_info.insert(
+    self.symbols_info.id_to_symbol_info.insert(
       func.ident.to_id(),
       SymbolInfo {
         export_kind: ExportKind::Function,
@@ -271,7 +303,7 @@ impl<'a> ExportScannerVisitor<'a> {
   }
 
   fn find_exports_from_class_decl(&mut self, class: &ClassDecl) {
-    self.symbol_info.insert(
+    self.symbols_info.id_to_symbol_info.insert(
       class.ident.to_id(),
       SymbolInfo {
         export_kind: ExportKind::Class,
@@ -329,17 +361,17 @@ impl Visit for ExportScannerVisitor<'_> {
 pub struct BindingVisitor<'a> {
   exported_identifiers: &'a mut HashMap<Id, HashSet<Id>>,
   reassignments: &'a mut HashSet<Id>,
-  symbol_info: &'a mut HashMap<Id, SymbolInfo>,
+  symbols_info: &'a mut SymbolsInfo,
 }
 
 impl<'a> BindingVisitor<'a> {
   fn new(
-    symbol_info: &'a mut HashMap<Id, SymbolInfo>,
+    symbols_info: &'a mut SymbolsInfo,
     exported_identifiers: &'a mut HashMap<Id, HashSet<Id>>,
     reassignments: &'a mut HashSet<Id>,
   ) -> Self {
     Self {
-      symbol_info,
+      symbols_info,
       exported_identifiers,
       reassignments,
     }
@@ -372,7 +404,7 @@ impl Visit for BindingVisitor<'_> {
             .unwrap()
             .iter()
             .for_each(|exported_ident| {
-              self.symbol_info.insert(
+              self.symbols_info.id_to_symbol_info.insert(
                 exported_ident.to_id(),
                 SymbolInfo {
                   export_kind,
@@ -394,7 +426,7 @@ impl Visit for BindingVisitor<'_> {
         .unwrap()
         .iter()
         .for_each(|exported_ident| {
-          self.symbol_info.insert(
+          self.symbols_info.id_to_symbol_info.insert(
             exported_ident.to_id(),
             SymbolInfo {
               export_kind: ExportKind::Function,
@@ -407,14 +439,14 @@ impl Visit for BindingVisitor<'_> {
 }
 
 pub struct EsmExportClassifier {
-  pub symbol_info: HashMap<Id, SymbolInfo>,
+  pub symbols_info: SymbolsInfo,
   pub exports_rebinding_optimisation: bool,
 }
 
 impl EsmExportClassifier {
   pub fn new(exports_rebinding_optimisation: bool) -> Self {
     Self {
-      symbol_info: HashMap::new(),
+      symbols_info: SymbolsInfo::default(),
       exports_rebinding_optimisation,
     }
   }
@@ -429,14 +461,14 @@ impl Visit for EsmExportClassifier {
     }
 
     // First we scan for all esm exports
-    let mut export_scanner_visitor = ExportScannerVisitor::new(&mut self.symbol_info);
+    let mut export_scanner_visitor = ExportScannerVisitor::new(&mut self.symbols_info);
     module.visit_with(&mut export_scanner_visitor);
 
     // We then want to look for any variable declarations that we've discovered references to
     let mut exported_identifiers = export_scanner_visitor.exported_identifiers;
     let mut reassignments = export_scanner_visitor.reassignments;
     let mut binding_visitor = BindingVisitor::new(
-      &mut self.symbol_info,
+      &mut self.symbols_info,
       &mut exported_identifiers,
       &mut reassignments,
     );
@@ -445,7 +477,7 @@ impl Visit for EsmExportClassifier {
 
     // Finally, we may have already processed some export declarations but not discovered reassignments
     // so we need to update the symbol info for any reassignments detected from exports in the first pass (export_scanner_visitor)
-    for (ident, symbol_info) in &mut self.symbol_info {
+    for (ident, symbol_info) in &mut self.symbols_info.id_to_symbol_info {
       if reassignments.contains(ident) {
         symbol_info.is_reassigned = true;
       }
@@ -476,7 +508,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();
@@ -517,7 +550,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();
@@ -548,7 +582,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();
@@ -575,7 +610,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();
@@ -596,7 +632,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();
@@ -620,7 +657,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();
@@ -642,7 +680,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();
@@ -665,7 +704,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();
@@ -694,7 +734,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();
@@ -734,7 +775,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();
@@ -762,7 +804,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();
@@ -799,7 +842,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();
@@ -833,7 +877,8 @@ mod tests {
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
-      .symbol_info
+      .symbols_info
+      .id_to_symbol_info
       .iter()
       .map(|(key, value)| (key.0.clone(), value))
       .collect::<HashMap<_, _>>();

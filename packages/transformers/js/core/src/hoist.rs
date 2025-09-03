@@ -75,7 +75,7 @@ pub struct ExportedSymbol {
   /// The location of this export
   pub loc: SourceLocation,
   pub is_esm: bool,
-  pub no_rebinding_allowed: bool,
+  pub is_static_binding_safe: bool,
 }
 
 /// An imported identifier with its rename and original name
@@ -495,10 +495,11 @@ impl Fold for Hoist<'_> {
                 for specifier in export.specifiers {
                   if let ExportSpecifier::Named(named) = specifier {
                     let id = id!(match_export_name_ident(&named.orig));
-                    let exported = match named.exported {
-                      Some(exported) => match_export_name(&exported).0,
-                      None => match_export_name(&named.orig).0,
+                    let exported_node = match named.exported {
+                      Some(exported) => exported,
+                      None => named.orig,
                     };
+                    let exported = match_export_name(&exported_node).0;
                     if let Some(Import {
                       source,
                       specifier,
@@ -524,12 +525,22 @@ impl Fold for Hoist<'_> {
                           .get_export_ident(DUMMY_SP, self.collect.exports_locals.get(&id).unwrap())
                           .sym
                       };
+
+                      let is_static_binding_safe =
+                        if let ModuleExportName::Ident(ident) = exported_node {
+                          self
+                            .collect
+                            .symbols_info
+                            .is_static_binding_safe(&ident.to_id())
+                        } else {
+                          false
+                        };
                       self.exported_symbols.push(ExportedSymbol {
-                        local: id,
+                        local: id.clone(),
                         exported,
                         loc: SourceLocation::from(&self.collect.source_map, named.span),
                         is_esm: true,
-                        no_rebinding_allowed: true,
+                        is_static_binding_safe,
                       });
                     }
                   }
@@ -1126,7 +1137,7 @@ impl Fold for Hoist<'_> {
           exported: exported.clone(),
           loc: SourceLocation::from(&self.collect.source_map, node.span),
           is_esm: false,
-          no_rebinding_allowed: false,
+          is_static_binding_safe: false,
         });
         return node;
       } else {
@@ -1350,10 +1361,10 @@ impl Hoist<'_> {
       Some(Export { is_esm: true, .. })
     );
 
-    let no_rebinding_allowed = matches!(
+    let is_static_binding_safe = matches!(
       self.collect.exports.get(exported),
       Some(Export {
-        no_rebinding_allowed: true,
+        is_static_binding_safe: true,
         ..
       })
     );
@@ -1363,7 +1374,7 @@ impl Hoist<'_> {
       exported: exported.clone(),
       loc: SourceLocation::from(&self.collect.source_map, span),
       is_esm,
-      no_rebinding_allowed,
+      is_static_binding_safe,
     });
 
     Ident::new_no_ctxt(new_name, span)
@@ -1415,6 +1426,8 @@ impl Hoist<'_> {
 mod tests {
   use atlaspack_swc_runner::test_utils::{run_test_fold, run_test_visit_const, RunVisitResult};
   use indoc::{formatdoc, indoc};
+
+  use crate::esm_export_classifier::SymbolsInfo;
 
   use super::*;
 
@@ -2738,7 +2751,7 @@ mod tests {
       ..
     } = run_test_visit_const(input_code, |context| {
       Collect::new(
-        HashMap::new(),
+        SymbolsInfo::default(),
         context.source_map.clone(),
         context.unresolved_mark,
         Mark::fresh(Mark::root()),

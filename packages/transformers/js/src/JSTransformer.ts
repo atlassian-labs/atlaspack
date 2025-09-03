@@ -973,11 +973,11 @@ export default new Transformer({
         local,
         loc,
         is_esm,
-        no_rebinding_allowed,
+        is_static_binding_safe,
       } of hoist_result.exported_symbols) {
         asset.symbols.set(exported, local, convertLoc(loc), {
           isEsm: is_esm,
-          noRebindingAllowed: no_rebinding_allowed,
+          isStaticBindingSafe: is_static_binding_safe,
         });
       }
 

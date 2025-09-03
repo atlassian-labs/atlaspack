@@ -1562,7 +1562,7 @@ ${code}
 
                 if (
                   getFeatureFlag('exportsRebindingOptimisation') &&
-                  asset.meta?.noRebindingAllowed
+                  asset.meta?.isStaticBindingSafe
                 ) {
                   append += `$${assetId}$exports[${JSON.stringify(
                     symbol,
@@ -1630,7 +1630,7 @@ ${code}
           const meta = asset.symbols.get(exp)?.meta;
           if (
             getFeatureFlag('exportsRebindingOptimisation') &&
-            meta?.noRebindingAllowed
+            meta?.isStaticBindingSafe
           ) {
             append += `$${assetId}$exports[${JSON.stringify(
               exp,

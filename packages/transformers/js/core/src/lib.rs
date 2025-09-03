@@ -101,6 +101,7 @@ pub use utils::SourceLocation;
 pub use utils::SourceType;
 
 use crate::esm_export_classifier::EsmExportClassifier;
+use crate::esm_export_classifier::SymbolsInfo;
 
 type SourceMapBuffer = Vec<(swc_core::common::BytePos, swc_core::common::LineCol)>;
 
@@ -433,7 +434,7 @@ pub fn transform(
                       is_module,
                       config.conditional_bundling,
                       config.computed_properties_fix,
-                      HashMap::new(),
+                      SymbolsInfo::default(),
                     )),
                     should_inline_fs
                   ),
@@ -539,8 +540,9 @@ pub fn transform(
               let mut esm_export_classifier = EsmExportClassifier::new(config.exports_rebinding_optimisation);
               module.visit_with(&mut esm_export_classifier);
 
+
               let mut collect = Collect::new(
-                esm_export_classifier.symbol_info,
+                esm_export_classifier.symbols_info,
                 source_map.clone(),
                 unresolved_mark,
                 ignore_mark,
