@@ -96,20 +96,16 @@ export function getAssetGraph(serializedGraph: any): {
     let jsSymbol = {
       local: symbol.local ?? undefined,
       loc: symbol.loc ?? undefined,
-      meta: undefined,
       isWeak: symbol.isWeak,
+      meta: {
+        isEsm: symbol.isEsm,
+        isStaticBindingSafe: symbol.isStaticBindingSafe,
+      },
     };
 
     if (symbol.exported) {
       // @ts-expect-error TS2339
       jsSymbol.exported = symbol.exported;
-    }
-
-    if (symbol.isEsmExport) {
-      // @ts-expect-error TS2322
-      jsSymbol.meta = {
-        isEsm: true,
-      };
     }
 
     return [exported, jsSymbol];

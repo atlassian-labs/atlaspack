@@ -172,6 +172,7 @@ impl Dependency {
         loc: None,
         local: "*".into(),
         self_referenced: false,
+        is_static_binding_safe: false,
       }]);
     }
 
