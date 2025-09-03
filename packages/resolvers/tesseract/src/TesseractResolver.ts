@@ -11,7 +11,7 @@ interface TesseractResolverConfig {
   browserResolvedNodeBuiltins?: Array<string>;
 
   /** Module mappings that bypass normal resolution (e.g., for SSR compatibility). */
-  preResolved?: Map<string, string>;
+  preResolved?: Record<string, string>;
 
   /** Node.js built-in aliases for Tesseract-specific implementations. */
   builtinAliases?: Record<string, string>;
@@ -37,7 +37,7 @@ const getIgnoreModules = (
   ignoreModules: Array<string>,
 ) => {
   if (env.PILLAR_LOCAL_DEVELOPMENT === 'true') {
-    ignoreModules.push('@atlassiansox/analytics-web-client');
+    return [...ignoreModules, '@atlassiansox/analytics-web-client'];
   }
 
   return ignoreModules;
@@ -91,7 +91,9 @@ export default new Resolver({
     });
     const userConfig: TesseractResolverConfig = conf?.contents || {};
 
-    const preResolved = userConfig.preResolved || new Map<string, string>();
+    const preResolved = userConfig.preResolved
+      ? new Map(Object.entries(userConfig.preResolved))
+      : new Map<string, string>();
     const builtinAliases = userConfig.builtinAliases || {};
     const serverSuffixes = userConfig.serverSuffixes || [];
     const ignoreModules = userConfig.ignoreModules || [];
@@ -129,11 +131,6 @@ export default new Resolver({
     };
   },
   resolve({dependency, specifier, config, options}) {
-    // Only resolve for Tesseract environment
-    if (!dependency.env.isTesseract()) {
-      return null;
-    }
-
     const {
       nodeResolver,
       browserResolver,
@@ -175,8 +172,12 @@ export default new Resolver({
 
     let preResolvedValue = preResolved.get(specifier);
     if (preResolvedValue) {
+      const resolvedPath =
+        preResolvedValue.startsWith('./') || preResolvedValue.startsWith('../')
+          ? require.resolve(join(options.projectRoot, preResolvedValue))
+          : require.resolve(preResolvedValue, {paths: [options.projectRoot]});
       return {
-        filePath: require.resolve(preResolvedValue),
+        filePath: resolvedPath,
         code: undefined,
         sideEffects: false,
       };
@@ -197,7 +198,22 @@ export default new Resolver({
           parent: dependency.resolveFrom,
           filename: aliasSpecifier || specifier,
           specifierType: dependency.specifierType,
-          env: dependency.env,
+          env: new Proxy(dependency.env, {
+            get(target, property) {
+              if (property === 'isLibrary') {
+                return false;
+              }
+
+              if (typeof property === 'string') {
+                const value = target[property as keyof typeof target];
+                const ret =
+                  typeof value === 'function' ? value.bind(target) : value;
+                return ret;
+              }
+
+              return Reflect.get(target, property);
+            },
+          }),
           packageConditions: ['ssr', 'require'],
         })
       : nodeResolver.resolve({
