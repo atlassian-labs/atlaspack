@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -5,7 +6,7 @@ use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, Load
 use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
-use atlaspack_core::types::AtlaspackOptions;
+use atlaspack_core::types::{AtlaspackOptions, SourceField, Targets};
 use atlaspack_filesystem::{os_file_system::OsFileSystem, FileSystemRef};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
@@ -51,14 +52,45 @@ impl Atlaspack {
     }: AtlaspackInitOptions,
   ) -> Result<Self, anyhow::Error> {
     let fs = fs.unwrap_or_else(|| Arc::new(OsFileSystem));
-    let project_root = infer_project_root(Arc::clone(&fs), options.entries.clone())?;
+
+    // When allowExplicitTargetEntries is enabled and no entries are provided,
+    // automatically derive entries from target sources
+    let mut resolved_options = options;
+    if resolved_options
+      .feature_flags
+      .bool_enabled("allowExplicitTargetEntries")
+      && resolved_options.entries.is_empty()
+    {
+      if let Some(Targets::CustomTarget(custom_targets)) = &resolved_options.targets {
+        let mut target_sources = HashSet::new();
+
+        for (_, target) in custom_targets.iter() {
+          if let Some(source) = &target.source {
+            match source {
+              SourceField::Source(source_str) => {
+                target_sources.insert(source_str.clone());
+              }
+              SourceField::Sources(sources) => {
+                for source_str in sources {
+                  target_sources.insert(source_str.clone());
+                }
+              }
+            }
+          }
+        }
+
+        resolved_options.entries = target_sources.into_iter().collect();
+      }
+    }
+
+    let project_root = infer_project_root(Arc::clone(&fs), resolved_options.entries.clone())?;
 
     let package_manager = package_manager
       .unwrap_or_else(|| Arc::new(NodePackageManager::new(project_root.clone(), fs.clone())));
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
       .enable_all()
-      .worker_threads(options.threads.unwrap_or_else(num_cpus::get))
+      .worker_threads(resolved_options.threads.unwrap_or_else(num_cpus::get))
       .build()?;
 
     let rpc_worker = rpc.start()?;
@@ -70,8 +102,8 @@ impl Atlaspack {
       &project_root,
       LoadConfigOptions {
         additional_reporters: vec![], // TODO
-        config: options.config.as_deref(),
-        fallback_config: options.fallback_config.as_deref(),
+        config: resolved_options.config.as_deref(),
+        fallback_config: resolved_options.fallback_config.as_deref(),
       },
     )?;
 
@@ -88,12 +120,12 @@ impl Atlaspack {
         config: Arc::clone(&config_loader),
         file_system: fs.clone(),
         options: Arc::new(PluginOptions {
-          core_path: options.core_path.clone(),
-          env: options.env.clone(),
-          log_level: options.log_level.clone(),
-          mode: options.mode.clone(),
+          core_path: resolved_options.core_path.clone(),
+          env: resolved_options.env.clone(),
+          log_level: resolved_options.log_level.clone(),
+          mode: resolved_options.mode.clone(),
           project_root: project_root.clone(),
-          feature_flags: options.feature_flags.clone(),
+          feature_flags: resolved_options.feature_flags.clone(),
         }),
         // TODO Initialise actual logger
         logger: PluginLogger::default(),
@@ -103,7 +135,7 @@ impl Atlaspack {
     let request_tracker = RequestTracker::new(
       config_loader.clone(),
       fs.clone(),
-      Arc::new(options.clone()),
+      Arc::new(resolved_options.clone()),
       plugins.clone(),
       project_root.clone(),
     );
@@ -111,7 +143,7 @@ impl Atlaspack {
     Ok(Self {
       db,
       fs,
-      options,
+      options: resolved_options,
       project_root,
       rpc,
       rpc_worker,

@@ -314,6 +314,10 @@ impl TargetRequest {
     &self,
     request_context: RunRequestContext,
   ) -> Result<Vec<Option<Target>>, anyhow::Error> {
+    let allow_explicit_target_entries = request_context
+      .options
+      .feature_flags
+      .bool_enabled("allowExplicitTargetEntries");
     let config = self.load_config(&request_context)?;
     let mut targets: Vec<Option<Target>> = Vec::new();
 
@@ -345,6 +349,13 @@ impl TargetRequest {
           target_filter = Some(target_list);
         }
         Targets::CustomTarget(custom_targets) => {
+          // Check if ALL targets have sources - only apply new behavior if they do
+          let all_targets_have_sources = if allow_explicit_target_entries {
+            custom_targets.values().all(|t| t.source.is_some())
+          } else {
+            false
+          };
+
           for (name, descriptor) in custom_targets.iter() {
             targets.push(self.target_from_descriptor(
               None,
@@ -352,6 +363,8 @@ impl TargetRequest {
               descriptor.clone(),
               name,
               &request_context.project_root,
+              allow_explicit_target_entries,
+              all_targets_have_sources,
             )?);
           }
 
@@ -375,6 +388,8 @@ impl TargetRequest {
             builtin_target_descriptor,
             builtin_target.name,
             &request_context.project_root,
+            allow_explicit_target_entries,
+            false, // builtin targets don't participate in the all_targets_have_sources logic
           )?);
         }
       }
@@ -413,6 +428,8 @@ impl TargetRequest {
         custom_target.descriptor.clone(),
         custom_target.name,
         &request_context.project_root,
+        allow_explicit_target_entries,
+        false, // package.json custom targets don't participate in the all_targets_have_sources logic
       )?);
     }
 
@@ -469,6 +486,40 @@ impl TargetRequest {
     Ok(targets)
   }
 
+  fn entry_matches_target_source(
+    &self,
+    target_source: &Option<SourceField>,
+    project_root: &Path,
+  ) -> bool {
+    let Some(source) = target_source else {
+      return false;
+    };
+
+    let current_entry_path = &self.entry.file_path;
+
+    // Handle both string and array sources
+    let sources = match source {
+      SourceField::Source(s) => vec![s.as_str()],
+      SourceField::Sources(sources) => sources.iter().map(|s| s.as_str()).collect(),
+    };
+
+    // Check if current entry matches any of the target sources
+    sources.iter().any(|source_str| {
+      // Resolve the target source path relative to the package directory (where package.json is)
+      // The package directory is the parent of the current entry path
+      let package_dir = current_entry_path.parent().unwrap_or(project_root);
+      let source_path = package_dir.join(source_str);
+      let target_source_path = source_path
+        .canonicalize()
+        .unwrap_or_else(|_| source_path.clone());
+      let current_entry_canonical = current_entry_path
+        .canonicalize()
+        .unwrap_or_else(|_| current_entry_path.clone());
+
+      target_source_path == current_entry_canonical
+    })
+  }
+
   fn get_default_engines_for_context(&self, context: EnvironmentContext) -> Engines {
     let defaults = self.default_target_options.engines.clone();
     if context.is_browser() {
@@ -486,16 +537,32 @@ impl TargetRequest {
     }
   }
 
-  fn skip_target(&self, target_name: &str, source: &Option<SourceField>) -> bool {
+  fn skip_target(
+    &self,
+    target_name: &str,
+    source: &Option<SourceField>,
+    allow_explicit_target_entries: bool,
+    all_targets_have_sources: bool,
+  ) -> bool {
     // We skip targets if they have a descriptor.source that does not match the current
     // exclusiveTarget. They will be handled by a separate resolvePackageTargets call from their
     // Entry point but with exclusiveTarget set.
+    // However, when allowExplicitTargetEntries is enabled, we don't skip targets with source
+    // as they will be filtered later based on the current entry.
     match self.entry.target.as_ref() {
-      None => source.is_some(),
+      None => {
+        if allow_explicit_target_entries {
+          // If not all targets have sources, fall back to old behavior (skip targets with sources)
+          source.is_some() && !all_targets_have_sources
+        } else {
+          source.is_some()
+        }
+      }
       Some(exclusive_target) => target_name != exclusive_target,
     }
   }
 
+  #[allow(clippy::too_many_arguments)] // `allow_explicit_target_entries` will be removed once feature is cleaned up
   fn target_from_descriptor(
     &self,
     dist: Option<PathBuf>,
@@ -503,8 +570,24 @@ impl TargetRequest {
     target_descriptor: TargetDescriptor,
     target_name: &str,
     project_root: &Path,
+    allow_explicit_target_entries: bool,
+    all_targets_have_sources: bool,
   ) -> Result<Option<Target>, anyhow::Error> {
-    if self.skip_target(target_name, &target_descriptor.source) {
+    if self.skip_target(
+      target_name,
+      &target_descriptor.source,
+      allow_explicit_target_entries,
+      all_targets_have_sources,
+    ) {
+      return Ok(None);
+    }
+
+    // Additional filtering for allowExplicitTargetEntries feature
+    if allow_explicit_target_entries
+      && all_targets_have_sources
+      && target_descriptor.source.is_some()
+      && !self.entry_matches_target_source(&target_descriptor.source, project_root)
+    {
       return Ok(None);
     }
 
@@ -788,6 +871,15 @@ mod tests {
     browserslistrc: Option<String>,
     atlaspack_options: Option<AtlaspackOptions>,
   ) -> Result<RequestResult, anyhow::Error> {
+    targets_from_config_with_entry(package_json, browserslistrc, atlaspack_options, None).await
+  }
+
+  async fn targets_from_config_with_entry(
+    package_json: String,
+    browserslistrc: Option<String>,
+    atlaspack_options: Option<AtlaspackOptions>,
+    entry_file: Option<&str>,
+  ) -> Result<RequestResult, anyhow::Error> {
     let fs = InMemoryFileSystem::default();
     let project_root = PathBuf::default();
     let package_dir = package_dir();
@@ -801,9 +893,25 @@ mod tests {
       fs.write_file(&project_root.join(".browserslistrc"), browserslistrc);
     }
 
+    // Create the entry file path based on the first entry in options or use default
+    let entry_path = if let Some(entry_file) = entry_file {
+      project_root.join(&package_dir).join(entry_file)
+    } else if let Some(ref options) = atlaspack_options {
+      if !options.entries.is_empty() {
+        project_root.join(&package_dir).join(&options.entries[0])
+      } else {
+        PathBuf::default()
+      }
+    } else {
+      PathBuf::default()
+    };
+
     let request = TargetRequest {
       default_target_options: DefaultTargetOptions::default(),
-      entry: Entry::default(),
+      entry: Entry {
+        file_path: entry_path,
+        target: None,
+      },
       env: None,
       mode: BuildMode::Development,
     };
@@ -1856,5 +1964,89 @@ mod tests {
     assert_targets("mjs", None, OutputFormat::EsModule).await;
     assert_targets("mjs", Some(ModuleFormat::CommonJS), OutputFormat::EsModule).await;
     assert_targets("mjs", Some(ModuleFormat::Module), OutputFormat::EsModule).await;
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_allow_explicit_target_entries_feature_flag_disabled() {
+    // When feature flag is disabled, targets with source should be skipped
+    let feature_flags = atlaspack_core::types::FeatureFlags::default();
+    // Feature flag is false by default
+
+    let mut options = AtlaspackOptions::default();
+    options.feature_flags = feature_flags;
+    options.entries = vec!["input.js".to_string()];
+
+    let targets = targets_from_config(
+      r#"{
+        "targets": {
+          "one": {
+            "source": "./input.js",
+            "distDir": "./dist/one"
+          },
+          "two": {
+            "source": "./input2.js", 
+            "distDir": "./dist/two"
+          }
+        }
+      }"#
+        .to_string(),
+      None,
+      Some(options),
+    )
+    .await;
+
+    // Should get no targets because they all have source properties and feature flag is disabled
+    if let Ok(RequestResult::Target(output)) = targets {
+      assert_eq!(
+        output.targets.len(),
+        0,
+        "Expected 0 targets when feature flag is disabled"
+      );
+    } else {
+      panic!("Expected successful target resolution");
+    }
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_allow_explicit_target_entries_feature_flag_enabled() {
+    // When feature flag is enabled, existing behaviour should be preserved
+    let feature_flags =
+      atlaspack_core::types::FeatureFlags::with_bool_flag("allowExplicitTargetEntries", true);
+
+    let mut options = AtlaspackOptions::default();
+    options.feature_flags = feature_flags;
+    options.entries = vec!["input.js".to_string()];
+
+    let targets = targets_from_config(
+      r#"{
+        "targets": {
+          "one": {
+            "source": "./input.js",
+            "distDir": "./dist/one"
+          },
+          "two": {
+            "distDir": "./dist/two"
+          }
+        }
+      }"#
+        .to_string(),
+      None,
+      Some(options),
+    )
+    .await;
+
+    if let Ok(RequestResult::Target(output)) = targets {
+      assert_eq!(
+        output.targets.len(),
+        1,
+        "Expected 1 target matching the entry"
+      );
+      assert_eq!(
+        output.targets[0].name, "two",
+        "Expected target 'two' as it doesn't have a source"
+      );
+    } else {
+      panic!("Expected successful target resolution");
+    }
   }
 }
