@@ -2,6 +2,7 @@ import type {Async, Bundle as IBundle, Namer} from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
 import type {AtlaspackConfig, LoadedPlugin} from '../AtlaspackConfig';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
+import console from 'console';
 import type {
   Asset,
   AssetGroup,
@@ -178,6 +179,7 @@ export default function createBundleGraphRequest(
       }
 
       // if (input.rustAtlaspack && process.env.NATIVE_COMPARE === 'true') {
+      //   console.log('comparing V2 and V3 asset graphs');
       //   let {assetGraph: jsAssetGraph} = await api.runRequest(
       //     createAssetGraphRequestJS({
       //       name: 'Main',

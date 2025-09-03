@@ -46,6 +46,18 @@ impl Request for PathRequest {
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
+    tracing::info!(
+      "PathRequest: Resolving '{}' from '{}' with specifier_type: {:?}",
+      self.dependency.specifier,
+      self
+        .dependency
+        .source_path
+        .as_ref()
+        .map(|p| p.display())
+        .unwrap_or_else(|| std::path::Path::new("unknown").display()),
+      self.dependency.specifier_type
+    );
+
     request_context
       .report(ReporterEvent::BuildProgress(BuildProgressEvent::Resolving(
         ResolvingEvent {
@@ -71,6 +83,12 @@ impl Request for PathRequest {
     let mut invalidations = Vec::new();
 
     for resolver in request_context.plugins().resolvers()?.iter() {
+      tracing::info!(
+        "PathRequest: Trying resolver {:?} for '{}'",
+        resolver,
+        self.dependency.specifier
+      );
+
       let result = resolver
         .resolve(ResolveContext {
           dependency: Arc::clone(&self.dependency),

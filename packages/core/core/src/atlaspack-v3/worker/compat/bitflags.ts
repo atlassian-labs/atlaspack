@@ -53,7 +53,19 @@ export class BitFlags<K, V> {
     return this.from(key);
   }
 
-  fromArray(keys: V[]): K[] {
+  fromArray(keys: V[] | number): K[] {
+    // handle the case where we receive a number (bitflags) instead of an array
+    if (typeof keys === 'number') {
+      // Convert bitflags number to array of strings
+      const result: K[] = [];
+      for (const [key, value] of Object.entries(this.#kv)) {
+        if ((keys as number) & (value as number)) {
+          result.push(key as K);
+        }
+      }
+      return result;
+    }
+    // Handle the normal case where keys is an array
     return keys.map((key) => this.from(key));
   }
 }

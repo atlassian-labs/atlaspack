@@ -249,29 +249,57 @@ impl AtlaspackResolver {
     }
 
     let browser_module = match builtin.as_str() {
-      "assert" => "assert/",
-      "buffer" => "buffer/",
-      "console" => "console-browserify",
-      "constants" => "constants-browserify",
-      "crypto" => "crypto-browserify",
-      "domain" => "domain-browser",
-      "events" => "events/",
-      "http" => "stream-http",
-      "https" => "https-browserify",
-      "os" => "os-browserify",
-      "path" => "path-browserify",
-      "process" => "process/",
-      "punycode" => "punycode/",
-      "querystring" => "querystring-es3",
-      "stream" => "stream-browserify",
-      "string_decoder" => "string_decoder/",
-      "sys" => "util/",
-      "timers" => "timers-browserify",
-      "tty" => "tty-browserify",
-      "url" => "url/",
-      "util" => "util/",
-      "vm" => "vm-browserify",
-      "zlib" => "browserify-zlib",
+      "assert" => Some("assert/"),
+      "assert/strict" => Some("assert/"),
+      "async_hooks" => None,
+      "buffer" => Some("buffer/"),
+      "child_process" => None,
+      "cluster" => None,
+      "console" => Some("console-browserify"),
+      "constants" => Some("constants-browserify"),
+      "crypto" => Some("crypto-browserify"),
+      "dgram" => None,
+      "diagnostics_channel" => None,
+      "dns" => None,
+      "dns/promises" => None,
+      "domain" => Some("domain-browser"),
+      "events" => Some("events/"),
+      "fs" => None,
+      "fs/promises" => None,
+      "http" => Some("stream-http"),
+      "http2" => None,
+      "https" => Some("https-browserify"),
+      "inspector" => Some("node-inspect-extracted"),
+      "module" => None,
+      "net" => None,
+      "os" => Some("os-browserify"),
+      "path" => Some("path-browserify"),
+      "path/posix" => Some("path-browserify"),
+      "path/win32" => Some("path-browserify"),
+      "perf_hooks" => None,
+      "process" => Some("process/"),
+      "punycode" => Some("punycode/"),
+      "querystring" => Some("querystring-es3"),
+      "readline" => None,
+      "repl" => None,
+      "stream" => Some("stream-browserify"),
+      "stream/consumers" => Some("stream-browserify"),
+      "stream/promises" => Some("stream-browserify"),
+      "stream/web" => Some("stream-browserify"),
+      "string_decoder" => Some("string_decoder/"),
+      "sys" => Some("util/"),
+      "timers" => Some("timers-browserify"),
+      "timers/promises" => Some("timers-browserify"),
+      "tls" => None,
+      "trace_events" => None,
+      "tty" => Some("tty-browserify"),
+      "url" => Some("url/"),
+      "util" => Some("util/"),
+      "util/types" => Some("util/"),
+      "v8" => None,
+      "vm" => Some("vm-browserify"),
+      "worker_threads" => None,
+      "zlib" => Some("browserify-zlib"),
       _ => {
         return Ok(Resolved {
           invalidations: Vec::new(),
@@ -280,14 +308,25 @@ impl AtlaspackResolver {
       }
     };
 
-    self
-      .resolve(ResolveContext {
-        // TODO: Can we get rid of the clones?
-        dependency: Arc::clone(&ctx.dependency),
-        pipeline: ctx.pipeline.clone(),
-        specifier: browser_module.to_owned(),
-      })
-      .await
+    match browser_module {
+      Some(module) => {
+        self
+          .resolve(ResolveContext {
+            // TODO: Can we get rid of the clones?
+            dependency: Arc::clone(&ctx.dependency),
+            pipeline: ctx.pipeline.clone(),
+            specifier: module.to_owned(),
+          })
+          .await
+      }
+      None => {
+        // Module is not available in browser environment
+        Ok(Resolved {
+          invalidations: Vec::new(),
+          resolution: Resolution::Excluded,
+        })
+      }
+    }
   }
 }
 

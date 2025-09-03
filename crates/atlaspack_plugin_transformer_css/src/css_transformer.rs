@@ -197,6 +197,12 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 return None;
               }
 
+              println!(
+                "CSS Import: Creating dependency for '{}' from '{}' with specifier_type: ESM",
+                import_dependency.url,
+                asset.file_path.display()
+              );
+
               let mut dependency = Dependency {
                 env: asset.env.clone(),
                 package_conditions: ExportsCondition::STYLE,
@@ -204,7 +210,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 source_asset_id: Some(asset.id.clone()),
                 source_path: Some(asset.file_path.clone()),
                 specifier: import_dependency.url.clone(),
-                specifier_type: SpecifierType::Url,
+                specifier_type: SpecifierType::Esm,
                 source_asset_type: Some(FileType::Css),
                 ..Dependency::default()
               };

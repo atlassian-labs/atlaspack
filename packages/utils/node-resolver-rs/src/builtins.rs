@@ -35,6 +35,7 @@ pub const BUILTINS: &[&str] = &[
   "http2",
   "https",
   "inspector",
+  "inspector/promises",
   "module",
   "net",
   "os",
@@ -46,6 +47,7 @@ pub const BUILTINS: &[&str] = &[
   "punycode",
   "querystring",
   "readline",
+  "readline/promises",
   "repl",
   "stream",
   "stream/consumers",
@@ -63,6 +65,7 @@ pub const BUILTINS: &[&str] = &[
   "util/types",
   "v8",
   "vm",
+  "wasi",
   "worker_threads",
   "zlib",
 ];

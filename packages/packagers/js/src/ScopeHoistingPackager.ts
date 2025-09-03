@@ -7,6 +7,8 @@ import type {
   PluginLogger,
 } from '@atlaspack/types';
 
+import console from 'console';
+
 import {
   DefaultMap,
   PromiseQueue,
@@ -934,6 +936,26 @@ ${code}
     let assetId = asset.meta.id;
     invariant(typeof assetId === 'string');
 
+    console.log(`[DEBUG] buildReplacements called for asset:`, {
+      assetId: asset.id,
+      assetPath: asset.filePath,
+      assetType: asset.type,
+      assetSymbols: asset.symbols
+        ? Array.from(asset.symbols.exportSymbols())
+        : 'no symbols',
+      depsCount: deps.length,
+      deps: deps.map((d) => ({
+        id: d.id,
+        specifier: d.specifier,
+        sourcePath: d.sourcePath,
+        symbols: d.symbols
+          ? Array.from(d.symbols.exportSymbols())
+          : 'no symbols',
+      })),
+      bundleId: this.bundle.id,
+      bundleType: this.bundle.type,
+    });
+
     // Build two maps: one of import specifiers, and one of imported symbols to replace.
     // These will be used to build a regex below.
     let depMap = new DefaultMap<string, Array<Dependency>>(() => []);
@@ -994,6 +1016,18 @@ ${code}
         if (local === '*') {
           continue;
         }
+
+        console.log(`[DEBUG] Processing symbol in buildReplacements:`, {
+          assetId: asset.id,
+          assetPath: asset.filePath,
+          depId: dep.id,
+          depSpecifier: dep.specifier,
+          depSourcePath: dep.sourcePath,
+          imported,
+          local,
+          resolvedAssetId: resolved.id,
+          resolvedAssetPath: resolved.filePath,
+        });
 
         // @ts-expect-error TS2345
         let symbol = this.getSymbolResolution(asset, resolved, imported, dep);
@@ -1252,12 +1286,43 @@ ${code}
       // @ts-expect-error TS2345
     } = this.bundleGraph.getSymbolResolution(resolved, imported, this.bundle);
 
+    // Add debug logging for symbol resolution
+    console.log(`[DEBUG] getSymbolResolution called:`, {
+      parentAssetId: parentAsset.id,
+      parentAssetPath: parentAsset.filePath,
+      resolvedAssetId: resolved.id,
+      resolvedAssetPath: resolved.filePath,
+      imported,
+      exportSymbol,
+      symbol,
+      symbolType: typeof symbol,
+      depId: dep?.id,
+      depSpecifier: dep?.specifier,
+      depSourcePath: dep?.sourcePath,
+      resolvedAssetType: resolvedAsset.type,
+      resolvedAssetSymbols: resolvedAsset.symbols
+        ? Array.from(resolvedAsset.symbols.exportSymbols())
+        : 'no symbols',
+      bundleId: this.bundle.id,
+      bundleType: this.bundle.type,
+      bundleTarget: this.bundle.target?.name,
+    });
+
     if (
       resolvedAsset.type !== 'js' ||
       (dep && this.bundleGraph.isDependencySkipped(dep))
     ) {
       // Graceful fallback for non-js imports or when trying to resolve a symbol
       // that is actually unused but we still need a placeholder value.
+      console.log(
+        `[DEBUG] Early return due to non-js type or skipped dependency:`,
+        {
+          resolvedAssetType: resolvedAsset.type,
+          isDependencySkipped: dep
+            ? this.bundleGraph.isDependencySkipped(dep)
+            : false,
+        },
+      );
       return '{}';
     }
 
@@ -1370,7 +1435,91 @@ ${code}
         return this.getPropertyAccess(obj, exportSymbol);
       }
     } else if (!symbol) {
-      invariant(false, 'Asset was skipped or not found.');
+      // CRITICAL: This is where the crash happens - add comprehensive debug info
+      console.error(`[CRASH] Asset was skipped or not found!`, {
+        parentAsset: {
+          id: parentAsset.id,
+          filePath: parentAsset.filePath,
+          type: parentAsset.type,
+          symbols: parentAsset.symbols
+            ? Array.from(parentAsset.symbols.exportSymbols())
+            : 'no symbols',
+        },
+        resolvedAsset: {
+          id: resolvedAsset.id,
+          filePath: resolvedAsset.filePath,
+          type: resolvedAsset.type,
+          symbols: resolvedAsset.symbols
+            ? Array.from(resolvedAsset.symbols.exportSymbols())
+            : 'no symbols',
+          meta: resolvedAsset.meta,
+        },
+        resolved: {
+          id: resolved.id,
+          filePath: resolved.filePath,
+          type: resolved.type,
+          symbols: resolved.symbols
+            ? Array.from(resolved.symbols.exportSymbols())
+            : 'no symbols',
+        },
+        imported,
+        exportSymbol,
+        symbol,
+        symbolType: typeof symbol,
+        dep: dep
+          ? {
+              id: dep.id,
+              specifier: dep.specifier,
+              sourcePath: dep.sourcePath,
+              symbols: dep.symbols
+                ? Array.from(dep.symbols.exportSymbols())
+                : 'no symbols',
+              meta: dep.meta,
+            }
+          : 'no dependency',
+        bundle: {
+          id: this.bundle.id,
+          type: this.bundle.type,
+          target: this.bundle.target?.name,
+          env: this.bundle.env,
+        },
+        bundleGraph: {
+          hasAsset: this.bundle.hasAsset(resolvedAsset),
+          isDependencySkipped: dep
+            ? this.bundleGraph.isDependencySkipped(dep)
+            : 'no dep',
+          getUsedSymbols: this.bundleGraph.getUsedSymbols(parentAsset)
+            ? Array.from(this.bundleGraph.getUsedSymbols(parentAsset) || [])
+            : 'no used symbols',
+        },
+        stack: new Error().stack,
+      });
+
+      // Also log the bundle graph structure around this asset
+      try {
+        const incomingDeps =
+          this.bundleGraph.getIncomingDependencies(parentAsset);
+        const outgoingDeps = this.bundleGraph.getDependencies(parentAsset);
+        console.error(`[CRASH] Bundle graph context:`, {
+          incomingDependencies: Array.from(incomingDeps).map((d) => ({
+            id: d.id,
+            specifier: d.specifier,
+            sourcePath: d.sourcePath,
+          })),
+          outgoingDependencies: Array.from(outgoingDeps).map((d) => ({
+            id: d.id,
+            specifier: d.specifier,
+            sourcePath: d.sourcePath,
+          })),
+        });
+      } catch (e) {
+        console.error(`[CRASH] Error getting bundle graph context:`, e);
+      }
+
+      invariant(
+        false,
+        `Asset was skipped or not found. Parent: ${parentAsset.id} (${parentAsset.filePath}), Resolved: ${resolved.id} (${resolved.filePath}), Imported: ${String(imported)}, Symbol: ${String(symbol)}, ExportSymbol: ${String(exportSymbol)}`,
+      );
     } else {
       // @ts-expect-error TS2322
       return replacements?.get(symbol) || symbol;

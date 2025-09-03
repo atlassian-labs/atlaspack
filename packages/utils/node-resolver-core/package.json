@@ -24,12 +24,12 @@
     "lib"
   ],
   "dependencies": {
-    "@mischnic/json-sourcemap": "^0.1.0",
     "@atlaspack/diagnostic": "2.14.3",
     "@atlaspack/feature-flags": "2.24.1",
     "@atlaspack/fs": "2.15.24",
     "@atlaspack/rust": "3.7.0",
     "@atlaspack/utils": "2.19.1",
+    "@mischnic/json-sourcemap": "^0.1.0",
     "nullthrows": "^1.1.1",
     "semver": "^7.5.2"
   },
@@ -43,6 +43,7 @@
     "domain-browser": "^3.5.0",
     "events": "^3.1.0",
     "https-browserify": "^1.0.0",
+    "node-inspect-extracted": "^3.2.0",
     "os-browserify": "^0.3.0",
     "path-browserify": "^1.0.0",
     "process": "^0.11.10",

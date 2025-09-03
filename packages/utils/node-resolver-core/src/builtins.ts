@@ -27,6 +27,7 @@ let polyfills = {
   events: 'events',
   http: 'stream-http',
   https: 'https-browserify',
+  inspector: 'node-inspect-extracted',
   os: 'os-browserify',
   path: 'path-browserify',
   process: 'process',
