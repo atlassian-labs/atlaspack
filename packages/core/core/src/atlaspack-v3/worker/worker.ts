@@ -282,6 +282,14 @@ export class AtlaspackWorker {
         '[V3] Unimplemented: New asset returned from Node transformer',
       );
 
+      let assetBuffer: Buffer | null = await mutableAsset.getBuffer();
+
+      // If the asset has no code, we set the buffer to null, which we can
+      // detect in Rust, to avoid passing back an empty buffer, which we can't.
+      if (assetBuffer.length === 0) {
+        assetBuffer = null;
+      }
+
       return [
         {
           id: mutableAsset.id,
@@ -301,7 +309,7 @@ export class AtlaspackWorker {
           type: mutableAsset.type,
           uniqueKey: mutableAsset.uniqueKey,
         },
-        await mutableAsset.getBuffer(),
+        assetBuffer,
         // Only send back the map if it has changed
         mutableAsset.isMapDirty
           ? // @ts-expect-error TS2533
