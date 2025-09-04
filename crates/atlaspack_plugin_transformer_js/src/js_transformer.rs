@@ -570,6 +570,7 @@ mod tests {
             is_weak: false,
             is_esm_export: false,
             self_referenced: false,
+            is_static_binding_safe: false,
           },]),
           meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
           ..target_asset

@@ -110,6 +110,7 @@ mod tests {
         is_weak: false,
         is_esm_export: false,
         self_referenced: false,
+        is_static_binding_safe: false,
       }
     )
   }
@@ -143,6 +144,7 @@ export function test() {
         is_weak: false,
         is_esm_export: false,
         self_referenced: false,
+        is_static_binding_safe: false,
       }
     );
   }
@@ -178,6 +180,7 @@ export function test() {
         is_weak: false,
         is_esm_export: true,
         self_referenced: false,
+        is_static_binding_safe: false,
       }
     );
   }

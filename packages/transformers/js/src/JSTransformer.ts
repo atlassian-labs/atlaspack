@@ -1010,12 +1010,15 @@ export default new Transformer({
         let dep = deps.get(source);
         if (!dep) continue;
         if (local === '*' && imported === '*') {
+          // @ts-expect-error TS2345
           dep.symbols.set('*', '*', convertLoc(loc), true);
         } else {
           let reExportName =
             dep.symbols.get(imported)?.local ??
             `$${asset.id}$re_export$${local}`;
+          // @ts-expect-error TS2345
           asset.symbols.set(local, reExportName);
+          // @ts-expect-error TS2345
           dep.symbols.set(imported, reExportName, convertLoc(loc), true);
         }
       }
@@ -1038,6 +1041,7 @@ export default new Transformer({
           // Do not create a self-reference for the `default` symbol unless we have seen an __esModule flag.
           if (
             name === 'default' &&
+            // @ts-expect-error TS2345
             !asset.symbols.hasExportSymbol('__esModule')
           ) {
             continue;
@@ -1073,11 +1077,13 @@ export default new Transformer({
           asset.sideEffects &&
           deps.size === 0 &&
           Object.keys(hoist_result.exported_symbols).length === 0) ||
+        // @ts-expect-error TS2345
         (hoist_result.should_wrap && !asset.symbols.hasExportSymbol('*'))
       ) {
         if (is_empty_or_empty_export) {
           asset.meta.emptyFileStarReexport = true;
         }
+        // @ts-expect-error TS2345
         asset.symbols.set('*', `$${asset.id}$exports`);
       }
 
@@ -1097,6 +1103,7 @@ export default new Transformer({
           let dep = source ? deps.get(source) : undefined;
           asset.symbols.set(
             exported,
+            // @ts-expect-error TS2345
             `${dep?.id ?? ''}$${local}`,
             convertLoc(loc),
           );
@@ -1104,6 +1111,7 @@ export default new Transformer({
             dep.symbols.ensure();
             dep.symbols.set(
               local,
+              // @ts-expect-error TS2345
               `${dep?.id ?? ''}$${local}`,
               convertLoc(loc),
               true,
@@ -1122,6 +1130,7 @@ export default new Transformer({
           let dep = deps.get(source);
           if (!dep) continue;
           dep.symbols.ensure();
+          // @ts-expect-error TS2345
           dep.symbols.set('*', '*', convertLoc(loc), true);
         }
 
@@ -1132,14 +1141,17 @@ export default new Transformer({
           (!symbol_result.is_esm &&
             deps.size === 0 &&
             symbol_result.exports.length === 0) ||
+          // @ts-expect-error TS2345
           (symbol_result.should_wrap && !asset.symbols.hasExportSymbol('*'))
         ) {
           asset.symbols.ensure();
+          // @ts-expect-error TS2345
           asset.symbols.set('*', `$${asset.id}$exports`);
         }
       } else {
         // If the asset is wrapped, add * as a fallback
         asset.symbols.ensure();
+        // @ts-expect-error TS2345
         asset.symbols.set('*', `$${asset.id}$exports`);
       }
 
@@ -1148,6 +1160,7 @@ export default new Transformer({
       for (let dep of asset.getDependencies()) {
         if (dep.symbols.isCleared) {
           dep.symbols.ensure();
+          // @ts-expect-error TS2345
           dep.symbols.set('*', `${dep.id}$`);
         }
       }
