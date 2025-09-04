@@ -2185,6 +2185,7 @@ output = getExports() === exports && getExports().foo
             export_kind: ExportKind::Const,
             is_reassigned: false,
             is_cjs_module: true,
+            has_export_all: false,
           },
         ),
         (
@@ -2193,6 +2194,7 @@ output = getExports() === exports && getExports().foo
             export_kind: ExportKind::Function,
             is_reassigned: false,
             is_cjs_module: true,
+            has_export_all: false,
           },
         )
       ])

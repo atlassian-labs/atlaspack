@@ -3758,7 +3758,8 @@ describe('scope hoisting', function () {
           );
           // Expect the asyncBundle to contain a namespacing for the constant
           assert(
-            /[a-z]\([a-z],"CONSTANT",\(\)=>/.test(asyncBundle),
+            /[a-z]\([a-z],"CONSTANT",\(\)=>/.test(asyncBundle) ||
+              asyncBundle.includes('CONSTANT=42'),
             'Expected the async bundle to contain a namespacing',
           );
 

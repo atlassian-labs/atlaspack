@@ -22,6 +22,7 @@ pub struct SymbolInfo {
   pub export_kind: ExportKind,
   pub is_reassigned: bool,
   pub is_cjs_module: bool,
+  pub has_export_all: bool,
 }
 
 impl SymbolInfo {
@@ -30,6 +31,7 @@ impl SymbolInfo {
       export_kind,
       is_reassigned,
       is_cjs_module: false,
+      has_export_all: false,
     }
   }
 }
@@ -48,7 +50,7 @@ impl SymbolsInfo {
   pub fn is_static_binding_safe(&self, id: &Id) -> bool {
     match self.id_to_symbol_info.get(id) {
       Some(info) => {
-        if info.is_cjs_module {
+        if info.is_cjs_module || info.has_export_all {
           // CJS modules can access the exports object so we need to bail out
           return false;
         }
@@ -79,6 +81,7 @@ pub struct ExportScannerVisitor<'a> {
   symbols_info: &'a mut SymbolsInfo,
   unresolved_mark: Mark,
   is_cjs_module: bool,
+  has_export_all: bool,
 }
 
 fn export_kind_from_decl(decl: &VarDecl) -> ExportKind {
@@ -97,6 +100,7 @@ impl<'a> ExportScannerVisitor<'a> {
       symbols_info,
       unresolved_mark,
       is_cjs_module: false,
+      has_export_all: false,
     }
   }
 
@@ -371,9 +375,12 @@ impl Visit for ExportScannerVisitor<'_> {
           self.find_exports_from_specifier(specifier);
         }
       }
+      ModuleDecl::ExportAll(_) => {
+        // It's complicated to determine if an export all is safe, so we default to safe and allow rebinding
+        self.has_export_all = true;
+      }
       // These are not yet implemented but can be handled in the future.
       ModuleDecl::ExportDefaultDecl(_) => {}
-      ModuleDecl::ExportAll(_) => {}
       // Types are skipped
       ModuleDecl::TsExportAssignment(_) => {}
       ModuleDecl::TsNamespaceExport(_) => {}
@@ -548,7 +555,7 @@ impl Visit for EsmExportClassifier {
     }
 
     // First we scan for all esm exports
-    let (mut exported_identifiers, mut reassignments, is_cjs_module) = {
+    let (mut exported_identifiers, mut reassignments, is_cjs_module, has_export_all) = {
       let mut export_scanner_visitor =
         ExportScannerVisitor::new(&mut self.symbols_info, self.unresolved_mark);
       module.visit_with(&mut export_scanner_visitor);
@@ -557,6 +564,7 @@ impl Visit for EsmExportClassifier {
         export_scanner_visitor.exported_identifiers,
         export_scanner_visitor.reassignments,
         export_scanner_visitor.is_cjs_module,
+        export_scanner_visitor.has_export_all,
       )
     };
 
@@ -580,6 +588,10 @@ impl Visit for EsmExportClassifier {
       // This informs that we want to bail out
       if is_cjs_module {
         symbol_info.is_cjs_module = true;
+      }
+
+      if has_export_all {
+        symbol_info.has_export_all = true;
       }
     }
   }
@@ -625,16 +637,19 @@ mod tests {
           export_kind: ExportKind::Const,
           is_reassigned: false,
           is_cjs_module: false,
+          has_export_all: false,
         },
         &&SymbolInfo {
           export_kind: ExportKind::Let,
           is_reassigned: true,
           is_cjs_module: false,
+          has_export_all: false,
         },
         &&SymbolInfo {
           export_kind: ExportKind::Var,
           is_reassigned: true,
           is_cjs_module: false,
+          has_export_all: false,
         },
       )
     );
@@ -819,6 +834,7 @@ mod tests {
         export_kind: ExportKind::Let,
         is_reassigned: true,
         is_cjs_module: false,
+        has_export_all: false,
       }
     );
   }
@@ -855,16 +871,19 @@ mod tests {
           export_kind: ExportKind::Const,
           is_reassigned: false,
           is_cjs_module: false,
+          has_export_all: false,
         },
         &&SymbolInfo {
           export_kind: ExportKind::Let,
           is_reassigned: true,
           is_cjs_module: false,
+          has_export_all: false,
         },
         &&SymbolInfo {
           export_kind: ExportKind::Const,
           is_reassigned: false,
           is_cjs_module: false,
+          has_export_all: false,
         }
       )
     );
@@ -927,11 +946,13 @@ mod tests {
           export_kind: ExportKind::Function,
           is_reassigned: false,
           is_cjs_module: false,
+          has_export_all: false,
         },
         &&SymbolInfo {
           export_kind: ExportKind::Function,
           is_reassigned: true,
           is_cjs_module: false,
+          has_export_all: false,
         }
       )
     );
@@ -967,11 +988,13 @@ mod tests {
           export_kind: ExportKind::Function,
           is_reassigned: false,
           is_cjs_module: false,
+          has_export_all: false,
         },
         &&SymbolInfo {
           export_kind: ExportKind::Function,
           is_reassigned: true,
           is_cjs_module: false,
+          has_export_all: false,
         }
       )
     );
@@ -1000,6 +1023,7 @@ mod tests {
         export_kind: ExportKind::Class,
         is_reassigned: true,
         is_cjs_module: false,
+        has_export_all: false,
       })
     );
   }
@@ -1029,6 +1053,7 @@ mod tests {
         export_kind: ExportKind::Class,
         is_reassigned: true,
         is_cjs_module: false,
+        has_export_all: false,
       })
     );
   }
@@ -1057,6 +1082,7 @@ mod tests {
         export_kind: ExportKind::Const,
         is_reassigned: false,
         is_cjs_module: true,
+        has_export_all: false,
       })
     );
   }
@@ -1085,6 +1111,36 @@ mod tests {
         export_kind: ExportKind::Const,
         is_reassigned: false,
         is_cjs_module: true,
+        has_export_all: false,
+      })
+    );
+  }
+
+  #[test]
+  fn marks_export_all() {
+    let RunVisitResult { visitor, .. } = run_test_visit_const(
+      r#"
+        export * from 'foo';
+
+        export const bar = 'bar';
+      "#,
+      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+    );
+
+    let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
+      .symbols_info
+      .id_to_symbol_info
+      .iter()
+      .map(|(key, value)| (key.0.clone(), value))
+      .collect::<HashMap<_, _>>();
+
+    assert_eq!(
+      (symbol_info.get(&Atom::from("bar")).unwrap()),
+      (&&SymbolInfo {
+        export_kind: ExportKind::Const,
+        is_reassigned: false,
+        is_cjs_module: false,
+        has_export_all: true,
       })
     );
   }
