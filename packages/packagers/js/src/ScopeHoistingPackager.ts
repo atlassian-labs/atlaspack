@@ -1599,29 +1599,16 @@ ${code}
                   undefined,
                   replacements,
                 );
-
-                if (
-                  getFeatureFlag('exportsRebindingOptimisation') &&
-                  asset.meta?.isStaticBindingSafe
-                ) {
-                  append += `$${assetId}$exports[${JSON.stringify(
-                    symbol,
-                  )}] = ${resolvedSymbol};\n`;
-                } else {
-                  let get = this.buildFunctionExpression([], resolvedSymbol);
-                  let set = asset.meta.hasCJSExports
-                    ? ', ' +
-                      this.buildFunctionExpression(
-                        ['v'],
-                        `${resolvedSymbol} = v`,
-                      )
-                    : '';
-                  prepend += `$parcel$export($${assetId}$exports, ${JSON.stringify(
-                    symbol,
-                  )}, ${get}${set});\n`;
-                  this.usedHelpers.add('$parcel$export');
-                  prependLineCount++;
-                }
+                let get = this.buildFunctionExpression([], resolvedSymbol);
+                let set = asset.meta.hasCJSExports
+                  ? ', ' +
+                    this.buildFunctionExpression(['v'], `${resolvedSymbol} = v`)
+                  : '';
+                prepend += `$parcel$export($${assetId}$exports, ${JSON.stringify(
+                  symbol,
+                )}, ${get}${set});\n`;
+                this.usedHelpers.add('$parcel$export');
+                prependLineCount++;
               }
             }
           }
