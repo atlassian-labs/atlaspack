@@ -98,7 +98,7 @@ export function getAssetGraph(serializedGraph: any): {
       loc: symbol.loc ?? undefined,
       isWeak: symbol.isWeak,
       meta: {
-        isEsm: symbol.isEsm,
+        isEsm: symbol.isEsmExport,
         isStaticBindingSafe: symbol.isStaticBindingSafe,
       },
     };
