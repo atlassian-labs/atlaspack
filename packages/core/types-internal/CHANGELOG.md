@@ -1,5 +1,16 @@
 # @atlaspack/types-internal
 
+## 2.20.0
+
+### Minor Changes
+
+- [#769](https://github.com/atlassian-labs/atlaspack/pull/769) [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572) Thanks [@marcins](https://github.com/marcins)! - Adds a new feature to support adding custom `env` properties in a target, that are available in the Environment during the build. A new feature flag `customEnvInTargets` has been added to gate this feature.
+
+### Patch Changes
+
+- Updated dependencies [[`038e87a`](https://github.com/atlassian-labs/atlaspack/commit/038e87a7858d39556d59d3a2d17db534d45f62c6), [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572)]:
+  - @atlaspack/feature-flags@2.25.0
+
 ## 2.19.5
 
 ### Patch Changes

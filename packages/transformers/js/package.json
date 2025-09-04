@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-js",
-  "version": "4.0.5",
+  "version": "5.0.0",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -26,12 +26,12 @@
   ],
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.3",
-    "@atlaspack/feature-flags": "2.24.1",
-    "@atlaspack/plugin": "2.14.29",
-    "@atlaspack/rust": "3.7.0",
+    "@atlaspack/feature-flags": "2.25.0",
+    "@atlaspack/plugin": "2.14.30",
+    "@atlaspack/rust": "3.8.0",
     "@parcel/source-map": "^2.1.1",
-    "@atlaspack/utils": "2.19.1",
-    "@atlaspack/workers": "2.14.29",
+    "@atlaspack/utils": "2.19.2",
+    "@atlaspack/workers": "2.14.30",
     "@swc/helpers": "^0.5.15",
     "browserslist": "^4.6.6",
     "nullthrows": "^1.1.1",
@@ -39,7 +39,7 @@
     "semver": "^7.5.2"
   },
   "peerDependencies": {
-    "@atlaspack/core": "2.23.5"
+    "@atlaspack/core": "2.24.0"
   },
   "type": "commonjs"
 }

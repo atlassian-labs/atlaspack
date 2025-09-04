@@ -1,5 +1,33 @@
 # @atlaspack/core
 
+## 2.24.0
+
+### Minor Changes
+
+- [#767](https://github.com/atlassian-labs/atlaspack/pull/767) [`038e87a`](https://github.com/atlassian-labs/atlaspack/commit/038e87a7858d39556d59d3a2d17db534d45f62c6) Thanks [@marcins](https://github.com/marcins)! - Implement a new feature `allowExplicitTargetEntries` where entries provided as entries can be filtered by the source property in targets to allow different targets to be built for different subsets of entries.
+
+- [#769](https://github.com/atlassian-labs/atlaspack/pull/769) [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572) Thanks [@marcins](https://github.com/marcins)! - Adds a new feature to support adding custom `env` properties in a target, that are available in the Environment during the build. A new feature flag `customEnvInTargets` has been added to gate this feature.
+
+### Patch Changes
+
+- [#776](https://github.com/atlassian-labs/atlaspack/pull/776) [`5a0363f`](https://github.com/atlassian-labs/atlaspack/commit/5a0363f1086e81068959b87e92064bed5a11a9b4) Thanks [@benjervis](https://github.com/benjervis)! - Guard against empty buffers being returned from JS workers, when using the V3 asset graph build
+
+- [#771](https://github.com/atlassian-labs/atlaspack/pull/771) [`8604d2a`](https://github.com/atlassian-labs/atlaspack/commit/8604d2a49ace5e9194ec4f76e71f06b93610f6b4) Thanks [@benjervis](https://github.com/benjervis)! - Fixes a small error with inline bundle packaging resulting from an incorrect comparison.
+
+- Updated dependencies [[`5a0363f`](https://github.com/atlassian-labs/atlaspack/commit/5a0363f1086e81068959b87e92064bed5a11a9b4), [`038e87a`](https://github.com/atlassian-labs/atlaspack/commit/038e87a7858d39556d59d3a2d17db534d45f62c6), [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572)]:
+  - @atlaspack/rust@3.8.0
+  - @atlaspack/feature-flags@2.25.0
+  - @atlaspack/cache@3.2.25
+  - @atlaspack/fs@2.15.25
+  - @atlaspack/logger@2.14.22
+  - @atlaspack/utils@2.19.2
+  - @atlaspack/graph@3.5.19
+  - @atlaspack/plugin@2.14.30
+  - @atlaspack/profiler@2.14.27
+  - @atlaspack/types@2.15.20
+  - @atlaspack/workers@2.14.30
+  - @atlaspack/package-manager@2.14.30
+
 ## 2.23.5
 
 ### Patch Changes

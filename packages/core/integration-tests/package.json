@@ -15,7 +15,7 @@
     "check-ts": "echo 'No TypeScript check for integration tests yet'"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.14.8",
+    "@atlaspack/cli": "2.14.9",
     "@atlaspack/mocha-profiler": "*",
     "@babel/core": "^7.22.11",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
