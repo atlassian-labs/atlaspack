@@ -2,6 +2,7 @@ import type {
   EnvironmentOptions,
   Environment as IEnvironment,
   FilePath,
+  EnvMap,
 } from '@atlaspack/types';
 import type {Environment, InternalSourceLocation} from './types';
 import {createEnvironmentId} from '@atlaspack/rust';
@@ -19,6 +20,7 @@ const DEFAULT_ENGINES = {
 
 type EnvironmentOpts = EnvironmentOptions & {
   loc?: InternalSourceLocation | null | undefined;
+  customEnv?: EnvMap | null | undefined;
 };
 
 export function createEnvironment({
@@ -33,6 +35,7 @@ export function createEnvironment({
   sourceMap,
   unstableSingleFileOutput = false,
   loc,
+  customEnv,
 }: EnvironmentOpts = {
   /*::...null*/
 }): EnvironmentRef {
@@ -113,6 +116,7 @@ export function createEnvironment({
     sourceMap,
     unstableSingleFileOutput,
     loc,
+    customEnv,
   };
 
   res.id = getEnvironmentHash(res);
@@ -152,6 +156,7 @@ export function getEnvironmentHash(env: Environment): string {
     shouldOptimize: env.shouldOptimize,
     shouldScopeHoist: env.shouldScopeHoist,
     sourceMap: env.sourceMap,
+    customEnv: env.customEnv,
   } as const;
   const id = createEnvironmentId(data);
   identifierRegistry.addIdentifier('environment', id, data);

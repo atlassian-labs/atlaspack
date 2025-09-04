@@ -71,6 +71,10 @@ pub struct Environment {
   pub source_type: SourceType,
 
   pub unstable_single_file_output: bool,
+
+  /// Custom environment variables specific to this target
+  #[serde(skip_serializing_if = "Option::is_none", rename = "customEnv")]
+  pub custom_env: Option<BTreeMap<String, String>>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -84,6 +88,7 @@ pub fn create_environment_id(
   should_optimize: &bool,
   should_scope_hoist: &bool,
   source_map: &Option<TargetSourceMapOptions>,
+  custom_env: &Option<BTreeMap<String, String>>,
 ) -> String {
   let mut hasher = IdentifierHasher::new();
   context.hash(&mut hasher);
@@ -95,6 +100,14 @@ pub fn create_environment_id(
   should_optimize.hash(&mut hasher);
   should_scope_hoist.hash(&mut hasher);
   source_map.clone().unwrap_or_default().hash(&mut hasher);
+
+  // Only hash custom_env if it's Some and not empty to maintain backward compatibility
+  if let Some(ref env) = custom_env {
+    if !env.is_empty() {
+      env.hash(&mut hasher);
+    }
+  }
+
   let hash = hasher.finish(); // We can simply expose this as a nº too
   format!("{:016x}", hash)
 }
@@ -111,6 +124,7 @@ impl Environment {
       &self.should_optimize,
       &self.should_scope_hoist,
       &self.source_map,
+      &self.custom_env,
     )
   }
 }
@@ -257,5 +271,96 @@ mod test {
     };
     let id = environment.id();
     assert_eq!(id, "9602bef6237ef34c");
+  }
+
+  #[test]
+  fn test_environment_with_custom_env() {
+    let mut custom_env = BTreeMap::new();
+    custom_env.insert("NODE_ENV".to_string(), "production".to_string());
+    custom_env.insert("API_URL".to_string(), "https://api.example.com".to_string());
+
+    let environment = Environment {
+      custom_env: Some(custom_env),
+      ..Default::default()
+    };
+
+    let id = environment.id();
+    // This should be different from the default environment ID
+    assert_ne!(id, "627f0f1998db2469");
+
+    // Test that the same custom env produces the same ID
+    let mut same_custom_env = BTreeMap::new();
+    same_custom_env.insert("NODE_ENV".to_string(), "production".to_string());
+    same_custom_env.insert("API_URL".to_string(), "https://api.example.com".to_string());
+
+    let environment2 = Environment {
+      custom_env: Some(same_custom_env),
+      ..Default::default()
+    };
+
+    assert_eq!(environment.id(), environment2.id());
+  }
+
+  #[test]
+  fn test_environment_custom_env_ordering() {
+    // Test that BTreeMap ordering ensures consistent hashing
+    let mut custom_env1 = BTreeMap::new();
+    custom_env1.insert("B_VAR".to_string(), "value2".to_string());
+    custom_env1.insert("A_VAR".to_string(), "value1".to_string());
+
+    let mut custom_env2 = BTreeMap::new();
+    custom_env2.insert("A_VAR".to_string(), "value1".to_string());
+    custom_env2.insert("B_VAR".to_string(), "value2".to_string());
+
+    let environment1 = Environment {
+      custom_env: Some(custom_env1),
+      ..Default::default()
+    };
+
+    let environment2 = Environment {
+      custom_env: Some(custom_env2),
+      ..Default::default()
+    };
+
+    // Should produce the same ID regardless of insertion order
+    assert_eq!(environment1.id(), environment2.id());
+  }
+
+  #[test]
+  fn test_environment_custom_env_different_values() {
+    let mut custom_env1 = BTreeMap::new();
+    custom_env1.insert("NODE_ENV".to_string(), "development".to_string());
+
+    let mut custom_env2 = BTreeMap::new();
+    custom_env2.insert("NODE_ENV".to_string(), "production".to_string());
+
+    let environment1 = Environment {
+      custom_env: Some(custom_env1),
+      ..Default::default()
+    };
+
+    let environment2 = Environment {
+      custom_env: Some(custom_env2),
+      ..Default::default()
+    };
+
+    // Should produce different IDs for different values
+    assert_ne!(environment1.id(), environment2.id());
+  }
+
+  #[test]
+  fn test_environment_none_vs_empty_custom_env() {
+    let environment_none = Environment {
+      custom_env: None,
+      ..Default::default()
+    };
+
+    let environment_empty = Environment {
+      custom_env: Some(BTreeMap::new()),
+      ..Default::default()
+    };
+
+    // None and empty BTreeMap should produce the same IDs (both don't affect the hash)
+    assert_eq!(environment_none.id(), environment_empty.id());
   }
 }

@@ -475,6 +475,7 @@ impl TargetRequest {
             .then(TargetSourceMapOptions::default),
           source_type: SourceType::Module,
           unstable_single_file_output: false,
+          custom_env: None, // Default target has no custom env
         }),
         loc: None,
         name: String::from("default"),
@@ -696,6 +697,7 @@ impl TargetRequest {
             Some(SourceMapField::Options(source_maps)) => Some(source_maps.clone()),
           },
         },
+        custom_env: target_descriptor.env.clone(),
         ..Environment::default()
       }),
       loc: None, // TODO
@@ -766,6 +768,7 @@ fn merge_builtin_descriptors(
       dist_dir: descriptor.dist_dir.or(default_descriptor.dist_dir),
       dist_entry: descriptor.dist_entry.or(default_descriptor.dist_entry),
       engines: descriptor.engines.or(default_descriptor.engines),
+      env: descriptor.env.or(default_descriptor.env),
       include_node_modules: descriptor
         .include_node_modules
         .or(default_descriptor.include_node_modules),

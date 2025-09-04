@@ -105,10 +105,17 @@ impl AtlaspackJsTransformerPlugin {
         .as_ref()
         .is_some_and(|vars| vars.is_empty())
     {
-      return HashMap::new();
+      // Still check for custom env even if global env is empty
+      if asset.env.custom_env.is_none() {
+        return HashMap::new();
+      }
     }
 
-    let env_vars = self.options.env.clone().unwrap_or_default();
+    // Merge global environment variables with asset's custom environment variables
+    let mut env_vars = self.options.env.clone().unwrap_or_default();
+    if let Some(custom_env) = &asset.env.custom_env {
+      env_vars.extend(custom_env.clone());
+    }
     let inline_environment = self
       .config
       .inline_environment

@@ -9,6 +9,7 @@ describe('Environment', () => {
     assert.deepEqual(fromEnvironmentId(createEnvironment()), {
       id: 'd821e85f6b50315e',
       context: 'browser',
+      customEnv: undefined,
       engines: {
         browsers: ['> 0.25%'],
       },
@@ -17,8 +18,8 @@ describe('Environment', () => {
       isLibrary: false,
       shouldOptimize: false,
       shouldScopeHoist: false,
-      sourceMap: null,
-      loc: null,
+      sourceMap: undefined,
+      loc: undefined,
       sourceType: 'module',
       unstableSingleFileOutput: false,
     });
@@ -30,6 +31,7 @@ describe('Environment', () => {
       {
         id: '2320af923a717577',
         context: 'node',
+        customEnv: undefined,
         engines: {
           node: '>= 10.0.0',
         },
@@ -54,6 +56,7 @@ describe('Environment', () => {
       {
         id: '75603271034eff15',
         context: 'browser',
+        customEnv: undefined,
         engines: {
           browsers: ['last 1 version'],
         },
@@ -62,8 +65,8 @@ describe('Environment', () => {
         isLibrary: false,
         shouldOptimize: false,
         shouldScopeHoist: false,
-        sourceMap: null,
-        loc: null,
+        sourceMap: undefined,
+        loc: undefined,
         sourceType: 'module',
         unstableSingleFileOutput: false,
       },
@@ -74,6 +77,7 @@ describe('Environment', () => {
     assert.deepEqual(fromEnvironmentId(createEnvironment({context: 'node'})), {
       id: 'e45cc12216f7857d',
       context: 'node',
+      customEnv: undefined,
       engines: {
         node: '>= 8.0.0',
       },
@@ -95,6 +99,7 @@ describe('Environment', () => {
       {
         id: 'd821e85f6b50315e',
         context: 'browser',
+        customEnv: undefined,
         engines: {
           browsers: ['> 0.25%'],
         },
@@ -103,8 +108,8 @@ describe('Environment', () => {
         isLibrary: false,
         shouldOptimize: false,
         shouldScopeHoist: false,
-        sourceMap: null,
-        loc: null,
+        sourceMap: undefined,
+        loc: undefined,
         sourceType: 'module',
         unstableSingleFileOutput: false,
       },
@@ -117,6 +122,7 @@ describe('Environment', () => {
       {
         id: '9917be65326c5de9',
         context: 'tesseract',
+        customEnv: undefined,
         engines: {
           browsers: ['> 0.25%'],
         },
@@ -125,8 +131,8 @@ describe('Environment', () => {
         isLibrary: false,
         shouldOptimize: false,
         shouldScopeHoist: false,
-        sourceMap: null,
-        loc: null,
+        sourceMap: undefined,
+        loc: undefined,
         sourceType: 'module',
         unstableSingleFileOutput: false,
       },
