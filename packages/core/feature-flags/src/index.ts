@@ -185,6 +185,10 @@ export const DEFAULT_FEATURE_FLAGS = {
    * This allows building only specific entries for specific targets.
    */
   allowExplicitTargetEntries: process.env.ATLASPACK_BUILD_ENV === 'test',
+  /**
+   * When enabled, the packager will avoid using the binding helper for exports where possible.
+   */
+  exportsRebindingOptimisation: false,
 
   /**
    * When enabled, allows custom per-target "env" properties to be used in transformers.

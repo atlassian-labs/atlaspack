@@ -260,6 +260,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
         is_esm_export: true,
         self_referenced: false,
         loc: None,
+        is_static_binding_safe: true,
       });
 
       /// This function handles each CSS export as it is discovered. It runs recursively in cases
@@ -292,6 +293,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
           is_esm_export: true,
           self_referenced: false,
           loc: None,
+          is_static_binding_safe: true,
         });
 
         let mut code = format!("module.exports[\"{}\"] = `{}", key, export.name);
@@ -328,6 +330,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                   is_esm_export: false,
                   self_referenced: true,
                   loc: None,
+                  is_static_binding_safe: false,
                 }];
 
                 dependencies.push(Dependency {
@@ -370,6 +373,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
             is_esm_export: false,
             self_referenced: true,
             loc: None,
+            is_static_binding_safe: false,
           }];
 
           dependencies.push(Dependency {
@@ -436,6 +440,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
               is_esm_export: true,
               self_referenced: false,
               loc: None,
+              is_static_binding_safe: false,
             })
           }
         }
@@ -453,6 +458,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
               loc: None,
               self_referenced: false,
               is_esm_export: false,
+              is_static_binding_safe: false,
             }];
 
             dependencies.push(Dependency {
@@ -602,6 +608,7 @@ mod tests {
             is_weak: false,
             is_esm_export: true,
             self_referenced: false,
+            is_static_binding_safe: true,
           },
           Symbol {
             local: "EcQGha_root".into(),
@@ -610,6 +617,7 @@ mod tests {
             is_weak: false,
             is_esm_export: true,
             self_referenced: false,
+            is_static_binding_safe: true,
           },
         ]),
         ..asset
@@ -657,6 +665,7 @@ mod tests {
             is_weak: false,
             is_esm_export: true,
             self_referenced: false,
+            is_static_binding_safe: true,
           },
           Symbol {
             local: "EcQGha_other".into(),
@@ -665,6 +674,7 @@ mod tests {
             is_weak: false,
             is_esm_export: true,
             self_referenced: false,
+            is_static_binding_safe: true,
           },
           Symbol {
             local: "EcQGha_root".into(),
@@ -673,6 +683,7 @@ mod tests {
             is_weak: false,
             is_esm_export: true,
             self_referenced: false,
+            is_static_binding_safe: true,
           },
         ]),
         ..asset
@@ -721,6 +732,7 @@ mod tests {
             is_weak: false,
             is_esm_export: true,
             self_referenced: false,
+            is_static_binding_safe: true,
           },
           Symbol {
             local: "EcQGha_other".into(),
@@ -729,6 +741,7 @@ mod tests {
             is_weak: false,
             is_esm_export: true,
             self_referenced: false,
+            is_static_binding_safe: true,
           },
         ]),
         ..asset

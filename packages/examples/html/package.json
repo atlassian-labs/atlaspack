@@ -4,7 +4,8 @@
   "license": "(MIT OR Apache-2.0)",
   "private": true,
   "scripts": {
-    "start": "atlaspack src/index.html --open"
+    "start": "atlaspack src/index.html --open",
+    "build": "atlaspack build src/index.html"
   },
   "devDependencies": {
     "@atlaspack/cli": "2.14.8"
@@ -14,5 +15,6 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "sideEffects": true
 }

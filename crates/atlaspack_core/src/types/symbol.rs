@@ -30,4 +30,7 @@ pub struct Symbol {
   /// Only on ESM exports, this will be set to true
   pub is_esm_export: bool,
   pub self_referenced: bool,
+  /// false if the Symbol can be changed at runtime, requiring extra export
+  /// wrapping runtime code
+  pub is_static_binding_safe: bool,
 }

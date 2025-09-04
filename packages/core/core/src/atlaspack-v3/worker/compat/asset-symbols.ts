@@ -170,6 +170,7 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
             }
           : undefined,
         isEsmExport: Boolean(meta?.isEsm),
+        isStaticBindingSafe: Boolean(meta?.isStaticBindingSafe),
         isWeak: false,
         selfReferenced: Boolean(meta?.selfReferenced),
       });

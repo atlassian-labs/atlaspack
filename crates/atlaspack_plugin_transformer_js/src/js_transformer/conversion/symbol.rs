@@ -55,6 +55,7 @@ pub(crate) fn transformer_exported_symbol_into_symbol(
       &symbol.loc,
     )),
     is_esm_export: symbol.is_esm,
+    is_static_binding_safe: symbol.is_static_binding_safe,
     ..Default::default()
   }
 }
@@ -109,6 +110,7 @@ mod tests {
         is_weak: false,
         is_esm_export: false,
         self_referenced: false,
+        is_static_binding_safe: false,
       }
     )
   }
@@ -142,6 +144,7 @@ export function test() {
         is_weak: false,
         is_esm_export: false,
         self_referenced: false,
+        is_static_binding_safe: false,
       }
     );
   }
@@ -177,6 +180,7 @@ export function test() {
         is_weak: false,
         is_esm_export: true,
         self_referenced: false,
+        is_static_binding_safe: false,
       }
     );
   }

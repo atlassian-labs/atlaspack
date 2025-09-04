@@ -520,6 +520,8 @@ export default new Transformer({
       hmr_improvements: options.featureFlags.hmrImprovements,
       computed_properties_fix: options.featureFlags.unusedComputedPropertyFix,
       add_display_name: Boolean(config.addReactDisplayName),
+      exports_rebinding_optimisation:
+        options.featureFlags.exportsRebindingOptimisation,
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
@@ -971,8 +973,12 @@ export default new Transformer({
         local,
         loc,
         is_esm,
+        is_static_binding_safe,
       } of hoist_result.exported_symbols) {
-        asset.symbols.set(exported, local, convertLoc(loc), {isEsm: is_esm});
+        asset.symbols.set(exported, local, convertLoc(loc), {
+          isEsm: is_esm,
+          isStaticBindingSafe: is_static_binding_safe,
+        });
       }
 
       // deps is a map of dependencies that are keyed by placeholder or specifier

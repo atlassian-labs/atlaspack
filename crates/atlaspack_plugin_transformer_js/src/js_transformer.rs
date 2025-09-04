@@ -215,6 +215,11 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       .feature_flags
       .bool_enabled("unusedComputedPropertyFix");
 
+    let feature_flag_exports_rebinding_optimisation = self
+      .options
+      .feature_flags
+      .bool_enabled("exportsRebindingOptimisation");
+
     let mut targets: HashMap<String, String> = HashMap::new();
     if env.context.is_browser() {
       let browsers = env.engines.browsers.clone().unwrap_or_default();
@@ -329,6 +334,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       conditional_bundling: feature_flag_conditional_bundling,
       hmr_improvements: feature_flag_hmr_improvements,
       computed_properties_fix: feature_flag_computed_properties_fix,
+      exports_rebinding_optimisation: feature_flag_exports_rebinding_optimisation,
       ..atlaspack_js_swc_core::Config::default()
     };
 
@@ -564,6 +570,7 @@ mod tests {
             is_weak: false,
             is_esm_export: false,
             self_referenced: false,
+            is_static_binding_safe: false,
           },]),
           meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
           ..target_asset
