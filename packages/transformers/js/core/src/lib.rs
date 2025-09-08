@@ -804,11 +804,11 @@ mod tests {
   #[traced_test]
   fn test_logs_when_flag_is_on_and_file_is_empty() {
     let config: Config = make_test_swc_config(r#""#);
-    env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "true");
+    unsafe { env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "true") };
     let _result = transform(config, None);
     assert!(logs_contain("You are attempting to import"));
 
-    env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "false");
+    unsafe { env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "false") };
     let config: Config = make_test_swc_config(r#""#);
     let _result = transform(config, None);
     logs_assert(|lines: &[&str]| {

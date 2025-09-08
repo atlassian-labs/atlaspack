@@ -168,7 +168,7 @@ mod tests {
   #[test]
   fn test_tracing_options_sets_to_none_if_no_mode_is_set() {
     let _guard = TEST_LOCK.lock();
-    std::env::remove_var("ATLASPACK_TRACING_MODE");
+    unsafe { std::env::remove_var("ATLASPACK_TRACING_MODE") };
     let options = TracerMode::from_env().unwrap();
     assert!(options.is_empty());
   }
@@ -176,7 +176,7 @@ mod tests {
   #[test]
   fn test_tracing_options_sets_to_file() {
     let _guard = TEST_LOCK.lock();
-    std::env::set_var("ATLASPACK_TRACING_MODE", "stdout");
+    unsafe { std::env::set_var("ATLASPACK_TRACING_MODE", "stdout") };
     let options = TracerMode::from_env().unwrap();
     assert!(options.contains(&TracerMode::stdout()));
   }

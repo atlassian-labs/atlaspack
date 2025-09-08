@@ -12,8 +12,8 @@ pub struct JsValue(pub JsUnknown, pub Env);
 
 impl FromNapiValue for JsValue {
   unsafe fn from_napi_value(env: napi_env, value: napi_value) -> napi::Result<Self> {
-    let value = JsUnknown::from_napi_value(env, value)?;
-    let env = Env::from_raw(env);
+    let value = unsafe { JsUnknown::from_napi_value(env, value) }?;
+    let env = unsafe { Env::from_raw(env) };
     Ok(Self(value, env))
   }
 }

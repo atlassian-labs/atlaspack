@@ -429,12 +429,12 @@ impl DatabaseWriter {
   }
 
   /// Create a write transaction
-  pub fn write_txn(&self) -> heed::Result<RwTxn> {
+  pub fn write_txn<'a>(&'a self) -> heed::Result<RwTxn<'a>> {
     self.environment.write_txn()
   }
 
   /// Create a read transaction
-  pub fn read_txn(&self) -> heed::Result<RoTxn> {
+  pub fn read_txn<'a>(&'a self) -> heed::Result<RoTxn<'a>> {
     self.environment.read_txn()
   }
 

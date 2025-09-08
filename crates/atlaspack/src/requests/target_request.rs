@@ -73,12 +73,12 @@ struct CustomTarget<'a> {
 }
 
 impl TargetRequest {
-  fn builtin_browser_target(
-    &self,
+  fn builtin_browser_target<'a>(
+    &'a self,
     descriptor: Option<BuiltInTargetDescriptor>,
     dist: Option<BrowserField>,
     name: Option<String>,
-  ) -> BuiltInTarget {
+  ) -> BuiltInTarget<'a> {
     BuiltInTarget {
       descriptor: descriptor
         .map(|d| {
@@ -102,11 +102,11 @@ impl TargetRequest {
     }
   }
 
-  fn builtin_main_target(
-    &self,
+  fn builtin_main_target<'a>(
+    &'a self,
     descriptor: Option<BuiltInTargetDescriptor>,
     dist: Option<PathBuf>,
-  ) -> BuiltInTarget {
+  ) -> BuiltInTarget<'a> {
     BuiltInTarget {
       descriptor: descriptor
         .map(|d| merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Node)))
@@ -120,11 +120,11 @@ impl TargetRequest {
     }
   }
 
-  fn builtin_module_target(
-    &self,
+  fn builtin_module_target<'a>(
+    &'a self,
     descriptor: Option<BuiltInTargetDescriptor>,
     dist: Option<PathBuf>,
-  ) -> BuiltInTarget {
+  ) -> BuiltInTarget<'a> {
     BuiltInTarget {
       descriptor: descriptor
         .map(|d| merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Node)))
@@ -138,11 +138,11 @@ impl TargetRequest {
     }
   }
 
-  fn builtin_types_target(
-    &self,
+  fn builtin_types_target<'a>(
+    &'a self,
     descriptor: Option<BuiltInTargetDescriptor>,
     dist: Option<PathBuf>,
-  ) -> BuiltInTarget {
+  ) -> BuiltInTarget<'a> {
     BuiltInTarget {
       descriptor: descriptor
         .map(|d| merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Node)))
@@ -1990,7 +1990,7 @@ mod tests {
             "distDir": "./dist/one"
           },
           "two": {
-            "source": "./input2.js", 
+            "source": "./input2.js",
             "distDir": "./dist/two"
           }
         }

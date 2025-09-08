@@ -218,10 +218,10 @@ mod tests {
   use crate::global_replacer::GlobalReplacer;
   use crate::{DependencyDescriptor, DependencyKind};
 
-  fn make_global_replacer(
+  fn make_global_replacer<'a>(
     run_test_context: RunTestContext,
-    items: &mut Vec<DependencyDescriptor>,
-  ) -> GlobalReplacer {
+    items: &'a mut Vec<DependencyDescriptor>,
+  ) -> GlobalReplacer<'a> {
     GlobalReplacer {
       source_map: run_test_context.source_map.clone(),
       items,

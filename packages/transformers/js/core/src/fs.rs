@@ -33,7 +33,7 @@ pub fn inline_fs<'a>(
   conditional_bundling: bool,
   computed_properties_fix: bool,
   symbols_info: SymbolsInfo,
-) -> impl VisitMut + 'a {
+) -> impl VisitMut + 'a + use<'a> {
   InlineFS {
     filename: Path::new(filename).to_path_buf(),
     collect: Collect::new(
