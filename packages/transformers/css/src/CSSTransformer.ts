@@ -14,6 +14,7 @@ import * as native from 'lightningcss';
 import browserslist from 'browserslist';
 import nullthrows from 'nullthrows';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 const {transform, transformStyleAttribute, browserslistToTargets} = native;
 
@@ -63,6 +64,11 @@ export default new Transformer({
       shouldOptimize: asset.env.shouldOptimize,
       shouldScopeHoist: asset.env.shouldScopeHoist,
       sourceMap: asset.env.sourceMap,
+      unstableSingleFileOutput: getFeatureFlag(
+        'preserveUnstableSingleFileOutputInCss',
+      )
+        ? asset.env.unstableSingleFileOutput
+        : undefined,
     });
 
     let [code, originalMap] = await Promise.all([
