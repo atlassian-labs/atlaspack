@@ -84,6 +84,7 @@ impl Drop for JPEGOptimizer {
 
 // This function losslessly optimizes jpegs.
 // Based on the jpegtran.c example program in libjpeg.
+#[allow(clippy::mut_from_ref)]
 unsafe fn optimize_jpeg(bytes: &[u8]) -> std::thread::Result<&mut [u8]> {
   std::panic::catch_unwind(|| unsafe {
     let mut info = JPEGOptimizer::new();

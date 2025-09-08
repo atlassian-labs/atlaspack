@@ -358,6 +358,7 @@ impl RequestTracker {
 ///
 /// See [`RequestTracker::run_request`].
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 enum RequestQueueMessage {
   RunRequest {
     tx: Sender<RequestQueueMessage>,

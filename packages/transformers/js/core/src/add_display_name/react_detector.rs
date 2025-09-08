@@ -23,15 +23,15 @@ impl Visit for ReactDetector {
   }
 
   fn visit_call_expr(&mut self, n: &CallExpr) {
-    if let Callee::Expr(expr) = &n.callee {
-      if let Expr::Ident(id) = &**expr {
-        let sym = id.sym.as_ref();
-        if sym.starts_with("use")
-          && sym.len() > 3
-          && sym[3..].chars().next().map_or(false, |c| c.is_uppercase())
-        {
-          self.is_react = true;
-        }
+    if let Callee::Expr(expr) = &n.callee
+      && let Expr::Ident(id) = &**expr
+    {
+      let sym = id.sym.as_ref();
+      if sym.starts_with("use")
+        && sym.len() > 3
+        && sym[3..].chars().next().is_some_and(|c| c.is_uppercase())
+      {
+        self.is_react = true;
       }
     }
     if !self.is_react {

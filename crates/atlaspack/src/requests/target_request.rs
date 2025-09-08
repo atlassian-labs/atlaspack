@@ -221,16 +221,15 @@ impl TargetRequest {
       _ => None,
     };
 
-    if let Some(inferred_output_format) = inferred_output_format {
-      if let Some(output_format) = target.output_format {
-        if output_format != inferred_output_format {
-          return Err(diagnostic_error!(DiagnosticBuilder::default()
+    if let Some(inferred_output_format) = inferred_output_format
+      && let Some(output_format) = target.output_format
+      && output_format != inferred_output_format
+    {
+      return Err(diagnostic_error!(DiagnosticBuilder::default()
             .code_frames(vec![CodeFrame::from(package_json)])
             .message(format!(
               "Declared output format {output_format} does not match expected output format {inferred_output_format}",
             ))));
-        }
-      }
     }
 
     Ok(inferred_output_format)
@@ -258,12 +257,11 @@ impl TargetRequest {
       Ok(pkg) => pkg,
     };
 
-    if let Some(engines) = config.contents.engines.as_ref() {
-      if let Some(browsers) = &engines.browsers {
-        if !Browsers::from(browsers).is_empty() {
-          return Ok(config);
-        }
-      }
+    if let Some(engines) = config.contents.engines.as_ref()
+      && let Some(browsers) = &engines.browsers
+      && !Browsers::from(browsers).is_empty()
+    {
+      return Ok(config);
     }
 
     let env = self

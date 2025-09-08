@@ -16,13 +16,13 @@ static SOURCEMAP_URL: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 pub fn find_sourcemap_url(code: &str) -> Option<SourceMapUrlMatch> {
-  if let Some(captures) = SOURCEMAP_URL.captures(code) {
-    if let (Some(code), Some(url)) = (captures.get(0), captures.name("url")) {
-      return Some(SourceMapUrlMatch {
-        code: code.as_str().trim().into(),
-        url: url.as_str().to_string(),
-      });
-    }
+  if let Some(captures) = SOURCEMAP_URL.captures(code)
+    && let (Some(code), Some(url)) = (captures.get(0), captures.name("url"))
+  {
+    return Some(SourceMapUrlMatch {
+      code: code.as_str().trim().into(),
+      url: url.as_str().to_string(),
+    });
   }
 
   None

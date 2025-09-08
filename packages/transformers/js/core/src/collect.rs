@@ -310,14 +310,14 @@ impl Visit for Collect {
 
     if let Some(bailouts) = &mut self.bailouts {
       for (key, Import { specifier, .. }) in &self.imports {
-        if specifier == "*" {
-          if let Some(spans) = self.non_static_access.get(key) {
-            for span in spans {
-              bailouts.push(Bailout {
-                loc: SourceLocation::from(&self.source_map, *span),
-                reason: BailoutReason::NonStaticAccess,
-              })
-            }
+        if specifier == "*"
+          && let Some(spans) = self.non_static_access.get(key)
+        {
+          for span in spans {
+            bailouts.push(Bailout {
+              loc: SourceLocation::from(&self.source_map, *span),
+              reason: BailoutReason::NonStaticAccess,
+            })
           }
         }
       }
@@ -797,10 +797,10 @@ impl Visit for Collect {
           if !self.is_module {
             handle_export!();
           }
-        } else if !self.in_class {
-          if let MemberProp::Ident(prop) = &node.prop {
-            self.this_exprs.insert(prop.sym.clone(), node.span);
-          }
+        } else if !self.in_class
+          && let MemberProp::Ident(prop) = &node.prop
+        {
+          self.this_exprs.insert(prop.sym.clone(), node.span);
         }
         return;
       }
@@ -847,16 +847,16 @@ impl Visit for Collect {
       self.add_bailout(span, BailoutReason::NonStaticDynamicImport);
     }
 
-    if self.conditional_bundling {
-      if let Some((source_true, source_false)) = match_import_cond(node, self.ignore_mark) {
-        self.wrapped_requires.insert(source_true.to_string());
-        self.wrapped_requires.insert(source_false.to_string());
-        let span = match node {
-          Expr::Call(c) => c.span,
-          _ => unreachable!(),
-        };
-        self.add_bailout(span, BailoutReason::NonStaticDynamicImport);
-      }
+    if self.conditional_bundling
+      && let Some((source_true, source_false)) = match_import_cond(node, self.ignore_mark)
+    {
+      self.wrapped_requires.insert(source_true.to_string());
+      self.wrapped_requires.insert(source_false.to_string());
+      let span = match node {
+        Expr::Call(c) => c.span,
+        _ => unreachable!(),
+      };
+      self.add_bailout(span, BailoutReason::NonStaticDynamicImport);
     }
 
     match node {
@@ -1028,27 +1028,26 @@ impl Visit for Collect {
         }
         Expr::Member(member) => {
           // import('foo').then(foo => ...);
-          if let Some(source) = match_import(&member.obj) {
-            if match_property_name(member).map_or(false, |f| &*f.0 == "then") {
-              if let Some(ExprOrSpread { expr, .. }) = node.args.first() {
-                let param = match &**expr {
-                  Expr::Fn(func) => func.function.params.first().map(|param| &param.pat),
-                  Expr::Arrow(arrow) => arrow.params.first(),
-                  _ => None,
-                };
+          if let Some(source) = match_import(&member.obj)
+            && match_property_name(member).is_some_and(|f| &*f.0 == "then")
+            && let Some(ExprOrSpread { expr, .. }) = node.args.first()
+          {
+            let param = match &**expr {
+              Expr::Fn(func) => func.function.params.first().map(|param| &param.pat),
+              Expr::Arrow(arrow) => arrow.params.first(),
+              _ => None,
+            };
 
-                if let Some(param) = param {
-                  self.add_pat_imports(param, &source, ImportKind::DynamicImport);
-                } else {
-                  self.non_static_requires.insert(source.clone());
-                  self.wrapped_requires.insert(source.to_string());
-                  self.add_bailout(node.span, BailoutReason::NonStaticDynamicImport);
-                }
-
-                expr.visit_with(self);
-                return;
-              }
+            if let Some(param) = param {
+              self.add_pat_imports(param, &source, ImportKind::DynamicImport);
+            } else {
+              self.non_static_requires.insert(source.clone());
+              self.wrapped_requires.insert(source.to_string());
+              self.add_bailout(node.span, BailoutReason::NonStaticDynamicImport);
             }
+
+            expr.visit_with(self);
+            return;
           }
         }
         _ => {}

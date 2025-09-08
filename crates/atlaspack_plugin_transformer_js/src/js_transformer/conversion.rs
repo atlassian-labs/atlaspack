@@ -481,6 +481,7 @@ fn make_export_all_symbol(loc: Option<SourceLocation>) -> Symbol {
   }
 }
 
+#[allow(clippy::large_enum_variant)]
 enum DependencyConversionResult {
   Dependency(Dependency),
   /// Only for [`atlaspack_js_swc_core::DependencyKind::File`] dependencies, the output will not be a

@@ -305,19 +305,19 @@ impl<'a> ExportScannerVisitor<'a> {
   /// ```
   ///
   fn find_exports_from_specifier(&mut self, specifier: &ExportSpecifier) {
-    if let ExportSpecifier::Named(named_specifier) = specifier {
-      if let ModuleExportName::Ident(orig_ident) = named_specifier.orig.clone() {
-        let exported: ModuleExportName = named_specifier
-          .exported
-          .clone()
-          .unwrap_or(ModuleExportName::Ident(orig_ident.clone()));
-        if let ModuleExportName::Ident(exported_ident) = exported {
-          self
-            .exported_identifiers
-            .entry(orig_ident.to_id())
-            .or_default()
-            .insert(exported_ident.to_id());
-        }
+    if let ExportSpecifier::Named(named_specifier) = specifier
+      && let ModuleExportName::Ident(orig_ident) = named_specifier.orig.clone()
+    {
+      let exported: ModuleExportName = named_specifier
+        .exported
+        .clone()
+        .unwrap_or(ModuleExportName::Ident(orig_ident.clone()));
+      if let ModuleExportName::Ident(exported_ident) = exported {
+        self
+          .exported_identifiers
+          .entry(orig_ident.to_id())
+          .or_default()
+          .insert(exported_ident.to_id());
       }
     }
   }
@@ -411,10 +411,11 @@ impl Visit for ExportScannerVisitor<'_> {
         }
       }
       (Expr::Ident(obj), MemberProp::Computed(ComputedPropName { expr, .. })) => {
-        if let Expr::Lit(Lit::Str(str)) = &**expr {
-          if obj.sym == "module" && str.value == "exports" {
-            self.is_cjs_module = true;
-          }
+        if let Expr::Lit(Lit::Str(str)) = &**expr
+          && obj.sym == "module"
+          && str.value == "exports"
+        {
+          self.is_cjs_module = true;
         }
       }
       _ => {}

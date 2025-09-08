@@ -266,10 +266,10 @@ impl<'a> Resolver<'a> {
         return Ok(ModuleType::Json);
       }
 
-      if ext == "js" {
-        if let Some(package) = self.find_package(path.parent().unwrap(), invalidations)? {
-          return Ok(package.module_type);
-        }
+      if ext == "js"
+        && let Some(package) = self.find_package(path.parent().unwrap(), invalidations)?
+      {
+        return Ok(package.module_type);
       }
     }
 
@@ -297,10 +297,10 @@ impl<'a> Resolver<'a> {
   ) -> Option<PathBuf> {
     let mut first = true;
     for dir in from.ancestors() {
-      if let Some(filename) = dir.file_name() {
-        if filename == "node_modules" {
-          break;
-        }
+      if let Some(filename) = dir.file_name()
+        && filename == "node_modules"
+      {
+        break;
       }
 
       let file = dir.join(filename);
@@ -603,10 +603,10 @@ impl<'a> ResolveRequest<'a> {
   ) -> Result<Option<Resolution>, ResolverError> {
     if self.resolver.flags.contains(Flags::ALIASES) {
       // First, check for an alias in the root package.json.
-      if let Some(package) = self.root_package()? {
-        if let Some(res) = self.resolve_aliases(&package, specifier, Fields::ALIAS)? {
-          return Ok(Some(res));
-        }
+      if let Some(package) = self.root_package()?
+        && let Some(res) = self.resolve_aliases(&package, specifier, Fields::ALIAS)?
+      {
+        return Ok(Some(res));
       }
 
       // Next, try the local package.json.
@@ -638,10 +638,10 @@ impl<'a> ResolveRequest<'a> {
 
       for dir in self.from.ancestors() {
         // Skip over node_modules directories
-        if let Some(filename) = dir.file_name() {
-          if filename == "node_modules" {
-            continue;
-          }
+        if let Some(filename) = dir.file_name()
+          && filename == "node_modules"
+        {
+          continue;
         }
 
         let package_dir = dir.join("node_modules").join(module);
@@ -678,10 +678,10 @@ impl<'a> ResolveRequest<'a> {
       Ok(package) => package,
       Err(ResolverError::IOError(_)) | Err(ResolverError::FileNotFound { .. }) => {
         // No package.json in node_modules is probably invalid but we have tests for it...
-        if self.resolver.flags.contains(Flags::DIR_INDEX) {
-          if let Some(res) = self.load_file(&package_dir.join(self.resolver.index_file), None)? {
-            return Ok(res);
-          }
+        if self.resolver.flags.contains(Flags::DIR_INDEX)
+          && let Some(res) = self.load_file(&package_dir.join(self.resolver.index_file), None)?
+        {
+          return Ok(res);
         }
 
         return Err(ResolverError::ModuleNotFound {
@@ -692,12 +692,12 @@ impl<'a> ResolveRequest<'a> {
     };
 
     // Try the "source" field first, if present.
-    if self.resolver.entries.contains(Fields::SOURCE) && subpath.is_empty() {
-      if let Some(source) = package.source() {
-        if let Some(res) = self.load_path(&source, Some(&*package))? {
-          return Ok(res);
-        }
-      }
+    if self.resolver.entries.contains(Fields::SOURCE)
+      && subpath.is_empty()
+      && let Some(source) = package.source()
+      && let Some(res) = self.load_path(&source, Some(&*package))?
+    {
+      return Ok(res);
     }
 
     // If the exports field is present, use the Node ESM algorithm.
@@ -810,13 +810,12 @@ impl<'a> ResolveRequest<'a> {
         .map(|s| s.ends_with('/'))
         .unwrap_or(false);
 
-    if !is_directory {
-      if let Some(res) = self
+    if !is_directory
+      && let Some(res) = self
         .load_file(path, package)?
         .map(|res| self.upgrade_graphql_path_to_esm(package, res))
-      {
-        return Ok(Some(res));
-      }
+    {
+      return Ok(Some(res));
     }
 
     // Urls and Node ESM do not resolve directory index files.
@@ -847,24 +846,23 @@ impl<'a> ResolveRequest<'a> {
     if self.resolver.flags.contains(Flags::GRAPHQL_ESM_UPGRADE)
       && package.is_some_and(|package| package.name == "graphql")
       && matches!(&res, Resolution::Path(path) if path.extension().is_some_and(|extension| extension == "js"))
+      && let Resolution::Path(path) = &res
     {
-      if let Resolution::Path(path) = &res {
-        let esm_path = path.with_extension("mjs");
+      let esm_path = path.with_extension("mjs");
 
-        if let Ok(Some(res)) = self.load_file(&esm_path, package) {
-          tracing::info!(
-            "Upgraded graphql import to mjs. {:?} to {:?}",
-            path,
-            esm_path
-          );
-          return res;
-        } else {
-          tracing::info!(
-            "Failed to upgrade graphql import to mjs {:?}. Tried {:?}",
-            path,
-            esm_path
-          );
-        }
+      if let Ok(Some(res)) = self.load_file(&esm_path, package) {
+        tracing::info!(
+          "Upgraded graphql import to mjs. {:?} to {:?}",
+          path,
+          esm_path
+        );
+        return res;
+      } else {
+        tracing::info!(
+          "Failed to upgrade graphql import to mjs {:?}. Tried {:?}",
+          path,
+          esm_path
+        );
       }
     }
 
@@ -894,36 +892,35 @@ impl<'a> ResolveRequest<'a> {
       && self.flags.contains(RequestFlags::IN_TS_FILE)
       && !self.flags.contains(RequestFlags::IN_NODE_MODULES)
       && self.specifier_type != SpecifierType::Url
+      && let Some(ext) = path.extension()
     {
-      if let Some(ext) = path.extension() {
-        // TODO: would be nice if there was a way to do this without cloning
-        // but OsStr doesn't let you create a slice.
-        let without_extension = &path.with_extension("");
-        let extensions: Option<&[&str]> = if ext == "js" || ext == "jsx" {
-          // TSC always prioritizes .ts over .tsx, even when the original extension was .jsx.
-          Some(&["ts", "tsx"])
-        } else if ext == "mjs" {
-          Some(&["mts"])
-        } else if ext == "cjs" {
-          Some(&["cts"])
-        } else {
-          None
-        };
+      // TODO: would be nice if there was a way to do this without cloning
+      // but OsStr doesn't let you create a slice.
+      let without_extension = &path.with_extension("");
+      let extensions: Option<&[&str]> = if ext == "js" || ext == "jsx" {
+        // TSC always prioritizes .ts over .tsx, even when the original extension was .jsx.
+        Some(&["ts", "tsx"])
+      } else if ext == "mjs" {
+        Some(&["mts"])
+      } else if ext == "cjs" {
+        Some(&["cts"])
+      } else {
+        None
+      };
 
-        let res = if let Some(extensions) = extensions {
-          self.try_extensions(
-            without_extension,
-            package,
-            &Extensions::Borrowed(extensions),
-            false,
-          )?
-        } else {
-          None
-        };
+      let res = if let Some(extensions) = extensions {
+        self.try_extensions(
+          without_extension,
+          package,
+          &Extensions::Borrowed(extensions),
+          false,
+        )?
+      } else {
+        None
+      };
 
-        if res.is_some() {
-          return Ok(res);
-        }
+      if res.is_some() {
+        return Ok(res);
       }
     }
 
@@ -944,12 +941,10 @@ impl<'a> ResolveRequest<'a> {
       .flags
       .contains(Flags::TYPESCRIPT_EXTENSIONS | Flags::OPTIONAL_EXTENSIONS)
       && !self.flags.contains(RequestFlags::IN_NODE_MODULES)
-    {
-      if let Some(res) =
+      && let Some(res) =
         self.try_extensions(path, package, &Extensions::Borrowed(&["ts", "tsx"]), true)?
-      {
-        return Ok(Some(res));
-      }
+    {
+      return Ok(Some(res));
     }
 
     // Try appending the configured extensions.
@@ -958,10 +953,10 @@ impl<'a> ResolveRequest<'a> {
     }
 
     // If there is no extension in the specifier, try an extensionless file as a last resort.
-    if path.extension().is_none() {
-      if let Some(res) = self.try_suffixes(path, "", package, false)? {
-        return Ok(Some(res));
-      }
+    if path.extension().is_none()
+      && let Some(res) = self.try_suffixes(path, "", package, false)?
+    {
+      return Ok(Some(res));
     }
 
     Ok(None)
@@ -1007,11 +1002,11 @@ impl<'a> ResolveRequest<'a> {
     // such as ".ios" to be appended just before the last extension.
     let mut module_suffixes = vec![String::from("")];
 
-    if let Some(tsconfig) = self.tsconfig_read()? {
-      if let Some(module_suffixs) = tsconfig.module_suffixes.as_ref() {
-        module_suffixes = module_suffixs.as_ref().clone()
-      };
-    }
+    if let Some(tsconfig) = self.tsconfig_read()?
+      && let Some(module_suffixs) = tsconfig.module_suffixes.as_ref()
+    {
+      module_suffixes = module_suffixs.as_ref().clone()
+    };
 
     for suffix in module_suffixes {
       let mut p = if !suffix.is_empty() {
@@ -1030,11 +1025,11 @@ impl<'a> ResolveRequest<'a> {
         s.push(suffix);
 
         // Re-add the original extension if we removed it earlier.
-        if ext.is_empty() {
-          if let Some(original_ext) = original_ext {
-            s.push(".");
-            s.push(original_ext);
-          }
+        if ext.is_empty()
+          && let Some(original_ext) = original_ext
+        {
+          s.push(".");
+          s.push(original_ext);
         }
 
         Cow::Owned(PathBuf::from(s))
@@ -1066,26 +1061,26 @@ impl<'a> ResolveRequest<'a> {
   ) -> Result<Option<Resolution>, ResolverError> {
     if self.resolver.flags.contains(Flags::ALIASES) {
       // Check the project root package.json first.
-      if let Some(package) = self.root_package()? {
-        if let Ok(s) = path.strip_prefix(package.path.parent().unwrap()) {
-          let specifier = Specifier::Relative(s.to_path_buf());
-          if let Some(res) = self.resolve_aliases(&package, &specifier, Fields::ALIAS)? {
-            return Ok(Some(res));
-          }
+      if let Some(package) = self.root_package()?
+        && let Ok(s) = path.strip_prefix(package.path.parent().unwrap())
+      {
+        let specifier = Specifier::Relative(s.to_path_buf());
+        if let Some(res) = self.resolve_aliases(&package, &specifier, Fields::ALIAS)? {
+          return Ok(Some(res));
         }
       }
 
       // Next try the local package.json.
-      if let Some(package) = package {
-        if let Ok(s) = path.strip_prefix(package.path.parent().unwrap()) {
-          let specifier = Specifier::Relative(s.to_path_buf());
-          let mut fields = Fields::ALIAS;
-          if self.resolver.entries.contains(Fields::BROWSER) {
-            fields |= Fields::BROWSER;
-          }
-          if let Some(res) = self.resolve_aliases(package, &specifier, fields)? {
-            return Ok(Some(res));
-          }
+      if let Some(package) = package
+        && let Ok(s) = path.strip_prefix(package.path.parent().unwrap())
+      {
+        let specifier = Specifier::Relative(s.to_path_buf());
+        let mut fields = Fields::ALIAS;
+        if self.resolver.entries.contains(Fields::BROWSER) {
+          fields |= Fields::BROWSER;
+        }
+        if let Some(res) = self.resolve_aliases(package, &specifier, fields)? {
+          return Ok(Some(res));
         }
       }
     }

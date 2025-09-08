@@ -186,13 +186,15 @@ pub fn parse_scheme(input: &str) -> Result<(Cow<'_, str>, &str), ()> {
     return Err(());
   }
   let mut is_lowercase = true;
-  for (i, c) in input.chars().enumerate() {
+  for (i, c) in input.char_indices() {
     match c {
       'A'..='Z' => {
         is_lowercase = false;
       }
       'a'..='z' | '0'..='9' | '+' | '-' | '.' => {}
       ':' => {
+        // FIXME
+        #[allow(clippy::char_indices_as_byte_indices)]
         let scheme = &input[0..i];
         let rest = &input[i + 1..];
         return Ok(if is_lowercase {

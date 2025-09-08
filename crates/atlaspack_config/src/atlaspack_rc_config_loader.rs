@@ -208,19 +208,19 @@ impl AtlaspackRcConfigLoader {
       None => self.find_config(project_root, &resolve_from),
     };
 
-    if config_path.is_err() {
-      if let Some(fallback_config) = options.fallback_config {
-        config_path = self
-          .package_manager
-          .resolve(fallback_config, &resolve_from)
-          .map(|r| r.resolved)
-          .map_err(|source| {
-            source.context(diagnostic_error!(
-              "Failed to resolve fallback {fallback_config} from {}",
-              resolve_from.display()
-            ))
-          })
-      }
+    if config_path.is_err()
+      && let Some(fallback_config) = options.fallback_config
+    {
+      config_path = self
+        .package_manager
+        .resolve(fallback_config, &resolve_from)
+        .map(|r| r.resolved)
+        .map_err(|source| {
+          source.context(diagnostic_error!(
+            "Failed to resolve fallback {fallback_config} from {}",
+            resolve_from.display()
+          ))
+        })
     }
 
     let config_path = config_path?;

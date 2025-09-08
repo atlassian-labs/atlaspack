@@ -60,27 +60,26 @@ impl Atlaspack {
       .feature_flags
       .bool_enabled("allowExplicitTargetEntries")
       && resolved_options.entries.is_empty()
+      && let Some(Targets::CustomTarget(custom_targets)) = &resolved_options.targets
     {
-      if let Some(Targets::CustomTarget(custom_targets)) = &resolved_options.targets {
-        let mut target_sources = HashSet::new();
+      let mut target_sources = HashSet::new();
 
-        for (_, target) in custom_targets.iter() {
-          if let Some(source) = &target.source {
-            match source {
-              SourceField::Source(source_str) => {
+      for (_, target) in custom_targets.iter() {
+        if let Some(source) = &target.source {
+          match source {
+            SourceField::Source(source_str) => {
+              target_sources.insert(source_str.clone());
+            }
+            SourceField::Sources(sources) => {
+              for source_str in sources {
                 target_sources.insert(source_str.clone());
-              }
-              SourceField::Sources(sources) => {
-                for source_str in sources {
-                  target_sources.insert(source_str.clone());
-                }
               }
             }
           }
         }
-
-        resolved_options.entries = target_sources.into_iter().collect();
       }
+
+      resolved_options.entries = target_sources.into_iter().collect();
     }
 
     let project_root = infer_project_root(Arc::clone(&fs), resolved_options.entries.clone())?;

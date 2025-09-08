@@ -92,50 +92,47 @@ impl VisitMut for EnvReplacer<'_> {
         return;
       }
 
-      if let Expr::Member(member) = &*assign.right {
-        if assign.op == AssignOp::Assign
-          && match_member_expr(member, vec!["process", "env"], self.unresolved_mark)
-        {
-          let pat = match &assign.left {
-            // ({x, y, z, ...} = process.env);
-            AssignTarget::Simple(SimpleAssignTarget::Ident(ident)) => {
-              Some(Pat::Ident(ident.clone()))
-            }
-            // foo = process.env;
-            AssignTarget::Pat(AssignTargetPat::Object(obj)) => Some(obj.clone().into()),
-            _ => None,
-          };
-          if let Some(pat) = pat {
-            let mut decls = vec![];
-            self.collect_pat_bindings(&pat, &mut decls);
+      if let Expr::Member(member) = &*assign.right
+        && assign.op == AssignOp::Assign
+        && match_member_expr(member, vec!["process", "env"], self.unresolved_mark)
+      {
+        let pat = match &assign.left {
+          // ({x, y, z, ...} = process.env);
+          AssignTarget::Simple(SimpleAssignTarget::Ident(ident)) => Some(Pat::Ident(ident.clone())),
+          // foo = process.env;
+          AssignTarget::Pat(AssignTargetPat::Object(obj)) => Some(obj.clone().into()),
+          _ => None,
+        };
+        if let Some(pat) = pat {
+          let mut decls = vec![];
+          self.collect_pat_bindings(&pat, &mut decls);
 
-            let mut exprs: Vec<Box<Expr>> = decls
-              .iter()
-              .map(|decl| {
-                Box::new(Expr::Assign(AssignExpr {
-                  span: DUMMY_SP,
-                  op: AssignOp::Assign,
-                  left: decl.name.clone().try_into().unwrap(),
-                  right: Box::new(if let Some(init) = &decl.init {
-                    *init.clone()
-                  } else {
-                    Expr::Ident(get_undefined_ident(self.unresolved_mark))
-                  }),
-                }))
-              })
-              .collect();
+          let mut exprs: Vec<Box<Expr>> = decls
+            .iter()
+            .map(|decl| {
+              Box::new(Expr::Assign(AssignExpr {
+                span: DUMMY_SP,
+                op: AssignOp::Assign,
+                left: decl.name.clone().try_into().unwrap(),
+                right: Box::new(if let Some(init) = &decl.init {
+                  *init.clone()
+                } else {
+                  Expr::Ident(get_undefined_ident(self.unresolved_mark))
+                }),
+              }))
+            })
+            .collect();
 
-            exprs.push(Box::new(Expr::Object(ObjectLit {
-              span: DUMMY_SP,
-              props: vec![],
-            })));
+          exprs.push(Box::new(Expr::Object(ObjectLit {
+            span: DUMMY_SP,
+            props: vec![],
+          })));
 
-            *node = Expr::Seq(SeqExpr {
-              span: assign.span,
-              exprs,
-            });
-            return;
-          }
+          *node = Expr::Seq(SeqExpr {
+            span: assign.span,
+            exprs,
+          });
+          return;
         }
       }
     }
@@ -146,9 +143,9 @@ impl VisitMut for EnvReplacer<'_> {
         Expr::Unary(UnaryExpr { op: UnaryOp::Delete, arg, span, .. }) |
         // e.g. process.env.UPDATE++
         Expr::Update(UpdateExpr { arg, span, .. }) => {
-          if let Expr::Member(MemberExpr { obj, .. }) = &&**arg {
-            if let Expr::Member(member) = &**obj {
-              if match_member_expr(member, vec!["process", "env"], self.unresolved_mark) {
+          if let Expr::Member(MemberExpr { obj, .. }) = &&**arg
+            && let Expr::Member(member) = &**obj
+              && match_member_expr(member, vec!["process", "env"], self.unresolved_mark) {
                 self.emit_mutating_error(*span);
                 *node = match &node {
                   Expr::Unary(_) => Expr::Lit(Lit::Bool(Bool { span: *span, value: true })),
@@ -161,8 +158,6 @@ impl VisitMut for EnvReplacer<'_> {
                   _ => unreachable!()
                 };
               }
-            }
-          }
         },
         _ => {}
       }
@@ -179,13 +174,12 @@ impl VisitMut for EnvReplacer<'_> {
 
     let mut decls = vec![];
     for decl in &node.decls {
-      if let Some(init) = &decl.init {
-        if let Expr::Member(member) = &**init {
-          if match_member_expr(member, vec!["process", "env"], self.unresolved_mark) {
-            self.collect_pat_bindings(&decl.name, &mut decls);
-            continue;
-          }
-        }
+      if let Some(init) = &decl.init
+        && let Expr::Member(member) = &**init
+        && match_member_expr(member, vec!["process", "env"], self.unresolved_mark)
+      {
+        self.collect_pat_bindings(&decl.name, &mut decls);
+        continue;
       }
 
       let mut decl = decl.clone();

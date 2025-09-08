@@ -37,7 +37,7 @@ pub fn match_member_expr(expr: &ast::MemberExpr, idents: Vec<&str>, unresolved_m
           return false;
         }
       }
-      MemberProp::Ident(IdentName { sym, .. }) => &sym,
+      MemberProp::Ident(IdentName { sym, .. }) => sym,
       _ => return false,
     };
 
@@ -144,19 +144,18 @@ pub fn match_require(node: &ast::Expr, unresolved_mark: Mark, ignore_mark: Mark)
           if ident.sym == js_word!("require")
             && is_unresolved(ident, unresolved_mark)
             && !is_marked(ident.ctxt, ignore_mark)
+            && let Some(arg) = call.args.first()
           {
-            if let Some(arg) = call.args.first() {
-              return match_str(&arg.expr).map(|(name, _)| name);
-            }
+            return match_str(&arg.expr).map(|(name, _)| name);
           }
 
           None
         }
         Expr::Member(member) => {
-          if match_member_expr(member, vec!["module", "require"], unresolved_mark) {
-            if let Some(arg) = call.args.first() {
-              return match_str(&arg.expr).map(|(name, _)| name);
-            }
+          if match_member_expr(member, vec!["module", "require"], unresolved_mark)
+            && let Some(arg) = call.args.first()
+          {
+            return match_str(&arg.expr).map(|(name, _)| name);
           }
 
           None

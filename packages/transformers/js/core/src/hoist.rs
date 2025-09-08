@@ -682,42 +682,41 @@ impl Fold for Hoist<'_> {
                         // Match var x = require('foo').bar;
                         if let Some(source) =
                           match_require(&member.obj, self.unresolved_mark, self.collect.ignore_mark)
+                          && !self.collect.non_static_requires.contains(&source)
                         {
-                          if !self.collect.non_static_requires.contains(&source) {
-                            // If this is not the first declarator in the variable declaration, we need to
-                            // split the declaration into multiple to preserve side effect ordering.
-                            // var x = sideEffect(), y = require('foo').bar, z = 2;
-                            //   -> var x = sideEffect(); import 'foo'; var y = $id$import$foo$bar, z = 2;
-                            if !decls.is_empty() {
-                              let var = VarDecl {
-                                span: var.span,
-                                ctxt: var.ctxt,
-                                kind: var.kind,
-                                declare: var.declare,
-                                decls: std::mem::take(&mut decls),
-                              };
-                              self
-                                .module_items
-                                .push(ModuleItem::Stmt(Stmt::Decl(Decl::Var(Box::new(var)))));
-                            }
+                          // If this is not the first declarator in the variable declaration, we need to
+                          // split the declaration into multiple to preserve side effect ordering.
+                          // var x = sideEffect(), y = require('foo').bar, z = 2;
+                          //   -> var x = sideEffect(); import 'foo'; var y = $id$import$foo$bar, z = 2;
+                          if !decls.is_empty() {
+                            let var = VarDecl {
+                              span: var.span,
+                              ctxt: var.ctxt,
+                              kind: var.kind,
+                              declare: var.declare,
+                              decls: std::mem::take(&mut decls),
+                            };
                             self
                               .module_items
-                              .push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
-                                specifiers: vec![],
-                                with: None,
-                                span: DUMMY_SP,
-                                src: Box::new(Str {
-                                  value: format!("{}:{}", self.module_id, source,).into(),
-                                  span: DUMMY_SP,
-                                  raw: None,
-                                }),
-                                type_only: false,
-                                phase: Default::default(),
-                              })));
-
-                            self.handle_non_const_require(v, &source);
-                            continue;
+                              .push(ModuleItem::Stmt(Stmt::Decl(Decl::Var(Box::new(var)))));
                           }
+                          self
+                            .module_items
+                            .push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
+                              specifiers: vec![],
+                              with: None,
+                              span: DUMMY_SP,
+                              src: Box::new(Str {
+                                value: format!("{}:{}", self.module_id, source,).into(),
+                                span: DUMMY_SP,
+                                raw: None,
+                              }),
+                              type_only: false,
+                              phase: Default::default(),
+                            })));
+
+                          self.handle_non_const_require(v, &source);
+                          continue;
                         }
                       }
                     }
@@ -1025,13 +1024,13 @@ impl Fold for Hoist<'_> {
         if let Some(Import {
           specifier, kind, ..
         }) = self.collect.imports.get(&id!(ident))
+          && kind == &ImportKind::Import
+          && specifier != "*"
         {
-          if kind == &ImportKind::Import && specifier != "*" {
-            return Expr::Seq(SeqExpr {
-              span: ident.span,
-              exprs: vec![0.into(), Box::new(Expr::Ident(ident.fold_with(self)))],
-            });
-          }
+          return Expr::Seq(SeqExpr {
+            span: ident.span,
+            exprs: vec![0.into(), Box::new(Expr::Ident(ident.fold_with(self)))],
+          });
         }
         return Expr::Ident(ident.fold_with(self));
       }

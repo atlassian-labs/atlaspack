@@ -154,17 +154,17 @@ impl Cache {
     let mut packages_by_version: HashMap<String, Arc<PackageJson>> = HashMap::new();
 
     for entry in packages {
-      if let Ok(package_json) = entry.as_ref() {
-        if let Some(version) = package_json.version.clone() {
-          let dedupe_key = format!("{}@{}", package_json.name, version);
+      if let Ok(package_json) = entry.as_ref()
+        && let Some(version) = package_json.version.clone()
+      {
+        let dedupe_key = format!("{}@{}", package_json.name, version);
 
-          if let Some(existing) = packages_by_version.get(&dedupe_key) {
-            self
-              .package_duplicates
-              .insert(package_json.path.clone(), existing.clone());
-          } else {
-            packages_by_version.insert(dedupe_key.clone(), package_json.clone());
-          }
+        if let Some(existing) = packages_by_version.get(&dedupe_key) {
+          self
+            .package_duplicates
+            .insert(package_json.path.clone(), existing.clone());
+        } else {
+          packages_by_version.insert(dedupe_key.clone(), package_json.clone());
         }
       }
     }

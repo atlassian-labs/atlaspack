@@ -355,17 +355,17 @@ impl Resolver {
 
     let mut module_type = 0;
 
-    if self.mode == 2 {
-      if let Ok((Resolution::Path(p), _)) = &res.result {
-        module_type = match self.resolver.resolve_module_type(p, &res.invalidations) {
-          Ok(t) => match t {
-            ModuleType::CommonJs | ModuleType::Json => 1,
-            ModuleType::Module => 2,
-          },
-          Err(err) => {
-            res.result = Err(err);
-            0
-          }
+    if self.mode == 2
+      && let Ok((Resolution::Path(p), _)) = &res.result
+    {
+      module_type = match self.resolver.resolve_module_type(p, &res.invalidations) {
+        Ok(t) => match t {
+          ModuleType::CommonJs | ModuleType::Json => 1,
+          ModuleType::Module => 2,
+        },
+        Err(err) => {
+          res.result = Err(err);
+          0
         }
       }
     }

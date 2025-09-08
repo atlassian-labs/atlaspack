@@ -43,7 +43,7 @@ fn local_name_for_src(src: &JsWord) -> JsWord {
     return format!("_{}", src.to_camel_case()).into();
   }
 
-  format!("_{}", src.split('/').last().unwrap().to_camel_case()).into()
+  format!("_{}", src.split('/').next_back().unwrap().to_camel_case()).into()
 }
 
 impl EsmToCjsReplacer {
@@ -627,15 +627,15 @@ impl VisitMut for EsmToCjsReplacer {
 
   fn visit_mut_prop(&mut self, node: &mut Prop) {
     // let obj = {a, b}; -> let obj = {a: imported.a, b: imported.b};
-    if let Some(ident) = node.as_mut_shorthand() {
-      if let Some((source, imported)) = self.imports.get(&id!(ident)).cloned() {
-        *node = Prop::KeyValue(KeyValueProp {
-          key: PropName::Ident(IdentName::new(ident.sym.clone(), DUMMY_SP)),
-          value: Box::new(self.create_import_access(&source, &imported, ident.span)),
-        });
+    if let Some(ident) = node.as_mut_shorthand()
+      && let Some((source, imported)) = self.imports.get(&id!(ident)).cloned()
+    {
+      *node = Prop::KeyValue(KeyValueProp {
+        key: PropName::Ident(IdentName::new(ident.sym.clone(), DUMMY_SP)),
+        value: Box::new(self.create_import_access(&source, &imported, ident.span)),
+      });
 
-        return;
-      }
+      return;
     }
 
     node.visit_mut_children_with(self);

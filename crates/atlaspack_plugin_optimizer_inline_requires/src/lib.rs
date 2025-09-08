@@ -333,12 +333,12 @@ impl VisitMut for InlineRequiresReplacer {
   fn visit_mut_stmt(&mut self, stmt: &mut Stmt) {
     stmt.visit_mut_children_with(self);
 
-    if let Stmt::Decl(Decl::Var(var)) = stmt {
-      if var.decls.is_empty() {
-        *stmt = Stmt::Empty(EmptyStmt {
-          span: Span::default(),
-        });
-      }
+    if let Stmt::Decl(Decl::Var(var)) = stmt
+      && var.decls.is_empty()
+    {
+      *stmt = Stmt::Empty(EmptyStmt {
+        span: Span::default(),
+      });
     }
   }
 

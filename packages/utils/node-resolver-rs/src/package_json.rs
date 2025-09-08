@@ -404,27 +404,25 @@ impl PackageJson {
     custom_conditions: &[String],
   ) -> Result<ExportsResolution<'_>, PackageJsonError> {
     let pattern = ExportsKey::Pattern(match_key.to_string());
-    if let Some(target) = match_obj.get(&pattern) {
-      if !match_key.contains('*') {
-        return self.resolve_package_target(target, "", is_imports, conditions, custom_conditions);
-      }
+    if let Some(target) = match_obj.get(&pattern)
+      && !match_key.contains('*')
+    {
+      return self.resolve_package_target(target, "", is_imports, conditions, custom_conditions);
     }
 
     let mut best_key = "";
     let mut best_match = "";
     for key in match_obj.keys() {
-      if let ExportsKey::Pattern(key) = key {
-        if let Some((pattern_base, pattern_trailer)) = key.split_once('*') {
-          if match_key.starts_with(pattern_base)
-            && !pattern_trailer.contains('*')
-            && (pattern_trailer.is_empty()
-              || (match_key.len() >= key.len() && match_key.ends_with(pattern_trailer)))
-            && pattern_key_compare(best_key, key) == Ordering::Greater
-          {
-            best_key = key;
-            best_match = &match_key[pattern_base.len()..match_key.len() - pattern_trailer.len()];
-          }
-        }
+      if let ExportsKey::Pattern(key) = key
+        && let Some((pattern_base, pattern_trailer)) = key.split_once('*')
+        && match_key.starts_with(pattern_base)
+        && !pattern_trailer.contains('*')
+        && (pattern_trailer.is_empty()
+          || (match_key.len() >= key.len() && match_key.ends_with(pattern_trailer)))
+        && pattern_key_compare(best_key, key) == Ordering::Greater
+      {
+        best_key = key;
+        best_match = &match_key[pattern_base.len()..match_key.len() - pattern_trailer.len()];
       }
     }
 
@@ -446,12 +444,12 @@ impl PackageJson {
     specifier: &'b Specifier,
     fields: Fields,
   ) -> Option<Cow<'b, AliasValue>> {
-    if fields.contains(Fields::SOURCE) {
-      if let SourceField::Map(source) = &self.source {
-        match self.resolve_alias(source, specifier) {
-          None => {}
-          res => return res,
-        }
+    if fields.contains(Fields::SOURCE)
+      && let SourceField::Map(source) = &self.source
+    {
+      match self.resolve_alias(source, specifier) {
+        None => {}
+        res => return res,
       }
     }
 
@@ -462,12 +460,12 @@ impl PackageJson {
       }
     }
 
-    if fields.contains(Fields::BROWSER) {
-      if let BrowserField::Map(browser) = &self.browser {
-        match self.resolve_alias(browser, specifier) {
-          None => {}
-          res => return res,
-        }
+    if fields.contains(Fields::BROWSER)
+      && let BrowserField::Map(browser) = &self.browser
+    {
+      match self.resolve_alias(browser, specifier) {
+        None => {}
+        res => return res,
       }
     }
 
@@ -483,60 +481,59 @@ impl PackageJson {
       return Some(alias);
     }
 
-    if let Specifier::Package(package, subpath) = specifier {
-      if let Some(alias) =
+    if let Specifier::Package(package, subpath) = specifier
+      && let Some(alias) =
         self.lookup_alias(map, &Specifier::Package(package.clone(), String::from("")))
-      {
-        match alias.as_ref() {
-          AliasValue::Specifier(base) => {
-            // Join the subpath back onto the resolved alias.
-            match base {
-              Specifier::Package(base_pkg, base_subpath) => {
-                let subpath = if !base_subpath.is_empty() && !subpath.is_empty() {
-                  format!("{}/{}", base_subpath, subpath)
-                } else if !subpath.is_empty() {
-                  subpath.clone()
-                } else {
-                  return Some(alias);
-                };
-                return Some(Cow::Owned(AliasValue::Specifier(Specifier::Package(
-                  base_pkg.clone(),
-                  subpath,
+    {
+      match alias.as_ref() {
+        AliasValue::Specifier(base) => {
+          // Join the subpath back onto the resolved alias.
+          match base {
+            Specifier::Package(base_pkg, base_subpath) => {
+              let subpath = if !base_subpath.is_empty() && !subpath.is_empty() {
+                format!("{}/{}", base_subpath, subpath)
+              } else if !subpath.is_empty() {
+                subpath.clone()
+              } else {
+                return Some(alias);
+              };
+              return Some(Cow::Owned(AliasValue::Specifier(Specifier::Package(
+                base_pkg.clone(),
+                subpath,
+              ))));
+            }
+            Specifier::Relative(path) => {
+              if subpath.is_empty() {
+                return Some(alias);
+              } else {
+                return Some(Cow::Owned(AliasValue::Specifier(Specifier::Relative(
+                  path.join(subpath),
                 ))));
               }
-              Specifier::Relative(path) => {
-                if subpath.is_empty() {
-                  return Some(alias);
-                } else {
-                  return Some(Cow::Owned(AliasValue::Specifier(Specifier::Relative(
-                    path.join(subpath),
-                  ))));
-                }
-              }
-              Specifier::Absolute(path) => {
-                if subpath.is_empty() {
-                  return Some(alias);
-                } else {
-                  return Some(Cow::Owned(AliasValue::Specifier(Specifier::Absolute(
-                    path.join(subpath),
-                  ))));
-                }
-              }
-              Specifier::Tilde(path) => {
-                if subpath.is_empty() {
-                  return Some(alias);
-                } else {
-                  return Some(Cow::Owned(AliasValue::Specifier(Specifier::Tilde(
-                    path.join(subpath),
-                  ))));
-                }
-              }
-              _ => return Some(alias),
             }
+            Specifier::Absolute(path) => {
+              if subpath.is_empty() {
+                return Some(alias);
+              } else {
+                return Some(Cow::Owned(AliasValue::Specifier(Specifier::Absolute(
+                  path.join(subpath),
+                ))));
+              }
+            }
+            Specifier::Tilde(path) => {
+              if subpath.is_empty() {
+                return Some(alias);
+              } else {
+                return Some(Cow::Owned(AliasValue::Specifier(Specifier::Tilde(
+                  path.join(subpath),
+                ))));
+              }
+            }
+            _ => return Some(alias),
           }
-          _ => return Some(alias),
-        };
-      }
+        }
+        _ => return Some(alias),
+      };
     }
 
     None
@@ -654,12 +651,12 @@ fn replace_captures(s: &str, path: &str, captures: &Vec<Range<usize>>) -> String
       end += 1;
     }
 
-    if end != idx {
-      if let Ok(capture_index) = s[idx + 1..end + 1].parse::<usize>() {
-        if capture_index > 0 && capture_index - 1 < captures.len() {
-          res.replace_range(idx..end + 1, &path[captures[capture_index - 1].clone()]);
-        }
-      }
+    if end != idx
+      && let Ok(capture_index) = s[idx + 1..end + 1].parse::<usize>()
+      && capture_index > 0
+      && capture_index - 1 < captures.len()
+    {
+      res.replace_range(idx..end + 1, &path[captures[capture_index - 1].clone()]);
     }
   }
 

@@ -182,10 +182,10 @@ fn handle_message<'a, 'b>(
         std::thread::current().id()
       );
 
-      if let Some(txn) = current_transaction.take() {
-        if let Err(e) = txn.commit() {
-          tracing::error!("Failed to commit trailing transaction on shutdown: {e}");
-        }
+      if let Some(txn) = current_transaction.take()
+        && let Err(e) = txn.commit()
+      {
+        tracing::error!("Failed to commit trailing transaction on shutdown: {e}");
       }
       return true;
     }

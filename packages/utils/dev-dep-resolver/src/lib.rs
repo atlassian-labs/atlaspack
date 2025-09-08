@@ -89,11 +89,13 @@ impl<'a> EsmGraphBuilder<'a> {
 
     self.visited.write().insert(file.to_owned());
 
-    if let Some(ext) = file.extension() {
-      if ext != "js" && ext != "cjs" && ext != "mjs" {
-        // Ignore.
-        return Ok(());
-      }
+    if let Some(ext) = file.extension()
+      && ext != "js"
+      && ext != "cjs"
+      && ext != "mjs"
+    {
+      // Ignore.
+      return Ok(());
     }
 
     let read = self.cache.entries.read();

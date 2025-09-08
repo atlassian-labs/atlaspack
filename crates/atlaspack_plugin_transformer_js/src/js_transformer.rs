@@ -135,10 +135,10 @@ impl AtlaspackJsTransformerPlugin {
             vars.insert("NODE_ENV".into(), node_env.as_str().into());
           }
 
-          if let Some(build_env) = env_vars.get("ATLASPACK_BUILD_ENV") {
-            if build_env == "test" {
-              vars.insert("ATLASPACK_BUILD_ENV".into(), "test".into());
-            }
+          if let Some(build_env) = env_vars.get("ATLASPACK_BUILD_ENV")
+            && build_env == "test"
+          {
+            vars.insert("ATLASPACK_BUILD_ENV".into(), "test".into());
           }
 
           self.cache.write().env_variables.disabled = Some(vars.clone());
@@ -232,22 +232,22 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       }
     }
 
-    if env.context.is_electron() {
-      if let Some(version) = env.engines.electron {
-        targets.insert(
-          String::from("electron"),
-          format!("{}.{}", version.major(), version.minor()),
-        );
-      }
+    if env.context.is_electron()
+      && let Some(version) = env.engines.electron
+    {
+      targets.insert(
+        String::from("electron"),
+        format!("{}.{}", version.major(), version.minor()),
+      );
     }
 
-    if env.context.is_node() {
-      if let Some(version) = env.engines.node {
-        targets.insert(
-          String::from("node"),
-          format!("{}.{}", version.major(), version.minor()),
-        );
-      }
+    if env.context.is_node()
+      && let Some(version) = env.engines.node
+    {
+      targets.insert(
+        String::from("node"),
+        format!("{}.{}", version.major(), version.minor()),
+      );
     }
 
     let env_vars = self.env_variables(&asset);

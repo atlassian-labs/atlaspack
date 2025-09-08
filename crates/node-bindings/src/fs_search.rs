@@ -9,10 +9,10 @@ pub fn find_ancestor_file(filenames: Vec<String>, from: String, root: String) ->
 
   for dir in from.ancestors() {
     // Break if we hit a node_modules directory
-    if let Some(filename) = dir.file_name() {
-      if filename == "node_modules" {
-        break;
-      }
+    if let Some(filename) = dir.file_name()
+      && filename == "node_modules"
+    {
+      break;
     }
 
     for name in &filenames {
@@ -50,10 +50,10 @@ pub fn find_node_module(module: String, from: String) -> Option<String> {
 
   for dir in from.ancestors() {
     // Skip over node_modules directories
-    if let Some(filename) = dir.file_name() {
-      if filename == "node_modules" {
-        continue;
-      }
+    if let Some(filename) = dir.file_name()
+      && filename == "node_modules"
+    {
+      continue;
     }
 
     let fullpath = dir.join("node_modules").join(module);

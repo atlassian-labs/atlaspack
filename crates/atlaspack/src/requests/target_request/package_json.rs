@@ -28,6 +28,7 @@ pub enum BrowsersList {
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(untagged)]
+#[allow(clippy::large_enum_variant)]
 pub enum BuiltInTargetDescriptor {
   Disabled(serde_bool::False),
   TargetDescriptor(TargetDescriptor),

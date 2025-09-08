@@ -5,6 +5,7 @@ use crate::{request_tracker::RunRequestError, requests::RequestResult};
 pub type RequestGraph = StableDiGraph<RequestNode, RequestEdgeType>;
 
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum RequestNode {
   Error(RunRequestError),
   Root,

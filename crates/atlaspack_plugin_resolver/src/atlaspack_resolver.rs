@@ -93,7 +93,8 @@ impl AtlaspackResolver {
 
   fn to_diagnostic_error(&self, specifier: &str, error: ResolverError) -> anyhow::Error {
     let mut diagnostic = DiagnosticBuilder::default();
-    let diagnostic_error = match error {
+
+    match error {
       ResolverError::FileNotFound { from, relative } => {
         // TODO: Add potential files hints
         let file = relative.display();
@@ -224,9 +225,7 @@ impl AtlaspackResolver {
       ResolverError::UnknownScheme { scheme } => {
         diagnostic_error!(diagnostic.message(format!("Unknown url scheme or pipeline {scheme}")))
       }
-    };
-
-    diagnostic_error
+    }
   }
 
   pub fn resolve_simple<S: AsRef<str>>(_from: &Path, _specifier: S) {
@@ -431,10 +430,11 @@ impl ResolverPlugin for AtlaspackResolver {
         resolution: Resolution::Resolved(self.resolve_empty(side_effects)),
       }),
       (atlaspack_resolver::Resolution::External, _query) => {
-        if let Some(_source_path) = &ctx.dependency.source_path {
-          if ctx.dependency.env.is_library && ctx.dependency.specifier_type != SpecifierType::Url {
-            todo!("check excluded dependency for libraries");
-          }
+        if let Some(_source_path) = &ctx.dependency.source_path
+          && ctx.dependency.env.is_library
+          && ctx.dependency.specifier_type != SpecifierType::Url
+        {
+          todo!("check excluded dependency for libraries");
         }
 
         Ok(Resolved {
