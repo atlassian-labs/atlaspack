@@ -29,7 +29,7 @@ impl TypeofReplacer {
   /// Given an expression, optionally return a replacement if it happens to be `typeof $symbol` for
   /// the constants supported in this transformation step (`require`, `exports` and `module`).
   fn get_replacement(&mut self, node: &Expr) -> Option<Expr> {
-    let Expr::Unary(ref unary) = node else {
+    let Expr::Unary(unary) = &node else {
       return None;
     };
     if unary.op != UnaryOp::TypeOf {
@@ -82,7 +82,7 @@ impl VisitMut for TypeofReplacer {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{RunVisitResult, run_test_visit};
   use indoc::indoc;
 
   use super::*;

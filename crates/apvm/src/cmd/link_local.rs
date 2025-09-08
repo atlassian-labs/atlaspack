@@ -134,7 +134,7 @@ fn create_bin(node_modules_bin_atlaspack: &Path) -> std::io::Result<()> {
   #[cfg(windows)]
   {
     // Just use a wrapper process for Windows
-    crate::platform::fs_ext::hard_link_or_copy(&ctx.env.exe_path, &node_modules_bin_atlaspack)?;
+    // crate::platform::fs_ext::hard_link_or_copy(&ctx.env.exe_path, &node_modules_bin_atlaspack)?;
   }
 
   Ok(())

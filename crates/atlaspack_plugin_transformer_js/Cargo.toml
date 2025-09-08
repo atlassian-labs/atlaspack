@@ -5,7 +5,7 @@ authors = [
   "Pedro Tacla Yamada <tacla.yamada@gmail.com>",
   "Monica Olejniczak <monica.j.olejniczak@gmail.com>",
 ]
-edition = "2021"
+edition = "2024"
 description = "JavaScript transformer plugin for the Atlaspack Bundler"
 
 [lints]

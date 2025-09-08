@@ -1,12 +1,12 @@
 use std::borrow::Cow;
-use std::path::is_separator;
 use std::path::PathBuf;
+use std::path::is_separator;
 
 use percent_encoding::percent_decode_str;
 
+use crate::Flags;
 use crate::builtins::BUILTINS;
 use crate::url_to_path::url_to_path;
-use crate::Flags;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SpecifierType {

@@ -14,9 +14,9 @@ use serde::Deserialize;
 pub use atlaspack_core::types::ExportsCondition;
 
 use crate::path::resolve_path;
-use crate::specifier::decode_path;
 use crate::specifier::Specifier;
 use crate::specifier::SpecifierType;
+use crate::specifier::decode_path;
 
 bitflags! {
   #[derive(serde::Serialize)]
@@ -715,7 +715,7 @@ impl Iterator for EntryIter<'_> {
       match &self.package.browser {
         BrowserField::None => {}
         BrowserField::String(browser) => {
-          return Some((resolve_path(&self.package.path, browser), "browser"))
+          return Some((resolve_path(&self.package.path, browser), "browser"));
         }
         BrowserField::Map(map) => {
           if let Some(AliasValue::Specifier(Specifier::Relative(s))) = map.get(&Specifier::Package(

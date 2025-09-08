@@ -2,7 +2,7 @@
 authors = ["Devon Govett <devongovett@gmail.com>"]
 name = "atlaspack-resolver"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [[bench]]
 name = "node_resolver_bench"
