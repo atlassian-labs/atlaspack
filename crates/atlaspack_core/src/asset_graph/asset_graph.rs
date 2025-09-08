@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use petgraph::Direction;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
 use petgraph::visit::EdgeRef;
 use petgraph::visit::IntoEdgeReferences;
-use petgraph::Direction;
 
 use crate::types::Asset;
 use crate::types::Dependency;
@@ -32,6 +32,7 @@ pub enum DependencyState {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum AssetGraphNode {
   Root,
   Entry,
@@ -176,10 +177,8 @@ impl AssetGraph {
     let is_library = dependency.env.is_library;
     let dependency_idx = self.add_dependency(dependency);
 
-    if is_library {
-      if let Some(dependency_node) = self.get_dependency_node_mut(&dependency_idx) {
-        dependency_node.requested_symbols.insert("*".into());
-      }
+    if is_library && let Some(dependency_node) = self.get_dependency_node_mut(&dependency_idx) {
+      dependency_node.requested_symbols.insert("*".into());
     }
 
     dependency_idx

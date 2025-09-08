@@ -5,7 +5,7 @@ authors = [
   "Monica Olejniczak <monica.j.olejniczak@gmail.com>",
   "Devon Govett <devongovett@gmail.com>",
 ]
-edition = "2021"
+edition = "2024"
 
 [lints]
 workspace = true

@@ -1,4 +1,4 @@
-use napi::{bindgen_prelude::ToNapiValue, Env, JsObject};
+use napi::{Env, JsObject, bindgen_prelude::ToNapiValue};
 
 /// This creates the following JavaScript tuple
 /// ```

@@ -3,7 +3,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use async_trait::async_trait;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};

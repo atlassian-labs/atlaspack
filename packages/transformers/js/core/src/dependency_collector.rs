@@ -1,6 +1,6 @@
-use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::hash_map::DefaultHasher;
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -10,20 +10,20 @@ use atlaspack_core::types::Condition;
 use path_slash::PathBufExt;
 use serde::Deserialize;
 use serde::Serialize;
-use swc_core::common::sync::Lrc;
+use swc_core::common::DUMMY_SP;
 use swc_core::common::Span;
 use swc_core::common::Spanned;
-use swc_core::common::DUMMY_SP;
+use swc_core::common::sync::Lrc;
 use swc_core::common::{Mark, SourceMap, SyntaxContext};
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::atoms::JsWord;
+use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::utils::member_expr;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
 
-use crate::utils::*;
 use crate::Config;
+use crate::utils::*;
 
 macro_rules! hash {
   ($str:expr) => {{
@@ -178,11 +178,12 @@ impl DependencyCollector<'_> {
   ) -> Option<JsWord> {
     // Rewrite SWC helpers from ESM to CJS for library output.
     let mut is_specifier_rewritten = false;
-    if self.config.is_library && !self.config.is_esm_output {
-      if let Some(rest) = specifier.strip_prefix("@swc/helpers/_/") {
-        specifier = format!("@swc/helpers/cjs/{}.cjs", rest).into();
-        is_specifier_rewritten = true;
-      }
+    if self.config.is_library
+      && !self.config.is_esm_output
+      && let Some(rest) = specifier.strip_prefix("@swc/helpers/_/")
+    {
+      specifier = format!("@swc/helpers/cjs/{}.cjs", rest).into();
+      is_specifier_rewritten = true;
     }
 
     // For ESM imports, the specifier will remain unchanged.
@@ -527,19 +528,19 @@ impl VisitMut for DependencyCollector<'_> {
               }
               "parcelRequire" => {
                 if self.config.hmr_improvements {
-                  if let Some(ExprOrSpread { expr, .. }) = node.args.first() {
-                    if let Some((id, span)) = match_str(expr) {
-                      self.items.push(DependencyDescriptor {
-                        kind: DependencyKind::Id,
-                        loc: SourceLocation::from(&self.source_map, span),
-                        specifier: id,
-                        attributes: None,
-                        is_optional: false,
-                        is_helper: false,
-                        source_type: None,
-                        placeholder: None,
-                      });
-                    }
+                  if let Some(ExprOrSpread { expr, .. }) = node.args.first()
+                    && let Some((id, span)) = match_str(expr)
+                  {
+                    self.items.push(DependencyDescriptor {
+                      kind: DependencyKind::Id,
+                      loc: SourceLocation::from(&self.source_map, span),
+                      specifier: id,
+                      attributes: None,
+                      is_optional: false,
+                      is_helper: false,
+                      source_type: None,
+                      placeholder: None,
+                    });
                   }
                   node.visit_mut_children_with(self);
 
@@ -588,17 +589,15 @@ impl VisitMut for DependencyCollector<'_> {
 
               // Match compiled dynamic imports (Atlaspack)
               // Promise.resolve(require('foo'))
-              if match_member_expr(member, vec!["Promise", "resolve"], self.unresolved_mark) {
-                if let Some(expr) = node.args.first() {
-                  if match_require(&expr.expr, self.unresolved_mark, Mark::fresh(Mark::root()))
-                    .is_some()
-                  {
-                    self.in_promise = true;
-                    node.visit_mut_children_with(self);
-                    self.in_promise = was_in_promise;
-                    return;
-                  }
-                }
+              if match_member_expr(member, vec!["Promise", "resolve"], self.unresolved_mark)
+                && let Some(expr) = node.args.first()
+                && match_require(&expr.expr, self.unresolved_mark, Mark::fresh(Mark::root()))
+                  .is_some()
+              {
+                self.in_promise = true;
+                node.visit_mut_children_with(self);
+                self.in_promise = was_in_promise;
+                return;
               }
 
               // Match compiled dynamic imports (TypeScript)
@@ -607,39 +606,33 @@ impl VisitMut for DependencyCollector<'_> {
               // Promise.resolve().then(function () { return require('foo') })
               //   but not
               // Promise.resolve(require('foo'))
-              if let Expr::Call(call) = &*member.obj {
-                if let Callee::Expr(e) = &call.callee {
-                  if let Expr::Member(m) = &**e {
-                    if match_member_expr(m, vec!["Promise", "resolve"], self.unresolved_mark) &&
+              if let Expr::Call(call) = &*member.obj
+                && let Callee::Expr(e) = &call.callee
+                  && let Expr::Member(m) = &**e
+                    && match_member_expr(m, vec!["Promise", "resolve"], self.unresolved_mark) &&
                       // Make sure the arglist is empty.
                       // I.e. do not proceed with the below unless Promise.resolve has an empty arglist
                       // because build_promise_chain() will not work in this case.
                       call.args.is_empty()
-                    {
-                      if let MemberProp::Ident(id) = &member.prop {
-                        if id.sym.to_string().as_str() == "then" {
-                          if let Some(arg) = node.args.first() {
-                            match &*arg.expr {
-                              Expr::Fn(_) | Expr::Arrow(_) => {
-                                self.in_promise = true;
-                                node.visit_mut_children_with(self);
-                                self.in_promise = was_in_promise;
+                      && let MemberProp::Ident(id) = &member.prop
+                        && id.sym.to_string().as_str() == "then"
+                          && let Some(arg) = node.args.first()
+              {
+                match &*arg.expr {
+                  Expr::Fn(_) | Expr::Arrow(_) => {
+                    self.in_promise = true;
+                    node.visit_mut_children_with(self);
+                    self.in_promise = was_in_promise;
 
-                                // Transform Promise.resolve().then(() => __importStar(require('foo')))
-                                //   => Promise.resolve().then(() => require('foo')).then(res => __importStar(res))
-                                if let Some(require_node) = self.require_node.clone() {
-                                  self.require_node = None;
-                                  build_promise_chain(node, require_node);
-                                  return;
-                                }
-                              }
-                              _ => {}
-                            }
-                          }
-                        }
-                      }
+                    // Transform Promise.resolve().then(() => __importStar(require('foo')))
+                    //   => Promise.resolve().then(() => require('foo')).then(res => __importStar(res))
+                    if let Some(require_node) = self.require_node.clone() {
+                      self.require_node = None;
+                      build_promise_chain(node, require_node);
+                      return;
                     }
                   }
+                  _ => {}
                 }
               }
 
@@ -661,39 +654,38 @@ impl VisitMut for DependencyCollector<'_> {
 
     // Convert import attributes for dynamic import
     let mut attributes = None;
-    if kind == DependencyKind::DynamicImport {
-      if let Some(arg) = node.args.get(1) {
-        if let Expr::Object(arg) = &*arg.expr {
-          let mut attrs = HashMap::new();
-          for key in &arg.props {
-            let prop = match key {
-              PropOrSpread::Prop(prop) => prop,
-              _ => continue,
-            };
+    if kind == DependencyKind::DynamicImport
+      && let Some(arg) = node.args.get(1)
+      && let Expr::Object(arg) = &*arg.expr
+    {
+      let mut attrs = HashMap::new();
+      for key in &arg.props {
+        let prop = match key {
+          PropOrSpread::Prop(prop) => prop,
+          _ => continue,
+        };
 
-            let kv = match &**prop {
-              Prop::KeyValue(kv) => kv,
-              _ => continue,
-            };
+        let kv = match &**prop {
+          Prop::KeyValue(kv) => kv,
+          _ => continue,
+        };
 
-            let k = match &kv.key {
-              PropName::Ident(IdentName { sym, .. }) | PropName::Str(Str { value: sym, .. }) => {
-                sym.clone()
-              }
-              _ => continue,
-            };
-
-            let v = match &*kv.value {
-              Expr::Lit(Lit::Bool(Bool { value, .. })) => *value,
-              _ => continue,
-            };
-
-            attrs.insert(k, v);
+        let k = match &kv.key {
+          PropName::Ident(IdentName { sym, .. }) | PropName::Str(Str { value: sym, .. }) => {
+            sym.clone()
           }
+          _ => continue,
+        };
 
-          attributes = Some(attrs);
-        }
+        let v = match &*kv.value {
+          Expr::Lit(Lit::Bool(Bool { value, .. })) => *value,
+          _ => continue,
+        };
+
+        attrs.insert(k, v);
       }
+
+      attributes = Some(attrs);
     }
 
     if let Some(arg) = node.args.first() {
@@ -803,7 +795,6 @@ impl VisitMut for DependencyCollector<'_> {
       self.require_node = Some(call.clone());
     } else if kind == DependencyKind::Require {
       // Bail traversing so that `require` is not replaced with undefined
-      return;
     } else if kind == DependencyKind::ConditionalImport {
       let call = node;
 
@@ -927,12 +918,11 @@ impl VisitMut for DependencyCollector<'_> {
       arg,
       ..
     } = &node
+      && let Expr::Ident(ident) = &**arg
+      && ident.sym == js_word!("require")
+      && is_unresolved(ident, self.unresolved_mark)
     {
-      if let Expr::Ident(ident) = &**arg {
-        if ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark) {
-          return;
-        }
-      }
+      return;
     }
 
     node.visit_mut_children_with(self);
@@ -977,67 +967,67 @@ impl VisitMut for DependencyCollector<'_> {
       return;
     }
 
-    if let Some(args) = &node.args {
-      if !args.is_empty() {
-        let (specifier, span) = if let Some(s) = self.match_new_url(&args[0].expr) {
-          s
-        } else if let Expr::Lit(Lit::Str(str_)) = &*args[0].expr {
-          let constructor = match &*node.callee {
-            Expr::Ident(id) => id.sym.to_string(),
-            _ => "Worker".to_string(),
-          };
-
-          self.diagnostics.push(Diagnostic {
-            message: format!(
-              "Constructing a {} with a string literal is not supported.",
-              constructor
-            ),
-            code_highlights: Some(vec![CodeHighlight {
-              message: None,
-              loc: SourceLocation::from(&self.source_map, str_.span),
-            }]),
-            hints: Some(vec![format!(
-              "Replace with: new URL('{}', import.meta.url)",
-              str_.value
-            )]),
-            show_environment: false,
-            severity: DiagnosticSeverity::Error,
-            documentation_url: Some(String::from(
-              "https://parceljs.org/languages/javascript/#web-workers",
-            )),
-          });
-
-          return;
-        } else {
-          return;
+    if let Some(args) = &node.args
+      && !args.is_empty()
+    {
+      let (specifier, span) = if let Some(s) = self.match_new_url(&args[0].expr) {
+        s
+      } else if let Expr::Lit(Lit::Str(str_)) = &*args[0].expr {
+        let constructor = match &*node.callee {
+          Expr::Ident(id) => id.sym.to_string(),
+          _ => "Worker".to_string(),
         };
 
-        let (source_type, opts) = match_worker_type(args.get(1));
-        let placeholder =
-          self.add_url_dependency(specifier, span, DependencyKind::WebWorker, source_type);
-
-        // Replace argument with a require call to resolve the URL at runtime.
-        if let Some(mut args) = node.args.clone() {
-          args[0].expr = Box::new(placeholder);
-
-          // If module workers aren't supported natively, remove the `type: 'module'` option.
-          // If no other options are passed, remove the argument entirely.
-          if !self.config.supports_module_workers {
-            match opts {
-              None => {
-                args.truncate(1);
-              }
-              Some(opts) => {
-                args[1] = opts;
-              }
-            }
-          }
-
-          node.args = Some(args);
-        }
+        self.diagnostics.push(Diagnostic {
+          message: format!(
+            "Constructing a {} with a string literal is not supported.",
+            constructor
+          ),
+          code_highlights: Some(vec![CodeHighlight {
+            message: None,
+            loc: SourceLocation::from(&self.source_map, str_.span),
+          }]),
+          hints: Some(vec![format!(
+            "Replace with: new URL('{}', import.meta.url)",
+            str_.value
+          )]),
+          show_environment: false,
+          severity: DiagnosticSeverity::Error,
+          documentation_url: Some(String::from(
+            "https://parceljs.org/languages/javascript/#web-workers",
+          )),
+        });
 
         return;
+      } else {
+        return;
+      };
+
+      let (source_type, opts) = match_worker_type(args.get(1));
+      let placeholder =
+        self.add_url_dependency(specifier, span, DependencyKind::WebWorker, source_type);
+
+      // Replace argument with a require call to resolve the URL at runtime.
+      if let Some(mut args) = node.args.clone() {
+        args[0].expr = Box::new(placeholder);
+
+        // If module workers aren't supported natively, remove the `type: 'module'` option.
+        // If no other options are passed, remove the argument entirely.
+        if !self.config.supports_module_workers {
+          match opts {
+            None => {
+              args.truncate(1);
+            }
+            Some(opts) => {
+              args[1] = opts;
+            }
+          }
+        }
+
+        node.args = Some(args);
       }
+
+      return;
     }
 
     node.visit_mut_children_with(self);
@@ -1116,23 +1106,19 @@ impl VisitMut for DependencyCollector<'_> {
   }
 
   fn visit_mut_var_declarator(&mut self, node: &mut VarDeclarator) {
-    if self.config.conditional_bundling {
-      if let Some(init) = node.init.clone() {
-        if let Expr::Call(call) = *init {
-          if let Callee::Expr(callee) = &call.callee {
-            if let Expr::Ident(ident) = &**callee {
-              if ident.sym.as_str() == "importCond" {
-                // Drill down to default value in source, as the importCond API accesses this value directly
-                node.init = Some(Box::new(Expr::Member(MemberExpr {
-                  span: DUMMY_SP,
-                  obj: call.into(),
-                  prop: MemberProp::Ident(IdentName::new("default".into(), DUMMY_SP)),
-                })));
-              }
-            }
-          }
-        }
-      }
+    if self.config.conditional_bundling
+      && let Some(init) = node.init.clone()
+      && let Expr::Call(call) = *init
+      && let Callee::Expr(callee) = &call.callee
+      && let Expr::Ident(ident) = &**callee
+      && ident.sym.as_str() == "importCond"
+    {
+      // Drill down to default value in source, as the importCond API accesses this value directly
+      node.init = Some(Box::new(Expr::Member(MemberExpr {
+        span: DUMMY_SP,
+        obj: call.into(),
+        prop: MemberProp::Ident(IdentName::new("default".into(), DUMMY_SP)),
+      })));
     }
 
     node.visit_mut_children_with(self);
@@ -1146,56 +1132,50 @@ impl DependencyCollector<'_> {
     // new Promise(resolve => { resolve(require('foo')) })
     // new Promise(function (resolve) { resolve(require('foo')) })
     // new Promise(function (resolve) { return resolve(require('foo')) })
-    if let Some(args) = &node.args {
-      if let Some(arg) = args.first() {
-        let (resolve, expr) = match &*arg.expr {
-          Expr::Fn(f) => {
-            let param = f.function.params.first().map(|param| &param.pat);
-            let body = if let Some(body) = &f.function.body {
-              self.match_block_stmt_expr(body)
-            } else {
-              None
-            };
-            (param, body)
-          }
-          Expr::Arrow(f) => {
-            let param = f.params.first();
-            let body = match &*f.body {
-              BlockStmtOrExpr::Expr(expr) => Some(&**expr),
-              BlockStmtOrExpr::BlockStmt(block) => self.match_block_stmt_expr(block),
-            };
-            (param, body)
-          }
-          _ => (None, None),
-        };
-
-        let resolve_id = match resolve {
-          Some(Pat::Ident(id)) => id.to_id(),
-          _ => {
-            node.visit_mut_children_with(self);
-            return;
-          }
-        };
-
-        if let Some(Expr::Call(call)) = expr {
-          if let Callee::Expr(callee) = &call.callee {
-            if let Expr::Ident(id) = &**callee {
-              if id.to_id() == resolve_id {
-                if let Some(arg) = call.args.first() {
-                  if match_require(&arg.expr, self.unresolved_mark, Mark::fresh(Mark::root()))
-                    .is_some()
-                  {
-                    let was_in_promise = self.in_promise;
-                    self.in_promise = true;
-                    node.visit_mut_children_with(self);
-                    self.in_promise = was_in_promise;
-                    return;
-                  }
-                }
-              }
-            }
-          }
+    if let Some(args) = &node.args
+      && let Some(arg) = args.first()
+    {
+      let (resolve, expr) = match &*arg.expr {
+        Expr::Fn(f) => {
+          let param = f.function.params.first().map(|param| &param.pat);
+          let body = if let Some(body) = &f.function.body {
+            self.match_block_stmt_expr(body)
+          } else {
+            None
+          };
+          (param, body)
         }
+        Expr::Arrow(f) => {
+          let param = f.params.first();
+          let body = match &*f.body {
+            BlockStmtOrExpr::Expr(expr) => Some(&**expr),
+            BlockStmtOrExpr::BlockStmt(block) => self.match_block_stmt_expr(block),
+          };
+          (param, body)
+        }
+        _ => (None, None),
+      };
+
+      let resolve_id = match resolve {
+        Some(Pat::Ident(id)) => id.to_id(),
+        _ => {
+          node.visit_mut_children_with(self);
+          return;
+        }
+      };
+
+      if let Some(Expr::Call(call)) = expr
+        && let Callee::Expr(callee) = &call.callee
+        && let Expr::Ident(id) = &**callee
+        && id.to_id() == resolve_id
+        && let Some(arg) = call.args.first()
+        && match_require(&arg.expr, self.unresolved_mark, Mark::fresh(Mark::root())).is_some()
+      {
+        let was_in_promise = self.in_promise;
+        self.in_promise = true;
+        node.visit_mut_children_with(self);
+        self.in_promise = was_in_promise;
+        return;
       }
     }
 
@@ -1231,83 +1211,83 @@ fn build_promise_chain(node: &mut CallExpr, require_node: CallExpr) {
 
   node.visit_mut_with(&mut transformer);
 
-  if let Some(require_node) = &transformer.require_node {
-    if let Some(f) = node.args.first() {
-      // Add `res` as an argument to the original function
-      let f = match &*f.expr {
-        Expr::Fn(f) => {
-          let mut f = f.clone();
-          f.function.params.insert(
-            0,
-            Param {
-              pat: Pat::Ident(BindingIdent::from(Ident::new_no_ctxt(
-                "res".into(),
-                DUMMY_SP,
-              ))),
-              decorators: vec![],
-              span: DUMMY_SP,
-            },
-          );
-          Expr::Fn(f)
-        }
-        Expr::Arrow(f) => {
-          let mut f = f.clone();
-          f.params.insert(
-            0,
-            Pat::Ident(BindingIdent::from(Ident::new_no_ctxt(
+  if let Some(require_node) = &transformer.require_node
+    && let Some(f) = node.args.first()
+  {
+    // Add `res` as an argument to the original function
+    let f = match &*f.expr {
+      Expr::Fn(f) => {
+        let mut f = f.clone();
+        f.function.params.insert(
+          0,
+          Param {
+            pat: Pat::Ident(BindingIdent::from(Ident::new_no_ctxt(
               "res".into(),
               DUMMY_SP,
             ))),
-          );
-          Expr::Arrow(f)
-        }
-        _ => return,
-      };
+            decorators: vec![],
+            span: DUMMY_SP,
+          },
+        );
+        Expr::Fn(f)
+      }
+      Expr::Arrow(f) => {
+        let mut f = f.clone();
+        f.params.insert(
+          0,
+          Pat::Ident(BindingIdent::from(Ident::new_no_ctxt(
+            "res".into(),
+            DUMMY_SP,
+          ))),
+        );
+        Expr::Arrow(f)
+      }
+      _ => return,
+    };
 
-      *node = CallExpr {
-        callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
-          span: DUMMY_SP,
-          obj: (Box::new(Expr::Call(CallExpr {
-            callee: node.callee.clone(),
-            args: vec![ExprOrSpread {
-              expr: Box::new(Expr::Fn(FnExpr {
-                ident: None,
-                function: Box::new(Function {
-                  body: Some(BlockStmt {
-                    span: DUMMY_SP,
-                    stmts: vec![Stmt::Return(ReturnStmt {
-                      span: DUMMY_SP,
-                      arg: Some(Box::new(Expr::Call(require_node.clone()))),
-                    })],
-                    ctxt: SyntaxContext::empty(),
-                  }),
-                  params: vec![],
-                  decorators: vec![],
-                  is_async: false,
-                  is_generator: false,
-                  return_type: None,
-                  type_params: None,
+    *node = CallExpr {
+      callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
+        span: DUMMY_SP,
+        obj: (Box::new(Expr::Call(CallExpr {
+          callee: node.callee.clone(),
+          args: vec![ExprOrSpread {
+            expr: Box::new(Expr::Fn(FnExpr {
+              ident: None,
+              function: Box::new(Function {
+                body: Some(BlockStmt {
                   span: DUMMY_SP,
+                  stmts: vec![Stmt::Return(ReturnStmt {
+                    span: DUMMY_SP,
+                    arg: Some(Box::new(Expr::Call(require_node.clone()))),
+                  })],
                   ctxt: SyntaxContext::empty(),
                 }),
-              })),
-              spread: None,
-            }],
-            span: DUMMY_SP,
-            ctxt: SyntaxContext::empty(),
-            type_args: None,
-          }))),
-          prop: MemberProp::Ident(IdentName::new("then".into(), DUMMY_SP)),
+                params: vec![],
+                decorators: vec![],
+                is_async: false,
+                is_generator: false,
+                return_type: None,
+                type_params: None,
+                span: DUMMY_SP,
+                ctxt: SyntaxContext::empty(),
+              }),
+            })),
+            spread: None,
+          }],
+          span: DUMMY_SP,
+          ctxt: SyntaxContext::empty(),
+          type_args: None,
         }))),
-        args: vec![ExprOrSpread {
-          expr: Box::new(f),
-          spread: None,
-        }],
-        span: DUMMY_SP,
-        ctxt: SyntaxContext::empty(),
-        type_args: None,
-      };
-    }
+        prop: MemberProp::Ident(IdentName::new("then".into(), DUMMY_SP)),
+      }))),
+      args: vec![ExprOrSpread {
+        expr: Box::new(f),
+        spread: None,
+      }],
+      span: DUMMY_SP,
+      ctxt: SyntaxContext::empty(),
+      type_args: None,
+    };
   }
 }
 
@@ -1359,28 +1339,24 @@ struct PromiseTransformer {
 impl VisitMut for PromiseTransformer {
   fn visit_mut_return_stmt(&mut self, node: &mut ReturnStmt) {
     // If the require node is returned, no need to do any replacement.
-    if let Some(arg) = &node.arg {
-      if let Expr::Call(call) = &**arg {
-        if let Some(require_node) = &self.require_node {
-          if require_node == call {
-            self.require_node = None
-          }
-        }
-      }
+    if let Some(arg) = &node.arg
+      && let Expr::Call(call) = &**arg
+      && let Some(require_node) = &self.require_node
+      && require_node == call
+    {
+      self.require_node = None
     }
 
     node.visit_mut_children_with(self);
   }
 
   fn visit_mut_arrow_expr(&mut self, node: &mut ArrowExpr) {
-    if let BlockStmtOrExpr::Expr(expr) = &*node.body {
-      if let Expr::Call(call) = &**expr {
-        if let Some(require_node) = &self.require_node {
-          if require_node == call {
-            self.require_node = None
-          }
-        }
-      }
+    if let BlockStmtOrExpr::Expr(expr) = &*node.body
+      && let Expr::Call(call) = &**expr
+      && let Some(require_node) = &self.require_node
+      && require_node == call
+    {
+      self.require_node = None
     }
 
     node.visit_mut_children_with(self);
@@ -1391,12 +1367,11 @@ impl VisitMut for PromiseTransformer {
 
     // Replace the original require node with a reference to a variable `res`, which will be added
     // as a parameter to the parent function.
-    if let Expr::Call(call) = &node {
-      if let Some(require_node) = &self.require_node {
-        if require_node == call {
-          *node = Expr::Ident(Ident::new_no_ctxt("res".into(), DUMMY_SP));
-        }
-      }
+    if let Expr::Call(call) = &node
+      && let Some(require_node) = &self.require_node
+      && require_node == call
+    {
+      *node = Expr::Ident(Ident::new_no_ctxt("res".into(), DUMMY_SP));
     }
   }
 }
@@ -1420,10 +1395,10 @@ impl DependencyCollector<'_> {
           return None;
         };
 
-        if let Some(arg) = args.get(1) {
-          if self.is_import_meta_url(&arg.expr) {
-            return Some((specifier, span));
-          }
+        if let Some(arg) = args.get(1)
+          && self.is_import_meta_url(&arg.expr)
+        {
+          return Some((specifier, span));
         }
       }
     }
@@ -1598,61 +1573,61 @@ impl DependencyCollector<'_> {
 
 // matches the `type: 'module'` option of workers
 fn match_worker_type(expr: Option<&ExprOrSpread>) -> (SourceType, Option<ExprOrSpread>) {
-  if let Some(expr_or_spread) = expr {
-    if let Expr::Object(obj) = &*expr_or_spread.expr {
-      let mut source_type: Option<SourceType> = None;
-      let props: Vec<PropOrSpread> = obj
-        .props
-        .iter()
-        .filter(|key| {
-          let prop = match key {
-            PropOrSpread::Prop(prop) => prop,
-            _ => return true,
-          };
-
-          let kv = match &**prop {
-            Prop::KeyValue(kv) => kv,
-            _ => return true,
-          };
-
-          match &kv.key {
-            PropName::Ident(IdentName { sym, .. }) if sym == "type" => {}
-            PropName::Str(Str { value, .. }) if value == "type" => {}
-            _ => return true,
-          };
-
-          let v = if let Some((v, _)) = match_str(&kv.value) {
-            v
-          } else {
-            return true;
-          };
-
-          source_type = Some(if v == "module" {
-            SourceType::Module
-          } else {
-            SourceType::Script
-          });
-
-          false
-        })
-        .cloned()
-        .collect();
-
-      if let Some(source_type) = source_type {
-        let e = if props.is_empty() {
-          None
-        } else {
-          Some(ExprOrSpread {
-            spread: None,
-            expr: Box::new(Expr::Object(ObjectLit {
-              props,
-              span: obj.span,
-            })),
-          })
+  if let Some(expr_or_spread) = expr
+    && let Expr::Object(obj) = &*expr_or_spread.expr
+  {
+    let mut source_type: Option<SourceType> = None;
+    let props: Vec<PropOrSpread> = obj
+      .props
+      .iter()
+      .filter(|key| {
+        let prop = match key {
+          PropOrSpread::Prop(prop) => prop,
+          _ => return true,
         };
 
-        return (source_type, e);
-      }
+        let kv = match &**prop {
+          Prop::KeyValue(kv) => kv,
+          _ => return true,
+        };
+
+        match &kv.key {
+          PropName::Ident(IdentName { sym, .. }) if sym == "type" => {}
+          PropName::Str(Str { value, .. }) if value == "type" => {}
+          _ => return true,
+        };
+
+        let v = if let Some((v, _)) = match_str(&kv.value) {
+          v
+        } else {
+          return true;
+        };
+
+        source_type = Some(if v == "module" {
+          SourceType::Module
+        } else {
+          SourceType::Script
+        });
+
+        false
+      })
+      .cloned()
+      .collect();
+
+    if let Some(source_type) = source_type {
+      let e = if props.is_empty() {
+        None
+      } else {
+        Some(ExprOrSpread {
+          spread: None,
+          expr: Box::new(Expr::Object(ObjectLit {
+            props,
+            span: obj.span,
+          })),
+        })
+      };
+
+      return (source_type, e);
     }
   }
 
@@ -1663,7 +1638,7 @@ fn match_worker_type(expr: Option<&ExprOrSpread>) -> (SourceType, Option<ExprOrS
 mod tests {
   use super::*;
   use crate::DependencyDescriptor;
-  use atlaspack_swc_runner::test_utils::{run_test_visit, RunContext, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{RunContext, RunVisitResult, run_test_visit};
   use indoc::{formatdoc, indoc};
 
   fn make_dependency_collector<'a>(

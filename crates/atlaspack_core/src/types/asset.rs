@@ -13,12 +13,12 @@ use serde_json::json;
 
 use crate::project_path::to_project_path;
 
+use super::Dependency;
 use super::bundle::MaybeBundleBehavior;
 use super::environment::Environment;
 use super::file_type::FileType;
 use super::json::JSONObject;
 use super::symbol::Symbol;
-use super::Dependency;
 use super::{BundleBehavior, SourceMap};
 
 pub type AssetId = String;

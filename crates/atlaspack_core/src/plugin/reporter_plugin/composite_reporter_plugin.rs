@@ -91,10 +91,12 @@ mod tests {
 
     let result = composite_reporter.report(&ReporterEvent::BuildStart).await;
     assert!(result.is_err());
-    assert!(result
-      .err()
-      .unwrap()
-      .to_string()
-      .starts_with("CompositeReporterPluginError [Failed"));
+    assert!(
+      result
+        .err()
+        .unwrap()
+        .to_string()
+        .starts_with("CompositeReporterPluginError [Failed")
+    );
   }
 }

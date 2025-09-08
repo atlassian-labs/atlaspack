@@ -44,15 +44,15 @@ use std::sync::LazyLock;
 use std::sync::{Arc, Weak};
 
 use anyhow::anyhow;
-use napi::bindgen_prelude::Env;
 use napi::JsUnknown;
+use napi::bindgen_prelude::Env;
 use napi_derive::napi;
 use tracing::Level;
 
 pub use crate::writer::LMDBOptions;
 pub mod writer;
-use crate::writer::{start_make_database_writer, DatabaseWriterError, DatabaseWriterMessage};
 pub use crate::writer::{DatabaseWriter, DatabaseWriterHandle};
+use crate::writer::{DatabaseWriterError, DatabaseWriterMessage, start_make_database_writer};
 
 #[cfg(not(test))]
 type Buffer = napi::bindgen_prelude::Buffer;
@@ -433,7 +433,7 @@ impl LMDB {
 impl LMDB {
   /// On the main thread, we either start a new read transaction on each read, or use the currently
   /// active read transaction.
-  fn read_txn(&self) -> napi::Result<writer::Transaction> {
+  fn read_txn<'a, 'b>(&'b self) -> napi::Result<writer::Transaction<'a, 'b>> {
     if let Some(txn) = &self.read_transaction {
       Ok(writer::Transaction::Borrowed(txn))
     } else {

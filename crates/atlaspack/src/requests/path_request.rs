@@ -97,7 +97,7 @@ impl Request for PathRequest {
           return Ok(ResultAndInvalidations {
             invalidations: Vec::new(),
             result: RequestResult::Path(PathRequestOutput::Excluded),
-          })
+          });
         }
         Resolution::Resolved(ResolvedResolution {
           can_defer,
@@ -170,12 +170,12 @@ mod tests {
 
   use async_trait::async_trait;
   use atlaspack_core::plugin::{
-    composite_reporter_plugin::CompositeReporterPlugin, Resolved, ResolverPlugin,
+    Resolved, ResolverPlugin, composite_reporter_plugin::CompositeReporterPlugin,
   };
 
   use crate::{
     plugins::{MockPlugins, PluginsRef},
-    test_utils::{request_tracker, RequestTrackerTestOptions},
+    test_utils::{RequestTrackerTestOptions, request_tracker},
   };
 
   use super::*;

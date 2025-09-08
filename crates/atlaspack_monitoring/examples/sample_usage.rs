@@ -3,7 +3,7 @@
 use minidumper::Server;
 
 use atlaspack_monitoring::{
-  initialize_monitoring, CrashReporterOptions, MonitoringOptions, TracerMode, MONITORING_GUARD,
+  CrashReporterOptions, MONITORING_GUARD, MonitoringOptions, TracerMode, initialize_monitoring,
 };
 
 const SOCKET_NAME: &str = "minidumper-example";

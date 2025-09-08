@@ -7,7 +7,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use html5ever::serialize::SerializeOpts;
 use html5ever::tendril::TendrilSink;
-use html5ever::{serialize, ParseOpts};
+use html5ever::{ParseOpts, serialize};
 use markup5ever_rcdom::{RcDom, SerializableHandle};
 
 use atlaspack_core::plugin::{PluginContext, TransformContext, TransformResult, TransformerPlugin};

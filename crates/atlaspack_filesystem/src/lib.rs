@@ -25,22 +25,18 @@ pub type FileSystemRealPathCache = SharedHashMap<PathBuf, Option<PathBuf>>;
 /// ## TODO list
 ///
 /// * [ ] Do not leak dash-map cache into calls. Instead this should be managed by implementations;
-///       it should not be in the trait
+///   it should not be in the trait
 /// * [ ] Do not use io results, instead use anyhow or this error
 ///
 #[allow(clippy::disallowed_methods, clippy::disallowed_types)]
 #[mockall::automock]
 pub trait FileSystem: std::fmt::Debug {
   fn cwd(&self) -> std::io::Result<PathBuf> {
-    Err(std::io::Error::new(
-      std::io::ErrorKind::Other,
-      "Not implemented: FileSystem::cwd",
-    ))
+    Err(std::io::Error::other("Not implemented: FileSystem::cwd"))
   }
 
   fn canonicalize_base(&self, _path: &Path) -> std::io::Result<PathBuf> {
-    Err(std::io::Error::new(
-      std::io::ErrorKind::Other,
+    Err(std::io::Error::other(
       "Not implemented: FileSystem::canonicalize_base",
     ))
   }
@@ -55,10 +51,7 @@ pub trait FileSystem: std::fmt::Debug {
 
   /// Create a directory at the specified path
   fn create_directory(&self, _path: &Path) -> std::io::Result<()> {
-    Err(std::io::Error::new(
-      std::io::ErrorKind::Other,
-      "Not implemented",
-    ))
+    Err(std::io::Error::other("Not implemented"))
   }
 
   fn read(&self, path: &Path) -> std::io::Result<Vec<u8>>;

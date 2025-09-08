@@ -16,11 +16,11 @@ use std::hint::black_box;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use parking_lot::RwLock;
 
-use atlaspack_filesystem::os_file_system::OsFileSystem;
 use atlaspack_filesystem::FileSystem;
+use atlaspack_filesystem::os_file_system::OsFileSystem;
 use atlaspack_resolver::{Cache, CacheCow, Resolver, SpecifierType};
 
 #[derive(Clone)]

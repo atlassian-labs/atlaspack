@@ -7,7 +7,7 @@ use anyhow::anyhow;
 use crash_handler::CrashHandler;
 use minidumper::Client;
 
-use crate::from_env::{optional_var, required_var, FromEnvError};
+use crate::from_env::{FromEnvError, optional_var, required_var};
 
 #[derive(Debug)]
 pub struct CrashReporterOptions {
@@ -127,7 +127,7 @@ mod tests {
   #[test]
   fn test_crash_reporter_set_to_none() {
     let _guard = TEST_LOCK.lock();
-    std::env::remove_var("ATLASPACK_ENABLE_MINIDUMPER");
+    unsafe { std::env::remove_var("ATLASPACK_ENABLE_MINIDUMPER") };
     let options = CrashReporterOptions::from_env().unwrap();
     assert!(options.is_none());
   }
@@ -135,8 +135,8 @@ mod tests {
   #[test]
   fn test_crash_reporter_server_pid_file_missing() {
     let _guard = TEST_LOCK.lock();
-    std::env::set_var("ATLASPACK_ENABLE_MINIDUMPER", "1");
-    std::env::remove_var("ATLASPACK_MINIDUMPER_SERVER_PID_FILE");
+    unsafe { std::env::set_var("ATLASPACK_ENABLE_MINIDUMPER", "1") };
+    unsafe { std::env::remove_var("ATLASPACK_MINIDUMPER_SERVER_PID_FILE") };
     let options = CrashReporterOptions::from_env();
     assert!(matches!(options, Err(FromEnvError::MissingKey(_, _))));
   }
@@ -144,8 +144,8 @@ mod tests {
   #[test]
   fn test_crash_reporter_server_pid_file_does_not_exist() {
     let _guard = TEST_LOCK.lock();
-    std::env::set_var("ATLASPACK_ENABLE_MINIDUMPER", "1");
-    std::env::set_var("ATLASPACK_MINIDUMPER_SERVER_PID_FILE", "does not exist");
+    unsafe { std::env::set_var("ATLASPACK_ENABLE_MINIDUMPER", "1") };
+    unsafe { std::env::set_var("ATLASPACK_MINIDUMPER_SERVER_PID_FILE", "does not exist") };
     let options = CrashReporterOptions::from_env();
     assert!(matches!(options, Err(FromEnvError::InvalidKey(_, _))));
   }
@@ -155,9 +155,9 @@ mod tests {
     let _guard = TEST_LOCK.lock();
     let pid_file = temp_dir().join("minidumper-test.pid");
     std::fs::write(&pid_file, "invalid").unwrap();
-    std::env::set_var("ATLASPACK_ENABLE_MINIDUMPER", "1");
-    std::env::set_var("ATLASPACK_MINIDUMPER_SERVER_PID_FILE", pid_file);
-    std::env::set_var("ATLASPACK_MINIDUMPER_SERVER_SOCKET_NAME", "socket");
+    unsafe { std::env::set_var("ATLASPACK_ENABLE_MINIDUMPER", "1") };
+    unsafe { std::env::set_var("ATLASPACK_MINIDUMPER_SERVER_PID_FILE", pid_file) };
+    unsafe { std::env::set_var("ATLASPACK_MINIDUMPER_SERVER_SOCKET_NAME", "socket") };
     let options = CrashReporterOptions::from_env();
 
     assert!(matches!(options, Err(FromEnvError::InvalidKey(_, _))));
@@ -168,9 +168,9 @@ mod tests {
     let _guard = TEST_LOCK.lock();
     let pid_file = temp_dir().join("minidumper-test.pid");
     std::fs::write(&pid_file, "1234").unwrap();
-    std::env::set_var("ATLASPACK_ENABLE_MINIDUMPER", "1");
-    std::env::set_var("ATLASPACK_MINIDUMPER_SERVER_PID_FILE", pid_file);
-    std::env::remove_var("ATLASPACK_MINIDUMPER_SERVER_SOCKET_NAME");
+    unsafe { std::env::set_var("ATLASPACK_ENABLE_MINIDUMPER", "1") };
+    unsafe { std::env::set_var("ATLASPACK_MINIDUMPER_SERVER_PID_FILE", pid_file) };
+    unsafe { std::env::remove_var("ATLASPACK_MINIDUMPER_SERVER_SOCKET_NAME") };
     let options = CrashReporterOptions::from_env();
 
     assert!(matches!(options, Err(FromEnvError::MissingKey(_, _))));
@@ -181,9 +181,9 @@ mod tests {
     let _guard = TEST_LOCK.lock();
     let pid_file = temp_dir().join("minidumper-test.pid");
     std::fs::write(&pid_file, "1234").unwrap();
-    std::env::set_var("ATLASPACK_ENABLE_MINIDUMPER", "1");
-    std::env::set_var("ATLASPACK_MINIDUMPER_SERVER_PID_FILE", pid_file);
-    std::env::set_var("ATLASPACK_MINIDUMPER_SERVER_SOCKET_NAME", "socket");
+    unsafe { std::env::set_var("ATLASPACK_ENABLE_MINIDUMPER", "1") };
+    unsafe { std::env::set_var("ATLASPACK_MINIDUMPER_SERVER_PID_FILE", pid_file) };
+    unsafe { std::env::set_var("ATLASPACK_MINIDUMPER_SERVER_SOCKET_NAME", "socket") };
     let options = CrashReporterOptions::from_env().unwrap().unwrap();
 
     assert_eq!(options.minidumper_server_pid, 1234);

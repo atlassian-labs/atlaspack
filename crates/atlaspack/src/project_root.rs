@@ -1,8 +1,8 @@
 use std::path::{Component, Components, Path, PathBuf};
 
 use atlaspack_filesystem::{
-  search::{find_ancestor_directory, find_ancestor_file},
   FileSystemRef,
+  search::{find_ancestor_directory, find_ancestor_file},
 };
 
 /// Makes the path absolute without accessing the filesystem
@@ -45,16 +45,15 @@ fn common_path(paths: &[PathBuf]) -> Option<PathBuf> {
       .collect::<Vec<Option<Component>>>();
 
     // When the first component is available, check if all other components match as well
-    if let Some(Some(component)) = components.first() {
-      if components
+    if let Some(Some(component)) = components.first()
+      && components
         .iter()
         .all(|c| c.is_some_and(|c| &c == component))
-      {
-        common_path = common_path
-          .map(|p| p.join(component))
-          .or(Some(PathBuf::from(&component)));
-        continue;
-      }
+    {
+      common_path = common_path
+        .map(|p| p.join(component))
+        .or(Some(PathBuf::from(&component)));
+      continue;
     }
 
     // Not all of the components are equal, so we are now done

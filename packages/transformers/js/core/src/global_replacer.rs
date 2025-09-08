@@ -2,25 +2,25 @@ use std::path::Path;
 
 use indexmap::IndexMap;
 use path_slash::PathBufExt;
-use swc_core::common::sync::Lrc;
+use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
 use swc_core::common::SyntaxContext;
-use swc_core::common::DUMMY_SP;
+use swc_core::common::sync::Lrc;
 use swc_core::ecma::ast::{self, Expr};
 use swc_core::ecma::ast::{ComputedPropName, Module};
-use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::atoms::JsWord;
+use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
 
 use crate::dependency_collector::DependencyDescriptor;
 use crate::dependency_collector::DependencyKind;
+use crate::utils::SourceLocation;
+use crate::utils::SourceType;
 use crate::utils::create_global_decl_stmt;
 use crate::utils::create_require;
 use crate::utils::is_unresolved;
-use crate::utils::SourceLocation;
-use crate::utils::SourceType;
 
 /// Replaces a few node.js constants with literals or require statements.
 /// This duplicates some logic in [`NodeReplacer`]
@@ -211,17 +211,17 @@ impl GlobalReplacer<'_> {
 mod tests {
   use std::path::Path;
 
-  use atlaspack_swc_runner::test_utils::{run_test_visit, RunTestContext, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{RunTestContext, RunVisitResult, run_test_visit};
   use indoc::indoc;
   use swc_core::ecma::atoms::JsWord;
 
   use crate::global_replacer::GlobalReplacer;
   use crate::{DependencyDescriptor, DependencyKind};
 
-  fn make_global_replacer(
+  fn make_global_replacer<'a>(
     run_test_context: RunTestContext,
-    items: &mut Vec<DependencyDescriptor>,
-  ) -> GlobalReplacer {
+    items: &'a mut Vec<DependencyDescriptor>,
+  ) -> GlobalReplacer<'a> {
     GlobalReplacer {
       source_map: run_test_context.source_map.clone(),
       items,

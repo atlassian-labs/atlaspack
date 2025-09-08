@@ -3,12 +3,12 @@ use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::input::StringInput;
 use swc_core::common::sync::Lrc;
 use swc_core::common::util::take::Take;
-use swc_core::common::{FileName, Globals, Mark, SourceMap, GLOBALS};
+use swc_core::common::{FileName, GLOBALS, Globals, Mark, SourceMap};
 use swc_core::ecma::ast::{Module, ModuleItem, Program};
-use swc_core::ecma::codegen::text_writer::JsWriter;
 use swc_core::ecma::codegen::Config;
-use swc_core::ecma::parser::lexer::Lexer;
+use swc_core::ecma::codegen::text_writer::JsWriter;
 use swc_core::ecma::parser::Parser;
+use swc_core::ecma::parser::lexer::Lexer;
 use swc_core::ecma::transforms::base::resolver;
 use swc_core::ecma::visit::{Fold, FoldWith, Visit, VisitMut, VisitMutWith, VisitWith};
 

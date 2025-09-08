@@ -4,8 +4,8 @@ use std::sync::Arc;
 use std::thread::JoinHandle;
 
 use crossbeam::channel::{Receiver, Sender};
-use heed::types::{Bytes, Str};
 use heed::EnvOpenOptions;
+use heed::types::{Bytes, Str};
 use heed::{Env, RoTxn, RwTxn};
 use heed::{EnvFlags, MdbError};
 use napi_derive::napi;
@@ -182,10 +182,10 @@ fn handle_message<'a, 'b>(
         std::thread::current().id()
       );
 
-      if let Some(txn) = current_transaction.take() {
-        if let Err(e) = txn.commit() {
-          tracing::error!("Failed to commit trailing transaction on shutdown: {e}");
-        }
+      if let Some(txn) = current_transaction.take()
+        && let Err(e) = txn.commit()
+      {
+        tracing::error!("Failed to commit trailing transaction on shutdown: {e}");
       }
       return true;
     }
@@ -429,12 +429,12 @@ impl DatabaseWriter {
   }
 
   /// Create a write transaction
-  pub fn write_txn(&self) -> heed::Result<RwTxn> {
+  pub fn write_txn<'a>(&'a self) -> heed::Result<RwTxn<'a>> {
     self.environment.write_txn()
   }
 
   /// Create a read transaction
-  pub fn read_txn(&self) -> heed::Result<RoTxn> {
+  pub fn read_txn<'a>(&'a self) -> heed::Result<RoTxn<'a>> {
     self.environment.read_txn()
   }
 

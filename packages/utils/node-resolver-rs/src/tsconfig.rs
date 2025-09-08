@@ -163,30 +163,28 @@ impl TsConfig {
 
       if reduce_string_creation {
         for (key, path) in self.paths_specifier_strings() {
-          if let Some((prefix, suffix)) = path.split_once('*') {
-            if (best_key.is_none() || prefix.len() > longest_prefix_length)
-              && full_specifier.starts_with(prefix)
-              && full_specifier.ends_with(suffix)
-            {
-              longest_prefix_length = prefix.len();
-              longest_suffix_length = suffix.len();
-              best_key = Some(key);
-            }
+          if let Some((prefix, suffix)) = path.split_once('*')
+            && (best_key.is_none() || prefix.len() > longest_prefix_length)
+            && full_specifier.starts_with(prefix)
+            && full_specifier.ends_with(suffix)
+          {
+            longest_prefix_length = prefix.len();
+            longest_suffix_length = suffix.len();
+            best_key = Some(key);
           }
         }
       } else {
         for key in paths.keys() {
           let path = key.to_string();
 
-          if let Some((prefix, suffix)) = path.split_once('*') {
-            if (best_key.is_none() || prefix.len() > longest_prefix_length)
-              && full_specifier.starts_with(prefix)
-              && full_specifier.ends_with(suffix)
-            {
-              longest_prefix_length = prefix.len();
-              longest_suffix_length = suffix.len();
-              best_key = Some(key);
-            }
+          if let Some((prefix, suffix)) = path.split_once('*')
+            && (best_key.is_none() || prefix.len() > longest_prefix_length)
+            && full_specifier.starts_with(prefix)
+            && full_specifier.ends_with(suffix)
+          {
+            longest_prefix_length = prefix.len();
+            longest_suffix_length = suffix.len();
+            best_key = Some(key);
           }
         }
       }

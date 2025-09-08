@@ -12,6 +12,7 @@ mod target_request;
 
 /// Union of all request outputs
 #[derive(Clone, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum RequestResult {
   AssetGraph(AssetGraphRequestOutput),
   Asset(AssetRequestOutput),

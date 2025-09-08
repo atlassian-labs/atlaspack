@@ -1,10 +1,9 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use atlaspack_config::map::NamedPattern;
 use atlaspack_config::AtlaspackConfig;
+use atlaspack_config::map::NamedPattern;
 use atlaspack_core::diagnostic_error;
-use atlaspack_core::plugin::composite_reporter_plugin::CompositeReporterPlugin;
 use atlaspack_core::plugin::BundlerPlugin;
 use atlaspack_core::plugin::CompressorPlugin;
 use atlaspack_core::plugin::NamerPlugin;
@@ -16,6 +15,7 @@ use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::plugin::ValidatorPlugin;
+use atlaspack_core::plugin::composite_reporter_plugin::CompositeReporterPlugin;
 use atlaspack_plugin_resolver::AtlaspackResolver;
 use atlaspack_plugin_rpc::RpcWorkerRef;
 use atlaspack_plugin_transformer_css::AtlaspackCssTransformerPlugin;
@@ -28,9 +28,9 @@ use atlaspack_plugin_transformer_json::AtlaspackJsonTransformerPlugin;
 use atlaspack_plugin_transformer_raw::AtlaspackRawTransformerPlugin;
 use atlaspack_plugin_transformer_yaml::AtlaspackYamlTransformerPlugin;
 
-use super::plugin_cache::PluginCache;
 use super::Plugins;
 use super::TransformerPipeline;
+use super::plugin_cache::PluginCache;
 
 /// Loads plugins based on the Atlaspack config
 pub struct ConfigPlugins {

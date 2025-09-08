@@ -32,10 +32,10 @@ impl PackageResolver {
 
     if input == "local" {
       return Ok(Specifier::Local);
-    } else if self.apvmrc.exists {
-      if let Some(alias) = self.apvmrc.get_alias(input) {
-        return Ok(alias.clone());
-      }
+    } else if self.apvmrc.exists
+      && let Some(alias) = self.apvmrc.get_alias(input)
+    {
+      return Ok(alias.clone());
     }
 
     Specifier::parse(input)
@@ -51,24 +51,24 @@ impl PackageResolver {
       for installed in self.versions.installed()? {
         match installed {
           InstallablePackage::Npm(package) => {
-            if let Specifier::Npm { version } = &input {
-              if &package.version == version {
-                return Ok(Some(ManagedPackage::Npm(package)));
-              };
+            if let Specifier::Npm { version } = &input
+              && &package.version == version
+            {
+              return Ok(Some(ManagedPackage::Npm(package)));
             };
           }
           InstallablePackage::Release(package) => {
-            if let Specifier::Release { version } = &input {
-              if &package.version == version {
-                return Ok(Some(ManagedPackage::Release(package)));
-              };
+            if let Specifier::Release { version } = &input
+              && &package.version == version
+            {
+              return Ok(Some(ManagedPackage::Release(package)));
             };
           }
           InstallablePackage::Git(package) => {
-            if let Specifier::Git { version: branch } = &input {
-              if &package.version == branch {
-                return Ok(Some(ManagedPackage::Git(package)));
-              };
+            if let Specifier::Git { version: branch } = &input
+              && &package.version == branch
+            {
+              return Ok(Some(ManagedPackage::Git(package)));
             };
           }
         }
@@ -94,10 +94,10 @@ impl PackageResolver {
       specifier = Some(self.resolve_specifier(version)?)
     } else if let Some(result) = self.versions.node_modules()? {
       return Ok(result);
-    } else if self.apvmrc.exists {
-      if let Some(default) = self.apvmrc.get_alias("default") {
-        specifier = Some(default)
-      }
+    } else if self.apvmrc.exists
+      && let Some(default) = self.apvmrc.get_alias("default")
+    {
+      specifier = Some(default)
     }
 
     log::info!("resolved: {:?}", specifier);

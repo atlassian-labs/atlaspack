@@ -115,17 +115,18 @@ fn build_assignment_for_decl(decl: &Decl) -> Option<ModuleItem> {
 fn build_assignment_for_default(decl: &ExportDefaultDecl) -> Option<ModuleItem> {
   match &decl.decl {
     DefaultDecl::Fn(fn_expr) => {
-      if let Some(id) = &fn_expr.ident {
-        if is_component_name(id) && function_contains_component(&fn_expr.function) {
-          return Some(create_display_name_assignment(id));
-        }
+      if let Some(id) = &fn_expr.ident
+        && is_component_name(id)
+        && function_contains_component(&fn_expr.function)
+      {
+        return Some(create_display_name_assignment(id));
       }
     }
     DefaultDecl::Class(class_expr) => {
-      if let Some(id) = &class_expr.ident {
-        if is_component_name(id) {
-          return Some(create_display_name_assignment(id));
-        }
+      if let Some(id) = &class_expr.ident
+        && is_component_name(id)
+      {
+        return Some(create_display_name_assignment(id));
       }
     }
     _ => {}
@@ -151,7 +152,7 @@ fn create_display_name_assignment(id: &Ident) -> ModuleItem {
 #[cfg(test)]
 mod tests {
   use atlaspack_swc_runner::runner::{
-    run_with_transformation, RunWithTransformationOptions, RunWithTransformationOutput,
+    RunWithTransformationOptions, RunWithTransformationOutput, run_with_transformation,
   };
   use pretty_assertions::assert_str_eq;
   use swc_ecma_parser::{EsSyntax, Syntax};
