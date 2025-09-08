@@ -2,8 +2,8 @@ use clap::Parser;
 
 use crate::context::Context;
 use crate::platform::bin_path::get_bin_path;
-use crate::platform::exec::exec_blocking;
 use crate::platform::exec::ExecOptions;
+use crate::platform::exec::exec_blocking;
 use crate::platform::path_ext::PathExt;
 use crate::platform::runtime::resolve_executable;
 

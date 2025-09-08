@@ -1,8 +1,8 @@
 use regex::Regex;
 use swc_core::ecma::visit::{Fold, Visit, VisitMut};
 
-use crate::runner::{run_fold, run_visit, run_visit_const};
 pub use crate::runner::{RunContext, RunVisitResult};
+use crate::runner::{run_fold, run_visit, run_visit_const};
 
 /// In the future this might be a different type to `RunContext`
 pub type RunTestContext = RunContext;

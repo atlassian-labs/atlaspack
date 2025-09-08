@@ -1,12 +1,12 @@
 use std::borrow::Cow;
-use std::path::is_separator;
 use std::path::PathBuf;
+use std::path::is_separator;
 
 use percent_encoding::percent_decode_str;
 
+use crate::Flags;
 use crate::builtins::BUILTINS;
 use crate::url_to_path::url_to_path;
-use crate::Flags;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SpecifierType {
@@ -186,13 +186,15 @@ pub fn parse_scheme(input: &str) -> Result<(Cow<'_, str>, &str), ()> {
     return Err(());
   }
   let mut is_lowercase = true;
-  for (i, c) in input.chars().enumerate() {
+  for (i, c) in input.char_indices() {
     match c {
       'A'..='Z' => {
         is_lowercase = false;
       }
       'a'..='z' | '0'..='9' | '+' | '-' | '.' => {}
       ':' => {
+        // FIXME
+        #[allow(clippy::char_indices_as_byte_indices)]
         let scheme = &input[0..i];
         let rest = &input[i + 1..];
         return Ok(if is_lowercase {

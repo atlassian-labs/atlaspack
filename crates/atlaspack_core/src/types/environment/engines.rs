@@ -3,9 +3,9 @@ use browserslist::Distrib;
 use serde::Deserialize;
 use serde::Serialize;
 
+use super::OutputFormat;
 use super::browsers::Browsers;
 use super::version::Version;
-use super::OutputFormat;
 
 /// The browsers list as it appears on the engines field.
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]

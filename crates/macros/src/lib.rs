@@ -6,18 +6,18 @@ use std::sync::Arc;
 use swc_core::ecma::utils::stack_size::maybe_grow_default;
 
 use indexmap::IndexMap;
-use swc_core::common::sync::Lrc;
-use swc_core::common::util::take::Take;
+use swc_core::common::DUMMY_SP;
 use swc_core::common::SourceMap;
 use swc_core::common::Span;
-use swc_core::common::DUMMY_SP;
+use swc_core::common::sync::Lrc;
+use swc_core::common::util::take::Take;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::atoms::JsWord;
-use swc_core::ecma::parser::error::Error;
-use swc_core::ecma::parser::lexer::Lexer;
+use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::parser::Parser;
 use swc_core::ecma::parser::StringInput;
+use swc_core::ecma::parser::error::Error;
+use swc_core::ecma::parser::lexer::Lexer;
 use swc_core::ecma::visit::Fold;
 use swc_core::ecma::visit::FoldWith;
 
@@ -181,11 +181,11 @@ impl Fold for Macros<'_> {
   fn fold_module(&mut self, mut node: Module) -> Module {
     // Pre-pass to find all macro imports.
     node.body.retain(|item| {
-      if let ModuleItem::ModuleDecl(ModuleDecl::Import(import)) = &item {
-        if matches!(&import.with, Some(with) if is_macro(with)) {
-          self.add_macro(import);
-          return false;
-        }
+      if let ModuleItem::ModuleDecl(ModuleDecl::Import(import)) = &item
+        && matches!(&import.with, Some(with) if is_macro(with))
+      {
+        self.add_macro(import);
+        return false;
       }
 
       true
@@ -204,16 +204,16 @@ impl Fold for Macros<'_> {
       if let Callee::Expr(expr) = &call.callee {
         match &**expr {
           Expr::Ident(ident) => {
-            if let Some(specifier) = self.macros.get(&ident.to_id()) {
-              if let Some(imported) = &specifier.imported {
-                let src = specifier.src.to_string();
-                let imported = imported.to_string();
-                let span = specifier.span;
-                let in_call = std::mem::take(&mut self.in_call);
-                let call = call.fold_with(self);
-                self.in_call = in_call;
-                return handle_error(self.call_macro(src, imported, call, span), self.errors);
-              }
+            if let Some(specifier) = self.macros.get(&ident.to_id())
+              && let Some(imported) = &specifier.imported
+            {
+              let src = specifier.src.to_string();
+              let imported = imported.to_string();
+              let span = specifier.span;
+              let in_call = std::mem::take(&mut self.in_call);
+              let call = call.fold_with(self);
+              self.in_call = in_call;
+              return handle_error(self.call_macro(src, imported, call, span), self.errors);
             }
           }
           Expr::Member(member) => 'block: {
@@ -287,12 +287,11 @@ impl Fold for Macros<'_> {
     if let Some(assignment_span) = self.assignment_span {
       // Error when re-assigning a property of a constant that's used in a macro.
       let node = node.fold_children_with(self);
-      if let Expr::Ident(id) = &*node.obj {
-        if let Some(constant) = self.constants.get_mut(&id.to_id()) {
-          if constant.is_ok() {
-            *constant = Err(assignment_span);
-          }
-        }
+      if let Expr::Ident(id) = &*node.obj
+        && let Some(constant) = self.constants.get_mut(&id.to_id())
+        && constant.is_ok()
+      {
+        *constant = Err(assignment_span);
       }
 
       return node;
@@ -315,13 +314,12 @@ impl Fold for Macros<'_> {
   }
 
   fn fold_ident(&mut self, node: Ident) -> Ident {
-    if self.in_call {
-      if let Some(constant) = self.constants.get_mut(&node.to_id()) {
-        if matches!(constant, Ok(JsValue::Object(..) | JsValue::Array(..))) {
-          // Mark access to constant object inside a call as an error since it could potentially be mutated.
-          *constant = Err(node.span);
-        }
-      }
+    if self.in_call
+      && let Some(constant) = self.constants.get_mut(&node.to_id())
+      && matches!(constant, Ok(JsValue::Object(..) | JsValue::Array(..)))
+    {
+      // Mark access to constant object inside a call as an error since it could potentially be mutated.
+      *constant = Err(node.span);
     }
 
     node
@@ -331,19 +329,19 @@ impl Fold for Macros<'_> {
 /// Checks if an object literal (from import attributes) has type: 'macro'.
 fn is_macro(with: &ObjectLit) -> bool {
   for prop in &with.props {
-    if let PropOrSpread::Prop(prop) = &prop {
-      if let Prop::KeyValue(kv) = &**prop {
-        let k = match &kv.key {
-          PropName::Ident(IdentName { sym, .. }) | PropName::Str(Str { value: sym, .. }) => {
-            sym.clone()
-          }
-          _ => continue,
-        };
-        if &k == "type"
-          && matches!(&*kv.value, Expr::Lit(Lit::Str(Str { value, .. })) if value == "macro")
-        {
-          return true;
+    if let PropOrSpread::Prop(prop) = &prop
+      && let Prop::KeyValue(kv) = &**prop
+    {
+      let k = match &kv.key {
+        PropName::Ident(IdentName { sym, .. }) | PropName::Str(Str { value: sym, .. }) => {
+          sym.clone()
         }
+        _ => continue,
+      };
+      if &k == "type"
+        && matches!(&*kv.value, Expr::Lit(Lit::Str(Str { value, .. })) if value == "macro")
+      {
+        return true;
       }
     }
   }
@@ -355,7 +353,7 @@ fn handle_error(result: Result<Expr, MacroError>, errors: &mut Vec<MacroError>) 
   match result {
     Ok(expr) => expr,
     Err(err) => {
-      if !errors.iter().any(|d| *d == err) {
+      if !errors.contains(&err) {
         errors.push(err);
       }
       Expr::Lit(Lit::Null(Null::dummy()))

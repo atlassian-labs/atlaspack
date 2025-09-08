@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::Path;
 
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 pub trait JsonSerde: Serialize + DeserializeOwned {
   fn read_from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {

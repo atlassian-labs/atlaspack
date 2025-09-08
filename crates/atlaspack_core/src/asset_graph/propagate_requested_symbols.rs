@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use petgraph::Direction;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::EdgeRef;
-use petgraph::Direction;
 
 use crate::types::Asset;
 use crate::types::Dependency;

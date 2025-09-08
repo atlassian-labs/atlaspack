@@ -4,9 +4,9 @@ use std::sync::Arc;
 
 use thiserror::Error;
 
+use crate::PackageJsonError;
 use crate::cache::JsonError;
 use crate::specifier::SpecifierError;
-use crate::PackageJsonError;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, Error)]
 #[serde(tag = "type")]
@@ -19,7 +19,9 @@ pub enum ResolverError {
   FileNotFound { relative: PathBuf, from: PathBuf },
   #[error("Module {module} not found")]
   ModuleNotFound { module: String },
-  #[error("Module {module} entry not found in path {entry_path} with package {package_path} and field {field}")]
+  #[error(
+    "Module {module} entry not found in path {entry_path} with package {package_path} and field {field}"
+  )]
   ModuleEntryNotFound {
     module: String,
     entry_path: PathBuf,

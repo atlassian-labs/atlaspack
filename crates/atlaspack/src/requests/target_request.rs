@@ -7,9 +7,6 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigFile;
 use atlaspack_core::diagnostic_error;
-use atlaspack_core::types::browsers::Browsers;
-use atlaspack_core::types::engines::Engines;
-use atlaspack_core::types::engines::EnginesBrowsers;
 use atlaspack_core::types::BuildMode;
 use atlaspack_core::types::CodeFrame;
 use atlaspack_core::types::DefaultTargetOptions;
@@ -26,6 +23,9 @@ use atlaspack_core::types::Target;
 use atlaspack_core::types::TargetDescriptor;
 use atlaspack_core::types::TargetSourceMapOptions;
 use atlaspack_core::types::Targets;
+use atlaspack_core::types::browsers::Browsers;
+use atlaspack_core::types::engines::Engines;
+use atlaspack_core::types::engines::EnginesBrowsers;
 use atlaspack_resolver::IncludeNodeModules;
 use package_json::BrowserField;
 use package_json::BrowsersList;
@@ -38,8 +38,8 @@ use crate::request_tracker::ResultAndInvalidations;
 use crate::request_tracker::RunRequestContext;
 use crate::request_tracker::RunRequestError;
 
-use super::entry_request::Entry;
 use super::RequestResult;
+use super::entry_request::Entry;
 
 mod package_json;
 
@@ -73,12 +73,12 @@ struct CustomTarget<'a> {
 }
 
 impl TargetRequest {
-  fn builtin_browser_target(
-    &self,
+  fn builtin_browser_target<'a>(
+    &'a self,
     descriptor: Option<BuiltInTargetDescriptor>,
     dist: Option<BrowserField>,
     name: Option<String>,
-  ) -> BuiltInTarget {
+  ) -> BuiltInTarget<'a> {
     BuiltInTarget {
       descriptor: descriptor
         .map(|d| {
@@ -102,11 +102,11 @@ impl TargetRequest {
     }
   }
 
-  fn builtin_main_target(
-    &self,
+  fn builtin_main_target<'a>(
+    &'a self,
     descriptor: Option<BuiltInTargetDescriptor>,
     dist: Option<PathBuf>,
-  ) -> BuiltInTarget {
+  ) -> BuiltInTarget<'a> {
     BuiltInTarget {
       descriptor: descriptor
         .map(|d| merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Node)))
@@ -120,11 +120,11 @@ impl TargetRequest {
     }
   }
 
-  fn builtin_module_target(
-    &self,
+  fn builtin_module_target<'a>(
+    &'a self,
     descriptor: Option<BuiltInTargetDescriptor>,
     dist: Option<PathBuf>,
-  ) -> BuiltInTarget {
+  ) -> BuiltInTarget<'a> {
     BuiltInTarget {
       descriptor: descriptor
         .map(|d| merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Node)))
@@ -138,11 +138,11 @@ impl TargetRequest {
     }
   }
 
-  fn builtin_types_target(
-    &self,
+  fn builtin_types_target<'a>(
+    &'a self,
     descriptor: Option<BuiltInTargetDescriptor>,
     dist: Option<PathBuf>,
-  ) -> BuiltInTarget {
+  ) -> BuiltInTarget<'a> {
     BuiltInTarget {
       descriptor: descriptor
         .map(|d| merge_builtin_descriptors(d, builtin_target_descriptor(EnvironmentContext::Node)))
@@ -221,16 +221,15 @@ impl TargetRequest {
       _ => None,
     };
 
-    if let Some(inferred_output_format) = inferred_output_format {
-      if let Some(output_format) = target.output_format {
-        if output_format != inferred_output_format {
-          return Err(diagnostic_error!(DiagnosticBuilder::default()
+    if let Some(inferred_output_format) = inferred_output_format
+      && let Some(output_format) = target.output_format
+      && output_format != inferred_output_format
+    {
+      return Err(diagnostic_error!(DiagnosticBuilder::default()
             .code_frames(vec![CodeFrame::from(package_json)])
             .message(format!(
               "Declared output format {output_format} does not match expected output format {inferred_output_format}",
             ))));
-        }
-      }
     }
 
     Ok(inferred_output_format)
@@ -258,12 +257,11 @@ impl TargetRequest {
       Ok(pkg) => pkg,
     };
 
-    if let Some(engines) = config.contents.engines.as_ref() {
-      if let Some(browsers) = &engines.browsers {
-        if !Browsers::from(browsers).is_empty() {
-          return Ok(config);
-        }
-      }
+    if let Some(engines) = config.contents.engines.as_ref()
+      && let Some(browsers) = &engines.browsers
+      && !Browsers::from(browsers).is_empty()
+    {
+      return Ok(config);
     }
 
     let env = self
@@ -415,9 +413,11 @@ impl TargetRequest {
             dist = Some(PathBuf::from(str));
           }
           _ => {
-            return Err(diagnostic_error!(DiagnosticBuilder::default()
-              .code_frames(vec![CodeFrame::from(&config)])
-              .message(format!("Invalid path for target {}", custom_target.name))));
+            return Err(diagnostic_error!(
+              DiagnosticBuilder::default()
+                .code_frames(vec![CodeFrame::from(&config)])
+                .message(format!("Invalid path for target {}", custom_target.name))
+            ));
           }
         }
       }
@@ -838,10 +838,10 @@ mod tests {
 
   use regex::Regex;
 
-  use atlaspack_core::types::{version::Version, AtlaspackOptions};
+  use atlaspack_core::types::{AtlaspackOptions, version::Version};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
-  use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
+  use crate::test_utils::{RequestTrackerTestOptions, request_tracker};
   use pretty_assertions::assert_eq;
 
   use super::*;
@@ -947,7 +947,8 @@ mod tests {
 
       assert_eq!(
         targets.map_err(to_deterministic_error),
-        Err(format!("data did not match any variant of untagged enum BuiltInTargetDescriptor at line \\d column \\d in {}",
+        Err(format!(
+          "data did not match any variant of untagged enum BuiltInTargetDescriptor at line \\d column \\d in {}",
           package_dir().join("package.json").display()
         ))
       );
@@ -1987,7 +1988,7 @@ mod tests {
             "distDir": "./dist/one"
           },
           "two": {
-            "source": "./input2.js", 
+            "source": "./input2.js",
             "distDir": "./dist/two"
           }
         }

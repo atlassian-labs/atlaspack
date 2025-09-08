@@ -157,14 +157,14 @@ impl Visit for ConstantModule {
 
 #[cfg(test)]
 mod tests {
-  use swc_core::common::comments::SingleThreadedComments;
-  use swc_core::common::sync::Lrc;
   use swc_core::common::FileName;
   use swc_core::common::Globals;
   use swc_core::common::SourceMap;
-  use swc_core::ecma::parser::lexer::Lexer;
+  use swc_core::common::comments::SingleThreadedComments;
+  use swc_core::common::sync::Lrc;
   use swc_core::ecma::parser::Parser;
   use swc_core::ecma::parser::StringInput;
+  use swc_core::ecma::parser::lexer::Lexer;
   use swc_core::ecma::visit::VisitWith;
 
   use super::*;

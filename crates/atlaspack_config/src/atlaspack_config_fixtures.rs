@@ -2,8 +2,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use indexmap::indexmap;
 use indexmap::IndexMap;
+use indexmap::indexmap;
 
 use super::atlaspack_config::AtlaspackConfig;
 use super::map::NamedPipelinesMap;

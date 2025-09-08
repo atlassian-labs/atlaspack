@@ -7,18 +7,18 @@ use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::{AtlaspackOptions, SourceField, Targets};
-use atlaspack_filesystem::{os_file_system::OsFileSystem, FileSystemRef};
+use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::DatabaseHandle;
 use tokio::runtime::Runtime;
 use tokio::sync::RwLock;
 
-use crate::plugins::{config_plugins::ConfigPlugins, PluginsRef};
+use crate::WatchEvents;
+use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
 use crate::request_tracker::RequestTracker;
 use crate::requests::{AssetGraphRequest, RequestResult};
-use crate::WatchEvents;
 
 pub struct AtlaspackInitOptions {
   pub db: Arc<DatabaseHandle>,
@@ -60,27 +60,26 @@ impl Atlaspack {
       .feature_flags
       .bool_enabled("allowExplicitTargetEntries")
       && resolved_options.entries.is_empty()
+      && let Some(Targets::CustomTarget(custom_targets)) = &resolved_options.targets
     {
-      if let Some(Targets::CustomTarget(custom_targets)) = &resolved_options.targets {
-        let mut target_sources = HashSet::new();
+      let mut target_sources = HashSet::new();
 
-        for (_, target) in custom_targets.iter() {
-          if let Some(source) = &target.source {
-            match source {
-              SourceField::Source(source_str) => {
+      for (_, target) in custom_targets.iter() {
+        if let Some(source) = &target.source {
+          match source {
+            SourceField::Source(source_str) => {
+              target_sources.insert(source_str.clone());
+            }
+            SourceField::Sources(sources) => {
+              for source_str in sources {
                 target_sources.insert(source_str.clone());
-              }
-              SourceField::Sources(sources) => {
-                for source_str in sources {
-                  target_sources.insert(source_str.clone());
-                }
               }
             }
           }
         }
-
-        resolved_options.entries = target_sources.into_iter().collect();
       }
+
+      resolved_options.entries = target_sources.into_iter().collect();
     }
 
     let project_root = infer_project_root(Arc::clone(&fs), resolved_options.entries.clone())?;
@@ -222,7 +221,7 @@ mod tests {
   use atlaspack_core::types::{Asset, Code};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_plugin_rpc::{MockRpcFactory, MockRpcWorker};
-  use lmdb_js_lite::{get_database, LMDBOptions};
+  use lmdb_js_lite::{LMDBOptions, get_database};
 
   use super::*;
 

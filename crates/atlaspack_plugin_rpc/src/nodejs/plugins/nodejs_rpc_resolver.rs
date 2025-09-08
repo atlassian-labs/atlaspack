@@ -17,9 +17,9 @@ use atlaspack_core::types::Dependency;
 use serde::{Deserialize, Serialize};
 use tokio::sync::OnceCell;
 
-use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 use super::super::rpc::LoadPluginKind;
 use super::super::rpc::LoadPluginOptions;
+use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 use super::plugin_options::RpcPluginOptions;
 
 /// Plugin state once initialized

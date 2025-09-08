@@ -3,15 +3,15 @@ use std::ptr;
 use std::slice;
 
 use mozjpeg_sys::*;
-use napi::bindgen_prelude::*;
 use napi::Env;
 use napi::Error;
 use napi::JsBuffer;
 use napi::Result;
+use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use oxipng::optimize_from_memory;
 use oxipng::Options;
 use oxipng::StripChunks;
+use oxipng::optimize_from_memory;
 
 #[napi]
 pub fn optimize_image(kind: String, buf: Buffer, env: Env) -> Result<JsBuffer> {
@@ -67,8 +67,8 @@ struct JPEGOptimizer {
 impl JPEGOptimizer {
   unsafe fn new() -> JPEGOptimizer {
     JPEGOptimizer {
-      srcinfo: mem::zeroed(),
-      dstinfo: mem::zeroed(),
+      srcinfo: unsafe { mem::zeroed() },
+      dstinfo: unsafe { mem::zeroed() },
     }
   }
 }
@@ -84,8 +84,9 @@ impl Drop for JPEGOptimizer {
 
 // This function losslessly optimizes jpegs.
 // Based on the jpegtran.c example program in libjpeg.
+#[allow(clippy::mut_from_ref)]
 unsafe fn optimize_jpeg(bytes: &[u8]) -> std::thread::Result<&mut [u8]> {
-  std::panic::catch_unwind(|| {
+  std::panic::catch_unwind(|| unsafe {
     let mut info = JPEGOptimizer::new();
     let mut err = create_error_handler();
     info.srcinfo.common.err = &mut err;
@@ -114,8 +115,8 @@ unsafe fn optimize_jpeg(bytes: &[u8]) -> std::thread::Result<&mut [u8]> {
 }
 
 unsafe fn create_error_handler() -> jpeg_error_mgr {
-  let mut err: jpeg_error_mgr = mem::zeroed();
-  jpeg_std_error(&mut err);
+  let mut err: jpeg_error_mgr = unsafe { mem::zeroed() };
+  unsafe { jpeg_std_error(&mut err) };
   err.error_exit = Some(unwind_error_exit);
   err.emit_message = Some(silence_message);
   err

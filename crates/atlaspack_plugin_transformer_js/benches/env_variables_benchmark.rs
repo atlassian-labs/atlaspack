@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use atlaspack_plugin_transformer_js::js_transformer_config::InlineEnvironment;
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use glob_match::glob_match;
 use swc_core::atoms::Atom;
 

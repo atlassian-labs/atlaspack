@@ -4,15 +4,15 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::ops::Deref;
+use std::sync::Arc;
 use std::sync::atomic::AtomicI32;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
-use napi::bindgen_prelude::FromNapiValue;
-use napi::bindgen_prelude::ToNapiValue;
 use napi::Env;
 use napi::JsNumber;
 use napi::NapiRaw;
+use napi::bindgen_prelude::FromNapiValue;
+use napi::bindgen_prelude::ToNapiValue;
 use once_cell::sync::Lazy;
 
 type Inner = Arc<dyn Any + Send + Sync>;
@@ -110,9 +110,9 @@ impl<T> ToNapiValue for JsTransferable<T> {
     env: napi::sys::napi_env,
     val: Self,
   ) -> napi::Result<napi::sys::napi_value> {
-    let env = Env::from_raw(env);
+    let env = unsafe { Env::from_raw(env) };
     let pointer = env.create_int32(val.id)?;
-    Ok(pointer.raw())
+    Ok(unsafe { pointer.raw() })
   }
 }
 
@@ -122,7 +122,7 @@ impl<T> FromNapiValue for JsTransferable<T> {
     env: napi::sys::napi_env,
     napi_val: napi::sys::napi_value,
   ) -> napi::Result<Self> {
-    let pointer = JsNumber::from_napi_value(env, napi_val)?;
+    let pointer = unsafe { JsNumber::from_napi_value(env, napi_val) }?;
     let id = pointer.get_int32()?;
     Ok(Self {
       id,

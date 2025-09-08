@@ -3,10 +3,10 @@ use std::path::PathBuf;
 
 use data_encoding::BASE64;
 use data_encoding::HEXLOWER;
+use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::Span;
 use swc_core::common::SyntaxContext;
-use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::*;
 use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::VisitMut;
@@ -33,7 +33,7 @@ pub fn inline_fs<'a>(
   conditional_bundling: bool,
   computed_properties_fix: bool,
   symbols_info: SymbolsInfo,
-) -> impl VisitMut + 'a {
+) -> impl VisitMut + 'a + use<'a> {
   InlineFS {
     filename: Path::new(filename).to_path_buf(),
     collect: Collect::new(
@@ -66,19 +66,16 @@ impl VisitMut for InlineFS<'_> {
   }
 
   fn visit_mut_expr(&mut self, node: &mut Expr) {
-    if let Expr::Call(call) = &node {
-      if let Callee::Expr(expr) = &call.callee {
-        if let Some((source, specifier)) = self.match_module_reference(expr) {
-          if &source == "fs" && &specifier == "readFileSync" {
-            if let Some(arg) = call.args.first() {
-              if let Some(res) = self.evaluate_fs_arg(&arg.expr, call.args.get(1), call.span) {
-                *node = res;
-                return;
-              }
-            }
-          }
-        }
-      }
+    if let Expr::Call(call) = &node
+      && let Callee::Expr(expr) = &call.callee
+      && let Some((source, specifier)) = self.match_module_reference(expr)
+      && &source == "fs"
+      && &specifier == "readFileSync"
+      && let Some(arg) = call.args.first()
+      && let Some(res) = self.evaluate_fs_arg(&arg.expr, call.args.get(1), call.span)
+    {
+      *node = res;
+      return;
     }
 
     node.visit_mut_children_with(self);
@@ -113,15 +110,13 @@ impl InlineFS<'_> {
           return Some((source, prop));
         }
 
-        if let Expr::Ident(ident) = &*member.obj {
-          if let Some(Import {
+        if let Expr::Ident(ident) = &*member.obj
+          && let Some(Import {
             source, specifier, ..
           }) = self.collect.imports.get(&id!(ident))
-          {
-            if specifier == "default" || specifier == "*" {
-              return Some((source.clone(), prop));
-            }
-          }
+          && (specifier == "default" || specifier == "*")
+        {
+          return Some((source.clone(), prop));
         }
       }
       _ => return None,
@@ -285,32 +280,32 @@ impl VisitMut for Evaluator<'_> {
           _ => return,
         };
 
-        if let Some((source, specifier)) = self.inline.match_module_reference(callee) {
-          if let ("path", "join") = (source.to_string().as_str(), specifier.to_string().as_str()) {
-            let mut path = PathBuf::new();
-            for arg in call.args.clone() {
-              let s = match &*arg.expr {
-                Expr::Lit(Lit::Str(str_)) => str_.value.clone(),
-                _ => return,
-              };
+        if let Some((source, specifier)) = self.inline.match_module_reference(callee)
+          && let ("path", "join") = (source.to_string().as_str(), specifier.to_string().as_str())
+        {
+          let mut path = PathBuf::new();
+          for arg in call.args.clone() {
+            let s = match &*arg.expr {
+              Expr::Lit(Lit::Str(str_)) => str_.value.clone(),
+              _ => return,
+            };
 
-              if path.as_os_str().is_empty() {
-                path.push(s.to_string());
-              } else {
-                let s = s.to_string();
-                let mut p = Path::new(s.as_str());
+            if path.as_os_str().is_empty() {
+              path.push(s.to_string());
+            } else {
+              let s = s.to_string();
+              let mut p = Path::new(s.as_str());
 
-                // Node's path.join ignores separators at the start of path components.
-                // Rust's does not, so we need to strip them.
-                if let Ok(stripped) = p.strip_prefix("/") {
-                  p = stripped;
-                }
-                path.push(p);
+              // Node's path.join ignores separators at the start of path components.
+              // Rust's does not, so we need to strip them.
+              if let Ok(stripped) = p.strip_prefix("/") {
+                p = stripped;
               }
+              path.push(p);
             }
-
-            *node = Expr::Lit(Lit::Str(path.to_str().unwrap().into()));
           }
+
+          *node = Expr::Lit(Lit::Str(path.to_str().unwrap().into()));
         }
       }
       _ => (),

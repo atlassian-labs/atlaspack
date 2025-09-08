@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use atlaspack_filesystem::search::find_ancestor_file;
 use atlaspack_filesystem::FileSystemRef;
+use atlaspack_filesystem::search::find_ancestor_file;
 use serde::de::DeserializeOwned;
 
 use crate::{
@@ -40,26 +40,30 @@ impl ConfigLoader {
       &self.project_root,
     )
     .ok_or_else(|| {
-      diagnostic_error!(DiagnosticBuilder::default()
-        .kind(ErrorKind::NotFound)
-        .message(format!(
-          "Unable to locate {filename} config file from {}",
-          self.search_path.display()
-        )))
+      diagnostic_error!(
+        DiagnosticBuilder::default()
+          .kind(ErrorKind::NotFound)
+          .message(format!(
+            "Unable to locate {filename} config file from {}",
+            self.search_path.display()
+          ))
+      )
     })?;
 
     let code = self.fs.read_to_string(&path)?;
 
     let contents = serde_json::from_str::<Config>(&code).map_err(|error| {
-      diagnostic_error!(DiagnosticBuilder::default()
-        .code_frames(vec![CodeFrame {
-          code_highlights: vec![CodeHighlight::from([error.line(), error.column()])],
-          ..CodeFrame::from(File {
-            contents: code.clone(),
-            path: path.clone()
-          })
-        }])
-        .message(format!("{error} in {}", path.display())))
+      diagnostic_error!(
+        DiagnosticBuilder::default()
+          .code_frames(vec![CodeFrame {
+            code_highlights: vec![CodeHighlight::from([error.line(), error.column()])],
+            ..CodeFrame::from(File {
+              contents: code.clone(),
+              path: path.clone()
+            })
+          }])
+          .message(format!("{error} in {}", path.display()))
+      )
     })?;
 
     Ok(ConfigFile {
