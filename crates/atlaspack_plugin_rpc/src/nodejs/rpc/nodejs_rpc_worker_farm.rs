@@ -1,6 +1,6 @@
+use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::ResolverPlugin;
@@ -8,8 +8,8 @@ use atlaspack_core::plugin::*;
 
 use super::super::super::RpcWorker;
 use super::super::plugins::*;
-use super::nodejs_rpc_worker::NodejsWorker;
 use super::LoadPluginOptions;
+use super::nodejs_rpc_worker::NodejsWorker;
 
 /// NodejsWorkerFarm holds a collection of Nodejs worker threads
 /// and provides the ability to initialize plugins

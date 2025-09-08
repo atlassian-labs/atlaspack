@@ -8,9 +8,9 @@ use bitflags::bitflags;
 use once_cell::unsync::OnceCell;
 
 pub use atlaspack_core::types::IncludeNodeModules;
+pub use atlaspack_filesystem::FileSystem;
 #[cfg(not(target_arch = "wasm32"))]
 pub use atlaspack_filesystem::os_file_system::OsFileSystem;
-pub use atlaspack_filesystem::FileSystem;
 pub use cache::Cache;
 pub use cache::CacheCow;
 pub use error::ResolverError;
@@ -24,11 +24,11 @@ use package_json::PackageJson;
 pub use package_json::PackageJsonError;
 use parking_lot::RwLock;
 use parking_lot::RwLockReadGuard;
-pub use specifier::parse_package_specifier;
-pub use specifier::parse_scheme;
 pub use specifier::Specifier;
 pub use specifier::SpecifierError;
 pub use specifier::SpecifierType;
+pub use specifier::parse_package_specifier;
+pub use specifier::parse_scheme;
 use tsconfig::TsConfig;
 
 use crate::path::resolve_path;

@@ -102,9 +102,11 @@ impl AtlaspackResolver {
           .unwrap_or(&from)
           .display();
 
-        diagnostic_error!(diagnostic
-          .kind(ErrorKind::NotFound)
-          .message(format!("Cannot load file '{file}' in '{from}'")))
+        diagnostic_error!(
+          diagnostic
+            .kind(ErrorKind::NotFound)
+            .message(format!("Cannot load file '{file}' in '{from}'"))
+        )
       }
       ResolverError::InvalidSpecifier(specifier_error) => {
         diagnostic_error!(diagnostic.message(match specifier_error {
@@ -118,12 +120,14 @@ impl AtlaspackResolver {
       ResolverError::IOError(io_error) => {
         diagnostic_error!(diagnostic.message(format!("{}", io_error)))
       }
-      ResolverError::JsonError(json_error) => diagnostic_error!(diagnostic
-        .code_frames(vec![CodeFrame {
-          code_highlights: vec![CodeHighlight::from([json_error.line, json_error.column])],
-          ..CodeFrame::from(json_error.file)
-        }])
-        .message("Error parsing JSON")),
+      ResolverError::JsonError(json_error) => diagnostic_error!(
+        diagnostic
+          .code_frames(vec![CodeFrame {
+            code_highlights: vec![CodeHighlight::from([json_error.line, json_error.column])],
+            ..CodeFrame::from(json_error.file)
+          }])
+          .message("Error parsing JSON")
+      ),
       ResolverError::ModuleEntryNotFound {
         entry_path,
         field,
@@ -141,9 +145,11 @@ impl AtlaspackResolver {
       }
       ResolverError::ModuleNotFound { module } => {
         // TODO: Add alternative modules
-        diagnostic_error!(diagnostic
-          .kind(ErrorKind::NotFound)
-          .message(format!("Cannot find module '{module}'")))
+        diagnostic_error!(
+          diagnostic
+            .kind(ErrorKind::NotFound)
+            .message(format!("Cannot find module '{module}'"))
+        )
       }
       ResolverError::ModuleSubpathNotFound {
         module,
@@ -154,9 +160,11 @@ impl AtlaspackResolver {
         let package_dir = package_path.parent().unwrap_or(&package_path);
         let path = path.strip_prefix(package_dir).unwrap_or(&path).display();
 
-        diagnostic_error!(diagnostic
-          .kind(ErrorKind::NotFound)
-          .message(format!("Cannot load file '{path}' from module {module}")))
+        diagnostic_error!(
+          diagnostic
+            .kind(ErrorKind::NotFound)
+            .message(format!("Cannot load file '{path}' from module {module}"))
+        )
       }
       ResolverError::PackageJsonError {
         error,
@@ -172,24 +180,30 @@ impl AtlaspackResolver {
           }
           PackageJsonError::PackagePathNotExported => {
             // TODO Exports code highlight
-            diagnostic_error!(diagnostic
-              .code_frames(vec![CodeFrame::from(path)])
-              .message(format!(
-                "Module '{specifier}' is not exported from the '{module}' package"
-              )))
+            diagnostic_error!(
+              diagnostic
+                .code_frames(vec![CodeFrame::from(path)])
+                .message(format!(
+                  "Module '{specifier}' is not exported from the '{module}' package"
+                ))
+            )
           }
           PackageJsonError::ImportNotDefined => {
             // TODO Imports code highlight
-            diagnostic_error!(diagnostic
-              .code_frames(vec![CodeFrame::from(path)])
-              .message(format!(
-                "Package import '{specifier}' is not defined in the '{module}' package"
-              )))
+            diagnostic_error!(
+              diagnostic
+                .code_frames(vec![CodeFrame::from(path)])
+                .message(format!(
+                  "Package import '{specifier}' is not defined in the '{module}' package"
+                ))
+            )
           }
           PackageJsonError::InvalidSpecifier => {
-            diagnostic_error!(diagnostic
-              .code_frames(vec![CodeFrame::from(path)])
-              .message(format!("Invalid package import specifier {specifier}")))
+            diagnostic_error!(
+              diagnostic
+                .code_frames(vec![CodeFrame::from(path)])
+                .message(format!("Invalid package import specifier {specifier}"))
+            )
           }
         }
       }

@@ -6,18 +6,18 @@ use std::sync::Arc;
 use swc_core::ecma::utils::stack_size::maybe_grow_default;
 
 use indexmap::IndexMap;
-use swc_core::common::sync::Lrc;
-use swc_core::common::util::take::Take;
+use swc_core::common::DUMMY_SP;
 use swc_core::common::SourceMap;
 use swc_core::common::Span;
-use swc_core::common::DUMMY_SP;
+use swc_core::common::sync::Lrc;
+use swc_core::common::util::take::Take;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::atoms::JsWord;
-use swc_core::ecma::parser::error::Error;
-use swc_core::ecma::parser::lexer::Lexer;
+use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::parser::Parser;
 use swc_core::ecma::parser::StringInput;
+use swc_core::ecma::parser::error::Error;
+use swc_core::ecma::parser::lexer::Lexer;
 use swc_core::ecma::visit::Fold;
 use swc_core::ecma::visit::FoldWith;
 

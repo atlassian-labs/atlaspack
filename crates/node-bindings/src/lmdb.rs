@@ -1,6 +1,6 @@
+use napi::JsUnknown;
 use napi::bindgen_prelude::Buffer;
 use napi::bindgen_prelude::Env;
-use napi::JsUnknown;
 use napi_derive::napi;
 
 #[napi]

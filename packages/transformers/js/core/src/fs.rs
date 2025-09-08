@@ -3,10 +3,10 @@ use std::path::PathBuf;
 
 use data_encoding::BASE64;
 use data_encoding::HEXLOWER;
+use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::Span;
 use swc_core::common::SyntaxContext;
-use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::*;
 use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::VisitMut;

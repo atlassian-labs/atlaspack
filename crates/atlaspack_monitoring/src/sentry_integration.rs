@@ -4,12 +4,12 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
-use sentry::configure_scope;
 use sentry::ClientInitGuard;
+use sentry::configure_scope;
 use serde_json::Value;
 use whoami::username;
 
-use crate::from_env::{optional_var, required_var, FromEnvError};
+use crate::from_env::{FromEnvError, optional_var, required_var};
 
 fn value_to_string(value: &Value) -> String {
   match value {

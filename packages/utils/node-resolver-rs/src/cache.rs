@@ -12,11 +12,11 @@ use atlaspack_core::types::File;
 use atlaspack_filesystem::{FileSystemRealPathCache, FileSystemRef};
 use atlaspack_shared_map::SharedHashMap;
 
+use crate::ResolverError;
 use crate::package_json::PackageJson;
 use crate::package_json::SourceField;
 use crate::tsconfig::TsConfig;
 use crate::tsconfig::TsConfigWrapper;
-use crate::ResolverError;
 
 pub struct Cache {
   pub fs: FileSystemRef,

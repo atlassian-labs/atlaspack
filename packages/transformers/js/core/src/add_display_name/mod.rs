@@ -151,7 +151,7 @@ fn create_display_name_assignment(id: &Ident) -> ModuleItem {
 #[cfg(test)]
 mod tests {
   use atlaspack_swc_runner::runner::{
-    run_with_transformation, RunWithTransformationOptions, RunWithTransformationOutput,
+    RunWithTransformationOptions, RunWithTransformationOutput, run_with_transformation,
   };
   use pretty_assertions::assert_str_eq;
   use swc_ecma_parser::{EsSyntax, Syntax};

@@ -601,7 +601,7 @@ impl Visit for EsmExportClassifier {
 mod tests {
   use std::collections::HashMap;
 
-  use atlaspack_swc_runner::test_utils::{run_test_visit_const, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{RunVisitResult, run_test_visit_const};
   use swc_core::{atoms::Atom, common::Mark};
 
   use crate::esm_export_classifier::{EsmExportClassifier, ExportKind, SymbolInfo};

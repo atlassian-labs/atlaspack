@@ -2,11 +2,10 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
-use napi::bindgen_prelude::Either3;
 use napi::Env;
 use napi::JsBoolean;
 use napi::JsBuffer;
@@ -16,6 +15,7 @@ use napi::JsString;
 use napi::JsUnknown;
 use napi::Ref;
 use napi::Result;
+use napi::bindgen_prelude::Either3;
 use napi_derive::napi;
 
 use atlaspack::file_system::{FileSystemRealPathCache, FileSystemRef};
@@ -325,13 +325,13 @@ impl Resolver {
           return Err(napi::Error::new(
             napi::Status::InvalidArg,
             "Unsupported specifier type: custom",
-          ))
+          ));
         }
         _ => {
           return Err(napi::Error::new(
             napi::Status::InvalidArg,
             format!("Invalid specifier type: {}", options.specifier_type),
-          ))
+          ));
         }
       },
       if let Some(conditions) = options.package_conditions {

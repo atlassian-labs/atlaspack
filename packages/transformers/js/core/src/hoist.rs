@@ -1,18 +1,18 @@
-use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 
 use indexmap::IndexMap;
 use serde::Deserialize;
 use serde::Serialize;
+use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::Span;
 use swc_core::common::SyntaxContext;
-use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::atoms::JsWord;
+use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::utils::stack_size::maybe_grow_default;
 use swc_core::ecma::visit::Fold;
 use swc_core::ecma::visit::FoldWith;
@@ -22,6 +22,10 @@ use crate::collect::Export;
 use crate::collect::Import;
 use crate::collect::ImportKind;
 use crate::id;
+use crate::utils::CodeHighlight;
+use crate::utils::Diagnostic;
+use crate::utils::DiagnosticSeverity;
+use crate::utils::SourceLocation;
 use crate::utils::get_undefined_ident;
 use crate::utils::is_unresolved;
 use crate::utils::match_export_name;
@@ -31,10 +35,6 @@ use crate::utils::match_import_cond;
 use crate::utils::match_member_expr;
 use crate::utils::match_property_name;
 use crate::utils::match_require;
-use crate::utils::CodeHighlight;
-use crate::utils::Diagnostic;
-use crate::utils::DiagnosticSeverity;
-use crate::utils::SourceLocation;
 
 macro_rules! hash {
   ($str:expr) => {{
@@ -1424,7 +1424,7 @@ impl Hoist<'_> {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_swc_runner::test_utils::{run_test_fold, run_test_visit_const, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{RunVisitResult, run_test_fold, run_test_visit_const};
   use indoc::{formatdoc, indoc};
 
   use crate::esm_export_classifier::SymbolsInfo;

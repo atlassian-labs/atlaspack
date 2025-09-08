@@ -7,7 +7,7 @@ use anyhow::anyhow;
 use crash_handler::CrashHandler;
 use minidumper::Client;
 
-use crate::from_env::{optional_var, required_var, FromEnvError};
+use crate::from_env::{FromEnvError, optional_var, required_var};
 
 #[derive(Debug)]
 pub struct CrashReporterOptions {

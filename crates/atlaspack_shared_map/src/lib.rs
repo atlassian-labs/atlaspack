@@ -96,7 +96,7 @@ mod test {
     });
 
     rx.recv().unwrap(); // wait for value to be written
-                        // and check value is visible on other threads
+    // and check value is visible on other threads
     std::thread::spawn({
       let map = map.clone();
       move || {

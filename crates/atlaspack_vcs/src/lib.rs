@@ -122,7 +122,7 @@ use std::{
   process::Command,
   time::Instant,
 };
-use yarn_integration::{parse_yarn_lock, parse_yarn_state_file, YarnLock, YarnStateFile};
+use yarn_integration::{YarnLock, YarnStateFile, parse_yarn_lock, parse_yarn_state_file};
 
 pub mod yarn_integration;
 

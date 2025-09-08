@@ -78,10 +78,10 @@ pub fn arrow_contains_component(arrow: &ArrowExpr) -> bool {
 #[cfg(test)]
 mod tests {
   use atlaspack_swc_runner::runner::{
-    run_with_transformation, RunWithTransformationOptions, RunWithTransformationOutput,
+    RunWithTransformationOptions, RunWithTransformationOutput, run_with_transformation,
   };
   use swc_core::{
-    common::{SyntaxContext, DUMMY_SP},
+    common::{DUMMY_SP, SyntaxContext},
     ecma::visit::VisitWith,
   };
   use swc_ecma_parser::{EsSyntax, Syntax};

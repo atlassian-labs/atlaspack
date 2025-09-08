@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use atlaspack_core::plugin::PluginOptions;
-use napi::bindgen_prelude::FromNapiValue;
 use napi::JsBuffer;
 use napi::JsObject;
 use napi::JsString;
 use napi::JsUnknown;
+use napi::bindgen_prelude::FromNapiValue;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -23,13 +23,13 @@ use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
-use atlaspack_core::types::engines::Engines;
 use atlaspack_core::types::Asset;
+use atlaspack_core::types::engines::Engines;
 use atlaspack_core::types::*;
 
-use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 use super::super::rpc::LoadPluginKind;
 use super::super::rpc::LoadPluginOptions;
+use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 use super::plugin_options::RpcPluginOptions;
 
 /// Plugin state once initialized

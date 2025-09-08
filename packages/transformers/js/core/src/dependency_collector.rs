@@ -1,6 +1,6 @@
-use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::hash_map::DefaultHasher;
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -10,20 +10,20 @@ use atlaspack_core::types::Condition;
 use path_slash::PathBufExt;
 use serde::Deserialize;
 use serde::Serialize;
-use swc_core::common::sync::Lrc;
+use swc_core::common::DUMMY_SP;
 use swc_core::common::Span;
 use swc_core::common::Spanned;
-use swc_core::common::DUMMY_SP;
+use swc_core::common::sync::Lrc;
 use swc_core::common::{Mark, SourceMap, SyntaxContext};
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::atoms::JsWord;
+use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::utils::member_expr;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
 
-use crate::utils::*;
 use crate::Config;
+use crate::utils::*;
 
 macro_rules! hash {
   ($str:expr) => {{
@@ -1663,7 +1663,7 @@ fn match_worker_type(expr: Option<&ExprOrSpread>) -> (SourceType, Option<ExprOrS
 mod tests {
   use super::*;
   use crate::DependencyDescriptor;
-  use atlaspack_swc_runner::test_utils::{run_test_visit, RunContext, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{RunContext, RunVisitResult, run_test_visit};
   use indoc::{formatdoc, indoc};
 
   fn make_dependency_collector<'a>(

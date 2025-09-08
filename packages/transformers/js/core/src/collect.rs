@@ -3,20 +3,23 @@ use std::collections::HashSet;
 
 use serde::Deserialize;
 use serde::Serialize;
-use swc_core::common::sync::Lrc;
+use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::Span;
-use swc_core::common::DUMMY_SP;
+use swc_core::common::sync::Lrc;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::atoms::JsWord;
+use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::utils::stack_size::maybe_grow_default;
-use swc_core::ecma::visit::noop_visit_type;
 use swc_core::ecma::visit::Visit;
 use swc_core::ecma::visit::VisitWith;
+use swc_core::ecma::visit::noop_visit_type;
 
 use crate::esm_export_classifier::SymbolsInfo;
 use crate::id;
+use crate::utils::Bailout;
+use crate::utils::BailoutReason;
+use crate::utils::SourceLocation;
 use crate::utils::is_unresolved;
 use crate::utils::match_export_name;
 use crate::utils::match_export_name_ident;
@@ -25,9 +28,6 @@ use crate::utils::match_import_cond;
 use crate::utils::match_member_expr;
 use crate::utils::match_property_name;
 use crate::utils::match_require;
-use crate::utils::Bailout;
-use crate::utils::BailoutReason;
-use crate::utils::SourceLocation;
 
 macro_rules! collect_visit_fn {
   ($name:ident, $type:ident) => {
@@ -1269,7 +1269,7 @@ mod tests {
 
   use atlaspack_swc_runner::{
     runner::RunContext,
-    test_utils::{run_test_visit_const, RunVisitResult},
+    test_utils::{RunVisitResult, run_test_visit_const},
   };
 
   pub struct TestCollectVisitor {

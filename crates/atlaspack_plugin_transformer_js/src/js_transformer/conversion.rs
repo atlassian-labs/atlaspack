@@ -650,23 +650,25 @@ fn convert_dependency(
           env.context,
           EnvironmentContext::Worklet | EnvironmentContext::ServiceWorker
         ) {
-          let diagnostic = diagnostic!(DiagnosticBuilder::default()
-            .code_frames(vec![CodeFrame {
-              code_highlights: vec![CodeHighlight::from(loc)],
-              ..CodeFrame::from(File {
-                contents: asset.code.to_string(),
-                path: asset.file_path.clone()
-              })
-            }])
-            .hints(vec![String::from("Try using a static `import`")])
-            .message(format!(
-              "import() is not allowed in {}.",
-              match env.context {
-                EnvironmentContext::Worklet => "worklets",
-                EnvironmentContext::ServiceWorker => "service workers",
-                _ => unreachable!(),
-              }
-            )));
+          let diagnostic = diagnostic!(
+            DiagnosticBuilder::default()
+              .code_frames(vec![CodeFrame {
+                code_highlights: vec![CodeHighlight::from(loc)],
+                ..CodeFrame::from(File {
+                  contents: asset.code.to_string(),
+                  path: asset.file_path.clone()
+                })
+              }])
+              .hints(vec![String::from("Try using a static `import`")])
+              .message(format!(
+                "import() is not allowed in {}.",
+                match env.context {
+                  EnvironmentContext::Worklet => "worklets",
+                  EnvironmentContext::ServiceWorker => "service workers",
+                  _ => unreachable!(),
+                }
+              ))
+          );
 
           // environment_diagnostic(&mut diagnostic, &asset, false);
           return Err(vec![diagnostic]);

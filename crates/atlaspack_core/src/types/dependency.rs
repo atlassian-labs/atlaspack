@@ -12,13 +12,13 @@ use serde_repr::Serialize_repr;
 use crate::hash::IdentifierHasher;
 use crate::types::{AssetId, ExportsCondition};
 
+use super::FileType;
 use super::bundle::MaybeBundleBehavior;
 use super::environment::Environment;
 use super::json::JSONObject;
 use super::source::SourceLocation;
 use super::symbol::Symbol;
 use super::target::Target;
-use super::FileType;
 
 #[allow(clippy::too_many_arguments)]
 pub fn create_dependency_id(

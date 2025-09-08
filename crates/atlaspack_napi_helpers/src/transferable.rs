@@ -4,15 +4,15 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::ops::Deref;
+use std::sync::Arc;
 use std::sync::atomic::AtomicI32;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
-use napi::bindgen_prelude::FromNapiValue;
-use napi::bindgen_prelude::ToNapiValue;
 use napi::Env;
 use napi::JsNumber;
 use napi::NapiRaw;
+use napi::bindgen_prelude::FromNapiValue;
+use napi::bindgen_prelude::ToNapiValue;
 use once_cell::sync::Lazy;
 
 type Inner = Arc<dyn Any + Send + Sync>;

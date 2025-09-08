@@ -7,18 +7,18 @@ use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::{AtlaspackOptions, SourceField, Targets};
-use atlaspack_filesystem::{os_file_system::OsFileSystem, FileSystemRef};
+use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::DatabaseHandle;
 use tokio::runtime::Runtime;
 use tokio::sync::RwLock;
 
-use crate::plugins::{config_plugins::ConfigPlugins, PluginsRef};
+use crate::WatchEvents;
+use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
 use crate::request_tracker::RequestTracker;
 use crate::requests::{AssetGraphRequest, RequestResult};
-use crate::WatchEvents;
 
 pub struct AtlaspackInitOptions {
   pub db: Arc<DatabaseHandle>,
@@ -222,7 +222,7 @@ mod tests {
   use atlaspack_core::types::{Asset, Code};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_plugin_rpc::{MockRpcFactory, MockRpcWorker};
-  use lmdb_js_lite::{get_database, LMDBOptions};
+  use lmdb_js_lite::{LMDBOptions, get_database};
 
   use super::*;
 

@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use inflector::Inflector;
+use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::Span;
 use swc_core::common::SyntaxContext;
-use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::atoms::JsWord;
+use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::preset_env::Feature;
 use swc_core::ecma::preset_env::Versions;
 use swc_core::ecma::visit::VisitMut;
@@ -654,7 +654,7 @@ impl VisitMut for EsmToCjsReplacer {
 mod tests {
   use std::str::FromStr;
 
-  use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{RunVisitResult, run_test_visit};
   use indoc::indoc;
   use swc_core::ecma::preset_env::{BrowserData, Version};
 

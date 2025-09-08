@@ -1,8 +1,8 @@
 use std::path::{Component, Components, Path, PathBuf};
 
 use atlaspack_filesystem::{
-  search::{find_ancestor_directory, find_ancestor_file},
   FileSystemRef,
+  search::{find_ancestor_directory, find_ancestor_file},
 };
 
 /// Makes the path absolute without accessing the filesystem

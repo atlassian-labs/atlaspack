@@ -15,8 +15,8 @@ use atlaspack_resolver::ResolverError;
 use atlaspack_resolver::Specifier;
 use atlaspack_resolver::SpecifierError;
 use atlaspack_resolver::SpecifierType;
-use es_module_lexer::lex;
 use es_module_lexer::ImportKind;
+use es_module_lexer::lex;
 use parking_lot::RwLock;
 // use rayon::prelude::{ParallelBridge, ParallelIterator};
 
@@ -304,7 +304,7 @@ fn read_string(bytes: &[u8]) -> Option<(Cow<'_, str>, &[u8])> {
         return Some((
           escape_glob(unsafe { std::str::from_utf8_unchecked(&bytes[1..i]) }),
           &bytes[i + 1..],
-        ))
+        ));
       }
       _ => {}
     }

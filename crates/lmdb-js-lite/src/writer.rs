@@ -4,8 +4,8 @@ use std::sync::Arc;
 use std::thread::JoinHandle;
 
 use crossbeam::channel::{Receiver, Sender};
-use heed::types::{Bytes, Str};
 use heed::EnvOpenOptions;
+use heed::types::{Bytes, Str};
 use heed::{Env, RoTxn, RwTxn};
 use heed::{EnvFlags, MdbError};
 use napi_derive::napi;

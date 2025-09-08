@@ -44,15 +44,15 @@ use std::sync::LazyLock;
 use std::sync::{Arc, Weak};
 
 use anyhow::anyhow;
-use napi::bindgen_prelude::Env;
 use napi::JsUnknown;
+use napi::bindgen_prelude::Env;
 use napi_derive::napi;
 use tracing::Level;
 
 pub use crate::writer::LMDBOptions;
 pub mod writer;
-use crate::writer::{start_make_database_writer, DatabaseWriterError, DatabaseWriterMessage};
 pub use crate::writer::{DatabaseWriter, DatabaseWriterHandle};
+use crate::writer::{DatabaseWriterError, DatabaseWriterMessage, start_make_database_writer};
 
 #[cfg(not(test))]
 type Buffer = napi::bindgen_prelude::Buffer;

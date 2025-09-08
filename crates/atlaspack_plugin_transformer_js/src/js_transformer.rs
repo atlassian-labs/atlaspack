@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 
 use async_trait::async_trait;
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
@@ -20,8 +20,8 @@ use swc_core::atoms::Atom;
 use crate::js_transformer_config::{
   InlineEnvironment, JsTransformerConfig, JsTransformerPackageJson,
 };
-use crate::map_diagnostics::{map_diagnostics, MapDiagnosticOptions};
-use crate::package_json::{depends_on_react, supports_automatic_jsx_runtime, PackageJson};
+use crate::map_diagnostics::{MapDiagnosticOptions, map_diagnostics};
+use crate::package_json::{PackageJson, depends_on_react, supports_automatic_jsx_runtime};
 use crate::ts_config::{Jsx, Target, TsConfig};
 
 mod conversion;
@@ -387,7 +387,7 @@ mod tests {
       Symbol,
     },
   };
-  use atlaspack_filesystem::{in_memory_file_system::InMemoryFileSystem, FileSystemRef};
+  use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSystem};
   use pretty_assertions::assert_eq;
   use swc_core::ecma::parser::lexer::util::CharExt;
 

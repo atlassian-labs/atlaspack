@@ -3,20 +3,20 @@ use std::sync::Arc;
 use std::thread;
 
 use anyhow::anyhow;
-use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack::Atlaspack;
 use atlaspack::AtlaspackError;
 use atlaspack::AtlaspackInitOptions;
 use atlaspack::WatchEvents;
-use atlaspack_napi_helpers::js_callable::JsCallable;
+use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack_napi_helpers::JsTransferable;
+use atlaspack_napi_helpers::js_callable::JsCallable;
 use lmdb_js_lite::DatabaseHandle;
 use lmdb_js_lite::LMDB;
-use napi::bindgen_prelude::External;
-use napi::bindgen_prelude::FromNapiValue;
 use napi::Env;
 use napi::JsObject;
 use napi::JsUnknown;
+use napi::bindgen_prelude::External;
+use napi::bindgen_prelude::FromNapiValue;
 use napi_derive::napi;
 
 use atlaspack::file_system::FileSystemRef;

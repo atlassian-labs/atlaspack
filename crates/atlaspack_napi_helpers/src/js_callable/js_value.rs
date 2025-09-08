@@ -1,8 +1,8 @@
+use napi::Env;
+use napi::JsUnknown;
 use napi::bindgen_prelude::FromNapiValue;
 use napi::sys::napi_env;
 use napi::sys::napi_value;
-use napi::Env;
-use napi::JsUnknown;
 
 /// ## Safety
 /// This will do unsafe casting of a raw env pointer in order to access it
