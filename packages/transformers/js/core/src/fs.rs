@@ -17,6 +17,7 @@ use crate::collect::Collect;
 use crate::collect::Import;
 use crate::dependency_collector::DependencyDescriptor;
 use crate::dependency_collector::DependencyKind;
+use crate::esm_export_classifier::SymbolsInfo;
 use crate::id;
 use crate::utils::SourceLocation;
 
@@ -31,10 +32,12 @@ pub fn inline_fs<'a>(
   is_module: bool,
   conditional_bundling: bool,
   computed_properties_fix: bool,
+  symbols_info: SymbolsInfo,
 ) -> impl VisitMut + 'a {
   InlineFS {
     filename: Path::new(filename).to_path_buf(),
     collect: Collect::new(
+      symbols_info,
       source_map,
       unresolved_mark,
       Mark::fresh(Mark::root()),
@@ -446,6 +449,7 @@ mod tests {
         true,
         false,
         true,
+        SymbolsInfo::default(),
       )
     });
 

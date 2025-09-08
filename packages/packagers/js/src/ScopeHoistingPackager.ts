@@ -1648,29 +1648,37 @@ ${code}
         // for the symbol so that when the value changes the object property also changes. This is
         // required to simulate ESM live bindings. It's easier to do it this way rather than inserting
         // additional assignments after each mutation of the original binding.
-        prepend += `\n${usedExports
-          .map((exp) => {
-            let resolved = this.getSymbolResolution(
-              asset,
-              asset,
-              // @ts-expect-error TS2345
+        for (let exp of usedExports) {
+          let resolved = this.getSymbolResolution(
+            asset,
+            asset,
+            // @ts-expect-error TS2345
+            exp,
+            undefined,
+            replacements,
+          );
+          const meta = asset.symbols.get(exp)?.meta;
+          if (
+            getFeatureFlag('exportsRebindingOptimisation') &&
+            meta?.isStaticBindingSafe
+          ) {
+            append += `$${assetId}$exports[${JSON.stringify(
               exp,
-              undefined,
-              replacements,
-            );
+            )}] = ${resolved};\n`;
+          } else {
             let get = this.buildFunctionExpression([], resolved);
             let isEsmExport = !!asset.symbols.get(exp)?.meta?.isEsm;
             let set =
               !isEsmExport && asset.meta.hasCJSExports
                 ? ', ' + this.buildFunctionExpression(['v'], `${resolved} = v`)
                 : '';
-            return `$parcel$export($${assetId}$exports, ${JSON.stringify(
+            prepend += `$parcel$export($${assetId}$exports, ${JSON.stringify(
               exp,
-            )}, ${get}${set});`;
-          })
-          .join('\n')}\n`;
-        this.usedHelpers.add('$parcel$export');
-        prependLineCount += 1 + usedExports.length;
+            )}, ${get}${set});\n`;
+            this.usedHelpers.add('$parcel$export');
+            prependLineCount += 1 + usedExports.length;
+          }
+        }
       }
     }
 
