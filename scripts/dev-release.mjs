@@ -35,6 +35,7 @@ try {
       '--force-publish="*"',
       '--no-git-tag-version',
       '--no-push',
+      '--loglevel=verbose',
       'prepatch',
     ],
     {
@@ -43,6 +44,7 @@ try {
     },
   );
 } catch (error) {
+  console.error(error);
   process.exit(1);
 }
 
