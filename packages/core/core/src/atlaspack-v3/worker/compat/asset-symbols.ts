@@ -1,4 +1,3 @@
-// @ts-expect-error TS2305
 import type {Symbol as NapiSymbol} from '@atlaspack/rust';
 import type {
   AssetSymbols as IAssetSymbols,
@@ -10,8 +9,8 @@ import type {
 } from '@atlaspack/types';
 
 export class MutableDependencySymbols implements IMutableDependencySymbols {
-  #symbols: Map<symbol, DependencyAssetSymbol>;
-  #locals: Set<symbol>;
+  #symbols: Map<Symbol, DependencyAssetSymbol>;
+  #locals: Set<Symbol>;
 
   get isCleared(): boolean {
     return this.#symbols.size === 0;
@@ -29,25 +28,25 @@ export class MutableDependencySymbols implements IMutableDependencySymbols {
     throw new Error('MutableDependencySymbols.ensure()');
   }
 
-  get(exportSymbol: symbol): DependencyAssetSymbol | null | undefined {
+  get(exportSymbol: Symbol): DependencyAssetSymbol | null | undefined {
     return this.#symbols.get(exportSymbol);
   }
 
-  hasExportSymbol(exportSymbol: symbol): boolean {
+  hasExportSymbol(exportSymbol: Symbol): boolean {
     return this.#symbols.has(exportSymbol);
   }
 
-  hasLocalSymbol(local: symbol): boolean {
+  hasLocalSymbol(local: Symbol): boolean {
     return this.#locals.has(local);
   }
 
-  exportSymbols(): Iterable<symbol> {
+  exportSymbols(): Iterable<Symbol> {
     return this.#symbols.keys();
   }
 
   set(
-    exportSymbol: symbol,
-    local: symbol,
+    exportSymbol: Symbol,
+    local: Symbol,
     loc?: SourceLocation | null,
     isWeak?: boolean | null,
   ): void {
@@ -60,7 +59,7 @@ export class MutableDependencySymbols implements IMutableDependencySymbols {
     });
   }
 
-  delete(exportSymbol: symbol): void {
+  delete(exportSymbol: Symbol): void {
     let existing = this.#symbols.get(exportSymbol);
     if (!existing) return;
     this.#locals.delete(existing.local);
@@ -75,8 +74,8 @@ export class MutableDependencySymbols implements IMutableDependencySymbols {
 }
 
 export class AssetSymbols implements IAssetSymbols {
-  #symbols: Map<symbol, AssetSymbol>;
-  #locals: Set<symbol>;
+  #symbols: Map<Symbol, AssetSymbol>;
+  #locals: Set<Symbol>;
 
   get isCleared(): boolean {
     return this.#symbols.size === 0;
@@ -91,8 +90,8 @@ export class AssetSymbols implements IAssetSymbols {
   }
 
   #set(
-    exportSymbol: symbol,
-    local: symbol,
+    exportSymbol: Symbol,
+    local: Symbol,
     loc?: SourceLocation | null,
   ): undefined {
     this.#locals.add(local);
@@ -103,19 +102,19 @@ export class AssetSymbols implements IAssetSymbols {
     });
   }
 
-  get(exportSymbol: symbol): AssetSymbol | null | undefined {
+  get(exportSymbol: Symbol): AssetSymbol | null | undefined {
     return this.#symbols.get(exportSymbol);
   }
 
-  hasExportSymbol(exportSymbol: symbol): boolean {
+  hasExportSymbol(exportSymbol: Symbol): boolean {
     return this.#symbols.has(exportSymbol);
   }
 
-  hasLocalSymbol(local: symbol): boolean {
+  hasLocalSymbol(local: Symbol): boolean {
     return this.#locals.has(local);
   }
 
-  exportSymbols(): Iterable<symbol> {
+  exportSymbols(): Iterable<Symbol> {
     return this.#symbols.keys();
   }
 
@@ -131,8 +130,8 @@ export class AssetSymbols implements IAssetSymbols {
 }
 
 export class MutableAssetSymbols implements IMutableAssetSymbols {
-  #symbols: Map<symbol, AssetSymbol>;
-  #locals: Set<symbol>;
+  #symbols: Map<Symbol, AssetSymbol>;
+  #locals: Set<Symbol>;
 
   get isCleared(): boolean {
     return this.#symbols.size === 0;
@@ -141,10 +140,17 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
   constructor(inner: NapiSymbol[] | null | undefined | null) {
     this.#symbols = new Map();
     this.#locals = new Set();
-    for (const {exported, loc, local, isEsmExport, selfReferenced} of inner ||
-      []) {
+    for (const {
+      exported,
+      loc,
+      local,
+      isEsmExport,
+      selfReferenced,
+      isStaticBindingSafe,
+    } of inner || []) {
       this.set(exported, local, loc, {
         isEsm: isEsmExport,
+        isStaticBindingSafe,
         selfReferenced,
       });
     }
@@ -183,8 +189,8 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
   }
 
   set(
-    exportSymbol: symbol,
-    local: symbol,
+    exportSymbol: Symbol,
+    local: Symbol,
     loc?: SourceLocation | null,
     meta?: Meta | null,
   ): void {
@@ -196,23 +202,23 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
     });
   }
 
-  get(exportSymbol: symbol): AssetSymbol | null | undefined {
+  get(exportSymbol: Symbol): AssetSymbol | null | undefined {
     return this.#symbols.get(exportSymbol);
   }
 
-  hasExportSymbol(exportSymbol: symbol): boolean {
+  hasExportSymbol(exportSymbol: Symbol): boolean {
     return this.#symbols.has(exportSymbol);
   }
 
-  hasLocalSymbol(local: symbol): boolean {
+  hasLocalSymbol(local: Symbol): boolean {
     return this.#locals.has(local);
   }
 
-  exportSymbols(): Iterable<symbol> {
+  exportSymbols(): Iterable<Symbol> {
     return this.#symbols.keys();
   }
 
-  delete(exportSymbol: symbol): void {
+  delete(exportSymbol: Symbol): void {
     let existing = this.#symbols.get(exportSymbol);
     if (!existing) return;
     this.#locals.delete(existing.local);
@@ -227,13 +233,13 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
 }
 
 export type AssetSymbol = {
-  local: symbol;
+  local: Symbol;
   loc: SourceLocation | null | undefined;
   meta?: Meta | null | undefined;
 };
 
 export type DependencyAssetSymbol = {
-  local: symbol;
+  local: Symbol;
   loc: SourceLocation | null | undefined;
   meta?: Meta | null | undefined;
   isWeak: boolean;
