@@ -1,5 +1,12 @@
 # @atlaspack/ts-utils
 
+## 2.14.9
+
+### Patch Changes
+
+- Updated dependencies [[`eedcbc4`](https://github.com/atlassian-labs/atlaspack/commit/eedcbc408fc1e86a2a8e25f1a41c57146d8529e1), [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572)]:
+  - @atlaspack/types-internal@2.20.0
+
 ## 2.14.8
 
 ### Patch Changes
