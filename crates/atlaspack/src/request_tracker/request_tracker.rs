@@ -12,10 +12,10 @@ use atlaspack_core::config_loader::ConfigLoaderRef;
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_filesystem::FileSystemRef;
+use petgraph::Direction;
 use petgraph::visit::Dfs;
 use petgraph::visit::EdgeRef;
 use petgraph::visit::Reversed;
-use petgraph::Direction;
 
 use crate::AtlaspackError;
 use crate::WatchEvent;
