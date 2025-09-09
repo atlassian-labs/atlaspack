@@ -66,7 +66,7 @@ export const DEFAULT_FEATURE_FLAGS = {
   /**
    * Deduplicates environments across cache / memory entities
    */
-  environmentDeduplication: true,
+  environmentDeduplication: false,
 
   /**
    * Enable scanning for the presence of loadable to determine side effects
@@ -77,7 +77,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enable performance optimization for the resolver specifier to_string
    * conversions
    */
-  reduceResolverStringCreation: true,
+  reduceResolverStringCreation: false,
 
   /**
    * Add verbose metrics for request tracker invalidation.
@@ -88,18 +88,18 @@ export const DEFAULT_FEATURE_FLAGS = {
   /**
    * Fixes source maps for inline bundles
    */
-  inlineBundlesSourceMapFixes: true,
+  inlineBundlesSourceMapFixes: false,
 
   /** Enable patch project paths. This will patch the project paths to be relative to the project root.
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    */
-  patchProjectPaths: true,
+  patchProjectPaths: false,
 
   /**
    * Enables optimized inline string replacement perf for the packager.
    * Used heavily for inline bundles.
    */
-  inlineStringReplacementPerf: true,
+  inlineStringReplacementPerf: false,
 
   /**
    * Enable resolution of bundler config starting from the CWD

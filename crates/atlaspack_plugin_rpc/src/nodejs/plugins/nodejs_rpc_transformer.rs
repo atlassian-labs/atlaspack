@@ -1,29 +1,20 @@
 use async_trait::async_trait;
 use atlaspack_core::plugin::PluginOptions;
-use napi::bindgen_prelude::FromNapiValue;
-use napi::JsBuffer;
-use napi::JsObject;
-use napi::JsString;
-use napi::JsUnknown;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::hash::Hasher;
-use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::OnceCell;
 
 use anyhow::Error;
 use atlaspack_core::hash::IdentifierHasher;
-use serde::Deserialize;
-use serde::Serialize;
 
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
-use atlaspack_core::types::engines::Engines;
 use atlaspack_core::types::Asset;
 use atlaspack_core::types::*;
 
@@ -32,7 +23,6 @@ use crate::javascript_plugin_api::JavaScriptPluginAPI;
 use crate::javascript_plugin_api::LoadPluginKind;
 use crate::javascript_plugin_api::LoadPluginOptions;
 use crate::javascript_plugin_api::RpcTransformerOpts;
-use crate::nodejs::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 
 /// Plugin state once initialized
 struct InitializedState {
@@ -133,7 +123,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       .await?;
 
     let transformed_asset = Asset {
-      id: result.id,
+      id: Asset::asset_id_from_hex(result.id),
       code: Code::new(contents),
       bundle_behavior: result.bundle_behavior,
       env: asset_env.clone(),

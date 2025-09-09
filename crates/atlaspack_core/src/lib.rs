@@ -3,6 +3,7 @@ pub mod bundle_graph;
 pub mod cache;
 pub mod config_loader;
 pub mod hash;
+pub mod macros;
 pub mod plugin;
 pub mod project_path;
 pub mod types;

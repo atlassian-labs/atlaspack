@@ -7,6 +7,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Arc;
 use tracing_appender::non_blocking::WorkerGuard;
+use tracing_indicatif::filter::IndicatifFilter;
+use tracing_indicatif::style::ProgressStyle;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
@@ -107,11 +109,18 @@ impl Tracer {
 
     worker_guards.push(TracerGuard::WorkerGuard(worker_guard));
 
-    let stdout_layer = if options
+    let (indicatif_layer, stdout_layer) = if options
       .iter()
       .any(|mode| matches!(mode, TracerMode::Stdout))
     {
-      let (non_blocking, worker_guard) = tracing_appender::non_blocking(std::io::stdout());
+      let indicatif_layer = tracing_indicatif::IndicatifLayer::new().with_progress_style(
+        ProgressStyle::default_bar()
+          .template("[{elapsed_precise}] {bar:40.magenta/magenta} {pos:>7}/{len:7} {msg}")
+          .unwrap(),
+      );
+
+      let (non_blocking, worker_guard) =
+        tracing_appender::non_blocking(indicatif_layer.get_stdout_writer());
       let stdout_layer = tracing_subscriber::fmt::layer()
         .with_writer(non_blocking)
         .with_span_events(FmtSpan::CLOSE)
@@ -119,9 +128,11 @@ impl Tracer {
 
       worker_guards.push(TracerGuard::WorkerGuard(worker_guard));
 
-      Some(stdout_layer)
+      let indicatif_layer = indicatif_layer.with_filter(IndicatifFilter::new(false));
+
+      (Some(indicatif_layer), Some(stdout_layer))
     } else {
-      None
+      (None, None)
     };
 
     let chrome_layer = if options
@@ -144,6 +155,7 @@ impl Tracer {
     let subscriber = Registry::default()
       .with(layer)
       .with(stdout_layer)
+      .with(indicatif_layer)
       .with(sentry_layer)
       .with(chrome_layer);
 

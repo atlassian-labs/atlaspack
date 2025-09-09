@@ -2,9 +2,6 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::hash::hash_bytes;
-use atlaspack_core::plugin::AssetBuildEvent;
-use atlaspack_core::plugin::BuildProgressEvent;
-use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::types::AssetStats;
@@ -400,7 +397,7 @@ mod tests {
     assert_eq!(
       result.asset.clone(),
       Asset {
-        id: "531e3635c3398c55".into(),
+        id: Asset::asset_id_from_hex("531e3635c3398c55"),
         file_type: FileType::Js,
         ..result.asset
       }

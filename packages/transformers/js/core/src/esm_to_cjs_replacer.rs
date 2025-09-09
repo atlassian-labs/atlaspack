@@ -261,6 +261,187 @@ impl EsmToCjsReplacer {
       span,
     })
   }
+
+  fn extract_exports_from_decl(&mut self, var: &VarDecl) -> Vec<ModuleItem> {
+    let mut exports = vec![];
+
+    for decl in &var.decls {
+      match &decl.name {
+        Pat::Ident(binding_ident) => {
+          self.extract_exports_from_binding_ident(binding_ident, &mut exports)
+        }
+        Pat::Array(array_pat) => self.extract_exports_from_array_pattern(array_pat, &mut exports),
+        Pat::Rest(rest_pat) => self.extract_exports_from_rest_pattern(rest_pat, &mut exports),
+        Pat::Object(object_pat) => {
+          self.extract_exports_from_object_pattern(object_pat, &mut exports);
+        }
+        Pat::Assign(assign_pat) => {
+          self.extract_exports_from_assign_pattern(assign_pat, &mut exports)
+        }
+        Pat::Invalid(_) => {}
+        Pat::Expr(_) => {}
+      }
+    }
+
+    exports
+  }
+
+  /// Extracts exports from a binding ident.
+  ///
+  /// For example:
+  ///
+  ///     export const foo = 1;
+  ///
+  /// Will extract:
+  ///
+  ///     const foo = 1;
+  ///     exports.foo = foo;
+  ///
+  fn extract_exports_from_binding_ident(
+    &mut self,
+    binding_ident: &BindingIdent,
+    exports: &mut Vec<ModuleItem>,
+  ) {
+    let ident = binding_ident.id.clone();
+    let export =
+      self.create_exports_assign(ident.sym.clone(), Expr::Ident(ident.clone()), DUMMY_SP);
+    exports.push(export);
+  }
+
+  /// Extracts exports from an object pattern.
+  ///
+  /// For example:
+  ///
+  ///     export const { foo } = obj;
+  ///
+  /// Will extract:
+  ///
+  ///     const { foo } = obj;
+  ///     exports.foo = foo;
+  ///
+  fn extract_exports_from_object_pattern(
+    &mut self,
+    object_pat: &ObjectPat,
+    exports: &mut Vec<ModuleItem>,
+  ) {
+    for prop in &object_pat.props {
+      match prop {
+        // This is `foo` in:
+        // { foo }
+        ObjectPatProp::Assign(prop) => {
+          let key = prop.key.clone();
+          assert!(prop.value.is_none());
+          let export =
+            self.create_exports_assign(key.sym.clone(), Expr::Ident(key.id.clone()), DUMMY_SP);
+          exports.push(export);
+        }
+        // This is `foo` in:
+        // { prop: foo }
+        ObjectPatProp::KeyValue(prop) => {
+          let value = &prop.value;
+          self.extract_exports_from_pat(&*value, exports);
+        }
+        // This is `foo` in:
+        // { ...foo }
+        ObjectPatProp::Rest(rest_pat) => {
+          self.extract_exports_from_rest_pattern(rest_pat, exports);
+        }
+      }
+    }
+  }
+
+  /// Extracts exports from a pattern.
+  ///
+  /// This happens when we have:
+  ///
+  ///     export const { foo: <PAT> } = ...;
+  ///
+  /// The issue is there are many valid patterns. For example:
+  ///
+  ///     export const { foo: { bar } } = ...;
+  ///
+  fn extract_exports_from_pat(&mut self, pat: &Pat, exports: &mut Vec<ModuleItem>) {
+    match pat {
+      Pat::Ident(binding_ident) => {
+        self.extract_exports_from_binding_ident(binding_ident, exports);
+      }
+      Pat::Array(array_pat) => {
+        self.extract_exports_from_array_pattern(array_pat, exports);
+      }
+      Pat::Object(object_pat) => {
+        self.extract_exports_from_object_pattern(object_pat, exports);
+      }
+      Pat::Rest(rest_pat) => {
+        self.extract_exports_from_rest_pattern(rest_pat, exports);
+      }
+      Pat::Assign(assign_pat) => {
+        self.extract_exports_from_assign_pattern(assign_pat, exports);
+      }
+      // These cases are INVALID
+      // Pat expr is for for-in/for-of loops.
+      Pat::Expr(_) => {}
+      Pat::Invalid(_) => {}
+    }
+  }
+
+  /// Extracts exports from a pattern.
+  ///
+  /// This happens when we have:
+  ///
+  ///     export const [<PAT>]= ...;
+  ///
+  /// The issue is there are many valid patterns. For example:
+  ///
+  ///     export const [foo, bar, ...rest, { abc }] = ...;
+  ///
+  /// We recursively extract exports from each element. Missing elements are ignored.
+  /// An element is missing on this sample:
+  ///
+  ///     export const [one, two, , four] = ...;
+  ///
+  fn extract_exports_from_array_pattern(
+    &mut self,
+    array_pat: &ArrayPat,
+    exports: &mut Vec<ModuleItem>,
+  ) {
+    for elem in &array_pat.elems {
+      if let Some(elem) = elem {
+        self.extract_exports_from_pat(elem, exports);
+      }
+    }
+  }
+
+  /// Extracts exports from a rest pattern.
+  ///
+  /// This happens when we have:
+  ///
+  ///     export const { ...<PAT> } = ...;
+  ///     export const [ ...<PAT> ] = ...;
+  ///
+  /// We recursively extract exports from the `<PAT>` node.
+  fn extract_exports_from_rest_pattern(
+    &mut self,
+    rest_pat: &RestPat,
+    exports: &mut Vec<ModuleItem>,
+  ) {
+    self.extract_exports_from_pat(&*rest_pat.arg, exports);
+  }
+
+  /// Extracts exports from an assign pattern.
+  ///
+  /// This happens when we have:
+  ///
+  ///     export const { a = 10 } = ...;
+  ///     export const { <PAT> = <DEFAULT> } = ...;
+  ///
+  /// We recursively extract exports from `<PAT>`.
+  fn extract_exports_from_assign_pattern(
+    &mut self,
+    assign_pat: &AssignPat,
+    exports: &mut Vec<ModuleItem>,
+  ) {
+    self.extract_exports_from_pat(&*assign_pat.left, exports);
+  }
 }
 
 macro_rules! visit_function_scope {
@@ -520,33 +701,7 @@ impl VisitMut for EsmToCjsReplacer {
                   let mut var = var.clone();
 
                   if var.kind == VarDeclKind::Const {
-                    let mut exports = vec![];
-                    for decl in &var.decls {
-                      let Some(ident) = decl.name.as_ident() else {
-                        // This should never happen. And would be caused by:
-                        // export const { a } = 10;
-                        // Or similar patterns.
-                        continue;
-                      };
-                      let ident = ident.id.clone();
-
-                      exports.push(ModuleItem::Stmt(Stmt::Expr(ExprStmt {
-                        span: DUMMY_SP,
-                        expr: Box::new(Expr::Assign(AssignExpr {
-                          op: AssignOp::Assign,
-                          left: AssignTarget::Simple(SimpleAssignTarget::Member(MemberExpr {
-                            obj: Box::new(Expr::Ident(Ident::new_no_ctxt(
-                              "exports".into(),
-                              DUMMY_SP,
-                            ))),
-                            prop: MemberProp::Ident(IdentName::new(ident.sym.clone(), DUMMY_SP)),
-                            span: DUMMY_SP,
-                          })),
-                          right: Box::new(Expr::Ident(ident.clone())),
-                          span: DUMMY_SP,
-                        })),
-                      })));
-                    }
+                    let exports = self.extract_exports_from_decl(&var);
                     items.push(ModuleItem::Stmt(Stmt::Decl(Decl::Var(var))));
                     items.extend(exports);
 
@@ -631,6 +786,7 @@ impl VisitMut for EsmToCjsReplacer {
   fn visit_mut_binding_ident(&mut self, node: &mut BindingIdent) {
     if self.in_export_decl {
       // export const {foo} = ...;
+      // println!("exporting {:?}", node.id.sym);
       self.create_export(node.id.sym.clone(), Expr::Ident(node.id.clone()), DUMMY_SP);
     }
 
@@ -912,8 +1068,9 @@ mod tests {
     assert!(visitor.needs_helpers);
   }
 
+  // Unneeded on spec and not how Chrome works
   #[test]
-  fn transforms_destructured_object_export_to_use_helpers() {
+  fn does_not_transform_destructured_object_export_to_use_helpers() {
     let RunVisitResult {
       output_code,
       visitor,
@@ -928,14 +1085,160 @@ mod tests {
     assert_eq!(
       output_code,
       indoc! {r#"
-        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
-        parcelHelpers.defineInteropFlag(exports);
-        parcelHelpers.export(exports, "main", ()=>main);
         const { main } = obj;
+        exports.main = main;
       "#}
     );
 
-    assert!(visitor.needs_helpers);
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn does_not_transform_destructured_object_export_with_rename_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        export const { main: foo } = obj;
+        export const x = foo;
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { main: foo } = obj;
+        exports.foo = foo;
+        const x = foo;
+        exports.x = x;
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn does_not_transform_destructured_object_export_with_array_destructuring_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        export const { main: [foo] } = obj;
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { main: [foo] } = obj;
+        exports.foo = foo;
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn does_not_transform_destructured_object_with_nested_destructuring_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        export const { main: { foo } } = obj;
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { main: { foo } } = obj;
+        exports.foo = foo;
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn test_extracts_rest_patterns_in_objects() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        export const { main: foo, ...rest } = obj;
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { main: foo, ...rest } = obj;
+        exports.foo = foo;
+        exports.rest = rest;
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn test_extracts_assign_patterns_in_objects() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        export const { main: foo = 1 } = obj;
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { main: foo = 1 } = obj;
+        exports.foo = foo;
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
+  }
+
+  #[test]
+  fn does_not_transform_constant_bindings_to_use_helpers() {
+    let RunVisitResult {
+      output_code,
+      visitor,
+      ..
+    } = run_test_visit(
+      r#"
+        export const something = 10;
+      "#,
+      |context| EsmToCjsReplacer::new(context.unresolved_mark, None),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const something = 10;
+        exports.something = something;
+      "#}
+    );
+
+    assert!(!visitor.needs_helpers);
   }
 
   #[test]
@@ -1000,7 +1303,7 @@ mod tests {
   }
 
   #[test]
-  fn transforms_arrow_functions_to_use_helpers_when_unsupported() {
+  fn does_not_transforms_arrow_functions_to_use_helpers() {
     let RunVisitResult {
       output_code,
       visitor,
@@ -1025,16 +1328,12 @@ mod tests {
     assert_eq!(
       output_code,
       indoc! {r#"
-        var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
-        parcelHelpers.defineInteropFlag(exports);
-        parcelHelpers.export(exports, "main1", function() {
-            return main1;
-        });
         const main1 = ()=>{};
+        exports.main1 = main1;
         const main2 = ()=>{};
       "#}
     );
 
-    assert!(visitor.needs_helpers);
+    assert!(!visitor.needs_helpers);
   }
 }

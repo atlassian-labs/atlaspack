@@ -59,7 +59,7 @@ impl RequestTracker {
     plugins: PluginsRef,
     project_root: PathBuf,
   ) -> Self {
-    let mut graph = StableDiGraph::<RequestNode, RequestEdgeType>::new();
+    let mut graph = StableDiGraph::<RequestNode, RequestEdgeType>::with_capacity(100_000, 100_000);
 
     graph.add_node(RequestNode::Root);
 
@@ -102,7 +102,7 @@ impl RequestTracker {
   ///     without stalls and locks/channels
   ///   - For non-main-thread requests, do not allow enqueueing of sub-requests
   pub async fn run_request(&mut self, request: impl Request) -> anyhow::Result<RequestResult> {
-    // tracing::debug!("run_request {:?}", request);
+    tracing::debug!("run_request {:?}", request);
 
     let request_id = request.id();
     let (tx, rx) = std::sync::mpsc::channel();

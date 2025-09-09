@@ -3,6 +3,8 @@ use serde::Serialize;
 use serde_repr::Deserialize_repr;
 use serde_repr::Serialize_repr;
 
+use crate::types::AssetId;
+
 use super::environment::Environment;
 use super::file_type::FileType;
 use super::target::Target;
@@ -23,7 +25,7 @@ pub struct Bundle {
   ///
   /// Some bundles may not have any entry assets, like shared bundles.
   ///
-  pub entry_asset_ids: Vec<String>,
+  pub entry_asset_ids: Vec<AssetId>,
 
   /// The environment of the bundle
   pub env: Environment,
@@ -50,7 +52,7 @@ pub struct Bundle {
   ///
   /// Some bundles, such as shared bundles, may not have a main entry.
   ///
-  pub main_entry_id: Option<String>,
+  pub main_entry_id: Option<AssetId>,
 
   pub manual_shared_bundle: Option<String>,
 

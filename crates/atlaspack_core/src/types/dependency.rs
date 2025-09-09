@@ -34,7 +34,7 @@ pub fn create_dependency_id(
 ) -> String {
   let mut hasher = IdentifierHasher::new();
 
-  source_asset_id.hash(&mut hasher);
+  source_asset_id.map(AssetId::to_string).hash(&mut hasher);
   specifier.hash(&mut hasher);
   environment_id.hash(&mut hasher);
   target.hash(&mut hasher);
@@ -92,6 +92,7 @@ pub struct Dependency {
   ///
   pub resolve_from: Option<PathBuf>,
 
+  // TODO: missing serialize
   /// The id of the asset with this dependency
   pub source_asset_id: Option<AssetId>,
 
@@ -143,6 +144,12 @@ pub struct Dependency {
   pub is_esm: bool,
 
   pub placeholder: Option<String>,
+}
+
+impl std::fmt::Display for Dependency {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "specifier='{}' ({:?})", self.specifier, self.priority)
+  }
 }
 
 impl Dependency {

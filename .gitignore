@@ -33,3 +33,5 @@ debug-symbols/
 /databases
 
 mocha-cpu-profiles/
+bundle-graph-diagnostics.json
+*.cpuprofile

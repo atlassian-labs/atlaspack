@@ -20,6 +20,7 @@ async-trait = { workspace = true }
 bitflags = { workspace = true }
 browserslist-rs = { workspace = true }
 derive_builder = { workspace = true }
+indicatif = "0.18"
 dyn-hash = { workspace = true }
 nodejs-semver = { workspace = true }
 mockall = { workspace = true }

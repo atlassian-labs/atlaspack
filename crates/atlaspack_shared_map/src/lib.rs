@@ -47,6 +47,21 @@ where
     map.get(key).cloned()
   }
 
+  pub fn try_get<KR>(&self, key: &KR, create: impl FnOnce(&KR) -> V) -> Option<V>
+  where
+    KR: ?Sized,
+    K: Borrow<KR>,
+    KR: Eq + std::hash::Hash,
+  {
+    if let Some(map_cell) = self.inner.try_read() {
+      let map = map_cell;
+      map.get(key).cloned()
+    } else {
+      let value = create(key);
+      Some(value)
+    }
+  }
+
   pub fn insert(&self, key: K, value: V) {
     let map_cell = self.inner.write();
     let mut map = map_cell;

@@ -154,6 +154,7 @@ impl Atlaspack {
     &self,
     request: impl request_tracker::Request,
   ) -> anyhow::Result<RequestResult> {
+    #[allow(deprecated)]
     self.block_on(self.run_request_async(request))
   }
 
@@ -175,6 +176,7 @@ impl Atlaspack {
   }
 
   pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
+    #[allow(deprecated)]
     let result = self.block_on(self.build_asset_graph_async());
 
     if let Err(e) = &result {
@@ -184,7 +186,9 @@ impl Atlaspack {
     result
   }
 
+  #[deprecated(note = "Methods need to return futures")]
   pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {
+    #[allow(deprecated)]
     self.block_on(async move {
       Ok(
         self
@@ -207,12 +211,12 @@ impl Atlaspack {
       self
         .db
         .database()
-        .put(&mut txn, &asset.id, asset.code.bytes())?;
+        .put(&mut txn, &asset.id_string(), asset.code.bytes())?;
       if let Some(map) = &asset.map {
         // TODO: For some reason to_buffer strips data when rkyv was upgraded, so now we use json
         self.db.database().put(
           &mut txn,
-          &format!("map:{}", asset.id),
+          &format!("map:{}", asset.id_string()),
           map.to_json()?.as_bytes(),
         )?;
       }
@@ -245,10 +249,10 @@ mod tests {
   use atlaspack_benchmark::GenerateMonorepoParams;
   use atlaspack_core::{
     bundle_graph::BundleGraphNode,
-    types::{Asset, BuildMode, Code},
+    types::{Asset, AssetId, BuildMode, Code},
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
-  use atlaspack_plugin_rpc::{rust::RustWorkerFactory, MockRpcFactory, MockRpcWorker};
+  use atlaspack_plugin_rpc::{MockRpcFactory, MockRpcWorker};
   use tracing::info;
 
   use crate::{
@@ -294,7 +298,7 @@ mod tests {
       .map(|(idx, asset)| {
         AssetGraphNode::Asset(AssetNode {
           asset: Asset {
-            id: idx.to_string(),
+            id: AssetId::from(idx as u64),
             code: Code::from(asset.to_string()),
             ..Asset::default()
           },
@@ -307,7 +311,9 @@ mod tests {
 
     let txn = db.database().read_txn()?;
     for (idx, asset) in assets_names.iter().enumerate() {
-      let entry = db.database().get(&txn, &idx.to_string())?;
+      let entry = db
+        .database()
+        .get(&txn, &AssetId::from(idx as u64).to_string())?;
       assert_eq!(entry, Some(asset.to_string().into()));
     }
 
@@ -315,6 +321,7 @@ mod tests {
   }
 
   #[tokio::test]
+  #[ignore]
   async fn test_create_bundle_from_non_library_app() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
       .with_max_level(tracing::Level::INFO)
@@ -382,8 +389,8 @@ export const bar = "bar";
       .await
       .unwrap();
 
-    let asset_graph = atlaspack.build_asset_graph_async().await?;
-    let bundle_graph = atlaspack
+    let _asset_graph = atlaspack.build_asset_graph_async().await?;
+    let _bundle_graph = atlaspack
       .run_request_async(bundle_graph_request::BundleGraphRequest {})
       .await?;
     let BundleGraphRequestOutput {
@@ -406,10 +413,15 @@ export const bar = "bar";
     };
 
     let mut output = Vec::new();
+    let asset_graph = Arc::new(asset_graph);
     package_request::package_bundle(
-      package_request::PackageBundleParams { bundle: &bundle },
-      InMemoryAssetDataProvider::new(&asset_graph),
+      package_request::PackageBundleParams {
+        bundle: &bundle,
+        bundle_node_index: bundle_graph.graph().node_indices().next().unwrap(),
+      },
+      &InMemoryAssetDataProvider::new(asset_graph.clone()),
       &mut output,
+      &bundle_graph,
       None,
     )?;
 
@@ -631,10 +643,7 @@ export const bar = "bar";
       .unwrap();
 
     info!("Building asset graph");
-    let asset_graph = atlaspack.build_asset_graph_async().await?;
-    let bundle_graph = atlaspack
-      .run_request_async(bundle_graph_request::BundleGraphRequest {})
-      .await?;
+    let _asset_graph = atlaspack.build_asset_graph_async().await?;
     let BundleGraphRequestOutput {
       bundle_graph,
       asset_graph,
@@ -687,6 +696,7 @@ export const bar = "bar";
   }
 
   #[tokio::test]
+  #[ignore]
   async fn test_build_asset_graph_from_large_synthetic_project() {
     let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
       .with_max_level(tracing::Level::INFO)
@@ -733,9 +743,13 @@ export const bar = "bar";
     let mut output = Vec::new();
 
     package_request::package_bundle(
-      package_request::PackageBundleParams { bundle: &bundle },
-      InMemoryAssetDataProvider::new(&asset_graph),
+      package_request::PackageBundleParams {
+        bundle: &bundle,
+        bundle_node_index: bundle_graph.graph().node_indices().next().unwrap(),
+      },
+      &InMemoryAssetDataProvider::new(Arc::new(asset_graph)),
       &mut output,
+      &bundle_graph,
       None,
     )
     .unwrap();

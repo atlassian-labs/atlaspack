@@ -15,6 +15,7 @@ pretty_assertions = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 async-trait = { workspace = true }
+rayon = { workspace = true }
 
 [dev-dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }

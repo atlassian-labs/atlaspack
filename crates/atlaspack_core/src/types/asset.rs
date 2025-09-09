@@ -21,7 +21,46 @@ use super::symbol::Symbol;
 use super::Dependency;
 use super::{BundleBehavior, SourceMap};
 
-pub type AssetId = String;
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy, Default)]
+pub struct AssetId(u64);
+
+impl From<AssetId> for serde_json::Value {
+  fn from(val: AssetId) -> Self {
+    val.to_string().into()
+  }
+}
+
+// This should probably not be available unless on tests
+impl From<u64> for AssetId {
+  fn from(value: u64) -> Self {
+    AssetId(value)
+  }
+}
+
+impl Display for AssetId {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{:016x}", self.0)
+  }
+}
+
+impl Serialize for AssetId {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: serde::Serializer,
+  {
+    serializer.serialize_str(&self.to_string())
+  }
+}
+
+impl<'de> Deserialize<'de> for AssetId {
+  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+  where
+    D: serde::Deserializer<'de>,
+  {
+    let s = String::deserialize(deserializer)?;
+    Ok(AssetId(u64::from_str_radix(&s, 16).unwrap()))
+  }
+}
 
 /// The source code for an asset.
 ///
@@ -112,7 +151,7 @@ pub struct CreateAssetIdParams<'a> {
   pub unique_key: Option<&'a str>,
 }
 
-pub fn create_asset_id(params: CreateAssetIdParams) -> String {
+pub fn create_asset_id_hash(params: CreateAssetIdParams) -> AssetId {
   let CreateAssetIdParams {
     code,
     environment_id,
@@ -133,8 +172,20 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
   file_type.hash(&mut hasher);
   unique_key.hash(&mut hasher);
 
+  AssetId(hasher.finish())
+}
+
+pub fn create_asset_id(params: CreateAssetIdParams) -> String {
+  let hash = create_asset_id_hash(params);
   // Ids must be 16 characters for scope hoisting to replace imports correctly in REPLACEMENT_RE
-  format!("{:016x}", hasher.finish())
+  hash.to_string()
+}
+
+pub fn serialize_asset_id<S>(id: &u64, serializer: S) -> Result<S::Ok, S::Error>
+where
+  S: serde::Serializer,
+{
+  serializer.serialize_str(&format!("{:016x}", id))
 }
 
 /// An asset is a file or part of a file that may represent any data type including source code, binary data, etc.
@@ -259,9 +310,23 @@ pub struct Asset {
   pub config_key_path: Option<String>,
 }
 
+impl std::fmt::Display for Asset {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "Asset(file_path={})", self.file_path.display())
+  }
+}
+
 impl Asset {
   pub fn id(&self) -> &AssetId {
     &self.id
+  }
+
+  pub fn id_string(&self) -> String {
+    self.id.to_string()
+  }
+
+  pub fn asset_id_from_hex(hex: impl AsRef<str>) -> AssetId {
+    AssetId(u64::from_str_radix(hex.as_ref(), 16).unwrap())
   }
 }
 
@@ -295,7 +360,7 @@ impl Asset {
     } else {
       None
     };
-    let id = create_asset_id(CreateAssetIdParams {
+    let id = create_asset_id_hash(CreateAssetIdParams {
       code: virtual_code,
       environment_id: &env.id(),
       file_path: &to_project_path(project_root, &file_path).to_string_lossy(),
@@ -334,7 +399,7 @@ impl Asset {
     unique_key: Option<String>,
     bundle_behavior: Option<BundleBehavior>,
   ) -> Self {
-    let id = create_asset_id(CreateAssetIdParams {
+    let id_hash = create_asset_id_hash(CreateAssetIdParams {
       code: None,
       environment_id: &env.id(),
       file_path: &to_project_path(project_root, &file_path).to_string_lossy(),
@@ -354,7 +419,7 @@ impl Asset {
       env,
       file_path,
       file_type,
-      id,
+      id: id_hash,
       is_bundle_splittable: true,
       is_source,
       meta,
@@ -371,7 +436,7 @@ impl Asset {
     source_asset: &Asset,
     unique_key: Option<String>,
   ) -> Self {
-    let id = create_asset_id(CreateAssetIdParams {
+    let id = create_asset_id_hash(CreateAssetIdParams {
       code: None,
       environment_id: &source_asset.env.id(),
       file_path: &to_project_path(project_root, &source_asset.file_path).to_string_lossy(),
@@ -391,7 +456,7 @@ impl Asset {
   }
 
   pub fn update_id(&mut self, project_root: &Path) {
-    let id = create_asset_id(CreateAssetIdParams {
+    let id = create_asset_id_hash(CreateAssetIdParams {
       code: None,
       environment_id: &self.env.id(),
       file_path: &to_project_path(project_root, &self.file_path).to_string_lossy(),
@@ -498,7 +563,7 @@ mod tests {
     .unwrap();
 
     // This nº should not change across runs / compilation
-    assert_eq!(asset_1.id, "91d0d64458c223d1");
+    assert_eq!(asset_1.id, AssetId(0x91d0d64458c223d1));
     assert_eq!(asset_1.id, asset_2.id);
   }
 
@@ -521,7 +586,7 @@ mod tests {
 
     assert_eq!(
       asset.id,
-      create_asset_id(CreateAssetIdParams {
+      create_asset_id_hash(CreateAssetIdParams {
         code: None,
         environment_id: &env.id(),
         file_path: "test.js",
@@ -552,7 +617,7 @@ mod tests {
 
     assert_eq!(
       inline_asset.id,
-      create_asset_id(CreateAssetIdParams {
+      create_asset_id_hash(CreateAssetIdParams {
         code: None,
         environment_id: &env.id(),
         file_path: "test.js",
@@ -583,7 +648,7 @@ mod tests {
 
     assert_eq!(
       discovered_asset.id,
-      create_asset_id(CreateAssetIdParams {
+      create_asset_id_hash(CreateAssetIdParams {
         code: None,
         environment_id: &source_asset.env.id(),
         file_path: "test.js",

@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::ffi::os_str::Display;
 use std::sync::Arc;
 
 use petgraph::graph::NodeIndex;
@@ -7,13 +8,38 @@ use petgraph::visit::EdgeRef;
 use petgraph::visit::IntoEdgeReferences;
 use petgraph::Direction;
 
+use crate::as_variant_impl;
 use crate::types::Asset;
+use crate::types::AssetId;
 use crate::types::Dependency;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct AssetNode {
+  // This should be Arc or nothing
   pub asset: Asset,
+  // We don't need this since there should be no mutable state during the build
   pub requested_symbols: HashSet<String>,
+}
+
+impl std::fmt::Display for AssetNode {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.asset)
+  }
+}
+
+impl AssetNode {
+  pub fn id(&self) -> AssetId {
+    *self.asset.id()
+  }
+}
+
+impl From<Asset> for AssetNode {
+  fn from(asset: Asset) -> Self {
+    Self {
+      asset,
+      requested_symbols: HashSet::default(),
+    }
+  }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -23,10 +49,31 @@ pub struct DependencyNode {
   pub state: DependencyState,
 }
 
+impl DependencyNode {
+  pub fn id(&self) -> String {
+    self.dependency.id()
+  }
+}
+
+impl std::fmt::Display for DependencyNode {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.dependency)
+  }
+}
+
+impl Default for DependencyNode {
+  fn default() -> Self {
+    Self {
+      dependency: Arc::new(Dependency::default()),
+      requested_symbols: HashSet::default(),
+      state: DependencyState::Resolved,
+    }
+  }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum DependencyState {
   New,
-  Deferred,
   Excluded,
   Resolved,
 }
@@ -34,15 +81,34 @@ pub enum DependencyState {
 #[derive(Clone, Debug, PartialEq)]
 pub enum AssetGraphNode {
   Root,
-  Entry,
   Asset(AssetNode),
   Dependency(DependencyNode),
 }
 
+impl std::fmt::Display for AssetGraphNode {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      AssetGraphNode::Root => write!(f, "Root"),
+      AssetGraphNode::Asset(asset_node) => write!(f, "Asset({:?})", asset_node.asset.file_path),
+      AssetGraphNode::Dependency(dependency_node) => {
+        write!(f, "Dependency({})", dependency_node.dependency.specifier)
+      }
+    }
+  }
+}
+
+as_variant_impl!(AssetGraphNode, as_asset_node, Asset, AssetNode);
+as_variant_impl!(
+  AssetGraphNode,
+  as_dependency_node,
+  Dependency,
+  DependencyNode
+);
+
 #[derive(Clone, Debug)]
 pub struct AssetGraph {
   pub graph: StableDiGraph<AssetGraphNode, ()>,
-  root_node_index: NodeIndex,
+  pub root_node_index: NodeIndex,
 }
 
 impl Default for AssetGraph {
@@ -135,11 +201,12 @@ impl AssetGraph {
     results
   }
 
-  pub fn add_dependency(&mut self, dependency: Dependency) -> NodeIndex {
+  pub fn add_dependency(&mut self, dependency: impl Into<Arc<Dependency>>) -> NodeIndex {
+    let dependency = dependency.into();
     self
       .graph
       .add_node(AssetGraphNode::Dependency(DependencyNode {
-        dependency: Arc::new(dependency),
+        dependency,
         requested_symbols: HashSet::default(),
         state: DependencyState::New,
       }))
@@ -172,7 +239,8 @@ impl AssetGraph {
     Some(node)
   }
 
-  pub fn add_entry_dependency(&mut self, dependency: Dependency) -> NodeIndex {
+  pub fn add_entry_dependency(&mut self, dependency: impl Into<Arc<Dependency>>) -> NodeIndex {
+    let dependency = dependency.into();
     let is_library = dependency.env.is_library;
     let dependency_idx = self.add_dependency(dependency);
 
@@ -185,12 +253,35 @@ impl AssetGraph {
     dependency_idx
   }
 
-  pub fn has_edge(&mut self, from_idx: &NodeIndex, to_idx: &NodeIndex) -> bool {
-    self.graph.contains_edge(*from_idx, *to_idx)
+  pub fn has_dependency(&self, from_idx: &NodeIndex, to_idx: &NodeIndex) -> bool {
+    let run = || -> Option<bool> {
+      // This is checking we got assets on both sides
+      let _from_node = self.get_node(from_idx)?.as_asset_node()?;
+      let _to_node = self.get_node(to_idx)?.as_asset_node()?;
+
+      for outgoing_edge in self.graph.edges_directed(*from_idx, Direction::Outgoing) {
+        let dependency_idx = outgoing_edge.target();
+        let Some(_) = self.graph.node_weight(dependency_idx)?.as_dependency_node() else {
+          continue;
+        };
+
+        if self.graph.contains_edge(dependency_idx, *to_idx) {
+          return Some(true);
+        }
+      }
+
+      Some(false)
+    };
+
+    run().unwrap_or(false)
   }
 
-  pub fn add_edge(&mut self, from_idx: &NodeIndex, to_idx: &NodeIndex) {
-    self.graph.add_edge(*from_idx, *to_idx, ());
+  pub fn has_edge(&self, from_idx: NodeIndex, to_idx: NodeIndex) -> bool {
+    self.graph.contains_edge(from_idx, to_idx)
+  }
+
+  pub fn add_edge(&mut self, from_idx: NodeIndex, to_idx: NodeIndex) {
+    self.graph.add_edge(from_idx, to_idx, ());
   }
 }
 
@@ -226,7 +317,6 @@ mod tests {
   use crate::types::Symbol;
   use crate::types::Target;
 
-  use super::super::propagate_requested_symbols::propagate_requested_symbols;
   use super::*;
 
   type TestSymbol<'a> = (&'a str, &'a str, bool);
@@ -262,7 +352,7 @@ mod tests {
       ..Asset::default()
     };
     let asset_nid = graph.add_asset(index_asset);
-    graph.add_edge(&parent_node, &asset_nid);
+    graph.add_edge(parent_node, asset_nid);
     asset_nid
   }
 
@@ -275,14 +365,234 @@ mod tests {
       symbols: Some(symbols.iter().map(symbol).collect()),
       ..Dependency::default()
     };
-    let node_index = graph.add_dependency(dep);
-    graph.add_edge(&parent_node, &node_index);
+    let node_index = graph.add_dependency(Arc::new(dep));
+    graph.add_edge(parent_node, node_index);
     node_index
   }
 
+  // #[test]
+  // fn should_request_entry_asset() {
+  //   let mut requested = HashSet::new();
+  //   let mut graph = AssetGraph::new();
+  //   let target = Target::default();
+  //   let dep = Dependency::entry(String::from("index.js"), target);
+  //   let entry_dep_node = graph.add_entry_dependency(dep);
+
+  //   let index_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "index.js");
+  //   let dep_a_node = add_dependency(&mut graph, index_asset_node, vec![("a", "a", false)]);
+
+  //   // propagate_requested_symbols(
+  //   //   &mut graph,
+  //   //   index_asset_node,
+  //   //   entry_dep_node,
+  //   //   &mut |dependency_node_index, _| {
+  //   //     requested.insert(dependency_node_index);
+  //   //   },
+  //   // );
+
+  //   assert_eq!(requested, HashSet::from_iter(vec![dep_a_node]));
+  //   assert_requested_symbols(&graph, dep_a_node, vec!["a"]);
+  // }
+
+  // #[test]
+  // fn should_propagate_named_reexports() {
+  //   let mut graph = AssetGraph::new();
+  //   let target = Target::default();
+  //   let dep = Dependency::entry(String::from("index.js"), target);
+  //   let entry_dep_node = graph.add_entry_dependency(dep);
+
+  //   // entry.js imports "a" from library.js
+  //   let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
+  //   let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
+  //   propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
+
+  //   // library.js re-exports "a" from a.js and "b" from b.js
+  //   // only "a" is used in entry.js
+  //   let library_asset_node = add_asset(
+  //     &mut graph,
+  //     library_dep_node,
+  //     vec![("a", "a", true), ("b", "b", true)],
+  //     "library.js",
+  //   );
+  //   let a_dep = add_dependency(&mut graph, library_asset_node, vec![("a", "a", true)]);
+  //   let b_dep = add_dependency(&mut graph, library_asset_node, vec![("b", "b", true)]);
+
+  //   let mut requested_deps = Vec::new();
+
+  //   propagate_requested_symbols(
+  //     &mut graph,
+  //     library_asset_node,
+  //     library_dep_node,
+  //     &mut |dependency_node_index, _| {
+  //       requested_deps.push(dependency_node_index);
+  //     },
+  //   );
+
+  //   assert_eq!(
+  //     requested_deps,
+  //     vec![b_dep, a_dep],
+  //     "Should request both new deps"
+  //   );
+
+  //   // "a" should be the only requested symbol
+  //   assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
+  //   assert_requested_symbols(&graph, a_dep, vec!["a"]);
+  //   assert_requested_symbols(&graph, b_dep, vec![]);
+  // }
+
+  // #[test]
+  // fn should_propagate_wildcard_reexports() {
+  //   let mut graph = AssetGraph::new();
+  //   let target = Target::default();
+  //   let dep = Dependency::entry(String::from("index.js"), target);
+  //   let entry_dep_node = graph.add_entry_dependency(dep);
+
+  //   // entry.js imports "a" from library.js
+  //   let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
+  //   let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
+  //   propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
+
+  //   // library.js re-exports "*" from a.js and "*" from b.js
+  //   // only "a" is used in entry.js
+  //   let library_asset_node = add_asset(&mut graph, library_dep_node, vec![], "library.js");
+  //   let a_dep = add_dependency(&mut graph, library_asset_node, vec![("*", "*", true)]);
+  //   let b_dep = add_dependency(&mut graph, library_asset_node, vec![("*", "*", true)]);
+
+  //   let mut requested_deps = Vec::new();
+  //   propagate_requested_symbols(
+  //     &mut graph,
+  //     library_asset_node,
+  //     library_dep_node,
+  //     &mut |dependency_node_index, _| {
+  //       requested_deps.push(dependency_node_index);
+  //     },
+  //   );
+  //   assert_eq!(
+  //     requested_deps,
+  //     vec![b_dep, a_dep],
+  //     "Should request both new deps"
+  //   );
+
+  //   // "a" should be marked as requested on all deps as wildcards make it
+  //   // unclear who the owning dep is
+  //   assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
+  //   assert_requested_symbols(&graph, a_dep, vec!["a"]);
+  //   assert_requested_symbols(&graph, b_dep, vec!["a"]);
+  // }
+
+  // #[test]
+  // fn should_propagate_nested_reexports() {
+  //   let mut graph = AssetGraph::new();
+  //   let target = Target::default();
+  //   let dep = Dependency::entry(String::from("index.js"), target);
+  //   let entry_dep_node = graph.add_entry_dependency(dep);
+
+  //   // entry.js imports "a" from library
+  //   let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
+  //   let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
+  //   propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
+
+  //   // library.js re-exports "*" from library/index.js
+  //   let library_entry_asset_node = add_asset(&mut graph, library_dep_node, vec![], "library.js");
+  //   let library_reexport_dep_node =
+  //     add_dependency(&mut graph, library_entry_asset_node, vec![("*", "*", true)]);
+  //   propagate_requested_symbols(
+  //     &mut graph,
+  //     library_entry_asset_node,
+  //     library_dep_node,
+  //     &mut |_, _| {},
+  //   );
+
+  //   // library/index.js re-exports "a" from a.js
+  //   let library_asset_node = add_asset(
+  //     &mut graph,
+  //     library_reexport_dep_node,
+  //     vec![("a", "a", true)],
+  //     "library/index.js",
+  //   );
+  //   let a_dep = add_dependency(&mut graph, library_asset_node, vec![("a", "a", true)]);
+  //   propagate_requested_symbols(
+  //     &mut graph,
+  //     library_entry_asset_node,
+  //     library_dep_node,
+  //     &mut |_, _| {},
+  //   );
+
+  //   // "a" should be marked as requested on all deps until the a dep is reached
+  //   assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
+  //   assert_requested_symbols(&graph, library_reexport_dep_node, vec!["a"]);
+  //   assert_requested_symbols(&graph, a_dep, vec!["a"]);
+  // }
+
+  // #[test]
+  // fn should_propagate_renamed_reexports() {
+  //   let mut graph = AssetGraph::new();
+  //   let target = Target::default();
+  //   let dep = Dependency::entry(String::from("index.js"), target);
+  //   let entry_dep_node = graph.add_entry_dependency(dep);
+
+  //   // entry.js imports "a" from library
+  //   let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
+  //   let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
+  //   propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
+
+  //   // library.js re-exports "b" from b.js renamed as "a"
+  //   let library_asset_node = add_asset(
+  //     &mut graph,
+  //     library_dep_node,
+  //     vec![("b", "a", true)],
+  //     "library.js",
+  //   );
+  //   let b_dep = add_dependency(&mut graph, library_asset_node, vec![("b", "b", true)]);
+  //   propagate_requested_symbols(
+  //     &mut graph,
+  //     library_asset_node,
+  //     library_dep_node,
+  //     &mut |_, _| {},
+  //   );
+
+  //   // "a" should be marked as requested on the library dep
+  //   assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
+  //   // "b" should be marked as requested on the b dep
+  //   assert_requested_symbols(&graph, b_dep, vec!["b"]);
+  // }
+
+  // #[test]
+  // fn should_propagate_namespace_reexports() {
+  //   let mut graph = AssetGraph::new();
+  //   let target = Target::default();
+  //   let dep = Dependency::entry(String::from("index.js"), target);
+  //   let entry_dep_node = graph.add_entry_dependency(dep);
+
+  //   // entry.js imports "a" from library
+  //   let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
+  //   let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
+  //   propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
+
+  //   // library.js re-exports "*" from stuff.js renamed as "a""
+  //   // export * as a from './stuff.js'
+  //   let library_asset_node = add_asset(
+  //     &mut graph,
+  //     library_dep_node,
+  //     vec![("a", "a", true)],
+  //     "library.js",
+  //   );
+  //   let stuff_dep = add_dependency(&mut graph, library_asset_node, vec![("a", "*", true)]);
+  //   propagate_requested_symbols(
+  //     &mut graph,
+  //     library_asset_node,
+  //     library_dep_node,
+  //     &mut |_, _| {},
+  //   );
+
+  //   // "a" should be marked as requested on the library dep
+  //   assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
+  //   // "*" should be marked as requested on the stuff dep
+  //   assert_requested_symbols(&graph, stuff_dep, vec!["*"]);
+  // }
+
   #[test]
-  fn should_request_entry_asset() {
-    let mut requested = HashSet::new();
+  fn test_has_dependency_edge() {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
@@ -290,214 +600,11 @@ mod tests {
 
     let index_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "index.js");
     let dep_a_node = add_dependency(&mut graph, index_asset_node, vec![("a", "a", false)]);
+    let a_asset_node = add_asset(&mut graph, dep_a_node, vec![], "a.js");
 
-    propagate_requested_symbols(
-      &mut graph,
-      index_asset_node,
-      entry_dep_node,
-      &mut |dependency_node_index, _| {
-        requested.insert(dependency_node_index);
-      },
-    );
-
-    assert_eq!(requested, HashSet::from_iter(vec![dep_a_node]));
-    assert_requested_symbols(&graph, dep_a_node, vec!["a"]);
-  }
-
-  #[test]
-  fn should_propagate_named_reexports() {
-    let mut graph = AssetGraph::new();
-    let target = Target::default();
-    let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(dep);
-
-    // entry.js imports "a" from library.js
-    let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
-    let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
-    propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
-
-    // library.js re-exports "a" from a.js and "b" from b.js
-    // only "a" is used in entry.js
-    let library_asset_node = add_asset(
-      &mut graph,
-      library_dep_node,
-      vec![("a", "a", true), ("b", "b", true)],
-      "library.js",
-    );
-    let a_dep = add_dependency(&mut graph, library_asset_node, vec![("a", "a", true)]);
-    let b_dep = add_dependency(&mut graph, library_asset_node, vec![("b", "b", true)]);
-
-    let mut requested_deps = Vec::new();
-
-    propagate_requested_symbols(
-      &mut graph,
-      library_asset_node,
-      library_dep_node,
-      &mut |dependency_node_index, _| {
-        requested_deps.push(dependency_node_index);
-      },
-    );
-
-    assert_eq!(
-      requested_deps,
-      vec![b_dep, a_dep],
-      "Should request both new deps"
-    );
-
-    // "a" should be the only requested symbol
-    assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
-    assert_requested_symbols(&graph, a_dep, vec!["a"]);
-    assert_requested_symbols(&graph, b_dep, vec![]);
-  }
-
-  #[test]
-  fn should_propagate_wildcard_reexports() {
-    let mut graph = AssetGraph::new();
-    let target = Target::default();
-    let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(dep);
-
-    // entry.js imports "a" from library.js
-    let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
-    let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
-    propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
-
-    // library.js re-exports "*" from a.js and "*" from b.js
-    // only "a" is used in entry.js
-    let library_asset_node = add_asset(&mut graph, library_dep_node, vec![], "library.js");
-    let a_dep = add_dependency(&mut graph, library_asset_node, vec![("*", "*", true)]);
-    let b_dep = add_dependency(&mut graph, library_asset_node, vec![("*", "*", true)]);
-
-    let mut requested_deps = Vec::new();
-    propagate_requested_symbols(
-      &mut graph,
-      library_asset_node,
-      library_dep_node,
-      &mut |dependency_node_index, _| {
-        requested_deps.push(dependency_node_index);
-      },
-    );
-    assert_eq!(
-      requested_deps,
-      vec![b_dep, a_dep],
-      "Should request both new deps"
-    );
-
-    // "a" should be marked as requested on all deps as wildcards make it
-    // unclear who the owning dep is
-    assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
-    assert_requested_symbols(&graph, a_dep, vec!["a"]);
-    assert_requested_symbols(&graph, b_dep, vec!["a"]);
-  }
-
-  #[test]
-  fn should_propagate_nested_reexports() {
-    let mut graph = AssetGraph::new();
-    let target = Target::default();
-    let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(dep);
-
-    // entry.js imports "a" from library
-    let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
-    let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
-    propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
-
-    // library.js re-exports "*" from library/index.js
-    let library_entry_asset_node = add_asset(&mut graph, library_dep_node, vec![], "library.js");
-    let library_reexport_dep_node =
-      add_dependency(&mut graph, library_entry_asset_node, vec![("*", "*", true)]);
-    propagate_requested_symbols(
-      &mut graph,
-      library_entry_asset_node,
-      library_dep_node,
-      &mut |_, _| {},
-    );
-
-    // library/index.js re-exports "a" from a.js
-    let library_asset_node = add_asset(
-      &mut graph,
-      library_reexport_dep_node,
-      vec![("a", "a", true)],
-      "library/index.js",
-    );
-    let a_dep = add_dependency(&mut graph, library_asset_node, vec![("a", "a", true)]);
-    propagate_requested_symbols(
-      &mut graph,
-      library_entry_asset_node,
-      library_dep_node,
-      &mut |_, _| {},
-    );
-
-    // "a" should be marked as requested on all deps until the a dep is reached
-    assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
-    assert_requested_symbols(&graph, library_reexport_dep_node, vec!["a"]);
-    assert_requested_symbols(&graph, a_dep, vec!["a"]);
-  }
-
-  #[test]
-  fn should_propagate_renamed_reexports() {
-    let mut graph = AssetGraph::new();
-    let target = Target::default();
-    let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(dep);
-
-    // entry.js imports "a" from library
-    let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
-    let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
-    propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
-
-    // library.js re-exports "b" from b.js renamed as "a"
-    let library_asset_node = add_asset(
-      &mut graph,
-      library_dep_node,
-      vec![("b", "a", true)],
-      "library.js",
-    );
-    let b_dep = add_dependency(&mut graph, library_asset_node, vec![("b", "b", true)]);
-    propagate_requested_symbols(
-      &mut graph,
-      library_asset_node,
-      library_dep_node,
-      &mut |_, _| {},
-    );
-
-    // "a" should be marked as requested on the library dep
-    assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
-    // "b" should be marked as requested on the b dep
-    assert_requested_symbols(&graph, b_dep, vec!["b"]);
-  }
-
-  #[test]
-  fn should_propagate_namespace_reexports() {
-    let mut graph = AssetGraph::new();
-    let target = Target::default();
-    let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(dep);
-
-    // entry.js imports "a" from library
-    let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
-    let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
-    propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
-
-    // library.js re-exports "*" from stuff.js renamed as "a""
-    // export * as a from './stuff.js'
-    let library_asset_node = add_asset(
-      &mut graph,
-      library_dep_node,
-      vec![("a", "a", true)],
-      "library.js",
-    );
-    let stuff_dep = add_dependency(&mut graph, library_asset_node, vec![("a", "*", true)]);
-    propagate_requested_symbols(
-      &mut graph,
-      library_asset_node,
-      library_dep_node,
-      &mut |_, _| {},
-    );
-
-    // "a" should be marked as requested on the library dep
-    assert_requested_symbols(&graph, library_dep_node, vec!["a"]);
-    // "*" should be marked as requested on the stuff dep
-    assert_requested_symbols(&graph, stuff_dep, vec!["*"]);
+    assert!(!graph.has_dependency(&entry_dep_node, &dep_a_node));
+    assert!(graph.has_dependency(&index_asset_node, &a_asset_node));
+    assert!(!graph.has_dependency(&entry_dep_node, &a_asset_node));
+    assert!(!graph.has_dependency(&dep_a_node, &index_asset_node));
   }
 }

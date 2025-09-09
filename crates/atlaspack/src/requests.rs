@@ -1,5 +1,6 @@
 pub use asset_graph_request::*;
 use asset_request::AssetRequestOutput;
+use atlaspack_core::{as_variant_impl, into_variant_impl};
 use bundle_graph_request::BundleGraphRequestOutput;
 use entry_request::EntryRequestOutput;
 use package_request::PackageRequestOutput;
@@ -31,47 +32,40 @@ pub enum RequestResult {
   TestMain(Vec<String>),
 }
 
-macro_rules! into_variant_impl {
-  ($method:ident, $variant:ident, $output:ty) => {
-    impl RequestResult {
-      pub fn $method(self) -> Option<$output> {
-        match self {
-          RequestResult::$variant(output) => Some(output),
-          _ => return None,
-        }
-      }
-    }
-  };
-}
-
-into_variant_impl!(into_asset_graph, AssetGraph, AssetGraphRequestOutput);
-into_variant_impl!(into_asset, Asset, AssetRequestOutput);
-into_variant_impl!(into_bundle_graph, BundleGraph, BundleGraphRequestOutput);
-into_variant_impl!(into_entry, Entry, EntryRequestOutput);
-into_variant_impl!(into_path, Path, PathRequestOutput);
-into_variant_impl!(into_target, Target, TargetRequestOutput);
-into_variant_impl!(into_package, Package, PackageRequestOutput);
-
-macro_rules! as_variant_impl {
-  ($method:ident, $variant:ident, $output:ty) => {
-    impl RequestResult {
-      pub fn $method(&self) -> Option<&$output> {
-        match self {
-          RequestResult::$variant(output) => Some(output),
-          _ => return None,
-        }
-      }
-    }
-  };
-}
-
-as_variant_impl!(as_asset_graph, AssetGraph, AssetGraphRequestOutput);
-as_variant_impl!(as_asset, Asset, AssetRequestOutput);
-as_variant_impl!(as_bundle_graph, BundleGraph, BundleGraphRequestOutput);
-as_variant_impl!(as_entry, Entry, EntryRequestOutput);
-as_variant_impl!(as_path, Path, PathRequestOutput);
-as_variant_impl!(as_target, Target, TargetRequestOutput);
-as_variant_impl!(as_package, Package, PackageRequestOutput);
+into_variant_impl!(
+  RequestResult,
+  into_asset_graph,
+  AssetGraph,
+  AssetGraphRequestOutput
+);
+into_variant_impl!(RequestResult, into_asset, Asset, AssetRequestOutput);
+into_variant_impl!(
+  RequestResult,
+  into_bundle_graph,
+  BundleGraph,
+  BundleGraphRequestOutput
+);
+into_variant_impl!(RequestResult, into_entry, Entry, EntryRequestOutput);
+into_variant_impl!(RequestResult, into_path, Path, PathRequestOutput);
+into_variant_impl!(RequestResult, into_target, Target, TargetRequestOutput);
+into_variant_impl!(RequestResult, into_package, Package, PackageRequestOutput);
+as_variant_impl!(
+  RequestResult,
+  as_asset_graph,
+  AssetGraph,
+  AssetGraphRequestOutput
+);
+as_variant_impl!(RequestResult, as_asset, Asset, AssetRequestOutput);
+as_variant_impl!(
+  RequestResult,
+  as_bundle_graph,
+  BundleGraph,
+  BundleGraphRequestOutput
+);
+as_variant_impl!(RequestResult, as_entry, Entry, EntryRequestOutput);
+as_variant_impl!(RequestResult, as_path, Path, PathRequestOutput);
+as_variant_impl!(RequestResult, as_target, Target, TargetRequestOutput);
+as_variant_impl!(RequestResult, as_package, Package, PackageRequestOutput);
 
 impl std::fmt::Debug for RequestResult {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

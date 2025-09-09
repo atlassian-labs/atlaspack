@@ -21,8 +21,8 @@ use crate::js_transformer_config::{
   InlineEnvironment, JsTransformerConfig, JsTransformerPackageJson,
 };
 use crate::map_diagnostics::{map_diagnostics, MapDiagnosticOptions};
-use crate::package_json::{depends_on_react, supports_automatic_jsx_runtime, PackageJson};
-use crate::ts_config::{Jsx, Target, TsConfig};
+use crate::package_json::{depends_on_react, PackageJson};
+use crate::ts_config::{Target, TsConfig};
 
 mod conversion;
 
@@ -252,16 +252,18 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       .ts_config
       .as_ref()
       .and_then(|ts| ts.compiler_options.as_ref());
-
     let automatic_jsx_runtime = false;
-    //  compiler_options
+
+    // let automatic_jsx_runtime = compiler_options
     //   .map(|co| {
+    //     use crate::ts_config::Jsx;
     //     co.jsx
     //       .as_ref()
     //       .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
     //       || co.jsx_import_source.is_some()
     //   })
     //   .unwrap_or_else(|| {
+    //     use crate::package_json::supports_automatic_jsx_runtime;
     //     self
     //       .package_json
     //       .as_ref()

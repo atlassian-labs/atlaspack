@@ -180,6 +180,46 @@ mod test {
   }
 
   #[test]
+  fn transforms_external_script_module_tag() {
+    let bytes = r#"
+      <html>
+        <body>
+          <script type="module" src="input.js"></script>
+        </body>
+      </html>
+    "#;
+
+    let mut dom = parse_html(bytes.as_bytes()).unwrap();
+
+    run_html_transformations(
+      HTMLTransformationContext {
+        env: Arc::new(Environment {
+          should_scope_hoist: true,
+          output_format: atlaspack_core::types::OutputFormat::EsModule,
+          ..Environment::default()
+        }),
+        ..transformation_context()
+      },
+      &mut dom,
+    );
+
+    let html = String::from_utf8(serialize_html(dom).unwrap()).unwrap();
+
+    assert_eq!(
+      &normalize_html(&html),
+      &normalize_html(
+        r#"
+          <html>
+            <body>
+              <script type="module" src="54c79fcd274236b4"></script>
+            </body>
+          </html>
+        "#
+      )
+    );
+  }
+
+  #[test]
   fn transforms_manifest_link_tag() {
     let bytes = r#"
       <html>
@@ -254,7 +294,7 @@ mod test {
         dependencies: vec![Dependency {
           bundle_behavior: Some(BundleBehavior::Inline),
           env: env.clone(),
-          source_asset_id: Some(String::from("test")),
+          source_asset_id: Some(AssetId::from(0x16f87d7beed96467)),
           source_asset_type: Some(FileType::Html),
           source_path: Some(PathBuf::from("main.html")),
           specifier: String::from("16f87d7beed96467"),
@@ -267,7 +307,7 @@ mod test {
             env: env.clone(),
             file_path: PathBuf::from("main.html"),
             file_type: FileType::Js,
-            id: String::from("b0deada2a458cc5f"),
+            id: AssetId::from(0x16f87d7beed96467),
             is_bundle_splittable: true,
             is_source: true,
             meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
@@ -324,7 +364,7 @@ mod test {
         dependencies: vec![Dependency {
           bundle_behavior: Some(BundleBehavior::InlineIsolated),
           env: env.clone(),
-          source_asset_id: Some(String::from("test")),
+          source_asset_id: Some(AssetId::from(0x16f87d7beed96467)),
           source_asset_type: Some(FileType::Html),
           source_path: Some(PathBuf::from("main.html")),
           specifier: String::from("16f87d7beed96467"),
@@ -381,7 +421,7 @@ mod test {
       transformation,
       HtmlTransformation {
         dependencies: vec![Dependency {
-          source_asset_id: Some(String::from("test")),
+          source_asset_id: Some(AssetId::from(0x16f87d7beed96467)),
           source_asset_type: Some(FileType::Html),
           source_path: Some(PathBuf::from("main.html")),
           specifier: String::from("16f87d7beed96467"),
@@ -432,7 +472,7 @@ mod test {
     Arc::get_mut(&mut context.env).unwrap().should_optimize = false;
     Arc::get_mut(&mut context.env).unwrap().should_scope_hoist = false;
     context.source_path = Some(PathBuf::from("main.html"));
-    context.source_asset_id = String::from("test");
+    context.source_asset_id = AssetId::default();
     // Remove this when cleaning up feature flag
     context.enable_inline_isolated = true;
 

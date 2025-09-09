@@ -440,7 +440,7 @@ impl DatabaseWriter {
   }
 
   /// Create a read transaction
-  pub fn read_txn(&self) -> heed::Result<RoTxn> {
+  pub fn read_txn(&self) -> heed::Result<RoTxn<'_>> {
     self.environment.read_txn()
   }
 

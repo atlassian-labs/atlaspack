@@ -9,9 +9,9 @@ use swc_core::atoms::{Atom, JsWord};
 use atlaspack_core::plugin::{PluginOptions, TransformResult};
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
-  Asset, BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, Diagnostic, DiagnosticBuilder,
-  Environment, EnvironmentContext, File, FileType, IncludeNodeModules, OutputFormat,
-  SourceLocation, SourceMap, SourceType, SpecifierType, Symbol,
+  Asset, AssetId, BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, Diagnostic,
+  DiagnosticBuilder, Environment, EnvironmentContext, File, FileType, IncludeNodeModules,
+  OutputFormat, SourceLocation, SourceMap, SourceType, SpecifierType, Symbol,
 };
 
 use crate::js_transformer::conversion::dependency_kind::{
@@ -208,7 +208,7 @@ pub(crate) fn convert_result(
           .meta
           .insert("emptyFileStarReexport".to_string(), true.into());
       }
-      asset_symbols.push(make_export_star_symbol(&asset.id));
+      asset_symbols.push(make_export_star_symbol(&asset.id_string()));
     }
 
     asset.set_has_cjs_exports(hoist_result.has_cjs_exports);
@@ -301,11 +301,11 @@ pub(crate) fn convert_result(
         || (symbol_result.should_wrap
           && !asset_symbols.as_slice().iter().any(|s| s.exported == "*"))
       {
-        asset_symbols.push(make_export_star_symbol(&asset.id));
+        asset_symbols.push(make_export_star_symbol(&asset.id_string()));
       }
     } else {
       // If the asset is wrapped, add * as a fallback
-      asset_symbols.push(make_export_star_symbol(&asset.id));
+      asset_symbols.push(make_export_star_symbol(&asset.id_string()));
     }
 
     // For all other imports and requires, mark everything as imported (this covers both dynamic
@@ -346,7 +346,7 @@ pub(crate) fn convert_result(
   // However, the packager needs to be aware of the original id when creating
   // symbols replacements in scope hoisting. That's why we store the id before
   // it get's updated on the meta object.
-  asset.set_meta_id(asset.id.clone());
+  asset.set_meta_id(asset.id.to_string());
 
   if let Some(map) = result.map {
     // TODO: Fix diagnostic error handling
@@ -447,10 +447,10 @@ fn make_esm_helpers_dependency(
   options: &PluginOptions,
   #[allow(clippy::ptr_arg)] asset_file_path: &PathBuf,
   asset_environment: Environment,
-  asset_id: &str,
+  asset_id: &AssetId,
 ) -> Dependency {
   Dependency {
-    source_asset_id: Some(asset_id.to_string()),
+    source_asset_id: Some(*asset_id),
     specifier: "@atlaspack/transformer-js/src/esmodule-helpers.js".into(),
     specifier_type: SpecifierType::Esm,
     source_path: Some(asset_file_path.clone()),
@@ -511,7 +511,7 @@ fn convert_dependency(
     env: asset.env.clone(),
     loc: Some(loc.clone()),
     priority: convert_priority(&transformer_dependency),
-    source_asset_id: Some(asset.id.to_string()),
+    source_asset_id: Some(*asset.id()),
     source_asset_type: Some(asset.file_type.clone()),
     source_path: Some(asset.file_path.clone()),
     specifier: transformer_dependency.specifier.as_ref().into(),
