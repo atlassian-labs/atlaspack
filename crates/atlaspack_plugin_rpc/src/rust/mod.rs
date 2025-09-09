@@ -48,6 +48,7 @@ pub struct RustWorkerFactory {
 impl RustWorkerFactory {
   pub async fn new() -> anyhow::Result<Self> {
     let libnode_path = get_libnode_path().await?;
+    tracing::info!(?libnode_path, "Loading libnode");
     let node = Arc::new(edon::Nodejs::load_default(libnode_path)?);
     Ok(Self { node })
   }
@@ -349,17 +350,36 @@ async fn get_libnode_path() -> anyhow::Result<PathBuf> {
   let home_dir =
     home::home_dir().ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?;
   let atlaspack_dir = home_dir.join(".atlaspack");
-  let libnode_path = atlaspack_dir.join("libnode.dylib");
+  let platform = std::env::consts::OS;
+
+  let libnode_path = if platform == "linux" {
+    atlaspack_dir.join("libnode.so")
+  } else if platform == "macos" {
+    atlaspack_dir.join("libnode.dylib")
+  } else {
+    return Err(anyhow::anyhow!("Unsupported platform: {}", platform));
+  };
 
   if libnode_path.exists() {
     return Ok(libnode_path);
   }
 
-  let response = reqwest::get("https://github.com/alshdavid/libnode-prebuilt/releases/download/v22/libnode-macos-arm64.tar.gz").await?;
+  let arch = if std::env::consts::ARCH.contains("x86") {
+    "amd64"
+  } else {
+    "arm64"
+  };
+  let node_version = "v22";
+  let archive = format!("libnode-{platform}-{arch}.tar.gz");
+  let download_url = format!(
+    "https://github.com/alshdavid/libnode-prebuilt/releases/download/{node_version}/{archive}"
+  );
+  tracing::info!(?platform, ?arch, ?download_url, "Downloading libnode");
+  let response = reqwest::get(&download_url).await?;
 
   std::fs::create_dir_all(&atlaspack_dir)?;
 
-  let target_path = atlaspack_dir.join("libnode-macos-arm64.tar.gz");
+  let target_path = atlaspack_dir.join(archive);
 
   let mut file = std::fs::File::create(&target_path)?;
   let mut content = std::io::Cursor::new(response.bytes().await?);
