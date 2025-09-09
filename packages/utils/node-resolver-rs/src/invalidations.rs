@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
-use crate::path::normalize_path;
 use crate::ResolverError;
+use crate::path::normalize_path;
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub enum FileCreateInvalidation {

@@ -305,19 +305,19 @@ impl<'a> ExportScannerVisitor<'a> {
   /// ```
   ///
   fn find_exports_from_specifier(&mut self, specifier: &ExportSpecifier) {
-    if let ExportSpecifier::Named(named_specifier) = specifier {
-      if let ModuleExportName::Ident(orig_ident) = named_specifier.orig.clone() {
-        let exported: ModuleExportName = named_specifier
-          .exported
-          .clone()
-          .unwrap_or(ModuleExportName::Ident(orig_ident.clone()));
-        if let ModuleExportName::Ident(exported_ident) = exported {
-          self
-            .exported_identifiers
-            .entry(orig_ident.to_id())
-            .or_default()
-            .insert(exported_ident.to_id());
-        }
+    if let ExportSpecifier::Named(named_specifier) = specifier
+      && let ModuleExportName::Ident(orig_ident) = named_specifier.orig.clone()
+    {
+      let exported: ModuleExportName = named_specifier
+        .exported
+        .clone()
+        .unwrap_or(ModuleExportName::Ident(orig_ident.clone()));
+      if let ModuleExportName::Ident(exported_ident) = exported {
+        self
+          .exported_identifiers
+          .entry(orig_ident.to_id())
+          .or_default()
+          .insert(exported_ident.to_id());
       }
     }
   }
@@ -411,10 +411,11 @@ impl Visit for ExportScannerVisitor<'_> {
         }
       }
       (Expr::Ident(obj), MemberProp::Computed(ComputedPropName { expr, .. })) => {
-        if let Expr::Lit(Lit::Str(str)) = &**expr {
-          if obj.sym == "module" && str.value == "exports" {
-            self.is_cjs_module = true;
-          }
+        if let Expr::Lit(Lit::Str(str)) = &**expr
+          && obj.sym == "module"
+          && str.value == "exports"
+        {
+          self.is_cjs_module = true;
         }
       }
       _ => {}
@@ -601,7 +602,7 @@ impl Visit for EsmExportClassifier {
 mod tests {
   use std::collections::HashMap;
 
-  use atlaspack_swc_runner::test_utils::{run_test_visit_const, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{RunVisitResult, run_test_visit_const};
   use swc_core::{atoms::Atom, common::Mark};
 
   use crate::esm_export_classifier::{EsmExportClassifier, ExportKind, SymbolInfo};

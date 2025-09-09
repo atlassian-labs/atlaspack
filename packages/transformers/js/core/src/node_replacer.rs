@@ -2,12 +2,12 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::Path;
 
-use swc_core::common::comments::SingleThreadedComments;
-use swc_core::common::sync::Lrc;
+use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
 use swc_core::common::SyntaxContext;
-use swc_core::common::DUMMY_SP;
+use swc_core::common::comments::SingleThreadedComments;
+use swc_core::common::sync::Lrc;
 use swc_core::ecma::ast;
 use swc_core::ecma::ast::MemberProp;
 use swc_core::ecma::atoms::JsWord;
@@ -15,11 +15,11 @@ use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 use crate::dependency_collector::DependencyDescriptor;
 use crate::dependency_collector::DependencyKind;
+use crate::utils::SourceLocation;
+use crate::utils::SourceType;
 use crate::utils::create_global_decl_stmt;
 use crate::utils::create_require;
 use crate::utils::is_unresolved;
-use crate::utils::SourceLocation;
-use crate::utils::SourceType;
 
 /// Replaces __filename and __dirname with globals that reference to string literals for the
 /// file-path of this file.
@@ -235,7 +235,7 @@ impl NodeReplacer<'_> {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{RunVisitResult, run_test_visit};
   use indoc::indoc;
   use pretty_assertions::{assert_eq, assert_str_eq};
 

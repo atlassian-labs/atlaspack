@@ -93,7 +93,8 @@ impl AtlaspackResolver {
 
   fn to_diagnostic_error(&self, specifier: &str, error: ResolverError) -> anyhow::Error {
     let mut diagnostic = DiagnosticBuilder::default();
-    let diagnostic_error = match error {
+
+    match error {
       ResolverError::FileNotFound { from, relative } => {
         // TODO: Add potential files hints
         let file = relative.display();
@@ -102,9 +103,11 @@ impl AtlaspackResolver {
           .unwrap_or(&from)
           .display();
 
-        diagnostic_error!(diagnostic
-          .kind(ErrorKind::NotFound)
-          .message(format!("Cannot load file '{file}' in '{from}'")))
+        diagnostic_error!(
+          diagnostic
+            .kind(ErrorKind::NotFound)
+            .message(format!("Cannot load file '{file}' in '{from}'"))
+        )
       }
       ResolverError::InvalidSpecifier(specifier_error) => {
         diagnostic_error!(diagnostic.message(match specifier_error {
@@ -118,12 +121,14 @@ impl AtlaspackResolver {
       ResolverError::IOError(io_error) => {
         diagnostic_error!(diagnostic.message(format!("{}", io_error)))
       }
-      ResolverError::JsonError(json_error) => diagnostic_error!(diagnostic
-        .code_frames(vec![CodeFrame {
-          code_highlights: vec![CodeHighlight::from([json_error.line, json_error.column])],
-          ..CodeFrame::from(json_error.file)
-        }])
-        .message("Error parsing JSON")),
+      ResolverError::JsonError(json_error) => diagnostic_error!(
+        diagnostic
+          .code_frames(vec![CodeFrame {
+            code_highlights: vec![CodeHighlight::from([json_error.line, json_error.column])],
+            ..CodeFrame::from(json_error.file)
+          }])
+          .message("Error parsing JSON")
+      ),
       ResolverError::ModuleEntryNotFound {
         entry_path,
         field,
@@ -141,9 +146,11 @@ impl AtlaspackResolver {
       }
       ResolverError::ModuleNotFound { module } => {
         // TODO: Add alternative modules
-        diagnostic_error!(diagnostic
-          .kind(ErrorKind::NotFound)
-          .message(format!("Cannot find module '{module}'")))
+        diagnostic_error!(
+          diagnostic
+            .kind(ErrorKind::NotFound)
+            .message(format!("Cannot find module '{module}'"))
+        )
       }
       ResolverError::ModuleSubpathNotFound {
         module,
@@ -154,9 +161,11 @@ impl AtlaspackResolver {
         let package_dir = package_path.parent().unwrap_or(&package_path);
         let path = path.strip_prefix(package_dir).unwrap_or(&path).display();
 
-        diagnostic_error!(diagnostic
-          .kind(ErrorKind::NotFound)
-          .message(format!("Cannot load file '{path}' from module {module}")))
+        diagnostic_error!(
+          diagnostic
+            .kind(ErrorKind::NotFound)
+            .message(format!("Cannot load file '{path}' from module {module}"))
+        )
       }
       ResolverError::PackageJsonError {
         error,
@@ -172,24 +181,30 @@ impl AtlaspackResolver {
           }
           PackageJsonError::PackagePathNotExported => {
             // TODO Exports code highlight
-            diagnostic_error!(diagnostic
-              .code_frames(vec![CodeFrame::from(path)])
-              .message(format!(
-                "Module '{specifier}' is not exported from the '{module}' package"
-              )))
+            diagnostic_error!(
+              diagnostic
+                .code_frames(vec![CodeFrame::from(path)])
+                .message(format!(
+                  "Module '{specifier}' is not exported from the '{module}' package"
+                ))
+            )
           }
           PackageJsonError::ImportNotDefined => {
             // TODO Imports code highlight
-            diagnostic_error!(diagnostic
-              .code_frames(vec![CodeFrame::from(path)])
-              .message(format!(
-                "Package import '{specifier}' is not defined in the '{module}' package"
-              )))
+            diagnostic_error!(
+              diagnostic
+                .code_frames(vec![CodeFrame::from(path)])
+                .message(format!(
+                  "Package import '{specifier}' is not defined in the '{module}' package"
+                ))
+            )
           }
           PackageJsonError::InvalidSpecifier => {
-            diagnostic_error!(diagnostic
-              .code_frames(vec![CodeFrame::from(path)])
-              .message(format!("Invalid package import specifier {specifier}")))
+            diagnostic_error!(
+              diagnostic
+                .code_frames(vec![CodeFrame::from(path)])
+                .message(format!("Invalid package import specifier {specifier}"))
+            )
           }
         }
       }
@@ -210,9 +225,7 @@ impl AtlaspackResolver {
       ResolverError::UnknownScheme { scheme } => {
         diagnostic_error!(diagnostic.message(format!("Unknown url scheme or pipeline {scheme}")))
       }
-    };
-
-    diagnostic_error
+    }
   }
 
   pub fn resolve_simple<S: AsRef<str>>(_from: &Path, _specifier: S) {
@@ -417,10 +430,11 @@ impl ResolverPlugin for AtlaspackResolver {
         resolution: Resolution::Resolved(self.resolve_empty(side_effects)),
       }),
       (atlaspack_resolver::Resolution::External, _query) => {
-        if let Some(_source_path) = &ctx.dependency.source_path {
-          if ctx.dependency.env.is_library && ctx.dependency.specifier_type != SpecifierType::Url {
-            todo!("check excluded dependency for libraries");
-          }
+        if let Some(_source_path) = &ctx.dependency.source_path
+          && ctx.dependency.env.is_library
+          && ctx.dependency.specifier_type != SpecifierType::Url
+        {
+          todo!("check excluded dependency for libraries");
         }
 
         Ok(Resolved {

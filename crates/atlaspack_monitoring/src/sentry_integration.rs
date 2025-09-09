@@ -4,12 +4,12 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
-use sentry::configure_scope;
 use sentry::ClientInitGuard;
+use sentry::configure_scope;
 use serde_json::Value;
 use whoami::username;
 
-use crate::from_env::{optional_var, required_var, FromEnvError};
+use crate::from_env::{FromEnvError, optional_var, required_var};
 
 fn value_to_string(value: &Value) -> String {
   match value {
@@ -105,7 +105,7 @@ mod tests {
   #[test]
   fn test_sentry_options_from_env_if_disabled_returns_none() {
     let _guard = TEST_LOCK.lock();
-    std::env::remove_var("ATLASPACK_ENABLE_SENTRY");
+    unsafe { std::env::remove_var("ATLASPACK_ENABLE_SENTRY") };
     let options = SentryOptions::from_env().unwrap();
     assert!(options.is_none());
   }
@@ -113,9 +113,9 @@ mod tests {
   #[test]
   fn test_sentry_options_from_env_returns_some_if_dsn_is_set() {
     let _guard = TEST_LOCK.lock();
-    std::env::set_var("ATLASPACK_ENABLE_SENTRY", "1");
-    std::env::set_var("ATLASPACK_SENTRY_DSN", "1234");
-    std::env::remove_var("ATLASPACK_SENTRY_TAGS");
+    unsafe { std::env::set_var("ATLASPACK_ENABLE_SENTRY", "1") };
+    unsafe { std::env::set_var("ATLASPACK_SENTRY_DSN", "1234") };
+    unsafe { std::env::remove_var("ATLASPACK_SENTRY_TAGS") };
     let options = SentryOptions::from_env().unwrap().expect("missing options");
     assert_eq!(options.sentry_dsn, "1234");
     assert_eq!(options.sentry_tags, HashMap::new());
@@ -124,9 +124,9 @@ mod tests {
   #[test]
   fn test_sentry_options_from_env_parses_tags_properly() {
     let _guard = TEST_LOCK.lock();
-    std::env::set_var("ATLASPACK_ENABLE_SENTRY", "1");
-    std::env::set_var("ATLASPACK_SENTRY_DSN", "1234");
-    std::env::set_var("ATLASPACK_SENTRY_TAGS", "{\"key\":\"value\"}");
+    unsafe { std::env::set_var("ATLASPACK_ENABLE_SENTRY", "1") };
+    unsafe { std::env::set_var("ATLASPACK_SENTRY_DSN", "1234") };
+    unsafe { std::env::set_var("ATLASPACK_SENTRY_TAGS", "{\"key\":\"value\"}") };
     let options = SentryOptions::from_env().unwrap().expect("missing options");
     assert_eq!(options.sentry_dsn, "1234");
     assert_eq!(
@@ -138,9 +138,9 @@ mod tests {
   #[test]
   fn test_sentry_options_from_env_stringifies_non_string_tags() {
     let _guard = TEST_LOCK.lock();
-    std::env::set_var("ATLASPACK_ENABLE_SENTRY", "1");
-    std::env::set_var("ATLASPACK_SENTRY_DSN", "1234");
-    std::env::set_var("ATLASPACK_SENTRY_TAGS", "{\"key\":1234,\"other\":[]}");
+    unsafe { std::env::set_var("ATLASPACK_ENABLE_SENTRY", "1") };
+    unsafe { std::env::set_var("ATLASPACK_SENTRY_DSN", "1234") };
+    unsafe { std::env::set_var("ATLASPACK_SENTRY_TAGS", "{\"key\":1234,\"other\":[]}") };
     let options = SentryOptions::from_env().unwrap().expect("missing options");
     assert_eq!(options.sentry_dsn, "1234");
     assert_eq!(
@@ -155,9 +155,9 @@ mod tests {
   #[test]
   fn test_sentry_options_from_env_fails_if_dsn_is_missing() {
     let _guard = TEST_LOCK.lock();
-    std::env::set_var("ATLASPACK_ENABLE_SENTRY", "1");
-    std::env::remove_var("ATLASPACK_SENTRY_DSN");
-    std::env::set_var("ATLASPACK_SENTRY_TAGS", "{\"key\":1234,\"other\":[]}");
+    unsafe { std::env::set_var("ATLASPACK_ENABLE_SENTRY", "1") };
+    unsafe { std::env::remove_var("ATLASPACK_SENTRY_DSN") };
+    unsafe { std::env::set_var("ATLASPACK_SENTRY_TAGS", "{\"key\":1234,\"other\":[]}") };
     let options = SentryOptions::from_env();
     assert!(options.is_err());
     assert!(matches!(options, Err(FromEnvError::MissingKey(_, _))));
@@ -166,9 +166,9 @@ mod tests {
   #[test]
   fn test_sentry_options_from_env_fails_if_tags_are_invalid() {
     let _guard = TEST_LOCK.lock();
-    std::env::set_var("ATLASPACK_ENABLE_SENTRY", "1");
-    std::env::set_var("ATLASPACK_SENTRY_DSN", "1234");
-    std::env::set_var("ATLASPACK_SENTRY_TAGS", "asdf");
+    unsafe { std::env::set_var("ATLASPACK_ENABLE_SENTRY", "1") };
+    unsafe { std::env::set_var("ATLASPACK_SENTRY_DSN", "1234") };
+    unsafe { std::env::set_var("ATLASPACK_SENTRY_TAGS", "asdf") };
     let options = SentryOptions::from_env();
     assert!(options.is_err());
     assert!(matches!(options, Err(FromEnvError::InvalidKey(_, _))));

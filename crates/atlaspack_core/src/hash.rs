@@ -1,5 +1,5 @@
-use xxhash_rust::xxh3::xxh3_64;
 use xxhash_rust::xxh3::Xxh3;
+use xxhash_rust::xxh3::xxh3_64;
 
 /// Atlaspack needs to use a hasher for generating certain identifiers used in caches.
 ///

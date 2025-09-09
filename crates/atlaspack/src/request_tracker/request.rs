@@ -2,8 +2,8 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::PathBuf;
-use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use std::sync::mpsc::Sender;
 
 use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigLoaderRef;

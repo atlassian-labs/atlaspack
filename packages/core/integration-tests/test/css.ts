@@ -10,6 +10,8 @@ import {
   removeDistDirectory,
   inputFS,
   outputFS,
+  fsFixture,
+  overlayFS,
 } from '@atlaspack/test-utils';
 
 describe('css', () => {
@@ -596,4 +598,57 @@ describe('css', () => {
       ),
     );
   });
+
+  // Note that currently `unstableSingleFileOutput` is not supported in the V3 asset graph / environment
+  it.v2(
+    'should preserve unstableSingleFileOutput in CSS transformer',
+    async function () {
+      await fsFixture(overlayFS, __dirname)`
+      integration/css
+        a.js:
+          import * as styles from './styles.module.css';
+          export const a = 'a';
+
+
+        styles.module.css:
+          .a {
+            color: red;
+          }
+
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "transformers": {
+              "*.css": ["...", "./env-test-transformer.js"]
+            }
+          }
+
+        package.json:
+          {
+            "name": "env-correctness",
+            "targets": {
+              "env-correctness": {
+                "distDir": "dist-env-correctness",
+                "__unstable_singleFileOutput": true
+              }
+            }
+          }
+
+        yarn.lock: {}
+    `;
+
+      let bundleResult = await bundle(
+        path.join(__dirname, 'integration/css/a.js'),
+        {
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+          mode: 'production',
+          targets: ['env-correctness'],
+        },
+      );
+
+      const bundles = bundleResult.getBundles();
+      assert(bundles.length === 1);
+    },
+  );
 });

@@ -2,8 +2,8 @@ mod inlining_visitor;
 
 use crate::inlining_visitor::IdentifierReplacementVisitor;
 use std::collections::HashSet;
-use swc_core::atoms::atom;
 use swc_core::atoms::Atom;
+use swc_core::atoms::atom;
 use swc_core::common::Mark;
 use swc_core::common::Span;
 use swc_core::ecma::ast::Decl;
@@ -333,12 +333,12 @@ impl VisitMut for InlineRequiresReplacer {
   fn visit_mut_stmt(&mut self, stmt: &mut Stmt) {
     stmt.visit_mut_children_with(self);
 
-    if let Stmt::Decl(Decl::Var(var)) = stmt {
-      if var.decls.is_empty() {
-        *stmt = Stmt::Empty(EmptyStmt {
-          span: Span::default(),
-        });
-      }
+    if let Stmt::Decl(Decl::Var(var)) = stmt
+      && var.decls.is_empty()
+    {
+      *stmt = Stmt::Empty(EmptyStmt {
+        span: Span::default(),
+      });
     }
   }
 
@@ -424,7 +424,7 @@ impl VisitMut for InlineRequiresOptimizer {
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_swc_runner::test_utils::{run_test_visit, RunVisitResult};
+  use atlaspack_swc_runner::test_utils::{RunVisitResult, run_test_visit};
   use pretty_assertions::assert_eq;
 
   use super::*;

@@ -3,9 +3,9 @@ use std::ffi::OsStr;
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
 
-use atlaspack_core::types::engines::Engines;
 use atlaspack_core::types::OutputFormat;
 use atlaspack_core::types::TargetDescriptor;
+use atlaspack_core::types::engines::Engines;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde_json::Value;
@@ -28,6 +28,7 @@ pub enum BrowsersList {
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(untagged)]
+#[allow(clippy::large_enum_variant)]
 pub enum BuiltInTargetDescriptor {
   Disabled(serde_bool::False),
   TargetDescriptor(TargetDescriptor),

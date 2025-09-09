@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use swc_core::atoms::Atom;
-use swc_core::common::{Mark, Span, SyntaxContext, DUMMY_SP};
+use swc_core::common::{DUMMY_SP, Mark, Span, SyntaxContext};
 use swc_core::ecma::ast::{
   self, CallExpr, ExprOrSpread, Ident, IdentName, Lit, MemberExpr, MemberProp, ModuleItem, Stmt,
   Str,

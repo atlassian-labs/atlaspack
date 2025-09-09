@@ -102,10 +102,10 @@ pub fn create_environment_id(
   source_map.clone().unwrap_or_default().hash(&mut hasher);
 
   // Only hash custom_env if it's Some and not empty to maintain backward compatibility
-  if let Some(ref env) = custom_env {
-    if !env.is_empty() {
-      env.hash(&mut hasher);
-    }
+  if let Some(env) = &custom_env
+    && !env.is_empty()
+  {
+    env.hash(&mut hasher);
   }
 
   let hash = hasher.finish(); // We can simply expose this as a nº too

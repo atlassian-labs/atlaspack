@@ -62,7 +62,7 @@ mod tests {
 
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
-  use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
+  use crate::test_utils::{RequestTrackerTestOptions, request_tracker};
 
   use super::*;
 

@@ -1,9 +1,9 @@
-use napi::bindgen_prelude::FromNapiValue;
 use napi::Env;
 use napi::JsFunction;
 use napi::JsObject;
 use napi::JsUnknown;
 use napi::NapiRaw;
+use napi::bindgen_prelude::FromNapiValue;
 
 /// Get an object field as a JSFunction. Will error out if the field is not present or isn't an
 /// instance of the global `"Function"`.

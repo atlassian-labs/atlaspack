@@ -7,12 +7,12 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Arc;
 use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::fmt::format::FmtSpan;
-use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Registry;
+use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::prelude::*;
 
-use crate::from_env::{optional_var, FromEnvError};
+use crate::from_env::{FromEnvError, optional_var};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", tag = "mode")]
@@ -51,7 +51,7 @@ impl TracerMode {
           return Err(FromEnvError::InvalidKey(
             String::from("ATLASPACK_TRACING_MODE"),
             anyhow!("Invalid value: {}", value),
-          ))
+          ));
         }
       }
     }
@@ -168,7 +168,7 @@ mod tests {
   #[test]
   fn test_tracing_options_sets_to_none_if_no_mode_is_set() {
     let _guard = TEST_LOCK.lock();
-    std::env::remove_var("ATLASPACK_TRACING_MODE");
+    unsafe { std::env::remove_var("ATLASPACK_TRACING_MODE") };
     let options = TracerMode::from_env().unwrap();
     assert!(options.is_empty());
   }
@@ -176,7 +176,7 @@ mod tests {
   #[test]
   fn test_tracing_options_sets_to_file() {
     let _guard = TEST_LOCK.lock();
-    std::env::set_var("ATLASPACK_TRACING_MODE", "stdout");
+    unsafe { std::env::set_var("ATLASPACK_TRACING_MODE", "stdout") };
     let options = TracerMode::from_env().unwrap();
     assert!(options.contains(&TracerMode::stdout()));
   }

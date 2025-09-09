@@ -43,8 +43,8 @@ pub(crate) fn convert_specifier_type(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use atlaspack_js_swc_core::test_utils::run_swc_core_transform;
   use atlaspack_js_swc_core::DependencyKind;
+  use atlaspack_js_swc_core::test_utils::run_swc_core_transform;
 
   #[test]
   fn test_import_dependency_kind() {

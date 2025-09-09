@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use html5ever::namespace_url;
-use markup5ever::{expanded_name, local_name, ns, QualName};
+use markup5ever::{QualName, expanded_name, local_name, ns};
 use markup5ever_rcdom::{Handle, Node, NodeData};
 
 use atlaspack_core::types::{Asset, Dependency, FileType, Priority, SpecifierType};

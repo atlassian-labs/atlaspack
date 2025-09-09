@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use std::sync::mpsc::Sender;
 
 use atlaspack_core::types::Invalidation;
 use petgraph::graph::NodeIndex;
@@ -14,11 +14,11 @@ use atlaspack_filesystem::FileSystemRef;
 use petgraph::visit::Dfs;
 use petgraph::visit::Reversed;
 
-use crate::plugins::PluginsRef;
-use crate::requests::RequestResult;
 use crate::AtlaspackError;
 use crate::WatchEvent;
 use crate::WatchEvents;
+use crate::plugins::PluginsRef;
+use crate::requests::RequestResult;
 
 use super::Request;
 use super::RequestEdgeType;
@@ -358,6 +358,7 @@ impl RequestTracker {
 ///
 /// See [`RequestTracker::run_request`].
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 enum RequestQueueMessage {
   RunRequest {
     tx: Sender<RequestQueueMessage>,

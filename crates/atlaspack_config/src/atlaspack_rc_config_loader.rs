@@ -7,8 +7,8 @@ use atlaspack_core::types::CodeHighlight;
 use atlaspack_core::types::DiagnosticBuilder;
 use atlaspack_core::types::DiagnosticError;
 use atlaspack_core::types::File;
-use atlaspack_filesystem::search::find_ancestor_file;
 use atlaspack_filesystem::FileSystemRef;
+use atlaspack_filesystem::search::find_ancestor_file;
 use atlaspack_package_manager::PackageManagerRef;
 use pathdiff::diff_paths;
 use serde_json5::Location;
@@ -71,9 +71,11 @@ impl AtlaspackRcConfigLoader {
     path: PathBuf,
   ) -> Result<(PartialAtlaspackConfig, Vec<PathBuf>), DiagnosticError> {
     let raw = self.fs.read_to_string(&path).map_err(|source| {
-      diagnostic_error!(DiagnosticBuilder::default()
-        .message(source.to_string())
-        .code_frames(vec![CodeFrame::from(path.clone())]))
+      diagnostic_error!(
+        DiagnosticBuilder::default()
+          .message(source.to_string())
+          .code_frames(vec![CodeFrame::from(path.clone())])
+      )
     })?;
 
     let contents = serde_json5::from_str(&raw).map_err(|error| {
@@ -109,23 +111,27 @@ impl AtlaspackRcConfigLoader {
         .package_manager
         .resolve(extend, &atlaspack_rc_file.path)
         .map_err(|source| {
-          source.context(diagnostic_error!(DiagnosticBuilder::default()
-            .message(format!(
-              "Failed to resolve extended config {extend} from {}",
-              atlaspack_rc_file.path.display()
-            ))
-            .code_frames(vec![CodeFrame::from(File::from(atlaspack_rc_file))])))
+          source.context(diagnostic_error!(
+            DiagnosticBuilder::default()
+              .message(format!(
+                "Failed to resolve extended config {extend} from {}",
+                atlaspack_rc_file.path.display()
+              ))
+              .code_frames(vec![CodeFrame::from(File::from(atlaspack_rc_file))])
+          ))
         })?
         .resolved
     };
 
     self.fs.canonicalize_base(&path).map_err(|source| {
-      diagnostic_error!("{}", source).context(diagnostic_error!(DiagnosticBuilder::default()
-        .message(format!(
-          "Failed to resolve extended config {extend} from {}",
-          atlaspack_rc_file.path.display()
-        ))
-        .code_frames(vec![CodeFrame::from(File::from(atlaspack_rc_file))])))
+      diagnostic_error!("{}", source).context(diagnostic_error!(
+        DiagnosticBuilder::default()
+          .message(format!(
+            "Failed to resolve extended config {extend} from {}",
+            atlaspack_rc_file.path.display()
+          ))
+          .code_frames(vec![CodeFrame::from(File::from(atlaspack_rc_file))])
+      ))
     })
   }
 
@@ -202,19 +208,19 @@ impl AtlaspackRcConfigLoader {
       None => self.find_config(project_root, &resolve_from),
     };
 
-    if config_path.is_err() {
-      if let Some(fallback_config) = options.fallback_config {
-        config_path = self
-          .package_manager
-          .resolve(fallback_config, &resolve_from)
-          .map(|r| r.resolved)
-          .map_err(|source| {
-            source.context(diagnostic_error!(
-              "Failed to resolve fallback {fallback_config} from {}",
-              resolve_from.display()
-            ))
-          })
-      }
+    if config_path.is_err()
+      && let Some(fallback_config) = options.fallback_config
+    {
+      config_path = self
+        .package_manager
+        .resolve(fallback_config, &resolve_from)
+        .map(|r| r.resolved)
+        .map_err(|source| {
+          source.context(diagnostic_error!(
+            "Failed to resolve fallback {fallback_config} from {}",
+            resolve_from.display()
+          ))
+        })
     }
 
     let config_path = config_path?;
@@ -258,8 +264,8 @@ mod tests {
   use std::sync::Arc;
 
   use anyhow::anyhow;
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
+  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_package_manager::MockPackageManager;
   use atlaspack_package_manager::PackageManager;
   use atlaspack_package_manager::Resolution;

@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
+use std::sync::mpsc::{Receiver, Sender, channel};
 
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -10,15 +10,15 @@ use petgraph::graph::NodeIndex;
 
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 use atlaspack_core::asset_graph::{
-  propagate_requested_symbols, AssetGraph, DependencyNode, DependencyState,
+  AssetGraph, DependencyNode, DependencyState, propagate_requested_symbols,
 };
 use atlaspack_core::types::{Asset, AssetWithDependencies, Dependency};
 
+use super::RequestResult;
 use super::asset_request::{AssetRequest, AssetRequestOutput};
 use super::entry_request::{EntryRequest, EntryRequestOutput};
 use super::path_request::{PathRequest, PathRequestOutput};
 use super::target_request::{TargetRequest, TargetRequestOutput};
-use super::RequestResult;
 
 type ResultSender = Sender<Result<(RequestResult, u64), anyhow::Error>>;
 type ResultReceiver = Receiver<Result<(RequestResult, u64), anyhow::Error>>;
@@ -128,7 +128,7 @@ impl AssetGraphBuilder {
             "Unexpected request result in AssetGraphRequest ({}): {:?}",
             request_id,
             result
-          ))
+          ));
         }
       }
     }
@@ -524,12 +524,12 @@ mod tests {
 
   use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
   use atlaspack_core::types::{AtlaspackOptions, Code};
-  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use atlaspack_filesystem::FileSystem;
+  use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
   use petgraph::visit::Bfs;
 
   use crate::requests::{AssetGraphRequest, RequestResult};
-  use crate::test_utils::{request_tracker, RequestTrackerTestOptions};
+  use crate::test_utils::{RequestTrackerTestOptions, request_tracker};
 
   #[tokio::test(flavor = "multi_thread")]
   async fn test_asset_graph_request_with_no_entries() {

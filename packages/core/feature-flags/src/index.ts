@@ -261,6 +261,12 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @author Marcin Szczepanski <mszczepanski@atlassian.com>
    */
   customEnvInTargets: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * When enabled, ensures the `unstableSingleFileOutput` environment property is preserved during CSS transformation
+   */
+  preserveUnstableSingleFileOutputInCss:
+    process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
