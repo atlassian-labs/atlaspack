@@ -18,7 +18,7 @@ export const DEFAULT_FEATURE_FLAGS = {
   /**
    * Rust backed requests
    *
-   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
+   * @author Matt Jones <mjones4@atlassian.com>
    */
   atlaspackV3: false,
 
