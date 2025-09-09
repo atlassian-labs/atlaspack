@@ -98,15 +98,12 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
         }
 
         let defaultImport = null;
-        // @ts-expect-error TS2345
         if (usedSymbols.has('default')) {
           let incoming = bundleGraph.getIncomingDependencies(asset);
           defaultImport = incoming.find((d) =>
-            // @ts-expect-error TS2345
             d.symbols.hasExportSymbol('default'),
           );
           if (defaultImport) {
-            // @ts-expect-error TS2345
             let loc = defaultImport.symbols.get('default')?.loc;
             logger.warn({
               message:
@@ -130,10 +127,8 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
           }
         }
 
-        // @ts-expect-error TS2345
         if (!defaultImport && !usedSymbols.has('*')) {
           for (let [symbol, {local}] of asset.symbols) {
-            // @ts-expect-error TS2367
             if (local !== 'default' && !usedSymbols.has(symbol)) {
               unusedSymbols.push(local);
             }

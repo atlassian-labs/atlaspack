@@ -4,6 +4,7 @@ import type {
   TraversalActions,
   BundleBehavior as IBundleBehavior,
   ConditionMeta,
+  Symbol,
 } from '@atlaspack/types';
 import type {
   ContentKey,
@@ -82,12 +83,12 @@ export type BundleGraphEdgeType =
 type InternalSymbolResolution = {
   asset: Asset;
   exportSymbol: string;
-  symbol: symbol | null | undefined | false;
+  symbol: Symbol | null | undefined | false;
   loc: InternalSourceLocation | null | undefined;
 };
 
 type InternalExportSymbolResolution = InternalSymbolResolution & {
-  readonly exportAs: symbol | string;
+  readonly exportAs: Symbol | string;
 };
 
 type BundleGraphOpts = {
@@ -286,7 +287,7 @@ export default class BundleGraph {
         let nodeValueSymbols = node.value.symbols;
 
         // asset -> symbols that should be imported directly from that asset
-        let targets = new DefaultMap<ContentKey, Map<symbol, symbol>>(
+        let targets = new DefaultMap<ContentKey, Map<Symbol, Symbol>>(
           () => new Map(),
         );
         let externalSymbols = new Set();
@@ -316,7 +317,6 @@ export default class BundleGraph {
           // It doesn't make sense to retarget dependencies where `*` is used, because the
           // retargeting won't enable any benefits in that case (apart from potentially even more
           // code being generated).
-          // @ts-expect-error TS2345
           !node.usedSymbolsUp.has('*') &&
           // TODO We currently can't rename imports in async imports, e.g. from
           //      (parcelRequire("...")).then(({ a }) => a);
@@ -333,11 +333,9 @@ export default class BundleGraph {
             ([, t]: [any, any]) => new Set([...t.values()]).size === t.size,
           )
         ) {
-          // @ts-expect-error TS2367
           let isReexportAll = nodeValueSymbols.get('*')?.local === '*';
           let reexportAllLoc = isReexportAll
-            ? // @ts-expect-error TS2345
-              nullthrows(nodeValueSymbols.get('*')).loc
+            ? nullthrows(nodeValueSymbols.get('*')).loc
             : undefined;
 
           // TODO adjust sourceAssetIdNode.value.dependencies ?
@@ -413,7 +411,6 @@ export default class BundleGraph {
                         invariant(!sourceAssetSymbols.has(as));
                         sourceAssetSymbols.set(as, {
                           loc: reexportAllLoc,
-                          // @ts-expect-error TS2322
                           local: local,
                         });
                       }
@@ -1893,13 +1890,12 @@ export default class BundleGraph {
 
   getSymbolResolution(
     asset: Asset,
-    symbol: symbol,
+    symbol: Symbol,
     boundary?: Bundle | null,
   ): InternalSymbolResolution {
     let assetOutside = boundary && !this.bundleHasAsset(boundary, asset);
 
     let identifier = asset.symbols?.get(symbol)?.local;
-    // @ts-expect-error TS2367
     if (symbol === '*') {
       return {
         asset,
@@ -1931,7 +1927,6 @@ export default class BundleGraph {
           // External module or self-reference
           return {
             asset,
-            // @ts-expect-error TS2322
             exportSymbol: symbol,
             symbol: identifier,
             loc: asset.symbols?.get(symbol)?.loc,
@@ -1974,9 +1969,7 @@ export default class BundleGraph {
       // Wildcard reexports are never listed in the reexporting asset's symbols.
       if (
         identifier == null &&
-        // @ts-expect-error TS2367
         depSymbols.get('*')?.local === '*' &&
-        // @ts-expect-error TS2367
         symbol !== 'default'
       ) {
         let resolved = this.getResolvedAsset(dep, boundary);
@@ -2053,7 +2046,6 @@ export default class BundleGraph {
           result = null;
         } else if (result === undefined) {
           // If not exported explicitly by the asset (= would have to be in * or a reexport-all) ...
-          // @ts-expect-error TS2345
           if (nonStaticDependency || asset.symbols?.has('*')) {
             // ... and if there are non-statically analyzable dependencies or it's a CJS asset,
             // fallback to namespace access.
@@ -2067,7 +2059,6 @@ export default class BundleGraph {
 
       return {
         asset,
-        // @ts-expect-error TS2322
         exportSymbol: symbol,
         symbol: result,
         loc: asset.symbols?.get(symbol)?.loc,
@@ -2116,7 +2107,6 @@ export default class BundleGraph {
       let depSymbols = dep.symbols;
       if (!depSymbols) continue;
 
-      // @ts-expect-error TS2367
       if (depSymbols.get('*')?.local === '*') {
         let resolved = this.getResolvedAsset(dep, boundary);
         if (!resolved) continue;
@@ -2258,7 +2248,7 @@ export default class BundleGraph {
     }
   }
 
-  getUsedSymbolsAsset(asset: Asset): ReadonlySet<symbol> | null | undefined {
+  getUsedSymbolsAsset(asset: Asset): ReadonlySet<Symbol> | null | undefined {
     let node = this._graph.getNodeByContentKey(asset.id);
     invariant(node && node.type === 'asset');
     return node.value.symbols
@@ -2268,7 +2258,7 @@ export default class BundleGraph {
 
   getUsedSymbolsDependency(
     dep: Dependency,
-  ): ReadonlySet<symbol> | null | undefined {
+  ): ReadonlySet<Symbol> | null | undefined {
     let node = this._graph.getNodeByContentKey(dep.id);
     invariant(node && node.type === 'dependency');
     return node.value.symbols
