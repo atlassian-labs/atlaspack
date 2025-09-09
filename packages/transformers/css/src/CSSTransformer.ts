@@ -250,7 +250,6 @@ export default new Transformer({
       // @ts-expect-error TS2339
       let exports = res.exports;
       asset.symbols.ensure();
-      // @ts-expect-error TS2345
       asset.symbols.set('default', 'default');
 
       let dependencies = new Map();
@@ -321,7 +320,7 @@ export default new Transformer({
           asset.addDependency({
             specifier: nullthrows(asset.uniqueKey),
             specifierType: 'esm',
-            // @ts-expect-error TS2322
+
             symbols: new Map([
               [key, {local: exports[key].name, isWeak: false, loc: null}],
             ]),
@@ -334,7 +333,6 @@ export default new Transformer({
       // It's possible that the exports can be ordered differently between builds.
       // Sorting by key is safe as the order is irrelevant but needs to be deterministic.
       for (let key of Object.keys(exports).sort()) {
-        // @ts-expect-error TS2345
         asset.symbols.set(key, exports[key].name);
         add(key);
       }
@@ -346,7 +344,7 @@ export default new Transformer({
             let d = `dep_$${c++}`;
             depjs += `import * as ${d} from ${JSON.stringify(dep.url)};\n`;
             js += `for (let key in ${d}) { if (key in module.exports) module.exports[key] += ' ' + ${d}[key]; else module.exports[key] = ${d}[key]; }\n`;
-            // @ts-expect-error TS2345
+
             asset.symbols.set('*', '*');
           }
         }
@@ -362,7 +360,6 @@ export default new Transformer({
             specifier: reference.specifier,
             specifierType: 'esm',
             packageConditions: ['style'],
-            // @ts-expect-error TS2322
             symbols: new Map([
               [reference.name, {local: symbol, isWeak: false, loc: null}],
             ]),
