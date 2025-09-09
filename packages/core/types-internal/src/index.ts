@@ -532,7 +532,7 @@ export interface MutableAssetSymbols extends AssetSymbols {
 }
 
 /**
- * isWeak means: the Symbol is not used by the parent asset itself and is merely reexported
+ * isWeak means: the symbol is not used by the parent asset itself and is merely reexported
  */
 export interface MutableDependencySymbols
   extends Iterable<
@@ -1411,15 +1411,15 @@ export type CreateBundleOpts = // If an entryAsset is provided, a bundle id, typ
     };
 
 /**
- * Specifies a Symbol in an asset
+ * Specifies a symbol in an asset
  * @section packager
  */
 export type SymbolResolution = {
-  /** The Asset which exports the Symbol. */
+  /** The Asset which exports the symbol. */
   readonly asset: Asset;
-  /** under which name the Symbol is exported */
+  /** under which name the symbol is exported */
   readonly exportSymbol: Symbol | string;
-  /** The identifier under which the Symbol can be referenced. */
+  /** The identifier under which the symbol can be referenced. */
   readonly symbol: undefined | null | false | Symbol;
   /** The location of the specifier that lead to this result. */
   readonly loc: SourceLocation | null | undefined;
@@ -1691,19 +1691,19 @@ export interface BundleGraph<TBundle extends Bundle> {
   /** Returns whether an asset is referenced outside the given bundle. */
   isAssetReferenced(bundle: Bundle, asset: Asset): boolean;
   /**
-   * Resolves the export `Symbol` of `asset` to the source,
+   * Resolves the export `symbol` of `asset` to the source,
    * stopping at the first asset after leaving `bundle`.
-   * `Symbol === null`: bailout (== caller should do `asset.exports[exportsSymbol]`)
-   * `Symbol === undefined`: Symbol not found
-   * `Symbol === false`: skipped
+   * `symbol === null`: bailout (== caller should do `asset.exports[exportsSymbol]`)
+   * `symbol === undefined`: symbol not found
+   * `symbol === false`: skipped
    *
-   * <code>asset</code> exports <code>Symbol</code>, try to find the asset where the \
+   * <code>asset</code> exports <code>symbol</code>, try to find the asset where the \
    * corresponding variable lives (resolves re-exports). Stop resolving transitively once \
-   * <code>boundary</code> was left (<code>bundle.hasAsset(asset) === false</code>), then <code>result.Symbol</code> is undefined.
+   * <code>boundary</code> was left (<code>bundle.hasAsset(asset) === false</code>), then <code>result.symbol</code> is undefined.
    */
   getSymbolResolution(
     asset: Asset,
-    Symbol: Symbol,
+    symbol: Symbol,
     boundary?: Bundle | null | undefined,
   ): SymbolResolution;
   /** Returns a list of symbols that are exported by the asset, including re-exports. */
@@ -1714,7 +1714,7 @@ export interface BundleGraph<TBundle extends Bundle> {
   /**
    * Returns a list of symbols from an asset or dependency that are referenced by a dependent asset.
    *
-   * Returns null if Symbol propagation didn't run (so the result is unknown).
+   * Returns null if symbol propagation didn't run (so the result is unknown).
    */
   getUsedSymbols(
     arg1: Asset | Dependency,
