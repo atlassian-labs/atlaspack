@@ -47,25 +47,20 @@ export class AssetSymbols implements IAssetSymbols {
     return this;
   }
 
-  // @ts-expect-error TS2416
   hasExportSymbol(exportSymbol: ISymbol): boolean {
-    // @ts-expect-error TS2345
     return Boolean(this.#value.symbols?.has(exportSymbol));
   }
 
-  // @ts-expect-error TS2416
   hasLocalSymbol(local: ISymbol): boolean {
     if (this.#value.symbols == null) {
       return false;
     }
     for (let s of this.#value.symbols.values()) {
-      // @ts-expect-error TS2367
       if (local === s.local) return true;
     }
     return false;
   }
 
-  // @ts-expect-error TS2416
   get(exportSymbol: ISymbol):
     | {
         local: ISymbol;
@@ -74,10 +69,8 @@ export class AssetSymbols implements IAssetSymbols {
       }
     | null
     | undefined {
-    // @ts-expect-error TS2322
     return fromInternalAssetSymbol(
       this.#options.projectRoot,
-      // @ts-expect-error TS2345
       this.#value.symbols?.get(exportSymbol),
     );
   }
@@ -86,9 +79,7 @@ export class AssetSymbols implements IAssetSymbols {
     return this.#value.symbols == null;
   }
 
-  // @ts-expect-error TS2416
   exportSymbols(): Iterable<ISymbol> {
-    // @ts-expect-error TS2322
     return this.#value.symbols?.keys() ?? [];
   }
   // @ts-expect-error TS2416
@@ -132,25 +123,20 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
 
   // immutable
 
-  // @ts-expect-error TS2416
   hasExportSymbol(exportSymbol: ISymbol): boolean {
-    // @ts-expect-error TS2345
     return Boolean(this.#value.symbols?.has(exportSymbol));
   }
 
-  // @ts-expect-error TS2416
   hasLocalSymbol(local: ISymbol): boolean {
     if (this.#value.symbols == null) {
       return false;
     }
     for (let s of this.#value.symbols.values()) {
-      // @ts-expect-error TS2367
       if (local === s.local) return true;
     }
     return false;
   }
 
-  // @ts-expect-error TS2416
   get(exportSymbol: ISymbol):
     | {
         local: ISymbol;
@@ -159,10 +145,8 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
       }
     | null
     | undefined {
-    // @ts-expect-error TS2322
     return fromInternalAssetSymbol(
       this.#options.projectRoot,
-      // @ts-expect-error TS2345
       this.#value.symbols?.get(exportSymbol),
     );
   }
@@ -171,7 +155,6 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
     return this.#value.symbols == null;
   }
 
-  // @ts-expect-error TS2416
   exportSymbols(): Iterable<ISymbol> {
     // @ts-expect-error TS2322
     return this.#value.symbols.keys();
@@ -201,14 +184,12 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
     }
   }
 
-  // @ts-expect-error TS2416
   set(
     exportSymbol: ISymbol,
     local: ISymbol,
     loc?: SourceLocation | null,
     meta?: Meta | null,
   ) {
-    // @ts-expect-error TS2345
     nullthrows(this.#value.symbols).set(exportSymbol, {
       local,
       loc: toInternalSourceLocation(this.#options.projectRoot, loc),
@@ -216,9 +197,7 @@ export class MutableAssetSymbols implements IMutableAssetSymbols {
     });
   }
 
-  // @ts-expect-error TS2416
   delete(exportSymbol: ISymbol) {
-    // @ts-expect-error TS2345
     nullthrows(this.#value.symbols).delete(exportSymbol);
   }
 }
@@ -248,24 +227,19 @@ export class MutableDependencySymbols implements IMutableDependencySymbols {
 
   // immutable:
 
-  // @ts-expect-error TS2416
   hasExportSymbol(exportSymbol: ISymbol): boolean {
-    // @ts-expect-error TS2345
     return Boolean(this.#value.symbols?.has(exportSymbol));
   }
 
-  // @ts-expect-error TS2416
   hasLocalSymbol(local: ISymbol): boolean {
     if (this.#value.symbols) {
       for (let s of this.#value.symbols.values()) {
-        // @ts-expect-error TS2367
         if (local === s.local) return true;
       }
     }
     return false;
   }
 
-  // @ts-expect-error TS2416
   get(exportSymbol: ISymbol):
     | {
         local: ISymbol;
@@ -275,10 +249,8 @@ export class MutableDependencySymbols implements IMutableDependencySymbols {
       }
     | null
     | undefined {
-    // @ts-expect-error TS2322
     return fromInternalDependencySymbol(
       this.#options.projectRoot,
-      // @ts-expect-error TS2345
       nullthrows(this.#value.symbols).get(exportSymbol),
     );
   }
@@ -287,7 +259,6 @@ export class MutableDependencySymbols implements IMutableDependencySymbols {
     return this.#value.symbols == null;
   }
 
-  // @ts-expect-error TS2416
   exportSymbols(): Iterable<ISymbol> {
     // @ts-expect-error TS2322
     return this.#value.symbols ? this.#value.symbols.keys() : EMPTY_ITERABLE;
@@ -321,7 +292,6 @@ export class MutableDependencySymbols implements IMutableDependencySymbols {
     }
   }
 
-  // @ts-expect-error TS2416
   set(
     exportSymbol: ISymbol,
     local: ISymbol,
@@ -329,18 +299,14 @@ export class MutableDependencySymbols implements IMutableDependencySymbols {
     isWeak?: boolean | null,
   ) {
     let symbols = nullthrows(this.#value.symbols);
-    // @ts-expect-error TS2345
     symbols.set(exportSymbol, {
       local,
       loc: toInternalSourceLocation(this.#options.projectRoot, loc),
-      // @ts-expect-error TS2345
       isWeak: (symbols.get(exportSymbol)?.isWeak ?? true) && (isWeak ?? false),
     });
   }
 
-  // @ts-expect-error TS2416
   delete(exportSymbol: ISymbol) {
-    // @ts-expect-error TS2345
     nullthrows(this.#value.symbols).delete(exportSymbol);
   }
 }
@@ -352,7 +318,7 @@ function fromInternalAssetSymbol(
     | {
         // @ts-expect-error TS2304
         loc: InternalSourceLocation | null | undefined;
-        local: symbol;
+        local: ISymbol;
         meta?: Meta | null | undefined;
       },
 ) {
@@ -373,7 +339,7 @@ function fromInternalDependencySymbol(
         isWeak: boolean;
         // @ts-expect-error TS2304
         loc: InternalSourceLocation | null | undefined;
-        local: symbol;
+        local: ISymbol;
         meta?: Meta | null | undefined;
       },
 ) {

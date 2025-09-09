@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.15.3
+
+### Patch Changes
+
+- [#775](https://github.com/atlassian-labs/atlaspack/pull/775) [`525360f`](https://github.com/atlassian-labs/atlaspack/commit/525360fb683b01e6d46f10d67cb6225e193e4251) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - small fixes for tesseract resolver
+
+- Updated dependencies [[`eedcbc4`](https://github.com/atlassian-labs/atlaspack/commit/eedcbc408fc1e86a2a8e25f1a41c57146d8529e1), [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572)]:
+  - @atlaspack/types-internal@2.20.0
+  - @atlaspack/node-resolver-core@3.7.1
+  - @atlaspack/plugin@2.14.30
+
 ## 2.15.2
 
 ### Patch Changes

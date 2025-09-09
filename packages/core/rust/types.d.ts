@@ -223,3 +223,29 @@ export class Resolver {
   getInvalidations(path: string): JsInvalidations;
   getInvalidations(path: string): JsInvalidations;
 }
+
+export interface SourceLocation {
+  filePath: string;
+  start: {
+    line: number;
+    column: number;
+    line: number;
+    column: number;
+  };
+  end: {
+    line: number;
+    column: number;
+    line: number;
+    column: number;
+  };
+}
+
+export interface Symbol {
+  local: string;
+  exported: string;
+  loc?: SourceLocation;
+  isWeak: boolean;
+  isEsmExport: boolean;
+  isStaticBindingSafe: boolean;
+  selfReferenced: boolean;
+}

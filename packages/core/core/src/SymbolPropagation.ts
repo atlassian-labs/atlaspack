@@ -68,7 +68,6 @@ export function propagateSymbols({
               (d) => d.value.specifierType === SpecifierType.esm,
             )
           ) {
-            // @ts-expect-error TS2345
             assetNode.value.symbols?.delete('*');
           }
         }
@@ -76,9 +75,9 @@ export function propagateSymbols({
         // exportSymbol -> identifier
         let assetSymbols:
           | ReadonlyMap<
-              symbol,
+              Symbol,
               {
-                local: symbol;
+                local: Symbol;
                 loc: InternalSourceLocation | null | undefined;
                 meta?: Meta | null | undefined;
               }
@@ -88,7 +87,7 @@ export function propagateSymbols({
         // identifier -> exportSymbol
         let assetSymbolsInverse;
         if (assetSymbols) {
-          assetSymbolsInverse = new Map<symbol, Set<symbol>>();
+          assetSymbolsInverse = new Map<Symbol, Set<Symbol>>();
           for (let [s, {local}] of assetSymbols) {
             let set = assetSymbolsInverse.get(local);
 
@@ -100,7 +99,6 @@ export function propagateSymbols({
           }
         }
         let hasNamespaceOutgoingDeps = outgoingDeps.some(
-          // @ts-expect-error TS2367
           (d) => d.value.symbols?.get('*')?.local === '*',
         );
 
@@ -114,13 +112,11 @@ export function propagateSymbols({
         assetNode.usedSymbols = new Set();
 
         // Symbols that have to be namespace reexported by outgoingDeps.
-        let namespaceReexportedSymbols = new Set<symbol>();
+        let namespaceReexportedSymbols = new Set<Symbol>();
 
         if (incomingDeps.length === 0) {
           // Root in the runtimes Graph
-          // @ts-expect-error TS2345
           assetNode.usedSymbols.add('*');
-          // @ts-expect-error TS2345
           namespaceReexportedSymbols.add('*');
         } else {
           for (let incomingDep of incomingDeps) {
@@ -139,17 +135,13 @@ export function propagateSymbols({
             }
 
             for (let exportSymbol of incomingDep.usedSymbolsDown) {
-              // @ts-expect-error TS2367
               if (exportSymbol === '*') {
-                // @ts-expect-error TS2345
                 assetNode.usedSymbols.add('*');
-                // @ts-expect-error TS2345
                 namespaceReexportedSymbols.add('*');
               }
               if (
                 !assetSymbols ||
                 assetSymbols.has(exportSymbol) ||
-                // @ts-expect-error TS2345
                 assetSymbols.has('*')
               ) {
                 // An own symbol or a non-namespace reexport
@@ -159,7 +151,6 @@ export function propagateSymbols({
               // (but only if we actually have namespace-exporting outgoing dependencies,
               // This usually happens with a reexporting asset with many namespace exports which means that
               // we cannot match up the correct asset with the used symbol at this level.)
-              // @ts-expect-error TS2367
               else if (hasNamespaceOutgoingDeps && exportSymbol !== 'default') {
                 namespaceReexportedSymbols.add(exportSymbol);
               }
@@ -173,10 +164,10 @@ export function propagateSymbols({
             (
               _: {
                 loc: InternalSourceLocation | null | undefined;
-                local: symbol;
+                local: Symbol;
                 meta?: Meta | null | undefined;
               },
-              exportSymbol: symbol,
+              exportSymbol: Symbol,
             ) => assetNode.usedSymbols.add(exportSymbol),
           );
         }
@@ -205,7 +196,6 @@ export function propagateSymbols({
             let depSymbols = dep.value.symbols;
             if (!depSymbols) continue;
 
-            // @ts-expect-error TS2367
             if (depSymbols.get('*')?.local === '*') {
               if (addAll) {
                 depUsedSymbolsDown.add('*');
@@ -219,7 +209,6 @@ export function propagateSymbols({
 
             for (let [symbol, {local}] of depSymbols) {
               // Was already handled above
-              // @ts-expect-error TS2367
               if (local === '*') continue;
 
               if (!assetSymbolsInverse || !depSymbols.get(symbol)?.isWeak) {
@@ -230,7 +219,6 @@ export function propagateSymbols({
                 if (reexportedExportSymbols == null) {
                   // not reexported = used in asset itself
                   depUsedSymbolsDown.add(symbol);
-                  // @ts-expect-error TS2345
                 } else if (assetNode.usedSymbols.has('*')) {
                   // we need everything
                   depUsedSymbolsDown.add(symbol);
@@ -271,7 +259,7 @@ export function propagateSymbols({
 
     const logFallbackNamespaceInsertion = (
       assetNode: AssetNode,
-      symbol: symbol,
+      symbol: Symbol,
       depNode1: DependencyNode,
       depNode2: DependencyNode,
     ) => {
@@ -279,7 +267,6 @@ export function propagateSymbols({
         logger.warn({
           message: `${fromProjectPathRelative(
             assetNode.value.filePath,
-            // @ts-expect-error TS2731
           )} reexports "${symbol}", which could be resolved either to the dependency "${
             depNode1.value.specifier
           }" or "${
@@ -300,9 +287,9 @@ export function propagateSymbols({
       (assetNode, incomingDeps, outgoingDeps) => {
         let assetSymbols:
           | ReadonlyMap<
-              symbol,
+              Symbol,
               {
-                local: symbol;
+                local: Symbol;
                 loc: InternalSourceLocation | null | undefined;
                 meta?: Meta | null | undefined;
               }
@@ -312,7 +299,7 @@ export function propagateSymbols({
 
         let assetSymbolsInverse = null;
         if (assetSymbols) {
-          assetSymbolsInverse = new Map<symbol, Set<symbol>>();
+          assetSymbolsInverse = new Map<Symbol, Set<Symbol>>();
           for (let [s, {local}] of assetSymbols) {
             let set = assetSymbolsInverse.get(local);
             if (!set) {
@@ -325,10 +312,10 @@ export function propagateSymbols({
 
         // the symbols that are reexported (not used in `asset`) -> asset they resolved to
         let reexportedSymbols = new Map<
-          symbol,
+          Symbol,
           | {
               asset: ContentKey;
-              symbol: symbol | null | undefined;
+              symbol: Symbol | null | undefined;
             }
           | null
           | undefined
@@ -336,7 +323,7 @@ export function propagateSymbols({
         // the symbols that are reexported (not used in `asset`) -> the corresponding outgoingDep(s)
         // To generate the diagnostic when there are multiple dependencies with non-statically
         // analyzable exports
-        let reexportedSymbolsSource = new Map<symbol, DependencyNode>();
+        let reexportedSymbolsSource = new Map<Symbol, DependencyNode>();
         for (let outgoingDep of outgoingDeps) {
           let outgoingDepSymbols = outgoingDep.value.symbols;
           if (!outgoingDepSymbols) continue;
@@ -352,10 +339,8 @@ export function propagateSymbols({
             );
           }
 
-          // @ts-expect-error TS2367
           if (outgoingDepSymbols.get('*')?.local === '*') {
             outgoingDep.usedSymbolsUp.forEach((sResolved, s) => {
-              // @ts-expect-error TS2367
               if (s === 'default') {
                 return;
               }
@@ -363,7 +348,6 @@ export function propagateSymbols({
               // If the symbol could come from multiple assets at runtime, assetNode's
               // namespace will be needed at runtime to perform the lookup on.
               if (reexportedSymbols.has(s)) {
-                // @ts-expect-error TS2345
                 if (!assetNode.usedSymbols.has('*')) {
                   logFallbackNamespaceInsertion(
                     assetNode,
@@ -372,7 +356,6 @@ export function propagateSymbols({
                     outgoingDep,
                   );
                 }
-                // @ts-expect-error TS2345
                 assetNode.usedSymbols.add('*');
                 reexportedSymbols.set(s, {asset: assetNode.id, symbol: s});
               } else {
@@ -400,7 +383,6 @@ export function propagateSymbols({
               reexported.forEach((s) => {
                 // see same code above
                 if (reexportedSymbols.has(s)) {
-                  // @ts-expect-error TS2345
                   if (!assetNode.usedSymbols.has('*')) {
                     logFallbackNamespaceInsertion(
                       assetNode,
@@ -409,7 +391,6 @@ export function propagateSymbols({
                       outgoingDep,
                     );
                   }
-                  // @ts-expect-error TS2345
                   assetNode.usedSymbols.add('*');
                   reexportedSymbols.set(s, {asset: assetNode.id, symbol: s});
                 } else {
@@ -425,32 +406,32 @@ export function propagateSymbols({
 
         function usedSymbolsUpAmbiguous(
           old: Map<
-            symbol,
+            Symbol,
             | {
                 asset: ContentKey;
-                symbol: symbol | null | undefined;
+                symbol: Symbol | null | undefined;
               }
             | null
             | undefined
           >,
           current: Map<
-            symbol,
+            Symbol,
             | {
                 asset: ContentKey;
-                symbol: symbol | null | undefined;
+                symbol: Symbol | null | undefined;
               }
             | null
             | undefined
           >,
-          s: symbol,
+          s: Symbol,
           value:
             | {
                 asset: ContentKey;
-                symbol: symbol;
+                symbol: Symbol;
               }
             | {
                 asset: ContentKey;
-                symbol: symbol | null | undefined;
+                symbol: Symbol | null | undefined;
               },
         ) {
           if (old.has(s)) {
@@ -476,14 +457,12 @@ export function propagateSymbols({
           let incomingDepSymbols = incomingDep.value.symbols;
           if (!incomingDepSymbols) continue;
 
-          // @ts-expect-error TS2367
           let hasNamespaceReexport = incomingDepSymbols.get('*')?.local === '*';
           for (let s of incomingDep.usedSymbolsDown) {
             if (
               assetSymbols == null || // Assume everything could be provided if symbols are cleared
               assetNode.value.bundleBehavior === BundleBehavior.isolated ||
               assetNode.value.bundleBehavior === BundleBehavior.inline ||
-              // @ts-expect-error TS2367
               s === '*' ||
               assetNode.usedSymbols.has(s)
             ) {
@@ -850,7 +829,7 @@ function equalMap<K>(
     K,
     | {
         asset: ContentKey;
-        symbol: symbol | null | undefined;
+        symbol: Symbol | null | undefined;
       }
     | null
     | undefined
@@ -859,7 +838,7 @@ function equalMap<K>(
     K,
     | {
         asset: ContentKey;
-        symbol: symbol | null | undefined;
+        symbol: Symbol | null | undefined;
       }
     | null
     | undefined
