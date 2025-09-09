@@ -1,5 +1,13 @@
 # @atlaspack/graph
 
+## 3.5.19
+
+### Patch Changes
+
+- Updated dependencies [[`7a52bab`](https://github.com/atlassian-labs/atlaspack/commit/7a52bab6281e8edbfa66af248eb6f872c6b4b7bd), [`eedcbc4`](https://github.com/atlassian-labs/atlaspack/commit/eedcbc408fc1e86a2a8e25f1a41c57146d8529e1), [`038e87a`](https://github.com/atlassian-labs/atlaspack/commit/038e87a7858d39556d59d3a2d17db534d45f62c6), [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572), [`602f8ed`](https://github.com/atlassian-labs/atlaspack/commit/602f8ed9d8381301df8b2cc82c1d5cf6f2f94fec)]:
+  - @atlaspack/feature-flags@2.25.0
+  - @atlaspack/types-internal@2.20.0
+
 ## 3.5.18
 
 ### Patch Changes

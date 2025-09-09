@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/validator-eslint",
-  "version": "2.14.29",
+  "version": "2.14.30",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.3",
-    "@atlaspack/plugin": "2.14.29",
-    "@atlaspack/utils": "2.19.1",
+    "@atlaspack/plugin": "2.14.30",
+    "@atlaspack/utils": "2.19.2",
     "chalk": "^4.1.0"
   },
   "devDependencies": {
