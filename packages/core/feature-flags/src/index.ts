@@ -264,6 +264,8 @@ export const DEFAULT_FEATURE_FLAGS = {
 
   /**
    * When enabled, ensures the `unstableSingleFileOutput` environment property is preserved during CSS transformation
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
    */
   preserveUnstableSingleFileOutputInCss:
     process.env.ATLASPACK_BUILD_ENV === 'test',
