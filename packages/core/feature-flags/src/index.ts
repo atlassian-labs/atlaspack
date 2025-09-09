@@ -18,28 +18,28 @@ export const DEFAULT_FEATURE_FLAGS = {
   /**
    * Rust backed requests
    *
-   * @author Pedro Tacla Yamada <tacla.yamada@gmail.com>
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   atlaspackV3: false,
 
   /**
    * Use node.js implementation of @parcel/watcher watchman backend
    *
-   * @author Pedro Tacla Yamada <tacla.yamada@gmail.com>
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   useWatchmanWatcher: false,
 
   /**
    * Configure runtime to enable retriable dynamic imports
    *
-   * @author David Alsh <12656294+alshdavid@users.noreply.github.com>
+   * @author David Alsh <dalsh@atlassian.com>
    */
   importRetry: false,
 
   /**
    * Fixes quadratic cache invalidation issue
    *
-   * @author Pedro Tacla Yamada <tacla.yamada@gmail.com>
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   fixQuadraticCacheInvalidation: 'OLD' as ConsistencyCheckFeatureFlagValue,
 
@@ -58,7 +58,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * - NEW_AND_CHECK - Return VCS result but still call watchman
    * - NEW: Return VCS result, but don't call watchman
    *
-   * @author Celeste Carloni <pancaspe87@users.noreply.github.com>
+   * @author Celeste Carloni <ccarloni@atlassian.com>
    */
   vcsMode: 'OLD' as ConsistencyCheckFeatureFlagValue,
 
@@ -68,14 +68,14 @@ export const DEFAULT_FEATURE_FLAGS = {
    * - Remove "large file blob" writes
    * - Reduce size of the caches by deduplicating data
    *
-   * @author Pedro Tacla Yamada <tacla.yamada@gmail.com>
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   cachePerformanceImprovements: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Deduplicates environments across cache / memory entities
    *
-   * @author Pedro Tacla Yamada <tacla.yamada@gmail.com>
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   environmentDeduplication: false,
 
@@ -90,7 +90,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enable performance optimization for the resolver specifier to_string
    * conversions
    *
-   * @author Pedro Tacla Yamada <tacla.yamada@gmail.com>
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   reduceResolverStringCreation: false,
 
@@ -98,21 +98,21 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Add verbose metrics for request tracker invalidation.
    * Default to true as it's a monitoring change. Can be turned off if necessary.
    *
-   * @author Pedro Tacla Yamada <tacla.yamada@gmail.com>
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   verboseRequestInvalidationStats: true,
 
   /**
    * Fixes source maps for inline bundles
    *
-   * @author Pedro Tacla Yamada <tacla.yamada@gmail.com>
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   inlineBundlesSourceMapFixes: false,
 
   /** Enable patch project paths. This will patch the project paths to be relative to the project root.
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    *
-   * @author Celeste Carloni <pancaspe87@users.noreply.github.com>
+   * @author Celeste Carloni <ccarloni@atlassian.com>
    */
   patchProjectPaths: false,
 
@@ -120,7 +120,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enables optimized inline string replacement perf for the packager.
    * Used heavily for inline bundles.
    *
-   * @author Matt Jones <mattjones701@gmail.com>
+   * @author Matt Jones <mjones4@atlassian.com>
    */
   inlineStringReplacementPerf: false,
 
@@ -151,7 +151,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * - Fixing HMR behaviour with lazy bundle edges
    * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer
    *
-   * @author sbhuiyan-atlassian <sbhuiyan@atlassian.com>
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
    */
   hmrImprovements: false,
 
@@ -169,14 +169,14 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries)
    * could cause exports to undefined at runtime.
    *
-   * @author Matt Jones <mattjones701@gmail.com>
+   * @author Matt Jones <mjones4@atlassian.com>
    */
   emptyFileStarRexportFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Enables the new packaging progress CLI experience
    *
-   * @author Matt Jones <mattjones701@gmail.com>
+   * @author Matt Jones <mjones4@atlassian.com>
    */
   cliProgressReportingImprovements: false,
 
@@ -206,7 +206,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enable the new incremental bundling versioning logic which determines whether
    * a full bundling pass is required based on the AssetGraph's bundlingVersion.
    *
-   * @author Pedro Tacla Yamada <tacla.yamada@gmail.com>
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   incrementalBundlingVersioning: process.env.ATLASPACK_BUILD_ENV === 'test',
 
@@ -214,7 +214,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Remove redundant shared bundles that are no longer required after merging
    * async bundles.
    *
-   * @author Matt Jones <mattjones701@gmail.com>
+   * @author Matt Jones <mjones4@atlassian.com>
    */
   removeRedundantSharedBundles: process.env.ATLASPACK_BUILD_ENV === 'test',
 
