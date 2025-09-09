@@ -1,0 +1,14 @@
+{
+  "bracketSpacing": false,
+  "endOfLine": "lf",
+  "singleQuote": true,
+  "trailingComma": "all",
+  "overrides": [
+    {
+      "files": ["packages/packagers/js/src/dev-prelude.js"],
+      "options": {
+        "trailingComma": "es5"
+      }
+    }
+  ]
+}

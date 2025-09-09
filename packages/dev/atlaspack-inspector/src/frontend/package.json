@@ -1,0 +1,60 @@
+{
+  "name": "@atlaspack/inspector-frontend",
+  "version": "0.1.0",
+  "license": "MIT",
+  "private": true,
+  "authors": [
+    "Pedro Tacla Yamada"
+  ],
+  "scripts": {
+    "dev": "ATLASPACK_INSPECTOR_BACKEND_URL='http://localhost:3000' atlaspack serve --feature-flag cachePerformanceImprovements=true --cache-dir=.atlaspack-cache ./index.html",
+    "build:css-types": "rm -rf src/**/*.module.css.d.ts && tcm --namedExports ./src && prettier --write src/**/*.css.d.ts",
+    "lint": "oxlint",
+    "build": "yarn build:css-types && rm -rf .atlaspack-cache && rm -rf dist && ATLASPACK_INSPECTOR_BACKEND_URL='' atlaspack build --feature-flag cachePerformanceImprovements=false --cache-dir=.atlaspack-cache ./index.html",
+    "test": "yarn test:unit",
+    "test:unit": "jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@atlaskit/app-provider": "^2.2.1",
+    "@atlaskit/code": "^17.2.2",
+    "@atlaskit/css-reset": "^7.3.2",
+    "@atlaskit/heading": "^5.2.1",
+    "@atlaskit/logo": "^19.0.1",
+    "@atlaskit/navigation-system": "^0.170.0",
+    "@atlaskit/primitives": "^14.8.4",
+    "@atlaskit/tabs": "^18.1.2",
+    "@atlaspack/cli": "2.14.4",
+    "@atlaspack/core": "2.23.2",
+    "@atlaspack/graph": "3.5.18",
+    "@carrotsearch/foamtree": "^3.5.2",
+    "@tanstack/react-query": "^5.81.5",
+    "@tanstack/react-virtual": "^3.13.12",
+    "axios": "^1.9.0",
+    "graphology": "^0.26.0",
+    "graphology-layout": "^0.6.1",
+    "graphology-layout-forceatlas2": "^0.10.1",
+    "graphology-types": "^0.24.8",
+    "mobx": "^6.13.7",
+    "mobx-react-lite": "^4.1.0",
+    "path-browserify": "^1.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router": "^7.6.0",
+    "sigma": "^3.0.1"
+  },
+  "browserslist": "Chrome 75",
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "jest": "^30.0.4",
+    "jest-environment-jsdom": "^30.0.4",
+    "oxlint": "^1.2.0",
+    "ts-jest": "^29.4.0",
+    "typed-css-modules": "^0.9.1"
+  },
+  "type": "commonjs"
+}
