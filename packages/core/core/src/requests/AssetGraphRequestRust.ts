@@ -133,7 +133,7 @@ export function getAssetGraph(serializedGraph: any): {
 
     let envId = envs.get(envKey);
     if (envId == null) {
-      envId = envs.size;
+      envId = `${envs.size}`;
       envs.set(envKey, envId);
     }
 

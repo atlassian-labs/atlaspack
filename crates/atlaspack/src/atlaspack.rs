@@ -186,6 +186,7 @@ impl Atlaspack {
     })
   }
 
+  #[tracing::instrument(level = "info", skip_all)]
   fn commit_assets(&self, assets: Vec<&AssetGraphNode>) -> anyhow::Result<()> {
     let mut txn = self.db.database().write_txn()?;
 
