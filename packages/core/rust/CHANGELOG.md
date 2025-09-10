@@ -1,5 +1,15 @@
 # @atlaspack/rust
 
+## 3.8.1
+
+### Patch Changes
+
+- [#785](https://github.com/atlassian-labs/atlaspack/pull/785) [`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922) Thanks [@matt-koko](https://github.com/matt-koko)! - We need to re-publish every package in Atlaspack with the corrected types field.
+
+- [#421](https://github.com/atlassian-labs/atlaspack/pull/421) [`686a398`](https://github.com/atlassian-labs/atlaspack/commit/686a398faa1f9e19cbf9274add2c46e246bafba8) Thanks [@mattcompiles](https://github.com/mattcompiles)! - - Fix native respondToFsEvents API
+  - Fix native handling of failed requests, allowing them to rebuild when necessary
+  - Fix native environment id type
+
 ## 3.8.0
 
 ### Minor Changes
