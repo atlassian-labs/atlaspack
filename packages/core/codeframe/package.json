@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/codeframe",
-  "version": "2.13.12",
+  "version": "2.13.13",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
@@ -25,7 +25,7 @@
     }
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.20.0",
+    "@atlaspack/types-internal": "2.20.1",
     "chalk": "^4.1.0",
     "emphasize": "^4.2.0",
     "slice-ansi": "^4.0.0",

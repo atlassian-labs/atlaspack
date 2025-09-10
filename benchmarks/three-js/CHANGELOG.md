@@ -1,5 +1,17 @@
 # @atlaspack/benchmark-three-js
 
+## 0.1.2
+
+### Patch Changes
+
+- [#785](https://github.com/atlassian-labs/atlaspack/pull/785) [`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922) Thanks [@matt-koko](https://github.com/matt-koko)! - We need to re-publish every package in Atlaspack with the corrected types field.
+
+- Updated dependencies [[`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922), [`686a398`](https://github.com/atlassian-labs/atlaspack/commit/686a398faa1f9e19cbf9274add2c46e246bafba8)]:
+  - @atlaspack/config-default@5.0.1
+  - @atlaspack/cli@2.14.10
+  - @atlaspack/core@2.24.1
+  - @atlaspack/plugin@2.14.31
+
 ## 0.1.1
 
 ### Patch Changes

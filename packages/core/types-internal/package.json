@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/types-internal",
-  "version": "2.20.0",
+  "version": "2.20.1",
   "license": "(MIT OR Apache-2.0)",
   "main": "./lib/index.js",
   "source": "./src/index.ts",
@@ -17,8 +17,8 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.3",
-    "@atlaspack/feature-flags": "2.25.0",
+    "@atlaspack/diagnostic": "2.14.4",
+    "@atlaspack/feature-flags": "2.25.1",
     "@parcel/source-map": "^2.1.1",
     "utility-types": "^3.10.0"
   },

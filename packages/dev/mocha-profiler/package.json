@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/mocha-profiler",
-  "version": "2.14.3",
+  "version": "2.14.4",
   "description": "Profile mocha tests",
   "license": "(MIT OR Apache-2.0)",
   "private": true,
