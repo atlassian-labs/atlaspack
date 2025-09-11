@@ -517,7 +517,6 @@ export default new Transformer({
       standalone: asset.query.has('standalone'),
       inline_constants: config.inlineConstants,
       conditional_bundling: options.featureFlags.conditionalBundlingApi,
-      hmr_options: options.hmrOptions,
       hmr_improvements: options.featureFlags.hmrImprovements,
       computed_properties_fix: options.featureFlags.unusedComputedPropertyFix,
       add_display_name: Boolean(config.addReactDisplayName),
