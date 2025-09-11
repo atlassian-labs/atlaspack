@@ -91,23 +91,17 @@ module.exports = {
  * Check if a property node represents a feature flag
  */
 function isFeatureFlagProperty(node) {
-  // Feature flags are typically properties in an object literal
-  // We'll look for properties that are likely feature flags based on context
+  // Only apply to properties in the DEFAULT_FEATURE_FLAGS object
   const parent = node.parent;
 
-  // Check if parent is an object expression (likely DEFAULT_FEATURE_FLAGS)
+  // Check if parent is an object expression
   if (parent && parent.type === 'ObjectExpression') {
     const grandParent = parent.parent;
 
-    // Check if the object is assigned to a variable with "FEATURE_FLAGS" in the name
+    // Check if the object is assigned to DEFAULT_FEATURE_FLAGS
     if (grandParent && grandParent.type === 'VariableDeclarator') {
       const varName = grandParent.id.name;
-      return varName && varName.includes('FEATURE_FLAGS');
-    }
-
-    // Check if the object is part of an export
-    if (grandParent && grandParent.type === 'ExportDefaultDeclaration') {
-      return true;
+      return varName === 'DEFAULT_FEATURE_FLAGS';
     }
   }
 
