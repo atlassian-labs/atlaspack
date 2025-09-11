@@ -2,7 +2,7 @@ import assert from 'assert';
 import invariant from 'assert';
 import path from 'path';
 
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import type {InitialAtlaspackOptions} from '@atlaspack/types';
 import {
   bundle as _bundle,
@@ -1582,7 +1582,7 @@ describe('sourcemaps', function () {
   ) {
     for (const test of tests) {
       // We are intentionally using mozilla sourcemaps, since they are basically what will be
-      // consumed by the browser. The @parcel/source-map module contains some dubious mappings
+      // consumed by the browser. The @atlaspack/source-map module contains some dubious mappings
       // between Rust and JS that may mask bugs.
       let map = JSON.parse(await outputFS.readFile(`${test.dist}.map`));
       let sourcemap = await new SourceMapConsumer(map);
