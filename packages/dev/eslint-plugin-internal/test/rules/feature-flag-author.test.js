@@ -3,6 +3,10 @@
 const {RuleTester} = require('eslint');
 const rule = require('../../src/rules/feature-flag-author');
 
+// Set test environment variables for consistent testing
+process.env.ESLINT_TEST_USER_NAME = 'Test User';
+process.env.ESLINT_TEST_USER_EMAIL = 'test.user@atlassian.com';
+
 const ruleTester = new RuleTester({
   parserOptions: {
     ecmaVersion: 2018,
@@ -78,16 +82,50 @@ ruleTester.run('feature-flag-author', rule, {
       errors: [
         {
           message:
-            'Feature flag "testFeature" is missing @author documentation. Add a comment with @author "Name <email@atlassian.com>" before the property.',
+            'Feature flag "testFeature" is missing @author documentation. Add a comment with "@author Name <email@atlassian.com>" before the property.',
         },
       ],
+      output: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * @author Test User <test.user@atlassian.com>
+           */
+          testFeature: false,
+        };
+      `,
+    },
+    // Missing @author in existing JSDoc comment
+    {
+      code: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * This is a feature flag description
+           */
+          testFeatureWithComment: false,
+        };
+      `,
+      errors: [
+        {
+          message:
+            'Feature flag "testFeatureWithComment" is missing @author documentation. Add a comment with "@author Name <email@atlassian.com>" before the property.',
+        },
+      ],
+      output: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * This is a feature flag description
+           * @author Test User <test.user@atlassian.com>
+           */
+          testFeatureWithComment: false,
+        };
+      `,
     },
     // Wrong email domain
     {
       code: `
         export const DEFAULT_FEATURE_FLAGS = {
           /**
-           * @author John Doe <jdoe@example.com>
+           * @author Test User <test.user@invalid.com>
            */
           testFeature: false,
         };
@@ -95,16 +133,24 @@ ruleTester.run('feature-flag-author', rule, {
       errors: [
         {
           message:
-            'Feature flag "testFeature" @author email must end with @atlassian.com, got: "jdoe@example.com"',
+            'Feature flag "testFeature" @author email must end with @atlassian.com, got: "test.user@invalid.com"',
         },
       ],
+      output: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * @author Test User <test.user@atlassian.com>
+           */
+          testFeature: false,
+        };
+      `,
     },
     // Empty name
     {
       code: `
         export const DEFAULT_FEATURE_FLAGS = {
           /**
-           * @author <jdoe@atlassian.com>
+           * @author <test.user@atlassian.com>
            */
           testFeature: false,
         };
@@ -112,16 +158,24 @@ ruleTester.run('feature-flag-author', rule, {
       errors: [
         {
           message:
-            'Feature flag "testFeature" @author format is invalid. Expected: Name <email@atlassian.com>, got: "<jdoe@atlassian.com>"',
+            'Feature flag "testFeature" @author format is invalid. Expected format: "@author Name <email@atlassian.com>"',
         },
       ],
+      output: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * @author Test User <test.user@atlassian.com>
+           */
+          testFeature: false,
+        };
+      `,
     },
     // Missing email brackets
     {
       code: `
         export const DEFAULT_FEATURE_FLAGS = {
           /**
-           * @author John Doe jdoe@atlassian.com
+           * @author Test User test.user@atlassian.com
            */
           testFeature: false,
         };
@@ -129,9 +183,49 @@ ruleTester.run('feature-flag-author', rule, {
       errors: [
         {
           message:
-            'Feature flag "testFeature" @author format is invalid. Expected: Name <email@atlassian.com>, got: "John Doe jdoe@atlassian.com"',
+            'Feature flag "testFeature" @author format is invalid. Expected format: "@author Name <email@atlassian.com>"',
         },
       ],
+      output: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * @author Test User <test.user@atlassian.com>
+           */
+          testFeature: false,
+        };
+      `,
+    },
+    // Mixed valid and invalid flags
+    {
+      code: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * Correct flag
+           * @author Joe Bloggs <jbloggs@atlassian.com>
+           */
+          correctFlag: true,
+          incorrectFlag: false,
+        };
+      `,
+      errors: [
+        {
+          message:
+            'Feature flag "incorrectFlag" is missing @author documentation. Add a comment with "@author Name <email@atlassian.com>" before the property.',
+        },
+      ],
+      output: `
+        export const DEFAULT_FEATURE_FLAGS = {
+          /**
+           * Correct flag
+           * @author Joe Bloggs <jbloggs@atlassian.com>
+           */
+          correctFlag: true,
+          /**
+           * @author Test User <test.user@atlassian.com>
+           */
+          incorrectFlag: false,
+        };
+      `,
     },
   ],
 });
