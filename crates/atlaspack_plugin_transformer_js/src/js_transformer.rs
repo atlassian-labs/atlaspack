@@ -304,12 +304,13 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       module_id: asset.id.to_string(),
       node_replacer: is_node,
       project_root: self.options.project_root.to_string_lossy().into_owned(),
-      react_refresh: self.options.mode == BuildMode::Development && package_json.is_some_and(|pkg| depends_on_react(&pkg.contents))
-      // && TODO: self.options.hmr_options
-      && env.context.is_browser()
-      && !env.is_library
-      && !env.context.is_worker()
-      && !env.context.is_worklet(),
+      react_refresh: self.options.hmr_options.is_some()
+        && self.options.mode == BuildMode::Development
+        && package_json.is_some_and(|pkg| depends_on_react(&pkg.contents))
+        && env.context.is_browser()
+        && !env.is_library
+        && !env.context.is_worker()
+        && !env.context.is_worklet(),
       replace_env: !is_node,
       scope_hoist: env.should_scope_hoist && env.source_type != SourceType::Script,
       source_maps: env.source_map.is_some(),

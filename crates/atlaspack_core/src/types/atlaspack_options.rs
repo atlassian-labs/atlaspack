@@ -6,6 +6,8 @@ use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 
+use crate::plugin::HmrOptions;
+
 use super::EnvironmentContext;
 use super::FeatureFlags;
 use super::IncludeNodeModules;
@@ -45,6 +47,8 @@ pub struct AtlaspackOptions {
 
   #[serde(default)]
   pub feature_flags: FeatureFlags,
+
+  pub hmr_options: Option<HmrOptions>,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Deserialize, Serialize)]

@@ -125,6 +125,7 @@ impl Atlaspack {
           mode: resolved_options.mode.clone(),
           project_root: project_root.clone(),
           feature_flags: resolved_options.feature_flags.clone(),
+          hmr_options: resolved_options.hmr_options.clone(),
         }),
         // TODO Initialise actual logger
         logger: PluginLogger::default(),
