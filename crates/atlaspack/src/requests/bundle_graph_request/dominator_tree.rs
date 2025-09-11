@@ -93,7 +93,28 @@ pub fn build_dominator_tree(graph: &AcyclicAssetGraph, root_id: NodeIndex) -> Do
       |_, edge| {
         let edge = edge.clone();
         match edge {
-          SimplifiedAssetGraphEdge::AsyncRoot(_) => None,
+          // For now we are skipping async dependencies. This is not good.
+          // This means that the following graph will not be handled correctly:
+          //
+          // ```
+          // graph {
+          //   root -> a
+          //   a -> b [label="async"]
+          //   b -> c
+          //   a -> c # we want C to be lifted up into A
+          // }
+          // ```
+          //
+          // On this case, the dependency `C`, should be lifted into A, since it's then
+          // known to be loaded on all entries of `B`, but currently it will be split into its
+          // own bundle.
+          //
+          // To fix that, we need to flip the relation.
+          // Async roots need to be skipped. Async dependencies handled in dominator tree.
+          // But additional handling must be present somehow so that dependencies of async dependencies
+          // don't get lifted up.
+          SimplifiedAssetGraphEdge::AssetAsyncDependency(_) => None,
+          // SimplifiedAssetGraphEdge::AsyncRoot(_) => None,
           _ => Some(edge),
         }
       },
@@ -126,18 +147,15 @@ pub fn build_dominator_tree(graph: &AcyclicAssetGraph, root_id: NodeIndex) -> Do
 
 #[cfg(test)]
 mod tests {
-  use crate::{
-    requests::bundle_graph_request::{
-      acyclic_asset_graph::remove_cycles, asset_graph_builder::simplified_asset_graph_builder,
-    },
-    test_utils::graph::expect_edge,
+  use crate::requests::bundle_graph_request::{
+    acyclic_asset_graph::remove_cycles, asset_graph_builder::simplified_asset_graph_builder,
   };
 
   use super::*;
 
   #[test]
   fn test_build_dominator_tree_with_empty_graph() {
-    let mut graph = simplified_asset_graph_builder();
+    let graph = simplified_asset_graph_builder();
     let graph = graph.build();
     let (root, graph) = remove_cycles(&graph);
 

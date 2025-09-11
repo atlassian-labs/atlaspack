@@ -177,17 +177,18 @@ pub fn make_bundle_graph(
 
     let prefix = match bundle_edge_type {
       BundleGraphEdge::RootEntryOf => "",
-      BundleGraphEdge::RootAsyncBundleOf => "async-",
-      BundleGraphEdge::RootTypeChangeBundleOf => "type-change-",
-      BundleGraphEdge::RootSharedBundleOf => "shared-",
+      BundleGraphEdge::RootAsyncBundleOf => "async.",
+      BundleGraphEdge::RootTypeChangeBundleOf => "",
+      BundleGraphEdge::RootSharedBundleOf => "shared.",
       _ => "",
     };
 
     let bundle_id = format!("bundle(entry={})", entry_asset.id());
     let bundle_name = Some(format!(
-      "{}{}.{}",
+      "{}{}.{}.{}",
       prefix,
       file_name,
+      entry_asset.id().to_string(),
       entry_asset.file_type().extension()
     ));
 
@@ -198,6 +199,7 @@ pub fn make_bundle_graph(
         .node_weights()
         .map(|asset| asset.file_path().to_string_lossy().to_string())
         .collect(),
+      dependencies: vec![],
     });
 
     let bundle_graph_bundle = BundleGraphBundle {
@@ -241,12 +243,6 @@ pub fn make_bundle_graph(
   }
 
   info!("Discovered {assets_discovered} assets");
-
-  std::fs::write(
-    "bundle-graph-diagnostics.json",
-    serde_json::to_string_pretty(&bundle_graph_diagnostics).unwrap(),
-  )
-  .unwrap();
 
   for (node_index, node_weight) in dominator_tree.node_references() {
     match node_weight {
@@ -320,6 +316,16 @@ pub fn make_bundle_graph(
           //   "Discovering node: {}",
           //   dominator_tree.node_weight(node_index).unwrap()
           // );
+          let source_bundle_index = bundles_by_node_index[&node_index];
+          let source_bundle = bundle_graph
+            .node_weight(source_bundle_index)
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .as_bundle()
+            .unwrap()
+            .clone();
+
           for edge in dominator_tree.edges_directed(node_index, Direction::Outgoing) {
             // println!("  Discovering edge: {}", edge.weight());
             match edge.weight() {
@@ -338,6 +344,26 @@ pub fn make_bundle_graph(
                   continue;
                 }
 
+                bundle_graph_diagnostics
+                  .bundles
+                  .iter_mut()
+                  .find(|diagnostics| diagnostics.bundle_id == source_bundle.bundle.id)
+                  .as_mut()
+                  .unwrap()
+                  .dependencies
+                  .push((
+                    "sync".to_string(),
+                    bundle_graph
+                      .node_weight(target_bundle)
+                      .unwrap()
+                      .as_ref()
+                      .unwrap()
+                      .as_bundle()
+                      .unwrap()
+                      .bundle
+                      .id
+                      .clone(),
+                  ));
                 bundle_graph.add_edge(
                   *bundle_dominator_tree_node_index,
                   target_bundle,
@@ -353,8 +379,28 @@ pub fn make_bundle_graph(
                 let target_bundle = bundles_by_node_index[&target];
 
                 // let source_weight = dominator_tree.node_weight(node_index).unwrap();
-                let target_weight = dominator_tree.node_weight(target).unwrap();
+                // let target_weight = dominator_tree.node_weight(target).unwrap();
 
+                bundle_graph_diagnostics
+                  .bundles
+                  .iter_mut()
+                  .find(|diagnostics| diagnostics.bundle_id == source_bundle.bundle.id)
+                  .as_deref_mut()
+                  .unwrap()
+                  .dependencies
+                  .push((
+                    "async".to_string(),
+                    bundle_graph
+                      .node_weight(target_bundle)
+                      .unwrap()
+                      .as_ref()
+                      .unwrap()
+                      .as_bundle()
+                      .unwrap()
+                      .bundle
+                      .id
+                      .clone(),
+                  ));
                 bundle_graph.add_edge(
                   *bundle_node_index,
                   target_bundle,
@@ -378,6 +424,12 @@ pub fn make_bundle_graph(
     );
   }
 
+  std::fs::write(
+    "bundle-graph-diagnostics.json",
+    serde_json::to_string_pretty(&bundle_graph_diagnostics).unwrap(),
+  )
+  .unwrap();
+
   let bundle_graph = bundle_graph.filter_map(|_, node| node.clone(), |_, edge| Some(edge.clone()));
 
   BundleGraph::build_from(root_node, bundle_graph)
@@ -393,6 +445,7 @@ pub struct BundleDiagnostics {
   bundle_id: String,
   bundle_name: String,
   assets: Vec<String>,
+  dependencies: Vec<(String, String)>,
 }
 
 pub fn debug_node_chain(

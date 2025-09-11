@@ -1,7 +1,7 @@
 use atlaspack_core::{
   asset_graph::{AssetGraph, AssetGraphNode, DependencyNode},
   bundle_graph::AssetRef,
-  types::{AssetId, Priority},
+  types::Priority,
 };
 use petgraph::{
   graph::NodeIndex,
@@ -276,7 +276,7 @@ mod tests {
     }
 
     fn sync_dependency(&mut self, source: NodeIndex, target: NodeIndex) {
-      let dependency = self.graph.add_dependency(Dependency::default(), target);
+      let dependency = self.graph.add_dependency(Dependency::default());
       self.graph.add_edge(source, dependency);
       self.graph.add_edge(dependency, target);
     }

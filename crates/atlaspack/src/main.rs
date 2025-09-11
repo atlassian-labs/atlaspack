@@ -110,13 +110,13 @@ async fn run(args: Cli) -> anyhow::Result<()> {
 
   let command = args.command;
   match command {
-    Command::Build { entries } => {
+    Command::Build { .. } => {
       run_build().await?;
     }
     Command::Scan { target } => {
       run_scan_directory(target.as_deref().unwrap_or(&current_dir()?)).await?
     }
-    Command::Watch { entries } => {
+    Command::Watch { .. } => {
       run_build().await?;
 
       let dev_server = DevServer::new(DevServerOptions {
@@ -165,7 +165,7 @@ async fn make_atlaspack(args: &Cli) -> anyhow::Result<Atlaspack> {
       entries: match &args.command {
         Command::Build { entries } => entries.clone(),
         Command::Watch { entries } => entries.clone(),
-        Command::Scan { target } => vec![],
+        Command::Scan { .. } => vec![],
       },
       mode: if args.dev {
         BuildMode::Development

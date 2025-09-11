@@ -381,7 +381,10 @@ mod tests {
       simplified_graph.add_edge(
         a,
         b,
-        SimplifiedAssetGraphEdge::AssetAsyncDependency(DependencyNode::default()),
+        SimplifiedAssetGraphEdge::AssetAsyncDependency(SimplifiedAssetDependency::new(
+          DependencyNode::default(),
+          b,
+        )),
       );
 
       let (root, acyclic_graph) = remove_cycles(&simplified_graph);

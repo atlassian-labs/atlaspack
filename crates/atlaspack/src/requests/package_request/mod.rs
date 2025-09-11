@@ -8,7 +8,7 @@ use std::{
 
 use async_trait::async_trait;
 use atlaspack_core::{
-  asset_graph::{self, AssetGraph, AssetGraphNode, AssetNode},
+  asset_graph::{AssetGraph, AssetGraphNode, AssetNode},
   bundle_graph::{BundleGraph, BundleGraphBundle, BundleGraphEdge, BundleGraphNode},
   plugin::PackagerPlugin,
   types::{AssetId, AtlaspackOptions, BundleId, FileType},
@@ -16,6 +16,7 @@ use atlaspack_core::{
 use petgraph::{
   graph::NodeIndex,
   visit::{EdgeRef, IntoNodeReferences},
+  Direction,
 };
 use rayon::prelude::*;
 use tracing::{debug, info_span, warn};
@@ -23,8 +24,14 @@ use tracing_indicatif::span_ext::IndicatifSpanExt;
 
 use crate::{
   request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
-  requests::RequestResult,
+  requests::{package_request::parallel_graph_processor::ParallelGraphProcessor, RequestResult},
 };
+
+use package_html_bundle::package_html_bundle;
+
+mod package_html_bundle;
+mod parallel_graph_processor;
+mod shared_graph;
 
 #[derive(Debug)]
 pub struct PackageRequest {
@@ -53,6 +60,42 @@ impl Request for PackageRequest {
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
+    let num_bundles = self.bundle_graph.num_bundles();
+    let package_bundles_span = info_span!("Packaging bundles", indicatif.pb_show = true);
+    package_bundles_span.pb_set_message("Packaging bundles...");
+    package_bundles_span.pb_set_length(num_bundles as u64);
+    // Not sure if this is correct
+    let _ = package_bundles_span.enter();
+
+    let asset_data_provider = Arc::new(InMemoryAssetDataProvider::new(self.asset_graph.clone()));
+
+    let mut task_graph = ParallelGraphProcessor::new();
+    let mut task_ids = HashMap::new();
+    for (node_index, bundle) in self.bundle_graph.graph().node_references() {
+      let BundleGraphNode::Bundle(bundle) = bundle else {
+        continue;
+      };
+
+      let task_id = task_graph.add_task(bundle.clone());
+      task_ids.insert(node_index, task_id);
+    }
+
+    for (node_index, bundle) in self.bundle_graph.graph().node_references() {
+      let BundleGraphNode::Bundle(bundle) = bundle else {
+        continue;
+      };
+
+      for edge in self
+        .bundle_graph
+        .graph()
+        .edges_directed(node_index, Direction::Outgoing)
+      {
+        if let BundleGraphEdge::BundleAsyncLoads(dependency_node) = edge.weight() {
+          task_graph.add_edge(task_ids[&edge.source()], task_ids[&edge.target()]);
+        }
+      }
+    }
+
     let bundles = self
       .bundle_graph
       .graph()
@@ -65,15 +108,6 @@ impl Request for PackageRequest {
         Some((node_index, bundle.clone()))
       })
       .collect::<Vec<_>>();
-
-    let package_bundles_span = info_span!("Packaging bundles", indicatif.pb_show = true);
-    package_bundles_span.pb_set_message("Packaging bundles...");
-    package_bundles_span.pb_set_length(bundles.len() as u64);
-    // Not sure if this is correct
-    let _ = package_bundles_span.enter();
-
-    let asset_data_provider = Arc::new(InMemoryAssetDataProvider::new(self.asset_graph.clone()));
-
     let results = bundles
       .into_par_iter()
       .map({
@@ -95,7 +129,7 @@ impl Request for PackageRequest {
             &bundle,
             &*asset_data_provider,
             &*bundle_graph,
-            packager,
+            packager.as_ref(),
           )?;
 
           package_bundles_span.pb_inc(1);
@@ -141,13 +175,13 @@ fn get_bundle_file_path(
 
 fn run_package_bundle(
   output_file_path: PathBuf,
-  _options: Arc<AtlaspackOptions>,
-  _project_root: PathBuf,
+  options: Arc<AtlaspackOptions>,
+  project_root: PathBuf,
   bundle_node_index: NodeIndex,
   bundle: &BundleGraphBundle,
   asset_data_provider: &impl AssetDataProvider,
   bundle_graph: &BundleGraph,
-  packager: Option<Box<dyn PackagerPlugin>>,
+  packager: Option<&Box<dyn PackagerPlugin>>,
 ) -> Result<ResultAndInvalidations, RunRequestError> {
   debug!("Packaging bundle to {}", output_file_path.display());
   std::fs::create_dir_all(&output_file_path.parent().unwrap())?;
@@ -156,11 +190,13 @@ fn run_package_bundle(
     PackageBundleParams {
       bundle: &bundle,
       bundle_node_index,
+      options,
+      project_root,
+      bundle_graph,
+      packager,
+      asset_data_provider,
     },
-    asset_data_provider,
     &mut writer,
-    bundle_graph,
-    packager,
   )?;
 
   Ok(ResultAndInvalidations {
@@ -176,9 +212,14 @@ pub struct PackageRequestOutput {
   pub bundle_paths: HashMap<BundleId, PathBuf>,
 }
 
-pub struct PackageBundleParams<'a> {
+pub struct PackageBundleParams<'a, ADP: AssetDataProvider> {
   pub bundle: &'a BundleGraphBundle,
   pub bundle_node_index: NodeIndex,
+  pub options: Arc<AtlaspackOptions>,
+  pub project_root: PathBuf,
+  pub asset_data_provider: &'a ADP,
+  pub bundle_graph: &'a BundleGraph,
+  pub packager: Option<&'a Box<dyn PackagerPlugin>>,
 }
 
 pub trait AssetDataProvider: std::fmt::Debug {
@@ -323,15 +364,12 @@ impl AssetDataProvider for InMemoryAssetDataProvider {
   }
 }
 
-#[tracing::instrument(skip(params, asset_data_provider, writer), fields(bundle_id = %params.bundle.bundle.id), level = "debug")]
-pub fn package_bundle(
-  params: PackageBundleParams<'_>,
-  asset_data_provider: &impl AssetDataProvider,
+#[tracing::instrument(skip(params, writer), fields(bundle_id = %params.bundle.bundle.id), level = "debug")]
+pub fn package_bundle<ADP: AssetDataProvider>(
+  params: PackageBundleParams<'_, ADP>,
   writer: &mut impl Write,
-  bundle_graph: &BundleGraph,
-  packager: Option<Box<dyn PackagerPlugin>>,
 ) -> anyhow::Result<()> {
-  if let Some(_packager) = packager {
+  if let Some(_packager) = &params.packager {
     debug!("Have packager for {:?}", params.bundle.bundle.bundle_type);
     // packager.package(PackageContext {
     //   bundle: &params.bundle.bundle,
@@ -342,8 +380,8 @@ pub fn package_bundle(
   }
 
   match params.bundle.bundle.bundle_type {
-    FileType::Js => package_js_bundle(params, asset_data_provider, writer, bundle_graph),
-    FileType::Html => package_html_bundle(params, asset_data_provider, writer, bundle_graph),
+    FileType::Js => package_js_bundle(params, writer),
+    FileType::Html => package_html_bundle(params, writer),
     _ => {
       debug!(
         "Unsupported bundle type: {:?}",
@@ -357,78 +395,15 @@ pub fn package_bundle(
   }
 }
 
-fn package_html_bundle(
+fn package_js_bundle<ADP: AssetDataProvider>(
   PackageBundleParams {
     bundle,
     bundle_node_index,
-  }: PackageBundleParams,
-  asset_data_provider: &impl AssetDataProvider,
+    asset_data_provider,
+    bundle_graph,
+    ..
+  }: PackageBundleParams<'_, ADP>,
   writer: &mut impl Write,
-  bundle_graph: &BundleGraph,
-) -> anyhow::Result<()> {
-  assert!(bundle.assets.node_count() == 1);
-  let bundle_asset_ref = bundle.assets.node_weights().next().unwrap();
-  let bundle_asset = asset_data_provider.get_asset_code(bundle_asset_ref.id())?;
-
-  let prelude = include_str!("./packager_runtime/prelude.js");
-  writer.write_all(format!("<script>{}</script>", prelude).as_bytes())?;
-
-  let referenced_bundles = bundle_graph
-    .graph()
-    .edges_directed(bundle_node_index, petgraph::Direction::Outgoing)
-    .map(|e| (e.target(), e.weight()))
-    .collect::<Vec<_>>();
-
-  // println!(
-  //   "referenced_bundles: {} count={}",
-  //   bundle,
-  //   referenced_bundles.len()
-  // );
-
-  let mut bundle_asset_string = String::from_utf8(bundle_asset)?;
-
-  for (referenced_bundle_node_index, edge_weight) in referenced_bundles {
-    let bundle_node = bundle_graph
-      .graph()
-      .node_weight(referenced_bundle_node_index)
-      .unwrap();
-
-    // println!("  referenced_bundle: {}", bundle_node);
-    let BundleGraphNode::Bundle(bundle) = bundle_node else {
-      panic!("Referenced bundle is not a bundle: {:?}", bundle_node);
-    };
-    let dependency_id = match edge_weight {
-      BundleGraphEdge::BundleSyncLoads(dependency_node) => dependency_node.id(),
-      BundleGraphEdge::BundleAsyncLoads(dependency_node) => dependency_node.id(),
-      _ => unreachable!(),
-    };
-
-    // find the reference ID
-    let regex = regex::Regex::new(&format!("{}", dependency_id)).unwrap();
-    let matches = regex.find(&bundle_asset_string);
-    if let Some(m) = matches {
-      // println!("  found match: {}", m.as_str());
-      bundle_asset_string = bundle_asset_string.replace(
-        m.as_str(),
-        // TODO: Public path
-        &format!("{}", bundle.bundle.name.as_ref().unwrap().as_str()),
-      );
-    }
-  }
-
-  writer.write_all(bundle_asset_string.as_bytes())?;
-
-  Ok(())
-}
-
-fn package_js_bundle(
-  PackageBundleParams {
-    bundle,
-    bundle_node_index,
-  }: PackageBundleParams<'_>,
-  asset_data_provider: &impl AssetDataProvider,
-  writer: &mut impl Write,
-  bundle_graph: &BundleGraph,
 ) -> anyhow::Result<()> {
   let mut sorted_indexes =
     petgraph::algo::toposort(&bundle.assets, None).expect("Cycle in bundle graph");
@@ -445,7 +420,7 @@ fn package_js_bundle(
 
     writer.write_all(
       format!(
-        "ms.push(['{}', (module, exports, require, atlaspack$require, atlaspack$export) => {{\n\n\n",
+        "ms.push(['{}', (module, exports, require, atlaspack$require, atlaspack$export) => {{\n",
         asset_ref.id()
       )
       .as_bytes(),
@@ -476,7 +451,7 @@ fn package_js_bundle(
     }
     let dependencies_object_string = serde_json::to_string(&dependencies_object).unwrap();
 
-    let postlude = format!("\n\n}}, {dependencies_object_string},\n\n ]);\n\n");
+    let postlude = format!("\n}}, {dependencies_object_string}]);\n");
     writer.write_all(postlude.as_bytes())?;
   }
 
@@ -515,7 +490,7 @@ fn package_js_bundle(
 
     writer.write_all(
       format!(
-        "ms.push(['{}', (module, exports, require, atlaspack$require, atlaspack$export) => {{\n\n\n",
+        "ms.push(['{}', (module, exports, require, atlaspack$require, atlaspack$export) => {{\n",
         placeholder
       )
       .as_bytes(),
@@ -525,7 +500,7 @@ fn package_js_bundle(
       .unwrap();
     writer.write_all(
       format!(
-        "module.exports = import(new URL('{}', import.meta.url)).then(() => atlaspack$require('{}'));\n\n",
+        "module.exports = import(new URL('{}', import.meta.url)).then(() => atlaspack$require('{}'));\n",
         bundle.bundle.name.as_ref().unwrap(),
         target_asset.to_string(),
       )
@@ -534,7 +509,7 @@ fn package_js_bundle(
     writer.write_all("}]);\n\n".as_bytes())?;
   }
 
-  writer.write_all("atlaspack$bootstrap();".as_bytes())?;
+  writer.write_all("atlaspack$bootstrap();\n\n".as_bytes())?;
 
   for entry in bundle.modules_to_load_on_startup() {
     writer.write_all(format!("atlaspack$require('{}');\n", entry).as_bytes())?;
@@ -545,10 +520,7 @@ fn package_js_bundle(
 
 #[cfg(test)]
 mod tests {
-  use super::*;
 
   #[test]
-  fn test_package_html_bundle() {
-    let bundle_graph = BundleGraph::new();
-  }
+  fn test_package_html_bundle() {}
 }

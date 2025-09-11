@@ -157,6 +157,10 @@ impl BundleDependency {
     self.dependency_node.dependency.placeholder.as_deref()
   }
 
+  pub fn specifier(&self) -> &str {
+    self.dependency_node.dependency.specifier.as_str()
+  }
+
   pub fn target_asset(&self) -> NodeIndex {
     self.target_asset
   }
@@ -224,14 +228,24 @@ pub enum BundlePriority {
   Lazy,
 }
 
+#[derive(Debug)]
 pub struct ReferencedBundle {
   bundle_ref: BundleRef,
+  dependency: BundleDependency,
   priority: BundlePriority,
 }
 
 impl ReferencedBundle {
   pub fn bundle_graph_bundle(&self) -> &BundleGraphBundle {
     &self.bundle_ref.bundle_graph_bundle
+  }
+
+  pub fn bundle_node_index(&self) -> NodeIndex {
+    self.bundle_ref.bundle_node_index
+  }
+
+  pub fn dependency(&self) -> &BundleDependency {
+    &self.dependency
   }
 
   pub fn priority(&self) -> BundlePriority {
@@ -304,7 +318,13 @@ impl BundleGraph {
   }
 
   pub fn referenced_bundles(&self, bundle: &BundleRef) -> Vec<ReferencedBundle> {
-    let bundle_node_index = bundle.bundle_node_index;
+    self.referenced_bundles_for_index(bundle.bundle_node_index)
+  }
+
+  pub fn referenced_bundles_for_index(
+    &self,
+    bundle_node_index: NodeIndex,
+  ) -> Vec<ReferencedBundle> {
     let edges = self
       .graph
       .edges_directed(bundle_node_index, Direction::Outgoing);
@@ -312,7 +332,8 @@ impl BundleGraph {
     let mut referenced_bundles = Vec::new();
     for edge in edges {
       match edge.weight() {
-        BundleGraphEdge::BundleSyncLoads(_) | BundleGraphEdge::BundleAsyncLoads(_) => {
+        BundleGraphEdge::BundleSyncLoads(dependency)
+        | BundleGraphEdge::BundleAsyncLoads(dependency) => {
           let node_index = edge.target();
           let node = self.graph.node_weight(node_index).unwrap();
           let bundle = node
@@ -324,6 +345,7 @@ impl BundleGraph {
               bundle_graph_bundle: bundle.clone(),
               bundle_node_index: node_index,
             },
+            dependency: dependency.clone(),
             priority: if matches!(edge.weight(), BundleGraphEdge::BundleSyncLoads(_)) {
               BundlePriority::Parallel
             } else {

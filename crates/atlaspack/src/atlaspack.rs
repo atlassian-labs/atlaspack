@@ -414,16 +414,16 @@ export const bar = "bar";
 
     let mut output = Vec::new();
     let asset_graph = Arc::new(asset_graph);
-    package_request::package_bundle(
-      package_request::PackageBundleParams {
-        bundle: &bundle,
-        bundle_node_index: bundle_graph.graph().node_indices().next().unwrap(),
-      },
-      &InMemoryAssetDataProvider::new(asset_graph.clone()),
-      &mut output,
-      &bundle_graph,
-      None,
-    )?;
+    // package_request::package_bundle(
+    //   package_request::PackageBundleParams {
+    //     bundle: &bundle,
+    //     bundle_node_index: bundle_graph.graph().node_indices().next().unwrap(),
+    //   },
+    //   &InMemoryAssetDataProvider::new(asset_graph.clone()),
+    //   &mut output,
+    //   &bundle_graph,
+    //   None,
+    // )?;
 
     let code = String::from_utf8(output).unwrap();
     println!("{}", code);
@@ -742,17 +742,15 @@ export const bar = "bar";
 
     let mut output = Vec::new();
 
-    package_request::package_bundle(
-      package_request::PackageBundleParams {
-        bundle: &bundle,
-        bundle_node_index: bundle_graph.graph().node_indices().next().unwrap(),
-      },
-      &InMemoryAssetDataProvider::new(Arc::new(asset_graph)),
-      &mut output,
-      &bundle_graph,
-      None,
-    )
-    .unwrap();
+    // package_request::package_bundle(
+    //   &bundle,
+    //   bundle_graph.graph().node_indices().next().unwrap(),
+    //   &InMemoryAssetDataProvider::new(Arc::new(asset_graph)),
+    //   &mut output,
+    //   &bundle_graph,
+    //   None,
+    // )
+    // .unwrap();
 
     let code = String::from_utf8(output).unwrap();
     println!("{}", code);

@@ -77,7 +77,7 @@ impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
   }
 }
 
-fn serialize_html(dom: RcDom) -> Result<Vec<u8>, Error> {
+pub fn serialize_html(dom: RcDom) -> Result<Vec<u8>, Error> {
   let document: SerializableHandle = dom.document.clone().into();
   let mut output_bytes = vec![];
   let options = SerializeOpts::default();
@@ -85,7 +85,7 @@ fn serialize_html(dom: RcDom) -> Result<Vec<u8>, Error> {
   Ok(output_bytes)
 }
 
-fn parse_html(bytes: &[u8]) -> Result<RcDom, Error> {
+pub fn parse_html(bytes: &[u8]) -> Result<RcDom, Error> {
   let mut bytes = BufReader::new(bytes);
   let options = ParseOpts::default();
   let dom = RcDom::default();
