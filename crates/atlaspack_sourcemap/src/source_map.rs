@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use parcel_sourcemap::{Mapping, SourceMap as ParcelSourceMap, SourceMapError};
+use parcel_sourcemap_ext::SourceMap as ParcelSourceMapExt;
 use rkyv::AlignedVec;
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
@@ -69,6 +70,16 @@ impl SourceMap {
 
 impl From<ParcelSourceMap> for SourceMap {
   fn from(source_map: ParcelSourceMap) -> Self {
+    SourceMap { inner: source_map }
+  }
+}
+
+impl From<ParcelSourceMapExt> for SourceMap {
+  fn from(source_map_ext: ParcelSourceMapExt) -> Self {
+    let mut buf = AlignedVec::new();
+    source_map_ext.to_buffer(&mut buf).unwrap();
+    let source_map =
+      ParcelSourceMap::from_buffer(source_map_ext.project_root.as_str(), &buf).unwrap();
     SourceMap { inner: source_map }
   }
 }
@@ -278,5 +289,18 @@ mod tests {
         sources: vec![String::from("index.js")],
       },
     )
+  }
+
+  #[test]
+  fn parcel_source_map_ext_conversion_is_lossless() -> anyhow::Result<()> {
+    let (json, expected) = json_fixture();
+
+    let source_map_ext =
+      ParcelSourceMapExt::from_json(&PathBuf::default().to_string_lossy(), &json)?;
+    let source_map = SourceMap::from(source_map_ext);
+
+    assert_eq!(source_map.to_json()?, expected.json);
+
+    Ok(())
   }
 }

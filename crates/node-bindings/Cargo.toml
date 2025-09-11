@@ -23,6 +23,7 @@ atlaspack_napi_helpers = { path = "../atlaspack_napi_helpers" }
 atlaspack_vcs = { path = "../atlaspack_vcs" }
 atlaspack_swc_runner = { path = "../atlaspack_swc_runner" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
+parcel_sourcemap_node = { path = "../parcel_sourcemap_node" }
 
 aho-corasick = { workspace = true }
 anyhow = { workspace = true }
