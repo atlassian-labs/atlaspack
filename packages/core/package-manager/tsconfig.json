@@ -1,4 +1,33 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src", "test", "package.json"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../utils/node-resolver-core/tsconfig.json"
+    },
+    {
+      "path": "../build-cache/tsconfig.json"
+    },
+    {
+      "path": "../diagnostic/tsconfig.json"
+    },
+    {
+      "path": "../fs/tsconfig.json"
+    },
+    {
+      "path": "../logger/tsconfig.json"
+    },
+    {
+      "path": "../types/tsconfig.json"
+    },
+    {
+      "path": "../utils/tsconfig.json"
+    },
+    {
+      "path": "../workers/tsconfig.json"
+    }
+  ]
 }

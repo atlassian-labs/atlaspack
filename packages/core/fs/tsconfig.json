@@ -1,4 +1,30 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src", "test", "package.json"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../utils/atlaspack-watcher-watchman-js/tsconfig.json"
+    },
+    {
+      "path": "../build-cache/tsconfig.json"
+    },
+    {
+      "path": "../feature-flags/tsconfig.json"
+    },
+    {
+      "path": "../logger/tsconfig.json"
+    },
+    {
+      "path": "../rust/tsconfig.json"
+    },
+    {
+      "path": "../types-internal/tsconfig.json"
+    },
+    {
+      "path": "../workers/tsconfig.json"
+    }
+  ]
 }

@@ -1,4 +1,21 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src", "test"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../utils/events/tsconfig.json"
+    },
+    {
+      "path": "../diagnostic/tsconfig.json"
+    },
+    {
+      "path": "../rust/tsconfig.json"
+    },
+    {
+      "path": "../types-internal/tsconfig.json"
+    }
+  ]
 }

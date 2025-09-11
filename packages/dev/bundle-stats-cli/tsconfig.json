@@ -1,4 +1,27 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src", "test", "package.json"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../core/core/tsconfig.json"
+    },
+    {
+      "path": "../../core/types/tsconfig.json"
+    },
+    {
+      "path": "../../core/utils/tsconfig.json"
+    },
+    {
+      "path": "../../reporters/bundle-stats/tsconfig.json"
+    },
+    {
+      "path": "../babel-register/tsconfig.json"
+    },
+    {
+      "path": "../query/tsconfig.json"
+    }
+  ]
 }

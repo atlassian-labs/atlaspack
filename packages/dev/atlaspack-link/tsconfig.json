@@ -1,4 +1,18 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src", "test", "package.json"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../core/fs/tsconfig.json"
+    },
+    {
+      "path": "../../core/utils/tsconfig.json"
+    },
+    {
+      "path": "../babel-register/tsconfig.json"
+    }
+  ]
 }

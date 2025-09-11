@@ -1,4 +1,45 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src", "test", "package.json"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../dev/babel-register/tsconfig.json"
+    },
+    {
+      "path": "../../reporters/cli/tsconfig.json"
+    },
+    {
+      "path": "../../reporters/dev-server/tsconfig.json"
+    },
+    {
+      "path": "../../reporters/tracer/tsconfig.json"
+    },
+    {
+      "path": "../../utils/events/tsconfig.json"
+    },
+    {
+      "path": "../core/tsconfig.json"
+    },
+    {
+      "path": "../diagnostic/tsconfig.json"
+    },
+    {
+      "path": "../feature-flags/tsconfig.json"
+    },
+    {
+      "path": "../fs/tsconfig.json"
+    },
+    {
+      "path": "../logger/tsconfig.json"
+    },
+    {
+      "path": "../package-manager/tsconfig.json"
+    },
+    {
+      "path": "../utils/tsconfig.json"
+    }
+  ]
 }

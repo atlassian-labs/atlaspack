@@ -1,4 +1,27 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src", "test"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../core/diagnostic/tsconfig.json"
+    },
+    {
+      "path": "../../core/feature-flags/tsconfig.json"
+    },
+    {
+      "path": "../../core/plugin/tsconfig.json"
+    },
+    {
+      "path": "../../core/types-internal/tsconfig.json"
+    },
+    {
+      "path": "../../core/utils/tsconfig.json"
+    },
+    {
+      "path": "../../utils/domain-sharding/tsconfig.json"
+    }
+  ]
 }

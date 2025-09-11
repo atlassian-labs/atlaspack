@@ -1,4 +1,24 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src", "test"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../core/core/tsconfig.json"
+    },
+    {
+      "path": "../../core/diagnostic/tsconfig.json"
+    },
+    {
+      "path": "../../core/feature-flags/tsconfig.json"
+    },
+    {
+      "path": "../../core/plugin/tsconfig.json"
+    },
+    {
+      "path": "../../core/rust/tsconfig.json"
+    }
+  ]
 }
