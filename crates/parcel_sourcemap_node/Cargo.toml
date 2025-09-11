@@ -1,0 +1,22 @@
+[package]
+authors = ["Jasper De Moor <jasperdemoor@gmail.com>"]
+edition = "2021"
+name = "parcel_sourcemap_node"
+version = "2.1.1"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { workspace = true, features = ["napi4", "serde-json"]}
+napi-derive = { workspace = true }
+parcel_sourcemap = {path = "../parcel_sourcemap"}
+serde = { workspace = true }
+serde_json = { workspace = true }
+rkyv = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+jemallocator = { workspace = true, features = ["disable_initial_exec_tls"]}
+
+[build-dependencies]
+napi-build = "2"

@@ -17,7 +17,8 @@ use lightningcss::dependencies::DependencyOptions;
 use lightningcss::printer::PrinterOptions;
 use lightningcss::stylesheet::{ParserFlags, ParserOptions, StyleSheet};
 use lightningcss::targets::{Browsers, Targets};
-use parcel_sourcemap::SourceMap as ParcelSourceMap;
+//use parcel_sourcemap::SourceMap as ParcelSourceMap;
+use parcel_sourcemap_ext::SourceMap as ParcelSourceMapExt;
 use serde::Deserialize;
 use serde_json::json;
 
@@ -159,8 +160,8 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       },
     )?;
 
-    let mut lightning_source_map: Option<ParcelSourceMap> = if asset.env.source_map.is_some() {
-      let mut sm = ParcelSourceMap::new(&self.project_root.to_string_lossy());
+    let mut lightning_source_map: Option<ParcelSourceMapExt> = if asset.env.source_map.is_some() {
+      let mut sm = ParcelSourceMapExt::new(&self.project_root.to_string_lossy());
       sm.add_source(&asset.file_path.to_string_lossy());
       sm.set_source_content(0, asset.code.as_str()?)?;
       Some(sm)
