@@ -7,7 +7,7 @@ import type {
   NamedBundle as NamedBundleType,
   Async,
 } from '@atlaspack/types';
-import type SourceMap from '@parcel/source-map';
+import type SourceMap from '@atlaspack/source-map';
 import type {
   Bundle as InternalBundle,
   Config,

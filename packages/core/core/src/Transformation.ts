@@ -69,6 +69,7 @@ import {
 import {invalidateOnFileCreateToInternal, createInvalidations} from './utils';
 import invariant from 'assert';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
+import SourceMap from '@atlaspack/source-map';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type GenerateFunc = (input: UncommittedAsset) => Promise<GenerateOutput>;
@@ -460,7 +461,7 @@ export default class Transformation {
           if (asset.isASTDirty && asset.generate) {
             let output = await asset.generate();
             asset.content = output.content;
-            asset.mapBuffer = output.map?.toBuffer();
+            asset.mapBuffer = SourceMap.safeToBuffer(output.map);
           }
 
           asset.clearAST();
@@ -634,7 +635,7 @@ export default class Transformation {
     ) {
       let output = await asset.generate();
       asset.content = output.content;
-      asset.mapBuffer = output.map?.toBuffer();
+      asset.mapBuffer = SourceMap.safeToBuffer(output.map);
     }
 
     // Load config for the transformer.
