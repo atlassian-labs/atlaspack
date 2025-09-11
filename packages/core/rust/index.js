@@ -310,10 +310,11 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { initTracingSubscriber, Lmdb, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, Resolver, performStringReplacements, transform, transformAsync, getVcsStateSnapshot, getEventsSince } = nativeBinding
+const { initTracingSubscriber, Lmdb, SourceMap, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, Resolver, performStringReplacements, transform, transformAsync, getVcsStateSnapshot, getEventsSince } = nativeBinding
 
 module.exports.initTracingSubscriber = initTracingSubscriber
 module.exports.Lmdb = Lmdb
+module.exports.SourceMap = SourceMap
 module.exports.findAncestorFile = findAncestorFile
 module.exports.findFirstFile = findFirstFile
 module.exports.findNodeModule = findNodeModule
