@@ -67,7 +67,7 @@ impl Request for BundleGraphRequest {
 fn bundle_asset_graph(asset_graph: &AssetGraph) -> BundleGraph {
   let simplified_graph = simplify_graph(asset_graph);
   let (root_node, acyclic_graph) = remove_cycles(&simplified_graph);
-  let dominator_tree = build_dominator_tree(&acyclic_graph, root_node);
+  let dominator_tree = build_dominator_tree(&acyclic_graph, root_node, false);
 
   // {
   //   let mut reachable_assets = HashSet::new();
@@ -161,7 +161,7 @@ mod tests {
     let graph = graph.build();
 
     let (root, acyclic_graph) = remove_cycles(&graph);
-    let dominator_tree = build_dominator_tree(&acyclic_graph, root);
+    let dominator_tree = build_dominator_tree(&acyclic_graph, root, false);
 
     let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
       root_node: root,
@@ -200,7 +200,7 @@ mod tests {
     let graph = graph.build();
 
     let (root, acyclic_graph) = remove_cycles(&graph);
-    let dominator_tree = build_dominator_tree(&acyclic_graph, root);
+    let dominator_tree = build_dominator_tree(&acyclic_graph, root, false);
 
     let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
       root_node: root,
@@ -252,7 +252,7 @@ mod tests {
     let graph = graph.build();
 
     let (root, acyclic_graph) = remove_cycles(&graph);
-    let dominator_tree = build_dominator_tree(&acyclic_graph, root);
+    let dominator_tree = build_dominator_tree(&acyclic_graph, root, false);
 
     let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
       root_node: root,
@@ -314,7 +314,7 @@ mod tests {
     let graph = graph.build();
 
     let (root, acyclic_graph) = remove_cycles(&graph);
-    let dominator_tree = build_dominator_tree(&acyclic_graph, root);
+    let dominator_tree = build_dominator_tree(&acyclic_graph, root, false);
 
     let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
       root_node: root,
@@ -791,7 +791,7 @@ export const baz = "baz" + foo + bar;
       println!("simplified_dot:\n{}\n\n", simplified_dot);
 
       let (root_node, acyclic_graph) = remove_cycles(&simplified_graph);
-      let dominator_tree = build_dominator_tree(&acyclic_graph, root_node);
+      let dominator_tree = build_dominator_tree(&acyclic_graph, root_node, false);
 
       dominator_tree
     }

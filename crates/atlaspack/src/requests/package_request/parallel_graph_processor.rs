@@ -132,7 +132,7 @@ impl<TaskData: Send + Sync + 'static> ParallelGraphProcessor<TaskData> {
 
     let mut remaining_tasks = self.graph.node_count();
     while remaining_tasks > 0 {
-      let Ok((TaskId(node_index), result)) = rx.recv() else {
+      let Ok((TaskId(node_index), _)) = rx.recv() else {
         break;
       };
 
@@ -202,8 +202,6 @@ mod test {
     processor.add_edge(task_b, task_d);
     processor.add_edge(task_c, task_d);
 
-    // Measure elapsed time to infer parallelism between B and C.
-    let started = Instant::now();
     processor.run_with_thread_pool(MockThreadPool, |_| Ok(()));
 
     let log: Vec<Event> = EVENTS.lock().unwrap().clone();

@@ -240,6 +240,7 @@ mod tests {
 
   use atlaspack_core::types::FileType;
   use atlaspack_core::types::{Asset, Dependency};
+  use petgraph::dot::Dot;
 
   use crate::test_utils::graph::expect_edge;
 
@@ -297,6 +298,33 @@ mod tests {
 
   fn asset_graph_builder() -> AssetGraphBuilder {
     AssetGraphBuilder::new()
+  }
+
+  fn print_test_case(
+    name: &str,
+    input_graph: &AssetGraph,
+    simplified_graph: &SimplifiedAssetGraph,
+  ) {
+    let output_dir =
+      env!("CARGO_MANIFEST_DIR").join("src/requests/bundle_graph_request/simplified_graph/tests");
+    output_dir.create_dir_all().unwrap();
+
+    let input_graph: StableDiGraph<String, String> = input_graph
+      .graph
+      .map(|_, node| format!("{}", node), |_, edge| format!("{}", edge));
+    let input_dot: Dot<StableDiGraph<String, String>> = Dot::new(input_graph);
+    let simplified_graph: StableDiGraph<String, String> =
+      simplified_graph.map(|_, node| format!("{}", node), |_, edge| format!("{}", edge));
+    let simplified_dot: Dot<StableDiGraph<String, String>> = Dot::new(simplified_graph);
+
+    let input_dot = format!("{}", input_dot);
+    let simplified_dot = format!("{}", simplified_dot);
+
+    let input_path = output_dir.join(format!("{}.INPUT.dot", name));
+    let simplified_path = output_dir.join(format!("{}.OUTPUT.dot", name));
+
+    write(input_path, input_dot).unwrap();
+    write(simplified_path, simplified_dot).unwrap();
   }
 
   #[test]

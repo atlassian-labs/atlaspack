@@ -81,7 +81,11 @@ impl From<SimplifiedAssetGraphEdge> for DominatorTreeEdge {
 /// The original edges and node indexes are preserved.
 ///
 /// New "shared bundle root" edges are added between the root and newly split sub-trees.
-pub fn build_dominator_tree(graph: &AcyclicAssetGraph, root_id: NodeIndex) -> DominatorTree {
+pub fn build_dominator_tree(
+  graph: &AcyclicAssetGraph,
+  root_id: NodeIndex,
+  follow_async_edges: bool,
+) -> DominatorTree {
   let mut result = graph.map(
     |_, node| node.clone(),
     |_, edge| DominatorTreeEdge::from(edge.clone()),
@@ -113,7 +117,13 @@ pub fn build_dominator_tree(graph: &AcyclicAssetGraph, root_id: NodeIndex) -> Do
           // Async roots need to be skipped. Async dependencies handled in dominator tree.
           // But additional handling must be present somehow so that dependencies of async dependencies
           // don't get lifted up.
-          SimplifiedAssetGraphEdge::AssetAsyncDependency(_) => None,
+          SimplifiedAssetGraphEdge::AssetAsyncDependency(_) => {
+            if follow_async_edges {
+              Some(edge)
+            } else {
+              None
+            }
+          }
           // SimplifiedAssetGraphEdge::AsyncRoot(_) => None,
           _ => Some(edge),
         }
@@ -159,7 +169,7 @@ mod tests {
     let graph = graph.build();
     let (root, graph) = remove_cycles(&graph);
 
-    let dominator_tree = build_dominator_tree(&graph, root);
+    let dominator_tree = build_dominator_tree(&graph, root, true);
 
     assert_eq!(dominator_tree.node_count(), 1);
     assert_eq!(dominator_tree.edge_count(), 0);
@@ -194,7 +204,7 @@ mod tests {
     let graph = graph.build();
     let (root, graph) = remove_cycles(&graph);
 
-    let dominator_tree = build_dominator_tree(&graph, root);
+    let dominator_tree = build_dominator_tree(&graph, root, true);
 
     assert_eq!(dominator_tree.node_count(), 2);
     assert_eq!(dominator_tree.edge_count(), 2);
@@ -230,7 +240,7 @@ mod tests {
     let graph = graph.build();
     let (root, graph) = remove_cycles(&graph);
 
-    let dominator_tree = build_dominator_tree(&graph, root);
+    let dominator_tree = build_dominator_tree(&graph, root, true);
 
     assert_eq!(dominator_tree.node_count(), 3);
     assert_eq!(dominator_tree.edge_count(), 4);
@@ -283,7 +293,7 @@ mod tests {
     let graph = graph.build();
     let (root, graph) = remove_cycles(&graph);
 
-    let dominator_tree = build_dominator_tree(&graph, root);
+    let dominator_tree = build_dominator_tree(&graph, root, true);
 
     assert_eq!(dominator_tree.node_count(), 3);
     assert_eq!(dominator_tree.edge_count(), 5);
@@ -370,7 +380,7 @@ mod tests {
     let graph = graph.build();
     let (root, graph) = remove_cycles(&graph);
 
-    let dominator_tree = build_dominator_tree(&graph, root);
+    let dominator_tree = build_dominator_tree(&graph, root, true);
 
     assert_eq!(dominator_tree.node_count(), 4);
     // assert_eq!(dominator_tree.edge_count(), 9);
@@ -462,7 +472,7 @@ mod tests {
     let graph = graph.build();
     let (root, graph) = remove_cycles(&graph);
 
-    let dominator_tree = build_dominator_tree(&graph, root);
+    let dominator_tree = build_dominator_tree(&graph, root, true);
 
     assert_eq!(dominator_tree.node_count(), 4);
     // assert_eq!(dominator_tree.edge_count(), 9);
@@ -488,7 +498,7 @@ mod tests {
     }
 
     // a -> b
-    // a -> c
+    // b -> c
     {
       let edges = dominator_tree
         .edges_connecting(a, b)
@@ -501,7 +511,7 @@ mod tests {
       );
 
       let edges = dominator_tree
-        .edges_connecting(a, c)
+        .edges_connecting(b, c)
         .map(|e| e.weight())
         .collect::<Vec<_>>();
       // assert_eq!(edges.len(), 1);
@@ -549,7 +559,7 @@ mod tests {
     let graph = graph.build();
     let (root, graph) = remove_cycles(&graph);
 
-    let dominator_tree = build_dominator_tree(&graph, root);
+    let dominator_tree = build_dominator_tree(&graph, root, true);
 
     assert!(dominator_tree.contains_node(root));
 

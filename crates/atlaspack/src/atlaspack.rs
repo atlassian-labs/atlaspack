@@ -403,7 +403,7 @@ export const bar = "bar";
       .into_bundle_graph()
       .unwrap();
     assert_eq!(bundle_graph.num_bundles(), 1);
-    let BundleGraphNode::Bundle(bundle) = bundle_graph
+    let BundleGraphNode::Bundle(_bundle) = bundle_graph
       .graph()
       .node_weights()
       .find(|weight| matches!(weight, BundleGraphNode::Bundle(_)))
@@ -412,7 +412,7 @@ export const bar = "bar";
       panic!("Expected a bundle");
     };
 
-    let mut output = Vec::new();
+    let _output = Vec::new();
     let asset_graph = Arc::new(asset_graph);
     // package_request::package_bundle(
     //   package_request::PackageBundleParams {
@@ -740,7 +740,7 @@ export const bar = "bar";
       panic!("Expected a bundle");
     };
 
-    let mut output = Vec::new();
+    let mut _output = Vec::new();
 
     // package_request::package_bundle(
     //   &bundle,

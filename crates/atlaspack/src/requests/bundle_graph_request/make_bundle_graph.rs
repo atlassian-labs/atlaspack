@@ -569,7 +569,7 @@ mod tests {
     let graph = graph.build();
 
     let (root_node, graph) = remove_cycles(&graph);
-    let dominator_tree = build_dominator_tree(&graph, root_node);
+    let dominator_tree = build_dominator_tree(&graph, root_node, false);
 
     let bundle_graph = make_bundle_graph(MakeBundleGraphParams {
       root_node: root_node,

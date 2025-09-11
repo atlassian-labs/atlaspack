@@ -81,7 +81,7 @@ impl Request for PackageRequest {
     }
 
     for (node_index, bundle) in self.bundle_graph.graph().node_references() {
-      let BundleGraphNode::Bundle(bundle) = bundle else {
+      let BundleGraphNode::Bundle(_bundle) = bundle else {
         continue;
       };
 
@@ -90,7 +90,7 @@ impl Request for PackageRequest {
         .graph()
         .edges_directed(node_index, Direction::Outgoing)
       {
-        if let BundleGraphEdge::BundleAsyncLoads(dependency_node) = edge.weight() {
+        if let BundleGraphEdge::BundleAsyncLoads(_dependency_node) = edge.weight() {
           task_graph.add_edge(task_ids[&edge.source()], task_ids[&edge.target()]);
         }
       }

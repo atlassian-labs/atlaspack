@@ -4,10 +4,8 @@ use std::{
   sync::Arc,
 };
 
-use atlaspack_core::bundle_graph::{
-  BundleGraph, BundleGraphBundle, BundleGraphEdge, BundleGraphNode, BundleRef,
-};
-use atlaspack_plugin_transformer_html::dom_visitor::{walk, DomTraversalOperation, DomVisitor};
+use atlaspack_core::bundle_graph::{BundleGraph, BundleGraphBundle, BundleGraphEdge};
+use atlaspack_plugin_transformer_html::dom_visitor::walk;
 use html5ever::namespace_url;
 use markup5ever::{expanded_name, local_name, ns, QualName};
 use markup5ever_rcdom::{Handle, NodeData};
@@ -51,20 +49,13 @@ pub fn get_all_referenced_bundles(
         _ => None,
       };
 
-      if let Some(dependency_id) = dependency_id {
+      if let Some(_) = dependency_id {
         let target_bundle_node = bundle_graph
           .graph()
           .node_weight(referenced_bundle_node_index)
           .unwrap();
 
         let target_bundle = target_bundle_node.as_bundle().unwrap();
-        let target_bundle_path = target_bundle
-          .bundle
-          .name
-          .as_ref()
-          .unwrap()
-          .as_str()
-          .to_string();
 
         result.push((target_bundle.clone(), referenced_bundle_node_index));
       }
@@ -515,11 +506,13 @@ mod tests {
         bundle_node_index,
         asset_data_provider: &asset_data_provider,
         bundle_graph: &bundle_graph,
-        options: todo!(),
-        project_root: todo!(),
-        packager: todo!(),
+        options: &Arc::new(AtlaspackOptions::default()),
+        project_root: PathBuf::from("."),
+        packager: None,
       },
       &mut writer,
     );
+    let html = String::from_utf8(writer).unwrap();
+    assert!(html.len() > 0);
   }
 }

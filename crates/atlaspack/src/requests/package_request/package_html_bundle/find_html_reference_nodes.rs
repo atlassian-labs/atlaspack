@@ -371,8 +371,8 @@ mod tests {
     assert!(matches!(refs[0].reference_type, HTMLReferenceType::Script));
     assert_eq!(refs[0].dependency_id, "dep");
 
-    let mut referenced_paths_by_dependency_specifier = HashMap::new();
-    referenced_paths_by_dependency_specifier
+    let mut referenced_paths_by_dependency_id = HashMap::new();
+    referenced_paths_by_dependency_id
       .insert(String::from("dep"), vec![String::from("/static/app.js")]);
 
     rewrite_html_reference(
@@ -418,7 +418,7 @@ mod tests {
     assert!(matches!(refs[0].reference_type, HTMLReferenceType::Script));
     assert_eq!(refs[0].dependency_specifier, "dep");
 
-    let mut referenced_paths_by_dependency_specifier = HashMap::new();
+    let mut referenced_paths_by_dependency_id = HashMap::new();
     referenced_paths_by_dependency_id.insert(
       String::from("dep"),
       vec![
@@ -477,7 +477,7 @@ mod tests {
     assert_eq!(refs[0].dependency_specifier, "abc123");
 
     let mut contents_by_dependency_specifier = HashMap::new();
-    contents_by_dependency_id.insert(
+    contents_by_dependency_specifier.insert(
       String::from("abc123"),
       String::from("console.log('transformed');"),
     );
