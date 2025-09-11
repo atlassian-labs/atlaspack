@@ -38,6 +38,8 @@
     "unlink-all": "node scripts/unlink-all.js packages",
     "check": "flow check",
     "check-ts": "lerna run check-ts",
+    "update-ts-references": "node scripts/update-ts-references.mjs",
+    "type-coverage": "type-coverage -b tsconfig.paths.json",
     "lint": "node ./scripts/lint-all.mjs",
     "prepublishOnly": "yarn pre-publish",
     "pre-publish": "yarn build && yarn build-dts && node ./scripts/rewrite-package-types.mjs && yarn build-ts",
@@ -61,7 +63,8 @@
     "tag:release": "lerna version --exact --force-publish=* --no-git-tag-version --no-push",
     "release": "lerna publish -y from-package --pre-dist-tag=next --no-git-tag-version --no-push",
     "prepare": "husky install",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "check-ts-repo": "yarn update-ts-references && tsc --build tsconfig.paths.json"
   },
   "devDependencies": {
     "@babel/core": "^7.22.11",
@@ -94,6 +97,7 @@
     "rimraf": "^5.0.5",
     "semver": "^7.5.2",
     "sinon": "^7.3.1",
+    "type-coverage": "^2.3.3",
     "typescript": "^5.8.3",
     "zx": "^8.1.9"
   },
