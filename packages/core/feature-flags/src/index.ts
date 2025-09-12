@@ -156,16 +156,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   hmrImprovements: false,
 
   /**
-   * Fixes a bug where imported objects that are accessed with non-static
-   * properties (e.g. `CONSTANTS['api_' + endpoint`]) would not be recognised as
-   * being used, and thus not included in the bundle.
-   *
-   *
-   * @author Ben Jervis <bjervis@atlassian.com>
-   */
-  unusedComputedPropertyFix: process.env.ATLASPACK_BUILD_ENV === 'test',
-
-  /**
    * Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries)
    * could cause exports to undefined at runtime.
    *
