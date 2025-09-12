@@ -177,6 +177,7 @@ impl JsSourceMap {
   }
 
   #[napi(js_name = "toVLQ")]
+  #[allow(clippy::wrong_self_convention)]
   pub fn to_vlq(&mut self, env: Env) -> Result<JsObject> {
     let mut vlq_output: Vec<u8> = vec![];
     self
