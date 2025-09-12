@@ -57,7 +57,7 @@ export function migrateDependencies(packageJson: any, tag: string): boolean {
   let didDependenciesChange = false;
   const skipPackages = new Set([
     '@parcel/hash',
-    '@parcel/source-map',
+    '@atlaspack/source-map',
     '@parcel/watcher',
   ]);
 
