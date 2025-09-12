@@ -339,9 +339,49 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
     let package_json = context.config().load_package_json::<PackageJson>().ok();
 
-    // Determine JSX configuration
+    // v3JsxConfigurationLoading CLEANUP NOTE: Remove the flag disabled code path after rollout
+    let feature_flag_v3_jsx_configuration_loading = self
+      .options
+      .feature_flags
+      .bool_enabled("v3JsxConfigurationLoading");
+
+    // Determine JSX configuration based on v3JsxConfigurationLoading feature flag
     let (is_jsx, jsx_pragma, jsx_pragma_frag, jsx_import_source, automatic_jsx_runtime) =
-      self.determine_jsx_configuration(&file_type, &asset, compiler_options, &package_json);
+      if feature_flag_v3_jsx_configuration_loading {
+        // With v3JsxConfigurationLoading enabled, use the new determine_jsx_configuration method
+        self.determine_jsx_configuration(&file_type, &asset, compiler_options, &package_json)
+      } else {
+        // With v3JsxConfigurationLoading disabled, use the old logic
+        let is_jsx = matches!(file_type, FileType::Jsx | FileType::Tsx);
+
+        let automatic_jsx_runtime = compiler_options
+          .map(|co| {
+            co.jsx
+              .as_ref()
+              .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
+              || co.jsx_import_source.is_some()
+          })
+          .unwrap_or_else(|| {
+            package_json
+              .as_ref()
+              .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents))
+          });
+
+        let jsx_import_source = compiler_options
+          .and_then(|co| co.jsx_import_source.clone())
+          .or_else(|| automatic_jsx_runtime.then_some(String::from("react")));
+
+        let jsx_pragma = compiler_options.and_then(|co| co.jsx_factory.clone());
+        let jsx_pragma_frag = compiler_options.and_then(|co| co.jsx_fragment_factory.clone());
+
+        (
+          is_jsx,
+          jsx_pragma,
+          jsx_pragma_frag,
+          jsx_import_source,
+          automatic_jsx_runtime,
+        )
+      };
 
     let transform_config = atlaspack_js_swc_core::Config {
       automatic_jsx_runtime,
@@ -365,8 +405,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       is_library: env.is_library,
       is_type_script: matches!(file_type, FileType::Ts | FileType::Tsx),
       is_worker: env.context.is_worker(),
-      jsx_import_source: jsx_import_source
-        .or_else(|| automatic_jsx_runtime.then_some(String::from("react"))),
+      jsx_import_source,
       jsx_pragma,
       jsx_pragma_frag,
       magic_comments: self.config.magic_comments.unwrap_or_default(),
@@ -452,8 +491,8 @@ mod tests {
     config_loader::ConfigLoader,
     plugin::PluginLogger,
     types::{
-      Code, DependencyBuilder, DependencyKind, Environment, EnvironmentContext, Location, Priority,
-      SourceLocation, SpecifierType, Symbol,
+      Code, DependencyBuilder, DependencyKind, Environment, EnvironmentContext, FeatureFlags,
+      Location, Priority, SourceLocation, SpecifierType, Symbol,
     },
   };
   use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSystem};
@@ -953,77 +992,504 @@ mod tests {
     assert_eq!(jsx_pragma_frag_tsx, Some("React.Fragment".to_string()));
   }
 
-  #[tokio::test(flavor = "multi_thread")]
-  async fn transforms_js_file_as_jsx_when_tsconfig_has_jsx_config() -> anyhow::Result<()> {
-    let file_system = Arc::new(InMemoryFileSystem::default());
-    let project_root = Path::new("project");
+  // End-to-end tests for the new determine_jsx_configuration logic
+  // These tests verify that the JSX configuration works correctly in the full transform pipeline
 
-    // Create a .js file with JSX syntax
-    let target_asset = create_asset_at_project_root(
-      &project_root,
-      "src/render.js",
-      "
-        import React from 'react';
+  mod jsx_configuration {
+    use super::*;
 
-        const StandaloneNavigation = () => {
-          return <div className=\"navigation\">Hello World</div>;
-        };
+    #[tokio::test(flavor = "multi_thread")]
+    async fn js_file_with_tsconfig_and_react() -> anyhow::Result<()> {
+      // Case 1: .js file with React dependency and tsconfig jsx: "react"
+      // Expected: JSX should be enabled and transformed
+      let file_system = Arc::new(InMemoryFileSystem::default());
 
-        export default StandaloneNavigation;
-      ",
-    );
+      let target_asset = create_asset(
+        "render.js",
+        "
+          import React from 'react';
 
-    // Set up package.json with React dependency
-    file_system.write_file(
-      &project_root.join("package.json"),
-      r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
-    );
+          const Component = () => {
+            return <div>Hello World</div>;
+          };
 
-    // Set up tsconfig.json with JSX configuration
-    file_system.write_file(
-      &project_root.join("tsconfig.json"),
-      r#"{
-        "compilerOptions": {
-          "jsx": "react",
-          "target": "es2015",
-          "module": "commonjs"
-        }
-      }"#
-        .to_string(),
-    );
+          export default Component;
+        ",
+      );
 
-    let result = run_test(TestOptions {
-      asset: target_asset.clone(),
-      file_system: Some(file_system),
-      project_root: Some(project_root.to_path_buf()),
-      ..TestOptions::default()
-    })
-    .await?;
+      // Set up package.json with React dependency
+      file_system.write_file(
+        Path::new("package.json"),
+        r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
+      );
 
-    // Verify that the JSX was transformed (not left as raw JSX syntax)
-    let code = result.asset.code.as_str()?;
-    assert!(
-      !code.contains("<div"),
-      "JSX should be transformed, not left as raw syntax. Code: {}",
-      code
-    );
+      // Set up tsconfig.json with JSX configuration
+      file_system.write_file(
+        Path::new("tsconfig.json"),
+        r#"{
+          "compilerOptions": {
+            "jsx": "react",
+            "target": "es2015"
+          }
+        }"#
+          .to_string(),
+      );
 
-    // Verify that React.createElement or similar was generated
-    assert!(
-      code.contains("createElement") || code.contains("_react.createElement"),
-      "JSX should be transformed to React.createElement calls. Code: {}",
-      code
-    );
+      let result = run_test(TestOptions {
+        asset: target_asset.clone(),
+        file_system: Some(file_system),
+        ..TestOptions::default()
+      })
+      .await;
+      let transform_result = result?;
+      let code = transform_result.asset.code.as_str()?;
 
-    // Verify dependencies include React
-    let dependencies = get_dependencies(&result);
-    assert!(
-      dependencies.contains(&"react".to_string()),
-      "Dependencies should include 'react', but got: {:?}",
-      dependencies
-    );
+      // JSX should be transformed
+      assert!(
+        !code.contains("<div"),
+        "JSX should be transformed. Code: {}",
+        code
+      );
+      // JSX should be transformed to either React.createElement or jsxDEV calls
+      assert!(
+        code.contains("createElement") || code.contains("jsxDEV") || code.contains("jsx"),
+        "JSX should be transformed to React calls. Code: {}",
+        code
+      );
+      // Verify dependencies include React
+      let dependencies = get_dependencies(&transform_result);
+      assert!(
+        dependencies.contains(&"react".to_string()),
+        "Dependencies should include 'react', but got: {:?}",
+        dependencies
+      );
 
-    Ok(())
+      Ok(())
+    }
+
+    // v3JsxConfigurationLoading CLEANUP NOTE: Remove this test after rollout.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn js_file_with_tsconfig_and_react_feature_flag_off() -> anyhow::Result<()> {
+      // Case 1: .js file with React dependency and tsconfig jsx: "react"
+      // Expected: JSX parsing should FAIL because .js files don't have JSX enabled in old logic
+      let file_system = Arc::new(InMemoryFileSystem::default());
+
+      let target_asset = create_asset(
+        "render.js",
+        "
+          import React from 'react';
+
+          const Component = () => {
+            return <div>Hello World</div>;
+          };
+
+          export default Component;
+        ",
+      );
+
+      // Set up package.json with React dependency
+      file_system.write_file(
+        Path::new("package.json"),
+        r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
+      );
+
+      // Set up tsconfig.json with JSX configuration
+      file_system.write_file(
+        Path::new("tsconfig.json"),
+        r#"{
+          "compilerOptions": {
+            "jsx": "react",
+            "target": "es2015"
+          }
+        }"#
+          .to_string(),
+      );
+
+      // Test with feature flag OFF (old behaviour)
+      let result = run_test(TestOptions {
+        asset: target_asset.clone(),
+        file_system: Some(file_system.clone()),
+        feature_flags: Some(FeatureFlags::with_bool_flag(
+          "v3JsxConfigurationLoading",
+          false,
+        )),
+        ..TestOptions::default()
+      })
+      .await;
+
+      // Old behaviour: .js files should NOT have JSX enabled even with React dependency
+      // This should result in a parsing error since JSX is not enabled
+      assert!(
+        result.is_err(),
+        "Old behaviour: .js files with JSX should fail to parse when JSX is not enabled. Error: {:?}",
+        result.err()
+      );
+
+      Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn js_file_without_react_or_tsconfig() -> anyhow::Result<()> {
+      // Case 2: .js file with NO React dependency and NO tsconfig
+      // Expected: JSX parsing should FAIL
+      let file_system = Arc::new(InMemoryFileSystem::default());
+
+      let target_asset = create_asset(
+        "render.js",
+        "
+          const Component = () => {
+            return <div>Hello World</div>;
+          };
+
+          export default Component;
+        ",
+      );
+
+      // Set up package.json WITHOUT React dependency
+      file_system.write_file(
+        Path::new("package.json"),
+        r#"{ "dependencies": {} }"#.to_string(),
+      );
+
+      let result = run_test(TestOptions {
+        asset: target_asset.clone(),
+        file_system: Some(file_system),
+        ..TestOptions::default()
+      })
+      .await;
+
+      // JSX parsing should fail
+      assert!(
+        result.is_err(),
+        "JSX parsing should fail when no React dependency and no tsconfig. Error: {:?}",
+        result.err()
+      );
+
+      Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn js_file_with_react_only() -> anyhow::Result<()> {
+      // Case 3: .js file with React dependency but NO tsconfig
+      // Expected: JSX should be enabled and transformed
+      let file_system = Arc::new(InMemoryFileSystem::default());
+
+      let target_asset = create_asset(
+        "render.js",
+        "
+          import React from 'react';
+
+          const Component = () => {
+            return <div>Hello World</div>;
+          };
+
+          export default Component;
+        ",
+      );
+
+      // Set up package.json with React dependency
+      file_system.write_file(
+        Path::new("package.json"),
+        r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
+      );
+
+      let result = run_test(TestOptions {
+        asset: target_asset.clone(),
+        file_system: Some(file_system),
+        ..TestOptions::default()
+      })
+      .await;
+      let transform_result = result?;
+      let code = transform_result.asset.code.as_str()?;
+
+      // JSX should be transformed
+      assert!(
+        !code.contains("<div"),
+        "JSX should be transformed with React dependency. Code: {}",
+        code
+      );
+      // JSX should be transformed to either React.createElement or jsxDEV calls
+      assert!(
+        code.contains("createElement") || code.contains("jsxDEV") || code.contains("jsx"),
+        "JSX should be transformed to React calls. Code: {}",
+        code
+      );
+      // Verify dependencies include React
+      let dependencies = get_dependencies(&transform_result);
+      assert!(
+        dependencies.contains(&"react".to_string()),
+        "Dependencies should include 'react', but got: {:?}",
+        dependencies
+      );
+
+      Ok(())
+    }
+
+    // v3JsxConfigurationLoading CLEANUP NOTE: Remove this test after rollout.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn js_file_with_react_only_feature_flag_off() -> anyhow::Result<()> {
+      // Case 3: .js file with React dependency but NO tsconfig
+      // Expected: JSX parsing should FAIL because .js files don't have JSX enabled in old logic
+      let file_system = Arc::new(InMemoryFileSystem::default());
+
+      let target_asset = create_asset(
+        "render.js",
+        "
+          import React from 'react';
+
+          const Component = () => {
+            return <div>Hello World</div>;
+          };
+
+          export default Component;
+        ",
+      );
+
+      // Set up package.json with React dependency
+      file_system.write_file(
+        Path::new("package.json"),
+        r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
+      );
+
+      // Test with feature flag OFF (old behaviour)
+      let result = run_test(TestOptions {
+        asset: target_asset.clone(),
+        file_system: Some(file_system.clone()),
+        feature_flags: Some(FeatureFlags::with_bool_flag(
+          "v3JsxConfigurationLoading",
+          false,
+        )),
+        ..TestOptions::default()
+      })
+      .await;
+
+      // Old behaviour: .js files should NOT have JSX enabled even with React dependency
+      // This should result in a parsing error since JSX is not enabled
+      assert!(
+        result.is_err(),
+        "Old behaviour: .js files with JSX should fail to parse when JSX is not enabled. Error: {:?}",
+        result.err()
+      );
+
+      Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn jsx_file_without_react() -> anyhow::Result<()> {
+      // Case 4: .jsx file with NO React dependency
+      // Expected: JSX should be enabled but no pragmas (should still parse)
+      let file_system = Arc::new(InMemoryFileSystem::default());
+
+      let target_asset = create_asset(
+        "render.jsx",
+        "
+          const Component = () => {
+            return <div>Hello World</div>;
+          };
+
+          export default Component;
+        ",
+      );
+
+      // Set up package.json WITHOUT React dependency
+      file_system.write_file(
+        Path::new("package.json"),
+        r#"{ "dependencies": {} }"#.to_string(),
+      );
+
+      let result = run_test(TestOptions {
+        asset: target_asset.clone(),
+        file_system: Some(file_system),
+        ..TestOptions::default()
+      })
+      .await;
+      let transform_result = result?;
+      let code = transform_result.asset.code.as_str()?;
+
+      // JSX should be transformed (file extension enables JSX)
+      assert!(
+        !code.contains("<div"),
+        "JSX should be transformed in .jsx files. Code: {}",
+        code
+      );
+      // JSX should be transformed to either React.createElement or jsxDEV calls
+      assert!(
+        code.contains("createElement") || code.contains("jsxDEV") || code.contains("jsx"),
+        "JSX should be transformed to React calls. Code: {}",
+        code
+      );
+
+      Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn jsx_file_with_react() -> anyhow::Result<()> {
+      // Case 5: .jsx file with React dependency
+      // Expected: JSX should be enabled with React pragmas
+      let file_system = Arc::new(InMemoryFileSystem::default());
+
+      let target_asset = create_asset(
+        "render.jsx",
+        "
+          import React from 'react';
+
+          const Component = () => {
+            return <div>Hello World</div>;
+          };
+
+          export default Component;
+        ",
+      );
+
+      // Set up package.json with React dependency
+      file_system.write_file(
+        Path::new("package.json"),
+        r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
+      );
+
+      let result = run_test(TestOptions {
+        asset: target_asset.clone(),
+        file_system: Some(file_system),
+        ..TestOptions::default()
+      })
+      .await;
+      let transform_result = result?;
+      let code = transform_result.asset.code.as_str()?;
+
+      // JSX should be transformed with React pragmas
+      assert!(
+        !code.contains("<div"),
+        "JSX should be transformed in .jsx files with React. Code: {}",
+        code
+      );
+      // JSX should be transformed to either React.createElement or jsxDEV calls
+      assert!(
+        code.contains("createElement") || code.contains("jsxDEV") || code.contains("jsx"),
+        "JSX should be transformed to React calls. Code: {}",
+        code
+      );
+      // Verify dependencies include React
+      let dependencies = get_dependencies(&transform_result);
+      assert!(
+        dependencies.contains(&"react".to_string()),
+        "Dependencies should include 'react', but got: {:?}",
+        dependencies
+      );
+
+      Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn ts_file_never_has_jsx() -> anyhow::Result<()> {
+      // Case 6: .ts file with React dependency and tsconfig jsx: "react"
+      // Expected: JSX parsing should FAIL (TypeScript files never have JSX)
+
+      let file_system = Arc::new(InMemoryFileSystem::default());
+
+      let target_asset = create_asset(
+        "render.ts",
+        "
+          import React from 'react';
+
+          const Component = () => {
+            return <div>Hello World</div>;
+          };
+
+          export default Component;
+        ",
+      );
+
+      // Set up package.json with React dependency
+      file_system.write_file(
+        Path::new("package.json"),
+        r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
+      );
+
+      // Set up tsconfig.json with JSX configuration
+      file_system.write_file(
+        Path::new("tsconfig.json"),
+        r#"{
+          "compilerOptions": {
+            "jsx": "react",
+            "target": "es2015"
+          }
+        }"#
+          .to_string(),
+      );
+
+      let result = run_test(TestOptions {
+        asset: target_asset.clone(),
+        file_system: Some(file_system),
+        ..TestOptions::default()
+      })
+      .await;
+
+      // JSX parsing should fail (TypeScript files never have JSX)
+      assert!(
+        result.is_err(),
+        "JSX parsing should fail in .ts files even with React dependency and tsconfig. Error: {:?}",
+        result.err()
+      );
+
+      Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn tsx_file_with_react() -> anyhow::Result<()> {
+      // Case 7: .tsx file with React dependency
+      // Expected: JSX should be enabled with React pragmas
+      let file_system = Arc::new(InMemoryFileSystem::default());
+
+      let target_asset = create_asset(
+        "render.tsx",
+        "
+          import React from 'react';
+
+          const Component = () => {
+            return <div>Hello World</div>;
+          };
+
+          export default Component;
+        ",
+      );
+
+      // Set up package.json with React dependency
+      file_system.write_file(
+        Path::new("package.json"),
+        r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
+      );
+
+      let result = run_test(TestOptions {
+        asset: target_asset.clone(),
+        file_system: Some(file_system),
+        ..TestOptions::default()
+      })
+      .await;
+      let transform_result = result?;
+      let code = transform_result.asset.code.as_str()?;
+
+      // JSX should be transformed with React pragmas
+      assert!(
+        !code.contains("<div"),
+        "JSX should be transformed in .tsx files with React. Code: {}",
+        code
+      );
+      // JSX should be transformed to either React.createElement or jsxDEV calls
+      assert!(
+        code.contains("createElement") || code.contains("jsxDEV") || code.contains("jsx"),
+        "JSX should be transformed to React calls. Code: {}",
+        code
+      );
+      // Verify dependencies include React
+      let dependencies = get_dependencies(&transform_result);
+      assert!(
+        dependencies.contains(&"react".to_string()),
+        "Dependencies should include 'react', but got: {:?}",
+        dependencies
+      );
+
+      Ok(())
+    }
   }
 
   #[tokio::test(flavor = "multi_thread")]
@@ -1219,6 +1685,7 @@ mod tests {
     asset: Asset,
     file_system: Option<FileSystemRef>,
     project_root: Option<PathBuf>,
+    feature_flags: Option<FeatureFlags>,
   }
 
   async fn run_test(options: TestOptions) -> anyhow::Result<TransformResult> {
@@ -1228,6 +1695,15 @@ mod tests {
       .file_system
       .unwrap_or_else(|| default_fs(&project_root));
 
+    // v3JsxConfigurationLoading CLEANUP NOTE: Remove 'flag enabled for tests by default' logic
+    let plugin_options = PluginOptions {
+      feature_flags: options
+        .feature_flags
+        .unwrap_or_default()
+        .with_bool_flag_default("v3JsxConfigurationLoading", true),
+      ..PluginOptions::default()
+    };
+
     let ctx = PluginContext {
       config: Arc::new(ConfigLoader {
         fs: file_system.clone(),
@@ -1236,7 +1712,7 @@ mod tests {
       }),
       file_system: file_system.clone(),
       logger: PluginLogger::default(),
-      options: Arc::new(PluginOptions::default()),
+      options: Arc::new(plugin_options),
     };
 
     let transformer = AtlaspackJsTransformerPlugin::new(&ctx)?;

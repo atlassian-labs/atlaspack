@@ -281,6 +281,14 @@ export const DEFAULT_FEATURE_FLAGS = {
   deduplicateReporters: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
+   * Enable JSX configuration loading in v3 Rust transformer to match v2 behaviour
+   *
+   * @author matt-koko <mkokolich@atlassian.com>
+   * @since 2025-10-21
+   */
+  v3JsxConfigurationLoading: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
 
    * When _disabled_, will early exit from the @atlaspack/transformer-tokens transformation
    *
