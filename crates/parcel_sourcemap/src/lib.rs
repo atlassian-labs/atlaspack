@@ -266,18 +266,18 @@ impl SourceMap {
   }
 
   pub fn add_name(&mut self, name: &str) -> u32 {
-    return match self.inner.names.iter().position(|s| name.eq(s)) {
+    match self.inner.names.iter().position(|s| name.eq(s)) {
       Some(i) => i as u32,
       None => {
         self.inner.names.push(String::from(name));
         (self.inner.names.len() - 1) as u32
       }
-    };
+    }
   }
 
   pub fn add_names<I: AsRef<str>>(&mut self, names: Vec<I>) -> Vec<u32> {
     self.inner.names.reserve(names.len());
-    return names.iter().map(|n| self.add_name(n.as_ref())).collect();
+    names.iter().map(|n| self.add_name(n.as_ref())).collect()
   }
 
   pub fn get_name_index(&self, name: &str) -> Option<u32> {
@@ -404,27 +404,24 @@ impl SourceMap {
       if generated_line >= 0 {
         let mut line = mapping_line;
         for mapping in line.mappings.iter_mut() {
-          match &mut mapping.original {
-            Some(original_mapping_location) => {
-              original_mapping_location.source =
-                match source_indexes.get(original_mapping_location.source as usize) {
-                  Some(new_source_index) => *new_source_index,
-                  None => {
-                    return Err(SourceMapError::new(SourceMapErrorType::SourceOutOfRange));
-                  }
-                };
-
-              original_mapping_location.name = match original_mapping_location.name {
-                Some(name_index) => match names_indexes.get(name_index as usize) {
-                  Some(new_name_index) => Some(*new_name_index),
-                  None => {
-                    return Err(SourceMapError::new(SourceMapErrorType::NameOutOfRange));
-                  }
-                },
-                None => None,
+          if let Some(original_mapping_location) = &mut mapping.original {
+            original_mapping_location.source =
+              match source_indexes.get(original_mapping_location.source as usize) {
+                Some(new_source_index) => *new_source_index,
+                None => {
+                  return Err(SourceMapError::new(SourceMapErrorType::SourceOutOfRange));
+                }
               };
-            }
-            None => {}
+
+            original_mapping_location.name = match original_mapping_location.name {
+              Some(name_index) => match names_indexes.get(name_index as usize) {
+                Some(new_name_index) => Some(*new_name_index),
+                None => {
+                  return Err(SourceMapError::new(SourceMapErrorType::NameOutOfRange));
+                }
+              },
+              None => None,
+            };
           }
         }
 
@@ -554,7 +551,7 @@ impl SourceMap {
 
           // Read source, original line, and original column if the
           // mapping has them.
-          let original = if input.peek().cloned().map_or(true, is_mapping_separator) {
+          let original = if input.peek().cloned().is_none_or(is_mapping_separator) {
             None
           } else {
             read_relative_vlq(&mut source, &mut input)?;
@@ -569,7 +566,7 @@ impl SourceMap {
                   return Err(SourceMapError::new(SourceMapErrorType::SourceOutOfRange));
                 }
               },
-              if input.peek().cloned().map_or(true, is_mapping_separator) {
+              if input.peek().cloned().is_none_or(is_mapping_separator) {
                 None
               } else {
                 read_relative_vlq(&mut name, &mut input)?;
