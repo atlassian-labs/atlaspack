@@ -31,7 +31,6 @@ pub fn inline_fs<'a>(
   deps: &'a mut Vec<DependencyDescriptor>,
   is_module: bool,
   conditional_bundling: bool,
-  computed_properties_fix: bool,
   symbols_info: SymbolsInfo,
 ) -> impl VisitMut + 'a + use<'a> {
   InlineFS {
@@ -45,7 +44,6 @@ pub fn inline_fs<'a>(
       false,
       is_module,
       conditional_bundling,
-      computed_properties_fix,
     ),
     project_root,
     deps,

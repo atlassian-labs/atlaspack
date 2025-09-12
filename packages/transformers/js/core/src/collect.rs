@@ -94,7 +94,6 @@ pub struct Collect {
   pub wrapped_requires: HashSet<String>,
   pub bailouts: Option<Vec<Bailout>>,
   pub is_empty_or_empty_export: bool,
-  pub computed_properties_fix: bool,
   pub symbols_info: SymbolsInfo,
   in_module_this: bool,
   in_top_level: bool,
@@ -144,10 +143,6 @@ pub struct CollectResult {
 }
 
 impl Collect {
-  // An extra argument has been added here for the computed_properties_fix, but it bumps the
-  // function up over the arguments limit. Rather than reworking how feature flags work, just
-  // setting this to ignore the lint warning for now.
-  #[allow(clippy::too_many_arguments)]
   pub fn new(
     symbols_info: SymbolsInfo,
     source_map: Lrc<swc_core::common::SourceMap>,
@@ -157,7 +152,6 @@ impl Collect {
     trace_bailouts: bool,
     is_module: bool,
     conditional_bundling: bool,
-    computed_properties_fix: bool,
   ) -> Self {
     Collect {
       source_map,
@@ -188,7 +182,6 @@ impl Collect {
       bailouts: if trace_bailouts { Some(vec![]) } else { None },
       conditional_bundling,
       is_empty_or_empty_export: false,
-      computed_properties_fix,
       symbols_info,
     }
   }
@@ -768,20 +761,10 @@ impl Visit for Collect {
           return;
         }
 
-        if !self.computed_properties_fix && match_property_name(node).is_none() {
-          self
-            .non_static_access
-            .entry(id!(ident))
-            .or_default()
-            .push(node.span);
-
-          return;
-        }
-
         if self.imports.contains_key(&id!(ident)) {
           self.used_imports.insert(id!(ident));
 
-          if self.computed_properties_fix && match_property_name(node).is_none() {
+          if match_property_name(node).is_none() {
             self
               .non_static_access
               .entry(id!(ident))
@@ -1301,7 +1284,6 @@ mod tests {
         true,
         self.context.is_module,
         false,
-        true,
       );
 
       module.visit_with(&mut collect);
