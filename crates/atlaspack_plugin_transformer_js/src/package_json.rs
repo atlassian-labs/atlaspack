@@ -1,12 +1,12 @@
 use nodejs_semver::Range;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Default)]
 pub struct DependencyList {
   pub react: Option<String>,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct PackageJson {
   pub dependencies: Option<DependencyList>,

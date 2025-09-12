@@ -10,9 +10,11 @@ import {
   overlayFS,
   run,
   ncp,
+  fsFixture,
 } from '@atlaspack/test-utils';
 import {symlinkSync} from 'fs';
 import nullthrows from 'nullthrows';
+import {rimraf} from 'rimraf';
 
 const inputDir = path.join(__dirname, '/input');
 
@@ -99,7 +101,7 @@ describe('transpilation', function () {
     assert(file.includes('fileName: "integration/jsx/index.jsx"'));
   });
 
-  describe.v2('supports compiling JSX', () => {
+  describe('supports compiling JSX', () => {
     it('with member expression type', async function () {
       await bundle(path.join(__dirname, '/integration/jsx-member/index.jsx'));
 
@@ -148,7 +150,223 @@ describe('transpilation', function () {
       assert(file.includes('React.createElement("div"'));
     });
 
-    it('in js files with React aliased to Preact', async function () {
+    // JSX Configuration Tests
+    // These integration tests ensure that the JSX parsing and transformation logic for:
+    // - v2 -> packages/transformers/js/src/JSTransformer.ts
+    // - v3 -> crates/atlaspack_plugin_transformer_js/src/js_transformer.rs
+    // are consistent.
+    describe('JSX parsing and transformation', () => {
+      let dir: string = path.join(__dirname, 'jsx-configuration-fixture');
+
+      beforeEach(async function () {
+        await rimraf(dir);
+        await overlayFS.mkdirp(dir);
+      });
+
+      it('transforms JSX in .js files with React dependency and tsconfig', async function () {
+        await fsFixture(overlayFS, dir)`
+          package.json:
+            {
+              "private": true,
+              "dependencies": {
+                "react": "*"
+              }
+            }
+
+          tsconfig.json:
+            {
+              "compilerOptions": {
+                "jsx": "react",
+                "target": "es2015"
+              }
+            }
+
+          index.js:
+            module.exports = <div>"First we bundle, then we ball." - Sun Tzu, The Art of War</div>;
+        `;
+
+        await bundle(path.join(dir, 'index.js'), {
+          inputFS: overlayFS,
+        });
+
+        let file = await outputFS.readFile(
+          path.join(distDir, 'index.js'),
+          'utf8',
+        );
+        // JSX should be transformed
+        assert(!file.includes('<div'), 'JSX should be transformed');
+        // JSX should be transformed with React pragmas
+        assert(file.includes('React.createElement("div"'));
+      });
+
+      it('fails to parse JSX in .js files without React dependency or tsconfig', async function () {
+        await fsFixture(overlayFS, dir)`
+          package.json:
+            {
+              "private": true,
+              "dependencies": {}
+            }
+
+          index.js:
+            module.exports = <div>"First we bundle, then we ball." - Sun Tzu, The Art of War</div>;
+        `;
+
+        await assert.rejects(
+          () =>
+            bundle(path.join(dir, 'index.js'), {
+              inputFS: overlayFS,
+            }),
+          'JSX parsing should fail when no React dependency and no tsconfig',
+        );
+      });
+
+      it('transforms JSX in .js files with React dependency but no tsconfig', async function () {
+        await fsFixture(overlayFS, dir)`
+          package.json:
+            {
+              "private": true,
+              "dependencies": {
+                "react": "*"
+              }
+            }
+
+          index.js:
+            module.exports = <div>"First we bundle, then we ball." - Sun Tzu, The Art of War</div>;
+        `;
+
+        await bundle(path.join(dir, 'index.js'), {
+          inputFS: overlayFS,
+        });
+
+        let file = await outputFS.readFile(
+          path.join(distDir, 'index.js'),
+          'utf8',
+        );
+        // JSX should be transformed
+        assert(!file.includes('<div'), 'JSX should be transformed');
+        // JSX should be transformed with React pragmas
+        assert(file.includes('React.createElement("div"'));
+      });
+
+      it('transforms JSX in .jsx files without React dependency or tsconfig', async function () {
+        await fsFixture(overlayFS, dir)`
+          package.json:
+            {
+              "private": true,
+              "dependencies": {}
+            }
+
+          index.jsx:
+            module.exports = <div>"First we bundle, then we ball." - Sun Tzu, The Art of War</div>;
+        `;
+
+        await bundle(path.join(dir, 'index.jsx'), {
+          inputFS: overlayFS,
+        });
+
+        // Output file is normalized to .js despite input file .jsx extension
+        let file = await outputFS.readFile(
+          path.join(distDir, 'index.js'),
+          'utf8',
+        );
+        // JSX should be transformed (file extension enables JSX)
+        assert(!file.includes('<div'), 'JSX should be transformed');
+        // JSX should be transformed with React pragmas
+        assert(file.includes('React.createElement("div"'));
+      });
+
+      it('transforms JSX in .jsx files with React dependency but no tsconfig', async function () {
+        await fsFixture(overlayFS, dir)`
+          package.json:
+            {
+              "private": true,
+              "dependencies": {
+                "react": "*"
+              }
+            }
+
+          index.jsx:
+            module.exports = <div>"First we bundle, then we ball." - Sun Tzu, The Art of War</div>;
+        `;
+
+        await bundle(path.join(dir, 'index.jsx'), {
+          inputFS: overlayFS,
+        });
+
+        // Output file is normalized to .js despite input file .jsx extension
+        let file = await outputFS.readFile(
+          path.join(distDir, 'index.js'),
+          'utf8',
+        );
+        // JSX should be transformed
+        assert(!file.includes('<div'), 'JSX should be transformed');
+        // JSX should be transformed with React pragmas
+        assert(file.includes('React.createElement("div"'));
+      });
+
+      it('fails to parse JSX in .ts files even with React dependency and tsconfig', async function () {
+        await fsFixture(overlayFS, dir)`
+          package.json:
+            {
+              "private": true,
+              "dependencies": {
+                "react": "*"
+              }
+            }
+
+          tsconfig.json:
+            {
+              "compilerOptions": {
+                "jsx": "react",
+                "target": "es2015"
+              }
+            }
+
+          index.ts:
+            module.exports = <div>"First we bundle, then we ball." - Sun Tzu, The Art of War</div>;
+        `;
+
+        await assert.rejects(
+          () =>
+            bundle(path.join(dir, 'index.ts'), {
+              inputFS: overlayFS,
+            }),
+          'JSX parsing should fail in .ts files even with React dependency and tsconfig',
+        );
+      });
+
+      it('transforms JSX in .tsx files with React dependency but no tsconfig', async function () {
+        await fsFixture(overlayFS, dir)`
+          package.json:
+            {
+              "private": true,
+              "dependencies": {
+                "react": "*"
+              }
+            }
+
+          index.tsx:
+            module.exports = <div>"First we bundle, then we ball." - Sun Tzu, The Art of War</div>;
+        `;
+
+        await bundle(path.join(dir, 'index.tsx'), {
+          inputFS: overlayFS,
+        });
+
+        // Output file is normalized to .js despite input file .tsx extension
+        let file = await outputFS.readFile(
+          path.join(distDir, 'index.js'),
+          'utf8',
+        );
+        // JSX should be transformed
+        assert(!file.includes('<div'), 'JSX should be transformed');
+        // JSX should be transformed with React pragmas
+        assert(file.includes('React.createElement("div"'));
+      });
+    });
+
+    // Non react frameworks are not currently supported in v3.
+    it.v2('in js files with React aliased to Preact', async function () {
       await bundle(
         path.join(__dirname, '/integration/jsx-react-alias/index.js'),
       );
@@ -160,7 +378,8 @@ describe('transpilation', function () {
       assert(file.includes('React.createElement("div"'));
     });
 
-    it('in js files with Preact dependency', async function () {
+    // Non react frameworks are not currently supported in v3.
+    it.v2('in js files with Preact dependency', async function () {
       await bundle(path.join(__dirname, '/integration/jsx-preact/index.js'));
 
       let file = await outputFS.readFile(
@@ -170,7 +389,8 @@ describe('transpilation', function () {
       assert(file.includes('h("div"'));
     });
 
-    it('in ts files with Preact dependency', async function () {
+    // Non react frameworks are not currently supported in v3.
+    it.v2('in ts files with Preact dependency', async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/jsx-preact-ts/index.tsx'),
       );
@@ -178,7 +398,8 @@ describe('transpilation', function () {
       assert(typeof (await run(b)) === 'object');
     });
 
-    it('in js files with Preact url dependency', async function () {
+    // Non react frameworks are not currently supported in v3.
+    it.v2('in js files with Preact url dependency', async function () {
       await bundle(
         path.join(__dirname, '/integration/jsx-preact-with-url/index.js'),
       );
@@ -190,7 +411,8 @@ describe('transpilation', function () {
       assert(file.includes('h("div"'));
     });
 
-    it('in js files with Nerv dependency', async function () {
+    // Non react frameworks are not currently supported in v3.
+    it.v2('in js files with Nerv dependency', async function () {
       await bundle(path.join(__dirname, '/integration/jsx-nervjs/index.js'));
 
       let file = await outputFS.readFile(
@@ -200,7 +422,8 @@ describe('transpilation', function () {
       assert(file.includes('Nerv.createElement("div"'));
     });
 
-    it('in js files with Hyperapp dependency', async function () {
+    // Non react frameworks are not currently supported in v3.
+    it.v2('in js files with Hyperapp dependency', async function () {
       await bundle(path.join(__dirname, '/integration/jsx-hyperapp/index.js'));
 
       let file = await outputFS.readFile(

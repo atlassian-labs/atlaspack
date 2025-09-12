@@ -43,4 +43,14 @@ impl FeatureFlags {
     flags.insert(key.into(), FeatureFlagValue::Bool(value));
     FeatureFlags(flags)
   }
+
+  /// Set a boolean flag only if it doesn't already exist (useful for defaults).
+  /// This is also primarily intended for testing
+  pub fn with_bool_flag_default(mut self, key: impl Into<String>, default_value: bool) -> Self {
+    self
+      .0
+      .entry(key.into())
+      .or_insert(FeatureFlagValue::Bool(default_value));
+    self
+  }
 }
