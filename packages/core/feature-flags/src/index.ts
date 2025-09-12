@@ -17,21 +17,29 @@ export const DEFAULT_FEATURE_FLAGS = {
 
   /**
    * Rust backed requests
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
    */
   atlaspackV3: false,
 
   /**
    * Use node.js implementation of @parcel/watcher watchman backend
+   *
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   useWatchmanWatcher: false,
 
   /**
    * Configure runtime to enable retriable dynamic imports
+   *
+   * @author David Alsh <dalsh@atlassian.com>
    */
   importRetry: false,
 
   /**
    * Fixes quadratic cache invalidation issue
+   *
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   fixQuadraticCacheInvalidation: 'OLD' as ConsistencyCheckFeatureFlagValue,
 
@@ -39,6 +47,8 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enables an experimental "conditional bundling" API - this allows the use of `importCond` syntax
    * in order to have (consumer) feature flag driven bundling. This feature is very experimental,
    * and requires server-side support.
+   *
+   * @author Jake Lane <jlane2@atlassian.com>
    */
   conditionalBundlingApi: false,
 
@@ -47,6 +57,8 @@ export const DEFAULT_FEATURE_FLAGS = {
    * - OLD - default value, return watchman result
    * - NEW_AND_CHECK - Return VCS result but still call watchman
    * - NEW: Return VCS result, but don't call watchman
+   *
+   * @author Celeste Carloni <ccarloni@atlassian.com>
    */
   vcsMode: 'OLD' as ConsistencyCheckFeatureFlagValue,
 
@@ -55,60 +67,82 @@ export const DEFAULT_FEATURE_FLAGS = {
    * - Split writes into multiple entries
    * - Remove "large file blob" writes
    * - Reduce size of the caches by deduplicating data
+   *
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   cachePerformanceImprovements: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Deduplicates environments across cache / memory entities
+   *
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   environmentDeduplication: false,
 
   /**
    * Enable scanning for the presence of loadable to determine side effects
+   *
+   * @author Ben Jervis <bjervis@atlassian.com>
    */
   loadableSideEffects: false,
 
   /**
    * Enable performance optimization for the resolver specifier to_string
    * conversions
+   *
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   reduceResolverStringCreation: false,
 
   /**
    * Add verbose metrics for request tracker invalidation.
    * Default to true as it's a monitoring change. Can be turned off if necessary.
+   *
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   verboseRequestInvalidationStats: true,
 
   /**
    * Fixes source maps for inline bundles
+   *
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   inlineBundlesSourceMapFixes: false,
 
   /** Enable patch project paths. This will patch the project paths to be relative to the project root.
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
+   *
+   * @author Celeste Carloni <ccarloni@atlassian.com>
    */
   patchProjectPaths: false,
 
   /**
    * Enables optimized inline string replacement perf for the packager.
    * Used heavily for inline bundles.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
    */
   inlineStringReplacementPerf: false,
 
   /**
    * Enable resolution of bundler config starting from the CWD
+   *
+   * @author Ben Jervis <bjervis@atlassian.com>
    */
   resolveBundlerConfigFromCwd: false,
 
   /**
    * Enable a setting that allows for more assets to be scope hoisted, if
    * they're safe to do so.
+   *
+   * @author Ben Jervis <bjervis@atlassian.com>
    */
   applyScopeHoistingImprovement: false,
 
   /**
    * Enable a change where a constant module only have the namespacing object added in bundles where it is required
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
    */
   inlineConstOptimisationFix: false,
 
@@ -116,6 +150,8 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Improves/fixes HMR behaviour by:
    * - Fixing HMR behaviour with lazy bundle edges
    * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
    */
   hmrImprovements: false,
 
@@ -123,23 +159,32 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Fixes a bug where imported objects that are accessed with non-static
    * properties (e.g. `CONSTANTS['api_' + endpoint`]) would not be recognised as
    * being used, and thus not included in the bundle.
+   *
+   *
+   * @author Ben Jervis <bjervis@atlassian.com>
    */
   unusedComputedPropertyFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries)
    * could cause exports to undefined at runtime.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
    */
   emptyFileStarRexportFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Enables the new packaging progress CLI experience
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
    */
   cliProgressReportingImprovements: false,
 
   /**
    * Adds support for `webpackChunkName` comments in dynamic imports.
    * Imports with the same `webpackChunkName` will be bundled together.
+   *
+   * @author Ben Jervis <bjervis@atlassian.com>
    */
   supportWebpackChunkName: process.env.ATLASPACK_BUILD_ENV === 'test',
 
@@ -147,35 +192,51 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enable a change to the conditional bundling loader to use a fallback bundle loading if the expected scripts aren't found
    *
    * Split into two flags, to allow usage in the dev or prod packagers separately
+   *
+   * @author Jake Lane <jlane2@atlassian.com>
    */
   condbDevFallbackDev: false,
+  /**
+   *
+   * @author Jake Lane <jlane2@atlassian.com>
+   */
   condbDevFallbackProd: false,
 
   /**
    * Enable the new incremental bundling versioning logic which determines whether
    * a full bundling pass is required based on the AssetGraph's bundlingVersion.
+   *
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
    */
   incrementalBundlingVersioning: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Remove redundant shared bundles that are no longer required after merging
    * async bundles.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
    */
   removeRedundantSharedBundles: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * When enabled, single file output bundles have a stable name
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
    */
   singleFileOutputStableName: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Enable optimised prelude for the ScopeHoistingPackager.
+   *
+   * @author Jake Lane <jlane2@atlassian.com>
    */
   useNewPrelude: false,
 
   /**
    * Enable a fix for applyScopeHoistingImprovement that allows assets to still
    * be at the top level of the bundle.
+   *
+   * @author Ben Jervis <bjervis@atlassian.com>
    */
   applyScopeHoistingImprovementV2: false,
 
@@ -183,20 +244,28 @@ export const DEFAULT_FEATURE_FLAGS = {
    * When enabled, if both explicit entries and explicit targets are specified,
    * the source properties of those targets are used as filters against the base entries.
    * This allows building only specific entries for specific targets.
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
    */
   allowExplicitTargetEntries: process.env.ATLASPACK_BUILD_ENV === 'test',
   /**
    * When enabled, the packager will avoid using the binding helper for exports where possible.
+   *
+   * @author Jake Lane <jlane2@atlassian.com>
    */
   exportsRebindingOptimisation: false,
 
   /**
    * When enabled, allows custom per-target "env" properties to be used in transformers.
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
    */
   customEnvInTargets: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * When enabled, ensures the `unstableSingleFileOutput` environment property is preserved during CSS transformation
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
    */
   preserveUnstableSingleFileOutputInCss:
     process.env.ATLASPACK_BUILD_ENV === 'test',
