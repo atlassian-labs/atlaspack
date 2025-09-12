@@ -1,4 +1,33 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../dev/babel-register/tsconfig.json"
+    },
+    {
+      "path": "../codeframe/tsconfig.json"
+    },
+    {
+      "path": "../diagnostic/tsconfig.json"
+    },
+    {
+      "path": "../feature-flags/tsconfig.json"
+    },
+    {
+      "path": "../logger/tsconfig.json"
+    },
+    {
+      "path": "../markdown-ansi/tsconfig.json"
+    },
+    {
+      "path": "../rust/tsconfig.json"
+    },
+    {
+      "path": "../types-internal/tsconfig.json"
+    }
+  ]
 }

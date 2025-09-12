@@ -329,11 +329,13 @@ export function saveState(state: State) {
 
   let dataStr = JSON.stringify(data);
   if (dataStr.length < 1_000_000) {
+    // @ts-expect-error TS2304
     window.location.hash = btoa(encodeURIComponent(dataStr));
   }
 }
 
 export function loadState(): State | null | undefined {
+  // @ts-expect-error TS2304
   const hash = window.location.hash.replace(/^#/, '');
 
   try {
@@ -355,6 +357,7 @@ export function loadState(): State | null | undefined {
       browserCollapsed: new Set(data.browserCollapsed),
     };
   } catch (e: any) {
+    // @ts-expect-error TS2304
     window.location.hash = '';
     return null;
   }

@@ -1,4 +1,15 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../atlaspack-lsp-protocol/tsconfig.json"
+    },
+    {
+      "path": "../atlaspack-lsp/tsconfig.json"
+    }
+  ]
 }

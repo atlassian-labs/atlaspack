@@ -30,7 +30,6 @@
     "sorted-array-functions": "^1.0.0"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

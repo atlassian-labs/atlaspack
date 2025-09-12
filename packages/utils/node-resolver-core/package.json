@@ -17,7 +17,6 @@
   },
   "scripts": {
     "test": "mocha test",
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "files": [

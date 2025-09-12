@@ -140,6 +140,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
   constructor(opts?: AssetGraphOpts | null) {
     if (opts) {
       let {hash, bundlingVersion, disableIncrementalBundling, ...rest} = opts;
+      // @ts-expect-error TS2345
       super(rest);
       this.hash = hash;
       this.#bundlingVersion = bundlingVersion ?? 0;

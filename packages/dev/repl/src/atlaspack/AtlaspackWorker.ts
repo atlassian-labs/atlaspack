@@ -76,6 +76,7 @@ function resetSWPromise() {
   } = makeDeferredWithPromise());
 }
 
+// @ts-expect-error TS2749
 let sw: MessagePort;
 // @ts-expect-error TS7017
 global.ATLASPACK_SERVICE_WORKER = async (type: any, data: any) => {
@@ -509,6 +510,7 @@ function uuidv4() {
 }
 
 function sendMsg(
+  // @ts-expect-error TS2749
   target: MessagePort,
   type: any,
   data: any,

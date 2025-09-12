@@ -19,7 +19,6 @@
     "test": "mocha",
     "test-ci": "mocha",
     "generate-ts": "tsc --emitDeclarationOnly",
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {

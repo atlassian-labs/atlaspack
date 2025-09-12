@@ -1,4 +1,15 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../core/plugin/tsconfig.json"
+    },
+    {
+      "path": "../../utils/node-resolver-core/tsconfig.json"
+    }
+  ]
 }
