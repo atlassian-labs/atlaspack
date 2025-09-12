@@ -1,8 +1,5 @@
 {
   "files": [],
-  "compilerOptions": {
-    "emitDeclarationOnly": true
-  },
   "references": [
     {
       "path": "./packages/bundlers/default/tsconfig.json"

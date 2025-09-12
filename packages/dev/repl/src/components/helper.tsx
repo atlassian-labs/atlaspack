@@ -231,8 +231,9 @@ export function PresetSelector({dispatch}: any): any {
     async (preset) => {
       if (preset === 'Three.js Benchmark') {
         try {
-          let data = await // @ts-expect-error TS1470
-          (
+          // prettier-ignore
+          let data = await (
+            // @ts-expect-error TS1470
             await fetch(new URL('../assets/three.zip', import.meta.url))
           ).arrayBuffer();
           let files: FSMap = await extractZIP(data);
