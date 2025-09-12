@@ -83,7 +83,7 @@ function getAllPackages() {
 /**
  * Build dependency graph and update tsconfig references
  */
-function updateTsConfigReferences(packages) {
+function updateTsConfigReferences(packages, frozen) {
   let totalUpdates = 0;
 
   for (const [packageName, packageInfo] of packages) {
@@ -130,13 +130,18 @@ function updateTsConfigReferences(packages) {
     if (referencesChanged) {
       currentTsconfig.references = newReferences;
 
-      const tsconfigPath = path.join(packageInfo.path, 'tsconfig.json');
-      fs.writeFileSync(
-        tsconfigPath,
-        JSON.stringify(currentTsconfig, null, 2) + '\n',
-      );
+      if (frozen) {
+        console.log(`Skipping ${packageName}:`);
+      } else {
+        const tsconfigPath = path.join(packageInfo.path, 'tsconfig.json');
+        fs.writeFileSync(
+          tsconfigPath,
+          JSON.stringify(currentTsconfig, null, 2) + '\n',
+        );
 
-      console.log(`Updated ${packageName}:`);
+        console.log(`Updated ${packageName}:`);
+      }
+
       console.log(
         `  References: ${newReferences.map((r) => r.path).join(', ') || 'none'}`,
       );
@@ -151,7 +156,7 @@ function updateTsConfigReferences(packages) {
 /**
  * Update the root tsconfig.paths.json with all composite projects
  */
-function updateRootReferences(packages) {
+function updateRootReferences(packages, frozen) {
   const rootTsconfigPath = path.join(__root, 'tsconfig.paths.json');
 
   let rootTsconfig = {};
@@ -190,13 +195,21 @@ function updateRootReferences(packages) {
 
   if (referencesChanged) {
     rootTsconfig.references = allReferences;
-    fs.writeFileSync(
-      rootTsconfigPath,
-      JSON.stringify(rootTsconfig, null, 2) + '\n',
-    );
-    console.log(
-      `\nUpdated root tsconfig.paths.json with ${allReferences.length} references`,
-    );
+
+    if (frozen) {
+      console.log(
+        `\nSkipping updating tsconfig.paths.json with ${allReferences.length} references`,
+      );
+    } else {
+      fs.writeFileSync(
+        rootTsconfigPath,
+        JSON.stringify(rootTsconfig, null, 2) + '\n',
+      );
+      console.log(
+        `\nUpdated tsconfig.paths.json with ${allReferences.length} references`,
+      );
+    }
+
     return true;
   }
 
@@ -204,6 +217,8 @@ function updateRootReferences(packages) {
 }
 
 function main() {
+  const frozen = process.argv.includes('--frozen');
+
   console.log('🔍 Scanning for TypeScript packages...');
 
   const packages = getAllPackages();
@@ -212,10 +227,10 @@ function main() {
   );
 
   console.log('\n📝 Updating individual package references...');
-  const packageUpdates = updateTsConfigReferences(packages);
+  const packageUpdates = updateTsConfigReferences(packages, frozen);
 
   console.log('\n📝 Updating references in tsconfig.paths.json...');
-  const rootUpdated = updateRootReferences(packages);
+  const rootUpdated = updateRootReferences(packages, frozen);
 
   console.log('\n✅ Done!');
   console.log(
@@ -224,6 +239,11 @@ function main() {
   console.log(
     `  - tsconfig.paths.json ${rootUpdated ? 'updated' : 'unchanged'}`,
   );
+
+  if (frozen && (packageUpdates > 0 || rootUpdated)) {
+    console.log('\n❌ Exiting with error as frozen');
+    process.exitCode = 1;
+  }
 }
 
 main();

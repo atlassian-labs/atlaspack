@@ -17339,7 +17339,7 @@ type-check@~0.3.2:
   dependencies:
     prelude-ls "~1.1.2"
 
-type-coverage-core@^2.29.7:
+type-coverage-core@^2.2.0, type-coverage-core@^2.29.7:
   version "2.29.7"
   resolved "https://registry.yarnpkg.com/type-coverage-core/-/type-coverage-core-2.29.7.tgz#dbc50f88e7eaf4fab6ca6fbf1811a3612cfdf451"
   integrity sha512-bt+bnXekw3p5NnqiZpNupOOxfUKGw2Z/YJedfGHkxpeyGLK7DZ59a6Wds8eq1oKjJc5Wulp2xL207z8FjFO14Q==
@@ -17426,6 +17426,14 @@ type@^2.7.2:
   version "2.7.3"
   resolved "https://registry.yarnpkg.com/type/-/type-2.7.3.tgz#436981652129285cc3ba94f392886c2637ea0486"
   integrity sha512-8j+1QmAbPvLZow5Qpi6NCaN8FB60p/6x8/vfNqOk/hC+HuvFZhL4+WfekuhQLiqFZXOgQdrs3B+XxEmCc6b3FQ==
+
+typecov@^0.2.3:
+  version "0.2.3"
+  resolved "https://registry.yarnpkg.com/typecov/-/typecov-0.2.3.tgz#350daa72bbed73ae8c95c64253206a7191cd9b7e"
+  integrity sha512-BE+nnnDoXSyieH09CmNzwU+tu9TNf+RUB4OsM3hC7TxrW1WI0vUOex3bm2rcf4L07qkP5/CokcWidWEFD3PNUA==
+  dependencies:
+    lodash "^4.17.11"
+    type-coverage-core "^2.2.0"
 
 typed-array-buffer@^1.0.0:
   version "1.0.0"
