@@ -17,11 +17,12 @@ use std::borrow::Cow;
 use std::io;
 
 use rkyv::{
-  AlignedVec, Archive, Deserialize, Infallible, Serialize, archived_root,
+  archived_root,
   ser::{
-    Serializer,
     serializers::{AlignedSerializer, AllocScratch, CompositeSerializer},
+    Serializer,
   },
+  AlignedVec, Archive, Deserialize, Infallible, Serialize,
 };
 
 use vlq_utils::{is_mapping_separator, read_relative_vlq};
