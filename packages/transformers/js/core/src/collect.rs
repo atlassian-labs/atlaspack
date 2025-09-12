@@ -143,6 +143,7 @@ pub struct CollectResult {
 }
 
 impl Collect {
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     symbols_info: SymbolsInfo,
     source_map: Lrc<swc_core::common::SourceMap>,

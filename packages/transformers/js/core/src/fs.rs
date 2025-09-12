@@ -441,7 +441,6 @@ mod tests {
         &mut deps,
         true,
         false,
-        true,
         SymbolsInfo::default(),
       )
     });

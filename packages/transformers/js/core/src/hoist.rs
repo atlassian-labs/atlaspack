@@ -2758,7 +2758,6 @@ mod tests {
         true,
         context.is_module,
         false,
-        true,
       )
     });
 
