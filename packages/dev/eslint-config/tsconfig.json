@@ -4,9 +4,5 @@
   "compilerOptions": {
     "composite": true
   },
-  "references": [
-    {
-      "path": "../eslint-plugin-internal/tsconfig.json"
-    }
-  ]
+  "references": []
 }

@@ -32,6 +32,7 @@ function FileBrowserEntry({
     <li
       draggable="true"
       onDragStart={(e) => {
+        // @ts-expect-error TS2339
         e.dataTransfer.setData('application/x-parcel-repl-file', p);
         e.stopPropagation();
       }}
@@ -88,6 +89,7 @@ function FileBrowserEntry({
                 dispatch({
                   type: 'file.isEntry',
                   name: p,
+                  // @ts-expect-error TS2339
                   value: e.target.checked,
                 });
                 e.stopPropagation();

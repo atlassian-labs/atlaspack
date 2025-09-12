@@ -1,7 +1,7 @@
 {
   "files": [],
   "compilerOptions": {
-    "outDir": "./dist/types"
+    "emitDeclarationOnly": true
   },
   "references": [
     {
@@ -102,9 +102,6 @@
     },
     {
       "path": "./packages/dev/eslint-config/tsconfig.json"
-    },
-    {
-      "path": "./packages/dev/eslint-plugin-internal/tsconfig.json"
     },
     {
       "path": "./packages/dev/esm-fuzzer/tsconfig.json"

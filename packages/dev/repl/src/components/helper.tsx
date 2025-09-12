@@ -94,8 +94,8 @@ export const Graphs: any = memo(function Graphs({graphs}) {
             <button
               key={i}
               onClick={() => {
+                // @ts-expect-error TS2304
                 var win = window.open();
-                // @ts-expect-error TS18047
                 win.document.write(content);
                 // win.document.write(
                 //   '<iframe src="' +
@@ -183,9 +183,11 @@ export function EditableField({value, editing, onChange}: any): any {
         onChange(v);
       };
 
+      // @ts-expect-error TS2304
       window.addEventListener('click', handler);
 
       return () => {
+        // @ts-expect-error TS2304
         window.removeEventListener('click', handler);
       };
     }
@@ -272,6 +274,7 @@ export function PresetSelector({dispatch}: any): any {
        // @ts-expect-error TS17004 */}
       <select
         onChange={(e) => {
+          // @ts-expect-error TS2339
           onChange(e.target.value);
         }}
         value={''}
@@ -314,6 +317,7 @@ export function useSessionStorage(
 ): [any, () => void] {
   const [storedValue, setStoredValue] = useState(() => {
     try {
+      // @ts-expect-error TS2304
       const item = window.sessionStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch (error: any) {
@@ -328,6 +332,7 @@ export function useSessionStorage(
         // @ts-expect-error TS2358
         value instanceof Function ? value(storedValue) : value;
       setStoredValue(valueToStore);
+      // @ts-expect-error TS2304
       window.sessionStorage.setItem(key, JSON.stringify(valueToStore));
     } catch (error: any) {
       console.log(error);
@@ -366,8 +371,10 @@ export function usePromise<T>(
 }
 
 const addBodyClass = (className: string) =>
+  // @ts-expect-error TS2584
   document.body.classList.add(className);
 const removeBodyClass = (className: string) =>
+  // @ts-expect-error TS2584
   document.body.classList.remove(className);
 export function useBodyClass(className: string) {
   useEffect(() => {
@@ -392,8 +399,10 @@ export function useKeyboard(
     [cb, ...deps],
   );
   useEffect(() => {
+    // @ts-expect-error TS2584
     document.addEventListener('keydown', keydownCb);
     return () => {
+      // @ts-expect-error TS2584
       document.removeEventListener('keydown', keydownCb);
     };
   }, [keydownCb]);
