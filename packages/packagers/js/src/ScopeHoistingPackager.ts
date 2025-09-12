@@ -15,7 +15,7 @@ import {
   normalizeSeparators,
   debugTools,
 } from '@atlaspack/utils';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import nullthrows from 'nullthrows';
 import invariant, {AssertionError} from 'assert';
 import ThrowableDiagnostic, {
@@ -687,7 +687,6 @@ export class ScopeHoistingPackager {
           let [code, map, lines] = this.visitAsset(resolved);
           depCode += code + '\n';
           if (sourceMap && map) {
-            // @ts-expect-error TS2551
             sourceMap.addSourceMap(map, lineCount);
           }
           lineCount += lines + 1;
@@ -844,7 +843,6 @@ export class ScopeHoistingPackager {
                   }
 
                   if (map) {
-                    // @ts-expect-error TS2551
                     sourceMap.addSourceMap(map, lineCount);
                   }
                 }
@@ -901,7 +899,6 @@ ${code}
         if (!depCode) continue;
         code += depCode + '\n';
         if (sourceMap && map) {
-          // @ts-expect-error TS2551
           sourceMap.addSourceMap(map, lineCount);
         }
         lineCount += lines + 1;
