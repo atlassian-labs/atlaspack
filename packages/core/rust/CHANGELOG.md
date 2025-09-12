@@ -1,5 +1,13 @@
 # @atlaspack/rust
 
+## 3.8.2
+
+### Patch Changes
+
+- [#790](https://github.com/atlassian-labs/atlaspack/pull/790) [`0207171`](https://github.com/atlassian-labs/atlaspack/commit/0207171e59e985c51e105aec2e0a99de174374bd) Thanks [@benjervis](https://github.com/benjervis)! - Clean up the `unusedComputedPropertyFix` feature flag
+
+- [#786](https://github.com/atlassian-labs/atlaspack/pull/786) [`bbe4e28`](https://github.com/atlassian-labs/atlaspack/commit/bbe4e28c89e5e9284bd730075d4d6f2a3cb37b21) Thanks [@benjervis](https://github.com/benjervis)! - Add `hmr_options` to the native transformer to prevent applying react refresh when it's not in use.
+
 ## 3.8.1
 
 ### Patch Changes
