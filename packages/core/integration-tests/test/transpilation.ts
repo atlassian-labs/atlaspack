@@ -159,6 +159,7 @@ describe('transpilation', function () {
       let dir: string = path.join(__dirname, 'jsx-configuration-fixture');
 
       beforeEach(async function () {
+        await rimraf(dir);
         await overlayFS.mkdirp(dir);
       });
 
