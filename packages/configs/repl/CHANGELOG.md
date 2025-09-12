@@ -1,5 +1,36 @@
 # @atlaspack/config-repl
 
+## 2.13.37
+
+### Patch Changes
+
+- Updated dependencies [[`0207171`](https://github.com/atlassian-labs/atlaspack/commit/0207171e59e985c51e105aec2e0a99de174374bd), [`bbe4e28`](https://github.com/atlassian-labs/atlaspack/commit/bbe4e28c89e5e9284bd730075d4d6f2a3cb37b21)]:
+  - @atlaspack/transformer-js@5.0.2
+  - @atlaspack/bundler-default@3.4.4
+  - @atlaspack/packager-html@2.15.14
+  - @atlaspack/packager-js@2.23.2
+  - @atlaspack/runtime-js@2.18.8
+  - @atlaspack/runtime-react-refresh@2.15.8
+  - @atlaspack/transformer-css@2.14.32
+  - @atlaspack/transformer-html@2.15.9
+  - @atlaspack/transformer-react-refresh-wrap@2.15.8
+  - @atlaspack/transformer-postcss@2.14.32
+  - @atlaspack/packager-css@2.14.32
+  - @atlaspack/optimizer-terser@2.14.32
+  - @atlaspack/reporter-dev-server-sw@2.14.32
+  - @atlaspack/reporter-json@2.14.32
+  - @atlaspack/runtime-browser-hmr@2.14.32
+  - @atlaspack/transformer-babel@2.14.32
+  - @atlaspack/transformer-posthtml@2.14.32
+  - @atlaspack/resolver-default@2.14.32
+  - @atlaspack/compressor-raw@2.13.34
+  - @atlaspack/namer-default@2.14.32
+  - @atlaspack/packager-raw@2.14.32
+  - @atlaspack/resolver-repl-runtimes@2.14.32
+  - @atlaspack/transformer-inline-string@2.14.32
+  - @atlaspack/transformer-json@2.14.32
+  - @atlaspack/transformer-raw@2.14.32
+
 ## 2.13.36
 
 ### Patch Changes
