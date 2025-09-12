@@ -21,9 +21,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Fetch full history to enable comparison with base branch
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
+
+      - name: Fetch base branch
+        run: |
+          git fetch origin ${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
