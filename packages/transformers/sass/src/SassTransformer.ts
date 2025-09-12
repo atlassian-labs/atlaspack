@@ -1,7 +1,7 @@
 import {Transformer} from '@atlaspack/plugin';
 import path from 'path';
 import {EOL} from 'os';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 // @ts-expect-error TS7016
 import sass from 'sass';
 import {promisify} from 'util';

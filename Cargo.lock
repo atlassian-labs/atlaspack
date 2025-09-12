@@ -374,6 +374,7 @@ dependencies = [
  "getrandom 0.2.15",
  "glob",
  "indexmap",
+ "jemallocator",
  "libc",
  "lmdb-js-lite",
  "log",
@@ -386,9 +387,10 @@ dependencies = [
  "num_cpus",
  "once_cell",
  "oxipng",
- "parcel_sourcemap_node",
+ "parcel_sourcemap 2.1.1",
  "parking_lot",
  "rayon",
+ "rkyv 0.7.45",
  "serde",
  "serde_json",
  "swc_core",
@@ -3636,20 +3638,6 @@ dependencies = [
  "serde",
  "serde_json",
  "vlq",
-]
-
-[[package]]
-name = "parcel_sourcemap_node"
-version = "2.1.1"
-dependencies = [
- "jemallocator",
- "napi",
- "napi-build",
- "napi-derive",
- "parcel_sourcemap 2.1.1",
- "rkyv 0.7.45",
- "serde",
- "serde_json",
 ]
 
 [[package]]
