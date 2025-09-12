@@ -85,3 +85,5 @@ export default class NodeSourceMap extends SourceMap {
 }
 
 export const init: Promise<void> = Promise.resolve();
+
+export type {SourceMap};

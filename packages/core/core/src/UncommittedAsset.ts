@@ -11,7 +11,7 @@ import type {Asset, Dependency, AtlaspackOptions, Invalidations} from './types';
 
 import invariant from 'assert';
 import {Readable} from 'stream';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {serializeRaw} from '@atlaspack/build-cache';
 import {
   blobToStream,

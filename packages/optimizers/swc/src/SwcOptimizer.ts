@@ -2,7 +2,7 @@ import nullthrows from 'nullthrows';
 import {transform} from '@swc/core';
 import {Optimizer} from '@atlaspack/plugin';
 import {blobToString, stripAnsi} from '@atlaspack/utils';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import ThrowableDiagnostic, {escapeMarkdown} from '@atlaspack/diagnostic';
 import path from 'path';
 
@@ -114,7 +114,6 @@ export default new Optimizer({
       sourceMap = new SourceMap(options.projectRoot);
       sourceMap.addVLQMap(JSON.parse(resultMap));
       if (originalMap) {
-        // @ts-expect-error TS2345
         sourceMap.extends(originalMap);
       }
       let sourcemapReference = await getSourceMapReference(sourceMap);

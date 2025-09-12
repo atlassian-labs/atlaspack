@@ -8,7 +8,7 @@ import type {
 } from '@atlaspack/types';
 import type {SchemaEntity} from '@atlaspack/utils';
 import type {Diagnostic} from '@atlaspack/diagnostic';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {Transformer} from '@atlaspack/plugin';
 import {transform, transformAsync} from '@atlaspack/rust';
 import invariant from 'assert';
@@ -582,7 +582,6 @@ export default new Transformer({
 
                       map.addIndexedMappings(mappings);
                       if (originalMap) {
-                        // @ts-expect-error TS2345
                         map.extends(originalMap);
                       } else {
                         map.setSourceContent(asset.filePath, code.toString());
@@ -1173,7 +1172,6 @@ export default new Transformer({
       let sourceMap = new SourceMap(options.projectRoot);
       sourceMap.addVLQMap(JSON.parse(map));
       if (originalMap) {
-        // @ts-expect-error TS2345
         sourceMap.extends(originalMap);
       }
       asset.setMap(sourceMap);
