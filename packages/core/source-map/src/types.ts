@@ -1,4 +1,3 @@
-// @flow
 export interface MappingPosition {
   line: number;
   column: number;
