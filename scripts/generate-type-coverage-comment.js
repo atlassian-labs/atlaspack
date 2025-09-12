@@ -261,5 +261,3 @@ function formatTypeCoverageComment(currentData, baselineData) {
 }
 
 module.exports = {generateTypeCoverageComment};
-
-console.log(generateTypeCoverageComment());
