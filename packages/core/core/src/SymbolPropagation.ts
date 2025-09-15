@@ -61,15 +61,11 @@ export function propagateSymbols({
       changedAssets,
       assetGroupsWithRemovedParents,
       (assetNode, incomingDeps, outgoingDeps) => {
-        if (getFeatureFlag('emptyFileStarRexportFix')) {
-          if (
-            assetNode.value.meta.emptyFileStarReexport &&
-            incomingDeps.every(
-              (d) => d.value.specifierType === SpecifierType.esm,
-            )
-          ) {
-            assetNode.value.symbols?.delete('*');
-          }
+        if (
+          assetNode.value.meta.emptyFileStarReexport &&
+          incomingDeps.every((d) => d.value.specifierType === SpecifierType.esm)
+        ) {
+          assetNode.value.symbols?.delete('*');
         }
 
         // exportSymbol -> identifier
