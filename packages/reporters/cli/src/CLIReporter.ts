@@ -122,8 +122,9 @@ export async function _report(
         getFeatureFlag('cliProgressReportingImprovements') &&
         (event.phase === 'packaging' || event.phase === 'optimizing')
       ) {
-        // If the flag is turned on, then the output is handled
-        // getProgressMessage
+        // If the flag is turned on, we ignore the old `packaging` and
+        // `optimizing` event types, and only consider `packagingAndOptimizing`
+        // events
         break;
       }
 
