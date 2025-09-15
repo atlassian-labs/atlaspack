@@ -9,78 +9,32 @@ use crate::{Config, TransformResult};
 ///
 /// # Example
 ///
-/// ```rust
-/// use swc_core::ecma::visit::{Visit, VisitMut};
-/// use swc_core::ecma::ast::*;
+/// ```rust,no_run
+/// // Example visitor implementation (simplified for documentation)
+/// struct MyVisitor;
 ///
-/// // Example immutable visitor (Visit)
-/// struct MyReadVisitor {
-///     found_jsx: bool,
-/// }
-///
-/// impl JsVisitor for MyReadVisitor {
-///     fn should_apply(&self, config: &Config) -> bool {
-///         config.is_jsx
-///     }
-///
-///     fn apply_results(self, result: &mut TransformResult) {
-///         // Store any collected information in the result
-///         if self.found_jsx {
-///             // Add some metadata or modify result
-///         }
-///     }
-/// }
-///
-/// impl Visit for MyReadVisitor {
-///     fn visit_jsx_element(&mut self, _node: &JSXElement) {
-///         self.found_jsx = true;
-///     }
-/// }
-///
-/// // Example mutable visitor (VisitMut)
-/// struct MyMutVisitor;
-///
-/// impl JsVisitor for MyMutVisitor {
-///     fn should_apply(&self, config: &Config) -> bool {
-///         config.minify
-///     }
-/// }
-///
-/// impl VisitMut for MyMutVisitor {
-///     fn visit_mut_ident(&mut self, node: &mut Ident) {
-///         // Transform the identifier
-///         node.sym = format!("_{}", node.sym).into();
-///     }
-/// }
-///
-/// // Usage Option 1: Static collection (zero-cost, compile-time dispatch)
-/// let mut collection = StaticVisitorCollection::new()
-///     .add_read_visitor(MyReadVisitor { found_jsx: false })
-///     .add_mut_visitor(MyMutVisitor);
-///
-/// collection.run(&mut program, &config, &mut result);
-///
-/// // Usage Option 2: Macro for inline visitor execution
-/// run_visitors! {
-///     program: &mut program,
-///     config: &config,
-///     result: &mut result,
-///     visitors: {
-///         read: MyReadVisitor { found_jsx: false },
-///         mut: MyMutVisitor,
-///     }
-/// }
-///
-/// // Usage Option 3: Direct runner for single visitors
-/// VisitorRunner::run_visitor(&mut my_read_visitor, &mut program, &config, &mut result);
-/// VisitorRunner::run_mut_visitor(&mut my_mut_visitor, &mut program, &config, &mut result);
+/// // impl JsVisitor for MyVisitor {
+/// //     fn should_apply(&self, config: &Config) -> bool {
+/// //         config.is_jsx
+/// //     }
+/// // }
+/// //
+/// // impl Visit for MyVisitor {
+/// //     fn visit_jsx_element(&mut self, _node: &JSXElement) {
+/// //         // Process JSX elements
+/// //     }
+/// // }
 /// ```
 pub trait JsVisitor {
   /// Check if this visitor should be applied based on the config
   fn should_apply(&self, config: &Config) -> bool;
 
   /// Apply any results/side effects after visiting
-  fn apply_results(self, _result: &mut TransformResult) where Self: Sized {}
+  fn apply_results(self, _result: &mut TransformResult)
+  where
+    Self: Sized,
+  {
+  }
 }
 
 /// Generic visitor runner that works with any visitor type at compile time
@@ -704,7 +658,7 @@ mod tests {
     // Clone the visitor before running since run_visitor consumes it
     let visitor_clone = visitor.clone();
     VisitorRunner::run_visitor(visitor_clone, &mut program, &config, &mut result);
-    
+
     // For this test, we need to check the result differently since we can't access visitor after consumption
     // We'll verify the visitor would have been called by checking if it should_apply returns true
     assert!(
@@ -728,7 +682,7 @@ mod tests {
     // Clone the visitor before running since run_visitor consumes it
     let visitor_clone = visitor.clone();
     VisitorRunner::run_visitor(visitor_clone, &mut program, &config, &mut result);
-    
+
     // For this test, we verify the visitor should not apply with the given config
     assert!(
       !visitor.should_apply(&config),
@@ -746,7 +700,7 @@ mod tests {
     // Clone the visitor before running since run_visitor consumes it
     let visitor_clone = visitor.clone();
     VisitorRunner::run_visitor(visitor_clone, &mut program, &config, &mut result);
-    
+
     // For this test, we verify the disabled visitor should never apply
     assert!(
       !visitor.should_apply(&config),

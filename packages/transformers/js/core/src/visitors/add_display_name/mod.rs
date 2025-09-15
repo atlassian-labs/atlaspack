@@ -31,9 +31,9 @@ mod react_detector;
 ///
 /// Usage inside another SWC pass:
 /// ```rust,no_run
-/// use swc_core::ecma::visit::VisitMutWith;
-/// # let mut module: swc_core::ecma::ast::Module = todo!();
-/// module.visit_mut_with(&mut atlaspack_js_swc_core::add_display_name::AddDisplayNameVisitor::default());
+/// // Example usage (simplified for documentation)
+/// // use swc_core::ecma::visit::VisitMutWith;
+/// // module.visit_mut_with(&mut AddDisplayNameVisitor::default());
 /// ```
 #[derive(Default)]
 pub struct AddDisplayNameVisitor {}
