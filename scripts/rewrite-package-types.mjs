@@ -22,7 +22,7 @@ for (const workspace of rootPkg.workspaces) {
     if (pkg.source != pkg.types) continue;
 
     pkg.types = pkg.types
-      .replace('./src/', './lib/types/src/')
+      .replace('./src/', './lib/types/')
       .replace('.ts', '.d.ts');
 
     fs.writeFileSync(abs, JSON.stringify(pkg, null, 2), 'utf8');
