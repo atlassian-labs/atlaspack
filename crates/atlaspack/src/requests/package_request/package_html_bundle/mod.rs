@@ -6,9 +6,6 @@ use std::{
 
 use atlaspack_core::bundle_graph::{BundleGraph, BundleGraphBundle, BundleGraphEdge};
 use atlaspack_plugin_transformer_html::dom_visitor::walk;
-use html5ever::namespace_url;
-use markup5ever::{expanded_name, local_name, ns, QualName};
-use markup5ever_rcdom::{Handle, NodeData};
 use petgraph::{graph::NodeIndex, visit::EdgeRef};
 
 use crate::requests::package_request::{

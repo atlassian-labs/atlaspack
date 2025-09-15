@@ -10,7 +10,7 @@ use petgraph::{
 use crate::{
   as_variant_impl,
   asset_graph::{AssetNode, DependencyNode},
-  types::{Asset, AssetId, Bundle, FileType, Priority},
+  types::{Asset, AssetId, Bundle, FileType},
 };
 
 /// We're hiding some of the asset on this value.

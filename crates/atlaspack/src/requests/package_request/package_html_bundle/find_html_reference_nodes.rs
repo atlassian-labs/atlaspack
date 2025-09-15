@@ -1,17 +1,10 @@
-use std::{
-  cell::RefCell,
-  collections::{HashMap, HashSet},
-  io::Write,
-  ops::Deref,
-  rc::Rc,
-};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use atlaspack_core::bundle_graph::{BundleGraph, BundleGraphEdge, BundleGraphNode};
-use atlaspack_plugin_transformer_html::dom_visitor::{walk, DomTraversalOperation, DomVisitor};
+use atlaspack_core::bundle_graph::{BundleGraphEdge, BundleGraphNode};
+use atlaspack_plugin_transformer_html::dom_visitor::{DomTraversalOperation, DomVisitor};
 use html5ever::{namespace_url, ExpandedName, LocalName};
-use markup5ever::{expanded_name, local_name, ns, QualName};
+use markup5ever::{expanded_name, local_name, ns};
 use markup5ever_rcdom::{Handle, Node, NodeData};
-use petgraph::visit::EdgeRef;
 
 pub struct RewriteHTMLReferenceParams<'a> {
   pub referenced_paths_by_dependency_id: &'a HashMap<String, Vec<String>>,
