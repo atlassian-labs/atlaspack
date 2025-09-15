@@ -1,4 +1,5 @@
 pub mod add_display_name;
+pub mod constant_module;
 pub mod js_visitor;
 pub mod magic_comments;
 

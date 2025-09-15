@@ -1,5 +1,4 @@
 mod collect;
-mod constant_module;
 mod dependency_collector;
 mod env_replacer;
 mod esm_export_classifier;
@@ -26,11 +25,11 @@ use atlaspack_macros::MacroCallback;
 use atlaspack_macros::MacroError;
 use atlaspack_macros::Macros;
 
+use crate::visitors::constant_module::ConstantModule;
 use crate::visitors::magic_comments::MagicCommentsVisitor;
 use collect::Collect;
 pub use collect::CollectImportedSymbol;
 use collect::CollectResult;
-use constant_module::ConstantModule;
 pub use dependency_collector::DependencyDescriptor;
 pub use dependency_collector::DependencyKind;
 pub use dependency_collector::dependency_collector;
@@ -372,12 +371,6 @@ pub fn transform(
                 }
               }
 
-              if config.scope_hoist && config.inline_constants {
-                let mut constant_module = ConstantModule::new();
-                module.visit_with(&mut constant_module);
-                result.is_constant_module = constant_module.is_constant_module;
-              }
-
               if !config.conditional_bundling {
                 // Treat conditional imports as two inline requires when flag is off
                 module.visit_mut_with(&mut ContextualImportsInlineRequireVisitor::new(
@@ -393,6 +386,7 @@ pub fn transform(
 
              StaticVisitorCollection::new()
                 .add_read_visitor(MagicCommentsVisitor::new(code))
+                .add_read_visitor(ConstantModule::new())
                 .add_mut_visitor(AddDisplayNameVisitor::default())
                 .run(&mut module, &config, &mut result);
 

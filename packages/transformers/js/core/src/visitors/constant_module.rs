@@ -12,6 +12,10 @@ use swc_core::ecma::ast::VarDeclarator;
 use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::Visit;
 
+use crate::Config;
+use crate::TransformResult;
+use crate::visitors::js_visitor::JsVisitor;
+
 fn is_safe_literal(lit: &Lit) -> bool {
   matches!(
     lit,
@@ -43,8 +47,18 @@ fn is_safe_literal(lit: &Lit) -> bool {
 ///
 /// ```
 pub struct ConstantModule {
-  pub is_constant_module: bool,
+  is_constant_module: bool,
   constants: HashSet<JsWord>,
+}
+
+impl JsVisitor for ConstantModule {
+  fn should_apply(&self, config: &Config) -> bool {
+    config.scope_hoist && config.inline_constants
+  }
+
+  fn apply_results(self, result: &mut TransformResult) {
+    result.is_constant_module = self.is_constant_module;
+  }
 }
 
 impl ConstantModule {
