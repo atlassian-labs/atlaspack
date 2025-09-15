@@ -124,7 +124,13 @@ pub fn build_dominator_tree(
               None
             }
           }
-          // SimplifiedAssetGraphEdge::AsyncRoot(_) => None,
+          SimplifiedAssetGraphEdge::AsyncRoot(_) => {
+            if follow_async_edges {
+              None
+            } else {
+              Some(edge)
+            }
+          }
           _ => Some(edge),
         }
       },
@@ -499,6 +505,7 @@ mod tests {
 
     // a -> b
     // b -> c
+    // a -> c
     {
       let edges = dominator_tree
         .edges_connecting(a, b)
@@ -512,6 +519,17 @@ mod tests {
 
       let edges = dominator_tree
         .edges_connecting(b, c)
+        .map(|e| e.weight())
+        .collect::<Vec<_>>();
+      // assert_eq!(edges.len(), 1);
+      assert_contains_matching!(
+        edges,
+        DominatorTreeEdge::AssetDependency(_),
+        "AssetDependency"
+      );
+
+      let edges = dominator_tree
+        .edges_connecting(a, c)
         .map(|e| e.weight())
         .collect::<Vec<_>>();
       // assert_eq!(edges.len(), 1);
@@ -533,7 +551,7 @@ mod tests {
   }
 
   #[test]
-  fn test_build_dominator_tree_with_nested_dependency_shared() {
+  fn test_build_dominator_tree_with_nested_dependency_shared_by_not_following_async_edges() {
     // here we have:
     // graph {
     //   root -> a[label="entry"]
@@ -548,18 +566,18 @@ mod tests {
     let mut graph = simplified_asset_graph_builder();
     let a = graph.entry_asset("a.js");
     let b = graph.asset("b.js");
-    graph.async_dependency(a, b);
     let c = graph.asset("c.js");
-    graph.async_dependency(a, c);
-
     let d = graph.asset("d.js");
+
+    graph.async_dependency(a, b);
+    graph.async_dependency(a, c);
     graph.sync_dependency(b, d);
     graph.sync_dependency(c, d);
 
     let graph = graph.build();
     let (root, graph) = remove_cycles(&graph);
 
-    let dominator_tree = build_dominator_tree(&graph, root, true);
+    let dominator_tree = build_dominator_tree(&graph, root, false);
 
     assert!(dominator_tree.contains_node(root));
 

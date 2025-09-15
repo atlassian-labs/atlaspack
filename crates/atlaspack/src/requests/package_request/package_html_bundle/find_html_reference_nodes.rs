@@ -235,7 +235,7 @@ mod tests {
 
     assert_eq!(refs.len(), 1);
     assert!(matches!(refs[0].reference_type, HTMLReferenceType::Script));
-    assert_eq!(refs[0].dependency_specifier, "dep");
+    assert_eq!(refs[0].dependency_id, "dep");
   }
 
   #[test]
@@ -301,9 +301,9 @@ mod tests {
 
     assert_eq!(refs.len(), 2);
     assert!(matches!(refs[0].reference_type, HTMLReferenceType::Script));
-    assert_eq!(refs[0].dependency_specifier, "a");
+    assert_eq!(refs[0].dependency_id, "a");
     assert!(matches!(refs[1].reference_type, HTMLReferenceType::Script));
-    assert_eq!(refs[1].dependency_specifier, "b");
+    assert_eq!(refs[1].dependency_id, "b");
   }
 
   #[test]
@@ -322,7 +322,7 @@ mod tests {
     let refs = visitor.into_references();
     assert_eq!(refs.len(), 1);
     assert!(matches!(refs[0].reference_type, HTMLReferenceType::Script));
-    assert_eq!(refs[0].dependency_specifier, "dep");
+    assert_eq!(refs[0].dependency_id, "dep");
 
     let mut referenced_paths_by_dependency_id = HashMap::new();
     referenced_paths_by_dependency_id
@@ -416,7 +416,7 @@ mod tests {
     let refs = visitor.into_references();
     assert_eq!(refs.len(), 1);
     assert!(matches!(refs[0].reference_type, HTMLReferenceType::Script));
-    assert_eq!(refs[0].dependency_specifier, "dep");
+    assert_eq!(refs[0].dependency_id, "dep");
 
     let mut referenced_paths_by_dependency_id = HashMap::new();
     referenced_paths_by_dependency_id.insert(
