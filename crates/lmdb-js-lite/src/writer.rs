@@ -435,7 +435,7 @@ impl DatabaseWriter {
   }
 
   /// Create a write transaction
-  pub fn write_txn(&self) -> heed::Result<RwTxn> {
+  pub fn write_txn(&self) -> heed::Result<RwTxn<'_>> {
     self.environment.write_txn()
   }
 

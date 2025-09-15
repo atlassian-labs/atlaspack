@@ -124,6 +124,7 @@ impl HTMLReference {
     }
   }
 
+  #[allow(unused)]
   pub fn dependency_id(&self) -> Option<&str> {
     match self {
       HTMLReference::Script { dependency_id, .. } => Some(dependency_id),
@@ -131,6 +132,7 @@ impl HTMLReference {
     }
   }
 
+  #[allow(unused)]
   pub fn dependency_specifier(&self) -> Option<&str> {
     match self {
       HTMLReference::Script { .. } => None,

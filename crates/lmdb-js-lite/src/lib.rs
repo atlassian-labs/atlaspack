@@ -432,7 +432,7 @@ impl LMDB {
 impl LMDB {
   /// On the main thread, we either start a new read transaction on each read, or use the currently
   /// active read transaction.
-  fn read_txn(&self) -> napi::Result<writer::Transaction> {
+  fn read_txn(&self) -> napi::Result<writer::Transaction<'_, '_>> {
     if let Some(txn) = &self.read_transaction {
       Ok(writer::Transaction::Borrowed(txn))
     } else {
