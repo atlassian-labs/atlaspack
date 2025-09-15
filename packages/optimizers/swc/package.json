@@ -18,7 +18,7 @@
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/plugin": "2.14.31",
-    "@atlaspack/source-map": "2.0.0",
+    "@atlaspack/source-map": "3.0.0",
     "@atlaspack/utils": "2.19.3",
     "@swc/core": "^1.10.0",
     "nullthrows": "^1.1.1"
