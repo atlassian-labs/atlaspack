@@ -924,6 +924,11 @@
   resolved "https://registry.yarnpkg.com/@atlaspack/feature-flags/-/feature-flags-2.24.1.tgz#638fae2ad49867731c26fdb844546b11b48db2c8"
   integrity sha512-Vk2Pzvsyq15vwOEU343jhH/kTsTCQFCgb939wZxO6muJR2KWrptveD/oBB72lh3GS4lucZZWaLmz8CGCs2v0yg==
 
+"@atlaspack/feature-flags@2.25.1":
+  version "2.25.1"
+  resolved "https://registry.yarnpkg.com/@atlaspack/feature-flags/-/feature-flags-2.25.1.tgz#c5ee7e0d2b71346c5a4624562a16aa7de37cc72a"
+  integrity sha512-RlUOQFckMNtOzEUYzcWj86Lx3K21+DRsWca35S0DLc4pGppK3Z58bRxECC9w6uICaURfVGf2fVNACp26ya5WZw==
+
 "@atlaspack/fs@2.15.21":
   version "2.15.21"
   resolved "https://registry.yarnpkg.com/@atlaspack/fs/-/fs-2.15.21.tgz#bf998b89e72df0337f7f23b813282e3384f185af"
@@ -969,6 +974,16 @@
     "@atlaspack/events" "2.14.3"
     "@atlaspack/rust" "3.6.1"
     "@atlaspack/types-internal" "2.19.2"
+
+"@atlaspack/logger@2.14.23":
+  version "2.14.23"
+  resolved "https://registry.yarnpkg.com/@atlaspack/logger/-/logger-2.14.23.tgz#59933f8d0878bb0e96c2558e07cdd2f13f48367a"
+  integrity sha512-OoLSX/RDpCiZg89WI60TQNu/LqOze+SnB/6R1zQ3ZmzTY8sHzTTo1G8NUanDxTRf5wl8LBhj4NHtJNDVdYKoGw==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.4"
+    "@atlaspack/events" "2.14.4"
+    "@atlaspack/rust" "3.8.1"
+    "@atlaspack/types-internal" "2.20.1"
 
 "@atlaspack/markdown-ansi@2.14.3":
   version "2.14.3"
@@ -1404,6 +1419,16 @@
   dependencies:
     "@atlaspack/diagnostic" "2.14.3"
     "@atlaspack/feature-flags" "2.24.1"
+    "@parcel/source-map" "^2.1.1"
+    utility-types "^3.10.0"
+
+"@atlaspack/types-internal@2.20.1":
+  version "2.20.1"
+  resolved "https://registry.yarnpkg.com/@atlaspack/types-internal/-/types-internal-2.20.1.tgz#43a4552015a33ff8232499ea0ce908a1e6928ab9"
+  integrity sha512-HYVixSWOUe8Xze/kqUUjuWvCqafZcz9os213Gx/J7H6CcDFC5ZtGYEV7KYKdGAShhEnXcyrlDBUSPcsIG9doww==
+  dependencies:
+    "@atlaspack/diagnostic" "2.14.4"
+    "@atlaspack/feature-flags" "2.25.1"
     "@parcel/source-map" "^2.1.1"
     utility-types "^3.10.0"
 

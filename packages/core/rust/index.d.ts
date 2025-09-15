@@ -163,6 +163,25 @@ export class Lmdb {
   commitWriteTransaction(): Promise<void>
   compact(targetPath: string): void
 }
+export class Hash {
+  constructor()
+  writeString(s: string): void
+  writeBuffer(buf: Buffer): void
+  finish(): string
+}
+export class AtlaspackTracer {
+  constructor()
+  enter(label: string): SpanId
+  exit(id: SpanId): void
+}
+export class Resolver {
+  constructor(projectRoot: string, options: FileSystem)
+  resolve(options: ResolveOptions): ResolveResult
+  resolveAsync(): object
+  resolveAsync(options: ResolveOptions): object
+  getInvalidations(path: string): JsInvalidations
+  getInvalidations(path: string): JsInvalidations
+}
 export type JsSourceMap = SourceMap
 export class SourceMap {
   constructor(projectRoot: string, buffer?: Buffer | undefined | null)
@@ -189,23 +208,4 @@ export class SourceMap {
   extends(originalSourcemap: SourceMap): void
   findClosestMapping(generatedLine: number, generatedColumn: number): object | null
   getProjectRoot(): string
-}
-export class Hash {
-  constructor()
-  writeString(s: string): void
-  writeBuffer(buf: Buffer): void
-  finish(): string
-}
-export class AtlaspackTracer {
-  constructor()
-  enter(label: string): SpanId
-  exit(id: SpanId): void
-}
-export class Resolver {
-  constructor(projectRoot: string, options: FileSystem)
-  resolve(options: ResolveOptions): ResolveResult
-  resolveAsync(): object
-  resolveAsync(options: ResolveOptions): object
-  getInvalidations(path: string): JsInvalidations
-  getInvalidations(path: string): JsInvalidations
 }

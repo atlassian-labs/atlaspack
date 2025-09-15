@@ -31,7 +31,7 @@ export default class SourceMap {
 
   // Use this to invalidate saved buffers, we don't check versioning at all in Rust
   get libraryVersion(): string {
-    return version;
+    return `atlaspack:${version}`;
   }
 
   /**

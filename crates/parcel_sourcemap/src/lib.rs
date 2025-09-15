@@ -17,12 +17,11 @@ use std::borrow::Cow;
 use std::io;
 
 use rkyv::{
-  archived_root,
+  AlignedVec, Archive, Deserialize, Infallible, Serialize, archived_root,
   ser::{
-    serializers::{AlignedSerializer, AllocScratch, CompositeSerializer},
     Serializer,
+    serializers::{AlignedSerializer, AllocScratch, CompositeSerializer},
   },
-  AlignedVec, Archive, Deserialize, Infallible, Serialize,
 };
 
 use vlq_utils::{is_mapping_separator, read_relative_vlq};
@@ -125,14 +124,14 @@ impl SourceMap {
     generated_line: u32,
     generated_column: u32,
   ) -> Option<Mapping> {
-    if let Some(line) = self.inner.mapping_lines.get_mut(generated_line as usize) {
-      if let Some(line_mapping) = line.find_closest_mapping(generated_column) {
-        return Some(Mapping {
-          generated_line,
-          generated_column: line_mapping.generated_column,
-          original: line_mapping.original,
-        });
-      }
+    if let Some(line) = self.inner.mapping_lines.get_mut(generated_line as usize)
+      && let Some(line_mapping) = line.find_closest_mapping(generated_column)
+    {
+      return Some(Mapping {
+        generated_line,
+        generated_column: line_mapping.generated_column,
+        original: line_mapping.original,
+      });
     }
 
     None
@@ -487,6 +486,18 @@ impl SourceMap {
                     Some(name_index) => match names_indexes.get(name_index as usize) {
                       Some(new_name_index) => Some(*new_name_index),
                       None => {
+                        // println!("name_index: {}", name_index);
+                        // println!("names_indexes: {:?}\n", names_indexes);
+                        // println!("self.inner.names.len(): {}", self.inner.names.len());
+                        // println!("self.inner.names: {:?}\n", self.inner.names);
+                        // println!(
+                        //   "original_sourcemap.inner.names.len(): {}\n",
+                        //   original_sourcemap.inner.names.len()
+                        // );
+                        // println!(
+                        //   "original_sourcemap.inner.names: {:?}",
+                        //   original_sourcemap.inner.names
+                        // );
                         return Err(SourceMapError::new(SourceMapErrorType::NameOutOfRange));
                       }
                     },
