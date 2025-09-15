@@ -105,23 +105,23 @@ macro_rules! run_visitors {
 }
 
 /// Builder pattern for creating and running visitor collections with zero-cost abstraction
-pub struct StaticVisitorCollection<T> {
+pub struct VisitorCollection<T> {
   visitors: T,
 }
 
-impl StaticVisitorCollection<()> {
+impl VisitorCollection<()> {
   pub fn new() -> Self {
     Self { visitors: () }
   }
 }
 
-impl<T> StaticVisitorCollection<T> {
+impl<T> VisitorCollection<T> {
   /// Add an immutable visitor to the collection
   pub fn add_read_visitor<V: JsVisitor + Visit>(
     self,
     visitor: V,
-  ) -> StaticVisitorCollection<(T, ReadVisitorWrapper<V>)> {
-    StaticVisitorCollection {
+  ) -> VisitorCollection<(T, ReadVisitorWrapper<V>)> {
+    VisitorCollection {
       visitors: (self.visitors, ReadVisitorWrapper { visitor }),
     }
   }
@@ -130,8 +130,8 @@ impl<T> StaticVisitorCollection<T> {
   pub fn add_mut_visitor<V: JsVisitor + VisitMut>(
     self,
     visitor: V,
-  ) -> StaticVisitorCollection<(T, MutVisitorWrapper<V>)> {
-    StaticVisitorCollection {
+  ) -> VisitorCollection<(T, MutVisitorWrapper<V>)> {
+    VisitorCollection {
       visitors: (self.visitors, MutVisitorWrapper { visitor }),
     }
   }
@@ -203,7 +203,7 @@ where
   }
 }
 
-impl<T: RunVisitors> StaticVisitorCollection<T> {
+impl<T: RunVisitors> VisitorCollection<T> {
   /// Run all visitors in the collection
   pub fn run(
     self,
@@ -411,7 +411,7 @@ mod tests {
 
   #[test]
   fn test_static_visitor_collection_empty() {
-    let mut collection = StaticVisitorCollection::new();
+    let mut collection = VisitorCollection::new();
     let mut program = create_test_program();
     let config = make_test_swc_config("test");
     let mut result = TransformResult::default();
@@ -427,7 +427,7 @@ mod tests {
       ..Default::default()
     };
 
-    let mut collection = StaticVisitorCollection::new().add_read_visitor(read_visitor);
+    let mut collection = VisitorCollection::new().add_read_visitor(read_visitor);
 
     let mut program = create_test_program();
     let config = make_test_swc_config("test");
@@ -447,7 +447,7 @@ mod tests {
       ..Default::default()
     };
 
-    let mut collection = StaticVisitorCollection::new().add_mut_visitor(mut_visitor);
+    let mut collection = VisitorCollection::new().add_mut_visitor(mut_visitor);
 
     let mut program = create_test_program();
     let config = make_test_swc_config("test");
@@ -488,7 +488,7 @@ mod tests {
       ..Default::default()
     };
 
-    let mut collection = StaticVisitorCollection::new()
+    let mut collection = VisitorCollection::new()
       .add_read_visitor(read_visitor)
       .add_mut_visitor(mut_visitor);
 
@@ -730,7 +730,7 @@ mod tests {
       ..Default::default()
     };
 
-    let mut collection = StaticVisitorCollection::new()
+    let mut collection = VisitorCollection::new()
       .add_read_visitor(read_visitor)
       .add_mut_visitor(mut_visitor1)
       .add_mut_visitor(mut_visitor2);
@@ -764,7 +764,7 @@ mod tests {
   #[test]
   fn test_visitor_can_be_chained_with_builder_pattern() {
     // Test the fluent builder pattern
-    let collection = StaticVisitorCollection::new()
+    let collection = VisitorCollection::new()
       .add_read_visitor(MockReadVisitor {
         should_apply_result: true,
         ..Default::default()

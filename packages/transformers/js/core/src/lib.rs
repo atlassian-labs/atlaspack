@@ -101,7 +101,7 @@ use utils::error_buffer_to_diagnostics;
 use crate::esm_export_classifier::EsmExportClassifier;
 use crate::esm_export_classifier::SymbolsInfo;
 use crate::visitors::add_display_name::AddDisplayNameVisitor;
-use crate::visitors::js_visitor::StaticVisitorCollection;
+use crate::visitors::js_visitor::VisitorCollection;
 
 type SourceMapBuffer = Vec<(swc_core::common::BytePos, swc_core::common::LineCol)>;
 
@@ -371,20 +371,15 @@ pub fn transform(
                 }
               }
 
-              if !config.conditional_bundling {
-                // Treat conditional imports as two inline requires when flag is off
-                module.visit_mut_with(&mut ContextualImportsInlineRequireVisitor::new(
+
+             VisitorCollection::new()
+                .add_mut_visitor(ContextualImportsInlineRequireVisitor::new(
                   unresolved_mark,
                   ContextualImportsConfig {
                     server: false,
                     // Fallback to false variant when flag is off
                     default_if_undefined: true,
-                  },
-                ));
-              }
-
-
-             StaticVisitorCollection::new()
+                  }))
                 .add_read_visitor(MagicCommentsVisitor::new(code))
                 .add_read_visitor(ConstantModule::new())
                 .add_mut_visitor(AddDisplayNameVisitor::default())
