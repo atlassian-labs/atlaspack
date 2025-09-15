@@ -28,6 +28,7 @@ impl SimplifiedAssetGraphBuilder {
       .add_node(SimplifiedAssetGraphNode::Asset(AssetRef::new(
         AssetNode::from(Asset {
           file_path: PathBuf::from(path),
+          id: AssetId::from(self.graph.node_count() as u64),
           ..Asset::default()
         }),
         NodeIndex::new(self.graph.node_count()),

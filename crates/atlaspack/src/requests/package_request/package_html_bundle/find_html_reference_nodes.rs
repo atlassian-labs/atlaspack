@@ -104,12 +104,6 @@ pub fn rewrite_html_reference(
   Some(())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum HTMLReferenceType {
-  Script,
-  InlineScript,
-}
-
 #[derive(Debug)]
 pub enum HTMLReference {
   Script {
@@ -123,13 +117,6 @@ pub enum HTMLReference {
 }
 
 impl HTMLReference {
-  pub fn reference_type(&self) -> &HTMLReferenceType {
-    match self {
-      HTMLReference::Script { .. } => &HTMLReferenceType::Script,
-      HTMLReference::InlineScript { .. } => &HTMLReferenceType::InlineScript,
-    }
-  }
-
   pub fn handle(&self) -> &Handle {
     match self {
       HTMLReference::Script { handle, .. } => handle,
@@ -243,10 +230,7 @@ mod tests {
     let refs = visitor.into_references();
 
     assert_eq!(refs.len(), 1);
-    assert!(matches!(
-      refs[0].reference_type(),
-      HTMLReferenceType::Script
-    ));
+    assert!(matches!(refs[0], HTMLReference::Script { .. }));
     assert_eq!(refs[0].dependency_id(), Some("dep"));
   }
 
@@ -266,10 +250,7 @@ mod tests {
     let refs = visitor.into_references();
 
     assert_eq!(refs.len(), 1);
-    assert!(matches!(
-      refs[0].reference_type(),
-      HTMLReferenceType::InlineScript
-    ));
+    assert!(matches!(refs[0], HTMLReference::InlineScript { .. }));
     assert_eq!(refs[0].dependency_specifier(), Some("abc123"));
   }
 
@@ -312,15 +293,9 @@ mod tests {
     let refs = visitor.into_references();
 
     assert_eq!(refs.len(), 2);
-    assert!(matches!(
-      refs[0].reference_type(),
-      HTMLReferenceType::Script
-    ));
+    assert!(matches!(refs[0], HTMLReference::Script { .. }));
     assert_eq!(refs[0].dependency_id(), Some("a"));
-    assert!(matches!(
-      refs[1].reference_type(),
-      HTMLReferenceType::Script
-    ));
+    assert!(matches!(refs[1], HTMLReference::Script { .. }));
     assert_eq!(refs[1].dependency_id(), Some("b"));
   }
 
@@ -339,10 +314,7 @@ mod tests {
     walk(dom.document.clone(), &mut visitor);
     let refs = visitor.into_references();
     assert_eq!(refs.len(), 1);
-    assert!(matches!(
-      refs[0].reference_type(),
-      HTMLReferenceType::Script
-    ));
+    assert!(matches!(refs[0], HTMLReference::Script { .. }));
     assert_eq!(refs[0].dependency_id(), Some("dep"));
 
     let mut referenced_paths_by_dependency_id = HashMap::new();
@@ -389,10 +361,7 @@ mod tests {
     walk(dom.document.clone(), &mut visitor);
     let refs = visitor.into_references();
     assert_eq!(refs.len(), 1);
-    assert!(matches!(
-      refs[0].reference_type(),
-      HTMLReferenceType::Script
-    ));
+    assert!(matches!(refs[0], HTMLReference::Script { .. }));
     assert_eq!(refs[0].dependency_id(), Some("dep"));
 
     let mut referenced_paths_by_dependency_id = HashMap::new();
@@ -439,10 +408,7 @@ mod tests {
     walk(dom.document.clone(), &mut visitor);
     let refs = visitor.into_references();
     assert_eq!(refs.len(), 1);
-    assert!(matches!(
-      refs[0].reference_type(),
-      HTMLReferenceType::Script
-    ));
+    assert!(matches!(refs[0], HTMLReference::Script { .. }));
     assert_eq!(refs[0].dependency_id(), Some("dep"));
 
     let mut referenced_paths_by_dependency_id = HashMap::new();
@@ -497,10 +463,7 @@ mod tests {
     walk(dom.document.clone(), &mut visitor);
     let refs = visitor.into_references();
     assert_eq!(refs.len(), 1);
-    assert!(matches!(
-      refs[0].reference_type(),
-      HTMLReferenceType::InlineScript
-    ));
+    assert!(matches!(refs[0], HTMLReference::InlineScript { .. }));
     assert_eq!(refs[0].dependency_specifier(), Some("abc123"));
 
     let mut contents_by_dependency_specifier = HashMap::new();

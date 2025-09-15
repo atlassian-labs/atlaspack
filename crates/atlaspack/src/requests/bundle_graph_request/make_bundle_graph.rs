@@ -534,7 +534,7 @@ pub fn debug_asset_dependency_chain(asset_graph: &AssetGraph, file_path: &Path) 
 
 #[cfg(test)]
 mod tests {
-  use atlaspack_core::bundle_graph::BundleRef;
+  use atlaspack_core::{bundle_graph::BundleRef, types::AssetId};
 
   use crate::requests::bundle_graph_request::{
     acyclic_asset_graph::remove_cycles, asset_graph_builder::simplified_asset_graph_builder,
@@ -542,15 +542,16 @@ mod tests {
 
   use super::*;
 
-  fn get_bundle_by_name(bundle_graph: &BundleGraph, name: &str) -> Option<BundleRef> {
+  fn get_bundle_by_entry_asset_id(
+    bundle_graph: &BundleGraph,
+    asset_id: AssetId,
+  ) -> Option<BundleRef> {
     bundle_graph.bundles().find(|bundle| {
       bundle
         .bundle_graph_bundle()
         .bundle
-        .name
-        .as_ref()
-        .unwrap()
-        .contains(name)
+        .entry_asset_ids
+        .contains(&asset_id)
     })
   }
 
@@ -579,10 +580,14 @@ mod tests {
 
     assert_eq!(bundle_graph.num_bundles(), 4);
 
-    let bundle_a = get_bundle_by_name(&bundle_graph, "a.js").unwrap();
-    let bundle_b = get_bundle_by_name(&bundle_graph, "b.js").unwrap();
-    let bundle_c = get_bundle_by_name(&bundle_graph, "c.js").unwrap();
-    let bundle_d = get_bundle_by_name(&bundle_graph, "d.js").unwrap();
+    let bundle_a =
+      get_bundle_by_entry_asset_id(&bundle_graph, AssetId::from(a.index() as u64)).unwrap();
+    let bundle_b =
+      get_bundle_by_entry_asset_id(&bundle_graph, AssetId::from(b.index() as u64)).unwrap();
+    let bundle_c =
+      get_bundle_by_entry_asset_id(&bundle_graph, AssetId::from(c.index() as u64)).unwrap();
+    let bundle_d =
+      get_bundle_by_entry_asset_id(&bundle_graph, AssetId::from(d.index() as u64)).unwrap();
 
     assert_eq!(bundle_a.num_assets(), 1);
     assert_eq!(bundle_b.num_assets(), 1);
