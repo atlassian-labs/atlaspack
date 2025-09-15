@@ -89,9 +89,15 @@ impl std::fmt::Display for AssetGraphNode {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       AssetGraphNode::Root => write!(f, "Root"),
-      AssetGraphNode::Asset(asset_node) => write!(f, "Asset({:?})", asset_node.asset.file_path),
+      AssetGraphNode::Asset(asset_node) => {
+        write!(f, "Asset({})", asset_node.asset.file_path.display())
+      }
       AssetGraphNode::Dependency(dependency_node) => {
-        write!(f, "Dependency({})", dependency_node.dependency.specifier)
+        write!(
+          f,
+          "Dependency({}, priority={:?})",
+          dependency_node.dependency.specifier, dependency_node.dependency.priority
+        )
       }
     }
   }

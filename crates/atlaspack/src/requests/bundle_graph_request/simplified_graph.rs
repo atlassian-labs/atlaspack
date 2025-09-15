@@ -17,6 +17,17 @@ pub enum SimplifiedAssetGraphNode {
   Asset(AssetRef),
 }
 
+impl std::fmt::Display for SimplifiedAssetGraphNode {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      SimplifiedAssetGraphNode::Root => write!(f, "Root"),
+      SimplifiedAssetGraphNode::Asset(asset_ref) => {
+        write!(f, "Asset({})", asset_ref.file_path().display())
+      }
+    }
+  }
+}
+
 impl TryFrom<(NodeIndex, &AssetGraphNode)> for SimplifiedAssetGraphNode {
   type Error = ();
 
@@ -39,7 +50,7 @@ impl std::fmt::Debug for SimplifiedAssetGraphNode {
       SimplifiedAssetGraphNode::Root => write!(f, "Root"),
       // SimplifiedAssetGraphNode::Entry => write!(f, "Entry"),
       SimplifiedAssetGraphNode::Asset(asset_node) => {
-        write!(f, "Asset({:?})", asset_node.file_path())
+        write!(f, "Asset({})", asset_node.file_path().display())
       }
     }
   }
@@ -97,6 +108,44 @@ pub enum SimplifiedAssetGraphEdge {
   /// If an asset A imports an asset B, of *different type*, then this edge is added.
   /// Not the dependency edge.
   AssetAsyncDependency(SimplifiedAssetDependency),
+}
+
+impl std::fmt::Display for SimplifiedAssetGraphEdge {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      SimplifiedAssetGraphEdge::EntryAssetRoot(dependency_node) => {
+        write!(
+          f,
+          "EntryAssetRoot({})",
+          dependency_node.dependency.specifier
+        )
+      }
+      SimplifiedAssetGraphEdge::AsyncRoot(dependency_node) => {
+        write!(f, "AsyncRoot({})", dependency_node.dependency.specifier)
+      }
+      SimplifiedAssetGraphEdge::TypeChangeRoot(dependency_node) => {
+        write!(
+          f,
+          "TypeChangeRoot({})",
+          dependency_node.dependency.specifier
+        )
+      }
+      SimplifiedAssetGraphEdge::AssetDependency(simplified_asset_dependency) => {
+        write!(
+          f,
+          "AssetDependency({})",
+          simplified_asset_dependency.dependency.specifier
+        )
+      }
+      SimplifiedAssetGraphEdge::AssetAsyncDependency(simplified_asset_dependency) => {
+        write!(
+          f,
+          "AssetAsyncDependency({})",
+          simplified_asset_dependency.dependency.specifier
+        )
+      }
+    }
+  }
 }
 
 pub type SimplifiedAssetGraph = StableDiGraph<SimplifiedAssetGraphNode, SimplifiedAssetGraphEdge>;
@@ -236,7 +285,8 @@ pub fn simplify_graph(asset_graph: &AssetGraph) -> SimplifiedAssetGraph {
 
 #[cfg(test)]
 mod tests {
-  use std::path::PathBuf;
+  use std::path::Path;
+  use std::{fs, path::PathBuf, process::Command};
 
   use atlaspack_core::types::FileType;
   use atlaspack_core::types::{Asset, Dependency};
@@ -305,26 +355,34 @@ mod tests {
     input_graph: &AssetGraph,
     simplified_graph: &SimplifiedAssetGraph,
   ) {
-    let output_dir =
-      env!("CARGO_MANIFEST_DIR").join("src/requests/bundle_graph_request/simplified_graph/tests");
-    output_dir.create_dir_all().unwrap();
+    let output_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+      .join("src/requests/bundle_graph_request/simplified_graph/tests");
+    fs::create_dir_all(&output_dir).unwrap();
 
     let input_graph: StableDiGraph<String, String> = input_graph
       .graph
-      .map(|_, node| format!("{}", node), |_, edge| format!("{}", edge));
-    let input_dot: Dot<StableDiGraph<String, String>> = Dot::new(input_graph);
+      .map(|_, node| format!("{}", node), |_, edge| "".to_string());
     let simplified_graph: StableDiGraph<String, String> =
       simplified_graph.map(|_, node| format!("{}", node), |_, edge| format!("{}", edge));
-    let simplified_dot: Dot<StableDiGraph<String, String>> = Dot::new(simplified_graph);
 
-    let input_dot = format!("{}", input_dot);
-    let simplified_dot = format!("{}", simplified_dot);
+    let input_dot = format!("{}", Dot::new(&input_graph));
+    let simplified_dot = format!("{}", Dot::new(&simplified_graph));
 
     let input_path = output_dir.join(format!("{}.INPUT.dot", name));
     let simplified_path = output_dir.join(format!("{}.OUTPUT.dot", name));
 
-    write(input_path, input_dot).unwrap();
-    write(simplified_path, simplified_dot).unwrap();
+    fs::write(&input_path, input_dot).unwrap();
+    fs::write(&simplified_path, simplified_dot).unwrap();
+
+    fn run_dot(dot: &Path, output_path: &Path) {
+      let mut cmd = Command::new("dot");
+      cmd.arg("-Tpng").arg(dot).arg("-o").arg(output_path);
+      println!("Running dot: {:?}", cmd);
+      cmd.output().unwrap();
+    }
+
+    run_dot(&input_path, &input_path.with_extension("png"));
+    run_dot(&simplified_path, &simplified_path.with_extension("png"));
   }
 
   #[test]
@@ -365,6 +423,12 @@ mod tests {
         .weight(),
       SimplifiedAssetGraphEdge::EntryAssetRoot(_)
     ));
+
+    print_test_case(
+      "test_simplify_graph_with_single_asset",
+      &asset_graph,
+      &simplified_graph,
+    );
   }
 
   #[test]
@@ -411,6 +475,12 @@ mod tests {
       expect_edge(&simplified_graph, a, b).weight(),
       SimplifiedAssetGraphEdge::AssetDependency(_)
     ));
+
+    print_test_case(
+      "test_simplify_graph_with_sync_dependencies",
+      &asset_graph,
+      &simplified_graph,
+    );
   }
 
   #[test]
@@ -461,6 +531,12 @@ mod tests {
       expect_edge(&simplified_graph, root, b).weight(),
       SimplifiedAssetGraphEdge::AsyncRoot(_)
     ));
+
+    print_test_case(
+      "test_simplify_graph_with_async_dependencies",
+      &asset_graph,
+      &simplified_graph,
+    );
   }
 
   #[test]
@@ -504,6 +580,12 @@ mod tests {
       expect_edge(&simplified_graph, a, b).weight(),
       SimplifiedAssetGraphEdge::AssetAsyncDependency(_)
     ));
+
+    print_test_case(
+      "test_type_change_creates_type_change_root_edge_and_skips_dependency",
+      &asset_graph,
+      &simplified_graph,
+    );
   }
 
   #[test]
@@ -556,6 +638,12 @@ mod tests {
         .is_none(),
       "Unexpected AsyncRoot edge present to b"
     );
+
+    print_test_case(
+      "test_type_change_with_async_dependency_only_adds_type_change_root",
+      &asset_graph,
+      &simplified_graph,
+    );
   }
 
   #[test]
@@ -583,6 +671,12 @@ mod tests {
       expect_edge(&simplified_graph, root, b).weight(),
       SimplifiedAssetGraphEdge::EntryAssetRoot(_)
     ));
+
+    print_test_case(
+      "test_multiple_entry_assets_create_multiple_root_entry_edges",
+      &asset_graph,
+      &simplified_graph,
+    );
   }
 
   #[test]
@@ -633,5 +727,11 @@ mod tests {
       expect_edge(&simplified_graph, b, d).weight(),
       SimplifiedAssetGraphEdge::AssetDependency(_)
     ));
+
+    print_test_case(
+      "test_simplify_graph_with_nested_chain_and_multiple_children",
+      &asset_graph,
+      &simplified_graph,
+    );
   }
 }

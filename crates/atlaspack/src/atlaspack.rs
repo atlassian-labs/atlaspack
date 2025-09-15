@@ -412,7 +412,7 @@ export const bar = "bar";
       panic!("Expected a bundle");
     };
 
-    let _output = Vec::new();
+    let output = Vec::new();
     let asset_graph = Arc::new(asset_graph);
     // package_request::package_bundle(
     //   package_request::PackageBundleParams {
@@ -740,7 +740,7 @@ export const bar = "bar";
       panic!("Expected a bundle");
     };
 
-    let mut _output = Vec::new();
+    let mut output = Vec::new();
 
     // package_request::package_bundle(
     //   &bundle,

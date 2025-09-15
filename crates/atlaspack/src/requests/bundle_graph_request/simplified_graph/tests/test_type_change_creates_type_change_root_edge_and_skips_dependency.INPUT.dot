@@ -1,0 +1,11 @@
+digraph {
+    0 [ label = "Root" ]
+    1 [ label = "Asset(src/a.ts)" ]
+    2 [ label = "Dependency(, priority=Sync)" ]
+    3 [ label = "Asset(src/b.css)" ]
+    4 [ label = "Dependency(, priority=Sync)" ]
+    0 -> 2 [ label = "" ]
+    2 -> 1 [ label = "" ]
+    1 -> 4 [ label = "" ]
+    4 -> 3 [ label = "" ]
+}

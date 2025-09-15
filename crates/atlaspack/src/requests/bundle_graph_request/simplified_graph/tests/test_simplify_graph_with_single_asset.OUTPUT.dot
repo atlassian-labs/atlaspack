@@ -1,0 +1,5 @@
+digraph {
+    0 [ label = "Root" ]
+    1 [ label = "Asset(src/index.ts)" ]
+    0 -> 1 [ label = "EntryAssetRoot()" ]
+}

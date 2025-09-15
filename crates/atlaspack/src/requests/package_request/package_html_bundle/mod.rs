@@ -230,8 +230,9 @@ pub fn package_html_bundle<ADP: AssetDataProvider>(
 
 #[cfg(test)]
 mod tests {
-  use std::{collections::HashSet, sync::Arc};
+  use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
+  use atlaspack_core::types::AtlaspackOptions;
   use atlaspack_core::{
     asset_graph::{AssetGraph, AssetNode, DependencyNode, DependencyState},
     bundle_graph::{AssetRef, BundleDependency, BundleGraphBundle},
@@ -506,7 +507,7 @@ mod tests {
         bundle_node_index,
         asset_data_provider: &asset_data_provider,
         bundle_graph: &bundle_graph,
-        options: &Arc::new(AtlaspackOptions::default()),
+        options: Arc::new(AtlaspackOptions::default()),
         project_root: PathBuf::from("."),
         packager: None,
       },

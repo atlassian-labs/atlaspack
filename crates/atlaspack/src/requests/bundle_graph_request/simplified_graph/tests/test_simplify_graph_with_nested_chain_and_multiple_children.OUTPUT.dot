@@ -1,0 +1,11 @@
+digraph {
+    0 [ label = "Root" ]
+    1 [ label = "Asset(src/a.ts)" ]
+    3 [ label = "Asset(src/b.ts)" ]
+    4 [ label = "Asset(src/c.ts)" ]
+    5 [ label = "Asset(src/d.ts)" ]
+    3 -> 5 [ label = "AssetDependency()" ]
+    3 -> 4 [ label = "AssetDependency()" ]
+    1 -> 3 [ label = "AssetDependency()" ]
+    0 -> 1 [ label = "EntryAssetRoot()" ]
+}
