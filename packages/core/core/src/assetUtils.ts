@@ -39,6 +39,8 @@ import {PluginTracer} from '@atlaspack/profiler';
 import {identifierRegistry} from './IdentifierRegistry';
 import type {EnvironmentRef} from './EnvironmentManager';
 import {toEnvironmentId} from './EnvironmentManager';
+import SourceMap from '@atlaspack/source-map';
+import invariant from 'assert';
 
 export type AssetOptions = {
   id?: string;
@@ -180,7 +182,7 @@ async function _generateFromAST(asset: CommittedAsset | UncommittedAsset) {
     tracer: new PluginTracer({origin: pluginName, category: 'asset-generate'}),
   });
 
-  let mapBuffer = map?.toBuffer();
+  let mapBuffer = map ? SourceMap.assert(map).toBuffer() : undefined;
   // Store the results in the cache so we can avoid generating again next time
   await Promise.all([
     asset.options.cache.setStream(
