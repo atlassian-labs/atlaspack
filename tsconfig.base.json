@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "declaration": true,
-    "declarationDir": "${configDir}/lib/types",
+    "declarationDir": "${configDir}/lib",
     "downlevelIteration": true,
     "erasableSyntaxOnly": true,
     "esModuleInterop": true,
