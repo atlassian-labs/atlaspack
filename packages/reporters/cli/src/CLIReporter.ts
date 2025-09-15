@@ -118,6 +118,16 @@ export async function _report(
         seenPhasesGen.add(event.phase);
       }
 
+      if (
+        getFeatureFlag('cliProgressReportingImprovements') &&
+        (event.phase === 'packaging' || event.phase === 'optimizing')
+      ) {
+        // If the flag is turned on, we ignore the old `packaging` and
+        // `optimizing` event types, and only consider `packagingAndOptimizing`
+        // events
+        break;
+      }
+
       if (!isTTY && logLevelFilter != logLevels.verbose) {
         if (event.phase == 'transforming' && !seenPhases.has('transforming')) {
           updateSpinner('Building...');
@@ -126,7 +136,6 @@ export async function _report(
         } else if (event.phase === 'packagingAndOptimizing') {
           updatePackageProgress(event.completeBundles, event.totalBundles);
         } else if (
-          !getFeatureFlag('cliProgressReportingImprovements') &&
           (event.phase == 'packaging' || event.phase == 'optimizing') &&
           !seenPhases.has('packaging') &&
           !seenPhases.has('optimizing')
