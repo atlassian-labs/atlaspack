@@ -1,14 +1,20 @@
+const {getBundleURL} = require('./bundle-url');
+const {resolve} = require('./bundle-manifest');
+
 module.exports = function loadCond(cond, ifTrue, ifFalse, fallback) {
   let result = globalThis.__MCOND(cond);
   try {
     return result ? ifTrue() : ifFalse();
   } catch (err) {
     if (fallback) {
-      console.error(
-        'Conditional dependency was not registered when executing. Falling back to synchronous bundle loading.',
+      globalThis.__ATLASPACK_ERRORS = globalThis.__ATLASPACK_ERRORS || [];
+      globalThis.__ATLASPACK_ERRORS.push(
+        new Error(
+          `Sync dependency fallback triggered for condition "${cond}": ${err.message}`,
+        ),
       );
-      for (const url of fallback.urls) {
-        fallback.loader(url);
+      for (const id of fallback.i) {
+        fallback.l(new URL(resolve(id), getBundleURL(id)).toString());
       }
 
       return result ? ifTrue() : ifFalse();

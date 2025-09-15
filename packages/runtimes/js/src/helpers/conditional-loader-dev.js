@@ -19,8 +19,14 @@ module.exports = function loadCond(cond, ifTrue, ifFalse, fallback) {
     );
 
     if (fallback) {
+      globalThis.__ATLASPACK_ERRORS = globalThis.__ATLASPACK_ERRORS || [];
+      globalThis.__ATLASPACK_ERRORS.push(
+        new Error(
+          `Sync dependency fallback triggered for condition "${cond}": ${err.message}`,
+        ),
+      );
       for (const url of fallback.urls) {
-        fallback.loader(url);
+        fallback.l(url);
       }
 
       return globalThis.__MCOND(cond) ? ifTrue() : ifFalse();

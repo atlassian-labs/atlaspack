@@ -21,10 +21,31 @@ export async function serve(directory: string): Promise<ServeContext> {
   const server = createServer((req, res) => {
     const relPath = !req.url || req.url === '/' ? 'index.html' : req.url;
     const target = path.join(directory, path.normalize(relPath));
+
+    // Check if file exists before trying to serve it
+    if (!fs.existsSync(target)) {
+      // Handle common browser requests gracefully
+      if (relPath === '/favicon.ico') {
+        res.writeHead(204, {'Content-Type': 'text/plain'});
+        res.end();
+        return;
+      }
+
+      res.writeHead(404, {'Content-Type': 'text/plain'});
+      res.end('File not found');
+      return;
+    }
+
     const extname = path.extname(target);
     const contentType = contentTypes[extname] || 'application/octet-stream';
     res.setHeader('Content-Type', contentType);
-    fs.createReadStream(target).pipe(res);
+
+    const stream = fs.createReadStream(target);
+    stream.on('error', (err) => {
+      res.writeHead(500, {'Content-Type': 'text/plain'});
+      res.end('Internal server error');
+    });
+    stream.pipe(res);
   });
 
   await new Promise<void>((res) => server.listen(0, '127.0.0.1', res));
