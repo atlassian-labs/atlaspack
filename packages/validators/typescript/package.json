@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/validator-typescript",
-  "version": "2.14.29",
+  "version": "2.14.31",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,11 +16,11 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.3",
-    "@atlaspack/plugin": "2.14.29",
-    "@atlaspack/ts-utils": "2.14.8",
-    "@atlaspack/types": "2.15.19",
-    "@atlaspack/utils": "2.19.1"
+    "@atlaspack/diagnostic": "2.14.4",
+    "@atlaspack/plugin": "2.14.31",
+    "@atlaspack/ts-utils": "2.14.10",
+    "@atlaspack/types": "2.15.21",
+    "@atlaspack/utils": "2.19.3"
   },
   "devDependencies": {
     "typescript": ">=3.0.0"

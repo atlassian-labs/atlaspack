@@ -1,5 +1,32 @@
 # @atlaspack/fs
 
+## 2.15.26
+
+### Patch Changes
+
+- [#785](https://github.com/atlassian-labs/atlaspack/pull/785) [`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922) Thanks [@matt-koko](https://github.com/matt-koko)! - We need to re-publish every package in Atlaspack with the corrected types field.
+
+- Updated dependencies [[`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922), [`686a398`](https://github.com/atlassian-labs/atlaspack/commit/686a398faa1f9e19cbf9274add2c46e246bafba8)]:
+  - @atlaspack/build-cache@2.13.6
+  - @atlaspack/feature-flags@2.25.1
+  - @atlaspack/logger@2.14.23
+  - @atlaspack/rust@3.8.1
+  - @atlaspack/types-internal@2.20.1
+  - @atlaspack/workers@2.14.31
+  - @atlaspack/watcher-watchman-js@2.14.31
+
+## 2.15.25
+
+### Patch Changes
+
+- Updated dependencies [[`7a52bab`](https://github.com/atlassian-labs/atlaspack/commit/7a52bab6281e8edbfa66af248eb6f872c6b4b7bd), [`eedcbc4`](https://github.com/atlassian-labs/atlaspack/commit/eedcbc408fc1e86a2a8e25f1a41c57146d8529e1), [`5a0363f`](https://github.com/atlassian-labs/atlaspack/commit/5a0363f1086e81068959b87e92064bed5a11a9b4), [`038e87a`](https://github.com/atlassian-labs/atlaspack/commit/038e87a7858d39556d59d3a2d17db534d45f62c6), [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572), [`0684997`](https://github.com/atlassian-labs/atlaspack/commit/0684997c127a6204af1376b36e556fddd1ba5557), [`602f8ed`](https://github.com/atlassian-labs/atlaspack/commit/602f8ed9d8381301df8b2cc82c1d5cf6f2f94fec)]:
+  - @atlaspack/feature-flags@2.25.0
+  - @atlaspack/types-internal@2.20.0
+  - @atlaspack/rust@3.8.0
+  - @atlaspack/logger@2.14.22
+  - @atlaspack/workers@2.14.30
+  - @atlaspack/watcher-watchman-js@2.14.30
+
 ## 2.15.24
 
 ### Patch Changes

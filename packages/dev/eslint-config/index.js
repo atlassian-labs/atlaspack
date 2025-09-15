@@ -55,6 +55,7 @@ module.exports = {
         'flowtype/no-types-missing-file-annotation': 'off',
         '@atlaspack/internal/no-self-package-imports': 'error',
         '@atlaspack/internal/no-ff-module-level-eval': 'error',
+        '@atlaspack/internal/feature-flag-author': 'error',
         'import/first': 'error',
         'import/newline-after-import': 'error',
         'import/no-extraneous-dependencies': 'error',
@@ -98,6 +99,7 @@ module.exports = {
   rules: {
     '@atlaspack/internal/no-self-package-imports': 'error',
     '@atlaspack/internal/no-ff-module-level-eval': 'error',
+    '@atlaspack/internal/feature-flag-author': 'error',
     'import/first': 'error',
     'import/newline-after-import': 'error',
     'import/no-extraneous-dependencies': 'error',

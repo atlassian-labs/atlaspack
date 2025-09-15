@@ -11,6 +11,7 @@ pub use packager_plugin::*;
 pub use reporter_plugin::*;
 pub use resolver_plugin::*;
 pub use runtime_plugin::*;
+use serde::{Deserialize, Serialize};
 pub use transformer_plugin::*;
 pub use validator_plugin::*;
 
@@ -35,6 +36,12 @@ pub struct PluginContext {
   pub options: Arc<PluginOptions>,
 }
 
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+pub struct HmrOptions {
+  pub port: u32,
+  pub host: String,
+}
+
 #[derive(Default)]
 pub struct PluginLogger {}
 
@@ -47,4 +54,5 @@ pub struct PluginOptions {
   pub mode: BuildMode,
   pub project_root: PathBuf,
   pub feature_flags: FeatureFlags,
+  pub hmr_options: Option<HmrOptions>,
 }

@@ -210,10 +210,6 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       .bool_enabled("conditionalBundlingApi");
 
     let feature_flag_hmr_improvements = self.options.feature_flags.bool_enabled("hmrImprovements");
-    let feature_flag_computed_properties_fix = self
-      .options
-      .feature_flags
-      .bool_enabled("unusedComputedPropertyFix");
 
     let feature_flag_exports_rebinding_optimisation = self
       .options
@@ -304,12 +300,13 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       module_id: asset.id.to_string(),
       node_replacer: is_node,
       project_root: self.options.project_root.to_string_lossy().into_owned(),
-      react_refresh: self.options.mode == BuildMode::Development && package_json.is_some_and(|pkg| depends_on_react(&pkg.contents))
-      // && TODO: self.options.hmr_options
-      && env.context.is_browser()
-      && !env.is_library
-      && !env.context.is_worker()
-      && !env.context.is_worklet(),
+      react_refresh: self.options.hmr_options.is_some()
+        && self.options.mode == BuildMode::Development
+        && package_json.is_some_and(|pkg| depends_on_react(&pkg.contents))
+        && env.context.is_browser()
+        && !env.is_library
+        && !env.context.is_worker()
+        && !env.context.is_worklet(),
       replace_env: !is_node,
       scope_hoist: env.should_scope_hoist && env.source_type != SourceType::Script,
       source_maps: env.source_map.is_some(),
@@ -333,7 +330,6 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         .unwrap_or_default(),
       conditional_bundling: feature_flag_conditional_bundling,
       hmr_improvements: feature_flag_hmr_improvements,
-      computed_properties_fix: feature_flag_computed_properties_fix,
       exports_rebinding_optimisation: feature_flag_exports_rebinding_optimisation,
       ..atlaspack_js_swc_core::Config::default()
     };
