@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@atlaspack/config-default": "6.0.1",
-    "@atlaspack/core": "2.25.1",
+    "@atlaspack/core": "2.25.0",
     "@atlaspack/fs": "2.15.29",
     "@atlaspack/package-manager": "2.14.34",
     "pirates": "^4.0.0"

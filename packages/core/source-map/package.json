@@ -21,7 +21,7 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/logger": "2.14.23",
-    "@atlaspack/rust": "3.8.1"
+    "@atlaspack/logger": "2.14.26",
+    "@atlaspack/rust": "3.8.2"
   }
 }

@@ -39,7 +39,7 @@
   "dependencies": {
     "@atlaspack/build-cache": "2.13.6",
     "@atlaspack/cache": "3.2.29",
-    "@atlaspack/core": "2.25.1",
+    "@atlaspack/core": "2.25.0",
     "@atlaspack/cli": "2.14.13",
     "@atlaspack/feature-flags": "2.25.4",
     "@modelcontextprotocol/sdk": "^1.13.0",

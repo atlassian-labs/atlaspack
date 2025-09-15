@@ -32,7 +32,7 @@
     "srcset": "4"
   },
   "devDependencies": {
-    "@atlaspack/core": "2.25.1"
+    "@atlaspack/core": "2.25.0"
   },
   "type": "commonjs"
 }

@@ -17,7 +17,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/core": "2.25.1",
+    "@atlaspack/core": "2.25.0",
     "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/feature-flags": "2.25.4",
     "@atlaspack/graph": "3.5.23",

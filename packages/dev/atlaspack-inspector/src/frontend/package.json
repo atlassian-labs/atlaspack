@@ -28,7 +28,7 @@
     "@atlaskit/primitives": "^14.8.4",
     "@atlaskit/tabs": "^18.1.2",
     "@atlaspack/cli": "2.14.13",
-    "@atlaspack/core": "2.25.1",
+    "@atlaspack/core": "2.25.0",
     "@atlaspack/graph": "3.5.23",
     "@carrotsearch/foamtree": "^3.5.2",
     "@tanstack/react-query": "^5.81.5",

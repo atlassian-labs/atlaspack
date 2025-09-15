@@ -82,6 +82,19 @@ export default class NodeSourceMap extends SourceMap {
     map.addEmptyMap(sourceName, sourceContent, lineOffset);
     return map;
   }
+
+  static safeToBuffer<T extends SourceMap>(
+    sourceMap: T | null | undefined,
+  ): Buffer | undefined {
+    if (sourceMap == null || sourceMap == undefined) {
+      return undefined;
+    }
+    if (sourceMap instanceof SourceMap) {
+      return sourceMap.toBuffer();
+    }
+
+    throw new Error('Source map is not an Atlaspack SourceMap');
+  }
 }
 
 export const init: Promise<void> = Promise.resolve();
