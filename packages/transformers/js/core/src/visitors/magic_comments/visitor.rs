@@ -6,6 +6,9 @@ use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::Visit;
 use swc_core::ecma::visit::VisitWith;
 
+use crate::visitors::js_visitor::JsVisitor;
+use crate::{Config, TransformResult};
+
 static RE_CHUNK_NAME: LazyLock<Regex> =
   LazyLock::new(|| Regex::new(r#"webpackChunkName:\s*['"](?<name>[^'"]+)['"]"#).unwrap());
 const MAGIC_COMMENT_DEFAULT_KEYWORD: &str = "webpackChunkName";
@@ -27,6 +30,16 @@ impl<'a> MagicCommentsVisitor<'a> {
 
   pub fn has_magic_comment(code: &str) -> bool {
     code.contains(MAGIC_COMMENT_DEFAULT_KEYWORD)
+  }
+}
+
+impl<'a> JsVisitor for MagicCommentsVisitor<'a> {
+  fn should_apply(&self, config: &Config) -> bool {
+    config.magic_comments && Self::has_magic_comment(self.code)
+  }
+
+  fn apply_results(self, result: &mut TransformResult) {
+    result.magic_comments = self.magic_comments;
   }
 }
 

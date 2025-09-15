@@ -1,4 +1,3 @@
-pub mod add_display_name;
 mod collect;
 mod constant_module;
 mod dependency_collector;
@@ -8,11 +7,11 @@ mod esm_to_cjs_replacer;
 mod fs;
 mod global_replacer;
 mod hoist;
-mod magic_comments;
 mod node_replacer;
 pub mod test_utils;
 mod typeof_replacer;
 mod utils;
+mod visitors;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -27,6 +26,7 @@ use atlaspack_macros::MacroCallback;
 use atlaspack_macros::MacroError;
 use atlaspack_macros::Macros;
 
+use crate::visitors::magic_comments::MagicCommentsVisitor;
 use collect::Collect;
 pub use collect::CollectImportedSymbol;
 use collect::CollectResult;
@@ -43,7 +43,6 @@ use hoist::HoistResult;
 pub use hoist::ImportedSymbol;
 use hoist::hoist;
 use indexmap::IndexMap;
-use magic_comments::MagicCommentsVisitor;
 use node_replacer::NodeReplacer;
 use path_slash::PathExt;
 use pathdiff::diff_paths;
@@ -102,6 +101,8 @@ use utils::error_buffer_to_diagnostics;
 
 use crate::esm_export_classifier::EsmExportClassifier;
 use crate::esm_export_classifier::SymbolsInfo;
+use crate::visitors::add_display_name::AddDisplayNameVisitor;
+use crate::visitors::js_visitor::StaticVisitorCollection;
 
 type SourceMapBuffer = Vec<(swc_core::common::BytePos, swc_core::common::LineCol)>;
 
@@ -281,11 +282,6 @@ pub fn transform(
               let global_mark = Mark::fresh(Mark::root());
               let unresolved_mark = Mark::fresh(Mark::root());
 
-              if config.magic_comments && MagicCommentsVisitor::has_magic_comment(code) {
-                let mut magic_comment_visitor = MagicCommentsVisitor::new(code);
-                module.visit_with(&mut magic_comment_visitor);
-                result.magic_comments = magic_comment_visitor.magic_comments;
-              }
 
               let module = module.apply(&mut (
                 resolver(unresolved_mark, global_mark, config.is_type_script),
@@ -333,10 +329,6 @@ pub fn transform(
               };
 
               if config.is_jsx {
-                if config.add_display_name.unwrap_or(false) {
-                  module.visit_mut_with(&mut add_display_name::AddDisplayNameVisitor::default());
-                }
-
                 module = module.apply(&mut react::react(
                     source_map.clone(),
                     Some(&comments),
@@ -397,6 +389,13 @@ pub fn transform(
                   },
                 ));
               }
+
+
+             StaticVisitorCollection::new()
+                .add_read_visitor(MagicCommentsVisitor::new(code))
+                .add_mut_visitor(AddDisplayNameVisitor::default())
+                .run(&mut module, &config, &mut result);
+
 
               let mut module = {
                 let mut passes = (

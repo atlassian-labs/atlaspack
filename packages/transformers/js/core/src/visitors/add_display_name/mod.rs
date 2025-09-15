@@ -2,6 +2,8 @@ use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::quote;
 
+use crate::visitors::js_visitor::JsVisitor;
+
 use self::react_detector::{
   arrow_contains_component, function_contains_component, is_component_name,
 };
@@ -35,6 +37,12 @@ mod react_detector;
 /// ```
 #[derive(Default)]
 pub struct AddDisplayNameVisitor {}
+
+impl JsVisitor for AddDisplayNameVisitor {
+  fn should_apply(&self, config: &crate::Config) -> bool {
+    config.is_jsx && config.add_display_name.unwrap_or(false)
+  }
+}
 
 impl VisitMut for AddDisplayNameVisitor {
   fn visit_mut_module(&mut self, module: &mut Module) {
