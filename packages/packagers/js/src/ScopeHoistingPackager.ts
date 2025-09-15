@@ -111,7 +111,7 @@ export class ScopeHoistingPackager {
   topLevelNames: Map<string, number> = new Map();
   seenAssets: Set<Asset> = new Set();
   wrappedAssets: Set<Asset> = new Set();
-  hoistedRequires: Map<string, Map<string, string>> = new Map();
+  hoistedRequires: Map<Dependency, Map<Asset, string>> = new Map();
   seenHoistedRequires: Set<string> = new Set();
   needsPrelude: boolean = false;
   usedHelpers: Set<string> = new Set();
@@ -1257,14 +1257,14 @@ ${code}
       (!this.bundle.hasAsset(resolvedAsset) ||
         !this.shouldSkipAsset(resolvedAsset))
     ) {
-      let hoisted = this.hoistedRequires.get(dep.id);
+      let hoisted = this.hoistedRequires.get(dep);
       if (!hoisted) {
         hoisted = new Map();
-        this.hoistedRequires.set(dep.id, hoisted);
+        this.hoistedRequires.set(dep, hoisted);
       }
 
       hoisted.set(
-        resolvedAsset.id,
+        resolvedAsset,
         `var $${publicId} = parcelRequire(${JSON.stringify(publicId)});`,
       );
     }
@@ -1349,7 +1349,7 @@ ${code}
       return ['', 0];
     }
 
-    let hoisted = this.hoistedRequires.get(dep.id);
+    let hoisted = this.hoistedRequires.get(dep);
     let res = '';
     let lineCount = 0;
     let isWrapped = this.isWrapped(resolved, parentAsset);
@@ -1361,7 +1361,7 @@ ${code}
     if (
       isWrapped &&
       !dep.meta.shouldWrap &&
-      (!hoisted || hoisted.keys().next().value !== resolved.id) &&
+      (!hoisted || hoisted.keys().next().value !== resolved) &&
       !this.bundleGraph.isDependencySkipped(dep) &&
       !this.shouldSkipAsset(resolved)
     ) {
