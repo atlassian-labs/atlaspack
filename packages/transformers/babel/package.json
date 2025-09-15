@@ -18,7 +18,7 @@
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/plugin": "2.14.33",
-    "@atlaspack/source-map": "2.0.0",
+    "@atlaspack/source-map": "3.0.0",
     "@atlaspack/utils": "3.0.1",
     "browserslist": "^4.6.6",
     "json5": "^2.2.0",
