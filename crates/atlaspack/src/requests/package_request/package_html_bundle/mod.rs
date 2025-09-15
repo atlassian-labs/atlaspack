@@ -11,7 +11,7 @@ use petgraph::{graph::NodeIndex, visit::EdgeRef};
 use crate::requests::package_request::{
   package_bundle,
   package_html_bundle::find_html_reference_nodes::{
-    rewrite_html_reference, RewriteHTMLReferenceParams,
+    rewrite_html_reference, HTMLReference, RewriteHTMLReferenceParams,
   },
   AssetDataProvider, PackageBundleParams,
 };
@@ -158,9 +158,11 @@ pub fn package_html_bundle<ADP: AssetDataProvider>(
   for reference in &references {
     // println!("reference: {:?}", reference);
     // println!("referenced_bundles: {:#?}", referenced_bundles);
-    if reference.reference_type() == &find_html_reference_nodes::HTMLReferenceType::InlineScript {
-      let dependency_specifier = reference.dependency_specifier();
-
+    if let HTMLReference::InlineScript {
+      dependency_specifier,
+      ..
+    } = reference
+    {
       if let Some(reference) = referenced_bundles.get(dependency_specifier) {
         let mut inline_writer = Vec::new();
 

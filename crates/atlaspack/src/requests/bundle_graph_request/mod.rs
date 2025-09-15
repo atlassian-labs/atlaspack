@@ -603,39 +603,6 @@ mod tests {
     )
   }
 
-  fn acyclic_asset_graph_node_label(
-    node: &AcyclicAssetGraphNode,
-    repo_root: &Path,
-    project_dir: &Path,
-  ) -> String {
-    match node {
-      AcyclicAssetGraphNode::Asset(asset_node) => {
-        asset_node_label(asset_node, &repo_root, &project_dir)
-      }
-      AcyclicAssetGraphNode::Cycle(assets) => {
-        let mut cycle_assets = assets
-          .iter()
-          .map(|asset| asset_path_label(asset, &repo_root, &project_dir))
-          .collect::<Vec<_>>();
-        cycle_assets.sort();
-
-        format!("Cycle({})", cycle_assets.join(", "))
-      }
-      AcyclicAssetGraphNode::Root => "Root".to_string(),
-    }
-  }
-
-  fn make_acyclic_dot_graph(project_dir: PathBuf, acyclic_graph: AcyclicAssetGraph) -> DebugGraph {
-    let repo_root = get_repo_path();
-
-    make_dot_graph(
-      &acyclic_graph,
-      |node| acyclic_asset_graph_node_label(node, &repo_root, &project_dir),
-      |edge| simplified_asset_graph_edge_label(edge),
-      |_| true,
-    )
-  }
-
   fn make_dominator_tree_dot_graph(
     project_dir: PathBuf,
     dominator_tree: DominatorTree,

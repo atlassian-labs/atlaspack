@@ -1,6 +1,5 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use atlaspack_core::bundle_graph::{BundleGraphEdge, BundleGraphNode};
 use atlaspack_plugin_transformer_html::dom_visitor::{DomTraversalOperation, DomVisitor};
 use html5ever::{namespace_url, ExpandedName, LocalName};
 use markup5ever::{expanded_name, local_name, ns};
@@ -16,15 +15,15 @@ pub fn rewrite_html_reference(
   reference: &HTMLReference,
 ) -> Option<()> {
   // println!("rewrite_html_reference: {:?}", reference);
-  match reference.reference_type() {
-    HTMLReferenceType::Script => {
-      let parent = reference.handle.parent.replace(None);
+  match reference {
+    HTMLReference::Script { dependency_id, .. } => {
+      let parent = reference.handle().parent.replace(None);
       let parent = parent.map(|p| p.upgrade()).flatten()?;
       let mut children = parent.children.borrow_mut();
 
       let index = children
         .iter()
-        .position(|child| Rc::as_ptr(child) == Rc::as_ptr(&reference.handle))?;
+        .position(|child| Rc::as_ptr(child) == Rc::as_ptr(reference.handle()))?;
 
       let script_node: Handle = children.remove(index);
       let NodeData::Element {
@@ -39,7 +38,7 @@ pub fn rewrite_html_reference(
 
       let new_script_paths = params
         .referenced_paths_by_dependency_id
-        .get(&reference.dependency_id)?;
+        .get(dependency_id)?;
       let new_script_nodes: Vec<Handle> = new_script_paths
         .iter()
         .map(|path| {
@@ -66,8 +65,11 @@ pub fn rewrite_html_reference(
 
       children.splice(index..=index, new_script_nodes);
     }
-    HTMLReferenceType::InlineScript => {
-      let mut children = reference.handle.children.borrow_mut();
+    HTMLReference::InlineScript {
+      dependency_specifier,
+      ..
+    } => {
+      let mut children = reference.handle().children.borrow_mut();
       children.clear();
 
       // println!(
@@ -80,13 +82,13 @@ pub fn rewrite_html_reference(
       // );
       let contents = params
         .contents_by_dependency_specifier
-        .get(&reference.dependency_specifier)
+        .get(dependency_specifier)
         .expect("Reference not found");
       children.push(Node::new(NodeData::Text {
         contents: RefCell::new(contents.clone().into()),
       }));
 
-      let NodeData::Element { attrs, .. } = &reference.handle.data else {
+      let NodeData::Element { attrs, .. } = &reference.handle().data else {
         return None;
       };
 
@@ -109,28 +111,47 @@ pub enum HTMLReferenceType {
 }
 
 #[derive(Debug)]
-pub struct HTMLReference {
-  reference_type: HTMLReferenceType,
-  handle: Handle,
-  dependency_id: String,
-  dependency_specifier: String,
+pub enum HTMLReference {
+  Script {
+    handle: Handle,
+    dependency_id: String,
+  },
+  InlineScript {
+    handle: Handle,
+    dependency_specifier: String,
+  },
 }
 
 impl HTMLReference {
   pub fn reference_type(&self) -> &HTMLReferenceType {
-    &self.reference_type
+    match self {
+      HTMLReference::Script { .. } => &HTMLReferenceType::Script,
+      HTMLReference::InlineScript { .. } => &HTMLReferenceType::InlineScript,
+    }
   }
 
   pub fn handle(&self) -> &Handle {
-    &self.handle
+    match self {
+      HTMLReference::Script { handle, .. } => handle,
+      HTMLReference::InlineScript { handle, .. } => handle,
+    }
   }
 
-  pub fn dependency_id(&self) -> &str {
-    &self.dependency_id
+  pub fn dependency_id(&self) -> Option<&str> {
+    match self {
+      HTMLReference::Script { dependency_id, .. } => Some(dependency_id),
+      HTMLReference::InlineScript { .. } => None,
+    }
   }
 
-  pub fn dependency_specifier(&self) -> &str {
-    &self.dependency_specifier
+  pub fn dependency_specifier(&self) -> Option<&str> {
+    match self {
+      HTMLReference::Script { .. } => None,
+      HTMLReference::InlineScript {
+        dependency_specifier,
+        ..
+      } => Some(dependency_specifier),
+    }
   }
 }
 
@@ -163,19 +184,14 @@ impl DomVisitor for FindHTMLReferenceNodesVisitor {
           });
 
           if let Some(value) = src_attribute {
-            self.references.push(HTMLReference {
-              reference_type: HTMLReferenceType::Script,
+            self.references.push(HTMLReference::Script {
               handle: node.clone(),
-              // TODO: enum
-              dependency_specifier: "".to_string(),
               dependency_id: value.to_string(),
             });
           } else if let Some(value) = data_key_attribute {
-            self.references.push(HTMLReference {
-              reference_type: HTMLReferenceType::InlineScript,
+            self.references.push(HTMLReference::InlineScript {
               handle: node.clone(),
               dependency_specifier: value.to_string(),
-              dependency_id: "".to_string(),
             });
           }
         }
@@ -227,8 +243,11 @@ mod tests {
     let refs = visitor.into_references();
 
     assert_eq!(refs.len(), 1);
-    assert!(matches!(refs[0].reference_type, HTMLReferenceType::Script));
-    assert_eq!(refs[0].dependency_id, "dep");
+    assert!(matches!(
+      refs[0].reference_type(),
+      HTMLReferenceType::Script
+    ));
+    assert_eq!(refs[0].dependency_id(), Some("dep"));
   }
 
   #[test]
@@ -248,10 +267,10 @@ mod tests {
 
     assert_eq!(refs.len(), 1);
     assert!(matches!(
-      refs[0].reference_type,
+      refs[0].reference_type(),
       HTMLReferenceType::InlineScript
     ));
-    assert_eq!(refs[0].dependency_specifier, "abc123");
+    assert_eq!(refs[0].dependency_specifier(), Some("abc123"));
   }
 
   #[test]
@@ -293,10 +312,16 @@ mod tests {
     let refs = visitor.into_references();
 
     assert_eq!(refs.len(), 2);
-    assert!(matches!(refs[0].reference_type, HTMLReferenceType::Script));
-    assert_eq!(refs[0].dependency_id, "a");
-    assert!(matches!(refs[1].reference_type, HTMLReferenceType::Script));
-    assert_eq!(refs[1].dependency_id, "b");
+    assert!(matches!(
+      refs[0].reference_type(),
+      HTMLReferenceType::Script
+    ));
+    assert_eq!(refs[0].dependency_id(), Some("a"));
+    assert!(matches!(
+      refs[1].reference_type(),
+      HTMLReferenceType::Script
+    ));
+    assert_eq!(refs[1].dependency_id(), Some("b"));
   }
 
   #[test]
@@ -314,8 +339,11 @@ mod tests {
     walk(dom.document.clone(), &mut visitor);
     let refs = visitor.into_references();
     assert_eq!(refs.len(), 1);
-    assert!(matches!(refs[0].reference_type, HTMLReferenceType::Script));
-    assert_eq!(refs[0].dependency_id, "dep");
+    assert!(matches!(
+      refs[0].reference_type(),
+      HTMLReferenceType::Script
+    ));
+    assert_eq!(refs[0].dependency_id(), Some("dep"));
 
     let mut referenced_paths_by_dependency_id = HashMap::new();
     referenced_paths_by_dependency_id
@@ -361,8 +389,11 @@ mod tests {
     walk(dom.document.clone(), &mut visitor);
     let refs = visitor.into_references();
     assert_eq!(refs.len(), 1);
-    assert!(matches!(refs[0].reference_type, HTMLReferenceType::Script));
-    assert_eq!(refs[0].dependency_id, "dep");
+    assert!(matches!(
+      refs[0].reference_type(),
+      HTMLReferenceType::Script
+    ));
+    assert_eq!(refs[0].dependency_id(), Some("dep"));
 
     let mut referenced_paths_by_dependency_id = HashMap::new();
     referenced_paths_by_dependency_id
@@ -408,8 +439,11 @@ mod tests {
     walk(dom.document.clone(), &mut visitor);
     let refs = visitor.into_references();
     assert_eq!(refs.len(), 1);
-    assert!(matches!(refs[0].reference_type, HTMLReferenceType::Script));
-    assert_eq!(refs[0].dependency_id, "dep");
+    assert!(matches!(
+      refs[0].reference_type(),
+      HTMLReferenceType::Script
+    ));
+    assert_eq!(refs[0].dependency_id(), Some("dep"));
 
     let mut referenced_paths_by_dependency_id = HashMap::new();
     referenced_paths_by_dependency_id.insert(
@@ -464,10 +498,10 @@ mod tests {
     let refs = visitor.into_references();
     assert_eq!(refs.len(), 1);
     assert!(matches!(
-      refs[0].reference_type,
+      refs[0].reference_type(),
       HTMLReferenceType::InlineScript
     ));
-    assert_eq!(refs[0].dependency_specifier, "abc123");
+    assert_eq!(refs[0].dependency_specifier(), Some("abc123"));
 
     let mut contents_by_dependency_specifier = HashMap::new();
     contents_by_dependency_specifier.insert(

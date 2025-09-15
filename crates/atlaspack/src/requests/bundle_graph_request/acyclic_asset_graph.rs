@@ -158,15 +158,6 @@ mod tests {
   use super::super::asset_graph_builder::simplified_asset_graph_builder;
   use super::*;
 
-  fn find_root<N, E>(graph: &StableDiGraph<N, E>) -> NodeIndex {
-    graph
-      .node_references()
-      .find_map(|(idx, _)| match idx.index() {
-        _ => Some(idx),
-      })
-      .expect("graph should have nodes")
-  }
-
   fn find_root_simplified(graph: &SimplifiedAssetGraph) -> NodeIndex {
     graph
       .node_references()

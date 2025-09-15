@@ -1,10 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use atlaspack_plugin_transformer_html::dom_visitor::{walk, DomTraversalOperation, DomVisitor};
+use atlaspack_plugin_transformer_html::dom_visitor::{DomTraversalOperation, DomVisitor};
 use html5ever::namespace_url;
-use markup5ever::{expanded_name, local_name, ns, QualName};
+use markup5ever::{expanded_name, local_name, ns};
 use markup5ever_rcdom::{Handle, NodeData};
-use petgraph::visit::EdgeRef;
 
 /// The HTML transformer will rewrite <script src="..."></script> tags to keep the
 /// atlaspack `dependency-id` on the SRC attribute.

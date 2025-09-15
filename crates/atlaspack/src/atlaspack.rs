@@ -258,7 +258,7 @@ mod tests {
   use crate::{
     requests::{
       bundle_graph_request::{self, BundleGraphRequestOutput},
-      package_request::{self, InMemoryAssetDataProvider, PackageRequest, PackageRequestOutput},
+      package_request::{PackageRequest, PackageRequestOutput},
     },
     test_utils,
   };

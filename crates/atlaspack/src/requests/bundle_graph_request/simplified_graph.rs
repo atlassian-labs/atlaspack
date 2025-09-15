@@ -361,7 +361,7 @@ mod tests {
 
     let input_graph: StableDiGraph<String, String> = input_graph
       .graph
-      .map(|_, node| format!("{}", node), |_, edge| "".to_string());
+      .map(|_, node| format!("{}", node), |_, _edge| "".to_string());
     let simplified_graph: StableDiGraph<String, String> =
       simplified_graph.map(|_, node| format!("{}", node), |_, edge| format!("{}", edge));
 

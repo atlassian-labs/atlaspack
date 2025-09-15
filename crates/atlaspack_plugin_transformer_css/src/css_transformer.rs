@@ -535,11 +535,11 @@ mod tests {
   async fn run_plugin(asset: &Asset) -> anyhow::Result<TransformResult> {
     let file_system = Arc::new(InMemoryFileSystem::default());
     let plugin = AtlaspackCssTransformerPlugin::new(&PluginContext {
-      config: Arc::new(ConfigLoader {
-        fs: file_system.clone(),
-        project_root: PathBuf::default(),
-        search_path: PathBuf::default(),
-      }),
+      config: Arc::new(ConfigLoader::new(
+        file_system.clone(),
+        PathBuf::default(),
+        PathBuf::default(),
+      )),
       file_system,
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),

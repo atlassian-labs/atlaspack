@@ -1,10 +1,7 @@
-use std::{
-  collections::VecDeque,
-  sync::{
-    atomic::{AtomicUsize, Ordering},
-    mpsc::Sender,
-    Arc,
-  },
+use std::sync::{
+  atomic::{AtomicUsize, Ordering},
+  mpsc::Sender,
+  Arc,
 };
 
 use petgraph::{
@@ -15,7 +12,7 @@ trait ThreadPool {
   fn spawn(&self, task_id: TaskId, f: impl FnOnce() + Send + 'static);
 }
 
-struct RayonThreadPool;
+pub struct RayonThreadPool;
 
 impl ThreadPool for RayonThreadPool {
   fn spawn(&self, _task_id: TaskId, f: impl FnOnce() + Send + 'static) {
@@ -155,9 +152,8 @@ impl<TaskData: Send + Sync + 'static> ParallelGraphProcessor<TaskData> {
 mod test {
   use super::*;
 
-  use rayon::ThreadPoolBuilder;
-  use std::sync::{Mutex, OnceLock};
-  use std::time::{Duration, Instant};
+  use std::sync::Mutex;
+  use std::time::Duration;
 
   #[test]
   fn test_order_and_parallelism() {
