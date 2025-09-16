@@ -5,13 +5,17 @@ import {declare} from '@babel/helper-plugin-utils';
 interface Opts {
   /** Use node safe import cond syntax */
   node?: boolean;
+  /** Use binding-aware identifier replacement (prevents shadowing issues) */
+  useBindingAwareReplacement?: boolean;
 }
 
 interface State {
   /** Plugin options */
   opts: Opts;
-  /** Set of bindings that need to be mutated after import was transformed */
+  /** Set of bindings that need to be mutated after import was transformed (new approach) */
   conditionalImportBindings?: Set<Binding>;
+  /** Set of identifier names that need to be mutated after import was transformed (legacy approach) */
+  conditionalImportIdentifiers?: Set<string>;
   /** Set of identifiers that have been visited in the exit pass, to avoid adding the load property multiple times */
   visitedIdentifiers?: Set<BabelTypes.Identifier>;
 }
@@ -187,10 +191,15 @@ export default declare((api): PluginObj<State> => {
                   buildNodeObject(importId, cond, ifTrue, ifFalse),
                 );
 
-                // Add the binding to set so we can mutate all references to this binding in the exit pass
-                const binding = path.scope.getBinding(importId.name);
-                if (binding) {
-                  state.conditionalImportBindings?.add(binding);
+                if (state.opts.useBindingAwareReplacement) {
+                  // Add the binding to set so we can mutate all references to this binding in the exit pass
+                  const binding = path.scope.getBinding(importId.name);
+                  if (binding) {
+                    state.conditionalImportBindings?.add(binding);
+                  }
+                } else {
+                  // Add identifier name to set so we can mutate all import usages in the exit pass (legacy approach)
+                  state.conditionalImportIdentifiers?.add(importId.name);
                 }
               }
             }
@@ -199,17 +208,28 @@ export default declare((api): PluginObj<State> => {
       },
       Identifier: {
         exit(path, state) {
-          // Only transform identifiers that are actual references to our conditional import bindings
-          if (
-            !path.isReferencedIdentifier() ||
-            state.visitedIdentifiers?.has(path.node)
-          ) {
+          if (state.visitedIdentifiers?.has(path.node)) {
             return;
           }
 
-          const binding = path.scope.getBinding(path.node.name);
-          const isConditionalImport =
-            binding && state.conditionalImportBindings?.has(binding);
+          let isConditionalImport = false;
+
+          if (state.opts.useBindingAwareReplacement) {
+            // New binding-aware approach: only transform identifiers that are actual references
+            if (!path.isReferencedIdentifier()) {
+              return;
+            }
+
+            const binding = path.scope.getBinding(path.node.name);
+            isConditionalImport = !!(
+              binding && state.conditionalImportBindings?.has(binding)
+            );
+          } else {
+            // Legacy approach: check identifier names (can cause shadowing issues)
+            isConditionalImport = !!state.conditionalImportIdentifiers?.has(
+              path.node.name,
+            );
+          }
 
           if (isConditionalImport) {
             // Add load property to the import usage
@@ -224,6 +244,7 @@ export default declare((api): PluginObj<State> => {
       Program: {
         enter(_, state) {
           state.conditionalImportBindings = new Set();
+          state.conditionalImportIdentifiers = new Set();
           state.visitedIdentifiers = new Set();
         },
       },
