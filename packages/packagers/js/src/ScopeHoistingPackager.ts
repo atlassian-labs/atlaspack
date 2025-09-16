@@ -111,6 +111,7 @@ export class ScopeHoistingPackager {
   topLevelNames: Map<string, number> = new Map();
   seenAssets: Set<Asset> = new Set();
   wrappedAssets: Set<Asset> = new Set();
+  constantAssets: Set<Asset> = new Set();
   hoistedRequires: Map<Dependency, Map<Asset, string>> = new Map();
   seenHoistedRequires: Set<string> = new Set();
   needsPrelude: boolean = false;
@@ -152,8 +153,7 @@ export class ScopeHoistingPackager {
     contents: string;
     map: SourceMap | null | undefined;
   }> {
-    let {wrapped: wrappedAssets, constant: constantAssets} =
-      await this.loadAssets();
+    await this.loadAssets();
     this.buildExportedSymbols();
 
     // If building a library, the target is actually another bundler rather
@@ -196,7 +196,7 @@ export class ScopeHoistingPackager {
       this.useBothScopeHoistingImprovements
     ) {
       // Write out all constant modules used by this bundle
-      for (let asset of constantAssets) {
+      for (let asset of this.constantAssets) {
         if (!this.seenAssets.has(asset)) {
           processAsset(asset);
         }
@@ -205,7 +205,7 @@ export class ScopeHoistingPackager {
 
     // Hoist wrapped asset to the top of the bundle to ensure that they are registered
     // before they are used.
-    for (let asset of wrappedAssets) {
+    for (let asset of this.wrappedAssets) {
       if (!this.seenAssets.has(asset)) {
         processAsset(asset);
       }
@@ -397,16 +397,11 @@ export class ScopeHoistingPackager {
     return `$parcel$global.rwr(${params.join(', ')});`;
   }
 
-  async loadAssets(): Promise<{
-    wrapped: Array<Asset>;
-    constant: Array<Asset>;
-  }> {
+  async loadAssets() {
     type QueueItem = [Asset, {code: string; map: Buffer | undefined | null}];
     let queue = new PromiseQueue<QueueItem>({
       maxConcurrent: 32,
     });
-    let wrapped: Array<Asset> = [];
-    let constant: Array<Asset> = [];
 
     this.bundle.traverseAssets((asset) => {
       queue.add(async () => {
@@ -434,13 +429,12 @@ export class ScopeHoistingPackager {
             .some((dep) => dep.priority === 'lazy')
         ) {
           this.wrappedAssets.add(asset);
-          wrapped.push(asset);
         } else if (
           (getFeatureFlag('inlineConstOptimisationFix') ||
             this.useBothScopeHoistingImprovements) &&
           asset.meta.isConstantModule
         ) {
-          constant.push(asset);
+          this.constantAssets.add(asset);
         }
       }
     });
@@ -456,12 +450,13 @@ export class ScopeHoistingPackager {
         for (let entryAsset of this.bundle.getEntryAssets()) {
           if (!this.wrappedAssets.has(entryAsset)) {
             this.wrappedAssets.add(entryAsset);
-            wrapped.push(entryAsset);
           }
         }
       }
 
-      let moduleGroupParents = [...wrapped];
+      // We need to make a new copy here so that we can add to the list and
+      // iterate the newly added items, without mutating the wrappedAssets set
+      let moduleGroupParents = [...this.wrappedAssets.values()];
 
       if (getFeatureFlag('applyScopeHoistingImprovementV2')) {
         // The main entry needs to be check to find assets that would have gone in
@@ -487,7 +482,6 @@ export class ScopeHoistingPackager {
             !asset.meta.isConstantModule &&
             (assignedAssets.has(asset) || this.isReExported(asset))
           ) {
-            wrapped.push(asset);
             this.wrappedAssets.add(asset);
 
             // This also needs to be added to the traversal so that we iterate
@@ -502,7 +496,7 @@ export class ScopeHoistingPackager {
         }, moduleGroupParentAsset);
       }
     } else {
-      for (let wrappedAssetRoot of [...wrapped]) {
+      for (let wrappedAssetRoot of this.wrappedAssets) {
         this.bundle.traverseAssets((asset, _, actions) => {
           if (asset === wrappedAssetRoot) {
             return;
@@ -515,14 +509,12 @@ export class ScopeHoistingPackager {
 
           if (!asset.meta.isConstantModule) {
             this.wrappedAssets.add(asset);
-            wrapped.push(asset);
           }
         }, wrappedAssetRoot);
       }
     }
 
     this.assetOutputs = new Map(await queue.run());
-    return {wrapped, constant};
   }
 
   isReExported(asset: Asset): boolean {
