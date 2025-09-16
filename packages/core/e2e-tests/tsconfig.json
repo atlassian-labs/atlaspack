@@ -7,6 +7,12 @@
   "references": [
     {
       "path": "../core/tsconfig.json"
+    },
+    {
+      "path": "../test-utils/tsconfig.json"
+    },
+    {
+      "path": "../types/tsconfig.json"
     }
   ]
 }
