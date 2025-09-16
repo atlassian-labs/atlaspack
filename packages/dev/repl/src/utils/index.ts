@@ -14,11 +14,13 @@ export function nthIndex(str: string, pat: string, n: number): number {
   return i;
 }
 
+// @ts-expect-error TS2304
 export const ctrlKey: string = navigator.platform.includes('Mac')
   ? '⌘'
   : 'Ctrl';
 
 function downloadBlob(name: string, blob: Blob) {
+  // @ts-expect-error TS2584
   const el = document.createElement('a');
   el.href = URL.createObjectURL(blob);
   el.download = name;

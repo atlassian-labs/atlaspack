@@ -23,13 +23,11 @@ export function Preview({clientID}: {clientID: Promise<string>}): any {
             // @ts-expect-error TS17004
             <button
               onClick={() => {
+                // @ts-expect-error TS2304
                 let w = window.open(url);
                 // window.open(url, '_blank', 'toolbar=0,location=0,menubar=0'),
-                // @ts-expect-error TS2345
                 setPopover(w);
-                // @ts-expect-error TS18047
                 w.onload = function () {
-                  // @ts-expect-error TS2339
                   this.onbeforeunload = function () {
                     setPopover(null);
                   };

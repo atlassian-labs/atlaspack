@@ -17,7 +17,6 @@
   },
   "scripts": {
     "test": "yarn workspace @atlaspack/integration-tests test -g jsonld",
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {

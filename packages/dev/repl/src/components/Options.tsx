@@ -47,6 +47,7 @@ export function Options({
           checked={values.sourceMaps}
           // @ts-expect-error TS2322
           disabled={values.viewSourcemaps || disabled}
+          // @ts-expect-error TS2339
           onChange={(e) => onChange('sourceMaps', e.target.checked)}
         />
       </label>
@@ -77,6 +78,7 @@ export function Options({
         {/*
          // @ts-expect-error TS17004 */}
         <select
+          // @ts-expect-error TS2339
           onChange={(e) => onChange('outputFormat', e.target.value || null)}
           value={values.outputFormat ?? ''}
           disabled={disabled || disablePackageJSON}
@@ -108,6 +110,7 @@ export function Options({
            // @ts-expect-error TS17004 */}
           <select
             onChange={(e) => {
+              // @ts-expect-error TS2339
               onChange('targetType', e.target.value);
               onChange('targetEnv', null);
             }}
@@ -144,7 +147,9 @@ export function Options({
          // @ts-expect-error TS17004 */}
         <select
           onChange={(e) => {
+            // @ts-expect-error TS2339
             onChange('mode', e.target.value || null);
+            // @ts-expect-error TS2339
             if (e.target.value === 'production') {
               onChange('hmr', false);
             } else {
@@ -175,6 +180,7 @@ export function Options({
         <input
           type="checkbox"
           checked={values.hmr}
+          // @ts-expect-error TS2339
           onChange={(e) => onChange('hmr', e.target.checked)}
           disabled={disabled || values.mode === 'production'}
         />
@@ -190,6 +196,7 @@ export function Options({
         <input
           type="checkbox"
           checked={values.minify}
+          // @ts-expect-error TS2339
           onChange={(e) => onChange('minify', e.target.checked)}
           disabled={disabled || values.mode === 'development'}
         />
@@ -205,6 +212,7 @@ export function Options({
         <input
           type="checkbox"
           checked={values.scopeHoist}
+          // @ts-expect-error TS2339
           onChange={(e) => onChange('scopeHoist', e.target.checked)}
           disabled={disabled || values.mode === 'development'}
         />
@@ -221,6 +229,7 @@ export function Options({
         {/*
          // @ts-expect-error TS17004 */}
         <select
+          // @ts-expect-error TS2339
           onChange={(e) => onChange('renderGraphs', e.target.value || null)}
           // @ts-expect-error TS2322
           value={values.renderGraphs}
@@ -332,6 +341,7 @@ export function Options({
         {/*
          // @ts-expect-error TS17004 */}
         <select
+          // @ts-expect-error TS2339
           onChange={(e) => onChange('numWorkers', JSON.parse(e.target.value))}
           value={JSON.stringify(values.numWorkers)}
           // @ts-expect-error TS2322
@@ -340,7 +350,9 @@ export function Options({
           {/*
            // @ts-expect-error TS17004 */}
           <option value="0">Use no nested workers</option>
+          {/* @ts-expect-error TS2304 */}
           {navigator.hardwareConcurrency > 0 &&
+            // @ts-expect-error TS2304
             new Array(navigator.hardwareConcurrency / 2).fill(0).map((_, i) => (
               // @ts-expect-error TS17004
               <option key={i + 1} value={i + 1}>

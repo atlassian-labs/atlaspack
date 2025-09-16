@@ -14,7 +14,6 @@
   "types": "./src/JSTransformer.ts",
   "scripts": {
     "test": "mocha",
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "engines": {
