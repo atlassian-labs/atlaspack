@@ -2,7 +2,9 @@
 import nullthrows from 'nullthrows';
 
 let isSafari =
+  // @ts-expect-error TS2304
   /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+// @ts-expect-error TS7034
 let lastHMRStream;
 
 type ClientId = string;
@@ -15,12 +17,16 @@ let pages = new Map<
     [key: string]: string;
   }
 >();
+// @ts-expect-error TS2749
 let parentPorts = new Map<ParentId, MessagePort>();
 let parentToIframe = new Map<ParentId, ClientId>();
 let iframeToParent = new Map<ClientId, ParentId>();
 
+// @ts-expect-error TS7017
 global.parentPorts = parentPorts;
+// @ts-expect-error TS7017
 global.parentToIframe = parentToIframe;
+// @ts-expect-error TS7017
 global.iframeToParent = iframeToParent;
 
 const SECURITY_HEADERS = {
@@ -78,6 +84,7 @@ const MIME = new Map([
 // listen here instead of attaching temporary 'message' event listeners to self
 let messageProxy = new EventTarget();
 
+// @ts-expect-error TS2304
 self.addEventListener('message', (evt) => {
   let parentId = evt.source.id;
   let {type, data, id} = evt.data;
@@ -92,11 +99,13 @@ self.addEventListener('message', (evt) => {
     parentPorts.set(parentId, evt.source);
     let clientId = parentToIframe.get(parentId);
     let send =
+      // @ts-expect-error TS7005
       (clientId != null ? sendToIFrame.get(clientId) : null) ?? lastHMRStream;
     send?.(data);
     evt.source.postMessage({id});
   } else {
     let wrapper = new Event(evt.type);
+    // @ts-expect-error TS2339
     wrapper.data = evt.data;
     messageProxy.dispatchEvent(wrapper);
   }
@@ -104,6 +113,7 @@ self.addEventListener('message', (evt) => {
 
 let encodeUTF8 = new TextEncoder();
 
+// @ts-expect-error TS2304
 self.addEventListener('fetch', (evt) => {
   let url = new URL(evt.request.url);
   let {clientId} = evt;
@@ -127,6 +137,7 @@ self.addEventListener('fetch', (evt) => {
     ) {
       let stream = new ReadableStream({
         start: (controller) => {
+          // @ts-expect-error TS7006
           let cb = (data) => {
             let chunk = `data: ${JSON.stringify(data)}\n\n`;
             controller.enqueue(encodeUTF8.encode(chunk));
@@ -155,6 +166,7 @@ self.addEventListener('fetch', (evt) => {
             return new Response(null, {status: 500});
           }
 
+          // @ts-expect-error TS2488
           let [type, content] = await sendMsg(
             port,
             'hmrAssetSource',
@@ -197,6 +209,7 @@ function extname(filename: string) {
   return filename.slice(filename.lastIndexOf('.') + 1);
 }
 
+// @ts-expect-error TS7006
 function removeNonExistingKeys(existing: Set<ClientId | ParentId>, map) {
   for (let id of map.keys()) {
     if (!existing.has(id)) {
@@ -206,16 +219,22 @@ function removeNonExistingKeys(existing: Set<ClientId | ParentId>, map) {
 }
 setInterval(async () => {
   let existingClients = new Set(
+    // @ts-expect-error TS2304
     (await self.clients.matchAll()).map((c) => c.id),
   );
 
+  // @ts-expect-error TS2345
   removeNonExistingKeys(existingClients, pages);
+  // @ts-expect-error TS2345
   removeNonExistingKeys(existingClients, sendToIFrame);
+  // @ts-expect-error TS2345
   removeNonExistingKeys(existingClients, parentToIframe);
+  // @ts-expect-error TS2345
   removeNonExistingKeys(existingClients, iframeToParent);
 }, 20000);
 
 function sendMsg(
+  // @ts-expect-error TS2749
   target: MessagePort,
   type: string,
   data: string,
@@ -225,10 +244,12 @@ function sendMsg(
   return new Promise((res: (result: Promise<never>) => void) => {
     let handler = (evt: MessageEvent) => {
       if (evt.data.id === id) {
+        // @ts-expect-error TS2345
         messageProxy.removeEventListener('message', handler);
         res(evt.data.data);
       }
     };
+    // @ts-expect-error TS2345
     messageProxy.addEventListener('message', handler);
     target.postMessage({type, data, id}, transfer);
   });
@@ -236,6 +257,7 @@ function sendMsg(
 function uuidv4() {
   return (String(1e7) + -1e3 + -4e3 + -8e3 + -1e11).replace(
     /[018]/g,
+    // @ts-expect-error TS2769
     (c: number) =>
       (
         c ^

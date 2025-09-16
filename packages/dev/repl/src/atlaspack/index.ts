@@ -137,10 +137,13 @@ function uuidv4() {
 
 export let clientID: Promise<string> = Promise.resolve('no-sw');
 
+// @ts-expect-error TS2304
 if (navigator.serviceWorker) {
   clientID = (async () => {
+    // @ts-expect-error TS2304
     let {active: serviceWorker} = await navigator.serviceWorker.ready;
 
+    // @ts-expect-error TS2304
     let sw = new MessageTarget(navigator.serviceWorker, serviceWorker);
 
     let {port1, port2} = new MessageChannel();
@@ -151,6 +154,7 @@ if (navigator.serviceWorker) {
     sw.addEventListener('message', (evt: MessageEvent) => {
       port2.postMessage(evt.data);
     });
+    // @ts-expect-error TS2345
     port2.addEventListener('message', (evt: MessageEvent) => {
       sw.postMessage(evt.data);
     });

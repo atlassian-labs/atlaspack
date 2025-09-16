@@ -100,7 +100,6 @@ function getHostname() {
   return (
     // @ts-expect-error TS2304
     HMR_HOST ||
-    // @ts-expect-error TS2304
     (location.protocol.indexOf('http') === 0 ? location.hostname : 'localhost')
   );
 }
@@ -119,7 +118,6 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var protocol =
     // @ts-expect-error TS2304
     HMR_SECURE ||
-    // @ts-expect-error TS2304
     (location.protocol == 'https:' &&
       !['localhost', '127.0.0.1', '0.0.0.0'].includes(hostname))
       ? 'wss'
@@ -180,7 +178,6 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
       fullReload();
     } else if (data.type === 'update') {
       // Remove error overlay if there is one
-      // @ts-expect-error TS2304
       if (typeof document !== 'undefined') {
         removeErrorOverlay();
       }
@@ -206,11 +203,9 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
 
         // Dispatch custom event so other runtimes (e.g React Refresh) are aware.
         if (
-          // @ts-expect-error TS2304
           typeof window !== 'undefined' &&
           typeof CustomEvent !== 'undefined'
         ) {
-          // @ts-expect-error TS2304
           window.dispatchEvent(new CustomEvent('parcelhmraccept'));
         }
 
@@ -250,12 +245,10 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
         );
       }
 
-      // @ts-expect-error TS2304
       if (typeof document !== 'undefined') {
         // Render the fancy html overlay
         removeErrorOverlay();
         var overlay = createErrorOverlay(data.diagnostics.html);
-        // @ts-expect-error TS2304
         document.body.appendChild(overlay);
       }
     }
@@ -275,7 +268,6 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
 }
 
 function removeErrorOverlay() {
-  // @ts-expect-error TS2304
   var overlay = document.getElementById(OVERLAY_ID);
   if (overlay) {
     overlay.remove();
@@ -296,7 +288,6 @@ function createErrorOverlay(
     >
   >,
 ) {
-  // @ts-expect-error TS2304
   var overlay = document.createElement('div');
   overlay.id = OVERLAY_ID;
 
@@ -346,9 +337,7 @@ ${frame.code}`;
 }
 
 function fullReload() {
-  // @ts-expect-error TS2304
   if ('reload' in location) {
-    // @ts-expect-error TS2304
     location.reload();
   } else if (extCtx && extCtx.runtime && extCtx.runtime.reload) {
     extCtx.runtime.reload();
@@ -387,21 +376,19 @@ function getParents(
 }
 
 function updateLink(link: HTMLElement) {
-  // @ts-expect-error TS2339
   var href = link.getAttribute('href');
 
   if (!href) {
     return;
   }
-  // @ts-expect-error TS2339
   var newLink = link.cloneNode();
+  // @ts-expect-error TS2345
   newLink.onload = function () {
-    // @ts-expect-error TS2339
     if (link.parentNode !== null) {
-      // @ts-expect-error TS2339
       link.parentNode.removeChild(link);
     }
   };
+  // @ts-expect-error TS2339
   newLink.setAttribute('href', href.split('?')[0] + '?' + Date.now());
   // @ts-expect-error TS18047
   link.parentNode.insertBefore(newLink, link.nextSibling);
@@ -416,7 +403,6 @@ function reloadCSS() {
   }
 
   cssTimeout = setTimeout(function () {
-    // @ts-expect-error TS18047
     var document = window.document;
     var links = document.querySelectorAll('link[rel="stylesheet"]');
     for (var i = 0; i < links.length; i++) {
@@ -426,14 +412,18 @@ function reloadCSS() {
         hostname === 'localhost'
           ? new RegExp(
               '^(https?:\\/\\/(0.0.0.0|127.0.0.1)|localhost):' + getPort(),
+              // @ts-expect-error TS2345
             ).test(href)
-          : href.indexOf(hostname + ':' + getPort());
+          : // @ts-expect-error TS2345
+            href.indexOf(hostname + ':' + getPort());
       var absolute =
+        // @ts-expect-error TS2345
         /^https?:\/\//i.test(href) &&
         // @ts-expect-error TS18047
         href.indexOf(location.origin) !== 0 &&
         !servedFromHMRServer;
       if (!absolute) {
+        // @ts-expect-error TS2345
         updateLink(links[i]);
       }
     }
@@ -445,9 +435,7 @@ function reloadCSS() {
 // @ts-expect-error TS2304
 function hmrDownload(asset: HMRAsset) {
   if (asset.type === 'js') {
-    // @ts-expect-error TS18047
     if (typeof document !== 'undefined') {
-      // @ts-expect-error TS18047
       let script = document.createElement('script');
       script.src = asset.url + '?t=' + Date.now();
       if (asset.outputFormat === 'esmodule') {
@@ -462,7 +450,6 @@ function hmrDownload(asset: HMRAsset) {
         ) => {
           script.onload = () => resolve(script);
           script.onerror = reject;
-          // @ts-expect-error TS18047
           document.head?.appendChild(script);
         },
       );
@@ -541,7 +528,6 @@ async function hmrApplyUpdates(assets: Array<HMRAsset>) {
       // @ts-expect-error TS7006
       scriptsToRemove.forEach((script) => {
         if (script) {
-          // @ts-expect-error TS18047
           document.head?.removeChild(script);
         }
       });

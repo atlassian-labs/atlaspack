@@ -190,7 +190,9 @@ function Output({state, dispatch}: {state: State; dispatch: any}) {
   useKeyboard(
     (e) => {
       if (
+        // @ts-expect-error TS2339
         e.metaKey &&
+        // @ts-expect-error TS2339
         e.code === 'KeyB' &&
         !watching &&
         buildState !== STATUS_RUNNING
@@ -408,9 +410,11 @@ function App() {
 
   useKeyboard(
     (e) => {
+      // @ts-expect-error TS2339
       if (e.metaKey && e.code === 'KeyS') {
         dispatch({type: 'view.saveCurrent'});
         e.preventDefault();
+        // @ts-expect-error TS2339
       } else if (e.ctrlKey && e.code === 'KeyW') {
         dispatch({type: 'view.closeCurrent'});
         e.preventDefault();
@@ -559,16 +563,20 @@ function ResizeHandle() {
   return <PanelResizeHandle className="resize-handle"></PanelResizeHandle>;
 }
 
+// @ts-expect-error TS2584
 let root = createRoot(document.getElementById('root'));
 // @ts-expect-error TS17004
 root.render(<App />);
 
+// @ts-expect-error TS2304
 if (navigator.serviceWorker) {
+  // @ts-expect-error TS2304
   navigator.serviceWorker
     // @ts-expect-error TS1470
     .register(new URL('./sw.js', import /*:: ("") */.meta.url), {
       type: 'module',
     })
+    // @ts-expect-error TS7006
     .catch((error) => {
       console.error('Service worker registration failed:', error);
     });
