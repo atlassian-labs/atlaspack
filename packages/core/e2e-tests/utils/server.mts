@@ -18,15 +18,17 @@ export type ServeContext = {
 };
 
 export async function serve(directory: string): Promise<ServeContext> {
-  // Normalize and resolve the root directory only once
-  const rootDir = path.resolve(directory);
   const server = createServer((req, res) => {
     const relPath = !req.url || req.url === '/' ? 'index.html' : req.url;
-    // Use path.resolve to build an absolute path, preventing path traversal
-    const target = path.resolve(rootDir, path.normalize(relPath));
+    const target = path.join(directory, path.normalize(relPath));
 
-    // Prevent directory traversal: ensure target is within rootDir
-    if (!target.startsWith(rootDir + path.sep) && target !== rootDir) {
+    // Check if the resolved target is within the intended directory
+    const resolvedDir = path.resolve(directory);
+    const resolvedTarget = path.resolve(target);
+    if (
+      !resolvedTarget.startsWith(resolvedDir + path.sep) &&
+      resolvedTarget !== resolvedDir
+    ) {
       res.writeHead(403, {'Content-Type': 'text/plain'});
       res.end('Forbidden');
       return;
