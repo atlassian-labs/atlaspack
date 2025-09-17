@@ -95,6 +95,7 @@ export async function loadSourceMap(
 export function remapSourceLocation(
   loc: SourceLocation,
   originalMap: SourceMap,
+  projectRoot: string,
 ): SourceLocation {
   let {
     filePath,
@@ -108,7 +109,11 @@ export function remapSourceLocation(
 
   if (start?.original) {
     if (start.source) {
-      filePath = start.source;
+      if (!path.isAbsolute(start.source)) {
+        filePath = path.join(projectRoot, start.source);
+      } else {
+        filePath = start.source;
+      }
     }
 
     ({line: startLine, column: startCol} = start.original);

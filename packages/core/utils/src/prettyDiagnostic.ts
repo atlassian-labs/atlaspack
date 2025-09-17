@@ -2,6 +2,7 @@ import type {Diagnostic} from '@atlaspack/diagnostic';
 import type {PluginOptions} from '@atlaspack/types-internal';
 
 import formatCodeFrame from '@atlaspack/codeframe';
+import logger from '@atlaspack/logger';
 import _mdAnsi from '@atlaspack/markdown-ansi';
 import _chalk from 'chalk';
 import path from 'path';
@@ -86,7 +87,15 @@ export default async function prettyDiagnostic(
       let highlights = codeFrame.codeHighlights;
       let code = codeFrame.code;
       if (code == null && options && filePath != null) {
-        code = await options.inputFS.readFile(filePath, 'utf8');
+        try {
+          code = await options.inputFS.readFile(filePath, 'utf8');
+        } catch (e) {
+          // In strange cases this can fail and hide the underlying error.
+          logger.warn({
+            origin: '@atlaspack/utils',
+            message: `Failed to read file for generating codeframe: "${filePath}"`,
+          });
+        }
       }
 
       let formattedCodeFrame = '';
