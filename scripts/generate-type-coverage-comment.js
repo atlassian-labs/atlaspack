@@ -66,7 +66,7 @@ function runTypeCoverage(commitSha = null) {
       });
 
       console.log('Building TypeScript references for baseline...');
-      execSync('yarn update-ts-references --frozen', {
+      execSync('yarn build:ts', {
         cwd: WORKSPACE_PATH,
         stdio: 'inherit',
       });
@@ -80,7 +80,7 @@ function runTypeCoverage(commitSha = null) {
     });
 
     const data = JSON.parse(output);
-    console.log(data);
+
     if (data?.succeeded) {
       console.log(
         `Coverage${commitSha ? ' (baseline)' : ''}: ${data.percentString}%`,
@@ -116,7 +116,7 @@ function runTypeCoverage(commitSha = null) {
         });
 
         console.log('Rebuilding TypeScript references for current state...');
-        execSync('yarn update-ts-references --frozen', {
+        execSync('yarn build:ts', {
           cwd: WORKSPACE_PATH,
           stdio: 'inherit',
         });
