@@ -3,7 +3,7 @@ import {Readable} from 'stream';
 import {deserializeRaw} from '@atlaspack/build-cache';
 import type {AST, Blob} from '@atlaspack/types';
 import {bufferStream, blobToStream, streamFromPromise} from '@atlaspack/utils';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 
 import {generateFromAST} from './assetUtils';
 import type {Asset, Dependency, AtlaspackOptions} from './types';
