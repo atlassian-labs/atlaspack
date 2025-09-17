@@ -241,7 +241,9 @@ function main() {
   );
 
   if (frozen && (packageUpdates > 0 || rootUpdated)) {
-    console.log('\n❌ Exiting with error as frozen');
+    console.log(
+      '\n❌ Exiting with error. Rerun without --frozen to update references.',
+    );
     process.exitCode = 1;
   }
 }
