@@ -12,6 +12,10 @@ const BASE_REF = process.env.GITHUB_BASE_REF ?? 'main';
  */
 function getBaselineCommit() {
   try {
+    console.log(`Getting merge base between origin/${BASE_REF} and HEAD...`);
+    console.log(`Working directory: ${WORKSPACE_PATH}`);
+    console.log(`BASE_REF: ${BASE_REF}`);
+
     // Get the merge base between the base branch and current HEAD
     const mergeBase = execSync(`git merge-base origin/${BASE_REF} HEAD`, {
       encoding: 'utf8',
@@ -21,9 +25,19 @@ function getBaselineCommit() {
     console.log(
       `Baseline commit: ${mergeBase} (merge base with origin/${BASE_REF})`,
     );
+
+    // Also log current HEAD for comparison
+    const currentHead = execSync('git rev-parse HEAD', {
+      encoding: 'utf8',
+      cwd: WORKSPACE_PATH,
+    }).trim();
+    console.log(`Current HEAD: ${currentHead}`);
+
     return mergeBase;
   } catch (error) {
     console.error('Failed to get baseline commit:', error.message);
+    console.error('Error output:', error.stdout?.toString());
+    console.error('Error stderr:', error.stderr?.toString());
     return null;
   }
 }
@@ -41,20 +55,20 @@ function runTypeCoverage(commitSha = null) {
       console.log(`Checking out commit ${commitSha} for baseline coverage...`);
       execSync(`git checkout ${commitSha}`, {
         cwd: WORKSPACE_PATH,
-        stdio: 'pipe',
+        stdio: 'inherit',
       });
 
       // Reinstall dependencies and rebuild if needed
       console.log('Installing dependencies for baseline...');
       execSync('yarn install --frozen-lockfile', {
         cwd: WORKSPACE_PATH,
-        stdio: 'pipe',
+        stdio: 'inherit',
       });
 
       console.log('Building TypeScript references for baseline...');
       execSync('yarn update-ts-references --frozen', {
         cwd: WORKSPACE_PATH,
-        stdio: 'pipe',
+        stdio: 'inherit',
       });
     }
 
@@ -90,26 +104,28 @@ function runTypeCoverage(commitSha = null) {
         console.log(`Switching back to ${originalBranch}...`);
         execSync(`git checkout ${originalBranch}`, {
           cwd: WORKSPACE_PATH,
-          stdio: 'pipe',
+          stdio: 'inherit',
         });
 
         // Reinstall dependencies for current state
         console.log('Reinstalling dependencies for current state...');
         execSync('yarn install --frozen-lockfile', {
           cwd: WORKSPACE_PATH,
-          stdio: 'pipe',
+          stdio: 'inherit',
         });
 
         console.log('Rebuilding TypeScript references for current state...');
         execSync('yarn update-ts-references --frozen', {
           cwd: WORKSPACE_PATH,
-          stdio: 'pipe',
+          stdio: 'inherit',
         });
       } catch (switchError) {
         console.error(
           'Failed to switch back to original branch:',
           switchError.message,
         );
+        console.error('Switch error output:', switchError.stdout?.toString());
+        console.error('Switch error stderr:', switchError.stderr?.toString());
       }
     }
   }
@@ -121,12 +137,16 @@ function runTypeCoverage(commitSha = null) {
  */
 function getCurrentBranch() {
   try {
-    return execSync('git rev-parse --abbrev-ref HEAD', {
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', {
       encoding: 'utf8',
       cwd: WORKSPACE_PATH,
     }).trim();
+    console.log(`Current branch: ${branch}`);
+    return branch;
   } catch (error) {
     console.error('Failed to get current branch:', error.message);
+    console.error('Error output:', error.stdout?.toString());
+    console.error('Error stderr:', error.stderr?.toString());
     return null;
   }
 }

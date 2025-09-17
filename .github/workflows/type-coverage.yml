@@ -1,4 +1,4 @@
-name: Type Coverage PR Comment
+name: Type Coverage
 
 on:
   pull_request:
@@ -35,7 +35,7 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Build TypeScript references
+      - name: Ensure TypeScript references are up to date
         run: yarn update-ts-references --frozen
 
       - name: Run type coverage
