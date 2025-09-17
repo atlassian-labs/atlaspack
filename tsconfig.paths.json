@@ -110,9 +110,6 @@
       "path": "./packages/dev/query/tsconfig.json"
     },
     {
-      "path": "./packages/dev/repl/tsconfig.json"
-    },
-    {
       "path": "./packages/migrations/parcel-to-atlaspack/tsconfig.json"
     },
     {
@@ -219,9 +216,6 @@
     },
     {
       "path": "./packages/resolvers/glob/tsconfig.json"
-    },
-    {
-      "path": "./packages/resolvers/repl-runtimes/tsconfig.json"
     },
     {
       "path": "./packages/resolvers/tesseract/tsconfig.json"

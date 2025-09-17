@@ -28,5 +28,8 @@
   "type": "commonjs",
   "scripts": {
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  },
+  "devDependencies": {
+    "@types/semver": "^7.7.1"
   }
 }
