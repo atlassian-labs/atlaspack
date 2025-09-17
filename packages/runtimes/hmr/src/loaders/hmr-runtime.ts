@@ -1,52 +1,94 @@
-/* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __parcel__import__, __parcel__importScripts__, ServiceWorkerGlobalScope */
+// TypeScript declarations for HMR runtime
+type HMRData = Record<string, unknown>;
+type ModuleExports = Record<string, unknown>;
+type ModuleDependencies = Record<string, string>;
+type HMRAcceptCallback = (updateFn: () => void) => void;
+type HMRDisposeCallback = (data: HMRData) => void;
+type ModuleFactory = (
+  require: ParcelRequire,
+  module: ParcelModule,
+  exports: ModuleExports,
+) => void;
 
-/*::
-import type {
-  HMRAsset,
-  HMRMessage,
-} from '@atlaspack/reporter-dev-server/src/HMRServer';
+// HMR Asset type
+interface HMRAsset {
+  id: string;
+  url: string;
+  type: string;
+  outputFormat?: 'esmodule' | 'global';
+  depsByBundle?: Record<string, Record<string, string>>;
+  output?: string;
+}
+
+// HMR Message types
+interface HMRUpdateMessage {
+  type: 'update';
+  assets: HMRAsset[];
+}
+
+interface HMRErrorMessage {
+  type: 'error';
+  diagnostics: {
+    message: string;
+    stack?: string;
+  };
+}
+
+type HMRMessage = HMRUpdateMessage | HMRErrorMessage;
+
 interface ParcelRequire {
-  (string): mixed;
-  cache: {|[string]: ParcelModule|};
-  hotData: {|[string]: mixed|};
-  Module: any;
-  parent: ?ParcelRequire;
+  (id: string): ModuleExports;
+  cache: {[id: string]: ParcelModule};
+  hotData: {[id: string]: HMRData};
+  Module: unknown;
+  parent?: ParcelRequire;
   isParcelRequire: true;
-  modules: {|[string]: [Function, {|[string]: string|}]|};
+  modules: {[id: string]: [ModuleFactory, ModuleDependencies]};
   HMR_BUNDLE_ID: string;
   root: ParcelRequire;
 }
+
 interface ParcelModule {
-  hot: {|
-    data: mixed,
-    accept(cb: (Function) => void): void,
-    dispose(cb: (mixed) => void): void,
-    // accept(deps: Array<string> | string, cb: (Function) => void): void,
-    // decline(): void,
-    _acceptCallbacks: Array<(Function) => void>,
-    _disposeCallbacks: Array<(mixed) => void>,
-  |};
+  hot: {
+    data: HMRData;
+    accept(cb: HMRAcceptCallback): void;
+    dispose(cb: HMRDisposeCallback): void;
+    _acceptCallbacks: Array<HMRAcceptCallback>;
+    _disposeCallbacks: Array<HMRDisposeCallback>;
+  };
 }
+
 interface ExtensionContext {
-  runtime: {|
-    reload(): void,
+  runtime: {
+    reload(): void;
     getURL(url: string): string;
-    getManifest(): {manifest_version: number, ...};
-  |};
+    getManifest(): {manifest_version: number};
+  };
 }
-declare var module: {bundle: ParcelRequire, ...};
-declare var HMR_HOST: string;
-declare var HMR_PORT: string;
-declare var HMR_ENV_HASH: string;
-declare var HMR_SECURE: boolean;
-declare var HMR_USE_SSE: boolean;
-declare var chrome: ExtensionContext;
-declare var browser: ExtensionContext;
-declare var __parcel__import__: (string) => Promise<void>;
-declare var __parcel__importScripts__: (string) => Promise<void>;
-declare var globalThis: typeof self;
-declare var ServiceWorkerGlobalScope: Object;
-*/
+
+declare global {
+  var module: {bundle: ParcelRequire};
+  var HMR_HOST: string | null;
+  var HMR_PORT: string | null;
+  var HMR_ENV_HASH: string;
+  var HMR_SECURE: boolean;
+  var HMR_USE_SSE: boolean;
+  var chrome: ExtensionContext;
+  var browser: ExtensionContext;
+  var __parcel__import__: (id: string) => Promise<void>;
+  var __parcel__importScripts__: (url: string) => Promise<void>;
+  var globalThis: typeof self;
+  var ServiceWorkerGlobalScope: unknown;
+  var global: {
+    parcelHotUpdate?: Record<string, ModuleFactory>;
+  } & typeof globalThis;
+  var importScripts: (url: string) => void;
+  var process: {
+    env: {
+      ATLASPACK_BUILD_ENV?: string;
+    };
+  };
+}
 
 // flow-to-ts helpers
 export type SetComplement<A, B extends A> = A extends B ? never : A;
@@ -58,65 +100,48 @@ export type Diff<T extends U, U extends object> = Pick<
 
 var OVERLAY_ID = '__parcel__error__overlay__';
 
-// @ts-expect-error TS2339
-var OldModule = module.bundle.Module;
+var OldModule = module.bundle.Module as (...args: any[]) => any;
 
-function Module(moduleName: any) {
-  // @ts-expect-error TS2683
+function Module(this: ParcelModule, moduleName: string) {
   OldModule.call(this, moduleName);
-  // @ts-expect-error TS2683
   this.hot = {
-    // @ts-expect-error TS2339
-    data: module.bundle.hotData[moduleName],
+    data: module.bundle.hotData[moduleName] || {},
     _acceptCallbacks: [],
     _disposeCallbacks: [],
-    // @ts-expect-error TS7006
-    accept: function (fn) {
+    accept: function (fn: HMRAcceptCallback) {
       this._acceptCallbacks.push(fn || function () {});
     },
-    // @ts-expect-error TS7006
-    dispose: function (fn) {
+    dispose: function (fn: HMRDisposeCallback) {
       this._disposeCallbacks.push(fn);
     },
   };
-  // @ts-expect-error TS2339
-  module.bundle.hotData[moduleName] = undefined;
+  delete module.bundle.hotData[moduleName];
 }
-// @ts-expect-error TS2339
 module.bundle.Module = Module;
-// @ts-expect-error TS2339
 module.bundle.hotData = {};
 
-// @ts-expect-error TS7034
-var checkedAssets /*: {|[string]: boolean|} */,
-  // @ts-expect-error TS7034
-  disposedAssets /*: {|[string]: boolean|} */,
-  // @ts-expect-error TS7034
-  assetsToDispose /*: Array<[ParcelRequire, string]> */,
-  // @ts-expect-error TS7034
-  assetsToAccept /*: Array<[ParcelRequire, string]> */;
+var checkedAssets: {[id: string]: boolean},
+  disposedAssets: {[id: string]: boolean},
+  assetsToDispose: Array<[ParcelRequire, string]>,
+  assetsToAccept: Array<[ParcelRequire, string]>;
 
 function getHostname() {
   return (
-    // @ts-expect-error TS2304
     HMR_HOST ||
     (location.protocol.indexOf('http') === 0 ? location.hostname : 'localhost')
   );
 }
 
 function getPort() {
-  // @ts-expect-error TS2304
   return HMR_PORT || location.port;
 }
 
 // eslint-disable-next-line no-redeclare
-// @ts-expect-error TS2339
 var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = getHostname();
   var port = getPort();
   var protocol =
-    // @ts-expect-error TS2304
     HMR_SECURE ||
     (location.protocol == 'https:' &&
       !['localhost', '127.0.0.1', '0.0.0.0'].includes(hostname))
@@ -124,7 +149,6 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
       : 'ws';
 
   var ws;
-  // @ts-expect-error TS2304
   if (HMR_USE_SSE) {
     ws = new EventSource('/__parcel_hmr');
   } else {
@@ -132,8 +156,8 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
       ws = new WebSocket(
         protocol + '://' + hostname + (port ? ':' + port : '') + '/',
       );
-    } catch (err: any) {
-      if (err.message) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message) {
         console.error(err.message);
       }
       ws = {};
@@ -142,23 +166,20 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
 
   // Web extension context
   var extCtx =
-    // @ts-expect-error TS2304
     typeof browser === 'undefined'
-      ? // @ts-expect-error TS2304
-        typeof chrome === 'undefined'
+      ? typeof chrome === 'undefined'
         ? null
-        : // @ts-expect-error TS2304
-          chrome
-      : // @ts-expect-error TS2304
-        browser;
+        : chrome
+      : browser;
 
   // Safari doesn't support sourceURL in error stacks.
   // eval may also be disabled via CSP, so do a quick check.
   var supportsSourceURL = false;
   try {
     (0, eval)('throw new Error("test"); //# sourceURL=test.js');
-  } catch (err: any) {
-    supportsSourceURL = err.stack.includes('test.js');
+  } catch (err: unknown) {
+    supportsSourceURL =
+      (err instanceof Error && err.stack?.includes('test.js')) || false;
   }
 
   // @ts-expect-error TS2339
@@ -193,7 +214,6 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
         return (
           asset.type === 'css' ||
           (asset.type === 'js' &&
-            // @ts-expect-error TS2339
             hmrAcceptCheck(module.bundle.root, asset.id, asset.depsByBundle))
         );
       });
@@ -216,11 +236,9 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
         // Run accept callbacks. This will also re-execute other disposed assets in topological order.
         let processedAssets: Record<string, any> = {};
         for (let i = 0; i < assetsToAccept.length; i++) {
-          // @ts-expect-error TS7005
           let id = assetsToAccept[i][1];
 
           if (!processedAssets[id]) {
-            // @ts-expect-error TS7005
             hmrAccept(assetsToAccept[i][0], id);
             processedAssets[id] = true;
           }
@@ -254,8 +272,8 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
     }
   };
   if (ws instanceof WebSocket) {
-    ws.onerror = function (e: any) {
-      if (e.message) {
+    ws.onerror = function (e: Event) {
+      if (e instanceof ErrorEvent && e.message) {
         console.error(e.message);
       }
     };
@@ -345,7 +363,6 @@ function fullReload() {
 }
 
 function getParents(
-  // @ts-expect-error TS2304
   bundle: ParcelRequire,
   id: string,
 ) /*: Array<[ParcelRequire, string]> */ {
@@ -354,7 +371,6 @@ function getParents(
     return [];
   }
 
-  // @ts-expect-error TS2304
   var parents: Array<[ParcelRequire, string]> = [];
   var k, d, dep;
 
@@ -432,7 +448,6 @@ function reloadCSS() {
   }, 50);
 }
 
-// @ts-expect-error TS2304
 function hmrDownload(asset: HMRAsset) {
   if (asset.type === 'js') {
     if (typeof document !== 'undefined') {
@@ -446,31 +461,28 @@ function hmrDownload(asset: HMRAsset) {
           resolve: (
             result: Promise<HTMLScriptElement> | HTMLScriptElement,
           ) => void,
-          reject: (error?: any) => void,
+          reject: (error?: unknown) => void,
         ) => {
           script.onload = () => resolve(script);
           script.onerror = reject;
           document.head?.appendChild(script);
         },
       );
-      // @ts-expect-error TS2304
     } else if (typeof importScripts === 'function') {
       // Worker scripts
       if (asset.outputFormat === 'esmodule') {
-        // @ts-expect-error TS2304
         return __parcel__import__(asset.url + '?t=' + Date.now());
       } else {
         return new Promise(
           (
             resolve: (result: Promise<undefined> | undefined) => void,
-            reject: (error?: any) => void,
+            reject: (error?: unknown) => void,
           ) => {
             try {
-              // @ts-expect-error TS2304
               __parcel__importScripts__(asset.url + '?t=' + Date.now());
               // @ts-expect-error TS2794
               resolve();
-            } catch (err: any) {
+            } catch (err: unknown) {
               reject(err);
             }
           },
@@ -480,9 +492,7 @@ function hmrDownload(asset: HMRAsset) {
   }
 }
 
-// @ts-expect-error TS2304
 async function hmrApplyUpdates(assets: Array<HMRAsset>) {
-  // @ts-expect-error TS7017
   global.parcelHotUpdate = Object.create(null);
 
   let scriptsToRemove;
@@ -495,16 +505,14 @@ async function hmrApplyUpdates(assets: Array<HMRAsset>) {
     // This path is also taken if a CSP disallows eval.
     if (!supportsSourceURL) {
       let promises = assets.map((asset) =>
-        hmrDownload(asset)?.catch((err: any) => {
+        hmrDownload(asset)?.catch((err: unknown) => {
           // Web extension fix
           if (
             extCtx &&
             extCtx.runtime &&
             extCtx.runtime.getManifest().manifest_version == 3 &&
-            // @ts-expect-error TS2304
             typeof ServiceWorkerGlobalScope != 'undefined' &&
-            // @ts-expect-error TS2304
-            global instanceof ServiceWorkerGlobalScope
+            global instanceof (ServiceWorkerGlobalScope as any)
           ) {
             extCtx.runtime.reload();
             return;
@@ -517,15 +525,12 @@ async function hmrApplyUpdates(assets: Array<HMRAsset>) {
     }
 
     assets.forEach(function (asset) {
-      // @ts-expect-error TS2339
       hmrApply(module.bundle.root, asset);
     });
   } finally {
-    // @ts-expect-error TS7017
     delete global.parcelHotUpdate;
 
     if (scriptsToRemove) {
-      // @ts-expect-error TS7006
       scriptsToRemove.forEach((script) => {
         if (script) {
           document.head?.removeChild(script);
@@ -536,9 +541,7 @@ async function hmrApplyUpdates(assets: Array<HMRAsset>) {
 }
 
 function hmrApply(
-  // @ts-expect-error TS2304
   bundle: ParcelRequire /*: ParcelRequire */,
-  // @ts-expect-error TS2304
   asset: HMRAsset /*:  HMRAsset */,
 ) {
   var modules = bundle.modules;
@@ -549,7 +552,7 @@ function hmrApply(
   if (asset.type === 'css') {
     reloadCSS();
   } else if (asset.type === 'js') {
-    let deps = asset.depsByBundle[bundle.HMR_BUNDLE_ID];
+    let deps = asset.depsByBundle?.[bundle.HMR_BUNDLE_ID];
     if (deps) {
       if (modules[asset.id]) {
         // Remove dependencies that are removed and will become orphaned.
@@ -558,10 +561,8 @@ function hmrApply(
         for (let dep in oldDeps) {
           if (!deps[dep] || deps[dep] !== oldDeps[dep]) {
             let id = oldDeps[dep];
-            // @ts-expect-error TS2339
             let parents = getParents(module.bundle.root, id);
             if (parents.length === 1) {
-              // @ts-expect-error TS2339
               hmrDelete(module.bundle.root, id);
             }
           }
@@ -571,12 +572,15 @@ function hmrApply(
       if (supportsSourceURL) {
         // Global eval. We would use `new Function` here but browser
         // support for source maps is better with eval.
-        (0, eval)(asset.output);
+        if (asset.output) {
+          (0, eval)(asset.output);
+        }
       }
 
-      // @ts-expect-error TS7017
-      let fn = global.parcelHotUpdate[asset.id];
-      modules[asset.id] = [fn, deps];
+      let fn = global.parcelHotUpdate?.[asset.id];
+      if (fn) {
+        modules[asset.id] = [fn, deps];
+      }
     }
 
     // Always traverse to the parent bundle, even if we already replaced the asset in this bundle.
@@ -587,7 +591,6 @@ function hmrApply(
   }
 }
 
-// @ts-expect-error TS2304
 function hmrDelete(bundle: ParcelRequire, id: string) {
   let modules = bundle.modules;
   if (!modules) {
@@ -599,7 +602,6 @@ function hmrDelete(bundle: ParcelRequire, id: string) {
     let deps = modules[id][1];
     let orphans: Array<string> = [];
     for (let dep in deps) {
-      // @ts-expect-error TS2339
       let parents = getParents(module.bundle.root, deps[dep]);
       if (parents.length === 1) {
         orphans.push(deps[dep]);
@@ -612,7 +614,6 @@ function hmrDelete(bundle: ParcelRequire, id: string) {
 
     // Now delete the orphans.
     orphans.forEach((id) => {
-      // @ts-expect-error TS2339
       hmrDelete(module.bundle.root, id);
     });
   } else if (bundle.parent) {
@@ -621,7 +622,6 @@ function hmrDelete(bundle: ParcelRequire, id: string) {
 }
 
 function hmrAcceptCheck(
-  // @ts-expect-error TS2304
   bundle: ParcelRequire /*: ParcelRequire */,
   id: string /*: string */,
   depsByBundle:
@@ -638,7 +638,6 @@ function hmrAcceptCheck(
   }
 
   // Traverse parents breadth first. All possible ancestries must accept the HMR update, or we'll reload.
-  // @ts-expect-error TS2339
   let parents = getParents(module.bundle.root, id);
   let accepted = false;
   while (parents.length > 0) {
@@ -665,7 +664,6 @@ function hmrAcceptCheck(
 }
 
 function hmrAcceptCheckOne(
-  // @ts-expect-error TS2304
   bundle: ParcelRequire /*: ParcelRequire */,
   id: string /*: string */,
   depsByBundle:
@@ -692,12 +690,10 @@ function hmrAcceptCheckOne(
     return hmrAcceptCheck(bundle.parent, id, depsByBundle);
   }
 
-  // @ts-expect-error TS7005
   if (checkedAssets[id]) {
     return true;
   }
 
-  // @ts-expect-error TS7005
   checkedAssets[id] = true;
 
   var cached = bundle.cache[id];
@@ -712,12 +708,9 @@ function hmrAcceptCheckOne(
 function hmrDisposeQueue() {
   // Dispose all old assets.
   for (let i = 0; i < assetsToDispose.length; i++) {
-    // @ts-expect-error TS7005
     let id = assetsToDispose[i][1];
 
-    // @ts-expect-error TS7005
     if (!disposedAssets[id]) {
-      // @ts-expect-error TS7005
       hmrDispose(assetsToDispose[i][0], id);
       disposedAssets[id] = true;
     }
@@ -727,7 +720,6 @@ function hmrDisposeQueue() {
 }
 
 function hmrDispose(
-  // @ts-expect-error TS2304
   bundle: ParcelRequire /*: ParcelRequire */,
   id: string /*: string */,
 ) {
@@ -738,7 +730,6 @@ function hmrDispose(
   }
 
   if (cached && cached.hot && cached.hot._disposeCallbacks.length) {
-    // @ts-expect-error TS7006
     cached.hot._disposeCallbacks.forEach(function (cb) {
       cb(bundle.hotData[id]);
     });
@@ -748,7 +739,6 @@ function hmrDispose(
 }
 
 function hmrAccept(
-  // @ts-expect-error TS2304
   bundle: ParcelRequire /*: ParcelRequire */,
   id: string /*: string */,
 ) {
@@ -759,10 +749,8 @@ function hmrAccept(
   var cached = bundle.cache[id];
   if (cached && cached.hot && cached.hot._acceptCallbacks.length) {
     let assetsToAlsoAccept: Array<never> = [];
-    // @ts-expect-error TS7006
     cached.hot._acceptCallbacks.forEach(function (cb) {
       let additionalAssets = cb(function () {
-        // @ts-expect-error TS2339
         return getParents(module.bundle.root, id);
       });
       if (Array.isArray(additionalAssets) && additionalAssets.length) {
