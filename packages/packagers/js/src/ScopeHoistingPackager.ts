@@ -90,14 +90,13 @@ export class ScopeHoistingPackager {
   outputFormat: OutputFormat;
   isAsyncBundle: boolean;
   globalNames: ReadonlySet<string>;
-  // @ts-expect-error TS2564
   assetOutputs: Map<
     Asset,
     {
       code: string;
       map: Buffer | null | undefined;
     }
-  >;
+  > = new Map();
   exportedSymbols: Map<
     string,
     {
@@ -174,14 +173,13 @@ export class ScopeHoistingPackager {
 
     let res = '';
     let lineCount = 0;
-    // @ts-expect-error TS7034
-    let sourceMap = null;
+    let sourceMap: SourceMap | null | undefined = null;
     let processAsset = (asset: Asset) => {
       this.seenHoistedRequires.clear();
       let [content, map, lines] = this.visitAsset(asset);
 
-      // @ts-expect-error TS7005
       if (sourceMap && map) {
+        // @ts-expect-error TS2551 - addSourceMap method exists but missing from @parcel/source-map type definitions
         sourceMap.addSourceMap(map, lineCount);
       } else if (this.bundle.env.sourceMap) {
         sourceMap = map;
@@ -226,7 +224,7 @@ export class ScopeHoistingPackager {
     let [prelude, preludeLines] = this.buildBundlePrelude();
     res = prelude + res;
     lineCount += preludeLines;
-    // @ts-expect-error TS2339
+    // @ts-expect-error TS2339 - offsetLines method exists but missing from @parcel/source-map type definitions
     sourceMap?.offsetLines(1, preludeLines);
 
     let entries = this.bundle.getEntryAssets();
@@ -312,7 +310,7 @@ export class ScopeHoistingPackager {
         this.parcelRequireName,
       );
       if (sourceMap && map) {
-        // @ts-expect-error TS2339
+        // @ts-expect-error TS2339 - addSourceMap method exists but missing from @parcel/source-map type definitions
         sourceMap.addSourceMap(map, lineCount);
       }
     }
@@ -676,7 +674,7 @@ export class ScopeHoistingPackager {
           let [code, map, lines] = this.visitAsset(resolved);
           depCode += code + '\n';
           if (sourceMap && map) {
-            // @ts-expect-error TS2551
+            // @ts-expect-error TS2551 - addSourceMap method exists but missing from @parcel/source-map type definitions
             sourceMap.addSourceMap(map, lineCount);
           }
           lineCount += lines + 1;
@@ -713,9 +711,7 @@ export class ScopeHoistingPackager {
     code += append;
 
     let lineCount = 0;
-    // @ts-expect-error TS2552
-    let depContent: Array<[string, NodeSourceMap | null | undefined, number]> =
-      [];
+    let depContent: Array<[string, SourceMap | null | undefined, number]> = [];
     if (depMap.size === 0 && replacements.size === 0) {
       // If there are no dependencies or replacements, use a simple function to count the number of lines.
       lineCount = countLines(code) - 1;
@@ -833,7 +829,7 @@ export class ScopeHoistingPackager {
                   }
 
                   if (map) {
-                    // @ts-expect-error TS2551
+                    // @ts-expect-error TS2551 - addSourceMap method exists but missing from @parcel/source-map type definitions
                     sourceMap.addSourceMap(map, lineCount);
                   }
                 }
@@ -890,7 +886,7 @@ ${code}
         if (!depCode) continue;
         code += depCode + '\n';
         if (sourceMap && map) {
-          // @ts-expect-error TS2551
+          // @ts-expect-error TS2551 - addSourceMap method exists but missing from @parcel/source-map type definitions
           sourceMap.addSourceMap(map, lineCount);
         }
         lineCount += lines + 1;
@@ -1136,12 +1132,9 @@ ${code}
               }
             }
 
-            // @ts-expect-error TS2322
-            renamed = this.bundleGraph.getSymbolResolution(
-              entry,
-              imported,
-              this.bundle,
-            ).symbol;
+            renamed =
+              this.bundleGraph.getSymbolResolution(entry, imported, this.bundle)
+                .symbol || undefined;
           }
         }
 
@@ -1663,11 +1656,11 @@ ${code}
     }
 
     for (let helper of this.usedHelpers) {
-      // @ts-expect-error TS7053
-      let currentHelper = helpers[helper];
+      let currentHelper = (helpers as Record<string, any>)[helper];
       if (typeof currentHelper === 'function') {
-        // @ts-expect-error TS7053
-        currentHelper = helpers[helper](this.bundle.env);
+        currentHelper = (helpers as Record<string, any>)[helper](
+          this.bundle.env,
+        );
       }
       res += currentHelper;
       if (enableSourceMaps) {

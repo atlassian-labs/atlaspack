@@ -229,7 +229,6 @@ function formatTypeCoverageComment(currentData, baselineData) {
     comment += `| **Correctly Typed** | ${baselineData.correctCount.toLocaleString()} | ${currentData.correctCount.toLocaleString()} | ${currentData.correctCount - baselineData.correctCount >= 0 ? '+' : ''}${(currentData.correctCount - baselineData.correctCount).toLocaleString()} |\n`;
     comment += `| **Total Expressions** | ${baselineData.totalCount.toLocaleString()} | ${currentData.totalCount.toLocaleString()} | ${currentData.totalCount - baselineData.totalCount >= 0 ? '+' : ''}${(currentData.totalCount - baselineData.totalCount).toLocaleString()} |\n`;
     comment += `| **Untyped Expressions** | ${(baselineData.totalCount - baselineData.correctCount).toLocaleString()} | ${(currentData.totalCount - currentData.correctCount).toLocaleString()} | ${untypedDiff >= 0 ? '+' : ''}${untypedDiff.toLocaleString()} |\n\n`;
-    comment += `| **Status** | ${currentData.succeeded ? '✅ Success' : '❌ Failed'} |\n\n`;
   } else {
     comment += `### Overall Coverage\n`;
     comment += `| Metric | Value |\n`;
@@ -238,7 +237,6 @@ function formatTypeCoverageComment(currentData, baselineData) {
     comment += `| **Correctly Typed** | ${currentData.correctCount.toLocaleString()} |\n`;
     comment += `| **Total Expressions** | ${currentData.totalCount.toLocaleString()} |\n`;
     comment += `| **Untyped Expressions** | ${(currentData.totalCount - currentData.correctCount).toLocaleString()} |\n`;
-    comment += `| **Status** | ${currentData.succeeded ? '✅ Success' : '❌ Failed'} |\n\n`;
 
     comment += `**Note**: No baseline data available to compare with.\n\n`;
   }

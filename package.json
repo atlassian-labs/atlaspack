@@ -27,7 +27,6 @@
     "build-native": "node scripts/build-native.js",
     "build-native-release": "cross-env CARGO_PROFILE=release node scripts/build-native.js",
     "build-native-wasm": "cross-env CARGO_PROFILE=release RUSTUP_TARGET=wasm32-unknown-unknown scripts/build-native.js",
-    "build-repl": "yarn build-native-release && yarn build-native-wasm && yarn workspace @atlaspack/repl build",
     "clean-test": "rimraf packages/core/integration-tests/.parcel-cache && rimraf packages/core/integration-tests/dist",
     "clean": "yarn clean-test && lerna clean --yes && lerna exec -- rimraf ./lib && yarn",
     "dev": "./scripts/dev",
