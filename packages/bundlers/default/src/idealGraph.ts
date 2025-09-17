@@ -1391,9 +1391,8 @@ export function createIdealGraph(
           numBundlesContributingToPRL > config.maxParallelRequests
         ) {
           let bundleTuple = sharedBundlesInGroup.pop();
-          // @ts-expect-error TS18048
+          if (!bundleTuple) break;
           let bundleToRemove = bundleTuple.bundle;
-          // @ts-expect-error TS18048
           let bundleIdToRemove = bundleTuple.id;
           //TODO add integration test where bundles in bunlde group > max parallel request limit & only remove a couple shared bundles
           // but total # bundles still exceeds limit due to non shared bundles
@@ -1470,11 +1469,10 @@ export function createIdealGraph(
 
       let newAssetReference = assetReference
         .get(asset)
-        .map(([dep, bundle]: [any, any]) =>
+        .map(([dep, bundle]): [Dependency, Bundle] =>
           bundle === bundleToRemove ? [dep, bundleToKeep] : [dep, bundle],
         );
 
-      // @ts-expect-error TS2345
       assetReference.set(asset, newAssetReference);
     }
 
