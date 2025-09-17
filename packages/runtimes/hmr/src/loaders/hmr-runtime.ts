@@ -78,7 +78,7 @@ declare global {
   var __parcel__import__: (id: string) => Promise<void>;
   var __parcel__importScripts__: (url: string) => Promise<void>;
   var globalThis: typeof self;
-  var ServiceWorkerGlobalScope: unknown;
+  var ServiceWorkerGlobalScope: new () => unknown;
   var global: {
     parcelHotUpdate?: Record<string, ModuleFactory>;
   } & typeof globalThis;
@@ -100,7 +100,10 @@ export type Diff<T extends U, U extends object> = Pick<
 
 var OVERLAY_ID = '__parcel__error__overlay__';
 
-var OldModule = module.bundle.Module as (...args: any[]) => any;
+var OldModule = module.bundle.Module as (
+  this: ParcelModule,
+  moduleName: string,
+) => void;
 
 function Module(this: ParcelModule, moduleName: string) {
   OldModule.call(this, moduleName);
@@ -234,7 +237,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
         hmrDisposeQueue();
 
         // Run accept callbacks. This will also re-execute other disposed assets in topological order.
-        let processedAssets: Record<string, any> = {};
+        let processedAssets: Record<string, boolean> = {};
         for (let i = 0; i < assetsToAccept.length; i++) {
           let id = assetsToAccept[i][1];
 
@@ -512,7 +515,7 @@ async function hmrApplyUpdates(assets: Array<HMRAsset>) {
             extCtx.runtime &&
             extCtx.runtime.getManifest().manifest_version == 3 &&
             typeof ServiceWorkerGlobalScope != 'undefined' &&
-            global instanceof (ServiceWorkerGlobalScope as any)
+            global instanceof ServiceWorkerGlobalScope
           ) {
             extCtx.runtime.reload();
             return;
