@@ -80,6 +80,7 @@ function runTypeCoverage(commitSha = null) {
     });
 
     const data = JSON.parse(output);
+    console.log(data);
     if (data?.succeeded) {
       console.log(
         `Coverage${commitSha ? ' (baseline)' : ''}: ${data.percentString}%`,
