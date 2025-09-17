@@ -94,6 +94,7 @@ export default async function prettyDiagnostic(
           logger.warn({
             origin: '@atlaspack/utils',
             message: `Failed to read file for generating codeframe: "${filePath}"`,
+            skipFormatting: true,
           });
         }
       }
