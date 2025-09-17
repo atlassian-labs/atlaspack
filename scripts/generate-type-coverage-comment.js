@@ -49,6 +49,7 @@ function getBaselineCommit() {
  */
 function runTypeCoverage(commitSha = null) {
   const originalBranch = commitSha ? getCurrentBranch() : null;
+  const originalCommit = commitSha ? getCurrentCommit() : null;
 
   try {
     if (commitSha) {
@@ -100,10 +101,13 @@ function runTypeCoverage(commitSha = null) {
     );
     return null;
   } finally {
-    if (commitSha && originalBranch) {
+    if (commitSha && (originalBranch || originalCommit)) {
       try {
-        console.log(`Switching back to ${originalBranch}...`);
-        execSync(`git checkout ${originalBranch}`, {
+        // In GitHub Actions, we might be in detached HEAD state, so use commit SHA if branch is "HEAD"
+        const targetToCheckout =
+          originalBranch === 'HEAD' ? originalCommit : originalBranch;
+        console.log(`Switching back to ${targetToCheckout}...`);
+        execSync(`git checkout ${targetToCheckout}`, {
           cwd: WORKSPACE_PATH,
           stdio: 'inherit',
         });
@@ -146,6 +150,26 @@ function getCurrentBranch() {
     return branch;
   } catch (error) {
     console.error('Failed to get current branch:', error.message);
+    console.error('Error output:', error.stdout?.toString());
+    console.error('Error stderr:', error.stderr?.toString());
+    return null;
+  }
+}
+
+/**
+ * Get the current commit SHA
+ * @returns {string|null} The current commit SHA or null if failed
+ */
+function getCurrentCommit() {
+  try {
+    const commit = execSync('git rev-parse HEAD', {
+      encoding: 'utf8',
+      cwd: WORKSPACE_PATH,
+    }).trim();
+    console.log(`Current commit: ${commit}`);
+    return commit;
+  } catch (error) {
+    console.error('Failed to get current commit:', error.message);
     console.error('Error output:', error.stdout?.toString());
     console.error('Error stderr:', error.stderr?.toString());
     return null;
