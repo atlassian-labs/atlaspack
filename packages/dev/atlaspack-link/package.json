@@ -19,7 +19,8 @@
     "@atlaspack/fs": "2.15.26",
     "@atlaspack/utils": "2.19.3",
     "commander": "^7.0.0",
-    "nullthrows": "^1.1.1"
+    "nullthrows": "^1.1.1",
+    "find-up": "^8.0.0"
   },
   "type": "commonjs"
 }
