@@ -1,0 +1,29 @@
+.focusedGroupInfoInner {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  width: 100%;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+.focusedGroupInfoInnerAdvancedSettings {
+  overflow-x: hidden;
+  overflow-y: auto;
+  height: calc(100% - 8px);
+  width: 100%;
+}
+
+.focusedGroupInfoInnerAssetTable {
+  overflow-x: hidden;
+  overflow-y: auto;
+  height: 100%;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.focusedGroupInfoInnerGraphContainer {
+  height: 100%;
+  width: 400px;
+  display: flex;
+}

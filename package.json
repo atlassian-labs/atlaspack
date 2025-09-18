@@ -13,10 +13,14 @@
     "crates/caniuse_database",
     "crates/lmdb-js-lite",
     "packages/*/*",
+    "packages/dev/atlaspack-inspector",
+    "packages/dev/atlaspack-inspector/src/frontend",
     "scripts"
   ],
   "resolutions": {
-    "@swc/core": "1.11.18"
+    "@swc/core": "1.11.18",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   },
   "scripts": {
     "build": "yarn build:clean && yarn build:prepare && yarn build:gulp && yarn build:ts",

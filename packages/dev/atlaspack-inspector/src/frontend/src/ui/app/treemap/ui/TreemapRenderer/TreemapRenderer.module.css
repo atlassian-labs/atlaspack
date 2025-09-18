@@ -1,0 +1,14 @@
+.expander {
+  height: 100%;
+  width: 100%;
+  min-height: 100px;
+  min-width: 100px;
+  flex: 1;
+}
+
+.treemapRenderer {
+  height: 100%;
+  width: 100%;
+  flex: 1;
+  position: relative;
+}

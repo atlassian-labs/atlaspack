@@ -1,0 +1,14 @@
+.logoContainer {
+  max-height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+.logoContainer img {
+  height: calc(48px - 24px);
+  width: auto;
+}
+
+.logoContainer a {
+  text-decoration: none !important;
+}

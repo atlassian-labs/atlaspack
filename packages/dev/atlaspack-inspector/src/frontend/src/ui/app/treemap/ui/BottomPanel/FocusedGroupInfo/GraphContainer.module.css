@@ -1,0 +1,7 @@
+.graphContainer {
+  height: 100%;
+  width: 100%;
+  border: 1px solid var(--ds-border);
+  border-radius: 8px;
+  background-color: var(--ds-surface-sunken);
+}

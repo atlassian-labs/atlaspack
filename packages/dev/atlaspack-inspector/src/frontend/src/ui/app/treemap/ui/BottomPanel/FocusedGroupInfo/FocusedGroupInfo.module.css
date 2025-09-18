@@ -1,0 +1,20 @@
+.focusedGroupInfoBundleGraph {
+  height: 100%;
+  width: 100%;
+  padding-top: 8px;
+}
+
+.focusedGroupInfoAdvancedSettings {
+  overflow-x: hidden;
+  overflow-y: auto;
+  height: calc(100% - 8px);
+  width: 100%;
+}
+
+.focusedGroupInfoAssetTable {
+  overflow-x: hidden;
+  overflow-y: auto;
+  height: 100%;
+  width: 100%;
+  margin-top: 8px;
+}

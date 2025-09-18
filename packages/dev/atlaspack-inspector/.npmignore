@@ -1,0 +1,4 @@
+src/frontend/node_modules
+.atlaspack-cache
+node_modules
+test-results

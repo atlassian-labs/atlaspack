@@ -11,6 +11,7 @@ packages/*/*/test/mochareporters.json
 packages/core/integration-tests/test/input/**
 packages/core/utils/test/input/**
 packages/utils/create-react-app/templates
+packages/dev/atlaspack-inspector/test/e2e-tests/mock-project/**
 packages/examples
 
 /benchmarks/three-js/three-js

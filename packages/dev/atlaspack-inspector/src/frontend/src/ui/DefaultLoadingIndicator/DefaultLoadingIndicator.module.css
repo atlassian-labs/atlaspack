@@ -1,0 +1,9 @@
+.defaultLoadingIndicator {
+  display: flex;
+  padding-top: 100px;
+  flex-direction: column;
+  gap: 32px;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+}
