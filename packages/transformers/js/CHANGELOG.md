@@ -1,5 +1,25 @@
 # @atlaspack/transformer-js
 
+## 5.0.2
+
+### Patch Changes
+
+- [#790](https://github.com/atlassian-labs/atlaspack/pull/790) [`0207171`](https://github.com/atlassian-labs/atlaspack/commit/0207171e59e985c51e105aec2e0a99de174374bd) Thanks [@benjervis](https://github.com/benjervis)! - Clean up the `unusedComputedPropertyFix` feature flag
+
+- [#786](https://github.com/atlassian-labs/atlaspack/pull/786) [`bbe4e28`](https://github.com/atlassian-labs/atlaspack/commit/bbe4e28c89e5e9284bd730075d4d6f2a3cb37b21) Thanks [@benjervis](https://github.com/benjervis)! - Add `hmr_options` to the native transformer to prevent applying react refresh when it's not in use.
+
+- [#800](https://github.com/atlassian-labs/atlaspack/pull/800) [`1180103`](https://github.com/atlassian-labs/atlaspack/commit/118010351ed444f8178988afb3f77807154dd933) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix errors when creating diagnostics with relative file paths
+
+  BREAKING CHANGE: The `remapSourceLocation` API in `@atlaspack/utils` now requires the project root
+
+- Updated dependencies [[`0207171`](https://github.com/atlassian-labs/atlaspack/commit/0207171e59e985c51e105aec2e0a99de174374bd), [`10ee3fa`](https://github.com/atlassian-labs/atlaspack/commit/10ee3fa5b75a92acde8973673d9b3c5b6f3958e5), [`bbe4e28`](https://github.com/atlassian-labs/atlaspack/commit/bbe4e28c89e5e9284bd730075d4d6f2a3cb37b21), [`1180103`](https://github.com/atlassian-labs/atlaspack/commit/118010351ed444f8178988afb3f77807154dd933), [`2bc93b1`](https://github.com/atlassian-labs/atlaspack/commit/2bc93b17cea07fd7cbb68acec84d8471345a22b4)]:
+  - @atlaspack/feature-flags@2.25.2
+  - @atlaspack/rust@3.8.2
+  - @atlaspack/core@2.24.2
+  - @atlaspack/utils@3.0.0
+  - @atlaspack/workers@2.14.32
+  - @atlaspack/plugin@2.14.32
+
 ## 5.0.1
 
 ### Patch Changes
