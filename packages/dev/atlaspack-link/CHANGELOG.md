@@ -1,5 +1,13 @@
 # @atlaspack/link
 
+## 2.14.32
+
+### Patch Changes
+
+- Updated dependencies [[`1180103`](https://github.com/atlassian-labs/atlaspack/commit/118010351ed444f8178988afb3f77807154dd933)]:
+  - @atlaspack/utils@3.0.0
+  - @atlaspack/fs@2.15.27
+
 ## 2.14.31
 
 ### Patch Changes

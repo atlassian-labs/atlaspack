@@ -1,5 +1,11 @@
 # @atlaspack/babel-plugin-transform-contextual-imports
 
+## 2.16.0
+
+### Minor Changes
+
+- [#795](https://github.com/atlassian-labs/atlaspack/pull/795) [`336eb1e`](https://github.com/atlassian-labs/atlaspack/commit/336eb1ef59542b7488991ff13da815f87c26645c) Thanks [@JakeLane](https://github.com/JakeLane)! - Fix binding replacement behaviour for contextual imports babel plugin
+
 ## 2.15.3
 
 ### Patch Changes
