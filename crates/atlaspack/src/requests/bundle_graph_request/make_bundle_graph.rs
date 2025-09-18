@@ -176,21 +176,31 @@ pub fn make_bundle_graph(
       .unwrap_or_else(|| format!("bundle-{}", entry_asset.id()));
 
     let prefix = match bundle_edge_type {
-      BundleGraphEdge::RootEntryOf => "",
-      BundleGraphEdge::RootAsyncBundleOf => "async.",
-      BundleGraphEdge::RootTypeChangeBundleOf => "",
-      BundleGraphEdge::RootSharedBundleOf => "shared.",
-      _ => "",
-    };
+      BundleGraphEdge::RootEntryOf => None,
+      BundleGraphEdge::RootAsyncBundleOf => Some("async"),
+      BundleGraphEdge::RootTypeChangeBundleOf => Some("type-change"),
+      BundleGraphEdge::RootSharedBundleOf => Some("shared"),
+      _ => None,
+    }
+    .map(|s| s.to_string());
 
     let bundle_id = format!("bundle(entry={})", entry_asset.id());
-    let bundle_name = Some(format!(
-      "{}{}.{}.{}",
-      prefix,
-      file_name,
-      entry_asset.id().to_string(),
-      entry_asset.file_type().extension()
-    ));
+    let bundle_name = Some(
+      [
+        prefix,
+        Some(file_name),
+        if bundle_edge_type == BundleGraphEdge::RootEntryOf {
+          None
+        } else {
+          Some(entry_asset.id().to_string())
+        },
+        Some(entry_asset.file_type().extension().to_string()),
+      ]
+      .into_iter()
+      .filter_map(|s| s)
+      .collect::<Vec<_>>()
+      .join("."),
+    );
 
     bundle_graph_diagnostics.bundles.push(BundleDiagnostics {
       bundle_id: bundle_id.clone(),
@@ -199,7 +209,7 @@ pub fn make_bundle_graph(
         .node_weights()
         .map(|asset| asset.file_path().to_string_lossy().to_string())
         .collect(),
-      dependencies: vec![],
+      dependencies: HashSet::new(),
     });
 
     let bundle_graph_bundle = BundleGraphBundle {
@@ -215,7 +225,7 @@ pub fn make_bundle_graph(
         main_entry_id: Some(entry_asset.id()),
         manual_shared_bundle: None,
         name: bundle_name,
-        needs_stable_name: false,
+        needs_stable_name: bundle_edge_type == BundleGraphEdge::RootEntryOf,
         pipeline: None,
         public_id: None,
         target: Target::default(),
@@ -351,7 +361,7 @@ pub fn make_bundle_graph(
                   .as_mut()
                   .unwrap()
                   .dependencies
-                  .push((
+                  .insert((
                     "sync".to_string(),
                     bundle_graph
                       .node_weight(target_bundle)
@@ -388,7 +398,7 @@ pub fn make_bundle_graph(
                   .as_deref_mut()
                   .unwrap()
                   .dependencies
-                  .push((
+                  .insert((
                     "async".to_string(),
                     bundle_graph
                       .node_weight(target_bundle)
@@ -445,7 +455,7 @@ pub struct BundleDiagnostics {
   bundle_id: String,
   bundle_name: String,
   assets: Vec<String>,
-  dependencies: Vec<(String, String)>,
+  dependencies: HashSet<(String, String)>,
 }
 
 pub fn debug_node_chain(

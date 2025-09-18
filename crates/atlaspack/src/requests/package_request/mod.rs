@@ -409,6 +409,28 @@ fn package_js_bundle<ADP: AssetDataProvider>(
     petgraph::algo::toposort(&bundle.assets, None).expect("Cycle in bundle graph");
   sorted_indexes.reverse();
 
+  writer.write_all("{\n".as_bytes())?;
+  writer.write_all(
+    format!(
+      "// {}\n",
+      serde_json::to_string(
+        &[
+          ("name", bundle.bundle.name.clone().unwrap()),
+          ("id", bundle.bundle.id.clone()),
+          (
+            "bundle_behavior",
+            format!("{:?}", bundle.bundle.bundle_behavior)
+          ),
+          ("bundle_type", format!("{:?}", bundle.bundle.bundle_type)),
+        ]
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect::<HashMap<String, String>>()
+      )
+      .unwrap()
+    )
+    .as_bytes(),
+  )?;
   writer.write_all("const ms = (window.atlaspack$ms = window.atlaspack$ms || []);\n".as_bytes())?;
 
   for node_id in sorted_indexes {
@@ -514,6 +536,8 @@ fn package_js_bundle<ADP: AssetDataProvider>(
   for entry in bundle.modules_to_load_on_startup() {
     writer.write_all(format!("atlaspack$require('{}');\n", entry).as_bytes())?;
   }
+
+  writer.write_all("}".as_bytes())?;
 
   Ok(())
 }

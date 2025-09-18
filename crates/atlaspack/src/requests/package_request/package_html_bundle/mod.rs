@@ -23,7 +23,7 @@ pub fn get_all_referenced_bundles(
   bundle_graph: &BundleGraph,
   bundle_node_index: NodeIndex,
 ) -> Vec<(Arc<BundleGraphBundle>, NodeIndex)> {
-  let mut result = Vec::new();
+  let mut result = vec![];
   let mut visited_bundles = HashSet::new();
 
   let mut bundle_stack = vec![bundle_node_index];
@@ -134,8 +134,15 @@ pub fn package_html_bundle<ADP: AssetDataProvider>(
   writer: &mut impl Write,
 ) -> anyhow::Result<()> {
   assert!(bundle.assets.node_count() == 1);
+
   let bundle_asset_ref = bundle.assets.node_weights().next().unwrap();
   let bundle_asset = asset_data_provider.get_asset_code(bundle_asset_ref.id())?;
+
+  println!(
+    "packaging HTML bundle: {}\n\n\n```{}```\n\n",
+    bundle.bundle.name.as_ref().unwrap(),
+    String::from_utf8(bundle_asset.clone())?
+  );
 
   let prelude = include_str!("../../packager_runtime/prelude.js");
   writer.write_all(format!("<script>{}</script>", prelude).as_bytes())?;
@@ -154,6 +161,14 @@ pub fn package_html_bundle<ADP: AssetDataProvider>(
     .map(|reference| (reference.dependency().specifier().to_string(), reference))
     .collect::<HashMap<_, _>>();
 
+  println!(
+    "referenced_bundles: {:#?}",
+    referenced_bundles
+      .iter()
+      .map(|(k, v)| (k, v.bundle_graph_bundle().bundle.name.as_ref().unwrap()))
+      .collect::<Vec<_>>()
+  );
+
   let mut contents_by_dependency_specifier = HashMap::new();
   for reference in &references {
     // println!("reference: {:?}", reference);
@@ -171,7 +186,9 @@ pub fn package_html_bundle<ADP: AssetDataProvider>(
           get_all_referenced_bundles(bundle_graph, reference.bundle_node_index());
 
         println!(
-          "inline - referenced_bundles: {:#?}",
+          "inline - specifier={} referenced_bundles: source={} {:#?}",
+          dependency_specifier,
+          bundle.bundle.name.as_ref().unwrap(),
           referenced_bundles.len()
         );
 
@@ -405,14 +422,6 @@ mod tests {
 
   #[test]
   fn test_package_html_bundle() {
-    let _bundle_asset = r#"
-    <html>
-      <body>
-        <script src="dep"></script>
-      </body>
-    </html>
-    "#;
-
     let mut asset_graph = AssetGraph::new();
     let mut assets = StableDiGraph::default();
     let asset_graph_node_index = asset_graph.add_asset(Asset {
@@ -479,6 +488,114 @@ mod tests {
       BundleGraphEdge::BundleAsyncLoads(BundleDependency::new(
         &DependencyNode {
           dependency: Arc::new(Dependency {
+            ..Default::default()
+          }),
+          requested_symbols: HashSet::new(),
+          state: DependencyState::Resolved,
+        },
+        script_asset,
+      )),
+      script_bundle,
+    );
+
+    let bundle = bundle_graph
+      .graph()
+      .node_weight(bundle_node_index)
+      .unwrap()
+      .as_bundle()
+      .unwrap();
+
+    let asset_graph = Arc::new(asset_graph);
+    let asset_data_provider = InMemoryAssetDataProvider::new(asset_graph);
+
+    let mut writer = Vec::new();
+    let _dom = package_html_bundle(
+      PackageBundleParams {
+        bundle: &bundle,
+        bundle_node_index,
+        asset_data_provider: &asset_data_provider,
+        bundle_graph: &bundle_graph,
+        options: Arc::new(AtlaspackOptions::default()),
+        project_root: PathBuf::from("."),
+        packager: None,
+      },
+      &mut writer,
+    );
+    let html = String::from_utf8(writer).unwrap();
+    assert!(html.len() > 0);
+  }
+
+  #[test]
+  fn test_package_html_bundle_with_inline_script() {
+    let mut asset_graph = AssetGraph::new();
+    let mut assets = StableDiGraph::default();
+    let asset_graph_node_index = asset_graph.add_asset(Asset {
+      code: Code::new(
+        r#"
+<html>
+  <body>
+    <script data-parcel-key="dep">
+      import './dep';
+    </script>
+  </body>
+</html>
+      "#
+        .as_bytes()
+        .to_vec(),
+      ),
+      ..Asset::default()
+    });
+    let asset_node = asset_graph.get_asset_node(&asset_graph_node_index).unwrap();
+
+    let _ = assets.add_node(AssetRef::new(asset_node.clone(), asset_graph_node_index));
+    let bundle = BundleGraphBundle {
+      bundle: Bundle {
+        bundle_behavior: Some(BundleBehavior::Isolated),
+        bundle_type: FileType::Js,
+        entry_asset_ids: vec![],
+        env: Environment::default(),
+        hash_reference: "hash".to_string(),
+        id: "bundle".to_string(),
+        is_splittable: true,
+        main_entry_id: None,
+        manual_shared_bundle: None,
+        name: Some("bundle".to_string()),
+        needs_stable_name: true,
+        pipeline: None,
+        public_id: None,
+        target: Target::default(),
+      },
+      assets,
+    };
+    let mut bundle_graph = BundleGraph::new();
+    let bundle_node_index = bundle_graph.add_bundle(BundleGraphEdge::RootEntryOf, bundle);
+
+    let mut assets = StableDiGraph::default();
+    let script_asset = assets.add_node(AssetRef::new(asset_node.clone(), asset_graph_node_index));
+    let script_bundle = BundleGraphBundle {
+      bundle: Bundle {
+        bundle_behavior: Some(BundleBehavior::Isolated),
+        bundle_type: FileType::Js,
+        entry_asset_ids: vec![],
+        env: Environment::default(),
+        hash_reference: "hash".to_string(),
+        id: "bundle".to_string(),
+        is_splittable: true,
+        main_entry_id: None,
+        manual_shared_bundle: None,
+        name: Some("bundle".to_string()),
+        needs_stable_name: true,
+        pipeline: None,
+        public_id: None,
+        target: Target::default(),
+      },
+      assets,
+    };
+    let _ = bundle_graph.add_bundle(
+      BundleGraphEdge::BundleAsyncLoads(BundleDependency::new(
+        &DependencyNode {
+          dependency: Arc::new(Dependency {
+            specifier: "dep".to_string(),
             ..Default::default()
           }),
           requested_symbols: HashSet::new(),

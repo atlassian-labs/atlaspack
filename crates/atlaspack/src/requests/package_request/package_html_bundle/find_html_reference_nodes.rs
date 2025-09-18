@@ -83,7 +83,10 @@ pub fn rewrite_html_reference(
       let contents = params
         .contents_by_dependency_specifier
         .get(dependency_specifier)
-        .expect("Reference not found");
+        .expect(&format!(
+          "Reference for dependency_specifier={} not found",
+          dependency_specifier
+        ));
       children.push(Node::new(NodeData::Text {
         contents: RefCell::new(contents.clone().into()),
       }));
