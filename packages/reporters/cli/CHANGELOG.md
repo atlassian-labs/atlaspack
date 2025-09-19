@@ -1,5 +1,16 @@
 # @atlaspack/reporter-cli
 
+## 2.17.14
+
+### Patch Changes
+
+- [#793](https://github.com/atlassian-labs/atlaspack/pull/793) [`a4f887b`](https://github.com/atlassian-labs/atlaspack/commit/a4f887b8c45386b058650c41ad38ac675deee27d) Thanks [@benjervis](https://github.com/benjervis)! - Fixes the cliProgressReportingImprovements, which were previously being overwritten by the existing packaging messaging. With this fix, now only the progress messages are shown during packaging.
+
+- Updated dependencies [[`1180103`](https://github.com/atlassian-labs/atlaspack/commit/118010351ed444f8178988afb3f77807154dd933)]:
+  - @atlaspack/utils@3.0.0
+  - @atlaspack/plugin@2.14.32
+  - @atlaspack/types@2.15.22
+
 ## 2.17.13
 
 ### Patch Changes

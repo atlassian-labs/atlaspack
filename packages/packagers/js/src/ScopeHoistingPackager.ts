@@ -671,13 +671,23 @@ export class ScopeHoistingPackager {
         }
 
         if (this.bundle.hasAsset(resolved) && !this.seenAssets.has(resolved)) {
-          let [code, map, lines] = this.visitAsset(resolved);
-          depCode += code + '\n';
-          if (sourceMap && map) {
-            // @ts-expect-error TS2551 - addSourceMap method exists but missing from @parcel/source-map type definitions
-            sourceMap.addSourceMap(map, lineCount);
+          if (
+            this.useBothScopeHoistingImprovements &&
+            this.wrappedAssets.has(resolved)
+          ) {
+            // When the dep is wrapped then we just need to drop a side effect
+            // require instead of inlining
+            depCode += `parcelRequire("${this.bundleGraph.getAssetPublicId(resolved)}");\n`;
+            lineCount += 1;
+          } else {
+            let [code, map, lines] = this.visitAsset(resolved);
+            depCode += code + '\n';
+            if (sourceMap && map) {
+              // @ts-expect-error TS2551 - addSourceMap method exists but missing from @parcel/source-map type definitions
+              sourceMap.addSourceMap(map, lineCount);
+            }
+            lineCount += lines + 1;
           }
-          lineCount += lines + 1;
         }
       }
 

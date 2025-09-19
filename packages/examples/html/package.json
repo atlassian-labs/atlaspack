@@ -8,7 +8,7 @@
     "build": "atlaspack build src/index.html"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.14.10"
+    "@atlaspack/cli": "2.14.11"
   },
   "dependencies": {
     "lodash": "^4.17.11",
