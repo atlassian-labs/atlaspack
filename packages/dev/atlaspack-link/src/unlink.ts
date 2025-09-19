@@ -150,7 +150,7 @@ export function createUnlinkCommand(
         ? path.dirname(lockfileLocation)
         : process.cwd();
 
-      let parcelLinkConfig;
+      let parcelLinkConfig: AtlaspackLinkConfig | null = null;
       try {
         parcelLinkConfig = AtlaspackLinkConfig.load(appRoot, {fs});
       } catch (e: any) {
