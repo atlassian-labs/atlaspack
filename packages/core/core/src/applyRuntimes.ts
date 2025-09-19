@@ -4,6 +4,7 @@ import type {SharedReference} from '@atlaspack/workers';
 import type {
   Asset,
   AssetGroup,
+  Bundle,
   Bundle as InternalBundle,
   Config,
   DevDepRequest,
@@ -105,16 +106,16 @@ export default async function applyRuntimes<TResult extends RequestResult>({
    * order), so that children will always be available when parents try to reference
    * them.
    */
-  // @ts-expect-error TS2304
   let bundles: Array<Bundle> = [];
   bundleGraph.traverseBundles({
-    // @ts-expect-error TS2304
     exit(bundle: Bundle) {
       bundles.push(bundle);
     },
   });
 
-  let connectionMap = new DefaultMap(() => []);
+  let connectionMap = new DefaultMap<InternalBundle, Array<RuntimeConnection>>(
+    () => [],
+  );
 
   for (let bundle of bundles) {
     for (let runtime of runtimes) {
@@ -207,7 +208,6 @@ export default async function applyRuntimes<TResult extends RequestResult>({
               nameRuntimeBundle(connectionBundle, bundle);
             }
 
-            // @ts-expect-error TS2345
             connectionMap.get(connectionBundle).push({
               bundle: connectionBundle,
               assetGroup,
@@ -246,7 +246,6 @@ export default async function applyRuntimes<TResult extends RequestResult>({
    */
   let connections: Array<RuntimeConnection> = [];
   bundleGraph.traverseBundles({
-    // @ts-expect-error TS2304
     enter(bundle: Bundle) {
       connections.push(...connectionMap.get(bundle));
     },

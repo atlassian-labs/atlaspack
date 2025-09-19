@@ -129,6 +129,7 @@ export declare function transform(opts: object): unknown
 export declare function transformAsync(opts: object): object
 export declare function getVcsStateSnapshot(path: string, excludePatterns: Array<string>): object
 export declare function getEventsSince(repoPath: string, vcsStateSnapshot: unknown, newRev?: string | undefined | null): object
+export declare function init(): Promise<void>
 export type LMDB = Lmdb
 export class Lmdb {
   constructor(options: LmdbOptions)

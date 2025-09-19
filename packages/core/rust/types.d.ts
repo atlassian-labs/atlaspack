@@ -170,6 +170,7 @@ export declare function getEventsSince(
   vcsStateSnapshot: unknown,
   newRev?: string | undefined | null,
 ): object;
+export declare function init(): Promise<void>;
 export type LMDB = Lmdb;
 export class Lmdb {
   constructor(options: LmdbOptions);

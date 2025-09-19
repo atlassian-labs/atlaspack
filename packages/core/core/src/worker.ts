@@ -3,7 +3,9 @@ import type {
   AtlaspackOptions,
   ProcessedAtlaspackConfig,
   RequestInvalidation,
+  ReportFn,
 } from './types';
+import type {AtlaspackConfig} from './AtlaspackConfig';
 import type {SharedReference, WorkerApi} from '@atlaspack/workers';
 import {loadConfig as configCache} from '@atlaspack/utils';
 import type {DevDepSpecifier} from './requests/DevDepRequest';
@@ -18,11 +20,10 @@ import Transformation, {
 import {reportWorker, report} from './ReporterRunner';
 import PackagerRunner, {RunPackagerRunnerResult} from './PackagerRunner';
 import Validation, {ValidationOpts} from './Validation';
-import {AtlaspackConfig} from './AtlaspackConfig';
+import {AtlaspackConfig as AtlaspackConfigClass} from './AtlaspackConfig';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
 import {clearBuildCaches} from '@atlaspack/build-cache';
 import {init as initSourcemaps} from '@parcel/source-map';
-// @ts-expect-error TS2305
 import {init as initRust} from '@atlaspack/rust';
 import WorkerFarm from '@atlaspack/workers';
 import {setFeatureFlags} from '@atlaspack/feature-flags';
@@ -48,17 +49,19 @@ type WorkerTransformationOpts = Diff<
   {
     workerApi: unknown;
     options: AtlaspackOptions;
+    config: AtlaspackConfig;
   }
 > & {
   optionsRef: SharedReference;
   configCachePath: string;
 };
 type WorkerValidationOpts = Diff<
-  // @ts-expect-error TS2344
   ValidationOpts,
   {
-    workerApi: unknown;
+    workerApi?: unknown;
     options: AtlaspackOptions;
+    config: AtlaspackConfig;
+    report: ReportFn;
   }
 > & {
   optionsRef: SharedReference;
@@ -81,7 +84,7 @@ async function loadConfig(cachePath: string, options: AtlaspackOptions) {
   let processedConfig = nullthrows(
     await options.cache.get<ProcessedAtlaspackConfig>(cachePath),
   );
-  config = new AtlaspackConfig(processedConfig, options);
+  config = new AtlaspackConfigClass(processedConfig, options);
   atlaspackConfigCache.set(cachePath, config);
 
   setFeatureFlags(options.featureFlags);
@@ -105,7 +108,6 @@ export async function runTransform(
   return new Transformation({
     workerApi,
     options,
-    // @ts-expect-error TS2783
     config,
     ...rest,
   }).run();
@@ -121,10 +123,8 @@ export async function runValidate(
 
   return new Validation({
     workerApi,
-    // @ts-expect-error TS2783
-    report: reportWorker.bind(null, workerApi),
+    report: reportWorker.bind(null, workerApi) as ReportFn,
     options,
-    // @ts-expect-error TS2783
     config,
     ...rest,
   }).run();
@@ -158,8 +158,9 @@ export async function runPackage(
   let runner = new PackagerRunner({
     config: atlaspackConfig,
     options,
-    // @ts-expect-error TS2322
-    report: WorkerFarm.isWorker() ? reportWorker.bind(null, workerApi) : report,
+    report: WorkerFarm.isWorker()
+      ? (reportWorker.bind(null, workerApi) as ReportFn)
+      : report,
     previousDevDeps,
     previousInvalidations,
   });

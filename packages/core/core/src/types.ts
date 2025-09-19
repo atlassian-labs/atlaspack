@@ -23,6 +23,7 @@ import type {
   HMROptions,
   DetailedReportOptions,
   Symbol,
+  BundleBehavior as BundleBehaviorType
 } from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
 import type {FileSystem} from '@atlaspack/fs';
@@ -33,6 +34,7 @@ import type {Event} from '@parcel/watcher';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
 import type {BackendType} from '@parcel/watcher';
 import type {EnvironmentRef} from './EnvironmentManager';
+import { InlineRequiresOptimizerInput } from '@atlaspack/rust';
 
 // flow-to-ts helpers
 export type SetComplement<A, B extends A> = A extends B ? never : A;
@@ -183,9 +185,7 @@ export const BundleBehavior = {
   inlineIsolated: 2,
 } as const;
 
-// @ts-expect-error TS2322
-export const BundleBehaviorNames: Array<keyof typeof BundleBehavior> =
-  Object.keys(BundleBehavior);
+export const BundleBehaviorNames = Object.keys(BundleBehavior) as ReadonlyArray<BundleBehaviorType>;
 
 export type Asset = {
   id: ContentKey;
@@ -636,7 +636,9 @@ export type ValidationOpts = {
   configCachePath: string;
 };
 
-export type ReportFn = (event: ReporterEvent) => undefined | Promise<undefined>;
+export type ReportFn = (
+  event: ReporterEvent,
+) => undefined | Promise<undefined | void>;
 
 export type Condition = {
   publicId: string;

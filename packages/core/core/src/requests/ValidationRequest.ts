@@ -68,7 +68,6 @@ export default function createValidationRequest(
           requests: trackedRequestsDesc,
           options,
           config,
-          // @ts-expect-error TS2322
           report,
           dedicatedThread: true,
         }).run(),

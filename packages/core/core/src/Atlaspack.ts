@@ -46,7 +46,6 @@ import {Disposable} from '@atlaspack/events';
 import {init as initSourcemaps} from '@parcel/source-map';
 import {LMDBLiteCache} from '@atlaspack/cache';
 import {
-  // @ts-expect-error TS2305
   init as initRust,
   initializeMonitoring,
   closeMonitoring,

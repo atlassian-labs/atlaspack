@@ -12,7 +12,6 @@ import type {
 } from '@atlaspack/types';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import {NodeFS} from '@atlaspack/fs';
-// @ts-expect-error TS2305
 import {init, Resolver} from '@atlaspack/rust';
 import builtins, {empty} from './builtins';
 import path from 'path';
