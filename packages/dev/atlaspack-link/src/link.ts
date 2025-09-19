@@ -15,7 +15,6 @@ import nullthrows from 'nullthrows';
 import path from 'path';
 import {NodeFS} from '@atlaspack/fs';
 import commander from 'commander';
-import {findUpSync} from 'find-up';
 
 export type LinkOptions = {
   dryRun?: boolean;
@@ -165,6 +164,7 @@ export function createLinkCommand(
       ['node_modules'],
     )
     .action(async (packageRoot, options) => {
+      const {findUpSync} = await import('find-up');
       if (options.dryRun) log('Dry run...');
       let lockfileLocation = findUpSync('yarn.lock');
       let appRoot = lockfileLocation
