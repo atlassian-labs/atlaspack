@@ -1,6 +1,5 @@
 import type {CmdOptions} from './utils';
 import type {FileSystem} from '@atlaspack/fs';
-import {findAncestorFile} from '@atlaspack/rust';
 
 import {AtlaspackLinkConfig} from './AtlaspackLinkConfig';
 import {
@@ -10,6 +9,7 @@ import {
   cleanupNodeModules,
   fsWrite,
   fsSymlink,
+  getAppRoot,
 } from './utils';
 
 import nullthrows from 'nullthrows';
@@ -166,16 +166,9 @@ export function createLinkCommand(
     )
     .action(async (packageRoot, options) => {
       if (options.dryRun) log('Dry run...');
-      let lockfileLocation = findAncestorFile(
-        ['yarn.lock'],
-        process.cwd(),
-        '/',
-      );
-      let appRoot = lockfileLocation
-        ? path.dirname(lockfileLocation)
-        : process.cwd();
+      let appRoot = getAppRoot();
 
-      let parcelLinkConfig;
+      let parcelLinkConfig: AtlaspackLinkConfig | null = null;
 
       try {
         parcelLinkConfig = AtlaspackLinkConfig.load(appRoot, {fs});
