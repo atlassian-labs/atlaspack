@@ -8,6 +8,7 @@ import {
   execSync,
   findParcelPackages,
   fsWrite,
+  getAppRoot,
   mapNamespacePackageAliases,
 } from './utils';
 
@@ -140,11 +141,11 @@ export function createUnlinkCommand(
     .option('-f, --force-install', 'Force a reinstall after unlinking')
     .action(async (options) => {
       if (options.dryRun) log('Dry run...');
-      let appRoot = process.cwd();
+      let appRoot = getAppRoot();
 
-      let parcelLinkConfig;
+      let parcelLinkConfig: AtlaspackLinkConfig | null = null;
       try {
-        parcelLinkConfig = await AtlaspackLinkConfig.load(appRoot, {fs});
+        parcelLinkConfig = AtlaspackLinkConfig.load(appRoot, {fs});
       } catch (e: any) {
         // boop!
       }

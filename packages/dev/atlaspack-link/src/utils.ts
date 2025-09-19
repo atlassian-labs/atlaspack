@@ -3,6 +3,7 @@ import child_process from 'child_process';
 import path from 'path';
 
 import type {FileSystem} from '@atlaspack/fs';
+import {findAncestorFile} from '@atlaspack/rust';
 
 export type CmdOptions = {
   appRoot: string;
@@ -122,7 +123,7 @@ export async function cleanupNodeModules(
       continue;
     }
 
-    let packageName;
+    let packageName: string | undefined;
     let parts = dirPath.split(path.sep).slice(-2);
     if (parts[0].startsWith('@')) {
       packageName = parts.join('/');
@@ -139,7 +140,7 @@ export async function cleanupNodeModules(
     // -------
 
     let packageNodeModules = path.join(root, dirName, 'node_modules');
-    let stat;
+    let stat: ReturnType<typeof fs.statSync> | undefined;
     try {
       stat = fs.statSync(packageNodeModules);
     } catch (e: any) {
@@ -159,4 +160,14 @@ export function execSync(
   if (!dryRun) {
     child_process.execSync(cmd, {cwd: appRoot, stdio: 'inherit'});
   }
+}
+
+export function getAppRoot() {
+  let lockfileLocation = findAncestorFile(['yarn.lock'], process.cwd(), '/');
+
+  if (!lockfileLocation) {
+    return process.cwd();
+  }
+
+  return path.dirname(lockfileLocation);
 }
