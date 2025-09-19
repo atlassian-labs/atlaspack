@@ -1,5 +1,6 @@
 import type {CmdOptions} from './utils';
 import type {FileSystem} from '@atlaspack/fs';
+import {findAncestorFile} from '@atlaspack/rust';
 
 import {AtlaspackLinkConfig} from './AtlaspackLinkConfig';
 import {
@@ -164,9 +165,12 @@ export function createLinkCommand(
       ['node_modules'],
     )
     .action(async (packageRoot, options) => {
-      const {findUpSync} = await import('find-up');
       if (options.dryRun) log('Dry run...');
-      let lockfileLocation = findUpSync('yarn.lock');
+      let lockfileLocation = findAncestorFile(
+        ['yarn.lock'],
+        process.cwd(),
+        '/',
+      );
       let appRoot = lockfileLocation
         ? path.dirname(lockfileLocation)
         : process.cwd();

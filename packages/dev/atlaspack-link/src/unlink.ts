@@ -1,5 +1,6 @@
 import type {CmdOptions} from './utils';
 import type {FileSystem} from '@atlaspack/fs';
+import {findAncestorFile} from '@atlaspack/rust';
 
 import {AtlaspackLinkConfig} from './AtlaspackLinkConfig';
 import {
@@ -140,11 +141,18 @@ export function createUnlinkCommand(
     .option('-f, --force-install', 'Force a reinstall after unlinking')
     .action(async (options) => {
       if (options.dryRun) log('Dry run...');
-      let appRoot = process.cwd();
+      let lockfileLocation = findAncestorFile(
+        ['yarn.lock'],
+        process.cwd(),
+        '/',
+      );
+      let appRoot = lockfileLocation
+        ? path.dirname(lockfileLocation)
+        : process.cwd();
 
       let parcelLinkConfig;
       try {
-        parcelLinkConfig = await AtlaspackLinkConfig.load(appRoot, {fs});
+        parcelLinkConfig = AtlaspackLinkConfig.load(appRoot, {fs});
       } catch (e: any) {
         // boop!
       }
