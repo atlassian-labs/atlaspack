@@ -80,7 +80,10 @@ export default new Transformer({
       map.addIndexedMappings(rawMappings);
     }
 
-    if (originalSourceMap) {
+    if (
+      originalSourceMap &&
+      options.featureFlags?.omitSourcesContentInMemory !== true
+    ) {
       // The babel AST already contains the correct mappings, but not the source contents.
       // We need to copy over the source contents from the original map.
       // @ts-expect-error TS2551
