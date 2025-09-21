@@ -1658,7 +1658,6 @@ describe('sourcemaps', function () {
     );
   }
 
-  // New test: when omitSourcesContentInMemory is enabled, we do not retain sourcesContent in intermediate maps
   it('does not retain sourcesContent in transformers when omitSourcesContentInMemory is enabled', async function () {
     // Enable flag via env; integration test harness reads feature flags from options.featureFlags
     const prevFlag =
