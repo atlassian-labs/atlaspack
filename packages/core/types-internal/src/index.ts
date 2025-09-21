@@ -2141,6 +2141,10 @@ export type BuildSuccessEvent = {
   readonly unstable_requestStats: {
     [requestType: string]: number;
   };
+  readonly scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
+  };
 };
 
 /**

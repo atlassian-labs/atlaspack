@@ -1,6 +1,5 @@
 import type {ReporterEvent, PluginOptions} from '@atlaspack/types';
 import type {Diagnostic} from '@atlaspack/diagnostic';
-import type {Color} from 'chalk';
 
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Reporter} from '@atlaspack/plugin';
@@ -74,6 +73,7 @@ function calculateWrappingStats(scopeHoistingStats?: {
   wrappedAssets: number;
 }) {
   if (!scopeHoistingStats) {
+    // eslint-disable-next-line no-console
     console.log('No scope hoisting data collected.');
     return;
   }
@@ -82,6 +82,7 @@ function calculateWrappingStats(scopeHoistingStats?: {
   let hoistedAssets = totalAssets - wrappedAssets;
   let percentage = totalAssets > 0 ? (hoistedAssets / totalAssets) * 100 : 0;
 
+  // eslint-disable-next-line no-console
   console.table({
     'Wrapped Assets': wrappedAssets,
     'Total Assets': totalAssets,
@@ -191,7 +192,9 @@ export async function _report(
       );
 
       if (options.mode === 'production') {
-        calculateWrappingStats(event.scopeHoistingStats);
+        if (debugTools['scope-hoisting-stats']) {
+          calculateWrappingStats(event.scopeHoistingStats);
+        }
         if (debugTools['simple-cli-reporter']) {
           writeOut(
             `🛠️ Built ${event.bundleGraph.getBundles().length} bundles.`,

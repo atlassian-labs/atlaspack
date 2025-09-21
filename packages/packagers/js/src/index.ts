@@ -82,7 +82,7 @@ export default new Packager({
     // then we don't need to package at all and can pass through the original code un-wrapped.
     let contents, map;
     let scopeHoistingStats;
-    
+
     if (bundle.env.sourceType === 'script') {
       let entries = bundle.getEntryAssets();
       if (
@@ -113,9 +113,12 @@ export default new Packager({
 
       let packageResult = await packager.package();
       ({contents, map} = packageResult);
-      
-      // If this is a scope hoisting packager, extract the stats
-      scopeHoistingStats = 'scopeHoistingStats' in packageResult ? packageResult.scopeHoistingStats : undefined;
+
+      // Extract scope hoisting stats if available (only from ScopeHoistingPackager)
+      scopeHoistingStats =
+        'scopeHoistingStats' in packageResult
+          ? packageResult.scopeHoistingStats
+          : undefined;
     }
 
     contents += '\n' + (await getSourceMapSuffix(getSourceMapReference, map));

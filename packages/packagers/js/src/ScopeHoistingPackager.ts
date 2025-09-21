@@ -81,6 +81,15 @@ export interface OutputFormat {
   buildBundlePostlude(): [string, number];
 }
 
+type PackageResult = {
+  contents: string;
+  map: SourceMap | null | undefined;
+  scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
+  };
+};
+
 function recordScopeHoistingStats(
   bundleId: string,
   wrapped: number,
@@ -91,6 +100,7 @@ function recordScopeHoistingStats(
     total,
   };
 }
+
 export class ScopeHoistingPackager {
   options: PluginOptions;
   bundleGraph: BundleGraph<NamedBundle>;
@@ -158,14 +168,7 @@ export class ScopeHoistingPackager {
     this.globalNames = GLOBALS_BY_CONTEXT[bundle.env.context];
   }
 
-  async package(): Promise<{
-    contents: string;
-    map: SourceMap | null | undefined;
-    scopeHoistingStats?: {
-      totalAssets: number;
-      wrappedAssets: number;
-    };
-  }> {
+  async package(): Promise<PackageResult> {
     await this.loadAssets();
     this.buildExportedSymbols();
 
@@ -329,14 +332,16 @@ export class ScopeHoistingPackager {
       }
     }
 
-    return {
-      contents: res,
-      map: sourceMap,
-      scopeHoistingStats: {
+    const result: PackageResult = {contents: res, map: sourceMap};
+
+    if (debugTools['scope-hoisting-stats']) {
+      result.scopeHoistingStats = {
         totalAssets: this.assetOutputs.size,
         wrappedAssets: this.wrappedAssets.size,
-      },
-    };
+      };
+    }
+
+    return result;
   }
 
   shouldBundleQueue(bundle: NamedBundle): boolean {
