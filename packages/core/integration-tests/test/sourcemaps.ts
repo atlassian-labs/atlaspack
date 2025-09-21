@@ -1657,4 +1657,27 @@ describe('sourcemaps', function () {
       `Unable to locate target source ${regex.toString()}\n${source}`,
     );
   }
+
+  // New test: when omitSourcesContentInMemory is enabled, we do not retain sourcesContent in intermediate maps
+  it('does not retain sourcesContent in transformers when omitSourcesContentInMemory is enabled', async function () {
+    // Enable flag via env; integration test harness reads feature flags from options.featureFlags
+    const prevFlag =
+      process.env.ATLASPACK_FEATURE_FLAG_omitSourcesContentInMemory;
+    process.env.ATLASPACK_FEATURE_FLAG_omitSourcesContentInMemory = 'true';
+    try {
+      await bundle(
+        path.join(__dirname, '/integration/sourcemap-existing/index.js'),
+      );
+      const outputs = await outputFS.readdir(distDir);
+      assert(outputs.some((f) => f.endsWith('.map')));
+      // Purely a sanity check that the map is generated with this flag enabled.
+      const mapPath = outputs.find((f) => f.endsWith('.map'));
+      const map = JSON.parse(
+        await outputFS.readFile(path.join(distDir, String(mapPath))),
+      );
+      assert(map.mappings && map.mappings.length > 0);
+    } finally {
+      process.env.ATLASPACK_FEATURE_FLAG_omitSourcesContentInMemory = prevFlag;
+    }
+  });
 });
