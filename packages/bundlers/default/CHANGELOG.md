@@ -1,5 +1,44 @@
 # @atlaspack/bundler-default
 
+## 3.4.4
+
+### Patch Changes
+
+- Updated dependencies [[`0207171`](https://github.com/atlassian-labs/atlaspack/commit/0207171e59e985c51e105aec2e0a99de174374bd), [`10ee3fa`](https://github.com/atlassian-labs/atlaspack/commit/10ee3fa5b75a92acde8973673d9b3c5b6f3958e5), [`bbe4e28`](https://github.com/atlassian-labs/atlaspack/commit/bbe4e28c89e5e9284bd730075d4d6f2a3cb37b21), [`1180103`](https://github.com/atlassian-labs/atlaspack/commit/118010351ed444f8178988afb3f77807154dd933), [`2bc93b1`](https://github.com/atlassian-labs/atlaspack/commit/2bc93b17cea07fd7cbb68acec84d8471345a22b4)]:
+  - @atlaspack/feature-flags@2.25.2
+  - @atlaspack/rust@3.8.2
+  - @atlaspack/utils@3.0.0
+  - @atlaspack/graph@3.5.21
+  - @atlaspack/types-internal@2.20.2
+  - @atlaspack/plugin@2.14.32
+
+## 3.4.3
+
+### Patch Changes
+
+- [#785](https://github.com/atlassian-labs/atlaspack/pull/785) [`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922) Thanks [@matt-koko](https://github.com/matt-koko)! - We need to re-publish every package in Atlaspack with the corrected types field.
+
+- Updated dependencies [[`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922), [`686a398`](https://github.com/atlassian-labs/atlaspack/commit/686a398faa1f9e19cbf9274add2c46e246bafba8)]:
+  - @atlaspack/diagnostic@2.14.4
+  - @atlaspack/feature-flags@2.25.1
+  - @atlaspack/graph@3.5.20
+  - @atlaspack/plugin@2.14.31
+  - @atlaspack/rust@3.8.1
+  - @atlaspack/types-internal@2.20.1
+  - @atlaspack/utils@2.19.3
+
+## 3.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`7a52bab`](https://github.com/atlassian-labs/atlaspack/commit/7a52bab6281e8edbfa66af248eb6f872c6b4b7bd), [`eedcbc4`](https://github.com/atlassian-labs/atlaspack/commit/eedcbc408fc1e86a2a8e25f1a41c57146d8529e1), [`5a0363f`](https://github.com/atlassian-labs/atlaspack/commit/5a0363f1086e81068959b87e92064bed5a11a9b4), [`038e87a`](https://github.com/atlassian-labs/atlaspack/commit/038e87a7858d39556d59d3a2d17db534d45f62c6), [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572), [`0684997`](https://github.com/atlassian-labs/atlaspack/commit/0684997c127a6204af1376b36e556fddd1ba5557), [`602f8ed`](https://github.com/atlassian-labs/atlaspack/commit/602f8ed9d8381301df8b2cc82c1d5cf6f2f94fec)]:
+  - @atlaspack/feature-flags@2.25.0
+  - @atlaspack/types-internal@2.20.0
+  - @atlaspack/rust@3.8.0
+  - @atlaspack/graph@3.5.19
+  - @atlaspack/utils@2.19.2
+  - @atlaspack/plugin@2.14.30
+
 ## 3.4.1
 
 ### Patch Changes

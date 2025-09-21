@@ -1,5 +1,45 @@
 # @atlaspack/package-manager
 
+## 2.14.32
+
+### Patch Changes
+
+- Updated dependencies [[`1180103`](https://github.com/atlassian-labs/atlaspack/commit/118010351ed444f8178988afb3f77807154dd933)]:
+  - @atlaspack/utils@3.0.0
+  - @atlaspack/fs@2.15.27
+  - @atlaspack/node-resolver-core@3.7.3
+  - @atlaspack/logger@2.14.24
+  - @atlaspack/workers@2.14.32
+  - @atlaspack/types@2.15.22
+
+## 2.14.31
+
+### Patch Changes
+
+- [#785](https://github.com/atlassian-labs/atlaspack/pull/785) [`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922) Thanks [@matt-koko](https://github.com/matt-koko)! - We need to re-publish every package in Atlaspack with the corrected types field.
+
+- Updated dependencies [[`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922)]:
+  - @atlaspack/build-cache@2.13.6
+  - @atlaspack/diagnostic@2.14.4
+  - @atlaspack/fs@2.15.26
+  - @atlaspack/logger@2.14.23
+  - @atlaspack/types@2.15.21
+  - @atlaspack/utils@2.19.3
+  - @atlaspack/workers@2.14.31
+  - @atlaspack/node-resolver-core@3.7.2
+
+## 2.14.30
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.25
+  - @atlaspack/utils@2.19.2
+  - @atlaspack/node-resolver-core@3.7.1
+  - @atlaspack/logger@2.14.22
+  - @atlaspack/types@2.15.20
+  - @atlaspack/workers@2.14.30
+
 ## 2.14.29
 
 ### Patch Changes

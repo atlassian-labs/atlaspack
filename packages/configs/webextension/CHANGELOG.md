@@ -1,5 +1,46 @@
 # @atlaspack/config-webextension
 
+## 5.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`10ee3fa`](https://github.com/atlassian-labs/atlaspack/commit/10ee3fa5b75a92acde8973673d9b3c5b6f3958e5)]:
+  - @atlaspack/core@2.24.2
+  - @atlaspack/config-default@5.0.2
+  - @atlaspack/packager-webextension@2.14.32
+  - @atlaspack/runtime-webextension@2.14.32
+  - @atlaspack/transformer-webextension@2.14.32
+  - @atlaspack/types@2.15.22
+  - @atlaspack/transformer-raw@2.14.32
+
+## 5.0.1
+
+### Patch Changes
+
+- [#785](https://github.com/atlassian-labs/atlaspack/pull/785) [`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922) Thanks [@matt-koko](https://github.com/matt-koko)! - We need to re-publish every package in Atlaspack with the corrected types field.
+
+- Updated dependencies [[`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922), [`686a398`](https://github.com/atlassian-labs/atlaspack/commit/686a398faa1f9e19cbf9274add2c46e246bafba8)]:
+  - @atlaspack/config-default@5.0.1
+  - @atlaspack/core@2.24.1
+  - @atlaspack/types@2.15.21
+  - @atlaspack/packager-webextension@2.14.31
+  - @atlaspack/runtime-webextension@2.14.31
+  - @atlaspack/transformer-raw@2.14.31
+  - @atlaspack/transformer-webextension@2.14.31
+
+## 5.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`eedcbc4`](https://github.com/atlassian-labs/atlaspack/commit/eedcbc408fc1e86a2a8e25f1a41c57146d8529e1), [`5a0363f`](https://github.com/atlassian-labs/atlaspack/commit/5a0363f1086e81068959b87e92064bed5a11a9b4), [`038e87a`](https://github.com/atlassian-labs/atlaspack/commit/038e87a7858d39556d59d3a2d17db534d45f62c6), [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572), [`8604d2a`](https://github.com/atlassian-labs/atlaspack/commit/8604d2a49ace5e9194ec4f76e71f06b93610f6b4)]:
+  - @atlaspack/core@2.24.0
+  - @atlaspack/config-default@5.0.0
+  - @atlaspack/types@2.15.20
+  - @atlaspack/packager-webextension@2.14.30
+  - @atlaspack/runtime-webextension@2.14.30
+  - @atlaspack/transformer-webextension@2.14.30
+  - @atlaspack/transformer-raw@2.14.30
+
 ## 4.0.6
 
 ### Patch Changes

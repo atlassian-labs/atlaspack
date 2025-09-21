@@ -337,7 +337,6 @@ async function processCSSModule(
       let usedLocalSymbols = new Set(
         [...usedSymbols].map(
           (exportSymbol) =>
-            // @ts-expect-error TS2731
             `.${nullthrows(asset.symbols.get(exportSymbol)).local}`,
         ),
       );

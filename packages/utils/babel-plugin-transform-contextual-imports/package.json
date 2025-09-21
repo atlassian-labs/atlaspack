@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/babel-plugin-transform-contextual-imports",
-  "version": "2.15.2",
+  "version": "2.16.0",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -25,7 +25,6 @@
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

@@ -1,4 +1,18 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../core/tsconfig.json"
+    },
+    {
+      "path": "../fs/tsconfig.json"
+    },
+    {
+      "path": "../package-manager/tsconfig.json"
+    }
+  ]
 }

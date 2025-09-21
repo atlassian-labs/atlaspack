@@ -1,4 +1,5 @@
 import type {SourceLocation, FileSystem} from '@atlaspack/types-internal';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import SourceMap from '@parcel/source-map';
 import path from 'path';
 import {normalizeSeparators, isAbsolute} from './path';
@@ -95,6 +96,7 @@ export async function loadSourceMap(
 export function remapSourceLocation(
   loc: SourceLocation,
   originalMap: SourceMap,
+  projectRoot: string,
 ): SourceLocation {
   let {
     filePath,
@@ -108,7 +110,14 @@ export function remapSourceLocation(
 
   if (start?.original) {
     if (start.source) {
-      filePath = start.source;
+      if (
+        getFeatureFlag('symbolLocationFix') &&
+        !path.isAbsolute(start.source)
+      ) {
+        filePath = path.join(projectRoot, start.source);
+      } else {
+        filePath = start.source;
+      }
     }
 
     ({line: startLine, column: startCol} = start.original);

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/resolver-glob",
-  "version": "2.14.29",
+  "version": "2.14.32",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,16 +16,15 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.3",
-    "@atlaspack/node-resolver-core": "3.7.0",
-    "@atlaspack/plugin": "2.14.29",
-    "@atlaspack/types": "2.15.19",
-    "@atlaspack/utils": "2.19.1",
+    "@atlaspack/diagnostic": "2.14.4",
+    "@atlaspack/node-resolver-core": "3.7.3",
+    "@atlaspack/plugin": "2.14.32",
+    "@atlaspack/types": "2.15.22",
+    "@atlaspack/utils": "3.0.0",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

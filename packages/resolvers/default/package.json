@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/resolver-default",
-  "version": "2.14.29",
+  "version": "2.14.32",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,15 +16,14 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/node-resolver-core": "3.7.0",
-    "@atlaspack/plugin": "2.14.29"
+    "@atlaspack/node-resolver-core": "3.7.3",
+    "@atlaspack/plugin": "2.14.32"
   },
   "devDependencies": {
     "@babel/core": "^7.22.11"
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/diagnostic",
-  "version": "2.14.3",
+  "version": "2.14.4",
   "description": "Types and utilities for printing source-code located errors, warning and information messages.",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -17,7 +17,6 @@
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {

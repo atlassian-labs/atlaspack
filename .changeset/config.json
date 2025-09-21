@@ -24,7 +24,6 @@
     "caniuse-database",
     "lmdb-js-lite",
     "fuzzer",
-    "@atlaspack/repl",
     "@atlaspack/conditional-bundling-example",
     "@atlaspack/eslint-example",
     "@atlaspack/html-example",

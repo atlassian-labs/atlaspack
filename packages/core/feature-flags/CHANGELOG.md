@@ -1,5 +1,43 @@
 # @atlaspack/feature-flags
 
+## 2.25.2
+
+### Patch Changes
+
+- [#790](https://github.com/atlassian-labs/atlaspack/pull/790) [`0207171`](https://github.com/atlassian-labs/atlaspack/commit/0207171e59e985c51e105aec2e0a99de174374bd) Thanks [@benjervis](https://github.com/benjervis)! - Clean up the `unusedComputedPropertyFix` feature flag
+
+- [#791](https://github.com/atlassian-labs/atlaspack/pull/791) [`10ee3fa`](https://github.com/atlassian-labs/atlaspack/commit/10ee3fa5b75a92acde8973673d9b3c5b6f3958e5) Thanks [@benjervis](https://github.com/benjervis)! - Remove emptyFileStarRexportFix and make the flagged behaviour standard.
+
+  See PR [#685][pr] for details on the change.
+
+  [pr]: https://github.com/atlassian-labs/atlaspack/pull/685
+
+- [#800](https://github.com/atlassian-labs/atlaspack/pull/800) [`1180103`](https://github.com/atlassian-labs/atlaspack/commit/118010351ed444f8178988afb3f77807154dd933) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix errors when creating diagnostics with relative file paths
+
+  BREAKING CHANGE: The `remapSourceLocation` API in `@atlaspack/utils` now requires the project root
+
+- [#781](https://github.com/atlassian-labs/atlaspack/pull/781) [`2bc93b1`](https://github.com/atlassian-labs/atlaspack/commit/2bc93b17cea07fd7cbb68acec84d8471345a22b4) Thanks [@matt-koko](https://github.com/matt-koko)! - add attribution to feature flags and eslint rule to enforce attribution convention
+
+## 2.25.1
+
+### Patch Changes
+
+- [#785](https://github.com/atlassian-labs/atlaspack/pull/785) [`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922) Thanks [@matt-koko](https://github.com/matt-koko)! - We need to re-publish every package in Atlaspack with the corrected types field.
+
+## 2.25.0
+
+### Minor Changes
+
+- [#767](https://github.com/atlassian-labs/atlaspack/pull/767) [`038e87a`](https://github.com/atlassian-labs/atlaspack/commit/038e87a7858d39556d59d3a2d17db534d45f62c6) Thanks [@marcins](https://github.com/marcins)! - Implement a new feature `allowExplicitTargetEntries` where entries provided as entries can be filtered by the source property in targets to allow different targets to be built for different subsets of entries.
+
+- [#769](https://github.com/atlassian-labs/atlaspack/pull/769) [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572) Thanks [@marcins](https://github.com/marcins)! - Adds a new feature to support adding custom `env` properties in a target, that are available in the Environment during the build. A new feature flag `customEnvInTargets` has been added to gate this feature.
+
+- [#774](https://github.com/atlassian-labs/atlaspack/pull/774) [`602f8ed`](https://github.com/atlassian-labs/atlaspack/commit/602f8ed9d8381301df8b2cc82c1d5cf6f2f94fec) Thanks [@JakeLane](https://github.com/JakeLane)! - Add feature flag exportsRebindingOptimisation which detects cases where we don't need the rebinding helper for esm exports
+
+### Patch Changes
+
+- [#779](https://github.com/atlassian-labs/atlaspack/pull/779) [`7a52bab`](https://github.com/atlassian-labs/atlaspack/commit/7a52bab6281e8edbfa66af248eb6f872c6b4b7bd) Thanks [@marcins](https://github.com/marcins)! - Add new feature flag `preserveUnstableSingleFileOutputInCss` which when enabled will ensure the `unstableSingleFileOutput` property on the asset environment is preserved when transforming CSS.
+
 ## 2.24.1
 
 ### Patch Changes

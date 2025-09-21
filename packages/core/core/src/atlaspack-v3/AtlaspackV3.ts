@@ -106,8 +106,17 @@ export class AtlaspackV3 {
     return graph;
   }
 
-  respondToFsEvents(events: Array<Event>): boolean {
-    // @ts-expect-error TS2322
-    return atlaspackNapiRespondToFsEvents(this._atlaspack_napi, events);
+  async respondToFsEvents(events: Array<Event>): Promise<boolean> {
+    // @ts-expect-error TS2488
+    let [needsRebuild, error] = await atlaspackNapiRespondToFsEvents(
+      this._atlaspack_napi,
+      events,
+    );
+
+    if (error) {
+      throw new Error(error);
+    }
+
+    return needsRebuild;
   }
 }

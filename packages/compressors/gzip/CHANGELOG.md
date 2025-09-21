@@ -1,5 +1,28 @@
 # @atlaspack/compressor-gzip
 
+## 2.13.34
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.32
+
+## 2.13.33
+
+### Patch Changes
+
+- [#785](https://github.com/atlassian-labs/atlaspack/pull/785) [`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922) Thanks [@matt-koko](https://github.com/matt-koko)! - We need to re-publish every package in Atlaspack with the corrected types field.
+
+- Updated dependencies [[`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922)]:
+  - @atlaspack/plugin@2.14.31
+
+## 2.13.32
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.30
+
 ## 2.13.31
 
 ### Patch Changes

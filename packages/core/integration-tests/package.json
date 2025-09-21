@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/integration-tests",
-  "version": "2.17.1",
+  "version": "2.17.2",
   "private": true,
   "license": "(MIT OR Apache-2.0)",
   "repository": {
@@ -11,11 +11,10 @@
     "test": "cross-env NODE_ENV=test ATLASPACK_REGISTER_USE_SRC=true ATLASPACK_BUILD_ENV=test mocha --conditions=atlaspack::sources --experimental-vm-modules",
     "test-ci": "ATLASPACK_INTEGRATION_TESTS_CI=true NODE_ENV=test ATLASPACK_BUILD_ENV=test mocha --experimental-vm-modules",
     "test:integration": "yarn run test",
-    "test:integration:ci": "yarn run test-ci",
-    "check-ts": "echo 'No TypeScript check for integration tests yet'"
+    "test:integration:ci": "yarn run test-ci"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.14.8",
+    "@atlaspack/cli": "2.14.11",
     "@atlaspack/mocha-profiler": "*",
     "@babel/core": "^7.22.11",
     "@babel/plugin-syntax-class-properties": "^7.12.13",

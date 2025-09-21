@@ -1,5 +1,36 @@
 # @atlaspack/reporter-cli
 
+## 2.17.14
+
+### Patch Changes
+
+- [#793](https://github.com/atlassian-labs/atlaspack/pull/793) [`a4f887b`](https://github.com/atlassian-labs/atlaspack/commit/a4f887b8c45386b058650c41ad38ac675deee27d) Thanks [@benjervis](https://github.com/benjervis)! - Fixes the cliProgressReportingImprovements, which were previously being overwritten by the existing packaging messaging. With this fix, now only the progress messages are shown during packaging.
+
+- Updated dependencies [[`1180103`](https://github.com/atlassian-labs/atlaspack/commit/118010351ed444f8178988afb3f77807154dd933)]:
+  - @atlaspack/utils@3.0.0
+  - @atlaspack/plugin@2.14.32
+  - @atlaspack/types@2.15.22
+
+## 2.17.13
+
+### Patch Changes
+
+- [#785](https://github.com/atlassian-labs/atlaspack/pull/785) [`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922) Thanks [@matt-koko](https://github.com/matt-koko)! - We need to re-publish every package in Atlaspack with the corrected types field.
+
+- Updated dependencies [[`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922)]:
+  - @atlaspack/plugin@2.14.31
+  - @atlaspack/types@2.15.21
+  - @atlaspack/utils@2.19.3
+
+## 2.17.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@2.19.2
+  - @atlaspack/plugin@2.14.30
+  - @atlaspack/types@2.15.20
+
 ## 2.17.11
 
 ### Patch Changes

@@ -1,5 +1,36 @@
 # Changelog
 
+## 2.15.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.2
+  - @atlaspack/node-resolver-core@3.7.3
+  - @atlaspack/plugin@2.14.32
+
+## 2.15.4
+
+### Patch Changes
+
+- [#785](https://github.com/atlassian-labs/atlaspack/pull/785) [`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922) Thanks [@matt-koko](https://github.com/matt-koko)! - We need to re-publish every package in Atlaspack with the corrected types field.
+
+- Updated dependencies [[`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922)]:
+  - @atlaspack/plugin@2.14.31
+  - @atlaspack/types-internal@2.20.1
+  - @atlaspack/node-resolver-core@3.7.2
+
+## 2.15.3
+
+### Patch Changes
+
+- [#775](https://github.com/atlassian-labs/atlaspack/pull/775) [`525360f`](https://github.com/atlassian-labs/atlaspack/commit/525360fb683b01e6d46f10d67cb6225e193e4251) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - small fixes for tesseract resolver
+
+- Updated dependencies [[`eedcbc4`](https://github.com/atlassian-labs/atlaspack/commit/eedcbc408fc1e86a2a8e25f1a41c57146d8529e1), [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572)]:
+  - @atlaspack/types-internal@2.20.0
+  - @atlaspack/node-resolver-core@3.7.1
+  - @atlaspack/plugin@2.14.30
+
 ## 2.15.2
 
 ### Patch Changes

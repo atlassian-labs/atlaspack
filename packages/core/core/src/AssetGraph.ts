@@ -140,6 +140,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
   constructor(opts?: AssetGraphOpts | null) {
     if (opts) {
       let {hash, bundlingVersion, disableIncrementalBundling, ...rest} = opts;
+      // @ts-expect-error TS2345
       super(rest);
       this.hash = hash;
       this.#bundlingVersion = bundlingVersion ?? 0;
@@ -327,9 +328,7 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
 
       if (fromEnvironmentId(node.value.env).isLibrary) {
         // in library mode, all of the entry's symbols are "used"
-        // @ts-expect-error TS2345
         node.usedSymbolsDown.add('*');
-        // @ts-expect-error TS2345
         node.usedSymbolsUp.set('*', undefined);
       }
       return node;
@@ -483,7 +482,6 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
       [...dependencySymbols].every(([, {isWeak}]: [any, any]) => isWeak) &&
       sideEffects === false &&
       canDefer &&
-      // @ts-expect-error TS2345
       !dependencySymbols.has('*');
 
     if (!isDeferrable) {
@@ -521,7 +519,6 @@ export default class AssetGraph extends ContentGraph<AssetGraphNode> {
       let depIsDeferrable =
         d.symbols &&
         !(fromEnvironmentId(d.env).isLibrary && d.isEntry) &&
-        // @ts-expect-error TS2345
         !d.symbols.has('*') &&
         ![...d.symbols.keys()].some((symbol) => {
           let assetSymbol = resolvedAsset.symbols?.get(symbol)?.local;

@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/build-cache",
   "description": "Serialize and deserialize data structures to a build cache",
-  "version": "2.13.5",
+  "version": "2.13.6",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -18,7 +18,6 @@
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

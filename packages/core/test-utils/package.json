@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/test-utils",
-  "version": "2.14.32",
+  "version": "2.14.35",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "private": true,
@@ -15,16 +15,15 @@
     "node": ">= 16.0.0"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/cache": "3.2.24",
-    "@atlaspack/config-default": "4.0.6",
-    "@atlaspack/core": "2.23.5",
-    "@atlaspack/fs": "2.15.24",
-    "@atlaspack/package-manager": "2.14.29",
-    "@atlaspack/utils": "2.19.1",
+    "@atlaspack/cache": "3.2.27",
+    "@atlaspack/config-default": "5.0.2",
+    "@atlaspack/core": "2.24.2",
+    "@atlaspack/fs": "2.15.27",
+    "@atlaspack/package-manager": "2.14.32",
+    "@atlaspack/utils": "3.0.0",
     "async": "^3.2.6",
     "chalk": "^4.1.0",
     "expect": "^29.7.0",

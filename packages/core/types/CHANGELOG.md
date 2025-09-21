@@ -1,5 +1,31 @@
 # @atlaspack/types
 
+## 2.15.22
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.2
+  - @atlaspack/workers@2.14.32
+
+## 2.15.21
+
+### Patch Changes
+
+- [#785](https://github.com/atlassian-labs/atlaspack/pull/785) [`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922) Thanks [@matt-koko](https://github.com/matt-koko)! - We need to re-publish every package in Atlaspack with the corrected types field.
+
+- Updated dependencies [[`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922)]:
+  - @atlaspack/types-internal@2.20.1
+  - @atlaspack/workers@2.14.31
+
+## 2.15.20
+
+### Patch Changes
+
+- Updated dependencies [[`eedcbc4`](https://github.com/atlassian-labs/atlaspack/commit/eedcbc408fc1e86a2a8e25f1a41c57146d8529e1), [`f6532d7`](https://github.com/atlassian-labs/atlaspack/commit/f6532d7a4f7f007bd4e5e36af04dd466f0b9f572)]:
+  - @atlaspack/types-internal@2.20.0
+  - @atlaspack/workers@2.14.30
+
 ## 2.15.19
 
 ### Patch Changes

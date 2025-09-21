@@ -1,5 +1,23 @@
 # @atlaspack/eslint-config
 
+## 2.14.5
+
+### Patch Changes
+
+- [#781](https://github.com/atlassian-labs/atlaspack/pull/781) [`2bc93b1`](https://github.com/atlassian-labs/atlaspack/commit/2bc93b17cea07fd7cbb68acec84d8471345a22b4) Thanks [@matt-koko](https://github.com/matt-koko)! - add attribution to feature flags and eslint rule to enforce attribution convention
+
+- Updated dependencies [[`2bc93b1`](https://github.com/atlassian-labs/atlaspack/commit/2bc93b17cea07fd7cbb68acec84d8471345a22b4)]:
+  - @atlaspack/eslint-plugin-internal@2.14.5
+
+## 2.14.4
+
+### Patch Changes
+
+- [#785](https://github.com/atlassian-labs/atlaspack/pull/785) [`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922) Thanks [@matt-koko](https://github.com/matt-koko)! - We need to re-publish every package in Atlaspack with the corrected types field.
+
+- Updated dependencies [[`0e7dd5e`](https://github.com/atlassian-labs/atlaspack/commit/0e7dd5ec6fbe05aa9e0bb5775a9d0975f206a922)]:
+  - @atlaspack/eslint-plugin-internal@2.14.4
+
 ## 2.14.3
 
 ### Patch Changes
