@@ -26,7 +26,13 @@ type WriteBundlesRequestInput = {
   optionsRef: SharedReference;
 };
 
-export type WriteBundlesRequestResult = Map<string, PackagedBundleInfo>;
+export type WriteBundlesRequestResult = {
+  bundleInfoMap: Map<string, PackagedBundleInfo>;
+  scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
+  };
+};
 
 type RunInput<TResult> = {
   input: WriteBundlesRequestInput;
@@ -206,8 +212,29 @@ async function run({
       }),
     );
 
-    api.storeResult(res);
-    return res;
+    // Aggregate scope hoisting stats from all bundles
+    let aggregatedScopeHoistingStats = {
+      totalAssets: 0,
+      wrappedAssets: 0,
+    };
+    let hasScopeHoistingStats = false;
+
+    for (let bundle of bundles) {
+      let bundleInfo = bundleInfoMap[bundle.id];
+      if (bundleInfo?.scopeHoistingStats) {
+        hasScopeHoistingStats = true;
+        aggregatedScopeHoistingStats.totalAssets += bundleInfo.scopeHoistingStats.totalAssets;
+        aggregatedScopeHoistingStats.wrappedAssets += bundleInfo.scopeHoistingStats.wrappedAssets;
+      }
+    }
+
+    let result = {
+      bundleInfoMap: res,
+      scopeHoistingStats: hasScopeHoistingStats ? aggregatedScopeHoistingStats : undefined,
+    };
+
+    api.storeResult(result);
+    return result;
   } finally {
     await dispose();
   }

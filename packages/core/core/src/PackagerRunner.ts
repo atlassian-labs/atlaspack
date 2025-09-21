@@ -87,6 +87,10 @@ export type BundleInfo = {
   readonly time?: number;
   readonly cacheKeys: CacheKeyMap;
   readonly isLargeBlob: boolean;
+  readonly scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
+  };
 };
 
 type CacheKeyMap = {
@@ -313,7 +317,7 @@ export default class PackagerRunner {
     configs: Map<string, Config>,
     bundleConfigs: Map<string, Config>,
   ): Promise<BundleInfo> {
-    let {type, contents, map} = await this.getBundleResult(
+    let {type, contents, map, scopeHoistingStats} = await this.getBundleResult(
       bundle,
       bundleGraph,
       configs,
@@ -334,7 +338,7 @@ export default class PackagerRunner {
       info: PackagerRunner.getInfoKey(cacheKey),
     };
 
-    return this.writeToCache(cacheKeys, type, contents, map);
+    return this.writeToCache(cacheKeys, type, contents, map, scopeHoistingStats);
   }
 
   async getBundleResult(
@@ -346,6 +350,10 @@ export default class PackagerRunner {
     type: string;
     contents: Blob;
     map: string | null | undefined;
+    scopeHoistingStats?: {
+      totalAssets: number;
+      wrappedAssets: number;
+    };
   }> {
     let packaged = await this.package(
       bundle,
@@ -370,6 +378,7 @@ export default class PackagerRunner {
       type: res.type ?? type,
       contents: res.contents,
       map,
+      scopeHoistingStats: packaged.scopeHoistingStats,
     };
   }
 
@@ -413,7 +422,7 @@ export default class PackagerRunner {
       measurement = tracer.createMeasurement(name, 'packaging', bundle.name, {
         type: bundle.type,
       });
-      return await plugin.package({
+      let packagerResult = await plugin.package({
         config: configs.get(name)?.result,
         bundleConfig: bundleConfigs.get(name)?.result,
         bundle,
@@ -451,6 +460,8 @@ export default class PackagerRunner {
           return {contents: res.contents};
         },
       });
+
+      return packagerResult;
     } catch (e: any) {
       throw new ThrowableDiagnostic({
         diagnostic: errorToDiagnostic(e, {
@@ -773,6 +784,10 @@ export default class PackagerRunner {
     type: string,
     contents: Blob,
     map?: string | null,
+    scopeHoistingStats?: {
+      totalAssets: number;
+      wrappedAssets: number;
+    },
   ): Promise<BundleInfo> {
     let size = 0;
     let hash;
@@ -842,6 +857,7 @@ export default class PackagerRunner {
       hashReferences,
       cacheKeys,
       isLargeBlob,
+      scopeHoistingStats,
     };
 
     await this.options.cache.set(cacheKeys.info, info);

@@ -69,6 +69,27 @@ const cacheWriteState: {
   startTime: null,
 };
 
+function calculateWrappingStats(scopeHoistingStats?: {
+  totalAssets: number;
+  wrappedAssets: number;
+}) {
+  if (!scopeHoistingStats) {
+    console.log('No scope hoisting data collected.');
+    return;
+  }
+
+  let {totalAssets, wrappedAssets} = scopeHoistingStats;
+  let hoistedAssets = totalAssets - wrappedAssets;
+  let percentage = totalAssets > 0 ? (hoistedAssets / totalAssets) * 100 : 0;
+
+  console.table({
+    'Wrapped Assets': wrappedAssets,
+    'Total Assets': totalAssets,
+    'Hoisted Assets': hoistedAssets,
+    'Percentage Hoisted': `${percentage.toFixed(3)}%`,
+  });
+}
+
 // Exported only for test
 export async function _report(
   event: ReporterEvent,
@@ -170,6 +191,7 @@ export async function _report(
       );
 
       if (options.mode === 'production') {
+        calculateWrappingStats(event.scopeHoistingStats);
         if (debugTools['simple-cli-reporter']) {
           writeOut(
             `🛠️ Built ${event.bundleGraph.getBundles().length} bundles.`,

@@ -1756,6 +1756,10 @@ export type BundleResult = {
   readonly ast?: AST;
   readonly map?: SourceMap | null | undefined;
   readonly type?: string;
+  readonly scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
+  };
 };
 
 /**
