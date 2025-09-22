@@ -338,7 +338,13 @@ export default class PackagerRunner {
       info: PackagerRunner.getInfoKey(cacheKey),
     };
 
-    return this.writeToCache(cacheKeys, type, contents, map, scopeHoistingStats);
+    return this.writeToCache(
+      cacheKeys,
+      type,
+      contents,
+      map,
+      scopeHoistingStats,
+    );
   }
 
   async getBundleResult(
@@ -422,7 +428,7 @@ export default class PackagerRunner {
       measurement = tracer.createMeasurement(name, 'packaging', bundle.name, {
         type: bundle.type,
       });
-      let packagerResult = await plugin.package({
+      return await plugin.package({
         config: configs.get(name)?.result,
         bundleConfig: bundleConfigs.get(name)?.result,
         bundle,
@@ -460,8 +466,6 @@ export default class PackagerRunner {
           return {contents: res.contents};
         },
       });
-
-      return packagerResult;
     } catch (e: any) {
       throw new ThrowableDiagnostic({
         diagnostic: errorToDiagnostic(e, {
@@ -632,7 +636,7 @@ export default class PackagerRunner {
       if (
         !(bundleEnv.sourceMap && bundleEnv.sourceMap.inlineSources === false)
       ) {
-        /* 
+        /*
           We're omitting sourcesContent during transformation to allow GC to run.
           Ensure sources are still inlined into the final source maps written to disk. UNLESS the user explicitly disabled inlineSources.
         */

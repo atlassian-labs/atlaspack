@@ -20,6 +20,7 @@ import nullthrows from 'nullthrows';
 import {hashString} from '@atlaspack/rust';
 import {createPackageRequest} from './PackageRequest';
 import createWriteBundleRequest from './WriteBundleRequest';
+import {debugTools} from '@atlaspack/utils';
 
 type WriteBundlesRequestInput = {
   bundleGraph: BundleGraph;
@@ -27,7 +28,7 @@ type WriteBundlesRequestInput = {
 };
 
 export type WriteBundlesRequestResult = {
-  bundleInfoMap: Map<string, PackagedBundleInfo>;
+  bundleInfo: Map<string, PackagedBundleInfo>;
   scopeHoistingStats?: {
     totalAssets: number;
     wrappedAssets: number;
@@ -212,25 +213,29 @@ async function run({
       }),
     );
 
-    // Aggregate scope hoisting stats from all bundles
-    let aggregatedScopeHoistingStats = {
-      totalAssets: 0,
-      wrappedAssets: 0,
-    };
-    let hasScopeHoistingStats = false;
+    let aggregatedScopeHoistingStats = undefined;
 
-    for (let bundle of bundles) {
-      let bundleInfo = bundleInfoMap[bundle.id];
-      if (bundleInfo?.scopeHoistingStats) {
-        hasScopeHoistingStats = true;
-        aggregatedScopeHoistingStats.totalAssets += bundleInfo.scopeHoistingStats.totalAssets;
-        aggregatedScopeHoistingStats.wrappedAssets += bundleInfo.scopeHoistingStats.wrappedAssets;
+    if (debugTools['scope-hoisting-stats']) {
+      // Aggregate scope hoisting stats from all bundles
+      aggregatedScopeHoistingStats = {
+        totalAssets: 0,
+        wrappedAssets: 0,
+      };
+
+      for (let bundle of bundles) {
+        let bundleInfo = bundleInfoMap[bundle.id];
+        if (bundleInfo?.scopeHoistingStats) {
+          aggregatedScopeHoistingStats.totalAssets +=
+            bundleInfo.scopeHoistingStats.totalAssets;
+          aggregatedScopeHoistingStats.wrappedAssets +=
+            bundleInfo.scopeHoistingStats.wrappedAssets;
+        }
       }
     }
 
     let result = {
-      bundleInfoMap: res,
-      scopeHoistingStats: hasScopeHoistingStats ? aggregatedScopeHoistingStats : undefined,
+      bundleInfo: res,
+      scopeHoistingStats: aggregatedScopeHoistingStats,
     };
 
     api.storeResult(result);

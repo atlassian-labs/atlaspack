@@ -90,17 +90,6 @@ type PackageResult = {
   };
 };
 
-function recordScopeHoistingStats(
-  bundleId: string,
-  wrapped: number,
-  total: number,
-) {
-  ((globalThis as any).ATLASPACK_SCOPE_HOISTING_STATS ??= {})[bundleId] = {
-    wrapped,
-    total,
-  };
-}
-
 export class ScopeHoistingPackager {
   options: PluginOptions;
   bundleGraph: BundleGraph<NamedBundle>;
@@ -534,12 +523,6 @@ export class ScopeHoistingPackager {
         }, wrappedAssetRoot);
       }
     }
-
-    recordScopeHoistingStats(
-      this.bundle.publicId,
-      this.wrappedAssets.size,
-      this.assetOutputs.size,
-    );
 
     this.assetOutputs = new Map(await queue.run());
   }
