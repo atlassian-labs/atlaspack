@@ -156,14 +156,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   hmrImprovements: false,
 
   /**
-   * Fixes an issue where star re-exports of empty files (usually occurring in compiled typescript libraries)
-   * could cause exports to undefined at runtime.
-   *
-   * @author Matt Jones <mjones4@atlassian.com>
-   */
-  emptyFileStarRexportFix: process.env.ATLASPACK_BUILD_ENV === 'test',
-
-  /**
    * Enables the new packaging progress CLI experience
    *
    * @author Matt Jones <mjones4@atlassian.com>
@@ -259,6 +251,14 @@ export const DEFAULT_FEATURE_FLAGS = {
    */
   preserveUnstableSingleFileOutputInCss:
     process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * When enabled, fixes handling of symbol locations when source maps contain
+   * project relative paths
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   */
+  symbolLocationFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

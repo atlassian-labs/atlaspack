@@ -1,5 +1,20 @@
 # @atlaspack/packager-js
 
+## 2.23.2
+
+### Patch Changes
+
+- [#796](https://github.com/atlassian-labs/atlaspack/pull/796) [`0e967b0`](https://github.com/atlassian-labs/atlaspack/commit/0e967b0cf0fbd885588b81476ec1f25a507ffa94) Thanks [@benjervis](https://github.com/benjervis)! - Minor refactor of the internals of the scope hoisting packager. Some of the internal objects are now keyed on Assets rather than string asset IDs.
+
+- [#801](https://github.com/atlassian-labs/atlaspack/pull/801) [`b104fd8`](https://github.com/atlassian-labs/atlaspack/commit/b104fd846ea17c583e68ddc6b309c5e1edee6938) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix incorrect output with skipped assets with scope hoisting improvements
+
+- Updated dependencies [[`0207171`](https://github.com/atlassian-labs/atlaspack/commit/0207171e59e985c51e105aec2e0a99de174374bd), [`10ee3fa`](https://github.com/atlassian-labs/atlaspack/commit/10ee3fa5b75a92acde8973673d9b3c5b6f3958e5), [`bbe4e28`](https://github.com/atlassian-labs/atlaspack/commit/bbe4e28c89e5e9284bd730075d4d6f2a3cb37b21), [`1180103`](https://github.com/atlassian-labs/atlaspack/commit/118010351ed444f8178988afb3f77807154dd933), [`2bc93b1`](https://github.com/atlassian-labs/atlaspack/commit/2bc93b17cea07fd7cbb68acec84d8471345a22b4)]:
+  - @atlaspack/feature-flags@2.25.2
+  - @atlaspack/rust@3.8.2
+  - @atlaspack/utils@3.0.0
+  - @atlaspack/plugin@2.14.32
+  - @atlaspack/types@2.15.22
+
 ## 2.23.1
 
 ### Patch Changes

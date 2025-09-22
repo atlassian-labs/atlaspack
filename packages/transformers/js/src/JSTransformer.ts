@@ -672,7 +672,11 @@ export default new Transformer({
 
       // If there is an original source map, use it to remap to the original source location.
       if (originalMap) {
-        location = remapSourceLocation(location, originalMap);
+        location = remapSourceLocation(
+          location,
+          originalMap,
+          options.projectRoot,
+        );
       }
 
       return location;

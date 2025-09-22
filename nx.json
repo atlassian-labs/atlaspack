@@ -2,16 +2,6 @@
   "$schema": "https://raw.githubusercontent.com/nrwl/nx/refs/heads/master/packages/nx/schemas/nx-schema.json",
   "parallel": "200%",
   "targetDefaults": {
-    "check-ts": {
-      "dependsOn": ["^check-ts", "^dev:prepare"],
-      "inputs": [
-        "{projectRoot}/src/**/*.{ts,tsx}",
-        "{projectRoot}/tsconfig.json",
-        "{projectRoot}/package.json"
-      ],
-      "outputs": ["{projectRoot}/lib/**/*.js", "{projectRoot}/**/*.d.ts"],
-      "cache": true
-    },
     "dev:prepare": {
       "inputs": [
         "{projectRoot}/**/*.{ts,tsx}",
@@ -35,15 +25,13 @@
     "test": {
       "dependsOn": [
         {"projects": ["*"], "target": "build-native-release"},
-        {"projects": ["*"], "target": "build:lib"},
-        {"projects": ["*"], "target": "check-ts"}
+        {"projects": ["*"], "target": "build:lib"}
       ]
     },
     "test:integration": {
       "dependsOn": [
         {"projects": ["*"], "target": "build-native-release"},
-        {"projects": ["*"], "target": "build:lib"},
-        {"projects": ["*"], "target": "check-ts"}
+        {"projects": ["*"], "target": "build:lib"}
       ]
     },
     "build-native-release": {
@@ -62,8 +50,7 @@
     "test:integration:ci": {
       "dependsOn": [
         {"projects": ["*"], "target": "build-native-release"},
-        {"projects": ["*"], "target": "build:lib"},
-        {"projects": ["*"], "target": "check-ts"}
+        {"projects": ["*"], "target": "build:lib"}
       ]
     }
   }

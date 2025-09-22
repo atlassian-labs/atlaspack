@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-toml",
-  "version": "2.14.31",
+  "version": "2.14.32",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,11 +17,10 @@
   },
   "dependencies": {
     "@iarna/toml": "^2.2.3",
-    "@atlaspack/plugin": "2.14.31"
+    "@atlaspack/plugin": "2.14.32"
   },
   "type": "commonjs",
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

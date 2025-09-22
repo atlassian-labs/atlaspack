@@ -13,7 +13,7 @@
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.14.10"
+    "@atlaspack/cli": "2.14.11"
   },
   "targets": {
     "browserModern": {

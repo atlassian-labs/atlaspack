@@ -58,11 +58,8 @@ pub fn install_from_git(
   println!("Building (Native)");
   exec_blocking(["yarn", "build-native-release"], &command_options)?;
 
-  println!("Building (Flow)");
-  exec_blocking(["yarn", "build"], &command_options)?;
-
   println!("Building (TypeScript)");
-  exec_blocking(["yarn", "build-ts"], &command_options)?;
+  exec_blocking(["yarn", "build"], &command_options)?;
 
   // Save a little space
   fs::remove_dir_all(inner_temp.path().join("target"))?;

@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/cache",
   "description": "Interface for defining caches and file-system, IDB and LMDB implementations.",
-  "version": "3.2.26",
+  "version": "3.2.27",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -19,16 +19,15 @@
   },
   "scripts": {
     "test": "mocha",
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
     "@atlaspack/build-cache": "2.13.6",
-    "@atlaspack/feature-flags": "2.25.1",
-    "@atlaspack/fs": "2.15.26",
-    "@atlaspack/logger": "2.14.23",
-    "@atlaspack/rust": "3.8.1",
-    "@atlaspack/utils": "2.19.3",
+    "@atlaspack/feature-flags": "2.25.2",
+    "@atlaspack/fs": "2.15.27",
+    "@atlaspack/logger": "2.14.24",
+    "@atlaspack/rust": "3.8.2",
+    "@atlaspack/utils": "3.0.0",
     "ncp": "^2.0.0"
   },
   "devDependencies": {

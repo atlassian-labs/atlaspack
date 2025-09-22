@@ -1,4 +1,57 @@
 {
-  "extends": "../../../tsconfig.json",
-  "include": ["src"]
+  "extends": "../../../tsconfig.base.json",
+  "include": ["./src/", "./package.json"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../dev/babel-register/tsconfig.json"
+    },
+    {
+      "path": "../../utils/events/tsconfig.json"
+    },
+    {
+      "path": "../build-cache/tsconfig.json"
+    },
+    {
+      "path": "../cache/tsconfig.json"
+    },
+    {
+      "path": "../diagnostic/tsconfig.json"
+    },
+    {
+      "path": "../feature-flags/tsconfig.json"
+    },
+    {
+      "path": "../fs/tsconfig.json"
+    },
+    {
+      "path": "../graph/tsconfig.json"
+    },
+    {
+      "path": "../logger/tsconfig.json"
+    },
+    {
+      "path": "../package-manager/tsconfig.json"
+    },
+    {
+      "path": "../plugin/tsconfig.json"
+    },
+    {
+      "path": "../profiler/tsconfig.json"
+    },
+    {
+      "path": "../rust/tsconfig.json"
+    },
+    {
+      "path": "../types/tsconfig.json"
+    },
+    {
+      "path": "../utils/tsconfig.json"
+    },
+    {
+      "path": "../workers/tsconfig.json"
+    }
+  ]
 }

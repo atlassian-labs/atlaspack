@@ -1,5 +1,12 @@
 # @atlaspack/transformer-json
 
+## 2.14.32
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.32
+
 ## 2.14.31
 
 ### Patch Changes

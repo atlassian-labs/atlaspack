@@ -220,7 +220,7 @@ export default new Transformer({
       for (let dep of res.dependencies) {
         let loc = convertLoc(dep.loc);
         if (originalMap) {
-          loc = remapSourceLocation(loc, originalMap);
+          loc = remapSourceLocation(loc, originalMap, options.projectRoot);
         }
 
         // @ts-expect-error TS2339

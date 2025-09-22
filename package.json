@@ -23,17 +23,14 @@
     "react-dom": "18.2.0"
   },
   "scripts": {
-    "build": "yarn build:clean && yarn build:prepare && yarn build:tsc && yarn build:gulp && yarn build-ts",
+    "build": "yarn build:clean && yarn build:prepare && yarn build:gulp && yarn build:ts",
     "build:clean": "node ./scripts/clean.mjs",
     "build:prepare": "lerna run dev:prepare",
-    "build:tsc": "lerna run --parallel build-tsc",
     "build:gulp": "cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_REGISTER_USE_SRC=true gulp",
-    "build-ts": "lerna run build-ts",
-    "build-dts": "yarn check-ts",
+    "build:ts": "yarn update-ts-references && tsc --build tsconfig.paths.json",
     "build-native": "node scripts/build-native.js",
     "build-native-release": "cross-env CARGO_PROFILE=release node scripts/build-native.js",
     "build-native-wasm": "cross-env CARGO_PROFILE=release RUSTUP_TARGET=wasm32-unknown-unknown scripts/build-native.js",
-    "build-repl": "yarn build-native-release && yarn build-native-wasm && yarn workspace @atlaspack/repl build",
     "clean-test": "rimraf packages/core/integration-tests/.parcel-cache && rimraf packages/core/integration-tests/dist",
     "clean": "yarn clean-test && lerna clean --yes && lerna exec -- rimraf ./lib && yarn",
     "dev": "./scripts/dev",
@@ -41,10 +38,10 @@
     "link-all": "node scripts/link-all.js packages",
     "unlink-all": "node scripts/unlink-all.js packages",
     "check": "flow check",
-    "check-ts": "lerna run check-ts",
+    "update-ts-references": "node scripts/update-ts-references.mjs",
     "lint": "node ./scripts/lint-all.mjs",
     "prepublishOnly": "yarn pre-publish",
-    "pre-publish": "yarn build && yarn build-dts && node ./scripts/rewrite-package-types.mjs && yarn build-ts",
+    "pre-publish": "yarn build && node ./scripts/rewrite-package-types.mjs",
     "changesets-publish": "yarn pre-publish && yarn changeset publish",
     "test": "yarn test:unit && yarn test:integration",
     "test:e2e": "yarn workspace @atlaspack/e2e-tests test",
@@ -65,7 +62,8 @@
     "tag:release": "lerna version --exact --force-publish=* --no-git-tag-version --no-push",
     "release": "lerna publish -y from-package --pre-dist-tag=next --no-git-tag-version --no-push",
     "prepare": "husky install",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "type-coverage": "type-coverage -b tsconfig.paths.json"
   },
   "devDependencies": {
     "@babel/core": "^7.22.11",
@@ -98,6 +96,8 @@
     "rimraf": "^5.0.5",
     "semver": "^7.5.2",
     "sinon": "^7.3.1",
+    "type-coverage": "^2.3.3",
+    "typecov": "^0.2.3",
     "typescript": "^5.8.3",
     "zx": "^8.1.9"
   },

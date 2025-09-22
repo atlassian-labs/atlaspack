@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/codeframe",
-  "version": "2.13.13",
+  "version": "2.13.14",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
@@ -25,14 +25,13 @@
     }
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.20.1",
+    "@atlaspack/types-internal": "2.20.2",
     "chalk": "^4.1.0",
     "emphasize": "^4.2.0",
     "slice-ansi": "^4.0.0",
     "string-width": "^4.2.0"
   },
   "scripts": {
-    "check-ts": "tsc --emitDeclarationOnly --rootDir src",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   }
 }

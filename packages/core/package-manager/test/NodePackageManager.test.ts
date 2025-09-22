@@ -76,7 +76,7 @@ describe('NodePackageManager', function () {
         invalidateOnFileChange: new Set([
           path.join(FIXTURES_DIR, 'has-foo/node_modules/foo/package.json'),
           path.join(ROOT_DIR, '/packages/core/package-manager/tsconfig.json'),
-          path.join(ROOT_DIR, 'tsconfig.json'),
+          path.join(ROOT_DIR, 'tsconfig.base.json'),
         ]),
         invalidateOnFileCreate: [
           {
@@ -132,7 +132,7 @@ describe('NodePackageManager', function () {
         invalidateOnFileChange: new Set([
           path.join(FIXTURES_DIR, 'has-foo/node_modules/a/package.json'),
           path.join(ROOT_DIR, '/packages/core/package-manager/tsconfig.json'),
-          path.join(ROOT_DIR, 'tsconfig.json'),
+          path.join(ROOT_DIR, 'tsconfig.base.json'),
         ]),
         invalidateOnFileCreate: [
           {
@@ -304,7 +304,7 @@ describe('NodePackageManager', function () {
               'has-foo/subpackage/node_modules/foo/package.json',
             ),
             path.join(ROOT_DIR, '/packages/core/package-manager/tsconfig.json'),
-            path.join(ROOT_DIR, 'tsconfig.json'),
+            path.join(ROOT_DIR, 'tsconfig.base.json'),
           ]),
           invalidateOnFileCreate: [
             {
