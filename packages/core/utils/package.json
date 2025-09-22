@@ -61,6 +61,7 @@
   },
   "devDependencies": {
     "@atlaspack/babel-register": "2.14.4",
+    "@types/is-glob": "^4.0.1",
     "benny": "^3.7.1",
     "random-int": "^1.0.0"
   },
