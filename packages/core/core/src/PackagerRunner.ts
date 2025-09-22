@@ -317,7 +317,7 @@ export default class PackagerRunner {
     configs: Map<string, Config>,
     bundleConfigs: Map<string, Config>,
   ): Promise<BundleInfo> {
-    let {type, contents, map, scopeHoistingStats} = await this.getBundleResult(
+    let {type, contents, map} = await this.getBundleResult(
       bundle,
       bundleGraph,
       configs,
@@ -338,13 +338,7 @@ export default class PackagerRunner {
       info: PackagerRunner.getInfoKey(cacheKey),
     };
 
-    return this.writeToCache(
-      cacheKeys,
-      type,
-      contents,
-      map,
-      scopeHoistingStats,
-    );
+    return this.writeToCache(cacheKeys, type, contents, map);
   }
 
   async getBundleResult(
@@ -788,10 +782,6 @@ export default class PackagerRunner {
     type: string,
     contents: Blob,
     map?: string | null,
-    scopeHoistingStats?: {
-      totalAssets: number;
-      wrappedAssets: number;
-    },
   ): Promise<BundleInfo> {
     let size = 0;
     let hash;
@@ -861,7 +851,6 @@ export default class PackagerRunner {
       hashReferences,
       cacheKeys,
       isLargeBlob,
-      scopeHoistingStats,
     };
 
     await this.options.cache.set(cacheKeys.info, info);
