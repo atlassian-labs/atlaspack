@@ -213,11 +213,11 @@ async function run({
       }),
     );
 
-    let aggregatedScopeHoistingStats = undefined;
+    let result: WriteBundlesRequestResult = {bundleInfo: res};
 
     if (debugTools['scope-hoisting-stats']) {
       // Aggregate scope hoisting stats from all bundles
-      aggregatedScopeHoistingStats = {
+      let aggregatedScopeHoistingStats = {
         totalAssets: 0,
         wrappedAssets: 0,
       };
@@ -231,12 +231,9 @@ async function run({
             bundleInfo.scopeHoistingStats.wrappedAssets;
         }
       }
-    }
 
-    let result = {
-      bundleInfo: res,
-      scopeHoistingStats: aggregatedScopeHoistingStats,
-    };
+      result.scopeHoistingStats = aggregatedScopeHoistingStats;
+    }
 
     api.storeResult(result);
     return result;
