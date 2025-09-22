@@ -133,7 +133,7 @@ export function findSourceCodeURL(target: string): SourceCodeURL | null {
 
   // get owner and repo from HTTP or SSH urls
   const regex =
-    /(?:https?:\/\/|git@)(github|bitbucket)\.(com|org)[:/]([^/\s.]+)\/([^/\s.]+)(\.git)?/;
+    /^(?:https?:\/\/|git@)(github|bitbucket)\.(com|org)[:/]([^/\s.]+)\/([^/\s.]+)(\.git)?/;
   const match = remoteUrl.match(regex);
 
   if (!match) {
