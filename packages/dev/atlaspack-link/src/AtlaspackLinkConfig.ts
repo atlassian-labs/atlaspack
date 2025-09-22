@@ -88,7 +88,11 @@ export class AtlaspackLinkConfig {
     return this.nodeModulesGlobs.reduce<Array<any>>(
       (matches, pattern) => [
         ...matches,
-        ...globSync(pattern, this.fs, {cwd: this.appRoot, onlyFiles: false}),
+        ...globSync(pattern, this.fs, {
+          cwd: this.appRoot,
+          onlyFiles: false,
+          absolute: true,
+        }),
       ],
       [],
     );
