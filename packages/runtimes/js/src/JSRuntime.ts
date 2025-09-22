@@ -230,22 +230,39 @@ export default new Runtime({
             ? 'parcelRequire'
             : '__parcel__require__';
 
-        // @ts-expect-error TS7006
-        const fallbackUrls = (cond) => {
-          return `[${[...cond.ifTrueBundles, ...cond.ifFalseBundles]
-            .map((target) => {
-              let relativePathExpr = getRelativePathExpr(
-                bundle,
-                target,
-                options,
-              );
-              return getAbsoluteUrlExpr(
-                relativePathExpr,
-                bundle,
-                config.domainSharding,
-              );
-            })
-            .join(',')}]`;
+        // We have fallback behaviour that can be used in development mode, so we need to handle both types of packagers
+        const getFallbackArgs = (cond: {
+          ifTrueBundles: NamedBundle[];
+          ifFalseBundles: NamedBundle[];
+        }) => {
+          const fallbackUrls = () => {
+            return `urls: [${[...cond.ifTrueBundles, ...cond.ifFalseBundles]
+              .map((target) => {
+                let relativePathExpr = getRelativePathExpr(
+                  bundle,
+                  target,
+                  options,
+                );
+                return getAbsoluteUrlExpr(
+                  relativePathExpr,
+                  bundle,
+                  config.domainSharding,
+                );
+              })
+              .join(',')}]`;
+          };
+
+          const fallbackBundleIds = () => {
+            return `i: [${[...cond.ifTrueBundles, ...cond.ifFalseBundles]
+              .map((target) => `"${target.publicId}"`)
+              .join(',')}]`;
+          };
+
+          return `, {l: require('./helpers/browser/sync-js-loader'), ${
+            options.mode === 'development'
+              ? fallbackUrls()
+              : fallbackBundleIds()
+          }}`;
         };
 
         const shouldUseFallback =
@@ -263,11 +280,7 @@ export default new Runtime({
         const assetCode = `module.exports = require('${loaderPath}')('${
           cond.key
         }', ${ifTrue}, ${ifFalse}${
-          shouldUseFallback
-            ? `, {loader: require('./helpers/browser/sync-js-loader'), urls: ${fallbackUrls(
-                cond,
-              )}}`
-            : ''
+          shouldUseFallback ? getFallbackArgs(cond) : ''
         })`;
 
         assets.push({
