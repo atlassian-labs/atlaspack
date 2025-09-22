@@ -36,8 +36,9 @@ for (let tool of envVarValue.split(',')) {
   } else if (tool === '') {
     continue;
   } else {
-    throw new Error(
-      `Invalid debug tool option: ${tool}. Valid options are: ${Object.keys(
+    // eslint-disable-next-line no-console
+    console.warn(
+      `Unknown debug tool option: ${tool}. Valid options are: ${Object.keys(
         debugTools,
       ).join(', ')}`,
     );
