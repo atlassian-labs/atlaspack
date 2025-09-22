@@ -1,4 +1,4 @@
-import type {Async} from '@atlaspack/types';
+import type {Async, BundleResult} from '@atlaspack/types';
 import type SourceMap from '@parcel/source-map';
 import {Packager} from '@atlaspack/plugin';
 import {
@@ -11,7 +11,10 @@ import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
 import {hashString} from '@atlaspack/rust';
 import nullthrows from 'nullthrows';
 import {DevPackager} from './DevPackager';
-import {ScopeHoistingPackager} from './ScopeHoistingPackager';
+import {
+  type PackageResult as ScopeHoistingPackageResult,
+  ScopeHoistingPackager,
+} from './ScopeHoistingPackager';
 
 type JSPackagerConfig = {
   parcelRequireName: string;
@@ -81,7 +84,7 @@ export default new Packager({
     // If this is a non-module script, and there is only one asset with no dependencies,
     // then we don't need to package at all and can pass through the original code un-wrapped.
     let contents, map;
-    let scopeHoistingStats;
+    let scopeHoistingStats: ScopeHoistingPackageResult['scopeHoistingStats'];
 
     if (bundle.env.sourceType === 'script') {
       let entries = bundle.getEntryAssets();
@@ -95,30 +98,30 @@ export default new Packager({
     }
 
     if (contents == null) {
-      let packager = bundle.env.shouldScopeHoist
-        ? new ScopeHoistingPackager(
-            options,
-            bundleGraph,
-            bundle,
-            nullthrows(config).parcelRequireName,
-            nullthrows(config).unstable_asyncBundleRuntime,
-            logger,
-          )
-        : new DevPackager(
-            options,
-            bundleGraph,
-            bundle,
-            nullthrows(config).parcelRequireName,
-          );
+      if (bundle.env.shouldScopeHoist) {
+        let packager = new ScopeHoistingPackager(
+          options,
+          bundleGraph,
+          bundle,
+          nullthrows(config).parcelRequireName,
+          nullthrows(config).unstable_asyncBundleRuntime,
+          logger,
+        );
 
-      let packageResult = await packager.package();
-      ({contents, map} = packageResult);
+        let packageResult = await packager.package();
+        ({contents, map} = packageResult);
+        scopeHoistingStats = packageResult.scopeHoistingStats;
+      } else {
+        let packager = new DevPackager(
+          options,
+          bundleGraph,
+          bundle,
+          nullthrows(config).parcelRequireName,
+        );
 
-      // Extract scope hoisting stats if available (only from ScopeHoistingPackager)
-      scopeHoistingStats =
-        'scopeHoistingStats' in packageResult
-          ? packageResult.scopeHoistingStats
-          : undefined;
+        let packageResult = await packager.package();
+        ({contents, map} = packageResult);
+      }
     }
 
     contents += '\n' + (await getSourceMapSuffix(getSourceMapReference, map));
@@ -135,7 +138,7 @@ export default new Packager({
       }));
     }
 
-    let result = replaceInlineReferences({
+    let result = await replaceInlineReferences({
       bundle,
       bundleGraph,
       contents,
@@ -147,15 +150,7 @@ export default new Packager({
       map,
     });
 
-    // Add scope hoisting stats if available
-    if (scopeHoistingStats) {
-      return {
-        ...result,
-        scopeHoistingStats,
-      };
-    }
-
-    return result;
+    return {...result, scopeHoistingStats};
   },
 }) as Packager<unknown, unknown>;
 

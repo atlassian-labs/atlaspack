@@ -81,7 +81,7 @@ export interface OutputFormat {
   buildBundlePostlude(): [string, number];
 }
 
-type PackageResult = {
+export type PackageResult = {
   contents: string;
   map: SourceMap | null | undefined;
   scopeHoistingStats?: {
