@@ -350,10 +350,6 @@ export default class PackagerRunner {
     type: string;
     contents: Blob;
     map: string | null | undefined;
-    scopeHoistingStats?: {
-      totalAssets: number;
-      wrappedAssets: number;
-    };
   }> {
     let packaged = await this.package(
       bundle,
@@ -378,7 +374,6 @@ export default class PackagerRunner {
       type: res.type ?? type,
       contents: res.contents,
       map,
-      scopeHoistingStats: packaged.scopeHoistingStats,
     };
   }
 
@@ -450,14 +445,14 @@ export default class PackagerRunner {
             );
           }
 
-          let res = await this.getBundleResult(
+          let {contents} = await this.getBundleResult(
             bundleToInternalBundle(bundle),
             bundleGraphToInternalBundleGraph(bundleGraph),
             configs,
             bundleConfigs,
           );
 
-          return {contents: res.contents};
+          return {contents};
         },
       });
     } catch (e: any) {
