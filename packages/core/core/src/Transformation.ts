@@ -69,6 +69,7 @@ import {
 import {invalidateOnFileCreateToInternal, createInvalidations} from './utils';
 import invariant from 'assert';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type GenerateFunc = (input: UncommittedAsset) => Promise<GenerateOutput>;
 
@@ -164,7 +165,9 @@ export default class Transformation {
       // If no existing sourcemap was found, initialize asset.sourceContent
       // with the original contents. This will be used when the transformer
       // calls setMap to ensure the source content is in the sourcemap.
-      asset.sourceContent = await asset.getCode();
+      if (!getFeatureFlag('omitSourcesContentInMemory')) {
+        asset.sourceContent = await asset.getCode();
+      }
     }
 
     invalidateDevDeps(

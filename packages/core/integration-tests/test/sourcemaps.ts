@@ -1657,4 +1657,26 @@ describe('sourcemaps', function () {
       `Unable to locate target source ${regex.toString()}\n${source}`,
     );
   }
+
+  it('does not retain sourcesContent in transformers when omitSourcesContentInMemory is enabled', async function () {
+    await bundle(
+      path.join(__dirname, '/integration/sourcemap-existing/index.js'),
+      {featureFlags: {omitSourcesContentInMemory: true}},
+    );
+    const outputs = await outputFS.readdir(distDir);
+    const mapPath = outputs.find((f) => f.endsWith('.map'));
+    const map = JSON.parse(
+      await outputFS.readFile(path.join(distDir, String(mapPath))),
+    );
+
+    assert(outputs.some((f) => f.endsWith('.map')));
+    assert(map.mappings && map.mappings.length > 0);
+    assert(Array.isArray(map.sourcesContent));
+    assert.strictEqual(map.sourcesContent.length, map.sources.length);
+    assert(
+      map.sourcesContent.some(
+        (s: unknown) => typeof s === 'string' && s.length > 0,
+      ),
+    );
+  });
 });

@@ -617,6 +617,18 @@ export default class PackagerRunner {
     let mapFilename = fullPath + '.map';
     let isInlineMap = bundleEnv.sourceMap && bundleEnv.sourceMap.inline;
 
+    if (getFeatureFlag('omitSourcesContentInMemory') && !isInlineMap) {
+      if (
+        !(bundleEnv.sourceMap && bundleEnv.sourceMap.inlineSources === false)
+      ) {
+        /* 
+          We're omitting sourcesContent during transformation to allow GC to run.
+          Ensure sources are still inlined into the final source maps written to disk. UNLESS the user explicitly disabled inlineSources.
+        */
+        inlineSources = true;
+      }
+    }
+
     let stringified = await map.stringify({
       file: path.basename(mapFilename),
       fs: this.options.inputFS,
