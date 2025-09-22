@@ -259,6 +259,13 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @author Matt Jones <mjones4@atlassian.com>
    */
   symbolLocationFix: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * When enabled, avoid retaining sourcesContent in memory during transformation.
+   * Source contents will be inlined only during final map stringify if needed.
+   * @author Shanon Jackson <sjackson3@atlassian.com>
+   */
+  omitSourcesContentInMemory: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

@@ -584,7 +584,9 @@ export default new Transformer({
                         // @ts-expect-error TS2345
                         map.extends(originalMap);
                       } else {
-                        map.setSourceContent(asset.filePath, code.toString());
+                        if (!getFeatureFlag('omitSourcesContentInMemory')) {
+                          map.setSourceContent(asset.filePath, code.toString());
+                        }
                       }
                     }
 
