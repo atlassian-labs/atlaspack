@@ -427,8 +427,13 @@ export default class Atlaspack {
         signal,
       });
 
-      let {bundleGraph, bundleInfo, changedAssets, assetRequests, scopeHoistingStats} =
-        await this.#requestTracker.runRequest(request, {force: true});
+      let {
+        bundleGraph,
+        bundleInfo,
+        changedAssets,
+        assetRequests,
+        scopeHoistingStats,
+      } = await this.#requestTracker.runRequest(request, {force: true});
 
       this.#requestedAssetIds.clear();
 
