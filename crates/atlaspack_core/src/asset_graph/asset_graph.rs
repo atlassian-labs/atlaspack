@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use petgraph::Direction;
+use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
 use petgraph::visit::EdgeRef;
 use petgraph::visit::IntoEdgeReferences;
@@ -36,7 +36,7 @@ pub struct AssetGraph {
   requested_symbols: HashMap<NodeId, HashSet<String>>,
   dependency_states: HashMap<NodeId, DependencyState>,
   content_key_to_node_id: HashMap<String, NodeId>,
-  node_id_to_node_index: HashMap<NodeId, NodeId>,
+  node_id_to_node_index: HashMap<NodeId, NodeIndex>,
   root_node_id: NodeId,
   node_delta: Vec<NodeId>,
   pub starting_node_count: usize,
@@ -143,7 +143,7 @@ impl AssetGraph {
     node_id
   }
 
-  pub fn get_asset_node(&self, idx: &NodeId) -> Option<&Asset> {
+  pub fn get_asset(&self, idx: &NodeId) -> Option<&Asset> {
     let value = self.get_node(idx)?;
     let AssetGraphNode::Asset(asset_node) = value else {
       return None;
@@ -162,7 +162,7 @@ impl AssetGraph {
     node_id
   }
 
-  pub fn get_dependency_node(&self, idx: &NodeId) -> Option<&Dependency> {
+  pub fn get_dependency(&self, idx: &NodeId) -> Option<&Dependency> {
     let value = self.get_node(idx)?;
     let AssetGraphNode::Dependency(node) = value else {
       return None;
@@ -170,7 +170,7 @@ impl AssetGraph {
     Some(node)
   }
 
-  pub fn get_dependency_nodes(&self) -> Vec<&Dependency> {
+  pub fn get_dependencies(&self) -> Vec<&Dependency> {
     let mut results = vec![];
     for n in self.nodes() {
       let AssetGraphNode::Dependency(dependency) = n else {
@@ -207,44 +207,8 @@ impl AssetGraph {
     self.graph.add_edge(
       self.node_id_to_node_index[from_idx],
       self.node_id_to_node_index[to_idx],
-    )
-  }
-
-  pub fn get_outgoing_dependencies(&self, asset_node_id: &NodeId) -> Vec<NodeId> {
-    self
-      .graph
-      .neighbors_directed(
-        self.node_id_to_node_index[asset_node_id],
-        Direction::Outgoing,
-      )
-      .filter_map(|node_index| self.graph.node_weight(node_index).map(|n| *n))
-      .collect()
-  }
-
-  pub fn resolve_dependency_asset(&self, dep_node_id: &NodeId) -> Option<&NodeId> {
-    if let Some(resolved) = self
-      .graph
-      .edges_directed(self.node_id_to_node_index[dep_node_id], Direction::Outgoing)
-      .next()
-    {
-      return self.graph.node_weight(resolved.target());
-    }
-
-    None
-  }
-
-  pub fn get_requested_symbols(&self, node_id: &NodeId) -> &HashSet<String> {
-    // TODO: Should probably do error handling here...
-    self.requested_symbols.get(node_id).unwrap()
-  }
-
-  pub fn get_mut_requested_symbols(&mut self, node_id: &NodeId) -> &mut HashSet<String> {
-    // TODO: Should probably do error handling here...
-    self.requested_symbols.get_mut(node_id).unwrap()
-  }
-  pub fn get_mut_dependency_state(&mut self, node_id: &NodeId) -> &mut DependencyState {
-    // TODO: Should probably do error handling here...
-    self.dependency_states.get_mut(node_id).unwrap()
+      (),
+    );
   }
 }
 
@@ -262,11 +226,11 @@ impl PartialEq for AssetGraph {
 
 impl std::hash::Hash for AssetGraph {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    for node in self.graph.node_weights() {
+    for node in self.nodes() {
       std::mem::discriminant(node).hash(state);
       match node {
-        AssetGraphNode::Asset(asset_node) => asset_node.asset.id.hash(state),
-        AssetGraphNode::Dependency(dependency_node) => dependency_node.dependency.id().hash(state),
+        AssetGraphNode::Asset(asset) => asset.id.hash(state),
+        AssetGraphNode::Dependency(dependency) => dependency.id().hash(state),
         _ => {}
       }
     }
@@ -296,7 +260,7 @@ mod tests {
 
   fn assert_requested_symbols(graph: &AssetGraph, idx: NodeId, expected: Vec<&str>) {
     assert_eq!(
-      graph.get_dependency_node(&idx).unwrap().requested_symbols,
+      *graph.requested_symbols.get(&idx).unwrap(),
       expected
         .into_iter()
         .map(|s| s.into())
@@ -310,11 +274,11 @@ mod tests {
     symbols: Vec<TestSymbol>,
     file_path: &str,
   ) -> NodeId {
-    let index_asset = Asset {
+    let index_asset = Arc::new(Asset {
       file_path: PathBuf::from(file_path),
       symbols: Some(symbols.iter().map(symbol).collect()),
       ..Asset::default()
-    };
+    });
     let asset_nid = graph.add_asset(index_asset);
     graph.add_edge(&parent_node, &asset_nid);
     asset_nid
