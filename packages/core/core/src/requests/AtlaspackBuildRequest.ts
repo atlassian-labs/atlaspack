@@ -62,8 +62,12 @@ export default function createAtlaspackBuildRequest(
   };
 }
 
-type RunArgs = Parameters<AtlaspackBuildRequest['run']>[0];
-async function run({input, api, options, rustAtlaspack}: RunArgs) {
+async function run({
+  input,
+  api,
+  options,
+  rustAtlaspack,
+}: RunInput<AtlaspackBuildRequestResult>) {
   let {optionsRef, requestedAssetIds, signal} = input;
 
   let bundleGraphRequest = createBundleGraphRequest({
