@@ -546,13 +546,7 @@ mod tests {
     };
 
     assert_eq!(asset_graph_request_result.graph.get_asset_nodes().len(), 0);
-    assert_eq!(
-      asset_graph_request_result
-        .graph
-        .get_dependency_nodes()
-        .len(),
-      0
-    );
+    assert_eq!(asset_graph_request_result.graph.get_dependencies().len(), 0);
   }
 
   #[tokio::test(flavor = "multi_thread")]
@@ -601,13 +595,7 @@ mod tests {
     };
 
     assert_eq!(asset_graph_request_result.graph.get_asset_nodes().len(), 1);
-    assert_eq!(
-      asset_graph_request_result
-        .graph
-        .get_dependency_nodes()
-        .len(),
-      1
-    );
+    assert_eq!(asset_graph_request_result.graph.get_dependencies().len(), 1);
 
     let AssetNode {
       asset: first_asset, ..
@@ -700,13 +688,7 @@ mod tests {
     // Entry, 2 assets + helpers file
     assert_eq!(asset_graph_request_result.graph.get_asset_nodes().len(), 4);
     // Entry, entry to assets (2), assets to helpers (2)
-    assert_eq!(
-      asset_graph_request_result
-        .graph
-        .get_dependency_nodes()
-        .len(),
-      5
-    );
+    assert_eq!(asset_graph_request_result.graph.get_dependencies().len(), 5);
 
     let AssetNode {
       asset: first_asset, ..
