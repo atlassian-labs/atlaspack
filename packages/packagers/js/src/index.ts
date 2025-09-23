@@ -6,6 +6,7 @@ import {
   replaceURLReferences,
   validateSchema,
   SchemaEntity,
+  debugTools,
 } from '@atlaspack/utils';
 import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
 import {hashString} from '@atlaspack/rust';
@@ -150,7 +151,11 @@ export default new Packager({
       map,
     });
 
-    return {...result, scopeHoistingStats};
+    if (debugTools['scope-hoisting-stats']) {
+      return {...result, scopeHoistingStats};
+    }
+
+    return result;
   },
 }) as Packager<unknown, unknown>;
 
