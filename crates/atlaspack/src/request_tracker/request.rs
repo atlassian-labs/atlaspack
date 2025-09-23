@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{Receiver, Sender};
 
 use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigLoaderRef;
@@ -16,11 +16,15 @@ use dyn_hash::DynHash;
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
 
+type ChannelRequestResult = anyhow::Result<(Arc<RequestResult>, RequestId)>;
+pub type RequestResultReceiver = Receiver<ChannelRequestResult>;
+pub type RequestResultSender = Sender<ChannelRequestResult>;
+
 #[derive(Debug)]
 pub struct RunRequestMessage {
   pub request: Box<dyn Request>,
   pub parent_request_id: Option<u64>,
-  pub response_tx: Option<Sender<Result<(RequestResult, RequestId), anyhow::Error>>>,
+  pub response_tx: Option<RequestResultSender>,
 }
 
 type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send + Sync>;
@@ -74,7 +78,7 @@ impl RunRequestContext {
   pub fn queue_request(
     &mut self,
     request: impl Request,
-    tx: Sender<anyhow::Result<(RequestResult, RequestId)>>,
+    tx: RequestResultSender,
   ) -> anyhow::Result<()> {
     let request: Box<dyn Request> = Box::new(request);
     let message = RunRequestMessage {
