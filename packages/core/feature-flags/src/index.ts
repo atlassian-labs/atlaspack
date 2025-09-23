@@ -266,6 +266,12 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @author Shanon Jackson <sjackson3@atlassian.com>
    */
   omitSourcesContentInMemory: false,
+  /**
+   * Enable OXC-based JS minification instead of SWC.
+   *
+   * @author Shanon Jackson <sjackson3@atlassian.com>
+   */
+  useOxcMinifier: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

@@ -21,6 +21,7 @@
     "@parcel/source-map": "^2.1.1",
     "@atlaspack/utils": "3.0.0",
     "@swc/core": "^1.10.0",
+    "oxc-minify": "^0.91.0",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs",

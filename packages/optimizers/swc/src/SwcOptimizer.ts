@@ -6,6 +6,28 @@ import SourceMap from '@parcel/source-map';
 import ThrowableDiagnostic, {escapeMarkdown} from '@atlaspack/diagnostic';
 import path from 'path';
 
+type OxcMinifyResult = {
+  code: string;
+  map?: unknown;
+};
+
+type OxcMinifyOptions = {
+  compress?: {target?: string};
+  mangle?: {toplevel?: boolean};
+  codegen?: {removeWhitespace?: boolean};
+  sourcemap?: boolean;
+};
+
+type OxcMinifyFn = (
+  filename: string,
+  source: string,
+  options: OxcMinifyOptions,
+) => OxcMinifyResult;
+
+// Load at module scope with explicit typing
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const {minify: oxcMinify} = require('oxc-minify') as {minify: OxcMinifyFn};
+
 export default new Optimizer({
   async loadConfig({config, options}) {
     let userConfig = await config.getConfigFrom(
@@ -28,27 +50,46 @@ export default new Optimizer({
     }
 
     let code = await blobToString(contents);
-    let result;
+    let result: {code?: string | null; map?: unknown} = {};
     try {
-      result = await transform(code, {
-        jsc: {
-          target: 'es2022',
-          minify: {
-            mangle: true,
-            compress: true,
-            // @ts-expect-error TS2698
-            ...userConfig,
+      if (options.featureFlags?.useOxcMinifier) {
+        const oxcOptions: OxcMinifyOptions = {
+          compress: {
+            target: 'es2022',
+          },
+          mangle: {
             toplevel:
               bundle.env.outputFormat === 'esmodule' ||
               bundle.env.outputFormat === 'commonjs',
-            module: bundle.env.outputFormat === 'esmodule',
           },
-        },
-        minify: true,
-        sourceMaps: !!bundle.env.sourceMap,
-        configFile: false,
-        swcrc: false,
-      });
+          codegen: {
+            removeWhitespace: true,
+          },
+          sourcemap: !!bundle.env.sourceMap,
+        };
+        // Filename is used only for sourcemap metadata
+        result = oxcMinify('index.js', code, oxcOptions);
+      } else {
+        result = await transform(code, {
+          jsc: {
+            target: 'es2022',
+            minify: {
+              mangle: true,
+              compress: true,
+              // @ts-expect-error TS2698
+              ...userConfig,
+              toplevel:
+                bundle.env.outputFormat === 'esmodule' ||
+                bundle.env.outputFormat === 'commonjs',
+              module: bundle.env.outputFormat === 'esmodule',
+            },
+          },
+          minify: true,
+          sourceMaps: !!bundle.env.sourceMap,
+          configFile: false,
+          swcrc: false,
+        });
+      }
     } catch (err: any) {
       // SWC doesn't give us nice error objects, so we need to parse the message.
       let message = escapeMarkdown(
@@ -112,7 +153,10 @@ export default new Optimizer({
     let resultMap = result.map;
     if (resultMap) {
       sourceMap = new SourceMap(options.projectRoot);
-      sourceMap.addVLQMap(JSON.parse(resultMap));
+      const parsed =
+        typeof resultMap === 'string' ? JSON.parse(resultMap) : resultMap;
+      // Both SWC and OXC return VLQ sourcemaps compatible with addVLQMap
+      sourceMap.addVLQMap(parsed);
       if (originalMap) {
         // @ts-expect-error TS2345
         sourceMap.extends(originalMap);
