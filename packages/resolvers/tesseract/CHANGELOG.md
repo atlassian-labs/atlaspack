@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.15.6
+
+### Patch Changes
+
+- [#807](https://github.com/atlassian-labs/atlaspack/pull/807) [`9c9ecf8`](https://github.com/atlassian-labs/atlaspack/commit/9c9ecf87299b1d66388ec59c2bfc11a19362cd7d) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - additional ignore modules for resolver via env variable
+
+- Updated dependencies []:
+  - @atlaspack/node-resolver-core@3.7.4
+  - @atlaspack/types-internal@2.20.3
+  - @atlaspack/plugin@2.14.33
+
 ## 2.15.5
 
 ### Patch Changes

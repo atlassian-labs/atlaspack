@@ -1,5 +1,19 @@
 # @atlaspack/runtime-js
 
+## 2.19.0
+
+### Minor Changes
+
+- [#792](https://github.com/atlassian-labs/atlaspack/pull/792) [`e27dd64`](https://github.com/atlassian-labs/atlaspack/commit/e27dd64267fbf38cfc75383a3b407fa40de96e94) Thanks [@JakeLane](https://github.com/JakeLane)! - Add conditional bundling sync fallback behaviour suitable for production
+
+### Patch Changes
+
+- Updated dependencies [[`236e546`](https://github.com/atlassian-labs/atlaspack/commit/236e5465863dca6044a7191e05260a5b924c342e), [`f07351a`](https://github.com/atlassian-labs/atlaspack/commit/f07351a2398b6a8e5155a2daad77e69b7dcb2b4b)]:
+  - @atlaspack/utils@3.0.1
+  - @atlaspack/feature-flags@2.25.3
+  - @atlaspack/types-internal@2.20.3
+  - @atlaspack/plugin@2.14.33
+
 ## 2.18.8
 
 ### Patch Changes

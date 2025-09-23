@@ -1,5 +1,12 @@
 # @atlaspack/ts-utils
 
+## 2.14.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.3
+
 ## 2.14.11
 
 ### Patch Changes

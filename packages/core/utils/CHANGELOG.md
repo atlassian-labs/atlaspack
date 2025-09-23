@@ -1,5 +1,17 @@
 # @atlaspack/utils
 
+## 3.0.1
+
+### Patch Changes
+
+- [#805](https://github.com/atlassian-labs/atlaspack/pull/805) [`236e546`](https://github.com/atlassian-labs/atlaspack/commit/236e5465863dca6044a7191e05260a5b924c342e) Thanks [@benjervis](https://github.com/benjervis)! - Passing in an unknown debug tool will now just warn, rather than blowing up the build.
+
+- Updated dependencies [[`f07351a`](https://github.com/atlassian-labs/atlaspack/commit/f07351a2398b6a8e5155a2daad77e69b7dcb2b4b)]:
+  - @atlaspack/feature-flags@2.25.3
+  - @atlaspack/types-internal@2.20.3
+  - @atlaspack/codeframe@2.13.15
+  - @atlaspack/logger@2.14.25
+
 ## 3.0.0
 
 ### Major Changes
