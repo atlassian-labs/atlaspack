@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/e2e-tests",
-  "version": "2.14.4",
+  "version": "2.14.5",
   "private": true,
   "license": "(MIT OR Apache-2.0)",
   "repository": {
@@ -13,9 +13,9 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "devDependencies": {
-    "@atlaspack/core": "2.24.2",
-    "@atlaspack/types": "2.15.22",
-    "@atlaspack/test-utils": "2.14.35",
+    "@atlaspack/core": "2.25.0",
+    "@atlaspack/types": "2.15.23",
+    "@atlaspack/test-utils": "2.14.36",
     "playwright": "1.50.0"
   }
 }
