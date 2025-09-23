@@ -11,17 +11,19 @@ const patterns = [
   'packages/**/tsconfig.tsbuildinfo',
 ];
 
+const allEntries = [];
 for (const pattern of patterns) {
   const entries = glob.sync(pattern, {
     cwd: __root,
     ignore: ['.git', 'node_modules'],
   });
+  allEntries.push(...entries);
+}
 
-  for (const entry of entries) {
-    execFileSync('git', ['clean', '-xdf', entry], {
-      cwd: __root,
-      shell: true,
-      stdio: 'inherit',
-    });
-  }
+if (allEntries.length > 0) {
+  execFileSync('git', ['clean', '-xdf', ...allEntries], {
+    cwd: __root,
+    shell: true,
+    stdio: 'inherit',
+  });
 }
