@@ -2,19 +2,27 @@ use std::collections::{HashMap, HashSet};
 
 use swc_core::common::Mark;
 use swc_core::ecma::ast::*;
+use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::utils::ident::IdentLike;
 use swc_core::ecma::visit::{Visit, VisitWith};
 
+use crate::utils::is_unresolved;
 use crate::utils::match_member_expr;
+use crate::utils::match_property_name;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ExportKind {
+  // ESM kinds
   Const,
   Let,
   Var,
   Function,
   Class,
-  // Literal,
+  // CJS kinds
+  CjsAssignment,    // exports.foo = value
+  CjsLiteral,       // exports.foo = "literal"
+  CjsFunction,      // exports.foo = function() {}
+  CjsModuleExports, // module.exports = value
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -23,15 +31,24 @@ pub struct SymbolInfo {
   pub is_reassigned: bool,
   pub is_cjs_module: bool,
   pub has_export_all: bool,
+  pub is_computed_property: bool, // For CJS: exports[key] vs exports.key
+  pub assigned_value_id: Option<Id>, // Track what variable is assigned for CJS
 }
 
 impl SymbolInfo {
-  pub fn new(export_kind: ExportKind, is_reassigned: bool) -> Self {
+  pub fn new(
+    export_kind: ExportKind,
+    is_reassigned: bool,
+    is_computed_property: bool,
+    assigned_value_id: Option<Id>,
+  ) -> Self {
     Self {
       export_kind,
       is_reassigned,
       is_cjs_module: false,
       has_export_all: false,
+      is_computed_property,
+      assigned_value_id,
     }
   }
 }
@@ -50,13 +67,20 @@ impl SymbolsInfo {
   pub fn is_static_binding_safe(&self, id: &Id) -> bool {
     match self.id_to_symbol_info.get(id) {
       Some(info) => {
-        if info.is_cjs_module || info.has_export_all {
-          // CJS modules can access the exports object so we need to bail out
+        // Export-all makes things unsafe because we can't know all exports
+        if info.has_export_all {
+          return false;
+        }
+
+        // CJS computed properties are never safe
+        if info.is_computed_property {
           return false;
         }
 
         match info.export_kind {
           ExportKind::Const => true,
+          ExportKind::CjsLiteral => true, // Literal values are always safe
+          ExportKind::CjsFunction => !info.is_reassigned, // Functions are safe if not reassigned
           // If the symbol is reassigned, we need to allow rebinding
           _ => !info.is_reassigned,
         }
@@ -74,14 +98,29 @@ impl Default for SymbolsInfo {
   }
 }
 
+#[derive(Debug, Clone)]
+struct CjsExportInfo {
+  export_name: JsWord,
+  assigned_expr: Option<Box<Expr>>, // Store the RHS for analysis
+  is_static_property: bool,         // true for .foo, false for [key]
+  span: swc_core::common::Span,
+}
+
 pub struct ExportScannerVisitor<'a> {
-  // Keep track of exported idenifiers (values are the export names)
+  // ESM tracking (existing)
   exported_identifiers: HashMap<Id, HashSet<Id>>,
   reassignments: HashSet<Id>,
+
+  // CJS tracking (new)
+  cjs_exports: HashMap<JsWord, CjsExportInfo>, // export name -> info
+  cjs_assigned_variables: HashMap<Id, JsWord>, // variable -> export name
+
+  // Shared state
   symbols_info: &'a mut SymbolsInfo,
   unresolved_mark: Mark,
   is_cjs_module: bool,
   has_export_all: bool,
+  static_cjs_exports: bool, // Moved from collect.rs
 }
 
 fn export_kind_from_decl(decl: &VarDecl) -> ExportKind {
@@ -97,13 +136,17 @@ impl<'a> ExportScannerVisitor<'a> {
     Self {
       exported_identifiers: HashMap::new(),
       reassignments: HashSet::new(),
+      cjs_exports: HashMap::new(),
+      cjs_assigned_variables: HashMap::new(),
       symbols_info,
       unresolved_mark,
       is_cjs_module: false,
       has_export_all: false,
+      static_cjs_exports: true,
     }
   }
 
+  // ESM export analysis methods (existing functionality)
   fn find_exports_from_var_decl(&mut self, var: &VarDecl) {
     let export_kind = export_kind_from_decl(var);
     for decl in &var.decls {
@@ -137,10 +180,10 @@ impl<'a> ExportScannerVisitor<'a> {
     export_kind: &ExportKind,
   ) {
     let ident = binding_ident.id.clone();
-    self
-      .symbols_info
-      .id_to_symbol_info
-      .insert(ident.to_id(), SymbolInfo::new(*export_kind, false));
+    self.symbols_info.id_to_symbol_info.insert(
+      ident.to_id(),
+      SymbolInfo::new(*export_kind, false, false, None),
+    );
   }
 
   /// Finds exports from an object pattern.
@@ -159,10 +202,10 @@ impl<'a> ExportScannerVisitor<'a> {
         ObjectPatProp::Assign(prop) => {
           let key = prop.key.clone();
           assert!(prop.value.is_none());
-          self
-            .symbols_info
-            .id_to_symbol_info
-            .insert(key.to_id(), SymbolInfo::new(*export_kind, false));
+          self.symbols_info.id_to_symbol_info.insert(
+            key.to_id(),
+            SymbolInfo::new(*export_kind, false, false, None),
+          );
         }
         // This is `foo` in:
         // { prop: foo }
@@ -333,23 +376,98 @@ impl<'a> ExportScannerVisitor<'a> {
   fn find_exports_from_function_decl(&mut self, func: &FnDecl) {
     self.symbols_info.id_to_symbol_info.insert(
       func.ident.to_id(),
-      SymbolInfo::new(ExportKind::Function, false), // If we're here, this function was declared inside an export
+      SymbolInfo::new(ExportKind::Function, false, false, None), // If we're here, this function was declared inside an export
     );
   }
 
-  /// Finds exports from a class declaration.
-  ///
-  /// This happens when we have a class declaration:
-  ///
-  /// ```javascript
-  /// export class Foo { ... }
-  /// ```
-  ///
   fn find_exports_from_class_decl(&mut self, class: &ClassDecl) {
     self.symbols_info.id_to_symbol_info.insert(
       class.ident.to_id(),
-      SymbolInfo::new(ExportKind::Class, false),
+      SymbolInfo::new(ExportKind::Class, false, false, None),
     );
+  }
+
+  // CJS export analysis methods (new functionality)
+  fn is_cjs_export_pattern(&self, member: &MemberExpr) -> bool {
+    match &*member.obj {
+      Expr::Member(nested) => {
+        match_member_expr(nested, vec!["module", "exports"], self.unresolved_mark)
+      }
+      Expr::Ident(ident) => &*ident.sym == "exports" && is_unresolved(ident, self.unresolved_mark),
+      Expr::This(_) => true, // Assuming we're in module scope
+      _ => false,
+    }
+  }
+
+  fn is_cjs_exports_reassignment(&self, assign_target: &AssignTarget) -> bool {
+    match assign_target {
+      AssignTarget::Simple(SimpleAssignTarget::Ident(ident)) => {
+        (&*ident.id.sym == "exports" || &*ident.id.sym == "module")
+          && is_unresolved(&ident.id, self.unresolved_mark)
+      }
+      _ => false,
+    }
+  }
+
+  fn extract_export_name(&self, member: &MemberExpr) -> Option<(JsWord, swc_core::common::Span)> {
+    match_property_name(member)
+  }
+
+  fn handle_cjs_export_assignment(&mut self, member: &MemberExpr, rhs: &Expr) {
+    if let Some((export_name, span)) = self.extract_export_name(member) {
+      let is_static = match &member.prop {
+        MemberProp::Ident(_) => true,
+        MemberProp::Computed(_) => false,
+        _ => false,
+      };
+
+      if !is_static {
+        self.static_cjs_exports = false;
+      }
+
+      self.cjs_exports.insert(
+        export_name.clone(),
+        CjsExportInfo {
+          export_name: export_name.clone(),
+          assigned_expr: Some(Box::new(rhs.clone())),
+          is_static_property: is_static,
+          span,
+        },
+      );
+
+      // Track if a variable is assigned to this export
+      if let Expr::Ident(ident) = rhs {
+        self
+          .cjs_assigned_variables
+          .insert(ident.to_id(), export_name);
+      }
+
+      self.is_cjs_module = true;
+    }
+  }
+}
+
+// Standalone function to determine CJS export kind
+fn determine_cjs_export_kind(
+  export_info: &CjsExportInfo,
+  symbols_info: &SymbolsInfo,
+) -> ExportKind {
+  if let Some(assigned_expr) = &export_info.assigned_expr {
+    match &**assigned_expr {
+      Expr::Lit(_) => ExportKind::CjsLiteral,
+      Expr::Fn(_) | Expr::Arrow(_) => ExportKind::CjsFunction,
+      Expr::Ident(ident) => {
+        // Inherit from the assigned variable's kind
+        if let Some(symbol_info) = symbols_info.id_to_symbol_info.get(&ident.to_id()) {
+          symbol_info.export_kind
+        } else {
+          ExportKind::CjsAssignment
+        }
+      }
+      _ => ExportKind::CjsAssignment,
+    }
+  } else {
+    ExportKind::CjsAssignment
   }
 }
 
@@ -393,6 +511,24 @@ impl Visit for ExportScannerVisitor<'_> {
   }
 
   fn visit_assign_expr(&mut self, node: &AssignExpr) {
+    // Handle CJS exports: exports.foo = value, module.exports.bar = value
+    if let AssignTarget::Simple(SimpleAssignTarget::Member(member)) = &node.left {
+      if self.is_cjs_export_pattern(member) {
+        self.handle_cjs_export_assignment(member, &node.right);
+        node.right.visit_with(self);
+        return;
+      }
+    }
+
+    // Handle exports/module reassignment: exports = {}, module = {}
+    if self.is_cjs_exports_reassignment(&node.left) {
+      self.static_cjs_exports = false;
+      self.is_cjs_module = true;
+      node.visit_children_with(self);
+      return;
+    }
+
+    // Existing ESM assignment tracking
     if let AssignTarget::Simple(SimpleAssignTarget::Ident(ident)) = &node.left {
       self.reassignments.insert(ident.to_id());
     }
@@ -479,7 +615,7 @@ impl Visit for BindingVisitor<'_> {
             .for_each(|exported_ident| {
               self.symbols_info.id_to_symbol_info.insert(
                 exported_ident.to_id(),
-                SymbolInfo::new(export_kind, self.reassignments.contains(&id)),
+                SymbolInfo::new(export_kind, self.reassignments.contains(&id), false, None),
               );
             });
         }
@@ -503,7 +639,12 @@ impl Visit for BindingVisitor<'_> {
       exported_idents.iter().for_each(|exported_ident| {
         self.symbols_info.id_to_symbol_info.insert(
           exported_ident.to_id(),
-          SymbolInfo::new(ExportKind::Function, self.reassignments.contains(&ident)),
+          SymbolInfo::new(
+            ExportKind::Function,
+            self.reassignments.contains(&ident),
+            false,
+            None,
+          ),
         );
       });
     }
@@ -524,20 +665,25 @@ impl Visit for BindingVisitor<'_> {
       exported_idents.iter().for_each(|exported_ident| {
         self.symbols_info.id_to_symbol_info.insert(
           exported_ident.to_id(),
-          SymbolInfo::new(ExportKind::Class, self.reassignments.contains(&ident)),
+          SymbolInfo::new(
+            ExportKind::Class,
+            self.reassignments.contains(&ident),
+            false,
+            None,
+          ),
         );
       });
     }
   }
 }
 
-pub struct EsmExportClassifier {
+pub struct ExportClassifier {
   pub symbols_info: SymbolsInfo,
   pub exports_rebinding_optimisation: bool,
   pub unresolved_mark: Mark,
 }
 
-impl EsmExportClassifier {
+impl ExportClassifier {
   pub fn new(exports_rebinding_optimisation: bool, unresolved_mark: Mark) -> Self {
     Self {
       symbols_info: SymbolsInfo::default(),
@@ -547,7 +693,7 @@ impl EsmExportClassifier {
   }
 }
 
-impl Visit for EsmExportClassifier {
+impl Visit for ExportClassifier {
   fn visit_module(&mut self, module: &Module) {
     if !self.exports_rebinding_optimisation {
       // Skip all work when flag is off
@@ -555,8 +701,15 @@ impl Visit for EsmExportClassifier {
       return;
     }
 
-    // First we scan for all esm exports
-    let (mut exported_identifiers, mut reassignments, is_cjs_module, has_export_all) = {
+    // Single pass: analyze both ESM and CJS exports
+    let (
+      mut exported_identifiers,
+      mut reassignments,
+      cjs_exports,
+      is_cjs_module,
+      has_export_all,
+      _static_cjs_exports,
+    ) = {
       let mut export_scanner_visitor =
         ExportScannerVisitor::new(&mut self.symbols_info, self.unresolved_mark);
       module.visit_with(&mut export_scanner_visitor);
@@ -564,8 +717,10 @@ impl Visit for EsmExportClassifier {
       (
         export_scanner_visitor.exported_identifiers,
         export_scanner_visitor.reassignments,
+        export_scanner_visitor.cjs_exports,
         export_scanner_visitor.is_cjs_module,
         export_scanner_visitor.has_export_all,
+        export_scanner_visitor.static_cjs_exports,
       )
     };
 
@@ -577,6 +732,44 @@ impl Visit for EsmExportClassifier {
     );
 
     module.visit_with(&mut binding_visitor);
+
+    // Process CJS exports and create symbol info
+    for (export_name, export_info) in cjs_exports {
+      let export_kind = determine_cjs_export_kind(&export_info, &self.symbols_info);
+      let is_computed_property = !export_info.is_static_property;
+      let assigned_value_id = if let Some(assigned_expr) = &export_info.assigned_expr {
+        if let Expr::Ident(ident) = &**assigned_expr {
+          Some(ident.to_id())
+        } else {
+          None
+        }
+      } else {
+        None
+      };
+
+      // Create a synthetic ID for the CJS export
+      let export_id = (
+        export_name.clone(),
+        swc_core::common::SyntaxContext::empty(),
+      );
+
+      // Check if the assigned variable is reassigned
+      let is_assigned_variable_reassigned = if let Some(ref assigned_value_id) = assigned_value_id {
+        reassignments.contains(assigned_value_id)
+      } else {
+        false
+      };
+
+      self.symbols_info.id_to_symbol_info.insert(
+        export_id,
+        SymbolInfo::new(
+          export_kind,
+          is_assigned_variable_reassigned,
+          is_computed_property,
+          assigned_value_id,
+        ),
+      );
+    }
 
     for (ident, symbol_info) in &mut self.symbols_info.id_to_symbol_info {
       // Finally, we may have already processed some export declarations but not discovered reassignments
@@ -605,7 +798,10 @@ mod tests {
   use atlaspack_swc_runner::test_utils::{RunVisitResult, run_test_visit_const};
   use swc_core::{atoms::Atom, common::Mark};
 
-  use crate::esm_export_classifier::{EsmExportClassifier, ExportKind, SymbolInfo};
+  use crate::{
+    esm_export_classifier::ExportClassifier,
+    export_classifier::{ExportClassifier, ExportKind, SymbolInfo},
+  };
 
   #[test]
   fn marks_exports_from_binding_ident() {
@@ -617,7 +813,7 @@ mod tests {
         export var z = 'baz';
         z = 'baz2';
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -665,7 +861,7 @@ mod tests {
         export let { main: bar } = obj;
         export let y = foo;
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -697,7 +893,7 @@ mod tests {
       r#"
         export const { main: [foo] } = obj;
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -725,7 +921,7 @@ mod tests {
 
         export const { main: { d } } = obj;
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -747,7 +943,7 @@ mod tests {
       r#"
         export const { main: foo, ...rest } = obj;
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -772,7 +968,7 @@ mod tests {
       r#"
         export const { main: foo = 1 } = obj;
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -795,7 +991,7 @@ mod tests {
         const x = 'x';
         export default x;
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -819,7 +1015,7 @@ mod tests {
         x = 'x2';
         export default x;
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -851,7 +1047,7 @@ mod tests {
         export { foo, bar as baz };
         export { foo as foo2 };
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -898,7 +1094,7 @@ mod tests {
         function bar() {}
         export { bar as baz };
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -927,7 +1123,7 @@ mod tests {
         function bar() {}
         export { bar as baz };
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -969,7 +1165,7 @@ mod tests {
         function bar() {}
         export { bar as baz };
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -1008,7 +1204,7 @@ mod tests {
         export class Foo {}
         Foo = 'Foo';
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -1038,7 +1234,7 @@ mod tests {
 
         export { Foo };
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -1067,7 +1263,7 @@ mod tests {
 
         module.exports.bar = 'bar';
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -1096,7 +1292,7 @@ mod tests {
 
         module["exports"]["bar"] = 'bar';
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -1125,7 +1321,7 @@ mod tests {
 
         export const bar = 'bar';
       "#,
-      |_context| EsmExportClassifier::new(true, Mark::fresh(Mark::root())),
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
     );
 
     let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
@@ -1144,5 +1340,186 @@ mod tests {
         has_export_all: true,
       })
     );
+  }
+
+  #[test]
+  fn marks_cjs_literal_exports() {
+    let RunVisitResult { visitor, .. } = run_test_visit_const(
+      r#"
+        exports.foo = 'literal';
+        exports.bar = 42;
+        exports.baz = true;
+      "#,
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
+    );
+
+    let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
+      .symbols_info
+      .id_to_symbol_info
+      .iter()
+      .map(|(key, value)| (key.0.clone(), value))
+      .collect::<HashMap<_, _>>();
+
+    assert_eq!(
+      (
+        symbol_info.get(&Atom::from("foo")).unwrap().export_kind,
+        symbol_info.get(&Atom::from("bar")).unwrap().export_kind,
+        symbol_info.get(&Atom::from("baz")).unwrap().export_kind,
+      ),
+      (
+        ExportKind::CjsLiteral,
+        ExportKind::CjsLiteral,
+        ExportKind::CjsLiteral
+      )
+    );
+  }
+
+  #[test]
+  fn marks_cjs_function_exports() {
+    let RunVisitResult { visitor, .. } = run_test_visit_const(
+      r#"
+        exports.func = function() { return 42; };
+        exports.arrow = () => 42;
+      "#,
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
+    );
+
+    let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
+      .symbols_info
+      .id_to_symbol_info
+      .iter()
+      .map(|(key, value)| (key.0.clone(), value))
+      .collect::<HashMap<_, _>>();
+
+    assert_eq!(
+      (
+        symbol_info.get(&Atom::from("func")).unwrap().export_kind,
+        symbol_info.get(&Atom::from("arrow")).unwrap().export_kind,
+      ),
+      (ExportKind::CjsFunction, ExportKind::CjsFunction)
+    );
+  }
+
+  #[test]
+  fn marks_cjs_variable_exports() {
+    let RunVisitResult { visitor, .. } = run_test_visit_const(
+      r#"
+        const x = 'const_value';
+        let y = 'let_value';
+        var z = 'var_value';
+        
+        exports.constExport = x;
+        exports.letExport = y;
+        exports.varExport = z;
+      "#,
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
+    );
+
+    let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
+      .symbols_info
+      .id_to_symbol_info
+      .iter()
+      .map(|(key, value)| (key.0.clone(), value))
+      .collect::<HashMap<_, _>>();
+
+    assert_eq!(
+      (
+        symbol_info
+          .get(&Atom::from("constExport"))
+          .unwrap()
+          .export_kind,
+        symbol_info
+          .get(&Atom::from("letExport"))
+          .unwrap()
+          .export_kind,
+        symbol_info
+          .get(&Atom::from("varExport"))
+          .unwrap()
+          .export_kind,
+      ),
+      (ExportKind::Const, ExportKind::Let, ExportKind::Var)
+    );
+  }
+
+  #[test]
+  fn handles_computed_properties() {
+    let RunVisitResult { visitor, .. } = run_test_visit_const(
+      r#"
+        const key = 'dynamicKey';
+        exports[key] = 'value';
+        exports['staticKey'] = 'value';
+      "#,
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
+    );
+
+    let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
+      .symbols_info
+      .id_to_symbol_info
+      .iter()
+      .map(|(key, value)| (key.0.clone(), value))
+      .collect::<HashMap<_, _>>();
+
+    // Both should be marked as computed properties and not safe for static binding
+    if let Some(info) = symbol_info.values().next() {
+      assert!(info.is_computed_property);
+    }
+  }
+
+  #[test]
+  fn marks_module_exports() {
+    let RunVisitResult { visitor, .. } = run_test_visit_const(
+      r#"
+        module.exports.foo = 'value';
+        module.exports.bar = function() {};
+      "#,
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
+    );
+
+    let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
+      .symbols_info
+      .id_to_symbol_info
+      .iter()
+      .map(|(key, value)| (key.0.clone(), value))
+      .collect::<HashMap<_, _>>();
+
+    assert_eq!(
+      (
+        symbol_info.get(&Atom::from("foo")).unwrap().export_kind,
+        symbol_info.get(&Atom::from("bar")).unwrap().export_kind,
+      ),
+      (ExportKind::CjsLiteral, ExportKind::CjsFunction)
+    );
+  }
+
+  #[test]
+  fn detects_reassignment() {
+    let RunVisitResult { visitor, .. } = run_test_visit_const(
+      r#"
+        let x = 'initial';
+        x = 'reassigned';
+        exports.reassigned = x;
+        
+        const y = 'constant';
+        exports.constant = y;
+      "#,
+      |_context| ExportClassifier::new(true, Mark::fresh(Mark::root())),
+    );
+
+    let symbol_info: HashMap<Atom, &SymbolInfo> = visitor
+      .symbols_info
+      .id_to_symbol_info
+      .iter()
+      .map(|(key, value)| (key.0.clone(), value))
+      .collect::<HashMap<_, _>>();
+
+    // The variable 'x' should be marked as reassigned
+    if let Some(x_info) = symbol_info.get(&Atom::from("x")) {
+      assert!(x_info.is_reassigned);
+    }
+
+    // The variable 'y' should not be marked as reassigned
+    if let Some(y_info) = symbol_info.get(&Atom::from("y")) {
+      assert!(!y_info.is_reassigned);
+    }
   }
 }

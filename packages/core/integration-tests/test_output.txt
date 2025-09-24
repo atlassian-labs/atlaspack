@@ -1,0 +1,77 @@
+Running your command via BARN -- See go/barn
+[0;30m$ cross-env NODE_ENV=test ATLASPACK_REGISTER_USE_SRC=true ATLASPACK_BUILD_ENV=test mocha --conditions=atlaspack::sources --experimental-vm-modules --grep 'should use a binding helper if the export has cycles'[0m
+
+
+  scope hoisting with exports rebinding optimisation: true
+    exports rebinding optimisation
+Asset /Users/jlane2/atlassian/atlaspack/packages/core/integration-tests/test/esm-export-rebinding-optimisation/one.js:
+  Export: one
+  isStaticBindingSafe: true
+  isPartOfCycle: true
+Asset /Users/jlane2/atlassian/atlaspack/packages/core/integration-tests/test/esm-export-rebinding-optimisation/one.js:
+  Export: two
+  isStaticBindingSafe: true
+  isPartOfCycle: true
+Asset /Users/jlane2/atlassian/atlaspack/packages/core/integration-tests/test/esm-export-rebinding-optimisation/one.js:
+  Export: both
+  isStaticBindingSafe: true
+  isPartOfCycle: true
+Asset /Users/jlane2/atlassian/atlaspack/packages/core/integration-tests/test/esm-export-rebinding-optimisation/two.js:
+  Export: two
+  isStaticBindingSafe: true
+  isPartOfCycle: true
+Asset /Users/jlane2/atlassian/atlaspack/packages/core/integration-tests/test/esm-export-rebinding-optimisation/two.js:
+  Export: both
+  isStaticBindingSafe: true
+  isPartOfCycle: true
+undefined
+      1) should use a binding helper if the export has cycles
+(node:91641) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+  0 passing (6s)
+  1 failing
+
+  1) scope hoisting with exports rebinding optimisation: true
+       exports rebinding optimisation
+         should use a binding helper if the export has cycles:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be loosely deep-equal:
+
+[
+  'one',
+  'two',
+  [
+    undefined,
+    'two'
+  ]
+]
+
+should loosely deep-equal
+
+[
+  'one',
+  'two',
+  [
+    'one',
+    'two'
+  ]
+]
+      + expected - actual
+
+       [
+         "one"
+         "two"
+         [
+      -    [undefined]
+      +    "one"
+           "two"
+         ]
+       ]
+      
+      at Context.<anonymous> (test/scope-hoisting.ts:7282:16)
+
+
+
+🌽 ❌ Failed in 7.34s

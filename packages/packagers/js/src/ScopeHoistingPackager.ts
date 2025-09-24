@@ -97,6 +97,7 @@ export class ScopeHoistingPackager {
       map: Buffer | null | undefined;
     }
   > = new Map();
+  reportedCycles: Set<string> = new Set();
   exportedSymbols: Map<
     string,
     {
@@ -1607,14 +1608,30 @@ ${code}
             replacements,
           );
           const meta = asset.symbols.get(exp)?.meta;
+          const isPartOfCycle = this.isAssetPartOfCycle(asset);
+
           if (
             getFeatureFlag('exportsRebindingOptimisation') &&
-            meta?.isStaticBindingSafe
+            meta?.isStaticBindingSafe &&
+            !isPartOfCycle
           ) {
+            console.log(
+              `USING STATIC ASSIGNMENT for ${exp} in ${asset.filePath}`,
+            );
             append += `$${assetId}$exports[${JSON.stringify(
               exp,
             )}] = ${resolved};\n`;
           } else {
+            const reasons = [];
+            if (!meta?.isStaticBindingSafe)
+              reasons.push('not static binding safe');
+            if (isPartOfCycle) reasons.push('part of circular dependency');
+            if (!getFeatureFlag('exportsRebindingOptimisation'))
+              reasons.push('exports rebinding optimization disabled');
+
+            console.log(
+              `USING BINDING HELPER for ${exp} in ${asset.filePath} (${reasons.join(', ')})`,
+            );
             let get = this.buildFunctionExpression([], resolved);
             let isEsmExport = !!asset.symbols.get(exp)?.meta?.isEsm;
             let set =
@@ -1796,5 +1813,64 @@ ${code}
           .getIncomingDependencies(entry)
           .some((dep) => dep.priority === 'conditional'),
       );
+  }
+
+  /**
+   * Detects if an asset is part of a circular dependency chain within the current bundle.
+   * This is used to determine if static binding optimization is safe.
+   */
+  isAssetPartOfCycle(asset: Asset): boolean {
+    const visited = new Set<string>();
+    const recursionStack = new Set<string>();
+    const pathStack: string[] = [];
+
+    const hasCycle = (currentAsset: Asset): boolean => {
+      const assetId = currentAsset.id;
+
+      if (recursionStack.has(assetId)) {
+        // Found a cycle - report the cycle path
+        const cycleStartIndex = pathStack.indexOf(currentAsset.filePath);
+        const cyclePath = pathStack.slice(cycleStartIndex);
+        cyclePath.push(currentAsset.filePath); // Complete the cycle
+
+        // Create a normalized cycle key to avoid duplicate reports
+        const normalizedCycle = [...cyclePath].sort().join(' → ');
+        if (!this.reportedCycles.has(normalizedCycle)) {
+          this.reportedCycles.add(normalizedCycle);
+          console.log(`🔄 CYCLE DETECTED: ${cyclePath.join(' → ')}`);
+        }
+        return true;
+      }
+
+      if (visited.has(assetId)) {
+        return false; // Already processed this asset
+      }
+
+      visited.add(assetId);
+      recursionStack.add(assetId);
+      pathStack.push(currentAsset.filePath);
+
+      // Check all dependencies of the current asset
+      const dependencies = this.bundleGraph.getDependencies(currentAsset);
+      for (const dep of dependencies) {
+        const resolvedAsset = this.bundleGraph.getResolvedAsset(
+          dep,
+          this.bundle,
+        );
+
+        // Only check assets within the same bundle
+        if (resolvedAsset && this.bundle.hasAsset(resolvedAsset)) {
+          if (hasCycle(resolvedAsset)) {
+            return true;
+          }
+        }
+      }
+
+      recursionStack.delete(assetId);
+      pathStack.pop();
+      return false;
+    };
+
+    return hasCycle(asset);
   }
 }

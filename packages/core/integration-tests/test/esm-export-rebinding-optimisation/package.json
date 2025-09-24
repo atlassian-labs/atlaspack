@@ -1,0 +1,12 @@
+{
+  "@atlaspack/bundler-default": {
+    "manualSharedBundles": [
+      {
+        "name": "shared",
+        "assets": [
+          "!index.js"
+        ]
+      }
+    ]
+  }
+}

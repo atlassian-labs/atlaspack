@@ -266,6 +266,13 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @author Shanon Jackson <sjackson3@atlassian.com>
    */
   omitSourcesContentInMemory: false,
+
+  /**
+   * When enabled, enables the new export optimisation for CJS exports
+   *
+   * @author Jake Lane <jlane2@atlassian.com>
+   */
+  cjsExportsRebindingOptimisation: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

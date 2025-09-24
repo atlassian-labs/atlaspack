@@ -1426,7 +1426,7 @@ mod tests {
   use atlaspack_swc_runner::test_utils::{RunVisitResult, run_test_fold, run_test_visit_const};
   use indoc::{formatdoc, indoc};
 
-  use crate::esm_export_classifier::SymbolsInfo;
+  use crate::export_classifier::SymbolsInfo;
 
   use super::*;
 

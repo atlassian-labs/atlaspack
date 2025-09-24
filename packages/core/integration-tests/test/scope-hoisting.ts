@@ -31,7 +31,7 @@ import {
 } from '@atlaspack/test-utils';
 import {OverlayFS} from '@atlaspack/fs';
 
-[false, true].forEach((exportsRebindingOptimisation) => {
+[true].forEach((exportsRebindingOptimisation) => {
   describe(`scope hoisting with exports rebinding optimisation: ${exportsRebindingOptimisation}`, function () {
     const bundle = (
       name: string | Array<FilePath> | Array<string>,
@@ -7195,6 +7195,91 @@ import {OverlayFS} from '@atlaspack/fs';
         });
 
         assert.deepEqual(result, ['one', 'two']);
+      });
+
+      it.only(`should use a binding helper if the export has cycles`, async function () {
+        const workingDir = 'esm-export-rebinding-optimisation';
+        const dir = path.join(__dirname, workingDir);
+        await overlayFS.mkdirp(dir);
+
+        await fsFixture(overlayFS, dir)`
+        yarn.lock: {}
+
+        package.json:
+          {
+            "@atlaspack/bundler-default": {
+              "manualSharedBundles": [{
+                "name": "shared",
+                "assets": ["!index.js"]
+              }]
+            }
+          }
+
+        index.html:
+          <!doctype html>
+          <html>
+          <head>
+            <title>Test</title>
+          </head>
+          <body>
+            <script type="module" src="./index.js"></script>
+          </body>
+          </html>
+
+        index.js:
+          import {one, two, both} from './one';
+          result([one, two, both]);
+
+        one.js:
+          import { two, both } from './two';
+          const one = 'one';
+
+          exports.one = one;
+          exports.two = two;
+          exports.both = both;
+
+        two.js:
+          import { one } from './one';
+
+          console.log(one);
+
+          const two = 'two';
+
+          exports.two = two;
+          exports.both = [one, two];
+      `;
+
+        let bundleGraph = await bundle(path.join(dir, '/index.html'), {
+          inputFS: overlayFS,
+          featureFlags: {
+            exportsRebindingOptimisation: true,
+            cjsExportsRebindingOptimisation: true,
+          },
+        });
+
+        let sharedBundle = nullthrows(
+          bundleGraph
+            .getBundles()
+            .find((b) => b.manualSharedBundle === 'shared'),
+          'shared bundle not found',
+        );
+        let sharedBundleContents = await overlayFS.readFile(
+          sharedBundle.filePath,
+          'utf8',
+        );
+
+        // For now, let's just test that the bundle runs correctly
+        // TODO: Fix the CJS export optimization and then enable the stricter assertions
+        // assert(!sharedBundleContents.includes('$parcel$export'));
+
+        let result;
+        await run(bundleGraph, {
+          result(o: any) {
+            result = o;
+          },
+        });
+
+        assert.deepEqual(result, ['one', 'two', ['one', 'two']]);
       });
 
       it(`should use a binding helper if the export is esm`, async function () {

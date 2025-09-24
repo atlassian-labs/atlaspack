@@ -1,0 +1,28 @@
+{
+  "name": "@atlaspack/react-simple-example",
+  "version": "2.12.0",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build:off": "atlaspack build --no-cache --feature-flag cjsExportsRebindingOptimisation=false --feature-flag exportsRebindingOptimisation=true src/index.html",
+    "build:on": "atlaspack build --no-cache --feature-flag cjsExportsRebindingOptimisation=true --feature-flag exportsRebindingOptimisation=true src/index.html",
+    "compare": "rm -rf dist/ && yarn build:off --dist-dir dist/off && yarn build:on --dist-dir dist/on && yarn prettier -w dist",
+    "dev": "npx nodemon -e 'ts, tsx, json, .parcelrc' --watch . --ignore 'dist/' --exec 'yarn build:on && node serve.js'",
+    "serve": "atlaspack serve --no-cache --feature-flag cjsExportsRebindingOptimisation=true --feature-flag exportsRebindingOptimisation=true src/index.html"
+  },
+  "dependencies": {
+    "@atlaskit/button": "*",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "@atlaspack/cli": "2.14.11",
+    "@atlaspack/reporter-conditional-manifest": "2.15.14",
+    "@types/react-dom": "^17.0.2",
+    "express": "*"
+  },
+  "type": "commonjs",
+  "@atlaspack/packager-js": {
+    "unstable_asyncBundleRuntime": true
+  }
+}

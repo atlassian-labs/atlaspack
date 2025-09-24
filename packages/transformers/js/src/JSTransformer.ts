@@ -521,6 +521,8 @@ export default new Transformer({
       add_display_name: Boolean(config.addReactDisplayName),
       exports_rebinding_optimisation:
         options.featureFlags.exportsRebindingOptimisation,
+      cjs_exports_rebinding_optimisation:
+        options.featureFlags.cjsExportsRebindingOptimisation,
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),

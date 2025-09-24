@@ -100,7 +100,7 @@ pub use utils::SourceLocation;
 pub use utils::SourceType;
 use utils::error_buffer_to_diagnostics;
 
-use crate::esm_export_classifier::EsmExportClassifier;
+use crate::esm_export_classifier::ExportClassifier;
 use crate::esm_export_classifier::SymbolsInfo;
 
 type SourceMapBuffer = Vec<(swc_core::common::BytePos, swc_core::common::LineCol)>;
@@ -145,6 +145,7 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
+  pub cjs_exports_rebinding_optimisation: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -535,12 +536,12 @@ pub fn transform(
                 return Ok(result);
               }
 
-              let mut esm_export_classifier = EsmExportClassifier::new(config.exports_rebinding_optimisation, unresolved_mark);
-              module.visit_with(&mut esm_export_classifier);
+              let mut export_classifier = ExportClassifier::new(config.exports_rebinding_optimisation, unresolved_mark);
+              module.visit_with(&mut export_classifier);
 
 
               let mut collect = Collect::new(
-                esm_export_classifier.symbols_info,
+                export_classifier.symbols_info,
                 source_map.clone(),
                 unresolved_mark,
                 ignore_mark,

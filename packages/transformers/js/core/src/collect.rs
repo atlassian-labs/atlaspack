@@ -722,6 +722,10 @@ impl Visit for Collect {
       () => {
         self.has_cjs_exports = true;
         if let Some((name, span)) = match_property_name(&node) {
+          // Check if this export was analyzed by the classifier
+          let export_id = (name.clone(), swc_core::common::SyntaxContext::empty());
+          let is_static_binding_safe = self.symbols_info.is_static_binding_safe(&export_id);
+
           self.exports.insert(
             name.clone(),
             Export {
@@ -729,7 +733,7 @@ impl Visit for Collect {
               source: None,
               loc: SourceLocation::from(&self.source_map, span),
               is_esm: false,
-              is_static_binding_safe: false,
+              is_static_binding_safe,
             },
           );
         } else {
@@ -1246,7 +1250,7 @@ fn has_binding_identifier(node: &AssignTarget, sym: &JsWord, unresolved_mark: Ma
 
 #[cfg(test)]
 mod tests {
-  use crate::esm_export_classifier::{EsmExportClassifier, ExportKind, SymbolInfo};
+  use crate::esm_export_classifier::{ExportClassifier, ExportKind, SymbolInfo};
 
   use super::*;
 
@@ -1271,10 +1275,10 @@ mod tests {
 
   impl Visit for TestCollectVisitor {
     fn visit_module(&mut self, module: &Module) {
-      let mut export_scanner_visitor = EsmExportClassifier::new(true, Mark::fresh(Mark::root()));
-      module.visit_with(&mut export_scanner_visitor);
+      let mut export_classifier = ExportClassifier::new(true, Mark::fresh(Mark::root()));
+      module.visit_with(&mut export_classifier);
 
-      let symbol_info = export_scanner_visitor.symbols_info;
+      let symbol_info = export_classifier.symbols_info;
 
       let mut collect = Collect::new(
         symbol_info,
@@ -2168,6 +2172,8 @@ output = getExports() === exports && getExports().foo
             is_reassigned: false,
             is_cjs_module: true,
             has_export_all: false,
+            is_computed_property: false,
+            assigned_value_id: None,
           },
         ),
         (
@@ -2177,10 +2183,64 @@ output = getExports() === exports && getExports().foo
             is_reassigned: false,
             is_cjs_module: true,
             has_export_all: false,
+            is_computed_property: false,
+            assigned_value_id: None,
           },
         )
       ])
     );
+  }
+
+  #[test]
+  fn handles_cjs_static_binding_safety() {
+    let input_code = r#"
+      const CONSTANT = 'never_changes';
+      let variable = 'might_change';
+      variable = 'changed';
+
+      exports.safeExport = CONSTANT;
+      exports.unsafeExport = variable;
+      exports.literalExport = 'literal';
+      exports.functionExport = function() { return 42; };
+      
+      const key = 'dynamic';
+      exports[key] = 'computed';
+    "#;
+
+    let collect = run_collect(input_code);
+
+    // Check that safe exports are marked as static binding safe
+    let safe_export = collect.exports.get(&js_word!("safeExport")).unwrap();
+    let literal_export = collect.exports.get(&js_word!("literalExport")).unwrap();
+    let function_export = collect.exports.get(&js_word!("functionExport")).unwrap();
+
+    // Check that unsafe exports are not marked as static binding safe
+    let unsafe_export = collect.exports.get(&js_word!("unsafeExport")).unwrap();
+
+    // Literal and function expressions should be safe
+    assert!(
+      literal_export.is_static_binding_safe,
+      "Literal exports should be static binding safe"
+    );
+    assert!(
+      function_export.is_static_binding_safe,
+      "Function expression exports should be static binding safe"
+    );
+
+    // Const variables should be safe
+    assert!(
+      safe_export.is_static_binding_safe,
+      "Const variable exports should be static binding safe"
+    );
+
+    // Reassigned variables should not be safe
+    assert!(
+      !unsafe_export.is_static_binding_safe,
+      "Reassigned variable exports should not be static binding safe"
+    );
+
+    // Computed properties should not be safe (if they exist in exports)
+    // Note: computed properties might not appear in static exports depending on implementation
   }
 
   #[test]
