@@ -190,7 +190,6 @@ export class ScopeHoistingPackager {
       let [content, map, lines] = this.visitAsset(asset);
 
       if (sourceMap && map) {
-        // @ts-expect-error TS2551 - addSourceMap method exists but missing from @parcel/source-map type definitions
         sourceMap.addSourceMap(map, lineCount);
       } else if (this.bundle.env.sourceMap) {
         sourceMap = map;
