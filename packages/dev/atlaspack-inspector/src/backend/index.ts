@@ -128,7 +128,7 @@ export function buildInspectorApp({
   app.use(loggingMiddleware());
   app.use(
     cors({
-      // origin: 'http://localhost:3333',
+      origin: /http:\/\/localhost:(\d+)/,
       credentials: true,
     }),
   );
