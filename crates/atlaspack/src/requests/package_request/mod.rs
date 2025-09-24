@@ -24,7 +24,13 @@ use tracing_indicatif::span_ext::IndicatifSpanExt;
 
 use crate::{
   request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError},
-  requests::{package_request::parallel_graph_processor::ParallelGraphProcessor, RequestResult},
+  requests::{
+    package_request::{
+      package_html_bundle::get_all_referenced_bundles,
+      parallel_graph_processor::ParallelGraphProcessor,
+    },
+    RequestResult,
+  },
 };
 
 use package_html_bundle::package_html_bundle;
@@ -520,10 +526,39 @@ fn package_js_bundle<ADP: AssetDataProvider>(
     let target_asset = asset_data_provider
       .get_asset_id(dependency.target_asset())
       .unwrap();
+
+    let referenced_bundles = get_all_referenced_bundles(bundle_graph, referenced_bundle_node_index);
+    let shared_dependencies = referenced_bundles
+      .iter()
+      .map(|(bundle, _)| {
+        format!(
+          "await import(new URL('{}', import.meta.url));\n",
+          bundle.bundle.name.as_ref().unwrap()
+        )
+      })
+      .collect::<Vec<_>>()
+      .join("\n");
+
+    println!("bundle: {:#?}", bundle.bundle.name.as_ref().unwrap());
+    println!("shared_dependencies: {:#?}", shared_dependencies);
+
     writer.write_all(
       format!(
-        "module.exports = import(new URL('{}', import.meta.url)).then(() => atlaspack$require('{}'));\n",
+        "
+    async function load() {{
+      // shared
+      {shared_dependencies}
+      // target
+      await import(new URL('{}', import.meta.url));
+    }}
+    ",
         bundle.bundle.name.as_ref().unwrap(),
+      )
+      .as_bytes(),
+    );
+    writer.write_all(
+      format!(
+        "module.exports = load().then(() => atlaspack$require('{}'));\n",
         target_asset.to_string(),
       )
       .as_bytes(),

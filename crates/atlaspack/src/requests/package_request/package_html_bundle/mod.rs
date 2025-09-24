@@ -26,12 +26,34 @@ pub fn get_all_referenced_bundles(
   let mut result = vec![];
   let mut visited_bundles = HashSet::new();
 
+  let root_bundle = bundle_graph
+    .graph()
+    .node_weight(bundle_node_index)
+    .unwrap()
+    .as_bundle()
+    .unwrap();
+  println!(
+    "root_bundle: {:#?}",
+    root_bundle.bundle.name.as_ref().unwrap()
+  );
+
   let mut bundle_stack = vec![bundle_node_index];
   while let Some(bundle_node_index) = bundle_stack.pop() {
     if visited_bundles.contains(&bundle_node_index) {
       continue;
     }
     visited_bundles.insert(bundle_node_index);
+
+    let cause_bundle = bundle_graph
+      .graph()
+      .node_weight(bundle_node_index)
+      .unwrap()
+      .as_bundle()
+      .unwrap();
+    println!(
+      "  >> cause_bundle: {:#?}",
+      cause_bundle.bundle.name.as_ref().unwrap()
+    );
 
     let referenced_bundles = bundle_graph
       .graph()
@@ -53,6 +75,11 @@ pub fn get_all_referenced_bundles(
           .unwrap();
 
         let target_bundle = target_bundle_node.as_bundle().unwrap();
+        println!(
+          "    >> target_bundle: {:#?} for cause_bundle: {:#?}",
+          target_bundle.bundle.name.as_ref().unwrap(),
+          cause_bundle.bundle.name.as_ref().unwrap()
+        );
 
         result.push((target_bundle.clone(), referenced_bundle_node_index));
       }
@@ -72,12 +99,34 @@ fn get_referenced_paths_by_dependency_id(
   let mut referenced_paths_by_dependency_id: HashMap<String, Vec<String>> = HashMap::new();
   let mut visited_bundles = HashSet::new();
 
+  let root_bundle = bundle_graph
+    .graph()
+    .node_weight(bundle_node_index)
+    .unwrap()
+    .as_bundle()
+    .unwrap();
+  println!(
+    "root_bundle: {:#?}",
+    root_bundle.bundle.name.as_ref().unwrap()
+  );
+
   let mut bundle_stack = vec![bundle_node_index];
   while let Some(bundle_node_index) = bundle_stack.pop() {
     if visited_bundles.contains(&bundle_node_index) {
       continue;
     }
     visited_bundles.insert(bundle_node_index);
+
+    let cause_bundle = bundle_graph
+      .graph()
+      .node_weight(bundle_node_index)
+      .unwrap()
+      .as_bundle()
+      .unwrap();
+    println!(
+      "  >> cause_bundle: {:#?}",
+      cause_bundle.bundle.name.as_ref().unwrap()
+    );
 
     let referenced_bundles = bundle_graph
       .graph()
@@ -106,6 +155,12 @@ fn get_referenced_paths_by_dependency_id(
           .unwrap()
           .as_str()
           .to_string();
+
+        println!(
+          "  >>>> target_bundle_path: {:#?} for cause_bundle: {:#?}",
+          target_bundle_path,
+          cause_bundle.bundle.name.as_ref().unwrap()
+        );
 
         referenced_paths_by_dependency_id
           .entry(dependency_id)
