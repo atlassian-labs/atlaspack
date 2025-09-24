@@ -95,14 +95,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   reduceResolverStringCreation: false,
 
   /**
-   * Add verbose metrics for request tracker invalidation.
-   * Default to true as it's a monitoring change. Can be turned off if necessary.
-   *
-   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
-   */
-  verboseRequestInvalidationStats: true,
-
-  /**
    * Fixes source maps for inline bundles
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>
