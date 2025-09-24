@@ -52,7 +52,6 @@ export default class WebWorker implements WorkerImpl {
 
     let {deferred, promise} = makeDeferredWithPromise();
 
-    // @ts-expect-error TS7031
     this.worker.onmessage = ({data}) => {
       if (data === 'online') {
         // @ts-expect-error TS2554
@@ -62,6 +61,7 @@ export default class WebWorker implements WorkerImpl {
 
       this.handleMessage(data);
     };
+    // @ts-expect-error TS2322
     this.worker.onerror = this.onError;
     // Web workers can't crash or intentionally stop on their own, apart from stop() below
     // this.worker.on('exit', this.onExit);

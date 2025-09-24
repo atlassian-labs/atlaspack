@@ -17,6 +17,7 @@ const IGNORED_PACKAGES = isBuildingSinglePackage
 
       // Static packages that don't need to be build
       '!packages/core/atlaspack/**',
+      '!packages/dev/atlaspack-inspector/**',
     ];
 
 const paths = {

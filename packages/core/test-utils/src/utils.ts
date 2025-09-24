@@ -78,7 +78,6 @@ beforeEach(async () => {
       ) {
         await new Promise(
           (resolve: (result: Promise<undefined> | undefined) => void) =>
-            // @ts-expect-error TS2345
             setTimeout(resolve, 100),
         );
         continue;
@@ -123,7 +122,6 @@ type ExternalModules = {
 export function sleep(ms: number): Promise<void> {
   return new Promise(
     (resolve: (result: Promise<undefined> | undefined) => void) =>
-      // @ts-expect-error TS2345
       setTimeout(resolve, ms),
   );
 }

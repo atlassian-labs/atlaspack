@@ -31,7 +31,6 @@ export async function logUncaughtError(e: unknown) {
   // A hack to definitely ensure we logged the uncaught exception
   await new Promise(
     (resolve: (result: Promise<undefined> | undefined) => void) =>
-      // @ts-expect-error TS2304
       setTimeout(resolve, 100),
   );
 }

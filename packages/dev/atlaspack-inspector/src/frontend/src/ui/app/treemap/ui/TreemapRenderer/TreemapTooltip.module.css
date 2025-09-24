@@ -1,0 +1,15 @@
+.treemapTooltip {
+  position: absolute;
+  background-color: var(--ds-background-input);
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid var(--ds-border);
+  box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 400px;
+}
+
+.parent {
+  padding-left: 10px;
+  border-left: 3px solid var(--ds-border);
+}
