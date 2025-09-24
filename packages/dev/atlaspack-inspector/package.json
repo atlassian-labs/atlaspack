@@ -5,6 +5,9 @@
   "authors": [
     "Pedro Tacla Yamada"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "prepack": "yarn run build",
     "build": "tsc --project . && cd .. && yarn workspace @atlaspack/inspector-frontend build",
