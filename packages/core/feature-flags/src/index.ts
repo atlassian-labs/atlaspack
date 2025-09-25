@@ -281,6 +281,15 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-09-22
    */
   omitSourcesContentInMemory: false,
+
+  /**
+   * Fixes an issue in BundleGraph.fromAssetGraph where Dependency.sourceAssetId
+   * diverging from Asset.id can cause it to fail. The fix to to stop using Dependency.sourceAssetId
+   * all together and use graph.getNodeIdsConnectedTo instead.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   */
+  sourceAssetIdBundleGraphFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
