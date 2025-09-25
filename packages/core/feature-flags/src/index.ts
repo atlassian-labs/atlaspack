@@ -87,14 +87,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   loadableSideEffects: false,
 
   /**
-   * Enable performance optimization for the resolver specifier to_string
-   * conversions
-   *
-   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
-   */
-  reduceResolverStringCreation: false,
-
-  /**
    * Fixes source maps for inline bundles
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>
