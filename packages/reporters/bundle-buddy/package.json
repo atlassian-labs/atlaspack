@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/reporter-bundle-buddy",
-  "version": "2.14.33",
+  "version": "2.14.34",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,8 +16,8 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.20.3",
-    "@atlaspack/plugin": "2.14.33"
+    "@atlaspack/types-internal": "2.20.4",
+    "@atlaspack/plugin": "2.14.34"
   },
   "type": "commonjs",
   "scripts": {

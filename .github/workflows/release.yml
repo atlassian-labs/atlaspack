@@ -57,7 +57,7 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     container:
-      image: debian:bullseye-slim
+      image: debian:bookworm-slim
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies

@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.25.4
+
+### Patch Changes
+
+- [#811](https://github.com/atlassian-labs/atlaspack/pull/811) [`662d3c6`](https://github.com/atlassian-labs/atlaspack/commit/662d3c627888b16bf27df15cfac5a9094509e93d) Thanks [@yamadapc](https://github.com/yamadapc)! - Clean-up feature-flag
+
 ## 2.25.3
 
 ### Patch Changes
