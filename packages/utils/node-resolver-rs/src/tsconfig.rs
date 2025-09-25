@@ -276,11 +276,6 @@ mod tests {
 
   #[test]
   fn test_base_url() {
-    test_base_url_inner(false);
-    test_base_url_inner(true);
-  }
-
-  fn test_base_url_inner() {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
       base_url: Some(Arc::new(Path::new("src").into())),
