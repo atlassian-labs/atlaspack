@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/optimizer-terser",
-  "version": "2.14.33",
+  "version": "2.14.34",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,9 +17,9 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.33",
+    "@atlaspack/plugin": "2.14.34",
     "@parcel/source-map": "^2.1.1",
-    "@atlaspack/utils": "3.0.1",
+    "@atlaspack/utils": "3.0.2",
     "nullthrows": "^1.1.1",
     "terser": "^5.2.0"
   },

@@ -1,5 +1,13 @@
 # @atlaspack/transformer-html
 
+## 2.15.11
+
+### Patch Changes
+
+- Updated dependencies [[`662d3c6`](https://github.com/atlassian-labs/atlaspack/commit/662d3c627888b16bf27df15cfac5a9094509e93d)]:
+  - @atlaspack/feature-flags@2.25.4
+  - @atlaspack/plugin@2.14.34
+
 ## 2.15.10
 
 ### Patch Changes

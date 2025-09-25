@@ -1,5 +1,17 @@
 # @atlaspack/packager-js
 
+## 2.23.4
+
+### Patch Changes
+
+- [#814](https://github.com/atlassian-labs/atlaspack/pull/814) [`4fe7211`](https://github.com/atlassian-labs/atlaspack/commit/4fe7211301085c3e118d69a192e190e5ac343b42) Thanks [@JakeLane](https://github.com/JakeLane)! - Experimental config option to manually specify static export bindings as a performance optimisation. Requires the "exportsRebindingOptimisation" flag to be enabled.
+
+- Updated dependencies [[`662d3c6`](https://github.com/atlassian-labs/atlaspack/commit/662d3c627888b16bf27df15cfac5a9094509e93d)]:
+  - @atlaspack/feature-flags@2.25.4
+  - @atlaspack/types@2.15.24
+  - @atlaspack/utils@3.0.2
+  - @atlaspack/plugin@2.14.34
+
 ## 2.23.3
 
 ### Patch Changes

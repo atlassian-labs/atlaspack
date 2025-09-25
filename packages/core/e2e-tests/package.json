@@ -13,9 +13,9 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "devDependencies": {
-    "@atlaspack/core": "2.25.0",
-    "@atlaspack/types": "2.15.23",
-    "@atlaspack/test-utils": "2.14.36",
+    "@atlaspack/core": "2.25.1",
+    "@atlaspack/types": "2.15.24",
+    "@atlaspack/test-utils": "2.14.37",
     "playwright": "1.50.0"
   }
 }
