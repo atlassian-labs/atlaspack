@@ -37,7 +37,7 @@
     "frontend/dist"
   ],
   "dependencies": {
-    "@atlaspack/build-cache": "2.13.5",
+    "@atlaspack/build-cache": "2.13.6",
     "@atlaspack/cache": "3.2.29",
     "@atlaspack/core": "2.25.1",
     "@atlaspack/cli": "2.14.13",

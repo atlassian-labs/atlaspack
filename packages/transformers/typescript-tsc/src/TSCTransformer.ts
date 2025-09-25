@@ -3,7 +3,7 @@ import type {TranspileOptions} from 'typescript';
 import {Transformer} from '@atlaspack/plugin';
 import {loadTSConfig} from '@atlaspack/ts-utils';
 import typescript from 'typescript';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 
 export default new Transformer({
   loadConfig({config, options}) {
@@ -44,7 +44,6 @@ export default new Transformer({
       let map = new SourceMap(options.projectRoot);
       map.addVLQMap(JSON.parse(sourceMapText));
       if (originalMap) {
-        // @ts-expect-error TS2345 - the types are wrong, `extends` accepts a `SourceMap` or a `Buffer`
         map.extends(originalMap);
       }
       asset.setMap(map);

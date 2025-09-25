@@ -28,7 +28,7 @@
     "@atlaspack/feature-flags": "2.25.4",
     "@atlaspack/plugin": "2.14.34",
     "@atlaspack/rust": "3.8.2",
-    "@parcel/source-map": "^2.1.1",
+    "@atlaspack/source-map": "3.0.0",
     "@atlaspack/utils": "3.0.2",
     "@atlaspack/workers": "2.14.34",
     "@swc/helpers": "^0.5.15",

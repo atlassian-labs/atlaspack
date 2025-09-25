@@ -6,7 +6,7 @@ import {
   countLines,
   normalizeSeparators,
 } from '@atlaspack/utils';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import invariant from 'assert';
 import path from 'path';
@@ -229,7 +229,6 @@ export class DevPackager {
         this.parcelRequireName,
       );
       if (this.bundle.env.sourceMap && entryMap) {
-        // @ts-expect-error TS2551
         map.addSourceMap(entryMap, lineOffset);
       }
     }

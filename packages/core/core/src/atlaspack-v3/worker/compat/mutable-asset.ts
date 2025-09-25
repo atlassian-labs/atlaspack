@@ -1,4 +1,4 @@
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import * as napi from '@atlaspack/rust';
 import {Readable} from 'stream';
 import type {
