@@ -19,6 +19,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Rust backed requests
    *
    * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2024-05-01
    */
   atlaspackV3: false,
 
@@ -26,6 +27,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Use node.js implementation of @parcel/watcher watchman backend
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>
+   * @since 2024-08-09
    */
   useWatchmanWatcher: false,
 
@@ -33,6 +35,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Configure runtime to enable retriable dynamic imports
    *
    * @author David Alsh <dalsh@atlassian.com>
+   * @since 2024-08-21
    */
   importRetry: false,
 
@@ -40,6 +43,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Fixes quadratic cache invalidation issue
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>
+   * @since 2024-10-21
    */
   fixQuadraticCacheInvalidation: 'OLD' as ConsistencyCheckFeatureFlagValue,
 
@@ -49,6 +53,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * and requires server-side support.
    *
    * @author Jake Lane <jlane2@atlassian.com>
+   * @since 2024-09-11
    */
   conditionalBundlingApi: false,
 
@@ -59,6 +64,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * - NEW: Return VCS result, but don't call watchman
    *
    * @author Celeste Carloni <ccarloni@atlassian.com>
+   * @since 2025-02-04
    */
   vcsMode: 'OLD' as ConsistencyCheckFeatureFlagValue,
 
@@ -69,6 +75,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * - Reduce size of the caches by deduplicating data
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>
+   * @since 2025-05-13
    */
   cachePerformanceImprovements: process.env.ATLASPACK_BUILD_ENV === 'test',
 
@@ -76,6 +83,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Deduplicates environments across cache / memory entities
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>
+   * @since 2025-06-11
    */
   environmentDeduplication: false,
 
@@ -83,6 +91,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enable scanning for the presence of loadable to determine side effects
    *
    * @author Ben Jervis <bjervis@atlassian.com>
+   * @since 2025-03-07
    */
   loadableSideEffects: false,
 
@@ -91,6 +100,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * conversions
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>
+   * @since 2025-03-13
    */
   reduceResolverStringCreation: false,
 
@@ -98,6 +108,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Fixes source maps for inline bundles
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>
+   * @since 2025-04-08
    */
   inlineBundlesSourceMapFixes: false,
 
@@ -105,6 +116,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * This feature is experimental and should not be used in production. It will used to test downloadble cache artefacts.
    *
    * @author Celeste Carloni <ccarloni@atlassian.com>
+   * @since 2025-04-10
    */
   patchProjectPaths: false,
 
@@ -113,6 +125,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Used heavily for inline bundles.
    *
    * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-04-17
    */
   inlineStringReplacementPerf: false,
 
@@ -120,6 +133,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enable resolution of bundler config starting from the CWD
    *
    * @author Ben Jervis <bjervis@atlassian.com>
+   * @since 2025-05-29
    */
   resolveBundlerConfigFromCwd: false,
 
@@ -128,6 +142,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * they're safe to do so.
    *
    * @author Ben Jervis <bjervis@atlassian.com>
+   * @since 2025-06-17
    */
   applyScopeHoistingImprovement: false,
 
@@ -135,6 +150,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enable a change where a constant module only have the namespacing object added in bundles where it is required
    *
    * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-06-19
    */
   inlineConstOptimisationFix: false,
 
@@ -144,6 +160,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * - Moving the functionality of the react-refresh runtime into the react-refresh-wrap transformer
    *
    * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-06-20
    */
   hmrImprovements: false,
 
@@ -151,6 +168,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enables the new packaging progress CLI experience
    *
    * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-07-02
    */
   cliProgressReportingImprovements: false,
 
@@ -159,6 +177,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Imports with the same `webpackChunkName` will be bundled together.
    *
    * @author Ben Jervis <bjervis@atlassian.com>
+   * @since 2025-07-08
    */
   supportWebpackChunkName: process.env.ATLASPACK_BUILD_ENV === 'test',
 
@@ -168,11 +187,13 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Split into two flags, to allow usage in the dev or prod packagers separately
    *
    * @author Jake Lane <jlane2@atlassian.com>
+   * @since 2025-07-08
    */
   condbDevFallbackDev: false,
   /**
    *
    * @author Jake Lane <jlane2@atlassian.com>
+   * @since 2025-07-08
    */
   condbDevFallbackProd: false,
 
@@ -181,6 +202,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * a full bundling pass is required based on the AssetGraph's bundlingVersion.
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>
+   * @since 2025-07-08
    */
   incrementalBundlingVersioning: process.env.ATLASPACK_BUILD_ENV === 'test',
 
@@ -189,6 +211,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * async bundles.
    *
    * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-08-20
    */
   removeRedundantSharedBundles: process.env.ATLASPACK_BUILD_ENV === 'test',
 
@@ -196,6 +219,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * When enabled, single file output bundles have a stable name
    *
    * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-08-21
    */
   singleFileOutputStableName: process.env.ATLASPACK_BUILD_ENV === 'test',
 
@@ -203,6 +227,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * Enable optimised prelude for the ScopeHoistingPackager.
    *
    * @author Jake Lane <jlane2@atlassian.com>
+   * @since 2025-08-22
    */
   useNewPrelude: false,
 
@@ -211,6 +236,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * be at the top level of the bundle.
    *
    * @author Ben Jervis <bjervis@atlassian.com>
+   * @since 2025-08-27
    */
   applyScopeHoistingImprovementV2: false,
 
@@ -220,12 +246,14 @@ export const DEFAULT_FEATURE_FLAGS = {
    * This allows building only specific entries for specific targets.
    *
    * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-09-03
    */
   allowExplicitTargetEntries: process.env.ATLASPACK_BUILD_ENV === 'test',
   /**
    * When enabled, the packager will avoid using the binding helper for exports where possible.
    *
    * @author Jake Lane <jlane2@atlassian.com>
+   * @since 2025-09-08
    */
   exportsRebindingOptimisation: false,
 
@@ -233,6 +261,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * When enabled, allows custom per-target "env" properties to be used in transformers.
    *
    * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-09-04
    */
   customEnvInTargets: process.env.ATLASPACK_BUILD_ENV === 'test',
 
@@ -240,6 +269,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * When enabled, ensures the `unstableSingleFileOutput` environment property is preserved during CSS transformation
    *
    * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-09-09
    */
   preserveUnstableSingleFileOutputInCss:
     process.env.ATLASPACK_BUILD_ENV === 'test',
@@ -249,6 +279,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * project relative paths
    *
    * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-09-18
    */
   symbolLocationFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 
@@ -256,6 +287,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * When enabled, avoid retaining sourcesContent in memory during transformation.
    * Source contents will be inlined only during final map stringify if needed.
    * @author Shanon Jackson <sjackson3@atlassian.com>
+   * @since 2025-09-22
    */
   omitSourcesContentInMemory: false,
 };
