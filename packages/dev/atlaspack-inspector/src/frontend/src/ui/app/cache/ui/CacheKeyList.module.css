@@ -1,0 +1,40 @@
+.cacheKeyList {
+  padding: 8px;
+  height: 100%;
+  gap: 8px;
+  display: flex;
+  background-color: var(--ds-surface-sunken);
+  flex-direction: column;
+  border: 1px solid var(--ds-border);
+  width: 300px;
+  flex-shrink: 0;
+}
+
+.cacheKeyListInner {
+  background-color: var(--ds-background-input);
+  padding: 4px;
+  border: 1px solid var(--ds-border);
+  border-radius: 4px;
+  flex: 1;
+  overflow: hidden;
+  gap: 4px;
+}
+
+.cacheKeyPlaceholderContainer {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cacheKeyListItemsContainer {
+  flex: 1;
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  position: relative;
+}
+
+.cacheKeyListItemsContainerInner {
+  width: 100%;
+}

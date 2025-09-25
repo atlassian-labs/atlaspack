@@ -1,0 +1,11 @@
+.cacheKeysPage {
+  display: flex;
+  height: calc(100vh - 48px);
+  width: 100%;
+}
+
+.cacheKeysPageChild {
+  overflow: auto;
+  flex: 1;
+  max-height: 100%;
+}

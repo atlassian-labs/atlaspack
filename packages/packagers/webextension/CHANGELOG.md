@@ -1,5 +1,21 @@
 # @atlaspack/packager-webextension
 
+## 2.14.34
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.0.2
+  - @atlaspack/plugin@2.14.34
+
+## 2.14.33
+
+### Patch Changes
+
+- Updated dependencies [[`236e546`](https://github.com/atlassian-labs/atlaspack/commit/236e5465863dca6044a7191e05260a5b924c342e)]:
+  - @atlaspack/utils@3.0.1
+  - @atlaspack/plugin@2.14.33
+
 ## 2.14.32
 
 ### Patch Changes

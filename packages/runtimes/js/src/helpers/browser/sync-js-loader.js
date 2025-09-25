@@ -1,5 +1,3 @@
-const cacheLoader = require('../cacheLoader');
-
 module.exports = function loadJSBundle(bundle) {
   // Don't insert the same script twice (e.g. if it was already in the HTML)
   let existingScripts = document.getElementsByTagName('script');

@@ -1,5 +1,52 @@
 # @atlaspack/core
 
+## 2.25.1
+
+### Patch Changes
+
+- Updated dependencies [[`25cbee6`](https://github.com/atlassian-labs/atlaspack/commit/25cbee625fb47ac20423fe34ff37bc818a807245), [`662d3c6`](https://github.com/atlassian-labs/atlaspack/commit/662d3c627888b16bf27df15cfac5a9094509e93d)]:
+  - @atlaspack/workers@2.14.34
+  - @atlaspack/feature-flags@2.25.4
+  - @atlaspack/fs@2.15.29
+  - @atlaspack/package-manager@2.14.34
+  - @atlaspack/types@2.15.24
+  - @atlaspack/cache@3.2.29
+  - @atlaspack/graph@3.5.23
+  - @atlaspack/utils@3.0.2
+  - @atlaspack/logger@2.14.26
+  - @atlaspack/plugin@2.14.34
+  - @atlaspack/profiler@2.14.31
+
+## 2.25.0
+
+### Minor Changes
+
+- [#803](https://github.com/atlassian-labs/atlaspack/pull/803) [`f07351a`](https://github.com/atlassian-labs/atlaspack/commit/f07351a2398b6a8e5155a2daad77e69b7dcb2b4b) Thanks [@shanshrew](https://github.com/shanshrew)! - feat(core, transformers): add feature-flag to omit sourcesContent from memory; reduce peak memory during builds
+  - Introduce `omitSourcesContentInMemory` feature flag to stop retaining full source text in `sourcesContent` throughout transforms. Default OFF; behavior unchanged unless enabled.
+  - Guard `asset.sourceContent` initialization and `setSourceContent`/`sourcesContent` copies behind the flag.
+  - Mappings and source paths remain correct; packager still inlines or references sources per config.
+
+  Memory (three-js benchmark, V3, 1 run):
+  - Baseline OFF: later, larger compactions near end of build (e.g. `~44.2s Mark-Compact 20.4 (50.2) -> 12.5 (53.5) MB`).
+  - Flag ON: earlier compactions during transform/packaging, keeping old space ≈10–11 MB (e.g. `~17.7s Mark-Compact 11.5 (28.0) -> 9.6 (27.5) MB`).
+
+  Sourcemaps: unchanged by default; with flag ON, only the in-memory retention is removed.
+
+### Patch Changes
+
+- Updated dependencies [[`236e546`](https://github.com/atlassian-labs/atlaspack/commit/236e5465863dca6044a7191e05260a5b924c342e), [`f07351a`](https://github.com/atlassian-labs/atlaspack/commit/f07351a2398b6a8e5155a2daad77e69b7dcb2b4b)]:
+  - @atlaspack/utils@3.0.1
+  - @atlaspack/feature-flags@2.25.3
+  - @atlaspack/cache@3.2.28
+  - @atlaspack/package-manager@2.14.33
+  - @atlaspack/workers@2.14.33
+  - @atlaspack/fs@2.15.28
+  - @atlaspack/graph@3.5.22
+  - @atlaspack/types@2.15.23
+  - @atlaspack/logger@2.14.25
+  - @atlaspack/plugin@2.14.33
+  - @atlaspack/profiler@2.14.30
+
 ## 2.24.2
 
 ### Patch Changes

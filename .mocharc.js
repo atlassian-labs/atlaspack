@@ -14,7 +14,7 @@ const TEST_FILE_PATTERN =
 const spec = args.some(isFileArg)
   ? args.filter(isFileArg)
   : [
-      `packages/*/!(integration-tests|e2e-tests)/test/${TEST_FILE_PATTERN}`,
+      `packages/*/!(integration-tests|e2e-tests|atlaspack-inspector)/test/${TEST_FILE_PATTERN}`,
       `scripts/test/${TEST_FILE_PATTERN}`,
     ];
 

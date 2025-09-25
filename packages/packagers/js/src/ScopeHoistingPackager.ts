@@ -14,6 +14,7 @@ import {
   countLines,
   normalizeSeparators,
   debugTools,
+  globToRegex,
 } from '@atlaspack/utils';
 import SourceMap from '@parcel/source-map';
 import nullthrows from 'nullthrows';
@@ -99,6 +100,7 @@ export class ScopeHoistingPackager {
   outputFormat: OutputFormat;
   isAsyncBundle: boolean;
   globalNames: ReadonlySet<string>;
+  manualStaticBindingExports: RegExp[] | null;
   assetOutputs: Map<
     Asset,
     {
@@ -136,6 +138,7 @@ export class ScopeHoistingPackager {
     bundle: NamedBundle,
     parcelRequireName: string,
     useAsyncBundleRuntime: boolean,
+    manualStaticBindingExports: string[] | null,
     logger: PluginLogger,
   ) {
     this.options = options;
@@ -143,6 +146,8 @@ export class ScopeHoistingPackager {
     this.bundle = bundle;
     this.parcelRequireName = parcelRequireName;
     this.useAsyncBundleRuntime = useAsyncBundleRuntime;
+    this.manualStaticBindingExports =
+      manualStaticBindingExports?.map((glob) => globToRegex(glob)) ?? null;
     this.logger = logger;
 
     let OutputFormat = OUTPUT_FORMATS[this.bundle.env.outputFormat];
@@ -1621,7 +1626,10 @@ ${code}
           const meta = asset.symbols.get(exp)?.meta;
           if (
             getFeatureFlag('exportsRebindingOptimisation') &&
-            meta?.isStaticBindingSafe
+            (meta?.isStaticBindingSafe ||
+              this.manualStaticBindingExports?.some((regex) =>
+                regex.test(asset.filePath),
+              ))
           ) {
             append += `$${assetId}$exports[${JSON.stringify(
               exp,

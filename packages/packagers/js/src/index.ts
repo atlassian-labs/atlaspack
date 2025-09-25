@@ -20,6 +20,7 @@ import {
 type JSPackagerConfig = {
   parcelRequireName: string;
   unstable_asyncBundleRuntime: boolean;
+  unstable_manualStaticBindingExports: string[] | null;
 };
 
 const CONFIG_SCHEMA: SchemaEntity = {
@@ -28,6 +29,12 @@ const CONFIG_SCHEMA: SchemaEntity = {
     unstable_asyncBundleRuntime: {
       type: 'boolean',
     },
+    unstable_manualStaticBindingExports: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+    },
   },
   additionalProperties: false,
 };
@@ -35,7 +42,10 @@ const CONFIG_SCHEMA: SchemaEntity = {
 export default new Packager({
   async loadConfig({config, options}): Promise<JSPackagerConfig> {
     let packageKey = '@atlaspack/packager-js';
-    let conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
+    let conf = await config.getConfigFrom<{
+      unstable_asyncBundleRuntime?: boolean;
+      unstable_manualStaticBindingExports?: string[];
+    }>(options.projectRoot + '/index', [], {
       packageKey,
     });
 
@@ -55,7 +65,7 @@ export default new Packager({
 
     // Generate a name for the global parcelRequire function that is unique to this project.
     // This allows multiple parcel builds to coexist on the same page.
-    let packageName = await config.getConfigFrom(
+    let packageName = await config.getConfigFrom<string>(
       options.projectRoot + '/index',
       [],
       {
@@ -65,12 +75,12 @@ export default new Packager({
 
     let name = packageName?.contents ?? '';
     return {
-      // @ts-expect-error TS2345
       parcelRequireName: 'parcelRequire' + hashString(name).slice(-4),
       unstable_asyncBundleRuntime: Boolean(
-        // @ts-expect-error TS2339
         conf?.contents?.unstable_asyncBundleRuntime,
       ),
+      unstable_manualStaticBindingExports:
+        conf?.contents?.unstable_manualStaticBindingExports ?? null,
     };
   },
   async package({
@@ -106,6 +116,7 @@ export default new Packager({
           bundle,
           nullthrows(config).parcelRequireName,
           nullthrows(config).unstable_asyncBundleRuntime,
+          nullthrows(config).unstable_manualStaticBindingExports,
           logger,
         );
 

@@ -5,13 +5,13 @@
   "private": true,
   "scripts": {
     "build:inspect:off": "PARCEL_WORKERS=0 node --inspect-brk $(yarn bin atlaspack) build --no-cache --feature-flag conditionalBundlingApi=false src/index.html",
-    "build:inspect:on": "PARCEL_WORKERS=0 node --inspect-brk $(yarn bin atlaspack) build --no-cache --feature-flag conditionalBundlingApi=true --feature-flag conditionalBundlingNestedRuntime=true --feature-flag conditionalBundlingReporterDuplicateFix=true --feature-flag conditionalBundlingReporterSameConditionFix=true --feature-flag condbHtmlPackagerChange=true src/index.html",
+    "build:inspect:on": "PARCEL_WORKERS=0 node --inspect-brk $(yarn bin atlaspack) build --no-cache --feature-flag conditionalBundlingApi=true src/index.html",
     "build:off": "atlaspack build --no-cache --feature-flag conditionalBundlingApi=false src/index.html",
-    "build:on": "atlaspack build --no-cache --feature-flag condbDevFallbackProd=true --feature-flag conditionalBundlingApi=true --feature-flag conditionalBundlingNestedRuntime=true --feature-flag conditionalBundlingReporterDuplicateFix=true --feature-flag conditionalBundlingReporterSameConditionFix=true --feature-flag condbHtmlPackagerChange=true --feature-flag conditionalBundlingAsyncRuntime=true --no-optimize src/index.html",
+    "build:on": "atlaspack build --no-cache --feature-flag condbDevFallbackProd=true --feature-flag conditionalBundlingApi=true --no-optimize src/index.html",
     "dev:off": "npx nodemon -e 'ts, tsx, json, .parcelrc' --watch . --ignore 'dist/' --exec 'yarn build:off && node serve.js'",
     "dev:on": "npx nodemon -e 'ts, tsx, json, .parcelrc' --watch . --ignore 'dist/' --exec 'yarn build:on && node serve.js'",
     "serve:off": "atlaspack serve --no-cache --feature-flag conditionalBundlingApi=false src/index.html",
-    "serve:on": "atlaspack serve --no-cache --feature-flag condbDevFallbackDev=true --feature-flag conditionalBundlingApi=true --feature-flag conditionalBundlingNestedRuntime=true --feature-flag conditionalBundlingReporterDuplicateFix=true --feature-flag conditionalBundlingReporterSameConditionFix=true --feature-flag condbHtmlPackagerChange=true --feature-flag conditionalBundlingAsyncRuntime=true src/index.html"
+    "serve:on": "atlaspack serve --no-cache --feature-flag condbDevFallbackDev=true --feature-flag conditionalBundlingApi=true src/index.html"
   },
   "dependencies": {
     "@atlaskit/button": "*",
@@ -19,8 +19,8 @@
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@atlaspack/cli": "2.14.11",
-    "@atlaspack/reporter-conditional-manifest": "2.15.14",
+    "@atlaspack/cli": "2.14.13",
+    "@atlaspack/reporter-conditional-manifest": "2.15.16",
     "@types/react-dom": "^17.0.2",
     "express": "*"
   },

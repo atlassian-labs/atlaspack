@@ -1,5 +1,27 @@
 # @atlaspack/workers
 
+## 2.14.34
+
+### Patch Changes
+
+- [#782](https://github.com/atlassian-labs/atlaspack/pull/782) [`25cbee6`](https://github.com/atlassian-labs/atlaspack/commit/25cbee625fb47ac20423fe34ff37bc818a807245) Thanks [@yamadapc](https://github.com/yamadapc)! - Initial atlaspack-inspector release
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.4
+  - @atlaspack/utils@3.0.2
+  - @atlaspack/logger@2.14.26
+  - @atlaspack/profiler@2.14.31
+
+## 2.14.33
+
+### Patch Changes
+
+- Updated dependencies [[`236e546`](https://github.com/atlassian-labs/atlaspack/commit/236e5465863dca6044a7191e05260a5b924c342e)]:
+  - @atlaspack/utils@3.0.1
+  - @atlaspack/types-internal@2.20.3
+  - @atlaspack/logger@2.14.25
+  - @atlaspack/profiler@2.14.30
+
 ## 2.14.32
 
 ### Patch Changes

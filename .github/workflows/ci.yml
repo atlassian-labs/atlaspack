@@ -293,3 +293,75 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
       - run: yarn playwright install
       - run: yarn test:e2e:ci
+
+  atlaspack_inspector_unit_tests:
+    name: ${{ matrix.project }} - Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
+    needs:
+      - build_native
+    strategy:
+      matrix:
+        include:
+          # Linux AMD64
+          - os: ubuntu-22.04
+            node: 22
+            project: '@atlaspack/inspector'
+          - os: ubuntu-22.04
+            node: 22
+            project: '@atlaspack/inspector-frontend'
+
+          # MacOS ARM64
+          # - os: macos-15
+          #   node: 22
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      - name: Bump max inotify watches (Linux only)
+        if: ${{ runner.os == 'Linux' }}
+        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+      - run: |
+          yarn build
+          yarn workspace ${{ matrix.project }} test:unit
+
+  atlaspack_inspector_e2e_tests:
+    name: '@atlaspack/inspector - E2E tests (${{ matrix.os }}, Node ${{ matrix.node }})'
+    needs:
+      - build_native
+    strategy:
+      matrix:
+        include:
+          # Linux AMD64
+          - os: ubuntu-22.04
+            node: 22
+
+          # MacOS ARM64
+          # - os: macos-15
+          #   node: 22
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      - name: Bump max inotify watches (Linux only)
+        if: ${{ runner.os == 'Linux' }}
+        run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+      - run: |
+          yarn build
+          yarn playwright install-deps
+          yarn playwright install
+          yarn workspace @atlaspack/inspector test:e2e

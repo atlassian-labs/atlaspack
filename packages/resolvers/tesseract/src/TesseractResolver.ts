@@ -36,10 +36,12 @@ const getIgnoreModules = (
   env: typeof process.env,
   ignoreModules: Array<string>,
 ) => {
-  if (env.PILLAR_LOCAL_DEVELOPMENT === 'true') {
-    return [...ignoreModules, '@atlassiansox/analytics-web-client'];
+  if (env.SSR_IGNORE_MODULES) {
+    const additionalIgnoreModules = env.SSR_IGNORE_MODULES.split(',')
+      .map((module) => module.trim())
+      .filter((module) => module.length > 0);
+    return [...ignoreModules, ...additionalIgnoreModules];
   }
-
   return ignoreModules;
 };
 
