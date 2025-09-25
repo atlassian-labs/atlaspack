@@ -1,5 +1,15 @@
 # @atlaspack/transformer-babel
 
+## 2.14.34
+
+### Patch Changes
+
+- [#782](https://github.com/atlassian-labs/atlaspack/pull/782) [`25cbee6`](https://github.com/atlassian-labs/atlaspack/commit/25cbee625fb47ac20423fe34ff37bc818a807245) Thanks [@yamadapc](https://github.com/yamadapc)! - Initial atlaspack-inspector release
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.0.2
+  - @atlaspack/plugin@2.14.34
+
 ## 2.14.33
 
 ### Patch Changes

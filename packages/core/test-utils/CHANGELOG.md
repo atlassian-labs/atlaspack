@@ -1,5 +1,19 @@
 # @atlaspack/test-utils
 
+## 2.14.37
+
+### Patch Changes
+
+- [#782](https://github.com/atlassian-labs/atlaspack/pull/782) [`25cbee6`](https://github.com/atlassian-labs/atlaspack/commit/25cbee625fb47ac20423fe34ff37bc818a807245) Thanks [@yamadapc](https://github.com/yamadapc)! - Initial atlaspack-inspector release
+
+- Updated dependencies []:
+  - @atlaspack/core@2.25.1
+  - @atlaspack/fs@2.15.29
+  - @atlaspack/package-manager@2.14.34
+  - @atlaspack/cache@3.2.29
+  - @atlaspack/utils@3.0.2
+  - @atlaspack/config-default@6.0.1
+
 ## 2.14.36
 
 ### Patch Changes

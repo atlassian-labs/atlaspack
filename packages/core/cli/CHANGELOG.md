@@ -1,5 +1,23 @@
 # @atlaspack/cli
 
+## 2.14.13
+
+### Patch Changes
+
+- [#782](https://github.com/atlassian-labs/atlaspack/pull/782) [`25cbee6`](https://github.com/atlassian-labs/atlaspack/commit/25cbee625fb47ac20423fe34ff37bc818a807245) Thanks [@yamadapc](https://github.com/yamadapc)! - Initial atlaspack-inspector release
+
+- Updated dependencies [[`662d3c6`](https://github.com/atlassian-labs/atlaspack/commit/662d3c627888b16bf27df15cfac5a9094509e93d)]:
+  - @atlaspack/feature-flags@2.25.4
+  - @atlaspack/core@2.25.1
+  - @atlaspack/fs@2.15.29
+  - @atlaspack/package-manager@2.14.34
+  - @atlaspack/utils@3.0.2
+  - @atlaspack/reporter-cli@2.17.16
+  - @atlaspack/config-default@6.0.1
+  - @atlaspack/reporter-dev-server@2.14.34
+  - @atlaspack/logger@2.14.26
+  - @atlaspack/reporter-tracer@2.14.34
+
 ## 2.14.12
 
 ### Patch Changes
