@@ -83,7 +83,7 @@ export default class WorkerFarm extends EventEmitter {
   sharedReferencesByValue: Map<unknown, SharedReference> = new Map();
   serializedSharedReferences: Map<
     SharedReference,
-    ArrayBuffer | null | undefined
+    ArrayBufferLike | null | undefined
   > = new Map();
   profiler: SamplingProfiler | null | undefined;
 
@@ -539,7 +539,7 @@ export default class WorkerFarm extends EventEmitter {
     };
   }
 
-  getSerializedSharedReference(ref: SharedReference): ArrayBuffer {
+  getSerializedSharedReference(ref: SharedReference): ArrayBufferLike {
     let cached = this.serializedSharedReferences.get(ref);
     if (cached) {
       return cached;
@@ -551,11 +551,9 @@ export default class WorkerFarm extends EventEmitter {
     // If the reference was created with the isCacheable option set to false,
     // serializedSharedReferences will contain `null` as the value.
     if (cached !== null) {
-      // @ts-expect-error TS2345
       this.serializedSharedReferences.set(ref, buf);
     }
 
-    // @ts-expect-error TS2322
     return buf;
   }
 
