@@ -1756,6 +1756,10 @@ export type BundleResult = {
   readonly ast?: AST;
   readonly map?: SourceMap | null | undefined;
   readonly type?: string;
+  readonly scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
+  };
 };
 
 /**
@@ -2136,6 +2140,10 @@ export type BuildSuccessEvent = {
   readonly requestBundle: (bundle: NamedBundle) => Promise<BuildSuccessEvent>;
   readonly unstable_requestStats: {
     [requestType: string]: number;
+  };
+  readonly scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
   };
 };
 

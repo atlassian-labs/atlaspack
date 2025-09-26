@@ -46,15 +46,13 @@ export function createPackageRequest(
   };
 }
 
-// @ts-expect-error TS7031
-async function run({input, api, farm}) {
+async function run({input, api, farm}: RunInput<BundleInfo>) {
   let {bundleGraphReference, optionsRef, bundle, useMainThread} = input;
   let runPackage = farm.createHandle('runPackage', useMainThread);
 
   let start = Date.now();
   let {devDeps, invalidDevDeps} = await getDevDepRequests(api);
   let {cachePath} = nullthrows(
-    // @ts-expect-error TS2347
     await api.runRequest<null, ConfigAndCachePath>(
       createAtlaspackConfigRequest(),
     ),
