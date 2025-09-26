@@ -331,8 +331,8 @@ dependencies = [
  "serde_bytes",
  "sha-1",
  "sourcemap",
+ "swc_atlaskit_tokens",
  "swc_core",
- "swc_design_system_tokens",
  "swc_ecma_parser",
  "tempfile",
  "thiserror 2.0.9",
@@ -5256,6 +5256,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "swc_atlaskit_tokens"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "once_cell",
+ "serde_json",
+ "serde_json5",
+ "swc_core",
+ "testing 12.0.0",
+]
+
+[[package]]
 name = "swc_atoms"
 version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5413,18 +5425,6 @@ dependencies = [
  "swc_plugin_macro",
  "swc_plugin_proxy",
  "vergen",
-]
-
-[[package]]
-name = "swc_design_system_tokens"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "once_cell",
- "serde_json",
- "serde_json5",
- "swc_core",
- "testing 12.0.0",
 ]
 
 [[package]]
