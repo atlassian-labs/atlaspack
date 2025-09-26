@@ -1,19 +1,21 @@
 /*
- * Enforces that feature flags have proper @author documentation.
+ * Enforces that feature flags have proper @author and @since documentation.
  *
  * Rules:
  * - Every feature flag (except those starting with "example") must have an @author line
  * - @author format must be "Name <email@atlassian.com>"
  * - Email must end with @atlassian.com
+ * - Every feature flag must have a @since line with format YYYY-MM-DD
  */
 
 'use strict';
 
 const EXPECTED_AUTHOR_FORMAT = `"@author Name <email@atlassian.com>"`;
+const EXPECTED_SINCE_FORMAT = `"@since YYYY-MM-DD"`;
 
 module.exports = {
   meta: {
-    description: 'Enforce @author documentation for feature flags',
+    description: 'Enforce @author and @since documentation for feature flags',
     fixable: 'code',
     schema: [],
   },
@@ -32,22 +34,44 @@ module.exports = {
           return;
         }
 
-        // Look for @author comment in the JSDoc comment
-        const authorComment = findAuthorComment(node, context);
+        // Look for JSDoc comment with @author and @since
+        const jsdocComment = findJSDocComment(node, context);
 
-        if (!authorComment) {
-          reportMissingAuthor(node, flagName, context);
+        if (!jsdocComment) {
+          reportMissingDocumentation(node, flagName, context);
           return;
         }
 
-        const validationResult = validateAuthorComment(authorComment, flagName);
-        if (!validationResult.isValid) {
+        // Check both @author and @since
+        const authorValidation = validateAuthorInComment(
+          jsdocComment,
+          flagName,
+        );
+        const sinceValidation = validateSinceInComment(jsdocComment, flagName);
+
+        // Check if they actually exist in the comment
+        const hasAuthor = /@author/m.test(jsdocComment);
+        const hasSince = /@since/m.test(jsdocComment);
+
+        // If both are completely missing, report missing documentation
+        if (!hasAuthor && !hasSince) {
+          reportMissingDocumentation(node, flagName, context);
+          return;
+        }
+
+        // Otherwise, report specific issues
+        if (!authorValidation.isValid) {
           reportInvalidAuthor(
             node,
             flagName,
-            validationResult.message,
+            authorValidation.message,
             context,
           );
+          return;
+        }
+
+        if (!sinceValidation.isValid) {
+          reportInvalidSince(node, flagName, sinceValidation.message, context);
           return;
         }
       },
@@ -56,10 +80,10 @@ module.exports = {
 };
 
 /**
- * Report missing @author with auto-fix if possible
+ * Report missing documentation with auto-fix if possible
  */
-function reportMissingAuthor(node, flagName, context) {
-  const message = `Feature flag "${flagName}" is missing @author documentation. Add a comment with ${EXPECTED_AUTHOR_FORMAT} before the property.`;
+function reportMissingDocumentation(node, flagName, context) {
+  const message = `Feature flag "${flagName}" is missing @author and @since documentation. Add a comment with ${EXPECTED_AUTHOR_FORMAT} and ${EXPECTED_SINCE_FORMAT} before the property.`;
 
   reportWithAutoFix(node, message, context);
 }
@@ -72,6 +96,13 @@ function reportInvalidAuthor(node, flagName, errorMessage, context) {
 }
 
 /**
+ * Report invalid @since with auto-fix if possible
+ */
+function reportInvalidSince(node, flagName, errorMessage, context) {
+  reportWithAutoFix(node, errorMessage, context);
+}
+
+/**
  * Report error with auto-fix if git config is available
  */
 function reportWithAutoFix(node, message, context) {
@@ -80,7 +111,7 @@ function reportWithAutoFix(node, message, context) {
     context.report({
       node,
       message,
-      fix: (fixer) => addAuthorToComment(fixer, node, context),
+      fix: (fixer) => addDocumentationToComment(fixer, node, context),
     });
   } catch (error) {
     context.report({
@@ -91,13 +122,13 @@ function reportWithAutoFix(node, message, context) {
 }
 
 /**
- * Validate @author comment format and content
+ * Validate @author in JSDoc comment
  */
-function validateAuthorComment(authorComment, flagName) {
+function validateAuthorInComment(commentValue, flagName) {
   const COMMENT_AUTHOR_REGEX = /@author (?<name>[^<]+) <(?<email>[^>]+)>/m;
 
   // Check if @author line exists and matches the expected format
-  const authorMatch = authorComment.match(COMMENT_AUTHOR_REGEX);
+  const authorMatch = commentValue.match(COMMENT_AUTHOR_REGEX);
   if (!authorMatch) {
     return {
       isValid: false,
@@ -120,6 +151,51 @@ function validateAuthorComment(authorComment, flagName) {
     return {
       isValid: false,
       message: `Feature flag "${flagName}" @author name cannot be empty`,
+    };
+  }
+
+  return {isValid: true};
+}
+
+/**
+ * Validate @since in JSDoc comment
+ */
+function validateSinceInComment(commentValue, flagName) {
+  const COMMENT_SINCE_REGEX = /@since (\d{4}-\d{2}-\d{2})/m;
+
+  // Check if @since line exists and matches the expected format
+  const sinceMatch = commentValue.match(COMMENT_SINCE_REGEX);
+  if (!sinceMatch) {
+    return {
+      isValid: false,
+      message: `Feature flag "${flagName}" is missing @since or format is invalid. Expected format: ${EXPECTED_SINCE_FORMAT}`,
+    };
+  }
+
+  const dateStr = sinceMatch[1];
+
+  // Validate the date format more strictly
+  const dateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const match = dateStr.match(dateRegex);
+  if (!match) {
+    return {
+      isValid: false,
+      message: `Feature flag "${flagName}" @since format is invalid. Expected format: ${EXPECTED_SINCE_FORMAT}`,
+    };
+  }
+
+  const [, year, month, day] = match;
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+
+  // Check if the date is valid (e.g., not Feb 30)
+  if (
+    date.getFullYear() != year ||
+    date.getMonth() != month - 1 ||
+    date.getDate() != day
+  ) {
+    return {
+      isValid: false,
+      message: `Feature flag "${flagName}" @since date is invalid: ${dateStr}`,
     };
   }
 
@@ -161,15 +237,15 @@ function getPropertyName(node) {
 }
 
 /**
- * Find @author comment in JSDoc comments before the property
+ * Find JSDoc comment before the property
  */
-function findAuthorComment(node, context) {
+function findJSDocComment(node, context) {
   const sourceCode = context.getSourceCode();
   const comments = sourceCode.getCommentsBefore(node);
 
-  // Look through comments for JSDoc with @author
+  // Look through comments for JSDoc (Block comment starting with *)
   for (const comment of comments) {
-    if (comment.type === 'Block' && comment.value.includes('@author')) {
+    if (comment.type === 'Block') {
       return comment.value;
     }
   }
@@ -202,11 +278,11 @@ function getCurrentUserDetails() {
     email = execSync('git config --global user.email', {
       encoding: 'utf8',
     }).trim();
-  } catch (error) {
+  } catch {
     try {
       name = execSync('git config user.name', {encoding: 'utf8'}).trim();
       email = execSync('git config user.email', {encoding: 'utf8'}).trim();
-    } catch (localError) {
+    } catch {
       throw new Error(
         `Unable to get user details from git config. ${gitConfigMessage}`,
       );
@@ -224,9 +300,9 @@ function getCurrentUserDetails() {
 }
 
 /**
- * Add @author to JSDoc comment
+ * Add @author and @since to JSDoc comment
  */
-function addAuthorToComment(fixer, node, context) {
+function addDocumentationToComment(fixer, node, context) {
   const sourceCode = context.getSourceCode();
   const comments = sourceCode.getCommentsBefore(node);
 
@@ -243,7 +319,7 @@ function addAuthorToComment(fixer, node, context) {
 
   if (jsdocComment) {
     // Case 1: Existing JSDoc comment
-    // Add or replace @author in existing JSDoc comment
+    // Add or replace @author and @since in existing JSDoc comment
     const commentText = sourceCode.getText(jsdocComment);
     const lines = commentText.split('\n');
 
@@ -260,28 +336,46 @@ function addAuthorToComment(fixer, node, context) {
       }
     }
 
-    // Create the @author line with proper indentation
+    // Create the @author and @since lines with proper indentation
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     const indentedAuthorLine = indentation + `@author ${name} <${email}>`;
+    const indentedSinceLine = indentation + `@since ${today}`;
 
-    // Check if there's already an @author line and replace it
+    // Check what needs to be fixed
+    const authorValidation = validateAuthorInComment(jsdocComment.value, '');
+    const sinceValidation = validateSinceInComment(jsdocComment.value, '');
+
+    // Check if there's already an @author line and replace it if needed
     let authorLineFound = false;
+    let sinceLineFound = false;
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].includes('@author')) {
+      if (lines[i].includes('@author') && !authorValidation.isValid) {
         lines[i] = indentedAuthorLine;
         authorLineFound = true;
+      } else if (lines[i].includes('@author')) {
+        authorLineFound = true;
+      } else if (lines[i].includes('@since') && !sinceValidation.isValid) {
+        lines[i] = indentedSinceLine;
+        sinceLineFound = true;
+      } else if (lines[i].includes('@since')) {
+        sinceLineFound = true;
+      }
+    }
+
+    // Find where to insert new lines (before the closing */)
+    let insertIndex = lines.length - 1;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i].trim() === '*/') {
+        insertIndex = i;
         break;
       }
     }
 
-    // If no @author line found, add it before the closing */
+    // Add missing lines (add @author first, then @since)
+    if (!sinceLineFound) {
+      lines.splice(insertIndex, 0, indentedSinceLine);
+    }
     if (!authorLineFound) {
-      let insertIndex = lines.length - 1;
-      for (let i = lines.length - 1; i >= 0; i--) {
-        if (lines[i].trim() === '*/') {
-          insertIndex = i;
-          break;
-        }
-      }
       lines.splice(insertIndex, 0, indentedAuthorLine);
     }
 
@@ -289,7 +383,7 @@ function addAuthorToComment(fixer, node, context) {
     return fixer.replaceText(jsdocComment, newCommentText);
   } else {
     // Case 2: No existing JSDoc comment
-    // Create new JSDoc comment with @author
+    // Create new JSDoc comment with @author and @since
 
     // Get the indentation from the source code
     const sourceCode = context.getSourceCode();
@@ -311,7 +405,8 @@ function addAuthorToComment(fixer, node, context) {
     const match = propertyLine.match(/^(\s*)/);
     const baseIndentation = match ? match[1] : '';
 
-    const newComment = `/**\n${baseIndentation} * @author ${name} <${email}>\n${baseIndentation} */\n${baseIndentation}`;
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const newComment = `/**\n${baseIndentation} * @author ${name} <${email}>\n${baseIndentation} * @since ${today}\n${baseIndentation} */\n${baseIndentation}`;
     const originalPropertyText = sourceCode.getText(node);
     const newPropertyText = newComment + originalPropertyText;
 
