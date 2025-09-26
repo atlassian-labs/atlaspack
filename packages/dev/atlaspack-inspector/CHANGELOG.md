@@ -1,5 +1,11 @@
 # @atlaspack/inspector
 
+## 0.0.20
+
+### Patch Changes
+
+- [#820](https://github.com/atlassian-labs/atlaspack/pull/820) [`2a37776`](https://github.com/atlassian-labs/atlaspack/commit/2a3777684a74bcdc609c7dafa0a42dc394f39c5b) Thanks [@yamadapc](https://github.com/yamadapc)! - Fix dependency
+
 ## 0.0.19
 
 ### Patch Changes
