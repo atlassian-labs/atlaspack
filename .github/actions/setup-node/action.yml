@@ -16,7 +16,7 @@ runs:
 
     - name: Get yarn cache directory path
       id: yarn-cache-dir-path
-      run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+      run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
       shell: bash
 
     # We only store yarn cache on main to save cache space

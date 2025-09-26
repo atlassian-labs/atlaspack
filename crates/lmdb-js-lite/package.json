@@ -24,10 +24,10 @@
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "@atlaspack/cache": "*",
-    "@atlaspack/core": "*",
-    "@atlaspack/fs": "*",
-    "@atlaspack/types": "*",
+    "@atlaspack/cache": "workspace:*",
+    "@atlaspack/core": "workspace:*",
+    "@atlaspack/fs": "workspace:*",
+    "@atlaspack/types": "workspace:*",
     "@napi-rs/cli": "^2.18.4",
     "@types/node": ">= 18",
     "bench-node": "^0.0.1-beta.0",
@@ -48,10 +48,10 @@
     "version": "napi version"
   },
   "peerDependencies": {
-    "@atlaspack/cache": "*",
-    "@atlaspack/core": "*",
-    "@atlaspack/fs": "*",
-    "@atlaspack/types": "*"
+    "@atlaspack/cache": "workspace:*",
+    "@atlaspack/core": "workspace:*",
+    "@atlaspack/fs": "workspace:*",
+    "@atlaspack/types": "workspace:*"
   },
   "stableVersion": "0.0.0",
   "type": "commonjs"

@@ -33,3 +33,4 @@ debug-symbols/
 /databases
 
 mocha-cpu-profiles/
+/.yarn/install-state.gz
