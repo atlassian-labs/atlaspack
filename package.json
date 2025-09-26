@@ -112,10 +112,10 @@
     "*.{json,md}": "prettier --write",
     "*.rs": "rustfmt"
   },
-  "packageManager": "yarn@1.22.19",
+  "packageManager": "yarn@4.10.3",
   "browser": {
-    "react-dom": "preact/compat",
     "react": "preact/compat",
+    "react-dom": "preact/compat",
     "scheduler": false
   },
   "dependencies": {
