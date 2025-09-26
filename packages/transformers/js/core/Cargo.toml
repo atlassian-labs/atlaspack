@@ -52,7 +52,7 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-test = { workspace = true }
 
-swc_design_system_tokens = { path = "../../../../crates/swc_design_system_tokens" }
+swc_atlaskit_tokens = { path = "../../../../crates/swc_atlaskit_tokens" }
 
 [dev-dependencies]
 tempfile = { workspace = true }
