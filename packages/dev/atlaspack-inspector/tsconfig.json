@@ -7,7 +7,7 @@
     "skipLibCheck": true,
     "jsx": "react",
     "strict": true,
-    "target": "es2020",
+    "target": "es2021",
     "rootDir": "./src"
   },
   "exclude": ["src/frontend", "test"]
