@@ -24511,7 +24511,7 @@ __metadata:
 
 "node-gyp@npm:latest":
   version: 11.4.2
-  resolution: "node-gyp@npm:11.4.2::__archiveUrl=https%3A%2F%2Fregistry.npmjs.org%2Fnode-gyp%2F-%2Fnode-gyp-11.4.2.tgz"
+  resolution: "node-gyp@npm:11.4.2"
   dependencies:
     env-paths: "npm:^2.2.0"
     exponential-backoff: "npm:^3.1.1"
