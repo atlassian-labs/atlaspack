@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import url from 'node:url';
 import path from 'node:path';
 import glob from 'glob';
+import pkg from 'json5';
+const {parse} = pkg;
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const __root = path.dirname(__dirname); // Go up one level to project root
@@ -48,8 +50,21 @@ function getAllPackages() {
     }
 
     try {
-      const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-      const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf8'));
+      let pkg, tsconfig;
+      try {
+        pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+      } catch (error) {
+        throw new Error(
+          `Error loading or parsing package.json: ${error.message}`,
+        );
+      }
+      try {
+        tsconfig = parse(fs.readFileSync(tsconfigPath, 'utf8'));
+      } catch (error) {
+        throw new Error(
+          `Error loading or parsing tsconfig.json: ${error.message}`,
+        );
+      }
 
       // Only include packages with composite: true
       if (!tsconfig.compilerOptions?.composite) {
@@ -71,7 +86,7 @@ function getAllPackages() {
       });
     } catch (error) {
       console.warn(
-        `Error reading package at ${packageJsonPathRel}:`,
+        `Error reading package at ${path.dirname(packageJsonPathRel)}:`,
         error.message,
       );
     }
@@ -161,7 +176,7 @@ function updateRootReferences(packages, frozen) {
 
   let rootTsconfig = {};
   if (fs.existsSync(rootTsconfigPath)) {
-    rootTsconfig = JSON.parse(fs.readFileSync(rootTsconfigPath, 'utf8'));
+    rootTsconfig = parse(fs.readFileSync(rootTsconfigPath, 'utf8'));
   }
 
   // Get all required references
