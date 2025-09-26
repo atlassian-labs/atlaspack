@@ -52,6 +52,8 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-test = { workspace = true }
 
+swc_design_system_tokens = { path = "../../../../crates/swc_design_system_tokens" }
+
 [dev-dependencies]
 tempfile = { workspace = true }
 
