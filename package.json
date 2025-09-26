@@ -79,7 +79,6 @@
     "@types/sinon": "^17.0.4",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
-    "buffer": "mischnic/buffer#b8a4fa94",
     "cross-env": "^7.0.0",
     "eslint": "^8.57.0",
     "flow-bin": "0.184.0",
@@ -113,10 +112,10 @@
     "*.{json,md}": "prettier --write",
     "*.rs": "rustfmt"
   },
-  "packageManager": "yarn@1.22.19",
+  "packageManager": "yarn@4.10.3",
   "browser": {
-    "react-dom": "preact/compat",
     "react": "preact/compat",
+    "react-dom": "preact/compat",
     "scheduler": false
   },
   "dependencies": {

@@ -23,15 +23,15 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/core": "2.26.0",
-    "@atlaspack/query": "2.14.36",
-    "@atlaspack/reporter-bundle-stats": "2.14.36",
-    "@atlaspack/utils": "3.0.3",
+    "@atlaspack/core": "workspace:*",
+    "@atlaspack/query": "workspace:*",
+    "@atlaspack/reporter-bundle-stats": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "commander": "^7.0.0"
   },
   "devDependencies": {
-    "@atlaspack/babel-register": "2.14.4",
-    "@atlaspack/types": "2.15.25",
+    "@atlaspack/babel-register": "workspace:*",
+    "@atlaspack/types": "workspace:*",
     "rimraf": "^5.0.5"
   },
   "type": "commonjs"

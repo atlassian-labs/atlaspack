@@ -19,14 +19,14 @@
     "lib"
   ],
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.35",
-    "@atlaspack/rust": "3.8.3",
-    "@atlaspack/utils": "3.0.3",
-    "@atlaspack/workers": "2.14.35"
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/rust": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
+    "@atlaspack/workers": "workspace:*"
   },
   "peerDependencies": {
-    "@atlaspack/core": "2.26.0"
+    "@atlaspack/core": "workspace:*"
   },
   "type": "commonjs",
   "scripts": {

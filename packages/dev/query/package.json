@@ -19,16 +19,16 @@
   "main": "lib/index.js",
   "source": "src/index.ts",
   "dependencies": {
-    "@atlaspack/cache": "3.2.30",
-    "@atlaspack/core": "2.26.0",
-    "@atlaspack/graph": "3.5.24",
+    "@atlaspack/cache": "workspace:*",
+    "@atlaspack/core": "workspace:*",
+    "@atlaspack/graph": "workspace:*",
     "nullthrows": "^1.1.1",
     "table": "^6.8.1",
     "v8-compile-cache": "^2.0.0"
   },
   "devDependencies": {
+    "@atlaspack/babel-register": "workspace:*",
     "@babel/core": "^7.22.11",
-    "@atlaspack/babel-register": "2.14.4",
     "rimraf": "^5.0.5"
   },
   "type": "commonjs"

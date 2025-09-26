@@ -25,7 +25,7 @@
     }
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.20.5",
+    "@atlaspack/types-internal": "workspace:*",
     "chalk": "^4.1.0",
     "emphasize": "^4.2.0",
     "slice-ansi": "^4.0.0",

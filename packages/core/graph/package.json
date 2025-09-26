@@ -21,12 +21,12 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.20.5",
-    "@atlaspack/feature-flags": "2.25.5",
+    "@atlaspack/feature-flags": "workspace:*",
+    "@atlaspack/types-internal": "workspace:*",
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {
-    "@atlaspack/babel-register": "2.14.4",
+    "@atlaspack/babel-register": "workspace:*",
     "benny": "^3.7.1"
   },
   "type": "commonjs"

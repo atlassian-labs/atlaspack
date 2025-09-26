@@ -16,11 +16,11 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/node-resolver-core": "3.7.6",
-    "@atlaspack/plugin": "2.14.35",
-    "@atlaspack/types": "2.15.25",
-    "@atlaspack/utils": "3.0.3",
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/node-resolver-core": "workspace:*",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/types": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs",

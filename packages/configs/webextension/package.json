@@ -12,15 +12,15 @@
   },
   "main": "index.json",
   "dependencies": {
-    "@atlaspack/config-default": "7.0.0",
-    "@atlaspack/packager-webextension": "2.14.35",
-    "@atlaspack/runtime-webextension": "2.14.35",
-    "@atlaspack/transformer-raw": "2.14.35",
-    "@atlaspack/transformer-webextension": "2.14.35",
-    "@atlaspack/types": "2.15.25"
+    "@atlaspack/config-default": "workspace:*",
+    "@atlaspack/packager-webextension": "workspace:*",
+    "@atlaspack/runtime-webextension": "workspace:*",
+    "@atlaspack/transformer-raw": "workspace:*",
+    "@atlaspack/transformer-webextension": "workspace:*",
+    "@atlaspack/types": "workspace:*"
   },
   "peerDependencies": {
-    "@atlaspack/core": "2.26.0"
+    "@atlaspack/core": "workspace:*"
   },
   "scripts": {
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."

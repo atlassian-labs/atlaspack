@@ -23,12 +23,12 @@
     "lib"
   ],
   "dependencies": {
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/feature-flags": "workspace:*",
+    "@atlaspack/fs": "workspace:*",
+    "@atlaspack/rust": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "@mischnic/json-sourcemap": "^0.1.0",
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/feature-flags": "2.25.5",
-    "@atlaspack/fs": "2.15.30",
-    "@atlaspack/rust": "3.8.3",
-    "@atlaspack/utils": "3.0.3",
     "nullthrows": "^1.1.1",
     "semver": "^7.5.2"
   },

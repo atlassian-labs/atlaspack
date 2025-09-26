@@ -16,9 +16,9 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.35",
-    "@atlaspack/utils": "3.0.3",
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "svgo": "^2.4.0"
   },
   "type": "commonjs",

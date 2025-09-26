@@ -20,10 +20,10 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/feature-flags": "2.25.5",
-    "@atlaspack/plugin": "2.14.35",
-    "@atlaspack/rust": "3.8.3",
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/feature-flags": "workspace:*",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/rust": "workspace:*",
     "nullthrows": "^1.1.1",
     "posthtml": "^0.16.5",
     "posthtml-parser": "^0.10.1",
@@ -32,7 +32,7 @@
     "srcset": "4"
   },
   "devDependencies": {
-    "@atlaspack/core": "2.26.0"
+    "@atlaspack/core": "workspace:*"
   },
   "type": "commonjs"
 }

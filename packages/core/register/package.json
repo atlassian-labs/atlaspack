@@ -22,10 +22,10 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/config-default": "7.0.0",
-    "@atlaspack/core": "2.26.0",
-    "@atlaspack/fs": "2.15.30",
-    "@atlaspack/package-manager": "2.14.35",
+    "@atlaspack/config-default": "workspace:*",
+    "@atlaspack/core": "workspace:*",
+    "@atlaspack/fs": "workspace:*",
+    "@atlaspack/package-manager": "workspace:*",
     "pirates": "^4.0.0"
   },
   "type": "commonjs"

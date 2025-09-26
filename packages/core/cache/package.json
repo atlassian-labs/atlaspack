@@ -22,12 +22,12 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/build-cache": "2.13.6",
-    "@atlaspack/feature-flags": "2.25.5",
-    "@atlaspack/fs": "2.15.30",
-    "@atlaspack/logger": "2.14.27",
-    "@atlaspack/rust": "3.8.3",
-    "@atlaspack/utils": "3.0.3",
+    "@atlaspack/build-cache": "workspace:*",
+    "@atlaspack/feature-flags": "workspace:*",
+    "@atlaspack/fs": "workspace:*",
+    "@atlaspack/logger": "workspace:*",
+    "@atlaspack/rust": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "ncp": "^2.0.0"
   },
   "devDependencies": {
