@@ -117,6 +117,32 @@ const CONFIG_SCHEMA: SchemaEntity = {
     unstable_inlineConstants: {
       type: 'boolean',
     },
+    atlaskitTokens: {
+      type: 'object',
+      properties: {
+        shouldUseAutoFallback: {
+          type: 'boolean',
+        },
+        shouldForceAutoFallback: {
+          type: 'boolean',
+        },
+        forceAutoFallbackExemptions: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+        },
+        defaultTheme: {
+          type: 'string',
+          enum: ['light', 'legacy-light'],
+        },
+        tokenDataPath: {
+          type: 'string',
+        },
+      },
+      required: ['tokenDataPath'],
+      additionalProperties: false,
+    },
   },
   additionalProperties: false,
 };
@@ -309,6 +335,7 @@ export default new Transformer({
     let enableLazyLoadingTransformer = Boolean(
       options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
     );
+    let atlaskitTokens;
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -337,6 +364,20 @@ export default new Transformer({
       inlineConstants =
         // @ts-expect-error TS2339
         conf.contents?.unstable_inlineConstants ?? inlineConstants;
+
+      // @ts-expect-error TS2339
+      if (conf.contents?.atlaskitTokens) {
+        // @ts-expect-error TS2339
+        const tokensConfig = conf.contents.atlaskitTokens;
+        atlaskitTokens = {
+          shouldUseAutoFallback: tokensConfig.shouldUseAutoFallback ?? true,
+          shouldForceAutoFallback: tokensConfig.shouldForceAutoFallback ?? true,
+          forceAutoFallbackExemptions:
+            tokensConfig.forceAutoFallbackExemptions ?? [],
+          defaultTheme: tokensConfig.defaultTheme ?? 'light',
+          tokenDataPath: tokensConfig.tokenDataPath, // Required by schema validation
+        };
+      }
     }
 
     return {
@@ -353,6 +394,7 @@ export default new Transformer({
       decorators,
       useDefineForClassFields,
       magicComments,
+      atlaskitTokens,
       enableGlobalThisAliaser,
       enableLazyLoadingTransformer,
     };
@@ -533,6 +575,18 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
+      is_source: asset.isSource,
+      ...(config?.atlaskitTokens && {
+        atlaskit_tokens: {
+          should_use_auto_fallback: config.atlaskitTokens.shouldUseAutoFallback,
+          should_force_auto_fallback:
+            config.atlaskitTokens.shouldForceAutoFallback,
+          force_auto_fallback_exemptions:
+            config.atlaskitTokens.forceAutoFallbackExemptions,
+          default_theme: config.atlaskitTokens.defaultTheme,
+          token_data_path: config.atlaskitTokens.tokenDataPath, // Now required
+        },
+      }),
       enable_global_this_aliaser: Boolean(config.enableGlobalThisAliaser),
       enable_lazy_loading_transformer: Boolean(
         config.enableLazyLoadingTransformer,
