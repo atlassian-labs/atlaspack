@@ -132,7 +132,6 @@ export default class NodeResolver {
                 );
               }
             : undefined,
-        reduceStringCreation: getFeatureFlag('reduceResolverStringCreation'),
       });
       this.resolversByEnv.set(options.env.id, resolver);
     }

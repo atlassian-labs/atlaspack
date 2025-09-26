@@ -132,11 +132,7 @@ impl TsConfig {
     let _ = self.paths_specifier_strings.take();
   }
 
-  pub fn paths<'a>(
-    &'a self,
-    specifier: &'a Specifier,
-    reduce_string_creation: bool,
-  ) -> impl Iterator<Item = PathBuf> + 'a {
+  pub fn paths<'a>(&'a self, specifier: &'a Specifier) -> impl Iterator<Item = PathBuf> + 'a {
     if !matches!(specifier, Specifier::Package(..) | Specifier::Builtin(..)) {
       return Either::Right(Either::Right(std::iter::empty()));
     }
@@ -161,31 +157,15 @@ impl TsConfig {
       let mut best_key = None;
       let full_specifier = specifier.to_string();
 
-      if reduce_string_creation {
-        for (key, path) in self.paths_specifier_strings() {
-          if let Some((prefix, suffix)) = path.split_once('*')
-            && (best_key.is_none() || prefix.len() > longest_prefix_length)
-            && full_specifier.starts_with(prefix)
-            && full_specifier.ends_with(suffix)
-          {
-            longest_prefix_length = prefix.len();
-            longest_suffix_length = suffix.len();
-            best_key = Some(key);
-          }
-        }
-      } else {
-        for key in paths.keys() {
-          let path = key.to_string();
-
-          if let Some((prefix, suffix)) = path.split_once('*')
-            && (best_key.is_none() || prefix.len() > longest_prefix_length)
-            && full_specifier.starts_with(prefix)
-            && full_specifier.ends_with(suffix)
-          {
-            longest_prefix_length = prefix.len();
-            longest_suffix_length = suffix.len();
-            best_key = Some(key);
-          }
+      for (key, path) in self.paths_specifier_strings() {
+        if let Some((prefix, suffix)) = path.split_once('*')
+          && (best_key.is_none() || prefix.len() > longest_prefix_length)
+          && full_specifier.starts_with(prefix)
+          && full_specifier.ends_with(suffix)
+        {
+          longest_prefix_length = prefix.len();
+          longest_suffix_length = suffix.len();
+          best_key = Some(key);
         }
       }
 
@@ -250,11 +230,6 @@ mod tests {
 
   #[test]
   fn test_paths() {
-    test_paths_inner(false);
-    test_paths_inner(true);
-  }
-
-  fn test_paths_inner(reduce_string_creation: bool) {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
       paths: Some(Arc::new(HashMap::from([
@@ -275,11 +250,7 @@ mod tests {
     };
     tsconfig.validate();
 
-    let test = |specifier: &str| {
-      tsconfig
-        .paths(&specifier.into(), reduce_string_creation)
-        .collect::<Vec<PathBuf>>()
-    };
+    let test = |specifier: &str| tsconfig.paths(&specifier.into()).collect::<Vec<PathBuf>>();
 
     assert_eq!(
       test("jquery"),
@@ -305,11 +276,6 @@ mod tests {
 
   #[test]
   fn test_base_url() {
-    test_base_url_inner(false);
-    test_base_url_inner(true);
-  }
-
-  fn test_base_url_inner(reduce_string_creation: bool) {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
       base_url: Some(Arc::new(Path::new("src").into())),
@@ -317,11 +283,7 @@ mod tests {
     };
     tsconfig.validate();
 
-    let test = |specifier: &str| {
-      tsconfig
-        .paths(&specifier.into(), reduce_string_creation)
-        .collect::<Vec<PathBuf>>()
-    };
+    let test = |specifier: &str| tsconfig.paths(&specifier.into()).collect::<Vec<PathBuf>>();
 
     assert_eq!(test("foo"), vec![PathBuf::from("/foo/src/foo")]);
     assert_eq!(
@@ -333,11 +295,6 @@ mod tests {
 
   #[test]
   fn test_paths_and_base_url() {
-    test_paths_and_base_url_inner(false);
-    test_paths_and_base_url_inner(true);
-  }
-
-  fn test_paths_and_base_url_inner(reduce_string_creation: bool) {
     let mut tsconfig = TsConfig {
       path: "/foo/tsconfig.json".into(),
       base_url: Some(Arc::new(Path::new("src").into())),
@@ -354,11 +311,7 @@ mod tests {
     };
     tsconfig.validate();
 
-    let test = |specifier: &str| {
-      tsconfig
-        .paths(&specifier.into(), reduce_string_creation)
-        .collect::<Vec<PathBuf>>()
-    };
+    let test = |specifier: &str| tsconfig.paths(&specifier.into()).collect::<Vec<PathBuf>>();
 
     assert_eq!(
       test("test"),
