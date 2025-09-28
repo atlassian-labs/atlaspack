@@ -391,16 +391,27 @@ export default class BundleGraph {
                       local,
                       loc: reexportAllLoc,
                     });
+
                     if (node.value.sourceAssetId != null) {
-                      let sourceAssetId = nullthrows(
-                        assetGraphNodeIdToBundleGraphNodeId.get(
-                          assetGraph.getNodeIdByContentKey(
-                            node.value.sourceAssetId,
+                      let sourceAssetId: NodeId;
+
+                      if (getFeatureFlag('sourceAssetIdBundleGraphFix')) {
+                        [sourceAssetId] =
+                          assetGraph.getNodeIdsConnectedTo(nodeId);
+                      } else {
+                        sourceAssetId = assetGraph.getNodeIdByContentKey(
+                          node.value.sourceAssetId,
+                        );
+                      }
+
+                      let sourceAsset = nullthrows(
+                        graph.getNode(
+                          nullthrows(
+                            assetGraphNodeIdToBundleGraphNodeId.get(
+                              sourceAssetId,
+                            ),
                           ),
                         ),
-                      );
-                      let sourceAsset = nullthrows(
-                        graph.getNode(sourceAssetId),
                       );
                       invariant(sourceAsset.type === 'asset');
                       let sourceAssetSymbols = sourceAsset.value.symbols;
