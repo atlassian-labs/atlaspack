@@ -288,6 +288,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * all together and use graph.getNodeIdsConnectedTo instead.
    *
    * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-09-29
    */
   sourceAssetIdBundleGraphFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
