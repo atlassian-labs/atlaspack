@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use petgraph::Direction;
+use petgraph::graph::Edges;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
 use petgraph::visit::EdgeRef;
@@ -162,12 +164,16 @@ impl AssetGraph {
     node_id
   }
 
-  pub fn get_dependency(&self, idx: &NodeId) -> Option<&Dependency> {
+  pub fn get_dependency(&self, idx: &NodeId) -> Option<Arc<Dependency>> {
     let value = self.get_node(idx)?;
     let AssetGraphNode::Dependency(node) = value else {
       return None;
     };
-    Some(node)
+    Some(node.clone())
+  }
+
+  pub fn get_dependency_state(&self, idx: &NodeId) -> Option<&DependencyState> {
+    self.dependency_states.get(idx)
   }
 
   pub fn get_dependencies(&self) -> Vec<&Dependency> {
@@ -179,6 +185,34 @@ impl AssetGraph {
       results.push(dependency.as_ref());
     }
     results
+  }
+
+  pub fn get_outgoing_dependencies(&self, asset_node_id: &NodeId) -> Vec<NodeId> {
+    self
+      .graph
+      .neighbors_directed(
+        self.node_id_to_node_index[asset_node_id],
+        Direction::Outgoing,
+      )
+      .filter_map(|node_index| self.graph.node_weight(node_index).map(|n| *n))
+      .collect()
+  }
+
+  pub fn get_requested_symbols(&self, idx: &NodeId) -> Option<&HashSet<String>> {
+    self.requested_symbols.get(idx)
+  }
+
+  pub fn get_requested_symbols_mut(&mut self, idx: &NodeId) -> Option<&mut HashSet<String>> {
+    self.requested_symbols.get_mut(idx)
+  }
+
+  pub fn set_requested_symbol(&mut self, idx: &NodeId, symbol: String) -> bool {
+    if let Some(requested) = self.requested_symbols.get_mut(idx) {
+      requested.insert(symbol);
+      true
+    } else {
+      false
+    }
   }
 
   pub fn add_entry_dependency(&mut self, dependency: Dependency) -> NodeId {
