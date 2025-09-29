@@ -1,6 +1,9 @@
-import type {ReporterEvent, PluginOptions} from '@atlaspack/types';
+import type {
+  ReporterEvent,
+  PluginOptions,
+  PluginLogger,
+} from '@atlaspack/types';
 import type {Diagnostic} from '@atlaspack/diagnostic';
-import type {Color} from 'chalk';
 
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Reporter} from '@atlaspack/plugin';
@@ -25,6 +28,7 @@ import {
   isTTY,
   resetWindow,
   persistMessage,
+  table,
 } from './render';
 import * as emoji from './emoji';
 // @ts-expect-error TS7016
@@ -69,10 +73,43 @@ const cacheWriteState: {
   startTime: null,
 };
 
+function calculateWrappingStats(
+  scopeHoistingStats:
+    | {
+        totalAssets: number;
+        wrappedAssets: number;
+      }
+    | undefined,
+  logger: PluginLogger,
+) {
+  if (!scopeHoistingStats) {
+    logger.info({
+      message: 'No scope hoisting data collected.',
+      origin: '@atlaspack/reporter-cli',
+    });
+    return;
+  }
+
+  let {totalAssets, wrappedAssets} = scopeHoistingStats;
+  let hoistedAssets = totalAssets - wrappedAssets;
+  let percentage = totalAssets > 0 ? (hoistedAssets / totalAssets) * 100 : 0;
+
+  table(
+    [{align: 'left'}, {align: 'right'}],
+    [
+      ['Wrapped Assets', wrappedAssets.toString()],
+      ['Total Assets', totalAssets.toString()],
+      ['Hoisted Assets', hoistedAssets.toString()],
+      ['Percentage Hoisted', `${percentage.toFixed(3)}%`],
+    ],
+  );
+}
+
 // Exported only for test
 export async function _report(
   event: ReporterEvent,
   options: PluginOptions,
+  logger: PluginLogger,
 ): Promise<void> {
   let logLevelFilter = logLevels[options.logLevel || 'info'];
 
@@ -170,6 +207,9 @@ export async function _report(
       );
 
       if (options.mode === 'production') {
+        if (debugTools['scope-hoisting-stats']) {
+          calculateWrappingStats(event.scopeHoistingStats, logger);
+        }
         if (debugTools['simple-cli-reporter']) {
           writeOut(
             `🛠️ Built ${event.bundleGraph.getBundles().length} bundles.`,
@@ -351,7 +391,7 @@ function indentString(string, indent = 0, initialIndent = indent) {
 }
 
 export default new Reporter({
-  report({event, options}) {
-    return _report(event, options);
+  report({event, options, logger}) {
+    return _report(event, options, logger);
   },
 }) as Reporter;

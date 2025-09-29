@@ -24,7 +24,7 @@ import type {DevDepSpecifier} from './requests/DevDepRequest';
 
 import invariant from 'assert';
 import {createBuildCache} from '@atlaspack/build-cache';
-import {blobToStream, TapStream} from '@atlaspack/utils';
+import {blobToStream, debugTools, TapStream} from '@atlaspack/utils';
 import {PluginLogger} from '@atlaspack/logger';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {Readable} from 'stream';
@@ -87,6 +87,10 @@ export type BundleInfo = {
   readonly time?: number;
   readonly cacheKeys: CacheKeyMap;
   readonly isLargeBlob: boolean;
+  readonly scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
+  };
 };
 
 type CacheKeyMap = {
@@ -313,7 +317,7 @@ export default class PackagerRunner {
     configs: Map<string, Config>,
     bundleConfigs: Map<string, Config>,
   ): Promise<BundleInfo> {
-    let {type, contents, map} = await this.getBundleResult(
+    let {type, contents, map, scopeHoistingStats} = await this.getBundleResult(
       bundle,
       bundleGraph,
       configs,
@@ -334,7 +338,13 @@ export default class PackagerRunner {
       info: PackagerRunner.getInfoKey(cacheKey),
     };
 
-    return this.writeToCache(cacheKeys, type, contents, map);
+    let cachedResult = await this.writeToCache(cacheKeys, type, contents, map);
+
+    if (debugTools['scope-hoisting-stats']) {
+      return {...cachedResult, scopeHoistingStats};
+    }
+
+    return cachedResult;
   }
 
   async getBundleResult(
@@ -346,6 +356,7 @@ export default class PackagerRunner {
     type: string;
     contents: Blob;
     map: string | null | undefined;
+    scopeHoistingStats?: BundleResult['scopeHoistingStats'];
   }> {
     let packaged = await this.package(
       bundle,
@@ -370,6 +381,7 @@ export default class PackagerRunner {
       type: res.type ?? type,
       contents: res.contents,
       map,
+      scopeHoistingStats: packaged.scopeHoistingStats,
     };
   }
 
@@ -441,14 +453,14 @@ export default class PackagerRunner {
             );
           }
 
-          let res = await this.getBundleResult(
+          let {contents} = await this.getBundleResult(
             bundleToInternalBundle(bundle),
             bundleGraphToInternalBundleGraph(bundleGraph),
             configs,
             bundleConfigs,
           );
 
-          return {contents: res.contents};
+          return {contents};
         },
       });
     } catch (e: any) {
@@ -621,7 +633,7 @@ export default class PackagerRunner {
       if (
         !(bundleEnv.sourceMap && bundleEnv.sourceMap.inlineSources === false)
       ) {
-        /* 
+        /*
           We're omitting sourcesContent during transformation to allow GC to run.
           Ensure sources are still inlined into the final source maps written to disk. UNLESS the user explicitly disabled inlineSources.
         */
