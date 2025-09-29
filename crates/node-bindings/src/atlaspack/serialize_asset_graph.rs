@@ -23,15 +23,16 @@ pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Res
       serde_json::to_vec(&match item {
         AssetGraphNode::Root => SerializedAssetGraphNode::Root,
         AssetGraphNode::Entry => SerializedAssetGraphNode::Entry,
-        AssetGraphNode::Asset(asset_node) => SerializedAssetGraphNode::Asset {
-          value: asset_node.asset.clone(),
+        AssetGraphNode::Asset(asset) => SerializedAssetGraphNode::Asset {
+          value: asset.as_ref(),
         },
-        AssetGraphNode::Dependency(dependency_node) => SerializedAssetGraphNode::Dependency {
+        AssetGraphNode::Dependency(dependency) => SerializedAssetGraphNode::Dependency {
           value: SerializedDependency {
-            id: dependency_node.dependency.id(),
-            dependency: dependency_node.dependency.as_ref().clone(),
+            id: dependency.id(),
+            dependency: dependency.as_ref(),
           },
-          has_deferred: dependency_node.state == DependencyState::Deferred,
+          // TODO: Add some tracking of id to node id in the asset_graph
+          has_deferred: *asset_graph.get_dependency_state(&0_usize) == DependencyState::Deferred,
         },
       })
     })
@@ -58,21 +59,21 @@ pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Res
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SerializedDependency {
+pub struct SerializedDependency<'a> {
   id: String,
-  dependency: Dependency,
+  dependency: &'a Dependency,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
-enum SerializedAssetGraphNode {
+enum SerializedAssetGraphNode<'a> {
   Root,
   Entry,
   Asset {
-    value: Asset,
+    value: &'a Asset,
   },
   Dependency {
-    value: SerializedDependency,
+    value: SerializedDependency<'a>,
     has_deferred: bool,
   },
 }

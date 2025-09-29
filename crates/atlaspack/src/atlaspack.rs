@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
-use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, AssetNode};
+use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode};
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::{AtlaspackOptions, SourceField, Targets};
@@ -165,11 +165,11 @@ impl Atlaspack {
         .run_request(AssetGraphRequest {})
         .await?;
 
-      let RequestResult::AssetGraph(asset_graph_request_output) = request_result else {
+      let RequestResult::AssetGraph(asset_graph_request_output) = request_result.as_ref() else {
         panic!("Something went wrong with the request tracker")
       };
 
-      let asset_graph = asset_graph_request_output.graph;
+      let asset_graph = asset_graph_request_output.graph.clone();
       self.commit_assets(asset_graph.nodes().collect())?;
       Ok(asset_graph)
     })
@@ -192,7 +192,7 @@ impl Atlaspack {
     let mut txn = self.db.database().write_txn()?;
 
     for asset_node in assets {
-      let AssetGraphNode::Asset(AssetNode { asset, .. }) = asset_node else {
+      let AssetGraphNode::Asset(asset) = asset_node else {
         continue;
       };
 

@@ -119,9 +119,7 @@ pub fn propagate_requested_symbols<F>(
         }
       }
 
-      let state = asset_graph
-        .get_dependency_state(&nested_dependency_id)
-        .unwrap();
+      let state = asset_graph.get_dependency_state(&nested_dependency_id);
 
       // If the dependency was updated, propagate to the target asset if there is one,
       // or un-defer this dependency so we transform the requested asset.

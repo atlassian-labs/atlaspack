@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use petgraph::Direction;
-use petgraph::graph::Edges;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
 use petgraph::visit::EdgeRef;
@@ -172,8 +171,20 @@ impl AssetGraph {
     Some(node.clone())
   }
 
-  pub fn get_dependency_state(&self, idx: &NodeId) -> Option<&DependencyState> {
-    self.dependency_states.get(idx)
+  pub fn get_dependency_state(&self, idx: &NodeId) -> &DependencyState {
+    self
+      .dependency_states
+      .get(idx)
+      .expect("Dependency state should exist")
+  }
+
+  pub fn set_dependency_state(&mut self, idx: &NodeId, state: DependencyState) {
+    let dep_state = self
+      .dependency_states
+      .get_mut(idx)
+      .expect("Dependency state should exist");
+
+    *dep_state = state;
   }
 
   pub fn get_dependencies(&self) -> Vec<&Dependency> {
@@ -194,7 +205,7 @@ impl AssetGraph {
         self.node_id_to_node_index[asset_node_id],
         Direction::Outgoing,
       )
-      .filter_map(|node_index| self.graph.node_weight(node_index).map(|n| *n))
+      .filter_map(|node_index| self.graph.node_weight(node_index).copied())
       .collect()
   }
 
