@@ -6,7 +6,7 @@ import url from 'node:url';
 import path from 'node:path';
 import glob from 'glob';
 import pkg from 'json5';
-import { parse as astParse } from '@ast-grep/napi';
+import {parse as astParse} from '@ast-grep/napi';
 
 const {parse} = pkg;
 
@@ -44,7 +44,7 @@ function checkForPackageJsonImports(packagePath) {
     // Get all TypeScript/JavaScript files in src directory recursively
     const sourceFiles = glob.sync('**/*.{ts,tsx,js,jsx}', {
       cwd: srcPath,
-      absolute: true
+      absolute: true,
     });
 
     for (const filePath of sourceFiles) {
@@ -54,7 +54,8 @@ function checkForPackageJsonImports(packagePath) {
 
         // Determine language for ast-grep based on file extension
         const ext = path.extname(filePath);
-        const language = ext === '.ts' || ext === '.tsx' ? 'typescript' : 'javascript';
+        const language =
+          ext === '.ts' || ext === '.tsx' ? 'typescript' : 'javascript';
 
         // Parse the file into an AST
         const ast = astParse(language, content);
@@ -84,8 +85,10 @@ function checkForPackageJsonImports(packagePath) {
                 // Remove quotes and check if it's a relative import of package.json
                 const cleanPath = importPath.replace(/['"]/g, '');
                 // Only match relative imports to own package.json (starts with ./ or ../)
-                if ((cleanPath.startsWith('./') || cleanPath.startsWith('../')) &&
-                    cleanPath.endsWith('/package.json')) {
+                if (
+                  (cleanPath.startsWith('./') || cleanPath.startsWith('../')) &&
+                  cleanPath.endsWith('/package.json')
+                ) {
                   return true;
                 }
               }
@@ -155,7 +158,10 @@ function getAllPackages(frozen = false) {
       const relativeTsconfigPath = path.relative(__root, tsconfigPath);
 
       // Calculate expected extends path relative to package directory
-      const expectedExtends = path.relative(packagePath, path.join(__root, 'tsconfig.base.json'));
+      const expectedExtends = path.relative(
+        packagePath,
+        path.join(__root, 'tsconfig.base.json'),
+      );
 
       let tsconfigChanged = false;
 
@@ -199,7 +205,10 @@ function getAllPackages(frozen = false) {
 
       // Assertion 3: Check if source code imports package.json, and if so, validate it's in include array
       const hasPackageJsonImport = checkForPackageJsonImports(packagePath);
-      if (hasPackageJsonImport && (!tsconfig.include || !tsconfig.include.includes('./package.json'))) {
+      if (
+        hasPackageJsonImport &&
+        (!tsconfig.include || !tsconfig.include.includes('./package.json'))
+      ) {
         if (frozen) {
           console.error(
             `❌ ${relativeTsconfigPath}: Source code imports package.json but "./package.json" is missing from "include" array. Got: ${JSON.stringify(tsconfig.include || [])}`,
@@ -245,7 +254,7 @@ function getAllPackages(frozen = false) {
     }
   }
 
-  return { packages, validationErrors, validationFixes };
+  return {packages, validationErrors, validationFixes};
 }
 
 /**
@@ -389,7 +398,7 @@ function main() {
 
   console.log('🔍 Scanning for TypeScript packages...');
 
-  const { packages, validationErrors, validationFixes } = getAllPackages(frozen);
+  const {packages, validationErrors, validationFixes} = getAllPackages(frozen);
   console.log(
     `Found ${packages.size} TypeScript packages with composite: true`,
   );
