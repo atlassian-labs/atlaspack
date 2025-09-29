@@ -36,10 +36,8 @@ pub struct AssetGraph {
   nodes: Vec<AssetGraphNode>,
   requested_symbols: HashMap<NodeId, HashSet<String>>,
   dependency_states: HashMap<NodeId, DependencyState>,
-  content_key_to_node_id: HashMap<String, NodeId>,
   node_id_to_node_index: HashMap<NodeId, NodeIndex>,
   root_node_id: NodeId,
-  pub starting_node_count: usize,
 }
 
 impl Default for AssetGraph {
@@ -60,13 +58,11 @@ impl AssetGraph {
 
     AssetGraph {
       graph,
-      content_key_to_node_id: HashMap::new(),
       requested_symbols: HashMap::new(),
       dependency_states: HashMap::new(),
       node_id_to_node_index,
       nodes,
       root_node_id,
-      starting_node_count: 0,
     }
   }
 
@@ -87,10 +83,6 @@ impl AssetGraph {
     self.nodes.iter()
   }
 
-  pub fn new_nodes(&self) -> Vec<&AssetGraphNode> {
-    self.nodes[self.starting_node_count..].iter().collect()
-  }
-
   pub fn root_node(&self) -> NodeId {
     self.root_node_id
   }
@@ -107,19 +99,9 @@ impl AssetGraph {
     a != b
   }
 
-  fn add_node(&mut self, content_key: String, node: AssetGraphNode) -> NodeId {
-    let node_id = if let Some(existing_node_id) = self.content_key_to_node_id.get(&content_key) {
-      self.nodes[*existing_node_id] = node;
-
-      *existing_node_id
-    } else {
-      let node_id = self.nodes.len();
-      self.nodes.push(node);
-      self
-        .content_key_to_node_id
-        .insert(content_key.clone(), node_id);
-      node_id
-    };
+  fn add_node(&mut self, node: AssetGraphNode) -> NodeId {
+    let node_id = self.nodes.len();
+    self.nodes.push(node);
 
     let node_index = self.graph.add_node(node_id);
     self.node_id_to_node_index.insert(node_id, node_index);
@@ -128,7 +110,7 @@ impl AssetGraph {
   }
 
   pub fn add_asset(&mut self, asset: Arc<Asset>) -> NodeId {
-    let node_id = self.add_node(asset.id.clone(), AssetGraphNode::Asset(asset));
+    let node_id = self.add_node(AssetGraphNode::Asset(asset));
     self.requested_symbols.insert(node_id, HashSet::new());
     node_id
   }
@@ -142,10 +124,7 @@ impl AssetGraph {
   }
 
   pub fn add_dependency(&mut self, dependency: Dependency) -> NodeId {
-    let node_id = self.add_node(
-      dependency.id(),
-      AssetGraphNode::Dependency(Arc::new(dependency)),
-    );
+    let node_id = self.add_node(AssetGraphNode::Dependency(Arc::new(dependency)));
 
     self.requested_symbols.insert(node_id, HashSet::new());
     self.dependency_states.insert(node_id, DependencyState::New);
