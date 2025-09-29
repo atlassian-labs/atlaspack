@@ -22,6 +22,7 @@ import ThrowableDiagnostic, {
 import {validateSchema, remapSourceLocation, globMatch} from '@atlaspack/utils';
 import pkg from '../package.json';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import path from 'path';
 
 const JSX_EXTENSIONS = {
   jsx: true,
@@ -199,7 +200,7 @@ type MacroContext = {
 };
 
 export default new Transformer({
-  async loadConfig({config, options}) {
+  async loadConfig({config, options, logger}) {
     let packageJson = await config.getPackage();
     let isJSX,
       pragma,
@@ -369,14 +370,19 @@ export default new Transformer({
       if (conf.contents?.atlaskitTokens) {
         // @ts-expect-error TS2339
         const tokensConfig = conf.contents.atlaskitTokens;
+        const tokenDataPath = path.join(
+          options.projectRoot,
+          tokensConfig.tokenDataPath,
+        );
         atlaskitTokens = {
           shouldUseAutoFallback: tokensConfig.shouldUseAutoFallback ?? true,
           shouldForceAutoFallback: tokensConfig.shouldForceAutoFallback ?? true,
           forceAutoFallbackExemptions:
             tokensConfig.forceAutoFallbackExemptions ?? [],
           defaultTheme: tokensConfig.defaultTheme ?? 'light',
-          tokenDataPath: tokensConfig.tokenDataPath, // Required by schema validation
+          tokenDataPath: tokenDataPath,
         };
+        config.invalidateOnFileChange(tokenDataPath);
       }
     }
 
@@ -584,7 +590,7 @@ export default new Transformer({
           force_auto_fallback_exemptions:
             config.atlaskitTokens.forceAutoFallbackExemptions,
           default_theme: config.atlaskitTokens.defaultTheme,
-          token_data_path: config.atlaskitTokens.tokenDataPath, // Now required
+          token_data_path: config.atlaskitTokens.tokenDataPath,
         },
       }),
       enable_global_this_aliaser: Boolean(config.enableGlobalThisAliaser),
