@@ -139,6 +139,18 @@ impl Request for AssetRequest {
       .invalidate_on_file_change
       .push(result.asset.file_path.clone());
 
+    for dep in result.dependencies.iter_mut() {
+      dep.ensure_id();
+    }
+
+    for dep in result
+      .discovered_assets
+      .iter_mut()
+      .flat_map(|da| da.dependencies.iter_mut())
+    {
+      dep.ensure_id();
+    }
+
     Ok(ResultAndInvalidations {
       result: RequestResult::Asset(AssetRequestOutput {
         asset: Arc::new(result.asset),
