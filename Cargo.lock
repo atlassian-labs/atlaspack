@@ -740,7 +740,6 @@ dependencies = [
  "anyhow",
  "atlaspack_filesystem",
  "parcel_sourcemap 2.1.1",
- "parcel_sourcemap 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "pretty_assertions",
  "regex",
  "rkyv 0.7.45",
