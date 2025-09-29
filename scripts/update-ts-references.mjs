@@ -178,11 +178,23 @@ function getAllPackages(frozen = false) {
 
       // Assertion 2: Should include compilerOptions.composite: true
       if (!tsconfig.compilerOptions?.composite) {
-        console.error(
-          `❌ ${relativeTsconfigPath}: Expected "compilerOptions.composite": true, but got: ${tsconfig.compilerOptions?.composite || 'undefined'}`,
-        );
-        validationErrors++;
-        continue;
+        if (frozen) {
+          console.error(
+            `❌ ${relativeTsconfigPath}: Expected "compilerOptions.composite": true, but got: ${tsconfig.compilerOptions?.composite || 'undefined'}`,
+          );
+          validationErrors++;
+          continue;
+        } else {
+          console.log(
+            `🔧 ${relativeTsconfigPath}: Adding "compilerOptions.composite": true`,
+          );
+          if (!tsconfig.compilerOptions) {
+            tsconfig.compilerOptions = {};
+          }
+          tsconfig.compilerOptions.composite = true;
+          tsconfigChanged = true;
+          validationFixes++;
+        }
       }
 
       // Assertion 3: Check if source code imports package.json, and if so, validate it's in include array
