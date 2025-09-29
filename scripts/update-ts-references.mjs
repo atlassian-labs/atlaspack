@@ -6,6 +6,8 @@ import url from 'node:url';
 import path from 'node:path';
 import glob from 'glob';
 import pkg from 'json5';
+import {parse as astParse} from '@ast-grep/napi';
+
 const {parse} = pkg;
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -17,19 +19,105 @@ const IGNORED_PATTERNS = [
   'node-resolver-core/test/fixture',
   'test/fixtures',
   'examples',
+  'example',
   'integration-tests',
   'workers/test/integration',
   'fixtures',
   'fixture',
   'template',
   'lib',
+  'packages/dev/atlaspack-inspector',
 ];
+
+/**
+ * Check if a package's source code imports its package.json file using AST analysis
+ */
+function checkForPackageJsonImports(packagePath) {
+  const srcPath = path.join(packagePath, 'src');
+
+  // Check if src directory exists
+  if (!fs.existsSync(srcPath)) {
+    return false;
+  }
+
+  try {
+    // Get all TypeScript/JavaScript files in src directory recursively
+    const sourceFiles = glob.sync('**/*.{ts,tsx,js,jsx}', {
+      cwd: srcPath,
+      absolute: true,
+    });
+
+    for (const filePath of sourceFiles) {
+      try {
+        const content = fs.readFileSync(filePath, 'utf8');
+        if (!content.includes('package.json')) continue;
+
+        // Determine language for ast-grep based on file extension
+        const ext = path.extname(filePath);
+        const language =
+          ext === '.ts' || ext === '.tsx' ? 'typescript' : 'javascript';
+
+        // Parse the file into an AST
+        const ast = astParse(language, content);
+        const root = ast.root();
+
+        // Define patterns to match different types of package.json imports
+        const patterns = [
+          // ES6 import statements - default imports
+          'import $IDENTIFIER from $STRING',
+          // ES6 import statements - named imports
+          'import { $$$NAMES } from $STRING',
+          // ES6 import statements - namespace imports
+          'import * as $IDENTIFIER from $STRING',
+          // CommonJS require statements
+          'require($STRING)',
+        ];
+
+        // Check each pattern
+        for (const pattern of patterns) {
+          const matches = root.findAll(pattern);
+          for (const match of matches) {
+            try {
+              // Get the import/require path
+              const stringNodes = match.findAll('$STRING');
+              for (const stringNode of stringNodes) {
+                const importPath = stringNode.text();
+                // Remove quotes and check if it's a relative import of package.json
+                const cleanPath = importPath.replace(/['"]/g, '');
+                // Only match relative imports to own package.json (starts with ./ or ../)
+                if (
+                  (cleanPath.startsWith('./') || cleanPath.startsWith('../')) &&
+                  cleanPath.endsWith('/package.json')
+                ) {
+                  return true;
+                }
+              }
+            } catch {
+              // Continue checking other matches if this one fails
+              continue;
+            }
+          }
+        }
+      } catch {
+        // Skip files that can't be parsed, but don't fail the whole process
+        continue;
+      }
+    }
+  } catch {
+    // If we can't scan the directory, assume no imports
+    return false;
+  }
+
+  return false;
+}
 
 /**
  * Get all package information from the monorepo
  */
-function getAllPackages() {
+function getAllPackages(frozen = false) {
   const packages = new Map();
+  let validationErrors = 0;
+  let validationFixes = 0;
 
   for (const packageJsonPathRel of glob.sync('packages/**/*/package.json', {
     cwd: __root,
@@ -66,12 +154,86 @@ function getAllPackages() {
         );
       }
 
-      // Only include packages with composite: true
-      if (!tsconfig.compilerOptions?.composite) {
-        continue;
+      // Validate tsconfig assertions
+      const relativeTsconfigPath = path.relative(__root, tsconfigPath);
+
+      // Calculate expected extends path relative to package directory
+      const expectedExtends = path.relative(
+        packagePath,
+        path.join(__root, 'tsconfig.base.json'),
+      );
+
+      let tsconfigChanged = false;
+
+      // Assertion 1: Should extend tsconfig.base.json from the root
+      if (!tsconfig.extends || tsconfig.extends !== expectedExtends) {
+        if (frozen) {
+          console.error(
+            `❌ ${relativeTsconfigPath}: Expected "extends": "${expectedExtends}", but got: "${tsconfig.extends || 'undefined'}"`,
+          );
+          validationErrors++;
+        } else {
+          console.log(
+            `🔧 ${relativeTsconfigPath}: Fixing "extends" path from "${tsconfig.extends || 'undefined'}" to "${expectedExtends}"`,
+          );
+          tsconfig.extends = expectedExtends;
+          tsconfigChanged = true;
+          validationFixes++;
+        }
       }
 
-      const relativeTsconfigPath = path.relative(__root, tsconfigPath);
+      // Assertion 2: Should include compilerOptions.composite: true
+      if (!tsconfig.compilerOptions?.composite) {
+        if (frozen) {
+          console.error(
+            `❌ ${relativeTsconfigPath}: Expected "compilerOptions.composite": true, but got: ${tsconfig.compilerOptions?.composite || 'undefined'}`,
+          );
+          validationErrors++;
+          continue;
+        } else {
+          console.log(
+            `🔧 ${relativeTsconfigPath}: Adding "compilerOptions.composite": true`,
+          );
+          if (!tsconfig.compilerOptions) {
+            tsconfig.compilerOptions = {};
+          }
+          tsconfig.compilerOptions.composite = true;
+          tsconfigChanged = true;
+          validationFixes++;
+        }
+      }
+
+      // Assertion 3: Check if source code imports package.json, and if so, validate it's in include array
+      const hasPackageJsonImport = checkForPackageJsonImports(packagePath);
+      if (
+        hasPackageJsonImport &&
+        (!tsconfig.include || !tsconfig.include.includes('./package.json'))
+      ) {
+        if (frozen) {
+          console.error(
+            `❌ ${relativeTsconfigPath}: Source code imports package.json but "./package.json" is missing from "include" array. Got: ${JSON.stringify(tsconfig.include || [])}`,
+          );
+          validationErrors++;
+        } else {
+          console.log(
+            `🔧 ${relativeTsconfigPath}: Adding "./package.json" to include array (source code imports package.json)`,
+          );
+          if (!tsconfig.include) {
+            tsconfig.include = [];
+          }
+          tsconfig.include.push('./package.json');
+          tsconfigChanged = true;
+          validationFixes++;
+        }
+      }
+
+      // Write the updated tsconfig if changes were made
+      if (tsconfigChanged) {
+        fs.writeFileSync(
+          tsconfigPath,
+          JSON.stringify(tsconfig, null, 2) + '\n',
+        );
+      }
 
       packages.set(pkg.name, {
         name: pkg.name,
@@ -92,7 +254,7 @@ function getAllPackages() {
     }
   }
 
-  return packages;
+  return {packages, validationErrors, validationFixes};
 }
 
 /**
@@ -236,10 +398,16 @@ function main() {
 
   console.log('🔍 Scanning for TypeScript packages...');
 
-  const packages = getAllPackages();
+  const {packages, validationErrors, validationFixes} = getAllPackages(frozen);
   console.log(
     `Found ${packages.size} TypeScript packages with composite: true`,
   );
+
+  if (validationFixes > 0) {
+    console.log(
+      `🔧 Fixed ${validationFixes} validation issue${validationFixes === 1 ? '' : 's'}`,
+    );
+  }
 
   console.log('\n📝 Updating individual package references...');
   const packageUpdates = updateTsConfigReferences(packages, frozen);
@@ -254,10 +422,22 @@ function main() {
   console.log(
     `  - tsconfig.paths.json ${rootUpdated ? 'updated' : 'unchanged'}`,
   );
-
-  if (frozen && (packageUpdates > 0 || rootUpdated)) {
+  if (validationFixes > 0) {
     console.log(
-      '\n❌ Exiting with error. Rerun without --frozen to update references.',
+      `  - Fixed ${validationFixes} validation issue${validationFixes === 1 ? '' : 's'}`,
+    );
+  }
+
+  if (frozen && (packageUpdates > 0 || rootUpdated || validationFixes > 0)) {
+    console.log(
+      '\n❌ Exiting with error. Rerun without --frozen to update references and fix validation issues.',
+    );
+    process.exitCode = 1;
+  }
+
+  if (validationErrors > 0) {
+    console.log(
+      `\n❌ Found ${validationErrors} validation error${validationErrors === 1 ? '' : 's'}. Please fix the issues above.`,
     );
     process.exitCode = 1;
   }
