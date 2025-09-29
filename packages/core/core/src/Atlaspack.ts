@@ -427,8 +427,13 @@ export default class Atlaspack {
         signal,
       });
 
-      let {bundleGraph, bundleInfo, changedAssets, assetRequests} =
-        await this.#requestTracker.runRequest(request, {force: true});
+      let {
+        bundleGraph,
+        bundleInfo,
+        changedAssets,
+        assetRequests,
+        scopeHoistingStats,
+      } = await this.#requestTracker.runRequest(request, {force: true});
 
       this.#requestedAssetIds.clear();
 
@@ -479,6 +484,7 @@ export default class Atlaspack {
               buildTime: 0,
               requestBundle: event.requestBundle,
               unstable_requestStats: {},
+              scopeHoistingStats: event.scopeHoistingStats,
             };
           }
 
@@ -505,6 +511,7 @@ export default class Atlaspack {
           return result;
         },
         unstable_requestStats: this.#requestTracker.flushStats(),
+        scopeHoistingStats,
       };
 
       // @ts-expect-error TS2345

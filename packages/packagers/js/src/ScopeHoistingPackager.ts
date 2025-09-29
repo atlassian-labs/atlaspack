@@ -82,6 +82,15 @@ export interface OutputFormat {
   buildBundlePostlude(): [string, number];
 }
 
+export type PackageResult = {
+  contents: string;
+  map: SourceMap | null | undefined;
+  scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
+  };
+};
+
 export class ScopeHoistingPackager {
   options: PluginOptions;
   bundleGraph: BundleGraph<NamedBundle>;
@@ -153,10 +162,7 @@ export class ScopeHoistingPackager {
     this.globalNames = GLOBALS_BY_CONTEXT[bundle.env.context];
   }
 
-  async package(): Promise<{
-    contents: string;
-    map: SourceMap | null | undefined;
-  }> {
+  async package(): Promise<PackageResult> {
     await this.loadAssets();
     this.buildExportedSymbols();
 
@@ -320,10 +326,16 @@ export class ScopeHoistingPackager {
       }
     }
 
-    return {
-      contents: res,
-      map: sourceMap,
-    };
+    const result: PackageResult = {contents: res, map: sourceMap};
+
+    if (debugTools['scope-hoisting-stats']) {
+      result.scopeHoistingStats = {
+        totalAssets: this.assetOutputs.size,
+        wrappedAssets: this.wrappedAssets.size,
+      };
+    }
+
+    return result;
   }
 
   shouldBundleQueue(bundle: NamedBundle): boolean {
