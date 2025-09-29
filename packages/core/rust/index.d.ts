@@ -88,7 +88,6 @@ export interface FileSystem {
   extensions?: Array<string>
   packageExports: boolean
   typescript?: boolean
-  reduceStringCreation?: boolean
 }
 export interface ResolveOptions {
   filename: string

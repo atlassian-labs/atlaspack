@@ -352,6 +352,11 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         .insert("conditions".to_string(), serde_json::to_value(&converted)?);
     }
 
+    asset.meta.insert(
+      "styleRules".to_string(),
+      serde_json::to_value(&transformation_result.compiled_css_rules)?,
+    );
+
     if let Some(errors) = transformation_result.diagnostics {
       return Err(anyhow!(map_diagnostics(
         errors,

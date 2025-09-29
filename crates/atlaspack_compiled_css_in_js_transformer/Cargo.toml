@@ -1,0 +1,25 @@
+[package]
+name = "atlaspack_compiled_css_in_js_transformer"
+version = "0.1.0"
+authors = ["Jake Lane <me@jakelane.me>"]
+edition = "2024"
+description = "Atlaspack Compiled CSS-in-JS implementation"
+
+[lints]
+workspace = true
+
+[dependencies]
+ahash = { workspace = true }
+rustc-hash = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true}
+swc_atoms = { workspace = true }
+swc_common = { workspace = true }
+swc_core = { workspace = true, features = ["ecma_plugin_transform", "__utils", "ecma_quote"] }
+swc_ecma_ast = { workspace = true }
+swc_ecma_transforms_testing = { workspace = true }
+swc_ecma_visit = { workspace = true }
+getrandom = { workspace = true, features = ["js"] }
+urlencoding = { workspace = true }
+xxhash-rust = { workspace = true, features = ["xxh3"] }
+

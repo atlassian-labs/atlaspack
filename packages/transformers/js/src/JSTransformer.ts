@@ -349,6 +349,7 @@ export default new Transformer({
     };
   },
   async transform({asset, config, options, logger}) {
+    console.log('JS Transform called for:', asset.filePath);
     let [code, originalMap] = await Promise.all([
       asset.getBuffer(),
       asset.getMap(),
@@ -475,6 +476,8 @@ export default new Transformer({
       conditions,
       // @ts-expect-error TS2339
       magic_comments,
+      // @ts-expect-error TS2339
+      compiled_css_rules,
     } = await (transformAsync || transform)({
       filename: asset.filePath,
       code,
@@ -643,6 +646,13 @@ export default new Transformer({
           }
         : null,
     });
+
+    if (compiled_css_rules && compiled_css_rules.length > 0) {
+      console.log(
+        'Transform result for compiled_css_rules:',
+        compiled_css_rules,
+      );
+    }
 
     if (getFeatureFlag('conditionalBundlingApi')) {
       asset.meta.conditions = conditions.map(
@@ -1169,6 +1179,12 @@ export default new Transformer({
           },
         });
       }
+    }
+
+    // Set CSS rules for the optimizer
+    if (compiled_css_rules && compiled_css_rules.length > 0) {
+      console.log('Setting CSS rules:', compiled_css_rules);
+      asset.meta.styleRules = compiled_css_rules;
     }
 
     asset.type = 'js';

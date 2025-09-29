@@ -1,0 +1,26 @@
+{
+  "name": "@atlaspack/compiled-example",
+  "version": "2.12.0",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build:inspect": "PARCEL_WORKERS=0 node --inspect-brk $(yarn bin atlaspack) build --no-cache src/index.html",
+    "build": "atlaspack build --no-cache src/index.html",
+    "dev": "npx nodemon -e 'ts, tsx, json, .parcelrc' --watch . --ignore 'dist/' --exec 'yarn build && node serve.js'",
+    "serve": "atlaspack serve --no-cache src/index.html"
+  },
+  "dependencies": {
+    "@atlaskit/button": "*",
+    "@compiled/react": "*",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "@atlaspack/cli": "2.14.13",
+    "@atlaspack/optimizer-compiled-css-in-js": "2.14.32",
+    "@atlaspack/config-default": "6.0.1",
+    "@types/react-dom": "^17.0.2",
+    "express": "*"
+  },
+  "type": "commonjs"
+}
