@@ -209,12 +209,12 @@ impl AssetGraphBuilder {
       let _ = self
         .request_context
         .queue_request(asset_request, self.sender.clone());
-    } else if let Some(asset_node_index) = self.asset_request_to_asset_id.get(&id) {
-      if !self.graph.has_edge(&dependency_id, asset_node_index) {
+    } else if let Some(asset_node_id) = self.asset_request_to_asset_id.get(&id) {
+      if !self.graph.has_edge(&dependency_id, asset_node_id) {
         // We have already completed this AssetRequest so we can connect the
         // Dependency to the Asset immediately
-        self.graph.add_edge(&dependency_id, asset_node_index);
-        self.propagate_requested_symbols(*asset_node_index, dependency_id);
+        self.graph.add_edge(&dependency_id, asset_node_id);
+        self.propagate_requested_symbols(*asset_node_id, dependency_id);
       }
     } else {
       // The AssetRequest has already been kicked off but is yet to
@@ -301,10 +301,10 @@ impl AssetGraphBuilder {
     // Connect any previously discovered Dependencies that were waiting
     // for this AssetNode to be created
     if let Some(waiting) = self.waiting_asset_requests.remove(&request_id) {
-      for dep in waiting {
-        if !self.graph.has_edge(&dep, &asset_id) {
-          self.graph.add_edge(&dep, &asset_id);
-          self.propagate_requested_symbols(asset_id, dep);
+      for dep_id in waiting {
+        if !self.graph.has_edge(&dep_id, &asset_id) {
+          self.graph.add_edge(&dep_id, &asset_id);
+          self.propagate_requested_symbols(asset_id, dep_id);
         }
       }
     }
@@ -359,11 +359,11 @@ impl AssetGraphBuilder {
         .as_ref()
         .is_some_and(|key| key == &dependency.specifier);
 
-      let dependency_idx = self.graph.add_dependency(dependency);
-      self.graph.add_edge(&asset_id, &dependency_idx);
+      let dependency_id = self.graph.add_dependency(dependency);
+      self.graph.add_edge(&asset_id, &dependency_id);
 
       if dep_to_root_asset {
-        self.graph.add_edge(&dependency_idx, &root_asset.1);
+        self.graph.add_edge(&dependency_id, &root_asset.1);
       }
 
       // If the dependency points to a dicovered asset then add the asset using the new
@@ -375,26 +375,26 @@ impl AssetGraphBuilder {
       {
         let existing_discovered_asset = added_discovered_assets.get(&asset.id);
 
-        if let Some(asset_node_index) = existing_discovered_asset {
+        if let Some(asset_node_id) = existing_discovered_asset {
           // This discovered_asset has already been added to the graph so we
           // just need to connect the dependency node to the asset node
-          self.graph.add_edge(&dependency_idx, asset_node_index);
+          self.graph.add_edge(&dependency_id, asset_node_id);
         } else {
           // This discovered_asset isn't yet in the graph so we'll need to add
           // it and assign it's dependencies by calling added_discovered_assets
           // recursively.
-          let asset_idx = self.graph.add_asset(Arc::new(asset.clone()));
-          self.graph.add_edge(&dependency_idx, &asset_idx);
-          added_discovered_assets.insert(asset.id.clone(), asset_idx);
+          let asset_id = self.graph.add_asset(Arc::new(asset.clone()));
+          self.graph.add_edge(&dependency_id, &asset_id);
+          added_discovered_assets.insert(asset.id.clone(), asset_id);
 
           self.add_asset_dependencies(
             dependencies,
             discovered_assets,
-            asset_idx,
+            asset_id,
             added_discovered_assets,
             root_asset.clone(),
           );
-          self.propagate_requested_symbols(asset_idx, dependency_idx);
+          self.propagate_requested_symbols(asset_id, dependency_id);
         }
       }
     }

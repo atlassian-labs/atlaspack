@@ -237,10 +237,10 @@ impl AssetGraph {
     )
   }
 
-  pub fn add_edge(&mut self, from_idx: &NodeId, to_idx: &NodeId) {
+  pub fn add_edge(&mut self, from_id: &NodeId, to_id: &NodeId) {
     self.graph.add_edge(
-      self.node_id_to_node_index[from_idx],
-      self.node_id_to_node_index[to_idx],
+      self.node_id_to_node_index[from_id],
+      self.node_id_to_node_index[to_id],
       (),
     );
   }
