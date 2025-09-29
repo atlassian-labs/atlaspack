@@ -39,7 +39,6 @@ pub struct AssetGraph {
   content_key_to_node_id: HashMap<String, NodeId>,
   node_id_to_node_index: HashMap<NodeId, NodeIndex>,
   root_node_id: NodeId,
-  node_delta: Vec<NodeId>,
   pub starting_node_count: usize,
 }
 
@@ -67,7 +66,6 @@ impl AssetGraph {
       node_id_to_node_index,
       nodes,
       root_node_id,
-      node_delta: Vec::new(),
       starting_node_count: 0,
     }
   }
@@ -93,14 +91,6 @@ impl AssetGraph {
     self.nodes[self.starting_node_count..].iter().collect()
   }
 
-  pub fn updated_nodes(&self) -> Vec<&AssetGraphNode> {
-    self
-      .node_delta
-      .iter()
-      .map(|node_id| &self.nodes[*node_id])
-      .collect()
-  }
-
   pub fn root_node(&self) -> NodeId {
     self.root_node_id
   }
@@ -120,7 +110,6 @@ impl AssetGraph {
   fn add_node(&mut self, content_key: String, node: AssetGraphNode) -> NodeId {
     let node_id = if let Some(existing_node_id) = self.content_key_to_node_id.get(&content_key) {
       self.nodes[*existing_node_id] = node;
-      self.node_delta.push(*existing_node_id);
 
       *existing_node_id
     } else {
