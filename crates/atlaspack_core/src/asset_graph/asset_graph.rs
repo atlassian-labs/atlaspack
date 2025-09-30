@@ -126,6 +126,10 @@ impl AssetGraph {
     Some(asset_node)
   }
 
+  pub fn get_node_id_by_content_key(&self, content_key: &str) -> Option<&NodeId> {
+    self.content_key_to_node_id.get(content_key)
+  }
+
   pub fn get_assets(&self) -> impl Iterator<Item = &Asset> {
     self.nodes().filter_map(|node| {
       let AssetGraphNode::Asset(asset) = node else {
