@@ -3,6 +3,7 @@ import SourceMap from './SourceMap';
 
 import {SourceMap as AtlaspackSourceMap} from '@atlaspack/rust';
 
+const INSTANCE_FOR_VERSION_COMPARISON = new SourceMap();
 export default class NodeSourceMap extends SourceMap {
   constructor(projectRoot: string = '/', buffer?: Buffer) {
     super(projectRoot);
@@ -89,11 +90,23 @@ export default class NodeSourceMap extends SourceMap {
     if (sourceMap == null || sourceMap == undefined) {
       return undefined;
     }
-    if (sourceMap instanceof SourceMap) {
+
+    // We can't use instanceof here because if we're using a resolution for @parcel/source-map,
+    // it will be a different instance as it'll be a "copy" of @atlaspack/source-map
+    if (
+      sourceMap.libraryVersion ===
+      INSTANCE_FOR_VERSION_COMPARISON.libraryVersion
+    ) {
       return sourceMap.toBuffer();
     }
 
-    throw new Error('Source map is not an Atlaspack SourceMap');
+    throw new Error(
+      'Source map is not an Atlaspack SourceMap (Expected version ' +
+        INSTANCE_FOR_VERSION_COMPARISON.libraryVersion +
+        ', got ' +
+        sourceMap.libraryVersion +
+        ')',
+    );
   }
 }
 
