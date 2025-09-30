@@ -1,7 +1,9 @@
 import type {VLQMap, GenerateEmptyMapOptions} from './types';
 import SourceMap, {SOURCE_MAP_VERSION} from './SourceMap';
-
 import {SourceMap as AtlaspackSourceMap} from '@atlaspack/rust';
+
+// Re-export types for consumers
+export type * from './types';
 
 export default class NodeSourceMap extends SourceMap {
   constructor(projectRoot: string = '/', buffer?: Buffer) {
