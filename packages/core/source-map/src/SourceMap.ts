@@ -9,6 +9,8 @@ import type {
 import {partialVlqMapToSourceMap} from './utils';
 import {version} from '../package.json';
 
+export const SOURCE_MAP_VERSION = `atlaspack:${version}`;
+
 export default class SourceMap {
   /**
    * @private
@@ -31,7 +33,7 @@ export default class SourceMap {
 
   // Use this to invalidate saved buffers, we don't check versioning at all in Rust
   get libraryVersion(): string {
-    return `atlaspack:${version}`;
+    return SOURCE_MAP_VERSION;
   }
 
   /**

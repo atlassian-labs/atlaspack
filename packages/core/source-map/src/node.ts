@@ -1,9 +1,8 @@
 import type {VLQMap, GenerateEmptyMapOptions} from './types';
-import SourceMap from './SourceMap';
+import SourceMap, {SOURCE_MAP_VERSION} from './SourceMap';
 
 import {SourceMap as AtlaspackSourceMap} from '@atlaspack/rust';
 
-const INSTANCE_FOR_VERSION_COMPARISON = new SourceMap();
 export default class NodeSourceMap extends SourceMap {
   constructor(projectRoot: string = '/', buffer?: Buffer) {
     super(projectRoot);
@@ -84,6 +83,9 @@ export default class NodeSourceMap extends SourceMap {
     return map;
   }
 
+  // This function exists to ensure that source map instances from (for example) @parcel/source-map
+  // are not used in place of @atlaspack/source-map, as from a JS point of view this is fine, but the
+  // underlying buffer may be different, and can cause build time errors.
   static safeToBuffer<T extends SourceMap>(
     sourceMap: T | null | undefined,
   ): Buffer | undefined {
@@ -93,16 +95,13 @@ export default class NodeSourceMap extends SourceMap {
 
     // We can't use instanceof here because if we're using a resolution for @parcel/source-map,
     // it will be a different instance as it'll be a "copy" of @atlaspack/source-map
-    if (
-      sourceMap.libraryVersion ===
-      INSTANCE_FOR_VERSION_COMPARISON.libraryVersion
-    ) {
+    if (sourceMap.libraryVersion === SOURCE_MAP_VERSION) {
       return sourceMap.toBuffer();
     }
 
     throw new Error(
       'Source map is not an Atlaspack SourceMap (Expected version ' +
-        INSTANCE_FOR_VERSION_COMPARISON.libraryVersion +
+        SOURCE_MAP_VERSION +
         ', got ' +
         sourceMap.libraryVersion +
         ')',
