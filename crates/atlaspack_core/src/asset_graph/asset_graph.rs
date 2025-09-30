@@ -37,6 +37,7 @@ pub struct AssetGraph {
   requested_symbols: HashMap<NodeId, HashSet<String>>,
   dependency_states: HashMap<NodeId, DependencyState>,
   node_id_to_node_index: HashMap<NodeId, NodeIndex>,
+  content_key_to_node_id: HashMap<String, NodeId>,
   root_node_id: NodeId,
 }
 
@@ -61,6 +62,7 @@ impl AssetGraph {
       requested_symbols: HashMap::new(),
       dependency_states: HashMap::new(),
       node_id_to_node_index,
+      content_key_to_node_id: HashMap::new(),
       nodes,
       root_node_id,
     }
@@ -99,18 +101,19 @@ impl AssetGraph {
     a != b
   }
 
-  fn add_node(&mut self, node: AssetGraphNode) -> NodeId {
+  fn add_node(&mut self, content_key: String, node: AssetGraphNode) -> NodeId {
     let node_id = self.nodes.len();
     self.nodes.push(node);
 
     let node_index = self.graph.add_node(node_id);
     self.node_id_to_node_index.insert(node_id, node_index);
+    self.content_key_to_node_id.insert(content_key, node_id);
 
     node_id
   }
 
   pub fn add_asset(&mut self, asset: Arc<Asset>) -> NodeId {
-    let node_id = self.add_node(AssetGraphNode::Asset(asset));
+    let node_id = self.add_node(asset.id.clone(), AssetGraphNode::Asset(asset));
     self.requested_symbols.insert(node_id, HashSet::new());
     node_id
   }
@@ -133,7 +136,10 @@ impl AssetGraph {
   }
 
   pub fn add_dependency(&mut self, dependency: Dependency) -> NodeId {
-    let node_id = self.add_node(AssetGraphNode::Dependency(Arc::new(dependency)));
+    let node_id = self.add_node(
+      dependency.id(),
+      AssetGraphNode::Dependency(Arc::new(dependency)),
+    );
 
     self.requested_symbols.insert(node_id, HashSet::new());
     self.dependency_states.insert(node_id, DependencyState::New);
