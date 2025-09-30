@@ -308,10 +308,11 @@ mod tests {
     parent_node: NodeId,
     symbols: Vec<TestSymbol>,
   ) -> NodeId {
-    let dep = Dependency {
+    let mut dep = Dependency {
       symbols: Some(symbols.iter().map(symbol).collect()),
       ..Dependency::default()
     };
+    dep.ensure_id();
     let node_index = graph.add_dependency(dep);
     graph.add_edge(&parent_node, &node_index);
     node_index
