@@ -192,7 +192,11 @@ export default function createBundleGraphRequest(
       //       force: true,
       //     },
       //   );
-      //   require('./asset-graph-diff.js')(jsAssetGraph, assetGraph);
+      //   require('./asset-graph-diff.ts')(
+      //     jsAssetGraph,
+      //     assetGraph,
+      //     options.projectRoot,
+      //   );
       // }
 
       measurement && measurement.end();
