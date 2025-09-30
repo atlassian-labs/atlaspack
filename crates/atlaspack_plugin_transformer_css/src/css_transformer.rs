@@ -515,6 +515,10 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       asset.map = Some(source_map);
     }
 
+    for dependency in dependencies.iter_mut() {
+      dependency.ensure_id();
+    }
+
     Ok(TransformResult {
       asset,
       dependencies,
