@@ -258,14 +258,11 @@ mod tests {
       .iter()
       .enumerate()
       .map(|(idx, asset)| {
-        AssetGraphNode::Asset(AssetNode {
-          asset: Asset {
-            id: idx.to_string(),
-            code: Code::from(asset.to_string()),
-            ..Asset::default()
-          },
-          requested_symbols: HashSet::new(),
-        })
+        AssetGraphNode::Asset(Arc::new(Asset {
+          id: idx.to_string(),
+          code: Code::from(asset.to_string()),
+          ..Asset::default()
+        }))
       })
       .collect::<Vec<AssetGraphNode>>();
 

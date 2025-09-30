@@ -1,3 +1,4 @@
+use atlaspack_core::types::Asset;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::mpsc::channel;
@@ -12,7 +13,7 @@ use crate::request_tracker::{
   RunRequestError,
 };
 use atlaspack_core::asset_graph::{AssetGraph, DependencyState, propagate_requested_symbols};
-use atlaspack_core::types::{Asset, AssetWithDependencies, Dependency};
+use atlaspack_core::types::{AssetWithDependencies, Dependency};
 
 use super::RequestResult;
 use super::asset_request::{AssetRequest, AssetRequestOutput};
@@ -522,7 +523,6 @@ mod tests {
   use atlaspack_core::types::{AtlaspackOptions, Code};
   use atlaspack_filesystem::FileSystem;
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
-  use petgraph::visit::Bfs;
 
   use crate::requests::{AssetGraphRequest, RequestResult};
   use crate::test_utils::{RequestTrackerTestOptions, request_tracker};
@@ -533,16 +533,19 @@ mod tests {
     let mut request_tracker = request_tracker(options);
 
     let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+    let result = request_tracker
       .run_request(asset_graph_request)
       .await
-      .unwrap()
-    else {
+      .unwrap();
+    let RequestResult::AssetGraph(asset_graph_request_result) = result.as_ref() else {
       panic!("Got invalid result");
     };
 
-    assert_eq!(asset_graph_request_result.graph.get_asset_nodes().len(), 0);
-    assert_eq!(asset_graph_request_result.graph.get_dependencies().len(), 0);
+    assert_eq!(asset_graph_request_result.graph.get_assets().count(), 0);
+    assert_eq!(
+      asset_graph_request_result.graph.get_dependencies().count(),
+      0
+    );
   }
 
   #[tokio::test(flavor = "multi_thread")]
@@ -581,21 +584,22 @@ mod tests {
     });
 
     let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+    let result = request_tracker
       .run_request(asset_graph_request)
       .await
-      .expect("Failed to run asset graph request")
-    else {
-      assert!(false, "Got invalid result");
-      return;
+      .expect("Failed to run asset graph request");
+    let RequestResult::AssetGraph(asset_graph_request_result) = result.as_ref() else {
+      unreachable!("Got invalid result");
     };
 
-    assert_eq!(asset_graph_request_result.graph.get_asset_nodes().len(), 1);
-    assert_eq!(asset_graph_request_result.graph.get_dependencies().len(), 1);
+    assert_eq!(asset_graph_request_result.graph.get_assets().count(), 1);
+    assert_eq!(
+      asset_graph_request_result.graph.get_dependencies().count(),
+      1
+    );
 
-    let AssetNode {
-      asset: first_asset, ..
-    } = get_first_asset(&asset_graph_request_result.graph).expect("No assets in graph");
+    let first_asset =
+      get_first_asset(&asset_graph_request_result.graph).expect("No assets in graph");
 
     assert_eq!(first_asset.file_path, temporary_dir.join("entry.js"));
     assert_eq!(
@@ -672,23 +676,24 @@ mod tests {
     });
 
     let asset_graph_request = AssetGraphRequest {};
-    let RequestResult::AssetGraph(asset_graph_request_result) = request_tracker
+    let result = request_tracker
       .run_request(asset_graph_request)
       .await
-      .expect("Failed to run asset graph request")
-    else {
-      assert!(false, "Got invalid result");
-      return;
+      .expect("Failed to run asset graph request");
+    let RequestResult::AssetGraph(asset_graph_request_result) = result.as_ref() else {
+      unreachable!("Got invalid result");
     };
 
     // Entry, 2 assets + helpers file
-    assert_eq!(asset_graph_request_result.graph.get_asset_nodes().len(), 4);
+    assert_eq!(asset_graph_request_result.graph.get_assets().count(), 4);
     // Entry, entry to assets (2), assets to helpers (2)
-    assert_eq!(asset_graph_request_result.graph.get_dependencies().len(), 5);
+    assert_eq!(
+      asset_graph_request_result.graph.get_dependencies().count(),
+      5
+    );
 
-    let AssetNode {
-      asset: first_asset, ..
-    } = get_first_asset(&asset_graph_request_result.graph).expect("No assets in graph");
+    let first_asset =
+      get_first_asset(&asset_graph_request_result.graph).expect("No assets in graph");
 
     assert_eq!(first_asset.file_path, temporary_dir.join("entry.js"));
   }
@@ -705,20 +710,26 @@ mod tests {
     );
   }
 
-  /// Do a BFS traversal of the the graph until the first AssetNode
+  /// Do a BFS traversal of the the graph until the first Asset
   /// is discovered. This should be the entry Asset.
-  fn get_first_asset(asset_graph: &AssetGraph) -> Option<&AssetNode> {
-    let mut first_asset = None::<&AssetNode>;
+  fn get_first_asset(asset_graph: &AssetGraph) -> Option<&atlaspack_core::types::Asset> {
+    use petgraph::graph::NodeIndex;
+    use petgraph::visit::Bfs;
 
-    let mut bfs = Bfs::new(&asset_graph.graph, asset_graph.root_node());
+    let mut first_asset = None::<&atlaspack_core::types::Asset>;
 
-    while let Some(idx) = bfs.next(&asset_graph.graph) {
-      match asset_graph.get_node(&idx) {
-        Some(AssetGraphNode::Asset(asset_node)) => {
-          first_asset.replace(asset_node);
-          break;
+    let root_node_index = NodeIndex::new(asset_graph.root_node());
+    let mut bfs = Bfs::new(&asset_graph.graph, root_node_index);
+
+    while let Some(node_index) = bfs.next(&asset_graph.graph) {
+      if let Some(node_id) = asset_graph.graph.node_weight(node_index) {
+        match asset_graph.get_node(node_id) {
+          Some(AssetGraphNode::Asset(asset)) => {
+            first_asset.replace(asset.as_ref());
+            break;
+          }
+          _ => continue,
         }
-        _ => continue,
       }
     }
 
