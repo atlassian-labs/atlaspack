@@ -91,30 +91,28 @@ pub fn propagate_requested_symbols<F>(
     let dep_ids = asset_graph.get_outgoing_dependencies(&asset_id);
 
     for nested_dependency_id in dep_ids {
+      let nested_dependency = asset_graph.get_dependency(&nested_dependency_id).unwrap();
       let mut updated = false;
 
-      {
-        if let Some(symbols) = &dependency.symbols {
-          for sym in symbols {
-            if sym.is_weak {
-              // This is a re-export. If it is a wildcard, add all unmatched symbols
-              // to this dependency, otherwise attempt to match a named re-export.
-              if sym.local == "*" {
-                for wildcard in &dependency_wildcards {
-                  if asset_graph.set_requested_symbol(&nested_dependency_id, wildcard.clone()) {
-                    updated = true;
-                  }
+      if let Some(symbols) = &nested_dependency.symbols {
+        for sym in symbols {
+          if sym.is_weak {
+            // This is a re-export. If it is a wildcard, add all unmatched symbols
+            // to this dependency, otherwise attempt to match a named re-export.
+            if sym.local == "*" {
+              for wildcard in &dependency_wildcards {
+                if asset_graph.set_requested_symbol(&nested_dependency_id, wildcard.clone()) {
+                  updated = true;
                 }
-              } else if dependency_re_exports.contains(&sym.local)
-                && asset_graph.set_requested_symbol(&nested_dependency_id, sym.exported.clone())
-              {
-                updated = true;
               }
-            } else if asset_graph.set_requested_symbol(&nested_dependency_id, sym.exported.clone())
+            } else if dependency_re_exports.contains(&sym.local)
+              && asset_graph.set_requested_symbol(&nested_dependency_id, sym.exported.clone())
             {
-              // This is a normal import. Add the requested symbol.
               updated = true;
             }
+          } else if asset_graph.set_requested_symbol(&nested_dependency_id, sym.exported.clone()) {
+            // This is a normal import. Add the requested symbol.
+            updated = true;
           }
         }
       }
