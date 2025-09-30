@@ -31,7 +31,6 @@ pub fn propagate_requested_symbols<F>(
     let mut dependency_wildcards = HashSet::<String>::default();
     let mut asset_requested_symbols_buf = HashSet::<String>::default();
 
-    let dependency = asset_graph.get_dependency(&dependency_id).unwrap();
     let asset = asset_graph.get_asset(&asset_id).unwrap();
 
     let asset_symbols = asset_graph.get_requested_symbols(&asset_id).unwrap();
