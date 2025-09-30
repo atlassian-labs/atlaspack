@@ -568,23 +568,22 @@ mod tests {
       ..Default::default()
     };
     let result = run_plugin(&asset).await;
+    let mut expected_dependency = Dependency {
+      specifier: "./stuff.css".into(),
+      source_asset_id: Some("my-asset".into()),
+      source_path: Some("styles.css".into()),
+      source_asset_type: Some(FileType::Css),
+      specifier_type: SpecifierType::Url,
+      package_conditions: ExportsCondition::STYLE,
+      meta: JSONObject::from_iter([
+        ("isCSSImport".into(), true.into()),
+        ("placeholder".into(), "OFe21q".into()),
+      ]),
+      ..Dependency::default()
+    };
+    expected_dependency.ensure_id();
 
-    assert_eq!(
-      result.unwrap().dependencies,
-      vec![Dependency {
-        specifier: "./stuff.css".into(),
-        source_asset_id: Some("my-asset".into()),
-        source_path: Some("styles.css".into()),
-        source_asset_type: Some(FileType::Css),
-        specifier_type: SpecifierType::Url,
-        package_conditions: ExportsCondition::STYLE,
-        meta: JSONObject::from_iter([
-          ("isCSSImport".into(), true.into()),
-          ("placeholder".into(), "OFe21q".into())
-        ]),
-        ..Dependency::default()
-      }]
-    );
+    assert_eq!(result.unwrap().dependencies, vec![expected_dependency]);
   }
 
   #[tokio::test(flavor = "multi_thread")]

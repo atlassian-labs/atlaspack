@@ -241,18 +241,21 @@ mod test {
       ..Environment::default()
     });
 
+    let mut expected_dependency = Dependency {
+      bundle_behavior: Some(BundleBehavior::Inline),
+      env: env.clone(),
+      source_asset_id: Some(String::from("test")),
+      source_asset_type: Some(FileType::Html),
+      source_path: Some(PathBuf::from("main.html")),
+      specifier: String::from("16f87d7beed96467"),
+      ..Dependency::default()
+    };
+    expected_dependency.ensure_id();
+
     assert_eq!(
       transformation,
       HtmlTransformation {
-        dependencies: vec![Dependency {
-          bundle_behavior: Some(BundleBehavior::Inline),
-          env: env.clone(),
-          source_asset_id: Some(String::from("test")),
-          source_asset_type: Some(FileType::Html),
-          source_path: Some(PathBuf::from("main.html")),
-          specifier: String::from("16f87d7beed96467"),
-          ..Dependency::default()
-        }],
+        dependencies: vec![expected_dependency],
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::Inline),
@@ -311,18 +314,22 @@ mod test {
       ..Environment::default()
     });
 
+    let mut expected_dependency = Dependency {
+      bundle_behavior: Some(BundleBehavior::InlineIsolated),
+      env: env.clone(),
+      source_asset_id: Some(String::from("test")),
+      source_asset_type: Some(FileType::Html),
+      source_path: Some(PathBuf::from("main.html")),
+      specifier: String::from("16f87d7beed96467"),
+      ..Dependency::default()
+    };
+
+    expected_dependency.ensure_id();
+
     assert_eq!(
       transformation,
       HtmlTransformation {
-        dependencies: vec![Dependency {
-          bundle_behavior: Some(BundleBehavior::InlineIsolated),
-          env: env.clone(),
-          source_asset_id: Some(String::from("test")),
-          source_asset_type: Some(FileType::Html),
-          source_path: Some(PathBuf::from("main.html")),
-          specifier: String::from("16f87d7beed96467"),
-          ..Dependency::default()
-        }],
+        dependencies: vec![expected_dependency],
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::InlineIsolated),
@@ -370,16 +377,19 @@ mod test {
       ))
     );
 
+    let mut expected_dependency = Dependency {
+      source_asset_id: Some(String::from("test")),
+      source_asset_type: Some(FileType::Html),
+      source_path: Some(PathBuf::from("main.html")),
+      specifier: String::from("16f87d7beed96467"),
+      ..Dependency::default()
+    };
+    expected_dependency.ensure_id();
+
     assert_eq!(
       transformation,
       HtmlTransformation {
-        dependencies: vec![Dependency {
-          source_asset_id: Some(String::from("test")),
-          source_asset_type: Some(FileType::Html),
-          source_path: Some(PathBuf::from("main.html")),
-          specifier: String::from("16f87d7beed96467"),
-          ..Dependency::default()
-        }],
+        dependencies: vec![expected_dependency],
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::Inline),
