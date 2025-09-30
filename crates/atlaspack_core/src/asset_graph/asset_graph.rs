@@ -123,6 +123,15 @@ impl AssetGraph {
     Some(asset_node)
   }
 
+  pub fn get_assets(&self) -> impl Iterator<Item = &Asset> {
+    self.nodes().filter_map(|node| {
+      let AssetGraphNode::Asset(asset) = node else {
+        return None;
+      };
+      Some(asset.as_ref())
+    })
+  }
+
   pub fn add_dependency(&mut self, dependency: Dependency) -> NodeId {
     let node_id = self.add_node(AssetGraphNode::Dependency(Arc::new(dependency)));
 
@@ -155,15 +164,13 @@ impl AssetGraph {
     *dep_state = state;
   }
 
-  pub fn get_dependencies(&self) -> Vec<&Dependency> {
-    let mut results = vec![];
-    for n in self.nodes() {
-      let AssetGraphNode::Dependency(dependency) = n else {
-        continue;
+  pub fn get_dependencies(&self) -> impl Iterator<Item = &Dependency> {
+    self.nodes().filter_map(|node| {
+      let AssetGraphNode::Dependency(dep) = node else {
+        return None;
       };
-      results.push(dependency.as_ref());
-    }
-    results
+      Some(dep.as_ref())
+    })
   }
 
   pub fn get_outgoing_dependencies(&self, asset_node_id: &NodeId) -> Vec<NodeId> {
