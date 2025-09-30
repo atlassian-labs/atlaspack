@@ -40,7 +40,7 @@ impl HtmlDependenciesVisitor {
   }
 
   fn add_url_dependency(&mut self, specifier: String) -> String {
-    let dependency = Dependency {
+    let mut dependency = Dependency {
       env: self.context.env.clone(),
       priority: Priority::Lazy,
       source_asset_id: Some(self.context.source_asset_id.clone()),
@@ -50,6 +50,8 @@ impl HtmlDependenciesVisitor {
       specifier_type: SpecifierType::Url,
       ..Dependency::default()
     };
+
+    dependency.ensure_id();
 
     let dependency_id = dependency.id();
 
@@ -152,7 +154,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
             local: &LocalName::from("data-atlaspack-isolated"),
           };
           let mut inline_bundle_behavior = None;
-          let dependency = Dependency {
+          let mut dependency = Dependency {
             bundle_behavior: if src_attr.is_none() && attrs.get(isolated_attr).is_some() {
               attrs.delete(isolated_attr);
               inline_bundle_behavior = Some(BundleBehavior::InlineIsolated);
@@ -183,6 +185,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
             },
             ..Default::default()
           };
+          dependency.ensure_id();
           let dependency_id = dependency.id();
           self.dependencies.push(dependency);
 
@@ -249,7 +252,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
             &specifier,
           );
 
-          self.dependencies.push(Dependency {
+          let mut new_dependency = Dependency {
             env: self.context.env.clone(),
             source_asset_id: Some(self.context.source_asset_id.clone()),
             source_asset_type: Some(FileType::Html),
@@ -257,7 +260,11 @@ impl DomVisitor for HtmlDependenciesVisitor {
             specifier: specifier.clone(),
             specifier_type: SpecifierType::Esm,
             ..Dependency::default()
-          });
+          };
+
+          new_dependency.ensure_id();
+
+          self.dependencies.push(new_dependency);
 
           self.discovered_assets.push(AssetWithDependencies {
             asset: Asset::new_inline(
