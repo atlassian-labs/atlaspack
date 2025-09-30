@@ -382,6 +382,9 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
+            customEnv: {
+              useFlag: 'false',
+            },
           }),
           loc: {
             filePath: relative(
@@ -416,6 +419,9 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
+            customEnv: {
+              useFlag: 'true',
+            },
           }),
           loc: {
             filePath: relative(
@@ -501,6 +507,9 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
+            customEnv: {
+              useFlag: 'false',
+            },
           }),
           loc: {
             filePath: relative(
@@ -535,6 +544,9 @@ describe('TargetResolver', () => {
             loc: undefined,
             sourceType: 'module',
             unstableSingleFileOutput: false,
+            customEnv: {
+              useFlag: 'true',
+            },
           }),
           loc: {
             filePath: relative(
