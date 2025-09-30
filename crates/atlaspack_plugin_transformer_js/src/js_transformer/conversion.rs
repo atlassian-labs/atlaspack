@@ -701,7 +701,7 @@ fn convert_dependency(
         }
       }
 
-      let dependency = Dependency {
+      let mut dependency = Dependency {
         env,
         is_optional: transformer_dependency.is_optional,
         is_esm: matches!(
@@ -712,6 +712,7 @@ fn convert_dependency(
         ..base_dependency
       };
 
+      dependency.ensure_id();
       Ok(DependencyConversionResult::Dependency(dependency))
     }
   }
