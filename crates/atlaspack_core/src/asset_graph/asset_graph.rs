@@ -186,12 +186,11 @@ impl AssetGraph {
   }
 
   pub fn set_requested_symbol(&mut self, idx: &NodeId, symbol: String) -> bool {
-    if let Some(requested) = self.requested_symbols.get_mut(idx) {
-      requested.insert(symbol);
-      true
-    } else {
-      false
-    }
+    self
+      .requested_symbols
+      .get_mut(idx)
+      .expect("Requested symbols should have been initialized")
+      .insert(symbol)
   }
 
   pub fn add_entry_dependency(&mut self, dependency: Dependency) -> NodeId {
