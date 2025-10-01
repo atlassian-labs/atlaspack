@@ -19,7 +19,7 @@ anyhow = { workspace = true }
 async-trait = { workspace = true }
 bitflags = { workspace = true }
 browserslist-rs = { workspace = true }
-derive_builder.workspace = true
+derive_builder = { workspace = true }
 dyn-hash = { workspace = true }
 nodejs-semver = { workspace = true }
 mockall = { workspace = true }
