@@ -133,6 +133,14 @@ jobs:
       - uses: ./.github/actions/setup-node
       - run: yarn build:ts
 
+  lint_feature_flags:
+    name: 🏴‍☠️ Lint Feature Flags
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node
+      - run: yarn lint:feature-flags
+
   lint_rust:
     name: 🦀 Lint Rust
     runs-on: ubuntu-24.04
