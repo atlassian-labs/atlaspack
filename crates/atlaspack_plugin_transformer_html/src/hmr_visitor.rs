@@ -48,7 +48,7 @@ impl DomVisitor for HMRVisitor {
               .source_path_option(self.context.source_path.clone())
               .build();
 
-            let src = dependency.id();
+            let src = dependency.id;
 
             self.hmr_asset = Some(Asset {
               file_type: FileType::Js,
