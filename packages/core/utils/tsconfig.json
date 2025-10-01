@@ -28,6 +28,9 @@
     },
     {
       "path": "../types-internal/tsconfig.json"
+    },
+    {
+      "path": "../source-map/tsconfig.json"
     }
   ]
 }

@@ -816,11 +816,6 @@
     "@babel/runtime" "^7.0.0"
     "@compiled/react" "^0.18.3"
 
-"@atlaspack/rust@3.8.1":
-  version "3.8.1"
-  resolved "https://registry.yarnpkg.com/@atlaspack/rust/-/rust-3.8.1.tgz#beae29c354a5475b88c333d9acef2b816c7178ad"
-  integrity sha512-N1tUrNtzrtd7wc1h3HppV9bz/M0TrVUwBRRmlxPxteGcM6HU9ijaAGiG5OT1VW9DuGlPkIBSOYrYlS2LQKzF2g==
-
 "@babel/code-frame@^7.0.0", "@babel/code-frame@^7.10.4", "@babel/code-frame@^7.22.13", "@babel/code-frame@^7.23.4":
   version "7.23.4"
   resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.23.4.tgz#03ae5af150be94392cb5c7ccd97db5a19a5da6aa"
@@ -5208,13 +5203,6 @@
   integrity sha512-ZOBkgDwEdoYVlSeRbYYXs0S9MejQofiVYoTbKzy/6GQa39/q5tQU2IX46+shYnUkpEl3wc+J6wRlar7r2EK2xA==
   dependencies:
     "@noble/hashes" "^1.1.5"
-
-"@parcel/source-map@^2.1.1":
-  version "2.1.1"
-  resolved "https://registry.yarnpkg.com/@parcel/source-map/-/source-map-2.1.1.tgz#fb193b82dba6dd62cc7a76b326f57bb35000a782"
-  integrity sha512-Ejx1P/mj+kMjQb8/y5XxDUn4reGdr+WyKYloBljpppUy8gs42T+BNoEOuRYqDVdgPc6NxduzIDoJS9pOFfV5Ew==
-  dependencies:
-    detect-libc "^1.0.3"
 
 "@parcel/watcher-android-arm64@2.2.0":
   version "2.2.0"

@@ -4,12 +4,19 @@
   "private": true,
   "source": "src/index.js",
   "devDependencies": {
-    "@atlaspack/babel-register": "2.0.0-beta.1",
-    "@atlaspack/core": "2.0.0-beta.1"
+    "@atlaspack/babel-register": "2.14.4",
+<<<<<<< HEAD
+    "@atlaspack/core": "2.25.0"
+=======
+    "@atlaspack/core": "2.25.1"
+>>>>>>> 197159d64 (Fix packages again)
   },
   "targets": {
     "alternate": {
-      "source": ["src/indexAlternate.js", "src/indexAlternate2.js"]
+      "source": [
+        "src/indexAlternate.js",
+        "src/indexAlternate2.js"
+      ]
     },
     "browser": {
       "engines": {
