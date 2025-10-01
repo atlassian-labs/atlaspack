@@ -283,6 +283,14 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-09-29
    */
   sourceAssetIdBundleGraphFix: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Enable JSX configuration loading in v3 Rust transformer to match v2 behaviour
+   *
+   * @author Matt Koko <mkokolich@atlassian.com>
+   * @since 2025-10-01
+   */
+  v3JsxConfigurationLoading: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
