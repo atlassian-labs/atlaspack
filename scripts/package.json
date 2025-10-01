@@ -6,6 +6,7 @@
     "@ast-grep/napi": "^0.39.5",
     "@swc/plugin-transform-imports": "^8.0.4",
     "flowgen": "^1.21.0",
+    "fast-glob": "^3.3.3",
     "glob": "^7.1.6",
     "json5": "^2.2.3",
     "zx": "^8.1.9"
