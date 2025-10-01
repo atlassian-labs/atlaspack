@@ -279,7 +279,6 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-10-14
    */
   deduplicateReporters: process.env.ATLASPACK_BUILD_ENV === 'test',
-
   /**
    * Enable JSX configuration loading in v3 Rust transformer to match v2 behaviour
    *
