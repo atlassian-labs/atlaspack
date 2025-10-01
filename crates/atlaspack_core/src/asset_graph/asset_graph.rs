@@ -97,10 +97,6 @@ impl AssetGraph {
     self.nodes.get_mut(*idx)
   }
 
-  pub fn is_diff(&self, a: &AssetGraphNode, b: &AssetGraphNode) -> bool {
-    a != b
-  }
-
   fn add_node(&mut self, content_key: String, node: AssetGraphNode) -> NodeId {
     let node_id = self.nodes.len();
     self.nodes.push(node);
