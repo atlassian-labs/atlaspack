@@ -218,7 +218,7 @@ impl Atlaspack {
 
 #[cfg(test)]
 mod tests {
-  use std::{collections::HashSet, env::temp_dir};
+  use std::env::temp_dir;
 
   use atlaspack_core::types::{Asset, Code};
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;

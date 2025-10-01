@@ -157,15 +157,13 @@ impl DependencyBuilder {
     let env = self.env.expect("env is required");
     let specifier_type = self.specifier_type.expect("specifier_type is required");
     let priority = self.priority.expect("priority is required");
-    let package_conditions = self
-      .package_conditions
-      .expect("package_conditions is required");
 
     // These are part of ID generation, but can be optional
     let source_asset_id = self.source_asset_id.flatten();
     let target = self.target.flatten();
     let pipeline = self.pipeline.flatten();
     let bundle_behavior = self.bundle_behavior.unwrap_or_default();
+    let package_conditions = self.package_conditions.unwrap_or_default();
 
     let id = create_dependency_id(
       source_asset_id.as_ref(),
