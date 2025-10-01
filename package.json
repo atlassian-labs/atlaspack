@@ -40,6 +40,7 @@
     "check": "flow check",
     "update-ts-references": "node scripts/update-ts-references.mjs",
     "lint": "node ./scripts/lint-all.mjs",
+    "lint:feature-flags": "node ./scripts/find-unused-feature-flags.js",
     "prepublishOnly": "yarn pre-publish",
     "pre-publish": "yarn build && node ./scripts/rewrite-package-types.mjs",
     "changesets-publish": "yarn pre-publish && yarn changeset publish",
