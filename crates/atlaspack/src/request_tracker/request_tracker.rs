@@ -135,44 +135,47 @@ impl RequestTracker {
           let request_id = request.id();
           tracing::trace!(?request_id, ?parent_request_id, "Run request");
 
-          if self.prepare_request(request_id)?.is_none() {
-            let context = RunRequestContext::new(
-              self.config_loader.clone(),
-              self.file_system.clone(),
-              self.options.clone(),
-              Some(request_id),
-              self.plugins.clone(),
-              self.project_root.clone(),
-              // sub-request run
-              Box::new({
-                let tx = tx.clone();
-                move |message| {
-                  let tx2 = tx.clone();
-                  tx.send(RequestQueueMessage::RunRequest { message, tx: tx2 })
-                    .unwrap();
-                }
-              }),
-            );
+          if let Some(previous_result) = self.prepare_request(request_id)? {
+            self.link_request_to_parent(request_id, parent_request_id)?;
 
-            tokio::spawn({
-              let tx = tx.clone();
-              async move {
-                let result = request.run(context).await;
-                let _ = tx.send(RequestQueueMessage::RequestResult {
-                  request_id,
-                  parent_request_id,
-                  result,
-                  response_tx,
-                });
-              }
-            });
-          } else {
             // Cached request
             if let Some(response_tx) = response_tx {
-              let result = self.get_request(parent_request_id, request_id);
-              let _ = response_tx.send(result.map(|r| (r, request_id)));
+              let _ = response_tx.send(Ok((previous_result, request_id)));
             }
-          };
+            continue;
+          }
+
+          // Request needs to be executed
+          let context = RunRequestContext::new(
+            self.config_loader.clone(),
+            self.file_system.clone(),
+            self.options.clone(),
+            Some(request_id),
+            self.plugins.clone(),
+            self.project_root.clone(),
+            // sub-request run
+            Box::new({
+              let tx = tx.clone();
+              move |message| {
+                let tx2 = tx.clone();
+                tx.send(RequestQueueMessage::RunRequest { message, tx: tx2 })
+                  .unwrap();
+              }
+            }),
+          );
+
+          tokio::spawn({
+            let tx = tx.clone();
+            async move {
+              let result = request.run(context).await;
+              let _ = tx.send(RequestQueueMessage::RequestResult {
+                request_id,
+                parent_request_id,
+                result,
+                response_tx,
+              });
+            }
+          });
         }
         RequestQueueMessage::RequestResult {
           request_id,
@@ -207,8 +210,8 @@ impl RequestTracker {
       .ok_or_else(|| diagnostic_error!("Failed to find request node"))?;
 
     // Don't run if already run
-    if let RequestNode::Valid(_) = request_node {
-      return Ok(None);
+    if let RequestNode::Valid(result) = request_node {
+      return Ok(Some(result.clone()));
     }
 
     self.invalid_nodes.remove(&node_index);
