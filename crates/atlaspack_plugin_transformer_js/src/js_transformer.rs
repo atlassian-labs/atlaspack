@@ -775,7 +775,6 @@ mod tests {
         }]))
         .env(Arc::new(Environment::default()))
         .priority(Priority::Sync)
-        .package_conditions(Default::default())
         .build(),
     ];
 

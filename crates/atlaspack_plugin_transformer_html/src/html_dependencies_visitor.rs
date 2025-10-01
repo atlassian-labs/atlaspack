@@ -48,7 +48,6 @@ impl HtmlDependenciesVisitor {
       .source_path(self.context.source_path.clone())
       .specifier(specifier)
       .specifier_type(SpecifierType::Url)
-      .package_conditions(Default::default())
       .build();
 
     let dependency_id = dependency.id();
@@ -183,7 +182,6 @@ impl DomVisitor for HtmlDependenciesVisitor {
               None => SpecifierType::Esm,
               Some(_) => SpecifierType::Url,
             })
-            .package_conditions(Default::default())
             .build();
 
           let dependency_id = dependency.id();
@@ -260,7 +258,6 @@ impl DomVisitor for HtmlDependenciesVisitor {
             .specifier(specifier.clone())
             .specifier_type(SpecifierType::Esm)
             .priority(Priority::Sync)
-            .package_conditions(Default::default())
             .build();
 
           self.dependencies.push(new_dependency);

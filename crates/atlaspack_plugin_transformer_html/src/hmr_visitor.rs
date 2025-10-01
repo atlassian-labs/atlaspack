@@ -46,7 +46,6 @@ impl DomVisitor for HMRVisitor {
               .source_asset_id(Some(self.context.source_asset_id.clone()))
               .source_asset_type(Some(FileType::Html))
               .source_path(self.context.source_path.clone())
-              .package_conditions(Default::default())
               .build();
 
             let src = dependency.id();
