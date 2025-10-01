@@ -43,9 +43,9 @@ impl HtmlDependenciesVisitor {
     let dependency = DependencyBuilder::default()
       .env(self.context.env.clone())
       .priority(Priority::Lazy)
-      .source_asset_id(Some(self.context.source_asset_id.clone()))
-      .source_asset_type(Some(FileType::Html))
-      .source_path(self.context.source_path.clone())
+      .source_asset_id(self.context.source_asset_id.clone())
+      .source_asset_type(FileType::Html)
+      .source_path_option(self.context.source_path.clone())
       .specifier(specifier)
       .specifier_type(SpecifierType::Url)
       .build();
@@ -174,9 +174,9 @@ impl DomVisitor for HtmlDependenciesVisitor {
               None => Priority::Sync,
               Some(_) => Priority::Parallel,
             })
-            .source_asset_id(Some(self.context.source_asset_id.clone()))
-            .source_asset_type(Some(FileType::Html))
-            .source_path(self.context.source_path.clone())
+            .source_asset_id(self.context.source_asset_id.clone())
+            .source_asset_type(FileType::Html)
+            .source_path_option(self.context.source_path.clone())
             .specifier(specifier.clone())
             .specifier_type(match src_attr {
               None => SpecifierType::Esm,
@@ -252,9 +252,9 @@ impl DomVisitor for HtmlDependenciesVisitor {
 
           let new_dependency = DependencyBuilder::default()
             .env(self.context.env.clone())
-            .source_asset_id(Some(self.context.source_asset_id.clone()))
-            .source_asset_type(Some(FileType::Html))
-            .source_path(self.context.source_path.clone())
+            .source_asset_id(self.context.source_asset_id.clone())
+            .source_asset_type(FileType::Html)
+            .source_path_option(self.context.source_path.clone())
             .specifier(specifier.clone())
             .specifier_type(SpecifierType::Esm)
             .priority(Priority::Sync)

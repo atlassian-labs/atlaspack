@@ -52,7 +52,7 @@ pub fn create_dependency_id(
 /// A dependency denotes a connection between two assets
 #[derive(Hash, PartialEq, Clone, Debug, Default, Deserialize, Serialize, Builder)]
 #[serde(rename_all = "camelCase")]
-#[builder(build_fn(skip), pattern = "owned")]
+#[builder(build_fn(skip), pattern = "owned", setter(strip_option))]
 pub struct Dependency {
   /// Controls the behavior of the bundle the resolved asset is placed into
   ///
@@ -209,6 +209,14 @@ impl DependencyBuilder {
       should_wrap: self.should_wrap.unwrap_or_default(),
       is_esm: self.is_esm.unwrap_or_default(),
       placeholder: self.placeholder.flatten(),
+    }
+  }
+
+  pub fn source_path_option(self, source_path: Option<PathBuf>) -> Self {
+    if let Some(source_path) = source_path {
+      self.source_path(source_path)
+    } else {
+      self
     }
   }
 }

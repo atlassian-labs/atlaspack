@@ -750,7 +750,7 @@ mod tests {
 
     let mut expected_dependencies = vec![
       DependencyBuilder::default()
-        .loc(Some(SourceLocation {
+        .loc(SourceLocation {
           file_path: PathBuf::from("mock_path.js"),
           start: Location {
             line: 2,
@@ -760,19 +760,19 @@ mod tests {
             line: 2,
             column: 32,
           },
-        }))
-        .placeholder(Some("e83f3db3d6f57ea6".to_string()))
-        .source_asset_id(Some(asset_id.clone()))
-        .source_path(Some(PathBuf::from("mock_path.js")))
-        .source_asset_type(Some(FileType::Js))
+        })
+        .placeholder("e83f3db3d6f57ea6".to_string())
+        .source_asset_id(asset_id.clone())
+        .source_path(PathBuf::from("mock_path.js"))
+        .source_asset_type(FileType::Js)
         .specifier(String::from("other"))
         .specifier_type(SpecifierType::CommonJS)
-        .symbols(Some(vec![Symbol {
+        .symbols(vec![Symbol {
           exported: String::from("*"),
           loc: None,
           local: String::from("a1ad9714284f3ad6$"),
           ..Symbol::default()
-        }]))
+        }])
         .env(Arc::new(Environment::default()))
         .priority(Priority::Sync)
         .build(),

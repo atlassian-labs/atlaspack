@@ -43,9 +43,9 @@ impl DomVisitor for HMRVisitor {
               .priority(Priority::Parallel)
               .specifier("".to_owned())
               .specifier_type(SpecifierType::Url)
-              .source_asset_id(Some(self.context.source_asset_id.clone()))
-              .source_asset_type(Some(FileType::Html))
-              .source_path(self.context.source_path.clone())
+              .source_asset_id(self.context.source_asset_id.clone())
+              .source_asset_type(FileType::Html)
+              .source_path_option(self.context.source_path.clone())
               .build();
 
             let src = dependency.id();
