@@ -300,9 +300,9 @@ async fn test_selective_invalidation() {
   let _ = rt.run_request(request_a.clone()).await.unwrap();
   let _ = rt.run_request(request_b.clone()).await.unwrap();
 
-  // Request A should have run twice, request B should have run twice (due to current implementation)
+  // Request A should have run twice, request B should have run once
   assert_eq!(request_a.run_count(), 2);
-  assert_eq!(request_b.run_count(), 2);
+  assert_eq!(request_b.run_count(), 1);
 }
 
 #[tokio::test(flavor = "multi_thread")]
