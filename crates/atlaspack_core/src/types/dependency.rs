@@ -213,15 +213,6 @@ impl DependencyBuilder {
   }
 }
 
-pub struct MinimumDependencyFields {
-  source_asset_id: Option<AssetId>,
-  specifier: String,
-  env: Arc<Environment>,
-  specifier_type: SpecifierType,
-  bundle_behavior: MaybeBundleBehavior,
-  priority: Priority,
-}
-
 impl Dependency {
   pub fn id(&self) -> String {
     self.id.clone()
@@ -271,20 +262,6 @@ impl Dependency {
 
     dep.ensure_id();
     dep
-  }
-
-  pub fn new(input_options: MinimumDependencyFields) -> Dependency {
-    let mut new_dep = Dependency {
-      source_asset_id: input_options.source_asset_id,
-      specifier: input_options.specifier,
-      env: input_options.env,
-      specifier_type: input_options.specifier_type,
-      bundle_behavior: input_options.bundle_behavior,
-      priority: input_options.priority,
-      ..Dependency::default()
-    };
-    new_dep.ensure_id();
-    new_dep
   }
 
   pub fn set_placeholder(&mut self, placeholder: impl Into<serde_json::Value>) {
