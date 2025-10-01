@@ -66,7 +66,7 @@ function compareFileContents(file1: string, file2: string): string | null {
     try {
       const diffOutput = execSync(`diff -u "${file1}" "${file2}"`, {
         encoding: 'utf8',
-        maxBuffer: 1024 * 1024, // 1MB buffer
+        maxBuffer: 50 * 1024 * 1024, // 50MB buffer
       });
       return diffOutput;
     } catch (diffError) {
