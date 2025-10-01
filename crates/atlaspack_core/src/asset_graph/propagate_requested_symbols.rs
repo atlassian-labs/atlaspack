@@ -87,7 +87,7 @@ pub fn propagate_requested_symbols<F>(
       .unwrap()
       .extend(asset_requested_symbols_buf);
 
-    let dep_ids = asset_graph.get_outgoing_dependencies(&asset_id);
+    let dep_ids = asset_graph.get_outgoing_neighbors(&asset_id);
 
     for nested_dependency_id in dep_ids {
       let nested_dependency = asset_graph.get_dependency(&nested_dependency_id).unwrap();
@@ -123,8 +123,8 @@ pub fn propagate_requested_symbols<F>(
       // or un-defer this dependency so we transform the requested asset.
       // We must always resolve new dependencies to determine whether they have side effects.
       if updated || *state == DependencyState::New {
-        let outgoing_deps = asset_graph.get_outgoing_dependencies(&nested_dependency_id);
-        let Some(resolved_asset_id) = outgoing_deps.first() else {
+        let outgoing_dep_assets = asset_graph.get_outgoing_neighbors(&nested_dependency_id);
+        let Some(resolved_asset_id) = outgoing_dep_assets.first() else {
           on_undeferred(nested_dependency_id, nested_dependency.clone());
           continue;
         };

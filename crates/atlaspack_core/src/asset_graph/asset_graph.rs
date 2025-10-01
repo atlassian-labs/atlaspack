@@ -183,13 +183,10 @@ impl AssetGraph {
     })
   }
 
-  pub fn get_outgoing_dependencies(&self, asset_node_id: &NodeId) -> Vec<NodeId> {
+  pub fn get_outgoing_neighbors(&self, node_id: &NodeId) -> Vec<NodeId> {
     self
       .graph
-      .neighbors_directed(
-        self.node_id_to_node_index[asset_node_id],
-        Direction::Outgoing,
-      )
+      .neighbors_directed(self.node_id_to_node_index[node_id], Direction::Outgoing)
       .filter_map(|node_index| self.graph.node_weight(node_index).copied())
       .collect()
   }
