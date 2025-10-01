@@ -135,7 +135,6 @@ impl RequestTracker {
           let request_id = request.id();
           tracing::trace!(?request_id, ?parent_request_id, "Run request");
 
-          // If no existing result, prepare a new request
           if self.prepare_request(request_id)?.is_none() {
             let context = RunRequestContext::new(
               self.config_loader.clone(),
