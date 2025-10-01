@@ -53,6 +53,9 @@ pub fn create_dependency_id(
 #[derive(Hash, PartialEq, Clone, Debug, Default, Deserialize, Serialize, Builder)]
 #[serde(rename_all = "camelCase")]
 #[builder(build_fn(skip), pattern = "owned", setter(strip_option))]
+// Dependencies should not be created directly, so we can ensure that an ID
+// exists. DependencyBuilder::build() should be used instead.
+#[non_exhaustive]
 pub struct Dependency {
   /// Controls the behavior of the bundle the resolved asset is placed into
   ///
@@ -217,6 +220,22 @@ impl DependencyBuilder {
       self
     }
   }
+
+  pub fn symbols_option(self, symbols: Option<Vec<Symbol>>) -> Self {
+    if let Some(symbols) = symbols {
+      self.symbols(symbols)
+    } else {
+      self
+    }
+  }
+
+  pub fn placeholder_option(self, placeholder: Option<String>) -> Self {
+    if let Some(placeholder) = placeholder {
+      self.placeholder(placeholder)
+    } else {
+      self
+    }
+  }
 }
 
 impl Dependency {
@@ -254,17 +273,16 @@ impl Dependency {
       }]);
     }
 
-    let mut dep = Dependency {
-      env: target.env.clone(),
-      is_entry: true,
-      needs_stable_name: true,
-      specifier: entry,
-      // By default in JS this is set to ESM, even though it is resolved as Url
-      specifier_type: SpecifierType::Url,
-      symbols,
-      target: Some(Box::new(target)),
-      ..Dependency::default()
-    };
+    let mut dep = DependencyBuilder::default()
+      .env(target.env.clone())
+      .is_entry(true)
+      .needs_stable_name(true)
+      .specifier(entry)
+      .specifier_type(SpecifierType::Url)
+      .symbols_option(symbols)
+      .target(Box::new(target))
+      .priority(Priority::default())
+      .build();
 
     dep.ensure_id();
     dep

@@ -263,6 +263,10 @@ impl std::hash::Hash for AssetGraph {
 mod tests {
   use std::path::PathBuf;
 
+  use crate::types::DependencyBuilder;
+  use crate::types::Environment;
+  use crate::types::Priority;
+  use crate::types::SpecifierType;
   use crate::types::Symbol;
   use crate::types::Target;
 
@@ -311,11 +315,13 @@ mod tests {
     parent_node: NodeId,
     symbols: Vec<TestSymbol>,
   ) -> NodeId {
-    let mut dep = Dependency {
-      symbols: Some(symbols.iter().map(symbol).collect()),
-      ..Dependency::default()
-    };
-    dep.ensure_id();
+    let dep = DependencyBuilder::default()
+      .symbols(symbols.iter().map(symbol).collect())
+      .specifier("test".to_string())
+      .env(Arc::new(Environment::default()))
+      .specifier_type(SpecifierType::default())
+      .priority(Priority::default())
+      .build();
     let node_index = graph.add_dependency(dep);
     graph.add_edge(&parent_node, &node_index);
     node_index
