@@ -580,6 +580,7 @@ fn convert_dependency(
         .source_path(base_dependency.source_path.clone().unwrap_or_default())
         .specifier(base_dependency.specifier.clone())
         .specifier_type(base_dependency.specifier_type)
+        .meta(base_dependency.meta.clone())
         .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
@@ -611,6 +612,7 @@ fn convert_dependency(
         .source_path(base_dependency.source_path.clone().unwrap_or_default())
         .specifier(base_dependency.specifier.clone())
         .specifier_type(base_dependency.specifier_type)
+        .meta(base_dependency.meta.clone())
         .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
@@ -641,6 +643,7 @@ fn convert_dependency(
         .source_path(base_dependency.source_path.clone().unwrap_or_default())
         .specifier(base_dependency.specifier.clone())
         .specifier_type(base_dependency.specifier_type)
+        .meta(base_dependency.meta.clone())
         .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
@@ -661,6 +664,7 @@ fn convert_dependency(
         .source_path(base_dependency.source_path.clone().unwrap_or_default())
         .specifier(base_dependency.specifier.clone())
         .specifier_type(base_dependency.specifier_type)
+        .meta(base_dependency.meta.clone())
         .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
@@ -763,6 +767,7 @@ fn convert_dependency(
         .source_path(base_dependency.source_path.clone().unwrap_or_default())
         .specifier(base_dependency.specifier.clone())
         .specifier_type(base_dependency.specifier_type)
+        .meta(base_dependency.meta.clone())
         .build();
 
       dependency.ensure_id();
