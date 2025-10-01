@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Atlaspack minimalist A-bundle logo">
+  <defs>
+    <style>
+      .deep{stroke:#0052CC;fill:none}
+      .accent{stroke:#2684FF;fill:none}
+    </style>
+  </defs>
+  <!-- abstract A as bundling apex -->
+  <polygon points="32,10 12,50 52,50" class="deep" stroke-width="4" stroke-linejoin="round"/>
+  <!-- converging module links -->
+  <path d="M32 16 L32 34" class="accent" stroke-linecap="round" stroke-width="3"/>
+  <path d="M18 46 L32 32" class="accent" stroke-linecap="round" stroke-width="3"/>
+  <path d="M46 46 L32 32" class="accent" stroke-linecap="round" stroke-width="3"/>
+  <!-- bundled core node -->
+  <circle cx="32" cy="32" r="3" fill="#0052CC"/>
+</svg>

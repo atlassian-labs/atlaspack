@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="../../../atlaspack-minimal-bundle-1.svg" alt="Atlaspack logo concept 1" width="120" />
+  <img src="../../../atlaspack-minimal-bundle-2.svg" alt="Atlaspack logo concept 2" width="120" />
+  <img src="../../../atlaspack-minimal-bundle-3.svg" alt="Atlaspack logo concept 3" width="120" />
+</p>
+
 # Atlaspack
 
 [![Atlassian license](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
