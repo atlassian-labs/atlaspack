@@ -20,7 +20,7 @@
   "source": "src/index.ts",
   "dependencies": {
     "@atlaspack/cache": "3.2.29",
-    "@atlaspack/core": "2.25.0",
+    "@atlaspack/core": "2.25.1",
     "@atlaspack/graph": "3.5.23",
     "nullthrows": "^1.1.1",
     "table": "^6.8.1",

@@ -23,7 +23,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/core": "2.25.0",
+    "@atlaspack/core": "2.25.1",
     "@atlaspack/query": "2.14.35",
     "@atlaspack/reporter-bundle-stats": "2.14.35",
     "@atlaspack/utils": "3.0.2",

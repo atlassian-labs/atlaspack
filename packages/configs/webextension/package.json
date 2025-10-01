@@ -20,7 +20,7 @@
     "@atlaspack/types": "2.15.24"
   },
   "peerDependencies": {
-    "@atlaspack/core": "2.25.0"
+    "@atlaspack/core": "2.25.1"
   },
   "scripts": {
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
