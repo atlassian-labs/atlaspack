@@ -9,9 +9,9 @@ use swc_core::atoms::{Atom, JsWord};
 use atlaspack_core::plugin::{PluginOptions, TransformResult};
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
-  Asset, BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, Diagnostic, DiagnosticBuilder,
-  Environment, EnvironmentContext, File, FileType, IncludeNodeModules, OutputFormat,
-  SourceLocation, SourceMap, SourceType, SpecifierType, Symbol,
+  Asset, BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, DependencyBuilder, Diagnostic,
+  DiagnosticBuilder, Environment, EnvironmentContext, File, FileType, IncludeNodeModules,
+  OutputFormat, Priority, SourceLocation, SourceMap, SourceType, SpecifierType, Symbol,
 };
 
 use crate::js_transformer::conversion::dependency_kind::{
@@ -449,22 +449,21 @@ fn make_esm_helpers_dependency(
   asset_environment: Environment,
   asset_id: &str,
 ) -> Dependency {
-  Dependency {
-    source_asset_id: Some(asset_id.to_string()),
-    specifier: "@atlaspack/transformer-js/src/esmodule-helpers.js".into(),
-    specifier_type: SpecifierType::Esm,
-    source_path: Some(asset_file_path.clone()),
-    env: Environment {
+  DependencyBuilder::default()
+    .source_asset_id(asset_id.to_string())
+    .specifier("@atlaspack/transformer-js/src/esmodule-helpers.js".to_string())
+    .specifier_type(SpecifierType::Esm)
+    .source_path(asset_file_path.clone())
+    .env(Arc::new(Environment {
       include_node_modules: IncludeNodeModules::Map(BTreeMap::from([(
         "@atlaspack/transformer-js".into(),
         true,
       )])),
       ..asset_environment.clone()
-    }
-    .into(),
-    resolve_from: Some(options.core_path.as_path().into()),
-    ..Default::default()
-  }
+    }))
+    .resolve_from(options.core_path.as_path().into())
+    .priority(Priority::default())
+    .build()
 }
 
 /// This will replace the hoist result symbols that `is_re_export_all` returns true for as well
@@ -504,21 +503,20 @@ fn convert_dependency(
     asset.file_path.clone(),
     &transformer_dependency.loc,
   );
-  let mut base_dependency = Dependency {
-    bundle_behavior: match transformer_dependency.kind {
+  let mut base_dependency = DependencyBuilder::default()
+    .bundle_behavior(match transformer_dependency.kind {
       DependencyKind::Url => Some(BundleBehavior::Isolated),
       _ => None,
-    },
-    env: asset.env.clone(),
-    loc: Some(loc.clone()),
-    priority: convert_priority(&transformer_dependency),
-    source_asset_id: Some(asset.id.to_string()),
-    source_asset_type: Some(asset.file_type.clone()),
-    source_path: Some(asset.file_path.clone()),
-    specifier: transformer_dependency.specifier.as_ref().into(),
-    specifier_type: convert_specifier_type(&transformer_dependency),
-    ..Dependency::default()
-  };
+    })
+    .env(asset.env.clone())
+    .loc(loc.clone())
+    .priority(convert_priority(&transformer_dependency))
+    .source_asset_id(asset.id.to_string())
+    .source_asset_type(asset.file_type.clone())
+    .source_path(asset.file_path.clone())
+    .specifier(transformer_dependency.specifier.as_ref().to_string())
+    .specifier_type(convert_specifier_type(&transformer_dependency))
+    .build();
 
   if let Some(placeholder) = &transformer_dependency.placeholder {
     base_dependency.set_placeholder(placeholder.clone());
@@ -557,8 +555,8 @@ fn convert_dependency(
 
       base_dependency.set_is_webworker();
 
-      let dependency = Dependency {
-        env: Arc::new(Environment {
+      let dependency = DependencyBuilder::default()
+        .env(Arc::new(Environment {
           context: EnvironmentContext::WebWorker,
           engines: asset.env.engines.clone(),
           include_node_modules: asset.env.include_node_modules.clone(),
@@ -568,15 +566,28 @@ fn convert_dependency(
           source_type,
           custom_env: asset.env.custom_env.clone(),
           ..*asset.env.clone()
-        }),
-        ..base_dependency
-      };
+        }))
+        .bundle_behavior(base_dependency.bundle_behavior)
+        .loc(base_dependency.loc.clone().unwrap_or_default())
+        .priority(base_dependency.priority)
+        .source_asset_id(base_dependency.source_asset_id.clone().unwrap_or_default())
+        .source_asset_type(
+          base_dependency
+            .source_asset_type
+            .clone()
+            .unwrap_or_default(),
+        )
+        .source_path(base_dependency.source_path.clone().unwrap_or_default())
+        .specifier(base_dependency.specifier.clone())
+        .specifier_type(base_dependency.specifier_type)
+        .meta(base_dependency.meta.clone())
+        .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
     }
     DependencyKind::ServiceWorker => {
-      let dependency = Dependency {
-        env: Arc::new(Environment {
+      let dependency = DependencyBuilder::default()
+        .env(Arc::new(Environment {
           context: EnvironmentContext::ServiceWorker,
           engines: asset.env.engines.clone(),
           include_node_modules: asset.env.include_node_modules.clone(),
@@ -586,17 +597,29 @@ fn convert_dependency(
           source_type,
           custom_env: asset.env.custom_env.clone(),
           ..*asset.env.clone()
-        }),
-        needs_stable_name: true,
-        // placeholder: dep.placeholder.map(|s| s.into()),
-        ..base_dependency
-      };
+        }))
+        .needs_stable_name(true)
+        .bundle_behavior(base_dependency.bundle_behavior)
+        .loc(base_dependency.loc.clone().unwrap_or_default())
+        .priority(base_dependency.priority)
+        .source_asset_id(base_dependency.source_asset_id.clone().unwrap_or_default())
+        .source_asset_type(
+          base_dependency
+            .source_asset_type
+            .clone()
+            .unwrap_or_default(),
+        )
+        .source_path(base_dependency.source_path.clone().unwrap_or_default())
+        .specifier(base_dependency.specifier.clone())
+        .specifier_type(base_dependency.specifier_type)
+        .meta(base_dependency.meta.clone())
+        .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
     }
     DependencyKind::Worklet => {
-      let dependency = Dependency {
-        env: Arc::new(Environment {
+      let dependency = DependencyBuilder::default()
+        .env(Arc::new(Environment {
           context: EnvironmentContext::Worklet,
           engines: asset.env.engines.clone(),
           include_node_modules: asset.env.include_node_modules.clone(),
@@ -606,21 +629,43 @@ fn convert_dependency(
           source_type: SourceType::Module,
           custom_env: asset.env.custom_env.clone(),
           ..*asset.env.clone()
-        }),
-        // placeholder: dep.placeholder.map(|s| s.into()),
-        // promise_symbol: None,
-        ..base_dependency
-      };
+        }))
+        .bundle_behavior(base_dependency.bundle_behavior)
+        .loc(base_dependency.loc.clone().unwrap_or_default())
+        .priority(base_dependency.priority)
+        .source_asset_id(base_dependency.source_asset_id.clone().unwrap_or_default())
+        .source_asset_type(
+          base_dependency
+            .source_asset_type
+            .clone()
+            .unwrap_or_default(),
+        )
+        .source_path(base_dependency.source_path.clone().unwrap_or_default())
+        .specifier(base_dependency.specifier.clone())
+        .specifier_type(base_dependency.specifier_type)
+        .meta(base_dependency.meta.clone())
+        .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
     }
     DependencyKind::Url => {
-      let dependency = Dependency {
-        env: asset.env.clone(),
-        bundle_behavior: Some(BundleBehavior::Isolated),
-        // placeholder: dep.placeholder.map(|s| s.into()),
-        ..base_dependency
-      };
+      let dependency = DependencyBuilder::default()
+        .env(asset.env.clone())
+        .bundle_behavior(Some(BundleBehavior::Isolated))
+        .loc(base_dependency.loc.clone().unwrap_or_default())
+        .priority(base_dependency.priority)
+        .source_asset_id(base_dependency.source_asset_id.clone().unwrap_or_default())
+        .source_asset_type(
+          base_dependency
+            .source_asset_type
+            .clone()
+            .unwrap_or_default(),
+        )
+        .source_path(base_dependency.source_path.clone().unwrap_or_default())
+        .specifier(base_dependency.specifier.clone())
+        .specifier_type(base_dependency.specifier_type)
+        .meta(base_dependency.meta.clone())
+        .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
     }
@@ -701,16 +746,29 @@ fn convert_dependency(
         }
       }
 
-      let dependency = Dependency {
-        env,
-        is_optional: transformer_dependency.is_optional,
-        is_esm: matches!(
+      let dependency = DependencyBuilder::default()
+        .env(env)
+        .is_optional(transformer_dependency.is_optional)
+        .is_esm(matches!(
           transformer_dependency.kind,
           DependencyKind::Import | DependencyKind::Export
-        ),
-        placeholder: transformer_dependency.placeholder.clone(),
-        ..base_dependency
-      };
+        ))
+        .placeholder_option(transformer_dependency.placeholder.clone())
+        .bundle_behavior(base_dependency.bundle_behavior)
+        .loc(base_dependency.loc.clone().unwrap_or_default())
+        .priority(base_dependency.priority)
+        .source_asset_id(base_dependency.source_asset_id.clone().unwrap_or_default())
+        .source_asset_type(
+          base_dependency
+            .source_asset_type
+            .clone()
+            .unwrap_or_default(),
+        )
+        .source_path(base_dependency.source_path.clone().unwrap_or_default())
+        .specifier(base_dependency.specifier.clone())
+        .specifier_type(base_dependency.specifier_type)
+        .meta(base_dependency.meta.clone())
+        .build();
 
       Ok(DependencyConversionResult::Dependency(dependency))
     }

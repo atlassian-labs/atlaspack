@@ -2,6 +2,8 @@ use napi::{Env, JsObject};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::Serialize;
 
+use anyhow::anyhow;
+
 use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, DependencyState};
 use atlaspack_core::types::{Asset, Dependency};
 
@@ -20,22 +22,33 @@ pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Res
     .collect::<Vec<_>>()
     .par_iter()
     .map(|item| {
-      serde_json::to_vec(&match item {
+      Ok(serde_json::to_vec(&match item {
         AssetGraphNode::Root => SerializedAssetGraphNode::Root,
         AssetGraphNode::Entry => SerializedAssetGraphNode::Entry,
-        AssetGraphNode::Asset(asset_node) => SerializedAssetGraphNode::Asset {
-          value: asset_node.asset.clone(),
+        AssetGraphNode::Asset(asset) => SerializedAssetGraphNode::Asset {
+          value: asset.as_ref(),
         },
-        AssetGraphNode::Dependency(dependency_node) => SerializedAssetGraphNode::Dependency {
-          value: SerializedDependency {
-            id: dependency_node.dependency.id(),
-            dependency: dependency_node.dependency.as_ref().clone(),
-          },
-          has_deferred: dependency_node.state == DependencyState::Deferred,
-        },
-      })
+        AssetGraphNode::Dependency(dependency) => {
+          let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dependency.id()) else {
+            return Err(anyhow!(
+              "Dependency node not found for id: {}",
+              dependency.id()
+            ));
+          };
+
+          let dep_state = asset_graph.get_dependency_state(dep_node_id);
+
+          SerializedAssetGraphNode::Dependency {
+            value: SerializedDependency {
+              id: dependency.id(),
+              dependency: dependency.as_ref(),
+            },
+            has_deferred: *dep_state == DependencyState::Deferred,
+          }
+        }
+      }))
     })
-    .collect::<Vec<_>>();
+    .collect::<anyhow::Result<Vec<_>>>()?;
 
   // Collect the results into a JavaScript Array
   // TODO NAPI3 allows removing this
@@ -58,21 +71,21 @@ pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Res
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SerializedDependency {
+pub struct SerializedDependency<'a> {
   id: String,
-  dependency: Dependency,
+  dependency: &'a Dependency,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
-enum SerializedAssetGraphNode {
+enum SerializedAssetGraphNode<'a> {
   Root,
   Entry,
   Asset {
-    value: Asset,
+    value: &'a Asset,
   },
   Dependency {
-    value: SerializedDependency,
+    value: SerializedDependency<'a>,
     has_deferred: bool,
   },
 }

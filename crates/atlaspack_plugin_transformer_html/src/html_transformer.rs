@@ -137,7 +137,9 @@ fn run_html_transformations(
 
 #[cfg(test)]
 mod test {
-  use atlaspack_core::types::{FileType, JSONObject, SourceType};
+  use atlaspack_core::types::{
+    DependencyBuilder, FileType, JSONObject, Priority, SourceType, SpecifierType,
+  };
   use pretty_assertions::assert_eq;
 
   use super::*;
@@ -241,18 +243,21 @@ mod test {
       ..Environment::default()
     });
 
+    let expected_dependency = DependencyBuilder::default()
+      .bundle_behavior(Some(BundleBehavior::Inline))
+      .env(env.clone())
+      .source_asset_id("test".to_string())
+      .source_asset_type(FileType::Html)
+      .source_path(PathBuf::from("main.html"))
+      .specifier("16f87d7beed96467".to_string())
+      .specifier_type(SpecifierType::default())
+      .priority(Priority::default())
+      .build();
+
     assert_eq!(
       transformation,
       HtmlTransformation {
-        dependencies: vec![Dependency {
-          bundle_behavior: Some(BundleBehavior::Inline),
-          env: env.clone(),
-          source_asset_id: Some(String::from("test")),
-          source_asset_type: Some(FileType::Html),
-          source_path: Some(PathBuf::from("main.html")),
-          specifier: String::from("16f87d7beed96467"),
-          ..Dependency::default()
-        }],
+        dependencies: vec![expected_dependency],
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::Inline),
@@ -311,18 +316,21 @@ mod test {
       ..Environment::default()
     });
 
+    let expected_dependency = DependencyBuilder::default()
+      .bundle_behavior(Some(BundleBehavior::InlineIsolated))
+      .env(env.clone())
+      .source_asset_id("test".to_string())
+      .source_asset_type(FileType::Html)
+      .source_path(PathBuf::from("main.html"))
+      .specifier("16f87d7beed96467".to_string())
+      .specifier_type(SpecifierType::default())
+      .priority(Priority::default())
+      .build();
+
     assert_eq!(
       transformation,
       HtmlTransformation {
-        dependencies: vec![Dependency {
-          bundle_behavior: Some(BundleBehavior::InlineIsolated),
-          env: env.clone(),
-          source_asset_id: Some(String::from("test")),
-          source_asset_type: Some(FileType::Html),
-          source_path: Some(PathBuf::from("main.html")),
-          specifier: String::from("16f87d7beed96467"),
-          ..Dependency::default()
-        }],
+        dependencies: vec![expected_dependency],
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::InlineIsolated),
@@ -370,16 +378,20 @@ mod test {
       ))
     );
 
+    let expected_dependency = DependencyBuilder::default()
+      .source_asset_id("test".to_string())
+      .source_asset_type(FileType::Html)
+      .source_path(PathBuf::from("main.html"))
+      .specifier("16f87d7beed96467".to_string())
+      .env(Arc::new(Environment::default()))
+      .specifier_type(SpecifierType::default())
+      .priority(Priority::default())
+      .build();
+
     assert_eq!(
       transformation,
       HtmlTransformation {
-        dependencies: vec![Dependency {
-          source_asset_id: Some(String::from("test")),
-          source_asset_type: Some(FileType::Html),
-          source_path: Some(PathBuf::from("main.html")),
-          specifier: String::from("16f87d7beed96467"),
-          ..Dependency::default()
-        }],
+        dependencies: vec![expected_dependency],
         discovered_assets: vec![AssetWithDependencies {
           asset: Asset {
             bundle_behavior: Some(BundleBehavior::Inline),

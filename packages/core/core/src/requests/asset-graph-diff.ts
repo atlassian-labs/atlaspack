@@ -71,7 +71,11 @@ function compactDeep(
   }
 }
 
-function assetGraphDiff(jsAssetGraph: AssetGraph, rustAssetGraph: AssetGraph) {
+function assetGraphDiff(
+  jsAssetGraph: AssetGraph,
+  rustAssetGraph: AssetGraph,
+  projectRoot: string,
+) {
   const getNodes = (graph: any) => {
     let nodes: Record<string, any> = {};
 
@@ -81,13 +85,12 @@ function assetGraphDiff(jsAssetGraph: AssetGraph, rustAssetGraph: AssetGraph) {
       if (!node) return;
 
       if (node.type === 'dependency') {
-        let sourcePath = node.value.sourcePath ?? toProjectPath('', 'entry');
-        nodes[
-          `dep:${fromProjectPathRelative(sourcePath)}:${node.value.specifier}`
-        ] = filterNode(node);
+        let sourcePath = node.value.sourcePath
+          ? toProjectPath(node.value.sourcePath)
+          : toProjectPath(projectRoot, 'entry');
+        nodes[`dep:${sourcePath}:${node.value.specifier}`] = filterNode(node);
       } else if (node.type === 'asset') {
-        nodes[`asset:${fromProjectPathRelative(node.value.filePath)}`] =
-          filterNode(node);
+        nodes[`asset:${toProjectPath(node.value.filePath)}`] = filterNode(node);
       }
     });
 

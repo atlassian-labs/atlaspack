@@ -379,8 +379,8 @@ mod tests {
     config_loader::ConfigLoader,
     plugin::PluginLogger,
     types::{
-      Code, Dependency, Environment, EnvironmentContext, Location, SourceLocation, SpecifierType,
-      Symbol,
+      Code, DependencyBuilder, Environment, EnvironmentContext, Location, Priority, SourceLocation,
+      SpecifierType, Symbol,
     },
   };
   use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSystem};
@@ -748,32 +748,35 @@ mod tests {
     let target_asset = create_asset_at_project_root(project_root, "mock_path.js", source_code);
     let asset_id = target_asset.id.clone();
 
-    let mut expected_dependencies = vec![Dependency {
-      loc: Some(SourceLocation {
-        file_path: PathBuf::from("mock_path.js"),
-        start: Location {
-          line: 2,
-          column: 25,
-        },
-        end: Location {
-          line: 2,
-          column: 32,
-        },
-      }),
-      placeholder: Some("e83f3db3d6f57ea6".to_string()),
-      source_asset_id: Some(asset_id.clone()),
-      source_path: Some(PathBuf::from("mock_path.js")),
-      source_asset_type: Some(FileType::Js),
-      specifier: String::from("other"),
-      specifier_type: SpecifierType::CommonJS,
-      symbols: Some(vec![Symbol {
-        exported: String::from("*"),
-        loc: None,
-        local: String::from("a1ad9714284f3ad6$"),
-        ..Symbol::default()
-      }]),
-      ..Default::default()
-    }];
+    let mut expected_dependencies = vec![
+      DependencyBuilder::default()
+        .loc(SourceLocation {
+          file_path: PathBuf::from("mock_path.js"),
+          start: Location {
+            line: 2,
+            column: 25,
+          },
+          end: Location {
+            line: 2,
+            column: 32,
+          },
+        })
+        .placeholder("e83f3db3d6f57ea6".to_string())
+        .source_asset_id(asset_id.clone())
+        .source_path(PathBuf::from("mock_path.js"))
+        .source_asset_type(FileType::Js)
+        .specifier(String::from("other"))
+        .specifier_type(SpecifierType::CommonJS)
+        .symbols(vec![Symbol {
+          exported: String::from("*"),
+          loc: None,
+          local: String::from("a1ad9714284f3ad6$"),
+          ..Symbol::default()
+        }])
+        .env(Arc::new(Environment::default()))
+        .priority(Priority::Sync)
+        .build(),
+    ];
 
     expected_dependencies[0].set_placeholder("e83f3db3d6f57ea6");
     expected_dependencies[0].set_kind("Require");

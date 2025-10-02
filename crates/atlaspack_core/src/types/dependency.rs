@@ -4,6 +4,7 @@ use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use derive_builder::Builder;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_repr::Deserialize_repr;
@@ -49,8 +50,12 @@ pub fn create_dependency_id(
 }
 
 /// A dependency denotes a connection between two assets
-#[derive(Hash, PartialEq, Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Hash, PartialEq, Clone, Debug, Default, Deserialize, Serialize, Builder)]
 #[serde(rename_all = "camelCase")]
+#[builder(build_fn(skip), pattern = "owned", setter(strip_option))]
+// Dependencies should not be created directly, so we can ensure that an ID
+// exists. DependencyBuilder::build() should be used instead.
+#[non_exhaustive]
 pub struct Dependency {
   /// Controls the behavior of the bundle the resolved asset is placed into
   ///
@@ -60,6 +65,9 @@ pub struct Dependency {
 
   /// The environment of the dependency
   pub env: Arc<Environment>,
+
+  #[builder(setter(skip))]
+  pub id: String,
 
   /// The location within the source file where the dependency was found
   #[serde(default)]
@@ -145,19 +153,94 @@ pub struct Dependency {
   pub placeholder: Option<String>,
 }
 
+impl DependencyBuilder {
+  pub fn build(self) -> Dependency {
+    // These properties are required to generate an ID
+    let specifier = self.specifier.expect("specifier is required");
+    let env = self.env.expect("env is required");
+    let specifier_type = self.specifier_type.expect("specifier_type is required");
+    let priority = self.priority.expect("priority is required");
+
+    // These are part of ID generation, but can be optional
+    let source_asset_id = self.source_asset_id.flatten();
+    let target = self.target.flatten();
+    let pipeline = self.pipeline.flatten();
+    let bundle_behavior = self.bundle_behavior.unwrap_or_default();
+    let package_conditions = self.package_conditions.unwrap_or_default();
+
+    let id = create_dependency_id(
+      source_asset_id.as_ref(),
+      &specifier,
+      &env.id(),
+      target.as_deref(),
+      pipeline.as_deref(),
+      &specifier_type,
+      &bundle_behavior,
+      &priority,
+      &package_conditions,
+    );
+
+    Dependency {
+      id,
+
+      // Mandatory ID fields
+      specifier,
+      env,
+      specifier_type,
+      priority,
+      package_conditions,
+
+      // Optional ID fields
+      pipeline,
+      source_asset_id,
+      target,
+
+      // These properties are either optional or safe to default
+      bundle_behavior: self.bundle_behavior.unwrap_or_default(),
+      loc: self.loc.flatten(),
+      meta: self.meta.unwrap_or_default(),
+      range: self.range.flatten(),
+      resolve_from: self.resolve_from.flatten(),
+      source_path: self.source_path.flatten(),
+      source_asset_type: self.source_asset_type.flatten(),
+      symbols: self.symbols.flatten(),
+      is_entry: self.is_entry.unwrap_or_default(),
+      is_optional: self.is_optional.unwrap_or_default(),
+      needs_stable_name: self.needs_stable_name.unwrap_or_default(),
+      should_wrap: self.should_wrap.unwrap_or_default(),
+      is_esm: self.is_esm.unwrap_or_default(),
+      placeholder: self.placeholder.flatten(),
+    }
+  }
+
+  pub fn source_path_option(self, source_path: Option<PathBuf>) -> Self {
+    if let Some(source_path) = source_path {
+      self.source_path(source_path)
+    } else {
+      self
+    }
+  }
+
+  pub fn symbols_option(self, symbols: Option<Vec<Symbol>>) -> Self {
+    if let Some(symbols) = symbols {
+      self.symbols(symbols)
+    } else {
+      self
+    }
+  }
+
+  pub fn placeholder_option(self, placeholder: Option<String>) -> Self {
+    if let Some(placeholder) = placeholder {
+      self.placeholder(placeholder)
+    } else {
+      self
+    }
+  }
+}
+
 impl Dependency {
   pub fn id(&self) -> String {
-    create_dependency_id(
-      self.source_asset_id.as_ref(),
-      &self.specifier,
-      &self.env.id(),
-      self.target.as_deref(),
-      self.pipeline.as_deref(),
-      &self.specifier_type,
-      &self.bundle_behavior,
-      &self.priority,
-      &self.package_conditions,
-    )
+    self.id.clone()
   }
 
   pub fn entry(entry: String, target: Target) -> Dependency {
@@ -176,26 +259,16 @@ impl Dependency {
       }]);
     }
 
-    Dependency {
-      env: target.env.clone(),
-      is_entry: true,
-      needs_stable_name: true,
-      specifier: entry,
-      // By default in JS this is set to ESM, even though it is resolved as Url
-      specifier_type: SpecifierType::Url,
-      symbols,
-      target: Some(Box::new(target)),
-      ..Dependency::default()
-    }
-  }
-
-  pub fn new(specifier: String, env: Arc<Environment>) -> Dependency {
-    Dependency {
-      env,
-      meta: JSONObject::new(),
-      specifier,
-      ..Dependency::default()
-    }
+    DependencyBuilder::default()
+      .env(target.env.clone())
+      .is_entry(true)
+      .needs_stable_name(true)
+      .specifier(entry)
+      .specifier_type(SpecifierType::Url)
+      .symbols_option(symbols)
+      .target(Box::new(target))
+      .priority(Priority::default())
+      .build()
   }
 
   pub fn set_placeholder(&mut self, placeholder: impl Into<serde_json::Value>) {

@@ -180,6 +180,17 @@ mod tests {
 
   use super::*;
 
+  fn assert_path_result(
+    actual: Result<Arc<RequestResult>, anyhow::Error>,
+    expected: PathRequestOutput,
+  ) {
+    let Ok(result) = actual else {
+      panic!("Expected Ok, got Err: {:?}", actual.err());
+    };
+
+    assert_eq!(result, Arc::new(RequestResult::Path(expected)));
+  }
+
   macro_rules! test_plugins {
     ($resolvers:expr) => {{
       let mut plugins = MockPlugins::new();
@@ -258,10 +269,7 @@ mod tests {
     .run_request(request)
     .await;
 
-    assert_eq!(
-      resolution.map_err(|e| e.to_string()),
-      Ok(RequestResult::Path(PathRequestOutput::Excluded))
-    );
+    assert_path_result(resolution, PathRequestOutput::Excluded);
   }
 
   #[tokio::test(flavor = "multi_thread")]
@@ -325,30 +333,36 @@ mod tests {
     .run_request(request)
     .await;
 
-    assert_eq!(
-      resolution.map_err(|e| e.to_string()),
-      Ok(RequestResult::Path(PathRequestOutput::Resolved {
+    assert_path_result(
+      resolution,
+      PathRequestOutput::Resolved {
         can_defer: false,
         code: None,
         path,
         pipeline: None,
         query: None,
-        side_effects: false
-      }))
+        side_effects: false,
+      },
     );
   }
 
   mod when_all_resolvers_return_unresolved {
+    use atlaspack_core::types::{DependencyBuilder, Environment, Priority, SpecifierType};
+
     use super::*;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn returns_an_excluded_resolution_when_the_dependency_is_optional() {
       let request = PathRequest {
-        dependency: Arc::new(Dependency {
-          is_optional: true,
-          specifier: String::from("a.js"),
-          ..Default::default()
-        }),
+        dependency: Arc::new(
+          DependencyBuilder::default()
+            .is_optional(true)
+            .specifier("a.js".to_string())
+            .env(Arc::new(Environment::default()))
+            .specifier_type(SpecifierType::default())
+            .priority(Priority::default())
+            .build(),
+        ),
       };
 
       let resolution = request_tracker(RequestTrackerTestOptions {
@@ -358,20 +372,17 @@ mod tests {
       .run_request(request)
       .await;
 
-      assert_eq!(
-        resolution.map_err(|e| e.to_string()),
-        Ok(RequestResult::Path(PathRequestOutput::Excluded))
-      );
+      assert_path_result(resolution, PathRequestOutput::Excluded);
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn returns_an_error_when_the_dependency_is_required() {
       let assert_error = move |dependency: Dependency, error: &'static str| async move {
+        let mut dep = dependency.clone();
+        dep.is_optional = false;
+
         let request = PathRequest {
-          dependency: Arc::new(Dependency {
-            is_optional: false,
-            ..dependency
-          }),
+          dependency: Arc::new(dep),
         };
 
         let resolution = request_tracker(RequestTrackerTestOptions {
@@ -388,41 +399,49 @@ mod tests {
       };
 
       assert_error(
-        Dependency {
-          specifier: String::from("a.js"),
-          ..Dependency::default()
-        },
+        DependencyBuilder::default()
+          .specifier("a.js".to_string())
+          .env(Arc::new(Environment::default()))
+          .specifier_type(SpecifierType::default())
+          .priority(Priority::default())
+          .build(),
         "Failed to resolve a.js",
       )
       .await;
 
       assert_error(
-        Dependency {
-          resolve_from: Some(PathBuf::from("rf.js")),
-          specifier: String::from("a.js"),
-          ..Dependency::default()
-        },
+        DependencyBuilder::default()
+          .resolve_from(PathBuf::from("rf.js"))
+          .specifier("a.js".to_string())
+          .env(Arc::new(Environment::default()))
+          .specifier_type(SpecifierType::default())
+          .priority(Priority::default())
+          .build(),
         "Failed to resolve a.js from rf.js",
       )
       .await;
 
       assert_error(
-        Dependency {
-          source_path: Some(PathBuf::from("sp.js")),
-          specifier: String::from("a.js"),
-          ..Dependency::default()
-        },
+        DependencyBuilder::default()
+          .source_path(PathBuf::from("sp.js"))
+          .specifier("a.js".to_string())
+          .env(Arc::new(Environment::default()))
+          .specifier_type(SpecifierType::default())
+          .priority(Priority::default())
+          .build(),
         "Failed to resolve a.js from sp.js",
       )
       .await;
 
       assert_error(
-        Dependency {
-          resolve_from: Some(PathBuf::from("rf.js")),
-          source_path: Some(PathBuf::from("sp.js")),
-          specifier: String::from("a.js"),
-          ..Dependency::default()
-        },
+        DependencyBuilder::default()
+          .resolve_from(PathBuf::from("rf.js"))
+          .source_path(PathBuf::from("sp.js"))
+          .specifier("a.js".to_string())
+          .env(Arc::new(Environment::default()))
+          .specifier_type(SpecifierType::default())
+          .priority(Priority::default())
+          .build(),
         "Failed to resolve a.js from rf.js",
       )
       .await;
