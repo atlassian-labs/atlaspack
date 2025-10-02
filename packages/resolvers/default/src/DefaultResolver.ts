@@ -29,6 +29,10 @@ export default new Resolver({
       );
     }
 
+    if (specifier.startsWith('@atlaspack/compiled-css-in-js-stylesheet')) {
+      console.log('resolve', specifier, dependency);
+    }
+
     return resolver.resolve({
       filename: specifier,
       specifierType: dependency.specifierType,

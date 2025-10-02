@@ -1,0 +1,11 @@
+{
+  "extends": [
+    "@atlaspack/config-default"
+  ],
+  "optimizers": {
+    "*.css": [
+      "@atlaspack/optimizer-css-compiled-css-in-js",
+      "..."
+    ]
+  }
+}

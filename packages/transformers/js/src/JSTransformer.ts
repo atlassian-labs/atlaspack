@@ -475,6 +475,8 @@ export default new Transformer({
       conditions,
       // @ts-expect-error TS2339
       magic_comments,
+      // @ts-expect-error TS2339
+      compiled_css_rules,
     } = await (transformAsync || transform)({
       filename: asset.filePath,
       code,
@@ -1170,6 +1172,8 @@ export default new Transformer({
         });
       }
     }
+
+    asset.setCompiledCssStyles(compiled_css_rules);
 
     asset.type = 'js';
     asset.setBuffer(compiledCode);

@@ -1,0 +1,17 @@
+{
+  "name": "@atlaspack/compiled-css-in-js-stylesheet",
+  "version": "2.0.0",
+  "license": "MIT",
+  "main": "styles.css",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "commonjs",
+  "scripts": {
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  }
+}

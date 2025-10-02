@@ -190,6 +190,10 @@ class BaseAsset {
   getMapBuffer(): Promise<Buffer | null | undefined> {
     return this.#asset.getMapBuffer();
   }
+
+  getCompiledCssStyles(): ReadonlyArray<string> | undefined {
+    return this.#asset.getCompiledCssStyles();
+  }
 }
 
 export class Asset extends BaseAsset implements IAsset {
@@ -368,5 +372,9 @@ export class MutableAsset extends BaseAsset implements IMutableAsset {
       loc: toInternalSourceLocation(this.#asset.options.projectRoot, env.loc),
     });
     this.#asset.updateId();
+  }
+
+  setCompiledCssStyles(styles: string[]): void {
+    this.#asset.setCompiledCssStyles(styles);
   }
 }

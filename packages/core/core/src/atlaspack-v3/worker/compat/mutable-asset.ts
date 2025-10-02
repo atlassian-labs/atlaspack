@@ -41,6 +41,7 @@ export class MutableAsset implements IMutableAsset {
   symbols: MutableAssetSymbols;
   type: string;
   uniqueKey: string | null | undefined;
+  compiledCssStyles?: string[];
 
   #astDirty: boolean;
   #ast: AST | null | undefined;
@@ -82,6 +83,7 @@ export class MutableAsset implements IMutableAsset {
     this.symbols = new MutableAssetSymbols(asset.symbols);
     this.type = asset.type;
     this.uniqueKey = asset.uniqueKey;
+    this.compiledCssStyles = asset.compiledCssStyles;
 
     this.#astDirty = false;
     this.#contents = contents;
@@ -205,5 +207,9 @@ export class MutableAsset implements IMutableAsset {
 
   invalidateOnBuild(): void {
     // TODO: Forward invalidations to Rust
+  }
+
+  setCompiledCssStyles(styles: string[]): void {
+    this.compiledCssStyles = styles;
   }
 }

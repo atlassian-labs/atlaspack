@@ -854,6 +854,7 @@ export interface BaseAsset {
   getMapBuffer(): Promise<Buffer | null | undefined>;
   /** Returns a list of dependencies for the asset. */
   getDependencies(): ReadonlyArray<Dependency>;
+  getCompiledCssStyles(): ReadonlyArray<string> | undefined;
 }
 
 /**
@@ -923,6 +924,8 @@ export interface MutableAsset extends BaseAsset {
   /** Sets the asset's source map. */
   setMap(arg1?: SourceMap | null | undefined): void;
   setEnvironment(opts: EnvironmentOptions): void;
+  /** Sets the asset's CSS rules. */
+  setCompiledCssStyles(styles: string[]): void;
 }
 
 /**

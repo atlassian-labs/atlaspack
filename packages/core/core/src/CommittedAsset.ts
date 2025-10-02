@@ -162,4 +162,8 @@ export default class CommittedAsset {
   getDependencies(): Array<Dependency> {
     return Array.from(this.value.dependencies.values());
   }
+
+  getCompiledCssStyles(): ReadonlyArray<string> | undefined {
+    return this.value.compiledCssStyles;
+  }
 }

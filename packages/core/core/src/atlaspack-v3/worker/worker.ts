@@ -278,7 +278,7 @@ export class AtlaspackWorker {
       );
 
       assert(
-        result[0] === mutableAsset,
+        (result[0] as unknown as MutableAsset) === mutableAsset,
         '[V3] Unimplemented: New asset returned from Node transformer',
       );
 

@@ -226,6 +226,7 @@ export type Asset = {
   plugin: PackageName | null | undefined;
   configKeyPath?: string;
   isLargeBlob?: boolean;
+  compiledCssStyles?: string[];
 };
 
 export type InternalGlob = ProjectPath;

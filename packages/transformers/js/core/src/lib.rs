@@ -165,6 +165,7 @@ pub struct TransformResult {
   pub conditions: HashSet<Condition>,
   pub magic_comments: HashMap<String, String>,
   pub is_empty_or_empty_export: bool,
+  pub compiled_css_rules: Vec<String>,
 }
 
 fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Versions> {
@@ -331,6 +332,12 @@ pub fn transform(
                 }),
               };
 
+              // Run CSS transformer BEFORE JSX transformation so it can process JSX syntax
+              let mut compiled_css_tranformer_result = atlaspack_compiled_css_in_js_transformer::AtomicCssCollector::default();
+              module.visit_mut_with(&mut compiled_css_tranformer_result);
+              let generated_css_rules = compiled_css_tranformer_result.generated_css_rules;
+              result.compiled_css_rules = generated_css_rules;
+
               if config.is_jsx {
                 if config.add_display_name.unwrap_or(false) {
                   module.visit_mut_with(&mut add_display_name::AddDisplayNameVisitor::default());
@@ -384,6 +391,7 @@ pub fn transform(
                 module.visit_with(&mut constant_module);
                 result.is_constant_module = constant_module.is_constant_module;
               }
+
 
               if !config.conditional_bundling {
                 // Treat conditional imports as two inline requires when flag is off
@@ -537,7 +545,6 @@ pub fn transform(
 
               let mut esm_export_classifier = EsmExportClassifier::new(config.exports_rebinding_optimisation, unresolved_mark);
               module.visit_with(&mut esm_export_classifier);
-
 
               let mut collect = Collect::new(
                 esm_export_classifier.symbols_info,

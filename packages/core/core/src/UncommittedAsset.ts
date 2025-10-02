@@ -444,4 +444,15 @@ export default class UncommittedAsset {
     // @ts-expect-error TS2345
     this.value.id = createAssetIdFromOptions(this.value);
   }
+
+  setCompiledCssStyles(styles: string[]): void {
+    if (styles.length > 0) {
+      console.log('setCompiledCssStyles', styles);
+    }
+    this.value.compiledCssStyles = styles;
+  }
+
+  getCompiledCssStyles(): ReadonlyArray<string> | undefined {
+    return this.value.compiledCssStyles;
+  }
 }
