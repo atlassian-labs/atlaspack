@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/bundler-library",
-  "version": "2.12.36",
+  "version": "2.12.37",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -17,7 +17,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.34",
+    "@atlaspack/plugin": "2.14.35",
     "nullthrows": "^1.1.1"
   },
   "scripts": {
