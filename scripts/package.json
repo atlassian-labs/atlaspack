@@ -2,13 +2,25 @@
   "name": "@workspace/scripts",
   "private": true,
   "version": "0.0.3",
+  "scripts": {
+    "test": "cd .. && npx mocha scripts/test/**/*.test.ts --require ts-node/register --timeout 10000",
+    "test:watch": "cd .. && npx mocha scripts/test/**/*.test.ts --require ts-node/register --watch --timeout 10000",
+    "test:dist-differ": "cd .. && npx mocha scripts/test/dist-differ.test.ts --require ts-node/register --timeout 10000",
+    "compile:dist-differ": "npx tsc dist-differ.ts dist-differ-lib.ts --outDir ../compiled --skipLibCheck",
+    "dist-differ": "npm run compile:dist-differ && node ../compiled/dist-differ.js"
+  },
   "devDependencies": {
     "@ast-grep/napi": "^0.39.5",
     "@swc/plugin-transform-imports": "^8.0.4",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^18.0.0",
     "flowgen": "^1.21.0",
     "fast-glob": "^3.3.3",
     "glob": "^7.1.6",
     "json5": "^2.2.3",
+    "mocha": "^10.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0",
     "zx": "^8.1.9"
   }
 }
