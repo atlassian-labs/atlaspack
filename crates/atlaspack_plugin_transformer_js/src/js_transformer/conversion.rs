@@ -630,7 +630,7 @@ fn convert_dependency(
           custom_env: asset.env.custom_env.clone(),
           ..*asset.env.clone()
         }))
-        .bundle_behavior(base_dependency.bundle_behavior.clone())
+        .bundle_behavior(base_dependency.bundle_behavior)
         .loc(base_dependency.loc.clone().unwrap_or_default())
         .priority(base_dependency.priority)
         .source_asset_id(base_dependency.source_asset_id.clone().unwrap_or_default())
