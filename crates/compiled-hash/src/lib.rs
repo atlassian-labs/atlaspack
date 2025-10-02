@@ -1,82 +1,84 @@
 const M: u32 = 0x5bd1e995;
 
+// Replicate JavaScript's 32-bit multiplication behavior
 fn murmur_mul(a: u32, b: u32) -> u32 {
-    // Replicate JavaScript's 32-bit multiplication behavior
-    let a_low = a & 0xffff;
-    let a_high = a >> 16;
-    let b_low = b & 0xffff;
-    let b_high = b >> 16;
-    
-    let result_low = a_low.wrapping_mul(b_low);
-    let result_high = a_high.wrapping_mul(b_low).wrapping_add(a_low.wrapping_mul(b_high));
-    
-    result_low.wrapping_add((result_high & 0xffff) << 16)
+  let a_low = a & 0xffff;
+  let a_high = a >> 16;
+  let b_low = b & 0xffff;
+  let b_high = b >> 16;
+
+  let result_low = a_low.wrapping_mul(b_low);
+  let result_high = a_high
+    .wrapping_mul(b_low)
+    .wrapping_add(a_low.wrapping_mul(b_high));
+
+  result_low.wrapping_add((result_high & 0xffff) << 16)
+}
+
+// Convert to base36 string - equivalent to JavaScript's (h >>> 0).toString(36)
+fn to_js_base36(mut num: u32) -> String {
+  if num == 0 {
+    return "0".to_string();
+  }
+
+  let chars = b"0123456789abcdefghijklmnopqrstuvwxyz";
+  let mut result = Vec::new();
+
+  while num > 0 {
+    result.push(chars[(num % 36) as usize]);
+    num /= 36;
+  }
+
+  result.reverse();
+  String::from_utf8(result).unwrap()
 }
 
 pub fn hash(key: &str, seed: u32) -> String {
-    let str_bytes = key.as_bytes();
-    let mut l = str_bytes.len();
-    let mut h = seed ^ (l as u32);
-    let mut i = 0;
+  let str_bytes = key.as_bytes();
+  let mut l = str_bytes.len();
+  let mut h = seed ^ (l as u32);
+  let mut i = 0;
 
-    while l >= 4 {
-        let k = (str_bytes[i] as u32) |
-                ((str_bytes[i + 1] as u32) << 8) |
-                ((str_bytes[i + 2] as u32) << 16) |
-                ((str_bytes[i + 3] as u32) << 24);
+  while l >= 4 {
+    let k = (str_bytes[i] as u32)
+      | ((str_bytes[i + 1] as u32) << 8)
+      | ((str_bytes[i + 2] as u32) << 16)
+      | ((str_bytes[i + 3] as u32) << 24);
 
-        let mut k = murmur_mul(k, M);
-        k ^= k >> 24;
-        k = murmur_mul(k, M);
-        h = murmur_mul(h, M) ^ k;
-        
-        l -= 4;
-        i += 4;
+    let mut k = murmur_mul(k, M);
+    k ^= k >> 24;
+    k = murmur_mul(k, M);
+    h = murmur_mul(h, M) ^ k;
+
+    l -= 4;
+    i += 4;
+  }
+
+  // Handle remaining bytes
+  match l {
+    3 => {
+      h ^= (str_bytes[i + 2] as u32) << 16;
+      h ^= (str_bytes[i + 1] as u32) << 8;
+      h ^= str_bytes[i] as u32;
+      h = murmur_mul(h, M);
     }
-
-    // Handle remaining bytes
-    match l {
-        3 => {
-            h ^= (str_bytes[i + 2] as u32) << 16;
-            h ^= (str_bytes[i + 1] as u32) << 8;
-            h ^= str_bytes[i] as u32;
-            h = murmur_mul(h, M);
-        }
-        2 => {
-            h ^= (str_bytes[i + 1] as u32) << 8;
-            h ^= str_bytes[i] as u32;
-            h = murmur_mul(h, M);
-        }
-        1 => {
-            h ^= str_bytes[i] as u32;
-            h = murmur_mul(h, M);
-        }
-        _ => {}
+    2 => {
+      h ^= (str_bytes[i + 1] as u32) << 8;
+      h ^= str_bytes[i] as u32;
+      h = murmur_mul(h, M);
     }
-
-    h ^= h >> 13;
-    h = murmur_mul(h, M);
-    h ^= h >> 15;
-
-    // Convert to base36 string - equivalent to JavaScript's (h >>> 0).toString(36)
-    fn to_base36(mut num: u32) -> String {
-        if num == 0 {
-            return "0".to_string();
-        }
-        
-        let chars = b"0123456789abcdefghijklmnopqrstuvwxyz";
-        let mut result = Vec::new();
-        
-        while num > 0 {
-            result.push(chars[(num % 36) as usize]);
-            num /= 36;
-        }
-        
-        result.reverse();
-        String::from_utf8(result).unwrap()
+    1 => {
+      h ^= str_bytes[i] as u32;
+      h = murmur_mul(h, M);
     }
-    
-    to_base36(h)
+    _ => {}
+  }
+
+  h ^= h >> 13;
+  h = murmur_mul(h, M);
+  h ^= h >> 15;
+
+  to_js_base36(h)
 }
 
 #[cfg(test)]
@@ -85,7 +87,9 @@ mod tests {
 
   #[test]
   fn test_case_1() {
-    assert_eq!(hash("undefined&font-size", 0), "1wyb1t4");
+    let result = hash("undefined&font-size", 0);
+    println!("Expected: 1wyb1t4, Got: {}", result);
+    assert_eq!(result, "1wyb1t4");
   }
 
   #[test]

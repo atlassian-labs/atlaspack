@@ -1,3 +1,4 @@
+/* eslint-disable no-fallthrough */
 /**
  * Quick hash the result of a string input.
  *
