@@ -778,8 +778,8 @@ mod tests {
         .build(),
     ];
 
-    expected_dependencies[0].set_placeholder("e83f3db3d6f57ea6");
-    expected_dependencies[0].set_kind("Require");
+    expected_dependencies[0].placeholder = Some("e83f3db3d6f57ea6".to_string());
+    expected_dependencies[0].kind = Some("Require".to_string());
 
     assert_eq!(
       run_test(TestOptions {

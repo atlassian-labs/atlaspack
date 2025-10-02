@@ -1,4 +1,4 @@
-use core::panic;
+use std::collections::BTreeMap;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::PathBuf;
@@ -151,6 +151,34 @@ pub struct Dependency {
   pub is_esm: bool,
 
   pub placeholder: Option<String>,
+
+  /// Whether this dependency is a webworker
+  #[serde(default)]
+  pub is_webworker: bool,
+
+  /// The kind of dependency (e.g., "Require", "Import", etc.)
+  #[serde(default)]
+  pub kind: Option<String>,
+
+  /// Symbol name for promise-based imports
+  #[serde(default)]
+  pub promise_symbol: Option<String>,
+
+  /// Import attributes for this dependency
+  #[serde(default)]
+  pub import_attributes: BTreeMap<String, bool>,
+
+  /// Media query for CSS imports
+  #[serde(default)]
+  pub media: Option<String>,
+
+  /// Whether this is a CSS import
+  #[serde(default)]
+  pub is_css_import: bool,
+
+  /// Chunk name from magic comment
+  #[serde(default)]
+  pub chunk_name_magic_comment: Option<String>,
 }
 
 impl DependencyBuilder {
@@ -210,6 +238,13 @@ impl DependencyBuilder {
       should_wrap: self.should_wrap.unwrap_or_default(),
       is_esm: self.is_esm.unwrap_or_default(),
       placeholder: self.placeholder.flatten(),
+      is_webworker: self.is_webworker.unwrap_or_default(),
+      kind: self.kind.flatten(),
+      promise_symbol: self.promise_symbol.flatten(),
+      import_attributes: self.import_attributes.unwrap_or_default(),
+      media: self.media.flatten(),
+      is_css_import: self.is_css_import.unwrap_or_default(),
+      chunk_name_magic_comment: self.chunk_name_magic_comment.flatten(),
     }
   }
 
@@ -221,17 +256,17 @@ impl DependencyBuilder {
     }
   }
 
-  pub fn symbols_option(self, symbols: Option<Vec<Symbol>>) -> Self {
-    if let Some(symbols) = symbols {
-      self.symbols(symbols)
+  pub fn placeholder_option(self, placeholder: Option<String>) -> Self {
+    if let Some(placeholder) = placeholder {
+      self.placeholder(placeholder)
     } else {
       self
     }
   }
 
-  pub fn placeholder_option(self, placeholder: Option<String>) -> Self {
-    if let Some(placeholder) = placeholder {
-      self.placeholder(placeholder)
+  pub fn media_option(self, media: Option<String>) -> Self {
+    if let Some(media) = media {
+      self.media(media)
     } else {
       self
     }
@@ -245,10 +280,18 @@ impl Dependency {
 
   pub fn entry(entry: String, target: Target) -> Dependency {
     let is_library = target.env.is_library;
-    let mut symbols = None;
+
+    let mut dep_builder = DependencyBuilder::default()
+      .env(target.env.clone())
+      .is_entry(true)
+      .needs_stable_name(true)
+      .specifier(entry)
+      .specifier_type(SpecifierType::Url)
+      .target(Box::new(target))
+      .priority(Priority::default());
 
     if is_library {
-      symbols = Some(vec![Symbol {
+      dep_builder = dep_builder.symbols(vec![Symbol {
         exported: "*".into(),
         is_esm_export: false,
         is_weak: true,
@@ -256,53 +299,10 @@ impl Dependency {
         local: "*".into(),
         self_referenced: false,
         is_static_binding_safe: false,
-      }]);
+      }])
     }
 
-    DependencyBuilder::default()
-      .env(target.env.clone())
-      .is_entry(true)
-      .needs_stable_name(true)
-      .specifier(entry)
-      .specifier_type(SpecifierType::Url)
-      .symbols_option(symbols)
-      .target(Box::new(target))
-      .priority(Priority::default())
-      .build()
-  }
-
-  pub fn set_placeholder(&mut self, placeholder: impl Into<serde_json::Value>) {
-    self.meta.insert("placeholder".into(), placeholder.into());
-  }
-
-  pub fn set_is_webworker(&mut self) {
-    self.meta.insert("webworker".into(), true.into());
-  }
-
-  pub fn set_kind(&mut self, kind: impl Into<serde_json::Value>) {
-    self.meta.insert("kind".into(), kind.into());
-  }
-
-  pub fn set_should_wrap(&mut self, should_wrap: bool) {
-    self.meta.insert("shouldWrap".into(), should_wrap.into());
-    self.should_wrap = should_wrap;
-  }
-
-  pub fn set_promise_symbol(&mut self, name: impl Into<serde_json::Value>) {
-    self.meta.insert("promiseSymbol".into(), name.into());
-  }
-
-  pub fn set_add_import_attibute(&mut self, attribute: impl Into<String>) {
-    let object = self
-      .meta
-      .entry(String::from("importAttributes"))
-      .or_insert(serde_json::Map::new().into());
-
-    if let serde_json::Value::Object(import_attributes) = object {
-      import_attributes.insert(attribute.into(), true.into());
-    } else {
-      panic!("Dependency import attributes invalid. This should never happen");
-    }
+    dep_builder.build()
   }
 }
 

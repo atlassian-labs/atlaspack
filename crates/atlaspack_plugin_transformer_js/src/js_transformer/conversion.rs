@@ -163,13 +163,13 @@ pub(crate) fn convert_result(
 
     for specifier in hoist_result.wrapped_requires {
       if let Some(dependency) = dependency_by_specifier.get_mut(&JsWord::new(specifier)) {
-        dependency.set_should_wrap(true);
+        dependency.should_wrap = true;
       }
     }
 
     for (name, specifier) in hoist_result.dynamic_imports {
       if let Some(dependency) = dependency_by_specifier.get_mut(&specifier) {
-        dependency.set_promise_symbol(&*name);
+        dependency.promise_symbol = Some(name.to_string());
       }
     }
 
@@ -416,10 +416,7 @@ pub(crate) fn convert_dependencies(
     match result {
       DependencyConversionResult::Dependency(mut dependency) => {
         if let Some(chunk_name) = magic_comments.get(&dependency.specifier) {
-          dependency.meta.insert(
-            "chunkNameMagicComment".to_string(),
-            chunk_name.clone().into(),
-          );
+          dependency.chunk_name_magic_comment = Some(chunk_name.clone());
         }
         dependency_by_specifier.insert(placeholder, dependency);
       }
@@ -516,11 +513,8 @@ fn convert_dependency(
     .source_path(asset.file_path.clone())
     .specifier(transformer_dependency.specifier.as_ref().to_string())
     .specifier_type(convert_specifier_type(&transformer_dependency))
+    .placeholder_option(transformer_dependency.placeholder.clone())
     .build();
-
-  if let Some(placeholder) = &transformer_dependency.placeholder {
-    base_dependency.set_placeholder(placeholder.clone());
-  }
 
   let source_type = convert_source_type(&transformer_dependency.source_type);
   match transformer_dependency.kind {
@@ -553,7 +547,7 @@ fn convert_dependency(
         output_format = OutputFormat::Global;
       }
 
-      base_dependency.set_is_webworker();
+      base_dependency.is_webworker = true;
 
       let dependency = DependencyBuilder::default()
         .env(Arc::new(Environment {
@@ -678,14 +672,16 @@ fn convert_dependency(
     )),
     _ => {
       let mut env = asset.env.clone();
-      base_dependency.set_kind(format!("{}", transformer_dependency.kind));
+      base_dependency.kind = Some(format!("{}", transformer_dependency.kind));
 
       if let Some(attributes) = transformer_dependency.attributes {
         for attr in ["preload", "prefetch"] {
           let attr_atom = Into::<Atom>::into(attr);
           if attributes.contains_key(&attr_atom) {
             let attr_key = Into::<String>::into(attr);
-            base_dependency.set_add_import_attibute(attr_key);
+            base_dependency
+              .import_attributes
+              .insert(attr_key.to_string(), true);
           }
         }
       }
