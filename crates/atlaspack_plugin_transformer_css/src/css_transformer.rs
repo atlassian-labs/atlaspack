@@ -198,7 +198,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 return None;
               }
 
-              let mut dependency = DependencyBuilder::default()
+              let dependency = DependencyBuilder::default()
                 .env(asset.env.clone())
                 .package_conditions(ExportsCondition::STYLE)
                 .priority(Priority::Sync)
@@ -207,21 +207,15 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 .specifier(import_dependency.url.clone())
                 .specifier_type(SpecifierType::Url)
                 .source_asset_type(FileType::Css)
+                .media_option(import_dependency.media.clone())
+                .is_css_import(true)
+                .placeholder(import_dependency.placeholder.clone())
                 .build();
-
-              if let Some(media) = &import_dependency.media {
-                dependency.meta.insert("media".into(), media.clone().into());
-              }
-
-              // For the glob resolver to distinguish between `@import` and other URL dependencies.
-              dependency.meta.insert("isCSSImport".into(), true.into());
-
-              dependency.set_placeholder(import_dependency.placeholder.clone());
 
               Some(dependency)
             }
             lightningcss::dependencies::Dependency::Url(url_dependency) => {
-              let mut dependency = DependencyBuilder::default()
+              let dependency = DependencyBuilder::default()
                 .env(asset.env.clone())
                 .priority(Priority::Sync)
                 .source_asset_id(asset.id.clone())
@@ -229,9 +223,8 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 .source_path(asset.file_path.clone())
                 .specifier(url_dependency.url.clone())
                 .specifier_type(SpecifierType::Url)
+                .placeholder(url_dependency.placeholder.clone())
                 .build();
-
-              dependency.set_placeholder(url_dependency.placeholder.clone());
 
               Some(dependency)
             }
