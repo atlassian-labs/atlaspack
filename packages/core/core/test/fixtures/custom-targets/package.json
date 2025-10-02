@@ -9,11 +9,17 @@
     "browserModern": {
       "engines": {
         "browsers": ["last 1 version"]
+      },
+      "env": {
+        "useFlag": "false"
       }
     },
     "browserLegacy": {
       "engines": {
         "browsers": ["ie11"]
+      },
+      "env": {
+        "useFlag": "true"
       }
     }
   }

@@ -68,6 +68,66 @@
     "@csstools/css-tokenizer" "^3.0.3"
     lru-cache "^10.4.3"
 
+"@ast-grep/napi-darwin-arm64@0.39.5":
+  version "0.39.5"
+  resolved "https://registry.yarnpkg.com/@ast-grep/napi-darwin-arm64/-/napi-darwin-arm64-0.39.5.tgz#73826167721673cda7f558036443b8b2981bc121"
+  integrity sha512-UqIUjowAcXTJ00R5+bIi+2nQStzbpBeFEsXe0G1hXZVsWytaa69W4/Ewnr84IdeIo7IcpbFY/Y35PdYIDR36eQ==
+
+"@ast-grep/napi-darwin-x64@0.39.5":
+  version "0.39.5"
+  resolved "https://registry.yarnpkg.com/@ast-grep/napi-darwin-x64/-/napi-darwin-x64-0.39.5.tgz#e56f933475e61b66015129782edb58f81762706b"
+  integrity sha512-TZLIFoGbVUD9iCQmYTv2isLUBVRPu9kd+q1ifkdQ4iaSlit5UEqvvgluU0NHhWeAg1pW5EuN2COlSbvlcr/RKQ==
+
+"@ast-grep/napi-linux-arm64-gnu@0.39.5":
+  version "0.39.5"
+  resolved "https://registry.yarnpkg.com/@ast-grep/napi-linux-arm64-gnu/-/napi-linux-arm64-gnu-0.39.5.tgz#2db6af2c8bdbcf7f12cd3a457a7004e7031f6d70"
+  integrity sha512-QPoVTfRzIyQRI7lNRMsuOTr8OfFLw8iLQSOHwAqa64Cb5AnjJIfLZEBIJhWj+z62ZWcFiX9sn2c8HlCp+58lAg==
+
+"@ast-grep/napi-linux-arm64-musl@0.39.5":
+  version "0.39.5"
+  resolved "https://registry.yarnpkg.com/@ast-grep/napi-linux-arm64-musl/-/napi-linux-arm64-musl-0.39.5.tgz#d6fedb1317bb5a69df2599240f92bf5fdd1bb8b8"
+  integrity sha512-pk756OgZxienyktNJqiYHVF11zWR/zmOQRiFEzN70W+rWI6wQFRvdi4JPaezKScR524AKuSAeWXR7PUglBnoaA==
+
+"@ast-grep/napi-linux-x64-gnu@0.39.5":
+  version "0.39.5"
+  resolved "https://registry.yarnpkg.com/@ast-grep/napi-linux-x64-gnu/-/napi-linux-x64-gnu-0.39.5.tgz#c795a3c8d70752f4063bf241a4eb685faf5bd6f7"
+  integrity sha512-UcQSD5A10isLk1TqvFzp4MfPZhAUc0Ehraf3ytsgaIjs9GUxjEc4uI6aKVesXd0Y1DDE/SjakgNfcAcizokjPw==
+
+"@ast-grep/napi-linux-x64-musl@0.39.5":
+  version "0.39.5"
+  resolved "https://registry.yarnpkg.com/@ast-grep/napi-linux-x64-musl/-/napi-linux-x64-musl-0.39.5.tgz#7df7f8fa9eb46caab4bb786e58035e36974ad62c"
+  integrity sha512-aJyiF57bA8Pa6H5hPNq5qz/hh6Q/NQ3f0cAe0oE09KW09lLGK3CWWInENq8QiK+nhO1aAaFvxGhUKUDwroA9ow==
+
+"@ast-grep/napi-win32-arm64-msvc@0.39.5":
+  version "0.39.5"
+  resolved "https://registry.yarnpkg.com/@ast-grep/napi-win32-arm64-msvc/-/napi-win32-arm64-msvc-0.39.5.tgz#9bafe76758d1b0078a2eca2ce4405379adb6943f"
+  integrity sha512-FfluwNw+oItFVMr7o26lnK9euFU6084JSBLFsbIhTdfZO2xiTRrxPXFm5A3jvr0grv669GBLJKfp9DNxcsoYsg==
+
+"@ast-grep/napi-win32-ia32-msvc@0.39.5":
+  version "0.39.5"
+  resolved "https://registry.yarnpkg.com/@ast-grep/napi-win32-ia32-msvc/-/napi-win32-ia32-msvc-0.39.5.tgz#eb04bb9a412986fb8e8963ee3c52c18b719600e1"
+  integrity sha512-pmx8Zfdv8qEgoepDB+XqV+nThnBioxvsDQT+q310RmeP4cRuSEHI13U3eb5Bgy/E0tGFzTSnQSKifZHuonp7YA==
+
+"@ast-grep/napi-win32-x64-msvc@0.39.5":
+  version "0.39.5"
+  resolved "https://registry.yarnpkg.com/@ast-grep/napi-win32-x64-msvc/-/napi-win32-x64-msvc-0.39.5.tgz#5cf74bd3098e21e5289022920b665466bae415a5"
+  integrity sha512-bffrn4aF7Tu7hN6qPfZ6PCcbfwRokamUst32ZyJIxBJRAuVua1+CDBXeBug6UHj96tSt0Oh6h2cvh+1mEqL1jg==
+
+"@ast-grep/napi@^0.39.5":
+  version "0.39.5"
+  resolved "https://registry.yarnpkg.com/@ast-grep/napi/-/napi-0.39.5.tgz#eebc48242988873eee7943a41ac9103430725870"
+  integrity sha512-/qEPYdY0+Mg4fdS06CY4Jptzbd6NDvdkKRBL1vTnpY8BO4t6j1q9sbNobgm74pr2xPv13Z4Lq2hVNzAYJNy9dw==
+  optionalDependencies:
+    "@ast-grep/napi-darwin-arm64" "0.39.5"
+    "@ast-grep/napi-darwin-x64" "0.39.5"
+    "@ast-grep/napi-linux-arm64-gnu" "0.39.5"
+    "@ast-grep/napi-linux-arm64-musl" "0.39.5"
+    "@ast-grep/napi-linux-x64-gnu" "0.39.5"
+    "@ast-grep/napi-linux-x64-musl" "0.39.5"
+    "@ast-grep/napi-win32-arm64-msvc" "0.39.5"
+    "@ast-grep/napi-win32-ia32-msvc" "0.39.5"
+    "@ast-grep/napi-win32-x64-msvc" "0.39.5"
+
 "@atlaskit/analytics-next-stable-react-context@1.0.1":
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/@atlaskit/analytics-next-stable-react-context/-/analytics-next-stable-react-context-1.0.1.tgz#93c4c7a1a35f4ab606d727af443f49f0842fd96f"
@@ -11447,7 +11507,7 @@ fast-fifo@^1.2.0, fast-fifo@^1.3.2:
   resolved "https://registry.yarnpkg.com/fast-fifo/-/fast-fifo-1.3.2.tgz#286e31de96eb96d38a97899815740ba2a4f3640c"
   integrity sha512-/d9sfos4yxzpwkDkuN7k2SqFKtYNmCTzgfEpz82x34IM9/zc8KGxQoXg1liNC/izpRM/MBdt44Nmx41ZWqk+FQ==
 
-fast-glob@3, fast-glob@^3.2.5, fast-glob@^3.3.2:
+fast-glob@3, fast-glob@^3.2.5, fast-glob@^3.3.2, fast-glob@^3.3.3:
   version "3.3.3"
   resolved "https://registry.yarnpkg.com/fast-glob/-/fast-glob-3.3.3.tgz#d06d585ce8dba90a16b0505c543c3ccfb3aeb818"
   integrity sha512-7MptL8U0cqcFdzIzwOTHoilX9x5BrNqye7Z/LuC7kCMRio1EMSyqRK3BEAUD7sXRq4iT4AzTVuZdhgQ2TCvYLg==

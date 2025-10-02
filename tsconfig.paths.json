@@ -366,6 +366,9 @@
     },
     {
       "path": "./packages/validators/typescript/tsconfig.json"
+    },
+    {
+      "path": "./packages/bundlers/bundler-experimental/tsconfig.json"
     }
   ]
 }

@@ -249,14 +249,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   exportsRebindingOptimisation: false,
 
   /**
-   * When enabled, allows custom per-target "env" properties to be used in transformers.
-   *
-   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
-   * @since 2025-09-04
-   */
-  customEnvInTargets: process.env.ATLASPACK_BUILD_ENV === 'test',
-
-  /**
    * When enabled, ensures the `unstableSingleFileOutput` environment property is preserved during CSS transformation
    *
    * @author Marcin Szczepanski <mszczepanski@atlassian.com>

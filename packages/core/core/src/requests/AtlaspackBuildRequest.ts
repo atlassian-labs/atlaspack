@@ -32,6 +32,10 @@ export type AtlaspackBuildRequestResult = {
   bundleInfo: Map<string, PackagedBundleInfo>;
   changedAssets: Map<string, Asset>;
   assetRequests: Array<AssetGroup>;
+  scopeHoistingStats?: {
+    totalAssets: number;
+    wrappedAssets: number;
+  };
 };
 
 type RunInput<TResult> = {
@@ -58,8 +62,12 @@ export default function createAtlaspackBuildRequest(
   };
 }
 
-// @ts-expect-error TS7031
-async function run({input, api, options, rustAtlaspack}) {
+async function run({
+  input,
+  api,
+  options,
+  rustAtlaspack,
+}: RunInput<AtlaspackBuildRequestResult>) {
   let {optionsRef, requestedAssetIds, signal} = input;
 
   let bundleGraphRequest = createBundleGraphRequest({
@@ -102,9 +110,16 @@ async function run({input, api, options, rustAtlaspack}) {
     optionsRef,
   });
 
-  let bundleInfo = await api.runRequest(writeBundlesRequest);
+  let {bundleInfo, scopeHoistingStats} =
+    await api.runRequest(writeBundlesRequest);
   packagingMeasurement && packagingMeasurement.end();
   assertSignalNotAborted(signal);
 
-  return {bundleGraph, bundleInfo, changedAssets, assetRequests};
+  return {
+    bundleGraph,
+    bundleInfo,
+    changedAssets,
+    assetRequests,
+    scopeHoistingStats,
+  };
 }
