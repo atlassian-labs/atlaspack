@@ -243,7 +243,7 @@ mod test {
       ..Environment::default()
     });
 
-    let mut expected_dependency = DependencyBuilder::default()
+    let expected_dependency = DependencyBuilder::default()
       .bundle_behavior(Some(BundleBehavior::Inline))
       .env(env.clone())
       .source_asset_id("test".to_string())
@@ -253,7 +253,6 @@ mod test {
       .specifier_type(SpecifierType::default())
       .priority(Priority::default())
       .build();
-    expected_dependency.ensure_id();
 
     assert_eq!(
       transformation,
@@ -317,7 +316,7 @@ mod test {
       ..Environment::default()
     });
 
-    let mut expected_dependency = DependencyBuilder::default()
+    let expected_dependency = DependencyBuilder::default()
       .bundle_behavior(Some(BundleBehavior::InlineIsolated))
       .env(env.clone())
       .source_asset_id("test".to_string())
@@ -327,8 +326,6 @@ mod test {
       .specifier_type(SpecifierType::default())
       .priority(Priority::default())
       .build();
-
-    expected_dependency.ensure_id();
 
     assert_eq!(
       transformation,
@@ -381,7 +378,7 @@ mod test {
       ))
     );
 
-    let mut expected_dependency = DependencyBuilder::default()
+    let expected_dependency = DependencyBuilder::default()
       .source_asset_id("test".to_string())
       .source_asset_type(FileType::Html)
       .source_path(PathBuf::from("main.html"))
@@ -390,7 +387,6 @@ mod test {
       .specifier_type(SpecifierType::default())
       .priority(Priority::default())
       .build();
-    expected_dependency.ensure_id();
 
     assert_eq!(
       transformation,

@@ -746,7 +746,7 @@ fn convert_dependency(
         }
       }
 
-      let mut dependency = DependencyBuilder::default()
+      let dependency = DependencyBuilder::default()
         .env(env)
         .is_optional(transformer_dependency.is_optional)
         .is_esm(matches!(
@@ -770,7 +770,6 @@ fn convert_dependency(
         .meta(base_dependency.meta.clone())
         .build();
 
-      dependency.ensure_id();
       Ok(DependencyConversionResult::Dependency(dependency))
     }
   }

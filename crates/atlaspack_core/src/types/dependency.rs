@@ -243,20 +243,6 @@ impl Dependency {
     self.id.clone()
   }
 
-  pub fn ensure_id(&mut self) {
-    self.id = create_dependency_id(
-      self.source_asset_id.as_ref(),
-      &self.specifier,
-      &self.env.id(),
-      self.target.as_deref(),
-      self.pipeline.as_deref(),
-      &self.specifier_type,
-      &self.bundle_behavior,
-      &self.priority,
-      &self.package_conditions,
-    )
-  }
-
   pub fn entry(entry: String, target: Target) -> Dependency {
     let is_library = target.env.is_library;
     let mut symbols = None;
@@ -273,7 +259,7 @@ impl Dependency {
       }]);
     }
 
-    let mut dep = DependencyBuilder::default()
+    DependencyBuilder::default()
       .env(target.env.clone())
       .is_entry(true)
       .needs_stable_name(true)
@@ -282,10 +268,7 @@ impl Dependency {
       .symbols_option(symbols)
       .target(Box::new(target))
       .priority(Priority::default())
-      .build();
-
-    dep.ensure_id();
-    dep
+      .build()
   }
 
   pub fn set_placeholder(&mut self, placeholder: impl Into<serde_json::Value>) {

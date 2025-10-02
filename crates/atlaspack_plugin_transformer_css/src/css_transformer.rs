@@ -518,10 +518,6 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       asset.map = Some(source_map);
     }
 
-    for dependency in dependencies.iter_mut() {
-      dependency.ensure_id();
-    }
-
     Ok(TransformResult {
       asset,
       dependencies,
@@ -585,7 +581,6 @@ mod tests {
       ("isCSSImport".into(), true.into()),
       ("placeholder".into(), "OFe21q".into()),
     ]);
-    expected_dependency.ensure_id();
 
     assert_eq!(result.unwrap().dependencies, vec![expected_dependency]);
   }
