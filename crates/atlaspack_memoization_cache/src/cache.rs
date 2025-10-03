@@ -1,4 +1,5 @@
 use lmdb_js_lite::writer::DatabaseWriter;
+use rand::Rng;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::future::Future;
@@ -46,11 +47,23 @@ impl CacheReaderWriter for LmdbCacheReaderWriter {
 
 pub struct CacheHandler<T: CacheReaderWriter> {
   reader_writer: T,
+  validation_rate: f32, // Probability of running validation (0.0 to 1.0)
 }
 
 impl<T: CacheReaderWriter> CacheHandler<T> {
   pub fn new(reader_writer: T) -> Self {
-    CacheHandler { reader_writer }
+    CacheHandler {
+      reader_writer,
+      validation_rate: 0.0, // No validation by default
+    }
+  }
+
+  pub fn new_with_validation(reader_writer: T, validation_rate: f32) -> Self {
+    let validation_rate = validation_rate.clamp(0.0, 1.0);
+    CacheHandler {
+      reader_writer,
+      validation_rate,
+    }
   }
 
   #[tracing::instrument(level = "debug", skip_all, fields(label))]
@@ -62,7 +75,7 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
   ) -> Result<Res, Error>
   where
     Input: Hash,
-    Res: DeserializeOwned + Serialize,
+    Res: DeserializeOwned + Serialize + PartialEq + std::fmt::Debug,
     FutureResult: Future<Output = Result<Res, Error>>,
     RunFn: FnOnce(Input) -> FutureResult,
   {
@@ -81,13 +94,15 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
     };
 
     // If we have a cached value, try to deserialize it and return it
-    if let Some(value) = cache_result {
-      match deserialize(&value) {
-        Ok(value) => {
-          return Ok(value);
-        }
-        Err(err) => {
-          tracing::error!("Failed to deserialize cached value for {}: {}", label, err);
+    if !self.should_validate() {
+      if let Some(value) = cache_result.as_ref() {
+        match deserialize(value) {
+          Ok(value) => {
+            return Ok(value);
+          }
+          Err(err) => {
+            tracing::error!("Failed to deserialize cached value for {}: {}", label, err);
+          }
         }
       }
     }
@@ -98,6 +113,15 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
     // Now we have a result, try to serialize and cache it
     match serialize(&result) {
       Ok(serialized_result) => {
+        if let Some(value) = cache_result {
+          if value != serialized_result {
+            tracing::error!(
+              "Cache validation mismatch for {}: cached value does not match computed result",
+              label
+            );
+          }
+        }
+
         if let Err(error) = self.reader_writer.put(&cache_key, &serialized_result) {
           tracing::error!("Failed to write to cache for {}: {}", label, error);
         }
@@ -109,6 +133,12 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
 
     // Finally return the result
     Ok(result)
+  }
+
+  /// Determines if we should validate this cache hit based on the configured sampling rate
+  fn should_validate(&self) -> bool {
+    let random: f32 = rand::thread_rng().gen_range(0.0..1.0);
+    random < self.validation_rate
   }
 }
 
@@ -221,6 +251,104 @@ mod test {
       })
       .await;
     assert_eq!(result, Ok("HELLO".to_string()));
+  }
+
+  #[tokio::test]
+  async fn cache_validation_with_matching_results() {
+    #[derive(PartialEq, Debug, Deserialize, Serialize)]
+    struct TestResult {
+      value: String,
+    }
+
+    let cached_result = TestResult {
+      value: "HELLO".to_string(),
+    };
+    let cached_value = serde_json::to_vec(&cached_result).unwrap();
+    let reader_writer = SimpleMockReaderWriter::new_with_cached_value(cached_value);
+
+    // Set validation rate to 100% to ensure validation runs
+    let handler = CacheHandler::new_with_validation(reader_writer, 1.0);
+
+    let result: Result<TestResult, ()> = handler
+      .run("test_label", "Hello", |input| async move {
+        Ok::<_, ()>(TestResult {
+          value: input.to_ascii_uppercase(),
+        })
+      })
+      .await;
+
+    // Should return cached result even with validation
+    assert_eq!(
+      result,
+      Ok(TestResult {
+        value: "HELLO".to_string()
+      })
+    );
+  }
+
+  #[tokio::test]
+  async fn cache_validation_with_mismatched_results() {
+    #[derive(PartialEq, Debug, Deserialize, Serialize)]
+    struct TestResult {
+      value: String,
+    }
+
+    // Cache contains "WRONG" but computation would return "HELLO"
+    let cached_result = TestResult {
+      value: "WRONG".to_string(),
+    };
+    let cached_value = serde_json::to_vec(&cached_result).unwrap();
+    let reader_writer = SimpleMockReaderWriter::new_with_cached_value(cached_value);
+
+    // Set validation rate to 100% to ensure validation runs
+    let handler = CacheHandler::new_with_validation(reader_writer, 1.0);
+
+    let result: Result<TestResult, ()> = handler
+      .run("test_label", "Hello", |input| async move {
+        Ok::<_, ()>(TestResult {
+          value: input.to_ascii_uppercase(),
+        })
+      })
+      .await;
+
+    // NOTE: Current implementation returns computed result when validation is enabled
+    // This means validation always "fixes" invalid cache entries by returning fresh computation
+    assert_eq!(
+      result,
+      Ok(TestResult {
+        value: "HELLO".to_string()
+      })
+    );
+  }
+
+  #[tokio::test]
+  async fn cache_validation_disabled_by_default() {
+    #[derive(PartialEq, Debug, Deserialize, Serialize)]
+    struct TestResult {
+      value: String,
+    }
+
+    let cached_result = TestResult {
+      value: "CACHED".to_string(),
+    };
+    let cached_value = serde_json::to_vec(&cached_result).unwrap();
+    let reader_writer = SimpleMockReaderWriter::new_with_cached_value(cached_value);
+
+    // Default handler has validation disabled
+    let handler = CacheHandler::new(reader_writer);
+
+    let result: Result<TestResult, ()> = handler
+      .run("test_label", "Hello", |_input| async move {
+        panic!("Validation should not run - this would execute if validation was enabled")
+      })
+      .await;
+
+    assert_eq!(
+      result,
+      Ok(TestResult {
+        value: "CACHED".to_string()
+      })
+    );
   }
 
   // Simple mock for testing cache miss scenarios
