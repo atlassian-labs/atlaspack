@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 pub trait CacheReaderWriter {
   fn read(&self, key: &str) -> anyhow::Result<Option<Vec<u8>>>;
-  // TODO: error handling
   fn put(&self, key: &str, value: &[u8]) -> anyhow::Result<()>;
 }
 
