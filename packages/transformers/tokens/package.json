@@ -1,0 +1,27 @@
+{
+  "name": "@atlaspack/transformer-tokens",
+  "version": "2.0.0",
+  "license": "(MIT OR Apache-2.0)",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
+  },
+  "main": "./lib/TokensTransformer.js",
+  "source": "./src/TokensTransformer.ts",
+  "types": "./src/TokensTransformer.ts",
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "dependencies": {
+    "@atlaspack/types-internal": "2.20.4",
+    "@atlaspack/plugin": "2.14.34",
+    "@atlaspack/rust": "3.8.2"
+  },
+  "type": "commonjs",
+  "scripts": {
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  }
+}
