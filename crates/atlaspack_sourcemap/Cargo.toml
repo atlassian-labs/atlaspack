@@ -2,7 +2,7 @@
 authors = ["Monica Olejniczak <monica.j.olejniczak@gmail.com>"]
 name = "atlaspack_sourcemap"
 version = "0.1.0"
-edition = "2024"
+edition = { workspace = true }
 description = "Sourcemaps for Atlaspack"
 
 [lints]

@@ -17,9 +17,9 @@ permissions:
   contents: read
 
 jobs:
-  # Test for changesets if branch is not main
-  enforce-changeset:
-    name: ✍️ Enforce Changesets
+  # Validate changesets - handles both general and Rust-specific validation
+  validate-changesets:
+    name: ✍️ Validate Changesets
     runs-on: ubuntu-24.04
     if: github.ref_name != 'main'
     steps:
@@ -27,34 +27,8 @@ jobs:
       - uses: actions/github-script@v7
         with:
           script: |
-            const { enforceChangeset } = require('./scripts/enforce-changeset.js');
-            await enforceChangeset({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pullNumber: context.payload.pull_request.number,
-              octokit: github
-            });
-
-  # Check if Rust files changed and rust package is bumped
-  check-rust-changes:
-    name: 🦀 Rust Changeset Check (ferris-atlaspack-bot)
-    runs-on: ubuntu-24.04
-    if: github.ref_name != 'main'
-    steps:
-      - uses: actions/checkout@v4
-      - name: Generate token for Ferris bot
-        id: ferris_token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.FERRIS_APP_ID }}
-          private-key: ${{ secrets.FERRIS_APP_PRIVATE_KEY }}
-      - name: Run Rust Changeset Check (ferris-atlaspack-bot)
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ steps.ferris_token.outputs.token }}
-          script: |
-            const { checkRustChanges } = require('./scripts/check-rust-changes.js');
-            await checkRustChanges({
+            const { validateChangesets } = require('./scripts/validate-changesets.js');
+            await validateChangesets({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pullNumber: context.payload.pull_request.number,

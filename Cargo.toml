@@ -7,6 +7,9 @@ members = [
   "packages/utils/dev-dep-resolver",
 ]
 
+[workspace.package]
+edition = "2024"
+
 [profile.dev]
 # Even in dev we want the fastest performance to decrease compile times when
 # testing or linking into products
