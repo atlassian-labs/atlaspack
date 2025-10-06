@@ -16,13 +16,11 @@ pub mod test_utils;
 mod typeof_replacer;
 mod utils;
 
-use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::{Arc, LazyLock};
 
 use atlaspack_contextual_imports::ContextualImportsConfig;
 use atlaspack_contextual_imports::ContextualImportsInlineRequireVisitor;
@@ -56,7 +54,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::io::{self};
 use swc_atlaskit_tokens::design_system_tokens_visitor;
-use swc_atlaskit_tokens::token_map::{TokenMap, load_token_map_from_json};
+use swc_atlaskit_tokens::token_map::get_or_load_token_map;
 use swc_core::common::FileName;
 use swc_core::common::Globals;
 use swc_core::common::Mark;
@@ -111,32 +109,6 @@ use crate::esm_export_classifier::EsmExportClassifier;
 use crate::esm_export_classifier::SymbolsInfo;
 
 type SourceMapBuffer = Vec<(swc_core::common::BytePos, swc_core::common::LineCol)>;
-
-static SHARED_TOKEN_DATA: LazyLock<Mutex<HashMap<String, Arc<TokenMap>>>> =
-  LazyLock::new(|| Mutex::new(HashMap::new()));
-
-fn get_or_load_token_map(path: Option<&String>) -> Result<Option<Arc<TokenMap>>, String> {
-  let path = match path {
-    Some(p) => p,
-    None => return Ok(None),
-  };
-
-  let mut cache = SHARED_TOKEN_DATA.lock();
-
-  if let Some(cached_map) = cache.get(path) {
-    return Ok(Some(Arc::clone(cached_map)));
-  }
-
-  // Load token map for the first time
-  match load_token_map_from_json(&PathBuf::from(path)) {
-    Ok(token_map) => {
-      let arc_map = Arc::new(token_map);
-      cache.insert(path.clone(), Arc::clone(&arc_map));
-      Ok(Some(arc_map))
-    }
-    Err(err) => Err(format!("Failed to load token map from '{}': {}", path, err)),
-  }
-}
 #[derive(Serialize, Debug, Deserialize)]
 pub struct AtlaskitTokensConfig {
   #[serde(default = "default_true")]
@@ -752,7 +724,7 @@ pub fn transform(
 
 pub type ParseResult<T> = Result<T, Vec<Error>>;
 
-fn parse(
+pub fn parse(
   code: &str,
   project_root: &str,
   filename: &str,
@@ -812,7 +784,7 @@ fn parse(
   Ok((module, comments))
 }
 
-fn emit(
+pub fn emit(
   source_map: Lrc<SourceMap>,
   comments: SingleThreadedComments,
   module: &Module,

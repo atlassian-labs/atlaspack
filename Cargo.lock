@@ -391,6 +391,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "swc_atlaskit_tokens",
  "swc_core",
  "toml",
  "tracing",
@@ -5276,6 +5277,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "once_cell",
+ "parking_lot",
  "serde_json",
  "serde_json5",
  "swc_core",

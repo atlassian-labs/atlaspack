@@ -249,3 +249,11 @@ export interface Symbol {
   isStaticBindingSafe: boolean;
   selfReferenced: boolean;
 }
+
+export declare function applyTokensPlugin(
+  rawCode: Buffer,
+  projectRoot: string,
+  filename: string,
+  isSource: boolean,
+  tokensPath: string,
+): object;
