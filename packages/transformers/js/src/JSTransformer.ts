@@ -22,6 +22,7 @@ import ThrowableDiagnostic, {
 import {validateSchema, remapSourceLocation, globMatch} from '@atlaspack/utils';
 import pkg from '../package.json';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import path from 'path';
 
 const JSX_EXTENSIONS = {
   jsx: true,
@@ -117,6 +118,32 @@ const CONFIG_SCHEMA: SchemaEntity = {
     unstable_inlineConstants: {
       type: 'boolean',
     },
+    atlaskitTokens: {
+      type: 'object',
+      properties: {
+        shouldUseAutoFallback: {
+          type: 'boolean',
+        },
+        shouldForceAutoFallback: {
+          type: 'boolean',
+        },
+        forceAutoFallbackExemptions: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+        },
+        defaultTheme: {
+          type: 'string',
+          enum: ['light', 'legacy-light'],
+        },
+        tokenDataPath: {
+          type: 'string',
+        },
+      },
+      required: ['tokenDataPath'],
+      additionalProperties: false,
+    },
   },
   additionalProperties: false,
 };
@@ -173,7 +200,7 @@ type MacroContext = {
 };
 
 export default new Transformer({
-  async loadConfig({config, options}) {
+  async loadConfig({config, options, logger}) {
     let packageJson = await config.getPackage();
     let isJSX,
       pragma,
@@ -302,6 +329,7 @@ export default new Transformer({
     let inlineConstants = false;
     let magicComments = false;
     let addReactDisplayName = false;
+    let atlaskitTokens;
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -330,6 +358,25 @@ export default new Transformer({
       inlineConstants =
         // @ts-expect-error TS2339
         conf.contents?.unstable_inlineConstants ?? inlineConstants;
+
+      // @ts-expect-error TS2339
+      if (conf.contents?.atlaskitTokens) {
+        // @ts-expect-error TS2339
+        const tokensConfig = conf.contents.atlaskitTokens;
+        const tokenDataPath = path.join(
+          options.projectRoot,
+          tokensConfig.tokenDataPath,
+        );
+        atlaskitTokens = {
+          shouldUseAutoFallback: tokensConfig.shouldUseAutoFallback ?? true,
+          shouldForceAutoFallback: tokensConfig.shouldForceAutoFallback ?? true,
+          forceAutoFallbackExemptions:
+            tokensConfig.forceAutoFallbackExemptions ?? [],
+          defaultTheme: tokensConfig.defaultTheme ?? 'light',
+          tokenDataPath: tokenDataPath,
+        };
+        config.invalidateOnFileChange(tokenDataPath);
+      }
     }
 
     return {
@@ -346,6 +393,7 @@ export default new Transformer({
       decorators,
       useDefineForClassFields,
       magicComments,
+      atlaskitTokens,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -524,6 +572,18 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
+      is_source: asset.isSource,
+      ...(config?.atlaskitTokens && {
+        atlaskit_tokens: {
+          should_use_auto_fallback: config.atlaskitTokens.shouldUseAutoFallback,
+          should_force_auto_fallback:
+            config.atlaskitTokens.shouldForceAutoFallback,
+          force_auto_fallback_exemptions:
+            config.atlaskitTokens.forceAutoFallbackExemptions,
+          default_theme: config.atlaskitTokens.defaultTheme,
+          token_data_path: config.atlaskitTokens.tokenDataPath,
+        },
+      }),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
