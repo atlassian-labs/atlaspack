@@ -38,7 +38,7 @@ pub(crate) fn convert_result(
   let asset_environment = asset.env.clone();
 
   if let Some(shebang) = result.shebang {
-    asset.set_interpreter(shebang);
+    asset.interpreter = Some(shebang);
   }
 
   let (mut dependency_by_specifier, invalidate_on_file_change) = convert_dependencies(
@@ -211,9 +211,9 @@ pub(crate) fn convert_result(
       asset_symbols.push(make_export_star_symbol(&asset.id));
     }
 
-    asset.set_has_cjs_exports(hoist_result.has_cjs_exports);
-    asset.set_static_exports(hoist_result.static_cjs_exports);
-    asset.set_should_wrap(hoist_result.should_wrap);
+    asset.has_cjs_exports = hoist_result.has_cjs_exports;
+    asset.static_exports = hoist_result.static_cjs_exports;
+    asset.should_wrap = hoist_result.should_wrap;
   } else {
     if let Some(symbol_result) = result.symbol_result {
       asset_symbols.reserve(symbol_result.exports.len() + 1);
@@ -334,10 +334,10 @@ pub(crate) fn convert_result(
     asset.symbols = Some(asset_symbols);
   }
 
-  asset.set_has_node_replacements(result.has_node_replacements);
-  asset.set_is_constant_module(result.is_constant_module);
+  asset.has_node_replacements = result.has_node_replacements;
+  asset.is_constant_module = result.is_constant_module;
   if transformer_config.conditional_bundling {
-    asset.set_conditions(result.conditions);
+    asset.conditions = result.conditions;
   }
 
   asset.file_type = FileType::Js;
@@ -346,7 +346,7 @@ pub(crate) fn convert_result(
   // However, the packager needs to be aware of the original id when creating
   // symbols replacements in scope hoisting. That's why we store the id before
   // it get's updated on the meta object.
-  asset.set_meta_id(asset.id.clone());
+  asset.meta_id = Some(asset.id.clone());
 
   if let Some(map) = result.map {
     // TODO: Fix diagnostic error handling

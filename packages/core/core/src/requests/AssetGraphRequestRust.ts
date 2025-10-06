@@ -158,7 +158,18 @@ export function getAssetGraph(serializedGraph: any): {
         value: null,
       });
     } else if (node.type === 'asset') {
-      let asset = node.value;
+      let {
+        interpreter,
+        meta_id,
+        has_references,
+        has_cjs_exports,
+        static_exports,
+        should_wrap,
+        is_constant_module,
+        has_node_replacements,
+        conditions,
+        ...asset
+      } = node.value;
       let id = asset.id;
 
       asset.committed = true;
@@ -181,6 +192,19 @@ export function getAssetGraph(serializedGraph: any): {
       if (asset.symbols != null) {
         asset.symbols = new Map(asset.symbols.map(mapSymbols));
       }
+
+      // Move typed fields from Rust to meta for backward compatibility
+      asset.meta = {
+        interpreter: interpreter,
+        metaId: meta_id,
+        hasReferences: has_references,
+        hasCJSExports: has_cjs_exports,
+        staticExports: static_exports,
+        shouldWrap: should_wrap,
+        isConstantModule: is_constant_module,
+        hasNodeReplacements: has_node_replacements,
+        conditions: conditions,
+      };
 
       changedAssets.set(id, asset);
 
