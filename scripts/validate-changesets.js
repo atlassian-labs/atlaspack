@@ -9,7 +9,7 @@
  */
 
 const generalCommentTitle = '## Missing Changeset';
-const rustCommentTitle = `## 🦀 Ferris' Rust Changeset Check`;
+const rustCommentTitle = `## Rust Package Changeset Check`;
 const debugMode = process.env.DEBUG_VALIDATE_CHANGESETS === 'true';
 
 function debugLog(message) {
@@ -18,7 +18,11 @@ function debugLog(message) {
   }
 }
 
-async function getCommentId({octokit, owner, repo, pullNumber}) {
+async function getCommentId(
+  {octokit, owner, repo, pullNumber},
+  commentTitle,
+  botLogin,
+) {
   const comments = await octokit.rest.issues.listComments({
     owner,
     repo,
@@ -27,14 +31,13 @@ async function getCommentId({octokit, owner, repo, pullNumber}) {
 
   const comment = comments.data.find(
     (comment) =>
-      comment.body.includes(rustCommentTitle) &&
-      comment.user.login === 'ferris-atlaspack-bot[bot]',
+      comment.body.includes(commentTitle) && comment.user.login === botLogin,
   );
 
   if (comment) {
-    debugLog('Existing ferris-atlaspack-bot comment found in PR');
+    debugLog('Existing changeset validation comment found in PR');
   } else {
-    debugLog('No ferris-atlaspack-bot comment found in PR');
+    debugLog('No changeset validation comment found in PR');
   }
 
   return comment?.id;
@@ -129,7 +132,7 @@ async function checkRustChanges(prOptions) {
 
   const [hasRustFiles, commentId] = await Promise.all([
     checkForRustFileChanges(prOptions),
-    getCommentId(prOptions),
+    getCommentId(prOptions, rustCommentTitle, 'ferris-atlaspack-bot[bot]'),
   ]);
 
   // If no Rust files changed, we don't need to do anything
@@ -145,7 +148,7 @@ async function checkRustChanges(prOptions) {
       });
 
       debugLog(
-        'Detected existing ferris-atlaspack-bot comment in PR but now there are no Rust files, so deleting it',
+        'Detected existing changeset validation comment in PR but now there are no Rust files, so deleting it',
       );
     }
 
@@ -169,13 +172,12 @@ async function checkRustChanges(prOptions) {
         comment_id: commentId,
         body: `
 ${rustCommentTitle}
-I can see you have now included \`@atlaspack/rust\` in your changeset. This means your Rust changes will be published.
-Now I'm a [happy crab](https://youtu.be/LDU_Txk06tM?si=L80HlbKGtjXAmi6R&t=71) 🦀🎉
+✅ The \`@atlaspack/rust\` package has been included in your changeset. Your Rust changes will be published.
 `.trim(),
       });
 
       debugLog(
-        'Detected existing ferris-atlaspack-bot comment in PR but now there is a Rust bump, so updating it',
+        'Detected existing changeset validation comment in PR but now there is a Rust bump, so updating it',
       );
     }
 
@@ -194,14 +196,12 @@ Now I'm a [happy crab](https://youtu.be/LDU_Txk06tM?si=L80HlbKGtjXAmi6R&t=71) �
         comment_id: commentId,
         body: `
 ${rustCommentTitle}
-I see you've added a \`[no-changeset]\` tag to your PR description. Since you've indicated this change doesn't need a changeset, I'll allow your Rust changes to pass without requiring a bump to \`@atlaspack/rust\`.
-
-Happy coding! 🦀
+✅ A \`[no-changeset]\` tag has been detected in your PR description. Since this change doesn't require a changeset, your Rust changes will pass without requiring a bump to \`@atlaspack/rust\`.
 `.trim(),
       });
 
       debugLog(
-        'Detected existing ferris-atlaspack-bot comment in PR but now there is a [no-changeset] tag, so updating it',
+        'Detected existing changeset validation comment in PR but now there is a [no-changeset] tag, so updating it',
       );
     }
 
@@ -225,9 +225,13 @@ Happy coding! 🦀
     issue_number: pullNumber,
     body: `
 ${rustCommentTitle}
-Ferris says: Hi! I noticed you changed some \`.rs\` files but you didn't bump the Rust package.
+⚠️ Rust files have been changed but the \`@atlaspack/rust\` package was not bumped in your changeset.
 
-If you want your Rust changes published, you will need to bump the \`@atlaspack/rust\` package in your changeset.
+**Options:**
+1. **If you want your Rust changes published:** Add \`@atlaspack/rust\` to your changeset
+2. **If this change doesn't require publishing:** Add a \`[no-changeset]\` tag to your PR description
+
+Example: \`[no-changeset]: Internal refactoring that doesn't affect the public API\`
 `.trim(),
   });
 
