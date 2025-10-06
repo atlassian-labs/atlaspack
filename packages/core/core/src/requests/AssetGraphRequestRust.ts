@@ -194,7 +194,29 @@ export function getAssetGraph(serializedGraph: any): {
       });
     } else if (node.type === 'dependency') {
       let id = node.value.id;
-      let dependency = node.value.dependency;
+      let {
+        is_webworker,
+        kind,
+        promise_symbol,
+        import_attributes,
+        media,
+        is_css_import,
+        chunk_name_magic_comment,
+        ...dependency
+      } = node.value.dependency;
+
+      // Re-map top level meta fields back into a meta object and remove them
+      // from the top level of the dependency.
+      dependency.meta = {
+        isWebWorker: is_webworker,
+        kind,
+        promiseSymbol: promise_symbol,
+        importAttributes: import_attributes,
+        media: media,
+        isCSSImport: is_css_import,
+        chunkNameMagicComment: chunk_name_magic_comment,
+        placeholder: dependency.placeholder,
+      };
 
       dependency.id = id;
       dependency.env.id = getFeatureFlag('environmentDeduplication')
