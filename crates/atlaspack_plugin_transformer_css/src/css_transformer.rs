@@ -560,7 +560,7 @@ mod tests {
       ..Default::default()
     };
     let result = run_plugin(&asset).await;
-    let mut expected_dependency = DependencyBuilder::default()
+    let expected_dependency = DependencyBuilder::default()
       .specifier("./stuff.css".to_string())
       .source_asset_id("my-asset".to_string())
       .source_path("styles.css".into())
@@ -569,11 +569,9 @@ mod tests {
       .package_conditions(ExportsCondition::STYLE)
       .env(Arc::new(Environment::default()))
       .priority(Priority::default())
+      .is_css_import(true)
+      .placeholder("OFe21q".to_string())
       .build();
-    expected_dependency.meta = JSONObject::from_iter([
-      ("isCSSImport".into(), true.into()),
-      ("placeholder".into(), "OFe21q".into()),
-    ]);
 
     assert_eq!(result.unwrap().dependencies, vec![expected_dependency]);
   }
