@@ -469,7 +469,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 .build(),
             );
 
-            asset.has_references = true;
+            asset.meta.insert("hasReferences".into(), true.into());
             css_code.push(format!("@import '{}';", specifier));
           }
         }
