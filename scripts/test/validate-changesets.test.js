@@ -1,7 +1,11 @@
 /* eslint-env jest */
 const assert = require('assert');
 const sinon = require('sinon');
-const {checkForRustPackageBump} = require('../check-rust-changes.js');
+const {
+  checkForRustPackageBump,
+  enforceChangeset,
+  validateChangesets,
+} = require('../validate-changesets.js');
 
 describe('check-rust-changes test', () => {
   let mockOctokit;

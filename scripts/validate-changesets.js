@@ -8,8 +8,9 @@
  * @property {import('@actions/github-script').AsyncFunctionArguments} octokit
  */
 
-const commentTitle = `## 🦀 Ferris' Rust Changeset Check`;
-const debugMode = process.env.DEBUG_CHECK_RUST_CHANGES === 'true';
+const generalCommentTitle = '## Missing Changeset';
+const rustCommentTitle = `## 🦀 Ferris' Rust Changeset Check`;
+const debugMode = process.env.DEBUG_VALIDATE_CHANGESETS === 'true';
 
 function debugLog(message) {
   if (debugMode) {
@@ -26,7 +27,7 @@ async function getCommentId({octokit, owner, repo, pullNumber}) {
 
   const comment = comments.data.find(
     (comment) =>
-      comment.body.includes(commentTitle) &&
+      comment.body.includes(rustCommentTitle) &&
       comment.user.login === 'ferris-atlaspack-bot[bot]',
   );
 
@@ -151,7 +152,10 @@ async function checkRustChanges(prOptions) {
     return;
   }
 
-  const hasRustBump = await checkForRustPackageBump(prOptions);
+  const [hasRustBump, hasExplanationTag] = await Promise.all([
+    checkForRustPackageBump(prOptions),
+    checkForExplanationTag(prOptions),
+  ]);
 
   // If Rust files changed and rust package is bumped, no need for PR comment
   if (hasRustBump) {
@@ -164,7 +168,7 @@ async function checkRustChanges(prOptions) {
         repo,
         comment_id: commentId,
         body: `
-${commentTitle}
+${rustCommentTitle}
 I can see you have now included \`@atlaspack/rust\` in your changeset. This means your Rust changes will be published.
 Now I'm a [happy crab](https://youtu.be/LDU_Txk06tM?si=L80HlbKGtjXAmi6R&t=71) 🦀🎉
 `.trim(),
@@ -172,6 +176,32 @@ Now I'm a [happy crab](https://youtu.be/LDU_Txk06tM?si=L80HlbKGtjXAmi6R&t=71) �
 
       debugLog(
         'Detected existing ferris-atlaspack-bot comment in PR but now there is a Rust bump, so updating it',
+      );
+    }
+
+    return;
+  }
+
+  // If Rust files changed but [no-changeset] tag is present, allow it to pass
+  if (hasExplanationTag) {
+    process.exitCode = 0;
+
+    // If we previously left a PR comment, update it to acknowledge the no-changeset tag
+    if (commentId) {
+      await octokit.rest.issues.updateComment({
+        owner,
+        repo,
+        comment_id: commentId,
+        body: `
+${rustCommentTitle}
+I see you've added a \`[no-changeset]\` tag to your PR description. Since you've indicated this change doesn't need a changeset, I'll allow your Rust changes to pass without requiring a bump to \`@atlaspack/rust\`.
+
+Happy coding! 🦀
+`.trim(),
+      });
+
+      debugLog(
+        'Detected existing ferris-atlaspack-bot comment in PR but now there is a [no-changeset] tag, so updating it',
       );
     }
 
@@ -194,7 +224,7 @@ Now I'm a [happy crab](https://youtu.be/LDU_Txk06tM?si=L80HlbKGtjXAmi6R&t=71) �
     repo,
     issue_number: pullNumber,
     body: `
-${commentTitle}
+${rustCommentTitle}
 Ferris says: Hi! I noticed you changed some \`.rs\` files but you didn't bump the Rust package.
 
 If you want your Rust changes published, you will need to bump the \`@atlaspack/rust\` package in your changeset.
@@ -206,7 +236,89 @@ If you want your Rust changes published, you will need to bump the \`@atlaspack/
   );
 }
 
+const changesetFileRegex = /\.changeset\/\w+-\w+-\w+\.md$/;
+
+async function checkForChangesetFile({octokit, owner, repo, pullNumber}) {
+  const files = await octokit.rest.pulls.listFiles({
+    owner,
+    repo,
+    pull_number: pullNumber,
+  });
+
+  const hasChangesetFile = files.data.some(({filename}) =>
+    changesetFileRegex.test(filename),
+  );
+
+  if (!hasChangesetFile) {
+    debugLog('No changeset file found in PR');
+  } else {
+    debugLog('Changeset file found in PR');
+  }
+
+  return hasChangesetFile;
+}
+
+const noChangesetRegex = /\[no-changeset\]/;
+
+async function checkForExplanationTag({octokit, owner, repo, pullNumber}) {
+  const prDetails = await octokit.rest.pulls.get({
+    owner,
+    repo,
+    pull_number: pullNumber,
+  });
+
+  const hasExplanationTag = noChangesetRegex.test(prDetails.data.body);
+
+  if (!hasExplanationTag) {
+    debugLog('No explanation tag found in PR description');
+  } else {
+    debugLog('Explanation tag found in PR description');
+  }
+
+  return hasExplanationTag;
+}
+
+async function enforceChangeset(prOptions) {
+  const {octokit, owner, repo, pullNumber} = prOptions;
+
+  const [hasChangeset, hasExplanationTag] = await Promise.all([
+    checkForChangesetFile(prOptions),
+    checkForExplanationTag(prOptions),
+  ]);
+
+  if (hasChangeset || hasExplanationTag) {
+    process.exitCode = 0;
+    return;
+  }
+
+  await octokit.rest.issues.createComment({
+    owner,
+    repo,
+    issue_number: pullNumber,
+    body: `
+${generalCommentTitle}
+No changeset found in PR.
+Please add a changeset file (\`yarn changeset\`), or add a '[no-changeset]' tag with explanation to the PR description.
+`.trim(),
+  });
+
+  throw new Error('No changeset found in PR');
+}
+
+async function validateChangesets(prOptions) {
+  const {isRustBot = false} = prOptions;
+
+  if (isRustBot) {
+    await checkRustChanges(prOptions);
+  } else {
+    await enforceChangeset(prOptions);
+  }
+}
+
 module.exports = {
-  checkForRustPackageBump,
+  validateChangesets,
+  enforceChangeset,
   checkRustChanges,
+  checkForRustPackageBump,
+  checkForChangesetFile,
 };
