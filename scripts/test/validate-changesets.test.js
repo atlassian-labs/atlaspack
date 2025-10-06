@@ -3,11 +3,10 @@ const assert = require('assert');
 const sinon = require('sinon');
 const {
   checkForRustPackageBump,
-  enforceChangeset,
   validateChangesets,
 } = require('../validate-changesets.js');
 
-describe('check-rust-changes test', () => {
+describe('validate-changesets', () => {
   let mockOctokit;
 
   beforeEach(() => {
@@ -228,5 +227,81 @@ This is malformed frontmatter without closing ---`;
       path: '.changeset/test.md',
       ref: 'pull/1/head',
     });
+  });
+
+  // Add missing mock methods for validation tests
+  const setupMockComments = (comments = []) => {
+    mockOctokit.rest.issues.listComments.resolves({
+      data: comments,
+    });
+  };
+
+  const setupMockPR = (body = '') => {
+    mockOctokit.rest.pulls.get.resolves({
+      data: {body},
+    });
+  };
+
+  beforeEach(() => {
+    mockOctokit.rest.issues = {
+      listComments: sinon.stub(),
+      createComment: sinon.stub(),
+      updateComment: sinon.stub(),
+      deleteComment: sinon.stub(),
+    };
+    mockOctokit.rest.pulls.get = sinon.stub();
+    process.exitCode = 0;
+  });
+
+  it('should validate both general and Rust changesets in one pass', async () => {
+    setupMockFiles(['.changeset/seven-pens-beg.md']);
+    setupMockComments([]);
+    setupMockPR('');
+
+    await validateChangesets({
+      octokit: mockOctokit,
+      owner: 'test',
+      repo: 'test',
+      pullNumber: 1,
+    });
+
+    assert.equal(process.exitCode, 0);
+    sinon.assert.notCalled(mockOctokit.rest.issues.createComment);
+  });
+
+  it('should fail validation when Rust changes have no changeset and no explanation', async () => {
+    setupMockFiles(['src/main.rs']);
+    setupMockComments([]);
+    setupMockPR('Regular PR description');
+
+    try {
+      await validateChangesets({
+        octokit: mockOctokit,
+        owner: 'test',
+        repo: 'test',
+        pullNumber: 1,
+      });
+      assert.fail('Expected function to throw');
+    } catch (error) {
+      assert.equal(error.message, 'No changeset found in PR');
+      // Should create comments for both general and Rust validation
+      sinon.assert.calledTwice(mockOctokit.rest.issues.createComment);
+    }
+  });
+
+  it('should pass validation when Rust changes have no-changeset tag', async () => {
+    setupMockFiles(['src/main.rs']);
+    setupMockComments([]);
+    setupMockPR('[no-changeset]: Internal Rust refactoring');
+
+    await validateChangesets({
+      octokit: mockOctokit,
+      owner: 'test',
+      repo: 'test',
+      pullNumber: 1,
+    });
+
+    assert.equal(process.exitCode, 0);
+    sinon.assert.notCalled(mockOctokit.rest.issues.createComment);
   });
 });

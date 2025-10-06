@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 
 /**
- * @typedef CheckRustChangesOptions
+ * @typedef ValidateChangesetsOptions
  * @property number pullNumber
  * @property string owner
  * @property string repo
@@ -123,16 +123,114 @@ async function checkForRustPackageBump({octokit, owner, repo, pullNumber}) {
   return hasRustBump;
 }
 
-/**
- * Check if Rust files have been changed and if the @atlaspack/rust package is bumped
- * @param CheckRustChangesOptions options
- */
-async function checkRustChanges(prOptions) {
+const changesetFileRegex = /\.changeset\/\w+-\w+-\w+\.md$/;
+
+async function checkForChangesetFile({octokit, owner, repo, pullNumber}) {
+  const files = await octokit.rest.pulls.listFiles({
+    owner,
+    repo,
+    pull_number: pullNumber,
+  });
+
+  const hasChangesetFile = files.data.some(({filename}) =>
+    changesetFileRegex.test(filename),
+  );
+
+  if (!hasChangesetFile) {
+    debugLog('No changeset file found in PR');
+  } else {
+    debugLog('Changeset file found in PR');
+  }
+
+  return hasChangesetFile;
+}
+
+const noChangesetRegex = /\[no-changeset\]/;
+
+async function checkForExplanationTag({octokit, owner, repo, pullNumber}) {
+  const prDetails = await octokit.rest.pulls.get({
+    owner,
+    repo,
+    pull_number: pullNumber,
+  });
+
+  const hasExplanationTag = noChangesetRegex.test(prDetails.data.body);
+
+  if (!hasExplanationTag) {
+    debugLog('No explanation tag found in PR description');
+  } else {
+    debugLog('Explanation tag found in PR description');
+  }
+
+  return hasExplanationTag;
+}
+
+async function enforceChangeset(prOptions) {
   const {octokit, owner, repo, pullNumber} = prOptions;
+
+  const [hasChangeset, hasExplanationTag] = await Promise.all([
+    checkForChangesetFile(prOptions),
+    checkForExplanationTag(prOptions),
+  ]);
+
+  if (hasChangeset || hasExplanationTag) {
+    process.exitCode = 0;
+    return;
+  }
+
+  await octokit.rest.issues.createComment({
+    owner,
+    repo,
+    issue_number: pullNumber,
+    body: `
+${generalCommentTitle}
+No changeset found in PR.
+Please add a changeset file (\`yarn changeset\`), or add a '[no-changeset]' tag with explanation to the PR description.
+`.trim(),
+  });
+
+  throw new Error('No changeset found in PR');
+}
+
+async function validateChangesets(prOptions) {
+  // Run both validations concurrently
+  // The Rust validation will override general validation if [no-changeset] is used for Rust changes
+  const rustOptions = {
+    ...prOptions,
+    rustBotLogin: 'github-actions[bot]',
+  };
+
+  // Check if there are Rust files and [no-changeset] tag
+  const [hasRustFiles, hasExplanationTag] = await Promise.all([
+    checkForRustFileChanges(prOptions),
+    checkForExplanationTag(prOptions),
+  ]);
+
+  // If there are Rust files with [no-changeset] tag, only run Rust validation
+  if (hasRustFiles && hasExplanationTag) {
+    await checkRustChanges(rustOptions);
+    return;
+  }
+
+  // Otherwise, run both validations
+  await Promise.all([
+    enforceChangeset(prOptions),
+    checkRustChanges(rustOptions),
+  ]);
+}
+
+async function checkRustChanges(prOptions) {
+  const {
+    octokit,
+    owner,
+    repo,
+    pullNumber,
+    rustBotLogin = 'github-actions[bot]',
+  } = prOptions;
 
   const [hasRustFiles, commentId] = await Promise.all([
     checkForRustFileChanges(prOptions),
-    getCommentId(prOptions, rustCommentTitle, 'ferris-atlaspack-bot[bot]'),
+    getCommentId(prOptions, rustCommentTitle, rustBotLogin),
   ]);
 
   // If no Rust files changed, we don't need to do anything
@@ -212,7 +310,7 @@ ${rustCommentTitle}
   if (commentId) {
     process.exitCode = 1;
     debugLog(
-      'Rust files changed but @atlaspack/rust package not bumped. Comment already exists.',
+      'Rust files changed but @atlaspack/rust package not bumped and no [no-changeset] tag. Comment already exists.',
     );
 
     return;
@@ -236,93 +334,12 @@ Example: \`[no-changeset]: Internal refactoring that doesn't affect the public A
   });
 
   debugLog(
-    'Rust files changed but @atlaspack/rust package not bumped. Left a comment.',
+    'Rust files changed but @atlaspack/rust package not bumped and no [no-changeset] tag. Left a comment.',
   );
-}
-
-const changesetFileRegex = /\.changeset\/\w+-\w+-\w+\.md$/;
-
-async function checkForChangesetFile({octokit, owner, repo, pullNumber}) {
-  const files = await octokit.rest.pulls.listFiles({
-    owner,
-    repo,
-    pull_number: pullNumber,
-  });
-
-  const hasChangesetFile = files.data.some(({filename}) =>
-    changesetFileRegex.test(filename),
-  );
-
-  if (!hasChangesetFile) {
-    debugLog('No changeset file found in PR');
-  } else {
-    debugLog('Changeset file found in PR');
-  }
-
-  return hasChangesetFile;
-}
-
-const noChangesetRegex = /\[no-changeset\]/;
-
-async function checkForExplanationTag({octokit, owner, repo, pullNumber}) {
-  const prDetails = await octokit.rest.pulls.get({
-    owner,
-    repo,
-    pull_number: pullNumber,
-  });
-
-  const hasExplanationTag = noChangesetRegex.test(prDetails.data.body);
-
-  if (!hasExplanationTag) {
-    debugLog('No explanation tag found in PR description');
-  } else {
-    debugLog('Explanation tag found in PR description');
-  }
-
-  return hasExplanationTag;
-}
-
-async function enforceChangeset(prOptions) {
-  const {octokit, owner, repo, pullNumber} = prOptions;
-
-  const [hasChangeset, hasExplanationTag] = await Promise.all([
-    checkForChangesetFile(prOptions),
-    checkForExplanationTag(prOptions),
-  ]);
-
-  if (hasChangeset || hasExplanationTag) {
-    process.exitCode = 0;
-    return;
-  }
-
-  await octokit.rest.issues.createComment({
-    owner,
-    repo,
-    issue_number: pullNumber,
-    body: `
-${generalCommentTitle}
-No changeset found in PR.
-Please add a changeset file (\`yarn changeset\`), or add a '[no-changeset]' tag with explanation to the PR description.
-`.trim(),
-  });
-
-  throw new Error('No changeset found in PR');
-}
-
-async function validateChangesets(prOptions) {
-  const {isRustBot = false} = prOptions;
-
-  if (isRustBot) {
-    await checkRustChanges(prOptions);
-  } else {
-    await enforceChangeset(prOptions);
-  }
 }
 
 module.exports = {
   validateChangesets,
-  enforceChangeset,
-  checkRustChanges,
+  // Keep these for testing purposes
   checkForRustPackageBump,
-  checkForChangesetFile,
 };
