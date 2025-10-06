@@ -1,0 +1,8 @@
+[package]
+name = "compiled_hash"
+version = "0.1.0"
+edition = "2024"
+description = "Hash function for use in Compiled CSS-in-JS"
+
+[lints]
+workspace = true
