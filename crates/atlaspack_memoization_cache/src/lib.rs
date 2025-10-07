@@ -1,7 +1,7 @@
 use lmdb_js_lite::writer::DatabaseWriter;
 use rand::Rng;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use std::future::Future;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
