@@ -5,7 +5,7 @@ use atlaspack_core::diagnostic;
 use atlaspack_sourcemap::SourceMapError;
 use indexmap::IndexMap;
 use std::collections::{BTreeMap, HashMap};
-use swc_core::atoms::{Atom, JsWord};
+use swc_core::atoms::Atom;
 
 use atlaspack_core::plugin::{PluginOptions, TransformResult};
 use atlaspack_core::types::engines::EnvironmentFeature;
@@ -163,7 +163,7 @@ pub(crate) fn convert_result(
     }
 
     for specifier in hoist_result.wrapped_requires {
-      if let Some(dependency) = dependency_by_specifier.get_mut(&JsWord::new(specifier)) {
+      if let Some(dependency) = dependency_by_specifier.get_mut(&Atom::new(specifier)) {
         dependency.should_wrap = true;
       }
     }

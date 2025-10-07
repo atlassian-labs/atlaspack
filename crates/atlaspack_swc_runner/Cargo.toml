@@ -10,14 +10,17 @@ workspace = true
 [dependencies]
 regex = { workspace = true }
 swc_core = { workspace = true, features = [
+    "base",
     "__ecma",
     "ecma_codegen",
     "__visit",
     "__parser",
     "ecma_ast",
     "__common",
-    "__testing_transform"
+    "__testing_transform",
+    "common_sourcemap"
 ]}
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 swc_ecma_parser = { workspace = true }
 sourcemap = { workspace = true }

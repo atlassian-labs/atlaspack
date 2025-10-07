@@ -31,6 +31,7 @@ parking_lot = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
+swc_ecma_lexer = { workspace = true }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 
 criterion = { workspace = true }
