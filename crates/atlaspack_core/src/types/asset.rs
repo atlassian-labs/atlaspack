@@ -140,7 +140,6 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
 }
 
 option_like_enum!(AssetInlineType, String);
-
 option_like_enum!(CSSDependencyType, Tag);
 
 /// An asset is a file or part of a file that may represent any data type including source code, binary data, etc.
