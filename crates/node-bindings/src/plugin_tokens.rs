@@ -3,7 +3,7 @@ use napi::bindgen_prelude::Buffer;
 use napi::{Env, Error as NapiError, JsObject};
 use napi_derive::napi;
 use swc_atlaskit_tokens::design_system_tokens_visitor;
-use swc_atlaskit_tokens::token_map::get_or_load_token_map;
+use swc_atlaskit_tokens::token_map::get_or_load_token_map_from_json;
 use swc_core::common::SourceMap;
 use swc_core::common::sync::Lrc;
 
@@ -37,7 +37,7 @@ pub fn apply_tokens_plugin(
       let (module, comments) = parse(&code_string, &project_root, &filename, &source_map, &config)
         .map_err(|e| format!("Parse error: {:?}", e))?;
 
-      let token_map = get_or_load_token_map(Some(&tokens_path))?;
+      let token_map = get_or_load_token_map_from_json(Some(&tokens_path))?;
 
       let mut passes = design_system_tokens_visitor(
         comments.clone(),
