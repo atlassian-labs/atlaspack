@@ -162,16 +162,19 @@ export function getAssetGraph(serializedGraph: any): {
       let id = asset.id;
 
       asset.meta = {
-        interpreter: asset.interpreter,
-        id: asset.packagingId,
-        hasCJSExports: asset.hasCjsExports,
-        staticExports: asset.staticExports,
-        shouldWrap: asset.shouldWrap,
-        isConstantModule: asset.isConstantModule,
         conditions: asset.conditions,
+        emptyFileStarReexport: asset.emptyFileStarReexport,
+        hasCJSExports: asset.hasCjsExports,
+        hasDependencies: asset.hasDependencies,
         hasReferences: asset.hasReferences,
-        type: asset.cssDependencyType,
+        has_node_replacements: asset.hasNodeReplacements,
+        id: asset.packagingId,
         inlineType: asset.inlineType,
+        interpreter: asset.interpreter,
+        isConstantModule: asset.isConstantModule,
+        shouldWrap: asset.shouldWrap,
+        staticExports: asset.staticExports,
+        type: asset.cssDependencyType,
         ...asset.meta,
       };
 
@@ -222,14 +225,16 @@ export function getAssetGraph(serializedGraph: any): {
       // Re-map top level meta fields back into a meta object and remove them
       // from the top level of the dependency.
       dependency.meta = {
-        webworker: isWebworker,
-        kind,
-        promiseSymbol,
-        importAttributes,
-        media: media,
-        isCSSImport: isCssImport,
         chunkNameMagicComment,
+        importAttributes,
+        isCSSImport: isCssImport,
+        kind,
+        media,
         placeholder: dependency.placeholder,
+        promiseSymbol,
+        shouldWrap: dependency.shouldWrap,
+        webworker: isWebworker,
+        ...dependency.meta,
       };
 
       dependency.id = id;
