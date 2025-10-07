@@ -5,6 +5,7 @@ use std::sync::atomic::Ordering;
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::plugin::*;
+use atlaspack_package_manager::PackageManagerRef;
 
 use super::super::super::RpcWorker;
 use super::super::plugins::*;
@@ -45,11 +46,13 @@ impl RpcWorker for NodejsWorkerFarm {
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,
+    package_manager: PackageManagerRef,
   ) -> anyhow::Result<Arc<dyn TransformerPlugin>> {
     Ok(Arc::new(NodejsRpcTransformerPlugin::new(
       self.workers.clone(),
       ctx,
       plugin,
+      package_manager,
     )?))
   }
 

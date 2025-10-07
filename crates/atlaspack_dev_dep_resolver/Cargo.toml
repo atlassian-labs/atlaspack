@@ -1,11 +1,11 @@
 [package]
 authors = ["Devon Govett <devongovett@gmail.com>"]
-name = "atlaspack-dev-dep-resolver"
+name = "atlaspack_dev_dep_resolver"
 version = "0.1.0"
 edition = { workspace = true }
 
 [dependencies]
-atlaspack-resolver = { path = "../node-resolver-rs" }
+atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 es-module-lexer = { workspace = true }
 serde_json = { workspace = true }
 rayon = { workspace = true }

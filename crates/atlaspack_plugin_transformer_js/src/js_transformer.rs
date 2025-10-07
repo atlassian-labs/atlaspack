@@ -193,6 +193,10 @@ impl fmt::Debug for AtlaspackJsTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackJsTransformerPlugin {
+  fn cache_key(&self) -> &atlaspack_core::plugin::CacheStatus {
+    &atlaspack_core::plugin::CacheStatus::BuiltIn
+  }
+
   /// This does equivalent work to `JSTransformer::transform` in `packages/transformers/js`
   async fn transform(
     &self,

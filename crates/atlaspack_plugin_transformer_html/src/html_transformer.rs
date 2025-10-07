@@ -34,6 +34,10 @@ impl AtlaspackHtmlTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
+  fn cache_key(&self) -> &atlaspack_core::plugin::CacheStatus {
+    &atlaspack_core::plugin::CacheStatus::BuiltIn
+  }
+
   async fn transform(
     &self,
     context: TransformContext,

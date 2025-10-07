@@ -199,7 +199,7 @@ async fn run_pipelines(
     let mut current_dependencies = dependencies;
     let mut pipeline_complete = true;
 
-    for transformer in pipeline.transformers_mut() {
+    for transformer in pipeline.transformers() {
       let transform_result = transformer
         .transform(transform_context.clone(), current_asset)
         .await?;

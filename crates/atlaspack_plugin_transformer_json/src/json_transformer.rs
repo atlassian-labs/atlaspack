@@ -15,6 +15,10 @@ impl AtlaspackJsonTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackJsonTransformerPlugin {
+  fn cache_key(&self) -> &atlaspack_core::plugin::CacheStatus {
+    &atlaspack_core::plugin::CacheStatus::BuiltIn
+  }
+
   async fn transform(
     &self,
     _context: TransformContext,

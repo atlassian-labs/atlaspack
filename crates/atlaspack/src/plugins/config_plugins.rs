@@ -16,6 +16,7 @@ use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::plugin::ValidatorPlugin;
 use atlaspack_core::plugin::composite_reporter_plugin::CompositeReporterPlugin;
+use atlaspack_package_manager::PackageManagerRef;
 use atlaspack_plugin_resolver::AtlaspackResolver;
 use atlaspack_plugin_rpc::RpcWorkerRef;
 use atlaspack_plugin_transformer_css::AtlaspackCssTransformerPlugin;
@@ -47,6 +48,8 @@ pub struct ConfigPlugins {
 
   /// Storage of initialized plugins
   plugin_cache: PluginCache,
+
+  package_manager: PackageManagerRef,
 }
 
 impl ConfigPlugins {
@@ -54,6 +57,7 @@ impl ConfigPlugins {
     rpc_worker: RpcWorkerRef,
     config: AtlaspackConfig,
     ctx: PluginContext,
+    package_manager: PackageManagerRef,
   ) -> anyhow::Result<Self> {
     let mut reporters: Vec<Box<dyn ReporterPlugin>> = Vec::new();
 
@@ -69,6 +73,7 @@ impl ConfigPlugins {
       ctx,
       reporter,
       plugin_cache: Default::default(),
+      package_manager,
     })
   }
 
@@ -236,7 +241,11 @@ impl Plugins for ConfigPlugins {
             "@atlaspack/transformer-yaml" => {
               Arc::new(AtlaspackYamlTransformerPlugin::new(&self.ctx))
             }
-            _ => self.rpc_worker.create_transformer(&self.ctx, transformer)?,
+            _ => self.rpc_worker.create_transformer(
+              &self.ctx,
+              transformer,
+              self.package_manager.clone(),
+            )?,
           })
         })?;
 

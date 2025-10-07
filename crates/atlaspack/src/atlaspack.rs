@@ -94,8 +94,7 @@ impl Atlaspack {
 
     let rpc_worker = rpc.start()?;
 
-    let rc_config_loader =
-      AtlaspackRcConfigLoader::new(Arc::clone(&fs), Arc::clone(&package_manager));
+    let rc_config_loader = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager.clone());
 
     let (config, _files) = rc_config_loader.load(
       &project_root,
@@ -130,6 +129,7 @@ impl Atlaspack {
         // TODO Initialise actual logger
         logger: PluginLogger::default(),
       },
+      package_manager,
     )?);
 
     let request_tracker = RequestTracker::new(

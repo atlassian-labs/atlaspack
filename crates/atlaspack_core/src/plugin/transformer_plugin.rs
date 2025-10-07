@@ -1,3 +1,4 @@
+use crate::cache::Cache;
 use crate::config_loader::{ConfigLoader, ConfigLoaderRef};
 use crate::hash::IdentifierHasher;
 use crate::types::{Asset, AssetWithDependencies, Dependency, Environment, SpecifierType};
@@ -68,6 +69,12 @@ impl TransformContext {
   }
 }
 
+pub enum CacheStatus {
+  Hash(u64),
+  Uncachable,
+  BuiltIn,
+}
+
 /// Compile a single asset, discover dependencies, or convert the asset to a different format
 ///
 /// Many transformers are wrappers around other tools such as compilers and preprocessors, and are
@@ -83,6 +90,8 @@ pub trait TransformerPlugin: Any + Debug + Send + Sync {
     self.type_id().hash(&mut hasher);
     hasher.finish()
   }
+
+  fn cache_key(&self) -> &CacheStatus;
 
   /// Transform the asset and/or add new assets
   async fn transform(

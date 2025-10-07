@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::*;
+use atlaspack_package_manager::PackageManagerRef;
 use mockall::automock;
 
 pub type RpcFactoryRef = Arc<dyn RpcFactory>;
@@ -75,5 +76,6 @@ pub trait RpcWorker: Send + Sync {
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,
+    package_manager: PackageManagerRef,
   ) -> anyhow::Result<Arc<dyn TransformerPlugin>>;
 }

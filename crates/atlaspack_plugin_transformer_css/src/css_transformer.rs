@@ -525,6 +525,10 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       ..Default::default()
     })
   }
+
+  fn cache_key(&self) -> &atlaspack_core::plugin::CacheStatus {
+    &atlaspack_core::plugin::CacheStatus::BuiltIn
+  }
 }
 
 #[cfg(test)]

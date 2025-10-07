@@ -1,5 +1,7 @@
 use async_trait::async_trait;
+use atlaspack_core::plugin::CacheStatus;
 use atlaspack_core::plugin::PluginOptions;
+use atlaspack_package_manager::PackageManagerRef;
 use napi::JsBuffer;
 use napi::JsObject;
 use napi::JsString;
@@ -42,6 +44,7 @@ pub struct NodejsRpcTransformerPlugin {
   plugin_options: Arc<PluginOptions>,
   plugin_node: PluginNode,
   started: OnceCell<InitializedState>,
+  cache_key: CacheStatus,
 }
 
 impl Debug for NodejsRpcTransformerPlugin {
@@ -55,12 +58,22 @@ impl NodejsRpcTransformerPlugin {
     nodejs_workers: Arc<NodeJsWorkerCollection>,
     ctx: &PluginContext,
     plugin_node: &PluginNode,
+    package_manager: PackageManagerRef,
   ) -> Result<Self, anyhow::Error> {
+    let cache_key = match package_manager
+      .resolve_dev_dependency(&plugin_node.package_name, &plugin_node.resolve_from)?
+      .hash
+    {
+      Some(hash) => CacheStatus::Hash(hash),
+      None => CacheStatus::Uncachable,
+    };
+
     Ok(Self {
       nodejs_workers,
       plugin_options: ctx.options.clone(),
       plugin_node: plugin_node.clone(),
       started: OnceCell::new(),
+      cache_key,
     })
   }
 
@@ -96,6 +109,10 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     let mut hasher = IdentifierHasher::new();
     self.plugin_node.hash(&mut hasher);
     hasher.finish()
+  }
+
+  fn cache_key(&self) -> &CacheStatus {
+    &self.cache_key
   }
 
   async fn transform(

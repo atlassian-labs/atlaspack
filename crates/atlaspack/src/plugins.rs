@@ -55,27 +55,53 @@ pub trait Plugins {
 pub struct TransformerPipeline {
   transformers: Vec<Arc<dyn TransformerPlugin>>,
   pipeline_id: u64,
+  cache_key: Option<u64>,
 }
 
 #[cfg_attr(test, automock)]
 impl TransformerPipeline {
   pub fn new(transformers: Vec<Arc<dyn TransformerPlugin>>) -> Self {
-    let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
+    let mut id_hasher = atlaspack_core::hash::IdentifierHasher::default();
+    let mut cache_key_hasher = atlaspack_core::hash::IdentifierHasher::default();
+
+    let mut cacheable = true;
 
     for transformer in &transformers {
-      transformer.id().hash(&mut hasher);
+      transformer.id().hash(&mut id_hasher);
+
+      if cacheable {
+        match transformer.cache_key() {
+          atlaspack_core::plugin::CacheStatus::Hash(hash) => {
+            hash.hash(&mut cache_key_hasher);
+          }
+          atlaspack_core::plugin::CacheStatus::Uncachable => {
+            cacheable = false;
+          }
+          atlaspack_core::plugin::CacheStatus::BuiltIn => {
+            // Built-in transformers are considered cacheable, but do not contribute to the cache key
+          }
+        }
+      }
     }
+
+    let cache_key = if cacheable {
+      Some(cache_key_hasher.finish())
+    } else {
+      None
+    };
 
     Self {
       transformers,
-      pipeline_id: hasher.finish(),
+      pipeline_id: id_hasher.finish(),
+      cache_key,
     }
   }
+
   pub fn id(&self) -> u64 {
     self.pipeline_id
   }
 
-  pub fn transformers_mut(&mut self) -> &mut [Arc<dyn TransformerPlugin>] {
+  pub fn transformers(&mut self) -> &[Arc<dyn TransformerPlugin>] {
     &mut self.transformers
   }
 }
