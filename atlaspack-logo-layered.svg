@@ -1,0 +1,27 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Layered packaging concept with stacked rounded rectangles -->
+  <defs>
+    <linearGradient id="grad3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0052CC;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#0065FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#36B37E;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Base layer - largest -->
+  <rect x="20" y="65" width="80" height="25" rx="8" fill="#0052CC" opacity="0.3"/>
+  
+  <!-- Middle layer -->
+  <rect x="25" y="50" width="70" height="25" rx="8" fill="#0065FF" opacity="0.6"/>
+  
+  <!-- Top layer - smallest, main focus -->
+  <rect x="30" y="35" width="60" height="25" rx="8" fill="url(#grad3)" opacity="0.9"/>
+  
+  <!-- Abstract "A" symbol embedded in top layer -->
+  <path d="M50 45 L60 55 L70 45 M55 50 L65 50" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"/>
+  
+  <!-- Small accent dots representing modular elements -->
+  <circle cx="40" cy="75" r="3" fill="#36B37E" opacity="0.8"/>
+  <circle cx="80" cy="75" r="3" fill="#36B37E" opacity="0.8"/>
+  <circle cx="60" cy="25" r="3" fill="#0052CC" opacity="0.8"/>
+</svg>

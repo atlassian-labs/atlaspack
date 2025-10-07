@@ -1,0 +1,22 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Modular bundling concept with interlocking hexagons -->
+  <defs>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0052CC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#36B37E;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Central hexagon representing the main bundle -->
+  <polygon points="60,25 80,37.5 80,62.5 60,75 40,62.5 40,37.5" fill="url(#grad2)" opacity="0.9"/>
+  
+  <!-- Smaller hexagons representing modules being bundled -->
+  <polygon points="35,50 45,56.25 45,68.75 35,75 25,68.75 25,56.25" fill="#0052CC" opacity="0.7"/>
+  <polygon points="85,50 95,56.25 95,68.75 85,75 75,68.75 75,56.25" fill="#0052CC" opacity="0.7"/>
+  <polygon points="60,10 70,16.25 70,28.75 60,35 50,28.75 50,16.25" fill="#36B37E" opacity="0.7"/>
+  
+  <!-- Connection points -->
+  <circle cx="47.5" cy="50" r="2" fill="#253858" opacity="0.6"/>
+  <circle cx="72.5" cy="50" r="2" fill="#253858" opacity="0.6"/>
+  <circle cx="60" cy="32.5" r="2" fill="#253858" opacity="0.6"/>
+</svg>
