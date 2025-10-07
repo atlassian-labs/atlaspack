@@ -238,10 +238,11 @@ pub struct Asset {
   /// `module.exports[key] = 10`.
   pub static_exports: bool,
 
-  /// TODO: MISSING DOCUMENTATION
+  /// The asset contains code patterns internally that cannot be safely scope hoisted
   pub should_wrap: bool,
 
-  /// TODO: MISSING DOCUMENTATION
+  /// Indicates whether a JavaScript asset contains Node.js-specific globals (e.g. __filename and
+  /// __dirname) that have been replaced during transformation.
   pub has_node_replacements: bool,
 
   /// True if this is a 'constant module', meaning it only exports constant assignment statements,
@@ -263,7 +264,7 @@ pub struct Asset {
   pub config_path: Option<String>,
   pub config_key_path: Option<String>,
 
-  // These are properties that used to live on `meta` but have now been moved to the top level
+  /// Tells the packager whether to insert a hashbang, and what that hashbang is.
   pub interpreter: Option<String>,
 
   /// This is the original asset ID that this asset was created with. The asset ID can change
@@ -271,10 +272,23 @@ pub struct Asset {
   /// to know the original ID in order to do replacements.
   pub packaging_id: Option<String>,
 
+  /// Whether a CSS asset has references to symbols which need to be replaced by the packager.
   pub has_references: Option<bool>,
+
+  /// If the asset is a CSS asset, this indicates how it was imported.
+  /// Only values are Tag or None
   pub css_dependency_type: CSSDependencyType,
+
+  /// If the asset is an inline asset, this indicates the method of inlining.
+  /// Only values are String or None
   pub inline_type: AssetInlineType,
+
+  /// Indicates whether the asset contains an empty star re-export, e.g.
+  /// `export * from 'other-module';` where `other-module` is an empty module.
   pub empty_file_star_reexport: Option<bool>,
+
+  /// Indicates whether a CSS asset has dependencies. This is used to optimize
+  /// packaging by skipping assets without dependencies when possible.
   pub has_dependencies: Option<bool>,
 }
 
