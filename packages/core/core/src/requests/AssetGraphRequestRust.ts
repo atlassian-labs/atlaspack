@@ -163,15 +163,15 @@ export function getAssetGraph(serializedGraph: any): {
 
       asset.meta = {
         interpreter: asset.interpreter,
-        id: asset.packaging_id,
-        hasCJSExports: asset.has_cjs_exports,
-        staticExports: asset.static_exports,
-        shouldWrap: asset.should_wrap,
-        isConstantModule: asset.is_constant_module,
+        id: asset.packagingId,
+        hasCJSExports: asset.hasCjsExports,
+        staticExports: asset.staticExports,
+        shouldWrap: asset.shouldWrap,
+        isConstantModule: asset.isConstantModule,
         conditions: asset.conditions,
-        hasReferences: asset.has_references,
-        type: asset.css_dependency_type,
-        inline_type: asset.inline_type,
+        hasReferences: asset.hasReferences,
+        type: asset.cssDependencyType,
+        inlineType: asset.inlineType,
         ...asset.meta,
       };
 
