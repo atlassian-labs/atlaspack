@@ -54,7 +54,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::io::{self};
 use swc_atlaskit_tokens::design_system_tokens_visitor;
-use swc_atlaskit_tokens::token_map::get_or_load_token_map;
+use swc_atlaskit_tokens::token_map::get_or_load_token_map_from_json;
 use swc_core::common::FileName;
 use swc_core::common::Globals;
 use swc_core::common::Mark;
@@ -256,10 +256,10 @@ pub fn transform(
   // Load token map from cache or file path provided in config (only if tokens config is present)
   let mut token_loading_error: Option<String> = None;
   let token_map = if let Some(tokens_config) = config.atlaskit_tokens.as_ref() {
-    match get_or_load_token_map(Some(&tokens_config.token_data_path)) {
+    match get_or_load_token_map_from_json(Some(&tokens_config.token_data_path)) {
       Ok(map) => map,
       Err(error_msg) => {
-        token_loading_error = Some(error_msg);
+        token_loading_error = Some(error_msg.to_string());
         None
       }
     }
