@@ -438,6 +438,7 @@ pub struct AssetStats {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Condition {
   pub key: String,
   pub if_true_placeholder: Option<String>,
