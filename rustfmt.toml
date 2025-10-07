@@ -1,2 +1,2 @@
-edition = "2024"
+edition = { workspace = true }
 tab_spaces = 2
