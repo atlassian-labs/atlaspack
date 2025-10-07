@@ -93,15 +93,15 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
     };
 
     // If we have a cached value, try to deserialize it and return it
-    if !self.should_validate() {
-      if let Some(value) = cache_result.as_ref() {
-        match deserialize(value) {
-          Ok(value) => {
-            return Ok(value);
-          }
-          Err(err) => {
-            tracing::error!("Failed to deserialize cached value for {}: {}", label, err);
-          }
+    if !self.should_validate()
+      && let Some(value) = cache_result.as_ref()
+    {
+      match deserialize(value) {
+        Ok(value) => {
+          return Ok(value);
+        }
+        Err(err) => {
+          tracing::error!("Failed to deserialize cached value for {}: {}", label, err);
         }
       }
     }
@@ -112,13 +112,13 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
     // Now we have a result, try to serialize and cache it
     match serialize(&result) {
       Ok(serialized_result) => {
-        if let Some(value) = cache_result {
-          if value != serialized_result {
-            tracing::error!(
-              "Cache validation mismatch for {}: cached value does not match computed result",
-              label
-            );
-          }
+        if let Some(value) = cache_result
+          && value != serialized_result
+        {
+          tracing::error!(
+            "Cache validation mismatch for {}: cached value does not match computed result",
+            label
+          );
         }
 
         if let Err(error) = self.reader_writer.put(&cache_key, &serialized_result) {
