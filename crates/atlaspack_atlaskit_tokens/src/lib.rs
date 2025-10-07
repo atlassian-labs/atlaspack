@@ -135,7 +135,7 @@ pub fn process_tokens_sync(code: &str, config: &TokensConfig) -> Result<TokensPl
     let map_json = if config.source_maps && !line_pos_buffer.is_empty() {
       let mut output_map_buffer = vec![];
       if source_map
-        .build_source_map_with_config(&line_pos_buffer, None, SourceMapConfig)
+        .build_source_map(&line_pos_buffer, None, SourceMapConfig)
         .to_writer(&mut output_map_buffer)
         .is_ok()
       {

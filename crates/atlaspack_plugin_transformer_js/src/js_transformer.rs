@@ -532,7 +532,7 @@ mod tests {
   };
   use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSystem};
   use pretty_assertions::assert_eq;
-  use swc_core::ecma::parser::lexer::util::CharExt;
+  use swc_ecma_lexer::common::lexer::char::CharExt;
 
   use super::*;
 
