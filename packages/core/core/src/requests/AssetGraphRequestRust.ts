@@ -161,6 +161,20 @@ export function getAssetGraph(serializedGraph: any): {
       let asset = node.value;
       let id = asset.id;
 
+      asset.meta = {
+        interpreter: asset.interpreter,
+        id: asset.packaging_id,
+        hasCJSExports: asset.has_cjs_exports,
+        staticExports: asset.static_exports,
+        shouldWrap: asset.should_wrap,
+        isConstantModule: asset.is_constant_module,
+        conditions: asset.conditions,
+        hasReferences: asset.has_references,
+        type: asset.css_dependency_type,
+        inline_type: asset.inline_type,
+        ...asset.meta,
+      };
+
       asset.committed = true;
       asset.contentKey = id;
       asset.env.id = getFeatureFlag('environmentDeduplication')
