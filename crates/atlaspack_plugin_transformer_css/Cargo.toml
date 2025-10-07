@@ -2,7 +2,7 @@
 name = "atlaspack_plugin_transformer_css"
 version = "0.1.0"
 authors = ["Matt Jones <mattjones701@gmail.com>"]
-edition = "2024"
+edition = { workspace = true }
 description = "CSS transformer plugin for the Atlaspack Bundler"
 
 [lints]

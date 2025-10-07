@@ -2,7 +2,7 @@
 authors = ["Monica Olejniczak <monica.j.olejniczak@gmail.com>"]
 name = "atlaspack_package_manager"
 version = "0.1.0"
-edition = "2024"
+edition = { workspace = true }
 
 [lints]
 workspace = true

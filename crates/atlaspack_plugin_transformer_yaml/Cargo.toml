@@ -2,7 +2,7 @@
 name = "atlaspack_plugin_transformer_yaml"
 version = "0.1.0"
 authors = ["Monica Olejniczak <monica.j.olejniczak@gmail.com>"]
-edition = "2024"
+edition = { workspace = true }
 description = "Yaml transformer plugin for the Atlaspack Bundler"
 
 [lints]
