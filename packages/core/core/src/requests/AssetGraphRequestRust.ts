@@ -222,7 +222,7 @@ export function getAssetGraph(serializedGraph: any): {
       // Re-map top level meta fields back into a meta object and remove them
       // from the top level of the dependency.
       dependency.meta = {
-        isWebWorker: isWebworker,
+        webworker: isWebworker,
         kind,
         promiseSymbol,
         importAttributes,
