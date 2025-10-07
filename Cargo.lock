@@ -473,6 +473,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "atlaspack-macros",
  "atlaspack_filesystem",
  "atlaspack_sourcemap",
  "bitflags 2.6.0",

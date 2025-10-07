@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
 
+use atlaspack_macros::option_like_enum;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -138,43 +139,9 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
   format!("{:016x}", hasher.finish())
 }
 
-#[derive(Default, PartialEq, Clone, Debug, Deserialize)]
-pub enum AssetInlineType {
-  String,
-  #[default]
-  None,
-}
+option_like_enum!(AssetInlineType, String);
 
-impl Serialize for AssetInlineType {
-  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-  where
-    S: serde::Serializer,
-  {
-    match self {
-      AssetInlineType::String => serializer.serialize_str("string"),
-      AssetInlineType::None => serializer.serialize_none(),
-    }
-  }
-}
-
-#[derive(Default, PartialEq, Clone, Debug, Deserialize)]
-pub enum CSSDependencyType {
-  Tag,
-  #[default]
-  None,
-}
-
-impl Serialize for CSSDependencyType {
-  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-  where
-    S: serde::Serializer,
-  {
-    match self {
-      CSSDependencyType::Tag => serializer.serialize_str("tag"),
-      CSSDependencyType::None => serializer.serialize_none(),
-    }
-  }
-}
+option_like_enum!(CSSDependencyType, Tag);
 
 /// An asset is a file or part of a file that may represent any data type including source code, binary data, etc.
 ///
