@@ -112,15 +112,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   patchProjectPaths: false,
 
   /**
-   * Enables optimized inline string replacement perf for the packager.
-   * Used heavily for inline bundles.
-   *
-   * @author Matt Jones <mjones4@atlassian.com>
-   * @since 2025-04-17
-   */
-  inlineStringReplacementPerf: false,
-
-  /**
    * Enable resolution of bundler config starting from the CWD
    *
    * @author Ben Jervis <bjervis@atlassian.com>

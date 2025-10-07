@@ -153,9 +153,6 @@ describe('monolithic bundler', function () {
             __unstable_singleFileOutput: true,
           },
         },
-        featureFlags: {
-          inlineStringReplacementPerf: true,
-        },
       },
     );
 
@@ -188,9 +185,6 @@ describe('monolithic bundler', function () {
           distDir: 'dist-bundle-text',
           __unstable_singleFileOutput: true,
         },
-      },
-      featureFlags: {
-        inlineStringReplacementPerf: true,
       },
     });
 
