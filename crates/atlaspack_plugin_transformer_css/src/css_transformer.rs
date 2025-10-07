@@ -9,7 +9,7 @@ use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::engines::{Engines, EnginesBrowsers};
 use atlaspack_core::types::{
-  Asset, AssetWithDependencies, Code, Dependency, DependencyBuilder, Diagnostic,
+  Asset, AssetWithDependencies, CSSDependencyType, Code, Dependency, DependencyBuilder, Diagnostic,
   EnvironmentContext, ErrorKind, ExportsCondition, FileType, Priority, SourceMap, SpecifierType,
   Symbol,
 };
@@ -20,7 +20,6 @@ use lightningcss::stylesheet::{ParserFlags, ParserOptions, StyleSheet};
 use lightningcss::targets::{Browsers, Targets};
 use parcel_sourcemap::SourceMap as ParcelSourceMap;
 use serde::Deserialize;
-use serde_json::json;
 
 use crate::css_transformer_config::{CssModulesConfig, CssModulesFullConfig, CssTransformerConfig};
 
@@ -69,10 +68,7 @@ impl AtlaspackCssTransformerPlugin {
   }
 
   fn is_css_module(&self, asset: &Asset) -> bool {
-    let is_style_tag = asset
-      .meta
-      .get("type")
-      .is_some_and(|meta_type| *meta_type == json!("tag"));
+    let is_style_tag = matches!(asset.css_dependency_type, CSSDependencyType::Tag);
 
     // If this is a style tag it's not a CSS module
     if is_style_tag {
@@ -148,9 +144,8 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
     });
 
     let preserve_imports = asset
-      .meta
-      .get("hasDependencies")
-      .map_or_else(|| true, |value| value != false);
+      .has_dependencies
+      .map_or_else(|| true, |has_deps| !has_deps);
 
     let browsers = asset.env.engines.browsers.clone().map_or_else(
       || Ok(None),
@@ -469,7 +464,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 .build(),
             );
 
-            asset.meta.insert("hasReferences".into(), true.into());
+            asset.has_references = Some(true);
             css_code.push(format!("@import '{}';", specifier));
           }
         }
@@ -528,7 +523,7 @@ mod tests {
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::{PluginLogger, PluginOptions},
-    types::{Environment, JSONObject},
+    types::Environment,
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 

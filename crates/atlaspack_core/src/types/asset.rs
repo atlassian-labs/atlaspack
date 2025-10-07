@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::json;
 
 use crate::project_path::to_project_path;
 
@@ -139,6 +138,44 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
   format!("{:016x}", hasher.finish())
 }
 
+#[derive(Default, PartialEq, Clone, Debug, Deserialize)]
+pub enum AssetInlineType {
+  String,
+  #[default]
+  None,
+}
+
+impl Serialize for AssetInlineType {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: serde::Serializer,
+  {
+    match self {
+      AssetInlineType::String => serializer.serialize_str("string"),
+      AssetInlineType::None => serializer.serialize_none(),
+    }
+  }
+}
+
+#[derive(Default, PartialEq, Clone, Debug, Deserialize)]
+pub enum CSSDependencyType {
+  Tag,
+  #[default]
+  None,
+}
+
+impl Serialize for CSSDependencyType {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: serde::Serializer,
+  {
+    match self {
+      CSSDependencyType::Tag => serializer.serialize_str("tag"),
+      CSSDependencyType::None => serializer.serialize_none(),
+    }
+  }
+}
+
 /// An asset is a file or part of a file that may represent any data type including source code, binary data, etc.
 ///
 /// Note that assets may exist in the file system or virtually.
@@ -259,6 +296,20 @@ pub struct Asset {
 
   pub config_path: Option<String>,
   pub config_key_path: Option<String>,
+
+  // These are properties that used to live on `meta` but have now been moved to the top level
+  pub interpreter: Option<String>,
+
+  /// This is the original asset ID that this asset was created with. The asset ID can change
+  /// later in the pipeline if the file path, type, or environment change, but the packager needs
+  /// to know the original ID in order to do replacements.
+  pub packaging_id: Option<String>,
+
+  pub has_references: Option<bool>,
+  pub css_dependency_type: CSSDependencyType,
+  pub inline_type: AssetInlineType,
+  pub empty_file_star_reexport: Option<bool>,
+  pub has_dependencies: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -396,51 +447,6 @@ impl Asset {
       query: self.query.as_deref(),
       unique_key: self.unique_key.as_deref(),
     });
-  }
-
-  pub fn set_interpreter(&mut self, shebang: impl Into<serde_json::Value>) {
-    self.meta.insert("interpreter".into(), shebang.into());
-  }
-
-  pub fn set_meta_id(&mut self, id: impl Into<serde_json::Value>) {
-    self.meta.insert("id".into(), id.into());
-  }
-
-  pub fn set_has_cjs_exports(&mut self, value: bool) {
-    self.meta.insert("hasCJSExports".into(), value.into());
-    self.has_cjs_exports = value;
-  }
-
-  pub fn set_static_exports(&mut self, value: bool) {
-    self.meta.insert("staticExports".into(), value.into());
-    self.static_exports = value;
-  }
-
-  pub fn set_should_wrap(&mut self, value: bool) {
-    self.meta.insert("shouldWrap".into(), value.into());
-    self.should_wrap = value;
-  }
-
-  pub fn set_is_constant_module(&mut self, is_constant_module: bool) {
-    self.is_constant_module = is_constant_module;
-    if is_constant_module {
-      self.meta.insert("isConstantModule".into(), true.into());
-    }
-  }
-
-  pub fn set_has_node_replacements(&mut self, has_node_replacements: bool) {
-    self.has_node_replacements = has_node_replacements;
-    if has_node_replacements {
-      self
-        .meta
-        // This is intentionally snake_case as that's what it was originally.
-        .insert("has_node_replacements".into(), true.into());
-    }
-  }
-
-  pub fn set_conditions(&mut self, conditions: HashSet<Condition>) {
-    self.conditions = conditions.clone();
-    self.meta.insert("conditions".into(), json!(conditions));
   }
 }
 

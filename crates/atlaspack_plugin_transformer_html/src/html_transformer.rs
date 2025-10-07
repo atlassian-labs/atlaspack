@@ -138,7 +138,7 @@ fn run_html_transformations(
 #[cfg(test)]
 mod test {
   use atlaspack_core::types::{
-    DependencyBuilder, FileType, JSONObject, Priority, SourceType, SpecifierType,
+    CSSDependencyType, DependencyBuilder, FileType, JSONObject, Priority, SourceType, SpecifierType,
   };
   use pretty_assertions::assert_eq;
 
@@ -268,8 +268,9 @@ mod test {
             id: String::from("b0deada2a458cc5f"),
             is_bundle_splittable: true,
             is_source: true,
-            meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
+            meta: JSONObject::new(),
             unique_key: Some(String::from("16f87d7beed96467")),
+            css_dependency_type: CSSDependencyType::Tag,
             ..Asset::default()
           },
           dependencies: Vec::new()
@@ -341,8 +342,9 @@ mod test {
             id: transformation.discovered_assets[0].asset.id.clone(),
             is_bundle_splittable: true,
             is_source: true,
-            meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
+            meta: JSONObject::new(),
             unique_key: Some(String::from("16f87d7beed96467")),
+            css_dependency_type: CSSDependencyType::Tag,
             ..Asset::default()
           },
           dependencies: Vec::new()
@@ -401,8 +403,9 @@ mod test {
             id: transformation.discovered_assets[0].asset.id.clone(),
             is_bundle_splittable: true,
             is_source: true,
-            meta: JSONObject::from_iter([(String::from("type"), "tag".into())]),
+            meta: JSONObject::new(),
             unique_key: Some(String::from("16f87d7beed96467")),
+            css_dependency_type: CSSDependencyType::Tag,
             ..Asset::default()
           },
           dependencies: Vec::new()

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use atlaspack_core::types::Environment;
+use atlaspack_core::types::{CSSDependencyType, Environment, JSONObject};
 use html5ever::{ExpandedName, LocalName};
 use markup5ever::{expanded_name, local_name, namespace_url, ns};
 use markup5ever_rcdom::{Handle, NodeData};
@@ -12,7 +12,7 @@ use atlaspack_core::{
   hash::IdentifierHasher,
   types::{
     Asset, AssetWithDependencies, BundleBehavior, Code, Dependency, DependencyBuilder, FileType,
-    JSONObject, OutputFormat, Priority, SourceType, SpecifierType,
+    OutputFormat, Priority, SourceType, SpecifierType,
   },
 };
 
@@ -215,18 +215,21 @@ impl DomVisitor for HtmlDependenciesVisitor {
               })
               .unwrap_or(FileType::Js);
 
+            let mut new_asset = Asset::new_inline(
+              Code::new(text_content(&node)),
+              env.clone(),
+              inline_asset_file_path(&self.context.source_path, &file_type),
+              file_type,
+              JSONObject::new(),
+              &self.context.project_root,
+              self.context.side_effects,
+              Some(specifier),
+              inline_bundle_behavior,
+            );
+            new_asset.css_dependency_type = CSSDependencyType::Tag;
+
             self.discovered_assets.push(AssetWithDependencies {
-              asset: Asset::new_inline(
-                Code::new(text_content(&node)),
-                env.clone(),
-                inline_asset_file_path(&self.context.source_path, &file_type),
-                file_type,
-                JSONObject::from_iter([(String::from("type"), "tag".into())]),
-                &self.context.project_root,
-                self.context.side_effects,
-                Some(specifier),
-                inline_bundle_behavior,
-              ),
+              asset: new_asset,
               dependencies: Vec::new(),
             });
 
@@ -262,18 +265,21 @@ impl DomVisitor for HtmlDependenciesVisitor {
 
           self.dependencies.push(new_dependency);
 
+          let mut new_asset = Asset::new_inline(
+            Code::new(text_content(&node)),
+            self.context.env.clone(),
+            inline_asset_file_path(&self.context.source_path, &file_type),
+            file_type,
+            JSONObject::new(),
+            &self.context.project_root,
+            self.context.side_effects,
+            Some(specifier),
+            Some(BundleBehavior::Inline),
+          );
+          new_asset.css_dependency_type = CSSDependencyType::Tag;
+
           self.discovered_assets.push(AssetWithDependencies {
-            asset: Asset::new_inline(
-              Code::new(text_content(&node)),
-              self.context.env.clone(),
-              inline_asset_file_path(&self.context.source_path, &file_type),
-              file_type,
-              JSONObject::from_iter([(String::from("type"), "tag".into())]),
-              &self.context.project_root,
-              self.context.side_effects,
-              Some(specifier),
-              Some(BundleBehavior::Inline),
-            ),
+            asset: new_asset,
             dependencies: Vec::new(),
           });
 
