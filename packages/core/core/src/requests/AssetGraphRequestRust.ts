@@ -158,7 +158,7 @@ export function getAssetGraph(serializedGraph: any): {
         value: null,
       });
     } else if (node.type === 'asset') {
-      let asset = node.value;
+      let {packagingId, ...asset} = node.value;
       let id = asset.id;
 
       asset.meta = {
@@ -168,7 +168,7 @@ export function getAssetGraph(serializedGraph: any): {
         hasDependencies: asset.hasDependencies,
         hasReferences: asset.hasReferences,
         has_node_replacements: asset.hasNodeReplacements,
-        id: asset.packagingId,
+        id: packagingId,
         inlineType: asset.inlineType,
         interpreter: asset.interpreter,
         isConstantModule: asset.isConstantModule,
