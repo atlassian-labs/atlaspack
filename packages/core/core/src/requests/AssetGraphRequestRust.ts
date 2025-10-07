@@ -209,26 +209,26 @@ export function getAssetGraph(serializedGraph: any): {
     } else if (node.type === 'dependency') {
       let id = node.value.id;
       let {
-        is_webworker,
+        isWebworker,
         kind,
-        promise_symbol,
-        import_attributes,
+        promiseSymbol,
+        importAttributes,
         media,
-        is_css_import,
-        chunk_name_magic_comment,
+        isCssImport,
+        chunkNameMagicComment,
         ...dependency
       } = node.value.dependency;
 
       // Re-map top level meta fields back into a meta object and remove them
       // from the top level of the dependency.
       dependency.meta = {
-        isWebWorker: is_webworker,
+        isWebWorker: isWebworker,
         kind,
-        promiseSymbol: promise_symbol,
-        importAttributes: import_attributes,
+        promiseSymbol,
+        importAttributes,
         media: media,
-        isCSSImport: is_css_import,
-        chunkNameMagicComment: chunk_name_magic_comment,
+        isCSSImport: isCssImport,
+        chunkNameMagicComment,
         placeholder: dependency.placeholder,
       };
 
