@@ -570,6 +570,7 @@ fn convert_dependency(
         .specifier(base_dependency.specifier.clone())
         .specifier_type(base_dependency.specifier_type)
         .meta(base_dependency.meta.clone())
+        .placeholder_option(base_dependency.placeholder.clone())
         .kind(DependencyKind::WebWorker)
         .build();
 
@@ -603,6 +604,7 @@ fn convert_dependency(
         .specifier(base_dependency.specifier.clone())
         .specifier_type(base_dependency.specifier_type)
         .meta(base_dependency.meta.clone())
+        .placeholder_option(base_dependency.placeholder.clone())
         .kind(DependencyKind::ServiceWorker)
         .build();
 
@@ -635,6 +637,7 @@ fn convert_dependency(
         .specifier(base_dependency.specifier.clone())
         .specifier_type(base_dependency.specifier_type)
         .meta(base_dependency.meta.clone())
+        .placeholder_option(base_dependency.placeholder.clone())
         .kind(DependencyKind::Worklet)
         .build();
 
@@ -657,6 +660,7 @@ fn convert_dependency(
         .specifier(base_dependency.specifier.clone())
         .specifier_type(base_dependency.specifier_type)
         .meta(base_dependency.meta.clone())
+        .placeholder_option(base_dependency.placeholder.clone())
         .kind(DependencyKind::Url)
         .build();
 
