@@ -47,10 +47,6 @@ pub struct GlobalThisAliaser {
   pub aliases: HashSet<JsWord>,
   /// Mark used to identify unresolved (global) references
   pub unresolved_mark: Mark,
-  /// File path patterns to exclude from transformation
-  pub exclude_files: Vec<String>,
-  /// Current filename being transformed
-  pub filename: Option<String>,
 }
 
 impl Default for GlobalThisAliaser {
@@ -63,53 +59,32 @@ impl Default for GlobalThisAliaser {
         "window".into(),
       ]),
       unresolved_mark: Mark::root(),
-      exclude_files: vec!["js.cookie.js".to_string()],
-      filename: None,
     }
   }
 }
 
 impl GlobalThisAliaser {
-  pub fn new(unresolved_mark: Mark, filename: Option<String>) -> Self {
+  pub fn new(unresolved_mark: Mark) -> Self {
     Self {
       unresolved_mark,
-      filename,
       ..Default::default()
     }
   }
 
-  pub fn with_aliases(
-    unresolved_mark: Mark,
-    filename: Option<String>,
-    aliases: HashSet<JsWord>,
-  ) -> Self {
+  pub fn with_aliases(unresolved_mark: Mark, aliases: HashSet<JsWord>) -> Self {
     Self {
       aliases,
       unresolved_mark,
-      filename,
-      ..Default::default()
     }
   }
 
-  fn should_skip_file(&self) -> bool {
-    if let Some(filename) = &self.filename {
-      self
-        .exclude_files
-        .iter()
-        .any(|exclude| filename.contains(exclude))
-    } else {
-      false
-    }
+  pub fn should_transform(filename: &str) -> bool {
+    !filename.contains("js.cookie.js")
   }
 }
 
 impl VisitMut for GlobalThisAliaser {
   fn visit_mut_expr(&mut self, node: &mut Expr) {
-    if self.should_skip_file() {
-      node.visit_mut_children_with(self);
-      return;
-    }
-
     if let Expr::Ident(ident) = node
       && is_unresolved(ident, self.unresolved_mark)
       && self.aliases.contains(&ident.sym)
@@ -142,9 +117,7 @@ mod tests {
         const glob = global;
         const other = someOther;
       "#},
-      |run_test_context: RunTestContext| {
-        GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
-      },
+      |run_test_context: RunTestContext| GlobalThisAliaser::new(run_test_context.unresolved_mark),
     );
 
     assert_eq!(
@@ -169,9 +142,7 @@ mod tests {
         }
         const global = window;
       "#},
-      |run_test_context: RunTestContext| {
-        GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
-      },
+      |run_test_context: RunTestContext| GlobalThisAliaser::new(run_test_context.unresolved_mark),
     );
 
     assert_eq!(
@@ -193,12 +164,7 @@ mod tests {
         const doc = document;
         const win = window;
       "#},
-      |run_test_context: RunTestContext| {
-        GlobalThisAliaser::new(
-          run_test_context.unresolved_mark,
-          Some("js.cookie.js".to_string()),
-        )
-      },
+      |run_test_context: RunTestContext| GlobalThisAliaser::new(run_test_context.unresolved_mark),
     );
 
     assert_eq!(
@@ -223,7 +189,7 @@ mod tests {
         const windowVar = window;
       "#},
       |run_test_context: RunTestContext| {
-        GlobalThisAliaser::with_aliases(run_test_context.unresolved_mark, None, custom_aliases)
+        GlobalThisAliaser::with_aliases(run_test_context.unresolved_mark, custom_aliases)
       },
     );
 
@@ -245,9 +211,7 @@ mod tests {
         const title = document.title;
         window.alert('test');
       "#},
-      |run_test_context: RunTestContext| {
-        GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
-      },
+      |run_test_context: RunTestContext| GlobalThisAliaser::new(run_test_context.unresolved_mark),
     );
 
     assert_eq!(
@@ -269,9 +233,7 @@ mod tests {
         window.blah();
         x(`${window.location.protocol}//${window.location.host}/browse/${issueKey}`);
       "#},
-      |run_test_context: RunTestContext| {
-        GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
-      },
+      |run_test_context: RunTestContext| GlobalThisAliaser::new(run_test_context.unresolved_mark),
     );
 
     assert_eq!(
@@ -291,9 +253,7 @@ mod tests {
       indoc! {r#"
         export const url = window.location.protocol + '/' + window.location.host;
       "#},
-      |run_test_context: RunTestContext| {
-        GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
-      },
+      |run_test_context: RunTestContext| GlobalThisAliaser::new(run_test_context.unresolved_mark),
     );
 
     assert_eq!(
@@ -313,9 +273,7 @@ mod tests {
         globalThis?.window.location.origin;
         globalThis?.window?.location.origin;
       "#},
-      |run_test_context: RunTestContext| {
-        GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
-      },
+      |run_test_context: RunTestContext| GlobalThisAliaser::new(run_test_context.unresolved_mark),
     );
 
     assert_eq!(
@@ -340,9 +298,7 @@ mod tests {
           const window = true;
         }
       "#},
-      |run_test_context: RunTestContext| {
-        GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
-      },
+      |run_test_context: RunTestContext| GlobalThisAliaser::new(run_test_context.unresolved_mark),
     );
 
     assert_eq!(
@@ -366,9 +322,7 @@ mod tests {
           windowLike: window
         });
       "#},
-      |run_test_context: RunTestContext| {
-        GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
-      },
+      |run_test_context: RunTestContext| GlobalThisAliaser::new(run_test_context.unresolved_mark),
     );
 
     assert_eq!(
@@ -411,9 +365,7 @@ mod tests {
           }
         }
       "#},
-      |run_test_context: RunTestContext| {
-        GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
-      },
+      |run_test_context: RunTestContext| GlobalThisAliaser::new(run_test_context.unresolved_mark),
     );
 
     assert_eq!(

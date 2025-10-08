@@ -420,8 +420,8 @@ pub fn transform(
                     config.source_type != SourceType::Script
                   ),
                   Optional::new(
-                    visit_mut_pass(GlobalThisAliaser::new(unresolved_mark, Some(config.filename.clone()))),
-                    config.enable_global_this_aliaser
+                    visit_mut_pass(GlobalThisAliaser::new(unresolved_mark)),
+                    config.enable_global_this_aliaser && GlobalThisAliaser::should_transform(&config.filename)
                   ),
                   paren_remover(Some(&comments)),
                   // Simplify expressions and remove dead branches so that we
