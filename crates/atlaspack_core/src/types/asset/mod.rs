@@ -23,6 +23,8 @@ use super::{BundleBehavior, SourceMap};
 
 pub type AssetId = String;
 
+pub mod serialize;
+
 /// The source code for an asset.
 ///
 /// TODO: This should be called contents now that it's bytes
@@ -146,7 +148,7 @@ option_like_enum!(CSSDependencyType, Tag);
 ///
 /// Note that assets may exist in the file system or virtually.
 ///
-#[derive(Default, PartialEq, Clone, Debug, Deserialize, Serialize)]
+#[derive(Default, PartialEq, Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Asset {
   /// The main identify hash for the asset. It is consistent for the entire
