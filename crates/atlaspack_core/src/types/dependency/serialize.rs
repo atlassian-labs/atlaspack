@@ -99,7 +99,7 @@ impl Serialize for Dependency {
     );
     meta.insert("isEsm".to_string(), serde_json::json!(self.is_esm));
     meta.insert(
-      "isWebworker".to_string(),
+      "webworker".to_string(),
       serde_json::json!(self.is_webworker),
     );
     meta.insert(
@@ -208,7 +208,7 @@ impl<'de> Visitor<'de> for DependencyVisitor {
       .unwrap_or_default();
 
     let final_is_webworker = meta_map
-      .get("isWebworker")
+      .get("webworker")
       .and_then(|v| v.as_bool())
       .unwrap_or_default();
 
@@ -250,7 +250,7 @@ impl<'de> Visitor<'de> for DependencyVisitor {
     meta_map.remove("needsStableName");
     meta_map.remove("shouldWrap");
     meta_map.remove("isEsm");
-    meta_map.remove("isWebworker");
+    meta_map.remove("webworker");
     meta_map.remove("isCssImport");
     meta_map.remove("placeholder");
     meta_map.remove("media");
@@ -431,7 +431,7 @@ mod tests {
         "needsStableName": true,
         "shouldWrap": false,
         "isEsm": true,
-        "isWebworker": false,
+        "webworker": false,
         "isCssImport": false
       }
     });
@@ -471,7 +471,7 @@ mod tests {
         "needsStableName": false,
         "shouldWrap": true,
         "isEsm": false,
-        "isWebworker": true,
+        "webworker": true,
         "isCssImport": true,
         "placeholder": "JSON_PLACEHOLDER",
         "media": "print",
