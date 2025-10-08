@@ -480,13 +480,12 @@ pub fn transform(
 
                   // Transpile new syntax to older syntax if needed
                   Optional::new(
-                    preset_env::transform_from_env(
-                      unresolved_mark,
-                      Some(&comments),
-                      // Fix type: convert Config to EnvConfig
-                      preset_env::EnvConfig::from(preset_env_config),
-                      assumptions
-                    ),
+                        preset_env::transform_from_env(
+                          unresolved_mark,
+                          Some(&comments),
+                          preset_env::EnvConfig::from(preset_env_config),
+                          assumptions
+                        ),
                     should_run_preset_env,
                   ),
 
