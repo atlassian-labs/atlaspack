@@ -11,9 +11,7 @@
       "aarch64-unknown-linux-gnu"
     ]
   },
-  "bin": {
-    "apvm-linux-arm64": "apvm-linux-arm64"
-  },
+  "bin": "apvm-linux-arm64",
   "publishConfig": {
     "access": "public"
   },
