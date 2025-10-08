@@ -158,25 +158,6 @@ mod tests {
   }
 
   #[test]
-  fn test_excluded_files_not_processed() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const doc = document;
-        const win = window;
-      "#},
-      |run_test_context: RunTestContext| GlobalThisAliaser::new(run_test_context.unresolved_mark),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const doc = document;
-        const win = window;
-      "#}
-    );
-  }
-
-  #[test]
   fn test_custom_aliases() {
     let mut custom_aliases = HashSet::new();
     custom_aliases.insert("custom".into());
@@ -372,5 +353,23 @@ mod tests {
       output_code,
       "{\n    const obj = {\n        document,\n        global,\n        navigator,\n        window,\n        document: 25,\n        global: 'global value',\n        navigator: {\n            key: 'value'\n        },\n        window: true,\n        documentLike: globalThis,\n        globalLike: globalThis,\n        navigatorLike: globalThis,\n        windowLike: globalThis\n    };\n}"
     );
+  }
+
+  #[test]
+  fn test_should_transform_excludes_js_cookie() {
+    assert!(!GlobalThisAliaser::should_transform("js.cookie.js"));
+    assert!(!GlobalThisAliaser::should_transform("path/to/js.cookie.js"));
+    assert!(!GlobalThisAliaser::should_transform(
+      "/absolute/path/js.cookie.js"
+    ));
+  }
+
+  #[test]
+  fn test_should_transform_allows_other_files() {
+    assert!(GlobalThisAliaser::should_transform("index.js"));
+    assert!(GlobalThisAliaser::should_transform("component.tsx"));
+    assert!(GlobalThisAliaser::should_transform("utils/helper.js"));
+    assert!(GlobalThisAliaser::should_transform("cookie.js"));
+    assert!(GlobalThisAliaser::should_transform("js-cookie.js"));
   }
 }
