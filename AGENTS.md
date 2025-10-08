@@ -3,6 +3,7 @@
 - This is a repository on GitHub and GitHub actions are used to trigger builds.
 - Github configuration is loaded in .github/.
 - Validate that the builds will pass on CI before completing tasks, .github/workflows/ci.yml contains the configuration for most builds - run these first.
+- This repository uses yarn as its package manager. Any commands you want to run, or dependencies to install, should be done using yarn.
 
 ## Pull requests
 
@@ -16,3 +17,7 @@
 ## Git
 
 - Do not push to the repository without confirmation from the developer.
+
+## Rust
+
+- When writing tests for Rust code, always put them in the same file as the code they are testing, using the #[cfg(test)] attribute.
