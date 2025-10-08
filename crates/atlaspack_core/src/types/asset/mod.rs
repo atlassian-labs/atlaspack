@@ -148,8 +148,7 @@ option_like_enum!(CSSDependencyType, Tag);
 ///
 /// Note that assets may exist in the file system or virtually.
 ///
-#[derive(Default, PartialEq, Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default, PartialEq, Clone, Debug)]
 pub struct Asset {
   /// The main identify hash for the asset. It is consistent for the entire
   /// build and between builds.
@@ -165,16 +164,13 @@ pub struct Asset {
   pub file_path: PathBuf,
 
   /// The file type of the asset, which may change during transformation
-  #[serde(rename = "type")]
   pub file_type: FileType,
 
   /// The code of this asset, initially read from disk, then becoming the
   /// transformed output
-  #[serde(skip_serializing)]
   pub code: Code,
 
   /// The source map for the asset
-  #[serde(skip_serializing)]
   pub map: Option<SourceMap>,
 
   /// Plugin specific metadata for the asset
@@ -201,7 +197,6 @@ pub struct Asset {
   /// This is optional because only when transformers add identifiable assets we should add this.
   ///
   /// We should not add this set to the asset ID.
-  #[serde(skip_serializing_if = "Option::is_none")]
   pub unique_key: Option<String>,
 
   /// Whether this asset can be omitted if none of its exports are being used
@@ -225,7 +220,6 @@ pub struct Asset {
 
   /// True if the Asset's code was returned from a resolver rather than being
   /// read from disk.
-  #[serde(skip_serializing)]
   pub is_virtual: bool,
 
   /// True if the asset has CommonJS exports
