@@ -71,6 +71,7 @@ impl GlobalThisAliaser {
     }
   }
 
+  #[allow(dead_code)]
   pub fn with_aliases(unresolved_mark: Mark, aliases: HashSet<JsWord>) -> Self {
     Self {
       aliases,
