@@ -158,25 +158,8 @@ export function getAssetGraph(serializedGraph: any): {
         value: null,
       });
     } else if (node.type === 'asset') {
-      let {packagingId, ...asset} = node.value;
+      let asset = node.value;
       let id = asset.id;
-
-      asset.meta = {
-        conditions: asset.conditions,
-        emptyFileStarReexport: asset.emptyFileStarReexport,
-        hasCJSExports: asset.hasCjsExports,
-        hasDependencies: asset.hasDependencies,
-        hasReferences: asset.hasReferences,
-        has_node_replacements: asset.hasNodeReplacements,
-        id: packagingId,
-        inlineType: asset.inlineType,
-        interpreter: asset.interpreter,
-        isConstantModule: asset.isConstantModule,
-        shouldWrap: asset.shouldWrap,
-        staticExports: asset.staticExports,
-        type: asset.cssDependencyType,
-        ...asset.meta,
-      };
 
       asset.committed = true;
       asset.contentKey = id;
@@ -210,32 +193,7 @@ export function getAssetGraph(serializedGraph: any): {
         value: asset,
       });
     } else if (node.type === 'dependency') {
-      let id = node.value.id;
-      let {
-        isWebworker,
-        kind,
-        promiseSymbol,
-        importAttributes,
-        media,
-        isCssImport,
-        chunkNameMagicComment,
-        ...dependency
-      } = node.value.dependency;
-
-      // Re-map top level meta fields back into a meta object and remove them
-      // from the top level of the dependency.
-      dependency.meta = {
-        chunkNameMagicComment,
-        importAttributes,
-        isCSSImport: isCssImport,
-        kind,
-        media,
-        placeholder: dependency.placeholder,
-        promiseSymbol,
-        shouldWrap: dependency.shouldWrap,
-        webworker: isWebworker,
-        ...dependency.meta,
-      };
+      let {dependency, id} = node.value;
 
       dependency.id = id;
       dependency.env.id = getFeatureFlag('environmentDeduplication')
