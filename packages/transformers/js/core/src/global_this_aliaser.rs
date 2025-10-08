@@ -135,13 +135,13 @@ mod tests {
   #[test]
   fn test_global_this_aliasing() {
     let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"
+      indoc! {r#"
         const doc = document;
         const win = window;
         const nav = navigator;
         const glob = global;
         const other = someOther;
-      "#,
+      "#},
       |run_test_context: RunTestContext| {
         GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
       },
@@ -162,13 +162,13 @@ mod tests {
   #[test]
   fn test_scoped_variables_not_replaced() {
     let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"
+      indoc! {r#"
         function test() {
           const window = {};
           return window.location;
         }
         const global = window;
-      "#,
+      "#},
       |run_test_context: RunTestContext| {
         GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
       },
@@ -189,10 +189,10 @@ mod tests {
   #[test]
   fn test_excluded_files_not_processed() {
     let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"
+      indoc! {r#"
         const doc = document;
         const win = window;
-      "#,
+      "#},
       |run_test_context: RunTestContext| {
         GlobalThisAliaser::new(
           run_test_context.unresolved_mark,
@@ -217,11 +217,11 @@ mod tests {
     custom_aliases.insert("test".into());
 
     let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"
+      indoc! {r#"
         const customVar = custom;
         const testVar = test;
         const windowVar = window;
-      "#,
+      "#},
       |run_test_context: RunTestContext| {
         GlobalThisAliaser::with_aliases(run_test_context.unresolved_mark, None, custom_aliases)
       },
@@ -240,11 +240,11 @@ mod tests {
   #[test]
   fn test_member_expressions_preserved() {
     let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"
+      indoc! {r#"
         const location = window.location;
         const title = document.title;
         window.alert('test');
-      "#,
+      "#},
       |run_test_context: RunTestContext| {
         GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
       },
@@ -263,12 +263,12 @@ mod tests {
   #[test]
   fn test_window_href_and_template_literals() {
     let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"
+      indoc! {r#"
         window;
         window.location.href;
         window.blah();
         x(`${window.location.protocol}//${window.location.host}/browse/${issueKey}`);
-      "#,
+      "#},
       |run_test_context: RunTestContext| {
         GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
       },
@@ -287,11 +287,10 @@ mod tests {
 
   #[test]
   fn test_declared_window_variable_type() {
-    // TypeScript declare syntax not supported in SWC parser, testing global replacement only
     let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"
+      indoc! {r#"
         export const url = window.location.protocol + '/' + window.location.host;
-      "#,
+      "#},
       |run_test_context: RunTestContext| {
         GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
       },
@@ -308,12 +307,12 @@ mod tests {
   #[test]
   fn test_non_reference_window_identifiers_not_replaced() {
     let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"
+      indoc! {r#"
         globalThis.window.location.origin;
         globalThis.window?.location.origin;
         globalThis?.window.location.origin;
         globalThis?.window?.location.origin;
-      "#,
+      "#},
       |run_test_context: RunTestContext| {
         GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
       },
@@ -333,14 +332,14 @@ mod tests {
   #[test]
   fn test_assignments_not_replaced() {
     let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"
+      indoc! {r#"
         {
           const document = 25;
           const global = 'global value';
           const navigator = { key: 'value' };
           const window = true;
         }
-      "#,
+      "#},
       |run_test_context: RunTestContext| {
         GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
       },
@@ -354,9 +353,8 @@ mod tests {
 
   #[test]
   fn test_jsx_attributes_not_replaced() {
-    // JSX not available in this test setup, testing object literal syntax instead
     let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"
+      indoc! {r#"
         React.createElement(AkRenderer, {
           document: 25,
           global: 'global value',
@@ -367,7 +365,7 @@ mod tests {
           navigatorLike: navigator,
           windowLike: window
         });
-      "#,
+      "#},
       |run_test_context: RunTestContext| {
         GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
       },
@@ -395,7 +393,7 @@ mod tests {
   #[test]
   fn test_object_keys_not_replaced() {
     let RunVisitResult { output_code, .. } = run_test_visit(
-      r#"
+      indoc! {r#"
         {
           const obj = {
             document,
@@ -412,7 +410,7 @@ mod tests {
             windowLike: window
           }
         }
-      "#,
+      "#},
       |run_test_context: RunTestContext| {
         GlobalThisAliaser::new(run_test_context.unresolved_mark, None)
       },
