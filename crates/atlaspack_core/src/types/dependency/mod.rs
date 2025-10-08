@@ -1,4 +1,6 @@
 use std::collections::BTreeMap;
+
+mod serialize;
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -132,8 +134,7 @@ pub fn create_dependency_id(
 }
 
 /// A dependency denotes a connection between two assets
-#[derive(Hash, PartialEq, Clone, Debug, Default, Deserialize, Serialize, Builder)]
-#[serde(rename_all = "camelCase")]
+#[derive(Hash, PartialEq, Clone, Debug, Default, Builder)]
 #[builder(build_fn(skip), pattern = "owned", setter(strip_option))]
 // Dependencies should not be created directly, so we can ensure that an ID
 // exists. DependencyBuilder::build() should be used instead.
@@ -152,22 +153,18 @@ pub struct Dependency {
   pub id: String,
 
   /// The location within the source file where the dependency was found
-  #[serde(default)]
   pub loc: Option<SourceLocation>,
 
   /// Plugin-specific metadata for the dependency
-  #[serde(default)]
   pub meta: JSONObject,
 
   /// A list of custom conditions to use when resolving package.json "exports" and "imports"
   ///
   /// This will be combined with the conditions from the environment. However, it overrides the default "import" and "require" conditions inferred from the specifierType. To include those in addition to custom conditions, explicitly add them to this list.
   ///
-  #[serde(default, skip_serializing_if = "ExportsCondition::is_empty")]
   pub package_conditions: ExportsCondition,
 
   /// The pipeline defined in .parcelrc that the dependency should be processed with
-  #[serde(default)]
   pub pipeline: Option<String>,
 
   /// Determines when the dependency should be loaded
@@ -194,17 +191,14 @@ pub struct Dependency {
   /// How the specifier should be interpreted
   pub specifier_type: SpecifierType,
 
-  #[serde(skip_serializing_if = "Option::is_none")]
   pub source_asset_type: Option<FileType>,
 
   /// These are the "Symbols" this dependency has which are used in import sites.
   ///
   /// We might want to split this information from this type.
-  #[serde(default)]
   pub symbols: Option<Vec<Symbol>>,
 
   /// The target associated with an entry, if any
-  #[serde(default)]
   pub target: Option<Box<Target>>,
 
   /// Whether the dependency is an entry
@@ -235,31 +229,24 @@ pub struct Dependency {
   pub placeholder: Option<String>,
 
   /// Whether this dependency is a webworker
-  #[serde(default)]
   pub is_webworker: bool,
 
   /// The kind of dependency (e.g., "Require", "Import", etc.)
-  #[serde(default)]
   pub kind: Option<DependencyKind>,
 
   /// Symbol name for promise-based imports
-  #[serde(default)]
   pub promise_symbol: Option<String>,
 
   /// Import attributes for this dependency
-  #[serde(default)]
   pub import_attributes: BTreeMap<String, bool>,
 
   /// Media query for CSS imports
-  #[serde(default)]
   pub media: Option<String>,
 
   /// Whether this is a CSS import
-  #[serde(default)]
   pub is_css_import: bool,
 
   /// Chunk name from magic comment
-  #[serde(default)]
   pub chunk_name_magic_comment: Option<String>,
 }
 
