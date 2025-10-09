@@ -1,3 +1,4 @@
+import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
 import {Transformer} from '@atlaspack/plugin';
 import {applyTokensPlugin} from '@atlaspack/rust';
 import {validateSchema} from '@atlaspack/utils';
@@ -11,30 +12,21 @@ type AtlaskitTokensConfig = {
   tokenDataPath: string;
 };
 
-type LoadedConfig = {
-  atlaskitTokens?: Required<Omit<AtlaskitTokensConfig, 'tokenDataPath'>> & {
-    tokenDataPath: string;
-  };
+type LoadedConfig = Required<Omit<AtlaskitTokensConfig, 'tokenDataPath'>> & {
+  tokenDataPath: string;
 };
 
 const CONFIG_SCHEMA = {
   type: 'object',
   properties: {
-    atlaskitTokens: {
-      type: 'object',
-      properties: {
-        shouldUseAutoFallback: {type: 'boolean'},
-        shouldForceAutoFallback: {type: 'boolean'},
-        forceAutoFallbackExemptions: {
-          type: 'array',
-          items: {type: 'string'},
-        },
-        defaultTheme: {type: 'string', enum: ['light', 'legacy-light']},
-        tokenDataPath: {type: 'string'},
-      },
-      required: ['tokenDataPath'],
-      additionalProperties: false,
+    shouldUseAutoFallback: {type: 'boolean'},
+    shouldForceAutoFallback: {type: 'boolean'},
+    forceAutoFallbackExemptions: {
+      type: 'array',
+      items: {type: 'string'},
     },
+    defaultTheme: {type: 'string', enum: ['light', 'legacy-light']},
+    tokenDataPath: {type: 'string'},
   },
   additionalProperties: false,
 } as const;
@@ -51,33 +43,35 @@ export default new Transformer({
 
     let loaded: LoadedConfig = {};
     if (conf && conf.contents) {
-      validateSchema(
+      validateSchema.diagnostic(
+        CONFIG_SCHEMA,
         {
-          type: 'object',
-          properties: CONFIG_SCHEMA.properties,
-          additionalProperties: false,
-        } as any,
-        {data: conf.contents},
+          data: conf.contents,
+          // FIXME
+          source: await options.inputFS.readFile(conf.filePath, 'utf8'),
+          filePath: conf.filePath,
+          prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-tokens')}`,
+        },
+        // FIXME
+        '@atlaspack/transformer-tokens',
+        'Invalid config for @atlaspack/transformer-js',
       );
 
       // @ts-expect-error TS2339
-      if (conf.contents?.atlaskitTokens) {
-        // @ts-expect-error TS2339
-        const tokensConfig: AtlaskitTokensConfig = conf.contents.atlaskitTokens;
-        const tokenDataPath = path.join(
-          options.projectRoot,
-          tokensConfig.tokenDataPath,
-        );
-        loaded.atlaskitTokens = {
-          shouldUseAutoFallback: tokensConfig.shouldUseAutoFallback ?? true,
-          shouldForceAutoFallback: tokensConfig.shouldForceAutoFallback ?? true,
-          forceAutoFallbackExemptions:
-            tokensConfig.forceAutoFallbackExemptions ?? [],
-          defaultTheme: tokensConfig.defaultTheme ?? 'light',
-          tokenDataPath,
-        };
-        config.invalidateOnFileChange(tokenDataPath);
-      }
+      const tokensConfig: AtlaskitTokensConfig = conf.contents;
+      const tokenDataPath = path.join(
+        options.projectRoot,
+        tokensConfig.tokenDataPath,
+      );
+      loaded = {
+        shouldUseAutoFallback: tokensConfig.shouldUseAutoFallback ?? true,
+        shouldForceAutoFallback: tokensConfig.shouldForceAutoFallback ?? true,
+        forceAutoFallbackExemptions:
+          tokensConfig.forceAutoFallbackExemptions ?? [],
+        defaultTheme: tokensConfig.defaultTheme ?? 'light',
+        tokenDataPath,
+      };
+      config.invalidateOnFileChange(tokenDataPath);
     }
 
     return loaded;
@@ -90,8 +84,7 @@ export default new Transformer({
     }
 
     const codeBuffer = Buffer.from(code);
-    const tokensPath = config?.atlaskitTokens?.tokenDataPath;
-    if (!tokensPath) {
+    if (!config) {
       // If no config provided, just return asset unchanged.
       return [asset];
     }
@@ -102,13 +95,11 @@ export default new Transformer({
       asset.filePath,
       asset.isSource,
       {
-        tokens_path: tokensPath,
-        should_use_auto_fallback: config.atlaskitTokens.shouldUseAutoFallback,
-        should_force_auto_fallback:
-          config.atlaskitTokens.shouldForceAutoFallback,
-        force_auto_fallback_exemptions:
-          config.atlaskitTokens.forceAutoFallbackExemptions,
-        default_theme: config.atlaskitTokens.defaultTheme,
+        tokensPath: config.tokenDataPath,
+        shouldUseAutoFallback: config.shouldUseAutoFallback,
+        shouldForceAutoFallback: config.shouldForceAutoFallback,
+        forceAutoFallbackExemptions: config.forceAutoFallbackExemptions,
+        defaultTheme: config.defaultTheme,
       },
     )) as Buffer;
 

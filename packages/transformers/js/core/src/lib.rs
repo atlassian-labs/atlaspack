@@ -14,7 +14,7 @@ mod magic_comments;
 mod node_replacer;
 pub mod test_utils;
 mod typeof_replacer;
-mod utils;
+pub mod utils;
 
 use std::collections::HashMap;
 use std::collections::HashSet;

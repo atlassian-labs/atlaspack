@@ -76,9 +76,7 @@ describe('tokens', () => {
           {
             "name": "tokens",
             "@atlaspack/transformer-tokens": {
-              "atlaskitTokens": {
-                "tokenDataPath": "./packages/core/integration-tests/fixtures/tokens/token-data.json"
-              }
+              "tokenDataPath": "../../fixtures/tokens/token-data.json5"
             }
           }
 

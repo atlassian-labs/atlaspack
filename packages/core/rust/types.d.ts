@@ -250,16 +250,17 @@ export interface Symbol {
   selfReferenced: boolean;
 }
 
+export interface TokensPluginOptions {
+  tokensPath: string;
+  shouldUseAutoFallback: boolean;
+  shouldForceAutoFallback: boolean;
+  forceAutoFallbackExemptions: Array<string>;
+  defaultTheme: string;
+}
 export declare function applyTokensPlugin(
   rawCode: Buffer,
   projectRoot: string,
   filename: string,
   isSource: boolean,
-  options: {
-    tokens_path: string;
-    should_use_auto_fallback: boolean;
-    should_force_auto_fallback: boolean;
-    force_auto_fallback_exemptions: Array<string>;
-    default_theme: string;
-  },
+  options: TokensPluginOptions,
 ): object;

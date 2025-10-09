@@ -1,11 +1,12 @@
-use atlaspack_js_swc_core::{Config, emit, parse};
+use atlaspack_js_swc_core::{Config, emit, parse, utils::ErrorBuffer};
 use napi::bindgen_prelude::Buffer;
 use napi::{Env, Error as NapiError, JsObject};
 use napi_derive::napi;
 use swc_atlaskit_tokens::design_system_tokens_visitor;
 use swc_atlaskit_tokens::token_map::get_or_load_token_map_from_json;
-use swc_core::common::SourceMap;
+use swc_core::common::errors::Handler;
 use swc_core::common::sync::Lrc;
+use swc_core::common::{SourceMap, errors};
 
 #[napi(object)]
 pub struct TokensPluginOptions {
@@ -41,28 +42,33 @@ pub fn apply_tokens_plugin(
   let code_string = code.to_string();
 
   rayon::spawn(move || {
-    let result = (|| -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-      let source_map = Lrc::new(SourceMap::default());
-      let (module, comments) = parse(&code_string, &project_root, &filename, &source_map, &config)
-        .map_err(|e| format!("Parse error: {:?}", e))?;
+    let result: Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> = {
+      let error_buffer = ErrorBuffer::default();
+      let handler = Handler::with_emitter(true, false, Box::new(error_buffer.clone()));
+      errors::HANDLER.set(&handler, || {
+        let source_map = Lrc::new(SourceMap::default());
+        let (module, comments) =
+          parse(&code_string, &project_root, &filename, &source_map, &config)
+            .map_err(|e| format!("Parse error: {:?}", e))?;
 
-      let token_map = get_or_load_token_map_from_json(Some(&options.tokens_path))?;
+        let token_map = get_or_load_token_map_from_json(Some(&options.tokens_path))?;
 
-      let mut passes = design_system_tokens_visitor(
-        comments.clone(),
-        options.should_use_auto_fallback,
-        options.should_force_auto_fallback,
-        options.force_auto_fallback_exemptions,
-        options.default_theme,
-        !is_source,
-        token_map.as_ref().map(|t| t.as_ref()),
-      );
-      let module = module.apply(&mut passes);
+        let mut passes = design_system_tokens_visitor(
+          comments.clone(),
+          options.should_use_auto_fallback,
+          options.should_force_auto_fallback,
+          options.force_auto_fallback_exemptions,
+          options.default_theme,
+          !is_source,
+          token_map.as_ref().map(|t| t.as_ref()),
+        );
+        let module = module.apply(&mut passes);
 
-      let module_result = module.module().ok_or("Failed to get module")?;
-      let (code, _) = emit(source_map, comments, &module_result, false)?;
-      Ok(code)
-    })();
+        let module_result = module.module().ok_or("Failed to get module")?;
+        let (code, _) = emit(source_map, comments, &module_result, false)?;
+        Ok(code)
+      })
+    };
 
     match result {
       Ok(code_bytes) => {

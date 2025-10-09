@@ -16,6 +16,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
+    "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/types-internal": "2.20.4",
     "@atlaspack/plugin": "2.14.34",
     "@atlaspack/rust": "3.8.2",
