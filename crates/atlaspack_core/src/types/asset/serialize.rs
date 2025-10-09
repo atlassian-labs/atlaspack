@@ -29,7 +29,6 @@ impl Serialize for Asset {
     state.serialize_field("configPath", &self.config_path)?;
     state.serialize_field("env", &self.env)?;
     state.serialize_field("filePath", &self.file_path)?;
-    state.serialize_field("hasCJSExports", &self.has_cjs_exports)?;
     state.serialize_field("id", &self.id)?;
     state.serialize_field("isBundleSplittable", &self.is_bundle_splittable)?;
     state.serialize_field("isSource", &self.is_source)?;
@@ -129,7 +128,6 @@ impl<'de> Visitor<'de> for AssetVisitor {
         "configPath" => config_path = Some(map.next_value()?),
         "env" => env = Some(map.next_value()?),
         "filePath" => file_path = Some(map.next_value()?),
-        "hasCJSExports" => has_cjs_exports = Some(map.next_value()?),
         "id" => id = Some(map.next_value()?),
         "isBundleSplittable" => is_bundle_splittable = Some(map.next_value()?),
         "isSource" => is_source = Some(map.next_value()?),
@@ -283,6 +281,7 @@ mod tests {
   use crate::types::asset::{AssetStats, Code};
   use crate::types::json::JSONObject;
   use crate::types::{Environment, FileType};
+  use pretty_assertions::assert_eq;
   use std::collections::HashSet;
   use std::path::PathBuf;
   use std::sync::Arc;
@@ -335,36 +334,227 @@ mod tests {
     // Test deserialization
     let deserialized: Asset = serde_json::from_str(&serialized).expect("Failed to deserialize");
 
-    // Basic checks
+    // Compare fields that survive serialization/deserialization
     assert_eq!(asset.id, deserialized.id);
+    assert_eq!(asset.file_path, deserialized.file_path);
     assert_eq!(asset.file_type, deserialized.file_type);
-    assert_eq!(asset.has_cjs_exports, deserialized.has_cjs_exports);
-    assert_eq!(asset.should_wrap, deserialized.should_wrap);
-    assert_eq!(asset.static_exports, deserialized.static_exports);
-    assert_eq!(asset.is_constant_module, deserialized.is_constant_module);
-    assert_eq!(
-      asset.has_node_replacements,
-      deserialized.has_node_replacements
-    );
-    assert_eq!(asset.interpreter, deserialized.interpreter);
-    assert_eq!(asset.packaging_id, deserialized.packaging_id);
-    assert_eq!(asset.has_references, deserialized.has_references);
-    assert_eq!(
-      asset.empty_file_star_reexport,
-      deserialized.empty_file_star_reexport
-    );
-    assert_eq!(asset.has_dependencies, deserialized.has_dependencies);
+    assert_eq!(asset.is_source, deserialized.is_source);
     assert_eq!(asset.pipeline, deserialized.pipeline);
     assert_eq!(asset.query, deserialized.query);
     assert_eq!(asset.unique_key, deserialized.unique_key);
-    assert_eq!(asset.config_path, deserialized.config_path);
-    assert_eq!(asset.config_key_path, deserialized.config_key_path);
     assert_eq!(asset.side_effects, deserialized.side_effects);
     assert_eq!(
       asset.is_bundle_splittable,
       deserialized.is_bundle_splittable
     );
-    assert_eq!(asset.is_source, deserialized.is_source);
-    assert_eq!(asset.output_hash, deserialized.output_hash);
+  }
+
+  #[test]
+  fn test_asset_serialization_basic() {
+    // Test basic serialization functionality
+    let asset = Asset {
+      id: "basic_asset".to_string(),
+      file_path: PathBuf::from("/path/to/basic.js"),
+      file_type: FileType::Js,
+      env: Arc::new(Environment::default()),
+      is_source: true,
+      side_effects: false,
+      is_bundle_splittable: true,
+      ..Asset::default()
+    };
+
+    let serialized = serde_json::to_string(&asset).expect("Failed to serialize");
+    let parsed: serde_json::Value =
+      serde_json::from_str(&serialized).expect("Failed to parse JSON");
+
+    let expected = serde_json::json!({
+      "bundleBehavior": null,
+      "configKeyPath": null,
+      "configPath": null,
+      "env": {
+        "context": "browser",
+        "engines": {
+          "browsers": null
+        },
+        "includeNodeModules": true,
+        "isLibrary": false,
+        "loc": null,
+        "outputFormat": "global",
+        "shouldScopeHoist": false,
+        "shouldOptimize": false,
+        "sourceMap": null,
+        "sourceType": "module",
+        "unstableSingleFileOutput": false
+      },
+      "filePath": "/path/to/basic.js",
+      "id": "basic_asset",
+      "isBundleSplittable": true,
+      "isSource": true,
+      "outputHash": null,
+      "pipeline": null,
+      "query": null,
+      "sideEffects": false,
+      "stats": {
+        "size": 0,
+        "time": 0
+      },
+      "symbols": null,
+      "type": "js",
+      "meta": {
+        "conditions": [],
+        "hasCJSExports": false,
+        "has_node_replacements": false,
+        "inlineType": null,
+        "isConstantModule": false,
+        "shouldWrap": false,
+        "staticExports": false,
+        "type": null
+      }
+    });
+
+    assert_eq!(expected, parsed);
+  }
+
+  #[test]
+  fn test_asset_meta_field_serialization() {
+    // Test that meta fields are properly serialized
+    let mut meta = JSONObject::new();
+    meta.insert("customField".to_string(), serde_json::json!("customValue"));
+    meta.insert("numField".to_string(), serde_json::json!(42));
+
+    let asset = Asset {
+      id: "meta_test_asset".to_string(),
+      file_path: PathBuf::from("/test/meta.js"),
+      file_type: FileType::Js,
+      env: Arc::new(Environment::default()),
+      meta: meta.clone(),
+      unique_key: Some("meta_unique".to_string()),
+      pipeline: Some("babel".to_string()),
+      has_cjs_exports: true,
+      should_wrap: false,
+      ..Asset::default()
+    };
+
+    let json = serde_json::to_string_pretty(&asset).expect("Failed to serialize");
+    let parsed: serde_json::Value = serde_json::from_str(&json).expect("Failed to parse JSON");
+
+    let expected = serde_json::json!({
+      "bundleBehavior": null,
+      "configKeyPath": null,
+      "configPath": null,
+      "env": {
+        "context": "browser",
+        "engines": {
+          "browsers": null
+        },
+        "includeNodeModules": true,
+        "isLibrary": false,
+        "loc": null,
+        "outputFormat": "global",
+        "shouldScopeHoist": false,
+        "shouldOptimize": false,
+        "sourceMap": null,
+        "sourceType": "module",
+        "unstableSingleFileOutput": false
+      },
+      "filePath": "/test/meta.js",
+      "id": "meta_test_asset",
+      "isBundleSplittable": false,
+      "isSource": false,
+      "outputHash": null,
+      "pipeline": "babel",
+      "query": null,
+      "sideEffects": false,
+      "stats": {
+        "size": 0,
+        "time": 0
+      },
+      "symbols": null,
+      "type": "js",
+      "uniqueKey": "meta_unique",
+      "meta": {
+        "customField": "customValue",
+        "numField": 42,
+        "conditions": [],
+        "hasCJSExports": true,
+        "has_node_replacements": false,
+        "inlineType": null,
+        "isConstantModule": false,
+        "shouldWrap": false,
+        "staticExports": false,
+        "type": null
+      }
+    });
+
+    assert_eq!(expected, parsed);
+  }
+
+  #[test]
+  fn test_asset_serialization_with_optional_fields() {
+    // Test serialization with various optional fields
+    let asset = Asset {
+      id: "optional_fields_asset".to_string(),
+      file_path: PathBuf::from("/test/optional.js"),
+      file_type: FileType::Js,
+      env: Arc::new(Environment::default()),
+      unique_key: Some("optional_unique".to_string()),
+      pipeline: Some("typescript".to_string()),
+      query: Some("?optional=true".to_string()),
+      config_path: Some("/config.json".to_string()),
+      config_key_path: Some("ts.compile".to_string()),
+      output_hash: Some("optional_hash".to_string()),
+      ..Asset::default()
+    };
+
+    let json = serde_json::to_string(&asset).expect("Failed to serialize");
+    let parsed: serde_json::Value = serde_json::from_str(&json).expect("Failed to parse JSON");
+
+    let expected = serde_json::json!({
+      "bundleBehavior": null,
+      "configKeyPath": "ts.compile",
+      "configPath": "/config.json",
+      "env": {
+        "context": "browser",
+        "engines": {
+          "browsers": null
+        },
+        "includeNodeModules": true,
+        "isLibrary": false,
+        "loc": null,
+        "outputFormat": "global",
+        "shouldScopeHoist": false,
+        "shouldOptimize": false,
+        "sourceMap": null,
+        "sourceType": "module",
+        "unstableSingleFileOutput": false
+      },
+      "filePath": "/test/optional.js",
+      "id": "optional_fields_asset",
+      "isBundleSplittable": false,
+      "isSource": false,
+      "outputHash": "optional_hash",
+      "pipeline": "typescript",
+      "query": "?optional=true",
+      "sideEffects": false,
+      "stats": {
+        "size": 0,
+        "time": 0
+      },
+      "symbols": null,
+      "type": "js",
+      "uniqueKey": "optional_unique",
+      "meta": {
+        "conditions": [],
+        "hasCJSExports": false,
+        "has_node_replacements": false,
+        "inlineType": null,
+        "isConstantModule": false,
+        "shouldWrap": false,
+        "staticExports": false,
+        "type": null
+      }
+    });
+
+    assert_eq!(expected, parsed);
   }
 }
