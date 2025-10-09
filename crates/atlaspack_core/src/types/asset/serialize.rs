@@ -24,22 +24,22 @@ impl Serialize for Asset {
     S: Serializer,
   {
     let mut state = serializer.serialize_struct("Asset", 5)?;
-    state.serialize_field("id", &self.id)?;
     state.serialize_field("bundleBehavior", &self.bundle_behavior)?;
+    state.serialize_field("configKeyPath", &self.config_key_path)?;
+    state.serialize_field("configPath", &self.config_path)?;
     state.serialize_field("env", &self.env)?;
     state.serialize_field("filePath", &self.file_path)?;
-    state.serialize_field("type", &self.file_type)?;
-    state.serialize_field("pipeline", &self.pipeline)?;
-    state.serialize_field("query", &self.query)?;
-    state.serialize_field("stats", &self.stats)?;
-    state.serialize_field("symbols", &self.symbols)?;
-    state.serialize_field("sideEffects", &self.side_effects)?;
+    state.serialize_field("hasCJSExports", &self.has_cjs_exports)?;
+    state.serialize_field("id", &self.id)?;
     state.serialize_field("isBundleSplittable", &self.is_bundle_splittable)?;
     state.serialize_field("isSource", &self.is_source)?;
-    state.serialize_field("hasCJSExports", &self.has_cjs_exports)?;
     state.serialize_field("outputHash", &self.output_hash)?;
-    state.serialize_field("configPath", &self.config_path)?;
-    state.serialize_field("configKeyPath", &self.config_key_path)?;
+    state.serialize_field("pipeline", &self.pipeline)?;
+    state.serialize_field("query", &self.query)?;
+    state.serialize_field("sideEffects", &self.side_effects)?;
+    state.serialize_field("stats", &self.stats)?;
+    state.serialize_field("symbols", &self.symbols)?;
+    state.serialize_field("type", &self.file_type)?;
 
     if let Some(unique_key) = &self.unique_key {
       state.serialize_field("uniqueKey", unique_key)?;
@@ -51,10 +51,6 @@ impl Serialize for Asset {
     insert_json!(meta, "hasCJSExports", &self.has_cjs_exports);
     insert_json!(meta, "has_node_replacements", &self.has_node_replacements);
     insert_json!(meta, "inlineType", &self.inline_type);
-    insert_json!(meta, "isConstantModule", &self.is_constant_module);
-    insert_json!(meta, "shouldWrap", &self.should_wrap);
-    insert_json!(meta, "staticExports", &self.static_exports);
-    insert_json!(meta, "type", &self.css_dependency_type);
     insert_json!(meta, "isConstantModule", &self.is_constant_module);
     insert_json!(meta, "shouldWrap", &self.should_wrap);
     insert_json!(meta, "staticExports", &self.static_exports);
@@ -128,22 +124,22 @@ impl<'de> Visitor<'de> for AssetVisitor {
 
     while let Some(key) = map.next_key::<String>()? {
       match key.as_str() {
-        "id" => id = Some(map.next_value()?),
         "bundleBehavior" => bundle_behavior = map.next_value()?,
+        "configKeyPath" => config_key_path = Some(map.next_value()?),
+        "configPath" => config_path = Some(map.next_value()?),
         "env" => env = Some(map.next_value()?),
         "filePath" => file_path = Some(map.next_value()?),
-        "type" => file_type = Some(map.next_value()?),
-        "pipeline" => pipeline = Some(map.next_value()?),
-        "query" => query = Some(map.next_value()?),
-        "stats" => stats = Some(map.next_value()?),
-        "symbols" => symbols = Some(map.next_value()?),
-        "sideEffects" => side_effects = Some(map.next_value()?),
+        "hasCJSExports" => has_cjs_exports = Some(map.next_value()?),
+        "id" => id = Some(map.next_value()?),
         "isBundleSplittable" => is_bundle_splittable = Some(map.next_value()?),
         "isSource" => is_source = Some(map.next_value()?),
-        "hasCJSExports" => has_cjs_exports = Some(map.next_value()?),
         "outputHash" => output_hash = Some(map.next_value()?),
-        "configPath" => config_path = Some(map.next_value()?),
-        "configKeyPath" => config_key_path = Some(map.next_value()?),
+        "pipeline" => pipeline = Some(map.next_value()?),
+        "query" => query = Some(map.next_value()?),
+        "sideEffects" => side_effects = Some(map.next_value()?),
+        "stats" => stats = Some(map.next_value()?),
+        "symbols" => symbols = Some(map.next_value()?),
+        "type" => file_type = Some(map.next_value()?),
         "uniqueKey" => unique_key = Some(map.next_value()?),
         "meta" => {
           let meta_value: serde_json::Value = map.next_value()?;
@@ -155,18 +151,16 @@ impl<'de> Visitor<'de> for AssetVisitor {
               );
             }
 
-            if let Some(has_cjs_exports_val) = meta_obj.get("hasCJSExports") {
-              // Optimize simple boolean extraction
-              if let Some(val) = has_cjs_exports_val.as_bool() {
-                has_cjs_exports = Some(val);
-              }
+            if let Some(has_cjs_exports_val) = meta_obj.get("hasCJSExports")
+              && let Some(val) = has_cjs_exports_val.as_bool()
+            {
+              has_cjs_exports = Some(val);
             }
 
-            if let Some(has_node_replacements_val) = meta_obj.get("has_node_replacements") {
-              // Optimize simple boolean extraction
-              if let Some(val) = has_node_replacements_val.as_bool() {
-                has_node_replacements = Some(val);
-              }
+            if let Some(has_node_replacements_val) = meta_obj.get("has_node_replacements")
+              && let Some(val) = has_node_replacements_val.as_bool()
+            {
+              has_node_replacements = Some(val);
             }
 
             if let Some(inline_type_val) = meta_obj.get("inlineType")
@@ -178,25 +172,22 @@ impl<'de> Visitor<'de> for AssetVisitor {
               );
             }
 
-            if let Some(is_constant_module_val) = meta_obj.get("isConstantModule") {
-              // Optimize simple boolean extraction
-              if let Some(val) = is_constant_module_val.as_bool() {
-                is_constant_module = Some(val);
-              }
+            if let Some(is_constant_module_val) = meta_obj.get("isConstantModule")
+              && let Some(val) = is_constant_module_val.as_bool()
+            {
+              is_constant_module = Some(val);
             }
 
-            if let Some(should_wrap_val) = meta_obj.get("shouldWrap") {
-              // Optimize simple boolean extraction
-              if let Some(val) = should_wrap_val.as_bool() {
-                should_wrap = Some(val);
-              }
+            if let Some(should_wrap_val) = meta_obj.get("shouldWrap")
+              && let Some(val) = should_wrap_val.as_bool()
+            {
+              should_wrap = Some(val);
             }
 
-            if let Some(static_exports_val) = meta_obj.get("staticExports") {
-              // Optimize simple boolean extraction
-              if let Some(val) = static_exports_val.as_bool() {
-                static_exports = Some(val);
-              }
+            if let Some(static_exports_val) = meta_obj.get("staticExports")
+              && let Some(val) = static_exports_val.as_bool()
+            {
+              static_exports = Some(val);
             }
 
             if let Some(css_type_val) = meta_obj.get("type")
@@ -207,39 +198,34 @@ impl<'de> Visitor<'de> for AssetVisitor {
               );
             }
 
-            if let Some(empty_star_val) = meta_obj.get("emptyFileStarReexport") {
-              // Optimize simple boolean extraction
-              if let Some(val) = empty_star_val.as_bool() {
-                empty_file_star_reexport = Some(val);
-              }
+            if let Some(empty_star_val) = meta_obj.get("emptyFileStarReexport")
+              && let Some(val) = empty_star_val.as_bool()
+            {
+              empty_file_star_reexport = Some(val);
             }
 
-            if let Some(has_deps_val) = meta_obj.get("hasDependencies") {
-              // Optimize simple boolean extraction
-              if let Some(val) = has_deps_val.as_bool() {
-                has_dependencies = Some(val);
-              }
+            if let Some(has_deps_val) = meta_obj.get("hasDependencies")
+              && let Some(val) = has_deps_val.as_bool()
+            {
+              has_dependencies = Some(val);
             }
 
-            if let Some(has_refs_val) = meta_obj.get("hasReferences") {
-              // Optimize simple boolean extraction
-              if let Some(val) = has_refs_val.as_bool() {
-                has_references = Some(val);
-              }
+            if let Some(has_refs_val) = meta_obj.get("hasReferences")
+              && let Some(val) = has_refs_val.as_bool()
+            {
+              has_references = Some(val);
             }
 
-            if let Some(pkg_id_val) = meta_obj.get("id") {
-              // Optimize simple string extraction
-              if let Some(val) = pkg_id_val.as_str() {
-                packaging_id = Some(val.to_string());
-              }
+            if let Some(pkg_id_val) = meta_obj.get("id")
+              && let Some(val) = pkg_id_val.as_str()
+            {
+              packaging_id = Some(val.to_string());
             }
 
-            if let Some(interpreter_val) = meta_obj.get("interpreter") {
-              // Optimize simple string extraction
-              if let Some(val) = interpreter_val.as_str() {
-                interpreter = Some(val.to_string());
-              }
+            if let Some(interpreter_val) = meta_obj.get("interpreter")
+              && let Some(val) = interpreter_val.as_str()
+            {
+              interpreter = Some(val.to_string());
             }
           }
           meta = Some(serde_json::from_value(meta_value).map_err(serde::de::Error::custom)?);
