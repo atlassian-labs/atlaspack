@@ -162,12 +162,9 @@ impl<'de> Visitor<'de> for AssetVisitor {
             }
 
             if let Some(inline_type_val) = meta_obj.get("inlineType")
-              && !inline_type_val.is_null()
+              && let Some(val) = inline_type_val.as_str()
             {
-              inline_type = Some(
-                serde_json::from_value(inline_type_val.clone())
-                  .map_err(serde::de::Error::custom)?,
-              );
+              inline_type = Some(val.to_string());
             }
 
             if let Some(is_constant_module_val) = meta_obj.get("isConstantModule")
@@ -189,11 +186,9 @@ impl<'de> Visitor<'de> for AssetVisitor {
             }
 
             if let Some(css_type_val) = meta_obj.get("type")
-              && !css_type_val.is_null()
+              && let Some(val) = css_type_val.as_str()
             {
-              css_dependency_type = Some(
-                serde_json::from_value(css_type_val.clone()).map_err(serde::de::Error::custom)?,
-              );
+              css_dependency_type = Some(val.to_string());
             }
 
             if let Some(empty_star_val) = meta_obj.get("emptyFileStarReexport")
@@ -229,8 +224,7 @@ impl<'de> Visitor<'de> for AssetVisitor {
           meta = Some(serde_json::from_value(meta_value).map_err(serde::de::Error::custom)?);
         }
         _ => {
-          // Skip unknown fields instead of erroring
-          let _: serde_json::Value = map.next_value()?;
+          return Err(serde::de::Error::unknown_field(&key, &[]));
         }
       }
     }
@@ -256,11 +250,11 @@ impl<'de> Visitor<'de> for AssetVisitor {
       meta: meta.unwrap_or_default(),
       conditions: conditions.unwrap_or_default(),
       has_node_replacements: has_node_replacements.unwrap_or_default(),
-      inline_type: inline_type.unwrap_or_default(),
+      inline_type,
       is_constant_module: is_constant_module.unwrap_or_default(),
       should_wrap: should_wrap.unwrap_or_default(),
       static_exports: static_exports.unwrap_or_default(),
-      css_dependency_type: css_dependency_type.unwrap_or_default(),
+      css_dependency_type,
       empty_file_star_reexport,
       has_dependencies,
       has_references,
@@ -278,9 +272,9 @@ impl<'de> Visitor<'de> for AssetVisitor {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::types::asset::{AssetStats, Code};
+  use crate::types::asset::AssetStats;
   use crate::types::json::JSONObject;
-  use crate::types::{AssetInlineType, Environment, FileType};
+  use crate::types::{Environment, FileType};
   use pretty_assertions::assert_eq;
   use std::collections::HashSet;
   use std::path::PathBuf;
@@ -295,7 +289,7 @@ mod tests {
       env: Arc::new(Environment::default()),
       file_path: PathBuf::from("test.js"),
       file_type: FileType::Js,
-      code: Code::from("console.log('hello')"),
+      code: Default::default(),
       map: None,
       meta: JSONObject::default(),
       pipeline: Some("js".to_string()),
@@ -322,8 +316,8 @@ mod tests {
       interpreter: Some("#!/usr/bin/node".to_string()),
       packaging_id: Some("pkg123".to_string()),
       has_references: Some(true),
-      css_dependency_type: Default::default(),
-      inline_type: AssetInlineType::String,
+      css_dependency_type: Some("tag".to_string()),
+      inline_type: Some("string".to_string()),
       empty_file_star_reexport: Some(false),
       has_dependencies: Some(true),
     };
@@ -421,7 +415,7 @@ mod tests {
       pipeline: Some("babel".to_string()),
       has_cjs_exports: true,
       should_wrap: false,
-      inline_type: AssetInlineType::String,
+      inline_type: Some("string".to_string()),
       ..Asset::default()
     };
 

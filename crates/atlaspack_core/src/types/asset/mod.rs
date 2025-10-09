@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
 
-use atlaspack_macros::option_like_enum;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -141,9 +140,6 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
   format!("{:016x}", hasher.finish())
 }
 
-option_like_enum!(AssetInlineType, String);
-option_like_enum!(CSSDependencyType, Tag);
-
 /// An asset is a file or part of a file that may represent any data type including source code, binary data, etc.
 ///
 /// Note that assets may exist in the file system or virtually.
@@ -273,11 +269,11 @@ pub struct Asset {
 
   /// If the asset is a CSS asset, this indicates how it was imported.
   /// Only values are Tag or None
-  pub css_dependency_type: CSSDependencyType,
+  pub css_dependency_type: Option<String>,
 
   /// If the asset is an inline asset, this indicates the method of inlining.
   /// Only values are String or None
-  pub inline_type: AssetInlineType,
+  pub inline_type: Option<String>,
 
   /// Indicates whether the asset contains an empty star re-export, e.g.
   /// `export * from 'other-module';` where `other-module` is an empty module.
