@@ -5929,7 +5929,7 @@ describe('javascript', function () {
               "name": "tokens",
               "@atlaspack/transformer-js": {
                 "atlaskitTokens": {
-                  "tokenDataPath": "/Users/mszczepanski/Work/atlassian/afm/pillar-jira-ssr/platform/packages/design-system/tokens/src/artifacts/token-data.json"
+                  "tokenDataPath": "../../../../../../afm/tokens/platform/packages/design-system/tokens/src/artifacts/token-data.json"
                 }
               }
             }

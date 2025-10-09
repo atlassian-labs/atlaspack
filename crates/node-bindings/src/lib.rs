@@ -27,6 +27,8 @@ mod string_ops;
 mod transformer;
 pub mod vcs;
 
+mod plugin_tokens;
+
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]
 pub extern "C" fn napi_wasm_malloc(size: usize) -> *mut u8 {
