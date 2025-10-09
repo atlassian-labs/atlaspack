@@ -4,7 +4,7 @@ import deepClone from 'rfdc/default';
 import {diff} from 'jest-diff';
 import AssetGraph from '../AssetGraph';
 import type {AssetGraphNode} from '../types';
-import {fromProjectPathRelative, toProjectPath} from '../projectPath';
+import {toProjectPath} from '../projectPath';
 
 function filterNode(node: any) {
   let clone = deepClone(node);
@@ -86,11 +86,12 @@ function assetGraphDiff(
 
       if (node.type === 'dependency') {
         let sourcePath = node.value.sourcePath
-          ? toProjectPath(node.value.sourcePath)
+          ? toProjectPath(projectRoot, node.value.sourcePath)
           : toProjectPath(projectRoot, 'entry');
         nodes[`dep:${sourcePath}:${node.value.specifier}`] = filterNode(node);
       } else if (node.type === 'asset') {
-        nodes[`asset:${toProjectPath(node.value.filePath)}`] = filterNode(node);
+        nodes[`asset:${toProjectPath(projectRoot, node.value.filePath)}`] =
+          filterNode(node);
       }
     });
 
