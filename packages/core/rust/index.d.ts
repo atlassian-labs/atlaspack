@@ -128,7 +128,14 @@ export declare function transform(opts: object): unknown
 export declare function transformAsync(opts: object): object
 export declare function getVcsStateSnapshot(path: string, excludePatterns: Array<string>): object
 export declare function getEventsSince(repoPath: string, vcsStateSnapshot: unknown, newRev?: string | undefined | null): object
-export declare function applyTokensPlugin(rawCode: Buffer, projectRoot: string, filename: string, isSource: boolean, tokensPath: string): object
+export interface TokensPluginOptions {
+  tokensPath: string
+  shouldUseAutoFallback: boolean
+  shouldForceAutoFallback: boolean
+  forceAutoFallbackExemptions: Array<string>
+  defaultTheme: string
+}
+export declare function applyTokensPlugin(rawCode: Buffer, projectRoot: string, filename: string, isSource: boolean, options: TokensPluginOptions): object
 export type LMDB = Lmdb
 export class Lmdb {
   constructor(options: LmdbOptions)

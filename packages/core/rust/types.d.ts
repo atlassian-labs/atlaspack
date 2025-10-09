@@ -255,5 +255,11 @@ export declare function applyTokensPlugin(
   projectRoot: string,
   filename: string,
   isSource: boolean,
-  tokensPath: string,
+  options: {
+    tokens_path: string;
+    should_use_auto_fallback: boolean;
+    should_force_auto_fallback: boolean;
+    force_auto_fallback_exemptions: Array<string>;
+    default_theme: string;
+  },
 ): object;

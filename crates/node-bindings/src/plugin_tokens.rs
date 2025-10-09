@@ -7,13 +7,22 @@ use swc_atlaskit_tokens::token_map::get_or_load_token_map_from_json;
 use swc_core::common::SourceMap;
 use swc_core::common::sync::Lrc;
 
+#[napi(object)]
+pub struct TokensPluginOptions {
+  pub tokens_path: String,
+  pub should_use_auto_fallback: bool,
+  pub should_force_auto_fallback: bool,
+  pub force_auto_fallback_exemptions: Vec<String>,
+  pub default_theme: String,
+}
+
 #[napi]
 pub fn apply_tokens_plugin(
   raw_code: Buffer,
   project_root: String,
   filename: String,
   is_source: bool,
-  tokens_path: String,
+  options: TokensPluginOptions,
   env: Env,
 ) -> napi::Result<JsObject> {
   let config = Config {
@@ -37,15 +46,14 @@ pub fn apply_tokens_plugin(
       let (module, comments) = parse(&code_string, &project_root, &filename, &source_map, &config)
         .map_err(|e| format!("Parse error: {:?}", e))?;
 
-      let token_map = get_or_load_token_map_from_json(Some(&tokens_path))?;
+      let token_map = get_or_load_token_map_from_json(Some(&options.tokens_path))?;
 
-      // FIXME load the config from config
       let mut passes = design_system_tokens_visitor(
         comments.clone(),
-        true,
-        false,
-        vec![],
-        "light".to_string(),
+        options.should_use_auto_fallback,
+        options.should_force_auto_fallback,
+        options.force_auto_fallback_exemptions,
+        options.default_theme,
         !is_source,
         token_map.as_ref().map(|t| t.as_ref()),
       );

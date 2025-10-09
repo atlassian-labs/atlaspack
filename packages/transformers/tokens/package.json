@@ -18,7 +18,8 @@
   "dependencies": {
     "@atlaspack/types-internal": "2.20.4",
     "@atlaspack/plugin": "2.14.34",
-    "@atlaspack/rust": "3.8.2"
+    "@atlaspack/rust": "3.8.2",
+    "@atlaspack/utils": "3.0.2"
   },
   "type": "commonjs",
   "scripts": {

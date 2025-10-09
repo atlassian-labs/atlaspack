@@ -1,0 +1,12 @@
+{
+  "color": {
+    "text": {
+      "value": "#172B4D",
+      "attributes": {
+        "group": "text",
+        "state": null
+      },
+      "fallback": "#172B4D"
+    }
+  }
+}
