@@ -181,8 +181,7 @@ impl<'de> Visitor<'de> for DependencyVisitor {
         "isEntry" => is_entry = Some(map.next_value()?),
         "isOptional" => is_optional = Some(map.next_value()?),
         _ => {
-          // Skip unknown fields instead of erroring
-          let _: serde_json::Value = map.next_value()?;
+          return Err(serde::de::Error::unknown_field(&key, &[]));
         }
       }
     }
