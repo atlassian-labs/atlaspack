@@ -52,7 +52,7 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-test = { workspace = true }
 
-swc_atlaskit_tokens = { path = "../../../../crates/swc_atlaskit_tokens" }
+swc_atlaskit_tokens = { workspace = true, features = ["atlaspack-compat"]}
 
 [dev-dependencies]
 tempfile = { workspace = true }

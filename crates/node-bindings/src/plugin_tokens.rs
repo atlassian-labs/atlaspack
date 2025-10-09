@@ -39,6 +39,7 @@ pub fn apply_tokens_plugin(
 
       let token_map = get_or_load_token_map_from_json(Some(&tokens_path))?;
 
+      // FIXME load the config from config
       let mut passes = design_system_tokens_visitor(
         comments.clone(),
         true,
