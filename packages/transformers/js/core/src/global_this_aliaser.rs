@@ -109,6 +109,24 @@ mod tests {
   use indoc::indoc;
 
   #[test]
+  fn test_should_transform_excludes_js_cookie() {
+    assert!(!GlobalThisAliaser::should_transform("js.cookie.js"));
+    assert!(!GlobalThisAliaser::should_transform("path/to/js.cookie.js"));
+    assert!(!GlobalThisAliaser::should_transform(
+      "/absolute/path/js.cookie.js"
+    ));
+  }
+
+  #[test]
+  fn test_should_transform_allows_other_files() {
+    assert!(GlobalThisAliaser::should_transform("index.js"));
+    assert!(GlobalThisAliaser::should_transform("component.tsx"));
+    assert!(GlobalThisAliaser::should_transform("utils/helper.js"));
+    assert!(GlobalThisAliaser::should_transform("cookie.js"));
+    assert!(GlobalThisAliaser::should_transform("js-cookie.js"));
+  }
+
+  #[test]
   fn test_global_this_aliasing() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
@@ -354,23 +372,5 @@ mod tests {
       output_code,
       "{\n    const obj = {\n        document,\n        global,\n        navigator,\n        window,\n        document: 25,\n        global: 'global value',\n        navigator: {\n            key: 'value'\n        },\n        window: true,\n        documentLike: globalThis,\n        globalLike: globalThis,\n        navigatorLike: globalThis,\n        windowLike: globalThis\n    };\n}"
     );
-  }
-
-  #[test]
-  fn test_should_transform_excludes_js_cookie() {
-    assert!(!GlobalThisAliaser::should_transform("js.cookie.js"));
-    assert!(!GlobalThisAliaser::should_transform("path/to/js.cookie.js"));
-    assert!(!GlobalThisAliaser::should_transform(
-      "/absolute/path/js.cookie.js"
-    ));
-  }
-
-  #[test]
-  fn test_should_transform_allows_other_files() {
-    assert!(GlobalThisAliaser::should_transform("index.js"));
-    assert!(GlobalThisAliaser::should_transform("component.tsx"));
-    assert!(GlobalThisAliaser::should_transform("utils/helper.js"));
-    assert!(GlobalThisAliaser::should_transform("cookie.js"));
-    assert!(GlobalThisAliaser::should_transform("js-cookie.js"));
   }
 }
