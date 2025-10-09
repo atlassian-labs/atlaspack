@@ -51,6 +51,7 @@ impl Serialize for Dependency {
     // Top-level booleans that remain
     state.serialize_field("isEntry", &self.is_entry)?;
     state.serialize_field("isOptional", &self.is_optional)?;
+    state.serialize_field("needsStableName", &self.needs_stable_name)?;
 
     // Package conditions (serialize only if not empty)
     if !self.package_conditions.is_empty() {
@@ -89,10 +90,6 @@ impl Serialize for Dependency {
       );
     }
     // Always include these booleans in meta
-    meta.insert(
-      "needsStableName".to_string(),
-      serde_json::json!(self.needs_stable_name),
-    );
     meta.insert(
       "shouldWrap".to_string(),
       serde_json::json!(self.should_wrap),
@@ -151,6 +148,7 @@ impl<'de> Visitor<'de> for DependencyVisitor {
     let mut target = None;
     let mut is_entry = None;
     let mut is_optional = None;
+    let mut needs_stable_name = None;
 
     while let Some(key) = map.next_key::<String>()? {
       match key.as_str() {
@@ -167,6 +165,7 @@ impl<'de> Visitor<'de> for DependencyVisitor {
               .clone(),
           );
         }
+        "needsStableName" => needs_stable_name = Some(map.next_value()?),
         "packageConditions" => package_conditions = Some(map.next_value()?),
         "pipeline" => pipeline = Some(map.next_value()?),
         "priority" => priority = Some(map.next_value()?),
@@ -190,12 +189,6 @@ impl<'de> Visitor<'de> for DependencyVisitor {
 
     // Extract fields from meta if not present at top level
     let mut meta_map = meta.unwrap_or_default();
-
-    // Extract fields ONLY from meta - these should never be at top level
-    let final_needs_stable_name = meta_map
-      .get("needsStableName")
-      .and_then(|v| v.as_bool())
-      .unwrap_or_default();
 
     let final_should_wrap = meta_map
       .get("shouldWrap")
@@ -247,7 +240,6 @@ impl<'de> Visitor<'de> for DependencyVisitor {
       .map(|s| s.to_string());
 
     // Remove the extracted fields from meta to maintain symmetry
-    meta_map.remove("needsStableName");
     meta_map.remove("shouldWrap");
     meta_map.remove("isEsm");
     meta_map.remove("webworker");
@@ -280,7 +272,7 @@ impl<'de> Visitor<'de> for DependencyVisitor {
       target,
       is_entry: is_entry.unwrap_or_default(),
       is_optional: is_optional.unwrap_or_default(),
-      needs_stable_name: final_needs_stable_name,
+      needs_stable_name: needs_stable_name.unwrap_or_default(),
       should_wrap: final_should_wrap,
       is_esm: final_is_esm,
       placeholder: final_placeholder,
@@ -422,13 +414,13 @@ mod tests {
       "range": "^2.0.0",
       "isEntry": true,
       "isOptional": false,
+      "needsStableName": true,
       "meta": {
         "kind": "Import",
         "promiseSymbol": "symbol",
         "placeholder": "TEST_PLACEHOLDER",
         "media": "(min-width: 800px)",
         "chunkNameMagicComment": "my-dynamic-chunk",
-        "needsStableName": true,
         "shouldWrap": false,
         "isEsm": true,
         "webworker": false,
@@ -466,9 +458,9 @@ mod tests {
       "range": "~1.5.0",
       "isEntry": false,
       "isOptional": true,
+      "needsStableName": false,
       "meta": {
         "customField": "customValue",
-        "needsStableName": false,
         "shouldWrap": true,
         "isEsm": false,
         "webworker": true,
