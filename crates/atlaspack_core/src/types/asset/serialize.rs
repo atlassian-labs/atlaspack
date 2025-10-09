@@ -280,7 +280,7 @@ mod tests {
   use super::*;
   use crate::types::asset::{AssetStats, Code};
   use crate::types::json::JSONObject;
-  use crate::types::{Environment, FileType};
+  use crate::types::{AssetInlineType, Environment, FileType};
   use pretty_assertions::assert_eq;
   use std::collections::HashSet;
   use std::path::PathBuf;
@@ -323,7 +323,7 @@ mod tests {
       packaging_id: Some("pkg123".to_string()),
       has_references: Some(true),
       css_dependency_type: Default::default(),
-      inline_type: Default::default(),
+      inline_type: AssetInlineType::String,
       empty_file_star_reexport: Some(false),
       has_dependencies: Some(true),
     };
@@ -335,18 +335,7 @@ mod tests {
     let deserialized: Asset = serde_json::from_str(&serialized).expect("Failed to deserialize");
 
     // Compare fields that survive serialization/deserialization
-    assert_eq!(asset.id, deserialized.id);
-    assert_eq!(asset.file_path, deserialized.file_path);
-    assert_eq!(asset.file_type, deserialized.file_type);
-    assert_eq!(asset.is_source, deserialized.is_source);
-    assert_eq!(asset.pipeline, deserialized.pipeline);
-    assert_eq!(asset.query, deserialized.query);
-    assert_eq!(asset.unique_key, deserialized.unique_key);
-    assert_eq!(asset.side_effects, deserialized.side_effects);
-    assert_eq!(
-      asset.is_bundle_splittable,
-      deserialized.is_bundle_splittable
-    );
+    assert_eq!(asset, deserialized);
   }
 
   #[test]
@@ -432,6 +421,7 @@ mod tests {
       pipeline: Some("babel".to_string()),
       has_cjs_exports: true,
       should_wrap: false,
+      inline_type: AssetInlineType::String,
       ..Asset::default()
     };
 
@@ -478,7 +468,7 @@ mod tests {
         "conditions": [],
         "hasCJSExports": true,
         "has_node_replacements": false,
-        "inlineType": null,
+        "inlineType": "string",
         "isConstantModule": false,
         "shouldWrap": false,
         "staticExports": false,
