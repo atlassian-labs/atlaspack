@@ -928,38 +928,3 @@ impl JsValue {
     }
   }
 }
-
-/// Generates an option-like enum with a `None` variant and one other variant.
-///
-/// The generated enum will have:
-/// - `#[derive(Default, PartialEq, Clone, Debug, Deserialize)]`
-/// - `None` variant marked as `#[default]`
-/// - Custom `Serialize` implementation that serializes the non-None variant as a lowercase string
-///   and the None variant as null
-#[macro_export]
-macro_rules! option_like_enum {
-  ($enum_name:ident, $variant_name:ident) => {
-    #[derive(Default, PartialEq, Clone, Debug, serde::Deserialize)]
-    pub enum $enum_name {
-      $variant_name,
-      #[default]
-      None,
-    }
-
-    impl serde::Serialize for $enum_name {
-      fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-      where
-        S: serde::Serializer,
-      {
-        match self {
-          $enum_name::$variant_name => {
-            // Convert variant name to lowercase string
-            let variant_str = stringify!($variant_name).to_lowercase();
-            serializer.serialize_str(&variant_str)
-          }
-          $enum_name::None => serializer.serialize_none(),
-        }
-      }
-    }
-  };
-}

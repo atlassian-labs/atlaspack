@@ -1,7 +1,7 @@
 use anyhow::Error;
 use async_trait::async_trait;
 use atlaspack_core::plugin::{PluginContext, TransformContext, TransformResult, TransformerPlugin};
-use atlaspack_core::types::{Asset, AssetInlineType, BundleBehavior};
+use atlaspack_core::types::{Asset, BundleBehavior};
 
 #[derive(Debug)]
 pub struct AtlaspackInlineStringTransformerPlugin {}
@@ -22,7 +22,7 @@ impl TransformerPlugin for AtlaspackInlineStringTransformerPlugin {
     let mut asset = asset.clone();
 
     asset.bundle_behavior = Some(BundleBehavior::Inline);
-    asset.inline_type = AssetInlineType::String;
+    asset.inline_type = Some("string".into());
 
     Ok(TransformResult {
       asset,
@@ -69,7 +69,7 @@ mod tests {
       Ok(TransformResult {
         asset: Asset {
           bundle_behavior: Some(BundleBehavior::Inline),
-          inline_type: AssetInlineType::String,
+          inline_type: Some("string".into()),
           ..Asset::default()
         },
         ..Default::default()

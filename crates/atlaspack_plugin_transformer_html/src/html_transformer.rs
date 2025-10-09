@@ -138,7 +138,7 @@ fn run_html_transformations(
 #[cfg(test)]
 mod test {
   use atlaspack_core::types::{
-    CSSDependencyType, DependencyBuilder, FileType, JSONObject, Priority, SourceType, SpecifierType,
+    DependencyBuilder, FileType, JSONObject, Priority, SourceType, SpecifierType,
   };
   use pretty_assertions::assert_eq;
 
@@ -270,7 +270,7 @@ mod test {
             is_source: true,
             meta: JSONObject::new(),
             unique_key: Some(String::from("16f87d7beed96467")),
-            css_dependency_type: CSSDependencyType::Tag,
+            css_dependency_type: Some("tag".into()),
             ..Asset::default()
           },
           dependencies: Vec::new()
@@ -344,7 +344,7 @@ mod test {
             is_source: true,
             meta: JSONObject::new(),
             unique_key: Some(String::from("16f87d7beed96467")),
-            css_dependency_type: CSSDependencyType::Tag,
+            css_dependency_type: Some("tag".into()),
             ..Asset::default()
           },
           dependencies: Vec::new()
@@ -405,7 +405,7 @@ mod test {
             is_source: true,
             meta: JSONObject::new(),
             unique_key: Some(String::from("16f87d7beed96467")),
-            css_dependency_type: CSSDependencyType::Tag,
+            css_dependency_type: Some("tag".into()),
             ..Asset::default()
           },
           dependencies: Vec::new()

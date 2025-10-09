@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use atlaspack_core::types::{CSSDependencyType, Environment, JSONObject};
+use atlaspack_core::types::{Environment, JSONObject};
 use html5ever::{ExpandedName, LocalName};
 use markup5ever::{expanded_name, local_name, namespace_url, ns};
 use markup5ever_rcdom::{Handle, NodeData};
@@ -226,7 +226,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
               Some(specifier),
               inline_bundle_behavior,
             );
-            new_asset.css_dependency_type = CSSDependencyType::Tag;
+            new_asset.css_dependency_type = Some("tag".into());
 
             self.discovered_assets.push(AssetWithDependencies {
               asset: new_asset,
@@ -276,7 +276,7 @@ impl DomVisitor for HtmlDependenciesVisitor {
             Some(specifier),
             Some(BundleBehavior::Inline),
           );
-          new_asset.css_dependency_type = CSSDependencyType::Tag;
+          new_asset.css_dependency_type = Some("tag".into());
 
           self.discovered_assets.push(AssetWithDependencies {
             asset: new_asset,

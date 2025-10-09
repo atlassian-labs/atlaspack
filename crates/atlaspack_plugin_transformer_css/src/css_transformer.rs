@@ -9,7 +9,7 @@ use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::engines::{Engines, EnginesBrowsers};
 use atlaspack_core::types::{
-  Asset, AssetWithDependencies, CSSDependencyType, Code, Dependency, DependencyBuilder, Diagnostic,
+  Asset, AssetWithDependencies, Code, Dependency, DependencyBuilder, Diagnostic,
   EnvironmentContext, ErrorKind, ExportsCondition, FileType, Priority, SourceMap, SpecifierType,
   Symbol,
 };
@@ -68,10 +68,8 @@ impl AtlaspackCssTransformerPlugin {
   }
 
   fn is_css_module(&self, asset: &Asset) -> bool {
-    let is_style_tag = matches!(asset.css_dependency_type, CSSDependencyType::Tag);
-
     // If this is a style tag it's not a CSS module
-    if is_style_tag {
+    if asset.css_dependency_type == Some("tag".into()) {
       return false;
     }
 
