@@ -59,7 +59,7 @@ once_cell = { workspace = true }
 oxipng = { workspace = true }
 rayon = { workspace = true }
 swc_core = { workspace = true }
-swc_atlaskit_tokens = { path = "../swc_atlaskit_tokens" }
+swc_atlaskit_tokens = { workspace = true, features = ["atlaspack-compat"]}
 
 # Crash reporting dependencies
 

@@ -7,10 +7,11 @@ export default new Transformer({
     const code = await asset.getCode();
     if (code.includes('@atlaskit/tokens')) {
       const codeBuffer = Buffer.from(code);
+      // FIXME load this config from config
       const tokensPath = path.join(
         options.projectRoot,
-        // '../../../../../../afm/tokens/platform/packages/design-system/tokens/src/artifacts/token-data.json',
-        './packages/design-system/tokens/src/artifacts/token-data.json',
+        '../../../../../../afm/master/platform/packages/design-system/tokens/src/artifacts/token-data.json5',
+        // './packages/design-system/tokens/src/artifacts/token-data.json',
       );
       const compiledCode = await applyTokensPlugin(
         codeBuffer,
