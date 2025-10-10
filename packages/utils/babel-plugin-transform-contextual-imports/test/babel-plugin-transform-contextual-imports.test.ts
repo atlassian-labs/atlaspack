@@ -57,7 +57,7 @@ const jsx = <MyComponent JqlUtils={JqlUtils} />;`;
     const result = babel.transformSync(input, {
       configFile: false,
       presets: [],
-      plugins: [[plugin, {node: true, useBindingAwareReplacement: true}]],
+      plugins: [[plugin, {node: true}]],
       parserOpts: {
         plugins: ['jsx'],
       },
@@ -80,13 +80,17 @@ const jsx = <MyComponent JqlUtils={JqlUtils.load} />;`,
     );
   });
 
-  it('should use legacy behavior when feature flag is disabled', () => {
+  it('should transform importCond components from legacy runtime transformed JSX', () => {
     const input = `const JqlUtils = importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
-const SomeValue = JqlUtils.someProperty;`;
+
+const jsx = React.createElement(JqlUtils, null);`;
     const result = babel.transformSync(input, {
       configFile: false,
       presets: [],
-      plugins: [[plugin, {node: true, useBindingAwareReplacement: false}]],
+      plugins: [[plugin, {node: true}]],
+      parserOpts: {
+        plugins: ['jsx'],
+      },
     });
 
     assert.equal(
@@ -98,7 +102,33 @@ const SomeValue = JqlUtils.someProperty;`;
 Object.defineProperty(JqlUtils, "load", {
   get: () => globalThis.__MCOND && globalThis.__MCOND('CONDITION') ? JqlUtils.ifTrue : JqlUtils.ifFalse
 });
-const SomeValue = JqlUtils.load.someProperty;`,
+const jsx = React.createElement(JqlUtils.load, null);`,
+    );
+  });
+
+  it('should transform importCond components from preserved JSX', () => {
+    const input = `const JqlUtils = importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
+
+const jsx = <JqlUtils />;`;
+    const result = babel.transformSync(input, {
+      configFile: false,
+      presets: [],
+      plugins: [[plugin, {node: true}]],
+      parserOpts: {
+        plugins: ['jsx'],
+      },
+    });
+
+    assert.equal(
+      result?.code,
+      `const JqlUtils = {
+  ifTrue: require('IF_TRUE').default,
+  ifFalse: require('IF_FALSE').default
+};
+Object.defineProperty(JqlUtils, "load", {
+  get: () => globalThis.__MCOND && globalThis.__MCOND('CONDITION') ? JqlUtils.ifTrue : JqlUtils.ifFalse
+});
+const jsx = <JqlUtils.load />;`,
     );
   });
 });
