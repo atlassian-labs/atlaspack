@@ -45,6 +45,58 @@ console.log(Imported.load, Imported.load.someProperty);`,
     );
   });
 
+  it('should transform importCond components from legacy runtime transformed JSX', () => {
+    const input = `const JqlUtils = importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
+
+const jsx = React.createElement(JqlUtils, null);`;
+    const result = babel.transformSync(input, {
+      configFile: false,
+      presets: [],
+      plugins: [[plugin, {node: true, useBindingAwareReplacement: true}]],
+      parserOpts: {
+        plugins: ['jsx'],
+      },
+    });
+
+    assert.equal(
+      result?.code,
+      `const JqlUtils = {
+  ifTrue: require('IF_TRUE').default,
+  ifFalse: require('IF_FALSE').default
+};
+Object.defineProperty(JqlUtils, "load", {
+  get: () => globalThis.__MCOND && globalThis.__MCOND('CONDITION') ? JqlUtils.ifTrue : JqlUtils.ifFalse
+});
+const jsx = React.createElement(JqlUtils.load, null);`,
+    );
+  });
+
+  it('should transform importCond components from preserved JSX', () => {
+    const input = `const JqlUtils = importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
+
+const jsx = <JqlUtils />;`;
+    const result = babel.transformSync(input, {
+      configFile: false,
+      presets: [],
+      plugins: [[plugin, {node: true, useBindingAwareReplacement: true}]],
+      parserOpts: {
+        plugins: ['jsx'],
+      },
+    });
+
+    assert.equal(
+      result?.code,
+      `const JqlUtils = {
+  ifTrue: require('IF_TRUE').default,
+  ifFalse: require('IF_FALSE').default
+};
+Object.defineProperty(JqlUtils, "load", {
+  get: () => globalThis.__MCOND && globalThis.__MCOND('CONDITION') ? JqlUtils.ifTrue : JqlUtils.ifFalse
+});
+const jsx = <JqlUtils.load />;`,
+    );
+  });
+
   it('should transform shadowed identifiers correctly', () => {
     const input = `const JqlUtils = importCond('CONDITION', 'IF_TRUE', 'IF_FALSE');
 
@@ -86,7 +138,7 @@ const SomeValue = JqlUtils.someProperty;`;
     const result = babel.transformSync(input, {
       configFile: false,
       presets: [],
-      plugins: [[plugin, {node: true, useBindingAwareReplacement: false}]],
+      plugins: [[plugin, {node: true}]],
     });
 
     assert.equal(
