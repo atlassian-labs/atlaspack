@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::json;
 
 use crate::project_path::to_project_path;
 
@@ -22,6 +21,8 @@ use super::symbol::Symbol;
 use super::{BundleBehavior, SourceMap};
 
 pub type AssetId = String;
+
+pub mod serialize;
 
 /// The source code for an asset.
 ///
@@ -143,8 +144,7 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
 ///
 /// Note that assets may exist in the file system or virtually.
 ///
-#[derive(Default, PartialEq, Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default, PartialEq, Clone, Debug)]
 pub struct Asset {
   /// The main identify hash for the asset. It is consistent for the entire
   /// build and between builds.
@@ -160,16 +160,13 @@ pub struct Asset {
   pub file_path: PathBuf,
 
   /// The file type of the asset, which may change during transformation
-  #[serde(rename = "type")]
   pub file_type: FileType,
 
   /// The code of this asset, initially read from disk, then becoming the
   /// transformed output
-  #[serde(skip_serializing)]
   pub code: Code,
 
   /// The source map for the asset
-  #[serde(skip_serializing)]
   pub map: Option<SourceMap>,
 
   /// Plugin specific metadata for the asset
@@ -196,7 +193,6 @@ pub struct Asset {
   /// This is optional because only when transformers add identifiable assets we should add this.
   ///
   /// We should not add this set to the asset ID.
-  #[serde(skip_serializing_if = "Option::is_none")]
   pub unique_key: Option<String>,
 
   /// Whether this asset can be omitted if none of its exports are being used
@@ -220,7 +216,6 @@ pub struct Asset {
 
   /// True if the Asset's code was returned from a resolver rather than being
   /// read from disk.
-  #[serde(skip_serializing)]
   pub is_virtual: bool,
 
   /// True if the asset has CommonJS exports
@@ -235,10 +230,11 @@ pub struct Asset {
   /// `module.exports[key] = 10`.
   pub static_exports: bool,
 
-  /// TODO: MISSING DOCUMENTATION
+  /// The asset contains code patterns internally that cannot be safely scope hoisted
   pub should_wrap: bool,
 
-  /// TODO: MISSING DOCUMENTATION
+  /// Indicates whether a JavaScript asset contains Node.js-specific globals (e.g. __filename and
+  /// __dirname) that have been replaced during transformation.
   pub has_node_replacements: bool,
 
   /// True if this is a 'constant module', meaning it only exports constant assignment statements,
@@ -259,6 +255,33 @@ pub struct Asset {
 
   pub config_path: Option<String>,
   pub config_key_path: Option<String>,
+
+  /// Tells the packager whether to insert a hashbang, and what that hashbang is.
+  pub interpreter: Option<String>,
+
+  /// This is the original asset ID that this asset was created with. The asset ID can change
+  /// later in the pipeline if the file path, type, or environment change, but the packager needs
+  /// to know the original ID in order to do replacements.
+  pub packaging_id: Option<String>,
+
+  /// Whether a CSS asset has references to symbols which need to be replaced by the packager.
+  pub has_references: Option<bool>,
+
+  /// If the asset is a CSS asset, this indicates how it was imported.
+  /// Only values are Tag or None
+  pub css_dependency_type: Option<String>,
+
+  /// If the asset is an inline asset, this indicates the method of inlining.
+  /// Only values are String or None
+  pub inline_type: Option<String>,
+
+  /// Indicates whether the asset contains an empty star re-export, e.g.
+  /// `export * from 'other-module';` where `other-module` is an empty module.
+  pub empty_file_star_reexport: Option<bool>,
+
+  /// Indicates whether a CSS asset has dependencies. This is used to optimize
+  /// packaging by skipping assets without dependencies when possible.
+  pub has_dependencies: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -397,51 +420,6 @@ impl Asset {
       unique_key: self.unique_key.as_deref(),
     });
   }
-
-  pub fn set_interpreter(&mut self, shebang: impl Into<serde_json::Value>) {
-    self.meta.insert("interpreter".into(), shebang.into());
-  }
-
-  pub fn set_meta_id(&mut self, id: impl Into<serde_json::Value>) {
-    self.meta.insert("id".into(), id.into());
-  }
-
-  pub fn set_has_cjs_exports(&mut self, value: bool) {
-    self.meta.insert("hasCJSExports".into(), value.into());
-    self.has_cjs_exports = value;
-  }
-
-  pub fn set_static_exports(&mut self, value: bool) {
-    self.meta.insert("staticExports".into(), value.into());
-    self.static_exports = value;
-  }
-
-  pub fn set_should_wrap(&mut self, value: bool) {
-    self.meta.insert("shouldWrap".into(), value.into());
-    self.should_wrap = value;
-  }
-
-  pub fn set_is_constant_module(&mut self, is_constant_module: bool) {
-    self.is_constant_module = is_constant_module;
-    if is_constant_module {
-      self.meta.insert("isConstantModule".into(), true.into());
-    }
-  }
-
-  pub fn set_has_node_replacements(&mut self, has_node_replacements: bool) {
-    self.has_node_replacements = has_node_replacements;
-    if has_node_replacements {
-      self
-        .meta
-        // This is intentionally snake_case as that's what it was originally.
-        .insert("has_node_replacements".into(), true.into());
-    }
-  }
-
-  pub fn set_conditions(&mut self, conditions: HashSet<Condition>) {
-    self.conditions = conditions.clone();
-    self.meta.insert("conditions".into(), json!(conditions));
-  }
 }
 
 /// Statistics that pertain to an asset
@@ -452,6 +430,7 @@ pub struct AssetStats {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Condition {
   pub key: String,
   pub if_true_placeholder: Option<String>,

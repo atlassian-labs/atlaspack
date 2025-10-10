@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::Path;
 
+use atlaspack_core::types::DependencyKind;
 use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
@@ -14,7 +15,6 @@ use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 use crate::dependency_collector::DependencyDescriptor;
-use crate::dependency_collector::DependencyKind;
 use crate::utils::SourceLocation;
 use crate::utils::SourceType;
 use crate::utils::create_global_decl_stmt;

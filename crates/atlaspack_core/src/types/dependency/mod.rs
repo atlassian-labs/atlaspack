@@ -1,4 +1,7 @@
-use core::panic;
+use std::collections::BTreeMap;
+
+mod serialize;
+use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::PathBuf;
@@ -20,6 +23,87 @@ use super::json::JSONObject;
 use super::source::SourceLocation;
 use super::symbol::Symbol;
 use super::target::Target;
+
+#[derive(Hash, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum DependencyKind {
+  /// Corresponds to ESM import statements
+  /// ```skip
+  /// import {x} from './dependency';
+  /// ```
+  Import,
+  /// Corresponds to ESM re-export statements
+  /// ```skip
+  /// export {x} from './dependency';
+  /// ```
+  Export,
+  /// Corresponds to dynamic import statements
+  /// ```skip
+  /// import('./dependency').then(({x}) => {/* ... */});
+  /// ```
+  DynamicImport,
+  /// Corresponds to CJS require statements
+  /// ```skip
+  /// const {x} = require('./dependency');
+  /// ```
+  Require,
+  /// Corresponds to conditional import statements
+  /// ```skip
+  /// const {x} = importCond('condition', './true-dep', './false-dep');
+  /// ```
+  ConditionalImport,
+  /// Corresponds to Worker URL statements
+  /// ```skip
+  /// const worker = new Worker(
+  ///     new URL('./dependency', import.meta.url),
+  ///     {type: 'module'}
+  /// );
+  /// ```
+  WebWorker,
+  /// Corresponds to ServiceWorker URL statements
+  /// ```skip
+  /// navigator.serviceWorker.register(
+  ///     new URL('./dependency', import.meta.url),
+  ///     {type: 'module'}
+  /// );
+  /// ```
+  ServiceWorker,
+  /// CSS / WebAudio worklets
+  /// ```skip
+  /// CSS.paintWorklet.addModule(
+  ///   new URL('./dependency', import.meta.url)
+  /// );
+  /// ```
+  Worklet,
+  /// URL statements
+  /// ```skip
+  /// let img = document.createElement('img');
+  /// img.src = new URL('hero.jpg', import.meta.url);
+  /// document.body.appendChild(img);
+  /// ```
+  Url,
+  /// `fs.readFileSync` statements
+  ///
+  /// > Calls to fs.readFileSync are replaced with the file's contents if the filepath is statically
+  /// > determinable and inside the project root.
+  ///
+  /// ```skip
+  /// import fs from "fs";
+  /// import path from "path";
+  ///
+  /// const data = fs.readFileSync(path.join(__dirname, "data.json"), "utf8");
+  /// ```
+  ///
+  /// * https://parceljs.org/features/node-emulation/#inlining-fs.readfilesync
+  File,
+  /// `parcelRequire` call.
+  Id,
+}
+
+impl fmt::Display for DependencyKind {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{:?}", self)
+  }
+}
 
 #[allow(clippy::too_many_arguments)]
 pub fn create_dependency_id(
@@ -50,8 +134,7 @@ pub fn create_dependency_id(
 }
 
 /// A dependency denotes a connection between two assets
-#[derive(Hash, PartialEq, Clone, Debug, Default, Deserialize, Serialize, Builder)]
-#[serde(rename_all = "camelCase")]
+#[derive(Hash, PartialEq, Clone, Debug, Default, Builder)]
 #[builder(build_fn(skip), pattern = "owned", setter(strip_option))]
 // Dependencies should not be created directly, so we can ensure that an ID
 // exists. DependencyBuilder::build() should be used instead.
@@ -70,22 +153,18 @@ pub struct Dependency {
   pub id: String,
 
   /// The location within the source file where the dependency was found
-  #[serde(default)]
   pub loc: Option<SourceLocation>,
 
   /// Plugin-specific metadata for the dependency
-  #[serde(default)]
   pub meta: JSONObject,
 
   /// A list of custom conditions to use when resolving package.json "exports" and "imports"
   ///
   /// This will be combined with the conditions from the environment. However, it overrides the default "import" and "require" conditions inferred from the specifierType. To include those in addition to custom conditions, explicitly add them to this list.
   ///
-  #[serde(default, skip_serializing_if = "ExportsCondition::is_empty")]
   pub package_conditions: ExportsCondition,
 
   /// The pipeline defined in .parcelrc that the dependency should be processed with
-  #[serde(default)]
   pub pipeline: Option<String>,
 
   /// Determines when the dependency should be loaded
@@ -112,17 +191,14 @@ pub struct Dependency {
   /// How the specifier should be interpreted
   pub specifier_type: SpecifierType,
 
-  #[serde(skip_serializing_if = "Option::is_none")]
   pub source_asset_type: Option<FileType>,
 
   /// These are the "Symbols" this dependency has which are used in import sites.
   ///
   /// We might want to split this information from this type.
-  #[serde(default)]
   pub symbols: Option<Vec<Symbol>>,
 
   /// The target associated with an entry, if any
-  #[serde(default)]
   pub target: Option<Box<Target>>,
 
   /// Whether the dependency is an entry
@@ -151,6 +227,27 @@ pub struct Dependency {
   pub is_esm: bool,
 
   pub placeholder: Option<String>,
+
+  /// Whether this dependency is a webworker
+  pub is_webworker: bool,
+
+  /// The kind of dependency (e.g., "Require", "Import", etc.)
+  pub kind: Option<DependencyKind>,
+
+  /// Symbol name for promise-based imports
+  pub promise_symbol: Option<String>,
+
+  /// Import attributes for this dependency
+  pub import_attributes: BTreeMap<String, bool>,
+
+  /// Media query for CSS imports
+  pub media: Option<String>,
+
+  /// Whether this is a CSS import
+  pub is_css_import: bool,
+
+  /// Chunk name from magic comment
+  pub chunk_name_magic_comment: Option<String>,
 }
 
 impl DependencyBuilder {
@@ -210,6 +307,13 @@ impl DependencyBuilder {
       should_wrap: self.should_wrap.unwrap_or_default(),
       is_esm: self.is_esm.unwrap_or_default(),
       placeholder: self.placeholder.flatten(),
+      is_webworker: self.is_webworker.unwrap_or_default(),
+      kind: self.kind.flatten(),
+      promise_symbol: self.promise_symbol.flatten(),
+      import_attributes: self.import_attributes.unwrap_or_default(),
+      media: self.media.flatten(),
+      is_css_import: self.is_css_import.unwrap_or_default(),
+      chunk_name_magic_comment: self.chunk_name_magic_comment.flatten(),
     }
   }
 
@@ -221,17 +325,17 @@ impl DependencyBuilder {
     }
   }
 
-  pub fn symbols_option(self, symbols: Option<Vec<Symbol>>) -> Self {
-    if let Some(symbols) = symbols {
-      self.symbols(symbols)
+  pub fn placeholder_option(self, placeholder: Option<String>) -> Self {
+    if let Some(placeholder) = placeholder {
+      self.placeholder(placeholder)
     } else {
       self
     }
   }
 
-  pub fn placeholder_option(self, placeholder: Option<String>) -> Self {
-    if let Some(placeholder) = placeholder {
-      self.placeholder(placeholder)
+  pub fn media_option(self, media: Option<String>) -> Self {
+    if let Some(media) = media {
+      self.media(media)
     } else {
       self
     }
@@ -245,10 +349,18 @@ impl Dependency {
 
   pub fn entry(entry: String, target: Target) -> Dependency {
     let is_library = target.env.is_library;
-    let mut symbols = None;
+
+    let mut dep_builder = DependencyBuilder::default()
+      .env(target.env.clone())
+      .is_entry(true)
+      .needs_stable_name(true)
+      .specifier(entry)
+      .specifier_type(SpecifierType::Url)
+      .target(Box::new(target))
+      .priority(Priority::default());
 
     if is_library {
-      symbols = Some(vec![Symbol {
+      dep_builder = dep_builder.symbols(vec![Symbol {
         exported: "*".into(),
         is_esm_export: false,
         is_weak: true,
@@ -256,53 +368,10 @@ impl Dependency {
         local: "*".into(),
         self_referenced: false,
         is_static_binding_safe: false,
-      }]);
+      }])
     }
 
-    DependencyBuilder::default()
-      .env(target.env.clone())
-      .is_entry(true)
-      .needs_stable_name(true)
-      .specifier(entry)
-      .specifier_type(SpecifierType::Url)
-      .symbols_option(symbols)
-      .target(Box::new(target))
-      .priority(Priority::default())
-      .build()
-  }
-
-  pub fn set_placeholder(&mut self, placeholder: impl Into<serde_json::Value>) {
-    self.meta.insert("placeholder".into(), placeholder.into());
-  }
-
-  pub fn set_is_webworker(&mut self) {
-    self.meta.insert("webworker".into(), true.into());
-  }
-
-  pub fn set_kind(&mut self, kind: impl Into<serde_json::Value>) {
-    self.meta.insert("kind".into(), kind.into());
-  }
-
-  pub fn set_should_wrap(&mut self, should_wrap: bool) {
-    self.meta.insert("shouldWrap".into(), should_wrap.into());
-    self.should_wrap = should_wrap;
-  }
-
-  pub fn set_promise_symbol(&mut self, name: impl Into<serde_json::Value>) {
-    self.meta.insert("promiseSymbol".into(), name.into());
-  }
-
-  pub fn set_add_import_attibute(&mut self, attribute: impl Into<String>) {
-    let object = self
-      .meta
-      .entry(String::from("importAttributes"))
-      .or_insert(serde_json::Map::new().into());
-
-    if let serde_json::Value::Object(import_attributes) = object {
-      import_attributes.insert(attribute.into(), true.into());
-    } else {
-      panic!("Dependency import attributes invalid. This should never happen");
-    }
+    dep_builder.build()
   }
 }
 

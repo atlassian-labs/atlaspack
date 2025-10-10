@@ -1,10 +1,8 @@
-use atlaspack_core::types::{Priority, SpecifierType};
+use atlaspack_core::types::{DependencyKind, Priority, SpecifierType};
 
 pub(crate) fn convert_priority(
   transformer_dependency: &atlaspack_js_swc_core::DependencyDescriptor,
 ) -> Priority {
-  use atlaspack_js_swc_core::DependencyKind;
-
   match transformer_dependency.kind {
     DependencyKind::DynamicImport => Priority::Lazy,
     DependencyKind::WebWorker => Priority::Lazy,
@@ -23,8 +21,6 @@ pub(crate) fn convert_priority(
 pub(crate) fn convert_specifier_type(
   transformer_dependency: &atlaspack_js_swc_core::DependencyDescriptor,
 ) -> SpecifierType {
-  use atlaspack_js_swc_core::DependencyKind;
-
   match transformer_dependency.kind {
     DependencyKind::Require => SpecifierType::CommonJS,
     DependencyKind::Import => SpecifierType::Esm,
@@ -43,7 +39,6 @@ pub(crate) fn convert_specifier_type(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use atlaspack_js_swc_core::DependencyKind;
   use atlaspack_js_swc_core::test_utils::run_swc_core_transform;
 
   #[test]

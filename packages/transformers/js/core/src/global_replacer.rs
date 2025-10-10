@@ -15,12 +15,12 @@ use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
 
 use crate::dependency_collector::DependencyDescriptor;
-use crate::dependency_collector::DependencyKind;
 use crate::utils::SourceLocation;
 use crate::utils::SourceType;
 use crate::utils::create_global_decl_stmt;
 use crate::utils::create_require;
 use crate::utils::is_unresolved;
+use atlaspack_core::types::DependencyKind;
 
 /// Replaces a few node.js constants with literals or require statements.
 /// This duplicates some logic in [`NodeReplacer`]
@@ -211,12 +211,13 @@ impl GlobalReplacer<'_> {
 mod tests {
   use std::path::Path;
 
+  use atlaspack_core::types::DependencyKind;
   use atlaspack_swc_runner::test_utils::{RunTestContext, RunVisitResult, run_test_visit};
   use indoc::indoc;
   use swc_core::ecma::atoms::JsWord;
 
+  use crate::DependencyDescriptor;
   use crate::global_replacer::GlobalReplacer;
-  use crate::{DependencyDescriptor, DependencyKind};
 
   fn make_global_replacer<'a>(
     run_test_context: RunTestContext,

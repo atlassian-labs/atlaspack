@@ -336,6 +336,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
     let transformation_result = atlaspack_js_swc_core::transform(transform_config, None)?;
 
+    // TODO: Suspect this will now need to be moved to JS
     if feature_flag_conditional_bundling {
       let mut converted = vec![];
 
@@ -347,9 +348,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         }));
       }
 
-      asset
-        .meta
-        .insert("conditions".to_string(), serde_json::to_value(&converted)?);
+      asset.conditions = transformation_result.conditions.clone();
     }
 
     if let Some(errors) = transformation_result.diagnostics {
@@ -379,8 +378,8 @@ mod tests {
     config_loader::ConfigLoader,
     plugin::PluginLogger,
     types::{
-      Code, DependencyBuilder, Environment, EnvironmentContext, Location, Priority, SourceLocation,
-      SpecifierType, Symbol,
+      Code, DependencyBuilder, DependencyKind, Environment, EnvironmentContext, Location, Priority,
+      SourceLocation, SpecifierType, Symbol,
     },
   };
   use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSystem};
@@ -408,7 +407,7 @@ mod tests {
           file_path: "mock_path.js".into(),
           file_type: FileType::Js,
           symbols: Some(Vec::new()),
-          meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
+          packaging_id: Some(target_asset.id.to_string()),
           ..target_asset
         },
         discovered_assets: vec![],
@@ -463,7 +462,7 @@ mod tests {
         file_path: PathBuf::from("index.jsx"),
         file_type: FileType::Js,
         symbols: Some(Vec::new()),
-        meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
+        packaging_id: Some(target_asset.id.to_string()),
         ..target_asset
       },
     );
@@ -514,7 +513,7 @@ mod tests {
         file_path: PathBuf::from("index.tsx"),
         file_type: FileType::Js,
         symbols: Some(Vec::new()),
-        meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
+        packaging_id: Some(target_asset.id.to_string()),
         ..target_asset
       },
     );
@@ -568,7 +567,7 @@ mod tests {
             self_referenced: false,
             is_static_binding_safe: false,
           },]),
-          meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
+          packaging_id: Some(target_asset.id.to_string()),
           ..target_asset
         },
       );
@@ -634,7 +633,7 @@ mod tests {
         file_path: PathBuf::from("src").join("index.jsx"),
         file_type: FileType::Js,
         symbols: Some(Vec::new()),
-        meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
+        packaging_id: Some(target_asset.id.to_string()),
         ..target_asset
       },
     );
@@ -695,7 +694,7 @@ mod tests {
         file_path: PathBuf::from("index.jsx"),
         file_type: FileType::Js,
         symbols: Some(Vec::new()),
-        meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
+        packaging_id: Some(target_asset.id.to_string()),
         ..target_asset
       },
     );
@@ -725,7 +724,7 @@ mod tests {
           code: Code::from(String::from("const test = ()=>{};")),
           file_path: "index.js".into(),
           symbols: Some(Vec::new()),
-          meta: serde_json::Map::from_iter([(String::from("id"), target_asset.id.clone().into())]),
+          packaging_id: Some(target_asset.id.to_string()),
           ..target_asset
         },
         discovered_assets: vec![],
@@ -748,7 +747,7 @@ mod tests {
     let target_asset = create_asset_at_project_root(project_root, "mock_path.js", source_code);
     let asset_id = target_asset.id.clone();
 
-    let mut expected_dependencies = vec![
+    let expected_dependencies = vec![
       DependencyBuilder::default()
         .loc(SourceLocation {
           file_path: PathBuf::from("mock_path.js"),
@@ -762,6 +761,7 @@ mod tests {
           },
         })
         .placeholder("e83f3db3d6f57ea6".to_string())
+        .kind(DependencyKind::Require)
         .source_asset_id(asset_id.clone())
         .source_path(PathBuf::from("mock_path.js"))
         .source_asset_type(FileType::Js)
@@ -777,9 +777,6 @@ mod tests {
         .priority(Priority::Sync)
         .build(),
     ];
-
-    expected_dependencies[0].set_placeholder("e83f3db3d6f57ea6");
-    expected_dependencies[0].set_kind("Require");
 
     assert_eq!(
       run_test(TestOptions {
@@ -832,7 +829,7 @@ mod tests {
             }
           ]),
           unique_key: None,
-          meta: serde_json::Map::from_iter([(String::from("id"), asset_id.clone().into())]),
+          packaging_id: Some(asset_id.to_string()),
           ..empty_asset()
         },
         discovered_assets: vec![],
