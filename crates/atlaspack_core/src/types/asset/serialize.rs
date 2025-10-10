@@ -271,6 +271,7 @@ mod tests {
       is_source: true,
       side_effects: false,
       is_bundle_splittable: true,
+      empty_file_star_reexport: Some(true),
       ..Asset::default()
     };
 
@@ -319,7 +320,8 @@ mod tests {
         "isConstantModule": false,
         "shouldWrap": false,
         "staticExports": false,
-        "type": null
+        "type": null,
+        "emptyFileStarReexport": true,
       }
     });
 
@@ -344,6 +346,7 @@ mod tests {
       has_cjs_exports: true,
       should_wrap: false,
       inline_type: Some("string".to_string()),
+      packaging_id: Some("1234".to_string()),
       ..Asset::default()
     };
 
@@ -385,6 +388,7 @@ mod tests {
       "type": "js",
       "uniqueKey": "meta_unique",
       "meta": {
+        "id": "1234",
         "customField": "customValue",
         "numField": 42,
         "conditions": [],
