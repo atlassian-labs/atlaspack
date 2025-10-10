@@ -2,8 +2,8 @@ use serde::de::{Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use serde_json::json;
 
-use crate::types::serialization::{extract_bool, extract_string};
-use crate::types::{Asset, Condition};
+use crate::types::Asset;
+use crate::types::serialization::{extract_val, extract_val_default};
 
 macro_rules! insert_if_not_none {
   ($map:expr, $key:expr, $value:expr) => {
@@ -142,34 +142,20 @@ impl<'de> Visitor<'de> for AssetVisitor {
 
     let mut meta_map = meta.unwrap_or_default();
 
-    let has_cjs_exports = extract_bool(&mut meta_map, "hasCJSExports");
-    let has_node_replacements = extract_bool(&mut meta_map, "has_node_replacements");
-    let is_constant_module = extract_bool(&mut meta_map, "isConstantModule");
-    let should_wrap = extract_bool(&mut meta_map, "shouldWrap");
-    let static_exports = extract_bool(&mut meta_map, "staticExports");
+    let conditions = extract_val_default(&mut meta_map, "conditions");
+    let has_cjs_exports = extract_val_default(&mut meta_map, "hasCJSExports");
+    let has_node_replacements = extract_val_default(&mut meta_map, "has_node_replacements");
+    let is_constant_module = extract_val_default(&mut meta_map, "isConstantModule");
+    let should_wrap = extract_val_default(&mut meta_map, "shouldWrap");
+    let static_exports = extract_val_default(&mut meta_map, "staticExports");
 
-    let empty_file_star_reexport = Some(extract_bool(&mut meta_map, "emptyFileStarReexport"));
-    let has_dependencies = Some(extract_bool(&mut meta_map, "hasDependencies"));
-    let has_references = Some(extract_bool(&mut meta_map, "hasReferences"));
-
-    let css_dependency_type = extract_string(&mut meta_map, "type");
-    let inline_type = extract_string(&mut meta_map, "inlineType");
-    let interpreter = extract_string(&mut meta_map, "interpreter");
-    let packaging_id = extract_string(&mut meta_map, "id");
-
-    // Conditions is a special case since it's an array of Condition objects
-    let conditions = meta_map
-      .get("conditions")
-      .and_then(|v| {
-        v.as_array().map(|arr| {
-          arr
-            .iter()
-            .filter_map(|val| Condition::deserialize(val).ok())
-            .collect()
-        })
-      })
-      .unwrap_or_default();
-    meta_map.remove("conditions");
+    let css_dependency_type = extract_val(&mut meta_map, "type");
+    let empty_file_star_reexport = extract_val(&mut meta_map, "emptyFileStarReexport");
+    let has_dependencies = extract_val(&mut meta_map, "hasDependencies");
+    let has_references = extract_val(&mut meta_map, "hasReferences");
+    let inline_type = extract_val(&mut meta_map, "inlineType");
+    let interpreter = extract_val(&mut meta_map, "interpreter");
+    let packaging_id = extract_val(&mut meta_map, "id");
 
     Ok(Asset {
       id: id.ok_or_else(|| serde::de::Error::missing_field("id"))?,

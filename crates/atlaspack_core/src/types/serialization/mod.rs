@@ -1,14 +1,15 @@
-pub fn extract_bool(map: &mut serde_json::Map<String, serde_json::Value>, key: &str) -> bool {
-  let val = map.get(key).and_then(|v| v.as_bool()).unwrap_or_default();
-  map.remove(key);
-  val
+pub fn extract_val_default<T>(map: &mut serde_json::Map<String, serde_json::Value>, key: &str) -> T
+where
+  T: serde::de::DeserializeOwned + Default,
+{
+  extract_val(map, key).unwrap_or_default()
 }
 
-pub fn extract_string(
-  map: &mut serde_json::Map<String, serde_json::Value>,
-  key: &str,
-) -> Option<String> {
-  let val = map.get(key).and_then(|v| v.as_str().map(|s| s.to_string()));
+pub fn extract_val<T>(map: &mut serde_json::Map<String, serde_json::Value>, key: &str) -> Option<T>
+where
+  T: serde::de::DeserializeOwned,
+{
+  let val = map.get(key).and_then(|v| T::deserialize(v).ok());
   map.remove(key);
   val
 }

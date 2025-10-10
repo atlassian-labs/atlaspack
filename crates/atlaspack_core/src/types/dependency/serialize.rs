@@ -1,6 +1,5 @@
-use std::collections::BTreeMap;
-
-use crate::types::{Dependency, DependencyKind};
+use crate::types::Dependency;
+use crate::types::serialization::{extract_val, extract_val_default};
 use serde::de::{Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
@@ -189,66 +188,17 @@ impl<'de> Visitor<'de> for DependencyVisitor {
     // Extract fields from meta if not present at top level
     let mut meta_map = meta.unwrap_or_default();
 
-    let final_should_wrap = meta_map
-      .get("shouldWrap")
-      .and_then(|v| v.as_bool())
-      .unwrap_or_default();
+    let import_attributes = extract_val_default(&mut meta_map, "importAttributes");
+    let is_css_import = extract_val_default(&mut meta_map, "isCssImport");
+    let is_esm = extract_val_default(&mut meta_map, "isEsm");
+    let is_webworker = extract_val_default(&mut meta_map, "webworker");
+    let kind = extract_val_default(&mut meta_map, "kind");
+    let should_wrap = extract_val_default(&mut meta_map, "shouldWrap");
 
-    let final_is_esm = meta_map
-      .get("isEsm")
-      .and_then(|v| v.as_bool())
-      .unwrap_or_default();
-
-    let final_is_webworker = meta_map
-      .get("webworker")
-      .and_then(|v| v.as_bool())
-      .unwrap_or_default();
-
-    let final_is_css_import = meta_map
-      .get("isCssImport")
-      .and_then(|v| v.as_bool())
-      .unwrap_or_default();
-
-    let final_placeholder = meta_map
-      .get("placeholder")
-      .and_then(|v| v.as_str())
-      .map(|s| s.to_string());
-
-    let final_media = meta_map
-      .get("media")
-      .and_then(|v| v.as_str())
-      .map(|s| s.to_string());
-
-    let final_chunk_name_magic_comment = meta_map
-      .get("chunkNameMagicComment")
-      .and_then(|v| v.as_str())
-      .map(|s| s.to_string());
-
-    let final_import_attributes = meta_map
-      .get("importAttributes")
-      .and_then(|v| serde_json::from_value(v.clone()).ok())
-      .unwrap_or_else(BTreeMap::default);
-
-    let kind = meta_map
-      .get("kind")
-      .and_then(|v| DependencyKind::deserialize(v).ok());
-
-    let promise_symbol = meta_map
-      .get("promiseSymbol")
-      .and_then(|v| v.as_str())
-      .map(|s| s.to_string());
-
-    // Remove the extracted fields from meta to maintain symmetry
-    meta_map.remove("shouldWrap");
-    meta_map.remove("isEsm");
-    meta_map.remove("webworker");
-    meta_map.remove("isCssImport");
-    meta_map.remove("placeholder");
-    meta_map.remove("media");
-    meta_map.remove("chunkNameMagicComment");
-    meta_map.remove("importAttributes");
-    meta_map.remove("kind");
-    meta_map.remove("promiseSymbol");
+    let chunk_name_magic_comment = extract_val(&mut meta_map, "chunkNameMagicComment");
+    let media = extract_val(&mut meta_map, "media");
+    let placeholder = extract_val(&mut meta_map, "placeholder");
+    let promise_symbol = extract_val(&mut meta_map, "promiseSymbol");
 
     Ok(Dependency {
       id: id.ok_or_else(|| serde::de::Error::missing_field("id"))?,
@@ -272,16 +222,16 @@ impl<'de> Visitor<'de> for DependencyVisitor {
       is_entry: is_entry.unwrap_or_default(),
       is_optional: is_optional.unwrap_or_default(),
       needs_stable_name: needs_stable_name.unwrap_or_default(),
-      should_wrap: final_should_wrap,
-      is_esm: final_is_esm,
-      placeholder: final_placeholder,
-      is_webworker: final_is_webworker,
+      should_wrap,
+      is_esm,
+      placeholder,
+      is_webworker,
       kind,
       promise_symbol,
-      import_attributes: final_import_attributes,
-      media: final_media,
-      is_css_import: final_is_css_import,
-      chunk_name_magic_comment: final_chunk_name_magic_comment,
+      import_attributes,
+      media,
+      is_css_import,
+      chunk_name_magic_comment,
     })
   }
 
@@ -294,8 +244,8 @@ impl<'de> Visitor<'de> for DependencyVisitor {
 mod tests {
   use super::*;
   use crate::types::{
-    Environment, EnvironmentContext, IncludeNodeModules, OutputFormat, Priority, SourceType,
-    SpecifierType,
+    DependencyKind, Environment, EnvironmentContext, IncludeNodeModules, OutputFormat, Priority,
+    SourceType, SpecifierType,
   };
   use pretty_assertions::assert_eq;
   use std::collections::BTreeMap;
