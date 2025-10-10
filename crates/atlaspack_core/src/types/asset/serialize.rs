@@ -2,7 +2,8 @@ use serde::de::{Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use serde_json::json;
 
-use crate::types::Asset;
+use crate::types::serialization::{extract_bool, extract_string};
+use crate::types::{Asset, Condition};
 
 macro_rules! insert_if_not_none {
   ($map:expr, $key:expr, $value:expr) => {
@@ -100,26 +101,11 @@ impl<'de> Visitor<'de> for AssetVisitor {
     let mut side_effects = None;
     let mut is_bundle_splittable = None;
     let mut is_source = None;
-    let mut has_cjs_exports = None;
     let mut output_hash = None;
     let mut config_path = None;
     let mut config_key_path = None;
     let mut unique_key = None;
     let mut meta = None;
-
-    // Fields extracted from meta
-    let mut conditions = None;
-    let mut has_node_replacements = None;
-    let mut inline_type = None;
-    let mut is_constant_module = None;
-    let mut should_wrap = None;
-    let mut static_exports = None;
-    let mut css_dependency_type = None;
-    let mut empty_file_star_reexport = None;
-    let mut has_dependencies = None;
-    let mut has_references = None;
-    let mut packaging_id = None;
-    let mut interpreter = None;
 
     while let Some(key) = map.next_key::<String>()? {
       match key.as_str() {
@@ -140,94 +126,50 @@ impl<'de> Visitor<'de> for AssetVisitor {
         "type" => file_type = Some(map.next_value()?),
         "uniqueKey" => unique_key = Some(map.next_value()?),
         "meta" => {
-          let meta_value: serde_json::Value = map.next_value()?;
-          if let Some(meta_obj) = meta_value.as_object() {
-            // Extract specific fields from meta
-            if let Some(conditions_val) = meta_obj.get("conditions") {
-              conditions = Some(
-                serde_json::from_value(conditions_val.clone()).map_err(serde::de::Error::custom)?,
-              );
-            }
-
-            if let Some(has_cjs_exports_val) = meta_obj.get("hasCJSExports")
-              && let Some(val) = has_cjs_exports_val.as_bool()
-            {
-              has_cjs_exports = Some(val);
-            }
-
-            if let Some(has_node_replacements_val) = meta_obj.get("has_node_replacements")
-              && let Some(val) = has_node_replacements_val.as_bool()
-            {
-              has_node_replacements = Some(val);
-            }
-
-            if let Some(inline_type_val) = meta_obj.get("inlineType")
-              && let Some(val) = inline_type_val.as_str()
-            {
-              inline_type = Some(val.to_string());
-            }
-
-            if let Some(is_constant_module_val) = meta_obj.get("isConstantModule")
-              && let Some(val) = is_constant_module_val.as_bool()
-            {
-              is_constant_module = Some(val);
-            }
-
-            if let Some(should_wrap_val) = meta_obj.get("shouldWrap")
-              && let Some(val) = should_wrap_val.as_bool()
-            {
-              should_wrap = Some(val);
-            }
-
-            if let Some(static_exports_val) = meta_obj.get("staticExports")
-              && let Some(val) = static_exports_val.as_bool()
-            {
-              static_exports = Some(val);
-            }
-
-            if let Some(css_type_val) = meta_obj.get("type")
-              && let Some(val) = css_type_val.as_str()
-            {
-              css_dependency_type = Some(val.to_string());
-            }
-
-            if let Some(empty_star_val) = meta_obj.get("emptyFileStarReexport")
-              && let Some(val) = empty_star_val.as_bool()
-            {
-              empty_file_star_reexport = Some(val);
-            }
-
-            if let Some(has_deps_val) = meta_obj.get("hasDependencies")
-              && let Some(val) = has_deps_val.as_bool()
-            {
-              has_dependencies = Some(val);
-            }
-
-            if let Some(has_refs_val) = meta_obj.get("hasReferences")
-              && let Some(val) = has_refs_val.as_bool()
-            {
-              has_references = Some(val);
-            }
-
-            if let Some(pkg_id_val) = meta_obj.get("id")
-              && let Some(val) = pkg_id_val.as_str()
-            {
-              packaging_id = Some(val.to_string());
-            }
-
-            if let Some(interpreter_val) = meta_obj.get("interpreter")
-              && let Some(val) = interpreter_val.as_str()
-            {
-              interpreter = Some(val.to_string());
-            }
-          }
-          meta = Some(serde_json::from_value(meta_value).map_err(serde::de::Error::custom)?);
+          let meta_map: serde_json::Value = map.next_value()?;
+          meta = Some(
+            meta_map
+              .as_object()
+              .unwrap_or(&serde_json::Map::new())
+              .clone(),
+          );
         }
         _ => {
           return Err(serde::de::Error::unknown_field(&key, &[]));
         }
       }
     }
+
+    let mut meta_map = meta.unwrap_or_default();
+
+    let has_cjs_exports = extract_bool(&mut meta_map, "hasCJSExports");
+    let has_node_replacements = extract_bool(&mut meta_map, "has_node_replacements");
+    let is_constant_module = extract_bool(&mut meta_map, "isConstantModule");
+    let should_wrap = extract_bool(&mut meta_map, "shouldWrap");
+    let static_exports = extract_bool(&mut meta_map, "staticExports");
+
+    let empty_file_star_reexport = Some(extract_bool(&mut meta_map, "emptyFileStarReexport"));
+    let has_dependencies = Some(extract_bool(&mut meta_map, "hasDependencies"));
+    let has_references = Some(extract_bool(&mut meta_map, "hasReferences"));
+
+    let css_dependency_type = extract_string(&mut meta_map, "type");
+    let inline_type = extract_string(&mut meta_map, "inlineType");
+    let interpreter = extract_string(&mut meta_map, "interpreter");
+    let packaging_id = extract_string(&mut meta_map, "id");
+
+    // Conditions is a special case since it's an array of Condition objects
+    let conditions = meta_map
+      .get("conditions")
+      .and_then(|v| {
+        v.as_array().map(|arr| {
+          arr
+            .iter()
+            .filter_map(|val| Condition::deserialize(val).ok())
+            .collect()
+        })
+      })
+      .unwrap_or_default();
+    meta_map.remove("conditions");
 
     Ok(Asset {
       id: id.ok_or_else(|| serde::de::Error::missing_field("id"))?,
@@ -242,18 +184,18 @@ impl<'de> Visitor<'de> for AssetVisitor {
       side_effects: side_effects.unwrap_or_default(),
       is_bundle_splittable: is_bundle_splittable.unwrap_or(true),
       is_source: is_source.unwrap_or_default(),
-      has_cjs_exports: has_cjs_exports.unwrap_or_default(),
+      has_cjs_exports,
       output_hash,
       config_path,
       config_key_path,
       unique_key,
-      meta: meta.unwrap_or_default(),
-      conditions: conditions.unwrap_or_default(),
-      has_node_replacements: has_node_replacements.unwrap_or_default(),
+      meta: meta_map,
+      conditions,
+      has_node_replacements,
       inline_type,
-      is_constant_module: is_constant_module.unwrap_or_default(),
-      should_wrap: should_wrap.unwrap_or_default(),
-      static_exports: static_exports.unwrap_or_default(),
+      is_constant_module,
+      should_wrap,
+      static_exports,
       css_dependency_type,
       empty_file_star_reexport,
       has_dependencies,
