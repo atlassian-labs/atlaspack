@@ -68,6 +68,27 @@ impl AssetGraph {
     }
   }
 
+  pub fn from(prev_asset_graph: &AssetGraph) -> Self {
+    let mut graph = StableDiGraph::new();
+
+    let mut node_id_to_node_index = HashMap::new();
+
+    // Add root node to graph
+    let root_node_id = prev_asset_graph.root_node_id;
+    node_id_to_node_index.insert(root_node_id, graph.add_node(root_node_id));
+    let nodes = prev_asset_graph.nodes.clone();
+
+    AssetGraph {
+      graph,
+      node_id_to_node_index,
+      root_node_id,
+      requested_symbols: HashMap::new(),
+      dependency_states: HashMap::new(),
+      content_key_to_node_id: prev_asset_graph.content_key_to_node_id.clone(),
+      nodes,
+    }
+  }
+
   pub fn edges(&self) -> Vec<u32> {
     let raw_edges = self.graph.edge_references();
     let mut edges = Vec::new();
