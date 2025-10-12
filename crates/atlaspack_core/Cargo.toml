@@ -14,7 +14,6 @@ default = []
 atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 caniuse_database = { path = "../caniuse_database" }
-atlaspack-macros = { path = "../macros" }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }
