@@ -20,7 +20,6 @@ use lightningcss::stylesheet::{ParserFlags, ParserOptions, StyleSheet};
 use lightningcss::targets::{Browsers, Targets};
 use parcel_sourcemap::SourceMap as ParcelSourceMap;
 use serde::Deserialize;
-use serde_json::json;
 
 use crate::css_transformer_config::{CssModulesConfig, CssModulesFullConfig, CssTransformerConfig};
 
@@ -69,13 +68,8 @@ impl AtlaspackCssTransformerPlugin {
   }
 
   fn is_css_module(&self, asset: &Asset) -> bool {
-    let is_style_tag = asset
-      .meta
-      .get("type")
-      .is_some_and(|meta_type| *meta_type == json!("tag"));
-
     // If this is a style tag it's not a CSS module
-    if is_style_tag {
+    if asset.css_dependency_type == Some("tag".into()) {
       return false;
     }
 
@@ -148,9 +142,8 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
     });
 
     let preserve_imports = asset
-      .meta
-      .get("hasDependencies")
-      .map_or_else(|| true, |value| value != false);
+      .has_dependencies
+      .map_or_else(|| true, |has_deps| !has_deps);
 
     let browsers = asset.env.engines.browsers.clone().map_or_else(
       || Ok(None),
@@ -198,7 +191,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 return None;
               }
 
-              let mut dependency = DependencyBuilder::default()
+              let dependency = DependencyBuilder::default()
                 .env(asset.env.clone())
                 .package_conditions(ExportsCondition::STYLE)
                 .priority(Priority::Sync)
@@ -207,21 +200,15 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 .specifier(import_dependency.url.clone())
                 .specifier_type(SpecifierType::Url)
                 .source_asset_type(FileType::Css)
+                .media_option(import_dependency.media.clone())
+                .is_css_import(true)
+                .placeholder(import_dependency.placeholder.clone())
                 .build();
-
-              if let Some(media) = &import_dependency.media {
-                dependency.meta.insert("media".into(), media.clone().into());
-              }
-
-              // For the glob resolver to distinguish between `@import` and other URL dependencies.
-              dependency.meta.insert("isCSSImport".into(), true.into());
-
-              dependency.set_placeholder(import_dependency.placeholder.clone());
 
               Some(dependency)
             }
             lightningcss::dependencies::Dependency::Url(url_dependency) => {
-              let mut dependency = DependencyBuilder::default()
+              let dependency = DependencyBuilder::default()
                 .env(asset.env.clone())
                 .priority(Priority::Sync)
                 .source_asset_id(asset.id.clone())
@@ -229,9 +216,8 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 .source_path(asset.file_path.clone())
                 .specifier(url_dependency.url.clone())
                 .specifier_type(SpecifierType::Url)
+                .placeholder(url_dependency.placeholder.clone())
                 .build();
-
-              dependency.set_placeholder(url_dependency.placeholder.clone());
 
               Some(dependency)
             }
@@ -476,7 +462,7 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
                 .build(),
             );
 
-            asset.meta.insert("hasReferences".into(), true.into());
+            asset.has_references = Some(true);
             css_code.push(format!("@import '{}';", specifier));
           }
         }
@@ -535,7 +521,7 @@ mod tests {
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::{PluginLogger, PluginOptions},
-    types::{Environment, JSONObject},
+    types::Environment,
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
@@ -567,7 +553,7 @@ mod tests {
       ..Default::default()
     };
     let result = run_plugin(&asset).await;
-    let mut expected_dependency = DependencyBuilder::default()
+    let expected_dependency = DependencyBuilder::default()
       .specifier("./stuff.css".to_string())
       .source_asset_id("my-asset".to_string())
       .source_path("styles.css".into())
@@ -576,11 +562,9 @@ mod tests {
       .package_conditions(ExportsCondition::STYLE)
       .env(Arc::new(Environment::default()))
       .priority(Priority::default())
+      .is_css_import(true)
+      .placeholder("OFe21q".to_string())
       .build();
-    expected_dependency.meta = JSONObject::from_iter([
-      ("isCSSImport".into(), true.into()),
-      ("placeholder".into(), "OFe21q".into()),
-    ]);
 
     assert_eq!(result.unwrap().dependencies, vec![expected_dependency]);
   }

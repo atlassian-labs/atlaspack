@@ -32,7 +32,6 @@ pub use collect::CollectImportedSymbol;
 use collect::CollectResult;
 use constant_module::ConstantModule;
 pub use dependency_collector::DependencyDescriptor;
-pub use dependency_collector::DependencyKind;
 pub use dependency_collector::dependency_collector;
 use env_replacer::*;
 use esm_to_cjs_replacer::EsmToCjsReplacer;

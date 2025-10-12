@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::path::PathBuf;
 
+use atlaspack_core::types::DependencyKind;
 use data_encoding::BASE64;
 use data_encoding::HEXLOWER;
 use swc_core::common::DUMMY_SP;
@@ -16,7 +17,6 @@ use swc_core::ecma::visit::VisitWith;
 use crate::collect::Collect;
 use crate::collect::Import;
 use crate::dependency_collector::DependencyDescriptor;
-use crate::dependency_collector::DependencyKind;
 use crate::esm_export_classifier::SymbolsInfo;
 use crate::id;
 use crate::utils::SourceLocation;

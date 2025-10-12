@@ -121,7 +121,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       env: asset_env.clone(),
       asset: Asset {
         code: Default::default(),
-        ..asset
+        ..asset.clone()
       },
     };
 
@@ -205,8 +205,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       side_effects: result.side_effects,
       is_bundle_splittable: result.is_bundle_splittable,
       is_source: result.is_source,
-      // TODO: Fix or remove the duplicate meta fields.
-      ..Default::default()
+      ..asset
     };
 
     Ok(TransformResult {
