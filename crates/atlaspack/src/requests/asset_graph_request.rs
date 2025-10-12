@@ -1,5 +1,6 @@
 use atlaspack_core::types::Asset;
 use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::sync::mpsc::channel;
 
@@ -23,8 +24,16 @@ use super::target_request::{TargetRequest, TargetRequestOutput};
 
 /// The AssetGraphRequest is in charge of building the AssetGraphRequest
 /// In doing so, it kicks of the EntryRequest, TargetRequest, PathRequest and AssetRequests.
-#[derive(Debug, Hash)]
-pub struct AssetGraphRequest {}
+#[derive(Debug, Default)]
+pub struct AssetGraphRequest {
+  prev_asset_graph: Option<Arc<AssetGraph>>,
+}
+
+impl Hash for AssetGraphRequest {
+  // Hash returns nothing here as every AssetGraphRequest should have the same
+  // ID in the end.
+  fn hash<H: Hasher>(&self, _state: &mut H) {}
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AssetGraphRequestOutput {
@@ -37,7 +46,7 @@ impl Request for AssetGraphRequest {
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
-    let builder = AssetGraphBuilder::new(request_context);
+    let builder = AssetGraphBuilder::new(request_context, self.prev_asset_graph.clone());
 
     builder.build()
   }
@@ -59,12 +68,12 @@ struct AssetGraphBuilder {
 }
 
 impl AssetGraphBuilder {
-  fn new(request_context: RunRequestContext) -> Self {
+  fn new(request_context: RunRequestContext, prev_asset_graph: Option<Arc<AssetGraph>>) -> Self {
     let (sender, receiver) = channel();
 
     AssetGraphBuilder {
       request_id_to_dependency_id: HashMap::new(),
-      graph: AssetGraph::new(),
+      graph: prev_asset_graph.map_or_else(AssetGraph::new, |prev| AssetGraph::from(&prev)),
       visited: HashSet::new(),
       work_count: 0,
       request_context,
@@ -542,7 +551,9 @@ mod tests {
     let options = RequestTrackerTestOptions::default();
     let mut request_tracker = request_tracker(options);
 
-    let asset_graph_request = AssetGraphRequest {};
+    let asset_graph_request = AssetGraphRequest {
+      prev_asset_graph: None,
+    };
     let result = request_tracker
       .run_request(asset_graph_request)
       .await
@@ -593,7 +604,9 @@ mod tests {
       ..RequestTrackerTestOptions::default()
     });
 
-    let asset_graph_request = AssetGraphRequest {};
+    let asset_graph_request = AssetGraphRequest {
+      prev_asset_graph: None,
+    };
     let result = request_tracker
       .run_request(asset_graph_request)
       .await
@@ -685,7 +698,9 @@ mod tests {
       ..RequestTrackerTestOptions::default()
     });
 
-    let asset_graph_request = AssetGraphRequest {};
+    let asset_graph_request = AssetGraphRequest {
+      prev_asset_graph: None,
+    };
     let result = request_tracker
       .run_request(asset_graph_request)
       .await
