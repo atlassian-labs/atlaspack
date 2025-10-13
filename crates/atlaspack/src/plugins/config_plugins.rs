@@ -211,46 +211,49 @@ impl Plugins for ConfigPlugins {
         _ => {}
       }
 
-      let transformer =
-        self
-          .plugin_cache
-          .get_or_init_transformer(transformer_name, async || {
-            Ok(match transformer_name {
-              "@atlaspack/transformer-js" => {
-                Arc::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?) as Arc<dyn TransformerPlugin>
-              }
-              "@atlaspack/transformer-css" => {
-                Arc::new(AtlaspackCssTransformerPlugin::new(&self.ctx)?) as Arc<dyn TransformerPlugin>
-              }
-              "@atlaspack/transformer-inline-string" => {
-                Arc::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
-              }
-              "@atlaspack/transformer-inline" => {
-                Arc::new(AtlaspackInlineTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
-              }
-              "@atlaspack/transformer-image" => {
-                Arc::new(AtlaspackImageTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
-              }
-              "@atlaspack/transformer-raw" => {
-                Arc::new(AtlaspackRawTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
-              }
-              "@atlaspack/transformer-html" => {
-                Arc::new(AtlaspackHtmlTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
-              }
-              "@atlaspack/transformer-json" => {
-                Arc::new(AtlaspackJsonTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
-              }
-              "@atlaspack/transformer-yaml" => {
-                Arc::new(AtlaspackYamlTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
-              }
-              _ => {
-                self
-                  .rpc_worker
-                  .create_transformer(&self.ctx, transformer)
-                  .await?
-              }
-            })
-          }).await?;
+      let transformer = self
+        .plugin_cache
+        .get_or_init_transformer(transformer_name, async || {
+          Ok(match transformer_name {
+            "@atlaspack/transformer-js" => {
+              Arc::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?) as Arc<dyn TransformerPlugin>
+            }
+            "@atlaspack/transformer-css" => {
+              Arc::new(AtlaspackCssTransformerPlugin::new(&self.ctx)?) as Arc<dyn TransformerPlugin>
+            }
+            "@atlaspack/transformer-inline-string" => {
+              Arc::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx))
+                as Arc<dyn TransformerPlugin>
+            }
+            "@atlaspack/transformer-inline" => {
+              Arc::new(AtlaspackInlineTransformerPlugin::new(&self.ctx))
+                as Arc<dyn TransformerPlugin>
+            }
+            "@atlaspack/transformer-image" => {
+              Arc::new(AtlaspackImageTransformerPlugin::new(&self.ctx))
+                as Arc<dyn TransformerPlugin>
+            }
+            "@atlaspack/transformer-raw" => {
+              Arc::new(AtlaspackRawTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+            }
+            "@atlaspack/transformer-html" => {
+              Arc::new(AtlaspackHtmlTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+            }
+            "@atlaspack/transformer-json" => {
+              Arc::new(AtlaspackJsonTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+            }
+            "@atlaspack/transformer-yaml" => {
+              Arc::new(AtlaspackYamlTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+            }
+            _ => {
+              self
+                .rpc_worker
+                .create_transformer(&self.ctx, transformer)
+                .await?
+            }
+          })
+        })
+        .await?;
 
       transformers.push(transformer);
     }
