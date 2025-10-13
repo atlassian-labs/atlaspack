@@ -26,7 +26,7 @@ use super::target_request::{TargetRequest, TargetRequestOutput};
 /// In doing so, it kicks of the EntryRequest, TargetRequest, PathRequest and AssetRequests.
 #[derive(Debug, Default)]
 pub struct AssetGraphRequest {
-  prev_asset_graph: Option<Arc<AssetGraph>>,
+  pub prev_asset_graph: Option<Arc<AssetGraph>>,
 }
 
 impl Hash for AssetGraphRequest {
@@ -37,7 +37,7 @@ impl Hash for AssetGraphRequest {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AssetGraphRequestOutput {
-  pub graph: AssetGraph,
+  pub graph: Arc<AssetGraph>,
 }
 
 #[async_trait]
@@ -159,7 +159,9 @@ impl AssetGraphBuilder {
     }
 
     Ok(ResultAndInvalidations {
-      result: RequestResult::AssetGraph(AssetGraphRequestOutput { graph: self.graph }),
+      result: RequestResult::AssetGraph(AssetGraphRequestOutput {
+        graph: Arc::new(self.graph),
+      }),
       invalidations: vec![],
     })
   }
