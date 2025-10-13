@@ -16,7 +16,7 @@ use dyn_hash::DynHash;
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
 
-type ChannelRequestResult = anyhow::Result<(Arc<RequestResult>, RequestId)>;
+type ChannelRequestResult = anyhow::Result<(Arc<RequestResult>, RequestId, bool)>;
 pub type RequestResultReceiver = Receiver<ChannelRequestResult>;
 pub type RequestResultSender = Sender<ChannelRequestResult>;
 

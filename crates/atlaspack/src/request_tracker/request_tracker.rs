@@ -140,7 +140,7 @@ impl RequestTracker {
 
             // Cached request
             if let Some(response_tx) = response_tx {
-              let _ = response_tx.send(Ok((previous_result, request_id)));
+              let _ = response_tx.send(Ok((previous_result, request_id, true)));
             }
             continue;
           }
@@ -188,7 +188,7 @@ impl RequestTracker {
           self.link_request_to_parent(request_id, parent_request_id)?;
 
           if let Some(response_tx) = response_tx {
-            let _ = response_tx.send(result.map(|result| (result, request_id)));
+            let _ = response_tx.send(result.map(|result| (result, request_id, false)));
           }
         }
       }
