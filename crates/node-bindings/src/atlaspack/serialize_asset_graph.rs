@@ -16,10 +16,30 @@ use atlaspack_core::types::{Asset, Dependency};
 /// ```
 #[tracing::instrument(level = "info", skip_all)]
 pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Result<JsObject> {
+  let mut napi_asset_graph = env.create_object()?;
+
+  napi_asset_graph.set_named_property(
+    "nodes",
+    serialize_asset_graph_nodes(env, asset_graph, &asset_graph.new_nodes().collect())?,
+  )?;
+
+  napi_asset_graph.set_named_property(
+    "updates",
+    serialize_asset_graph_nodes(env, asset_graph, &asset_graph.updated_nodes().collect())?,
+  )?;
+
+  napi_asset_graph.set_named_property("edges", asset_graph.edges())?;
+
+  Ok(napi_asset_graph)
+}
+
+fn serialize_asset_graph_nodes(
+  env: &Env,
+  asset_graph: &AssetGraph,
+  nodes: &Vec<&AssetGraphNode>,
+) -> anyhow::Result<JsObject> {
   // Serialize graph nodes in parallel
-  let nodes = asset_graph
-    .nodes()
-    .collect::<Vec<_>>()
+  let serialized_nodes = nodes
     .par_iter()
     .map(|item| {
       Ok(serde_json::to_vec(&match item {
@@ -52,9 +72,9 @@ pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Res
 
   // Collect the results into a JavaScript Array
   // TODO NAPI3 allows removing this
-  let mut js_nodes = env.create_array_with_length(nodes.len())?;
+  let mut js_nodes = env.create_array_with_length(serialized_nodes.len())?;
 
-  for (i, node_bytes) in nodes.into_iter().enumerate() {
+  for (i, node_bytes) in serialized_nodes.into_iter().enumerate() {
     let js_buffer = env.create_buffer_with_data(node_bytes?)?;
     let js_buffer = js_buffer.into_unknown();
 
