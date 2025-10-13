@@ -194,7 +194,8 @@ impl RequestTracker {
       }
     }
 
-    self.get_request(None, request_id)
+    self.link_request_to_parent(request_id, None)?;
+    self.get_request(request_id)
   }
 
   /// Before a request is run, a 'pending' [`RequestNode::Incomplete`] entry is added to the graph.
@@ -215,7 +216,11 @@ impl RequestTracker {
     }
 
     self.invalid_nodes.remove(&node_index);
-    *request_node = RequestNode::Incomplete(None);
+    *request_node = if let RequestNode::Invalid(previous_result) = request_node {
+      RequestNode::Incomplete(previous_result.clone())
+    } else {
+      RequestNode::Incomplete(None)
+    };
 
     self.clear_invalidations(node_index);
 
@@ -295,26 +300,24 @@ impl RequestTracker {
     }
   }
 
-  /// Get a request result and call [`RequestTracker::link_request_to_parent`] to create a
-  /// dependency link between the source request and this sub-request.
-  fn get_request(
-    &mut self,
-    parent_request_hash: Option<u64>,
-    request_id: u64,
-  ) -> anyhow::Result<Arc<RequestResult>> {
-    self.link_request_to_parent(request_id, parent_request_hash)?;
+  fn get_request_node(&self, request_id: u64) -> Option<&RequestNode> {
+    let node_index = self.request_index.get(&request_id)?;
+    self.graph.node_weight(*node_index)
+  }
 
-    let Some(node_index) = self.request_index.get(&request_id) else {
-      return Err(diagnostic_error!("Impossible error"));
-    };
-    let Some(request_node) = self.graph.node_weight(*node_index) else {
-      return Err(diagnostic_error!("Impossible"));
-    };
+  fn get_request(&self, request_id: u64) -> anyhow::Result<Arc<RequestResult>> {
+    match self.get_request_node(request_id) {
+      Some(RequestNode::Error(error)) => Err(AtlaspackError::from(error).into()),
+      Some(RequestNode::Valid(value)) => Ok(value.clone()),
+      _ => Err(diagnostic_error!("No request with result {}", request_id)),
+    }
+  }
 
-    match request_node {
-      RequestNode::Error(error) => Err(AtlaspackError::from(error).into()),
-      RequestNode::Valid(value) => Ok(value.clone()),
-      _ => Err(diagnostic_error!("Impossible")),
+  pub fn get_cached_request_result(&self, request: impl Request) -> Option<Arc<RequestResult>> {
+    match self.get_request_node(request.id())? {
+      RequestNode::Valid(value) => Some(value.clone()),
+      RequestNode::Invalid(value) => value.as_ref().map(|v| v.clone()),
+      _ => None,
     }
   }
 

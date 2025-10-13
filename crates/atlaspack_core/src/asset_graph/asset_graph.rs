@@ -39,6 +39,8 @@ pub struct AssetGraph {
   node_id_to_node_index: HashMap<NodeId, NodeIndex>,
   content_key_to_node_id: HashMap<String, NodeId>,
   root_node_id: NodeId,
+  node_delta: Vec<NodeId>,
+  pub starting_node_count: usize,
 }
 
 impl Default for AssetGraph {
@@ -65,6 +67,8 @@ impl AssetGraph {
       content_key_to_node_id: HashMap::new(),
       nodes,
       root_node_id,
+      node_delta: Vec::new(),
+      starting_node_count: 0,
     }
   }
 
@@ -86,6 +90,8 @@ impl AssetGraph {
       dependency_states: HashMap::new(),
       content_key_to_node_id: prev_asset_graph.content_key_to_node_id.clone(),
       nodes,
+      node_delta: Vec::new(),
+      starting_node_count: prev_asset_graph.nodes.len(),
     }
   }
 
@@ -106,6 +112,17 @@ impl AssetGraph {
     self.nodes.iter()
   }
 
+  pub fn new_nodes(&self) -> impl Iterator<Item = &AssetGraphNode> {
+    self.nodes.iter().skip(self.starting_node_count)
+  }
+
+  pub fn updated_nodes(&self) -> impl Iterator<Item = &AssetGraphNode> {
+    self
+      .node_delta
+      .iter()
+      .filter_map(move |idx| self.get_node(idx))
+  }
+
   pub fn root_node(&self) -> NodeId {
     self.root_node_id
   }
@@ -118,19 +135,31 @@ impl AssetGraph {
     self.nodes.get_mut(*idx)
   }
 
-  fn add_node(&mut self, content_key: String, node: AssetGraphNode) -> NodeId {
-    let node_id = self.nodes.len();
-    self.nodes.push(node);
+  fn add_node(&mut self, content_key: String, node: AssetGraphNode, cached: bool) -> NodeId {
+    let node_id = if let Some(existing_node_id) = self.content_key_to_node_id.get(&content_key) {
+      if !cached {
+        self.nodes[*existing_node_id] = node;
+        self.node_delta.push(*existing_node_id);
+      }
+
+      *existing_node_id
+    } else {
+      let node_id = self.nodes.len();
+      self.nodes.push(node);
+
+      self.content_key_to_node_id.insert(content_key, node_id);
+
+      node_id
+    };
 
     let node_index = self.graph.add_node(node_id);
     self.node_id_to_node_index.insert(node_id, node_index);
-    self.content_key_to_node_id.insert(content_key, node_id);
 
     node_id
   }
 
-  pub fn add_asset(&mut self, asset: Arc<Asset>) -> NodeId {
-    let node_id = self.add_node(asset.id.clone(), AssetGraphNode::Asset(asset));
+  pub fn add_asset(&mut self, asset: Arc<Asset>, cached: bool) -> NodeId {
+    let node_id = self.add_node(asset.id.clone(), AssetGraphNode::Asset(asset), cached);
     self.requested_symbols.insert(node_id, HashSet::new());
     node_id
   }
@@ -156,10 +185,11 @@ impl AssetGraph {
     })
   }
 
-  pub fn add_dependency(&mut self, dependency: Dependency) -> NodeId {
+  pub fn add_dependency(&mut self, dependency: Dependency, cached: bool) -> NodeId {
     let node_id = self.add_node(
       dependency.id(),
       AssetGraphNode::Dependency(Arc::new(dependency)),
+      cached,
     );
 
     self.requested_symbols.insert(node_id, HashSet::new());
@@ -224,9 +254,9 @@ impl AssetGraph {
       .insert(symbol)
   }
 
-  pub fn add_entry_dependency(&mut self, dependency: Dependency) -> NodeId {
+  pub fn add_entry_dependency(&mut self, dependency: Dependency, cached: bool) -> NodeId {
     let is_library = dependency.env.is_library;
-    let dependency_idx = self.add_dependency(dependency);
+    let dependency_idx = self.add_dependency(dependency, cached);
 
     if is_library {
       self
@@ -326,7 +356,7 @@ mod tests {
       symbols: Some(symbols.iter().map(symbol).collect()),
       ..Asset::default()
     });
-    let asset_nid = graph.add_asset(index_asset);
+    let asset_nid = graph.add_asset(index_asset, false);
     graph.add_edge(&parent_node, &asset_nid);
     asset_nid
   }
@@ -343,7 +373,7 @@ mod tests {
       .specifier_type(SpecifierType::default())
       .priority(Priority::default())
       .build();
-    let node_index = graph.add_dependency(dep);
+    let node_index = graph.add_dependency(dep, false);
     graph.add_edge(&parent_node, &node_index);
     node_index
   }
@@ -354,7 +384,7 @@ mod tests {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(dep);
+    let entry_dep_node = graph.add_entry_dependency(dep, false);
 
     let index_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "index.js");
     let dep_a_node = add_dependency(&mut graph, index_asset_node, vec![("a", "a", false)]);
@@ -377,7 +407,7 @@ mod tests {
     let mut graph = AssetGraph::new();
     let target = Target::default();
     let dep = Dependency::entry(String::from("index.js"), target);
-    let entry_dep_node = graph.add_entry_dependency(dep);
+    let entry_dep_node = graph.add_entry_dependency(dep, false);
 
     // entry.js imports "a" from library.js
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
