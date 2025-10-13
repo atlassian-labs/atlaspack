@@ -183,13 +183,15 @@ async fn run_pipelines(
   )) = asset_queue.pop_front()
   {
     let original_asset_type = asset_to_modify.file_type.clone();
-    let (mut pipeline, pipeline_id) = if let Some(pipeline_info) = pipeline {
+    let (pipeline, pipeline_id) = if let Some(pipeline_info) = pipeline {
       pipeline_info
     } else {
       let mut file_path = asset_to_modify.file_path.clone();
       file_path.set_extension(asset_to_modify.file_type.extension());
 
-      let pipeline = plugins.transformers(&file_path, asset_to_modify.pipeline.clone()).await?;
+      let pipeline = plugins
+        .transformers(&file_path, asset_to_modify.pipeline.clone())
+        .await?;
       let pipeline_id = pipeline.id();
 
       (pipeline, pipeline_id)
@@ -199,7 +201,7 @@ async fn run_pipelines(
     let mut current_dependencies = dependencies;
     let mut pipeline_complete = true;
 
-    for transformer in pipeline.transformers_mut() {
+    for transformer in pipeline.transformers() {
       let transform_result = transformer
         .transform(transform_context.clone(), current_asset)
         .await?;
@@ -220,12 +222,14 @@ async fn run_pipelines(
         // When the Asset changes file_type we need to regenerate its id
         current_asset.update_id(project_root);
 
-        let next_pipeline = plugins.transformers(
-          &current_asset
-            .file_path
-            .with_extension(current_asset.file_type.extension()),
-          current_asset.pipeline.clone(),
-        ).await?;
+        let next_pipeline = plugins
+          .transformers(
+            &current_asset
+              .file_path
+              .with_extension(current_asset.file_type.extension()),
+            current_asset.pipeline.clone(),
+          )
+          .await?;
 
         let next_pipeline_id = next_pipeline.id();
 
