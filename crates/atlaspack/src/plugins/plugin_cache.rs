@@ -1,5 +1,5 @@
-use std::{collections::HashMap, sync::Arc};
 use std::future::Future;
+use std::{collections::HashMap, sync::Arc};
 
 use atlaspack_core::plugin::{ResolverPlugin, TransformerPlugin};
 use once_cell::sync::OnceCell;
