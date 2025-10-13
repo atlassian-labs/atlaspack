@@ -77,8 +77,8 @@ impl TransformerPipeline {
     self.pipeline_id
   }
 
-  pub fn transformers_mut(&mut self) -> &mut [Arc<dyn TransformerPlugin>] {
-    &mut self.transformers
+  pub fn transformers(&self) -> &[Arc<dyn TransformerPlugin>] {
+    &self.transformers
   }
 }
 
