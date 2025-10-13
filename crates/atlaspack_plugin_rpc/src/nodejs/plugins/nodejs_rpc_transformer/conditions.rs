@@ -16,11 +16,11 @@ impl Conditions {
     Ok(Self { code_match })
   }
 
-  pub fn should_run(&self, asset: &Asset) -> anyhow::Result<bool> {
+  pub fn should_skip(&self, asset: &Asset) -> anyhow::Result<bool> {
     if let Some(code_match) = &self.code_match {
-      return Ok(code_match.is_match(asset.code.as_str()?));
+      return Ok(!code_match.is_match(asset.code.as_str()?));
     }
 
-    Ok(true)
+    Ok(false)
   }
 }
