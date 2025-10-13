@@ -3,6 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_core::plugin::BundlerPlugin;
 use atlaspack_core::plugin::CompressorPlugin;
 use atlaspack_core::plugin::NamerPlugin;
@@ -22,6 +23,7 @@ pub mod config_plugins;
 pub mod plugin_cache;
 
 #[cfg_attr(test, automock)]
+#[async_trait]
 pub trait Plugins {
   #[allow(unused)]
   fn bundler(&self) -> Result<Box<dyn BundlerPlugin>, anyhow::Error>;
@@ -42,7 +44,7 @@ pub trait Plugins {
   fn resolvers(&self) -> Result<Vec<Arc<dyn ResolverPlugin>>, anyhow::Error>;
   #[allow(unused)]
   fn runtimes(&self) -> Result<Vec<Box<dyn RuntimePlugin>>, anyhow::Error>;
-  fn transformers(
+  async fn transformers(
     &self,
     path: &Path,
     pipeline: Option<String>,

@@ -618,6 +618,7 @@ dependencies = [
  "napi",
  "once_cell",
  "parking_lot",
+ "regex",
  "serde",
  "tokio",
  "tracing",

@@ -7,6 +7,7 @@ import {NodePackageManager} from '@atlaspack/package-manager';
 import type {
   Resolver,
   Transformer,
+  TransformerV3,
   FilePath,
   FileSystem,
 } from '@atlaspack/types';
@@ -31,7 +32,7 @@ const CONFIG = Symbol.for('parcel-plugin-config');
 
 export class AtlaspackWorker {
   #resolvers: Map<string, ResolverState<any>>;
-  #transformers: Map<string, TransformerState<any>>;
+  #transformers: Map<string, TransformerState>;
   #fs: FileSystem;
   #packageManager: NodePackageManager;
 
@@ -80,9 +81,23 @@ export class AtlaspackWorker {
         case 'resolver':
           this.#resolvers.set(specifier, {resolver: instance});
           break;
-        case 'transformer':
-          this.#transformers.set(specifier, {transformer: instance});
+        case 'transformer': {
+          let transformer = instance;
+
+          if ('setup' in transformer) {
+            let state = await transformer.setup();
+
+            this.#transformers.set(specifier, {
+              instance: {type: 'v3', transformer, state},
+            });
+          } else {
+            this.#transformers.set(specifier, {
+              instance: {type: 'legacy', transformer},
+            });
+          }
+
           break;
+        }
       }
     },
   );
@@ -198,105 +213,20 @@ export class AtlaspackWorker {
         state.packageManager = packageManager;
       }
 
-      const transformer: Transformer<any> = state.transformer;
-      const resolveFunc = (from: string, to: string): Promise<any> => {
-        let customRequire = module.createRequire(from);
-        let resolvedPath = customRequire.resolve(to);
-
-        return Promise.resolve(resolvedPath);
-      };
-
-      const env = new Environment(napiEnv);
-      const mutableAsset = new MutableAsset(
-        innerAsset,
-        // @ts-expect-error TS2345
-        contents,
-        env,
-        this.#fs,
-        map,
-        options.projectRoot,
-      );
-
-      const defaultOptions = {
-        logger: new PluginLogger(),
-        tracer: new PluginTracer(),
-        options: new PluginOptions({
-          ...options,
+      let mutableAsset;
+      if (state.transformer.type === 'legacy') {
+        mutableAsset = await this.runLegacyTransformer(
+          state.transformer.value,
+          napiEnv,
+          innerAsset,
+          contents,
+          map,
+          options,
           packageManager,
-          shouldAutoInstall: false,
-          inputFS: this.#fs,
-          outputFS: this.#fs,
-        }),
-      } as const;
-
-      // @ts-expect-error TS2345
-      const config = await transformer.loadConfig?.({
-        config: new PluginConfig({
-          env,
-          isSource: true,
-          searchPath: innerAsset.filePath,
-          projectRoot: options.projectRoot,
-          fs: this.#fs,
-          packageManager,
-        }),
-        ...defaultOptions,
-      });
-
-      if (transformer.parse) {
-        const ast = await transformer.parse({
-          // @ts-expect-error TS2322
-          asset: mutableAsset,
-          config,
-          resolve: resolveFunc,
-          ...defaultOptions,
-        });
-        if (ast) {
-          mutableAsset.setAST(ast);
-        }
+        );
+      } else {
+        throw new Error('Implemented');
       }
-
-      const result = await state.transformer.transform({
-        // @ts-expect-error TS2322
-        asset: mutableAsset,
-        config,
-        resolve: resolveFunc,
-        ...defaultOptions,
-      });
-
-      if (transformer.generate) {
-        const ast = await mutableAsset.getAST();
-        if (ast) {
-          const output = await transformer.generate({
-            // @ts-expect-error TS2322
-            asset: mutableAsset,
-            ast,
-            ...defaultOptions,
-          });
-
-          if (typeof output.content === 'string') {
-            mutableAsset.setCode(output.content);
-          } else if (output.content instanceof Buffer) {
-            mutableAsset.setBuffer(output.content);
-          } else {
-            // @ts-expect-error TS2345
-            mutableAsset.setStream(output.content);
-          }
-
-          if (output.map) {
-            mutableAsset.setMap(output.map);
-          }
-        }
-      }
-
-      assert(
-        result.length === 1,
-        '[V3] Unimplemented: Multiple asset return from Node transformer',
-      );
-
-      assert(
-        result[0] === mutableAsset,
-        '[V3] Unimplemented: New asset returned from Node transformer',
-      );
 
       let assetBuffer: Buffer | null = await mutableAsset.getBuffer();
 
@@ -334,6 +264,164 @@ export class AtlaspackWorker {
       ];
     },
   );
+
+  async runLegacyTransformer(
+    transformer: Transformer<any>,
+    napiEnv: any,
+    innerAsset: any,
+    contents: unknown,
+    map: unknown,
+    options: any,
+    packageManager: NodePackageManager,
+  ): Promise<MutableAsset> {
+    const resolveFunc = (from: string, to: string): Promise<any> => {
+      let customRequire = module.createRequire(from);
+      let resolvedPath = customRequire.resolve(to);
+
+      return Promise.resolve(resolvedPath);
+    };
+
+    const env = new Environment(napiEnv);
+    const mutableAsset = new MutableAsset(
+      innerAsset,
+      // @ts-expect-error TS2345
+      contents,
+      env,
+      this.#fs,
+      map,
+      options.projectRoot,
+    );
+
+    const defaultOptions = {
+      logger: new PluginLogger(),
+      tracer: new PluginTracer(),
+      options: new PluginOptions({
+        ...options,
+        packageManager,
+        shouldAutoInstall: false,
+        inputFS: this.#fs,
+        outputFS: this.#fs,
+      }),
+    } as const;
+
+    // @ts-expect-error TS2345
+    const config = await transformer.loadConfig?.({
+      config: new PluginConfig({
+        env,
+        isSource: true,
+        searchPath: innerAsset.filePath,
+        projectRoot: options.projectRoot,
+        fs: this.#fs,
+        packageManager,
+      }),
+      ...defaultOptions,
+    });
+
+    if (transformer.parse) {
+      const ast = await transformer.parse({
+        // @ts-expect-error TS2322
+        asset: mutableAsset,
+        config,
+        resolve: resolveFunc,
+        ...defaultOptions,
+      });
+      if (ast) {
+        mutableAsset.setAST(ast);
+      }
+    }
+
+    const result = await transformer.transform({
+      // @ts-expect-error TS2322
+      asset: mutableAsset,
+      config,
+      resolve: resolveFunc,
+      ...defaultOptions,
+    });
+
+    if (transformer.generate) {
+      const ast = await mutableAsset.getAST();
+      if (ast) {
+        const output = await transformer.generate({
+          // @ts-expect-error TS2322
+          asset: mutableAsset,
+          ast,
+          ...defaultOptions,
+        });
+
+        if (typeof output.content === 'string') {
+          mutableAsset.setCode(output.content);
+        } else if (output.content instanceof Buffer) {
+          mutableAsset.setBuffer(output.content);
+        } else {
+          // @ts-expect-error TS2345
+          mutableAsset.setStream(output.content);
+        }
+
+        if (output.map) {
+          mutableAsset.setMap(output.map);
+        }
+      }
+    }
+    assert(
+      result.length === 1,
+      '[V3] Unimplemented: Multiple asset return from Node transformer',
+    );
+
+    assert(
+      result[0] === mutableAsset,
+      '[V3] Unimplemented: New asset returned from Node transformer',
+    );
+
+    return mutableAsset;
+  }
+
+  async runTransformer<State>(
+    transformer: TransformerV3<State>,
+    state: State,
+    napiEnv: any,
+    innerAsset: any,
+    contents: unknown,
+    map: unknown,
+    options: any,
+    packageManager: NodePackageManager,
+  ): Promise<MutableAsset> {
+    const env = new Environment(napiEnv);
+    const mutableAsset = new MutableAsset(
+      innerAsset,
+      // @ts-expect-error TS2345
+      contents,
+      env,
+      this.#fs,
+      map,
+      options.projectRoot,
+    );
+
+    const result = await transformer.transform({
+      // @ts-expect-error TS2322
+      asset: mutableAsset,
+      logger: new PluginLogger(),
+      options: new PluginOptions({
+        ...options,
+        packageManager,
+        shouldAutoInstall: false,
+        inputFS: this.#fs,
+        outputFS: this.#fs,
+      }),
+      state,
+    });
+
+    assert(
+      result.length === 1,
+      '[V3] Unimplemented: Multiple asset return from Node transformer',
+    );
+
+    assert(
+      result[0] === mutableAsset,
+      '[V3] Unimplemented: New asset returned from Node transformer',
+    );
+
+    return mutableAsset;
+  }
 }
 
 // Create napi worker and send it back to main thread
@@ -347,9 +435,13 @@ type ResolverState<T> = {
   packageManager?: NodePackageManager;
 };
 
-type TransformerState<T> = {
+type TransformerInstance =
+  | {type: 'legacy'; transformer: Transformer<any>}
+  | {type: 'v3'; transformer: TransformerV3<any>; state: any};
+
+type TransformerState = {
   packageManager?: NodePackageManager;
-  transformer: Transformer<T>;
+  instance: TransformerInstance;
 };
 
 type LoadPluginOptions = {

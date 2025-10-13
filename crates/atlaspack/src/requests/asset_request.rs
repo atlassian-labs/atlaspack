@@ -189,7 +189,7 @@ async fn run_pipelines(
       let mut file_path = asset_to_modify.file_path.clone();
       file_path.set_extension(asset_to_modify.file_type.extension());
 
-      let pipeline = plugins.transformers(&file_path, asset_to_modify.pipeline.clone())?;
+      let pipeline = plugins.transformers(&file_path, asset_to_modify.pipeline.clone()).await?;
       let pipeline_id = pipeline.id();
 
       (pipeline, pipeline_id)
@@ -225,7 +225,7 @@ async fn run_pipelines(
             .file_path
             .with_extension(current_asset.file_type.extension()),
           current_asset.pipeline.clone(),
-        )?;
+        ).await?;
 
         let next_pipeline_id = next_pipeline.id();
 

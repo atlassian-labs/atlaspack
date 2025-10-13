@@ -4,6 +4,7 @@ pub mod testing;
 
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::*;
 use mockall::automock;
@@ -30,6 +31,7 @@ pub trait RpcFactory: Send + Sync {
 /// their equivalent within the external context
 #[allow(clippy::disallowed_methods, clippy::disallowed_types)]
 #[automock]
+#[async_trait]
 pub trait RpcWorker: Send + Sync {
   fn create_bundler(
     &self,
@@ -71,7 +73,7 @@ pub trait RpcWorker: Send + Sync {
     ctx: &PluginContext,
     plugin: &PluginNode,
   ) -> anyhow::Result<Box<dyn RuntimePlugin>>;
-  fn create_transformer(
+  async fn create_transformer(
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,

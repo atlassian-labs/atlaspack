@@ -20,6 +20,7 @@ impl RpcFactory for TestingRpcFactory {
 #[derive(Default)]
 pub struct TestingRpcWorker {}
 
+#[async_trait]
 impl RpcWorker for TestingRpcWorker {
   fn create_bundler(
     &self,
@@ -85,7 +86,7 @@ impl RpcWorker for TestingRpcWorker {
     Ok(Box::new(TestingRpcPlugin("RpcRuntimePlugin".into())))
   }
 
-  fn create_transformer(
+  async fn create_transformer(
     &self,
     _ctx: &PluginContext,
     _plugin: &PluginNode,

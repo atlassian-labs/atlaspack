@@ -1,4 +1,5 @@
 use std::{collections::HashMap, sync::Arc};
+use std::future::Future;
 
 use atlaspack_core::plugin::{ResolverPlugin, TransformerPlugin};
 use once_cell::sync::OnceCell;
@@ -19,20 +20,21 @@ impl PluginCache {
     self.resolvers_store.get_or_try_init(f).cloned()
   }
 
-  pub fn get_or_init_transformer<S, F>(
+  pub async fn get_or_init_transformer<S, F, Fut>(
     &self,
     name: S,
     f: F,
   ) -> anyhow::Result<Arc<dyn TransformerPlugin>>
   where
     S: AsRef<str>,
-    F: FnOnce() -> anyhow::Result<Arc<dyn TransformerPlugin>>,
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = anyhow::Result<Arc<dyn TransformerPlugin>>>,
   {
     if let Some(transformer) = self.transformers_store.read().get(name.as_ref()) {
       return Ok(transformer.clone());
     }
 
-    let transformer = f()?;
+    let transformer = f().await?;
     self
       .transformers_store
       .write()

@@ -1276,6 +1276,34 @@ export type Transformer<ConfigType> = {
   }) => Async<GenerateOutput>;
 };
 
+interface TransformerConditions {
+  codeMatches?: Array<RegExp>;
+}
+
+interface TransformerSetup<State> {
+  conditions?: TransformerConditions;
+  state: State;
+}
+
+/**
+ * New transformer API
+ * @section transformer
+ */
+export type TransformerV3<State> = {
+  setup(arg1: {
+    options: PluginOptions;
+    logger: PluginLogger;
+  }): TransformerSetup<State> | Promise<TransformerSetup<State>>;
+  /** Transform the asset and/or add new assets */
+  transform(arg1: {
+    asset: MutableAsset;
+    state: State;
+    options: PluginOptions;
+    logger: PluginLogger;
+    tracer: PluginTracer;
+  }): Async<Array<TransformerResult | MutableAsset>>;
+};
+
 /**
  * Used to control a traversal
  * @section bundler

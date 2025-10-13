@@ -11,7 +11,6 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::OnceCell;
 
 use anyhow::Error;
 use atlaspack_core::hash::IdentifierHasher;
@@ -27,21 +26,21 @@ use atlaspack_core::types::Asset;
 use atlaspack_core::types::engines::Engines;
 use atlaspack_core::types::*;
 
+use crate::nodejs::conditions::Conditions;
+
 use super::super::rpc::LoadPluginKind;
 use super::super::rpc::LoadPluginOptions;
 use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 use super::plugin_options::RpcPluginOptions;
 
-/// Plugin state once initialized
-struct InitializedState {
-  rpc_plugin_options: RpcPluginOptions,
-}
+pub mod conditions;
 
 pub struct NodejsRpcTransformerPlugin {
   nodejs_workers: Arc<NodeJsWorkerCollection>,
   plugin_options: Arc<PluginOptions>,
   plugin_node: PluginNode,
-  started: OnceCell<InitializedState>,
+  rpc_plugin_options: RpcPluginOptions,
+  conditions: Conditions,
 }
 
 impl Debug for NodejsRpcTransformerPlugin {
@@ -50,44 +49,77 @@ impl Debug for NodejsRpcTransformerPlugin {
   }
 }
 
+#[derive(Debug, Hash, Deserialize, Serialize, PartialEq)]
+struct TransformerConditions {
+  code_match: Option<Vec<String>>,
+}
+
+#[derive(Debug, Hash, Deserialize, Serialize, PartialEq)]
+struct TransformerSetup {
+  conditions: Option<TransformerConditions>,
+  state: JSONObject,
+}
+
 impl NodejsRpcTransformerPlugin {
-  pub fn new(
+  #[tracing::instrument(level = "info", skip_all, fields(plugin = %plugin_node.package_name))]
+  pub async fn new(
     nodejs_workers: Arc<NodeJsWorkerCollection>,
     ctx: &PluginContext,
     plugin_node: &PluginNode,
   ) -> Result<Self, anyhow::Error> {
+    let mut set = vec![];
+    let opts = LoadPluginOptions {
+      kind: LoadPluginKind::Transformer,
+      specifier: plugin_node.package_name.clone(),
+      resolve_from: plugin_node.resolve_from.as_ref().clone(),
+      feature_flags: Some(ctx.options.feature_flags.clone()),
+    };
+
+    for worker in nodejs_workers.all_workers() {
+      let opts = opts.clone();
+      set.push(tokio::spawn(async move {
+        worker
+          .load_plugin_fn
+          .call_serde::<LoadPluginOptions, TransformerSetup>(opts)
+          .await
+      }));
+    }
+
+    let mut transformer_setup = None;
+
+    while let Some(res) = set.pop() {
+      let result = res.await??;
+
+      if let Some(existing) = &transformer_setup {
+        if existing != &result {
+          return Err(anyhow::anyhow!(
+            "Plugin {} returned inconsistent state from multiple workers",
+            plugin_node.package_name
+          ));
+        }
+      } else {
+        transformer_setup = Some(result);
+      }
+    }
+
+    let transformer_setup = transformer_setup.ok_or(anyhow::anyhow!(
+      "Plugin {} did not return setup information",
+      plugin_node.package_name
+    ))?;
+
+    let conditions = Conditions::new(transformer_setup.conditions.and_then(|c| c.code_match))?;
+
     Ok(Self {
       nodejs_workers,
       plugin_options: ctx.options.clone(),
       plugin_node: plugin_node.clone(),
-      started: OnceCell::new(),
+      rpc_plugin_options: RpcPluginOptions {
+        hmr_options: ctx.options.hmr_options.clone(),
+        project_root: ctx.options.project_root.clone(),
+        mode: ctx.options.mode.clone(),
+      },
+      conditions,
     })
-  }
-
-  async fn get_or_init_state(&self) -> anyhow::Result<&InitializedState> {
-    self
-      .started
-      .get_or_try_init::<anyhow::Error, _, _>(|| async move {
-        self
-          .nodejs_workers
-          .load_plugin(LoadPluginOptions {
-            kind: LoadPluginKind::Transformer,
-            specifier: self.plugin_node.package_name.clone(),
-            #[allow(clippy::needless_borrow)]
-            resolve_from: (&*self.plugin_node.resolve_from).clone(),
-            feature_flags: Some(self.plugin_options.feature_flags.clone()),
-          })
-          .await?;
-
-        Ok(InitializedState {
-          rpc_plugin_options: RpcPluginOptions {
-            hmr_options: None,
-            project_root: self.plugin_options.project_root.clone(),
-            mode: self.plugin_options.mode.clone(),
-          },
-        })
-      })
-      .await
   }
 }
 
@@ -105,8 +137,6 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, Error> {
-    let state = self.get_or_init_state().await?;
-
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();
 
@@ -119,7 +149,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
 
     let run_transformer_opts = RpcTransformerOpts {
       key: self.plugin_node.package_name.clone(),
-      options: state.rpc_plugin_options.clone(),
+      options: self.rpc_plugin_options.clone(),
       env: asset_env.clone(),
       asset: Asset {
         code: Default::default(),
