@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
-use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::Path;
 
 use atlaspack_core::types::Condition;
+use atlaspack_core::types::DependencyKind;
 use path_slash::PathBufExt;
 use serde::Deserialize;
 use serde::Serialize;
@@ -31,87 +31,6 @@ macro_rules! hash {
     $str.hash(&mut hasher);
     hasher.finish()
   }};
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub enum DependencyKind {
-  /// Corresponds to ESM import statements
-  /// ```skip
-  /// import {x} from './dependency';
-  /// ```
-  Import,
-  /// Corresponds to ESM re-export statements
-  /// ```skip
-  /// export {x} from './dependency';
-  /// ```
-  Export,
-  /// Corresponds to dynamic import statements
-  /// ```skip
-  /// import('./dependency').then(({x}) => {/* ... */});
-  /// ```
-  DynamicImport,
-  /// Corresponds to CJS require statements
-  /// ```skip
-  /// const {x} = require('./dependency');
-  /// ```
-  Require,
-  /// Corresponds to conditional import statements
-  /// ```skip
-  /// const {x} = importCond('condition', './true-dep', './false-dep');
-  /// ```
-  ConditionalImport,
-  /// Corresponds to Worker URL statements
-  /// ```skip
-  /// const worker = new Worker(
-  ///     new URL('./dependency', import.meta.url),
-  ///     {type: 'module'}
-  /// );
-  /// ```
-  WebWorker,
-  /// Corresponds to ServiceWorker URL statements
-  /// ```skip
-  /// navigator.serviceWorker.register(
-  ///     new URL('./dependency', import.meta.url),
-  ///     {type: 'module'}
-  /// );
-  /// ```
-  ServiceWorker,
-  /// CSS / WebAudio worklets
-  /// ```skip
-  /// CSS.paintWorklet.addModule(
-  ///   new URL('./dependency', import.meta.url)
-  /// );
-  /// ```
-  Worklet,
-  /// URL statements
-  /// ```skip
-  /// let img = document.createElement('img');
-  /// img.src = new URL('hero.jpg', import.meta.url);
-  /// document.body.appendChild(img);
-  /// ```
-  Url,
-  /// `fs.readFileSync` statements
-  ///
-  /// > Calls to fs.readFileSync are replaced with the file's contents if the filepath is statically
-  /// > determinable and inside the project root.
-  ///
-  /// ```skip
-  /// import fs from "fs";
-  /// import path from "path";
-  ///
-  /// const data = fs.readFileSync(path.join(__dirname, "data.json"), "utf8");
-  /// ```
-  ///
-  /// * https://parceljs.org/features/node-emulation/#inlining-fs.readfilesync
-  File,
-  /// `parcelRequire` call.
-  Id,
-}
-
-impl fmt::Display for DependencyKind {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{:?}", self)
-  }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -1638,6 +1557,7 @@ fn match_worker_type(expr: Option<&ExprOrSpread>) -> (SourceType, Option<ExprOrS
 mod tests {
   use super::*;
   use crate::DependencyDescriptor;
+  use atlaspack_core::types::DependencyKind;
   use atlaspack_swc_runner::test_utils::{RunContext, RunVisitResult, run_test_visit};
   use indoc::{formatdoc, indoc};
 

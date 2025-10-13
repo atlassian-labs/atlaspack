@@ -193,8 +193,7 @@ export function getAssetGraph(serializedGraph: any): {
         value: asset,
       });
     } else if (node.type === 'dependency') {
-      let id = node.value.id;
-      let dependency = node.value.dependency;
+      let {dependency, id} = node.value;
 
       dependency.id = id;
       dependency.env.id = getFeatureFlag('environmentDeduplication')
