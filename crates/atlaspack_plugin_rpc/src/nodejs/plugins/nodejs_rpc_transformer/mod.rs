@@ -137,6 +137,13 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, Error> {
+    if self.conditions.should_skip(&asset)? {
+      return Ok(TransformResult {
+        asset,
+        ..Default::default()
+      });
+    }
+
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();
 
