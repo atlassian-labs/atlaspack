@@ -272,11 +272,14 @@ mod tests {
     let assets_names = ["foo", "bar", "baz"];
     let mut asset_graph = AssetGraph::new();
     assets_names.iter().enumerate().for_each(|(idx, asset)| {
-      asset_graph.add_asset(Arc::new(Asset {
-        id: idx.to_string(),
-        code: Code::from(asset.to_string()),
-        ..Asset::default()
-      }));
+      asset_graph.add_asset(
+        Arc::new(Asset {
+          id: idx.to_string(),
+          code: Code::from(asset.to_string()),
+          ..Asset::default()
+        }),
+        false,
+      );
     });
 
     atlaspack.commit_assets(&asset_graph)?;
