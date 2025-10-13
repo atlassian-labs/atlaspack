@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_config::AtlaspackConfig;
 use atlaspack_config::map::NamedPattern;
 use atlaspack_core::diagnostic_error;
@@ -84,6 +85,7 @@ impl ConfigPlugins {
   }
 }
 
+#[async_trait]
 impl Plugins for ConfigPlugins {
   #[allow(unused)]
   fn bundler(&self) -> Result<Box<dyn BundlerPlugin>, anyhow::Error> {
@@ -185,7 +187,7 @@ impl Plugins for ConfigPlugins {
   }
 
   /// Resolve and load transformer plugins for a given path.
-  fn transformers(
+  async fn transformers(
     &self,
     path: &Path,
     pipeline: Option<String>,
@@ -209,36 +211,46 @@ impl Plugins for ConfigPlugins {
         _ => {}
       }
 
-      let transformer = self
-        .plugin_cache
-        .get_or_init_transformer(transformer_name, || {
-          Ok(match transformer_name {
-            "@atlaspack/transformer-js" => Arc::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?),
-            "@atlaspack/transformer-css" => {
-              Arc::new(AtlaspackCssTransformerPlugin::new(&self.ctx)?)
-            }
-            "@atlaspack/transformer-inline-string" => {
-              Arc::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx))
-            }
-            "@atlaspack/transformer-inline" => {
-              Arc::new(AtlaspackInlineTransformerPlugin::new(&self.ctx))
-            }
-            "@atlaspack/transformer-image" => {
-              Arc::new(AtlaspackImageTransformerPlugin::new(&self.ctx))
-            }
-            "@atlaspack/transformer-raw" => Arc::new(AtlaspackRawTransformerPlugin::new(&self.ctx)),
-            "@atlaspack/transformer-html" => {
-              Arc::new(AtlaspackHtmlTransformerPlugin::new(&self.ctx))
-            }
-            "@atlaspack/transformer-json" => {
-              Arc::new(AtlaspackJsonTransformerPlugin::new(&self.ctx))
-            }
-            "@atlaspack/transformer-yaml" => {
-              Arc::new(AtlaspackYamlTransformerPlugin::new(&self.ctx))
-            }
-            _ => self.rpc_worker.create_transformer(&self.ctx, transformer)?,
-          })
-        })?;
+      let transformer =
+        self
+          .plugin_cache
+          .get_or_init_transformer(transformer_name, async || {
+            Ok(match transformer_name {
+              "@atlaspack/transformer-js" => {
+                Arc::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?) as Arc<dyn TransformerPlugin>
+              }
+              "@atlaspack/transformer-css" => {
+                Arc::new(AtlaspackCssTransformerPlugin::new(&self.ctx)?) as Arc<dyn TransformerPlugin>
+              }
+              "@atlaspack/transformer-inline-string" => {
+                Arc::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+              }
+              "@atlaspack/transformer-inline" => {
+                Arc::new(AtlaspackInlineTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+              }
+              "@atlaspack/transformer-image" => {
+                Arc::new(AtlaspackImageTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+              }
+              "@atlaspack/transformer-raw" => {
+                Arc::new(AtlaspackRawTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+              }
+              "@atlaspack/transformer-html" => {
+                Arc::new(AtlaspackHtmlTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+              }
+              "@atlaspack/transformer-json" => {
+                Arc::new(AtlaspackJsonTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+              }
+              "@atlaspack/transformer-yaml" => {
+                Arc::new(AtlaspackYamlTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+              }
+              _ => {
+                self
+                  .rpc_worker
+                  .create_transformer(&self.ctx, transformer)
+                  .await?
+              }
+            })
+          }).await?;
 
       transformers.push(transformer);
     }
@@ -338,10 +350,11 @@ mod tests {
     assert_eq!(format!("{:?}", runtimes), "[RpcRuntimePlugin]")
   }
 
-  #[test]
-  fn returns_transformers() {
+  #[tokio::test]
+  async fn returns_transformers() {
     let pipeline = config_plugins(make_test_plugin_context())
       .transformers(Path::new("a.ts"), None)
+      .await
       .expect("Not to panic");
 
     assert_eq!(

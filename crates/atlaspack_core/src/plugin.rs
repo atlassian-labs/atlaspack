@@ -38,7 +38,7 @@ pub struct PluginContext {
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
 pub struct HmrOptions {
-  pub port: u32,
+  pub port: u16,
   pub host: String,
 }
 
