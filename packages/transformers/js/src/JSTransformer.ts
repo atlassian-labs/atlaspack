@@ -309,6 +309,9 @@ export default new Transformer({
     let enableGlobalThisAliaser = Boolean(
       options.env.NATIVE_GLOBAL_THIS_ALIASER,
     );
+    let enableLazyLoadingTransformer = Boolean(
+      options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
+    );
 
     let enableReactHooksRemover = Boolean(options.env.NATIVE_HOOKS_REMOVER);
 
@@ -358,6 +361,7 @@ export default new Transformer({
       enableSsrGlobalReplacer,
       enableGlobalThisAliaser,
       enableReactHooksRemover,
+      enableLazyLoadingTransformer,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -539,6 +543,9 @@ export default new Transformer({
       enable_ssr_global_replacer: Boolean(config.enableSsrGlobalReplacer),
       enable_global_this_aliaser: Boolean(config.enableGlobalThisAliaser),
       enable_react_hooks_remover: Boolean(config.enableReactHooksRemover),
+      enable_lazy_loading_transformer: Boolean(
+        config.enableLazyLoadingTransformer,
+      ),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
