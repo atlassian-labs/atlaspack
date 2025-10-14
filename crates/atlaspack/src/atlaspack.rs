@@ -94,8 +94,9 @@ impl Atlaspack {
 
     let rpc_worker = rpc.start()?;
 
-    let rc_config_loader =
+    let mut rc_config_loader =
       AtlaspackRcConfigLoader::new(Arc::clone(&fs), Arc::clone(&package_manager));
+    rc_config_loader.feature_flags = resolved_options.feature_flags.clone();
 
     let (config, _files) = rc_config_loader.load(
       &project_root,
