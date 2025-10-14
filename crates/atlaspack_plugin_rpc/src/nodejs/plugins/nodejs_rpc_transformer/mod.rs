@@ -27,6 +27,7 @@ use atlaspack_core::types::engines::Engines;
 use atlaspack_core::types::*;
 
 use crate::nodejs::conditions::Conditions;
+use crate::nodejs::conditions::SerializableTransformerConditions;
 
 use super::super::rpc::LoadPluginKind;
 use super::super::rpc::LoadPluginOptions;
@@ -49,14 +50,9 @@ impl Debug for NodejsRpcTransformerPlugin {
   }
 }
 
-#[derive(Debug, Hash, Deserialize, Serialize, PartialEq)]
-struct TransformerConditions {
-  code_match: Option<Vec<String>>,
-}
-
-#[derive(Debug, Hash, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq)]
 struct TransformerSetup {
-  conditions: Option<TransformerConditions>,
+  conditions: Option<SerializableTransformerConditions>,
   state: JSONObject,
 }
 
@@ -107,7 +103,7 @@ impl NodejsRpcTransformerPlugin {
       plugin_node.package_name
     ))?;
 
-    let conditions = Conditions::new(transformer_setup.conditions.and_then(|c| c.code_match))?;
+    let conditions = Conditions::try_from(transformer_setup.conditions)?;
 
     Ok(Self {
       nodejs_workers,

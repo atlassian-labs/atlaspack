@@ -618,8 +618,10 @@ dependencies = [
  "napi",
  "once_cell",
  "parking_lot",
+ "pretty_assertions",
  "regex",
  "serde",
+ "serde_json",
  "tokio",
  "tracing",
 ]
