@@ -1277,23 +1277,23 @@ export type Transformer<ConfigType> = {
 };
 
 interface TransformerConditions {
-  codeMatches?: Array<RegExp>;
+  codeMatches?: Array<string>;
 }
 
 interface TransformerSetup<State> {
   conditions?: TransformerConditions;
-  state: State;
+  state?: State;
 }
 
 /**
  * New transformer API
  * @section transformer
  */
-export type TransformerV3<State> = {
+export type PureTransformer<State> = {
   setup(arg1: {
     options: PluginOptions;
     logger: PluginLogger;
-  }): TransformerSetup<State> | Promise<TransformerSetup<State>>;
+  }): Async<TransformerSetup<State>>;
   /** Transform the asset and/or add new assets */
   transform(arg1: {
     asset: MutableAsset;

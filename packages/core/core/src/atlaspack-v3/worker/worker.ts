@@ -7,7 +7,7 @@ import {NodePackageManager} from '@atlaspack/package-manager';
 import type {
   Resolver,
   Transformer,
-  TransformerV3,
+  PureTransformer,
   FilePath,
   FileSystem,
 } from '@atlaspack/types';
@@ -84,12 +84,14 @@ export class AtlaspackWorker {
         case 'transformer': {
           let transformer = instance;
 
-          if ('setup' in transformer) {
+          if (transformer.setup) {
             let state = await transformer.setup();
 
             this.#transformers.set(specifier, {
               instance: {type: 'v3', transformer, state},
             });
+
+            return state;
           } else {
             this.#transformers.set(specifier, {
               instance: {type: 'legacy', transformer},
@@ -214,9 +216,9 @@ export class AtlaspackWorker {
       }
 
       let mutableAsset;
-      if (state.transformer.type === 'legacy') {
+      if (state.instance.type === 'legacy') {
         mutableAsset = await this.runLegacyTransformer(
-          state.transformer.value,
+          state.instance.transformer,
           napiEnv,
           innerAsset,
           contents,
@@ -225,7 +227,15 @@ export class AtlaspackWorker {
           packageManager,
         );
       } else {
-        throw new Error('Implemented');
+        mutableAsset = await this.runPureTransformer(
+          state.instance.transformer,
+          state.instance.state,
+          napiEnv,
+          innerAsset,
+          contents,
+          map,
+          options,
+        );
       }
 
       let assetBuffer: Buffer | null = await mutableAsset.getBuffer();
@@ -375,15 +385,14 @@ export class AtlaspackWorker {
     return mutableAsset;
   }
 
-  async runTransformer<State>(
-    transformer: TransformerV3<State>,
+  async runPureTransformer<State>(
+    transformer: PureTransformer<State>,
     state: State,
     napiEnv: any,
     innerAsset: any,
     contents: unknown,
     map: unknown,
     options: any,
-    packageManager: NodePackageManager,
   ): Promise<MutableAsset> {
     const env = new Environment(napiEnv);
     const mutableAsset = new MutableAsset(
@@ -400,13 +409,6 @@ export class AtlaspackWorker {
       // @ts-expect-error TS2322
       asset: mutableAsset,
       logger: new PluginLogger(),
-      options: new PluginOptions({
-        ...options,
-        packageManager,
-        shouldAutoInstall: false,
-        inputFS: this.#fs,
-        outputFS: this.#fs,
-      }),
       state,
     });
 
@@ -437,7 +439,7 @@ type ResolverState<T> = {
 
 type TransformerInstance =
   | {type: 'legacy'; transformer: Transformer<any>}
-  | {type: 'v3'; transformer: TransformerV3<any>; state: any};
+  | {type: 'v3'; transformer: PureTransformer<any>; state: any};
 
 type TransformerState = {
   packageManager?: NodePackageManager;

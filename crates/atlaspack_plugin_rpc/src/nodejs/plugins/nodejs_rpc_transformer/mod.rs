@@ -53,7 +53,7 @@ impl Debug for NodejsRpcTransformerPlugin {
 #[derive(Debug, Deserialize, PartialEq)]
 struct TransformerSetup {
   conditions: Option<SerializableTransformerConditions>,
-  state: JSONObject,
+  state: Option<JSONObject>,
 }
 
 impl NodejsRpcTransformerPlugin {
@@ -76,7 +76,7 @@ impl NodejsRpcTransformerPlugin {
       set.push(tokio::spawn(async move {
         worker
           .load_plugin_fn
-          .call_serde::<LoadPluginOptions, TransformerSetup>(opts)
+          .call_serde::<LoadPluginOptions, Option<TransformerSetup>>(opts)
           .await
       }));
     }
@@ -103,7 +103,17 @@ impl NodejsRpcTransformerPlugin {
       plugin_node.package_name
     ))?;
 
-    let conditions = Conditions::try_from(transformer_setup.conditions)?;
+    let conditions = if let Some(setup) = transformer_setup {
+      Conditions::try_from(setup.conditions)?
+    } else {
+      Conditions::default()
+    };
+
+    tracing::info!(
+      "Loaded transformer {} with conditions: {:?}",
+      plugin_node.package_name,
+      conditions
+    );
 
     Ok(Self {
       nodejs_workers,

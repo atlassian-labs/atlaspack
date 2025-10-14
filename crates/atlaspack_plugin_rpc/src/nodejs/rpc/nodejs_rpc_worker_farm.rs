@@ -202,19 +202,4 @@ impl NodeJsWorkerCollection {
 
     Ok(())
   }
-
-  pub async fn setup_transformer_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
-    let mut set = vec![];
-
-    for worker in self.all_workers() {
-      let opts = opts.clone();
-      set.push(tokio::spawn(async move { worker.load_plugin(opts).await }));
-    }
-
-    while let Some(res) = set.pop() {
-      let result = res.await?;
-    }
-
-    Ok(())
-  }
 }

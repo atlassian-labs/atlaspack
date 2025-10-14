@@ -6,7 +6,7 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase")]
 pub struct SerializableTransformerConditions {
   code_match: Option<Vec<String>>,
-  enabled: bool,
+  enabled: Option<bool>,
   origin: Option<OriginCondition>,
 }
 
@@ -17,6 +17,7 @@ enum OriginCondition {
   ThirdParty,
 }
 
+#[derive(Debug)]
 pub struct Conditions {
   code_match: Option<RegexSet>,
   enabled: bool,
@@ -49,13 +50,14 @@ impl TryFrom<Option<SerializableTransformerConditions>> for Conditions {
 
     Ok(Conditions {
       code_match,
-      enabled: value.enabled,
+      enabled: value.enabled.unwrap_or(true),
       origin: value.origin,
     })
   }
 }
 
 impl Conditions {
+  #[tracing::instrument(level = "info", skip_all)]
   pub fn should_skip(&self, asset: &Asset) -> anyhow::Result<bool> {
     if !self.enabled {
       return Ok(true);
@@ -104,32 +106,42 @@ mod tests {
 
   #[test]
   fn test_serializable_transformer_conditions_deserialization() {
-    // Test basic deserialization
+    // Test basic deserialization with explicit enabled
     let json = r#"{"codeMatch": ["test"], "enabled": true}"#;
     let conditions: SerializableTransformerConditions = serde_json::from_str(json).unwrap();
     let expected = SerializableTransformerConditions {
       code_match: Some(vec!["test".to_string()]),
-      enabled: true,
+      enabled: Some(true),
       origin: None,
     };
     assert_eq!(conditions, expected);
 
-    // Test with origin condition
+    // Test with enabled omitted (should deserialize as None)
+    let json = r#"{"codeMatch": ["test"]}"#;
+    let conditions: SerializableTransformerConditions = serde_json::from_str(json).unwrap();
+    let expected = SerializableTransformerConditions {
+      code_match: Some(vec!["test".to_string()]),
+      enabled: None,
+      origin: None,
+    };
+    assert_eq!(conditions, expected);
+
+    // Test with origin condition and explicit false
     let json = r#"{"enabled": false, "origin": "source"}"#;
     let conditions: SerializableTransformerConditions = serde_json::from_str(json).unwrap();
     let expected = SerializableTransformerConditions {
       code_match: None,
-      enabled: false,
+      enabled: Some(false),
       origin: Some(OriginCondition::Source),
     };
     assert_eq!(conditions, expected);
 
-    // Test with third-party origin
+    // Test with third-party origin and explicit true
     let json = r#"{"enabled": true, "origin": "third-party"}"#;
     let conditions: SerializableTransformerConditions = serde_json::from_str(json).unwrap();
     let expected = SerializableTransformerConditions {
       code_match: None,
-      enabled: true,
+      enabled: Some(true),
       origin: Some(OriginCondition::ThirdParty),
     };
     assert_eq!(conditions, expected);
@@ -139,7 +151,7 @@ mod tests {
   fn test_conditions_try_from_some() {
     let serializable = SerializableTransformerConditions {
       code_match: Some(vec!["console\\.log".to_string(), "alert".to_string()]),
-      enabled: false,
+      enabled: Some(false),
       origin: Some(OriginCondition::Source),
     };
 
@@ -156,10 +168,61 @@ mod tests {
   }
 
   #[test]
+  fn test_conditions_default() {
+    let conditions = Conditions::default();
+    assert_eq!(conditions.code_match.is_none(), true);
+    assert_eq!(conditions.enabled, true);
+    assert_eq!(conditions.origin, None);
+  }
+
+  #[test]
+  fn test_conditions_try_from_none() {
+    let conditions: Conditions = None.try_into().unwrap();
+    assert_eq!(conditions.code_match.is_none(), true);
+    assert_eq!(conditions.enabled, true);
+    assert_eq!(conditions.origin, None);
+  }
+
+  #[test]
+  fn test_conditions_try_from_enabled_defaults_to_true() {
+    // Test that enabled defaults to true when None
+    let serializable = SerializableTransformerConditions {
+      code_match: None,
+      enabled: None,
+      origin: None,
+    };
+
+    let conditions: Conditions = Some(serializable).try_into().unwrap();
+    assert_eq!(conditions.code_match.is_none(), true);
+    assert_eq!(conditions.enabled, true); // Should default to true
+    assert_eq!(conditions.origin, None);
+
+    // Test with explicit false
+    let serializable = SerializableTransformerConditions {
+      code_match: None,
+      enabled: Some(false),
+      origin: None,
+    };
+
+    let conditions: Conditions = Some(serializable).try_into().unwrap();
+    assert_eq!(conditions.enabled, false);
+
+    // Test with explicit true
+    let serializable = SerializableTransformerConditions {
+      code_match: None,
+      enabled: Some(true),
+      origin: None,
+    };
+
+    let conditions: Conditions = Some(serializable).try_into().unwrap();
+    assert_eq!(conditions.enabled, true);
+  }
+
+  #[test]
   fn test_conditions_try_from_invalid_regex() {
     let serializable = SerializableTransformerConditions {
       code_match: Some(vec!["[".to_string()]), // Invalid regex
-      enabled: true,
+      enabled: Some(true),
       origin: None,
     };
 
@@ -274,5 +337,44 @@ mod tests {
 
     let asset2 = create_test_asset("any code", false);
     assert!(!conditions.should_skip(&asset2).unwrap());
+  }
+
+  #[test]
+  fn test_should_skip_with_invalid_utf8() {
+    let conditions = Conditions {
+      code_match: Some(RegexSet::new(&["test"]).unwrap()),
+      enabled: true,
+      origin: None,
+    };
+
+    let mut asset = create_test_asset("test", true);
+    // Insert invalid UTF-8 bytes
+    asset.code = Code::new(vec![0xFF, 0xFE]);
+
+    // Should return an error when trying to convert to string
+    let result = conditions.should_skip(&asset);
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn test_origin_condition_equality() {
+    assert_eq!(OriginCondition::Source, OriginCondition::Source);
+    assert_eq!(OriginCondition::ThirdParty, OriginCondition::ThirdParty);
+    assert_ne!(OriginCondition::Source, OriginCondition::ThirdParty);
+  }
+
+  #[test]
+  fn test_serializable_transformer_conditions_equality() {
+    let cond1 = SerializableTransformerConditions {
+      code_match: Some(vec!["test".to_string()]),
+      enabled: Some(true),
+      origin: Some(OriginCondition::Source),
+    };
+    let cond2 = SerializableTransformerConditions {
+      code_match: Some(vec!["test".to_string()]),
+      enabled: Some(true),
+      origin: Some(OriginCondition::Source),
+    };
+    assert_eq!(cond1, cond2);
   }
 }
