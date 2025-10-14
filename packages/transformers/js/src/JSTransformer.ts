@@ -306,6 +306,10 @@ export default new Transformer({
       options.env.NATIVE_SSR_GLOBAL_REPLACER,
     );
 
+    let enableGlobalThisAliaser = Boolean(
+      options.env.NATIVE_GLOBAL_THIS_ALIASER,
+    );
+
     if (conf && conf.contents) {
       validateSchema.diagnostic(
         CONFIG_SCHEMA,
@@ -350,6 +354,7 @@ export default new Transformer({
       useDefineForClassFields,
       magicComments,
       enableSsrGlobalReplacer,
+      enableGlobalThisAliaser,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -529,6 +534,7 @@ export default new Transformer({
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
       enable_ssr_global_replacer: Boolean(config.enableSsrGlobalReplacer),
+      enable_global_this_aliaser: Boolean(config.enableGlobalThisAliaser),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
