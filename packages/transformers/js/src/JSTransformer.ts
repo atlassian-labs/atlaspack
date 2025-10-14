@@ -310,6 +310,8 @@ export default new Transformer({
       options.env.NATIVE_GLOBAL_THIS_ALIASER,
     );
 
+    let enableReactHooksRemover = Boolean(options.env.NATIVE_HOOKS_REMOVER);
+
     if (conf && conf.contents) {
       validateSchema.diagnostic(
         CONFIG_SCHEMA,
@@ -355,6 +357,7 @@ export default new Transformer({
       magicComments,
       enableSsrGlobalReplacer,
       enableGlobalThisAliaser,
+      enableReactHooksRemover,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -535,6 +538,7 @@ export default new Transformer({
         getFeatureFlag('supportWebpackChunkName'),
       enable_ssr_global_replacer: Boolean(config.enableSsrGlobalReplacer),
       enable_global_this_aliaser: Boolean(config.enableGlobalThisAliaser),
+      enable_react_hooks_remover: Boolean(config.enableReactHooksRemover),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
