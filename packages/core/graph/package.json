@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/graph",
-  "version": "3.5.23",
+  "version": "3.5.24",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -21,8 +21,8 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.20.4",
-    "@atlaspack/feature-flags": "2.25.4",
+    "@atlaspack/types-internal": "2.20.5",
+    "@atlaspack/feature-flags": "2.25.5",
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {

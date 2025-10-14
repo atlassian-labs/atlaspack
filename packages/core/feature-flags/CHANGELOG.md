@@ -1,5 +1,19 @@
 # @atlaspack/feature-flags
 
+## 2.25.5
+
+### Patch Changes
+
+- [#816](https://github.com/atlassian-labs/atlaspack/pull/816) [`79a7e22`](https://github.com/atlassian-labs/atlaspack/commit/79a7e22ef119891a2f4180a9d3cc66b38dd52092) Thanks [@yamadapc](https://github.com/yamadapc)! - Clean-up resolver optimisation feature-flag
+
+- [#817](https://github.com/atlassian-labs/atlaspack/pull/817) [`3da8e69`](https://github.com/atlassian-labs/atlaspack/commit/3da8e690605472d81c531366b65fa9844f8ca337) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix an issue when creating the BundleGraph and some Dependency.sourceAssetId values have diverged from the actual Asset.id values.
+
+  Fix behind flag `sourceAssetIdBundleGraphFix`
+
+- [#840](https://github.com/atlassian-labs/atlaspack/pull/840) [`17dfea9`](https://github.com/atlassian-labs/atlaspack/commit/17dfea9e9f3169807808520df9c09ebf70dc8b10) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - cleanup inlineStringReplacmentPerf flag
+
+- [#828](https://github.com/atlassian-labs/atlaspack/pull/828) [`f1070ec`](https://github.com/atlassian-labs/atlaspack/commit/f1070ec48e99b4ec111a03179c5ab5b74163fab1) Thanks [@marcins](https://github.com/marcins)! - Cleanup customEnvInTargets feature flag
+
 ## 2.25.4
 
 ### Patch Changes
