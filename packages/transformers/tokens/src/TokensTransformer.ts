@@ -4,7 +4,7 @@ import {applyTokensPlugin} from '@atlaspack/rust';
 import {validateSchema} from '@atlaspack/utils';
 import path from 'path';
 
-type AtlaskitTokensConfig = {
+type AtlaskitTokensConfigPartial = {
   shouldUseAutoFallback?: boolean;
   shouldForceAutoFallback?: boolean;
   forceAutoFallbackExemptions?: Array<string>;
@@ -12,9 +12,7 @@ type AtlaskitTokensConfig = {
   tokenDataPath: string;
 };
 
-type LoadedConfig = Required<Omit<AtlaskitTokensConfig, 'tokenDataPath'>> & {
-  tokenDataPath: string;
-};
+type AtlaskitTokensConfig = Required<AtlaskitTokensConfigPartial>;
 
 const CONFIG_SCHEMA = {
   type: 'object',
@@ -41,7 +39,6 @@ export default new Transformer({
       },
     );
 
-    let loaded: LoadedConfig = {};
     if (conf && conf.contents) {
       validateSchema.diagnostic(
         CONFIG_SCHEMA,
@@ -58,23 +55,22 @@ export default new Transformer({
       );
 
       // @ts-expect-error TS2339
-      const tokensConfig: AtlaskitTokensConfig = conf.contents;
-      const tokenDataPath = path.join(
-        options.projectRoot,
-        tokensConfig.tokenDataPath,
-      );
-      loaded = {
+      const tokensConfig: AtlaskitTokensConfigPartial = conf.contents;
+
+      let resolvedConfig: AtlaskitTokensConfig = {
         shouldUseAutoFallback: tokensConfig.shouldUseAutoFallback ?? true,
         shouldForceAutoFallback: tokensConfig.shouldForceAutoFallback ?? true,
         forceAutoFallbackExemptions:
           tokensConfig.forceAutoFallbackExemptions ?? [],
         defaultTheme: tokensConfig.defaultTheme ?? 'light',
-        tokenDataPath,
+        tokenDataPath: path.join(
+          options.projectRoot,
+          tokensConfig.tokenDataPath,
+        ),
       };
-      config.invalidateOnFileChange(tokenDataPath);
+      config.invalidateOnFileChange(resolvedConfig.tokenDataPath);
+      return resolvedConfig;
     }
-
-    return loaded;
   },
 
   async transform({asset, options, config}) {
@@ -89,7 +85,7 @@ export default new Transformer({
       return [asset];
     }
 
-    const compiledCode = (await applyTokensPlugin(
+    const compiledCode = await applyTokensPlugin(
       codeBuffer,
       options.projectRoot,
       asset.filePath,
@@ -101,9 +97,11 @@ export default new Transformer({
         forceAutoFallbackExemptions: config.forceAutoFallbackExemptions,
         defaultTheme: config.defaultTheme,
       },
-    )) as Buffer;
+    );
 
-    asset.setBuffer(compiledCode);
+    // Rather then setting this as a buffer we set it as a string, since most of the following
+    // plugins will call `getCode`, this avoids repeatedly converting the buffer to a string.
+    asset.setCode(compiledCode);
     return [asset];
   },
 }) as Transformer<unknown>;

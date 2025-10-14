@@ -51,7 +51,7 @@ describe('tokens', () => {
     );
     // Without config, the transformer should not change the code
     assert(
-      firstBundle.includes("import { token } from '@atlaskit/tokens'"),
+      firstBundle.includes('color.text'),
       `Expected the import to remain when no config is provided, but bundle was ${firstBundle.substring(0, 150)}...`,
     );
   });

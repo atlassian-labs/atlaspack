@@ -135,7 +135,8 @@ export interface TokensPluginOptions {
   forceAutoFallbackExemptions: Array<string>
   defaultTheme: string
 }
-export declare function applyTokensPlugin(rawCode: Buffer, projectRoot: string, filename: string, isSource: boolean, options: TokensPluginOptions): object
+/** Apply the tokens transformation plugin to the given code */
+export declare function applyTokensPlugin(rawCode: Buffer, projectRoot: string, filename: string, isSource: boolean, options: TokensPluginOptions): string
 export type LMDB = Lmdb
 export class Lmdb {
   constructor(options: LmdbOptions)

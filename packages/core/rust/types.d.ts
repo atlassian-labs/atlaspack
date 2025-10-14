@@ -257,10 +257,11 @@ export interface TokensPluginOptions {
   forceAutoFallbackExemptions: Array<string>;
   defaultTheme: string;
 }
+
 export declare function applyTokensPlugin(
   rawCode: Buffer,
   projectRoot: string,
   filename: string,
   isSource: boolean,
   options: TokensPluginOptions,
-): object;
+): string;
