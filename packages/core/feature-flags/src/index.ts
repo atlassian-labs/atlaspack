@@ -274,6 +274,13 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-09-29
    */
   sourceAssetIdBundleGraphFix: process.env.ATLASPACK_BUILD_ENV === 'test',
+  /**
+   * When enabled, deduplicates reporters when resolving the config.
+   *
+   * @author Vy Kim Nguyen <vnguyen4@atlassian.com>
+   * @since 2025-10-14
+   */
+  deduplicateReporters: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
