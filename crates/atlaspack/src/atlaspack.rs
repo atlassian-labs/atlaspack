@@ -94,9 +94,13 @@ impl Atlaspack {
 
     let rpc_worker = rpc.start()?;
 
-    let mut rc_config_loader =
-      AtlaspackRcConfigLoader::new(Arc::clone(&fs), Arc::clone(&package_manager));
-    rc_config_loader.feature_flags = resolved_options.feature_flags.clone();
+    let rc_config_loader = AtlaspackRcConfigLoader::new(
+      Arc::clone(&fs),
+      Arc::clone(&package_manager),
+      resolved_options
+        .feature_flags
+        .bool_enabled("deduplicateReporters"),
+    );
 
     let (config, _files) = rc_config_loader.load(
       &project_root,

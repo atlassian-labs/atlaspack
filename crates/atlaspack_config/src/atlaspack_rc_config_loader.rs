@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -6,7 +7,6 @@ use atlaspack_core::types::CodeFrame;
 use atlaspack_core::types::CodeHighlight;
 use atlaspack_core::types::DiagnosticBuilder;
 use atlaspack_core::types::DiagnosticError;
-use atlaspack_core::types::FeatureFlags;
 use atlaspack_core::types::File;
 use atlaspack_filesystem::FileSystemRef;
 use atlaspack_filesystem::search::find_ancestor_file;
@@ -35,15 +35,19 @@ pub struct LoadConfigOptions<'a> {
 pub struct AtlaspackRcConfigLoader {
   fs: FileSystemRef,
   package_manager: PackageManagerRef,
-  pub feature_flags: FeatureFlags,
+  pub should_deduplicate_reporters: bool,
 }
 
 impl AtlaspackRcConfigLoader {
-  pub fn new(fs: FileSystemRef, package_manager: PackageManagerRef) -> Self {
+  pub fn new(
+    fs: FileSystemRef,
+    package_manager: PackageManagerRef,
+    should_deduplicate_reporters: bool,
+  ) -> Self {
     AtlaspackRcConfigLoader {
       fs,
       package_manager,
-      feature_flags: FeatureFlags::default(),
+      should_deduplicate_reporters,
     }
   }
 
@@ -230,27 +234,20 @@ impl AtlaspackRcConfigLoader {
     let (mut atlaspack_config, files) = self.load_config(config_path)?;
 
     if !options.additional_reporters.is_empty() {
-      if self.feature_flags.bool_enabled("deduplicateReporters") {
-        let mut seen_packages = std::collections::HashSet::new();
-        let mut deduplicated_reporters = Vec::new();
+      atlaspack_config
+        .reporters
+        .extend(options.additional_reporters);
 
-        for reporter in &atlaspack_config.reporters {
-          if seen_packages.insert(reporter.package_name.clone()) {
-            deduplicated_reporters.push(reporter.clone());
+      if self.should_deduplicate_reporters {
+        let mut seen = HashSet::new();
+        atlaspack_config.reporters.retain(|plugin_node| {
+          if seen.contains(&plugin_node.package_name) {
+            false
+          } else {
+            seen.insert(plugin_node.package_name.clone());
+            true
           }
-        }
-
-        for additional_reporter in &options.additional_reporters {
-          if seen_packages.insert(additional_reporter.package_name.clone()) {
-            deduplicated_reporters.push(additional_reporter.clone());
-          }
-        }
-
-        atlaspack_config.reporters = deduplicated_reporters;
-      } else {
-        atlaspack_config
-          .reporters
-          .extend(options.additional_reporters);
+        });
       }
     }
 
@@ -363,7 +360,7 @@ mod tests {
       let fs = Arc::new(InMemoryFileSystem::default());
       let project_root = fs.cwd().unwrap();
 
-      let err = AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::new()))
+      let err = AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::new()), false)
         .load(&project_root, LoadConfigOptions::default())
         .map_err(|e| e.to_string());
 
@@ -390,7 +387,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let err = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let err = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(&project_root, LoadConfigOptions::default())
         .map_err(|e| e.to_string());
 
@@ -414,7 +411,7 @@ mod tests {
       fs.write_file(&default_config.path, default_config.atlaspack_rc);
 
       let atlaspack_config =
-        AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
+        AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()), false)
           .load(&project_root, LoadConfigOptions::default())
           .map_err(|e| e.to_string());
 
@@ -435,7 +432,7 @@ mod tests {
       fs.write_file(&default_config.path, default_config.atlaspack_rc);
 
       let atlaspack_config =
-        AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
+        AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()), false)
           .load(&project_root, LoadConfigOptions::default())
           .map_err(|e| e.to_string());
 
@@ -457,7 +454,7 @@ mod tests {
       fs.write_file(&default_config.path, default_config.atlaspack_rc);
 
       let atlaspack_config =
-        AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
+        AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()), false)
           .load(&project_root, LoadConfigOptions::default())
           .map_err(|e| e.to_string());
 
@@ -493,7 +490,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(&project_root, LoadConfigOptions::default())
         .map_err(|e| e.to_string());
 
@@ -522,7 +519,7 @@ mod tests {
 
       let package_manager = Arc::new(package_manager);
 
-      let err = AtlaspackRcConfigLoader::new(fs, package_manager)
+      let err = AtlaspackRcConfigLoader::new(fs, package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -556,7 +553,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let err = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let err = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -593,7 +590,7 @@ mod tests {
       let fs: FileSystemRef = fs;
       let package_manager = Arc::new(package_manager);
 
-      let err = AtlaspackRcConfigLoader::new(fs, package_manager)
+      let err = AtlaspackRcConfigLoader::new(fs, package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -635,7 +632,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -672,7 +669,7 @@ mod tests {
 
       let package_manager = Arc::new(package_manager);
 
-      let err = AtlaspackRcConfigLoader::new(fs, package_manager)
+      let err = AtlaspackRcConfigLoader::new(fs, package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -709,7 +706,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let err = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let err = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -743,7 +740,7 @@ mod tests {
 
       let package_manager = Arc::new(package_manager);
 
-      let err = AtlaspackRcConfigLoader::new(fs, package_manager)
+      let err = AtlaspackRcConfigLoader::new(fs, package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -785,7 +782,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -820,7 +817,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -859,7 +856,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -890,7 +887,7 @@ mod tests {
         fs: Arc::clone(&fs),
       });
 
-      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
+      let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, false)
         .load(
           &project_root,
           LoadConfigOptions {
@@ -940,8 +937,7 @@ mod tests {
         },
       ];
 
-      let mut config_loader = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager);
-      config_loader.feature_flags = FeatureFlags::with_bool_flag("deduplicateReporters", true);
+      let config_loader = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager, true);
 
       let (atlaspack_config, _files) = config_loader
         .load(
