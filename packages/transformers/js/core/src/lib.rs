@@ -10,6 +10,7 @@ mod global_replacer;
 mod hoist;
 mod magic_comments;
 mod node_replacer;
+mod react_hooks_remover;
 pub mod test_utils;
 mod typeof_replacer;
 mod utils;
@@ -46,6 +47,7 @@ use magic_comments::MagicCommentsVisitor;
 use node_replacer::NodeReplacer;
 use path_slash::PathExt;
 use pathdiff::diff_paths;
+use react_hooks_remover::ReactHooksRemover;
 use serde::Deserialize;
 use serde::Serialize;
 use std::io::{self};
@@ -144,6 +146,7 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
+  pub enable_react_hooks_remover: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -414,6 +417,10 @@ pub fn transform(
                       unresolved_mark
                     }),
                     config.source_type != SourceType::Script
+                  ),
+                  Optional::new(
+                    visit_mut_pass(ReactHooksRemover::new(unresolved_mark)),
+                    config.enable_react_hooks_remover
                   ),
                   paren_remover(Some(&comments)),
                   // Simplify expressions and remove dead branches so that we
