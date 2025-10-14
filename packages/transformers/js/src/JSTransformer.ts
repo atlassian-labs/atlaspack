@@ -302,6 +302,7 @@ export default new Transformer({
     let inlineConstants = false;
     let magicComments = false;
     let addReactDisplayName = false;
+    let enableImportCleaner = Boolean(options.env.NATIVE_IMPORT_CLEANER);
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -346,6 +347,7 @@ export default new Transformer({
       decorators,
       useDefineForClassFields,
       magicComments,
+      enableImportCleaner,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -524,6 +526,7 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
+      enable_import_cleaner: Boolean(config.enableImportCleaner),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
