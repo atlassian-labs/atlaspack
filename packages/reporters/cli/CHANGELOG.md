@@ -1,5 +1,16 @@
 # @atlaspack/reporter-cli
 
+## 2.17.17
+
+### Patch Changes
+
+- [#810](https://github.com/atlassian-labs/atlaspack/pull/810) [`c372f3f`](https://github.com/atlassian-labs/atlaspack/commit/c372f3fd6fce8200d5cf47f41bc7895c6cbb5558) Thanks [@benjervis](https://github.com/benjervis)! - Add the `scope-hosting-stats` debug tool to report on the percentage of assets that were able to be scope hoisted during the build.
+
+- Updated dependencies [[`c372f3f`](https://github.com/atlassian-labs/atlaspack/commit/c372f3fd6fce8200d5cf47f41bc7895c6cbb5558), [`17dfea9`](https://github.com/atlassian-labs/atlaspack/commit/17dfea9e9f3169807808520df9c09ebf70dc8b10)]:
+  - @atlaspack/utils@3.0.3
+  - @atlaspack/plugin@2.14.35
+  - @atlaspack/types@2.15.25
+
 ## 2.17.16
 
 ### Patch Changes
