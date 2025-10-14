@@ -302,6 +302,9 @@ export default new Transformer({
     let inlineConstants = false;
     let magicComments = false;
     let addReactDisplayName = false;
+    let enableSsrGlobalReplacer = Boolean(
+      options.env.NATIVE_SSR_GLOBAL_REPLACER,
+    );
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -346,6 +349,7 @@ export default new Transformer({
       decorators,
       useDefineForClassFields,
       magicComments,
+      enableSsrGlobalReplacer,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -524,6 +528,7 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
+      enable_ssr_global_replacer: Boolean(config.enableSsrGlobalReplacer),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;

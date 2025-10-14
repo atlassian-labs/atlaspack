@@ -10,6 +10,7 @@ mod global_replacer;
 mod hoist;
 mod magic_comments;
 mod node_replacer;
+mod ssr_global_replacer;
 pub mod test_utils;
 mod typeof_replacer;
 mod utils;
@@ -48,6 +49,7 @@ use path_slash::PathExt;
 use pathdiff::diff_paths;
 use serde::Deserialize;
 use serde::Serialize;
+use ssr_global_replacer::SsrGlobalReplacer;
 use std::io::{self};
 use swc_core::common::FileName;
 use swc_core::common::Globals;
@@ -144,6 +146,7 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
+  pub enable_ssr_global_replacer: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -414,6 +417,10 @@ pub fn transform(
                       unresolved_mark
                     }),
                     config.source_type != SourceType::Script
+                  ),
+                  Optional::new(
+                    visit_mut_pass(SsrGlobalReplacer::new(unresolved_mark)),
+                    config.enable_ssr_global_replacer
                   ),
                   paren_remover(Some(&comments)),
                   // Simplify expressions and remove dead branches so that we
