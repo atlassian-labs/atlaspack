@@ -302,6 +302,9 @@ export default new Transformer({
     let inlineConstants = false;
     let magicComments = false;
     let addReactDisplayName = false;
+    let enableBrowserApiTypeofReplacer = Boolean(
+      options.env.NATIVE_TYPEOF_REPLACER,
+    );
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -346,6 +349,7 @@ export default new Transformer({
       decorators,
       useDefineForClassFields,
       magicComments,
+      enableBrowserApiTypeofReplacer,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -524,6 +528,9 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
+      enable_browser_api_typeof_replacer: Boolean(
+        config.enableBrowserApiTypeofReplacer,
+      ),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
