@@ -1,5 +1,13 @@
 # @atlaspack/reporter-conditional-manifest
 
+## 2.15.18
+
+### Patch Changes
+
+- Updated dependencies [[`d0c7bea`](https://github.com/atlassian-labs/atlaspack/commit/d0c7bea04458255b4c5d4299600e734b5f919fe1)]:
+  - @atlaspack/feature-flags@2.25.6
+  - @atlaspack/plugin@2.14.36
+
 ## 2.15.17
 
 ### Patch Changes

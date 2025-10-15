@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/compressor-brotli",
-  "version": "2.13.37",
+  "version": "2.13.38",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -17,7 +17,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.35"
+    "@atlaspack/plugin": "2.14.36"
   },
   "scripts": {
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."

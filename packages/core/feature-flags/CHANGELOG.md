@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.25.6
+
+### Patch Changes
+
+- [#844](https://github.com/atlassian-labs/atlaspack/pull/844) [`d0c7bea`](https://github.com/atlassian-labs/atlaspack/commit/d0c7bea04458255b4c5d4299600e734b5f919fe1) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - deduplicate reporters from config
+
 ## 2.25.5
 
 ### Patch Changes
