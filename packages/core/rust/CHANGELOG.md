@@ -1,5 +1,17 @@
 # @atlaspack/rust
 
+## 3.8.3
+
+### Patch Changes
+
+- [#816](https://github.com/atlassian-labs/atlaspack/pull/816) [`79a7e22`](https://github.com/atlassian-labs/atlaspack/commit/79a7e22ef119891a2f4180a9d3cc66b38dd52092) Thanks [@yamadapc](https://github.com/yamadapc)! - Clean-up resolver optimisation feature-flag
+
+- [#840](https://github.com/atlassian-labs/atlaspack/pull/840) [`17dfea9`](https://github.com/atlassian-labs/atlaspack/commit/17dfea9e9f3169807808520df9c09ebf70dc8b10) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - cleanup inlineStringReplacmentPerf flag
+
+- [#831](https://github.com/atlassian-labs/atlaspack/pull/831) [`27fd73f`](https://github.com/atlassian-labs/atlaspack/commit/27fd73fa07d358653f1be6f2d15d72dc5d8fc2fd) Thanks [@benjervis](https://github.com/benjervis)! - Update some Rust internals to use Arcs instead of passing references. This won't make any difference in the immediate term, but is required setup for the next set of changes
+
+- [#834](https://github.com/atlassian-labs/atlaspack/pull/834) [`3091fa3`](https://github.com/atlassian-labs/atlaspack/commit/3091fa36425ecffe3938e55247a035b08cda37a2) Thanks [@benjervis](https://github.com/benjervis)! - We no longer want to use `meta` fields internally in Atlaspack, so they have been removed from the Rust side of the codebase, and are mapped back to the legacy format on the JS side.
+
 ## 3.8.2
 
 ### Patch Changes

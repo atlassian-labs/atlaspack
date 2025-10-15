@@ -4,7 +4,7 @@
  * Diff the results of two different directories
  *
  * 1. Check if they have the same number of files
- * 2. Report the diffreences in files and stop if they differ
+ * 2. Report the differences in files and stop if they differ
  * 3. Check if the files have the same names
  * 4. Check that the file contents is the same
  * 5. Report the diff on the files that differ

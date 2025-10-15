@@ -80,6 +80,7 @@ impl GlobalThisAliaser {
   }
 
   pub fn should_transform(filename: &str) -> bool {
+    // Exclude files named "js.cookie.js" to avoid breaking the js-cookie library in static fallback
     !filename.contains("js.cookie.js")
   }
 }

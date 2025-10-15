@@ -22,9 +22,7 @@ impl TransformerPlugin for AtlaspackInlineStringTransformerPlugin {
     let mut asset = asset.clone();
 
     asset.bundle_behavior = Some(BundleBehavior::Inline);
-    asset
-      .meta
-      .insert(String::from("inlineType"), "string".into());
+    asset.inline_type = Some("string".into());
 
     Ok(TransformResult {
       asset,
@@ -40,7 +38,6 @@ mod tests {
   use atlaspack_core::{
     config_loader::ConfigLoader,
     plugin::{PluginLogger, PluginOptions},
-    types::JSONObject,
   };
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
@@ -72,7 +69,7 @@ mod tests {
       Ok(TransformResult {
         asset: Asset {
           bundle_behavior: Some(BundleBehavior::Inline),
-          meta: JSONObject::from_iter([(String::from("inlineType"), "string".into())]),
+          inline_type: Some("string".into()),
           ..Asset::default()
         },
         ..Default::default()

@@ -658,14 +658,7 @@ export default new Transformer({
     });
 
     if (getFeatureFlag('conditionalBundlingApi')) {
-      asset.meta.conditions = conditions.map(
-        // @ts-expect-error TS7006
-        (c): ConditionMeta => ({
-          key: c.key,
-          ifTruePlaceholder: c.if_true_placeholder,
-          ifFalsePlaceholder: c.if_false_placeholder,
-        }),
-      );
+      asset.meta.conditions = conditions;
     }
 
     if (is_constant_module) {
