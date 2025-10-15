@@ -6,12 +6,11 @@ mod env_replacer;
 mod esm_export_classifier;
 mod esm_to_cjs_replacer;
 mod fs;
+mod global_aliaser;
 mod global_replacer;
-mod global_this_aliaser;
 mod hoist;
 mod magic_comments;
 mod node_replacer;
-mod ssr_global_replacer;
 pub mod test_utils;
 mod typeof_replacer;
 mod utils;
@@ -38,8 +37,8 @@ pub use dependency_collector::dependency_collector;
 use env_replacer::*;
 use esm_to_cjs_replacer::EsmToCjsReplacer;
 use fs::inline_fs;
+use global_aliaser::GlobalAliaser;
 use global_replacer::GlobalReplacer;
-use global_this_aliaser::GlobalThisAliaser;
 pub use hoist::ExportedSymbol;
 use hoist::HoistResult;
 pub use hoist::ImportedSymbol;
@@ -51,7 +50,6 @@ use path_slash::PathExt;
 use pathdiff::diff_paths;
 use serde::Deserialize;
 use serde::Serialize;
-use ssr_global_replacer::SsrGlobalReplacer;
 use std::io::{self};
 use swc_core::common::FileName;
 use swc_core::common::Globals;
@@ -148,8 +146,8 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
-  pub enable_global_this_aliaser: bool,
-  pub enable_ssr_global_replacer: bool,
+  pub global_aliaser_config:
+    Option<HashMap<swc_core::ecma::atoms::JsWord, swc_core::ecma::atoms::JsWord>>,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -422,12 +420,8 @@ pub fn transform(
                     config.source_type != SourceType::Script
                   ),
                   Optional::new(
-                    visit_mut_pass(GlobalThisAliaser::new(unresolved_mark)),
-                    config.enable_global_this_aliaser && GlobalThisAliaser::should_transform(&config.filename)
-                  ),
-                  Optional::new(
-                    visit_mut_pass(SsrGlobalReplacer::new(unresolved_mark)),
-                    config.enable_ssr_global_replacer
+                    visit_mut_pass(GlobalAliaser::with_config(unresolved_mark, &config.global_aliaser_config)),
+                    config.global_aliaser_config.is_some()
                   ),
                   paren_remover(Some(&comments)),
                   // Simplify expressions and remove dead branches so that we

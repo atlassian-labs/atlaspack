@@ -303,12 +303,9 @@ export default new Transformer({
     let magicComments = false;
     let addReactDisplayName = false;
 
-    let enableGlobalThisAliaser = Boolean(
-      options.env.NATIVE_GLOBAL_THIS_ALIASER,
-    );
-    let enableSsrGlobalReplacer = Boolean(
-      options.env.NATIVE_SSR_GLOBAL_REPLACER,
-    );
+    let globalAliaserConfig =
+      options.env.NATIVE_GLOBAL_ALIASER &&
+      JSON.parse(options.env.NATIVE_GLOBAL_ALIASER);
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -353,8 +350,7 @@ export default new Transformer({
       decorators,
       useDefineForClassFields,
       magicComments,
-      enableGlobalThisAliaser,
-      enableSsrGlobalReplacer,
+      globalAliaserConfig,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -533,8 +529,7 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
-      enable_global_this_aliaser: Boolean(config.enableGlobalThisAliaser),
-      enable_ssr_global_replacer: Boolean(config.enableSsrGlobalReplacer),
+      global_aliaser_config: config.globalAliaserConfig,
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
