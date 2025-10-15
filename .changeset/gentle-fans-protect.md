@@ -1,7 +1,7 @@
 ---
 '@atlaspack/feature-flags': patch
-'@atlaspack/utils': patch
+'@atlaspack/core': patch
 '@atlaspack/rust': patch
 ---
 
-cleanup inlineStringReplacmentPerf flag
+deduplicate reporters from config

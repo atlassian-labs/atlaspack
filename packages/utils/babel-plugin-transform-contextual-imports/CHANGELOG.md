@@ -1,5 +1,11 @@
 # @atlaspack/babel-plugin-transform-contextual-imports
 
+## 2.16.1
+
+### Patch Changes
+
+- [#843](https://github.com/atlassian-labs/atlaspack/pull/843) [`f97acf2`](https://github.com/atlassian-labs/atlaspack/commit/f97acf242ed210841db3403d3a5f224f5eff5ab5) Thanks [@nickrobson](https://github.com/nickrobson)! - Transform importCond in JSX, ungate binding-based transform
+
 ## 2.16.0
 
 ### Minor Changes

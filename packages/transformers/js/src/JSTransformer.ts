@@ -302,6 +302,10 @@ export default new Transformer({
     let inlineConstants = false;
     let magicComments = false;
     let addReactDisplayName = false;
+
+    let enableGlobalThisAliaser = Boolean(
+      options.env.NATIVE_GLOBAL_THIS_ALIASER,
+    );
     let enableSsrGlobalReplacer = Boolean(
       options.env.NATIVE_SSR_GLOBAL_REPLACER,
     );
@@ -349,6 +353,7 @@ export default new Transformer({
       decorators,
       useDefineForClassFields,
       magicComments,
+      enableGlobalThisAliaser,
       enableSsrGlobalReplacer,
     };
   },
@@ -528,6 +533,7 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
+      enable_global_this_aliaser: Boolean(config.enableGlobalThisAliaser),
       enable_ssr_global_replacer: Boolean(config.enableSsrGlobalReplacer),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {

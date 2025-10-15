@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/resolver-glob",
-  "version": "2.14.34",
+  "version": "2.14.35",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,10 +17,10 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/node-resolver-core": "3.7.5",
-    "@atlaspack/plugin": "2.14.34",
-    "@atlaspack/types": "2.15.24",
-    "@atlaspack/utils": "3.0.2",
+    "@atlaspack/node-resolver-core": "3.7.6",
+    "@atlaspack/plugin": "2.14.35",
+    "@atlaspack/types": "2.15.25",
+    "@atlaspack/utils": "3.0.3",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs",

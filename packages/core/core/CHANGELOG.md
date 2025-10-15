@@ -1,5 +1,37 @@
 # @atlaspack/core
 
+## 2.26.0
+
+### Minor Changes
+
+- [#827](https://github.com/atlassian-labs/atlaspack/pull/827) [`ff8ac84`](https://github.com/atlassian-labs/atlaspack/commit/ff8ac84bd0be15caa7c7af21bf5b6e47b6d36438) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Fix custom environment properties sometimes being ignored
+
+### Patch Changes
+
+- [#817](https://github.com/atlassian-labs/atlaspack/pull/817) [`3da8e69`](https://github.com/atlassian-labs/atlaspack/commit/3da8e690605472d81c531366b65fa9844f8ca337) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix an issue when creating the BundleGraph and some Dependency.sourceAssetId values have diverged from the actual Asset.id values.
+
+  Fix behind flag `sourceAssetIdBundleGraphFix`
+
+- [#810](https://github.com/atlassian-labs/atlaspack/pull/810) [`c372f3f`](https://github.com/atlassian-labs/atlaspack/commit/c372f3fd6fce8200d5cf47f41bc7895c6cbb5558) Thanks [@benjervis](https://github.com/benjervis)! - Add the `scope-hosting-stats` debug tool to report on the percentage of assets that were able to be scope hoisted during the build.
+
+- [#831](https://github.com/atlassian-labs/atlaspack/pull/831) [`27fd73f`](https://github.com/atlassian-labs/atlaspack/commit/27fd73fa07d358653f1be6f2d15d72dc5d8fc2fd) Thanks [@benjervis](https://github.com/benjervis)! - Update some Rust internals to use Arcs instead of passing references. This won't make any difference in the immediate term, but is required setup for the next set of changes
+
+- [#834](https://github.com/atlassian-labs/atlaspack/pull/834) [`3091fa3`](https://github.com/atlassian-labs/atlaspack/commit/3091fa36425ecffe3938e55247a035b08cda37a2) Thanks [@benjervis](https://github.com/benjervis)! - We no longer want to use `meta` fields internally in Atlaspack, so they have been removed from the Rust side of the codebase, and are mapped back to the legacy format on the JS side.
+
+- Updated dependencies [[`79a7e22`](https://github.com/atlassian-labs/atlaspack/commit/79a7e22ef119891a2f4180a9d3cc66b38dd52092), [`3da8e69`](https://github.com/atlassian-labs/atlaspack/commit/3da8e690605472d81c531366b65fa9844f8ca337), [`c372f3f`](https://github.com/atlassian-labs/atlaspack/commit/c372f3fd6fce8200d5cf47f41bc7895c6cbb5558), [`17dfea9`](https://github.com/atlassian-labs/atlaspack/commit/17dfea9e9f3169807808520df9c09ebf70dc8b10), [`f1070ec`](https://github.com/atlassian-labs/atlaspack/commit/f1070ec48e99b4ec111a03179c5ab5b74163fab1), [`27fd73f`](https://github.com/atlassian-labs/atlaspack/commit/27fd73fa07d358653f1be6f2d15d72dc5d8fc2fd), [`3091fa3`](https://github.com/atlassian-labs/atlaspack/commit/3091fa36425ecffe3938e55247a035b08cda37a2)]:
+  - @atlaspack/feature-flags@2.25.5
+  - @atlaspack/rust@3.8.3
+  - @atlaspack/utils@3.0.3
+  - @atlaspack/cache@3.2.30
+  - @atlaspack/fs@2.15.30
+  - @atlaspack/graph@3.5.24
+  - @atlaspack/package-manager@2.14.35
+  - @atlaspack/logger@2.14.27
+  - @atlaspack/plugin@2.14.35
+  - @atlaspack/profiler@2.14.32
+  - @atlaspack/types@2.15.25
+  - @atlaspack/workers@2.14.35
+
 ## 2.25.1
 
 ### Patch Changes

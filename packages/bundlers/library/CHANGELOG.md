@@ -1,5 +1,12 @@
 # @atlaspack/bundler-library
 
+## 2.12.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.35
+
 ## 2.12.36
 
 ### Patch Changes
