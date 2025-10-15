@@ -1,5 +1,12 @@
 # @atlaspack/types-internal
 
+## 2.20.6
+
+### Patch Changes
+
+- Updated dependencies [[`d0c7bea`](https://github.com/atlassian-labs/atlaspack/commit/d0c7bea04458255b4c5d4299600e734b5f919fe1)]:
+  - @atlaspack/feature-flags@2.25.6
+
 ## 2.20.5
 
 ### Patch Changes
