@@ -2,49 +2,17 @@ import {bundle, fsFixture, overlayFS} from '@atlaspack/test-utils';
 import assert from 'assert';
 import path from 'path';
 
-/*
-
-        package.json:
-          {
-            "name": "tokens",
-            "@atlaspack/transformer-js": {
-              "atlaskitTokens": {
-                "tokenDataPath": "../../../../../../afm/tokens/platform/packages/design-system/tokens/src/artifacts/token-data.json"
-              }
-            }
-          }
-            */
-
 describe('tokens', () => {
   it('should no-op without config', async () => {
-    await fsFixture(overlayFS, __dirname)`
-      tokens
-        .parcelrc:
-          {
-            "extends": "@atlaspack/config-default",
-            "transformers": {
-              "*.js": ["@atlaspack/transformer-tokens", "..."]
-            }
-          }
-
-        index.js:
-          import { token } from '@atlaskit/tokens';
-          const v = token('color.text');
-          console.log(v);
-
-        package.json:
-          {
-            "name": "tokens"
-          }
-
-        yarn.lock: {}
-        `;
-
-    const b = await bundle(path.join(__dirname, 'tokens/index.js'), {
-      inputFS: overlayFS,
-      outputFS: overlayFS,
-      mode: 'production',
-    });
+    // This test requires a real filesystem to work with V3, so we can't use fsFixture
+    const b = await bundle(
+      path.join(__dirname, './integration/tokens-no-config/index.js'),
+      {
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+        mode: 'production',
+      },
+    );
     const firstBundle = await overlayFS.readFile(
       b.getBundles()[0].filePath,
       'utf8',
@@ -57,37 +25,14 @@ describe('tokens', () => {
   });
 
   it('should transform tokens when valid fixture is provided', async () => {
-    await fsFixture(overlayFS, __dirname)`
-      tokens
-        .parcelrc:
-          {
-            "extends": "@atlaspack/config-default",
-            "transformers": {
-              "*.js": ["@atlaspack/transformer-tokens", "..."]
-            }
-          }
-
-        index.js:
-          import { token } from '@atlaskit/tokens';
-          const v = token('color.text');
-          console.log(v);
-
-        package.json:
-          {
-            "name": "tokens",
-            "@atlaspack/transformer-tokens": {
-              "tokenDataPath": "../../fixtures/tokens/token-data.json5"
-            }
-          }
-
-        yarn.lock: {}
-        `;
-
-    const b = await bundle(path.join(__dirname, 'tokens/index.js'), {
-      inputFS: overlayFS,
-      outputFS: overlayFS,
-      mode: 'production',
-    });
+    // This test requires a real filesystem to work with V3, so we can't use fsFixture
+    const b = await bundle(
+      path.join(__dirname, './integration/tokens/index.js'),
+      {
+        outputFS: overlayFS,
+        mode: 'production',
+      },
+    );
 
     const firstBundle = await overlayFS.readFile(
       b.getBundles()[0].filePath,

@@ -1,0 +1,7 @@
+{
+  "name": "tokens",
+  "devDependencies": {
+    "@atlaskit/tokens": "*",
+    "@atlaspack/transformer-tokens": "*"
+  }
+}
