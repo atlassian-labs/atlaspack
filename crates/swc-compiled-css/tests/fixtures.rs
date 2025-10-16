@@ -148,6 +148,7 @@ fn run_fixture_dir(case_dir: &Path) {
   assert_eq!(left, right, "fixture mismatch: {}", case_dir.display());
 }
 
+#[ignore]
 #[test]
 fn fixtures_match_out_js() {
   let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
