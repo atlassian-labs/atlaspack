@@ -545,45 +545,6 @@ impl AtomicCssCollector {
       _ => false,
     }
   }
-
-  // Emit CSS constants in reverse order to match Babel plugin behavior
-  fn emit_css_constants_in_babel_order(&mut self, _m: &mut Module) {
-    if self.css_rules_for_emission.is_empty() {
-      return;
-    }
-
-    // Emit constants in reverse order (like Babel)
-    let mut reversed_rules = self.css_rules_for_emission.clone();
-    reversed_rules.reverse();
-
-    for (rule_key, css_text) in reversed_rules.iter() {
-      if let Some(ident) = self.rule_key_to_ident.get(rule_key) {
-        let var_decl = VarDecl {
-          span: DUMMY_SP,
-          ctxt: SyntaxContext::empty(),
-          kind: VarDeclKind::Const,
-          declare: false,
-          decls: vec![VarDeclarator {
-            span: DUMMY_SP,
-            name: Pat::Ident(BindingIdent {
-              id: ident.clone(),
-              type_ann: None,
-            }),
-            init: Some(Box::new(Expr::Lit(Lit::Str(Str {
-              span: DUMMY_SP,
-              value: css_text.clone().into(),
-              raw: None,
-            })))),
-            definite: false,
-          }],
-        };
-
-        self
-          .hoisted
-          .push(ModuleItem::Stmt(Stmt::Decl(Decl::Var(Box::new(var_decl)))));
-      }
-    }
-  }
 }
 
 fn collect_idents_from_pat(pat: &Pat, out: &mut FxHashSet<String>) {
@@ -786,8 +747,6 @@ impl VisitMut for AtomicCssCollector {
     crate::imports::ensure_runtime_ix_import(self, m);
     crate::imports::ensure_runtime_cc_cs_imports(self, m);
 
-    // Emit CSS constants in reverse order (to match Babel)
-    self.emit_css_constants_in_babel_order(m);
     // Emit wrapper-grouped constants after traversal
     if !self.wrapper_key_to_rules.is_empty() {
       let mut keys: Vec<String> = self.wrapper_key_to_rules.keys().cloned().collect();

@@ -1,17 +1,17 @@
-const _2 = '._1bsb168g{width:var(--1v470gf)}';
 const _ = '._4t3i1yd6{height:var(--13gm3b0)}';
-import { ax, ix, CC, CS } from '@compiled/react/runtime';
+const _2 = '._1bsb168g{width:var(--1v470gf)}';
+import {ax, ix, CC, CS} from '@compiled/react/runtime';
 export const View = () => (
-	<CC>
-		<CS>{[_, _2]}</CS>
-		{
-			<div
-				style={{
-					'--13gm3b0': ix(Math.random() + 'px'),
-					'--1v470gf': ix(Math.random() + 'px'),
-				}}
-				className={ax(['_4t3i1yd6 _1bsb168g'])}
-			/>
-		}
-	</CC>
+  <CC>
+    <CS>{[_, _2]}</CS>
+    {
+      <div
+        style={{
+          '--13gm3b0': ix(Math.random() + 'px'),
+          '--1v470gf': ix(Math.random() + 'px'),
+        }}
+        className={ax(['_4t3i1yd6 _1bsb168g'])}
+      />
+    }
+  </CC>
 );

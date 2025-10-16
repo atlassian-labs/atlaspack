@@ -22,20 +22,46 @@ impl AtomicCssCollector {
     if let Some(id) = self.rule_key_to_ident.get(&rule_key) {
       return id.clone();
     }
-
-    // Collect rules for output in correct order
+    let mut candidate: String;
+    loop {
+      self.next_id += 1;
+      candidate = if self.next_id == 1 {
+        "_".to_string()
+      } else {
+        format!("_{}", self.next_id)
+      };
+      if !self.used_idents.contains(&candidate) {
+        break;
+      }
+    }
+    self.used_idents.insert(candidate.clone());
+    let ident = Ident::new(candidate.into(), DUMMY_SP, SyntaxContext::empty());
     let css_text = css_builder();
     self
       .css_rules_for_emission
       .push((rule_key, css_text.clone()));
-    self.style_rules.insert(css_text);
-
-    let current_count = self.css_rules_for_emission.len() - 1;
-    let candidate = self.generate_style_rule_name(current_count);
-
-    self.used_idents.insert(candidate.clone());
-    let ident = Ident::new(candidate.into(), DUMMY_SP, SyntaxContext::empty());
-
+    self.style_rules.insert(css_text.clone());
+    let var_decl = VarDecl {
+      span: DUMMY_SP,
+      ctxt: SyntaxContext::empty(),
+      kind: VarDeclKind::Const,
+      declare: false,
+      decls: vec![VarDeclarator {
+        span: DUMMY_SP,
+        name: Pat::Ident(BindingIdent {
+          id: ident.clone(),
+          type_ann: None,
+        }),
+        init: Some(Box::new(Expr::Lit(Lit::Str(Str {
+          span: DUMMY_SP,
+          value: css_text.into(),
+          raw: None,
+        })))),
+        definite: false,
+      }],
+    };
+    let decl = ModuleItem::Stmt(Stmt::Decl(Decl::Var(Box::new(var_decl))));
+    self.hoisted.push(decl);
     self.rule_key_to_ident.insert(rule_key, ident.clone());
 
     // Track CSS constant for CS component generation
@@ -44,19 +70,6 @@ impl AtomicCssCollector {
     }
 
     ident
-  }
-
-  /// Generate a name for a CSS rule constant.
-  ///
-  /// This function generates a name that is matches the Babel unique name generation.
-  fn generate_style_rule_name(&self, position: usize) -> String {
-    match position {
-      0 => "_".to_string(),
-      1..=8 => format!("_{}", position + 1),
-      9 => "_0".to_string(),
-      10 => "_1".to_string(),
-      _ => format!("_{}", position - 1),
-    }
   }
 
   pub fn emit_rule_input<'a>(&mut self, input: RuleInput<'a>, out_classes: &mut Vec<String>) {

@@ -1,5 +1,5 @@
 <div
-	css={{
-		color: 'red',
-	}}
+  css={{
+    color: 'red',
+  }}
 />;
