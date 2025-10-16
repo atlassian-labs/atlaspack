@@ -55,7 +55,7 @@ pub enum ReplacementValue {
 /// ```
 pub struct GlobalAliaser {
   /// Map of global identifiers to their replacement values
-  pub mappings: HashMap<JsWord, ReplacementValue>,
+  pub mappings: HashMap<String, ReplacementValue>,
   /// Mark used to identify unresolved (global) references
   pub unresolved_mark: Mark,
 }
@@ -100,14 +100,14 @@ impl GlobalAliaser {
     }
   }
 
-  pub fn with_mappings(unresolved_mark: Mark, mappings: HashMap<JsWord, ReplacementValue>) -> Self {
+  pub fn with_mappings(unresolved_mark: Mark, mappings: HashMap<String, ReplacementValue>) -> Self {
     Self {
       mappings,
       unresolved_mark,
     }
   }
 
-  pub fn with_config(unresolved_mark: Mark, config: &Option<HashMap<JsWord, JsWord>>) -> Self {
+  pub fn with_config(unresolved_mark: Mark, config: &Option<HashMap<String, String>>) -> Self {
     let Some(config) = config else {
       return Self::new(unresolved_mark);
     };
@@ -132,7 +132,7 @@ impl VisitMut for GlobalAliaser {
   fn visit_mut_expr(&mut self, node: &mut Expr) {
     if let Expr::Ident(ident) = node
       && is_unresolved(ident, self.unresolved_mark)
-      && let Some(replacement) = self.mappings.get(&ident.sym)
+      && let Some(replacement) = self.mappings.get(ident.sym.as_ref())
     {
       *node = match replacement {
         ReplacementValue::Identifier(identifier) => Expr::Ident(Ident::new(

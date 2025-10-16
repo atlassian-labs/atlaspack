@@ -146,8 +146,7 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
-  pub global_aliaser_config:
-    Option<HashMap<swc_core::ecma::atoms::JsWord, swc_core::ecma::atoms::JsWord>>,
+  pub global_aliaser_config: Option<HashMap<String, String>>,
 }
 
 #[derive(Serialize, Debug, Default)]
