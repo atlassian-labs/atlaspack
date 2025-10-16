@@ -61,20 +61,20 @@ fn create_import_decl(module_path: &str, specifiers: Vec<ImportSpecifier>) -> Mo
 
 fn find_existing_import_specifier(m: &Module, module_path: &str, specifier_name: &str) -> bool {
   m.body.iter().any(|item| {
-    if let ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl)) = item {
-      if &*import_decl.src.value == module_path {
-        return import_decl.specifiers.iter().any(|spec| {
-          if let ImportSpecifier::Named(named) = spec {
-            match &named.imported {
-              Some(ModuleExportName::Ident(id)) => &*id.sym == specifier_name,
-              Some(ModuleExportName::Str(s)) => &*s.value == specifier_name,
-              None => &*named.local.sym == specifier_name,
-            }
-          } else {
-            false
+    if let ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl)) = item
+      && &*import_decl.src.value == module_path
+    {
+      return import_decl.specifiers.iter().any(|spec| {
+        if let ImportSpecifier::Named(named) = spec {
+          match &named.imported {
+            Some(ModuleExportName::Ident(id)) => &*id.sym == specifier_name,
+            Some(ModuleExportName::Str(s)) => &*s.value == specifier_name,
+            None => &*named.local.sym == specifier_name,
           }
-        });
-      }
+        } else {
+          false
+        }
+      });
     }
     false
   })
@@ -82,11 +82,11 @@ fn find_existing_import_specifier(m: &Module, module_path: &str, specifier_name:
 
 fn add_to_existing_import(m: &mut Module, module_path: &str, specifier: ImportSpecifier) -> bool {
   for item in &mut m.body {
-    if let ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl)) = item {
-      if &*import_decl.src.value == module_path {
-        import_decl.specifiers.push(specifier);
-        return true;
-      }
+    if let ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl)) = item
+      && &*import_decl.src.value == module_path
+    {
+      import_decl.specifiers.push(specifier);
+      return true;
     }
   }
   false
@@ -106,21 +106,21 @@ pub fn ensure_forward_ref_import(visitor: &mut AtomicCssCollector, m: &mut Modul
 
   // Check if forwardRef is already imported and get the local identifier
   for item in &m.body {
-    if let ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl)) = item {
-      if &*import_decl.src.value == "react" {
-        for spec in &import_decl.specifiers {
-          if let ImportSpecifier::Named(named) = spec {
-            let is_forward_ref = match &named.imported {
-              Some(ModuleExportName::Ident(id)) => &*id.sym == "forwardRef",
-              Some(ModuleExportName::Str(s)) => &*s.value == "forwardRef",
-              None => &*named.local.sym == "forwardRef",
-            };
-            if is_forward_ref {
-              visitor.forward_ref_ident = Some(named.local.clone());
-              visitor.used_idents.insert(named.local.sym.to_string());
-              visitor.need_forward_ref = false;
-              return;
-            }
+    if let ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl)) = item
+      && &*import_decl.src.value == "react"
+    {
+      for spec in &import_decl.specifiers {
+        if let ImportSpecifier::Named(named) = spec {
+          let is_forward_ref = match &named.imported {
+            Some(ModuleExportName::Ident(id)) => &*id.sym == "forwardRef",
+            Some(ModuleExportName::Str(s)) => &*s.value == "forwardRef",
+            None => &*named.local.sym == "forwardRef",
+          };
+          if is_forward_ref {
+            visitor.forward_ref_ident = Some(named.local.clone());
+            visitor.used_idents.insert(named.local.sym.to_string());
+            visitor.need_forward_ref = false;
+            return;
           }
         }
       }
@@ -210,12 +210,12 @@ pub fn ensure_runtime_cc_cs_imports(visitor: &mut AtomicCssCollector, m: &mut Mo
     // Try to add to existing import
     let mut added_to_existing = false;
     for item in &mut m.body {
-      if let ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl)) = item {
-        if &*import_decl.src.value == "@compiled/react/runtime" {
-          import_decl.specifiers.extend(specifiers.clone());
-          added_to_existing = true;
-          break;
-        }
+      if let ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl)) = item
+        && &*import_decl.src.value == "@compiled/react/runtime"
+      {
+        import_decl.specifiers.extend(specifiers.clone());
+        added_to_existing = true;
+        break;
       }
     }
 

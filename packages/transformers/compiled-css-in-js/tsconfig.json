@@ -10,6 +10,9 @@
     },
     {
       "path": "../../core/rust/tsconfig.json"
+    },
+    {
+      "path": "../../core/feature-flags/tsconfig.json"
     }
   ]
 }

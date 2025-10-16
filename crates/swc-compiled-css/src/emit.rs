@@ -161,10 +161,7 @@ impl AtomicCssCollector {
       self.ensure_const_for_rule(rule_key, move || selector_rule_clone);
     } else {
       let key = input.wrappers.join("\x1f");
-      let seen = self
-        .wrapper_key_to_seen
-        .entry(key.clone())
-        .or_insert_with(rustc_hash::FxHashSet::default);
+      let seen = self.wrapper_key_to_seen.entry(key.clone()).or_default();
       if !seen.contains(&rule_key) {
         seen.insert(rule_key);
         // Build the selector only if we will store it
@@ -235,12 +232,12 @@ impl AtomicCssCollector {
         self
           .wrapper_key_to_rules
           .entry(key.clone())
-          .or_insert_with(Vec::new)
+          .or_default()
           .push(selector_rule);
         self
           .wrapper_key_to_stack
           .entry(key)
-          .or_insert_with(|| input.wrappers.iter().cloned().collect());
+          .or_insert_with(|| input.wrappers.to_vec());
       }
     }
     out_classes.push(class_name);

@@ -124,17 +124,15 @@ fn run_fixture_dir(case_dir: &Path) {
     .and_then(|s| s.to_str())
     .unwrap_or(if is_jsx { "input.jsx" } else { "input.js" });
   let mut syntax = Syntax::Es(Default::default());
-  if is_jsx {
-    if let Syntax::Es(ref mut es_cfg) = syntax {
-      es_cfg.jsx = true;
-    }
+  if is_jsx && let Syntax::Es(ref mut es_cfg) = syntax {
+    es_cfg.jsx = true;
   }
-  let actual = transform_source(input, file_name, syntax.clone());
+  let actual = transform_source(input, file_name, syntax);
   // Normalize both actual and expected by parsing and re-emitting with the same emitter config
   let normalized_actual = reemit_source_without_transform(
     actual,
     if is_jsx { "actual.jsx" } else { "actual.js" },
-    syntax.clone(),
+    syntax,
   );
   let normalized_expected = reemit_source_without_transform(
     expected,

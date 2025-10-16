@@ -47,7 +47,7 @@ pub fn eval_const_expr(expr: &Expr) -> Option<ConstValue> {
       if t.exprs.is_empty() {
         let mut s = String::new();
         for q in &t.quasis {
-          s.push_str(&q.raw.to_string());
+          s.push_str(q.raw.as_ref());
         }
         Some(ConstValue::Str(s))
       } else {
@@ -206,7 +206,7 @@ pub fn eval_value_expr(expr: &Expr, env: &FxHashMap<Atom, ConstValue>) -> Option
     Expr::Tpl(t) => {
       let mut s = String::new();
       for (i, q) in t.quasis.iter().enumerate() {
-        s.push_str(&q.raw.to_string());
+        s.push_str(q.raw.as_ref());
         if let Some(e) = t.exprs.get(i) {
           let v = eval_value_expr(e, env)?;
           match v {
@@ -278,7 +278,7 @@ fn eval_member_target(
 }
 
 fn eval_call_to_value(call: &CallExpr, env: &FxHashMap<Atom, ConstValue>) -> Option<ValueOrNumber> {
-  if call.args.len() > 0 {
+  if !call.args.is_empty() {
     return None;
   } // only no-arg functions supported
   let func = resolve_callee_to_func(&call.callee, env)?;
@@ -362,7 +362,7 @@ pub fn eval_expr_to_const(expr: &Expr, env: &FxHashMap<Atom, ConstValue>) -> Opt
     Expr::Tpl(t) => {
       let mut s = String::new();
       for (i, q) in t.quasis.iter().enumerate() {
-        s.push_str(&q.raw.to_string());
+        s.push_str(q.raw.as_ref());
         if let Some(e) = t.exprs.get(i) {
           match eval_value_expr(e, env)? {
             ValueOrNumber::Str(st) => s.push_str(&st),
@@ -372,10 +372,7 @@ pub fn eval_expr_to_const(expr: &Expr, env: &FxHashMap<Atom, ConstValue>) -> Opt
       }
       Some(ConstValue::Str(s))
     }
-    Expr::Object(o) => match eval_object_literal_to_const_with_env(o, env) {
-      Some(v) => Some(v),
-      None => None,
-    },
+    Expr::Object(o) => eval_object_literal_to_const_with_env(o, env),
     Expr::Ident(i) => {
       if &*i.sym == "runtime" {
         return None;
@@ -440,7 +437,7 @@ pub fn eval_object_expr(
       }
     }
     Expr::Call(c) => {
-      if c.args.len() > 0 {
+      if !c.args.is_empty() {
         return None;
       }
       let func = resolve_callee_to_func(&c.callee, env)?;

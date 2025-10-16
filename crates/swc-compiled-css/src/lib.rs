@@ -19,10 +19,15 @@ mod styled;
 mod template;
 mod utils;
 
+pub(crate) type RuntimeStyleEntry = (String, Expr, bool);
+pub(crate) type RuntimeStyleEntries = Vec<RuntimeStyleEntry>;
+pub(crate) type CssRuntimeResult = (Vec<String>, RuntimeStyleEntries);
+pub(crate) type CssRuntimeResultPerKey = FxHashMap<String, CssRuntimeResult>;
+
 // Thread-local flag indicating whether a JSX pragma `@jsxImportSource @compiled/react` was found
 // in the original source. Our test harness sets this per transform.
-thread_local! { static JSX_PRAGMA_COMPILED: Cell<bool> = Cell::new(false); }
-thread_local! { static JSX_CLASSIC_PRAGMA_LOCAL: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(None); }
+thread_local! { static JSX_PRAGMA_COMPILED: Cell<bool> = const { Cell::new(false) }; }
+thread_local! { static JSX_CLASSIC_PRAGMA_LOCAL: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) }; }
 
 /// Set whether the current transform source had `/** @jsxImportSource @compiled/react */` present.
 pub fn set_jsx_import_source_compiled(present: bool) {
@@ -75,11 +80,11 @@ pub(crate) struct AtomicCssCollector {
   module_has_classic_compiled_jsx: bool,
   // Map compiled keyframes animation name -> runtime custom property entries to set on elements
   // using that animation. Each entry is (var_name, ix_arg_expr, wrap_iife)
-  keyframes_name_to_runtime: FxHashMap<String, Vec<(String, Expr, bool)>>,
+  keyframes_name_to_runtime: FxHashMap<String, RuntimeStyleEntries>,
   // Whether to allow creating runtime CSS variables when expressions are not const
   allow_runtime_vars: bool,
   // Temporary bucket to collect runtime entries during a single collection pass
-  tmp_runtime_entries: Vec<(String, Expr, bool)>,
+  tmp_runtime_entries: RuntimeStyleEntries,
   // Sequence to generate unique runtime var ids
   runtime_var_seq: u64,
   // Depth counter: when > 0, expressions within an xcss-like JSX attribute are not transformed
@@ -95,10 +100,9 @@ pub(crate) struct AtomicCssCollector {
   style_rules: FxHashSet<String>,
   // Removed diagnostics queue for non-const css outside JSX (we drop unattached runtime)
   // Results of css() assigned to identifiers: collected classes and runtime entries
-  css_result_by_ident: FxHashMap<Atom, (Vec<String>, Vec<(String, Expr, bool)>)>,
+  css_result_by_ident: FxHashMap<Atom, CssRuntimeResult>,
   // Results of cssMap() assigned to identifiers: key -> (classes, runtime entries)
-  css_map_result_by_ident:
-    FxHashMap<Atom, FxHashMap<String, (Vec<String>, Vec<(String, Expr, bool)>)>>,
+  css_map_result_by_ident: FxHashMap<Atom, CssRuntimeResultPerKey>,
 }
 
 impl AtomicCssCollector {
@@ -118,7 +122,7 @@ impl AtomicCssCollector {
     self.tmp_runtime_entries.clear();
   }
 
-  fn take_runtime_entries(&mut self) -> Vec<(String, Expr, bool)> {
+  fn take_runtime_entries(&mut self) -> RuntimeStyleEntries {
     self.allow_runtime_vars = false;
     std::mem::take(&mut self.tmp_runtime_entries)
   }
@@ -137,10 +141,7 @@ impl AtomicCssCollector {
   // Attempt to resolve a cssMap member expression to classes and runtime entries.
   // Supports both `styles.primary` where `styles` is a const bound to cssMap(...)
   // and `(cssMap({...})).primary` inline with static key.
-  fn try_resolve_css_map_member(
-    &mut self,
-    me: &MemberExpr,
-  ) -> Option<(Vec<String>, Vec<(String, Expr, bool)>)> {
+  fn try_resolve_css_map_member(&mut self, me: &MemberExpr) -> Option<CssRuntimeResult> {
     // Resolve property key if static
     let key_name: Option<String> = match &me.prop {
       MemberProp::Ident(i) => Some(i.sym.to_string()),
@@ -157,55 +158,52 @@ impl AtomicCssCollector {
     };
     let key_name = key_name?;
     // Case 1: obj is an identifier bound to cssMap result
-    if let Expr::Ident(obj_id) = &*me.obj {
-      if let Some(per_key) = self.css_map_result_by_ident.get(&obj_id.sym) {
-        if let Some((classes, entries)) = per_key.get(&key_name) {
-          return Some((classes.clone(), entries.clone()));
-        }
-      }
+    if let Expr::Ident(obj_id) = &*me.obj
+      && let Some(per_key) = self.css_map_result_by_ident.get(&obj_id.sym)
+      && let Some((classes, entries)) = per_key.get(&key_name)
+    {
+      return Some((classes.clone(), entries.clone()));
     }
     // Case 2: obj is an inline cssMap call with object literal
-    if let Expr::Call(call) = &*me.obj {
-      if let Callee::Expr(callee_expr) = &call.callee {
-        // Resolve callee ident possibly behind SeqExpr
-        let mut maybe_ident: Option<Ident> = None;
-        match &**callee_expr {
-          Expr::Ident(i) => maybe_ident = Some(i.clone()),
-          Expr::Seq(seq) => {
-            if let Some(last) = seq.exprs.last() {
-              if let Expr::Ident(i) = &**last {
-                maybe_ident = Some(i.clone());
-              }
-            }
+    if let Expr::Call(call) = &*me.obj
+      && let Callee::Expr(callee_expr) = &call.callee
+    {
+      // Resolve callee ident possibly behind SeqExpr
+      let mut maybe_ident: Option<Ident> = None;
+      match &**callee_expr {
+        Expr::Ident(i) => maybe_ident = Some(i.clone()),
+        Expr::Seq(seq) => {
+          if let Some(last) = seq.exprs.last()
+            && let Expr::Ident(i) = &**last
+          {
+            maybe_ident = Some(i.clone());
           }
-          _ => {}
         }
-        if let Some(ci) = maybe_ident {
-          if self.css_map_local.as_ref().map_or(false, |w| ci.sym == *w) {
-            if let Some(arg0) = call.args.get(0) {
-              if let Expr::Object(outer) = &*arg0.expr {
-                for p in &outer.props {
-                  if let PropOrSpread::Prop(pp) = p {
-                    if let Prop::KeyValue(kv) = &**pp {
-                      let k = match &kv.key {
-                        PropName::Ident(i) => i.sym.to_string(),
-                        PropName::Str(s) => s.value.to_string(),
-                        PropName::Num(n) => n.value.to_string(),
-                        PropName::BigInt(b) => b.value.to_string(),
-                        PropName::Computed(_) => continue,
-                      };
-                      if k == key_name {
-                        if let Expr::Object(style_obj) = &*kv.value {
-                          self.begin_runtime_collection();
-                          let classes = self.collect_atomic_classes_from_object(style_obj);
-                          let entries = self.take_runtime_entries();
-                          return Some((classes, entries));
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+        _ => {}
+      }
+      if let Some(ci) = maybe_ident
+        && self.css_map_local.as_ref().is_some_and(|w| ci.sym == *w)
+        && let Some(arg0) = call.args.first()
+        && let Expr::Object(outer) = &*arg0.expr
+      {
+        for p in &outer.props {
+          if let PropOrSpread::Prop(pp) = p
+            && let Prop::KeyValue(kv) = &**pp
+          {
+            let k = match &kv.key {
+              PropName::Ident(i) => i.sym.to_string(),
+              PropName::Str(s) => s.value.to_string(),
+              PropName::Num(n) => n.value.to_string(),
+              PropName::BigInt(b) => b.value.to_string(),
+              PropName::Computed(_) => continue,
+            };
+            if k == key_name
+              && let Expr::Object(style_obj) = &*kv.value
+            {
+              self.begin_runtime_collection();
+              let classes = self.collect_atomic_classes_from_object(style_obj);
+              let entries = self.take_runtime_entries();
+              return Some((classes, entries));
             }
           }
         }
@@ -216,21 +214,22 @@ impl AtomicCssCollector {
 
   // Resolve a css prop expression into atomic classes and runtime ix entries.
   // Returns None when expression should pass through to ax as-is.
-  fn resolve_css_expr_to_classes_and_entries(
-    &mut self,
-    expr: &Expr,
-  ) -> Option<(Vec<String>, Vec<(String, Expr, bool)>)> {
+  fn resolve_css_expr_to_classes_and_entries(&mut self, expr: &Expr) -> Option<CssRuntimeResult> {
     match expr {
       // styles.primary (or (cssMap({...})).primary)
       Expr::Member(me) => self.try_resolve_css_map_member(me),
       // Identifier bound to css() const or class string
       Expr::Ident(id) => {
         if let Some(ConstValue::Str(joined)) = self.const_env.get(&id.sym) {
-          let mut classes = Vec::new();
-          classes.push(joined.clone());
-          let mut entries = Vec::new();
+          let classes = vec![joined.clone()];
+          let mut entries = RuntimeStyleEntries::with_capacity(
+            self
+              .css_result_by_ident
+              .get(&id.sym)
+              .map_or(0, |(_, e)| e.len()),
+          );
           if let Some((_cls, e)) = self.css_result_by_ident.get(&id.sym) {
-            entries.extend_from_slice(e);
+            entries.extend(e.iter().cloned());
           }
           return Some((classes, entries));
         }
@@ -242,12 +241,10 @@ impl AtomicCssCollector {
         if let Some(css_text) = self.build_css_text_from_object(o) {
           let classes = self.collect_atomic_classes_from_css_text(&css_text);
           // Merge keyframes runtime entries if animation-name present
-          let mut entries: Vec<(String, Expr, bool)> = Vec::new();
+          let mut entries: RuntimeStyleEntries = RuntimeStyleEntries::new();
           for anim_name in crate::template::parse_animation_names_from_css_text(&css_text) {
             if let Some(kf_entries) = self.keyframes_name_to_runtime.get(&anim_name) {
-              for (v, e, w) in kf_entries.clone() {
-                entries.push((v, e, w));
-              }
+              entries.extend(kf_entries.iter().cloned());
             }
           }
           Some((classes, entries))
@@ -266,60 +263,51 @@ impl AtomicCssCollector {
           match &**callee_expr {
             Expr::Ident(i) => maybe_ident = Some(i.clone()),
             Expr::Seq(seq) => {
-              if let Some(last) = seq.exprs.last() {
-                if let Expr::Ident(i) = &**last {
-                  maybe_ident = Some(i.clone());
-                }
+              if let Some(last) = seq.exprs.last()
+                && let Expr::Ident(i) = &**last
+              {
+                maybe_ident = Some(i.clone());
               }
             }
             _ => {}
           }
-          if let Some(id) = maybe_ident {
-            if self.css_local.as_ref().map_or(false, |w| id.sym == *w) {
-              if let Some(arg0) = call.args.get(0) {
-                match &*arg0.expr {
-                  Expr::Object(o) => {
-                    if let Some(css_text) = self.build_css_text_from_object(o) {
-                      let classes = self.collect_atomic_classes_from_css_text(&css_text);
-                      let mut entries: Vec<(String, Expr, bool)> = Vec::new();
-                      for anim_name in
-                        crate::template::parse_animation_names_from_css_text(&css_text)
-                      {
-                        if let Some(kf_entries) = self.keyframes_name_to_runtime.get(&anim_name) {
-                          for (v, e, w) in kf_entries.clone() {
-                            entries.push((v, e, w));
-                          }
-                        }
-                      }
-                      return Some((classes, entries));
-                    } else {
-                      self.begin_runtime_collection();
-                      let classes = self.collect_atomic_classes_from_object(o);
-                      let entries = self.take_runtime_entries();
-                      return Some((classes, entries));
+          if let Some(id) = maybe_ident
+            && self.css_local.as_ref().is_some_and(|w| id.sym == *w)
+            && let Some(arg0) = call.args.first()
+          {
+            match &*arg0.expr {
+              Expr::Object(o) => {
+                if let Some(css_text) = self.build_css_text_from_object(o) {
+                  let classes = self.collect_atomic_classes_from_css_text(&css_text);
+                  let mut entries: RuntimeStyleEntries = RuntimeStyleEntries::new();
+                  for anim_name in crate::template::parse_animation_names_from_css_text(&css_text) {
+                    if let Some(kf_entries) = self.keyframes_name_to_runtime.get(&anim_name) {
+                      entries.extend(kf_entries.iter().cloned());
                     }
                   }
-                  Expr::Tpl(tpl) => {
-                    self.begin_runtime_collection();
-                    if let Some(css_text) = self.build_css_text_from_tpl(tpl) {
-                      let mut entries = self.take_runtime_entries();
-                      // Merge keyframes runtime entries if animation-name present
-                      for anim_name in
-                        crate::template::parse_animation_names_from_css_text(&css_text)
-                      {
-                        if let Some(kf_entries) = self.keyframes_name_to_runtime.get(&anim_name) {
-                          for (v, e, w) in kf_entries.clone() {
-                            entries.push((v, e, w));
-                          }
-                        }
-                      }
-                      let classes = self.collect_atomic_classes_from_css_text(&css_text);
-                      return Some((classes, entries));
-                    }
-                  }
-                  _ => {}
+                  return Some((classes, entries));
+                } else {
+                  self.begin_runtime_collection();
+                  let classes = self.collect_atomic_classes_from_object(o);
+                  let entries = self.take_runtime_entries();
+                  return Some((classes, entries));
                 }
               }
+              Expr::Tpl(tpl) => {
+                self.begin_runtime_collection();
+                if let Some(css_text) = self.build_css_text_from_tpl(tpl) {
+                  let mut entries = self.take_runtime_entries();
+                  // Merge keyframes runtime entries if animation-name present
+                  for anim_name in crate::template::parse_animation_names_from_css_text(&css_text) {
+                    if let Some(kf_entries) = self.keyframes_name_to_runtime.get(&anim_name) {
+                      entries.extend(kf_entries.iter().cloned());
+                    }
+                  }
+                  let classes = self.collect_atomic_classes_from_css_text(&css_text);
+                  return Some((classes, entries));
+                }
+              }
+              _ => {}
             }
           }
         }
@@ -332,9 +320,7 @@ impl AtomicCssCollector {
           let mut entries = self.take_runtime_entries();
           for anim_name in crate::template::parse_animation_names_from_css_text(&css_text) {
             if let Some(kf_entries) = self.keyframes_name_to_runtime.get(&anim_name) {
-              for (v, e, w) in kf_entries.clone() {
-                entries.push((v, e, w));
-              }
+              entries.extend(kf_entries.iter().cloned());
             }
           }
           let classes = self.collect_atomic_classes_from_css_text(&css_text);
@@ -349,29 +335,27 @@ impl AtomicCssCollector {
         match &*tt.tag {
           Expr::Ident(i) => maybe_ident = Some(i.clone()),
           Expr::Seq(seq) => {
-            if let Some(last) = seq.exprs.last() {
-              if let Expr::Ident(i) = &**last {
-                maybe_ident = Some(i.clone());
-              }
+            if let Some(last) = seq.exprs.last()
+              && let Expr::Ident(i) = &**last
+            {
+              maybe_ident = Some(i.clone());
             }
           }
           _ => {}
         }
-        if let Some(id) = maybe_ident {
-          if self.css_local.as_ref().map_or(false, |w| id.sym == *w) {
-            self.begin_runtime_collection();
-            if let Some(css_text) = self.build_css_text_from_tpl(&tt.tpl) {
-              let mut entries = self.take_runtime_entries();
-              for anim_name in crate::template::parse_animation_names_from_css_text(&css_text) {
-                if let Some(kf_entries) = self.keyframes_name_to_runtime.get(&anim_name) {
-                  for (v, e, w) in kf_entries.clone() {
-                    entries.push((v, e, w));
-                  }
-                }
+        if let Some(id) = maybe_ident
+          && self.css_local.as_ref().is_some_and(|w| id.sym == *w)
+        {
+          self.begin_runtime_collection();
+          if let Some(css_text) = self.build_css_text_from_tpl(&tt.tpl) {
+            let mut entries = self.take_runtime_entries();
+            for anim_name in crate::template::parse_animation_names_from_css_text(&css_text) {
+              if let Some(kf_entries) = self.keyframes_name_to_runtime.get(&anim_name) {
+                entries.extend(kf_entries.iter().cloned());
               }
-              let classes = self.collect_atomic_classes_from_css_text(&css_text);
-              return Some((classes, entries));
             }
+            let classes = self.collect_atomic_classes_from_css_text(&css_text);
+            return Some((classes, entries));
           }
         }
         None
@@ -407,19 +391,17 @@ impl AtomicCssCollector {
     &mut self,
     expr: &Expr,
     ax_array_elems: &mut Vec<ExprOrSpread>,
-    runtime_entries: &mut Vec<(String, Expr, bool)>,
+    runtime_entries: &mut RuntimeStyleEntries,
   ) {
     match expr {
       Expr::Array(arr) => {
-        for el in &arr.elems {
-          if let Some(el) = el {
-            self.collect_from_css_expr(&el.expr, ax_array_elems, runtime_entries);
-          }
+        for el in arr.elems.iter().flatten() {
+          self.collect_from_css_expr(&el.expr, ax_array_elems, runtime_entries);
         }
       }
       _ => {
-        if let Some((classes, mut entries)) = self.resolve_css_expr_to_classes_and_entries(expr) {
-          runtime_entries.append(&mut entries);
+        if let Some((classes, entries)) = self.resolve_css_expr_to_classes_and_entries(expr) {
+          runtime_entries.extend(entries);
           if let Some(e) = Self::classes_to_array_elem_static(classes) {
             ax_array_elems.push(e);
           }
@@ -470,18 +452,14 @@ impl AtomicCssCollector {
   fn jsx_element_has_css_transformation(&self, element: &JSXElement) -> bool {
     // Check if any attribute is className with ax() call
     for attr in &element.opening.attrs {
-      if let JSXAttrOrSpread::JSXAttr(jsx_attr) = attr {
-        if let JSXAttrName::Ident(name) = &jsx_attr.name {
-          if &*name.sym == "className" {
-            if let Some(JSXAttrValue::JSXExprContainer(container)) = &jsx_attr.value {
-              if let JSXExpr::Expr(expr) = &container.expr {
-                if self.is_ax_call(expr) {
-                  return true;
-                }
-              }
-            }
-          }
-        }
+      if let JSXAttrOrSpread::JSXAttr(jsx_attr) = attr
+        && let JSXAttrName::Ident(name) = &jsx_attr.name
+        && &*name.sym == "className"
+        && let Some(JSXAttrValue::JSXExprContainer(container)) = &jsx_attr.value
+        && let JSXExpr::Expr(expr) = &container.expr
+        && self.is_ax_call(expr)
+      {
+        return true;
       }
     }
     false
@@ -492,42 +470,31 @@ impl AtomicCssCollector {
 
     // Find className attribute with ax() call
     for attr in &element.opening.attrs {
-      if let JSXAttrOrSpread::JSXAttr(jsx_attr) = attr {
-        if let JSXAttrName::Ident(name) = &jsx_attr.name {
-          if &*name.sym == "className" {
-            if let Some(JSXAttrValue::JSXExprContainer(container)) = &jsx_attr.value {
-              if let JSXExpr::Expr(expr) = &container.expr {
-                if let Expr::Call(call) = &**expr {
-                  if let Callee::Expr(callee_expr) = &call.callee {
-                    if let Expr::Ident(callee_ident) = &**callee_expr {
-                      if &*callee_ident.sym == "ax" {
-                        // Extract class names from ax([...]) call
-                        if let Some(ExprOrSpread { expr: arg_expr, .. }) = call.args.first() {
-                          if let Expr::Array(array) = &**arg_expr {
-                            for elem in &array.elems {
-                              if let Some(ExprOrSpread {
-                                expr: elem_expr, ..
-                              }) = elem
-                              {
-                                if let Expr::Lit(Lit::Str(class_str)) = &**elem_expr {
-                                  // Parse space-separated class names and map to CSS constants
-                                  let class_names: Vec<&str> =
-                                    class_str.value.split_whitespace().collect();
-                                  for class_name in class_names {
-                                    if let Some(ident) =
-                                      self.find_css_constant_for_class(class_name)
-                                    {
-                                      css_constants.push(ident);
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
+      if let JSXAttrOrSpread::JSXAttr(jsx_attr) = attr
+        && let JSXAttrName::Ident(name) = &jsx_attr.name
+        && &*name.sym == "className"
+        && let Some(JSXAttrValue::JSXExprContainer(container)) = &jsx_attr.value
+        && let JSXExpr::Expr(expr) = &container.expr
+        && let Expr::Call(call) = &**expr
+        && let Callee::Expr(callee_expr) = &call.callee
+        && let Expr::Ident(callee_ident) = &**callee_expr
+        && &*callee_ident.sym == "ax"
+      {
+        // Extract class names from ax([...]) call
+        if let Some(ExprOrSpread { expr: arg_expr, .. }) = call.args.first()
+          && let Expr::Array(array) = &**arg_expr
+        {
+          for elem in &array.elems {
+            if let Some(ExprOrSpread {
+              expr: elem_expr, ..
+            }) = elem
+              && let Expr::Lit(Lit::Str(class_str)) = &**elem_expr
+            {
+              // Parse space-separated class names and map to CSS constants
+              let class_names: Vec<&str> = class_str.value.split_whitespace().collect();
+              for class_name in class_names {
+                if let Some(ident) = self.find_css_constant_for_class(class_name) {
+                  css_constants.push(ident);
                 }
               }
             }
@@ -545,10 +512,10 @@ impl AtomicCssCollector {
       if let Some(ident) = self.rule_key_to_ident.get(rule_key) {
         // Check if this CSS rule contains the class name
         // We need to check the CSS text to see if it starts with the class selector
-        if let Some(css_text) = self.get_css_text_for_rule(*rule_key) {
-          if css_text.contains(&format!(".{}", class_name)) {
-            return Some(ident.clone());
-          }
+        if let Some(css_text) = self.get_css_text_for_rule(*rule_key)
+          && css_text.contains(&format!(".{}", class_name))
+        {
+          return Some(ident.clone());
         }
       }
     }
@@ -568,10 +535,10 @@ impl AtomicCssCollector {
   fn is_ax_call(&self, expr: &Expr) -> bool {
     match expr {
       Expr::Call(call) => {
-        if let Callee::Expr(callee) = &call.callee {
-          if let Expr::Ident(ident) = &**callee {
-            return &*ident.sym == "ax";
-          }
+        if let Callee::Expr(callee) = &call.callee
+          && let Expr::Ident(ident) = &**callee
+        {
+          return &*ident.sym == "ax";
         }
         false
       }
@@ -625,10 +592,8 @@ fn collect_idents_from_pat(pat: &Pat, out: &mut FxHashSet<String>) {
       out.insert(id.sym.to_string());
     }
     Pat::Array(arr) => {
-      for elem in &arr.elems {
-        if let Some(p) = elem {
-          collect_idents_from_pat(p, out);
-        }
+      for p in arr.elems.iter().flatten() {
+        collect_idents_from_pat(p, out);
       }
     }
     Pat::Object(obj) => {
@@ -744,18 +709,18 @@ impl VisitMut for AtomicCssCollector {
     // Compute classic JSX pragma availability for this module, for gating in JSX visitors
     let mut classic_jsx_local_from_import: Option<String> = None;
     for item in &m.body {
-      if let ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl)) = item {
-        if &*import_decl.src.value == "@compiled/react" {
-          for s in &import_decl.specifiers {
-            if let ImportSpecifier::Named(named) = s {
-              let is_jsx = match &named.imported {
-                Some(ModuleExportName::Ident(i)) => &*i.sym == "jsx",
-                Some(ModuleExportName::Str(s)) => &*s.value == "jsx",
-                None => &*named.local.sym == "jsx",
-              };
-              if is_jsx {
-                classic_jsx_local_from_import = Some(named.local.sym.to_string());
-              }
+      if let ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl)) = item
+        && &*import_decl.src.value == "@compiled/react"
+      {
+        for s in &import_decl.specifiers {
+          if let ImportSpecifier::Named(named) = s {
+            let is_jsx = match &named.imported {
+              Some(ModuleExportName::Ident(i)) => &*i.sym == "jsx",
+              Some(ModuleExportName::Str(s)) => &*s.value == "jsx",
+              None => &*named.local.sym == "jsx",
+            };
+            if is_jsx {
+              classic_jsx_local_from_import = Some(named.local.sym.to_string());
             }
           }
         }
@@ -877,7 +842,7 @@ impl VisitMut for AtomicCssCollector {
     }
     if !self.hoisted.is_empty() {
       let mut items = Vec::with_capacity(self.hoisted.len() + m.body.len());
-      items.extend(self.hoisted.drain(..));
+      items.append(&mut self.hoisted);
       items.append(&mut m.body);
       m.body = items;
     }
@@ -892,272 +857,166 @@ impl VisitMut for AtomicCssCollector {
     }
     if n.kind == VarDeclKind::Const {
       for d in &n.decls {
-        if let Pat::Ident(BindingIdent { id, .. }) = &d.name {
-          if let Some(init) = &d.init {
-            if let Some(v) = eval_const_expr(init) {
-              self.const_env.insert(id.sym.clone(), v);
-            } else if let Some(v) = eval_expr_to_const(init, &self.const_env) {
-              self.const_env.insert(id.sym.clone(), v);
-            } else {
-              // Record class string for consts assigned from css({...}) or css`...`
-              match &**init {
-                Expr::Call(call) => {
-                  if let Callee::Expr(callee_expr) = &call.callee {
-                    // resolve ident from possible seq expr
-                    let mut maybe_ident: Option<Ident> = None;
-                    match &**callee_expr {
-                      Expr::Ident(i) => maybe_ident = Some(i.clone()),
-                      Expr::Seq(seq) => {
-                        if let Some(last) = seq.exprs.last() {
-                          if let Expr::Ident(i) = &**last {
-                            maybe_ident = Some(i.clone());
-                          }
-                        }
-                      }
-                      _ => {}
-                    }
-                    if let Some(ci) = maybe_ident {
-                      // Handle cssMap(...) assigned to const ident
-                      if self.css_map_local.as_ref().map_or(false, |w| ci.sym == *w) {
-                        if let Some(arg0) = call.args.get(0) {
-                          if let Expr::Object(outer) = &*arg0.expr {
-                            // Build const env object and per-key runtime entries
-                            let mut obj_map: FxHashMap<String, evaluate_expr::ConstValue> =
-                              FxHashMap::default();
-                            let mut per_key: FxHashMap<
-                              String,
-                              (Vec<String>, Vec<(String, Expr, bool)>),
-                            > = FxHashMap::default();
-                            for p in &outer.props {
-                              if let PropOrSpread::Prop(pp) = p {
-                                if let Prop::KeyValue(kv) = &**pp {
-                                  let key_name = match &kv.key {
-                                    PropName::Ident(i) => i.sym.to_string(),
-                                    PropName::Str(s) => s.value.to_string(),
-                                    PropName::Num(n) => n.value.to_string(),
-                                    PropName::BigInt(b) => b.value.to_string(),
-                                    PropName::Computed(_) => continue,
-                                  };
-                                  if let Expr::Object(style_obj) = &*kv.value {
-                                    // Collect classes with runtime fallback enabled
-                                    self.begin_runtime_collection();
-                                    let classes =
-                                      self.collect_atomic_classes_from_object(style_obj);
-                                    let runtime_entries = self.take_runtime_entries();
-                                    // Store results
-                                    let joined = join_classes_space(classes.clone());
-                                    obj_map.insert(
-                                      key_name.clone(),
-                                      evaluate_expr::ConstValue::Str(joined),
-                                    );
-                                    per_key.insert(key_name, (classes, runtime_entries));
-                                  }
-                                }
-                              }
-                            }
-                            if !obj_map.is_empty() {
-                              self
-                                .const_env
-                                .insert(id.sym.clone(), evaluate_expr::ConstValue::Obj(obj_map));
-                            }
-                            if !per_key.is_empty() {
-                              self.css_map_result_by_ident.insert(id.sym.clone(), per_key);
-                            }
-                          }
-                        }
-                      }
-                      if self.css_local.as_ref().map_or(false, |w| ci.sym == *w) {
-                        if let Some(arg0) = call.args.get(0) {
-                          match &*arg0.expr {
-                            Expr::Object(o) => {
-                              // Prefer static fast path for consts
-                              let classes =
-                                if let Some(css_text) = self.build_css_text_from_object(o) {
-                                  self.collect_atomic_classes_from_css_text(&css_text)
-                                } else {
-                                  self.begin_runtime_collection();
-                                  let classes = self.collect_atomic_classes_from_object(o);
-                                  let runtime_entries = self.take_runtime_entries();
-                                  self
-                                    .css_result_by_ident
-                                    .insert(id.sym.clone(), (Vec::new(), runtime_entries));
-                                  classes
-                                };
-                              let joined = join_classes_space(classes);
-                              self
-                                .const_env
-                                .insert(id.sym.clone(), evaluate_expr::ConstValue::Str(joined));
-
-                              // Mark for null replacement when CC/CS components are enabled
-                              self.css_calls_to_nullify.insert(id.sym.clone());
-                            }
-                            Expr::Tpl(tpl) => {
-                              if let Some(css_text) = self.build_css_text_from_tpl(tpl) {
-                                let classes = self.collect_atomic_classes_from_css_text(&css_text);
-                                let joined = join_classes_space(classes);
-                                self
-                                  .const_env
-                                  .insert(id.sym.clone(), evaluate_expr::ConstValue::Str(joined));
-
-                                self.css_calls_to_nullify.insert(id.sym.clone());
-                              } else {
-                                // Enable runtime var fallback and try again for templates
-                                self.begin_runtime_collection();
-                                if let Some(css_text) = self.build_css_text_from_tpl(tpl) {
-                                  let runtime_entries = self.take_runtime_entries();
-                                  let classes =
-                                    self.collect_atomic_classes_from_css_text(&css_text);
-                                  let joined = join_classes_space(classes);
-                                  self
-                                    .const_env
-                                    .insert(id.sym.clone(), evaluate_expr::ConstValue::Str(joined));
-                                  self
-                                    .css_result_by_ident
-                                    .insert(id.sym.clone(), (Vec::new(), runtime_entries));
-
-                                  self.css_calls_to_nullify.insert(id.sym.clone());
-                                }
-                              }
-                            }
-                            _ => {}
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-                Expr::TaggedTpl(tt) => {
-                  // css`...`
+        if let Pat::Ident(BindingIdent { id, .. }) = &d.name
+          && let Some(init) = &d.init
+        {
+          if let Some(v) = eval_const_expr(init) {
+            self.const_env.insert(id.sym.clone(), v);
+          } else if let Some(v) = eval_expr_to_const(init, &self.const_env) {
+            self.const_env.insert(id.sym.clone(), v);
+          } else {
+            // Record class string for consts assigned from css({...}) or css`...`
+            match &**init {
+              Expr::Call(call) => {
+                if let Callee::Expr(callee_expr) = &call.callee {
+                  // resolve ident from possible seq expr
                   let mut maybe_ident: Option<Ident> = None;
-                  match &*tt.tag {
+                  match &**callee_expr {
                     Expr::Ident(i) => maybe_ident = Some(i.clone()),
                     Expr::Seq(seq) => {
-                      if let Some(last) = seq.exprs.last() {
-                        if let Expr::Ident(i) = &**last {
-                          maybe_ident = Some(i.clone());
-                        }
+                      if let Some(last) = seq.exprs.last()
+                        && let Expr::Ident(i) = &**last
+                      {
+                        maybe_ident = Some(i.clone());
                       }
                     }
                     _ => {}
                   }
                   if let Some(ci) = maybe_ident {
-                    if self.css_local.as_ref().map_or(false, |w| ci.sym == *w) {
-                      if let Some(css_text) = self.build_css_text_from_tpl(&tt.tpl) {
-                        let classes = self.collect_atomic_classes_from_css_text(&css_text);
-                        let joined = join_classes_space(classes);
-                        self
-                          .const_env
-                          .insert(id.sym.clone(), evaluate_expr::ConstValue::Str(joined));
-
-                        self.css_calls_to_nullify.insert(id.sym.clone());
-                      }
-                    }
-                  }
-                }
-                Expr::Object(obj) => {
-                  // Capture object literal with css() values into const_env as an object of strings
-                  let mut map: FxHashMap<String, evaluate_expr::ConstValue> = FxHashMap::default();
-                  for p in &obj.props {
-                    if let PropOrSpread::Prop(pp) = p {
-                      if let Prop::KeyValue(kv) = &**pp {
-                        let key_name = match &kv.key {
-                          PropName::Ident(i) => i.sym.to_string(),
-                          PropName::Str(s) => s.value.to_string(),
-                          PropName::Num(n) => n.value.to_string(),
-                          PropName::BigInt(b) => b.value.to_string(),
-                          PropName::Computed(_) => continue,
-                        };
-                        // css({}) or css`` inside object
-                        match &*kv.value {
-                          Expr::Call(call) => {
-                            if let Callee::Expr(callee_expr) = &call.callee {
-                              let mut maybe_ident: Option<Ident> = None;
-                              match &**callee_expr {
-                                Expr::Ident(i) => maybe_ident = Some(i.clone()),
-                                Expr::Seq(seq) => {
-                                  if let Some(last) = seq.exprs.last() {
-                                    if let Expr::Ident(i) = &**last {
-                                      maybe_ident = Some(i.clone());
-                                    }
-                                  }
-                                }
-                                _ => {}
-                              }
-                              if let Some(ci) = maybe_ident {
-                                if self.css_local.as_ref().map_or(false, |w| ci.sym == *w) {
-                                  if let Some(arg0) = call.args.get(0) {
-                                    match &*arg0.expr {
-                                      Expr::Object(o) => {
-                                        let classes = self.collect_atomic_classes_from_object(o);
-                                        let joined = join_classes_space(classes);
-                                        map
-                                          .insert(key_name, evaluate_expr::ConstValue::Str(joined));
-                                      }
-                                      Expr::Tpl(tpl) => {
-                                        if let Some(css_text) = self.build_css_text_from_tpl(tpl) {
-                                          let classes =
-                                            self.collect_atomic_classes_from_css_text(&css_text);
-                                          let joined = join_classes_space(classes);
-                                          map.insert(
-                                            key_name,
-                                            evaluate_expr::ConstValue::Str(joined),
-                                          );
-                                        }
-                                      }
-                                      _ => {}
-                                    }
-                                  }
-                                }
-                              }
-                            }
+                    // Handle cssMap(...) assigned to const ident
+                    if self.css_map_local.as_ref().is_some_and(|w| ci.sym == *w)
+                      && let Some(arg0) = call.args.first()
+                      && let Expr::Object(outer) = &*arg0.expr
+                    {
+                      // Build const env object and per-key runtime entries
+                      let mut obj_map: FxHashMap<String, evaluate_expr::ConstValue> =
+                        FxHashMap::default();
+                      let mut per_key: CssRuntimeResultPerKey = FxHashMap::default();
+                      for p in &outer.props {
+                        if let PropOrSpread::Prop(pp) = p
+                          && let Prop::KeyValue(kv) = &**pp
+                        {
+                          let key_name = match &kv.key {
+                            PropName::Ident(i) => i.sym.to_string(),
+                            PropName::Str(s) => s.value.to_string(),
+                            PropName::Num(n) => n.value.to_string(),
+                            PropName::BigInt(b) => b.value.to_string(),
+                            PropName::Computed(_) => continue,
+                          };
+                          if let Expr::Object(style_obj) = &*kv.value {
+                            // Collect classes with runtime fallback enabled
+                            self.begin_runtime_collection();
+                            let classes = self.collect_atomic_classes_from_object(style_obj);
+                            let runtime_entries = self.take_runtime_entries();
+                            // Store results
+                            let joined = join_classes_space(classes.clone());
+                            obj_map
+                              .insert(key_name.clone(), evaluate_expr::ConstValue::Str(joined));
+                            per_key.insert(key_name, (classes, runtime_entries));
                           }
-                          Expr::TaggedTpl(tt2) => {
-                            // css`...`
-                            let mut maybe_ident: Option<Ident> = None;
-                            match &*tt2.tag {
-                              Expr::Ident(i) => maybe_ident = Some(i.clone()),
-                              Expr::Seq(seq) => {
-                                if let Some(last) = seq.exprs.last() {
-                                  if let Expr::Ident(i) = &**last {
-                                    maybe_ident = Some(i.clone());
-                                  }
-                                }
-                              }
-                              _ => {}
-                            }
-                            if let Some(ci) = maybe_ident {
-                              if self.css_local.as_ref().map_or(false, |w| ci.sym == *w) {
-                                if let Some(css_text) = self.build_css_text_from_tpl(&tt2.tpl) {
-                                  let classes =
-                                    self.collect_atomic_classes_from_css_text(&css_text);
-                                  let joined = join_classes_space(classes);
-                                  map.insert(key_name, evaluate_expr::ConstValue::Str(joined));
-                                }
-                              }
-                            }
-                          }
-                          _ => {}
                         }
                       }
+                      if !obj_map.is_empty() {
+                        self
+                          .const_env
+                          .insert(id.sym.clone(), evaluate_expr::ConstValue::Obj(obj_map));
+                      }
+                      if !per_key.is_empty() {
+                        self.css_map_result_by_ident.insert(id.sym.clone(), per_key);
+                      }
+                    }
+                    if self.css_local.as_ref().is_some_and(|w| ci.sym == *w)
+                      && let Some(arg0) = call.args.first()
+                    {
+                      match &*arg0.expr {
+                        Expr::Object(o) => {
+                          // Prefer static fast path for consts
+                          let classes = if let Some(css_text) = self.build_css_text_from_object(o) {
+                            self.collect_atomic_classes_from_css_text(&css_text)
+                          } else {
+                            self.begin_runtime_collection();
+                            let classes = self.collect_atomic_classes_from_object(o);
+                            let runtime_entries = self.take_runtime_entries();
+                            self
+                              .css_result_by_ident
+                              .insert(id.sym.clone(), (Vec::new(), runtime_entries));
+                            classes
+                          };
+                          let joined = join_classes_space(classes);
+                          self
+                            .const_env
+                            .insert(id.sym.clone(), evaluate_expr::ConstValue::Str(joined));
+
+                          // Mark for null replacement when CC/CS components are enabled
+                          self.css_calls_to_nullify.insert(id.sym.clone());
+                        }
+                        Expr::Tpl(tpl) => {
+                          if let Some(css_text) = self.build_css_text_from_tpl(tpl) {
+                            let classes = self.collect_atomic_classes_from_css_text(&css_text);
+                            let joined = join_classes_space(classes);
+                            self
+                              .const_env
+                              .insert(id.sym.clone(), evaluate_expr::ConstValue::Str(joined));
+
+                            self.css_calls_to_nullify.insert(id.sym.clone());
+                          } else {
+                            // Enable runtime var fallback and try again for templates
+                            self.begin_runtime_collection();
+                            if let Some(css_text) = self.build_css_text_from_tpl(tpl) {
+                              let runtime_entries = self.take_runtime_entries();
+                              let classes = self.collect_atomic_classes_from_css_text(&css_text);
+                              let joined = join_classes_space(classes);
+                              self
+                                .const_env
+                                .insert(id.sym.clone(), evaluate_expr::ConstValue::Str(joined));
+                              self
+                                .css_result_by_ident
+                                .insert(id.sym.clone(), (Vec::new(), runtime_entries));
+
+                              self.css_calls_to_nullify.insert(id.sym.clone());
+                            }
+                          }
+                        }
+                        _ => {}
+                      }
                     }
                   }
-                  if !map.is_empty() {
-                    self
-                      .const_env
-                      .insert(id.sym.clone(), evaluate_expr::ConstValue::Obj(map));
-                  }
                 }
-                _ => {}
               }
-            }
-            // Additionally, if the initializer is an object literal containing css(...) or css`...`,
-            // record a ConstValue::Obj mapping of keys to joined class strings so that spreads like
-            // ...styles.default can be resolved later.
-            if let Expr::Object(obj2) = &**init {
-              let mut map2: FxHashMap<String, evaluate_expr::ConstValue> = FxHashMap::default();
-              for p in &obj2.props {
-                if let PropOrSpread::Prop(pp) = p {
-                  if let Prop::KeyValue(kv) = &**pp {
+              Expr::TaggedTpl(tt) => {
+                // css`...`
+                let mut maybe_ident: Option<Ident> = None;
+                match &*tt.tag {
+                  Expr::Ident(i) => maybe_ident = Some(i.clone()),
+                  Expr::Seq(seq) => {
+                    if let Some(last) = seq.exprs.last()
+                      && let Expr::Ident(i) = &**last
+                    {
+                      maybe_ident = Some(i.clone());
+                    }
+                  }
+                  _ => {}
+                }
+                if let Some(ci) = maybe_ident
+                  && self.css_local.as_ref().is_some_and(|w| ci.sym == *w)
+                  && let Some(css_text) = self.build_css_text_from_tpl(&tt.tpl)
+                {
+                  let classes = self.collect_atomic_classes_from_css_text(&css_text);
+                  let joined = join_classes_space(classes);
+                  self
+                    .const_env
+                    .insert(id.sym.clone(), evaluate_expr::ConstValue::Str(joined));
+
+                  self.css_calls_to_nullify.insert(id.sym.clone());
+                }
+              }
+              Expr::Object(obj) => {
+                // Capture object literal with css() values into const_env as an object of strings
+                let mut map: FxHashMap<String, evaluate_expr::ConstValue> = FxHashMap::default();
+                for p in &obj.props {
+                  if let PropOrSpread::Prop(pp) = p
+                    && let Prop::KeyValue(kv) = &**pp
+                  {
                     let key_name = match &kv.key {
                       PropName::Ident(i) => i.sym.to_string(),
                       PropName::Str(s) => s.value.to_string(),
@@ -1165,6 +1024,7 @@ impl VisitMut for AtomicCssCollector {
                       PropName::BigInt(b) => b.value.to_string(),
                       PropName::Computed(_) => continue,
                     };
+                    // css({}) or css`` inside object
                     match &*kv.value {
                       Expr::Call(call) => {
                         if let Callee::Expr(callee_expr) = &call.callee {
@@ -1172,71 +1032,156 @@ impl VisitMut for AtomicCssCollector {
                           match &**callee_expr {
                             Expr::Ident(i) => maybe_ident = Some(i.clone()),
                             Expr::Seq(seq) => {
-                              if let Some(last) = seq.exprs.last() {
-                                if let Expr::Ident(i) = &**last {
-                                  maybe_ident = Some(i.clone());
-                                }
+                              if let Some(last) = seq.exprs.last()
+                                && let Expr::Ident(i) = &**last
+                              {
+                                maybe_ident = Some(i.clone());
                               }
                             }
                             _ => {}
                           }
-                          if let Some(ci) = maybe_ident {
-                            if self.css_local.as_ref().map_or(false, |w| ci.sym == *w) {
-                              if let Some(arg0) = call.args.get(0) {
-                                match &*arg0.expr {
-                                  Expr::Object(o) => {
-                                    let classes = self.collect_atomic_classes_from_object(o);
-                                    let joined = join_classes_space(classes);
-                                    map2.insert(key_name, evaluate_expr::ConstValue::Str(joined));
-                                  }
-                                  Expr::Tpl(tpl) => {
-                                    if let Some(css_text) = self.build_css_text_from_tpl(tpl) {
-                                      let classes =
-                                        self.collect_atomic_classes_from_css_text(&css_text);
-                                      let joined = join_classes_space(classes);
-                                      map2.insert(key_name, evaluate_expr::ConstValue::Str(joined));
-                                    }
-                                  }
-                                  _ => {}
+                          if let Some(ci) = maybe_ident
+                            && self.css_local.as_ref().is_some_and(|w| ci.sym == *w)
+                            && let Some(arg0) = call.args.first()
+                          {
+                            match &*arg0.expr {
+                              Expr::Object(o) => {
+                                let classes = self.collect_atomic_classes_from_object(o);
+                                let joined = join_classes_space(classes);
+                                map.insert(key_name, evaluate_expr::ConstValue::Str(joined));
+                              }
+                              Expr::Tpl(tpl) => {
+                                if let Some(css_text) = self.build_css_text_from_tpl(tpl) {
+                                  let classes =
+                                    self.collect_atomic_classes_from_css_text(&css_text);
+                                  let joined = join_classes_space(classes);
+                                  map.insert(key_name, evaluate_expr::ConstValue::Str(joined));
                                 }
                               }
+                              _ => {}
                             }
                           }
                         }
                       }
                       Expr::TaggedTpl(tt2) => {
+                        // css`...`
                         let mut maybe_ident: Option<Ident> = None;
                         match &*tt2.tag {
                           Expr::Ident(i) => maybe_ident = Some(i.clone()),
                           Expr::Seq(seq) => {
-                            if let Some(last) = seq.exprs.last() {
-                              if let Expr::Ident(i) = &**last {
-                                maybe_ident = Some(i.clone());
-                              }
+                            if let Some(last) = seq.exprs.last()
+                              && let Expr::Ident(i) = &**last
+                            {
+                              maybe_ident = Some(i.clone());
                             }
                           }
                           _ => {}
                         }
-                        if let Some(ci) = maybe_ident {
-                          if self.css_local.as_ref().map_or(false, |w| ci.sym == *w) {
-                            if let Some(css_text) = self.build_css_text_from_tpl(&tt2.tpl) {
-                              let classes = self.collect_atomic_classes_from_css_text(&css_text);
-                              let joined = join_classes_space(classes);
-                              map2.insert(key_name, evaluate_expr::ConstValue::Str(joined));
-                            }
-                          }
+                        if let Some(ci) = maybe_ident
+                          && self.css_local.as_ref().is_some_and(|w| ci.sym == *w)
+                          && let Some(css_text) = self.build_css_text_from_tpl(&tt2.tpl)
+                        {
+                          let classes = self.collect_atomic_classes_from_css_text(&css_text);
+                          let joined = join_classes_space(classes);
+                          map.insert(key_name, evaluate_expr::ConstValue::Str(joined));
                         }
                       }
                       _ => {}
                     }
                   }
                 }
+                if !map.is_empty() {
+                  self
+                    .const_env
+                    .insert(id.sym.clone(), evaluate_expr::ConstValue::Obj(map));
+                }
               }
-              if !map2.is_empty() {
-                self
-                  .const_env
-                  .insert(id.sym.clone(), evaluate_expr::ConstValue::Obj(map2));
+              _ => {}
+            }
+          }
+          // Additionally, if the initializer is an object literal containing css(...) or css`...`,
+          // record a ConstValue::Obj mapping of keys to joined class strings so that spreads like
+          // ...styles.default can be resolved later.
+          if let Expr::Object(obj2) = &**init {
+            let mut map2: FxHashMap<String, evaluate_expr::ConstValue> = FxHashMap::default();
+            for p in &obj2.props {
+              if let PropOrSpread::Prop(pp) = p
+                && let Prop::KeyValue(kv) = &**pp
+              {
+                let key_name = match &kv.key {
+                  PropName::Ident(i) => i.sym.to_string(),
+                  PropName::Str(s) => s.value.to_string(),
+                  PropName::Num(n) => n.value.to_string(),
+                  PropName::BigInt(b) => b.value.to_string(),
+                  PropName::Computed(_) => continue,
+                };
+                match &*kv.value {
+                  Expr::Call(call) => {
+                    if let Callee::Expr(callee_expr) = &call.callee {
+                      let mut maybe_ident: Option<Ident> = None;
+                      match &**callee_expr {
+                        Expr::Ident(i) => maybe_ident = Some(i.clone()),
+                        Expr::Seq(seq) => {
+                          if let Some(last) = seq.exprs.last()
+                            && let Expr::Ident(i) = &**last
+                          {
+                            maybe_ident = Some(i.clone());
+                          }
+                        }
+                        _ => {}
+                      }
+                      if let Some(ci) = maybe_ident
+                        && self.css_local.as_ref().is_some_and(|w| ci.sym == *w)
+                        && let Some(arg0) = call.args.first()
+                      {
+                        match &*arg0.expr {
+                          Expr::Object(o) => {
+                            let classes = self.collect_atomic_classes_from_object(o);
+                            let joined = join_classes_space(classes);
+                            map2.insert(key_name, evaluate_expr::ConstValue::Str(joined));
+                          }
+                          Expr::Tpl(tpl) => {
+                            if let Some(css_text) = self.build_css_text_from_tpl(tpl) {
+                              let classes = self.collect_atomic_classes_from_css_text(&css_text);
+                              let joined = join_classes_space(classes);
+                              map2.insert(key_name, evaluate_expr::ConstValue::Str(joined));
+                            }
+                          }
+                          _ => {}
+                        }
+                      }
+                    }
+                  }
+                  Expr::TaggedTpl(tt2) => {
+                    let mut maybe_ident: Option<Ident> = None;
+                    match &*tt2.tag {
+                      Expr::Ident(i) => maybe_ident = Some(i.clone()),
+                      Expr::Seq(seq) => {
+                        if let Some(last) = seq.exprs.last()
+                          && let Expr::Ident(i) = &**last
+                        {
+                          maybe_ident = Some(i.clone());
+                        }
+                      }
+                      _ => {}
+                    }
+                    if let Some(ci) = maybe_ident
+                      && self.css_local.as_ref().is_some_and(|w| ci.sym == *w)
+                      && let Some(css_text) = self.build_css_text_from_tpl(&tt2.tpl)
+                    {
+                      let classes = self.collect_atomic_classes_from_css_text(&css_text);
+                      let joined = join_classes_space(classes);
+                      map2.insert(key_name, evaluate_expr::ConstValue::Str(joined));
+                    }
+                  }
+                  _ => {}
+                }
               }
+            }
+            if !map2.is_empty() {
+              self
+                .const_env
+                .insert(id.sym.clone(), evaluate_expr::ConstValue::Obj(map2));
             }
           }
         }
@@ -1244,50 +1189,24 @@ impl VisitMut for AtomicCssCollector {
       // Compile keyframes assigned to consts and record mapping to generated name
       if n.kind == VarDeclKind::Const {
         for d in &mut n.decls {
-          if let Pat::Ident(BindingIdent { id, .. }) = &d.name {
-            if let Some(init) = &mut d.init {
-              let mut compiled: Option<String> = None;
-              match &mut **init {
-                Expr::Call(call) => {
-                  if let Callee::Expr(callee_expr) = &call.callee {
-                    if let Expr::Ident(i) = &**callee_expr {
-                      if self.keyframes_local.as_ref().map_or(false, |w| i.sym == *w) {
-                        if let Some(arg0) = call.args.get(0) {
-                          match &*arg0.expr {
-                            Expr::Object(o) => {
-                              compiled = Some(self.compile_keyframes_from_object(o))
-                            }
-                            Expr::Tpl(t) => {
-                              if let Some(text) = self.build_css_text_from_tpl(t) {
-                                compiled = Some(self.compile_keyframes_from_css_text(&text));
-                              } else if let Some((body, entries)) =
-                                self.build_keyframes_body_from_tpl_with_vars(t)
-                              {
-                                let name = self.ensure_keyframes_rule(&body);
-                                if !entries.is_empty() {
-                                  self.keyframes_name_to_runtime.insert(name.clone(), entries);
-                                }
-                                compiled = Some(name);
-                              }
-                            }
-                            _ => {}
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-                Expr::TaggedTpl(tt) => {
-                  if let Expr::Ident(tag_ident) = &*tt.tag {
-                    if self
-                      .keyframes_local
-                      .as_ref()
-                      .map_or(false, |w| tag_ident.sym == *w)
-                    {
-                      if let Some(text) = self.build_css_text_from_tpl(&tt.tpl) {
+          if let Pat::Ident(BindingIdent { id, .. }) = &d.name
+            && let Some(init) = &mut d.init
+          {
+            let mut compiled: Option<String> = None;
+            match &mut **init {
+              Expr::Call(call) => {
+                if let Callee::Expr(callee_expr) = &call.callee
+                  && let Expr::Ident(i) = &**callee_expr
+                  && self.keyframes_local.as_ref().is_some_and(|w| i.sym == *w)
+                  && let Some(arg0) = call.args.first()
+                {
+                  match &*arg0.expr {
+                    Expr::Object(o) => compiled = Some(self.compile_keyframes_from_object(o)),
+                    Expr::Tpl(t) => {
+                      if let Some(text) = self.build_css_text_from_tpl(t) {
                         compiled = Some(self.compile_keyframes_from_css_text(&text));
                       } else if let Some((body, entries)) =
-                        self.build_keyframes_body_from_tpl_with_vars(&tt.tpl)
+                        self.build_keyframes_body_from_tpl_with_vars(t)
                       {
                         let name = self.ensure_keyframes_rule(&body);
                         if !entries.is_empty() {
@@ -1296,16 +1215,37 @@ impl VisitMut for AtomicCssCollector {
                         compiled = Some(name);
                       }
                     }
+                    _ => {}
                   }
                 }
-                _ => {}
               }
-              if let Some(name) = compiled {
-                **init = Expr::Lit(Lit::Null(Null { span: DUMMY_SP }));
-                self
-                  .const_env
-                  .insert(id.sym.clone(), evaluate_expr::ConstValue::Str(name));
+              Expr::TaggedTpl(tt) => {
+                if let Expr::Ident(tag_ident) = &*tt.tag
+                  && self
+                    .keyframes_local
+                    .as_ref()
+                    .is_some_and(|w| tag_ident.sym == *w)
+                {
+                  if let Some(text) = self.build_css_text_from_tpl(&tt.tpl) {
+                    compiled = Some(self.compile_keyframes_from_css_text(&text));
+                  } else if let Some((body, entries)) =
+                    self.build_keyframes_body_from_tpl_with_vars(&tt.tpl)
+                  {
+                    let name = self.ensure_keyframes_rule(&body);
+                    if !entries.is_empty() {
+                      self.keyframes_name_to_runtime.insert(name.clone(), entries);
+                    }
+                    compiled = Some(name);
+                  }
+                }
               }
+              _ => {}
+            }
+            if let Some(name) = compiled {
+              **init = Expr::Lit(Lit::Null(Null { span: DUMMY_SP }));
+              self
+                .const_env
+                .insert(id.sym.clone(), evaluate_expr::ConstValue::Str(name));
             }
           }
         }
@@ -1318,35 +1258,22 @@ impl VisitMut for AtomicCssCollector {
         let mut replaced: Option<Expr> = None;
         match &mut **init {
           Expr::Call(call) => {
-            if let Callee::Expr(callee_expr) = &call.callee {
-              if let Expr::Member(me) = &**callee_expr {
-                if let Expr::Ident(obj_id) = &*me.obj {
-                  if self
-                    .styled_local
-                    .as_ref()
-                    .map_or(false, |w| obj_id.sym == *w)
-                  {
-                    if let Some(expr) = self.try_transform_styled_call(me, call) {
-                      replaced = Some(expr);
-                    }
-                  }
-                }
-              }
+            if let Callee::Expr(callee_expr) = &call.callee
+              && let Expr::Member(me) = &**callee_expr
+              && let Expr::Ident(obj_id) = &*me.obj
+              && self.styled_local.as_ref().is_some_and(|w| obj_id.sym == *w)
+              && let Some(expr) = self.try_transform_styled_call(me, call)
+            {
+              replaced = Some(expr);
             }
           }
           Expr::TaggedTpl(tt) => {
-            if let Expr::Member(me) = &*tt.tag {
-              if let Expr::Ident(obj_id) = &*me.obj {
-                if self
-                  .styled_local
-                  .as_ref()
-                  .map_or(false, |w| obj_id.sym == *w)
-                {
-                  if let Some(expr) = self.try_transform_styled_tagged_tpl(me, tt) {
-                    replaced = Some(expr);
-                  }
-                }
-              }
+            if let Expr::Member(me) = &*tt.tag
+              && let Expr::Ident(obj_id) = &*me.obj
+              && self.styled_local.as_ref().is_some_and(|w| obj_id.sym == *w)
+              && let Some(expr) = self.try_transform_styled_tagged_tpl(me, tt)
+            {
+              replaced = Some(expr);
             }
           }
           _ => {}
@@ -1359,10 +1286,10 @@ impl VisitMut for AtomicCssCollector {
         }
 
         // Replace css() and css`` calls with null
-        if let Pat::Ident(BindingIdent { id, .. }) = &d.name {
-          if self.css_calls_to_nullify.contains(&id.sym) {
-            **init = Expr::Lit(Lit::Null(Null { span: DUMMY_SP }));
-          }
+        if let Pat::Ident(BindingIdent { id, .. }) = &d.name
+          && self.css_calls_to_nullify.contains(&id.sym)
+        {
+          **init = Expr::Lit(Lit::Null(Null { span: DUMMY_SP }));
         }
       }
     }
@@ -1381,15 +1308,15 @@ impl VisitMut for AtomicCssCollector {
           // Only @compiled/react can carry the classic jsx import we track
           if is_compiled_react {
             if let Some(imported) = &named.imported {
-              if let ModuleExportName::Ident(i) = imported {
-                if &*i.sym == "jsx" {
-                  self.classic_jsx_local = Some(named.local.sym.clone());
-                }
+              if let ModuleExportName::Ident(i) = imported
+                && &*i.sym == "jsx"
+              {
+                self.classic_jsx_local = Some(named.local.sym.clone());
               }
-              if let ModuleExportName::Str(s) = imported {
-                if &*s.value == "jsx" {
-                  self.classic_jsx_local = Some(named.local.sym.clone());
-                }
+              if let ModuleExportName::Str(s) = imported
+                && &*s.value == "jsx"
+              {
+                self.classic_jsx_local = Some(named.local.sym.clone());
               }
             } else if &*named.local.sym == "jsx" {
               self.classic_jsx_local = Some(named.local.sym.clone());
@@ -1460,38 +1387,25 @@ impl VisitMut for AtomicCssCollector {
         n.visit_mut_children_with(self);
       }
       Expr::Call(call) => {
-        if let Callee::Expr(expr) = &call.callee {
-          if let Expr::Member(me) = &**expr {
-            if let Expr::Ident(obj_id) = &*me.obj {
-              if self
-                .styled_local
-                .as_ref()
-                .map_or(false, |w| obj_id.sym == *w)
-              {
-                if let Some(repl) = self.try_transform_styled_call(me, call) {
-                  *n = repl;
-                  return;
-                }
-              }
-            }
-          }
+        if let Callee::Expr(expr) = &call.callee
+          && let Expr::Member(me) = &**expr
+          && let Expr::Ident(obj_id) = &*me.obj
+          && self.styled_local.as_ref().is_some_and(|w| obj_id.sym == *w)
+          && let Some(repl) = self.try_transform_styled_call(me, call)
+        {
+          *n = repl;
+          return;
         }
         n.visit_mut_children_with(self);
       }
       Expr::TaggedTpl(tt) => {
-        if let Expr::Member(me) = &*tt.tag {
-          if let Expr::Ident(obj_id) = &*me.obj {
-            if self
-              .styled_local
-              .as_ref()
-              .map_or(false, |w| obj_id.sym == *w)
-            {
-              if let Some(repl) = self.try_transform_styled_tagged_tpl(me, tt) {
-                *n = repl;
-                return;
-              }
-            }
-          }
+        if let Expr::Member(me) = &*tt.tag
+          && let Expr::Ident(obj_id) = &*me.obj
+          && self.styled_local.as_ref().is_some_and(|w| obj_id.sym == *w)
+          && let Some(repl) = self.try_transform_styled_tagged_tpl(me, tt)
+        {
+          *n = repl;
+          return;
         }
         n.visit_mut_children_with(self);
       }
@@ -1535,7 +1449,7 @@ impl VisitMut for AtomicCssCollector {
                 match &c.expr {
                   JSXExpr::Expr(expr) => {
                     self.collect_from_css_expr(
-                      &expr,
+                      expr,
                       &mut ax_array_elems,
                       &mut runtime_style_entries_from_css,
                     );
@@ -1549,71 +1463,70 @@ impl VisitMut for AtomicCssCollector {
             // Handle any prop ending with "xcss" (case-insensitive) when value is an inline object
             {
               let lower = name.sym.to_string().to_lowercase();
-              if lower.ends_with("xcss") {
-                if let Some(JSXAttrValue::JSXExprContainer(c)) = &a.value {
-                  if let JSXExpr::Expr(expr) = &c.expr {
-                    // Temporarily set in_xcss_attr_depth to gate nested css() transforms within
-                    self.in_xcss_attr_depth += 1;
-                    let result = if let Expr::Object(o) = &**expr {
-                      // Collect with runtime fallback enabled, but panic if any runtime vars were needed
-                      self.begin_runtime_collection();
-                      let classes = self.collect_atomic_classes_from_object(o);
-                      let runtime_entries = self.take_runtime_entries();
-                      if !runtime_entries.is_empty() {
-                        panic!("xcss prop values must be statically resolvable");
-                      }
-                      // Join into a single string token (space-separated)
-                      let mut joined = String::new();
-                      let mut first = true;
-                      for c in classes {
-                        if !first {
-                          joined.push(' ');
-                        }
-                        joined.push_str(&c);
-                        first = false;
-                      }
-                      // Replace attribute with the same name and a string literal value
-                      let new_attr = JSXAttrOrSpread::JSXAttr(JSXAttr {
-                        span: DUMMY_SP,
-                        name: a.name.clone(),
-                        value: Some(JSXAttrValue::Lit(Lit::Str(Str {
-                          span: DUMMY_SP,
-                          value: joined.into(),
-                          raw: None,
-                        }))),
-                      });
-                      Some(new_attr)
-                    } else {
-                      // Not an inline object: leave attribute intact and do not traverse inside
-                      next_attrs.push(JSXAttrOrSpread::JSXAttr(a));
-                      self.in_xcss_attr_depth -= 1;
-                      continue;
-                    };
-                    self.in_xcss_attr_depth -= 1;
-                    if let Some(new_attr) = result {
-                      next_attrs.push(new_attr);
-                      continue;
-                    }
+              if lower.ends_with("xcss")
+                && let Some(JSXAttrValue::JSXExprContainer(c)) = &a.value
+                && let JSXExpr::Expr(expr) = &c.expr
+              {
+                // Temporarily set in_xcss_attr_depth to gate nested css() transforms within
+                self.in_xcss_attr_depth += 1;
+                let result = if let Expr::Object(o) = &**expr {
+                  // Collect with runtime fallback enabled, but panic if any runtime vars were needed
+                  self.begin_runtime_collection();
+                  let classes = self.collect_atomic_classes_from_object(o);
+                  let runtime_entries = self.take_runtime_entries();
+                  if !runtime_entries.is_empty() {
+                    panic!("xcss prop values must be statically resolvable");
                   }
+                  // Join into a single string token (space-separated)
+                  let mut joined = String::new();
+                  let mut first = true;
+                  for c in classes {
+                    if !first {
+                      joined.push(' ');
+                    }
+                    joined.push_str(&c);
+                    first = false;
+                  }
+                  // Replace attribute with the same name and a string literal value
+                  let new_attr = JSXAttrOrSpread::JSXAttr(JSXAttr {
+                    span: DUMMY_SP,
+                    name: a.name.clone(),
+                    value: Some(JSXAttrValue::Lit(Lit::Str(Str {
+                      span: DUMMY_SP,
+                      value: joined.into(),
+                      raw: None,
+                    }))),
+                  });
+                  Some(new_attr)
+                } else {
+                  // Not an inline object: leave attribute intact and do not traverse inside
+                  next_attrs.push(JSXAttrOrSpread::JSXAttr(a));
+                  self.in_xcss_attr_depth -= 1;
+                  continue;
+                };
+                self.in_xcss_attr_depth -= 1;
+                if let Some(new_attr) = result {
+                  next_attrs.push(new_attr);
+                  continue;
                 }
-                // For non-object expressions (identifiers, calls, conditionals, etc.) leave as-is
               }
+              // For non-object expressions (identifiers, calls, conditionals, etc.) leave as-is
             }
             if &*name.sym == "className" {
               // Capture existing className expression to merge later
-              if let Some(JSXAttrValue::JSXExprContainer(c)) = &a.value {
-                if let JSXExpr::Expr(expr) = &c.expr {
-                  existing_class_expr = Some(expr.clone());
-                }
+              if let Some(JSXAttrValue::JSXExprContainer(c)) = &a.value
+                && let JSXExpr::Expr(expr) = &c.expr
+              {
+                existing_class_expr = Some(expr.clone());
               }
               // Do not push existing className; we'll re-create it
               continue;
             }
             if &*name.sym == "style" {
-              if let Some(JSXAttrValue::JSXExprContainer(c)) = &a.value {
-                if let JSXExpr::Expr(expr) = &c.expr {
-                  existing_style_expr = Some(expr.clone());
-                }
+              if let Some(JSXAttrValue::JSXExprContainer(c)) = &a.value
+                && let JSXExpr::Expr(expr) = &c.expr
+              {
+                existing_style_expr = Some(expr.clone());
               }
               // Remember original position to re-insert style later to preserve order
               style_insert_index = Some(next_attrs.len());
@@ -1857,8 +1770,6 @@ pub fn apply_compiled_atomic_with_config(
   program: &mut Program,
   config: CompiledCssInJsTransformConfig,
 ) -> CompiledCssInJsTransformResult {
-  let config = config;
-
   let emit_cc_cs = !config.extract.unwrap_or(false);
   let mut v = AtomicCssCollector::new(emit_cc_cs);
   program.visit_mut_with(&mut v);

@@ -18,10 +18,10 @@ pub fn transform_code(
   let cm: Lrc<SourceMap> = Default::default();
   let fm = cm.new_source_file(FileName::Custom(file_name.into()).into(), code.to_string());
   let mut syntax: Syntax = Syntax::Es(Default::default());
-  if file_name.ends_with(".jsx") {
-    if let Syntax::Es(ref mut es_cfg) = syntax {
-      es_cfg.jsx = true;
-    }
+  if file_name.ends_with(".jsx")
+    && let Syntax::Es(ref mut es_cfg) = syntax
+  {
+    es_cfg.jsx = true;
   }
   let mut parser = Parser::new(syntax, StringInput::from(&*fm), None);
   let module = parser.parse_module().expect("parse module");

@@ -173,22 +173,23 @@ pub fn try_expand_shorthand(
         ValueOrNumber::Str(s) => parse_border_outline_tokens(s, false),
       };
       // If it's style-only (e.g., "none") and no width/color, keep shorthand to match legacy/basic cases
-      if width.is_none() && color.is_none() {
-        if let Some(st) = &style {
-          let st_lc = st.to_ascii_lowercase();
-          if st_lc == "none"
-            || st_lc == "hidden"
-            || st_lc == "dotted"
-            || st_lc == "dashed"
-            || st_lc == "solid"
-            || st_lc == "double"
-            || st_lc == "groove"
-            || st_lc == "ridge"
-            || st_lc == "inset"
-            || st_lc == "outset"
-          {
-            return None;
-          }
+      if width.is_none()
+        && color.is_none()
+        && let Some(st) = &style
+      {
+        let st_lc = st.to_ascii_lowercase();
+        if st_lc == "none"
+          || st_lc == "hidden"
+          || st_lc == "dotted"
+          || st_lc == "dashed"
+          || st_lc == "solid"
+          || st_lc == "double"
+          || st_lc == "groove"
+          || st_lc == "ridge"
+          || st_lc == "inset"
+          || st_lc == "outset"
+        {
+          return None;
         }
       }
       let base = if let Some(suf) = side_suffix(prop_kebab) {
@@ -505,7 +506,7 @@ pub fn try_expand_shorthand(
         return None;
       }
       let mut out = Vec::new();
-      if tokens.len() >= 1 {
+      if !tokens.is_empty() {
         out.push(("text-wrap-mode".into(), tokens[0].clone()));
       }
       if tokens.len() >= 2 {
@@ -635,7 +636,7 @@ pub fn try_expand_shorthand(
         return None;
       }
       let mut out = Vec::new();
-      if items.len() >= 1 {
+      if !items.is_empty() {
         out.push(("grid-row-start".into(), items[0].clone()));
       }
       if items.len() >= 2 {
@@ -673,7 +674,7 @@ pub fn try_expand_shorthand(
         return None;
       }
       let mut out = Vec::new();
-      if tokens.len() >= 1 {
+      if !tokens.is_empty() {
         out.push(("position-try-order".into(), tokens[0].clone()));
       }
       if tokens.len() >= 2 {

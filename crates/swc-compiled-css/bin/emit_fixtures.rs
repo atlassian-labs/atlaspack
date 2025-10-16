@@ -104,10 +104,8 @@ fn process_fixture_dir(
     .unwrap_or(if is_jsx { "input.jsx" } else { "input.js" });
 
   let mut syntax = Syntax::Es(Default::default());
-  if is_jsx {
-    if let Syntax::Es(ref mut es_cfg) = syntax {
-      es_cfg.jsx = true;
-    }
+  if is_jsx && let Syntax::Es(ref mut es_cfg) = syntax {
+    es_cfg.jsx = true;
   }
 
   println!("Processing {}", case_dir.display());
@@ -213,11 +211,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
   }
 
-  if let Some(ref target) = target_fixture {
-    if processed_count == 0 && error_count == 0 {
-      eprintln!("Error: fixture '{}' not found", target);
-      std::process::exit(1);
-    }
+  if let Some(ref target) = target_fixture
+    && processed_count == 0
+    && error_count == 0
+  {
+    eprintln!("Error: fixture '{}' not found", target);
+    std::process::exit(1);
   }
 
   println!("\nSummary:");

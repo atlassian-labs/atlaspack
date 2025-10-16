@@ -5,7 +5,7 @@ use swc_ecma_ast::*;
 
 use crate::evaluate_expr::{ValueOrNumber, eval_value_expr};
 use crate::utils::to_kebab_case;
-use crate::{AtomicCssCollector, base_encode36};
+use crate::{AtomicCssCollector, RuntimeStyleEntries, base_encode36};
 
 impl AtomicCssCollector {
   // Public entry for compiling keyframes from an object literal.
@@ -29,11 +29,7 @@ impl AtomicCssCollector {
     let name_hash = name_hasher.finish();
     let mut name = base_encode36(name_hash);
     // Ensure starts with a letter for CSS validity if base36 begins with a digit.
-    if name
-      .as_bytes()
-      .first()
-      .map_or(false, |b| b.is_ascii_digit())
-    {
+    if name.as_bytes().first().is_some_and(|b| b.is_ascii_digit()) {
       let mut prefixed = String::with_capacity(name.len() + 1);
       prefixed.push('k');
       prefixed.push_str(&name);
@@ -72,50 +68,50 @@ impl AtomicCssCollector {
     let mut steps: Vec<(String, Step)> = Vec::new();
 
     for p in &obj.props {
-      if let PropOrSpread::Prop(pp) = p {
-        if let Prop::KeyValue(kv) = &**pp {
-          // Step key can be ident/str/num; treat numbers as percentages when appropriate.
-          let step_key = match &kv.key {
-            PropName::Ident(i) => i.sym.to_string(),
-            PropName::Str(s) => s.value.to_string(),
-            PropName::Num(n) => format!("{}%", num_to_int_string(n.value)),
-            PropName::BigInt(b) => b.value.to_string(),
-            PropName::Computed(_) => continue,
-          };
-          let step_label = normalize_step_label(&step_key);
-          if let Expr::Object(style_obj) = &*kv.value {
-            let mut decls: Vec<(String, String)> = Vec::new();
-            for sp in &style_obj.props {
-              if let PropOrSpread::Prop(pp2) = sp {
-                if let Prop::KeyValue(kv2) = &**pp2 {
-                  let original_prop_name = match &kv2.key {
-                    PropName::Ident(i) => i.sym.to_string(),
-                    PropName::Str(s) => s.value.to_string(),
-                    PropName::Num(n) => n.value.to_string(),
-                    PropName::BigInt(b) => b.value.to_string(),
-                    PropName::Computed(_) => continue,
-                  };
-                  // Resolve value via const-env where possible for correctness.
-                  let value_text = match eval_value_expr(&*kv2.value, &self.const_env) {
-                    Some(ValueOrNumber::Str(s)) => s,
-                    Some(ValueOrNumber::Num(n)) => {
-                      let mut v = num_to_string(n);
-                      if !Self::is_unitless_property_generic(&original_prop_name) {
-                        v.push_str("px");
-                      }
-                      v
-                    }
-                    None => continue,
-                  };
-                  let prop_kebab = to_kebab_case(&original_prop_name);
-                  decls.push((prop_kebab, value_text));
+      if let PropOrSpread::Prop(pp) = p
+        && let Prop::KeyValue(kv) = &**pp
+      {
+        // Step key can be ident/str/num; treat numbers as percentages when appropriate.
+        let step_key = match &kv.key {
+          PropName::Ident(i) => i.sym.to_string(),
+          PropName::Str(s) => s.value.to_string(),
+          PropName::Num(n) => format!("{}%", num_to_int_string(n.value)),
+          PropName::BigInt(b) => b.value.to_string(),
+          PropName::Computed(_) => continue,
+        };
+        let step_label = normalize_step_label(&step_key);
+        if let Expr::Object(style_obj) = &*kv.value {
+          let mut decls: Vec<(String, String)> = Vec::new();
+          for sp in &style_obj.props {
+            if let PropOrSpread::Prop(pp2) = sp
+              && let Prop::KeyValue(kv2) = &**pp2
+            {
+              let original_prop_name = match &kv2.key {
+                PropName::Ident(i) => i.sym.to_string(),
+                PropName::Str(s) => s.value.to_string(),
+                PropName::Num(n) => n.value.to_string(),
+                PropName::BigInt(b) => b.value.to_string(),
+                PropName::Computed(_) => continue,
+              };
+              // Resolve value via const-env where possible for correctness.
+              let value_text = match eval_value_expr(&kv2.value, &self.const_env) {
+                Some(ValueOrNumber::Str(s)) => s,
+                Some(ValueOrNumber::Num(n)) => {
+                  let mut v = num_to_string(n);
+                  if !Self::is_unitless_property_generic(&original_prop_name) {
+                    v.push_str("px");
+                  }
+                  v
                 }
-              }
+                None => continue,
+              };
+              let prop_kebab = to_kebab_case(&original_prop_name);
+              decls.push((prop_kebab, value_text));
             }
-            // Sort declarations by property name for stable output.
-            decls.sort_by(|a, b| a.0.cmp(&b.0));
-            steps.push((step_label, Step { props: decls }));
           }
+          // Sort declarations by property name for stable output.
+          decls.sort_by(|a, b| a.0.cmp(&b.0));
+          steps.push((step_label, Step { props: decls }));
         }
       }
     }
@@ -157,54 +153,50 @@ impl AtomicCssCollector {
   pub fn maybe_compile_keyframes_to_name(&mut self, expr: &Expr) -> Option<String> {
     match expr {
       Expr::Call(call) => {
-        if let Callee::Expr(callee_expr) = &call.callee {
-          if let Expr::Ident(i) = &**callee_expr {
-            if self.keyframes_local.as_ref().map_or(false, |w| i.sym == *w) {
-              if let Some(arg0) = call.args.get(0) {
-                return match &*arg0.expr {
-                  Expr::Object(o) => Some(self.compile_keyframes_from_object(o)),
-                  Expr::Tpl(t) => {
-                    if let Some(s) = self.build_css_text_from_tpl(t) {
-                      Some(self.compile_keyframes_from_css_text(&s))
-                    } else if let Some((body, entries)) =
-                      self.build_keyframes_body_from_tpl_with_vars(t)
-                    {
-                      let name = self.ensure_keyframes_rule(&body);
-                      if !entries.is_empty() {
-                        self.keyframes_name_to_runtime.insert(name.clone(), entries);
-                      }
-                      Some(name)
-                    } else {
-                      None
-                    }
-                  }
-                  _ => None,
-                };
+        if let Callee::Expr(callee_expr) = &call.callee
+          && let Expr::Ident(i) = &**callee_expr
+          && self.keyframes_local.as_ref().is_some_and(|w| i.sym == *w)
+          && let Some(arg0) = call.args.first()
+        {
+          return match &*arg0.expr {
+            Expr::Object(o) => Some(self.compile_keyframes_from_object(o)),
+            Expr::Tpl(t) => {
+              if let Some(s) = self.build_css_text_from_tpl(t) {
+                Some(self.compile_keyframes_from_css_text(&s))
+              } else if let Some((body, entries)) = self.build_keyframes_body_from_tpl_with_vars(t)
+              {
+                let name = self.ensure_keyframes_rule(&body);
+                if !entries.is_empty() {
+                  self.keyframes_name_to_runtime.insert(name.clone(), entries);
+                }
+                Some(name)
+              } else {
+                None
               }
             }
-          }
+            _ => None,
+          };
         }
         None
       }
       Expr::TaggedTpl(tt) => {
-        if let Expr::Ident(tag_ident) = &*tt.tag {
-          if self
+        if let Expr::Ident(tag_ident) = &*tt.tag
+          && self
             .keyframes_local
             .as_ref()
-            .map_or(false, |w| tag_ident.sym == *w)
-          {
-            if let Some(s) = self.build_css_text_from_tpl(&tt.tpl) {
-              return Some(self.compile_keyframes_from_css_text(&s));
-            }
-            if let Some((body, entries)) = self.build_keyframes_body_from_tpl_with_vars(&tt.tpl) {
-              let name = self.ensure_keyframes_rule(&body);
-              if !entries.is_empty() {
-                self.keyframes_name_to_runtime.insert(name.clone(), entries);
-              }
-              return Some(name);
-            }
-            return None;
+            .is_some_and(|w| tag_ident.sym == *w)
+        {
+          if let Some(s) = self.build_css_text_from_tpl(&tt.tpl) {
+            return Some(self.compile_keyframes_from_css_text(&s));
           }
+          if let Some((body, entries)) = self.build_keyframes_body_from_tpl_with_vars(&tt.tpl) {
+            let name = self.ensure_keyframes_rule(&body);
+            if !entries.is_empty() {
+              self.keyframes_name_to_runtime.insert(name.clone(), entries);
+            }
+            return Some(name);
+          }
+          return None;
         }
         None
       }
@@ -259,10 +251,10 @@ fn compare_step_labels(a: &str, b: &str) -> Ordering {
 }
 
 fn parse_percent(s: &str) -> Option<i64> {
-  if let Some(stripped) = s.strip_suffix('%') {
-    if let Ok(n) = stripped.parse::<i64>() {
-      return Some(n);
-    }
+  if let Some(stripped) = s.strip_suffix('%')
+    && let Ok(n) = stripped.parse::<i64>()
+  {
+    return Some(n);
   }
   None
 }
@@ -306,7 +298,7 @@ impl AtomicCssCollector {
   pub fn build_keyframes_body_from_tpl_with_vars(
     &mut self,
     tpl: &Tpl,
-  ) -> Option<(String, Vec<(String, Expr, bool)>)> {
+  ) -> Option<(String, RuntimeStyleEntries)> {
     let approx_cap: usize = tpl
       .quasis
       .iter()
@@ -314,7 +306,7 @@ impl AtomicCssCollector {
       .sum::<usize>()
       + tpl.exprs.len() * 12;
     let mut out = String::with_capacity(approx_cap);
-    let mut entries: Vec<(String, Expr, bool)> = Vec::new();
+    let mut entries: RuntimeStyleEntries = RuntimeStyleEntries::new();
     for (idx, quasi) in tpl.quasis.iter().enumerate() {
       out.push_str(quasi.raw.as_ref());
       if let Some(expr) = tpl.exprs.get(idx) {

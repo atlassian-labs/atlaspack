@@ -131,12 +131,11 @@ impl AtomicCssCollector {
       return Some(match cv {
         ConstValue::Str(s) => s,
         ConstValue::Num(n) => {
-          let v = if (n - (n as i64 as f64)).abs() < f64::EPSILON {
+          if (n - (n as i64 as f64)).abs() < f64::EPSILON {
             (n as i64).to_string()
           } else {
             n.to_string()
-          };
-          v
+          }
         }
         _ => return None,
       });
@@ -145,12 +144,11 @@ impl AtomicCssCollector {
       return Some(match cv {
         ConstValue::Str(s) => s,
         ConstValue::Num(n) => {
-          let v = if (n - (n as i64 as f64)).abs() < f64::EPSILON {
+          if (n - (n as i64 as f64)).abs() < f64::EPSILON {
             (n as i64).to_string()
           } else {
             n.to_string()
-          };
-          v
+          }
         }
         _ => return None,
       });
@@ -410,9 +408,8 @@ impl AtomicCssCollector {
             i += 1;
           }
           let header = s[start..i].trim();
-          let wrapper = if header.starts_with("@media") {
-            let q = header["@media".len()..].trim();
-            let normalized_q = normalize_at_query(q);
+          let wrapper = if let Some(stripped) = header.strip_prefix("@media") {
+            let normalized_q = normalize_at_query(stripped.trim());
             if normalized_q.starts_with('(') {
               format!("@media {}", normalized_q)
             } else if normalized_q.is_empty() {
@@ -420,9 +417,8 @@ impl AtomicCssCollector {
             } else {
               format!("@media ({})", normalized_q)
             }
-          } else if header.starts_with("@supports") {
-            let q = header["@supports".len()..].trim();
-            let normalized_q = normalize_at_query(q);
+          } else if let Some(stripped) = header.strip_prefix("@supports") {
+            let normalized_q = normalize_at_query(stripped.trim());
             if normalized_q.starts_with('(') {
               format!("@supports {}", normalized_q)
             } else if normalized_q.is_empty() {
@@ -511,10 +507,10 @@ impl AtomicCssCollector {
               AtomicCssCollector::normalize_selector(&sel)
             };
             let mut new_suffix = normalized.clone();
-            if normalized.starts_with('&') {
+            if let Some(stripped) = normalized.strip_prefix('&') {
               let mut ns = String::with_capacity(suffix.len() + normalized.len());
               ns.push_str(suffix);
-              ns.push_str(&normalized[1..]);
+              ns.push_str(stripped);
               new_suffix = ns;
             }
             let _ = parse_block(this, body, 0, &new_suffix, wrappers, out_classes);
@@ -528,7 +524,7 @@ impl AtomicCssCollector {
           // Avoid allocation if already kebab-case (common in CSS text)
           let mut needs_kebab = false;
           for ch in prop_slice.bytes() {
-            if ch >= b'A' && ch <= b'Z' {
+            if ch.is_ascii_uppercase() {
               needs_kebab = true;
               break;
             }
@@ -590,7 +586,7 @@ impl AtomicCssCollector {
                     prop_kebab: &sub_prop,
                     value_text: Cow::Borrowed(sub_val.as_str()),
                     suffix,
-                    wrappers: &wrappers,
+                    wrappers,
                   },
                   out_classes,
                 );
@@ -602,7 +598,7 @@ impl AtomicCssCollector {
                   prop_kebab,
                   value_text: Cow::Borrowed(val_slice),
                   suffix,
-                  wrappers: &wrappers,
+                  wrappers,
                 },
                 out_classes,
               );
@@ -616,7 +612,7 @@ impl AtomicCssCollector {
                   prop_kebab,
                   value_text: Cow::Borrowed(val_slice),
                   suffix,
-                  wrappers: &wrappers,
+                  wrappers,
                 },
                 out_classes,
               );
@@ -626,7 +622,7 @@ impl AtomicCssCollector {
                   prop_kebab,
                   value_text: Cow::Borrowed(val_slice),
                   suffix,
-                  wrappers: &wrappers,
+                  wrappers,
                 },
                 out_classes,
               );
@@ -702,10 +698,10 @@ impl AtomicCssCollector {
               if key_str.starts_with('@') {
                 if key_str.starts_with("@media") || key_str.starts_with("@supports") {
                   if let Expr::Object(nested) = &*kv.value {
-                    let (name, rest) = if key_str.starts_with("@media") {
-                      ("@media", &key_str["@media".len()..])
+                    let (name, rest) = if let Some(stripped) = key_str.strip_prefix("@media") {
+                      ("@media", stripped)
                     } else {
-                      ("@supports", &key_str["@supports".len()..])
+                      ("@supports", key_str.strip_prefix("@supports").unwrap_or(""))
                     };
                     let normalized_q = normalize_at_query(rest.trim_start());
                     if normalized_q.is_empty() {
@@ -739,7 +735,7 @@ impl AtomicCssCollector {
                 PropName::Computed(_) => return None,
               };
               // Resolve value (return early on success)
-              let val = if let Some(v) = eval_value_expr(&*kv.value, &this.const_env) {
+              let val = if let Some(v) = eval_value_expr(&kv.value, &this.const_env) {
                 match v {
                   ValueOrNumber::Str(s) => s,
                   ValueOrNumber::Num(n) => {
@@ -753,11 +749,7 @@ impl AtomicCssCollector {
               } else {
                 // Try inline keyframes for animationName
                 if original_prop_name == "animationName" {
-                  if let Some(name) = this.maybe_compile_keyframes_to_name(&*kv.value) {
-                    name
-                  } else {
-                    return None;
-                  }
+                  this.maybe_compile_keyframes_to_name(&kv.value)?
                 } else {
                   return None;
                 }
@@ -835,10 +827,10 @@ impl AtomicCssCollector {
                   key_str.clone()
                 };
                 if let Expr::Object(nested) = &*kv.value {
-                  let new_suffix = if normalized.starts_with('&') {
+                  let new_suffix = if let Some(stripped) = normalized.strip_prefix('&') {
                     let mut ns = String::with_capacity(suffix.len() + normalized.len());
                     ns.push_str(suffix);
-                    ns.push_str(&normalized[1..]);
+                    ns.push_str(stripped);
                     ns
                   } else {
                     normalized.clone()
@@ -850,10 +842,13 @@ impl AtomicCssCollector {
               if key_str.starts_with('@') {
                 if key_str.starts_with("@media") || key_str.starts_with("@supports") {
                   if let Expr::Object(nested) = &*kv.value {
-                    let (name, query) = if key_str.starts_with("@media") {
-                      ("@media", key_str["@media".len()..].trim_start())
+                    let (name, query) = if let Some(stripped) = key_str.strip_prefix("@media") {
+                      ("@media", stripped.trim_start())
                     } else {
-                      ("@supports", key_str["@supports".len()..].trim_start())
+                      (
+                        "@supports",
+                        key_str.strip_prefix("@supports").unwrap_or("").trim_start(),
+                      )
                     };
                     let normalized_q = normalize_at_query(query);
                     let wrapper = if normalized_q.starts_with('(') {
@@ -869,43 +864,43 @@ impl AtomicCssCollector {
                   }
                   continue;
                 }
-                if key_str.starts_with("@property") {
+                if let Some(stripped) = key_str.strip_prefix("@property") {
                   if let Expr::Object(defn) = &*kv.value {
-                    let name = key_str["@property".len()..].trim();
+                    let name = stripped.trim();
                     let normalized_name = name;
                     let mut entries: Vec<(String, String)> = Vec::new();
                     for dp in &defn.props {
-                      if let PropOrSpread::Prop(pp2) = dp {
-                        if let Prop::KeyValue(kv2) = &**pp2 {
-                          let key_name = match &kv2.key {
-                            PropName::Ident(i) => i.sym.to_string(),
-                            PropName::Str(s) => s.value.to_string(),
-                            PropName::Num(n) => n.value.to_string(),
-                            PropName::BigInt(b) => b.value.to_string(),
-                            PropName::Computed(_) => continue,
-                          };
-                          let key_kebab = to_kebab_case(&key_name);
-                          let val = match &*kv2.value {
-                            Expr::Lit(Lit::Str(s)) => s.value.to_string(),
-                            Expr::Lit(Lit::Num(n)) => {
-                              let is_int = (n.value - (n.value as i64 as f64)).abs() < f64::EPSILON;
-                              if is_int {
-                                (n.value as i64).to_string()
-                              } else {
-                                n.value.to_string()
-                              }
+                      if let PropOrSpread::Prop(pp2) = dp
+                        && let Prop::KeyValue(kv2) = &**pp2
+                      {
+                        let key_name = match &kv2.key {
+                          PropName::Ident(i) => i.sym.to_string(),
+                          PropName::Str(s) => s.value.to_string(),
+                          PropName::Num(n) => n.value.to_string(),
+                          PropName::BigInt(b) => b.value.to_string(),
+                          PropName::Computed(_) => continue,
+                        };
+                        let key_kebab = to_kebab_case(&key_name);
+                        let val = match &*kv2.value {
+                          Expr::Lit(Lit::Str(s)) => s.value.to_string(),
+                          Expr::Lit(Lit::Num(n)) => {
+                            let is_int = (n.value - (n.value as i64 as f64)).abs() < f64::EPSILON;
+                            if is_int {
+                              (n.value as i64).to_string()
+                            } else {
+                              n.value.to_string()
                             }
-                            Expr::Lit(Lit::Bool(b)) => {
-                              if b.value {
-                                "true".to_string()
-                              } else {
-                                "false".to_string()
-                              }
+                          }
+                          Expr::Lit(Lit::Bool(b)) => {
+                            if b.value {
+                              "true".to_string()
+                            } else {
+                              "false".to_string()
                             }
-                            _ => continue,
-                          };
-                          entries.push((key_kebab, val));
-                        }
+                          }
+                          _ => continue,
+                        };
+                        entries.push((key_kebab, val));
                       }
                     }
                     let mut hasher = xxhash_rust::xxh3::Xxh3Builder::new().build();
@@ -958,17 +953,14 @@ impl AtomicCssCollector {
             };
 
             // Resolve value from const env, or compile inline keyframes and use its name
-            let mut value_eval = match eval_value_expr(&*kv.value, &self.const_env) {
-              Some(v) => Some(v),
-              None => None,
-            };
+            let mut value_eval = eval_value_expr(&kv.value, &self.const_env);
             if value_eval.is_none() {
               // Try inline keyframes only for animation-name property
               let original_name_is_animation = original_prop_name == "animationName";
-              if original_name_is_animation {
-                if let Some(name) = self.maybe_compile_keyframes_to_name(&*kv.value) {
-                  value_eval = Some(ValueOrNumber::Str(name));
-                }
+              if original_name_is_animation
+                && let Some(name) = self.maybe_compile_keyframes_to_name(&kv.value)
+              {
+                value_eval = Some(ValueOrNumber::Str(name));
               }
             }
             if value_eval.is_none() && self.allow_runtime_vars {
@@ -977,7 +969,7 @@ impl AtomicCssCollector {
                 continue;
               }
               // Fallback to runtime variable for non-const values
-              let var_name = self.create_runtime_var_for_expr(&*kv.value, false);
+              let var_name = self.create_runtime_var_for_expr(&kv.value, false);
               let value_text_str = format!("var({})", var_name);
               let prop_kebab = to_kebab_case(&original_prop_name);
               self.emit_rule_input(
@@ -985,7 +977,7 @@ impl AtomicCssCollector {
                   prop_kebab: &prop_kebab,
                   value_text: Cow::Borrowed(value_text_str.as_str()),
                   suffix,
-                  wrappers: &wrappers,
+                  wrappers,
                 },
                 out_classes,
               );
@@ -1004,7 +996,7 @@ impl AtomicCssCollector {
                       prop_kebab: &sub_prop,
                       value_text: Cow::Borrowed(sub_val.as_str()),
                       suffix,
-                      wrappers: &wrappers,
+                      wrappers,
                     },
                     out_classes,
                   );
@@ -1032,7 +1024,7 @@ impl AtomicCssCollector {
                     prop_kebab: &prop_kebab,
                     value_text: Cow::Borrowed(value_text_str.as_str()),
                     suffix,
-                    wrappers: &wrappers,
+                    wrappers,
                   },
                   out_classes,
                 );
@@ -1057,7 +1049,7 @@ impl AtomicCssCollector {
                   prop_kebab: &prop_kebab,
                   value_text: Cow::Borrowed(value_text_str.as_str()),
                   suffix,
-                  wrappers: &wrappers,
+                  wrappers,
                 },
                 out_classes,
               );
@@ -1106,7 +1098,7 @@ impl AtomicCssCollector {
                         prop_kebab: &sub_prop,
                         value_text: Cow::Borrowed(sub_val.as_str()),
                         suffix,
-                        wrappers: &wrappers,
+                        wrappers,
                       },
                       out_classes,
                     );
@@ -1117,7 +1109,7 @@ impl AtomicCssCollector {
                       prop_kebab: &prop_kebab,
                       value_text: Cow::Borrowed(value_text.as_str()),
                       suffix,
-                      wrappers: &wrappers,
+                      wrappers,
                     },
                     out_classes,
                   );
@@ -1128,7 +1120,7 @@ impl AtomicCssCollector {
                     prop_kebab: &prop_kebab,
                     value_text: Cow::Borrowed(value_text.as_str()),
                     suffix,
-                    wrappers: &wrappers,
+                    wrappers,
                   },
                   out_classes,
                 );

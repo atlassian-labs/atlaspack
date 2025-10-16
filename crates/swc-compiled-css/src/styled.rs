@@ -6,6 +6,24 @@ use crate::shorthand;
 use crate::utils::{normalize_at_query, to_kebab_case};
 
 use crate::AtomicCssCollector;
+use crate::RuntimeStyleEntries;
+
+type DynamicAndEntry = (String, Expr, String);
+type DynamicCondEntry = (String, Expr, String, String);
+type DynamicAndPair = (Vec<(String, String)>, Expr, String);
+type DynamicCondPair = (Vec<(String, String)>, Expr, String, String);
+type DynamicAndEntries = Vec<DynamicAndEntry>;
+type DynamicCondEntries = Vec<DynamicCondEntry>;
+type DynamicAndPairs = Vec<DynamicAndPair>;
+type DynamicCondPairs = Vec<DynamicCondPair>;
+
+struct ForwardRefDynamicData {
+  dynamic_and_entries: DynamicAndEntries,
+  dynamic_cond_entries: DynamicCondEntries,
+  dynamic_and_pairs: DynamicAndPairs,
+  dynamic_cond_pairs: DynamicCondPairs,
+  runtime_style_entries: RuntimeStyleEntries,
+}
 
 impl AtomicCssCollector {
   fn alloc_unique_ident_from(&mut self, candidates: &[&str]) -> Ident {
@@ -65,17 +83,13 @@ impl AtomicCssCollector {
         } else {
           Self::replace_ident_in_expr(&mut m.obj, from, to_ident);
         }
-        match &mut m.prop {
-          MemberProp::Computed(c) => {
-            Self::replace_ident_in_expr(&mut c.expr, from, to_ident);
-          }
-          _ => {}
+        if let MemberProp::Computed(c) = &mut m.prop {
+          Self::replace_ident_in_expr(&mut c.expr, from, to_ident);
         }
       }
       Expr::Call(c) => {
-        match &mut c.callee {
-          Callee::Expr(e) => Self::replace_ident_in_expr(e, from, to_ident),
-          _ => {}
+        if let Callee::Expr(e) = &mut c.callee {
+          Self::replace_ident_in_expr(e, from, to_ident)
         }
         for a in &mut c.args {
           Self::replace_ident_in_expr(&mut a.expr, from, to_ident);
@@ -205,12 +219,15 @@ impl AtomicCssCollector {
     &mut self,
     tag_default: &str,
     joined_classes: String,
-    dynamic_and_entries: Vec<(String, Expr, String)>,
-    dynamic_cond_entries: Vec<(String, Expr, String, String)>,
-    dynamic_and_pairs: Vec<(Vec<(String, String)>, Expr, String)>,
-    dynamic_cond_pairs: Vec<(Vec<(String, String)>, Expr, String, String)>,
-    runtime_style_entries: Vec<(String, Expr, bool)>,
+    dynamics: ForwardRefDynamicData,
   ) -> Expr {
+    let ForwardRefDynamicData {
+      dynamic_and_entries,
+      dynamic_cond_entries,
+      dynamic_and_pairs,
+      dynamic_cond_pairs,
+      runtime_style_entries,
+    } = dynamics;
     // Ensure we will import/resolve forwardRef
     if self.forward_ref_ident.is_none() {
       // Prefer the canonical name and mark that we need an import
@@ -661,47 +678,95 @@ impl AtomicCssCollector {
       }
     }
     for p in &obj.props {
-      if let PropOrSpread::Prop(pp) = p {
-        if let Prop::KeyValue(kv) = &**pp {
-          let original_prop_name = match &kv.key {
-            PropName::Ident(i) => i.sym.to_string(),
-            PropName::Str(s) => s.value.to_string(),
-            PropName::Num(n) => n.value.to_string(),
-            PropName::BigInt(b) => b.value.to_string(),
-            PropName::Computed(_) => continue,
-          };
-          if let Expr::Arrow(a) = &*kv.value {
-            if a.params.len() == 1 {
-              let prop_kebab = to_kebab_case(&original_prop_name);
-              // Attempt to derive ix argument from arrow
-              let mut ix_arg_opt: Option<(Expr, bool)> = None;
-              match &a.params[0] {
-                Pat::Ident(BindingIdent { id, .. }) => {
-                  // Body can be ident (same as param.property) or member of param
-                  match &*a.body {
-                    BlockStmtOrExpr::Expr(body_e) => {
+      if let PropOrSpread::Prop(pp) = p
+        && let Prop::KeyValue(kv) = &**pp
+      {
+        let original_prop_name = match &kv.key {
+          PropName::Ident(i) => i.sym.to_string(),
+          PropName::Str(s) => s.value.to_string(),
+          PropName::Num(n) => n.value.to_string(),
+          PropName::BigInt(b) => b.value.to_string(),
+          PropName::Computed(_) => continue,
+        };
+        if let Expr::Arrow(a) = &*kv.value
+          && a.params.len() == 1
+        {
+          let prop_kebab = to_kebab_case(&original_prop_name);
+          // Attempt to derive ix argument from arrow
+          let mut ix_arg_opt: Option<(Expr, bool)> = None;
+          match &a.params[0] {
+            Pat::Ident(BindingIdent { id, .. }) => {
+              // Body can be ident (same as param.property) or member of param
+              if let BlockStmtOrExpr::Expr(body_e) = &*a.body {
+                match &**body_e {
+                  Expr::Member(m) => {
+                    // p => p.width OR p => (p.width)
+                    let mut obj_expr = (*m.obj).clone();
+                    // replace param ident with __cmplp
+                    Self::replace_ident_in_expr(
+                      &mut obj_expr,
+                      id.sym.as_ref(),
+                      &Ident::new("__cmplp".into(), DUMMY_SP, SyntaxContext::empty()),
+                    );
+                    ix_arg_opt = Some((
+                      Expr::Member(MemberExpr {
+                        span: DUMMY_SP,
+                        obj: Box::new(obj_expr),
+                        prop: m.prop.clone(),
+                      }),
+                      false,
+                    ));
+                  }
+                  Expr::Ident(local) => {
+                    // p => prop (unsupported unless prop == param)
+                    // Treat as __cmplp[local]
+                    ix_arg_opt = Some((
+                      Expr::Member(MemberExpr {
+                        span: DUMMY_SP,
+                        obj: Box::new(Expr::Ident(Ident::new(
+                          "__cmplp".into(),
+                          DUMMY_SP,
+                          SyntaxContext::empty(),
+                        ))),
+                        prop: MemberProp::Ident(local.clone().into()),
+                      }),
+                      false,
+                    ));
+                  }
+                  Expr::Bin(bin_expr) => {
+                    // Support p => p.dim.width + 10 + "px"
+                    let mut cloned = Expr::Bin(bin_expr.clone());
+                    Self::replace_ident_in_expr(
+                      &mut cloned,
+                      id.sym.as_ref(),
+                      &Ident::new("__cmplp".into(), DUMMY_SP, SyntaxContext::empty()),
+                    );
+                    ix_arg_opt = Some((cloned, true));
+                  }
+                  _ => {}
+                }
+              }
+            }
+            Pat::Object(obj_pat) => {
+              // ({ width }) => width ; ({ width: w }) => w
+              if obj_pat.props.len() == 1 {
+                match &obj_pat.props[0] {
+                  ObjectPatProp::KeyValue(kvp) => {
+                    let key_name = match &kvp.key {
+                      PropName::Ident(i) => i.sym.to_string(),
+                      PropName::Str(s) => s.value.to_string(),
+                      _ => String::new(),
+                    };
+                    if key_name.is_empty() {
+                      continue;
+                    }
+                    let local_ident = match &*kvp.value {
+                      Pat::Ident(BindingIdent { id, .. }) => id.clone(),
+                      _ => continue,
+                    };
+                    if let BlockStmtOrExpr::Expr(body_e) = &*a.body {
                       match &**body_e {
-                        Expr::Member(m) => {
-                          // p => p.width OR p => (p.width)
-                          let mut obj_expr = (*m.obj).clone();
-                          // replace param ident with __cmplp
-                          Self::replace_ident_in_expr(
-                            &mut obj_expr,
-                            &id.sym.to_string(),
-                            &Ident::new("__cmplp".into(), DUMMY_SP, SyntaxContext::empty()),
-                          );
-                          ix_arg_opt = Some((
-                            Expr::Member(MemberExpr {
-                              span: DUMMY_SP,
-                              obj: Box::new(obj_expr),
-                              prop: m.prop.clone(),
-                            }),
-                            false,
-                          ));
-                        }
-                        Expr::Ident(local) => {
-                          // p => prop (unsupported unless prop == param)
-                          // Treat as __cmplp[local]
+                        Expr::Ident(local) if local.sym == local_ident.sym => {
                           ix_arg_opt = Some((
                             Expr::Member(MemberExpr {
                               span: DUMMY_SP,
@@ -710,124 +775,67 @@ impl AtomicCssCollector {
                                 DUMMY_SP,
                                 SyntaxContext::empty(),
                               ))),
-                              prop: MemberProp::Ident(local.clone().into()),
+                              prop: MemberProp::Ident(
+                                Ident::new(key_name.into(), DUMMY_SP, SyntaxContext::empty())
+                                  .into(),
+                              ),
                             }),
                             false,
                           ));
                         }
-                        Expr::Bin(bin_expr) => {
-                          // Support p => p.dim.width + 10 + "px"
-                          let mut cloned = Expr::Bin(bin_expr.clone());
-                          Self::replace_ident_in_expr(
-                            &mut cloned,
-                            &id.sym.to_string(),
-                            &Ident::new("__cmplp".into(), DUMMY_SP, SyntaxContext::empty()),
-                          );
-                          ix_arg_opt = Some((cloned, true));
-                        }
                         _ => {}
                       }
                     }
-                    _ => {}
                   }
-                }
-                Pat::Object(obj_pat) => {
-                  // ({ width }) => width ; ({ width: w }) => w
-                  if obj_pat.props.len() == 1 {
-                    match &obj_pat.props[0] {
-                      ObjectPatProp::KeyValue(kvp) => {
-                        let key_name = match &kvp.key {
-                          PropName::Ident(i) => i.sym.to_string(),
-                          PropName::Str(s) => s.value.to_string(),
-                          _ => String::new(),
-                        };
-                        if key_name.is_empty() {
-                          continue;
-                        }
-                        let local_ident = match &*kvp.value {
-                          Pat::Ident(BindingIdent { id, .. }) => id.clone(),
-                          _ => continue,
-                        };
-                        match &*a.body {
-                          BlockStmtOrExpr::Expr(body_e) => match &**body_e {
-                            Expr::Ident(local) if local.sym == local_ident.sym => {
-                              ix_arg_opt = Some((
-                                Expr::Member(MemberExpr {
-                                  span: DUMMY_SP,
-                                  obj: Box::new(Expr::Ident(Ident::new(
-                                    "__cmplp".into(),
-                                    DUMMY_SP,
-                                    SyntaxContext::empty(),
-                                  ))),
-                                  prop: MemberProp::Ident(
-                                    Ident::new(key_name.into(), DUMMY_SP, SyntaxContext::empty())
-                                      .into(),
-                                  ),
-                                }),
-                                false,
-                              ));
-                            }
-                            _ => {}
-                          },
-                          _ => {}
-                        }
-                      }
-                      ObjectPatProp::Assign(ap) => {
-                        let key_name = ap.key.sym.to_string();
-                        match &*a.body {
-                          BlockStmtOrExpr::Expr(body_e) => {
-                            if let Expr::Ident(local) = &**body_e {
-                              if local.sym == ap.key.sym {
-                                ix_arg_opt = Some((
-                                  Expr::Member(MemberExpr {
-                                    span: DUMMY_SP,
-                                    obj: Box::new(Expr::Ident(Ident::new(
-                                      "__cmplp".into(),
-                                      DUMMY_SP,
-                                      SyntaxContext::empty(),
-                                    ))),
-                                    prop: MemberProp::Ident(
-                                      Ident::new(key_name.into(), DUMMY_SP, SyntaxContext::empty())
-                                        .into(),
-                                    ),
-                                  }),
-                                  false,
-                                ));
-                              }
-                            }
-                          }
-                          _ => {}
-                        }
-                      }
-                      _ => {}
+                  ObjectPatProp::Assign(ap) => {
+                    let key_name = ap.key.sym.to_string();
+                    if let BlockStmtOrExpr::Expr(body_e) = &*a.body
+                      && let Expr::Ident(local) = &**body_e
+                      && local.sym == ap.key.sym
+                    {
+                      ix_arg_opt = Some((
+                        Expr::Member(MemberExpr {
+                          span: DUMMY_SP,
+                          obj: Box::new(Expr::Ident(Ident::new(
+                            "__cmplp".into(),
+                            DUMMY_SP,
+                            SyntaxContext::empty(),
+                          ))),
+                          prop: MemberProp::Ident(
+                            Ident::new(key_name.into(), DUMMY_SP, SyntaxContext::empty()).into(),
+                          ),
+                        }),
+                        false,
+                      ));
                     }
                   }
-                }
-                _ => {}
-              }
-              if let Some((ix_arg, need_iife)) = ix_arg_opt {
-                // Emit atomic rule using var(--token) where token stable per ix arg path
-                let ix_key = member_path_key(&ix_arg).unwrap_or_else(|| prop_kebab.clone());
-                let var_name = ix_key_to_var
-                  .entry(ix_key.clone())
-                  .or_insert_with(|| format!("--{}", self.hash_ix(&ix_key)))
-                  .clone();
-                let value_text = format!("var({})", var_name);
-                let mut tmp: Vec<String> = Vec::new();
-                self.emit_rule_input(
-                  crate::emit::RuleInput {
-                    prop_kebab: &prop_kebab,
-                    value_text: std::borrow::Cow::Borrowed(value_text.as_str()),
-                    suffix: "",
-                    wrappers: &[],
-                  },
-                  &mut tmp,
-                );
-                classes.extend(tmp);
-                if !runtime_entries.iter().any(|(k, _, _)| k == &var_name) {
-                  runtime_entries.push((var_name, ix_arg, need_iife));
+                  _ => {}
                 }
               }
+            }
+            _ => {}
+          }
+          if let Some((ix_arg, need_iife)) = ix_arg_opt {
+            // Emit atomic rule using var(--token) where token stable per ix arg path
+            let ix_key = member_path_key(&ix_arg).unwrap_or_else(|| prop_kebab.clone());
+            let var_name = ix_key_to_var
+              .entry(ix_key.clone())
+              .or_insert_with(|| format!("--{}", self.hash_ix(&ix_key)))
+              .clone();
+            let value_text = format!("var({})", var_name);
+            let mut tmp: Vec<String> = Vec::new();
+            self.emit_rule_input(
+              crate::emit::RuleInput {
+                prop_kebab: &prop_kebab,
+                value_text: std::borrow::Cow::Borrowed(value_text.as_str()),
+                suffix: "",
+                wrappers: &[],
+              },
+              &mut tmp,
+            );
+            classes.extend(tmp);
+            if !runtime_entries.iter().any(|(k, _, _)| k == &var_name) {
+              runtime_entries.push((var_name, ix_arg, need_iife));
             }
           }
         }
@@ -846,11 +854,13 @@ impl AtomicCssCollector {
     Some(self.build_forward_ref_component(
       &tag,
       joined,
-      Vec::new(),
-      Vec::new(),
-      Vec::new(),
-      Vec::new(),
-      runtime_entries,
+      ForwardRefDynamicData {
+        dynamic_and_entries: DynamicAndEntries::new(),
+        dynamic_cond_entries: DynamicCondEntries::new(),
+        dynamic_and_pairs: DynamicAndPairs::new(),
+        dynamic_cond_pairs: DynamicCondPairs::new(),
+        runtime_style_entries: runtime_entries,
+      },
     ))
   }
 
@@ -874,11 +884,11 @@ impl AtomicCssCollector {
       .sum::<usize>()
       + tpl.exprs.len() * 8;
     let mut css_buf = String::with_capacity(approx_cap);
-    let mut dynamics: Vec<(String, Expr, String)> = Vec::new();
-    let mut dynamics_cond: Vec<(String, Expr, String, String)> = Vec::new();
-    let mut dynamics_pairs: Vec<(Vec<(String, String)>, Expr, String)> = Vec::new();
-    let mut dynamics_cond_pairs: Vec<(Vec<(String, String)>, Expr, String, String)> = Vec::new();
-    let mut runtime_style_entries: Vec<(String, Expr, bool)> = Vec::new();
+    let mut dynamics: DynamicAndEntries = DynamicAndEntries::new();
+    let mut dynamics_cond: DynamicCondEntries = DynamicCondEntries::new();
+    let mut dynamics_pairs: DynamicAndPairs = DynamicAndPairs::new();
+    let mut dynamics_cond_pairs: DynamicCondPairs = DynamicCondPairs::new();
+    let mut runtime_style_entries: RuntimeStyleEntries = RuntimeStyleEntries::new();
     // Enable runtime var capture for non-const template interpolations
     self.begin_runtime_collection();
 
@@ -985,15 +995,15 @@ impl AtomicCssCollector {
       } else if let Some(raw) = value_to_raw_text(value_expr) {
         // literal fallback
         let mut s = raw;
-        if let Ok(n) = s.parse::<f64>() {
-          if !AtomicCssCollector::is_unitless_property_generic(prop_name_raw) {
-            s = if (n - (n as i64 as f64)).abs() < f64::EPSILON {
-              (n as i64).to_string()
-            } else {
-              n.to_string()
-            };
-            s.push_str("px");
-          }
+        if let Ok(n) = s.parse::<f64>()
+          && !AtomicCssCollector::is_unitless_property_generic(prop_name_raw)
+        {
+          s = if (n - (n as i64 as f64)).abs() < f64::EPSILON {
+            (n as i64).to_string()
+          } else {
+            n.to_string()
+          };
+          s.push_str("px");
         }
         value_text = Some(s);
       }
@@ -1085,9 +1095,8 @@ impl AtomicCssCollector {
             i += 1;
           }
           let header = &chunk[start..i].trim();
-          let wrapper = if header.starts_with("@media") {
-            let q = header["@media".len()..].trim();
-            let normalized = normalize_at_query(q);
+          let wrapper = if let Some(stripped) = header.strip_prefix("@media") {
+            let normalized = normalize_at_query(stripped.trim());
             if normalized.starts_with('(') {
               format!("@media {}", normalized)
             } else if normalized.is_empty() {
@@ -1095,9 +1104,8 @@ impl AtomicCssCollector {
             } else {
               format!("@media ({})", normalized)
             }
-          } else if header.starts_with("@supports") {
-            let q = header["@supports".len()..].trim();
-            let normalized = normalize_at_query(q);
+          } else if let Some(stripped) = header.strip_prefix("@supports") {
+            let normalized = normalize_at_query(stripped.trim());
             if normalized.starts_with('(') {
               format!("@supports {}", normalized)
             } else if normalized.is_empty() {
@@ -1126,11 +1134,11 @@ impl AtomicCssCollector {
           continue;
         }
         if c == b'}' {
-          if let Some(mut top) = stack.pop() {
-            if top.1 > 1 {
-              top.1 -= 1;
-              stack.push(top);
-            }
+          if let Some(mut top) = stack.pop()
+            && top.1 > 1
+          {
+            top.1 -= 1;
+            stack.push(top);
           }
           i += 1;
           continue;
@@ -1192,8 +1200,8 @@ impl AtomicCssCollector {
             if !header.is_empty() && !header.starts_with('@') {
               // Normalize to suffix (strip leading '&')
               let mut suf = header.to_string();
-              if suf.starts_with('&') {
-                suf = suf[1..].to_string();
+              if let Some(stripped) = suf.strip_prefix('&') {
+                suf = stripped.to_string();
               }
               // Preserve as-is; emit_rule_input will append after ".class"
               stack.push((suf, 1));
@@ -1208,11 +1216,11 @@ impl AtomicCssCollector {
           continue;
         }
         if c == b'}' {
-          if let Some(mut top) = stack.pop() {
-            if top.1 > 1 {
-              top.1 -= 1;
-              stack.push(top);
-            }
+          if let Some(mut top) = stack.pop()
+            && top.1 > 1
+          {
+            top.1 -= 1;
+            stack.push(top);
           }
           i += 1;
           continue;
@@ -1234,190 +1242,177 @@ impl AtomicCssCollector {
           continue;
         }
         // Detect arrow function param => param.cond && ({...})
-        if let Expr::Arrow(arrow) = &**expr {
-          if arrow.params.len() == 1 {
-            let param_pat = &arrow.params[0];
-            let binding_pairs: Vec<(String, String)> =
-              Self::collect_binding_pairs_from_param(param_pat);
-            if let Pat::Ident(BindingIdent {
-              id: param_ident, ..
-            }) = param_pat
-            {
-              // Only support concise body expressions for now
-              match &*arrow.body {
-                BlockStmtOrExpr::Expr(body_expr) => {
-                  // Unwrap parens
-                  let mut e: &Expr = &**body_expr;
-                  if let Expr::Paren(p) = e {
-                    e = &*p.expr;
+        if let Expr::Arrow(arrow) = &**expr
+          && arrow.params.len() == 1
+        {
+          let param_pat = &arrow.params[0];
+          let binding_pairs: Vec<(String, String)> =
+            Self::collect_binding_pairs_from_param(param_pat);
+          if let Pat::Ident(BindingIdent {
+            id: param_ident, ..
+          }) = param_pat
+          {
+            // Only support concise body expressions for now
+            if let BlockStmtOrExpr::Expr(body_expr) = &*arrow.body {
+              // Unwrap parens
+              let mut e: &Expr = body_expr;
+              if let Expr::Paren(p) = e {
+                e = &*p.expr;
+              }
+              if let Expr::Bin(bin) = e {
+                if matches!(bin.op, BinaryOp::LogicalAnd) {
+                  // Right side should be object (possibly wrapped in parens)
+                  let mut right_expr: &Expr = &bin.right;
+                  if let Expr::Paren(p) = right_expr {
+                    right_expr = &*p.expr;
                   }
-                  if let Expr::Bin(bin) = e {
-                    if matches!(bin.op, BinaryOp::LogicalAnd) {
-                      // Right side should be object (possibly wrapped in parens)
-                      let mut right_expr: &Expr = &*bin.right;
-                      if let Expr::Paren(p) = right_expr {
-                        right_expr = &*p.expr;
-                      }
-                      if let Expr::Object(style_obj) = right_expr {
-                        let classes = self.collect_atomic_classes_from_object(style_obj);
-                        let joined_dyn = Self::join_classes(classes);
-                        let cond_clone = (*bin.left).clone();
-                        if !binding_pairs.is_empty() { /* mapping handled at build time */ }
-                        dynamics.push((param_ident.sym.to_string(), cond_clone, joined_dyn));
-                        // Do not append anything to css for this expr
-                        continue;
-                      }
-                    }
-                    // Ternary dynamic property values: test ? cons : alt
-                  } else if let Expr::Cond(cond) = e {
-                    if let Some((prop_start, prop_name)) = backscan_property_name(&css_buf) {
-                      // remove the pending "prop: " from base css buffer
-                      if prop_start <= css_buf.len() {
-                        css_buf.truncate(prop_start);
-                      }
-                      let wrappers_now: Vec<String> =
-                        wrapper_stack.iter().map(|(w, _)| w.clone()).collect();
-                      let suffix_now: String = selector_suffix_stack
-                        .last()
-                        .map(|(s, _)| s.clone())
-                        .unwrap_or_default();
-                      let classes_cons = emit_value_classes_for_prop(
-                        self,
-                        &prop_name,
-                        &cond.cons,
-                        &suffix_now,
-                        &wrappers_now,
-                      );
-                      let classes_alt = emit_value_classes_for_prop(
-                        self,
-                        &prop_name,
-                        &cond.alt,
-                        &suffix_now,
-                        &wrappers_now,
-                      );
-                      let joined_cons = Self::join_classes(classes_cons);
-                      let joined_alt = Self::join_classes(classes_alt);
-                      let test_clone = (*cond.test).clone();
-                      if binding_pairs.is_empty() {
-                        dynamics_cond.push((
-                          param_ident.sym.to_string(),
-                          test_clone,
-                          joined_cons,
-                          joined_alt,
-                        ));
-                      } else {
-                        dynamics_cond_pairs.push((
-                          binding_pairs.clone(),
-                          test_clone,
-                          joined_cons,
-                          joined_alt,
-                        ));
-                      }
-                      continue;
-                    } else {
-                      // Non-property ternary: expect branches to evaluate to class strings (e.g., css vars)
-                      if let (Some(cons_str), Some(alt_str)) = (
-                        self.eval_expr_to_string(&cond.cons),
-                        self.eval_expr_to_string(&cond.alt),
-                      ) {
-                        let test_clone = (*cond.test).clone();
-                        if binding_pairs.is_empty() {
-                          dynamics_cond.push((
-                            param_ident.sym.to_string(),
-                            test_clone,
-                            cons_str,
-                            alt_str,
-                          ));
-                        } else {
-                          dynamics_cond_pairs.push((
-                            binding_pairs.clone(),
-                            test_clone,
-                            cons_str,
-                            alt_str,
-                          ));
-                        }
-                        continue;
-                      }
-                    }
+                  if let Expr::Object(style_obj) = right_expr {
+                    let classes = self.collect_atomic_classes_from_object(style_obj);
+                    let joined_dyn = Self::join_classes(classes);
+                    let cond_clone = (*bin.left).clone();
+                    if !binding_pairs.is_empty() { /* mapping handled at build time */ }
+                    dynamics.push((param_ident.sym.to_string(), cond_clone, joined_dyn));
+                    // Do not append anything to css for this expr
+                    continue;
                   }
                 }
-                _ => {}
-              }
-            } else {
-              // Destructured param case (no param ident); handle ternary
-              match &*arrow.body {
-                BlockStmtOrExpr::Expr(body_expr) => {
-                  let mut e: &Expr = &**body_expr;
-                  if let Expr::Paren(p) = e {
-                    e = &*p.expr;
+                // Ternary dynamic property values: test ? cons : alt
+              } else if let Expr::Cond(cond) = e {
+                if let Some((prop_start, prop_name)) = backscan_property_name(&css_buf) {
+                  // remove the pending "prop: " from base css buffer
+                  if prop_start <= css_buf.len() {
+                    css_buf.truncate(prop_start);
                   }
-                  if let Expr::Cond(cond) = e {
-                    if let Some((prop_start, prop_name)) = backscan_property_name(&css_buf) {
-                      if prop_start <= css_buf.len() {
-                        css_buf.truncate(prop_start);
-                      }
-                      let wrappers_now: Vec<String> =
-                        wrapper_stack.iter().map(|(w, _)| w.clone()).collect();
-                      let suffix_now: String = selector_suffix_stack
-                        .last()
-                        .map(|(s, _)| s.clone())
-                        .unwrap_or_default();
-                      let classes_cons = emit_value_classes_for_prop(
-                        self,
-                        &prop_name,
-                        &cond.cons,
-                        &suffix_now,
-                        &wrappers_now,
-                      );
-                      let classes_alt = emit_value_classes_for_prop(
-                        self,
-                        &prop_name,
-                        &cond.alt,
-                        &suffix_now,
-                        &wrappers_now,
-                      );
-                      let joined_cons = Self::join_classes(classes_cons);
-                      let joined_alt = Self::join_classes(classes_alt);
-                      let test_expr = (*cond.test).clone();
+                  let wrappers_now: Vec<String> =
+                    wrapper_stack.iter().map(|(w, _)| w.clone()).collect();
+                  let suffix_now: String = selector_suffix_stack
+                    .last()
+                    .map(|(s, _)| s.clone())
+                    .unwrap_or_default();
+                  let classes_cons = emit_value_classes_for_prop(
+                    self,
+                    &prop_name,
+                    &cond.cons,
+                    &suffix_now,
+                    &wrappers_now,
+                  );
+                  let classes_alt = emit_value_classes_for_prop(
+                    self,
+                    &prop_name,
+                    &cond.alt,
+                    &suffix_now,
+                    &wrappers_now,
+                  );
+                  let joined_cons = Self::join_classes(classes_cons);
+                  let joined_alt = Self::join_classes(classes_alt);
+                  let test_clone = (*cond.test).clone();
+                  if binding_pairs.is_empty() {
+                    dynamics_cond.push((
+                      param_ident.sym.to_string(),
+                      test_clone,
+                      joined_cons,
+                      joined_alt,
+                    ));
+                  } else {
+                    dynamics_cond_pairs.push((
+                      binding_pairs.clone(),
+                      test_clone,
+                      joined_cons,
+                      joined_alt,
+                    ));
+                  }
+                  continue;
+                } else {
+                  // Non-property ternary: expect branches to evaluate to class strings (e.g., css vars)
+                  if let (Some(cons_str), Some(alt_str)) = (
+                    self.eval_expr_to_string(&cond.cons),
+                    self.eval_expr_to_string(&cond.alt),
+                  ) {
+                    let test_clone = (*cond.test).clone();
+                    if binding_pairs.is_empty() {
+                      dynamics_cond.push((
+                        param_ident.sym.to_string(),
+                        test_clone,
+                        cons_str,
+                        alt_str,
+                      ));
+                    } else {
                       dynamics_cond_pairs.push((
                         binding_pairs.clone(),
-                        test_expr,
-                        joined_cons,
-                        joined_alt,
+                        test_clone,
+                        cons_str,
+                        alt_str,
                       ));
-                      continue;
-                    } else {
-                      if let (Some(cons_str), Some(alt_str)) = (
-                        self.eval_expr_to_string(&cond.cons),
-                        self.eval_expr_to_string(&cond.alt),
-                      ) {
-                        let test_expr = (*cond.test).clone();
-                        dynamics_cond_pairs.push((
-                          binding_pairs.clone(),
-                          test_expr,
-                          cons_str,
-                          alt_str,
-                        ));
-                        continue;
-                      }
                     }
-                  } else if let Expr::Bin(bin) = e {
-                    if matches!(bin.op, BinaryOp::LogicalAnd) {
-                      let mut right_expr: &Expr = &*bin.right;
-                      if let Expr::Paren(p) = right_expr {
-                        right_expr = &*p.expr;
-                      }
-                      if let Expr::Object(style_obj) = right_expr {
-                        let classes = self.collect_atomic_classes_from_object(style_obj);
-                        let joined_dyn = Self::join_classes(classes);
-                        let cond_clone = (*bin.left).clone();
-                        dynamics_pairs.push((binding_pairs.clone(), cond_clone, joined_dyn));
-                        continue;
-                      }
-                    }
+                    continue;
                   }
                 }
-                _ => {}
+              }
+            }
+          } else {
+            // Destructured param case (no param ident); handle ternary
+            if let BlockStmtOrExpr::Expr(body_expr) = &*arrow.body {
+              let mut e: &Expr = body_expr;
+              if let Expr::Paren(p) = e {
+                e = &*p.expr;
+              }
+              if let Expr::Cond(cond) = e {
+                if let Some((prop_start, prop_name)) = backscan_property_name(&css_buf) {
+                  if prop_start <= css_buf.len() {
+                    css_buf.truncate(prop_start);
+                  }
+                  let wrappers_now: Vec<String> =
+                    wrapper_stack.iter().map(|(w, _)| w.clone()).collect();
+                  let suffix_now: String = selector_suffix_stack
+                    .last()
+                    .map(|(s, _)| s.clone())
+                    .unwrap_or_default();
+                  let classes_cons = emit_value_classes_for_prop(
+                    self,
+                    &prop_name,
+                    &cond.cons,
+                    &suffix_now,
+                    &wrappers_now,
+                  );
+                  let classes_alt = emit_value_classes_for_prop(
+                    self,
+                    &prop_name,
+                    &cond.alt,
+                    &suffix_now,
+                    &wrappers_now,
+                  );
+                  let joined_cons = Self::join_classes(classes_cons);
+                  let joined_alt = Self::join_classes(classes_alt);
+                  let test_expr = (*cond.test).clone();
+                  dynamics_cond_pairs.push((
+                    binding_pairs.clone(),
+                    test_expr,
+                    joined_cons,
+                    joined_alt,
+                  ));
+                  continue;
+                } else if let (Some(cons_str), Some(alt_str)) = (
+                  self.eval_expr_to_string(&cond.cons),
+                  self.eval_expr_to_string(&cond.alt),
+                ) {
+                  let test_expr = (*cond.test).clone();
+                  dynamics_cond_pairs.push((binding_pairs.clone(), test_expr, cons_str, alt_str));
+                  continue;
+                }
+              } else if let Expr::Bin(bin) = e
+                && matches!(bin.op, BinaryOp::LogicalAnd)
+              {
+                let mut right_expr: &Expr = &bin.right;
+                if let Expr::Paren(p) = right_expr {
+                  right_expr = &*p.expr;
+                }
+                if let Expr::Object(style_obj) = right_expr {
+                  let classes = self.collect_atomic_classes_from_object(style_obj);
+                  let joined_dyn = Self::join_classes(classes);
+                  let cond_clone = (*bin.left).clone();
+                  dynamics_pairs.push((binding_pairs.clone(), cond_clone, joined_dyn));
+                  continue;
+                }
               }
             }
           }
@@ -1483,11 +1478,13 @@ impl AtomicCssCollector {
     Some(self.build_forward_ref_component(
       &tag,
       joined,
-      dynamics,
-      dynamics_cond,
-      dynamics_pairs,
-      dynamics_cond_pairs,
-      runtime_style_entries,
+      ForwardRefDynamicData {
+        dynamic_and_entries: dynamics,
+        dynamic_cond_entries: dynamics_cond,
+        dynamic_and_pairs: dynamics_pairs,
+        dynamic_cond_pairs: dynamics_cond_pairs,
+        runtime_style_entries,
+      },
     ))
   }
 }

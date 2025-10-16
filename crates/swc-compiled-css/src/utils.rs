@@ -75,12 +75,10 @@ pub fn normalize_nested_selector(sel: &str) -> String {
       }
       if word == "after" || word == "before" {
         out.push(':');
+      } else if colon_count == 2 {
+        out.push_str("::");
       } else {
-        if colon_count == 2 {
-          out.push_str("::");
-        } else {
-          out.push(':');
-        }
+        out.push(':');
       }
     } else {
       out.push(ch);
