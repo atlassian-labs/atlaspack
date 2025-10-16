@@ -59,19 +59,6 @@ fn process_tokens_sync(code: &str, config: &TokensConfig) -> Result<TokensPlugin
     ..Default::default()
   };
 
-  let tokens_config = atlaspack_js_swc_core::AtlaskitTokensConfig {
-    token_data_path: config.tokens_options.tokens_path.clone(),
-    should_use_auto_fallback: config.tokens_options.should_use_auto_fallback,
-    should_force_auto_fallback: config.tokens_options.should_force_auto_fallback,
-    force_auto_fallback_exemptions: config.tokens_options.force_auto_fallback_exemptions.clone(),
-    default_theme: config.tokens_options.default_theme.clone(),
-  };
-
-  let swc_config = Config {
-    atlaskit_tokens: Some(tokens_config),
-    ..swc_config
-  };
-
   let error_buffer = ErrorBuffer::default();
   let handler = Handler::with_emitter(true, false, Box::new(error_buffer.clone()));
   errors::HANDLER.set(&handler, || {

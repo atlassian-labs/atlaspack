@@ -53,8 +53,6 @@ use pathdiff::diff_paths;
 use serde::Deserialize;
 use serde::Serialize;
 use std::io::{self};
-use swc_atlaskit_tokens::design_system_tokens_visitor;
-use swc_atlaskit_tokens::token_map::get_or_load_token_map_from_json;
 use swc_core::common::FileName;
 use swc_core::common::Globals;
 use swc_core::common::Mark;
@@ -109,38 +107,7 @@ use crate::esm_export_classifier::EsmExportClassifier;
 use crate::esm_export_classifier::SymbolsInfo;
 
 type SourceMapBuffer = Vec<(swc_core::common::BytePos, swc_core::common::LineCol)>;
-#[derive(Serialize, Debug, Deserialize)]
-pub struct AtlaskitTokensConfig {
-  #[serde(default = "default_true")]
-  pub should_use_auto_fallback: bool,
-  #[serde(default = "default_true")]
-  pub should_force_auto_fallback: bool,
-  #[serde(default)]
-  pub force_auto_fallback_exemptions: Vec<String>,
-  #[serde(default = "default_light_theme")]
-  pub default_theme: String,
-  pub token_data_path: String,
-}
 
-fn default_true() -> bool {
-  true
-}
-
-fn default_light_theme() -> String {
-  "light".to_string()
-}
-
-impl Default for AtlaskitTokensConfig {
-  fn default() -> Self {
-    Self {
-      should_use_auto_fallback: true,
-      should_force_auto_fallback: true,
-      force_auto_fallback_exemptions: Vec::new(),
-      default_theme: "light".to_string(),
-      token_data_path: "".to_string(), // This should never be used in practice
-    }
-  }
-}
 #[derive(Default, Serialize, Debug, Deserialize)]
 pub struct Config {
   pub filename: String,
@@ -184,7 +151,6 @@ pub struct Config {
   pub enable_global_this_aliaser: bool,
   pub enable_lazy_loading_transformer: bool,
   pub is_source: bool,
-  pub atlaskit_tokens: Option<AtlaskitTokensConfig>,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -253,35 +219,6 @@ pub fn transform(
     &source_map,
     &config,
   );
-  // Load token map from cache or file path provided in config (only if tokens config is present)
-  let mut token_loading_error: Option<String> = None;
-  let token_map = if let Some(tokens_config) = config.atlaskit_tokens.as_ref() {
-    match get_or_load_token_map_from_json(Some(&tokens_config.token_data_path)) {
-      Ok(map) => map,
-      Err(error_msg) => {
-        token_loading_error = Some(error_msg.to_string());
-        None
-      }
-    }
-  } else {
-    None
-  };
-
-  // If token loading failed, return early with error
-  if let Some(error_msg) = token_loading_error {
-    result.diagnostics = Some(vec![Diagnostic {
-      message: error_msg,
-      code_highlights: None,
-      hints: Some(vec![
-        "Ensure the token data file exists and is valid JSON".to_string(),
-        "Check the file path in your transformer configuration".to_string(),
-      ]),
-      show_environment: false,
-      severity: DiagnosticSeverity::Error,
-      documentation_url: None,
-    }]);
-    return Ok(result);
-  }
 
   match module {
     Err(errs) => {
@@ -492,16 +429,6 @@ pub fn transform(
                   Optional::new(
                     visit_mut_pass(LazyLoadingTransformer::new(unresolved_mark)),
                     config.enable_lazy_loading_transformer && LazyLoadingTransformer::should_transform(code)
-                    design_system_tokens_visitor(
-                      comments.clone(),
-                      config.atlaskit_tokens.as_ref().is_none_or(|c| c.should_use_auto_fallback),
-                      config.atlaskit_tokens.as_ref().is_none_or(|c| c.should_force_auto_fallback),
-                      config.atlaskit_tokens.as_ref().map_or_else(Vec::new, |c| c.force_auto_fallback_exemptions.clone()),
-                      config.atlaskit_tokens.as_ref().map_or_else(|| "light".to_string(), |c| c.default_theme.clone()),
-                      !config.is_source, // is_node_modules = !is_source
-                      token_map.as_deref()
-                    ),
-                    config.atlaskit_tokens.is_some()
                   ),
                   paren_remover(Some(&comments)),
                   // Simplify expressions and remove dead branches so that we

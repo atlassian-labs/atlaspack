@@ -331,7 +331,6 @@ dependencies = [
  "serde_bytes",
  "sha-1",
  "sourcemap",
- "swc_atlaskit_tokens",
  "swc_core",
  "swc_ecma_parser",
  "tempfile",
