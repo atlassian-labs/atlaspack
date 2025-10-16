@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-tokens",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
+    "@atlaspack/feature-flags": "2.25.5",
     "@atlaspack/types-internal": "2.20.5",
     "@atlaspack/plugin": "2.14.35",
     "@atlaspack/rust": "3.8.3",

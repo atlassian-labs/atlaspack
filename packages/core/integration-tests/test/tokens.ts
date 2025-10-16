@@ -39,9 +39,33 @@ describe('tokens', () => {
       'utf8',
     );
     assert(
-      firstBundle.includes('var(--ds-text, #172B4D)') ||
-        firstBundle.includes('#172B4D'),
+      firstBundle.includes('var(--ds-text, #172B4D)'),
       `Expected transformed token value to be present, but bundle was ${firstBundle.substring(0, 200)}...`,
+    );
+  });
+
+  it('should not transform tokens when the feature flag is disabled', async () => {
+    // This test requires a real filesystem to work with V3, so we can't use fsFixture
+    const b = await bundle(
+      path.join(__dirname, './integration/tokens/index.js'),
+      {
+        outputFS: overlayFS,
+        mode: 'production',
+        featureFlags: {
+          enableTokensTransformer: false,
+        },
+      },
+    );
+
+    const firstBundle = await overlayFS.readFile(
+      b.getBundles()[0].filePath,
+      'utf8',
+    );
+
+    require('fs').writeFileSync('/tmp/bundle.js', firstBundle);
+    assert(
+      !firstBundle.includes('var(--ds-text, #172B4D)'),
+      `Expected token to not be transformed, but bundle was ${firstBundle.substring(0, 200)}...`,
     );
   });
 });

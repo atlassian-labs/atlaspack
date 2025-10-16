@@ -21,7 +21,6 @@ import ThrowableDiagnostic, {
 import {validateSchema, remapSourceLocation, globMatch} from '@atlaspack/utils';
 import pkg from '../package.json';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
-import path from 'path';
 
 const JSX_EXTENSIONS = {
   jsx: true,

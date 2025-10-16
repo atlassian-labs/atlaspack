@@ -1,4 +1,5 @@
 import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Transformer} from '@atlaspack/plugin';
 import {applyTokensPlugin} from '@atlaspack/rust';
 import {validateSchema} from '@atlaspack/utils';
@@ -75,6 +76,10 @@ export default new Transformer({
   },
 
   async transform({asset, options, config}) {
+    if (!getFeatureFlag('enableTokensTransformer')) {
+      return [asset];
+    }
+
     const [code, originalMap] = await Promise.all([
       asset.getCode(),
       asset.getMap(),
