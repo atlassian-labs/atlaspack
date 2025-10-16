@@ -22,10 +22,13 @@ mod atlaspack;
 #[cfg(not(test))]
 pub mod lmdb;
 mod optimizers;
+mod plugin_compiled_css_in_js;
 mod resolver;
 mod string_ops;
 mod transformer;
 pub mod vcs;
+
+pub use atlassian_swc_compiled_css::config::CompiledCssInJsTransformConfig;
 
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]

@@ -1,5 +1,3 @@
-// Converted from Flow to TypeScript
-
 export type ConsistencyCheckFeatureFlagValue =
   (typeof CONSISTENCY_CHECK_VALUES)[number];
 
@@ -281,6 +279,16 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-10-14
    */
   deduplicateReporters: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * When enabled, applies the SWC compiled CSS in JS transformer to the codebase.
+   *
+   * This is a temporary feature flag for the migration state. We eventually will remove this transformer plugin and directly use the SWC visitor in the JS transform.
+   *
+   * @author Jake Lane <jlane2@atlassian.com>
+   * @since 2025-10-16
+   */
+  compiledCssInJsTransformer: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

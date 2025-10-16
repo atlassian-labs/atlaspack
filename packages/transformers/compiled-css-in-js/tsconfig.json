@@ -1,0 +1,15 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "include": ["./src/", "./package.json"],
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../core/plugin/tsconfig.json"
+    },
+    {
+      "path": "../../core/rust/tsconfig.json"
+    }
+  ]
+}
