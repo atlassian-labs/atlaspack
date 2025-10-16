@@ -2,6 +2,7 @@ import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
 import {Transformer} from '@atlaspack/plugin';
 import {applyTokensPlugin} from '@atlaspack/rust';
 import {validateSchema} from '@atlaspack/utils';
+import SourceMap from '@parcel/source-map';
 import path from 'path';
 
 type AtlaskitTokensConfigPartial = {
@@ -74,7 +75,11 @@ export default new Transformer({
   },
 
   async transform({asset, options, config}) {
-    const code = await asset.getCode();
+    const [code, originalMap] = await Promise.all([
+      asset.getCode(),
+      asset.getMap(),
+    ]);
+
     if (!code.includes('@atlaskit/tokens')) {
       return [asset];
     }
@@ -85,23 +90,34 @@ export default new Transformer({
       return [asset];
     }
 
-    const compiledCode = await applyTokensPlugin(
-      codeBuffer,
-      options.projectRoot,
-      asset.filePath,
-      asset.isSource,
-      {
+    const result = await applyTokensPlugin(codeBuffer, {
+      filename: asset.filePath,
+      projectRoot: options.projectRoot,
+      isSource: asset.isSource,
+      sourceMaps: !!asset.env.sourceMap,
+      tokensOptions: {
         tokensPath: config.tokenDataPath,
         shouldUseAutoFallback: config.shouldUseAutoFallback,
         shouldForceAutoFallback: config.shouldForceAutoFallback,
         forceAutoFallbackExemptions: config.forceAutoFallbackExemptions,
         defaultTheme: config.defaultTheme,
       },
-    );
+    });
+
+    // Handle sourcemap merging if sourcemap is generated
+    if (result.map != null) {
+      let map = new SourceMap(options.projectRoot);
+      map.addVLQMap(JSON.parse(result.map));
+      if (originalMap) {
+        // @ts-expect-error TS2345 - the types are wrong, `extends` accepts a `SourceMap` or a `Buffer`
+        map.extends(originalMap);
+      }
+      asset.setMap(map);
+    }
 
     // Rather then setting this as a buffer we set it as a string, since most of the following
     // plugins will call `getCode`, this avoids repeatedly converting the buffer to a string.
-    asset.setCode(compiledCode);
+    asset.setCode(result.code);
     return [asset];
   },
 }) as Transformer<unknown>;

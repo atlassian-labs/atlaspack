@@ -258,10 +258,20 @@ export interface TokensPluginOptions {
   defaultTheme: string;
 }
 
+export interface TokensConfig {
+  filename: string;
+  projectRoot: string;
+  isSource: boolean;
+  sourceMaps: boolean;
+  tokensOptions: TokensPluginOptions;
+}
+
+export interface TokensPluginResult {
+  code: string;
+  map: string | null;
+}
+
 export declare function applyTokensPlugin(
   rawCode: Buffer,
-  projectRoot: string,
-  filename: string,
-  isSource: boolean,
-  options: TokensPluginOptions,
-): string;
+  config: TokensConfig,
+): TokensPluginResult;
