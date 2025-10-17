@@ -1,7 +1,7 @@
 import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Transformer} from '@atlaspack/plugin';
-import {applyTokensPlugin} from '@atlaspack/rust';
+import {applyTokensPlugin, TokensPluginResult} from '@atlaspack/rust';
 import {validateSchema} from '@atlaspack/utils';
 import SourceMap from '@parcel/source-map';
 import path from 'path';
@@ -95,7 +95,7 @@ export default new Transformer({
       return [asset];
     }
 
-    const result = await applyTokensPlugin(codeBuffer, {
+    const result = await (applyTokensPlugin(codeBuffer, {
       filename: asset.filePath,
       projectRoot: options.projectRoot,
       isSource: asset.isSource,
@@ -107,7 +107,7 @@ export default new Transformer({
         forceAutoFallbackExemptions: config.forceAutoFallbackExemptions,
         defaultTheme: config.defaultTheme,
       },
-    });
+    }) as Promise<TokensPluginResult>);
 
     // Handle sourcemap merging if sourcemap is generated
     if (result.map != null) {

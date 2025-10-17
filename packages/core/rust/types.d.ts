@@ -271,7 +271,8 @@ export interface TokensPluginResult {
   map: string | null;
 }
 
+/** Apply the tokens transformation plugin to the given code asynchronously */
 export declare function applyTokensPlugin(
   rawCode: Buffer,
   config: TokensConfig,
-): TokensPluginResult;
+): object;

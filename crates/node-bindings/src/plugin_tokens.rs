@@ -2,8 +2,9 @@ use anyhow::{Context, Result, anyhow};
 use atlaspack_js_swc_core::{
   Config, emit, parse, utils::ErrorBuffer, utils::error_buffer_to_diagnostics,
 };
-use napi::{Error as NapiError, bindgen_prelude::Buffer};
+use napi::{Env, Error as NapiError, JsObject, bindgen_prelude::Buffer};
 use napi_derive::napi;
+use serde::Serialize;
 use swc_atlaskit_tokens::{
   design_system_tokens_visitor, token_map::get_or_load_token_map_from_json,
 };
@@ -32,7 +33,7 @@ pub struct TokensConfig {
 }
 
 #[napi(object)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct TokensPluginResult {
   pub code: String,
   pub map: Option<String>,
@@ -139,31 +140,41 @@ fn process_tokens_sync(code: &str, config: &TokensConfig) -> Result<TokensPlugin
   })
 }
 
-/// Apply the tokens transformation plugin to the given code
+/// Apply the tokens transformation plugin to the given code asynchronously
 #[napi]
 pub fn apply_tokens_plugin(
   raw_code: Buffer,
   config: TokensConfig,
-) -> napi::Result<TokensPluginResult> {
-  let code_bytes = raw_code.as_ref();
-
-  // Convert bytes to string
-  let code = std::str::from_utf8(code_bytes)
+  env: Env,
+) -> napi::Result<JsObject> {
+  // Convert bytes to string and take ownership
+  let code = std::str::from_utf8(raw_code.as_ref())
     .with_context(|| "Input code is not valid UTF-8")
-    .map_err(|e| NapiError::from_reason(e.to_string()))?;
+    .map_err(|e| NapiError::from_reason(e.to_string()))?
+    .to_string();
 
   // Return early for empty code
   if code.trim().is_empty() {
     return Err(NapiError::from_reason("Empty code input".to_string()));
   }
 
-  // Process tokens synchronously
-  let result = process_tokens_sync(code, &config);
+  // Create deferred promise
+  let (deferred, promise) = env.create_deferred()?;
 
-  match result {
-    Ok(plugin_result) => Ok(plugin_result),
-    Err(e) => Err(NapiError::from_reason(e.to_string())),
-  }
+  // Spawn the work on a Rayon thread
+  rayon::spawn(move || {
+    let result = process_tokens_sync(&code, &config);
+    match result {
+      Ok(plugin_result) => {
+        deferred.resolve(move |env| env.to_js_value(&plugin_result));
+      }
+      Err(e) => {
+        deferred.reject(NapiError::from_reason(e.to_string()));
+      }
+    }
+  });
+
+  Ok(promise)
 }
 
 #[cfg(test)]

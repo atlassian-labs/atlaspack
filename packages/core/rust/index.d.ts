@@ -146,8 +146,8 @@ export interface TokensPluginResult {
   code: string
   map?: string
 }
-/** Apply the tokens transformation plugin to the given code */
-export declare function applyTokensPlugin(rawCode: Buffer, config: TokensConfig): TokensPluginResult
+/** Apply the tokens transformation plugin to the given code asynchronously */
+export declare function applyTokensPlugin(rawCode: Buffer, config: TokensConfig): object
 export type LMDB = Lmdb
 export class Lmdb {
   constructor(options: LmdbOptions)
