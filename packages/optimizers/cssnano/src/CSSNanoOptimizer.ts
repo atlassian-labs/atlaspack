@@ -1,4 +1,4 @@
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {Optimizer} from '@atlaspack/plugin';
 import postcss from 'postcss';
 // @ts-expect-error TS7016

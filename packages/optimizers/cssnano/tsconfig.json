@@ -7,6 +7,9 @@
   "references": [
     {
       "path": "../../core/plugin/tsconfig.json"
+    },
+    {
+      "path": "../../core/source-map/tsconfig.json"
     }
   ]
 }
