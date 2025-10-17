@@ -3,7 +3,7 @@ use std::cell::Cell;
 use swc_atoms::Atom;
 use swc_common::{DUMMY_SP, SyntaxContext};
 use swc_ecma_ast::*;
-use swc_ecma_visit::{VisitMut, VisitMutWith};
+use swc_ecma_visit::{VisitMut, VisitMutWith, visit_mut_pass};
 
 mod evaluate_expr;
 use evaluate_expr::{ConstValue, eval_const_expr, eval_expr_to_const};
@@ -1722,6 +1722,12 @@ pub use plugin_entry::process_transform as __swc_plugin_process_transform;
 /// Apply the compiled atomic transform in-place to a Program (native pipeline).
 pub fn apply_compiled_atomic(program: &mut Program) -> CompiledCssInJsTransformResult {
   apply_compiled_atomic_with_config(program, CompiledCssInJsTransformConfig::default())
+}
+
+pub fn compiled_css_in_js_visitor(config: &CompiledCssInJsTransformConfig) -> impl Pass {
+  let emit_cc_cs = !config.extract.unwrap_or(false);
+
+  visit_mut_pass(AtomicCssCollector::new(emit_cc_cs))
 }
 
 /// Apply the compiled atomic transform in-place to a Program with configuration.

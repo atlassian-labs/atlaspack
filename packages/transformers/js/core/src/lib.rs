@@ -12,7 +12,7 @@ mod magic_comments;
 mod node_replacer;
 pub mod test_utils;
 mod typeof_replacer;
-mod utils;
+pub mod utils;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -636,7 +636,7 @@ pub fn transform(
 
 pub type ParseResult<T> = Result<T, Vec<Error>>;
 
-fn parse(
+pub fn parse(
   code: &str,
   project_root: &str,
   filename: &str,
@@ -696,7 +696,7 @@ fn parse(
   Ok((module, comments))
 }
 
-fn emit(
+pub fn emit(
   source_map: Lrc<SourceMap>,
   comments: SingleThreadedComments,
   module: &Module,

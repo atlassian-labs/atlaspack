@@ -86,7 +86,19 @@ export interface CompiledCssInJsTransformConfig {
   extract?: boolean
   ssr?: boolean
 }
-export declare function applyCompiledCssInJsPlugin(rawCode: Buffer, projectRoot: string, filename: string, isSource: boolean, config: CompiledCssInJsTransformConfig): object
+export interface CompiledCssInJsPluginInput {
+  filename: string
+  projectRoot: string
+  isSource: boolean
+  sourceMaps: boolean
+  config: CompiledCssInJsTransformConfig
+}
+export interface CompiledCssInJsPluginResult {
+  code: string
+  map?: string
+}
+/** Apply the tokens transformation plugin to the given code */
+export declare function applyCompiledCssInJsPlugin(rawCode: Buffer, input: CompiledCssInJsPluginInput): object
 export interface JsFileSystemOptions {
   canonicalize: (...args: any[]) => any
   read: (...args: any[]) => any

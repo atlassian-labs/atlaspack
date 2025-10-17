@@ -1,21 +1,17 @@
-use atlassian_swc_compiled_css::apply_compiled_atomic_with_config;
-use napi::Error as NapiError;
-
-use napi::bindgen_prelude::Buffer;
-use napi::{Env, JsObject};
+use anyhow::{Context, Result, anyhow};
+use atlaspack_js_swc_core::{
+  Config, emit, parse, utils::ErrorBuffer, utils::error_buffer_to_diagnostics,
+};
+use atlassian_swc_compiled_css::compiled_css_in_js_visitor;
+use napi::{Env, Error as NapiError, JsObject, bindgen_prelude::Buffer};
 use napi_derive::napi;
-use std::path::Path;
-use swc_core::common::comments::SingleThreadedComments;
-use swc_core::common::input::StringInput;
-use swc_core::common::sync::Lrc;
-use swc_core::common::{FileName, SourceMap};
-use swc_core::ecma::codegen::text_writer::JsWriter;
-use swc_core::ecma::codegen::{Config as CodegenConfig, Emitter};
-use swc_core::ecma::parser::lexer::Lexer;
-use swc_core::ecma::parser::{Parser, Syntax, TsSyntax};
+use swc_core::common::{
+  FileName, SourceMap, errors, errors::Handler, source_map::SourceMapGenConfig, sync::Lrc,
+};
 
 // NAPI-compatible config struct, we duplicate this so the type can generate
 #[napi(object)]
+#[derive(Clone, Debug)]
 pub struct CompiledCssInJsTransformConfig {
   pub import_react: Option<bool>,
   pub nonce: Option<String>,
@@ -54,90 +50,138 @@ impl From<CompiledCssInJsTransformConfig>
   }
 }
 
+#[napi(object)]
+#[derive(Clone, Debug)]
+pub struct CompiledCssInJsPluginInput {
+  pub filename: String,
+  pub project_root: String,
+  pub is_source: bool,
+  pub source_maps: bool,
+  pub config: CompiledCssInJsTransformConfig,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug)]
+pub struct CompiledCssInJsPluginResult {
+  pub code: String,
+  pub map: Option<String>,
+}
+
+// Exclude macro expansions from source maps.
+struct SourceMapConfig;
+impl SourceMapGenConfig for SourceMapConfig {
+  fn file_name_to_source(&self, f: &FileName) -> String {
+    f.to_string()
+  }
+
+  fn skip(&self, f: &FileName) -> bool {
+    matches!(f, FileName::MacroExpansion | FileName::Internal(..))
+  }
+}
+
+fn process_compiled_css_in_js(
+  code: &str,
+  input: &CompiledCssInJsPluginInput,
+) -> Result<CompiledCssInJsPluginResult> {
+  let swc_config = Config {
+    is_type_script: true,
+    is_jsx: true,
+    decorators: false,
+    ..Default::default()
+  };
+
+  let error_buffer = ErrorBuffer::default();
+  let handler = Handler::with_emitter(true, false, Box::new(error_buffer.clone()));
+  errors::HANDLER.set(&handler, || {
+    let source_map = Lrc::new(SourceMap::default());
+
+    // Parse and handle parsing errors
+    let (module, comments) = match parse(
+      code,
+      &input.project_root,
+      &input.filename,
+      &source_map,
+      &swc_config,
+    ) {
+      Ok(result) => result,
+      Err(_parsing_errors) => {
+        let diagnostics = error_buffer_to_diagnostics(&error_buffer, &source_map);
+        let error_msg = diagnostics
+          .iter()
+          .map(|d| &d.message)
+          .cloned()
+          .collect::<Vec<_>>()
+          .join("\n");
+        return Err(anyhow!("Parse error: {}", error_msg));
+      }
+    };
+
+    let config: atlassian_swc_compiled_css::CompiledCssInJsTransformConfig =
+      <atlassian_swc_compiled_css::CompiledCssInJsTransformConfig>::from(input.config.clone());
+    let mut passes = compiled_css_in_js_visitor(&config);
+    let module = module.apply(&mut passes);
+
+    let module_result = module
+      .module()
+      .ok_or_else(|| anyhow!("Failed to get transformed module"))?;
+    let (code_bytes, line_pos_buffer) = emit(
+      source_map.clone(),
+      comments,
+      &module_result,
+      input.source_maps,
+    )
+    .with_context(|| "Failed to emit transformed code")?;
+
+    let code =
+      String::from_utf8(code_bytes).with_context(|| "Failed to convert emitted code to UTF-8")?;
+    let map_json = if input.source_maps && !line_pos_buffer.is_empty() {
+      let mut output_map_buffer = vec![];
+      if source_map
+        .build_source_map_with_config(&line_pos_buffer, None, SourceMapConfig)
+        .to_writer(&mut output_map_buffer)
+        .is_ok()
+      {
+        Some(String::from_utf8(output_map_buffer).unwrap_or_default())
+      } else {
+        None
+      }
+    } else {
+      None
+    };
+
+    Ok(CompiledCssInJsPluginResult {
+      code,
+      map: map_json,
+    })
+  })
+}
+
 #[napi]
 pub fn apply_compiled_css_in_js_plugin(
   env: Env,
   raw_code: Buffer,
-  project_root: String,
-  filename: String,
-  _is_source: bool,
-  config: CompiledCssInJsTransformConfig,
+  input: CompiledCssInJsPluginInput,
 ) -> napi::Result<JsObject> {
-  // Convert Buffer to bytes properly
   let code_bytes = raw_code.as_ref();
+
+  // Convert bytes to string and create owned copy for moving into closure
   let code = std::str::from_utf8(code_bytes)
-    .map_err(|e| NapiError::from_reason(format!("Input code is not valid UTF-8: {}", e)))?;
+    .with_context(|| "Input code is not valid UTF-8")
+    .map_err(|e| NapiError::from_reason(e.to_string()))?
+    .to_string();
+
+  // Return early for empty code
+  if code.trim().is_empty() {
+    return Err(NapiError::from_reason("Empty code input".to_string()));
+  }
 
   let (deferred, promise) = env.create_deferred()?;
-  let code_string = code.to_string();
-  let filename_string = filename.clone();
-  let project_root_string = project_root.clone();
-
   rayon::spawn(move || {
-    let result = (|| -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-      // Create source map
-      let source_map = Lrc::new(SourceMap::default());
-
-      // Make filename relative to project root
-      let relative_filename = Path::new(&filename_string)
-        .strip_prefix(&project_root_string)
-        .unwrap_or(Path::new(&filename_string));
-
-      let source_file = source_map.new_source_file(
-        Lrc::new(FileName::Real(relative_filename.to_path_buf())),
-        code_string,
-      );
-
-      // Parse the code
-      let comments = SingleThreadedComments::default();
-      let syntax = Syntax::Typescript(TsSyntax {
-        tsx: true,
-        decorators: false,
-        ..Default::default()
-      });
-
-      let lexer = Lexer::new(
-        syntax,
-        Default::default(),
-        StringInput::from(&*source_file),
-        Some(&comments),
-      );
-
-      let mut parser = Parser::new_from(lexer);
-      let mut program = parser
-        .parse_program()
-        .map_err(|e| format!("Parse error: {:?}", e))?;
-
-      // Apply the transformation
-      let internal_config: atlassian_swc_compiled_css::config::CompiledCssInJsTransformConfig =
-        config.into();
-      let _result = apply_compiled_atomic_with_config(&mut program, internal_config);
-
-      // Emit the code
-      let mut output_buffer = vec![];
-      let writer = JsWriter::new(source_map.clone(), "\n", &mut output_buffer, None);
-
-      let mut emitter = Emitter {
-        cfg: CodegenConfig::default(),
-        cm: source_map.clone(),
-        comments: Some(&comments),
-        wr: writer,
-      };
-
-      emitter
-        .emit_program(&program)
-        .map_err(|e| format!("Emit error: {:?}", e))?;
-
-      Ok(output_buffer)
-    })();
+    let result = process_compiled_css_in_js(&code, &input);
 
     match result {
-      Ok(code_bytes) => {
-        deferred.resolve(move |env| {
-          env
-            .create_buffer_with_data(code_bytes)
-            .map(|buf| buf.into_raw())
-        });
+      Ok(result) => {
+        deferred.resolve(move |_env| Ok(result));
       }
       Err(e) => {
         deferred.reject(NapiError::from_reason(format!(
