@@ -84,10 +84,14 @@ pub trait TransformerPlugin: Any + Debug + Send + Sync {
     hasher.finish()
   }
 
+  fn should_skip(&self, _asset: &Asset) -> anyhow::Result<bool> {
+    Ok(false)
+  }
+
   /// Transform the asset and/or add new assets
   async fn transform(
     &self,
     context: TransformContext,
     asset: Asset,
-  ) -> Result<TransformResult, anyhow::Error>;
+  ) -> anyhow::Result<TransformResult>;
 }

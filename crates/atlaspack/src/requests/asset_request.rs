@@ -182,9 +182,7 @@ async fn run_pipelines(
       let mut file_path = asset_to_modify.file_path.clone();
       file_path.set_extension(asset_to_modify.file_type.extension());
 
-      plugins
-        .transformers(&file_path, asset_to_modify.pipeline.clone())
-        .await?
+      plugins.transformers(&asset_to_modify).await?
     };
 
     let (invalidations, discovered_assets, result) = run_pipeline(
@@ -276,14 +274,7 @@ async fn run_pipeline(
       // When the Asset changes file_type we need to regenerate its id
       current_asset.update_id(&context.config().project_root);
 
-      let next_pipeline = plugins
-        .transformers(
-          &current_asset
-            .file_path
-            .with_extension(current_asset.file_type.extension()),
-          current_asset.pipeline.clone(),
-        )
-        .await?;
+      let next_pipeline = plugins.transformers(&current_asset).await?;
 
       if next_pipeline.id() != pipeline.id() {
         return Ok((
@@ -313,7 +304,6 @@ mod tests {
   use atlaspack_core::types::FileType;
   use pretty_assertions::assert_eq;
   use std::hash::Hasher;
-  use std::path::Path;
 
   fn make_asset(file_path: &str, file_type: FileType) -> Asset {
     Asset {
@@ -333,7 +323,7 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn test_run_pipelines_works() {
     let mut plugins = MockPlugins::new();
-    plugins.expect_transformers().returning(move |_, _| {
+    plugins.expect_transformers().returning(move |_| {
       Ok(TransformerPipeline::new(vec![
         make_transformer(MockTrasformerOptions {
           label: "transformer1",
@@ -360,10 +350,8 @@ mod tests {
     let mut plugins = MockPlugins::new();
     plugins
       .expect_transformers()
-      .withf(|path: &Path, _pipeline: &Option<String>| {
-        path.extension().is_some_and(|ext| ext == "js")
-      })
-      .returning(move |_, _| {
+      .withf(|asset: &Asset| asset.file_path.extension().is_some_and(|ext| ext == "js"))
+      .returning(move |_| {
         Ok(TransformerPipeline::new(vec![
           make_transformer(MockTrasformerOptions {
             label: "js-1",
@@ -393,10 +381,8 @@ mod tests {
     let mut plugins = MockPlugins::new();
     plugins
       .expect_transformers()
-      .withf(|path: &Path, _pipeline: &Option<String>| {
-        path.extension().is_some_and(|ext| ext == "json")
-      })
-      .returning(move |_, _| {
+      .withf(|asset: &Asset| asset.file_path.extension().is_some_and(|ext| ext == "json"))
+      .returning(move |_| {
         Ok(TransformerPipeline::new(vec![make_transformer(
           MockTrasformerOptions {
             label: "json",
@@ -409,10 +395,8 @@ mod tests {
 
     plugins
       .expect_transformers()
-      .withf(|path: &Path, _pipeline: &Option<String>| {
-        path.extension().is_some_and(|ext| ext == "js")
-      })
-      .returning(move |_, _| {
+      .withf(|asset: &Asset| asset.file_type == FileType::Js)
+      .returning(move |_| {
         Ok(TransformerPipeline::new(vec![make_transformer(
           MockTrasformerOptions {
             label: "js",
@@ -443,10 +427,8 @@ mod tests {
     let mut plugins = MockPlugins::new();
     plugins
       .expect_transformers()
-      .withf(|path: &Path, _pipeline: &Option<String>| {
-        path.extension().is_some_and(|ext| ext == "js")
-      })
-      .returning(move |_, _| {
+      .withf(|asset: &Asset| asset.file_path.extension().is_some_and(|ext| ext == "js"))
+      .returning(move |_| {
         Ok(TransformerPipeline::new(vec![
           make_transformer(MockTrasformerOptions {
             label: "js-1",
@@ -477,10 +459,8 @@ mod tests {
 
     plugins
       .expect_transformers()
-      .withf(|path: &Path, _pipeline: &Option<String>| {
-        path.extension().is_some_and(|ext| ext == "js")
-      })
-      .returning(move |_, _| {
+      .withf(|asset: &Asset| asset.file_path.extension().is_some_and(|ext| ext == "js"))
+      .returning(move |_| {
         Ok(TransformerPipeline::new(vec![
           make_transformer(MockTrasformerOptions {
             label: "js-1",
@@ -499,10 +479,8 @@ mod tests {
 
     plugins
       .expect_transformers()
-      .withf(|path: &Path, _pipeline: &Option<String>| {
-        path.extension().is_some_and(|ext| ext == "css")
-      })
-      .returning(move |_, _| {
+      .withf(|asset: &Asset| asset.file_path.extension().is_some_and(|ext| ext == "css"))
+      .returning(move |_| {
         Ok(TransformerPipeline::new(vec![
           make_transformer(MockTrasformerOptions {
             label: "css-1",

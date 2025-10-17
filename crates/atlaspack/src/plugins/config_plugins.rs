@@ -17,6 +17,7 @@ use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::plugin::ValidatorPlugin;
 use atlaspack_core::plugin::composite_reporter_plugin::CompositeReporterPlugin;
+use atlaspack_core::types::Asset;
 use atlaspack_plugin_resolver::AtlaspackResolver;
 use atlaspack_plugin_rpc::RpcWorkerRef;
 use atlaspack_plugin_transformer_css::AtlaspackCssTransformerPlugin;
@@ -188,18 +189,21 @@ impl Plugins for ConfigPlugins {
   }
 
   /// Resolve and load transformer plugins for a given path.
-  async fn transformers(
-    &self,
-    path: &Path,
-    pipeline: Option<String>,
-  ) -> Result<TransformerPipeline, anyhow::Error> {
+  async fn transformers(&self, asset: &Asset) -> Result<TransformerPipeline, anyhow::Error> {
     let mut transformers: Vec<Arc<dyn TransformerPlugin>> = Vec::new();
-    let named_pattern = pipeline.as_ref().map(|pipeline| NamedPattern {
+    let named_pattern = asset.pipeline.as_ref().map(|pipeline| NamedPattern {
       pipeline,
       use_fallback: false,
     });
 
-    for transformer in self.config.transformers.get(path, named_pattern).iter() {
+    let file_path = &asset.file_path.with_extension(asset.file_type.extension());
+
+    for transformer in self
+      .config
+      .transformers
+      .get(file_path, named_pattern)
+      .iter()
+    {
       let transformer_name = transformer.package_name.as_str();
 
       match transformer_name {
@@ -259,13 +263,17 @@ impl Plugins for ConfigPlugins {
         })
         .await?;
 
-      transformers.push(transformer);
+      if !transformer.should_skip(asset)? {
+        transformers.push(transformer);
+      }
     }
 
     if transformers.is_empty() {
-      return match pipeline {
-        None => Err(self.missing_plugin(path, "transformers")),
-        Some(pipeline) => Err(self.missing_pipeline_plugin(path, "transformers", &pipeline)),
+      return match asset.pipeline {
+        None => Err(self.missing_plugin(&asset.file_path, "transformers")),
+        Some(ref pipeline) => {
+          Err(self.missing_pipeline_plugin(&asset.file_path, "transformers", pipeline))
+        }
       };
     }
 
@@ -359,8 +367,25 @@ mod tests {
 
   #[tokio::test]
   async fn returns_transformers() {
-    let pipeline = config_plugins(make_test_plugin_context())
-      .transformers(Path::new("a.ts"), None)
+    use atlaspack_core::types::{Code, Environment};
+    use std::path::PathBuf;
+    use std::sync::Arc;
+
+    let ctx = make_test_plugin_context();
+    let asset = Asset::new(
+      Code::from("console.log('test');"),
+      false,
+      Arc::new(Environment::default()),
+      PathBuf::from("a.ts"),
+      None,
+      &PathBuf::default(),
+      None,
+      false,
+    )
+    .unwrap();
+
+    let pipeline = config_plugins(ctx)
+      .transformers(&asset)
       .await
       .expect("Not to panic");
 
