@@ -129,7 +129,7 @@ export declare function transformAsync(opts: object): object
 export declare function getVcsStateSnapshot(path: string, excludePatterns: Array<string>): object
 export declare function getEventsSince(repoPath: string, vcsStateSnapshot: unknown, newRev?: string | undefined | null): object
 export interface TokensPluginOptions {
-  tokensPath: string
+  tokenDataPath: string
   shouldUseAutoFallback: boolean
   shouldForceAutoFallback: boolean
   forceAutoFallbackExemptions: Array<string>

@@ -101,11 +101,7 @@ export default new Transformer({
       isSource: asset.isSource,
       sourceMaps: !!asset.env.sourceMap,
       tokensOptions: {
-        tokensPath: config.tokenDataPath,
-        shouldUseAutoFallback: config.shouldUseAutoFallback,
-        shouldForceAutoFallback: config.shouldForceAutoFallback,
-        forceAutoFallbackExemptions: config.forceAutoFallbackExemptions,
-        defaultTheme: config.defaultTheme,
+        ...config,
       },
     }) as Promise<TokensPluginResult>);
 

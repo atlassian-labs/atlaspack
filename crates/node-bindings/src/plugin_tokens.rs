@@ -15,7 +15,7 @@ use swc_core::common::{
 #[napi(object)]
 #[derive(Clone)]
 pub struct TokensPluginOptions {
-  pub tokens_path: String,
+  pub token_data_path: String,
   pub should_use_auto_fallback: bool,
   pub should_force_auto_fallback: bool,
   pub force_auto_fallback_exemptions: Vec<String>,
@@ -86,13 +86,13 @@ fn process_tokens_sync(code: &str, config: &TokensConfig) -> Result<TokensPlugin
       }
     };
 
-    let token_map = get_or_load_token_map_from_json(Some(&config.tokens_options.tokens_path))
+    let token_map = get_or_load_token_map_from_json(Some(&config.tokens_options.token_data_path))
       .with_context(|| {
-        format!(
-          "Failed to load token map from: {}",
-          config.tokens_options.tokens_path
-        )
-      })?;
+      format!(
+        "Failed to load token map from: {}",
+        config.tokens_options.token_data_path
+      )
+    })?;
 
     let mut passes = design_system_tokens_visitor(
       comments.clone(),
@@ -211,7 +211,7 @@ mod tests {
       is_source: false,
       source_maps,
       tokens_options: TokensPluginOptions {
-        tokens_path: tokens_path.to_string(),
+        token_data_path: tokens_path.to_string(),
         should_use_auto_fallback: true,
         should_force_auto_fallback: true,
         force_auto_fallback_exemptions: vec![],
@@ -223,7 +223,10 @@ mod tests {
   #[test]
   fn test_tokens_plugin_options_creation() {
     let config = create_test_config("/path/to/tokens.json", true);
-    assert_eq!(config.tokens_options.tokens_path, "/path/to/tokens.json");
+    assert_eq!(
+      config.tokens_options.token_data_path,
+      "/path/to/tokens.json"
+    );
     assert!(config.tokens_options.should_use_auto_fallback);
     assert!(config.tokens_options.should_force_auto_fallback);
     assert_eq!(config.tokens_options.default_theme, "light");

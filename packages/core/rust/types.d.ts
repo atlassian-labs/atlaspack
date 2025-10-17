@@ -251,7 +251,7 @@ export interface Symbol {
 }
 
 export interface TokensPluginOptions {
-  tokensPath: string;
+  tokenDataPath: string;
   shouldUseAutoFallback: boolean;
   shouldForceAutoFallback: boolean;
   forceAutoFallbackExemptions: Array<string>;
