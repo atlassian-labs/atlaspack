@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 use std::hash::Hasher;
 
-use swc_common::{DUMMY_SP, SyntaxContext};
-use swc_ecma_ast::*;
+use swc_core::common::{DUMMY_SP, SyntaxContext};
+use swc_core::ecma::ast::*;
 use xxhash_rust::xxh3::Xxh3Builder;
 
 use crate::AtomicCssCollector;

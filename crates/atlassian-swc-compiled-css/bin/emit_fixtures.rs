@@ -2,12 +2,18 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use swc_common::comments::SingleThreadedComments;
-use swc_common::errors::{HANDLER, Handler};
-use swc_common::{FileName, SourceMap, sync::Lrc};
-use swc_ecma_ast::Program;
-use swc_ecma_codegen::{Emitter, text_writer::JsWriter};
-use swc_ecma_parser::{Parser, StringInput, Syntax};
+use swc_core::common::FileName;
+use swc_core::common::SourceMap;
+use swc_core::common::comments::SingleThreadedComments;
+use swc_core::common::errors::Handler;
+use swc_core::common::input::StringInput;
+use swc_core::common::sync;
+use swc_core::ecma::ast::Program;
+use swc_core::ecma::codegen::Emitter;
+use swc_core::ecma::codegen::text_writer::JsWriter;
+use swc_core::ecma::parser::Parser;
+use swc_core::ecma::parser::Syntax;
+use swc_core::plugin::errors::HANDLER;
 
 fn transform_source(
   src: String,
@@ -15,7 +21,7 @@ fn transform_source(
   syntax: Syntax,
   config: atlassian_swc_compiled_css::config::CompiledCssInJsTransformConfig,
 ) -> String {
-  let cm: Lrc<SourceMap> = Default::default();
+  let cm: sync::Lrc<SourceMap> = Default::default();
   let fm = cm.new_source_file(FileName::Custom(file_name.into()).into(), src);
   let comments = SingleThreadedComments::default();
   let mut parser = Parser::new(syntax, StringInput::from(&*fm), Some(&comments));

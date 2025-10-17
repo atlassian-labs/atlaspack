@@ -1,12 +1,14 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use swc_common::comments::SingleThreadedComments;
-use swc_common::errors::{HANDLER, Handler};
-use swc_common::{FileName, SourceMap, sync::Lrc};
-use swc_ecma_ast::Program;
-use swc_ecma_codegen::{Emitter, text_writer::JsWriter};
-use swc_ecma_parser::{Parser, StringInput, Syntax};
+use swc_core::common::comments::SingleThreadedComments;
+use swc_core::common::errors::Handler;
+use swc_core::common::sync::Lrc;
+use swc_core::common::{FileName, SourceMap};
+use swc_core::ecma::ast::Program;
+use swc_core::ecma::codegen::text_writer::JsWriter;
+use swc_core::ecma::parser::{Parser, StringInput, Syntax};
+use swc_core::plugin::errors::HANDLER;
 
 fn transform_source(src: String, file_name: &str, syntax: Syntax) -> String {
   let cm: Lrc<SourceMap> = Default::default();
@@ -65,7 +67,7 @@ fn transform_source(src: String, file_name: &str, syntax: Syntax) -> String {
 
   let mut buf = Vec::new();
   {
-    let mut emitter = Emitter {
+    let mut emitter = swc_core::ecma::codegen::Emitter {
       cfg: Default::default(),
       cm: cm.clone(),
       comments: None,
@@ -85,7 +87,7 @@ fn reemit_source_without_transform(src: String, file_name: &str, syntax: Syntax)
 
   let mut buf = Vec::new();
   {
-    let mut emitter = Emitter {
+    let mut emitter = swc_core::ecma::codegen::Emitter {
       cfg: Default::default(),
       cm: cm.clone(),
       comments: None,

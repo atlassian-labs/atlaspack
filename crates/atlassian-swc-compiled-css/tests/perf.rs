@@ -1,9 +1,12 @@
 use std::time::Instant;
-
-use swc_common::{FileName, SourceMap, sync::Lrc};
-use swc_ecma_ast::Program;
-use swc_ecma_codegen::{Emitter, text_writer::JsWriter};
-use swc_ecma_parser::{Parser, StringInput, Syntax};
+use swc_core::{
+  common::{FileName, SourceMap, sync::Lrc},
+  ecma::{
+    ast::Program,
+    codegen::text_writer::JsWriter,
+    parser::{Parser, StringInput, Syntax},
+  },
+};
 
 fn transform_source(src: String) -> String {
   let cm: Lrc<SourceMap> = Default::default();
@@ -20,7 +23,7 @@ fn transform_source(src: String) -> String {
 
   let mut buf = Vec::new();
   {
-    let mut emitter = Emitter {
+    let mut emitter = swc_core::ecma::codegen::Emitter {
       cfg: Default::default(),
       cm: cm.clone(),
       comments: None,

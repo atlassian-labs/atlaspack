@@ -1,5 +1,5 @@
-use swc_common::{DUMMY_SP, SyntaxContext};
-use swc_ecma_ast::*;
+use swc_core::common::{DUMMY_SP, SyntaxContext};
+use swc_core::ecma::ast::*;
 
 use crate::evaluate_expr::{ValueOrNumber, eval_value_expr};
 use crate::shorthand;

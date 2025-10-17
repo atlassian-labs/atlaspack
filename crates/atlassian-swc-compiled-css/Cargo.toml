@@ -12,14 +12,7 @@ name = "emit_fixtures"
 path = "bin/emit_fixtures.rs"
 
 [dependencies]
-swc_core                       = { workspace = true, features = ["ecma_plugin_transform"] }
-swc_common                     = { workspace = true, features = ["concurrent"] }
-swc_atoms                      = { workspace = true }
-swc_ecma_ast                   = { workspace = true }
-swc_ecma_parser                = { workspace = true }
-swc_ecma_utils                 = { workspace = true }
-swc_ecma_visit                 = { workspace = true }
-swc_ecma_codegen               = { workspace = true }
+swc_core                       = { workspace = true, features = ["ecma_plugin_transform", "ecma_codegen"] }
 serde                          = { workspace = true, features = ["derive"]}
 serde_json                     = { workspace = true }
 once_cell                      = { workspace = true }
@@ -30,9 +23,7 @@ napi-derive                    = { workspace = true }
 napi                           = { workspace = true }
 
 [dev-dependencies]
-swc_ecma_codegen               = { workspace = true }
-swc_ecma_parser                = { workspace = true }
-swc_common                     = { workspace = true }
+swc_core                = { workspace = true, features = ["__parser"] }
 
 [features]
 default = []

@@ -61,7 +61,7 @@ pub struct CompiledCssInJsPluginInput {
 }
 
 #[napi(object)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize)]
 pub struct CompiledCssInJsPluginResult {
   pub code: String,
   pub map: Option<String>,
@@ -162,10 +162,8 @@ pub fn apply_compiled_css_in_js_plugin(
   raw_code: Buffer,
   input: CompiledCssInJsPluginInput,
 ) -> napi::Result<JsObject> {
-  let code_bytes = raw_code.as_ref();
-
-  // Convert bytes to string and create owned copy for moving into closure
-  let code = std::str::from_utf8(code_bytes)
+  // Convert bytes to string and take ownership
+  let code = std::str::from_utf8(raw_code.as_ref())
     .with_context(|| "Input code is not valid UTF-8")
     .map_err(|e| NapiError::from_reason(e.to_string()))?
     .to_string();
@@ -175,19 +173,18 @@ pub fn apply_compiled_css_in_js_plugin(
     return Err(NapiError::from_reason("Empty code input".to_string()));
   }
 
+  // Create deferred promise
   let (deferred, promise) = env.create_deferred()?;
+
+  // Spawn the work on a Rayon thread
   rayon::spawn(move || {
     let result = process_compiled_css_in_js(&code, &input);
-
     match result {
-      Ok(result) => {
-        deferred.resolve(move |_env| Ok(result));
+      Ok(plugin_result) => {
+        deferred.resolve(move |env| env.to_js_value(&plugin_result));
       }
       Err(e) => {
-        deferred.reject(NapiError::from_reason(format!(
-          "Failed to process Compiled CSS in JS: {}",
-          e
-        )));
+        deferred.reject(NapiError::from_reason(e.to_string()));
       }
     }
   });

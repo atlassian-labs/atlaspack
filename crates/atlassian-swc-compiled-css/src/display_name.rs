@@ -1,5 +1,7 @@
-use swc_common::{DUMMY_SP, SyntaxContext};
-use swc_ecma_ast::*;
+use swc_core::{
+  common::{DUMMY_SP, SyntaxContext},
+  ecma::ast::*,
+};
 
 use crate::AtomicCssCollector;
 

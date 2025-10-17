@@ -1,5 +1,4 @@
 ---
-'@atlaspack/transformer-compiled-css-in-js': minor
 '@atlaspack/feature-flags': minor
 '@atlaspack/compiled-css-in-js-example': minor
 '@atlaspack/rust': minor

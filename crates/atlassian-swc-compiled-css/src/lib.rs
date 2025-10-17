@@ -1,9 +1,13 @@
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::cell::Cell;
-use swc_atoms::Atom;
-use swc_common::{DUMMY_SP, SyntaxContext};
-use swc_ecma_ast::*;
-use swc_ecma_visit::{VisitMut, VisitMutWith, visit_mut_pass};
+use swc_core::{
+  atoms::Atom,
+  common::{DUMMY_SP, SyntaxContext},
+  ecma::{
+    ast::*,
+    visit::{VisitMut, VisitMutWith, visit_mut_pass},
+  },
+};
 
 mod evaluate_expr;
 use evaluate_expr::{ConstValue, eval_const_expr, eval_expr_to_const};

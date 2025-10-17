@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::hash::Hasher;
 
-use swc_ecma_ast::*;
+use swc_core::ecma::ast::*;
 
 use crate::evaluate_expr::{ValueOrNumber, eval_value_expr};
 use crate::utils::to_kebab_case;

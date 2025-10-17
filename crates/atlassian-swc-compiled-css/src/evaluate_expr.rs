@@ -1,6 +1,5 @@
 use rustc_hash::FxHashMap;
-use swc_atoms::Atom;
-use swc_ecma_ast::*;
+use swc_core::{atoms::Atom, ecma::ast::*};
 
 #[derive(Clone)]
 pub enum ConstValue {
