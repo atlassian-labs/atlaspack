@@ -18,12 +18,12 @@ use atlaspack_sourcemap::find_sourcemap_url;
 use atlaspack_sourcemap::load_sourcemap_url;
 use std::collections::VecDeque;
 use std::hash::Hash;
-use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
 use crate::plugins::PluginsRef;
+use crate::plugins::TransformerPipeline;
 use crate::request_tracker::{Request, ResultAndInvalidations, RunRequestContext, RunRequestError};
 
 use super::RequestResult;
@@ -114,13 +114,8 @@ impl Request for AssetRequest {
     });
 
     let transform_context = TransformContext::new(config_loader, self.env.clone());
-    let mut result = run_pipelines(
-      transform_context,
-      asset,
-      request_context.plugins().clone(),
-      &request_context.project_root,
-    )
-    .await?;
+    let mut result =
+      run_pipelines(transform_context, asset, request_context.plugins().clone()).await?;
 
     // TODO: Commit the asset with a project path now, as transformers rely on an absolute path
     // result.asset.file_path = to_project_path(&self.project_root, &result.asset.file_path);
@@ -160,9 +155,8 @@ async fn run_pipelines(
   transform_context: TransformContext,
   input: Asset,
   plugins: PluginsRef,
-  project_root: &Path,
 ) -> anyhow::Result<TransformResult> {
-  let mut invalidations = vec![];
+  let mut all_invalidations = vec![];
   let mut asset_queue = VecDeque::from([(
     AssetWithDependencies {
       asset: input,
@@ -177,86 +171,62 @@ async fn run_pipelines(
   while let Some((
     AssetWithDependencies {
       asset: asset_to_modify,
-      dependencies,
+      dependencies: prev_dependencies,
     },
     pipeline,
   )) = asset_queue.pop_front()
   {
-    let original_asset_type = asset_to_modify.file_type.clone();
-    let (pipeline, pipeline_id) = if let Some(pipeline_info) = pipeline {
+    let pipeline = if let Some(pipeline_info) = pipeline {
       pipeline_info
     } else {
       let mut file_path = asset_to_modify.file_path.clone();
       file_path.set_extension(asset_to_modify.file_type.extension());
 
-      let pipeline = plugins
+      plugins
         .transformers(&file_path, asset_to_modify.pipeline.clone())
-        .await?;
-      let pipeline_id = pipeline.id();
-
-      (pipeline, pipeline_id)
+        .await?
     };
 
-    let mut current_asset = asset_to_modify.clone();
-    let mut current_dependencies = dependencies;
-    let mut pipeline_complete = true;
+    let (invalidations, discovered_assets, result) = run_pipeline(
+      asset_to_modify,
+      pipeline,
+      transform_context.clone(),
+      plugins.clone(),
+    )
+    .await?;
 
-    for transformer in pipeline.transformers() {
-      let transform_result = transformer
-        .transform(transform_context.clone(), current_asset)
-        .await?;
+    all_invalidations.extend(invalidations);
+    asset_queue.extend(
+      discovered_assets
+        .into_iter()
+        .map(|discovered_asset| (discovered_asset, None)),
+    );
 
-      current_asset = transform_result.asset;
+    match result {
+      PipelineResult::Complete(asset, mut dependencies) => {
+        dependencies.extend(prev_dependencies);
 
-      current_dependencies.extend(transform_result.dependencies);
-      invalidations.extend(transform_result.invalidate_on_file_change);
-      asset_queue.extend(
-        transform_result
-          .discovered_assets
-          .into_iter()
-          .map(|discovered_asset| (discovered_asset, None)),
-      );
-
-      // If the Asset has changed type then we may need to trigger a different pipeline
-      if current_asset.file_type != original_asset_type {
-        // When the Asset changes file_type we need to regenerate its id
-        current_asset.update_id(project_root);
-
-        let next_pipeline = plugins
-          .transformers(
-            &current_asset
-              .file_path
-              .with_extension(current_asset.file_type.extension()),
-            current_asset.pipeline.clone(),
-          )
-          .await?;
-
-        let next_pipeline_id = next_pipeline.id();
-
-        if next_pipeline_id != pipeline_id {
-          asset_queue.push_front((
-            AssetWithDependencies {
-              asset: current_asset.clone(),
-              dependencies: current_dependencies.clone(),
-            },
-            Some((next_pipeline, next_pipeline_id)),
-          ));
-          pipeline_complete = false;
-          break;
-        }
+        // We assume the first asset to complete the pipeline is the initial asset
+        if initial_asset.is_none() {
+          initial_asset = Some(asset);
+          initial_asset_dependencies = Some(dependencies);
+        } else {
+          processed_assets.push(AssetWithDependencies {
+            asset,
+            dependencies,
+          });
+        };
       }
-    }
+      PipelineResult::TypeChange(next_pipeline, asset, mut dependencies) => {
+        dependencies.extend(prev_dependencies);
 
-    if pipeline_complete {
-      // We assume the first asset to complete the pipeline is the initial asset
-      if initial_asset.is_none() {
-        initial_asset = Some(current_asset);
-        initial_asset_dependencies = Some(current_dependencies);
-      } else {
-        processed_assets.push(AssetWithDependencies {
-          asset: current_asset,
-          dependencies: current_dependencies,
-        });
+        asset_queue.push_front((
+          AssetWithDependencies {
+            asset: asset.clone(),
+            dependencies,
+          },
+          Some(next_pipeline),
+        ));
       }
     }
   }
@@ -267,8 +237,69 @@ async fn run_pipelines(
     dependencies: initial_asset_dependencies
       .ok_or_else(|| anyhow!("Initial asset missing after transformer pipeline"))?,
     discovered_assets: processed_assets,
-    invalidate_on_file_change: invalidations,
+    invalidate_on_file_change: all_invalidations,
   })
+}
+
+enum PipelineResult {
+  Complete(Asset, Vec<Dependency>),
+  TypeChange(TransformerPipeline, Asset, Vec<Dependency>),
+}
+
+#[tracing::instrument(level = "trace", skip_all)]
+async fn run_pipeline(
+  asset: Asset,
+  pipeline: TransformerPipeline,
+  context: TransformContext,
+  plugins: PluginsRef,
+) -> anyhow::Result<(Vec<PathBuf>, Vec<AssetWithDependencies>, PipelineResult)> {
+  let mut current_asset = asset.clone();
+  let mut dependencies = Vec::new();
+  let mut discovered_assets = Vec::new();
+  let mut invalidations = Vec::new();
+
+  let original_asset_type = current_asset.file_type.clone();
+
+  for transformer in pipeline.transformers() {
+    let transform_result = transformer
+      .transform(context.clone(), current_asset)
+      .await?;
+
+    current_asset = transform_result.asset;
+
+    dependencies.extend(transform_result.dependencies);
+    invalidations.extend(transform_result.invalidate_on_file_change);
+    discovered_assets.extend(transform_result.discovered_assets);
+
+    // If the Asset has changed type then we may need to trigger a different pipeline
+    if current_asset.file_type != original_asset_type {
+      // When the Asset changes file_type we need to regenerate its id
+      current_asset.update_id(&context.config().project_root);
+
+      let next_pipeline = plugins
+        .transformers(
+          &current_asset
+            .file_path
+            .with_extension(current_asset.file_type.extension()),
+          current_asset.pipeline.clone(),
+        )
+        .await?;
+
+      if next_pipeline.id() != pipeline.id() {
+        return Ok((
+          invalidations,
+          discovered_assets,
+          PipelineResult::TypeChange(next_pipeline, current_asset, dependencies),
+        ));
+      }
+    }
+  }
+
+  Ok((
+    invalidations,
+    discovered_assets,
+    PipelineResult::Complete(current_asset, dependencies),
+  ))
 }
 
 #[cfg(test)]
@@ -317,7 +348,7 @@ mod tests {
 
     let asset = Asset::default();
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins), &PathBuf::default())
+    let result = run_pipelines(context, asset, Arc::new(plugins))
       .await
       .unwrap();
 
@@ -349,7 +380,7 @@ mod tests {
     let asset = make_asset("index.js", FileType::Js);
     let expected_invalidations = vec![PathBuf::from("./tmp")];
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins), &PathBuf::default())
+    let result = run_pipelines(context, asset, Arc::new(plugins))
       .await
       .unwrap();
 
@@ -392,7 +423,7 @@ mod tests {
 
     let asset = make_asset("index.json", FileType::Json);
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins), &PathBuf::default())
+    let result = run_pipelines(context, asset, Arc::new(plugins))
       .await
       .unwrap();
 
@@ -432,7 +463,7 @@ mod tests {
     let asset = make_asset("index.js", FileType::Js);
     let expected_dependencies = vec![Dependency::default()];
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins), &PathBuf::default())
+    let result = run_pipelines(context, asset, Arc::new(plugins))
       .await
       .unwrap();
 
@@ -487,7 +518,7 @@ mod tests {
 
     let asset = make_asset("index.js", FileType::Js);
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins), &PathBuf::default())
+    let result = run_pipelines(context, asset, Arc::new(plugins))
       .await
       .unwrap();
 
