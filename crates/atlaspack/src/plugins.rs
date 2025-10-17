@@ -14,6 +14,7 @@ use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::plugin::ValidatorPlugin;
+use atlaspack_core::types::Asset;
 #[cfg(test)]
 use mockall::automock;
 
@@ -44,11 +45,7 @@ pub trait Plugins {
   fn resolvers(&self) -> Result<Vec<Arc<dyn ResolverPlugin>>, anyhow::Error>;
   #[allow(unused)]
   fn runtimes(&self) -> Result<Vec<Box<dyn RuntimePlugin>>, anyhow::Error>;
-  async fn transformers(
-    &self,
-    path: &Path,
-    pipeline: Option<String>,
-  ) -> Result<TransformerPipeline, anyhow::Error>;
+  async fn transformers(&self, asset: &Asset) -> Result<TransformerPipeline, anyhow::Error>;
   #[allow(unused)]
   fn validators(&self, _path: &Path) -> Result<Vec<Box<dyn ValidatorPlugin>>, anyhow::Error>;
 }
