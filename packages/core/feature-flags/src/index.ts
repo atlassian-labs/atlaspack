@@ -281,6 +281,14 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-10-14
    */
   deduplicateReporters: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * When _disabled_, will early exit from the @atlaspack/transformer-tokens transformation
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-10-17
+   */
+  enableTokensTransformer: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

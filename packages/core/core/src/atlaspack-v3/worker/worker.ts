@@ -25,6 +25,7 @@ import {
   bundleBehaviorMap,
   dependencyPriorityMap,
 } from './compat';
+import {FeatureFlags} from '@atlaspack/feature-flags';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 
@@ -40,7 +41,7 @@ export class AtlaspackWorker {
   }
 
   loadPlugin: JsCallable<[LoadPluginOptions], Promise<undefined>> = jsCallable(
-    async ({kind, specifier, resolveFrom}) => {
+    async ({kind, specifier, resolveFrom, featureFlags}) => {
       let customRequire = module.createRequire(resolveFrom);
       let resolvedPath = customRequire.resolve(specifier);
       let resolvedModule = await import(resolvedPath);
@@ -58,6 +59,11 @@ export class AtlaspackWorker {
         throw new Error(
           `Plugin could not be resolved\n\t${kind}\n\t${resolveFrom}\n\t${specifier}`,
         );
+      }
+      // Set feature flags in the worker process
+      if (featureFlags) {
+        const {setFeatureFlags} = await import('@atlaspack/feature-flags');
+        setFeatureFlags(featureFlags);
       }
 
       switch (kind) {
@@ -340,6 +346,7 @@ type LoadPluginOptions = {
   kind: 'resolver' | 'transformer';
   specifier: string;
   resolveFrom: string;
+  featureFlags?: FeatureFlags;
 };
 
 type RpcPluginOptions = {

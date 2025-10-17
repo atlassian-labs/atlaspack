@@ -1,0 +1,10 @@
+{
+  "name": "tokens",
+  "devDependencies": {
+    "@atlaskit/tokens": "*",
+    "@atlaspack/transformer-tokens": "*"
+  },
+  "@atlaspack/transformer-tokens": {
+    "tokenDataPath": "./token-data.json5"
+  }
+}

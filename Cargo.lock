@@ -374,6 +374,7 @@ dependencies = [
  "getrandom 0.2.15",
  "glob",
  "indexmap",
+ "indoc",
  "libc",
  "lmdb-js-lite",
  "log",
@@ -390,7 +391,9 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "swc_atlaskit_tokens",
  "swc_core",
+ "tempfile",
  "toml",
  "tracing",
  "tracing-appender",
@@ -420,7 +423,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
- "serde_json5",
+ "serde_json5 0.1.0",
  "thiserror 2.0.9",
  "thread_local",
  "tracing",
@@ -443,7 +446,7 @@ dependencies = [
  "mockall",
  "pathdiff",
  "serde",
- "serde_json5",
+ "serde_json5 0.1.0",
 ]
 
 [[package]]
@@ -3465,9 +3468,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.20.2"
+version = "1.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1261fe7e33c73b354eab43b1273a57c8f967d0391e80353e51f764ac02cf6775"
+checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 
 [[package]]
 name = "oorandom"
@@ -4880,9 +4883,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.135"
+version = "1.0.143"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b0d7ba2887406110130a978386c4e1befb98c674b4fba677954e4db976630d9"
+checksum = "d401abef1d108fbd9cbaebc3e46611f4b1021f714a0597a71f41ee463f5f4a5a"
 dependencies = [
  "indexmap",
  "itoa",
@@ -4896,6 +4899,17 @@ name = "serde_json5"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32a6b754515e1a7bd79fc2edeaecee526fc80cb3a918607e5ca149225a3a9586"
+dependencies = [
+ "pest",
+ "pest_derive",
+ "serde",
+]
+
+[[package]]
+name = "serde_json5"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d34d03f54462862f2a42918391c9526337f53171eaa4d8894562be7f252edd3"
 dependencies = [
  "pest",
  "pest_derive",
@@ -5243,6 +5257,20 @@ dependencies = [
  "ptr_meta 0.3.0",
  "rustc-hash 1.1.0",
  "triomphe",
+]
+
+[[package]]
+name = "swc_atlaskit_tokens"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "472dd0291bad9ba21f68bf7e1f680725add2a89111a57c389e4027d340bb1ef0"
+dependencies = [
+ "anyhow",
+ "once_cell",
+ "parking_lot",
+ "serde_json",
+ "serde_json5 0.2.1",
+ "swc_core",
 ]
 
 [[package]]
