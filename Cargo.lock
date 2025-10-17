@@ -366,6 +366,7 @@ dependencies = [
  "getrandom 0.2.16",
  "glob",
  "indexmap",
+ "indoc",
  "libc",
  "lmdb-js-lite",
  "log",

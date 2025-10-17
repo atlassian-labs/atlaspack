@@ -70,5 +70,8 @@ napi = { workspace = true, features = ["serde-json"] }
 [target.'cfg(windows)'.dependencies]
 mimalloc = { workspace = true }
 
+[dev-dependencies]
+indoc = { workspace = true }
+
 [build-dependencies]
 napi-build = { workspace = true }

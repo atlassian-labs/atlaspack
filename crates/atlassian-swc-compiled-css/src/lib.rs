@@ -812,6 +812,19 @@ impl VisitMut for AtomicCssCollector {
 
     // Remove unused @compiled/react imports
     self.remove_unused_compiled_imports(m);
+
+    // Add comment marker to the start of the module
+    m.body.insert(
+      0,
+      ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+        span: DUMMY_SP,
+        expr: Box::new(Expr::Lit(Lit::Str(Str {
+          span: DUMMY_SP,
+          value: "/* COMPILED_TRANSFORMED_ASSET */".into(),
+          raw: None,
+        }))),
+      })),
+    );
   }
   fn visit_mut_var_decl(&mut self, n: &mut VarDecl) {
     // Track declared identifiers to avoid name clashes

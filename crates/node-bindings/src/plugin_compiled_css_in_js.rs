@@ -1,12 +1,19 @@
 use anyhow::{Context, Result, anyhow};
 use atlaspack_js_swc_core::{
-  Config, emit, parse, utils::ErrorBuffer, utils::error_buffer_to_diagnostics,
+  Config, SourceType, emit, parse,
+  utils::{ErrorBuffer, error_buffer_to_diagnostics},
 };
 use atlassian_swc_compiled_css::compiled_css_in_js_visitor;
 use napi::{Env, Error as NapiError, JsObject, bindgen_prelude::Buffer};
 use napi_derive::napi;
-use swc_core::common::{
-  FileName, SourceMap, errors, errors::Handler, source_map::SourceMapGenConfig, sync::Lrc,
+use swc_core::{
+  common::{
+    FileName, SourceMap,
+    errors::{self, Handler},
+    source_map::SourceMapGenConfig,
+    sync::Lrc,
+  },
+  ecma::ast::{Module, ModuleItem, Program},
 };
 
 // NAPI-compatible config struct, we duplicate this so the type can generate
@@ -83,10 +90,16 @@ fn process_compiled_css_in_js(
   code: &str,
   input: &CompiledCssInJsPluginInput,
 ) -> Result<CompiledCssInJsPluginResult> {
+  // Check for empty code
+  if code.trim().is_empty() {
+    return Err(anyhow!("Empty code input"));
+  }
+
   let swc_config = Config {
     is_type_script: true,
     is_jsx: true,
     decorators: false,
+    source_type: SourceType::Module,
     ..Default::default()
   };
 
@@ -114,6 +127,16 @@ fn process_compiled_css_in_js(
           .join("\n");
         return Err(anyhow!("Parse error: {}", error_msg));
       }
+    };
+
+    // Convert the program to a module if it's a script
+    let module = match module {
+      Program::Module(module) => Program::Module(module),
+      Program::Script(script) => Program::Module(Module {
+        span: script.span,
+        shebang: None,
+        body: script.body.into_iter().map(ModuleItem::Stmt).collect(),
+      }),
     };
 
     let config: atlassian_swc_compiled_css::CompiledCssInJsTransformConfig =
@@ -190,4 +213,228 @@ pub fn apply_compiled_css_in_js_plugin(
   });
 
   Ok(promise)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use indoc::indoc;
+
+  // Helper function to create test config
+  fn create_test_config(source_maps: bool, extract: bool) -> CompiledCssInJsPluginInput {
+    CompiledCssInJsPluginInput {
+      filename: "test.ts".to_string(),
+      project_root: "/project".to_string(),
+      is_source: false,
+      source_maps,
+      config: CompiledCssInJsTransformConfig {
+        import_react: Some(true),
+        nonce: None,
+        import_sources: None,
+        optimize_css: Some(true),
+        extensions: None,
+        add_component_name: None,
+        process_xcss: None,
+        increase_specificity: Some(true),
+        sort_at_rules: Some(true),
+        class_hash_prefix: None,
+        flatten_multiple_selectors: Some(true),
+        extract: Some(extract),
+        ssr: Some(true),
+      },
+    }
+  }
+
+  #[test]
+  fn test_successful_transformation() {
+    let config = create_test_config(true, false);
+
+    let code = indoc! {r#"
+      import { css } from '@compiled/react';
+      const styles = css({ color: 'red' });
+      <div css={styles} />;
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Transformed code should succeed");
+
+    let transformed = result.unwrap();
+    assert!(
+      transformed.code.contains("@compiled/react/runtime"),
+      "Transformed code should contain @compiled/react/runtime"
+    );
+  }
+
+  #[test]
+  fn test_comment_marker() {
+    let config = create_test_config(true, false);
+
+    let code = indoc! {r#"
+      import { css } from '@compiled/react';
+      const styles = css({ color: 'red' });
+      <div css={styles} />;
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Transformed code should succeed");
+
+    let transformed = result.unwrap();
+    assert!(
+      transformed
+        .code
+        .contains("/* COMPILED_TRANSFORMED_ASSET */"),
+      "Transformed code should contain COMPILED_TRANSFORMED_ASSET comment marker"
+    );
+  }
+
+  #[test]
+  fn test_successful_extract_transformation() {
+    let config = create_test_config(true, true);
+
+    let code = indoc! {r#"
+      import { css } from '@compiled/react';
+      const styles = css({ color: 'red' });
+      <div css={styles} />;
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Transformed code should succeed");
+
+    let transformed = result.unwrap();
+    assert!(
+      transformed.code.contains("@compiled/react/runtime"),
+      "Transformed code should contain @compiled/react/runtime"
+    );
+  }
+
+  #[test]
+  fn test_invalid_javascript_syntax_error() {
+    let config = create_test_config(true, false);
+
+    let invalid_code = indoc! {r#"
+      import { css  from '@compiled/react'; // Missing closing brace
+      const styles = css({ color: 'red' });
+      <div css={styles} />;
+    "#};
+
+    let result = process_compiled_css_in_js(invalid_code, &config);
+    assert!(result.is_err(), "Invalid syntax should result in an error");
+    let error = result.unwrap_err();
+    let error_string = error.to_string();
+    // Just verify an error occurred - the exact error message format can vary
+    assert!(
+      error_string.contains("Parse error") || !error_string.is_empty(),
+      "Expected some error message, got: {}",
+      error_string
+    );
+  }
+
+  #[test]
+  fn test_typescript_syntax_support() {
+    let config = create_test_config(true, false);
+
+    let ts_code = indoc! {r#"
+      import { css } from '@compiled/react';
+      const styles = css({ color: 'red' });
+      interface MyInterface {
+        color: string;
+      }
+      <div css={styles} />;
+    "#};
+
+    let result = process_compiled_css_in_js(ts_code, &config);
+    assert!(result.is_ok(), "TypeScript syntax should be supported");
+  }
+
+  #[test]
+  fn test_empty_code_input() {
+    let config = create_test_config(true, false);
+
+    let empty_code = "";
+    let result = process_compiled_css_in_js(empty_code, &config);
+
+    // Empty code should result in an error since we now check for it
+    assert!(result.is_err(), "Empty code should result in an error");
+  }
+
+  #[test]
+  fn test_code_without_compiled() {
+    let config = create_test_config(true, false);
+
+    let code_without_compiled = indoc! {r#"
+      const greeting = "Hello, world!";
+      console.log(greeting);
+    "#};
+
+    let result = process_compiled_css_in_js(code_without_compiled, &config);
+
+    // Code without compiled should still be processed successfully
+    // Even if there are no compiled components to transform, the code should parse and emit correctly
+    match result {
+      Ok(transformed) => {
+        assert!(
+          transformed.code.contains("Hello, world!"),
+          "Original code should be preserved"
+        );
+      }
+      Err(e) => {
+        panic!("Should not get an error; got error for code: {}", e);
+      }
+    }
+  }
+
+  #[test]
+  fn test_sourcemap_generation() {
+    let config = create_test_config(true, false);
+
+    let code = indoc! {r#"
+      import { css } from '@compiled/react';
+      const styles = css({ color: 'red' });
+      <div css={styles} />;
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Transformed code should succeed");
+
+    let transformed = result.unwrap();
+    assert!(
+      transformed.code.contains("@compiled/react/runtime"),
+      "Transformed code should contain @compiled/react/runtime"
+    );
+
+    // Check that sourcemap is generated
+    assert!(transformed.map.is_some(), "Sourcemap should be generated");
+
+    let map = transformed.map.unwrap();
+    assert!(!map.is_empty(), "Sourcemap should not be empty");
+
+    // Verify that the sourcemap is valid JSON
+    let parsed_sourcemap: Result<serde_json::Value, _> = serde_json::from_str(&map);
+    assert!(parsed_sourcemap.is_ok(), "Sourcemap should be valid JSON");
+  }
+
+  #[test]
+  fn test_no_sourcemap_when_disabled() {
+    let config = create_test_config(false, false);
+
+    let code = indoc! {r#"
+      import { token } from '@atlaskit/tokens';
+      const textColor = token('color.text');
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Token transformation should succeed");
+
+    let transformed = result.unwrap();
+    assert!(
+      transformed.code.contains("token"),
+      "Transformed code should contain token reference"
+    );
+
+    // Check that sourcemap is NOT generated when disabled
+    assert!(
+      transformed.map.is_none(),
+      "Sourcemap should not be generated when source_maps is false"
+    );
+  }
 }
