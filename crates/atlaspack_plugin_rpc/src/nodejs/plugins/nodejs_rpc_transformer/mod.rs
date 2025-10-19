@@ -137,6 +137,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     hasher.finish()
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   fn should_skip(&self, asset: &Asset) -> anyhow::Result<bool> {
     self.conditions.should_skip(asset)
   }

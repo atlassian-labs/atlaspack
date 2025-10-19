@@ -77,6 +77,27 @@ impl TransformerPipeline {
   pub fn transformers(&self) -> &[Arc<dyn TransformerPlugin>] {
     &self.transformers
   }
+
+  pub fn should_run_new_pipeline(&self, other: &TransformerPipeline) -> bool {
+    if self.pipeline_id == other.pipeline_id {
+      // If the pipeline IDs are the same, no need to run
+      return false;
+    }
+
+    if self.transformers.len() < other.transformers.len() {
+      // If the new pipeline has more transformers, we need to run it
+      return true;
+    }
+
+    for transformer in &other.transformers {
+      if !self.transformers.iter().any(|t| t.id() == transformer.id()) {
+        // If any transformer is not in the current pipeline, we need to run it
+        return true;
+      }
+    }
+
+    false
+  }
 }
 
 impl Debug for TransformerPipeline {
