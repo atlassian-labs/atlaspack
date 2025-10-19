@@ -57,7 +57,6 @@ impl TryFrom<Option<SerializableTransformerConditions>> for Conditions {
 }
 
 impl Conditions {
-  #[tracing::instrument(level = "info", skip_all)]
   pub fn should_skip(&self, asset: &Asset) -> anyhow::Result<bool> {
     if !self.enabled {
       return Ok(true);
