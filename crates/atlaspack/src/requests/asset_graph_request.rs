@@ -336,6 +336,7 @@ impl AssetGraphBuilder {
     }
   }
 
+  #[allow(clippy::too_many_arguments)]
   fn add_asset_dependencies(
     &mut self,
     dependencies: &Vec<Dependency>,
