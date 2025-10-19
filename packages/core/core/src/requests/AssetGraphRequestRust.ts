@@ -29,6 +29,12 @@ type AssetGraphRequest = {
   input: AssetGraphRequestInput;
 };
 
+type SerializedAssetGraphDelta = {
+  nodes: Array<any>;
+  edges: Array<string>;
+  updates: Array<any>;
+};
+
 export function createAssetGraphRequestRust(
   rustAtlaspack: AtlaspackV3,
 ): (input: AssetGraphRequestInput) => AssetGraphRequest {
@@ -37,16 +43,25 @@ export function createAssetGraphRequestRust(
     id: input.name,
     run: async (input) => {
       let options = input.options;
-      let serializedAssetGraph = await rustAtlaspack.buildAssetGraph();
+      let serializedAssetGraph =
+        (await rustAtlaspack.buildAssetGraph()) as SerializedAssetGraphDelta;
 
-      // @ts-expect-error TS7006
+      // Newly created nodes
       serializedAssetGraph.nodes = serializedAssetGraph.nodes.map((node) =>
         JSON.parse(node),
       );
 
+      // Updated existing nodes
+      serializedAssetGraph.updates = serializedAssetGraph.updates.map((node) =>
+        JSON.parse(node),
+      );
+
+      let prevResult =
+        await input.api.getPreviousResult<AssetGraphRequestResult>();
+
       let {assetGraph, changedAssets} = instrument(
         'atlaspack_v3_getAssetGraph',
-        () => getAssetGraph(serializedAssetGraph),
+        () => getAssetGraph(serializedAssetGraph, prevResult?.assetGraph),
       );
 
       let changedAssetsPropagation = new Set(changedAssets.keys());
@@ -66,7 +81,7 @@ export function createAssetGraphRequestRust(
         });
       }
 
-      return {
+      let result = {
         assetGraph,
         assetRequests: [],
         assetGroupsWithRemovedParents: new Set(),
@@ -74,20 +89,53 @@ export function createAssetGraphRequestRust(
         changedAssetsPropagation,
         previousSymbolPropagationErrors: undefined,
       };
+
+      await input.api.storeResult(result);
+      input.api.invalidateOnBuild();
+
+      return result;
     },
     input,
   });
 }
 
-export function getAssetGraph(serializedGraph: any): {
+export function getAssetGraph(
+  serializedGraph: any,
+  prevAssetGraph?: AssetGraph,
+): {
   assetGraph: AssetGraph;
   changedAssets: Map<string, Asset>;
 } {
-  let graph = new AssetGraph({
-    _contentKeyToNodeId: new Map(),
-    _nodeIdToContentKey: new Map(),
-    initialCapacity: serializedGraph.edges.length,
-  });
+  let graph: AssetGraph;
+
+  if (prevAssetGraph && serializedGraph.updates.length > 0) {
+    graph = new AssetGraph({
+      _contentKeyToNodeId: new Map(),
+      _nodeIdToContentKey: new Map(),
+      nodes: prevAssetGraph.nodes,
+      initialCapacity: serializedGraph.edges.length,
+      // Accomodate the root node
+      initialNodeCapacity: prevAssetGraph.nodes.length + 1,
+    });
+  } else {
+    graph = new AssetGraph({
+      _contentKeyToNodeId: new Map(),
+      _nodeIdToContentKey: new Map(),
+      initialCapacity: serializedGraph.edges.length,
+      // Accomodate the root node
+      initialNodeCapacity: serializedGraph.nodes.length + 1,
+    });
+
+    let index = graph.addNodeByContentKey('@@root', {
+      id: '@@root',
+      type: 'root',
+      value: null,
+    });
+
+    graph.setRootNodeId(index);
+  }
+
+  invariant(graph, 'Asset graph not initialized');
 
   graph.safeToIncrementallyBundle = false;
 
@@ -133,23 +181,15 @@ export function getAssetGraph(serializedGraph: any): {
 
     let envId = envs.get(envKey);
     if (envId == null) {
-      envId = `${envs.size}`;
+      envId = envs.size.toString();
       envs.set(envKey, envId);
     }
 
     return envId;
   };
 
-  for (let node of serializedGraph.nodes) {
-    if (node.type === 'root') {
-      let index = graph.addNodeByContentKey('@@root', {
-        id: '@@root',
-        type: 'root',
-        value: null,
-      });
-
-      graph.setRootNodeId(index);
-    } else if (node.type === 'entry') {
+  for (let node of [...serializedGraph.nodes, ...serializedGraph.updates]) {
+    if (node.type === 'entry') {
       let id = 'entry:' + ++entry;
 
       graph.addNodeByContentKey(id, {
