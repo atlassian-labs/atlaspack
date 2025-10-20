@@ -1,11 +1,11 @@
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
-/// Transformer that removes unreachable statements after return statements.
+/// Transformer that removes unreachable return statements after the first return.
 ///
 /// In functions with multiple return statements, only the first return is reachable.
-/// This transform removes all statements that appear after the first return statement
-/// in a block, as they can never be executed.
+/// This transform removes only the return statements that appear after the first return
+/// statement in a block, preserving other statements.
 ///
 /// # Example
 ///
@@ -24,6 +24,7 @@ use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 /// function foo() {
 ///   console.log('before');
 ///   return 1;
+///   console.log('unreachable');
 /// }
 /// ```
 ///
@@ -47,8 +48,10 @@ use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 /// function bar() {
 ///   if (condition) {
 ///     return 1;
+///     console.log('dead');
 ///   }
 ///   return 2;
+///   console.log('also dead');
 /// }
 /// ```
 pub struct DeadReturnsRemover;
@@ -58,12 +61,22 @@ impl DeadReturnsRemover {
     Self
   }
 
+  fn has_return(stmt: &Stmt) -> bool {
+    match stmt {
+      Stmt::Return(_) => true,
+      Stmt::Block(block) => block.stmts.iter().any(Self::has_return),
+      _ => false,
+    }
+  }
+
   fn remove_dead_returns(stmts: &mut Vec<Stmt>) {
-    if let Some(return_idx) = stmts
-      .iter()
-      .position(|stmt| matches!(stmt, Stmt::Return(_)))
-    {
-      stmts.truncate(return_idx + 1);
+    if let Some(first_return_idx) = stmts.iter().position(Self::has_return) {
+      let mut idx = 0;
+      stmts.retain(|stmt| {
+        let current_idx = idx;
+        idx += 1;
+        current_idx <= first_return_idx || !matches!(stmt, Stmt::Return(_))
+      });
     }
   }
 }
@@ -115,6 +128,7 @@ mod tests {
         function foo() {
             console.log('before');
             return 1;
+            console.log('unreachable');
         }
       "#}
     );
@@ -145,8 +159,10 @@ mod tests {
             if (condition) {
                 doSomething();
                 return 1;
+                console.log('dead');
             }
             return 2;
+            console.log('also dead');
         }
       "#}
     );
@@ -171,7 +187,34 @@ mod tests {
         const fn = ()=>{
             console.log('start');
             return 42;
+            console.log('unreachable');
         };
+      "#}
+    );
+  }
+
+  // Test does not currently succeed due to SWC codegen removing comments after return statements.
+  #[test]
+  fn test_retains_comments_after_return() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function foo() {
+          console.log('before');
+          return 1;
+          // test comment
+        }
+      "#},
+      |_: RunTestContext| DeadReturnsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function foo() {
+            console.log('before');
+            return 1;
+        // test comment
+        }
       "#}
     );
   }
@@ -253,9 +296,11 @@ mod tests {
             if (x < 0) {
                 console.log('negative');
                 return -1;
+                console.log('after return in if');
             }
             console.log('positive or zero');
             return x;
+            console.log('after final return');
         }
       "#}
     );
@@ -283,8 +328,10 @@ mod tests {
         function outer() {
             function inner() {
                 return 1;
+                console.log('dead in inner');
             }
             return inner();
+            console.log('dead in outer');
         }
       "#}
     );
@@ -315,11 +362,42 @@ mod tests {
             if (a) {
                 {
                     return 1;
+                    console.log('dead 1');
                 }
             }
             return 2;
+            console.log('dead 3');
         }
       "#}
+    );
+  }
+
+  #[test]
+  fn test_retains_nested_functions() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function complex() {
+          var variable = nested();
+          return variable;
+          function nested() {
+            return 1;
+          }
+        }
+      "#},
+      |_: RunTestContext| DeadReturnsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function complex() {
+            var variable = nested();
+            return variable;
+            function nested() {
+                return 1;
+            }
+        }
+      "#},
     );
   }
 
@@ -353,6 +431,34 @@ mod tests {
       output_code,
       indoc! {r#"
         const fn = ()=>42;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_return_in_non_conditional_block() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function foo() {
+          {
+            return 1;
+          }
+          console.log("foo");
+          return 2;
+        }
+      "#},
+      |_: RunTestContext| DeadReturnsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function foo() {
+            {
+                return 1;
+            }
+            console.log("foo");
+        }
       "#}
     );
   }
