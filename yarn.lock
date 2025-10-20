@@ -3038,6 +3038,7 @@ __metadata:
     "@atlaspack/markdown-ansi": "workspace:*"
     "@atlaspack/rust": "workspace:*"
     "@atlaspack/types-internal": "workspace:*"
+    "@iarna/toml": "npm:^2.2.3"
     "@parcel/source-map": "npm:^2.1.1"
     "@types/is-glob": "npm:^4.0.1"
     "@types/micromatch": "npm:^4.0.9"
