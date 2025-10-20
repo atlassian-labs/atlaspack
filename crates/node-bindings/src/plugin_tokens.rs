@@ -8,8 +8,14 @@ use serde::Serialize;
 use swc_atlaskit_tokens::{
   design_system_tokens_visitor, token_map::get_or_load_token_map_from_json,
 };
-use swc_core::common::{
-  FileName, SourceMap, errors, errors::Handler, source_map::SourceMapGenConfig, sync::Lrc,
+use swc_core::{
+  common::{
+    FileName, SourceMap,
+    errors::{self, Handler},
+    source_map::SourceMapGenConfig,
+    sync::Lrc,
+  },
+  ecma::ast::{Module, ModuleItem, Program},
 };
 
 #[napi(object)]
@@ -53,6 +59,10 @@ impl SourceMapGenConfig for SourceMapConfig {
 
 // Helper function to test synchronous token processing without NAPI
 fn process_tokens_sync(code: &str, config: &TokensConfig) -> Result<TokensPluginResult> {
+  if code.trim().is_empty() {
+    return Err(anyhow!("Empty code input"));
+  }
+
   let swc_config = Config {
     is_type_script: true,
     is_jsx: true,
@@ -86,6 +96,15 @@ fn process_tokens_sync(code: &str, config: &TokensConfig) -> Result<TokensPlugin
       }
     };
 
+    let module = match module {
+      Program::Module(module) => Program::Module(module),
+      Program::Script(script) => Program::Module(Module {
+        span: script.span,
+        shebang: None,
+        body: script.body.into_iter().map(ModuleItem::Stmt).collect(),
+      }),
+    };
+
     let token_map = get_or_load_token_map_from_json(Some(&config.tokens_options.token_data_path))
       .with_context(|| {
       format!(
@@ -104,7 +123,6 @@ fn process_tokens_sync(code: &str, config: &TokensConfig) -> Result<TokensPlugin
       token_map.as_ref().map(|t| t.as_ref()),
     );
     let module = module.apply(&mut passes);
-
     let module_result = module
       .module()
       .ok_or_else(|| anyhow!("Failed to get transformed module"))?;
@@ -427,8 +445,7 @@ mod tests {
         // If there's an error, it should be related to parsing, not token processing
         let error_string = e.to_string();
         println!("Got error for code without tokens: {}", error_string);
-        // For now, we'll accept that this might fail in some cases
-        // since the main functionality (token transformation) is working
+        unreachable!("Code without tokens should not result in an error");
       }
     }
   }
