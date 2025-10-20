@@ -277,7 +277,7 @@ async fn run_pipeline(
       let next_pipeline = plugins.transformers(&current_asset).await?;
 
       if pipeline.should_run_new_pipeline(&next_pipeline) {
-        tracing::info!(
+        tracing::debug!(
           "Asset requires pipeline switch. File: {} from {} to {}",
           current_asset.file_path.display(),
           original_asset_type.extension(),
