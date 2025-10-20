@@ -8,9 +8,9 @@ use crate::evaluate_expr::{
 };
 use crate::shorthand;
 use crate::utils::{normalize_at_query, normalize_nested_selector, to_kebab_case};
-use crate::{AtomicCssCollector, emit::RuleInput};
+use crate::{CompiledCssInJsCollector, emit::RuleInput};
 
-impl AtomicCssCollector {
+impl CompiledCssInJsCollector {
   fn normalize_selector(sel: &str) -> String {
     // Collapse whitespace and remove spaces around combinators '>', '+', '~'
     let bytes = sel.as_bytes();
@@ -82,7 +82,7 @@ impl AtomicCssCollector {
     out.trim().to_string()
   }
   pub(crate) fn is_unitless_property_generic(name: &str) -> bool {
-    if AtomicCssCollector::is_unitless_property(name) {
+    if CompiledCssInJsCollector::is_unitless_property(name) {
       return true;
     }
     if name.contains('-') {
@@ -118,8 +118,8 @@ impl AtomicCssCollector {
           camel_upper.extend(chars2);
         }
       }
-      if AtomicCssCollector::is_unitless_property(&camel_lower)
-        || AtomicCssCollector::is_unitless_property(&camel_upper)
+      if CompiledCssInJsCollector::is_unitless_property(&camel_lower)
+        || CompiledCssInJsCollector::is_unitless_property(&camel_upper)
       {
         return true;
       }
@@ -363,7 +363,7 @@ impl AtomicCssCollector {
     }
 
     fn parse_block(
-      this: &mut AtomicCssCollector,
+      this: &mut CompiledCssInJsCollector,
       s: &str,
       mut i: usize,
       suffix: &str,
@@ -504,7 +504,7 @@ impl AtomicCssCollector {
             let normalized = if sel.starts_with('&') || sel.starts_with(':') {
               normalize_nested_selector(&sel)
             } else {
-              AtomicCssCollector::normalize_selector(&sel)
+              CompiledCssInJsCollector::normalize_selector(&sel)
             };
             let mut new_suffix = normalized.clone();
             if let Some(stripped) = normalized.strip_prefix('&') {
@@ -661,7 +661,7 @@ impl AtomicCssCollector {
       }
     }
     fn append_block(
-      this: &mut AtomicCssCollector,
+      this: &mut CompiledCssInJsCollector,
       obj: &ObjectLit,
       buf: &mut String,
     ) -> Option<()> {
@@ -740,7 +740,8 @@ impl AtomicCssCollector {
                   ValueOrNumber::Str(s) => s,
                   ValueOrNumber::Num(n) => {
                     let mut s = num_to_string(n);
-                    if !AtomicCssCollector::is_unitless_property_generic(&original_prop_name) {
+                    if !CompiledCssInJsCollector::is_unitless_property_generic(&original_prop_name)
+                    {
                       s.push_str("px");
                     }
                     s
@@ -776,7 +777,7 @@ impl AtomicCssCollector {
                   }
                   ConstValue::Num(n) => {
                     let mut s = num_to_string(n);
-                    if !AtomicCssCollector::is_unitless_property_generic(&k) {
+                    if !CompiledCssInJsCollector::is_unitless_property_generic(&k) {
                       s.push_str("px");
                     }
                     buf.push_str(&prop_kebab);
@@ -1013,7 +1014,8 @@ impl AtomicCssCollector {
                     } else {
                       n.to_string()
                     };
-                    if !AtomicCssCollector::is_unitless_property_generic(&original_prop_name) {
+                    if !CompiledCssInJsCollector::is_unitless_property_generic(&original_prop_name)
+                    {
                       v.push_str("px");
                     }
                     v
@@ -1038,7 +1040,7 @@ impl AtomicCssCollector {
                   } else {
                     n.to_string()
                   };
-                  if !AtomicCssCollector::is_unitless_property_generic(&original_prop_name) {
+                  if !CompiledCssInJsCollector::is_unitless_property_generic(&original_prop_name) {
                     v.push_str("px");
                   }
                   v
@@ -1069,7 +1071,7 @@ impl AtomicCssCollector {
                   } else {
                     n.to_string()
                   };
-                  if !AtomicCssCollector::is_unitless_property_generic(&original_prop_name) {
+                  if !CompiledCssInJsCollector::is_unitless_property_generic(&original_prop_name) {
                     v.push_str("px");
                   }
                   v

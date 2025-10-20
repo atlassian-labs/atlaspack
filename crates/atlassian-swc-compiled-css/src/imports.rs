@@ -3,9 +3,9 @@ use swc_core::{
   ecma::ast::*,
 };
 
-use crate::AtomicCssCollector;
+use crate::CompiledCssInJsCollector;
 
-impl AtomicCssCollector {
+impl CompiledCssInJsCollector {
   fn alloc_unique_ident_for(&mut self, preferred: &str, fallback: &str) -> Ident {
     let cand = if !self.used_idents.contains(preferred) {
       preferred
@@ -101,7 +101,7 @@ fn prepend_import(m: &mut Module, import: ModuleItem) {
   m.body = items;
 }
 
-pub fn ensure_forward_ref_import(visitor: &mut AtomicCssCollector, m: &mut Module) {
+pub fn ensure_forward_ref_import(visitor: &mut CompiledCssInJsCollector, m: &mut Module) {
   if !visitor.need_forward_ref {
     return;
   }
@@ -173,7 +173,7 @@ fn ensure_runtime_import(m: &mut Module, import_name: &str) -> bool {
   true
 }
 
-pub fn ensure_runtime_ax_import(visitor: &mut AtomicCssCollector, m: &mut Module) {
+pub fn ensure_runtime_ax_import(visitor: &mut CompiledCssInJsCollector, m: &mut Module) {
   if !visitor.need_runtime_ax {
     return;
   }
@@ -182,7 +182,7 @@ pub fn ensure_runtime_ax_import(visitor: &mut AtomicCssCollector, m: &mut Module
   visitor.need_runtime_ax = false;
 }
 
-pub fn ensure_runtime_ix_import(visitor: &mut AtomicCssCollector, m: &mut Module) {
+pub fn ensure_runtime_ix_import(visitor: &mut CompiledCssInJsCollector, m: &mut Module) {
   if !visitor.need_runtime_ix {
     return;
   }
@@ -191,7 +191,7 @@ pub fn ensure_runtime_ix_import(visitor: &mut AtomicCssCollector, m: &mut Module
   visitor.need_runtime_ix = false;
 }
 
-pub fn ensure_runtime_cc_cs_imports(visitor: &mut AtomicCssCollector, m: &mut Module) {
+pub fn ensure_runtime_cc_cs_imports(visitor: &mut CompiledCssInJsCollector, m: &mut Module) {
   if !visitor.need_runtime_cc && !visitor.need_runtime_cs {
     return;
   }

@@ -5,7 +5,7 @@ use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 use xxhash_rust::xxh3::Xxh3Builder;
 
-use crate::AtomicCssCollector;
+use crate::CompiledCssInJsCollector;
 
 pub struct RuleInput<'a> {
   pub prop_kebab: &'a str,
@@ -14,7 +14,7 @@ pub struct RuleInput<'a> {
   pub wrappers: &'a [String],
 }
 
-impl AtomicCssCollector {
+impl CompiledCssInJsCollector {
   pub fn ensure_const_for_rule<F>(&mut self, rule_key: u64, css_builder: F) -> Ident
   where
     F: FnOnce() -> String,

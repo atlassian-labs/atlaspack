@@ -5,9 +5,9 @@ use swc_core::ecma::ast::*;
 
 use crate::evaluate_expr::{ValueOrNumber, eval_value_expr};
 use crate::utils::to_kebab_case;
-use crate::{AtomicCssCollector, RuntimeStyleEntries, base_encode36};
+use crate::{CompiledCssInJsCollector, RuntimeStyleEntries, base_encode36};
 
-impl AtomicCssCollector {
+impl CompiledCssInJsCollector {
   // Public entry for compiling keyframes from an object literal.
   pub fn compile_keyframes_from_object(&mut self, obj: &ObjectLit) -> String {
     let body = self.build_keyframes_body_from_object(obj);
@@ -148,7 +148,7 @@ impl AtomicCssCollector {
   }
 }
 
-impl AtomicCssCollector {
+impl CompiledCssInJsCollector {
   // Try to compile a keyframes expression used inline and return the generated name.
   pub fn maybe_compile_keyframes_to_name(&mut self, expr: &Expr) -> Option<String> {
     match expr {
@@ -292,7 +292,7 @@ fn normalize_whitespace(s: &str) -> String {
   out.trim().to_string()
 }
 
-impl AtomicCssCollector {
+impl CompiledCssInJsCollector {
   // Build keyframes body from a template literal, inserting CSS variables for non-const
   // interpolations and recording runtime ix entries to set those variables.
   pub fn build_keyframes_body_from_tpl_with_vars(

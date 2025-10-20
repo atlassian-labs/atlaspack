@@ -3,7 +3,6 @@ use atlaspack_js_swc_core::{
   Config, SourceType, emit, parse,
   utils::{ErrorBuffer, error_buffer_to_diagnostics},
 };
-use atlassian_swc_compiled_css::compiled_css_in_js_visitor;
 use napi::{Env, Error as NapiError, JsObject, bindgen_prelude::Buffer};
 use napi_derive::napi;
 use swc_core::{
@@ -69,9 +68,11 @@ pub struct CompiledCssInJsPluginInput {
 
 #[napi(object)]
 #[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CompiledCssInJsPluginResult {
   pub code: String,
   pub map: Option<String>,
+  pub style_rules: Vec<String>,
 }
 
 // Exclude macro expansions from source maps.
@@ -141,8 +142,12 @@ fn process_compiled_css_in_js(
 
     let config: atlassian_swc_compiled_css::CompiledCssInJsTransformConfig =
       <atlassian_swc_compiled_css::CompiledCssInJsTransformConfig>::from(input.config.clone());
-    let mut passes = compiled_css_in_js_visitor(&config);
-    let module = module.apply(&mut passes);
+    let mut collector =
+      atlassian_swc_compiled_css::CompiledCssInJsCollector::new_with_config(&config);
+    let module = {
+      let mut passes = collector.compiled_css_in_js_visitor();
+      module.apply(&mut passes)
+    };
 
     let module_result = module
       .module()
@@ -172,9 +177,13 @@ fn process_compiled_css_in_js(
       None
     };
 
+    // Extract style_rules
+    let style_rules: Vec<String> = collector.style_rules.into_iter().collect();
+
     Ok(CompiledCssInJsPluginResult {
       code,
       map: map_json,
+      style_rules,
     })
   })
 }

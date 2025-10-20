@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use anyhow::{Error, anyhow};
 use async_trait::async_trait;
-use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
+use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::engines::{Engines, EnginesBrowsers};
 use atlaspack_core::types::{
@@ -27,6 +27,7 @@ use crate::css_transformer_config::{CssModulesConfig, CssModulesFullConfig, CssT
 pub struct AtlaspackCssTransformerPlugin {
   project_root: PathBuf,
   css_modules_config: CssModulesFullConfig,
+  options: Arc<PluginOptions>,
 }
 
 #[derive(Deserialize)]
@@ -64,6 +65,7 @@ impl AtlaspackCssTransformerPlugin {
     Ok(AtlaspackCssTransformerPlugin {
       project_root: ctx.options.project_root.clone(),
       css_modules_config,
+      options: ctx.options.clone(),
     })
   }
 
@@ -89,6 +91,21 @@ impl AtlaspackCssTransformerPlugin {
     // enabled
     asset.is_source && self.css_modules_config.global.unwrap_or_default()
   }
+
+  fn handle_compiled_css_asset(&self, asset: &mut Asset) -> Result<(), Error> {
+    let code = asset.code.as_str()?;
+    let rules: Vec<String> = code.split("\n").map(|s| s.to_string()).collect();
+
+    // styleRules will be consumed by the optimiser in @compiled/parcel-optimizer
+    asset
+      .meta
+      .insert("styleRules".into(), serde_json::to_value(rules)?);
+
+    // Empty the code because we only use compiled CSS assets for their metadata
+    asset.code = Code::new(vec![]);
+
+    Ok(())
+  }
 }
 
 #[async_trait]
@@ -98,6 +115,20 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
     _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, Error> {
+    let is_compiled_css_in_js_transformer_enabled = self
+      .options
+      .feature_flags
+      .bool_enabled("compiledCssInJsTransformer");
+
+    if is_compiled_css_in_js_transformer_enabled && asset.file_path.ends_with(".compiled.css") {
+      let mut asset = asset;
+      self.handle_compiled_css_asset(&mut asset)?;
+
+      return Ok(TransformResult {
+        asset,
+        ..Default::default()
+      });
+    }
     let css_modules = if self.is_css_module(&asset) {
       Some(lightningcss::css_modules::Config {
         dashed_idents: asset.is_source && self.css_modules_config.dashed_idents.unwrap_or_default(),

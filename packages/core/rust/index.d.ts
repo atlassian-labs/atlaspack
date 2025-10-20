@@ -96,6 +96,7 @@ export interface CompiledCssInJsPluginInput {
 export interface CompiledCssInJsPluginResult {
   code: string
   map?: string
+  styleRules: Array<string>
 }
 export declare function applyCompiledCssInJsPlugin(rawCode: Buffer, input: CompiledCssInJsPluginInput): object
 export interface JsFileSystemOptions {

@@ -3,9 +3,9 @@ use swc_core::{
   ecma::ast::*,
 };
 
-use crate::AtomicCssCollector;
+use crate::CompiledCssInJsCollector;
 
-impl AtomicCssCollector {
+impl CompiledCssInJsCollector {
   pub fn build_display_if(name: &str) -> ModuleItem {
     let cond = Expr::Bin(BinExpr {
       span: DUMMY_SP,

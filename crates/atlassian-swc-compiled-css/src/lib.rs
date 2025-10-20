@@ -55,7 +55,7 @@ pub struct CompiledCssInJsTransformResult {
 }
 
 #[derive(Default)]
-pub(crate) struct AtomicCssCollector {
+pub struct CompiledCssInJsCollector {
   rule_key_to_ident: FxHashMap<u64, Ident>,
   next_id: usize,
   css_local: Option<Atom>,
@@ -101,7 +101,7 @@ pub(crate) struct AtomicCssCollector {
   css_calls_to_nullify: FxHashSet<Atom>,
   // Collect CSS rules for reverse-order emission (to match Babel)
   css_rules_for_emission: Vec<(u64, String)>, // (rule_key, css_text)
-  style_rules: FxHashSet<String>,
+  pub style_rules: FxHashSet<String>,
   // Removed diagnostics queue for non-const css outside JSX (we drop unattached runtime)
   // Results of css() assigned to identifiers: collected classes and runtime entries
   css_result_by_ident: FxHashMap<Atom, CssRuntimeResult>,
@@ -109,12 +109,23 @@ pub(crate) struct AtomicCssCollector {
   css_map_result_by_ident: FxHashMap<Atom, CssRuntimeResultPerKey>,
 }
 
-impl AtomicCssCollector {
+impl CompiledCssInJsCollector {
   pub(crate) fn new(emit_cc_cs_components: bool) -> Self {
     Self {
       emit_cc_cs_components,
       ..Default::default()
     }
+  }
+
+  pub fn new_with_config(config: &CompiledCssInJsTransformConfig) -> Self {
+    Self {
+      emit_cc_cs_components: !config.extract.unwrap_or(false),
+      ..Default::default()
+    }
+  }
+
+  pub fn compiled_css_in_js_visitor(&mut self) -> impl Pass {
+    visit_mut_pass(self)
   }
 
   fn collect_atomic_classes_from_css_text_swc(&mut self, _css_text: &str) -> Option<Vec<String>> {
@@ -593,7 +604,7 @@ pub(crate) fn base_encode36(mut v: u64) -> String {
   String::from_utf8(buf[i..].to_vec()).unwrap()
 }
 
-impl VisitMut for AtomicCssCollector {
+impl VisitMut for CompiledCssInJsCollector {
   fn visit_mut_jsx_element(&mut self, n: &mut JSXElement) {
     // Process the element's children and attributes first
     n.visit_mut_children_with(self);
@@ -1712,7 +1723,7 @@ pub fn process_transform(program: Program) -> Program {
 
 pub fn process_transform_with_config(program: Program, emit_cc_cs: bool) -> Program {
   let mut program = program;
-  let mut v = AtomicCssCollector {
+  let mut v = CompiledCssInJsCollector {
     emit_cc_cs_components: emit_cc_cs,
     ..Default::default()
   };
@@ -1741,19 +1752,13 @@ pub fn apply_compiled_atomic(program: &mut Program) -> CompiledCssInJsTransformR
   apply_compiled_atomic_with_config(program, CompiledCssInJsTransformConfig::default())
 }
 
-pub fn compiled_css_in_js_visitor(config: &CompiledCssInJsTransformConfig) -> impl Pass {
-  let emit_cc_cs = !config.extract.unwrap_or(false);
-
-  visit_mut_pass(AtomicCssCollector::new(emit_cc_cs))
-}
-
 /// Apply the compiled atomic transform in-place to a Program with configuration.
 pub fn apply_compiled_atomic_with_config(
   program: &mut Program,
   config: CompiledCssInJsTransformConfig,
 ) -> CompiledCssInJsTransformResult {
   let emit_cc_cs = !config.extract.unwrap_or(false);
-  let mut v = AtomicCssCollector::new(emit_cc_cs);
+  let mut v = CompiledCssInJsCollector::new(emit_cc_cs);
   program.visit_mut_with(&mut v);
 
   CompiledCssInJsTransformResult {

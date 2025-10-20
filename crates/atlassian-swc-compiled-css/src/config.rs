@@ -1,4 +1,5 @@
 #[cfg_attr(feature = "napi", napi_derive::napi(object))]
+#[derive(Clone, Debug)]
 pub struct CompiledCssInJsTransformConfig {
   ///
   /// Will import the React namespace if it is missing.

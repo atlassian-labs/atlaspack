@@ -5,7 +5,7 @@ use crate::evaluate_expr::{ValueOrNumber, eval_value_expr};
 use crate::shorthand;
 use crate::utils::{normalize_at_query, to_kebab_case};
 
-use crate::AtomicCssCollector;
+use crate::CompiledCssInJsCollector;
 use crate::RuntimeStyleEntries;
 
 type DynamicAndEntry = (String, Expr, String);
@@ -25,7 +25,7 @@ struct ForwardRefDynamicData {
   runtime_style_entries: RuntimeStyleEntries,
 }
 
-impl AtomicCssCollector {
+impl CompiledCssInJsCollector {
   fn alloc_unique_ident_from(&mut self, candidates: &[&str]) -> Ident {
     for c in candidates {
       let name = (*c).to_string();
@@ -968,7 +968,7 @@ impl AtomicCssCollector {
     }
 
     fn emit_value_classes_for_prop(
-      this: &mut AtomicCssCollector,
+      this: &mut CompiledCssInJsCollector,
       prop_name_raw: &str,
       value_expr: &Expr,
       suffix: &str,
@@ -986,7 +986,7 @@ impl AtomicCssCollector {
             } else {
               n.to_string()
             };
-            if !AtomicCssCollector::is_unitless_property_generic(prop_name_raw) {
+            if !CompiledCssInJsCollector::is_unitless_property_generic(prop_name_raw) {
               s.push_str("px");
             }
             value_text = Some(s);
@@ -996,7 +996,7 @@ impl AtomicCssCollector {
         // literal fallback
         let mut s = raw;
         if let Ok(n) = s.parse::<f64>()
-          && !AtomicCssCollector::is_unitless_property_generic(prop_name_raw)
+          && !CompiledCssInJsCollector::is_unitless_property_generic(prop_name_raw)
         {
           s = if (n - (n as i64 as f64)).abs() < f64::EPSILON {
             (n as i64).to_string()

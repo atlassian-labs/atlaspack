@@ -1,8 +1,8 @@
-use crate::{AtomicCssCollector, utils::rule_hash};
+use crate::{CompiledCssInJsCollector, utils::rule_hash};
 
 const CSS_PREFIX: &str = "_";
 
-impl AtomicCssCollector {
+impl CompiledCssInJsCollector {
   pub fn hash_ix(&self, key: &str) -> String {
     rule_hash(key)
   }
@@ -80,7 +80,7 @@ mod tests {
   #[test]
   fn test_normalise_css_property_value() {
     let css = "#FFF";
-    let v = AtomicCssCollector::default();
+    let v = CompiledCssInJsCollector::default();
     let actual_code = v.normalise_css_property_value(css);
     assert_eq!(actual_code, "#fff");
   }

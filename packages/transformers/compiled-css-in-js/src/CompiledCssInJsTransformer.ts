@@ -73,6 +73,10 @@ export default new Transformer({
     // Rather then setting this as a buffer we set it as a string, since most of the following
     // plugins will call `getCode`, this avoids repeatedly converting the buffer to a string.
     asset.setCode(result.code);
+
+    // Add styleRules to the asset
+    asset.meta.styleRules = result.styleRules;
+
     return [asset];
   },
 });
