@@ -545,8 +545,14 @@ export function propagateSymbols({
               ) {
                 incomingDep.excluded = true;
               }
-            } else {
-              invariant(assetGroups.length === 0);
+            } else if (
+              assetGroups.every((nodeId) => {
+                let asset = nullthrows(assetGraph.getNode(nodeId));
+                invariant(asset.type === 'asset');
+                return asset.value.sideEffects === false;
+              })
+            ) {
+              incomingDep.excluded = true;
             }
           }
         }
@@ -805,19 +811,31 @@ function getDependencyResolution(
   graph: AssetGraph,
   depId: ContentKey,
 ): Array<NodeId> {
+  invariant(
+    graph.getNodeByContentKey(depId)?.type === 'dependency',
+    '[!!!] Not a dep',
+  );
   let depNodeId = graph.getNodeIdByContentKey(depId);
   let connected = graph.getNodeIdsConnectedFrom(depNodeId);
-  invariant(connected.length <= 1);
-  let child = connected[0];
-  if (child) {
+
+  let resolvedNodeIds: Array<NodeId> = [];
+
+  // If any of the resolved nodes is an asset_group, we need to resolve its
+  // assets here.
+  for (let child of connected) {
+    if (!child) {
+      continue;
+    }
+
     let childNode = nullthrows(graph.getNode(child));
     if (childNode.type === 'asset_group') {
-      return graph.getNodeIdsConnectedFrom(child);
+      resolvedNodeIds.push(...graph.getNodeIdsConnectedFrom(child));
     } else {
-      return [child];
+      resolvedNodeIds.push(child);
     }
   }
-  return [];
+
+  return resolvedNodeIds;
 }
 
 function equalMap<K>(
