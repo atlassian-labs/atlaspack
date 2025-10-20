@@ -9,11 +9,11 @@
     "access": "public"
   },
   "dependencies": {
-    "@atlaspack/logger": "2.14.27",
-    "@atlaspack/utils": "3.0.3",
+    "@atlaspack/logger": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "@parcel/watcher": "^2.4.1",
-    "fb-watchman": "^2.0.2",
-    "@types/fb-watchman": "^2.0.2"
+    "@types/fb-watchman": "^2.0.2",
+    "fb-watchman": "^2.0.2"
   },
   "type": "commonjs",
   "scripts": {

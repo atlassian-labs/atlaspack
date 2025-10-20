@@ -4,6 +4,12 @@ import path from 'path';
 
 import {bundler, describe, it} from '@atlaspack/test-utils';
 
+import {findAncestorFile} from '@atlaspack/rust';
+
+const repoRoot = path.dirname(
+  findAncestorFile(['yarn.lock'], process.cwd(), '/'),
+);
+const binPath = path.join(repoRoot, 'node_modules/.bin/atlaspack');
 describe('reporters', () => {
   let successfulEntry = path.join(
     __dirname,
@@ -29,34 +35,25 @@ describe('reporters', () => {
   describe('running on the cli', () => {
     it('exit successfully when no errors are emitted', () => {
       assert.doesNotThrow(() =>
-        execSync(
-          `./node_modules/.bin/atlaspack build --no-cache ${successfulEntry}`,
-          {
-            stdio: 'inherit',
-          },
-        ),
+        execSync(`${binPath} build --no-cache ${successfulEntry}`, {
+          stdio: 'inherit',
+        }),
       );
     });
 
     it('exit with an error code when a reporter fails to load', () => {
       assert.throws(() =>
-        execSync(
-          `./node_modules/.bin/atlaspack build --no-cache ${loadReporterFailureEntry}`,
-          {
-            stdio: 'inherit',
-          },
-        ),
+        execSync(`${binPath} build --no-cache ${loadReporterFailureEntry}`, {
+          stdio: 'inherit',
+        }),
       );
     });
 
     it('exit with an error code when a reporter emits an error', () => {
       assert.throws(() =>
-        execSync(
-          `./node_modules/.bin/atlaspack build --no-cache ${failingReporterEntry}`,
-          {
-            stdio: 'inherit',
-          },
-        ),
+        execSync(`${binPath} build --no-cache ${failingReporterEntry}`, {
+          stdio: 'inherit',
+        }),
       );
     });
   });

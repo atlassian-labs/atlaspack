@@ -16,16 +16,16 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.35",
-    "@atlaspack/utils": "3.0.3",
-    "@atlaspack/workers": "2.14.35",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
+    "@atlaspack/workers": "workspace:*",
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {
     "sharp": "^0.31.1"
   },
   "peerDependencies": {
-    "@atlaspack/core": "2.26.0"
+    "@atlaspack/core": "workspace:*"
   },
   "type": "commonjs",
   "scripts": {

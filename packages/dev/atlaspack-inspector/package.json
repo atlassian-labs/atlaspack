@@ -37,11 +37,11 @@
     "frontend/dist"
   ],
   "dependencies": {
-    "@atlaspack/build-cache": "2.13.6",
-    "@atlaspack/cache": "3.2.30",
-    "@atlaspack/core": "2.26.0",
-    "@atlaspack/cli": "2.14.14",
-    "@atlaspack/feature-flags": "2.25.5",
+    "@atlaspack/build-cache": "workspace:*",
+    "@atlaspack/cache": "workspace:*",
+    "@atlaspack/cli": "workspace:*",
+    "@atlaspack/core": "workspace:*",
+    "@atlaspack/feature-flags": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.13.0",
     "commander": "^7.0.0",
     "cors": "^2.8.5",

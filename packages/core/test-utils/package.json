@@ -18,12 +18,12 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/cache": "3.2.30",
-    "@atlaspack/config-default": "7.0.0",
-    "@atlaspack/core": "2.26.0",
-    "@atlaspack/fs": "2.15.30",
-    "@atlaspack/package-manager": "2.14.35",
-    "@atlaspack/utils": "3.0.3",
+    "@atlaspack/cache": "workspace:*",
+    "@atlaspack/config-default": "workspace:*",
+    "@atlaspack/core": "workspace:*",
+    "@atlaspack/fs": "workspace:*",
+    "@atlaspack/package-manager": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "async": "^3.2.6",
     "chalk": "^4.1.0",
     "expect": "^29.7.0",
@@ -33,9 +33,8 @@
     "posthtml-parser": "^0.10.1",
     "resolve": "^1.12.0",
     "rimraf": "^5.0.5",
-    "ws": "^7.0.0",
-    "@types/async": "^3.2.6",
     "tempy": "^1.0.0",
-    "why-is-node-running": "^3.2.2"
+    "why-is-node-running": "^3.2.2",
+    "ws": "^7.0.0"
   }
 }

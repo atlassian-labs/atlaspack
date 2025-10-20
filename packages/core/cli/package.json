@@ -24,25 +24,25 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/config-default": "7.0.0",
-    "@atlaspack/core": "2.26.0",
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/events": "2.14.4",
-    "@atlaspack/feature-flags": "2.25.5",
-    "@atlaspack/fs": "2.15.30",
-    "@atlaspack/logger": "2.14.27",
-    "@atlaspack/package-manager": "2.14.35",
-    "@atlaspack/reporter-cli": "2.17.17",
-    "@atlaspack/reporter-dev-server": "2.14.35",
-    "@atlaspack/reporter-tracer": "2.14.35",
-    "@atlaspack/utils": "3.0.3",
+    "@atlaspack/config-default": "workspace:*",
+    "@atlaspack/core": "workspace:*",
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/events": "workspace:*",
+    "@atlaspack/feature-flags": "workspace:*",
+    "@atlaspack/fs": "workspace:*",
+    "@atlaspack/logger": "workspace:*",
+    "@atlaspack/package-manager": "workspace:*",
+    "@atlaspack/reporter-cli": "workspace:*",
+    "@atlaspack/reporter-dev-server": "workspace:*",
+    "@atlaspack/reporter-tracer": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "chalk": "^4.1.0",
     "commander": "^7.0.0",
     "get-port": "^4.2.0"
   },
   "devDependencies": {
+    "@atlaspack/babel-register": "workspace:*",
     "@babel/core": "^7.22.11",
-    "@atlaspack/babel-register": "2.14.4",
     "rimraf": "^5.0.5"
   }
 }

@@ -4,8 +4,8 @@
   "private": true,
   "source": "src/index.js",
   "devDependencies": {
-    "@atlaspack/babel-register": "2.0.0-beta.1",
-    "@atlaspack/core": "2.0.0-beta.1"
+    "@atlaspack/babel-register": "workspace:*",
+    "@atlaspack/core": "workspace:*"
   },
   "targets": {
     "alternate": {

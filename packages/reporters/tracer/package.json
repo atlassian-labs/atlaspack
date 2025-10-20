@@ -16,8 +16,8 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.35",
-    "@atlaspack/utils": "3.0.3",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "chrome-trace-event": "^1.0.3",
     "nullthrows": "^1.1.1"
   },

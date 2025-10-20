@@ -11,9 +11,7 @@
       "x86_64-unknown-linux-gnu"
     ]
   },
-  "bin": {
-    "apvm-linux-amd64": "apvm-linux-amd64"
-  },
+  "bin": "apvm-linux-amd64",
   "publishConfig": {
     "access": "public"
   },

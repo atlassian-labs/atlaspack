@@ -14,11 +14,11 @@
   "source": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
+    "@atlaspack/babel-register": "workspace:*",
+    "@atlaspack/fs": "workspace:*",
+    "@atlaspack/rust": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
     "@babel/core": "^7.22.11",
-    "@atlaspack/babel-register": "2.14.4",
-    "@atlaspack/fs": "2.15.30",
-    "@atlaspack/utils": "3.0.3",
-    "@atlaspack/rust": "3.8.3",
     "commander": "^7.0.0",
     "nullthrows": "^1.1.1"
   },

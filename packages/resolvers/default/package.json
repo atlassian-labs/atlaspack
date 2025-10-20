@@ -16,8 +16,8 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/node-resolver-core": "3.7.6",
-    "@atlaspack/plugin": "2.14.35"
+    "@atlaspack/node-resolver-core": "workspace:*",
+    "@atlaspack/plugin": "workspace:*"
   },
   "devDependencies": {
     "@babel/core": "^7.22.11"

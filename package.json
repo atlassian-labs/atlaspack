@@ -74,12 +74,12 @@
     "@khanacademy/flow-to-ts": "^0.5.2",
     "@napi-rs/cli": "^2.18.3",
     "@sentry/cli": "^2.45.0",
+    "@types/async": "^3.2.25",
     "@types/mocha": "^10.0.10",
     "@types/node": ">= 18",
     "@types/sinon": "^17.0.4",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
-    "buffer": "mischnic/buffer#b8a4fa94",
     "cross-env": "^7.0.0",
     "eslint": "^8.57.0",
     "flow-bin": "0.184.0",
@@ -91,6 +91,7 @@
     "lint-staged": "^10.2.11",
     "mocha": "^8.3.0",
     "nyc": "^17.1.0",
+    "playwright": "1.50.0",
     "prettier": "^3.0.0",
     "punycode": "^2.3.1",
     "rfdc": "^1.4.1",
@@ -113,10 +114,10 @@
     "*.{json,md}": "prettier --write",
     "*.rs": "rustfmt"
   },
-  "packageManager": "yarn@1.22.19",
+  "packageManager": "yarn@4.10.3",
   "browser": {
-    "react-dom": "preact/compat",
     "react": "preact/compat",
+    "react-dom": "preact/compat",
     "scheduler": false
   },
   "dependencies": {

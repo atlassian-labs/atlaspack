@@ -24,13 +24,13 @@
     "src"
   ],
   "dependencies": {
-    "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/feature-flags": "2.25.5",
-    "@atlaspack/plugin": "2.14.35",
-    "@atlaspack/rust": "3.8.3",
+    "@atlaspack/diagnostic": "workspace:*",
+    "@atlaspack/feature-flags": "workspace:*",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/rust": "workspace:*",
+    "@atlaspack/utils": "workspace:*",
+    "@atlaspack/workers": "workspace:*",
     "@parcel/source-map": "^2.1.1",
-    "@atlaspack/utils": "3.0.3",
-    "@atlaspack/workers": "2.14.35",
     "@swc/helpers": "^0.5.15",
     "browserslist": "^4.6.6",
     "nullthrows": "^1.1.1",
@@ -38,7 +38,7 @@
     "semver": "^7.5.2"
   },
   "peerDependencies": {
-    "@atlaspack/core": "2.26.0"
+    "@atlaspack/core": "workspace:*"
   },
   "type": "commonjs"
 }
