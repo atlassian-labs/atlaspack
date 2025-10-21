@@ -71,6 +71,34 @@ export interface InlineRequiresOptimizerResult {
 export declare function runInlineRequiresOptimizer(input: InlineRequiresOptimizerInput): InlineRequiresOptimizerResult
 /** Runs in the rayon thread pool */
 export declare function runInlineRequiresOptimizerAsync(input: InlineRequiresOptimizerInput): object
+export interface CompiledCssInJsTransformConfig {
+  importReact?: boolean
+  nonce?: string
+  importSources?: Array<string>
+  optimizeCss?: boolean
+  extensions?: Array<string>
+  addComponentName?: boolean
+  processXcss?: boolean
+  increaseSpecificity?: boolean
+  sortAtRules?: boolean
+  classHashPrefix?: string
+  flattenMultipleSelectors?: boolean
+  extract?: boolean
+  ssr?: boolean
+}
+export interface CompiledCssInJsPluginInput {
+  filename: string
+  projectRoot: string
+  isSource: boolean
+  sourceMaps: boolean
+  config: CompiledCssInJsTransformConfig
+}
+export interface CompiledCssInJsPluginResult {
+  code: string
+  map?: string
+  styleRules: Array<string>
+}
+export declare function applyCompiledCssInJsPlugin(rawCode: Buffer, input: CompiledCssInJsPluginInput): object
 export interface JsFileSystemOptions {
   canonicalize: (...args: any[]) => any
   read: (...args: any[]) => any

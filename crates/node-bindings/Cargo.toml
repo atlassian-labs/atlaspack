@@ -22,6 +22,7 @@ atlaspack_plugin_transformer_js = { path = "../atlaspack_plugin_transformer_js" 
 atlaspack_napi_helpers = { path = "../atlaspack_napi_helpers" }
 atlaspack_vcs = { path = "../atlaspack_vcs" }
 atlaspack_swc_runner = { path = "../atlaspack_swc_runner" }
+atlassian_swc_compiled_css = { path = "../atlassian-swc-compiled-css", features = ["napi"] }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
 
 aho-corasick = { workspace = true }
@@ -68,6 +69,9 @@ napi = { workspace = true, features = ["serde-json"] }
 
 [target.'cfg(windows)'.dependencies]
 mimalloc = { workspace = true }
+
+[dev-dependencies]
+indoc = { workspace = true }
 
 [build-dependencies]
 napi-build = { workspace = true }
