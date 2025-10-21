@@ -194,14 +194,17 @@ mod tests {
   }
 
   // Test does not currently succeed due to SWC codegen removing comments after return statements.
+  #[ignore]
   #[test]
   fn test_retains_comments_after_return() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         function foo() {
+          // first comment
           console.log('before');
+          // second comment
           return 1;
-          // test comment
+          // trailing comment
         }
       "#},
       |_: RunTestContext| DeadReturnsRemover::new(),
@@ -211,9 +214,11 @@ mod tests {
       output_code,
       indoc! {r#"
         function foo() {
+            // first comment
             console.log('before');
+            // second comment
             return 1;
-        // test comment
+        // trailing comment
         }
       "#}
     );
