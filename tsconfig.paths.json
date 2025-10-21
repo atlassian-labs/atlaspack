@@ -372,6 +372,9 @@
     },
     {
       "path": "./packages/transformers/tokens/tsconfig.json"
+    },
+    {
+      "path": "./packages/transformers/compiled-css-in-js/tsconfig.json"
     }
   ]
 }

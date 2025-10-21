@@ -310,7 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { initTracingSubscriber, Lmdb, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, Resolver, performStringReplacements, transform, transformAsync, getVcsStateSnapshot, getEventsSince, applyTokensPlugin } = nativeBinding
+const { initTracingSubscriber, Lmdb, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, applyCompiledCssInJsPlugin, Resolver, performStringReplacements, transform, transformAsync, getVcsStateSnapshot, getEventsSince, applyTokensPlugin } = nativeBinding
 
 module.exports.initTracingSubscriber = initTracingSubscriber
 module.exports.Lmdb = Lmdb
@@ -338,6 +338,7 @@ module.exports.closeMonitoring = closeMonitoring
 module.exports.newNodejsWorker = newNodejsWorker
 module.exports.runInlineRequiresOptimizer = runInlineRequiresOptimizer
 module.exports.runInlineRequiresOptimizerAsync = runInlineRequiresOptimizerAsync
+module.exports.applyCompiledCssInJsPlugin = applyCompiledCssInJsPlugin
 module.exports.Resolver = Resolver
 module.exports.performStringReplacements = performStringReplacements
 module.exports.transform = transform
