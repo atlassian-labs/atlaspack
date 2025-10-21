@@ -16,7 +16,7 @@ const page = (
     <h1 data-testid="heading" css={styles}>
       Hello, world!
     </h1>
-    <Button data-testid="button">Click me</Button>
+    <Button testId="button">Click me</Button>
   </>
 );
 
