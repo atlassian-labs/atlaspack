@@ -303,6 +303,13 @@ export default new Transformer({
     let magicComments = false;
     let addReactDisplayName = false;
 
+    let enableGlobalThisAliaser = Boolean(
+      options.env.NATIVE_GLOBAL_THIS_ALIASER,
+    );
+    let enableLazyLoadingTransformer = Boolean(
+      options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
+    );
+
     if (conf && conf.contents) {
       validateSchema.diagnostic(
         CONFIG_SCHEMA,
@@ -346,6 +353,8 @@ export default new Transformer({
       decorators,
       useDefineForClassFields,
       magicComments,
+      enableGlobalThisAliaser,
+      enableLazyLoadingTransformer,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -524,6 +533,10 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
+      enable_global_this_aliaser: Boolean(config.enableGlobalThisAliaser),
+      enable_lazy_loading_transformer: Boolean(
+        config.enableLazyLoadingTransformer,
+      ),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;

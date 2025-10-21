@@ -7,7 +7,9 @@ mod esm_export_classifier;
 mod esm_to_cjs_replacer;
 mod fs;
 mod global_replacer;
+mod global_this_aliaser;
 mod hoist;
+mod lazy_loading_transformer;
 mod magic_comments;
 mod node_replacer;
 pub mod test_utils;
@@ -37,11 +39,13 @@ use env_replacer::*;
 use esm_to_cjs_replacer::EsmToCjsReplacer;
 use fs::inline_fs;
 use global_replacer::GlobalReplacer;
+use global_this_aliaser::GlobalThisAliaser;
 pub use hoist::ExportedSymbol;
 use hoist::HoistResult;
 pub use hoist::ImportedSymbol;
 use hoist::hoist;
 use indexmap::IndexMap;
+use lazy_loading_transformer::LazyLoadingTransformer;
 use magic_comments::MagicCommentsVisitor;
 use node_replacer::NodeReplacer;
 use path_slash::PathExt;
@@ -144,6 +148,8 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
+  pub enable_global_this_aliaser: bool,
+  pub enable_lazy_loading_transformer: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -414,6 +420,14 @@ pub fn transform(
                       unresolved_mark
                     }),
                     config.source_type != SourceType::Script
+                  ),
+                  Optional::new(
+                    visit_mut_pass(GlobalThisAliaser::new(unresolved_mark)),
+                    config.enable_global_this_aliaser && GlobalThisAliaser::should_transform(&config.filename)
+                  ),
+                  Optional::new(
+                    visit_mut_pass(LazyLoadingTransformer::new(unresolved_mark)),
+                    config.enable_lazy_loading_transformer && LazyLoadingTransformer::should_transform(code)
                   ),
                   paren_remover(Some(&comments)),
                   // Simplify expressions and remove dead branches so that we
