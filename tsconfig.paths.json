@@ -371,6 +371,9 @@
       "path": "./packages/bundlers/bundler-experimental/tsconfig.json"
     },
     {
+      "path": "./packages/transformers/tokens/tsconfig.json"
+    },
+    {
       "path": "./packages/transformers/compiled-css-in-js/tsconfig.json"
     }
   ]

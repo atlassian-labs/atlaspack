@@ -4,7 +4,6 @@ import type {
   SourceLocation,
   FilePath,
   FileCreateInvalidation,
-  ConditionMeta,
 } from '@atlaspack/types';
 import type {SchemaEntity} from '@atlaspack/utils';
 import type {Diagnostic} from '@atlaspack/diagnostic';
@@ -173,7 +172,7 @@ type MacroContext = {
 };
 
 export default new Transformer({
-  async loadConfig({config, options}) {
+  async loadConfig({config, options, logger}) {
     let packageJson = await config.getPackage();
     let isJSX,
       pragma,
@@ -533,6 +532,7 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
+      is_source: asset.isSource,
       enable_global_this_aliaser: Boolean(config.enableGlobalThisAliaser),
       enable_lazy_loading_transformer: Boolean(
         config.enableLazyLoadingTransformer,

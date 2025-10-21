@@ -60,6 +60,7 @@ once_cell = { workspace = true }
 oxipng = { workspace = true }
 rayon = { workspace = true }
 swc_core = { workspace = true }
+swc_atlaskit_tokens = { workspace = true, features = ["atlaspack-compat"]}
 
 # Crash reporting dependencies
 
@@ -72,6 +73,7 @@ mimalloc = { workspace = true }
 
 [dev-dependencies]
 indoc = { workspace = true }
+tempfile = { workspace = true }
 
 [build-dependencies]
 napi-build = { workspace = true }

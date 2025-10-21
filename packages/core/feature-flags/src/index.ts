@@ -281,6 +281,15 @@ export const DEFAULT_FEATURE_FLAGS = {
   deduplicateReporters: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
+
+   * When _disabled_, will early exit from the @atlaspack/transformer-tokens transformation
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-10-17
+   */
+  enableTokensTransformer: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /*
    * When enabled, applies the SWC compiled CSS in JS transformer to the codebase.
    *
    * This is a temporary feature flag for the migration state. We eventually will remove this transformer plugin and directly use the SWC visitor in the JS transform.

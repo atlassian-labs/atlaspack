@@ -156,6 +156,26 @@ export declare function transform(opts: object): unknown
 export declare function transformAsync(opts: object): object
 export declare function getVcsStateSnapshot(path: string, excludePatterns: Array<string>): object
 export declare function getEventsSince(repoPath: string, vcsStateSnapshot: unknown, newRev?: string | undefined | null): object
+export interface TokensPluginOptions {
+  tokenDataPath: string
+  shouldUseAutoFallback: boolean
+  shouldForceAutoFallback: boolean
+  forceAutoFallbackExemptions: Array<string>
+  defaultTheme: string
+}
+export interface TokensConfig {
+  filename: string
+  projectRoot: string
+  isSource: boolean
+  sourceMaps: boolean
+  tokensOptions: TokensPluginOptions
+}
+export interface TokensPluginResult {
+  code: string
+  map?: string
+}
+/** Apply the tokens transformation plugin to the given code asynchronously */
+export declare function applyTokensPlugin(rawCode: Buffer, config: TokensConfig): object
 export type LMDB = Lmdb
 export class Lmdb {
   constructor(options: LmdbOptions)

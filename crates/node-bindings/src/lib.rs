@@ -28,6 +28,7 @@ mod string_ops;
 mod transformer;
 pub mod vcs;
 
+mod plugin_tokens;
 pub use atlassian_swc_compiled_css::config::CompiledCssInJsTransformConfig;
 
 #[cfg(target_arch = "wasm32")]
