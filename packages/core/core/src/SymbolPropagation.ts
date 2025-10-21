@@ -533,25 +533,21 @@ export function propagateSymbols({
             incomingDep.value.symbols != null &&
             incomingDep.usedSymbolsUp.size === 0
           ) {
-            let assetGroups = assetGraph.getNodeIdsConnectedFrom(
+            let connectedNodeIds = assetGraph.getNodeIdsConnectedFrom(
               assetGraph.getNodeIdByContentKey(incomingDep.id),
             );
-            if (assetGroups.length === 1) {
-              let [assetGroupId] = assetGroups;
-              let assetGroup = nullthrows(assetGraph.getNode(assetGroupId));
-              if (
-                assetGroup.type === 'asset_group' &&
-                assetGroup.value.sideEffects === false
-              ) {
-                incomingDep.excluded = true;
-              }
-            } else if (
-              assetGroups.every((nodeId) => {
-                let asset = nullthrows(assetGraph.getNode(nodeId));
-                invariant(asset.type === 'asset');
-                return asset.value.sideEffects === false;
-              })
-            ) {
+
+            let sideEffectFree = connectedNodeIds.every((nodeId) => {
+              let connectedNode = nullthrows(assetGraph.getNode(nodeId));
+              // Dependencies should only connect to asset_groups or assets
+              invariant(
+                connectedNode.type === 'asset' ||
+                  connectedNode.type === 'asset_group',
+              );
+              return connectedNode.value.sideEffects === false;
+            });
+
+            if (sideEffectFree) {
               incomingDep.excluded = true;
             }
           }
