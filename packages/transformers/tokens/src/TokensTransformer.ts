@@ -46,14 +46,12 @@ export default new Transformer({
         CONFIG_SCHEMA,
         {
           data: conf.contents,
-          // FIXME
           source: await options.inputFS.readFile(conf.filePath, 'utf8'),
           filePath: conf.filePath,
           prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-tokens')}`,
         },
-        // FIXME
         '@atlaspack/transformer-tokens',
-        'Invalid config for @atlaspack/transformer-js',
+        'Invalid config for @atlaspack/transformer-tokens',
       );
 
       // @ts-expect-error TS2339
@@ -70,7 +68,6 @@ export default new Transformer({
           tokensConfig.tokenDataPath,
         ),
       };
-      config.invalidateOnFileChange(resolvedConfig.tokenDataPath);
       return resolvedConfig;
     }
   },
@@ -105,6 +102,9 @@ export default new Transformer({
       },
     }) as Promise<TokensPluginResult>);
 
+    // Ensure this transform is invalidated when the token data changes
+    asset.invalidateOnFileChange(config.tokenDataPath);
+
     // Handle sourcemap merging if sourcemap is generated
     if (result.map != null) {
       let map = new SourceMap(options.projectRoot);
@@ -116,8 +116,6 @@ export default new Transformer({
       asset.setMap(map);
     }
 
-    // Rather then setting this as a buffer we set it as a string, since most of the following
-    // plugins will call `getCode`, this avoids repeatedly converting the buffer to a string.
     asset.setCode(result.code);
     return [asset];
   },
