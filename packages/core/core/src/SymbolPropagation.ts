@@ -807,10 +807,6 @@ function getDependencyResolution(
   graph: AssetGraph,
   depId: ContentKey,
 ): Array<NodeId> {
-  invariant(
-    graph.getNodeByContentKey(depId)?.type === 'dependency',
-    '[!!!] Not a dep',
-  );
   let depNodeId = graph.getNodeIdByContentKey(depId);
   let connected = graph.getNodeIdsConnectedFrom(depNodeId);
 
