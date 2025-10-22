@@ -1,3 +1,4 @@
+use anyhow::Context;
 use async_trait::async_trait;
 use atlaspack_core::plugin::PluginOptions;
 use napi::JsBuffer;
@@ -229,7 +230,14 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
           Ok((transform_result, contents, map))
         },
       )
-      .await?;
+      .await
+      .with_context(|| {
+        format!(
+          "Failed to transform asset '{}' with transformer '{}'",
+          asset.file_path.display(),
+          self.plugin_node.package_name
+        )
+      })?;
 
     let transformed_asset = Asset {
       id: result.id,
