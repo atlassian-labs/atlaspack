@@ -1,10 +1,11 @@
 use atlaspack_core::types::Asset;
-use regex::RegexSet;
+use regex::{Regex, RegexSet};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SerializableTransformerConditions {
+  file_match: Option<String>,
   code_match: Option<Vec<String>>,
   enabled: Option<bool>,
   origin: Option<OriginCondition>,
@@ -19,6 +20,7 @@ enum OriginCondition {
 
 #[derive(Debug)]
 pub struct Conditions {
+  file_match: Option<Regex>,
   code_match: Option<RegexSet>,
   enabled: bool,
   origin: Option<OriginCondition>,
@@ -27,6 +29,7 @@ pub struct Conditions {
 impl Default for Conditions {
   fn default() -> Self {
     Self {
+      file_match: None,
       code_match: None,
       enabled: true,
       origin: None,
@@ -48,7 +51,14 @@ impl TryFrom<Option<SerializableTransformerConditions>> for Conditions {
       None
     };
 
+    let file_match = if let Some(pattern) = value.file_match {
+      Some(Regex::new(&pattern)?)
+    } else {
+      None
+    };
+
     Ok(Conditions {
+      file_match,
       code_match,
       enabled: value.enabled.unwrap_or(true),
       origin: value.origin,
@@ -75,6 +85,17 @@ impl Conditions {
           }
         }
       }
+    }
+
+    if let Some(file_match) = &self.file_match
+      && !file_match.is_match(
+        asset
+          .file_path
+          .to_str()
+          .ok_or_else(|| anyhow::anyhow!("Invalid UTF-8 in file path"))?,
+      )
+    {
+      return Ok(true);
     }
 
     if let Some(code_match) = &self.code_match {
@@ -109,6 +130,7 @@ mod tests {
     let json = r#"{"codeMatch": ["test"], "enabled": true}"#;
     let conditions: SerializableTransformerConditions = serde_json::from_str(json).unwrap();
     let expected = SerializableTransformerConditions {
+      file_match: None,
       code_match: Some(vec!["test".to_string()]),
       enabled: Some(true),
       origin: None,
