@@ -314,8 +314,9 @@ export default new Transformer({
         CONFIG_SCHEMA,
         {
           data: conf.contents,
-          // FIXME
-          source: await options.inputFS.readFile(conf.filePath, 'utf8'),
+          source: getFeatureFlag('schemaValidationDeferSourceLoading')
+            ? () => options.inputFS.readFileSync(conf.filePath, 'utf8')
+            : await options.inputFS.readFile(conf.filePath, 'utf8'),
           filePath: conf.filePath,
           prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-js')}`,
         },

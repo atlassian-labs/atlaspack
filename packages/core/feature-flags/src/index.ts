@@ -305,6 +305,15 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-10-16
    */
   compiledCssInJsTransformer: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * When enabled, defers source loading for schema validation until the source is needed.
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-10-22
+   */
+  schemaValidationDeferSourceLoading:
+    process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
