@@ -801,6 +801,78 @@ describe('AtlaspackConfigRequest', () => {
     });
   });
 
+  describe('additionalReporters', () => {
+    it('should deduplicate reporters by packageName', async () => {
+      const configPath = path.join(
+        __dirname,
+        'fixtures',
+        'config-with-reporters',
+        '.parcelrc',
+      );
+
+      const options = {
+        ...DEFAULT_OPTIONS,
+        projectRoot: path.join(__dirname, 'fixtures', 'config-with-reporters'),
+        config: configPath,
+        additionalReporters: [
+          {
+            packageName: '@atlaspack/reporter-cli',
+            resolveFrom: '/custom/path',
+          },
+          {
+            packageName: '@atlaspack/reporter-dev-server',
+            resolveFrom: '/another/path',
+          },
+        ],
+      };
+
+      const result = await resolveAtlaspackConfig(options);
+      assert(result !== null && result !== undefined);
+
+      const {config} = result;
+
+      // With feature flag enabled, should have 3 reporters (with deduplication)
+      assert(
+        config.reporters && config.reporters.length === 3,
+        'Should have exactly 3 reporters with deduplication',
+      );
+
+      const cliReporter = config.reporters?.find(
+        (r) => r.packageName === '@atlaspack/reporter-cli',
+      );
+      const bundleAnalyzerReporter = config.reporters?.find(
+        (r) => r.packageName === '@atlaspack/reporter-bundle-analyzer',
+      );
+      const devServerReporter = config.reporters?.find(
+        (r) => r.packageName === '@atlaspack/reporter-dev-server',
+      );
+
+      assert(cliReporter, 'CLI reporter should exist');
+      assert.equal(
+        cliReporter.resolveFrom,
+        '/custom/path',
+        'CLI reporter should use additional reporter resolveFrom',
+      );
+
+      assert(
+        bundleAnalyzerReporter,
+        'Bundle analyzer reporter should exist from original config',
+      );
+
+      assert(devServerReporter, 'Dev server reporter should exist');
+      assert.equal(devServerReporter.resolveFrom, '/another/path');
+
+      const cliReporters = config.reporters?.filter(
+        (r) => r.packageName === '@atlaspack/reporter-cli',
+      );
+      assert.equal(
+        cliReporters?.length,
+        1,
+        'Should have exactly one CLI reporter after deduplication',
+      );
+    });
+  });
+
   describe('resolve', () => {
     it('should return null if there is no .parcelrc file found', async () => {
       let resolved = await resolveAtlaspackConfig(DEFAULT_OPTIONS);

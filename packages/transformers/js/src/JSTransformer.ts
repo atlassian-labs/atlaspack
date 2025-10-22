@@ -314,6 +314,12 @@ export default new Transformer({
     );
 
     let enableReactHooksRemover = Boolean(options.env.NATIVE_HOOKS_REMOVER);
+    let enableDeadReturnsRemover = Boolean(
+      options.env.NATIVE_DEAD_RETURNS_REMOVER,
+    );
+    let enableUnusedBindingsRemover = Boolean(
+      options.env.NATIVE_UNUSED_BINDINGS_REMOVER,
+    );
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -362,6 +368,8 @@ export default new Transformer({
       enableGlobalThisAliaser,
       enableReactHooksRemover,
       enableLazyLoadingTransformer,
+      enableDeadReturnsRemover,
+      enableUnusedBindingsRemover,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -545,6 +553,10 @@ export default new Transformer({
       enable_react_hooks_remover: Boolean(config.enableReactHooksRemover),
       enable_lazy_loading_transformer: Boolean(
         config.enableLazyLoadingTransformer,
+      ),
+      enable_dead_returns_remover: Boolean(config.enableDeadReturnsRemover),
+      enable_unused_bindings_remover: Boolean(
+        config.enableUnusedBindingsRemover,
       ),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {

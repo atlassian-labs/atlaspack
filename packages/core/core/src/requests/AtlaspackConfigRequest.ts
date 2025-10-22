@@ -12,6 +12,7 @@ import type {
   PureAtlaspackConfigPipeline,
   AtlaspackOptions,
   ProcessedAtlaspackConfig,
+  AtlaspackPluginNode,
 } from '../types';
 
 import {createBuildCache} from '@atlaspack/build-cache';
@@ -197,13 +198,29 @@ export async function resolveAtlaspackConfig(
     await parseAndProcessConfig(configPath, contents, options);
 
   if (options.additionalReporters.length > 0) {
-    config.reporters = [
-      ...options.additionalReporters.map(({packageName, resolveFrom}) => ({
-        packageName,
-        resolveFrom,
-      })),
-      ...(config.reporters ?? []),
-    ];
+    if (options.featureFlags.deduplicateReporters) {
+      const reporterMap = new Map<PackageName, AtlaspackPluginNode>();
+
+      options.additionalReporters.forEach(({packageName, resolveFrom}) => {
+        reporterMap.set(packageName, {packageName, resolveFrom});
+      });
+
+      config.reporters?.forEach((reporter) => {
+        if (!reporterMap.has(reporter.packageName)) {
+          reporterMap.set(reporter.packageName, reporter);
+        }
+      });
+
+      config.reporters = Array.from(reporterMap.values());
+    } else {
+      config.reporters = [
+        ...options.additionalReporters.map(({packageName, resolveFrom}) => ({
+          packageName,
+          resolveFrom,
+        })),
+        ...(config.reporters ?? []),
+      ];
+    }
   }
 
   return {config, extendedFiles, usedDefault};
