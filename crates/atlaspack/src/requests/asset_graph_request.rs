@@ -155,6 +155,14 @@ impl AssetGraphBuilder {
     })
   }
 
+  fn replicate_existing_edges(&mut self, existing_dep_id: NodeId, new_dep_id: NodeId) {
+    let existing_edges = self.graph.get_outgoing_neighbors(&existing_dep_id);
+    for edge in existing_edges {
+      self.graph.add_edge(&new_dep_id, &edge);
+      self.propagate_requested_symbols(edge, new_dep_id);
+    }
+  }
+
   fn handle_path_result(&mut self, result: &PathRequestOutput, request_id: u64) {
     let dependency_id = *self
       .request_id_to_dependency_id
@@ -210,13 +218,16 @@ impl AssetGraphBuilder {
       let _ = self
         .request_context
         .queue_request(asset_request, self.sender.clone());
-    } else if let Some(asset_node_id) = self.asset_request_to_asset_id.get(&id) {
-      if !self.graph.has_edge(&dependency_id, asset_node_id) {
-        // We have already completed this AssetRequest so we can connect the
-        // Dependency to the Asset immediately
-        self.graph.add_edge(&dependency_id, asset_node_id);
-        self.propagate_requested_symbols(*asset_node_id, dependency_id);
-      }
+    } else if self.asset_request_to_asset_id.contains_key(&id) {
+      // We also need to handle discovered assets here
+      let previous_dependency_id = self
+        .request_id_to_dependency_id
+        .get(&id)
+        .expect("Missing node index for request id {id}");
+
+      // We have already completed this AssetRequest so we can connect the
+      // Dependency to the Asset immediately
+      self.replicate_existing_edges(*previous_dependency_id, dependency_id);
     } else {
       // The AssetRequest has already been kicked off but is yet to
       // complete. Register this Dependency to be connected once it
@@ -303,10 +314,9 @@ impl AssetGraphBuilder {
     // for this AssetNode to be created
     if let Some(waiting) = self.waiting_asset_requests.remove(&request_id) {
       for dep_id in waiting {
-        if !self.graph.has_edge(&dep_id, &asset_id) {
-          self.graph.add_edge(&dep_id, &asset_id);
-          self.propagate_requested_symbols(asset_id, dep_id);
-        }
+        // If the incoming dependency has been linked to other assets, then
+        // replicate those links for the waiting dependency
+        self.replicate_existing_edges(incoming_dependency_id, dep_id);
       }
     }
   }
@@ -367,7 +377,7 @@ impl AssetGraphBuilder {
         self.graph.add_edge(&dependency_id, &root_asset.1);
       }
 
-      // If the dependency points to a dicovered asset then add the asset using the new
+      // If the dependency points to a discovered asset then add the asset using the new
       // dep as it's parent
       if let Some(AssetWithDependencies {
         asset,
