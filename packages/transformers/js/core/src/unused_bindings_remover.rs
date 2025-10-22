@@ -137,16 +137,91 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
     prop.visit_children_with(self);
   }
 
-  // Mark exported identifiers as used
+  // Mark exported identifiers as used (export { foo })
   fn visit_export_named_specifier(&mut self, spec: &ExportNamedSpecifier) {
     if let ModuleExportName::Ident(ident) = &spec.orig {
       self.used_bindings.insert(ident.to_id());
     }
   }
 
+  // Mark exported declarations as used (export const foo = ...)
+  fn visit_export_decl(&mut self, export: &ExportDecl) {
+    if let Decl::Var(var) = &export.decl {
+      for declarator in &var.decls {
+        self.mark_exported_pat(&declarator.name);
+      }
+    }
+    export.visit_children_with(self);
+  }
+
+  // Mark default exports as used (export default foo)
+  fn visit_export_default_expr(&mut self, export: &ExportDefaultExpr) {
+    if let Expr::Ident(ident) = &*export.expr {
+      self.used_bindings.insert(ident.to_id());
+    }
+    export.visit_children_with(self);
+  }
+
+  // Mark default export declarations as used (export default function foo() {})
+  fn visit_export_default_decl(&mut self, export: &ExportDefaultDecl) {
+    match &export.decl {
+      DefaultDecl::Fn(fn_expr) => {
+        if let Some(ident) = &fn_expr.ident {
+          self.used_bindings.insert(ident.to_id());
+        }
+      }
+      DefaultDecl::Class(class_expr) => {
+        if let Some(ident) = &class_expr.ident {
+          self.used_bindings.insert(ident.to_id());
+        }
+      }
+      DefaultDecl::TsInterfaceDecl(_) => {}
+    }
+    export.visit_children_with(self);
+  }
+
+  // Mark assignments to module.exports or exports.* as keeping those bindings alive
+  fn visit_assign_expr(&mut self, assign: &AssignExpr) {
+    // Always traverse children - this handles all expressions
+    assign.visit_children_with(self);
+  }
+
   // Don't visit patterns (they're declarations, not references)
   fn visit_pat(&mut self, _pat: &Pat) {
     // Skip - patterns are declarations not usages
+  }
+}
+
+impl BindingCollector<'_> {
+  fn mark_exported_pat(&mut self, pat: &Pat) {
+    match pat {
+      Pat::Ident(ident) => {
+        self.used_bindings.insert(ident.id.to_id());
+      }
+      Pat::Array(arr) => {
+        for elem in arr.elems.iter().flatten() {
+          self.mark_exported_pat(elem);
+        }
+      }
+      Pat::Object(obj) => {
+        for prop in &obj.props {
+          match prop {
+            ObjectPatProp::KeyValue(kv) => {
+              self.mark_exported_pat(&kv.value);
+            }
+            ObjectPatProp::Assign(assign) => {
+              self.used_bindings.insert(assign.key.to_id());
+            }
+            ObjectPatProp::Rest(rest) => {
+              self.mark_exported_pat(&rest.arg);
+            }
+          }
+        }
+      }
+      Pat::Rest(rest) => self.mark_exported_pat(&rest.arg),
+      Pat::Assign(assign) => self.mark_exported_pat(&assign.left),
+      _ => {}
+    }
   }
 }
 
@@ -403,6 +478,24 @@ mod tests {
   }
 
   #[test]
+  fn test_keeps_structured_exports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        export const { a, b } = obj;
+        const { unused } = obj;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        export const { a, b } = obj;
+      "#}
+    );
+  }
+
+  #[test]
   fn test_handles_nested_destructuring() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
@@ -519,6 +612,126 @@ mod tests {
         function foo() {
             return x;
         }
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_default_export() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const obj = {};
+        const unused = 1;
+        export default obj;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const obj = {};
+        export default obj;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_default_function_export() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const unused = 1;
+        export default function foo() {}
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        export default function foo() {}
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_preserves_reexports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        export { default as LottiePlayer } from 'lottie-web';
+        const unused = 1;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        export { default as LottiePlayer } from 'lottie-web';
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_object_used_in_member_expressions() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const lottie = {};
+        lottie.play = function() {};
+        lottie.pause = function() {};
+        const unused = 1;
+        export default lottie;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const lottie = {};
+        lottie.play = function() {};
+        lottie.pause = function() {};
+        export default lottie;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_cjs_module_exports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const foo = 1;
+        const unused = 2;
+        module.exports = foo;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const foo = 1;
+        module.exports = foo;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_cjs_property_exports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const bar = 1;
+        const unused = 2;
+        exports.default = bar;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const bar = 1;
+        exports.default = bar;
       "#}
     );
   }
