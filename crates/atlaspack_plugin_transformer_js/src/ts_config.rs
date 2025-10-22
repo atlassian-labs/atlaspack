@@ -56,7 +56,7 @@ impl<'de> Deserialize<'de> for Target {
   }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CompilerOptions {
   pub experimental_decorators: Option<bool>,
