@@ -33,6 +33,11 @@ function getAllFiles(dir: string, baseDir: string = dir): FileInfo[] {
         continue;
       }
 
+      if (entry.name === '.DS_Store') {
+        // Skip .DS_Store files
+        continue;
+      }
+
       if (entry.isDirectory()) {
         files.push(...getAllFiles(fullPath, baseDir));
       } else if (entry.isFile()) {
