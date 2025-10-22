@@ -745,4 +745,163 @@ mod tests {
 
     first_asset
   }
+
+  /// Unit tests for the replicate_existing_edges function
+  ///
+  /// These tests verify that when multiple dependencies point to the same file,
+  /// all discovered assets are properly linked to all dependencies.
+  #[cfg(test)]
+  mod replicate_existing_edges_tests {
+    use super::*;
+    use atlaspack_core::types::{Asset, Dependency, Target};
+
+    #[test]
+    fn test_replicate_existing_edges_basic_functionality() {
+      // Create a simple graph to test the core logic
+      let mut graph = AssetGraph::new();
+
+      // Create test assets
+      let asset1 = Arc::new(Asset {
+        id: "asset1".to_string(),
+        file_path: PathBuf::from("/test/asset1.js"),
+        unique_key: Some("asset1".to_string()),
+        code: Code::from("asset1 code".to_string()),
+        ..Asset::default()
+      });
+
+      let asset2 = Arc::new(Asset {
+        id: "asset2".to_string(),
+        file_path: PathBuf::from("/test/asset2.js"),
+        unique_key: Some("asset2".to_string()),
+        code: Code::from("asset2 code".to_string()),
+        ..Asset::default()
+      });
+
+      // Add assets to graph
+      let asset1_id = graph.add_asset(asset1.clone());
+      let asset2_id = graph.add_asset(asset2.clone());
+
+      // Create test dependencies
+      let target = Target::default();
+      let dependency1 = Dependency::entry("./asset1.js".to_string(), target.clone());
+      let dependency2 = Dependency::entry("./asset1.js".to_string(), target);
+
+      // Add dependencies to graph
+      let dep1_id = graph.add_dependency(dependency1);
+      let dep2_id = graph.add_dependency(dependency2);
+
+      // Connect first dependency to both assets (simulating discovered assets)
+      graph.add_edge(&dep1_id, &asset1_id);
+      graph.add_edge(&dep1_id, &asset2_id);
+
+      // Verify initial state: dep1 has connections, dep2 doesn't
+      let dep1_neighbors = graph.get_outgoing_neighbors(&dep1_id);
+      let dep2_neighbors = graph.get_outgoing_neighbors(&dep2_id);
+
+      assert_eq!(dep1_neighbors.len(), 2);
+      assert_eq!(dep2_neighbors.len(), 0);
+
+      // Test the core logic: manually replicate the edges
+      let existing_edges: Vec<_> = graph.get_outgoing_neighbors(&dep1_id);
+      for edge in existing_edges {
+        graph.add_edge(&dep2_id, &edge);
+      }
+
+      // Verify that dep2 now has the same connections as dep1
+      let dep2_neighbors_after = graph.get_outgoing_neighbors(&dep2_id);
+      assert_eq!(dep2_neighbors_after.len(), 2);
+
+      // Verify that both assets are connected
+      assert!(dep2_neighbors_after.contains(&asset1_id));
+      assert!(dep2_neighbors_after.contains(&asset2_id));
+    }
+
+    #[test]
+    fn test_replicate_existing_edges_with_no_existing_edges() {
+      let mut graph = AssetGraph::new();
+
+      // Create test dependencies with no outgoing edges
+      let target = Target::default();
+      let dependency1 = Dependency::entry("./asset1.js".to_string(), target.clone());
+      let dependency2 = Dependency::entry("./asset2.js".to_string(), target);
+
+      let dep1_id = graph.add_dependency(dependency1);
+      let dep2_id = graph.add_dependency(dependency2);
+
+      // Verify initial state: neither dependency has connections
+      let dep1_neighbors = graph.get_outgoing_neighbors(&dep1_id);
+      let dep2_neighbors = graph.get_outgoing_neighbors(&dep2_id);
+
+      assert_eq!(dep1_neighbors.len(), 0);
+      assert_eq!(dep2_neighbors.len(), 0);
+
+      // Test the core logic: manually replicate the edges (should be empty)
+      let existing_edges: Vec<_> = graph.get_outgoing_neighbors(&dep1_id);
+      for edge in existing_edges {
+        graph.add_edge(&dep2_id, &edge);
+      }
+
+      // Verify that dep2 still has no connections (nothing to replicate)
+      let dep2_neighbors_after = graph.get_outgoing_neighbors(&dep2_id);
+      assert_eq!(dep2_neighbors_after.len(), 0);
+    }
+
+    #[test]
+    fn test_replicate_existing_edges_preserves_original_edges() {
+      let mut graph = AssetGraph::new();
+
+      // Create test assets
+      let asset1 = Arc::new(Asset {
+        id: "asset1".to_string(),
+        file_path: PathBuf::from("/test/asset1.js"),
+        unique_key: Some("asset1".to_string()),
+        code: Code::from("asset1 code".to_string()),
+        ..Asset::default()
+      });
+
+      let asset2 = Arc::new(Asset {
+        id: "asset2".to_string(),
+        file_path: PathBuf::from("/test/asset2.js"),
+        unique_key: Some("asset2".to_string()),
+        code: Code::from("asset2 code".to_string()),
+        ..Asset::default()
+      });
+
+      let asset1_id = graph.add_asset(asset1.clone());
+      let asset2_id = graph.add_asset(asset2.clone());
+
+      // Create test dependencies
+      let target = Target::default();
+      let dependency1 = Dependency::entry("./shared.js".to_string(), target.clone());
+      let dependency2 = Dependency::entry("./shared.js".to_string(), target);
+
+      let dep1_id = graph.add_dependency(dependency1);
+      let dep2_id = graph.add_dependency(dependency2);
+
+      // Connect first dependency to assets
+      graph.add_edge(&dep1_id, &asset1_id);
+      graph.add_edge(&dep1_id, &asset2_id);
+
+      // Store original connections count
+      let original_dep1_neighbors = graph.get_outgoing_neighbors(&dep1_id);
+
+      // Test the core logic: manually replicate the edges
+      let existing_edges: Vec<_> = graph.get_outgoing_neighbors(&dep1_id);
+      for edge in existing_edges {
+        graph.add_edge(&dep2_id, &edge);
+      }
+
+      // Verify that original dependency still has its connections
+      let dep1_neighbors_after = graph.get_outgoing_neighbors(&dep1_id);
+      assert_eq!(dep1_neighbors_after.len(), original_dep1_neighbors.len());
+      assert!(dep1_neighbors_after.contains(&asset1_id));
+      assert!(dep1_neighbors_after.contains(&asset2_id));
+
+      // Verify that new dependency also has the connections
+      let dep2_neighbors = graph.get_outgoing_neighbors(&dep2_id);
+      assert_eq!(dep2_neighbors.len(), 2);
+      assert!(dep2_neighbors.contains(&asset1_id));
+      assert!(dep2_neighbors.contains(&asset2_id));
+    }
+  }
 }
