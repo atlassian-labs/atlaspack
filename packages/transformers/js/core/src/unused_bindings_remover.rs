@@ -180,10 +180,11 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
     export.visit_children_with(self);
   }
 
-  // Mark assignments to module.exports or exports.* as keeping those bindings alive
+  // Handle assignment expressions - only visit the right side (value being assigned)
   fn visit_assign_expr(&mut self, assign: &AssignExpr) {
-    // Always traverse children - this handles all expressions
-    assign.visit_children_with(self);
+    // Only visit right side - left side is assignment target, not a usage
+    assign.right.visit_with(self);
+    // Don't visit left side or call visit_children_with to avoid visiting assignment target
   }
 
   // Don't visit patterns (they're declarations, not references)
@@ -732,6 +733,34 @@ mod tests {
       indoc! {r#"
         const bar = 1;
         exports.default = bar;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_factory_in_iife_pattern() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        (function (global, factory) {
+          module.exports = factory();
+        })(this, (function () {
+          const lottie = {};
+          return lottie;
+        }));
+        const unused = 1;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        (function(global, factory) {
+            module.exports = factory();
+        })(this, function() {
+            const lottie = {};
+            return lottie;
+        });
       "#}
     );
   }
