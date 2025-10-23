@@ -53,6 +53,7 @@ import {
   loadPluginConfig,
   getConfigRequests,
   ConfigRequest,
+  loadPluginSetup,
 } from './requests/ConfigRequest';
 import {
   createDevDependency,
@@ -71,6 +72,7 @@ import invariant from 'assert';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 import SourceMap from '@atlaspack/source-map';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {createBuildCache} from '@atlaspack/build-cache';
 
 type GenerateFunc = (input: UncommittedAsset) => Promise<GenerateOutput>;
 
@@ -92,6 +94,10 @@ export type TransformationResult = {
   invalidations: Invalidations;
   devDepRequests: Array<DevDepRequest | DevDepRequestRef>;
 };
+
+// Global setup config are not file-specific, so we only need to
+// load them once per build.
+const setupConfig = createBuildCache<string, Config>();
 
 export default class Transformation {
   request: TransformationRequest;
@@ -540,12 +546,42 @@ export default class Transformation {
     transformer: LoadedPlugin<Transformer<unknown>>,
     isSource: boolean,
   ): Promise<Config | null | undefined> {
+    // Only load setup config for a transformer once per build.
+    let config = setupConfig.get(transformer.name);
+
+    if (config == null && transformer.plugin.setup != null) {
+      config = createConfig({
+        plugin: transformer.name,
+        searchPath: toProjectPathUnsafe('index'),
+        // Consider project setup config as source
+        isSource: true,
+      });
+
+      await loadPluginSetup(
+        transformer.name,
+        transformer.plugin.setup,
+        config,
+        this.options,
+      );
+
+      setupConfig.set(transformer.name, config);
+    }
+
+    if (config != null) {
+      for (let devDep of config.devDeps) {
+        await this.addDevDependency(devDep);
+      }
+
+      // `loadConfig` is not called for setup configs
+      return config;
+    }
+
     let loadConfig = transformer.plugin.loadConfig;
     if (!loadConfig) {
       return;
     }
 
-    let config = createConfig({
+    config = createConfig({
       plugin: transformer.name,
       isSource,
       // @ts-expect-error TS2322
