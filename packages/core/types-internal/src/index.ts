@@ -1218,25 +1218,41 @@ export type MultiThreadValidator = {
  */
 export type Validator = DedicatedThreadValidator | MultiThreadValidator;
 
+interface TransformerConditions {
+  enabled?: boolean;
+  fileMatch?: string;
+  codeMatch?: Array<string>;
+  origin?: 'source' | 'third-party';
+}
+
+export interface TransformerSetup<Config> {
+  conditions?: TransformerConditions;
+  config?: Config;
+}
+
 /**
  * The methods for a transformer plugin.
  * @section transformer
  */
 export type Transformer<ConfigType> = {
+  setup?(arg1: {
+    options: PluginOptions;
+    config: Config;
+    logger: PluginLogger;
+  }): Async<TransformerSetup<ConfigType>>;
+  /** @deprecated Deprecated in favour of `setup` */
   loadConfig?: (arg1: {
     config: Config;
     options: PluginOptions;
     logger: PluginLogger;
     tracer: PluginTracer;
   }) => Promise<ConfigType> | ConfigType;
-  /** Whether an AST from a previous transformer can be reused (to prevent double-parsing) */
   canReuseAST?: (arg1: {
     ast: AST;
     options: PluginOptions;
     logger: PluginLogger;
     tracer: PluginTracer;
   }) => boolean;
-  /** Parse the contents into an ast */
   parse?: (arg1: {
     asset: Asset;
     config: ConfigType;
@@ -1274,34 +1290,6 @@ export type Transformer<ConfigType> = {
     logger: PluginLogger;
     tracer: PluginTracer;
   }) => Async<GenerateOutput>;
-};
-
-interface TransformerConditions {
-  codeMatches?: Array<string>;
-}
-
-interface TransformerSetup<State> {
-  conditions?: TransformerConditions;
-  state?: State;
-}
-
-/**
- * New transformer API
- * @section transformer
- */
-export type PureTransformer<State> = {
-  setup(arg1: {
-    options: PluginOptions;
-    logger: PluginLogger;
-  }): Async<TransformerSetup<State>>;
-  /** Transform the asset and/or add new assets */
-  transform(arg1: {
-    asset: MutableAsset;
-    state: State;
-    options: PluginOptions;
-    logger: PluginLogger;
-    tracer: PluginTracer;
-  }): Async<Array<TransformerResult | MutableAsset>>;
 };
 
 /**

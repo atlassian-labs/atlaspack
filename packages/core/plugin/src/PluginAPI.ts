@@ -1,6 +1,5 @@
 import type {
   Transformer as TransformerOpts,
-  PureTransformer as PureTransformerOpts,
   Resolver as ResolverOpts,
   Bundler as BundlerOpts,
   Namer as NamerOpts,
@@ -20,14 +19,6 @@ export class Transformer<T = unknown> {
   [CONFIG]: TransformerOpts<T>;
 
   constructor(opts: TransformerOpts<T>) {
-    this[CONFIG] = opts;
-  }
-}
-
-export class PureTransformer<T = unknown> {
-  [CONFIG]: PureTransformerOpts<T>;
-
-  constructor(opts: PureTransformerOpts<T>) {
     this[CONFIG] = opts;
   }
 }
