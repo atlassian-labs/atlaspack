@@ -34,6 +34,7 @@ export class AtlaspackWorker {
   #transformers: Map<string, TransformerState<any>>;
   #fs: FileSystem;
   #packageManager: NodePackageManager;
+  #options: Options | undefined;
 
   constructor() {
     this.#resolvers = new Map();
@@ -43,7 +44,7 @@ export class AtlaspackWorker {
   }
 
   loadPlugin: JsCallable<[LoadPluginOptions], Promise<undefined>> = jsCallable(
-    async ({kind, specifier, resolveFrom, featureFlags}) => {
+    async ({kind, specifier, resolveFrom, featureFlags, options}) => {
       // Use packageManager.require() instead of dynamic import() to support TypeScript plugins
       let resolvedModule = await this.#packageManager.require(
         specifier,
@@ -76,20 +77,22 @@ export class AtlaspackWorker {
         setFeatureFlags(featureFlags);
       }
 
+      if (this.#options == null) {
+        this.#options = {
+          ...options,
+          inputFS: this.#fs,
+          outputFS: this.#fs,
+          packageManager: new NodePackageManager(this.#fs, options.projectRoot),
+          shouldAutoInstall: false,
+        };
+      }
+
       switch (kind) {
         case 'resolver':
           this.#resolvers.set(specifier, {resolver: instance});
           break;
         case 'transformer': {
-          let transformer = instance;
-          let setup = await transformer.setup?.();
-
-          this.#transformers.set(specifier, {
-            transformer,
-            config: setup?.config,
-          });
-
-          return setup;
+          return this.initializeTransformer(instance, specifier);
         }
       }
     },
@@ -99,25 +102,10 @@ export class AtlaspackWorker {
     [RunResolverResolveOptions],
     Promise<RunResolverResolveResult>
   > = jsCallable(
-    async ({
-      key,
-      dependency: napiDependency,
-      specifier,
-      pipeline,
-      pluginOptions,
-    }) => {
+    async ({key, dependency: napiDependency, specifier, pipeline}) => {
       const state = this.#resolvers.get(key);
       if (!state) {
         throw new Error(`Resolver not found: ${key}`);
-      }
-
-      let packageManager = state.packageManager;
-      if (!packageManager) {
-        packageManager = new NodePackageManager(
-          this.#fs,
-          pluginOptions.projectRoot,
-        );
-        state.packageManager = packageManager;
       }
 
       const env = new Environment(napiDependency.env);
@@ -126,26 +114,20 @@ export class AtlaspackWorker {
       const defaultOptions = {
         logger: new PluginLogger(),
         tracer: new PluginTracer(),
-        options: new PluginOptions({
-          ...pluginOptions,
-          packageManager,
-          shouldAutoInstall: false,
-          inputFS: this.#fs,
-          outputFS: this.#fs,
-        }),
+        options: new PluginOptions(this.options),
       } as const;
 
       if (!('config' in state)) {
         // @ts-expect-error TS2345
         state.config = await state.resolver.loadConfig?.({
-          config: new PluginConfig({
-            env,
-            isSource: true,
-            searchPath: specifier,
-            projectRoot: pluginOptions.projectRoot,
-            fs: this.#fs,
-            packageManager,
-          }),
+          config: new PluginConfig(
+            {
+              plugin: key,
+              isSource: true,
+              searchPath: 'index',
+            },
+            this.options,
+          ),
           ...defaultOptions,
         });
       }
@@ -247,15 +229,14 @@ export class AtlaspackWorker {
         }
         // @ts-expect-error TS2345
         config = await transformer.loadConfig({
-          config: new PluginConfig({
-            env,
-            // TODO: Fix this value
-            isSource: innerAsset.isSource,
-            searchPath: innerAsset.filePath,
-            projectRoot: options.projectRoot,
-            fs: this.#fs,
-            packageManager,
-          }),
+          config: new PluginConfig(
+            {
+              plugin: key,
+              isSource: innerAsset.isSource,
+              searchPath: innerAsset.filePath,
+            },
+            this.options,
+          ),
           ...defaultOptions,
         });
       }
@@ -352,6 +333,54 @@ export class AtlaspackWorker {
       ];
     },
   );
+
+  get options() {
+    if (this.#options == null) {
+      throw new Error('Plugin options have not been initialized');
+    }
+    return this.#options;
+  }
+
+  async initializeTransformer(instance: Transformer<any>, specifier: string) {
+    let transformer = instance;
+    let setup, config;
+
+    let packageManager = new NodePackageManager(
+      this.#fs,
+      this.options.projectRoot,
+    );
+
+    if (transformer.setup) {
+      let setup = await transformer.setup({
+        logger: new PluginLogger(),
+        options: new PluginOptions({
+          ...this.options,
+          shouldAutoInstall: false,
+          inputFS: this.#fs,
+          outputFS: this.#fs,
+          packageManager,
+        }),
+        config: new PluginConfig(
+          {
+            plugin: specifier,
+            searchPath: 'index',
+            // Consider project setup config as source
+            isSource: true,
+          },
+          this.options,
+        ),
+      });
+      config = setup?.config;
+    }
+
+    this.#transformers.set(specifier, {
+      transformer,
+      config,
+      packageManager,
+    });
+
+    return setup;
+  }
 }
 
 // Create napi worker and send it back to main thread
@@ -376,11 +405,19 @@ type LoadPluginOptions = {
   specifier: string;
   resolveFrom: string;
   featureFlags?: FeatureFlags;
+  options: RpcPluginOptions;
 };
 
 type RpcPluginOptions = {
   projectRoot: string;
   mode: string;
+};
+
+type Options = RpcPluginOptions & {
+  inputFS: FileSystem;
+  outputFS: FileSystem;
+  packageManager: NodePackageManager;
+  shouldAutoInstall: boolean;
 };
 
 type RunResolverResolveOptions = {
@@ -389,7 +426,6 @@ type RunResolverResolveOptions = {
   dependency: napi.Dependency;
   specifier: FilePath;
   pipeline: string | null | undefined;
-  pluginOptions: RpcPluginOptions;
 };
 
 type RunResolverResolveResult = {
@@ -418,7 +454,6 @@ type RunTransformerTransformOptions = {
   key: string;
   // @ts-expect-error TS2724
   env: napi.Environment;
-  options: RpcPluginOptions;
   // @ts-expect-error TS2694
   asset: napi.Asset;
 };

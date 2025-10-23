@@ -29,11 +29,11 @@ use atlaspack_core::types::*;
 
 use crate::nodejs::conditions::Conditions;
 use crate::nodejs::conditions::SerializableTransformerConditions;
+use crate::nodejs::plugins::load_plugin::LoadPluginKind;
+use crate::nodejs::plugins::load_plugin::LoadPluginOptions;
 
-use super::super::rpc::LoadPluginKind;
-use super::super::rpc::LoadPluginOptions;
 use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
-use super::plugin_options::RpcPluginOptions;
+use super::load_plugin::RpcPluginOptions;
 
 pub mod conditions;
 
@@ -65,11 +65,17 @@ impl NodejsRpcTransformerPlugin {
     plugin_node: &PluginNode,
   ) -> Result<Self, anyhow::Error> {
     let mut set = vec![];
+
     let opts = LoadPluginOptions {
       kind: LoadPluginKind::Transformer,
       specifier: plugin_node.package_name.clone(),
       resolve_from: plugin_node.resolve_from.as_ref().clone(),
       feature_flags: Some(ctx.options.feature_flags.clone()),
+      options: RpcPluginOptions {
+        hmr_options: ctx.options.hmr_options.clone(),
+        project_root: ctx.options.project_root.clone(),
+        mode: ctx.options.mode.clone(),
+      },
     };
 
     for worker in nodejs_workers.all_workers() {

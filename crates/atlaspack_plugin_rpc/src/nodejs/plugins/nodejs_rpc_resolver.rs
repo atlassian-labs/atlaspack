@@ -17,21 +17,17 @@ use atlaspack_core::types::Dependency;
 use serde::{Deserialize, Serialize};
 use tokio::sync::OnceCell;
 
-use super::super::rpc::LoadPluginKind;
-use super::super::rpc::LoadPluginOptions;
-use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
-use super::plugin_options::RpcPluginOptions;
+use crate::nodejs::plugins::load_plugin::LoadPluginKind;
+use crate::nodejs::plugins::load_plugin::LoadPluginOptions;
 
-/// Plugin state once initialized
-struct InitializedState {
-  rpc_plugin_options: RpcPluginOptions,
-}
+use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
+use super::load_plugin::RpcPluginOptions;
 
 pub struct RpcNodejsResolverPlugin {
   nodejs_workers: Arc<NodeJsWorkerCollection>,
   plugin_options: Arc<PluginOptions>,
   plugin_node: Arc<PluginNode>,
-  started: OnceCell<InitializedState>,
+  started: OnceCell<()>,
 }
 
 impl Debug for RpcNodejsResolverPlugin {
@@ -58,28 +54,39 @@ impl RpcNodejsResolverPlugin {
     })
   }
 
-  async fn get_or_init_state(&self) -> anyhow::Result<&InitializedState> {
+  async fn get_or_init_state(&self) -> anyhow::Result<&()> {
     self
       .started
       .get_or_try_init::<anyhow::Error, _, _>(|| async move {
-        self
-          .nodejs_workers
-          .load_plugin(LoadPluginOptions {
-            kind: LoadPluginKind::Resolver,
-            specifier: self.plugin_node.package_name.clone(),
-            #[allow(clippy::needless_borrow)]
-            resolve_from: (&*self.plugin_node.resolve_from).clone(),
-            feature_flags: Some(self.plugin_options.feature_flags.clone()),
-          })
-          .await?;
-
-        Ok(InitializedState {
-          rpc_plugin_options: RpcPluginOptions {
-            hmr_options: None,
+        let opts = LoadPluginOptions {
+          kind: LoadPluginKind::Transformer,
+          specifier: self.plugin_node.package_name.clone(),
+          resolve_from: self.plugin_node.resolve_from.as_ref().clone(),
+          feature_flags: Some(self.plugin_options.feature_flags.clone()),
+          options: RpcPluginOptions {
+            hmr_options: self.plugin_options.hmr_options.clone(),
             project_root: self.plugin_options.project_root.clone(),
             mode: self.plugin_options.mode.clone(),
           },
-        })
+        };
+
+        let mut set = Vec::new();
+
+        for worker in self.nodejs_workers.all_workers() {
+          let opts = opts.clone();
+          set.push(tokio::spawn(async move {
+            worker
+              .load_plugin_fn
+              .call_serde::<LoadPluginOptions, ()>(opts)
+              .await
+          }));
+        }
+
+        while let Some(res) = set.pop() {
+          res.await??;
+        }
+
+        Ok(())
       })
       .await
   }
@@ -96,7 +103,7 @@ impl ResolverPlugin for RpcNodejsResolverPlugin {
   }
 
   async fn resolve(&self, ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
-    let state = self.get_or_init_state().await?;
+    self.get_or_init_state().await?;
 
     self
       .nodejs_workers
@@ -109,7 +116,6 @@ impl ResolverPlugin for RpcNodejsResolverPlugin {
         #[allow(clippy::needless_borrow)]
         specifier: (&*ctx.specifier).to_owned(),
         pipeline: ctx.pipeline.clone(),
-        plugin_options: state.rpc_plugin_options.clone(),
       })
       .await
   }
@@ -122,5 +128,4 @@ pub struct RunResolverResolve {
   pub dependency: Dependency,
   pub specifier: String,
   pub pipeline: Option<String>,
-  pub plugin_options: RpcPluginOptions,
 }

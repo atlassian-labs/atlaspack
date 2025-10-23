@@ -9,7 +9,6 @@ use atlaspack_core::plugin::*;
 
 use super::super::super::RpcWorker;
 use super::super::plugins::*;
-use super::LoadPluginOptions;
 use super::nodejs_rpc_worker::NodejsWorker;
 
 /// NodejsWorkerFarm holds a collection of Nodejs worker threads
@@ -186,20 +185,5 @@ impl NodeJsWorkerCollection {
     }
 
     workers
-  }
-
-  pub async fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
-    let mut set = vec![];
-
-    for worker in self.all_workers() {
-      let opts = opts.clone();
-      set.push(tokio::spawn(async move { worker.load_plugin(opts).await }));
-    }
-
-    while let Some(res) = set.pop() {
-      res.await??;
-    }
-
-    Ok(())
   }
 }

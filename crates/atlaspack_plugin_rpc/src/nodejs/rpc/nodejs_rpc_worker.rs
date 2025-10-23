@@ -1,9 +1,5 @@
-use std::path::PathBuf;
-
-use atlaspack_core::types::FeatureFlags;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use napi::JsObject;
-use serde::{Deserialize, Serialize};
 
 /// NodejsWorker is the connection to a single JavaScript worker thread
 pub struct NodejsWorker {
@@ -22,24 +18,4 @@ impl NodejsWorker {
       transformer_register_fn: bind("runTransformerTransform")?,
     })
   }
-
-  pub async fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
-    self.load_plugin_fn.call_serde(opts).await
-  }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum LoadPluginKind {
-  Resolver,
-  Transformer,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LoadPluginOptions {
-  pub kind: LoadPluginKind,
-  pub specifier: String,
-  pub resolve_from: PathBuf,
-  pub feature_flags: Option<FeatureFlags>,
 }
