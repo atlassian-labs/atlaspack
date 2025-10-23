@@ -95,19 +95,13 @@ export async function ncp(source: FilePath, destination: FilePath) {
   });
 }
 
-/* eslint-disable no-console */
 after(async () => {
   // Spin down the worker farm to stop it from preventing the main process from exiting
-  console.log('Shutting down worker farm...');
   await workerFarm.end();
-  console.log('Worker farm shut down.');
   if (isAtlaspackV3) {
-    console.log('Shutting down N-API worker pool...');
     napiWorkerPool.shutdown();
-    console.log('N-API worker pool shut down.');
   }
 });
-/* eslint-enable no-console */
 
 const chalk = new _chalk.Instance();
 const warning = chalk.keyword('orange');

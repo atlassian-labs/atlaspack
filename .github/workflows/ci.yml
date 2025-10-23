@@ -246,7 +246,7 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
-      - run: ATLASPACK_MOCHA_HANG_DEBUG=true yarn test:integration-ci
+      - run: yarn test:integration-ci
         env:
           ATLASPACK_V3: true
           RUST_BACKTRACE: full
