@@ -2,10 +2,41 @@ use std::collections::{HashMap, HashSet};
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith, VisitWith};
 
+/// Helper function to recursively collect binding identifiers from patterns.
+/// Calls the provided closure for each binding found, passing the identifier and export status.
+fn collect_bindings_from_pat<F>(pat: &Pat, is_exported: bool, f: &mut F)
+where
+  F: FnMut(Id, bool),
+{
+  match pat {
+    Pat::Ident(ident) => f(ident.id.to_id(), is_exported),
+    Pat::Array(arr) => {
+      for elem in arr.elems.iter().flatten() {
+        collect_bindings_from_pat(elem, is_exported, f);
+      }
+    }
+    Pat::Object(obj) => {
+      for prop in &obj.props {
+        match prop {
+          ObjectPatProp::KeyValue(kv) => collect_bindings_from_pat(&kv.value, is_exported, f),
+          ObjectPatProp::Assign(assign) => f(assign.key.to_id(), is_exported),
+          ObjectPatProp::Rest(rest) => collect_bindings_from_pat(&rest.arg, is_exported, f),
+        }
+      }
+    }
+    Pat::Rest(rest) => collect_bindings_from_pat(&rest.arg, is_exported, f),
+    Pat::Assign(assign) => collect_bindings_from_pat(&assign.left, is_exported, f),
+    _ => {}
+  }
+}
+
 /// Transformer that removes unused variable bindings.
 ///
 /// This transform removes variable declarations that are never referenced,
-/// helping to clean up dead code. It handles:
+/// helping to clean up dead code. It uses a multi-pass algorithm to handle
+/// cascading dependencies (e.g., `const a = 1; const b = a;` where neither is used).
+///
+/// It handles:
 /// - Simple variable declarations
 /// - Object destructuring patterns
 /// - Array destructuring patterns
@@ -40,6 +71,7 @@ use swc_core::ecma::visit::{VisitMut, VisitMutWith, VisitWith};
 /// const { a, c: { d, } } = obj;
 /// console.log(a, d);
 /// ```
+#[derive(Default)]
 pub struct UnusedBindingsRemover {
   used_bindings: HashSet<Id>,
   declared_bindings: HashMap<Id, bool>,
@@ -47,10 +79,7 @@ pub struct UnusedBindingsRemover {
 
 impl UnusedBindingsRemover {
   pub fn new() -> Self {
-    Self {
-      used_bindings: HashSet::new(),
-      declared_bindings: HashMap::new(),
-    }
+    Self::default()
   }
 
   fn is_special_ident(name: &str) -> bool {
@@ -63,10 +92,85 @@ impl UnusedBindingsRemover {
 
   fn is_pattern_empty(&self, pat: &Pat) -> bool {
     match pat {
-      Pat::Ident(ident) => !self.used_bindings.contains(&ident.id.to_id()),
+      Pat::Ident(ident) => {
+        let id = ident.id.to_id();
+        !self.used_bindings.contains(&id) && !Self::is_special_ident(&id.0)
+      }
       Pat::Object(obj) => obj.props.is_empty(),
       Pat::Array(arr) => arr.elems.iter().all(Option::is_none),
       _ => false,
+    }
+  }
+
+  fn cleanup_module_items(&self, items: &mut Vec<ModuleItem>) {
+    items.retain(|item| match item {
+      ModuleItem::Stmt(Stmt::Decl(Decl::Var(var))) => !var.decls.is_empty(),
+      ModuleItem::ModuleDecl(ModuleDecl::Import(import)) => !import.specifiers.is_empty(),
+      _ => true,
+    });
+  }
+
+  fn cleanup_empty_var_decls(&self, stmts: &mut Vec<Stmt>) {
+    stmts.retain(|stmt| !matches!(stmt, Stmt::Decl(Decl::Var(var)) if var.decls.is_empty()));
+  }
+
+  fn should_keep_declarator(&self, decl: &VarDeclarator) -> bool {
+    match &decl.name {
+      Pat::Ident(ident) => {
+        let id = ident.id.to_id();
+        self
+          .declared_bindings
+          .get(&id)
+          .is_none_or(|&is_exported| self.should_keep_binding(&id, is_exported))
+      }
+      _ => true,
+    }
+  }
+
+  fn should_keep_import_spec(&self, spec: &ImportSpecifier) -> bool {
+    let id = match spec {
+      ImportSpecifier::Named(named) => &named.local,
+      ImportSpecifier::Default(default) => &default.local,
+      ImportSpecifier::Namespace(ns) => &ns.local,
+    };
+    self.should_keep_binding(&id.to_id(), false)
+  }
+
+  /// Runs multiple passes of unused binding elimination until no more progress can be made.
+  /// Each pass collects declarations, collects usages, then removes unused bindings.
+  fn run_elimination_passes(&mut self, module: &mut Module) {
+    loop {
+      self.declared_bindings.clear();
+      self.used_bindings.clear();
+
+      // Collect declarations
+      module.visit_with(&mut DeclarationCollector::new(&mut self.declared_bindings));
+
+      if self.declared_bindings.is_empty() {
+        break;
+      }
+
+      let declarations_before = self.declared_bindings.len();
+
+      // Collect usages
+      module.visit_with(&mut BindingCollector::new(
+        &mut self.used_bindings,
+        &self.declared_bindings,
+      ));
+
+      // Remove unused bindings
+      module.visit_mut_children_with(self);
+
+      // Clean up empty declarations and imports
+      self.cleanup_module_items(&mut module.body);
+
+      // Check if we made progress
+      self.declared_bindings.clear();
+      module.visit_with(&mut DeclarationCollector::new(&mut self.declared_bindings));
+
+      if self.declared_bindings.len() == declarations_before {
+        break;
+      }
     }
   }
 
@@ -107,13 +211,75 @@ impl UnusedBindingsRemover {
   }
 }
 
+/// Visitor that collects all variable and import declarations.
+struct DeclarationCollector<'a> {
+  declared_bindings: &'a mut HashMap<Id, bool>,
+}
+
+impl<'a> DeclarationCollector<'a> {
+  fn new(declared_bindings: &'a mut HashMap<Id, bool>) -> Self {
+    Self { declared_bindings }
+  }
+}
+
+impl swc_core::ecma::visit::Visit for DeclarationCollector<'_> {
+  // Collect all variable declarations (var, let, const) - NOT function/class declarations
+  fn visit_var_decl(&mut self, var: &VarDecl) {
+    for declarator in &var.decls {
+      self.collect_bindings_from_pat(&declarator.name, false);
+    }
+    // Continue visiting to find nested var decls in initializers (e.g., arrow function bodies)
+    var.visit_children_with(self);
+  }
+
+  // Collect exported variable declarations
+  fn visit_export_decl(&mut self, export: &ExportDecl) {
+    if let Decl::Var(var) = &export.decl {
+      for declarator in &var.decls {
+        self.collect_bindings_from_pat(&declarator.name, true);
+      }
+    }
+    // Continue visiting to find nested var decls
+    export.visit_children_with(self);
+  }
+
+  fn visit_import_decl(&mut self, import: &ImportDecl) {
+    for spec in &import.specifiers {
+      let id = match spec {
+        ImportSpecifier::Named(named) => &named.local,
+        ImportSpecifier::Default(default) => &default.local,
+        ImportSpecifier::Namespace(ns) => &ns.local,
+      };
+      self.declared_bindings.insert(id.to_id(), false);
+    }
+  }
+}
+
+impl DeclarationCollector<'_> {
+  fn collect_bindings_from_pat(&mut self, pat: &Pat, is_exported: bool) {
+    collect_bindings_from_pat(pat, is_exported, &mut |id, is_exp| {
+      self.declared_bindings.insert(id, is_exp);
+    });
+  }
+}
+
+/// Visitor that collects all binding usages/references.
 struct BindingCollector<'a> {
   used_bindings: &'a mut HashSet<Id>,
   declared_bindings: &'a HashMap<Id, bool>,
 }
 
+impl<'a> BindingCollector<'a> {
+  fn new(used_bindings: &'a mut HashSet<Id>, declared_bindings: &'a HashMap<Id, bool>) -> Self {
+    Self {
+      used_bindings,
+      declared_bindings,
+    }
+  }
+}
+
 impl BindingCollector<'_> {
-  fn mark_used(&mut self, id: Id) {
+  fn mark_binding_used(&mut self, id: Id) {
     if self.declared_bindings.contains_key(&id) {
       self.used_bindings.insert(id);
     }
@@ -124,7 +290,7 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
   // Visit expressions to find identifier references
   fn visit_expr(&mut self, expr: &Expr) {
     if let Expr::Ident(ident) = expr {
-      self.mark_used(ident.to_id());
+      self.mark_binding_used(ident.to_id());
     }
     expr.visit_children_with(self);
   }
@@ -132,7 +298,7 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
   // Visit property shorthand: { foo } is a reference to foo
   fn visit_prop(&mut self, prop: &Prop) {
     if let Prop::Shorthand(ident) = prop {
-      self.mark_used(ident.to_id());
+      self.mark_binding_used(ident.to_id());
     }
     prop.visit_children_with(self);
   }
@@ -148,7 +314,7 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
   fn visit_export_decl(&mut self, export: &ExportDecl) {
     if let Decl::Var(var) = &export.decl {
       for declarator in &var.decls {
-        self.mark_exported_pat(&declarator.name);
+        self.mark_bindings_in_pat_as_used(&declarator.name);
       }
     }
     export.visit_children_with(self);
@@ -164,18 +330,13 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
 
   // Mark default export declarations as used (export default function foo() {})
   fn visit_export_default_decl(&mut self, export: &ExportDefaultDecl) {
-    match &export.decl {
-      DefaultDecl::Fn(fn_expr) => {
-        if let Some(ident) = &fn_expr.ident {
-          self.used_bindings.insert(ident.to_id());
-        }
-      }
-      DefaultDecl::Class(class_expr) => {
-        if let Some(ident) = &class_expr.ident {
-          self.used_bindings.insert(ident.to_id());
-        }
-      }
-      DefaultDecl::TsInterfaceDecl(_) => {}
+    let ident = match &export.decl {
+      DefaultDecl::Fn(fn_expr) => fn_expr.ident.as_ref(),
+      DefaultDecl::Class(class_expr) => class_expr.ident.as_ref(),
+      DefaultDecl::TsInterfaceDecl(_) => None,
+    };
+    if let Some(ident) = ident {
+      self.used_bindings.insert(ident.to_id());
     }
     export.visit_children_with(self);
   }
@@ -194,59 +355,16 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
 }
 
 impl BindingCollector<'_> {
-  fn mark_exported_pat(&mut self, pat: &Pat) {
-    match pat {
-      Pat::Ident(ident) => {
-        self.used_bindings.insert(ident.id.to_id());
-      }
-      Pat::Array(arr) => {
-        for elem in arr.elems.iter().flatten() {
-          self.mark_exported_pat(elem);
-        }
-      }
-      Pat::Object(obj) => {
-        for prop in &obj.props {
-          match prop {
-            ObjectPatProp::KeyValue(kv) => {
-              self.mark_exported_pat(&kv.value);
-            }
-            ObjectPatProp::Assign(assign) => {
-              self.used_bindings.insert(assign.key.to_id());
-            }
-            ObjectPatProp::Rest(rest) => {
-              self.mark_exported_pat(&rest.arg);
-            }
-          }
-        }
-      }
-      Pat::Rest(rest) => self.mark_exported_pat(&rest.arg),
-      Pat::Assign(assign) => self.mark_exported_pat(&assign.left),
-      _ => {}
-    }
+  fn mark_bindings_in_pat_as_used(&mut self, pat: &Pat) {
+    collect_bindings_from_pat(pat, true, &mut |id, _| {
+      self.used_bindings.insert(id);
+    });
   }
 }
 
 impl VisitMut for UnusedBindingsRemover {
   fn visit_mut_module(&mut self, module: &mut Module) {
-    // Collect declarations
-    for item in &module.body {
-      self.collect_declarations_from_module_item(item);
-    }
-
-    // Collect usages
-    let mut collector = BindingCollector {
-      used_bindings: &mut self.used_bindings,
-      declared_bindings: &self.declared_bindings,
-    };
-    module.visit_with(&mut collector);
-
-    // Remove unused bindings
-    module.visit_mut_children_with(self);
-
-    // Clean up empty declarations
-    module.body.retain(
-      |item| !matches!(item, ModuleItem::Stmt(Stmt::Decl(Decl::Var(var))) if var.decls.is_empty()),
-    );
+    self.run_elimination_passes(module);
   }
 
   fn visit_mut_var_declarator(&mut self, node: &mut VarDeclarator) {
@@ -256,68 +374,25 @@ impl VisitMut for UnusedBindingsRemover {
 
   fn visit_mut_var_decl(&mut self, node: &mut VarDecl) {
     node.visit_mut_children_with(self);
-
-    node.decls.retain(|decl| match &decl.name {
-      Pat::Object(obj) if obj.props.is_empty() => false,
-      Pat::Array(arr) if arr.elems.iter().all(Option::is_none) => false,
-      Pat::Ident(ident) => {
-        let id = ident.id.to_id();
-        self
-          .declared_bindings
-          .get(&id)
-          .is_none_or(|&is_exported| self.should_keep_binding(&id, is_exported))
-      }
-      _ => true,
-    });
-  }
-}
-
-impl UnusedBindingsRemover {
-  fn collect_declarations_from_module_item(&mut self, item: &ModuleItem) {
-    let (decl, is_exported) = match item {
-      ModuleItem::Stmt(Stmt::Decl(decl)) => (decl, false),
-      ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(export)) => (&export.decl, true),
-      _ => return,
-    };
-
-    if let Decl::Var(var) = decl {
-      for declarator in &var.decls {
-        self.collect_declarations_from_pat(&declarator.name, is_exported);
-      }
-    }
+    node
+      .decls
+      .retain(|decl| !self.is_pattern_empty(&decl.name) && self.should_keep_declarator(decl));
   }
 
-  fn collect_declarations_from_pat(&mut self, pat: &Pat, is_exported: bool) {
-    match pat {
-      Pat::Ident(ident) => {
-        self.declared_bindings.insert(ident.id.to_id(), is_exported);
-      }
-      Pat::Array(arr) => {
-        for elem in arr.elems.iter().flatten() {
-          self.collect_declarations_from_pat(elem, is_exported);
-        }
-      }
-      Pat::Object(obj) => {
-        for prop in &obj.props {
-          match prop {
-            ObjectPatProp::KeyValue(kv) => {
-              self.collect_declarations_from_pat(&kv.value, is_exported);
-            }
-            ObjectPatProp::Assign(assign) => {
-              self
-                .declared_bindings
-                .insert(assign.key.to_id(), is_exported);
-            }
-            ObjectPatProp::Rest(rest) => {
-              self.collect_declarations_from_pat(&rest.arg, is_exported);
-            }
-          }
-        }
-      }
-      Pat::Rest(rest) => self.collect_declarations_from_pat(&rest.arg, is_exported),
-      Pat::Assign(assign) => self.collect_declarations_from_pat(&assign.left, is_exported),
-      _ => {}
-    }
+  fn visit_mut_block_stmt(&mut self, block: &mut BlockStmt) {
+    block.visit_mut_children_with(self);
+    self.cleanup_empty_var_decls(&mut block.stmts);
+  }
+
+  fn visit_mut_stmts(&mut self, stmts: &mut Vec<Stmt>) {
+    stmts.visit_mut_children_with(self);
+    self.cleanup_empty_var_decls(stmts);
+  }
+
+  fn visit_mut_import_decl(&mut self, import: &mut ImportDecl) {
+    import
+      .specifiers
+      .retain(|spec| self.should_keep_import_spec(spec));
   }
 }
 
@@ -425,10 +500,12 @@ mod tests {
   }
 
   #[test]
-  fn test_keeps_react_identifier() {
+  fn test_keeps_special_identifiers() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         const React = require('react');
+        const di = something;
+        const jsx = other;
         const unused = 1;
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
@@ -438,24 +515,8 @@ mod tests {
       output_code,
       indoc! {r#"
         const React = require('react');
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_keeps_di_identifier() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
         const di = something;
-        const unused = 1;
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const di = something;
+        const jsx = other;
       "#}
     );
   }
@@ -757,10 +818,303 @@ mod tests {
       indoc! {r#"
         (function(global, factory) {
             module.exports = factory();
-        })(this, function() {
+        })(this, (function() {
             const lottie = {};
             return lottie;
-        });
+        }));
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_multi_pass_removes_cascading_unused_bindings() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const a = 1;
+        const b = a;
+        const c = b;
+        const d = c;
+        console.log('hello');
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        console.log('hello');
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_multi_pass_partial_chain() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const a = 1;
+        const b = a;
+        const c = b;
+        const d = c;
+        console.log(b);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const a = 1;
+        const b = a;
+        console.log(b);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_removes_unused_in_function() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function foo() {
+          const unused = 1;
+          const used = 2;
+          console.log(used);
+        }
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function foo() {
+            const used = 2;
+            console.log(used);
+        }
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_removes_unused_in_block() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function foo() {
+          {
+            const unused = 42;
+            console.log('hello');
+          }
+        }
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function foo() {
+            {
+                console.log('hello');
+            }
+        }
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_unused_after_used_in_arrow() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const inner = () => {
+          const c = 1;
+          const unusedInner = c;
+          console.log(c);
+        };
+        inner();
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const inner = ()=>{
+            const c = 1;
+            console.log(c);
+        };
+        inner();
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_multi_pass_scopes() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        import used from 'used';
+        import unused from 'unused';
+
+        outer();
+
+        function outer() {
+          const a = 1;
+          const b = a;
+
+          const inner = () => {
+            {
+              const unusedBlockInner = 42;
+              used();
+            }
+
+            const c = b;
+            const unusedInner = c;
+            console.log(c);
+          };
+
+          inner();
+        }
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        import used from 'used';
+        outer();
+        function outer() {
+            const a = 1;
+            const b = a;
+            const inner = ()=>{
+                {
+                    used();
+                }
+                const c = b;
+                console.log(c);
+            };
+            inner();
+        }
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_removes_unused_from_object_rest_pattern() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const { a, ...rest } = obj;
+        console.log(a);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { a } = obj;
+        console.log(a);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_used_object_rest_pattern() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const { a, ...rest } = obj;
+        console.log(rest);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { ...rest } = obj;
+        console.log(rest);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_removes_unused_from_array_rest_pattern() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const [a, ...rest] = arr;
+        console.log(a);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const [a, ...rest] = arr;
+        console.log(a);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_used_array_rest_pattern() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const [a, ...rest] = arr;
+        console.log(rest);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const [, ...rest] = arr;
+        console.log(rest);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_shorthand_property_usage() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const foo = 1;
+        const unused = 2;
+        const obj = { foo };
+        export default obj;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const foo = 1;
+        const obj = {
+            foo
+        };
+        export default obj;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_named_exports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const foo = 1;
+        const bar = 2;
+        const unused = 3;
+        export { foo, bar };
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const foo = 1;
+        const bar = 2;
+        export { foo, bar };
       "#}
     );
   }
