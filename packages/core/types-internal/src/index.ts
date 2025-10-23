@@ -1690,6 +1690,8 @@ export interface BundleGraph<TBundle extends Bundle> {
   isAssetReachableFromBundle(asset: Asset, bundle: Bundle): boolean;
   /** Returns whether an asset is referenced outside the given bundle. */
   isAssetReferenced(bundle: Bundle, asset: Asset): boolean;
+  /** Returns a set of all assets that are referenced outside the given bundle. */
+  getReferencedAssets(bundle: Bundle): Set<Asset>;
   /**
    * Resolves the export `symbol` of `asset` to the source,
    * stopping at the first asset after leaving `bundle`.

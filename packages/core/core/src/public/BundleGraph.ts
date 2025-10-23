@@ -198,6 +198,20 @@ export default class BundleGraph<TBundle extends IBundle>
     );
   }
 
+  getReferencedAssets(bundle: IBundle): Set<IAsset> {
+    let internalReferencedAssets = this.#graph.getReferencedAssets(
+      bundleToInternalBundle(bundle),
+    );
+
+    // Convert internal assets to public assets
+    let publicReferencedAssets = new Set<IAsset>();
+    for (let internalAsset of internalReferencedAssets) {
+      publicReferencedAssets.add(assetFromValue(internalAsset, this.#options));
+    }
+
+    return publicReferencedAssets;
+  }
+
   hasParentBundleOfType(bundle: IBundle, type: string): boolean {
     return this.#graph.hasParentBundleOfType(
       bundleToInternalBundle(bundle),
