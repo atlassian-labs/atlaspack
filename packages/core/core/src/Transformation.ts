@@ -46,7 +46,6 @@ import UncommittedAsset from './UncommittedAsset';
 import {createAsset} from './assetUtils';
 import summarizeRequest from './summarizeRequest';
 import PluginOptions from './public/PluginOptions';
-import {fromEnvironmentId} from './EnvironmentManager';
 import {optionsProxy} from './utils';
 import {createConfig} from './InternalConfig';
 import {

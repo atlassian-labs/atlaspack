@@ -6,57 +6,24 @@ import type {
   FileCreateInvalidation,
   ConfigResultWithFilePath,
   PackageJSON,
-  PackageManager as IPackageManager,
 } from '@atlaspack/types';
 
-import type {FileSystem as IFileSystem} from '@atlaspack/fs';
 import ClassicPublicConfig from '../../../public/Config';
-
-export type PluginConfigOptions = {
-  isSource: boolean;
-  searchPath: FilePath;
-  projectRoot: FilePath;
-  env: Environment;
-  fs: IFileSystem;
-  packageManager: IPackageManager;
-};
+import {type ConfigOpts, createConfig} from '../../../InternalConfig';
 
 export class PluginConfig implements IPluginConfig {
   isSource: boolean;
   searchPath: FilePath;
   // @ts-expect-error TS2564
-  #projectRoot: FilePath;
   env: Environment;
   #inner: ClassicPublicConfig;
 
-  constructor({
-    env,
-    isSource,
-    searchPath,
-    projectRoot,
-    fs,
-    packageManager,
-  }: PluginConfigOptions) {
-    this.env = env;
-    this.isSource = isSource;
-    this.searchPath = searchPath;
+  constructor(configOpts: ConfigOpts, options: any) {
+    let internalConfig = createConfig(configOpts);
 
-    this.#inner = new ClassicPublicConfig(
-      // @ts-expect-error TS2345
-      {
-        invalidateOnConfigKeyChange: [],
-        invalidateOnFileCreate: [],
-        invalidateOnFileChange: new Set(),
-        devDeps: [],
-        searchPath: searchPath.replace(projectRoot + '/', ''),
-      },
-      {
-        projectRoot,
-        inputFS: fs,
-        outputFS: fs,
-        packageManager,
-      },
-    );
+    this.isSource = internalConfig.isSource;
+    this.searchPath = internalConfig.searchPath;
+    this.#inner = new ClassicPublicConfig(internalConfig, options);
   }
 
   // eslint-disable-next-line no-unused-vars
