@@ -6,6 +6,7 @@ import type {
   PluginTracer as IPluginTracer,
   NamedBundle as INamedBundle,
   BundleGraph as IBundleGraph,
+  TransformerSetup,
 } from '@atlaspack/types';
 import {readConfig, hashObject} from '@atlaspack/utils';
 import type {
@@ -28,6 +29,13 @@ import {hashString, Hash} from '@atlaspack/rust';
 import {PluginTracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 import {fromProjectPath, fromProjectPathRelative} from '../projectPath';
+
+type Setup<T> = (arg1: {
+  config: IConfig;
+  options: IPluginOptions;
+  logger: IPluginLogger;
+  tracer: IPluginTracer;
+}) => Async<TransformerSetup<T>>;
 
 export type PluginWithLoadConfig = {
   loadConfig?: (arg1: {
@@ -99,6 +107,37 @@ export async function loadPluginConfig<T extends PluginWithLoadConfig>(
     throw new ThrowableDiagnostic({
       diagnostic: errorToDiagnostic(e, {
         origin: loadedPlugin.name,
+      }),
+    });
+  }
+}
+
+export async function loadPluginSetup<T>(
+  pluginName: string,
+  setup: Setup<T>,
+  config: Config,
+  options: AtlaspackOptions,
+): Promise<void> {
+  try {
+    let result = await setup({
+      config: new PublicConfig(config, options),
+      options: new PluginOptions(
+        optionsProxy(options, (option) => {
+          config.invalidateOnOptionChange.add(option);
+        }),
+      ),
+      logger: new PluginLogger({origin: pluginName}),
+      tracer: new PluginTracer({
+        origin: pluginName,
+        category: 'setup',
+      }),
+    });
+
+    config.result = result.config;
+  } catch (e: any) {
+    throw new ThrowableDiagnostic({
+      diagnostic: errorToDiagnostic(e, {
+        origin: pluginName,
       }),
     });
   }
