@@ -131,6 +131,11 @@ export class ScopeHoistingPackager {
   useBothScopeHoistingImprovements: boolean =
     getFeatureFlag('applyScopeHoistingImprovementV2') ||
     getFeatureFlag('applyScopeHoistingImprovement');
+  referencedAssetsCache: Map<string, Set<Asset>> | null = getFeatureFlag(
+    'precomputeReferencedAssets',
+  )
+    ? new Map()
+    : null;
 
   constructor(
     options: PluginOptions,
@@ -412,6 +417,26 @@ export class ScopeHoistingPackager {
     return `$parcel$global.rwr(${params.join(', ')});`;
   }
 
+  // Helper to check if an asset is referenced, with lazy caching when feature flag is enabled
+  isAssetReferencedInBundle(bundle: NamedBundle, asset: Asset): boolean {
+    if (this.referencedAssetsCache !== null) {
+      // Feature flag is enabled, use cached approach
+      let bundleId = bundle.id;
+
+      let referencedAssets = this.referencedAssetsCache.get(bundleId);
+      if (!referencedAssets) {
+        // Lazy compute and cache for this bundle
+        referencedAssets = this.bundleGraph.getReferencedAssets(bundle);
+        this.referencedAssetsCache.set(bundleId, referencedAssets);
+      }
+
+      return referencedAssets!.has(asset);
+    } else {
+      // Feature flag is disabled, use original method
+      return this.bundleGraph.isAssetReferenced(bundle, asset);
+    }
+  }
+
   async loadAssets() {
     type QueueItem = [Asset, {code: string; map: Buffer | undefined | null}];
     let queue = new PromiseQueue<QueueItem>({
@@ -431,7 +456,7 @@ export class ScopeHoistingPackager {
       if (
         asset.meta.shouldWrap ||
         this.bundle.env.sourceType === 'script' ||
-        this.bundleGraph.isAssetReferenced(this.bundle, asset) ||
+        this.isAssetReferencedInBundle(this.bundle, asset) ||
         this.bundleGraph
           .getIncomingDependencies(asset)
           .some((dep) => dep.meta.shouldWrap && dep.specifierType !== 'url')
@@ -993,7 +1018,7 @@ ${code}
           referencedBundle &&
           referencedBundle.getMainEntry() === resolved &&
           referencedBundle.type === 'js' &&
-          !this.bundleGraph.isAssetReferenced(referencedBundle, resolved)
+          !this.isAssetReferencedInBundle(referencedBundle, resolved)
         ) {
           this.addExternal(dep, replacements, referencedBundle);
           this.externalAssets.add(resolved);
@@ -1792,7 +1817,7 @@ ${code}
     return (
       asset.sideEffects === false &&
       nullthrows(this.bundleGraph.getUsedSymbols(asset)).size == 0 &&
-      !this.bundleGraph.isAssetReferenced(this.bundle, asset)
+      !this.isAssetReferencedInBundle(this.bundle, asset)
     );
   }
 

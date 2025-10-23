@@ -326,6 +326,16 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-11-05
    */
   nestedPromiseImportFix: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Precompute referenced assets in bundles to avoid repeated traversals
+   * during scope hoisting packaging. This optimization caches which assets
+   * are referenced in a bundle, reducing O(N*M) calls to O(1).
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-10-24
+   */
+  precomputeReferencedAssets: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
