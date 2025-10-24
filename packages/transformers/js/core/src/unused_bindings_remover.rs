@@ -341,7 +341,7 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
     export.visit_children_with(self);
   }
 
-  // Handle assignment expressions - only visit the right side (value being assigned)
+  // Handle assignment expressions - visit both sides appropriately
   fn visit_assign_expr(&mut self, assign: &AssignExpr) {
     // For member expressions like obj.prop = value or obj[key] = value,
     // visit the entire member expression (obj and computed key if present)
@@ -363,8 +363,26 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
   }
 
   // Don't visit patterns (they're declarations, not references)
-  fn visit_pat(&mut self, _pat: &Pat) {
-    // Skip - patterns are declarations not usages
+  // But we need to visit default values in patterns
+  fn visit_pat(&mut self, pat: &Pat) {
+    match pat {
+      Pat::Assign(assign) => {
+        // Visit the default value (right side) to collect any usages within it
+        assign.right.visit_with(self);
+      }
+      Pat::Object(obj) => {
+        // Visit default values in object pattern properties
+        for prop in &obj.props {
+          if let ObjectPatProp::Assign(assign) = prop {
+            if let Some(value) = &assign.value {
+              value.visit_with(self);
+            }
+          }
+        }
+      }
+      _ => {}
+    }
+    // Don't visit other children - patterns themselves are declarations not usages
   }
 }
 
@@ -1333,6 +1351,125 @@ mod tests {
       indoc! {r#"
         const used = 2;
         console.log(used);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_compound_assignment_operator() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        let count = 0;
+        count += 1;
+        console.log(count);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        let count = 0;
+        count += 1;
+        console.log(count);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_increment_operator() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        let i = 0;
+        i++;
+        console.log(i);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        let i = 0;
+        i++;
+        console.log(i);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_compound_assignment_in_function() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function foo() {
+            let count = 0;
+            count += 1;
+            console.log(count);
+        }
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function foo() {
+            let count = 0;
+            count += 1;
+            console.log(count);
+        }
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_var_in_auto_function() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        (function() {
+            var count = 0;
+            if (true) {count = 1;}
+            console.log(count);
+        })();
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        (function() {
+            var count = 0;
+            if (true) {count = 1;}
+            console.log(count);
+        })();
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_var_in_destructured_function_default() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const { func = function() {
+            let count = 0;
+            count += 1;
+            console.log(count);
+        } } = options;
+        func();
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { func = function() {
+            let count = 0;
+            count += 1;
+            console.log(count);
+        } } = options;
+        func();
       "#}
     );
   }
