@@ -238,28 +238,13 @@ export function getAssetGraph(serializedGraph: any): {
 
     if (fromNode?.type === 'dependency') {
       invariant(toNode?.type === 'asset');
-
-      // For backwards compatibility, create asset group node if needed.
-      let assetGroupNode = nodeFromAssetGroup({
-        filePath: toNode.value.filePath,
-        env: fromNode.value.env,
-        pipeline: toNode.value.pipeline,
-        sideEffects: Boolean(toNode.value.sideEffects),
-      });
-
-      let index = graph.addNodeByContentKeyIfNeeded(
-        assetGroupNode.id,
-        assetGroupNode,
-      );
-
-      graph.addEdge(from, index);
-      graph.addEdge(index, to);
-    } else if (fromNode?.type === 'asset' && toNode?.type === 'dependency') {
-      fromNode.value.dependencies.set(toNode.value.id, toNode.value);
-      graph.addEdge(from, to);
-    } else {
-      graph.addEdge(from, to);
     }
+
+    if (fromNode?.type === 'asset' && toNode?.type === 'dependency') {
+      fromNode.value.dependencies.set(toNode.value.id, toNode.value);
+    }
+
+    graph.addEdge(from, to);
   }
 
   return {

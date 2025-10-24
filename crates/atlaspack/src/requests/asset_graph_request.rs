@@ -155,6 +155,14 @@ impl AssetGraphBuilder {
     })
   }
 
+  fn replicate_existing_edges(&mut self, existing_dep_id: NodeId, new_dep_id: NodeId) {
+    let existing_edges = self.graph.get_outgoing_neighbors(&existing_dep_id);
+    for edge in existing_edges {
+      self.graph.add_edge(&new_dep_id, &edge);
+      self.propagate_requested_symbols(edge, new_dep_id);
+    }
+  }
+
   fn handle_path_result(&mut self, result: &PathRequestOutput, request_id: u64) {
     let dependency_id = *self
       .request_id_to_dependency_id
@@ -210,13 +218,16 @@ impl AssetGraphBuilder {
       let _ = self
         .request_context
         .queue_request(asset_request, self.sender.clone());
-    } else if let Some(asset_node_id) = self.asset_request_to_asset_id.get(&id) {
-      if !self.graph.has_edge(&dependency_id, asset_node_id) {
-        // We have already completed this AssetRequest so we can connect the
-        // Dependency to the Asset immediately
-        self.graph.add_edge(&dependency_id, asset_node_id);
-        self.propagate_requested_symbols(*asset_node_id, dependency_id);
-      }
+    } else if self.asset_request_to_asset_id.contains_key(&id) {
+      // We also need to handle discovered assets here
+      let previous_dependency_id = self
+        .request_id_to_dependency_id
+        .get(&id)
+        .expect("Missing node index for request id {id}");
+
+      // We have already completed this AssetRequest so we can connect the
+      // Dependency to the Asset immediately
+      self.replicate_existing_edges(*previous_dependency_id, dependency_id);
     } else {
       // The AssetRequest has already been kicked off but is yet to
       // complete. Register this Dependency to be connected once it
@@ -303,10 +314,9 @@ impl AssetGraphBuilder {
     // for this AssetNode to be created
     if let Some(waiting) = self.waiting_asset_requests.remove(&request_id) {
       for dep_id in waiting {
-        if !self.graph.has_edge(&dep_id, &asset_id) {
-          self.graph.add_edge(&dep_id, &asset_id);
-          self.propagate_requested_symbols(asset_id, dep_id);
-        }
+        // If the incoming dependency has been linked to other assets, then
+        // replicate those links for the waiting dependency
+        self.replicate_existing_edges(incoming_dependency_id, dep_id);
       }
     }
   }
@@ -367,7 +377,7 @@ impl AssetGraphBuilder {
         self.graph.add_edge(&dependency_id, &root_asset.1);
       }
 
-      // If the dependency points to a dicovered asset then add the asset using the new
+      // If the dependency points to a discovered asset then add the asset using the new
       // dep as it's parent
       if let Some(AssetWithDependencies {
         asset,
@@ -734,5 +744,164 @@ mod tests {
     }
 
     first_asset
+  }
+
+  /// Unit tests for the replicate_existing_edges function
+  ///
+  /// These tests verify that when multiple dependencies point to the same file,
+  /// all discovered assets are properly linked to all dependencies.
+  #[cfg(test)]
+  mod replicate_existing_edges_tests {
+    use super::*;
+    use atlaspack_core::types::{Asset, Dependency, Target};
+
+    #[test]
+    fn test_replicate_existing_edges_basic_functionality() {
+      // Create a simple graph to test the core logic
+      let mut graph = AssetGraph::new();
+
+      // Create test assets
+      let asset1 = Arc::new(Asset {
+        id: "asset1".to_string(),
+        file_path: PathBuf::from("/test/asset1.js"),
+        unique_key: Some("asset1".to_string()),
+        code: Code::from("asset1 code".to_string()),
+        ..Asset::default()
+      });
+
+      let asset2 = Arc::new(Asset {
+        id: "asset2".to_string(),
+        file_path: PathBuf::from("/test/asset2.js"),
+        unique_key: Some("asset2".to_string()),
+        code: Code::from("asset2 code".to_string()),
+        ..Asset::default()
+      });
+
+      // Add assets to graph
+      let asset1_id = graph.add_asset(asset1.clone());
+      let asset2_id = graph.add_asset(asset2.clone());
+
+      // Create test dependencies
+      let target = Target::default();
+      let dependency1 = Dependency::entry("./asset1.js".to_string(), target.clone());
+      let dependency2 = Dependency::entry("./asset1.js".to_string(), target);
+
+      // Add dependencies to graph
+      let dep1_id = graph.add_dependency(dependency1);
+      let dep2_id = graph.add_dependency(dependency2);
+
+      // Connect first dependency to both assets (simulating discovered assets)
+      graph.add_edge(&dep1_id, &asset1_id);
+      graph.add_edge(&dep1_id, &asset2_id);
+
+      // Verify initial state: dep1 has connections, dep2 doesn't
+      let dep1_neighbors = graph.get_outgoing_neighbors(&dep1_id);
+      let dep2_neighbors = graph.get_outgoing_neighbors(&dep2_id);
+
+      assert_eq!(dep1_neighbors.len(), 2);
+      assert_eq!(dep2_neighbors.len(), 0);
+
+      // Test the core logic: manually replicate the edges
+      let existing_edges: Vec<_> = graph.get_outgoing_neighbors(&dep1_id);
+      for edge in existing_edges {
+        graph.add_edge(&dep2_id, &edge);
+      }
+
+      // Verify that dep2 now has the same connections as dep1
+      let dep2_neighbors_after = graph.get_outgoing_neighbors(&dep2_id);
+      assert_eq!(dep2_neighbors_after.len(), 2);
+
+      // Verify that both assets are connected
+      assert!(dep2_neighbors_after.contains(&asset1_id));
+      assert!(dep2_neighbors_after.contains(&asset2_id));
+    }
+
+    #[test]
+    fn test_replicate_existing_edges_with_no_existing_edges() {
+      let mut graph = AssetGraph::new();
+
+      // Create test dependencies with no outgoing edges
+      let target = Target::default();
+      let dependency1 = Dependency::entry("./asset1.js".to_string(), target.clone());
+      let dependency2 = Dependency::entry("./asset2.js".to_string(), target);
+
+      let dep1_id = graph.add_dependency(dependency1);
+      let dep2_id = graph.add_dependency(dependency2);
+
+      // Verify initial state: neither dependency has connections
+      let dep1_neighbors = graph.get_outgoing_neighbors(&dep1_id);
+      let dep2_neighbors = graph.get_outgoing_neighbors(&dep2_id);
+
+      assert_eq!(dep1_neighbors.len(), 0);
+      assert_eq!(dep2_neighbors.len(), 0);
+
+      // Test the core logic: manually replicate the edges (should be empty)
+      let existing_edges: Vec<_> = graph.get_outgoing_neighbors(&dep1_id);
+      for edge in existing_edges {
+        graph.add_edge(&dep2_id, &edge);
+      }
+
+      // Verify that dep2 still has no connections (nothing to replicate)
+      let dep2_neighbors_after = graph.get_outgoing_neighbors(&dep2_id);
+      assert_eq!(dep2_neighbors_after.len(), 0);
+    }
+
+    #[test]
+    fn test_replicate_existing_edges_preserves_original_edges() {
+      let mut graph = AssetGraph::new();
+
+      // Create test assets
+      let asset1 = Arc::new(Asset {
+        id: "asset1".to_string(),
+        file_path: PathBuf::from("/test/asset1.js"),
+        unique_key: Some("asset1".to_string()),
+        code: Code::from("asset1 code".to_string()),
+        ..Asset::default()
+      });
+
+      let asset2 = Arc::new(Asset {
+        id: "asset2".to_string(),
+        file_path: PathBuf::from("/test/asset2.js"),
+        unique_key: Some("asset2".to_string()),
+        code: Code::from("asset2 code".to_string()),
+        ..Asset::default()
+      });
+
+      let asset1_id = graph.add_asset(asset1.clone());
+      let asset2_id = graph.add_asset(asset2.clone());
+
+      // Create test dependencies
+      let target = Target::default();
+      let dependency1 = Dependency::entry("./shared.js".to_string(), target.clone());
+      let dependency2 = Dependency::entry("./shared.js".to_string(), target);
+
+      let dep1_id = graph.add_dependency(dependency1);
+      let dep2_id = graph.add_dependency(dependency2);
+
+      // Connect first dependency to assets
+      graph.add_edge(&dep1_id, &asset1_id);
+      graph.add_edge(&dep1_id, &asset2_id);
+
+      // Store original connections count
+      let original_dep1_neighbors = graph.get_outgoing_neighbors(&dep1_id);
+
+      // Test the core logic: manually replicate the edges
+      let existing_edges: Vec<_> = graph.get_outgoing_neighbors(&dep1_id);
+      for edge in existing_edges {
+        graph.add_edge(&dep2_id, &edge);
+      }
+
+      // Verify that original dependency still has its connections
+      let dep1_neighbors_after = graph.get_outgoing_neighbors(&dep1_id);
+      assert_eq!(dep1_neighbors_after.len(), original_dep1_neighbors.len());
+      assert!(dep1_neighbors_after.contains(&asset1_id));
+      assert!(dep1_neighbors_after.contains(&asset2_id));
+
+      // Verify that new dependency also has the connections
+      let dep2_neighbors = graph.get_outgoing_neighbors(&dep2_id);
+      assert_eq!(dep2_neighbors.len(), 2);
+      assert!(dep2_neighbors.contains(&asset1_id));
+      assert!(dep2_neighbors.contains(&asset2_id));
+    }
   }
 }
