@@ -253,7 +253,7 @@ impl AssetGraphBuilder {
   }
 
   fn handle_entry_result(&mut self, result: &EntryRequestOutput) {
-    let EntryRequestOutput { entries } = result;
+    let EntryRequestOutput { entries, .. } = result;
     for entry in entries {
       let target_request = TargetRequest {
         default_target_options: self.request_context.options.default_target_options.clone(),
