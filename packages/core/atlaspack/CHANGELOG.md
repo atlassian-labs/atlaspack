@@ -1,5 +1,106 @@
 # atlaspack
 
+## 2.0.20
+
+### Patch Changes
+
+- Updated dependencies [[`02f6aa1`](https://github.com/atlassian-labs/atlaspack/commit/02f6aa1906953fc184d2b49c905c2ef815cb878d), [`58527ee`](https://github.com/atlassian-labs/atlaspack/commit/58527eec15c1aebaaadbeb63586f3082c16beae3), [`525898e`](https://github.com/atlassian-labs/atlaspack/commit/525898e33cc229a4bc938ae853732be36d20c01a), [`9cd9521`](https://github.com/atlassian-labs/atlaspack/commit/9cd9521978f783046e2ae4ce78f2de7aeb07d073), [`cfb39a0`](https://github.com/atlassian-labs/atlaspack/commit/cfb39a0d729eb620cf2ca1611750a2bf7a080d08), [`d0c7bea`](https://github.com/atlassian-labs/atlaspack/commit/d0c7bea04458255b4c5d4299600e734b5f919fe1), [`1086c6a`](https://github.com/atlassian-labs/atlaspack/commit/1086c6a2c59271b63b3fb78e6acdb9d3a0dbf354), [`9cd9521`](https://github.com/atlassian-labs/atlaspack/commit/9cd9521978f783046e2ae4ce78f2de7aeb07d073), [`1086c6a`](https://github.com/atlassian-labs/atlaspack/commit/1086c6a2c59271b63b3fb78e6acdb9d3a0dbf354), [`5776be2`](https://github.com/atlassian-labs/atlaspack/commit/5776be21f70a3f2b9471ba33da3ba1a883f21f1a)]:
+  - @atlaspack/rust@3.9.0
+  - @atlaspack/transformer-js@7.1.0
+  - @atlaspack/feature-flags@2.26.0
+  - @atlaspack/core@2.26.1
+  - @atlaspack/utils@3.1.0
+  - @atlaspack/bundler-default@3.4.8
+  - @atlaspack/packager-js@2.23.6
+  - @atlaspack/cache@3.2.31
+  - @atlaspack/fs@2.15.31
+  - @atlaspack/logger@2.14.28
+  - @atlaspack/optimizer-image@7.0.1
+  - @atlaspack/optimizer-inline-requires@2.14.36
+  - @atlaspack/transformer-html@2.15.13
+  - @atlaspack/transformer-postcss@2.14.36
+  - @atlaspack/transformer-svg@2.14.36
+  - @atlaspack/node-resolver-core@3.7.7
+  - @atlaspack/config-default@7.0.1
+  - @atlaspack/cli@2.14.15
+  - @atlaspack/graph@3.5.25
+  - @atlaspack/types-internal@2.20.6
+  - @atlaspack/packager-html@2.15.18
+  - @atlaspack/reporter-cli@2.17.18
+  - @atlaspack/reporter-conditional-manifest@2.15.18
+  - @atlaspack/runtime-js@2.19.3
+  - @atlaspack/runtime-react-refresh@2.15.12
+  - @atlaspack/transformer-css@2.14.36
+  - @atlaspack/transformer-react-refresh-wrap@2.15.12
+  - @atlaspack/config-webextension@7.0.1
+  - @atlaspack/reporter-bundle-stats@2.14.37
+  - @atlaspack/transformer-image@7.0.1
+  - @atlaspack/package-manager@2.14.36
+  - @atlaspack/workers@2.14.36
+  - @atlaspack/optimizer-blob-url@2.14.36
+  - @atlaspack/optimizer-css@2.14.36
+  - @atlaspack/optimizer-data-url@2.14.36
+  - @atlaspack/optimizer-svgo@2.14.36
+  - @atlaspack/optimizer-swc@2.14.36
+  - @atlaspack/optimizer-terser@2.14.36
+  - @atlaspack/packager-css@2.14.36
+  - @atlaspack/packager-raw-url@2.14.36
+  - @atlaspack/packager-svg@2.14.36
+  - @atlaspack/packager-webextension@2.14.36
+  - @atlaspack/packager-xml@2.14.36
+  - @atlaspack/reporter-build-metrics@2.14.36
+  - @atlaspack/reporter-bundle-analyzer@2.14.36
+  - @atlaspack/reporter-dev-server@2.14.36
+  - @atlaspack/reporter-json@2.14.36
+  - @atlaspack/reporter-lsp@2.14.36
+  - @atlaspack/reporter-sourcemap-visualiser@2.14.36
+  - @atlaspack/reporter-tracer@2.14.36
+  - @atlaspack/resolver-glob@2.14.36
+  - @atlaspack/runtime-browser-hmr@2.14.36
+  - @atlaspack/runtime-service-worker@2.14.36
+  - @atlaspack/runtime-webextension@2.14.36
+  - @atlaspack/transformer-babel@2.14.36
+  - @atlaspack/transformer-posthtml@2.14.36
+  - @atlaspack/transformer-typescript-types@2.14.36
+  - @atlaspack/transformer-webextension@2.14.36
+  - @atlaspack/transformer-webmanifest@2.14.36
+  - @atlaspack/watcher-watchman-js@2.14.36
+  - @atlaspack/validator-eslint@2.14.36
+  - @atlaspack/validator-typescript@2.14.36
+  - @atlaspack/resolver-default@2.14.36
+  - @atlaspack/codeframe@2.13.18
+  - @atlaspack/plugin@2.14.36
+  - @atlaspack/profiler@2.14.33
+  - @atlaspack/types@2.15.26
+  - @atlaspack/reporter-bundle-buddy@2.14.36
+  - @atlaspack/transformer-less@2.14.36
+  - @atlaspack/transformer-xml@2.14.36
+  - @atlaspack/bundler-library@2.12.38
+  - @atlaspack/compressor-brotli@2.13.38
+  - @atlaspack/compressor-gzip@2.13.38
+  - @atlaspack/compressor-raw@2.13.38
+  - @atlaspack/namer-default@2.14.36
+  - @atlaspack/optimizer-cssnano@2.14.36
+  - @atlaspack/optimizer-htmlnano@2.14.36
+  - @atlaspack/packager-raw@2.14.36
+  - @atlaspack/packager-ts@2.14.36
+  - @atlaspack/packager-wasm@2.14.36
+  - @atlaspack/transformer-glsl@2.14.36
+  - @atlaspack/transformer-graphql@2.14.36
+  - @atlaspack/transformer-inline@2.14.36
+  - @atlaspack/transformer-inline-string@2.14.36
+  - @atlaspack/transformer-json@2.14.36
+  - @atlaspack/transformer-jsonld@2.14.36
+  - @atlaspack/transformer-mdx@2.14.36
+  - @atlaspack/transformer-pug@2.14.36
+  - @atlaspack/transformer-raw@2.14.36
+  - @atlaspack/transformer-sass@2.14.36
+  - @atlaspack/transformer-svg-react@2.14.36
+  - @atlaspack/transformer-toml@2.14.36
+  - @atlaspack/transformer-typescript-tsc@2.14.36
+  - @atlaspack/transformer-worklet@2.14.36
+  - @atlaspack/transformer-yaml@2.14.36
+
 ## 2.0.19
 
 ### Patch Changes
