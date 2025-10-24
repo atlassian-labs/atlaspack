@@ -959,7 +959,7 @@ mod tests {
       assert_eq!(
         targets.map_err(to_deterministic_error),
         Err(format!(
-          "data did not match any variant of untagged enum BuiltInTargetDescriptor at line \\d column \\d in {}",
+          "Error parsing {}: data did not match any variant of untagged enum BuiltInTargetDescriptor at line \\d column \\d",
           package_dir().join("package.json").display()
         ))
       );
@@ -979,9 +979,9 @@ mod tests {
       assert_eq!(
         targets.map_err(to_deterministic_error),
         Err(format!(
-          "Unexpected file type \"main.rs\" in \"{}\" target at line \\d column \\d in {}",
-          builtin_target,
-          package_dir().join("package.json").display()
+          "Error parsing {}: Unexpected file type \"main.rs\" in \"{}\" target at line \\d column \\d",
+          package_dir().join("package.json").display(),
+          builtin_target
         ))
       );
     }
@@ -1006,9 +1006,9 @@ mod tests {
       assert_eq!(
         targets.map_err(to_deterministic_error),
         Err(format!(
-          "The \"global\" output format is not supported in the {} target at line \\d column \\d in {}",
-          builtin_target,
-          package_dir().join("package.json").display()
+          "Error parsing {}: The \"global\" output format is not supported in the {} target at line \\d column \\d",
+          package_dir().join("package.json").display(),
+          builtin_target
         ))
       );
     }
@@ -1070,9 +1070,9 @@ mod tests {
       assert_eq!(
         targets.map_err(to_deterministic_error),
         Err(format!(
-          "Scope hoisting cannot be disabled for \"{}\" library target at line \\d column \\d in {}",
-          name,
-          package_dir().join("package.json").display()
+          "Error parsing {}: Scope hoisting cannot be disabled for \"{}\" library target at line \\d column \\d",
+          package_dir().join("package.json").display(),
+          name
         ))
       );
     };
