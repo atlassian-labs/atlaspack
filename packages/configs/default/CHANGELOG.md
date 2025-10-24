@@ -1,5 +1,35 @@
 # @atlaspack/config-default
 
+## 7.0.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/bundler-default@3.4.9
+  - @atlaspack/core@2.26.2
+  - @atlaspack/optimizer-image@7.0.2
+  - @atlaspack/packager-js@2.23.7
+  - @atlaspack/transformer-html@2.15.14
+  - @atlaspack/transformer-js@7.1.1
+  - @atlaspack/transformer-postcss@2.14.37
+  - @atlaspack/transformer-svg@2.14.37
+  - @atlaspack/transformer-image@7.0.2
+  - @atlaspack/optimizer-css@2.14.37
+  - @atlaspack/optimizer-svgo@2.14.37
+  - @atlaspack/optimizer-swc@2.14.37
+  - @atlaspack/packager-css@2.14.37
+  - @atlaspack/packager-html@2.15.19
+  - @atlaspack/packager-svg@2.14.37
+  - @atlaspack/reporter-dev-server@2.14.37
+  - @atlaspack/runtime-browser-hmr@2.14.37
+  - @atlaspack/runtime-js@2.19.4
+  - @atlaspack/runtime-react-refresh@2.15.13
+  - @atlaspack/runtime-service-worker@2.14.37
+  - @atlaspack/transformer-css@2.14.37
+  - @atlaspack/transformer-posthtml@2.14.37
+  - @atlaspack/transformer-react-refresh-wrap@2.15.13
+  - @atlaspack/resolver-default@2.14.37
+
 ## 7.0.1
 
 ### Patch Changes

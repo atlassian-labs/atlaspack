@@ -1,5 +1,13 @@
 # @atlaspack/transformer-tokens
 
+## 1.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`339b600`](https://github.com/atlassian-labs/atlaspack/commit/339b60095d755742cea50f811d08ccc44a4ae521)]:
+  - @atlaspack/rust@3.9.1
+  - @atlaspack/utils@3.1.1
+
 ## 1.0.1
 
 ### Patch Changes
