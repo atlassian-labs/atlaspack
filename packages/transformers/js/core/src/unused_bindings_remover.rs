@@ -343,9 +343,23 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
 
   // Handle assignment expressions - only visit the right side (value being assigned)
   fn visit_assign_expr(&mut self, assign: &AssignExpr) {
-    // Only visit right side - left side is assignment target, not a usage
+    // For member expressions like obj.prop = value or obj[key] = value,
+    // visit the entire member expression (obj and computed key if present)
+    if let AssignTarget::Simple(SimpleAssignTarget::Member(member)) = &assign.left {
+      member.visit_with(self);
+    }
+    // Visit right side
     assign.right.visit_with(self);
-    // Don't visit left side or call visit_children_with to avoid visiting assignment target
+  }
+
+  // Handle member expressions to mark computed property keys as used
+  fn visit_member_expr(&mut self, member: &MemberExpr) {
+    // Visit the object being accessed
+    member.obj.visit_with(self);
+    // For computed properties like obj[key], visit the key
+    if let MemberProp::Computed(computed) = &member.prop {
+      computed.expr.visit_with(self);
+    }
   }
 
   // Don't visit patterns (they're declarations, not references)
@@ -1115,6 +1129,210 @@ mod tests {
         const foo = 1;
         const bar = 2;
         export { foo, bar };
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_simple_var_usage() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        var x = 1;
+        console.log(x);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var x = 1;
+        console.log(x);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_var_used_in_member_assignment() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        var curve = exports;
+        curve.short = require('./short');
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        var curve = exports;
+        curve.short = require('./short');
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_var_used_as_array_index() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const index = 0;
+        const value = someArray[index];
+        console.log(value);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const index = 0;
+        const value = someArray[index];
+        console.log(value);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_var_used_as_computed_property() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const key = 'foo';
+        const value = obj[key];
+        console.log(value);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const key = 'foo';
+        const value = obj[key];
+        console.log(value);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_var_property_index_assign() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const obj = {};
+        const key = 'foo';
+        obj[key] = 'bar';
+        console.log(obj);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const obj = {};
+        const key = 'foo';
+        obj[key] = 'bar';
+        console.log(obj);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_var_array_index_assign() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const arr = [];
+        const index = 0;
+        arr[index] = 'value';
+        console.log(arr);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const arr = [];
+        const index = 0;
+        arr[index] = 'value';
+        console.log(arr);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_var_used_in_for_loop_body() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        let retryDelay = 1000;
+        for(let i = 0; i < 5; i++)retryDelay *= 2;
+        console.log(retryDelay);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        let retryDelay = 1000;
+        for(let i = 0; i < 5; i++)retryDelay *= 2;
+        console.log(retryDelay);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_var_used_in_compound_expression() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const r = Math.random() * 16 | 0, v = r & 0x3 | 0x8;
+        return v.toString(16);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const r = Math.random() * 16 | 0, v = r & 0x3 | 0x8;
+        return v.toString(16);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_multiple_declarators_both_used() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const a = 1, b = 2;
+        console.log(a, b);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const a = 1, b = 2;
+        console.log(a, b);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_multiple_declarators_first_unused() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const unused = 1, used = 2;
+        console.log(used);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const used = 2;
+        console.log(used);
       "#}
     );
   }
