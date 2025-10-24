@@ -913,6 +913,7 @@ mod tests {
       default_target_options: DefaultTargetOptions::default(),
       entry: Entry {
         file_path: entry_path,
+        package_path: project_root.clone(),
         target: None,
       },
       env: None,
