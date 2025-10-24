@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.9.1
+
+### Patch Changes
+
+- [#855](https://github.com/atlassian-labs/atlaspack/pull/855) [`339b600`](https://github.com/atlassian-labs/atlaspack/commit/339b60095d755742cea50f811d08ccc44a4ae521) Thanks [@matt-koko](https://github.com/matt-koko)! - Make diagnostic error message for parsing errors in package.json files in v3 more ergonomic
+
 ## 3.9.0
 
 ### Minor Changes

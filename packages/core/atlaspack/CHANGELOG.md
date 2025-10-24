@@ -1,5 +1,73 @@
 # atlaspack
 
+## 2.0.21
+
+### Patch Changes
+
+- Updated dependencies [[`339b600`](https://github.com/atlassian-labs/atlaspack/commit/339b60095d755742cea50f811d08ccc44a4ae521)]:
+  - @atlaspack/rust@3.9.1
+  - @atlaspack/bundler-default@3.4.9
+  - @atlaspack/cache@3.2.32
+  - @atlaspack/core@2.26.2
+  - @atlaspack/fs@2.15.32
+  - @atlaspack/logger@2.14.29
+  - @atlaspack/utils@3.1.1
+  - @atlaspack/optimizer-image@7.0.2
+  - @atlaspack/optimizer-inline-requires@2.14.37
+  - @atlaspack/packager-js@2.23.7
+  - @atlaspack/transformer-html@2.15.14
+  - @atlaspack/transformer-js@7.1.1
+  - @atlaspack/transformer-postcss@2.14.37
+  - @atlaspack/transformer-svg@2.14.37
+  - @atlaspack/node-resolver-core@3.7.8
+  - @atlaspack/config-default@7.0.2
+  - @atlaspack/config-webextension@7.0.2
+  - @atlaspack/cli@2.14.16
+  - @atlaspack/reporter-bundle-stats@2.14.38
+  - @atlaspack/transformer-image@7.0.2
+  - @atlaspack/package-manager@2.14.37
+  - @atlaspack/workers@2.14.37
+  - @atlaspack/watcher-watchman-js@2.14.37
+  - @atlaspack/optimizer-blob-url@2.14.37
+  - @atlaspack/optimizer-css@2.14.37
+  - @atlaspack/optimizer-data-url@2.14.37
+  - @atlaspack/optimizer-svgo@2.14.37
+  - @atlaspack/optimizer-swc@2.14.37
+  - @atlaspack/optimizer-terser@2.14.37
+  - @atlaspack/packager-css@2.14.37
+  - @atlaspack/packager-html@2.15.19
+  - @atlaspack/packager-raw-url@2.14.37
+  - @atlaspack/packager-svg@2.14.37
+  - @atlaspack/packager-webextension@2.14.37
+  - @atlaspack/packager-xml@2.14.37
+  - @atlaspack/reporter-build-metrics@2.14.37
+  - @atlaspack/reporter-bundle-analyzer@2.14.37
+  - @atlaspack/reporter-cli@2.17.19
+  - @atlaspack/reporter-dev-server@2.14.37
+  - @atlaspack/reporter-json@2.14.37
+  - @atlaspack/reporter-lsp@2.14.37
+  - @atlaspack/reporter-sourcemap-visualiser@2.14.37
+  - @atlaspack/reporter-tracer@2.14.37
+  - @atlaspack/resolver-glob@2.14.37
+  - @atlaspack/runtime-browser-hmr@2.14.37
+  - @atlaspack/runtime-js@2.19.4
+  - @atlaspack/runtime-react-refresh@2.15.13
+  - @atlaspack/runtime-service-worker@2.14.37
+  - @atlaspack/runtime-webextension@2.14.37
+  - @atlaspack/transformer-babel@2.14.37
+  - @atlaspack/transformer-css@2.14.37
+  - @atlaspack/transformer-posthtml@2.14.37
+  - @atlaspack/transformer-react-refresh-wrap@2.15.13
+  - @atlaspack/transformer-typescript-types@2.14.37
+  - @atlaspack/transformer-webextension@2.14.37
+  - @atlaspack/transformer-webmanifest@2.14.37
+  - @atlaspack/validator-eslint@2.14.37
+  - @atlaspack/validator-typescript@2.14.37
+  - @atlaspack/resolver-default@2.14.37
+  - @atlaspack/types@2.15.27
+  - @atlaspack/packager-ts@2.14.37
+  - @atlaspack/transformer-jsonld@2.14.37
+
 ## 2.0.20
 
 ### Patch Changes
