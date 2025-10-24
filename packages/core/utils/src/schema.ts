@@ -114,14 +114,13 @@ function validateSchema(
   data: unknown,
 ): Array<SchemaError> {
   function walk(
-    // @ts-expect-error TS7006
-    schemaAncestors,
+    schemaAncestors: Array<SchemaEntity>,
     dataNode: unknown,
     dataPath: string,
   ): SchemaError | null | undefined | Array<SchemaError> {
     let [schemaNode] = schemaAncestors;
 
-    if (schemaNode.type) {
+    if ('type' in schemaNode && schemaNode.type) {
       let type = Array.isArray(dataNode) ? 'array' : typeof dataNode;
       if (schemaNode.type !== type) {
         return {
@@ -130,18 +129,20 @@ function validateSchema(
           dataPath,
           expectedTypes: [schemaNode.type],
           ancestors: schemaAncestors,
-          prettyType: schemaNode.__type,
+          prettyType: '__type' in schemaNode ? schemaNode.__type : undefined,
         };
       } else {
         switch (schemaNode.type) {
           case 'array': {
-            if (schemaNode.items) {
+            if (
+              'items' in schemaNode &&
+              schemaNode.items &&
+              Array.isArray(dataNode)
+            ) {
               let results: Array<SchemaError | Array<SchemaError>> = [];
-              // @ts-expect-error TS18046
               for (let i = 0; i < dataNode.length; i++) {
                 let result = walk(
                   [schemaNode.items].concat(schemaAncestors),
-                  // @ts-expect-error TS18046
                   dataNode[i],
                   dataPath + '/' + i,
                 );
@@ -156,145 +157,149 @@ function validateSchema(
             break;
           }
           case 'string': {
-            // @ts-expect-error TS2322
-            let value: string = dataNode;
-            if (schemaNode.enum) {
-              if (!schemaNode.enum.includes(value)) {
-                return {
-                  type: 'enum',
-                  dataType: 'value',
-                  dataPath,
-                  expectedValues: schemaNode.enum,
-                  actualValue: value,
-                  ancestors: schemaAncestors,
-                };
-              }
-            } else if (schemaNode.__validate) {
-              let validationError = schemaNode.__validate(value);
-              if (typeof validationError == 'string') {
-                return {
-                  type: 'other',
-                  dataType: 'value',
-                  dataPath,
-                  message: validationError,
-                  actualValue: value,
-                  ancestors: schemaAncestors,
-                };
+            if (typeof dataNode === 'string') {
+              let value: string = dataNode;
+              if ('enum' in schemaNode && schemaNode.enum) {
+                if (!schemaNode.enum.includes(value)) {
+                  return {
+                    type: 'enum',
+                    dataType: 'value',
+                    dataPath,
+                    expectedValues: schemaNode.enum,
+                    actualValue: value,
+                    ancestors: schemaAncestors,
+                  };
+                }
+              } else if ('__validate' in schemaNode && schemaNode.__validate) {
+                let validationError = schemaNode.__validate(value);
+                if (typeof validationError == 'string') {
+                  return {
+                    type: 'other',
+                    dataType: 'value',
+                    dataPath,
+                    message: validationError,
+                    actualValue: value,
+                    ancestors: schemaAncestors,
+                  };
+                }
               }
             }
             break;
           }
           case 'number': {
-            // @ts-expect-error TS2322
-            let value: number = dataNode;
-            if (schemaNode.enum) {
-              if (!schemaNode.enum.includes(value)) {
-                return {
-                  type: 'enum',
-                  dataType: 'value',
-                  dataPath,
-                  expectedValues: schemaNode.enum,
-                  actualValue: value,
-                  ancestors: schemaAncestors,
-                };
+            if (typeof dataNode === 'number') {
+              let value: number = dataNode;
+              if ('enum' in schemaNode && schemaNode.enum) {
+                if (!schemaNode.enum.includes(value)) {
+                  return {
+                    type: 'enum',
+                    dataType: 'value',
+                    dataPath,
+                    expectedValues: schemaNode.enum,
+                    actualValue: value,
+                    ancestors: schemaAncestors,
+                  };
+                }
               }
             }
             break;
           }
           case 'object': {
-            let results: Array<Array<SchemaError> | SchemaError> = [];
-            let invalidProps;
-            if (schemaNode.__forbiddenProperties) {
-              // @ts-expect-error TS2769
-              let keys = Object.keys(dataNode);
-              // @ts-expect-error TS7006
-              invalidProps = schemaNode.__forbiddenProperties.filter((val) =>
-                keys.includes(val),
-              );
-              results.push(
-                ...invalidProps.map(
-                  // @ts-expect-error TS7006
-                  (k) =>
-                    ({
-                      type: 'forbidden-prop',
-                      dataPath: dataPath + '/' + encodeJSONKeyComponent(k),
-                      dataType: 'key',
-                      prop: k,
-                      expectedProps: Object.keys(schemaNode.properties),
-                      actualProps: keys,
-                      ancestors: schemaAncestors,
-                    }) as SchemaError,
-                ),
-              );
-            }
-            if (schemaNode.required) {
-              // @ts-expect-error TS2769
-              let keys = Object.keys(dataNode);
-              let missingKeys = schemaNode.required.filter(
-                // @ts-expect-error TS7006
-                (val) => !keys.includes(val),
-              );
-              results.push(
-                ...missingKeys.map(
-                  // @ts-expect-error TS7006
-                  (k) =>
-                    ({
-                      type: 'missing-prop',
-                      dataPath,
-                      dataType: 'value',
-                      prop: k,
-                      expectedProps: schemaNode.required,
-                      actualProps: keys,
-                      ancestors: schemaAncestors,
-                    }) as SchemaError,
-                ),
-              );
-            }
-            if (schemaNode.properties) {
-              let {additionalProperties = true} = schemaNode;
-              // @ts-expect-error TS2407
-              for (let k in dataNode) {
-                if (invalidProps && invalidProps.includes(k)) {
-                  // Don't check type on forbidden props
-                  continue;
-                } else if (k in schemaNode.properties) {
-                  let result = walk(
-                    [schemaNode.properties[k]].concat(schemaAncestors),
-                    // @ts-expect-error TS18046
-                    dataNode[k],
-                    dataPath + '/' + encodeJSONKeyComponent(k),
-                  );
-                  if (result) results.push(result);
-                } else {
-                  if (typeof additionalProperties === 'boolean') {
-                    if (!additionalProperties) {
-                      results.push({
-                        type: 'enum',
-                        dataType: 'key',
+            if (
+              typeof dataNode === 'object' &&
+              dataNode !== null &&
+              !Array.isArray(dataNode)
+            ) {
+              let results: Array<Array<SchemaError> | SchemaError> = [];
+              let invalidProps;
+              if (
+                '__forbiddenProperties' in schemaNode &&
+                schemaNode.__forbiddenProperties
+              ) {
+                let keys = Object.keys(dataNode);
+                invalidProps = schemaNode.__forbiddenProperties.filter(
+                  (val: string) => keys.includes(val),
+                );
+                results.push(
+                  ...invalidProps.map(
+                    (k: string) =>
+                      ({
+                        type: 'forbidden-prop',
                         dataPath: dataPath + '/' + encodeJSONKeyComponent(k),
-                        expectedValues: Object.keys(
-                          schemaNode.properties,
-                          // @ts-expect-error TS18046
-                        ).filter((p) => !(p in dataNode)),
-                        actualValue: k,
+                        dataType: 'key',
+                        prop: k,
+                        expectedProps: Object.keys(schemaNode.properties),
+                        actualProps: keys,
                         ancestors: schemaAncestors,
-                        prettyType: schemaNode.__type,
-                      });
-                    }
-                  } else {
+                      }) as SchemaError,
+                  ),
+                );
+              }
+              if ('required' in schemaNode && schemaNode.required) {
+                let keys = Object.keys(dataNode);
+                let missingKeys = schemaNode.required.filter(
+                  (val: string) => !keys.includes(val),
+                );
+                results.push(
+                  ...missingKeys.map(
+                    (k: string) =>
+                      ({
+                        type: 'missing-prop',
+                        dataPath,
+                        dataType: 'value',
+                        prop: k,
+                        expectedProps: schemaNode.required,
+                        actualProps: keys,
+                        ancestors: schemaAncestors,
+                      }) as SchemaError,
+                  ),
+                );
+              }
+              if ('properties' in schemaNode && schemaNode.properties) {
+                let {additionalProperties = true} = schemaNode;
+                for (let k in dataNode) {
+                  if (invalidProps && invalidProps.includes(k)) {
+                    // Don't check type on forbidden props
+                    continue;
+                  } else if (k in schemaNode.properties) {
                     let result = walk(
-                      [additionalProperties].concat(schemaAncestors),
-                      // @ts-expect-error TS18046
-                      dataNode[k],
+                      [schemaNode.properties[k]].concat(schemaAncestors),
+                      (dataNode as Record<string, unknown>)[k],
                       dataPath + '/' + encodeJSONKeyComponent(k),
                     );
                     if (result) results.push(result);
+                  } else {
+                    if (typeof additionalProperties === 'boolean') {
+                      if (!additionalProperties) {
+                        results.push({
+                          type: 'enum',
+                          dataType: 'key',
+                          dataPath: dataPath + '/' + encodeJSONKeyComponent(k),
+                          expectedValues: Object.keys(
+                            schemaNode.properties,
+                          ).filter((p) => !(p in dataNode)),
+                          actualValue: k,
+                          ancestors: schemaAncestors,
+                          prettyType: schemaNode.__type,
+                        });
+                      }
+                    } else {
+                      let result = walk(
+                        [additionalProperties].concat(schemaAncestors),
+                        (dataNode as Record<string, unknown>)[k],
+                        dataPath + '/' + encodeJSONKeyComponent(k),
+                      );
+                      if (result) results.push(result);
+                    }
                   }
                 }
               }
+              if (results.length)
+                return results.reduce<Array<any>>(
+                  (acc, v) => acc.concat(v),
+                  [],
+                );
             }
-            if (results.length)
-              return results.reduce<Array<any>>((acc, v) => acc.concat(v), []);
             break;
           }
           case 'boolean':
@@ -305,7 +310,11 @@ function validateSchema(
         }
       }
     } else {
-      if (schemaNode.enum && !schemaNode.enum.includes(dataNode)) {
+      if (
+        'enum' in schemaNode &&
+        schemaNode.enum &&
+        !schemaNode.enum.includes(dataNode)
+      ) {
         return {
           type: 'enum',
           dataType: 'value',
@@ -316,15 +325,20 @@ function validateSchema(
         };
       }
 
-      if (schemaNode.oneOf || schemaNode.allOf) {
-        let list = schemaNode.oneOf || schemaNode.allOf;
+      if ('oneOf' in schemaNode || 'allOf' in schemaNode) {
+        let list =
+          'oneOf' in schemaNode
+            ? schemaNode.oneOf
+            : 'allOf' in schemaNode
+              ? schemaNode.allOf
+              : [];
         let results: Array<SchemaError | Array<SchemaError>> = [];
         for (let f of list) {
           let result = walk([f].concat(schemaAncestors), dataNode, dataPath);
           if (result) results.push(result);
         }
         if (
-          schemaNode.oneOf
+          'oneOf' in schemaNode
             ? results.length == schemaNode.oneOf.length
             : results.length > 0
         ) {
@@ -342,14 +356,13 @@ function validateSchema(
           );
           return results[0];
         }
-      } else if (schemaNode.not) {
+      } else if ('not' in schemaNode && schemaNode.not) {
         let result = walk(
           [schemaNode.not].concat(schemaAncestors),
           dataNode,
           dataPath,
         );
-        // @ts-expect-error TS2339
-        if (!result || result.length == 0) {
+        if (!result || (Array.isArray(result) && result.length == 0)) {
           return {
             type: 'other',
             dataPath,
@@ -375,16 +388,16 @@ export function fuzzySearch(
   actualValue: string,
 ): Array<string> {
   let result = expectedValues
-    .map((exp) => [exp, levenshtein.distance(exp, actualValue)])
+    .map(
+      (exp) =>
+        [exp, levenshtein.distance(exp, actualValue)] as [string, number],
+    )
     .filter(
       // Remove if more than half of the string would need to be changed
-      // @ts-expect-error TS2769
-      ([, d]: [any, any]) => d * 2 < actualValue.length,
+      ([, d]: [string, number]) => d * 2 < actualValue.length,
     );
-  // @ts-expect-error TS2345
-  result.sort(([, a]: [any, any], [, b]: [any, any]) => a - b);
-  // @ts-expect-error TS2345
-  return result.map(([v]: [any]) => v);
+  result.sort(([, a]: [string, number], [, b]: [string, number]) => a - b);
+  return result.map(([v]: [string, number]) => v);
 }
 
 validateSchema.diagnostic = function (
@@ -430,12 +443,18 @@ validateSchema.diagnostic = function (
     }
     return loadedSource;
   }
-  // @ts-expect-error TS2339
-  let object = data.map
-    ? // @ts-expect-error TS2339
-      data.map.data
-    : // @ts-expect-error TS2339
-      (data.data ?? JSON.parse(loadSource(data.source)));
+
+  let object: unknown;
+  if ('map' in data && data.map) {
+    object = data.map.data;
+  } else if ('data' in data && data.data !== undefined) {
+    object = data.data;
+  } else if ('source' in data && data.source) {
+    object = JSON.parse(loadSource(data.source) || '');
+  } else {
+    throw new Error('Unable to get object from data');
+  }
+
   let errors = validateSchema(schema, object);
   if (errors.length) {
     let keys = errors.map((e) => {
@@ -493,23 +512,24 @@ validateSchema.diagnostic = function (
       return {key: e.dataPath, type: e.dataType, message};
     });
     let map, code;
-    // @ts-expect-error TS2339
-    if (data.map) {
-      // @ts-expect-error TS2339
+    if ('map' in data && data.map) {
       map = data.map;
-      code = loadSource(data.source);
+      code = loadSource(data.source) ?? '';
     } else {
-      map =
-        loadSource(data.source) ??
-        // @ts-expect-error TS2339
-        JSON.stringify(nullthrows(data.data), 0, '\t');
+      if ('source' in data && data.source) {
+        map = loadSource(data.source) ?? '';
+      } else if ('data' in data && data.data !== undefined) {
+        map = JSON.stringify(nullthrows(data.data), null, '\t');
+      } else {
+        map = '';
+      }
       code = map;
     }
     let codeFrames = [
       {
         filePath: data.filePath ?? undefined,
-        language: 'json',
-        code,
+        language: 'json' as const,
+        code: code ?? '',
         codeHighlights: generateJSONCodeHighlights(
           map,
           keys.map(({key, type, message}) => ({
@@ -525,7 +545,6 @@ validateSchema.diagnostic = function (
       diagnostic: {
         message: message,
         origin,
-        // @ts-expect-error TS2322
         codeFrames,
       },
     });
