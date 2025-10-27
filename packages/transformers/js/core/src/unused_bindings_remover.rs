@@ -483,6 +483,10 @@ mod tests {
   use atlaspack_swc_runner::test_utils::{RunTestContext, RunVisitResult, run_test_visit};
   use indoc::indoc;
 
+  // ===========================================================================
+  // Basic variable removal
+  // ===========================================================================
+
   #[test]
   fn test_removes_unused_variable() {
     let RunVisitResult { output_code, .. } = run_test_visit(
@@ -525,6 +529,53 @@ mod tests {
   }
 
   #[test]
+  fn test_multiple_declarators() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const a = 1, b = 2;
+        const unused = 1, used = 2;
+        console.log(a, b, used);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const a = 1, b = 2;
+        const used = 2;
+        console.log(a, b, used);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_special_identifiers() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const React = require('react');
+        const di = something;
+        const jsx = other;
+        const unused = 1;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const React = require('react');
+        const di = something;
+        const jsx = other;
+      "#}
+    );
+  }
+
+  // ===========================================================================
+  // Object destructuring
+  // ===========================================================================
+
+  #[test]
   fn test_removes_unused_from_object_destructuring() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
@@ -557,64 +608,6 @@ mod tests {
       output_code,
       indoc! {r#"
         console.log(other);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_keeps_special_identifiers() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const React = require('react');
-        const di = something;
-        const jsx = other;
-        const unused = 1;
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const React = require('react');
-        const di = something;
-        const jsx = other;
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_keeps_exports() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        export const exported = 1;
-        const notExported = 2;
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        export const exported = 1;
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_keeps_structured_exports() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        export const { a, b } = obj;
-        const { unused } = obj;
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        export const { a, b } = obj;
       "#}
     );
   }
@@ -656,6 +649,74 @@ mod tests {
       "#}
     );
   }
+
+  #[test]
+  fn test_object_rest_pattern() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const { a, ...rest } = obj;
+        const { b, ...rest2 } = obj2;
+        console.log(a, rest2);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    // Cannot remove properties when rest is present - affects rest contents
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { a, ...rest } = obj;
+        const { b, ...rest2 } = obj2;
+        console.log(a, rest2);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_object_rest_vs_no_rest() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const { a, b, ...rest } = obj;
+        const { c, d, e } = obj2;
+        console.log(rest, c);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { a, b, ...rest } = obj;
+        const { c } = obj2;
+        console.log(rest, c);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_computed_property_exclusion_with_rest() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const key = 'excluded';
+        const { [key]: _, ...rest } = obj;
+        console.log(rest);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const key = 'excluded';
+        const { [key]: _, ...rest } = obj;
+        console.log(rest);
+      "#}
+    );
+  }
+
+  // ===========================================================================
+  // Array destructuring
+  // ===========================================================================
 
   #[test]
   fn test_handles_nested_array_destructuring() {
@@ -716,13 +777,12 @@ mod tests {
   }
 
   #[test]
-  fn test_keeps_variables_used_in_functions() {
+  fn test_array_destructuring_holes_and_trimming() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
-        const x = 1;
-        function foo() {
-          return x;
-        }
+        const [a, b, c] = arr;
+        const [d, e, f, g] = arr2;
+        console.log(a, c, d);
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -730,10 +790,70 @@ mod tests {
     assert_eq!(
       output_code,
       indoc! {r#"
-        const x = 1;
-        function foo() {
-            return x;
-        }
+        const [a, , c] = arr;
+        const [d] = arr2;
+        console.log(a, c, d);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_array_rest_pattern() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const [a, ...rest] = arr;
+        const [b, ...rest2] = arr2;
+        console.log(a, rest2);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const [a] = arr;
+        const [, ...rest2] = arr2;
+        console.log(a, rest2);
+      "#}
+    );
+  }
+
+  // ===========================================================================
+  // Exports
+  // ===========================================================================
+
+  #[test]
+  fn test_keeps_exports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        export const exported = 1;
+        const notExported = 2;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        export const exported = 1;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_structured_exports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        export const { a, b } = obj;
+        const { unused } = obj;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        export const { a, b } = obj;
       "#}
     );
   }
@@ -777,6 +897,28 @@ mod tests {
   }
 
   #[test]
+  fn test_keeps_named_exports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const foo = 1;
+        const bar = 2;
+        const unused = 3;
+        export { foo, bar };
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const foo = 1;
+        const bar = 2;
+        export { foo, bar };
+      "#}
+    );
+  }
+
+  #[test]
   fn test_preserves_reexports() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
@@ -790,30 +932,6 @@ mod tests {
       output_code,
       indoc! {r#"
         export { default as LottiePlayer } from 'lottie-web';
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_keeps_object_used_in_member_expressions() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const lottie = {};
-        lottie.play = function() {};
-        lottie.pause = function() {};
-        const unused = 1;
-        export default lottie;
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const lottie = {};
-        lottie.play = function() {};
-        lottie.pause = function() {};
-        export default lottie;
       "#}
     );
   }
@@ -858,86 +976,17 @@ mod tests {
     );
   }
 
-  #[test]
-  fn test_keeps_factory_in_iife_pattern() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        (function (global, factory) {
-          module.exports = factory();
-        })(this, (function () {
-          const lottie = {};
-          return lottie;
-        }));
-        const unused = 1;
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        (function(global, factory) {
-            module.exports = factory();
-        })(this, (function() {
-            const lottie = {};
-            return lottie;
-        }));
-      "#}
-    );
-  }
+  // ===========================================================================
+  // Variable usage patterns
+  // ===========================================================================
 
   #[test]
-  fn test_multi_pass_removes_cascading_unused_bindings() {
+  fn test_keeps_variables_used_in_functions() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
-        const a = 1;
-        const b = a;
-        const c = b;
-        const d = c;
-        console.log('hello');
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        console.log('hello');
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_multi_pass_partial_chain() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const a = 1;
-        const b = a;
-        const c = b;
-        const d = c;
-        console.log(b);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const a = 1;
-        const b = a;
-        console.log(b);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_removes_unused_in_function() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
+        const x = 1;
         function foo() {
-          const unused = 1;
-          const used = 2;
-          console.log(used);
+          return x;
         }
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
@@ -946,156 +995,10 @@ mod tests {
     assert_eq!(
       output_code,
       indoc! {r#"
+        const x = 1;
         function foo() {
-            const used = 2;
-            console.log(used);
+            return x;
         }
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_removes_unused_in_block() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        function foo() {
-          {
-            const unused = 42;
-            console.log('hello');
-          }
-        }
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        function foo() {
-            {
-                console.log('hello');
-            }
-        }
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_unused_after_used_in_arrow() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const inner = () => {
-          const c = 1;
-          const unusedInner = c;
-          console.log(c);
-        };
-        inner();
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const inner = ()=>{
-            const c = 1;
-            console.log(c);
-        };
-        inner();
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_multi_pass_scopes() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        import used from 'used';
-        import unused from 'unused';
-
-        outer();
-
-        function outer() {
-          const a = 1;
-          const b = a;
-
-          const inner = () => {
-            {
-              const unusedBlockInner = 42;
-              used();
-            }
-
-            const c = b;
-            const unusedInner = c;
-            console.log(c);
-          };
-
-          inner();
-        }
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        import used from 'used';
-        outer();
-        function outer() {
-            const a = 1;
-            const b = a;
-            const inner = ()=>{
-                {
-                    used();
-                }
-                const c = b;
-                console.log(c);
-            };
-            inner();
-        }
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_object_rest_pattern() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const { a, ...rest } = obj;
-        const { b, ...rest2 } = obj2;
-        console.log(a, rest2);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    // Cannot remove properties when rest is present - affects rest contents
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const { a, ...rest } = obj;
-        const { b, ...rest2 } = obj2;
-        console.log(a, rest2);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_array_rest_pattern() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const [a, ...rest] = arr;
-        const [b, ...rest2] = arr2;
-        console.log(a, rest2);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const [a] = arr;
-        const [, ...rest2] = arr2;
-        console.log(a, rest2);
       "#}
     );
   }
@@ -1125,13 +1028,14 @@ mod tests {
   }
 
   #[test]
-  fn test_keeps_named_exports() {
+  fn test_keeps_object_used_in_member_expressions() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
-        const foo = 1;
-        const bar = 2;
-        const unused = 3;
-        export { foo, bar };
+        const lottie = {};
+        lottie.play = function() {};
+        lottie.pause = function() {};
+        const unused = 1;
+        export default lottie;
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -1139,9 +1043,10 @@ mod tests {
     assert_eq!(
       output_code,
       indoc! {r#"
-        const foo = 1;
-        const bar = 2;
-        export { foo, bar };
+        const lottie = {};
+        lottie.play = function() {};
+        lottie.pause = function() {};
+        export default lottie;
       "#}
     );
   }
@@ -1220,27 +1125,6 @@ mod tests {
   }
 
   #[test]
-  fn test_var_used_in_for_loop_body() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        let retryDelay = 1000;
-        for(let i = 0; i < 5; i++)retryDelay *= 2;
-        console.log(retryDelay);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        let retryDelay = 1000;
-        for(let i = 0; i < 5; i++)retryDelay *= 2;
-        console.log(retryDelay);
-      "#}
-    );
-  }
-
-  #[test]
   fn test_var_used_in_compound_expression() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
@@ -1255,27 +1139,6 @@ mod tests {
       indoc! {r#"
         const r = Math.random() * 16 | 0, v = r & 0x3 | 0x8;
         return v.toString(16);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_multiple_declarators() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const a = 1, b = 2;
-        const unused = 1, used = 2;
-        console.log(a, b, used);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const a = 1, b = 2;
-        const used = 2;
-        console.log(a, b, used);
       "#}
     );
   }
@@ -1324,6 +1187,104 @@ mod tests {
     );
   }
 
+  // Scoped contexts
+  #[test]
+  fn test_removes_unused_in_function() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function foo() {
+          const unused = 1;
+          const used = 2;
+          console.log(used);
+        }
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function foo() {
+            const used = 2;
+            console.log(used);
+        }
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_removes_unused_in_block() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function foo() {
+          {
+            const unused = 42;
+            console.log('hello');
+          }
+        }
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function foo() {
+            {
+                console.log('hello');
+            }
+        }
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_unused_after_used_in_arrow() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const inner = () => {
+          const c = 1;
+          const unusedInner = c;
+          console.log(c);
+        };
+        inner();
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const inner = ()=>{
+            const c = 1;
+            console.log(c);
+        };
+        inner();
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_var_used_in_for_loop_body() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        let retryDelay = 1000;
+        for(let i = 0; i < 5; i++)retryDelay *= 2;
+        console.log(retryDelay);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        let retryDelay = 1000;
+        for(let i = 0; i < 5; i++)retryDelay *= 2;
+        console.log(retryDelay);
+      "#}
+    );
+  }
+
   #[test]
   fn test_unused_iteration_variable() {
     let RunVisitResult { output_code, .. } = run_test_visit(
@@ -1346,12 +1307,16 @@ mod tests {
   }
 
   #[test]
-  fn test_computed_property_exclusion_with_rest() {
+  fn test_keeps_factory_in_iife_pattern() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
-        const key = 'excluded';
-        const { [key]: _, ...rest } = obj;
-        console.log(rest);
+        (function (global, factory) {
+          module.exports = factory();
+        })(this, (function () {
+          const lottie = {};
+          return lottie;
+        }));
+        const unused = 1;
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -1359,20 +1324,50 @@ mod tests {
     assert_eq!(
       output_code,
       indoc! {r#"
-        const key = 'excluded';
-        const { [key]: _, ...rest } = obj;
-        console.log(rest);
+        (function(global, factory) {
+            module.exports = factory();
+        })(this, (function() {
+            const lottie = {};
+            return lottie;
+        }));
+      "#}
+    );
+  }
+
+  // ===========================================================================
+  // Multi-pass elimination
+  // ===========================================================================
+
+  #[test]
+  fn test_multi_pass_removes_cascading_unused_bindings() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const a = 1;
+        const b = a;
+        const c = b;
+        const d = c;
+        console.log('hello');
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        console.log('hello');
       "#}
     );
   }
 
   #[test]
-  fn test_object_rest_vs_no_rest() {
+  fn test_multi_pass_partial_chain() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
-        const { a, b, ...rest } = obj;
-        const { c, d, e } = obj2;
-        console.log(rest, c);
+        const a = 1;
+        const b = a;
+        const c = b;
+        const d = c;
+        console.log(b);
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -1380,20 +1375,39 @@ mod tests {
     assert_eq!(
       output_code,
       indoc! {r#"
-        const { a, b, ...rest } = obj;
-        const { c } = obj2;
-        console.log(rest, c);
+        const a = 1;
+        const b = a;
+        console.log(b);
       "#}
     );
   }
 
   #[test]
-  fn test_array_destructuring_holes_and_trimming() {
+  fn test_multi_pass_scopes() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
-        const [a, b, c] = arr;
-        const [d, e, f, g] = arr2;
-        console.log(a, c, d);
+        import used from 'used';
+        import unused from 'unused';
+
+        outer();
+
+        function outer() {
+          const a = 1;
+          const b = a;
+
+          const inner = () => {
+            {
+              const unusedBlockInner = 42;
+              used();
+            }
+
+            const c = b;
+            const unusedInner = c;
+            console.log(c);
+          };
+
+          inner();
+        }
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -1401,9 +1415,20 @@ mod tests {
     assert_eq!(
       output_code,
       indoc! {r#"
-        const [a, , c] = arr;
-        const [d] = arr2;
-        console.log(a, c, d);
+        import used from 'used';
+        outer();
+        function outer() {
+            const a = 1;
+            const b = a;
+            const inner = ()=>{
+                {
+                    used();
+                }
+                const c = b;
+                console.log(c);
+            };
+            inner();
+        }
       "#}
     );
   }
