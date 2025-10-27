@@ -81,12 +81,7 @@ fn serialize_asset_graph_nodes(
     js_nodes.set_element(i as u32, js_buffer)?;
   }
 
-  // TODO use a napi_derive::napi(object) with NAPI3
-  let mut napi_asset_graph = env.create_object()?;
-  napi_asset_graph.set_named_property("edges", asset_graph.edges())?;
-  napi_asset_graph.set_named_property("nodes", js_nodes)?;
-
-  Ok(napi_asset_graph)
+  Ok(js_nodes)
 }
 
 #[derive(Debug, Serialize)]
