@@ -98,6 +98,7 @@ impl UnusedBindingsRemover {
       }
       Pat::Object(obj) => obj.props.is_empty(),
       Pat::Array(arr) => arr.elems.iter().all(Option::is_none),
+      Pat::Rest(rest) => self.is_pattern_empty(&rest.arg),
       _ => false,
     }
   }
@@ -177,16 +178,26 @@ impl UnusedBindingsRemover {
   fn remove_from_pat(&self, pat: &mut Pat) {
     match pat {
       Pat::Object(obj) => {
+        let mut has_rest = false;
+
         // Recursively process nested patterns
         for prop in &mut obj.props {
           match prop {
             ObjectPatProp::KeyValue(kv) => self.remove_from_pat(&mut kv.value),
-            ObjectPatProp::Rest(rest) => self.remove_from_pat(&mut rest.arg),
+            ObjectPatProp::Rest(rest) => {
+              has_rest = true;
+              self.remove_from_pat(&mut rest.arg);
+            }
             _ => {}
           }
         }
 
-        // Remove unused props
+        if has_rest {
+          // Don't remove any properties to not affect the rest pattern
+          return;
+        }
+
+        // Remove unused properties
         obj.props.retain(|prop| match prop {
           ObjectPatProp::KeyValue(kv) => !self.is_pattern_empty(&kv.value),
           ObjectPatProp::Assign(assign) => self.used_bindings.contains(&assign.key.to_id()),
@@ -199,11 +210,17 @@ impl UnusedBindingsRemover {
           self.remove_from_pat(elem);
         }
 
-        // Remove unused elements
+        // Replace unused elements with holes (None), which creates valid JS like [a, , c]
+        // This preserves array positions while removing unused bindings
         for elem in &mut arr.elems {
           if matches!(elem, Some(p) if self.is_pattern_empty(p)) {
             *elem = None;
           }
+        }
+
+        // Trim trailing holes to avoid unnecessary commas like [a, , , ]
+        while arr.elems.last().is_some_and(|e| e.is_none()) {
+          arr.elems.pop();
         }
       }
       _ => {}
@@ -343,10 +360,20 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
 
   // Handle assignment expressions - visit both sides appropriately
   fn visit_assign_expr(&mut self, assign: &AssignExpr) {
-    // For member expressions like obj.prop = value or obj[key] = value,
-    // visit the entire member expression (obj and computed key if present)
-    if let AssignTarget::Simple(SimpleAssignTarget::Member(member)) = &assign.left {
-      member.visit_with(self);
+    match &assign.left {
+      // For simple identifier assignments like foo = 1, mark the identifier as used
+      AssignTarget::Simple(SimpleAssignTarget::Ident(ident)) => {
+        self.mark_binding_used(ident.id.to_id());
+      }
+      // For member expressions like obj.prop = value or obj[key] = value,
+      // visit the entire member expression (obj and computed key if present)
+      AssignTarget::Simple(SimpleAssignTarget::Member(member)) => {
+        member.visit_with(self);
+      }
+      // For other assignment targets, use default visiting
+      _ => {
+        assign.left.visit_with(self);
+      }
     }
     // Visit right side
     assign.right.visit_with(self);
@@ -371,12 +398,22 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
         assign.right.visit_with(self);
       }
       Pat::Object(obj) => {
-        // Visit default values in object pattern properties
+        // Visit computed property keys and default values in object pattern properties
         for prop in &obj.props {
-          if let ObjectPatProp::Assign(assign) = prop {
-            if let Some(value) = &assign.value {
-              value.visit_with(self);
+          match prop {
+            ObjectPatProp::KeyValue(kv) => {
+              // Visit computed property keys like { [key]: value }
+              if let PropName::Computed(computed) = &kv.key {
+                computed.expr.visit_with(self);
+              }
             }
+            ObjectPatProp::Assign(assign) => {
+              // Visit default values like { foo = defaultValue }
+              if let Some(value) = &assign.value {
+                value.visit_with(self);
+              }
+            }
+            _ => {}
           }
         }
       }
@@ -425,6 +462,18 @@ impl VisitMut for UnusedBindingsRemover {
     import
       .specifiers
       .retain(|spec| self.should_keep_import_spec(spec));
+  }
+
+  fn visit_mut_for_in_stmt(&mut self, node: &mut ForInStmt) {
+    // Don't remove the loop variable, only visit the body
+    node.right.visit_mut_with(self);
+    node.body.visit_mut_with(self);
+  }
+
+  fn visit_mut_for_of_stmt(&mut self, node: &mut ForOfStmt) {
+    // Don't remove the loop variable, only visit the body
+    node.right.visit_mut_with(self);
+    node.body.visit_mut_with(self);
   }
 }
 
@@ -637,11 +686,10 @@ mod tests {
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
 
-    // Note: The output has a trailing comma which is valid JS
     assert_eq!(
       output_code,
       indoc! {r#"
-        const [a, [, c], ] = arr;
+        const [a, [, c]] = arr;
         console.log(a, c);
       "#}
     );
@@ -657,7 +705,6 @@ mod tests {
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
 
-    // Multiple holes in array destructuring is valid JS: [a, , , , e]
     assert_eq!(
       output_code,
       indoc! {r#"
@@ -677,7 +724,7 @@ mod tests {
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
 
-    // The nested array [b, c] becomes empty and should be removed entirely
+    // The nested array becomes a hole to preserve d's position
     assert_eq!(
       output_code,
       indoc! {r#"
@@ -1039,10 +1086,11 @@ mod tests {
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
 
+    // Cannot remove rest when present - it affects semantics
     assert_eq!(
       output_code,
       indoc! {r#"
-        const { a } = obj;
+        const { a, ...rest } = obj;
         console.log(a);
       "#}
     );
@@ -1058,10 +1106,11 @@ mod tests {
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
 
+    // Cannot remove `a` when rest is present - removing affects rest contents
     assert_eq!(
       output_code,
       indoc! {r#"
-        const { ...rest } = obj;
+        const { a, ...rest } = obj;
         console.log(rest);
       "#}
     );
@@ -1077,10 +1126,11 @@ mod tests {
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
 
+    // Can safely remove unused rest
     assert_eq!(
       output_code,
       indoc! {r#"
-        const [a, ...rest] = arr;
+        const [a] = arr;
         console.log(a);
       "#}
     );
@@ -1440,7 +1490,9 @@ mod tests {
       indoc! {r#"
         (function() {
             var count = 0;
-            if (true) {count = 1;}
+            if (true) {
+                count = 1;
+            }
             console.log(count);
         })();
       "#}
@@ -1470,6 +1522,184 @@ mod tests {
             console.log(count);
         } } = options;
         func();
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_var_assign_only() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        let foo = 0;
+        foo = 1;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        let foo = 0;
+        foo = 1;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_unused_iteration_variable() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        for (var foo in []) {
+          console.log("Hello");
+        }
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        for(var foo in []){
+            console.log("Hello");
+        }
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_computed_property_exclusion_with_rest() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const key = 'excluded';
+        const { [key]: _, ...rest } = obj;
+        console.log(rest);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const key = 'excluded';
+        const { [key]: _, ...rest } = obj;
+        console.log(rest);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_object_rest_allows_removal_without_computed() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const { a, b, ...rest } = obj;
+        console.log(rest);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    // Cannot remove `a` or `b` when rest is present - removing affects rest contents
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { a, b, ...rest } = obj;
+        console.log(rest);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_object_without_rest_can_remove_properties() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const { a, b, c } = obj;
+        console.log(a);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { a } = obj;
+        console.log(a);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_computed_property_without_rest() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const key = 'prop';
+        const { [key]: value, other } = obj;
+        console.log(value);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const key = 'prop';
+        const { [key]: value } = obj;
+        console.log(value);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_array_destructuring_preserves_position() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const [foo, bar] = arr;
+        console.log(bar);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const [, bar] = arr;
+        console.log(bar);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_array_destructuring_trailing_commas_removed() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const [a, b, c, d] = arr;
+        console.log(a);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const [a] = arr;
+        console.log(a);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_array_destructuring_middle_unused() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const [a, b, c] = arr;
+        console.log(a, c);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const [a, , c] = arr;
+        console.log(a, c);
       "#}
     );
   }
