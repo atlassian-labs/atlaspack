@@ -131,11 +131,7 @@ export class ScopeHoistingPackager {
   useBothScopeHoistingImprovements: boolean =
     getFeatureFlag('applyScopeHoistingImprovementV2') ||
     getFeatureFlag('applyScopeHoistingImprovement');
-  referencedAssetsCache: Map<string, Set<Asset>> | null = getFeatureFlag(
-    'precomputeReferencedAssets',
-  )
-    ? new Map()
-    : null;
+  referencedAssetsCache: Map<string, Set<Asset>> = new Map();
 
   constructor(
     options: PluginOptions,
@@ -419,7 +415,7 @@ export class ScopeHoistingPackager {
 
   // Helper to check if an asset is referenced, with lazy caching when feature flag is enabled
   isAssetReferencedInBundle(bundle: NamedBundle, asset: Asset): boolean {
-    if (this.referencedAssetsCache !== null) {
+    if (getFeatureFlag('precomputeReferencedAssets')) {
       // Feature flag is enabled, use cached approach
       let bundleId = bundle.id;
 
