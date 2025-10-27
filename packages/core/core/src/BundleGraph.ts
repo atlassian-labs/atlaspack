@@ -1444,13 +1444,13 @@ export default class BundleGraph {
 
     this.traverseAssets(bundle, (asset) => {
       // Quick check 1: If asset is in multiple bundles in same target, it's referenced
-      if (
-        this.getBundlesWithAsset(asset).filter(
-          (b) =>
-            b.target.name === bundle.target.name &&
-            b.target.distDir === bundle.target.distDir,
-        ).length > 1
-      ) {
+      let bundlesWithAsset = this.getBundlesWithAsset(asset).filter(
+        (b) =>
+          b.target.name === bundle.target.name &&
+          b.target.distDir === bundle.target.distDir,
+      );
+
+      if (bundlesWithAsset.length > 1) {
         referencedAssets.add(asset);
         return;
       }
@@ -1495,12 +1495,14 @@ export default class BundleGraph {
     }
 
     // Now do ONE traversal to check all remaining assets
-    let visitedBundles: Set<Bundle> = new Set();
     let siblingBundles = new Set(
       this.getBundleGroupsContainingBundle(bundle).flatMap((bundleGroup) =>
         this.getBundlesInBundleGroup(bundleGroup, {includeInline: true}),
       ),
     );
+
+    // Track visited bundles across all sibling traversals (matching original implementation)
+    let visitedBundles: Set<Bundle> = new Set();
 
     // Check if any of this bundle's descendants reference any of our assets
     for (let referencer of siblingBundles) {
@@ -1521,7 +1523,7 @@ export default class BundleGraph {
           fromEnvironmentId(descendant.env).context !==
             fromEnvironmentId(bundle.env).context
         ) {
-          actions.skipChildren();
+          // Don't skip children - they might be the right type!
           return;
         }
 
