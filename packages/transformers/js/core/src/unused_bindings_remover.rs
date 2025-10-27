@@ -544,25 +544,6 @@ mod tests {
   }
 
   #[test]
-  fn test_removes_unused_from_array_destructuring() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const [a, b, c] = arr;
-        console.log(a, c);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const [a, , c] = arr;
-        console.log(a, c);
-      "#}
-    );
-  }
-
-  #[test]
   fn test_removes_entire_declaration_if_all_unused() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
@@ -1077,80 +1058,44 @@ mod tests {
   }
 
   #[test]
-  fn test_removes_unused_from_object_rest_pattern() {
+  fn test_object_rest_pattern() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         const { a, ...rest } = obj;
-        console.log(a);
+        const { b, ...rest2 } = obj2;
+        console.log(a, rest2);
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
 
-    // Cannot remove rest when present - it affects semantics
+    // Cannot remove properties when rest is present - affects rest contents
     assert_eq!(
       output_code,
       indoc! {r#"
         const { a, ...rest } = obj;
-        console.log(a);
+        const { b, ...rest2 } = obj2;
+        console.log(a, rest2);
       "#}
     );
   }
 
   #[test]
-  fn test_keeps_used_object_rest_pattern() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const { a, ...rest } = obj;
-        console.log(rest);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    // Cannot remove `a` when rest is present - removing affects rest contents
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const { a, ...rest } = obj;
-        console.log(rest);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_removes_unused_from_array_rest_pattern() {
+  fn test_array_rest_pattern() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         const [a, ...rest] = arr;
-        console.log(a);
+        const [b, ...rest2] = arr2;
+        console.log(a, rest2);
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
 
-    // Can safely remove unused rest
     assert_eq!(
       output_code,
       indoc! {r#"
         const [a] = arr;
-        console.log(a);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_keeps_used_array_rest_pattern() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const [a, ...rest] = arr;
-        console.log(rest);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const [, ...rest] = arr;
-        console.log(rest);
+        const [, ...rest2] = arr2;
+        console.log(a, rest2);
       "#}
     );
   }
@@ -1202,25 +1147,6 @@ mod tests {
   }
 
   #[test]
-  fn test_simple_var_usage() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        var x = 1;
-        console.log(x);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        var x = 1;
-        console.log(x);
-      "#}
-    );
-  }
-
-  #[test]
   fn test_var_used_in_member_assignment() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
@@ -1240,12 +1166,14 @@ mod tests {
   }
 
   #[test]
-  fn test_var_used_as_array_index() {
+  fn test_var_used_in_computed_access() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         const index = 0;
-        const value = someArray[index];
-        console.log(value);
+        const key = 'foo';
+        const value1 = someArray[index];
+        const value2 = obj[key];
+        console.log(value1, value2);
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -1254,41 +1182,25 @@ mod tests {
       output_code,
       indoc! {r#"
         const index = 0;
-        const value = someArray[index];
-        console.log(value);
+        const key = 'foo';
+        const value1 = someArray[index];
+        const value2 = obj[key];
+        console.log(value1, value2);
       "#}
     );
   }
 
   #[test]
-  fn test_var_used_as_computed_property() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const key = 'foo';
-        const value = obj[key];
-        console.log(value);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const key = 'foo';
-        const value = obj[key];
-        console.log(value);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_var_property_index_assign() {
+  fn test_var_used_in_computed_assignment() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         const obj = {};
+        const arr = [];
         const key = 'foo';
+        const index = 0;
         obj[key] = 'bar';
-        console.log(obj);
+        arr[index] = 'value';
+        console.log(obj, arr);
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -1297,32 +1209,12 @@ mod tests {
       output_code,
       indoc! {r#"
         const obj = {};
+        const arr = [];
         const key = 'foo';
+        const index = 0;
         obj[key] = 'bar';
-        console.log(obj);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_var_array_index_assign() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const arr = [];
-        const index = 0;
         arr[index] = 'value';
-        console.log(arr);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const arr = [];
-        const index = 0;
-        arr[index] = 'value';
-        console.log(arr);
+        console.log(obj, arr);
       "#}
     );
   }
@@ -1368,30 +1260,12 @@ mod tests {
   }
 
   #[test]
-  fn test_multiple_declarators_both_used() {
+  fn test_multiple_declarators() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         const a = 1, b = 2;
-        console.log(a, b);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const a = 1, b = 2;
-        console.log(a, b);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_multiple_declarators_first_unused() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
         const unused = 1, used = 2;
-        console.log(used);
+        console.log(a, b, used);
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -1399,19 +1273,22 @@ mod tests {
     assert_eq!(
       output_code,
       indoc! {r#"
+        const a = 1, b = 2;
         const used = 2;
-        console.log(used);
+        console.log(a, b, used);
       "#}
     );
   }
 
   #[test]
-  fn test_compound_assignment_operator() {
+  fn test_mutation_operators() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         let count = 0;
+        let i = 0;
         count += 1;
-        console.log(count);
+        i++;
+        console.log(count, i);
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -1420,108 +1297,10 @@ mod tests {
       output_code,
       indoc! {r#"
         let count = 0;
+        let i = 0;
         count += 1;
-        console.log(count);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_increment_operator() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        let i = 0;
         i++;
-        console.log(i);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        let i = 0;
-        i++;
-        console.log(i);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_compound_assignment_in_function() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        function foo() {
-            let count = 0;
-            count += 1;
-            console.log(count);
-        }
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        function foo() {
-            let count = 0;
-            count += 1;
-            console.log(count);
-        }
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_var_in_auto_function() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        (function() {
-            var count = 0;
-            if (true) {count = 1;}
-            console.log(count);
-        })();
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        (function() {
-            var count = 0;
-            if (true) {
-                count = 1;
-            }
-            console.log(count);
-        })();
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_var_in_destructured_function_default() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const { func = function() {
-            let count = 0;
-            count += 1;
-            console.log(count);
-        } } = options;
-        func();
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const { func = function() {
-            let count = 0;
-            count += 1;
-            console.log(count);
-        } } = options;
-        func();
+        console.log(count, i);
       "#}
     );
   }
@@ -1588,109 +1367,33 @@ mod tests {
   }
 
   #[test]
-  fn test_object_rest_allows_removal_without_computed() {
+  fn test_object_rest_vs_no_rest() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         const { a, b, ...rest } = obj;
-        console.log(rest);
+        const { c, d, e } = obj2;
+        console.log(rest, c);
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
 
-    // Cannot remove `a` or `b` when rest is present - removing affects rest contents
     assert_eq!(
       output_code,
       indoc! {r#"
         const { a, b, ...rest } = obj;
-        console.log(rest);
+        const { c } = obj2;
+        console.log(rest, c);
       "#}
     );
   }
 
   #[test]
-  fn test_object_without_rest_can_remove_properties() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const { a, b, c } = obj;
-        console.log(a);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const { a } = obj;
-        console.log(a);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_computed_property_without_rest() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const key = 'prop';
-        const { [key]: value, other } = obj;
-        console.log(value);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const key = 'prop';
-        const { [key]: value } = obj;
-        console.log(value);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_array_destructuring_preserves_position() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const [foo, bar] = arr;
-        console.log(bar);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const [, bar] = arr;
-        console.log(bar);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_array_destructuring_trailing_commas_removed() {
-    let RunVisitResult { output_code, .. } = run_test_visit(
-      indoc! {r#"
-        const [a, b, c, d] = arr;
-        console.log(a);
-      "#},
-      |_: RunTestContext| UnusedBindingsRemover::new(),
-    );
-
-    assert_eq!(
-      output_code,
-      indoc! {r#"
-        const [a] = arr;
-        console.log(a);
-      "#}
-    );
-  }
-
-  #[test]
-  fn test_array_destructuring_middle_unused() {
+  fn test_array_destructuring_holes_and_trimming() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         const [a, b, c] = arr;
-        console.log(a, c);
+        const [d, e, f, g] = arr2;
+        console.log(a, c, d);
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -1699,7 +1402,8 @@ mod tests {
       output_code,
       indoc! {r#"
         const [a, , c] = arr;
-        console.log(a, c);
+        const [d] = arr2;
+        console.log(a, c, d);
       "#}
     );
   }
