@@ -1494,17 +1494,18 @@ export default class BundleGraph {
       return referencedAssets;
     }
 
-    // Now do ONE traversal to check all remaining assets
+    // Do ONE traversal to check all remaining assets
+    // We can share visitedBundles across all assets because we check every asset
+    // against every visited bundle, which matches the original per-asset behavior
     let siblingBundles = new Set(
       this.getBundleGroupsContainingBundle(bundle).flatMap((bundleGroup) =>
         this.getBundlesInBundleGroup(bundleGroup, {includeInline: true}),
       ),
     );
 
-    // Track visited bundles across all sibling traversals (matching original implementation)
     let visitedBundles: Set<Bundle> = new Set();
 
-    // Check if any of this bundle's descendants reference any of our assets
+    // Single traversal from all referencers
     for (let referencer of siblingBundles) {
       this.traverseBundles((descendant, _, actions) => {
         if (descendant.id === bundle.id) {
