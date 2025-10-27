@@ -5,7 +5,7 @@ import type {Async} from '@atlaspack/types';
 import {instrument} from '@atlaspack/logger';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 
-import AssetGraph, {nodeFromAssetGroup} from '../AssetGraph';
+import AssetGraph from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
 import {requestTypes, StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
@@ -84,7 +84,7 @@ export function createAssetGraphRequestRust(
       let result = {
         assetGraph,
         assetRequests: [],
-        assetGroupsWithRemovedParents: new Set(),
+        assetGroupsWithRemovedParents: new Set<number>(),
         changedAssets,
         changedAssetsPropagation,
         previousSymbolPropagationErrors: undefined,
@@ -125,17 +125,22 @@ export function getAssetGraph(
       // Accomodate the root node
       initialNodeCapacity: serializedGraph.nodes.length + 1,
     });
+  }
 
-    let index = graph.addNodeByContentKey('@@root', {
+  invariant(graph, 'Asset graph not initialized');
+
+  // Use the previous root node if it exists, otherwise create a new one
+  let rootNodeId =
+    prevAssetGraph?.rootNodeId ??
+    graph.addNodeByContentKey('@@root', {
       id: '@@root',
       type: 'root',
       value: null,
     });
 
-    graph.setRootNodeId(index);
-  }
+  graph.setRootNodeId(rootNodeId);
 
-  invariant(graph, 'Asset graph not initialized');
+  invariant(graph.rootNodeId != null, 'Asset graph has no root node');
 
   graph.safeToIncrementallyBundle = false;
 
