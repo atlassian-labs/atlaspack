@@ -1494,6 +1494,13 @@ export default class BundleGraph {
       return referencedAssets;
     }
 
+    // Get the assets we need to check once
+    let assetsToCheck = Array.from(assetDependenciesMap.keys());
+
+    // Helper function to check if all assets from assetDependenciesMap are in referencedAssets
+    const allAssetsReferenced = (): boolean =>
+      assetsToCheck.every((asset) => referencedAssets.has(asset));
+
     // Do ONE traversal to check all remaining assets
     // We can share visitedBundles across all assets because we check every asset
     // against every visited bundle, which matches the original per-asset behavior
@@ -1546,15 +1553,15 @@ export default class BundleGraph {
           }
         }
 
-        // If all assets are now marked as referenced, we can stop early
-        if (referencedAssets.size === assetDependenciesMap.size) {
+        // If all assets from assetDependenciesMap are now marked as referenced, we can stop early
+        if (allAssetsReferenced()) {
           actions.stop();
           return;
         }
       }, referencer);
 
-      // If all assets are referenced, no need to check more sibling bundles
-      if (referencedAssets.size === assetDependenciesMap.size) {
+      // If all assets from assetDependenciesMap are referenced, no need to check more sibling bundles
+      if (allAssetsReferenced()) {
         break;
       }
     }
