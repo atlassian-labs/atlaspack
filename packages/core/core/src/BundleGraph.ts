@@ -1499,6 +1499,7 @@ export default class BundleGraph {
 
     // Helper function to check if all assets from assetDependenciesMap are in referencedAssets
     const allAssetsReferenced = (): boolean =>
+      assetsToCheck.length <= referencedAssets.size &&
       assetsToCheck.every((asset) => referencedAssets.has(asset));
 
     // Do ONE traversal to check all remaining assets
