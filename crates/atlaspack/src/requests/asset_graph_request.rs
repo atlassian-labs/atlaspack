@@ -800,8 +800,8 @@ mod tests {
       });
 
       // Add assets to graph
-      let asset1_id = graph.add_asset(asset1.clone());
-      let asset2_id = graph.add_asset(asset2.clone());
+      let asset1_id = graph.add_asset(asset1.clone(), false);
+      let asset2_id = graph.add_asset(asset2.clone(), false);
 
       // Create test dependencies
       let target = Target::default();
@@ -809,8 +809,8 @@ mod tests {
       let dependency2 = Dependency::entry("./asset1.js".to_string(), target);
 
       // Add dependencies to graph
-      let dep1_id = graph.add_dependency(dependency1);
-      let dep2_id = graph.add_dependency(dependency2);
+      let dep1_id = graph.add_dependency(dependency1, false);
+      let dep2_id = graph.add_dependency(dependency2, false);
 
       // Connect first dependency to both assets (simulating discovered assets)
       graph.add_edge(&dep1_id, &asset1_id);
@@ -847,8 +847,8 @@ mod tests {
       let dependency1 = Dependency::entry("./asset1.js".to_string(), target.clone());
       let dependency2 = Dependency::entry("./asset2.js".to_string(), target);
 
-      let dep1_id = graph.add_dependency(dependency1);
-      let dep2_id = graph.add_dependency(dependency2);
+      let dep1_id = graph.add_dependency(dependency1, false);
+      let dep2_id = graph.add_dependency(dependency2, false);
 
       // Verify initial state: neither dependency has connections
       let dep1_neighbors = graph.get_outgoing_neighbors(&dep1_id);
@@ -889,16 +889,16 @@ mod tests {
         ..Asset::default()
       });
 
-      let asset1_id = graph.add_asset(asset1.clone());
-      let asset2_id = graph.add_asset(asset2.clone());
+      let asset1_id = graph.add_asset(asset1.clone(), false);
+      let asset2_id = graph.add_asset(asset2.clone(), false);
 
       // Create test dependencies
       let target = Target::default();
       let dependency1 = Dependency::entry("./shared.js".to_string(), target.clone());
       let dependency2 = Dependency::entry("./shared.js".to_string(), target);
 
-      let dep1_id = graph.add_dependency(dependency1);
-      let dep2_id = graph.add_dependency(dependency2);
+      let dep1_id = graph.add_dependency(dependency1, false);
+      let dep2_id = graph.add_dependency(dependency2, false);
 
       // Connect first dependency to assets
       graph.add_edge(&dep1_id, &asset1_id);
