@@ -15,7 +15,7 @@ on:
 jobs:
   build-and-release:
     name: Build and release dev
-    uses: ./.github/workflows/release.yml
+    uses: ./.github/workflows/release-optimized.yml
     secrets: inherit
     with:
       release-command: node ./scripts/dev-release.mjs
