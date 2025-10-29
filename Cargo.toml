@@ -16,6 +16,18 @@ opt-level = 3
 # The debug symbols are built for release and then sent to sentry in CI
 debug = true
 
+[profile.release-ci]
+# Optimized profile for CI builds to reduce disk usage
+inherits = "release"
+# Reduce debug info to save space
+debug = "line-tables-only"
+# Enable LTO to reduce binary size
+lto = true
+# Use more aggressive optimization
+opt-level = "z"  # Optimize for size
+# Reduce codegen units for smaller binaries
+codegen-units = 1
+
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "allow"
 rust_2018_idioms = { priority = -1, level = "deny" }

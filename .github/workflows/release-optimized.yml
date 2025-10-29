@@ -1,4 +1,4 @@
-name: Release
+name: Release (Optimized for Disk Space)
 
 on:
   workflow_call:
@@ -47,22 +47,14 @@ jobs:
             target: aarch64-unknown-linux-gnu
             os: ubuntu-22.04-arm
 
-          # # Linux ARM
-          # We don't support 32 bit linux
-          # - name: arm-unknown-linux-gnueabihf
-          #   os: ubuntu-22.04
-          #   target: arm-unknown-linux-gnueabihf
-          #   run: apt install -y gcc-arm-linux-gnueabihf
-
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     container:
       image: debian:bullseye-slim
+      options: --shm-size=2g  # Increase shared memory
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        # We need to install nodejs because `setup-node` requires
-        # the runner to have nodejs installed (https://github.com/actions/setup-node/issues/1287)
         run: |
           apt-get update
           apt-get install -y build-essential curl nodejs npm
@@ -77,7 +69,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: '${{ matrix.name }}'
-          # Only store new caches on main
           save-if: ${{ github.ref == 'refs/heads/main' }}
           # Optimize cache to reduce disk usage
           cache-directories: |
@@ -102,13 +93,52 @@ jobs:
           find target -name "*.pdb" -type f -exec rm -f {} + 2>/dev/null || true
           # Clean up temporary files
           rm -rf /tmp/rustc* /tmp/cargo* 2>/dev/null || true
+          # Clean up node_modules to free space
+          rm -rf node_modules/.cache 2>/dev/null || true
+          # Clean up any large log files
+          find . -name "*.log" -size +100M -delete 2>/dev/null || true
           echo "=== Disk usage after cleanup ==="
           df -h
-      - name: Build native packages
+      - name: Build core crates first
         env:
           RUSTUP_TARGET: ${{ matrix.target }}
-          CARGO_PROFILE: release
-        run: yarn build-native
+          CARGO_PROFILE: release-ci
+        run: |
+          echo "=== Building core crates first ==="
+          # Build core crates without the large node bindings
+          cargo build --target ${{ matrix.target }} --profile release-ci --workspace --exclude atlaspack-node-bindings
+          echo "=== Disk usage after core crates ==="
+          df -h
+      - name: Clean up intermediate files
+        run: |
+          echo "=== Cleaning up intermediate files ==="
+          # Remove intermediate build artifacts to free space
+          find target/${{ matrix.target }}/release/deps -name "*.rlib" -delete 2>/dev/null || true
+          find target/${{ matrix.target }}/release/build -type d -name "out" -exec rm -rf {} + 2>/dev/null || true
+          # Clean up any large temporary files
+          find /tmp -name "rustc*" -type d -exec rm -rf {} + 2>/dev/null || true
+          echo "=== Disk usage after intermediate cleanup ==="
+          df -h
+      - name: Build node bindings
+        env:
+          RUSTUP_TARGET: ${{ matrix.target }}
+          CARGO_PROFILE: release-ci
+        run: |
+          echo "=== Building node bindings ==="
+          # Build only the node bindings
+          cargo build --target ${{ matrix.target }} --profile release-ci -p atlaspack-node-bindings
+          echo "=== Disk usage after node bindings ==="
+          df -h
+      - name: Run napi build
+        env:
+          RUSTUP_TARGET: ${{ matrix.target }}
+          CARGO_PROFILE: release-ci
+        run: |
+          echo "=== Running napi build ==="
+          # Run the napi build process
+          yarn build-native
+          echo "=== Disk usage after napi build ==="
+          df -h
       - name: Monitor disk usage after build
         run: |
           echo "=== Disk usage after build ==="
@@ -153,41 +183,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: '${{ matrix.name }}'
-          # Only store new caches on main
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - name: Monitor disk usage before build
-        run: |
-          echo "=== Disk usage before build ==="
-          df -h
-          echo "=== Largest directories in workspace ==="
-          du -sh * | sort -hr | head -10
-          echo "=== Rust target directory size ==="
-          du -sh target/ 2>/dev/null || echo "No target directory yet"
-      - name: Clean up previous build artifacts
-        run: |
-          echo "=== Cleaning up previous build artifacts ==="
-          # Clean up cargo build artifacts for this specific target
-          cargo clean --target ${{ matrix.target }} --profile release 2>/dev/null || true
-          # Remove any leftover debug symbols
-          find target -name "*.dSYM" -type d -exec rm -rf {} + 2>/dev/null || true
-          find target -name "*.pdb" -type f -exec rm -f {} + 2>/dev/null || true
-          # Clean up temporary files
-          rm -rf /tmp/rustc* /tmp/cargo* 2>/dev/null || true
-          echo "=== Disk usage after cleanup ==="
-          df -h
       - name: Build native packages
         env:
           RUSTUP_TARGET: ${{ matrix.target }}
           CARGO_PROFILE: release
         run: yarn build-native
-      - name: Monitor disk usage after build
-        run: |
-          echo "=== Disk usage after build ==="
-          df -h
-          echo "=== Target directory size after build ==="
-          du -sh target/ 2>/dev/null || echo "No target directory"
-          echo "=== Largest files in target directory ==="
-          find target/ -type f -size +10M -exec ls -lh {} \; 2>/dev/null | head -20 || echo "No large files found"
       - name: Upload debug symbols to sentry
         run: node "./scripts/debug-symbols.mjs" --upload-to-sentry --rm
         env:
