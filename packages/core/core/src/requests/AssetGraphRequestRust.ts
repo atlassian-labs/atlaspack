@@ -113,8 +113,8 @@ export function getAssetGraph(
 
   if (prevAssetGraph && serializedGraph.updates.length > 0) {
     graph = new AssetGraph({
-      _contentKeyToNodeId: new Map(),
-      _nodeIdToContentKey: new Map(),
+      _contentKeyToNodeId: prevAssetGraph._contentKeyToNodeId,
+      _nodeIdToContentKey: prevAssetGraph._nodeIdToContentKey,
       nodes: prevAssetGraph.nodes,
       initialCapacity: serializedGraph.edges.length,
       // Accomodate the root node
