@@ -82,7 +82,7 @@ jobs:
         run: yarn build-native
 
       - if: ${{ matrix.build_js }}
-        run: yarn build
+        run: yarn build:ci
       # Upload artifacts for use later in pipeline
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
