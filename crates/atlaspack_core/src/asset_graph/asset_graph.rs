@@ -364,13 +364,17 @@ mod tests {
   fn add_dependency(
     graph: &mut AssetGraph,
     parent_node: NodeId,
+    specifier: &str,
     symbols: Vec<TestSymbol>,
   ) -> NodeId {
+    let asset = graph.get_asset(&parent_node).unwrap();
     let dep = DependencyBuilder::default()
       .symbols(symbols.iter().map(symbol).collect())
-      .specifier("test".to_string())
+      .specifier(specifier.to_string())
       .env(Arc::new(Environment::default()))
       .specifier_type(SpecifierType::default())
+      .source_path(asset.file_path.clone())
+      .source_asset_id(asset.id.clone())
       .priority(Priority::default())
       .build();
     let node_index = graph.add_dependency(dep, false);
@@ -387,7 +391,12 @@ mod tests {
     let entry_dep_node = graph.add_entry_dependency(dep, false);
 
     let index_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "index.js");
-    let dep_a_node = add_dependency(&mut graph, index_asset_node, vec![("a", "a", false)]);
+    let dep_a_node = add_dependency(
+      &mut graph,
+      index_asset_node,
+      "./a.js",
+      vec![("a", "a", false)],
+    );
 
     propagate_requested_symbols(
       &mut graph,
@@ -411,7 +420,12 @@ mod tests {
 
     // entry.js imports "a" from library.js
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
-    let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
+    let library_dep_node = add_dependency(
+      &mut graph,
+      entry_asset_node,
+      "./library.js",
+      vec![("a", "a", false)],
+    );
     propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
 
     // library.js re-exports "a" from a.js and "b" from b.js
@@ -422,8 +436,18 @@ mod tests {
       vec![("a", "a", true), ("b", "b", true)],
       "library.js",
     );
-    let a_dep = add_dependency(&mut graph, library_asset_node, vec![("a", "a", true)]);
-    let b_dep = add_dependency(&mut graph, library_asset_node, vec![("b", "b", true)]);
+    let a_dep = add_dependency(
+      &mut graph,
+      library_asset_node,
+      "./a.js",
+      vec![("a", "a", true)],
+    );
+    let b_dep = add_dependency(
+      &mut graph,
+      library_asset_node,
+      "./b.js",
+      vec![("b", "b", true)],
+    );
 
     let mut requested_deps = Vec::new();
 
@@ -457,14 +481,29 @@ mod tests {
 
     // entry.js imports "a" from library.js
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
-    let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
+    let library_dep_node = add_dependency(
+      &mut graph,
+      entry_asset_node,
+      "./library.js",
+      vec![("a", "a", false)],
+    );
     propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
 
     // library.js re-exports "*" from a.js and "*" from b.js
     // only "a" is used in entry.js
     let library_asset_node = add_asset(&mut graph, library_dep_node, vec![], "library.js");
-    let a_dep = add_dependency(&mut graph, library_asset_node, vec![("*", "*", true)]);
-    let b_dep = add_dependency(&mut graph, library_asset_node, vec![("*", "*", true)]);
+    let a_dep = add_dependency(
+      &mut graph,
+      library_asset_node,
+      "./a.js",
+      vec![("*", "*", true)],
+    );
+    let b_dep = add_dependency(
+      &mut graph,
+      library_asset_node,
+      "./b.js",
+      vec![("*", "*", true)],
+    );
 
     let mut requested_deps = Vec::new();
     propagate_requested_symbols(
@@ -497,13 +536,22 @@ mod tests {
 
     // entry.js imports "a" from library
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
-    let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
+    let library_dep_node = add_dependency(
+      &mut graph,
+      entry_asset_node,
+      "./library.js",
+      vec![("a", "a", false)],
+    );
     propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
 
     // library.js re-exports "*" from library/index.js
     let library_entry_asset_node = add_asset(&mut graph, library_dep_node, vec![], "library.js");
-    let library_reexport_dep_node =
-      add_dependency(&mut graph, library_entry_asset_node, vec![("*", "*", true)]);
+    let library_reexport_dep_node = add_dependency(
+      &mut graph,
+      library_entry_asset_node,
+      "./library/index.js",
+      vec![("*", "*", true)],
+    );
     propagate_requested_symbols(
       &mut graph,
       library_entry_asset_node,
@@ -518,7 +566,12 @@ mod tests {
       vec![("a", "a", true)],
       "library/index.js",
     );
-    let a_dep = add_dependency(&mut graph, library_asset_node, vec![("a", "a", true)]);
+    let a_dep = add_dependency(
+      &mut graph,
+      library_asset_node,
+      "./a.js",
+      vec![("a", "a", true)],
+    );
     propagate_requested_symbols(
       &mut graph,
       library_entry_asset_node,
@@ -541,7 +594,12 @@ mod tests {
 
     // entry.js imports "a" from library
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
-    let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
+    let library_dep_node = add_dependency(
+      &mut graph,
+      entry_asset_node,
+      "./library.js",
+      vec![("a", "a", false)],
+    );
     propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
 
     // library.js re-exports "b" from b.js renamed as "a"
@@ -551,7 +609,13 @@ mod tests {
       vec![("b", "a", true)],
       "library.js",
     );
-    let b_dep = add_dependency(&mut graph, library_asset_node, vec![("b", "b", true)]);
+
+    let b_dep = add_dependency(
+      &mut graph,
+      library_asset_node,
+      "./b.js",
+      vec![("b", "b", true)],
+    );
     propagate_requested_symbols(
       &mut graph,
       library_asset_node,
@@ -574,7 +638,12 @@ mod tests {
 
     // entry.js imports "a" from library
     let entry_asset_node = add_asset(&mut graph, entry_dep_node, vec![], "entry.js");
-    let library_dep_node = add_dependency(&mut graph, entry_asset_node, vec![("a", "a", false)]);
+    let library_dep_node = add_dependency(
+      &mut graph,
+      entry_asset_node,
+      "./library.js",
+      vec![("a", "a", false)],
+    );
     propagate_requested_symbols(&mut graph, entry_asset_node, entry_dep_node, &mut |_, _| {});
 
     // library.js re-exports "*" from stuff.js renamed as "a""
@@ -585,7 +654,12 @@ mod tests {
       vec![("a", "a", true)],
       "library.js",
     );
-    let stuff_dep = add_dependency(&mut graph, library_asset_node, vec![("a", "*", true)]);
+    let stuff_dep = add_dependency(
+      &mut graph,
+      library_asset_node,
+      "./stuff.js",
+      vec![("a", "*", true)],
+    );
     propagate_requested_symbols(
       &mut graph,
       library_asset_node,
