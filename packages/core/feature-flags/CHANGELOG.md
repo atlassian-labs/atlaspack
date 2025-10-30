@@ -1,5 +1,12 @@
 # @atlaspack/feature-flags
 
+## 2.26.1
+
+### Patch Changes
+
+- [#863](https://github.com/atlassian-labs/atlaspack/pull/863) [`373ee2d`](https://github.com/atlassian-labs/atlaspack/commit/373ee2d3b5cc315df1e90e647619f915892e2b87) Thanks [@matt-koko](https://github.com/matt-koko)! - Revert clean up of resolver optimisation feature-flag.
+  Reverts PR: 'Clean-up resolver optimisation #816'
+
 ## 2.26.0
 
 ### Minor Changes
