@@ -110,7 +110,7 @@ impl AssetGraphBuilder {
       self.work_count -= 1;
       let (result, request_id, cached) = result?;
 
-      match &*result {
+      match result.as_ref() {
         RequestResult::Entry(result) => {
           tracing::debug!("Handling EntryRequestOutput");
           self.handle_entry_result(result);
@@ -170,19 +170,6 @@ impl AssetGraphBuilder {
     for edge in existing_edges {
       self.graph.add_edge(&new_dep_id, &edge);
       self.propagate_requested_symbols(edge, new_dep_id);
-    }
-  }
-
-  #[cfg(test)]
-  pub fn test_replicate_existing_edges(
-    graph: &mut AssetGraph,
-    existing_dep_id: NodeId,
-    new_dep_id: NodeId,
-  ) {
-    let existing_edges = graph.get_outgoing_neighbors(&existing_dep_id);
-    for edge in existing_edges {
-      graph.add_edge(&new_dep_id, &edge);
-      // Note: We skip propagate_requested_symbols in tests as it requires the full builder context
     }
   }
 
@@ -785,9 +772,10 @@ mod tests {
   ///
   /// These tests directly test the replicate_existing_edges logic by using
   /// a simplified test function that operates on AssetGraph directly.
+  #[cfg(test)]
   mod replicate_existing_edges_tests {
     use super::*;
-    use crate::requests::asset_graph_request::AssetGraphBuilder;
+    use atlaspack_core::asset_graph::NodeId;
     use atlaspack_core::types::{Asset, Code, Dependency, Target};
 
     #[test]
@@ -840,7 +828,7 @@ mod tests {
       );
 
       // Test the replicate_existing_edges function via test helper
-      AssetGraphBuilder::test_replicate_existing_edges(&mut graph, dep1_id, dep2_id);
+      test_replicate_existing_edges(&mut graph, dep1_id, dep2_id);
 
       // Verify that dep2 now has the same connections as dep1
       let dep2_neighbors_after = graph.get_outgoing_neighbors(&dep2_id);
@@ -877,6 +865,19 @@ mod tests {
       );
     }
 
+    #[cfg(test)]
+    pub fn test_replicate_existing_edges(
+      graph: &mut AssetGraph,
+      existing_dep_id: NodeId,
+      new_dep_id: NodeId,
+    ) {
+      let existing_edges = graph.get_outgoing_neighbors(&existing_dep_id);
+      for edge in existing_edges {
+        graph.add_edge(&new_dep_id, &edge);
+        // Note: We skip propagate_requested_symbols in tests as it requires the full builder context
+      }
+    }
+
     #[test]
     fn test_replicate_existing_edges_with_no_existing_edges() {
       let mut graph = AssetGraph::new();
@@ -905,7 +906,7 @@ mod tests {
       );
 
       // Test the replicate_existing_edges function (should be no-op)
-      AssetGraphBuilder::test_replicate_existing_edges(&mut graph, dep1_id, dep2_id);
+      test_replicate_existing_edges(&mut graph, dep1_id, dep2_id);
 
       // Verify that dep2 still has no connections (nothing to replicate)
       let dep2_neighbors_after = graph.get_outgoing_neighbors(&dep2_id);
@@ -969,7 +970,7 @@ mod tests {
       );
 
       // Test the replicate_existing_edges function
-      AssetGraphBuilder::test_replicate_existing_edges(&mut graph, dep1_id, dep2_id);
+      test_replicate_existing_edges(&mut graph, dep1_id, dep2_id);
 
       // Verify that original dependency still has its connections unchanged
       let dep1_neighbors_after = graph.get_outgoing_neighbors(&dep1_id);
@@ -1044,7 +1045,7 @@ mod tests {
       assert_eq!(graph.get_outgoing_neighbors(&dep2_id).len(), 0);
 
       // Test the replicate_existing_edges function
-      AssetGraphBuilder::test_replicate_existing_edges(&mut graph, dep1_id, dep2_id);
+      test_replicate_existing_edges(&mut graph, dep1_id, dep2_id);
 
       // Verify replication worked for single connection
       let dep2_neighbors = graph.get_outgoing_neighbors(&dep2_id);

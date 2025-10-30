@@ -211,8 +211,8 @@ impl RequestTracker {
       .ok_or_else(|| diagnostic_error!("Failed to find request node"))?;
 
     // Don't run if already run
-    if let RequestNode::Valid(result) = request_node {
-      return Ok(Some(result.clone()));
+    if let RequestNode::Valid(previous_result) = request_node {
+      return Ok(Some(previous_result.clone()));
     }
 
     self.invalid_nodes.remove(&node_index);
@@ -269,6 +269,8 @@ impl RequestTracker {
           invalidations,
         } = result;
         let result = Arc::new(result);
+
+        // Update node with latest result
         *request_node = RequestNode::Valid(result.clone());
 
         for invalidation in invalidations.iter() {
