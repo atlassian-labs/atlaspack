@@ -57,11 +57,6 @@ impl Request for EntryRequest {
       entry_path = request_context.project_root.join(entry_path);
     };
 
-    let feature_flag_v3_handle_directory_entry_points = request_context
-      .options
-      .feature_flags
-      .bool_enabled("v3HandleDirectoryEntryPoints");
-
     // Handle file entries
     if request_context.file_system().is_file(&entry_path) {
       let package_path = if entry_path.starts_with(&request_context.project_root) {
@@ -77,12 +72,7 @@ impl Request for EntryRequest {
         result: RequestResult::Entry(EntryRequestOutput {
           entries: vec![Entry {
             file_path: entry_path,
-            // Prior to v3HandleDirectoryEntryPoints, Entry did not have a package_path field.
-            package_path: if feature_flag_v3_handle_directory_entry_points {
-              package_path
-            } else {
-              PathBuf::new() // Empty for original behavior
-            },
+            package_path,
             target: None,
           }],
           files: vec![],
@@ -94,10 +84,7 @@ impl Request for EntryRequest {
     }
 
     // Handle directory entries
-    // only if v3HandleDirectoryEntryPoints feature flag is enabled
-    if feature_flag_v3_handle_directory_entry_points
-      && request_context.file_system().is_dir(&entry_path)
-    {
+    if request_context.file_system().is_dir(&entry_path) {
       return self
         .handle_directory_entry(entry_path, request_context)
         .await;
@@ -256,7 +243,6 @@ impl EntryRequest {
 mod tests {
   use std::sync::Arc;
 
-  use atlaspack_core::types::{AtlaspackOptions, FeatureFlags};
   use atlaspack_filesystem::FileSystem;
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 
@@ -273,18 +259,6 @@ mod tests {
     };
 
     assert_eq!(result, Arc::new(RequestResult::Entry(expected)));
-  }
-
-  fn default_test_options() -> RequestTrackerTestOptions {
-    let options = AtlaspackOptions {
-      feature_flags: FeatureFlags::with_bool_flag("v3HandleDirectoryEntryPoints", true),
-      ..AtlaspackOptions::default()
-    };
-
-    RequestTrackerTestOptions {
-      atlaspack_options: options,
-      ..RequestTrackerTestOptions::default()
-    }
   }
 
   #[tokio::test(flavor = "multi_thread")]
@@ -318,40 +292,6 @@ mod tests {
     let entry = request_tracker(RequestTrackerTestOptions {
       fs,
       project_root: project_root.clone(),
-      ..default_test_options()
-    })
-    .run_request(request)
-    .await;
-
-    assert_entry_result(
-      entry,
-      EntryRequestOutput {
-        entries: vec![Entry {
-          file_path: entry_path,
-          package_path: project_root, // With feature flag enabled
-          target: None,
-        }],
-        files: vec![],
-        globs: vec![],
-      },
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_file_entry_from_project_root_feature_flag_off() {
-    let fs = Arc::new(InMemoryFileSystem::default());
-    let project_root = PathBuf::from("atlaspack");
-    let request = EntryRequest {
-      entry: String::from("src/a.js"),
-    };
-
-    let entry_path = project_root.join("src").join("a.js");
-
-    fs.write_file(&entry_path, String::default());
-
-    let entry = request_tracker(RequestTrackerTestOptions {
-      fs,
-      project_root: project_root.clone(),
       ..RequestTrackerTestOptions::default()
     })
     .run_request(request)
@@ -362,7 +302,7 @@ mod tests {
       EntryRequestOutput {
         entries: vec![Entry {
           file_path: entry_path,
-          package_path: PathBuf::new(), // Empty when feature flag is disabled
+          package_path: project_root,
           target: None,
         }],
         files: vec![],
@@ -391,45 +331,6 @@ mod tests {
     let entry = request_tracker(RequestTrackerTestOptions {
       fs,
       project_root: PathBuf::from("atlaspack"),
-      ..default_test_options()
-    })
-    .run_request(request)
-    .await;
-
-    assert_entry_result(
-      entry,
-      EntryRequestOutput {
-        entries: vec![Entry {
-          file_path: entry_path.clone(),
-          package_path: entry_path.parent().unwrap().to_path_buf(), // With feature flag enabled
-          target: None,
-        }],
-        files: vec![],
-        globs: vec![],
-      },
-    );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_file_entry_from_root_feature_flag_off() {
-    let fs = Arc::new(InMemoryFileSystem::default());
-
-    #[cfg(not(target_os = "windows"))]
-    let root = PathBuf::from(std::path::MAIN_SEPARATOR_STR);
-
-    #[cfg(target_os = "windows")]
-    let root = PathBuf::from("c:\\windows");
-
-    let entry_path = root.join("src").join("a.js");
-    let request = EntryRequest {
-      entry: root.join("src/a.js").to_string_lossy().into_owned(),
-    };
-
-    fs.write_file(&entry_path, String::default());
-
-    let entry = request_tracker(RequestTrackerTestOptions {
-      fs,
-      project_root: PathBuf::from("atlaspack"),
       ..RequestTrackerTestOptions::default()
     })
     .run_request(request)
@@ -440,7 +341,7 @@ mod tests {
       EntryRequestOutput {
         entries: vec![Entry {
           file_path: entry_path.clone(),
-          package_path: PathBuf::new(), // Empty when feature flag is disabled
+          package_path: entry_path.parent().unwrap().to_path_buf(),
           target: None,
         }],
         files: vec![],
@@ -463,7 +364,7 @@ mod tests {
     let entry = request_tracker(RequestTrackerTestOptions {
       fs,
       project_root: project_root.clone(),
-      ..default_test_options()
+      ..RequestTrackerTestOptions::default()
     })
     .run_request(request)
     .await;
@@ -495,7 +396,7 @@ mod tests {
     let entry = request_tracker(RequestTrackerTestOptions {
       fs,
       project_root: project_root.clone(),
-      ..default_test_options()
+      ..RequestTrackerTestOptions::default()
     })
     .run_request(request)
     .await;
@@ -536,7 +437,7 @@ mod tests {
     let entry = request_tracker(RequestTrackerTestOptions {
       fs,
       project_root: project_root.clone(),
-      ..default_test_options()
+      ..RequestTrackerTestOptions::default()
     })
     .run_request(request)
     .await;
@@ -553,31 +454,5 @@ mod tests {
         globs: vec![],
       },
     );
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn returns_error_when_directory_entry_feature_flag_off() {
-    let fs = Arc::new(InMemoryFileSystem::default());
-    let project_root = PathBuf::from("atlaspack");
-    let request = EntryRequest {
-      entry: String::from("src"),
-    };
-
-    let entry_path = project_root.join("src");
-    fs.create_directory(&entry_path).unwrap();
-
-    let entry = request_tracker(RequestTrackerTestOptions {
-      fs,
-      project_root: project_root.clone(),
-      ..RequestTrackerTestOptions::default()
-    })
-    .run_request(request)
-    .await;
-
-    // When feature flag is disabled, directory entries should be treated as unknown
-    assert_eq!(
-      entry.map_err(|e| e.to_string()),
-      Err(String::from("Unknown entry: src"))
-    )
   }
 }
