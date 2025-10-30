@@ -116,6 +116,7 @@ export function getAssetGraph(
       initialCapacity: serializedGraph.edges.length,
       // Accomodate the root node
       initialNodeCapacity: prevAssetGraph.nodes.length + 1,
+      rootNodeId: prevAssetGraph.rootNodeId,
     });
   } else {
     graph = new AssetGraph({
@@ -125,24 +126,21 @@ export function getAssetGraph(
       // Accomodate the root node
       initialNodeCapacity: serializedGraph.nodes.length + 1,
     });
-  }
 
-  invariant(graph, 'Asset graph not initialized');
-
-  // Use the previous root node if it exists, otherwise create a new one
-  let rootNodeId =
-    prevAssetGraph?.rootNodeId ??
-    graph.addNodeByContentKey('@@root', {
+    let rootNodeId = graph.addNodeByContentKey('@@root', {
       id: '@@root',
       type: 'root',
       value: null,
     });
 
-  graph.setRootNodeId(rootNodeId);
+    graph.setRootNodeId(rootNodeId);
+  }
 
+  invariant(graph, 'Asset graph not initialized');
   invariant(graph.rootNodeId != null, 'Asset graph has no root node');
 
-  graph.safeToIncrementallyBundle = false;
+  // TODO: Don't leave this as true
+  graph.safeToIncrementallyBundle = true;
 
   // @ts-expect-error TS7031
   function mapSymbols({exported, ...symbol}) {
