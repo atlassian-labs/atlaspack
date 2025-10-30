@@ -468,7 +468,7 @@ describe('watcher', function () {
     ]);
   });
 
-  it('should rebuild if a missing file is added', async function () {
+  it.v2('should rebuild if a missing file is added', async function () {
     await outputFS.mkdirp(inputDir);
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
