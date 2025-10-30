@@ -203,6 +203,10 @@ export default declare((api): PluginObj<State> => {
             return;
           }
 
+          if (path.parent.type.startsWith('TS')) {
+            return;
+          }
+
           if (state.visitedIdentifiers?.has(path.node)) {
             return;
           }
