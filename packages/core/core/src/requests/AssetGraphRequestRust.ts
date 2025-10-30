@@ -17,6 +17,7 @@ import type {
 } from './AssetGraphRequest';
 import {toEnvironmentRef} from '../EnvironmentManager';
 import {getEnvironmentHash} from '../Environment';
+import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
 
 type RunInput = {
   input: AssetGraphRequestInput;
@@ -80,6 +81,8 @@ export function createAssetGraphRequestRust(
           diagnostic: [...errors.values()][0],
         });
       }
+
+      await dumpGraphToGraphViz(assetGraph, 'AssetGraphV3');
 
       let result = {
         assetGraph,
