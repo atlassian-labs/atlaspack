@@ -9,7 +9,13 @@ import AssetGraph from '../AssetGraph';
 import type {AtlaspackV3} from '../atlaspack-v3';
 import {requestTypes, StaticRunOpts} from '../RequestTracker';
 import {propagateSymbols} from '../SymbolPropagation';
-import type {Environment, Asset} from '../types';
+import type {
+  Environment,
+  Asset,
+  AssetGraphNode,
+  AssetNode,
+  DependencyNode,
+} from '../types';
 
 import type {
   AssetGraphRequestInput,
@@ -18,6 +24,8 @@ import type {
 import {toEnvironmentRef} from '../EnvironmentManager';
 import {getEnvironmentHash} from '../Environment';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
+import nullthrows from 'nullthrows';
+import assert from 'assert';
 
 type RunInput = {
   input: AssetGraphRequestInput;
@@ -194,7 +202,28 @@ export function getAssetGraph(
     return envId;
   };
 
-  for (let node of [...serializedGraph.nodes, ...serializedGraph.updates]) {
+  function updateNode(newNode: AssetGraphNode, isUpdateNode: boolean) {
+    if (isUpdateNode) {
+      let existingNode = graph.getNodeByContentKey(newNode.id);
+
+      assert(existingNode && existingNode.type === newNode.type);
+
+      Object.assign(existingNode, newNode);
+    } else {
+      graph.addNodeByContentKey(newNode.id, newNode);
+    }
+  }
+
+  let nodeTypeSwitchoverIndex = serializedGraph.nodes.length;
+  let nodesCount =
+    serializedGraph.nodes.length + serializedGraph.updates.length;
+
+  for (let index = 0; index < nodesCount; index++) {
+    let isUpdateNode = index >= nodeTypeSwitchoverIndex;
+    let node = isUpdateNode
+      ? serializedGraph.updates[index - nodeTypeSwitchoverIndex]
+      : serializedGraph.nodes[index];
+
     if (node.type === 'entry') {
       let id = 'entry:' + ++entry;
 
@@ -230,14 +259,15 @@ export function getAssetGraph(
 
       changedAssets.set(id, asset);
 
-      graph.addNodeByContentKey(id, {
+      let assetNode: AssetNode = {
         id,
         type: 'asset',
         usedSymbols: new Set(),
         usedSymbolsDownDirty: true,
         usedSymbolsUpDirty: true,
         value: asset,
-      });
+      };
+      updateNode(assetNode, isUpdateNode);
     } else if (node.type === 'dependency') {
       let {dependency, id} = node.value;
 
@@ -259,7 +289,7 @@ export function getAssetGraph(
         usedSymbolsUp.set('*', undefined);
       }
 
-      graph.addNodeByContentKey(id, {
+      let depNode: DependencyNode = {
         id,
         type: 'dependency',
         deferred: false,
@@ -272,7 +302,9 @@ export function getAssetGraph(
         usedSymbolsUpDirtyDown: true,
         usedSymbolsUpDirtyUp: true,
         value: dependency,
-      });
+      };
+
+      updateNode(depNode, isUpdateNode);
     }
   }
 
