@@ -203,7 +203,7 @@ export default declare((api): PluginObj<State> => {
             return;
           }
 
-          if (path.parent.type.startsWith('TS')) {
+          if (path.parentPath.isTSType()) {
             return;
           }
 
