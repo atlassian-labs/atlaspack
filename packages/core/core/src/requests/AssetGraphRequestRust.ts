@@ -150,8 +150,7 @@ export function getAssetGraph(
   invariant(graph, 'Asset graph not initialized');
   invariant(graph.rootNodeId != null, 'Asset graph has no root node');
 
-  // TODO: Don't leave this as true
-  graph.safeToIncrementallyBundle = true;
+  graph.safeToIncrementallyBundle = false;
 
   // @ts-expect-error TS7031
   function mapSymbols({exported, ...symbol}) {
