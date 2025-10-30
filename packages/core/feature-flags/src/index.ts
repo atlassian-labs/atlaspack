@@ -298,14 +298,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   v3JsxConfigurationLoading: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
-   * Enables the v3 Rust entry request implementation to handle directory entry points
-   *
-   * @author matt-koko <mkokolich@atlassian.com>
-   * @since 2025-10-21
-   */
-  v3HandleDirectoryEntryPoints: process.env.ATLASPACK_BUILD_ENV === 'test',
-
-  /**
 
    * When _disabled_, will early exit from the @atlaspack/transformer-tokens transformation
    *
