@@ -19,15 +19,23 @@ import {
   BASELINE_FILENAME,
   CURRENT_FILENAME,
 } from './benchmarks/config.mts';
-import type { BenchmarkReport, BenchmarkResult } from './benchmarks/types.mts';
+import type {BenchmarkReport, BenchmarkResult} from './benchmarks/types.mts';
 
 async function main() {
   const args = process.argv.slice(2);
-  const outputDir = args.find(arg => arg.startsWith('--output='))?.split('=')[1] || DEFAULT_OUTPUT_DIR;
-  const baselinePath = args.find(arg => arg.startsWith('--baseline='))?.split('=')[1];
+  const outputDir =
+    args.find((arg) => arg.startsWith('--output='))?.split('=')[1] ||
+    DEFAULT_OUTPUT_DIR;
+  const baselinePath = args
+    .find((arg) => arg.startsWith('--baseline='))
+    ?.split('=')[1];
   const generateComment = args.includes('--github-comment');
-  const specificTest = args.find(arg => arg.startsWith('--test='))?.split('=')[1];
-  const samples = parseInt(args.find(arg => arg.startsWith('--samples='))?.split('=')[1] || '5');
+  const specificTest = args
+    .find((arg) => arg.startsWith('--test='))
+    ?.split('=')[1];
+  const samples = parseInt(
+    args.find((arg) => arg.startsWith('--samples='))?.split('=')[1] || '5',
+  );
 
   console.log('🚀 Starting Atlaspack benchmarks...\n');
 
@@ -39,15 +47,16 @@ async function main() {
   // Filter benchmarks if specific test requested
   let benchmarksToRun = BENCHMARK_CONFIGS;
   if (specificTest) {
-    benchmarksToRun = BENCHMARK_CONFIGS.filter(config =>
-      config.name.toLowerCase().includes(specificTest.toLowerCase()) ||
-      config.target.includes(specificTest)
+    benchmarksToRun = BENCHMARK_CONFIGS.filter(
+      (config) =>
+        config.name.toLowerCase().includes(specificTest.toLowerCase()) ||
+        config.target.includes(specificTest),
     );
 
     if (benchmarksToRun.length === 0) {
       console.error(`❌ No benchmark found matching: ${specificTest}`);
       console.log('\nAvailable benchmarks:');
-      BENCHMARK_CONFIGS.forEach(config => {
+      BENCHMARK_CONFIGS.forEach((config) => {
         console.log(`  - ${config.name} (${config.target})`);
       });
       process.exit(1);
@@ -56,13 +65,15 @@ async function main() {
 
   // Override sample count if specified
   if (samples !== 5) {
-    benchmarksToRun = benchmarksToRun.map(config => ({
+    benchmarksToRun = benchmarksToRun.map((config) => ({
       ...config,
       samples,
     }));
   }
 
-  console.log(`Running ${benchmarksToRun.length} benchmark(s) with ${samples} samples each...\n`);
+  console.log(
+    `Running ${benchmarksToRun.length} benchmark(s) with ${samples} samples each...\n`,
+  );
 
   // Run benchmarks
   const results: BenchmarkResult[] = [];
@@ -94,8 +105,10 @@ async function main() {
   }
 
   // Compare results
-  const comparisons = results.map(result => {
-    const baselineResult = baselineReport?.results.find(r => r.name === result.name);
+  const comparisons = results.map((result) => {
+    const baselineResult = baselineReport?.results.find(
+      (r) => r.name === result.name,
+    );
     return compareResults(result, baselineResult);
   });
 
@@ -117,11 +130,15 @@ async function main() {
   }
 
   // Check for regressions
-  const regressions = comparisons.filter(c => c.comparison?.isRegression);
+  const regressions = comparisons.filter((c) => c.comparison?.isRegression);
   if (regressions.length > 0) {
-    console.log(`\n⚠️  ${regressions.length} performance regression(s) detected!`);
-    regressions.forEach(r => {
-      console.log(`   - ${r.name}: ${r.comparison?.meanDiffPercent?.toFixed(2)}% slower`);
+    console.log(
+      `\n⚠️  ${regressions.length} performance regression(s) detected!`,
+    );
+    regressions.forEach((r) => {
+      console.log(
+        `   - ${r.name}: ${r.comparison?.meanDiffPercent?.toFixed(2)}% slower`,
+      );
     });
 
     // Exit with error code if regressions detected
@@ -130,11 +147,15 @@ async function main() {
     }
   }
 
-  const improvements = comparisons.filter(c => c.comparison?.isImprovement);
+  const improvements = comparisons.filter((c) => c.comparison?.isImprovement);
   if (improvements.length > 0) {
-    console.log(`\n🎉 ${improvements.length} performance improvement(s) detected!`);
-    improvements.forEach(i => {
-      console.log(`   - ${i.name}: ${Math.abs(i.comparison?.meanDiffPercent || 0).toFixed(2)}% faster`);
+    console.log(
+      `\n🎉 ${improvements.length} performance improvement(s) detected!`,
+    );
+    improvements.forEach((i) => {
+      console.log(
+        `   - ${i.name}: ${Math.abs(i.comparison?.meanDiffPercent || 0).toFixed(2)}% faster`,
+      );
     });
   }
 
@@ -153,7 +174,7 @@ process.on('uncaughtException', (error) => {
 });
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(error => {
+  main().catch((error) => {
     console.error('❌ Benchmark failed:', error);
     process.exit(1);
   });

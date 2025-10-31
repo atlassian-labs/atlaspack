@@ -7,7 +7,7 @@ import type {
   BenchmarkReport,
   ComparisonResult,
 } from './types.mts';
-import { MEMORY_THRESHOLD, PERFORMANCE_THRESHOLD } from './config.mts';
+import {MEMORY_THRESHOLD, PERFORMANCE_THRESHOLD} from './config.mts';
 
 function getCpuInfo(): string {
   const cpus = os.cpus();
@@ -28,17 +28,25 @@ export function createReport(results: BenchmarkResult[]): BenchmarkReport {
   };
 }
 
-export async function saveReport(report: BenchmarkReport, outputPath: string): Promise<void> {
+export async function saveReport(
+  report: BenchmarkReport,
+  outputPath: string,
+): Promise<void> {
   await writeFile(outputPath, JSON.stringify(report, null, 2));
   console.log(`Benchmark report saved to: ${outputPath}`);
 }
 
-export async function saveTextReport(content: string, outputPath: string): Promise<void> {
+export async function saveTextReport(
+  content: string,
+  outputPath: string,
+): Promise<void> {
   await writeFile(outputPath, content);
   console.log(`Benchmark report saved to: ${outputPath}`);
 }
 
-export async function loadBaselineReport(baselinePath: string): Promise<BenchmarkReport | null> {
+export async function loadBaselineReport(
+  baselinePath: string,
+): Promise<BenchmarkReport | null> {
   if (!existsSync(baselinePath)) {
     console.warn(`Baseline report not found at: ${baselinePath}`);
     return null;
@@ -67,11 +75,16 @@ export function compareResults(
   const meanDiff = current.stats.mean - baseline.stats.mean;
   const meanDiffPercent = (meanDiff / baseline.stats.mean) * 100;
 
-  const memoryDiff = current.stats.memoryPeakMean - baseline.stats.memoryPeakMean;
+  const memoryDiff =
+    current.stats.memoryPeakMean - baseline.stats.memoryPeakMean;
   const memoryDiffPercent = (memoryDiff / baseline.stats.memoryPeakMean) * 100;
 
-  const isRegression = meanDiffPercent > PERFORMANCE_THRESHOLD || memoryDiffPercent > MEMORY_THRESHOLD;
-  const isImprovement = meanDiffPercent < -PERFORMANCE_THRESHOLD || memoryDiffPercent < -MEMORY_THRESHOLD;
+  const isRegression =
+    meanDiffPercent > PERFORMANCE_THRESHOLD ||
+    memoryDiffPercent > MEMORY_THRESHOLD;
+  const isImprovement =
+    meanDiffPercent < -PERFORMANCE_THRESHOLD ||
+    memoryDiffPercent < -MEMORY_THRESHOLD;
 
   return {
     name: current.name,
@@ -109,7 +122,9 @@ export function formatPercentage(percent: number): string {
   return `${sign}${percent.toFixed(2)}%`;
 }
 
-export function generateMarkdownReport(comparisons: ComparisonResult[]): string {
+export function generateMarkdownReport(
+  comparisons: ComparisonResult[],
+): string {
   let markdown = '# 📊 Benchmark Results\n\n';
 
   if (comparisons.length === 0) {
@@ -154,8 +169,10 @@ export function generateMarkdownReport(comparisons: ComparisonResult[]): string 
 
     if (Object.keys(current.stats.phaseStats).length > 0) {
       markdown += `### ${name}\n\n`;
-      markdown += '| Phase | Duration (avg) | Duration (p95) | Memory Peak (avg) | Memory Peak (p95) |\n';
-      markdown += '|-------|----------------|----------------|-------------------|-------------------|\n';
+      markdown +=
+        '| Phase | Duration (avg) | Duration (p95) | Memory Peak (avg) | Memory Peak (p95) |\n';
+      markdown +=
+        '|-------|----------------|----------------|-------------------|-------------------|\n';
 
       Object.entries(current.stats.phaseStats).forEach(([phaseName, stats]) => {
         const avgDuration = formatDuration(stats.duration.mean);
@@ -180,10 +197,13 @@ export function generateMarkdownReport(comparisons: ComparisonResult[]): string 
 
       const memStats = current.stats.overallMemoryStats;
 
-      markdown += '| Metric | Min | Mean | Median | P95 | P99 | Max | Std Dev |\n';
-      markdown += '|--------|-----|------|--------|-----|-----|-----|----------|\n';
+      markdown +=
+        '| Metric | Min | Mean | Median | P95 | P99 | Max | Std Dev |\n';
+      markdown +=
+        '|--------|-----|------|--------|-----|-----|-----|----------|\n';
 
-      const formatMemStat = (stat: any) => `${formatMemory(stat.min)} | ${formatMemory(stat.mean)} | ${formatMemory(stat.median)} | ${formatMemory(stat.p95)} | ${formatMemory(stat.p99)} | ${formatMemory(stat.max)} | ${formatMemory(stat.standardDeviation)}`;
+      const formatMemStat = (stat: any) =>
+        `${formatMemory(stat.min)} | ${formatMemory(stat.mean)} | ${formatMemory(stat.median)} | ${formatMemory(stat.p95)} | ${formatMemory(stat.p99)} | ${formatMemory(stat.max)} | ${formatMemory(stat.standardDeviation)}`;
 
       markdown += `| RSS | ${formatMemStat(memStats.rss)} |\n`;
       markdown += `| Heap Used | ${formatMemStat(memStats.heapUsed)} |\n`;
@@ -211,8 +231,8 @@ export function generateMarkdownReport(comparisons: ComparisonResult[]): string 
 }
 
 export function generateGitHubComment(comparisons: ComparisonResult[]): string {
-  const hasRegressions = comparisons.some(c => c.comparison?.isRegression);
-  const hasImprovements = comparisons.some(c => c.comparison?.isImprovement);
+  const hasRegressions = comparisons.some((c) => c.comparison?.isRegression);
+  const hasImprovements = comparisons.some((c) => c.comparison?.isImprovement);
 
   let header = '## 📊 Benchmark Results\n\n';
 

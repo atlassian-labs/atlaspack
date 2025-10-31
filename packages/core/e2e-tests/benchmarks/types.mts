@@ -1,4 +1,4 @@
-import { InitialAtlaspackOptions } from "@atlaspack/types";
+import {InitialAtlaspackOptions} from '@atlaspack/types';
 
 export interface BenchmarkOptions {
   samples: number;

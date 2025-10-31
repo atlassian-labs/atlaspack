@@ -9,6 +9,7 @@ import type {
   InitialAtlaspackOptions,
 } from '@atlaspack/types';
 import {setupThreeJsProject, cleanupThreeJsProject} from './three-js-setup.mts';
+import {THREE_JS_CONFIG} from '../benchmarks/config.mts';
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,7 +131,9 @@ async function buildThreeJsFixture(
 
   // Setup the three.js project (this will clone the repo if needed)
   const threeJsProjectDir = await setupThreeJsProject({
-    copies: parseInt(process.env.THREE_JS_COPIES || '3'), // Reduced for benchmarks
+    copies: THREE_JS_CONFIG.copies,
+    branch: THREE_JS_CONFIG.branch,
+    repoUrl: THREE_JS_CONFIG.repoUrl,
   });
 
   try {

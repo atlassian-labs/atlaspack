@@ -35,7 +35,10 @@ function takeMemorySnapshot(): MemorySnapshot {
   };
 }
 
-function updateMemoryPeak(current: MemorySnapshot, peak: MemorySnapshot): MemorySnapshot {
+function updateMemoryPeak(
+  current: MemorySnapshot,
+  peak: MemorySnapshot,
+): MemorySnapshot {
   return current.rss > peak.rss ? current : peak;
 }
 
@@ -48,7 +51,10 @@ function startMemoryTracking(metrics: BuildMetrics) {
   metrics.memoryInterval = setInterval(() => {
     const snapshot = takeMemorySnapshot();
     metrics.memorySnapshots.push(snapshot);
-    metrics.globalMemoryPeak = updateMemoryPeak(snapshot, metrics.globalMemoryPeak);
+    metrics.globalMemoryPeak = updateMemoryPeak(
+      snapshot,
+      metrics.globalMemoryPeak,
+    );
 
     // Update current phase memory tracking
     if (metrics.currentPhase) {
@@ -128,9 +134,13 @@ function finalizeBuildMetrics(instanceId: string) {
   stopMemoryTracking(metrics);
 
   // Convert to serializable format and store globally
-  const serializedPhases: PhaseMetrics[] = Array.from(metrics.phases.entries()).map(([name, phase]) => {
+  const serializedPhases: PhaseMetrics[] = Array.from(
+    metrics.phases.entries(),
+  ).map(([name, phase]) => {
     const endTime = performance.now();
-    const endMemory = phase.memorySnapshots[phase.memorySnapshots.length - 1] || phase.startMemory;
+    const endMemory =
+      phase.memorySnapshots[phase.memorySnapshots.length - 1] ||
+      phase.startMemory;
 
     return {
       name,
@@ -161,10 +171,10 @@ function finalizeBuildMetrics(instanceId: string) {
 function calculateMemoryStats(snapshots: MemorySnapshot[]) {
   if (snapshots.length === 0) return null;
 
-  const rssValues = snapshots.map(s => s.rss);
-  const heapUsedValues = snapshots.map(s => s.heapUsed);
-  const heapTotalValues = snapshots.map(s => s.heapTotal);
-  const externalValues = snapshots.map(s => s.external);
+  const rssValues = snapshots.map((s) => s.rss);
+  const heapUsedValues = snapshots.map((s) => s.heapUsed);
+  const heapTotalValues = snapshots.map((s) => s.heapTotal);
+  const externalValues = snapshots.map((s) => s.external);
 
   return {
     rss: calculateDetailedStats(rssValues),
@@ -178,7 +188,9 @@ function calculateMemoryStats(snapshots: MemorySnapshot[]) {
 function calculateDetailedStats(values: number[]) {
   const sorted = [...values].sort((a, b) => a - b);
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+  const variance =
+    values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) /
+    values.length;
 
   return {
     min: Math.min(...values),
@@ -193,8 +205,11 @@ function calculateDetailedStats(values: number[]) {
 }
 
 export default new Reporter({
+  // eslint-disable-next-line require-await
   async report({event, options}): Promise<void> {
-    const instanceId = options.instanceId || 'default';
+    // Use benchmark instance ID from environment, fallback to the internal instanceId
+    const instanceId =
+      process.env.BENCHMARK_INSTANCE_ID || options.instanceId || 'default';
 
     switch (event.type) {
       case 'buildStart':
@@ -202,19 +217,17 @@ export default new Reporter({
         break;
 
       case 'buildProgress':
+        // eslint-disable-next-line no-case-declarations
         const metrics = buildMetrics.get(instanceId);
         if (metrics && event.phase) {
           startPhase(metrics, event.phase);
         }
         break;
-
       case 'buildSuccess':
       case 'buildFailure':
         finalizeBuildMetrics(instanceId);
         break;
-
       default:
-        // Handle other events as needed
         break;
     }
   },

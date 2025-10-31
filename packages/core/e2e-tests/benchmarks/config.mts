@@ -16,7 +16,7 @@ export const BENCHMARK_CONFIGS: BenchmarkOptions[] = [
         shouldScopeHoist: true,
         shouldOptimize: true,
       },
-      shouldDisableCache: true
+      shouldDisableCache: true,
     },
   },
 ];
