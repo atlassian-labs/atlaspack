@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
@@ -78,14 +79,14 @@ pub struct Collect {
   pub is_esm: bool,
   pub should_wrap: bool,
   /// local variable binding -> descriptor
-  pub imports: HashMap<Id, Import>,
+  pub imports: BTreeMap<Id, Import>,
   pub this_exprs: HashMap<JsWord, Span>,
   /// exported name -> descriptor
-  pub exports: HashMap<JsWord, Export>,
+  pub exports: BTreeMap<JsWord, Export>,
   /// local variable binding -> exported name
   pub exports_locals: HashMap<Id, JsWord>,
   /// source of the export-all --> location
-  pub exports_all: HashMap<JsWord, SourceLocation>,
+  pub exports_all: BTreeMap<JsWord, SourceLocation>,
   /// the keys in `imports` that are actually used (referenced), except namespace imports
   pub used_imports: HashSet<Id>,
   pub non_static_access: HashMap<Id, Vec<Span>>,
@@ -164,11 +165,11 @@ impl Collect {
       has_cjs_exports: false,
       is_esm: false,
       should_wrap: false,
-      imports: HashMap::new(),
+      imports: BTreeMap::new(),
       this_exprs: HashMap::new(),
-      exports: HashMap::new(),
+      exports: BTreeMap::new(),
       exports_locals: HashMap::new(),
-      exports_all: HashMap::new(),
+      exports_all: BTreeMap::new(),
       used_imports: HashSet::new(),
       non_static_access: HashMap::new(),
       non_const_bindings: HashMap::new(),
