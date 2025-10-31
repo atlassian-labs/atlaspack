@@ -20,9 +20,16 @@ pub struct Entry {
 }
 
 /// Package.json target configuration
+/// Targets can be either:
+/// - An object with configuration (e.g., { "source": "index.js" })
+/// - false to explicitly disable a target
 #[derive(Debug, Deserialize, Serialize)]
-pub struct PackageTarget {
-  pub source: Option<serde_json::Value>, // Can be string, array of strings, or null
+#[serde(untagged)]
+pub enum PackageTarget {
+  Config {
+    source: Option<serde_json::Value>, // Can be string, array of strings, or null
+  },
+  Disabled(bool), // false means the target is disabled
 }
 
 /// Package.json structure for entry resolution
@@ -130,14 +137,29 @@ impl EntryRequest {
     // Process target-specific sources first
     // Targets take precedence over package-level source when they define their own source.
     let mut targets_with_sources = 0;
+    let mut enabled_targets_count = 0;
     if let Some(targets) = &package_json.targets {
       for (target_name, target) in targets {
-        if let Some(source) = &target.source {
-          targets_with_sources += 1;
-          let target_entries = self
-            .resolve_sources(&entry_path, source, Some(target_name), &request_context)
-            .await?;
-          entries.extend(target_entries);
+        match target {
+          PackageTarget::Disabled(false) => {
+            // Skip disabled targets (e.g., "main": false)
+            continue;
+          }
+          PackageTarget::Disabled(true) => {
+            // true is unusual but treat as enabled with no source
+            // Will fall through to package-level source fallback if available
+            enabled_targets_count += 1;
+          }
+          PackageTarget::Config { source } => {
+            enabled_targets_count += 1;
+            if let Some(source) = source {
+              targets_with_sources += 1;
+              let target_entries = self
+                .resolve_sources(&entry_path, source, Some(target_name), &request_context)
+                .await?;
+              entries.extend(target_entries);
+            }
+          }
         }
       }
     }
@@ -152,13 +174,13 @@ impl EntryRequest {
     //   {
     //     "source": "fallback.js",  ← Used as fallback for targets without source
     //     "targets": {
-    //       "main": { "source": "index.js" },  ← Has its own source
+    //       "main": false,  ← Disabled, ignored
+    //       "development": { "source": "index.js" },  ← Has its own source
     //       "alt": {}  ← No source, will use "fallback.js"
     //     }
     //   }
-    let all_targets_have_source = targets_with_sources > 0
-      && package_json.targets.is_some()
-      && package_json.targets.as_ref().unwrap().len() == targets_with_sources;
+    let all_targets_have_source =
+      targets_with_sources > 0 && enabled_targets_count == targets_with_sources;
 
     if !all_targets_have_source && let Some(source) = &package_json.source {
       let package_entries = self
@@ -494,6 +516,63 @@ mod tests {
             file_path: fallback_file,
             package_path: entry_path.clone(),
             target: None, // From package-level source, not associated with a specific target
+          },
+        ],
+        files: vec![package_json_path],
+        globs: vec![],
+      },
+    );
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_entries_ignoring_disabled_targets() {
+    let fs = Arc::new(InMemoryFileSystem::default());
+    let project_root = PathBuf::from("atlaspack");
+    let request = EntryRequest {
+      entry: String::from("src"),
+    };
+
+    let entry_path = project_root.join("src");
+    let package_json_path = entry_path.join("package.json");
+    let dev_file = entry_path.join("dev.js");
+    let prod_file = entry_path.join("prod.js");
+
+    fs.create_directory(&entry_path).unwrap();
+    fs.write_file(&dev_file, String::default());
+    fs.write_file(&prod_file, String::default());
+    fs.write_file(
+      &package_json_path,
+      r#"{
+        "targets": {
+          "main": false,
+          "development": {"source": "dev.js"},
+          "production": {"source": "prod.js"}
+        }
+      }"#
+        .to_string(),
+    );
+
+    let entry = request_tracker(RequestTrackerTestOptions {
+      fs,
+      project_root: project_root.clone(),
+      ..RequestTrackerTestOptions::default()
+    })
+    .run_request(request)
+    .await;
+
+    assert_entry_result(
+      entry,
+      EntryRequestOutput {
+        entries: vec![
+          Entry {
+            file_path: dev_file,
+            package_path: entry_path.clone(),
+            target: Some("development".to_string()),
+          },
+          Entry {
+            file_path: prod_file,
+            package_path: entry_path.clone(),
+            target: Some("production".to_string()),
           },
         ],
         files: vec![package_json_path],
