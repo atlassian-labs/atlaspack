@@ -1,5 +1,15 @@
 # @atlaspack/validator-typescript
 
+## 2.14.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.1.1
+  - @atlaspack/plugin@2.14.37
+  - @atlaspack/types@2.15.27
+  - @atlaspack/ts-utils@2.14.16
+
 ## 2.14.36
 
 ### Patch Changes
