@@ -119,29 +119,42 @@ impl EntryRequest {
     let files = vec![package_json_path];
     let globs = Vec::new();
 
-    // Count targets with sources
+    // Process target-specific sources first
+    // Targets take precedence over package-level source when they define their own source.
     let mut targets_with_sources = 0;
     if let Some(targets) = &package_json.targets {
       for (target_name, target) in targets {
         if let Some(source) = &target.source {
           targets_with_sources += 1;
           let target_entries = self
-            .resolve_target_sources(&entry_path, source, target_name, &request_context)
+            .resolve_sources(&entry_path, source, Some(target_name), &request_context)
             .await?;
           entries.extend(target_entries);
         }
       }
     }
 
-    // Check if all targets have sources
+    // Determine if we should use package-level source as fallback
+    //
+    // Package-level source is used when:
+    // 1. No targets are defined, OR
+    // 2. Some targets exist but don't have their own source defined
+    //
+    // Example scenario:
+    //   {
+    //     "source": "fallback.js",  ← Used as fallback for targets without source
+    //     "targets": {
+    //       "main": { "source": "index.js" },  ← Has its own source
+    //       "alt": {}  ← No source, will use "fallback.js"
+    //     }
+    //   }
     let all_targets_have_source = targets_with_sources > 0
       && package_json.targets.is_some()
       && package_json.targets.as_ref().unwrap().len() == targets_with_sources;
 
-    // If not all targets have sources, try package-level source
     if !all_targets_have_source && let Some(source) = &package_json.source {
       let package_entries = self
-        .resolve_package_sources(&entry_path, source, &request_context)
+        .resolve_sources(&entry_path, source, None, &request_context)
         .await?;
       entries.extend(package_entries);
     }
@@ -163,11 +176,16 @@ impl EntryRequest {
     }
   }
 
-  async fn resolve_target_sources(
+  /// Resolves source files from a JSON value (string or array) into Entry objects.
+  ///
+  /// This method handles both target-specific sources and package-level sources.
+  /// - If target_name is Some, the entries will be associated with that target
+  /// - If target_name is None, the entries are package-level (no specific target)
+  async fn resolve_sources(
     &self,
     entry_path: &std::path::Path,
     source: &serde_json::Value,
-    target_name: &str,
+    target_name: Option<&str>,
     request_context: &RunRequestContext,
   ) -> Result<Vec<Entry>, RunRequestError> {
     let sources = match source {
@@ -188,44 +206,7 @@ impl EntryRequest {
         entries.push(Entry {
           file_path: source_path,
           package_path: entry_path.to_path_buf(),
-          target: Some(target_name.to_string()),
-        });
-      } else {
-        // Match v2 behavior: throw error when source file doesn't exist
-        return Err(diagnostic_error!(
-          DiagnosticBuilder::default()
-            .message(format!("{} does not exist.", source_path.display()))
-        ));
-      }
-    }
-    Ok(entries)
-  }
-
-  async fn resolve_package_sources(
-    &self,
-    entry_path: &std::path::Path,
-    source: &serde_json::Value,
-    request_context: &RunRequestContext,
-  ) -> Result<Vec<Entry>, RunRequestError> {
-    let sources = match source {
-      serde_json::Value::String(s) => vec![s.clone()],
-      serde_json::Value::Array(arr) => arr
-        .iter()
-        .filter_map(|v| v.as_str())
-        .map(|s| s.to_string())
-        .collect(),
-      _ => return Ok(vec![]),
-    };
-
-    let mut entries = Vec::new();
-    for source in sources {
-      // TODO: Handle globs in source
-      let source_path = entry_path.join(&source);
-      if request_context.file_system().is_file(&source_path) {
-        entries.push(Entry {
-          file_path: source_path,
-          package_path: entry_path.to_path_buf(),
-          target: None,
+          target: target_name.map(|s| s.to_string()),
         });
       } else {
         // Match v2 behavior: throw error when source file doesn't exist
@@ -450,6 +431,63 @@ mod tests {
           package_path: entry_path,
           target: Some("main".to_string()),
         }],
+        files: vec![package_json_path],
+        globs: vec![],
+      },
+    );
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn returns_entries_from_targets_with_package_source_fallback() {
+    let fs = Arc::new(InMemoryFileSystem::default());
+    let project_root = PathBuf::from("atlaspack");
+    let request = EntryRequest {
+      entry: String::from("src"),
+    };
+
+    let entry_path = project_root.join("src");
+    let package_json_path = entry_path.join("package.json");
+    let main_file = entry_path.join("main.js");
+    let fallback_file = entry_path.join("fallback.js");
+
+    fs.create_directory(&entry_path).unwrap();
+    fs.write_file(&main_file, String::default());
+    fs.write_file(&fallback_file, String::default());
+    fs.write_file(
+      &package_json_path,
+      r#"{
+        "source": "fallback.js",
+        "targets": {
+          "main": {"source": "main.js"},
+          "alt": {}
+        }
+      }"#
+        .to_string(),
+    );
+
+    let entry = request_tracker(RequestTrackerTestOptions {
+      fs,
+      project_root: project_root.clone(),
+      ..RequestTrackerTestOptions::default()
+    })
+    .run_request(request)
+    .await;
+
+    assert_entry_result(
+      entry,
+      EntryRequestOutput {
+        entries: vec![
+          Entry {
+            file_path: main_file,
+            package_path: entry_path.clone(),
+            target: Some("main".to_string()),
+          },
+          Entry {
+            file_path: fallback_file,
+            package_path: entry_path.clone(),
+            target: None, // From package-level source, not associated with a specific target
+          },
+        ],
         files: vec![package_json_path],
         globs: vec![],
       },
