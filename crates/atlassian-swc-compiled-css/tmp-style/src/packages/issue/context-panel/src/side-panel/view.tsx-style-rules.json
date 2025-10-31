@@ -1,0 +1,22 @@
+{
+  "source": "src/packages/issue/context-panel/src/side-panel/view.tsx",
+  "styleRules": [
+    "._154iidpf{top:0}",
+    "._18m915vq{overflow-y:hidden}",
+    "._19bvu2gc{padding-left:var(--ds-space-100,8px)}",
+    "._1bsbgy4q{width:var(--_1vp45zu)px}",
+    "._1e0c1txw{display:flex}",
+    "._1reo15vq{overflow-x:hidden}",
+    "._1xi285h6{right:var(--_xw6n01)px}",
+    "._2lx21bp4{flex-direction:column}",
+    "._3um015vq{visibility:hidden}",
+    "._3um0ewfl{visibility:visible}",
+    "._4t3i10op{height:var(--_14nmwu5)}",
+    "._4t3i1osq{height:100%}",
+    "._kqswstnw{position:absolute}",
+    "._tzy4idpf{opacity:0}",
+    "._tzy4kb7n{opacity:1}",
+    "._v56414sz{transition:width .5s cubic-bezier(.15,1,.3,1)}",
+    "._v5649gex{transition:width .5s cubic-bezier(.15,1,.3,1),opacity 0,.5s,visibility 0,.5s}"
+  ]
+}

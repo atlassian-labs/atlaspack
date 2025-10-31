@@ -1,0 +1,5 @@
+{
+  "extract": false,
+  "addComponentName": true,
+  "nodeEnv": "development"
+}

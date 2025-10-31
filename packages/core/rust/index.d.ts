@@ -71,7 +71,7 @@ export interface InlineRequiresOptimizerResult {
 export declare function runInlineRequiresOptimizer(input: InlineRequiresOptimizerInput): InlineRequiresOptimizerResult
 /** Runs in the rayon thread pool */
 export declare function runInlineRequiresOptimizerAsync(input: InlineRequiresOptimizerInput): object
-export interface CompiledCssInJsTransformConfig {
+export interface PartialCompiledCssInJsTransformConfig {
   importReact?: boolean
   nonce?: string
   importSources?: Array<string>
@@ -81,6 +81,7 @@ export interface CompiledCssInJsTransformConfig {
   processXcss?: boolean
   increaseSpecificity?: boolean
   sortAtRules?: boolean
+  sortShorthand?: boolean
   classHashPrefix?: string
   flattenMultipleSelectors?: boolean
   extract?: boolean
@@ -91,7 +92,7 @@ export interface CompiledCssInJsPluginInput {
   projectRoot: string
   isSource: boolean
   sourceMaps: boolean
-  config: CompiledCssInJsTransformConfig
+  config: PartialCompiledCssInJsTransformConfig
 }
 export interface CompiledCssInJsPluginResult {
   code: string

@@ -1,22 +1,8 @@
 import { css } from '@compiled/react';
 
-const buttonStyles = css({
-	border: 'none',
-	borderRadius: '3px',
-	padding: '8px 10px',
-	backgroundColor: '#6554C0',
-	color: '#fff',
-	fontWeight: 400,
-	fontFamily: 'Arial',
-	fontSize: '14px',
-
-	'&:hover': {
-		backgroundColor: '#8777D9',
-	},
-
-	'&:active': {
-		backgroundColor: '#5243AA',
-	},
+const styles = css({
+  color: 'red',
+  backgroundColor: 'transparent',
 });
 
-<button css={buttonStyles} />;
+export const Component = () => <div css={styles}>Hello</div>;
