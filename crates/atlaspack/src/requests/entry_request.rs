@@ -59,28 +59,7 @@ impl Request for EntryRequest {
 
     // Handle file entries
     if request_context.file_system().is_file(&entry_path) {
-      let package_path = if entry_path.starts_with(&request_context.project_root) {
-        request_context.project_root.clone()
-      } else {
-        entry_path
-          .parent()
-          .unwrap_or(&request_context.project_root)
-          .to_path_buf()
-      };
-
-      return Ok(ResultAndInvalidations {
-        result: RequestResult::Entry(EntryRequestOutput {
-          entries: vec![Entry {
-            file_path: entry_path,
-            package_path,
-            target: None,
-          }],
-          files: vec![],
-          globs: vec![],
-        }),
-        // TODO: invalidations
-        invalidations: vec![],
-      });
+      return self.handle_file_entry(entry_path, &request_context);
     }
 
     // Handle directory entries
@@ -97,19 +76,48 @@ impl Request for EntryRequest {
 }
 
 impl EntryRequest {
+  /// Handles a file entry by determining its package path and creating an Entry
+  fn handle_file_entry(
+    &self,
+    entry_path: PathBuf,
+    request_context: &RunRequestContext,
+  ) -> Result<ResultAndInvalidations, RunRequestError> {
+    let package_path = if entry_path.starts_with(&request_context.project_root) {
+      request_context.project_root.clone()
+    } else {
+      entry_path
+        .parent()
+        .unwrap_or(&request_context.project_root)
+        .to_path_buf()
+    };
+
+    Ok(ResultAndInvalidations {
+      result: RequestResult::Entry(EntryRequestOutput {
+        entries: vec![Entry {
+          file_path: entry_path,
+          package_path,
+          target: None,
+        }],
+        files: vec![],
+        globs: vec![],
+      }),
+      // TODO: invalidations
+      invalidations: vec![],
+    })
+  }
+
   async fn handle_directory_entry(
     &self,
     entry_path: PathBuf,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
-    // Create a ConfigLoader for this directory
     let config_loader = ConfigLoader {
       fs: request_context.file_system().clone(),
       project_root: request_context.project_root.clone(),
       search_path: entry_path.clone(),
     };
 
-    // Use ConfigLoader to load package.json
+    // Load package.json
     let package_json_file = config_loader.load_package_json::<PackageJSON>()?;
 
     let package_json = package_json_file.contents;
