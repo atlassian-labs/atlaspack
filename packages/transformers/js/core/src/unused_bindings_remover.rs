@@ -129,6 +129,9 @@ impl UnusedBindingsRemover {
   }
 
   fn should_keep_import_spec(&self, spec: &ImportSpecifier) -> bool {
+    // TODO: Re-implement light import cleaning
+    return true;
+
     let id = match spec {
       ImportSpecifier::Named(named) => &named.local,
       ImportSpecifier::Default(default) => &default.local,
