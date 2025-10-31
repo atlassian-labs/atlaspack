@@ -8,6 +8,7 @@ import type {
   BuildSuccessEvent,
   InitialAtlaspackOptions,
 } from '@atlaspack/types';
+import {setupThreeJsProject, cleanupThreeJsProject} from './three-js-setup.mts';
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,6 +43,10 @@ export async function buildFixture(
   outputDir: string;
   buildResult: BuildSuccessEvent;
 }> {
+  // Handle three.js project specially
+  if (target.includes('three-js-project')) {
+    return buildThreeJsFixture(target, config);
+  }
   const output = createHash('sha256').update(target).digest('hex');
   const outputDir = path.join(__root, 'dist', output);
 
@@ -104,4 +109,51 @@ export async function serveFixture(target: string): Promise<ServeContext> {
       subscription.unsubscribe();
     },
   };
+}
+
+async function buildThreeJsFixture(
+  target: string,
+  config: InitialAtlaspackOptions = {},
+): Promise<{
+  outputDir: string;
+  buildResult: BuildSuccessEvent;
+}> {
+  const output = createHash('sha256').update(target).digest('hex');
+  const outputDir = path.join(__root, 'dist', output);
+
+  if (fs.existsSync(outputDir)) {
+    fs.rmSync(outputDir, {
+      recursive: true,
+      force: true,
+    });
+  }
+
+  // Setup the three.js project (this will clone the repo if needed)
+  const threeJsProjectDir = await setupThreeJsProject({
+    copies: parseInt(process.env.THREE_JS_COPIES || '3'), // Reduced for benchmarks
+  });
+
+  try {
+    const atlaspack = new Atlaspack(
+      mergeParcelOptions(
+        {
+          entries: [path.join(threeJsProjectDir, 'index.html')],
+          defaultTargetOptions: {
+            distDir: outputDir,
+          },
+          defaultConfig: url.fileURLToPath(
+            import.meta.resolve('@atlaspack/config-default'),
+          ),
+        },
+        config,
+      ),
+    );
+
+    const buildResult = await atlaspack.run();
+    return {outputDir, buildResult};
+  } catch (error) {
+    // Clean up on error
+    await cleanupThreeJsProject(threeJsProjectDir);
+    throw error;
+  }
 }

@@ -1,0 +1,150 @@
+name: Performance Benchmarks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to benchmark (optional)'
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  benchmark:
+    name: 🏃 Performance Benchmarks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout current branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build packages
+        run: yarn build-native-release && yarn build
+
+      - name: Get baseline from main branch
+        run: |
+          git fetch origin main:main
+          git checkout main
+          yarn build
+
+          # Try to run benchmark on main branch, continue gracefully if it fails
+          if yarn benchmark --output=./benchmark-results --samples=5 2>/dev/null; then
+            echo "✅ Baseline benchmark completed successfully"
+            mv ./benchmark-results/current-report.json ./benchmark-results/baseline-report.json
+          else
+            echo "ℹ️ Main branch doesn't have benchmark command - skipping baseline generation"
+            echo "This is expected for the first benchmark PR"
+            mkdir -p ./benchmark-results
+          fi
+
+          git checkout ${{ github.head_ref || github.ref_name }}
+
+      - name: Build current branch
+        run: yarn build
+
+      - name: Run benchmarks on current branch
+        run: |
+          # Run benchmarks with baseline if available, otherwise without baseline
+          if [ -f "./benchmark-results/baseline-report.json" ]; then
+            echo "🔄 Running benchmarks with baseline comparison..."
+            yarn benchmark --output=./benchmark-results --baseline=./benchmark-results/baseline-report.json --github-comment --samples=3
+          else
+            echo "🔄 Running benchmarks without baseline..."
+            yarn benchmark --output=./benchmark-results --github-comment --samples=3
+          fi
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results
+          path: benchmark-results/
+          retention-days: 30
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = './benchmark-results/github-comment.md';
+
+            if (!fs.existsSync(path)) {
+              console.log('No GitHub comment file found');
+              return;
+            }
+
+            const comment = fs.readFileSync(path, 'utf8');
+
+            // Find existing benchmark comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.data.find(
+              comment => comment.body.includes('📊 Benchmark Results')
+            );
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: comment
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+
+      - name: Check for regressions
+        run: |
+          if [ -f "benchmark-results/github-comment.md" ]; then
+            if grep -q "🔴 Regression" benchmark-results/github-comment.md; then
+              echo "❌ Performance regressions detected!"
+              exit 1
+            else
+              echo "✅ No performance regressions detected"
+            fi
+          else
+            echo "ℹ️ No benchmark results found - skipping regression check"
+          fi
