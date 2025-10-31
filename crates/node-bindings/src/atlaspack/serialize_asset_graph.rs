@@ -28,7 +28,11 @@ pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Res
     serialize_asset_graph_nodes(env, asset_graph, &asset_graph.updated_nodes().collect())?,
   )?;
 
-  napi_asset_graph.set_named_property("edges", asset_graph.edges())?;
+  if !asset_graph.safe_to_skip_bundling {
+    napi_asset_graph.set_named_property("edges", asset_graph.edges())?;
+  }
+
+  napi_asset_graph.set_named_property("safeToSkipBundling", asset_graph.safe_to_skip_bundling)?;
 
   Ok(napi_asset_graph)
 }
