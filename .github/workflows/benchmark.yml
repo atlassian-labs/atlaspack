@@ -59,14 +59,16 @@ jobs:
           yarn build
 
           # Try to run benchmark on main branch, continue gracefully if it fails
-          if yarn benchmark --output=./packages/core/e2e-tests/benchmark-results --samples=5 2>/dev/null; then
+          cd packages/core/e2e-tests
+          if yarn benchmark --output=$GITHUB_WORKSPACE/benchmark-results --samples=5 2>/dev/null; then
             echo "✅ Baseline benchmark completed successfully"
-            mv ./packages/core/e2e-tests/benchmark-results/current-report.json ./packages/core/e2e-tests/benchmark-results/baseline-report.json
+            mv $GITHUB_WORKSPACE/benchmark-results/current-report.json $GITHUB_WORKSPACE/benchmark-results/baseline-report.json
           else
             echo "ℹ️ Main branch doesn't have benchmark command - skipping baseline generation"
             echo "This is expected for the first benchmark PR"
-            mkdir -p ./packages/core/e2e-tests/benchmark-results
+            mkdir -p $GITHUB_WORKSPACE/benchmark-results
           fi
+          cd $GITHUB_WORKSPACE
 
           git checkout ${{ github.head_ref || github.ref_name }}
 
@@ -76,12 +78,35 @@ jobs:
       - name: Run benchmarks on current branch
         run: |
           # Run benchmarks with baseline if available, otherwise without baseline
-          if [ -f "./packages/core/e2e-tests/benchmark-results/baseline-report.json" ]; then
+          cd packages/core/e2e-tests
+          if [ -f "$GITHUB_WORKSPACE/benchmark-results/baseline-report.json" ]; then
             echo "🔄 Running benchmarks with baseline comparison..."
-            yarn benchmark --output=./packages/core/e2e-tests/benchmark-results --baseline=./packages/core/e2e-tests/benchmark-results/baseline-report.json --github-comment --samples=3
+            yarn benchmark --output=$GITHUB_WORKSPACE/benchmark-results --baseline=$GITHUB_WORKSPACE/benchmark-results/baseline-report.json --github-comment --samples=3
           else
             echo "🔄 Running benchmarks without baseline..."
-            yarn benchmark --output=./packages/core/e2e-tests/benchmark-results --github-comment --samples=3
+            yarn benchmark --output=$GITHUB_WORKSPACE/benchmark-results --github-comment --samples=3
+          fi
+          cd $GITHUB_WORKSPACE
+
+      - name: Debug - List benchmark results
+        run: |
+          echo "Current working directory: $PWD"
+          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          echo "Contents of current directory:"
+          ls -la
+          echo "Contents of benchmark-results (if exists):"
+          if [ -d "benchmark-results" ]; then
+            ls -la benchmark-results/
+          else
+            echo "benchmark-results directory not found"
+          fi
+          echo "Contents of packages/core/e2e-tests (if exists):"
+          if [ -d "packages/core/e2e-tests" ]; then
+            ls -la packages/core/e2e-tests/
+            if [ -d "packages/core/e2e-tests/benchmark-results" ]; then
+              echo "Contents of packages/core/e2e-tests/benchmark-results:"
+              ls -la packages/core/e2e-tests/benchmark-results/
+            fi
           fi
 
       - name: Upload benchmark results
@@ -89,7 +114,7 @@ jobs:
         if: always()
         with:
           name: benchmark-results
-          path: packages/core/e2e-tests/benchmark-results/
+          path: benchmark-results/
           retention-days: 30
 
       - name: Comment on PR
@@ -98,7 +123,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const path = './packages/core/e2e-tests/benchmark-results/github-comment.md';
+            const path = './benchmark-results/github-comment.md';
 
             if (!fs.existsSync(path)) {
               console.log('No GitHub comment file found at: ' + path);
@@ -138,8 +163,8 @@ jobs:
 
       - name: Check for regressions
         run: |
-          if [ -f "packages/core/e2e-tests/benchmark-results/github-comment.md" ]; then
-            if grep -q "🔴 Regression" packages/core/e2e-tests/benchmark-results/github-comment.md; then
+          if [ -f "benchmark-results/github-comment.md" ]; then
+            if grep -q "🔴 Regression" benchmark-results/github-comment.md; then
               echo "❌ Performance regressions detected!"
               exit 1
             else

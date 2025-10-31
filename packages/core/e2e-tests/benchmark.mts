@@ -38,6 +38,9 @@ async function main() {
   );
 
   console.log('🚀 Starting Atlaspack benchmarks...\n');
+  console.log(`Debug: outputDir = ${outputDir}`);
+  console.log(`Debug: generateComment = ${generateComment}`);
+  console.log(`Debug: args = ${JSON.stringify(args)}`);
 
   // Ensure output directory exists
   if (!existsSync(outputDir)) {
@@ -122,11 +125,17 @@ async function main() {
   await saveTextReport(markdownReport, markdownPath);
 
   // Generate GitHub comment if requested
+  console.log(`Debug: About to check generateComment: ${generateComment}`);
   if (generateComment) {
+    console.log('Debug: Generating GitHub comment...');
     const commentPath = path.join(outputDir, 'github-comment.md');
+    console.log(`Debug: commentPath = ${commentPath}`);
     const comment = await generateGitHubComment(comparisons);
+    console.log(`Debug: comment length = ${comment.length}`);
     await saveTextReport(comment, commentPath);
     console.log(`\n💬 GitHub comment saved to: ${commentPath}`);
+  } else {
+    console.log('Debug: GitHub comment generation skipped - generateComment is false');
   }
 
   // Check for regressions
