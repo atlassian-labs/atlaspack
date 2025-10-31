@@ -8,7 +8,7 @@ export const BENCHMARK_CONFIGS: BenchmarkOptions[] = [
   {
     name: 'Three.js Real Repository',
     target: 'three-js-project/index.html',
-    samples: 3,
+    samples: 5,
     warmupRuns: 1,
     buildOptions: {
       mode: 'production',
