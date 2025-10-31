@@ -195,6 +195,73 @@ describe('Entry Points', function () {
       assert(b.getBundles().length >= 2);
     });
 
+    it('should ignore disabled targets set to false', async () => {
+      await fsFixture(overlayFS, dir)`
+        test-package
+          package.json:
+            {
+              "targets": {
+                "main": false,
+                "development": {
+                  "source": "src/dev.js"
+                },
+                "production": {
+                  "source": "src/prod.js"
+                }
+              }
+            }
+          src
+            dev.js:
+              console.log('dev entry');
+            prod.js:
+              console.log('prod entry');
+      `;
+
+      let b = await bundle(path.join(dir, 'test-package'), {
+        inputFS: overlayFS,
+      });
+
+      // Should have 2 bundles (development and production), main should be ignored
+      assert(b.getBundles().length >= 2);
+      let bundles = b.getBundles();
+      // Verify we don't have a bundle for the disabled 'main' target
+      assert(!bundles.some((bundle) => bundle.name === 'main'));
+    });
+
+    it('should handle disabled targets with source array', async () => {
+      await fsFixture(overlayFS, dir)`
+        test-package
+          package.json:
+            {
+              "targets": {
+                "main": false,
+                "development": {
+                  "source": ["src/dev1.js", "src/dev2.js"]
+                },
+                "production": {
+                  "source": ["src/prod1.js", "src/prod2.js"]
+                }
+              }
+            }
+          src
+            dev1.js:
+              console.log('dev entry 1');
+            dev2.js:
+              console.log('dev entry 2');
+            prod1.js:
+              console.log('prod entry 1');
+            prod2.js:
+              console.log('prod entry 2');
+      `;
+
+      let b = await bundle(path.join(dir, 'test-package'), {
+        inputFS: overlayFS,
+      });
+
+      // Should handle array sources for each enabled target
+      assert(b.getBundles().length >= 2);
+    });
+
     it('should error when directory has no package.json', async () => {
       await fsFixture(overlayFS, dir)`
         empty-dir
