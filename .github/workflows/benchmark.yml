@@ -59,13 +59,13 @@ jobs:
           yarn build
 
           # Try to run benchmark on main branch, continue gracefully if it fails
-          if yarn benchmark --output=./benchmark-results --samples=5 2>/dev/null; then
+          if yarn benchmark --output=./packages/core/e2e-tests/benchmark-results --samples=5 2>/dev/null; then
             echo "✅ Baseline benchmark completed successfully"
-            mv ./benchmark-results/current-report.json ./benchmark-results/baseline-report.json
+            mv ./packages/core/e2e-tests/benchmark-results/current-report.json ./packages/core/e2e-tests/benchmark-results/baseline-report.json
           else
             echo "ℹ️ Main branch doesn't have benchmark command - skipping baseline generation"
             echo "This is expected for the first benchmark PR"
-            mkdir -p ./benchmark-results
+            mkdir -p ./packages/core/e2e-tests/benchmark-results
           fi
 
           git checkout ${{ github.head_ref || github.ref_name }}
@@ -76,12 +76,12 @@ jobs:
       - name: Run benchmarks on current branch
         run: |
           # Run benchmarks with baseline if available, otherwise without baseline
-          if [ -f "./benchmark-results/baseline-report.json" ]; then
+          if [ -f "./packages/core/e2e-tests/benchmark-results/baseline-report.json" ]; then
             echo "🔄 Running benchmarks with baseline comparison..."
-            yarn benchmark --output=./benchmark-results --baseline=./benchmark-results/baseline-report.json --github-comment --samples=3
+            yarn benchmark --output=./packages/core/e2e-tests/benchmark-results --baseline=./packages/core/e2e-tests/benchmark-results/baseline-report.json --github-comment --samples=3
           else
             echo "🔄 Running benchmarks without baseline..."
-            yarn benchmark --output=./benchmark-results --github-comment --samples=3
+            yarn benchmark --output=./packages/core/e2e-tests/benchmark-results --github-comment --samples=3
           fi
 
       - name: Upload benchmark results
@@ -89,7 +89,7 @@ jobs:
         if: always()
         with:
           name: benchmark-results
-          path: benchmark-results/
+          path: packages/core/e2e-tests/benchmark-results/
           retention-days: 30
 
       - name: Comment on PR
@@ -98,10 +98,10 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const path = './benchmark-results/github-comment.md';
+            const path = './packages/core/e2e-tests/benchmark-results/github-comment.md';
 
             if (!fs.existsSync(path)) {
-              console.log('No GitHub comment file found');
+              console.log('No GitHub comment file found at: ' + path);
               return;
             }
 
@@ -138,8 +138,8 @@ jobs:
 
       - name: Check for regressions
         run: |
-          if [ -f "benchmark-results/github-comment.md" ]; then
-            if grep -q "🔴 Regression" benchmark-results/github-comment.md; then
+          if [ -f "packages/core/e2e-tests/benchmark-results/github-comment.md" ]; then
+            if grep -q "🔴 Regression" packages/core/e2e-tests/benchmark-results/github-comment.md; then
               echo "❌ Performance regressions detected!"
               exit 1
             else
