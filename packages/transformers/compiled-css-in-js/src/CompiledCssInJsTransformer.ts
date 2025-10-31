@@ -3,7 +3,7 @@ import {Transformer} from '@atlaspack/plugin';
 import {
   applyCompiledCssInJsPlugin,
   CompiledCssInJsPluginResult,
-  type CompiledCssInJsTransformConfig,
+  type PartialCompiledCssInJsTransformConfig,
 } from '@atlaspack/rust/index';
 import {join} from 'path';
 import SourceMap from '@parcel/source-map';
@@ -18,15 +18,16 @@ export default new Transformer({
       return {};
     }
 
-    const conf = await config.getConfigFrom<CompiledCssInJsTransformConfig>(
-      join(options.projectRoot, 'index'),
-      configFiles,
-      {
-        packageKey: PACKAGE_KEY,
-      },
-    );
+    const conf =
+      await config.getConfigFrom<PartialCompiledCssInJsTransformConfig>(
+        join(options.projectRoot, 'index'),
+        configFiles,
+        {
+          packageKey: PACKAGE_KEY,
+        },
+      );
 
-    const contents: CompiledCssInJsTransformConfig = {};
+    const contents: PartialCompiledCssInJsTransformConfig = {};
 
     Object.assign(contents, conf?.contents);
 

@@ -1,12 +1,22 @@
 import { css } from '@compiled/react';
 
 const styles = css({
-	color: 'red',
-	backgroundColor: 'black',
-	borderRadius: 4,
-	'&:hover': { color: 'blue', backgroundColor: 'white' },
-	'&:focus': { color: 'green', borderRadius: 8 },
-	'&:hover &:focus': { color: 'purple', backgroundColor: 'gray' },
+  color: 'navy',
+  '&:hover': {
+    color: 'white',
+  },
+  '& > span': {
+    textDecoration: 'underline',
+  },
+  '@media (min-width: 50em)': {
+    '&:focus': {
+      outline: 'none',
+    },
+  },
 });
 
-<div css={styles} />;
+export const Component = () => (
+  <div css={styles}>
+    <span>Nested</span>
+  </div>
+);

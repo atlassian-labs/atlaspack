@@ -7,7 +7,7 @@ use napi::{Env, Error as NapiError, JsObject, bindgen_prelude::Buffer};
 use napi_derive::napi;
 use swc_core::{
   common::{
-    FileName, SourceMap,
+    FileName, GLOBALS, SourceMap,
     errors::{self, Handler},
     source_map::SourceMapGenConfig,
     sync::Lrc,
@@ -15,10 +15,11 @@ use swc_core::{
   ecma::ast::{Module, ModuleItem, Program},
 };
 
-// NAPI-compatible config struct, we duplicate this so the type can generate
+// NAPI-compatible partial config struct for use from TypeScript
+// All fields are optional and will be filled with defaults
 #[napi(object)]
-#[derive(Clone, Debug)]
-pub struct CompiledCssInJsTransformConfig {
+#[derive(Clone, Debug, Default)]
+pub struct PartialCompiledCssInJsTransformConfig {
   pub import_react: Option<bool>,
   pub nonce: Option<String>,
   pub import_sources: Option<Vec<String>>,
@@ -28,17 +29,19 @@ pub struct CompiledCssInJsTransformConfig {
   pub process_xcss: Option<bool>,
   pub increase_specificity: Option<bool>,
   pub sort_at_rules: Option<bool>,
+  pub sort_shorthand: Option<bool>,
   pub class_hash_prefix: Option<String>,
   pub flatten_multiple_selectors: Option<bool>,
   pub extract: Option<bool>,
   pub ssr: Option<bool>,
 }
 
-impl From<CompiledCssInJsTransformConfig>
-  for atlassian_swc_compiled_css::config::CompiledCssInJsTransformConfig
+impl From<PartialCompiledCssInJsTransformConfig>
+  for atlassian_swc_compiled_css::CompiledCssInJsTransformConfig
 {
-  fn from(config: CompiledCssInJsTransformConfig) -> Self {
-    Self {
+  fn from(config: PartialCompiledCssInJsTransformConfig) -> Self {
+    // Convert to the library's partial config type first
+    let partial = atlassian_swc_compiled_css::PartialCompiledCssInJsTransformConfig {
       import_react: config.import_react,
       nonce: config.nonce,
       import_sources: config.import_sources,
@@ -48,11 +51,14 @@ impl From<CompiledCssInJsTransformConfig>
       process_xcss: config.process_xcss,
       increase_specificity: config.increase_specificity,
       sort_at_rules: config.sort_at_rules,
+      sort_shorthand: config.sort_shorthand,
       class_hash_prefix: config.class_hash_prefix,
       flatten_multiple_selectors: config.flatten_multiple_selectors,
       extract: config.extract,
       ssr: config.ssr,
-    }
+    };
+    // Then convert to full config with defaults
+    partial.into()
   }
 }
 
@@ -63,7 +69,7 @@ pub struct CompiledCssInJsPluginInput {
   pub project_root: String,
   pub is_source: bool,
   pub source_maps: bool,
-  pub config: CompiledCssInJsTransformConfig,
+  pub config: PartialCompiledCssInJsTransformConfig,
 }
 
 #[napi(object)]
@@ -106,6 +112,7 @@ fn process_compiled_css_in_js(
 
   let error_buffer = ErrorBuffer::default();
   let handler = Handler::with_emitter(true, false, Box::new(error_buffer.clone()));
+
   errors::HANDLER.set(&handler, || {
     let source_map = Lrc::new(SourceMap::default());
 
@@ -140,16 +147,25 @@ fn process_compiled_css_in_js(
       }),
     };
 
-    let config: atlassian_swc_compiled_css::CompiledCssInJsTransformConfig =
-      <atlassian_swc_compiled_css::CompiledCssInJsTransformConfig>::from(input.config.clone());
-    let mut collector =
-      atlassian_swc_compiled_css::CompiledCssInJsCollector::new_with_config(&config);
-    let module = {
-      let mut passes = collector.compiled_css_in_js_visitor();
-      module.apply(&mut passes)
-    };
+    // Convert config to the library's config type
+    let lib_config: atlassian_swc_compiled_css::CompiledCssInJsTransformConfig =
+      input.config.clone().into();
 
-    let module_result = module
+    // Apply the transformation using transform_program_with_config
+    // This needs to be wrapped in GLOBALS context
+    let (transformed_program, artifacts) = GLOBALS.set(&Default::default(), || {
+      let transformed_program = atlassian_swc_compiled_css::transform_program_with_config(
+        module,
+        input.filename.clone(),
+        lib_config,
+      );
+
+      // Get the collected style rules
+      let artifacts = atlassian_swc_compiled_css::take_latest_artifacts();
+      (transformed_program, artifacts)
+    });
+
+    let module_result = transformed_program
       .module()
       .ok_or_else(|| anyhow!("Failed to get transformed module"))?;
     let (code_bytes, line_pos_buffer) = emit(
@@ -160,8 +176,12 @@ fn process_compiled_css_in_js(
     )
     .with_context(|| "Failed to emit transformed code")?;
 
-    let code =
+    let mut code =
       String::from_utf8(code_bytes).with_context(|| "Failed to convert emitted code to UTF-8")?;
+
+    // Add the comment marker to indicate transformation occurred
+    code = format!("/* COMPILED_TRANSFORMED_ASSET */\n{}", code);
+
     let map_json = if input.source_maps && !line_pos_buffer.is_empty() {
       let mut output_map_buffer = vec![];
       if source_map
@@ -169,7 +189,20 @@ fn process_compiled_css_in_js(
         .to_writer(&mut output_map_buffer)
         .is_ok()
       {
-        Some(String::from_utf8(output_map_buffer).unwrap_or_default())
+        let map_string = String::from_utf8(output_map_buffer).unwrap_or_default();
+        // Adjust the sourcemap to account for the added comment line
+        // Parse the sourcemap, offset all generated line numbers by 1, and serialize it back
+        if let Ok(mut map_value) = serde_json::from_str::<serde_json::Value>(&map_string) {
+          if let Some(mappings) = map_value.get_mut("mappings") {
+            if let Some(mappings_str) = mappings.as_str() {
+              // VLQ sourcemap format: prepend a semicolon to shift all mappings down by 1 line
+              *mappings = serde_json::Value::String(format!(";{}", mappings_str));
+            }
+          }
+          Some(serde_json::to_string(&map_value).unwrap_or(map_string))
+        } else {
+          Some(map_string)
+        }
       } else {
         None
       }
@@ -177,13 +210,10 @@ fn process_compiled_css_in_js(
       None
     };
 
-    // Extract style_rules
-    let style_rules: Vec<String> = collector.style_rules.into_iter().collect();
-
     Ok(CompiledCssInJsPluginResult {
       code,
       map: map_json,
-      style_rules,
+      style_rules: artifacts.style_rules,
     })
   })
 }
@@ -232,24 +262,25 @@ mod tests {
   // Helper function to create test config
   fn create_test_config(source_maps: bool, extract: bool) -> CompiledCssInJsPluginInput {
     CompiledCssInJsPluginInput {
-      filename: "test.ts".to_string(),
+      filename: "test.tsx".to_string(),
       project_root: "/project".to_string(),
       is_source: false,
       source_maps,
-      config: CompiledCssInJsTransformConfig {
+      config: PartialCompiledCssInJsTransformConfig {
         import_react: Some(true),
         nonce: None,
-        import_sources: None,
+        import_sources: Some(vec!["@compiled/react".into()]),
         optimize_css: Some(true),
         extensions: None,
-        add_component_name: None,
-        process_xcss: None,
+        add_component_name: Some(false),
+        process_xcss: Some(true),
         increase_specificity: Some(true),
         sort_at_rules: Some(true),
         class_hash_prefix: None,
         flatten_multiple_selectors: Some(true),
         extract: Some(extract),
         ssr: Some(true),
+        sort_shorthand: Some(true),
       },
     }
   }

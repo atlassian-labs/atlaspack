@@ -3,16 +3,18 @@ name = "atlassian_swc_compiled_css"
 version = "0.0.1"
 edition = { workspace = true }
 publish = false
+autobins = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[[bin]]
-name = "emit_fixtures"
-path = "bin/emit_fixtures.rs"
+# Binary disabled - needs additional dependencies and config module
+# [[bin]]
+# name = "emit_fixtures"
+# path = "bin/emit_fixtures.rs"
 
 [dependencies]
-swc_core                       = { workspace = true, features = ["ecma_plugin_transform", "ecma_codegen"] }
+swc_core                       = { workspace = true, features = ["ecma_plugin_transform", "ecma_codegen", "ecma_transforms_react", "__parser", "__utils"] }
 serde                          = { workspace = true, features = ["derive"]}
 serde_json                     = { workspace = true }
 once_cell                      = { workspace = true }
@@ -21,9 +23,13 @@ xxhash-rust                    = { version = "0.8", features = ["xxh3"] }
 swc_plugin_macro               = { workspace = true, optional = true }
 napi-derive                    = { workspace = true }
 napi                           = { workspace = true }
+oxc_resolver = "11.12.0"
+indexmap.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
-swc_core                = { workspace = true, features = ["__parser"] }
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
 
 [features]
 default = []
