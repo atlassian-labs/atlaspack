@@ -125,7 +125,6 @@ impl AssetGraphRequest {
           } = prev_output;
 
           if dependencies != prev_dependencies {
-            pretty_assertions::assert_eq!(dependencies, prev_dependencies);
             return Err(anyhow!(
               "Cannot bundle assets incrementally if their dependencies have changed: {}",
               asset.file_path.display()
