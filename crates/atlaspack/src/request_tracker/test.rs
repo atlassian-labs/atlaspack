@@ -185,7 +185,7 @@ impl Request for TestRequest {
     let mut results = vec![name];
     while let Ok(response) = rx.recv_timeout(Duration::from_secs(2)) {
       match response {
-        Ok((result, _id)) => match result.as_ref() {
+        Ok((result, _id, _cached)) => match result.as_ref() {
           RequestResult::TestSub(r) => results.push(r.clone()),
           RequestResult::TestMain(sub_results) => results.extend(sub_results.clone()),
           _ => todo!(),
@@ -239,7 +239,7 @@ impl Request for TestRequest2 {
     let mut responses = Vec::new();
     while let Ok(response) = rx.recv_timeout(Duration::from_secs(2)) {
       match response {
-        Ok((result, _idd)) => match result.as_ref() {
+        Ok((result, _id, _cached)) => match result.as_ref() {
           RequestResult::TestSub(r) => responses.push(r.clone()),
           _ => todo!("unimplemented"),
         },

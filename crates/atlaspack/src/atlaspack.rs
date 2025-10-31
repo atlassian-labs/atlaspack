@@ -161,13 +161,21 @@ impl Atlaspack {
 }
 
 impl Atlaspack {
-  pub fn build_asset_graph(&self) -> anyhow::Result<AssetGraph> {
+  pub fn build_asset_graph(&self) -> anyhow::Result<Arc<AssetGraph>> {
     self.runtime.block_on(async move {
-      let request_result = self
-        .request_tracker
-        .write()
-        .await
-        .run_request(AssetGraphRequest {})
+      let mut request_tracker = self.request_tracker.write().await;
+
+      let prev_asset_graph = request_tracker
+        .get_cached_request_result(AssetGraphRequest::default())
+        .map(|result| {
+          let RequestResult::AssetGraph(asset_graph_request_output) = result.as_ref() else {
+            panic!("Something went wrong with the request tracker")
+          };
+          asset_graph_request_output.graph.clone()
+        });
+
+      let request_result = request_tracker
+        .run_request(AssetGraphRequest { prev_asset_graph })
         .await?;
 
       let RequestResult::AssetGraph(asset_graph_request_output) = request_result.as_ref() else {
@@ -175,7 +183,8 @@ impl Atlaspack {
       };
 
       let asset_graph = asset_graph_request_output.graph.clone();
-      self.commit_assets(asset_graph.nodes().collect())?;
+      self.commit_assets(&asset_graph)?;
+
       Ok(asset_graph)
     })
   }
@@ -193,11 +202,13 @@ impl Atlaspack {
   }
 
   #[tracing::instrument(level = "info", skip_all)]
-  fn commit_assets(&self, assets: Vec<&AssetGraphNode>) -> anyhow::Result<()> {
+  fn commit_assets(&self, graph: &AssetGraph) -> anyhow::Result<()> {
     let mut txn = self.db.database().write_txn()?;
 
-    for asset_node in assets {
-      let AssetGraphNode::Asset(asset) = asset_node else {
+    let nodes = graph.new_nodes().chain(graph.updated_nodes());
+
+    for node in nodes {
+      let AssetGraphNode::Asset(asset) = node else {
         continue;
       };
 
@@ -259,19 +270,19 @@ mod tests {
     })?;
 
     let assets_names = ["foo", "bar", "baz"];
-    let assets = assets_names
-      .iter()
-      .enumerate()
-      .map(|(idx, asset)| {
-        AssetGraphNode::Asset(Arc::new(Asset {
+    let mut asset_graph = AssetGraph::new();
+    assets_names.iter().enumerate().for_each(|(idx, asset)| {
+      asset_graph.add_asset(
+        Arc::new(Asset {
           id: idx.to_string(),
           code: Code::from(asset.to_string()),
           ..Asset::default()
-        }))
-      })
-      .collect::<Vec<AssetGraphNode>>();
+        }),
+        false,
+      );
+    });
 
-    atlaspack.commit_assets(assets.iter().collect())?;
+    atlaspack.commit_assets(&asset_graph)?;
 
     let txn = db.database().read_txn()?;
     for (idx, asset) in assets_names.iter().enumerate() {

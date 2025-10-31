@@ -13,7 +13,6 @@ pub enum RequestNode {
   Root,
   Incomplete(Option<Arc<RequestResult>>),
   Valid(Arc<RequestResult>),
-  #[expect(dead_code)] // This will be used in the future for caching
   Invalid(Option<Arc<RequestResult>>),
   FileInvalidation,
 }
