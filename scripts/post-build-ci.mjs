@@ -1,10 +1,10 @@
 /* eslint-disable no-console */
-import { execSync } from 'child_process';
+import {execSync} from 'child_process';
 
 function hasUnstagedChanges() {
   // Check for unstaged changes in main branch
   try {
-    const result = execSync('git status --porcelain', { encoding: 'utf8' });
+    const result = execSync('git status --porcelain', {encoding: 'utf8'});
     if (result.trim().length > 0) {
       console.log('Unstaged changes detected in main branch:');
       console.log(result);
