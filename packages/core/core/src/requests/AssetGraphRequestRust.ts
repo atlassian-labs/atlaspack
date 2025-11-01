@@ -41,6 +41,7 @@ type SerializedAssetGraphDelta = {
   nodes: Array<any>;
   edges: Array<string>;
   updates: Array<any>;
+  safeToSkipBundling: boolean;
 };
 
 export function createAssetGraphRequestRust(
