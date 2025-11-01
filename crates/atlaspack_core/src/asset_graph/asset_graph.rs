@@ -103,6 +103,7 @@ impl AssetGraph {
 
     new_graph.safe_to_skip_bundling = true;
     new_graph.starting_node_count = new_graph.nodes.len();
+    new_graph.node_delta.clear();
 
     for asset in assets_to_update {
       new_graph.replace_asset(asset)?;
@@ -309,6 +310,7 @@ impl AssetGraph {
     };
 
     self.nodes[*id] = AssetGraphNode::Asset(asset.clone());
+    self.node_delta.push(*id);
 
     Ok(())
   }
