@@ -149,7 +149,7 @@ pub fn atlaspack_napi_build_asset_graph(
   Ok(promise)
 }
 
-#[tracing::instrument(level = "info", skip_all)]
+#[tracing::instrument(level = "debug", skip_all)]
 #[napi]
 pub fn atlaspack_napi_respond_to_fs_events(
   env: Env,

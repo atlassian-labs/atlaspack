@@ -130,7 +130,10 @@ export function getAssetGraph(
       adjacencyList: prevAssetGraph.adjacencyList,
     });
     reuseEdges = true;
-  } else if (prevAssetGraph && serializedGraph.updates.length > 0) {
+  } else if (
+    prevAssetGraph &&
+    (serializedGraph.updates.length > 0 || serializedGraph.nodes.length > 0)
+  ) {
     graph = new AssetGraph({
       _contentKeyToNodeId: prevAssetGraph._contentKeyToNodeId,
       _nodeIdToContentKey: prevAssetGraph._nodeIdToContentKey,
