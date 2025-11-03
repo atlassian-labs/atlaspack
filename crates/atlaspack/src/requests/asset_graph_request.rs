@@ -422,6 +422,9 @@ impl AssetGraphBuilder {
       dependencies,
     } = result;
 
+    // If the asset request was already processed as part of
+    // try_reuse_asset_graph, then it will be cached from the request tracker's
+    // point of view, but we still need to treat it as changed here.
     let cached = cached && !self.changed_requests.contains(&request_id);
 
     let incoming_dependency_id = *self
