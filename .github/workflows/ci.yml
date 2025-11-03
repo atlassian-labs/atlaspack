@@ -250,6 +250,7 @@ jobs:
         env:
           ATLASPACK_V3: true
           RUST_BACKTRACE: full
+          ACTIONS_RUNNER_DEBUG: true
 
   end_to_end_tests:
     name: E2E tests
