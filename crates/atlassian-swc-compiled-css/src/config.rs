@@ -3,7 +3,7 @@
 #[cfg_attr(feature = "napi", napi_derive::napi(object))]
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", default)]
-pub struct PartialCompiledCssInJsTransformConfig {
+pub struct CompiledCssInJsConfig {
   ///
   /// Will import the React namespace if it is missing.
   /// When using the `'automatic'` jsx runtime set this to `false`.
@@ -203,8 +203,8 @@ impl Default for CompiledCssInJsTransformConfig {
   }
 }
 
-impl From<PartialCompiledCssInJsTransformConfig> for CompiledCssInJsTransformConfig {
-  fn from(partial: PartialCompiledCssInJsTransformConfig) -> Self {
+impl From<CompiledCssInJsConfig> for CompiledCssInJsTransformConfig {
+  fn from(partial: CompiledCssInJsConfig) -> Self {
     let defaults = Self::default();
     Self {
       import_react: partial.import_react.unwrap_or(defaults.import_react),

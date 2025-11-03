@@ -19,7 +19,7 @@ use swc_core::{
 // All fields are optional and will be filled with defaults
 #[napi(object)]
 #[derive(Clone, Debug, Default)]
-pub struct PartialCompiledCssInJsTransformConfig {
+pub struct CompiledCssInJsConfig {
   pub import_react: Option<bool>,
   pub nonce: Option<String>,
   pub import_sources: Option<Vec<String>>,
@@ -36,12 +36,10 @@ pub struct PartialCompiledCssInJsTransformConfig {
   pub ssr: Option<bool>,
 }
 
-impl From<PartialCompiledCssInJsTransformConfig>
-  for atlassian_swc_compiled_css::CompiledCssInJsTransformConfig
-{
-  fn from(config: PartialCompiledCssInJsTransformConfig) -> Self {
+impl From<CompiledCssInJsConfig> for atlassian_swc_compiled_css::CompiledCssInJsTransformConfig {
+  fn from(config: CompiledCssInJsConfig) -> Self {
     // Convert to the library's partial config type first
-    let partial = atlassian_swc_compiled_css::PartialCompiledCssInJsTransformConfig {
+    let partial = atlassian_swc_compiled_css::CompiledCssInJsConfig {
       import_react: config.import_react,
       nonce: config.nonce,
       import_sources: config.import_sources,
@@ -69,7 +67,7 @@ pub struct CompiledCssInJsPluginInput {
   pub project_root: String,
   pub is_source: bool,
   pub source_maps: bool,
-  pub config: PartialCompiledCssInJsTransformConfig,
+  pub config: CompiledCssInJsConfig,
 }
 
 #[napi(object)]
@@ -266,7 +264,7 @@ mod tests {
       project_root: "/project".to_string(),
       is_source: false,
       source_maps,
-      config: PartialCompiledCssInJsTransformConfig {
+      config: CompiledCssInJsConfig {
         import_react: Some(true),
         nonce: None,
         import_sources: Some(vec!["@compiled/react".into()]),

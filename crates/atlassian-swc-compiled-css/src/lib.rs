@@ -4,7 +4,7 @@ pub mod eval;
 pub mod hash;
 mod token_utils;
 
-pub use config::{CompiledCssInJsTransformConfig, PartialCompiledCssInJsTransformConfig};
+pub use config::{CompiledCssInJsConfig, CompiledCssInJsTransformConfig};
 
 use crate::css::{
   AtRuleInput, CssArtifacts, CssOptions, CssRuleInput, NormalizedCssValue, RuntimeClassCondition,
