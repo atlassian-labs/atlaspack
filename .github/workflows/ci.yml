@@ -215,14 +215,6 @@ jobs:
         env:
           RUST_BACKTRACE: full
 
-  workflow-telemetry-action:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Collect Workflow Telemetry
-        uses: catchpoint/workflow-telemetry-action@v2
-        with:
-          comment_on_pr: false
-
   integration_tests_v3:
     name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }})
     needs:
@@ -243,6 +235,10 @@ jobs:
             node: 20
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Collect Workflow Telemetry
+        uses: catchpoint/workflow-telemetry-action@v2
+        with:
+          comment_on_pr: false
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-watchman
       - uses: ./.github/actions/setup-node
