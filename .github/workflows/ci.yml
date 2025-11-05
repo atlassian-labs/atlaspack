@@ -16,6 +16,8 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write
+  actions: read
 
 jobs:
   # Validate changesets - handles both general and Rust-specific validation
@@ -233,6 +235,10 @@ jobs:
             node: 20
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Collect Workflow Telemetry
+        uses: catchpoint/workflow-telemetry-action@v2
+        with:
+          comment_on_pr: false
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-watchman
       - uses: ./.github/actions/setup-node
