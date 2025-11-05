@@ -540,13 +540,15 @@ impl VisitMut for DependencyCollector<'_> {
                 match &*arg.expr {
                   Expr::Fn(_) | Expr::Arrow(_) => {
                     self.in_promise = true;
+                    let old_require_node = self.require_node.take();
                     node.visit_mut_children_with(self);
                     self.in_promise = was_in_promise;
+                    let require_node = self.require_node.take();
+                    self.require_node = old_require_node;
 
                     // Transform Promise.resolve().then(() => __importStar(require('foo')))
                     //   => Promise.resolve().then(() => require('foo')).then(res => __importStar(res))
-                    if let Some(require_node) = self.require_node.clone() {
-                      self.require_node = None;
+                    if let Some(require_node) = require_node {
                       build_promise_chain(node, require_node);
                       return;
                     }
@@ -1673,7 +1675,7 @@ mod tests {
     let expected_code = formatdoc! {r#"
       const dynamic = ()=>import("{hash}");
       Promise.resolve().then(()=>{{
-          Promise.resolve().then((res)=>console.log());
+          Promise.resolve().then(()=>console.log());
       }});
     "#};
 
