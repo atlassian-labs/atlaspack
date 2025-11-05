@@ -274,6 +274,15 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-09-29
    */
   sourceAssetIdBundleGraphFix: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Fixes an issue where nested Promise.resolve chains mixed with dynamic
+   * imports could cause build errors.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-11-05
+   */
+  nestedPromiseImportFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

@@ -539,18 +539,32 @@ impl VisitMut for DependencyCollector<'_> {
               {
                 match &*arg.expr {
                   Expr::Fn(_) | Expr::Arrow(_) => {
-                    self.in_promise = true;
-                    let old_require_node = self.require_node.take();
-                    node.visit_mut_children_with(self);
-                    self.in_promise = was_in_promise;
-                    let require_node = self.require_node.take();
-                    self.require_node = old_require_node;
+                    if self.config.nested_promise_import_fix {
+                      self.in_promise = true;
+                      let old_require_node = self.require_node.take();
+                      node.visit_mut_children_with(self);
+                      self.in_promise = was_in_promise;
+                      let require_node = self.require_node.take();
+                      self.require_node = old_require_node;
 
-                    // Transform Promise.resolve().then(() => __importStar(require('foo')))
-                    //   => Promise.resolve().then(() => require('foo')).then(res => __importStar(res))
-                    if let Some(require_node) = require_node {
-                      build_promise_chain(node, require_node);
-                      return;
+                      // Transform Promise.resolve().then(() => __importStar(require('foo')))
+                      //   => Promise.resolve().then(() => require('foo')).then(res => __importStar(res))
+                      if let Some(require_node) = require_node {
+                        build_promise_chain(node, require_node);
+                        return;
+                      }
+                    } else {
+                      self.in_promise = true;
+                      node.visit_mut_children_with(self);
+                      self.in_promise = was_in_promise;
+
+                      // Transform Promise.resolve().then(() => __importStar(require('foo')))
+                      //   => Promise.resolve().then(() => require('foo')).then(res => __importStar(res))
+                      if let Some(require_node) = self.require_node.clone() {
+                        self.require_node = None;
+                        build_promise_chain(node, require_node);
+                        return;
+                      }
                     }
                   }
                   _ => {}
@@ -1589,6 +1603,7 @@ mod tests {
   fn make_config() -> Config {
     let mut config = Config::default();
     config.is_browser = true;
+    config.nested_promise_import_fix = true;
     config
   }
 
@@ -1605,7 +1620,7 @@ mod tests {
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let config = Config::default();
+    let config = make_config();
     let input_code = r#"
       const { x } = await import('other');
     "#;
@@ -1648,10 +1663,8 @@ mod tests {
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let config = Config {
-      scope_hoist: true,
-      ..Default::default()
-    };
+    let mut config = make_config();
+    config.scope_hoist = true;
 
     let input_code = indoc! {r#"
       const dynamic = () => import('./dynamic');
@@ -1702,7 +1715,7 @@ mod tests {
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let mut config = Config::default();
+    let mut config = make_config();
     config.source_type = SourceType::Script;
 
     let input_code = r#"
@@ -1747,7 +1760,7 @@ mod tests {
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let config = Config::default();
+    let config = make_config();
     let input_code = r#"
       import { x } from 'other';
     "#;
@@ -1789,7 +1802,7 @@ mod tests {
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let config = Config::default();
+    let config = make_config();
     let input_code = r#"
       export { x } from 'other';
     "#;
@@ -1831,7 +1844,7 @@ mod tests {
     let mut items = vec![];
     let mut diagnostics = vec![];
 
-    let config = Config::default();
+    let config = make_config();
     let input_code = r#"
       export * from 'other';
     "#;

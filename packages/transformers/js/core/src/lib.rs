@@ -144,6 +144,7 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
+  pub nested_promise_import_fix: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
