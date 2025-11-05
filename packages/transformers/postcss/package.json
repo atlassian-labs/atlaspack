@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-postcss",
-  "version": "2.14.36",
+  "version": "2.14.37",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,10 +17,10 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.36",
-    "@atlaspack/rust": "3.9.0",
-    "@atlaspack/utils": "3.1.0",
-    "@atlaspack/types-internal": "2.20.6",
+    "@atlaspack/plugin": "2.14.37",
+    "@atlaspack/rust": "3.9.1",
+    "@atlaspack/utils": "3.1.1",
+    "@atlaspack/types-internal": "2.20.7",
     "clone": "^2.1.1",
     "nullthrows": "^1.1.1",
     "postcss-value-parser": "^4.2.0",
