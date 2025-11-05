@@ -1560,6 +1560,7 @@ mod tests {
   use atlaspack_core::types::DependencyKind;
   use atlaspack_swc_runner::test_utils::{RunContext, RunVisitResult, run_test_visit};
   use indoc::{formatdoc, indoc};
+  use pretty_assertions::assert_eq;
 
   fn make_dependency_collector<'a>(
     context: RunContext,
@@ -1637,6 +1638,60 @@ mod tests {
         ..items[0].clone()
       }]
     );
+  }
+
+  #[test]
+  fn test_dynamic_import_nested_promise() {
+    let mut conditions = HashSet::new();
+    let mut diagnostics = vec![];
+    let mut items = vec![];
+
+    let config = Config {
+      scope_hoist: true,
+      ..Default::default()
+    };
+
+    let input_code = indoc! {r#"
+      const dynamic = () => import('./dynamic');
+
+      Promise.resolve().then(() => {
+          Promise.resolve().then(() => console.log());
+      });
+    "#};
+
+    let RunVisitResult { output_code, .. } = run_test_visit(input_code, |context| {
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
+    });
+
+    let hash = make_placeholder_hash("./dynamic", DependencyKind::DynamicImport);
+    let expected_code = formatdoc! {r#"
+      const dynamic = ()=>import("{hash}");
+      Promise.resolve().then(()=>{{
+          Promise.resolve().then((res)=>console.log());
+      }});
+    "#};
+
+    assert_eq!(diagnostics, []);
+    assert_eq!(
+      items,
+      [DependencyDescriptor {
+        kind: DependencyKind::DynamicImport,
+        specifier: "./dynamic".into(),
+        attributes: None,
+        is_optional: false,
+        is_helper: false,
+        source_type: Some(SourceType::Module),
+        placeholder: Some(hash),
+        ..items[0].clone()
+      }]
+    );
+    assert_eq!(output_code, expected_code);
   }
 
   #[test]
