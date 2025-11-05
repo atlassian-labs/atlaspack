@@ -88,27 +88,6 @@ jobs:
           fi
           cd $GITHUB_WORKSPACE
 
-      - name: Debug - List benchmark results
-        run: |
-          echo "Current working directory: $PWD"
-          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
-          echo "Contents of current directory:"
-          ls -la
-          echo "Contents of benchmark-results (if exists):"
-          if [ -d "benchmark-results" ]; then
-            ls -la benchmark-results/
-          else
-            echo "benchmark-results directory not found"
-          fi
-          echo "Contents of packages/core/e2e-tests (if exists):"
-          if [ -d "packages/core/e2e-tests" ]; then
-            ls -la packages/core/e2e-tests/
-            if [ -d "packages/core/e2e-tests/benchmark-results" ]; then
-              echo "Contents of packages/core/e2e-tests/benchmark-results:"
-              ls -la packages/core/e2e-tests/benchmark-results/
-            fi
-          fi
-
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
         if: always()
