@@ -249,3 +249,30 @@ export interface Symbol {
   isStaticBindingSafe: boolean;
   selfReferenced: boolean;
 }
+
+export interface TokensPluginOptions {
+  tokenDataPath: string;
+  shouldUseAutoFallback: boolean;
+  shouldForceAutoFallback: boolean;
+  forceAutoFallbackExemptions: Array<string>;
+  defaultTheme: string;
+}
+
+export interface TokensConfig {
+  filename: string;
+  projectRoot: string;
+  isSource: boolean;
+  sourceMaps: boolean;
+  tokensOptions: TokensPluginOptions;
+}
+
+export interface TokensPluginResult {
+  code: string;
+  map: string | null;
+}
+
+/** Apply the tokens transformation plugin to the given code asynchronously */
+export declare function applyTokensPlugin(
+  rawCode: Buffer,
+  config: TokensConfig,
+): object;

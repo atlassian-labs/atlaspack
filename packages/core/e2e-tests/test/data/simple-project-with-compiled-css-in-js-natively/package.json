@@ -1,0 +1,11 @@
+{
+  "name": "simple-project-with-compiled-css-in-js-natively",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@compiled/react": "*",
+    "@atlaskit/button": "*",
+    "react": "*",
+    "react-dom": "*"
+  }
+}

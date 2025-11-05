@@ -1,9 +1,11 @@
 use atlaspack_contextual_imports::{
   ContextualImportsConfig, ContextualImportsInlineRequireVisitor,
 };
+
 use swc_core::ecma::ast::Program;
 use swc_core::ecma::visit::VisitMutWith;
-use swc_core::plugin::{plugin_transform, proxies::TransformPluginProgramMetadata};
+use swc_core::plugin::proxies::TransformPluginProgramMetadata;
+use swc_plugin_macro::plugin_transform;
 
 #[plugin_transform]
 pub fn process_transform(

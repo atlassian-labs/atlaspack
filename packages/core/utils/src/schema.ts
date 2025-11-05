@@ -391,11 +391,11 @@ validateSchema.diagnostic = function (
   schema: SchemaEntity,
   data: (
     | {
-        source?: string | null | undefined;
+        source?: (() => string) | string | null | undefined;
         data?: unknown;
       }
     | {
-        source: string;
+        source: string | (() => string);
         map: {
           data: unknown;
           pointers: {
@@ -410,22 +410,32 @@ validateSchema.diagnostic = function (
   origin: string,
   message: string,
 ): undefined {
-  if (
-    'source' in data &&
-    'data' in data &&
-    typeof data.source !== 'string' &&
-    !data
-  ) {
+  if (!('map' in data) && !('source' in data || 'data' in data)) {
     throw new Error(
-      'At least one of data.source and data.data must be defined!',
+      'At least one of data.source, data.data, or data.map must be defined!',
     );
+  }
+  let loadedSource: string | null | undefined;
+  function loadSource(
+    loader: string | (() => string) | null | undefined,
+  ): string | null | undefined {
+    if (loadedSource !== undefined) {
+      return loadedSource;
+    } else if (typeof loader === 'function') {
+      loadedSource = loader();
+      return loadedSource;
+    } else if (typeof loader === 'string') {
+      loadedSource = loader;
+      return loadedSource;
+    }
+    return loadedSource;
   }
   // @ts-expect-error TS2339
   let object = data.map
     ? // @ts-expect-error TS2339
       data.map.data
     : // @ts-expect-error TS2339
-      (data.data ?? JSON.parse(data.source));
+      (data.data ?? JSON.parse(loadSource(data.source)));
   let errors = validateSchema(schema, object);
   if (errors.length) {
     let keys = errors.map((e) => {
@@ -487,10 +497,12 @@ validateSchema.diagnostic = function (
     if (data.map) {
       // @ts-expect-error TS2339
       map = data.map;
-      code = data.source;
+      code = loadSource(data.source);
     } else {
-      // @ts-expect-error TS2339
-      map = data.source ?? JSON.stringify(nullthrows(data.data), 0, '\t');
+      map =
+        loadSource(data.source) ??
+        // @ts-expect-error TS2339
+        JSON.stringify(nullthrows(data.data), 0, '\t');
       code = map;
     }
     let codeFrames = [
