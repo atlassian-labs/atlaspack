@@ -71,9 +71,7 @@ impl Request for EntryRequest {
 
     // Handle directory entries
     if request_context.file_system().is_dir(&entry_path) {
-      return self
-        .handle_directory_entry(entry_path, request_context)
-        .await;
+      return self.handle_directory_entry(entry_path, request_context);
     }
 
     Err(diagnostic_error!(
@@ -113,7 +111,7 @@ impl EntryRequest {
     })
   }
 
-  async fn handle_directory_entry(
+  fn handle_directory_entry(
     &self,
     entry_path: PathBuf,
     request_context: RunRequestContext,
@@ -154,9 +152,8 @@ impl EntryRequest {
             enabled_targets_count += 1;
             if let Some(source) = source {
               targets_with_sources += 1;
-              let target_entries = self
-                .resolve_sources(&entry_path, source, Some(target_name), &request_context)
-                .await?;
+              let target_entries =
+                self.resolve_sources(&entry_path, source, Some(target_name), &request_context)?;
               entries.extend(target_entries);
             }
           }
@@ -183,9 +180,7 @@ impl EntryRequest {
       targets_with_sources > 0 && enabled_targets_count == targets_with_sources;
 
     if !all_targets_have_source && let Some(source) = &package_json.source {
-      let package_entries = self
-        .resolve_sources(&entry_path, source, None, &request_context)
-        .await?;
+      let package_entries = self.resolve_sources(&entry_path, source, None, &request_context)?;
       entries.extend(package_entries);
     }
 
@@ -211,7 +206,7 @@ impl EntryRequest {
   /// This method handles both target-specific sources and package-level sources.
   /// - If target_name is Some, the entries will be associated with that target
   /// - If target_name is None, the entries are package-level (no specific target)
-  async fn resolve_sources(
+  fn resolve_sources(
     &self,
     entry_path: &std::path::Path,
     source: &serde_json::Value,
