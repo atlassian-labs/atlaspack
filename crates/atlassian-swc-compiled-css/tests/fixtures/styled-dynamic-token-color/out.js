@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ax, ix } from "@compiled/react/runtime";
-import { jsx } from "react/jsx-runtime";
 import { forwardRef } from "react";
+import { jsx } from "react/jsx-runtime";
 const ExpiryDateContainer = forwardRef(({ as: C = "div", style: __cmpls, ...__cmplp }, __cmplr)=>{
     if (__cmplp.innerRef) {
         throw new Error("Please use 'ref' instead of 'innerRef'.");
@@ -12,7 +12,7 @@ const ExpiryDateContainer = forwardRef(({ as: C = "div", style: __cmpls, ...__cm
         ref: __cmplr,
         className: ax([
             "_299mangw",
-            __cmplp.dueInWeek ? "_syaz1tmw" : "_syaz1kw7",
+            __cmplp.dueInWeek ? "_syazrhrk" : "_syaz1kw7",
             __cmplp.className
         ])
     });

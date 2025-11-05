@@ -22,7 +22,7 @@ use swc_core::ecma::transforms::base::resolver;
 use swc_core::ecma::visit::VisitMutWith;
 use walkdir::WalkDir;
 
-use compiled_swc_plugin::{StyleArtifacts, take_latest_artifacts};
+use compiled_swc_plugin::{EmitCommentsGuard, StyleArtifacts, take_latest_artifacts};
 use swc_design_system_tokens::design_system_tokens_visitor;
 
 const IMPORT_MARKERS: [&str; 2] = ["@compiled/react", "@atlaskit/css"];
@@ -269,6 +269,16 @@ fn process_file(
   }
 
   let mut style_rules = artifacts.style_rules;
+  let aria_count = style_rules
+    .iter()
+    .filter(|rule| rule.contains("aria"))
+    .count();
+  if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+    eprintln!("[compiled-debug] style_rules aria count = {}", aria_count);
+    for rule in style_rules.iter().take(10) {
+      eprintln!("[compiled-debug] style_rule {}", rule);
+    }
+  }
   style_rules.sort();
 
   let payload = json!({
@@ -294,6 +304,7 @@ fn run_pipeline(
   GLOBALS.set(&Globals::new(), || {
     let fm = cm.new_source_file(FileName::Real(filename.clone()).into(), source.to_string());
     let comments = SingleThreadedComments::default();
+    let _emitter_guard = EmitCommentsGuard::new(&comments);
     let syntax = compiled_syntax(path);
     let is_typescript = matches!(syntax, Syntax::Typescript(_));
 
@@ -317,7 +328,7 @@ fn run_pipeline(
     program.visit_mut_with(&mut resolver_pass);
 
     let mut tokens_pass = design_system_tokens_visitor(
-      comments,
+      comments.clone(),
       tokens_options.should_use_auto_fallback,
       tokens_options.should_force_auto_fallback,
       tokens_options.force_auto_fallback_exemptions.clone(),
@@ -330,11 +341,25 @@ fn run_pipeline(
     take_latest_artifacts();
 
     let filename_for_transform = filename.to_string_lossy().to_string();
-    let transformed = compiled_swc_plugin::transform_program_for_testing(
+    let transformed = match compiled_swc_plugin::transform_program_for_testing(
       program,
       filename_for_transform,
       Some(compiled_config_json),
-    );
+    ) {
+      Ok(program) => program,
+      Err(errors) => {
+        let message = errors
+          .into_iter()
+          .map(|error| error.message)
+          .collect::<Vec<_>>()
+          .join("\n");
+        return Err(anyhow!(
+          "failed to transform {}: {}",
+          filename.display(),
+          message
+        ));
+      }
+    };
 
     let artifacts = take_latest_artifacts();
     ensure_printable(&transformed)?;

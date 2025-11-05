@@ -1,14 +1,64 @@
 #!/usr/bin/env node
+/* eslint-disable no-console */
 
 const fs = require('fs/promises');
 const path = require('path');
 
-const STYLE_RULES_ROOT = path.resolve(__dirname, 'tmp/style-rules');
+const DEFAULT_STYLE_RULES_ROOT = path.resolve(__dirname, 'tmp/style-rules');
 const TOOLING_DIRECTORIES = {
   babel: 'babel',
   swc: 'swc',
 };
 const INCLUDED_PATH_PREFIXES = ['src/packages/'];
+
+function resolvePath(input, label) {
+  if (!input) {
+    throw new Error(`Missing value for '${label}'`);
+  }
+
+  if (path.isAbsolute(input)) {
+    return input;
+  }
+
+  return path.resolve(process.cwd(), input);
+}
+
+function parseArguments(argv) {
+  const options = {
+    root: DEFAULT_STYLE_RULES_ROOT,
+    babelDir: null,
+    swcDir: null,
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--root') {
+      options.root = resolvePath(argv[index + 1], '--root');
+      index += 1;
+      continue;
+    }
+
+    if (arg === '--babel') {
+      options.babelDir = resolvePath(argv[index + 1], '--babel');
+      index += 1;
+      continue;
+    }
+
+    if (arg === '--swc') {
+      options.swcDir = resolvePath(argv[index + 1], '--swc');
+      index += 1;
+      continue;
+    }
+
+    throw new Error(`Unknown argument '${arg}'. Supported flags are --root, --babel, --swc.`);
+  }
+
+  const resolvedRoot = options.root;
+  const babelDir = options.babelDir || path.join(resolvedRoot, TOOLING_DIRECTORIES.babel);
+  const swcDir = options.swcDir || path.join(resolvedRoot, TOOLING_DIRECTORIES.swc);
+
+  return { babelDir, swcDir };
+}
 
 function shouldInclude(relativePath) {
   if (!INCLUDED_PATH_PREFIXES.length) {
@@ -193,8 +243,7 @@ function summarizeProgress(babelMap, swcMap) {
 }
 
 async function main() {
-  const babelDir = path.join(STYLE_RULES_ROOT, TOOLING_DIRECTORIES.babel);
-  const swcDir = path.join(STYLE_RULES_ROOT, TOOLING_DIRECTORIES.swc);
+  const { babelDir, swcDir } = parseArguments(process.argv.slice(2));
 
   await Promise.all([
     assertDirectoryExists('babel', babelDir),

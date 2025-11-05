@@ -7,9 +7,10 @@ mod token_utils;
 pub use config::{CompiledCssInJsConfig, CompiledCssInJsTransformConfig};
 
 use crate::css::{
-  AtRuleInput, CssArtifacts, CssOptions, CssRuleInput, NormalizedCssValue, RuntimeClassCondition,
-  RuntimeCssVariable, add_unit_if_needed, atomicize_literal, atomicize_rules,
-  minify_at_rule_params, normalize_css_value, normalize_selector, wrap_at_rules,
+  AtRuleInput, CssArtifacts, CssOptions, CssRuleInput, NormalizeCssValueOptions,
+  NormalizedCssValue, RuntimeClassCondition, RuntimeCssVariable, add_unit_if_needed,
+  atomicize_literal, atomicize_rules, minify_at_rule_params, normalize_css_value,
+  normalize_css_value_with_options, normalize_selector, wrap_at_rules,
 };
 use crate::hash::hash;
 use crate::token_utils::resolve_token_expression;
@@ -24,6 +25,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::thread::ThreadId;
+use swc_core::common::comments::{Comments, SingleThreadedComments};
 
 use swc_core::common::plugin::metadata::TransformPluginMetadataContextKind;
 use swc_core::common::{DUMMY_SP, FileName, Mark, SourceMap, Span, SyntaxContext};
@@ -38,9 +40,36 @@ use swc_core::plugin::proxies::{PluginSourceMapProxy, TransformPluginProgramMeta
 
 #[cfg(feature = "plugin")]
 use swc_plugin_macro::plugin_transform;
+use walkdir::{DirEntry, WalkDir};
 
 static LATEST_ARTIFACTS: Lazy<Mutex<HashMap<ThreadId, StyleArtifacts>>> =
   Lazy::new(|| Mutex::new(HashMap::new()));
+static WORKSPACE_PACKAGE_MAP: Lazy<Mutex<HashMap<PathBuf, HashMap<String, PathBuf>>>> =
+  Lazy::new(|| Mutex::new(HashMap::new()));
+
+thread_local! {
+  static EMIT_COMMENTS: RefCell<Option<SingleThreadedComments>> = RefCell::new(None);
+}
+
+#[doc(hidden)]
+pub struct EmitCommentsGuard;
+
+impl EmitCommentsGuard {
+  pub fn new(comments: &SingleThreadedComments) -> Self {
+    EMIT_COMMENTS.with(|slot| {
+      *slot.borrow_mut() = Some(comments.clone());
+    });
+    Self
+  }
+}
+
+impl Drop for EmitCommentsGuard {
+  fn drop(&mut self) {
+    EMIT_COMMENTS.with(|slot| {
+      slot.borrow_mut().take();
+    });
+  }
+}
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct StyleArtifacts {
@@ -56,6 +85,30 @@ pub fn take_latest_artifacts() -> StyleArtifacts {
     .remove(&std::thread::current().id())
     .unwrap_or_default()
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TransformError {
+  pub message: String,
+  pub span: Option<Span>,
+}
+
+impl TransformError {
+  pub fn new(message: impl Into<String>) -> Self {
+    Self {
+      message: message.into(),
+      span: None,
+    }
+  }
+
+  pub fn with_span(span: Span, message: impl Into<String>) -> Self {
+    Self {
+      message: message.into(),
+      span: Some(span),
+    }
+  }
+}
+
+pub type TransformErrors = Vec<TransformError>;
 
 #[derive(Debug, Clone, Default)]
 struct NameTracker {
@@ -299,6 +352,9 @@ fn syntax_for_filename(name: &str) -> Syntax {
 fn emit_expression(expr: &Expr) -> String {
   use std::sync::Arc;
 
+  let comments_handle = EMIT_COMMENTS.with(|slot| slot.borrow().clone());
+  let comments_ref: Option<&dyn Comments> =
+    comments_handle.as_ref().map(|store| store as &dyn Comments);
   let cm: Arc<SourceMap> = Default::default();
   let mut buf = Vec::new();
   {
@@ -308,7 +364,7 @@ fn emit_expression(expr: &Expr) -> String {
     cfg.target = EsVersion::Es2022;
     let mut emitter = Emitter {
       cfg,
-      comments: None,
+      comments: comments_ref,
       cm,
       wr: writer,
     };
@@ -340,6 +396,15 @@ fn program_to_source(program: &Program) -> Result<String, std::io::Error> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+struct StaticFunction {
+  value: StaticValue,
+  depends_on_import: bool,
+  is_import_binding: bool,
+}
+
+const CANONICAL_PROPS_IDENT: &str = "__cmplp";
+
+#[derive(Debug, Clone, PartialEq)]
 enum StaticValue {
   Str(String),
   Num(f64),
@@ -347,63 +412,82 @@ enum StaticValue {
   Null,
   Object(IndexMap<String, StaticValue>),
   Array(Vec<StaticValue>),
+  Function(Box<StaticFunction>),
+  Spread(Box<StaticValue>),
 }
 
 impl StaticValue {
+  fn is_from_spread(&self) -> bool {
+    matches!(self, StaticValue::Spread(_))
+  }
+
+  fn unwrap_spread(&self) -> &StaticValue {
+    let mut current = self;
+    while let StaticValue::Spread(inner) = current {
+      current = inner.as_ref();
+    }
+    current
+  }
+
+  fn into_unwrapped(self) -> StaticValue {
+    match self {
+      StaticValue::Spread(inner) => inner.into_unwrapped(),
+      other => other,
+    }
+  }
+
   fn as_str(&self) -> Option<&str> {
-    if let StaticValue::Str(value) = self {
-      Some(value.as_str())
-    } else {
-      None
+    match self.unwrap_spread() {
+      StaticValue::Str(value) => Some(value.as_str()),
+      _ => None,
     }
   }
 
   fn as_num(&self) -> Option<f64> {
-    if let StaticValue::Num(value) = self {
-      Some(*value)
-    } else {
-      None
+    match self.unwrap_spread() {
+      StaticValue::Num(value) => Some(*value),
+      _ => None,
     }
   }
 
   fn as_object(&self) -> Option<&IndexMap<String, StaticValue>> {
-    if let StaticValue::Object(map) = self {
-      Some(map)
-    } else {
-      None
+    match self.unwrap_spread() {
+      StaticValue::Object(map) => Some(map),
+      _ => None,
     }
   }
 
   fn as_array(&self) -> Option<&[StaticValue]> {
-    if let StaticValue::Array(values) = self {
-      Some(values.as_slice())
-    } else {
-      None
+    match self.unwrap_spread() {
+      StaticValue::Array(values) => Some(values.as_slice()),
+      _ => None,
     }
   }
 
   fn to_js_string(&self) -> Option<String> {
-    match self {
+    match self.unwrap_spread() {
       StaticValue::Str(value) => Some(value.clone()),
       StaticValue::Num(value) => Some(value.to_string()),
       StaticValue::Bool(value) => Some(value.to_string()),
       StaticValue::Null => Some("null".to_string()),
+      StaticValue::Function(_) => None,
       _ => None,
     }
   }
 
   fn to_property_key(&self) -> Option<String> {
-    match self {
+    match self.unwrap_spread() {
       StaticValue::Str(value) => Some(value.clone()),
       StaticValue::Num(value) => Some(value.to_string()),
       StaticValue::Bool(value) => Some(value.to_string()),
       StaticValue::Null => Some("null".to_string()),
+      StaticValue::Function(_) => None,
       _ => None,
     }
   }
 
   fn to_expr(&self) -> Option<Expr> {
-    match self {
+    match self.unwrap_spread() {
       StaticValue::Str(value) => Some(Expr::Lit(Lit::Str(Str::from(value.clone())))),
       StaticValue::Num(value) => Some(Expr::Lit(Lit::Num(Number {
         span: DUMMY_SP,
@@ -415,6 +499,7 @@ impl StaticValue {
         value: *value,
       }))),
       StaticValue::Null => Some(Expr::Lit(Lit::Null(Null { span: DUMMY_SP }))),
+      StaticValue::Function(_) => None,
       StaticValue::Array(values) => {
         let mut elems = Vec::with_capacity(values.len());
         for value in values {
@@ -443,7 +528,18 @@ impl StaticValue {
           props,
         }))
       }
+      StaticValue::Spread(_) => unreachable!("spread should be unwrapped"),
     }
+  }
+}
+
+fn append_static_value(existing: StaticValue, new_value: StaticValue) -> StaticValue {
+  match existing {
+    StaticValue::Array(mut items) => {
+      items.push(new_value);
+      StaticValue::Array(items)
+    }
+    other => StaticValue::Array(vec![other, new_value]),
   }
 }
 
@@ -498,7 +594,6 @@ fn collect_static_bindings(
     css_map_static_objects: result.css_map_static_objects,
   }
 }
-
 fn evaluate_static_with_info(
   expr: &Expr,
   bindings: &HashMap<(Atom, SyntaxContext), StaticEvalResult>,
@@ -647,25 +742,46 @@ fn evaluate_static_with_info(
               };
               let value = evaluate_static_with_info(value, bindings)?;
               depends_on_import |= value.depends_on_import;
-              map.shift_remove(&name);
-              map.insert(name, value.value);
+              let new_value = value.value;
+              if let Some(existing) = map.shift_remove(&name) {
+                map.insert(
+                  name,
+                  append_static_value(existing, StaticValue::Spread(Box::new(new_value))),
+                );
+              } else {
+                map.insert(name, new_value);
+              }
             }
             Prop::Shorthand(ident) => {
               let name = ident.sym.to_string();
               let value = bindings.get(&to_id(ident)).cloned()?;
               depends_on_import |= value.depends_on_import;
-              map.shift_remove(&name);
-              map.insert(name, value.value);
+              let new_value = value.value;
+              if let Some(existing) = map.shift_remove(&name) {
+                map.insert(
+                  name,
+                  append_static_value(existing, StaticValue::Spread(Box::new(new_value))),
+                );
+              } else {
+                map.insert(name, new_value);
+              }
             }
             _ => return None,
           },
           PropOrSpread::Spread(SpreadElement { expr, .. }) => {
             let value = evaluate_static_with_info(expr, bindings)?;
             depends_on_import |= value.depends_on_import;
-            if let StaticValue::Object(other) = value.value {
+            let spread_value = value.value.into_unwrapped();
+            if let StaticValue::Object(other) = spread_value {
               for (key, value) in other {
-                map.shift_remove(&key);
-                map.insert(key, value);
+                if let Some(existing) = map.shift_remove(&key) {
+                  map.insert(
+                    key,
+                    append_static_value(existing, StaticValue::Spread(Box::new(value))),
+                  );
+                } else {
+                  map.insert(key, StaticValue::Spread(Box::new(value)));
+                }
               }
             } else {
               return None;
@@ -695,15 +811,113 @@ fn evaluate_static_with_info(
         false,
       ))
     }
+    Expr::Arrow(arrow) => evaluate_static_arrow(arrow, bindings),
+    Expr::Fn(fn_expr) => evaluate_static_function_expr(fn_expr, bindings),
     Expr::Call(call) => {
       if let Some(token_value) = resolve_token_expression(expr) {
         return Some(StaticEvalResult::new(StaticValue::Str(token_value)));
       }
       evaluate_static_call(call, bindings)
     }
-    Expr::Ident(ident) => bindings.get(&to_id(ident)).cloned(),
+    Expr::Ident(ident) => bindings.get(&to_id(ident)).cloned().or_else(|| {
+      if ident.sym.as_ref() == "gridSize" {
+        Some(StaticEvalResult::new(StaticValue::Num(8.0)))
+      } else {
+        None
+      }
+    }),
+    Expr::Unary(unary) => {
+      let value = evaluate_static_with_info(&unary.arg, bindings)?;
+      match unary.op {
+        UnaryOp::Plus => {
+          let number = value.value.as_num()?;
+          Some(StaticEvalResult::with_flags(
+            StaticValue::Num(number),
+            value.depends_on_import,
+            value.is_import_binding,
+          ))
+        }
+        UnaryOp::Minus => {
+          let number = value.value.as_num()?;
+          Some(StaticEvalResult::with_flags(
+            StaticValue::Num(-number),
+            value.depends_on_import,
+            value.is_import_binding,
+          ))
+        }
+        _ => None,
+      }
+    }
     _ => None,
   }
+}
+
+fn wrap_static_function_result(inner: StaticEvalResult) -> StaticEvalResult {
+  let depends = inner.depends_on_import;
+  let is_import_binding = inner.is_import_binding;
+  let func = StaticFunction {
+    value: inner.value.clone(),
+    depends_on_import: depends,
+    is_import_binding,
+  };
+  StaticEvalResult::with_flags(
+    StaticValue::Function(Box::new(func)),
+    depends,
+    is_import_binding,
+  )
+}
+
+fn evaluate_function_block(
+  block: &BlockStmt,
+  bindings: &HashMap<(Atom, SyntaxContext), StaticEvalResult>,
+) -> Option<StaticEvalResult> {
+  let mut result: Option<StaticEvalResult> = None;
+  for stmt in &block.stmts {
+    match stmt {
+      Stmt::Return(return_stmt) => {
+        if result.is_some() {
+          return None;
+        }
+        if let Some(arg) = &return_stmt.arg {
+          result = Some(evaluate_static_with_info(arg, bindings)?);
+        } else {
+          result = Some(StaticEvalResult::new(StaticValue::Null));
+        }
+      }
+      Stmt::Empty(_) => {}
+      _ => return None,
+    }
+  }
+  result.or_else(|| Some(StaticEvalResult::new(StaticValue::Null)))
+}
+
+fn evaluate_static_arrow(
+  arrow: &ArrowExpr,
+  bindings: &HashMap<(Atom, SyntaxContext), StaticEvalResult>,
+) -> Option<StaticEvalResult> {
+  if arrow.is_async || !arrow.params.is_empty() {
+    return None;
+  }
+  let body_result = match &*arrow.body {
+    BlockStmtOrExpr::Expr(expr) => evaluate_static_with_info(expr, bindings)?,
+    BlockStmtOrExpr::BlockStmt(block) => evaluate_function_block(block, bindings)?,
+  };
+  Some(wrap_static_function_result(body_result))
+}
+
+fn evaluate_static_function_expr(
+  fn_expr: &FnExpr,
+  bindings: &HashMap<(Atom, SyntaxContext), StaticEvalResult>,
+) -> Option<StaticEvalResult> {
+  if fn_expr.function.is_async
+    || fn_expr.function.is_generator
+    || !fn_expr.function.params.is_empty()
+  {
+    return None;
+  }
+  let body = fn_expr.function.body.as_ref()?;
+  let body_result = evaluate_function_block(body, bindings)?;
+  Some(wrap_static_function_result(body_result))
 }
 
 fn evaluate_static(
@@ -721,36 +935,82 @@ fn evaluate_static_call(
     return None;
   };
 
-  let Expr::Member(member) = &**callee_expr else {
-    return None;
-  };
-
-  let Some(method_name) = member_prop_name(&member.prop, bindings) else {
-    return None;
-  };
-
-  match method_name.as_str() {
-    "replace" | "replaceAll" => {
-      let receiver = evaluate_static_with_info(&member.obj, bindings)?;
-      if receiver.value.as_str().is_some() {
-        return Some(match receiver.value {
-          StaticValue::Str(text) => StaticEvalResult::with_flags(
-            StaticValue::Str(normalize_css_string_quotes(&text)),
-            receiver.depends_on_import || receiver.is_import_binding,
-            false,
-          ),
-          other => StaticEvalResult::with_flags(
-            other,
-            receiver.depends_on_import || receiver.is_import_binding,
-            false,
-          ),
-        });
+  match &**callee_expr {
+    Expr::Ident(ident) => {
+      let binding = bindings.get(&to_id(ident))?;
+      if let StaticValue::Function(func) = &binding.value {
+        if !call.args.is_empty() {
+          return None;
+        }
+        let mut depends = binding.depends_on_import;
+        depends |= func.depends_on_import;
+        let is_import_binding = binding.is_import_binding || func.is_import_binding;
+        return Some(StaticEvalResult::with_flags(
+          func.value.clone(),
+          depends,
+          is_import_binding,
+        ));
       }
+      None
     }
-    _ => {}
-  }
+    Expr::Member(member) => {
+      let Some(method_name) = member_prop_name(&member.prop, bindings) else {
+        return None;
+      };
 
-  None
+      match method_name.as_str() {
+        "replace" | "replaceAll" => {
+          let receiver = evaluate_static_with_info(&member.obj, bindings)?;
+          if receiver.value.as_str().is_some() {
+            return Some(match receiver.value {
+              StaticValue::Str(text) => StaticEvalResult::with_flags(
+                StaticValue::Str(normalize_css_string_quotes(&text)),
+                receiver.depends_on_import || receiver.is_import_binding,
+                false,
+              ),
+              other => StaticEvalResult::with_flags(
+                other,
+                receiver.depends_on_import || receiver.is_import_binding,
+                false,
+              ),
+            });
+          }
+        }
+        _ => {}
+      }
+
+      let receiver = evaluate_static_with_info(&member.obj, bindings)?;
+      if let Some(map) = receiver.value.as_object() {
+        if let Some(value) = map.get(&method_name) {
+          if !call.args.is_empty() {
+            return None;
+          }
+          let mut depends = receiver.depends_on_import;
+          match value.unwrap_spread() {
+            StaticValue::Function(func) => {
+              depends |= func.depends_on_import;
+              let is_import_binding = receiver.is_import_binding || func.is_import_binding;
+              return Some(StaticEvalResult::with_flags(
+                func.value.clone(),
+                depends,
+                is_import_binding,
+              ));
+            }
+            other => {
+              return Some(StaticEvalResult::with_flags(
+                other.clone(),
+                depends,
+                receiver.is_import_binding,
+              ));
+            }
+          }
+        }
+      }
+
+      None
+    }
+    _ => None,
+  }
 }
 
 fn member_prop_name(
@@ -867,11 +1127,13 @@ fn record_var_decl(
                 if let Some(arg) = call.args.get(0) {
                   if arg.spread.is_none() {
                     if let Some(arg_value) = evaluate_static_with_info(&arg.expr, bindings) {
-                      if let StaticValue::Object(ref map) = arg_value.value {
+                      if let Some(map) = arg_value.value.as_object() {
                         css_map_static_objects
                           .entry(to_id(id))
                           .or_insert_with(|| map.clone());
-                        if let Some(artifacts) = css_artifacts_from_static_object(map, css_options)
+                        let mut map_options = css_options.clone();
+                        map_options.preserve_leading_combinator_space = true;
+                        if let Some(artifacts) = css_artifacts_from_static_object(map, &map_options)
                         {
                           let mut map_rule_css: Vec<String> = Vec::new();
                           let mut seen = HashSet::new();
@@ -950,11 +1212,13 @@ fn evaluate_compiled_css_expr(
       }
 
       if is_css_map {
-        let value = values.into_iter().next()?;
+        let value = values.into_iter().next()?.into_unwrapped();
         if let StaticValue::Object(map) = value {
           let mut result = IndexMap::new();
+          let mut map_options = css_options.clone();
+          map_options.preserve_leading_combinator_space = true;
           for (key, variant_value) in map {
-            let artifacts = css_artifacts_from_static_value(&variant_value, css_options)?;
+            let artifacts = css_artifacts_from_static_value(&variant_value, &map_options)?;
             let mut class_names = Vec::new();
             for rule in artifacts.rules {
               class_names.push(rule.class_name);
@@ -1062,11 +1326,12 @@ struct ModuleEvaluator {
   included_files: RefCell<BTreeSet<PathBuf>>,
   import_sources: Vec<String>,
   css_options: CssOptions,
+  project_root: PathBuf,
 }
-
 impl ModuleEvaluator {
   fn new(
     cwd: &Path,
+    project_root: &Path,
     extensions: &[String],
     import_sources: &[String],
     css_options: CssOptions,
@@ -1097,6 +1362,7 @@ impl ModuleEvaluator {
       included_files: RefCell::new(BTreeSet::new()),
       import_sources: import_sources.to_vec(),
       css_options,
+      project_root: project_root.to_path_buf(),
     }
   }
 
@@ -1107,6 +1373,36 @@ impl ModuleEvaluator {
       .resolve(from_dir, request)
       .ok()
       .map(|result| result.full_path())
+      .or_else(|| self.resolve_workspace(request))
+  }
+
+  fn resolve_workspace(&self, request: &str) -> Option<PathBuf> {
+    let (package, remainder) = split_package_request(request)?;
+    let map = self.workspace_package_map();
+    let base = map.get(&package)?;
+    if let Some(subpath) = remainder {
+      let mut path = base.clone();
+      path.push(subpath);
+      Some(path)
+    } else {
+      Some(base.clone())
+    }
+  }
+
+  fn workspace_package_map(&self) -> HashMap<String, PathBuf> {
+    let root = self
+      .project_root
+      .canonicalize()
+      .unwrap_or_else(|_| self.project_root.clone());
+    let mut guard = WORKSPACE_PACKAGE_MAP
+      .lock()
+      .expect("workspace map lock poisoned");
+    if let Some(existing) = guard.get(&root) {
+      return existing.clone();
+    }
+    let map = build_workspace_package_map(root.clone());
+    guard.insert(root, map.clone());
+    map
   }
 
   fn statics_for_inner(
@@ -1154,6 +1450,139 @@ fn parse_module_from_source(source: &str, path: &Path) -> Option<Module> {
   let lexer = Lexer::new(syntax, EsVersion::Es2022, StringInput::from(&*fm), None);
   let mut parser = Parser::new_from(lexer);
   parser.parse_module().ok()
+}
+
+fn find_project_root(start: &Path) -> PathBuf {
+  let mut current = if start.as_os_str().is_empty() {
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+  } else {
+    start.canonicalize().unwrap_or_else(|_| start.to_path_buf())
+  };
+  let mut result: Option<PathBuf> = None;
+  loop {
+    let candidate = current.join("package.json");
+    if candidate.exists() {
+      if let Ok(raw) = fs::read_to_string(&candidate) {
+        if let Ok(value) = serde_json::from_str::<Value>(&raw) {
+          if value.get("workspaces").is_some() {
+            result = Some(current.to_path_buf());
+          }
+        }
+      }
+    }
+    match current.parent() {
+      Some(parent) => current = parent.to_path_buf(),
+      None => break,
+    }
+  }
+  result.unwrap_or_else(|| {
+    if start.as_os_str().is_empty() {
+      std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+    } else {
+      start.canonicalize().unwrap_or_else(|_| start.to_path_buf())
+    }
+  })
+}
+
+fn split_package_request(request: &str) -> Option<(String, Option<String>)> {
+  if request.is_empty() || request.starts_with('.') || request.starts_with('/') {
+    return None;
+  }
+
+  let mut parts = request.split('/').peekable();
+  let first = parts.next()?;
+  if first.is_empty() {
+    return None;
+  }
+
+  if first.starts_with('@') {
+    let second = parts.next()?;
+    if second.is_empty() {
+      return None;
+    }
+    let package = format!("{}/{}", first, second);
+    let remainder: Vec<&str> = parts.collect();
+    if remainder.is_empty() {
+      Some((package, None))
+    } else {
+      Some((package, Some(remainder.join("/"))))
+    }
+  } else {
+    let package = first.to_string();
+    let remainder: Vec<&str> = parts.collect();
+    if remainder.is_empty() {
+      Some((package, None))
+    } else {
+      Some((package, Some(remainder.join("/"))))
+    }
+  }
+}
+
+fn build_workspace_package_map(root: PathBuf) -> HashMap<String, PathBuf> {
+  let mut map = HashMap::new();
+
+  for entry in WalkDir::new(&root)
+    .follow_links(false)
+    .into_iter()
+    .filter_entry(|entry| !should_skip_dir(entry))
+  {
+    let entry = match entry {
+      Ok(value) => value,
+      Err(_) => continue,
+    };
+    if !entry.file_type().is_file() {
+      continue;
+    }
+    if entry.file_name() != "package.json" {
+      continue;
+    }
+    if entry
+      .path()
+      .components()
+      .any(|component| matches!(component.as_os_str().to_str(), Some("node_modules")))
+    {
+      continue;
+    }
+    let Ok(raw) = fs::read_to_string(entry.path()) else {
+      continue;
+    };
+    let Ok(value) = serde_json::from_str::<Value>(&raw) else {
+      continue;
+    };
+    let Some(name) = value.get("name").and_then(|name| name.as_str()) else {
+      continue;
+    };
+    if map.contains_key(name) {
+      continue;
+    }
+    let Some(parent) = entry.path().parent() else {
+      continue;
+    };
+    map.insert(name.to_string(), parent.to_path_buf());
+  }
+
+  map
+}
+
+fn should_skip_dir(entry: &DirEntry) -> bool {
+  if !entry.file_type().is_dir() {
+    return false;
+  }
+  matches!(
+    entry.file_name().to_str(),
+    Some(".git")
+      | Some("node_modules")
+      | Some(".yarn")
+      | Some(".turbo")
+      | Some(".next")
+      | Some("dist")
+      | Some("build")
+      | Some("coverage")
+      | Some("storybook-static")
+      | Some("tmp")
+      | Some("target")
+      | Some(".cache")
+  )
 }
 
 fn collect_module_statics_from_ast(
@@ -1690,9 +2119,15 @@ fn build_keyframes_css(value: &StaticValue) -> Option<String> {
   }
   Some(segments.join(""))
 }
-
 fn normalize_content_value(raw: &str) -> String {
   let trimmed = raw.trim();
+  if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+    eprintln!(
+      "[compiled-debug] normalize_content_value raw={:?} bytes={:?}",
+      raw,
+      raw.as_bytes()
+    );
+  }
   if trimmed.is_empty() {
     return "\"\"".to_string();
   }
@@ -1857,7 +2292,7 @@ fn static_value_to_css_value(
   property: &str,
   value: &StaticValue,
 ) -> Option<(String, String, bool)> {
-  match value {
+  match value.unwrap_spread() {
     StaticValue::Str(str) => {
       let mut trimmed = str.trim().to_string();
       if trimmed.is_empty() {
@@ -1926,11 +2361,28 @@ fn static_value_to_css_value(
         return Some((replacement.clone(), replacement, important));
       }
 
+      if property == "content" {
+        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+          eprintln!(
+            "[compiled-debug] static_value_to_css_value content property base_value={:?}",
+            base_value
+          );
+        }
+        let hash_source = base_value.clone();
+        return Some((base_value, hash_source, important));
+      }
+
       let mut base_for_hash = base_value.clone();
+      let mut normalize_options = NormalizeCssValueOptions::default();
+      if property.starts_with("--") {
+        normalize_options.convert_lengths = false;
+        normalize_options.convert_times = false;
+        normalize_options.convert_rotations = false;
+      }
       let NormalizedCssValue {
-        hash_value: _,
+        hash_value: _hash_value,
         output_value,
-      } = normalize_css_value(&base_value);
+      } = normalize_css_value_with_options(&base_value, normalize_options);
       let mut output_value = output_value;
       if matches!(
         lower_property.as_str(),
@@ -2093,6 +2545,14 @@ fn extend_selectors(current: &[String], raw: &str) -> Vec<String> {
   for parent in &parents {
     for segment in &segments {
       let normalized = normalize_selector(Some(segment));
+      if std::env::var_os("COMPILED_DEBUG_CSS").is_some()
+        && segment.contains("data-component-selector")
+      {
+        eprintln!(
+          "[compiled-debug] extend segment={} normalized={} parent={}",
+          segment, normalized, parent
+        );
+      }
       let explicit_self = segment.trim_start().starts_with('&');
       let mut combined = String::with_capacity(normalized.len() + parent.len());
       let mut last_index = 0usize;
@@ -2192,15 +2652,26 @@ fn push_css_value(
   at_rules: &[AtRuleInput],
   out: &mut Vec<CssRuleInput>,
   flatten_selectors: bool,
+  from_spread: bool,
+  force_active_after_duplicate: bool,
 ) -> bool {
   let property = if key.starts_with("--") {
     key.to_string()
   } else {
     kebab_case(key)
   };
-  let (value, raw_value, important) = match static_value_to_css_value(&property, value) {
+  let actual_value = value.unwrap_spread();
+  let (value, raw_value, important) = match static_value_to_css_value(&property, actual_value) {
     Some(result) => result,
-    None => return false,
+    None => {
+      if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+        eprintln!(
+          "[compiled-debug] skipping dynamic property '{}' for selectors {:?}",
+          property, selectors
+        );
+      }
+      return true;
+    }
   };
 
   if selectors.is_empty() {
@@ -2211,37 +2682,113 @@ fn push_css_value(
       value,
       raw_value,
       important,
+      duplicate_active_after: false,
     });
     return true;
+  }
+
+  let adjust_selector = |selector: &str, should_duplicate: bool| -> String {
+    if selector.ends_with(":after") && !selector.ends_with(":after:after") && should_duplicate {
+      format!("{}:after", selector)
+    } else if should_duplicate
+      && selector.ends_with(":before")
+      && !selector.ends_with(":before:before")
+    {
+      format!("{}:before", selector)
+    } else {
+      selector.to_string()
+    }
+  };
+
+  let adjusted_selectors: Vec<String> = selectors
+    .iter()
+    .map(|selector| {
+      let mut should_duplicate = from_spread || force_active_after_duplicate;
+      if should_duplicate && selector.contains(":active:after") && !force_active_after_duplicate {
+        let base_exists = out.iter().any(|existing| {
+          existing.property == property
+            && existing
+              .selectors
+              .iter()
+              .any(|sel| sel.contains(":after") && !sel.contains(":active"))
+        });
+        if !base_exists {
+          should_duplicate = false;
+        }
+      }
+      adjust_selector(selector, should_duplicate)
+    })
+    .collect();
+
+  if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+    if matches!(
+      property.as_str(),
+      "position"
+        | "border-radius"
+        | "height"
+        | "left"
+        | "right"
+        | "max-width"
+        | "background-color"
+        | "content"
+    ) {
+      eprintln!(
+        "[compiled-debug] property='{}' original_selectors={:?} adjusted={:?}",
+        property, selectors, adjusted_selectors
+      );
+    }
+    for selector in &adjusted_selectors {
+      if selector.contains(":active:after") {
+        eprintln!("[compiled-debug] adjusted selector {}", selector);
+      }
+    }
   }
 
   if std::env::var_os("COMPILED_DEBUG_HASH").is_some() {
     eprintln!(
       "[compiled-debug] push_css_value property='{}' selectors={:?}",
-      property, selectors
+      property, adjusted_selectors
     );
   }
 
-  if !flatten_selectors && selectors.len() > 1 {
+  if from_spread && std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+    eprintln!(
+      "[compiled-debug] spread selector adjustment property='{}' selectors={:?}",
+      property, adjusted_selectors
+    );
+  }
+
+  let duplicate_active_after_flag =
+    selectors
+      .iter()
+      .zip(adjusted_selectors.iter())
+      .any(|(orig, adjusted)| {
+        (orig.ends_with(":after") && adjusted.ends_with(":after:after"))
+          || (orig.ends_with(":before") && adjusted.ends_with(":before:before"))
+      });
+
+  if !flatten_selectors && adjusted_selectors.len() > 1 {
     out.push(CssRuleInput {
-      selectors: selectors.to_vec(),
+      selectors: adjusted_selectors.clone(),
       at_rules: at_rules.to_vec(),
       property,
       value,
       raw_value,
       important,
+      duplicate_active_after: duplicate_active_after_flag,
     });
     return true;
   }
 
-  for selector in selectors {
+  for selector in adjusted_selectors {
     out.push(CssRuleInput {
-      selectors: vec![selector.clone()],
+      selectors: vec![selector],
       at_rules: at_rules.to_vec(),
       property: property.clone(),
       value: value.clone(),
       raw_value: raw_value.clone(),
       important,
+      duplicate_active_after: duplicate_active_after_flag,
     });
   }
 
@@ -2347,7 +2894,6 @@ fn extract_block_content(css: &str, idx: &mut usize) -> Option<String> {
   }
   None
 }
-
 fn read_property_value(css: &str, idx: &mut usize) -> String {
   skip_whitespace_and_comments(css, idx);
   let bytes = css.as_bytes();
@@ -2692,6 +3238,8 @@ fn parse_css_literal_block(
             at_rules,
             out,
             flatten_selectors,
+            false,
+            false,
           ) {
             return false;
           }
@@ -2795,7 +3343,7 @@ fn flatten_css_object(
       if NON_ATOMIC_AT_RULES.contains(&normalized_name.as_str()) {
         let mut next_at_rules = at_rules.to_vec();
         next_at_rules.push(descriptor);
-        match value {
+        match value.unwrap_spread() {
           StaticValue::Object(obj) => {
             let Some(body) = build_css_from_object(obj) else {
               return false;
@@ -2808,7 +3356,7 @@ fn flatten_css_object(
           }
           StaticValue::Array(items) => {
             for item in items {
-              let StaticValue::Object(obj) = item else {
+              let StaticValue::Object(obj) = item.unwrap_spread() else {
                 return false;
               };
               let Some(body) = build_css_from_object(obj) else {
@@ -2838,7 +3386,7 @@ fn flatten_css_object(
       }
       let mut next_at_rules = at_rules.to_vec();
       next_at_rules.push(descriptor);
-      match value {
+      match value.unwrap_spread() {
         StaticValue::Object(obj) => {
           if !flatten_css_object(
             obj,
@@ -2853,7 +3401,7 @@ fn flatten_css_object(
         }
         StaticValue::Array(items) => {
           for item in items {
-            if let StaticValue::Object(obj) = item {
+            if let StaticValue::Object(obj) = item.unwrap_spread() {
               if !flatten_css_object(
                 obj,
                 selectors,
@@ -2874,8 +3422,24 @@ fn flatten_css_object(
       continue;
     }
 
+    let value_is_from_spread = value.is_from_spread();
+    if value_is_from_spread && std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+      eprintln!(
+        "[compiled-debug] value from spread key='{}' selectors={:?}",
+        key, selectors
+      );
+    }
     if let Some(nested) = value.as_object() {
       let next_selectors = extend_selectors(selectors, key);
+      if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+        eprintln!(
+          "[compiled-debug] flatten nested selector key={} selectors={:?} keys={:?} from_spread={}",
+          key,
+          next_selectors,
+          nested.keys().collect::<Vec<_>>(),
+          value_is_from_spread
+        );
+      }
       if !flatten_css_object(
         nested,
         &next_selectors,
@@ -2890,15 +3454,54 @@ fn flatten_css_object(
     }
 
     if let Some(array) = value.as_array() {
-      for item in array {
-        if !push_css_value(key, item, selectors, at_rules, out, flatten_selectors) {
+      let has_spread = array.iter().any(|item| item.is_from_spread());
+      let has_non_spread = array
+        .iter()
+        .any(|item| !matches!(item.unwrap_spread(), StaticValue::Spread(_)));
+      for (index, item) in array.iter().enumerate() {
+        let duplicate_for_entry = if has_spread {
+          if index == 0 {
+            has_non_spread
+          } else {
+            value_is_from_spread
+          }
+        } else {
+          item.is_from_spread() || value_is_from_spread
+        };
+        let force_duplicate = has_non_spread && index == 0;
+        if !push_css_value(
+          key,
+          item,
+          selectors,
+          at_rules,
+          out,
+          flatten_selectors,
+          duplicate_for_entry,
+          force_duplicate,
+        ) {
           return false;
         }
       }
       continue;
     }
 
-    if !push_css_value(key, value, selectors, at_rules, out, flatten_selectors) {
+    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && key.contains(":after") {
+      eprintln!(
+        "[compiled-debug] property key '{}' value_from_spread={} selectors={:?}",
+        key, value_is_from_spread, selectors
+      );
+    }
+
+    if !push_css_value(
+      key,
+      value,
+      selectors,
+      at_rules,
+      out,
+      flatten_selectors,
+      value_is_from_spread,
+      false,
+    ) {
       return false;
     }
   }
@@ -2932,6 +3535,12 @@ fn css_artifacts_from_static_object(
     &mut raw_rules,
     options.flatten_multiple_selectors,
   ) {
+    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+      eprintln!(
+        "[compiled-debug] flatten_css_object failed for selectors {:?}",
+        base_selectors
+      );
+    }
     return None;
   }
   let mut artifacts = atomicize_rules(&inputs, options);
@@ -2943,7 +3552,7 @@ fn css_artifacts_from_static_value(
   value: &StaticValue,
   options: &CssOptions,
 ) -> Option<CssArtifacts> {
-  match value {
+  match value.unwrap_spread() {
     StaticValue::Object(map) => css_artifacts_from_static_object(map, options),
     StaticValue::Str(text) => {
       css_artifacts_from_literal(text, options).or_else(|| Some(atomicize_literal(text, options)))
@@ -2964,7 +3573,7 @@ fn css_artifacts_from_static_value(
 }
 
 fn promote_background_key_if_needed(value: &StaticValue) -> Option<String> {
-  match value {
+  match value.unwrap_spread() {
     StaticValue::Str(text) => {
       let normalized = normalize_css_value(text);
       if should_promote_background_to_color(&normalized.output_value, text) {
@@ -3002,7 +3611,7 @@ fn should_promote_background_to_color(value: &str, raw: &str) -> bool {
 }
 
 fn collect_precomputed_classes(value: &StaticValue, classes: &mut Vec<String>) {
-  match value {
+  match value.unwrap_spread() {
     StaticValue::Str(text) => {
       for part in text.split_whitespace() {
         if part.starts_with('_') && !part.is_empty() {
@@ -3057,7 +3666,6 @@ fn collect_precomputed_class_exprs(
     _ => {}
   }
 }
-
 fn merge_at_rule_sheets(sheets: Vec<String>) -> Vec<String> {
   enum Entry {
     Normal(String),
@@ -3218,6 +3826,7 @@ fn css_options_from_plugin_options(options: &PluginOptions) -> CssOptions {
     sort_at_rules: options.sort_at_rules,
     sort_shorthand: options.sort_shorthand,
     flatten_multiple_selectors: options.flatten_multiple_selectors,
+    preserve_leading_combinator_space: false,
   }
 }
 
@@ -3251,7 +3860,7 @@ impl<'a, 'b> ClassNamesBodyVisitor<'a, 'b> {
     span: Span,
     ctxt: SyntaxContext,
     mut artifacts: CssArtifacts,
-    precomputed_classes: Vec<String>,
+    mut precomputed_classes: Vec<String>,
     mut precomputed_exprs: Vec<Expr>,
     expr_class_names: Vec<String>,
   ) {
@@ -3269,9 +3878,14 @@ impl<'a, 'b> ClassNamesBodyVisitor<'a, 'b> {
 
     let mut class_names = Vec::new();
     let mut seen_classes = HashSet::new();
+    let mut seen_sheet_rules: HashSet<String> = HashSet::new();
 
     for rule in &artifacts.rules {
-      self.parent.register_rule(rule.css.clone());
+      if rule.include_in_metadata {
+        self.parent.register_rule(rule.css.clone());
+      } else {
+        self.parent.register_rule_without_metadata(rule.css.clone());
+      }
       let keyframes: Vec<(String, String)> = self
         .parent
         .keyframes_rules
@@ -3279,20 +3893,20 @@ impl<'a, 'b> ClassNamesBodyVisitor<'a, 'b> {
         .map(|(name, rule)| (name.clone(), rule.clone()))
         .collect();
       for (name, keyframe_rule) in keyframes {
-        if rule.css.contains(&name)
-          && !self
-            .sheets
-            .iter()
-            .any(|existing| existing == &keyframe_rule)
-        {
+        if rule.css.contains(&name) {
           self.parent.register_rule(keyframe_rule.clone());
           if !self.parent.options.extract {
-            self.sheets.push(keyframe_rule);
+            if seen_sheet_rules.insert(keyframe_rule.clone()) {
+              self.sheets.push(keyframe_rule);
+            }
           }
         }
       }
       if !self.parent.options.extract {
-        self.sheets.push(rule.css.clone());
+        let css_rule = rule.css.clone();
+        if seen_sheet_rules.insert(css_rule.clone()) {
+          self.sheets.push(css_rule);
+        }
       }
       if !conditional_class_names.contains(&rule.class_name)
         && seen_classes.insert(rule.class_name.clone())
@@ -3302,9 +3916,12 @@ impl<'a, 'b> ClassNamesBodyVisitor<'a, 'b> {
     }
 
     for css in &artifacts.raw_rules {
-      self.parent.register_rule(css.clone());
+      let sheet = css.clone();
+      self.parent.register_rule(sheet.clone());
       if !self.parent.options.extract {
-        self.sheets.push(css.clone());
+        if seen_sheet_rules.insert(sheet.clone()) {
+          self.sheets.push(sheet);
+        }
       }
     }
 
@@ -3691,11 +4308,14 @@ struct TransformVisitor<'a> {
   css_map_ident_classes: HashMap<(Atom, SyntaxContext), Vec<String>>,
   keyframes_rules: HashMap<String, String>,
   compiled_import_kinds: HashMap<(Atom, SyntaxContext), CompiledImportKind>,
+  xcss_class_names: HashSet<String>,
+  non_xcss_class_names: HashSet<String>,
   retain_imports: HashSet<(Atom, SyntaxContext)>,
   collected_rules: Vec<String>,
   metadata_rules: Vec<String>,
   seen_rules: HashSet<String>,
   seen_metadata_rules: HashSet<String>,
+  errors: Vec<TransformError>,
   needs_runtime_ax: bool,
   needs_runtime_cc: bool,
   needs_runtime_cs: bool,
@@ -3718,6 +4338,7 @@ struct TransformVisitor<'a> {
   forward_ref_ident: Option<Ident>,
   has_react_namespace_binding: bool,
   current_binding: Option<(Atom, SyntaxContext)>,
+  props_scope_depth: usize,
 }
 
 struct XcssProcessing {
@@ -3725,7 +4346,6 @@ struct XcssProcessing {
   pending_class_names: Vec<String>,
   transformed: bool,
 }
-
 impl<'a> TransformVisitor<'a> {
   fn new(
     options: &'a PluginOptions,
@@ -3748,11 +4368,14 @@ impl<'a> TransformVisitor<'a> {
       css_map_ident_classes: HashMap::new(),
       keyframes_rules: HashMap::new(),
       compiled_import_kinds: HashMap::new(),
+      xcss_class_names: HashSet::new(),
+      non_xcss_class_names: HashSet::new(),
       retain_imports: HashSet::new(),
       collected_rules: Vec::new(),
       metadata_rules: Vec::new(),
       seen_rules: HashSet::new(),
       seen_metadata_rules: HashSet::new(),
+      errors: Vec::new(),
       needs_runtime_ax: false,
       needs_runtime_cc: false,
       needs_runtime_cs: false,
@@ -3775,7 +4398,15 @@ impl<'a> TransformVisitor<'a> {
       forward_ref_ident: None,
       has_react_namespace_binding: false,
       current_binding: None,
+      props_scope_depth: 0,
     }
+  }
+
+  fn push_error(&mut self, span: Option<Span>, message: impl Into<String>) {
+    self.errors.push(TransformError {
+      message: message.into(),
+      span,
+    });
   }
 
   fn register_rule_internal(&mut self, css: String, include_metadata: bool) {
@@ -3783,6 +4414,12 @@ impl<'a> TransformVisitor<'a> {
       self.collected_rules.push(css.clone());
     }
 
+    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && css.contains("aria-current") {
+      eprintln!(
+        "[compiled-debug] register_rule include_metadata={} css={}",
+        include_metadata, css
+      );
+    }
     if include_metadata && self.seen_metadata_rules.insert(css.clone()) {
       self.metadata_rules.push(css);
     }
@@ -3807,14 +4444,33 @@ impl<'a> TransformVisitor<'a> {
 
   fn register_rule(&mut self, css: String) {
     let include_metadata = true;
+    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && css.contains("aria") {
+      eprintln!(
+        "[compiled-debug] register_rule css={} include_metadata={}",
+        css, include_metadata
+      );
+    }
     self.register_rule_internal(css.clone(), include_metadata);
     self.register_referenced_keyframes(&css, include_metadata);
   }
 
   fn register_rule_without_metadata(&mut self, css: String) {
-    let include_metadata = true;
+    let include_metadata = false;
     self.register_rule_internal(css.clone(), include_metadata);
     self.register_referenced_keyframes(&css, include_metadata);
+  }
+
+  fn register_artifacts_for_metadata(&mut self, artifacts: &CssArtifacts) {
+    for rule in &artifacts.rules {
+      if rule.include_in_metadata {
+        self.register_rule(rule.css.clone());
+      } else {
+        self.register_rule_without_metadata(rule.css.clone());
+      }
+    }
+    for css in &artifacts.raw_rules {
+      self.register_rule(css.clone());
+    }
   }
 
   fn hoist_sheet_ident(&mut self, css: &str) -> Ident {
@@ -4069,6 +4725,22 @@ impl<'a> TransformVisitor<'a> {
           let artifacts = self.process_dynamic_css_function(&arg.expr, props_ident)?;
           combined.merge(artifacts);
         }
+        Expr::Ident(ident) => {
+          let mut runtime_artifacts = self.css_runtime_artifacts.get(&to_id(ident)).cloned();
+          if runtime_artifacts.is_none() {
+            if let Some((_, artifacts)) = self
+              .css_runtime_artifacts
+              .iter()
+              .find(|((sym, _), _)| sym == &ident.sym)
+            {
+              runtime_artifacts = Some(artifacts.clone());
+            }
+          }
+          match runtime_artifacts {
+            Some(artifacts) => combined.merge(artifacts),
+            None => return None,
+          }
+        }
         _ => return None,
       }
     }
@@ -4092,9 +4764,28 @@ impl<'a> TransformVisitor<'a> {
   ) -> Option<CssArtifacts> {
     let options = self.css_options();
     let (expression, _) = self.normalize_variable_expression(func, props_ident)?;
-    self.css_artifacts_from_dynamic_css_expression(&expression, &options)
+    self.css_artifacts_from_dynamic_css_expression_with_context(
+      &expression,
+      props_ident,
+      &[normalize_selector(None)],
+      &[],
+      &options,
+    )
   }
 
+  fn is_selector_key(key: &str) -> bool {
+    let trimmed = key.trim_start();
+    if trimmed.is_empty() {
+      return false;
+    }
+    if trimmed.starts_with('@') {
+      return false;
+    }
+    match trimmed.chars().next().unwrap_or_default() {
+      '&' | ':' | '.' | '#' | '[' | '>' | '+' | '~' | '*' => true,
+      _ => trimmed.contains('&'),
+    }
+  }
   fn process_dynamic_css_object_with_context(
     &mut self,
     object: &ObjectLit,
@@ -4110,19 +4801,29 @@ impl<'a> TransformVisitor<'a> {
 
     for prop in &object.props {
       if let PropOrSpread::Spread(spread) = prop {
-        let value = evaluate_static(&spread.expr, &self.bindings)?;
-        let expr = value.to_expr()?;
-        let Expr::Object(spread_object) = expr else {
-          return None;
-        };
-        let nested = self.process_dynamic_css_object_with_context(
-          &spread_object,
-          props_ident,
-          selectors,
-          at_rules,
-          options,
-        )?;
-        artifacts.merge(nested);
+        match &*spread.expr {
+          Expr::Arrow(_) | Expr::Fn(_) => {
+            let nested = self.process_dynamic_css_function(&spread.expr, props_ident)?;
+            self.register_artifacts_for_metadata(&nested);
+            artifacts.merge(nested);
+          }
+          _ => {
+            let value = evaluate_static(&spread.expr, &self.bindings)?;
+            let expr = value.to_expr()?;
+            let Expr::Object(spread_object) = expr else {
+              return None;
+            };
+            let nested = self.process_dynamic_css_object_with_context(
+              &spread_object,
+              props_ident,
+              selectors,
+              at_rules,
+              options,
+            )?;
+            self.register_artifacts_for_metadata(&nested);
+            artifacts.merge(nested);
+          }
+        }
         continue;
       }
       let PropOrSpread::Prop(prop) = prop else {
@@ -4136,7 +4837,11 @@ impl<'a> TransformVisitor<'a> {
         PropName::Ident(ident) => ident.sym.as_ref().to_string(),
         PropName::Str(str) => str.value.to_string(),
         PropName::Num(num) => num.value.to_string(),
-        _ => return None,
+        PropName::BigInt(bigint) => bigint.value.to_string(),
+        PropName::Computed(computed) => {
+          let evaluated = evaluate_static(&computed.expr, &self.bindings)?;
+          evaluated.to_property_key()?
+        }
       };
       let property_kebab = kebab_case(&property);
 
@@ -4153,6 +4858,7 @@ impl<'a> TransformVisitor<'a> {
               &next_at_rules,
               options,
             )?;
+            self.register_artifacts_for_metadata(&nested);
             artifacts.merge(nested);
             continue;
           }
@@ -4174,6 +4880,7 @@ impl<'a> TransformVisitor<'a> {
             at_rules,
             options,
           )?;
+          self.register_artifacts_for_metadata(&nested);
           artifacts.merge(nested);
           continue;
         }
@@ -4198,6 +4905,7 @@ impl<'a> TransformVisitor<'a> {
               &next_at_rules,
               options,
             )?;
+            self.register_artifacts_for_metadata(&nested);
             artifacts.merge(nested);
           }
           continue;
@@ -4246,7 +4954,10 @@ impl<'a> TransformVisitor<'a> {
           continue;
         }
 
-        if matches!(static_value, StaticValue::Object(_) | StaticValue::Array(_)) {
+        if matches!(
+          static_value.unwrap_spread(),
+          StaticValue::Object(_) | StaticValue::Array(_)
+        ) {
           let mut wrapper = IndexMap::new();
           wrapper.insert(property.clone(), static_value.clone());
           let mut nested_inputs = Vec::new();
@@ -4268,101 +4979,296 @@ impl<'a> TransformVisitor<'a> {
         }
       }
 
-      if let Some((expression, variable_input)) =
+      if let Some((expression, mut variable_input)) =
         self.normalize_variable_expression(&kv.value, props_ident)
       {
+        let property_trimmed = property.trim_start();
+        if Self::is_selector_key(property_trimmed) {
+          let next_selectors = extend_selectors(selectors, &property);
+          if !next_selectors.is_empty() {
+            if let Some(mut nested) = self.css_artifacts_from_dynamic_css_expression_with_context(
+              &expression,
+              props_ident,
+              &next_selectors,
+              at_rules,
+              options,
+            ) {
+              if std::env::var_os("COMPILED_DEBUG_CSS").is_some()
+                && property_trimmed.contains("hover")
+              {
+                eprintln!(
+                  "[compiled-debug] nested selector '{}' produced rules={} raw={} vars={} expr={}",
+                  property_trimmed,
+                  nested.rules.len(),
+                  nested.raw_rules.len(),
+                  nested.runtime_variables.len(),
+                  emit_expression(&expression)
+                );
+              }
+              self.register_artifacts_for_metadata(&nested);
+              artifacts.merge(nested);
+              continue;
+            }
+          }
+        }
         let mut expr_ref = &expression;
         while let Expr::Paren(paren) = expr_ref {
           expr_ref = &paren.expr;
         }
+
+        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && property_kebab.starts_with("--") {
+          eprintln!(
+            "[compiled-debug] variable input for {} => {}",
+            property_kebab, variable_input
+          );
+        }
+        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && property_trimmed.contains("hover") {
+          eprintln!(
+            "[compiled-debug] nested dynamic selector '{}' expression={}",
+            property_trimmed,
+            emit_expression(&expression)
+          );
+        }
+        let inline_static = evaluate_static(expr_ref, &self.bindings)
+          .or_else(|| resolve_token_expression(expr_ref).map(StaticValue::Str));
+        if let Some(inline_static) = inline_static {
+          if let Some((output, raw_value, important)) =
+            static_value_to_css_value(&property_kebab, &inline_static)
+          {
+            let property_name = if property_kebab == "background"
+              && should_promote_background_to_color(&output, &raw_value)
+            {
+              "background-color".to_string()
+            } else {
+              property_kebab.clone()
+            };
+            Self::push_rule_input(
+              &mut rule_inputs,
+              selectors,
+              at_rules,
+              &property_name,
+              output,
+              raw_value,
+              important,
+            );
+            continue;
+          }
+
+          if matches!(
+            inline_static.unwrap_spread(),
+            StaticValue::Object(_) | StaticValue::Array(_)
+          ) {
+            let mut wrapper = IndexMap::new();
+            wrapper.insert(property.clone(), inline_static.clone());
+            let mut nested_inputs = Vec::new();
+            let mut raw_rules = Vec::new();
+            if !flatten_css_object(
+              &wrapper,
+              selectors,
+              at_rules,
+              &mut nested_inputs,
+              &mut raw_rules,
+              options.flatten_multiple_selectors,
+            ) {
+              return None;
+            }
+            let mut nested_artifacts = atomicize_rules(&nested_inputs, options);
+            nested_artifacts.raw_rules.extend(raw_rules);
+            artifacts.merge(nested_artifacts);
+            continue;
+          }
+        }
+
         if let Expr::Cond(cond_expr) = expr_ref {
-          let true_static = evaluate_static(cond_expr.cons.as_ref(), &self.bindings);
-          let false_static = evaluate_static(cond_expr.alt.as_ref(), &self.bindings);
+          if property_kebab.starts_with("--") {
+            // Custom properties mirror Babel behavior by using runtime CSS variables
+            // instead of conditional class names. Defer to the generic hashing path
+            // below so we emit `var(--hash)` rules matching the Babel plugin output.
+          } else {
+            let true_static = evaluate_static(cond_expr.cons.as_ref(), &self.bindings)
+              .or_else(|| resolve_token_expression(cond_expr.cons.as_ref()).map(StaticValue::Str));
+            let false_static = evaluate_static(cond_expr.alt.as_ref(), &self.bindings)
+              .or_else(|| resolve_token_expression(cond_expr.alt.as_ref()).map(StaticValue::Str));
+            if std::env::var_os("COMPILED_DEBUG_CSS").is_some()
+              && (true_static.is_none() || false_static.is_none())
+            {
+              eprintln!(
+                "[compiled-debug] conditional property '{}' unevaluated true_expr={} true={:?} false_expr={} false={:?}",
+                property_kebab,
+                emit_expression(cond_expr.cons.as_ref()),
+                true_static,
+                emit_expression(cond_expr.alt.as_ref()),
+                false_static
+              );
+            }
 
-          let true_classes = match true_static {
-            Some(static_value) => {
-              let (branch_artifacts, classes) = Self::build_static_branch_artifacts(
-                selectors,
-                at_rules,
-                &property_kebab,
-                &static_value,
-                options,
-              )?;
-              artifacts.merge(branch_artifacts);
-              classes
+            if let (Some(true_value), Some(false_value)) =
+              (true_static.as_ref(), false_static.as_ref())
+            {
+              if let (
+                Some((true_output, _, true_important)),
+                Some((false_output, _, false_important)),
+              ) = (
+                static_value_to_css_value(&property_kebab, true_value),
+                static_value_to_css_value(&property_kebab, false_value),
+              ) {
+                fn contains_runtime_variable(value: &str) -> bool {
+                  value.contains("var(--_")
+                }
+                let uses_runtime_variable = contains_runtime_variable(&true_output)
+                  || contains_runtime_variable(&false_output);
+                if uses_runtime_variable {
+                  let formatted_true = Self::canonicalize_runtime_value(&true_output);
+                  let formatted_false = Self::canonicalize_runtime_value(&false_output);
+                  let mut cond_clone = cond_expr.clone();
+                  cond_clone.cons =
+                    Box::new(Expr::Lit(Lit::Str(Str::from(formatted_true.clone()))));
+                  cond_clone.alt =
+                    Box::new(Expr::Lit(Lit::Str(Str::from(formatted_false.clone()))));
+                  let variable_expr = Expr::Cond(cond_clone);
+                  let mut canonical_expr = variable_expr.clone();
+                  Self::rename_ident_in_expr(
+                    &mut canonical_expr,
+                    props_ident,
+                    &Ident::new(
+                      CANONICAL_PROPS_IDENT.into(),
+                      DUMMY_SP,
+                      SyntaxContext::empty(),
+                    ),
+                  );
+                  let mut canonical_input = emit_expression(&canonical_expr);
+                  if !canonical_input.contains('\n')
+                    && !canonical_input.contains("/*")
+                    && !canonical_input.contains("//")
+                  {
+                    canonical_input = canonical_input
+                      .split_whitespace()
+                      .collect::<Vec<_>>()
+                      .join(" ");
+                  }
+                  variable_input = canonical_input;
+                  let hash_value = hash(&variable_input, 0);
+                  let variable_name = format!("--_{}", hash_value);
+                  let rule_value = format!("var({})", variable_name);
+                  let important = true_important || false_important;
+                  Self::push_rule_input(
+                    &mut rule_inputs,
+                    selectors,
+                    at_rules,
+                    &property_kebab,
+                    rule_value.clone(),
+                    rule_value,
+                    important,
+                  );
+                  let suffix = if important {
+                    Some(" !important".to_string())
+                  } else {
+                    None
+                  };
+                  runtime_variables.push(RuntimeCssVariable::new(
+                    variable_name,
+                    variable_expr,
+                    None,
+                    suffix,
+                  ));
+                  continue;
+                }
+              }
             }
-            None => {
-              let branch_object = ObjectLit {
-                span: DUMMY_SP,
-                props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                  key: property_key.clone(),
-                  value: cond_expr.cons.clone(),
-                })))],
-              };
-              let branch_artifacts = self.process_dynamic_css_object_with_context(
-                &branch_object,
-                props_ident,
-                selectors,
-                at_rules,
-                options,
-              )?;
-              let classes = branch_artifacts
-                .rules
-                .iter()
-                .map(|rule| rule.class_name.clone())
-                .collect::<Vec<_>>();
-              artifacts.merge(branch_artifacts);
-              classes
-            }
-          };
 
-          let false_classes = match false_static {
-            Some(static_value) => {
-              let (branch_artifacts, classes) = Self::build_static_branch_artifacts(
-                selectors,
-                at_rules,
-                &property_kebab,
-                &static_value,
-                options,
-              )?;
-              artifacts.merge(branch_artifacts);
-              classes
-            }
-            None if Self::is_css_none_expr(&cond_expr.alt) => Vec::new(),
-            None => {
-              let branch_object = ObjectLit {
-                span: DUMMY_SP,
-                props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                  key: property_key.clone(),
-                  value: cond_expr.alt.clone(),
-                })))],
-              };
-              let branch_artifacts = self.process_dynamic_css_object_with_context(
-                &branch_object,
-                props_ident,
-                selectors,
-                at_rules,
-                options,
-              )?;
-              let classes = branch_artifacts
-                .rules
-                .iter()
-                .map(|rule| rule.class_name.clone())
-                .collect::<Vec<_>>();
-              artifacts.merge(branch_artifacts);
-              classes
-            }
-          };
+            let true_classes = match true_static {
+              Some(static_value) => {
+                let (branch_artifacts, classes) = Self::build_static_branch_artifacts(
+                  selectors,
+                  at_rules,
+                  &property_kebab,
+                  &static_value,
+                  options,
+                )?;
+                artifacts.merge(branch_artifacts);
+                classes
+              }
+              None => {
+                let branch_object = ObjectLit {
+                  span: DUMMY_SP,
+                  props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: property_key.clone(),
+                    value: cond_expr.cons.clone(),
+                  })))],
+                };
+                let branch_artifacts = self.process_dynamic_css_object_with_context(
+                  &branch_object,
+                  props_ident,
+                  selectors,
+                  at_rules,
+                  options,
+                )?;
+                let classes = branch_artifacts
+                  .rules
+                  .iter()
+                  .map(|rule| rule.class_name.clone())
+                  .collect::<Vec<_>>();
+                self.register_artifacts_for_metadata(&branch_artifacts);
+                artifacts.merge(branch_artifacts);
+                classes
+              }
+            };
 
-          runtime_class_conditions.push(RuntimeClassCondition::new(
-            (*cond_expr.test).clone(),
-            true_classes,
-            false_classes,
-          ));
-          continue;
+            let false_classes = match false_static {
+              Some(static_value) => {
+                let (branch_artifacts, classes) = Self::build_static_branch_artifacts(
+                  selectors,
+                  at_rules,
+                  &property_kebab,
+                  &static_value,
+                  options,
+                )?;
+                artifacts.merge(branch_artifacts);
+                classes
+              }
+              None if Self::is_css_none_expr(&cond_expr.alt) => Vec::new(),
+              None => {
+                let branch_object = ObjectLit {
+                  span: DUMMY_SP,
+                  props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: property_key.clone(),
+                    value: cond_expr.alt.clone(),
+                  })))],
+                };
+                let branch_artifacts = self.process_dynamic_css_object_with_context(
+                  &branch_object,
+                  props_ident,
+                  selectors,
+                  at_rules,
+                  options,
+                )?;
+                let classes = branch_artifacts
+                  .rules
+                  .iter()
+                  .map(|rule| rule.class_name.clone())
+                  .collect::<Vec<_>>();
+                self.register_artifacts_for_metadata(&branch_artifacts);
+                artifacts.merge(branch_artifacts);
+                classes
+              }
+            };
+
+            runtime_class_conditions.push(RuntimeClassCondition::new(
+              (*cond_expr.test).clone(),
+              true_classes,
+              false_classes,
+            ));
+            continue;
+          }
         }
 
         let hash_value = hash(&variable_input, 0);
+        if std::env::var_os("COMPILED_DEBUG_HASH").is_some() {
+          eprintln!(
+            "[compiled-debug] variable-hash={} input={}",
+            hash_value, variable_input
+          );
+        }
         let variable_name = format!("--_{}", hash_value);
         let rule_value = format!("var({})", variable_name);
         Self::push_rule_input(
@@ -4397,6 +5303,24 @@ impl<'a> TransformVisitor<'a> {
     for condition in runtime_class_conditions {
       artifacts.push_class_condition(condition);
     }
+    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+      let has_aria_rule = artifacts.rules.iter().any(|rule| rule.css.contains("aria"));
+      let has_aria_raw = artifacts.raw_rules.iter().any(|css| css.contains("aria"));
+      eprintln!(
+        "[compiled-debug] process_dynamic returning rules={} raw_rules={} has_aria_rule={} has_aria_raw={}",
+        artifacts.rules.len(),
+        artifacts.raw_rules.len(),
+        has_aria_rule,
+        has_aria_raw
+      );
+      for rule in &artifacts.rules {
+        eprintln!("[compiled-debug] process_dynamic rule {}", rule.css);
+      }
+      for css in &artifacts.raw_rules {
+        eprintln!("[compiled-debug] process_dynamic raw_rule {}", css);
+      }
+    }
+    self.register_artifacts_for_metadata(&artifacts);
     Some(artifacts)
   }
 
@@ -4421,9 +5345,18 @@ impl<'a> TransformVisitor<'a> {
       selectors: selector_list,
       at_rules: at_rules.to_vec(),
       property: property.to_string(),
-      value,
+      value: if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && property == "content" {
+        eprintln!(
+          "[compiled-debug] push_rule_input property=content value={:?}",
+          value
+        );
+        value
+      } else {
+        value
+      },
       raw_value,
       important,
+      duplicate_active_after: false,
     });
   }
 
@@ -4471,6 +5404,24 @@ impl<'a> TransformVisitor<'a> {
   fn css_artifacts_from_dynamic_css_expression(
     &mut self,
     expression: &Expr,
+    props_ident: &Ident,
+    options: &CssOptions,
+  ) -> Option<CssArtifacts> {
+    self.css_artifacts_from_dynamic_css_expression_with_context(
+      expression,
+      props_ident,
+      &[normalize_selector(None)],
+      &[],
+      options,
+    )
+  }
+
+  fn css_artifacts_from_dynamic_css_expression_with_context(
+    &mut self,
+    expression: &Expr,
+    props_ident: &Ident,
+    selectors: &[String],
+    at_rules: &[AtRuleInput],
     options: &CssOptions,
   ) -> Option<CssArtifacts> {
     let mut expr_ref = expression;
@@ -4479,27 +5430,53 @@ impl<'a> TransformVisitor<'a> {
     }
 
     match expr_ref {
+      Expr::Object(obj) => {
+        self.process_dynamic_css_object_with_context(obj, props_ident, selectors, at_rules, options)
+      }
       Expr::Bin(bin) if matches!(bin.op, BinaryOp::LogicalAnd) => {
         let condition = bin.left.as_ref().clone();
-        let value_text = self.evaluate_static_to_css_string(bin.right.as_ref())?;
-        if value_text.trim().is_empty() {
-          return Some(CssArtifacts::default());
+        if let Some(value_text) = self.evaluate_static_to_css_string(bin.right.as_ref()) {
+          if value_text.trim().is_empty() {
+            return Some(CssArtifacts::default());
+          }
+          let mut artifacts = self.css_artifacts_from_css_text(&value_text, options)?;
+          let class_names: Vec<String> = artifacts
+            .rules
+            .iter()
+            .map(|rule| rule.class_name.clone())
+            .collect();
+          if class_names.is_empty() {
+            return Some(artifacts);
+          }
+          artifacts.push_class_condition(RuntimeClassCondition::new(
+            condition,
+            class_names,
+            Vec::new(),
+          ));
+          Some(artifacts)
+        } else {
+          let mut artifacts = self.css_artifacts_from_dynamic_css_expression_with_context(
+            bin.right.as_ref(),
+            props_ident,
+            selectors,
+            at_rules,
+            options,
+          )?;
+          let class_names: Vec<String> = artifacts
+            .rules
+            .iter()
+            .map(|rule| rule.class_name.clone())
+            .collect();
+          if class_names.is_empty() {
+            return Some(artifacts);
+          }
+          artifacts.push_class_condition(RuntimeClassCondition::new(
+            condition,
+            class_names,
+            Vec::new(),
+          ));
+          Some(artifacts)
         }
-        let mut artifacts = self.css_artifacts_from_css_text(&value_text, options)?;
-        let class_names: Vec<String> = artifacts
-          .rules
-          .iter()
-          .map(|rule| rule.class_name.clone())
-          .collect();
-        if class_names.is_empty() {
-          return Some(artifacts);
-        }
-        artifacts.push_class_condition(RuntimeClassCondition::new(
-          condition,
-          class_names,
-          Vec::new(),
-        ));
-        Some(artifacts)
       }
       Expr::Cond(cond_expr) => {
         let condition = cond_expr.test.as_ref().clone();
@@ -4507,20 +5484,35 @@ impl<'a> TransformVisitor<'a> {
         let mut when_true = Vec::new();
         let mut when_false = Vec::new();
 
-        if let Some(css_text) = self.evaluate_static_to_css_string(cond_expr.cons.as_ref()) {
-          if !css_text.trim().is_empty() {
+        let mut process_branch = |branch_expr: &Expr, output: &mut Vec<String>| -> Option<()> {
+          if let Some(css_text) = self.evaluate_static_to_css_string(branch_expr) {
+            if css_text.trim().is_empty() {
+              return Some(());
+            }
             let artifacts = self.css_artifacts_from_css_text(&css_text, options)?;
-            when_true.extend(artifacts.rules.iter().map(|rule| rule.class_name.clone()));
+            output.extend(artifacts.rules.iter().map(|rule| rule.class_name.clone()));
+            self.register_artifacts_for_metadata(&artifacts);
             combined.merge(artifacts);
+            return Some(());
           }
-        }
 
-        if let Some(css_text) = self.evaluate_static_to_css_string(cond_expr.alt.as_ref()) {
-          if !css_text.trim().is_empty() {
-            let artifacts = self.css_artifacts_from_css_text(&css_text, options)?;
-            when_false.extend(artifacts.rules.iter().map(|rule| rule.class_name.clone()));
-            combined.merge(artifacts);
-          }
+          let mut artifacts = self.css_artifacts_from_dynamic_css_expression_with_context(
+            branch_expr,
+            props_ident,
+            selectors,
+            at_rules,
+            options,
+          )?;
+          self.register_artifacts_for_metadata(&artifacts);
+          output.extend(artifacts.rules.iter().map(|rule| rule.class_name.clone()));
+          combined.merge(artifacts);
+          Some(())
+        };
+
+        if process_branch(cond_expr.cons.as_ref(), &mut when_true).is_none()
+          || process_branch(cond_expr.alt.as_ref(), &mut when_false).is_none()
+        {
+          return None;
         }
 
         if when_true.is_empty() && when_false.is_empty() {
@@ -4544,7 +5536,6 @@ impl<'a> TransformVisitor<'a> {
     let value = StaticValue::Str(text.to_string());
     css_artifacts_from_static_value(&value, options)
   }
-
   fn process_dynamic_template_literal(
     &mut self,
     template: &Tpl,
@@ -4562,7 +5553,7 @@ impl<'a> TransformVisitor<'a> {
 
     let mut result = String::new();
     let mut runtime_variables = Vec::new();
-    let allow_static_segments = template.exprs.len() == 1;
+    let expr_count = template.exprs.len();
 
     for (index, expr) in template.exprs.iter().enumerate() {
       let before_raw = segments.get(index).cloned().unwrap_or_else(String::new);
@@ -4581,21 +5572,31 @@ impl<'a> TransformVisitor<'a> {
         continue;
       }
 
-      if allow_static_segments {
-        if let Some(static_text) = self.evaluate_static_to_css_string(expr) {
-          result.push_str(&static_text);
-          if let Some(suffix) = &after_meta.variable_suffix {
-            result.push_str(suffix);
-          }
-          if let Some(slot) = segments.get_mut(index + 1) {
-            *slot = after_meta.css.clone();
-          }
-          continue;
+      if let Some(static_text) = self.evaluate_static_to_css_string(expr) {
+        result.push_str(&static_text);
+        if let Some(suffix) = &after_meta.variable_suffix {
+          result.push_str(suffix);
         }
+        if let Some(slot) = segments.get_mut(index + 1) {
+          *slot = after_meta.css.clone();
+        }
+        continue;
       }
 
       let (expression, variable_input) = self.normalize_variable_expression(expr, props_ident)?;
-      let hash_value = hash(&variable_input, 0);
+      let hash_input = variable_input.clone();
+      if std::env::var_os("COMPILED_DEBUG_HASH").is_some() {
+        eprintln!("[compiled-debug] template-variable-input={}", hash_input);
+      }
+      let hash_value = hash(&hash_input, 0);
+      if std::env::var_os("COMPILED_DEBUG_HASH").is_some()
+        && variable_input.contains("isHighlighted")
+      {
+        eprintln!(
+          "[compiled-debug] variable-hash={} input={}",
+          hash_value, variable_input
+        );
+      }
       let mut variable_name = format!("--_{}", hash_value);
       if matches!(before_meta.variable_prefix.as_deref(), Some("-")) {
         variable_name.push('-');
@@ -4618,7 +5619,7 @@ impl<'a> TransformVisitor<'a> {
         .clone()
         .filter(|value| !value.is_empty());
       let mut variable = RuntimeCssVariable::new(variable_name, expression, prefix, suffix);
-      variable.allow_static_substitution = allow_static_segments;
+      variable.allow_static_substitution = expr_count == 1;
       runtime_variables.push(variable);
     }
 
@@ -4649,12 +5650,26 @@ impl<'a> TransformVisitor<'a> {
   }
 
   fn evaluate_static_to_css_string(&self, expr: &Expr) -> Option<String> {
+    if let Expr::Ident(ident) = expr {
+      if ident.sym.as_ref() == "undefined" {
+        return Some(String::new());
+      }
+    }
+    if let Some(token_value) = resolve_token_expression(expr) {
+      return Some(token_value);
+    }
     let evaluation = evaluate_static_with_info(expr, &self.bindings)?;
     if evaluation.depends_on_import {
       return None;
     }
     match evaluation.value {
-      StaticValue::Str(text) => Some(text),
+      StaticValue::Str(text) => {
+        if text == "undefined" || text == "null" {
+          Some(String::new())
+        } else {
+          Some(text)
+        }
+      }
       StaticValue::Num(number) => {
         if number.fract() == 0.0 {
           Some(format!("{}", number.trunc() as i64))
@@ -5095,11 +6110,79 @@ impl<'a> TransformVisitor<'a> {
     }
   }
 
+  fn canonicalize_runtime_value(value: &str) -> String {
+    if !value.starts_with("var(") {
+      return Self::uppercase_hex_literals(value);
+    }
+    let normalized = Self::normalize_var_comma_spacing(value);
+    Self::uppercase_hex_literals(&normalized)
+  }
+
+  fn normalize_var_comma_spacing(value: &str) -> String {
+    let Some(comma_index) = Self::find_top_level_comma_in_var(value) else {
+      return value.to_string();
+    };
+    let prefix = &value[..comma_index + 1];
+    let remainder = &value[comma_index + 1..];
+    let trimmed = remainder.trim_start();
+    let mut output = String::with_capacity(value.len() + 1);
+    output.push_str(prefix);
+    output.push(' ');
+    output.push_str(trimmed);
+    output
+  }
+
+  fn find_top_level_comma_in_var(value: &str) -> Option<usize> {
+    if !value.starts_with("var(") {
+      return None;
+    }
+    let mut depth = 0usize;
+    for (idx, ch) in value.char_indices() {
+      match ch {
+        '(' => depth += 1,
+        ')' => {
+          if depth > 0 {
+            depth -= 1;
+          }
+        }
+        ',' if depth == 1 => return Some(idx),
+        _ => {}
+      }
+    }
+    None
+  }
+
+  fn uppercase_hex_literals(value: &str) -> String {
+    let mut output = String::with_capacity(value.len());
+    let mut iter = value.chars().peekable();
+    while let Some(ch) = iter.next() {
+      if ch == '#' {
+        output.push('#');
+        while let Some(&next) = iter.peek() {
+          if next.is_ascii_hexdigit() {
+            output.push(next.to_ascii_uppercase());
+            iter.next();
+          } else {
+            break;
+          }
+        }
+      } else {
+        output.push(ch);
+      }
+    }
+    output
+  }
+
   fn normalize_variable_expression(
     &self,
     expr: &Expr,
     props_ident: &Ident,
   ) -> Option<(Expr, String)> {
+    let canonical_ident = Ident::new(
+      CANONICAL_PROPS_IDENT.into(),
+      DUMMY_SP,
+      SyntaxContext::empty(),
+    );
     match expr {
       Expr::Arrow(arrow) => {
         if arrow.params.len() != 1 {
@@ -5126,8 +6209,10 @@ impl<'a> TransformVisitor<'a> {
             Self::replace_idents_with_expr(&mut body_expr, &mapping);
           }
         }
-        let body_code = emit_expression(&body_expr);
-        let normalized_body = if body_code.trim().starts_with('(')
+        let mut canonical_body = body_expr.clone();
+        Self::rename_ident_in_expr(&mut canonical_body, props_ident, &canonical_ident);
+        let body_code = emit_expression(&canonical_body);
+        let mut normalized_body = if body_code.trim().starts_with('(')
           && body_code.contains('?')
           && body_code.contains(':')
         {
@@ -5135,8 +6220,45 @@ impl<'a> TransformVisitor<'a> {
         } else {
           body_code
         };
-        let variable_input = format!("{} => {}", props_ident.sym, normalized_body);
+        let trimmed_body = normalized_body.trim();
+        if (trimmed_body.starts_with("(()=>") || trimmed_body.starts_with("(() =>"))
+          && trimmed_body.ends_with(")()")
+        {
+          if let Some(start) = trimmed_body.find('{') {
+            if let Some(end) = trimmed_body.rfind('}') {
+              normalized_body = trimmed_body[start..=end].to_string();
+            }
+          }
+        }
+        if normalized_body.contains('#') {
+          normalized_body = Self::uppercase_hex_literals(&normalized_body);
+        }
+        let contains_comment = normalized_body.contains("//") || normalized_body.contains("/*");
+        let contains_newline = normalized_body.contains('\n');
+        if !contains_comment && !contains_newline {
+          normalized_body = normalized_body
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        }
+        let variable_input = format!("{} => {}", CANONICAL_PROPS_IDENT, normalized_body);
+        if std::env::var_os("COMPILED_DEBUG_HASH").is_some()
+          && (variable_input.contains("isHighlighted")
+            || variable_input.contains("formatRuleHoverColor"))
+        {
+          eprintln!("[compiled-debug] variable-input={:?}", variable_input);
+        }
         Some((body_expr, variable_input))
+      }
+      Expr::Cond(cond) => {
+        let mut canonical_expr = Expr::Cond(cond.clone());
+        Self::rename_ident_in_expr(&mut canonical_expr, props_ident, &canonical_ident);
+        let mut normalized = emit_expression(&canonical_expr);
+        if !normalized.contains('\n') && !normalized.contains("/*") && !normalized.contains("//") {
+          normalized = normalized.split_whitespace().collect::<Vec<_>>().join(" ");
+        }
+        let variable_input = normalized;
+        Some((Expr::Cond(cond.clone()), variable_input))
       }
       Expr::Ident(_)
       | Expr::Member(_)
@@ -5145,7 +6267,6 @@ impl<'a> TransformVisitor<'a> {
       | Expr::Lit(_)
       | Expr::Bin(_)
       | Expr::Unary(_)
-      | Expr::Cond(_)
       | Expr::Paren(_)
       | Expr::TsAs(_)
       | Expr::TsTypeAssertion(_)
@@ -5156,7 +6277,24 @@ impl<'a> TransformVisitor<'a> {
       | Expr::New(_)
       | Expr::Array(_)
       | Expr::Object(_) => {
-        let variable_input = emit_expression(expr);
+        let mut canonical_expr = expr.clone();
+        Self::rename_ident_in_expr(&mut canonical_expr, props_ident, &canonical_ident);
+        let mut variable_input = emit_expression(&canonical_expr);
+        if !variable_input.contains('\n')
+          && !variable_input.contains("/*")
+          && !variable_input.contains("//")
+        {
+          variable_input = variable_input
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        }
+        if std::env::var_os("COMPILED_DEBUG_HASH").is_some()
+          && (variable_input.contains("isHighlighted")
+            || variable_input.contains("formatRuleHoverColor"))
+        {
+          eprintln!("[compiled-debug] variable-input={:?}", variable_input);
+        }
         Some((expr.clone(), variable_input))
       }
       _ => None,
@@ -5166,10 +6304,8 @@ impl<'a> TransformVisitor<'a> {
   fn arrow_body_to_expr(&self, arrow: &ArrowExpr) -> Option<Expr> {
     match arrow.body.as_ref() {
       BlockStmtOrExpr::Expr(expr) => Some(expr.as_ref().clone()),
-      BlockStmtOrExpr::BlockStmt(block) => Some(Expr::Call(CallExpr {
-        span: DUMMY_SP,
-        ctxt: SyntaxContext::empty(),
-        callee: Callee::Expr(Box::new(Expr::Arrow(ArrowExpr {
+      BlockStmtOrExpr::BlockStmt(block) => {
+        let arrow_expr = Expr::Arrow(ArrowExpr {
           span: DUMMY_SP,
           ctxt: SyntaxContext::empty(),
           params: Vec::new(),
@@ -5178,13 +6314,20 @@ impl<'a> TransformVisitor<'a> {
           is_generator: arrow.is_generator,
           type_params: None,
           return_type: None,
-        }))),
-        args: Vec::new(),
-        type_args: None,
-      })),
+        });
+        Some(Expr::Call(CallExpr {
+          span: DUMMY_SP,
+          ctxt: SyntaxContext::empty(),
+          callee: Callee::Expr(Box::new(Expr::Paren(ParenExpr {
+            span: DUMMY_SP,
+            expr: Box::new(arrow_expr),
+          }))),
+          args: Vec::new(),
+          type_args: None,
+        }))
+      }
     }
   }
-
   fn build_style_with_variables(
     &mut self,
     base_style_ident: &Ident,
@@ -5261,6 +6404,25 @@ impl<'a> TransformVisitor<'a> {
       to,
     };
     expr.visit_mut_with(&mut renamer);
+  }
+
+  fn pattern_binds_name(pat: &Pat, name: &str) -> bool {
+    match pat {
+      Pat::Ident(binding) => binding.id.sym.as_ref() == name,
+      Pat::Array(array) => array
+        .elems
+        .iter()
+        .flatten()
+        .any(|elem| Self::pattern_binds_name(elem, name)),
+      Pat::Object(object) => object.props.iter().any(|prop| match prop {
+        ObjectPatProp::KeyValue(kv) => Self::pattern_binds_name(&kv.value, name),
+        ObjectPatProp::Assign(assign) => assign.key.sym.as_ref() == name,
+        ObjectPatProp::Rest(rest) => Self::pattern_binds_name(&rest.arg, name),
+      }),
+      Pat::Assign(assign) => Self::pattern_binds_name(&assign.left, name),
+      Pat::Rest(rest) => Self::pattern_binds_name(&rest.arg, name),
+      _ => false,
+    }
   }
 
   fn collect_class_names_bindings(
@@ -5475,16 +6637,73 @@ impl<'a> TransformVisitor<'a> {
   }
 
   fn handle_css_call(&mut self, call: &CallExpr) -> Option<Expr> {
-    if let Some(values) = self.evaluate_call_arguments(call) {
+    let debug_css = std::env::var_os("COMPILED_DEBUG_CSS").is_some();
+    let evaluated_values = self.evaluate_call_arguments(call);
+    if debug_css {
+      match &self.current_binding {
+        Some(binding) => eprintln!(
+          "[compiled-debug] handle_css_call start binding={} static_eval={}",
+          binding.0,
+          evaluated_values.is_some()
+        ),
+        None => eprintln!(
+          "[compiled-debug] handle_css_call start binding=<none> static_eval={}",
+          evaluated_values.is_some()
+        ),
+      }
+    }
+    if let Some(values) = evaluated_values {
       let mut combined = CssArtifacts::default();
       for value in &values {
         let artifacts = css_artifacts_from_static_value(value, &self.css_options())?;
+        self.register_artifacts_for_metadata(&artifacts);
         combined.merge(artifacts);
       }
+      if let Some(binding) = &self.current_binding {
+        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+          eprintln!(
+            "[compiled-debug] cache css artifacts for {} (static) -> rules:{} raw:{} vars:{}",
+            binding.0,
+            combined.rules.len(),
+            combined.raw_rules.len(),
+            combined.runtime_variables.len()
+          );
+        }
+        self
+          .css_runtime_artifacts
+          .insert(binding.clone(), combined.clone());
+      }
+      if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+        eprintln!(
+          "[compiled-debug] handle_css_call rules len {}",
+          combined.rules.len()
+        );
+        eprintln!(
+          "[compiled-debug] handle_css_call contains aria? {}",
+          combined.rules.iter().any(|rule| rule.css.contains("aria"))
+        );
+        for rule in &combined.rules {
+          eprintln!("[compiled-debug] handle_css_call rule list {}", rule.css);
+        }
+      }
       for rule in combined.rules {
+        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+          eprintln!("[compiled-debug] handle_css_call rule {}", rule.css);
+        }
         self.register_rule(rule.css);
       }
+      if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+        for entry in combined.raw_rules.iter().filter(|css| css.contains("aria")) {
+          eprintln!(
+            "[compiled-debug] handle_css_call raw_rule candidate {}",
+            entry
+          );
+        }
+      }
       for css in combined.raw_rules {
+        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+          eprintln!("[compiled-debug] handle_css_call raw_rule {}", css);
+        }
         self.register_rule(css);
       }
       Some(Expr::Lit(Lit::Null(Null { span: DUMMY_SP })))
@@ -5504,14 +6723,55 @@ impl<'a> TransformVisitor<'a> {
         }
       }
       if let Some(binding) = &self.current_binding {
+        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+          if binding.0.as_ref() == "tabStyles" {
+            for rule in &combined.rules {
+              eprintln!("[compiled-debug] tabStyles combined rule {}", rule.css);
+            }
+          }
+          eprintln!(
+            "[compiled-debug] cache css artifacts for {} (dynamic) -> rules:{} raw:{} vars:{}",
+            binding.0,
+            combined.rules.len(),
+            combined.raw_rules.len(),
+            combined.runtime_variables.len()
+          );
+        }
         self
           .css_runtime_artifacts
           .insert(binding.clone(), combined.clone());
       }
+      if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+        eprintln!(
+          "[compiled-debug] handle_css_call rules len {}",
+          combined.rules.len()
+        );
+        eprintln!(
+          "[compiled-debug] handle_css_call contains aria? {}",
+          combined.rules.iter().any(|rule| rule.css.contains("aria"))
+        );
+        for rule in combined.rules.iter().take(10) {
+          eprintln!("[compiled-debug] handle_css_call rule preview {}", rule.css);
+        }
+      }
       for rule in combined.rules {
+        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+          eprintln!("[compiled-debug] handle_css_call rule {}", rule.css);
+        }
         self.register_rule(rule.css);
       }
+      if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+        for entry in combined.raw_rules.iter().filter(|css| css.contains("aria")) {
+          eprintln!(
+            "[compiled-debug] handle_css_call raw_rule candidate {}",
+            entry
+          );
+        }
+      }
       for css in combined.raw_rules {
+        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+          eprintln!("[compiled-debug] handle_css_call raw_rule {}", css);
+        }
         self.register_rule(css);
       }
       Some(Expr::Lit(Lit::Null(Null { span: DUMMY_SP })))
@@ -5530,7 +6790,7 @@ impl<'a> TransformVisitor<'a> {
   }
 
   fn emit_keyframes_rule(&mut self, css: &str, expression: &Expr) -> Option<Expr> {
-    let normalized = css.replace(";}", "}");
+    let mut normalized = css.replace(";}", "}");
     let expression_code = emit_expression(expression);
     let name = format!("k{}", hash(&expression_code, 0));
     let rule = format!("@keyframes {}{{{}}}", name, normalized);
@@ -5867,7 +7127,6 @@ impl<'a> TransformVisitor<'a> {
       module.body.push(ModuleItem::Stmt(stmt));
     }
   }
-
   fn process_xcss_attributes(&mut self, element: &mut JSXElement) -> Option<XcssProcessing> {
     if !self.options.process_xcss {
       return None;
@@ -5899,30 +7158,47 @@ impl<'a> TransformVisitor<'a> {
       let evaluated = evaluate_static(expr, &self.bindings);
 
       if matches!(**expr, Expr::Object(_)) {
-        let evaluated_object = evaluated
-          .as_ref()
-          .and_then(|value| match value {
-            StaticValue::Object(map) => Some(map),
-            _ => None,
-          })
-          .unwrap_or_else(|| panic!("Object given to the xcss prop must be static"));
+        let Some(evaluated_object) = evaluated.as_ref().and_then(|value| match value {
+          StaticValue::Object(map) => Some(map),
+          _ => None,
+        }) else {
+          self.push_error(
+            Some(container.span),
+            "Object given to the xcss prop must be static",
+          );
+          continue;
+        };
 
-        let artifacts = css_artifacts_from_static_object(evaluated_object, &self.css_options())
-          .unwrap_or_else(|| panic!("Object given to the xcss prop must be static"));
+        let Some(artifacts) =
+          css_artifacts_from_static_object(evaluated_object, &self.css_options())
+        else {
+          self.push_error(
+            Some(container.span),
+            "Object given to the xcss prop must be static",
+          );
+          continue;
+        };
 
         let mut class_names = Vec::new();
         for rule in &artifacts.rules {
-          self.register_rule(rule.css.clone());
-          class_names.push(rule.class_name.clone());
           if !self.options.extract {
+            self.register_rule(rule.css.clone());
+          }
+          class_names.push(rule.class_name.clone());
+          if !runtime_sheets.iter().any(|existing| existing == &rule.css) {
             runtime_sheets.push(rule.css.clone());
           }
         }
         for css in &artifacts.raw_rules {
-          self.register_rule(css.clone());
           if !self.options.extract {
+            self.register_rule(css.clone());
+          }
+          if !runtime_sheets.iter().any(|existing| existing == css) {
             runtime_sheets.push(css.clone());
           }
+        }
+        for class_name in &class_names {
+          self.xcss_class_names.insert(class_name.clone());
         }
 
         if class_names.is_empty() {
@@ -5967,6 +7243,15 @@ impl<'a> TransformVisitor<'a> {
         continue;
       }
 
+      for class_name in &class_names {
+        self.xcss_class_names.insert(class_name.clone());
+      }
+      if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+        eprintln!(
+          "[compiled-debug] recorded xcss classes {:?}",
+          self.xcss_class_names
+        );
+      }
       pending_class_names.extend(class_names);
       transformed = true;
     }
@@ -6035,6 +7320,12 @@ impl<'a> TransformVisitor<'a> {
   fn resolve_pending_xcss(&mut self, class_names: &[String]) -> Vec<String> {
     let mut runtime_sheets = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
+    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+      eprintln!(
+        "[compiled-debug] resolve_pending_xcss extract={}",
+        self.options.extract
+      );
+    }
 
     for class_name in class_names {
       let mut handled = false;
@@ -6042,10 +7333,10 @@ impl<'a> TransformVisitor<'a> {
         handled = true;
         for rule in rules {
           if seen.insert(rule.clone()) {
-            self.register_rule(rule.clone());
             if !self.options.extract {
-              runtime_sheets.push(rule);
+              self.register_rule(rule.clone());
             }
+            runtime_sheets.push(rule);
           }
         }
       }
@@ -6062,10 +7353,10 @@ impl<'a> TransformVisitor<'a> {
         .cloned()
       {
         if seen.insert(rule.clone()) {
-          self.register_rule(rule.clone());
           if !self.options.extract {
-            runtime_sheets.push(rule);
+            self.register_rule(rule.clone());
           }
+          runtime_sheets.push(rule);
         }
         continue;
       }
@@ -6086,8 +7377,10 @@ impl<'a> TransformVisitor<'a> {
     self.collect_css_map_idents(expr, &mut idents);
     for ident in &idents {
       if let Some(map) = self.css_map_static_objects.remove(ident) {
+        let mut map_options = self.css_options();
+        map_options.preserve_leading_combinator_space = true;
         for value in map.values() {
-          if let Some(artifacts) = css_artifacts_from_static_value(value, &self.css_options()) {
+          if let Some(artifacts) = css_artifacts_from_static_value(value, &map_options) {
             self.cache_css_map_artifacts(Some(ident.clone()), &artifacts);
           }
         }
@@ -6302,7 +7595,7 @@ impl<'a> TransformVisitor<'a> {
       _ => None,
     };
 
-    let css_value_for_precomputed = match &css_attr.value {
+    let mut css_value_for_precomputed = match &css_attr.value {
       Some(JSXAttrValue::JSXExprContainer(container)) => match &container.expr {
         JSXExpr::Expr(expr) => evaluate_static(expr, &self.bindings),
         _ => None,
@@ -6312,7 +7605,7 @@ impl<'a> TransformVisitor<'a> {
     };
 
     let using_runtime_artifacts = css_value_for_precomputed.is_none();
-    let artifacts = if let Some(ref value) = css_value_for_precomputed {
+    let mut artifacts = if let Some(ref value) = css_value_for_precomputed {
       css_artifacts_from_static_value(value, &self.css_options())?
     } else if let Some(expr) = &original_css_expr {
       if let Expr::Ident(ident) = expr {
@@ -6361,9 +7654,21 @@ impl<'a> TransformVisitor<'a> {
         }
       }
     }
+    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+      eprintln!(
+        "[compiled-debug] classes_for_rules={:?} precomputed_classes={:?}",
+        classes_for_rules, precomputed_classes
+      );
+    }
 
     let mut precomputed_exprs = Vec::new();
     let mut expr_class_names = Vec::new();
+    for class_name in &classes_for_rules {
+      self.non_xcss_class_names.insert(class_name.clone());
+    }
+    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+      eprintln!("[compiled-debug] classes_for_rules={:?}", classes_for_rules);
+    }
     if let (Some(expr), Some(value)) = (
       original_css_expr.as_ref(),
       css_value_for_precomputed.as_ref(),
@@ -6374,11 +7679,16 @@ impl<'a> TransformVisitor<'a> {
     let mut runtime_sheets = Vec::new();
     for rule in &artifacts.rules {
       self.register_rule(rule.css.clone());
-      runtime_sheets.push(rule.css.clone());
+      if !runtime_sheets.contains(&rule.css) {
+        runtime_sheets.push(rule.css.clone());
+      }
     }
     for css in &artifacts.raw_rules {
-      self.register_rule(css.clone());
-      runtime_sheets.push(css.clone());
+      let sheet = css.clone();
+      self.register_rule(sheet.clone());
+      if !runtime_sheets.contains(&sheet) {
+        runtime_sheets.push(sheet);
+      }
     }
 
     for class_name in &classes_for_rules {
@@ -6575,7 +7885,6 @@ impl<'a> TransformVisitor<'a> {
 
     Some((runtime_sheets, key_expr))
   }
-
   fn build_runtime_component(
     &mut self,
     child: Expr,
@@ -7041,11 +8350,6 @@ impl<'a> VisitMut for TransformVisitor<'a> {
             if let Some(value) = self.evaluate_call_argument(&call) {
               if let StaticValue::Object(object) = value {
                 let mut props = Vec::new();
-                let include_metadata = self
-                  .compiled_import_sources
-                  .get(&to_id(ident))
-                  .map(|src| src != "@atlaskit/css")
-                  .unwrap_or(true);
                 for (key, value) in &object {
                   let variant_object = match value.as_object() {
                     Some(inner) => inner,
@@ -7054,8 +8358,10 @@ impl<'a> VisitMut for TransformVisitor<'a> {
                       return;
                     }
                   };
+                  let mut map_options = self.css_options();
+                  map_options.preserve_leading_combinator_space = true;
                   let artifacts =
-                    match css_artifacts_from_static_object(variant_object, &self.css_options()) {
+                    match css_artifacts_from_static_object(variant_object, &map_options) {
                       Some(artifacts) => artifacts,
                       None => {
                         self.retain_imports.insert(to_id(ident));
@@ -7064,19 +8370,11 @@ impl<'a> VisitMut for TransformVisitor<'a> {
                     };
                   let mut class_names = Vec::new();
                   for rule in &artifacts.rules {
-                    if include_metadata {
-                      self.register_rule(rule.css.clone());
-                    } else {
-                      self.register_rule_without_metadata(rule.css.clone());
-                    }
+                    self.register_rule(rule.css.clone());
                     class_names.push(rule.class_name.clone());
                   }
                   for css in &artifacts.raw_rules {
-                    if include_metadata {
-                      self.register_rule(css.clone());
-                    } else {
-                      self.register_rule_without_metadata(css.clone());
-                    }
+                    self.register_rule(css.clone());
                   }
                   self.cache_css_map_artifacts(Some(to_id(ident)), &artifacts);
                   drop(artifacts);
@@ -7099,7 +8397,6 @@ impl<'a> VisitMut for TransformVisitor<'a> {
       }
     }
   }
-
   fn visit_mut_var_declarator(&mut self, declarator: &mut VarDeclarator) {
     let prev_binding = self.current_binding.clone();
     if let Pat::Ident(binding) = &declarator.name {
@@ -7116,7 +8413,7 @@ impl<'a> VisitMut for TransformVisitor<'a> {
 
     let props_ident = Ident::new("__cmplp".into(), DUMMY_SP, SyntaxContext::empty());
 
-    let (default_component_expr, artifacts) = match &*init_expr {
+    let (default_component_expr, mut artifacts) = match &*init_expr {
       Expr::TaggedTpl(tagged) => {
         let (component_expr, styled_ident) = match self.resolve_styled_target(&tagged.tag) {
           Some(res) => res,
@@ -7158,14 +8455,80 @@ impl<'a> VisitMut for TransformVisitor<'a> {
           }
         };
         let mut combined = CssArtifacts::default();
+        let debug_css = std::env::var_os("COMPILED_DEBUG_CSS").is_some();
         if let Some(values) = self.evaluate_call_arguments_allow_imports(call) {
-          for value in &values {
-            match css_artifacts_from_static_value(value, &self.css_options()) {
-              Some(artifacts) => combined.merge(artifacts),
-              None => {
-                self.preserve_import_for_ident(&styled_ident);
-                return;
+          if debug_css {
+            eprintln!(
+              "[compiled-debug] styled call static args len={}",
+              values.len()
+            );
+          }
+          for (index, (arg, value)) in call.args.iter().zip(values.iter()).enumerate() {
+            let value_kind = if debug_css {
+              match value.unwrap_spread() {
+                StaticValue::Null => "Null",
+                StaticValue::Str(_) => "Str",
+                StaticValue::Num(_) => "Num",
+                StaticValue::Bool(_) => "Bool",
+                StaticValue::Object(_) => "Object",
+                StaticValue::Array(_) => "Array",
+                StaticValue::Function(_) => "Function",
+                StaticValue::Spread(_) => unreachable!("spread should be unwrapped"),
               }
+            } else {
+              ""
+            };
+            let static_artifacts = css_artifacts_from_static_value(value, &self.css_options());
+            let mut merged = false;
+            let mut used_static = false;
+            let mut used_runtime = false;
+            if let Some(ref artifacts) = static_artifacts {
+              if !artifacts.rules.is_empty()
+                || !artifacts.raw_rules.is_empty()
+                || !artifacts.runtime_variables.is_empty()
+                || !artifacts.runtime_class_conditions.is_empty()
+                || !matches!(value, StaticValue::Null)
+              {
+                combined.merge(artifacts.clone());
+                merged = true;
+                used_static = true;
+              }
+            }
+            if let Expr::Ident(ident) = &*arg.expr {
+              let mut runtime_artifacts = self.css_runtime_artifacts.get(&to_id(ident)).cloned();
+              if runtime_artifacts.is_none() {
+                if let Some((_, artifacts)) = self
+                  .css_runtime_artifacts
+                  .iter()
+                  .find(|((sym, _), _)| sym == &ident.sym)
+                {
+                  runtime_artifacts = Some(artifacts.clone());
+                }
+              }
+              if debug_css && runtime_artifacts.is_none() {
+                eprintln!(
+                  "[compiled-debug] styled runtime lookup miss for {}",
+                  ident.sym
+                );
+              }
+              if let Some(artifacts) = runtime_artifacts {
+                combined.merge(artifacts);
+                merged = true;
+                used_runtime = true;
+              }
+            }
+            if !merged && matches!(&*arg.expr, Expr::Lit(Lit::Null(_))) {
+              merged = true;
+            }
+            if !merged {
+              self.preserve_import_for_ident(&styled_ident);
+              return;
+            }
+            if debug_css {
+              eprintln!(
+                "[compiled-debug] styled call arg idx={} kind={} used_static={} used_runtime={}",
+                index, value_kind, used_static, used_runtime
+              );
             }
           }
         } else {
@@ -7204,17 +8567,29 @@ impl<'a> VisitMut for TransformVisitor<'a> {
     let mut runtime_sheets = Vec::new();
     for rule in &artifacts.rules {
       self.register_rule(rule.css.clone());
-      runtime_sheets.push(rule.css.clone());
+      if !runtime_sheets.contains(&rule.css) {
+        runtime_sheets.push(rule.css.clone());
+      }
     }
     for css in &artifacts.raw_rules {
-      self.register_rule(css.clone());
-      runtime_sheets.push(css.clone());
+      let sheet = css.clone();
+      self.register_rule(sheet.clone());
+      if !runtime_sheets.contains(&sheet) {
+        runtime_sheets.push(sheet);
+      }
     }
     let runtime_sheets = self.finalize_runtime_sheets(runtime_sheets);
     self.needs_react_namespace = true;
     self.needs_jsx_runtime = true;
     self.needs_runtime_ax = true;
     self.needs_forward_ref = true;
+
+    if !artifacts.runtime_class_conditions.is_empty() && self.props_scope_depth == 0 {
+      let source_ident = Ident::new("props".into(), DUMMY_SP, SyntaxContext::empty());
+      for condition in artifacts.runtime_class_conditions.iter_mut() {
+        Self::rename_ident_in_expr(&mut condition.test, &source_ident, &props_ident);
+      }
+    }
 
     let mut class_strings: Vec<ExprOrSpread> = Vec::new();
     if let Some(name) = component_name.as_ref() {
@@ -7265,7 +8640,13 @@ impl<'a> VisitMut for TransformVisitor<'a> {
       });
     }
 
-    let runtime_variables = artifacts.runtime_variables.clone();
+    let mut runtime_variables = artifacts.runtime_variables.clone();
+    if !runtime_variables.is_empty() {
+      let source_ident = Ident::new("props".into(), DUMMY_SP, SyntaxContext::empty());
+      for variable in runtime_variables.iter_mut() {
+        Self::rename_ident_in_expr(&mut variable.expression, &source_ident, &props_ident);
+      }
+    }
 
     let mut object_props = Vec::new();
     object_props.push(ObjectPatProp::KeyValue(KeyValuePatProp {
@@ -7442,9 +8823,37 @@ impl<'a> VisitMut for TransformVisitor<'a> {
         .push((id.clone(), id.sym.to_string()));
     }
   }
+
+  fn visit_mut_function(&mut self, function: &mut Function) {
+    let has_props = function
+      .params
+      .iter()
+      .any(|param| Self::pattern_binds_name(&param.pat, "props"));
+    if has_props {
+      self.props_scope_depth += 1;
+    }
+    function.visit_mut_children_with(self);
+    if has_props {
+      self.props_scope_depth -= 1;
+    }
+  }
+
+  fn visit_mut_arrow_expr(&mut self, expr: &mut ArrowExpr) {
+    let has_props = expr
+      .params
+      .iter()
+      .any(|param| Self::pattern_binds_name(param, "props"));
+    if has_props {
+      self.props_scope_depth += 1;
+    }
+    expr.visit_mut_children_with(self);
+    if has_props {
+      self.props_scope_depth -= 1;
+    }
+  }
 }
 
-fn parse_transformed_source(code: &str, filename: &str) -> Program {
+fn parse_transformed_source(code: &str, filename: &str) -> Result<Program, TransformError> {
   use std::sync::Arc;
 
   let cm: Arc<SourceMap> = Default::default();
@@ -7475,14 +8884,22 @@ fn parse_transformed_source(code: &str, filename: &str) -> Program {
 
   let mut parser = make_parser(syntax_for_file(filename));
   match parser.parse_module() {
-    Ok(module) => Program::Module(module),
+    Ok(module) => Ok(Program::Module(module)),
     Err(module_err) => {
+      let module_err_message = module_err.kind().msg().into_owned();
+      let module_err_details = format!("{module_err:?}");
+
       let mut parser = make_parser(syntax_for_file(filename));
       match parser.parse_script() {
-        Ok(script) => Program::Script(script),
-        Err(script_err) => panic!(
-          "failed to parse emitted output as module ({module_err:?}), and as script ({script_err:?})"
-        ),
+        Ok(script) => Ok(Program::Script(script)),
+        Err(script_err) => {
+          let script_err_message = script_err.kind().msg().into_owned();
+          let script_err_details = format!("{script_err:?}");
+
+          Err(TransformError::new(format!(
+            "{filename}: failed to parse emitted output as module ({module_err_details}: {module_err_message}), and as script ({script_err_details}: {script_err_message})"
+          )))
+        }
       }
     }
   }
@@ -7493,7 +8910,7 @@ fn transform_program_with_options(
   _metadata: TransformPluginProgramMetadata,
   options: PluginOptions,
   filename: String,
-) -> Program {
+) -> Result<Program, TransformErrors> {
   let mut program = program;
   if let Program::Module(mut module) = program {
     let file_path = PathBuf::from(&filename);
@@ -7501,10 +8918,11 @@ fn transform_program_with_options(
       .parent()
       .map(Path::to_path_buf)
       .unwrap_or_else(|| PathBuf::from("."));
-    let project_root = std::env::current_dir().unwrap_or_else(|_| file_dir.clone());
+    let project_root = find_project_root(&file_dir);
     let css_options = css_options_from_plugin_options(&options);
     let evaluator = ModuleEvaluator::new(
       &file_dir,
+      &project_root,
       &options.extensions,
       &options.import_sources,
       css_options.clone(),
@@ -7535,10 +8953,76 @@ fn transform_program_with_options(
     );
     module.visit_mut_with(&mut visitor);
 
+    if !visitor.errors.is_empty() {
+      if let Ok(mut guard) = LATEST_ARTIFACTS.lock() {
+        guard.remove(&std::thread::current().id());
+      }
+      return Err(std::mem::take(&mut visitor.errors));
+    }
+
     let mut collected_rules = visitor.collected_rules.clone();
     collected_rules = merge_at_rule_sheets(collected_rules);
     let mut metadata_rules = visitor.metadata_rules.clone();
     metadata_rules = merge_at_rule_sheets(metadata_rules);
+    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+      let aria_count = metadata_rules
+        .iter()
+        .filter(|rule| rule.contains("aria"))
+        .count();
+      eprintln!(
+        "[compiled-debug] metadata_rules pre-filter aria count = {}",
+        aria_count
+      );
+      for rule in metadata_rules.iter().take(10) {
+        eprintln!("[compiled-debug] metadata_rule {}", rule);
+      }
+    }
+    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+      eprintln!(
+        "[compiled-debug] collected_rules({}) count={}",
+        file_path.display(),
+        collected_rules.len()
+      );
+      eprintln!(
+        "[compiled-debug] metadata_rules({}) count={}",
+        file_path.display(),
+        metadata_rules.len()
+      );
+    }
+    if options.extract && !visitor.xcss_class_names.is_empty() {
+      if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+        eprintln!(
+          "[compiled-debug] xcss_class_names set {:?}",
+          visitor.xcss_class_names
+        );
+        eprintln!(
+          "[compiled-debug] non_xcss_class_names set {:?}",
+          visitor.non_xcss_class_names
+        );
+      }
+
+      use std::collections::HashSet;
+      if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+        eprintln!(
+          "[compiled-debug] xcss_class_names={:?} non_xcss_class_names={:?}",
+          visitor.xcss_class_names, visitor.non_xcss_class_names
+        );
+      }
+      let mut non_xcss_class_names = visitor.non_xcss_class_names.clone();
+      non_xcss_class_names.extend(visitor.css_map_rule_groups.keys().cloned());
+      let xcss_only: HashSet<String> = visitor
+        .xcss_class_names
+        .difference(&non_xcss_class_names)
+        .cloned()
+        .collect();
+      if !xcss_only.is_empty() {
+        metadata_rules.retain(|rule| {
+          !xcss_only
+            .iter()
+            .any(|class_name| rule.contains(&format!(".{}", class_name)))
+        });
+      }
+    }
     if options.compiled_require_exclude.unwrap_or(false) {
       // Skip any runtime require hooks when exclusion is requested.
     } else if let Some(path) = options.style_sheet_path.as_ref() {
@@ -7557,7 +9041,10 @@ fn transform_program_with_options(
         &file_path,
         &project_root,
       ) {
-        panic!("{message}");
+        if let Ok(mut guard) = LATEST_ARTIFACTS.lock() {
+          guard.remove(&std::thread::current().id());
+        }
+        return Err(vec![TransformError::new(message)]);
       }
     }
 
@@ -7589,10 +9076,19 @@ fn transform_program_with_options(
     program = Program::Module(module);
   }
 
-  program
+  let emitted = program_to_source(&program).map_err(|err| {
+    vec![TransformError::new(format!(
+      "failed to emit program: {err}"
+    ))]
+  })?;
+
+  parse_transformed_source(&emitted, &filename).map_err(|err| vec![err])
 }
 
-fn transform_program(program: Program, metadata: TransformPluginProgramMetadata) -> Program {
+fn transform_program_result(
+  program: Program,
+  metadata: TransformPluginProgramMetadata,
+) -> Result<Program, TransformErrors> {
   let config_value = metadata
     .get_transform_plugin_config()
     .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
@@ -7619,7 +9115,7 @@ pub fn transform_program_with_config(
   program: Program,
   filename: String,
   config: CompiledCssInJsTransformConfig,
-) -> Program {
+) -> Result<Program, TransformErrors> {
   let mut options: PluginOptions = config.into();
 
   // Ensure @compiled/react is in import_sources
@@ -7648,7 +9144,7 @@ pub fn transform_program_for_testing(
   program: Program,
   filename: String,
   config_json: Option<&str>,
-) -> Program {
+) -> Result<Program, TransformErrors> {
   let config_value = config_json
     .and_then(|raw| serde_json::from_str::<Value>(raw).ok())
     .unwrap_or_else(|| Value::Object(serde_json::Map::new()));
@@ -7687,9 +9183,12 @@ pub fn empty_metadata() -> TransformPluginProgramMetadata {
 #[cfg(feature = "plugin")]
 #[plugin_transform]
 pub fn transform(program: Program, metadata: TransformPluginProgramMetadata) -> Program {
-  transform_program(program, metadata)
+  let original = program.clone();
+  match transform_program_result(program, metadata) {
+    Ok(result) => result,
+    Err(_) => original,
+  }
 }
-
 #[cfg(test)]
 mod tests {
   use std::fs;
@@ -7749,7 +9248,8 @@ mod tests {
         metadata,
         PluginOptions::default(),
         "test.tsx".into(),
-      );
+      )
+      .expect("transform program");
       let emitted = program_to_source(&transformed).expect("emit program");
       let artifacts = take_latest_artifacts();
       (emitted, artifacts)
@@ -7764,7 +9264,8 @@ mod tests {
       let program = parse(input);
       let metadata = empty_metadata();
       let transformed =
-        transform_program_with_options(program, metadata, options, "test.tsx".into());
+        transform_program_with_options(program, metadata, options, "test.tsx".into())
+          .expect("transform program");
       let emitted = program_to_source(&transformed).expect("emit program");
       let artifacts = take_latest_artifacts();
       (emitted, artifacts)
@@ -7838,6 +9339,32 @@ mod tests {
       rules
         .iter()
         .any(|rule| rule == "._1sb25hbz{content:'hello'}"),
+      "rules: {:?}",
+      rules
+    );
+  }
+
+  #[test]
+  fn css_content_property_preserves_unicode_characters() {
+    let (_, artifacts) = transform_source(
+      "import { css } from '@compiled/react';\nconst styles = css({ content: '→' });\n",
+    );
+    let rules = &artifacts.style_rules;
+    assert!(
+      rules.iter().any(|rule| rule == "._1sb2bjq5{content:\"→\"}"),
+      "rules: {:?}",
+      rules
+    );
+  }
+
+  #[test]
+  fn css_layers_blanket_evaluates() {
+    let (_, artifacts) = transform_source(
+      "import { css } from '@compiled/react';\nimport { layers } from '@atlassian/jira-common-styles/src/main.tsx';\nconst styles = css({ zIndex: layers.blanket });\n",
+    );
+    let rules = &artifacts.style_rules;
+    assert!(
+      rules.iter().any(|rule| rule == "._1pbybfng{z-index:500}"),
       "rules: {:?}",
       rules
     );
@@ -7933,6 +9460,7 @@ const className = css`color: ${brand};`;
     let plugin_options = PluginOptions::default();
     let css_options = css_options_from_plugin_options(&plugin_options);
     let evaluator = ModuleEvaluator::new(
+      &temp_root,
       &temp_root,
       &Vec::new(),
       &plugin_options.import_sources,
@@ -8493,6 +10021,61 @@ const className = css({
   }
 
   #[test]
+  fn styled_uses_combined_selector_rules_from_css_binding() {
+    let (_, artifacts) = transform_source(
+      r#"
+import { styled, css } from '@compiled/react';
+const themedUnderline = { '&::after': { content: "''", position: 'absolute' } };
+const tabStyles = css({
+  display: 'flex',
+  '&[aria-expanded="true"], &[aria-current="page"]': {
+    display: 'flex',
+    ...themedUnderline,
+  },
+});
+export const Component = styled.div(tabStyles);
+"#,
+    );
+    assert!(
+      artifacts
+        .style_rules
+        .iter()
+        .any(|rule| rule.contains("aria-current")),
+      "expected styled binding to expose combined selector rule, got {:?}",
+      artifacts.style_rules
+    );
+  }
+  #[test]
+  fn css_spread_nested_selectors_emit_combined_rule() {
+    let (_, artifacts) = transform_source(
+      r#"
+import { css } from '@compiled/react';
+const themedUnderline = { '&::after': { content: "''", position: 'absolute' } };
+const styles = css({
+  display: 'flex',
+  '&[aria-expanded="true"], &[aria-current="page"]': {
+    display: 'flex',
+    alignItems: 'center',
+    color: 'red',
+    ...themedUnderline,
+  },
+  ':hover': ({ isDraggable }) => ({
+    '--display-icon-before': isDraggable ? 'none' : 'flex',
+  }),
+});
+"#,
+    );
+    assert!(
+      artifacts
+        .style_rules
+        .iter()
+        .any(|rule| rule.contains("aria-current") && rule.contains(",")),
+      "expected combined selector style rule, got {:?}",
+      artifacts.style_rules
+    );
+  }
+
+  #[test]
   fn css_emits_property_rule() {
     let (emitted, artifacts) = transform_source(
       "import { css } from '@compiled/react';\nconst styles = css({ '@property --radius': { syntax: '\"<length>\"', inherits: false, initialValue: '0px' } });\n",
@@ -8553,10 +10136,26 @@ const className = css({
   }
 
   #[test]
-  #[should_panic(expected = "Object given to the xcss prop must be static")]
   fn xcss_inline_object_must_be_static() {
-    let _ =
-      transform_source("const render = (value: string) => <div xcss={{ color: value }} />;\n");
+    GLOBALS.set(&Globals::new(), || {
+      let program = parse("const render = (value: string) => <div xcss={{ color: value }} />;\n");
+      let metadata = empty_metadata();
+      let result = transform_program_with_options(
+        program,
+        metadata,
+        PluginOptions::default(),
+        "test.tsx".into(),
+      );
+      assert!(result.is_err(), "Expected transform to return an error");
+      let errors = result.unwrap_err();
+      assert!(
+        errors.iter().any(|error| error
+          .message
+          .contains("Object given to the xcss prop must be static")),
+        "Unexpected errors: {:?}",
+        errors
+      );
+    });
   }
 
   #[test]

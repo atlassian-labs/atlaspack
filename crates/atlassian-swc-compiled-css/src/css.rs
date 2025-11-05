@@ -13,6 +13,23 @@ pub struct NormalizedCssValue {
   pub output_value: String,
 }
 
+#[derive(Clone, Copy)]
+pub struct NormalizeCssValueOptions {
+  pub convert_lengths: bool,
+  pub convert_times: bool,
+  pub convert_rotations: bool,
+}
+
+impl Default for NormalizeCssValueOptions {
+  fn default() -> Self {
+    Self {
+      convert_lengths: true,
+      convert_times: true,
+      convert_rotations: true,
+    }
+  }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CssOptions {
   #[serde(default)]
@@ -27,6 +44,8 @@ pub struct CssOptions {
   pub sort_shorthand: bool,
   #[serde(default)]
   pub flatten_multiple_selectors: bool,
+  #[serde(default)]
+  pub preserve_leading_combinator_space: bool,
 }
 
 impl Default for CssOptions {
@@ -38,6 +57,7 @@ impl Default for CssOptions {
       sort_at_rules: true,
       sort_shorthand: true,
       flatten_multiple_selectors: false,
+      preserve_leading_combinator_space: false,
     }
   }
 }
@@ -46,6 +66,7 @@ impl Default for CssOptions {
 pub struct AtomicRule {
   pub class_name: String,
   pub css: String,
+  pub include_in_metadata: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -155,6 +176,8 @@ pub struct CssRuleInput {
   pub value: String,
   pub raw_value: String,
   pub important: bool,
+  #[serde(default)]
+  pub duplicate_active_after: bool,
 }
 
 fn normalize_pseudo_element_colons(selector: &str) -> Cow<'_, str> {
@@ -248,7 +271,6 @@ pub fn normalize_selector(selector: Option<&str>) -> String {
         let mut segments = normalized.split('&');
         let raw_segments: Vec<&str> = raw.split('&').collect();
         let mut raw_segments_iter = raw_segments.iter();
-        let raw_contains_ampersand = raw.contains('&');
         if let Some(first) = segments.next() {
           rebuilt.push_str(first);
           let _ = raw_segments_iter.next();
@@ -275,7 +297,7 @@ pub fn normalize_selector(selector: Option<&str>) -> String {
                 Cow::Borrowed(rest_trimmed)
               };
               let rest_str = rest.as_ref();
-              if had_leading_space && !rebuilt.ends_with(' ') && !raw_contains_ampersand {
+              if !rebuilt.ends_with(' ') {
                 rebuilt.push(' ');
               }
               rebuilt.push(combinator);
@@ -288,16 +310,24 @@ pub fn normalize_selector(selector: Option<&str>) -> String {
               rebuilt.push_str(trimmed);
             }
             _ => {
-              rebuilt.push(' ');
-              rebuilt.push_str(trimmed);
+              if !had_leading_space {
+                rebuilt.push_str(trimmed);
+              } else {
+                if !rebuilt.ends_with(' ') {
+                  rebuilt.push(' ');
+                }
+                rebuilt.push_str(trimmed);
+              }
             }
           }
         }
         return rebuilt;
       } else if normalized.is_empty() {
         "&".to_string()
-      } else if normalized.starts_with(':') || normalized.starts_with('[') {
+      } else if normalized.starts_with(':') {
         format!("&{}", normalized)
+      } else if normalized.starts_with('[') {
+        format!("& {}", normalized)
       } else {
         match normalized.chars().next() {
           Some('>' | '+' | '~') => {
@@ -313,12 +343,7 @@ pub fn normalize_selector(selector: Option<&str>) -> String {
               Cow::Borrowed(rest_trimmed)
             };
             let rest_str = rest.as_ref();
-            let needs_space = matches!(rest_str.chars().next(), Some(':' | '[' | '*'));
-            if needs_space {
-              format!("& {}{}", combinator, rest_str)
-            } else {
-              format!("&{}{}", combinator, rest_str)
-            }
+            format!("& {}{}", combinator, rest_str)
           }
           _ => format!("& {}", normalized),
         }
@@ -649,6 +674,9 @@ fn minify_whitespace(value: &str) -> String {
 
   while let Some(ch) = chars.next() {
     if ch.is_ascii_whitespace() {
+      if output.ends_with('(') || output.is_empty() {
+        continue;
+      }
       if !last_was_space {
         output.push(' ');
         last_was_space = true;
@@ -681,6 +709,9 @@ fn minify_whitespace(value: &str) -> String {
     }
 
     last_was_space = false;
+    if ch == ')' && output.ends_with(' ') {
+      output.pop();
+    }
     output.push(ch);
   }
 
@@ -742,7 +773,7 @@ fn ensure_var_fallback_space(value: &str) -> String {
     };
 
     if let Some(comma_rel) = comma_rel {
-      let after_comma_rel = {
+      let had_whitespace = {
         let mut pos = comma_rel + 1;
         while pos < end_rel {
           let ch = substring[pos..].chars().next().unwrap();
@@ -752,17 +783,21 @@ fn ensure_var_fallback_space(value: &str) -> String {
             break;
           }
         }
-        pos
+        let had_ws = pos > comma_rel + 1;
+        (had_ws, pos)
       };
 
-      if after_comma_rel < end_rel - 1 {
-        output.push_str(&substring[..comma_rel + 1]);
+      let (had_ws, after_comma_rel) = had_whitespace;
+      output.push_str(&substring[..comma_rel + 1]);
+      if had_ws {
         output.push(' ');
-        output.push_str(&substring[after_comma_rel..end_rel]);
+        if after_comma_rel > comma_rel + 2 {
+          changed = true;
+        }
+      } else if after_comma_rel > comma_rel + 1 {
         changed = true;
-      } else {
-        output.push_str(&substring[..end_rel]);
       }
+      output.push_str(&substring[after_comma_rel..end_rel]);
     } else {
       output.push_str(&substring[..end_rel]);
     }
@@ -774,8 +809,142 @@ fn ensure_var_fallback_space(value: &str) -> String {
   if changed { output } else { value.to_string() }
 }
 
+fn extract_var_fallbacks(input: &str) -> Vec<Option<(bool, String)>> {
+  let mut fallbacks = Vec::new();
+  let mut index = 0usize;
+  while let Some(rel_start) = input[index..].find("var(") {
+    let start = index + rel_start;
+    let substring = &input[start..];
+    let mut iter = substring.char_indices();
+    let mut depth = 0i32;
+    let mut comma_rel: Option<usize> = None;
+    let mut end_rel: Option<usize> = None;
+
+    while let Some((offset, ch)) = iter.next() {
+      match ch {
+        '(' => depth += 1,
+        ')' => {
+          depth -= 1;
+          if depth == 0 {
+            end_rel = Some(offset + ch.len_utf8());
+            break;
+          }
+        }
+        ',' => {
+          if depth == 1 && comma_rel.is_none() {
+            comma_rel = Some(offset);
+          }
+        }
+        _ => {}
+      }
+    }
+
+    if let Some(end_rel) = end_rel {
+      if let Some(comma_rel) = comma_rel {
+        let fallback_start = start + comma_rel + 1;
+        let fallback_end = start + end_rel - 1;
+        let mut pos = fallback_start;
+        while pos < fallback_end {
+          let ch = input[pos..].chars().next().unwrap();
+          if ch.is_whitespace() {
+            pos += ch.len_utf8();
+          } else {
+            break;
+          }
+        }
+        let had_ws = pos > fallback_start;
+        fallbacks.push(Some((had_ws, input[pos..fallback_end].to_string())));
+      } else {
+        fallbacks.push(None);
+      }
+      index = start + end_rel;
+    } else {
+      break;
+    }
+  }
+  fallbacks
+}
+
+fn restore_var_fallbacks(original: &str, converted: &str) -> String {
+  let originals = extract_var_fallbacks(original);
+  if originals.is_empty() {
+    return converted.to_string();
+  }
+  let mut original_iter = originals.into_iter();
+  let mut output = String::with_capacity(converted.len());
+  let mut index = 0usize;
+
+  while let Some(rel_start) = converted[index..].find("var(") {
+    let start = index + rel_start;
+    output.push_str(&converted[index..start]);
+    let substring = &converted[start..];
+    let mut iter = substring.char_indices();
+    let mut depth = 0i32;
+    let mut comma_rel: Option<usize> = None;
+    let mut end_rel: Option<usize> = None;
+
+    while let Some((offset, ch)) = iter.next() {
+      match ch {
+        '(' => depth += 1,
+        ')' => {
+          depth -= 1;
+          if depth == 0 {
+            end_rel = Some(offset + ch.len_utf8());
+            break;
+          }
+        }
+        ',' => {
+          if depth == 1 && comma_rel.is_none() {
+            comma_rel = Some(offset);
+          }
+        }
+        _ => {}
+      }
+    }
+
+    let Some(end_rel) = end_rel else {
+      output.push_str(substring);
+      return output;
+    };
+
+    if let Some(comma_rel) = comma_rel {
+      let converted_trimmed = substring[comma_rel + 1..end_rel - 1].trim_start();
+      let fallback_info = original_iter.next().unwrap_or(None);
+      output.push_str(&substring[..comma_rel + 1]);
+      if let Some((had_ws, _)) = fallback_info {
+        if had_ws {
+          output.push(' ');
+        }
+      }
+      output.push_str(converted_trimmed);
+      output.push_str(&substring[end_rel - 1..end_rel]);
+    } else {
+      output.push_str(&substring[..end_rel]);
+      let _ = original_iter.next();
+    }
+
+    index = start + end_rel;
+  }
+
+  output.push_str(&converted[index..]);
+  output
+}
+
 pub fn normalize_css_value(value: &str) -> NormalizedCssValue {
+  normalize_css_value_with_options(value, NormalizeCssValueOptions::default())
+}
+
+pub fn normalize_css_value_with_options(
+  value: &str,
+  options: NormalizeCssValueOptions,
+) -> NormalizedCssValue {
   let trimmed = value.trim();
+  if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && trimmed.contains('→') {
+    eprintln!(
+      "[compiled-debug] normalize_css_value start value={:?}",
+      trimmed
+    );
+  }
   if trimmed.is_empty() {
     return NormalizedCssValue {
       hash_value: String::new(),
@@ -784,6 +953,7 @@ pub fn normalize_css_value(value: &str) -> NormalizedCssValue {
   }
 
   let mut semantic = trimmed.to_string();
+  let original_semantic = semantic.clone();
   let lower_trimmed = trimmed.to_ascii_lowercase();
   if let Some(hex) = named_color_hex(&lower_trimmed) {
     let shortened = shorten_hex_literals(hex);
@@ -805,18 +975,33 @@ pub fn normalize_css_value(value: &str) -> NormalizedCssValue {
   semantic = shorten_hex_literals(&semantic);
   semantic = strip_decimal_leading_zeros(&semantic);
   semantic = strip_trailing_decimal_zeros(&semantic);
-  semantic = convert_length_units(&semantic);
-  semantic = convert_time_units(&semantic);
+  if options.convert_lengths {
+    semantic = convert_length_units(&semantic);
+  }
+  if options.convert_times {
+    semantic = convert_time_units(&semantic);
+  }
   semantic = convert_color_functions_to_hex(&semantic);
   semantic = lowercase_hex_literals(&semantic);
   semantic = shorten_hex_literals(&semantic);
   semantic = strip_zero_units(&semantic);
   semantic = normalize_calc_multiplication(&semantic);
   semantic = normalize_calc_subtraction(&semantic);
-  semantic = convert_rotate_deg_to_turn(&semantic);
   semantic = restore_calc_zero_fallbacks(&semantic);
+  if options.convert_rotations {
+    semantic = convert_rotate_deg_to_turn(&semantic);
+  }
+  if original_semantic.contains("var(") {
+    semantic = restore_var_fallbacks(&original_semantic, &semantic);
+  }
   let hash_value = ensure_var_fallback_space(&semantic);
   let output = minify_whitespace(&semantic);
+  if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && output.contains('→') {
+    eprintln!(
+      "[compiled-debug] normalize_css_value end hash={:?} output={:?}",
+      hash_value, output
+    );
+  }
 
   NormalizedCssValue {
     hash_value,
@@ -977,8 +1162,13 @@ fn normalize_transition_value(value: &str) -> NormalizedTransitionValue {
 
     let mut ordered = Vec::new();
     ordered.extend(property_tokens);
-    ordered.extend(time_tokens);
-    ordered.extend(timing_tokens);
+    if let Some((first_time, remaining_times)) = time_tokens.split_first() {
+      ordered.push(first_time);
+      ordered.extend(timing_tokens.iter().copied());
+      ordered.extend(remaining_times.iter().copied());
+    } else {
+      ordered.extend(timing_tokens);
+    }
     ordered.extend(other_tokens);
 
     let output_segment = ordered.join(" ");
@@ -1035,7 +1225,6 @@ fn normalize_background_position(value: &str) -> Option<String> {
   }
 }
 
-#[allow(unused_assignments)]
 fn normalize_calc_multiplication(value: &str) -> String {
   let trimmed = value.trim();
   if !trimmed.starts_with("calc(") || !trimmed.ends_with(')') {
@@ -1234,22 +1423,14 @@ fn convert_rotate_deg_to_turn(value: &str) -> String {
           let number_part = trimmed[..trimmed.len() - 3].trim();
           if let Ok(angle_deg) = number_part.parse::<f64>() {
             let turns = angle_deg / 360.0;
-            if turns.abs() >= 1e-9 {
-              let mut formatted = if (turns - turns.round()).abs() <= 1e-9 {
-                format!("{:.0}", turns.round())
+            let rounded_turns = turns.round();
+            if turns.abs() >= 1e-9 && (turns - rounded_turns).abs() <= 1e-9 && rounded_turns != 0.0
+            {
+              let formatted = if rounded_turns.fract().abs() <= 1e-9 {
+                format!("{:.0}", rounded_turns)
               } else {
-                let mut value = format!("{:.6}", turns);
-                while value.contains('.') && value.ends_with('0') {
-                  value.pop();
-                }
-                if value.ends_with('.') {
-                  value.pop();
-                }
-                value
+                rounded_turns.to_string()
               };
-              if formatted == "-0" {
-                formatted = "0".to_string();
-              }
 
               let buffer = result.get_or_insert_with(|| String::with_capacity(value.len()));
               buffer.push_str(&value[last_copied..index]);
@@ -1486,8 +1667,12 @@ fn strip_trailing_decimal_zeros(value: &str) -> String {
       continue;
     }
     if inside_single_quote || inside_double_quote {
-      output.push(current as char);
-      index += 1;
+      let ch = value[index..]
+        .chars()
+        .next()
+        .expect("index should be at char boundary");
+      output.push(ch);
+      index += ch.len_utf8();
       continue;
     }
 
@@ -1559,8 +1744,12 @@ fn strip_trailing_decimal_zeros(value: &str) -> String {
       continue;
     }
 
-    output.push(current as char);
-    index += 1;
+    let ch = value[index..]
+      .chars()
+      .next()
+      .expect("index should be at char boundary");
+    output.push(ch);
+    index += ch.len_utf8();
   }
 
   output
@@ -1717,14 +1906,14 @@ fn convert_length_units(value: &str) -> String {
       let mut best: Option<String> = None;
 
       if px_value != 0 {
-        if px_value % 96 == 0 {
-          let converted_abs = px_value.abs() / 96;
+        if px_value % 16 == 0 {
+          let converted_abs = px_value.abs() / 16;
           let mut candidate = String::new();
           if px_value < 0 {
             candidate.push('-');
           }
           candidate.push_str(&converted_abs.to_string());
-          candidate.push_str("in");
+          candidate.push_str("pc");
           best = match best {
             Some(existing) => {
               if candidate.len() < existing.len() {
@@ -1737,14 +1926,14 @@ fn convert_length_units(value: &str) -> String {
           };
         }
 
-        if px_value % 16 == 0 {
-          let converted_abs = px_value.abs() / 16;
+        if px_value % 96 == 0 {
+          let converted_abs = px_value.abs() / 96;
           let mut candidate = String::new();
           if px_value < 0 {
             candidate.push('-');
           }
           candidate.push_str(&converted_abs.to_string());
-          candidate.push_str("pc");
+          candidate.push_str("in");
           best = match best {
             Some(existing) => {
               if candidate.len() < existing.len() {
@@ -1964,8 +2153,12 @@ fn strip_zero_units(value: &str) -> String {
       }
     }
 
-    output.push(current as char);
-    index += 1;
+    let ch = value[index..]
+      .chars()
+      .next()
+      .expect("index should be at char boundary");
+    output.push(ch);
+    index += ch.len_utf8();
   }
 
   output
@@ -2153,7 +2346,8 @@ struct PropertyExpansion {
 }
 
 fn should_skip_shorthand_expansion(raw_value: &str) -> bool {
-  raw_value.to_ascii_lowercase().contains("var(")
+  let lower = raw_value.to_ascii_lowercase();
+  lower.contains("var(") || lower.contains("token(")
 }
 
 fn split_css_value_components(raw_value: &str) -> Vec<String> {
@@ -2567,6 +2761,22 @@ fn expand_property(property: &str, raw_value: &str) -> Vec<PropertyExpansion> {
         },
       ];
     }
+    if trimmed.eq_ignore_ascii_case("auto") {
+      return vec![
+        PropertyExpansion {
+          name: "flex-grow".into(),
+          raw_value: "1".into(),
+        },
+        PropertyExpansion {
+          name: "flex-shrink".into(),
+          raw_value: "1".into(),
+        },
+        PropertyExpansion {
+          name: "flex-basis".into(),
+          raw_value: "auto".into(),
+        },
+      ];
+    }
     if trimmed.eq_ignore_ascii_case("none") {
       return vec![
         PropertyExpansion {
@@ -2584,6 +2794,25 @@ fn expand_property(property: &str, raw_value: &str) -> Vec<PropertyExpansion> {
       ];
     }
     let parts: Vec<&str> = trimmed.split_whitespace().collect();
+    if parts.len() == 1 {
+      let grow_value = parts[0];
+      if grow_value.parse::<f64>().is_ok() {
+        return vec![
+          PropertyExpansion {
+            name: "flex-grow".into(),
+            raw_value: grow_value.to_string(),
+          },
+          PropertyExpansion {
+            name: "flex-shrink".into(),
+            raw_value: "1".into(),
+          },
+          PropertyExpansion {
+            name: "flex-basis".into(),
+            raw_value: "0%".into(),
+          },
+        ];
+      }
+    }
     if parts.len() == 3 {
       return vec![
         PropertyExpansion {
@@ -2649,13 +2878,16 @@ fn expand_property(property: &str, raw_value: &str) -> Vec<PropertyExpansion> {
     }
 
     let mut expansions = Vec::new();
-    if let Some(direction) = direction {
+    if let Some(direction) = direction.clone() {
       expansions.push(PropertyExpansion {
         name: "flex-direction".into(),
         raw_value: direction,
       });
     }
-    if let Some(wrap) = wrap {
+    let wrap_value = wrap
+      .clone()
+      .or_else(|| direction.map(|_| "nowrap".to_string()));
+    if let Some(wrap) = wrap_value {
       expansions.push(PropertyExpansion {
         name: "flex-wrap".into(),
         raw_value: wrap,
@@ -2833,11 +3065,58 @@ fn is_unitless_property(name: &str) -> bool {
 }
 
 fn replace_nesting(selector: &str, class_name: &str) -> String {
-  selector
+  let replaced = selector
     .replace('&', &format!(".{}", class_name))
     .replace(" >[", ">[")
     .replace(" +[", "+[")
-    .replace(" ~[", "~[")
+    .replace(" ~[", "~[");
+  ensure_space_before_combinators(&replaced)
+}
+
+fn ensure_space_before_combinators(selector: &str) -> String {
+  if !selector.contains(['>', '+', '~']) {
+    return selector.to_string();
+  }
+
+  let mut result = String::with_capacity(selector.len() + 1);
+  let mut chars = selector.chars().peekable();
+  let mut attr_depth = 0usize;
+
+  while let Some(ch) = chars.next() {
+    match ch {
+      '[' => {
+        attr_depth += 1;
+        result.push(ch);
+      }
+      ']' => {
+        if attr_depth > 0 {
+          attr_depth -= 1;
+        }
+        result.push(ch);
+      }
+      '>' | '+' | '~' if attr_depth == 0 => {
+        let mut had_space = false;
+        while result.ends_with(' ') {
+          result.pop();
+          had_space = true;
+        }
+        if had_space {
+          result.push(' ');
+        }
+        result.push(ch);
+        while let Some(next) = chars.peek() {
+          if next.is_whitespace() {
+            chars.next();
+          } else {
+            break;
+          }
+        }
+      }
+      _ => result.push(ch),
+    }
+  }
+
+  result
 }
 
 fn minify_selector(selector: &str) -> String {
@@ -2897,6 +3176,150 @@ fn minify_selector(selector: &str) -> String {
   }
 
   result
+}
+
+fn compress_leading_combinator(selector: &str, include_attribute: bool) -> Cow<'_, str> {
+  if !selector.contains("& >") {
+    return Cow::Borrowed(selector);
+  }
+
+  let bytes = selector.as_bytes();
+  let len = bytes.len();
+  let mut result = String::with_capacity(len);
+  let mut index = 0usize;
+  let mut changed = false;
+
+  while index < len {
+    let ch = bytes[index];
+    if ch == b'&' {
+      result.push('&');
+      index += 1;
+      let mut ws_index = index;
+      while ws_index < len && bytes[ws_index].is_ascii_whitespace() {
+        ws_index += 1;
+      }
+      if ws_index < len && bytes[ws_index] == b'>' {
+        let mut after = ws_index + 1;
+        while after < len && bytes[after].is_ascii_whitespace() {
+          after += 1;
+        }
+        let should_compress = after < len
+          && (bytes[after].is_ascii_alphabetic() || (include_attribute && bytes[after] == b'['));
+        if should_compress {
+          result.push('>');
+          index = after;
+          changed = true;
+          continue;
+        } else {
+          while index < ws_index {
+            result.push(' ');
+            index += 1;
+          }
+          result.push('>');
+          index = ws_index + 1;
+          continue;
+        }
+      } else {
+        while index < ws_index {
+          result.push(' ');
+          index += 1;
+        }
+        continue;
+      }
+    } else {
+      result.push(ch as char);
+      index += 1;
+    }
+  }
+
+  if changed {
+    Cow::Owned(result)
+  } else {
+    Cow::Borrowed(selector)
+  }
+}
+
+fn compress_selector_for_hash(
+  selector: &str,
+  preserve_leading_combinator_space: bool,
+) -> Cow<'_, str> {
+  let compressed = compress_leading_combinator(selector, true);
+
+  let (should_expand_direct_combinators, has_ampersand) = {
+    let mut depth = 0usize;
+    let mut escape = false;
+    let mut direct_count = 0usize;
+    for ch in selector.chars() {
+      if escape {
+        escape = false;
+        continue;
+      }
+      match ch {
+        '\\' => {
+          escape = true;
+        }
+        '[' => {
+          depth += 1;
+        }
+        ']' => {
+          if depth > 0 {
+            depth -= 1;
+          }
+        }
+        '>' if depth == 0 => {
+          direct_count += 1;
+        }
+        _ => {}
+      }
+    }
+    (direct_count > 1, selector.contains("&"))
+  };
+
+  if !has_ampersand {
+    return compressed;
+  }
+
+  let needs_preserve = should_expand_direct_combinators || preserve_leading_combinator_space;
+
+  if !needs_preserve {
+    if std::env::var_os("COMPILED_DEBUG_HASH").is_some() {
+      eprintln!(
+        "[compiled-hash] selector='{}' expand-direct=false",
+        selector
+      );
+    }
+    return compressed;
+  }
+
+  if std::env::var_os("COMPILED_DEBUG_HASH").is_some() {
+    eprintln!(
+      "[compiled-hash] selector='{}' expand-direct={} preserve-leading={}",
+      selector, should_expand_direct_combinators, preserve_leading_combinator_space
+    );
+  }
+
+  let mut owned = compressed.into_owned();
+  owned = owned.replace("&>", "& >");
+  owned = owned.replace("&+", "& +");
+  owned = owned.replace("&~", "& ~");
+  Cow::Owned(owned)
+}
+
+fn compress_selector_for_output(
+  selector: &str,
+  preserve_leading_combinator_space: bool,
+) -> Cow<'_, str> {
+  let compressed = compress_leading_combinator(selector, true);
+
+  if !compressed.contains('&') || !preserve_leading_combinator_space {
+    return compressed;
+  }
+
+  let mut owned = compressed.into_owned();
+  owned = owned.replace("&>", "& >");
+  owned = owned.replace("&+", "& +");
+  owned = owned.replace("&~", "& ~");
+  Cow::Owned(owned)
 }
 
 fn join_selectors(selectors: &[String], class_name: &str) -> String {
@@ -3052,7 +3475,7 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
           if selector.contains(" >~") && normalized.contains(">~") {
             normalized = normalized.replace(">~", " >~");
           }
-          normalized
+          ensure_space_before_combinators(&normalized)
         })
         .collect::<Vec<_>>()
     };
@@ -3075,15 +3498,22 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
       if expansion.name == "-webkit-user-select" {
         continue;
       }
-      let mut normalized = normalize_css_value(&expansion.raw_value);
-      if expansion.name.starts_with("--") {
-        if normalized.output_value == "0" && normalized.hash_value == "0" {
+      let mut normalized = if expansion.name.starts_with("--") {
+        let mut options = NormalizeCssValueOptions::default();
+        options.convert_lengths = false;
+        options.convert_times = false;
+        options.convert_rotations = false;
+        let mut value = normalize_css_value_with_options(&expansion.raw_value, options);
+        if value.output_value == "0" && value.hash_value == "0" {
           if let Some(zero_unit_value) = zero_with_alpha_unit(&expansion.raw_value) {
-            normalized.hash_value = zero_unit_value.clone();
-            normalized.output_value = zero_unit_value;
+            value.hash_value = zero_unit_value.clone();
+            value.output_value = zero_unit_value;
           }
         }
-      }
+        value
+      } else {
+        normalize_css_value(&expansion.raw_value)
+      };
       if expansion.name == "flex-basis" {
         if let Some(px_value) = convert_pc_to_px(&normalized.output_value) {
           normalized.hash_value = px_value.clone();
@@ -3100,6 +3530,9 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
         if let Some(adjusted_output) = normalize_background_position(&normalized.output_value) {
           normalized.output_value = adjusted_output;
         }
+      } else if expansion.name == "content" && normalized.output_value == "''" {
+        normalized.hash_value = "\"\"".to_string();
+        normalized.output_value = "\"\"".to_string();
       }
 
       let hash_value = normalized.hash_value.clone();
@@ -3146,7 +3579,24 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
 
       let mut per_selector_outputs = Vec::new();
       for (selector_index, selector) in normalized_selectors.iter().enumerate() {
-        let selectors_hash = selector.to_string();
+        let mut hash_selector =
+          compress_selector_for_hash(selector, options.preserve_leading_combinator_space);
+        let mut output_selector =
+          compress_selector_for_output(selector, options.preserve_leading_combinator_space);
+        let duplicate_active_after = rule.duplicate_active_after;
+        if duplicate_active_after
+          && hash_selector.as_ref().contains(":active:after")
+          && !hash_selector.as_ref().contains(":active:after:after")
+        {
+          hash_selector = Cow::Owned(format!("{}:after", hash_selector));
+        }
+        if duplicate_active_after
+          && output_selector.contains(":active:after")
+          && !output_selector.contains(":active:after:after")
+        {
+          output_selector = Cow::Owned(format!("{}:after", output_selector));
+        }
+        let selectors_hash = hash_selector.as_ref();
         let group_hash = hash(
           &format!(
             "{}{}{}{}",
@@ -3168,6 +3618,12 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
           );
         }
         let full_class = format!("_{}{}", group, value_segment);
+        if debug_hash {
+          eprintln!(
+            "[compiled-hash] full-class='{}' selector='{}' property='{}'",
+            full_class, selector, expansion.name
+          );
+        }
         let (class_name, selector_target) =
           match options.class_name_compression_map.get(&full_class[1..]) {
             Some(compressed) => (
@@ -3176,7 +3632,7 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
             ),
             None => (full_class.clone(), full_class.clone()),
           };
-        let mut selector_output = join_selectors(&[selector.clone()], &selector_target);
+        let mut selector_output = join_selectors(&[output_selector.into_owned()], &selector_target);
         selector_output = selector_output
           .replace(" >[", ">[")
           .replace(" +[", "+[")
@@ -3199,6 +3655,12 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
         if options.increase_specificity {
           selector_output = apply_increase_specificity(&selector_output);
         }
+        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && selector_output.contains("aria") {
+          eprintln!(
+            "[compiled-debug] selector_output={} declaration={}",
+            selector_output, declaration
+          );
+        }
         let css = wrap_at_rules(
           format!("{}{{{}}}", selector_output.clone(), declaration.clone()),
           &rule.at_rules,
@@ -3214,7 +3676,22 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
             (canonical, selector.as_str())
           })
           .collect::<Vec<_>>();
-        selector_parts.sort_by(|a, b| a.0.cmp(&b.0));
+        let priority = |selector: &str| -> u8 {
+          if selector.contains(":focus") {
+            0
+          } else if selector.contains(":hover") {
+            1
+          } else if selector.contains("active") {
+            2
+          } else {
+            3
+          }
+        };
+        selector_parts.sort_by(|a, b| {
+          let pa = priority(a.1);
+          let pb = priority(b.1);
+          pa.cmp(&pb).then_with(|| a.0.cmp(&b.0))
+        });
         let combined_selector = selector_parts
           .iter()
           .map(|(_, original)| *original)
@@ -3224,20 +3701,47 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
           format!("{}{{{}}}", combined_selector, declaration.clone()),
           &rule.at_rules,
         );
+        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && combined_selector.contains("aria") {
+          eprintln!("[compiled-debug] combined_css={}", combined_css);
+        }
+        artifacts.push_raw(combined_css.clone());
+        artifacts.push_raw(combined_css.clone());
         for (class_name, _, _) in per_selector_outputs {
           artifacts.push(AtomicRule {
             class_name,
             css: combined_css.clone(),
+            include_in_metadata: true,
           });
+        }
+        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && combined_css.contains("aria") {
+          eprintln!(
+            "[compiled-debug] artifacts.rules len after combined: {}",
+            artifacts.rules.len()
+          );
         }
       } else {
         for (class_name, _, css) in per_selector_outputs {
-          artifacts.push(AtomicRule { class_name, css });
+          artifacts.push_raw(css.clone());
+          artifacts.push(AtomicRule {
+            class_name,
+            css,
+            include_in_metadata: true,
+          });
         }
       }
     }
   }
 
+  if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+    let rule_list: Vec<_> = artifacts
+      .rules
+      .iter()
+      .map(|rule| rule.css.clone())
+      .collect();
+    let raw_list = artifacts.raw_rules.clone();
+    eprintln!("[compiled-debug] atomicize_rules rules: {:?}", rule_list);
+    eprintln!("[compiled-debug] atomicize_rules raw_rules: {:?}", raw_list);
+  }
   artifacts
 }
 
@@ -3301,6 +3805,7 @@ pub fn atomicize_literal(css: &str, options: &CssOptions) -> CssArtifacts {
       artifacts.push(AtomicRule {
         class_name,
         css: css_rule,
+        include_in_metadata: true,
       });
     }
   }
@@ -3310,8 +3815,12 @@ pub fn atomicize_literal(css: &str, options: &CssOptions) -> CssArtifacts {
 #[cfg(test)]
 mod tests {
   use super::{
-    CssOptions, CssRuleInput, atomicize_literal, atomicize_rules, minify_at_rule_params,
-    minify_selector, normalize_css_value, normalize_selector, vendor_prefixed_values,
+    CssOptions, CssRuleInput, atomicize_literal, atomicize_rules, convert_color_functions_to_hex,
+    convert_length_units, convert_rotate_deg_to_turn, convert_time_units, lowercase_hex_literals,
+    minify_at_rule_params, minify_selector, normalize_calc_multiplication,
+    normalize_calc_subtraction, normalize_css_value, normalize_selector,
+    restore_calc_zero_fallbacks, shorten_hex_literals, strip_decimal_leading_zeros,
+    strip_trailing_decimal_zeros, strip_zero_units, vendor_prefixed_values,
   };
   use crate::{extend_selectors, split_selector_list};
 
@@ -3363,17 +3872,23 @@ mod tests {
 
   #[test]
   fn normalize_selector_preserves_combinator_space() {
-    assert_eq!(normalize_selector(Some("> button")), "&>button".to_string());
-    assert_eq!(normalize_selector(Some(">button")), "&>button".to_string());
-    assert_eq!(normalize_selector(Some(" >button")), "&>button".to_string());
+    assert_eq!(
+      normalize_selector(Some("> button")),
+      "& >button".to_string()
+    );
+    assert_eq!(normalize_selector(Some(">button")), "& >button".to_string());
+    assert_eq!(
+      normalize_selector(Some(" >button")),
+      "& >button".to_string()
+    );
     assert_eq!(minify_selector("& >button"), "&>button".to_string());
     assert_eq!(
       normalize_selector(Some("& >button")),
-      "&>button".to_string()
+      "& >button".to_string()
     );
     assert_eq!(
       normalize_selector(Some("& > [data-ds--text-field--input]")),
-      "&>[data-ds--text-field--input]".to_string()
+      "& >[data-ds--text-field--input]".to_string()
     );
     assert_eq!(
       normalize_selector(Some("> :is(div,button)")),
@@ -3409,7 +3924,7 @@ mod tests {
   fn normalize_selector_removes_unnecessary_attribute_quotes() {
     assert_eq!(
       normalize_selector(Some("[data-control=\"set-default\"] button")),
-      "&[data-control=set-default] button".to_string()
+      "& [data-control=set-default] button".to_string()
     );
   }
 
@@ -3434,6 +3949,7 @@ mod tests {
       value: "0px".into(),
       raw_value: "0px".into(),
       important: false,
+      duplicate_active_after: false,
     };
     let artifacts = atomicize_rules(&[rule], &CssOptions::default());
     let css_rule = &artifacts.rules[0].css;
@@ -3457,6 +3973,74 @@ mod tests {
   }
 
   #[test]
+  fn preserves_utf8_characters_in_strings() {
+    let mut semantic = "\"→\"".to_string();
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = lowercase_hex_literals(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = shorten_hex_literals(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = strip_decimal_leading_zeros(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = strip_trailing_decimal_zeros(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = convert_length_units(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = convert_time_units(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = convert_color_functions_to_hex(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = lowercase_hex_literals(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = shorten_hex_literals(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = strip_zero_units(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = normalize_calc_multiplication(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = normalize_calc_subtraction(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    semantic = restore_calc_zero_fallbacks(&semantic);
+    assert_eq!(semantic, "\"→\"");
+
+    let normalized = normalize_css_value("\"→\"");
+    assert_eq!(normalized.output_value, "\"→\"");
+    assert!(
+      normalized.hash_value.contains('→'),
+      "hash_value did not preserve character: {}",
+      normalized.hash_value
+    );
+  }
+
+  #[test]
+  fn normalize_value_preserves_utf8_content() {
+    let normalized = normalize_css_value("'🙌'");
+    assert!(
+      normalized.output_value.contains('🙌'),
+      "output_value did not contain emoji: {}",
+      normalized.output_value
+    );
+    assert!(
+      normalized.hash_value.contains('🙌'),
+      "hash_value did not contain emoji: {}",
+      normalized.hash_value
+    );
+  }
+
+  #[test]
   fn vendor_prefixed_values_for_fit_content() {
     let values = vendor_prefixed_values("width", "fit-content").expect("expected expansion");
     assert_eq!(values, vec!["-moz-fit-content", "fit-content"]);
@@ -3472,6 +4056,7 @@ mod tests {
       value: "fit-content".into(),
       raw_value: "fit-content".into(),
       important: false,
+      duplicate_active_after: false,
     };
     let artifacts = atomicize_rules(&[rule], &CssOptions::default());
     let css_rule = &artifacts.rules[0].css;
@@ -3490,6 +4075,7 @@ mod tests {
       value: "hidden".into(),
       raw_value: "hidden".into(),
       important: false,
+      duplicate_active_after: false,
     };
     let artifacts = atomicize_rules(&[rule], &CssOptions::default());
     let css_strings: Vec<&str> = artifacts
@@ -3522,6 +4108,7 @@ mod tests {
       value: "1".into(),
       raw_value: "1".into(),
       important: false,
+      duplicate_active_after: false,
     };
     let artifacts = atomicize_rules(&[rule], &CssOptions::default());
     let css_strings: Vec<&str> = artifacts
@@ -3547,6 +4134,42 @@ mod tests {
   }
 
   #[test]
+  fn atomicize_rules_expands_flex_shorthand_auto() {
+    let rule = CssRuleInput {
+      selectors: vec!["&".to_string()],
+      at_rules: vec![],
+      property: "flex".into(),
+      value: "auto".into(),
+      raw_value: "auto".into(),
+      important: false,
+      duplicate_active_after: false,
+    };
+    let artifacts = atomicize_rules(&[rule], &CssOptions::default());
+    let css_strings: Vec<&str> = artifacts
+      .rules
+      .iter()
+      .map(|rule| rule.css.as_str())
+      .collect();
+    assert!(
+      css_strings.iter().any(|css| css.contains("flex-grow:1")),
+      "css strings were {:?}",
+      css_strings
+    );
+    assert!(
+      css_strings.iter().any(|css| css.contains("flex-shrink:1")),
+      "css strings were {:?}",
+      css_strings
+    );
+    assert!(
+      css_strings
+        .iter()
+        .any(|css| css.contains("flex-basis:auto")),
+      "css strings were {:?}",
+      css_strings
+    );
+  }
+
+  #[test]
   fn minifies_media_query_parameters() {
     assert_eq!(
       minify_at_rule_params("(min-width: 90rem)"),
@@ -3565,7 +4188,7 @@ mod tests {
     assert_eq!(normalize_selector(Some("&::before")), "&:before");
     assert_eq!(
       normalize_selector(Some("[data-attr=\"a::b\"]")),
-      "&[data-attr=\"a::b\"]"
+      "& [data-attr=\"a::b\"]"
     );
   }
 }

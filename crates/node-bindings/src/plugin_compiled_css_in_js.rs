@@ -1,10 +1,16 @@
 use anyhow::{Context, Result, anyhow};
 use atlaspack_js_swc_core::{
   Config, SourceType, emit, parse,
-  utils::{ErrorBuffer, error_buffer_to_diagnostics},
+  utils::{
+    CodeHighlight, Diagnostic, DiagnosticSeverity, ErrorBuffer, SourceLocation,
+    error_buffer_to_diagnostics,
+  },
 };
 use napi::{Env, Error as NapiError, JsObject, bindgen_prelude::Buffer};
 use napi_derive::napi;
+use once_cell::sync::Lazy;
+use parking_lot::Mutex;
+use std::panic;
 use swc_core::{
   common::{
     FileName, GLOBALS, SourceMap,
@@ -71,12 +77,113 @@ pub struct CompiledCssInJsPluginInput {
 }
 
 #[napi(object)]
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CompiledCssInJsPluginResult {
   pub code: String,
   pub map: Option<String>,
   pub style_rules: Vec<String>,
+  pub diagnostics: Vec<JsDiagnostic>,
+  pub bail_out: bool,
+}
+
+static PANIC_HOOK_GUARD: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
+fn map_transform_errors_to_diagnostics(
+  errors: Vec<atlassian_swc_compiled_css::TransformError>,
+  source_map: &SourceMap,
+) -> Vec<Diagnostic> {
+  errors
+    .into_iter()
+    .map(|error| {
+      let code_highlights = error.span.and_then(|span| {
+        if span.lo().is_dummy() || span.hi().is_dummy() {
+          None
+        } else {
+          Some(vec![CodeHighlight {
+            message: None,
+            loc: SourceLocation::from(source_map, span),
+          }])
+        }
+      });
+
+      Diagnostic {
+        message: error.message,
+        code_highlights,
+        hints: None,
+        show_environment: false,
+        severity: DiagnosticSeverity::Error,
+        documentation_url: None,
+      }
+    })
+    .collect()
+}
+
+#[napi(object)]
+#[derive(Debug, serde::Serialize)]
+pub struct JsSourceLocation {
+  pub start_line: u32,
+  pub start_col: u32,
+  pub end_line: u32,
+  pub end_col: u32,
+}
+
+#[napi(object)]
+#[derive(Debug, serde::Serialize)]
+pub struct JsCodeHighlight {
+  pub message: Option<String>,
+  pub loc: JsSourceLocation,
+}
+
+#[napi(object)]
+#[derive(Debug, serde::Serialize)]
+pub struct JsDiagnostic {
+  pub message: String,
+  pub code_highlights: Option<Vec<JsCodeHighlight>>,
+  pub hints: Option<Vec<String>>,
+  pub show_environment: bool,
+  pub severity: String,
+  pub documentation_url: Option<String>,
+}
+
+fn convert_source_location(loc: SourceLocation) -> JsSourceLocation {
+  JsSourceLocation {
+    start_line: loc.start_line as u32,
+    start_col: loc.start_col as u32,
+    end_line: loc.end_line as u32,
+    end_col: loc.end_col as u32,
+  }
+}
+
+fn convert_code_highlight(highlight: CodeHighlight) -> JsCodeHighlight {
+  JsCodeHighlight {
+    message: highlight.message,
+    loc: convert_source_location(highlight.loc),
+  }
+}
+
+fn convert_diagnostic(diagnostic: Diagnostic) -> JsDiagnostic {
+  let severity = match diagnostic.severity {
+    DiagnosticSeverity::Error => "Error",
+    DiagnosticSeverity::Warning => "Warning",
+    DiagnosticSeverity::SourceError => "SourceError",
+  }
+  .to_string();
+
+  JsDiagnostic {
+    message: diagnostic.message,
+    code_highlights: diagnostic
+      .code_highlights
+      .map(|highlights| highlights.into_iter().map(convert_code_highlight).collect()),
+    hints: diagnostic.hints,
+    show_environment: diagnostic.show_environment,
+    severity,
+    documentation_url: diagnostic.documentation_url,
+  }
+}
+
+fn convert_diagnostics(diagnostics: Vec<Diagnostic>) -> Vec<JsDiagnostic> {
+  diagnostics.into_iter().map(convert_diagnostic).collect()
 }
 
 // Exclude macro expansions from source maps.
@@ -151,8 +258,8 @@ fn process_compiled_css_in_js(
 
     // Apply the transformation using transform_program_with_config
     // This needs to be wrapped in GLOBALS context
-    let (transformed_program, artifacts) = GLOBALS.set(&Default::default(), || {
-      let transformed_program = atlassian_swc_compiled_css::transform_program_with_config(
+    let (transform_result, artifacts) = GLOBALS.set(&Default::default(), || {
+      let transformed_result = atlassian_swc_compiled_css::transform_program_with_config(
         module,
         input.filename.clone(),
         lib_config,
@@ -160,8 +267,36 @@ fn process_compiled_css_in_js(
 
       // Get the collected style rules
       let artifacts = atlassian_swc_compiled_css::take_latest_artifacts();
-      (transformed_program, artifacts)
+      (transformed_result, artifacts)
     });
+
+    let transformed_program = match transform_result {
+      Ok(program) => program,
+      Err(errors) => {
+        let mut diagnostics = map_transform_errors_to_diagnostics(errors, &source_map);
+        diagnostics.extend(error_buffer_to_diagnostics(&error_buffer, &source_map));
+        if diagnostics.is_empty() {
+          diagnostics.push(Diagnostic {
+            message: "Compiled CSS in JS transform failed".to_string(),
+            code_highlights: None,
+            hints: None,
+            show_environment: false,
+            severity: DiagnosticSeverity::Error,
+            documentation_url: None,
+          });
+        }
+
+        let diagnostics = convert_diagnostics(diagnostics);
+
+        return Ok(CompiledCssInJsPluginResult {
+          code: code.to_string(),
+          map: None,
+          style_rules: Vec::new(),
+          diagnostics,
+          bail_out: true,
+        });
+      }
+    };
 
     let module_result = transformed_program
       .module()
@@ -174,44 +309,79 @@ fn process_compiled_css_in_js(
     )
     .with_context(|| "Failed to emit transformed code")?;
 
-    let mut code =
+    let code =
       String::from_utf8(code_bytes).with_context(|| "Failed to convert emitted code to UTF-8")?;
 
-    // Add the comment marker to indicate transformation occurred
-    code = format!("/* COMPILED_TRANSFORMED_ASSET */\n{}", code);
-
     let map_json = if input.source_maps && !line_pos_buffer.is_empty() {
-      let mut output_map_buffer = vec![];
-      if source_map
-        .build_source_map_with_config(&line_pos_buffer, None, SourceMapConfig)
-        .to_writer(&mut output_map_buffer)
-        .is_ok()
-      {
-        let map_string = String::from_utf8(output_map_buffer).unwrap_or_default();
-        // Adjust the sourcemap to account for the added comment line
-        // Parse the sourcemap, offset all generated line numbers by 1, and serialize it back
-        if let Ok(mut map_value) = serde_json::from_str::<serde_json::Value>(&map_string) {
-          if let Some(mappings) = map_value.get_mut("mappings") {
-            if let Some(mappings_str) = mappings.as_str() {
-              // VLQ sourcemap format: prepend a semicolon to shift all mappings down by 1 line
-              *mappings = serde_json::Value::String(format!(";{}", mappings_str));
+      let build_map_result = {
+        let _hook_guard = PANIC_HOOK_GUARD.lock();
+        let previous_hook = panic::take_hook();
+        panic::set_hook(Box::new(|_| {}));
+
+        let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+          let mut output_map_buffer = vec![];
+          let write_result = source_map
+            .build_source_map_with_config(&line_pos_buffer, None, SourceMapConfig)
+            .to_writer(&mut output_map_buffer);
+          (write_result, output_map_buffer)
+        }));
+
+        panic::set_hook(previous_hook);
+        result
+      };
+
+      match build_map_result {
+        Ok((Ok(()), output_map_buffer)) => {
+          let map_string = String::from_utf8(output_map_buffer).unwrap_or_default();
+          if let Ok(mut map_value) = serde_json::from_str::<serde_json::Value>(&map_string) {
+            if let Some(mappings) = map_value.get_mut("mappings") {
+              if let Some(mappings_str) = mappings.as_str() {
+                *mappings = serde_json::Value::String(format!(";{}", mappings_str));
+              }
             }
+            Some(serde_json::to_string(&map_value).unwrap_or(map_string))
+          } else {
+            Some(map_string)
           }
-          Some(serde_json::to_string(&map_value).unwrap_or(map_string))
-        } else {
-          Some(map_string)
         }
-      } else {
-        None
+        Ok((Err(err), _)) => {
+          if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+            eprintln!(
+              "[compiled-debug] Failed to write sourcemap for {}: {}",
+              input.filename, err
+            );
+          }
+          None
+        }
+        Err(panic_payload) => {
+          if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+            let panic_message = if let Some(message) = panic_payload.downcast_ref::<&str>() {
+              (*message).to_string()
+            } else if let Some(message) = panic_payload.downcast_ref::<String>() {
+              message.clone()
+            } else {
+              "non-string panic".to_string()
+            };
+            eprintln!(
+              "[compiled-debug] Sourcemap generation panicked for {}: {}",
+              input.filename, panic_message
+            );
+          }
+          None
+        }
       }
     } else {
       None
     };
 
+    let code = format!("/* COMPILED_TRANSFORMED_ASSET */\n{}", code);
+
     Ok(CompiledCssInJsPluginResult {
       code,
       map: map_json,
       style_rules: artifacts.style_rules,
+      diagnostics: Vec::new(),
+      bail_out: false,
     })
   })
 }
@@ -297,6 +467,11 @@ mod tests {
     assert!(result.is_ok(), "Transformed code should succeed");
 
     let transformed = result.unwrap();
+    assert!(!transformed.bail_out, "Should not bail out on success");
+    assert!(
+      transformed.diagnostics.is_empty(),
+      "Expected no diagnostics on success"
+    );
     assert!(
       transformed.code.contains("@compiled/react/runtime"),
       "Transformed code should contain @compiled/react/runtime"
@@ -317,6 +492,11 @@ mod tests {
     assert!(result.is_ok(), "Transformed code should succeed");
 
     let transformed = result.unwrap();
+    assert!(!transformed.bail_out, "Should not bail out on success");
+    assert!(
+      transformed.diagnostics.is_empty(),
+      "Expected no diagnostics on success"
+    );
     assert!(
       transformed
         .code
@@ -339,6 +519,11 @@ mod tests {
     assert!(result.is_ok(), "Transformed code should succeed");
 
     let transformed = result.unwrap();
+    assert!(!transformed.bail_out, "Should not bail out on success");
+    assert!(
+      transformed.diagnostics.is_empty(),
+      "Expected no diagnostics on success"
+    );
     assert!(
       transformed.code.contains("@compiled/react/runtime"),
       "Transformed code should contain @compiled/react/runtime"
@@ -382,6 +567,12 @@ mod tests {
 
     let result = process_compiled_css_in_js(ts_code, &config);
     assert!(result.is_ok(), "TypeScript syntax should be supported");
+    let transformed = result.unwrap();
+    assert!(!transformed.bail_out, "Should not bail out on success");
+    assert!(
+      transformed.diagnostics.is_empty(),
+      "Expected no diagnostics on success"
+    );
   }
 
   #[test]
@@ -410,6 +601,11 @@ mod tests {
     // Even if there are no compiled components to transform, the code should parse and emit correctly
     match result {
       Ok(transformed) => {
+        assert!(!transformed.bail_out, "Should not bail out on success");
+        assert!(
+          transformed.diagnostics.is_empty(),
+          "Expected no diagnostics on success"
+        );
         assert!(
           transformed.code.contains("Hello, world!"),
           "Original code should be preserved"
@@ -435,6 +631,11 @@ mod tests {
     assert!(result.is_ok(), "Transformed code should succeed");
 
     let transformed = result.unwrap();
+    assert!(!transformed.bail_out, "Should not bail out on success");
+    assert!(
+      transformed.diagnostics.is_empty(),
+      "Expected no diagnostics on success"
+    );
     assert!(
       transformed.code.contains("@compiled/react/runtime"),
       "Transformed code should contain @compiled/react/runtime"
@@ -464,6 +665,11 @@ mod tests {
     assert!(result.is_ok(), "Token transformation should succeed");
 
     let transformed = result.unwrap();
+    assert!(!transformed.bail_out, "Should not bail out on success");
+    assert!(
+      transformed.diagnostics.is_empty(),
+      "Expected no diagnostics on success"
+    );
     assert!(
       transformed.code.contains("token"),
       "Transformed code should contain token reference"
@@ -473,6 +679,43 @@ mod tests {
     assert!(
       transformed.map.is_none(),
       "Sourcemap should not be generated when source_maps is false"
+    );
+  }
+
+  #[test]
+  fn test_bail_out_on_transform_error() {
+    let config = create_test_config(true, false);
+
+    let code = indoc! {r#"
+      import { css } from '@compiled/react';
+      const render = (value) => <div xcss={{ color: value }} />;
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(
+      result.is_ok(),
+      "Transformation should return a bail-out result"
+    );
+
+    let transformed = result.unwrap();
+    assert!(
+      transformed.bail_out,
+      "Expected transformer to bail out on error"
+    );
+    assert_eq!(
+      transformed.code, code,
+      "Bail out should return original code"
+    );
+    assert!(
+      !transformed.diagnostics.is_empty(),
+      "Expected diagnostics to be reported on bail out"
+    );
+    assert!(
+      transformed.diagnostics[0]
+        .message
+        .contains("Object given to the xcss prop must be static"),
+      "Unexpected diagnostic message: {:?}",
+      transformed.diagnostics
     );
   }
 }

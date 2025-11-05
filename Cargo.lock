@@ -799,6 +799,7 @@ dependencies = [
  "swc_core",
  "swc_plugin_macro",
  "thiserror 2.0.17",
+ "walkdir",
  "xxhash-rust",
 ]
 

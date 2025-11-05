@@ -1,17 +1,17 @@
-use atlassian_swc_compiled_css::{
-  StyleArtifacts, take_latest_artifacts, transform_program_for_testing,
+use compiled_swc_plugin::{
+  EmitCommentsGuard, StyleArtifacts, take_latest_artifacts, transform_program_for_testing,
 };
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
-use swc_core::common::comments::SingleThreadedComments;
-use swc_core::common::sync::Lrc;
+use swc_common::comments::SingleThreadedComments;
+use swc_common::sync::Lrc;
 use swc_core::common::{FileName, GLOBALS, Globals, Mark, SourceMap};
 use swc_core::ecma::ast::{EsVersion, Pass, Program};
 use swc_core::ecma::codegen::{Config as CodegenConfig, Emitter, text_writer::JsWriter};
 use swc_core::ecma::parser::{EsSyntax, Parser, StringInput, Syntax, TsSyntax, lexer::Lexer};
-use swc_core::ecma::transforms::base::resolver;
-use swc_core::ecma::transforms::react::{Options, Runtime, react};
+use swc_ecma_transforms_base::resolver;
+use swc_ecma_transforms_react::{Options as ReactOptions, Runtime, react};
 
 fn syntax_for_filename(path: &Path) -> Syntax {
   let name = path.to_string_lossy();
@@ -32,20 +32,24 @@ fn syntax_for_filename(path: &Path) -> Syntax {
   }
 }
 
-pub fn parse_program(path: &Path, source: &str) -> Program {
+pub fn parse_program(path: &Path, source: &str) -> (Program, SingleThreadedComments) {
   use std::sync::Arc;
 
   let cm: Arc<SourceMap> = Default::default();
   let filename = FileName::Real(path.to_path_buf());
   let fm = cm.new_source_file(filename.into(), source.into());
+  let comments = SingleThreadedComments::default();
   let lexer = Lexer::new(
     syntax_for_filename(path),
     EsVersion::Es2022,
     StringInput::from(&*fm),
-    None,
+    Some(&comments),
   );
   let mut parser = Parser::new_from(lexer);
-  Program::Module(parser.parse_module().expect("failed to parse module"))
+  (
+    Program::Module(parser.parse_module().expect("failed to parse module")),
+    comments,
+  )
 }
 
 pub fn emit_program(program: &Program) -> String {
@@ -76,12 +80,14 @@ pub fn run_transform(
   config_json: &str,
 ) -> (String, StyleArtifacts) {
   GLOBALS.set(&Globals::new(), || {
-    let program = parse_program(input_path, source);
+    let (program, comments) = parse_program(input_path, source);
+    let _emitter_guard = EmitCommentsGuard::new(&comments);
     let mut transformed = transform_program_for_testing(
       program,
       input_path.to_string_lossy().to_string(),
       Some(config_json),
-    );
+    )
+    .expect("transform program");
     {
       let cm: Lrc<SourceMap> = Default::default();
       let top_level_mark = Mark::fresh(Mark::root());
@@ -91,7 +97,7 @@ pub fn run_transform(
         pass.process(&mut transformed);
       }
       {
-        let mut react_options = Options::default();
+        let mut react_options = ReactOptions::default();
         react_options.runtime = Some(Runtime::Automatic);
         react_options.development = Some(false);
         let mut pass = react(

@@ -16,7 +16,7 @@ const SkeletonRow = forwardRef(({ as: C = "div", style: __cmpls, ...__cmplp }, _
         },
         ref: __cmplr,
         className: ax([
-            "_2rko12b0 _1itk1xcs _12vemgnk _4t3i2nrh _1bsb1hdq",
+            "_2rko12b0 _1itk1wva _12vemgnk _4t3i2nrh _1bsb1hdq",
             __cmplp.className
         ])
     });

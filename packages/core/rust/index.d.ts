@@ -98,6 +98,26 @@ export interface CompiledCssInJsPluginResult {
   code: string
   map?: string
   styleRules: Array<string>
+  diagnostics: Array<JsDiagnostic>
+  bailOut: boolean
+}
+export interface JsSourceLocation {
+  startLine: number
+  startCol: number
+  endLine: number
+  endCol: number
+}
+export interface JsCodeHighlight {
+  message?: string
+  loc: JsSourceLocation
+}
+export interface JsDiagnostic {
+  message: string
+  codeHighlights?: Array<JsCodeHighlight>
+  hints?: Array<string>
+  showEnvironment: boolean
+  severity: string
+  documentationUrl?: string
 }
 export declare function applyCompiledCssInJsPlugin(rawCode: Buffer, input: CompiledCssInJsPluginInput): object
 export interface JsFileSystemOptions {
