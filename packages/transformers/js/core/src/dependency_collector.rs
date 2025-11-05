@@ -541,9 +541,13 @@ impl VisitMut for DependencyCollector<'_> {
                   Expr::Fn(_) | Expr::Arrow(_) => {
                     if self.config.nested_promise_import_fix {
                       self.in_promise = true;
+                      // Reset require_node to capture only requires within this
+                      // promise.then
                       let old_require_node = self.require_node.take();
                       node.visit_mut_children_with(self);
                       self.in_promise = was_in_promise;
+                      // Get the require node captured during visiting children
+                      // and reset the require_node to its previous value
                       let require_node = self.require_node.take();
                       self.require_node = old_require_node;
 
