@@ -2,34 +2,6 @@ use std::collections::{HashMap, HashSet};
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith, VisitWith};
 
-/// Helper function to recursively collect binding identifiers from patterns.
-/// Calls the provided closure for each binding found, passing the identifier and export status.
-fn collect_bindings_from_pat<F>(pat: &Pat, is_exported: bool, f: &mut F)
-where
-  F: FnMut(Id, bool),
-{
-  match pat {
-    Pat::Ident(ident) => f(ident.id.to_id(), is_exported),
-    Pat::Array(arr) => {
-      for elem in arr.elems.iter().flatten() {
-        collect_bindings_from_pat(elem, is_exported, f);
-      }
-    }
-    Pat::Object(obj) => {
-      for prop in &obj.props {
-        match prop {
-          ObjectPatProp::KeyValue(kv) => collect_bindings_from_pat(&kv.value, is_exported, f),
-          ObjectPatProp::Assign(assign) => f(assign.key.to_id(), is_exported),
-          ObjectPatProp::Rest(rest) => collect_bindings_from_pat(&rest.arg, is_exported, f),
-        }
-      }
-    }
-    Pat::Rest(rest) => collect_bindings_from_pat(&rest.arg, is_exported, f),
-    Pat::Assign(assign) => collect_bindings_from_pat(&assign.left, is_exported, f),
-    _ => {}
-  }
-}
-
 /// Transformer that removes unused variable bindings.
 ///
 /// This transform removes variable declarations that are never referenced,
@@ -228,6 +200,34 @@ impl UnusedBindingsRemover {
       }
       _ => {}
     }
+  }
+}
+
+/// Helper function to recursively collect binding identifiers from patterns.
+/// Calls the provided closure for each binding found, passing the identifier and export status.
+fn collect_bindings_from_pat<F>(pat: &Pat, is_exported: bool, f: &mut F)
+where
+  F: FnMut(Id, bool),
+{
+  match pat {
+    Pat::Ident(ident) => f(ident.id.to_id(), is_exported),
+    Pat::Array(arr) => {
+      for elem in arr.elems.iter().flatten() {
+        collect_bindings_from_pat(elem, is_exported, f);
+      }
+    }
+    Pat::Object(obj) => {
+      for prop in &obj.props {
+        match prop {
+          ObjectPatProp::KeyValue(kv) => collect_bindings_from_pat(&kv.value, is_exported, f),
+          ObjectPatProp::Assign(assign) => f(assign.key.to_id(), is_exported),
+          ObjectPatProp::Rest(rest) => collect_bindings_from_pat(&rest.arg, is_exported, f),
+        }
+      }
+    }
+    Pat::Rest(rest) => collect_bindings_from_pat(&rest.arg, is_exported, f),
+    Pat::Assign(assign) => collect_bindings_from_pat(&assign.left, is_exported, f),
+    _ => {}
   }
 }
 
@@ -979,6 +979,25 @@ mod tests {
     );
   }
 
+  #[test]
+  fn test_keeps_chained_cjs_property_exports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const foo = 1;
+        var bar = module.exports.default = foo;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const foo = 1;
+        var bar = module.exports.default = foo;
+      "#}
+    );
+  }
+
   // ===========================================================================
   // Variable usage patterns
   // ===========================================================================
@@ -1190,7 +1209,10 @@ mod tests {
     );
   }
 
+  // ===========================================================================
   // Scoped contexts
+  // ===========================================================================
+
   #[test]
   fn test_removes_unused_in_function() {
     let RunVisitResult { output_code, .. } = run_test_visit(
