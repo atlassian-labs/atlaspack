@@ -6,15 +6,26 @@ import {
   it,
   fsFixture,
   run,
+  runBundle,
   overlayFS,
 } from '@atlaspack/test-utils';
-import {rimraf} from 'rimraf';
+import {BundleGraph, PackagedBundle} from '@atlaspack/types-internal';
+
+async function assertBundleOutput(
+  b: BundleGraph<PackagedBundle>,
+  bundleMatch: string,
+  expected: any,
+) {
+  let bundle = b.getBundles().find((b) => b.filePath.includes(bundleMatch));
+  let output: any = await runBundle(b, bundle, {});
+  assert.deepEqual(output?.default, expected);
+}
 
 describe('Entry Points', function () {
   let dir: string = path.join(__dirname, 'entry-points-fixture');
 
   beforeEach(async function () {
-    await rimraf(dir);
+    await overlayFS.rimraf(dir);
     await overlayFS.mkdirp(dir);
   });
 
@@ -22,7 +33,7 @@ describe('Entry Points', function () {
     it('should handle single file entry', async () => {
       await fsFixture(overlayFS, dir)`
         index.js:
-          console.log('hello from file entry');
+          export default 'hello from file entry';
       `;
 
       let b = await bundle(path.join(dir, 'index.js'), {
@@ -31,15 +42,15 @@ describe('Entry Points', function () {
 
       assert(b.getBundles().length > 0);
       let output = await run(b);
-      assert.equal(typeof output, 'object'); // console.log returns undefined, but run() returns an object
+      assert.equal(output.default, 'hello from file entry'); // console.log returns undefined, but run() returns an object
     });
 
     it('should handle multiple file entries', async () => {
       await fsFixture(overlayFS, dir)`
         index.js:
-          console.log('main entry');
+          export default 'main entry';
         alt.js:
-          console.log('alt entry');
+          export default 'alt entry';
       `;
 
       let b = await bundle(
@@ -50,6 +61,8 @@ describe('Entry Points', function () {
       );
 
       assert(b.getBundles().length >= 2);
+      await assertBundleOutput(b, 'index.js', 'main entry');
+      await assertBundleOutput(b, 'alt.js', 'alt entry');
     });
   });
 
@@ -61,7 +74,7 @@ describe('Entry Points', function () {
             {"source": "src/index.js"}
           src
             index.js:
-              console.log('hello from directory entry');
+              export default 'hello from directory entry';
       `;
 
       let b = await bundle(path.join(dir, 'test-package'), {
@@ -70,7 +83,7 @@ describe('Entry Points', function () {
 
       assert(b.getBundles().length > 0);
       let output = await run(b);
-      assert.equal(typeof output, 'object');
+      assert.equal(output.default, 'hello from directory entry');
     });
 
     it('should handle directory with package.json source array', async () => {
@@ -80,9 +93,9 @@ describe('Entry Points', function () {
             {"source": ["src/index.js", "src/alt.js"]}
           src
             index.js:
-              console.log('main entry');
+              export default 'main entry';
             alt.js:
-              console.log('alt entry');
+              export default 'alt entry';
       `;
 
       let b = await bundle(path.join(dir, 'test-package'), {
@@ -90,6 +103,8 @@ describe('Entry Points', function () {
       });
 
       assert(b.getBundles().length >= 2);
+      await assertBundleOutput(b, 'index', 'main entry');
+      await assertBundleOutput(b, 'alt', 'alt entry');
     });
 
     it('should handle directory with package.json targets field', async () => {
@@ -104,9 +119,9 @@ describe('Entry Points', function () {
             }
           src
             index.js:
-              console.log('main entry');
+              export default 'main entry';
             alt.js:
-              console.log('alt entry');
+              export default 'alt entry';
       `;
 
       let b = await bundle(path.join(dir, 'test-package'), {
@@ -114,6 +129,8 @@ describe('Entry Points', function () {
       });
 
       assert(b.getBundles().length >= 2);
+      await assertBundleOutput(b, 'index', 'main entry');
+      await assertBundleOutput(b, 'alt', 'alt entry');
     });
 
     it('should prefer targets over source when both are present', async () => {
@@ -128,9 +145,9 @@ describe('Entry Points', function () {
             }
           src
             index.js:
-              console.log('target entry');
+              export default 'target entry';
             fallback.js:
-              console.log('source fallback');
+              export default 'source fallback';
       `;
 
       let b = await bundle(path.join(dir, 'test-package'), {
@@ -140,7 +157,7 @@ describe('Entry Points', function () {
       // Should use targets, not source
       assert(b.getBundles().length > 0);
       let output = await run(b);
-      assert.equal(typeof output, 'object');
+      assert.equal(output.default, 'target entry');
     });
 
     it('should handle mixed file and directory entries', async () => {
@@ -150,9 +167,9 @@ describe('Entry Points', function () {
             {"source": "src/index.js"}
           src
             index.js:
-              console.log('directory entry');
+              export default 'directory entry';
         standalone.js:
-          console.log('file entry');
+          export default 'file entry';
       `;
 
       let b = await bundle(
@@ -163,6 +180,8 @@ describe('Entry Points', function () {
       );
 
       assert(b.getBundles().length >= 2);
+      await assertBundleOutput(b, 'index', 'directory entry');
+      await assertBundleOutput(b, 'standalone', 'file entry');
     });
 
     it('should handle complex targets configuration', async () => {
@@ -183,9 +202,9 @@ describe('Entry Points', function () {
             }
           src
             browser.js:
-              console.log('browser entry');
+              export default 'browser entry';
             node.js:
-              console.log('node entry');
+              export default 'node entry';
       `;
 
       let b = await bundle(path.join(dir, 'test-package'), {
@@ -193,6 +212,8 @@ describe('Entry Points', function () {
       });
 
       assert(b.getBundles().length >= 2);
+      await assertBundleOutput(b, 'browser', 'browser entry');
+      await assertBundleOutput(b, 'node', 'node entry');
     });
 
     it('should ignore disabled targets set to false', async () => {
@@ -212,9 +233,9 @@ describe('Entry Points', function () {
             }
           src
             dev.js:
-              console.log('dev entry');
+              export default 'dev entry';
             prod.js:
-              console.log('prod entry');
+              export default 'prod entry';
       `;
 
       let b = await bundle(path.join(dir, 'test-package'), {
@@ -226,6 +247,8 @@ describe('Entry Points', function () {
       let bundles = b.getBundles();
       // Verify we don't have a bundle for the disabled 'main' target
       assert(!bundles.some((bundle) => bundle.name === 'main'));
+      await assertBundleOutput(b, 'dev', 'dev entry');
+      await assertBundleOutput(b, 'prod', 'prod entry');
     });
 
     it('should handle disabled targets with source array', async () => {
@@ -245,13 +268,13 @@ describe('Entry Points', function () {
             }
           src
             dev1.js:
-              console.log('dev entry 1');
+              export default 'dev entry 1';
             dev2.js:
-              console.log('dev entry 2');
+              export default 'dev entry 2';
             prod1.js:
-              console.log('prod entry 1');
+              export default 'prod entry 1';
             prod2.js:
-              console.log('prod entry 2');
+              export default 'prod entry 2';
       `;
 
       let b = await bundle(path.join(dir, 'test-package'), {
@@ -260,6 +283,10 @@ describe('Entry Points', function () {
 
       // Should handle array sources for each enabled target
       assert(b.getBundles().length >= 2);
+      await assertBundleOutput(b, 'dev1', 'dev entry 1');
+      await assertBundleOutput(b, 'dev2', 'dev entry 2');
+      await assertBundleOutput(b, 'prod1', 'prod entry 1');
+      await assertBundleOutput(b, 'prod2', 'prod entry 2');
     });
 
     it('should error when directory has no package.json', async () => {
