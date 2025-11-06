@@ -711,6 +711,7 @@ mod tests {
 
     let asset_graph_request = AssetGraphRequest {
       prev_asset_graph: None,
+      incrementally_bundled_assets: None,
     };
     let result = request_tracker
       .run_request(asset_graph_request)
@@ -764,6 +765,7 @@ mod tests {
 
     let asset_graph_request = AssetGraphRequest {
       prev_asset_graph: None,
+      incrementally_bundled_assets: None,
     };
     let result = request_tracker
       .run_request(asset_graph_request)
@@ -858,6 +860,7 @@ mod tests {
 
     let asset_graph_request = AssetGraphRequest {
       prev_asset_graph: None,
+      incrementally_bundled_assets: None,
     };
     let result = request_tracker
       .run_request(asset_graph_request)
