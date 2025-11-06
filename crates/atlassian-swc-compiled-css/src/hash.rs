@@ -115,4 +115,21 @@ mod tests {
     let class_name = format!("_{}{}", &group_hash[..4], &value_hash[..4]);
     assert_eq!(class_name, "_1mizidpf");
   }
+
+  #[test]
+  fn hash_matches_babel_for_nested_first_of_type_selector() {
+    let group_hash = hash("undefined& >div>div:first-of-typeborder-width", 0);
+    let value_hash = hash("0", 0);
+    let class_name = format!("_{}{}", &group_hash[..4], &value_hash[..4]);
+    assert_eq!(class_name, "_1p3lidpf");
+
+    let child_group = hash("undefined&>*margin-left", 0);
+    assert_eq!(&child_group[..4], "bmks");
+    let first_child_group = hash("undefined&>:first-childmargin-left", 0);
+    assert_eq!(&first_child_group[..4], "i12c");
+    let last_child_group = hash("undefined&>:last-childmargin-right", 0);
+    assert_eq!(&last_child_group[..4], "fhio");
+    let is_group = hash("undefined& >:is(div,button)flex-shrink", 0);
+    assert_eq!(&is_group[..4], "1puh");
+  }
 }

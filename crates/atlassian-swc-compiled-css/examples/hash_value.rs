@@ -1,8 +1,3 @@
-use atlassian_swc_compiled_css::{
-  css::normalize_css_value,
-  hash::{self, hash},
-};
-
 fn main() {
   let candidates = [
     "__cmplp.formatRuleHoverColor",
@@ -13,8 +8,7 @@ fn main() {
   ];
 
   for value in candidates {
-    let hash = normalize_css_value(value);
-    let hash(value, 0);
+    let hash = compiled_swc_plugin::hash::hash(value, 0);
     println!("{value} => {hash}");
   }
 }

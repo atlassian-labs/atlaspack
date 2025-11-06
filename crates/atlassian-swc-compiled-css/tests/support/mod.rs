@@ -10,8 +10,10 @@ use swc_core::common::{FileName, GLOBALS, Globals, Mark, SourceMap};
 use swc_core::ecma::ast::{EsVersion, Pass, Program};
 use swc_core::ecma::codegen::{Config as CodegenConfig, Emitter, text_writer::JsWriter};
 use swc_core::ecma::parser::{EsSyntax, Parser, StringInput, Syntax, TsSyntax, lexer::Lexer};
+use swc_design_system_tokens::design_system_tokens_visitor;
 use swc_ecma_transforms_base::resolver;
 use swc_ecma_transforms_react::{Options as ReactOptions, Runtime, react};
+use swc_ecma_visit::VisitMutWith;
 
 fn syntax_for_filename(path: &Path) -> Syntax {
   let name = path.to_string_lossy();
@@ -82,12 +84,34 @@ pub fn run_transform(
   GLOBALS.set(&Globals::new(), || {
     let (program, comments) = parse_program(input_path, source);
     let _emitter_guard = EmitCommentsGuard::new(&comments);
+    let mut program = program;
+    let is_ts = input_path
+      .extension()
+      .and_then(|ext| ext.to_str())
+      .map(|ext| matches!(ext, "ts" | "tsx" | "cts" | "mts"))
+      .unwrap_or(false);
+    let unresolved_mark = Mark::new();
+    let top_level_mark = Mark::new();
+    {
+      let mut resolver_pass = resolver(unresolved_mark, top_level_mark, is_ts);
+      program.visit_mut_with(&mut resolver_pass);
+    }
+    {
+      let mut tokens_pass = design_system_tokens_visitor(
+        comments.clone(),
+        true, // should_use_auto_fallback
+        true, // should_force_auto_fallback
+        Vec::new(),
+        "light".to_string(),
+        false,
+      );
+      tokens_pass.process(&mut program);
+    }
     let mut transformed = transform_program_for_testing(
       program,
       input_path.to_string_lossy().to_string(),
       Some(config_json),
-    )
-    .expect("transform program");
+    );
     {
       let cm: Lrc<SourceMap> = Default::default();
       let top_level_mark = Mark::fresh(Mark::root());
@@ -221,8 +245,11 @@ pub fn canonicalize_output(output: &str) -> String {
   }
 
   runtime_imports.sort();
+  runtime_imports.dedup();
   remaining_imports.sort();
+  remaining_imports.dedup();
   jsx_runtime_imports.sort();
+  jsx_runtime_imports.dedup();
 
   let mut result = String::new();
   if let Some(line) = react_import {
@@ -272,28 +299,34 @@ pub fn canonicalize_output(output: &str) -> String {
       "import * as React from 'react';",
     );
 
-  let mut seen_jsx_import = false;
-  let filtered_lines: Vec<&str> = result
-    .lines()
-    .filter(|line| {
-      let trimmed = line.trim();
-      if trimmed == "import { jsx } from \"react/jsx-runtime\";" {
-        if seen_jsx_import {
-          return false;
-        }
-        seen_jsx_import = true;
+  use std::collections::HashSet;
+  let mut seen_imports: HashSet<&str> = HashSet::new();
+  let mut deduped_lines = Vec::new();
+  for line in result.lines() {
+    let trimmed = line.trim();
+    if trimmed.starts_with("import ") {
+      if seen_imports.insert(trimmed) {
+        deduped_lines.push(line);
       }
-      true
-    })
-    .collect();
-  result = filtered_lines.join("\n");
+    } else {
+      deduped_lines.push(line);
+    }
+  }
+  result = deduped_lines.join("\n");
 
-  if result.contains("import { jsx, jsxs } from \"react/jsx-runtime\";") {
-    let filtered: Vec<&str> = result
+  const JSX_IMPORT: &str = "import { jsx } from \"react/jsx-runtime\";";
+  const JSXS_IMPORT: &str = "import { jsxs } from \"react/jsx-runtime\";";
+  const JSX_JSXS_IMPORT: &str = "import { jsx, jsxs } from \"react/jsx-runtime\";";
+
+  if result.contains(JSX_JSXS_IMPORT) {
+    result = result
       .lines()
-      .filter(|line| line.trim() != "import { jsx } from \"react/jsx-runtime\";")
-      .collect();
-    result = filtered.join("\n");
+      .filter(|line| {
+        let trimmed = line.trim();
+        trimmed != JSX_IMPORT && trimmed != JSXS_IMPORT
+      })
+      .collect::<Vec<_>>()
+      .join("\n");
   }
 
   if std::env::var_os("COMPILED_DEBUG_CANON").is_some() {

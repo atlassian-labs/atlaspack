@@ -341,25 +341,11 @@ fn run_pipeline(
     take_latest_artifacts();
 
     let filename_for_transform = filename.to_string_lossy().to_string();
-    let transformed = match compiled_swc_plugin::transform_program_for_testing(
+    let transformed = compiled_swc_plugin::transform_program_for_testing(
       program,
       filename_for_transform,
       Some(compiled_config_json),
-    ) {
-      Ok(program) => program,
-      Err(errors) => {
-        let message = errors
-          .into_iter()
-          .map(|error| error.message)
-          .collect::<Vec<_>>()
-          .join("\n");
-        return Err(anyhow!(
-          "failed to transform {}: {}",
-          filename.display(),
-          message
-        ));
-      }
-    };
+    );
 
     let artifacts = take_latest_artifacts();
     ensure_printable(&transformed)?;

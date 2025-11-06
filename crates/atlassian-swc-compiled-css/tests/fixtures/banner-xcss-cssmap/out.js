@@ -1,0 +1,31 @@
+import * as React from 'react';
+import { ax, ix, CC, CS } from "@compiled/react/runtime";
+import { jsx, jsxs } from "react/jsx-runtime";
+const _7 = "._1pbyb4wl{z-index:100}";
+const _6 = "._kqsw1if8{position:sticky}";
+const _5 = "._152tidpf{inset-block-start:0}";
+const _4 = "._4t3i1p2j{height:var(--banner-height)}";
+const _3 = "._18m915vq{overflow-y:hidden}";
+const _2 = "._1reo15vq{overflow-x:hidden}";
+const _ = "._nd5ldkfm{grid-area:banner}";
+const styles = {
+  root: "_nd5ldkfm _1reo15vq _18m915vq _4t3i1p2j _152tidpf _kqsw1if8 _1pbyb4wl"
+};
+function Banner({
+  children,
+  xcss,
+  height = 48,
+  testId
+}) {
+  return jsxs(CC, {
+    children: [jsx(CS, {
+      children: [_, _2, _3, _4, _5, _6, _7]
+    }), jsx("div", {
+      "data-layout-slot": true,
+      "data-testid": testId,
+      className: ax([styles.root]),
+      children: children
+    })]
+  });
+}
+export default Banner;

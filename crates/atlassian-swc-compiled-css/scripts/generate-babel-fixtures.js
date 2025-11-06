@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable no-console */
 const fs = require('fs');
 const path = require('path');
 const { transformSync } = require('@babel/core');
@@ -118,24 +119,24 @@ function transformForSwcOutput(inputPath, compiledCode) {
   // Drop the leading banner comment so the snapshot mirrors the SWC output.
   code = code.replace(/^\/\*.*?\*\/\n?/, '');
   // Normalize runtime helper imports and identifiers to match the Rust emitter.
-  code = code.replace(
-    /import \{([^}]*)\} from "react\/jsx-runtime";/g,
-    (statement, specifiers) => {
-      const cleaned = specifiers
-        .split(',')
-        .map((part) => part.trim())
-        .map((part) => part.replace(/jsx as _jsx/, 'jsx').replace(/jsxs as _jsxs/, 'jsxs'))
-        .join(', ');
-      return `import { ${cleaned} } from "react/jsx-runtime";`;
-    }
-  );
+  code = code.replace(/import \{([^}]*)\} from "react\/jsx-runtime";/g, (statement, specifiers) => {
+    const cleaned = specifiers
+      .split(',')
+      .map((part) => part.trim())
+      .map((part) => part.replace(/jsx as _jsx/, 'jsx').replace(/jsxs as _jsxs/, 'jsxs'))
+      .join(', ');
+    return `import { ${cleaned} } from "react/jsx-runtime";`;
+  });
   code = code.replace(/_jsx/g, 'jsx').replace(/_jsxs/g, 'jsxs');
   code = code.replace(/\/\*#__PURE__\*\//g, '');
   return code.trimEnd() + '\n';
 }
 
+const fixtureName = process.argv[2];
+
 fs.readdirSync(fixturesRoot, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
+  .filter((entry) => !fixtureName || entry.name === fixtureName)
   .forEach((entry) => {
     const fixtureDir = path.join(fixturesRoot, entry.name);
     const { pluginOptions, nodeEnv, babelEnv } = loadFixtureConfig(fixtureDir);
@@ -150,9 +151,8 @@ fs.readdirSync(fixturesRoot, { withFileTypes: true })
 
     const outputPath = path.join(fixtureDir, 'babel-out.js');
     const source = fs.readFileSync(inputPath, 'utf8');
-    const compiledCode = applyEnv(
-      { nodeEnv, babelEnv },
-      () => transformFixture(inputPath, source, pluginOptions)
+    const compiledCode = applyEnv({ nodeEnv, babelEnv }, () =>
+      transformFixture(inputPath, source, pluginOptions)
     );
     fs.writeFileSync(outputPath, compiledCode);
     console.log(`Updated ${path.relative(process.cwd(), outputPath)}`);

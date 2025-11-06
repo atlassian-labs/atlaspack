@@ -1,9 +1,7 @@
 import * as React from 'react';
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { token } from '@atlaskit/tokens';
 import { ax, ix, CC, CS } from "@compiled/react/runtime";
-import { jsx, jsxs } from "react/jsx-runtime";
 import { forwardRef } from "react";
+import { jsx, jsxs } from "react/jsx-runtime";
 const _ = "._zulpu2gc{gap:var(--ds-space-100,8px)}";
 const _1 = "._n7zl176a{border-bottom:var(--ds-space-025,2px) solid var(--ds-border,#091e4224)}";
 const _2 = "._4cvr1h6o{align-items:center}";
@@ -25,19 +23,19 @@ const _17 = "._bfhkk4ro{background-color:var(--_zlgi7a)}";
 const layoutStyles = {
     alignItems: 'center',
     display: 'flex',
-    gap: `${token('space.100')}`
+    gap: `${"var(--ds-space-100, 8px)"}`
 };
 const checkboxStyles = {
     ...layoutStyles,
-    borderBottom: `${token('space.025')} solid ${token('color.border')}`,
-    height: `${token('space.500')}`,
+    borderBottom: `${"var(--ds-space-025, 2px)"} solid ${"var(--ds-border, #091E4224)"}`,
+    height: `${"var(--ds-space-500, 40px)"}`,
     width: '100%'
 };
 const getBackgroundColor = (checked, disabled)=>{
     if (disabled) {
-        return token('color.background.accent.gray.subtlest');
+        return "var(--ds-background-accent-gray-subtlest, #F1F2F4)";
     }
-    return checked ? token('color.background.accent.blue.subtlest') : 'transparent';
+    return checked ? "var(--ds-background-accent-blue-subtlest, #E9F2FF)" : 'transparent';
 };
 const ProjectCheckbox = forwardRef(({ as: C = "div", style: __cmpls, ...__cmplp }, __cmplr)=>{
     if (__cmplp.innerRef) {
@@ -85,7 +83,7 @@ const ProjectCheckbox = forwardRef(({ as: C = "div", style: __cmpls, ...__cmplp 
 export const Component = ()=>jsx(ProjectCheckbox, {
         checked: true,
         disabled: false,
-        children: _jsxs("label", {
+        children: jsxs("label", {
             children: [
                 jsx("input", {
                     type: "checkbox"

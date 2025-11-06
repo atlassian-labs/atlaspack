@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { ax, ix } from "@compiled/react/runtime";
 import { forwardRef } from "react";
-import { token } from '@atlaskit/tokens';
 import { jsx } from "react/jsx-runtime";
 const DotStart = forwardRef(({ as: C = "div", style: __cmpls, ...__cmplp }, __cmplr)=>{
     if (__cmplp.innerRef) {

@@ -1,0 +1,10 @@
+{
+  "source": "/home/ubuntu/atlassian-frontend-monorepo/platform/crates/compiled/crates/compiled_swc_plugin/tests/fixtures/css-nested-spread-active-after/in.tsx",
+  "styleRules": [
+    "._174kt94y:active:after:after{border-radius:1px}",
+    "._19v6t94y:focus-visible:after, ._5or0t94y:focus:after, ._qrdit94y:hover:after{border-radius:1px}",
+    "._1uf0stnw:active:after:after{position:absolute}",
+    "._ee5ostnw:focus-visible:after, ._1tfxstnw:focus:after, ._ixiwstnw:hover:after{position:absolute}",
+    "._gcm15scu:active:after{background-color:red}"
+  ]
+}

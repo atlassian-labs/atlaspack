@@ -74,6 +74,26 @@ fn fixture_outputs_match() {
       let expected_style_rules = load_expected_style_rules(&expected_style_rules_path);
       let mut actual_rules = artifacts.style_rules.clone();
       let mut expected_rules = expected_style_rules;
+      if let Some(style_filter) = std::env::var_os("FIXTURE_STYLE_DEBUG") {
+        let style_filter = style_filter.to_string_lossy();
+        let matches = fixture_path
+          .file_name()
+          .and_then(|n| n.to_str())
+          .map(|name| style_filter.is_empty() || name == style_filter)
+          .unwrap_or(false);
+        if matches {
+          println!(
+            "style debug ({:?}) actual: {:?}",
+            fixture_path.file_name().unwrap(),
+            actual_rules
+          );
+          println!(
+            "style debug ({:?}) expected: {:?}",
+            fixture_path.file_name().unwrap(),
+            expected_rules
+          );
+        }
+      }
       actual_rules.sort();
       expected_rules.sort();
       assert_eq!(

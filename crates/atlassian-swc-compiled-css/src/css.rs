@@ -46,6 +46,8 @@ pub struct CssOptions {
   pub flatten_multiple_selectors: bool,
   #[serde(default)]
   pub preserve_leading_combinator_space: bool,
+  #[serde(default)]
+  pub extract: bool,
 }
 
 impl Default for CssOptions {
@@ -58,6 +60,7 @@ impl Default for CssOptions {
       sort_shorthand: true,
       flatten_multiple_selectors: false,
       preserve_leading_combinator_space: false,
+      extract: true,
     }
   }
 }
@@ -178,6 +181,8 @@ pub struct CssRuleInput {
   pub important: bool,
   #[serde(default)]
   pub duplicate_active_after: bool,
+  #[serde(default)]
+  pub value_hash_override: Option<String>,
 }
 
 fn normalize_pseudo_element_colons(selector: &str) -> Cow<'_, str> {
@@ -2314,6 +2319,35 @@ fn canonicalize_selector_key(selector: &str) -> String {
   output
 }
 
+pub(crate) fn selector_priority(selector: &str) -> u8 {
+  let lower = selector.to_ascii_lowercase();
+  let has_after = lower.contains(":after");
+  if lower.contains(":active") {
+    0
+  } else if has_after && lower.contains(":focus-visible") {
+    1
+  } else if has_after && lower.contains(":focus") {
+    2
+  } else if lower.contains(":focus:not(") {
+    1
+  } else if lower.contains(":focus-visible") {
+    2
+  } else if lower.contains(":focus") {
+    1
+  } else if lower.contains(":hover") {
+    3
+  } else {
+    4
+  }
+}
+
+pub(crate) fn selector_sort_key(selector: &str) -> (u8, String) {
+  (
+    selector_priority(selector),
+    canonicalize_selector_key(selector),
+  )
+}
+
 fn vendor_prefixed_values(property: &str, value: &str) -> Option<Vec<String>> {
   let normalized_value = value.trim();
   if normalized_value.is_empty() {
@@ -2347,7 +2381,7 @@ struct PropertyExpansion {
 
 fn should_skip_shorthand_expansion(raw_value: &str) -> bool {
   let lower = raw_value.to_ascii_lowercase();
-  lower.contains("var(") || lower.contains("token(")
+  lower.contains("var(") || lower.contains("token(") || raw_value.contains("__COMPILED_EXPR_")
 }
 
 fn split_css_value_components(raw_value: &str) -> Vec<String> {
@@ -2912,6 +2946,13 @@ fn expand_property(property: &str, raw_value: &str) -> Vec<PropertyExpansion> {
     return expand_box_shorthand(property, raw_value);
   }
 
+  if property == "background" && raw_value.trim().eq_ignore_ascii_case("initial") {
+    return vec![PropertyExpansion {
+      name: "background-color".into(),
+      raw_value: "initial".into(),
+    }];
+  }
+
   if property == "outline" {
     if let Some(expanded) = expand_outline_shorthand(raw_value) {
       return expanded;
@@ -3064,16 +3105,20 @@ fn is_unitless_property(name: &str) -> bool {
   )
 }
 
-fn replace_nesting(selector: &str, class_name: &str) -> String {
+fn replace_nesting(
+  selector: &str,
+  class_name: &str,
+  keep_space_before_combinators: bool,
+) -> String {
   let replaced = selector
     .replace('&', &format!(".{}", class_name))
     .replace(" >[", ">[")
     .replace(" +[", "+[")
     .replace(" ~[", "~[");
-  ensure_space_before_combinators(&replaced)
+  ensure_space_before_combinators(replaced.trim_start(), keep_space_before_combinators)
 }
 
-fn ensure_space_before_combinators(selector: &str) -> String {
+fn ensure_space_before_combinators(selector: &str, keep_space_before: bool) -> String {
   if !selector.contains(['>', '+', '~']) {
     return selector.to_string();
   }
@@ -3095,13 +3140,15 @@ fn ensure_space_before_combinators(selector: &str) -> String {
         result.push(ch);
       }
       '>' | '+' | '~' if attr_depth == 0 => {
-        let mut had_space = false;
-        while result.ends_with(' ') {
-          result.pop();
-          had_space = true;
-        }
-        if had_space {
+        if keep_space_before {
+          while result.ends_with(' ') {
+            result.pop();
+          }
           result.push(' ');
+        } else {
+          while result.ends_with(' ') {
+            result.pop();
+          }
         }
         result.push(ch);
         while let Some(next) = chars.peek() {
@@ -3114,6 +3161,74 @@ fn ensure_space_before_combinators(selector: &str) -> String {
       }
       _ => result.push(ch),
     }
+  }
+
+  result
+}
+
+fn prepare_selector_for_hash(normalized: &str, is_extract: bool) -> String {
+  if !normalized.contains(['>', '+', '~']) {
+    return ensure_space_before_combinators(normalized, true);
+  }
+
+  let mut flags = Vec::new();
+  let mut prev_char: Option<char> = None;
+  let mut attr_depth = 0usize;
+  for ch in normalized.chars() {
+    match ch {
+      '[' => {
+        attr_depth += 1;
+      }
+      ']' => {
+        if attr_depth > 0 {
+          attr_depth -= 1;
+        }
+      }
+      '>' | '+' | '~' if attr_depth == 0 => {
+        let has_leading_space = prev_char.map(|c| c.is_whitespace()).unwrap_or(false);
+        flags.push((ch, has_leading_space));
+      }
+      _ => {}
+    }
+    prev_char = Some(ch);
+  }
+
+  let mut result = ensure_space_before_combinators(normalized, true);
+  if !flags.iter().all(|(_, has_space)| *has_space) {
+    let mut adjusted = String::with_capacity(result.len());
+    let mut flag_iter = flags.iter();
+    let mut attr_depth = 0usize;
+    for ch in result.chars() {
+      match ch {
+        '[' => {
+          attr_depth += 1;
+          adjusted.push(ch);
+        }
+        ']' => {
+          if attr_depth > 0 {
+            attr_depth -= 1;
+          }
+          adjusted.push(ch);
+        }
+        '>' | '+' | '~' if attr_depth == 0 => {
+          if let Some((_, has_space)) = flag_iter.next() {
+            if !*has_space && adjusted.ends_with(' ') {
+              adjusted.pop();
+            }
+          }
+          adjusted.push(ch);
+        }
+        _ => adjusted.push(ch),
+      }
+    }
+    result = adjusted;
+  }
+
+  if is_extract {
+    result = result
+      .replace(" >*", ">*")
+      .replace(" >:first-child", ">:first-child")
+      .replace(" >:last-child", ">:last-child");
   }
 
   result
@@ -3244,6 +3359,31 @@ fn compress_selector_for_hash(
   preserve_leading_combinator_space: bool,
 ) -> Cow<'_, str> {
   let compressed = compress_leading_combinator(selector, true);
+  let mut needs_adjust = false;
+  if selector.contains("& >[") && compressed.as_ref().contains("&>[") {
+    needs_adjust = true;
+  }
+  if selector.contains("& +[") && compressed.as_ref().contains("&+[") {
+    needs_adjust = true;
+  }
+  if selector.contains("& ~[") && compressed.as_ref().contains("&~[") {
+    needs_adjust = true;
+  }
+  let compressed = if needs_adjust {
+    let mut owned = compressed.into_owned();
+    if selector.contains("& >[") {
+      owned = owned.replace("&>[", "& >[");
+    }
+    if selector.contains("& +[") {
+      owned = owned.replace("&+[", "& +[");
+    }
+    if selector.contains("& ~[") {
+      owned = owned.replace("&~[", "& ~[");
+    }
+    Cow::Owned(owned)
+  } else {
+    compressed
+  };
 
   let (should_expand_direct_combinators, has_ampersand) = {
     let mut depth = 0usize;
@@ -3322,10 +3462,14 @@ fn compress_selector_for_output(
   Cow::Owned(owned)
 }
 
-fn join_selectors(selectors: &[String], class_name: &str) -> String {
+fn join_selectors(
+  selectors: &[String],
+  class_name: &str,
+  keep_space_before_combinators: bool,
+) -> String {
   selectors
     .iter()
-    .map(|selector| replace_nesting(selector, class_name))
+    .map(|selector| replace_nesting(selector, class_name, keep_space_before_combinators))
     .collect::<Vec<_>>()
     .join(",")
 }
@@ -3453,7 +3597,10 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
       eprintln!("[compiled-debug] raw selectors: {:?}", rule.selectors);
     }
     let normalized_selectors = if rule.selectors.is_empty() {
-      vec![normalize_selector(None)]
+      let default_selector = normalize_selector(None);
+      let hash_selector = prepare_selector_for_hash(&default_selector, options.extract);
+      let output_selector = ensure_space_before_combinators(&default_selector, !options.extract);
+      vec![(hash_selector, output_selector)]
     } else {
       rule
         .selectors
@@ -3475,7 +3622,9 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
           if selector.contains(" >~") && normalized.contains(">~") {
             normalized = normalized.replace(">~", " >~");
           }
-          ensure_space_before_combinators(&normalized)
+          let hash_selector = prepare_selector_for_hash(&normalized, options.extract);
+          let output_selector = ensure_space_before_combinators(&normalized, !options.extract);
+          (hash_selector, output_selector)
         })
         .collect::<Vec<_>>()
     };
@@ -3574,15 +3723,24 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
         (declarations, hash_component)
       };
       let declaration = declaration_values.join(";");
-      let value_hash = hash(&value_for_hash, 0);
+      let mut value_hash = hash(&value_for_hash, 0);
+      if let Some(override_hash) = &rule.value_hash_override {
+        value_hash = override_hash.clone();
+      }
       let value_segment = &value_hash[..value_hash.len().min(4)];
 
       let mut per_selector_outputs = Vec::new();
-      for (selector_index, selector) in normalized_selectors.iter().enumerate() {
-        let mut hash_selector =
-          compress_selector_for_hash(selector, options.preserve_leading_combinator_space);
-        let mut output_selector =
-          compress_selector_for_output(selector, options.preserve_leading_combinator_space);
+      for (selector_index, (hash_selector_input, output_selector_input)) in
+        normalized_selectors.iter().enumerate()
+      {
+        let mut hash_selector = compress_selector_for_hash(
+          hash_selector_input.as_str(),
+          options.preserve_leading_combinator_space,
+        );
+        let mut output_selector = compress_selector_for_output(
+          output_selector_input.as_str(),
+          options.preserve_leading_combinator_space,
+        );
         let duplicate_active_after = rule.duplicate_active_after;
         if duplicate_active_after
           && hash_selector.as_ref().contains(":active:after")
@@ -3608,7 +3766,12 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
         if debug_hash {
           eprintln!(
             "[compiled-hash] group-input='{}{}{}{}' selector='{}' property='{}'",
-            prefix, at_rule_label, selectors_hash, expansion.name, selector, expansion.name
+            prefix,
+            at_rule_label,
+            selectors_hash,
+            expansion.name,
+            output_selector_input,
+            expansion.name
           );
         }
         if debug_hash {
@@ -3621,7 +3784,7 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
         if debug_hash {
           eprintln!(
             "[compiled-hash] full-class='{}' selector='{}' property='{}'",
-            full_class, selector, expansion.name
+            full_class, output_selector_input, expansion.name
           );
         }
         let (class_name, selector_target) =
@@ -3632,11 +3795,15 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
             ),
             None => (full_class.clone(), full_class.clone()),
           };
-        let mut selector_output = join_selectors(&[output_selector.into_owned()], &selector_target);
+        let mut selector_output =
+          join_selectors(&[output_selector.into_owned()], &selector_target, true);
         selector_output = selector_output
           .replace(" >[", ">[")
           .replace(" +[", "+[")
-          .replace(" ~[", "~[");
+          .replace(" ~[", "~[")
+          .replace("] +", "]+")
+          .replace("] ~", "]~")
+          .replace("] >", "]>");
         if let Some(original_selector) = rule.selectors.get(selector_index) {
           let trimmed_original = original_selector.trim_start();
           if trimmed_original.starts_with('[') {
@@ -3668,56 +3835,53 @@ pub fn atomicize_rules(rules: &[CssRuleInput], options: &CssOptions) -> CssArtif
         per_selector_outputs.push((class_name, selector_output, css));
       }
 
-      if !options.flatten_multiple_selectors && per_selector_outputs.len() > 1 {
-        let mut selector_parts = per_selector_outputs
-          .iter()
-          .map(|(_, selector, _)| {
-            let canonical = canonicalize_selector_key(selector.as_str());
-            (canonical, selector.as_str())
-          })
-          .collect::<Vec<_>>();
-        let priority = |selector: &str| -> u8 {
-          if selector.contains(":focus") {
-            0
-          } else if selector.contains(":hover") {
-            1
-          } else if selector.contains("active") {
-            2
-          } else {
-            3
-          }
-        };
-        selector_parts.sort_by(|a, b| {
-          let pa = priority(a.1);
-          let pb = priority(b.1);
-          pa.cmp(&pb).then_with(|| a.0.cmp(&b.0))
+      if per_selector_outputs.len() > 1 {
+        per_selector_outputs.sort_by(|a, b| {
+          let key_a = selector_sort_key(a.1.as_str());
+          let key_b = selector_sort_key(b.1.as_str());
+          key_a.cmp(&key_b)
         });
-        let combined_selector = selector_parts
-          .iter()
-          .map(|(_, original)| *original)
-          .collect::<Vec<_>>()
-          .join(", ");
-        let combined_css = wrap_at_rules(
-          format!("{}{{{}}}", combined_selector, declaration.clone()),
-          &rule.at_rules,
-        );
-        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && combined_selector.contains("aria") {
-          eprintln!("[compiled-debug] combined_css={}", combined_css);
-        }
-        artifacts.push_raw(combined_css.clone());
-        artifacts.push_raw(combined_css.clone());
-        for (class_name, _, _) in per_selector_outputs {
-          artifacts.push(AtomicRule {
-            class_name,
-            css: combined_css.clone(),
-            include_in_metadata: true,
-          });
-        }
-        if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && combined_css.contains("aria") {
-          eprintln!(
-            "[compiled-debug] artifacts.rules len after combined: {}",
-            artifacts.rules.len()
+      }
+
+      if !options.flatten_multiple_selectors && per_selector_outputs.len() > 1 {
+        if options.extract {
+          let combined_selector = per_selector_outputs
+            .iter()
+            .map(|(_, selector, _)| selector.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+          let combined_css = wrap_at_rules(
+            format!("{}{{{}}}", combined_selector, declaration.clone()),
+            &rule.at_rules,
           );
+          if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && combined_selector.contains("aria")
+          {
+            eprintln!("[compiled-debug] combined_css={}", combined_css);
+          }
+          artifacts.push_raw(combined_css.clone());
+          artifacts.push_raw(combined_css.clone());
+          for (class_name, _, _) in per_selector_outputs {
+            artifacts.push(AtomicRule {
+              class_name,
+              css: combined_css.clone(),
+              include_in_metadata: true,
+            });
+          }
+          if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && combined_css.contains("aria") {
+            eprintln!(
+              "[compiled-debug] artifacts.rules len after combined: {}",
+              artifacts.rules.len()
+            );
+          }
+        } else {
+          for (class_name, _, css) in per_selector_outputs {
+            artifacts.push_raw(css.clone());
+            artifacts.push(AtomicRule {
+              class_name,
+              css,
+              include_in_metadata: true,
+            });
+          }
         }
       } else {
         for (class_name, _, css) in per_selector_outputs {
@@ -3950,6 +4114,7 @@ mod tests {
       raw_value: "0px".into(),
       important: false,
       duplicate_active_after: false,
+      value_hash_override: None,
     };
     let artifacts = atomicize_rules(&[rule], &CssOptions::default());
     let css_rule = &artifacts.rules[0].css;
@@ -4057,6 +4222,7 @@ mod tests {
       raw_value: "fit-content".into(),
       important: false,
       duplicate_active_after: false,
+      value_hash_override: None,
     };
     let artifacts = atomicize_rules(&[rule], &CssOptions::default());
     let css_rule = &artifacts.rules[0].css;
@@ -4076,6 +4242,7 @@ mod tests {
       raw_value: "hidden".into(),
       important: false,
       duplicate_active_after: false,
+      value_hash_override: None,
     };
     let artifacts = atomicize_rules(&[rule], &CssOptions::default());
     let css_strings: Vec<&str> = artifacts
@@ -4109,6 +4276,7 @@ mod tests {
       raw_value: "1".into(),
       important: false,
       duplicate_active_after: false,
+      value_hash_override: None,
     };
     let artifacts = atomicize_rules(&[rule], &CssOptions::default());
     let css_strings: Vec<&str> = artifacts
@@ -4143,6 +4311,7 @@ mod tests {
       raw_value: "auto".into(),
       important: false,
       duplicate_active_after: false,
+      value_hash_override: None,
     };
     let artifacts = atomicize_rules(&[rule], &CssOptions::default());
     let css_strings: Vec<&str> = artifacts

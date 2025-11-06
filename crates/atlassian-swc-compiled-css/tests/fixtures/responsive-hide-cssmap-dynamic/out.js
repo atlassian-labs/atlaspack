@@ -1,0 +1,41 @@
+import * as React from 'react';
+import { ax, ix, CC, CS } from "@compiled/react/runtime";
+import { jsx, jsxs } from "react/jsx-runtime";
+const _0 = "@media not all and (min-width:110.5rem){._14wzglyw{display:none}}";
+const _9 = "@media not all and (min-width:90rem){._liwcglyw{display:none}}";
+const _8 = "@media not all and (min-width:64rem){._1mjbglyw{display:none}}";
+const _7 = "@media not all and (min-width:48rem){._sugaglyw{display:none}}";
+const _6 = "@media not all and (min-width:30rem){._1m0aglyw{display:none}}";
+const _5 = "@media (min-width:110.5rem){._1uxvglyw{display:none}}";
+const _4 = "@media (min-width:90rem){._je3oglyw{display:none}}";
+const _3 = "@media (min-width:64rem){._dm25glyw{display:none}}";
+const _2 = "@media (min-width:48rem){._181nglyw{display:none}}";
+const _ = "@media (min-width:30rem){._114bglyw{display:none}}";
+const styles = {
+  'above.xs': "_114bglyw",
+  'above.sm': "_181nglyw",
+  'above.md': "_dm25glyw",
+  'above.lg': "_je3oglyw",
+  'above.xl': "_1uxvglyw",
+  'below.xs': "_1m0aglyw",
+  'below.sm': "_sugaglyw",
+  'below.md': "_1mjbglyw",
+  'below.lg': "_liwcglyw",
+  'below.xl': "_14wzglyw"
+};
+export const Hide = ({
+  above,
+  below,
+  children,
+  as: AsElement = 'div',
+  className
+}) => {
+  return jsxs(CC, {
+    children: [jsx(CS, {
+      children: [_, _2, _3, _4, _5, _6, _7, _8, _9, _0]
+    }), jsx(AsElement, {
+      className: ax([above && styles[`above.${above}`], below && styles[`below.${below}`], className]),
+      children: children
+    })]
+  });
+};

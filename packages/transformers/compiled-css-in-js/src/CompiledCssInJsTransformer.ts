@@ -62,7 +62,7 @@ export default new Transformer({
       return [asset];
     }
 
-    if (code.includes('cssMap') || /styled[^.]*\.[^`]+`/.test(code)) {
+    if (code.includes('cssMap') || /(styled|css)[^.]*\.[^`]+`/.test(code)) {
       return [asset];
     }
 
@@ -84,7 +84,9 @@ export default new Transformer({
 
       const original = await ensureOriginalMap();
       type PluginDiagnostic = (typeof diagnostics)[number];
-      type PluginCodeHighlight = NonNullable<PluginDiagnostic['codeHighlights']>[number];
+      type PluginCodeHighlight = NonNullable<
+        PluginDiagnostic['codeHighlights']
+      >[number];
       type PluginSourceLocation = PluginCodeHighlight['loc'];
 
       const convertLoc = (loc: PluginSourceLocation): SourceLocation => {
