@@ -135,9 +135,10 @@ pub fn atlaspack_napi_build_asset_graph(
       // Errors are returned as a resolved value because they need to be serialized and are
       // not supplied as JavaScript Error types. The JavaScript layer needs to handle conversions
       deferred.resolve(move |env| match result {
-        Ok(asset_graph) => {
-          NapiAtlaspackResult::ok(&env, serialize_asset_graph(&env, &asset_graph)?)
-        }
+        Ok((asset_graph, had_previous_graph)) => NapiAtlaspackResult::ok(
+          &env,
+          serialize_asset_graph(&env, &asset_graph, had_previous_graph)?,
+        ),
         Err(error) => {
           let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
           NapiAtlaspackResult::error(&env, js_object)
