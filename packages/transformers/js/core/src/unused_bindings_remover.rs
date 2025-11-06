@@ -100,21 +100,11 @@ impl UnusedBindingsRemover {
     }
   }
 
-  fn should_keep_import_spec(&self, spec: &ImportSpecifier) -> bool {
-    // TODO: Re-implement light import cleaning
-    return true;
-
-    let id = match spec {
-      ImportSpecifier::Named(named) => &named.local,
-      ImportSpecifier::Default(default) => &default.local,
-      ImportSpecifier::Namespace(ns) => &ns.local,
-    };
-    self.should_keep_binding(&id.to_id(), false)
-  }
-
   /// Runs multiple passes of unused binding elimination until no more progress can be made.
   /// Each pass collects declarations, collects usages, then removes unused bindings.
   fn run_elimination_passes(&mut self, module: &mut Module) {
+    let mut prev_declaration_count = usize::MAX;
+
     loop {
       self.declared_bindings.clear();
       self.used_bindings.clear();
@@ -122,11 +112,12 @@ impl UnusedBindingsRemover {
       // Collect declarations
       module.visit_with(&mut DeclarationCollector::new(&mut self.declared_bindings));
 
-      if self.declared_bindings.is_empty() {
+      let current_declaration_count = self.declared_bindings.len();
+
+      // Exit if no declarations or no progress was made
+      if current_declaration_count == 0 || current_declaration_count == prev_declaration_count {
         break;
       }
-
-      let declarations_before = self.declared_bindings.len();
 
       // Collect usages
       module.visit_with(&mut BindingCollector::new(
@@ -140,35 +131,28 @@ impl UnusedBindingsRemover {
       // Clean up empty declarations and imports
       self.cleanup_module_items(&mut module.body);
 
-      // Check if we made progress
-      self.declared_bindings.clear();
-      module.visit_with(&mut DeclarationCollector::new(&mut self.declared_bindings));
-
-      if self.declared_bindings.len() == declarations_before {
-        break;
-      }
+      prev_declaration_count = current_declaration_count;
     }
   }
 
   fn remove_from_pat(&self, pat: &mut Pat) {
     match pat {
       Pat::Object(obj) => {
-        let mut has_rest = false;
-
-        // Recursively process nested patterns
-        for prop in &mut obj.props {
-          match prop {
-            ObjectPatProp::KeyValue(kv) => self.remove_from_pat(&mut kv.value),
-            ObjectPatProp::Rest(rest) => {
-              has_rest = true;
-              self.remove_from_pat(&mut rest.arg);
-            }
-            _ => {}
+        // Recursively process nested patterns and check for rest
+        let has_rest = obj.props.iter_mut().any(|prop| match prop {
+          ObjectPatProp::KeyValue(kv) => {
+            self.remove_from_pat(&mut kv.value);
+            false
           }
-        }
+          ObjectPatProp::Rest(rest) => {
+            self.remove_from_pat(&mut rest.arg);
+            true
+          }
+          _ => false,
+        });
 
+        // Don't remove properties if rest pattern exists (affects rest contents)
         if has_rest {
-          // Don't remove any properties to not affect the rest pattern
           return;
         }
 
@@ -194,7 +178,7 @@ impl UnusedBindingsRemover {
         }
 
         // Trim trailing holes to avoid unnecessary commas like [a, , , ]
-        while arr.elems.last().is_some_and(|e| e.is_none()) {
+        while matches!(arr.elems.last(), Some(None)) {
           arr.elems.pop();
         }
       }
@@ -309,14 +293,14 @@ impl BindingCollector<'_> {
   /// Returns true for patterns like: `module.exports.*`, `exports.*`
   fn is_cjs_export_member(&self, member: &MemberExpr) -> bool {
     match &*member.obj {
+      // Pattern: exports.*
+      Expr::Ident(ident) if &*ident.sym == "exports" => true,
       // Pattern: module.exports.*
-      Expr::Member(inner_member) => matches!(
-        (&*inner_member.obj, &inner_member.prop),
+      Expr::Member(inner) => matches!(
+        (&*inner.obj, &inner.prop),
         (Expr::Ident(obj), MemberProp::Ident(prop))
           if &*obj.sym == "module" && &*prop.sym == "exports"
       ),
-      // Pattern: exports.*
-      Expr::Ident(ident) => &*ident.sym == "exports",
       _ => false,
     }
   }
@@ -327,12 +311,11 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
   fn visit_var_declarator(&mut self, declarator: &VarDeclarator) {
     // If initialized with a CJS export assignment (e.g., var bar = module.exports.x = foo),
     // mark the variable as used since it captures the result of an export with side effects
-    if let Some(Expr::Assign(assign)) = declarator.init.as_deref() {
-      if let AssignTarget::Simple(SimpleAssignTarget::Member(member)) = &assign.left {
-        if self.is_cjs_export_member(member) {
-          self.mark_bindings_in_pat_as_used(&declarator.name);
-        }
-      }
+    if let Some(Expr::Assign(assign)) = declarator.init.as_deref()
+      && let AssignTarget::Simple(SimpleAssignTarget::Member(member)) = &assign.left
+      && self.is_cjs_export_member(member)
+    {
+      self.mark_bindings_in_pat_as_used(&declarator.name);
     }
     declarator.visit_children_with(self);
   }
@@ -417,10 +400,8 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
 
     // Visit right side
     // If this is a CJS export, mark any identifiers on the right as used (exported)
-    if is_cjs_export {
-      if let Expr::Ident(ident) = &*assign.right {
-        self.used_bindings.insert(ident.to_id());
-      }
+    if is_cjs_export && let Expr::Ident(ident) = &*assign.right {
+      self.used_bindings.insert(ident.to_id());
     }
     assign.right.visit_with(self);
   }
@@ -504,20 +485,17 @@ impl VisitMut for UnusedBindingsRemover {
     self.cleanup_empty_var_decls(stmts);
   }
 
-  fn visit_mut_import_decl(&mut self, import: &mut ImportDecl) {
-    import
-      .specifiers
-      .retain(|spec| self.should_keep_import_spec(spec));
-  }
+  // Import cleaning is currently disabled (always keeps all imports)
+  // TODO: Re-implement light import cleaning if needed
 
   fn visit_mut_for_in_stmt(&mut self, node: &mut ForInStmt) {
-    // Don't remove the loop variable, only visit the body
+    // Never visit the loop variable (node.left) since it is always necessary
     node.right.visit_mut_with(self);
     node.body.visit_mut_with(self);
   }
 
   fn visit_mut_for_of_stmt(&mut self, node: &mut ForOfStmt) {
-    // Don't remove the loop variable, only visit the body
+    // Never visit the loop variable (node.left) since it is always necessary
     node.right.visit_mut_with(self);
     node.body.visit_mut_with(self);
   }
@@ -1455,7 +1433,6 @@ mod tests {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         import used from 'used';
-        import unused from 'unused';
 
         outer();
 
