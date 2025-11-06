@@ -282,7 +282,8 @@ export async function bundle(
   entries: FilePath | Array<FilePath>,
   opts?: InitialAtlaspackOptions,
 ): Promise<BundleGraph<PackagedBundle>> {
-  const instance: Atlaspack = bundler(entries, opts);
+  let shouldDisableCache = opts?.shouldDisableCache ?? true;
+  const instance: Atlaspack = bundler(entries, {...opts, shouldDisableCache});
   const bundleGraph = (await instance.run()).bundleGraph;
   return bundleGraph;
 }
