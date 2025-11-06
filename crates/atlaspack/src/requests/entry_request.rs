@@ -36,7 +36,7 @@ pub enum PackageTarget {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PackageJSON {
   pub source: Option<serde_json::Value>, // Can be string, array of strings, or null
-  pub targets: Option<std::collections::HashMap<String, PackageTarget>>,
+  pub targets: Option<std::collections::BTreeMap<String, PackageTarget>>,
 }
 
 /// The EntryRequest resolves an entry path or glob to the actual file location
