@@ -304,9 +304,39 @@ impl BindingCollector<'_> {
       self.used_bindings.insert(id);
     }
   }
+
+  /// Checks if a member expression is a CommonJS export pattern.
+  /// Returns true for patterns like: `module.exports.*`, `exports.*`
+  fn is_cjs_export_member(&self, member: &MemberExpr) -> bool {
+    match &*member.obj {
+      // Pattern: module.exports.*
+      Expr::Member(inner_member) => matches!(
+        (&*inner_member.obj, &inner_member.prop),
+        (Expr::Ident(obj), MemberProp::Ident(prop))
+          if &*obj.sym == "module" && &*prop.sym == "exports"
+      ),
+      // Pattern: exports.*
+      Expr::Ident(ident) => &*ident.sym == "exports",
+      _ => false,
+    }
+  }
 }
 
 impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
+  // Visit variable declarators to check for CJS export assignments in initializers
+  fn visit_var_declarator(&mut self, declarator: &VarDeclarator) {
+    // If initialized with a CJS export assignment (e.g., var bar = module.exports.x = foo),
+    // mark the variable as used since it captures the result of an export with side effects
+    if let Some(Expr::Assign(assign)) = declarator.init.as_deref() {
+      if let AssignTarget::Simple(SimpleAssignTarget::Member(member)) = &assign.left {
+        if self.is_cjs_export_member(member) {
+          self.mark_bindings_in_pat_as_used(&declarator.name);
+        }
+      }
+    }
+    declarator.visit_children_with(self);
+  }
+
   // Visit expressions to find identifier references
   fn visit_expr(&mut self, expr: &Expr) {
     if let Expr::Ident(ident) = expr {
@@ -363,6 +393,12 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
 
   // Handle assignment expressions - visit both sides appropriately
   fn visit_assign_expr(&mut self, assign: &AssignExpr) {
+    // Check if this is a CommonJS export pattern: module.exports.* = value or exports.* = value
+    let is_cjs_export = match &assign.left {
+      AssignTarget::Simple(SimpleAssignTarget::Member(member)) => self.is_cjs_export_member(member),
+      _ => false,
+    };
+
     match &assign.left {
       // For simple identifier assignments like foo = 1, mark the identifier as used
       AssignTarget::Simple(SimpleAssignTarget::Ident(ident)) => {
@@ -378,7 +414,14 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
         assign.left.visit_with(self);
       }
     }
+
     // Visit right side
+    // If this is a CJS export, mark any identifiers on the right as used (exported)
+    if is_cjs_export {
+      if let Expr::Ident(ident) = &*assign.right {
+        self.used_bindings.insert(ident.to_id());
+      }
+    }
     assign.right.visit_with(self);
   }
 
