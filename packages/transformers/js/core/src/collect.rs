@@ -69,6 +69,8 @@ pub struct Export {
   pub is_static_binding_safe: bool,
 }
 
+// The three BTreeMaps in this struct are required for deterministic output order.
+// This allows them to be compared in `AssetGraphRequest::try_reuse_asset_graph`.
 pub struct Collect {
   pub source_map: Lrc<swc_core::common::SourceMap>,
   pub unresolved_mark: Mark,
