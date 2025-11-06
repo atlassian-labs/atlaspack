@@ -133,10 +133,8 @@ impl RunRequestContext {
       queue_result,
       receiver: rx,
       _bridge_task: tokio::spawn(async move {
-        if let Ok(result) = tokio::task::spawn_blocking(move || sync_rx.recv()).await {
-          if let Ok(msg) = result {
-            let _ = tx.send(msg);
-          }
+        if let Ok(Ok(msg)) = tokio::task::spawn_blocking(move || sync_rx.recv()).await {
+          let _ = tx.send(msg);
         }
       }),
     }
