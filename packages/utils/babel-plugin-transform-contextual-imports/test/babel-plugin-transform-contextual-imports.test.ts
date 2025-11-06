@@ -131,4 +131,32 @@ Object.defineProperty(JqlUtils, "load", {
 const jsx = <JqlUtils.load />;`,
     );
   });
+
+  it('should not transform type references', () => {
+    const input = `const JqlUtils = importCond<typeof import('IF_TRUE'),typeof import('IF_FALSE')>('CONDITION', 'IF_TRUE', 'IF_FALSE');
+
+type Props = ComponentProps<typeof JqlUtils>;
+const jsx = <JqlUtils />;`;
+    const result = babel.transformSync(input, {
+      configFile: false,
+      presets: [],
+      plugins: [[plugin, {node: true}]],
+      parserOpts: {
+        plugins: ['jsx', 'typescript'],
+      },
+    });
+
+    assert.equal(
+      result?.code,
+      `const JqlUtils = {
+  ifTrue: require('IF_TRUE').default,
+  ifFalse: require('IF_FALSE').default
+};
+Object.defineProperty(JqlUtils, "load", {
+  get: () => globalThis.__MCOND && globalThis.__MCOND('CONDITION') ? JqlUtils.ifTrue : JqlUtils.ifFalse
+});
+type Props = ComponentProps<typeof JqlUtils>;
+const jsx = <JqlUtils.load />;`,
+    );
+  });
 });

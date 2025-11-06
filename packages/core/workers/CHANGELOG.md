@@ -1,5 +1,25 @@
 # @atlaspack/workers
 
+## 2.14.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/logger@2.14.29
+  - @atlaspack/utils@3.1.1
+  - @atlaspack/types-internal@2.20.7
+  - @atlaspack/profiler@2.14.34
+
+## 2.14.36
+
+### Patch Changes
+
+- Updated dependencies [[`5776be2`](https://github.com/atlassian-labs/atlaspack/commit/5776be21f70a3f2b9471ba33da3ba1a883f21f1a)]:
+  - @atlaspack/utils@3.1.0
+  - @atlaspack/logger@2.14.28
+  - @atlaspack/types-internal@2.20.6
+  - @atlaspack/profiler@2.14.33
+
 ## 2.14.35
 
 ### Patch Changes

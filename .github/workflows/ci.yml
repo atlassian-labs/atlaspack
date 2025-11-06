@@ -16,6 +16,8 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write
+  actions: read
 
 jobs:
   # Validate changesets - handles both general and Rust-specific validation
@@ -82,7 +84,7 @@ jobs:
         run: yarn build-native
 
       - if: ${{ matrix.build_js }}
-        run: yarn build
+        run: yarn build:ci
       # Upload artifacts for use later in pipeline
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -189,11 +191,11 @@ jobs:
         include:
           # Linux AMD64
           - os: ubuntu-22.04
-            node: 20
+            node: 22
 
           # MacOS ARM64
           - os: macos-15
-            node: 20
+            node: 22
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -226,13 +228,17 @@ jobs:
         include:
           # Linux AMD64
           - os: ubuntu-22.04
-            node: 20
+            node: 22
 
           # MacOS ARM64
           - os: macos-15
-            node: 20
+            node: 22
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Collect Workflow Telemetry
+        uses: catchpoint/workflow-telemetry-action@v2
+        with:
+          comment_on_pr: false
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-watchman
       - uses: ./.github/actions/setup-node

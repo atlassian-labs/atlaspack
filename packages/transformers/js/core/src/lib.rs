@@ -150,6 +150,7 @@ pub struct Config {
   pub exports_rebinding_optimisation: bool,
   pub enable_global_this_aliaser: bool,
   pub enable_lazy_loading_transformer: bool,
+  pub nested_promise_import_fix: bool,
 }
 
 #[derive(Serialize, Debug, Default)]

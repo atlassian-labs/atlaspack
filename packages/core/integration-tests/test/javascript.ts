@@ -5069,7 +5069,7 @@ describe('javascript', function () {
 
           let bundleEvent = await getNextBuild(b);
           assert(bundleEvent.type === 'buildSuccess');
-          if (!bundleEvent.bundleGraph) return assert.fail();
+          assert(bundleEvent.bundleGraph, 'No bundle graph found');
 
           let output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, '12345hello');
@@ -5081,8 +5081,11 @@ describe('javascript', function () {
           );
 
           bundleEvent = await getNextBuild(b);
-          assert(bundleEvent.type === 'buildSuccess');
-          if (!bundleEvent.bundleGraph) return assert.fail();
+          assert(
+            bundleEvent.type === 'buildSuccess',
+            `Bundle event type should be buildSuccess but got ${bundleEvent.type}`,
+          );
+          assert(bundleEvent.bundleGraph, 'No bundle graph found');
 
           output = await run(bundleEvent.bundleGraph);
           assert.deepEqual(output, '1234556789');
