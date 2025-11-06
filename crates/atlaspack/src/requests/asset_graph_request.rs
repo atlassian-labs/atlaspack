@@ -692,6 +692,9 @@ fn get_direct_discovered_assets<'a>(
 }
 
 #[cfg(test)]
+mod incremental_tests;
+
+#[cfg(test)]
 mod tests {
   use std::path::{Path, PathBuf};
   use std::sync::Arc;
