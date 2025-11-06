@@ -161,7 +161,7 @@ impl Atlaspack {
 }
 
 impl Atlaspack {
-  pub fn build_asset_graph(&self) -> anyhow::Result<Arc<AssetGraph>> {
+  pub fn build_asset_graph(&self) -> anyhow::Result<(Arc<AssetGraph>, bool)> {
     self.runtime.block_on(async move {
       let mut request_tracker = self.request_tracker.write().await;
 
@@ -192,6 +192,8 @@ impl Atlaspack {
         )
         .ok();
 
+      let had_previous_graph = prev_asset_graph.is_some();
+
       let request_result = request_tracker
         .run_request(AssetGraphRequest {
           prev_asset_graph,
@@ -206,7 +208,7 @@ impl Atlaspack {
       let asset_graph = asset_graph_request_output.graph.clone();
       self.commit_assets(&asset_graph)?;
 
-      Ok(asset_graph)
+      Ok((asset_graph, had_previous_graph))
     })
   }
 

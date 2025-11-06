@@ -15,7 +15,11 @@ use atlaspack_core::types::{Asset, Dependency};
 /// }
 /// ```
 #[tracing::instrument(level = "info", skip_all)]
-pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Result<JsObject> {
+pub fn serialize_asset_graph(
+  env: &Env,
+  asset_graph: &AssetGraph,
+  had_previous_graph: bool,
+) -> anyhow::Result<JsObject> {
   let mut napi_asset_graph = env.create_object()?;
 
   napi_asset_graph.set_named_property(
@@ -33,6 +37,7 @@ pub fn serialize_asset_graph(env: &Env, asset_graph: &AssetGraph) -> anyhow::Res
   }
 
   napi_asset_graph.set_named_property("safeToSkipBundling", asset_graph.safe_to_skip_bundling)?;
+  napi_asset_graph.set_named_property("hadPreviousGraph", had_previous_graph)?;
 
   Ok(napi_asset_graph)
 }

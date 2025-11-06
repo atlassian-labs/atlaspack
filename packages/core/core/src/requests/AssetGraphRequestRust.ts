@@ -42,6 +42,7 @@ type SerializedAssetGraphDelta = {
   edges: Array<string>;
   updates: Array<any>;
   safeToSkipBundling: boolean;
+  hadPreviousGraph: boolean;
 };
 
 export function createAssetGraphRequestRust(
@@ -65,8 +66,12 @@ export function createAssetGraphRequestRust(
         JSON.parse(node),
       );
 
-      let prevResult =
-        await input.api.getPreviousResult<AssetGraphRequestResult>();
+      // Don't reuse a previous asset graph result if Rust didn't have one too
+      let prevResult = null;
+      if (serializedAssetGraph.hadPreviousGraph) {
+        prevResult =
+          await input.api.getPreviousResult<AssetGraphRequestResult>();
+      }
 
       let {assetGraph, changedAssets} = instrument(
         'atlaspack_v3_getAssetGraph',
