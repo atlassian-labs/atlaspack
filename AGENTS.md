@@ -195,7 +195,8 @@ yarn workspace @atlaspack/inspector test:e2e
 yarn test:js:unit --grep "test name pattern"     # JS unit test
 yarn test:integration --grep "test name pattern" # JS integration test
 cargo test test_name                             # Rust unit test (all packages)
-cargo test -p atlaspack_core test_name           # Rust unit test (specific package)
+cargo test -p atlaspack_core test_name           # Rust unit test (specific package - check Cargo.toml for exact name)
+cargo test --lib module::tests::test_name        # Rust unit test (by module path)
 cargo test --test integration_test_name          # Rust integration test
 
 # Clean test cache if tests behave unexpectedly:
