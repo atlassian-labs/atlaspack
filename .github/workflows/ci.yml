@@ -191,11 +191,11 @@ jobs:
         include:
           # Linux AMD64
           - os: ubuntu-22.04
-            node: 20
+            node: 22
 
           # MacOS ARM64
           - os: macos-15
-            node: 20
+            node: 22
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
