@@ -48,7 +48,7 @@ impl SvgDependenciesVisitor {
   fn add_url_dependency(&mut self, specifier: String) -> String {
     let dependency = DependencyBuilder::default()
       .env(self.context.env.clone())
-      .priority(Priority::Sync)
+      .priority(Priority::Lazy)
       .source_asset_id(self.context.source_asset_id.clone())
       .source_asset_type(FileType::Other("svg".to_string()))
       .source_path_option(self.context.source_path.clone())
@@ -68,7 +68,11 @@ impl SvgDependenciesVisitor {
         caps
           .get(1)
           .or_else(|| caps.get(2))
-          .map(|m| m.as_str().trim().to_string())
+          .map(|m| {
+            let url = m.as_str().trim();
+            // Unescape common escape sequences
+            url.replace("\\'", "'").replace("\\\"", "\"")
+          })
           .filter(|s| !s.is_empty())
       } else {
         None
@@ -267,10 +271,14 @@ impl DomVisitor for SvgDependenciesVisitor {
           // Handle external scripts with href attribute (SVG style)
           if let Some(href) = attrs.get(expanded_name!("", "href")) {
             let href_str = href.to_string();
-            if !href_str.is_empty() {
-              let dependency_id = self.add_url_dependency(href_str);
-              attrs.set(expanded_name!("", "href"), &dependency_id);
+            if href_str.is_empty() {
+              self
+                .errors
+                .push("'href' should not be empty string".to_string());
+              return DomTraversalOperation::Stop;
             }
+            let dependency_id = self.add_url_dependency(href_str);
+            attrs.set(expanded_name!("", "href"), &dependency_id);
             attrs.delete(expanded_name!("", "type"));
             return DomTraversalOperation::Continue;
           }
@@ -278,10 +286,14 @@ impl DomVisitor for SvgDependenciesVisitor {
           // Handle external scripts with src attribute (HTML style)
           if let Some(src) = attrs.get(expanded_name!("", "src")) {
             let src_str = src.to_string();
-            if !src_str.is_empty() {
-              let dependency_id = self.add_url_dependency(src_str);
-              attrs.set(expanded_name!("", "src"), &dependency_id);
+            if src_str.is_empty() {
+              self
+                .errors
+                .push("'src' should not be empty string".to_string());
+              return DomTraversalOperation::Stop;
             }
+            let dependency_id = self.add_url_dependency(src_str);
+            attrs.set(expanded_name!("", "src"), &dependency_id);
             attrs.delete(expanded_name!("", "type"));
             return DomTraversalOperation::Continue;
           }

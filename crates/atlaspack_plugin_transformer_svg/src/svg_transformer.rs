@@ -42,7 +42,8 @@ impl TransformerPlugin for AtlaspackSvgTransformerPlugin {
     let bytes: &[u8] = input.code.bytes();
 
     // Pre-process XML processing instructions before parsing with html5ever
-    let (processed_content, xml_dependencies) = process_xml_processing_instructions(bytes)?;
+    let (processed_content, xml_dependencies, processing_instructions) =
+      process_xml_processing_instructions(bytes)?;
 
     let mut dom = parse_svg(&processed_content)?;
     let context = SVGTransformationContext {
@@ -63,7 +64,7 @@ impl TransformerPlugin for AtlaspackSvgTransformerPlugin {
     for xml_dep in xml_dependencies {
       let dependency = atlaspack_core::types::DependencyBuilder::default()
         .env(context.env.clone())
-        .priority(atlaspack_core::types::Priority::Sync)
+        .priority(atlaspack_core::types::Priority::Parallel)
         .source_asset_id(context.source_asset_id.clone())
         .source_asset_type(atlaspack_core::types::FileType::Other("svg".to_string()))
         .source_path_option(context.source_path.clone())
@@ -75,7 +76,18 @@ impl TransformerPlugin for AtlaspackSvgTransformerPlugin {
 
     let mut asset = input;
     asset.bundle_behavior = Some(BundleBehavior::Isolated);
-    asset.code = Code::new(serialize_svg(dom)?);
+
+    // Serialize SVG and prepend processing instructions
+    let serialized_svg = serialize_svg(dom)?;
+    let final_output = if processing_instructions.is_empty() {
+      serialized_svg
+    } else {
+      let mut output = processing_instructions.into_bytes();
+      output.extend(serialized_svg);
+      output
+    };
+
+    asset.code = Code::new(final_output);
 
     Ok(TransformResult {
       asset,
@@ -86,26 +98,51 @@ impl TransformerPlugin for AtlaspackSvgTransformerPlugin {
   }
 }
 
-fn process_xml_processing_instructions(bytes: &[u8]) -> Result<(Vec<u8>, Vec<String>), Error> {
+fn process_xml_processing_instructions(
+  bytes: &[u8],
+) -> Result<(Vec<u8>, Vec<String>, String), Error> {
   let content = std::str::from_utf8(bytes)?;
   let mut xml_dependencies = Vec::new();
 
   // Handle <?xml-stylesheet?> processing instructions
-  let xml_stylesheet_regex =
-    Regex::new(r#"<\?xml-stylesheet[^>]*\shref\s*=\s*["']([^"']+)["'][^>]*\?>"#)?;
+  // Process each processing instruction individually to handle malformed cases
+  let xml_pi_regex = Regex::new(r#"(?s)<\?xml-stylesheet\s[^?]*?\?>"#)?;
+  let href_regex = Regex::new(r#"href\s*=\s*["']([^"']+)["']"#)?;
 
   // Extract dependencies from XML processing instructions
-  for caps in xml_stylesheet_regex.captures_iter(content) {
-    if let Some(href_match) = caps.get(1) {
-      let href = href_match.as_str();
-      if !href.is_empty() {
-        xml_dependencies.push(href.to_string());
+  for pi_match in xml_pi_regex.find_iter(content) {
+    let pi_content = pi_match.as_str();
+
+    // Only process xml-stylesheet instructions (not xml-not-a-stylesheet, etc.)
+    if pi_content.starts_with("<?xml-stylesheet") && pi_content.ends_with("?>") {
+      // Look for href within this specific processing instruction
+      if let Some(caps) = href_regex.captures(pi_content) {
+        if let Some(href_match) = caps.get(1) {
+          let href = href_match.as_str();
+          if !href.is_empty() {
+            xml_dependencies.push(href.to_string());
+          }
+        }
       }
     }
   }
 
-  // Keep XML processing instructions but they'll be processed later
-  Ok((content.as_bytes().to_vec(), xml_dependencies))
+  // Extract all XML processing instructions to preserve them
+  let all_pi_regex = Regex::new(r#"(?s)<\?[^?]*?\?>"#)?;
+  let mut processing_instructions = String::new();
+  for pi_match in all_pi_regex.find_iter(content) {
+    processing_instructions.push_str(pi_match.as_str());
+    processing_instructions.push('\n');
+  }
+
+  // Remove XML processing instructions from content for html5ever parsing
+  let svg_content_only = all_pi_regex.replace_all(content, "");
+
+  Ok((
+    svg_content_only.as_bytes().to_vec(),
+    xml_dependencies,
+    processing_instructions,
+  ))
 }
 
 fn serialize_svg(dom: RcDom) -> Result<Vec<u8>, Error> {
@@ -192,7 +229,7 @@ mod tests {
   <circle cx="50" cy="50" r="40"/>
 </svg>"#;
 
-    let (processed_content, xml_deps) =
+    let (processed_content, xml_deps, processing_instructions) =
       process_xml_processing_instructions(svg_with_xml.as_bytes()).unwrap();
 
     // Should extract both CSS dependencies
@@ -200,9 +237,12 @@ mod tests {
     assert!(xml_deps.contains(&"style.css".to_string()));
     assert!(xml_deps.contains(&"theme.css".to_string()));
 
-    // Content should be preserved
+    // Processing instructions should be extracted separately
+    assert!(processing_instructions.contains("<?xml-stylesheet"));
+
+    // Content should have processing instructions removed for parsing
     assert!(
-      String::from_utf8(processed_content)
+      !String::from_utf8(processed_content)
         .unwrap()
         .contains("<?xml-stylesheet")
     );
@@ -463,5 +503,115 @@ mod tests {
 
     // Should have dependencies for both href attributes
     assert_eq!(transformation.dependencies.len(), 2);
+  }
+
+  #[test]
+  fn test_xml_complex_integration_fixture() {
+    // This test matches the exact fixture from the complex XML test
+    let svg_content = r#"<?xml-stylesheet href="style1.css" type="text/css"?>
+<?xml-stylesheet
+  href="style2.css"
+  type="text/css"
+  media="screen"?>
+<?xml-stylesheet href='style3.css' type='text/css'?>
+<?xml-not-stylesheet href="should-not-process.css"?>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <text>Styled text</text>
+</svg>"#;
+
+    let (processed_content, xml_deps, processing_instructions) =
+      process_xml_processing_instructions(svg_content.as_bytes()).unwrap();
+
+    println!("Complex XML test - found {} dependencies:", xml_deps.len());
+    for dep in &xml_deps {
+      println!("  - {}", dep);
+    }
+
+    // JS version expects only 2 bundles, so only 2 stylesheets should be processed
+    // Let's see what we're actually finding
+    assert_eq!(
+      xml_deps.len(),
+      2,
+      "Expected 2 XML stylesheet dependencies to match JS behavior"
+    );
+  }
+
+  #[test]
+  fn test_xml_stylesheet_integration_fixture() {
+    // This test matches the exact fixture from svg-xml-stylesheet/img.svg
+    let svg_content = r#"<?xml-stylesheet href="style1.css"?>
+<?xml-stylesheet href="style2.css?>
+  <?xml-stylesheet
+    href
+    =
+    "style3.css"type="text/css"
+      ?>
+<?xml-not-a-stylesheet href="style4.css"?>
+<svg viewBox="0 0 240 80" xmlns="http://www.w3.org/2000/svg">
+  <text>Should be red and monospace</text>
+</svg>"#;
+
+    // Test XML processing instruction extraction
+    let (processed_content, xml_deps, processing_instructions) =
+      process_xml_processing_instructions(svg_content.as_bytes()).unwrap();
+
+    // Should extract exactly 2 dependencies: style1.css and style3.css
+    assert_eq!(
+      xml_deps.len(),
+      2,
+      "Should find exactly 2 XML stylesheet dependencies"
+    );
+    assert!(
+      xml_deps.contains(&"style1.css".to_string()),
+      "Should find style1.css"
+    );
+    assert!(
+      xml_deps.contains(&"style3.css".to_string()),
+      "Should find style3.css"
+    );
+
+    // Should NOT extract malformed or wrong instruction types
+    assert!(
+      !xml_deps.contains(&"style2.css".to_string()),
+      "Should NOT extract style2.css (malformed)"
+    );
+    assert!(
+      !xml_deps.contains(&"style4.css".to_string()),
+      "Should NOT extract style4.css from xml-not-a-stylesheet"
+    );
+
+    // Parse the SVG and run transformations
+    let mut dom = parse_svg(&processed_content).unwrap();
+    let context = create_test_context();
+    let transformation = run_svg_transformations(context, &mut dom).unwrap();
+
+    // No DOM dependencies expected in this SVG (just text content)
+    assert_eq!(
+      transformation.dependencies.len(),
+      0,
+      "No DOM dependencies expected"
+    );
+    assert_eq!(
+      transformation.discovered_assets.len(),
+      0,
+      "No inline assets expected"
+    );
+
+    // Processing instructions should be extracted separately
+    assert!(
+      processing_instructions.contains("<?xml-stylesheet"),
+      "XML processing instructions should be extracted"
+    );
+    assert!(
+      processing_instructions.contains("<?xml-not-a-stylesheet"),
+      "Non-stylesheet processing instructions should be extracted"
+    );
+
+    // Content should have processing instructions removed for parsing
+    let content_str = String::from_utf8(processed_content).unwrap();
+    assert!(
+      !content_str.contains("<?xml-stylesheet"),
+      "XML processing instructions should be removed from content for parsing"
+    );
   }
 }
