@@ -12,6 +12,7 @@ mod hoist;
 mod lazy_loading_transformer;
 mod magic_comments;
 mod node_replacer;
+mod sync_dynamic_import;
 pub mod test_utils;
 mod typeof_replacer;
 pub mod utils;
