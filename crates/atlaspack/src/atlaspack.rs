@@ -17,7 +17,7 @@ use tokio::sync::RwLock;
 use crate::WatchEvents;
 use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
-use crate::request_tracker::RequestTracker;
+use crate::request_tracker::{RequestNode, RequestTracker};
 use crate::requests::{AssetGraphRequest, RequestResult};
 
 pub struct AtlaspackInitOptions {
@@ -161,7 +161,7 @@ impl Atlaspack {
 }
 
 impl Atlaspack {
-  pub fn build_asset_graph(&self) -> anyhow::Result<Arc<AssetGraph>> {
+  pub fn build_asset_graph(&self) -> anyhow::Result<(Arc<AssetGraph>, bool)> {
     self.runtime.block_on(async move {
       let mut request_tracker = self.request_tracker.write().await;
 
@@ -174,8 +174,31 @@ impl Atlaspack {
           asset_graph_request_output.graph.clone()
         });
 
+      let incrementally_bundled_assets = request_tracker
+        .get_invalid_nodes()
+        .try_fold(
+          Vec::new(),
+          |mut invalid_nodes, invalid_node| match invalid_node {
+            RequestNode::Invalid(Some(result)) => match result.as_ref() {
+              RequestResult::Asset(_) => {
+                invalid_nodes.push(result.clone());
+                Ok(invalid_nodes)
+              }
+              RequestResult::AssetGraph(_) => Ok(invalid_nodes),
+              _ => Err(()),
+            },
+            _ => Err(()),
+          },
+        )
+        .ok();
+
+      let had_previous_graph = prev_asset_graph.is_some();
+
       let request_result = request_tracker
-        .run_request(AssetGraphRequest { prev_asset_graph })
+        .run_request(AssetGraphRequest {
+          prev_asset_graph,
+          incrementally_bundled_assets,
+        })
         .await?;
 
       let RequestResult::AssetGraph(asset_graph_request_output) = request_result.as_ref() else {
@@ -185,7 +208,7 @@ impl Atlaspack {
       let asset_graph = asset_graph_request_output.graph.clone();
       self.commit_assets(&asset_graph)?;
 
-      Ok(asset_graph)
+      Ok((asset_graph, had_previous_graph))
     })
   }
 

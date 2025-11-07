@@ -24,7 +24,6 @@ import type {
 import {toEnvironmentRef} from '../EnvironmentManager';
 import {getEnvironmentHash} from '../Environment';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
-import nullthrows from 'nullthrows';
 import assert from 'assert';
 
 type RunInput = {
@@ -42,6 +41,8 @@ type SerializedAssetGraphDelta = {
   nodes: Array<any>;
   edges: Array<string>;
   updates: Array<any>;
+  safeToSkipBundling: boolean;
+  hadPreviousGraph: boolean;
 };
 
 export function createAssetGraphRequestRust(
@@ -65,8 +66,12 @@ export function createAssetGraphRequestRust(
         JSON.parse(node),
       );
 
-      let prevResult =
-        await input.api.getPreviousResult<AssetGraphRequestResult>();
+      // Don't reuse a previous asset graph result if Rust didn't have one too
+      let prevResult = null;
+      if (serializedAssetGraph.hadPreviousGraph) {
+        prevResult =
+          await input.api.getPreviousResult<AssetGraphRequestResult>();
+      }
 
       let {assetGraph, changedAssets} = instrument(
         'atlaspack_v3_getAssetGraph',
@@ -119,7 +124,21 @@ export function getAssetGraph(
 } {
   let graph: AssetGraph;
 
-  if (prevAssetGraph && serializedGraph.updates.length > 0) {
+  let reuseEdges = false;
+
+  if (prevAssetGraph && serializedGraph.safeToSkipBundling) {
+    graph = new AssetGraph({
+      _contentKeyToNodeId: prevAssetGraph._contentKeyToNodeId,
+      _nodeIdToContentKey: prevAssetGraph._nodeIdToContentKey,
+      nodes: prevAssetGraph.nodes,
+      rootNodeId: prevAssetGraph.rootNodeId,
+      adjacencyList: prevAssetGraph.adjacencyList,
+    });
+    reuseEdges = true;
+  } else if (
+    prevAssetGraph &&
+    (serializedGraph.updates.length > 0 || serializedGraph.nodes.length > 0)
+  ) {
     graph = new AssetGraph({
       _contentKeyToNodeId: prevAssetGraph._contentKeyToNodeId,
       _nodeIdToContentKey: prevAssetGraph._nodeIdToContentKey,
@@ -129,6 +148,7 @@ export function getAssetGraph(
       initialNodeCapacity: prevAssetGraph.nodes.length + 1,
       rootNodeId: prevAssetGraph.rootNodeId,
     });
+    graph.safeToIncrementallyBundle = false;
   } else {
     graph = new AssetGraph({
       _contentKeyToNodeId: new Map(),
@@ -145,12 +165,11 @@ export function getAssetGraph(
     });
 
     graph.setRootNodeId(rootNodeId);
+    graph.safeToIncrementallyBundle = false;
   }
 
   invariant(graph, 'Asset graph not initialized');
   invariant(graph.rootNodeId != null, 'Asset graph has no root node');
-
-  graph.safeToIncrementallyBundle = false;
 
   // @ts-expect-error TS7031
   function mapSymbols({exported, ...symbol}) {
@@ -307,21 +326,23 @@ export function getAssetGraph(
     }
   }
 
-  for (let i = 0; i < serializedGraph.edges.length; i += 2) {
-    let from = serializedGraph.edges[i];
-    let to = serializedGraph.edges[i + 1];
-    let fromNode = graph.getNode(from);
-    let toNode = graph.getNode(to);
+  if (!reuseEdges) {
+    for (let i = 0; i < serializedGraph.edges.length; i += 2) {
+      let from = serializedGraph.edges[i];
+      let to = serializedGraph.edges[i + 1];
+      let fromNode = graph.getNode(from);
+      let toNode = graph.getNode(to);
 
-    if (fromNode?.type === 'dependency') {
-      invariant(toNode?.type === 'asset');
+      if (fromNode?.type === 'dependency') {
+        invariant(toNode?.type === 'asset');
+      }
+
+      if (fromNode?.type === 'asset' && toNode?.type === 'dependency') {
+        fromNode.value.dependencies.set(toNode.value.id, toNode.value);
+      }
+
+      graph.addEdge(from, to);
     }
-
-    if (fromNode?.type === 'asset' && toNode?.type === 'dependency') {
-      fromNode.value.dependencies.set(toNode.value.id, toNode.value);
-    }
-
-    graph.addEdge(from, to);
   }
 
   return {

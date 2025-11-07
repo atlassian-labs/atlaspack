@@ -198,6 +198,13 @@ impl RequestTracker {
     self.get_request(request_id)
   }
 
+  pub fn get_invalid_nodes(&self) -> impl Iterator<Item = &RequestNode> {
+    self
+      .invalid_nodes
+      .iter()
+      .map(|node_index| &self.graph[*node_index])
+  }
+
   /// Before a request is run, a 'pending' [`RequestNode::Incomplete`] entry is added to the graph.
   fn prepare_request(&mut self, request_id: u64) -> anyhow::Result<Option<Arc<RequestResult>>> {
     let node_index = *self
