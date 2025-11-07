@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use html5ever::serialize::SerializeOpts;
 use html5ever::tendril::TendrilSink;
 use html5ever::{ParseOpts, serialize};
+use markup5ever::{local_name, namespace_url, ns};
 use markup5ever_rcdom::{RcDom, SerializableHandle};
 use regex::Regex;
 
@@ -107,7 +108,7 @@ fn process_xml_processing_instructions(
   // Handle <?xml-stylesheet?> processing instructions
   // Process each processing instruction individually to handle malformed cases
   let xml_pi_regex = Regex::new(r#"(?s)<\?xml-stylesheet\s[^?]*?\?>"#)?;
-  let href_regex = Regex::new(r#"href\s*=\s*["']([^"']+)["']"#)?;
+  let href_regex = Regex::new(r#"href\s*=\s*"([^"]+)""#)?; // Only match double quotes to match JS behavior
 
   // Extract dependencies from XML processing instructions
   for pi_match in xml_pi_regex.find_iter(content) {
@@ -146,22 +147,39 @@ fn process_xml_processing_instructions(
 }
 
 fn serialize_svg(dom: RcDom) -> Result<Vec<u8>, Error> {
+  // Serialize the entire document and extract the SVG content
   let document: SerializableHandle = dom.document.clone().into();
   let mut output_bytes = vec![];
   let options = SerializeOpts::default();
   serialize(&mut output_bytes, &document, options)?;
-  Ok(output_bytes)
+
+  let full_html = String::from_utf8(output_bytes)?;
+
+  // Extract just the SVG content from the HTML wrapper
+  if let Some(svg_start) = full_html.find("<svg") {
+    if let Some(svg_end) = full_html.rfind("</svg>") {
+      let svg_content = &full_html[svg_start..svg_end + 6]; // +6 for "</svg>"
+      return Ok(svg_content.as_bytes().to_vec());
+    }
+  }
+
+  // Fallback: return the full content if we can't extract SVG
+  Ok(full_html.as_bytes().to_vec())
 }
 
 fn parse_svg(bytes: &[u8]) -> Result<RcDom, Error> {
   let mut bytes = BufReader::new(bytes);
   let options = ParseOpts::default();
   let dom = RcDom::default();
-  // Parse as HTML since html5ever doesn't have a specific SVG parser
-  // but SVG elements are part of the HTML5 spec
-  let dom = html5ever::parse_document(dom, options)
-    .from_utf8()
-    .read_from(&mut bytes)?;
+  // Parse as HTML fragment to avoid wrapping in <html><body>
+  let dom = html5ever::parse_fragment(
+    dom,
+    options,
+    html5ever::QualName::new(None, ns!(html), local_name!("svg")),
+    vec![],
+  )
+  .from_utf8()
+  .read_from(&mut bytes)?;
   Ok(dom)
 }
 
@@ -528,15 +546,16 @@ mod tests {
 
     // JS version expects only 2 bundles, so only 2 stylesheets should be processed
     // Let's see what we're actually finding
-    // Native version finds all 3 valid stylesheets (more comprehensive than JS)
+    // Matches JS behavior: only processes double-quoted href attributes
     assert_eq!(
       xml_deps.len(),
-      3,
-      "Native transformer finds all valid XML stylesheets"
+      2,
+      "Should match JS behavior of processing only double-quoted hrefs"
     );
     assert!(xml_deps.contains(&"style1.css".to_string()));
     assert!(xml_deps.contains(&"style2.css".to_string()));
-    assert!(xml_deps.contains(&"style3.css".to_string()));
+    // style3.css uses single quotes so is excluded to match JS behavior
+    assert!(!xml_deps.contains(&"style3.css".to_string()));
   }
 
   #[test]
