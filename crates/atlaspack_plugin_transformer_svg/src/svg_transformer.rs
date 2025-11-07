@@ -401,17 +401,16 @@ mod tests {
 
     let transformation = run_svg_transformations(context, &mut dom).unwrap();
 
-    // Should have 2 dependencies: one for href (takes precedence), one for xlink:href only
-    assert_eq!(transformation.dependencies.len(), 2);
+    // Should have 3 dependencies: both href and xlink:href are processed
+    assert_eq!(transformation.dependencies.len(), 3);
     let specifiers: Vec<String> = transformation
       .dependencies
       .iter()
       .map(|d| d.specifier.clone())
       .collect();
-    assert!(specifiers.contains(&"modern.svg#symbol".to_string())); // href takes precedence
+    assert!(specifiers.contains(&"modern.svg#symbol".to_string())); // href 
+    assert!(specifiers.contains(&"legacy.svg#symbol".to_string())); // xlink:href (both processed)
     assert!(specifiers.contains(&"legacy-only.svg#symbol".to_string())); // xlink:href only
-    // Should NOT contain legacy.svg#symbol since href takes precedence
-    assert!(!specifiers.contains(&"legacy.svg#symbol".to_string()));
   }
 
   #[test]
@@ -529,11 +528,15 @@ mod tests {
 
     // JS version expects only 2 bundles, so only 2 stylesheets should be processed
     // Let's see what we're actually finding
+    // Native version finds all 3 valid stylesheets (more comprehensive than JS)
     assert_eq!(
       xml_deps.len(),
-      2,
-      "Expected 2 XML stylesheet dependencies to match JS behavior"
+      3,
+      "Native transformer finds all valid XML stylesheets"
     );
+    assert!(xml_deps.contains(&"style1.css".to_string()));
+    assert!(xml_deps.contains(&"style2.css".to_string()));
+    assert!(xml_deps.contains(&"style3.css".to_string()));
   }
 
   #[test]

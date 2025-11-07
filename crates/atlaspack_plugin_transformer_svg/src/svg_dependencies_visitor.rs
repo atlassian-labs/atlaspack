@@ -178,27 +178,41 @@ impl SvgDependenciesVisitor {
       return Ok(());
     }
 
-    // href takes precedence over xlink:href
-    let href_value = attrs.get(expanded_name!("", "href")).or_else(|| {
-      attrs.get(ExpandedName {
-        ns: &namespace_url!("http://www.w3.org/1999/xlink"),
-        local: &local_name!("href"),
-      })
-    });
+    // Process both href and xlink:href (both create dependencies, href takes precedence for URL rewriting)
 
-    if let Some(href) = href_value {
+    // Process href first
+    if let Some(href) = attrs.get(expanded_name!("", "href")) {
       let href_str = href.to_string();
       if href_str.is_empty() {
         return Err(format!("'href' should not be empty string"));
       }
 
       // Skip fragment-only references and absolute paths
-      if href_str.starts_with("#") || href_str.starts_with("/") {
-        return Ok(());
+      if !href_str.starts_with("#") && !href_str.starts_with("/") {
+        let dependency_id = self.add_url_dependency(href_str);
+        attrs.set(expanded_name!("", "href"), &dependency_id);
+      }
+    }
+
+    // Also process xlink:href (even if href exists)
+    if let Some(xlink_href) = attrs.get(ExpandedName {
+      ns: &namespace_url!("http://www.w3.org/1999/xlink"),
+      local: &local_name!("href"),
+    }) {
+      let href_str = xlink_href.to_string();
+      if href_str.is_empty() {
+        return Err(format!("'href' should not be empty string"));
       }
 
-      let dependency_id = self.add_url_dependency(href_str);
-      attrs.set(expanded_name!("", "href"), &dependency_id);
+      // Skip fragment-only references and absolute paths
+      if !href_str.starts_with("#") && !href_str.starts_with("/") {
+        let dependency_id = self.add_url_dependency(href_str);
+        let xlink_href_name = ExpandedName {
+          ns: &namespace_url!("http://www.w3.org/1999/xlink"),
+          local: &local_name!("href"),
+        };
+        attrs.set(xlink_href_name, &dependency_id);
+      }
     }
 
     Ok(())
