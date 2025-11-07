@@ -99,6 +99,14 @@ impl UnusedBindingsRemover {
       _ => true,
     }
   }
+  fn should_keep_import_spec(&self, spec: &ImportSpecifier) -> bool {
+    let id = match spec {
+      ImportSpecifier::Named(named) => &named.local,
+      ImportSpecifier::Default(default) => &default.local,
+      ImportSpecifier::Namespace(ns) => &ns.local,
+    };
+    self.should_keep_binding(&id.to_id(), false)
+  }
 
   /// Runs multiple passes of unused binding elimination until no more progress can be made.
   /// Each pass collects declarations, collects usages, then removes unused bindings.
@@ -416,12 +424,19 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
     }
   }
 
+  // Visit function parameters to explicitly handle default values in patterns
+  fn visit_param(&mut self, param: &Param) {
+    self.visit_pat(&param.pat);
+  }
+
   // Don't visit patterns (they're declarations, not references)
   // But we need to visit default values in patterns
   fn visit_pat(&mut self, pat: &Pat) {
     match pat {
       Pat::Assign(assign) => {
-        // Visit the default value (right side) to collect any usages within it
+        // First, visit the left side to handle nested patterns with defaults
+        self.visit_pat(&assign.left);
+        // Then visit the default value (right side) to collect any usages within it
         assign.right.visit_with(self);
       }
       Pat::Object(obj) => {
@@ -432,6 +447,10 @@ impl swc_core::ecma::visit::Visit for BindingCollector<'_> {
               // Visit computed property keys like { [key]: value }
               if let PropName::Computed(computed) = &kv.key {
                 computed.expr.visit_with(self);
+              }
+              // Visit default values in nested patterns like { b: b = foo }
+              if let Pat::Assign(assign) = &*kv.value {
+                assign.right.visit_with(self);
               }
             }
             ObjectPatProp::Assign(assign) => {
@@ -485,8 +504,11 @@ impl VisitMut for UnusedBindingsRemover {
     self.cleanup_empty_var_decls(stmts);
   }
 
-  // Import cleaning is currently disabled (always keeps all imports)
-  // TODO: Re-implement light import cleaning if needed
+  fn visit_mut_import_decl(&mut self, import: &mut ImportDecl) {
+    import
+      .specifiers
+      .retain(|spec| self.should_keep_import_spec(spec));
+  }
 
   fn visit_mut_for_in_stmt(&mut self, node: &mut ForInStmt) {
     // Never visit the loop variable (node.left) since it is always necessary
@@ -670,6 +692,58 @@ mod tests {
       indoc! {r#"
         const { a: { b: { c } }, f } = obj;
         console.log(c, f);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_handles_destructuring_alias_default() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        import { foo } from "foo";
+        const { a, b: b = foo } = obj;
+        console.log(a, b);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        import { foo } from "foo";
+        const { a, b: b = foo } = obj;
+        console.log(a, b);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_handles_destructuring_alias_default_constructor() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        import { foo } from "foo";
+        class Foo {
+          constructor({ a, b: b = foo } = {}) {
+            this.a = a;
+            this.b = b;
+          }
+        }
+        console.log(new Foo());
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        import { foo } from "foo";
+        class Foo {
+            constructor({ a, b: b = foo } = {}){
+                this.a = a;
+                this.b = b;
+            }
+        }
+        console.log(new Foo());
       "#}
     );
   }
