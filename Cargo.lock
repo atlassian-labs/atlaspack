@@ -262,6 +262,7 @@ dependencies = [
  "atlaspack_plugin_transformer_js",
  "atlaspack_plugin_transformer_json",
  "atlaspack_plugin_transformer_raw",
+ "atlaspack_plugin_transformer_svg",
  "atlaspack_plugin_transformer_yaml",
  "atlaspack_sourcemap",
  "dyn-hash",
@@ -714,6 +715,24 @@ dependencies = [
  "async-trait",
  "atlaspack_core",
  "atlaspack_filesystem",
+ "tokio",
+]
+
+[[package]]
+name = "atlaspack_plugin_transformer_svg"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "atlaspack_core",
+ "atlaspack_filesystem",
+ "html5ever",
+ "markup5ever",
+ "markup5ever_rcdom",
+ "pretty_assertions",
+ "regex",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 

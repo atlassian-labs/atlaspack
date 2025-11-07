@@ -1,0 +1,429 @@
+use std::hash::{Hash, Hasher};
+use std::path::PathBuf;
+use std::rc::Rc;
+use std::sync::Arc;
+
+use atlaspack_core::types::{Environment, JSONObject};
+use markup5ever::{ExpandedName, LocalName, expanded_name, local_name, namespace_url, ns};
+use markup5ever_rcdom::{Handle, NodeData};
+use regex::Regex;
+
+use atlaspack_core::{
+  hash::IdentifierHasher,
+  types::{
+    Asset, AssetWithDependencies, BundleBehavior, Code, Dependency, DependencyBuilder, FileType,
+    Priority, SourceType, SpecifierType,
+  },
+};
+
+use crate::{
+  attrs::Attrs,
+  dom_visitor::{DomTraversalOperation, DomVisitor},
+  svg_transformer::SVGTransformationContext,
+};
+
+/// Find all SVG dependencies including functional IRIs, href attributes, and inline assets
+#[derive(Default)]
+pub struct SvgDependenciesVisitor {
+  context: Rc<SVGTransformationContext>,
+  pub dependencies: Vec<Dependency>,
+  pub discovered_assets: Vec<AssetWithDependencies>,
+  func_iri_regex: Option<Regex>,
+  pub errors: Vec<String>,
+}
+
+impl SvgDependenciesVisitor {
+  pub fn new(context: Rc<SVGTransformationContext>) -> Self {
+    let func_iri_regex =
+      Regex::new(r#"url\(\s*(?:['"]([^'"]*?)['"]|([^)]*?))\s*(?:\s+[^)]+)?\)"#).ok();
+
+    SvgDependenciesVisitor {
+      context,
+      func_iri_regex,
+      errors: Vec::new(),
+      ..Default::default()
+    }
+  }
+
+  fn add_url_dependency(&mut self, specifier: String) -> String {
+    let dependency = DependencyBuilder::default()
+      .env(self.context.env.clone())
+      .priority(Priority::Sync)
+      .source_asset_id(self.context.source_asset_id.clone())
+      .source_asset_type(FileType::Other("svg".to_string()))
+      .source_path_option(self.context.source_path.clone())
+      .specifier(specifier)
+      .specifier_type(SpecifierType::Url)
+      .build();
+
+    let dependency_id = dependency.id();
+    self.dependencies.push(dependency);
+    dependency_id
+  }
+
+  fn parse_func_iri(&self, value: &str) -> Option<String> {
+    if let Some(ref regex) = self.func_iri_regex {
+      if let Some(caps) = regex.captures(value) {
+        // Return the first non-empty capture group (quoted or unquoted)
+        caps
+          .get(1)
+          .or_else(|| caps.get(2))
+          .map(|m| m.as_str().trim().to_string())
+          .filter(|s| !s.is_empty())
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  }
+
+  fn process_functional_iri_attributes(&mut self, attrs: &mut Attrs) {
+    // List of attributes that can contain functional IRI references
+    let func_iri_attrs = [
+      expanded_name!("", "fill"),
+      expanded_name!("", "stroke"),
+      expanded_name!("", "clip-path"),
+      expanded_name!("", "color-profile"),
+      expanded_name!("", "cursor"),
+      expanded_name!("", "filter"),
+      expanded_name!("", "marker"),
+      expanded_name!("", "marker-start"),
+      expanded_name!("", "marker-mid"),
+      expanded_name!("", "marker-end"),
+      expanded_name!("", "mask"),
+      // SVG2 attributes that may not be predefined
+      ExpandedName {
+        ns: &ns!(),
+        local: &LocalName::from("shape-inside"),
+      },
+      ExpandedName {
+        ns: &ns!(),
+        local: &LocalName::from("shape-subtract"),
+      },
+      ExpandedName {
+        ns: &ns!(),
+        local: &LocalName::from("mask-image"),
+      },
+    ];
+
+    for attr_name in &func_iri_attrs {
+      if let Some(attr_value) = attrs.get(*attr_name) {
+        if let Some(url) = self.parse_func_iri(attr_value) {
+          if !url.is_empty() {
+            let _dependency_id = self.add_url_dependency(url);
+            // Note: We don't rewrite functional IRIs in SVG like we do with regular URLs
+            // They remain as-is for the SVG renderer to handle
+          }
+        }
+      }
+    }
+  }
+
+  fn process_href_attributes(
+    &mut self,
+    attrs: &mut Attrs,
+    element_name: &str,
+  ) -> Result<(), String> {
+    // Elements that support href/xlink:href attributes
+    let href_elements = [
+      "a",
+      "altGlyph",
+      "animate",
+      "animateMotion",
+      "animateTransform",
+      "circle",
+      "cursor",
+      "defs",
+      "desc",
+      "ellipse",
+      "feImage",
+      "filter",
+      "font-face-uri",
+      "foreignObject",
+      "g",
+      "glyphRef",
+      "image",
+      "line",
+      "linearGradient",
+      "mpath",
+      "path",
+      "pattern",
+      "polygon",
+      "polyline",
+      "radialGradient",
+      "rect",
+      "script",
+      "set",
+      "stop",
+      "style",
+      "svg",
+      "switch",
+      "symbol",
+      "text",
+      "textPath",
+      "title",
+      "tref",
+      "tspan",
+      "use",
+      "view",
+      "color-profile",
+    ];
+
+    if !href_elements.contains(&element_name) {
+      return Ok(());
+    }
+
+    // href takes precedence over xlink:href
+    let href_value = attrs.get(expanded_name!("", "href")).or_else(|| {
+      attrs.get(ExpandedName {
+        ns: &namespace_url!("http://www.w3.org/1999/xlink"),
+        local: &local_name!("href"),
+      })
+    });
+
+    if let Some(href) = href_value {
+      let href_str = href.to_string();
+      if href_str.is_empty() {
+        return Err(format!("'href' should not be empty string"));
+      }
+
+      // Skip fragment-only references and absolute paths
+      if href_str.starts_with("#") || href_str.starts_with("/") {
+        return Ok(());
+      }
+
+      let dependency_id = self.add_url_dependency(href_str);
+      attrs.set(expanded_name!("", "href"), &dependency_id);
+    }
+
+    Ok(())
+  }
+
+  fn inline_asset_id(&self) -> String {
+    let mut hasher = IdentifierHasher::default();
+    self.context.source_asset_id.hash(&mut hasher);
+    self.discovered_assets.len().hash(&mut hasher);
+    // Ids must be 16 characters for scope hoisting to replace imports correctly
+    format!("{:016x}", hasher.finish())
+  }
+
+  fn determine_script_type(&self, attrs: &Attrs) -> (FileType, SourceType) {
+    if let Some(script_type) = attrs.get(expanded_name!("", "type")) {
+      let script_type_str = script_type.to_string();
+
+      // Handle known script types
+      match script_type_str.as_str() {
+        "application/ecmascript" | "application/javascript" | "text/javascript" => {
+          (FileType::Js, SourceType::Script)
+        }
+        "module" => (FileType::Js, SourceType::Module),
+        _ => {
+          // Fallback: split by '/' and take the last part
+          if let Some(last_part) = script_type_str.split('/').last() {
+            (FileType::from_extension(last_part), SourceType::Script)
+          } else {
+            (FileType::Js, SourceType::Script)
+          }
+        }
+      }
+    } else {
+      (FileType::Js, SourceType::Script)
+    }
+  }
+
+  fn determine_style_type(&self, attrs: &Attrs) -> FileType {
+    if let Some(style_type) = attrs.get(expanded_name!("", "type")) {
+      let style_type_str = style_type.to_string();
+
+      // Split by '/' and take the last part (e.g., "text/scss" -> "scss")
+      if let Some(last_part) = style_type_str.split('/').last() {
+        match last_part {
+          "scss" => FileType::Other("scss".to_string()),
+          "sass" => FileType::Other("sass".to_string()),
+          _ => FileType::Css,
+        }
+      } else {
+        FileType::Css
+      }
+    } else {
+      FileType::Css
+    }
+  }
+}
+
+impl DomVisitor for SvgDependenciesVisitor {
+  fn visit_node(&mut self, node: Handle) -> DomTraversalOperation {
+    if let NodeData::Element { name, attrs, .. } = &node.data {
+      let mut attrs = attrs.borrow_mut();
+      let mut attrs = Attrs::new(&mut attrs);
+      let element_name = name.local.to_string();
+
+      // Process functional IRI attributes (fill, stroke, etc.)
+      self.process_functional_iri_attributes(&mut attrs);
+
+      match name.expanded() {
+        expanded_name!(html "script") | expanded_name!(svg "script") => {
+          // Handle external scripts with href attribute (SVG style)
+          if let Some(href) = attrs.get(expanded_name!("", "href")) {
+            let href_str = href.to_string();
+            if !href_str.is_empty() {
+              let dependency_id = self.add_url_dependency(href_str);
+              attrs.set(expanded_name!("", "href"), &dependency_id);
+            }
+            attrs.delete(expanded_name!("", "type"));
+            return DomTraversalOperation::Continue;
+          }
+
+          // Handle external scripts with src attribute (HTML style)
+          if let Some(src) = attrs.get(expanded_name!("", "src")) {
+            let src_str = src.to_string();
+            if !src_str.is_empty() {
+              let dependency_id = self.add_url_dependency(src_str);
+              attrs.set(expanded_name!("", "src"), &dependency_id);
+            }
+            attrs.delete(expanded_name!("", "type"));
+            return DomTraversalOperation::Continue;
+          }
+
+          // Handle inline scripts (only if no href or src)
+          let (file_type, source_type) = self.determine_script_type(&attrs);
+
+          // Use existing data-parcel-key or generate new one
+          let data_parcel_key_name = ExpandedName {
+            ns: &ns!(),
+            local: &LocalName::from("data-parcel-key"),
+          };
+          let specifier = if let Some(existing_key) = attrs.get(data_parcel_key_name) {
+            existing_key.to_string()
+          } else {
+            self.inline_asset_id()
+          };
+
+          attrs.set(data_parcel_key_name, &specifier);
+          attrs.delete(expanded_name!("", "type"));
+
+          let env = Arc::new(Environment {
+            source_type,
+            ..(*self.context.env).clone()
+          });
+
+          let new_dependency = DependencyBuilder::default()
+            .bundle_behavior(Some(BundleBehavior::Inline))
+            .env(env.clone())
+            .source_asset_id(self.context.source_asset_id.clone())
+            .source_asset_type(FileType::Other("svg".to_string()))
+            .source_path_option(self.context.source_path.clone())
+            .specifier(specifier.clone())
+            .specifier_type(SpecifierType::default())
+            .priority(Priority::default())
+            .build();
+
+          self.dependencies.push(new_dependency);
+
+          let mut new_asset = Asset::new_inline(
+            Code::new(text_content(&node)),
+            env.clone(),
+            inline_asset_file_path(&self.context.source_path, &file_type),
+            file_type,
+            JSONObject::new(),
+            &self.context.project_root,
+            self.context.side_effects,
+            Some(specifier),
+            Some(BundleBehavior::Inline),
+          );
+          new_asset.css_dependency_type = Some("tag".into());
+
+          self.discovered_assets.push(AssetWithDependencies {
+            asset: new_asset,
+            dependencies: Vec::new(),
+          });
+        }
+        expanded_name!(html "style") | expanded_name!(svg "style") => {
+          let file_type = self.determine_style_type(&attrs);
+
+          // Use existing data-parcel-key or generate new one
+          let data_parcel_key_name = ExpandedName {
+            ns: &ns!(),
+            local: &LocalName::from("data-parcel-key"),
+          };
+          let specifier = if let Some(existing_key) = attrs.get(data_parcel_key_name) {
+            existing_key.to_string()
+          } else {
+            self.inline_asset_id()
+          };
+
+          attrs.set(data_parcel_key_name, &specifier);
+          attrs.delete(expanded_name!("", "type"));
+
+          let new_dependency = DependencyBuilder::default()
+            .env(self.context.env.clone())
+            .source_asset_id(self.context.source_asset_id.clone())
+            .source_asset_type(FileType::Other("svg".to_string()))
+            .source_path_option(self.context.source_path.clone())
+            .specifier(specifier.clone())
+            .specifier_type(SpecifierType::default())
+            .priority(Priority::Sync)
+            .bundle_behavior(Some(BundleBehavior::Inline))
+            .build();
+
+          self.dependencies.push(new_dependency);
+
+          let mut new_asset = Asset::new_inline(
+            Code::new(text_content(&node)),
+            self.context.env.clone(),
+            inline_asset_file_path(&self.context.source_path, &file_type),
+            file_type,
+            JSONObject::new(),
+            &self.context.project_root,
+            self.context.side_effects,
+            Some(specifier),
+            Some(BundleBehavior::Inline),
+          );
+          new_asset.css_dependency_type = Some("tag".into());
+
+          self.discovered_assets.push(AssetWithDependencies {
+            asset: new_asset,
+            dependencies: Vec::new(),
+          });
+        }
+        _ => {
+          // For other elements, process href attributes
+          if let Err(error) = self.process_href_attributes(&mut attrs, &element_name) {
+            self.errors.push(error);
+            return DomTraversalOperation::Stop;
+          }
+        }
+      }
+    }
+
+    DomTraversalOperation::Continue
+  }
+}
+
+fn inline_asset_file_path(source_asset_path: &Option<PathBuf>, file_type: &FileType) -> PathBuf {
+  source_asset_path
+    .clone()
+    .unwrap_or_else(|| PathBuf::from(format!("index.{}", file_type.extension())))
+}
+
+/// Retrieves the text content of the node
+fn text_content(node: &Handle) -> Vec<u8> {
+  let mut content = Vec::new();
+  collect_text_content(node, &mut content);
+  content
+}
+
+fn collect_text_content(node: &Handle, content: &mut Vec<u8>) {
+  match &node.data {
+    NodeData::Text { contents } => {
+      content.extend_from_slice(contents.borrow().as_bytes());
+    }
+    NodeData::Element { .. } => {
+      for child in node.children.borrow().iter() {
+        collect_text_content(child, content);
+      }
+    }
+    _ => {}
+  }
+}
