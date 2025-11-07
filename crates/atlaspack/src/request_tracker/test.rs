@@ -444,12 +444,12 @@ impl Request for TestExecuteRequest {
           invalidations: vec![],
         })
       }
-      _ => Err(anyhow::anyhow!("Unexpected result type")),
+      _ => Err(anyhow::anyhow!("Unexpected result type").into()),
     }
   }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_execute_request() {
   let mut graph = request_tracker(Default::default());
 
