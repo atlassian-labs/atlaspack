@@ -35,7 +35,8 @@ pub struct SvgDependenciesVisitor {
 impl SvgDependenciesVisitor {
   pub fn new(context: Rc<SVGTransformationContext>) -> Self {
     let func_iri_regex =
-      Regex::new(r#"url\(\s*(?:['"]([^'"]*?)['"]|([^)]*?))\s*(?:\s+[^)]+)?\)"#).ok();
+      Regex::new(r#"url\(\s*(?:['"]([^'"\\]*(?:\\.[^'"\\]*)*)['"]|([^)]*?))\s*(?:\s+[^)]+)?\)"#)
+        .ok();
 
     SvgDependenciesVisitor {
       context,
@@ -70,7 +71,7 @@ impl SvgDependenciesVisitor {
           .or_else(|| caps.get(2))
           .map(|m| {
             let url = m.as_str().trim();
-            // Unescape common escape sequences
+            // Unescape common escape sequences (the regex already extracts content inside quotes)
             url.replace("\\'", "'").replace("\\\"", "\"")
           })
           .filter(|s| !s.is_empty())
