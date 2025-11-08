@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use atlaspack_core::types::{Environment, JSONObject};
+use atlaspack_core::types::Environment;
 use markup5ever::{ExpandedName, LocalName, expanded_name, local_name, namespace_url, ns};
 use markup5ever_rcdom::{Handle, NodeData};
 use regex::Regex;
@@ -11,7 +11,7 @@ use regex::Regex;
 use atlaspack_core::{
   hash::IdentifierHasher,
   types::{
-    Asset, AssetWithDependencies, BundleBehavior, Code, Dependency, DependencyBuilder, FileType,
+    Asset, AssetWithDependencies, BundleBehavior, Dependency, DependencyBuilder, FileType,
     Priority, SourceType, SpecifierType,
   },
 };
@@ -268,6 +268,60 @@ impl SvgDependenciesVisitor {
       FileType::Css
     }
   }
+
+  fn process_style_attribute_as_asset(&mut self, attrs: &mut Attrs) {
+    // Create CSS asset for style attributes to match JS transformer behavior
+    if let Some(style_content) = attrs.get(expanded_name!("", "style")) {
+      let style_str = style_content.to_string();
+      if !style_str.trim().is_empty() {
+        // Create dependency and corresponding CSS asset
+        let specifier = self.inline_asset_id();
+
+        let new_dependency = DependencyBuilder::default()
+          .env(self.context.env.clone())
+          .source_asset_id(self.context.source_asset_id.clone())
+          .source_asset_type(FileType::Other("svg".to_string()))
+          .source_path_option(self.context.source_path.clone())
+          .specifier(specifier.clone())
+          .specifier_type(SpecifierType::default())
+          .priority(Priority::Sync)
+          .bundle_behavior(Some(BundleBehavior::Inline))
+          .build();
+
+        self.dependencies.push(new_dependency);
+
+        // Create CSS asset for style attribute using new_discovered to inherit source asset identity
+        // Wrap style attribute content in a valid CSS rule for lightningcss
+        let css_content = format!("* {{ {} }}", style_str);
+
+        // Create a temporary source asset to pass to new_discovered
+        let source_asset = Asset {
+          file_path: self
+            .context
+            .source_path
+            .clone()
+            .unwrap_or_else(|| PathBuf::from("index.svg")),
+          env: self.context.env.clone(),
+          side_effects: self.context.side_effects,
+          ..Asset::default()
+        };
+
+        let mut new_asset = Asset::new_discovered(
+          css_content,
+          FileType::Css,
+          &self.context.project_root,
+          &source_asset,
+          Some(specifier),
+        );
+        new_asset.bundle_behavior = Some(BundleBehavior::Inline);
+
+        self.discovered_assets.push(AssetWithDependencies {
+          asset: new_asset,
+          dependencies: Vec::new(),
+        });
+      }
+    }
+  }
 }
 
 impl DomVisitor for SvgDependenciesVisitor {
@@ -279,6 +333,9 @@ impl DomVisitor for SvgDependenciesVisitor {
 
       // Process functional IRI attributes (fill, stroke, etc.)
       self.process_functional_iri_attributes(&mut attrs);
+
+      // Process style attributes as inline CSS assets (like JS implementation)
+      self.process_style_attribute_as_asset(&mut attrs);
 
       match name.expanded() {
         expanded_name!(html "script") | expanded_name!(svg "script") => {
@@ -347,17 +404,26 @@ impl DomVisitor for SvgDependenciesVisitor {
 
           self.dependencies.push(new_dependency);
 
-          let mut new_asset = Asset::new_inline(
-            Code::new(text_content(&node)),
-            env.clone(),
-            inline_asset_file_path(&self.context.source_path, &file_type),
+          // Create a temporary source asset to pass to new_discovered
+          let source_asset = Asset {
+            file_path: self
+              .context
+              .source_path
+              .clone()
+              .unwrap_or_else(|| PathBuf::from("index.svg")),
+            env: env.clone(),
+            side_effects: self.context.side_effects,
+            ..Asset::default()
+          };
+
+          let mut new_asset = Asset::new_discovered(
+            String::from_utf8_lossy(&text_content(&node)).to_string(),
             file_type,
-            JSONObject::new(),
             &self.context.project_root,
-            self.context.side_effects,
+            &source_asset,
             Some(specifier),
-            Some(BundleBehavior::Inline),
           );
+          new_asset.bundle_behavior = Some(BundleBehavior::Inline);
           new_asset.css_dependency_type = Some("tag".into());
 
           self.discovered_assets.push(AssetWithDependencies {
@@ -395,17 +461,26 @@ impl DomVisitor for SvgDependenciesVisitor {
 
           self.dependencies.push(new_dependency);
 
-          let mut new_asset = Asset::new_inline(
-            Code::new(text_content(&node)),
-            self.context.env.clone(),
-            inline_asset_file_path(&self.context.source_path, &file_type),
+          // Create a temporary source asset to pass to new_discovered
+          let source_asset = Asset {
+            file_path: self
+              .context
+              .source_path
+              .clone()
+              .unwrap_or_else(|| PathBuf::from("index.svg")),
+            env: self.context.env.clone(),
+            side_effects: self.context.side_effects,
+            ..Asset::default()
+          };
+
+          let mut new_asset = Asset::new_discovered(
+            String::from_utf8_lossy(&text_content(&node)).to_string(),
             file_type,
-            JSONObject::new(),
             &self.context.project_root,
-            self.context.side_effects,
+            &source_asset,
             Some(specifier),
-            Some(BundleBehavior::Inline),
           );
+          new_asset.bundle_behavior = Some(BundleBehavior::Inline);
           new_asset.css_dependency_type = Some("tag".into());
 
           self.discovered_assets.push(AssetWithDependencies {
@@ -425,12 +500,6 @@ impl DomVisitor for SvgDependenciesVisitor {
 
     DomTraversalOperation::Continue
   }
-}
-
-fn inline_asset_file_path(source_asset_path: &Option<PathBuf>, file_type: &FileType) -> PathBuf {
-  source_asset_path
-    .clone()
-    .unwrap_or_else(|| PathBuf::from(format!("index.{}", file_type.extension())))
 }
 
 /// Retrieves the text content of the node

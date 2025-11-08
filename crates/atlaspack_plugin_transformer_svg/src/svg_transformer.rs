@@ -559,6 +559,62 @@ mod tests {
   }
 
   #[test]
+  fn test_style_attribute_processing_debug() {
+    // Test the exact SVG from the failing integration test
+    let svg_content = r#"<svg viewBox="0 0 240 80" xmlns="http://www.w3.org/2000/svg">
+  <style>@import './test.css';</style>
+  <text style="fill: url(../svg/gradient.svg#myGradient)">Test</text>
+  <script type="module">import '../svg/script';</script>
+</svg>"#;
+
+    let mut dom = parse_svg(svg_content.as_bytes()).unwrap();
+    let context = create_test_context();
+
+    let transformation = run_svg_transformations(context, &mut dom).unwrap();
+
+    println!("Style attribute debug:");
+    println!("Dependencies: {}", transformation.dependencies.len());
+    println!("Assets: {}", transformation.discovered_assets.len());
+
+    for (i, dep) in transformation.dependencies.iter().enumerate() {
+      println!(
+        "  Dep {}: {} (type: {:?})",
+        i, dep.specifier, dep.specifier_type
+      );
+    }
+
+    for (i, asset) in transformation.discovered_assets.iter().enumerate() {
+      println!("  Asset {}: {:?}", i, asset.asset.file_type);
+    }
+
+    // Should create 3 dependencies and 3 assets for the complex SVG:
+    // 1. Style tag CSS asset (Esm dependency)
+    // 2. Style attribute CSS asset (Esm dependency)
+    // 3. Script tag JS asset (Esm dependency)
+    // Note: URL dependencies for url() in CSS are handled by the CSS transformer
+    assert_eq!(transformation.dependencies.len(), 3);
+    assert_eq!(transformation.discovered_assets.len(), 3);
+
+    // Verify we have 2 CSS assets and 1 JS asset
+    let css_assets = transformation
+      .discovered_assets
+      .iter()
+      .filter(|a| a.asset.file_type == atlaspack_core::types::FileType::Css)
+      .count();
+    let js_assets = transformation
+      .discovered_assets
+      .iter()
+      .filter(|a| a.asset.file_type == atlaspack_core::types::FileType::Js)
+      .count();
+
+    assert_eq!(
+      css_assets, 2,
+      "Should have 2 CSS assets (style tag + style attribute)"
+    );
+    assert_eq!(js_assets, 1, "Should have 1 JS asset (script tag)");
+  }
+
+  #[test]
   fn test_xml_stylesheet_integration_fixture() {
     // This test matches the exact fixture from svg-xml-stylesheet/img.svg
     let svg_content = r#"<?xml-stylesheet href="style1.css"?>
