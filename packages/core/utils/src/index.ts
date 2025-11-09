@@ -29,6 +29,7 @@ export {default as openInBrowser} from './openInBrowser';
 
 // Explicit re-exports instead of export * for lazy require performance
 export {findAlternativeNodeModules, findAlternativeFiles} from './alternatives';
+export {assert} from './assert';
 export {blobToBuffer, blobToString} from './blob';
 export {
   unique,

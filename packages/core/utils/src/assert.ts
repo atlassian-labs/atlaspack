@@ -51,3 +51,17 @@ assert.deepEqual = function <T>(
     throw e;
   }
 };
+
+assert.notEqual = function <T>(
+  actual: T,
+  expected: T,
+  message?: string | (() => string),
+) {
+  if (actual != expected) return;
+
+  throw new AssertionError({
+    message: typeof message === 'function' ? message() : message,
+    expected,
+    actual,
+  });
+};

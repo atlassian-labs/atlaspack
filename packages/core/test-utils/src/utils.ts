@@ -10,12 +10,12 @@ import type {
 } from '@atlaspack/types';
 import type {FileSystem} from '@atlaspack/fs';
 import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '@atlaspack/fs';
+import {assert} from '@atlaspack/utils';
 import type WorkerFarm from '@atlaspack/workers';
 import type {IncomingMessage} from 'http';
 import http from 'http';
 import expect from 'expect';
 
-import {assert} from './assert';
 import util from 'util';
 import Atlaspack, {createWorkerFarm, NapiWorkerPool} from '@atlaspack/core';
 import vm from 'vm';
