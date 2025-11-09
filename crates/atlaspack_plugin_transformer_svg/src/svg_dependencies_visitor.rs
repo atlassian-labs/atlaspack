@@ -270,7 +270,7 @@ impl SvgDependenciesVisitor {
         "module" => (FileType::Js, SourceType::Module),
         _ => {
           // Fallback: split by '/' and take the last part
-          if let Some(last_part) = script_type_str.split('/').last() {
+          if let Some(last_part) = script_type_str.split('/').next_back() {
             (FileType::from_extension(last_part), SourceType::Script)
           } else {
             (FileType::Js, SourceType::Script)
@@ -287,7 +287,7 @@ impl SvgDependenciesVisitor {
       let style_type_str = style_type.to_string();
 
       // Split by '/' and take the last part (e.g., "text/scss" -> "scss")
-      if let Some(last_part) = style_type_str.split('/').last() {
+      if let Some(last_part) = style_type_str.split('/').next_back() {
         match last_part {
           "scss" => FileType::Other("scss".to_string()),
           "sass" => FileType::Other("sass".to_string()),

@@ -117,12 +117,12 @@ fn process_xml_processing_instructions(
     // Only process xml-stylesheet instructions (not xml-not-a-stylesheet, etc.)
     if pi_content.starts_with("<?xml-stylesheet") && pi_content.ends_with("?>") {
       // Look for href within this specific processing instruction
-      if let Some(caps) = href_regex.captures(pi_content) {
-        if let Some(href_match) = caps.get(1) {
-          let href = href_match.as_str();
-          if !href.is_empty() {
-            xml_dependencies.push(href.to_string());
-          }
+      if let Some(caps) = href_regex.captures(pi_content)
+        && let Some(href_match) = caps.get(1)
+      {
+        let href = href_match.as_str();
+        if !href.is_empty() {
+          xml_dependencies.push(href.to_string());
         }
       }
     }
@@ -156,11 +156,11 @@ fn serialize_svg(dom: RcDom) -> Result<Vec<u8>, Error> {
   let full_html = String::from_utf8(output_bytes)?;
 
   // Extract just the SVG content from the HTML wrapper
-  if let Some(svg_start) = full_html.find("<svg") {
-    if let Some(svg_end) = full_html.rfind("</svg>") {
-      let svg_content = &full_html[svg_start..svg_end + 6]; // +6 for "</svg>"
-      return Ok(svg_content.as_bytes().to_vec());
-    }
+  if let Some(svg_start) = full_html.find("<svg")
+    && let Some(svg_end) = full_html.rfind("</svg>")
+  {
+    let svg_content = &full_html[svg_start..svg_end + 6]; // +6 for "</svg>"
+    return Ok(svg_content.as_bytes().to_vec());
   }
 
   // Fallback: return the full content if we can't extract SVG
