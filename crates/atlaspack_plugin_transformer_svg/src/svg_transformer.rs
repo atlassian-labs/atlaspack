@@ -426,7 +426,7 @@ mod tests {
       .iter()
       .map(|d| d.specifier.clone())
       .collect();
-    assert!(specifiers.contains(&"modern.svg#symbol".to_string())); // href 
+    assert!(specifiers.contains(&"modern.svg#symbol".to_string())); // href
     assert!(specifiers.contains(&"legacy.svg#symbol".to_string())); // xlink:href (both processed)
     assert!(specifiers.contains(&"legacy-only.svg#symbol".to_string())); // xlink:href only
   }
@@ -536,7 +536,7 @@ mod tests {
   <text>Styled text</text>
 </svg>"#;
 
-    let (processed_content, xml_deps, processing_instructions) =
+    let (_processed_content, xml_deps, _processing_instructions) =
       process_xml_processing_instructions(svg_content.as_bytes()).unwrap();
 
     // JS version expects only 2 bundles, so only 2 stylesheets should be processed
