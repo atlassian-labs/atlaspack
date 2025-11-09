@@ -15,8 +15,7 @@ import type {IncomingMessage} from 'http';
 import http from 'http';
 import expect from 'expect';
 
-import invariant from 'assert';
-import assert from 'assert';
+import {assert} from './assert';
 import util from 'util';
 import Atlaspack, {createWorkerFarm, NapiWorkerPool} from '@atlaspack/core';
 import vm from 'vm';
@@ -237,7 +236,7 @@ export function findDependency(
       ? dependencies.find((d) => !bundleGraph.isDependencySkipped(d))
       : dependencies[0];
 
-  invariant(
+  assert(
     dependency != null,
     `Couldn't find dependency ${assetFileName} -> ${specifier}`,
   );
@@ -272,9 +271,9 @@ export function assertDependencyWasExcluded(
   specifier: string,
 ): void {
   let dep = findDependency(bundleGraph, assetFileName, specifier);
-  invariant(
+  assert(
     bundleGraph.isDependencySkipped(dep),
-    util.inspect(dep) + " wasn't deferred",
+    () => util.inspect(dep) + " wasn't deferred",
   );
 }
 
@@ -299,12 +298,12 @@ export function getNextBuild(b: Atlaspack): Promise<BuildEvent> {
         subscriptionPromise
           .then((subscription) => {
             // If the watch callback was reached, subscription must have been successful
-            invariant(subscription != null);
+            assert(subscription != null);
             return subscription.unsubscribe();
           })
           .then(() => {
             // If the build promise hasn't been rejected, buildEvent must exist
-            invariant(buildEvent != null);
+            assert(buildEvent != null);
             resolve(buildEvent);
           })
           .catch(reject);
@@ -317,7 +316,7 @@ export async function getNextBuildSuccess(
   b: Atlaspack,
 ): Promise<BuildSuccessEvent> {
   let evt = await getNextBuild(b);
-  invariant(evt.type === 'buildSuccess');
+  assert(evt.type === 'buildSuccess');
   return evt;
 }
 
@@ -473,7 +472,7 @@ export async function runBundles(
         }
         return;
       case 'commonjs':
-        invariant(typeof ctx.module === 'object' && ctx.module != null);
+        assert(typeof ctx.module === 'object' && ctx.module != null);
         return ctx.module.exports;
       case 'esmodule':
         return esmOutput;
