@@ -539,11 +539,6 @@ mod tests {
     let (processed_content, xml_deps, processing_instructions) =
       process_xml_processing_instructions(svg_content.as_bytes()).unwrap();
 
-    println!("Complex XML test - found {} dependencies:", xml_deps.len());
-    for dep in &xml_deps {
-      println!("  - {}", dep);
-    }
-
     // JS version expects only 2 bundles, so only 2 stylesheets should be processed
     // Let's see what we're actually finding
     // Matches JS behavior: only processes double-quoted href attributes
@@ -571,21 +566,6 @@ mod tests {
     let context = create_test_context();
 
     let transformation = run_svg_transformations(context, &mut dom).unwrap();
-
-    println!("Style attribute debug:");
-    println!("Dependencies: {}", transformation.dependencies.len());
-    println!("Assets: {}", transformation.discovered_assets.len());
-
-    for (i, dep) in transformation.dependencies.iter().enumerate() {
-      println!(
-        "  Dep {}: {} (type: {:?})",
-        i, dep.specifier, dep.specifier_type
-      );
-    }
-
-    for (i, asset) in transformation.discovered_assets.iter().enumerate() {
-      println!("  Asset {}: {:?}", i, asset.asset.file_type);
-    }
 
     // Should create 3 dependencies and 3 assets for the complex SVG:
     // 1. Style tag CSS asset (Esm dependency)

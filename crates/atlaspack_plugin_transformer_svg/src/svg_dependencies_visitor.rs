@@ -46,41 +46,29 @@ impl SvgDependenciesVisitor {
     }
   }
 
-  fn add_url_dependency(&mut self, specifier: String) -> String {
-    let dependency = DependencyBuilder::default()
+  fn add_url_dependency_with_options(
+    &mut self,
+    specifier: String,
+    priority: Priority,
+    needs_stable_name: bool,
+  ) -> String {
+    let mut dependency_builder = DependencyBuilder::default()
       .env(self.context.env.clone())
-      .priority(Priority::Lazy)
+      .priority(priority)
       .source_asset_id(self.context.source_asset_id.clone())
       .source_asset_type(FileType::Other("svg".to_string()))
       .source_path_option(self.context.source_path.clone())
       .specifier(specifier)
-      .specifier_type(SpecifierType::Url)
-      .build();
+      .specifier_type(SpecifierType::Url);
 
+    if needs_stable_name {
+      dependency_builder = dependency_builder.needs_stable_name(true);
+    }
+
+    let dependency = dependency_builder.build();
     let dependency_id = dependency.id();
     self.dependencies.push(dependency);
     dependency_id
-  }
-
-  fn parse_func_iri(&self, value: &str) -> Option<String> {
-    if let Some(ref regex) = self.func_iri_regex {
-      if let Some(caps) = regex.captures(value) {
-        // Return the first non-empty capture group (quoted or unquoted)
-        caps
-          .get(1)
-          .or_else(|| caps.get(2))
-          .map(|m| {
-            let url = m.as_str().trim();
-            // Unescape common escape sequences (the regex already extracts content inside quotes)
-            url.replace("\\'", "'").replace("\\\"", "\"")
-          })
-          .filter(|s| !s.is_empty())
-      } else {
-        None
-      }
-    } else {
-      None
-    }
   }
 
   fn process_functional_iri_attributes(&mut self, attrs: &mut Attrs) {
@@ -114,11 +102,48 @@ impl SvgDependenciesVisitor {
 
     for attr_name in &func_iri_attrs {
       if let Some(attr_value) = attrs.get(*attr_name) {
-        if let Some(url) = self.parse_func_iri(attr_value) {
-          if !url.is_empty() {
-            let _dependency_id = self.add_url_dependency(url);
-            // Note: We don't rewrite functional IRIs in SVG like we do with regular URLs
-            // They remain as-is for the SVG renderer to handle
+        let attr_str = attr_value.to_string();
+
+        // Parse all url() references in the attribute value and rewrite them
+        if let Some(ref regex) = self.func_iri_regex {
+          let mut updated_value = attr_str.clone();
+
+          // Collect all URLs first, then process them in reverse order to avoid offset issues
+          let mut matches = Vec::new();
+          for caps in regex.captures_iter(&attr_str) {
+            if let Some(url_match) = caps.get(1).or_else(|| caps.get(2)) {
+              let url = url_match.as_str().trim();
+              let unescaped_url = url.replace("\\'", "'").replace("\\\"", "\"");
+              if !unescaped_url.is_empty() {
+                matches.push((url_match.start(), url_match.end(), unescaped_url));
+              }
+            }
+          }
+
+          // Process matches in reverse order to avoid offset issues
+          for (start, end, unescaped_url) in matches.into_iter().rev() {
+            // Create dependency with default options (like JS transformer)
+            let dependency = DependencyBuilder::default()
+              .env(self.context.env.clone())
+              .priority(Priority::Sync)
+              .source_asset_id(self.context.source_asset_id.clone())
+              .source_asset_type(FileType::Other("svg".to_string()))
+              .source_path_option(self.context.source_path.clone())
+              .specifier(unescaped_url)
+              .specifier_type(SpecifierType::Url)
+              .build();
+
+            let dependency_id = dependency.id();
+            self.dependencies.push(dependency);
+
+            // Replace only the URL part, preserving modifiers like fallback()
+            // Always wrap dependency ID in single quotes like JS transformer
+            updated_value.replace_range(start..end, &format!("'{}'", dependency_id));
+          }
+
+          // Update the attribute if it was modified
+          if updated_value != attr_str {
+            attrs.set(*attr_name, &updated_value);
           }
         }
       }
@@ -190,7 +215,10 @@ impl SvgDependenciesVisitor {
 
       // Skip fragment-only references and absolute paths
       if !href_str.starts_with("#") && !href_str.starts_with("/") {
-        let dependency_id = self.add_url_dependency(href_str);
+        // Use stable name for <a> tags (like JS transformer)
+        let needs_stable_name = element_name == "a";
+        let dependency_id =
+          self.add_url_dependency_with_options(href_str, Priority::Sync, needs_stable_name);
         attrs.set(expanded_name!("", "href"), &dependency_id);
       }
     }
@@ -207,7 +235,10 @@ impl SvgDependenciesVisitor {
 
       // Skip fragment-only references and absolute paths
       if !href_str.starts_with("#") && !href_str.starts_with("/") {
-        let dependency_id = self.add_url_dependency(href_str);
+        // Use stable name for <a> tags (like JS transformer)
+        let needs_stable_name = element_name == "a";
+        let dependency_id =
+          self.add_url_dependency_with_options(href_str, Priority::Sync, needs_stable_name);
         let xlink_href_name = ExpandedName {
           ns: &namespace_url!("http://www.w3.org/1999/xlink"),
           local: &local_name!("href"),
@@ -349,8 +380,86 @@ impl DomVisitor for SvgDependenciesVisitor {
                 .push("'href' should not be empty string".to_string());
               return DomTraversalOperation::Stop;
             }
-            let dependency_id = self.add_url_dependency(href_str);
+            // Determine source type and create environment like JS transformer
+            let source_type = if let Some(script_type) = attrs.get(expanded_name!("", "type")) {
+              match script_type.to_string().as_str() {
+                "module" => SourceType::Module,
+                _ => SourceType::Script,
+              }
+            } else {
+              SourceType::Script
+            };
+
+            let env = Arc::new(Environment {
+              source_type,
+              output_format: atlaspack_core::types::OutputFormat::Global,
+              ..(*self.context.env).clone()
+            });
+
+            let dependency = DependencyBuilder::default()
+              .env(env)
+              .priority(Priority::Parallel)
+              .source_asset_id(self.context.source_asset_id.clone())
+              .source_asset_type(FileType::Other("svg".to_string()))
+              .source_path_option(self.context.source_path.clone())
+              .specifier(href_str)
+              .specifier_type(SpecifierType::Url)
+              .build();
+
+            let dependency_id = dependency.id();
+            self.dependencies.push(dependency);
+
             attrs.set(expanded_name!("", "href"), &dependency_id);
+            attrs.delete(expanded_name!("", "type"));
+            return DomTraversalOperation::Continue;
+          }
+
+          // Handle external scripts with xlink:href attribute (SVG style)
+          if let Some(xlink_href) = attrs.get(ExpandedName {
+            ns: &namespace_url!("http://www.w3.org/1999/xlink"),
+            local: &local_name!("href"),
+          }) {
+            let href_str = xlink_href.to_string();
+            if href_str.is_empty() {
+              self
+                .errors
+                .push("'href' should not be empty string".to_string());
+              return DomTraversalOperation::Stop;
+            }
+            // Determine source type and create environment like JS transformer
+            let source_type = if let Some(script_type) = attrs.get(expanded_name!("", "type")) {
+              match script_type.to_string().as_str() {
+                "module" => SourceType::Module,
+                _ => SourceType::Script,
+              }
+            } else {
+              SourceType::Script
+            };
+
+            let env = Arc::new(Environment {
+              source_type,
+              output_format: atlaspack_core::types::OutputFormat::Global,
+              ..(*self.context.env).clone()
+            });
+
+            let dependency = DependencyBuilder::default()
+              .env(env)
+              .priority(Priority::Parallel)
+              .source_asset_id(self.context.source_asset_id.clone())
+              .source_asset_type(FileType::Other("svg".to_string()))
+              .source_path_option(self.context.source_path.clone())
+              .specifier(href_str)
+              .specifier_type(SpecifierType::Url)
+              .build();
+
+            let dependency_id = dependency.id();
+            self.dependencies.push(dependency);
+
+            let xlink_href_name = ExpandedName {
+              ns: &namespace_url!("http://www.w3.org/1999/xlink"),
+              local: &local_name!("href"),
+            };
+            attrs.set(xlink_href_name, &dependency_id);
             attrs.delete(expanded_name!("", "type"));
             return DomTraversalOperation::Continue;
           }
@@ -364,7 +473,35 @@ impl DomVisitor for SvgDependenciesVisitor {
                 .push("'src' should not be empty string".to_string());
               return DomTraversalOperation::Stop;
             }
-            let dependency_id = self.add_url_dependency(src_str);
+            // Determine source type and create environment like JS transformer
+            let source_type = if let Some(script_type) = attrs.get(expanded_name!("", "type")) {
+              match script_type.to_string().as_str() {
+                "module" => SourceType::Module,
+                _ => SourceType::Script,
+              }
+            } else {
+              SourceType::Script
+            };
+
+            let env = Arc::new(Environment {
+              source_type,
+              output_format: atlaspack_core::types::OutputFormat::Global,
+              ..(*self.context.env).clone()
+            });
+
+            let dependency = DependencyBuilder::default()
+              .env(env)
+              .priority(Priority::Parallel)
+              .source_asset_id(self.context.source_asset_id.clone())
+              .source_asset_type(FileType::Other("svg".to_string()))
+              .source_path_option(self.context.source_path.clone())
+              .specifier(src_str)
+              .specifier_type(SpecifierType::Url)
+              .build();
+
+            let dependency_id = dependency.id();
+            self.dependencies.push(dependency);
+
             attrs.set(expanded_name!("", "src"), &dependency_id);
             attrs.delete(expanded_name!("", "type"));
             return DomTraversalOperation::Continue;
