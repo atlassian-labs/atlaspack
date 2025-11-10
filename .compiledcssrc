@@ -1,0 +1,16 @@
+{
+  "addComponentName": true,
+  "extract": false,
+  "flattenMultipleSelectors": true,
+  "importReact": true,
+  "importSources": [
+    "@compiled/react",
+    "@atlaspack/css"
+  ],
+  "increaseSpecificity": false,
+  "optimizeCss": true,
+  "processXcss": true,
+  "sortAtRules": true,
+  "sortShorthand": true,
+  "ssr": false
+}

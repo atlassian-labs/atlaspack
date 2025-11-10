@@ -1,0 +1,8 @@
+{
+  "fixture": "styled-token-nested-ternary/in.jsx",
+  "outputDir": "styled-token-nested-ternary/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:36.110Z"
+}

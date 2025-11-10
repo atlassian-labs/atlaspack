@@ -1,0 +1,1050 @@
+{
+  "timestamp": "2025-11-10T00:51:36.371Z",
+  "total": 148,
+  "matches": 2,
+  "mismatches": 146,
+  "results": [
+    {
+      "fixture": "aside-unused-xcss-prop/in.jsx",
+      "outputDir": "aside-unused-xcss-prop/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "banner-navigation-system/in.jsx",
+      "outputDir": "banner-navigation-system/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "banner-xcss-cssmap/in.jsx",
+      "outputDir": "banner-xcss-cssmap/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "basic-css/in.jsx",
+      "outputDir": "basic-css/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "box-cssmap-massive/in.jsx",
+      "outputDir": "box-cssmap-massive/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "class-name-compression/in.jsx",
+      "outputDir": "class-name-compression/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "complex-runtime-combo/in.jsx",
+      "outputDir": "complex-runtime-combo/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-and-classname-conflict/in.jsx",
+      "outputDir": "css-and-classname-conflict/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-and-keyframes/in.jsx",
+      "outputDir": "css-and-keyframes/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-array-syntax/in.jsx",
+      "outputDir": "css-array-syntax/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-array-with-conditions/in.jsx",
+      "outputDir": "css-array-with-conditions/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-at-property/in.jsx",
+      "outputDir": "css-at-property/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-attribute-selector/in.jsx",
+      "outputDir": "css-attribute-selector/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-box-shadow-with-token/in.jsx",
+      "outputDir": "css-box-shadow-with-token/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-child-combinator-spacing/in.tsx",
+      "outputDir": "css-child-combinator-spacing/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-content/in.jsx",
+      "outputDir": "css-content/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-content-selectors/in.jsx",
+      "outputDir": "css-content-selectors/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-custom-property-length/in.jsx",
+      "outputDir": "css-custom-property-length/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-custom-property-zero-unit/in.jsx",
+      "outputDir": "css-custom-property-zero-unit/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-element-existing-className/in.jsx",
+      "outputDir": "css-element-existing-className/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-expression/in.jsx",
+      "outputDir": "css-expression/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-imported-media-query/in.jsx",
+      "outputDir": "css-imported-media-query/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-imported-shorthand-dynamic/in.jsx",
+      "outputDir": "css-imported-shorthand-dynamic/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-imported-value/in.jsx",
+      "outputDir": "css-imported-value/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-keyframes-background-position/in.jsx",
+      "outputDir": "css-keyframes-background-position/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-map/in.jsx",
+      "outputDir": "css-map/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-map-atlaskit/in.jsx",
+      "outputDir": "css-map-atlaskit/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-map-child-selector/in.jsx",
+      "outputDir": "css-map-child-selector/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-map-nested/in.jsx",
+      "outputDir": "css-map-nested/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-map-pseudo/in.jsx",
+      "outputDir": "css-map-pseudo/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-map-token/in.jsx",
+      "outputDir": "css-map-token/in",
+      "match": false,
+      "error": "Baseline transform failed: /Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/css-map-token/in.jsx: \nThe variant object must be statically defined.\n\nCheck out our documentation for cssMap examples: https://compiledcssinjs.com/docs/api-cssmap\n (5:8).\n  3 |\n  4 | const styles = cssMap({\n> 5 |   root: {\n    |         ^\n  6 |     paddingBlockStart: token('space.0'),\n  7 |     paddingBlockEnd: token('space.0'),\n  8 |   },",
+      "hasBaseline": false,
+      "hasExperiment": false
+    },
+    {
+      "fixture": "css-media-query-many-rules/in.jsx",
+      "outputDir": "css-media-query-many-rules/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-nested-is-selector/in.jsx",
+      "outputDir": "css-nested-is-selector/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-nested-selectors/in.jsx",
+      "outputDir": "css-nested-selectors/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-nested-spread-active-after/in.tsx",
+      "outputDir": "css-nested-spread-active-after/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-nested-spread-underline/in.tsx",
+      "outputDir": "css-nested-spread-underline/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-null-literal-styles/in.jsx",
+      "outputDir": "css-null-literal-styles/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-null-literal-variables/in.jsx",
+      "outputDir": "css-null-literal-variables/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-object-with-media-queries/in.jsx",
+      "outputDir": "css-object-with-media-queries/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-prop-basic/in.jsx",
+      "outputDir": "css-prop-basic/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-prop-nested-rules/in.jsx",
+      "outputDir": "css-prop-nested-rules/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-tagged-template-literal/in.jsx",
+      "outputDir": "css-tagged-template-literal/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-template-with-expressions/in.jsx",
+      "outputDir": "css-template-with-expressions/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-text-decoration-none/in.jsx",
+      "outputDir": "css-text-decoration-none/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-transform-rotate/in.jsx",
+      "outputDir": "css-transform-rotate/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-transition-decimal-normalization/in.jsx",
+      "outputDir": "css-transition-decimal-normalization/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-transition-decimal-normalization-extract/in.jsx",
+      "outputDir": "css-transition-decimal-normalization-extract/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-twice-imported/in.jsx",
+      "outputDir": "css-twice-imported/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css-vendor-prefix/in.jsx",
+      "outputDir": "css-vendor-prefix/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css_and_classname_conflict/in.jsx",
+      "outputDir": "css_and_classname_conflict/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "css_array_missing_comma/in.jsx",
+      "outputDir": "css_array_missing_comma/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "cssmap-class-names-as-css/in.jsx",
+      "outputDir": "cssmap-class-names-as-css/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "cssmap-class-names-in-css/in.jsx",
+      "outputDir": "cssmap-class-names-in-css/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "cssmap-dynamic-property-access/in.jsx",
+      "outputDir": "cssmap-dynamic-property-access/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "cssmap-grid-template-areas-nested-selectors/in.jsx",
+      "outputDir": "cssmap-grid-template-areas-nested-selectors/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "cssmap-simple-dotted/in.jsx",
+      "outputDir": "cssmap-simple-dotted/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "cssmap-unbounded-basic/in.jsx",
+      "outputDir": "cssmap-unbounded-basic/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "cssmap-with-xcss-prop/in.jsx",
+      "outputDir": "cssmap-with-xcss-prop/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "cx_with_cssmap/in.jsx",
+      "outputDir": "cx_with_cssmap/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "cx_with_dynamic_cssmap_property/in.jsx",
+      "outputDir": "cx_with_dynamic_cssmap_property/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "feature-card-cssmap-styled/in.jsx",
+      "outputDir": "feature-card-cssmap-styled/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "flex-cssmap-complex/in.jsx",
+      "outputDir": "flex-cssmap-complex/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "grid-cssmap-complex/in.jsx",
+      "outputDir": "grid-cssmap-complex/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "hover-display/in.jsx",
+      "outputDir": "hover-display/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "keyframes-rotate-normalization/in.jsx",
+      "outputDir": "keyframes-rotate-normalization/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "keyframes-with-css/in.jsx",
+      "outputDir": "keyframes-with-css/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "lozenge-complex-cssmap/in.jsx",
+      "outputDir": "lozenge-complex-cssmap/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "lozenge-cssmap-complex/in.jsx",
+      "outputDir": "lozenge-cssmap-complex/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "lozenge-mixed-cssmap-patterns/in.jsx",
+      "outputDir": "lozenge-mixed-cssmap-patterns/in",
+      "match": false,
+      "error": "Baseline transform failed: /Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/lozenge-mixed-cssmap-patterns/in.jsx: \nThe variant object must be statically defined.\n\nCheck out our documentation for cssMap examples: https://compiledcssinjs.com/docs/api-cssmap\n (10:12).\n   8 |\n   9 | const stylesOld = cssMap({\n> 10 | \tcontainer: {\n     | \t           ^\n  11 | \t\tdisplay: 'inline-flex',\n  12 | \t\tborderRadius: token('radius.small'),\n  13 | \t\tblockSize: 'min-content',",
+      "hasBaseline": false,
+      "hasExperiment": false
+    },
+    {
+      "fixture": "main-navigation-system/in.jsx",
+      "outputDir": "main-navigation-system/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "metric-text-cssmap-mixed/in.jsx",
+      "outputDir": "metric-text-cssmap-mixed/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "navigation-system-logo-xcss/in.jsx",
+      "outputDir": "navigation-system-logo-xcss/in",
+      "match": false,
+      "error": "Baseline transform failed: /Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/navigation-system-logo-xcss/in.jsx: \nThe variant object must be statically defined.\n\nCheck out our documentation for cssMap examples: https://compiledcssinjs.com/docs/api-cssmap\n (10:8).\n   8 |\n   9 | const anchorStyles = cssMap({\n> 10 |   root: {\n     |         ^\n  11 |     display: 'flex',\n  12 |     alignItems: 'center',\n  13 |     height: '32px',",
+      "hasBaseline": false,
+      "hasExperiment": false
+    },
+    {
+      "fixture": "navigation-system-root-xcss-classname/in.jsx",
+      "outputDir": "navigation-system-root-xcss-classname/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "null-literal-styles/in.jsx",
+      "outputDir": "null-literal-styles/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "null-literal-styles-css-prop/in.jsx",
+      "outputDir": "null-literal-styles-css-prop/in",
+      "match": true,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "null_literal_styles/in.jsx",
+      "outputDir": "null_literal_styles/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "onboarding-target-keyframes/in.jsx",
+      "outputDir": "onboarding-target-keyframes/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "onboarding-target-unterminated-jsx/in.jsx",
+      "outputDir": "onboarding-target-unterminated-jsx/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "page-layout-root-cssmap-grid/in.jsx",
+      "outputDir": "page-layout-root-cssmap-grid/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "refine-dropdown-jsx-error/in.jsx",
+      "outputDir": "refine-dropdown-jsx-error/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "responsive-hide-cssmap-dynamic/in.jsx",
+      "outputDir": "responsive-hide-cssmap-dynamic/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "responsive-hide-unused-cssmap/in.jsx",
+      "outputDir": "responsive-hide-unused-cssmap/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "responsive-show-atlaskit-cssmap/in.jsx",
+      "outputDir": "responsive-show-atlaskit-cssmap/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "responsive-show-cssmap/in.jsx",
+      "outputDir": "responsive-show-cssmap/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "responsive-show-cssmap-dynamic/in.jsx",
+      "outputDir": "responsive-show-cssmap-dynamic/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "responsive_show_extra_brace/in.jsx",
+      "outputDir": "responsive_show_extra_brace/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "simple-cssmap-unbounded/in.jsx",
+      "outputDir": "simple-cssmap-unbounded/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-add-component-name/in.jsx",
+      "outputDir": "styled-add-component-name/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-and-keyframes/in.jsx",
+      "outputDir": "styled-and-keyframes/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-arrow-function-static-dynamic/in.jsx",
+      "outputDir": "styled-arrow-function-static-dynamic/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-atlaskit-theme/in.jsx",
+      "outputDir": "styled-atlaskit-theme/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-attribute-adjacent-sibling/in.jsx",
+      "outputDir": "styled-attribute-adjacent-sibling/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-box-sizing-content-box/in.jsx",
+      "outputDir": "styled-box-sizing-content-box/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-calc-offset/in.jsx",
+      "outputDir": "styled-calc-offset/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-compiled-mixed-css-array/in.jsx",
+      "outputDir": "styled-compiled-mixed-css-array/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-component/in.jsx",
+      "outputDir": "styled-component/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-component-basic/in.jsx",
+      "outputDir": "styled-component-basic/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-component-with-condition/in.jsx",
+      "outputDir": "styled-component-with-condition/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-computed-negative-margin/in.jsx",
+      "outputDir": "styled-computed-negative-margin/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-conditional-classes/in.jsx",
+      "outputDir": "styled-conditional-classes/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-conditional-padding/in.jsx",
+      "outputDir": "styled-conditional-padding/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-css-reference/in.jsx",
+      "outputDir": "styled-css-reference/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-dynamic-absolute-position/in.jsx",
+      "outputDir": "styled-dynamic-absolute-position/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-dynamic-computed-selector/in.jsx",
+      "outputDir": "styled-dynamic-computed-selector/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-dynamic-destructure/in.jsx",
+      "outputDir": "styled-dynamic-destructure/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-dynamic-preloader/in.jsx",
+      "outputDir": "styled-dynamic-preloader/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-dynamic-props/in.jsx",
+      "outputDir": "styled-dynamic-props/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-dynamic-token-color/in.jsx",
+      "outputDir": "styled-dynamic-token-color/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-dynamic-token-flex-basis/in.jsx",
+      "outputDir": "styled-dynamic-token-flex-basis/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-dynamic-token-ternary/in.jsx",
+      "outputDir": "styled-dynamic-token-ternary/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-flex-none-descendant/in.jsx",
+      "outputDir": "styled-flex-none-descendant/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-flex-shorthand/in.jsx",
+      "outputDir": "styled-flex-shorthand/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-heading-cell-wrapper/in.jsx",
+      "outputDir": "styled-heading-cell-wrapper/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-imported-arithmetic/in.jsx",
+      "outputDir": "styled-imported-arithmetic/in",
+      "match": false,
+      "error": "Baseline transform failed: /Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/styled-imported-arithmetic/in.jsx: Can't resolve './constants' in '/Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/styled-imported-arithmetic'",
+      "hasBaseline": false,
+      "hasExperiment": false
+    },
+    {
+      "fixture": "styled-imported-value/in.jsx",
+      "outputDir": "styled-imported-value/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-layers-blanket/in.jsx",
+      "outputDir": "styled-layers-blanket/in",
+      "match": false,
+      "error": "Baseline transform failed: /Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/styled-layers-blanket/in.jsx: Can't resolve '@atlassian/jira-common-styles/src/main.tsx' in '/Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/styled-layers-blanket'",
+      "hasBaseline": false,
+      "hasExperiment": false
+    },
+    {
+      "fixture": "styled-length-pc/in.jsx",
+      "outputDir": "styled-length-pc/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-namespace-import/in.jsx",
+      "outputDir": "styled-namespace-import/in",
+      "match": false,
+      "error": "Baseline transform failed: /Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/styled-namespace-import/in.jsx: Can't resolve './theme' in '/Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/styled-namespace-import'",
+      "hasBaseline": false,
+      "hasExperiment": false
+    },
+    {
+      "fixture": "styled-nested-first-of-type/in.tsx",
+      "outputDir": "styled-nested-first-of-type/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-object-spread/in.jsx",
+      "outputDir": "styled-object-spread/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-placeholder-token/in.jsx",
+      "outputDir": "styled-placeholder-token/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-production/in.jsx",
+      "outputDir": "styled-production/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-production-extract-true/in.jsx",
+      "outputDir": "styled-production-extract-true/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-static-and-dynamic/in.jsx",
+      "outputDir": "styled-static-and-dynamic/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-static-string-replace/in.jsx",
+      "outputDir": "styled-static-string-replace/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-static-template-value/in.jsx",
+      "outputDir": "styled-static-template-value/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-tagged-template-literal/in.jsx",
+      "outputDir": "styled-tagged-template-literal/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-template-conditional/in.jsx",
+      "outputDir": "styled-template-conditional/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-template-dynamic/in.jsx",
+      "outputDir": "styled-template-dynamic/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-token-conditional/in.jsx",
+      "outputDir": "styled-token-conditional/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-token-conditional-border/in.jsx",
+      "outputDir": "styled-token-conditional-border/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-token-nested-ternary/in.jsx",
+      "outputDir": "styled-token-nested-ternary/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "styled-token-padding/in.jsx",
+      "outputDir": "styled-token-padding/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "tokens-gradient/in.jsx",
+      "outputDir": "tokens-gradient/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "tokens-gradient-extract/in.tsx",
+      "outputDir": "tokens-gradient-extract/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "tokens-nested-selectors/in.jsx",
+      "outputDir": "tokens-nested-selectors/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "tokens-project-checkbox/in.jsx",
+      "outputDir": "tokens-project-checkbox/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "tokens-space-200/in.jsx",
+      "outputDir": "tokens-space-200/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "tokens-var-whitespace/in.jsx",
+      "outputDir": "tokens-var-whitespace/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "unicode-em-dash-cssmap/in.jsx",
+      "outputDir": "unicode-em-dash-cssmap/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "xcss-className-prop-conflict/in.jsx",
+      "outputDir": "xcss-className-prop-conflict/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "xcss-classname-conflict/in.jsx",
+      "outputDir": "xcss-classname-conflict/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "xcss-css-map-atlaskit/in.jsx",
+      "outputDir": "xcss-css-map-atlaskit/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "xcss-cx-css-map/in.jsx",
+      "outputDir": "xcss-cx-css-map/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "xcss-inline-object/in.jsx",
+      "outputDir": "xcss-inline-object/in",
+      "match": true,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "xcss-keyframes/in.jsx",
+      "outputDir": "xcss-keyframes/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "xcss-prop-as-classname/in.jsx",
+      "outputDir": "xcss-prop-as-classname/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    },
+    {
+      "fixture": "xcss-prop-type-in-css-array/in.jsx",
+      "outputDir": "xcss-prop-type-in-css-array/in",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    }
+  ]
+}

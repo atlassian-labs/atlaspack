@@ -1,0 +1,8 @@
+{
+  "fixture": "lozenge-cssmap-complex/in.jsx",
+  "outputDir": "lozenge-cssmap-complex/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.230Z"
+}

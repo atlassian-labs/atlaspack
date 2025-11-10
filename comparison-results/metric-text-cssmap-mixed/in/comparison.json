@@ -1,0 +1,8 @@
+{
+  "fixture": "metric-text-cssmap-mixed/in.jsx",
+  "outputDir": "metric-text-cssmap-mixed/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.267Z"
+}

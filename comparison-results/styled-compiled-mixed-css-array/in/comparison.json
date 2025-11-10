@@ -1,0 +1,8 @@
+{
+  "fixture": "styled-compiled-mixed-css-array/in.jsx",
+  "outputDir": "styled-compiled-mixed-css-array/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.563Z"
+}

@@ -1,0 +1,8 @@
+{
+  "fixture": "class-name-compression/in.jsx",
+  "outputDir": "class-name-compression/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:34.409Z"
+}

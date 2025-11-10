@@ -1,0 +1,8 @@
+{
+  "fixture": "styled-css-reference/in.jsx",
+  "outputDir": "styled-css-reference/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.668Z"
+}

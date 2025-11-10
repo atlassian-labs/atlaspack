@@ -1,0 +1,8 @@
+{
+  "fixture": "null_literal_styles/in.jsx",
+  "outputDir": "null_literal_styles/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.315Z"
+}

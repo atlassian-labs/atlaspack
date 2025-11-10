@@ -1,0 +1,8 @@
+{
+  "fixture": "xcss-prop-as-classname/in.jsx",
+  "outputDir": "xcss-prop-as-classname/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:36.360Z"
+}

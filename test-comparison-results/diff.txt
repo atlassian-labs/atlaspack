@@ -1,0 +1,47 @@
+--- Atlaspack Output
++++ Expected Output
+
+- var parcelHelpers = require("@atlaspack/transformer-js/src/esmodule-helpers.js");
++ import * as React from 'react';
+- parcelHelpers.defineInteropFlag(exports);
++ import { ax, ix, CC, CS } from "@compiled/react/runtime";
+- parcelHelpers.export(exports, "Component", function() {
++ import { jsx, jsxs } from "react/jsx-runtime";
+-     return Component;
++ const _ = "._syaz5scu{color:red}";
+- });
++ const _1 = "._bfhk18uv{background-color:initial}";
+- var _react = require("@compiled/react");
++ const styles = null;
+- var _this = undefined;
++ export const Component = ()=>jsxs(CC, {
+- var styles = (0, _react.css)({
++         children: [
+-     color: 'red',
++             jsx(CS, {
+-     backgroundColor: 'transparent'
++                 children: [
+- });
++                     _,
+- var Component = function() {
++                     _1
+-     return /*#__PURE__*/ React.createElement("div", {
++                 ]
+-         css: styles,
++             }),
+-         __source: {
++             jsx("div", {
+-             fileName: "crates/atlassian-swc-compiled-css/tests/fixtures/basic-css/in.jsx",
++                 className: ax([
+-             lineNumber: 6,
++                     "_syaz5scu _bfhk18uv"
+-             columnNumber: 32
++                 ]),
+-         },
++                 children: "Hello"
+-         __self: _this
++             })
+-     }, "Hello");
++         ]
+- };
++     });

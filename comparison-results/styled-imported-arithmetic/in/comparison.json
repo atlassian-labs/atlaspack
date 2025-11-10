@@ -1,0 +1,9 @@
+{
+  "fixture": "styled-imported-arithmetic/in.jsx",
+  "outputDir": "styled-imported-arithmetic/in",
+  "match": false,
+  "error": "Baseline transform failed: /Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/styled-imported-arithmetic/in.jsx: Can't resolve './constants' in '/Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/styled-imported-arithmetic'",
+  "hasBaseline": false,
+  "hasExperiment": false,
+  "timestamp": "2025-11-10T00:51:35.849Z"
+}

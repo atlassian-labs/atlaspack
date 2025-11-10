@@ -1,0 +1,8 @@
+{
+  "fixture": "box-cssmap-massive/in.jsx",
+  "outputDir": "box-cssmap-massive/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:34.395Z"
+}

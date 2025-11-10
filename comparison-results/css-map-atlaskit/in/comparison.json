@@ -1,0 +1,8 @@
+{
+  "fixture": "css-map-atlaskit/in.jsx",
+  "outputDir": "css-map-atlaskit/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:34.705Z"
+}

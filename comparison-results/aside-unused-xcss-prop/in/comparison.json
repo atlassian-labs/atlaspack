@@ -1,0 +1,8 @@
+{
+  "fixture": "aside-unused-xcss-prop/in.jsx",
+  "outputDir": "aside-unused-xcss-prop/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:32.909Z"
+}

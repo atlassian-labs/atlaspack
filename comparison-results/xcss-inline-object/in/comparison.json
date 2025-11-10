@@ -1,0 +1,8 @@
+{
+  "fixture": "xcss-inline-object/in.jsx",
+  "outputDir": "xcss-inline-object/in",
+  "match": true,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:36.327Z"
+}

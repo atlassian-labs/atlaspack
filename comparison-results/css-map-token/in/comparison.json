@@ -1,0 +1,9 @@
+{
+  "fixture": "css-map-token/in.jsx",
+  "outputDir": "css-map-token/in",
+  "match": false,
+  "error": "Baseline transform failed: /Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/css-map-token/in.jsx: \nThe variant object must be statically defined.\n\nCheck out our documentation for cssMap examples: https://compiledcssinjs.com/docs/api-cssmap\n (5:8).\n  3 |\n  4 | const styles = cssMap({\n> 5 |   root: {\n    |         ^\n  6 |     paddingBlockStart: token('space.0'),\n  7 |     paddingBlockEnd: token('space.0'),\n  8 |   },",
+  "hasBaseline": false,
+  "hasExperiment": false,
+  "timestamp": "2025-11-10T00:51:34.759Z"
+}

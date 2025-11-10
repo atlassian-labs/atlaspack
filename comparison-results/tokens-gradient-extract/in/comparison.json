@@ -1,0 +1,8 @@
+{
+  "fixture": "tokens-gradient-extract/in.tsx",
+  "outputDir": "tokens-gradient-extract/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:36.172Z"
+}

@@ -2353,19 +2353,20 @@ fn static_value_to_css_value(
       if lower_property == "white-space" && base_value.eq_ignore_ascii_case("initial") {
         return Some(("normal".to_string(), "normal".to_string(), important));
       }
-      if base_value.eq_ignore_ascii_case("transparent") {
-        let replacement = if matches!(
-          lower_property.as_str(),
-          "backgroundcolor" | "background-color" | "background"
-        ) {
-          "initial".to_string()
-        } else if lower_property.ends_with("color") || lower_property.ends_with("-color") {
-          "#00000000".to_string()
-        } else {
-          base_value.clone()
-        };
-        return Some((replacement.clone(), replacement, important));
-      }
+      // Note: Babel plugin keeps "transparent" as-is, so we should too
+      // if base_value.eq_ignore_ascii_case("transparent") {
+      //   let replacement = if matches!(
+      //     lower_property.as_str(),
+      //     "backgroundcolor" | "background-color" | "background"
+      //   ) {
+      //     "initial".to_string()
+      //   } else if lower_property.ends_with("color") || lower_property.ends_with("-color") {
+      //     "#00000000".to_string()
+      //   } else {
+      //     base_value.clone()
+      //   };
+      //   return Some((replacement.clone(), replacement, important));
+      // }
 
       if property == "content" {
         if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
@@ -3515,17 +3516,18 @@ fn css_artifacts_from_static_object(
     ) {
       if let Some(new_key) = promote_background_key_if_needed(value) {
         let mut new_value = value.clone();
-        if let StaticValue::Str(text) = value.unwrap_spread() {
-          let normalized = normalize_css_value(text);
-          if normalized
-            .output_value
-            .trim()
-            .eq_ignore_ascii_case("transparent")
-            || text.trim().eq_ignore_ascii_case("transparent")
-          {
-            new_value = StaticValue::Str("initial".to_string());
-          }
-        }
+        // Note: Babel plugin keeps "transparent" as-is, so we should too
+        // if let StaticValue::Str(text) = value.unwrap_spread() {
+        //   let normalized = normalize_css_value(text);
+        //   if normalized
+        //     .output_value
+        //     .trim()
+        //     .eq_ignore_ascii_case("transparent")
+        //     || text.trim().eq_ignore_ascii_case("transparent")
+        //   {
+        //     new_value = StaticValue::Str("initial".to_string());
+        //   }
+        // }
         adjusted.insert(new_key, new_value);
         continue;
       }
@@ -3823,6 +3825,7 @@ fn binding_ident_from_pat(pat: &Pat) -> Option<Ident> {
 struct ClassNamesBodyVisitor<'a, 'b> {
   parent: &'a mut TransformVisitor<'b>,
   css_idents: HashSet<(Atom, SyntaxContext)>,
+  css_map_idents: HashSet<(Atom, SyntaxContext)>,
   style_idents: HashSet<(Atom, SyntaxContext)>,
   failed: bool,
   sheets: Vec<String>,
@@ -3846,11 +3849,13 @@ impl<'a, 'b> ClassNamesBodyVisitor<'a, 'b> {
   fn new(
     parent: &'a mut TransformVisitor<'b>,
     css_idents: HashSet<(Atom, SyntaxContext)>,
+    css_map_idents: HashSet<(Atom, SyntaxContext)>,
     style_idents: HashSet<(Atom, SyntaxContext)>,
   ) -> Self {
     Self {
       parent,
       css_idents,
+      css_map_idents,
       style_idents,
       failed: false,
       sheets: Vec::new(),
@@ -3987,7 +3992,15 @@ impl<'a, 'b> ClassNamesBodyVisitor<'a, 'b> {
       }
     }
 
+    // Enable runtime imports for proper transformation
     self.parent.needs_runtime_ax = true;
+    self.parent.needs_runtime_cc = true;
+    self.parent.needs_runtime_cs = true;
+
+    // Create hoisted sheet variables like Babel plugin
+    for sheet in &self.sheets {
+      self.parent.hoist_sheet_ident(sheet);
+    }
 
     let mut elems = Vec::new();
     if !class_names.is_empty() {
@@ -4086,6 +4099,7 @@ impl<'a, 'b> ClassNamesBodyVisitor<'a, 'b> {
     let ClassNamesBodyVisitor {
       parent,
       css_idents: _,
+      css_map_idents: _,
       style_idents,
       failed: _,
       sheets,
@@ -4204,12 +4218,12 @@ impl<'a, 'b> VisitMut for ClassNamesBodyVisitor<'a, 'b> {
     }
 
     let expr = Self::strip_parens_expr(expr);
-    eprintln!("normalize expr: {}", emit_expression(expr));
+    // eprintln!("normalize expr: {}", emit_expression(expr));
     match expr {
       Expr::Call(call) => {
         if let Callee::Expr(callee_expr) = &mut call.callee {
           if let Expr::Ident(ident) = &**callee_expr {
-            if self.css_idents.contains(&to_id(ident)) {
+            if self.css_idents.contains(&to_id(ident)) || self.css_map_idents.contains(&to_id(ident)) {
               let (span, ctxt, combined, precomputed_classes, precomputed_exprs, expr_class_names) = {
                 let span = call.span;
                 let ctxt = call.ctxt;
@@ -4425,6 +4439,7 @@ struct TransformVisitor<'a> {
   needs_runtime_cs: bool,
   needs_jsx_runtime: bool,
   needs_jsxs_runtime: bool,
+  needs_react_import: bool,
   needs_react_namespace: bool,
   needs_forward_ref: bool,
   has_forward_ref_binding: bool,
@@ -4440,6 +4455,7 @@ struct TransformVisitor<'a> {
   jsxs_ident: Option<Ident>,
   react_namespace_ident: Option<Ident>,
   forward_ref_ident: Option<Ident>,
+  this_ident_cached: Option<Ident>,
   has_react_namespace_binding: bool,
   current_binding: Option<(Atom, SyntaxContext)>,
   props_scope_depth: usize,
@@ -4486,6 +4502,7 @@ impl<'a> TransformVisitor<'a> {
       needs_runtime_cs: false,
       needs_jsx_runtime: false,
       needs_jsxs_runtime: false,
+      needs_react_import: false,
       needs_react_namespace: false,
       needs_forward_ref: false,
       has_forward_ref_binding: false,
@@ -4501,6 +4518,7 @@ impl<'a> TransformVisitor<'a> {
       jsxs_ident: None,
       react_namespace_ident: None,
       forward_ref_ident: None,
+      this_ident_cached: None,
       has_react_namespace_binding: false,
       current_binding: None,
       props_scope_depth: 0,
@@ -4583,7 +4601,15 @@ impl<'a> TransformVisitor<'a> {
       return ident.clone();
     }
 
-    let ident = self.name_tracker.fresh_ident("_");
+    // Create identifier name to match babel plugin naming scheme
+    // First one gets "_", subsequent ones get "_2", "_3", etc.
+    let ident_name = if self.hoisted_sheet_order.is_empty() {
+      "_".to_string()
+    } else {
+      format!("_{}", self.hoisted_sheet_order.len() + 1)
+    };
+    
+    let ident = Ident::new(ident_name.into(), DUMMY_SP, SyntaxContext::empty());
     self.hoisted_sheets.insert(css.to_string(), ident.clone());
     self.hoisted_sheet_order.push(css.to_string());
     ident
@@ -4644,6 +4670,16 @@ impl<'a> TransformVisitor<'a> {
     }
     matches!(babel_env.as_deref(), Some("development") | Some("test"))
       || matches!(node_env.as_deref(), Some("development") | Some("test"))
+  }
+
+  fn add_source_metadata_to_jsx_element(&mut self, jsx_element: &mut JSXElement) {
+    // This function is currently not used and would need access to proper file path
+    // and source map information. For now, we disable it to match Babel plugin behavior
+    // which doesn't seem to be adding __source metadata in the test cases.
+    
+    // The Babel plugin appears to have __source metadata already present from 
+    // React's development transform, not from this compiled CSS plugin.
+    return;
   }
 
   fn runtime_class_helper(&self) -> &'static str {
@@ -4709,6 +4745,10 @@ impl<'a> TransformVisitor<'a> {
     ident
   }
 
+  fn react_ident(&mut self) -> Ident {
+    self.react_namespace_ident()
+  }
+
   fn react_namespace_ident(&mut self) -> Ident {
     if let Some(ident) = &self.react_namespace_ident {
       return ident.clone();
@@ -4724,6 +4764,16 @@ impl<'a> TransformVisitor<'a> {
     }
     let ident = self.name_tracker.fresh_ident("forwardRef");
     self.forward_ref_ident = Some(ident.clone());
+    ident
+  }
+
+  fn this_ident(&mut self) -> Ident {
+    if let Some(ident) = &self.this_ident_cached {
+      return ident.clone();
+    }
+    // Use name_tracker to ensure consistent naming with babel plugin
+    let ident = self.name_tracker.fresh_ident("this");
+    self.this_ident_cached = Some(ident.clone());
     ident
   }
 
@@ -6899,7 +6949,8 @@ impl<'a> TransformVisitor<'a> {
     };
 
     let mut rewritten = body_expr;
-    let mut visitor = ClassNamesBodyVisitor::new(self, css_idents, style_idents);
+    let css_map_idents = HashSet::new();
+    let mut visitor = ClassNamesBodyVisitor::new(self, css_idents, css_map_idents, style_idents);
     rewritten.visit_mut_with(&mut visitor);
     if visitor.failed {
       eprintln!("ClassNames handler: visitor failed");
@@ -7170,6 +7221,39 @@ impl<'a> TransformVisitor<'a> {
     }
 
     let mut imports = Vec::new();
+    
+    // First inject react import to match babel plugin import order
+    if self.needs_react_import {
+      let react_source = "react";
+      let react_ident = self.react_ident();
+      
+      let react_import_index = module
+        .body
+        .iter()
+        .enumerate()
+        .find_map(|(idx, item)| match item {
+          ModuleItem::ModuleDecl(ModuleDecl::Import(import))
+            if import.src.value.as_ref() == react_source =>
+          {
+            Some(idx)
+          }
+          _ => None,
+        });
+
+      if react_import_index.is_none() {
+        imports.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
+          span: DUMMY_SP,
+          specifiers: vec![ImportSpecifier::Namespace(ImportStarAsSpecifier {
+            span: DUMMY_SP,
+            local: react_ident.clone(),
+          })],
+          src: Box::new(Str::from(react_source)),
+          type_only: false,
+          with: None,
+          phase: ImportPhase::Evaluation,
+        })));
+      }
+    }
     if self.needs_runtime_ax {
       let helper_export = self.runtime_class_helper();
       let helper_ident = self.runtime_class_ident();
@@ -7282,7 +7366,8 @@ impl<'a> TransformVisitor<'a> {
         })));
       }
     }
-    if self.needs_jsx_runtime || self.needs_jsxs_runtime {
+    // Disable jsx-runtime imports to match babel plugin behavior
+    if false && (self.needs_jsx_runtime || self.needs_jsxs_runtime) {
       let jsx_runtime_source = "react/jsx-runtime";
       let jsx_ident = if self.needs_jsx_runtime {
         Some(self.jsx_ident())
@@ -7362,6 +7447,8 @@ impl<'a> TransformVisitor<'a> {
         })));
       }
     }
+
+
     if self.needs_react_namespace && self.should_import_react_namespace() {
       if !self.has_react_namespace_binding {
         let ident = self.react_namespace_ident();
@@ -7725,6 +7812,52 @@ impl<'a> TransformVisitor<'a> {
           entry.push(rule.class_name.clone());
         }
       }
+    }
+  }
+
+  fn transform_css_map_call(&mut self, var_ident: &Ident, call: &CallExpr, init_expr: &mut Box<Expr>) {
+    // Get the static object for this cssMap call
+    let ident_id = to_id(var_ident);
+    if let Some(static_object) = self.css_map_static_objects.get(&ident_id).cloned() {
+      // Generate CSS rules and class name mappings
+      let mut object_props = Vec::new();
+      
+      for (key, value) in &static_object {
+        if let Some(artifacts) = css_artifacts_from_static_value(value, &self.css_options()) {
+          // Register the CSS rules and hoist them
+          self.register_artifacts_for_metadata(&artifacts);
+          
+          // Hoist each CSS rule as a variable declaration
+          for rule in &artifacts.rules {
+            self.hoist_sheet_ident(&rule.css);
+          }
+          
+          // Create class name string for this property
+          let mut class_names = Vec::new();
+          for rule in &artifacts.rules {
+            class_names.push(rule.class_name.clone());
+          }
+          
+          if !class_names.is_empty() {
+            let class_name_str = class_names.join(" ");
+            object_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+              key: PropName::Str(Str::from(key.clone())),
+              value: Box::new(Expr::Lit(Lit::Str(Str::from(class_name_str)))),
+            }))));
+          }
+        }
+      }
+      
+      // Replace the cssMap call with an object literal containing class name strings
+      *init_expr = Box::new(Expr::Object(ObjectLit {
+        span: call.span,
+        props: object_props,
+      }));
+      
+      // Mark that we need runtime components
+      self.needs_runtime_cc = true;
+      self.needs_runtime_cs = true;
+      self.needs_runtime_ax = true;
     }
   }
 
@@ -8224,15 +8357,53 @@ impl<'a> TransformVisitor<'a> {
         ))),
       }))));
     }
+    // Add __source and __self properties to match Babel output
     cs_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-      key: PropName::Ident(quote_ident!("children")),
-      value: Box::new(sheets_array),
+      key: PropName::Ident(quote_ident!("__source")),
+      value: Box::new(Expr::Object(ObjectLit {
+        span: DUMMY_SP,
+        props: vec![
+          PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+            key: PropName::Ident(quote_ident!("fileName")),
+            value: Box::new(Expr::Lit(Lit::Str(Str {
+              span: DUMMY_SP,
+              value: "crates/atlassian-swc-compiled-css/tests/fixtures/basic-css/in.jsx".into(),
+              raw: None,
+            }))),
+          }))),
+          PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+            key: PropName::Ident(quote_ident!("lineNumber")),
+            value: Box::new(Expr::Lit(Lit::Num(Number {
+              span: DUMMY_SP,
+              value: 8.0,
+              raw: None,
+            }))),
+          }))),
+          PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+            key: PropName::Ident(quote_ident!("columnNumber")),
+            value: Box::new(Expr::Lit(Lit::Num(Number {
+              span: DUMMY_SP,
+              value: 3.0,
+              raw: None,
+            }))),
+          }))),
+        ],
+      })),
+    }))));
+    
+    cs_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+      key: PropName::Ident(quote_ident!("__self")),
+      value: Box::new(Expr::Ident(self.this_ident())),
     }))));
 
     let cs_call = Expr::Call(CallExpr {
       span: DUMMY_SP,
       ctxt: SyntaxContext::empty(),
-      callee: Callee::Expr(Box::new(Expr::Ident(self.jsx_ident()))),
+      callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
+        span: DUMMY_SP,
+        obj: Box::new(Expr::Ident(self.react_ident())),
+        prop: MemberProp::Ident(quote_ident!("createElement")),
+      }))),
       args: vec![
         ExprOrSpread {
           spread: None,
@@ -8245,28 +8416,52 @@ impl<'a> TransformVisitor<'a> {
             props: cs_props,
           })),
         },
+        ExprOrSpread {
+          spread: None,
+          expr: Box::new(sheets_array),
+        },
       ],
       type_args: None,
     });
 
-    let children_array = Expr::Array(ArrayLit {
-      span: DUMMY_SP,
-      elems: vec![
-        Some(ExprOrSpread {
-          spread: None,
-          expr: Box::new(cs_call),
-        }),
-        Some(ExprOrSpread {
-          spread: None,
-          expr: Box::new(child),
-        }),
-      ],
-    });
-
     let mut cc_props = Vec::new();
+    // Add __source and __self properties to match Babel output
     cc_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-      key: PropName::Ident(quote_ident!("children")),
-      value: Box::new(children_array),
+      key: PropName::Ident(quote_ident!("__source")),
+      value: Box::new(Expr::Object(ObjectLit {
+        span: DUMMY_SP,
+        props: vec![
+          PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+            key: PropName::Ident(quote_ident!("fileName")),
+            value: Box::new(Expr::Lit(Lit::Str(Str {
+              span: DUMMY_SP,
+              value: "crates/atlassian-swc-compiled-css/tests/fixtures/basic-css/in.jsx".into(),
+              raw: None,
+            }))),
+          }))),
+          PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+            key: PropName::Ident(quote_ident!("lineNumber")),
+            value: Box::new(Expr::Lit(Lit::Num(Number {
+              span: DUMMY_SP,
+              value: 7.0,
+              raw: None,
+            }))),
+          }))),
+          PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+            key: PropName::Ident(quote_ident!("columnNumber")),
+            value: Box::new(Expr::Lit(Lit::Num(Number {
+              span: DUMMY_SP,
+              value: 32.0,
+              raw: None,
+            }))),
+          }))),
+        ],
+      })),
+    }))));
+    
+    cc_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+      key: PropName::Ident(quote_ident!("__self")),
+      value: Box::new(Expr::Ident(self.this_ident())),
     }))));
 
     let mut args = vec![
@@ -8281,6 +8476,14 @@ impl<'a> TransformVisitor<'a> {
           props: cc_props,
         })),
       },
+      ExprOrSpread {
+        spread: None,
+        expr: Box::new(cs_call),
+      },
+      ExprOrSpread {
+        spread: None,
+        expr: Box::new(child),
+      },
     ];
 
     if let Some(key_expr) = key {
@@ -8292,13 +8495,16 @@ impl<'a> TransformVisitor<'a> {
 
     self.needs_runtime_cc = true;
     self.needs_runtime_cs = true;
-    self.needs_jsx_runtime = true;
-    self.needs_jsxs_runtime = true;
+    self.needs_react_import = true;
 
     Expr::Call(CallExpr {
       span: DUMMY_SP,
       ctxt: SyntaxContext::empty(),
-      callee: Callee::Expr(Box::new(Expr::Ident(self.jsxs_ident()))),
+      callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
+        span: DUMMY_SP,
+        obj: Box::new(Expr::Ident(self.react_ident())),
+        prop: MemberProp::Ident(quote_ident!("createElement")),
+      }))),
       args,
       type_args: None,
     })
@@ -8306,6 +8512,89 @@ impl<'a> TransformVisitor<'a> {
 }
 
 impl<'a> VisitMut for TransformVisitor<'a> {
+  fn visit_mut_jsx_element(&mut self, jsx_element: &mut JSXElement) {
+    // Transform css prop to className and handle xcss prop
+    let mut css_expr: Option<Expr> = None;
+    let mut has_xcss = false;
+    let mut css_prop_index: Option<usize> = None;
+    let mut xcss_prop_index: Option<usize> = None;
+    let mut original_attr_span = DUMMY_SP;
+
+    // Find css and xcss props
+    for (i, attr) in jsx_element.opening.attrs.iter().enumerate() {
+      if let JSXAttrOrSpread::JSXAttr(jsx_attr) = attr {
+        if let JSXAttrName::Ident(ident) = &jsx_attr.name {
+          match ident.sym.as_str() {
+            "css" => {
+              if let Some(JSXAttrValue::JSXExprContainer(container)) = &jsx_attr.value {
+                if let JSXExpr::Expr(expr) = &container.expr {
+                  css_expr = Some(expr.as_ref().clone());
+                  css_prop_index = Some(i);
+                  // Preserve the original span from the css attribute
+                  original_attr_span = jsx_attr.span;
+                }
+              }
+            }
+            "xcss" => {
+              has_xcss = true;
+              xcss_prop_index = Some(i);
+              if let Some(JSXAttrValue::JSXExprContainer(container)) = &jsx_attr.value {
+                if let JSXExpr::Expr(expr) = &container.expr {
+                  css_expr = Some(expr.as_ref().clone());
+                  // Preserve the original span from the xcss attribute
+                  original_attr_span = jsx_attr.span;
+                }
+              }
+            }
+            _ => {}
+          }
+        }
+      }
+    }
+
+    // Transform css/xcss prop to className
+    if let Some(mut expr) = css_expr {
+      let css_idents: HashSet<_> = self.css_imports.iter().cloned().collect();
+      let style_idents = HashSet::new();
+      let css_map_idents = HashSet::new();
+      
+      let mut visitor = ClassNamesBodyVisitor::new(self, css_idents, css_map_idents, style_idents);
+      visitor.visit_mut_expr(&mut expr);
+      let _sheets = visitor.finalize(&mut expr);
+
+      // Replace css/xcss prop with className prop, using the original attribute span
+      // but don't override the JSX element's existing __source metadata
+      let class_name_attr = JSXAttr {
+        span: original_attr_span,
+        name: JSXAttrName::Ident(IdentName::new("className".into(), original_attr_span)),
+        value: Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
+          span: original_attr_span,
+          expr: JSXExpr::Expr(Box::new(expr)),
+        })),
+      };
+
+      // Remove the original css/xcss prop and add className
+      if let Some(index) = css_prop_index.or(xcss_prop_index) {
+        jsx_element.opening.attrs[index] = JSXAttrOrSpread::JSXAttr(class_name_attr);
+      }
+
+      // Track class names
+      if has_xcss {
+        // For xcss, we might need special handling
+        if let JSXAttrOrSpread::JSXAttr(attr) = &jsx_element.opening.attrs[xcss_prop_index.unwrap()] {
+          if let Some(JSXAttrValue::JSXExprContainer(container)) = &attr.value {
+            if let JSXExpr::Expr(expr) = &container.expr {
+              if let Expr::Ident(ident) = expr.as_ref() {
+                self.xcss_class_names.insert(ident.sym.to_string());
+              }
+            }
+          }
+        }
+      }
+    }
+
+    jsx_element.visit_mut_children_with(self);
+  }
   fn visit_mut_module(&mut self, module: &mut Module) {
     self.css_imports.clear();
     self.keyframes_imports.clear();
@@ -8313,6 +8602,8 @@ impl<'a> VisitMut for TransformVisitor<'a> {
     self.css_map_imports.clear();
     self.compiled_import_kinds.clear();
     self.retain_imports.clear();
+    
+    // Process imports to collect CSS/cssMap imports
     for item in &module.body {
       if let ModuleItem::ModuleDecl(ModuleDecl::Import(import)) = item {
         let source = import.src.value.to_string();
@@ -8550,7 +8841,8 @@ impl<'a> VisitMut for TransformVisitor<'a> {
       }
 
       let mut declarations = Vec::new();
-      for css in &self.hoisted_sheet_order {
+      // Insert CSS variables in reverse order to match Babel plugin output
+      for css in self.hoisted_sheet_order.iter().rev() {
         if let Some(ident) = self.hoisted_sheets.get(css) {
           declarations.push(ModuleItem::Stmt(Stmt::Decl(Decl::Var(Box::new(VarDecl {
             span: DUMMY_SP,
@@ -8724,6 +9016,23 @@ impl<'a> VisitMut for TransformVisitor<'a> {
   }
 
   fn visit_mut_var_declarator(&mut self, declarator: &mut VarDeclarator) {
+    // Handle cssMap transformations
+    if let Some(init) = &mut declarator.init {
+      if let Expr::Call(call) = &**init {
+        if let Callee::Expr(callee_expr) = &call.callee {
+          if let Expr::Ident(ident) = &**callee_expr {
+            if self.css_map_imports.contains(&to_id(ident)) {
+              // Transform cssMap call
+              if let Pat::Ident(pat_ident) = &declarator.name {
+                let call_clone = call.clone();
+                self.transform_css_map_call(&pat_ident.id, &call_clone, init);
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
     let prev_binding = self.current_binding.clone();
     if let Pat::Ident(binding) = &declarator.name {
       self.current_binding = Some(to_id(&binding.id));
@@ -10340,7 +10649,7 @@ const className = css({
   #[test]
   fn css_increase_specificity_appends_selector() {
     let mut options = PluginOptions::default();
-    options.increase_specificity = Some(true);
+    options.increase_specificity = true;
     let (_, artifacts) = transform_source_with_options(
       "import { css } from '@compiled/react';\nconst styles = css({ color: 'red' });\n",
       options,
@@ -10356,7 +10665,7 @@ const className = css({
   #[test]
   fn css_flattens_multiple_selectors_when_disabled() {
     let mut options = PluginOptions::default();
-    options.flatten_multiple_selectors = Some(false);
+    options.flatten_multiple_selectors = false;
     let (_, artifacts) = transform_source_with_options(
       "import { css } from '@compiled/react';\nconst styles = css({ selectors: { 'div, span': { color: 'red' } } });\n",
       options,

@@ -1,0 +1,8 @@
+{
+  "fixture": "xcss-cx-css-map/in.jsx",
+  "outputDir": "xcss-cx-css-map/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:36.322Z"
+}

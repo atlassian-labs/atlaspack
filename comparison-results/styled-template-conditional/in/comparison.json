@@ -1,0 +1,8 @@
+{
+  "fixture": "styled-template-conditional/in.jsx",
+  "outputDir": "styled-template-conditional/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:36.054Z"
+}

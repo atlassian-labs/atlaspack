@@ -1,0 +1,9 @@
+{
+  "fixture": "lozenge-mixed-cssmap-patterns/in.jsx",
+  "outputDir": "lozenge-mixed-cssmap-patterns/in",
+  "match": false,
+  "error": "Baseline transform failed: /Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/lozenge-mixed-cssmap-patterns/in.jsx: \nThe variant object must be statically defined.\n\nCheck out our documentation for cssMap examples: https://compiledcssinjs.com/docs/api-cssmap\n (10:12).\n   8 |\n   9 | const stylesOld = cssMap({\n> 10 | \tcontainer: {\n     | \t           ^\n  11 | \t\tdisplay: 'inline-flex',\n  12 | \t\tborderRadius: token('radius.small'),\n  13 | \t\tblockSize: 'min-content',",
+  "hasBaseline": false,
+  "hasExperiment": false,
+  "timestamp": "2025-11-10T00:51:35.242Z"
+}

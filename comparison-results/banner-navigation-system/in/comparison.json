@@ -1,0 +1,8 @@
+{
+  "fixture": "banner-navigation-system/in.jsx",
+  "outputDir": "banner-navigation-system/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:33.805Z"
+}

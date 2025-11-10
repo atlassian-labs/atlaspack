@@ -1,0 +1,8 @@
+{
+  "fixture": "cx_with_dynamic_cssmap_property/in.jsx",
+  "outputDir": "cx_with_dynamic_cssmap_property/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.099Z"
+}

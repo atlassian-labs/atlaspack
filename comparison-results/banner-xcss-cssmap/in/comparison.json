@@ -1,0 +1,8 @@
+{
+  "fixture": "banner-xcss-cssmap/in.jsx",
+  "outputDir": "banner-xcss-cssmap/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:33.824Z"
+}

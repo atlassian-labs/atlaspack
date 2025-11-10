@@ -1,0 +1,8 @@
+{
+  "fixture": "cssmap-class-names-as-css/in.jsx",
+  "outputDir": "cssmap-class-names-as-css/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.013Z"
+}

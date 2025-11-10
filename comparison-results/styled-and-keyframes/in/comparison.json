@@ -1,0 +1,8 @@
+{
+  "fixture": "styled-and-keyframes/in.jsx",
+  "outputDir": "styled-and-keyframes/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.475Z"
+}

@@ -1,0 +1,8 @@
+{
+  "fixture": "main-navigation-system/in.jsx",
+  "outputDir": "main-navigation-system/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.255Z"
+}
