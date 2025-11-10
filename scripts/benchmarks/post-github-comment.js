@@ -4,16 +4,15 @@
  * which provides 'github' and 'context' globals.
  *
  * Usage in workflow:
- *   const postComment = require('./post-github-comment.js');
- *   await postComment.call(this);
+ *   const postComment = require('./scripts/benchmarks/post-github-comment.js');
+ *   await postComment(github, context);
  */
 
-import fs from 'fs';
-import {join, dirname} from 'path';
-import {fileURLToPath} from 'url';
+const fs = require('fs');
+const path = require('path');
 
-const COMMENT_PATH = join(
-  dirname(fileURLToPath(import.meta.url)),
+const COMMENT_PATH = path.join(
+  __dirname,
   '../../packages/core/e2e-tests/benchmark-results/github-comment.md',
 );
 
@@ -21,8 +20,8 @@ const COMMENT_PATH = join(
  * Post benchmark results as a GitHub comment
  * Updates existing benchmark comments or creates a new one
  *
- * @param github - GitHub API client from actions/github
- * @param context - GitHub Actions context from actions/github
+ * @param {Object} github - GitHub API client from actions/github
+ * @param {Object} context - GitHub Actions context from actions/github
  * @throws If unable to read the comment file or GitHub API fails
  */
 async function postGitHubComment(github, context) {
@@ -62,4 +61,4 @@ async function postGitHubComment(github, context) {
   }
 }
 
-export default postGitHubComment;
+module.exports = postGitHubComment;
