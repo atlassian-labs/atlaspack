@@ -58,8 +58,8 @@ impl UnusedBindingsRemover {
     matches!(name, "di" | "jsx" | "React")
   }
 
-  fn should_keep_binding(&self, id: &Id, is_exported: bool) -> bool {
-    self.used_bindings.contains(id) || Self::is_special_ident(&id.0) || is_exported
+  fn should_keep_binding(&self, id: &Id) -> bool {
+    self.used_bindings.contains(id) || Self::is_special_ident(&id.0)
   }
 
   fn is_pattern_empty(&self, pat: &Pat) -> bool {
@@ -94,7 +94,7 @@ impl UnusedBindingsRemover {
         self
           .declared_bindings
           .get(&id)
-          .is_none_or(|&is_exported| self.should_keep_binding(&id, is_exported))
+          .is_none_or(|&is_exported| self.should_keep_binding(&id) || is_exported)
       }
       _ => true,
     }
@@ -105,7 +105,7 @@ impl UnusedBindingsRemover {
       ImportSpecifier::Default(default) => &default.local,
       ImportSpecifier::Namespace(ns) => &ns.local,
     };
-    self.should_keep_binding(&id.to_id(), false)
+    self.should_keep_binding(&id.to_id())
   }
 
   /// Runs multiple passes of unused binding elimination until no more progress can be made.
