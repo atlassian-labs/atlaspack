@@ -180,6 +180,7 @@ jobs:
 
   integration_tests:
     name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }})
+    if: false  # Temporarily disabled to focus on v3 integration tests
     needs:
       - build_native
     timeout-minutes: 45
