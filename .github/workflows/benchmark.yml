@@ -68,7 +68,7 @@ jobs:
         if: always()
         with:
           name: benchmark-results
-          path: benchmark-results/
+          path: packages/core/e2e-tests/benchmark-results
           retention-days: 30
 
       - name: Comment on PR
