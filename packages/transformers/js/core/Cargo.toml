@@ -34,6 +34,7 @@ swc_ecma_parser = { workspace = true }
 indoc = { workspace = true }
 serde = { workspace = true }
 serde_bytes = { workspace = true }
+serde_json = { workspace = true }
 Inflector = { workspace = true }
 data-encoding = { workspace = true }
 sha-1 = { workspace = true }

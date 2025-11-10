@@ -1,3 +1,5 @@
+use serde::Deserialize;
+use serde_json;
 use std::path::Path;
 use swc_core::common::Mark;
 use swc_core::common::SyntaxContext;
@@ -6,18 +8,43 @@ use swc_core::ecma::{
   visit::{VisitMut, VisitMutWith},
 };
 
+#[derive(Deserialize)]
+pub struct SyncDynamicImportConfig {
+  entrypoint_filepath_suffix: String,
+  actual_require_paths: Vec<String>,
+}
+
 pub struct SyncDynamicImport<'a> {
   filename: &'a Path,
   unresolved_mark: Mark,
+  config: SyncDynamicImportConfig,
   resolve_module_path_override: Option<fn(&str) -> Option<String>>,
 }
 
-#[allow(dead_code)]
 impl<'a> SyncDynamicImport<'a> {
-  pub fn new(filename: &'a Path, unresolved_mark: Mark) -> Self {
+  pub fn new(
+    filename: &'a Path,
+    unresolved_mark: Mark,
+    json_string_config: Option<String>,
+  ) -> Self {
+    let config: SyncDynamicImportConfig = json_string_config
+      .as_ref()
+      .and_then(|json_str| serde_json::from_str::<SyncDynamicImportConfig>(json_str).ok())
+      .unwrap_or_else(|| {
+        if json_string_config.is_some() {
+          println!(" SyncDynamicImport: Failed to parse SyncDynamicImportConfig JSON or config shape did not match, falling back to default configuration");
+        }
+
+        SyncDynamicImportConfig {
+          entrypoint_filepath_suffix: "".into(),
+          actual_require_paths: vec![],
+        }
+      });
+
     Self {
       filename,
       unresolved_mark,
+      config,
       resolve_module_path_override: None,
     }
   }
@@ -72,74 +99,77 @@ impl<'a> SyncDynamicImport<'a> {
   }
 
   fn create_entrypoint_import(&self, source_args: Vec<ExprOrSpread>) -> Expr {
-    // {
+    // (()=>{
     //     const fileExports = require(SOURCE);
     //     return Promise.resolve(fileExports);
-    // }
+    // })()
     let require_call = self.create_require_call(source_args);
 
     Expr::Call(CallExpr {
       span: Default::default(),
-      callee: Callee::Expr(Box::new(Expr::Arrow(ArrowExpr {
+      callee: Callee::Expr(Box::new(Expr::Paren(ParenExpr {
         span: Default::default(),
-        params: vec![],
-        body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+        expr: Box::new(Expr::Arrow(ArrowExpr {
           span: Default::default(),
-          ctxt: SyntaxContext::empty().apply_mark(self.unresolved_mark),
-          stmts: vec![
-            // const fileExports = require(SOURCE);
-            Stmt::Decl(Decl::Var(Box::new(VarDecl {
-              span: Default::default(),
-              ctxt: SyntaxContext::empty().apply_mark(self.unresolved_mark),
-              kind: VarDeclKind::Const,
-              declare: false,
-              decls: vec![VarDeclarator {
+          params: vec![],
+          body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+            span: Default::default(),
+            ctxt: SyntaxContext::empty().apply_mark(self.unresolved_mark),
+            stmts: vec![
+              // const fileExports = require(SOURCE);
+              Stmt::Decl(Decl::Var(Box::new(VarDecl {
                 span: Default::default(),
-                name: Pat::Ident(BindingIdent {
-                  id: Ident::new(
-                    "fileExports".into(),
-                    Default::default(),
-                    SyntaxContext::empty().apply_mark(self.unresolved_mark),
-                  ),
-                  type_ann: None,
-                }),
-                init: Some(Box::new(require_call)),
-                definite: false,
-              }],
-            }))),
-            // return Promise.resolve(fileExports);
-            Stmt::Return(ReturnStmt {
-              span: Default::default(),
-              arg: Some(Box::new(Expr::Call(CallExpr {
-                span: Default::default(),
-                callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
-                  span: Default::default(),
-                  obj: Box::new(Expr::Ident(Ident::new(
-                    "Promise".into(),
-                    Default::default(),
-                    SyntaxContext::empty().apply_mark(self.unresolved_mark),
-                  ))),
-                  prop: MemberProp::Ident("resolve".into()),
-                }))),
-                args: vec![ExprOrSpread {
-                  spread: None,
-                  expr: Box::new(Expr::Ident(Ident::new(
-                    "fileExports".into(),
-                    Default::default(),
-                    SyntaxContext::empty().apply_mark(self.unresolved_mark),
-                  ))),
-                }],
-                type_args: None,
                 ctxt: SyntaxContext::empty().apply_mark(self.unresolved_mark),
+                kind: VarDeclKind::Const,
+                declare: false,
+                decls: vec![VarDeclarator {
+                  span: Default::default(),
+                  name: Pat::Ident(BindingIdent {
+                    id: Ident::new(
+                      "fileExports".into(),
+                      Default::default(),
+                      SyntaxContext::empty().apply_mark(self.unresolved_mark),
+                    ),
+                    type_ann: None,
+                  }),
+                  init: Some(Box::new(require_call)),
+                  definite: false,
+                }],
               }))),
-            }),
-          ],
+              // return Promise.resolve(fileExports);
+              Stmt::Return(ReturnStmt {
+                span: Default::default(),
+                arg: Some(Box::new(Expr::Call(CallExpr {
+                  span: Default::default(),
+                  callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
+                    span: Default::default(),
+                    obj: Box::new(Expr::Ident(Ident::new(
+                      "Promise".into(),
+                      Default::default(),
+                      SyntaxContext::empty().apply_mark(self.unresolved_mark),
+                    ))),
+                    prop: MemberProp::Ident("resolve".into()),
+                  }))),
+                  args: vec![ExprOrSpread {
+                    spread: None,
+                    expr: Box::new(Expr::Ident(Ident::new(
+                      "fileExports".into(),
+                      Default::default(),
+                      SyntaxContext::empty().apply_mark(self.unresolved_mark),
+                    ))),
+                  }],
+                  type_args: None,
+                  ctxt: SyntaxContext::empty().apply_mark(self.unresolved_mark),
+                }))),
+              }),
+            ],
+          })),
+          is_async: false,
+          is_generator: false,
+          type_params: None,
+          return_type: None,
+          ctxt: SyntaxContext::empty().apply_mark(self.unresolved_mark),
         })),
-        is_async: false,
-        is_generator: false,
-        type_params: None,
-        return_type: None,
-        ctxt: SyntaxContext::empty().apply_mark(self.unresolved_mark),
       }))),
       args: vec![],
       type_args: None,
@@ -148,20 +178,18 @@ impl<'a> SyncDynamicImport<'a> {
   }
 
   fn should_convert_to_require(&self, module_path: &str) -> bool {
-    let allowed_paths = vec![
-      "src/packages/router-resources",
-      "@atlaskit/tokens",
-      "platform/packages/design-system/tokens",
-    ];
-
-    allowed_paths.iter().any(|&path| module_path.contains(path))
+    self
+      .config
+      .actual_require_paths
+      .iter()
+      .any(|path| module_path.contains(path))
   }
 
   fn is_entrypoint_file(&self) -> bool {
     self
       .filename
       .to_str()
-      .map(|f| f.ends_with("entrypoint.tsx"))
+      .map(|f| f.ends_with(&self.config.entrypoint_filepath_suffix))
       .unwrap_or(false)
   }
 
@@ -237,6 +265,21 @@ mod tests {
     return Some(file_path.to_string());
   }
 
+  fn get_config() -> Option<String> {
+    Some(
+      r#"
+      {
+        "entrypoint_filepath_suffix": "entrypoint.tsx",
+        "actual_require_paths": [
+            "src/packages/router-resources",
+            "@atlaskit/tokens",
+            "platform/packages/design-system/tokens"
+        ]
+      }"#
+        .to_string(),
+    )
+  }
+
   #[test]
   fn test_dummy_resolve() {
     let RunVisitResult { output_code, .. } = run_test_visit(
@@ -250,7 +293,11 @@ mod tests {
         const dummy = import(path);
       "#},
       |run_test_context: RunTestContext| {
-        SyncDynamicImport::new(Path::new("./index.tsx"), run_test_context.unresolved_mark)
+        SyncDynamicImport::new(
+          Path::new("./index.tsx"),
+          run_test_context.unresolved_mark,
+          get_config(),
+        )
       },
     );
 
@@ -279,8 +326,11 @@ mod tests {
         }
       "#},
       |run_test_context: RunTestContext| {
-        let mut transformer =
-          SyncDynamicImport::new(Path::new("./index.tsx"), run_test_context.unresolved_mark);
+        let mut transformer = SyncDynamicImport::new(
+          Path::new("./index.tsx"),
+          run_test_context.unresolved_mark,
+          get_config(),
+        );
 
         transformer.__override_resolve_module_path(Some(mock_resolve));
         transformer
@@ -317,6 +367,7 @@ mod tests {
         SyncDynamicImport::new(
           Path::new("./entrypoint.tsx"),
           run_test_context.unresolved_mark,
+          get_config(),
         )
       },
     );
@@ -325,10 +376,44 @@ mod tests {
       output_code,
       indoc! {r#"
         export const modalEntryPoint = createEntryPoint({
-            root: JSResourceForInteraction(()=>()=>{
+            root: JSResourceForInteraction(()=>(()=>{
                     const fileExports = require('./modal.tsx');
                     return Promise.resolve(fileExports);
-                }())
+                })())
+        });
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_entrypoint_file_with_chained_promise() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        export const modalEntryPoint = createEntryPoint({
+          root: JSResourceForInteraction(() =>
+            import(
+              /* webpackChunkName: "async-modal-entrypoint" */ './modal.tsx'
+            ).then((module) => module.modal),
+          ),
+        });
+      "#},
+      |run_test_context: RunTestContext| {
+        SyncDynamicImport::new(
+          Path::new("./entrypoint.tsx"),
+          run_test_context.unresolved_mark,
+          get_config(),
+        )
+      },
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        export const modalEntryPoint = createEntryPoint({
+            root: JSResourceForInteraction(()=>(()=>{
+                    const fileExports = require('./modal.tsx');
+                    return Promise.resolve(fileExports);
+                })().then((module)=>module.modal))
         });
       "#}
     );

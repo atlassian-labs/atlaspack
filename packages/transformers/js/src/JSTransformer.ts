@@ -308,6 +308,8 @@ export default new Transformer({
     let enableLazyLoadingTransformer = Boolean(
       options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
     );
+    let syncDynamicImportConfig =
+      options.env.SYNC_DYNAMIC_IMPORT_CONFIG || undefined;
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -355,6 +357,7 @@ export default new Transformer({
       magicComments,
       enableGlobalThisAliaser,
       enableLazyLoadingTransformer,
+      syncDynamicImportConfig,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -538,6 +541,7 @@ export default new Transformer({
       enable_lazy_loading_transformer: Boolean(
         config.enableLazyLoadingTransformer,
       ),
+      sync_dynamic_import_config: config.syncDynamicImportConfig,
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
