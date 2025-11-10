@@ -29,6 +29,11 @@ mod transformer;
 pub mod vcs;
 
 mod plugin_tokens;
+
+// Re-export memory profiling functions
+pub use atlaspack_memory_profiler::{
+  get_native_memory_stats, reset_memory_tracking, sample_native_memory,
+};
 pub use atlassian_swc_compiled_css::config::CompiledCssInJsTransformConfig;
 
 #[cfg(target_arch = "wasm32")]
