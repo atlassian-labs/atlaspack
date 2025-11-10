@@ -157,6 +157,7 @@ fn process_compiled_css_in_js(
       comments,
       &module_result,
       input.source_maps,
+      Some(false), // Preserve Unicode characters for now
     )
     .with_context(|| "Failed to emit transformed code")?;
 
