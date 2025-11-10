@@ -53,40 +53,15 @@ jobs:
         run: yarn build-native-release && yarn build
 
       - name: Get baseline from main branch
-        run: |
-          git fetch origin main:main
-          git checkout main
-          yarn build
-
-          # Try to run benchmark on main branch, continue gracefully if it fails
-          cd packages/core/e2e-tests
-          if yarn benchmark --output=$GITHUB_WORKSPACE/benchmark-results --samples=5 2>/dev/null; then
-            echo "✅ Baseline benchmark completed successfully"
-            mv $GITHUB_WORKSPACE/benchmark-results/current-report.json $GITHUB_WORKSPACE/benchmark-results/baseline-report.json
-          else
-            echo "ℹ️ Main branch doesn't have benchmark command - skipping baseline generation"
-            echo "This is expected for the first benchmark PR"
-            mkdir -p $GITHUB_WORKSPACE/benchmark-results
-          fi
-          cd $GITHUB_WORKSPACE
-
-          git checkout ${{ github.head_ref || github.ref_name }}
-
-      - name: Build current branch
-        run: yarn build
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          GITHUB_HEAD_REF: ${{ github.head_ref || github.ref_name }}
+        run: bash scripts/benchmarks/generate-baseline.sh
 
       - name: Run benchmarks on current branch
-        run: |
-          # Run benchmarks with baseline if available, otherwise without baseline
-          cd packages/core/e2e-tests
-          if [ -f "$GITHUB_WORKSPACE/benchmark-results/baseline-report.json" ]; then
-            echo "🔄 Running benchmarks with baseline comparison..."
-            yarn benchmark --output=$GITHUB_WORKSPACE/benchmark-results --baseline=$GITHUB_WORKSPACE/benchmark-results/baseline-report.json --github-comment --samples=3
-          else
-            echo "🔄 Running benchmarks without baseline..."
-            yarn benchmark --output=$GITHUB_WORKSPACE/benchmark-results --github-comment --samples=3
-          fi
-          cd $GITHUB_WORKSPACE
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+        run: bash scripts/benchmarks/run-benchmarks.sh
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
@@ -101,54 +76,8 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const path = './benchmark-results/github-comment.md';
-
-            if (!fs.existsSync(path)) {
-              console.log('No GitHub comment file found at: ' + path);
-              return;
-            }
-
-            const comment = fs.readFileSync(path, 'utf8');
-
-            // Find existing benchmark comment
-            const comments = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const existingComment = comments.data.find(
-              comment => comment.body.includes('📊 Benchmark Results')
-            );
-
-            if (existingComment) {
-              // Update existing comment
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existingComment.id,
-                body: comment
-              });
-            } else {
-              // Create new comment
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: comment
-              });
-            }
+            const postComment = require('./scripts/benchmarks/post-github-comment.mjs');
+            await postComment(github, context);
 
       - name: Check for regressions
-        run: |
-          if [ -f "benchmark-results/github-comment.md" ]; then
-            if grep -q "🔴 Regression" benchmark-results/github-comment.md; then
-              echo "❌ Performance regressions detected!"
-              exit 1
-            else
-              echo "✅ No performance regressions detected"
-            fi
-          else
-            echo "ℹ️ No benchmark results found - skipping regression check"
-          fi
+        run: bash scripts/benchmarks/check-regressions.sh
