@@ -57,6 +57,9 @@ export declare function addEnvironment(environment: unknown): void
 export declare function getAvailableThreads(): number
 export declare function initializeMonitoring(): void
 export declare function closeMonitoring(): void
+export declare function getNativeMemoryStats(): NativeMemoryStats | null
+export declare function resetMemoryTracking(): void
+export declare function sampleNativeMemory(): void
 /** Called on the worker thread to create a reference to the NodeJs worker */
 export declare function newNodejsWorker(worker: object): JsTransferable
 export interface InlineRequiresOptimizerInput {

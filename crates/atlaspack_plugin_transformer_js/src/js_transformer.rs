@@ -444,6 +444,10 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       conditional_bundling: feature_flag_conditional_bundling,
       hmr_improvements: feature_flag_hmr_improvements,
       exports_rebinding_optimisation: feature_flag_exports_rebinding_optimisation,
+      nested_promise_import_fix: self
+        .options
+        .feature_flags
+        .bool_enabled("nestedPromiseImportFix"),
       ..atlaspack_js_swc_core::Config::default()
     };
 

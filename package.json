@@ -48,6 +48,8 @@
     "test": "yarn test:unit && yarn test:integration",
     "test:e2e": "yarn workspace @atlaspack/e2e-tests test",
     "test:e2e:ci": "yarn workspace @atlaspack/e2e-tests test-ci",
+    "benchmark": "yarn workspace @atlaspack/e2e-tests benchmark",
+    "benchmark:ci": "yarn workspace @atlaspack/e2e-tests benchmark:ci",
     "nx:test:integration": "yarn lerna run --stream test:integration",
     "nx:test:integration:ci": "yarn lerna run --stream test:integration:ci",
     "test:integration": "yarn workspace @atlaspack/integration-tests test",

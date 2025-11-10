@@ -1,5 +1,9 @@
 {
   "name": "tokens",
+  "dependencies": {
+    "react": "*",
+    "react-dom": "*"
+  },
   "devDependencies": {
     "@atlaskit/tokens": "*",
     "@atlaspack/transformer-tokens": "*"

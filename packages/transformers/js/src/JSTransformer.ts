@@ -538,6 +538,7 @@ export default new Transformer({
       enable_lazy_loading_transformer: Boolean(
         config.enableLazyLoadingTransformer,
       ),
+      nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;

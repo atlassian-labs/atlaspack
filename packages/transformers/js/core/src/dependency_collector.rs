@@ -539,16 +539,36 @@ impl VisitMut for DependencyCollector<'_> {
               {
                 match &*arg.expr {
                   Expr::Fn(_) | Expr::Arrow(_) => {
-                    self.in_promise = true;
-                    node.visit_mut_children_with(self);
-                    self.in_promise = was_in_promise;
+                    if self.config.nested_promise_import_fix {
+                      self.in_promise = true;
+                      // Reset require_node to capture only requires within this
+                      // promise.then
+                      let old_require_node = self.require_node.take();
+                      node.visit_mut_children_with(self);
+                      self.in_promise = was_in_promise;
+                      // Get the require node captured during visiting children
+                      // and reset the require_node to its previous value
+                      let require_node = self.require_node.take();
+                      self.require_node = old_require_node;
 
-                    // Transform Promise.resolve().then(() => __importStar(require('foo')))
-                    //   => Promise.resolve().then(() => require('foo')).then(res => __importStar(res))
-                    if let Some(require_node) = self.require_node.clone() {
-                      self.require_node = None;
-                      build_promise_chain(node, require_node);
-                      return;
+                      // Transform Promise.resolve().then(() => __importStar(require('foo')))
+                      //   => Promise.resolve().then(() => require('foo')).then(res => __importStar(res))
+                      if let Some(require_node) = require_node {
+                        build_promise_chain(node, require_node);
+                        return;
+                      }
+                    } else {
+                      self.in_promise = true;
+                      node.visit_mut_children_with(self);
+                      self.in_promise = was_in_promise;
+
+                      // Transform Promise.resolve().then(() => __importStar(require('foo')))
+                      //   => Promise.resolve().then(() => require('foo')).then(res => __importStar(res))
+                      if let Some(require_node) = self.require_node.clone() {
+                        self.require_node = None;
+                        build_promise_chain(node, require_node);
+                        return;
+                      }
                     }
                   }
                   _ => {}
@@ -1560,6 +1580,7 @@ mod tests {
   use atlaspack_core::types::DependencyKind;
   use atlaspack_swc_runner::test_utils::{RunContext, RunVisitResult, run_test_visit};
   use indoc::{formatdoc, indoc};
+  use pretty_assertions::assert_eq;
 
   fn make_dependency_collector<'a>(
     context: RunContext,
@@ -1586,6 +1607,7 @@ mod tests {
   fn make_config() -> Config {
     let mut config = Config::default();
     config.is_browser = true;
+    config.nested_promise_import_fix = true;
     config
   }
 
@@ -1602,7 +1624,7 @@ mod tests {
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let config = Config::default();
+    let config = make_config();
     let input_code = r#"
       const { x } = await import('other');
     "#;
@@ -1640,12 +1662,64 @@ mod tests {
   }
 
   #[test]
+  fn test_dynamic_import_nested_promise() {
+    let mut conditions = HashSet::new();
+    let mut diagnostics = vec![];
+    let mut items = vec![];
+
+    let mut config = make_config();
+    config.scope_hoist = true;
+
+    let input_code = indoc! {r#"
+      const dynamic = () => import('./dynamic');
+
+      Promise.resolve().then(() => {
+          Promise.resolve().then(() => console.log());
+      });
+    "#};
+
+    let RunVisitResult { output_code, .. } = run_test_visit(input_code, |context| {
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
+    });
+
+    let hash = make_placeholder_hash("./dynamic", DependencyKind::DynamicImport);
+    let expected_code = formatdoc! {r#"
+      const dynamic = ()=>import("{hash}");
+      Promise.resolve().then(()=>{{
+          Promise.resolve().then(()=>console.log());
+      }});
+    "#};
+
+    assert_eq!(diagnostics, []);
+    assert_eq!(
+      items,
+      [DependencyDescriptor {
+        kind: DependencyKind::DynamicImport,
+        specifier: "./dynamic".into(),
+        attributes: None,
+        is_optional: false,
+        is_helper: false,
+        source_type: Some(SourceType::Module),
+        placeholder: Some(hash),
+        ..items[0].clone()
+      }]
+    );
+    assert_eq!(output_code, expected_code);
+  }
+
+  #[test]
   fn test_dynamic_import_dependency_from_script() {
     let mut conditions = HashSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let mut config = Config::default();
+    let mut config = make_config();
     config.source_type = SourceType::Script;
 
     let input_code = r#"
@@ -1690,7 +1764,7 @@ mod tests {
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let config = Config::default();
+    let config = make_config();
     let input_code = r#"
       import { x } from 'other';
     "#;
@@ -1732,7 +1806,7 @@ mod tests {
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let config = Config::default();
+    let config = make_config();
     let input_code = r#"
       export { x } from 'other';
     "#;
@@ -1774,7 +1848,7 @@ mod tests {
     let mut items = vec![];
     let mut diagnostics = vec![];
 
-    let config = Config::default();
+    let config = make_config();
     let input_code = r#"
       export * from 'other';
     "#;
