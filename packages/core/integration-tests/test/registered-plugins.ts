@@ -9,7 +9,7 @@ import {
   fsFixture,
 } from '@atlaspack/test-utils';
 
-describe.v2('plugins with "registered" languages', () => {
+describe('plugins with "registered" languages', () => {
   it('should support plugins with esbuild-register', async () => {
     const dir = path.join(__dirname, 'esbuild-register-plugin');
     overlayFS.mkdirp(dir);
