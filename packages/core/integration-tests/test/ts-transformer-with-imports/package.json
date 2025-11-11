@@ -1,0 +1,5 @@
+{
+  "name": "ts-transformer-imports-test",
+  "sideEffects": true,
+  "type": "commonjs"
+}
