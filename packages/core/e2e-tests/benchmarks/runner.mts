@@ -15,7 +15,6 @@ import type {
   BenchmarkOptions,
   BenchmarkSample,
   BenchmarkResult,
-  PhaseMetrics,
   MemorySnapshot,
   DetailedMemoryStats,
   MemoryStats,

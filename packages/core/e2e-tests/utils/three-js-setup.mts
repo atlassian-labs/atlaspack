@@ -83,9 +83,16 @@ async function createBenchmarkProject(
     dependencies: {},
   };
 
+
   await writeFile(
     join(outputDir, 'package.json'),
     JSON.stringify(packageJson, null, 2),
+  );
+
+  // Create empty yarn.lock
+  await writeFile(
+    join(outputDir, 'yarn.lock'),
+    '{}\n',
   );
 
   // Create .parcelrc
