@@ -14,7 +14,7 @@ export type NullEdgeType = 1;
 export const NULL_EDGE_TYPE: NullEdgeType = 1;
 export type GraphOpts<TNode, TEdgeType extends number = NullEdgeType> = {
   nodes?: Array<TNode | null>;
-  adjacencyList?: SerializedAdjacencyList<TEdgeType>;
+  adjacencyList?: SerializedAdjacencyList<TEdgeType> | AdjacencyList<TEdgeType>;
   rootNodeId?: NodeId | null | undefined;
   initialCapacity?: number;
   initialNodeCapacity?: number;
@@ -87,7 +87,9 @@ export default class Graph<TNode, TEdgeType extends number = NullEdgeType> {
     this.setRootNodeId(rootNodeId);
 
     this.adjacencyList = adjacencyList
-      ? AdjacencyList.deserialize(adjacencyList)
+      ? adjacencyList instanceof AdjacencyList
+        ? adjacencyList
+        : AdjacencyList.deserialize(adjacencyList)
       : new AdjacencyList<TEdgeType>(adjacencyListOpts);
 
     if (opts?.nodes && !opts.adjacencyList) {

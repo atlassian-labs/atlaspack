@@ -41,6 +41,7 @@ pub struct AssetGraph {
   root_node_id: NodeId,
   node_delta: Vec<NodeId>,
   pub starting_node_count: usize,
+  pub safe_to_skip_bundling: bool,
 }
 
 impl Default for AssetGraph {
@@ -69,6 +70,7 @@ impl AssetGraph {
       root_node_id,
       node_delta: Vec::new(),
       starting_node_count: 0,
+      safe_to_skip_bundling: false,
     }
   }
 
@@ -92,7 +94,22 @@ impl AssetGraph {
       nodes,
       node_delta: Vec::new(),
       starting_node_count: prev_asset_graph.nodes.len(),
+      safe_to_skip_bundling: false,
     }
+  }
+
+  pub fn apply_changed_assets(&self, assets_to_update: Vec<Arc<Asset>>) -> anyhow::Result<Self> {
+    let mut new_graph = self.clone();
+
+    new_graph.safe_to_skip_bundling = true;
+    new_graph.starting_node_count = new_graph.nodes.len();
+    new_graph.node_delta.clear();
+
+    for asset in assets_to_update {
+      new_graph.replace_asset(asset)?;
+    }
+
+    Ok(new_graph)
   }
 
   pub fn edges(&self) -> Vec<u32> {
@@ -282,6 +299,20 @@ impl AssetGraph {
       self.node_id_to_node_index[to_id],
       (),
     );
+  }
+
+  fn replace_asset(&mut self, asset: Arc<Asset>) -> anyhow::Result<()> {
+    let Some(id) = self.content_key_to_node_id.get(&asset.id) else {
+      return Err(anyhow::anyhow!(
+        "Missing content key for asset {}",
+        asset.file_path.display()
+      ));
+    };
+
+    self.nodes[*id] = AssetGraphNode::Asset(asset.clone());
+    self.node_delta.push(*id);
+
+    Ok(())
   }
 }
 

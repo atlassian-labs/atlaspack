@@ -7,6 +7,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use indexmap::IndexMap;
 use pathdiff::diff_paths;
+use tokio::task::JoinSet;
 
 use crate::request_tracker::{
   Request, RequestResultReceiver, RequestResultSender, ResultAndInvalidations, RunRequestContext,
@@ -26,6 +27,7 @@ use super::target_request::{TargetRequest, TargetRequestOutput};
 #[derive(Debug, Default)]
 pub struct AssetGraphRequest {
   pub prev_asset_graph: Option<Arc<AssetGraph>>,
+  pub incrementally_bundled_assets: Option<Vec<Arc<RequestResult>>>,
 }
 
 impl Hash for AssetGraphRequest {
@@ -43,11 +45,149 @@ pub struct AssetGraphRequestOutput {
 impl Request for AssetGraphRequest {
   async fn run(
     &self,
-    request_context: RunRequestContext,
+    mut request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
-    let builder = AssetGraphBuilder::new(request_context, self.prev_asset_graph.clone());
+    match self.try_reuse_asset_graph(&mut request_context).await? {
+      ReusedAssetGraphResult::Reused(result) => Ok(result),
+      ReusedAssetGraphResult::NeedsFullRebuild(changed_requests) => {
+        tracing::info!("Incremental asset graph reuse not possible, building full asset graph");
+        AssetGraphBuilder::new(
+          request_context,
+          self.prev_asset_graph.clone(),
+          changed_requests,
+        )
+        .build()
+      }
+    }
+  }
+}
 
-    builder.build()
+enum ReusedAssetGraphResult {
+  Reused(ResultAndInvalidations),
+  NeedsFullRebuild(HashSet<u64>),
+}
+
+impl AssetGraphRequest {
+  #[tracing::instrument(level = "info", skip_all)]
+  async fn try_reuse_asset_graph(
+    &self,
+    request_context: &mut RunRequestContext,
+  ) -> anyhow::Result<ReusedAssetGraphResult> {
+    let mut requires_full_rebuild = false;
+
+    let Some(prev_asset_graph) = &self.prev_asset_graph else {
+      tracing::info!("No previous asset graph");
+      return Ok(ReusedAssetGraphResult::NeedsFullRebuild(HashSet::new()));
+    };
+
+    let Some(ref incrementally_bundled_assets) = self.incrementally_bundled_assets else {
+      tracing::info!("No incrementally bundled assets");
+      return Ok(ReusedAssetGraphResult::NeedsFullRebuild(HashSet::new()));
+    };
+
+    let mut outputs = HashMap::new();
+
+    let mut asset_requests = JoinSet::new();
+    for asset in incrementally_bundled_assets.iter() {
+      let RequestResult::Asset(asset_request_output) = asset.as_ref() else {
+        return Err(anyhow!(
+          "Unexpected request result in AssetGraphRequest incremental build: {:?}. This should never happen.",
+          asset
+        ));
+      };
+
+      let asset = &asset_request_output.asset;
+
+      if asset.is_virtual {
+        tracing::info!("Cannot bundle virtual assets incrementally");
+        requires_full_rebuild = true;
+      }
+
+      let asset_request = AssetRequest {
+        code: None,
+        env: asset.env.clone(),
+        file_path: asset.file_path.clone(),
+        project_root: request_context.project_root.clone(),
+        pipeline: asset.pipeline.clone(),
+        query: asset.query.clone(),
+        side_effects: asset.side_effects,
+      };
+
+      outputs.insert(asset_request.id(), asset_request_output);
+
+      asset_requests.spawn(request_context.execute_request(asset_request));
+    }
+
+    let mut changed_assets = Vec::new();
+    let mut changed_requests = HashSet::new();
+
+    while let Some(result) = asset_requests.join_next().await {
+      let (request_result, id, _cached) = result??;
+
+      changed_requests.insert(id);
+
+      let prev_output = outputs
+        .get(&id)
+        .ok_or(anyhow!("Missing prev output, this should never happen"))?;
+
+      match request_result.as_ref() {
+        RequestResult::Asset(asset_request_result) => {
+          let AssetRequestOutput {
+            asset,
+            discovered_assets,
+            dependencies,
+          } = asset_request_result;
+
+          let AssetRequestOutput {
+            discovered_assets: prev_discovered_assets,
+            dependencies: prev_dependencies,
+            ..
+          } = prev_output;
+
+          if dependencies != prev_dependencies {
+            tracing::info!(
+              "Cannot bundle assets incrementally if their dependencies have changed: {}",
+              asset.file_path.display()
+            );
+            requires_full_rebuild = true;
+            continue;
+          }
+
+          if discovered_assets != prev_discovered_assets {
+            tracing::info!(
+              "Cannot bundle assets incrementally if their discovered assets have changed: {}",
+              asset.file_path.display()
+            );
+            requires_full_rebuild = true;
+            continue;
+          }
+
+          changed_assets.push(asset.clone());
+          discovered_assets.iter().for_each(|discovered_asset| {
+            changed_assets.push(Arc::new(discovered_asset.asset.clone()));
+          });
+        }
+        _ => {
+          return Err(anyhow!(
+            "Unexpected request result in AssetGraphRequest incremental build: {:?}",
+            request_result
+          ));
+        }
+      }
+    }
+
+    if requires_full_rebuild {
+      return Ok(ReusedAssetGraphResult::NeedsFullRebuild(changed_requests));
+    }
+
+    let asset_graph = prev_asset_graph.apply_changed_assets(changed_assets)?;
+
+    Ok(ReusedAssetGraphResult::Reused(ResultAndInvalidations {
+      result: RequestResult::AssetGraph(AssetGraphRequestOutput {
+        graph: Arc::new(asset_graph),
+      }),
+      invalidations: vec![],
+    }))
   }
 }
 
@@ -64,10 +204,15 @@ pub(crate) struct AssetGraphBuilder {
   asset_request_to_asset_id: HashMap<u64, NodeId>,
   waiting_asset_requests: HashMap<u64, HashSet<NodeId>>,
   entry_dependencies: Vec<(String, NodeId)>,
+  changed_requests: HashSet<u64>,
 }
 
 impl AssetGraphBuilder {
-  fn new(request_context: RunRequestContext, prev_asset_graph: Option<Arc<AssetGraph>>) -> Self {
+  fn new(
+    request_context: RunRequestContext,
+    prev_asset_graph: Option<Arc<AssetGraph>>,
+    changed_requests: HashSet<u64>,
+  ) -> Self {
     let (sender, receiver) = channel();
 
     AssetGraphBuilder {
@@ -81,6 +226,7 @@ impl AssetGraphBuilder {
       asset_request_to_asset_id: HashMap::new(),
       waiting_asset_requests: HashMap::new(),
       entry_dependencies: Vec::new(),
+      changed_requests,
     }
   }
 
@@ -275,6 +421,11 @@ impl AssetGraphBuilder {
       discovered_assets,
       dependencies,
     } = result;
+
+    // If the asset request was already processed as part of
+    // try_reuse_asset_graph, then it will be cached from the request tracker's
+    // point of view, but we still need to treat it as changed here.
+    let cached = cached && !self.changed_requests.contains(&request_id);
 
     let incoming_dependency_id = *self
       .request_id_to_dependency_id
@@ -545,6 +696,9 @@ fn get_direct_discovered_assets<'a>(
 }
 
 #[cfg(test)]
+mod incremental_tests;
+
+#[cfg(test)]
 mod tests {
   use std::path::{Path, PathBuf};
   use std::sync::Arc;
@@ -564,6 +718,7 @@ mod tests {
 
     let asset_graph_request = AssetGraphRequest {
       prev_asset_graph: None,
+      incrementally_bundled_assets: None,
     };
     let result = request_tracker
       .run_request(asset_graph_request)
@@ -617,6 +772,7 @@ mod tests {
 
     let asset_graph_request = AssetGraphRequest {
       prev_asset_graph: None,
+      incrementally_bundled_assets: None,
     };
     let result = request_tracker
       .run_request(asset_graph_request)
@@ -711,6 +867,7 @@ mod tests {
 
     let asset_graph_request = AssetGraphRequest {
       prev_asset_graph: None,
+      incrementally_bundled_assets: None,
     };
     let result = request_tracker
       .run_request(asset_graph_request)

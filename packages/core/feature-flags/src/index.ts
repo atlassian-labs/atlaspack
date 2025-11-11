@@ -283,13 +283,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   sourceAssetIdBundleGraphFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
-   * When enabled, deduplicates reporters when resolving the config.
-   *
-   * @author Vy Kim Nguyen <vnguyen4@atlassian.com>
-   * @since 2025-10-14
-   */
-  deduplicateReporters: process.env.ATLASPACK_BUILD_ENV === 'test',
-  /**
    * Enable JSX configuration loading in v3 Rust transformer to match v2 behaviour
    *
    * @author matt-koko <mkokolich@atlassian.com>

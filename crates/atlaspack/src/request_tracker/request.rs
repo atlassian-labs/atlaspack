@@ -1,9 +1,13 @@
 use std::fmt::Debug;
+use std::future::Future;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::PathBuf;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender};
+use std::task::{Context, Poll};
+use tokio::sync::oneshot;
 
 use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigLoaderRef;
@@ -19,6 +23,7 @@ use crate::requests::RequestResult;
 type ChannelRequestResult = anyhow::Result<(Arc<RequestResult>, RequestId, bool)>;
 pub type RequestResultReceiver = Receiver<ChannelRequestResult>;
 pub type RequestResultSender = Sender<ChannelRequestResult>;
+type AsyncRequestResult = anyhow::Result<(Arc<RequestResult>, RequestId, bool)>;
 
 #[derive(Debug)]
 pub struct RunRequestMessage {
@@ -28,6 +33,31 @@ pub struct RunRequestMessage {
 }
 
 type RunRequestFn = Box<dyn Fn(RunRequestMessage) + Send + Sync>;
+
+/// A future that represents an executing request
+pub struct ExecuteRequestFuture {
+  queue_result: anyhow::Result<()>,
+  receiver: oneshot::Receiver<AsyncRequestResult>,
+  _bridge_task: tokio::task::JoinHandle<()>,
+}
+
+impl Future for ExecuteRequestFuture {
+  type Output = anyhow::Result<(Arc<RequestResult>, RequestId, bool)>;
+
+  fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+    // First check if queueing failed
+    if let Err(e) = &self.queue_result {
+      return Poll::Ready(Err(anyhow::anyhow!("Failed to queue request: {}", e)));
+    }
+
+    // Poll the oneshot receiver
+    match Pin::new(&mut self.receiver).poll(cx) {
+      Poll::Ready(Ok(result)) => Poll::Ready(result),
+      Poll::Ready(Err(_)) => Poll::Ready(Err(anyhow::anyhow!("Request was cancelled or failed"))),
+      Poll::Pending => Poll::Pending,
+    }
+  }
+}
 
 /// This is the API for requests to call back onto the `RequestTracker`.
 ///
@@ -88,6 +118,26 @@ impl RunRequestContext {
     };
     (*self.run_request_fn)(message);
     Ok(())
+  }
+
+  /// Execute a child request and return a future that resolves to its result.
+  /// This is an async version of queue_request that doesn't require managing channels manually.
+  pub fn execute_request(&mut self, request: impl Request) -> ExecuteRequestFuture {
+    let (tx, rx) = oneshot::channel();
+
+    // Create a wrapper sender that forwards to the oneshot channel
+    let (sync_tx, sync_rx) = std::sync::mpsc::channel();
+    let queue_result = self.queue_request(request, sync_tx);
+
+    ExecuteRequestFuture {
+      queue_result,
+      receiver: rx,
+      _bridge_task: tokio::spawn(async move {
+        if let Ok(Ok(msg)) = tokio::task::spawn_blocking(move || sync_rx.recv()).await {
+          let _ = tx.send(msg);
+        }
+      }),
+    }
   }
 
   pub fn file_system(&self) -> &FileSystemRef {
