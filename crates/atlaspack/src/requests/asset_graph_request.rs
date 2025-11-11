@@ -487,13 +487,17 @@ impl AssetGraphBuilder {
       dependency: dependency.clone(),
     };
 
-    request_id_to_dep_node_id.insert(request.id(), dependency_node_id);
-    tracing::debug!(
-      "queueing a path request from on_undeferred, {}",
-      dependency.specifier
-    );
-    *work_count += 1;
-    let _ = request_context.queue_request(request, sender.clone());
+    if request_id_to_dep_node_id
+      .insert(request.id(), dependency_node_id)
+      .is_none()
+    {
+      tracing::debug!(
+        "queueing a path request from on_undeferred, {}",
+        dependency.specifier
+      );
+      *work_count += 1;
+      let _ = request_context.queue_request(request, sender.clone());
+    }
   }
 }
 
