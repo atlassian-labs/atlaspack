@@ -88,6 +88,9 @@ async function createBenchmarkProject(
     JSON.stringify(packageJson, null, 2),
   );
 
+  // Create empty yarn.lock
+  await writeFile(join(outputDir, 'yarn.lock'), '{}\n');
+
   // Create .parcelrc
   const parcelRc = {
     extends: '@atlaspack/config-default',
