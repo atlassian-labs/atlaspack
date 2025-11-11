@@ -252,10 +252,41 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
+      - name: Enable core dumps (Linux only)
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          # Enable core dumps
+          ulimit -c unlimited
+          # Set core dump pattern to put dumps in /tmp with identifying info
+          echo '/tmp/core.%e.%p.%t' | sudo tee /proc/sys/kernel/core_pattern
+          # Create directory for core dumps
+          sudo mkdir -p /tmp
+          sudo chmod 777 /tmp
+          echo "Core dumps enabled. Pattern: $(cat /proc/sys/kernel/core_pattern)"
       - run: yarn test:integration-ci
         env:
           ATLASPACK_V3: true
           RUST_BACKTRACE: full
+      - name: Collect core dumps (Linux only)
+        if: ${{ runner.os == 'Linux' && always() }}
+        run: |
+          echo "Looking for core dumps in /tmp..."
+          if ls /tmp/core.* 1> /dev/null 2>&1; then
+            echo "Core dumps found:"
+            ls -lh /tmp/core.*
+            mkdir -p core-dumps
+            cp /tmp/core.* core-dumps/ || true
+          else
+            echo "No core dumps found"
+          fi
+      - name: Upload core dumps (Linux only)
+        if: ${{ runner.os == 'Linux' && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-dumps-v3-${{ matrix.os }}-node-${{ matrix.node }}-${{ github.run_id }}
+          path: core-dumps/
+          if-no-files-found: ignore
+          retention-days: 7
 
   end_to_end_tests:
     name: E2E tests
