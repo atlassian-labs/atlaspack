@@ -1,6 +1,5 @@
 import assert from 'assert';
 import {join} from 'path';
-import {rimraf} from 'rimraf';
 
 import {
   AtlaspackV3,
@@ -274,7 +273,7 @@ describe.v3('AtlaspackV3', function () {
   // to TypeScript arrays in the Dependency constructor.
   it('should convert packageConditions from bitflags to array', async () => {
     const dir = join(__dirname, 'tmp', 'v3-css-style-condition');
-    await rimraf(dir);
+    await inputFS.rimraf(dir);
     inputFS.mkdirp(dir);
 
     await fsFixture(inputFS, dir)`
@@ -358,6 +357,6 @@ describe.v3('AtlaspackV3', function () {
       'Should have CSS bundle with @import resolved',
     );
 
-    await rimraf(dir);
+    await inputFS.rimraf(dir);
   });
 });
