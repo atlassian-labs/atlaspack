@@ -262,6 +262,7 @@ dependencies = [
  "atlaspack_plugin_transformer_js",
  "atlaspack_plugin_transformer_json",
  "atlaspack_plugin_transformer_raw",
+ "atlaspack_plugin_transformer_svg",
  "atlaspack_plugin_transformer_yaml",
  "atlaspack_sourcemap",
  "dyn-hash",
@@ -354,6 +355,7 @@ dependencies = [
  "atlaspack-macros",
  "atlaspack-resolver",
  "atlaspack_core",
+ "atlaspack_memory_profiler",
  "atlaspack_monitoring",
  "atlaspack_napi_helpers",
  "atlaspack_package_manager",
@@ -517,6 +519,16 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "atlaspack_memory_profiler"
+version = "0.1.0"
+dependencies = [
+ "memory-stats",
+ "napi",
+ "napi-derive",
+ "serde",
 ]
 
 [[package]]
@@ -714,6 +726,24 @@ dependencies = [
  "async-trait",
  "atlaspack_core",
  "atlaspack_filesystem",
+ "tokio",
+]
+
+[[package]]
+name = "atlaspack_plugin_transformer_svg"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "atlaspack_core",
+ "atlaspack_filesystem",
+ "html5ever",
+ "markup5ever",
+ "markup5ever_rcdom",
+ "pretty_assertions",
+ "regex",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 
@@ -3093,6 +3123,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "memory-stats"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c73f5c649995a115e1a0220b35e4df0a1294500477f97a91d0660fb5abeb574a"
+dependencies = [
+ "libc",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

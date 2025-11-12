@@ -1,0 +1,25 @@
+[package]
+name = "atlaspack_plugin_transformer_svg"
+version = "0.1.0"
+authors = ["Atlaspack Team"]
+edition = { workspace = true }
+description = "Native SVG transformer plugin for the Atlaspack Bundler"
+
+[lints]
+workspace = true
+
+[dependencies]
+atlaspack_core = { path = "../atlaspack_core" }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+regex = { workspace = true }
+html5ever = { workspace = true }
+markup5ever = { workspace = true }
+markup5ever_rcdom = { workspace = true }
+
+[dev-dependencies]
+atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+pretty_assertions = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
