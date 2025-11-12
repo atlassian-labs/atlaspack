@@ -17,6 +17,10 @@ target
 crates
 packages/core/rust/index.*
 packages/core/integration-tests/dist/**
+packages/core/e2e-tests/test/data/**
+packages/core/e2e-tests/benchmark-results
+packages/core/e2e-tests/.three-js-cache
+benchmarks/three-js/three-js
 
 # Ignoring main README for now because generated Table of Contents adds a line that prettier removes
 # in precommit hook, causing `yarn lint:readme` to fail

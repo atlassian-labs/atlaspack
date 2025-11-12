@@ -20,12 +20,17 @@ import {
 } from '@atlaspack/test-utils';
 import {symlinkSync} from 'fs';
 import tempy from 'tempy';
+import {
+  AsyncSubscription,
+  BundleGraph,
+  PackagedBundle,
+} from '@atlaspack/types-internal';
 
 const inputDir = path.join(__dirname, '/watcher');
 const distDir = path.join(inputDir, 'dist');
 
 describe('watcher', function () {
-  let subscription;
+  let subscription: AsyncSubscription;
   afterEach(async () => {
     if (subscription) {
       await subscription.unsubscribe();
@@ -43,7 +48,7 @@ describe('watcher', function () {
     let b = bundler(path.join(inputDir, '/index.js'), {inputFS: overlayFS});
     subscription = await b.watch();
     let buildEvent = await getNextBuild(b);
-    if (!buildEvent.bundleGraph) return assert.fail();
+    assert(buildEvent.type === 'buildSuccess');
 
     let output = await run(buildEvent.bundleGraph);
     assert.equal(output, 'hello');
@@ -54,7 +59,7 @@ describe('watcher', function () {
       {encoding: 'utf8'},
     );
     buildEvent = await getNextBuild(b);
-    if (!buildEvent.bundleGraph) return assert.fail();
+    assert(buildEvent.type === 'buildSuccess');
 
     output = await run(buildEvent.bundleGraph);
     assert.equal(output, 'something else');
@@ -77,7 +82,8 @@ describe('watcher', function () {
       {encoding: 'utf8'},
     );
     buildEvent = await getNextBuild(b);
-    if (!buildEvent.bundleGraph) return assert.fail();
+    assert(buildEvent.type === 'buildSuccess');
+
     let output = await run(buildEvent.bundleGraph);
 
     assert.equal(output, 'hello');
@@ -414,15 +420,14 @@ describe('watcher', function () {
     let indexPath = path.join(inputDir, 'index.js');
 
     let b = bundler(indexPath, {inputFS: overlayFS});
-    let bundleGraph;
-    subscription = await b.watch((err, event) => {
-      if (!event) return assert.fail();
-      assert(event.type === 'buildSuccess');
+    let bundleGraph: BundleGraph<PackagedBundle>;
+    subscription = await b.watch((_err, event) => {
+      assert(event && event.type === 'buildSuccess');
       bundleGraph = event.bundleGraph;
     });
     await getNextBuild(b);
 
-    if (!bundleGraph) return assert.fail();
+    assert(bundleGraph, 'Expected bundleGraph to be defined');
     assertBundles(bundleGraph, [
       {
         name: 'index.js',
@@ -439,7 +444,7 @@ describe('watcher', function () {
     );
 
     await getNextBuild(b);
-    if (!bundleGraph) return assert.fail();
+    assert(bundleGraph, 'Expected bundleGraph to be defined');
 
     assertBundles(bundleGraph, [
       {
@@ -453,7 +458,7 @@ describe('watcher', function () {
     await outputFS.writeFile(indexPath, '');
 
     await getNextBuild(b);
-    if (!bundleGraph) return assert.fail();
+    assert(bundleGraph, 'Expected bundleGraph to be defined');
 
     assertBundles(bundleGraph, [
       {
@@ -483,8 +488,7 @@ describe('watcher', function () {
     );
 
     buildEvent = await getNextBuild(b);
-    assert.equal(buildEvent.type, 'buildSuccess');
-    if (!buildEvent.bundleGraph) return assert.fail();
+    assert(buildEvent.type === 'buildSuccess');
 
     let res = await run(buildEvent.bundleGraph);
     assert.equal(res.default, 2);

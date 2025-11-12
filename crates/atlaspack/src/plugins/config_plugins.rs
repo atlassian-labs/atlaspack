@@ -26,6 +26,7 @@ use atlaspack_plugin_transformer_inline_string::AtlaspackInlineStringTransformer
 use atlaspack_plugin_transformer_js::AtlaspackJsTransformerPlugin;
 use atlaspack_plugin_transformer_json::AtlaspackJsonTransformerPlugin;
 use atlaspack_plugin_transformer_raw::AtlaspackRawTransformerPlugin;
+use atlaspack_plugin_transformer_svg::AtlaspackSvgTransformerPlugin;
 use atlaspack_plugin_transformer_yaml::AtlaspackYamlTransformerPlugin;
 
 use super::Plugins;
@@ -236,6 +237,7 @@ impl Plugins for ConfigPlugins {
             "@atlaspack/transformer-yaml" => {
               Arc::new(AtlaspackYamlTransformerPlugin::new(&self.ctx))
             }
+            "@atlaspack/transformer-svg" => Arc::new(AtlaspackSvgTransformerPlugin::new(&self.ctx)),
             _ => self.rpc_worker.create_transformer(&self.ctx, transformer)?,
           })
         })?;

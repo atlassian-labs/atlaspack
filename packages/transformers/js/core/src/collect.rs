@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
@@ -68,6 +69,8 @@ pub struct Export {
   pub is_static_binding_safe: bool,
 }
 
+// The three BTreeMaps in this struct are required for deterministic output order.
+// This allows them to be compared in `AssetGraphRequest::try_reuse_asset_graph`.
 pub struct Collect {
   pub source_map: Lrc<swc_core::common::SourceMap>,
   pub unresolved_mark: Mark,
@@ -78,14 +81,14 @@ pub struct Collect {
   pub is_esm: bool,
   pub should_wrap: bool,
   /// local variable binding -> descriptor
-  pub imports: HashMap<Id, Import>,
+  pub imports: BTreeMap<Id, Import>,
   pub this_exprs: HashMap<JsWord, Span>,
   /// exported name -> descriptor
-  pub exports: HashMap<JsWord, Export>,
+  pub exports: BTreeMap<JsWord, Export>,
   /// local variable binding -> exported name
   pub exports_locals: HashMap<Id, JsWord>,
   /// source of the export-all --> location
-  pub exports_all: HashMap<JsWord, SourceLocation>,
+  pub exports_all: BTreeMap<JsWord, SourceLocation>,
   /// the keys in `imports` that are actually used (referenced), except namespace imports
   pub used_imports: HashSet<Id>,
   pub non_static_access: HashMap<Id, Vec<Span>>,
@@ -164,11 +167,11 @@ impl Collect {
       has_cjs_exports: false,
       is_esm: false,
       should_wrap: false,
-      imports: HashMap::new(),
+      imports: BTreeMap::new(),
       this_exprs: HashMap::new(),
-      exports: HashMap::new(),
+      exports: BTreeMap::new(),
       exports_locals: HashMap::new(),
-      exports_all: HashMap::new(),
+      exports_all: BTreeMap::new(),
       used_imports: HashSet::new(),
       non_static_access: HashMap::new(),
       non_const_bindings: HashMap::new(),
@@ -1320,7 +1323,7 @@ mod tests {
   fn collects_imports() {
     assert_eq!(
       map_imports(run_collect("import { foo } from 'other';").imports),
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("foo"),
         PartialImport::new(ImportKind::Import, js_word!("other"), js_word!("foo")),
       )]),
@@ -1328,7 +1331,7 @@ mod tests {
 
     assert_eq!(
       map_imports(run_collect("import { foo as bar } from 'other';").imports),
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("bar"),
         PartialImport::new(ImportKind::Import, js_word!("other"), js_word!("foo")),
       )]),
@@ -1336,7 +1339,7 @@ mod tests {
 
     assert_eq!(
       map_imports(run_collect("const x = require('other');").imports),
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("x"),
         PartialImport::new(ImportKind::Require, js_word!("other"), js_word!("*")),
       )]),
@@ -1344,7 +1347,7 @@ mod tests {
 
     assert_eq!(
       map_imports(run_collect("const {foo: bar} = require('other');").imports),
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("bar"),
         PartialImport::new(ImportKind::Require, js_word!("other"), js_word!("foo")),
       )]),
@@ -1376,7 +1379,7 @@ mod tests {
             },
           )
         })
-        .collect::<HashMap<JsWord, PartialImport>>()
+        .collect::<BTreeMap<JsWord, PartialImport>>()
     );
   }
 
@@ -1384,7 +1387,7 @@ mod tests {
   fn collects_dynamic_imports() {
     fn assert_dynamic_import(
       input_code: &str,
-      imports: HashMap<JsWord, PartialImport>,
+      imports: BTreeMap<JsWord, PartialImport>,
       non_static_access: HashSet<JsWord>,
       non_static_requires: HashSet<JsWord>,
     ) {
@@ -1410,7 +1413,7 @@ mod tests {
           x.foo;
         }
       ",
-      HashMap::from([(js_word!("x"), star_import())]),
+      BTreeMap::from([(js_word!("x"), star_import())]),
       HashSet::new(),
       HashSet::new(),
     );
@@ -1422,7 +1425,7 @@ mod tests {
           x[foo];
         }
       ",
-      HashMap::from([(js_word!("x"), star_import())]),
+      BTreeMap::from([(js_word!("x"), star_import())]),
       HashSet::from([js_word!("x")]),
       HashSet::new(),
     );
@@ -1433,7 +1436,7 @@ mod tests {
           const {foo} = await import('other');
         }
       ",
-      HashMap::from([(js_word!("foo"), foo_import())]),
+      BTreeMap::from([(js_word!("foo"), foo_import())]),
       HashSet::new(),
       HashSet::new(),
     );
@@ -1444,14 +1447,14 @@ mod tests {
           const {foo: bar} = await import('other');
         }
       ",
-      HashMap::from([(js_word!("bar"), foo_import())]),
+      BTreeMap::from([(js_word!("bar"), foo_import())]),
       HashSet::new(),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(x => x.foo);",
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("x"),
         PartialImport {
           kind: ImportKind::DynamicImport,
@@ -1465,63 +1468,63 @@ mod tests {
 
     assert_dynamic_import(
       "import('other').then(x => x);",
-      HashMap::from([(js_word!("x"), star_import())]),
+      BTreeMap::from([(js_word!("x"), star_import())]),
       HashSet::from([js_word!("x")]),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(({foo}) => foo);",
-      HashMap::from([(js_word!("foo"), foo_import())]),
+      BTreeMap::from([(js_word!("foo"), foo_import())]),
       HashSet::from([js_word!("foo")]),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(({foo: bar}) => bar);",
-      HashMap::from([(js_word!("bar"), foo_import())]),
+      BTreeMap::from([(js_word!("bar"), foo_import())]),
       HashSet::from([js_word!("bar")]),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(function (x) { return x.foo });",
-      HashMap::from([(js_word!("x"), star_import())]),
+      BTreeMap::from([(js_word!("x"), star_import())]),
       HashSet::new(),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(function (x) { return x });",
-      HashMap::from([(js_word!("x"), star_import())]),
+      BTreeMap::from([(js_word!("x"), star_import())]),
       HashSet::from([js_word!("x")]),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(function ({foo}) {});",
-      HashMap::from([(js_word!("foo"), foo_import())]),
+      BTreeMap::from([(js_word!("foo"), foo_import())]),
       HashSet::new(),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(function ({foo: bar}) {});",
-      HashMap::from([(js_word!("bar"), foo_import())]),
+      BTreeMap::from([(js_word!("bar"), foo_import())]),
       HashSet::new(),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other');",
-      HashMap::new(),
+      BTreeMap::new(),
       HashSet::new(),
       HashSet::from([js_word!("other")]),
     );
 
     assert_dynamic_import(
       "let other = import('other');",
-      HashMap::new(),
+      BTreeMap::new(),
       HashSet::new(),
       HashSet::from([js_word!("other")]),
     );
@@ -1532,7 +1535,7 @@ mod tests {
           let {...other} = await import('other');
         }
       ",
-      HashMap::new(),
+      BTreeMap::new(),
       HashSet::new(),
       HashSet::from([js_word!("other")]),
     );
@@ -1615,7 +1618,7 @@ mod tests {
   fn collects_exports() {
     assert_eq!(
       run_collect("export function test() {};").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("test"),
         Export {
           source: None,
@@ -1634,7 +1637,7 @@ mod tests {
 
     assert_eq!(
       run_collect("export default function() {};").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("default"),
         Export {
           source: None,
@@ -1654,7 +1657,7 @@ mod tests {
 
     assert_eq!(
       run_collect("export default function test() {};").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("default"),
         Export {
           source: None,
@@ -1674,7 +1677,7 @@ mod tests {
 
     assert_eq!(
       run_collect("export default class {};").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("default"),
         Export {
           source: None,
@@ -1694,7 +1697,7 @@ mod tests {
 
     assert_eq!(
       run_collect("export default class Test {};").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("default"),
         Export {
           source: None,
@@ -1714,7 +1717,7 @@ mod tests {
 
     assert_eq!(
       run_collect("const foo = 'foo'; export default foo;").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("default"),
         Export {
           source: None,
@@ -1733,7 +1736,7 @@ mod tests {
 
     assert_eq!(
       run_collect("const foo = 'foo'; export { foo as test };").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("test"),
         Export {
           source: None,
@@ -1752,7 +1755,7 @@ mod tests {
 
     assert_eq!(
       run_collect("export const foo = 1;").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("foo"),
         Export {
           source: None,
@@ -1771,7 +1774,7 @@ mod tests {
 
     assert_eq!(
       run_collect("module.exports.foo = 1;").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("foo"),
         Export {
           source: None,
@@ -1790,7 +1793,7 @@ mod tests {
 
     assert_eq!(
       run_collect("module.exports['foo'] = 1;").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("foo"),
         Export {
           source: None,
@@ -1809,7 +1812,7 @@ mod tests {
 
     assert_eq!(
       run_collect("module.exports[`foo`] = 1;").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("foo"),
         Export {
           source: None,
@@ -1828,7 +1831,7 @@ mod tests {
 
     assert_eq!(
       run_collect("exports.foo = 1;").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("foo"),
         Export {
           source: None,
@@ -1847,7 +1850,7 @@ mod tests {
 
     assert_eq!(
       run_collect("this.foo = 1;").exports,
-      HashMap::from([(
+      BTreeMap::from([(
         js_word!("foo"),
         Export {
           source: None,
@@ -2151,7 +2154,7 @@ output = getExports() === exports && getExports().foo
     "#;
 
     let collect = run_collect(input_code);
-    let symbol_info: HashMap<String, &SymbolInfo> = collect
+    let symbol_info: BTreeMap<String, &SymbolInfo> = collect
       .symbols_info
       .id_to_symbol_info
       .iter()
@@ -2160,7 +2163,7 @@ output = getExports() === exports && getExports().foo
 
     assert_eq!(
       symbol_info,
-      HashMap::from([
+      BTreeMap::from([
         (
           "foo".to_string(),
           &SymbolInfo {
@@ -2289,8 +2292,8 @@ output = getExports() === exports && getExports().foo
       .unwrap_or_else(|| panic!("No collect found"))
   }
 
-  fn map_imports(imports: HashMap<Id, Import>) -> HashMap<JsWord, PartialImport> {
-    let mut map: HashMap<JsWord, PartialImport> = HashMap::new();
+  fn map_imports(imports: BTreeMap<Id, Import>) -> BTreeMap<JsWord, PartialImport> {
+    let mut map: BTreeMap<JsWord, PartialImport> = BTreeMap::new();
     for (key, import) in imports.into_iter() {
       map.insert(key.0, PartialImport::from(import));
     }

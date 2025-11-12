@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use atlaspack_core::types::FeatureFlags;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use napi::JsObject;
 use serde::{Deserialize, Serialize};
@@ -40,4 +41,5 @@ pub struct LoadPluginOptions {
   pub kind: LoadPluginKind,
   pub specifier: String,
   pub resolve_from: PathBuf,
+  pub feature_flags: Option<FeatureFlags>,
 }

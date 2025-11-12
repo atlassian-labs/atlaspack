@@ -24,6 +24,7 @@
   },
   "scripts": {
     "build": "yarn build:clean && yarn build:prepare && yarn build:gulp && yarn build:ts",
+    "build:ci": "yarn build && node scripts/post-build-ci.mjs",
     "build:clean": "node ./scripts/clean.mjs",
     "build:prepare": "lerna run dev:prepare",
     "build:gulp": "cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_REGISTER_USE_SRC=true gulp",
@@ -47,6 +48,8 @@
     "test": "yarn test:unit && yarn test:integration",
     "test:e2e": "yarn workspace @atlaspack/e2e-tests test",
     "test:e2e:ci": "yarn workspace @atlaspack/e2e-tests test-ci",
+    "benchmark": "yarn workspace @atlaspack/e2e-tests benchmark",
+    "benchmark:ci": "yarn workspace @atlaspack/e2e-tests benchmark:ci",
     "nx:test:integration": "yarn lerna run --stream test:integration",
     "nx:test:integration:ci": "yarn lerna run --stream test:integration:ci",
     "test:integration": "yarn workspace @atlaspack/integration-tests test",

@@ -6,3 +6,6 @@ test/integration/**/target
 test/integration/**/Cargo.lock
 test/**/package-lock.json
 test/integration/babel-plugin-autoinstall/package.json
+test/data/three-js-project
+benchmark-results/
+.three-js-cache/

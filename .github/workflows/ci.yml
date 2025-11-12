@@ -16,6 +16,8 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write
+  actions: read
 
 jobs:
   # Validate changesets - handles both general and Rust-specific validation
@@ -82,7 +84,7 @@ jobs:
         run: yarn build-native
 
       - if: ${{ matrix.build_js }}
-        run: yarn build
+        run: yarn build:ci
       # Upload artifacts for use later in pipeline
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -189,11 +191,11 @@ jobs:
         include:
           # Linux AMD64
           - os: ubuntu-22.04
-            node: 20
+            node: 22
 
           # MacOS ARM64
           - os: macos-15
-            node: 20
+            node: 22
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -226,13 +228,17 @@ jobs:
         include:
           # Linux AMD64
           - os: ubuntu-22.04
-            node: 20
+            node: 22
 
           # MacOS ARM64
           - os: macos-15
-            node: 20
+            node: 22
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Collect Workflow Telemetry
+        uses: catchpoint/workflow-telemetry-action@v2
+        with:
+          comment_on_pr: false
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-watchman
       - uses: ./.github/actions/setup-node
@@ -246,10 +252,41 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
+      - name: Enable core dumps (Linux only)
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          # Enable core dumps
+          ulimit -c unlimited
+          # Set core dump pattern to put dumps in /tmp with identifying info
+          echo '/tmp/core.%e.%p.%t' | sudo tee /proc/sys/kernel/core_pattern
+          # Create directory for core dumps
+          sudo mkdir -p /tmp
+          sudo chmod 777 /tmp
+          echo "Core dumps enabled. Pattern: $(cat /proc/sys/kernel/core_pattern)"
       - run: yarn test:integration-ci
         env:
           ATLASPACK_V3: true
           RUST_BACKTRACE: full
+      - name: Collect core dumps (Linux only)
+        if: ${{ runner.os == 'Linux' && always() }}
+        run: |
+          echo "Looking for core dumps in /tmp..."
+          if ls /tmp/core.* 1> /dev/null 2>&1; then
+            echo "Core dumps found:"
+            ls -lh /tmp/core.*
+            mkdir -p core-dumps
+            cp /tmp/core.* core-dumps/ || true
+          else
+            echo "No core dumps found"
+          fi
+      - name: Upload core dumps (Linux only)
+        if: ${{ runner.os == 'Linux' && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-dumps-v3-${{ matrix.os }}-node-${{ matrix.node }}-${{ github.run_id }}
+          path: core-dumps/
+          if-no-files-found: ignore
+          retention-days: 7
 
   end_to_end_tests:
     name: E2E tests

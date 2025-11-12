@@ -436,5 +436,6 @@ function getSerializedGraph() {
         },
       },
     ],
+    updates: [],
   };
 }

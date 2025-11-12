@@ -1,5 +1,11 @@
 # @atlaspack/babel-plugin-transform-contextual-imports
 
+## 2.16.2
+
+### Patch Changes
+
+- [#861](https://github.com/atlassian-labs/atlaspack/pull/861) [`ca42992`](https://github.com/atlassian-labs/atlaspack/commit/ca429925dab731600c2decd571b5245d361ca953) Thanks [@at-nathan](https://github.com/at-nathan)! - Ignore transform on type references
+
 ## 2.16.1
 
 ### Patch Changes

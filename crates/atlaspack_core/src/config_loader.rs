@@ -55,6 +55,7 @@ impl ConfigLoader {
     let contents = serde_json::from_str::<Config>(&code).map_err(|error| {
       diagnostic_error!(
         DiagnosticBuilder::default()
+          .kind(ErrorKind::ParseError)
           .code_frames(vec![CodeFrame {
             code_highlights: vec![CodeHighlight::from([error.line(), error.column()])],
             ..CodeFrame::from(File {
@@ -62,7 +63,7 @@ impl ConfigLoader {
               path: path.clone()
             })
           }])
-          .message(format!("{error} in {}", path.display()))
+          .message(format!("Error parsing {}: {error}", path.display()))
       )
     })?;
 
@@ -304,7 +305,7 @@ mod tests {
           .load_package_json::<PackageJsonConfig>()
           .map_err(|err| err.to_string()),
         Err(format!(
-          "missing field `plugin` at line 1 column 2 in {}",
+          "Error parsing {}: missing field `plugin` at line 1 column 2",
           package_path.display()
         ))
       )
@@ -330,7 +331,7 @@ mod tests {
           .load_package_json::<PackageJsonConfig>()
           .map_err(|err| err.to_string()),
         Err(format!(
-          "missing field `plugin` at line 1 column 2 in {}",
+          "Error parsing {}: missing field `plugin` at line 1 column 2",
           package_path.display()
         ))
       )
@@ -387,6 +388,114 @@ mod tests {
           contents: package_config(),
           raw: package_json()
         })
+      )
+    }
+
+    #[test]
+    fn returns_an_error_when_package_json_is_malformed() {
+      let fs = Arc::new(InMemoryFileSystem::default());
+      let project_root = PathBuf::from("/project-root");
+      let search_path = project_root.join("index");
+      let package_path = search_path.join("package.json");
+
+      // Write malformed JSON
+      fs.write_file(&package_path, String::from("{invalid json"));
+
+      let config = ConfigLoader {
+        fs,
+        project_root,
+        search_path,
+      };
+
+      assert_eq!(
+        config
+          .load_package_json::<PackageJsonConfig>()
+          .map_err(|err| err.to_string()),
+        Err(format!(
+          "Error parsing {}: key must be a string at line 1 column 2",
+          package_path.display()
+        ))
+      )
+    }
+
+    #[test]
+    fn returns_an_error_when_package_json_has_trailing_comma() {
+      let fs = Arc::new(InMemoryFileSystem::default());
+      let project_root = PathBuf::from("/project-root");
+      let search_path = project_root.join("index");
+      let package_path = search_path.join("package.json");
+
+      // Write JSON with trailing comma
+      fs.write_file(&package_path, String::from(r#"{"name": "test",}"#));
+
+      let config = ConfigLoader {
+        fs,
+        project_root,
+        search_path,
+      };
+
+      assert_eq!(
+        config
+          .load_package_json::<PackageJsonConfig>()
+          .map_err(|err| err.to_string()),
+        Err(format!(
+          "Error parsing {}: trailing comma at line 1 column 17",
+          package_path.display()
+        ))
+      )
+    }
+
+    #[test]
+    fn returns_an_error_when_package_json_has_unclosed_brace() {
+      let fs = Arc::new(InMemoryFileSystem::default());
+      let project_root = PathBuf::from("/project-root");
+      let search_path = project_root.join("index");
+      let package_path = search_path.join("package.json");
+
+      // Write JSON with unclosed brace
+      fs.write_file(&package_path, String::from(r#"{"name": "test""#));
+
+      let config = ConfigLoader {
+        fs,
+        project_root,
+        search_path,
+      };
+
+      assert_eq!(
+        config
+          .load_package_json::<PackageJsonConfig>()
+          .map_err(|err| err.to_string()),
+        Err(format!(
+          "Error parsing {}: EOF while parsing an object at line 1 column 15",
+          package_path.display()
+        ))
+      )
+    }
+
+    #[test]
+    fn returns_an_error_when_package_json_is_empty() {
+      let fs = Arc::new(InMemoryFileSystem::default());
+      let project_root = PathBuf::from("/project-root");
+      let search_path = project_root.join("index");
+      let package_path = search_path.join("package.json");
+
+      // Write empty file
+      fs.write_file(&package_path, String::from(""));
+
+      let config = ConfigLoader {
+        fs,
+        project_root,
+        search_path,
+      };
+
+      assert_eq!(
+        config
+          .load_package_json::<PackageJsonConfig>()
+          .map_err(|err| err.to_string()),
+        Err(format!(
+          "Error parsing {}: EOF while parsing a value at line 1 column 0",
+          package_path.display()
+        ))
       )
     }
   }

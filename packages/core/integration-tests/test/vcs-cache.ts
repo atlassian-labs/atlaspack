@@ -6,6 +6,7 @@ import {NodeVCSAwareFS} from '@atlaspack/fs';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {
   bundle,
+  describe,
   assertBundles,
   workerFarm,
   cacheDir,
@@ -274,7 +275,7 @@ function findSnapshotPath(): string {
   );
 }
 
-describe('vcs cache', () => {
+describe.v2('vcs cache', () => {
   before(async function () {
     this.timeout(10000);
     // Warm up worker farm so that the first test doesn't account for this time.

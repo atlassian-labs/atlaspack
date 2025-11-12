@@ -57,6 +57,9 @@ export declare function addEnvironment(environment: unknown): void
 export declare function getAvailableThreads(): number
 export declare function initializeMonitoring(): void
 export declare function closeMonitoring(): void
+export declare function getNativeMemoryStats(): NativeMemoryStats | null
+export declare function resetMemoryTracking(): void
+export declare function sampleNativeMemory(): void
 /** Called on the worker thread to create a reference to the NodeJs worker */
 export declare function newNodejsWorker(worker: object): JsTransferable
 export interface InlineRequiresOptimizerInput {
@@ -71,6 +74,34 @@ export interface InlineRequiresOptimizerResult {
 export declare function runInlineRequiresOptimizer(input: InlineRequiresOptimizerInput): InlineRequiresOptimizerResult
 /** Runs in the rayon thread pool */
 export declare function runInlineRequiresOptimizerAsync(input: InlineRequiresOptimizerInput): object
+export interface CompiledCssInJsTransformConfig {
+  importReact?: boolean
+  nonce?: string
+  importSources?: Array<string>
+  optimizeCss?: boolean
+  extensions?: Array<string>
+  addComponentName?: boolean
+  processXcss?: boolean
+  increaseSpecificity?: boolean
+  sortAtRules?: boolean
+  classHashPrefix?: string
+  flattenMultipleSelectors?: boolean
+  extract?: boolean
+  ssr?: boolean
+}
+export interface CompiledCssInJsPluginInput {
+  filename: string
+  projectRoot: string
+  isSource: boolean
+  sourceMaps: boolean
+  config: CompiledCssInJsTransformConfig
+}
+export interface CompiledCssInJsPluginResult {
+  code: string
+  map?: string
+  styleRules: Array<string>
+}
+export declare function applyCompiledCssInJsPlugin(rawCode: Buffer, input: CompiledCssInJsPluginInput): object
 export interface JsFileSystemOptions {
   canonicalize: (...args: any[]) => any
   read: (...args: any[]) => any
@@ -88,6 +119,7 @@ export interface FileSystem {
   extensions?: Array<string>
   packageExports: boolean
   typescript?: boolean
+  reduceStringCreation?: boolean
 }
 export interface ResolveOptions {
   filename: string
@@ -128,6 +160,26 @@ export declare function transform(opts: object): unknown
 export declare function transformAsync(opts: object): object
 export declare function getVcsStateSnapshot(path: string, excludePatterns: Array<string>): object
 export declare function getEventsSince(repoPath: string, vcsStateSnapshot: unknown, newRev?: string | undefined | null): object
+export interface TokensPluginOptions {
+  tokenDataPath: string
+  shouldUseAutoFallback: boolean
+  shouldForceAutoFallback: boolean
+  forceAutoFallbackExemptions: Array<string>
+  defaultTheme: string
+}
+export interface TokensConfig {
+  filename: string
+  projectRoot: string
+  isSource: boolean
+  sourceMaps: boolean
+  tokensOptions: TokensPluginOptions
+}
+export interface TokensPluginResult {
+  code: string
+  map?: string
+}
+/** Apply the tokens transformation plugin to the given code asynchronously */
+export declare function applyTokensPlugin(rawCode: Buffer, config: TokensConfig): object
 export type LMDB = Lmdb
 export class Lmdb {
   constructor(options: LmdbOptions)

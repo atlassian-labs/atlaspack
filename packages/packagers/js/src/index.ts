@@ -16,6 +16,7 @@ import {
   type PackageResult as ScopeHoistingPackageResult,
   ScopeHoistingPackager,
 } from './ScopeHoistingPackager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type JSPackagerConfig = {
   parcelRequireName: string;
@@ -54,7 +55,9 @@ export default new Packager({
         CONFIG_SCHEMA,
         {
           data: conf?.contents,
-          source: await options.inputFS.readFile(conf.filePath, 'utf8'),
+          source: getFeatureFlag('schemaValidationDeferSourceLoading')
+            ? () => options.inputFS.readFileSync(conf.filePath, 'utf8')
+            : await options.inputFS.readFile(conf.filePath, 'utf8'),
           filePath: conf.filePath,
           prependKey: `/${encodeJSONKeyComponent(packageKey)}`,
         },

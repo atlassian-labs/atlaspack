@@ -14,9 +14,10 @@ export type NullEdgeType = 1;
 export const NULL_EDGE_TYPE: NullEdgeType = 1;
 export type GraphOpts<TNode, TEdgeType extends number = NullEdgeType> = {
   nodes?: Array<TNode | null>;
-  adjacencyList?: SerializedAdjacencyList<TEdgeType>;
+  adjacencyList?: SerializedAdjacencyList<TEdgeType> | AdjacencyList<TEdgeType>;
   rootNodeId?: NodeId | null | undefined;
   initialCapacity?: number;
+  initialNodeCapacity?: number;
 };
 
 export type SerializedGraph<TNode, TEdgeType extends number = NullEdgeType> = {
@@ -80,16 +81,22 @@ export default class Graph<TNode, TEdgeType extends number = NullEdgeType> {
   _visited: BitSet | null | undefined;
 
   constructor(opts?: GraphOpts<TNode, TEdgeType> | null) {
-    this.nodes = opts?.nodes || [];
-    this.setRootNodeId(opts?.rootNodeId);
+    let {nodes, rootNodeId, adjacencyList, ...adjacencyListOpts} = opts ?? {};
 
-    let adjacencyList = opts?.adjacencyList;
-    let initialCapacity = opts?.initialCapacity;
+    this.nodes = nodes ?? [];
+    this.setRootNodeId(rootNodeId);
+
     this.adjacencyList = adjacencyList
-      ? AdjacencyList.deserialize(adjacencyList)
-      : new AdjacencyList<TEdgeType>(
-          typeof initialCapacity === 'number' ? {initialCapacity} : undefined,
-        );
+      ? adjacencyList instanceof AdjacencyList
+        ? adjacencyList
+        : AdjacencyList.deserialize(adjacencyList)
+      : new AdjacencyList<TEdgeType>(adjacencyListOpts);
+
+    if (opts?.nodes && !opts.adjacencyList) {
+      for (let i = 0; i < this.nodes.length; i++) {
+        this.adjacencyList.addNode();
+      }
+    }
   }
 
   setRootNodeId(id?: NodeId | null) {
