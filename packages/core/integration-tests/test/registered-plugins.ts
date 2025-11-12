@@ -78,26 +78,10 @@ describe('plugins with "registered" languages', () => {
 
 // Note: In v3, plugins need to use the real filesystem since the worker creates its own NodeFS instance.
 describe('TypeScript plugin loading', () => {
-  let transformerDir: string;
-  let resolverDir: string;
-  let transformerImportsDir: string;
-
-  beforeEach(async function () {
-    transformerDir = path.join(__dirname, 'ts-transformer-plugin');
-    resolverDir = path.join(__dirname, 'ts-resolver-plugin');
-    transformerImportsDir = path.join(__dirname, 'ts-transformer-with-imports');
-
-    await rimraf(transformerDir);
-    await rimraf(resolverDir);
-    await rimraf(transformerImportsDir);
-
-    inputFS.mkdirp(transformerDir);
-    inputFS.mkdirp(resolverDir);
-    inputFS.mkdirp(transformerImportsDir);
-  });
-
   it('should load TypeScript transformer plugins with ESM default export', async () => {
-    const dir = transformerDir;
+    const dir = path.join(__dirname, 'tmp', 'ts-transformer-plugin');
+    await rimraf(dir);
+    inputFS.mkdirp(dir);
 
     await fsFixture(inputFS, dir)`
       package.json:
@@ -147,10 +131,14 @@ describe('TypeScript plugin loading', () => {
     let output = await run(b);
     // Handle both CommonJS and ESM module outputs
     assert.equal(output?.default || output, 'transformed-by-ts-plugin');
+
+    await rimraf(dir);
   });
 
   it('should load TypeScript resolver plugins with CommonJS module.exports', async () => {
-    const dir = resolverDir;
+    const dir = path.join(__dirname, 'tmp', 'ts-resolver-plugin');
+    await rimraf(dir);
+    inputFS.mkdirp(dir);
 
     await fsFixture(inputFS, dir)`
       package.json:
@@ -203,10 +191,14 @@ describe('TypeScript plugin loading', () => {
     let output = await run(b);
     // Handle both CommonJS and ESM module outputs
     assert.equal(output?.default || output, 'resolved-by-ts-resolver');
+
+    await rimraf(dir);
   });
 
   it('should load TypeScript transformer plugins that import other TS files', async () => {
-    const dir = transformerImportsDir;
+    const dir = path.join(__dirname, 'tmp', 'ts-transformer-with-imports');
+    await rimraf(dir);
+    inputFS.mkdirp(dir);
 
     await fsFixture(inputFS, dir)`
       package.json:
@@ -260,5 +252,7 @@ describe('TypeScript plugin loading', () => {
     let output = await run(b);
     // Handle both CommonJS and ESM module outputs
     assert.equal(output?.default || output, 'value-from-ts-helper');
+
+    await rimraf(dir);
   });
 });
