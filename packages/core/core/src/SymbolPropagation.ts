@@ -533,20 +533,22 @@ export function propagateSymbols({
             incomingDep.value.symbols != null &&
             incomingDep.usedSymbolsUp.size === 0
           ) {
-            let assetGroups = assetGraph.getNodeIdsConnectedFrom(
+            let connectedNodeIds = assetGraph.getNodeIdsConnectedFrom(
               assetGraph.getNodeIdByContentKey(incomingDep.id),
             );
-            if (assetGroups.length === 1) {
-              let [assetGroupId] = assetGroups;
-              let assetGroup = nullthrows(assetGraph.getNode(assetGroupId));
-              if (
-                assetGroup.type === 'asset_group' &&
-                assetGroup.value.sideEffects === false
-              ) {
-                incomingDep.excluded = true;
-              }
-            } else {
-              invariant(assetGroups.length === 0);
+
+            let sideEffectFree = connectedNodeIds.every((nodeId) => {
+              let connectedNode = nullthrows(assetGraph.getNode(nodeId));
+              // Dependencies should only connect to asset_groups or assets
+              invariant(
+                connectedNode.type === 'asset' ||
+                  connectedNode.type === 'asset_group',
+              );
+              return connectedNode.value.sideEffects === false;
+            });
+
+            if (sideEffectFree) {
+              incomingDep.excluded = true;
             }
           }
         }
@@ -807,17 +809,25 @@ function getDependencyResolution(
 ): Array<NodeId> {
   let depNodeId = graph.getNodeIdByContentKey(depId);
   let connected = graph.getNodeIdsConnectedFrom(depNodeId);
-  invariant(connected.length <= 1);
-  let child = connected[0];
-  if (child) {
+
+  let resolvedNodeIds: Array<NodeId> = [];
+
+  // If any of the resolved nodes is an asset_group, we need to resolve its
+  // assets here.
+  for (let child of connected) {
+    if (!child) {
+      continue;
+    }
+
     let childNode = nullthrows(graph.getNode(child));
     if (childNode.type === 'asset_group') {
-      return graph.getNodeIdsConnectedFrom(child);
+      resolvedNodeIds.push(...graph.getNodeIdsConnectedFrom(child));
     } else {
-      return [child];
+      resolvedNodeIds.push(child);
     }
   }
-  return [];
+
+  return resolvedNodeIds;
 }
 
 function equalMap<K>(

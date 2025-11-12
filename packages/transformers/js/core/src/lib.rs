@@ -16,7 +16,7 @@ mod node_replacer;
 pub mod test_utils;
 mod typeof_replacer;
 mod unused_bindings_remover;
-mod utils;
+pub mod utils;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -154,6 +154,7 @@ pub struct Config {
   pub exports_rebinding_optimisation: bool,
   pub enable_global_this_aliaser: bool,
   pub enable_lazy_loading_transformer: bool,
+  pub nested_promise_import_fix: bool,
   pub enable_dead_returns_remover: bool,
   pub enable_unused_bindings_remover: bool,
 }
@@ -645,7 +646,7 @@ pub fn transform(
               }
 
               let (buf, src_map_buf) =
-                emit(source_map.clone(), comments, &module, config.source_maps)?;
+                emit(source_map.clone(), comments, &module, config.source_maps, None)?;
               if config.source_maps
                 && source_map
                   .build_source_map_with_config(&src_map_buf, None, SourceMapConfig)
@@ -666,7 +667,7 @@ pub fn transform(
 
 pub type ParseResult<T> = Result<T, Vec<Error>>;
 
-fn parse(
+pub fn parse(
   code: &str,
   project_root: &str,
   filename: &str,
@@ -726,11 +727,12 @@ fn parse(
   Ok((module, comments))
 }
 
-fn emit(
+pub fn emit(
   source_map: Lrc<SourceMap>,
   comments: SingleThreadedComments,
   module: &Module,
   source_maps: bool,
+  ascii_only: Option<bool>,
 ) -> Result<(Vec<u8>, SourceMapBuffer), io::Error> {
   let mut src_map_buf = vec![];
   let mut buf = vec![];
@@ -747,8 +749,8 @@ fn emit(
     ));
     let config = swc_core::ecma::codegen::Config::default()
       .with_target(swc_core::ecma::ast::EsVersion::Es5)
-      // Make sure the output works regardless of whether it's loaded with the correct (utf8) encoding
-      .with_ascii_only(true);
+      // Controls whether non-ASCII characters should be escaped (defaults to true for backward compatibility)
+      .with_ascii_only(ascii_only.unwrap_or(true));
     let mut emitter = swc_core::ecma::codegen::Emitter {
       cfg: config,
       comments: Some(&comments),
