@@ -292,7 +292,6 @@ describe.v3('AtlaspackV3', function () {
 
         index.js:
           import './main.css';
-          console.log('Loaded with CSS');
 
         main.css:
           @import './variables.css';
@@ -339,10 +338,6 @@ describe.v3('AtlaspackV3', function () {
 
     let b = await bundle(join(dir, 'index.js'), {
       inputFS,
-      outputFS: inputFS,
-      defaultTargetOptions: {
-        distDir: join(dir, 'dist'),
-      },
     });
 
     // If we get here, the BitFlags conversion is working correctly
