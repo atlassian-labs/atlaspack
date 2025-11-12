@@ -93,16 +93,20 @@ impl TestFixture {
 /// Returns the FileSystemRef for use in tests
 #[macro_export]
 macro_rules! test_fixture {
+    // Multi-line strings with indoc - automatically sets CWD to dirname
     ($dirname:expr, $($path:literal => {$content:literal}),* $(,)?) => {{
-        let fixture = $crate::TestFixture::with_dirname($dirname);
+        let fixture = $crate::TestFixture::with_dirname($dirname.clone());
+        fixture.in_memory_fs.set_current_working_directory(&$dirname);
         $(
             fixture.write_file($path, $crate::indoc!($content));
         )*
         fixture.fs
     }};
 
+    // Regular strings - automatically sets CWD to dirname
     ($dirname:expr, $($path:literal => $content:expr),* $(,)?) => {{
-        let fixture = $crate::TestFixture::with_dirname($dirname);
+        let fixture = $crate::TestFixture::with_dirname($dirname.clone());
+        fixture.in_memory_fs.set_current_working_directory(&$dirname);
         $(
             fixture.write_file($path, &$content);
         )*

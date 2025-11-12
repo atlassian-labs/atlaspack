@@ -394,23 +394,99 @@ mod tests {
 
     #[test]
     fn returns_default_atlaspack_config() {
-      let fs = Arc::new(InMemoryFileSystem::default());
-      let project_root = fs.cwd().unwrap();
+      use crate::{
+        AtlaspackConfig, PluginNode,
+        map::{NamedPipelinesMap, PipelineMap, PipelinesMap},
+      };
+      use atlaspack_test_fixtures::test_fixture;
+      use indexmap::IndexMap;
+      use indexmap::indexmap;
 
-      let default_config = default_config(Arc::new(project_root.join(".parcelrc")));
-      let files = vec![default_config.path.clone()];
-
-      fs.write_file(&default_config.path, default_config.atlaspack_rc);
+      let project_root = PathBuf::from("/test");
+      let fs = test_fixture! {
+        project_root.clone(),
+        ".parcelrc" => {r#"
+          {
+            "bundler": "@atlaspack/bundler-default",
+            "compressors": {
+              "*": ["@atlaspack/compressor-raw"]
+            },
+            "namers": ["@atlaspack/namer-default"],
+            "optimizers": {
+              "*.{js,mjs,cjs}": ["@atlaspack/optimizer-swc"]
+            },
+            "packagers": {
+              "*.{js,mjs,cjs}": "@atlaspack/packager-js"
+            },
+            "reporters": ["@atlaspack/reporter-dev-server"],
+            "resolvers": ["@atlaspack/resolver-default"],
+            "runtimes": ["@atlaspack/runtime-js"],
+            "transformers": {
+              "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": [
+                "@atlaspack/transformer-js"
+              ]
+            }
+          }
+        "#}
+      };
 
       let atlaspack_config =
         AtlaspackRcConfigLoader::new(fs, Arc::new(MockPackageManager::default()))
           .load(&project_root, LoadConfigOptions::default())
           .map_err(|e| e.to_string());
 
-      assert_eq!(
-        atlaspack_config,
-        Ok((default_config.atlaspack_config, files))
-      );
+      // Build the expected config structure
+      let expected_config = AtlaspackConfig {
+        bundler: PluginNode {
+          package_name: String::from("@atlaspack/bundler-default"),
+          resolve_from: Arc::new(project_root.join(".parcelrc")),
+        },
+        compressors: PipelinesMap::new(indexmap! {
+          String::from("*") => vec!(PluginNode {
+            package_name: String::from("@atlaspack/compressor-raw"),
+            resolve_from: Arc::new(project_root.join(".parcelrc")),
+          })
+        }),
+        namers: vec![PluginNode {
+          package_name: String::from("@atlaspack/namer-default"),
+          resolve_from: Arc::new(project_root.join(".parcelrc")),
+        }],
+        optimizers: NamedPipelinesMap::new(indexmap! {
+          String::from("*.{js,mjs,cjs}") => vec!(PluginNode {
+            package_name: String::from("@atlaspack/optimizer-swc"),
+            resolve_from: Arc::new(project_root.join(".parcelrc")),
+          })
+        }),
+        packagers: PipelineMap::new(indexmap! {
+          String::from("*.{js,mjs,cjs}") => PluginNode {
+            package_name: String::from("@atlaspack/packager-js"),
+            resolve_from: Arc::new(project_root.join(".parcelrc")),
+          }
+        }),
+        reporters: vec![PluginNode {
+          package_name: String::from("@atlaspack/reporter-dev-server"),
+          resolve_from: Arc::new(project_root.join(".parcelrc")),
+        }],
+        resolvers: vec![PluginNode {
+          package_name: String::from("@atlaspack/resolver-default"),
+          resolve_from: Arc::new(project_root.join(".parcelrc")),
+        }],
+        runtimes: vec![PluginNode {
+          package_name: String::from("@atlaspack/runtime-js"),
+          resolve_from: Arc::new(project_root.join(".parcelrc")),
+        }],
+        transformers: NamedPipelinesMap::new(indexmap! {
+          String::from("*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}") => vec!(PluginNode {
+            package_name: String::from("@atlaspack/transformer-js"),
+            resolve_from: Arc::new(project_root.join(".parcelrc")),
+          })
+        }),
+        validators: PipelinesMap::new(IndexMap::new()),
+      };
+
+      let expected_files = vec![project_root.join(".parcelrc")];
+
+      assert_eq!(atlaspack_config, Ok((expected_config, expected_files)));
     }
 
     #[test]
@@ -458,38 +534,140 @@ mod tests {
 
     #[test]
     fn returns_merged_default_atlaspack_config() {
-      let fs = Arc::new(InMemoryFileSystem::default());
-      let project_root = fs.cwd().unwrap();
+      use crate::{
+        AtlaspackConfig, PluginNode,
+        map::{NamedPipelinesMap, PipelineMap, PipelinesMap},
+      };
+      use atlaspack_test_fixtures::test_fixture;
+      use indexmap::IndexMap;
+      use indexmap::indexmap;
 
-      let default_config = default_extended_config(&project_root);
-      let files = vec![
-        default_config.base_config.path.clone(),
-        default_config.extended_config.path.clone(),
-      ];
+      let project_root = PathBuf::from("/test");
+      let fs = test_fixture! {
+        project_root.clone(),
+        // User config that extends a base config
+        ".parcelrc" => {r#"
+          {
+            "extends": "@atlaspack/config-default",
+            "reporters": ["...", "@scope/atlaspack-metrics-reporter"],
+            "transformers": {
+              "*.{ts,tsx}": [
+                "@scope/atlaspack-transformer-ts",
+                "..."
+              ]
+            }
+          }
+        "#},
 
-      fs.write_file(
-        &default_config.base_config.path,
-        default_config.base_config.atlaspack_rc,
-      );
+        // Extended base config (at absolute path that TestPackageManager expects)
+        "/test/node_modules/@atlaspack/config-default/index.json" => {r#"
+          {
+            "bundler": "@atlaspack/bundler-default",
+            "compressors": {
+              "*": ["@atlaspack/compressor-raw"]
+            },
+            "namers": ["@atlaspack/namer-default"],
+            "optimizers": {
+              "*.{js,mjs,cjs}": ["@atlaspack/optimizer-swc"]
+            },
+            "packagers": {
+              "*.{js,mjs,cjs}": "@atlaspack/packager-js"
+            },
+            "reporters": ["@atlaspack/reporter-dev-server"],
+            "resolvers": ["@atlaspack/resolver-default"],
+            "runtimes": ["@atlaspack/runtime-js"],
+            "transformers": {
+              "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": [
+                "@atlaspack/transformer-js"
+              ]
+            }
+          }
+        "#}
+      };
 
-      fs.write_file(
-        &default_config.extended_config.path,
-        default_config.extended_config.atlaspack_rc,
-      );
-
-      let fs: FileSystemRef = fs;
       let package_manager = Arc::new(TestPackageManager {
         fs: Arc::clone(&fs),
       });
-
       let atlaspack_config = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager)
         .load(&project_root, LoadConfigOptions::default())
         .map_err(|e| e.to_string());
 
-      assert_eq!(
-        atlaspack_config,
-        Ok((default_config.atlaspack_config, files))
+      // Build the expected merged config structure
+      let extended_resolve_from = Arc::new(
+        project_root
+          .join("node_modules")
+          .join("@atlaspack/config-default")
+          .join("index.json"),
       );
+      let base_resolve_from = Arc::new(project_root.join(".parcelrc"));
+
+      let expected_config = AtlaspackConfig {
+        bundler: PluginNode {
+          package_name: String::from("@atlaspack/bundler-default"),
+          resolve_from: extended_resolve_from.clone(),
+        },
+        compressors: PipelinesMap::new(indexmap! {
+          String::from("*") => vec!(PluginNode {
+            package_name: String::from("@atlaspack/compressor-raw"),
+            resolve_from: extended_resolve_from.clone(),
+          })
+        }),
+        namers: vec![PluginNode {
+          package_name: String::from("@atlaspack/namer-default"),
+          resolve_from: extended_resolve_from.clone(),
+        }],
+        optimizers: NamedPipelinesMap::new(indexmap! {
+          String::from("*.{js,mjs,cjs}") => vec!(PluginNode {
+            package_name: String::from("@atlaspack/optimizer-swc"),
+            resolve_from: extended_resolve_from.clone(),
+          })
+        }),
+        packagers: PipelineMap::new(indexmap! {
+          String::from("*.{js,mjs,cjs}") => PluginNode {
+            package_name: String::from("@atlaspack/packager-js"),
+            resolve_from: extended_resolve_from.clone(),
+          }
+        }),
+        reporters: vec![
+          PluginNode {
+            package_name: String::from("@atlaspack/reporter-dev-server"),
+            resolve_from: extended_resolve_from.clone(),
+          },
+          PluginNode {
+            package_name: String::from("@scope/atlaspack-metrics-reporter"),
+            resolve_from: base_resolve_from.clone(),
+          },
+        ],
+        resolvers: vec![PluginNode {
+          package_name: String::from("@atlaspack/resolver-default"),
+          resolve_from: extended_resolve_from.clone(),
+        }],
+        runtimes: vec![PluginNode {
+          package_name: String::from("@atlaspack/runtime-js"),
+          resolve_from: extended_resolve_from.clone(),
+        }],
+        transformers: NamedPipelinesMap::new(indexmap! {
+          String::from("*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}") => vec!(PluginNode {
+            package_name: String::from("@atlaspack/transformer-js"),
+            resolve_from: extended_resolve_from.clone(),
+          }),
+          String::from("*.{ts,tsx}") => vec!(PluginNode {
+            package_name: String::from("@scope/atlaspack-transformer-ts"),
+            resolve_from: base_resolve_from.clone(),
+          }),
+        }),
+        validators: PipelinesMap::new(IndexMap::new()),
+      };
+
+      let expected_files = vec![
+        project_root.join(".parcelrc"),
+        project_root
+          .join("node_modules")
+          .join("@atlaspack/config-default")
+          .join("index.json"),
+      ];
+
+      assert_eq!(atlaspack_config, Ok((expected_config, expected_files)));
     }
   }
 
