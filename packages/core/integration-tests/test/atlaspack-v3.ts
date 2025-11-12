@@ -267,22 +267,17 @@ describe.v3('AtlaspackV3', function () {
     });
   });
 
-  // Tests for V3's TypeScript/Rust interop layer
-  describe('BitFlags conversion', () => {
-    // This test ensures packageConditions are correctly converted from Rust bitflags (numbers)
-    // to TypeScript arrays in the Dependency constructor.
-    //
-    // When a CSS file imports another CSS file with a custom JS resolver, the Rust CSS
-    // transformer sets package_conditions to ExportsCondition::STYLE (number 4096).
-    //
-    // This serves as a regression test for a BitFlags bug in which packageConditions is
-    // passed as a number instead of an array.
-    it('should convert packageConditions from bitflags to array', async () => {
-      const dir = join(__dirname, 'tmp', 'v3-css-style-condition');
-      await rimraf(dir);
-      inputFS.mkdirp(dir);
+  // Regression test for V3's TypeScript/Rust interop: BitFlags conversion for packageConditions
+  // When a CSS file imports another CSS file with a custom JS resolver, the Rust CSS
+  // transformer sets package_conditions to ExportsCondition::STYLE (bitflags number 4096).
+  // This test ensures packageConditions are correctly converted from Rust bitflags (numbers)
+  // to TypeScript arrays in the Dependency constructor.
+  it('should convert packageConditions from bitflags to array', async () => {
+    const dir = join(__dirname, 'tmp', 'v3-css-style-condition');
+    await rimraf(dir);
+    inputFS.mkdirp(dir);
 
-      await fsFixture(inputFS, dir)`
+    await fsFixture(inputFS, dir)`
         package.json:
           {
             "name": "v3-css-style-condition-test"
@@ -341,29 +336,28 @@ describe.v3('AtlaspackV3', function () {
               });
             }
           });
-      `;
+    `;
 
-      let b = await bundle(join(dir, 'index.js'), {
-        inputFS,
-        outputFS: inputFS,
-        defaultTargetOptions: {
-          distDir: join(dir, 'dist'),
-        },
-      });
-
-      // If we get here, the BitFlags conversion is working correctly
-      assert.ok(b, 'Bundle should be created');
-      let bundles = b.getBundles();
-      assert.ok(bundles.length > 0, 'Should have at least one bundle');
-
-      // Verify we have CSS bundles (proves CSS @imports with style condition were processed correctly)
-      let cssBundles = bundles.filter((bundle) => bundle.type === 'css');
-      assert.ok(
-        cssBundles.length > 0,
-        'Should have CSS bundle with @import resolved',
-      );
-
-      await rimraf(dir);
+    let b = await bundle(join(dir, 'index.js'), {
+      inputFS,
+      outputFS: inputFS,
+      defaultTargetOptions: {
+        distDir: join(dir, 'dist'),
+      },
     });
+
+    // If we get here, the BitFlags conversion is working correctly
+    assert.ok(b, 'Bundle should be created');
+    let bundles = b.getBundles();
+    assert.ok(bundles.length > 0, 'Should have at least one bundle');
+
+    // Verify we have CSS bundles (proves CSS @imports with style condition were processed correctly)
+    let cssBundles = bundles.filter((bundle) => bundle.type === 'css');
+    assert.ok(
+      cssBundles.length > 0,
+      'Should have CSS bundle with @import resolved',
+    );
+
+    await rimraf(dir);
   });
 });
