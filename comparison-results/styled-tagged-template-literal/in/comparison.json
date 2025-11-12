@@ -1,0 +1,8 @@
+{
+  "fixture": "styled-tagged-template-literal/in.jsx",
+  "outputDir": "styled-tagged-template-literal/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:36.042Z"
+}

@@ -1,0 +1,8 @@
+{
+  "fixture": "basic-css/in.jsx",
+  "outputDir": "basic-css/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:34.359Z"
+}

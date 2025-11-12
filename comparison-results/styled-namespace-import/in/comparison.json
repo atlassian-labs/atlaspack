@@ -1,0 +1,9 @@
+{
+  "fixture": "styled-namespace-import/in.jsx",
+  "outputDir": "styled-namespace-import/in",
+  "match": false,
+  "error": "Baseline transform failed: /Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/styled-namespace-import/in.jsx: Can't resolve './theme' in '/Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/styled-namespace-import'",
+  "hasBaseline": false,
+  "hasExperiment": false,
+  "timestamp": "2025-11-10T00:51:35.884Z"
+}

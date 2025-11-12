@@ -1,0 +1,8 @@
+{
+  "fixture": "styled-component-with-condition/in.jsx",
+  "outputDir": "styled-component-with-condition/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.607Z"
+}

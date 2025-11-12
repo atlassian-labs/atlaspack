@@ -1,0 +1,8 @@
+{
+  "fixture": "styled-atlaskit-theme/in.jsx",
+  "outputDir": "styled-atlaskit-theme/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.514Z"
+}

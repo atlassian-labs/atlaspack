@@ -1,0 +1,8 @@
+{
+  "fixture": "css-template-with-expressions/in.jsx",
+  "outputDir": "css-template-with-expressions/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:34.910Z"
+}

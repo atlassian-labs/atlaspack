@@ -1,0 +1,8 @@
+{
+  "fixture": "simple-cssmap-unbounded/in.jsx",
+  "outputDir": "simple-cssmap-unbounded/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.455Z"
+}

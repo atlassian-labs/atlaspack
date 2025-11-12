@@ -1,0 +1,8 @@
+{
+  "fixture": "null-literal-styles-css-prop/in.jsx",
+  "outputDir": "null-literal-styles-css-prop/in",
+  "match": true,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.307Z"
+}

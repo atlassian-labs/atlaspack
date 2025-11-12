@@ -1,0 +1,40 @@
+import { ax, ix, CC, CS } from "@compiled/react/runtime";
+import React from 'react';
+import { Box } from '@atlaskit/primitives/compiled';
+import { jsx, jsxs } from "react/jsx-runtime";
+const _8 = "._syazalr3{color:#172b4d}";
+const _7 = "._k48p8n31{font-weight:bold}";
+const _6 = "._1wybdlk8{font-size:14px}";
+const _5 = "._bfhk1hxd{background-color:#f4f5f7}";
+const _4 = "._4cvr1h6o{align-items:center}";
+const _3 = "._1e0c1txw{display:flex}";
+const _2 = "._u5f3ftgi{padding-right:8px}";
+const _ = "._18u0yjp0{margin-left:-6px}";
+const styles = {
+  avatarItemWrapper: "_18u0yjp0 _u5f3ftgi",
+  container: "_1e0c1txw _4cvr1h6o _bfhk1hxd",
+  text: "_1wybdlk8 _k48p8n31 _syazalr3"
+};
+export const Component = ({
+  name,
+  picture
+}) => {
+  return jsxs(CC, {
+    children: [jsx(CS, {
+      children: [_, _2, _3, _4, _5, _6, _7, _8]
+    }), jsx(Box, {
+      xcss: styles.avatarItemWrapper,
+      children: jsxs("div", {
+        className: styles.container(),
+        children: [jsx("img", {
+          src: picture,
+          alt: name
+        }), jsx("span", {
+          className: styles.text(),
+          children: name
+        })]
+      })
+    })]
+  });
+};
+export default Component;

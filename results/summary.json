@@ -1,0 +1,14 @@
+{
+  "timestamp": "2025-11-07T05:25:23.836Z",
+  "total": 1,
+  "matches": 0,
+  "mismatches": 1,
+  "results": [
+    {
+      "fixture": ".",
+      "match": false,
+      "hasBaseline": true,
+      "hasExperiment": true
+    }
+  ]
+}

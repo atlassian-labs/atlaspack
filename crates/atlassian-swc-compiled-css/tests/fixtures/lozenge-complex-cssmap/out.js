@@ -1,0 +1,96 @@
+import * as React from 'react';
+import { ax, ix, CC, CS } from "@compiled/react/runtime";
+import { jsx, jsxs } from "react/jsx-runtime";
+const _39 = "._syazwwip{color:#292a2e}";
+const _38 = "._syazvwuj{color:#42526e}";
+const _37 = "._12jin0nx{outline-color:#94c748}";
+const _36 = "._12jia2c0{outline-color:#f87168}";
+const _35 = "._12ji157s{outline-color:#c97cf4}";
+const _34 = "._12jih727{outline-color:#fca700}";
+const _33 = "._12jiuisw{outline-color:#669df1}";
+const _32 = "._12y3t94y{outline-width:1px}";
+const _31 = "._1qu2nqa1{outline-style:solid}";
+const _30 = "._12ji14je{outline-color:#b7b9be}";
+const _29 = "._19it1am1{border:1px solid #94c748}";
+const _28 = "._19itoa5t{border:1px solid #f87168}";
+const _27 = "._19it1apr{border:1px solid #c97cf4}";
+const _26 = "._19itzi1n{border:1px solid #fca700}";
+const _25 = "._19it1cy7{border:1px solid #669df1}";
+const _24 = "._19it14mp{border:1px solid #b7b9be}";
+const _23 = "._bfhk1hxd{background-color:#f4f5f7}";
+const _22 = "._bfhk3uhp{background-color:#b3df72}";
+const _21 = "._bfhk1366{background-color:#fd9891}";
+const _20 = "._bfhkshej{background-color:#d8a0f7}";
+const _19 = "._bfhkxmjf{background-color:#f9c84e}";
+const _18 = "._bfhk1ymo{background-color:#8fb8f6}";
+const _17 = "._bfhk1fkg{background-color:#dddee1}";
+const _16 = "._o5721q9c{white-space:nowrap}";
+const _15 = "._1p1dangw{text-transform:uppercase}";
+const _14 = "._1bto1l2s{text-overflow:ellipsis}";
+const _13 = "._vwz47vkz{line-height:1pc}";
+const _12 = "._k48p8n31{font-weight:bold}";
+const _11 = "._zg8l4jg8{font-style:normal}";
+const _10 = "._1wyb1skh{font-size:11px}";
+const _1 = "._ect49sn6{font-family:ui-sans-serif}";
+const _0 = "._1cwg1n1a{outline-offset:-1px}";
+const _9 = "._y4ti1y44{padding-inline-end:4px}";
+const _8 = "._bozg1y44{padding-inline-start:4px}";
+const _7 = "._1kz6184x{block-size:min-content}";
+const _6 = "._kqswpfqs{position:static}";
+const _5 = "._vchhusvi{box-sizing:border-box}";
+const _4 = "._1e0c116y{display:inline-flex}";
+const _3 = "._18m915vq{overflow-y:hidden}";
+const _2 = "._1reo15vq{overflow-x:hidden}";
+const _ = "._2rko1l7b{border-radius:3px}";
+const stylesNew = {
+  container: "_2rko1l7b _1reo15vq _18m915vq _1e0c116y _vchhusvi _kqswpfqs _1kz6184x _bozg1y44 _y4ti1y44",
+  containerSubtle: "_1cwg1n1a",
+  text: "_1reo15vq _18m915vq _ect49sn6 _1wyb1skh _zg8l4jg8 _k48p8n31 _vwz47vkz _1bto1l2s _1p1dangw _o5721q9c",
+  'bg.bold.default': "_bfhk1fkg",
+  'bg.bold.inprogress': "_bfhk1ymo",
+  'bg.bold.moved': "_bfhkxmjf",
+  'bg.bold.new': "_bfhkshej",
+  'bg.bold.removed': "_bfhk1366",
+  'bg.bold.success': "_bfhk3uhp",
+  'bg.subtle.default': "_bfhk1hxd",
+  'bg.subtle.inprogress': "_bfhk1hxd",
+  'bg.subtle.moved': "_bfhk1hxd",
+  'bg.subtle.new': "_bfhk1hxd",
+  'bg.subtle.removed': "_bfhk1hxd",
+  'bg.subtle.success': "_bfhk1hxd",
+  'border.subtle.default': "_19it14mp",
+  'border.subtle.inprogress': "_19it1cy7",
+  'border.subtle.moved': "_19itzi1n",
+  'border.subtle.new': "_19it1apr",
+  'border.subtle.removed': "_19itoa5t",
+  'border.subtle.success': "_19it1am1",
+  'outline.subtle.default': "_12ji14je _1qu2nqa1 _12y3t94y",
+  'outline.subtle.inprogress': "_12jiuisw _1qu2nqa1 _12y3t94y",
+  'outline.subtle.moved': "_12jih727 _1qu2nqa1 _12y3t94y",
+  'outline.subtle.new': "_12ji157s _1qu2nqa1 _12y3t94y",
+  'outline.subtle.removed': "_12jia2c0 _1qu2nqa1 _12y3t94y",
+  'outline.subtle.success': "_12jin0nx _1qu2nqa1 _12y3t94y",
+  'text.subtle': "_syazvwuj",
+  'text.bold': "_syazwwip"
+};
+function LozengeComponent({
+  appearance,
+  isBold
+}) {
+  const appearanceStyle = isBold ? 'bold' : 'subtle';
+  return jsxs(CC, {
+    children: [jsx(CS, {
+      children: [_, _2, _3, _4, _5, _6, _7, _8, _9, _0, _1, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39]
+    }), jsx("span", {
+      className: ax([stylesNew.container, stylesNew[`bg.${appearanceStyle}.${appearance}`], stylesNew[`border.subtle.${appearance}`], stylesNew.containerSubtle]),
+      children: jsxs(CC, {
+        children: [jsx(CS, {
+          children: [_, _2, _3, _4, _5, _6, _7, _8, _9, _0, _1, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39]
+        }), jsx("span", {
+          className: ax([stylesNew.text, stylesNew[`text.${appearanceStyle}`]]),
+          children: "Content"
+        })]
+      })
+    })]
+  });
+}

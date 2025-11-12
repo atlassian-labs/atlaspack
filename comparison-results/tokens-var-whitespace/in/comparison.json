@@ -1,0 +1,8 @@
+{
+  "fixture": "tokens-var-whitespace/in.jsx",
+  "outputDir": "tokens-var-whitespace/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:36.268Z"
+}

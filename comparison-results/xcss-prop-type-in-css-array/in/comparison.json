@@ -1,0 +1,8 @@
+{
+  "fixture": "xcss-prop-type-in-css-array/in.jsx",
+  "outputDir": "xcss-prop-type-in-css-array/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:36.370Z"
+}

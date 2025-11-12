@@ -1,0 +1,64 @@
+import * as React from 'react';
+import { ax, ix, CC, CS } from "@compiled/react/runtime";
+import { jsx, jsxs } from "react/jsx-runtime";
+const _ = "._ca0q7vkz{padding-top:1pc}";
+const _1 = "._u5f37vkz{padding-right:1pc}";
+const _2 = "._n3td7vkz{padding-bottom:1pc}";
+const _3 = "._19bv7vkz{padding-left:1pc}";
+const _4 = "._19itxtig{border:2px solid #007bff}";
+const _5 = "._2rko1y44{border-radius:4px}";
+const _6 = "._v5641hdd{transition:all .2s ease}";
+const _7 = "._nt75130e:focus{outline-color:#007bff}";
+const _8 = "._49pcnqa1:focus{outline-style:solid}";
+const _9 = "._1hvwyh40:focus{outline-width:2px}";
+const _10 = "._4cvxi6ib:hover{border-color:#6c757d}";
+const _11 = "._bfhk130e{background-color:#007bff}";
+const _12 = "._syazu67f{color:#fff}";
+const _13 = "._1wybdlk8{font-size:14px}";
+const _14 = "._80omtlke{cursor:pointer}";
+const _15 = "._irr3i6ib:hover{background-color:#6c757d}";
+const _16 = "._1bg4yh40:focus{outline-offset:2px}";
+const theme = {
+    primary: '#007bff',
+    secondary: '#6c757d',
+    spacing: {
+        small: '8px',
+        medium: '16px',
+        large: '24px'
+    }
+};
+const buttonStyles = null;
+export const Component = ({ children, onClick })=>{
+    return (jsxs(CC, {
+        children: [
+            jsx(CS, {
+                children: [
+                    _,
+                    _1,
+                    _2,
+                    _3,
+                    _4,
+                    _5,
+                    _6,
+                    _7,
+                    _8,
+                    _9,
+                    _10,
+                    _11,
+                    _12,
+                    _13,
+                    _14,
+                    _15,
+                    _16
+                ]
+            }),
+            jsx("button", {
+                onClick: onClick,
+                className: ax([
+                    "_ca0q7vkz _u5f37vkz _n3td7vkz _19bv7vkz _19itxtig _2rko1y44 _v5641hdd _nt75130e _49pcnqa1 _1hvwyh40 _4cvxi6ib _bfhk130e _syazu67f _1wybdlk8 _80omtlke _irr3i6ib _1bg4yh40"
+                ]),
+                children: children
+            })
+        ]
+    }));
+};

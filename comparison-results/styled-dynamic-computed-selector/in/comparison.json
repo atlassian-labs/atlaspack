@@ -1,0 +1,8 @@
+{
+  "fixture": "styled-dynamic-computed-selector/in.jsx",
+  "outputDir": "styled-dynamic-computed-selector/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.704Z"
+}

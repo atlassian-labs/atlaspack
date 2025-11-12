@@ -1,0 +1,8 @@
+{
+  "fixture": "responsive-hide-unused-cssmap/in.jsx",
+  "outputDir": "responsive-hide-unused-cssmap/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.392Z"
+}

@@ -1,0 +1,54 @@
+import { forwardRef } from 'react';
+import * as React from 'react';
+import { ax, ix, CC, CS } from "@compiled/react/runtime";
+import { jsx, jsxs } from "react/jsx-runtime";
+const _12 = "._irr31osi:hover{background-color:#a9a9a9}";
+const _11 = "._irr31xek:hover{background-color:#00008b}";
+const _10 = "._bfhk17nt{background-color:gray}";
+const _1 = "._bfhk13q2{background-color:blue}";
+const _0 = "._j5dh13gf:disabled{cursor:not-allowed}";
+const _9 = "._1j55105o:disabled{opacity:.5}";
+const _8 = "._1wybdlk8{font-size:14px}";
+const _7 = "._syazu67f{color:#fff}";
+const _6 = "._2rko1y44{border-radius:4px}";
+const _5 = "._19itglyw{border:none}";
+const _4 = "._19bv7vkz{padding-left:1pc}";
+const _3 = "._n3tdftgi{padding-bottom:8px}";
+const _2 = "._u5f37vkz{padding-right:1pc}";
+const _ = "._ca0qftgi{padding-top:8px}";
+const StyledButton = forwardRef(({
+  as: C = "button",
+  style: __cmpls,
+  ...__cmplp
+}, __cmplr) => {
+  if (__cmplp.innerRef) {
+    throw new Error("Please use 'ref' instead of 'innerRef'.");
+  }
+  const {
+    primary,
+    ...__cmpldp
+  } = __cmplp;
+  return jsxs(CC, {
+    children: [jsx(CS, {
+      children: [_, _2, _3, _4, _5, _6, _7, _8, _9, _0, _1, _10, _11, _12]
+    }), jsx(C, {
+      ...__cmpldp,
+      style: __cmpls,
+      ref: __cmplr,
+      className: ax(["_ca0qftgi _u5f37vkz _n3tdftgi _19bv7vkz _19itglyw _2rko1y44 _syazu67f _1wybdlk8 _1j55105o _j5dh13gf", __cmplp.primary ? "_bfhk13q2" : "_bfhk17nt", __cmplp.primary ? "_irr31xek" : "_irr31osi", __cmplp.className])
+    })]
+  });
+});
+if (process.env.NODE_ENV !== 'production') {
+  StyledButton.displayName = 'StyledButton';
+}
+function App() {
+  return jsxs("div", {
+    children: [jsx(StyledButton, {
+      primary: true,
+      children: "Primary Button"
+    }), jsx(StyledButton, {
+      children: "Secondary Button"
+    })]
+  });
+}

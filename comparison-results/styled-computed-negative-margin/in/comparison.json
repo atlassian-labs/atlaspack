@@ -1,0 +1,8 @@
+{
+  "fixture": "styled-computed-negative-margin/in.jsx",
+  "outputDir": "styled-computed-negative-margin/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.621Z"
+}

@@ -1,0 +1,8 @@
+{
+  "fixture": "grid-cssmap-complex/in.jsx",
+  "outputDir": "grid-cssmap-complex/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.147Z"
+}

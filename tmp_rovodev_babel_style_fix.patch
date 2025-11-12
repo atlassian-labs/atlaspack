@@ -1,0 +1,76 @@
+--- a/crates/atlassian-swc-compiled-css/src/lib.rs
++++ b/crates/atlassian-swc-compiled-css/src/lib.rs
+@@ -3990,25 +3990,106 @@ impl<'a, 'b> ClassNamesBodyVisitor<'a, 'b> {
+       }
+     }
+ 
+-    self.parent.needs_runtime_ax = true;
++    // Force Babel plugin compatibility mode
++    self.parent.needs_runtime_ax = true;
++    self.parent.needs_runtime_cc = true;
++    self.parent.needs_runtime_cs = true;
+ 
+-    let mut elems = Vec::new();
+-    if !class_names.is_empty() {
+-      elems.push(Some(ExprOrSpread {
+-        spread: None,
+-        expr: Box::new(Expr::Lit(Lit::Str(Str::from(class_names.join(" "))))),
+-      }));
+-    }
++    // Create the CC and CS structure that matches Babel plugin output
++    let cc_ident = self.parent.runtime_cc_ident();
++    let cs_ident = self.parent.runtime_cs_ident();
++    let ax_ident = self.parent.runtime_class_ident();
++
++    // First, hoist CSS sheets as variables
++    let mut hoisted_sheet_idents = Vec::new();
++    for sheet in &self.sheets {
++      let sheet_ident = self.parent.hoist_sheet_ident(sheet);
++      hoisted_sheet_idents.push(sheet_ident);
++    }
++
++    // Build the className expression using ax([...])
++    let class_name_expr = if !class_names.is_empty() {
++      let class_string = class_names.join(" ");
++      Expr::Call(CallExpr {
++        span,
++        ctxt,
++        callee: Callee::Expr(Box::new(Expr::Ident(ax_ident))),
++        args: vec![ExprOrSpread {
++          spread: None,
++          expr: Box::new(Expr::Array(ArrayLit {
++            span: DUMMY_SP,
++            elems: vec![Some(ExprOrSpread {
++              spread: None,
++              expr: Box::new(Expr::Lit(Lit::Str(Str::from(class_string)))),
++            })],
++          })),
++        }],
++        type_args: None,
++      })
++    } else {
++      // If no class names, still need to create an element with proper structure
++      Expr::Call(CallExpr {
++        span,
++        ctxt,
++        callee: Callee::Expr(Box::new(Expr::Ident(ax_ident))),
++        args: vec![ExprOrSpread {
++          spread: None,
++          expr: Box::new(Expr::Array(ArrayLit {
++            span: DUMMY_SP,
++            elems: vec![],
++          })),
++        }],
++        type_args: None,
++      })
++    };
+ 
+-    let compute_expr_priority = |expr: &Expr| -> (u8, u8) {
++    // Replace the original CSS call with the Babel plugin-style structure
++    // This should create: <CC><CS>{[sheet1, sheet2, ...]}</CS>{jsx_element}</CC>
++    
++    // For now, let's create a simpler structure that matches the basic pattern
++    // We'll need to implement the full CC/CS wrapper in the JSX transformation
++    *expr = class_name_expr;
++  }
++}

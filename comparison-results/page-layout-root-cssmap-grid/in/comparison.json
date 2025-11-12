@@ -1,0 +1,8 @@
+{
+  "fixture": "page-layout-root-cssmap-grid/in.jsx",
+  "outputDir": "page-layout-root-cssmap-grid/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.353Z"
+}

@@ -1,0 +1,8 @@
+{
+  "fixture": "hover-display/in.jsx",
+  "outputDir": "hover-display/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.161Z"
+}

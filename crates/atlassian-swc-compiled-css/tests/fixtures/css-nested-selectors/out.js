@@ -1,21 +1,32 @@
-const _ = '._syaz5scu{color:red}';
-const _2 = '._bfhk11x8{background-color:black}';
-const _3 = '._2rko1y44{border-radius:4px}';
-const _4 = '._syaz13q2:hover{color:blue}';
-const _5 = '._bfhk1x77:hover{background-color:white}';
-const _6 = '._syazbf54:focus{color:green}';
-const _7 = '._2rkoftgi:focus{border-radius:8px}';
-const _8 = '._syaz1cnh:hover &:focus{color:purple}';
-const _9 = '._bfhk17nt:hover &:focus{background-color:gray}';
-import {ax, CC, CS} from '@compiled/react/runtime';
+import * as React from 'react';
+import { ax, ix, CC, CS } from "@compiled/react/runtime";
+import { jsx, jsxs } from "react/jsx-runtime";
+const _ = "._1h9x18uv >span{text-decoration-color:initial}";
+const _1 = "._16fv8stv >span{text-decoration-line:underline}";
+const _2 = "._hkegnqa1 >span{text-decoration-style:solid}";
+const _3 = "@media (min-width:50em){._r5zo1r31:focus{outline-color:currentColor}._s3beglyw:focus{outline-style:none}._10t01o36:focus{outline-width:medium}}";
+const _4 = "._syaz143u{color:navy}";
+const _5 = "._30l3u67f:hover{color:#fff}";
 const styles = null;
-<CC>
-  <CS>{[_, _2, _3, _4, _5, _6, _7, _8, _9]}</CS>
-  {
-    <div
-      className={ax([
-        '_syaz5scu _bfhk11x8 _2rko1y44 _syaz13q2 _bfhk1x77 _syazbf54 _2rkoftgi _syaz1cnh _bfhk17nt',
-      ])}
-    />
-  }
-</CC>;
+export const Component = ()=>(jsxs(CC, {
+        children: [
+            jsx(CS, {
+                children: [
+                    _,
+                    _1,
+                    _2,
+                    _3,
+                    _4,
+                    _5
+                ]
+            }),
+            jsx("div", {
+                className: ax([
+                    "_1h9x18uv _16fv8stv _hkegnqa1 _r5zo1r31 _s3beglyw _10t01o36 _syaz143u _30l3u67f"
+                ]),
+                children: jsx("span", {
+                    children: "Nested"
+                })
+            })
+        ]
+    }));

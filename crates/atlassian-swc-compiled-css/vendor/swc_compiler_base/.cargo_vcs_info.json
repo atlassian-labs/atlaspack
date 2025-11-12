@@ -1,0 +1,6 @@
+{
+  "git": {
+    "sha1": "c8bfbf94edd7be7eb11b862bf814701140b1e648"
+  },
+  "path_in_vcs": "crates/swc_compiler_base"
+}

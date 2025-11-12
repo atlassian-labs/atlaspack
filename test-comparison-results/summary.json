@@ -1,0 +1,14 @@
+{
+  "timestamp": "2025-11-07T04:01:48.715Z",
+  "total": 1,
+  "matches": 0,
+  "mismatches": 1,
+  "results": [
+    {
+      "fixture": ".",
+      "match": false,
+      "hasAtlaspack": true,
+      "hasExpected": true
+    }
+  ]
+}

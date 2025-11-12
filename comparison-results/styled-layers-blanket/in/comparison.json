@@ -1,0 +1,9 @@
+{
+  "fixture": "styled-layers-blanket/in.jsx",
+  "outputDir": "styled-layers-blanket/in",
+  "match": false,
+  "error": "Baseline transform failed: /Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/styled-layers-blanket/in.jsx: Can't resolve '@atlassian/jira-common-styles/src/main.tsx' in '/Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/styled-layers-blanket'",
+  "hasBaseline": false,
+  "hasExperiment": false,
+  "timestamp": "2025-11-10T00:51:35.868Z"
+}

@@ -8,6 +8,7 @@ import type {CommandExt} from './normalizeOptions';
 import {applyOptions} from './applyOptions';
 import {commonOptions} from './options';
 import {handleUncaughtException} from './handleUncaughtException';
+import {makeCompareCompiledCommand} from './compareCompiledCommand';
 
 export function makeDebugCommand(): commander.Command {
   const debug = new commander.Command('debug').description(
@@ -103,6 +104,8 @@ export function makeDebugCommand(): commander.Command {
       }
     });
   applyOptions(compactCache, commonOptions);
+
+  debug.addCommand(makeCompareCompiledCommand());
 
   return debug;
 }

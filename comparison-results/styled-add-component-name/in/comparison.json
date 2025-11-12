@@ -1,0 +1,8 @@
+{
+  "fixture": "styled-add-component-name/in.jsx",
+  "outputDir": "styled-add-component-name/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.464Z"
+}

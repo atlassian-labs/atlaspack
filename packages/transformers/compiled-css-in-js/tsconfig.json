@@ -1,6 +1,9 @@
 {
   "extends": "../../../tsconfig.base.json",
-  "include": ["./src/", "./package.json"],
+  "include": [
+    "./src/",
+    "./package.json"
+  ],
   "compilerOptions": {
     "composite": true
   },
@@ -13,6 +16,12 @@
     },
     {
       "path": "../../core/feature-flags/tsconfig.json"
+    },
+    {
+      "path": "../../core/diagnostic/tsconfig.json"
+    },
+    {
+      "path": "../../core/utils/tsconfig.json"
     }
   ]
 }

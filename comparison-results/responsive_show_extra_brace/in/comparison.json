@@ -1,0 +1,8 @@
+{
+  "fixture": "responsive_show_extra_brace/in.jsx",
+  "outputDir": "responsive_show_extra_brace/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.444Z"
+}

@@ -1,0 +1,8 @@
+{
+  "fixture": "styled-dynamic-token-flex-basis/in.jsx",
+  "outputDir": "styled-dynamic-token-flex-basis/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.789Z"
+}

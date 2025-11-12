@@ -1,0 +1,8 @@
+{
+  "fixture": "css-custom-property-length/in.jsx",
+  "outputDir": "css-custom-property-length/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:34.607Z"
+}

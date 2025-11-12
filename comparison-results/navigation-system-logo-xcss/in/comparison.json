@@ -1,0 +1,9 @@
+{
+  "fixture": "navigation-system-logo-xcss/in.jsx",
+  "outputDir": "navigation-system-logo-xcss/in",
+  "match": false,
+  "error": "Baseline transform failed: /Users/jlane2/atlassian/atlaspack/crates/atlassian-swc-compiled-css/tests/fixtures/navigation-system-logo-xcss/in.jsx: \nThe variant object must be statically defined.\n\nCheck out our documentation for cssMap examples: https://compiledcssinjs.com/docs/api-cssmap\n (10:8).\n   8 |\n   9 | const anchorStyles = cssMap({\n> 10 |   root: {\n     |         ^\n  11 |     display: 'flex',\n  12 |     alignItems: 'center',\n  13 |     height: '32px',",
+  "hasBaseline": false,
+  "hasExperiment": false,
+  "timestamp": "2025-11-10T00:51:35.275Z"
+}

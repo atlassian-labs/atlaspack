@@ -1,0 +1,8 @@
+{
+  "fixture": "css_array_missing_comma/in.jsx",
+  "outputDir": "css_array_missing_comma/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.001Z"
+}

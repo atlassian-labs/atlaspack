@@ -1,0 +1,8 @@
+{
+  "fixture": "onboarding-target-unterminated-jsx/in.jsx",
+  "outputDir": "onboarding-target-unterminated-jsx/in",
+  "match": false,
+  "hasBaseline": true,
+  "hasExperiment": true,
+  "timestamp": "2025-11-10T00:51:35.341Z"
+}
