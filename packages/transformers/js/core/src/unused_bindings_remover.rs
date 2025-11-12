@@ -147,6 +147,9 @@ impl UnusedBindingsRemover {
 
       prev_declaration_count = current_declaration_count;
     }
+
+    // Clean up empty declarations and imports
+    self.cleanup_module_items(&mut module.body);
   }
 
   fn remove_from_pat(&self, pat: &mut Pat) {
@@ -918,6 +921,177 @@ mod tests {
         const [a] = arr;
         const [, ...rest2] = arr2;
         console.log(a, rest2);
+      "#}
+    );
+  }
+
+  // ===========================================================================
+  // Imports
+  // ===========================================================================
+
+  #[test]
+  fn test_retains_special_imports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        import 'rxjs';
+        import 'react';
+        import '@emotion/react';
+        import '@atlaskit/css-reset';
+        import 'foo';
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        import 'rxjs';
+        import 'react';
+        import '@emotion/react';
+        import '@atlaskit/css-reset';
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_removes_unused_named_imports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        import { used1, unused1, unused2 } from 'foo';
+        import { unused3, used2 } from 'bar';
+        console.log(used1, used2);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        import { used1 } from 'foo';
+        import { used2 } from 'bar';
+        console.log(used1, used2);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_removes_unused_default_and_namespace_imports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        import React from 'react';
+        import * as utils from 'utils';
+        import { useState } from 'other-module';
+        const unused = 1;
+        console.log(React, utils);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        import React from 'react';
+        import * as utils from 'utils';
+        console.log(React, utils);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_removes_entire_imports_when_all_unused() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        import { a, b } from 'unused-module';
+        import { c } from 'also-unused';
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(output_code, indoc! {""});
+  }
+
+  #[test]
+  fn test_handles_mixed_import_syntax_with_requires() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const fs = require('fs');
+        const path = require('path');
+        import lodash from 'lodash';
+        const unused = require('unused');
+        console.log(fs, path, lodash);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const fs = require('fs');
+        const path = require('path');
+        import lodash from 'lodash';
+        console.log(fs, path, lodash);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_handles_destructured_requires_and_imports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const { readFile, writeFile, unused } = require('fs');
+        import { useState, useRef } from 'react';
+        const { notUsed } = require('other');
+        console.log(readFile, useState);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const { readFile } = require('fs');
+        import { useState } from 'react';
+        console.log(readFile, useState);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_imports_used_in_default_exports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        import Component from './Component';
+        import unused from 'unused';
+        export default Component;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        import Component from './Component';
+        export default Component;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_imports_used_in_named_exports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        import { foo, bar } from 'module';
+        import { unused } from 'other';
+        export { foo, bar };
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        import { foo, bar } from 'module';
+        export { foo, bar };
       "#}
     );
   }
