@@ -25,3 +25,4 @@ serde_json5 = { workspace = true }
 [dev-dependencies]
 anyhow = { workspace = true }
 mockall = { workspace = true }
+atlaspack_test_fixtures = { path = "../atlaspack_test_fixtures" }

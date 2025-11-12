@@ -434,6 +434,7 @@ dependencies = [
  "atlaspack_core",
  "atlaspack_filesystem",
  "atlaspack_package_manager",
+ "atlaspack_test_fixtures",
  "derive_builder",
  "glob-match",
  "indexmap",
@@ -792,6 +793,14 @@ dependencies = [
  "swc_core",
  "swc_ecma_parser",
  "thiserror 2.0.17",
+]
+
+[[package]]
+name = "atlaspack_test_fixtures"
+version = "0.1.0"
+dependencies = [
+ "atlaspack_filesystem",
+ "indoc",
 ]
 
 [[package]]
