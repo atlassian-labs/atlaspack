@@ -1,5 +1,6 @@
 import assert from 'assert';
 import {join} from 'path';
+import {rimraf} from 'rimraf';
 
 import {
   AtlaspackV3,
@@ -206,7 +207,7 @@ describe.v3('AtlaspackV3', function () {
       shutdown
         index.js:
           console.log('hello world');
-                    
+
         yarn.lock: {}
     `;
 
@@ -263,6 +264,106 @@ describe.v3('AtlaspackV3', function () {
           },
         }),
       );
+    });
+  });
+
+  // Tests for V3's TypeScript/Rust interop layer
+  describe('BitFlags conversion', () => {
+    // This test ensures packageConditions are correctly converted from Rust bitflags (numbers)
+    // to TypeScript arrays in the Dependency constructor.
+    //
+    // When a CSS file imports another CSS file with a custom JS resolver, the Rust CSS
+    // transformer sets package_conditions to ExportsCondition::STYLE (number 4096).
+    //
+    // This serves as a regression test for a BitFlags bug in which packageConditions is
+    // passed as a number instead of an array.
+    it('should convert packageConditions from bitflags to array', async () => {
+      const dir = join(__dirname, 'tmp', 'v3-css-style-condition');
+      await rimraf(dir);
+      inputFS.mkdirp(dir);
+
+      await fsFixture(inputFS, dir)`
+        package.json:
+          {
+            "name": "v3-css-style-condition-test"
+          }
+
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "resolvers": ["./custom-resolver.js"]
+          }
+
+        yarn.lock:
+
+        index.js:
+          import './main.css';
+          console.log('Loaded with CSS');
+
+        main.css:
+          @import './variables.css';
+
+          body {
+            background: var(--bg-color);
+            color: var(--text-color);
+          }
+
+        variables.css:
+          :root {
+            --bg-color: white;
+            --text-color: black;
+          }
+
+        custom-resolver.js:
+          const NodeResolver = require('@atlaspack/node-resolver-core').default;
+          const { Resolver } = require('@atlaspack/plugin');
+
+          // This custom resolver uses NodeResolver directly, forcing dependencies
+          // through the JavaScript worker's runResolverResolve, which triggers
+          // the BitFlags bug in the Dependency constructor
+          module.exports = new Resolver({
+            async loadConfig({ options }) {
+              return new NodeResolver({
+                fs: options.inputFS,
+                projectRoot: options.projectRoot,
+                packageManager: options.packageManager,
+              });
+            },
+
+            async resolve({ dependency, specifier, config: resolver }) {
+              return resolver.resolve({
+                filename: specifier,
+                specifierType: dependency.specifierType,
+                parent: dependency.resolveFrom,
+                env: dependency.env,
+                sourcePath: dependency.sourcePath,
+                packageConditions: dependency.packageConditions,
+              });
+            }
+          });
+      `;
+
+      let b = await bundle(join(dir, 'index.js'), {
+        inputFS,
+        outputFS: inputFS,
+        defaultTargetOptions: {
+          distDir: join(dir, 'dist'),
+        },
+      });
+
+      // If we get here, the BitFlags conversion is working correctly
+      assert.ok(b, 'Bundle should be created');
+      let bundles = b.getBundles();
+      assert.ok(bundles.length > 0, 'Should have at least one bundle');
+
+      // Verify we have CSS bundles (proves CSS @imports with style condition were processed correctly)
+      let cssBundles = bundles.filter((bundle) => bundle.type === 'css');
+      assert.ok(
+        cssBundles.length > 0,
+        'Should have CSS bundle with @import resolved',
+      );
+
+      await rimraf(dir);
     });
   });
 });
