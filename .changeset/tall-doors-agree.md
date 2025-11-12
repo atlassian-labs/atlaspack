@@ -1,5 +1,4 @@
 ---
-'@atlaspack/integration-tests': patch
 '@atlaspack/core': patch
 ---
 
