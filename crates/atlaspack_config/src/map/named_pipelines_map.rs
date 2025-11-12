@@ -114,16 +114,19 @@ impl NamedPipelinesMap {
   /// ```
   pub fn get(&self, path: &Path, named_pattern: Option<NamedPattern>) -> Vec<PluginNode> {
     let is_match = named_pattern_matcher(path);
-    let mut matches: Vec<PluginNode> = Vec::new();
 
-    for (pattern, pipelines) in self.inner.iter() {
-      if is_match(pattern, "") {
-        matches.extend(pipelines.iter().cloned());
-      }
-    }
-
-    // If a named pipeline is requested, the glob needs to match exactly
+    // If a named pipeline is requested, handle it specially
     if let Some(named_pattern) = named_pattern {
+      let mut matches: Vec<PluginNode> = Vec::new();
+
+      // First, collect all matching unnamed patterns
+      for (pattern, pipelines) in self.inner.iter() {
+        if is_match(pattern, "") {
+          matches.extend(pipelines.iter().cloned());
+        }
+      }
+
+      // Then find the named pattern
       let exact_match = self
         .inner
         .iter()
@@ -134,9 +137,18 @@ impl NamedPipelinesMap {
       } else if !named_pattern.use_fallback {
         return Vec::new();
       }
+
+      return matches;
     }
 
-    matches
+    // For unnamed patterns, return only the first match (highest priority)
+    for (pattern, pipelines) in self.inner.iter() {
+      if is_match(pattern, "") {
+        return pipelines.clone();
+      }
+    }
+
+    Vec::new()
   }
 
   pub fn contains_named_pipeline(&self, pipeline: impl AsRef<str>) -> bool {

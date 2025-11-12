@@ -112,21 +112,20 @@ impl PartialAtlaspackConfig {
     let mut merged_map = IndexMap::new();
     let mut used_patterns = HashSet::new();
 
-    // Add the extension options first so they have higher precedence in the output glob map
-    for (pattern, extend_pipelines) in extend_map {
-      let map_pipelines = map.get(&pattern);
-      if let Some(pipelines) = map_pipelines {
-        used_patterns.insert(pattern.clone());
-        merged_map.insert(pattern, merge(pipelines.clone(), extend_pipelines));
-      } else {
-        merged_map.insert(pattern, extend_pipelines);
-      }
+    // Add the user options first so they have higher precedence in the output glob map
+    for (pattern, map_pipelines) in map.iter() {
+      merged_map.insert(pattern.clone(), map_pipelines.clone());
+      used_patterns.insert(pattern.clone());
     }
 
-    // Add remaining pipelines
-    for (pattern, value) in map {
-      if !used_patterns.contains(&pattern) {
-        merged_map.insert(pattern, value);
+    // Add remaining extension options, merging with user options where patterns match
+    for (pattern, extend_pipelines) in extend_map {
+      if let Some(map_pipelines) = map.get(&pattern) {
+        // Pattern exists in both - merge them with user taking precedence
+        merged_map.insert(pattern, merge(map_pipelines.clone(), extend_pipelines));
+      } else {
+        // Pattern only exists in extension - add it
+        merged_map.insert(pattern, extend_pipelines);
       }
     }
 
