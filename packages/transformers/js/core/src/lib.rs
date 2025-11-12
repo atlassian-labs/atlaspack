@@ -18,7 +18,7 @@ mod ssr_global_replacer;
 pub mod test_utils;
 mod typeof_replacer;
 mod unused_bindings_remover;
-mod utils;
+pub mod utils;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
