@@ -58,6 +58,10 @@ impl UnusedBindingsRemover {
     matches!(name, "di" | "jsx" | "React")
   }
 
+  fn is_special_import(src: &str) -> bool {
+    src.contains("rxjs") || matches!(src, "react" | "@emotion/react" | "@atlaskit/css-reset")
+  }
+
   fn should_keep_binding(&self, id: &Id) -> bool {
     self.used_bindings.contains(id) || Self::is_special_ident(&id.0)
   }
@@ -78,7 +82,9 @@ impl UnusedBindingsRemover {
   fn cleanup_module_items(&self, items: &mut Vec<ModuleItem>) {
     items.retain(|item| match item {
       ModuleItem::Stmt(Stmt::Decl(Decl::Var(var))) => !var.decls.is_empty(),
-      ModuleItem::ModuleDecl(ModuleDecl::Import(import)) => !import.specifiers.is_empty(),
+      ModuleItem::ModuleDecl(ModuleDecl::Import(import)) => {
+        !import.specifiers.is_empty() || Self::is_special_import(&import.src.value)
+      }
       _ => true,
     });
   }
