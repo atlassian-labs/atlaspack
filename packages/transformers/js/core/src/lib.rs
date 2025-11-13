@@ -412,6 +412,7 @@ pub fn transform(
 
               let mut module = {
                 let mut passes = (
+                  // TODO: Only run the `undefined` replacements if browser API typeof replacer is enabled (should rename flag too)
                   Optional::new(
                     visit_mut_pass(TypeofReplacer::new(unresolved_mark)),
                     config.source_type != SourceType::Script,
