@@ -185,7 +185,7 @@ impl Request for TestRequest {
     let mut results = vec![name];
     while let Ok(response) = rx.recv_timeout(Duration::from_secs(2)) {
       match response {
-        Ok((result, _id)) => match result.as_ref() {
+        Ok((result, _id, _cached)) => match result.as_ref() {
           RequestResult::TestSub(r) => results.push(r.clone()),
           RequestResult::TestMain(sub_results) => results.extend(sub_results.clone()),
           _ => todo!(),
@@ -239,7 +239,7 @@ impl Request for TestRequest2 {
     let mut responses = Vec::new();
     while let Ok(response) = rx.recv_timeout(Duration::from_secs(2)) {
       match response {
-        Ok((result, _idd)) => match result.as_ref() {
+        Ok((result, _id, _cached)) => match result.as_ref() {
           RequestResult::TestSub(r) => responses.push(r.clone()),
           _ => todo!("unimplemented"),
         },
@@ -395,5 +395,75 @@ async fn test_parallel_subrequests() {
     _ => {
       panic!("Request should pass");
     }
+  }
+}
+
+/// Test request that uses the new execute_request method
+#[derive(Clone, Default, Debug)]
+struct TestExecuteRequest {
+  pub runs: Arc<AtomicUsize>,
+  pub name: String,
+}
+
+impl TestExecuteRequest {
+  pub fn new<T: AsRef<str>>(name: T) -> Self {
+    Self {
+      runs: Default::default(),
+      name: name.as_ref().to_string(),
+    }
+  }
+
+  pub fn run_count(&self) -> usize {
+    self.runs.load(Ordering::Relaxed)
+  }
+}
+
+impl std::hash::Hash for TestExecuteRequest {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.name.hash(state);
+  }
+}
+
+#[async_trait]
+impl Request for TestExecuteRequest {
+  async fn run(
+    &self,
+    mut request_context: RunRequestContext,
+  ) -> Result<ResultAndInvalidations, RunRequestError> {
+    self.runs.fetch_add(1, Ordering::Relaxed);
+
+    // Test the new execute_request method by running a child request
+    let child_request = TestRequest::new("child", &[]);
+    let (result, _request_id, _cached) = request_context.execute_request(child_request).await?;
+
+    match result.as_ref() {
+      RequestResult::TestSub(name) => {
+        assert_eq!(name, "child");
+        Ok(ResultAndInvalidations {
+          result: RequestResult::TestSub(self.name.clone()),
+          invalidations: vec![],
+        })
+      }
+      _ => Err(anyhow::anyhow!("Unexpected result type").into()),
+    }
+  }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_execute_request() {
+  let mut graph = request_tracker(Default::default());
+
+  let parent_request = TestExecuteRequest::new("parent");
+  let result = graph.run_request(parent_request.clone()).await;
+
+  assert!(result.is_ok());
+  assert_eq!(parent_request.run_count(), 1);
+
+  let result = result.unwrap();
+  match result.as_ref() {
+    RequestResult::TestSub(name) => {
+      assert_eq!(name, "parent");
+    }
+    _ => panic!("Unexpected result type"),
   }
 }

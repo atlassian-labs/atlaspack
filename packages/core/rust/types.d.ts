@@ -76,6 +76,9 @@ export declare function addEnvironment(environment: unknown): void;
 export declare function getAvailableThreads(): number;
 export declare function initializeMonitoring(): void;
 export declare function closeMonitoring(): void;
+export declare function getNativeMemoryStats(): NativeMemoryStats | null;
+export declare function resetMemoryTracking(): void;
+export declare function sampleNativeMemory(): void;
 /** Called on the worker thread to create a reference to the NodeJs worker */
 export declare function newNodejsWorker(worker: object): JsTransferable;
 export interface InlineRequiresOptimizerInput {
@@ -248,4 +251,48 @@ export interface Symbol {
   isEsmExport: boolean;
   isStaticBindingSafe: boolean;
   selfReferenced: boolean;
+}
+
+export interface TokensPluginOptions {
+  tokenDataPath: string;
+  shouldUseAutoFallback: boolean;
+  shouldForceAutoFallback: boolean;
+  forceAutoFallbackExemptions: Array<string>;
+  defaultTheme: string;
+}
+
+export interface TokensConfig {
+  filename: string;
+  projectRoot: string;
+  isSource: boolean;
+  sourceMaps: boolean;
+  tokensOptions: TokensPluginOptions;
+}
+
+export interface TokensPluginResult {
+  code: string;
+  map: string | null;
+}
+
+/** Apply the tokens transformation plugin to the given code asynchronously */
+export declare function applyTokensPlugin(
+  rawCode: Buffer,
+  config: TokensConfig,
+): object;
+
+export interface DetailedMemoryStats {
+  min: number;
+  max: number;
+  mean: number;
+  median: number;
+  p95: number;
+  p99: number;
+  standardDeviation: number;
+  range: number;
+}
+
+export interface NativeMemoryStats {
+  physicalMem: DetailedMemoryStats;
+  virtualMem: DetailedMemoryStats;
+  sampleCount: number;
 }

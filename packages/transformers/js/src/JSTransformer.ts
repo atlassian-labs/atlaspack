@@ -4,7 +4,6 @@ import type {
   SourceLocation,
   FilePath,
   FileCreateInvalidation,
-  ConditionMeta,
 } from '@atlaspack/types';
 import type {SchemaEntity} from '@atlaspack/utils';
 import type {Diagnostic} from '@atlaspack/diagnostic';
@@ -173,7 +172,7 @@ type MacroContext = {
 };
 
 export default new Transformer({
-  async loadConfig({config, options}) {
+  async loadConfig({config, options, logger}) {
     let packageJson = await config.getPackage();
     let isJSX,
       pragma,
@@ -302,6 +301,13 @@ export default new Transformer({
     let inlineConstants = false;
     let magicComments = false;
     let addReactDisplayName = false;
+
+    let enableGlobalThisAliaser = Boolean(
+      options.env.NATIVE_GLOBAL_THIS_ALIASER,
+    );
+    let enableLazyLoadingTransformer = Boolean(
+      options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
+    );
     let enableReactHooksRemover = Boolean(options.env.NATIVE_HOOKS_REMOVER);
 
     if (conf && conf.contents) {
@@ -309,8 +315,9 @@ export default new Transformer({
         CONFIG_SCHEMA,
         {
           data: conf.contents,
-          // FIXME
-          source: await options.inputFS.readFile(conf.filePath, 'utf8'),
+          source: getFeatureFlag('schemaValidationDeferSourceLoading')
+            ? () => options.inputFS.readFileSync(conf.filePath, 'utf8')
+            : await options.inputFS.readFile(conf.filePath, 'utf8'),
           filePath: conf.filePath,
           prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-js')}`,
         },
@@ -347,6 +354,8 @@ export default new Transformer({
       decorators,
       useDefineForClassFields,
       magicComments,
+      enableGlobalThisAliaser,
+      enableLazyLoadingTransformer,
       enableReactHooksRemover,
     };
   },
@@ -526,6 +535,12 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
+      is_source: asset.isSource,
+      enable_global_this_aliaser: Boolean(config.enableGlobalThisAliaser),
+      enable_lazy_loading_transformer: Boolean(
+        config.enableLazyLoadingTransformer,
+      ),
+      nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
       enable_react_hooks_remover: Boolean(config.enableReactHooksRemover),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {

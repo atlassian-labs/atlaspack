@@ -1,5 +1,3 @@
-// Converted from Flow to TypeScript
-
 export type ConsistencyCheckFeatureFlagValue =
   (typeof CONSISTENCY_CHECK_VALUES)[number];
 
@@ -94,6 +92,15 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-03-07
    */
   loadableSideEffects: false,
+
+  /**
+   * Enable performance optimization for the resolver specifier to_string
+   * conversions
+   *
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
+   * @since 2025-03-13
+   */
+  reduceResolverStringCreation: false,
 
   /**
    * Fixes source maps for inline bundles
@@ -274,6 +281,51 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-09-29
    */
   sourceAssetIdBundleGraphFix: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Enable JSX configuration loading in v3 Rust transformer to match v2 behaviour
+   *
+   * @author matt-koko <mkokolich@atlassian.com>
+   * @since 2025-10-21
+   */
+  v3JsxConfigurationLoading: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+
+   * When _disabled_, will early exit from the @atlaspack/transformer-tokens transformation
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-10-17
+   */
+  enableTokensTransformer: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /*
+   * When enabled, applies the SWC compiled CSS in JS transformer to the codebase.
+   *
+   * This is a temporary feature flag for the migration state. We eventually will remove this transformer plugin and directly use the SWC visitor in the JS transform.
+   *
+   * @author Jake Lane <jlane2@atlassian.com>
+   * @since 2025-10-16
+   */
+  compiledCssInJsTransformer: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * When enabled, defers source loading for schema validation until the source is needed.
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-10-22
+   */
+  schemaValidationDeferSourceLoading:
+    process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Fixes an issue where nested Promise.resolve chains mixed with dynamic
+   * imports could cause build errors.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-11-05
+   */
+  nestedPromiseImportFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

@@ -16,6 +16,7 @@ const config = {
 if (process.env.ATLASPACK_INTEGRATION_TESTS_CI === 'true') {
   config.retries = 2;
   config.timeout = 50000;
+  config.exit = true;
 }
 
 module.exports = config;
