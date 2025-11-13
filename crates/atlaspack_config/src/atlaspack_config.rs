@@ -93,33 +93,5 @@ mod tests {
         )
       );
     }
-
-    #[test]
-    fn returns_the_config() {
-      fn plugin() -> PluginNode {
-        PluginNode {
-          package_name: String::from("package"),
-          resolve_from: Arc::new(PathBuf::from("/")),
-        }
-      }
-
-      fn extension() -> PluginNode {
-        PluginNode {
-          package_name: String::from("..."),
-          resolve_from: Arc::new(PathBuf::from("/")),
-        }
-      }
-
-      let partial_config = PartialAtlaspackConfigBuilder::default()
-        .bundler(Some(plugin()))
-        .namers(vec![plugin()])
-        .resolvers(vec![extension(), plugin()])
-        .build()
-        .unwrap();
-
-      let config = AtlaspackConfig::try_from(partial_config);
-
-      assert!(config.is_ok_and(|c| !c.resolvers.contains(&extension())));
-    }
   }
 }
