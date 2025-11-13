@@ -8,7 +8,7 @@ export const BENCHMARK_CONFIGS: BenchmarkOptions[] = [
   {
     name: 'Three.js Real Repository (JS)',
     target: 'three-js-project/index.html',
-    samples: 5,
+    samples: 10,
     warmupRuns: 1,
     buildOptions: {
       mode: 'production',
@@ -20,9 +20,9 @@ export const BENCHMARK_CONFIGS: BenchmarkOptions[] = [
     },
   },
   {
-    name: 'Three.js Real Repository (Native)',
+    name: 'Three.js Real Repository (V3)',
     target: 'three-js-project/index.html',
-    samples: 5,
+    samples: 10,
     warmupRuns: 1,
     buildOptions: {
       mode: 'production',
@@ -47,5 +47,5 @@ export const THREE_JS_CONFIG = {
   branch: process.env.THREE_JS_BRANCH || 'r108',
   repoUrl:
     process.env.THREE_JS_REPO_URL || 'https://github.com/mrdoob/three.js.git',
-  copies: parseInt(process.env.THREE_JS_COPIES || '10'), // Number of three.js copies to bundle
+  copies: parseInt(process.env.THREE_JS_COPIES || '15'), // Number of three.js copies to bundle
 };
