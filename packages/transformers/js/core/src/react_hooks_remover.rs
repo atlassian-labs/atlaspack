@@ -34,15 +34,15 @@ use crate::utils::*;
 /// const cleanup = undefined;
 /// ```
 ///
-/// # Scope Awareness
+/// # Behavior
 ///
-/// Only removes unresolved (global/imported) references. Local variables with the same
-/// names are not affected:
+/// Removes all calls matching the hook names, regardless of scope. This matches the
+/// original Babel implementation which doesn't perform scope analysis:
 ///
 /// ```js
 /// function Component() {
 ///   const useEffect = () => console.log('local');
-///   useEffect(); // Not removed
+///   useEffect(); // Also removed
 /// }
 /// useEffect(() => {}); // Removed
 /// ```
@@ -75,21 +75,11 @@ impl ReactHooksRemover {
     }
   }
 
-  #[allow(dead_code)]
-  pub fn with_hooks(unresolved_mark: Mark, hooks: HashSet<JsWord>) -> Self {
-    Self {
-      hooks_to_remove: hooks,
-      unresolved_mark,
-    }
-  }
-
   fn should_remove_call(&self, callee: &Callee) -> bool {
     if let Callee::Expr(expr) = callee
       && let Expr::Ident(ident) = &**expr
     {
-      // Only remove if it's an unresolved reference (imported/global) and in our removal list
-      return is_unresolved(ident, self.unresolved_mark)
-        && self.hooks_to_remove.contains(&ident.sym);
+      return self.hooks_to_remove.contains(&ident.sym);
     }
 
     false
@@ -169,7 +159,7 @@ mod tests {
   }
 
   #[test]
-  fn test_scoped_functions_not_removed() {
+  fn test_all_hook_calls_removed() {
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         function Component() {
@@ -189,7 +179,7 @@ mod tests {
       indoc! {r#"
         function Component() {
             const useEffect = ()=>console.log('local');
-            useEffect();
+            ;
             return null;
         }
         ;
@@ -209,8 +199,9 @@ mod tests {
         const result = useAnotherHook();
         useEffect(() => {}); // Should not be removed with custom config
       "#},
-      |run_test_context: RunTestContext| {
-        ReactHooksRemover::with_hooks(run_test_context.unresolved_mark, custom_hooks)
+      |run_test_context: RunTestContext| ReactHooksRemover {
+        unresolved_mark: run_test_context.unresolved_mark,
+        hooks_to_remove: custom_hooks,
       },
     );
 
@@ -250,6 +241,25 @@ mod tests {
         if (condition) {
             ;
         }
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_nested_hook_calls() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        useEffect(useLayoutEffect());
+        const result = someFunc(useEffect(), useLayoutEffect());
+      "#},
+      |run_test_context: RunTestContext| ReactHooksRemover::new(run_test_context.unresolved_mark),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        ;
+        const result = someFunc(undefined, undefined);
       "#}
     );
   }
