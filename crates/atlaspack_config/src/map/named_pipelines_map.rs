@@ -167,7 +167,7 @@ impl NamedPipelinesMap {
 
         let mut result = Vec::new();
         result.extend(first[..spread_idx].iter().cloned());
-        result.extend(rest.into_iter());
+        result.extend(rest);
         result.extend(first[spread_idx + 1..].iter().cloned());
 
         // Remove any residual spreads to be safe

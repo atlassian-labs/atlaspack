@@ -281,6 +281,7 @@ mod tests {
   use atlaspack_package_manager::MockPackageManager;
   use atlaspack_package_manager::PackageManager;
   use atlaspack_package_manager::Resolution;
+  use atlaspack_test_fixtures::test_fixture;
   use mockall::predicate::eq;
 
   // Common imports used across tests
@@ -288,7 +289,6 @@ mod tests {
     AtlaspackConfig, PluginNode,
     map::{NamedPipelinesMap, PipelineMap, PipelinesMap},
   };
-  use atlaspack_test_fixtures::test_fixture;
   use indexmap::IndexMap;
   use indexmap::indexmap;
 
@@ -536,14 +536,6 @@ mod tests {
 
     #[test]
     fn returns_merged_default_atlaspack_config() {
-      use crate::{
-        AtlaspackConfig, PluginNode,
-        map::{NamedPipelinesMap, PipelineMap, PipelinesMap},
-      };
-      use atlaspack_test_fixtures::test_fixture;
-      use indexmap::IndexMap;
-      use indexmap::indexmap;
-
       let project_root = PathBuf::from("/test");
       let fs = test_fixture! {
         project_root.clone(),
@@ -594,83 +586,6 @@ mod tests {
         .load(&project_root, LoadConfigOptions::default())
         .map_err(|e| e.to_string());
 
-      // Build the expected merged config structure
-      let extended_resolve_from = Arc::new(
-        project_root
-          .join("node_modules")
-          .join("@atlaspack/config-default")
-          .join("index.json"),
-      );
-      let base_resolve_from = Arc::new(project_root.join(".parcelrc"));
-
-      let expected_config = AtlaspackConfig {
-        bundler: PluginNode {
-          package_name: String::from("@atlaspack/bundler-default"),
-          resolve_from: extended_resolve_from.clone(),
-        },
-        compressors: PipelinesMap::new(indexmap! {
-          String::from("*") => vec!(PluginNode {
-            package_name: String::from("@atlaspack/compressor-raw"),
-            resolve_from: extended_resolve_from.clone(),
-          })
-        }),
-        namers: vec![PluginNode {
-          package_name: String::from("@atlaspack/namer-default"),
-          resolve_from: extended_resolve_from.clone(),
-        }],
-        optimizers: NamedPipelinesMap::new(indexmap! {
-          String::from("*.{js,mjs,cjs}") => vec!(PluginNode {
-            package_name: String::from("@atlaspack/optimizer-swc"),
-            resolve_from: extended_resolve_from.clone(),
-          })
-        }),
-        packagers: PipelineMap::new(indexmap! {
-          String::from("*.{js,mjs,cjs}") => PluginNode {
-            package_name: String::from("@atlaspack/packager-js"),
-            resolve_from: extended_resolve_from.clone(),
-          }
-        }),
-        reporters: vec![
-          PluginNode {
-            package_name: String::from("@atlaspack/reporter-dev-server"),
-            resolve_from: extended_resolve_from.clone(),
-          },
-          PluginNode {
-            package_name: String::from("..."),
-            resolve_from: base_resolve_from.clone(),
-          },
-          PluginNode {
-            package_name: String::from("@scope/atlaspack-metrics-reporter"),
-            resolve_from: base_resolve_from.clone(),
-          },
-        ],
-        resolvers: vec![PluginNode {
-          package_name: String::from("@atlaspack/resolver-default"),
-          resolve_from: extended_resolve_from.clone(),
-        }],
-        runtimes: vec![PluginNode {
-          package_name: String::from("@atlaspack/runtime-js"),
-          resolve_from: extended_resolve_from.clone(),
-        }],
-        transformers: NamedPipelinesMap::new(indexmap! {
-          String::from("*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}") => vec!(PluginNode {
-            package_name: String::from("@atlaspack/transformer-js"),
-            resolve_from: extended_resolve_from.clone(),
-          }),
-          String::from("*.{ts,tsx}") => vec!(
-            PluginNode {
-              package_name: String::from("@scope/atlaspack-transformer-ts"),
-              resolve_from: base_resolve_from.clone(),
-            },
-            PluginNode {
-              package_name: String::from("..."),
-              resolve_from: base_resolve_from.clone(),
-            },
-          ),
-        }),
-        validators: PipelinesMap::new(IndexMap::new()),
-      };
-
       let expected_files = vec![
         project_root.join(".parcelrc"),
         project_root
@@ -700,14 +615,6 @@ mod tests {
 
     #[test]
     fn user_config_transformer_patterns_override_base_config_patterns() {
-      use crate::{
-        AtlaspackConfig, PluginNode,
-        map::{NamedPipelinesMap, PipelineMap, PipelinesMap},
-      };
-      use atlaspack_test_fixtures::test_fixture;
-      use indexmap::IndexMap;
-      use indexmap::indexmap;
-
       // This test recreates the issue we fixed - user config should override base config
       let project_root = PathBuf::from("/test");
       let fs = test_fixture! {
@@ -766,14 +673,6 @@ mod tests {
 
     #[test]
     fn transformers_with_spread_operator_merges_base_config() {
-      use crate::{
-        AtlaspackConfig, PluginNode,
-        map::{NamedPipelinesMap, PipelineMap, PipelinesMap},
-      };
-      use atlaspack_test_fixtures::test_fixture;
-      use indexmap::IndexMap;
-      use indexmap::indexmap;
-
       let project_root = PathBuf::from("/test");
       let fs = test_fixture! {
         project_root.clone(),
@@ -822,14 +721,6 @@ mod tests {
 
     #[test]
     fn different_file_extension_patterns_work_independently() {
-      use crate::{
-        AtlaspackConfig, PluginNode,
-        map::{NamedPipelinesMap, PipelineMap, PipelinesMap},
-      };
-      use atlaspack_test_fixtures::test_fixture;
-      use indexmap::IndexMap;
-      use indexmap::indexmap;
-
       let project_root = PathBuf::from("/test");
       let fs = test_fixture! {
         project_root.clone(),
@@ -892,14 +783,6 @@ mod tests {
 
     #[test]
     fn spread_operator_at_different_positions() {
-      use crate::{
-        AtlaspackConfig, PluginNode,
-        map::{NamedPipelinesMap, PipelineMap, PipelinesMap},
-      };
-      use atlaspack_test_fixtures::test_fixture;
-      use indexmap::IndexMap;
-      use indexmap::indexmap;
-
       let project_root = PathBuf::from("/test");
       let fs = test_fixture! {
         project_root.clone(),
@@ -1279,14 +1162,6 @@ mod tests {
 
     #[test]
     fn complex_glob_patterns_with_precedence() {
-      use crate::{
-        AtlaspackConfig, PluginNode,
-        map::{NamedPipelinesMap, PipelineMap, PipelinesMap},
-      };
-      use atlaspack_test_fixtures::test_fixture;
-      use indexmap::IndexMap;
-      use indexmap::indexmap;
-
       let project_root = PathBuf::from("/test");
       let fs = test_fixture! {
         project_root.clone(),
