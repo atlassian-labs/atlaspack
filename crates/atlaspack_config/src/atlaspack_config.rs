@@ -38,36 +38,17 @@ impl TryFrom<PartialAtlaspackConfig> for AtlaspackConfig {
   type Error = DiagnosticError;
 
   fn try_from(config: PartialAtlaspackConfig) -> Result<Self, Self::Error> {
-    // The final stage of merging filters out any ... extensions as they are a noop
-    fn filter_out_extends(pipelines: Vec<PluginNode>) -> Vec<PluginNode> {
-      pipelines
-        .into_iter()
-        .filter(|p| p.package_name != "...")
-        .collect()
-    }
-
-    fn filter_out_extends_from_map(
-      map: IndexMap<String, Vec<PluginNode>>,
-    ) -> IndexMap<String, Vec<PluginNode>> {
-      map
-        .into_iter()
-        .map(|(pattern, plugins)| (pattern, filter_out_extends(plugins)))
-        .collect()
-    }
-
     let mut missing_phases = Vec::new();
 
     if config.bundler.is_none() {
       missing_phases.push(String::from("bundler"));
     }
 
-    let namers = filter_out_extends(config.namers);
-    if namers.is_empty() {
+    if config.namers.is_empty() {
       missing_phases.push(String::from("namers"));
     }
 
-    let resolvers = filter_out_extends(config.resolvers);
-    if resolvers.is_empty() {
+    if config.resolvers.is_empty() {
       missing_phases.push(String::from("resolvers"));
     }
 
@@ -81,11 +62,11 @@ impl TryFrom<PartialAtlaspackConfig> for AtlaspackConfig {
     Ok(AtlaspackConfig {
       bundler: config.bundler.unwrap(),
       compressors: PipelinesMap::new(config.compressors),
-      namers,
+      namers: config.namers,
       optimizers: NamedPipelinesMap::new(config.optimizers),
       packagers: PipelineMap::new(config.packagers),
       reporters: config.reporters,
-      resolvers,
+      resolvers: config.resolvers,
       runtimes: config.runtimes,
       transformers: NamedPipelinesMap::new(config.transformers),
       validators: PipelinesMap::new(config.validators),

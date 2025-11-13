@@ -283,6 +283,15 @@ mod tests {
   use atlaspack_package_manager::Resolution;
   use mockall::predicate::eq;
 
+  // Common imports used across tests
+  use crate::{
+    AtlaspackConfig, PluginNode,
+    map::{NamedPipelinesMap, PipelineMap, PipelinesMap},
+  };
+  use atlaspack_test_fixtures::test_fixture;
+  use indexmap::IndexMap;
+  use indexmap::indexmap;
+
   use super::*;
 
   fn fail_package_manager_resolution(package_manager: &mut MockPackageManager) {
@@ -395,14 +404,6 @@ mod tests {
 
     #[test]
     fn returns_default_atlaspack_config() {
-      use crate::{
-        AtlaspackConfig, PluginNode,
-        map::{NamedPipelinesMap, PipelineMap, PipelinesMap},
-      };
-      use atlaspack_test_fixtures::test_fixture;
-      use indexmap::IndexMap;
-      use indexmap::indexmap;
-
       let project_root = PathBuf::from("/test");
       let fs = test_fixture! {
         project_root.clone(),
