@@ -1,5 +1,27 @@
 # @atlaspack/core
 
+## 2.28.0
+
+### Minor Changes
+
+- [#858](https://github.com/atlassian-labs/atlaspack/pull/858) [`8eb84ee`](https://github.com/atlassian-labs/atlaspack/commit/8eb84ee61a42bfe87c58079b610802b07a6a13e4) Thanks [@marcins](https://github.com/marcins)! - Introduce a new `getReferencedAssets(bundle)` method to the BundleGraph to pre-compute referenced assets, this is used by the scope hoisting packager behind a new `precomputeReferencedAssets` feature flag.
+
+### Patch Changes
+
+- Updated dependencies [[`c8a0e51`](https://github.com/atlassian-labs/atlaspack/commit/c8a0e51b1096d038a64644ad02fe68383f58682a), [`8eb84ee`](https://github.com/atlassian-labs/atlaspack/commit/8eb84ee61a42bfe87c58079b610802b07a6a13e4)]:
+  - @atlaspack/rust@3.10.1
+  - @atlaspack/feature-flags@2.27.0
+  - @atlaspack/cache@3.2.34
+  - @atlaspack/fs@2.15.34
+  - @atlaspack/logger@2.14.31
+  - @atlaspack/utils@3.1.3
+  - @atlaspack/graph@3.6.1
+  - @atlaspack/plugin@2.14.39
+  - @atlaspack/profiler@2.14.36
+  - @atlaspack/types@2.15.29
+  - @atlaspack/workers@2.14.39
+  - @atlaspack/package-manager@2.14.39
+
 ## 2.27.0
 
 ### Minor Changes
