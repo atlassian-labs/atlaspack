@@ -1,5 +1,12 @@
 # @atlaspack/transformer-graphql
 
+## 2.14.38
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.38
+
 ## 2.14.37
 
 ### Patch Changes

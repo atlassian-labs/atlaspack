@@ -1,5 +1,17 @@
 # @atlaspack/package-manager
 
+## 2.14.38
+
+### Patch Changes
+
+- Updated dependencies [[`7d7a55d`](https://github.com/atlassian-labs/atlaspack/commit/7d7a55dd6395ec391a2e4c33b3dec0d1ea477d4c)]:
+  - @atlaspack/utils@3.1.2
+  - @atlaspack/fs@2.15.33
+  - @atlaspack/node-resolver-core@3.7.9
+  - @atlaspack/logger@2.14.30
+  - @atlaspack/workers@2.14.38
+  - @atlaspack/types@2.15.28
+
 ## 2.14.37
 
 ### Patch Changes
