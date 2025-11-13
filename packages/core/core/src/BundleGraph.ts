@@ -1435,6 +1435,41 @@ export default class BundleGraph {
     });
   }
 
+  // New method: Fast checks only (no caching of results)
+  isAssetReferencedFastCheck(bundle: Bundle, asset: Asset): boolean | null {
+    // Fast Check #1: If asset is in multiple bundles in same target, it's referenced
+    let bundlesWithAsset = this.getBundlesWithAsset(asset).filter(
+      (b) =>
+        b.target.name === bundle.target.name &&
+        b.target.distDir === bundle.target.distDir,
+    );
+
+    if (bundlesWithAsset.length > 1) {
+      return true;
+    }
+
+    // Fast Check #2: If asset is referenced by any async/conditional dependency, it's referenced
+    let assetNodeId = nullthrows(this._graph.getNodeIdByContentKey(asset.id));
+
+    if (
+      this._graph
+        .getNodeIdsConnectedTo(assetNodeId, bundleGraphEdgeTypes.references)
+        .map((id) => this._graph.getNode(id))
+        .some(
+          (node) =>
+            node?.type === 'dependency' &&
+            (node.value.priority === Priority.lazy ||
+              node.value.priority === Priority.conditional) &&
+            node.value.specifierType !== SpecifierType.url,
+        )
+    ) {
+      return true;
+    }
+
+    // Fast checks failed - return null to indicate expensive computation needed
+    return null;
+  }
+
   getReferencedAssets(bundle: Bundle): Set<Asset> {
     let referencedAssets = new Set<Asset>();
 
@@ -1443,40 +1478,22 @@ export default class BundleGraph {
     let assetDependenciesMap = new Map<Asset, Array<Dependency>>();
 
     this.traverseAssets(bundle, (asset) => {
-      // Quick check 1: If asset is in multiple bundles in same target, it's referenced
-      let bundlesWithAsset = this.getBundlesWithAsset(asset).filter(
-        (b) =>
-          b.target.name === bundle.target.name &&
-          b.target.distDir === bundle.target.distDir,
-      );
+      // Always do fast checks (no caching)
+      let fastCheckResult = this.isAssetReferencedFastCheck(bundle, asset);
 
-      if (bundlesWithAsset.length > 1) {
+      if (fastCheckResult === true) {
         referencedAssets.add(asset);
         return;
       }
 
-      // Quick check 2: If asset is referenced by any async/conditional dependency, it's referenced
-      let assetNodeId = nullthrows(this._graph.getNodeIdByContentKey(asset.id));
-
-      if (
-        this._graph
-          .getNodeIdsConnectedTo(assetNodeId, bundleGraphEdgeTypes.references)
-          .map((id) => this._graph.getNode(id))
-          .some(
-            (node) =>
-              node?.type === 'dependency' &&
-              (node.value.priority === Priority.lazy ||
-                node.value.priority === Priority.conditional) &&
-              node.value.specifierType !== SpecifierType.url,
-          )
-      ) {
-        referencedAssets.add(asset);
-        return;
-      }
+      // Fast checks failed (fastCheckResult === null), need expensive computation
+      // Check if it's actually referenced via traversal
 
       // Store dependencies for later batch checking
       let dependencies = this._graph
-        .getNodeIdsConnectedTo(assetNodeId)
+        .getNodeIdsConnectedTo(
+          nullthrows(this._graph.getNodeIdByContentKey(asset.id)),
+        )
         .map((id) => nullthrows(this._graph.getNode(id)))
         .filter((node) => node.type === 'dependency')
         .map((node) => {

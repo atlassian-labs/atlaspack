@@ -198,6 +198,13 @@ export default class BundleGraph<TBundle extends IBundle>
     );
   }
 
+  isAssetReferencedFastCheck(bundle: IBundle, asset: IAsset): boolean | null {
+    return this.#graph.isAssetReferencedFastCheck(
+      bundleToInternalBundle(bundle),
+      assetToAssetValue(asset),
+    );
+  }
+
   getReferencedAssets(bundle: IBundle): Set<IAsset> {
     let internalReferencedAssets = this.#graph.getReferencedAssets(
       bundleToInternalBundle(bundle),

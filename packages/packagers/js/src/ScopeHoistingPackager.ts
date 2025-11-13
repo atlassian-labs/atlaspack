@@ -413,22 +413,40 @@ export class ScopeHoistingPackager {
     return `$parcel$global.rwr(${params.join(', ')});`;
   }
 
-  // Helper to check if an asset is referenced, with lazy caching when feature flag is enabled
+  // Helper to check if an asset is referenced, with cache-first + fast-check hybrid approach
   isAssetReferencedInBundle(bundle: NamedBundle, asset: Asset): boolean {
+    // STEP 1: Check expensive computation cache first (fastest when it hits)
     if (getFeatureFlag('precomputeReferencedAssets')) {
-      // Feature flag is enabled, use cached approach
       let bundleId = bundle.id;
-
       let referencedAssets = this.referencedAssetsCache.get(bundleId);
-      if (!referencedAssets) {
-        // Lazy compute and cache for this bundle
-        referencedAssets = this.bundleGraph.getReferencedAssets(bundle);
-        this.referencedAssetsCache.set(bundleId, referencedAssets);
-      }
 
-      return referencedAssets!.has(asset);
+      if (referencedAssets) {
+        // Cache hit - fastest path (~0.001ms)
+        return referencedAssets.has(asset);
+      }
+    }
+
+    // STEP 2: Cache miss - try fast checks (~0.01ms)
+    let fastCheckResult = this.bundleGraph.isAssetReferencedFastCheck(
+      bundle,
+      asset,
+    );
+
+    if (fastCheckResult === true) {
+      // Fast check succeeded - asset is referenced
+      return true;
+    }
+
+    // STEP 3: Need expensive computation (~20-2000ms)
+    if (getFeatureFlag('precomputeReferencedAssets')) {
+      // Compute and cache expensive results for this bundle
+      let bundleId = bundle.id;
+      let referencedAssets = this.bundleGraph.getReferencedAssets(bundle);
+      this.referencedAssetsCache.set(bundleId, referencedAssets);
+
+      return referencedAssets.has(asset);
     } else {
-      // Feature flag is disabled, use original method
+      // No caching - fall back to original expensive method
       return this.bundleGraph.isAssetReferenced(bundle, asset);
     }
   }
