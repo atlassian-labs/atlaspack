@@ -80,15 +80,15 @@ impl TryFrom<PartialAtlaspackConfig> for AtlaspackConfig {
 
     Ok(AtlaspackConfig {
       bundler: config.bundler.unwrap(),
-      compressors: PipelinesMap::new(filter_out_extends_from_map(config.compressors)),
+      compressors: PipelinesMap::new(config.compressors),
       namers,
-      optimizers: NamedPipelinesMap::new(filter_out_extends_from_map(config.optimizers)),
+      optimizers: NamedPipelinesMap::new(config.optimizers),
       packagers: PipelineMap::new(config.packagers),
-      reporters: filter_out_extends(config.reporters),
+      reporters: config.reporters,
       resolvers,
-      runtimes: filter_out_extends(config.runtimes),
-      transformers: NamedPipelinesMap::new(filter_out_extends_from_map(config.transformers)),
-      validators: PipelinesMap::new(filter_out_extends_from_map(config.validators)),
+      runtimes: config.runtimes,
+      transformers: NamedPipelinesMap::new(config.transformers),
+      validators: PipelinesMap::new(config.validators),
     })
   }
 }

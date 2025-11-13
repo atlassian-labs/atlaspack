@@ -112,43 +112,76 @@ impl NamedPipelinesMap {
   ///   })
   /// );
   /// ```
+  /// Get pipelines for a path, mimicking JS AtlaspackConfig behavior:
+  /// - First matching pipeline wins unless it contains "..." which flattens subsequent matches
+  /// - Named pipelines: exact named match first, then unnamed matches, with same flatten rules
+  /// - Named fallback: if no exact match and use_fallback=false, return empty; if true, use unnamed behavior
   pub fn get(&self, path: &Path, named_pattern: Option<NamedPattern>) -> Vec<PluginNode> {
     let is_match = named_pattern_matcher(path);
 
-    // If a named pipeline is requested, handle it specially
+    // Always collect all matching pipelines in order (user before base due to merge precedence)
+    let mut all_matches: Vec<Vec<PluginNode>> = Vec::new();
+
+    // For named pipelines, exact named match goes first
     if let Some(named_pattern) = named_pattern {
-      let mut matches: Vec<PluginNode> = Vec::new();
-
-      // First, collect all matching unnamed patterns
-      for (pattern, pipelines) in self.inner.iter() {
-        if is_match(pattern, "") {
-          matches.extend(pipelines.iter().cloned());
-        }
-      }
-
-      // Then find the named pattern
       let exact_match = self
         .inner
         .iter()
         .find(|(pattern, _)| is_match(pattern, named_pattern.pipeline));
 
       if let Some((_, pipelines)) = exact_match {
-        matches.extend(pipelines.iter().cloned());
+        all_matches.push(pipelines.clone());
       } else if !named_pattern.use_fallback {
         return Vec::new();
       }
-
-      return matches;
     }
 
-    // For unnamed patterns, return only the first match (highest priority)
+    // Collect all unnamed matches in order
     for (pattern, pipelines) in self.inner.iter() {
       if is_match(pattern, "") {
-        return pipelines.clone();
+        all_matches.push(pipelines.clone());
       }
     }
 
-    Vec::new()
+    if all_matches.is_empty() {
+      return Vec::new();
+    }
+
+    // Flatten matches using '...' semantics similar to JS implementation
+    fn has_spread(p: &[PluginNode]) -> Option<usize> {
+      p.iter().position(|n| n.package_name == "...")
+    }
+
+    fn flatten(mut groups: Vec<Vec<PluginNode>>) -> Vec<PluginNode> {
+      let first = match groups.first().cloned() {
+        Some(p) => p,
+        None => return Vec::new(),
+      };
+
+      if let Some(spread_idx) = has_spread(&first) {
+        let rest = if groups.len() > 1 {
+          flatten(groups.split_off(1))
+        } else {
+          Vec::new()
+        };
+
+        let mut result = Vec::new();
+        result.extend(first[..spread_idx].iter().cloned());
+        result.extend(rest.into_iter());
+        result.extend(first[spread_idx + 1..].iter().cloned());
+
+        // Remove any residual spreads to be safe
+        return result
+          .into_iter()
+          .filter(|n| n.package_name != "...")
+          .collect();
+      }
+
+      // No spread in first pipeline: ignore the rest per JS behaviour
+      first
+    }
+
+    flatten(all_matches)
   }
 
   pub fn contains_named_pipeline(&self, pipeline: impl AsRef<str>) -> bool {
@@ -305,10 +338,13 @@ mod tests {
         );
       };
 
-      assert_plugins("a.ts", "types", [pipelines("1"), pipelines("2")].concat());
+      // JS canonical behaviour: for named pipeline 'types', exact match first. Unnamed matches only apply via '...' flattening.
+      assert_plugins("a.ts", "types", pipelines("2"));
       assert_plugins("a.tsx", "types", pipelines("2"));
 
-      assert_plugins("a.js", "url", [pipelines("1"), pipelines("3")].concat());
+      // For named pipeline 'url', there is no exact named match for a.js, so with use_fallback=false expect []. But this test covers without fallback,
+      // and an exact 'url:*' exists, so only that should be returned when it matches.
+      assert_plugins("a.js", "url", pipelines("3"));
       assert_plugins("a.url", "url", pipelines("3"));
     }
 
@@ -333,12 +369,12 @@ mod tests {
         );
       };
 
-      assert_plugins("a.ts", "types", [pipelines("1"), pipelines("2")].concat());
+      assert_plugins("a.ts", "types", pipelines("2"));
       assert_plugins("a.tsx", "types", pipelines("2"));
       assert_plugins("a.ts", "typesa", pipelines("1"));
 
       assert_plugins("a.url", "url", pipelines("3"));
-      assert_plugins("a.js", "url", [pipelines("1"), pipelines("3")].concat());
+      assert_plugins("a.js", "url", pipelines("3"));
       assert_plugins("a.js", "urla", pipelines("1"));
     }
   }
