@@ -33,27 +33,37 @@ export class AtlaspackWorker {
   #resolvers: Map<string, ResolverState<any>>;
   #transformers: Map<string, TransformerState<any>>;
   #fs: FileSystem;
+  #packageManager: NodePackageManager;
 
   constructor() {
     this.#resolvers = new Map();
     this.#transformers = new Map();
     this.#fs = new NodeFS();
+    this.#packageManager = new NodePackageManager(this.#fs, '/');
   }
 
   loadPlugin: JsCallable<[LoadPluginOptions], Promise<undefined>> = jsCallable(
     async ({kind, specifier, resolveFrom, featureFlags}) => {
-      let customRequire = module.createRequire(resolveFrom);
-      let resolvedPath = customRequire.resolve(specifier);
-      let resolvedModule = await import(resolvedPath);
+      // Use packageManager.require() instead of dynamic import() to support TypeScript plugins
+      let resolvedModule = await this.#packageManager.require(
+        specifier,
+        resolveFrom,
+        {shouldAutoInstall: false},
+      );
 
       let instance = undefined;
-      if (resolvedModule.default && resolvedModule.default[CONFIG]) {
+      // Check for CommonJS export (module.exports = new Plugin(...))
+      if (resolvedModule[CONFIG]) {
+        instance = resolvedModule[CONFIG];
+      } else if (resolvedModule.default && resolvedModule.default[CONFIG]) {
+        // ESM default export
         instance = resolvedModule.default[CONFIG];
       } else if (
         resolvedModule.default &&
         resolvedModule.default.default &&
         resolvedModule.default.default[CONFIG]
       ) {
+        // Double-wrapped default export
         instance = resolvedModule.default.default[CONFIG];
       } else {
         throw new Error(
