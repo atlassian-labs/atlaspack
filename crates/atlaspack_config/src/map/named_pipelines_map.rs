@@ -158,27 +158,27 @@ impl NamedPipelinesMap {
         None => return Vec::new(),
       };
 
-      if let Some(spread_idx) = has_spread(&first) {
-        let rest = if groups.len() > 1 {
-          flatten(groups.split_off(1))
-        } else {
-          Vec::new()
-        };
+      let Some(spread_idx) = has_spread(&first) else {
+        // No spread in first pipeline: ignore the rest per JS behaviour
+        return first;
+      };
 
-        let mut result = Vec::new();
-        result.extend(first[..spread_idx].iter().cloned());
-        result.extend(rest);
-        result.extend(first[spread_idx + 1..].iter().cloned());
+      let rest = if groups.len() > 1 {
+        flatten(groups.split_off(1))
+      } else {
+        Vec::new()
+      };
 
-        // Remove any residual spreads to be safe
-        return result
-          .into_iter()
-          .filter(|n| n.package_name != "...")
-          .collect();
-      }
+      let mut result = Vec::new();
+      result.extend(first[..spread_idx].iter().cloned());
+      result.extend(rest);
+      result.extend(first[spread_idx + 1..].iter().cloned());
 
-      // No spread in first pipeline: ignore the rest per JS behaviour
-      first
+      // Remove any residual spreads to be safe
+      result
+        .into_iter()
+        .filter(|n| n.package_name != "...")
+        .collect()
     }
 
     flatten(all_matches)
