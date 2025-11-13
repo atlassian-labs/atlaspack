@@ -308,6 +308,12 @@ export default new Transformer({
     let enableLazyLoadingTransformer = Boolean(
       options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
     );
+    let enableDeadReturnsRemover = Boolean(
+      options.env.NATIVE_DEAD_RETURNS_REMOVER,
+    );
+    let enableUnusedBindingsRemover = Boolean(
+      options.env.NATIVE_UNUSED_BINDINGS_REMOVER,
+    );
     let enableReactHooksRemover = Boolean(options.env.NATIVE_HOOKS_REMOVER);
 
     if (conf && conf.contents) {
@@ -356,6 +362,8 @@ export default new Transformer({
       magicComments,
       enableGlobalThisAliaser,
       enableLazyLoadingTransformer,
+      enableDeadReturnsRemover,
+      enableUnusedBindingsRemover,
       enableReactHooksRemover,
     };
   },
@@ -541,6 +549,10 @@ export default new Transformer({
         config.enableLazyLoadingTransformer,
       ),
       nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
+      enable_dead_returns_remover: Boolean(config.enableDeadReturnsRemover),
+      enable_unused_bindings_remover: Boolean(
+        config.enableUnusedBindingsRemover,
+      ),
       enable_react_hooks_remover: Boolean(config.enableReactHooksRemover),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {

@@ -1,6 +1,7 @@
 pub mod add_display_name;
 mod collect;
 mod constant_module;
+mod dead_returns_remover;
 mod dependency_collector;
 mod env_replacer;
 mod esm_export_classifier;
@@ -15,6 +16,7 @@ mod node_replacer;
 mod react_hooks_remover;
 pub mod test_utils;
 mod typeof_replacer;
+mod unused_bindings_remover;
 pub mod utils;
 
 use std::collections::HashMap;
@@ -34,6 +36,7 @@ use collect::Collect;
 pub use collect::CollectImportedSymbol;
 use collect::CollectResult;
 use constant_module::ConstantModule;
+use dead_returns_remover::DeadReturnsRemover;
 pub use dependency_collector::DependencyDescriptor;
 pub use dependency_collector::dependency_collector;
 use env_replacer::*;
@@ -97,6 +100,7 @@ use swc_core::ecma::visit::VisitMutWith;
 use swc_core::ecma::visit::VisitWith;
 use swc_core::ecma::visit::visit_mut_pass;
 use typeof_replacer::*;
+use unused_bindings_remover::UnusedBindingsRemover;
 use utils::CodeHighlight;
 pub use utils::Diagnostic;
 use utils::DiagnosticSeverity;
@@ -153,6 +157,8 @@ pub struct Config {
   pub enable_global_this_aliaser: bool,
   pub enable_lazy_loading_transformer: bool,
   pub nested_promise_import_fix: bool,
+  pub enable_dead_returns_remover: bool,
+  pub enable_unused_bindings_remover: bool,
   pub enable_react_hooks_remover: bool,
 }
 
@@ -442,6 +448,16 @@ pub fn transform(
                   // don't include dependencies inside conditionals that are always false.
                   expr_simplifier(unresolved_mark, Default::default()),
                   dead_branch_remover(unresolved_mark),
+                  // Remove unreachable statements after return statements
+                  Optional::new(
+                    visit_mut_pass(DeadReturnsRemover::new()),
+                    config.enable_dead_returns_remover
+                  ),
+                  // Remove unused variable bindings
+                  Optional::new(
+                    visit_mut_pass(UnusedBindingsRemover::new()),
+                    config.enable_unused_bindings_remover
+                  ),
                   // Inline Node fs.readFileSync calls
                   Optional::new(
                     visit_mut_pass(inline_fs(
