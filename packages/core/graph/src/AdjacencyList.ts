@@ -28,6 +28,8 @@ export type SerializedAdjacencyList<TEdgeType> = {
 export type AdjacencyListOptions<TEdgeType> = {
   /** The initial number of edges to accommodate. */
   initialCapacity?: number;
+  /** The initial number of nodes to accommodate. */
+  initialNodeCapacity?: number;
   /** The max amount by which to grow the capacity. */
   maxGrowFactor?: number;
   /** The min amount by which to grow the capacity. */
@@ -42,6 +44,7 @@ export type AdjacencyListOptions<TEdgeType> = {
 
 type AdjacencyListParams = {
   initialCapacity: number;
+  initialNodeCapacity: number;
   unloadFactor: number;
   maxGrowFactor: number;
   minGrowFactor: number;
@@ -51,6 +54,10 @@ type AdjacencyListParams = {
 
 const DEFAULT_PARAMS: AdjacencyListParams = {
   initialCapacity: 2,
+  // TODO: Find a heuristic for right-sizing nodes.
+  // e.g., given an average ratio of `e` edges for every `n` nodes,
+  // init nodes with `capacity * n / e`.
+  initialNodeCapacity: 2,
   unloadFactor: 0.3,
   maxGrowFactor: 8,
   minGrowFactor: 2,
@@ -149,12 +156,7 @@ export default class AdjacencyList<TEdgeType extends number = NullEdgeType> {
     } else {
       this.#params = {...DEFAULT_PARAMS, ...opts};
 
-      let {initialCapacity} = this.#params;
-
-      // TODO: Find a heuristic for right-sizing nodes.
-      // e.g., given an average ratio of `e` edges for every `n` nodes,
-      // init nodes with `capacity * n / e`.
-      let initialNodeCapacity = 2;
+      let {initialCapacity, initialNodeCapacity} = this.#params;
 
       NodeTypeMap.assertMaxCapacity(initialNodeCapacity);
       EdgeTypeMap.assertMaxCapacity(initialCapacity);
