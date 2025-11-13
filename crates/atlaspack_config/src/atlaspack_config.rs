@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::types::DiagnosticError;
-use indexmap::IndexMap;
 use serde::Deserialize;
 use serde::Serialize;
 
