@@ -22,7 +22,7 @@ impl TestFixture {
     Self {
       fs: in_memory_fs.clone() as FileSystemRef,
       in_memory_fs,
-      dirname: dirname,
+      dirname,
     }
   }
 
