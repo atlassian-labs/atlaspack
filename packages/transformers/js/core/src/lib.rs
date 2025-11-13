@@ -1,5 +1,4 @@
 pub mod add_display_name;
-mod browser_api_typeof_replacer;
 mod collect;
 mod constant_module;
 mod dependency_collector;
@@ -28,7 +27,6 @@ use atlaspack_macros::MacroCallback;
 use atlaspack_macros::MacroError;
 use atlaspack_macros::Macros;
 
-use browser_api_typeof_replacer::BrowserApiTypeofReplacer;
 use collect::Collect;
 pub use collect::CollectImportedSymbol;
 use collect::CollectResult;
@@ -417,10 +415,6 @@ pub fn transform(
                       unresolved_mark
                     }),
                     config.source_type != SourceType::Script
-                  ),
-                  Optional::new(
-                    visit_mut_pass(BrowserApiTypeofReplacer::new(unresolved_mark)),
-                    config.enable_browser_api_typeof_replacer && BrowserApiTypeofReplacer::should_transform(&config.filename)
                   ),
                   paren_remover(Some(&comments)),
                   // Simplify expressions and remove dead branches so that we
