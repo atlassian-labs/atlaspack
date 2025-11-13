@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.10.1
+
+### Patch Changes
+
+- [#884](https://github.com/atlassian-labs/atlaspack/pull/884) [`c8a0e51`](https://github.com/atlassian-labs/atlaspack/commit/c8a0e51b1096d038a64644ad02fe68383f58682a) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix config loading precedence for v3 transformer patterns
+
 ## 3.10.0
 
 ### Minor Changes
