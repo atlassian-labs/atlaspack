@@ -1,3 +1,13 @@
+// Disable all warnings for this crate, as it's being iterated on by LLM
+#![allow(
+  warnings,
+  clippy::all,
+  clippy::pedantic,
+  clippy::restriction,
+  clippy::nursery,
+  clippy::cargo
+)]
+
 pub mod config;
 pub mod css;
 pub mod eval;
