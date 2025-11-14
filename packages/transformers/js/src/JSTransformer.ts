@@ -314,6 +314,7 @@ export default new Transformer({
     let enableUnusedBindingsRemover = Boolean(
       options.env.NATIVE_UNUSED_BINDINGS_REMOVER,
     );
+    let enableStaticPreEvaluation = Boolean(options.env.NATIVE_PRE_EVALUATION);
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -363,6 +364,7 @@ export default new Transformer({
       enableLazyLoadingTransformer,
       enableDeadReturnsRemover,
       enableUnusedBindingsRemover,
+      enableStaticPreEvaluation,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -551,6 +553,7 @@ export default new Transformer({
       enable_unused_bindings_remover: Boolean(
         config.enableUnusedBindingsRemover,
       ),
+      enable_static_pre_evaluation: Boolean(config.enableStaticPreEvaluation),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;

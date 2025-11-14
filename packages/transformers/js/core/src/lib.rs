@@ -13,6 +13,7 @@ mod hoist;
 mod lazy_loading_transformer;
 mod magic_comments;
 mod node_replacer;
+mod static_pre_evaluator;
 pub mod test_utils;
 mod typeof_replacer;
 mod unused_bindings_remover;
@@ -55,6 +56,7 @@ use path_slash::PathExt;
 use pathdiff::diff_paths;
 use serde::Deserialize;
 use serde::Serialize;
+use static_pre_evaluator::StaticPreEvaluator;
 use std::io::{self};
 use swc_core::common::FileName;
 use swc_core::common::Globals;
@@ -157,6 +159,7 @@ pub struct Config {
   pub nested_promise_import_fix: bool,
   pub enable_dead_returns_remover: bool,
   pub enable_unused_bindings_remover: bool,
+  pub enable_static_pre_evaluation: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -437,6 +440,11 @@ pub fn transform(
                     config.enable_lazy_loading_transformer && LazyLoadingTransformer::should_transform(code)
                   ),
                   paren_remover(Some(&comments)),
+                  // Pre-evaluate static expressions at compile time
+                  Optional::new(
+                    visit_mut_pass(StaticPreEvaluator),
+                    config.enable_static_pre_evaluation
+                  ),
                   // Simplify expressions and remove dead branches so that we
                   // don't include dependencies inside conditionals that are always false.
                   expr_simplifier(unresolved_mark, Default::default()),
