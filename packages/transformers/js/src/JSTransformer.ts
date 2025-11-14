@@ -308,6 +308,13 @@ export default new Transformer({
     let enableLazyLoadingTransformer = Boolean(
       options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
     );
+    let enableDeadReturnsRemover = Boolean(
+      options.env.NATIVE_DEAD_RETURNS_REMOVER,
+    );
+    let enableUnusedBindingsRemover = Boolean(
+      options.env.NATIVE_UNUSED_BINDINGS_REMOVER,
+    );
+    let enableStaticPreEvaluation = Boolean(options.env.NATIVE_PRE_EVALUATION);
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -355,6 +362,9 @@ export default new Transformer({
       magicComments,
       globalAliaserConfig,
       enableLazyLoadingTransformer,
+      enableDeadReturnsRemover,
+      enableUnusedBindingsRemover,
+      enableStaticPreEvaluation,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -539,6 +549,11 @@ export default new Transformer({
         config.enableLazyLoadingTransformer,
       ),
       nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
+      enable_dead_returns_remover: Boolean(config.enableDeadReturnsRemover),
+      enable_unused_bindings_remover: Boolean(
+        config.enableUnusedBindingsRemover,
+      ),
+      enable_static_pre_evaluation: Boolean(config.enableStaticPreEvaluation),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
