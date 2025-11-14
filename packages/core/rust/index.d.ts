@@ -74,7 +74,8 @@ export interface InlineRequiresOptimizerResult {
 export declare function runInlineRequiresOptimizer(input: InlineRequiresOptimizerInput): InlineRequiresOptimizerResult
 /** Runs in the rayon thread pool */
 export declare function runInlineRequiresOptimizerAsync(input: InlineRequiresOptimizerInput): object
-export interface CompiledCssInJsTransformConfig {
+export interface CompiledCssInJsConfig {
+  configPath?: string
   importReact?: boolean
   nonce?: string
   importSources?: Array<string>
@@ -84,22 +85,46 @@ export interface CompiledCssInJsTransformConfig {
   processXcss?: boolean
   increaseSpecificity?: boolean
   sortAtRules?: boolean
+  sortShorthand?: boolean
   classHashPrefix?: string
   flattenMultipleSelectors?: boolean
   extract?: boolean
   ssr?: boolean
+  unsafeReportSafeAssetsForMigration?: boolean
+  unsafeUseSafeAssets?: boolean
 }
 export interface CompiledCssInJsPluginInput {
   filename: string
   projectRoot: string
   isSource: boolean
   sourceMaps: boolean
-  config: CompiledCssInJsTransformConfig
+  config: CompiledCssInJsConfig
 }
 export interface CompiledCssInJsPluginResult {
   code: string
   map?: string
   styleRules: Array<string>
+  diagnostics: Array<JsDiagnostic>
+  bailOut: boolean
+  codeHash: string
+}
+export interface JsSourceLocation {
+  startLine: number
+  startCol: number
+  endLine: number
+  endCol: number
+}
+export interface JsCodeHighlight {
+  message?: string
+  loc: JsSourceLocation
+}
+export interface JsDiagnostic {
+  message: string
+  codeHighlights?: Array<JsCodeHighlight>
+  hints?: Array<string>
+  showEnvironment: boolean
+  severity: string
+  documentationUrl?: string
 }
 export declare function applyCompiledCssInJsPlugin(rawCode: Buffer, input: CompiledCssInJsPluginInput): object
 export interface JsFileSystemOptions {
