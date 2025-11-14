@@ -99,6 +99,20 @@ impl GlobalAliaser {
     }
   }
 
+  /// Create a new GlobalAliaser with custom mappings parsed from JSON
+  ///
+  /// # Example config (JSON):
+  /// ```json
+  /// {
+  ///   "document": "@globalThis",
+  ///   "global": "@globalThis",
+  ///   "navigator": "@globalThis",
+  ///   "window": "@globalThis",
+  ///   "__SERVER__": "true",
+  ///   "__SENTRY_DEBUG__": "false",
+  ///   "__SENTRY_TRACING__": "false"
+  /// }
+  /// ``````
   pub fn with_config(unresolved_mark: Mark, config: &Option<HashMap<String, String>>) -> Self {
     let Some(config) = config else {
       return Self::new(unresolved_mark);
