@@ -4,7 +4,6 @@ import type {
   SourceLocation,
   FilePath,
   FileCreateInvalidation,
-  ConditionMeta,
 } from '@atlaspack/types';
 import type {SchemaEntity} from '@atlaspack/utils';
 import type {Diagnostic} from '@atlaspack/diagnostic';
@@ -173,7 +172,7 @@ type MacroContext = {
 };
 
 export default new Transformer({
-  async loadConfig({config, options}) {
+  async loadConfig({config, options, logger}) {
     let packageJson = await config.getPackage();
     let isJSX,
       pragma,
@@ -306,14 +305,18 @@ export default new Transformer({
     let globalAliaserConfig =
       options.env.NATIVE_GLOBAL_ALIASER &&
       JSON.parse(options.env.NATIVE_GLOBAL_ALIASER);
+    let enableLazyLoadingTransformer = Boolean(
+      options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
+    );
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
         CONFIG_SCHEMA,
         {
           data: conf.contents,
-          // FIXME
-          source: await options.inputFS.readFile(conf.filePath, 'utf8'),
+          source: getFeatureFlag('schemaValidationDeferSourceLoading')
+            ? () => options.inputFS.readFileSync(conf.filePath, 'utf8')
+            : await options.inputFS.readFile(conf.filePath, 'utf8'),
           filePath: conf.filePath,
           prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-js')}`,
         },
@@ -351,6 +354,7 @@ export default new Transformer({
       useDefineForClassFields,
       magicComments,
       globalAliaserConfig,
+      enableLazyLoadingTransformer,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -529,7 +533,12 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
+      is_source: asset.isSource,
       global_aliaser_config: config.globalAliaserConfig,
+      enable_lazy_loading_transformer: Boolean(
+        config.enableLazyLoadingTransformer,
+      ),
+      nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;

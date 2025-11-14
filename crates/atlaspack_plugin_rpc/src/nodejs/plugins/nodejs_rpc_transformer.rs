@@ -75,6 +75,7 @@ impl NodejsRpcTransformerPlugin {
             specifier: self.plugin_node.package_name.clone(),
             #[allow(clippy::needless_borrow)]
             resolve_from: (&*self.plugin_node.resolve_from).clone(),
+            feature_flags: Some(self.plugin_options.feature_flags.clone()),
           })
           .await?;
 

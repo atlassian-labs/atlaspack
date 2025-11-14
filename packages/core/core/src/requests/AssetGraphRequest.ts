@@ -81,7 +81,7 @@ export default function createAssetGraphRequest(
         await input.api.getPreviousResult<AssetGraphRequestResult>();
 
       let builder = new AssetGraphBuilder(input, prevResult);
-      let assetGraphRequest = await await builder.build();
+      let assetGraphRequest = await builder.build();
 
       // early break for incremental bundling if production or flag is off;
       assetGraphRequest.assetGraph.setDisableIncrementalBundling(

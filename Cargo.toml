@@ -109,7 +109,8 @@ sentry = { version = "0.35.0", default-features = false, features = [
   "rustls",
 ] }
 sentry-tracing = { version = "0.35" }
-serde = "1.0.217"
+# Pinned because serde 1.0.218 breaks swc_core
+serde = "=1.0.217"
 serde_bytes = "0.11.15"
 serde_json = "1.0.135"
 serde_json5 = "0.1.0"
@@ -120,9 +121,11 @@ serde-value = "0.7.0"
 sha-1 = "0.10.1"
 sha2 = "0.10.9"
 sourcemap = "9.1.2"
+swc_atlaskit_tokens = { version = "0.0.6", default-features = false }
 swc_core = "10.0.0"
 swc_ecma_parser = "6.0.1"
 swc_ecma_transforms_testing = "7.0.0"
+swc_plugin_macro = "=1.0.0"
 tar = "0.4.44"
 tempfile = "3.17"
 thiserror = "2.0.9"

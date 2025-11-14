@@ -1,5 +1,34 @@
 # Changelog
 
+## 2.15.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.8
+  - @atlaspack/node-resolver-core@3.7.9
+  - @atlaspack/plugin@2.14.38
+
+## 2.15.10
+
+### Patch Changes
+
+- Updated dependencies [[`373ee2d`](https://github.com/atlassian-labs/atlaspack/commit/373ee2d3b5cc315df1e90e647619f915892e2b87)]:
+  - @atlaspack/node-resolver-core@3.7.8
+  - @atlaspack/types-internal@2.20.7
+  - @atlaspack/plugin@2.14.37
+
+## 2.15.9
+
+### Patch Changes
+
+- [#848](https://github.com/atlassian-labs/atlaspack/pull/848) [`26fcd0c`](https://github.com/atlassian-labs/atlaspack/commit/26fcd0ca1ede7c9e178cda01aa68d10fbeb8b405) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - add react-dom/server handling
+
+- Updated dependencies []:
+  - @atlaspack/node-resolver-core@3.7.7
+  - @atlaspack/types-internal@2.20.6
+  - @atlaspack/plugin@2.14.36
+
 ## 2.15.8
 
 ### Patch Changes

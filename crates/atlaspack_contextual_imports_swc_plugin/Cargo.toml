@@ -14,4 +14,5 @@ crate-type = ["cdylib"]
 [dependencies]
 atlaspack_contextual_imports = { path = "../atlaspack_contextual_imports" }
 swc_core = { workspace = true, features = ["ecma_plugin_transform"] }
+swc_plugin_macro = { workspace = true }
 serde_json = { workspace = true }

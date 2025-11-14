@@ -692,6 +692,12 @@ export class ScopeHoistingPackager {
             this.useBothScopeHoistingImprovements &&
             this.wrappedAssets.has(resolved)
           ) {
+            if (this.wrappedAssets.has(asset)) {
+              // If both the asset and the dep are wrapped there's no need to
+              // drop a side-effect require. This is an extremely rare case.
+              continue;
+            }
+
             // When the dep is wrapped then we just need to drop a side effect
             // require instead of inlining
             depCode += `parcelRequire("${this.bundleGraph.getAssetPublicId(resolved)}");\n`;

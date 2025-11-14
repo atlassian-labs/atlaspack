@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/optimizer-svgo",
-  "version": "2.14.35",
+  "version": "2.14.38",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.35",
-    "@atlaspack/utils": "3.0.3",
+    "@atlaspack/plugin": "2.14.38",
+    "@atlaspack/utils": "3.1.2",
     "svgo": "^2.4.0"
   },
   "type": "commonjs",

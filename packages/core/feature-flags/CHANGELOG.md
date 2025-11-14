@@ -1,5 +1,36 @@
 # @atlaspack/feature-flags
 
+## 2.26.2
+
+### Patch Changes
+
+- [#873](https://github.com/atlassian-labs/atlaspack/pull/873) [`ec3abe4`](https://github.com/atlassian-labs/atlaspack/commit/ec3abe4dffc98560a850fd2f71fb566577e6c99c) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - cleanup deduplicateReporters flag
+
+- [#868](https://github.com/atlassian-labs/atlaspack/pull/868) [`c7fe3f7`](https://github.com/atlassian-labs/atlaspack/commit/c7fe3f76f247e9e20299e205e2df0a16c418eaf2) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix issue where nested Promise.resolve calls mixed with dynamic imports could cause build errors
+
+## 2.26.1
+
+### Patch Changes
+
+- [#863](https://github.com/atlassian-labs/atlaspack/pull/863) [`373ee2d`](https://github.com/atlassian-labs/atlaspack/commit/373ee2d3b5cc315df1e90e647619f915892e2b87) Thanks [@matt-koko](https://github.com/matt-koko)! - Revert clean up of resolver optimisation feature-flag.
+  Reverts PR: 'Clean-up resolver optimisation #816'
+
+## 2.26.0
+
+### Minor Changes
+
+- [#846](https://github.com/atlassian-labs/atlaspack/pull/846) [`58527ee`](https://github.com/atlassian-labs/atlaspack/commit/58527eec15c1aebaaadbeb63586f3082c16beae3) Thanks [@JakeLane](https://github.com/JakeLane)! - Creating a new temp package @atlaspack/transformer-compiled-css-in-js to aid in native migration from babel
+
+- [#777](https://github.com/atlassian-labs/atlaspack/pull/777) [`cfb39a0`](https://github.com/atlassian-labs/atlaspack/commit/cfb39a0d729eb620cf2ca1611750a2bf7a080d08) Thanks [@matt-koko](https://github.com/matt-koko)! - Added logic to rust JS transformer to account for JSX transformations in scenarios when the file extension of the asset is NOT .jsx or .tsx. The logic to determine whether the file should be treated as JSX syntax now mirrors that of the existing v2 behaviour. Several unit tests and integration tests have been introduced to ensure this parity is maintained.
+
+### Patch Changes
+
+- [#844](https://github.com/atlassian-labs/atlaspack/pull/844) [`d0c7bea`](https://github.com/atlassian-labs/atlaspack/commit/d0c7bea04458255b4c5d4299600e734b5f919fe1) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - deduplicate reporters from config
+
+- [#847](https://github.com/atlassian-labs/atlaspack/pull/847) [`9cd9521`](https://github.com/atlassian-labs/atlaspack/commit/9cd9521978f783046e2ae4ce78f2de7aeb07d073) Thanks [@marcins](https://github.com/marcins)! - Implement a new transformer for Atlaskit Tokens, re-using infrastructure from the existing JS transformer.
+
+- [#852](https://github.com/atlassian-labs/atlaspack/pull/852) [`5776be2`](https://github.com/atlassian-labs/atlaspack/commit/5776be21f70a3f2b9471ba33da3ba1a883f21f1a) Thanks [@marcins](https://github.com/marcins)! - Support passing a function for source property in schema validation to allow for deferred reads of files
+
 ## 2.25.5
 
 ### Patch Changes

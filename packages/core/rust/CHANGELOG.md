@@ -1,5 +1,64 @@
 # @atlaspack/rust
 
+## 3.10.0
+
+### Minor Changes
+
+- [#869](https://github.com/atlassian-labs/atlaspack/pull/869) [`cfb4707`](https://github.com/atlassian-labs/atlaspack/commit/cfb4707087498e4fa4dcf10753fe984a248d196b) Thanks [@benjervis](https://github.com/benjervis)! - Adds a feature to the V3 devloop that will minimise the amount of work done if the change is only a content change.
+
+- [#874](https://github.com/atlassian-labs/atlaspack/pull/874) [`1468695`](https://github.com/atlassian-labs/atlaspack/commit/1468695fc0c9d06f060a6da9e9b0e154f11dff34) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add native `@atlaspack/transformer-svg` implementation
+
+### Patch Changes
+
+- [#873](https://github.com/atlassian-labs/atlaspack/pull/873) [`ec3abe4`](https://github.com/atlassian-labs/atlaspack/commit/ec3abe4dffc98560a850fd2f71fb566577e6c99c) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - cleanup deduplicateReporters flag
+
+- [#868](https://github.com/atlassian-labs/atlaspack/pull/868) [`c7fe3f7`](https://github.com/atlassian-labs/atlaspack/commit/c7fe3f76f247e9e20299e205e2df0a16c418eaf2) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix issue where nested Promise.resolve calls mixed with dynamic imports could cause build errors
+
+- [#856](https://github.com/atlassian-labs/atlaspack/pull/856) [`f31b041`](https://github.com/atlassian-labs/atlaspack/commit/f31b04107e9077c9946aadb99f6f91bb69703bb7) Thanks [@matt-koko](https://github.com/matt-koko)! - Handle Directory Entry Points in v3
+
+- [#859](https://github.com/atlassian-labs/atlaspack/pull/859) [`8180981`](https://github.com/atlassian-labs/atlaspack/commit/8180981be14c00f9570adb70d3f350bd91d6ec0a) Thanks [@benjervis](https://github.com/benjervis)! - Re-use asset graphs when building in Native, if we have one left over from a previous incremental build
+
+- [#878](https://github.com/atlassian-labs/atlaspack/pull/878) [`ae77e74`](https://github.com/atlassian-labs/atlaspack/commit/ae77e7452a466b43b3fa5bed24d4ba26345ed765) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Ensure path requests don't run multiple times
+
+- [#867](https://github.com/atlassian-labs/atlaspack/pull/867) [`f0a496f`](https://github.com/atlassian-labs/atlaspack/commit/f0a496f70fc8652e090cf1b3f6260e8cfbb796e2) Thanks [@JakeLane](https://github.com/JakeLane)! - Add benchmarking API to rust
+
+- [#875](https://github.com/atlassian-labs/atlaspack/pull/875) [`540f253`](https://github.com/atlassian-labs/atlaspack/commit/540f253dfdcd1a5caebbdc0b197319d439404aae) Thanks [@marcins](https://github.com/marcins)! - Allow configuring the `ascii_only` output of the `emit` function
+
+## 3.9.1
+
+### Patch Changes
+
+- [#855](https://github.com/atlassian-labs/atlaspack/pull/855) [`339b600`](https://github.com/atlassian-labs/atlaspack/commit/339b60095d755742cea50f811d08ccc44a4ae521) Thanks [@matt-koko](https://github.com/matt-koko)! - Make diagnostic error message for parsing errors in package.json files in v3 more ergonomic
+
+- [#863](https://github.com/atlassian-labs/atlaspack/pull/863) [`373ee2d`](https://github.com/atlassian-labs/atlaspack/commit/373ee2d3b5cc315df1e90e647619f915892e2b87) Thanks [@matt-koko](https://github.com/matt-koko)! - Revert clean up of resolver optimisation feature-flag.
+  Reverts PR: 'Clean-up resolver optimisation #816'
+
+## 3.9.0
+
+### Minor Changes
+
+- [#837](https://github.com/atlassian-labs/atlaspack/pull/837) [`02f6aa1`](https://github.com/atlassian-labs/atlaspack/commit/02f6aa1906953fc184d2b49c905c2ef815cb878d) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Add new `global_this_aliaser` transformer
+
+- [#846](https://github.com/atlassian-labs/atlaspack/pull/846) [`58527ee`](https://github.com/atlassian-labs/atlaspack/commit/58527eec15c1aebaaadbeb63586f3082c16beae3) Thanks [@JakeLane](https://github.com/JakeLane)! - Creating a new temp package @atlaspack/transformer-compiled-css-in-js to aid in native migration from babel
+
+- [#842](https://github.com/atlassian-labs/atlaspack/pull/842) [`525898e`](https://github.com/atlassian-labs/atlaspack/commit/525898e33cc229a4bc938ae853732be36d20c01a) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Add new `lazy_loading` transformer
+
+- [#777](https://github.com/atlassian-labs/atlaspack/pull/777) [`cfb39a0`](https://github.com/atlassian-labs/atlaspack/commit/cfb39a0d729eb620cf2ca1611750a2bf7a080d08) Thanks [@matt-koko](https://github.com/matt-koko)! - Added logic to rust JS transformer to account for JSX transformations in scenarios when the file extension of the asset is NOT .jsx or .tsx. The logic to determine whether the file should be treated as JSX syntax now mirrors that of the existing v2 behaviour. Several unit tests and integration tests have been introduced to ensure this parity is maintained.
+
+- [#847](https://github.com/atlassian-labs/atlaspack/pull/847) [`9cd9521`](https://github.com/atlassian-labs/atlaspack/commit/9cd9521978f783046e2ae4ce78f2de7aeb07d073) Thanks [@marcins](https://github.com/marcins)! - Implement a new transformer for Atlaskit Tokens, re-using infrastructure from the existing JS transformer.
+
+### Patch Changes
+
+- [#844](https://github.com/atlassian-labs/atlaspack/pull/844) [`d0c7bea`](https://github.com/atlassian-labs/atlaspack/commit/d0c7bea04458255b4c5d4299600e734b5f919fe1) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - deduplicate reporters from config
+
+- [#851](https://github.com/atlassian-labs/atlaspack/pull/851) [`1086c6a`](https://github.com/atlassian-labs/atlaspack/commit/1086c6a2c59271b63b3fb78e6acdb9d3a0dbf354) Thanks [@benjervis](https://github.com/benjervis)! - Fix missing edges in the asset graph when working with discovered assets.
+
+  When we are transforming an asset that returns "discovered" assets (e.g. CSS modules), we add an edge from the dependency to the asset, and then from the dependency to the discovered asset/s.
+
+  However, we also have some logic to skip some steps if the asset that is being referenced has already been transformed, instead just creating an edge from the new dependency to the existing asset node.
+
+  Unfortunately this reuse logic did not account for the discovered assets when adding edges, only connecting the dependency with the main asset. This has been addressed in this PR.
+
 ## 3.8.3
 
 ### Patch Changes

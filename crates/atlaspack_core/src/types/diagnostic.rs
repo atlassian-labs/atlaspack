@@ -37,6 +37,7 @@ impl From<Vec<Diagnostic>> for Diagnostics {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub enum ErrorKind {
   NotFound,
+  ParseError,
   #[default]
   Unknown,
 }
