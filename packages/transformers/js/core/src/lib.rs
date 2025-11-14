@@ -13,6 +13,7 @@ mod hoist;
 mod lazy_loading_transformer;
 mod magic_comments;
 mod node_replacer;
+mod react_hooks_remover;
 mod static_pre_evaluator;
 pub mod test_utils;
 mod typeof_replacer;
@@ -54,6 +55,7 @@ use magic_comments::MagicCommentsVisitor;
 use node_replacer::NodeReplacer;
 use path_slash::PathExt;
 use pathdiff::diff_paths;
+use react_hooks_remover::ReactHooksRemover;
 use serde::Deserialize;
 use serde::Serialize;
 use static_pre_evaluator::StaticPreEvaluator;
@@ -161,6 +163,7 @@ pub struct Config {
   pub enable_unused_bindings_remover: bool,
   pub enable_static_pre_evaluation: bool,
   pub enable_browser_api_typeof_replacer: bool,
+  pub enable_react_hooks_remover: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -440,6 +443,10 @@ pub fn transform(
                   Optional::new(
                     visit_mut_pass(LazyLoadingTransformer::new(unresolved_mark)),
                     config.enable_lazy_loading_transformer && LazyLoadingTransformer::should_transform(code)
+                  ),
+                  Optional::new(
+                    visit_mut_pass(ReactHooksRemover::new(unresolved_mark)),
+                    config.enable_react_hooks_remover
                   ),
                   paren_remover(Some(&comments)),
                   // Pre-evaluate static expressions at compile time
