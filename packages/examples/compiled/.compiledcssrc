@@ -1,0 +1,5 @@
+{
+  "extract": true,
+  "unsafeReportSafeAssetsForMigration": false,
+  "unsafeUseSafeAssets": true,
+}

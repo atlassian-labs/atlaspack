@@ -1,0 +1,10 @@
+{
+  "safeAssets": {
+    "16927594655605950757": "src/index.tsx"
+  },
+  "unsafeAssets": {},
+  "stats": {
+    "total": 1,
+    "safe": 1
+  }
+}
