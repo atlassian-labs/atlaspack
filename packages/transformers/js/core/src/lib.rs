@@ -160,6 +160,7 @@ pub struct Config {
   pub enable_dead_returns_remover: bool,
   pub enable_unused_bindings_remover: bool,
   pub enable_static_pre_evaluation: bool,
+  pub enable_browser_api_typeof_replacer: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -414,6 +415,7 @@ pub fn transform(
 
               let mut module = {
                 let mut passes = (
+                  // TODO: Only run the `undefined` replacements if browser API typeof replacer is enabled (should rename flag too)
                   Optional::new(
                     visit_mut_pass(TypeofReplacer::new(unresolved_mark)),
                     config.source_type != SourceType::Script,

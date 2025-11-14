@@ -301,6 +301,9 @@ export default new Transformer({
     let inlineConstants = false;
     let magicComments = false;
     let addReactDisplayName = false;
+    let enableBrowserApiTypeofReplacer = Boolean(
+      options.env.NATIVE_TYPEOF_REPLACER,
+    );
 
     let globalAliaserConfig =
       options.env.NATIVE_GLOBAL_ALIASER &&
@@ -361,6 +364,7 @@ export default new Transformer({
       useDefineForClassFields,
       magicComments,
       globalAliaserConfig,
+      enableBrowserApiTypeofReplacer,
       enableLazyLoadingTransformer,
       enableDeadReturnsRemover,
       enableUnusedBindingsRemover,
@@ -543,6 +547,9 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
+      enable_browser_api_typeof_replacer: Boolean(
+        config.enableBrowserApiTypeofReplacer,
+      ),
       is_source: asset.isSource,
       global_aliaser_config: config.globalAliaserConfig,
       enable_lazy_loading_transformer: Boolean(
