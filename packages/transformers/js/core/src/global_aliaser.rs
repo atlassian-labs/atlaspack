@@ -4,7 +4,6 @@ use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::SyntaxContext;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 use crate::utils::*;
@@ -100,13 +99,6 @@ impl GlobalAliaser {
     }
   }
 
-  pub fn with_mappings(unresolved_mark: Mark, mappings: HashMap<String, ReplacementValue>) -> Self {
-    Self {
-      mappings,
-      unresolved_mark,
-    }
-  }
-
   pub fn with_config(unresolved_mark: Mark, config: &Option<HashMap<String, String>>) -> Self {
     let Some(config) = config else {
       return Self::new(unresolved_mark);
@@ -124,7 +116,10 @@ impl GlobalAliaser {
       }
     }
 
-    Self::with_mappings(unresolved_mark, mappings)
+    Self {
+      unresolved_mark,
+      mappings,
+    }
   }
 }
 
@@ -279,8 +274,9 @@ mod tests {
         const customFlag = __CUSTOM__;
         const testFlag = __TEST__;
       "#},
-      |run_test_context: RunTestContext| {
-        GlobalAliaser::with_mappings(run_test_context.unresolved_mark, custom_mappings)
+      |run_test_context: RunTestContext| GlobalAliaser {
+        mappings: custom_mappings,
+        unresolved_mark: run_test_context.unresolved_mark,
       },
     );
 
