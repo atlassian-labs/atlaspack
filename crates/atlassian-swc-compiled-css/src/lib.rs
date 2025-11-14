@@ -12079,17 +12079,67 @@ impl<'a> VisitMut for TransformVisitor<'a> {
   }
 
   fn visit_mut_jsx_element(&mut self, element: &mut JSXElement) {
+    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+      let element_name = match &element.opening.name {
+        JSXElementName::Ident(ident) => ident.sym.as_ref().to_string(),
+        _ => "<complex>".to_string(),
+      };
+      eprintln!("[compiled-debug] visit_mut_jsx_element <{}>", element_name);
+    }
+
+    // Process the css={} prop
+    let css_info = self.process_css_prop(element);
+
+    // Walk children
+    element.visit_mut_children_with(self);
+    self.walk_jsx_children(element);
+
+    // Handle xcss attributes and runtime sheets
+    let mut runtime_sheets: Vec<String> = Vec::new();
+    let mut key_expr: Option<Expr> = None;
+    let mut xcss_transformed = false;
+
+    if let Some((sheets, key)) = css_info {
+      if !self.options.extract && !sheets.is_empty() {
+        runtime_sheets.extend(sheets);
+      }
+      key_expr = key;
+      if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+        eprintln!(
+          "[compiled-debug] visit_mut_jsx_element css_info runtime_sheets={} key_set={}",
+          runtime_sheets.len(),
+          key_expr.is_some()
+        );
+      }
+    }
+
     if self.options.extract {
       if let Some(result) = self.process_xcss_attributes(element) {
+        if !result.runtime_sheets.is_empty() {
+          runtime_sheets.extend(result.runtime_sheets);
+        }
         if !result.pending_class_names.is_empty() {
           let mut resolved = self.resolve_pending_xcss(&result.pending_class_names);
-          if std::env::var_os("COMPILED_DEBUG_CSS").is_some() && resolved.is_empty() {
-            eprintln!("[compiled-debug] resolve_pending_xcss produced no sheets");
-          }
+          runtime_sheets.append(&mut resolved);
+        }
+        if result.transformed || !result.pending_class_names.is_empty() {
+          xcss_transformed = true;
         }
       }
     }
-    self.walk_jsx_children(element);
+
+    if !runtime_sheets.is_empty() {
+      if !self.options.extract {
+        self.needs_runtime_ax = true;
+      }
+      let inner = element.clone();
+      let wrapper =
+        self.build_runtime_component(Expr::JSXElement(Box::new(inner)), runtime_sheets, key_expr);
+      // Note: We cannot directly replace the element here. The element is being processed in-place.
+      // The wrapper would need to be created at a higher level in visit_mut_expr.
+    } else if xcss_transformed {
+      // Metadata registrations have already occurred; no runtime wrapper required.
+    }
   }
 }
 

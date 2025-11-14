@@ -1001,4 +1001,59 @@ const modalHeaderStyles = css({
       "Should have collected style rules"
     );
   }
+
+  #[test]
+  fn test_e2e() {
+    unsafe {
+      std::env::set_var("COMPILED_DEBUG_CSS", "1");
+    }
+    let config = create_test_config(true, false);
+
+    let code = indoc! {r#"
+/* eslint-disable react/no-unknown-property */
+/* eslint-disable no-undef */
+
+import React from 'react';
+import {css} from '@compiled/react';
+import {createRoot} from 'react-dom/client';
+
+import Button from '@atlaskit/button/new';
+
+const divStyles = css({color: 'blue'});
+
+const root = createRoot(document.getElementById('app'));
+
+const page = (
+  <>
+    <h1 data-testid="heading" css={headingStyles}>
+      Hello, world!
+    </h1>
+    <div css={divStyles}>Content</div>
+    <Button testId="button">Click me</Button>
+  </>
+);
+
+const headingStyles = css({color: 'red'});
+
+root.render(page);
+"#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let transformed = result.unwrap();
+
+    assert!(
+      !transformed.code.contains("css={"),
+      "Should not have css in the code"
+    );
+    assert!(
+      transformed.code.contains("className="),
+      "Should have className in the code"
+    );
+    assert!(
+      !transformed.style_rules.is_empty(),
+      "Should have collected style rules"
+    );
+  }
 }
