@@ -7354,6 +7354,38 @@ impl<'a> TransformVisitor<'a> {
             None
           }
         } else {
+          // Attempt to resolve identifiers (e.g. css bindings) to cached runtime artifacts
+          if let Expr::Ident(ident) = bin.right.as_ref() {
+            self.mark_css_binding_used(ident);
+            if let Some(mut artifacts) = self
+              .css_runtime_artifacts
+              .get(&to_id(ident))
+              .cloned()
+              .or_else(|| {
+                self
+                  .css_runtime_artifacts
+                  .iter()
+                  .find(|((sym, _), _)| sym == &ident.sym)
+                  .map(|(_, a)| a.clone())
+              })
+            {
+              let class_names: Vec<String> = artifacts
+                .rules
+                .iter()
+                .map(|rule| rule.class_name.clone())
+                .collect();
+              if class_names.is_empty() {
+                return Some(artifacts);
+              }
+              artifacts.push_class_condition(RuntimeClassCondition::new(
+                condition,
+                class_names,
+                Vec::new(),
+              ));
+              return Some(artifacts);
+            }
+          }
+
           let mut artifacts = self.css_artifacts_from_dynamic_css_expression_with_context(
             bin.right.as_ref(),
             props_ident,

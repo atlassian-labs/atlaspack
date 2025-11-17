@@ -1056,4 +1056,133 @@ root.render(page);
       "Should have collected style rules"
     );
   }
+
+  #[test]
+  fn test_css_component_conditional() {
+    let config = create_test_config(true, false);
+
+    let code = indoc! {r#"
+      import { css } from '@compiled/react';
+      const myStyles = css({ color: 'red' });
+      <div css={enabled && myStyles} />;
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let transformed = result.unwrap();
+
+    assert!(
+      !transformed.code.contains("css={"),
+      "Should not have css in the code: {}",
+      transformed.code
+    );
+    assert!(
+      transformed.code.contains("className="),
+      "Should have className in the code"
+    );
+  }
+
+  #[test]
+  fn test_css_on_component() {
+    let config = create_test_config(true, false);
+
+    let code = indoc! {r#"
+/** @jsx jsx */
+import { useCallback } from 'react';
+import { css, jsx } from '@compiled/react';
+import { token } from '@atlaskit/tokens';
+import { Inline, xcss } from '@atlaskit/primitives';
+import { CellHoverProvider } from '@atlassian/jira-hover-popover/src/controllers/index.tsx';
+import ShowMorePopup, { type Props, type MinimumItemData } from './show-more-popup/index.tsx';
+
+const ListWithPopup = <TData extends MinimumItemData>({
+	items,
+	ItemComponent,
+	maxLimit,
+	initialIsOpen,
+	isHoverPopoverEnabled,
+	...restProps
+}: Props<TData>) => {
+	const [firstItem, ...restItems] = items;
+
+	const ShowMorePopupRenderer = useCallback(
+		() =>
+			isHoverPopoverEnabled ? (
+				<CellHoverProvider>
+					<ShowMorePopup
+						items={restItems}
+						maxLimit={maxLimit}
+						ItemComponent={ItemComponent}
+						initialIsOpen={initialIsOpen}
+						isHoverPopoverEnabled={isHoverPopoverEnabled}
+						{...restProps}
+					/>
+				</CellHoverProvider>
+			) : (
+				<ShowMorePopup
+					items={restItems}
+					maxLimit={maxLimit}
+					ItemComponent={ItemComponent}
+					initialIsOpen={initialIsOpen}
+					isHoverPopoverEnabled={isHoverPopoverEnabled}
+					{...restProps}
+				/>
+			),
+		[ItemComponent, initialIsOpen, isHoverPopoverEnabled, maxLimit, restItems, restProps],
+	);
+
+	if (items.length === 0) {
+		return null;
+	}
+
+	return (
+		<Inline
+			space="space.100"
+			alignBlock="center"
+			shouldWrap={!isHoverPopoverEnabled}
+			xcss={isHoverPopoverEnabled && hoverPopoverStyles}
+		>
+			<ItemComponent
+				{...firstItem}
+				isHoverPopoverEnabled={isHoverPopoverEnabled}
+				css={isHoverPopoverEnabled && hoverPopoverItemStyles}
+			/>
+
+			{restItems.length >= 1 && ShowMorePopupRenderer()}
+		</Inline>
+	);
+};
+
+const hoverPopoverStyles = xcss({
+	paddingRight: 'space.050',
+	width: '100%',
+});
+
+const hoverPopoverItemStyles = css({
+	minWidth: token('space.0'),
+});
+
+export default ListWithPopup;
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let transformed = result.unwrap();
+
+    assert!(
+      !transformed.code.contains(" css={"),
+      "Should not have css in the code: {}",
+      transformed.code
+    );
+    assert!(
+      transformed.code.contains("className="),
+      "Should have className in the code"
+    );
+    assert!(
+      transformed.code.contains("xcss={"),
+      "Should retain xcss in the code"
+    );
+  }
 }
