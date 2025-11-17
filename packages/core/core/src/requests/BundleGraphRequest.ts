@@ -17,7 +17,7 @@ import fs from 'fs';
 import invariant from 'assert';
 import assert from 'assert';
 import nullthrows from 'nullthrows';
-import {PluginLogger} from '@atlaspack/logger';
+import {instrumentAsync, PluginLogger} from '@atlaspack/logger';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import AssetGraph from '../AssetGraph';
@@ -155,12 +155,14 @@ export default function createBundleGraphRequest(
         requestedAssetIds,
       });
 
-      let {assetGraph, changedAssets, assetRequests} = await api.runRequest(
-        request,
-        {
-          force:
-            Boolean(input.rustAtlaspack) ||
-            (options.shouldBuildLazily && requestedAssetIds.size > 0),
+      let {assetGraph, changedAssets, assetRequests} = await instrumentAsync(
+        'asset-graph-request',
+        () => {
+          return api.runRequest(request, {
+            force:
+              Boolean(input.rustAtlaspack) ||
+              (options.shouldBuildLazily && requestedAssetIds.size > 0),
+          });
         },
       );
 
