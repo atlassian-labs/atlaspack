@@ -7,6 +7,7 @@ use std::sync::Arc;
 use bitflags::bitflags;
 use once_cell::unsync::OnceCell;
 
+use alias::AliasValue;
 pub use atlaspack_core::types::IncludeNodeModules;
 pub use atlaspack_filesystem::FileSystem;
 #[cfg(not(target_arch = "wasm32"))]
@@ -15,7 +16,6 @@ pub use cache::Cache;
 pub use cache::CacheCow;
 pub use error::ResolverError;
 pub use invalidations::*;
-use package_json::AliasValue;
 pub use package_json::ExportsCondition;
 use package_json::ExportsResolution;
 pub use package_json::Fields;
@@ -33,6 +33,7 @@ use tsconfig::TsConfig;
 
 use crate::path::resolve_path;
 
+mod alias;
 mod builtins;
 mod cache;
 mod error;
