@@ -5325,9 +5325,9 @@ dependencies = [
 
 [[package]]
 name = "swc_atlaskit_tokens"
-version = "0.0.6"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "472dd0291bad9ba21f68bf7e1f680725add2a89111a57c389e4027d340bb1ef0"
+checksum = "a893215e50714f7778487d34395144130a6ddd6d48b18229656c2ab1a71fe5b8"
 dependencies = [
  "anyhow",
  "once_cell",
