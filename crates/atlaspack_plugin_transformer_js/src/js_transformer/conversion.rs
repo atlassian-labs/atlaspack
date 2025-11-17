@@ -194,13 +194,12 @@ pub(crate) fn convert_result(
     // Add * symbol if there are CJS exports, no imports/exports at all
     // (and the asset has side effects), or the asset is wrapped.
     // This allows accessing symbols that don't exist without errors in symbol propagation.
-    if (hoist_result.has_cjs_exports
+    if hoist_result.has_cjs_exports
       || (!hoist_result.is_esm
         && asset.side_effects
         && dependency_by_specifier.is_empty()
         && hoist_result.exported_symbols.is_empty())
-      || hoist_result.should_wrap)
-      && !asset_symbols.as_slice().iter().any(|s| s.exported == "*")
+      || (hoist_result.should_wrap && !asset_symbols.as_slice().iter().any(|s| s.exported == "*"))
     {
       if result.is_empty_or_empty_export {
         asset.empty_file_star_reexport = Some(true);
