@@ -171,7 +171,7 @@ export class AtlaspackWorker {
           type: 'resolved',
           filePath: result.filePath || '',
           canDefer: result.canDefer || false,
-          sideEffects: result.sideEffects || false,
+          sideEffects: result.sideEffects ?? true,
           code: result.code || undefined,
           meta: result.meta || undefined,
           pipeline: result.pipeline || undefined,
