@@ -302,18 +302,14 @@ export default new Transformer({
     let magicComments = false;
     let addReactDisplayName = false;
 
-    let enableGlobalThisAliaser = Boolean(
-      options.env.NATIVE_GLOBAL_THIS_ALIASER,
-    );
-    let enableLazyLoadingTransformer = Boolean(
-      options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
-    );
-    let enableDeadReturnsRemover = Boolean(
-      options.env.NATIVE_DEAD_RETURNS_REMOVER,
-    );
-    let enableUnusedBindingsRemover = Boolean(
-      options.env.NATIVE_UNUSED_BINDINGS_REMOVER,
-    );
+    let enableGlobalThisAliaser =
+      options.env.NATIVE_GLOBAL_THIS_ALIASER === 'true';
+    let enableLazyLoadingTransformer =
+      options.env.NATIVE_LAZY_LOADING_TRANSFORMER === 'true';
+    let enableDeadReturnsRemover =
+      options.env.NATIVE_DEAD_RETURNS_REMOVER === 'true';
+    let enableUnusedBindingsRemover =
+      options.env.NATIVE_UNUSED_BINDINGS_REMOVER === 'true';
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
