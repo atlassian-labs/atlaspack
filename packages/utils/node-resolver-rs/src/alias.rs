@@ -24,6 +24,10 @@ pub struct AliasMap {
 }
 
 impl AliasMap {
+  pub fn new(map: IndexMap<Specifier, AliasValue>) -> Self {
+    Self { map }
+  }
+
   pub fn get(&self, specifier: &Specifier) -> Option<&AliasValue> {
     self.map.get(specifier)
   }

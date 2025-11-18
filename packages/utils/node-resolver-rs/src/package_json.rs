@@ -1246,7 +1246,7 @@ mod tests {
     let pkg = PackageJson {
       path: "/foo/package.json".into(),
       name: String::from("foobar"),
-      alias: indexmap! {
+      alias: AliasMap::new(indexmap! {
         "./foo.js".into() => AliasValue::Specifier("./foo-alias.js".into()),
         "bar".into()  => AliasValue::Specifier("./bar-alias.js".into()),
         "lodash".into()  => AliasValue::Specifier("my-lodash".into()),
@@ -1259,7 +1259,7 @@ mod tests {
         "url".into() => AliasValue::Bool(false),
         "@internal/**".into() => AliasValue::Specifier("./internal/$1".into()),
         "@foo/*/bar/*".into() => AliasValue::Specifier("./test/$1/$2".into()),
-      },
+      }),
       ..PackageJson::default()
     };
 

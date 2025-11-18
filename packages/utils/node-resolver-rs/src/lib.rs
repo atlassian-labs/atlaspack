@@ -31,6 +31,7 @@ pub use specifier::parse_package_specifier;
 pub use specifier::parse_scheme;
 use tsconfig::TsConfig;
 
+use crate::alias::AliasMap;
 use crate::path::resolve_path;
 
 mod alias;
@@ -94,6 +95,7 @@ pub struct Resolver<'a> {
   pub module_dir_resolver: Option<Arc<ResolveModuleDir>>,
   pub cache: CacheCow<'a>,
   pub reduce_string_creation: bool,
+  pub extra_aliases: Option<AliasMap>,
 }
 
 pub enum Extensions<'a> {
@@ -149,6 +151,7 @@ impl<'a> Resolver<'a> {
       conditions: ExportsCondition::NODE,
       module_dir_resolver: None,
       reduce_string_creation: false,
+      extra_aliases: None,
     }
   }
 
@@ -164,6 +167,7 @@ impl<'a> Resolver<'a> {
       conditions: ExportsCondition::NODE,
       module_dir_resolver: None,
       reduce_string_creation: false,
+      extra_aliases: None,
     }
   }
 
@@ -182,6 +186,7 @@ impl<'a> Resolver<'a> {
       conditions: ExportsCondition::empty(),
       module_dir_resolver: None,
       reduce_string_creation: false,
+      extra_aliases: None,
     }
   }
 
@@ -420,7 +425,15 @@ impl<'a> ResolveRequest<'a> {
       return Ok(None);
     }
 
-    match package.resolve_aliases(specifier, fields) {
+    let alias = package.resolve_aliases(specifier, fields).or_else(|| {
+      self
+        .resolver
+        .extra_aliases
+        .as_ref()
+        .and_then(|extra_aliases| extra_aliases.resolve_alias(specifier))
+    });
+
+    match alias {
       Some(alias) => match alias.as_ref() {
         AliasValue::Specifier(specifier) => {
           let mut req = ResolveRequest::new(
@@ -1238,6 +1251,8 @@ impl<'a> ResolveRequest<'a> {
                 conditions: ExportsCondition::TYPES,
                 module_dir_resolver: self.resolver.module_dir_resolver.clone(),
                 reduce_string_creation: self.resolver.reduce_string_creation,
+                // TODO: Ideally remove the clone here
+                extra_aliases: self.resolver.extra_aliases.clone(),
               };
 
               let req = ResolveRequest::new(
