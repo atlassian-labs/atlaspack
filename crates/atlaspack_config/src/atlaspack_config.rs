@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use atlaspack_core::diagnostic_error;
 use atlaspack_core::types::DiagnosticError;
+use atlaspack_resolver::AliasMap;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -31,6 +32,7 @@ pub struct AtlaspackConfig {
   pub runtimes: Vec<PluginNode>,
   pub transformers: NamedPipelinesMap,
   pub validators: PipelinesMap,
+  pub unstable_alias: Option<AliasMap>,
 }
 
 impl TryFrom<PartialAtlaspackConfig> for AtlaspackConfig {
@@ -69,6 +71,7 @@ impl TryFrom<PartialAtlaspackConfig> for AtlaspackConfig {
       runtimes: config.runtimes,
       transformers: NamedPipelinesMap::new(config.transformers),
       validators: PipelinesMap::new(config.validators),
+      unstable_alias: config.unstable_alias,
     })
   }
 }
@@ -78,7 +81,6 @@ mod tests {
   use super::*;
   mod try_from {
     use super::*;
-    use crate::partial_atlaspack_config::PartialAtlaspackConfigBuilder;
 
     #[test]
     fn returns_an_error_when_required_phases_are_optional() {

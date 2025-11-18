@@ -7,6 +7,7 @@ use std::sync::Arc;
 use bitflags::bitflags;
 use once_cell::unsync::OnceCell;
 
+pub use alias::AliasMap;
 use alias::AliasValue;
 pub use atlaspack_core::types::IncludeNodeModules;
 pub use atlaspack_filesystem::FileSystem;
@@ -31,7 +32,6 @@ pub use specifier::parse_package_specifier;
 pub use specifier::parse_scheme;
 use tsconfig::TsConfig;
 
-use crate::alias::AliasMap;
 use crate::path::resolve_path;
 
 mod alias;

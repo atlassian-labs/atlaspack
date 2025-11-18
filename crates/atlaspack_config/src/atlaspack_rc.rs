@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use atlaspack_core::types::File;
+use atlaspack_resolver::AliasMap;
 use indexmap::IndexMap;
 use serde::Deserialize;
 
@@ -25,6 +26,7 @@ pub struct AtlaspackRc {
   pub runtimes: Option<Vec<String>>,
   pub transformers: Option<IndexMap<String, Vec<String>>>,
   pub validators: Option<IndexMap<String, Vec<String>>>,
+  pub unstable_aliases: Option<AliasMap>,
 }
 
 /// Represents the .atlaspack_rc config file

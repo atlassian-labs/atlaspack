@@ -5,11 +5,12 @@ use std::{
 
 use glob_match::glob_match_with_captures;
 use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
 use std::ops::Range;
 
 use crate::Specifier;
 
-#[derive(serde::Deserialize, Clone, PartialEq, Debug)]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
 #[serde(untagged)]
 pub enum AliasValue {
   Specifier(Specifier),
@@ -17,7 +18,7 @@ pub enum AliasValue {
   Global { global: String },
 }
 
-#[derive(serde::Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Default)]
 #[serde(transparent)]
 pub struct AliasMap {
   map: IndexMap<Specifier, AliasValue>,

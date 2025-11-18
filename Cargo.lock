@@ -431,6 +431,7 @@ name = "atlaspack_config"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "atlaspack-resolver",
  "atlaspack_core",
  "atlaspack_filesystem",
  "atlaspack_package_manager",
