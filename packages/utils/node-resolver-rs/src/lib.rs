@@ -95,7 +95,7 @@ pub struct Resolver<'a> {
   pub module_dir_resolver: Option<Arc<ResolveModuleDir>>,
   pub cache: CacheCow<'a>,
   pub reduce_string_creation: bool,
-  pub extra_aliases: Option<AliasMap>,
+  pub extra_aliases: Option<&'a AliasMap>,
 }
 
 pub enum Extensions<'a> {
@@ -1251,8 +1251,7 @@ impl<'a> ResolveRequest<'a> {
                 conditions: ExportsCondition::TYPES,
                 module_dir_resolver: self.resolver.module_dir_resolver.clone(),
                 reduce_string_creation: self.resolver.reduce_string_creation,
-                // TODO: Ideally remove the clone here
-                extra_aliases: self.resolver.extra_aliases.clone(),
+                extra_aliases: self.resolver.extra_aliases,
               };
 
               let req = ResolveRequest::new(
