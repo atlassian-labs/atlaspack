@@ -1297,6 +1297,7 @@ impl<'a> ResolveRequest<'a> {
 
 #[cfg(test)]
 mod tests {
+  use indexmap::indexmap;
   use std::collections::{BTreeMap, HashSet};
 
   use super::*;
@@ -3048,6 +3049,182 @@ mod tests {
         .unwrap()
         .0,
       Resolution::Path(root().join("node_modules/graphql/error/some-error.mjs"))
+    );
+  }
+
+  #[test]
+  fn extra_aliases_basic() {
+    // Create extra aliases map
+    let extra_aliases = AliasMap::new(indexmap! {
+      Specifier::Package("extra-alias".to_string(), "".to_string()) =>
+        AliasValue::Specifier(Specifier::Package("foo".to_string(), "".to_string())),
+      Specifier::Package("extra-file".to_string(), "".to_string()) =>
+        AliasValue::Specifier(Specifier::Relative(PathBuf::from("bar.js"))),
+    });
+
+    // Create resolver with extra aliases
+    let resolver = Resolver {
+      project_root: root().into(),
+      extensions: Extensions::Borrowed(&["js", "json"]),
+      index_file: "index",
+      entries: Fields::MAIN | Fields::MODULE,
+      flags: Flags::ALIASES | Flags::DIR_INDEX | Flags::OPTIONAL_EXTENSIONS,
+      cache: CacheCow::Owned(Cache::new(Arc::new(OsFileSystem))),
+      include_node_modules: Cow::Owned(IncludeNodeModules::default()),
+      conditions: ExportsCondition::default(),
+      module_dir_resolver: None,
+      reduce_string_creation: false,
+      extra_aliases: Some(&extra_aliases),
+    };
+
+    // Test package alias
+    assert_eq!(
+      resolver
+        .resolve("extra-alias", &root().join("foo.js"), SpecifierType::Esm)
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/foo/index.js"))
+    );
+
+    // Test file alias
+    assert_eq!(
+      resolver
+        .resolve("extra-file", &root().join("foo.js"), SpecifierType::Esm)
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("bar.js"))
+    );
+  }
+
+  #[test]
+  fn extra_aliases_with_subpath() {
+    let extra_aliases = AliasMap::new(indexmap! {
+      Specifier::Package("extra-pkg".to_string(), "".to_string()) =>
+        AliasValue::Specifier(Specifier::Package("foo".to_string(), "".to_string())),
+    });
+
+    let resolver = Resolver {
+      project_root: root().into(),
+      extensions: Extensions::Borrowed(&["js", "json"]),
+      index_file: "index",
+      entries: Fields::MAIN | Fields::MODULE,
+      flags: Flags::ALIASES | Flags::DIR_INDEX | Flags::OPTIONAL_EXTENSIONS,
+      cache: CacheCow::Owned(Cache::new(Arc::new(OsFileSystem))),
+      include_node_modules: Cow::Owned(IncludeNodeModules::default()),
+      conditions: ExportsCondition::default(),
+      module_dir_resolver: None,
+      reduce_string_creation: false,
+      extra_aliases: Some(&extra_aliases),
+    };
+
+    // Test subpath resolution
+    assert_eq!(
+      resolver
+        .resolve("extra-pkg/bar", &root().join("foo.js"), SpecifierType::Esm)
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/foo/bar.js"))
+    );
+  }
+
+  #[test]
+  fn extra_aliases_fallback() {
+    // Test that extra aliases work as fallback when package.json has no matching alias
+    let extra_aliases = AliasMap::new(indexmap! {
+      Specifier::Package("fallback-alias".to_string(), "".to_string()) =>
+        AliasValue::Specifier(Specifier::Package("foo".to_string(), "".to_string())),
+    });
+
+    let resolver = Resolver {
+      project_root: root().into(),
+      extensions: Extensions::Borrowed(&["js", "json"]),
+      index_file: "index",
+      entries: Fields::MAIN | Fields::MODULE,
+      flags: Flags::ALIASES | Flags::DIR_INDEX | Flags::OPTIONAL_EXTENSIONS,
+      cache: CacheCow::Owned(Cache::new(Arc::new(OsFileSystem))),
+      include_node_modules: Cow::Owned(IncludeNodeModules::default()),
+      conditions: ExportsCondition::default(),
+      module_dir_resolver: None,
+      reduce_string_creation: false,
+      extra_aliases: Some(&extra_aliases),
+    };
+
+    // Should resolve using extra alias since package.json doesn't have this alias
+    assert_eq!(
+      resolver
+        .resolve(
+          "fallback-alias",
+          &root().join("node_modules/package-alias/index.js"),
+          SpecifierType::Esm
+        )
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/foo/index.js"))
+    );
+  }
+
+  #[test]
+  fn extra_aliases_glob_patterns() {
+    let extra_aliases = AliasMap::new(indexmap! {
+      Specifier::Package("glob-alias".to_string(), "*".to_string()) =>
+        AliasValue::Specifier(Specifier::Package("foo".to_string(), "$1".to_string())),
+    });
+
+    let resolver = Resolver {
+      project_root: root().into(),
+      extensions: Extensions::Borrowed(&["js", "json"]),
+      index_file: "index",
+      entries: Fields::MAIN | Fields::MODULE,
+      flags: Flags::ALIASES | Flags::DIR_INDEX | Flags::OPTIONAL_EXTENSIONS,
+      cache: CacheCow::Owned(Cache::new(Arc::new(OsFileSystem))),
+      include_node_modules: Cow::Owned(IncludeNodeModules::default()),
+      conditions: ExportsCondition::default(),
+      module_dir_resolver: None,
+      reduce_string_creation: false,
+      extra_aliases: Some(&extra_aliases),
+    };
+
+    // Test glob pattern matching
+    assert_eq!(
+      resolver
+        .resolve("glob-alias/bar", &root().join("foo.js"), SpecifierType::Esm)
+        .result
+        .unwrap()
+        .0,
+      Resolution::Path(root().join("node_modules/foo/bar.js"))
+    );
+  }
+
+  #[test]
+  fn extra_aliases_disabled_when_none() {
+    let resolver = Resolver {
+      project_root: root().into(),
+      extensions: Extensions::Borrowed(&["js", "json"]),
+      index_file: "index",
+      entries: Fields::MAIN | Fields::MODULE,
+      flags: Flags::ALIASES | Flags::DIR_INDEX | Flags::OPTIONAL_EXTENSIONS,
+      cache: CacheCow::Owned(Cache::new(Arc::new(OsFileSystem))),
+      include_node_modules: Cow::Owned(IncludeNodeModules::default()),
+      conditions: ExportsCondition::default(),
+      module_dir_resolver: None,
+      reduce_string_creation: false,
+      extra_aliases: None,
+    };
+
+    // Should fail to resolve since no extra aliases are provided
+    assert!(
+      resolver
+        .resolve(
+          "nonexistent-alias",
+          &root().join("foo.js"),
+          SpecifierType::Esm
+        )
+        .result
+        .is_err()
     );
   }
 
