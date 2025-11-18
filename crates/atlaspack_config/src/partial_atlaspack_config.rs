@@ -2,7 +2,6 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use atlaspack_core::types::DiagnosticError;
-use atlaspack_resolver::AliasMap;
 use derive_builder::Builder;
 use indexmap::IndexMap;
 
@@ -26,7 +25,7 @@ pub struct PartialAtlaspackConfig {
   pub runtimes: Vec<PluginNode>,
   pub transformers: IndexMap<String, Vec<PluginNode>>,
   pub validators: IndexMap<String, Vec<PluginNode>>,
-  pub unstable_alias: Option<AliasMap>,
+  pub unstable_alias: Option<atlaspack_core::types::AliasMap>,
 }
 
 impl TryFrom<AtlaspackRcFile> for PartialAtlaspackConfig {

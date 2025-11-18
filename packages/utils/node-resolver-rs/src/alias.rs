@@ -1,5 +1,6 @@
 use std::{
   borrow::Cow,
+  collections::BTreeMap,
   path::{Path, PathBuf},
 };
 
@@ -22,6 +23,20 @@ pub enum AliasValue {
 #[serde(transparent)]
 pub struct AliasMap {
   map: IndexMap<Specifier, AliasValue>,
+}
+
+impl From<&BTreeMap<String, String>> for AliasMap {
+  fn from(value: &BTreeMap<String, String>) -> AliasMap {
+    let mut alias_map = IndexMap::new();
+
+    for (key, value) in value {
+      let key_spec = Specifier::from(key.as_str());
+      let value_spec = AliasValue::Specifier(Specifier::from(value.as_str()));
+      alias_map.insert(key_spec, value_spec);
+    }
+
+    AliasMap::new(alias_map)
+  }
 }
 
 impl AliasMap {

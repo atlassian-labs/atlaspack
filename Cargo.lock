@@ -596,6 +596,7 @@ dependencies = [
  "atlaspack-resolver",
  "atlaspack_core",
  "atlaspack_filesystem",
+ "indexmap",
  "pretty_assertions",
  "serde",
  "tokio",

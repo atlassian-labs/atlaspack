@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_core::diagnostic_error;
+use atlaspack_core::types::AliasMap;
 use atlaspack_core::types::DiagnosticError;
-use atlaspack_resolver::AliasMap;
 use serde::Deserialize;
 use serde::Serialize;
 

@@ -107,6 +107,13 @@ export default {
     compressors: mapPipelineSchema('compressor', 'compressors') as SchemaEntity,
     reporters: pipelineSchema('reporter', 'reporters') as SchemaEntity,
     runtimes: pipelineSchema('runtime', 'runtimes') as SchemaEntity,
+    unstable_alias: {
+      type: 'object',
+      properties: {},
+      additionalProperties: {
+        type: 'string',
+      },
+    },
     filePath: {
       type: 'string',
     },
