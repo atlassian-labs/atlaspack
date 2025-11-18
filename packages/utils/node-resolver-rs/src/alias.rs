@@ -17,124 +17,133 @@ pub enum AliasValue {
   Global { global: String },
 }
 
-pub fn resolve_alias<'b>(
-  map: &'b IndexMap<Specifier, AliasValue>,
-  specifier: &'b Specifier,
-) -> Option<Cow<'b, AliasValue>> {
-  if let Some(alias) = lookup_alias(map, specifier) {
-    return Some(alias);
-  }
-
-  if let Specifier::Package(package, subpath) = specifier
-    && let Some(alias) = lookup_alias(map, &Specifier::Package(package.clone(), String::from("")))
-  {
-    match alias.as_ref() {
-      AliasValue::Specifier(base) => {
-        // Join the subpath back onto the resolved alias.
-        match base {
-          Specifier::Package(base_pkg, base_subpath) => {
-            let subpath = if !base_subpath.is_empty() && !subpath.is_empty() {
-              format!("{}/{}", base_subpath, subpath)
-            } else if !subpath.is_empty() {
-              subpath.clone()
-            } else {
-              return Some(alias);
-            };
-            return Some(Cow::Owned(AliasValue::Specifier(Specifier::Package(
-              base_pkg.clone(),
-              subpath,
-            ))));
-          }
-          Specifier::Relative(path) => {
-            if subpath.is_empty() {
-              return Some(alias);
-            } else {
-              return Some(Cow::Owned(AliasValue::Specifier(Specifier::Relative(
-                path.join(subpath),
-              ))));
-            }
-          }
-          Specifier::Absolute(path) => {
-            if subpath.is_empty() {
-              return Some(alias);
-            } else {
-              return Some(Cow::Owned(AliasValue::Specifier(Specifier::Absolute(
-                path.join(subpath),
-              ))));
-            }
-          }
-          Specifier::Tilde(path) => {
-            if subpath.is_empty() {
-              return Some(alias);
-            } else {
-              return Some(Cow::Owned(AliasValue::Specifier(Specifier::Tilde(
-                path.join(subpath),
-              ))));
-            }
-          }
-          _ => return Some(alias),
-        }
-      }
-      _ => return Some(alias),
-    };
-  }
-
-  None
+#[derive(serde::Deserialize, Clone, Debug, Default)]
+#[serde(transparent)]
+pub struct AliasMap {
+  map: IndexMap<Specifier, AliasValue>,
 }
 
-fn lookup_alias<'b>(
-  map: &'b IndexMap<Specifier, AliasValue>,
-  specifier: &Specifier,
-) -> Option<Cow<'b, AliasValue>> {
-  if let Some(value) = map.get(specifier) {
-    return Some(Cow::Borrowed(value));
+impl AliasMap {
+  pub fn get(&self, specifier: &Specifier) -> Option<&AliasValue> {
+    self.map.get(specifier)
   }
 
-  // Match glob aliases.
-  for (key, value) in map {
-    let (glob, path) = match (key, specifier) {
-      (Specifier::Relative(glob), Specifier::Relative(path))
-      | (Specifier::Absolute(glob), Specifier::Absolute(path))
-      | (Specifier::Tilde(glob), Specifier::Tilde(path)) => (
-        glob.as_os_str().to_string_lossy(),
-        path.as_os_str().to_string_lossy(),
-      ),
-      (Specifier::Package(module_a, glob), Specifier::Package(module_b, path))
-        if module_a == module_b =>
-      {
-        (Cow::Borrowed(glob.as_ref()), Cow::Borrowed(path.as_ref()))
-      }
-      (pkg_a @ Specifier::Package(..), pkg_b @ Specifier::Package(..)) => {
-        // Glob could be in the package name, e.g. "@internal/*"
-        (pkg_a.to_string(), pkg_b.to_string())
-      }
-      _ => continue,
-    };
+  pub fn resolve_alias(&self, specifier: &Specifier) -> Option<Cow<'_, AliasValue>> {
+    if let Some(alias) = self.lookup_alias(specifier) {
+      return Some(alias);
+    }
 
-    if let Some(captures) = glob_match_with_captures(&glob, &path) {
-      let res = match value {
-        AliasValue::Specifier(specifier) => AliasValue::Specifier(match specifier {
-          Specifier::Relative(r) => {
-            Specifier::Relative(replace_path_captures(r, &path, &captures)?)
+    if let Specifier::Package(package, subpath) = specifier
+      && let Some(alias) = self.lookup_alias(&Specifier::Package(package.clone(), String::from("")))
+    {
+      match alias.as_ref() {
+        AliasValue::Specifier(base) => {
+          // Join the subpath back onto the resolved alias.
+          match base {
+            Specifier::Package(base_pkg, base_subpath) => {
+              let subpath = if !base_subpath.is_empty() && !subpath.is_empty() {
+                format!("{}/{}", base_subpath, subpath)
+              } else if !subpath.is_empty() {
+                subpath.clone()
+              } else {
+                return Some(alias);
+              };
+              return Some(Cow::Owned(AliasValue::Specifier(Specifier::Package(
+                base_pkg.clone(),
+                subpath,
+              ))));
+            }
+            Specifier::Relative(path) => {
+              if subpath.is_empty() {
+                return Some(alias);
+              } else {
+                return Some(Cow::Owned(AliasValue::Specifier(Specifier::Relative(
+                  path.join(subpath),
+                ))));
+              }
+            }
+            Specifier::Absolute(path) => {
+              if subpath.is_empty() {
+                return Some(alias);
+              } else {
+                return Some(Cow::Owned(AliasValue::Specifier(Specifier::Absolute(
+                  path.join(subpath),
+                ))));
+              }
+            }
+            Specifier::Tilde(path) => {
+              if subpath.is_empty() {
+                return Some(alias);
+              } else {
+                return Some(Cow::Owned(AliasValue::Specifier(Specifier::Tilde(
+                  path.join(subpath),
+                ))));
+              }
+            }
+            _ => return Some(alias),
           }
-          Specifier::Absolute(r) => {
-            Specifier::Absolute(replace_path_captures(r, &path, &captures)?)
-          }
-          Specifier::Tilde(r) => Specifier::Tilde(replace_path_captures(r, &path, &captures)?),
-          Specifier::Package(module, subpath) => Specifier::Package(
-            module.clone(),
-            replace_captures(subpath, &path, &captures).to_string(),
-          ),
-          _ => return Some(Cow::Borrowed(value)),
-        }),
-        _ => return Some(Cow::Borrowed(value)),
+        }
+        _ => return Some(alias),
+      };
+    }
+
+    None
+  }
+
+  fn lookup_alias(&self, specifier: &Specifier) -> Option<Cow<'_, AliasValue>> {
+    if let Some(value) = self.map.get(specifier) {
+      return Some(Cow::Borrowed(value));
+    }
+
+    // Match glob aliases.
+    for (key, value) in &self.map {
+      let (glob, path) = match (key, specifier) {
+        (Specifier::Relative(glob), Specifier::Relative(path))
+        | (Specifier::Absolute(glob), Specifier::Absolute(path))
+        | (Specifier::Tilde(glob), Specifier::Tilde(path)) => (
+          glob.as_os_str().to_string_lossy().into_owned(),
+          path.as_os_str().to_string_lossy().into_owned(),
+        ),
+        (Specifier::Package(module_a, glob), Specifier::Package(module_b, path))
+          if module_a == module_b =>
+        {
+          (glob.clone(), path.clone())
+        }
+        (Specifier::Package(module_a, subpath_a), Specifier::Package(module_b, subpath_b)) => {
+          // Glob could be in the package name, e.g. "@internal/*"
+          (
+            format!("{}/{}", module_a, subpath_a),
+            format!("{}/{}", module_b, subpath_b),
+          )
+        }
+        _ => continue,
       };
 
-      return Some(Cow::Owned(res));
-    }
-  }
+      if let Some(captures) = glob_match_with_captures(&glob, &path) {
+        let res = match value {
+          AliasValue::Specifier(specifier) => AliasValue::Specifier(match specifier {
+            Specifier::Relative(r) => {
+              Specifier::Relative(replace_path_captures(r, &path, &captures)?)
+            }
+            Specifier::Absolute(r) => {
+              Specifier::Absolute(replace_path_captures(r, &path, &captures)?)
+            }
+            Specifier::Tilde(r) => Specifier::Tilde(replace_path_captures(r, &path, &captures)?),
+            Specifier::Package(module, subpath) => Specifier::Package(
+              module.clone(),
+              replace_captures(subpath, &path, &captures).to_string(),
+            ),
+            _ => return Some(Cow::Borrowed(value)),
+          }),
+          _ => return Some(Cow::Borrowed(value)),
+        };
 
-  None
+        return Some(Cow::Owned(res));
+      }
+    }
+
+    None
+  }
 }
 
 fn replace_path_captures(s: &Path, path: &str, captures: &Vec<Range<usize>>) -> Option<PathBuf> {
@@ -178,23 +187,23 @@ mod tests {
   fn test_replace_captures() {
     assert_eq!(
       replace_captures("test/$1/$2", "foo/bar/baz", &vec![4..7, 8..11]),
-      Cow::Borrowed("test/bar/baz")
+      "test/bar/baz"
     );
     assert_eq!(
       replace_captures("test/$1/$2", "foo/bar/baz", &vec![4..7]),
-      Cow::Borrowed("test/bar/$2")
+      "test/bar/$2"
     );
     assert_eq!(
       replace_captures("test/$1/$2/$3", "foo/bar/baz", &vec![4..7, 8..11]),
-      Cow::Borrowed("test/bar/baz/$3")
+      "test/bar/baz/$3"
     );
     assert_eq!(
       replace_captures("test/$1/$2/$", "foo/bar/baz", &vec![4..7, 8..11]),
-      Cow::Borrowed("test/bar/baz/$")
+      "test/bar/baz/$"
     );
     assert_eq!(
       replace_captures("te$st/$1/$2", "foo/bar/baz", &vec![4..7, 8..11]),
-      Cow::Borrowed("te$st/bar/baz")
+      "te$st/bar/baz"
     );
   }
 }

@@ -11,8 +11,8 @@ use serde::Deserialize;
 
 pub use atlaspack_core::types::ExportsCondition;
 
+use crate::alias::AliasMap;
 use crate::alias::AliasValue;
-use crate::alias::resolve_alias;
 use crate::path::resolve_path;
 use crate::specifier::Specifier;
 use crate::specifier::SpecifierType;
@@ -58,7 +58,7 @@ pub struct PackageJson {
   #[serde(default, deserialize_with = "ok_or_default")]
   browser: BrowserField,
   #[serde(default, deserialize_with = "ok_or_default")]
-  alias: IndexMap<Specifier, AliasValue>,
+  alias: AliasMap,
   #[serde(default, deserialize_with = "ok_or_default")]
   exports: ExportsField,
   #[serde(default, deserialize_with = "ok_or_default")]
@@ -91,7 +91,7 @@ pub enum BrowserField {
   #[default]
   None,
   String(String),
-  Map(IndexMap<Specifier, AliasValue>),
+  Map(AliasMap),
 }
 
 #[derive(serde::Deserialize, Debug, Default)]
@@ -100,7 +100,7 @@ pub enum SourceField {
   #[default]
   None,
   String(String),
-  Map(IndexMap<Specifier, AliasValue>),
+  Map(AliasMap),
   Array(Vec<String>),
   Bool(bool),
 }
@@ -431,22 +431,22 @@ impl PackageJson {
     Ok(ExportsResolution::None)
   }
 
-  pub fn resolve_aliases<'b>(
-    &'b self,
-    specifier: &'b Specifier,
+  pub fn resolve_aliases(
+    &self,
+    specifier: &Specifier,
     fields: Fields,
-  ) -> Option<Cow<'b, AliasValue>> {
+  ) -> Option<Cow<'_, AliasValue>> {
     if fields.contains(Fields::SOURCE)
       && let SourceField::Map(source) = &self.source
     {
-      match resolve_alias(source, specifier) {
+      match source.resolve_alias(specifier) {
         None => {}
         res => return res,
       }
     }
 
     if fields.contains(Fields::ALIAS) {
-      match resolve_alias(&self.alias, specifier) {
+      match self.alias.resolve_alias(specifier) {
         None => {}
         res => return res,
       }
@@ -455,7 +455,7 @@ impl PackageJson {
     if fields.contains(Fields::BROWSER)
       && let BrowserField::Map(browser) = &self.browser
     {
-      match resolve_alias(browser, specifier) {
+      match browser.resolve_alias(specifier) {
         None => {}
         res => return res,
       }
