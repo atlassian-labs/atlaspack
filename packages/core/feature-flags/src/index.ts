@@ -310,15 +310,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   compiledCssInJsTransformer: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
-   * When enabled, defers source loading for schema validation until the source is needed.
-   *
-   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
-   * @since 2025-10-22
-   */
-  schemaValidationDeferSourceLoading:
-    process.env.ATLASPACK_BUILD_ENV === 'test',
-
-  /**
    * Fixes an issue where nested Promise.resolve chains mixed with dynamic
    * imports could cause build errors.
    *
