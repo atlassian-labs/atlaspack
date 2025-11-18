@@ -592,4 +592,28 @@ describe('resolver', function () {
       assert.equal(empty.sideEffects, true);
     });
   });
+
+  describe('unstable_alias', function () {
+    it('should load .parcelrc with unstable_alias configuration', async function () {
+      // Simple test that validates the .parcelrc with unstable_alias can be parsed
+      // The actual alias resolution functionality will be tested once implemented
+      await fsFixture(overlayFS)`
+        .parcelrc:
+          {"extends": "@atlaspack/config-default", "unstable_alias": {"@test": "./test.js"}}
+
+        test.js:
+          module.exports = 42;
+
+        index.js:
+          module.exports = 'hello ' + require('@test');
+      `;
+
+      let b = await bundle('index.js', {
+        inputFS: overlayFS,
+      });
+
+      let output = await run(b);
+      assert.strictEqual(output, 'hello 42');
+    });
+  });
 });
