@@ -102,6 +102,12 @@ impl Cache {
     }
   }
 
+  pub fn clear(&self) {
+    self.is_file_cache.clear();
+    self.is_dir_cache.clear();
+    self.realpath_cache.clear();
+  }
+
   pub fn is_file(&self, path: &Path) -> bool {
     if let Some(is_file) = self.is_file_cache.get(path) {
       return is_file;
