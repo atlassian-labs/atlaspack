@@ -2,14 +2,15 @@ use std::collections::{HashMap, HashSet};
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith, VisitWith};
 
-/// Transformer that removes unused variable bindings.
+/// Transformer that removes unused variable bindings and function declarations.
 ///
-/// This transform removes variable declarations that are never referenced,
+/// This transform removes variable declarations and function declarations that are never referenced,
 /// helping to clean up dead code. It uses a multi-pass algorithm to handle
 /// cascading dependencies (e.g., `const a = 1; const b = a;` where neither is used).
 ///
 /// It handles:
 /// - Simple variable declarations
+/// - Function declarations (including async and generator functions)
 /// - Object destructuring patterns
 /// - Array destructuring patterns
 /// - Special cases like `di()` calls and exports
@@ -82,6 +83,7 @@ impl UnusedBindingsRemover {
   fn cleanup_module_items(&self, items: &mut Vec<ModuleItem>) {
     items.retain(|item| match item {
       ModuleItem::Stmt(Stmt::Decl(Decl::Var(var))) => !var.decls.is_empty(),
+      ModuleItem::Stmt(Stmt::Decl(Decl::Fn(func))) => self.should_keep_function(func),
       ModuleItem::ModuleDecl(ModuleDecl::Import(import)) => {
         !import.specifiers.is_empty() || Self::is_special_import(&import.src.value)
       }
@@ -89,8 +91,12 @@ impl UnusedBindingsRemover {
     });
   }
 
-  fn cleanup_empty_var_decls(&self, stmts: &mut Vec<Stmt>) {
-    stmts.retain(|stmt| !matches!(stmt, Stmt::Decl(Decl::Var(var)) if var.decls.is_empty()));
+  fn cleanup_unused_statements(&self, stmts: &mut Vec<Stmt>) {
+    stmts.retain(|stmt| match stmt {
+      Stmt::Decl(Decl::Var(var)) => !var.decls.is_empty(),
+      Stmt::Decl(Decl::Fn(func)) => self.should_keep_function(func),
+      _ => true,
+    });
   }
 
   fn should_keep_declarator(&self, decl: &VarDeclarator) -> bool {
@@ -112,6 +118,14 @@ impl UnusedBindingsRemover {
       ImportSpecifier::Namespace(ns) => &ns.local,
     };
     self.should_keep_binding(&id.to_id())
+  }
+
+  fn should_keep_function(&self, func: &FnDecl) -> bool {
+    let id = func.ident.to_id();
+    self
+      .declared_bindings
+      .get(&id)
+      .is_none_or(|&is_exported| self.should_keep_binding(&id) || is_exported)
   }
 
   /// Runs multiple passes of unused binding elimination until no more progress can be made.
@@ -148,7 +162,18 @@ impl UnusedBindingsRemover {
       prev_declaration_count = current_declaration_count;
     }
 
-    // Clean up empty declarations and imports
+    // After the loop exits, declared_bindings has been collected but used_bindings hasn't.
+    // We need to collect usages one more time before the final cleanup to ensure
+    // we don't remove items that are actually used.
+    if !self.declared_bindings.is_empty() {
+      self.used_bindings.clear();
+      module.visit_with(&mut BindingCollector::new(
+        &mut self.used_bindings,
+        &self.declared_bindings,
+      ));
+    }
+
+    // Final cleanup to handle any remaining empty imports or declarations
     self.cleanup_module_items(&mut module.body);
   }
 
@@ -253,12 +278,25 @@ impl swc_core::ecma::visit::Visit for DeclarationCollector<'_> {
     var.visit_children_with(self);
   }
 
-  // Collect exported variable declarations
+  // Collect function declarations
+  fn visit_fn_decl(&mut self, func: &FnDecl) {
+    self.declared_bindings.insert(func.ident.to_id(), false);
+    // Continue visiting to find nested declarations inside function bodies
+    func.visit_children_with(self);
+  }
+
+  // Collect exported variable and function declarations
   fn visit_export_decl(&mut self, export: &ExportDecl) {
-    if let Decl::Var(var) = &export.decl {
-      for declarator in &var.decls {
-        self.collect_bindings_from_pat(&declarator.name, true);
+    match &export.decl {
+      Decl::Var(var) => {
+        for declarator in &var.decls {
+          self.collect_bindings_from_pat(&declarator.name, true);
+        }
       }
+      Decl::Fn(func) => {
+        self.declared_bindings.insert(func.ident.to_id(), true);
+      }
+      _ => {}
     }
     // Continue visiting to find nested var decls
     export.visit_children_with(self);
@@ -505,12 +543,12 @@ impl VisitMut for UnusedBindingsRemover {
 
   fn visit_mut_block_stmt(&mut self, block: &mut BlockStmt) {
     block.visit_mut_children_with(self);
-    self.cleanup_empty_var_decls(&mut block.stmts);
+    self.cleanup_unused_statements(&mut block.stmts);
   }
 
   fn visit_mut_stmts(&mut self, stmts: &mut Vec<Stmt>) {
     stmts.visit_mut_children_with(self);
-    self.cleanup_empty_var_decls(stmts);
+    self.cleanup_unused_statements(stmts);
   }
 
   fn visit_mut_import_decl(&mut self, import: &mut ImportDecl) {
@@ -1285,6 +1323,7 @@ mod tests {
         function foo() {
           return x;
         }
+        foo();
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -1296,6 +1335,7 @@ mod tests {
         function foo() {
             return x;
         }
+        foo();
       "#}
     );
   }
@@ -1497,6 +1537,7 @@ mod tests {
           const used = 2;
           console.log(used);
         }
+        foo();
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -1508,6 +1549,7 @@ mod tests {
             const used = 2;
             console.log(used);
         }
+        foo();
       "#}
     );
   }
@@ -1522,6 +1564,7 @@ mod tests {
             console.log('hello');
           }
         }
+        foo();
       "#},
       |_: RunTestContext| UnusedBindingsRemover::new(),
     );
@@ -1534,6 +1577,7 @@ mod tests {
                 console.log('hello');
             }
         }
+        foo();
       "#}
     );
   }
@@ -1728,6 +1772,367 @@ mod tests {
             };
             inner();
         }
+      "#}
+    );
+  }
+
+  // ===========================================================================
+  // Function declarations
+  // ===========================================================================
+
+  #[test]
+  fn test_removes_unused_function() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function unused() {
+          return 42;
+        }
+        function used() {
+          return 1;
+        }
+        console.log(used());
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function used() {
+            return 1;
+        }
+        console.log(used());
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_all_used_functions() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function foo() {
+          return 1;
+        }
+        function bar() {
+          return 2;
+        }
+        console.log(foo(), bar());
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function foo() {
+            return 1;
+        }
+        function bar() {
+            return 2;
+        }
+        console.log(foo(), bar());
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_removes_unused_function_with_nested_declarations() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function unused() {
+          const x = 1;
+          const y = 2;
+          return x + y;
+        }
+        function used() {
+          return 42;
+        }
+        console.log(used());
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function used() {
+            return 42;
+        }
+        console.log(used());
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_function_used_in_another_function() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function helper() {
+          return 42;
+        }
+        function main() {
+          return helper();
+        }
+        console.log(main());
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function helper() {
+            return 42;
+        }
+        function main() {
+            return helper();
+        }
+        console.log(main());
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_multi_pass_removes_cascading_unused_functions() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function a() {
+          return 1;
+        }
+        function b() {
+          return a();
+        }
+        function c() {
+          return b();
+        }
+        console.log('hello');
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        console.log('hello');
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_exported_functions() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        export function exported() {
+          return 1;
+        }
+        function unused() {
+          return 2;
+        }
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        export function exported() {
+            return 1;
+        }
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_default_exported_function() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function used() {
+          return 1;
+        }
+        function unused() {
+          return 2;
+        }
+        export default used;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function used() {
+            return 1;
+        }
+        export default used;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_function_used_in_object_property() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function handler() {
+          return 42;
+        }
+        function unused() {
+          return 1;
+        }
+        const obj = { onClick: handler };
+        console.log(obj);
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function handler() {
+            return 42;
+        }
+        const obj = {
+            onClick: handler
+        };
+        console.log(obj);
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_removes_unused_nested_function() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function outer() {
+          function unusedNested() {
+            return 1;
+          }
+          function usedNested() {
+            return 2;
+          }
+          return usedNested();
+        }
+        outer();
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function outer() {
+            function usedNested() {
+                return 2;
+            }
+            return usedNested();
+        }
+        outer();
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_function_in_cjs_exports() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function exported() {
+          return 1;
+        }
+        function unused() {
+          return 2;
+        }
+        module.exports = exported;
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function exported() {
+            return 1;
+        }
+        module.exports = exported;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_mixed_functions_and_variables() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const unusedVar = 1;
+        function unusedFn() {
+          return 2;
+        }
+        const usedVar = 3;
+        function usedFn() {
+          return usedVar;
+        }
+        console.log(usedFn());
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const usedVar = 3;
+        function usedFn() {
+            return usedVar;
+        }
+        console.log(usedFn());
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_async_function_when_used() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        async function fetchData() {
+          return await Promise.resolve(42);
+        }
+        async function unusedAsync() {
+          return 1;
+        }
+        fetchData();
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        async function fetchData() {
+            return await Promise.resolve(42);
+        }
+        fetchData();
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_keeps_generator_function_when_used() {
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        function* gen() {
+          yield 1;
+        }
+        function* unusedGen() {
+          yield 2;
+        }
+        gen().next();
+      "#},
+      |_: RunTestContext| UnusedBindingsRemover::new(),
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        function* gen() {
+            yield 1;
+        }
+        gen().next();
       "#}
     );
   }
