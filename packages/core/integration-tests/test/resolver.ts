@@ -593,27 +593,74 @@ describe('resolver', function () {
     });
   });
 
-  describe('unstable_alias', function () {
-    it('should load .parcelrc with unstable_alias configuration', async function () {
-      // Simple test that validates the .parcelrc with unstable_alias can be parsed
-      // The actual alias resolution functionality will be tested once implemented
-      await fsFixture(overlayFS)`
-        .parcelrc:
-          {"extends": "@atlaspack/config-default", "unstable_alias": {"@test": "./test.js"}}
+  it('should resolve aliases set by unstable_alias in .parcelrc', async function () {
+    await fsFixture(overlayFS, __dirname)`
+        unstable-alias-test
+          .parcelrc:
+            {
+              "extends": "@atlaspack/config-default",
+               "unstable_alias": {"my-alias": "./test.js"}
+            }
 
-        test.js:
-          module.exports = 42;
+          package.json:
+            {
+              "name": "unstable-alias-test"
+            }
 
-        index.js:
-          module.exports = 'hello ' + require('@test');
+          yarn.lock:
+
+          test.js:
+            module.exports = 42;
+
+          index.js:
+            module.exports = 'hello ' + require('my-alias');
       `;
 
-      let b = await bundle('index.js', {
-        inputFS: overlayFS,
-      });
-
-      let output = await run(b);
-      assert.strictEqual(output, 'hello 42');
+    let b = await bundle(path.join(__dirname, 'unstable-alias-test/index.js'), {
+      inputFS: overlayFS,
     });
+
+    let output = await run(b);
+    assert.equal(output, 'hello 42');
+  });
+
+  it('should handle unstable_alias as well as regular alias', async function () {
+    await fsFixture(overlayFS, __dirname)`
+        unstable-alias-test-2
+          .parcelrc:
+            {
+              "extends": "@atlaspack/config-default",
+               "unstable_alias": {"my-alias": "./test.js"}
+            }
+
+          package.json:
+            {
+              "name": "unstable-alias-test",
+              "alias": {
+                "my-other-alias": "./other.js"
+              }
+            }
+
+          yarn.lock:
+
+          other.js:
+            module.exports = 'other';
+
+          test.js:
+            module.exports = 'test';
+
+          index.js:
+            module.exports = 'hello ' + require('my-alias') + ' ' + require('my-other-alias');
+      `;
+
+    let b = await bundle(
+      path.join(__dirname, 'unstable-alias-test-2/index.js'),
+      {
+        inputFS: overlayFS,
+      },
+    );
+
+    let output = await run(b);
+    assert.equal(output, 'hello test other');
   });
 });

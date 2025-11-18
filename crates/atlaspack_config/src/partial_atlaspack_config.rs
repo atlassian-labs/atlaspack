@@ -92,7 +92,7 @@ impl TryFrom<AtlaspackRcFile> for PartialAtlaspackConfig {
       runtimes: to_vec(file.contents.runtimes.as_ref()),
       transformers: to_pipelines(file.contents.transformers.as_ref()),
       validators: to_pipelines(file.contents.validators.as_ref()),
-      unstable_alias: file.contents.unstable_aliases,
+      unstable_alias: file.contents.unstable_alias,
     })
   }
 }
