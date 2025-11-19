@@ -1,0 +1,22 @@
+
+[package]
+name = "atlaspack_types"
+version = "0.1.0"
+edition = { workspace = true }
+description = "Common types used across Atlaspack crates"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
+bitflags = { workspace = true }
+browserslist-rs = { workspace = true }
+caniuse_database = { path = "../caniuse_database" }
+derive_builder = { workspace = true }
+nodejs-semver = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_repr = { workspace = true }
+tracing = { workspace = true }
