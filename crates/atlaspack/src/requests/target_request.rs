@@ -2080,4 +2080,91 @@ mod tests {
       panic!("Expected successful target resolution");
     }
   }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_loads_package_json_from_correct_directory_in_monorepo() {
+    // This test validates that TargetRequest loads package.json from the correct
+    // directory when multiple package.json files exist (monorepo scenario).
+    //
+    // Setup:
+    // - Root package.json
+    // - Nested package.json at packages/test/ with custom "nested-target"
+    //
+    // Expected: Should load targets from packages/test/package.json, not root
+    let fs = InMemoryFileSystem::default();
+    let project_root = PathBuf::default();
+    let package_dir = package_dir();
+
+    fs.write_file(
+      &project_root.join("package.json"),
+      String::from(
+        r#"{
+        "name": "root-package",
+        "targets": {
+          "root-target": {}
+        }
+      }"#,
+      ),
+    );
+
+    fs.write_file(
+      &project_root.join(&package_dir).join("package.json"),
+      String::from(
+        r#"{
+        "name": "nested-package",
+        "targets": {
+          "nested-target": {}
+        }
+      }"#,
+      ),
+    );
+
+    let entry_path = project_root.join(&package_dir).join("index.js");
+
+    let request = TargetRequest {
+      default_target_options: DefaultTargetOptions::default(),
+      entry: Entry {
+        file_path: entry_path,
+        package_path: project_root.join(&package_dir), // Points to nested package
+        target: None,
+      },
+      env: None,
+      mode: BuildMode::Development,
+    };
+
+    let result = request_tracker(RequestTrackerTestOptions {
+      search_path: project_root.join(&package_dir),
+      project_root,
+      fs: Arc::new(fs),
+      atlaspack_options: AtlaspackOptions::default(),
+      ..Default::default()
+    })
+    .run_request(request)
+    .await;
+
+    assert_target_result(
+      result,
+      TargetRequestOutput {
+        entry: package_dir.join("index.js"),
+        targets: vec![Target {
+          dist_dir: package_dir.join("dist/nested-target"),
+          dist_entry: None,
+          env: Arc::new(Environment {
+            context: EnvironmentContext::Browser,
+            engines: Engines {
+              browsers: Some(EnginesBrowsers::default()),
+              ..Engines::default()
+            },
+            is_library: false,
+            output_format: OutputFormat::Global,
+            should_optimize: true,
+            should_scope_hoist: false,
+            ..Environment::default()
+          }),
+          name: String::from("nested-target"), // Should be "nested-target", NOT "root-target"
+          ..Target::default()
+        }],
+      },
+    );
+  }
 }
