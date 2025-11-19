@@ -34,7 +34,6 @@ use tsconfig::TsConfig;
 use crate::path::resolve_path;
 
 mod builtins;
-mod cache;
 mod error;
 mod invalidations;
 mod package_json;
