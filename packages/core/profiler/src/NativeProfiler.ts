@@ -37,6 +37,8 @@ export default class NativeProfiler {
     const boxWidth = Math.max(60, stripAnsi(command).length + 6);
     const title = 'Native Profiling';
     const titlePadding = Math.floor((boxWidth - title.length - 2) / 2);
+    const isTTY = process.stdin.isTTY;
+    const maxWaitTime = 30; // seconds
 
     const padLine = (content: string) => {
       const contentLength = stripAnsi(content).length;
@@ -58,6 +60,11 @@ export default class NativeProfiler {
       return chalk.cyan.bold(cmd);
     };
 
+    // Contextual message based on TTY
+    const continueMessage = isTTY
+      ? 'Press Enter or start the profiler to continue'
+      : `Build will continue when profiler has started, or after ${maxWaitTime}s`;
+
     const banner = [
       '',
       chalk.blue('┌' + '─'.repeat(boxWidth) + '┐'),
@@ -73,7 +80,7 @@ export default class NativeProfiler {
       padLine(makeCommandDisplay(command)),
       padLine(''),
       padLine(chalk.gray('Run the command above to start profiling.')),
-      padLine(chalk.gray('Press Enter to continue...')),
+      padLine(chalk.gray(continueMessage)),
       chalk.blue('└' + '─'.repeat(boxWidth) + '┘'),
       '',
     ].join('\n');
@@ -188,8 +195,37 @@ export default class NativeProfiler {
       for (const line of lines) {
         const lowerLine = line.toLowerCase();
 
-        // Check if this line contains both the profiler name and our PID
-        if (lowerLine.includes(profilerName) && pidRegex.test(line)) {
+        // Skip lines that are part of our own process checking (avoid false positives)
+        // Skip lines containing "ps aux" or "grep" to avoid matching our own commands
+        if (lowerLine.includes('ps aux') || lowerLine.includes(' grep ')) {
+          continue;
+        }
+
+        // Skip our own process (the Atlaspack process itself)
+        // The PID column is the second field in ps aux output
+        const fields = line.trim().split(/\s+/);
+        if (fields.length >= 2 && fields[1] === String(pid)) {
+          continue;
+        }
+
+        // Check if this line contains the profiler name as a command
+        const profilerRegex = new RegExp(`\\b${profilerName}\\b`);
+        if (!profilerRegex.test(lowerLine)) {
+          continue;
+        }
+
+        // Now check if our PID appears in the command arguments (not in the PID column)
+        // The PID should appear after the profiler command, typically as --pid <pid> or --attach <pid>
+        // We need to check the command portion, which starts around column 11 in ps aux
+        // For safety, check if PID appears after the profiler name in the line
+        const profilerIndex = lowerLine.indexOf(profilerName);
+        if (profilerIndex === -1) {
+          continue;
+        }
+
+        // Check if PID appears in the command portion (after the profiler name)
+        const commandPortion = line.substring(profilerIndex);
+        if (pidRegex.test(commandPortion)) {
           return true;
         }
       }
