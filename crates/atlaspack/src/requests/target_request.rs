@@ -920,7 +920,7 @@ mod tests {
       default_target_options: DefaultTargetOptions::default(),
       entry: Entry {
         file_path: entry_path,
-        package_path: project_root.clone(),
+        package_path: project_root.join(&package_dir),
         target: None,
       },
       env: None,
