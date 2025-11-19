@@ -2,8 +2,8 @@ use serde::de::{Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use serde_json::json;
 
-use crate::types::Asset;
-use crate::types::serialization::{extract_val, extract_val_default};
+use crate::Asset;
+use crate::serialization::{extract_val, extract_val_default};
 
 macro_rules! insert_if_not_none {
   ($map:expr, $key:expr, $value:expr) => {
@@ -200,9 +200,9 @@ impl<'de> Visitor<'de> for AssetVisitor {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::types::asset::AssetStats;
-  use crate::types::json::JSONObject;
-  use crate::types::{Environment, FileType};
+  use crate::asset::AssetStats;
+  use crate::json::JSONObject;
+  use crate::{Environment, FileType};
   use pretty_assertions::assert_eq;
   use std::collections::HashSet;
   use std::path::PathBuf;
