@@ -16,6 +16,7 @@ These options are available for `atlaspack serve`, `atlaspack watch`, and `atlas
 - `--dist-dir <dir>` - Output directory when unspecified by targets
 - `--no-autoinstall` - Disable autoinstall
 - `--profile` - Enable sampling build profiling
+- `--profile-native [instruments|samply]` - Enable native build profiling (instruments on macOS, samply otherwise)
 - `--trace` - Enable build tracing
 - `-V, --version` - Output the version number
 - `--detailed-report [count]` - Print asset timings and sizes in the build report
