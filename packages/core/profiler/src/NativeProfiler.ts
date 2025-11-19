@@ -155,11 +155,13 @@ export default class NativeProfiler {
       const isRunning = await this.checkProfilerRunning(profilerType, pid);
 
       if (isRunning) {
+        // Instruments takes longer to start up (~5s), samply needs ~1s
+        const waitTime = profilerType === 'instruments' ? 5000 : 1000;
         logger.info({
           origin: '@atlaspack/profiler',
-          message: 'Profiler detected, waiting 500ms before continuing...',
+          message: `Profiler detected, waiting ${waitTime}ms before continuing...`,
         });
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
         onDetected();
         return;
       }
