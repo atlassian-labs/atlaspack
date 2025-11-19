@@ -335,6 +335,7 @@ export type AtlaspackOptions = {
   logLevel: LogLevel;
   projectRoot: FilePath;
   shouldProfile: boolean;
+  shouldProfileNative: boolean;
   shouldTrace: boolean;
   shouldPatchConsole: boolean;
   detailedReport?: DetailedReportOptions | null | undefined;

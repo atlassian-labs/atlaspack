@@ -269,6 +269,7 @@ export default async function resolveOptions(
       : false,
     shouldDisableCache: initialOptions.shouldDisableCache ?? false,
     shouldProfile: initialOptions.shouldProfile ?? false,
+    shouldProfileNative: initialOptions.shouldProfileNative ?? false,
     shouldTrace: initialOptions.shouldTrace ?? false,
     cacheDir,
     watchDir,

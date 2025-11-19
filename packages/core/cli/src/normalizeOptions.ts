@@ -47,6 +47,7 @@ export interface Options {
   config?: string;
   logLevel?: LogLevel;
   profile?: boolean;
+  profileNative?: boolean;
   contentHash?: boolean;
   featureFlag?: Partial<FeatureFlags>;
   optimize?: boolean;
@@ -192,6 +193,7 @@ export async function normalizeOptions(
     shouldAutoInstall: command.autoinstall ?? true,
     logLevel: command.logLevel,
     shouldProfile: command.profile,
+    shouldProfileNative: command.profileNative,
     shouldTrace: command.trace,
     shouldBuildLazily: typeof command.lazy !== 'undefined',
     lazyIncludes: normalizeIncludeExcludeList(command.lazy),

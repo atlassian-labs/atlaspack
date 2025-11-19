@@ -383,6 +383,7 @@ export type InitialAtlaspackOptionsInternal<WorkerFarm> = {
   readonly shouldAutoInstall?: boolean;
   readonly logLevel?: LogLevel;
   readonly shouldProfile?: boolean;
+  readonly shouldProfileNative?: boolean;
   readonly shouldTrace?: boolean;
   readonly shouldPatchConsole?: boolean;
   readonly shouldBuildLazily?: boolean;
