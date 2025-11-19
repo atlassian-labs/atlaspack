@@ -9,8 +9,10 @@ description = "Common types used across Atlaspack crates"
 workspace = true
 
 [dependencies]
-anyhow = { workspace = true }
+atlaspack_common_core = { path = "../atlaspack_common_core" }
 atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
+
+anyhow = { workspace = true }
 bitflags = { workspace = true }
 browserslist-rs = { workspace = true }
 caniuse_database = { path = "../caniuse_database" }

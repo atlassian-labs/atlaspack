@@ -401,6 +401,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_fs",
+ "atlaspack_cache",
  "atlaspack_core",
  "atlaspack_filesystem",
  "atlaspack_shared_map",
@@ -423,6 +424,30 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+ "xxhash-rust",
+]
+
+[[package]]
+name = "atlaspack_cache"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack_filesystem",
+ "atlaspack_shared_map",
+ "atlaspack_types",
+ "parking_lot",
+ "rayon",
+ "serde",
+ "serde_json",
+ "serde_json5 0.1.0",
+ "thiserror 2.0.17",
+ "tracing",
+]
+
+[[package]]
+name = "atlaspack_common_core"
+version = "0.1.0"
+dependencies = [
  "xxhash-rust",
 ]
 
@@ -472,8 +497,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "atlaspack_cache",
  "atlaspack_filesystem",
  "atlaspack_sourcemap",
+ "atlaspack_types",
  "bitflags 2.9.4",
  "browserslist-rs 0.17.0",
  "caniuse_database",
@@ -490,7 +517,6 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "xxhash-rust",
 ]
 
 [[package]]
@@ -801,6 +827,25 @@ version = "0.1.0"
 dependencies = [
  "atlaspack_filesystem",
  "indoc",
+]
+
+[[package]]
+name = "atlaspack_types"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack_common_core",
+ "atlaspack_sourcemap",
+ "bitflags 2.9.4",
+ "browserslist-rs 0.17.0",
+ "caniuse_database",
+ "derive_builder",
+ "nodejs-semver",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "tracing",
 ]
 
 [[package]]

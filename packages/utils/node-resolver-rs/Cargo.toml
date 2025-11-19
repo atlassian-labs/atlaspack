@@ -9,6 +9,7 @@ name = "node_resolver_bench"
 harness = false
 
 [dependencies]
+atlaspack_cache = { path = "../../../crates/atlaspack_cache" }
 atlaspack_core = { path = "../../../crates/atlaspack_core" }
 atlaspack_filesystem = { path = "../../../crates/atlaspack_filesystem" }
 atlaspack_shared_map = { path = "../../../crates/atlaspack_shared_map" }

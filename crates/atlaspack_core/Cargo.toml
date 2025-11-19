@@ -11,25 +11,26 @@ workspace = true
 default = []
 
 [dependencies]
-atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
+atlaspack_cache = { path = "../atlaspack_cache" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
-caniuse_database = { path = "../caniuse_database" }
+atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
+atlaspack_types = { path = "../atlaspack_types" }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 bitflags = { workspace = true }
 browserslist-rs = { workspace = true }
+caniuse_database = { path = "../caniuse_database" }
 derive_builder = { workspace = true }
 dyn-hash = { workspace = true }
-nodejs-semver = { workspace = true }
 mockall = { workspace = true }
+nodejs-semver = { workspace = true }
 petgraph = { workspace = true, features = ["serde-1"] }
 pretty_assertions = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
+serde-value = { workspace = true }
 serde_json = { workspace = true, features = ["preserve_order"] }
 serde_repr = { workspace = true }
-serde-value = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-xxhash-rust = { workspace = true, features = ["xxh3"] }
-tokio = { workspace = true, features = ["full"] }
