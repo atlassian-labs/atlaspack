@@ -10,7 +10,7 @@ use std::sync::Arc;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::project_path::to_project_path;
+use atlaspack_common_core::project_path::to_project_path;
 
 use super::Dependency;
 use super::bundle::MaybeBundleBehavior;
@@ -126,7 +126,7 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
     unique_key,
   } = params;
 
-  let mut hasher = crate::hash::IdentifierHasher::default();
+  let mut hasher = atlaspack_common_core::hash::IdentifierHasher::default();
 
   environment_id.hash(&mut hasher);
   file_path.hash(&mut hasher);

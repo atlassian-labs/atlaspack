@@ -6,14 +6,18 @@ use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 
-use crate::plugin::HmrOptions;
-
 use super::EnvironmentContext;
 use super::FeatureFlags;
 use super::IncludeNodeModules;
 use super::OutputFormat;
 use super::TargetSourceMapOptions;
 use super::engines::Engines;
+
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+pub struct HmrOptions {
+  pub port: u32,
+  pub host: String,
+}
 
 /// The options passed into Atlaspack either through the CLI or the programmatic API
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

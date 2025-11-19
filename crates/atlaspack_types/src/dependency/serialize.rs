@@ -1,5 +1,5 @@
-use crate::types::Dependency;
-use crate::types::serialization::{extract_val, extract_val_default};
+use crate::Dependency;
+use crate::serialization::{extract_val, extract_val_default};
 use serde::de::{Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
@@ -242,10 +242,9 @@ impl<'de> Visitor<'de> for DependencyVisitor {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use crate::types::{
-    DependencyKind, Environment, EnvironmentContext, IncludeNodeModules, OutputFormat, Priority,
-    SourceType, SpecifierType,
+  use crate::{
+    Dependency, DependencyKind, Environment, EnvironmentContext, FileType, IncludeNodeModules,
+    JSONObject, OutputFormat, Priority, SourceType, SpecifierType,
   };
   use pretty_assertions::assert_eq;
   use std::collections::BTreeMap;
@@ -432,7 +431,7 @@ mod tests {
     expected_import_attributes.insert("type".to_string(), true);
     expected_import_attributes.insert("assert".to_string(), false);
 
-    let mut expected_meta = crate::types::JSONObject::new();
+    let mut expected_meta = JSONObject::new();
     expected_meta.insert("customField".to_string(), serde_json::json!("customValue"));
 
     let expected = Dependency {
@@ -499,7 +498,7 @@ mod tests {
       priority: Priority::Parallel,
       loc: None,
       meta: {
-        let mut meta = crate::types::JSONObject::new();
+        let mut meta = JSONObject::new();
         meta.insert("testField".to_string(), serde_json::json!("testValue"));
         meta.insert("numField".to_string(), serde_json::json!(42));
         meta.insert("boolField".to_string(), serde_json::json!(true));
@@ -511,7 +510,7 @@ mod tests {
       resolve_from: Some(PathBuf::from("/project/src")),
       source_asset_id: Some("parent_asset_123".to_string()),
       source_path: Some(PathBuf::from("parent.ts")),
-      source_asset_type: Some(crate::types::FileType::Ts),
+      source_asset_type: Some(FileType::Ts),
       symbols: None,
       target: None,
       is_entry: true,

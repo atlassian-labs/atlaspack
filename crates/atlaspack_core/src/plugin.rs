@@ -16,7 +16,7 @@ pub use transformer_plugin::*;
 pub use validator_plugin::*;
 
 use crate::config_loader::{ConfigLoader, ConfigLoaderRef};
-use crate::types::{BuildMode, FeatureFlags, LogLevel};
+use atlaspack_types::{BuildMode, FeatureFlags, HmrOptions, LogLevel};
 
 mod bundler_plugin;
 mod compressor_plugin;
@@ -34,12 +34,6 @@ pub struct PluginContext {
   pub file_system: FileSystemRef,
   pub logger: PluginLogger,
   pub options: Arc<PluginOptions>,
-}
-
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
-pub struct HmrOptions {
-  pub port: u32,
-  pub host: String,
 }
 
 #[derive(Default)]
