@@ -454,6 +454,10 @@ impl ResolverPlugin for AtlaspackResolver {
       }),
     }
   }
+
+  fn on_new_build(&self) {
+    self.cache.clear();
+  }
 }
 
 fn should_include_node_module(include_node_modules: &IncludeNodeModules, name: &str) -> bool {
