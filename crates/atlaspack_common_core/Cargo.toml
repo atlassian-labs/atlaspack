@@ -1,0 +1,12 @@
+
+[package]
+name = "atlaspack_common_core"
+version = "0.1.0"
+edition = { workspace = true }
+description = "Functionality shared between atlaspack core crates"
+
+[lints]
+workspace = true
+
+[dependencies]
+xxhash-rust = { workspace = true, features = ["xxh3"] }
