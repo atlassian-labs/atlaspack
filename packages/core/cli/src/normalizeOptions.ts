@@ -177,6 +177,22 @@ export async function normalizeOptions(
     return input.split(',').map((value) => value.trim());
   };
 
+  let nativeProfiler: 'instruments' | 'samply' | undefined;
+  if (typeof command.profileNative === 'string') {
+    if (
+      command.profileNative === 'instruments' ||
+      command.profileNative === 'samply'
+    ) {
+      nativeProfiler = command.profileNative as 'instruments' | 'samply';
+    } else {
+      nativeProfiler = undefined;
+    }
+  } else if (command.profileNative) {
+    nativeProfiler = os.platform() === 'darwin' ? 'instruments' : 'samply';
+  } else {
+    nativeProfiler = undefined;
+  }
+
   return {
     shouldDisableCache: command.cache === false,
     cacheDir: command.cacheDir,
@@ -194,17 +210,7 @@ export async function normalizeOptions(
     shouldAutoInstall: command.autoinstall ?? true,
     logLevel: command.logLevel,
     shouldProfile: command.profile,
-    shouldProfileNative:
-      typeof command.profileNative === 'string'
-        ? command.profileNative === 'instruments' ||
-          command.profileNative === 'samply'
-          ? (command.profileNative as 'instruments' | 'samply')
-          : undefined
-        : command.profileNative
-          ? os.platform() === 'darwin'
-            ? 'instruments'
-            : 'samply'
-          : undefined,
+    nativeProfiler,
     shouldTrace: command.trace,
     shouldBuildLazily: typeof command.lazy !== 'undefined',
     lazyIncludes: normalizeIncludeExcludeList(command.lazy),

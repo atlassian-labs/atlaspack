@@ -116,7 +116,6 @@ export default class Atlaspack {
 
   // @ts-expect-error TS2564
   isProfiling: boolean;
-  isProfilingNative: boolean = false;
 
   constructor(options: InitialAtlaspackOptions) {
     this.#initialOptions = options;
@@ -408,9 +407,9 @@ export default class Atlaspack {
       if (options.shouldProfile) {
         await this.startProfiling();
       }
-      if (options.shouldProfileNative) {
+      if (options.nativeProfiler) {
         const nativeProfiler = new NativeProfiler();
-        await nativeProfiler.startProfiling(options.shouldProfileNative);
+        await nativeProfiler.startProfiling(options.nativeProfiler);
       }
       if (options.shouldTrace) {
         tracer.enable();

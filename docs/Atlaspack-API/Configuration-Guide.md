@@ -63,7 +63,7 @@ interface InitialAtlaspackOptions {
   shouldAutoInstall?: boolean;
   logLevel?: LogLevel;
   shouldProfile?: boolean;
-  shouldProfileNative?: 'instruments' | 'samply';
+  nativeProfiler?: 'instruments' | 'samply';
   shouldTrace?: boolean;
   shouldPatchConsole?: boolean;
   additionalReporters?: Array<{
@@ -682,7 +682,7 @@ const atlaspack = new Atlaspack({
 });
 ```
 
-### `shouldProfileNative`
+### `nativeProfiler`
 
 **Type**: `'instruments' | 'samply' | undefined`
 
@@ -693,7 +693,7 @@ const atlaspack = new Atlaspack({
 - `'instruments'` - Use Instruments (macOS only, uses `xcrun xctrace`)
 - `'samply'` - Use samply profiler (cross-platform)
 
-If not specified, defaults to `'instruments'` on macOS and `'samply'` on other platforms when the option is enabled via CLI.
+If `--profile-native` is provided on the CLI without a profiler name, defaults to `'samply'`.
 
 **Examples**:
 
@@ -701,19 +701,19 @@ If not specified, defaults to `'instruments'` on macOS and `'samply'` on other p
 // Enable native profiling with instruments (macOS)
 const atlaspack = new Atlaspack({
   entries: ['src/index.html'],
-  shouldProfileNative: 'instruments',
+  nativeProfiler: 'instruments',
 });
 
 // Enable native profiling with samply
 const atlaspack = new Atlaspack({
   entries: ['src/index.html'],
-  shouldProfileNative: 'samply',
+  nativeProfiler: 'samply',
 });
 
 // Environment-based native profiling
 const atlaspack = new Atlaspack({
   entries: ['src/index.html'],
-  shouldProfileNative:
+  nativeProfiler:
     process.env.NATIVE_PROFILE === 'samply' ? 'samply' : 'instruments',
 });
 ```

@@ -335,7 +335,7 @@ export type AtlaspackOptions = {
   logLevel: LogLevel;
   projectRoot: FilePath;
   shouldProfile: boolean;
-  shouldProfileNative: 'instruments' | 'samply' | undefined;
+  nativeProfiler: 'instruments' | 'samply' | undefined;
   shouldTrace: boolean;
   shouldPatchConsole: boolean;
   detailedReport?: DetailedReportOptions | null | undefined;
