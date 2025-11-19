@@ -29,7 +29,7 @@ import dumpGraphToGraphViz from './dumpGraphToGraphViz';
 import resolveOptions from './resolveOptions';
 import {ValueEmitter} from '@atlaspack/events';
 import {registerCoreWithSerializer} from './registerCoreWithSerializer';
-import {PromiseQueue, getTimeId} from '@atlaspack/utils';
+import {PromiseQueue} from '@atlaspack/utils';
 import {AtlaspackConfig} from './AtlaspackConfig';
 import logger from '@atlaspack/logger';
 import RequestTracker, {
@@ -57,16 +57,13 @@ import {
   toProjectPath,
   fromProjectPathRelative,
 } from './projectPath';
-import {tracer} from '@atlaspack/profiler';
+import {tracer, NativeProfiler} from '@atlaspack/profiler';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
 import type {AssetGraphRequestResult} from './requests/AssetGraphRequest';
 import {loadRustWorkerThreadDylibHack} from './rustWorkerThreadDylibHack';
-import {ChildProcess, spawn} from 'child_process';
-import os from 'os';
-import {SIGINT} from 'constants';
 
 registerCoreWithSerializer();
 
@@ -114,8 +111,6 @@ export default class Atlaspack {
   #watcherSubscription: AsyncSubscription | null | undefined;
   #watcherCount: number = 0;
   #requestedAssetIds: Set<string> = new Set();
-
-  #nativeProfilingProcess: ChildProcess | null | undefined;
 
   rustAtlaspack: AtlaspackV3 | null | undefined;
 
@@ -414,7 +409,8 @@ export default class Atlaspack {
         await this.startProfiling();
       }
       if (options.shouldProfileNative) {
-        await this.startProfilingNative();
+        const nativeProfiler = new NativeProfiler();
+        await nativeProfiler.startProfiling(options.shouldProfileNative);
       }
       if (options.shouldTrace) {
         tracer.enable();
@@ -557,9 +553,6 @@ export default class Atlaspack {
       if (this.isProfiling) {
         await this.stopProfiling();
       }
-      if (this.#nativeProfilingProcess) {
-        await this.stopNativeProfiling();
-      }
 
       await this.clearBuildCaches();
     }
@@ -633,89 +626,6 @@ export default class Atlaspack {
     logger.info({origin: '@atlaspack/core', message: 'Starting profiling...'});
     this.isProfiling = true;
     await this.#farm.startProfile();
-  }
-
-  startProfilingNative(): Promise<void> {
-    if (os.platform() !== 'darwin') {
-      logger.warn({
-        origin: '@atlaspack/core',
-        message: 'Profiling native is only supported on macOS for now',
-      });
-      return Promise.resolve();
-    }
-
-    if (this.#nativeProfilingProcess != null) {
-      throw new Error('Atlaspack is already profiling native');
-    }
-    return new Promise((resolve, reject) => {
-      const nativeProfilingFilename = `native-profile-${getTimeId()}.trace`;
-      logger.info({
-        origin: '@atlaspack/core',
-        message: 'Starting profiling native...',
-      });
-      this.#nativeProfilingProcess = spawn(
-        `xcrun`,
-        [
-          'xctrace',
-          'record',
-          '--template',
-          'CPU Profiler',
-          '--output',
-          nativeProfilingFilename,
-          '--attach',
-          String(process.pid),
-        ],
-        {detached: true},
-      );
-      this.#nativeProfilingProcess.on('error', (error) => {
-        logger.error({
-          origin: '@atlaspack/core',
-          message: `Native profiling failed with error ${error}`,
-        });
-        reject(new Error(`Native profiling failed with error ${error}`));
-      });
-      this.#nativeProfilingProcess.on('spawn', () => {
-        logger.info({
-          origin: '@atlaspack/core',
-          message: 'Native profiling started',
-        });
-      });
-      this.#nativeProfilingProcess.stdout?.on('data', (data) => {
-        const message = data.toString().trim();
-        logger.info({
-          origin: '@atlaspack/core',
-          message: `>>> native-profile stdout: ${message}`,
-        });
-        if (message.includes('Ctrl-C to stop the recording')) {
-          resolve();
-        }
-      });
-      this.#nativeProfilingProcess.stderr?.on('data', (data) => {
-        const message = data.toString().trim();
-        logger.info({
-          origin: '@atlaspack/core',
-          message: `>>> native-profile stderr: ${message}`,
-        });
-      });
-    });
-  }
-
-  stopNativeProfiling(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.#nativeProfilingProcess == null) {
-        throw new Error('Atlaspack is not profiling native');
-      }
-      this.#nativeProfilingProcess.on('close', (code) => {
-        logger.info({
-          origin: '@atlaspack/core',
-          message: `Native profiling completed with exit code ${code}`,
-        });
-        resolve();
-      });
-
-      // Send a Ctrl-C to the native profiling process to stop it cleanly
-      this.#nativeProfilingProcess.kill(SIGINT);
-    });
   }
 
   stopProfiling(): Promise<void> {

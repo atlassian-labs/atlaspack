@@ -6,6 +6,7 @@ import type {FeatureFlags} from '@atlaspack/feature-flags';
 import type {InitialAtlaspackOptions, LogLevel} from '@atlaspack/types';
 import {INTERNAL_ORIGINAL_CONSOLE} from '@atlaspack/logger';
 import path from 'path';
+import os from 'os';
 
 function parsePort(portValue: string): number {
   let parsedPort = Number(portValue);
@@ -47,7 +48,7 @@ export interface Options {
   config?: string;
   logLevel?: LogLevel;
   profile?: boolean;
-  profileNative?: boolean;
+  profileNative?: string | boolean;
   contentHash?: boolean;
   featureFlag?: Partial<FeatureFlags>;
   optimize?: boolean;
@@ -193,7 +194,17 @@ export async function normalizeOptions(
     shouldAutoInstall: command.autoinstall ?? true,
     logLevel: command.logLevel,
     shouldProfile: command.profile,
-    shouldProfileNative: command.profileNative,
+    shouldProfileNative:
+      typeof command.profileNative === 'string'
+        ? command.profileNative === 'instruments' ||
+          command.profileNative === 'samply'
+          ? (command.profileNative as 'instruments' | 'samply')
+          : undefined
+        : command.profileNative
+          ? os.platform() === 'darwin'
+            ? 'instruments'
+            : 'samply'
+          : undefined,
     shouldTrace: command.trace,
     shouldBuildLazily: typeof command.lazy !== 'undefined',
     lazyIncludes: normalizeIncludeExcludeList(command.lazy),
