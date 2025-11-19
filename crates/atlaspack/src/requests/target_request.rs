@@ -239,8 +239,15 @@ impl TargetRequest {
     &self,
     request_context: &RunRequestContext,
   ) -> Result<ConfigFile<PackageJson>, anyhow::Error> {
+    // Read the config from the path of the package given by the entry
+    let config_loader = atlaspack_core::config_loader::ConfigLoader {
+      fs: request_context.file_system().clone(),
+      project_root: request_context.project_root.clone(),
+      search_path: self.entry.package_path.clone(),
+    };
+
     // TODO Invalidations
-    let mut config = match request_context.config().load_package_json::<PackageJson>() {
+    let mut config = match config_loader.load_package_json::<PackageJson>() {
       Err(err) => {
         let diagnostic = err.downcast_ref::<Diagnostic>();
 
