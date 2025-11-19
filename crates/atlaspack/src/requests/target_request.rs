@@ -41,7 +41,7 @@ use crate::request_tracker::RunRequestError;
 use super::RequestResult;
 use super::entry_request::Entry;
 
-mod package_json;
+pub mod package_json;
 
 /// Infers how and where source code is outputted
 ///
