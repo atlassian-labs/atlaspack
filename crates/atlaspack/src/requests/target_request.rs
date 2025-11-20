@@ -61,6 +61,7 @@ pub struct TargetRequestOutput {
   pub targets: Vec<Target>,
 }
 
+#[derive(Debug)]
 struct BuiltInTarget<'a> {
   descriptor: BuiltInTargetDescriptor,
   dist: Option<PathBuf>,
