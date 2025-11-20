@@ -43,6 +43,8 @@ describe('monorepos', function () {
     await overlayFS.mkdirp(testDir);
 
     await fsFixture(overlayFS, testDir)`
+      yarn.lock:
+
       package.json:
         {
           "name": "monorepo-root"
@@ -73,7 +75,7 @@ describe('monorepos', function () {
     });
 
     let bundles = b.getBundles();
-    assert(bundles.length > 0, 'Expected at least one bundle');
+    assert.equal(bundles.length, 1, 'Expected one bundle');
 
     // Verify that dist files are in the correct location
     // (relative to the package directory, not project root)
