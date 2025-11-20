@@ -1,5 +1,12 @@
 # @atlaspack/plugin
 
+## 2.14.39
+
+### Patch Changes
+
+- Updated dependencies [[`8eb84ee`](https://github.com/atlassian-labs/atlaspack/commit/8eb84ee61a42bfe87c58079b610802b07a6a13e4), [`617a318`](https://github.com/atlassian-labs/atlaspack/commit/617a318ddc9419b38360257353fec50b9051ee13)]:
+  - @atlaspack/types-internal@2.21.0
+
 ## 2.14.38
 
 ### Patch Changes
