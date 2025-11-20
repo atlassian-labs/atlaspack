@@ -447,6 +447,14 @@ impl<'a> ResolveRequest<'a> {
           req.conditions = self.conditions;
           req.custom_conditions = self.custom_conditions;
           let resolved = req.resolve()?;
+
+          if let Resolution::Path(path) = &resolved
+            && path == self.from
+          {
+            // Don't resolve alias that points to itself.
+            return Ok(None);
+          }
+
           Ok(Some(resolved))
         }
         AliasValue::Bool(false) => Ok(Some(Resolution::Empty)),
