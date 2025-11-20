@@ -1654,7 +1654,7 @@ mod tests {
       TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
-          dist_dir: PathBuf::from("some-other-dist"),
+          dist_dir: package_dir().join("some-other-dist"),
           dist_entry: None,
           env: Arc::new(Environment {
             context: EnvironmentContext::Browser,
