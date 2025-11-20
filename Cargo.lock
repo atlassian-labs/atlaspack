@@ -431,7 +431,6 @@ name = "atlaspack_config"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "atlaspack-resolver",
  "atlaspack_core",
  "atlaspack_filesystem",
  "atlaspack_package_manager",
@@ -443,6 +442,7 @@ dependencies = [
  "pathdiff",
  "serde",
  "serde_json5 0.1.0",
+ "tracing",
 ]
 
 [[package]]
@@ -596,7 +596,6 @@ dependencies = [
  "atlaspack-resolver",
  "atlaspack_core",
  "atlaspack_filesystem",
- "indexmap",
  "pretty_assertions",
  "serde",
  "tokio",

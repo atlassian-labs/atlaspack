@@ -220,7 +220,14 @@ impl PartialAtlaspackConfig {
         extend_config.validators,
       ),
       // We don't currently support merging unstable_aliases
-      unstable_alias: from_config.unstable_alias.or(extend_config.unstable_alias),
+      unstable_alias: {
+        if extend_config.unstable_alias.is_some() && from_config.unstable_alias.is_some() {
+          tracing::warn!(
+            "Merging of 'unstable_alias' fields is not currently supported. Using the 'unstable_alias' from the extending configuration"
+          );
+        }
+        extend_config.unstable_alias.or(from_config.unstable_alias)
+      },
     }
   }
 }

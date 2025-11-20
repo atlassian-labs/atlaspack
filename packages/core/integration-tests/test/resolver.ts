@@ -593,8 +593,10 @@ describe('resolver', function () {
     });
   });
 
-  it('should resolve aliases set by unstable_alias in .parcelrc', async function () {
-    await fsFixture(overlayFS, __dirname)`
+  describe.v3('unstable_alias', function () {
+    // unstable_alias is currently only supported in v3
+    it('should resolve aliases set by unstable_alias in .parcelrc', async function () {
+      await fsFixture(overlayFS, __dirname)`
         unstable-alias-test
           .parcelrc:
             {
@@ -616,16 +618,19 @@ describe('resolver', function () {
             module.exports = 'hello ' + require('my-alias');
       `;
 
-    let b = await bundle(path.join(__dirname, 'unstable-alias-test/index.js'), {
-      inputFS: overlayFS,
+      let b = await bundle(
+        path.join(__dirname, 'unstable-alias-test/index.js'),
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      let output = await run(b);
+      assert.equal(output, 'hello 42');
     });
 
-    let output = await run(b);
-    assert.equal(output, 'hello 42');
-  });
-
-  it('should handle unstable_alias as well as regular alias', async function () {
-    await fsFixture(overlayFS, __dirname)`
+    it('should handle unstable_alias as well as regular alias', async function () {
+      await fsFixture(overlayFS, __dirname)`
         unstable-alias-test-2
           .parcelrc:
             {
@@ -653,14 +658,15 @@ describe('resolver', function () {
             module.exports = 'hello ' + require('my-alias') + ' ' + require('my-other-alias');
       `;
 
-    let b = await bundle(
-      path.join(__dirname, 'unstable-alias-test-2/index.js'),
-      {
-        inputFS: overlayFS,
-      },
-    );
+      let b = await bundle(
+        path.join(__dirname, 'unstable-alias-test-2/index.js'),
+        {
+          inputFS: overlayFS,
+        },
+      );
 
-    let output = await run(b);
-    assert.equal(output, 'hello test other');
+      let output = await run(b);
+      assert.equal(output, 'hello test other');
+    });
   });
 });
