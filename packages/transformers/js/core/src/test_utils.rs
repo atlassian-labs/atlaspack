@@ -2,7 +2,7 @@ use crate::{Config, SourceType, TransformResult};
 
 /// Parse a file with the `atlaspack_js_swc_core` parser for testing
 pub fn run_swc_core_transform(source: &str) -> TransformResult {
-  crate::transform(make_test_swc_config(source), None).unwrap()
+  crate::transform(&make_test_swc_config(source), None).unwrap()
 }
 
 /// SWC configuration for testing
