@@ -239,8 +239,18 @@ impl TargetRequest {
     &self,
     request_context: &RunRequestContext,
   ) -> Result<ConfigFile<PackageJson>, anyhow::Error> {
+    // Create a config loader with search path based on the entry's package path
+    // This ensures we load the package.json from the entry's package, not the project root
+    use atlaspack_core::config_loader::ConfigLoader;
+
+    let config_loader = ConfigLoader {
+      fs: request_context.file_system().clone(),
+      project_root: request_context.project_root.clone(),
+      search_path: self.entry.package_path.clone(),
+    };
+
     // TODO Invalidations
-    let mut config = match request_context.config().load_package_json::<PackageJson>() {
+    let mut config = match config_loader.load_package_json::<PackageJson>() {
       Err(err) => {
         let diagnostic = err.downcast_ref::<Diagnostic>();
 
@@ -659,13 +669,7 @@ impl TargetRequest {
     tracing::debug!("Target descriptor engines: {:?}", target_descriptor_engines);
 
     Ok(Some(Target {
-      dist_dir: self.infer_dist_dir(
-        dist,
-        package_json,
-        target_name,
-        &target_descriptor,
-        project_root,
-      )?,
+      dist_dir: self.infer_dist_dir(dist, package_json, target_name, &target_descriptor)?,
       dist_entry,
       env: Arc::new(Environment {
         context,
@@ -716,13 +720,20 @@ impl TargetRequest {
     package_json: &ConfigFile<PackageJson>,
     target_name: &str,
     target_descriptor: &TargetDescriptor,
-    project_root: &Path,
   ) -> anyhow::Result<PathBuf> {
     // Use the target_descriptor dist_dir as the highest precedence
     if let Some(dist_dir) = target_descriptor.dist_dir.as_ref() {
       // Strip the leading "./" if present
       let dist_dir = dist_dir.strip_prefix("./").ok().unwrap_or(dist_dir);
-      return Ok(project_root.join(dist_dir));
+
+      let package_dir = package_json
+        .path
+        .parent()
+        .ok_or(anyhow::anyhow!("package.json has no parent"))?;
+
+      let resolved_dist_dir = package_dir.join(dist_dir);
+
+      return Ok(resolved_dist_dir);
     }
 
     if let Some(target_dist) = dist.as_ref() {
