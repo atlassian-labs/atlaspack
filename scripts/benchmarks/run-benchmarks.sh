@@ -18,14 +18,12 @@ if [ -f "$BASELINE_OUTPUT_DIR/baseline-report.json" ]; then
   yarn benchmark \
     --output="$BASELINE_OUTPUT_DIR" \
     --baseline="$BASELINE_OUTPUT_DIR/baseline-report.json" \
-    --github-comment \
-    --samples=3
+    --github-comment
 else
   echo "🔄 Running benchmarks without baseline..."
   yarn benchmark \
     --output="$BASELINE_OUTPUT_DIR" \
-    --github-comment \
-    --samples=3
+    --github-comment
 fi
 
 cd "$GITHUB_WORKSPACE"

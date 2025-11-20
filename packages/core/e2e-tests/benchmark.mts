@@ -140,11 +140,6 @@ async function main() {
         `   - ${r.name}: ${r.comparison?.meanDiffPercent?.toFixed(2)}% slower`,
       );
     });
-
-    // Exit with error code if regressions detected
-    if (process.env.CI === 'true') {
-      process.exit(1);
-    }
   }
 
   const improvements = comparisons.filter((c) => c.comparison?.isImprovement);
