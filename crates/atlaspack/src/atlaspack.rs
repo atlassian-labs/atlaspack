@@ -158,6 +158,11 @@ impl Atlaspack {
 impl Atlaspack {
   pub fn build_asset_graph(&self) -> anyhow::Result<(Arc<AssetGraph>, bool)> {
     self.runtime.block_on(async move {
+      // Notify all resolver plugins that a new build is starting
+      for resolver in self.plugins.resolvers()? {
+        resolver.on_new_build();
+      }
+
       let mut request_tracker = self.request_tracker.write().await;
 
       let prev_asset_graph = request_tracker

@@ -468,12 +468,11 @@ describe('watcher', function () {
     ]);
   });
 
-  it.v2('should rebuild if a missing file is added', async function () {
+  it('should rebuild if a missing file is added', async function () {
     await outputFS.mkdirp(inputDir);
     await outputFS.writeFile(
       path.join(inputDir, '/index.js'),
       'import {other} from "./other";\nexport default other;',
-      {encoding: 'utf8'},
     );
 
     let b = bundler(path.join(inputDir, 'index.js'), {inputFS: overlayFS});
@@ -484,7 +483,6 @@ describe('watcher', function () {
     await outputFS.writeFile(
       path.join(inputDir, '/other.js'),
       'export const other = 2;',
-      {encoding: 'utf8'},
     );
 
     buildEvent = await getNextBuild(b);

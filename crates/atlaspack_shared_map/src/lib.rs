@@ -53,6 +53,12 @@ where
     map.insert(key, value);
   }
 
+  pub fn clear(&self) {
+    let map_cell = self.inner.write();
+    let mut map = map_cell;
+    map.clear();
+  }
+
   pub fn len(&self) -> usize {
     let map_cell = self.inner.read();
     let map = map_cell;
