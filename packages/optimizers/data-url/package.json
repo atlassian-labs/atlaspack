@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/optimizer-data-url",
-  "version": "2.14.38",
+  "version": "2.14.39",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,8 +16,8 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.38",
-    "@atlaspack/utils": "3.1.2",
+    "@atlaspack/plugin": "2.14.39",
+    "@atlaspack/utils": "3.2.0",
     "isbinaryfile": "^4.0.2",
     "mime": "^2.4.4"
   },
