@@ -667,13 +667,7 @@ impl TargetRequest {
     tracing::debug!("Target descriptor engines: {:?}", target_descriptor_engines);
 
     Ok(Some(Target {
-      dist_dir: self.infer_dist_dir(
-        dist,
-        package_json,
-        target_name,
-        &target_descriptor,
-        project_root,
-      )?,
+      dist_dir: self.infer_dist_dir(dist, package_json, target_name, &target_descriptor)?,
       dist_entry,
       env: Arc::new(Environment {
         context,
@@ -724,13 +718,19 @@ impl TargetRequest {
     package_json: &ConfigFile<PackageJson>,
     target_name: &str,
     target_descriptor: &TargetDescriptor,
-    project_root: &Path,
   ) -> anyhow::Result<PathBuf> {
     // Use the target_descriptor dist_dir as the highest precedence
     if let Some(dist_dir) = target_descriptor.dist_dir.as_ref() {
       // Strip the leading "./" if present
-      let dist_dir = dist_dir.strip_prefix("./").ok().unwrap_or(dist_dir);
-      return Ok(project_root.join(dist_dir));
+      let dist_dir_stripped = dist_dir.strip_prefix("./").ok().unwrap_or(dist_dir);
+
+      // Resolve relative to the package directory
+      let package_dir = package_json
+        .path
+        .parent()
+        .ok_or(anyhow::anyhow!("package.json has no parent"))?;
+
+      return Ok(package_dir.join(dist_dir_stripped));
     }
 
     if let Some(target_dist) = dist.as_ref() {
