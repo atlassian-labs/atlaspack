@@ -1,5 +1,4 @@
-use serde::Deserialize;
-use serde_json;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 use swc_core::common::Mark;
 use swc_core::common::SyntaxContext;
@@ -8,49 +7,29 @@ use swc_core::ecma::{
   visit::{VisitMut, VisitMutWith},
 };
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct SyncDynamicImportConfig {
-  entrypoint_filepath_suffix: String,
-  actual_require_paths: Vec<String>,
+  pub entrypoint_filepath_suffix: String,
+  pub actual_require_paths: Vec<String>,
 }
 
 pub struct SyncDynamicImport<'a> {
   filename: &'a Path,
   unresolved_mark: Mark,
-  config: SyncDynamicImportConfig,
-  resolve_module_path_override: Option<fn(&str) -> Option<String>>,
+  config: &'a Option<SyncDynamicImportConfig>,
 }
 
 impl<'a> SyncDynamicImport<'a> {
   pub fn new(
     filename: &'a Path,
     unresolved_mark: Mark,
-    json_string_config: Option<String>,
+    config: &'a Option<SyncDynamicImportConfig>,
   ) -> Self {
-    let config: SyncDynamicImportConfig = json_string_config
-      .as_ref()
-      .and_then(|json_str| serde_json::from_str::<SyncDynamicImportConfig>(json_str).ok())
-      .unwrap_or_else(|| {
-        if json_string_config.is_some() {
-          println!(" SyncDynamicImport: Failed to parse SyncDynamicImportConfig JSON or config shape did not match, falling back to default configuration");
-        }
-
-        SyncDynamicImportConfig {
-          entrypoint_filepath_suffix: "".into(),
-          actual_require_paths: vec![],
-        }
-      });
-
     Self {
       filename,
       unresolved_mark,
       config,
-      resolve_module_path_override: None,
     }
-  }
-
-  fn __override_resolve_module_path(&mut self, override_fn: Option<fn(&str) -> Option<String>>) {
-    self.resolve_module_path_override = override_fn;
   }
 
   fn create_require_call(&self, args: Vec<ExprOrSpread>) -> Expr {
@@ -180,29 +159,52 @@ impl<'a> SyncDynamicImport<'a> {
   fn should_convert_to_require(&self, module_path: &str) -> bool {
     self
       .config
-      .actual_require_paths
-      .iter()
-      .any(|path| module_path.contains(path))
+      .as_ref()
+      .map(|config| {
+        config
+          .actual_require_paths
+          .iter()
+          .any(|path| module_path.contains(path))
+      })
+      .unwrap_or(false)
   }
 
   fn is_entrypoint_file(&self) -> bool {
     self
       .filename
       .to_str()
-      .map(|f| f.ends_with(&self.config.entrypoint_filepath_suffix))
+      .zip(self.config.as_ref())
+      .map(|(f, config)| f.ends_with(&config.entrypoint_filepath_suffix))
       .unwrap_or(false)
   }
 
-  fn resolve_module_path(&self, import_path: &str) -> Option<String> {
-    if let Some(override_fn) = self.resolve_module_path_override {
-      override_fn(import_path)
-    } else {
-      if let Ok(resolved) = self.filename.parent()?.join(import_path).canonicalize() {
-        return resolved.to_str().map(|s| s.to_string());
+  // Simple path join function
+  // does not support resolution of inbetween back paths
+  // i.e /root/../src
+  fn resolve_module_path(&self, source: &str) -> String {
+    let mut head_path: &Path = self.filename;
+    let mut destination: &str = source;
+
+    if source.starts_with("./") {
+      destination = source.trim_start_matches("./");
+    } else if source.starts_with("../") {
+      for _i in 0..source.matches("../").count() {
+        if let Some(parent_path) = head_path.parent() {
+          head_path = parent_path;
+
+          if head_path == Path::new("/") {
+            break;
+          }
+        }
       }
 
-      return None;
+      destination = source.trim_start_matches("../");
+    } else if source.starts_with("/") {
+      head_path = Path::new("/");
+      destination = source.trim_start_matches("/");
     }
+
+    return head_path.join(Path::new(destination)).display().to_string();
   }
 }
 
@@ -235,12 +237,10 @@ impl<'a> VisitMut for SyncDynamicImport<'a> {
             }
 
             // Check if we should convert to require based on module path
-            if let Some(resolved_path) = self.resolve_module_path(&path) {
-              if self.should_convert_to_require(&resolved_path) {
-                *expr = self.create_require_call(call.args.clone());
+            if self.should_convert_to_require(&self.resolve_module_path(&path)) {
+              *expr = self.create_require_call(call.args.clone());
 
-                return;
-              }
+              return;
             }
           }
 
@@ -261,23 +261,14 @@ mod tests {
   use atlaspack_swc_runner::test_utils::{RunTestContext, RunVisitResult, run_test_visit};
   use indoc::indoc;
 
-  fn mock_resolve(file_path: &str) -> Option<String> {
-    return Some(file_path.to_string());
-  }
-
-  fn get_config() -> Option<String> {
-    Some(
-      r#"
-      {
-        "entrypoint_filepath_suffix": "entrypoint.tsx",
-        "actual_require_paths": [
-            "src/packages/router-resources",
-            "@atlaskit/tokens",
-            "platform/packages/design-system/tokens"
-        ]
-      }"#
-        .to_string(),
-    )
+  fn get_config() -> Option<SyncDynamicImportConfig> {
+    Some(SyncDynamicImportConfig {
+      entrypoint_filepath_suffix: "entrypoint.tsx".into(),
+      actual_require_paths: vec![
+        "src/packages/router-resources".into(),
+        "@atlaskit/tokens".into(),
+      ],
+    })
   }
 
   #[test]
@@ -294,9 +285,9 @@ mod tests {
       "#},
       |run_test_context: RunTestContext| {
         SyncDynamicImport::new(
-          Path::new("./index.tsx"),
+          Path::new("/repo/index.tsx"),
           run_test_context.unresolved_mark,
-          get_config(),
+          &None,
         )
       },
     );
@@ -317,30 +308,28 @@ mod tests {
 
   #[test]
   fn test_require_replacement() {
+    let config = get_config();
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
-        const module = import('src/packages/router-resources/module.tsx');
+        const module = import('./src/packages/router-resources/module.tsx');
         export function foo() {
           const moduleWithOpts = import(/* webpackChunkName: "tokens" */'@atlaskit/tokens', { with: 'json' });
           const dummy = import('./dummy');
         }
       "#},
       |run_test_context: RunTestContext| {
-        let mut transformer = SyncDynamicImport::new(
-          Path::new("./index.tsx"),
+        SyncDynamicImport::new(
+          Path::new("/repo/index.tsx"),
           run_test_context.unresolved_mark,
-          get_config(),
-        );
-
-        transformer.__override_resolve_module_path(Some(mock_resolve));
-        transformer
+          &config,
+        )
       },
     );
 
     assert_eq!(
       output_code,
       indoc! {r#"
-        const module = require('src/packages/router-resources/module.tsx');
+        const module = require('./src/packages/router-resources/module.tsx');
         export function foo() {
             const moduleWithOpts = require('@atlaskit/tokens', {
                 with: 'json'
@@ -353,6 +342,7 @@ mod tests {
 
   #[test]
   fn test_entrypoint_file() {
+    let config = get_config();
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         export const modalEntryPoint = createEntryPoint({
@@ -365,9 +355,9 @@ mod tests {
       "#},
       |run_test_context: RunTestContext| {
         SyncDynamicImport::new(
-          Path::new("./entrypoint.tsx"),
+          Path::new("/repo/entrypoint.tsx"),
           run_test_context.unresolved_mark,
-          get_config(),
+          &config,
         )
       },
     );
@@ -387,6 +377,7 @@ mod tests {
 
   #[test]
   fn test_entrypoint_file_with_chained_promise() {
+    let config = get_config();
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         export const modalEntryPoint = createEntryPoint({
@@ -399,9 +390,9 @@ mod tests {
       "#},
       |run_test_context: RunTestContext| {
         SyncDynamicImport::new(
-          Path::new("./entrypoint.tsx"),
+          Path::new("/repo/entrypoint.tsx"),
           run_test_context.unresolved_mark,
-          get_config(),
+          &config,
         )
       },
     );
@@ -417,5 +408,63 @@ mod tests {
         });
       "#}
     );
+  }
+
+  #[test]
+  fn test_resolve_current_directory_source() {
+    let instance = SyncDynamicImport::new(Path::new("/repo/index.tsx"), Mark::root(), &None);
+
+    let single_pattern_result = instance.resolve_module_path("./src/packages/index.tsx");
+    let multi_pattern_result = instance.resolve_module_path("./././src/packages/index.tsx");
+
+    assert_eq!(
+      single_pattern_result,
+      "/repo/index.tsx/src/packages/index.tsx"
+    );
+
+    assert_eq!(
+      multi_pattern_result,
+      "/repo/index.tsx/src/packages/index.tsx"
+    );
+  }
+
+  #[test]
+  fn test_resolve_back_directory_source() {
+    let instance =
+      SyncDynamicImport::new(Path::new("/repo/product/index.tsx"), Mark::root(), &None);
+
+    let single_pattern_result = instance.resolve_module_path("../src/packages/index.tsx");
+    let multi_pattern_result = instance.resolve_module_path("../../src/packages/index.tsx");
+    let back_to_root_result = instance.resolve_module_path("../../../src/packages/index.tsx");
+    let passed_root_result = instance.resolve_module_path("../../../../src/packages/index.tsx");
+
+    assert_eq!(
+      single_pattern_result,
+      "/repo/product/src/packages/index.tsx"
+    );
+    assert_eq!(multi_pattern_result, "/repo/src/packages/index.tsx");
+    assert_eq!(back_to_root_result, "/src/packages/index.tsx");
+    assert_eq!(passed_root_result, "/src/packages/index.tsx");
+  }
+
+  #[test]
+  fn test_resolve_root_source() {
+    let instance = SyncDynamicImport::new(Path::new("/repo/index.tsx"), Mark::root(), &None);
+
+    let result = instance.resolve_module_path("/src/packages/index.tsx");
+
+    assert_eq!(result, "/src/packages/index.tsx");
+  }
+
+  #[test]
+  // Update test if functionality is required
+  fn test_resolve_not_supported_source() {
+    let instance = SyncDynamicImport::new(Path::new("/repo/index.tsx"), Mark::root(), &None);
+
+    let result = instance.resolve_module_path("./src/../packages/index.tsx");
+
+    // To match Node's Path.resolve the result should be
+    // "/repo/product/index.tsx/packages/index.tsx"
+    assert_eq!(result, "/repo/index.tsx/src/../packages/index.tsx");
   }
 }

@@ -96,6 +96,7 @@ use swc_core::ecma::visit::VisitMutWith;
 use swc_core::ecma::visit::VisitWith;
 use swc_core::ecma::visit::visit_mut_pass;
 use sync_dynamic_import::SyncDynamicImport;
+use sync_dynamic_import::SyncDynamicImportConfig;
 use typeof_replacer::*;
 use utils::CodeHighlight;
 pub use utils::Diagnostic;
@@ -124,6 +125,7 @@ pub struct Config {
   pub node_replacer: bool,
   pub is_browser: bool,
   pub is_worker: bool,
+  pub is_tesseract: bool,
   pub is_type_script: bool,
   pub is_jsx: bool,
   pub add_display_name: Option<bool>,
@@ -152,7 +154,7 @@ pub struct Config {
   pub exports_rebinding_optimisation: bool,
   pub enable_global_this_aliaser: bool,
   pub enable_lazy_loading_transformer: bool,
-  pub sync_dynamic_import_config: Option<String>,
+  pub sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -428,9 +430,9 @@ pub fn transform(
                     visit_mut_pass(
                       SyncDynamicImport::new(Path::new(&config.filename),
                         unresolved_mark,
-                        config.sync_dynamic_import_config.clone(),
+                        &config.sync_dynamic_import_config,
                       )),
-                      config.sync_dynamic_import_config.is_some()),
+                      config.is_tesseract && config.sync_dynamic_import_config.is_some()),
                   Optional::new(
                     visit_mut_pass(GlobalThisAliaser::new(unresolved_mark)),
                     config.enable_global_this_aliaser && GlobalThisAliaser::should_transform(&config.filename)
