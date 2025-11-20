@@ -786,6 +786,7 @@ dependencies = [
  "regex",
  "rkyv 0.7.45",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

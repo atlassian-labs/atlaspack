@@ -204,7 +204,7 @@ fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Vers
 }
 
 pub fn transform(
-  config: Config,
+  config: &Config,
   call_macro: Option<MacroCallback>,
 ) -> Result<TransformResult, io::Error> {
   let mut result = TransformResult::default();
