@@ -302,20 +302,19 @@ export default new Transformer({
     let magicComments = false;
     let addReactDisplayName = false;
 
-    let enableBrowserApiTypeofReplacer =
-      options.env.NATIVE_TYPEOF_REPLACER === 'true';
-    let globalAliaserConfig =
-      options.env.NATIVE_GLOBAL_ALIASER &&
-      JSON.parse(options.env.NATIVE_GLOBAL_ALIASER);
-    let enableLazyLoadingTransformer =
-      options.env.NATIVE_LAZY_LOADING_TRANSFORMER === 'true';
-    let enableDeadReturnsRemover =
-      options.env.NATIVE_DEAD_RETURNS_REMOVER === 'true';
-    let enableUnusedBindingsRemover =
-      options.env.NATIVE_UNUSED_BINDINGS_REMOVER === 'true';
-    let enableStaticPreEvaluation =
-      options.env.NATIVE_PRE_EVALUATION === 'true';
-    let enableReactHooksRemover = options.env.NATIVE_HOOKS_REMOVER === 'true';
+    let enableSsrTypeofReplacement =
+      options.env.NATIVE_SSR_TYPEOF_REPLACEMENT === 'true';
+    let globalAliasingConfig =
+      options.env.NATIVE_GLOBAL_ALIASING &&
+      JSON.parse(options.env.NATIVE_GLOBAL_ALIASING);
+    let enableLazyLoading = options.env.NATIVE_LAZY_LOADING === 'true';
+    let enableReactHooksRemoval =
+      options.env.NATIVE_REACT_HOOKS_REMOVAL === 'true';
+    let enableStaticPrevaluation = options.env.NATIVE_PREVALUATION === 'true';
+    let enableDeadReturnsRemoval =
+      options.env.NATIVE_DEAD_RETURNS_REMOVAL === 'true';
+    let enableUnusedBindingsRemoval =
+      options.env.NATIVE_UNUSED_BINDINGS_REMOVAL === 'true';
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -361,13 +360,13 @@ export default new Transformer({
       decorators,
       useDefineForClassFields,
       magicComments,
-      globalAliaserConfig,
-      enableBrowserApiTypeofReplacer,
-      enableLazyLoadingTransformer,
-      enableDeadReturnsRemover,
-      enableUnusedBindingsRemover,
-      enableStaticPreEvaluation,
-      enableReactHooksRemover,
+      globalAliasingConfig,
+      enableSsrTypeofReplacement,
+      enableLazyLoading,
+      enableDeadReturnsRemoval,
+      enableUnusedBindingsRemoval,
+      enableStaticPrevaluation,
+      enableReactHooksRemoval,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -546,21 +545,17 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
-      enable_browser_api_typeof_replacer: Boolean(
-        config.enableBrowserApiTypeofReplacer,
-      ),
       is_source: asset.isSource,
-      global_aliaser_config: config.globalAliaserConfig,
-      enable_lazy_loading_transformer: Boolean(
-        config.enableLazyLoadingTransformer,
-      ),
       nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
-      enable_dead_returns_remover: Boolean(config.enableDeadReturnsRemover),
-      enable_unused_bindings_remover: Boolean(
-        config.enableUnusedBindingsRemover,
+      global_aliasing_config: config.globalAliasingConfig,
+      enable_ssr_typeof_replacement: Boolean(config.enableSsrTypeofReplacement),
+      enable_lazy_loading: Boolean(config.enableLazyLoading),
+      enable_dead_returns_removal: Boolean(config.enableDeadReturnsRemoval),
+      enable_unused_bindings_removal: Boolean(
+        config.enableUnusedBindingsRemoval,
       ),
-      enable_static_pre_evaluation: Boolean(config.enableStaticPreEvaluation),
-      enable_react_hooks_remover: Boolean(config.enableReactHooksRemover),
+      enable_static_prevaluation: Boolean(config.enableStaticPrevaluation),
+      enable_react_hooks_removal: Boolean(config.enableReactHooksRemoval),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;

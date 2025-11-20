@@ -14,7 +14,7 @@ mod lazy_loading_transformer;
 mod magic_comments;
 mod node_replacer;
 mod react_hooks_remover;
-mod static_pre_evaluator;
+mod static_prevaluator;
 pub mod test_utils;
 mod typeof_replacer;
 mod unused_bindings_remover;
@@ -58,7 +58,7 @@ use pathdiff::diff_paths;
 use react_hooks_remover::ReactHooksRemover;
 use serde::Deserialize;
 use serde::Serialize;
-use static_pre_evaluator::StaticPreEvaluator;
+use static_prevaluator::StaticPreEvaluator;
 use std::io::{self};
 use swc_core::common::FileName;
 use swc_core::common::Globals;
@@ -156,14 +156,14 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
-  pub global_aliaser_config: Option<HashMap<String, String>>,
-  pub enable_lazy_loading_transformer: bool,
   pub nested_promise_import_fix: bool,
-  pub enable_dead_returns_remover: bool,
-  pub enable_unused_bindings_remover: bool,
-  pub enable_static_pre_evaluation: bool,
-  pub enable_browser_api_typeof_replacer: bool,
-  pub enable_react_hooks_remover: bool,
+  pub global_aliasing_config: Option<HashMap<String, String>>,
+  pub enable_lazy_loading: bool,
+  pub enable_ssr_typeof_replacement: bool,
+  pub enable_react_hooks_removal: bool,
+  pub enable_static_prevaluation: bool,
+  pub enable_dead_returns_removal: bool,
+  pub enable_unused_bindings_removal: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -418,9 +418,9 @@ pub fn transform(
 
               let mut module = {
                 let mut passes = (
-                  // TODO: Only run the `undefined` replacements if browser API typeof replacer is enabled (should rename flag too)
                   Optional::new(
-                    visit_mut_pass(TypeofReplacer::new(unresolved_mark)),
+                    visit_mut_pass(
+                      if config.enable_ssr_typeof_replacement { TypeofReplacer::new_ssr(unresolved_mark) } else { TypeofReplacer::new(unresolved_mark) }),
                     config.source_type != SourceType::Script,
                   ),
                   // Inline process.env and process.browser,
@@ -437,22 +437,22 @@ pub fn transform(
                     config.source_type != SourceType::Script
                   ),
                   Optional::new(
-                    visit_mut_pass(GlobalAliaser::with_config(unresolved_mark, &config.global_aliaser_config)),
-                    config.global_aliaser_config.is_some()
+                    visit_mut_pass(GlobalAliaser::with_config(unresolved_mark, &config.global_aliasing_config)),
+                    config.global_aliasing_config.is_some()
                   ),
                   Optional::new(
                     visit_mut_pass(LazyLoadingTransformer::new(unresolved_mark)),
-                    config.enable_lazy_loading_transformer && LazyLoadingTransformer::should_transform(code)
+                    config.enable_lazy_loading && LazyLoadingTransformer::should_transform(code)
                   ),
                   Optional::new(
                     visit_mut_pass(ReactHooksRemover::new(unresolved_mark)),
-                    config.enable_react_hooks_remover
+                    config.enable_react_hooks_removal
                   ),
                   paren_remover(Some(&comments)),
                   // Pre-evaluate static expressions at compile time
                   Optional::new(
                     visit_mut_pass(StaticPreEvaluator),
-                    config.enable_static_pre_evaluation
+                    config.enable_static_prevaluation
                   ),
                   // Simplify expressions and remove dead branches so that we
                   // don't include dependencies inside conditionals that are always false.
@@ -461,12 +461,12 @@ pub fn transform(
                   // Remove unreachable statements after return statements
                   Optional::new(
                     visit_mut_pass(DeadReturnsRemover::new()),
-                    config.enable_dead_returns_remover
+                    config.enable_dead_returns_removal
                   ),
                   // Remove unused variable bindings
                   Optional::new(
                     visit_mut_pass(UnusedBindingsRemover::new()),
-                    config.enable_unused_bindings_remover
+                    config.enable_unused_bindings_removal
                   ),
                   // Inline Node fs.readFileSync calls
                   Optional::new(

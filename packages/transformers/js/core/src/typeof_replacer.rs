@@ -39,9 +39,6 @@ impl Default for TypeofReplacer {
         ("require".into(), "function".into()),
         ("module".into(), "object".into()),
         ("exports".into(), "object".into()),
-        ("window".into(), "undefined".into()),
-        ("document".into(), "undefined".into()),
-        ("navigator".into(), "undefined".into()),
       ]),
     }
   }
@@ -52,6 +49,20 @@ impl TypeofReplacer {
     Self {
       unresolved_mark,
       ..Default::default()
+    }
+  }
+
+  pub fn new_ssr(unresolved_mark: Mark) -> Self {
+    Self {
+      unresolved_mark,
+      replacements: HashMap::from([
+        ("require".into(), "function".into()),
+        ("module".into(), "object".into()),
+        ("exports".into(), "object".into()),
+        ("window".into(), "undefined".into()),
+        ("document".into(), "undefined".into()),
+        ("navigator".into(), "undefined".into()),
+      ]),
     }
   }
 }
