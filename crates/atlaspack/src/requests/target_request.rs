@@ -381,7 +381,20 @@ impl TargetRequest {
     }
 
     for builtin_target in builtin_targets {
-      if builtin_target.dist.is_none() {
+      // Builtin targets are processed if either:
+      // 1. They have a top-level field (e.g., "main": "dist/main.js"), OR
+      // 2. They're defined in the targets object (e.g., "targets": {"main": {...}})
+      let has_top_level_field = builtin_target.dist.is_some();
+
+      let is_defined_in_targets = match builtin_target.name {
+        "browser" => config.contents.targets.browser.is_some(),
+        "main" => config.contents.targets.main.is_some(),
+        "module" => config.contents.targets.module.is_some(),
+        "types" => config.contents.targets.types.is_some(),
+        _ => false,
+      };
+
+      if !(has_top_level_field || is_defined_in_targets) {
         continue;
       }
 
