@@ -133,6 +133,81 @@ describe('Entry Points', function () {
       await assertBundleOutput(b, 'alt', 'alt entry');
     });
 
+    it('should bundle correct sources for each target when given directory entry point', async () => {
+      const testDir = path.join(dir, 'monorepo');
+      await overlayFS.mkdirp(testDir);
+
+      await fsFixture(overlayFS, testDir)`
+        yarn.lock:
+
+        package.json:
+          {
+            "name": "monorepo-root"
+          }
+
+        packages/my-app
+          package.json:
+            {
+              "name": "my-app",
+              "main": "index.jsx",
+              "targets": {
+                "main": false,
+                "development": {
+                  "source": [
+                    "one.js",
+                    "two.js"
+                  ]
+                },
+                "production": {
+                  "source": [
+                    "one.js",
+                    "two.js",
+                    "three.js",
+                    "four.js"
+                  ]
+                }
+              }
+            }
+
+          one.js:
+            export default 'source one';
+          two.js:
+            export default 'source two';
+          three.js:
+            export default 'source three';
+          four.js:
+            export default 'source four';
+      `;
+
+      // Build production target
+      let prodTargetBundleGraph = await bundle(
+        path.join(testDir, 'packages/my-app'),
+        {
+          inputFS: overlayFS,
+          targets: ['production'],
+        },
+      );
+
+      assert.equal(prodTargetBundleGraph.getBundles().length, 4);
+      await assertBundleOutput(prodTargetBundleGraph, 'one', 'source one');
+      await assertBundleOutput(prodTargetBundleGraph, 'two', 'source two');
+      await assertBundleOutput(prodTargetBundleGraph, 'three', 'source three');
+      await assertBundleOutput(prodTargetBundleGraph, 'four', 'source four');
+
+      // Build development target
+      let devTargetBundleGraph = await bundle(
+        path.join(testDir, 'packages/my-app'),
+        {
+          inputFS: overlayFS,
+          targets: ['development'],
+        },
+      );
+
+      assert.equal(devTargetBundleGraph.getBundles().length, 2);
+      await assertBundleOutput(devTargetBundleGraph, 'one', 'source one');
+      await assertBundleOutput(devTargetBundleGraph, 'two', 'source two');
+    });
+
     it('should prefer targets over source when both are present', async () => {
       await fsFixture(overlayFS, dir)`
         test-package
