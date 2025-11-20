@@ -38,7 +38,7 @@
     "@atlaspack/types": "2.15.28",
     "@atlaspack/utils": "3.1.2",
     "@atlaspack/workers": "2.14.38",
-    "@parcel/source-map": "^2.1.1",
+    "@atlaspack/source-map": "3.0.0",
     "base-x": "^3.0.8",
     "browserslist": "^4.6.6",
     "clone": "^2.1.1",

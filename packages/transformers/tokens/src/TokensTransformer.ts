@@ -3,7 +3,7 @@ import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Transformer} from '@atlaspack/plugin';
 import {applyTokensPlugin, TokensPluginResult} from '@atlaspack/rust';
 import {validateSchema} from '@atlaspack/utils';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import path from 'path';
 
 type AtlaskitTokensConfigPartial = {
@@ -112,7 +112,6 @@ export default new Transformer({
       let map = new SourceMap(options.projectRoot);
       map.addVLQMap(JSON.parse(result.map));
       if (originalMap) {
-        // @ts-expect-error TS2345 - the types are wrong, `extends` accepts a `SourceMap` or a `Buffer`
         map.extends(originalMap);
       }
       asset.setMap(map);

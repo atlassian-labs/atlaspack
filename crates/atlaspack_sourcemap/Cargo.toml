@@ -10,7 +10,7 @@ workspace = true
 
 [dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
-parcel_sourcemap = { workspace = true, features = ["json"] }
+parcel_sourcemap = { path = "../parcel_sourcemap", features = ["json"] }
 regex = { workspace = true }
 rkyv = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

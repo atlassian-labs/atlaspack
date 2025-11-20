@@ -1,7 +1,7 @@
 import type {MutableAsset, SourceLocation} from '@atlaspack/types';
 
 import path from 'path';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {Transformer} from '@atlaspack/plugin';
 import {
   remapSourceLocation,

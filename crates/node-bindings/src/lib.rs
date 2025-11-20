@@ -24,6 +24,7 @@ pub mod lmdb;
 mod optimizers;
 mod plugin_compiled_css_in_js;
 mod resolver;
+mod sourcemap;
 mod string_ops;
 mod transformer;
 pub mod vcs;

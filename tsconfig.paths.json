@@ -375,6 +375,9 @@
     },
     {
       "path": "./packages/transformers/typescript-tsc/tsconfig.json"
+    },
+    {
+      "path": "./packages/core/source-map/tsconfig.json"
     }
   ]
 }

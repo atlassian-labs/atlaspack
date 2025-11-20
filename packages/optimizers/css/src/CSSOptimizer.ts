@@ -1,4 +1,4 @@
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {Optimizer} from '@atlaspack/plugin';
 import init, {
   transform,
@@ -174,7 +174,6 @@ Atlaspack\'s default CSS minifer changed from cssnano to lightningcss, but a "cs
       map = new SourceMap(options.projectRoot);
       map.addVLQMap(vlqMap);
       if (prevMap) {
-        // @ts-expect-error TS2345
         map.extends(prevMap);
       }
     }

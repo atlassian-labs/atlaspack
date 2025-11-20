@@ -1,7 +1,7 @@
 import {Optimizer} from '@atlaspack/plugin';
 import {runInlineRequiresOptimizerAsync} from '@atlaspack/rust';
 import nullthrows from 'nullthrows';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 
 // @ts-expect-error TS7034
 let assetPublicIdsWithSideEffects = null;
@@ -70,7 +70,6 @@ module.exports = new Optimizer<never, BundleConfig>({
         sourceMap = new SourceMap(options.projectRoot);
         sourceMap.addVLQMap(JSON.parse(sourceMapResult));
         if (originalMap) {
-          // @ts-expect-error TS2345
           sourceMap.extends(originalMap);
         }
       }
