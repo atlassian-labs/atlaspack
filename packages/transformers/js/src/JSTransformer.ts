@@ -301,24 +301,21 @@ export default new Transformer({
     let inlineConstants = false;
     let magicComments = false;
     let addReactDisplayName = false;
-    let enableBrowserApiTypeofReplacer = Boolean(
-      options.env.NATIVE_TYPEOF_REPLACER,
-    );
 
+    let enableBrowserApiTypeofReplacer =
+      options.env.NATIVE_TYPEOF_REPLACER === 'true';
     let globalAliaserConfig =
       options.env.NATIVE_GLOBAL_ALIASER &&
       JSON.parse(options.env.NATIVE_GLOBAL_ALIASER);
-    let enableLazyLoadingTransformer = Boolean(
-      options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
-    );
-    let enableDeadReturnsRemover = Boolean(
-      options.env.NATIVE_DEAD_RETURNS_REMOVER,
-    );
-    let enableUnusedBindingsRemover = Boolean(
-      options.env.NATIVE_UNUSED_BINDINGS_REMOVER,
-    );
-    let enableStaticPreEvaluation = Boolean(options.env.NATIVE_PRE_EVALUATION);
-    let enableReactHooksRemover = Boolean(options.env.NATIVE_HOOKS_REMOVER);
+    let enableLazyLoadingTransformer =
+      options.env.NATIVE_LAZY_LOADING_TRANSFORMER === 'true';
+    let enableDeadReturnsRemover =
+      options.env.NATIVE_DEAD_RETURNS_REMOVER === 'true';
+    let enableUnusedBindingsRemover =
+      options.env.NATIVE_UNUSED_BINDINGS_REMOVER === 'true';
+    let enableStaticPreEvaluation =
+      options.env.NATIVE_PRE_EVALUATION === 'true';
+    let enableReactHooksRemover = options.env.NATIVE_HOOKS_REMOVER === 'true';
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
