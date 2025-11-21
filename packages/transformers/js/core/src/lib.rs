@@ -13,6 +13,7 @@ mod hoist;
 mod lazy_loading_transformer;
 mod magic_comments;
 mod node_replacer;
+mod react_async_import_lift;
 mod react_hooks_remover;
 mod static_prevaluator;
 pub mod test_utils;
@@ -55,6 +56,7 @@ use magic_comments::MagicCommentsVisitor;
 use node_replacer::NodeReplacer;
 use path_slash::PathExt;
 use pathdiff::diff_paths;
+use react_async_import_lift::ReactAsyncImportLift;
 use react_hooks_remover::ReactHooksRemover;
 use serde::Deserialize;
 use serde::Serialize;
@@ -161,6 +163,9 @@ pub struct Config {
   pub enable_lazy_loading: bool,
   pub enable_ssr_typeof_replacement: bool,
   pub enable_react_hooks_removal: bool,
+  pub enable_react_async_import_lift: bool,
+  pub react_async_lift_by_default: bool,
+  pub react_async_lift_report_level: String,
   pub enable_static_prevaluation: bool,
   pub enable_dead_returns_removal: bool,
   pub enable_unused_bindings_removal: bool,
@@ -439,6 +444,10 @@ pub fn transform(
                   Optional::new(
                     visit_mut_pass(GlobalAliaser::with_config(unresolved_mark, &config.global_aliasing_config)),
                     config.global_aliasing_config.is_some()
+                  ),
+                  Optional::new(
+                    visit_mut_pass(ReactAsyncImportLift::new(unresolved_mark, config.react_async_lift_by_default, config.react_async_lift_report_level.clone())),
+                    config.enable_react_async_import_lift && ReactAsyncImportLift::should_transform(code)
                   ),
                   Optional::new(
                     visit_mut_pass(LazyLoadingTransformer::new(unresolved_mark)),

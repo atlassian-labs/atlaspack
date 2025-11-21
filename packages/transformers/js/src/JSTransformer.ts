@@ -310,6 +310,12 @@ export default new Transformer({
     let enableLazyLoading = options.env.NATIVE_LAZY_LOADING === 'true';
     let enableReactHooksRemoval =
       options.env.NATIVE_REACT_HOOKS_REMOVAL === 'true';
+    let enableReactAsyncImportLift =
+      options.env.NATIVE_REACT_ASYNC_IMPORT_LIFT === 'true';
+    let reactAsyncLiftByDefault =
+      options.env.REACT_ASYNC_IMPORT_LIFTING_BY_DEFAULT === 'true';
+    let reactAsyncLiftReportLevel =
+      options.env.REACT_ASYNC_LIFT_REPORT_LEVEL || 'none';
     let enableStaticPrevaluation = options.env.NATIVE_PREVALUATION === 'true';
     let enableDeadReturnsRemoval =
       options.env.NATIVE_DEAD_RETURNS_REMOVAL === 'true';
@@ -367,6 +373,9 @@ export default new Transformer({
       enableUnusedBindingsRemoval,
       enableStaticPrevaluation,
       enableReactHooksRemoval,
+      enableReactAsyncImportLift,
+      reactAsyncLiftByDefault,
+      reactAsyncLiftReportLevel,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -556,6 +565,11 @@ export default new Transformer({
       ),
       enable_static_prevaluation: Boolean(config.enableStaticPrevaluation),
       enable_react_hooks_removal: Boolean(config.enableReactHooksRemoval),
+      enable_react_async_import_lift: Boolean(
+        config.enableReactAsyncImportLift,
+      ),
+      react_async_lift_by_default: Boolean(config.reactAsyncLiftByDefault),
+      react_async_lift_report_level: String(config.reactAsyncLiftReportLevel),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
