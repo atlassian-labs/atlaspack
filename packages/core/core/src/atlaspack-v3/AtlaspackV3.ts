@@ -11,6 +11,8 @@ import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Event} from '@parcel/watcher';
 import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
 
+type NapiResultPromise = Promise<[any, any]>;
+
 export type AtlaspackV3Options = {
   fs?: AtlaspackNapiOptions['fs'];
   packageManager?: AtlaspackNapiOptions['packageManager'];
@@ -91,19 +93,18 @@ export class AtlaspackV3 {
     }
   }
 
-  async buildAssetGraph(): Promise<any> {
-    // @ts-expect-error TS2488
-    let [graph, error] = await atlaspackNapiBuildAssetGraph(
-      this._atlaspack_napi,
-    );
+  buildAssetGraph(): Promise<any> {
+    return (
+      atlaspackNapiBuildAssetGraph(this._atlaspack_napi) as NapiResultPromise
+    ).then(([res, err]) => {
+      if (err !== null) {
+        throw new ThrowableDiagnostic({
+          diagnostic: err,
+        });
+      }
 
-    if (error !== null) {
-      throw new ThrowableDiagnostic({
-        diagnostic: error,
-      });
-    }
-
-    return graph;
+      return res;
+    });
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {

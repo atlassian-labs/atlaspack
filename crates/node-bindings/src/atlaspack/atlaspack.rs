@@ -124,6 +124,13 @@ pub fn atlaspack_napi_build_asset_graph(
   atlaspack_napi: AtlaspackNapi,
 ) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;
+  let (second_deferred, second_promise) = env.create_deferred()?;
+
+  let mut js_result = env.create_object()?;
+  js_result.set_named_property("assetGraphPromise", promise)?;
+  js_result.set_named_property("commitPromise", second_promise)?;
+
+  println!("Spawning atlaspack_napi_build_asset_graph thread");
 
   thread::spawn({
     let atlaspack = atlaspack_napi.clone();
@@ -135,10 +142,18 @@ pub fn atlaspack_napi_build_asset_graph(
       // Errors are returned as a resolved value because they need to be serialized and are
       // not supplied as JavaScript Error types. The JavaScript layer needs to handle conversions
       deferred.resolve(move |env| match result {
-        Ok((asset_graph, had_previous_graph)) => NapiAtlaspackResult::ok(
-          &env,
-          serialize_asset_graph(&env, &asset_graph, had_previous_graph)?,
-        ),
+        Ok((asset_graph, had_previous_graph)) => {
+          let serialize_result = serialize_asset_graph(&env, &asset_graph, had_previous_graph)?;
+          println!("Resolved asset graph serialization");
+          thread::spawn(move || {
+            second_deferred.resolve(|env| {
+              println!("Committing asset graph to LMDB");
+              NapiAtlaspackResult::ok(&env, 45)
+            })
+          });
+
+          NapiAtlaspackResult::ok(&env, serialize_result)
+        }
         Err(error) => {
           let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
           NapiAtlaspackResult::error(&env, js_object)
@@ -147,7 +162,7 @@ pub fn atlaspack_napi_build_asset_graph(
     }
   });
 
-  Ok(promise)
+  Ok(js_result)
 }
 
 #[tracing::instrument(level = "debug", skip_all)]

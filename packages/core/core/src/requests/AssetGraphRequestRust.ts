@@ -53,8 +53,20 @@ export function createAssetGraphRequestRust(
     id: input.name,
     run: async (input) => {
       let options = input.options;
-      let serializedAssetGraph =
-        (await rustAtlaspack.buildAssetGraph()) as SerializedAssetGraphDelta;
+      let {assetGraphPromise, commitPromise} =
+        await rustAtlaspack.buildAssetGraph();
+
+      let [serializedAssetGraph, assetGraphError] =
+        (await assetGraphPromise) as [SerializedAssetGraphDelta, Error | null];
+
+      if (assetGraphError) {
+        throw new ThrowableDiagnostic({
+          diagnostic: {
+            message:
+              'Error building asset graph in Rust: ' + assetGraphError.message,
+          },
+        });
+      }
 
       // Newly created nodes
       serializedAssetGraph.nodes = serializedAssetGraph.nodes.map((node) =>
@@ -105,6 +117,17 @@ export function createAssetGraphRequestRust(
         changedAssetsPropagation,
         previousSymbolPropagationErrors: undefined,
       };
+
+      let [_commitResult, commitError] = await commitPromise;
+
+      if (commitError) {
+        throw new ThrowableDiagnostic({
+          diagnostic: {
+            message:
+              'Error committing asset graph in Rust: ' + commitError.message,
+          },
+        });
+      }
 
       await input.api.storeResult(result);
       input.api.invalidateOnBuild();
