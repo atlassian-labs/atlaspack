@@ -368,7 +368,6 @@ impl TargetRequest {
               &config,
               descriptor.clone(),
               name,
-              &request_context.project_root,
               allow_explicit_target_entries,
               all_targets_have_sources,
             )?);
@@ -406,7 +405,6 @@ impl TargetRequest {
             &config,
             builtin_target_descriptor,
             builtin_target.name,
-            &request_context.project_root,
             allow_explicit_target_entries,
             false, // builtin targets don't participate in the all_targets_have_sources logic
           )?);
@@ -448,7 +446,6 @@ impl TargetRequest {
         &config,
         custom_target.descriptor.clone(),
         custom_target.name,
-        &request_context.project_root,
         allow_explicit_target_entries,
         false, // package.json custom targets don't participate in the all_targets_have_sources logic
       )?);
@@ -508,11 +505,7 @@ impl TargetRequest {
     Ok(targets)
   }
 
-  fn entry_matches_target_source(
-    &self,
-    target_source: &Option<SourceField>,
-    project_root: &Path,
-  ) -> bool {
+  fn entry_matches_target_source(&self, target_source: &Option<SourceField>) -> bool {
     let Some(source) = target_source else {
       return false;
     };
@@ -528,8 +521,7 @@ impl TargetRequest {
     // Check if current entry matches any of the target sources
     sources.iter().any(|source_str| {
       // Resolve the target source path relative to the package directory (where package.json is)
-      // The package directory is the parent of the current entry path
-      let package_dir = current_entry_path.parent().unwrap_or(project_root);
+      let package_dir = self.entry.package_path.clone();
       let source_path = package_dir.join(source_str);
       let target_source_path = source_path
         .canonicalize()
@@ -591,7 +583,6 @@ impl TargetRequest {
     package_json: &ConfigFile<PackageJson>,
     target_descriptor: TargetDescriptor,
     target_name: &str,
-    project_root: &Path,
     allow_explicit_target_entries: bool,
     all_targets_have_sources: bool,
   ) -> Result<Option<Target>, anyhow::Error> {
@@ -608,7 +599,7 @@ impl TargetRequest {
     if allow_explicit_target_entries
       && all_targets_have_sources
       && target_descriptor.source.is_some()
-      && !self.entry_matches_target_source(&target_descriptor.source, project_root)
+      && !self.entry_matches_target_source(&target_descriptor.source)
     {
       return Ok(None);
     }
@@ -732,25 +723,18 @@ impl TargetRequest {
     target_name: &str,
     target_descriptor: &TargetDescriptor,
   ) -> anyhow::Result<PathBuf> {
+    // Resolve relative to the package directory
+    let package_dir = self.entry.package_path.clone();
+
     // Use the target_descriptor dist_dir as the highest precedence
     if let Some(dist_dir) = target_descriptor.dist_dir.as_ref() {
       // Strip the leading "./" if present
       let dist_dir_stripped = dist_dir.strip_prefix("./").ok().unwrap_or(dist_dir);
 
-      // Resolve relative to the package directory
-      let package_dir = package_json
-        .path
-        .parent()
-        .ok_or(anyhow::anyhow!("package.json has no parent"))?;
-
       return Ok(package_dir.join(dist_dir_stripped));
     }
 
     if let Some(target_dist) = dist.as_ref() {
-      let package_dir = package_json
-        .path
-        .parent()
-        .ok_or(anyhow::anyhow!("package.json has no parent"))?;
       let dir = target_dist
         .parent()
         // Strip the leading "./" if present
@@ -764,7 +748,7 @@ impl TargetRequest {
         });
 
       return Ok(match dir {
-        None => PathBuf::from(package_dir),
+        None => package_dir.clone(),
         Some(dir) => package_dir.join(dir),
       });
     }
@@ -914,7 +898,7 @@ mod tests {
     );
 
     if let Some(browserslistrc) = browserslistrc {
-      fs.write_file(&project_root.join(".browserslistrc"), browserslistrc);
+      fs.write_file(&package_dir.join(".browserslistrc"), browserslistrc);
     }
 
     // Create the entry file path based on the first entry in options or use default
