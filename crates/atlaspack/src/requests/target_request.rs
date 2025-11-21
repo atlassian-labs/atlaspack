@@ -41,7 +41,7 @@ use crate::request_tracker::RunRequestError;
 use super::RequestResult;
 use super::entry_request::Entry;
 
-mod package_json;
+pub mod package_json;
 
 /// Infers how and where source code is outputted
 ///
@@ -61,6 +61,7 @@ pub struct TargetRequestOutput {
   pub targets: Vec<Target>,
 }
 
+#[derive(Debug)]
 struct BuiltInTarget<'a> {
   descriptor: BuiltInTargetDescriptor,
   dist: Option<PathBuf>,
@@ -239,8 +240,15 @@ impl TargetRequest {
     &self,
     request_context: &RunRequestContext,
   ) -> Result<ConfigFile<PackageJson>, anyhow::Error> {
+    // Read the config from the path of the package given by the entry
+    let config_loader = atlaspack_core::config_loader::ConfigLoader {
+      fs: request_context.file_system().clone(),
+      project_root: request_context.project_root.clone(),
+      search_path: self.entry.package_path.clone(),
+    };
+
     // TODO Invalidations
-    let mut config = match request_context.config().load_package_json::<PackageJson>() {
+    let mut config = match config_loader.load_package_json::<PackageJson>() {
       Err(err) => {
         let diagnostic = err.downcast_ref::<Diagnostic>();
 
@@ -273,7 +281,7 @@ impl TargetRequest {
 
     let browsers = match config.contents.browserslist.clone() {
       None => {
-        let browserslistrc_path = &request_context.project_root.join(".browserslistrc");
+        let browserslistrc_path = self.entry.package_path.join(".browserslistrc");
 
         // Loading .browserslistrc
         if request_context
@@ -282,7 +290,7 @@ impl TargetRequest {
         {
           let browserslistrc = request_context
             .file_system()
-            .read_to_string(browserslistrc_path)?;
+            .read_to_string(browserslistrc_path.as_path())?;
 
           Some(EnginesBrowsers::from_browserslistrc(&browserslistrc)?)
         } else {
@@ -360,7 +368,6 @@ impl TargetRequest {
               &config,
               descriptor.clone(),
               name,
-              &request_context.project_root,
               allow_explicit_target_entries,
               all_targets_have_sources,
             )?);
@@ -373,7 +380,20 @@ impl TargetRequest {
     }
 
     for builtin_target in builtin_targets {
-      if builtin_target.dist.is_none() {
+      // Builtin targets are processed if either:
+      // 1. They have a top-level field (e.g., "main": "dist/main.js"), OR
+      // 2. They're defined in the targets object (e.g., "targets": {"main": {...}})
+      let has_top_level_field = builtin_target.dist.is_some();
+
+      let is_defined_in_targets = match builtin_target.name {
+        "browser" => config.contents.targets.browser.is_some(),
+        "main" => config.contents.targets.main.is_some(),
+        "module" => config.contents.targets.module.is_some(),
+        "types" => config.contents.targets.types.is_some(),
+        _ => false,
+      };
+
+      if !(has_top_level_field || is_defined_in_targets) {
         continue;
       }
 
@@ -385,7 +405,6 @@ impl TargetRequest {
             &config,
             builtin_target_descriptor,
             builtin_target.name,
-            &request_context.project_root,
             allow_explicit_target_entries,
             false, // builtin targets don't participate in the all_targets_have_sources logic
           )?);
@@ -427,7 +446,6 @@ impl TargetRequest {
         &config,
         custom_target.descriptor.clone(),
         custom_target.name,
-        &request_context.project_root,
         allow_explicit_target_entries,
         false, // package.json custom targets don't participate in the all_targets_have_sources logic
       )?);
@@ -487,11 +505,7 @@ impl TargetRequest {
     Ok(targets)
   }
 
-  fn entry_matches_target_source(
-    &self,
-    target_source: &Option<SourceField>,
-    project_root: &Path,
-  ) -> bool {
+  fn entry_matches_target_source(&self, target_source: &Option<SourceField>) -> bool {
     let Some(source) = target_source else {
       return false;
     };
@@ -507,8 +521,7 @@ impl TargetRequest {
     // Check if current entry matches any of the target sources
     sources.iter().any(|source_str| {
       // Resolve the target source path relative to the package directory (where package.json is)
-      // The package directory is the parent of the current entry path
-      let package_dir = current_entry_path.parent().unwrap_or(project_root);
+      let package_dir = self.entry.package_path.clone();
       let source_path = package_dir.join(source_str);
       let target_source_path = source_path
         .canonicalize()
@@ -570,7 +583,6 @@ impl TargetRequest {
     package_json: &ConfigFile<PackageJson>,
     target_descriptor: TargetDescriptor,
     target_name: &str,
-    project_root: &Path,
     allow_explicit_target_entries: bool,
     all_targets_have_sources: bool,
   ) -> Result<Option<Target>, anyhow::Error> {
@@ -587,7 +599,7 @@ impl TargetRequest {
     if allow_explicit_target_entries
       && all_targets_have_sources
       && target_descriptor.source.is_some()
-      && !self.entry_matches_target_source(&target_descriptor.source, project_root)
+      && !self.entry_matches_target_source(&target_descriptor.source)
     {
       return Ok(None);
     }
@@ -659,13 +671,7 @@ impl TargetRequest {
     tracing::debug!("Target descriptor engines: {:?}", target_descriptor_engines);
 
     Ok(Some(Target {
-      dist_dir: self.infer_dist_dir(
-        dist,
-        package_json,
-        target_name,
-        &target_descriptor,
-        project_root,
-      )?,
+      dist_dir: self.infer_dist_dir(dist, package_json, target_name, &target_descriptor)?,
       dist_entry,
       env: Arc::new(Environment {
         context,
@@ -716,20 +722,19 @@ impl TargetRequest {
     package_json: &ConfigFile<PackageJson>,
     target_name: &str,
     target_descriptor: &TargetDescriptor,
-    project_root: &Path,
   ) -> anyhow::Result<PathBuf> {
+    // Resolve relative to the package directory
+    let package_dir = self.entry.package_path.clone();
+
     // Use the target_descriptor dist_dir as the highest precedence
     if let Some(dist_dir) = target_descriptor.dist_dir.as_ref() {
       // Strip the leading "./" if present
-      let dist_dir = dist_dir.strip_prefix("./").ok().unwrap_or(dist_dir);
-      return Ok(project_root.join(dist_dir));
+      let dist_dir_stripped = dist_dir.strip_prefix("./").ok().unwrap_or(dist_dir);
+
+      return Ok(package_dir.join(dist_dir_stripped));
     }
 
     if let Some(target_dist) = dist.as_ref() {
-      let package_dir = package_json
-        .path
-        .parent()
-        .ok_or(anyhow::anyhow!("package.json has no parent"))?;
       let dir = target_dist
         .parent()
         // Strip the leading "./" if present
@@ -743,7 +748,7 @@ impl TargetRequest {
         });
 
       return Ok(match dir {
-        None => PathBuf::from(package_dir),
+        None => package_dir.clone(),
         Some(dir) => package_dir.join(dir),
       });
     }
@@ -893,7 +898,7 @@ mod tests {
     );
 
     if let Some(browserslistrc) = browserslistrc {
-      fs.write_file(&project_root.join(".browserslistrc"), browserslistrc);
+      fs.write_file(&package_dir.join(".browserslistrc"), browserslistrc);
     }
 
     // Create the entry file path based on the first entry in options or use default
@@ -913,7 +918,7 @@ mod tests {
       default_target_options: DefaultTargetOptions::default(),
       entry: Entry {
         file_path: entry_path,
-        package_path: project_root.clone(),
+        package_path: project_root.join(&package_dir),
         target: None,
       },
       env: None,
@@ -1633,7 +1638,7 @@ mod tests {
       TargetRequestOutput {
         entry: PathBuf::default(),
         targets: vec![Target {
-          dist_dir: PathBuf::from("some-other-dist"),
+          dist_dir: package_dir().join("some-other-dist"),
           dist_entry: None,
           env: Arc::new(Environment {
             context: EnvironmentContext::Browser,
@@ -2072,5 +2077,92 @@ mod tests {
     } else {
       panic!("Expected successful target resolution");
     }
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_loads_package_json_from_correct_directory_in_monorepo() {
+    // This test validates that TargetRequest loads package.json from the correct
+    // directory when multiple package.json files exist (monorepo scenario).
+    //
+    // Setup:
+    // - Root package.json
+    // - Nested package.json at packages/test/ with custom "nested-target"
+    //
+    // Expected: Should load targets from packages/test/package.json, not root
+    let fs = InMemoryFileSystem::default();
+    let project_root = PathBuf::default();
+    let package_dir = package_dir();
+
+    fs.write_file(
+      &project_root.join("package.json"),
+      String::from(
+        r#"{
+        "name": "root-package",
+        "targets": {
+          "root-target": {}
+        }
+      }"#,
+      ),
+    );
+
+    fs.write_file(
+      &project_root.join(&package_dir).join("package.json"),
+      String::from(
+        r#"{
+        "name": "nested-package",
+        "targets": {
+          "nested-target": {}
+        }
+      }"#,
+      ),
+    );
+
+    let entry_path = project_root.join(&package_dir).join("index.js");
+
+    let request = TargetRequest {
+      default_target_options: DefaultTargetOptions::default(),
+      entry: Entry {
+        file_path: entry_path,
+        package_path: project_root.join(&package_dir), // Points to nested package
+        target: None,
+      },
+      env: None,
+      mode: BuildMode::Development,
+    };
+
+    let result = request_tracker(RequestTrackerTestOptions {
+      search_path: project_root.join(&package_dir),
+      project_root,
+      fs: Arc::new(fs),
+      atlaspack_options: AtlaspackOptions::default(),
+      ..Default::default()
+    })
+    .run_request(request)
+    .await;
+
+    assert_target_result(
+      result,
+      TargetRequestOutput {
+        entry: package_dir.join("index.js"),
+        targets: vec![Target {
+          dist_dir: package_dir.join("dist/nested-target"),
+          dist_entry: None,
+          env: Arc::new(Environment {
+            context: EnvironmentContext::Browser,
+            engines: Engines {
+              browsers: Some(EnginesBrowsers::default()),
+              ..Engines::default()
+            },
+            is_library: false,
+            output_format: OutputFormat::Global,
+            should_optimize: true,
+            should_scope_hoist: false,
+            ..Environment::default()
+          }),
+          name: String::from("nested-target"), // Should be "nested-target", NOT "root-target"
+          ..Target::default()
+        }],
+      },
+    );
   }
 }

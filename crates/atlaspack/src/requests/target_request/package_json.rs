@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::ffi::OsStr;
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
@@ -78,7 +78,7 @@ pub struct PackageJson {
   pub targets: TargetsField,
 
   #[serde(flatten)]
-  pub fields: HashMap<String, serde_json::Value>,
+  pub fields: BTreeMap<String, serde_json::Value>,
 }
 
 fn browser_field<'de, D>(deserializer: D) -> Result<Option<BrowserField>, D::Error>
@@ -124,7 +124,7 @@ pub struct TargetsField {
 
   #[serde(flatten)]
   #[serde(deserialize_with = "custom_targets")]
-  pub custom_targets: HashMap<String, TargetDescriptor>,
+  pub custom_targets: BTreeMap<String, TargetDescriptor>,
 }
 
 fn browser_target<'de, D>(deserializer: D) -> Result<Option<BuiltInTargetDescriptor>, D::Error>
@@ -134,12 +134,12 @@ where
   parse_builtin_target(deserializer, "browser")
 }
 
-fn custom_targets<'de, D>(deserializer: D) -> Result<HashMap<String, TargetDescriptor>, D::Error>
+fn custom_targets<'de, D>(deserializer: D) -> Result<BTreeMap<String, TargetDescriptor>, D::Error>
 where
   D: Deserializer<'de>,
 {
   // TODO Consider refactoring to a visitor for better performance
-  let targets: HashMap<String, TargetDescriptor> = HashMap::deserialize(deserializer)?;
+  let targets: BTreeMap<String, TargetDescriptor> = BTreeMap::deserialize(deserializer)?;
 
   for (target, target_descriptor) in targets.iter() {
     validate_scope_hoisting::<D>(target, target_descriptor)?;
@@ -152,7 +152,7 @@ fn main_field<'de, D>(deserializer: D) -> Result<Option<PathBuf>, D::Error>
 where
   D: Deserializer<'de>,
 {
-  parse_builtin_dist(deserializer, "main", vec!["cjs", "mjs", "js"])
+  parse_builtin_dist(deserializer, "main", vec!["cjs", "mjs", "js", "jsx"])
 }
 
 fn main_target<'de, D>(deserializer: D) -> Result<Option<BuiltInTargetDescriptor>, D::Error>
@@ -353,7 +353,7 @@ mod test {
       PackageJson {
         name: Some(String::from("example-package")),
         targets: TargetsField {
-          custom_targets: HashMap::from([
+          custom_targets: BTreeMap::from([
             (
               String::from("development"),
               TargetDescriptor {
