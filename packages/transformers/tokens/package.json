@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-tokens",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,11 +17,11 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/feature-flags": "2.26.0",
-    "@atlaspack/types-internal": "2.20.6",
-    "@atlaspack/plugin": "2.14.36",
-    "@atlaspack/rust": "3.9.0",
-    "@atlaspack/utils": "3.1.0",
+    "@atlaspack/feature-flags": "2.26.2",
+    "@atlaspack/types-internal": "2.20.8",
+    "@atlaspack/plugin": "2.14.38",
+    "@atlaspack/rust": "3.10.0",
+    "@atlaspack/utils": "3.1.2",
     "@parcel/source-map": "^2.1.1"
   },
   "type": "commonjs",

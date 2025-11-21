@@ -281,13 +281,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-09-29
    */
   sourceAssetIdBundleGraphFix: process.env.ATLASPACK_BUILD_ENV === 'test',
-  /**
-   * When enabled, deduplicates reporters when resolving the config.
-   *
-   * @author Vy Kim Nguyen <vnguyen4@atlassian.com>
-   * @since 2025-10-14
-   */
-  deduplicateReporters: process.env.ATLASPACK_BUILD_ENV === 'test',
+
   /**
    * Enable JSX configuration loading in v3 Rust transformer to match v2 behaviour
    *
@@ -323,6 +317,25 @@ export const DEFAULT_FEATURE_FLAGS = {
    */
   schemaValidationDeferSourceLoading:
     process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Fixes an issue where nested Promise.resolve chains mixed with dynamic
+   * imports could cause build errors.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-11-05
+   */
+  nestedPromiseImportFix: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Precompute referenced assets in bundles to avoid repeated traversals
+   * during scope hoisting packaging. This optimization caches which assets
+   * are referenced in a bundle, reducing O(N*M) calls to O(1).
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-10-24
+   */
+  precomputeReferencedAssets: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

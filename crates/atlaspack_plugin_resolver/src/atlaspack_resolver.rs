@@ -288,7 +288,7 @@ impl AtlaspackResolver {
       _ => {
         return Ok(Resolved {
           invalidations: Vec::new(),
-          resolution: Resolution::Resolved(self.resolve_empty(false)),
+          resolution: Resolution::Resolved(self.resolve_empty(true)),
         });
       }
     };
@@ -453,6 +453,10 @@ impl ResolverPlugin for AtlaspackResolver {
         }),
       }),
     }
+  }
+
+  fn on_new_build(&self) {
+    self.cache.clear();
   }
 }
 

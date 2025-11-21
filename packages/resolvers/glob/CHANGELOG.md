@@ -1,5 +1,25 @@
 # @atlaspack/resolver-glob
 
+## 2.14.38
+
+### Patch Changes
+
+- Updated dependencies [[`7d7a55d`](https://github.com/atlassian-labs/atlaspack/commit/7d7a55dd6395ec391a2e4c33b3dec0d1ea477d4c)]:
+  - @atlaspack/utils@3.1.2
+  - @atlaspack/node-resolver-core@3.7.9
+  - @atlaspack/plugin@2.14.38
+  - @atlaspack/types@2.15.28
+
+## 2.14.37
+
+### Patch Changes
+
+- Updated dependencies [[`373ee2d`](https://github.com/atlassian-labs/atlaspack/commit/373ee2d3b5cc315df1e90e647619f915892e2b87)]:
+  - @atlaspack/node-resolver-core@3.7.8
+  - @atlaspack/utils@3.1.1
+  - @atlaspack/plugin@2.14.37
+  - @atlaspack/types@2.15.27
+
 ## 2.14.36
 
 ### Patch Changes

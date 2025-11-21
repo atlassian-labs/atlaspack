@@ -1,5 +1,23 @@
 # @atlaspack/transformer-react-refresh-wrap
 
+## 2.15.14
+
+### Patch Changes
+
+- Updated dependencies [[`ec3abe4`](https://github.com/atlassian-labs/atlaspack/commit/ec3abe4dffc98560a850fd2f71fb566577e6c99c), [`c7fe3f7`](https://github.com/atlassian-labs/atlaspack/commit/c7fe3f76f247e9e20299e205e2df0a16c418eaf2), [`7d7a55d`](https://github.com/atlassian-labs/atlaspack/commit/7d7a55dd6395ec391a2e4c33b3dec0d1ea477d4c)]:
+  - @atlaspack/feature-flags@2.26.2
+  - @atlaspack/utils@3.1.2
+  - @atlaspack/plugin@2.14.38
+
+## 2.15.13
+
+### Patch Changes
+
+- Updated dependencies [[`373ee2d`](https://github.com/atlassian-labs/atlaspack/commit/373ee2d3b5cc315df1e90e647619f915892e2b87)]:
+  - @atlaspack/feature-flags@2.26.1
+  - @atlaspack/utils@3.1.1
+  - @atlaspack/plugin@2.14.37
+
 ## 2.15.12
 
 ### Patch Changes

@@ -63,6 +63,7 @@ interface InitialAtlaspackOptions {
   shouldAutoInstall?: boolean;
   logLevel?: LogLevel;
   shouldProfile?: boolean;
+  nativeProfiler?: 'instruments' | 'samply';
   shouldTrace?: boolean;
   shouldPatchConsole?: boolean;
   additionalReporters?: Array<{
@@ -678,6 +679,42 @@ const atlaspack = new Atlaspack({
 const atlaspack = new Atlaspack({
   entries: ['src/index.html'],
   shouldProfile: process.env.PROFILE === 'true',
+});
+```
+
+### `nativeProfiler`
+
+**Type**: `'instruments' | 'samply' | undefined`
+
+**Default**: `undefined`
+
+**Description**: Enable native build profiling. When enabled, Atlaspack will display a banner with the PID and command to run the profiler. The profiler type can be:
+
+- `'instruments'` - Use Instruments (macOS only, uses `xcrun xctrace`)
+- `'samply'` - Use samply profiler (cross-platform)
+
+If `--profile-native` is provided on the CLI without a profiler name, defaults to `'samply'`.
+
+**Examples**:
+
+```javascript
+// Enable native profiling with instruments (macOS)
+const atlaspack = new Atlaspack({
+  entries: ['src/index.html'],
+  nativeProfiler: 'instruments',
+});
+
+// Enable native profiling with samply
+const atlaspack = new Atlaspack({
+  entries: ['src/index.html'],
+  nativeProfiler: 'samply',
+});
+
+// Environment-based native profiling
+const atlaspack = new Atlaspack({
+  entries: ['src/index.html'],
+  nativeProfiler:
+    process.env.NATIVE_PROFILE === 'samply' ? 'samply' : 'instruments',
 });
 ```
 

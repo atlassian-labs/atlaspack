@@ -585,6 +585,7 @@ export default new Transformer({
         config.enableLazyLoadingTransformer,
       ),
       sync_dynamic_import_config: config.syncDynamicImportConfig,
+      nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;

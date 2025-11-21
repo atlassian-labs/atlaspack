@@ -13,6 +13,12 @@
     },
     {
       "path": "../types/tsconfig.json"
+    },
+    {
+      "path": "../plugin/tsconfig.json"
+    },
+    {
+      "path": "../rust/tsconfig.json"
     }
   ]
 }

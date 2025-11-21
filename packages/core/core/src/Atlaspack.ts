@@ -57,7 +57,7 @@ import {
   toProjectPath,
   fromProjectPathRelative,
 } from './projectPath';
-import {tracer} from '@atlaspack/profiler';
+import {tracer, NativeProfiler} from '@atlaspack/profiler';
 import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
@@ -406,6 +406,10 @@ export default class Atlaspack {
     try {
       if (options.shouldProfile) {
         await this.startProfiling();
+      }
+      if (options.nativeProfiler) {
+        const nativeProfiler = new NativeProfiler();
+        await nativeProfiler.startProfiling(options.nativeProfiler);
       }
       if (options.shouldTrace) {
         tracer.enable();

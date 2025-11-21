@@ -1,5 +1,21 @@
 # @atlaspack/reporter-bundle-buddy
 
+## 2.14.38
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.8
+  - @atlaspack/plugin@2.14.38
+
+## 2.14.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.7
+  - @atlaspack/plugin@2.14.37
+
 ## 2.14.36
 
 ### Patch Changes

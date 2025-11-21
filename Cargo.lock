@@ -262,6 +262,7 @@ dependencies = [
  "atlaspack_plugin_transformer_js",
  "atlaspack_plugin_transformer_json",
  "atlaspack_plugin_transformer_raw",
+ "atlaspack_plugin_transformer_svg",
  "atlaspack_plugin_transformer_yaml",
  "atlaspack_sourcemap",
  "dyn-hash",
@@ -354,6 +355,7 @@ dependencies = [
  "atlaspack-macros",
  "atlaspack-resolver",
  "atlaspack_core",
+ "atlaspack_memory_profiler",
  "atlaspack_monitoring",
  "atlaspack_napi_helpers",
  "atlaspack_package_manager",
@@ -432,6 +434,7 @@ dependencies = [
  "atlaspack_core",
  "atlaspack_filesystem",
  "atlaspack_package_manager",
+ "atlaspack_test_fixtures",
  "derive_builder",
  "glob-match",
  "indexmap",
@@ -517,6 +520,16 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "atlaspack_memory_profiler"
+version = "0.1.0"
+dependencies = [
+ "memory-stats",
+ "napi",
+ "napi-derive",
+ "serde",
 ]
 
 [[package]]
@@ -718,6 +731,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "atlaspack_plugin_transformer_svg"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "atlaspack_core",
+ "atlaspack_filesystem",
+ "html5ever",
+ "markup5ever",
+ "markup5ever_rcdom",
+ "pretty_assertions",
+ "regex",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "atlaspack_plugin_transformer_yaml"
 version = "0.1.0"
 dependencies = [
@@ -762,6 +793,14 @@ dependencies = [
  "swc_core",
  "swc_ecma_parser",
  "thiserror 2.0.17",
+]
+
+[[package]]
+name = "atlaspack_test_fixtures"
+version = "0.1.0"
+dependencies = [
+ "atlaspack_filesystem",
+ "indoc",
 ]
 
 [[package]]
@@ -3096,6 +3135,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "memory-stats"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c73f5c649995a115e1a0220b35e4df0a1294500477f97a91d0660fb5abeb574a"
+dependencies = [
+ "libc",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "miette"
 version = "7.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5276,9 +5325,9 @@ dependencies = [
 
 [[package]]
 name = "swc_atlaskit_tokens"
-version = "0.0.6"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "472dd0291bad9ba21f68bf7e1f680725add2a89111a57c389e4027d340bb1ef0"
+checksum = "a893215e50714f7778487d34395144130a6ddd6d48b18229656c2ab1a71fe5b8"
 dependencies = [
  "anyhow",
  "once_cell",

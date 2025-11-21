@@ -1,5 +1,31 @@
 # @atlaspack/config-webextension
 
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`ec3abe4`](https://github.com/atlassian-labs/atlaspack/commit/ec3abe4dffc98560a850fd2f71fb566577e6c99c), [`cfb4707`](https://github.com/atlassian-labs/atlaspack/commit/cfb4707087498e4fa4dcf10753fe984a248d196b), [`33d4c26`](https://github.com/atlassian-labs/atlaspack/commit/33d4c261ceb8d585d56b0a446ed6e28cf7f1126d), [`f31b041`](https://github.com/atlassian-labs/atlaspack/commit/f31b04107e9077c9946aadb99f6f91bb69703bb7), [`8180981`](https://github.com/atlassian-labs/atlaspack/commit/8180981be14c00f9570adb70d3f350bd91d6ec0a), [`119210b`](https://github.com/atlassian-labs/atlaspack/commit/119210b597eb993c50445df87a36b70bd49cd414)]:
+  - @atlaspack/core@2.27.0
+  - @atlaspack/config-default@8.0.0
+  - @atlaspack/packager-webextension@2.14.38
+  - @atlaspack/runtime-webextension@2.14.38
+  - @atlaspack/transformer-webextension@2.14.38
+  - @atlaspack/types@2.15.28
+  - @atlaspack/transformer-raw@2.14.38
+
+## 7.0.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.26.2
+  - @atlaspack/config-default@7.0.2
+  - @atlaspack/packager-webextension@2.14.37
+  - @atlaspack/runtime-webextension@2.14.37
+  - @atlaspack/transformer-webextension@2.14.37
+  - @atlaspack/types@2.15.27
+  - @atlaspack/transformer-raw@2.14.37
+
 ## 7.0.1
 
 ### Patch Changes

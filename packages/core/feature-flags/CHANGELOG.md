@@ -1,5 +1,20 @@
 # @atlaspack/feature-flags
 
+## 2.26.2
+
+### Patch Changes
+
+- [#873](https://github.com/atlassian-labs/atlaspack/pull/873) [`ec3abe4`](https://github.com/atlassian-labs/atlaspack/commit/ec3abe4dffc98560a850fd2f71fb566577e6c99c) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - cleanup deduplicateReporters flag
+
+- [#868](https://github.com/atlassian-labs/atlaspack/pull/868) [`c7fe3f7`](https://github.com/atlassian-labs/atlaspack/commit/c7fe3f76f247e9e20299e205e2df0a16c418eaf2) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix issue where nested Promise.resolve calls mixed with dynamic imports could cause build errors
+
+## 2.26.1
+
+### Patch Changes
+
+- [#863](https://github.com/atlassian-labs/atlaspack/pull/863) [`373ee2d`](https://github.com/atlassian-labs/atlaspack/commit/373ee2d3b5cc315df1e90e647619f915892e2b87) Thanks [@matt-koko](https://github.com/matt-koko)! - Revert clean up of resolver optimisation feature-flag.
+  Reverts PR: 'Clean-up resolver optimisation #816'
+
 ## 2.26.0
 
 ### Minor Changes

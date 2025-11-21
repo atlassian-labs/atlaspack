@@ -1,5 +1,27 @@
 # @atlaspack/optimizer-image
 
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`ec3abe4`](https://github.com/atlassian-labs/atlaspack/commit/ec3abe4dffc98560a850fd2f71fb566577e6c99c), [`c7fe3f7`](https://github.com/atlassian-labs/atlaspack/commit/c7fe3f76f247e9e20299e205e2df0a16c418eaf2), [`cfb4707`](https://github.com/atlassian-labs/atlaspack/commit/cfb4707087498e4fa4dcf10753fe984a248d196b), [`33d4c26`](https://github.com/atlassian-labs/atlaspack/commit/33d4c261ceb8d585d56b0a446ed6e28cf7f1126d), [`1468695`](https://github.com/atlassian-labs/atlaspack/commit/1468695fc0c9d06f060a6da9e9b0e154f11dff34), [`f31b041`](https://github.com/atlassian-labs/atlaspack/commit/f31b04107e9077c9946aadb99f6f91bb69703bb7), [`8180981`](https://github.com/atlassian-labs/atlaspack/commit/8180981be14c00f9570adb70d3f350bd91d6ec0a), [`ae77e74`](https://github.com/atlassian-labs/atlaspack/commit/ae77e7452a466b43b3fa5bed24d4ba26345ed765), [`f0a496f`](https://github.com/atlassian-labs/atlaspack/commit/f0a496f70fc8652e090cf1b3f6260e8cfbb796e2), [`119210b`](https://github.com/atlassian-labs/atlaspack/commit/119210b597eb993c50445df87a36b70bd49cd414), [`7d7a55d`](https://github.com/atlassian-labs/atlaspack/commit/7d7a55dd6395ec391a2e4c33b3dec0d1ea477d4c), [`540f253`](https://github.com/atlassian-labs/atlaspack/commit/540f253dfdcd1a5caebbdc0b197319d439404aae)]:
+  - @atlaspack/core@2.27.0
+  - @atlaspack/rust@3.10.0
+  - @atlaspack/utils@3.1.2
+  - @atlaspack/workers@2.14.38
+  - @atlaspack/plugin@2.14.38
+
+## 7.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`339b600`](https://github.com/atlassian-labs/atlaspack/commit/339b60095d755742cea50f811d08ccc44a4ae521), [`373ee2d`](https://github.com/atlassian-labs/atlaspack/commit/373ee2d3b5cc315df1e90e647619f915892e2b87)]:
+  - @atlaspack/rust@3.9.1
+  - @atlaspack/core@2.26.2
+  - @atlaspack/utils@3.1.1
+  - @atlaspack/workers@2.14.37
+  - @atlaspack/plugin@2.14.37
+
 ## 7.0.1
 
 ### Patch Changes

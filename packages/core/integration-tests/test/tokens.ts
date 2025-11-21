@@ -42,6 +42,14 @@ describe('tokens', () => {
       firstBundle.includes('var(--ds-text, #172B4D)'),
       `Expected transformed token value to be present, but bundle was ${firstBundle.substring(0, 200)}...`,
     );
+    assert(
+      !firstBundle.includes('\\u2026'),
+      'Expected … to not be munged, and \\u2026 not to be present',
+    );
+    assert(
+      firstBundle.includes('…'),
+      'Expected … to not be munged and present',
+    );
   });
 
   it('should not transform tokens when the feature flag is disabled', async () => {

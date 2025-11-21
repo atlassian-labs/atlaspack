@@ -15,6 +15,7 @@ atlaspack = { path = "../atlaspack" }
 atlaspack_core = { path = "../atlaspack_core" }
 atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 atlaspack_monitoring = { path = "../atlaspack_monitoring" }
+atlaspack_memory_profiler = { path = "../atlaspack_memory_profiler" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 atlaspack_package_manager = { path = "../atlaspack_package_manager" }
 atlaspack_plugin_optimizer_inline_requires = { path = "../atlaspack_plugin_optimizer_inline_requires" }

@@ -1435,6 +1435,158 @@ export default class BundleGraph {
     });
   }
 
+  // New method: Fast checks only (no caching of results)
+  isAssetReferencedFastCheck(bundle: Bundle, asset: Asset): boolean | null {
+    // Fast Check #1: If asset is in multiple bundles in same target, it's referenced
+    let bundlesWithAsset = this.getBundlesWithAsset(asset).filter(
+      (b) =>
+        b.target.name === bundle.target.name &&
+        b.target.distDir === bundle.target.distDir,
+    );
+
+    if (bundlesWithAsset.length > 1) {
+      return true;
+    }
+
+    // Fast Check #2: If asset is referenced by any async/conditional dependency, it's referenced
+    let assetNodeId = nullthrows(this._graph.getNodeIdByContentKey(asset.id));
+
+    if (
+      this._graph
+        .getNodeIdsConnectedTo(assetNodeId, bundleGraphEdgeTypes.references)
+        .map((id) => this._graph.getNode(id))
+        .some(
+          (node) =>
+            node?.type === 'dependency' &&
+            (node.value.priority === Priority.lazy ||
+              node.value.priority === Priority.conditional) &&
+            node.value.specifierType !== SpecifierType.url,
+        )
+    ) {
+      return true;
+    }
+
+    // Fast checks failed - return null to indicate expensive computation needed
+    return null;
+  }
+
+  getReferencedAssets(bundle: Bundle): Set<Asset> {
+    let referencedAssets = new Set<Asset>();
+
+    // Build a map of all assets in this bundle with their dependencies
+    // This allows us to check all assets in a single traversal
+    let assetDependenciesMap = new Map<Asset, Array<Dependency>>();
+
+    this.traverseAssets(bundle, (asset) => {
+      // Always do fast checks (no caching)
+      let fastCheckResult = this.isAssetReferencedFastCheck(bundle, asset);
+
+      if (fastCheckResult === true) {
+        referencedAssets.add(asset);
+        return;
+      }
+
+      // Fast checks failed (fastCheckResult === null), need expensive computation
+      // Check if it's actually referenced via traversal
+
+      // Store dependencies for later batch checking
+      let dependencies = this._graph
+        .getNodeIdsConnectedTo(
+          nullthrows(this._graph.getNodeIdByContentKey(asset.id)),
+        )
+        .map((id) => nullthrows(this._graph.getNode(id)))
+        .filter((node) => node.type === 'dependency')
+        .map((node) => {
+          invariant(node.type === 'dependency');
+          return node.value;
+        });
+
+      if (dependencies.length > 0) {
+        assetDependenciesMap.set(asset, dependencies);
+      }
+    });
+
+    // If no assets need the expensive check, return early
+    if (assetDependenciesMap.size === 0) {
+      return referencedAssets;
+    }
+
+    // Get the assets we need to check once
+    let assetsToCheck = Array.from(assetDependenciesMap.keys());
+
+    // Helper function to check if all assets from assetDependenciesMap are in referencedAssets
+    const allAssetsReferenced = (): boolean =>
+      assetsToCheck.length <= referencedAssets.size &&
+      assetsToCheck.every((asset) => referencedAssets.has(asset));
+
+    // Do ONE traversal to check all remaining assets
+    // We can share visitedBundles across all assets because we check every asset
+    // against every visited bundle, which matches the original per-asset behavior
+    let siblingBundles = new Set(
+      this.getBundleGroupsContainingBundle(bundle).flatMap((bundleGroup) =>
+        this.getBundlesInBundleGroup(bundleGroup, {includeInline: true}),
+      ),
+    );
+
+    let visitedBundles: Set<Bundle> = new Set();
+
+    // Single traversal from all referencers
+    for (let referencer of siblingBundles) {
+      this.traverseBundles((descendant, _, actions) => {
+        if (descendant.id === bundle.id) {
+          return;
+        }
+
+        if (visitedBundles.has(descendant)) {
+          actions.skipChildren();
+          return;
+        }
+
+        visitedBundles.add(descendant);
+
+        if (
+          descendant.type !== bundle.type ||
+          fromEnvironmentId(descendant.env).context !==
+            fromEnvironmentId(bundle.env).context
+        ) {
+          // Don't skip children - they might be the right type!
+          return;
+        }
+
+        // Check ALL assets at once in this descendant bundle
+        for (let [asset, dependencies] of assetDependenciesMap) {
+          // Skip if already marked as referenced
+          if (referencedAssets.has(asset)) {
+            continue;
+          }
+
+          // Check if this descendant bundle references the asset
+          if (
+            !this.bundleHasAsset(descendant, asset) &&
+            dependencies.some((dependency) =>
+              this.bundleHasDependency(descendant, dependency),
+            )
+          ) {
+            referencedAssets.add(asset);
+          }
+        }
+
+        // If all assets from assetDependenciesMap are now marked as referenced, we can stop early
+        if (allAssetsReferenced()) {
+          actions.stop();
+          return;
+        }
+      }, referencer);
+
+      // If all assets from assetDependenciesMap are referenced, no need to check more sibling bundles
+      if (allAssetsReferenced()) {
+        break;
+      }
+    }
+
+    return referencedAssets;
+  }
+
   hasParentBundleOfType(bundle: Bundle, type: string): boolean {
     let parents = this.getParentBundles(bundle);
     return (

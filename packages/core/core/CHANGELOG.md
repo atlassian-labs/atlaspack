@@ -1,5 +1,55 @@
 # @atlaspack/core
 
+## 2.27.0
+
+### Minor Changes
+
+- [#869](https://github.com/atlassian-labs/atlaspack/pull/869) [`cfb4707`](https://github.com/atlassian-labs/atlaspack/commit/cfb4707087498e4fa4dcf10753fe984a248d196b) Thanks [@benjervis](https://github.com/benjervis)! - Adds a feature to the V3 devloop that will minimise the amount of work done if the change is only a content change.
+
+### Patch Changes
+
+- [#873](https://github.com/atlassian-labs/atlaspack/pull/873) [`ec3abe4`](https://github.com/atlassian-labs/atlaspack/commit/ec3abe4dffc98560a850fd2f71fb566577e6c99c) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - cleanup deduplicateReporters flag
+
+- [#870](https://github.com/atlassian-labs/atlaspack/pull/870) [`33d4c26`](https://github.com/atlassian-labs/atlaspack/commit/33d4c261ceb8d585d56b0a446ed6e28cf7f1126d) Thanks [@matt-koko](https://github.com/matt-koko)! - Support Loading TypeScript Plugin Files in v3
+
+- [#856](https://github.com/atlassian-labs/atlaspack/pull/856) [`f31b041`](https://github.com/atlassian-labs/atlaspack/commit/f31b04107e9077c9946aadb99f6f91bb69703bb7) Thanks [@matt-koko](https://github.com/matt-koko)! - Handle Directory Entry Points in v3
+
+- [#859](https://github.com/atlassian-labs/atlaspack/pull/859) [`8180981`](https://github.com/atlassian-labs/atlaspack/commit/8180981be14c00f9570adb70d3f350bd91d6ec0a) Thanks [@benjervis](https://github.com/benjervis)! - Re-use asset graphs when building in Native, if we have one left over from a previous incremental build
+
+- [#883](https://github.com/atlassian-labs/atlaspack/pull/883) [`119210b`](https://github.com/atlassian-labs/atlaspack/commit/119210b597eb993c50445df87a36b70bd49cd414) Thanks [@matt-koko](https://github.com/matt-koko)! - Fix bitflags rust/js interop
+
+- Updated dependencies [[`ec3abe4`](https://github.com/atlassian-labs/atlaspack/commit/ec3abe4dffc98560a850fd2f71fb566577e6c99c), [`c7fe3f7`](https://github.com/atlassian-labs/atlaspack/commit/c7fe3f76f247e9e20299e205e2df0a16c418eaf2), [`cfb4707`](https://github.com/atlassian-labs/atlaspack/commit/cfb4707087498e4fa4dcf10753fe984a248d196b), [`1468695`](https://github.com/atlassian-labs/atlaspack/commit/1468695fc0c9d06f060a6da9e9b0e154f11dff34), [`f31b041`](https://github.com/atlassian-labs/atlaspack/commit/f31b04107e9077c9946aadb99f6f91bb69703bb7), [`8180981`](https://github.com/atlassian-labs/atlaspack/commit/8180981be14c00f9570adb70d3f350bd91d6ec0a), [`ae77e74`](https://github.com/atlassian-labs/atlaspack/commit/ae77e7452a466b43b3fa5bed24d4ba26345ed765), [`f0a496f`](https://github.com/atlassian-labs/atlaspack/commit/f0a496f70fc8652e090cf1b3f6260e8cfbb796e2), [`7d7a55d`](https://github.com/atlassian-labs/atlaspack/commit/7d7a55dd6395ec391a2e4c33b3dec0d1ea477d4c), [`540f253`](https://github.com/atlassian-labs/atlaspack/commit/540f253dfdcd1a5caebbdc0b197319d439404aae)]:
+  - @atlaspack/feature-flags@2.26.2
+  - @atlaspack/rust@3.10.0
+  - @atlaspack/graph@3.6.0
+  - @atlaspack/utils@3.1.2
+  - @atlaspack/cache@3.2.33
+  - @atlaspack/fs@2.15.33
+  - @atlaspack/logger@2.14.30
+  - @atlaspack/package-manager@2.14.38
+  - @atlaspack/workers@2.14.38
+  - @atlaspack/plugin@2.14.38
+  - @atlaspack/profiler@2.14.35
+  - @atlaspack/types@2.15.28
+
+## 2.26.2
+
+### Patch Changes
+
+- Updated dependencies [[`339b600`](https://github.com/atlassian-labs/atlaspack/commit/339b60095d755742cea50f811d08ccc44a4ae521), [`373ee2d`](https://github.com/atlassian-labs/atlaspack/commit/373ee2d3b5cc315df1e90e647619f915892e2b87)]:
+  - @atlaspack/rust@3.9.1
+  - @atlaspack/feature-flags@2.26.1
+  - @atlaspack/cache@3.2.32
+  - @atlaspack/fs@2.15.32
+  - @atlaspack/logger@2.14.29
+  - @atlaspack/utils@3.1.1
+  - @atlaspack/graph@3.5.26
+  - @atlaspack/package-manager@2.14.37
+  - @atlaspack/workers@2.14.37
+  - @atlaspack/plugin@2.14.37
+  - @atlaspack/profiler@2.14.34
+  - @atlaspack/types@2.15.27
+
 ## 2.26.1
 
 ### Patch Changes

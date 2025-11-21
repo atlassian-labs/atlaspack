@@ -131,6 +131,7 @@ export class ScopeHoistingPackager {
   useBothScopeHoistingImprovements: boolean =
     getFeatureFlag('applyScopeHoistingImprovementV2') ||
     getFeatureFlag('applyScopeHoistingImprovement');
+  referencedAssetsCache: Map<string, Set<Asset>> = new Map();
 
   constructor(
     options: PluginOptions,
@@ -412,6 +413,44 @@ export class ScopeHoistingPackager {
     return `$parcel$global.rwr(${params.join(', ')});`;
   }
 
+  // Helper to check if an asset is referenced, with cache-first + fast-check hybrid approach
+  isAssetReferencedInBundle(bundle: NamedBundle, asset: Asset): boolean {
+    // STEP 1: Check expensive computation cache first (fastest when it hits)
+    if (getFeatureFlag('precomputeReferencedAssets')) {
+      let bundleId = bundle.id;
+      let referencedAssets = this.referencedAssetsCache.get(bundleId);
+
+      if (referencedAssets) {
+        // Cache hit - fastest path (~0.001ms)
+        return referencedAssets.has(asset);
+      }
+    }
+
+    // STEP 2: Cache miss - try fast checks (~0.01ms)
+    let fastCheckResult = this.bundleGraph.isAssetReferencedFastCheck(
+      bundle,
+      asset,
+    );
+
+    if (fastCheckResult === true) {
+      // Fast check succeeded - asset is referenced
+      return true;
+    }
+
+    // STEP 3: Need expensive computation (~20-2000ms)
+    if (getFeatureFlag('precomputeReferencedAssets')) {
+      // Compute and cache expensive results for this bundle
+      let bundleId = bundle.id;
+      let referencedAssets = this.bundleGraph.getReferencedAssets(bundle);
+      this.referencedAssetsCache.set(bundleId, referencedAssets);
+
+      return referencedAssets.has(asset);
+    } else {
+      // No caching - fall back to original expensive method
+      return this.bundleGraph.isAssetReferenced(bundle, asset);
+    }
+  }
+
   async loadAssets() {
     type QueueItem = [Asset, {code: string; map: Buffer | undefined | null}];
     let queue = new PromiseQueue<QueueItem>({
@@ -431,7 +470,7 @@ export class ScopeHoistingPackager {
       if (
         asset.meta.shouldWrap ||
         this.bundle.env.sourceType === 'script' ||
-        this.bundleGraph.isAssetReferenced(this.bundle, asset) ||
+        this.isAssetReferencedInBundle(this.bundle, asset) ||
         this.bundleGraph
           .getIncomingDependencies(asset)
           .some((dep) => dep.meta.shouldWrap && dep.specifierType !== 'url')
@@ -692,6 +731,12 @@ export class ScopeHoistingPackager {
             this.useBothScopeHoistingImprovements &&
             this.wrappedAssets.has(resolved)
           ) {
+            if (this.wrappedAssets.has(asset)) {
+              // If both the asset and the dep are wrapped there's no need to
+              // drop a side-effect require. This is an extremely rare case.
+              continue;
+            }
+
             // When the dep is wrapped then we just need to drop a side effect
             // require instead of inlining
             depCode += `parcelRequire("${this.bundleGraph.getAssetPublicId(resolved)}");\n`;
@@ -987,7 +1032,7 @@ ${code}
           referencedBundle &&
           referencedBundle.getMainEntry() === resolved &&
           referencedBundle.type === 'js' &&
-          !this.bundleGraph.isAssetReferenced(referencedBundle, resolved)
+          !this.isAssetReferencedInBundle(referencedBundle, resolved)
         ) {
           this.addExternal(dep, replacements, referencedBundle);
           this.externalAssets.add(resolved);
@@ -1786,7 +1831,7 @@ ${code}
     return (
       asset.sideEffects === false &&
       nullthrows(this.bundleGraph.getUsedSymbols(asset)).size == 0 &&
-      !this.bundleGraph.isAssetReferenced(this.bundle, asset)
+      !this.isAssetReferencedInBundle(this.bundle, asset)
     );
   }
 

@@ -131,6 +131,7 @@ fn process_tokens_sync(code: &str, config: &TokensConfig) -> Result<TokensPlugin
       comments,
       &module_result,
       config.source_maps,
+      Some(false), // Preserve Unicode characters in tokens
     )
     .with_context(|| "Failed to emit transformed code")?;
 
@@ -503,6 +504,36 @@ mod tests {
     assert!(
       transformed.map.is_none(),
       "Sourcemap should not be generated when source_maps is false"
+    );
+  }
+
+  #[test]
+  fn test_preserve_unicode_characters_in_react_attributes() {
+    let temp_file = create_test_token_file().expect("Failed to create temp file");
+    let config = create_test_config(temp_file.path().to_str().unwrap(), true);
+
+    let code = indoc! {r#"
+      import { token } from '@atlaskit/tokens';
+      import React from 'react';
+
+      const Component = () => {
+        return <input type="text" placeholder="This has a special characer that should not be munged: …"/>;
+      };
+
+      const t = Component();
+    "#};
+    let result = process_tokens_sync(code, &config);
+    assert!(
+      result.is_ok(),
+      "Unicode characters should be preserved in React attributes"
+    );
+
+    let transformed = result.unwrap();
+    assert!(
+      transformed
+        .code
+        .contains("This has a special characer that should not be munged: …"),
+      "Transformed code should contain the original Unicode character"
     );
   }
 }
