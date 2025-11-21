@@ -4709,6 +4709,155 @@ describe('javascript', function () {
     );
   });
 
+  describe('sync_dynamic_import', () => {
+    it('should replace non-matching dynamic imports with dummy promises', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        src/packages/components/modal.js:
+          export const modal = 'modal';
+        index.js:
+          const result = import('./src/packages/components/modal.js');
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        targets: {
+          default: {
+            context: 'tesseract',
+            distDir: path.join(__dirname, 'dist'),
+          },
+        },
+        env: {
+          SYNC_DYNAMIC_IMPORT_CONFIG: JSON.stringify({
+            entrypoint_filepath_suffix: 'entrypoint.tsx',
+            actual_require_paths: [],
+          }),
+        },
+      });
+
+      await run(b, null, {require: false});
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(contents.includes('var result = new Promise(function() {});'));
+    });
+
+    it('should convert dynamic imports to requires for matching paths', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        src/packages/components/modal.js:
+          export const modal = 'modal';
+        index.js:
+          const result = import('./src/packages/components/modal.js');
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        targets: {
+          default: {
+            context: 'tesseract',
+            distDir: path.join(__dirname, 'dist'),
+          },
+        },
+        env: {
+          SYNC_DYNAMIC_IMPORT_CONFIG: JSON.stringify({
+            entrypoint_filepath_suffix: 'entrypoint.tsx',
+            actual_require_paths: ['src/packages/components'],
+          }),
+        },
+      });
+
+      await run(b, null, {require: false});
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(contents.includes('var result = require("'));
+    });
+
+    it('should handle multiple allowed require paths', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        src/packages/components/modal.js:
+          export const modal = 'modal';
+        src/packages/resources/projects.js:
+          export const projects = 'projects';
+        src/packages/service/service.js:
+          export const service = 'service';
+        index.js:
+          const ModalComponent = import('./src/packages/components/modal.js');
+          const projectResource = import('./src/packages/resources/projects.js');
+          const service = import('./src/packages/service/service.js');
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        targets: {
+          default: {
+            context: 'tesseract',
+            distDir: path.join(__dirname, 'dist'),
+          },
+        },
+        env: {
+          SYNC_DYNAMIC_IMPORT_CONFIG: JSON.stringify({
+            entrypoint_filepath_suffix: 'entrypoint.tsx',
+            actual_require_paths: [
+              'src/packages/components',
+              'src/packages/resources',
+            ],
+          }),
+        },
+      });
+
+      await run(b, null, {require: false});
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(contents.includes('var ModalComponent = require("'));
+      assert(contents.includes('var projectResource = require("'));
+      assert(contents.includes('var service = new Promise(function() {});'));
+    });
+
+    it('should handle entrypoint files', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        src/packages/components/modal.js:
+          const modal = 'modal';
+          export default modal;
+        entrypoint.tsx:
+          const result = () => import('./src/packages/components/modal.js');
+      `;
+
+      let b = await bundle(path.join(__dirname, 'entrypoint.tsx'), {
+        inputFS: overlayFS,
+        targets: {
+          default: {
+            context: 'tesseract',
+            distDir: path.join(__dirname, 'dist'),
+          },
+        },
+        env: {
+          SYNC_DYNAMIC_IMPORT_CONFIG: JSON.stringify({
+            entrypoint_filepath_suffix: 'entrypoint.tsx',
+            actual_require_paths: [],
+          }),
+        },
+      });
+
+      await run(b, null, {require: false});
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(contents.includes('return Promise.resolve(fileExports);'));
+    });
+  });
+
   for (let shouldScopeHoist of [false, true]) {
     let options = {
       defaultTargetOptions: {

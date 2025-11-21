@@ -399,6 +399,7 @@ export async function runBundles(
       break;
     }
     case 'web-worker':
+    case 'tesseract':
     case 'service-worker': {
       let prepared = prepareWorkerContext(parent.filePath, globals);
       ctx = prepared.ctx;
