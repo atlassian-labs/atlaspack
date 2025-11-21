@@ -281,7 +281,7 @@ impl TargetRequest {
 
     let browsers = match config.contents.browserslist.clone() {
       None => {
-        let browserslistrc_path = &request_context.project_root.join(".browserslistrc");
+        let browserslistrc_path = self.entry.package_path.join(".browserslistrc");
 
         // Loading .browserslistrc
         if request_context
@@ -290,7 +290,7 @@ impl TargetRequest {
         {
           let browserslistrc = request_context
             .file_system()
-            .read_to_string(browserslistrc_path)?;
+            .read_to_string(browserslistrc_path.as_path())?;
 
           Some(EnginesBrowsers::from_browserslistrc(&browserslistrc)?)
         } else {
