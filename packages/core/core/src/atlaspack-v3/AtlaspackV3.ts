@@ -94,17 +94,7 @@ export class AtlaspackV3 {
   }
 
   buildAssetGraph(): Promise<any> {
-    return (
-      atlaspackNapiBuildAssetGraph(this._atlaspack_napi) as NapiResultPromise
-    ).then(([res, err]) => {
-      if (err !== null) {
-        throw new ThrowableDiagnostic({
-          diagnostic: err,
-        });
-      }
-
-      return res;
-    });
+    return atlaspackNapiBuildAssetGraph(this._atlaspack_napi);
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {
