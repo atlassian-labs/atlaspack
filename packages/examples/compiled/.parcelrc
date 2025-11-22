@@ -3,7 +3,18 @@
   "transformers": {
     "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": [
       "@atlaspack/transformer-compiled-css-in-js",
+      "@compiled/parcel-transformer",
       "..."
     ]
-  }
+  },
+  "optimizers": {
+    "*.html": [
+      "@compiled/parcel-optimizer",
+      "..."
+    ]
+  },
+  "reporters": [
+    // "@atlaspack/reporter-compiled-css-in-js-migration-map",
+    "..."
+  ]
 }
