@@ -39,3 +39,7 @@ runs:
     - name: Yarn install
       run: yarn install --frozen-lockfile
       shell: bash
+
+    - name: Validate workspace versions
+      run: node scripts/validate-workspace-versions.mjs
+      shell: bash

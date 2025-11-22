@@ -64,15 +64,18 @@ use walkdir::{DirEntry, WalkDir};
 
 static LATEST_ARTIFACTS: Lazy<Mutex<HashMap<ThreadId, StyleArtifacts>>> =
   Lazy::new(|| Mutex::new(HashMap::new()));
-static WORKSPACE_PACKAGE_MAP: Lazy<Mutex<HashMap<PathBuf, HashMap<String, PathBuf>>>> =
-  Lazy::new(|| Mutex::new(HashMap::new()));
 
 thread_local! {
   static EMIT_COMMENTS: RefCell<Option<Box<dyn Comments>>> = RefCell::new(None);
 }
 
+use lru::LruCache;
+use std::num::NonZeroUsize;
+
 thread_local! {
-  static EXPRESSION_SNIPPETS: RefCell<HashMap<(BytePos, BytePos), String>> = RefCell::new(HashMap::new());
+  static EXPRESSION_SNIPPETS: RefCell<LruCache<(BytePos, BytePos), String>> = {
+    RefCell::new(LruCache::new(NonZeroUsize::new(10_000).unwrap()))
+  };
 }
 
 #[doc(hidden)]
@@ -466,15 +469,15 @@ fn emit_expression(expr: &Expr) -> String {
   let span = expr.span();
   if let Some(snippet) = source_map_snippet(span) {
     EXPRESSION_SNIPPETS.with(|slot| {
-      slot
-        .borrow_mut()
-        .insert((span.lo, span.hi), snippet.clone());
+      let mut cache = slot.borrow_mut();
+      cache.put((span.lo, span.hi), snippet.clone());
     });
     return snippet;
   }
-  if let Some(cached) =
-    EXPRESSION_SNIPPETS.with(|slot| slot.borrow().get(&(span.lo, span.hi)).cloned())
-  {
+  if let Some(cached) = EXPRESSION_SNIPPETS.with(|slot| {
+    let mut cache = slot.borrow_mut();
+    cache.get(&(span.lo, span.hi)).cloned()
+  }) {
     return cached;
   }
   emit_expression_with_codegen(expr)
@@ -1681,36 +1684,6 @@ impl ModuleEvaluator {
       .resolve(from_dir, request)
       .ok()
       .map(|result| result.full_path())
-      .or_else(|| self.resolve_workspace(request))
-  }
-
-  fn resolve_workspace(&self, request: &str) -> Option<PathBuf> {
-    let (package, remainder) = split_package_request(request)?;
-    let map = self.workspace_package_map();
-    let base = map.get(&package)?;
-    if let Some(subpath) = remainder {
-      let mut path = base.clone();
-      path.push(subpath);
-      Some(path)
-    } else {
-      Some(base.clone())
-    }
-  }
-
-  fn workspace_package_map(&self) -> HashMap<String, PathBuf> {
-    let root = self
-      .project_root
-      .canonicalize()
-      .unwrap_or_else(|_| self.project_root.clone());
-    let mut guard = WORKSPACE_PACKAGE_MAP
-      .lock()
-      .expect("workspace map lock poisoned");
-    if let Some(existing) = guard.get(&root) {
-      return existing.clone();
-    }
-    let map = build_workspace_package_map(root.clone());
-    guard.insert(root, map.clone());
-    map
   }
 
   fn statics_for_inner(
@@ -1751,25 +1724,33 @@ impl ModuleEvaluator {
 
     let dependencies: Vec<PathBuf> = result.dependencies.iter().cloned().collect();
     let mut dependency_hashes: Vec<(PathBuf, String)> = Vec::with_capacity(dependencies.len());
+    let mut collected_paths = HashSet::new();
 
     {
       let cache = self.cache.borrow();
       for dependency in &dependencies {
         if let Some(dep_data) = cache.get(dependency) {
           dependency_hashes.push((dependency.clone(), dep_data.fingerprint.tree_hash.clone()));
+          collected_paths.insert(dependency.clone());
         }
       }
     }
 
     for dependency in &dependencies {
-      if dependency_hashes.iter().any(|(path, _)| path == dependency) {
+      if collected_paths.contains(dependency) {
         continue;
       }
       if let Some(dep_data) = get_cached_module(dependency) {
         dependency_hashes.push((dependency.clone(), dep_data.fingerprint.tree_hash.clone()));
+        collected_paths.insert(dependency.clone());
         self.cache.borrow_mut().insert(dependency.clone(), dep_data);
       } else {
-        return None;
+        // Graceful fallback: warn and continue without blocking the whole file
+        eprintln!(
+          "[compiled-css] Warning: Could not resolve dependency cache for {:?}",
+          dependency
+        );
+        // continue without adding a hash for this dependency
       }
     }
 
@@ -1878,73 +1859,6 @@ fn split_package_request(request: &str) -> Option<(String, Option<String>)> {
       Some((package, Some(remainder.join("/"))))
     }
   }
-}
-
-fn build_workspace_package_map(root: PathBuf) -> HashMap<String, PathBuf> {
-  let mut map = HashMap::new();
-
-  for entry in WalkDir::new(&root)
-    .follow_links(false)
-    .into_iter()
-    .filter_entry(|entry| !should_skip_dir(entry))
-  {
-    let entry = match entry {
-      Ok(value) => value,
-      Err(_) => continue,
-    };
-    if !entry.file_type().is_file() {
-      continue;
-    }
-    if entry.file_name() != "package.json" {
-      continue;
-    }
-    if entry
-      .path()
-      .components()
-      .any(|component| matches!(component.as_os_str().to_str(), Some("node_modules")))
-    {
-      continue;
-    }
-    let Ok(raw) = fs::read_to_string(entry.path()) else {
-      continue;
-    };
-    let Ok(value) = serde_json::from_str::<Value>(&raw) else {
-      continue;
-    };
-    let Some(name) = value.get("name").and_then(|name| name.as_str()) else {
-      continue;
-    };
-    if map.contains_key(name) {
-      continue;
-    }
-    let Some(parent) = entry.path().parent() else {
-      continue;
-    };
-    map.insert(name.to_string(), parent.to_path_buf());
-  }
-
-  map
-}
-
-fn should_skip_dir(entry: &DirEntry) -> bool {
-  if !entry.file_type().is_dir() {
-    return false;
-  }
-  matches!(
-    entry.file_name().to_str(),
-    Some(".git")
-      | Some("node_modules")
-      | Some(".yarn")
-      | Some(".turbo")
-      | Some(".next")
-      | Some("dist")
-      | Some("build")
-      | Some("coverage")
-      | Some("storybook-static")
-      | Some("tmp")
-      | Some("target")
-      | Some(".cache")
-  )
 }
 
 fn collect_module_statics_from_ast(
@@ -4461,6 +4375,46 @@ fn collect_precomputed_class_exprs(
   }
 }
 
+fn flatten_class_entries(entries: Vec<ExprOrSpread>) -> Vec<ExprOrSpread> {
+  fn flatten_entry(entry: ExprOrSpread, out: &mut Vec<ExprOrSpread>) {
+    match entry {
+      ExprOrSpread { spread: None, expr } => match *expr {
+        Expr::Array(array) => {
+          let can_flatten = array
+            .elems
+            .iter()
+            .all(|elem| elem.as_ref().map_or(true, |e| e.spread.is_none()));
+          if can_flatten {
+            for elem in array.elems {
+              if let Some(elem) = elem {
+                flatten_entry(elem, out);
+              }
+            }
+          } else {
+            out.push(ExprOrSpread {
+              spread: None,
+              expr: Box::new(Expr::Array(array)),
+            });
+          }
+        }
+        other => {
+          out.push(ExprOrSpread {
+            spread: None,
+            expr: Box::new(other),
+          });
+        }
+      },
+      other => out.push(other),
+    }
+  }
+
+  let mut flattened = Vec::new();
+  for entry in entries {
+    flatten_entry(entry, &mut flattened);
+  }
+  flattened
+}
+
 fn merge_adjacent_string_entries(entries: Vec<ExprOrSpread>) -> Vec<ExprOrSpread> {
   let mut merged = Vec::new();
   let mut buffer = Vec::new();
@@ -4472,19 +4426,22 @@ fn merge_adjacent_string_entries(entries: Vec<ExprOrSpread>) -> Vec<ExprOrSpread
       }
       other => {
         if !buffer.is_empty() {
+          let joined = buffer
+            .iter()
+            .map(|expr| match &**expr {
+              Expr::Lit(Lit::Str(str)) => str.value.to_string(),
+              _ => String::new(),
+            })
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ");
           merged.push(ExprOrSpread {
             spread: None,
-            expr: Box::new(Expr::Lit(Lit::Str(Str::from(
-              buffer
-                .iter()
-                .map(|expr| match &**expr {
-                  Expr::Lit(Lit::Str(str)) => str.value.to_string(),
-                  _ => String::new(),
-                })
-                .filter(|s| !s.is_empty())
-                .collect::<Vec<_>>()
-                .join(" "),
-            )))),
+            expr: Box::new(Expr::Lit(Lit::Str(Str {
+              span: DUMMY_SP,
+              value: joined.clone().into(),
+              raw: Some(Atom::from(format!("'{}'", joined))),
+            }))),
           });
           buffer.clear();
         }
@@ -4494,19 +4451,22 @@ fn merge_adjacent_string_entries(entries: Vec<ExprOrSpread>) -> Vec<ExprOrSpread
   }
 
   if !buffer.is_empty() {
+    let joined = buffer
+      .iter()
+      .map(|expr| match &**expr {
+        Expr::Lit(Lit::Str(str)) => str.value.to_string(),
+        _ => String::new(),
+      })
+      .filter(|s| !s.is_empty())
+      .collect::<Vec<_>>()
+      .join(" ");
     merged.push(ExprOrSpread {
       spread: None,
-      expr: Box::new(Expr::Lit(Lit::Str(Str::from(
-        buffer
-          .iter()
-          .map(|expr| match &**expr {
-            Expr::Lit(Lit::Str(str)) => str.value.to_string(),
-            _ => String::new(),
-          })
-          .filter(|s| !s.is_empty())
-          .collect::<Vec<_>>()
-          .join(" "),
-      )))),
+      expr: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: joined.clone().into(),
+        raw: Some(Atom::from(format!("'{}'", joined))),
+      }))),
     });
   }
 
@@ -5277,6 +5237,7 @@ struct TransformVisitor<'a> {
   options: &'a PluginOptions,
   bindings: HashMap<(Atom, SyntaxContext), StaticEvalResult>,
   css_runtime_artifacts: HashMap<(Atom, SyntaxContext), CssArtifacts>,
+  var_inits: HashMap<(Atom, SyntaxContext), Expr>,
   css_imports: HashSet<(Atom, SyntaxContext)>,
   keyframes_imports: HashSet<(Atom, SyntaxContext)>,
   styled_imports: HashSet<(Atom, SyntaxContext)>,
@@ -5385,6 +5346,7 @@ impl<'a> TransformVisitor<'a> {
       referenced_bindings,
       css_binding_rules: HashMap::new(),
       used_css_bindings: HashSet::new(),
+      var_inits: HashMap::new(),
       runtime_class_ident: None,
       runtime_ix_ident: None,
       runtime_cc_ident: None,
@@ -5414,6 +5376,13 @@ impl<'a> TransformVisitor<'a> {
         }
 
         if let Some(init) = &declarator.init {
+          // Store initializer expression for later resolution in className building
+          if let Pat::Ident(binding) = &declarator.name {
+            self
+              .host
+              .var_inits
+              .insert(to_id(&binding.id), (*init.clone()).clone());
+          }
           if let Expr::Call(call) = &**init {
             if let Callee::Expr(callee_expr) = &call.callee {
               if self.host.is_css_ident(callee_expr) {
@@ -5747,6 +5716,59 @@ impl<'a> TransformVisitor<'a> {
       }
     }
     expanded
+  }
+
+  fn detect_jsx_runtime_from_comments(module: &Module) -> Option<String> {
+    // Try to get comments from EMIT_COMMENTS first
+    let result = EMIT_COMMENTS.with(|slot| {
+      let comments = slot.borrow();
+      if let Some(comments) = comments.as_ref() {
+        // Get all leading comments (typically at the start of the file)
+        if let Some(leading) = comments.get_leading(BytePos(0)) {
+          for comment in leading {
+            let text = &comment.text;
+            // Look for @jsxRuntime pragma
+            if text.contains("@jsxRuntime") {
+              // Extract the runtime value (e.g., "classic" or "automatic")
+              if let Some(start) = text.find("@jsxRuntime") {
+                let after_pragma = &text[start + "@jsxRuntime".len()..];
+                let runtime = after_pragma
+                  .trim_start()
+                  .split_whitespace()
+                  .next()
+                  .unwrap_or("");
+                if !runtime.is_empty() {
+                  return Some(runtime.to_string());
+                }
+              }
+            }
+          }
+        }
+      }
+      None
+    });
+
+    if result.is_some() {
+      return result;
+    }
+
+    // If not found in EMIT_COMMENTS, try checking if there's a jsx pragma or similar markers
+    // in the first few items of the module body
+    for item in module.body.iter().take(5) {
+      if let ModuleItem::ModuleDecl(ModuleDecl::Import(import)) = item {
+        // Check if importing jsx from compiled/react - this is a sign of classic runtime
+        for spec in &import.specifiers {
+          if let ImportSpecifier::Named(named) = spec {
+            if named.local.sym.as_ref() == "jsx" && import.src.value.as_ref() == "@compiled/react" {
+              // Found jsx import from @compiled/react, likely classic runtime
+              return Some("classic".to_string());
+            }
+          }
+        }
+      }
+    }
+
+    None
   }
 
   fn should_import_react_namespace(&self) -> bool {
@@ -6089,6 +6111,62 @@ impl<'a> TransformVisitor<'a> {
             Some(artifacts) => combined.merge(artifacts),
             None => return None,
           }
+        }
+        Expr::Call(inner_call) => {
+          if let Callee::Expr(inner_callee) = &inner_call.callee {
+            // Handle nested css(...) inside styled(...)
+            if self.is_css_ident(inner_callee) {
+              if let Some(values) = self.evaluate_call_arguments(inner_call) {
+                for value in values {
+                  let artifacts = css_artifacts_from_static_value(&value, &self.css_options())?;
+                  combined.merge(artifacts);
+                }
+                // handled this argument fully
+                continue;
+              } else {
+                // Fallback to dynamic handling for nested css(...) when static eval fails
+                let mut merged_any = false;
+                for inner_arg in &inner_call.args {
+                  if inner_arg.spread.is_some() {
+                    return None;
+                  }
+                  match &*inner_arg.expr {
+                    Expr::Object(obj) => {
+                      let artifacts = self.process_dynamic_css_object(obj, props_ident)?;
+                      combined.merge(artifacts);
+                      merged_any = true;
+                    }
+                    Expr::Ident(ident) => {
+                      self.mark_css_binding_used(ident);
+                      let mut runtime_artifacts =
+                        self.css_runtime_artifacts.get(&to_id(ident)).cloned();
+                      if runtime_artifacts.is_none() {
+                        if let Some((_, artifacts)) = self
+                          .css_runtime_artifacts
+                          .iter()
+                          .find(|((sym, _), _)| sym == &ident.sym)
+                        {
+                          runtime_artifacts = Some(artifacts.clone());
+                        }
+                      }
+                      if let Some(artifacts) = runtime_artifacts {
+                        combined.merge(artifacts);
+                        merged_any = true;
+                      } else {
+                        return None;
+                      }
+                    }
+                    _ => return None,
+                  }
+                }
+                if !merged_any {
+                  return None;
+                }
+                continue;
+              }
+            }
+          }
+          return None;
         }
         _ => return None,
       }
@@ -7258,6 +7336,24 @@ impl<'a> TransformVisitor<'a> {
     }
 
     match expr_ref {
+      Expr::Ident(ident) => {
+        self.mark_css_binding_used(ident);
+        let mut runtime_artifacts = self.css_runtime_artifacts.get(&to_id(ident)).cloned();
+        if runtime_artifacts.is_none() {
+          if let Some((_, artifacts)) = self
+            .css_runtime_artifacts
+            .iter()
+            .find(|((sym, _), _)| sym == &ident.sym)
+          {
+            runtime_artifacts = Some(artifacts.clone());
+          }
+        }
+        if let Some(artifacts) = runtime_artifacts {
+          self.register_artifacts_for_metadata(&artifacts);
+          return Some(artifacts);
+        }
+        return None;
+      }
       Expr::Array(array) => {
         let mut combined = CssArtifacts::default();
         for elem in array.elems.iter().flatten() {
@@ -8940,7 +9036,8 @@ impl<'a> TransformVisitor<'a> {
       | Expr::Await(_)
       | Expr::New(_)
       | Expr::Array(_)
-      | Expr::Object(_) => {
+      | Expr::Object(_)
+      | Expr::Fn(_) => {
         let mut canonical_expr = expr.clone();
         Self::rename_ident_in_expr(&mut canonical_expr, props_ident, &canonical_ident);
         let mut variable_input = emit_expression_with_codegen(&canonical_expr);
@@ -9913,58 +10010,204 @@ impl<'a> TransformVisitor<'a> {
 
   fn append_display_names(&mut self, module: &mut Module) {
     for (ident, display_name) in self.styled_display_names.drain(..) {
-      let test = Expr::Bin(BinExpr {
-        span: DUMMY_SP,
-        op: BinaryOp::NotEqEq,
-        left: Box::new(Expr::Member(MemberExpr {
+      // Build the displayName assignment wrapped in a NODE_ENV check
+      let build_stmt = |ident: &Ident, display_name: &str| {
+        let test = Expr::Bin(BinExpr {
           span: DUMMY_SP,
-          obj: Box::new(Expr::Member(MemberExpr {
+          op: BinaryOp::NotEqEq,
+          left: Box::new(Expr::Member(MemberExpr {
             span: DUMMY_SP,
-            obj: Box::new(Expr::Ident(quote_ident!("process").into())),
-            prop: MemberProp::Ident(quote_ident!("env")),
-          })),
-          prop: MemberProp::Ident(quote_ident!("NODE_ENV")),
-        })),
-        right: Box::new(Expr::Lit(Lit::Str(Self::single_quoted_str("production")))),
-      });
-      let stmt = Stmt::If(IfStmt {
-        span: DUMMY_SP,
-        test: Box::new(test),
-        cons: Box::new(Stmt::Block(BlockStmt {
-          span: DUMMY_SP,
-          ctxt: SyntaxContext::empty(),
-          stmts: vec![Stmt::Expr(ExprStmt {
-            span: DUMMY_SP,
-            expr: Box::new(Expr::Assign(AssignExpr {
+            obj: Box::new(Expr::Member(MemberExpr {
               span: DUMMY_SP,
-              op: AssignOp::Assign,
-              left: SimpleAssignTarget::Member(MemberExpr {
-                span: DUMMY_SP,
-                obj: Box::new(Expr::Ident(ident.clone())),
-                prop: MemberProp::Ident(quote_ident!("displayName")),
-              })
-              .into(),
-              right: Box::new(Expr::Lit(Lit::Str(Self::single_quoted_str(&display_name)))),
+              obj: Box::new(Expr::Ident(quote_ident!("process").into())),
+              prop: MemberProp::Ident(quote_ident!("env")),
             })),
-          })],
-        })),
-        alt: None,
-      });
-      let item = ModuleItem::Stmt(stmt);
-      let insert_after_decl = module
+            prop: MemberProp::Ident(quote_ident!("NODE_ENV")),
+          })),
+          right: Box::new(Expr::Lit(Lit::Str(Self::single_quoted_str("production")))),
+        });
+        Stmt::If(IfStmt {
+          span: DUMMY_SP,
+          test: Box::new(test),
+          cons: Box::new(Stmt::Block(BlockStmt {
+            span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
+            stmts: vec![Stmt::Expr(ExprStmt {
+              span: DUMMY_SP,
+              expr: Box::new(Expr::Assign(AssignExpr {
+                span: DUMMY_SP,
+                op: AssignOp::Assign,
+                left: SimpleAssignTarget::Member(MemberExpr {
+                  span: DUMMY_SP,
+                  obj: Box::new(Expr::Ident(ident.clone())),
+                  prop: MemberProp::Ident(quote_ident!("displayName")),
+                })
+                .into(),
+                right: Box::new(Expr::Lit(Lit::Str(Self::single_quoted_str(display_name)))),
+              })),
+            })],
+          })),
+          alt: None,
+        })
+      };
+
+      // 1) Try to insert after a top-level declaration
+      if let Some(idx) = module
         .body
         .iter()
-        .position(|item| Self::matches_styled_binding(item, &ident));
-      if let Some(idx) = insert_after_decl {
+        .position(|item| Self::matches_styled_binding(item, &ident))
+      {
+        let item = ModuleItem::Stmt(build_stmt(&ident, &display_name));
         module.body.insert(idx + 1, item);
         continue;
       }
-      let export_index = module
-        .body
-        .iter()
-        .position(|item| Self::matches_export_decl(item))
-        .unwrap_or(module.body.len());
-      module.body.insert(export_index, item);
+
+      // 2) Recursively try to insert within nested scopes (e.g., function/arrow bodies)
+      fn insert_in_block(
+        block: &mut BlockStmt,
+        ident: &Ident,
+        display_name: &str,
+        build_stmt: &dyn Fn(&Ident, &str) -> Stmt,
+      ) -> bool {
+        // First, try to insert in this block right after a matching var declaration
+        for i in 0..block.stmts.len() {
+          let matches = match &block.stmts[i] {
+            Stmt::Decl(Decl::Var(var_decl)) => var_decl
+              .decls
+              .iter()
+              .any(|decl| TransformVisitor::pattern_binds_name(&decl.name, ident.sym.as_ref())),
+            _ => false,
+          };
+          if matches {
+            let stmt = build_stmt(ident, display_name);
+            block.stmts.insert(i + 1, stmt);
+            return true;
+          }
+        }
+
+        // Otherwise, search nested statements recursively
+        for st in &mut block.stmts {
+          if insert_in_stmt(st, ident, display_name, build_stmt) {
+            return true;
+          }
+        }
+        false
+      }
+
+      fn insert_in_stmt(
+        stmt: &mut Stmt,
+        ident: &Ident,
+        display_name: &str,
+        build_stmt: &dyn Fn(&Ident, &str) -> Stmt,
+      ) -> bool {
+        match stmt {
+          Stmt::Block(b) => insert_in_block(b, ident, display_name, build_stmt),
+          Stmt::If(if_stmt) => {
+            if insert_in_stmt(&mut if_stmt.cons, ident, display_name, build_stmt) {
+              return true;
+            }
+            if let Some(alt) = &mut if_stmt.alt {
+              if insert_in_stmt(alt, ident, display_name, build_stmt) {
+                return true;
+              }
+            }
+            false
+          }
+          Stmt::While(w) => insert_in_stmt(&mut w.body, ident, display_name, build_stmt),
+          Stmt::DoWhile(dw) => insert_in_stmt(&mut dw.body, ident, display_name, build_stmt),
+          Stmt::For(f) => insert_in_stmt(&mut f.body, ident, display_name, build_stmt),
+          Stmt::ForIn(fi) => insert_in_stmt(&mut fi.body, ident, display_name, build_stmt),
+          Stmt::ForOf(fo) => insert_in_stmt(&mut fo.body, ident, display_name, build_stmt),
+          Stmt::Switch(sw) => {
+            for case in &mut sw.cases {
+              for s in &mut case.cons {
+                if insert_in_stmt(s, ident, display_name, build_stmt) {
+                  return true;
+                }
+              }
+            }
+            false
+          }
+          Stmt::Try(t) => {
+            if insert_in_block(&mut t.block, ident, display_name, build_stmt) {
+              return true;
+            }
+            if let Some(handler) = &mut t.handler {
+              if insert_in_block(&mut handler.body, ident, display_name, build_stmt) {
+                return true;
+              }
+            }
+            if let Some(finalizer) = &mut t.finalizer {
+              if insert_in_block(finalizer, ident, display_name, build_stmt) {
+                return true;
+              }
+            }
+            false
+          }
+          Stmt::Labeled(l) => insert_in_stmt(&mut l.body, ident, display_name, build_stmt),
+          Stmt::With(w) => insert_in_stmt(&mut w.body, ident, display_name, build_stmt),
+          Stmt::Decl(Decl::Fn(fn_decl)) => {
+            if let Some(body) = &mut fn_decl.function.body {
+              return insert_in_block(body, ident, display_name, build_stmt);
+            }
+            false
+          }
+          Stmt::Decl(Decl::Var(var_decl)) => {
+            // The declaration itself may contain arrow/fn inits with blocks; traverse them
+            for d in &mut var_decl.decls {
+              if let Some(init) = &mut d.init {
+                if insert_in_expr(init, ident, display_name, build_stmt) {
+                  return true;
+                }
+              }
+            }
+            false
+          }
+          Stmt::Expr(expr_stmt) => {
+            insert_in_expr(&mut expr_stmt.expr, ident, display_name, build_stmt)
+          }
+          _ => false,
+        }
+      }
+
+      fn insert_in_expr(
+        expr: &mut Expr,
+        ident: &Ident,
+        display_name: &str,
+        build_stmt: &dyn Fn(&Ident, &str) -> Stmt,
+      ) -> bool {
+        match expr {
+          Expr::Arrow(a) => {
+            if let BlockStmtOrExpr::BlockStmt(ref mut b) = *a.body {
+              return insert_in_block(b, ident, display_name, build_stmt);
+            }
+            false
+          }
+          Expr::Fn(f) => {
+            if let Some(body) = &mut f.function.body {
+              return insert_in_block(body, ident, display_name, build_stmt);
+            }
+            false
+          }
+          Expr::Paren(p) => insert_in_expr(&mut p.expr, ident, display_name, build_stmt),
+          _ => false,
+        }
+      }
+
+      // Walk nested scopes starting from top-level statements
+      let mut inserted = false;
+      for item in &mut module.body {
+        if inserted {
+          break;
+        }
+        if let ModuleItem::Stmt(stmt) = item {
+          if insert_in_stmt(stmt, &ident, &display_name, &build_stmt) {
+            inserted = true;
+          }
+        }
+      }
+
+      // If not found anywhere, as a last resort, do nothing (avoid wrong scope insertion)
     }
   }
 
@@ -10302,7 +10545,16 @@ impl<'a> TransformVisitor<'a> {
         }
       }
     }
+    // Only return references that actually correspond to cssMap values we know about,
+    // otherwise a plain identifier (like an array variable) would incorrectly be
+    // treated as a cssMap reference and cause us to retain the original expression.
     unique_refs
+      .into_iter()
+      .filter(|r| {
+        self.css_map_ident_classes.contains_key(&r.ident)
+          || self.css_map_static_objects.contains_key(&r.ident)
+      })
+      .collect()
   }
 
   fn cache_css_map_artifacts(
@@ -10588,6 +10840,42 @@ impl<'a> TransformVisitor<'a> {
       }
     }
 
+    let mut static_ident_class_names: Vec<String> = Vec::new();
+    let mut static_ident_ids: HashSet<(Atom, SyntaxContext)> = HashSet::new();
+    // Map from identifier to the class names it resolves to, used for rebuilding conditional entries
+    let mut static_ident_class_map: HashMap<(Atom, SyntaxContext), Vec<String>> = HashMap::new();
+    if let Some(expr) = &original_css_expr {
+      if let Expr::Array(array) = expr {
+        for elem in &array.elems {
+          let Some(elem) = elem else {
+            continue;
+          };
+          if elem.spread.is_some() {
+            continue;
+          }
+          if let Expr::Ident(ident) = &*elem.expr {
+            if let Some(value) = evaluate_static_with_info(&elem.expr, &self.bindings) {
+              // Collect classes for this identifier
+              let mut classes = Vec::new();
+              collect_precomputed_classes(&value.value, &mut classes);
+              if !classes.is_empty() {
+                for class in &classes {
+                  static_ident_class_names.push(class.clone());
+                }
+                static_ident_class_map.insert(to_id(ident), classes);
+              }
+              static_ident_ids.insert(to_id(ident));
+            }
+          } else if matches!(&*elem.expr, Expr::Array(_)) {
+            // Traverse nested arrays for additional static identifiers.
+            if let Some(value) = evaluate_static_with_info(&elem.expr, &self.bindings) {
+              collect_precomputed_classes(&value.value, &mut static_ident_class_names);
+            }
+          }
+        }
+      }
+    }
+
     let mut css_value_for_precomputed = match &css_attr.value {
       Some(JSXAttrValue::JSXExprContainer(container)) => match &container.expr {
         JSXExpr::Expr(expr) => evaluate_static(expr, &self.bindings),
@@ -10622,26 +10910,29 @@ impl<'a> TransformVisitor<'a> {
         self.mark_css_binding_used(ident);
         match self.css_runtime_artifacts.get(&to_id(ident)).cloned() {
           Some(artifacts) => artifacts,
-          None => return None,
+          None => CssArtifacts::default(),
         }
       } else {
         using_runtime_artifacts = true;
         let options = self.css_options();
-        let artifacts =
-          self.css_artifacts_from_dynamic_css_expression(expr, &props_ident, &options)?;
-        if debug_css {
-          let source = emit_expression(expr);
-          eprintln!(
-            "[compiled-debug] css prop dynamic expression processed: {} (rules={}, raw={})",
-            source,
-            artifacts.rules.len(),
-            artifacts.raw_rules.len()
-          );
+        match self.css_artifacts_from_dynamic_css_expression(expr, &props_ident, &options) {
+          Some(artifacts) => {
+            if debug_css {
+              let source = emit_expression(expr);
+              eprintln!(
+                "[compiled-debug] css prop dynamic expression processed: {} (rules={}, raw={})",
+                source,
+                artifacts.rules.len(),
+                artifacts.raw_rules.len()
+              );
+            }
+            artifacts
+          }
+          None => CssArtifacts::default(),
         }
-        artifacts
       }
     } else {
-      return None;
+      CssArtifacts::default()
     };
     self.register_property_rules_from_artifacts(&artifacts);
     self.register_artifacts_for_metadata(&artifacts);
@@ -10675,8 +10966,12 @@ impl<'a> TransformVisitor<'a> {
       })
       .unwrap_or_default();
     let mut classes_for_rules = precomputed_classes.clone();
+    let mut has_css_map_reference = false;
     if let Some(expr) = original_css_expr.as_ref() {
       let related_refs = self.ensure_css_map_rules_for_expr(expr);
+      if !related_refs.is_empty() {
+        has_css_map_reference = true;
+      }
       for reference in related_refs {
         if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
           eprintln!(
@@ -10723,6 +11018,61 @@ impl<'a> TransformVisitor<'a> {
         expr_class_names,
         precomputed_exprs.len()
       );
+    }
+
+    // If the css prop referenced a cssMap, include the original css expression
+    // so that expressions like `styles.root` are preserved in the output and
+    // end up contributing to className at runtime (e.g., via primitives runtime).
+    // However, filter out identifiers that refer to statically compiled css() values
+    // (which are transformed to null) to avoid leaking null variables like `stylesCss`
+    // into the final className ax([...]) array.
+    if has_css_map_reference {
+      if let Some(expr) = &original_css_expr {
+        // When the original expression is an array literal, filter its elements to
+        // drop identifiers we already resolved as static css() bindings.
+        let maybe_filtered = match expr {
+          Expr::Array(arr) => {
+            let filtered_elems: Vec<Option<ExprOrSpread>> = arr
+              .elems
+              .iter()
+              .map(|elem_opt| {
+                if let Some(elem) = elem_opt {
+                  // Keep spreads as-is; they will be handled downstream.
+                  if elem.spread.is_some() {
+                    return Some(elem.clone());
+                  }
+                  match &*elem.expr {
+                    Expr::Ident(id) => {
+                      if static_ident_ids.contains(&to_id(id)) {
+                        // Drop identifiers that point to static css() results
+                        // (these would otherwise evaluate to null at runtime).
+                        None
+                      } else {
+                        Some(elem.clone())
+                      }
+                    }
+                    _ => Some(elem.clone()),
+                  }
+                } else {
+                  // Preserve holes for consistency with original array literal
+                  None
+                }
+              })
+              .collect();
+            Some(Expr::Array(ArrayLit {
+              span: DUMMY_SP,
+              elems: filtered_elems,
+            }))
+          }
+          _ => None,
+        };
+
+        if let Some(filtered) = maybe_filtered {
+          precomputed_exprs.push(filtered);
+        } else {
+          precomputed_exprs.push(expr.clone());
+        }
+      }
     }
 
     let mut runtime_class_conditions = std::mem::take(&mut artifacts.runtime_class_conditions);
@@ -10831,6 +11181,15 @@ impl<'a> TransformVisitor<'a> {
         unique_class_names.push(class_name.clone());
       }
     }
+
+    for class_name in static_ident_class_names {
+      if !expr_class_names.contains(&class_name)
+        && !conditional_class_names.contains(&class_name)
+        && seen_classes.insert(class_name.clone())
+      {
+        unique_class_names.push(class_name);
+      }
+    }
     if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
       eprintln!(
         "[compiled-debug] unique_class_names={:?} precomputed_classes={:?}",
@@ -10910,6 +11269,111 @@ impl<'a> TransformVisitor<'a> {
       });
     }
 
+    // If css prop was a single identifier that resolves to an initializer array,
+    // expand it into static class strings and conditional entries, preserving order.
+    if precomputed_exprs.is_empty() {
+      if let Some(expr) = &original_css_expr {
+        if let Expr::Ident(id) = expr {
+          if let Some(init) = self.var_inits.get(&to_id(id)) {
+            if let Expr::Array(arr) = init {
+              let mut base_classes: Vec<String> = Vec::new();
+              for elem_opt in &arr.elems {
+                if let Some(elem) = elem_opt {
+                  if elem.spread.is_some() {
+                    continue;
+                  }
+                  match &*elem.expr {
+                    Expr::Ident(css_ident) => {
+                      let key = to_id(css_ident);
+                      if let Some(artifacts) = self.css_runtime_artifacts.get(&key) {
+                        for rule in &artifacts.rules {
+                          if !base_classes.contains(&rule.class_name) {
+                            base_classes.push(rule.class_name.clone());
+                          }
+                        }
+                      }
+                    }
+                    Expr::Cond(cond) => {
+                      // condition ? cssIdent : null
+                      if let Expr::Ident(css_ident) = cond.cons.as_ref() {
+                        if matches!(cond.alt.as_ref(), Expr::Lit(Lit::Null(_))) {
+                          let key = to_id(css_ident);
+                          if let Some(artifacts) = self.css_runtime_artifacts.get(&key) {
+                            let mut classes = Vec::new();
+                            for rule in &artifacts.rules {
+                              classes.push(rule.class_name.clone());
+                            }
+                            if !classes.is_empty() {
+                              let joined = classes.join(" ");
+                              let single = Expr::Lit(Lit::Str(Str {
+                                span: DUMMY_SP,
+                                value: joined.clone().into(),
+                                raw: Some(Atom::from(format!("'{}'", joined))),
+                              }));
+                              let entry = Expr::Bin(BinExpr {
+                                span: DUMMY_SP,
+                                op: BinaryOp::LogicalAnd,
+                                left: cond.test.clone(),
+                                right: Box::new(single),
+                              });
+                              precomputed_exprs.push(entry);
+                            }
+                          }
+                        }
+                      }
+                    }
+                    Expr::Bin(bin) if matches!(bin.op, BinaryOp::LogicalAnd) => {
+                      if let Expr::Ident(css_ident) = bin.right.as_ref() {
+                        let key = to_id(css_ident);
+                        if let Some(artifacts) = self.css_runtime_artifacts.get(&key) {
+                          let mut classes = Vec::new();
+                          for rule in &artifacts.rules {
+                            classes.push(rule.class_name.clone());
+                          }
+                          if !classes.is_empty() {
+                            let joined = classes.join(" ");
+                            let single = Expr::Lit(Lit::Str(Str {
+                              span: DUMMY_SP,
+                              value: joined.clone().into(),
+                              raw: Some(Atom::from(format!("'{}'", joined))),
+                            }));
+                            let entry = Expr::Bin(BinExpr {
+                              span: DUMMY_SP,
+                              op: BinaryOp::LogicalAnd,
+                              left: bin.left.clone(),
+                              right: Box::new(single),
+                            });
+                            precomputed_exprs.push(entry);
+                          }
+                        }
+                      }
+                    }
+                    _ => {}
+                  }
+                }
+              }
+              if !base_classes.is_empty() {
+                // Emit as the first entry so it precedes conditionals
+                let joined = base_classes.join(" ");
+                let str_lit = Expr::Lit(Lit::Str(Str {
+                  span: DUMMY_SP,
+                  value: joined.clone().into(),
+                  raw: Some(Atom::from(format!("'{}'", joined))),
+                }));
+                class_entries.insert(
+                  0,
+                  ExprOrSpread {
+                    spread: None,
+                    expr: Box::new(str_lit),
+                  },
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
     for expr in precomputed_exprs {
       class_entries.push(ExprOrSpread {
         spread: None,
@@ -10932,24 +11396,57 @@ impl<'a> TransformVisitor<'a> {
             _ => None,
           };
           if let Some(expr) = expr {
-            class_entries.push(ExprOrSpread {
-              spread: None,
-              expr: Box::new(expr),
-            });
+            let mut skip_expr = false;
+            if let Expr::Ident(ident) = &expr {
+              let ident_id = to_id(ident);
+              if self.css_runtime_artifacts.contains_key(&ident_id)
+                || evaluate_static_with_info(&expr, &self.bindings).is_some()
+              {
+                static_ident_ids.insert(ident_id);
+                skip_expr = true;
+              }
+            }
+            if !skip_expr {
+              class_entries.push(ExprOrSpread {
+                spread: None,
+                expr: Box::new(expr),
+              });
+            }
           }
         }
       }
     }
 
+    let flattened_class_entries = flatten_class_entries(class_entries);
     let merged_class_entries = if class_index.is_some() {
-      class_entries
+      flattened_class_entries
     } else {
-      merge_adjacent_string_entries(class_entries)
+      merge_adjacent_string_entries(flattened_class_entries)
     };
+
+    let filter_static_ident = |entry: &ExprOrSpread| -> bool {
+      if entry.spread.is_some() {
+        return true;
+      }
+      if let Expr::Ident(ident) = &*entry.expr {
+        let id_key = to_id(ident);
+        // Drop identifiers that we detected as static css() bindings, and also
+        // drop identifiers that have cached css runtime artifacts (css calls bound to consts).
+        if static_ident_ids.contains(&id_key) || self.css_runtime_artifacts.contains_key(&id_key) {
+          return false;
+        }
+      }
+      true
+    };
+
     let class_entry_count = merged_class_entries.len();
+    let filtered_class_entries: Vec<ExprOrSpread> = merged_class_entries
+      .into_iter()
+      .filter(filter_static_ident)
+      .collect();
     let class_array = ArrayLit {
       span: DUMMY_SP,
-      elems: merged_class_entries.into_iter().map(Some).collect(),
+      elems: filtered_class_entries.into_iter().map(Some).collect(),
     };
 
     let class_attr = JSXAttrOrSpread::JSXAttr(JSXAttr {
@@ -11413,28 +11910,372 @@ impl<'a> VisitMut for TransformVisitor<'a> {
 
     if let Expr::Call(call) = expr {
       if let Callee::Expr(callee_expr) = &call.callee {
-        if let Some((_component_expr, styled_ident)) = self.resolve_styled_target(callee_expr) {
+        if let Some((component_expr_opt, styled_ident)) = self.resolve_styled_target(callee_expr) {
           let props_ident = Ident::new(
             CANONICAL_PROPS_IDENT.into(),
             DUMMY_SP,
             SyntaxContext::empty(),
           );
-          match self.process_styled_call_arguments(call, &props_ident) {
-            Some(artifacts) => {
-              if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+          // Build artifacts similar to var declarator path
+          let mut combined = CssArtifacts::default();
+          let debug_css = std::env::var_os("COMPILED_DEBUG_CSS").is_some();
+          if let Some(values) = self.evaluate_call_arguments_allow_imports(call) {
+            if debug_css {
+              eprintln!(
+                "[compiled-debug] inline styled call static args len={}",
+                values.len()
+              );
+            }
+            for (index, (arg, value)) in call.args.iter().zip(values.iter()).enumerate() {
+              let static_artifacts = css_artifacts_from_static_value(value, &self.css_options());
+              let mut merged = false;
+              let mut used_static = false;
+              let mut used_runtime = false;
+              if let Some(ref artifacts) = static_artifacts {
+                if !artifacts.rules.is_empty()
+                  || !artifacts.raw_rules.is_empty()
+                  || !artifacts.runtime_variables.is_empty()
+                  || !artifacts.runtime_class_conditions.is_empty()
+                  || !matches!(value, StaticValue::Null)
+                {
+                  combined.merge(artifacts.clone());
+                  merged = true;
+                  used_static = true;
+                }
+              }
+              if let Expr::Ident(ident) = &*arg.expr {
+                self.mark_css_binding_used(ident);
+                let mut runtime_artifacts = self.css_runtime_artifacts.get(&to_id(ident)).cloned();
+                if runtime_artifacts.is_none() {
+                  if let Some((_, artifacts)) = self
+                    .css_runtime_artifacts
+                    .iter()
+                    .find(|((sym, _), _)| sym == &ident.sym)
+                  {
+                    runtime_artifacts = Some(artifacts.clone());
+                  }
+                }
+                if let Some(artifacts) = runtime_artifacts {
+                  combined.merge(artifacts);
+                  merged = true;
+                  used_runtime = true;
+                }
+              }
+              if !merged && matches!(&*arg.expr, Expr::Lit(Lit::Null(_))) {
+                merged = true;
+              }
+              if !merged {
+                self.preserve_import_for_ident(&styled_ident);
+                return;
+              }
+              if debug_css {
+                let value_kind = if debug_css {
+                  match value.unwrap_spread() {
+                    StaticValue::Null => "Null",
+                    StaticValue::Str(_) => "Str",
+                    StaticValue::Num(_) => "Num",
+                    StaticValue::Bool(_) => "Bool",
+                    StaticValue::Object(_) => "Object",
+                    StaticValue::Array(_) => "Array",
+                    StaticValue::Function(_) => "Function",
+                    StaticValue::Spread(_) => unreachable!("spread should be unwrapped"),
+                  }
+                } else {
+                  ""
+                };
                 eprintln!(
-                  "[compiled-debug] inline styled call processed arg_count={} rules={} raw={}",
-                  call.args.len(),
-                  artifacts.rules.len(),
-                  artifacts.raw_rules.len()
+                  "[compiled-debug] inline styled call arg idx={} kind={} used_static={} used_runtime={}",
+                  index, value_kind, used_static, used_runtime
                 );
               }
-              self.register_artifacts_for_metadata(&artifacts);
             }
-            None => {
-              self.preserve_import_for_ident(&styled_ident);
+          } else {
+            match self.process_styled_call_arguments(call, &props_ident) {
+              Some(artifacts) => combined.merge(artifacts),
+              None => {
+                self.preserve_import_for_ident(&styled_ident);
+                return;
+              }
             }
           }
+          let default_component_expr = match component_expr_opt {
+            Some(expr) => expr,
+            None => {
+              self.preserve_import_for_ident(&styled_ident);
+              return;
+            }
+          };
+          // Register rules and build component expression inline
+          let mut runtime_sheets = Vec::new();
+          for rule in &combined.rules {
+            self.register_rule_with_metadata_key(
+              rule.css.clone(),
+              rule.include_in_metadata,
+              rule.metadata_key.clone(),
+            );
+            if !runtime_sheets.contains(&rule.css) {
+              runtime_sheets.push(rule.css.clone());
+            }
+          }
+          for css in &combined.raw_rules {
+            let sheet = css.clone();
+            self.register_rule_with_metadata_key(sheet.clone(), true, None);
+            if !runtime_sheets.contains(&sheet) {
+              runtime_sheets.push(sheet);
+            }
+          }
+          let runtime_sheets = self.finalize_runtime_sheets(runtime_sheets);
+          self.needs_react_namespace = true;
+          self.needs_jsx_runtime = true;
+          self.needs_runtime_ax = true;
+          self.needs_forward_ref = true;
+          if !combined.runtime_class_conditions.is_empty() && self.props_scope_depth == 0 {
+            let source_ident = Ident::new("props".into(), DUMMY_SP, SyntaxContext::empty());
+            for condition in combined.runtime_class_conditions.iter_mut() {
+              Self::rename_ident_in_expr(&mut condition.test, &source_ident, &props_ident);
+            }
+          }
+          let mut class_strings: Vec<ExprOrSpread> = Vec::new();
+          let mut conditional_classes = std::collections::HashSet::new();
+          for condition in &combined.runtime_class_conditions {
+            for class_name in &condition.when_true {
+              conditional_classes.insert(class_name.clone());
+            }
+            for class_name in &condition.when_false {
+              conditional_classes.insert(class_name.clone());
+            }
+          }
+          let mut styled_unique = Vec::new();
+          let mut styled_seen = std::collections::HashSet::new();
+          for rule in &combined.rules {
+            if conditional_classes.contains(&rule.class_name) {
+              continue;
+            }
+            if styled_seen.insert(rule.class_name.clone()) {
+              styled_unique.push(rule.class_name.clone());
+            }
+          }
+          if !styled_unique.is_empty() {
+            class_strings.push(ExprOrSpread {
+              spread: None,
+              expr: Box::new(Expr::Lit(Lit::Str(Str::from(styled_unique.join(" "))))),
+            });
+          }
+          for condition in &combined.runtime_class_conditions {
+            let has_true = !condition.when_true.is_empty();
+            let has_false = !condition.when_false.is_empty();
+            if has_true && has_false {
+              let test_expr = condition.test.clone();
+              let cons_expr = Self::class_names_to_expr(&condition.when_true);
+              let alt_expr = Self::class_names_to_expr(&condition.when_false);
+              class_strings.push(ExprOrSpread {
+                spread: None,
+                expr: Box::new(Expr::Cond(CondExpr {
+                  span: DUMMY_SP,
+                  test: Box::new(test_expr),
+                  cons: Box::new(cons_expr),
+                  alt: Box::new(alt_expr),
+                })),
+              });
+            } else if has_true {
+              let test_expr = condition.test.clone();
+              let cons_expr = Self::class_names_to_expr(&condition.when_true);
+              class_strings.push(ExprOrSpread {
+                spread: None,
+                expr: Box::new(Expr::Bin(BinExpr {
+                  span: DUMMY_SP,
+                  op: BinaryOp::LogicalAnd,
+                  left: Box::new(test_expr),
+                  right: Box::new(cons_expr),
+                })),
+              });
+            } else if has_false {
+              let test_expr = Expr::Unary(UnaryExpr {
+                span: DUMMY_SP,
+                op: UnaryOp::Bang,
+                arg: Box::new(condition.test.clone()),
+              });
+              let alt_expr = Self::class_names_to_expr(&condition.when_false);
+              class_strings.push(ExprOrSpread {
+                spread: None,
+                expr: Box::new(Expr::Bin(BinExpr {
+                  span: DUMMY_SP,
+                  op: BinaryOp::LogicalAnd,
+                  left: Box::new(test_expr),
+                  right: Box::new(alt_expr),
+                })),
+              });
+            }
+          }
+          let mut runtime_variables = combined.runtime_variables.clone();
+          if !runtime_variables.is_empty() {
+            let source_ident = Ident::new("props".into(), DUMMY_SP, SyntaxContext::empty());
+            for variable in runtime_variables.iter_mut() {
+              Self::rename_ident_in_expr(&mut variable.expression, &source_ident, &props_ident);
+            }
+          }
+          let style_ident = Ident::new("__cmpls".into(), DUMMY_SP, SyntaxContext::empty());
+          let ref_ident = Ident::new("__cmplr".into(), DUMMY_SP, SyntaxContext::empty());
+          let component_ident = Ident::new("C".into(), DUMMY_SP, SyntaxContext::empty());
+          let mut object_props = Vec::new();
+          object_props.push(ObjectPatProp::KeyValue(KeyValuePatProp {
+            key: PropName::Ident(quote_ident!("as")),
+            value: Box::new(Pat::Assign(AssignPat {
+              span: DUMMY_SP,
+              left: Box::new(Pat::Ident(BindingIdent::from(component_ident.clone()))),
+              right: Box::new(default_component_expr),
+            })),
+          }));
+          object_props.push(ObjectPatProp::KeyValue(KeyValuePatProp {
+            key: PropName::Ident(quote_ident!("style")),
+            value: Box::new(Pat::Ident(BindingIdent::from(style_ident.clone()))),
+          }));
+          object_props.push(ObjectPatProp::Rest(RestPat {
+            span: DUMMY_SP,
+            dot3_token: DUMMY_SP,
+            arg: Box::new(Pat::Ident(BindingIdent::from(props_ident.clone()))),
+            type_ann: None,
+          }));
+          let params = vec![
+            Pat::Object(ObjectPat {
+              span: DUMMY_SP,
+              props: object_props,
+              optional: false,
+              type_ann: None,
+            }),
+            Pat::Ident(BindingIdent::from(ref_ident.clone())),
+          ];
+          let class_array = Expr::Array(ArrayLit {
+            span: DUMMY_SP,
+            elems: class_strings
+              .into_iter()
+              .chain(std::iter::once(ExprOrSpread {
+                spread: None,
+                expr: Box::new(Expr::Member(MemberExpr {
+                  span: DUMMY_SP,
+                  obj: Box::new(Expr::Ident(props_ident.clone())),
+                  prop: MemberProp::Ident(quote_ident!("className")),
+                })),
+              }))
+              .map(Some)
+              .collect(),
+          });
+          let style_prop_value = if runtime_variables.is_empty() {
+            Expr::Ident(style_ident.clone())
+          } else {
+            self.build_style_with_variables(&style_ident, &runtime_variables)
+          };
+          let jsx_call = Expr::Call(CallExpr {
+            span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
+            callee: Callee::Expr(Box::new(Expr::Ident(self.jsx_ident()))),
+            args: vec![
+              ExprOrSpread {
+                spread: None,
+                expr: Box::new(Expr::Ident(component_ident.clone())),
+              },
+              ExprOrSpread {
+                spread: None,
+                expr: Box::new(Expr::Object(ObjectLit {
+                  span: DUMMY_SP,
+                  props: vec![
+                    PropOrSpread::Spread(SpreadElement {
+                      dot3_token: DUMMY_SP,
+                      expr: Box::new(Expr::Ident(props_ident.clone())),
+                    }),
+                    PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                      key: PropName::Ident(quote_ident!("style")),
+                      value: Box::new(style_prop_value),
+                    }))),
+                    PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                      key: PropName::Ident(quote_ident!("ref")),
+                      value: Box::new(Expr::Ident(ref_ident.clone())),
+                    }))),
+                    PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                      key: PropName::Ident(quote_ident!("className")),
+                      value: Box::new(Expr::Call(CallExpr {
+                        span: DUMMY_SP,
+                        ctxt: SyntaxContext::empty(),
+                        callee: Callee::Expr(Box::new(Expr::Ident(self.runtime_class_ident()))),
+                        args: vec![ExprOrSpread {
+                          spread: None,
+                          expr: Box::new(class_array),
+                        }],
+                        type_args: None,
+                      })),
+                    }))),
+                  ],
+                })),
+              },
+            ],
+            type_args: None,
+          });
+          let render_expr = if self.options.extract {
+            jsx_call
+          } else {
+            self.build_runtime_component(jsx_call, runtime_sheets, None)
+          };
+          let mut stmts = Vec::new();
+          if self.is_development_env() {
+            let guard = Stmt::If(IfStmt {
+              span: DUMMY_SP,
+              test: Box::new(Expr::Member(MemberExpr {
+                span: DUMMY_SP,
+                obj: Box::new(Expr::Ident(props_ident.clone())),
+                prop: MemberProp::Ident(quote_ident!("innerRef")),
+              })),
+              cons: Box::new(Stmt::Block(BlockStmt {
+                span: DUMMY_SP,
+                ctxt: SyntaxContext::empty(),
+                stmts: vec![Stmt::Throw(ThrowStmt {
+                  span: DUMMY_SP,
+                  arg: Box::new(Expr::New(NewExpr {
+                    span: DUMMY_SP,
+                    ctxt: SyntaxContext::empty(),
+                    callee: Box::new(Expr::Ident(quote_ident!("Error").into())),
+                    args: Some(vec![ExprOrSpread {
+                      spread: None,
+                      expr: Box::new(Expr::Lit(Lit::Str(Str::from(
+                        "Please use 'ref' instead of 'innerRef'.",
+                      )))),
+                    }]),
+                    type_args: None,
+                  })),
+                })],
+              })),
+              alt: None,
+            });
+            stmts.push(guard);
+          }
+          stmts.push(Stmt::Return(ReturnStmt {
+            span: DUMMY_SP,
+            arg: Some(Box::new(render_expr)),
+          }));
+          let arrow = Expr::Arrow(ArrowExpr {
+            span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
+            params,
+            body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+              span: DUMMY_SP,
+              ctxt: SyntaxContext::empty(),
+              stmts,
+            })),
+            is_async: false,
+            is_generator: false,
+            type_params: None,
+            return_type: None,
+          });
+          *expr = Expr::Call(CallExpr {
+            span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
+            callee: Callee::Expr(Box::new(Expr::Ident(self.forward_ref_ident()))),
+            args: vec![ExprOrSpread {
+              spread: None,
+              expr: Box::new(arrow),
+            }],
+            type_args: None,
+          });
+          return;
         }
       }
     }
@@ -11618,468 +12459,480 @@ impl<'a> VisitMut for TransformVisitor<'a> {
     } else {
       self.current_binding = None;
     }
-    declarator.visit_mut_children_with(self);
-    self.current_binding = prev_binding;
-    let init_expr = match &mut declarator.init {
-      Some(init) => &mut **init,
-      None => return,
-    };
+
+    let init_present = declarator.init.is_some();
+    if !init_present {
+      self.current_binding = prev_binding;
+      return;
+    }
 
     let props_ident = Ident::new("__cmplp".into(), DUMMY_SP, SyntaxContext::empty());
 
-    let (default_component_expr, mut artifacts) = match &*init_expr {
-      Expr::TaggedTpl(tagged) => {
-        let (component_expr, styled_ident) = match self.resolve_styled_target(&tagged.tag) {
-          Some(res) => res,
-          None => return,
-        };
-        let default_expr = match component_expr {
-          Some(expr) => expr,
-          None => {
-            self.preserve_import_for_ident(&styled_ident);
-            return;
-          }
-        };
-        let artifacts = if let Some(css) = self.evaluate_template(tagged) {
-          css_artifacts_from_literal(&css, &self.css_options())
-            .unwrap_or_else(|| atomicize_literal(&css, &self.css_options()))
-        } else {
-          match self.process_dynamic_styled_template(tagged, &props_ident) {
-            Some(artifacts) => artifacts,
-            None => {
-              if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
-                eprintln!(
-                  "[compiled-debug] styled template processing failed for {}",
-                  styled_ident.sym
-                );
-              }
-              self.preserve_import_for_ident(&styled_ident);
-              return;
-            }
-          }
-        };
-        (default_expr, artifacts)
-      }
-      Expr::Call(call) => {
-        let callee_expr = match &call.callee {
-          Callee::Expr(expr) => &**expr,
-          _ => {
-            self.preserve_styled_usage_in_expr(&Expr::Call(call.clone()));
-            return;
-          }
-        };
-        let (component_expr, styled_ident) = match self.resolve_styled_target(callee_expr) {
-          Some(res) => res,
-          None => {
-            self.preserve_styled_usage_in_expr(&Expr::Call(call.clone()));
-            return;
-          }
-        };
-        let mut combined = CssArtifacts::default();
-        let debug_css = std::env::var_os("COMPILED_DEBUG_CSS").is_some();
-        if let Some(values) = self.evaluate_call_arguments_allow_imports(call) {
-          if debug_css {
-            eprintln!(
-              "[compiled-debug] styled call static args len={}",
-              values.len()
-            );
-          }
-          for (index, (arg, value)) in call.args.iter().zip(values.iter()).enumerate() {
-            let value_kind = if debug_css {
-              match value.unwrap_spread() {
-                StaticValue::Null => "Null",
-                StaticValue::Str(_) => "Str",
-                StaticValue::Num(_) => "Num",
-                StaticValue::Bool(_) => "Bool",
-                StaticValue::Object(_) => "Object",
-                StaticValue::Array(_) => "Array",
-                StaticValue::Function(_) => "Function",
-                StaticValue::Spread(_) => unreachable!("spread should be unwrapped"),
-              }
-            } else {
-              ""
-            };
-            let static_artifacts = css_artifacts_from_static_value(value, &self.css_options());
-            let mut merged = false;
-            let mut used_static = false;
-            let mut used_runtime = false;
-            if let Some(ref artifacts) = static_artifacts {
-              if !artifacts.rules.is_empty()
-                || !artifacts.raw_rules.is_empty()
-                || !artifacts.runtime_variables.is_empty()
-                || !artifacts.runtime_class_conditions.is_empty()
-                || !matches!(value, StaticValue::Null)
-              {
-                combined.merge(artifacts.clone());
-                merged = true;
-                used_static = true;
-              }
-            }
-            if let Expr::Ident(ident) = &*arg.expr {
-              self.mark_css_binding_used(ident);
-              let mut runtime_artifacts = self.css_runtime_artifacts.get(&to_id(ident)).cloned();
-              if runtime_artifacts.is_none() {
-                if let Some((_, artifacts)) = self
-                  .css_runtime_artifacts
-                  .iter()
-                  .find(|((sym, _), _)| sym == &ident.sym)
-                {
-                  runtime_artifacts = Some(artifacts.clone());
+    // Borrow init expr in its own scope to avoid conflicts with later traversal
+    let mut transformed = false;
+    {
+      let init_expr = match &mut declarator.init {
+        Some(init) => &mut **init,
+        None => unreachable!(),
+      };
+
+      let result = match &*init_expr {
+        Expr::TaggedTpl(tagged) => {
+          if let Some((component_expr_opt, styled_ident)) = self.resolve_styled_target(&tagged.tag)
+          {
+            if let Some(default_expr) = component_expr_opt {
+              let artifacts = if let Some(css) = self.evaluate_template(tagged) {
+                css_artifacts_from_literal(&css, &self.css_options())
+                  .unwrap_or_else(|| atomicize_literal(&css, &self.css_options()))
+              } else {
+                match self.process_dynamic_styled_template(tagged, &props_ident) {
+                  Some(artifacts) => artifacts,
+                  None => {
+                    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+                      eprintln!(
+                        "[compiled-debug] styled template processing failed for {}",
+                        styled_ident.sym
+                      );
+                    }
+                    self.preserve_import_for_ident(&styled_ident);
+                    return;
+                  }
                 }
-              }
-              if debug_css && runtime_artifacts.is_none() {
-                eprintln!(
-                  "[compiled-debug] styled runtime lookup miss for {}",
-                  ident.sym
-                );
-              }
-              if let Some(artifacts) = runtime_artifacts {
-                combined.merge(artifacts);
-                merged = true;
-                used_runtime = true;
-              }
-            }
-            if !merged && matches!(&*arg.expr, Expr::Lit(Lit::Null(_))) {
-              merged = true;
-            }
-            if !merged {
+              };
+              Some((default_expr, artifacts))
+            } else {
               self.preserve_import_for_ident(&styled_ident);
               return;
             }
-            if debug_css {
-              eprintln!(
-                "[compiled-debug] styled call arg idx={} kind={} used_static={} used_runtime={}",
-                index, value_kind, used_static, used_runtime
-              );
-            }
-          }
-        } else {
-          match self.process_styled_call_arguments(call, &props_ident) {
-            Some(artifacts) => combined.merge(artifacts),
-            None => {
-              self.preserve_import_for_ident(&styled_ident);
-              return;
-            }
+          } else {
+            None
           }
         }
-        let default_expr = match component_expr {
-          Some(expr) => expr,
-          None => {
-            self.preserve_import_for_ident(&styled_ident);
-            return;
+        Expr::Call(call) => {
+          let callee_expr = match &call.callee {
+            Callee::Expr(expr) => &**expr,
+            _ => {
+              self.preserve_styled_usage_in_expr(&Expr::Call(call.clone()));
+              return;
+            }
+          };
+          if let Some((component_expr, styled_ident)) = self.resolve_styled_target(callee_expr) {
+            let mut combined = CssArtifacts::default();
+            let debug_css = std::env::var_os("COMPILED_DEBUG_CSS").is_some();
+            if let Some(values) = self.evaluate_call_arguments_allow_imports(call) {
+              if debug_css {
+                eprintln!(
+                  "[compiled-debug] styled call static args len={}",
+                  values.len()
+                );
+              }
+              for (index, (arg, value)) in call.args.iter().zip(values.iter()).enumerate() {
+                let static_artifacts = css_artifacts_from_static_value(value, &self.css_options());
+                let mut merged = false;
+                let mut used_static = false;
+                let mut used_runtime = false;
+                if let Some(ref artifacts) = static_artifacts {
+                  if !artifacts.rules.is_empty()
+                    || !artifacts.raw_rules.is_empty()
+                    || !artifacts.runtime_variables.is_empty()
+                    || !artifacts.runtime_class_conditions.is_empty()
+                    || !matches!(value, StaticValue::Null)
+                  {
+                    combined.merge(artifacts.clone());
+                    merged = true;
+                    used_static = true;
+                  }
+                }
+                if let Expr::Ident(ident) = &*arg.expr {
+                  self.mark_css_binding_used(ident);
+                  let mut runtime_artifacts =
+                    self.css_runtime_artifacts.get(&to_id(ident)).cloned();
+                  if runtime_artifacts.is_none() {
+                    if let Some((_, artifacts)) = self
+                      .css_runtime_artifacts
+                      .iter()
+                      .find(|((sym, _), _)| sym == &ident.sym)
+                    {
+                      runtime_artifacts = Some(artifacts.clone());
+                    }
+                  }
+                  if debug_css && runtime_artifacts.is_none() {
+                    eprintln!(
+                      "[compiled-debug] styled runtime lookup miss for {}",
+                      ident.sym
+                    );
+                  }
+                  if let Some(artifacts) = runtime_artifacts {
+                    combined.merge(artifacts);
+                    merged = true;
+                    used_runtime = true;
+                  }
+                }
+                if !merged && matches!(&*arg.expr, Expr::Lit(Lit::Null(_))) {
+                  merged = true;
+                }
+                if !merged {
+                  self.preserve_import_for_ident(&styled_ident);
+                  return;
+                }
+                if debug_css {
+                  let value_kind = if debug_css {
+                    match value.unwrap_spread() {
+                      StaticValue::Null => "Null",
+                      StaticValue::Str(_) => "Str",
+                      StaticValue::Num(_) => "Num",
+                      StaticValue::Bool(_) => "Bool",
+                      StaticValue::Object(_) => "Object",
+                      StaticValue::Array(_) => "Array",
+                      StaticValue::Function(_) => "Function",
+                      StaticValue::Spread(_) => unreachable!("spread should be unwrapped"),
+                    }
+                  } else {
+                    ""
+                  };
+                  eprintln!(
+                    "[compiled-debug] styled call arg idx={} kind={} used_static={} used_runtime={}",
+                    index, value_kind, used_static, used_runtime
+                  );
+                }
+              }
+            } else {
+              match self.process_styled_call_arguments(call, &props_ident) {
+                Some(artifacts) => combined.merge(artifacts),
+                None => {
+                  self.preserve_import_for_ident(&styled_ident);
+                  return;
+                }
+              }
+            }
+            let default_expr = match component_expr {
+              Some(expr) => expr,
+              None => {
+                self.preserve_import_for_ident(&styled_ident);
+                return;
+              }
+            };
+            Some((default_expr, combined))
+          } else {
+            None
           }
+        }
+        _ => None,
+      };
+
+      if let Some((default_component_expr, mut artifacts)) = result {
+        // Perform the same transformation as before
+        let component_name = match &declarator.name {
+          Pat::Ident(binding) => Some(binding.id.sym.to_string()),
+          _ => None,
         };
-        (default_expr, combined)
-      }
-      other => {
-        self.preserve_styled_usage_in_expr(other);
-        return;
-      }
-    };
 
-    let component_name = match &declarator.name {
-      Pat::Ident(binding) => Some(binding.id.sym.to_string()),
-      _ => None,
-    };
+        let style_ident = Ident::new("__cmpls".into(), DUMMY_SP, SyntaxContext::empty());
+        let ref_ident = Ident::new("__cmplr".into(), DUMMY_SP, SyntaxContext::empty());
+        let component_ident = Ident::new("C".into(), DUMMY_SP, SyntaxContext::empty());
 
-    let style_ident = Ident::new("__cmpls".into(), DUMMY_SP, SyntaxContext::empty());
-    let ref_ident = Ident::new("__cmplr".into(), DUMMY_SP, SyntaxContext::empty());
-    let component_ident = Ident::new("C".into(), DUMMY_SP, SyntaxContext::empty());
+        let mut runtime_sheets = Vec::new();
+        for rule in &artifacts.rules {
+          self.register_rule_with_metadata_key(
+            rule.css.clone(),
+            rule.include_in_metadata,
+            rule.metadata_key.clone(),
+          );
+          if !runtime_sheets.contains(&rule.css) {
+            runtime_sheets.push(rule.css.clone());
+          }
+        }
+        for css in &artifacts.raw_rules {
+          let sheet = css.clone();
+          self.register_rule_with_metadata_key(sheet.clone(), true, None);
+          if !runtime_sheets.contains(&sheet) {
+            runtime_sheets.push(sheet);
+          }
+        }
+        let runtime_sheets = self.finalize_runtime_sheets(runtime_sheets);
+        self.needs_react_namespace = true;
+        self.needs_jsx_runtime = true;
+        self.needs_runtime_ax = true;
+        self.needs_forward_ref = true;
 
-    let mut runtime_sheets = Vec::new();
-    for rule in &artifacts.rules {
-      self.register_rule_with_metadata_key(
-        rule.css.clone(),
-        rule.include_in_metadata,
-        rule.metadata_key.clone(),
-      );
-      if !runtime_sheets.contains(&rule.css) {
-        runtime_sheets.push(rule.css.clone());
-      }
-    }
-    for css in &artifacts.raw_rules {
-      let sheet = css.clone();
-      self.register_rule_with_metadata_key(sheet.clone(), true, None);
-      if !runtime_sheets.contains(&sheet) {
-        runtime_sheets.push(sheet);
-      }
-    }
-    let runtime_sheets = self.finalize_runtime_sheets(runtime_sheets);
-    self.needs_react_namespace = true;
-    self.needs_jsx_runtime = true;
-    self.needs_runtime_ax = true;
-    self.needs_forward_ref = true;
+        if !artifacts.runtime_class_conditions.is_empty() && self.props_scope_depth == 0 {
+          let source_ident = Ident::new("props".into(), DUMMY_SP, SyntaxContext::empty());
+          for condition in artifacts.runtime_class_conditions.iter_mut() {
+            Self::rename_ident_in_expr(&mut condition.test, &source_ident, &props_ident);
+          }
+        }
 
-    if !artifacts.runtime_class_conditions.is_empty() && self.props_scope_depth == 0 {
-      let source_ident = Ident::new("props".into(), DUMMY_SP, SyntaxContext::empty());
-      for condition in artifacts.runtime_class_conditions.iter_mut() {
-        Self::rename_ident_in_expr(&mut condition.test, &source_ident, &props_ident);
-      }
-    }
+        let mut class_strings: Vec<ExprOrSpread> = Vec::new();
+        if let Some(name) = component_name.as_ref() {
+          if self.should_emit_component_class_name() {
+            class_strings.push(ExprOrSpread {
+              spread: None,
+              expr: Box::new(Expr::Lit(Lit::Str(Str::from(format!("c_{}", name))))),
+            });
+          }
+        }
+        let mut conditional_classes = HashSet::new();
+        for condition in &artifacts.runtime_class_conditions {
+          for class_name in &condition.when_true {
+            conditional_classes.insert(class_name.clone());
+          }
+          for class_name in &condition.when_false {
+            conditional_classes.insert(class_name.clone());
+          }
+        }
+        let mut styled_unique = Vec::new();
+        let mut styled_seen = HashSet::new();
+        for rule in &artifacts.rules {
+          if conditional_classes.contains(&rule.class_name) {
+            continue;
+          }
+          if styled_seen.insert(rule.class_name.clone()) {
+            styled_unique.push(rule.class_name.clone());
+          }
+        }
+        if !styled_unique.is_empty() {
+          class_strings.push(ExprOrSpread {
+            spread: None,
+            expr: Box::new(Expr::Lit(Lit::Str(Str::from(styled_unique.join(" "))))),
+          });
+        }
+        for condition in &artifacts.runtime_class_conditions {
+          let has_true = !condition.when_true.is_empty();
+          let has_false = !condition.when_false.is_empty();
+          if has_true && has_false {
+            let test_expr = condition.test.clone();
+            let cons_expr = Self::class_names_to_expr(&condition.when_true);
+            let alt_expr = Self::class_names_to_expr(&condition.when_false);
+            class_strings.push(ExprOrSpread {
+              spread: None,
+              expr: Box::new(Expr::Cond(CondExpr {
+                span: DUMMY_SP,
+                test: Box::new(test_expr),
+                cons: Box::new(cons_expr),
+                alt: Box::new(alt_expr),
+              })),
+            });
+          } else if has_true {
+            let test_expr = condition.test.clone();
+            let cons_expr = Self::class_names_to_expr(&condition.when_true);
+            class_strings.push(ExprOrSpread {
+              spread: None,
+              expr: Box::new(Expr::Bin(BinExpr {
+                span: DUMMY_SP,
+                op: BinaryOp::LogicalAnd,
+                left: Box::new(test_expr),
+                right: Box::new(cons_expr),
+              })),
+            });
+          } else if has_false {
+            let test_expr = Expr::Unary(UnaryExpr {
+              span: DUMMY_SP,
+              op: UnaryOp::Bang,
+              arg: Box::new(condition.test.clone()),
+            });
+            let alt_expr = Self::class_names_to_expr(&condition.when_false);
+            class_strings.push(ExprOrSpread {
+              spread: None,
+              expr: Box::new(Expr::Bin(BinExpr {
+                span: DUMMY_SP,
+                op: BinaryOp::LogicalAnd,
+                left: Box::new(test_expr),
+                right: Box::new(alt_expr),
+              })),
+            });
+          }
+        }
 
-    let mut class_strings: Vec<ExprOrSpread> = Vec::new();
-    if let Some(name) = component_name.as_ref() {
-      if self.should_emit_component_class_name() {
-        class_strings.push(ExprOrSpread {
-          spread: None,
-          expr: Box::new(Expr::Lit(Lit::Str(Str::from(format!("c_{}", name))))),
-        });
-      }
-    }
-    let mut conditional_classes = HashSet::new();
-    for condition in &artifacts.runtime_class_conditions {
-      for class_name in &condition.when_true {
-        conditional_classes.insert(class_name.clone());
-      }
-      for class_name in &condition.when_false {
-        conditional_classes.insert(class_name.clone());
-      }
-    }
-    let mut styled_unique = Vec::new();
-    let mut styled_seen = HashSet::new();
-    for rule in &artifacts.rules {
-      if conditional_classes.contains(&rule.class_name) {
-        continue;
-      }
-      if styled_seen.insert(rule.class_name.clone()) {
-        styled_unique.push(rule.class_name.clone());
-      }
-    }
-    if !styled_unique.is_empty() {
-      class_strings.push(ExprOrSpread {
-        spread: None,
-        expr: Box::new(Expr::Lit(Lit::Str(Str::from(styled_unique.join(" "))))),
-      });
-    }
-    for condition in &artifacts.runtime_class_conditions {
-      let has_true = !condition.when_true.is_empty();
-      let has_false = !condition.when_false.is_empty();
-      if has_true && has_false {
-        let test_expr = condition.test.clone();
-        let cons_expr = Self::class_names_to_expr(&condition.when_true);
-        let alt_expr = Self::class_names_to_expr(&condition.when_false);
-        class_strings.push(ExprOrSpread {
-          spread: None,
-          expr: Box::new(Expr::Cond(CondExpr {
-            span: DUMMY_SP,
-            test: Box::new(test_expr),
-            cons: Box::new(cons_expr),
-            alt: Box::new(alt_expr),
-          })),
-        });
-      } else if has_true {
-        let test_expr = condition.test.clone();
-        let cons_expr = Self::class_names_to_expr(&condition.when_true);
-        class_strings.push(ExprOrSpread {
-          spread: None,
-          expr: Box::new(Expr::Bin(BinExpr {
-            span: DUMMY_SP,
-            op: BinaryOp::LogicalAnd,
-            left: Box::new(test_expr),
-            right: Box::new(cons_expr),
-          })),
-        });
-      } else if has_false {
-        let test_expr = Expr::Unary(UnaryExpr {
+        let mut runtime_variables = artifacts.runtime_variables.clone();
+        if !runtime_variables.is_empty() {
+          let source_ident = Ident::new("props".into(), DUMMY_SP, SyntaxContext::empty());
+          for variable in runtime_variables.iter_mut() {
+            Self::rename_ident_in_expr(&mut variable.expression, &source_ident, &props_ident);
+          }
+        }
+
+        let class_array = Expr::Array(ArrayLit {
           span: DUMMY_SP,
-          op: UnaryOp::Bang,
-          arg: Box::new(condition.test.clone()),
+          elems: class_strings
+            .into_iter()
+            .chain(std::iter::once(ExprOrSpread {
+              spread: None,
+              expr: Box::new(Expr::Member(MemberExpr {
+                span: DUMMY_SP,
+                obj: Box::new(Expr::Ident(props_ident.clone())),
+                prop: MemberProp::Ident(quote_ident!("className")),
+              })),
+            }))
+            .map(Some)
+            .collect(),
         });
-        let alt_expr = Self::class_names_to_expr(&condition.when_false);
-        class_strings.push(ExprOrSpread {
-          spread: None,
-          expr: Box::new(Expr::Bin(BinExpr {
-            span: DUMMY_SP,
-            op: BinaryOp::LogicalAnd,
-            left: Box::new(test_expr),
-            right: Box::new(alt_expr),
-          })),
+
+        let style_prop_value = if runtime_variables.is_empty() {
+          Expr::Ident(style_ident.clone())
+        } else {
+          self.build_style_with_variables(&style_ident, &runtime_variables)
+        };
+
+        let jsx_call = Expr::Call(CallExpr {
+          span: DUMMY_SP,
+          ctxt: SyntaxContext::empty(),
+          callee: Callee::Expr(Box::new(Expr::Ident(self.jsx_ident()))),
+          args: vec![
+            ExprOrSpread {
+              spread: None,
+              expr: Box::new(Expr::Ident(component_ident.clone())),
+            },
+            ExprOrSpread {
+              spread: None,
+              expr: Box::new(Expr::Object(ObjectLit {
+                span: DUMMY_SP,
+                props: vec![
+                  PropOrSpread::Spread(SpreadElement {
+                    dot3_token: DUMMY_SP,
+                    expr: Box::new(Expr::Ident(props_ident.clone())),
+                  }),
+                  PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(quote_ident!("style")),
+                    value: Box::new(style_prop_value),
+                  }))),
+                  PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(quote_ident!("ref")),
+                    value: Box::new(Expr::Ident(ref_ident.clone())),
+                  }))),
+                  PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(quote_ident!("className")),
+                    value: Box::new(Expr::Call(CallExpr {
+                      span: DUMMY_SP,
+                      ctxt: SyntaxContext::empty(),
+                      callee: Callee::Expr(Box::new(Expr::Ident(self.runtime_class_ident()))),
+                      args: vec![ExprOrSpread {
+                        spread: None,
+                        expr: Box::new(class_array),
+                      }],
+                      type_args: None,
+                    })),
+                  }))),
+                ],
+              })),
+            },
+          ],
+          type_args: None,
         });
-      }
-    }
 
-    let mut runtime_variables = artifacts.runtime_variables.clone();
-    if !runtime_variables.is_empty() {
-      let source_ident = Ident::new("props".into(), DUMMY_SP, SyntaxContext::empty());
-      for variable in runtime_variables.iter_mut() {
-        Self::rename_ident_in_expr(&mut variable.expression, &source_ident, &props_ident);
-      }
-    }
+        let render_expr = if self.options.extract {
+          jsx_call
+        } else {
+          self.build_runtime_component(jsx_call, runtime_sheets, None)
+        };
 
-    let mut object_props = Vec::new();
-    object_props.push(ObjectPatProp::KeyValue(KeyValuePatProp {
-      key: PropName::Ident(quote_ident!("as")),
-      value: Box::new(Pat::Assign(AssignPat {
-        span: DUMMY_SP,
-        left: Box::new(Pat::Ident(BindingIdent::from(component_ident.clone()))),
-        right: Box::new(default_component_expr),
-      })),
-    }));
-    object_props.push(ObjectPatProp::KeyValue(KeyValuePatProp {
-      key: PropName::Ident(quote_ident!("style")),
-      value: Box::new(Pat::Ident(BindingIdent::from(style_ident.clone()))),
-    }));
-    object_props.push(ObjectPatProp::Rest(RestPat {
-      span: DUMMY_SP,
-      dot3_token: DUMMY_SP,
-      arg: Box::new(Pat::Ident(BindingIdent::from(props_ident.clone()))),
-      type_ann: None,
-    }));
-
-    let params = vec![
-      Pat::Object(ObjectPat {
-        span: DUMMY_SP,
-        props: object_props,
-        optional: false,
-        type_ann: None,
-      }),
-      Pat::Ident(BindingIdent::from(ref_ident.clone())),
-    ];
-
-    let class_array = Expr::Array(ArrayLit {
-      span: DUMMY_SP,
-      elems: class_strings
-        .into_iter()
-        .chain(std::iter::once(ExprOrSpread {
-          spread: None,
-          expr: Box::new(Expr::Member(MemberExpr {
+        let guard = Stmt::If(IfStmt {
+          span: DUMMY_SP,
+          test: Box::new(Expr::Member(MemberExpr {
             span: DUMMY_SP,
             obj: Box::new(Expr::Ident(props_ident.clone())),
-            prop: MemberProp::Ident(quote_ident!("className")),
+            prop: MemberProp::Ident(quote_ident!("innerRef")),
           })),
-        }))
-        .map(Some)
-        .collect(),
-    });
-
-    let style_prop_value = if runtime_variables.is_empty() {
-      Expr::Ident(style_ident.clone())
-    } else {
-      self.build_style_with_variables(&style_ident, &runtime_variables)
-    };
-
-    let jsx_call = Expr::Call(CallExpr {
-      span: DUMMY_SP,
-      ctxt: SyntaxContext::empty(),
-      callee: Callee::Expr(Box::new(Expr::Ident(self.jsx_ident()))),
-      args: vec![
-        ExprOrSpread {
-          spread: None,
-          expr: Box::new(Expr::Ident(component_ident.clone())),
-        },
-        ExprOrSpread {
-          spread: None,
-          expr: Box::new(Expr::Object(ObjectLit {
-            span: DUMMY_SP,
-            props: vec![
-              PropOrSpread::Spread(SpreadElement {
-                dot3_token: DUMMY_SP,
-                expr: Box::new(Expr::Ident(props_ident.clone())),
-              }),
-              PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                key: PropName::Ident(quote_ident!("style")),
-                value: Box::new(style_prop_value),
-              }))),
-              PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                key: PropName::Ident(quote_ident!("ref")),
-                value: Box::new(Expr::Ident(ref_ident.clone())),
-              }))),
-              PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                key: PropName::Ident(quote_ident!("className")),
-                value: Box::new(Expr::Call(CallExpr {
-                  span: DUMMY_SP,
-                  ctxt: SyntaxContext::empty(),
-                  callee: Callee::Expr(Box::new(Expr::Ident(self.runtime_class_ident()))),
-                  args: vec![ExprOrSpread {
-                    spread: None,
-                    expr: Box::new(class_array),
-                  }],
-                  type_args: None,
-                })),
-              }))),
-            ],
-          })),
-        },
-      ],
-      type_args: None,
-    });
-
-    let render_expr = if self.options.extract {
-      jsx_call
-    } else {
-      self.build_runtime_component(jsx_call, runtime_sheets, None)
-    };
-
-    let guard = Stmt::If(IfStmt {
-      span: DUMMY_SP,
-      test: Box::new(Expr::Member(MemberExpr {
-        span: DUMMY_SP,
-        obj: Box::new(Expr::Ident(props_ident.clone())),
-        prop: MemberProp::Ident(quote_ident!("innerRef")),
-      })),
-      cons: Box::new(Stmt::Block(BlockStmt {
-        span: DUMMY_SP,
-        ctxt: SyntaxContext::empty(),
-        stmts: vec![Stmt::Throw(ThrowStmt {
-          span: DUMMY_SP,
-          arg: Box::new(Expr::New(NewExpr {
+          cons: Box::new(Stmt::Block(BlockStmt {
             span: DUMMY_SP,
             ctxt: SyntaxContext::empty(),
-            callee: Box::new(Expr::Ident(quote_ident!("Error").into())),
-            args: Some(vec![ExprOrSpread {
-              spread: None,
-              expr: Box::new(Expr::Lit(Lit::Str(Str::from(
-                "Please use 'ref' instead of 'innerRef'.",
-              )))),
-            }]),
-            type_args: None,
+            stmts: vec![Stmt::Throw(ThrowStmt {
+              span: DUMMY_SP,
+              arg: Box::new(Expr::New(NewExpr {
+                span: DUMMY_SP,
+                ctxt: SyntaxContext::empty(),
+                callee: Box::new(Expr::Ident(quote_ident!("Error").into())),
+                args: Some(vec![ExprOrSpread {
+                  spread: None,
+                  expr: Box::new(Expr::Lit(Lit::Str(Str::from(
+                    "Please use 'ref' instead of 'innerRef'.",
+                  )))),
+                }]),
+                type_args: None,
+              })),
+            })],
           })),
-        })],
-      })),
-      alt: None,
-    });
+          alt: None,
+        });
 
-    let arrow = Expr::Arrow(ArrowExpr {
-      span: DUMMY_SP,
-      ctxt: SyntaxContext::empty(),
-      params,
-      body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
-        span: DUMMY_SP,
-        ctxt: SyntaxContext::empty(),
-        stmts: {
-          let mut stmts = Vec::new();
-          if self.is_development_env() {
-            stmts.push(guard);
-          }
-          stmts.push(Stmt::Return(ReturnStmt {
+        let arrow = Expr::Arrow(ArrowExpr {
+          span: DUMMY_SP,
+          ctxt: SyntaxContext::empty(),
+          params: vec![
+            Pat::Object(ObjectPat {
+              span: DUMMY_SP,
+              props: vec![
+                ObjectPatProp::KeyValue(KeyValuePatProp {
+                  key: PropName::Ident(quote_ident!("as")),
+                  value: Box::new(Pat::Assign(AssignPat {
+                    span: DUMMY_SP,
+                    left: Box::new(Pat::Ident(BindingIdent::from(component_ident.clone()))),
+                    right: Box::new(default_component_expr),
+                  })),
+                }),
+                ObjectPatProp::KeyValue(KeyValuePatProp {
+                  key: PropName::Ident(quote_ident!("style")),
+                  value: Box::new(Pat::Ident(BindingIdent::from(style_ident.clone()))),
+                }),
+                ObjectPatProp::Rest(RestPat {
+                  span: DUMMY_SP,
+                  dot3_token: DUMMY_SP,
+                  arg: Box::new(Pat::Ident(BindingIdent::from(props_ident.clone()))),
+                  type_ann: None,
+                }),
+              ],
+              optional: false,
+              type_ann: None,
+            }),
+            Pat::Ident(BindingIdent::from(ref_ident.clone())),
+          ],
+          body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
             span: DUMMY_SP,
-            arg: Some(Box::new(render_expr)),
-          }));
-          stmts
-        },
-      })),
-      is_async: false,
-      is_generator: false,
-      type_params: None,
-      return_type: None,
-    });
+            ctxt: SyntaxContext::empty(),
+            stmts: {
+              let mut stmts = Vec::new();
+              if self.is_development_env() {
+                stmts.push(guard);
+              }
+              stmts.push(Stmt::Return(ReturnStmt {
+                span: DUMMY_SP,
+                arg: Some(Box::new(render_expr)),
+              }));
+              stmts
+            },
+          })),
+          is_async: false,
+          is_generator: false,
+          type_params: None,
+          return_type: None,
+        });
 
-    *init_expr = Expr::Call(CallExpr {
-      span: DUMMY_SP,
-      ctxt: SyntaxContext::empty(),
-      callee: Callee::Expr(Box::new(Expr::Ident(self.forward_ref_ident()))),
-      args: vec![ExprOrSpread {
-        spread: None,
-        expr: Box::new(arrow),
-      }],
-      type_args: None,
-    });
+        *init_expr = Expr::Call(CallExpr {
+          span: DUMMY_SP,
+          ctxt: SyntaxContext::empty(),
+          callee: Callee::Expr(Box::new(Expr::Ident(self.forward_ref_ident()))),
+          args: vec![ExprOrSpread {
+            spread: None,
+            expr: Box::new(arrow),
+          }],
+          type_args: None,
+        });
 
-    if let Pat::Ident(BindingIdent { id, .. }) = &declarator.name {
-      self
-        .styled_display_names
-        .push((id.clone(), id.sym.to_string()));
+        if let Pat::Ident(BindingIdent { id, .. }) = &declarator.name {
+          self
+            .styled_display_names
+            .push((id.clone(), id.sym.to_string()));
+        }
+
+        transformed = true;
+      }
     }
+
+    if !transformed {
+      // Not a styled initializer; walk children to transform nested styled calls
+      declarator.visit_mut_children_with(self);
+    }
+
+    self.current_binding = prev_binding;
   }
 
   fn visit_mut_function(&mut self, function: &mut Function) {
@@ -12239,6 +13092,228 @@ pub fn transform_program_with_options(
   let _source_map_guard = SourceMapGuard::from_proxy(metadata.source_map);
   let mut program = program;
   if let Program::Module(mut module) = program {
+    // In optimisation mode, only traverse imports when css/styled actually
+    // reference imported variables; otherwise avoid traversal entirely.
+
+    type Id = (Atom, SyntaxContext);
+
+    // Collect all identifiers bound by imports in this module
+    let mut import_ids: HashSet<Id> = HashSet::new();
+    for item in &module.body {
+      if let ModuleItem::ModuleDecl(ModuleDecl::Import(import)) = item {
+        for spec in &import.specifiers {
+          match spec {
+            ImportSpecifier::Named(named) => {
+              import_ids.insert(to_id(&named.local));
+            }
+            ImportSpecifier::Default(spec) => {
+              import_ids.insert(to_id(&spec.local));
+            }
+            ImportSpecifier::Namespace(spec) => {
+              import_ids.insert(to_id(&spec.local));
+            }
+          }
+        }
+      }
+    }
+
+    // Collect local idents for compiled css and styled imports
+    let mut css_ids: HashSet<Id> = HashSet::new();
+    let mut styled_ids: HashSet<Id> = HashSet::new();
+    for item in &module.body {
+      if let ModuleItem::ModuleDecl(ModuleDecl::Import(import)) = item {
+        let source = import.src.value.to_string();
+        if options.import_sources.contains(&source) {
+          for spec in &import.specifiers {
+            match spec {
+              ImportSpecifier::Named(named) => {
+                let imported_name = named
+                  .imported
+                  .as_ref()
+                  .map(|name| match name {
+                    ModuleExportName::Ident(ident) => ident.sym.as_ref(),
+                    ModuleExportName::Str(str) => str.value.as_ref(),
+                  })
+                  .unwrap_or_else(|| named.local.sym.as_ref());
+                let id = to_id(&named.local);
+                match imported_name {
+                  "css" => {
+                    css_ids.insert(id);
+                  }
+                  "styled" => {
+                    styled_ids.insert(id);
+                  }
+                  _ => {}
+                }
+              }
+              ImportSpecifier::Default(spec) => {
+                if source == "@compiled/react" {
+                  styled_ids.insert(to_id(&spec.local));
+                }
+              }
+              ImportSpecifier::Namespace(_) => {}
+            }
+          }
+        }
+      }
+
+      // Helper to check if an expression references any imported identifier
+      struct UsesImport<'a> {
+        import_ids: &'a HashSet<Id>,
+        found: bool,
+      }
+      impl<'a> Visit for UsesImport<'a> {
+        fn visit_ident(&mut self, ident: &Ident) {
+          // Ignore common safe functions like `token` by name.
+          if ident.sym.as_ref() == "token" {
+            return;
+          }
+          if self.import_ids.contains(&to_id(ident)) {
+            self.found = true;
+          }
+        }
+        fn visit_member_prop(&mut self, prop: &MemberProp) {
+          if let MemberProp::Computed(c) = prop {
+            c.visit_children_with(self);
+          }
+        }
+        fn visit_call_expr(&mut self, call: &CallExpr) {
+          // Do not consider the callee position as an import-usage requiring resolution.
+          for arg in &call.args {
+            arg.visit_with(self);
+          }
+        }
+        fn visit_tagged_tpl(&mut self, tagged: &TaggedTpl) {
+          // Do not consider the tag position; only expressions inside the template.
+          for expr in &tagged.tpl.exprs {
+            expr.visit_with(self);
+          }
+        }
+      }
+      fn expr_uses_import(expr: &Expr, import_ids: &HashSet<Id>) -> bool {
+        let mut v = UsesImport {
+          import_ids,
+          found: false,
+        };
+        expr.visit_with(&mut v);
+        v.found
+      }
+
+      // Walk module: if any css/styled usage references imported identifiers, bail out
+      struct CssStyledImportUse<'a> {
+        css_ids: &'a HashSet<Id>,
+        styled_ids: &'a HashSet<Id>,
+        import_ids: &'a HashSet<Id>,
+        found: bool,
+      }
+      impl<'a> Visit for CssStyledImportUse<'a> {
+        fn visit_call_expr(&mut self, call: &CallExpr) {
+          if let Callee::Expr(callee_expr) = &call.callee {
+            match &**callee_expr {
+              Expr::Ident(ident) if self.css_ids.contains(&to_id(ident)) => {
+                if call
+                  .args
+                  .iter()
+                  .any(|a| expr_uses_import(&a.expr, self.import_ids))
+                {
+                  self.found = true;
+                  return;
+                }
+              }
+              Expr::Ident(ident) if self.styled_ids.contains(&to_id(ident)) => {
+                // styled(Component)(...) pattern: check args
+                if call
+                  .args
+                  .iter()
+                  .any(|a| expr_uses_import(&a.expr, self.import_ids))
+                {
+                  self.found = true;
+                  return;
+                }
+              }
+              Expr::Member(member) => {
+                // styled.div(...)
+                if let Expr::Ident(obj_ident) = &*member.obj {
+                  if self.styled_ids.contains(&to_id(obj_ident)) {
+                    if call
+                      .args
+                      .iter()
+                      .any(|a| expr_uses_import(&a.expr, self.import_ids))
+                    {
+                      self.found = true;
+                      return;
+                    }
+                  }
+                }
+              }
+              _ => {}
+            }
+          }
+          call.visit_children_with(self);
+        }
+        fn visit_tagged_tpl(&mut self, tagged: &TaggedTpl) {
+          let mut matches_compiled = false;
+          match &*tagged.tag {
+            Expr::Ident(ident) => {
+              if self.css_ids.contains(&to_id(ident)) {
+                matches_compiled = true;
+              }
+            }
+            Expr::Member(member) => {
+              if let Expr::Ident(obj_ident) = &*member.obj {
+                if self.styled_ids.contains(&to_id(obj_ident)) {
+                  matches_compiled = true;
+                }
+              }
+            }
+            Expr::Call(call) => {
+              if let Callee::Expr(callee_expr) = &call.callee {
+                if let Expr::Ident(ident) = &**callee_expr {
+                  if self.styled_ids.contains(&to_id(ident)) {
+                    matches_compiled = true;
+                  }
+                }
+              }
+              if !matches_compiled
+                && call
+                  .args
+                  .iter()
+                  .any(|a| expr_uses_import(&a.expr, self.import_ids))
+              {
+                // styled(Component)`...`
+                self.found = true;
+                return;
+              }
+            }
+            _ => {}
+          }
+          if matches_compiled {
+            if tagged
+              .tpl
+              .exprs
+              .iter()
+              .any(|e| expr_uses_import(e, self.import_ids))
+            {
+              self.found = true;
+              return;
+            }
+          }
+          tagged.visit_children_with(self);
+        }
+      }
+
+      let mut v = CssStyledImportUse {
+        css_ids: &css_ids,
+        styled_ids: &styled_ids,
+        import_ids: &import_ids,
+        found: false,
+      };
+      module.visit_with(&mut v);
+      if v.found {
+        panic!("Bailing out of compiled-css transform: css/styled uses imported identifiers");
+      }
+    }
+
     let file_path = PathBuf::from(&filename);
     let file_dir = file_path
       .parent()
@@ -12246,17 +13321,28 @@ pub fn transform_program_with_options(
       .unwrap_or_else(|| PathBuf::from("."));
     let project_root = find_project_root(&file_dir);
     let css_options = css_options_from_plugin_options(&options);
-    let evaluator = ModuleEvaluator::new(
-      &file_dir,
-      &project_root,
-      &options.extensions,
-      &options.import_sources,
-      css_options.clone(),
-    );
+
+    let enable_evaluator = std::env::var_os("ENABLE_EVALUATOR").is_some();
+    let evaluator = if enable_evaluator {
+      Some(ModuleEvaluator::new(
+        &file_dir,
+        &project_root,
+        &options.extensions,
+        &options.import_sources,
+        css_options.clone(),
+      ))
+    } else {
+      None
+    };
+
     let static_bindings = collect_static_bindings(
       &module,
-      Some(&evaluator),
-      Some(file_path.as_path()),
+      evaluator.as_ref(),
+      if evaluator.is_some() {
+        Some(file_path.as_path())
+      } else {
+        None
+      },
       &options.import_sources,
       &css_options,
     );
@@ -12282,6 +13368,14 @@ pub fn transform_program_with_options(
       exported_binding_names,
       referenced_bindings,
     );
+
+    // Detect @jsxRuntime classic pragma and set needs_react_namespace flag
+    if let Some(jsx_runtime) = TransformVisitor::detect_jsx_runtime_from_comments(&module) {
+      if jsx_runtime == "classic" {
+        visitor.needs_react_namespace = true;
+      }
+    }
+
     if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
       eprintln!(
         "[compiled-debug] process_xcss option for {} => {}",
@@ -12398,11 +13492,14 @@ pub fn transform_program_with_options(
       }
     }
 
-    let included_files: Vec<String> = evaluator
-      .included_files()
-      .into_iter()
-      .map(|path| path.to_string_lossy().to_string())
-      .collect();
+    let included_files: Vec<String> = if let Some(ev) = evaluator.as_ref() {
+      ev.included_files()
+        .into_iter()
+        .map(|path| path.to_string_lossy().to_string())
+        .collect()
+    } else {
+      Vec::new()
+    };
 
     if let Ok(mut guard) = LATEST_ARTIFACTS.lock() {
       if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {

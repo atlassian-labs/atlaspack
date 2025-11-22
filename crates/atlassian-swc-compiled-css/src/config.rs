@@ -24,7 +24,7 @@ pub struct CompiledCssInJsConfig {
   ///
   /// Custom module origins that Compiled should compile when using APIs from.
   ///
-  /// Defaults to `["@compiled/react", "@compiled/css"]`
+  /// Defaults to `["@compiled/react"]`
   ///
   pub import_sources: Option<Vec<String>>,
   ///
@@ -228,7 +228,7 @@ impl Default for CompiledCssInJsTransformConfig {
       extract: false,
       flatten_multiple_selectors: true,
       import_react: true,
-      import_sources: vec!["@compiled/react".into(), "@compiled/css".into()],
+      import_sources: vec!["@compiled/react".into()],
       increase_specificity: false,
       nonce: None,
       optimize_css: true,

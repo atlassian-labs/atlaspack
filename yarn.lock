@@ -990,11 +990,6 @@
     slice-ansi "^4.0.0"
     string-width "^4.2.0"
 
-"@atlaspack/feature-flags@2.26.1":
-  version "2.26.1"
-  resolved "https://registry.yarnpkg.com/@atlaspack/feature-flags/-/feature-flags-2.26.1.tgz#2a4a8568864c09cfd091c573e98a275a87df2652"
-  integrity sha512-w8CYhpzlyuz1f0jcKDoTqEKEZ4bZI6d5+6iZP5apaVsJaOgoQ4uNXuLiJrh7T8PgfdHVhb9KMrxpeLePSHjcWQ==
-
 "@atlaspack/feature-flags@2.26.2":
   version "2.26.2"
   resolved "https://registry.yarnpkg.com/@atlaspack/feature-flags/-/feature-flags-2.26.2.tgz#665dade5416f0e932b4957e54b9bb344f0e8ebf8"
@@ -1010,27 +1005,17 @@
     "@atlaspack/rust" "3.10.0"
     "@atlaspack/types-internal" "2.20.8"
 
-"@atlaspack/plugin@2.14.37":
-  version "2.14.37"
-  resolved "https://registry.yarnpkg.com/@atlaspack/plugin/-/plugin-2.14.37.tgz#86f67f0db7537702ee0c4f69cded0ebe901d407c"
-  integrity sha512-dtsRsjRDaJ+/HDLDczkFvYUgRW+dhm4YZGLorgWieErgrdqnSvfKudk1lW+37LObI+lnUhZBnacBzZ+acdkYag==
+"@atlaspack/plugin@2.14.38":
+  version "2.14.38"
+  resolved "https://registry.yarnpkg.com/@atlaspack/plugin/-/plugin-2.14.38.tgz#24e24131dfc34a7ff954dfebb8b14a32d16972d6"
+  integrity sha512-7/6YXRurBQOAB53DTa2jtZP/gNOZy5JHfVFZSvOaVhoRgFVMqzUjuwA0+AMgpjpE/+abIk0AIpQpaHfRLCfOaQ==
   dependencies:
-    "@atlaspack/types-internal" "2.20.7"
+    "@atlaspack/types-internal" "2.20.8"
 
 "@atlaspack/rust@3.10.0":
   version "3.10.0"
   resolved "https://registry.yarnpkg.com/@atlaspack/rust/-/rust-3.10.0.tgz#d8944aff4af01e93508bd47844f2f0f6ca2a4563"
   integrity sha512-HoPB2jiMOJMhbqS563mSNGv8Unz0Mn7R2yFyyj/XZvesy00meqAEnqMKHmp434UtTSOfwZooN+Qm/+x6rWxfpA==
-
-"@atlaspack/types-internal@2.20.7":
-  version "2.20.7"
-  resolved "https://registry.yarnpkg.com/@atlaspack/types-internal/-/types-internal-2.20.7.tgz#2e71e7548ab46a9cefdf28a2c6f7275c74f4498b"
-  integrity sha512-BztLtZmXm0DsKBtRlxfiOyoQW6dzM1mxVEfGKk0PbspF81vvVXOXNtUTbUxOfMrfPJ0G7oal63gmwQnbYabrvQ==
-  dependencies:
-    "@atlaspack/diagnostic" "2.14.4"
-    "@atlaspack/feature-flags" "2.26.1"
-    "@parcel/source-map" "^2.1.1"
-    utility-types "^3.10.0"
 
 "@atlaspack/types-internal@2.20.8":
   version "2.20.8"

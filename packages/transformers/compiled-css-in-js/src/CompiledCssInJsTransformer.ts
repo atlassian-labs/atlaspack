@@ -39,6 +39,10 @@ export default new Transformer({
 
     Object.assign(contents, conf?.contents);
 
+    if (!contents.importSources?.includes('@compiled/react')) {
+      contents.importSources?.push('@compiled/react');
+    }
+
     return contents;
   },
   async transform({asset, options, config, logger}) {
@@ -65,11 +69,6 @@ export default new Transformer({
       return [asset];
     }
 
-    if (code.includes('cssMap') || /(styled|css)[^.]*\.[^`]+`/.test(code)) {
-      // We don't support cssMap and tagged template literals
-      return [asset];
-    }
-
     const codeBuffer = Buffer.from(code);
 
     const result = (await applyCompiledCssInJsPlugin(codeBuffer, {
@@ -79,13 +78,6 @@ export default new Transformer({
       sourceMaps: !!asset.env.sourceMap,
       config,
     })) as CompiledCssInJsPluginResult;
-
-    if (config.unsafeReportSafeAssetsForMigration) {
-      // We need to run the transform without returning the result, so we can report the safe assets
-      asset.meta.swcStyleRules = result.styleRules;
-      asset.meta.compiledCodeHash = result.codeHash;
-      return [asset];
-    }
 
     if (result.diagnostics?.length > 0) {
       const diagnostics = result.diagnostics ?? [];
@@ -169,9 +161,9 @@ export default new Transformer({
           (diagnostic.severity === 'SourceError' && asset.isSource),
       );
       if (errors.length > 0) {
-        throw new ThrowableDiagnostic({
-          diagnostic: errors.map(convertDiagnostic),
-        });
+        for (const error of errors) {
+          logger.error(convertDiagnostic(error));
+        }
       }
 
       const warnings = diagnostics.filter(
@@ -180,8 +172,23 @@ export default new Transformer({
           (diagnostic.severity === 'SourceError' && !asset.isSource),
       );
       if (warnings.length > 0) {
-        logger?.warn(warnings.map(convertDiagnostic));
+        for (const warning of warnings) {
+          logger.warn(convertDiagnostic(warning));
+        }
       }
+    }
+
+    if (config.unsafeReportSafeAssetsForMigration) {
+      // We need to run the transform without returning the result, so we can report the safe assets
+      asset.meta.swcStyleRules = result.styleRules;
+      if (!result.codeHash) {
+        throw new Error('Code hash is required');
+      }
+      asset.meta.compiledCodeHash = result.codeHash;
+      asset.meta.compiledCssDiagnostics = result.diagnostics.map(
+        (d) => d.message,
+      );
+      return [asset];
     }
 
     if (result.bailOut) {

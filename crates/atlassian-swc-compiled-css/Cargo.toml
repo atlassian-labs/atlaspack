@@ -29,6 +29,7 @@ thiserror.workspace = true
 walkdir = "2.5.0"
 anyhow = { workspace = true }
 parking_lot = { workspace = true }
+lru = "0.12"
 
 [dev-dependencies]
 anyhow = { workspace = true }

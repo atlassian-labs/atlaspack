@@ -3,21 +3,49 @@ import {Reporter} from '@atlaspack/plugin';
 import {join, relative} from 'node:path';
 
 export default new Reporter({
-  async report({event, options}) {
+  async report({event, options, logger}) {
     if (!getFeatureFlag('compiledCssInJsTransformer')) {
       return;
     }
     if (event.type === 'buildSuccess') {
-      const safeAssets: Record<string, string> = {};
+      const currentMap = (await options.outputFS.exists(
+        join(options.projectRoot, 'compiled-css-migration-map.json'),
+      ))
+        ? JSON.parse(
+            await options.outputFS.readFile(
+              join(options.projectRoot, 'compiled-css-migration-map.json'),
+              'utf-8',
+            ),
+          )
+        : {};
+
+      const safeAssets: Record<string, string> = currentMap?.safeAssets ?? {};
       const unsafeAssets: Record<
         string,
-        {asset: string; babel: string[]; swc: string[]}
-      > = {};
-      let total = 0;
-      let safe = 0;
+        {asset: string; babel: string[]; swc: string[]; diagnostics: string[]}
+      > = currentMap?.unsafeAssets ?? {};
+
       event.bundleGraph.traverseBundles((childBundle) => {
         childBundle.traverseAssets((asset) => {
-          if (asset.meta.compiledCodeHash) {
+          if (asset.meta.styleRules) {
+            const assetPath = relative(options.projectRoot, asset.filePath);
+
+            const currentSafeAsset = Object.entries(safeAssets).find(
+              ([, path]) => path === assetPath,
+            );
+
+            if (currentSafeAsset) {
+              delete safeAssets[currentSafeAsset[0]];
+            }
+
+            const currentUnsafeAsset = Object.entries(unsafeAssets).find(
+              ([, data]) => data.asset === assetPath,
+            );
+
+            if (currentUnsafeAsset) {
+              delete unsafeAssets[currentUnsafeAsset[0]];
+            }
+
             const babelStyleRules = new Set(
               (asset.meta.styleRules as string[]) ?? [],
             );
@@ -33,32 +61,56 @@ export default new Reporter({
             }
 
             if (mismatches.length === 0) {
-              safe += 1;
-              safeAssets[asset.meta.compiledCodeHash as string] = relative(
-                options.projectRoot,
-                asset.filePath,
-              );
+              if (asset.meta.compiledCodeHash) {
+                safeAssets[asset.meta.compiledCodeHash as string] = relative(
+                  options.projectRoot,
+                  asset.filePath,
+                );
+              }
             } else {
-              unsafeAssets[asset.meta.compiledCodeHash as string] = {
+              unsafeAssets[
+                (asset.meta.compiledCodeHash as string) ??
+                  (relative(options.projectRoot, asset.filePath) as string)
+              ] = {
                 asset: relative(options.projectRoot, asset.filePath),
-                babel: Array.from(babelStyleRules),
-                swc: Array.from(swcStyleRules),
+                babel: Array.from(babelStyleRules).sort(),
+                swc: Array.from(swcStyleRules).sort(),
+                diagnostics:
+                  (asset.meta.compiledCssDiagnostics as string[]) ?? [],
               };
             }
-            total += 1;
           }
         });
       });
 
-      if (total > 0) {
+      if (
+        Object.keys(safeAssets).length > 0 ||
+        Object.keys(unsafeAssets).length > 0
+      ) {
         await options.outputFS.writeFile(
           join(options.projectRoot, 'compiled-css-migration-map.json'),
           JSON.stringify(
-            {safeAssets, unsafeAssets, stats: {total, safe}},
+            {
+              safeAssets,
+              unsafeAssets,
+              stats: {
+                total:
+                  Object.keys(safeAssets).length +
+                  Object.keys(unsafeAssets).length,
+                safe: Object.keys(safeAssets).length,
+              },
+            },
             null,
             2,
           ),
         );
+        logger.info({
+          message: `Wrote compiled-css-migration-map.json to ${join(options.projectRoot, 'compiled-css-migration-map.json')}`,
+        });
+      } else {
+        logger.info({
+          message: 'No compiled CSS in JS assets found',
+        });
       }
     }
   },
