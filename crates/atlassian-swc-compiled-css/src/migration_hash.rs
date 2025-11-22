@@ -83,6 +83,8 @@ pub fn is_safe(code_hash: &str, config: &CompiledCssInJsTransformConfig) -> Resu
 
     safe_map.map(|safe_map| safe_map.safe_assets.contains_key(code_hash))
   } else {
-    Err(anyhow::anyhow!("config_path is required"))
+    Err(anyhow::anyhow!(
+      "config_path is required when unsafe_use_safe_assets is enabled"
+    ))
   }
 }

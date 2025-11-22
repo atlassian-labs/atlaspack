@@ -83,6 +83,15 @@ pub struct CompiledCssInJsPluginResult {
 }
 
 static PANIC_HOOK_GUARD: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+static PANIC_HOOK_INITIALIZED: OnceCell<()> = OnceCell::new();
+
+fn initialize_panic_hook_once() {
+  PANIC_HOOK_INITIALIZED.get_or_init(|| {
+    // Install a no-op panic hook used during source map generation
+    // to avoid expensive per-file take/set operations.
+    std::panic::set_hook(Box::new(|_| {}));
+  });
+}
 
 fn is_jsx_pragma_comment(comment: &Comment) -> bool {
   let text = comment.text.as_ref();
@@ -423,19 +432,13 @@ fn process_compiled_css_in_js(
     let map_json = if input.source_maps && !line_pos_buffer.is_empty() {
       let build_map_result = {
         let _hook_guard = PANIC_HOOK_GUARD.lock();
-        let previous_hook = panic::take_hook();
-        panic::set_hook(Box::new(|_| {}));
-
-        let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        panic::catch_unwind(panic::AssertUnwindSafe(|| {
           let mut output_map_buffer = vec![];
           let write_result = source_map
             .build_source_map_with_config(&line_pos_buffer, None, SourceMapConfig)
             .to_writer(&mut output_map_buffer);
           (write_result, output_map_buffer)
-        }));
-
-        panic::set_hook(previous_hook);
-        result
+        }))
       };
 
       match build_map_result {
@@ -508,6 +511,9 @@ pub fn apply_compiled_css_in_js_plugin(
 
   // Create deferred promise
   let (deferred, promise) = env.create_deferred()?;
+
+  // Initialize panic hook once for the plugin lifecycle
+  initialize_panic_hook_once();
 
   // Spawn the work on a Rayon thread
   rayon::spawn(move || {
@@ -652,12 +658,12 @@ mod tests {
         unsafe_use_safe_assets: None,
         import_react: Some(true),
         nonce: None,
-        import_sources: Some(vec!["@compiled/react".into()]),
+        import_sources: Some(vec!["@compiled/react".into(), "@atlaskit/css".into()]),
         optimize_css: Some(true),
         extensions: None,
         add_component_name: Some(false),
         process_xcss: Some(true),
-        increase_specificity: Some(true),
+        increase_specificity: Some(false),
         sort_at_rules: Some(true),
         class_hash_prefix: None,
         flatten_multiple_selectors: Some(true),
@@ -666,6 +672,10 @@ mod tests {
         sort_shorthand: Some(true),
       },
     }
+  }
+
+  fn normalize_whitespace(input: &str) -> String {
+    input.split_whitespace().collect()
   }
 
   #[test]
@@ -948,23 +958,17 @@ import { css, jsx } from '@compiled/react';
 import { Stack, Text } from '@atlaskit/primitives/compiled';
 import { token } from '@atlaskit/tokens';
 import { useIntl } from '@atlassian/jira-intl';
-import type { JiraBoardType } from '../../../services/use-board-create-mutation/__generated__/useBoardCreateMutation.graphql';
 import commonMessages from '../../../common/messages.tsx';
-import { descriptionMapping } from '../../../common/utils.tsx';
-
-export type ModalHeaderTypes = {
-	type: JiraBoardType;
-};
+import { mapping } from '../../../common/utils.tsx';
 
 export const ModalHeader = ({ type }: ModalHeaderTypes): JSX.Element => {
 	const { formatMessage } = useIntl();
 
 	return (
 		<Stack space="space.100">
-			{/* eslint-disable-next-line @atlaskit/design-system/use-heading */}
-			<h4 css={modalHeaderStyles}>{formatMessage(commonMessages.boardCreationTitle)}</h4>
+			<h4 css={modalHeaderStyles}>{formatMessage(commonMessages.title)}</h4>
 			<Text size="medium" color="color.text.accent.gray.bolder">
-				{descriptionMapping[type] && formatMessage(descriptionMapping[type])}
+				{mapping[type] && formatMessage(mapping[type])}
 			</Text>
 			<Text as="em" size="small" color="color.text.subtlest">
 				{formatMessage(commonMessages.requiredFieldsHeader)}
@@ -1091,45 +1095,24 @@ root.render(page);
 /** @jsx jsx */
 import { useCallback } from 'react';
 import { css, jsx } from '@compiled/react';
-import { token } from '@atlaskit/tokens';
 import { Inline, xcss } from '@atlaskit/primitives';
-import { CellHoverProvider } from '@atlassian/jira-hover-popover/src/controllers/index.tsx';
-import ShowMorePopup, { type Props, type MinimumItemData } from './show-more-popup/index.tsx';
+import { ComponentA } from 'a';
+import ComponentB, { type Props, type MinimumItemData } from 'b';
 
-const ListWithPopup = <TData extends MinimumItemData>({
-	items,
-	ItemComponent,
-	maxLimit,
-	initialIsOpen,
-	isHoverPopoverEnabled,
-	...restProps
-}: Props<TData>) => {
+const ListWithPopup = () => {
 	const [firstItem, ...restItems] = items;
 
-	const ShowMorePopupRenderer = useCallback(
+	const ComponentBRenderer = useCallback(
 		() =>
-			isHoverPopoverEnabled ? (
-				<CellHoverProvider>
-					<ShowMorePopup
-						items={restItems}
-						maxLimit={maxLimit}
-						ItemComponent={ItemComponent}
-						initialIsOpen={initialIsOpen}
-						isHoverPopoverEnabled={isHoverPopoverEnabled}
-						{...restProps}
-					/>
-				</CellHoverProvider>
+			isEnabled ? (
+				<ComponentA>
+					<ComponentB />
+				</ComponentA>
 			) : (
-				<ShowMorePopup
-					items={restItems}
-					maxLimit={maxLimit}
-					ItemComponent={ItemComponent}
-					initialIsOpen={initialIsOpen}
-					isHoverPopoverEnabled={isHoverPopoverEnabled}
-					{...restProps}
-				/>
+				<ComponentB
+ />
 			),
-		[ItemComponent, initialIsOpen, isHoverPopoverEnabled, maxLimit, restItems, restProps],
+		[],
 	);
 
 	if (items.length === 0) {
@@ -1140,27 +1123,27 @@ const ListWithPopup = <TData extends MinimumItemData>({
 		<Inline
 			space="space.100"
 			alignBlock="center"
-			shouldWrap={!isHoverPopoverEnabled}
-			xcss={isHoverPopoverEnabled && hoverPopoverStyles}
+			shouldWrap={!isEnabled}
+			xcss={isEnabled && xStyles}
 		>
 			<ItemComponent
 				{...firstItem}
-				isHoverPopoverEnabled={isHoverPopoverEnabled}
-				css={isHoverPopoverEnabled && hoverPopoverItemStyles}
+				isEnabled={isEnabled}
+				css={isEnabled && xItemStyles}
 			/>
 
-			{restItems.length >= 1 && ShowMorePopupRenderer()}
+			{restItems.length >= 1 && ComponentBRenderer()}
 		</Inline>
 	);
 };
 
-const hoverPopoverStyles = xcss({
+const xStyles = xcss({
 	paddingRight: 'space.050',
 	width: '100%',
 });
 
-const hoverPopoverItemStyles = css({
-	minWidth: token('space.0'),
+const xItemStyles = css({
+	minWidth: '100%',
 });
 
 export default ListWithPopup;
@@ -1183,6 +1166,683 @@ export default ListWithPopup;
     assert!(
       transformed.code.contains("xcss={"),
       "Should retain xcss in the code"
+    );
+  }
+
+  #[test]
+  fn test_nested_styled() {
+    // Test styled API transformation with component name generation
+    let mut config = create_test_config(true, false);
+    config.config.add_component_name = Some(true);
+
+    let input_code = indoc! {r#"
+import React from 'react';
+import { styled } from '@compiled/react';
+
+const Container = componentWithCondition(condition, styled.ul({
+    backgroundColor: "var(--ds-surface, #FFFFFF)",
+    borderWidth: "var(--ds-border-width, 1px)",
+    borderStyle: 'solid',
+    borderColor: `${"var(--ds-border, #091e4221)"}`,
+    // eslint-disable-next-line @atlaskit/design-system/no-unsafe-design-token-usage
+    borderRadius: "var(--ds-radius-small, 3px)",
+    paddingTop: "var(--ds-space-0, 0px)",
+    paddingRight: "var(--ds-space-0, 0px)",
+    paddingBottom: "var(--ds-space-0, 0px)",
+    paddingLeft: "var(--ds-space-0, 0px)"
+}), styled.ul({
+    boxShadow: "var(--ds-shadow-raised, 0px 1px 1px #091e423f, 0px 0px 1px #091e4221)",
+    backgroundColor: "var(--ds-surface-raised, #FFFFFF)",
+    // eslint-disable-next-line @atlaskit/design-system/no-unsafe-design-token-usage
+    borderRadius: "var(--ds-radius-small, 3px)",
+    paddingTop: "var(--ds-space-0, 0px)",
+    paddingRight: "var(--ds-space-0, 0px)",
+    paddingBottom: "var(--ds-space-0, 0px)",
+    paddingLeft: "var(--ds-space-0, 0px)"
+  }));
+
+export default Container;
+    "#};
+
+    let result = process_compiled_css_in_js(input_code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let output = result.unwrap();
+
+    // Verify transformation was applied
+    assert!(!output.bail_out, "Transformation should not bail out");
+
+    // Verify styled components are compiled away
+    assert!(
+      !output.code.contains("styled.ul"),
+      "styled.ul() calls should be compiled away and replaced with className-based components"
+    );
+
+    // Verify styles were extracted
+    assert!(
+      !output.style_rules.is_empty(),
+      "Style rules should be extracted from styled component definitions"
+    );
+
+    // Verify className was generated
+    assert!(
+      output.code.contains("className"),
+      "Output should use className to apply extracted styles"
+    );
+
+    // Verify diagnostics are clean
+    assert!(
+      output.diagnostics.is_empty(),
+      "Transformation should produce no diagnostics"
+    );
+  }
+
+  #[test]
+  fn test_mixed_css_and_styled() {
+    // Test styled API transformation with component name generation
+    let mut config = create_test_config(true, false);
+    config.config.add_component_name = Some(true);
+
+    let input_code = indoc! {r#"
+import { css, styled } from '@compiled/react';
+import React from 'react';
+const ellipsis = {
+	whiteSpace: 'nowrap',
+	overflow: 'hidden',
+	textOverflow: 'ellipsis',
+} as const;
+
+export const Ellipsis = styled.div(css<Record<any, any>>(ellipsis));
+    "#};
+
+    let result = process_compiled_css_in_js(input_code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let output = result.unwrap();
+
+    // Verify transformation was applied
+    assert!(!output.bail_out, "Transformation should not bail out");
+
+    // Verify styled components are compiled away
+    assert!(
+      !output.code.contains("styled.div"),
+      "styled.div() calls should be compiled away and replaced with className-based components"
+    );
+
+    // Verify styled components are compiled away
+    assert!(
+      !output.code.contains("css"),
+      "css calls should be compiled away and replaced with className-based components"
+    );
+
+    // Verify styles were extracted
+    assert!(
+      !output.style_rules.is_empty(),
+      "Style rules should be extracted from styled component definitions"
+    );
+
+    // Verify className was generated
+    assert!(
+      output.code.contains("className"),
+      "Output should use className to apply extracted styles"
+    );
+
+    // Verify diagnostics are clean
+    assert!(
+      output.diagnostics.is_empty(),
+      "Transformation should produce no diagnostics"
+    );
+  }
+
+  #[test]
+  fn test_jsx_runtime_classic() {
+    let mut config = create_test_config(true, false);
+    config.config.add_component_name = Some(true);
+
+    let input_code = indoc! {r#"
+/**
+ * @jsxRuntime classic
+ * @jsx jsx
+ */
+import { jsx } from '@compiled/react';
+import { Box } from '@atlaskit/primitives/compiled';
+
+<Box
+  style={{
+    display: 'inline-block',
+  }}
+/>;
+    "#};
+
+    let result = process_compiled_css_in_js(input_code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let output = result.unwrap();
+
+    // Verify transformation was applied
+    assert!(!output.bail_out, "Transformation should not bail out");
+
+    // Verify styled components are compiled away
+    assert!(
+      output.code.contains("import * as React from 'react'"),
+      "import * as React from 'react' should be present"
+    );
+  }
+
+  #[test]
+  fn test_css_map() {
+    let config = create_test_config(true, false);
+
+    let input_code = indoc! {r#"
+/**
+ * @jsxRuntime classic
+ * @jsx jsx
+ */
+import { jsx } from '@compiled/react';
+
+import { cssMap } from '@atlaskit/css';
+
+const styles = cssMap({
+	root: {
+		boxSizing: 'border-box',
+		height: '20px',
+		width: '20px',
+	},
+});
+
+export const ContainerAvatar = ({ src }: ContainerAvatarProps) => (
+	<img src={src} css={styles.root} alt="" />
+);
+
+    "#};
+
+    let result = process_compiled_css_in_js(input_code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let output = result.unwrap();
+
+    // Verify transformation was applied
+    assert!(!output.bail_out, "Transformation should not bail out");
+
+    assert!(
+      !output.style_rules.is_empty(),
+      "Style rules should be extracted from cssMap"
+    );
+
+    assert!(
+      !output.code.contains("css={"),
+      "Output should not contain css"
+    );
+
+    // Should rewrite css prop into a className application
+    assert!(
+      output.code.contains("className="),
+      "Output should apply className"
+    );
+
+    // Should rewrite css prop into a className application
+    assert!(
+      output.code.contains("styles.root"),
+      "Output should have styles.root applied as a className"
+    );
+  }
+
+  #[test]
+  fn test_css_map_primitives() {
+    let config = create_test_config(true, false);
+
+    let input_code = indoc! {r#"
+/**
+ * @jsxRuntime classic
+ * @jsx jsx
+ */
+import {
+	type ComponentPropsWithRef,
+	type ElementType,
+	forwardRef,
+	type ReactNode,
+	type Ref,
+} from 'react';
+
+import { jsx, cssMap as unboundedCssMap } from '@compiled/react';
+import invariant from 'tiny-invariant';
+
+import { css, cssMap, type StrictXCSSProp } from '@atlaskit/css';
+import { token } from '@atlaskit/tokens';
+
+import { HasTextAncestorProvider, useHasTextAncestor } from '../../utils/has-text-ancestor-context';
+import { useSurface } from '../../utils/surface-provider';
+
+import type { BasePrimitiveProps, FontSize, FontWeight, TextAlign, TextColor } from './types';
+
+const asAllowlist = ['span', 'p', 'strong', 'em'] as const;
+type AsElement = (typeof asAllowlist)[number];
+
+type TextPropsBase<T extends ElementType = 'span'> = {
+	/**
+	 * HTML tag to be rendered. Defaults to `span`.
+	 */
+	as?: AsElement;
+	/**
+	 * Elements rendered within the Text element.
+	 */
+	children: ReactNode;
+	/**
+	 * Token representing text color with a built-in fallback value.
+	 * Will apply inverse text color automatically if placed within a Box with bold background color.
+	 * Defaults to `color.text` if not nested in other Text components.
+	 */
+	color?: TextColor | 'inherit';
+	/**
+	 * The [HTML `id` attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/id).
+	 */
+	id?: string;
+	/**
+	 * The number of lines to limit the provided text to. Text will be truncated with an ellipsis.
+	 *
+	 * When `maxLines={1}`, `wordBreak` defaults to `break-all` to match the behaviour of `text-overflow: ellipsis`.
+	 */
+	maxLines?: number;
+	/**
+	 * Text alignment.
+	 */
+	align?: TextAlign;
+	/**
+	 * Text size.
+	 */
+	size?: FontSize;
+	/**
+	 * The [HTML `font-weight` attribute](https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight).
+	 */
+	weight?: FontWeight;
+	/**
+	 * Bounded style overrides.
+	 */
+	xcss?: StrictXCSSProp<'overflowWrap' | 'textDecorationLine', never>;
+	/**
+	 * Forwarded ref.
+	 */
+	ref?: ComponentPropsWithRef<T>['ref'];
+};
+
+export type TextProps<T extends ElementType = 'span'> = TextPropsBase<T> &
+	Omit<BasePrimitiveProps, 'xcss'>;
+
+/**
+ * Custom hook designed to abstract the parsing of the color props and make it clearer in the future how color is reconciled between themes and tokens.
+ */
+const useColor = (
+	colorProp: TextColor | undefined | 'inherit',
+	hasTextAncestor: boolean,
+): TextColor | undefined => {
+	const surface = useSurface();
+
+	if (colorProp === 'inherit') {
+		return undefined;
+	}
+
+	if (colorProp) {
+		return colorProp;
+	}
+
+	if (hasTextAncestor) {
+		return undefined;
+	}
+
+	if (inverseColorMap.hasOwnProperty(surface)) {
+		return inverseColorMap[surface as keyof typeof inverseColorMap];
+	}
+
+	return 'color.text';
+};
+
+const styles = unboundedCssMap({
+	root: {
+		// We're doing this because our CSS reset can add top margins to elements such as `p` which is totally insane.
+		// Long term we should remove those instances from the reset - it should be a reset to 0.
+		// For now, at least we know <Text> will be unaffected by this.
+		margin: 0,
+		overflowWrap: 'anywhere',
+	},
+	'as.strong': { fontWeight: 'var(--ds-font.weight.bold)' },
+	'as.em': { fontStyle: 'italic' },
+	'textAlign.center': { textAlign: 'center' },
+	'textAlign.end': { textAlign: 'end' },
+	'textAlign.start': { textAlign: 'start' },
+	truncation: {
+		display: '-webkit-box',
+		overflow: 'hidden',
+		// NOTE: This is an obsolete property not used in modern CSS, perhaps unused, but likely added for some compatibility
+		WebkitBoxOrient: 'vertical',
+	},
+	breakAll: { wordBreak: 'break-all' },
+});
+
+const fontSizeMap = cssMap({
+	medium: { font: 'var(--ds-font.body)' },
+	UNSAFE_small: { font: 'var(--ds-font.body.UNSAFE_small)' },
+	large: { font: 'var(--ds-font.body.large)' },
+	small: { font: 'var(--ds-font.body.small)' },
+});
+
+const fontWeightMap = unboundedCssMap({
+	bold: { fontWeight: 'var(--ds-font.weight.bold)' },
+	medium: { fontWeight: 'var(--ds-font.weight.medium)' },
+	regular: { fontWeight: 'var(--ds-font.weight.regular)' },
+	semibold: { fontWeight: 'var(--ds-font.weight.semibold)' },
+});
+
+const textColorMap = cssMap({
+	'color.text': { color: 'var(--ds-color.text)' },
+	'color.text.accent.lime': { color: 'var(--ds-color.text.accent.lime)' },
+	'color.text.accent.lime.bolder': { color: 'var(--ds-color.text.accent.lime.bolder)' },
+	'color.text.accent.red': { color: 'var(--ds-color.text.accent.red)' },
+	'color.text.accent.red.bolder': { color: 'var(--ds-color.text.accent.red.bolder)' },
+	'color.text.accent.orange': { color: 'var(--ds-color.text.accent.orange)' },
+	'color.text.accent.orange.bolder': { color: 'var(--ds-color.text.accent.orange.bolder)' },
+	'color.text.accent.yellow': { color: 'var(--ds-color.text.accent.yellow)' },
+	'color.text.accent.yellow.bolder': { color: 'var(--ds-color.text.accent.yellow.bolder)' },
+	'color.text.accent.green': { color: 'var(--ds-color.text.accent.green)' },
+	'color.text.accent.green.bolder': { color: 'var(--ds-color.text.accent.green.bolder)' },
+	'color.text.accent.teal': { color: 'var(--ds-color.text.accent.teal)' },
+	'color.text.accent.teal.bolder': { color: 'var(--ds-color.text.accent.teal.bolder)' },
+	'color.text.accent.blue': { color: 'var(--ds-color.text.accent.blue)' },
+	'color.text.accent.blue.bolder': { color: 'var(--ds-color.text.accent.blue.bolder)' },
+	'color.text.accent.purple': { color: 'var(--ds-color.text.accent.purple)' },
+	'color.text.accent.purple.bolder': { color: 'var(--ds-color.text.accent.purple.bolder)' },
+	'color.text.accent.magenta': { color: 'var(--ds-color.text.accent.magenta)' },
+	'color.text.accent.magenta.bolder': { color: 'var(--ds-color.text.accent.magenta.bolder)' },
+	'color.text.accent.gray': { color: 'var(--ds-color.text.accent.gray)' },
+	'color.text.accent.gray.bolder': { color: 'var(--ds-color.text.accent.gray.bolder)' },
+	'color.text.disabled': { color: 'var(--ds-color.text.disabled)' },
+	'color.text.inverse': { color: 'var(--ds-color.text.inverse)' },
+	'color.text.selected': { color: 'var(--ds-color.text.selected)' },
+	'color.text.brand': { color: 'var(--ds-color.text.brand)' },
+	'color.text.danger': { color: 'var(--ds-color.text.danger)' },
+	'color.text.warning': { color: 'var(--ds-color.text.warning)' },
+	'color.text.warning.inverse': { color: 'var(--ds-color.text.warning.inverse)' },
+	'color.text.success': { color: 'var(--ds-color.text.success)' },
+	'color.text.discovery': { color: 'var(--ds-color.text.discovery)' },
+	'color.text.information': { color: 'var(--ds-color.text.information)' },
+	'color.text.subtlest': { color: 'var(--ds-color.text.subtlest)' },
+	'color.text.subtle': { color: 'var(--ds-color.text.subtle)' },
+	'color.link': { color: 'var(--ds-color.link)' },
+	'color.link.pressed': { color: 'var(--ds-color.link.pressed)' },
+	'color.link.visited': { color: 'var(--ds-color.link.visited)' },
+	'color.link.visited.pressed': { color: 'var(--ds-color.link.visited.pressed)' },
+});
+
+export const inverseColorMap = {
+	'color.background.neutral.bold': 'color.text.inverse',
+	'color.background.neutral.bold.hovered': 'color.text.inverse',
+	'color.background.neutral.bold.pressed': 'color.text.inverse',
+	'color.background.selected.bold': 'color.text.inverse',
+	'color.background.selected.bold.hovered': 'color.text.inverse',
+	'color.background.selected.bold.pressed': 'color.text.inverse',
+	'color.background.brand.bold': 'color.text.inverse',
+	'color.background.brand.bold.hovered': 'color.text.inverse',
+	'color.background.brand.bold.pressed': 'color.text.inverse',
+	'color.background.brand.boldest': 'color.text.inverse',
+	'color.background.brand.boldest.hovered': 'color.text.inverse',
+	'color.background.brand.boldest.pressed': 'color.text.inverse',
+	'color.background.danger.bold': 'color.text.inverse',
+	'color.background.danger.bold.hovered': 'color.text.inverse',
+	'color.background.danger.bold.pressed': 'color.text.inverse',
+	'color.background.warning.bold': 'color.text.warning.inverse',
+	'color.background.warning.bold.hovered': 'color.text.warning.inverse',
+	'color.background.warning.bold.pressed': 'color.text.warning.inverse',
+	'color.background.success.bold': 'color.text.inverse',
+	'color.background.success.bold.hovered': 'color.text.inverse',
+	'color.background.success.bold.pressed': 'color.text.inverse',
+	'color.background.discovery.bold': 'color.text.inverse',
+	'color.background.discovery.bold.hovered': 'color.text.inverse',
+	'color.background.discovery.bold.pressed': 'color.text.inverse',
+	'color.background.information.bold': 'color.text.inverse',
+	'color.background.information.bold.hovered': 'color.text.inverse',
+	'color.background.information.bold.pressed': 'color.text.inverse',
+} as const;
+
+/**
+ * __Text__
+ *
+ * Text is a primitive component that has the Atlassian Design System's design guidelines baked in.
+ * This includes considerations for text attributes such as color, font size, font weight, and line height.
+ * It renders a `span` by default.
+ *
+ * @internal
+ */
+const Text: React.ForwardRefExoticComponent<
+	React.PropsWithoutRef<TextProps<ElementType>> & React.RefAttributes<any>
+> = forwardRef(
+	<T extends ElementType = 'span'>(
+		{
+			as: Component = 'span',
+			color: colorProp,
+			align,
+			testId,
+			id,
+			size,
+			weight,
+			maxLines,
+			xcss,
+			children,
+		}: TextProps<T>,
+		ref: Ref<any>,
+	) => {
+		invariant(
+			asAllowlist.includes(Component),
+			`@atlaskit/primitives: Text received an invalid "as" value of "${Component}"`,
+		);
+
+		const hasTextAncestor = useHasTextAncestor();
+		const color = useColor(colorProp, hasTextAncestor);
+
+		if (!size && !hasTextAncestor) {
+			size = 'medium';
+		}
+
+		const component = (
+			<Component
+				id={id}
+				className={xcss}
+				css={[
+          stylesCss,
+					styles.root,
+					size && fontSizeMap[size],
+					color && textColorMap[color],
+					maxLines && styles.truncation,
+					maxLines === 1 && styles.breakAll,
+					align && styles[`textAlign.${align}`],
+					weight && fontWeightMap[weight],
+					Component === 'em' && styles['as.em'],
+					Component === 'strong' && styles['as.strong'],
+				]}
+				style={{
+					WebkitLineClamp: maxLines,
+				}}
+				data-testid={testId}
+				ref={ref}
+			>
+				{children}
+			</Component>
+		);
+
+		if (hasTextAncestor) {
+			// no need to re-apply context if the text is already wrapped
+			return component;
+		}
+
+		return <HasTextAncestorProvider value={true}>{component}</HasTextAncestorProvider>;
+	},
+);
+
+const stylesCss = css({ color: 'red' });
+
+export default Text;
+    "#};
+
+    let result = process_compiled_css_in_js(input_code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let output = result.unwrap();
+
+    // Verify transformation was applied
+    assert!(!output.bail_out, "Transformation should not bail out");
+
+    // Ensure css prop was transformed
+    assert!(
+      !output.code.contains("css={"),
+      "Output should not contain css"
+    );
+    assert!(
+      !output.code.contains("cssMap("),
+      "cssMap should be transformed to a map of classes"
+    );
+    assert!(
+      !output.code.contains("unboundedCssMap("),
+      "unboundedCssMap should be transformed to a map of classes"
+    );
+    assert!(
+      output.code.contains("className="),
+      "Output should apply className"
+    );
+
+    let expected_classname = indoc! {r#"
+      className={ax([
+        "_syaz5scu",
+        styles.root,
+        size && fontSizeMap[size],
+        color && textColorMap[color],
+        maxLines && styles.truncation,
+        maxLines === 1 && styles.breakAll,
+        align && styles[`textAlign.${align}`],
+        weight && fontWeightMap[weight],
+        Component === 'em' && styles['as.em'],
+        Component === 'strong' && styles['as.strong'],
+        xcss
+      ])}
+    "#};
+
+    let normalized_output = normalize_whitespace(&output.code);
+    let normalized_expected = normalize_whitespace(expected_classname);
+    assert!(
+      normalized_output.contains(&normalized_expected),
+      "Output should include the expected ax className call with all flex props"
+    );
+  }
+
+  #[test]
+  fn test_css_prop_component() {
+    let config = create_test_config(true, false);
+
+    let input_code = indoc! {r#"
+/** @jsx jsx */
+import React from 'react';
+import { css, jsx } from '@compiled/react';
+import { AppSkeletonImage } from '@jira/platform__skeleton-image-container/src/ui/AppSkeletonImage.tsx';
+import imgSVG from './assets/virtual-agent-intent-training-phrases-app-skeleton.tpl.svg';
+
+const customCssStyles = css({
+	margin: '0 auto',
+	maxWidth: '960px',
+	borderLeftWidth: 0,
+	borderRightWidth: 0,
+});
+
+export const VirtualAgentIntentTrainingPhrasesSkeleton = () => (
+	<AppSkeletonImage src={imgSVG} css={customCssStyles} />
+);
+
+    "#};
+
+    let result = process_compiled_css_in_js(input_code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let output = result.unwrap();
+
+    // Verify transformation was applied
+    assert!(!output.bail_out, "Transformation should not bail out");
+
+    // Ensure css prop was transformed
+    assert!(
+      !output.code.contains("css={"),
+      "Output should not contain css"
+    );
+
+    assert!(
+      output.code.contains("className={ax(["),
+      "Output should apply className"
+    );
+  }
+
+  #[test]
+  fn test_css_prop_component_array() {
+    let config = create_test_config(true, false);
+
+    let input_code = indoc! {r#"
+/** @jsx jsx */
+import React from 'react';
+import { css, jsx } from '@compiled/react';
+import { AppSkeletonImage } from '@jira/platform__skeleton-image-container/src/ui/AppSkeletonImage.tsx';
+
+import imgSVG from './assets/issue-app-skeleton.tpl.svg';
+
+const fullpageStyles = css({
+	borderTopWidth: '50px',
+});
+const modalStyles = css({
+	// eslint-disable-next-line @atlaskit/design-system/use-tokens-space
+	marginTop: '-40px',
+});
+const customSpacingStyles = css({
+	maxWidth: '1920px',
+	marginRight: 'auto',
+	marginLeft: 'auto',
+	'@media (min--moz-device-pixel-ratio: 2)': {
+		maxWidth: '840px',
+	},
+});
+
+export const IssueViewSkeletonWithRightStatus = ({ isEmbedView, isModalView }) => {
+	// same as getIssueContainerMaxWidth
+	const customCss = [
+		customSpacingStyles,
+		isEmbedView !== true && isModalView !== true ? fullpageStyles : null,
+		isModalView === true ? modalStyles : null,
+	];
+	return (
+			<AppSkeletonImage src={imgSVG} css={customCss} />
+	);
+};
+    "#};
+
+    let result = process_compiled_css_in_js(input_code, &config);
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let output = result.unwrap();
+
+    // Verify transformation was applied
+    assert!(!output.bail_out, "Transformation should not bail out");
+
+    // Ensure css prop was transformed
+    assert!(
+      !output.code.contains("css={"),
+      "Output should not contain css"
+    );
+
+    let expected_classname = indoc! {r#"
+      className={ax([
+        '_p12f107j _2hwx1wug _18u01wug _11y7uu9g',
+        isEmbedView !== true && isModalView !== true && '_uwhk12am',
+        isModalView === true && '_19pk10j7'
+      ])}
+    "#};
+
+    let normalized_output = normalize_whitespace(&output.code);
+    let normalized_expected = normalize_whitespace(expected_classname);
+    assert!(
+      normalized_output.contains(&normalized_expected),
+      "Output should include the expected ax className call with all flex props"
     );
   }
 }
