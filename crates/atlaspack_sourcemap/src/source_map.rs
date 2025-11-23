@@ -69,40 +69,38 @@ impl SourceMap {
   /// Offset all generated line numbers by the specified amount
   /// This is useful when code has been wrapped with additional lines at the beginning
   pub fn offset_lines(&mut self, start_column: u32, line_offset: u32) {
-    // Get the current project root from the source map's JSON representation
-    let project_root = match self.inner.to_json(None) {
-      Ok(json_str) => {
-        // Try to parse project root from JSON, fallback to empty string
-        if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&json_str) {
-          json_value
-            .get("sourceRoot")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string()
-        } else {
-          String::new()
+    // Get the current source map as JSON to modify it properly
+    if let Ok(json_str) = self.inner.to_json(None)
+      && let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&json_str)
+    {
+      // Decode the existing mappings and modify them
+      if let Some(_mappings_str) = json_value.get("mappings").and_then(|v| v.as_str()) {
+        // For now, we'll use a simple approach: parse the mappings and offset line numbers
+        // This is a simplified implementation - a full implementation would need VLQ decoding
+
+        // Instead of trying to decode VLQ mappings, let's use the existing mapping data
+        let current_mappings = self.inner.get_mappings();
+
+        // Create a new source map with the same metadata but offset mappings
+        if let Some(project_root) = json_value.get("sourceRoot").and_then(|v| v.as_str()) {
+          let mut new_inner = ParcelSourceMap::new(project_root);
+
+          // Add offset mappings while preserving the original source references
+          for mapping in current_mappings {
+            let new_generated_line = mapping.generated_line + line_offset;
+            let new_generated_column = if mapping.generated_line == 0 {
+              mapping.generated_column + start_column
+            } else {
+              mapping.generated_column
+            };
+
+            new_inner.add_mapping(new_generated_line, new_generated_column, mapping.original);
+          }
+
+          self.inner = new_inner;
         }
       }
-      Err(_) => String::new(),
-    };
-
-    // Create a new source map with offset mappings
-    let mut new_inner = ParcelSourceMap::new(&project_root);
-
-    // For each mapping, create a new one with offset line numbers
-    for mapping in self.inner.get_mappings() {
-      let new_generated_line = mapping.generated_line + line_offset;
-      let new_generated_column = if mapping.generated_line == 0 {
-        mapping.generated_column + start_column
-      } else {
-        mapping.generated_column
-      };
-
-      // Use the add_mapping method with individual parameters
-      new_inner.add_mapping(new_generated_line, new_generated_column, mapping.original);
     }
-
-    self.inner = new_inner;
   }
 }
 
