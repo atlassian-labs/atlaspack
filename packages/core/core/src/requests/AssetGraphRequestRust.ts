@@ -68,16 +68,6 @@ export function createAssetGraphRequestRust(
         });
       }
 
-      // Newly created nodes
-      serializedAssetGraph.nodes = serializedAssetGraph.nodes.map((node) =>
-        JSON.parse(node),
-      );
-
-      // Updated existing nodes
-      serializedAssetGraph.updates = serializedAssetGraph.updates.map((node) =>
-        JSON.parse(node),
-      );
-
       // Don't reuse a previous asset graph result if Rust didn't have one too
       let prevResult = null;
       if (serializedAssetGraph.hadPreviousGraph) {
@@ -264,6 +254,8 @@ export function getAssetGraph(
     let node = isUpdateNode
       ? serializedGraph.updates[index - nodeTypeSwitchoverIndex]
       : serializedGraph.nodes[index];
+
+    node = JSON.parse(node);
 
     if (node.type === 'entry') {
       let id = 'entry:' + ++entry;
