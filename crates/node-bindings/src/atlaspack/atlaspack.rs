@@ -135,27 +135,26 @@ pub fn atlaspack_napi_build_asset_graph(
   thread::spawn({
     let atlaspack_ref = atlaspack_napi.clone();
     move || {
-      let atlaspack = atlaspack_ref.lock();
-
       let second_ref = atlaspack_ref.clone();
 
-      let result = atlaspack.build_asset_graph();
+      let result = {
+        // Ensure lock is dropped before resolving the deferred
+        let atlaspack = atlaspack_ref.lock();
+        atlaspack.build_asset_graph()
+      };
 
       // "deferred.resolve" closure executes on the JavaScript thread.
       // Errors are returned as a resolved value because they need to be serialized and are
       // not supplied as JavaScript Error types. The JavaScript layer needs to handle conversions
       deferred.resolve(move |env| match result {
         Ok((asset_graph, had_previous_graph)) => {
-          let serialize_result =
-            serialize_asset_graph(&env, &asset_graph.clone(), had_previous_graph)?;
-          println!("Resolved asset graph serialization");
+          let serialize_result = serialize_asset_graph(&env, &asset_graph, had_previous_graph)?;
+
           thread::spawn(move || {
             let atlaspack = second_ref.lock();
             atlaspack.commit_assets(&asset_graph).unwrap();
-            second_deferred.resolve(move |env| {
-              println!("Committing asset graph to LMDB");
-              NapiAtlaspackResult::ok(&env, ())
-            })
+
+            second_deferred.resolve(move |env| NapiAtlaspackResult::ok(&env, ()))
           });
 
           NapiAtlaspackResult::ok(&env, serialize_result)

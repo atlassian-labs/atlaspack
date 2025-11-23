@@ -68,15 +68,17 @@ export function createAssetGraphRequestRust(
         });
       }
 
-      // Newly created nodes
-      serializedAssetGraph.nodes = serializedAssetGraph.nodes.map((node) =>
-        JSON.parse(node),
-      );
+      instrument('parse-asset-graph', () => {
+        // Newly created nodes
+        serializedAssetGraph.nodes = serializedAssetGraph.nodes.map((node) =>
+          JSON.parse(node),
+        );
 
-      // Updated existing nodes
-      serializedAssetGraph.updates = serializedAssetGraph.updates.map((node) =>
-        JSON.parse(node),
-      );
+        // Updated existing nodes
+        serializedAssetGraph.updates = serializedAssetGraph.updates.map(
+          (node) => JSON.parse(node),
+        );
+      });
 
       // Don't reuse a previous asset graph result if Rust didn't have one too
       let prevResult = null;
