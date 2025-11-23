@@ -41,7 +41,7 @@ type SourceMapOffset = (u32, u32);
 
 pub fn wrap_with_react_refresh(
   asset: &Asset,
-  code: &Vec<u8>,
+  code: &[u8],
   options: &PluginOptions,
   dependencies: &IndexMap<Atom, Dependency>,
   hmr_improvements: bool,

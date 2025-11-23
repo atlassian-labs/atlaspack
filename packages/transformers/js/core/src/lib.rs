@@ -217,7 +217,7 @@ pub fn transform(
     config.project_root.as_str(),
     config.filename.as_str(),
     &source_map,
-    &config,
+    config,
   );
 
   match module {
@@ -529,7 +529,7 @@ pub fn transform(
                       &mut result.dependencies,
                       ignore_mark,
                       unresolved_mark,
-                      &config,
+                      config,
                       &mut diagnostics,
                       &mut result.conditions,
                     ),
@@ -817,12 +817,12 @@ mod tests {
   fn test_logs_when_flag_is_on_and_file_is_empty() {
     let config: Config = make_test_swc_config(r#""#);
     unsafe { env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "true") };
-    let _result = transform(config, None);
+    let _result = transform(&config, None);
     assert!(logs_contain("You are attempting to import"));
 
     unsafe { env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "false") };
     let config: Config = make_test_swc_config(r#""#);
-    let _result = transform(config, None);
+    let _result = transform(&config, None);
     logs_assert(|lines: &[&str]| {
       let count = lines
         .iter()
