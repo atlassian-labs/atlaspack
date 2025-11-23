@@ -11,8 +11,6 @@ import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Event} from '@parcel/watcher';
 import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
 
-type NapiResultPromise = Promise<[any, any]>;
-
 export type AtlaspackV3Options = {
   fs?: AtlaspackNapiOptions['fs'];
   packageManager?: AtlaspackNapiOptions['packageManager'];
