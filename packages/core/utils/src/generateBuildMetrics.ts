@@ -1,6 +1,6 @@
 import type {FilePath, PackagedBundle} from '@atlaspack/types-internal';
 import type {FileSystem} from '@atlaspack/types-internal';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import nullthrows from 'nullthrows';
 import path from 'path';
 import {loadSourceMapUrl} from './';

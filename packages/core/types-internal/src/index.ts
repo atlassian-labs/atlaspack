@@ -1,5 +1,5 @@
 import type {Readable} from 'stream';
-import type SourceMap from '@parcel/source-map';
+import type {SourceMap} from '@atlaspack/source-map';
 import type {
   Diagnostic,
   Diagnostifiable,

@@ -19,6 +19,9 @@
     },
     {
       "path": "../../core/utils/tsconfig.json"
+    },
+    {
+      "path": "../../core/source-map/tsconfig.json"
     }
   ]
 }
