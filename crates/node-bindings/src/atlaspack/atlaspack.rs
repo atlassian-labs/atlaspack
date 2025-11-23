@@ -130,8 +130,6 @@ pub fn atlaspack_napi_build_asset_graph(
   js_result.set_named_property("assetGraphPromise", promise)?;
   js_result.set_named_property("commitPromise", second_promise)?;
 
-  println!("Spawning atlaspack_napi_build_asset_graph thread");
-
   thread::spawn({
     let atlaspack_ref = atlaspack_napi.clone();
     move || {
