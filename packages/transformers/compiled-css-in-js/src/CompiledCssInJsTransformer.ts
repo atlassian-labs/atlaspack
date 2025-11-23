@@ -6,7 +6,7 @@ import {
   type CompiledCssInJsTransformConfig,
 } from '@atlaspack/rust/index';
 import {join} from 'path';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 
 const configFiles = ['.compiledcssrc', '.compiledcssrc.json'];
 
@@ -64,7 +64,6 @@ export default new Transformer({
       map.addVLQMap(JSON.parse(result.map));
       const originalMap = await mapPromise;
       if (originalMap) {
-        // @ts-expect-error TS2345 - the types are wrong, `extends` accepts a `SourceMap` or a `Buffer`
         map.extends(originalMap);
       }
       asset.setMap(map);

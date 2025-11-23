@@ -233,3 +233,30 @@ export class Resolver {
   getInvalidations(path: string): JsInvalidations
   getInvalidations(path: string): JsInvalidations
 }
+export type JsSourceMap = SourceMap
+export class SourceMap {
+  constructor(projectRoot: string, buffer?: Buffer | undefined | null)
+  addSource(source: string): number
+  getSource(sourceIndex: number): string
+  getSources(): Array<string>
+  getSourcesContent(): Array<string>
+  getSourceIndex(source: string): number
+  setSourceContentBySource(source: string, sourceContent: string): void
+  getSourceContentBySource(source: string): string
+  addName(name: string): number
+  getName(nameIndex: number): string
+  getNames(): Array<string>
+  getNameIndex(name: string): number
+  getMappings(): unknown[]
+  toBuffer(): Buffer
+  addSourceMap(sourcemapObject: SourceMap, lineOffset: number): void
+  addVLQMap(vlqMappings: string, sources: Array<string>, sourcesContent: Array<string>, names: Array<string>, lineOffset: number, columnOffset: number): void
+  toVLQ(): object
+  addIndexedMappings(mappings: JsTypedArray): void
+  offsetLines(generatedLine: number, generatedLineOffset: number): void
+  offsetColumns(generatedLine: number, generatedColumn: number, generatedColumnOffset: number): void
+  addEmptyMap(source: string, sourceContent: string, lineOffset: number): void
+  extends(originalSourcemap: SourceMap): void
+  findClosestMapping(generatedLine: number, generatedColumn: number): object | null
+  getProjectRoot(): string
+}

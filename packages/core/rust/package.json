@@ -10,7 +10,6 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "main": "index.js",
-  "browser": "browser.js",
   "types": "./types.d.ts",
   "napi": {
     "name": "atlaspack-node-bindings",
