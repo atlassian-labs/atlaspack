@@ -213,7 +213,7 @@ export function getAssetGraph(
 
     let envId = envs.get(envKey);
     if (envId == null) {
-      envId = envs.size.toString();
+      envId = getEnvironmentHash(env);
       envs.set(envKey, envId);
     }
 
