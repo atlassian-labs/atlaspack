@@ -107,6 +107,15 @@ export default {
     compressors: mapPipelineSchema('compressor', 'compressors') as SchemaEntity,
     reporters: pipelineSchema('reporter', 'reporters') as SchemaEntity,
     runtimes: pipelineSchema('runtime', 'runtimes') as SchemaEntity,
+    // This isn't currently supported in V2, however we need to allow it to
+    // parse as even V3 builds need the AtlaspackConfigRequest
+    unstable_alias: {
+      type: 'object',
+      properties: {},
+      additionalProperties: {
+        type: 'string',
+      },
+    },
     filePath: {
       type: 'string',
     },

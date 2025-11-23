@@ -106,6 +106,8 @@ impl Atlaspack {
       },
     )?;
 
+    let unstable_alias = config.unstable_alias.clone();
+
     let config_loader = Arc::new(ConfigLoader {
       fs: Arc::clone(&fs),
       project_root: project_root.clone(),
@@ -126,6 +128,7 @@ impl Atlaspack {
           project_root: project_root.clone(),
           feature_flags: resolved_options.feature_flags.clone(),
           hmr_options: resolved_options.hmr_options.clone(),
+          unstable_alias,
         }),
         // TODO Initialise actual logger
         logger: PluginLogger::default(),

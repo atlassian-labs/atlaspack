@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::path::is_separator;
 
 use percent_encoding::percent_decode_str;
+use serde::Serialize;
 
 use crate::Flags;
 use crate::builtins::BUILTINS;
@@ -39,7 +40,7 @@ where
   value.to_string().serialize(serializer)
 }
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Serialize, Eq, Hash, Clone, Debug)]
 pub enum Specifier {
   Relative(PathBuf),
   Absolute(PathBuf),

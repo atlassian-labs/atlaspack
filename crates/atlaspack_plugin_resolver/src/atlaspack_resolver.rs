@@ -39,6 +39,7 @@ pub struct AtlaspackResolver {
   cache: Cache,
   config: ResolverConfig,
   options: Arc<PluginOptions>,
+  extra_aliases: Option<atlaspack_resolver::AliasMap>,
 }
 
 impl Debug for AtlaspackResolver {
@@ -84,10 +85,17 @@ impl AtlaspackResolver {
       cache.scan_package_duplicates(&ctx.config.project_root)?;
     }
 
+    let extra_aliases = ctx
+      .options
+      .unstable_alias
+      .as_ref()
+      .map(atlaspack_resolver::AliasMap::from);
+
     Ok(Self {
       cache,
       config,
       options: Arc::clone(&ctx.options),
+      extra_aliases,
     })
   }
 
@@ -319,6 +327,11 @@ impl ResolverPlugin for AtlaspackResolver {
       Cow::Borrowed(&self.options.project_root),
       CacheCow::Borrowed(&self.cache),
     );
+
+    // Set unstable_alias from config
+    if let Some(ref extra_aliases) = self.extra_aliases {
+      resolver.extra_aliases = Some(extra_aliases);
+    }
 
     resolver.conditions.set(
       ExportsCondition::BROWSER,

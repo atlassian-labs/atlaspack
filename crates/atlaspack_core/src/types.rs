@@ -1,6 +1,7 @@
 // Re-export this from core, probably want to move this type here
 pub use atlaspack_filesystem::FileSystem;
 
+pub use self::alias::*;
 pub use self::asset::*;
 pub use self::atlaspack_options::*;
 pub use self::bundle::*;
@@ -17,6 +18,7 @@ pub use self::source::*;
 pub use self::symbol::*;
 pub use self::target::*;
 
+mod alias;
 mod asset;
 mod atlaspack_options;
 mod bundle;
