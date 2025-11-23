@@ -94,7 +94,7 @@ export class AtlaspackV3 {
   }
 
   buildAssetGraph(): Promise<any> {
-    return atlaspackNapiBuildAssetGraph(this._atlaspack_napi);
+    return atlaspackNapiBuildAssetGraph(this._atlaspack_napi) as Promise<any>;
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {
