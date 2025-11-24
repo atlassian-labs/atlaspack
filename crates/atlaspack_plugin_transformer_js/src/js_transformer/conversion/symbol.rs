@@ -73,7 +73,7 @@ mod tests {
     use atlaspack_core::types::Symbol;
 
     let result = atlaspack_js_swc_core::transform(
-      atlaspack_js_swc_core::Config {
+      &atlaspack_js_swc_core::Config {
         scope_hoist: false,
         ..make_test_swc_config(
           r#"

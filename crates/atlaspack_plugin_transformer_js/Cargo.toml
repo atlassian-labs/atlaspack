@@ -17,6 +17,7 @@ harness = false
 
 [dependencies]
 atlaspack_core = { path = "../atlaspack_core" }
+atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 
 anyhow = { workspace = true }
