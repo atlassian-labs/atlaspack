@@ -52,6 +52,9 @@
     },
     {
       "path": "../workers/tsconfig.json"
+    },
+    {
+      "path": "../source-map/tsconfig.json"
     }
   ]
 }

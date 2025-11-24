@@ -18,7 +18,7 @@
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/feature-flags": "2.26.2",
-    "@parcel/source-map": "^2.1.1",
+    "@atlaspack/source-map": "3.0.0",
     "utility-types": "^3.10.0"
   },
   "type": "commonjs"

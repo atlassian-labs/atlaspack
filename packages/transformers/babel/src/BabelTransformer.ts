@@ -1,7 +1,7 @@
 import {babelErrorEnhancer} from './babelErrorUtils';
 import {Transformer} from '@atlaspack/plugin';
 import {relativeUrl} from '@atlaspack/utils';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import semver from 'semver';
 import babel7 from './babel7';
 import {load} from './config';
@@ -86,7 +86,6 @@ export default new Transformer({
     ) {
       // The babel AST already contains the correct mappings, but not the source contents.
       // We need to copy over the source contents from the original map.
-      // @ts-expect-error TS2551
       let sourcesContent = originalSourceMap.getSourcesContentMap();
       for (let filePath in sourcesContent) {
         let content = sourcesContent[filePath];

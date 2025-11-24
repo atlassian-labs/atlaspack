@@ -369,6 +369,7 @@ dependencies = [
  "glob",
  "indexmap",
  "indoc",
+ "jemallocator",
  "libc",
  "lmdb-js-lite",
  "log",
@@ -381,8 +382,10 @@ dependencies = [
  "num_cpus",
  "once_cell",
  "oxipng",
+ "parcel_sourcemap 2.1.1",
  "parking_lot",
  "rayon",
+ "rkyv 0.7.45",
  "serde",
  "serde_json",
  "swc_atlaskit_tokens",
@@ -628,7 +631,8 @@ dependencies = [
  "atlaspack_core",
  "atlaspack_filesystem",
  "lightningcss",
- "parcel_sourcemap",
+ "parcel_sourcemap 2.1.1",
+ "parcel_sourcemap 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "pretty_assertions",
  "serde",
  "serde_json",
@@ -778,7 +782,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack_filesystem",
- "parcel_sourcemap",
+ "parcel_sourcemap 2.1.1",
  "pretty_assertions",
  "regex",
  "rkyv 0.7.45",
@@ -2761,6 +2765,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
+name = "jemalloc-sys"
+version = "0.5.4+5.3.0-patched"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac6c1946e1cea1788cbfde01c993b52a10e2da07f4bac608228d1bed20bfebf2"
+dependencies = [
+ "cc",
+ "libc",
+]
+
+[[package]]
+name = "jemallocator"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0de374a9f8e63150e6f5e8a60cc14c668226d7a347d8aee1a45766e3c4dd3bc"
+dependencies = [
+ "jemalloc-sys",
+ "libc",
+]
+
+[[package]]
 name = "jiff"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2945,7 +2969,7 @@ dependencies = [
  "lazy_static",
  "lightningcss-derive",
  "parcel_selectors",
- "parcel_sourcemap",
+ "parcel_sourcemap 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "paste",
  "pathdiff",
  "rayon",
@@ -3707,6 +3731,18 @@ dependencies = [
  "precomputed-hash",
  "rustc-hash 2.1.1",
  "smallvec",
+]
+
+[[package]]
+name = "parcel_sourcemap"
+version = "2.1.1"
+dependencies = [
+ "base64-simd 0.7.0",
+ "data-url",
+ "rkyv 0.7.45",
+ "serde",
+ "serde_json",
+ "vlq",
 ]
 
 [[package]]
