@@ -191,11 +191,10 @@ describe('Entry Points', function () {
       },
     );
 
-    it.skip('should build library with main defined in top level package.json field', async () => {
-      await inputFS.rimraf(dir);
-      inputFS.mkdirp(dir);
-
-      await fsFixture(inputFS, dir)`
+    it.v2(
+      'should build library with main defined in top level package.json field',
+      async () => {
+        await fsFixture(overlayFS, dir)`
         test-package
           yarn.lock:
           package.json:
@@ -208,18 +207,18 @@ describe('Entry Points', function () {
               export default 'main entry';
       `;
 
-      let b = await bundle(path.join(dir, 'test-package'), {
-        inputFS,
-        outputFS: inputFS,
-        defaultTargetOptions: {
-          outputFormat: 'commonjs',
-          distDir: path.join(dir, 'dist'),
-        },
-      });
+        let b = await bundle(path.join(dir, 'test-package'), {
+          inputFS: overlayFS,
+          defaultTargetOptions: {
+            outputFormat: 'commonjs',
+            distDir: path.join(dir, 'dist'),
+          },
+        });
 
-      assert.equal(b.getBundles().length, 1);
-      await assertBundleOutput(b, 'index', 'main entry');
-    });
+        assert.equal(b.getBundles().length, 1);
+        await assertBundleOutput(b, 'index', 'main entry');
+      },
+    );
 
     it('should bundle correct sources for each target when given directory entry point', async () => {
       const testDir = path.join(dir, 'monorepo');

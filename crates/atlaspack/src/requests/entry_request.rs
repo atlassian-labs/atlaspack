@@ -46,14 +46,14 @@ impl Request for EntryRequest {
 
     // Handle file entries
     if request_context.file_system().is_file(&entry_path) {
-      let result = self.handle_file_entry(&entry_path, &request_context)?;
+      let result = self.handle_file_entry(entry_path, &request_context)?;
       tracing::debug!("EntryRequestOutput (file): {:#?}", result);
       return Ok(result);
     }
 
     // Handle directory entries
     if request_context.file_system().is_dir(&entry_path) {
-      let result = self.handle_directory_entry(&entry_path, request_context)?;
+      let result = self.handle_directory_entry(entry_path, request_context)?;
       tracing::debug!("EntryRequestOutput (directory): {:#?}", result);
       return Ok(result);
     }
@@ -68,7 +68,7 @@ impl EntryRequest {
   /// Handles a file entry by determining its package path and creating an Entry
   fn handle_file_entry(
     &self,
-    entry_path: &Path,
+    entry_path: PathBuf,
     request_context: &RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
     let package_path = if entry_path.starts_with(&request_context.project_root) {
@@ -83,7 +83,7 @@ impl EntryRequest {
     Ok(ResultAndInvalidations {
       result: RequestResult::Entry(EntryRequestOutput {
         entries: vec![Entry {
-          file_path: entry_path.to_path_buf(),
+          file_path: entry_path,
           package_path,
           target: None,
         }],
@@ -97,14 +97,14 @@ impl EntryRequest {
 
   fn handle_directory_entry(
     &self,
-    entry_path: &Path,
+    entry_path: PathBuf,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
     // When provided with a directory as an entry point, load the package.json file from the given directory.
     let config_loader = ConfigLoader {
       fs: request_context.file_system().clone(),
       project_root: request_context.project_root.clone(),
-      search_path: entry_path.to_path_buf(),
+      search_path: entry_path.clone(),
     };
 
     let package_json_file = config_loader.load_package_json::<PackageJson>()?;
@@ -142,7 +142,7 @@ impl EntryRequest {
             if let Some(source) = &target_descriptor.source {
               targets_with_sources += 1;
               let target_entries =
-                self.resolve_sources(entry_path, source, Some(target_name), &request_context)?;
+                self.resolve_sources(&entry_path, source, Some(target_name), &request_context)?;
               entries.extend(target_entries);
             }
           }
@@ -156,7 +156,7 @@ impl EntryRequest {
       if let Some(source) = &target_descriptor.source {
         targets_with_sources += 1;
         let target_entries =
-          self.resolve_sources(entry_path, source, Some(target_name), &request_context)?;
+          self.resolve_sources(&entry_path, source, Some(target_name), &request_context)?;
         entries.extend(target_entries);
       }
     }
@@ -184,7 +184,7 @@ impl EntryRequest {
       // Convert JSON value to SourceField
       if let Ok(source_field) = serde_json::from_value::<SourceField>(source_value.clone()) {
         let package_entries =
-          self.resolve_sources(entry_path, &source_field, None, &request_context)?;
+          self.resolve_sources(&entry_path, &source_field, None, &request_context)?;
         entries.extend(package_entries);
       }
     }
@@ -213,7 +213,7 @@ impl EntryRequest {
   /// - If target_name is None, the entries are package-level (no specific target)
   fn resolve_sources(
     &self,
-    entry_path: &std::path::Path,
+    entry_path: &Path,
     source: &SourceField,
     target_name: Option<&str>,
     request_context: &RunRequestContext,
