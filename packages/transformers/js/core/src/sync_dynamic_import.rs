@@ -211,43 +211,42 @@ impl<'a> SyncDynamicImport<'a> {
 impl<'a> VisitMut for SyncDynamicImport<'a> {
   fn visit_mut_expr(&mut self, expr: &mut Expr) {
     // Check if this is a dynamic import call
-    if let Expr::Call(call) = expr {
-      if let Callee::Import(_) = &call.callee {
-        if let Some(first_arg) = call.args.first() {
-          let is_string_literal = matches!(&*first_arg.expr, Expr::Lit(Lit::Str(_)) | Expr::Tpl(_));
+    if let Expr::Call(call) = expr
+      && let Callee::Import(_) = &call.callee
+      && let Some(first_arg) = call.args.first()
+    {
+      let is_string_literal = matches!(&*first_arg.expr, Expr::Lit(Lit::Str(_)) | Expr::Tpl(_));
 
-          if !is_string_literal {
-            // Replace with dummy promise for non-string imports
-            *expr = self.create_dummy_promise();
-            return;
-          }
+      if !is_string_literal {
+        // Replace with dummy promise for non-string imports
+        *expr = self.create_dummy_promise();
+        return;
+      }
 
-          // Extract the import path for string literals
-          let import_path = match &*first_arg.expr {
-            Expr::Lit(Lit::Str(str_lit)) => Some(str_lit.value.to_string()),
-            _ => None,
-          };
+      // Extract the import path for string literals
+      let import_path = match &*first_arg.expr {
+        Expr::Lit(Lit::Str(str_lit)) => Some(str_lit.value.to_string()),
+        _ => None,
+      };
 
-          if let Some(path) = import_path {
-            // Check if this is an entrypoint file
-            if self.is_entrypoint_file() {
-              let entrypoint_expr = self.create_entrypoint_import(call.args.clone());
-              *expr = entrypoint_expr;
-              return;
-            }
+      if let Some(path) = import_path {
+        // Check if this is an entrypoint file
+        if self.is_entrypoint_file() {
+          let entrypoint_expr = self.create_entrypoint_import(call.args.clone());
+          *expr = entrypoint_expr;
+          return;
+        }
 
-            // Check if we should convert to require based on module path
-            if self.should_convert_to_require(&self.resolve_module_path(&path)) {
-              *expr = self.create_require_call(call.args.clone());
+        // Check if we should convert to require based on module path
+        if self.should_convert_to_require(&self.resolve_module_path(&path)) {
+          *expr = self.create_require_call(call.args.clone());
 
-              return;
-            }
-          }
-
-          // Default case: replace with dummy promise
-          *expr = self.create_dummy_promise();
+          return;
         }
       }
+
+      // Default case: replace with dummy promise
+      *expr = self.create_dummy_promise();
     }
 
     // Continue visiting child nodes
