@@ -25,7 +25,7 @@
     "@atlaspack/plugin": "2.14.39",
     "@atlaspack/rust": "3.11.0",
     "@atlaspack/source-map": "3.1.0",
-    "@atlaspack/utils": "3.1.2"
+    "@atlaspack/utils": "3.2.0"
   },
   "devDependencies": {},
   "type": "commonjs",

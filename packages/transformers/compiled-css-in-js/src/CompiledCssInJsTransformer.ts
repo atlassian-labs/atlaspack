@@ -43,10 +43,16 @@ export default new Transformer({
       contents.importSources?.push('@compiled/react');
     }
 
+    contents.extract = contents.extract && options.mode !== 'development';
+
     return contents;
   },
   async transform({asset, options, config, logger}) {
     if (!getFeatureFlag('compiledCssInJsTransformer')) {
+      return [asset];
+    }
+
+    if (!asset.isSource && !config.extract) {
       return [asset];
     }
 
@@ -213,7 +219,11 @@ export default new Transformer({
     asset.setCode(result.code);
 
     // Add styleRules to the asset
-    asset.meta.styleRules = result.styleRules;
+    if (config.extract) {
+      // Note: we only set styleRules if extract is true, this is because we will duplicate style rules on the client.
+      // This will cause undefined behaviour because the style rules will race for specificity based on ordering
+      asset.meta.styleRules = result.styleRules;
+    }
 
     return [asset];
   },

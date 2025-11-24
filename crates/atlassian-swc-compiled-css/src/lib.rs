@@ -10553,6 +10553,7 @@ impl<'a> TransformVisitor<'a> {
       .filter(|r| {
         self.css_map_ident_classes.contains_key(&r.ident)
           || self.css_map_static_objects.contains_key(&r.ident)
+          || self.is_css_map_binding(&r.ident)
       })
       .collect()
   }
@@ -10646,6 +10647,37 @@ impl<'a> TransformVisitor<'a> {
         self.collect_css_map_references(&paren.expr, out);
       }
       _ => {}
+    }
+  }
+
+  fn is_css_map_binding(&self, ident: &(Atom, SyntaxContext)) -> bool {
+    self
+      .var_inits
+      .get(ident)
+      .map(|expr| self.expr_initializes_css_map(expr))
+      .unwrap_or(false)
+  }
+
+  fn expr_initializes_css_map(&self, expr: &Expr) -> bool {
+    match expr {
+      Expr::Call(call) => self.call_uses_css_map(call),
+      Expr::Paren(paren) => self.expr_initializes_css_map(&paren.expr),
+      _ => false,
+    }
+  }
+
+  fn call_uses_css_map(&self, call: &CallExpr) -> bool {
+    match &call.callee {
+      Callee::Expr(callee) => self.expr_is_css_map_ident(callee),
+      _ => false,
+    }
+  }
+
+  fn expr_is_css_map_ident(&self, expr: &Expr) -> bool {
+    match expr {
+      Expr::Ident(ident) => self.css_map_imports.contains(&to_id(ident)),
+      Expr::Paren(paren) => self.expr_is_css_map_ident(&paren.expr),
+      _ => false,
     }
   }
 
@@ -12295,6 +12327,7 @@ impl<'a> VisitMut for TransformVisitor<'a> {
       }
 
       let css_info = self.process_css_prop(element);
+      let had_css_prop = css_info.is_some();
       let xcss_result = self.process_xcss_attributes(element);
       element.visit_mut_children_with(self);
       self.walk_jsx_children(element);
@@ -12330,8 +12363,43 @@ impl<'a> VisitMut for TransformVisitor<'a> {
         }
       }
 
-      if !runtime_sheets.is_empty() {
-        if !self.options.extract {
+      // If css prop was already transformed away earlier in traversal, detect
+      // cssMap references inside className and ensure we still wrap with CC/CS
+      // when extraction is disabled.
+      let mut had_cssmap_ref = false;
+      if !self.options.extract {
+        // Find className expression if present
+        let mut class_name_expr: Option<Expr> = None;
+        for attr in &element.opening.attrs {
+          if let JSXAttrOrSpread::JSXAttr(attr) = attr {
+            if matches!(attr.name, JSXAttrName::Ident(ref ident) if ident.sym.as_ref() == "className")
+            {
+              if let Some(value) = &attr.value {
+                class_name_expr = match value {
+                  JSXAttrValue::JSXExprContainer(container) => match &container.expr {
+                    JSXExpr::Expr(expr) => Some((**expr).clone()),
+                    _ => None,
+                  },
+                  JSXAttrValue::Lit(Lit::Str(str)) => Some(Expr::Lit(Lit::Str(str.clone()))),
+                  _ => None,
+                };
+              }
+              break;
+            }
+          }
+        }
+        if let Some(expr) = class_name_expr.as_ref() {
+          let mut refs = Vec::new();
+          self.collect_css_map_references(expr, &mut refs);
+          had_cssmap_ref = !refs.is_empty();
+        }
+      }
+
+      // Always wrap with CC/CS when extraction is disabled and this element
+      // participated in compiled styling (css, xcss, or cssMap), even if no sheets
+      // were collected for runtime injection.
+      if !self.options.extract && (!runtime_sheets.is_empty() || had_css_prop || xcss_transformed) {
+        if !runtime_sheets.is_empty() {
           self.needs_runtime_ax = true;
         }
         let inner = (**element).clone();
@@ -12339,7 +12407,6 @@ impl<'a> VisitMut for TransformVisitor<'a> {
           self.build_runtime_component(Expr::JSXElement(Box::new(inner)), runtime_sheets, key_expr);
         *expr = wrapper;
       } else if xcss_transformed {
-        // Metadata registrations have already occurred; no runtime wrapper required.
       }
       return;
     }
@@ -12972,58 +13039,43 @@ impl<'a> VisitMut for TransformVisitor<'a> {
       eprintln!("[compiled-debug] visit_mut_jsx_element <{}>", element_name);
     }
 
-    // Process the css={} prop
-    let css_info = self.process_css_prop(element);
-
-    // Walk children
+    // Delegate transformation to visit_mut_expr via walk_jsx_children to avoid double-processing.
+    // Just traverse children and call walk_jsx_children which will wrap JSXElement children
+    // in Expr::JSXElement and visit them through visit_mut_expr.
     element.visit_mut_children_with(self);
     self.walk_jsx_children(element);
+  }
 
-    // Handle xcss attributes and runtime sheets
-    let mut runtime_sheets: Vec<String> = Vec::new();
-    let mut key_expr: Option<Expr> = None;
-    let mut xcss_transformed = false;
-
-    if let Some((sheets, key)) = css_info {
-      if !self.options.extract && !sheets.is_empty() {
-        runtime_sheets.extend(sheets);
-      }
-      key_expr = key;
-      if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
-        eprintln!(
-          "[compiled-debug] visit_mut_jsx_element css_info runtime_sheets={} key_set={}",
-          runtime_sheets.len(),
-          key_expr.is_some()
-        );
-      }
+  fn visit_mut_jsx_fragment(&mut self, fragment: &mut JSXFragment) {
+    if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
+      eprintln!("[compiled-debug] visit_mut_jsx_fragment");
     }
 
-    if self.options.extract {
-      if let Some(result) = self.process_xcss_attributes(element) {
-        if !result.runtime_sheets.is_empty() {
-          runtime_sheets.extend(result.runtime_sheets);
-        }
-        if !result.pending_class_names.is_empty() {
-          let mut resolved = self.resolve_pending_xcss(&result.pending_class_names);
-          runtime_sheets.append(&mut resolved);
-        }
-        if result.transformed || !result.pending_class_names.is_empty() {
-          xcss_transformed = true;
-        }
-      }
-    }
+    // Process JSX fragment children similarly to elements
+    // Traverse children and call walk_jsx_children to wrap JSXElement children
+    // in Expr::JSXElement and visit them through visit_mut_expr.
+    fragment.visit_mut_children_with(self);
 
-    if !runtime_sheets.is_empty() {
-      if !self.options.extract {
-        self.needs_runtime_ax = true;
+    // Walk through fragment children and wrap JSXElement children in expressions
+    for child in &mut fragment.children {
+      match child {
+        JSXElementChild::JSXElement(child_element) => {
+          let mut expr = Expr::JSXElement(child_element.clone());
+          self.visit_mut_expr(&mut expr);
+          match expr {
+            Expr::JSXElement(new_element) => {
+              *child_element = new_element;
+            }
+            _ => {
+              *child = JSXElementChild::JSXExprContainer(JSXExprContainer {
+                span: DUMMY_SP,
+                expr: JSXExpr::Expr(Box::new(expr)),
+              });
+            }
+          }
+        }
+        _ => child.visit_mut_children_with(self),
       }
-      let inner = element.clone();
-      let wrapper =
-        self.build_runtime_component(Expr::JSXElement(Box::new(inner)), runtime_sheets, key_expr);
-      // Note: We cannot directly replace the element here. The element is being processed in-place.
-      // The wrapper would need to be created at a higher level in visit_mut_expr.
-    } else if xcss_transformed {
-      // Metadata registrations have already occurred; no runtime wrapper required.
     }
   }
 }
