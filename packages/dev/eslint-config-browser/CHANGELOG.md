@@ -1,5 +1,12 @@
 # @atlaspack/eslint-config-browser
 
+## 2.14.6
+
+### Patch Changes
+
+- Updated dependencies [[`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0)]:
+  - @atlaspack/eslint-config@2.15.0
+
 ## 2.14.5
 
 ### Patch Changes
