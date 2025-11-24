@@ -1,5 +1,11 @@
 # @atlaspack/parcel-to-atlaspack
 
+## 2.15.0
+
+### Minor Changes
+
+- [#789](https://github.com/atlassian-labs/atlaspack/pull/789) [`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0) Thanks [@marcins](https://github.com/marcins)! - Use an in-sourced version of @parcel/source-map, as @atlaspack/source-map
+
 ## 2.14.4
 
 ### Patch Changes
