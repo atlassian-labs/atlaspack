@@ -206,7 +206,6 @@ impl Atlaspack {
       };
 
       let asset_graph = asset_graph_request_output.graph.clone();
-      self.commit_assets(&asset_graph)?;
 
       Ok((asset_graph, had_previous_graph))
     })
@@ -225,7 +224,7 @@ impl Atlaspack {
   }
 
   #[tracing::instrument(level = "info", skip_all)]
-  fn commit_assets(&self, graph: &AssetGraph) -> anyhow::Result<()> {
+  pub fn commit_assets(&self, graph: &AssetGraph) -> anyhow::Result<()> {
     let mut txn = self.db.database().write_txn()?;
 
     let nodes = graph.new_nodes().chain(graph.updated_nodes());

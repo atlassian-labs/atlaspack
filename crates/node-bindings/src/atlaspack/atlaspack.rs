@@ -124,21 +124,37 @@ pub fn atlaspack_napi_build_asset_graph(
   atlaspack_napi: AtlaspackNapi,
 ) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;
+  let (second_deferred, second_promise) = env.create_deferred()?;
+
+  let mut js_result = env.create_object()?;
+  js_result.set_named_property("assetGraphPromise", promise)?;
+  js_result.set_named_property("commitPromise", second_promise)?;
 
   thread::spawn({
-    let atlaspack = atlaspack_napi.clone();
+    let atlaspack_ref = atlaspack_napi.clone();
     move || {
-      let atlaspack = atlaspack.lock();
-      let result = atlaspack.build_asset_graph();
+      let result = {
+        let atlaspack = atlaspack_ref.lock();
+        atlaspack.build_asset_graph()
+      };
 
       // "deferred.resolve" closure executes on the JavaScript thread.
       // Errors are returned as a resolved value because they need to be serialized and are
       // not supplied as JavaScript Error types. The JavaScript layer needs to handle conversions
       deferred.resolve(move |env| match result {
-        Ok((asset_graph, had_previous_graph)) => NapiAtlaspackResult::ok(
-          &env,
-          serialize_asset_graph(&env, &asset_graph, had_previous_graph)?,
-        ),
+        Ok((asset_graph, had_previous_graph)) => {
+          let serialize_result =
+            serialize_asset_graph(&env, &asset_graph.clone(), had_previous_graph)?;
+          thread::spawn(move || {
+            {
+              let atlaspack = atlaspack_ref.lock();
+              atlaspack.commit_assets(&asset_graph).unwrap();
+            }
+            second_deferred.resolve(move |env| NapiAtlaspackResult::ok(&env, ()))
+          });
+
+          NapiAtlaspackResult::ok(&env, serialize_result)
+        }
         Err(error) => {
           let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
           NapiAtlaspackResult::error(&env, js_object)
@@ -147,7 +163,7 @@ pub fn atlaspack_napi_build_asset_graph(
     }
   });
 
-  Ok(promise)
+  Ok(js_result)
 }
 
 #[tracing::instrument(level = "debug", skip_all)]
