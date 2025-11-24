@@ -445,6 +445,7 @@ dependencies = [
  "pathdiff",
  "serde",
  "serde_json5 0.1.0",
+ "tracing",
 ]
 
 [[package]]
