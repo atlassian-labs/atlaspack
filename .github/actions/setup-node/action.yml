@@ -29,7 +29,7 @@ runs:
         restore-keys: yarn-${{ runner.os }}
 
     - name: Restore yarn cache
-      if: ${{ github.ref == 'refs/heads/main' && runner.os != 'macOS' }}
+      if: ${{ github.ref != 'refs/heads/main' && runner.os != 'macOS' }}
       uses: actions/cache/restore@v4
       with:
         path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
