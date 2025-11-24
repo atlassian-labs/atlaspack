@@ -426,7 +426,21 @@ pub fn transform(
                 ));
               }
 
-              let module = {
+              let module = module.apply((
+                  Optional::new(
+                    visit_mut_pass(ReactAsyncImportLift::new(global_mark, config.react_async_lift_by_default, config.react_async_lift_report_level.clone())),
+                    config.enable_react_async_import_lift && ReactAsyncImportLift::should_transform(code)
+                  ),
+                  Optional::new(
+                    visit_mut_pass(
+                      SyncDynamicImport::new(Path::new(&config.filename),
+                        unresolved_mark,
+                        &config.sync_dynamic_import_config,
+                      )),
+                      config.is_tesseract && config.sync_dynamic_import_config.is_some()),
+                ));
+
+              let mut module = {
                 let mut passes = (
                   Optional::new(
                     visit_mut_pass(
@@ -446,28 +460,10 @@ pub fn transform(
                     }),
                     config.source_type != SourceType::Script
                   ),
-                );
-
-                module.apply(&mut passes)
-              };
-
-              let mut module = {
-                let mut passes = (
                   Optional::new(
                     visit_mut_pass(GlobalAliaser::with_config(unresolved_mark, &config.global_aliasing_config)),
                     config.global_aliasing_config.is_some()
                   ),
-                  Optional::new(
-                    visit_mut_pass(ReactAsyncImportLift::new(unresolved_mark, config.react_async_lift_by_default, config.react_async_lift_report_level.clone())),
-                    config.enable_react_async_import_lift && ReactAsyncImportLift::should_transform(code)
-                  ),
-                  Optional::new(
-                    visit_mut_pass(
-                      SyncDynamicImport::new(Path::new(&config.filename),
-                        unresolved_mark,
-                        &config.sync_dynamic_import_config,
-                      )),
-                      config.is_tesseract && config.sync_dynamic_import_config.is_some()),
                   Optional::new(
                     visit_mut_pass(LazyLoadingTransformer::new(unresolved_mark)),
                     config.enable_lazy_loading && LazyLoadingTransformer::should_transform(code)
