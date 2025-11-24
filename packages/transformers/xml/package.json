@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-xml",
-  "version": "2.14.38",
+  "version": "2.14.39",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,8 +16,8 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.20.8",
-    "@atlaspack/plugin": "2.14.38",
+    "@atlaspack/types-internal": "2.21.0",
+    "@atlaspack/plugin": "2.14.39",
     "@xmldom/xmldom": "^0.7.9"
   },
   "type": "commonjs",
