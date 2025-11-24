@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use atlaspack_core::diagnostic;
+use atlaspack_sourcemap::SourceMapError;
 use indexmap::IndexMap;
 use std::collections::{BTreeMap, HashMap};
 use swc_core::atoms::{Atom, JsWord};
@@ -386,18 +387,34 @@ pub(crate) fn convert_result(
   asset.packaging_id = Some(asset.id.clone());
 
   if let Some(map) = result.map {
-    // TODO: Fix diagnostic error handling
-    let mut source_map = SourceMap::from_json(&options.project_root, &map).map_err(|_| vec![])?;
+    let source_map_error_to_diagnostic = |error: SourceMapError| {
+      vec![
+        DiagnosticBuilder::default()
+          .origin(Some("@atlaspack/transformer-js".into()))
+          .message(format!(
+            "Error building SourceMap for {}: {}",
+            asset.file_path.display(),
+            error
+          ))
+          .build()
+          .unwrap(),
+      ]
+    };
+
+    let mut source_map =
+      SourceMap::from_json(&options.project_root, &map).map_err(source_map_error_to_diagnostic)?;
 
     if let Some(original_map) = asset.map {
       source_map
         .extends(&mut original_map.clone())
-        .map_err(|_| vec![])?;
+        .map_err(source_map_error_to_diagnostic)?
     }
 
     // Adjust source map if React refresh wrapping was applied
     if let Some((start_column, offset_lines)) = react_refresh_map_offset {
-      source_map.offset_lines(start_column, offset_lines);
+      source_map
+        .offset_lines(start_column, offset_lines)
+        .map_err(source_map_error_to_diagnostic)?
     }
 
     asset.map = Some(source_map);

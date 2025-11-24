@@ -37,7 +37,7 @@ fn has_react_dependency(dependencies: &IndexMap<Atom, Dependency>) -> bool {
   })
 }
 
-type SourceMapOffset = (u32, u32);
+type SourceMapOffset = (u32, i64);
 
 pub fn wrap_with_react_refresh(
   asset: &Asset,

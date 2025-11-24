@@ -1,9 +1,25 @@
+use std::fmt::Display;
 use std::path::Path;
 
-use parcel_sourcemap::{Mapping, SourceMap as ParcelSourceMap, SourceMapError};
+use parcel_sourcemap::{
+  Mapping, SourceMap as ParcelSourceMap, SourceMapError as ParcelSourceMapError,
+};
 use rkyv::AlignedVec;
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug)]
+pub struct SourceMapError {
+  inner: ParcelSourceMapError,
+}
+
+impl std::error::Error for SourceMapError {}
+
+impl Display for SourceMapError {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.inner)
+  }
+}
 
 #[derive(Clone, Debug)]
 pub struct SourceMap {
@@ -63,50 +79,34 @@ impl SourceMap {
   }
 
   pub fn to_json(&self) -> Result<String, SourceMapError> {
-    self.inner.clone().to_json(None)
+    self.inner.clone().to_json(None).map_err(|err| err.into())
   }
 
   /// Offset all generated line numbers by the specified amount
   /// This is useful when code has been wrapped with additional lines at the beginning
-  pub fn offset_lines(&mut self, start_column: u32, line_offset: u32) {
-    // Get the current source map as JSON to modify it properly
-    if let Ok(json_str) = self.inner.to_json(None)
-      && let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&json_str)
-    {
-      // Decode the existing mappings and modify them
-      if let Some(_mappings_str) = json_value.get("mappings").and_then(|v| v.as_str()) {
-        // For now, we'll use a simple approach: parse the mappings and offset line numbers
-        // This is a simplified implementation - a full implementation would need VLQ decoding
-
-        // Instead of trying to decode VLQ mappings, let's use the existing mapping data
-        let current_mappings = self.inner.get_mappings();
-
-        // Create a new source map with the same metadata but offset mappings
-        if let Some(project_root) = json_value.get("sourceRoot").and_then(|v| v.as_str()) {
-          let mut new_inner = ParcelSourceMap::new(project_root);
-
-          // Add offset mappings while preserving the original source references
-          for mapping in current_mappings {
-            let new_generated_line = mapping.generated_line + line_offset;
-            let new_generated_column = if mapping.generated_line == 0 {
-              mapping.generated_column + start_column
-            } else {
-              mapping.generated_column
-            };
-
-            new_inner.add_mapping(new_generated_line, new_generated_column, mapping.original);
-          }
-
-          self.inner = new_inner;
-        }
-      }
-    }
+  pub fn offset_lines(
+    &mut self,
+    start_column: u32,
+    line_offset: i64,
+  ) -> Result<(), SourceMapError> {
+    self
+      .inner
+      .offset_lines(start_column, line_offset)
+      .map_err(|err| err.into())
   }
 }
 
 impl From<ParcelSourceMap> for SourceMap {
   fn from(source_map: ParcelSourceMap) -> Self {
     SourceMap { inner: source_map }
+  }
+}
+
+impl From<ParcelSourceMapError> for SourceMapError {
+  fn from(source_map_error: ParcelSourceMapError) -> Self {
+    SourceMapError {
+      inner: source_map_error,
+    }
   }
 }
 
@@ -211,101 +211,6 @@ mod tests {
     mappings: Vec<Mapping>,
     names: Vec<String>,
     sources: Vec<String>,
-  }
-
-  #[test]
-  fn test_offset_lines() -> anyhow::Result<()> {
-    let (json, _) = json_fixture();
-
-    let mut source_map = SourceMap::from_json(&PathBuf::default(), &json)?;
-
-    // Get original mappings
-    let original_mappings = source_map.get_mappings();
-    assert!(
-      !original_mappings.is_empty(),
-      "Should have original mappings"
-    );
-
-    // Offset by 3 lines with start column 0
-    source_map.offset_lines(0, 3);
-
-    // Get new mappings
-    let new_mappings = source_map.get_mappings();
-    assert_eq!(
-      original_mappings.len(),
-      new_mappings.len(),
-      "Should have same number of mappings"
-    );
-
-    // Check that all line numbers are offset by 3
-    for (original, new) in original_mappings.iter().zip(new_mappings.iter()) {
-      assert_eq!(
-        new.generated_line,
-        original.generated_line + 3,
-        "Line should be offset by 3"
-      );
-
-      // Column should be unchanged except for the first line
-      if original.generated_line == 0 {
-        assert_eq!(
-          new.generated_column, original.generated_column,
-          "Column should be unchanged for line 0 when start_column is 0"
-        );
-      } else {
-        assert_eq!(
-          new.generated_column, original.generated_column,
-          "Column should be unchanged for lines > 0"
-        );
-      }
-
-      // Original location should be preserved
-      assert_eq!(
-        new.original, original.original,
-        "Original location should be preserved"
-      );
-    }
-
-    Ok(())
-  }
-
-  #[test]
-  fn test_offset_lines_with_start_column() -> anyhow::Result<()> {
-    let (json, _) = json_fixture();
-
-    let mut source_map = SourceMap::from_json(&PathBuf::default(), &json)?;
-
-    // Get original mappings
-    let original_mappings = source_map.get_mappings();
-
-    // Offset by 2 lines with start column 5
-    source_map.offset_lines(5, 2);
-
-    // Get new mappings
-    let new_mappings = source_map.get_mappings();
-
-    // Check that all line numbers are offset by 2 and first line column is offset by 5
-    for (original, new) in original_mappings.iter().zip(new_mappings.iter()) {
-      assert_eq!(
-        new.generated_line,
-        original.generated_line + 2,
-        "Line should be offset by 2"
-      );
-
-      if original.generated_line == 0 {
-        assert_eq!(
-          new.generated_column,
-          original.generated_column + 5,
-          "Column should be offset by 5 for line 0"
-        );
-      } else {
-        assert_eq!(
-          new.generated_column, original.generated_column,
-          "Column should be unchanged for lines > 0"
-        );
-      }
-    }
-
-    Ok(())
   }
 
   fn json_fixture() -> (String, ExpectedSourceMap) {

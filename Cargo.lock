@@ -697,6 +697,7 @@ dependencies = [
  "atlaspack-js-swc-core",
  "atlaspack_core",
  "atlaspack_filesystem",
+ "atlaspack_sourcemap",
  "criterion",
  "glob-match",
  "indexmap",
