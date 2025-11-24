@@ -61,10 +61,7 @@ export function createAssetGraphRequestRust(
 
       if (assetGraphError) {
         throw new ThrowableDiagnostic({
-          diagnostic: {
-            message:
-              'Error building asset graph in Rust: ' + assetGraphError.message,
-          },
+          diagnostic: assetGraphError,
         });
       }
 
