@@ -204,7 +204,7 @@ impl<'a> SyncDynamicImport<'a> {
       destination = source.trim_start_matches("/");
     }
 
-    return head_path.join(Path::new(destination)).display().to_string();
+    head_path.join(Path::new(destination)).display().to_string()
   }
 }
 
