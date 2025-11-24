@@ -1,3 +1,5 @@
+// This file is a rewrite of `@atlaspack/transformer-react-refresh-wrap`
+// packages/transformers/react-refresh-wrap/src/ReactRefreshWrapTransformer.ts
 use atlaspack_core::plugin::PluginOptions;
 use atlaspack_core::types::{
   Asset, BuildMode, Dependency, DependencyBuilder, DependencyKind, Priority, SpecifierType,
