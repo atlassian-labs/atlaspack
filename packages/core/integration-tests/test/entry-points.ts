@@ -8,6 +8,7 @@ import {
   run,
   runBundle,
   overlayFS,
+  inputFS,
 } from '@atlaspack/test-utils';
 import {BundleGraph, PackagedBundle} from '@atlaspack/types-internal';
 
@@ -40,7 +41,7 @@ describe('Entry Points', function () {
         inputFS: overlayFS,
       });
 
-      assert(b.getBundles().length > 0);
+      assert.equal(b.getBundles().length, 1);
       let output = await run(b);
       assert.equal(output.default, 'hello from file entry'); // console.log returns undefined, but run() returns an object
     });
@@ -60,7 +61,7 @@ describe('Entry Points', function () {
         },
       );
 
-      assert(b.getBundles().length >= 2);
+      assert.equal(b.getBundles().length, 2);
       await assertBundleOutput(b, 'index.js', 'main entry');
       await assertBundleOutput(b, 'alt.js', 'alt entry');
     });
@@ -81,7 +82,7 @@ describe('Entry Points', function () {
         inputFS: overlayFS,
       });
 
-      assert(b.getBundles().length > 0);
+      assert.equal(b.getBundles().length, 1);
       let output = await run(b);
       assert.equal(output.default, 'hello from directory entry');
     });
@@ -102,14 +103,44 @@ describe('Entry Points', function () {
         inputFS: overlayFS,
       });
 
-      assert(b.getBundles().length >= 2);
+      assert.equal(b.getBundles().length, 2);
       await assertBundleOutput(b, 'index', 'main entry');
       await assertBundleOutput(b, 'alt', 'alt entry');
     });
 
-    it('should handle directory with package.json targets field', async () => {
+    it('should handle directory with custom targets defined in package.json targets field', async () => {
       await fsFixture(overlayFS, dir)`
         test-package
+          yarn.lock:
+          package.json:
+            {
+              "targets": {
+                "custom1": {"source": "src/index.js"},
+                "custom2": {"source": "src/alt.js"}
+              }
+            }
+          src
+            index.js:
+              export default 'main entry';
+            alt.js:
+              export default 'alt entry';
+      `;
+
+      let b = await bundle(path.join(dir, 'test-package'), {
+        inputFS: overlayFS,
+      });
+
+      assert.equal(b.getBundles().length, 2);
+      await assertBundleOutput(b, 'index', 'main entry');
+      await assertBundleOutput(b, 'alt', 'alt entry');
+    });
+
+    it.v2(
+      'should handle directory with builtin target defined in package.json targets field',
+      async () => {
+        await fsFixture(overlayFS, dir)`
+        test-package
+          yarn.lock:
           package.json:
             {
               "targets": {
@@ -124,13 +155,144 @@ describe('Entry Points', function () {
               export default 'alt entry';
       `;
 
-      let b = await bundle(path.join(dir, 'test-package'), {
-        inputFS: overlayFS,
-      });
+        let b = await bundle(path.join(dir, 'test-package'), {
+          inputFS: overlayFS,
+        });
 
-      assert(b.getBundles().length >= 2);
-      await assertBundleOutput(b, 'index', 'main entry');
-      await assertBundleOutput(b, 'alt', 'alt entry');
+        assert.equal(b.getBundles().length, 2);
+        await assertBundleOutput(b, 'index', 'main entry');
+        await assertBundleOutput(b, 'alt', 'alt entry');
+      },
+    );
+
+    it.v2(
+      'should handle builtin main target defined targets field',
+      async () => {
+        await fsFixture(overlayFS, dir)`
+        test-package
+          yarn.lock:
+          package.json:
+            {
+              "targets": {
+                "main": {"source": "src/index.js"}
+              }
+            }
+          src
+            index.js:
+              export default 'main entry';
+      `;
+
+        let b = await bundle(path.join(dir, 'test-package'), {
+          inputFS: overlayFS,
+        });
+
+        assert.equal(b.getBundles().length, 1);
+        await assertBundleOutput(b, 'index', 'main entry');
+      },
+    );
+
+    it.v2(
+      'should build library with main defined in top level package.json field',
+      async () => {
+        await fsFixture(overlayFS, dir)`
+        test-package
+          yarn.lock:
+          package.json:
+            {
+              "main": "dist/index.js",
+              "source": "src/index.js"
+            }
+          src
+            index.js:
+              export default 'main entry';
+      `;
+
+        let b = await bundle(path.join(dir, 'test-package'), {
+          inputFS: overlayFS,
+          defaultTargetOptions: {
+            outputFormat: 'commonjs',
+            distDir: path.join(dir, 'dist'),
+          },
+        });
+
+        assert.equal(b.getBundles().length, 1);
+        await assertBundleOutput(b, 'index', 'main entry');
+      },
+    );
+
+    it('should bundle correct sources for each target when given directory entry point', async () => {
+      const testDir = path.join(dir, 'monorepo');
+      await overlayFS.mkdirp(testDir);
+
+      await fsFixture(overlayFS, testDir)`
+        yarn.lock:
+
+        package.json:
+          {
+            "name": "monorepo-root"
+          }
+
+        packages/my-app
+          package.json:
+            {
+              "name": "my-app",
+              "main": "index.jsx",
+              "targets": {
+                "main": false,
+                "development": {
+                  "source": [
+                    "one.js",
+                    "two.js"
+                  ]
+                },
+                "production": {
+                  "source": [
+                    "one.js",
+                    "two.js",
+                    "three.js",
+                    "four.js"
+                  ]
+                }
+              }
+            }
+
+          one.js:
+            export default 'source one';
+          two.js:
+            export default 'source two';
+          three.js:
+            export default 'source three';
+          four.js:
+            export default 'source four';
+      `;
+
+      // Build production target
+      let prodTargetBundleGraph = await bundle(
+        path.join(testDir, 'packages/my-app'),
+        {
+          inputFS: overlayFS,
+          targets: ['production'],
+        },
+      );
+
+      assert.equal(prodTargetBundleGraph.getBundles().length, 4);
+      await assertBundleOutput(prodTargetBundleGraph, 'one', 'source one');
+      await assertBundleOutput(prodTargetBundleGraph, 'two', 'source two');
+      await assertBundleOutput(prodTargetBundleGraph, 'three', 'source three');
+      await assertBundleOutput(prodTargetBundleGraph, 'four', 'source four');
+
+      // Build development target
+      let devTargetBundleGraph = await bundle(
+        path.join(testDir, 'packages/my-app'),
+        {
+          inputFS: overlayFS,
+          targets: ['development'],
+        },
+      );
+
+      assert.equal(devTargetBundleGraph.getBundles().length, 2);
+      await assertBundleOutput(devTargetBundleGraph, 'one', 'source one');
+      await assertBundleOutput(devTargetBundleGraph, 'two', 'source two');
     });
 
     it('should prefer targets over source when both are present', async () => {
@@ -140,7 +302,7 @@ describe('Entry Points', function () {
             {
               "source": "src/fallback.js",
               "targets": {
-                "main": {"source": "src/index.js"}
+                "production": {"source": "src/index.js"}
               }
             }
           src
@@ -155,7 +317,7 @@ describe('Entry Points', function () {
       });
 
       // Should use targets, not source
-      assert(b.getBundles().length > 0);
+      assert.equal(b.getBundles().length, 1);
       let output = await run(b);
       assert.equal(output.default, 'target entry');
     });
@@ -179,12 +341,12 @@ describe('Entry Points', function () {
         },
       );
 
-      assert(b.getBundles().length >= 2);
+      assert.equal(b.getBundles().length, 2);
       await assertBundleOutput(b, 'index', 'directory entry');
       await assertBundleOutput(b, 'standalone', 'file entry');
     });
 
-    it('should handle complex targets configuration', async () => {
+    it.v2('should handle complex targets configuration', async () => {
       await fsFixture(overlayFS, dir)`
         test-package
           package.json:
@@ -211,7 +373,7 @@ describe('Entry Points', function () {
         inputFS: overlayFS,
       });
 
-      assert(b.getBundles().length >= 2);
+      assert.equal(b.getBundles().length, 2);
       await assertBundleOutput(b, 'browser', 'browser entry');
       await assertBundleOutput(b, 'node', 'node entry');
     });
@@ -243,7 +405,7 @@ describe('Entry Points', function () {
       });
 
       // Should have 2 bundles (development and production), main should be ignored
-      assert(b.getBundles().length >= 2);
+      assert.equal(b.getBundles().length, 2);
       let bundles = b.getBundles();
       // Verify we don't have a bundle for the disabled 'main' target
       assert(!bundles.some((bundle) => bundle.name === 'main'));
@@ -282,7 +444,7 @@ describe('Entry Points', function () {
       });
 
       // Should handle array sources for each enabled target
-      assert(b.getBundles().length >= 2);
+      assert.equal(b.getBundles().length, 4);
       await assertBundleOutput(b, 'dev1', 'dev entry 1');
       await assertBundleOutput(b, 'dev2', 'dev entry 2');
       await assertBundleOutput(b, 'prod1', 'prod entry 1');

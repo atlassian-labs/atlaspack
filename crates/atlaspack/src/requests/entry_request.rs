@@ -1,11 +1,11 @@
 use std::hash::Hash;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use crate::requests::target_request::package_json::{BuiltInTargetDescriptor, PackageJson};
 use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::diagnostic_error;
-use atlaspack_core::types::DiagnosticBuilder;
-use serde::{Deserialize, Serialize};
+use atlaspack_core::types::{DiagnosticBuilder, SourceField};
 
 use super::RequestResult;
 
@@ -17,26 +17,6 @@ pub struct Entry {
   pub file_path: PathBuf,
   pub package_path: PathBuf, // directory that contains the package.json file used to resolve dependencies etc.
   pub target: Option<String>,
-}
-
-/// Package.json target configuration
-/// Targets can be either:
-/// - An object with configuration (e.g., { "source": "index.js" })
-/// - false to explicitly disable a target
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum PackageTarget {
-  Config {
-    source: Option<serde_json::Value>, // Can be string, array of strings, or null
-  },
-  Disabled(bool), // false means the target is disabled
-}
-
-/// Package.json structure for entry resolution
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PackageJSON {
-  pub source: Option<serde_json::Value>, // Can be string, array of strings, or null
-  pub targets: Option<std::collections::BTreeMap<String, PackageTarget>>,
 }
 
 /// The EntryRequest resolves an entry path or glob to the actual file location
@@ -66,12 +46,16 @@ impl Request for EntryRequest {
 
     // Handle file entries
     if request_context.file_system().is_file(&entry_path) {
-      return self.handle_file_entry(entry_path, &request_context);
+      let result = self.handle_file_entry(entry_path, &request_context)?;
+      tracing::debug!("EntryRequestOutput (file): {:#?}", result);
+      return Ok(result);
     }
 
     // Handle directory entries
     if request_context.file_system().is_dir(&entry_path) {
-      return self.handle_directory_entry(entry_path, request_context);
+      let result = self.handle_directory_entry(entry_path, request_context)?;
+      tracing::debug!("EntryRequestOutput (directory): {:#?}", result);
+      return Ok(result);
     }
 
     Err(diagnostic_error!(
@@ -116,16 +100,17 @@ impl EntryRequest {
     entry_path: PathBuf,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
+    // When provided with a directory as an entry point, load the package.json file from the given directory.
     let config_loader = ConfigLoader {
       fs: request_context.file_system().clone(),
       project_root: request_context.project_root.clone(),
       search_path: entry_path.clone(),
     };
 
-    // Load package.json
-    let package_json_file = config_loader.load_package_json::<PackageJSON>()?;
+    let package_json_file = config_loader.load_package_json::<PackageJson>()?;
 
     let package_json = package_json_file.contents;
+
     let package_json_path = package_json_file.path;
 
     let mut entries = Vec::new();
@@ -136,21 +121,25 @@ impl EntryRequest {
     // Targets take precedence over package-level source when they define their own source.
     let mut targets_with_sources = 0;
     let mut enabled_targets_count = 0;
-    if let Some(targets) = &package_json.targets {
-      for (target_name, target) in targets {
+
+    // Process built-in targets (browser, main, module, types)
+    let builtin_targets = [
+      ("browser", &package_json.targets.browser),
+      ("main", &package_json.targets.main),
+      ("module", &package_json.targets.module),
+      ("types", &package_json.targets.types),
+    ];
+
+    for (target_name, builtin_target) in &builtin_targets {
+      if let Some(target) = builtin_target {
         match target {
-          PackageTarget::Disabled(false) => {
+          BuiltInTargetDescriptor::Disabled(_) => {
             // Skip disabled targets (e.g., "main": false)
             continue;
           }
-          PackageTarget::Disabled(true) => {
-            // true is unusual but treat as enabled with no source
-            // Will fall through to package-level source fallback if available
+          BuiltInTargetDescriptor::TargetDescriptor(target_descriptor) => {
             enabled_targets_count += 1;
-          }
-          PackageTarget::Config { source } => {
-            enabled_targets_count += 1;
-            if let Some(source) = source {
+            if let Some(source) = &target_descriptor.source {
               targets_with_sources += 1;
               let target_entries =
                 self.resolve_sources(&entry_path, source, Some(target_name), &request_context)?;
@@ -158,6 +147,17 @@ impl EntryRequest {
             }
           }
         }
+      }
+    }
+
+    // Process custom targets
+    for (target_name, target_descriptor) in &package_json.targets.custom_targets {
+      enabled_targets_count += 1;
+      if let Some(source) = &target_descriptor.source {
+        targets_with_sources += 1;
+        let target_entries =
+          self.resolve_sources(&entry_path, source, Some(target_name), &request_context)?;
+        entries.extend(target_entries);
       }
     }
 
@@ -179,9 +179,14 @@ impl EntryRequest {
     let all_targets_have_source =
       targets_with_sources > 0 && enabled_targets_count == targets_with_sources;
 
-    if !all_targets_have_source && let Some(source) = &package_json.source {
-      let package_entries = self.resolve_sources(&entry_path, source, None, &request_context)?;
-      entries.extend(package_entries);
+    // Get package-level source from the flattened fields
+    if !all_targets_have_source && let Some(source_value) = package_json.fields.get("source") {
+      // Convert JSON value to SourceField
+      if let Ok(source_field) = serde_json::from_value::<SourceField>(source_value.clone()) {
+        let package_entries =
+          self.resolve_sources(&entry_path, &source_field, None, &request_context)?;
+        entries.extend(package_entries);
+      }
     }
 
     // Only return if we found valid entries
@@ -201,26 +206,21 @@ impl EntryRequest {
     }
   }
 
-  /// Resolves source files from a JSON value (string or array) into Entry objects.
+  /// Resolves source files from a SourceField into Entry objects.
   ///
   /// This method handles both target-specific sources and package-level sources.
   /// - If target_name is Some, the entries will be associated with that target
   /// - If target_name is None, the entries are package-level (no specific target)
   fn resolve_sources(
     &self,
-    entry_path: &std::path::Path,
-    source: &serde_json::Value,
+    entry_path: &Path,
+    source: &SourceField,
     target_name: Option<&str>,
     request_context: &RunRequestContext,
   ) -> Result<Vec<Entry>, RunRequestError> {
     let sources = match source {
-      serde_json::Value::String(s) => vec![s.clone()],
-      serde_json::Value::Array(arr) => arr
-        .iter()
-        .filter_map(|v| v.as_str())
-        .map(|s| s.to_string())
-        .collect(),
-      _ => return Ok(vec![]),
+      SourceField::Source(s) => vec![s.clone()],
+      SourceField::Sources(arr) => arr.clone(),
     };
 
     let mut entries = Vec::new();
