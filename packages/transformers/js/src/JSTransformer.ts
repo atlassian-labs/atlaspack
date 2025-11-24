@@ -5,6 +5,7 @@ import type {
   FilePath,
   FileCreateInvalidation,
 } from '@atlaspack/types';
+import {createBuildCache} from '@atlaspack/build-cache';
 import type {SchemaEntity} from '@atlaspack/utils';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import SourceMap from '@parcel/source-map';
@@ -119,6 +120,8 @@ const CONFIG_SCHEMA: SchemaEntity = {
   },
   additionalProperties: false,
 };
+
+const configCache = createBuildCache();
 
 const SCRIPT_ERRORS = {
   browser: {
@@ -321,6 +324,47 @@ export default new Transformer({
       options.env.NATIVE_DEAD_RETURNS_REMOVAL === 'true';
     let enableUnusedBindingsRemoval =
       options.env.NATIVE_UNUSED_BINDINGS_REMOVAL === 'true';
+    let syncDynamicImportConfig:
+      | {
+          entrypoint_filepath_suffix: string;
+          actual_require_paths: string[];
+        }
+      | undefined;
+
+    if (options.env.SYNC_DYNAMIC_IMPORT_CONFIG) {
+      try {
+        let config = configCache.get(
+          'SYNC_DYNAMIC_IMPORT_CONFIG',
+        ) as typeof syncDynamicImportConfig;
+
+        if (!config) {
+          config = JSON.parse(options.env.SYNC_DYNAMIC_IMPORT_CONFIG);
+
+          invariant(typeof config?.entrypoint_filepath_suffix === 'string');
+          invariant(Array.isArray(config.actual_require_paths));
+
+          configCache.set('SYNC_DYNAMIC_IMPORT_CONFIG', config);
+        }
+
+        syncDynamicImportConfig = config;
+      } catch {
+        // eslint-disable-next-line no-console
+        console.warn(
+          'Failed to parse SYNC_DYNAMIC_IMPORT_CONFIG to JSON or config shape did not match. Config will not be applied.',
+        );
+
+        const fallback = {
+          entrypoint_filepath_suffix: '__NO_MATCH__',
+          actual_require_paths: [],
+        };
+
+        // Set cache to fallback so we don't keep trying to parse.
+        configCache.set('SYNC_DYNAMIC_IMPORT_CONFIG', fallback);
+        syncDynamicImportConfig = fallback;
+      }
+    }
+
+    config.invalidateOnEnvChange('SYNC_DYNAMIC_IMPORT_CONFIG');
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -376,6 +420,7 @@ export default new Transformer({
       enableReactAsyncImportLift,
       reactAsyncLiftByDefault,
       reactAsyncLiftReportLevel,
+      syncDynamicImportConfig,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -517,6 +562,7 @@ export default new Transformer({
       node_replacer: asset.env.isNode(),
       is_browser: asset.env.isBrowser(),
       is_worker: asset.env.isWorker() || asset.env.isTesseract(),
+      is_tesseract: asset.env.isTesseract(),
       env,
       is_type_script: asset.type === 'ts' || asset.type === 'tsx',
       is_jsx: isJSX,
@@ -570,6 +616,7 @@ export default new Transformer({
       ),
       react_async_lift_by_default: Boolean(config.reactAsyncLiftByDefault),
       react_async_lift_report_level: String(config.reactAsyncLiftReportLevel),
+      sync_dynamic_import_config: config.syncDynamicImportConfig,
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;

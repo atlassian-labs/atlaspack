@@ -24,6 +24,7 @@
     "src"
   ],
   "dependencies": {
+    "@atlaspack/build-cache": "2.13.6",
     "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/feature-flags": "2.26.2",
     "@atlaspack/plugin": "2.14.38",

@@ -16,6 +16,7 @@ mod node_replacer;
 mod react_async_import_lift;
 mod react_hooks_remover;
 mod static_prevaluator;
+mod sync_dynamic_import;
 pub mod test_utils;
 mod typeof_replacer;
 mod unused_bindings_remover;
@@ -103,6 +104,8 @@ use swc_core::ecma::visit::FoldWith;
 use swc_core::ecma::visit::VisitMutWith;
 use swc_core::ecma::visit::VisitWith;
 use swc_core::ecma::visit::visit_mut_pass;
+use sync_dynamic_import::SyncDynamicImport;
+use sync_dynamic_import::SyncDynamicImportConfig;
 use typeof_replacer::*;
 use unused_bindings_remover::UnusedBindingsRemover;
 use utils::CodeHighlight;
@@ -132,6 +135,7 @@ pub struct Config {
   pub node_replacer: bool,
   pub is_browser: bool,
   pub is_worker: bool,
+  pub is_tesseract: bool,
   pub is_type_script: bool,
   pub is_jsx: bool,
   pub add_display_name: Option<bool>,
@@ -169,6 +173,7 @@ pub struct Config {
   pub enable_static_prevaluation: bool,
   pub enable_dead_returns_removal: bool,
   pub enable_unused_bindings_removal: bool,
+  pub sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -421,7 +426,7 @@ pub fn transform(
                 ));
               }
 
-              let mut module = {
+              let module = {
                 let mut passes = (
                   Optional::new(
                     visit_mut_pass(
@@ -441,6 +446,13 @@ pub fn transform(
                     }),
                     config.source_type != SourceType::Script
                   ),
+                );
+
+                module.apply(&mut passes)
+              };
+
+              let mut module = {
+                let mut passes = (
                   Optional::new(
                     visit_mut_pass(GlobalAliaser::with_config(unresolved_mark, &config.global_aliasing_config)),
                     config.global_aliasing_config.is_some()
@@ -449,6 +461,13 @@ pub fn transform(
                     visit_mut_pass(ReactAsyncImportLift::new(unresolved_mark, config.react_async_lift_by_default, config.react_async_lift_report_level.clone())),
                     config.enable_react_async_import_lift && ReactAsyncImportLift::should_transform(code)
                   ),
+                  Optional::new(
+                    visit_mut_pass(
+                      SyncDynamicImport::new(Path::new(&config.filename),
+                        unresolved_mark,
+                        &config.sync_dynamic_import_config,
+                      )),
+                      config.is_tesseract && config.sync_dynamic_import_config.is_some()),
                   Optional::new(
                     visit_mut_pass(LazyLoadingTransformer::new(unresolved_mark)),
                     config.enable_lazy_loading && LazyLoadingTransformer::should_transform(code)
