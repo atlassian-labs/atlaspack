@@ -208,7 +208,6 @@ export default new Transformer({
       map.addVLQMap(JSON.parse(result.map));
       const original = await ensureOriginalMap();
       if (original) {
-        // @ts-expect-error TS2345 - the types are wrong, `extends` accepts a `SourceMap` or a `Buffer`
         map.extends(original);
       }
       asset.setMap(map);
