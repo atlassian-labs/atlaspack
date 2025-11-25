@@ -14,6 +14,7 @@ use atlaspack_core::types::{
   Asset, BuildMode, Diagnostic, Diagnostics, ErrorKind, FileType, LogLevel, OutputFormat,
   SourceType,
 };
+use atlaspack_js_swc_core::SyncDynamicImportConfig;
 use glob_match::glob_match;
 use parking_lot::RwLock;
 use swc_core::atoms::Atom;
@@ -48,6 +49,7 @@ pub struct AtlaspackJsTransformerPlugin {
 #[derive(Default)]
 struct Cache {
   env_variables: EnvVariablesCache,
+  sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
 }
 
 #[derive(Default)]
@@ -265,6 +267,39 @@ impl AtlaspackJsTransformerPlugin {
       }
     }
   }
+
+  fn sync_dynamic_import_config(&self) -> Option<SyncDynamicImportConfig> {
+    if let Some(env_vars) = &self.options.env
+      && let Some(config_json) = env_vars.get("SYNC_DYNAMIC_IMPORT_CONFIG")
+    {
+      if let Some(cached) = self.cache.read().sync_dynamic_import_config.as_ref() {
+        return Some(cached.clone());
+      }
+
+      match serde_json::from_str::<SyncDynamicImportConfig>(config_json) {
+        Ok(config) => {
+          self.cache.write().sync_dynamic_import_config = Some(config.clone());
+          return Some(config);
+        }
+        Err(_) => {
+          eprintln!(
+            "Failed to parse SYNC_DYNAMIC_IMPORT_CONFIG to JSON or config shape did not match. Config will not be applied."
+          );
+
+          let fallback = SyncDynamicImportConfig {
+            entrypoint_filepath_suffix: "__NO_MATCH__".into(),
+            actual_require_paths: vec![],
+          };
+
+          self.cache.write().sync_dynamic_import_config = Some(fallback.clone());
+
+          return Some(fallback);
+        }
+      }
+    }
+
+    None
+  }
 }
 
 impl fmt::Debug for AtlaspackJsTransformerPlugin {
@@ -331,6 +366,12 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
     }
 
     let env_vars = self.env_variables(&asset);
+
+    let sync_dynamic_import_config = if env.context.is_tesseract() {
+      self.sync_dynamic_import_config()
+    } else {
+      None
+    };
 
     let compiler_options = self
       .ts_config
@@ -448,6 +489,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         .options
         .feature_flags
         .bool_enabled("nestedPromiseImportFix"),
+      sync_dynamic_import_config,
       ..atlaspack_js_swc_core::Config::default()
     };
 

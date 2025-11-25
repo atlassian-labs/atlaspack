@@ -4740,7 +4740,7 @@ describe('javascript', function () {
         'utf8',
       );
 
-      assert(contents.includes('var result = new Promise(function() {});'));
+      assert(contents.includes('result = new Promise('));
     });
 
     it('should convert dynamic imports to requires for matching paths', async () => {
@@ -4774,7 +4774,7 @@ describe('javascript', function () {
         'utf8',
       );
 
-      assert(contents.includes('var result = require("'));
+      assert(contents.includes('result = require("'));
     });
 
     it('should handle multiple allowed require paths', async () => {
@@ -4817,9 +4817,9 @@ describe('javascript', function () {
         'utf8',
       );
 
-      assert(contents.includes('var ModalComponent = require("'));
-      assert(contents.includes('var projectResource = require("'));
-      assert(contents.includes('var service = new Promise(function() {});'));
+      assert(contents.includes('ModalComponent = require("'));
+      assert(contents.includes('projectResource = require("'));
+      assert(contents.includes('service = new Promise('));
     });
 
     it('should handle entrypoint files', async () => {

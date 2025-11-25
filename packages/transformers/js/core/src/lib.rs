@@ -12,7 +12,7 @@ mod hoist;
 mod lazy_loading_transformer;
 mod magic_comments;
 mod node_replacer;
-mod sync_dynamic_import;
+pub mod sync_dynamic_import;
 pub mod test_utils;
 mod typeof_replacer;
 pub mod utils;
@@ -96,7 +96,7 @@ use swc_core::ecma::visit::VisitMutWith;
 use swc_core::ecma::visit::VisitWith;
 use swc_core::ecma::visit::visit_mut_pass;
 use sync_dynamic_import::SyncDynamicImport;
-use sync_dynamic_import::SyncDynamicImportConfig;
+pub use sync_dynamic_import::SyncDynamicImportConfig;
 use typeof_replacer::*;
 use utils::CodeHighlight;
 pub use utils::Diagnostic;
@@ -125,7 +125,6 @@ pub struct Config {
   pub node_replacer: bool,
   pub is_browser: bool,
   pub is_worker: bool,
-  pub is_tesseract: bool,
   pub is_type_script: bool,
   pub is_jsx: bool,
   pub add_display_name: Option<bool>,
@@ -433,7 +432,7 @@ pub fn transform(
                         unresolved_mark,
                         &config.sync_dynamic_import_config,
                       )),
-                      config.is_tesseract && config.sync_dynamic_import_config.is_some()),
+                      config.sync_dynamic_import_config.is_some()),
                   Optional::new(
                     visit_mut_pass(GlobalThisAliaser::new(unresolved_mark)),
                     config.enable_global_this_aliaser && GlobalThisAliaser::should_transform(&config.filename)

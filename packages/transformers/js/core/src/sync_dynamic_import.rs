@@ -7,7 +7,7 @@ use swc_core::ecma::{
   visit::{VisitMut, VisitMutWith},
 };
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SyncDynamicImportConfig {
   pub entrypoint_filepath_suffix: String,
   pub actual_require_paths: Vec<String>,

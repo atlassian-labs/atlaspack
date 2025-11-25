@@ -318,7 +318,7 @@ export default new Transformer({
         }
       | undefined;
 
-    if (options.env.SYNC_DYNAMIC_IMPORT_CONFIG) {
+    if (config.env.isTesseract() && options.env.SYNC_DYNAMIC_IMPORT_CONFIG) {
       try {
         let config = configCache.get(
           'SYNC_DYNAMIC_IMPORT_CONFIG',
@@ -541,7 +541,6 @@ export default new Transformer({
       node_replacer: asset.env.isNode(),
       is_browser: asset.env.isBrowser(),
       is_worker: asset.env.isWorker() || asset.env.isTesseract(),
-      is_tesseract: asset.env.isTesseract(),
       env,
       is_type_script: asset.type === 'ts' || asset.type === 'tsx',
       is_jsx: isJSX,
