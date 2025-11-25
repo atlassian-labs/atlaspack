@@ -22,6 +22,22 @@ export const DEFAULT_FEATURE_FLAGS = {
   atlaspackV3: false,
 
   /**
+   * Enable Atlaspack v3 for Confluence local builds
+   *
+   * @author Matt Koko <mkokolich@atlassian.com>
+   * @since 2025-11-24
+   */
+  v3ConfluenceLocal: false,
+
+  /**
+   * Enable Atlaspack v3 for Confluence CI builds
+   *
+   * @author Matt Koko <mkokolich@atlassian.com>
+   * @since 2025-11-24
+   */
+  v3ConfluenceCI: false,
+
+  /**
    * Use node.js implementation of @parcel/watcher watchman backend
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>
@@ -285,7 +301,7 @@ export const DEFAULT_FEATURE_FLAGS = {
   /**
    * Enable JSX configuration loading in v3 Rust transformer to match v2 behaviour
    *
-   * @author matt-koko <mkokolich@atlassian.com>
+   * @author Matt Koko <mkokolich@atlassian.com>
    * @since 2025-10-21
    */
   v3JsxConfigurationLoading: process.env.ATLASPACK_BUILD_ENV === 'test',
