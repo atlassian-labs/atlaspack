@@ -302,12 +302,14 @@ export default new Transformer({
     let magicComments = false;
     let addReactDisplayName = false;
 
-    let enableGlobalThisAliaser = Boolean(
-      options.env.NATIVE_GLOBAL_THIS_ALIASER,
-    );
-    let enableLazyLoadingTransformer = Boolean(
-      options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
-    );
+    let enableGlobalThisAliaser =
+      options.env.NATIVE_GLOBAL_THIS_ALIASER === 'true';
+    let enableLazyLoadingTransformer =
+      options.env.NATIVE_LAZY_LOADING_TRANSFORMER === 'true';
+    let enableDeadReturnsRemover =
+      options.env.NATIVE_DEAD_RETURNS_REMOVER === 'true';
+    let enableUnusedBindingsRemover =
+      options.env.NATIVE_UNUSED_BINDINGS_REMOVER === 'true';
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -353,6 +355,8 @@ export default new Transformer({
       magicComments,
       enableGlobalThisAliaser,
       enableLazyLoadingTransformer,
+      enableDeadReturnsRemover,
+      enableUnusedBindingsRemover,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -537,6 +541,10 @@ export default new Transformer({
         config.enableLazyLoadingTransformer,
       ),
       nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
+      enable_dead_returns_remover: Boolean(config.enableDeadReturnsRemover),
+      enable_unused_bindings_remover: Boolean(
+        config.enableUnusedBindingsRemover,
+      ),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
