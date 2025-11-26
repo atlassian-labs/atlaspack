@@ -1,5 +1,12 @@
 # @atlaspack/plugin
 
+## 2.14.40
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.21.1
+
 ## 2.14.39
 
 ### Patch Changes

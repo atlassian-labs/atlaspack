@@ -1,5 +1,14 @@
 # @atlaspack/runtime-webextension
 
+## 2.14.40
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.1
+  - @atlaspack/plugin@2.14.40
+  - @atlaspack/types@2.15.30
+
 ## 2.14.39
 
 ### Patch Changes
