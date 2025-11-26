@@ -1,5 +1,21 @@
 # @atlaspack/cli
 
+## 2.15.1
+
+### Patch Changes
+
+- Updated dependencies [[`a884bd2`](https://github.com/atlassian-labs/atlaspack/commit/a884bd2a6bd6f37d088fb886dd9b88e85328501b), [`5710532`](https://github.com/atlassian-labs/atlaspack/commit/57105322b26ce42af2cbfcc0506cff929e50b630), [`6fac01d`](https://github.com/atlassian-labs/atlaspack/commit/6fac01dbb1bfc5b971176c1a1c008297bf4b8f91), [`2f3af93`](https://github.com/atlassian-labs/atlaspack/commit/2f3af9374bcc082e6f4835f6f5a2b98e32ea45b4), [`432d571`](https://github.com/atlassian-labs/atlaspack/commit/432d571ea4e9fc67be12304fcafe8c445e844174), [`5710532`](https://github.com/atlassian-labs/atlaspack/commit/57105322b26ce42af2cbfcc0506cff929e50b630)]:
+  - @atlaspack/core@2.29.0
+  - @atlaspack/feature-flags@2.27.1
+  - @atlaspack/config-default@10.0.0
+  - @atlaspack/fs@2.15.35
+  - @atlaspack/logger@2.14.32
+  - @atlaspack/utils@3.2.1
+  - @atlaspack/reporter-cli@2.17.22
+  - @atlaspack/package-manager@2.14.40
+  - @atlaspack/reporter-dev-server@2.14.40
+  - @atlaspack/reporter-tracer@2.14.40
+
 ## 2.15.0
 
 ### Minor Changes
