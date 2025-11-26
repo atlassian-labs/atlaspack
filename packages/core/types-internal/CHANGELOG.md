@@ -1,5 +1,29 @@
 # @atlaspack/types-internal
 
+## 2.21.1
+
+### Patch Changes
+
+- Updated dependencies [[`2f3af93`](https://github.com/atlassian-labs/atlaspack/commit/2f3af9374bcc082e6f4835f6f5a2b98e32ea45b4)]:
+  - @atlaspack/feature-flags@2.27.1
+  - @atlaspack/source-map@3.1.1
+
+## 2.21.0
+
+### Minor Changes
+
+- [#858](https://github.com/atlassian-labs/atlaspack/pull/858) [`8eb84ee`](https://github.com/atlassian-labs/atlaspack/commit/8eb84ee61a42bfe87c58079b610802b07a6a13e4) Thanks [@marcins](https://github.com/marcins)! - Introduce a new `getReferencedAssets(bundle)` method to the BundleGraph to pre-compute referenced assets, this is used by the scope hoisting packager behind a new `precomputeReferencedAssets` feature flag.
+
+- [#789](https://github.com/atlassian-labs/atlaspack/pull/789) [`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0) Thanks [@marcins](https://github.com/marcins)! - Use an in-sourced version of @parcel/source-map, as @atlaspack/source-map
+
+- [#892](https://github.com/atlassian-labs/atlaspack/pull/892) [`617a318`](https://github.com/atlassian-labs/atlaspack/commit/617a318ddc9419b38360257353fec50b9051ee13) Thanks [@marcins](https://github.com/marcins)! - Added a new `shouldProfileNative` option that provides a way to pause and connect a native profiler to Atlaspack.
+
+### Patch Changes
+
+- Updated dependencies [[`8eb84ee`](https://github.com/atlassian-labs/atlaspack/commit/8eb84ee61a42bfe87c58079b610802b07a6a13e4), [`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0)]:
+  - @atlaspack/feature-flags@2.27.0
+  - @atlaspack/source-map@3.1.0
+
 ## 2.20.8
 
 ### Patch Changes

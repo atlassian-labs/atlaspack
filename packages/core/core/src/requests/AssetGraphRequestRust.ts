@@ -53,18 +53,17 @@ export function createAssetGraphRequestRust(
     id: input.name,
     run: async (input) => {
       let options = input.options;
-      let serializedAssetGraph =
-        (await rustAtlaspack.buildAssetGraph()) as SerializedAssetGraphDelta;
+      let {assetGraphPromise, commitPromise} =
+        await rustAtlaspack.buildAssetGraph();
 
-      // Newly created nodes
-      serializedAssetGraph.nodes = serializedAssetGraph.nodes.map((node) =>
-        JSON.parse(node),
-      );
+      let [serializedAssetGraph, assetGraphError] =
+        (await assetGraphPromise) as [SerializedAssetGraphDelta, Error | null];
 
-      // Updated existing nodes
-      serializedAssetGraph.updates = serializedAssetGraph.updates.map((node) =>
-        JSON.parse(node),
-      );
+      if (assetGraphError) {
+        throw new ThrowableDiagnostic({
+          diagnostic: assetGraphError,
+        });
+      }
 
       // Don't reuse a previous asset graph result if Rust didn't have one too
       let prevResult = null;
@@ -105,6 +104,17 @@ export function createAssetGraphRequestRust(
         changedAssetsPropagation,
         previousSymbolPropagationErrors: undefined,
       };
+
+      let [_commitResult, commitError] = await commitPromise;
+
+      if (commitError) {
+        throw new ThrowableDiagnostic({
+          diagnostic: {
+            message:
+              'Error committing asset graph in Rust: ' + commitError.message,
+          },
+        });
+      }
 
       await input.api.storeResult(result);
       input.api.invalidateOnBuild();
@@ -213,7 +223,7 @@ export function getAssetGraph(
 
     let envId = envs.get(envKey);
     if (envId == null) {
-      envId = envs.size.toString();
+      envId = getEnvironmentHash(env);
       envs.set(envKey, envId);
     }
 
@@ -241,6 +251,8 @@ export function getAssetGraph(
     let node = isUpdateNode
       ? serializedGraph.updates[index - nodeTypeSwitchoverIndex]
       : serializedGraph.nodes[index];
+
+    node = JSON.parse(node);
 
     if (node.type === 'entry') {
       let id = 'entry:' + ++entry;

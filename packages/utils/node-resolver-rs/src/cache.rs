@@ -126,6 +126,15 @@ impl Cache {
     Ok(self.fs.canonicalize(path, &self.realpath_cache)?)
   }
 
+  pub fn clear(&self) {
+    self.packages.clear();
+    self.package_duplicates.clear();
+    self.tsconfigs.clear();
+    self.is_dir_cache.clear();
+    self.is_file_cache.clear();
+    self.realpath_cache.clear();
+  }
+
   /// Calling this method before resolving will enable the package deduplication feature.
   /// It does thos by hydrating the "package_duplicates" lookup. This can
   /// the the be used when resolving packages that are duplicates, where a duplicate is a package

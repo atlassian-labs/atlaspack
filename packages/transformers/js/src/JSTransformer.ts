@@ -5,9 +5,10 @@ import type {
   FilePath,
   FileCreateInvalidation,
 } from '@atlaspack/types';
+import {createBuildCache} from '@atlaspack/build-cache';
 import type {SchemaEntity} from '@atlaspack/utils';
 import type {Diagnostic} from '@atlaspack/diagnostic';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {Transformer} from '@atlaspack/plugin';
 import {transform, transformAsync} from '@atlaspack/rust';
 import invariant from 'assert';
@@ -119,6 +120,8 @@ const CONFIG_SCHEMA: SchemaEntity = {
   },
   additionalProperties: false,
 };
+
+const configCache = createBuildCache();
 
 const SCRIPT_ERRORS = {
   browser: {
@@ -315,15 +318,54 @@ export default new Transformer({
       options.env.NATIVE_DEAD_RETURNS_REMOVAL === 'true';
     let enableUnusedBindingsRemoval =
       options.env.NATIVE_UNUSED_BINDINGS_REMOVAL === 'true';
+    let syncDynamicImportConfig:
+      | {
+          entrypoint_filepath_suffix: string;
+          actual_require_paths: string[];
+        }
+      | undefined;
+
+    if (config.env.isTesseract() && options.env.SYNC_DYNAMIC_IMPORT_CONFIG) {
+      try {
+        let config = configCache.get(
+          'SYNC_DYNAMIC_IMPORT_CONFIG',
+        ) as typeof syncDynamicImportConfig;
+
+        if (!config) {
+          config = JSON.parse(options.env.SYNC_DYNAMIC_IMPORT_CONFIG);
+
+          invariant(typeof config?.entrypoint_filepath_suffix === 'string');
+          invariant(Array.isArray(config.actual_require_paths));
+
+          configCache.set('SYNC_DYNAMIC_IMPORT_CONFIG', config);
+        }
+
+        syncDynamicImportConfig = config;
+      } catch {
+        // eslint-disable-next-line no-console
+        console.warn(
+          'Failed to parse SYNC_DYNAMIC_IMPORT_CONFIG to JSON or config shape did not match. Config will not be applied.',
+        );
+
+        const fallback = {
+          entrypoint_filepath_suffix: '__NO_MATCH__',
+          actual_require_paths: [],
+        };
+
+        // Set cache to fallback so we don't keep trying to parse.
+        configCache.set('SYNC_DYNAMIC_IMPORT_CONFIG', fallback);
+        syncDynamicImportConfig = fallback;
+      }
+    }
+
+    config.invalidateOnEnvChange('SYNC_DYNAMIC_IMPORT_CONFIG');
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
         CONFIG_SCHEMA,
         {
           data: conf.contents,
-          source: getFeatureFlag('schemaValidationDeferSourceLoading')
-            ? () => options.inputFS.readFileSync(conf.filePath, 'utf8')
-            : await options.inputFS.readFile(conf.filePath, 'utf8'),
+          source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
           filePath: conf.filePath,
           prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-js')}`,
         },
@@ -367,6 +409,7 @@ export default new Transformer({
       enableUnusedBindingsRemoval,
       enableStaticPrevaluation,
       enableReactHooksRemoval,
+      syncDynamicImportConfig,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -546,6 +589,7 @@ export default new Transformer({
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
       is_source: asset.isSource,
+      sync_dynamic_import_config: config.syncDynamicImportConfig,
       nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
       global_aliasing_config: config.globalAliasingConfig,
       enable_ssr_typeof_replacement: Boolean(config.enableSsrTypeofReplacement),
@@ -613,7 +657,6 @@ export default new Transformer({
 
                       map.addIndexedMappings(mappings);
                       if (originalMap) {
-                        // @ts-expect-error TS2345
                         map.extends(originalMap);
                       } else {
                         if (!getFeatureFlag('omitSourcesContentInMemory')) {
@@ -1203,7 +1246,6 @@ export default new Transformer({
       let sourceMap = new SourceMap(options.projectRoot);
       sourceMap.addVLQMap(JSON.parse(map));
       if (originalMap) {
-        // @ts-expect-error TS2345
         sourceMap.extends(originalMap);
       }
       asset.setMap(sourceMap);

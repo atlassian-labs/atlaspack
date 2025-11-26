@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use atlaspack_core::diagnostic;
+use atlaspack_sourcemap::SourceMapError;
 use indexmap::IndexMap;
 use std::collections::{BTreeMap, HashMap};
 use swc_core::atoms::{Atom, JsWord};
@@ -23,6 +24,7 @@ use crate::js_transformer::conversion::symbol::{
   transformer_collect_imported_symbol_to_symbol, transformer_exported_symbol_into_symbol,
   transformer_imported_symbol_to_symbol,
 };
+use crate::react_refresh;
 
 mod dependency_kind;
 mod loc;
@@ -332,12 +334,52 @@ pub(crate) fn convert_result(
 
   asset.has_node_replacements = result.has_node_replacements;
   asset.is_constant_module = result.is_constant_module;
+
   if transformer_config.conditional_bundling {
+    let mut converted = vec![];
+
+    for condition in result.conditions.iter() {
+      converted.push(serde_json::json!({
+        "key": condition.key.to_string(),
+        "ifTruePlaceholder": condition.if_true_placeholder,
+        "ifFalsePlaceholder": condition.if_false_placeholder,
+      }));
+    }
+
     asset.conditions = result.conditions;
   }
 
   asset.file_type = FileType::Js;
-  asset.code = Code::new(result.code);
+
+  let mut final_code = result.code;
+
+  // Apply React refresh wrapping if needed
+  let react_refresh_map_offset = if transformer_config.react_refresh {
+    if let Some((wrapped_code, refresh_dependency, source_map_offset)) =
+      react_refresh::wrap_with_react_refresh(
+        &asset,
+        &final_code,
+        options,
+        &dependency_by_specifier,
+        transformer_config.hmr_improvements,
+      )
+    {
+      final_code = wrapped_code;
+
+      dependency_by_specifier.insert(
+        refresh_dependency.specifier.as_str().into(),
+        refresh_dependency,
+      );
+
+      Some(source_map_offset)
+    } else {
+      None
+    }
+  } else {
+    None
+  };
+
+  asset.code = Code::new(final_code);
   // Updating the file_type to JS will cause the asset id to be updated.
   // However, the packager needs to be aware of the original id when creating
   // symbols replacements in scope hoisting. That's why we store the id before
@@ -345,13 +387,34 @@ pub(crate) fn convert_result(
   asset.packaging_id = Some(asset.id.clone());
 
   if let Some(map) = result.map {
-    // TODO: Fix diagnostic error handling
-    let mut source_map = SourceMap::from_json(&options.project_root, &map).map_err(|_| vec![])?;
+    let source_map_error_to_diagnostic = |error: SourceMapError| {
+      vec![
+        DiagnosticBuilder::default()
+          .origin(Some("@atlaspack/transformer-js".into()))
+          .message(format!(
+            "Error building SourceMap for {}: {}",
+            asset.file_path.display(),
+            error
+          ))
+          .build()
+          .unwrap(),
+      ]
+    };
+
+    let mut source_map =
+      SourceMap::from_json(&options.project_root, &map).map_err(source_map_error_to_diagnostic)?;
 
     if let Some(original_map) = asset.map {
       source_map
         .extends(&mut original_map.clone())
-        .map_err(|_| vec![])?;
+        .map_err(source_map_error_to_diagnostic)?
+    }
+
+    // Adjust source map if React refresh wrapping was applied
+    if let Some((start_column, offset_lines)) = react_refresh_map_offset {
+      source_map
+        .offset_lines(start_column, offset_lines)
+        .map_err(source_map_error_to_diagnostic)?
     }
 
     asset.map = Some(source_map);

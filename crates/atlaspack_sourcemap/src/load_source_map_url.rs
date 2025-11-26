@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 
 use atlaspack_filesystem::FileSystemRef;
-use parcel_sourcemap::SourceMapError;
 
 use crate::SourceMap;
 
@@ -10,10 +9,10 @@ pub fn load_sourcemap_url(
   project_root: &Path,
   file_path: &Path,
   url: &str,
-) -> Result<SourceMap, SourceMapError> {
+) -> anyhow::Result<SourceMap> {
   let protocol = url.split_once(":");
   if let Some(("data", _)) = protocol {
-    return SourceMap::from_data_url(project_root, url);
+    return SourceMap::from_data_url(project_root, url).map_err(|e| anyhow::anyhow!(e.to_string()));
   }
 
   let mut source_map_path = PathBuf::from(if let Some(("file", _)) = protocol {
@@ -31,5 +30,5 @@ pub fn load_sourcemap_url(
 
   let json = fs.read_to_string(&source_map_path)?;
 
-  SourceMap::from_json(project_root, &json)
+  SourceMap::from_json(project_root, &json).map_err(|e| anyhow::anyhow!(e.to_string()))
 }

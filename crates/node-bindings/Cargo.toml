@@ -25,6 +25,7 @@ atlaspack_vcs = { path = "../atlaspack_vcs" }
 atlaspack_swc_runner = { path = "../atlaspack_swc_runner" }
 atlassian_swc_compiled_css = { path = "../atlassian-swc-compiled-css", features = ["napi"] }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
+parcel_sourcemap = { path = "../parcel_sourcemap" }
 
 aho-corasick = { workspace = true }
 anyhow = { workspace = true }
@@ -34,9 +35,11 @@ mockall = { workspace = true }
 napi-derive = { workspace = true }
 num_cpus = { workspace = true }
 parking_lot = { workspace = true }
+rkyv = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 toml = { workspace = true }
+tokio = { workspace = true, features = ["rt"] }
 tracing = { workspace = true }
 tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -75,6 +78,9 @@ mimalloc = { workspace = true }
 [dev-dependencies]
 indoc = { workspace = true }
 tempfile = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+jemallocator = { workspace = true, features = ["disable_initial_exec_tls"]}
 
 [build-dependencies]
 napi-build = { workspace = true }

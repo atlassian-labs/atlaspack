@@ -1,6 +1,6 @@
 import path from 'path';
 import {Transformer} from '@atlaspack/plugin';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 // @ts-expect-error TS7016
 import less from 'less';
 

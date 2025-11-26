@@ -22,6 +22,12 @@
     },
     {
       "path": "../../core/workers/tsconfig.json"
+    },
+    {
+      "path": "../../core/build-cache/tsconfig.json"
+    },
+    {
+      "path": "../../core/source-map/tsconfig.json"
     }
   ]
 }

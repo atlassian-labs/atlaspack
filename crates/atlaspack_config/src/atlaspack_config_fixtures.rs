@@ -100,6 +100,7 @@ pub fn default_config(resolve_from: Arc<PathBuf>) -> ConfigFixture {
         })
       }),
       validators: PipelinesMap::new(IndexMap::new()),
+      unstable_alias: None,
     },
     atlaspack_rc: String::from(
       r#"
@@ -200,6 +201,7 @@ fn extended_config_from(
         }),
       }),
       validators: PipelinesMap::new(IndexMap::new()),
+      unstable_alias: None,
     },
     base_config: PartialConfigFixture {
       path: PathBuf::from(base_resolve_from.as_os_str()),

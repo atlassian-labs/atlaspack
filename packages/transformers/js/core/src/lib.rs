@@ -15,6 +15,7 @@ mod magic_comments;
 mod node_replacer;
 mod react_hooks_remover;
 mod static_prevaluator;
+mod sync_dynamic_import;
 pub mod test_utils;
 mod typeof_replacer;
 mod unused_bindings_remover;
@@ -101,6 +102,8 @@ use swc_core::ecma::visit::FoldWith;
 use swc_core::ecma::visit::VisitMutWith;
 use swc_core::ecma::visit::VisitWith;
 use swc_core::ecma::visit::visit_mut_pass;
+use sync_dynamic_import::SyncDynamicImport;
+pub use sync_dynamic_import::SyncDynamicImportConfig;
 use typeof_replacer::*;
 use unused_bindings_remover::UnusedBindingsRemover;
 use utils::CodeHighlight;
@@ -156,6 +159,7 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
+  pub sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
   pub nested_promise_import_fix: bool,
   pub global_aliasing_config: Option<HashMap<String, String>>,
   pub enable_lazy_loading: bool,
@@ -217,7 +221,7 @@ fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Vers
 }
 
 pub fn transform(
-  config: Config,
+  config: &Config,
   call_macro: Option<MacroCallback>,
 ) -> Result<TransformResult, io::Error> {
   let mut result = TransformResult::default();
@@ -230,7 +234,7 @@ pub fn transform(
     config.project_root.as_str(),
     config.filename.as_str(),
     &source_map,
-    &config,
+    config,
   );
 
   match module {
@@ -437,6 +441,13 @@ pub fn transform(
                     config.source_type != SourceType::Script
                   ),
                   Optional::new(
+                    visit_mut_pass(
+                      SyncDynamicImport::new(Path::new(&config.filename),
+                        unresolved_mark,
+                        &config.sync_dynamic_import_config,
+                      )),
+                      config.sync_dynamic_import_config.is_some()),
+                  Optional::new(
                     visit_mut_pass(GlobalAliaser::with_config(unresolved_mark, &config.global_aliasing_config)),
                     config.global_aliasing_config.is_some()
                   ),
@@ -562,7 +573,7 @@ pub fn transform(
                       &mut result.dependencies,
                       ignore_mark,
                       unresolved_mark,
-                      &config,
+                      config,
                       &mut diagnostics,
                       &mut result.conditions,
                     ),
@@ -850,12 +861,12 @@ mod tests {
   fn test_logs_when_flag_is_on_and_file_is_empty() {
     let config: Config = make_test_swc_config(r#""#);
     unsafe { env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "true") };
-    let _result = transform(config, None);
+    let _result = transform(&config, None);
     assert!(logs_contain("You are attempting to import"));
 
     unsafe { env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "false") };
     let config: Config = make_test_swc_config(r#""#);
-    let _result = transform(config, None);
+    let _result = transform(&config, None);
     logs_assert(|lines: &[&str]| {
       let count = lines
         .iter()

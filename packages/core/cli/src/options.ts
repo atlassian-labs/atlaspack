@@ -60,6 +60,8 @@ export const commonOptions: OptionsDefinition = {
     'output directory to write to when unspecified by targets',
   '--no-autoinstall': 'disable autoinstall',
   '--profile': 'enable sampling build profiling',
+  '--profile-native [instruments|samply]':
+    'enable native build profiling (defaults to instruments on macOS, samply otherwise)',
   '--trace': 'enable build tracing',
   '-V, --version': 'output the version number',
   '--detailed-report [count]': [
