@@ -5,6 +5,7 @@ import type {
   FilePath,
   FileCreateInvalidation,
 } from '@atlaspack/types';
+import {createBuildCache} from '@atlaspack/build-cache';
 import type {SchemaEntity} from '@atlaspack/utils';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import SourceMap from '@atlaspack/source-map';
@@ -119,6 +120,8 @@ const CONFIG_SCHEMA: SchemaEntity = {
   },
   additionalProperties: false,
 };
+
+const configCache = createBuildCache();
 
 const SCRIPT_ERRORS = {
   browser: {
@@ -302,6 +305,48 @@ export default new Transformer({
     let magicComments = false;
     let addReactDisplayName = false;
 
+    let syncDynamicImportConfig:
+      | {
+          entrypoint_filepath_suffix: string;
+          actual_require_paths: string[];
+        }
+      | undefined;
+
+    if (config.env.isTesseract() && options.env.SYNC_DYNAMIC_IMPORT_CONFIG) {
+      try {
+        let config = configCache.get(
+          'SYNC_DYNAMIC_IMPORT_CONFIG',
+        ) as typeof syncDynamicImportConfig;
+
+        if (!config) {
+          config = JSON.parse(options.env.SYNC_DYNAMIC_IMPORT_CONFIG);
+
+          invariant(typeof config?.entrypoint_filepath_suffix === 'string');
+          invariant(Array.isArray(config.actual_require_paths));
+
+          configCache.set('SYNC_DYNAMIC_IMPORT_CONFIG', config);
+        }
+
+        syncDynamicImportConfig = config;
+      } catch {
+        // eslint-disable-next-line no-console
+        console.warn(
+          'Failed to parse SYNC_DYNAMIC_IMPORT_CONFIG to JSON or config shape did not match. Config will not be applied.',
+        );
+
+        const fallback = {
+          entrypoint_filepath_suffix: '__NO_MATCH__',
+          actual_require_paths: [],
+        };
+
+        // Set cache to fallback so we don't keep trying to parse.
+        configCache.set('SYNC_DYNAMIC_IMPORT_CONFIG', fallback);
+        syncDynamicImportConfig = fallback;
+      }
+    }
+
+    config.invalidateOnEnvChange('SYNC_DYNAMIC_IMPORT_CONFIG');
+
     let enableGlobalThisAliaser =
       options.env.NATIVE_GLOBAL_THIS_ALIASER === 'true';
     let enableLazyLoadingTransformer =
@@ -357,6 +402,7 @@ export default new Transformer({
       enableLazyLoadingTransformer,
       enableDeadReturnsRemover,
       enableUnusedBindingsRemover,
+      syncDynamicImportConfig,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -540,6 +586,7 @@ export default new Transformer({
       enable_lazy_loading_transformer: Boolean(
         config.enableLazyLoadingTransformer,
       ),
+      sync_dynamic_import_config: config.syncDynamicImportConfig,
       nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
       enable_dead_returns_remover: Boolean(config.enableDeadReturnsRemover),
       enable_unused_bindings_remover: Boolean(

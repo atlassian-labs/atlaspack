@@ -13,6 +13,7 @@ mod hoist;
 mod lazy_loading_transformer;
 mod magic_comments;
 mod node_replacer;
+mod sync_dynamic_import;
 pub mod test_utils;
 mod typeof_replacer;
 mod unused_bindings_remover;
@@ -97,6 +98,8 @@ use swc_core::ecma::visit::FoldWith;
 use swc_core::ecma::visit::VisitMutWith;
 use swc_core::ecma::visit::VisitWith;
 use swc_core::ecma::visit::visit_mut_pass;
+use sync_dynamic_import::SyncDynamicImport;
+pub use sync_dynamic_import::SyncDynamicImportConfig;
 use typeof_replacer::*;
 use unused_bindings_remover::UnusedBindingsRemover;
 use utils::CodeHighlight;
@@ -154,6 +157,7 @@ pub struct Config {
   pub exports_rebinding_optimisation: bool,
   pub enable_global_this_aliaser: bool,
   pub enable_lazy_loading_transformer: bool,
+  pub sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
   pub nested_promise_import_fix: bool,
   pub enable_dead_returns_remover: bool,
   pub enable_unused_bindings_remover: bool,
@@ -428,6 +432,13 @@ pub fn transform(
                     }),
                     config.source_type != SourceType::Script
                   ),
+                  Optional::new(
+                    visit_mut_pass(
+                      SyncDynamicImport::new(Path::new(&config.filename),
+                        unresolved_mark,
+                        &config.sync_dynamic_import_config,
+                      )),
+                      config.sync_dynamic_import_config.is_some()),
                   Optional::new(
                     visit_mut_pass(GlobalThisAliaser::new(unresolved_mark)),
                     config.enable_global_this_aliaser && GlobalThisAliaser::should_transform(&config.filename)
