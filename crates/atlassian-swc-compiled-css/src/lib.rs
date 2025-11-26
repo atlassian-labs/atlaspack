@@ -4320,9 +4320,7 @@ fn collect_precomputed_classes(value: &StaticValue, classes: &mut Vec<String>) {
       for part in text.value.split_whitespace() {
         if part.starts_with('_') && !part.is_empty() {
           let class = part.to_string();
-          if !classes.contains(&class) {
-            classes.push(class);
-          }
+          classes.push(class);
         }
       }
     }
@@ -4562,7 +4560,6 @@ impl<'a, 'b> ClassNamesBodyVisitor<'a, 'b> {
     }
 
     let mut class_names = Vec::new();
-    let mut seen_classes = HashSet::new();
     let mut seen_sheet_rules: HashSet<String> = HashSet::new();
 
     for rule in &artifacts.rules {
@@ -4582,14 +4579,7 @@ impl<'a, 'b> ClassNamesBodyVisitor<'a, 'b> {
           }
         }
       }
-      if expr_class_names.contains(&rule.class_name) {
-        continue;
-      }
-      if !conditional_class_names.contains(&rule.class_name)
-        && seen_classes.insert(rule.class_name.clone())
-      {
-        class_names.push(rule.class_name.clone());
-      }
+      class_names.push(rule.class_name.clone());
     }
 
     let class_css_map: HashMap<String, String> = artifacts
@@ -4610,17 +4600,57 @@ impl<'a, 'b> ClassNamesBodyVisitor<'a, 'b> {
     }
 
     for class_name in &precomputed_classes {
-      if expr_class_names.contains(class_name) {
-        continue;
+      class_names.push(class_name.clone());
+    }
+
+    // Also add any conditional classes from precomputed_exprs to the static list
+    let mut class_name_entries: Vec<String> = Vec::new();
+
+    // Helper closure to collect string literals from precomputed expressions while
+    // retaining duplicates to respect author intent.
+    let mut extract_classes_from_expr = |expr: &Expr| {
+      fn collect(expr: &Expr, out: &mut Vec<String>) {
+        match expr {
+          Expr::Lit(Lit::Str(str_lit)) => {
+            for part in str_lit.value.split_whitespace() {
+              if !part.is_empty() {
+                out.push(part.to_string());
+              }
+            }
+          }
+          Expr::Cond(cond) => {
+            collect(&cond.cons, out);
+            collect(&cond.alt, out);
+          }
+          Expr::Bin(bin) if matches!(bin.op, BinaryOp::LogicalAnd) => {
+            collect(&bin.right, out);
+          }
+          _ => {}
+        }
       }
-      if !conditional_class_names.contains(class_name) && seen_classes.insert(class_name.clone()) {
-        class_names.push(class_name.clone());
-      }
+
+      let mut extracted = Vec::new();
+      collect(expr, &mut extracted);
+      class_name_entries.extend(extracted);
+    };
+
+    // Gather any class names referenced inside precomputed expressions.
+    for expr in &precomputed_exprs {
+      extract_classes_from_expr(expr);
     }
 
     for condition in runtime_class_conditions {
       let has_true = !condition.when_true.is_empty();
       let has_false = !condition.when_false.is_empty();
+
+      // Add conditional classes to the static class list to preserve user's intentions
+      for class_name in &condition.when_true {
+        class_names.push(class_name.clone());
+      }
+      for class_name in &condition.when_false {
+        class_names.push(class_name.clone());
+      }
+
       if has_true && has_false {
         let cons_expr = TransformVisitor::class_names_to_expr(&condition.when_true);
         let alt_expr = TransformVisitor::class_names_to_expr(&condition.when_false);
@@ -4911,9 +4941,7 @@ impl<'a, 'b> VisitMut for ClassNamesBodyVisitor<'a, 'b> {
                     if let StaticValue::Str(text) = value {
                       if text.value.starts_with('_') {
                         if !text.value.is_empty() {
-                          if !precomputed_classes.contains(&text.value) {
-                            precomputed_classes.push(text.value.clone());
-                          }
+                          precomputed_classes.push(text.value.clone());
                           if !self.parent.options.extract {
                             if let Some(rules) = self.parent.css_map_rule_groups.get(&text.value) {
                               for rule in rules {
@@ -10886,8 +10914,21 @@ impl<'a> TransformVisitor<'a> {
             continue;
           }
           if let Expr::Ident(ident) = &*elem.expr {
-            if let Some(value) = evaluate_static_with_info(&elem.expr, &self.bindings) {
-              // Collect classes for this identifier
+            // First try css_runtime_artifacts (works for forward references)
+            if let Some(artifacts) = self.css_runtime_artifacts.get(&to_id(ident)) {
+              let mut classes = Vec::new();
+              for rule in &artifacts.rules {
+                classes.push(rule.class_name.clone());
+              }
+              if !classes.is_empty() {
+                for class in &classes {
+                  static_ident_class_names.push(class.clone());
+                }
+                static_ident_class_map.insert(to_id(ident), classes);
+              }
+              static_ident_ids.insert(to_id(ident));
+            } else if let Some(value) = evaluate_static_with_info(&elem.expr, &self.bindings) {
+              // Fallback to evaluate_static_with_info for other cases
               let mut classes = Vec::new();
               collect_precomputed_classes(&value.value, &mut classes);
               if !classes.is_empty() {
@@ -11193,34 +11234,26 @@ impl<'a> TransformVisitor<'a> {
     self.needs_jsx_runtime = true;
     self.needs_react_namespace = true;
 
+    // Build a set of classes that come from unconditional (plain) identifiers in the array
+    let unconditional_classes: HashSet<String> = static_ident_class_names.iter().cloned().collect();
+
     let mut unique_class_names = Vec::new();
-    let mut seen_classes = HashSet::new();
     for rule in &artifacts.rules {
-      if expr_class_names.contains(&rule.class_name) {
-        continue;
-      }
+      // Include a class in the base if:
+      // 1. It's not in conditional_class_names (purely unconditional), OR
+      // 2. It's also in unconditional_classes (appears in both unconditional and conditional contexts)
       if !conditional_class_names.contains(&rule.class_name)
-        && seen_classes.insert(rule.class_name.clone())
+        || unconditional_classes.contains(&rule.class_name)
       {
         unique_class_names.push(rule.class_name.clone());
       }
     }
     for class_name in &precomputed_classes {
-      if !expr_class_names.contains(class_name)
-        && !conditional_class_names.contains(class_name)
-        && seen_classes.insert(class_name.clone())
-      {
-        unique_class_names.push(class_name.clone());
-      }
+      unique_class_names.push(class_name.clone());
     }
 
     for class_name in static_ident_class_names {
-      if !expr_class_names.contains(&class_name)
-        && !conditional_class_names.contains(&class_name)
-        && seen_classes.insert(class_name.clone())
-      {
-        unique_class_names.push(class_name);
-      }
+      unique_class_names.push(class_name);
     }
     if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
       eprintln!(
@@ -11294,7 +11327,15 @@ impl<'a> TransformVisitor<'a> {
 
     let mut class_entries: Vec<ExprOrSpread> = Vec::new();
     if !unique_class_names.is_empty() {
-      let joined = unique_class_names.join(" ");
+      // Deduplicate class names while preserving order
+      let mut seen = std::collections::HashSet::new();
+      let mut deduped = Vec::new();
+      for class_name in unique_class_names {
+        if seen.insert(class_name.clone()) {
+          deduped.push(class_name);
+        }
+      }
+      let joined = deduped.join(" ");
       class_entries.push(ExprOrSpread {
         spread: None,
         expr: Box::new(Expr::Lit(Lit::Str(Str::from(joined)))),
