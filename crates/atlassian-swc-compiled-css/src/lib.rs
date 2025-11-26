@@ -10372,14 +10372,10 @@ impl<'a> TransformVisitor<'a> {
         continue;
       }
 
-      let Some(value) = evaluated.as_ref() else {
-        continue;
-      };
-
       self.mark_cx_usage(expr);
 
       if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
-        eprintln!("[compiled-debug] xcss evaluated value: {:?}", value);
+        eprintln!("[compiled-debug] xcss evaluated value: {:?}", evaluated);
       }
       let related_refs = self.ensure_css_map_rules_for_expr(expr);
       if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
@@ -10389,7 +10385,9 @@ impl<'a> TransformVisitor<'a> {
         );
       }
       let mut class_names = Vec::new();
-      collect_precomputed_classes(value, &mut class_names);
+      if let Some(value) = evaluated.as_ref() {
+        collect_precomputed_classes(value, &mut class_names);
+      }
       if class_names.is_empty() {
         for reference in &related_refs {
           if let Some(property_map) = self.css_map_ident_classes.get(&reference.ident) {

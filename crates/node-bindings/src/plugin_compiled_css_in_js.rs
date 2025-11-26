@@ -2621,4 +2621,69 @@ const styles3 = css({
       "Output should include the expected ax className call with all styles"
     );
   }
+
+  #[test]
+  fn test_cx() {
+    let config = create_test_config(true, false);
+
+    let input_code = indoc! {r#"
+/**
+ * @jsxRuntime classic
+ * @jsx jsx
+ */
+
+import { cx, jsx } from '@compiled/react';
+
+import { cssMap } from '@atlaskit/css';
+import { token } from '@atlaskit/tokens';
+
+import { List } from '../../../components/list';
+
+const listStyles = cssMap({
+	root: {
+		alignItems: 'center',
+		display: 'flex',
+	},
+	hideOnSmallViewport: {
+		display: 'none',
+		'@media (min-width: 48rem)': {
+			display: 'flex',
+		},
+	}
+});
+
+export function TopNavEnd({ children }) {
+	return <List xcss={cx(listStyles.root, listStyles.hideOnSmallViewport)}>{children}</List>;
+}
+    "#};
+
+    let result = process_compiled_css_in_js(input_code, &config);
+
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let output = result.unwrap();
+
+    // Verify transformation was applied
+    assert!(!output.bail_out, "Transformation should not bail out");
+
+    let expected_css_map = indoc! {r#"
+      const listStyles = {
+          "hideOnSmallViewport": "_1e0cglyw _181n1txw",
+          "root": "_4cvr1h6o _1e0c1txw"
+      };
+    "#};
+
+    let normalized_output = normalize_output(&output.code);
+    let normalized_expected = normalize_output(expected_css_map);
+
+    assert!(
+      normalized_output.contains(&normalized_expected),
+      "Output should include the expected ax className call with all styles"
+    );
+
+    let has_cc = normalized_output.contains("jsxs(CC,") || normalized_output.contains("_jsxs(CC,");
+    assert!(has_cc, "Output should include CC runtime wrapper");
+    let has_cs = normalized_output.contains("jsx(CS,") || normalized_output.contains("_jsx(CS,");
+    assert!(has_cs, "Output should include CS runtime wrapper");
+  }
 }
