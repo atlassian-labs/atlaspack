@@ -592,4 +592,81 @@ describe('resolver', function () {
       assert.equal(empty.sideEffects, true);
     });
   });
+
+  describe.v3('unstable_alias', function () {
+    // unstable_alias is currently only supported in v3
+    it('should resolve aliases set by unstable_alias in .parcelrc', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        unstable-alias-test
+          .parcelrc:
+            {
+              "extends": "@atlaspack/config-default",
+               "unstable_alias": {"my-alias": "./test.js"}
+            }
+
+          package.json:
+            {
+              "name": "unstable-alias-test"
+            }
+
+          yarn.lock:
+
+          test.js:
+            module.exports = 42;
+
+          index.js:
+            module.exports = 'hello ' + require('my-alias');
+      `;
+
+      let b = await bundle(
+        path.join(__dirname, 'unstable-alias-test/index.js'),
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      let output = await run(b);
+      assert.equal(output, 'hello 42');
+    });
+
+    it('should handle unstable_alias as well as regular alias', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        unstable-alias-test-2
+          .parcelrc:
+            {
+              "extends": "@atlaspack/config-default",
+               "unstable_alias": {"my-alias": "./test.js"}
+            }
+
+          package.json:
+            {
+              "name": "unstable-alias-test",
+              "alias": {
+                "my-other-alias": "./other.js"
+              }
+            }
+
+          yarn.lock:
+
+          other.js:
+            module.exports = 'other';
+
+          test.js:
+            module.exports = 'test';
+
+          index.js:
+            module.exports = 'hello ' + require('my-alias') + ' ' + require('my-other-alias');
+      `;
+
+      let b = await bundle(
+        path.join(__dirname, 'unstable-alias-test-2/index.js'),
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      let output = await run(b);
+      assert.equal(output, 'hello test other');
+    });
+  });
 });

@@ -18,7 +18,7 @@ import {
 
 const distDir = path.join(__dirname, '/integration/monorepo/dist/default');
 
-describe.v2('monorepos', function () {
+describe('monorepos', function () {
   beforeEach(async () => {
     await outputFS.rimraf(path.join(__dirname, '/monorepo'));
   });
@@ -31,401 +31,693 @@ describe.v2('monorepos', function () {
     }
   });
 
-  it('should compile packages with target source overrides', async function () {
-    let fixture = path.join(__dirname, '/integration/target-source');
-    let oldcwd = inputFS.cwd();
-    inputFS.chdir(fixture);
+  it('should resolve distDir relative to package directory not project root', async function () {
+    // Structure:
+    //   /monorepo-root/package.json (no targets defined)
+    //   /monorepo-root/packages/my-app/package.json (defines "production" target)
+    //
+    // Expected: dist output should be in packages/my-app/dist/production
+    // not in monorepo-root/dist (using root package.json)
 
-    try {
-      let b = await bundle(
-        [
-          path.join(fixture, 'packages/package-a'),
-          path.join(fixture, 'packages/package-b'),
-        ],
+    const testDir = path.join(__dirname, 'monorepo-distdir-test');
+    await overlayFS.mkdirp(testDir);
+
+    await fsFixture(overlayFS, testDir)`
+      yarn.lock:
+
+      package.json:
         {
-          defaultTargetOptions: {
-            shouldScopeHoist: true,
-            distDir,
-          },
-        },
+          "name": "monorepo-root"
+        }
+
+      packages/my-app/package.json:
+        {
+          "name": "my-app",
+          "targets": {
+            "production": {
+              "source": "src/index.js",
+              "distDir": "dist/production"
+            }
+          }
+        }
+
+      packages/my-app/src/index.js:
+        export default function hello() {
+          return 'Arigato, Mr Robato 🤖';
+        }
+    `;
+
+    const entryPath = path.join(testDir, 'packages/my-app');
+
+    let b = await bundle(entryPath, {
+      inputFS: overlayFS,
+      targets: ['production'],
+    });
+
+    let bundles = b.getBundles();
+    assert.equal(bundles.length, 1, 'Expected one bundle');
+
+    // Verify that dist files are in the correct location
+    // (relative to the package directory, not project root)
+    const expectedDistDir = path.join(
+      testDir,
+      'packages/my-app/dist/production',
+    );
+
+    for (let bundle of bundles) {
+      let bundlePath = bundle.filePath;
+      assert(
+        bundlePath.startsWith(expectedDistDir),
+        `Bundle path ${bundlePath} should be in ${expectedDistDir}`,
       );
 
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: ['foo.js', 'index.js'],
-        },
-        {
-          name: 'indexAlternate.js',
-          assets: ['bar.js', 'indexAlternate.js'],
-        },
-        {
-          name: 'index.js',
-          assets: ['foo.js', 'index.js'],
-        },
-        {
-          name: 'indexAlternate.js',
-          assets: ['bar.js', 'indexAlternate.js'],
-        },
-        {
-          name: 'indexAlternate2.js',
-          assets: ['foo.js', 'indexAlternate2.js'],
-        },
-      ]);
-
-      let contents = await outputFS.readFile(
-        path.join(distDir, '/package-a/src/index.js'),
-        'utf8',
-      );
-      assert(contents.includes('hello foo'));
-
-      contents = await outputFS.readFile(
-        path.join(distDir, '/package-a/src/indexAlternate.js'),
-        'utf8',
-      );
-      assert(contents.includes('hello bar'));
-
-      contents = await outputFS.readFile(
-        path.join(distDir, '/package-a/src/indexAlternate2.js'),
-        'utf8',
-      );
-      assert(contents.includes('hello foo'));
-    } finally {
-      inputFS.chdir(oldcwd);
+      // Verify the file actually exists at the expected location
+      let exists = await outputFS.exists(bundlePath);
+      assert(exists, `Bundle file should exist at ${bundlePath}`);
     }
+
+    // Verify that dist was NOT created at the project root
+    const wrongDistDir = path.join(testDir, 'dist');
+    let wrongDistExists = await outputFS.exists(wrongDistDir);
+    assert(
+      !wrongDistExists,
+      `Dist directory should NOT exist at project root: ${wrongDistDir}`,
+    );
   });
 
-  it('should compile packages with target source overrides and --target option', async function () {
-    let fixture = path.join(__dirname, '/integration/target-source');
-    let oldcwd = inputFS.cwd();
-    inputFS.chdir(fixture);
+  it.v2(
+    'should compile packages with target source overrides',
+    async function () {
+      let fixture = path.join(__dirname, '/integration/target-source');
+      let oldcwd = inputFS.cwd();
+      inputFS.chdir(fixture);
 
-    try {
-      let b = await bundle(
-        [
-          path.join(fixture, 'packages/package-a'),
-          path.join(fixture, 'packages/package-b'),
-        ],
-        {
+      try {
+        let b = await bundle(
+          [
+            path.join(fixture, 'packages/package-a'),
+            path.join(fixture, 'packages/package-b'),
+          ],
+          {
+            defaultTargetOptions: {
+              shouldScopeHoist: true,
+              distDir,
+            },
+          },
+        );
+
+        assertBundles(b, [
+          {
+            name: 'index.js',
+            assets: ['foo.js', 'index.js'],
+          },
+          {
+            name: 'indexAlternate.js',
+            assets: ['bar.js', 'indexAlternate.js'],
+          },
+          {
+            name: 'index.js',
+            assets: ['foo.js', 'index.js'],
+          },
+          {
+            name: 'indexAlternate.js',
+            assets: ['bar.js', 'indexAlternate.js'],
+          },
+          {
+            name: 'indexAlternate2.js',
+            assets: ['foo.js', 'indexAlternate2.js'],
+          },
+        ]);
+
+        let contents = await outputFS.readFile(
+          path.join(distDir, '/package-a/src/index.js'),
+          'utf8',
+        );
+        assert(contents.includes('hello foo'));
+
+        contents = await outputFS.readFile(
+          path.join(distDir, '/package-a/src/indexAlternate.js'),
+          'utf8',
+        );
+        assert(contents.includes('hello bar'));
+
+        contents = await outputFS.readFile(
+          path.join(distDir, '/package-a/src/indexAlternate2.js'),
+          'utf8',
+        );
+        assert(contents.includes('hello foo'));
+      } finally {
+        inputFS.chdir(oldcwd);
+      }
+    },
+  );
+
+  it.v2(
+    'should compile packages with target source overrides and --target option',
+    async function () {
+      let fixture = path.join(__dirname, '/integration/target-source');
+      let oldcwd = inputFS.cwd();
+      inputFS.chdir(fixture);
+
+      try {
+        let b = await bundle(
+          [
+            path.join(fixture, 'packages/package-a'),
+            path.join(fixture, 'packages/package-b'),
+          ],
+          {
+            targets: ['alternate'],
+            defaultTargetOptions: {
+              shouldScopeHoist: true,
+              distDir,
+            },
+          },
+        );
+
+        assertBundles(b, [
+          {
+            name: 'indexAlternate.js',
+            assets: ['bar.js', 'indexAlternate.js'],
+          },
+          {
+            name: 'indexAlternate.js',
+            assets: ['bar.js', 'indexAlternate.js'],
+          },
+          {
+            name: 'indexAlternate2.js',
+            assets: ['foo.js', 'indexAlternate2.js'],
+          },
+        ]);
+
+        let contents = await outputFS.readFile(
+          path.join(distDir, '/package-a/src/indexAlternate.js'),
+          'utf8',
+        );
+        assert(contents.includes('hello bar'));
+
+        contents = await outputFS.readFile(
+          path.join(distDir, '/package-a/src/indexAlternate2.js'),
+          'utf8',
+        );
+        assert(contents.includes('hello foo'));
+      } finally {
+        inputFS.chdir(oldcwd);
+      }
+    },
+  );
+
+  it.v2(
+    'should compile packages with target source overrides and --target option in serve mode',
+    async function () {
+      let fixture = path.join(__dirname, '/integration/target-source');
+      let oldcwd = inputFS.cwd();
+      inputFS.chdir(fixture);
+
+      try {
+        let b = await bundle(path.join(fixture, 'packages/package-b'), {
           targets: ['alternate'],
-          defaultTargetOptions: {
-            shouldScopeHoist: true,
-            distDir,
+          serveOptions: {port: 1234},
+        });
+
+        assertBundles(b, [
+          {
+            name: 'indexAlternate.js',
+            assets: ['bar.js', 'esmodule-helpers.js', 'indexAlternate.js'],
           },
-        },
-      );
+        ]);
+      } finally {
+        inputFS.chdir(oldcwd);
+      }
+    },
+  );
 
-      assertBundles(b, [
-        {
-          name: 'indexAlternate.js',
-          assets: ['bar.js', 'indexAlternate.js'],
-        },
-        {
-          name: 'indexAlternate.js',
-          assets: ['bar.js', 'indexAlternate.js'],
-        },
-        {
-          name: 'indexAlternate2.js',
-          assets: ['foo.js', 'indexAlternate2.js'],
-        },
-      ]);
+  it.v2(
+    'should build using root targets with entry files inside packages and cwd at project root',
+    async function () {
+      let fixture = path.join(__dirname, '/integration/monorepo');
+      let oldcwd = inputFS.cwd();
+      inputFS.chdir(fixture);
 
-      let contents = await outputFS.readFile(
-        path.join(distDir, '/package-a/src/indexAlternate.js'),
-        'utf8',
-      );
-      assert(contents.includes('hello bar'));
+      try {
+        let b = await bundle(
+          [
+            path.join(fixture, 'packages/pkg-a/src/index.js'),
+            path.join(fixture, 'packages/pkg-b/src/index.js'),
+          ],
+          {
+            defaultTargetOptions: {
+              shouldScopeHoist: true,
+              distDir,
+            },
+          },
+        );
 
-      contents = await outputFS.readFile(
-        path.join(distDir, '/package-a/src/indexAlternate2.js'),
-        'utf8',
-      );
-      assert(contents.includes('hello foo'));
-    } finally {
-      inputFS.chdir(oldcwd);
-    }
-  });
+        assertBundles(b, [
+          {
+            name: 'index.js',
+            assets: ['index.js'],
+          },
+          {
+            name: 'index.js',
+            assets: ['index.js', 'index.module.css'],
+          },
+          {
+            name: 'index.css',
+            assets: ['index.module.css'],
+          },
+        ]);
 
-  it('should compile packages with target source overrides and --target option in serve mode', async function () {
-    let fixture = path.join(__dirname, '/integration/target-source');
-    let oldcwd = inputFS.cwd();
-    inputFS.chdir(fixture);
+        let contents = await outputFS.readFile(
+          path.join(distDir, '/pkg-a/src/index.js'),
+          'utf8',
+        );
+        assert(contents.includes('$parcel$export(module.exports, "default"'));
 
-    try {
-      let b = await bundle(path.join(fixture, 'packages/package-b'), {
-        targets: ['alternate'],
-        serveOptions: {port: 1234},
-      });
+        contents = await outputFS.readFile(
+          path.join(distDir, '/pkg-b/src/index.js'),
+          'utf8',
+        );
+        assert(contents.includes('require("./index.css")'));
 
-      assertBundles(b, [
-        {
-          name: 'indexAlternate.js',
-          assets: ['bar.js', 'esmodule-helpers.js', 'indexAlternate.js'],
-        },
-      ]);
-    } finally {
-      inputFS.chdir(oldcwd);
-    }
-  });
+        contents = await outputFS.readFile(
+          path.join(distDir, '/pkg-b/src/index.css'),
+          'utf8',
+        );
+        assert(/\.[_0-9a-zA-Z]+_foo/.test(contents));
+      } finally {
+        inputFS.chdir(oldcwd);
+      }
+    },
+  );
 
-  it('should build using root targets with entry files inside packages and cwd at project root', async function () {
-    let fixture = path.join(__dirname, '/integration/monorepo');
-    let oldcwd = inputFS.cwd();
-    inputFS.chdir(fixture);
-
-    try {
+  it.v2(
+    'should build multiple packages in a monorepo at once, pointing at directories with "source" field in package.json',
+    async function () {
       let b = await bundle(
         [
-          path.join(fixture, 'packages/pkg-a/src/index.js'),
-          path.join(fixture, 'packages/pkg-b/src/index.js'),
+          path.join(__dirname, '/integration/monorepo/packages/pkg-a'),
+          path.join(__dirname, '/integration/monorepo/packages/pkg-b'),
         ],
         {
           defaultTargetOptions: {
             shouldScopeHoist: true,
-            distDir,
           },
         },
       );
 
       assertBundles(b, [
         {
-          name: 'index.js',
+          name: 'pkg-a.cjs.js',
           assets: ['index.js'],
         },
         {
-          name: 'index.js',
+          name: 'pkg-a.module.js',
+          assets: ['index.js'],
+        },
+        {
+          name: 'pkg-b.cjs.js',
           assets: ['index.js', 'index.module.css'],
         },
         {
-          name: 'index.css',
+          name: 'pkg-b.module.js',
+          assets: ['index.js', 'index.module.css'],
+        },
+        {
+          name: 'pkg-b.cjs.css',
+          assets: ['index.module.css'],
+        },
+        {
+          name: 'pkg-b.module.css',
           assets: ['index.module.css'],
         },
       ]);
 
       let contents = await outputFS.readFile(
-        path.join(distDir, '/pkg-a/src/index.js'),
+        path.join(
+          __dirname,
+          '/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
+        ),
         'utf8',
       );
       assert(contents.includes('$parcel$export(module.exports, "default"'));
 
       contents = await outputFS.readFile(
-        path.join(distDir, '/pkg-b/src/index.js'),
+        path.join(
+          __dirname,
+          '/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
+        ),
         'utf8',
       );
-      assert(contents.includes('require("./index.css")'));
+      assert(contents.includes('export {'));
 
       contents = await outputFS.readFile(
-        path.join(distDir, '/pkg-b/src/index.css'),
+        path.join(
+          __dirname,
+          '/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.js',
+        ),
+        'utf8',
+      );
+      assert(contents.includes('require("./pkg-b.cjs.css")'));
+
+      contents = await outputFS.readFile(
+        path.join(
+          __dirname,
+          '/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.css',
+        ),
         'utf8',
       );
       assert(/\.[_0-9a-zA-Z]+_foo/.test(contents));
-    } finally {
-      inputFS.chdir(oldcwd);
-    }
-  });
-
-  it('should build multiple packages in a monorepo at once, pointing at directories with "source" field in package.json', async function () {
-    let b = await bundle(
-      [
-        path.join(__dirname, '/integration/monorepo/packages/pkg-a'),
-        path.join(__dirname, '/integration/monorepo/packages/pkg-b'),
-      ],
-      {
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
-        },
-      },
-    );
-
-    assertBundles(b, [
-      {
-        name: 'pkg-a.cjs.js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'pkg-a.module.js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'pkg-b.cjs.js',
-        assets: ['index.js', 'index.module.css'],
-      },
-      {
-        name: 'pkg-b.module.js',
-        assets: ['index.js', 'index.module.css'],
-      },
-      {
-        name: 'pkg-b.cjs.css',
-        assets: ['index.module.css'],
-      },
-      {
-        name: 'pkg-b.module.css',
-        assets: ['index.module.css'],
-      },
-    ]);
-
-    let contents = await outputFS.readFile(
-      path.join(
-        __dirname,
-        '/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
-      ),
-      'utf8',
-    );
-    assert(contents.includes('$parcel$export(module.exports, "default"'));
-
-    contents = await outputFS.readFile(
-      path.join(
-        __dirname,
-        '/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
-      ),
-      'utf8',
-    );
-    assert(contents.includes('export {'));
-
-    contents = await outputFS.readFile(
-      path.join(
-        __dirname,
-        '/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.js',
-      ),
-      'utf8',
-    );
-    assert(contents.includes('require("./pkg-b.cjs.css")'));
-
-    contents = await outputFS.readFile(
-      path.join(
-        __dirname,
-        '/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.css',
-      ),
-      'utf8',
-    );
-    assert(/\.[_0-9a-zA-Z]+_foo/.test(contents));
-
-    contents = await outputFS.readFile(
-      path.join(
-        __dirname,
-        '/integration/monorepo/packages/pkg-b/dist/pkg-b.module.js',
-      ),
-      'utf8',
-    );
-    assert(contents.includes('import "./pkg-b.module.css"'));
-  });
-
-  it('should build using root targets with a glob pointing at files inside packages and cwd at project root', async function () {
-    let fixture = path.join(__dirname, '/integration/monorepo');
-    let oldcwd = inputFS.cwd();
-    inputFS.chdir(fixture);
-
-    try {
-      let b = await bundle(path.join(fixture, 'packages/*/src/index.js'), {
-        defaultTargetOptions: {
-          shouldScopeHoist: true,
-          distDir,
-        },
-      });
-
-      assertBundles(b, [
-        {
-          name: 'index.js',
-          assets: ['index.js'],
-        },
-        {
-          name: 'index.js',
-          assets: ['index.js', 'index.module.css'],
-        },
-        {
-          name: 'index.css',
-          assets: ['index.module.css'],
-        },
-      ]);
-
-      let contents = await outputFS.readFile(
-        path.join(distDir, '/pkg-a/src/index.js'),
-        'utf8',
-      );
-      assert(contents.includes('$parcel$export(module.exports, "default"'));
 
       contents = await outputFS.readFile(
-        path.join(distDir, '/pkg-b/src/index.js'),
+        path.join(
+          __dirname,
+          '/integration/monorepo/packages/pkg-b/dist/pkg-b.module.js',
+        ),
         'utf8',
       );
-      assert(contents.includes('require("./index.css")'));
+      assert(contents.includes('import "./pkg-b.module.css"'));
+    },
+  );
 
-      contents = await outputFS.readFile(
-        path.join(distDir, '/pkg-b/src/index.css'),
-        'utf8',
-      );
-      assert(/\.[_0-9a-zA-Z]+_foo/.test(contents));
-    } finally {
-      inputFS.chdir(oldcwd);
-    }
-  });
+  it.v2(
+    'should build using root targets with a glob pointing at files inside packages and cwd at project root',
+    async function () {
+      let fixture = path.join(__dirname, '/integration/monorepo');
+      let oldcwd = inputFS.cwd();
+      inputFS.chdir(fixture);
 
-  it('should build using root targets with a glob pointing at files inside packages and cwd outside project root', async function () {
-    let oldcwd = inputFS.cwd();
-    inputFS.chdir(path.join(__dirname, '/integration'));
-
-    try {
-      let b = await bundle(
-        path.join(__dirname, '/integration/monorepo/packages/*/src/index.js'),
-        {
+      try {
+        let b = await bundle(path.join(fixture, 'packages/*/src/index.js'), {
           defaultTargetOptions: {
             shouldScopeHoist: true,
             distDir,
           },
+        });
+
+        assertBundles(b, [
+          {
+            name: 'index.js',
+            assets: ['index.js'],
+          },
+          {
+            name: 'index.js',
+            assets: ['index.js', 'index.module.css'],
+          },
+          {
+            name: 'index.css',
+            assets: ['index.module.css'],
+          },
+        ]);
+
+        let contents = await outputFS.readFile(
+          path.join(distDir, '/pkg-a/src/index.js'),
+          'utf8',
+        );
+        assert(contents.includes('$parcel$export(module.exports, "default"'));
+
+        contents = await outputFS.readFile(
+          path.join(distDir, '/pkg-b/src/index.js'),
+          'utf8',
+        );
+        assert(contents.includes('require("./index.css")'));
+
+        contents = await outputFS.readFile(
+          path.join(distDir, '/pkg-b/src/index.css'),
+          'utf8',
+        );
+        assert(/\.[_0-9a-zA-Z]+_foo/.test(contents));
+      } finally {
+        inputFS.chdir(oldcwd);
+      }
+    },
+  );
+
+  it.v2(
+    'should build using root targets with a glob pointing at files inside packages and cwd outside project root',
+    async function () {
+      let oldcwd = inputFS.cwd();
+      inputFS.chdir(path.join(__dirname, '/integration'));
+
+      try {
+        let b = await bundle(
+          path.join(__dirname, '/integration/monorepo/packages/*/src/index.js'),
+          {
+            defaultTargetOptions: {
+              shouldScopeHoist: true,
+              distDir,
+            },
+          },
+        );
+
+        assertBundles(b, [
+          {
+            name: 'index.js',
+            assets: ['index.js'],
+          },
+          {
+            name: 'index.js',
+            assets: ['index.js', 'index.module.css'],
+          },
+          {
+            name: 'index.css',
+            assets: ['index.module.css'],
+          },
+        ]);
+
+        let contents = await outputFS.readFile(
+          path.join(distDir, '/pkg-a/src/index.js'),
+          'utf8',
+        );
+        assert(contents.includes('$parcel$export(module.exports, "default"'));
+
+        contents = await outputFS.readFile(
+          path.join(distDir, '/pkg-b/src/index.js'),
+          'utf8',
+        );
+        assert(contents.includes('require("./index.css")'));
+
+        contents = await outputFS.readFile(
+          path.join(distDir, '/pkg-b/src/index.css'),
+          'utf8',
+        );
+        assert(/\.[_0-9a-zA-Z]+_foo/.test(contents));
+      } finally {
+        inputFS.chdir(oldcwd);
+      }
+    },
+  );
+
+  it.v2(
+    'should build a single package with an entry file and cwd at a package',
+    async function () {
+      let fixture = path.join(
+        __dirname,
+        '/integration/monorepo/packages/pkg-a',
+      );
+      let oldcwd = inputFS.cwd();
+      inputFS.chdir(fixture);
+
+      try {
+        let b = await bundle(path.join(fixture, 'src/index.js'), {
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+            distDir,
+          },
+        });
+
+        assertBundles(b, [
+          {
+            name: 'pkg-a.cjs.js',
+            assets: ['index.js'],
+          },
+          {
+            name: 'pkg-a.module.js',
+            assets: ['index.js'],
+          },
+        ]);
+
+        let contents = await outputFS.readFile(
+          path.join(
+            __dirname,
+            '/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
+          ),
+          'utf8',
+        );
+        assert(contents.includes('$parcel$export(module.exports, "default"'));
+
+        contents = await outputFS.readFile(
+          path.join(
+            __dirname,
+            '/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
+          ),
+          'utf8',
+        );
+        assert(contents.includes('export {'));
+      } finally {
+        inputFS.chdir(oldcwd);
+      }
+    },
+  );
+
+  it.v2(
+    'should build a single package with an entry file and cwd inside a package',
+    async function () {
+      let fixture = path.join(
+        __dirname,
+        '/integration/monorepo/packages/pkg-a/src',
+      );
+      let oldcwd = inputFS.cwd();
+      inputFS.chdir(fixture);
+
+      try {
+        let b = await bundle(path.join(fixture, 'index.js'), {
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+            distDir,
+          },
+        });
+
+        assertBundles(b, [
+          {
+            name: 'pkg-a.cjs.js',
+            assets: ['index.js'],
+          },
+          {
+            name: 'pkg-a.module.js',
+            assets: ['index.js'],
+          },
+        ]);
+
+        let contents = await outputFS.readFile(
+          path.join(
+            __dirname,
+            '/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
+          ),
+          'utf8',
+        );
+        assert(contents.includes('$parcel$export(module.exports, "default"'));
+
+        contents = await outputFS.readFile(
+          path.join(
+            __dirname,
+            '/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
+          ),
+          'utf8',
+        );
+        assert(contents.includes('export {'));
+      } finally {
+        inputFS.chdir(oldcwd);
+      }
+    },
+  );
+
+  it.v2(
+    'should build multiple packages in a monorepo at once, pointing at a glob of directories',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/monorepo/packages/*'),
+        {
+          defaultTargetOptions: {
+            shouldScopeHoist: true,
+          },
         },
       );
 
       assertBundles(b, [
         {
-          name: 'index.js',
+          name: 'pkg-a.cjs.js',
           assets: ['index.js'],
         },
         {
-          name: 'index.js',
+          name: 'pkg-a.module.js',
+          assets: ['index.js'],
+        },
+        {
+          name: 'pkg-b.cjs.js',
           assets: ['index.js', 'index.module.css'],
         },
         {
-          name: 'index.css',
+          name: 'pkg-b.module.js',
+          assets: ['index.js', 'index.module.css'],
+        },
+        {
+          name: 'pkg-b.cjs.css',
+          assets: ['index.module.css'],
+        },
+        {
+          name: 'pkg-b.module.css',
           assets: ['index.module.css'],
         },
       ]);
 
       let contents = await outputFS.readFile(
-        path.join(distDir, '/pkg-a/src/index.js'),
+        path.join(
+          __dirname,
+          '/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
+        ),
         'utf8',
       );
       assert(contents.includes('$parcel$export(module.exports, "default"'));
 
       contents = await outputFS.readFile(
-        path.join(distDir, '/pkg-b/src/index.js'),
+        path.join(
+          __dirname,
+          '/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
+        ),
         'utf8',
       );
-      assert(contents.includes('require("./index.css")'));
+      assert(contents.includes('export {'));
 
       contents = await outputFS.readFile(
-        path.join(distDir, '/pkg-b/src/index.css'),
+        path.join(
+          __dirname,
+          '/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.js',
+        ),
+        'utf8',
+      );
+      assert(contents.includes('require("./pkg-b.cjs.css")'));
+
+      contents = await outputFS.readFile(
+        path.join(
+          __dirname,
+          '/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.css',
+        ),
         'utf8',
       );
       assert(/\.[_0-9a-zA-Z]+_foo/.test(contents));
-    } finally {
-      inputFS.chdir(oldcwd);
-    }
-  });
 
-  it('should build a single package with an entry file and cwd at a package', async function () {
-    let fixture = path.join(__dirname, '/integration/monorepo/packages/pkg-a');
-    let oldcwd = inputFS.cwd();
-    inputFS.chdir(fixture);
+      contents = await outputFS.readFile(
+        path.join(
+          __dirname,
+          '/integration/monorepo/packages/pkg-b/dist/pkg-b.module.js',
+        ),
+        'utf8',
+      );
+      assert(contents.includes('import "./pkg-b.module.css"'));
+    },
+  );
 
-    try {
-      let b = await bundle(path.join(fixture, 'src/index.js'), {
+  it.v2(
+    'should watch glob entries and build new packages that are added',
+    async function () {
+      // copy into memory fs
+      await ncp(
+        path.join(__dirname, '/integration/monorepo/packages/pkg-a'),
+        path.join(__dirname, '/monorepo/packages/pkg-a'),
+      );
+
+      let b = await bundler(path.join(__dirname, '/monorepo/packages/*'), {
         defaultTargetOptions: {
           shouldScopeHoist: true,
-          distDir,
         },
+        inputFS: overlayFS,
       });
 
-      assertBundles(b, [
+      subscription = await b.watch();
+      let evt = await getNextBuild(b);
+      if (!evt.bundleGraph) return assert.fail();
+
+      assertBundles(evt.bundleGraph, [
         {
           name: 'pkg-a.cjs.js',
           assets: ['index.js'],
@@ -436,45 +728,64 @@ describe.v2('monorepos', function () {
         },
       ]);
 
-      let contents = await outputFS.readFile(
-        path.join(
-          __dirname,
-          '/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
-        ),
-        'utf8',
+      await ncp(
+        path.join(__dirname, '/integration/monorepo/packages/pkg-b'),
+        path.join(__dirname, '/monorepo/packages/pkg-b'),
       );
-      assert(contents.includes('$parcel$export(module.exports, "default"'));
 
-      contents = await outputFS.readFile(
-        path.join(
-          __dirname,
-          '/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
-        ),
-        'utf8',
+      evt = await getNextBuild(b);
+      if (!evt.bundleGraph) return assert.fail();
+
+      assertBundles(evt.bundleGraph, [
+        {
+          name: 'pkg-a.cjs.js',
+          assets: ['index.js'],
+        },
+        {
+          name: 'pkg-a.module.js',
+          assets: ['index.js'],
+        },
+        {
+          name: 'pkg-b.cjs.js',
+          assets: ['index.js', 'index.module.css'],
+        },
+        {
+          name: 'pkg-b.module.js',
+          assets: ['index.js', 'index.module.css'],
+        },
+        {
+          name: 'pkg-b.cjs.css',
+          assets: ['index.module.css'],
+        },
+        {
+          name: 'pkg-b.module.css',
+          assets: ['index.module.css'],
+        },
+      ]);
+    },
+  );
+
+  it.v2(
+    'should watch package.json containing "source" field for changes',
+    async function () {
+      // copy into memory fs
+      await ncp(
+        path.join(__dirname, '/integration/monorepo/packages/pkg-a'),
+        path.join(__dirname, '/monorepo/packages/pkg-a'),
       );
-      assert(contents.includes('export {'));
-    } finally {
-      inputFS.chdir(oldcwd);
-    }
-  });
 
-  it('should build a single package with an entry file and cwd inside a package', async function () {
-    let fixture = path.join(
-      __dirname,
-      '/integration/monorepo/packages/pkg-a/src',
-    );
-    let oldcwd = inputFS.cwd();
-    inputFS.chdir(fixture);
-
-    try {
-      let b = await bundle(path.join(fixture, 'index.js'), {
+      let b = await bundler(path.join(__dirname, '/monorepo/packages/*'), {
         defaultTargetOptions: {
           shouldScopeHoist: true,
-          distDir,
         },
+        inputFS: overlayFS,
       });
 
-      assertBundles(b, [
+      subscription = await b.watch();
+      let evt = await getNextBuild(b);
+      if (!evt.bundleGraph) return assert.fail();
+
+      assertBundles(evt.bundleGraph, [
         {
           name: 'pkg-a.cjs.js',
           assets: ['index.js'],
@@ -485,308 +796,119 @@ describe.v2('monorepos', function () {
         },
       ]);
 
+      let pkgFile = path.join(
+        __dirname,
+        '/monorepo/packages/pkg-a/package.json',
+      );
+      let pkg = JSON.parse(await outputFS.readFile(pkgFile, 'utf8'));
+      await outputFS.writeFile(
+        pkgFile,
+        JSON.stringify({...pkg, source: 'src/alt.js'}),
+      );
+
+      evt = await getNextBuild(b);
+      assert(evt.type === 'buildSuccess');
+      if (!evt.bundleGraph) return assert.fail();
+
+      assertBundles(evt.bundleGraph, [
+        {
+          name: 'pkg-a.cjs.js',
+          assets: ['alt.js'],
+        },
+        {
+          name: 'pkg-a.module.js',
+          assets: ['alt.js'],
+        },
+      ]);
+
       let contents = await outputFS.readFile(
-        path.join(
-          __dirname,
-          '/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
-        ),
+        path.join(__dirname, '/monorepo/packages/pkg-a/dist/pkg-a.cjs.js'),
         'utf8',
       );
-      assert(contents.includes('$parcel$export(module.exports, "default"'));
+      assert(contents.includes('return 3'));
 
       contents = await outputFS.readFile(
-        path.join(
-          __dirname,
-          '/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
-        ),
+        path.join(__dirname, '/monorepo/packages/pkg-a/dist/pkg-a.module.js'),
         'utf8',
       );
-      assert(contents.includes('export {'));
-    } finally {
-      inputFS.chdir(oldcwd);
-    }
-  });
+      assert(contents.includes('return 3'));
+    },
+  );
 
-  it('should build multiple packages in a monorepo at once, pointing at a glob of directories', async function () {
-    let b = await bundle(
-      path.join(__dirname, '/integration/monorepo/packages/*'),
-      {
+  it.v2(
+    'should watch package.json containing targets for changes',
+    async function () {
+      // copy into memory fs
+      await ncp(
+        path.join(__dirname, '/integration/monorepo/packages/pkg-a'),
+        path.join(__dirname, '/monorepo/packages/pkg-a'),
+      );
+
+      let b = await bundler(path.join(__dirname, '/monorepo/packages/*'), {
         defaultTargetOptions: {
           shouldScopeHoist: true,
         },
-      },
-    );
+        inputFS: overlayFS,
+      });
 
-    assertBundles(b, [
-      {
-        name: 'pkg-a.cjs.js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'pkg-a.module.js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'pkg-b.cjs.js',
-        assets: ['index.js', 'index.module.css'],
-      },
-      {
-        name: 'pkg-b.module.js',
-        assets: ['index.js', 'index.module.css'],
-      },
-      {
-        name: 'pkg-b.cjs.css',
-        assets: ['index.module.css'],
-      },
-      {
-        name: 'pkg-b.module.css',
-        assets: ['index.module.css'],
-      },
-    ]);
+      subscription = await b.watch();
+      let evt = await getNextBuild(b);
+      if (!evt.bundleGraph) return assert.fail();
 
-    let contents = await outputFS.readFile(
-      path.join(
+      assertBundles(evt.bundleGraph, [
+        {
+          name: 'pkg-a.cjs.js',
+          assets: ['index.js'],
+        },
+        {
+          name: 'pkg-a.module.js',
+          assets: ['index.js'],
+        },
+      ]);
+
+      let pkgFile = path.join(
         __dirname,
-        '/integration/monorepo/packages/pkg-a/dist/pkg-a.cjs.js',
-      ),
-      'utf8',
-    );
-    assert(contents.includes('$parcel$export(module.exports, "default"'));
+        '/monorepo/packages/pkg-a/package.json',
+      );
+      let pkg = JSON.parse(await outputFS.readFile(pkgFile, 'utf8'));
+      await outputFS.writeFile(
+        pkgFile,
+        JSON.stringify({
+          ...pkg,
+          main: 'dist/alt.js',
+          module: 'dist/alt.module.js',
+        }),
+      );
 
-    contents = await outputFS.readFile(
-      path.join(
-        __dirname,
-        '/integration/monorepo/packages/pkg-a/dist/pkg-a.module.js',
-      ),
-      'utf8',
-    );
-    assert(contents.includes('export {'));
+      evt = await getNextBuild(b);
+      if (!evt.bundleGraph) return assert.fail();
 
-    contents = await outputFS.readFile(
-      path.join(
-        __dirname,
-        '/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.js',
-      ),
-      'utf8',
-    );
-    assert(contents.includes('require("./pkg-b.cjs.css")'));
+      assertBundles(evt.bundleGraph, [
+        {
+          name: 'alt.js',
+          assets: ['index.js'],
+        },
+        {
+          name: 'alt.module.js',
+          assets: ['index.js'],
+        },
+      ]);
 
-    contents = await outputFS.readFile(
-      path.join(
-        __dirname,
-        '/integration/monorepo/packages/pkg-b/dist/pkg-b.cjs.css',
-      ),
-      'utf8',
-    );
-    assert(/\.[_0-9a-zA-Z]+_foo/.test(contents));
+      let contents = await outputFS.readFile(
+        path.join(__dirname, '/monorepo/packages/pkg-a/dist/alt.js'),
+        'utf8',
+      );
+      assert(contents.includes('return 2'));
 
-    contents = await outputFS.readFile(
-      path.join(
-        __dirname,
-        '/integration/monorepo/packages/pkg-b/dist/pkg-b.module.js',
-      ),
-      'utf8',
-    );
-    assert(contents.includes('import "./pkg-b.module.css"'));
-  });
+      contents = await outputFS.readFile(
+        path.join(__dirname, '/monorepo/packages/pkg-a/dist/alt.module.js'),
+        'utf8',
+      );
+      assert(contents.includes('return 2'));
+    },
+  );
 
-  it('should watch glob entries and build new packages that are added', async function () {
-    // copy into memory fs
-    await ncp(
-      path.join(__dirname, '/integration/monorepo/packages/pkg-a'),
-      path.join(__dirname, '/monorepo/packages/pkg-a'),
-    );
-
-    let b = await bundler(path.join(__dirname, '/monorepo/packages/*'), {
-      defaultTargetOptions: {
-        shouldScopeHoist: true,
-      },
-      inputFS: overlayFS,
-    });
-
-    subscription = await b.watch();
-    let evt = await getNextBuild(b);
-    if (!evt.bundleGraph) return assert.fail();
-
-    assertBundles(evt.bundleGraph, [
-      {
-        name: 'pkg-a.cjs.js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'pkg-a.module.js',
-        assets: ['index.js'],
-      },
-    ]);
-
-    await ncp(
-      path.join(__dirname, '/integration/monorepo/packages/pkg-b'),
-      path.join(__dirname, '/monorepo/packages/pkg-b'),
-    );
-
-    evt = await getNextBuild(b);
-    if (!evt.bundleGraph) return assert.fail();
-
-    assertBundles(evt.bundleGraph, [
-      {
-        name: 'pkg-a.cjs.js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'pkg-a.module.js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'pkg-b.cjs.js',
-        assets: ['index.js', 'index.module.css'],
-      },
-      {
-        name: 'pkg-b.module.js',
-        assets: ['index.js', 'index.module.css'],
-      },
-      {
-        name: 'pkg-b.cjs.css',
-        assets: ['index.module.css'],
-      },
-      {
-        name: 'pkg-b.module.css',
-        assets: ['index.module.css'],
-      },
-    ]);
-  });
-
-  it('should watch package.json containing "source" field for changes', async function () {
-    // copy into memory fs
-    await ncp(
-      path.join(__dirname, '/integration/monorepo/packages/pkg-a'),
-      path.join(__dirname, '/monorepo/packages/pkg-a'),
-    );
-
-    let b = await bundler(path.join(__dirname, '/monorepo/packages/*'), {
-      defaultTargetOptions: {
-        shouldScopeHoist: true,
-      },
-      inputFS: overlayFS,
-    });
-
-    subscription = await b.watch();
-    let evt = await getNextBuild(b);
-    if (!evt.bundleGraph) return assert.fail();
-
-    assertBundles(evt.bundleGraph, [
-      {
-        name: 'pkg-a.cjs.js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'pkg-a.module.js',
-        assets: ['index.js'],
-      },
-    ]);
-
-    let pkgFile = path.join(__dirname, '/monorepo/packages/pkg-a/package.json');
-    let pkg = JSON.parse(await outputFS.readFile(pkgFile, 'utf8'));
-    await outputFS.writeFile(
-      pkgFile,
-      JSON.stringify({...pkg, source: 'src/alt.js'}),
-    );
-
-    evt = await getNextBuild(b);
-    assert(evt.type === 'buildSuccess');
-    if (!evt.bundleGraph) return assert.fail();
-
-    assertBundles(evt.bundleGraph, [
-      {
-        name: 'pkg-a.cjs.js',
-        assets: ['alt.js'],
-      },
-      {
-        name: 'pkg-a.module.js',
-        assets: ['alt.js'],
-      },
-    ]);
-
-    let contents = await outputFS.readFile(
-      path.join(__dirname, '/monorepo/packages/pkg-a/dist/pkg-a.cjs.js'),
-      'utf8',
-    );
-    assert(contents.includes('return 3'));
-
-    contents = await outputFS.readFile(
-      path.join(__dirname, '/monorepo/packages/pkg-a/dist/pkg-a.module.js'),
-      'utf8',
-    );
-    assert(contents.includes('return 3'));
-  });
-
-  it('should watch package.json containing targets for changes', async function () {
-    // copy into memory fs
-    await ncp(
-      path.join(__dirname, '/integration/monorepo/packages/pkg-a'),
-      path.join(__dirname, '/monorepo/packages/pkg-a'),
-    );
-
-    let b = await bundler(path.join(__dirname, '/monorepo/packages/*'), {
-      defaultTargetOptions: {
-        shouldScopeHoist: true,
-      },
-      inputFS: overlayFS,
-    });
-
-    subscription = await b.watch();
-    let evt = await getNextBuild(b);
-    if (!evt.bundleGraph) return assert.fail();
-
-    assertBundles(evt.bundleGraph, [
-      {
-        name: 'pkg-a.cjs.js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'pkg-a.module.js',
-        assets: ['index.js'],
-      },
-    ]);
-
-    let pkgFile = path.join(__dirname, '/monorepo/packages/pkg-a/package.json');
-    let pkg = JSON.parse(await outputFS.readFile(pkgFile, 'utf8'));
-    await outputFS.writeFile(
-      pkgFile,
-      JSON.stringify({
-        ...pkg,
-        main: 'dist/alt.js',
-        module: 'dist/alt.module.js',
-      }),
-    );
-
-    evt = await getNextBuild(b);
-    if (!evt.bundleGraph) return assert.fail();
-
-    assertBundles(evt.bundleGraph, [
-      {
-        name: 'alt.js',
-        assets: ['index.js'],
-      },
-      {
-        name: 'alt.module.js',
-        assets: ['index.js'],
-      },
-    ]);
-
-    let contents = await outputFS.readFile(
-      path.join(__dirname, '/monorepo/packages/pkg-a/dist/alt.js'),
-      'utf8',
-    );
-    assert(contents.includes('return 2'));
-
-    contents = await outputFS.readFile(
-      path.join(__dirname, '/monorepo/packages/pkg-a/dist/alt.module.js'),
-      'utf8',
-    );
-    assert(contents.includes('return 2'));
-  });
-
-  it('should not share bundles between targets', async function () {
+  it.v2('should not share bundles between targets', async function () {
     let b = await bundle(
       [
         path.join(__dirname, '/integration/monorepo-shared/packages/pkg-a'),
@@ -981,7 +1103,7 @@ describe.v2('monorepos', function () {
     );
   });
 
-  it('should support globs in the source field', async function () {
+  it.v2('should support globs in the source field', async function () {
     const dir = path.join(__dirname, 'source-glob');
     overlayFS.mkdirp(dir);
 
@@ -1026,11 +1148,13 @@ describe.v2('monorepos', function () {
     }
   });
 
-  it('should support globs in target-specific source field', async function () {
-    const dir = path.join(__dirname, 'source-target-glob');
-    overlayFS.mkdirp(dir);
+  it.v2(
+    'should support globs in target-specific source field',
+    async function () {
+      const dir = path.join(__dirname, 'source-target-glob');
+      overlayFS.mkdirp(dir);
 
-    await fsFixture(overlayFS, dir)`
+      await fsFixture(overlayFS, dir)`
       yarn.lock:
 
       package.json:
@@ -1056,33 +1180,34 @@ describe.v2('monorepos', function () {
         export default 'b';
     `;
 
-    let b = await bundle(dir, {
-      inputFS: overlayFS,
-      mode: 'production',
-    });
+      let b = await bundle(dir, {
+        inputFS: overlayFS,
+        mode: 'production',
+      });
 
-    assertBundles(b, [
-      {
-        assets: ['a.js'],
-      },
-      {
-        assets: ['b.js'],
-      },
-      {
-        assets: ['a.js'],
-      },
-      {
-        assets: ['b.js'],
-      },
-    ]);
+      assertBundles(b, [
+        {
+          assets: ['a.js'],
+        },
+        {
+          assets: ['b.js'],
+        },
+        {
+          assets: ['a.js'],
+        },
+        {
+          assets: ['b.js'],
+        },
+      ]);
 
-    for (let bundle of b.getBundles()) {
-      let res = await runBundle(b, bundle);
-      assert.equal(res.default, bundle.name[0]);
-    }
-  });
+      for (let bundle of b.getBundles()) {
+        let res = await runBundle(b, bundle);
+        assert.equal(res.default, bundle.name[0]);
+      }
+    },
+  );
 
-  it('should watch globs in source field', async function () {
+  it.v2('should watch globs in source field', async function () {
     const dir = path.join(__dirname, 'input', 'source-glob-watch');
     await overlayFS.mkdirp(dir);
     await inputFS.mkdirp(dir);

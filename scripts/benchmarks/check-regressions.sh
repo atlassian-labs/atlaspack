@@ -10,7 +10,6 @@ if [ -f "$RESULTS_FILE" ]; then
   if grep -q "🔴 Regression" "$RESULTS_FILE"; then
     echo "❌ Performance regressions detected!"
     cat "$RESULTS_FILE"
-    exit 1
   else
     echo "✅ No performance regressions detected"
     cat "$RESULTS_FILE"

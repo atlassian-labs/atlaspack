@@ -316,7 +316,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   async fn transform(
     &self,
     context: TransformContext,
-    mut asset: Asset,
+    asset: Asset,
   ) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
     let file_type = asset.file_type.clone();
@@ -493,22 +493,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       ..atlaspack_js_swc_core::Config::default()
     };
 
-    let transformation_result = atlaspack_js_swc_core::transform(transform_config, None)?;
-
-    // TODO: Suspect this will now need to be moved to JS
-    if feature_flag_conditional_bundling {
-      let mut converted = vec![];
-
-      for condition in transformation_result.conditions.iter() {
-        converted.push(serde_json::json!({
-          "key": condition.key.to_string(),
-          "ifTruePlaceholder": condition.if_true_placeholder,
-          "ifFalsePlaceholder": condition.if_false_placeholder,
-        }));
-      }
-
-      asset.conditions = transformation_result.conditions.clone();
-    }
+    let transformation_result = atlaspack_js_swc_core::transform(&transform_config, None)?;
 
     if let Some(errors) = transformation_result.diagnostics {
       return Err(anyhow!(map_diagnostics(
@@ -521,9 +506,13 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       )));
     }
 
-    let config = atlaspack_js_swc_core::Config::default();
-    let result = conversion::convert_result(asset, &config, transformation_result, &self.options)
-      .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
+    let result = conversion::convert_result(
+      asset,
+      &transform_config,
+      transformation_result,
+      &self.options,
+    )
+    .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
 
     Ok(result)
   }

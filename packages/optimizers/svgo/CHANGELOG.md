@@ -1,5 +1,13 @@
 # @atlaspack/optimizer-svgo
 
+## 2.14.39
+
+### Patch Changes
+
+- Updated dependencies [[`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0), [`617a318`](https://github.com/atlassian-labs/atlaspack/commit/617a318ddc9419b38360257353fec50b9051ee13)]:
+  - @atlaspack/utils@3.2.0
+  - @atlaspack/plugin@2.14.39
+
 ## 2.14.38
 
 ### Patch Changes

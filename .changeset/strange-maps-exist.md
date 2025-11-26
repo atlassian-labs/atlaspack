@@ -3,4 +3,4 @@
 '@atlaspack/rust': patch
 ---
 
-fix sideEffects not defaulting to true correctly in v3
+Add HMR and react-refresh support to v3
