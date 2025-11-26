@@ -32,7 +32,10 @@ const PACKAGES_DIR = path.join(REPO_ROOT, 'packages');
 const CRATES_DIR = path.join(REPO_ROOT, 'crates');
 
 /**
- * Extract feature flag names from the DEFAULT_FEATURE_FLAGS object using AST parsing
+ * Extract feature flag names from the DEFAULT_FEATURE_FLAGS object using AST parsing.
+ * Also identifies flags marked with @external JSDoc tag (which means they may not be directly referenced in this repo).
+ *
+ * @returns {{allFlags: string[], externalFlags: Set<string>}}
  */
 function extractFeatureFlagNames() {
   try {
@@ -43,6 +46,20 @@ function extractFeatureFlagNames() {
     const root = ast.root();
 
     const flagNames = [];
+    const externalFlags = new Set();
+
+    // Find all comment nodes in the file
+    const allComments = root.findAll({rule: {kind: 'comment'}});
+
+    // Build a map of comment end line -> comment text for JSDoc comments (starting with /**)
+    const commentsByEndLine = new Map();
+    for (const comment of allComments) {
+      const text = comment.text();
+      if (text.startsWith('/**')) {
+        const endLine = comment.range().end.line;
+        commentsByEndLine.set(endLine, text);
+      }
+    }
 
     // Find all pairs (property assignments) inside the DEFAULT_FEATURE_FLAGS variable declarator
     const properties = root.findAll({
@@ -77,6 +94,15 @@ function extractFeatureFlagNames() {
         // Only add valid identifier names
         if (flagName && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(flagName)) {
           flagNames.push(flagName);
+
+          // Check for @external tag in the preceding JSDoc comment
+          // The JSDoc comment should end on the line immediately before the property
+          const propertyStartLine = property.range().start.line;
+          const precedingComment = commentsByEndLine.get(propertyStartLine - 1);
+
+          if (precedingComment && precedingComment.includes('@external')) {
+            externalFlags.add(flagName);
+          }
         }
       }
     }
@@ -87,7 +113,7 @@ function extractFeatureFlagNames() {
       );
     }
 
-    return flagNames;
+    return {allFlags: flagNames, externalFlags};
   } catch (error) {
     console.error('Error extracting feature flag names:', error.message);
     process.exit(1);
@@ -260,8 +286,13 @@ function main() {
   console.log('🏁 Finding unused feature flags...\n');
 
   console.log('📖 Extracting feature flag names from DEFAULT_FEATURE_FLAGS...');
-  const allFlags = extractFeatureFlagNames();
+  const {allFlags, externalFlags} = extractFeatureFlagNames();
   console.log(`   Found ${allFlags.length} feature flags`);
+  if (externalFlags.size > 0) {
+    console.log(
+      `   Found ${externalFlags.size} external flags (marked with @external): ${[...externalFlags].join(', ')}`,
+    );
+  }
 
   console.log(
     '\n🔍 Searching for feature flag usage patterns in packages/ and crates/...',
@@ -280,19 +311,24 @@ function main() {
 
   console.log('\n🚫 Unused flags:');
   const unusedFlags = allFlags.filter(
-    (flag) => !usedFlags.includes(flag) && !flag.startsWith('example'),
+    (flag) =>
+      !usedFlags.includes(flag) &&
+      !flag.startsWith('example') &&
+      !externalFlags.has(flag),
   );
 
   if (unusedFlags.length > 0) {
     unusedFlags.sort().forEach((flag) => console.log(`   ❌ ${flag}`));
     console.log(
-      `\n📊 Summary: ${unusedFlags.length} of ${allFlags.length} feature flags are unused (${Math.round((unusedFlags.length / allFlags.length) * 100)}%) (excluding example flags)`,
+      `\n📊 Summary: ${unusedFlags.length} of ${allFlags.length} feature flags are unused (${Math.round((unusedFlags.length / allFlags.length) * 100)}%) (excluding example and @external flags)`,
     );
   } else {
     console.log(
-      '   None! All feature flags are being used (excluding example flags).',
+      '   None! All feature flags are being used (excluding example and @external flags).',
     );
-    console.log(`\n📊 Summary: All non-example feature flags are in use.`);
+    console.log(
+      `\n📊 Summary: All non-example, non-external feature flags are in use.`,
+    );
   }
 
   // Return the unused flags for programmatic use

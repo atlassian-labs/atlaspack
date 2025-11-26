@@ -24,6 +24,7 @@ export const DEFAULT_FEATURE_FLAGS = {
   /**
    * Enable Atlaspack v3 for Confluence local builds
    *
+   * @external Used by Confluence for v3 rollout
    * @author Matt Koko <mkokolich@atlassian.com>
    * @since 2025-11-24
    */
@@ -32,6 +33,7 @@ export const DEFAULT_FEATURE_FLAGS = {
   /**
    * Enable Atlaspack v3 for Confluence CI builds
    *
+   * @external Used by Confluence for v3 rollout
    * @author Matt Koko <mkokolich@atlassian.com>
    * @since 2025-11-24
    */
