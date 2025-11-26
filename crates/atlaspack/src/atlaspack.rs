@@ -106,6 +106,8 @@ impl Atlaspack {
       },
     )?;
 
+    let unstable_alias = config.unstable_alias.clone();
+
     let config_loader = Arc::new(ConfigLoader {
       fs: Arc::clone(&fs),
       project_root: project_root.clone(),
@@ -126,6 +128,7 @@ impl Atlaspack {
           project_root: project_root.clone(),
           feature_flags: resolved_options.feature_flags.clone(),
           hmr_options: resolved_options.hmr_options.clone(),
+          unstable_alias,
         }),
         // TODO Initialise actual logger
         logger: PluginLogger::default(),
@@ -206,7 +209,6 @@ impl Atlaspack {
       };
 
       let asset_graph = asset_graph_request_output.graph.clone();
-      self.commit_assets(&asset_graph)?;
 
       Ok((asset_graph, had_previous_graph))
     })
@@ -225,7 +227,7 @@ impl Atlaspack {
   }
 
   #[tracing::instrument(level = "info", skip_all)]
-  fn commit_assets(&self, graph: &AssetGraph) -> anyhow::Result<()> {
+  pub fn commit_assets(&self, graph: &AssetGraph) -> anyhow::Result<()> {
     let mut txn = self.db.database().write_txn()?;
 
     let nodes = graph.new_nodes().chain(graph.updated_nodes());

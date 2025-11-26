@@ -305,12 +305,6 @@ export default new Transformer({
     let magicComments = false;
     let addReactDisplayName = false;
 
-    let enableGlobalThisAliaser = Boolean(
-      options.env.NATIVE_GLOBAL_THIS_ALIASER,
-    );
-    let enableLazyLoadingTransformer = Boolean(
-      options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
-    );
     let syncDynamicImportConfig:
       | {
           entrypoint_filepath_suffix: string;
@@ -353,14 +347,21 @@ export default new Transformer({
 
     config.invalidateOnEnvChange('SYNC_DYNAMIC_IMPORT_CONFIG');
 
+    let enableGlobalThisAliaser =
+      options.env.NATIVE_GLOBAL_THIS_ALIASER === 'true';
+    let enableLazyLoadingTransformer =
+      options.env.NATIVE_LAZY_LOADING_TRANSFORMER === 'true';
+    let enableDeadReturnsRemover =
+      options.env.NATIVE_DEAD_RETURNS_REMOVER === 'true';
+    let enableUnusedBindingsRemover =
+      options.env.NATIVE_UNUSED_BINDINGS_REMOVER === 'true';
+
     if (conf && conf.contents) {
       validateSchema.diagnostic(
         CONFIG_SCHEMA,
         {
           data: conf.contents,
-          source: getFeatureFlag('schemaValidationDeferSourceLoading')
-            ? () => options.inputFS.readFileSync(conf.filePath, 'utf8')
-            : await options.inputFS.readFile(conf.filePath, 'utf8'),
+          source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
           filePath: conf.filePath,
           prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-js')}`,
         },
@@ -399,6 +400,8 @@ export default new Transformer({
       magicComments,
       enableGlobalThisAliaser,
       enableLazyLoadingTransformer,
+      enableDeadReturnsRemover,
+      enableUnusedBindingsRemover,
       syncDynamicImportConfig,
     };
   },
@@ -585,6 +588,10 @@ export default new Transformer({
       ),
       sync_dynamic_import_config: config.syncDynamicImportConfig,
       nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
+      enable_dead_returns_remover: Boolean(config.enableDeadReturnsRemover),
+      enable_unused_bindings_remover: Boolean(
+        config.enableUnusedBindingsRemover,
+      ),
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;

@@ -25,6 +25,7 @@ pub struct PartialAtlaspackConfig {
   pub runtimes: Vec<PluginNode>,
   pub transformers: IndexMap<String, Vec<PluginNode>>,
   pub validators: IndexMap<String, Vec<PluginNode>>,
+  pub unstable_alias: Option<atlaspack_core::types::AliasMap>,
 }
 
 impl TryFrom<AtlaspackRcFile> for PartialAtlaspackConfig {
@@ -91,6 +92,7 @@ impl TryFrom<AtlaspackRcFile> for PartialAtlaspackConfig {
       runtimes: to_vec(file.contents.runtimes.as_ref()),
       transformers: to_pipelines(file.contents.transformers.as_ref()),
       validators: to_pipelines(file.contents.validators.as_ref()),
+      unstable_alias: file.contents.unstable_alias,
     })
   }
 }
@@ -217,6 +219,15 @@ impl PartialAtlaspackConfig {
         from_config.validators,
         extend_config.validators,
       ),
+      // We don't currently support merging unstable_aliases
+      unstable_alias: {
+        if extend_config.unstable_alias.is_some() && from_config.unstable_alias.is_some() {
+          tracing::warn!(
+            "Merging of 'unstable_alias' fields is not currently supported. Using the 'unstable_alias' from the extending configuration"
+          );
+        }
+        extend_config.unstable_alias.or(from_config.unstable_alias)
+      },
     }
   }
 }

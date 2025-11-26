@@ -2,4 +2,4 @@
 '@atlaspack/rust': patch
 ---
 
-Allow optional HMR options in V3
+Improve V3 JSON transformer perf

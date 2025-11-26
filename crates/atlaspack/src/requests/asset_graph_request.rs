@@ -258,16 +258,16 @@ impl AssetGraphBuilder {
 
       match result.as_ref() {
         RequestResult::Entry(result) => {
-          tracing::debug!("Handling EntryRequestOutput");
+          tracing::debug!("AssetGraphBuilder - EntryRequestOutput {:#?}", result);
           self.handle_entry_result(result);
         }
         RequestResult::Target(result) => {
-          tracing::debug!("Handling TargetRequestOutput");
+          tracing::debug!("AssetGraphBuilder - TargetRequestOutput {:#?}", result);
           self.handle_target_request_result(result, cached);
         }
         RequestResult::Asset(result) => {
           tracing::debug!(
-            "Handling AssetRequestOutput: {}",
+            "AssetGraphBuilder - AssetRequestOutput: {}",
             result.asset.file_path.display()
           );
           self.handle_asset_result(result, request_id, cached);

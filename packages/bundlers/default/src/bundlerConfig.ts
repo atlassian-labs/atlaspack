@@ -286,9 +286,7 @@ export async function loadBundlerConfig(
     CONFIG_SCHEMA,
     {
       data: modeConfig,
-      source: getFeatureFlag('schemaValidationDeferSourceLoading')
-        ? () => options.inputFS.readFileSync(conf.filePath, 'utf8')
-        : await options.inputFS.readFile(conf.filePath, 'utf8'),
+      source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
       filePath: conf.filePath,
       prependKey: `/${encodeJSONKeyComponent('@atlaspack/bundler-default')}`,
     },

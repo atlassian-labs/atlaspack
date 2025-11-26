@@ -1,9 +1,25 @@
+use std::fmt::Display;
 use std::path::Path;
 
-use parcel_sourcemap::{Mapping, SourceMap as ParcelSourceMap, SourceMapError};
+use parcel_sourcemap::{
+  Mapping, SourceMap as ParcelSourceMap, SourceMapError as ParcelSourceMapError,
+};
 use rkyv::AlignedVec;
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug)]
+pub struct SourceMapError {
+  inner: ParcelSourceMapError,
+}
+
+impl std::error::Error for SourceMapError {}
+
+impl Display for SourceMapError {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.inner)
+  }
+}
 
 #[derive(Clone, Debug)]
 pub struct SourceMap {
@@ -63,13 +79,34 @@ impl SourceMap {
   }
 
   pub fn to_json(&self) -> Result<String, SourceMapError> {
-    self.inner.clone().to_json(None)
+    self.inner.clone().to_json(None).map_err(|err| err.into())
+  }
+
+  /// Offset all generated line numbers by the specified amount
+  /// This is useful when code has been wrapped with additional lines at the beginning
+  pub fn offset_lines(
+    &mut self,
+    start_column: u32,
+    line_offset: i64,
+  ) -> Result<(), SourceMapError> {
+    self
+      .inner
+      .offset_lines(start_column, line_offset)
+      .map_err(|err| err.into())
   }
 }
 
 impl From<ParcelSourceMap> for SourceMap {
   fn from(source_map: ParcelSourceMap) -> Self {
     SourceMap { inner: source_map }
+  }
+}
+
+impl From<ParcelSourceMapError> for SourceMapError {
+  fn from(source_map_error: ParcelSourceMapError) -> Self {
+    SourceMapError {
+      inner: source_map_error,
+    }
   }
 }
 

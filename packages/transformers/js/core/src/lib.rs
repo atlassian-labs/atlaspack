@@ -1,6 +1,7 @@
 pub mod add_display_name;
 mod collect;
 mod constant_module;
+mod dead_returns_remover;
 mod dependency_collector;
 mod env_replacer;
 mod esm_export_classifier;
@@ -15,6 +16,7 @@ mod node_replacer;
 mod sync_dynamic_import;
 pub mod test_utils;
 mod typeof_replacer;
+mod unused_bindings_remover;
 pub mod utils;
 
 use std::collections::HashMap;
@@ -34,6 +36,7 @@ use collect::Collect;
 pub use collect::CollectImportedSymbol;
 use collect::CollectResult;
 use constant_module::ConstantModule;
+use dead_returns_remover::DeadReturnsRemover;
 pub use dependency_collector::DependencyDescriptor;
 pub use dependency_collector::dependency_collector;
 use env_replacer::*;
@@ -98,6 +101,7 @@ use swc_core::ecma::visit::visit_mut_pass;
 use sync_dynamic_import::SyncDynamicImport;
 pub use sync_dynamic_import::SyncDynamicImportConfig;
 use typeof_replacer::*;
+use unused_bindings_remover::UnusedBindingsRemover;
 use utils::CodeHighlight;
 pub use utils::Diagnostic;
 use utils::DiagnosticSeverity;
@@ -155,6 +159,8 @@ pub struct Config {
   pub enable_lazy_loading_transformer: bool,
   pub sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
   pub nested_promise_import_fix: bool,
+  pub enable_dead_returns_remover: bool,
+  pub enable_unused_bindings_remover: bool,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -208,7 +214,7 @@ fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Vers
 }
 
 pub fn transform(
-  config: Config,
+  config: &Config,
   call_macro: Option<MacroCallback>,
 ) -> Result<TransformResult, io::Error> {
   let mut result = TransformResult::default();
@@ -221,7 +227,7 @@ pub fn transform(
     config.project_root.as_str(),
     config.filename.as_str(),
     &source_map,
-    &config,
+    config,
   );
 
   match module {
@@ -446,6 +452,16 @@ pub fn transform(
                   // don't include dependencies inside conditionals that are always false.
                   expr_simplifier(unresolved_mark, Default::default()),
                   dead_branch_remover(unresolved_mark),
+                  // Remove unreachable statements after return statements
+                  Optional::new(
+                    visit_mut_pass(DeadReturnsRemover::new()),
+                    config.enable_dead_returns_remover
+                  ),
+                  // Remove unused variable bindings
+                  Optional::new(
+                    visit_mut_pass(UnusedBindingsRemover::new()),
+                    config.enable_unused_bindings_remover
+                  ),
                   // Inline Node fs.readFileSync calls
                   Optional::new(
                     visit_mut_pass(inline_fs(
@@ -540,7 +556,7 @@ pub fn transform(
                       &mut result.dependencies,
                       ignore_mark,
                       unresolved_mark,
-                      &config,
+                      config,
                       &mut diagnostics,
                       &mut result.conditions,
                     ),
@@ -828,12 +844,12 @@ mod tests {
   fn test_logs_when_flag_is_on_and_file_is_empty() {
     let config: Config = make_test_swc_config(r#""#);
     unsafe { env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "true") };
-    let _result = transform(config, None);
+    let _result = transform(&config, None);
     assert!(logs_contain("You are attempting to import"));
 
     unsafe { env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "false") };
     let config: Config = make_test_swc_config(r#""#);
-    let _result = transform(config, None);
+    let _result = transform(&config, None);
     logs_assert(|lines: &[&str]| {
       let count = lines
         .iter()
