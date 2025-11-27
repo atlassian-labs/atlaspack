@@ -406,6 +406,7 @@ impl AssetGraphBuilder {
         entry: entry.clone(),
         env: self.request_context.options.env.clone(),
         mode: self.request_context.options.mode.clone(),
+        serve_options: self.request_context.options.serve_options.clone(),
       };
 
       self.work_count += 1;

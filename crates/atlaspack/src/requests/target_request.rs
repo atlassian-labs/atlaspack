@@ -16,6 +16,7 @@ use atlaspack_core::types::Environment;
 use atlaspack_core::types::EnvironmentContext;
 use atlaspack_core::types::ErrorKind;
 use atlaspack_core::types::OutputFormat;
+use atlaspack_core::types::ServeOptions;
 use atlaspack_core::types::SourceField;
 use atlaspack_core::types::SourceMapField;
 use atlaspack_core::types::SourceType;
@@ -53,6 +54,7 @@ pub struct TargetRequest {
   pub entry: Entry,
   pub env: Option<BTreeMap<String, String>>,
   pub mode: BuildMode,
+  pub serve_options: ServeOptions,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -500,6 +502,20 @@ impl TargetRequest {
         public_url: self.default_target_options.public_url.clone(),
         ..Target::default()
       }));
+    } else if let ServeOptions::Options(serve_options) = &self.serve_options {
+      if targets.len() > 1 {
+        return Err(diagnostic_error!(
+          DiagnosticBuilder::default()
+            .message("More than one target is not supported in serve mode".to_string())
+            .origin(Some("@atlaspack/core".into()))
+        ));
+      }
+
+      if let Some(Some(target)) = targets.get_mut(0) {
+        target.dist_dir = request_context
+          .project_root
+          .join(serve_options.dist_dir.clone());
+      }
     }
 
     Ok(targets)
@@ -916,6 +932,7 @@ mod tests {
 
     let request = TargetRequest {
       default_target_options: DefaultTargetOptions::default(),
+      serve_options: ServeOptions::default(),
       entry: Entry {
         file_path: entry_path,
         package_path: project_root.join(&package_dir),
@@ -1125,6 +1142,7 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn returns_default_target_when_package_json_is_not_found() {
     let request = TargetRequest {
+      serve_options: ServeOptions::default(),
       default_target_options: DefaultTargetOptions::default(),
       entry: Entry::default(),
       env: None,
@@ -2120,6 +2138,7 @@ mod tests {
     let entry_path = project_root.join(&package_dir).join("index.js");
 
     let request = TargetRequest {
+      serve_options: ServeOptions::default(),
       default_target_options: DefaultTargetOptions::default(),
       entry: Entry {
         file_path: entry_path,

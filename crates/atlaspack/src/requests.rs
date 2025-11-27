@@ -26,6 +26,24 @@ pub enum RequestResult {
   TestMain(Vec<String>),
 }
 
+impl std::fmt::Display for RequestResult {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    match self {
+      RequestResult::AssetGraph(_output) => f.write_str("AssetGraph"),
+      RequestResult::Entry(output) => f.write_str(&format!("Entry({:?})", &output.entries)),
+      RequestResult::Asset(output) => {
+        f.write_str(&format!("Asset({})", &output.asset.file_path.display()))
+      }
+      RequestResult::Path(output) => f.write_str(&format!("Path({:?})", output)),
+      RequestResult::Target(_output) => f.write_str(&format!("Target")),
+      #[cfg(test)]
+      RequestResult::TestSub(_output) => f.write_str(&format!("TestSub")),
+      #[cfg(test)]
+      RequestResult::TestMain(_output) => f.write_str(&format!("Target")),
+    }
+  }
+}
+
 impl std::fmt::Debug for RequestResult {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match self {
