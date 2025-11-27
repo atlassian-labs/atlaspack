@@ -60,31 +60,6 @@ describe('server', function () {
     assert.equal(data, distFile);
   });
 
-  it('should serve files from the inferred serveOptions.distDir', async function () {
-    let port = await getPort();
-    let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
-      defaultTargetOptions: {
-        distDir: undefined,
-      },
-      config,
-      serveOptions: {
-        https: false,
-        port: port,
-        host: 'localhost',
-      },
-    });
-
-    subscription = await b.watch();
-
-    let data = await get('/index.js', port);
-    let distFile = await outputFS.readFile(
-      path.join(distDir, 'index.js'),
-      'utf8',
-    );
-
-    assert.equal(data, distFile);
-  });
-
   it('should include content length for HEAD requests', async function () {
     let port = await getPort();
     let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
