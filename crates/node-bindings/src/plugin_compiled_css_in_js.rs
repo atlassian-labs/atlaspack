@@ -12,6 +12,8 @@ use napi_derive::napi;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
+use regex::Regex;
+use std::collections::HashMap;
 use std::{any::Any, panic};
 use swc_core::common::Mark;
 use swc_core::{
@@ -58,6 +60,7 @@ pub struct CompiledCssInJsConfig {
   pub ssr: Option<bool>,
   pub unsafe_report_safe_assets_for_migration: Option<bool>,
   pub unsafe_use_safe_assets: Option<bool>,
+  pub unsafe_skip_pattern: Option<String>,
 }
 
 #[napi(object)]
@@ -84,6 +87,22 @@ pub struct CompiledCssInJsPluginResult {
 
 static PANIC_HOOK_GUARD: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 static PANIC_HOOK_INITIALIZED: OnceCell<()> = OnceCell::new();
+
+/// Cache for compiled regex patterns to avoid recompiling them on every function call
+static REGEX_CACHE: Lazy<Mutex<HashMap<String, Regex>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+
+/// Get or compile a regex pattern from the cache
+fn get_cached_regex(pattern: &str) -> Result<Regex> {
+  let mut cache = REGEX_CACHE.lock();
+
+  if let Some(regex) = cache.get(pattern) {
+    return Ok(regex.clone());
+  }
+
+  let regex = Regex::new(pattern).map_err(|e| anyhow!("Invalid regex pattern: {}", e))?;
+  cache.insert(pattern.to_string(), regex.clone());
+  Ok(regex)
+}
 
 fn initialize_panic_hook_once() {
   PANIC_HOOK_INITIALIZED.get_or_init(|| {
@@ -304,6 +323,7 @@ fn process_compiled_css_in_js(
       ssr: input.config.ssr,
       unsafe_report_safe_assets_for_migration: input.config.unsafe_report_safe_assets_for_migration,
       unsafe_use_safe_assets: input.config.unsafe_use_safe_assets,
+      unsafe_skip_pattern: input.config.unsafe_skip_pattern.clone(),
     },
   );
 
@@ -345,23 +365,27 @@ fn process_compiled_css_in_js(
     });
   }
 
-  if code.contains("xcss=") {
-    // Asset contains known unsafe CSS, bail out without erroring
-    return Ok(CompiledCssInJsPluginResult {
-      code: "".to_string(),
-      map: None,
-      style_rules: Vec::new(),
-      diagnostics: vec![JsDiagnostic {
-        message: "Skipping asset containing xcss".to_string(),
-        code_highlights: None,
-        hints: None,
-        show_environment: false,
-        severity: "Error".to_string(),
-        documentation_url: None,
-      }],
-      bail_out: true,
-      code_hash,
-    });
+  if let Some(pattern) = &transform_config.unsafe_skip_pattern {
+    let regex = get_cached_regex(pattern.as_str())?;
+
+    if regex.is_match(code) {
+      // Asset contains known unsafe CSS, bail out without erroring
+      return Ok(CompiledCssInJsPluginResult {
+        code: "".to_string(),
+        map: None,
+        style_rules: Vec::new(),
+        diagnostics: vec![JsDiagnostic {
+          message: "Skipping asset from configured pattern".to_string(),
+          code_highlights: None,
+          hints: None,
+          show_environment: false,
+          severity: "Error".to_string(),
+          documentation_url: None,
+        }],
+        bail_out: true,
+        code_hash,
+      });
+    }
   }
 
   let swc_config = Config {
@@ -712,6 +736,7 @@ mod tests {
         config_path: None,
         unsafe_report_safe_assets_for_migration: None,
         unsafe_use_safe_assets: None,
+        unsafe_skip_pattern: None,
         import_react: Some(true),
         nonce: None,
         import_sources: Some(vec!["@compiled/react".into(), "@atlaskit/css".into()]),
@@ -751,7 +776,7 @@ mod tests {
         let mut result = String::from("\"");
         let mut escape = false;
 
-        while let Some(ch) = iter.next() {
+        for ch in iter.by_ref() {
           if escape {
             match ch {
               '\'' => result.push('\''),
@@ -908,6 +933,28 @@ mod tests {
     assert!(
       transformed.code.contains("@compiled/react/runtime"),
       "Transformed code should contain @compiled/react/runtime"
+    );
+  }
+
+  #[test]
+  fn test_skip_pattern_successful_transformation() {
+    let mut config = create_test_config(true, false);
+
+    config.config.unsafe_skip_pattern = Some(String::from("css="));
+
+    let code = indoc! {r#"
+      import { css } from '@compiled/react';
+      const styles = css({ color: 'red' });
+      <div css={styles} />;
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Transformed code should succeed");
+
+    let transformed = result.unwrap();
+    assert!(
+      transformed.bail_out,
+      "Should bail out because of skip pattern"
     );
   }
 

@@ -92,6 +92,7 @@ export interface CompiledCssInJsConfig {
   ssr?: boolean
   unsafeReportSafeAssetsForMigration?: boolean
   unsafeUseSafeAssets?: boolean
+  unsafeSkipPattern?: string
 }
 export interface CompiledCssInJsPluginInput {
   filename: string
