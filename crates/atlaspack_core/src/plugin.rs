@@ -16,7 +16,7 @@ pub use transformer_plugin::*;
 pub use validator_plugin::*;
 
 use crate::config_loader::{ConfigLoader, ConfigLoaderRef};
-use crate::types::{BuildMode, FeatureFlags, LogLevel};
+use crate::types::{AliasMap, BuildMode, FeatureFlags, LogLevel};
 
 mod bundler_plugin;
 mod compressor_plugin;
@@ -38,8 +38,8 @@ pub struct PluginContext {
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
 pub struct HmrOptions {
-  pub port: u32,
-  pub host: String,
+  pub port: Option<u32>,
+  pub host: Option<String>,
 }
 
 #[derive(Default)]
@@ -55,4 +55,5 @@ pub struct PluginOptions {
   pub project_root: PathBuf,
   pub feature_flags: FeatureFlags,
   pub hmr_options: Option<HmrOptions>,
+  pub unstable_alias: Option<AliasMap>,
 }

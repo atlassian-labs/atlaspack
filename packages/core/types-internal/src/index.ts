@@ -1,5 +1,5 @@
 import type {Readable} from 'stream';
-import type SourceMap from '@parcel/source-map';
+import type {SourceMap} from '@atlaspack/source-map';
 import type {
   Diagnostic,
   Diagnostifiable,
@@ -383,6 +383,7 @@ export type InitialAtlaspackOptionsInternal<WorkerFarm> = {
   readonly shouldAutoInstall?: boolean;
   readonly logLevel?: LogLevel;
   readonly shouldProfile?: boolean;
+  readonly nativeProfiler?: 'instruments' | 'samply';
   readonly shouldTrace?: boolean;
   readonly shouldPatchConsole?: boolean;
   readonly shouldBuildLazily?: boolean;

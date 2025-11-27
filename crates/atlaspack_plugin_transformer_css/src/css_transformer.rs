@@ -18,7 +18,8 @@ use lightningcss::dependencies::DependencyOptions;
 use lightningcss::printer::PrinterOptions;
 use lightningcss::stylesheet::{ParserFlags, ParserOptions, StyleSheet};
 use lightningcss::targets::{Browsers, Targets};
-use parcel_sourcemap::SourceMap as ParcelSourceMap;
+// Lightning CSS uses the upstream Parcel SourceMap, but Atlaspack uses the in-sourced version (which will eventually be renamed)
+use parcel_sourcemap_ext::SourceMap as ParcelSourceMapExt;
 use serde::Deserialize;
 
 use crate::css_transformer_config::{CssModulesConfig, CssModulesFullConfig, CssTransformerConfig};
@@ -184,8 +185,8 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       },
     )?;
 
-    let mut lightning_source_map: Option<ParcelSourceMap> = if asset.env.source_map.is_some() {
-      let mut sm = ParcelSourceMap::new(&self.project_root.to_string_lossy());
+    let mut lightning_source_map: Option<ParcelSourceMapExt> = if asset.env.source_map.is_some() {
+      let mut sm = ParcelSourceMapExt::new(&self.project_root.to_string_lossy());
       sm.add_source(&asset.file_path.to_string_lossy());
       sm.set_source_content(0, asset.code.as_str()?)?;
       Some(sm)
@@ -525,8 +526,12 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
     css_code.push(css.code);
     asset.code = Code::from(css_code.join("\n"));
 
-    if let Some(source_map) = lightning_source_map.clone() {
-      let mut source_map = SourceMap::from(source_map);
+    if let Some(mut source_map) = lightning_source_map {
+      // The Lightning CSS sourcemap is a Parcel SourceMap, but we need an Atlaspack SourceMap - the only safe way to convert
+      // from one to the other is via JSON - as a buffer will use rkyv and requires binary compatibility
+      let lightning_source_map_json =
+        source_map.to_json(Some(&self.project_root.to_string_lossy()))?;
+      let mut source_map = SourceMap::from_json(&self.project_root, &lightning_source_map_json)?;
 
       if let Some(original_map) = asset.map {
         source_map.extends(&mut original_map.clone())?;

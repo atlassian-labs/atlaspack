@@ -25,6 +25,7 @@ pub struct AtlaspackRc {
   pub runtimes: Option<Vec<String>>,
   pub transformers: Option<IndexMap<String, Vec<String>>>,
   pub validators: Option<IndexMap<String, Vec<String>>>,
+  pub unstable_alias: Option<atlaspack_core::types::AliasMap>,
 }
 
 /// Represents the .atlaspack_rc config file

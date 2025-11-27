@@ -484,6 +484,7 @@ mod tests {
           })
         }),
         validators: PipelinesMap::new(IndexMap::new()),
+        unstable_alias: None,
       };
 
       let expected_files = vec![project_root.join(".parcelrc")];

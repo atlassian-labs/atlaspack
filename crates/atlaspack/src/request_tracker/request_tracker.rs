@@ -396,7 +396,7 @@ impl RequestTracker {
     }
   }
 
-  #[tracing::instrument(level = "info", skip_all, ret, fields(events = watch_events.len()))]
+  #[tracing::instrument(level = "debug", skip_all, ret, fields(events = watch_events.len()))]
   pub fn respond_to_fs_events(&mut self, watch_events: WatchEvents) -> bool {
     let nodes_to_invalidate: Vec<(NodeIndex, &PathBuf)> = watch_events
       .iter()
@@ -416,7 +416,7 @@ impl RequestTracker {
       self.invalidate_node(node_id, file_path_reason);
     }
 
-    tracing::info!(
+    tracing::debug!(
       "Invalid nodes {:#?}",
       self
         .invalid_nodes

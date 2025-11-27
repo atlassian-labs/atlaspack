@@ -56,7 +56,7 @@ async function nextWSMessage(ws: WebSocket) {
   );
 }
 
-describe.v2('hmr', function () {
+describe('hmr', function () {
   let subscription, ws;
 
   async function testHMRClient(
@@ -595,7 +595,7 @@ module.hot.dispose((data) => {
       assert(reloaded);
     });
 
-    it('should work with urls', async function () {
+    it.v2('should work with urls', async function () {
       let search;
       let {outputs} = await testHMRClient('hmr-url', (outputs) => {
         assert.equal(outputs.length, 1);
@@ -615,35 +615,38 @@ module.hot.dispose((data) => {
       assert.notEqual(url.search, search);
     });
 
-    it('should clean up orphaned assets when deleting a dependency', async function () {
-      let search;
-      let {outputs} = await testHMRClient('hmr-url', [
-        (outputs: Array<any>) => {
-          assert.equal(outputs.length, 1);
-          let url = new URL(outputs[0]);
-          assert(/test\.[0-9a-f]+\.txt/, url.pathname);
-          assert(!isNaN(url.search.slice(1)));
-          search = url.search;
-          return {
-            'index.js': 'output("yo"); module.hot.accept();',
-          };
-        },
-        (outputs: Array<any>) => {
-          assert.equal(outputs.length, 2);
-          assert.equal(outputs[1], 'yo');
-          return {
-            'index.js':
-              'output(new URL("test.txt", import.meta.url)); module.hot.accept();',
-          };
-        },
-      ]);
+    it.v2(
+      'should clean up orphaned assets when deleting a dependency',
+      async function () {
+        let search;
+        let {outputs} = await testHMRClient('hmr-url', [
+          (outputs: Array<any>) => {
+            assert.equal(outputs.length, 1);
+            let url = new URL(outputs[0]);
+            assert(/test\.[0-9a-f]+\.txt/, url.pathname);
+            assert(!isNaN(url.search.slice(1)));
+            search = url.search;
+            return {
+              'index.js': 'output("yo"); module.hot.accept();',
+            };
+          },
+          (outputs: Array<any>) => {
+            assert.equal(outputs.length, 2);
+            assert.equal(outputs[1], 'yo');
+            return {
+              'index.js':
+                'output(new URL("test.txt", import.meta.url)); module.hot.accept();',
+            };
+          },
+        ]);
 
-      assert.equal(outputs.length, 3);
-      let url = new URL(outputs[2]);
-      assert(/test\.[0-9a-f]+\.txt/, url.pathname);
-      assert(!isNaN(url.search.slice(1)));
-      assert.notEqual(url.search, search);
-    });
+        assert.equal(outputs.length, 3);
+        let url = new URL(outputs[2]);
+        assert(/test\.[0-9a-f]+\.txt/, url.pathname);
+        assert(!isNaN(url.search.slice(1)));
+        assert.notEqual(url.search, search);
+      },
+    );
 
     it('should have correct source locations in errors', async function () {
       let {outputs, bundleGraph} = await testHMRClient(
@@ -923,69 +926,72 @@ module.hot.dispose((data) => {
       assert(logs[1].trim().startsWith('[parcel] ✨'));
     });*/
 
-    it('should update CSS link tags when a CSS asset is changed', async () => {
-      let testDir = path.join(__dirname, '/input');
-      await overlayFS.rimraf(testDir);
-      await overlayFS.mkdirp(testDir);
-      await ncp(path.join(__dirname, '/integration/hmr-css'), testDir);
+    it.v2(
+      'should update CSS link tags when a CSS asset is changed',
+      async () => {
+        let testDir = path.join(__dirname, '/input');
+        await overlayFS.rimraf(testDir);
+        await overlayFS.mkdirp(testDir);
+        await ncp(path.join(__dirname, '/integration/hmr-css'), testDir);
 
-      let port = await getPort();
-      let b = bundler(path.join(testDir, 'index.html'), {
-        inputFS: overlayFS,
-        outputFS: overlayFS,
-        serveOptions: {
-          https: false,
-          port,
-          host: '127.0.0.1',
-        },
-        hmrOptions: {port},
-        shouldContentHash: false,
-        config,
-      });
-
-      subscription = await b.watch();
-      let bundleEvent = await getNextBuild(b);
-      assert.equal(bundleEvent.type, 'buildSuccess');
-
-      let window;
-      try {
-        let dom = await JSDOM.JSDOM.fromURL(
-          'http://127.0.0.1:' + port + '/index.html',
-          {
-            runScripts: 'dangerously',
-            resources: 'usable',
-            pretendToBeVisual: true,
+        let port = await getPort();
+        let b = bundler(path.join(testDir, 'index.html'), {
+          inputFS: overlayFS,
+          outputFS: overlayFS,
+          serveOptions: {
+            https: false,
+            port,
+            host: '127.0.0.1',
           },
-        );
-        let _window = (window = dom.window); // For Flow
-        window.WebSocket = WebSocket;
-        await new Promise(
-          (res: (result: Promise<undefined> | undefined) => void) =>
-            dom.window.document.addEventListener('load', () => {
-              res();
-            }),
-        );
-        _window.console.clear = () => {};
-        _window.console.warn = () => {};
+          hmrOptions: {port},
+          shouldContentHash: false,
+          config,
+        });
 
-        let initialHref = _window.document.querySelector('link').href;
+        subscription = await b.watch();
+        let bundleEvent = await getNextBuild(b);
+        assert.equal(bundleEvent.type, 'buildSuccess');
 
-        await overlayFS.copyFile(
-          path.join(testDir, 'index.2.css'),
-          path.join(testDir, 'index.css'),
-        );
-        assert.equal((await getNextBuild(b)).type, 'buildSuccess');
-        await sleep(200);
+        let window;
+        try {
+          let dom = await JSDOM.JSDOM.fromURL(
+            'http://127.0.0.1:' + port + '/index.html',
+            {
+              runScripts: 'dangerously',
+              resources: 'usable',
+              pretendToBeVisual: true,
+            },
+          );
+          let _window = (window = dom.window); // For Flow
+          window.WebSocket = WebSocket;
+          await new Promise(
+            (res: (result: Promise<undefined> | undefined) => void) =>
+              dom.window.document.addEventListener('load', () => {
+                res();
+              }),
+          );
+          _window.console.clear = () => {};
+          _window.console.warn = () => {};
 
-        let newHref = _window.document.querySelector('link').href;
+          let initialHref = _window.document.querySelector('link').href;
 
-        assert.notStrictEqual(initialHref, newHref);
-      } finally {
-        if (window) {
-          window.close();
+          await overlayFS.copyFile(
+            path.join(testDir, 'index.2.css'),
+            path.join(testDir, 'index.css'),
+          );
+          assert.equal((await getNextBuild(b)).type, 'buildSuccess');
+          await sleep(200);
+
+          let newHref = _window.document.querySelector('link').href;
+
+          assert.notStrictEqual(initialHref, newHref);
+        } finally {
+          if (window) {
+            window.close();
+          }
         }
-      }
-    });
+      },
+    );
 
     it('should handle CSS Modules update correctly', async () => {
       let testDir = path.join(__dirname, '/input');

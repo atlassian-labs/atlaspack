@@ -1,5 +1,5 @@
 import type {Async, BundleResult} from '@atlaspack/types';
-import type SourceMap from '@parcel/source-map';
+import type SourceMap from '@atlaspack/source-map';
 import {Packager} from '@atlaspack/plugin';
 import {
   replaceInlineReferences,
@@ -55,9 +55,7 @@ export default new Packager({
         CONFIG_SCHEMA,
         {
           data: conf?.contents,
-          source: getFeatureFlag('schemaValidationDeferSourceLoading')
-            ? () => options.inputFS.readFileSync(conf.filePath, 'utf8')
-            : await options.inputFS.readFile(conf.filePath, 'utf8'),
+          source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
           filePath: conf.filePath,
           prependKey: `/${encodeJSONKeyComponent(packageKey)}`,
         },

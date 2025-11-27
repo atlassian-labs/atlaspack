@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/feature-flags",
-  "version": "2.26.2",
+  "version": "2.27.1",
   "description": "Provides internal feature-flags for the atlaspack codebase.",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {

@@ -1,5 +1,29 @@
 # @atlaspack/transformer-typescript-types
 
+## 2.15.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.1.1
+  - @atlaspack/utils@3.2.1
+  - @atlaspack/plugin@2.14.40
+  - @atlaspack/ts-utils@2.14.19
+
+## 2.15.0
+
+### Minor Changes
+
+- [#789](https://github.com/atlassian-labs/atlaspack/pull/789) [`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0) Thanks [@marcins](https://github.com/marcins)! - Use an in-sourced version of @parcel/source-map, as @atlaspack/source-map
+
+### Patch Changes
+
+- Updated dependencies [[`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0), [`617a318`](https://github.com/atlassian-labs/atlaspack/commit/617a318ddc9419b38360257353fec50b9051ee13)]:
+  - @atlaspack/source-map@3.1.0
+  - @atlaspack/utils@3.2.0
+  - @atlaspack/plugin@2.14.39
+  - @atlaspack/ts-utils@2.14.18
+
 ## 2.14.38
 
 ### Patch Changes

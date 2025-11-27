@@ -14,6 +14,7 @@ use atlaspack_core::types::{
   Asset, BuildMode, Diagnostic, Diagnostics, ErrorKind, FileType, LogLevel, OutputFormat,
   SourceType,
 };
+use atlaspack_js_swc_core::SyncDynamicImportConfig;
 use glob_match::glob_match;
 use parking_lot::RwLock;
 use swc_core::atoms::Atom;
@@ -48,6 +49,7 @@ pub struct AtlaspackJsTransformerPlugin {
 #[derive(Default)]
 struct Cache {
   env_variables: EnvVariablesCache,
+  sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
 }
 
 #[derive(Default)]
@@ -265,6 +267,39 @@ impl AtlaspackJsTransformerPlugin {
       }
     }
   }
+
+  fn sync_dynamic_import_config(&self) -> Option<SyncDynamicImportConfig> {
+    if let Some(env_vars) = &self.options.env
+      && let Some(config_json) = env_vars.get("SYNC_DYNAMIC_IMPORT_CONFIG")
+    {
+      if let Some(cached) = self.cache.read().sync_dynamic_import_config.as_ref() {
+        return Some(cached.clone());
+      }
+
+      match serde_json::from_str::<SyncDynamicImportConfig>(config_json) {
+        Ok(config) => {
+          self.cache.write().sync_dynamic_import_config = Some(config.clone());
+          return Some(config);
+        }
+        Err(_) => {
+          eprintln!(
+            "Failed to parse SYNC_DYNAMIC_IMPORT_CONFIG to JSON or config shape did not match. Config will not be applied."
+          );
+
+          let fallback = SyncDynamicImportConfig {
+            entrypoint_filepath_suffix: "__NO_MATCH__".into(),
+            actual_require_paths: vec![],
+          };
+
+          self.cache.write().sync_dynamic_import_config = Some(fallback.clone());
+
+          return Some(fallback);
+        }
+      }
+    }
+
+    None
+  }
 }
 
 impl fmt::Debug for AtlaspackJsTransformerPlugin {
@@ -281,7 +316,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   async fn transform(
     &self,
     context: TransformContext,
-    mut asset: Asset,
+    asset: Asset,
   ) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
     let file_type = asset.file_type.clone();
@@ -331,6 +366,12 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
     }
 
     let env_vars = self.env_variables(&asset);
+
+    let sync_dynamic_import_config = if env.context.is_tesseract() {
+      self.sync_dynamic_import_config()
+    } else {
+      None
+    };
 
     let compiler_options = self
       .ts_config
@@ -448,25 +489,11 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         .options
         .feature_flags
         .bool_enabled("nestedPromiseImportFix"),
+      sync_dynamic_import_config,
       ..atlaspack_js_swc_core::Config::default()
     };
 
-    let transformation_result = atlaspack_js_swc_core::transform(transform_config, None)?;
-
-    // TODO: Suspect this will now need to be moved to JS
-    if feature_flag_conditional_bundling {
-      let mut converted = vec![];
-
-      for condition in transformation_result.conditions.iter() {
-        converted.push(serde_json::json!({
-          "key": condition.key.to_string(),
-          "ifTruePlaceholder": condition.if_true_placeholder,
-          "ifFalsePlaceholder": condition.if_false_placeholder,
-        }));
-      }
-
-      asset.conditions = transformation_result.conditions.clone();
-    }
+    let transformation_result = atlaspack_js_swc_core::transform(&transform_config, None)?;
 
     if let Some(errors) = transformation_result.diagnostics {
       return Err(anyhow!(map_diagnostics(
@@ -479,9 +506,13 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       )));
     }
 
-    let config = atlaspack_js_swc_core::Config::default();
-    let result = conversion::convert_result(asset, &config, transformation_result, &self.options)
-      .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
+    let result = conversion::convert_result(
+      asset,
+      &transform_config,
+      transformation_result,
+      &self.options,
+    )
+    .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
 
     Ok(result)
   }

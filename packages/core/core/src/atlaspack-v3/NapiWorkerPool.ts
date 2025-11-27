@@ -23,7 +23,11 @@ export class NapiWorkerPool implements INapiWorkerPool {
   constructor({workerCount}: NapiWorkerPoolOptions = {workerCount: undefined}) {
     // @ts-expect-error TS2322
     this.#workerCount =
-      workerCount ?? ATLASPACK_NAPI_WORKERS ?? getAvailableThreads();
+      workerCount ??
+      ATLASPACK_NAPI_WORKERS ??
+      // Default to a maximum of 4 workers as performance worsens beyond that
+      // point in most cases
+      Math.min(getAvailableThreads(), 4);
     if (!this.#workerCount) {
       // TODO use main thread if workerCount is 0
     }

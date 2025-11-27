@@ -1,13 +1,13 @@
 {
   "name": "@atlaspack/compiled-css-in-js-example",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "private": true,
   "scripts": {
     "build:inspect": "PARCEL_WORKERS=0 node --inspect-brk $(yarn bin atlaspack) build --no-cache src/index.html",
-    "build": "atlaspack build --no-cache src/index.html",
-    "dev": "npx nodemon -e 'ts, tsx, json, .parcelrc' --watch . --ignore 'dist/' --exec 'yarn build && node serve.js'",
-    "serve": "atlaspack serve --no-cache src/index.html"
+    "build": "atlaspack build --feature-flag compiledCssInJsTransformer=true --no-cache src/index.html",
+    "dev": "npx nodemon -e 'ts, tsx, json, .parcelrc' --watch . --ignore 'dist/' --ignore 'compiled-css-migration-map.json' --exec 'yarn build && node serve.js'",
+    "serve": "atlaspack serve --feature-flag compiledCssInJsTransformer=true --no-cache src/index.html"
   },
   "dependencies": {
     "@atlaskit/button": "*",
@@ -17,6 +17,7 @@
   "devDependencies": {
     "@atlaspack/cli": "*",
     "@atlaspack/transformer-compiled-css-in-js": "*",
+    "@atlaspack/reporter-compiled-css-in-js-migration-map": "*",
     "@types/react-dom": "^17.0.2",
     "express": "*"
   },

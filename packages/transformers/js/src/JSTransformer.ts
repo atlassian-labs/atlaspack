@@ -8,7 +8,7 @@ import type {
 import {createBuildCache} from '@atlaspack/build-cache';
 import type {SchemaEntity} from '@atlaspack/utils';
 import type {Diagnostic} from '@atlaspack/diagnostic';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {Transformer} from '@atlaspack/plugin';
 import {transform, transformAsync} from '@atlaspack/rust';
 import invariant from 'assert';
@@ -331,7 +331,7 @@ export default new Transformer({
         }
       | undefined;
 
-    if (options.env.SYNC_DYNAMIC_IMPORT_CONFIG) {
+    if (config.env.isTesseract() && options.env.SYNC_DYNAMIC_IMPORT_CONFIG) {
       try {
         let config = configCache.get(
           'SYNC_DYNAMIC_IMPORT_CONFIG',
@@ -371,9 +371,7 @@ export default new Transformer({
         CONFIG_SCHEMA,
         {
           data: conf.contents,
-          source: getFeatureFlag('schemaValidationDeferSourceLoading')
-            ? () => options.inputFS.readFileSync(conf.filePath, 'utf8')
-            : await options.inputFS.readFile(conf.filePath, 'utf8'),
+          source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
           filePath: conf.filePath,
           prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-js')}`,
         },
@@ -417,10 +415,10 @@ export default new Transformer({
       enableUnusedBindingsRemoval,
       enableStaticPrevaluation,
       enableReactHooksRemoval,
+      syncDynamicImportConfig,
       enableReactAsyncImportLift,
       reactAsyncLiftByDefault,
       reactAsyncLiftReportLevel,
-      syncDynamicImportConfig,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -674,7 +672,6 @@ export default new Transformer({
 
                       map.addIndexedMappings(mappings);
                       if (originalMap) {
-                        // @ts-expect-error TS2345
                         map.extends(originalMap);
                       } else {
                         if (!getFeatureFlag('omitSourcesContentInMemory')) {
@@ -1264,7 +1261,6 @@ export default new Transformer({
       let sourceMap = new SourceMap(options.projectRoot);
       sourceMap.addVLQMap(JSON.parse(map));
       if (originalMap) {
-        // @ts-expect-error TS2345
         sourceMap.extends(originalMap);
       }
       asset.setMap(sourceMap);

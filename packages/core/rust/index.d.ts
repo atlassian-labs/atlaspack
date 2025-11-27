@@ -74,7 +74,8 @@ export interface InlineRequiresOptimizerResult {
 export declare function runInlineRequiresOptimizer(input: InlineRequiresOptimizerInput): InlineRequiresOptimizerResult
 /** Runs in the rayon thread pool */
 export declare function runInlineRequiresOptimizerAsync(input: InlineRequiresOptimizerInput): object
-export interface CompiledCssInJsTransformConfig {
+export interface CompiledCssInJsConfig {
+  configPath?: string
   importReact?: boolean
   nonce?: string
   importSources?: Array<string>
@@ -84,22 +85,46 @@ export interface CompiledCssInJsTransformConfig {
   processXcss?: boolean
   increaseSpecificity?: boolean
   sortAtRules?: boolean
+  sortShorthand?: boolean
   classHashPrefix?: string
   flattenMultipleSelectors?: boolean
   extract?: boolean
   ssr?: boolean
+  unsafeReportSafeAssetsForMigration?: boolean
+  unsafeUseSafeAssets?: boolean
 }
 export interface CompiledCssInJsPluginInput {
   filename: string
   projectRoot: string
   isSource: boolean
   sourceMaps: boolean
-  config: CompiledCssInJsTransformConfig
+  config: CompiledCssInJsConfig
 }
 export interface CompiledCssInJsPluginResult {
   code: string
   map?: string
   styleRules: Array<string>
+  diagnostics: Array<JsDiagnostic>
+  bailOut: boolean
+  codeHash: string
+}
+export interface JsSourceLocation {
+  startLine: number
+  startCol: number
+  endLine: number
+  endCol: number
+}
+export interface JsCodeHighlight {
+  message?: string
+  loc: JsSourceLocation
+}
+export interface JsDiagnostic {
+  message: string
+  codeHighlights?: Array<JsCodeHighlight>
+  hints?: Array<string>
+  showEnvironment: boolean
+  severity: string
+  documentationUrl?: string
 }
 export declare function applyCompiledCssInJsPlugin(rawCode: Buffer, input: CompiledCssInJsPluginInput): object
 export interface JsFileSystemOptions {
@@ -232,4 +257,31 @@ export class Resolver {
   resolveAsync(options: ResolveOptions): object
   getInvalidations(path: string): JsInvalidations
   getInvalidations(path: string): JsInvalidations
+}
+export type JsSourceMap = SourceMap
+export class SourceMap {
+  constructor(projectRoot: string, buffer?: Buffer | undefined | null)
+  addSource(source: string): number
+  getSource(sourceIndex: number): string
+  getSources(): Array<string>
+  getSourcesContent(): Array<string>
+  getSourceIndex(source: string): number
+  setSourceContentBySource(source: string, sourceContent: string): void
+  getSourceContentBySource(source: string): string
+  addName(name: string): number
+  getName(nameIndex: number): string
+  getNames(): Array<string>
+  getNameIndex(name: string): number
+  getMappings(): unknown[]
+  toBuffer(): Buffer
+  addSourceMap(sourcemapObject: SourceMap, lineOffset: number): void
+  addVLQMap(vlqMappings: string, sources: Array<string>, sourcesContent: Array<string>, names: Array<string>, lineOffset: number, columnOffset: number): void
+  toVLQ(): object
+  addIndexedMappings(mappings: JsTypedArray): void
+  offsetLines(generatedLine: number, generatedLineOffset: number): void
+  offsetColumns(generatedLine: number, generatedColumn: number, generatedColumnOffset: number): void
+  addEmptyMap(source: string, sourceContent: string, lineOffset: number): void
+  extends(originalSourcemap: SourceMap): void
+  findClosestMapping(generatedLine: number, generatedColumn: number): object | null
+  getProjectRoot(): string
 }

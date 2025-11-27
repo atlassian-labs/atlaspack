@@ -91,19 +91,8 @@ export class AtlaspackV3 {
     }
   }
 
-  async buildAssetGraph(): Promise<any> {
-    // @ts-expect-error TS2488
-    let [graph, error] = await atlaspackNapiBuildAssetGraph(
-      this._atlaspack_napi,
-    );
-
-    if (error !== null) {
-      throw new ThrowableDiagnostic({
-        diagnostic: error,
-      });
-    }
-
-    return graph;
+  buildAssetGraph(): Promise<any> {
+    return atlaspackNapiBuildAssetGraph(this._atlaspack_napi) as Promise<any>;
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {

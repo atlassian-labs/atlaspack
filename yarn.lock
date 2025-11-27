@@ -1113,6 +1113,27 @@
     json5 "^2.2.3"
     semver "^6.3.1"
 
+"@babel/core@^7.26.10":
+  version "7.28.5"
+  resolved "https://registry.yarnpkg.com/@babel/core/-/core-7.28.5.tgz#4c81b35e51e1b734f510c99b07dfbc7bbbb48f7e"
+  integrity sha512-e7jT4DxYvIDLk1ZHmU/m/mB19rex9sv0c2ftBtjSBv+kVM/902eh0fINUzD7UwLLNR+jU585GxUJ8/EBfAM5fw==
+  dependencies:
+    "@babel/code-frame" "^7.27.1"
+    "@babel/generator" "^7.28.5"
+    "@babel/helper-compilation-targets" "^7.27.2"
+    "@babel/helper-module-transforms" "^7.28.3"
+    "@babel/helpers" "^7.28.4"
+    "@babel/parser" "^7.28.5"
+    "@babel/template" "^7.27.2"
+    "@babel/traverse" "^7.28.5"
+    "@babel/types" "^7.28.5"
+    "@jridgewell/remapping" "^2.3.5"
+    convert-source-map "^2.0.0"
+    debug "^4.1.0"
+    gensync "^1.0.0-beta.2"
+    json5 "^2.2.3"
+    semver "^6.3.1"
+
 "@babel/eslint-parser@^7.16.3":
   version "7.28.4"
   resolved "https://registry.yarnpkg.com/@babel/eslint-parser/-/eslint-parser-7.28.4.tgz#80dd86e0aeaae9704411a044db60e1ae6477d93f"
@@ -1160,6 +1181,17 @@
     "@babel/types" "^7.26.0"
     "@jridgewell/gen-mapping" "^0.3.5"
     "@jridgewell/trace-mapping" "^0.3.25"
+    jsesc "^3.0.2"
+
+"@babel/generator@^7.26.10", "@babel/generator@^7.28.5":
+  version "7.28.5"
+  resolved "https://registry.yarnpkg.com/@babel/generator/-/generator-7.28.5.tgz#712722d5e50f44d07bc7ac9fe84438742dd61298"
+  integrity sha512-3EwLFhZ38J4VyIP6WNtt2kUdW9dokXA9Cr4IVIFHuCpZ3H8/YFOl5JjZHisrn1fATPBmKKqXzDFvh9fUwHz6CQ==
+  dependencies:
+    "@babel/parser" "^7.28.5"
+    "@babel/types" "^7.28.5"
+    "@jridgewell/gen-mapping" "^0.3.12"
+    "@jridgewell/trace-mapping" "^0.3.28"
     jsesc "^3.0.2"
 
 "@babel/generator@^7.27.5", "@babel/generator@^7.28.3":
@@ -1431,7 +1463,7 @@
   resolved "https://registry.yarnpkg.com/@babel/helper-plugin-utils/-/helper-plugin-utils-7.25.7.tgz#8ec5b21812d992e1ef88a9b068260537b6f0e36c"
   integrity sha512-eaPZai0PiqCi09pPs3pAFfl/zYgGaE6IdXtYvmf0qlcDTd3WCtO7JWCcRd64e0EQrcYgiHibEZnOGsSY4QSgaw==
 
-"@babel/helper-plugin-utils@^7.27.1":
+"@babel/helper-plugin-utils@^7.26.5", "@babel/helper-plugin-utils@^7.27.1":
   version "7.27.1"
   resolved "https://registry.yarnpkg.com/@babel/helper-plugin-utils/-/helper-plugin-utils-7.27.1.tgz#ddb2f876534ff8013e6c2b299bf4d39b3c51d44c"
   integrity sha512-1gn1Up5YXka3YYAHGKpbideQ5Yjf1tDa9qYcgysz+cNCXukyLl6DjPXhD3VRwSb8c0J9tA4b2+rHEZtc6R0tlw==
@@ -1551,6 +1583,11 @@
   resolved "https://registry.yarnpkg.com/@babel/helper-validator-identifier/-/helper-validator-identifier-7.27.1.tgz#a7054dcc145a967dd4dc8fee845a57c1316c9df8"
   integrity sha512-D2hP9eA+Sqx1kBZgzxZh0y1trbuU+JoDkiEwqhQ36nodYqJwyEIhPSdMNd7lOm/4io72luTPWH20Yda0xOuUow==
 
+"@babel/helper-validator-identifier@^7.28.5":
+  version "7.28.5"
+  resolved "https://registry.yarnpkg.com/@babel/helper-validator-identifier/-/helper-validator-identifier-7.28.5.tgz#010b6938fab7cb7df74aa2bbc06aa503b8fe5fb4"
+  integrity sha512-qSs4ifwzKJSV39ucNjsvc6WVHs6b7S03sOh2OcHF9UHfVPqWWALUsNUVzhSBiItjRZoLHx7nIarVjqKVusUZ1Q==
+
 "@babel/helper-validator-option@^7.22.15":
   version "7.22.15"
   resolved "https://registry.yarnpkg.com/@babel/helper-validator-option/-/helper-validator-option-7.22.15.tgz#694c30dfa1d09a6534cdfcafbe56789d36aba040"
@@ -1663,6 +1700,13 @@
   integrity sha512-trGdfBdbD0l1ZPmcJ83eNxB9rbEax4ALFTF7fN386TMYbeCQbyme5cOEXQhbGXKebwGaB/J52w1mrklMcbgy6Q==
   dependencies:
     "@babel/types" "^7.25.6"
+
+"@babel/parser@^7.26.10", "@babel/parser@^7.28.5":
+  version "7.28.5"
+  resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.28.5.tgz#0b0225ee90362f030efd644e8034c99468893b08"
+  integrity sha512-KKBU1VGYR7ORr3At5HAtUQ+TV3SzRCXmA/8OdDZiLDBIZxVyzXuztPjfLd3BV1PRAQGCMWWSHYhL0F8d5uHBDQ==
+  dependencies:
+    "@babel/types" "^7.28.5"
 
 "@babel/parser@^7.27.2", "@babel/parser@^7.28.3", "@babel/parser@^7.28.4":
   version "7.28.4"
@@ -1934,7 +1978,7 @@
   dependencies:
     "@babel/helper-plugin-utils" "^7.22.5"
 
-"@babel/plugin-syntax-jsx@^7.27.1":
+"@babel/plugin-syntax-jsx@^7.25.9", "@babel/plugin-syntax-jsx@^7.27.1":
   version "7.27.1"
   resolved "https://registry.yarnpkg.com/@babel/plugin-syntax-jsx/-/plugin-syntax-jsx-7.27.1.tgz#2f9beb5eff30fa507c5532d107daac7b888fa34c"
   integrity sha512-y8YTNIeKoyhGd9O0Jiyzyyqk8gdjnumGTQPsz0xOZOQ2RmkVJeZ1vmmfIvFEKqucBG6axJGBZDE/7iI5suUI/w==
@@ -2287,7 +2331,7 @@
   dependencies:
     "@babel/helper-plugin-utils" "^7.27.1"
 
-"@babel/plugin-transform-flow-strip-types@^7.16.0":
+"@babel/plugin-transform-flow-strip-types@^7.16.0", "@babel/plugin-transform-flow-strip-types@^7.26.5":
   version "7.27.1"
   resolved "https://registry.yarnpkg.com/@babel/plugin-transform-flow-strip-types/-/plugin-transform-flow-strip-types-7.27.1.tgz#5def3e1e7730f008d683144fb79b724f92c5cdf9"
   integrity sha512-G5eDKsu50udECw7DL2AcsysXiQyB7Nfg521t2OAJ4tbfTJ27doHLeF/vlI1NZGlLdbb/v+ibvtL1YBQqYOwJGg==
@@ -3244,7 +3288,7 @@
     "@babel/parser" "^7.25.9"
     "@babel/types" "^7.25.9"
 
-"@babel/template@^7.27.1", "@babel/template@^7.27.2":
+"@babel/template@^7.26.9", "@babel/template@^7.27.1", "@babel/template@^7.27.2":
   version "7.27.2"
   resolved "https://registry.yarnpkg.com/@babel/template/-/template-7.27.2.tgz#fa78ceed3c4e7b63ebf6cb39e5852fca45f6809d"
   integrity sha512-LPDZ85aEJyYSd18/DkjNh4/y1ntkE5KwUHWTiqgRxruuZL2F1yuHligVHLvcHY2vMHXttKFpJn6LwfI7cw7ODw==
@@ -3295,6 +3339,19 @@
     debug "^4.3.1"
     globals "^11.1.0"
 
+"@babel/traverse@^7.26.10", "@babel/traverse@^7.28.5":
+  version "7.28.5"
+  resolved "https://registry.yarnpkg.com/@babel/traverse/-/traverse-7.28.5.tgz#450cab9135d21a7a2ca9d2d35aa05c20e68c360b"
+  integrity sha512-TCCj4t55U90khlYkVV/0TfkJkAkUg3jZFA3Neb7unZT8CPok7iiRfaX0F+WnqWqt7OxhOn0uBKXCw4lbL8W0aQ==
+  dependencies:
+    "@babel/code-frame" "^7.27.1"
+    "@babel/generator" "^7.28.5"
+    "@babel/helper-globals" "^7.28.0"
+    "@babel/parser" "^7.28.5"
+    "@babel/template" "^7.27.2"
+    "@babel/types" "^7.28.5"
+    debug "^4.3.1"
+
 "@babel/traverse@^7.27.1", "@babel/traverse@^7.28.0", "@babel/traverse@^7.28.3", "@babel/traverse@^7.28.4":
   version "7.28.4"
   resolved "https://registry.yarnpkg.com/@babel/traverse/-/traverse-7.28.4.tgz#8d456101b96ab175d487249f60680221692b958b"
@@ -3342,6 +3399,14 @@
   dependencies:
     "@babel/helper-string-parser" "^7.25.9"
     "@babel/helper-validator-identifier" "^7.25.9"
+
+"@babel/types@^7.26.10", "@babel/types@^7.28.5":
+  version "7.28.5"
+  resolved "https://registry.yarnpkg.com/@babel/types/-/types-7.28.5.tgz#10fc405f60897c35f07e85493c932c7b5ca0592b"
+  integrity sha512-qQ5m48eI/MFLQ5PxQj4PFaprjyCTLI37ElWMmNs0K8Lk3dVeOdNpB3ks8jc7yM5CDmVC73eMVk/trk3fgmrUpA==
+  dependencies:
+    "@babel/helper-string-parser" "^7.27.1"
+    "@babel/helper-validator-identifier" "^7.28.5"
 
 "@babel/types@^7.27.1", "@babel/types@^7.27.3", "@babel/types@^7.28.2", "@babel/types@^7.28.4":
   version "7.28.4"
@@ -3605,6 +3670,38 @@
   dependencies:
     commander "^2.15.1"
 
+"@compiled/babel-plugin-strip-runtime@^0.38.0":
+  version "0.38.0"
+  resolved "https://registry.yarnpkg.com/@compiled/babel-plugin-strip-runtime/-/babel-plugin-strip-runtime-0.38.0.tgz#0c58c0263377316dacbce98e768d0dcb0351f31d"
+  integrity sha512-I+SazUOFjQ7wCNom4ZgtQ/Roy6iESW/kG4ucNwcJt0/AYqEN/nOcC+vDWkEdaZtoREbblYEz6kG3yS8Pz5sAdw==
+  dependencies:
+    "@babel/core" "^7.26.10"
+    "@babel/helper-plugin-utils" "^7.26.5"
+    "@babel/template" "^7.26.9"
+    "@babel/traverse" "^7.26.10"
+    "@babel/types" "^7.26.10"
+    "@compiled/css" "^0.21.0"
+    "@compiled/utils" "^0.13.1"
+
+"@compiled/babel-plugin@^0.38.0":
+  version "0.38.1"
+  resolved "https://registry.yarnpkg.com/@compiled/babel-plugin/-/babel-plugin-0.38.1.tgz#3ea45ea75990ab10460247783d1b1231e2a25995"
+  integrity sha512-ZWAxfiY3c7wQphuhmdqrL/I5CHjP6/nSIf1Zo76Xkd+X0CqjuKB6YQp1eoACeJmzAVcZpL/1X2MPvR3RNJFktw==
+  dependencies:
+    "@babel/core" "^7.26.10"
+    "@babel/generator" "^7.26.10"
+    "@babel/helper-plugin-utils" "^7.26.5"
+    "@babel/parser" "^7.26.10"
+    "@babel/plugin-syntax-jsx" "^7.25.9"
+    "@babel/plugin-transform-flow-strip-types" "^7.26.5"
+    "@babel/template" "^7.26.9"
+    "@babel/traverse" "^7.26.10"
+    "@babel/types" "^7.26.10"
+    "@compiled/css" "^0.21.0"
+    "@compiled/utils" "^0.13.1"
+    "@emotion/is-prop-valid" "^1.3.1"
+    resolve "^1.22.10"
+
 "@compiled/css@^0.21.0":
   version "0.21.0"
   resolved "https://registry.yarnpkg.com/@compiled/css/-/css-0.21.0.tgz#945e032d81dd0e0587367660191eb19a14508333"
@@ -3630,6 +3727,21 @@
     "@parcel/plugin" "^2.8.3"
     posthtml "^0.16.6"
     posthtml-insert-at "^0.2.7"
+
+"@compiled/parcel-transformer@^0.19.0":
+  version "0.19.0"
+  resolved "https://registry.yarnpkg.com/@compiled/parcel-transformer/-/parcel-transformer-0.19.0.tgz#a0eaccc1609e265b3fbe6b7f25a83b31dce2e70f"
+  integrity sha512-EN4XCiyrSJVvA+ha+3L9OLgp98+MON0gHH+uWp5wnYSOgpp66uZrqShbPZ1/9mdyNxQlZAxLGS6/lOslk8/UBg==
+  dependencies:
+    "@babel/core" "^7.26.10"
+    "@babel/generator" "^7.26.10"
+    "@compiled/babel-plugin" "^0.38.0"
+    "@compiled/babel-plugin-strip-runtime" "^0.38.0"
+    "@compiled/utils" "^0.13.1"
+    "@parcel/plugin" "^2.8.3"
+    "@parcel/source-map" "^2.1.1"
+    "@parcel/utils" "^2.8.3"
+    enhanced-resolve "^5.18.1"
 
 "@compiled/react@^0.17.2":
   version "0.17.3"
@@ -3764,6 +3876,13 @@
   version "0.9.2"
   resolved "https://registry.yarnpkg.com/@emotion/hash/-/hash-0.9.2.tgz#ff9221b9f58b4dfe61e619a7788734bd63f6898b"
   integrity sha512-MyqliTZGuOm3+5ZRSaaBGP3USLw6+EGykkwZns2EPC5g8jJ4z9OrdZY9apkl3+UP9+sdz76YYkwCKP5gh8iY3g==
+
+"@emotion/is-prop-valid@^1.3.1":
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/@emotion/is-prop-valid/-/is-prop-valid-1.4.0.tgz#e9ad47adff0b5c94c72db3669ce46de33edf28c0"
+  integrity sha512-QgD4fyscGcbbKwJmqNvUMSE02OsHUa+lAWKdEUIJKgqe5IwRSKd7+KhibEWdaKwgjLj0DRSHA9biAIqGBk05lw==
+  dependencies:
+    "@emotion/memoize" "^0.9.0"
 
 "@emotion/memoize@^0.9.0":
   version "0.9.0"
@@ -5429,6 +5548,13 @@
   dependencies:
     chalk "^4.1.2"
 
+"@parcel/codeframe@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/codeframe/-/codeframe-2.16.1.tgz#1a57337f6d13a4c85a980fa4f467bd7b919627ca"
+  integrity sha512-KLy9Fvf37SX6/wek2SUPw8A/W0kChcNXPUNeCIYWUFI4USAZ5KvesXS5RHUnrJTaR0XzD0Qia+MFJPgp6kuazQ==
+  dependencies:
+    chalk "^4.1.2"
+
 "@parcel/diagnostic@2.16.0":
   version "2.16.0"
   resolved "https://registry.yarnpkg.com/@parcel/diagnostic/-/diagnostic-2.16.0.tgz#313e7a94ec0d2d856e604c96fa5c48c6b04fb0dc"
@@ -5437,10 +5563,23 @@
     "@mischnic/json-sourcemap" "^0.1.1"
     nullthrows "^1.1.1"
 
+"@parcel/diagnostic@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/diagnostic/-/diagnostic-2.16.1.tgz#3cf61235c81e2a9dc08d1cce113a1ece6948bbb8"
+  integrity sha512-PJl7/QGsPboAMVFZId31iGMMY70AllZNOtYka9rTZRjTiBhZw4VrAG/RdqqKzjVuL6fZhurmfcwWzj+3gx8ccg==
+  dependencies:
+    "@mischnic/json-sourcemap" "^0.1.1"
+    nullthrows "^1.1.1"
+
 "@parcel/events@2.16.0":
   version "2.16.0"
   resolved "https://registry.yarnpkg.com/@parcel/events/-/events-2.16.0.tgz#a1f17bfa4402b84d732bd21b408a3d9ee1e968b3"
   integrity sha512-PI7dryJLPYCe4jNzo7XWAzbUPUuD50Nd76GTdzaHhmcQfZnPrtWAu73UmP3yYqpbv97TtWSiCJyrJWPTDU/REA==
+
+"@parcel/events@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/events/-/events-2.16.1.tgz#bdaa4cb7986fb0c5d11f43659a67ae53417107a3"
+  integrity sha512-+U7Trb2W8fm8w/OjwQpWN/Tepiwim/YNXuyPrhikFnsrg6QDdDTD/8/km4ah8Bzr0u4hIrn1k32InwDMCF5sig==
 
 "@parcel/feature-flags@2.16.0":
   version "2.16.0"
@@ -5455,10 +5594,25 @@
     "@parcel/diagnostic" "2.16.0"
     "@parcel/events" "2.16.0"
 
+"@parcel/logger@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/logger/-/logger-2.16.1.tgz#50deb7ce82306ec7eff902836c9d0ae85c522d85"
+  integrity sha512-w9Qpp5S79fqn6nh/VqVYG4kCbIeW45zdPvYJMFgE90zhBRLrOnqw06cRZQdKj24C7/kdqOFFbrJ3B5uTsYeS0w==
+  dependencies:
+    "@parcel/diagnostic" "2.16.1"
+    "@parcel/events" "2.16.1"
+
 "@parcel/markdown-ansi@2.16.0":
   version "2.16.0"
   resolved "https://registry.yarnpkg.com/@parcel/markdown-ansi/-/markdown-ansi-2.16.0.tgz#37c9826a67390d6b0bb8d04091d8ce5b03d32629"
   integrity sha512-NxlmF/JAmsq9Yf/8q2+WEHFkcQ/cDoVOUx6ETDM8icDaQ8kXJbZSKAMOWnsB1EF0757UST77kX9zw/V6tyXqnw==
+  dependencies:
+    chalk "^4.1.2"
+
+"@parcel/markdown-ansi@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/markdown-ansi/-/markdown-ansi-2.16.1.tgz#f749775d13878a7833dfcee02fc7e6007ec9717f"
+  integrity sha512-4Qww9KkGrVrY/JyD2NtrdUmyufKOqGg3t6hkE4UqQBPb+GZd+TQi6i1mjWvOE6r9AF53x5PAZZ13f/HfllU2qA==
   dependencies:
     chalk "^4.1.2"
 
@@ -5484,40 +5638,80 @@
   resolved "https://registry.yarnpkg.com/@parcel/rust-darwin-arm64/-/rust-darwin-arm64-2.16.0.tgz#e624187ef241c4b3f9a41fc42f289d5de08ead3f"
   integrity sha512-rdNl1jq34VflBzduQjcOH9SBJPW+Dy1w5XL7hQ5OEAOkRTP1/3mvh98iVYeB3e+RMjRNE/Ipn/rz2KXXku6e6g==
 
+"@parcel/rust-darwin-arm64@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/rust-darwin-arm64/-/rust-darwin-arm64-2.16.1.tgz#9172c03d5f9fe08a8457d1646e11cd3119b96d3e"
+  integrity sha512-6J1pnznHYzH1TOQbDZmbGa6bXNW+KXbD+XIihvQOid42DLGJNXRmwMmCU3en/759lF/pfmzmR7sm6wPKaKGfbg==
+
 "@parcel/rust-darwin-x64@2.16.0":
   version "2.16.0"
   resolved "https://registry.yarnpkg.com/@parcel/rust-darwin-x64/-/rust-darwin-x64-2.16.0.tgz#546f4a3d43f9fdda6331590c22d7681d90f29540"
   integrity sha512-tozUnjBPfnCjk6HVZCUKNdgFWw4WsLRTJdnsTYBIERrfj858VN0rdOGlVesLFYNSUquoAO+aHtRdT/JqYW7ozA==
+
+"@parcel/rust-darwin-x64@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/rust-darwin-x64/-/rust-darwin-x64-2.16.1.tgz#eedfe6cc7692c9308501ee78a1b532bacd44f910"
+  integrity sha512-NDZpxleSeJ0yPx4OobDcj+z5x6RzsWmuA1RXBDuCKhf2kyXKP3+kfmrQew/7Q0r9uKA5pqCIw0W4eFqy4IoqIA==
 
 "@parcel/rust-linux-arm-gnueabihf@2.16.0":
   version "2.16.0"
   resolved "https://registry.yarnpkg.com/@parcel/rust-linux-arm-gnueabihf/-/rust-linux-arm-gnueabihf-2.16.0.tgz#a1f63d5ef852d11b8a6053a287c33a2bb17e315a"
   integrity sha512-FX/XrQm5BkLfHHBsUA1t7tYGTkNN4vr/t9ZuADUQCWng+m8g7BB78zWxkjoqayn5zTJAfjjQp42lSZzahtT59A==
 
+"@parcel/rust-linux-arm-gnueabihf@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/rust-linux-arm-gnueabihf/-/rust-linux-arm-gnueabihf-2.16.1.tgz#d396feb7c000d6f2311520641fb4c98e9eb31230"
+  integrity sha512-xLLcbMP38ya8/z5esp3ypN2htxO9AsY4uQqF2rigIUZ2abQwL4MPKxfVZtrExWdcrcWiFUbiwn3+GKu/0M9Yow==
+
 "@parcel/rust-linux-arm64-gnu@2.16.0":
   version "2.16.0"
   resolved "https://registry.yarnpkg.com/@parcel/rust-linux-arm64-gnu/-/rust-linux-arm64-gnu-2.16.0.tgz#b1e5e06491cf00e7a9e219e1e6975c7dd5480eda"
   integrity sha512-zmnWuclEQDQMhbB8jQw9f1VbnSs6EB2RApg16qs5Co/dhZVozMwJngdkZ6mq5aW8ut+PKYrxIPcVsm7WtVOOfg==
+
+"@parcel/rust-linux-arm64-gnu@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/rust-linux-arm64-gnu/-/rust-linux-arm64-gnu-2.16.1.tgz#7c80b7c283fafbcdfeb905e9ab5042415ad02fe4"
+  integrity sha512-asZlimUq1wBmj2PDcoBSKD1SJvcLf1mXTcYGojOsA3dqkOOz7fGz7oubqZYn6IM+02cUDO4ekH+YBV6Eo7XlTg==
 
 "@parcel/rust-linux-arm64-musl@2.16.0":
   version "2.16.0"
   resolved "https://registry.yarnpkg.com/@parcel/rust-linux-arm64-musl/-/rust-linux-arm64-musl-2.16.0.tgz#7d5b05708737ed24260fd5d1688c04ee1ccc240c"
   integrity sha512-bL3PzFEg0azmdFaf34yHAXukk2MjNSuiITPVOj9Cq65qAk7lb4+9nuGIwrCMr1+R1yCamrL31GgG61qp0X97xg==
 
+"@parcel/rust-linux-arm64-musl@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/rust-linux-arm64-musl/-/rust-linux-arm64-musl-2.16.1.tgz#84a2af035b9ac7230ce01d470a6ba4914690fab7"
+  integrity sha512-japSgrHYDD+uNHQ8TEdEhpiWu0zWMVBE48W3HJ5FKkwUOY51whZa8w0lhYW88ykUDYtEEd1ipvflv0fSDFY1jw==
+
 "@parcel/rust-linux-x64-gnu@2.16.0":
   version "2.16.0"
   resolved "https://registry.yarnpkg.com/@parcel/rust-linux-x64-gnu/-/rust-linux-x64-gnu-2.16.0.tgz#329d85282dd7d26da89bd8c3737b263ca025b7c6"
   integrity sha512-yvuDTyuhMtwZjB1xGFmCC/UsZjEpMTAanJHAVX9b+tJnn7ArG7Q75Az/JpZsru6KAXiTo1krI54vTE87zzwkIg==
+
+"@parcel/rust-linux-x64-gnu@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/rust-linux-x64-gnu/-/rust-linux-x64-gnu-2.16.1.tgz#f0a57da43b1129e8d4410c9b6e4322073b5170f5"
+  integrity sha512-A2LHDou7QDsKn3qlE+DHTBFqnjk0Hy1dhVEJgPgvW4N0XMa4x2JEcnLI9oFZ4KDXyMLGs0H6/smZ88zSdFoF3w==
 
 "@parcel/rust-linux-x64-musl@2.16.0":
   version "2.16.0"
   resolved "https://registry.yarnpkg.com/@parcel/rust-linux-x64-musl/-/rust-linux-x64-musl-2.16.0.tgz#868636e6c4b5f0e3ed9876a6b022f6bfcd72e9bc"
   integrity sha512-0q6ESCVe9uHVuQWuEGGDMJwjezliTsEWMcqn7oeQoKXaZJZQpW0UAuzNcNmpiHmeJdifYT9XuxVOo/a8IgOXhg==
 
+"@parcel/rust-linux-x64-musl@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/rust-linux-x64-musl/-/rust-linux-x64-musl-2.16.1.tgz#1377c1295719212e949d56bdf20482b6c9084e72"
+  integrity sha512-C+WgGbmIV1XxXUgNJdXpfZazqizYBvy7aesh8Z74QrlY99an/puQufd4kSbvwySN5iMGPSpN0VlyAUjDZLv9rQ==
+
 "@parcel/rust-win32-x64-msvc@2.16.0":
   version "2.16.0"
   resolved "https://registry.yarnpkg.com/@parcel/rust-win32-x64-msvc/-/rust-win32-x64-msvc-2.16.0.tgz#9b623ee20e69c67c22b4148e1be6aaa7bd5fc428"
   integrity sha512-IVWpXF1VY+Xgi6ylXaZttAF5+WjazPyxRJUZlC31taYwpfZ4LzmsV8NYlj5ehjTL8d28SKDBoAnOQJwDRe8z8Q==
+
+"@parcel/rust-win32-x64-msvc@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/rust-win32-x64-msvc/-/rust-win32-x64-msvc-2.16.1.tgz#645868a6e6698addffc6fec2bf281c268f7876ec"
+  integrity sha512-m8LoaBJfw5nv/4elM/jNNhWL5/HqBHNQnrbnN89e8sxn4L/zv9bPoXqHOuZglXwyB5velw1MGonX9Be/aK00ag==
 
 "@parcel/rust@2.16.0":
   version "2.16.0"
@@ -5532,6 +5726,20 @@
     "@parcel/rust-linux-x64-gnu" "2.16.0"
     "@parcel/rust-linux-x64-musl" "2.16.0"
     "@parcel/rust-win32-x64-msvc" "2.16.0"
+
+"@parcel/rust@2.16.1":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/rust/-/rust-2.16.1.tgz#1d41bbd3afdbc2c3801c1fef8638569b155bfa50"
+  integrity sha512-lQkf14MLKZSY/P8j1lrOgFvMCt95dO+VdXIIM2aHjbxnzYSIGgHIt2XDVtKULE+DexaYZbleA0tTnX8AABUIyQ==
+  optionalDependencies:
+    "@parcel/rust-darwin-arm64" "2.16.1"
+    "@parcel/rust-darwin-x64" "2.16.1"
+    "@parcel/rust-linux-arm-gnueabihf" "2.16.1"
+    "@parcel/rust-linux-arm64-gnu" "2.16.1"
+    "@parcel/rust-linux-arm64-musl" "2.16.1"
+    "@parcel/rust-linux-x64-gnu" "2.16.1"
+    "@parcel/rust-linux-x64-musl" "2.16.1"
+    "@parcel/rust-win32-x64-msvc" "2.16.1"
 
 "@parcel/source-map@^2.1.1":
   version "2.1.1"
@@ -5568,6 +5776,20 @@
     "@parcel/logger" "2.16.0"
     "@parcel/markdown-ansi" "2.16.0"
     "@parcel/rust" "2.16.0"
+    "@parcel/source-map" "^2.1.1"
+    chalk "^4.1.2"
+    nullthrows "^1.1.1"
+
+"@parcel/utils@^2.8.3":
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/@parcel/utils/-/utils-2.16.1.tgz#c47161198cdb9bf4fef1e2f21d274032c089a67c"
+  integrity sha512-aoY6SCfAY7X6L39PFOsWNNcAobmJr4AJEgco+PJ2UAPFiHhkBZfUofXCwna5GHH5uqXZx6u3rAHiCUrM3bEDXg==
+  dependencies:
+    "@parcel/codeframe" "2.16.1"
+    "@parcel/diagnostic" "2.16.1"
+    "@parcel/logger" "2.16.1"
+    "@parcel/markdown-ansi" "2.16.1"
+    "@parcel/rust" "2.16.1"
     "@parcel/source-map" "^2.1.1"
     chalk "^4.1.2"
     nullthrows "^1.1.1"
@@ -10853,6 +11075,14 @@ end-of-stream@^1.0.0, end-of-stream@^1.1.0, end-of-stream@^1.4.1:
   integrity sha512-+uw1inIHVPQoaVuHzRyXd21icM+cnt4CzD5rW+NC1wjOUSTOs+Te7FOv7AhN7vS9x/oIyhLP5PR1H+phQAHu5Q==
   dependencies:
     once "^1.4.0"
+
+enhanced-resolve@^5.18.1:
+  version "5.18.3"
+  resolved "https://registry.yarnpkg.com/enhanced-resolve/-/enhanced-resolve-5.18.3.tgz#9b5f4c5c076b8787c78fe540392ce76a88855b44"
+  integrity sha512-d4lC8xfavMeBjzGr2vECC3fsGXziXZQyJxD868h2M/mBI3PwAuODxAkLkq5HYuvrPYcUtiLzsTo8U3PgX3Ocww==
+  dependencies:
+    graceful-fs "^4.2.4"
+    tapable "^2.2.0"
 
 enquirer@^2.3.0:
   version "2.4.1"
@@ -21843,6 +22073,11 @@ tailwindcss@^3.0.2:
     resolve "^1.20.0"
     tmp "^0.2.1"
 
+tapable@^2.2.0:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/tapable/-/tapable-2.3.0.tgz#7e3ea6d5ca31ba8e078b560f0d83ce9a14aa8be6"
+  integrity sha512-g9ljZiwki/LfxmQADO3dEY1CbpmXT5Hm2fJ+QaGKwSXUylMybePR7/67YW7jOrrvjEgL1Fmz5kzyAjWVWLlucg==
+
 tar-fs@^2.0.0, tar-fs@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/tar-fs/-/tar-fs-2.1.1.tgz#489a15ab85f1f0befabb370b7de4f9eb5cbe8784"
@@ -23916,3 +24151,8 @@ zx@*, zx@^8.1.9:
   optionalDependencies:
     "@types/fs-extra" ">=11"
     "@types/node" ">=20"
+
+zx@^8.8.5:
+  version "8.8.5"
+  resolved "https://registry.yarnpkg.com/zx/-/zx-8.8.5.tgz#d092d8c0017aa7c5a276fda88ff19e4b1d91cc64"
+  integrity sha512-SNgDF5L0gfN7FwVOdEFguY3orU5AkfFZm9B5YSHog/UDHv+lvmd82ZAsOenOkQixigwH2+yyH198AwNdKhj+RA==
