@@ -13,6 +13,7 @@ use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use regex::Regex;
+use std::collections::HashMap;
 use std::{any::Any, panic};
 use swc_core::common::Mark;
 use swc_core::{
@@ -86,6 +87,22 @@ pub struct CompiledCssInJsPluginResult {
 
 static PANIC_HOOK_GUARD: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 static PANIC_HOOK_INITIALIZED: OnceCell<()> = OnceCell::new();
+
+/// Cache for compiled regex patterns to avoid recompiling them on every function call
+static REGEX_CACHE: Lazy<Mutex<HashMap<String, Regex>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+
+/// Get or compile a regex pattern from the cache
+fn get_cached_regex(pattern: &str) -> Result<Regex> {
+  let mut cache = REGEX_CACHE.lock();
+
+  if let Some(regex) = cache.get(pattern) {
+    return Ok(regex.clone());
+  }
+
+  let regex = Regex::new(pattern).map_err(|e| anyhow!("Invalid regex pattern: {}", e))?;
+  cache.insert(pattern.to_string(), regex.clone());
+  Ok(regex)
+}
 
 fn initialize_panic_hook_once() {
   PANIC_HOOK_INITIALIZED.get_or_init(|| {
@@ -281,6 +298,11 @@ fn process_compiled_css_in_js(
   code: &str,
   input: &CompiledCssInJsPluginInput,
 ) -> Result<CompiledCssInJsPluginResult> {
+  // Check for empty code
+  if code.trim().is_empty() {
+    return Err(anyhow!("Empty code input"));
+  }
+
   // Build the transform config from the input
   let transform_config = &atlassian_swc_compiled_css::CompiledCssInJsTransformConfig::from(
     atlassian_swc_compiled_css::CompiledCssInJsConfig {
@@ -344,8 +366,7 @@ fn process_compiled_css_in_js(
   }
 
   if let Some(pattern) = &transform_config.unsafe_skip_pattern {
-    let regex =
-      Regex::new(pattern.as_str()).map_err(|e| anyhow!("Invalid regex pattern: {}", e))?;
+    let regex = get_cached_regex(pattern.as_str())?;
 
     if regex.is_match(code) {
       // Asset contains known unsafe CSS, bail out without erroring
@@ -755,7 +776,7 @@ mod tests {
         let mut result = String::from("\"");
         let mut escape = false;
 
-        while let Some(ch) = iter.next() {
+        for ch in iter.by_ref() {
           if escape {
             match ch {
               '\'' => result.push('\''),
