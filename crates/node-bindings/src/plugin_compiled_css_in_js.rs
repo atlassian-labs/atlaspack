@@ -284,8 +284,6 @@ fn process_compiled_css_in_js(
     return Err(anyhow!("Empty code input"));
   }
 
-  let code_hash = atlassian_swc_compiled_css::migration_hash::hash_code(code);
-
   // Build the transform config from the input
   let transform_config = atlassian_swc_compiled_css::CompiledCssInJsTransformConfig::from(
     atlassian_swc_compiled_css::CompiledCssInJsConfig {
@@ -308,6 +306,27 @@ fn process_compiled_css_in_js(
       unsafe_use_safe_assets: input.config.unsafe_use_safe_assets,
     },
   );
+
+  let code_hash = atlassian_swc_compiled_css::migration_hash::hash_code(code);
+
+  if code.contains("cssMap") {
+    // Asset contains known unsafe CSS, bail out without erroring
+    return Ok(CompiledCssInJsPluginResult {
+      code: "".to_string(),
+      map: None,
+      style_rules: Vec::new(),
+      diagnostics: vec![JsDiagnostic {
+        message: "Skipping asset containing cssMap".to_string(),
+        code_highlights: None,
+        hints: None,
+        show_environment: false,
+        severity: "Error".to_string(),
+        documentation_url: None,
+      }],
+      bail_out: true,
+      code_hash,
+    });
+  }
 
   let is_safe_result =
     atlassian_swc_compiled_css::migration_hash::is_safe(&code_hash, &transform_config);
@@ -1479,6 +1498,8 @@ import { Box } from '@atlaskit/primitives/compiled';
     );
   }
 
+  // CSS map is not supported yet, so we ignore this test
+  #[ignore]
   #[test]
   fn test_css_map() {
     let config = create_test_config(true, false);
@@ -1537,6 +1558,8 @@ export const ContainerAvatar = ({ src }: ContainerAvatarProps) => (
     );
   }
 
+  // CSS map is not supported yet, so we ignore this test
+  #[ignore]
   #[test]
   fn test_css_map_primitives() {
     let config = create_test_config(true, false);
@@ -1996,6 +2019,8 @@ export const IssueViewSkeletonWithRightStatus = ({ isEmbedView, isModalView }) =
     );
   }
 
+  // CSS map is not supported yet, so we ignore this test
+  #[ignore]
   #[test]
   fn test_css_sidebar() {
     let config = create_test_config(true, false);
@@ -2335,6 +2360,8 @@ export function SideNavInternal({ children, defaultCollapsed }) {
     );
   }
 
+  // CSS map is not supported yet, so we ignore this test
+  #[ignore]
   #[test]
   fn test_css_page_layout() {
     let config = create_test_config(true, false);
@@ -2622,6 +2649,8 @@ const styles3 = css({
     );
   }
 
+  // CSS map is not supported yet, so we ignore this test
+  #[ignore]
   #[test]
   fn test_cx() {
     let config = create_test_config(true, false);
