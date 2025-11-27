@@ -312,7 +312,7 @@ fn process_compiled_css_in_js(
   let start = std::time::Instant::now();
 
   let is_safe_result =
-    atlassian_swc_compiled_css::migration_hash::is_safe(&code_hash, &transform_config);
+    atlassian_swc_compiled_css::migration_hash::is_safe(&code_hash, transform_config);
 
   if let Err(e) = is_safe_result {
     // Error checking if asset is safe
