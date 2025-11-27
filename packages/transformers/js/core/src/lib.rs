@@ -13,6 +13,7 @@ mod hoist;
 mod lazy_loading_transformer;
 mod magic_comments;
 mod node_replacer;
+mod react_async_import_lift;
 mod react_hooks_remover;
 mod static_prevaluator;
 mod sync_dynamic_import;
@@ -56,6 +57,7 @@ use magic_comments::MagicCommentsVisitor;
 use node_replacer::NodeReplacer;
 use path_slash::PathExt;
 use pathdiff::diff_paths;
+use react_async_import_lift::ReactAsyncImportLift;
 use react_hooks_remover::ReactHooksRemover;
 use serde::Deserialize;
 use serde::Serialize;
@@ -159,15 +161,18 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
-  pub sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
   pub nested_promise_import_fix: bool,
   pub global_aliasing_config: Option<HashMap<String, String>>,
   pub enable_lazy_loading: bool,
   pub enable_ssr_typeof_replacement: bool,
   pub enable_react_hooks_removal: bool,
+  pub enable_react_async_import_lift: bool,
+  pub react_async_lift_by_default: bool,
+  pub react_async_lift_report_level: String,
   pub enable_static_prevaluation: bool,
   pub enable_dead_returns_removal: bool,
   pub enable_unused_bindings_removal: bool,
+  pub sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -420,6 +425,20 @@ pub fn transform(
                 ));
               }
 
+              let module = module.apply((
+                  Optional::new(
+                    visit_mut_pass(ReactAsyncImportLift::new(global_mark, config.react_async_lift_by_default, config.react_async_lift_report_level.clone())),
+                    config.enable_react_async_import_lift && ReactAsyncImportLift::should_transform(code)
+                  ),
+                  Optional::new(
+                    visit_mut_pass(
+                      SyncDynamicImport::new(Path::new(&config.filename),
+                        unresolved_mark,
+                        &config.sync_dynamic_import_config,
+                      )),
+                      config.sync_dynamic_import_config.is_some()),
+                ));
+
               let mut module = {
                 let mut passes = (
                   Optional::new(
@@ -440,13 +459,6 @@ pub fn transform(
                     }),
                     config.source_type != SourceType::Script
                   ),
-                  Optional::new(
-                    visit_mut_pass(
-                      SyncDynamicImport::new(Path::new(&config.filename),
-                        unresolved_mark,
-                        &config.sync_dynamic_import_config,
-                      )),
-                      config.sync_dynamic_import_config.is_some()),
                   Optional::new(
                     visit_mut_pass(GlobalAliaser::with_config(unresolved_mark, &config.global_aliasing_config)),
                     config.global_aliasing_config.is_some()
