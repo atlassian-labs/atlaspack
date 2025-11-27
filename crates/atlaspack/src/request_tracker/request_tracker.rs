@@ -380,13 +380,12 @@ impl RequestTracker {
     }
 
     for invalid_node in invalid_nodes {
-      tracing::info!(
-        "{:?} invalidates {:#?}",
-        file_path_reason,
-        self.graph.node_weight(invalid_node)
-      );
       self.graph[invalid_node] = match &self.graph[invalid_node] {
-        RequestNode::Valid(result) => RequestNode::Invalid(Some(result.clone())),
+        RequestNode::Valid(result) => {
+          tracing::info!("{:?} invalidates {}", file_path_reason, result);
+
+          RequestNode::Invalid(Some(result.clone()))
+        }
         RequestNode::Incomplete(result) => RequestNode::Invalid(result.clone()),
         _ => {
           panic!("Impossible node type")
