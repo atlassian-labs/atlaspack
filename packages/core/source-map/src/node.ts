@@ -97,7 +97,14 @@ export default class NodeSourceMap extends SourceMap {
 
     // We can't use instanceof here because if we're using a resolution for @parcel/source-map,
     // it will be a different instance as it'll be a "copy" of @atlaspack/source-map
-    if (sourceMap.libraryVersion === SOURCE_MAP_VERSION) {
+    //
+    // We only compare the major version number for Atlaspack source maps, so we can take into account linking newer
+    // releases into existing codebases.
+    if (
+      sourceMap.libraryVersion.startsWith(
+        SOURCE_MAP_VERSION.substring(0, SOURCE_MAP_VERSION.indexOf('.')),
+      )
+    ) {
       return sourceMap.toBuffer();
     }
 
