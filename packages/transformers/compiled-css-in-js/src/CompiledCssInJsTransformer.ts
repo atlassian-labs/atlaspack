@@ -194,6 +194,7 @@ export default new Transformer({
       asset.meta.compiledCssDiagnostics = result.diagnostics.map(
         (d) => d.message,
       );
+      asset.meta.compiledBailOut = result.bailOut;
       return [asset];
     }
 

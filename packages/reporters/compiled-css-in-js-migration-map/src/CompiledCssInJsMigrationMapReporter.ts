@@ -60,7 +60,7 @@ export default new Reporter({
               }
             }
 
-            if (mismatches.length === 0) {
+            if (mismatches.length === 0 && !asset.meta.compiledBailOut) {
               if (asset.meta.compiledCodeHash) {
                 safeAssets[asset.meta.compiledCodeHash as string] = relative(
                   options.projectRoot,
