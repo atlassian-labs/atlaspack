@@ -108,7 +108,7 @@ impl ReactAsyncImportLift {
   /// Returns Some(lifted_id) if the expression becomes a simple identifier after lifting
   fn lift_imports_in_expr(&mut self, expr: &mut Box<Expr>) -> Option<Ident> {
     // Find and extract the import() call
-    let import_call = self.find_and_extract_import(expr)?;
+    let import_call = Self::find_and_extract_import(expr)?;
 
     let lifted_id = self.generate_lifted_import_id();
 
@@ -124,7 +124,7 @@ impl ReactAsyncImportLift {
     });
 
     // Replace import() with the lifted identifier in the expression tree
-    self.replace_import_with_ident(expr, &lifted_id);
+    Self::replace_import_with_ident(expr, &lifted_id);
 
     // Return the lifted_id if the expression is now just an identifier
     matches!(**expr, Expr::Ident(_)).then(|| lifted_id)
@@ -132,7 +132,7 @@ impl ReactAsyncImportLift {
 
   /// Find and extract import() call from an expression
   /// Recursively searches through member expressions and call chains
-  fn find_and_extract_import(&self, expr: &Expr) -> Option<Box<Expr>> {
+  fn find_and_extract_import(expr: &Expr) -> Option<Box<Expr>> {
     match expr {
       Expr::Call(call) if matches!(call.callee, Callee::Import(_)) => {
         Some(Box::new(Expr::Call(call.clone())))
@@ -141,18 +141,18 @@ impl ReactAsyncImportLift {
         if let Callee::Expr(callee_expr) = &call.callee
           && let Expr::Member(member) = &**callee_expr
         {
-          self.find_and_extract_import(&member.obj)
+          Self::find_and_extract_import(&member.obj)
         } else {
           None
         }
       }
-      Expr::Member(member) => self.find_and_extract_import(&member.obj),
+      Expr::Member(member) => Self::find_and_extract_import(&member.obj),
       _ => None,
     }
   }
 
   /// Replace import() call with identifier in expression tree
-  fn replace_import_with_ident(&self, expr: &mut Box<Expr>, lifted_id: &Ident) {
+  fn replace_import_with_ident(expr: &mut Box<Expr>, lifted_id: &Ident) {
     match &mut **expr {
       Expr::Call(call) if matches!(call.callee, Callee::Import(_)) => {
         *expr = Box::new(Expr::Ident(lifted_id.clone()));
@@ -161,11 +161,11 @@ impl ReactAsyncImportLift {
         if let Callee::Expr(callee_expr) = &mut call.callee
           && let Expr::Member(member) = &mut **callee_expr
         {
-          self.replace_import_with_ident(&mut member.obj, lifted_id);
+          Self::replace_import_with_ident(&mut member.obj, lifted_id);
         }
       }
       Expr::Member(member) => {
-        self.replace_import_with_ident(&mut member.obj, lifted_id);
+        Self::replace_import_with_ident(&mut member.obj, lifted_id);
       }
       _ => {}
     }
