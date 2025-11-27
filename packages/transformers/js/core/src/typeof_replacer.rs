@@ -136,6 +136,36 @@ mod tests {
         const x = "function";
         const m = "object";
         const e = "object";
+        const w = typeof window;
+        const d = typeof document;
+        const n = typeof navigator;
+        const p = typeof process;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_ssr_replacements() {
+    let code = indoc! {r#"
+      const x = typeof require;
+      const m = typeof module;
+      const e = typeof exports;
+      const w = typeof window;
+      const d = typeof document;
+      const n = typeof navigator;
+      const p = typeof process;
+    "#};
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| {
+      TypeofReplacer::new_ssr(context.unresolved_mark)
+    });
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const x = "function";
+        const m = "object";
+        const e = "object";
         const w = "undefined";
         const d = "undefined";
         const n = "undefined";
@@ -148,8 +178,8 @@ mod tests {
   fn test_typeof_in_expressions() {
     let code = indoc! {r#"
       const x = typeof require === 'function';
-      typeof window === 'undefined';
-      typeof window !== 'undefined';
+      typeof module === 'object';
+      typeof module !== 'object';
     "#};
 
     let RunVisitResult { output_code, .. } =
@@ -159,8 +189,8 @@ mod tests {
       output_code,
       indoc! {r#"
         const x = "function" === 'function';
-        "undefined" === 'undefined';
-        "undefined" !== 'undefined';
+        "object" === 'object';
+        "object" !== 'object';
       "#}
     );
   }
@@ -168,13 +198,12 @@ mod tests {
   #[test]
   fn test_respects_variable_scope() {
     let code = indoc! {r#"
-      function wrapper({ require, exports, window }) {
+      function wrapper({ require, exports }) {
         const x = typeof require;
         const e = typeof exports;
-        const w = typeof window;
         const m = typeof module;
       }
-      const global = typeof window;
+      const global = typeof require;
     "#};
 
     let RunVisitResult { output_code, .. } =
@@ -183,13 +212,12 @@ mod tests {
     assert_eq!(
       output_code,
       indoc! {r#"
-        function wrapper({ require, exports, window }) {
+        function wrapper({ require, exports }) {
             const x = typeof require;
             const e = typeof exports;
-            const w = typeof window;
             const m = "object";
         }
-        const global = "undefined";
+        const global = "function";
       "#}
     );
   }
