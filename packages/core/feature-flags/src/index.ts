@@ -327,6 +327,20 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-10-24
    */
   precomputeReferencedAssets: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Disallows circular package aliases during resolution.
+   * This fixes cases where package A aliases to package B, but package B
+   * imports package A, causing infinite loops during resolution. Instead,
+   * we disable the alias allow package B to import the real package A.
+   *
+   * This is useful in cases where you create wrapper packages that re-export
+   * another package under a different name.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-11-27
+   */
+  disallowCircularPackageAliases: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
