@@ -12,6 +12,7 @@ use napi_derive::napi;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
+use regex::Regex;
 use std::{any::Any, panic};
 use swc_core::common::Mark;
 use swc_core::{
@@ -58,6 +59,7 @@ pub struct CompiledCssInJsConfig {
   pub ssr: Option<bool>,
   pub unsafe_report_safe_assets_for_migration: Option<bool>,
   pub unsafe_use_safe_assets: Option<bool>,
+  pub unsafe_skip_pattern: Option<String>,
 }
 
 #[napi(object)]
@@ -279,11 +281,6 @@ fn process_compiled_css_in_js(
   code: &str,
   input: &CompiledCssInJsPluginInput,
 ) -> Result<CompiledCssInJsPluginResult> {
-  // Check for empty code
-  if code.trim().is_empty() {
-    return Err(anyhow!("Empty code input"));
-  }
-
   // Build the transform config from the input
   let transform_config = &atlassian_swc_compiled_css::CompiledCssInJsTransformConfig::from(
     atlassian_swc_compiled_css::CompiledCssInJsConfig {
@@ -304,6 +301,7 @@ fn process_compiled_css_in_js(
       ssr: input.config.ssr,
       unsafe_report_safe_assets_for_migration: input.config.unsafe_report_safe_assets_for_migration,
       unsafe_use_safe_assets: input.config.unsafe_use_safe_assets,
+      unsafe_skip_pattern: input.config.unsafe_skip_pattern.clone(),
     },
   );
 
@@ -345,23 +343,28 @@ fn process_compiled_css_in_js(
     });
   }
 
-  if code.contains("xcss=") {
-    // Asset contains known unsafe CSS, bail out without erroring
-    return Ok(CompiledCssInJsPluginResult {
-      code: "".to_string(),
-      map: None,
-      style_rules: Vec::new(),
-      diagnostics: vec![JsDiagnostic {
-        message: "Skipping asset containing xcss".to_string(),
-        code_highlights: None,
-        hints: None,
-        show_environment: false,
-        severity: "Error".to_string(),
-        documentation_url: None,
-      }],
-      bail_out: true,
-      code_hash,
-    });
+  if let Some(pattern) = &transform_config.unsafe_skip_pattern {
+    let regex =
+      Regex::new(pattern.as_str()).map_err(|e| anyhow!("Invalid regex pattern: {}", e))?;
+
+    if regex.is_match(code) {
+      // Asset contains known unsafe CSS, bail out without erroring
+      return Ok(CompiledCssInJsPluginResult {
+        code: "".to_string(),
+        map: None,
+        style_rules: Vec::new(),
+        diagnostics: vec![JsDiagnostic {
+          message: "Skipping asset from configured pattern".to_string(),
+          code_highlights: None,
+          hints: None,
+          show_environment: false,
+          severity: "Error".to_string(),
+          documentation_url: None,
+        }],
+        bail_out: true,
+        code_hash,
+      });
+    }
   }
 
   let swc_config = Config {
@@ -712,6 +715,7 @@ mod tests {
         config_path: None,
         unsafe_report_safe_assets_for_migration: None,
         unsafe_use_safe_assets: None,
+        unsafe_skip_pattern: None,
         import_react: Some(true),
         nonce: None,
         import_sources: Some(vec!["@compiled/react".into(), "@atlaskit/css".into()]),
@@ -908,6 +912,28 @@ mod tests {
     assert!(
       transformed.code.contains("@compiled/react/runtime"),
       "Transformed code should contain @compiled/react/runtime"
+    );
+  }
+
+  #[test]
+  fn test_skip_pattern_successful_transformation() {
+    let mut config = create_test_config(true, false);
+
+    config.config.unsafe_skip_pattern = Some(String::from("css="));
+
+    let code = indoc! {r#"
+      import { css } from '@compiled/react';
+      const styles = css({ color: 'red' });
+      <div css={styles} />;
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Transformed code should succeed");
+
+    let transformed = result.unwrap();
+    assert!(
+      transformed.bail_out,
+      "Should bail out because of skip pattern"
     );
   }
 

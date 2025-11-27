@@ -385,6 +385,7 @@ dependencies = [
  "parcel_sourcemap 2.1.1",
  "parking_lot",
  "rayon",
+ "regex",
  "rkyv 0.7.45",
  "serde",
  "serde_json",

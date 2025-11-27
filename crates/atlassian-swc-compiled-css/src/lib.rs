@@ -13412,11 +13412,13 @@ pub fn transform_program_with_options(
       .parent()
       .map(Path::to_path_buf)
       .unwrap_or_else(|| PathBuf::from("."));
-    let project_root = find_project_root(&file_dir);
+
     let css_options = css_options_from_plugin_options(&options);
 
     let enable_evaluator = std::env::var_os("ENABLE_EVALUATOR").is_some();
+
     let evaluator = if enable_evaluator {
+      let project_root = find_project_root(&file_dir);
       Some(ModuleEvaluator::new(
         &file_dir,
         &project_root,
@@ -13569,22 +13571,6 @@ pub fn transform_program_with_options(
       append_stylesheet_requires(&mut module, path, &collected_rules);
     }
 
-    if let Some(ref extract_opts) = options.extract_styles_to_directory {
-      let sort_at_rules = options.sort_at_rules.unwrap_or(true);
-      let sort_shorthand = options.sort_shorthand.unwrap_or(true);
-      if let Err(message) = write_stylesheet_to_directory(
-        &mut module,
-        extract_opts,
-        &collected_rules,
-        sort_at_rules,
-        sort_shorthand,
-        &file_path,
-        &project_root,
-      ) {
-        panic!("{message}");
-      }
-    }
-
     let included_files: Vec<String> = if let Some(ev) = evaluator.as_ref() {
       ev.included_files()
         .into_iter()
@@ -13617,69 +13603,6 @@ pub fn transform_program_with_options(
   }
 
   program
-}
-
-fn transform_program(program: Program, metadata: TransformPluginProgramMetadata) -> Program {
-  let config_value = metadata
-    .get_transform_plugin_config()
-    .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
-    .unwrap_or(Value::Object(serde_json::Map::new()));
-
-  let mut options: PluginOptions = serde_json::from_value(config_value).unwrap_or_default();
-  if !options
-    .import_sources
-    .iter()
-    .any(|source| source == "@compiled/react")
-  {
-    options.import_sources.push("@compiled/react".into());
-  }
-
-  let filename = metadata
-    .get_context(&TransformPluginMetadataContextKind::Filename)
-    .unwrap_or_else(|| "unknown.js".to_string());
-
-  transform_program_with_options(program, metadata, options, filename)
-}
-
-#[doc(hidden)]
-pub fn transform_program_for_testing(
-  program: Program,
-  filename: String,
-  config_json: Option<&str>,
-) -> Program {
-  let config_value = config_json
-    .and_then(|raw| serde_json::from_str::<Value>(raw).ok())
-    .unwrap_or_else(|| Value::Object(serde_json::Map::new()));
-
-  let mut options: PluginOptions = serde_json::from_value(config_value).unwrap_or_default();
-  if !options
-    .import_sources
-    .iter()
-    .any(|source| source == "@compiled/react")
-  {
-    options.import_sources.push("@compiled/react".into());
-  }
-
-  let metadata = TransformPluginProgramMetadata {
-    comments: None,
-    source_map: PluginSourceMapProxy {
-      source_file: OnceCell::new(),
-    },
-    unresolved_mark: Mark::new(),
-  };
-
-  transform_program_with_options(program, metadata, options, filename)
-}
-
-#[doc(hidden)]
-pub fn empty_metadata() -> TransformPluginProgramMetadata {
-  TransformPluginProgramMetadata {
-    comments: None,
-    source_map: PluginSourceMapProxy {
-      source_file: OnceCell::new(),
-    },
-    unresolved_mark: Mark::new(),
-  }
 }
 
 #[cfg(test)]
@@ -13770,9 +13693,6 @@ mod tests {
     assert_eq!(minified, "background-position:-300px 0;opacity:0");
   }
 
-  #[test]
-  #[test]
-  #[test]
   #[test]
   fn styled_component_transforms() {
     let (emitted, artifacts) = transform_source(
