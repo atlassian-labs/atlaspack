@@ -333,6 +333,11 @@ impl ResolverPlugin for AtlaspackResolver {
       resolver.extra_aliases = Some(extra_aliases);
     }
 
+    resolver.dissalow_circular_package_aliases = self
+      .options
+      .feature_flags
+      .bool_enabled("disallowCircularPackageAliases");
+
     resolver.conditions.set(
       ExportsCondition::BROWSER,
       ctx.dependency.env.context.is_browser(),

@@ -1,5 +1,36 @@
 # @atlaspack/core
 
+## 2.29.0
+
+### Minor Changes
+
+- [#898](https://github.com/atlassian-labs/atlaspack/pull/898) [`a884bd2`](https://github.com/atlassian-labs/atlaspack/commit/a884bd2a6bd6f37d088fb886dd9b88e85328501b) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add `unstable_alias` feature to .parcelrc V3 builds for configuring build specific aliases
+
+### Patch Changes
+
+- [#899](https://github.com/atlassian-labs/atlaspack/pull/899) [`5710532`](https://github.com/atlassian-labs/atlaspack/commit/57105322b26ce42af2cbfcc0506cff929e50b630) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix v3 environment ids not being consistent with v2
+
+- [#901](https://github.com/atlassian-labs/atlaspack/pull/901) [`6fac01d`](https://github.com/atlassian-labs/atlaspack/commit/6fac01dbb1bfc5b971176c1a1c008297bf4b8f91) Thanks [@benjervis](https://github.com/benjervis)! - Makes the serialization and LMDB write steps into separate Promises, so that we can return them separately and parallelise some work.
+
+- [#905](https://github.com/atlassian-labs/atlaspack/pull/905) [`432d571`](https://github.com/atlassian-labs/atlaspack/commit/432d571ea4e9fc67be12304fcafe8c445e844174) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Decrease max V3 JS workers to 4
+
+- [#899](https://github.com/atlassian-labs/atlaspack/pull/899) [`5710532`](https://github.com/atlassian-labs/atlaspack/commit/57105322b26ce42af2cbfcc0506cff929e50b630) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add HMR and react-refresh support to v3
+
+- Updated dependencies [[`a884bd2`](https://github.com/atlassian-labs/atlaspack/commit/a884bd2a6bd6f37d088fb886dd9b88e85328501b), [`25fee72`](https://github.com/atlassian-labs/atlaspack/commit/25fee723d2228d0482ec8a8f1b8379ccd2977ce7), [`6fac01d`](https://github.com/atlassian-labs/atlaspack/commit/6fac01dbb1bfc5b971176c1a1c008297bf4b8f91), [`2f3af93`](https://github.com/atlassian-labs/atlaspack/commit/2f3af9374bcc082e6f4835f6f5a2b98e32ea45b4), [`432d571`](https://github.com/atlassian-labs/atlaspack/commit/432d571ea4e9fc67be12304fcafe8c445e844174), [`042cd95`](https://github.com/atlassian-labs/atlaspack/commit/042cd95a32ad38cd02d57aa3344c36d4e7ab8f9c), [`28f5424`](https://github.com/atlassian-labs/atlaspack/commit/28f5424f7e2080dd4fbbeb1bc5314a530197a23e), [`a884bd2`](https://github.com/atlassian-labs/atlaspack/commit/a884bd2a6bd6f37d088fb886dd9b88e85328501b), [`5710532`](https://github.com/atlassian-labs/atlaspack/commit/57105322b26ce42af2cbfcc0506cff929e50b630), [`44eb8c3`](https://github.com/atlassian-labs/atlaspack/commit/44eb8c388d3e63f1ef5d835aee7aee5d1bb0620f)]:
+  - @atlaspack/rust@3.12.0
+  - @atlaspack/feature-flags@2.27.1
+  - @atlaspack/cache@3.2.35
+  - @atlaspack/fs@2.15.35
+  - @atlaspack/logger@2.14.32
+  - @atlaspack/source-map@3.1.1
+  - @atlaspack/utils@3.2.1
+  - @atlaspack/graph@3.6.2
+  - @atlaspack/package-manager@2.14.40
+  - @atlaspack/profiler@2.15.1
+  - @atlaspack/workers@2.14.40
+  - @atlaspack/plugin@2.14.40
+  - @atlaspack/types@2.15.30
+
 ## 2.28.0
 
 ### Minor Changes

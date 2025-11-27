@@ -1,33 +1,75 @@
+use std::collections::HashMap;
+
 use swc_core::common::Mark;
 use swc_core::ecma::ast::Expr;
 use swc_core::ecma::ast::Lit;
 use swc_core::ecma::ast::Str;
 use swc_core::ecma::ast::UnaryOp;
-use swc_core::ecma::atoms::js_word;
+use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 use crate::utils::is_unresolved;
 
-/// Replaces `typeof module`, `typeof exports` and `typeof require` unary operator expressions
-/// with the resulting string literals.
+/// Replaces `typeof` unary operator expressions with configured replacement values.
 ///
-/// Requires `unresolved_mark` as passed into `swc_ecma_transform_base::resolver`, which is a mark
-/// the SWC transformer will add into variables that are NOT shadowed. This means the `typeof`
-/// expression will be replaced at build time with the resulting literal only if it's referring to
-/// the global `module`, `exports` and `require` symbols.
+/// # Example
+/// ## Input
+/// ```js
+/// const x = typeof require;
+/// const m = typeof module;
+/// const e = typeof document;
+/// ```
+///
+/// ## Output
+/// ```js
+/// const x = "function";
+/// const m = "object";
+/// const e = "undefined";
+/// ```
 pub struct TypeofReplacer {
   unresolved_mark: Mark,
+  replacements: HashMap<JsWord, JsWord>,
+}
+
+impl Default for TypeofReplacer {
+  fn default() -> Self {
+    Self {
+      unresolved_mark: Mark::new(),
+      replacements: HashMap::from([
+        ("require".into(), "function".into()),
+        ("module".into(), "object".into()),
+        ("exports".into(), "object".into()),
+      ]),
+    }
+  }
 }
 
 impl TypeofReplacer {
   pub fn new(unresolved_mark: Mark) -> Self {
-    Self { unresolved_mark }
+    Self {
+      unresolved_mark,
+      ..Default::default()
+    }
+  }
+
+  pub fn new_ssr(unresolved_mark: Mark) -> Self {
+    Self {
+      unresolved_mark,
+      replacements: HashMap::from([
+        ("require".into(), "function".into()),
+        ("module".into(), "object".into()),
+        ("exports".into(), "object".into()),
+        ("window".into(), "undefined".into()),
+        ("document".into(), "undefined".into()),
+        ("navigator".into(), "undefined".into()),
+      ]),
+    }
   }
 }
 
 impl TypeofReplacer {
   /// Given an expression, optionally return a replacement if it happens to be `typeof $symbol` for
-  /// the constants supported in this transformation step (`require`, `exports` and `module`).
+  /// identifiers configured in the replacements map.
   fn get_replacement(&mut self, node: &Expr) -> Option<Expr> {
     let Expr::Unary(unary) = &node else {
       return None;
@@ -35,37 +77,23 @@ impl TypeofReplacer {
     if unary.op != UnaryOp::TypeOf {
       return None;
     }
-    // typeof require -> "function"
-    // typeof module -> "object"
+
     let Expr::Ident(ident) = &*unary.arg else {
       return None;
     };
 
-    if ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark) {
-      return Some(Expr::Lit(Lit::Str(Str {
-        span: unary.span,
-        value: js_word!("function"),
-        raw: None,
-      })));
+    // Check if this identifier is unresolved and has a replacement configured
+    if !is_unresolved(ident, self.unresolved_mark) {
+      return None;
     }
 
-    if &*ident.sym == "exports" && is_unresolved(ident, self.unresolved_mark) {
-      return Some(Expr::Lit(Lit::Str(Str {
-        span: unary.span,
-        value: js_word!("object"),
-        raw: None,
-      })));
-    }
+    let replacement_value = self.replacements.get(&ident.sym)?;
 
-    if ident.sym == js_word!("module") && is_unresolved(ident, self.unresolved_mark) {
-      return Some(Expr::Lit(Lit::Str(Str {
-        span: unary.span,
-        value: js_word!("object"),
-        raw: None,
-      })));
-    }
-
-    None
+    Some(Expr::Lit(Lit::Str(Str {
+      span: unary.span,
+      value: replacement_value.clone(),
+      raw: None,
+    })))
   }
 }
 
@@ -88,15 +116,48 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_visitor_typeof_replacer_without_shadowing() {
-    let code = r#"
+  fn test_default_replacements() {
+    let code = indoc! {r#"
       const x = typeof require;
       const m = typeof module;
       const e = typeof exports;
-    "#;
+      const w = typeof window;
+      const d = typeof document;
+      const n = typeof navigator;
+      const p = typeof process;
+    "#};
 
-    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| TypeofReplacer {
-      unresolved_mark: context.unresolved_mark,
+    let RunVisitResult { output_code, .. } =
+      run_test_visit(code, |context| TypeofReplacer::new(context.unresolved_mark));
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const x = "function";
+        const m = "object";
+        const e = "object";
+        const w = typeof window;
+        const d = typeof document;
+        const n = typeof navigator;
+        const p = typeof process;
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_ssr_replacements() {
+    let code = indoc! {r#"
+      const x = typeof require;
+      const m = typeof module;
+      const e = typeof exports;
+      const w = typeof window;
+      const d = typeof document;
+      const n = typeof navigator;
+      const p = typeof process;
+    "#};
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| {
+      TypeofReplacer::new_ssr(context.unresolved_mark)
     });
 
     assert_eq!(
@@ -105,50 +166,87 @@ mod tests {
         const x = "function";
         const m = "object";
         const e = "object";
+        const w = "undefined";
+        const d = "undefined";
+        const n = "undefined";
+        const p = typeof process;
       "#}
     );
   }
 
   #[test]
-  fn test_typeof_nested_expression() {
-    let code = r#"
+  fn test_typeof_in_expressions() {
+    let code = indoc! {r#"
       const x = typeof require === 'function';
-    "#;
+      typeof module === 'object';
+      typeof module !== 'object';
+    "#};
 
-    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| TypeofReplacer {
-      unresolved_mark: context.unresolved_mark,
-    });
+    let RunVisitResult { output_code, .. } =
+      run_test_visit(code, |context| TypeofReplacer::new(context.unresolved_mark));
 
     assert_eq!(
       output_code,
       indoc! {r#"
         const x = "function" === 'function';
+        "object" === 'object';
+        "object" !== 'object';
       "#}
     );
   }
 
   #[test]
-  fn test_visitor_typeof_replacer_with_shadowing() {
-    let code = r#"
+  fn test_respects_variable_scope() {
+    let code = indoc! {r#"
       function wrapper({ require, exports }) {
         const x = typeof require;
-        const m = typeof module;
         const e = typeof exports;
+        const m = typeof module;
       }
-    "#;
+      const global = typeof require;
+    "#};
 
-    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| TypeofReplacer {
-      unresolved_mark: context.unresolved_mark,
-    });
+    let RunVisitResult { output_code, .. } =
+      run_test_visit(code, |context| TypeofReplacer::new(context.unresolved_mark));
 
     assert_eq!(
       output_code,
       indoc! {r#"
         function wrapper({ require, exports }) {
             const x = typeof require;
-            const m = "object";
             const e = typeof exports;
+            const m = "object";
         }
+        const global = "function";
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_custom_replacements() {
+    let code = indoc! {r#"
+      const x = typeof require;
+      const m = typeof module;
+      const c = typeof custom;
+    "#};
+
+    let custom_replacements = HashMap::from([
+      ("require".into(), "string".into()),
+      ("module".into(), "number".into()),
+      ("custom".into(), "symbol".into()),
+    ]);
+
+    let RunVisitResult { output_code, .. } = run_test_visit(code, |context| TypeofReplacer {
+      unresolved_mark: context.unresolved_mark,
+      replacements: custom_replacements,
+    });
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const x = "string";
+        const m = "number";
+        const c = "symbol";
       "#}
     );
   }

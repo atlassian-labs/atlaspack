@@ -305,6 +305,25 @@ export default new Transformer({
     let magicComments = false;
     let addReactDisplayName = false;
 
+    let enableSsrTypeofReplacement =
+      options.env.NATIVE_SSR_TYPEOF_REPLACEMENT === 'true';
+    let globalAliasingConfig =
+      options.env.NATIVE_GLOBAL_ALIASING &&
+      JSON.parse(options.env.NATIVE_GLOBAL_ALIASING);
+    let enableLazyLoading = options.env.NATIVE_LAZY_LOADING === 'true';
+    let enableReactHooksRemoval =
+      options.env.NATIVE_REACT_HOOKS_REMOVAL === 'true';
+    let enableReactAsyncImportLift =
+      options.env.NATIVE_REACT_ASYNC_IMPORT_LIFT === 'true';
+    let reactAsyncLiftByDefault =
+      options.env.REACT_ASYNC_IMPORT_LIFTING_BY_DEFAULT === 'true';
+    let reactAsyncLiftReportLevel =
+      options.env.REACT_ASYNC_LIFT_REPORT_LEVEL || 'none';
+    let enableStaticPrevaluation = options.env.NATIVE_PREVALUATION === 'true';
+    let enableDeadReturnsRemoval =
+      options.env.NATIVE_DEAD_RETURNS_REMOVAL === 'true';
+    let enableUnusedBindingsRemoval =
+      options.env.NATIVE_UNUSED_BINDINGS_REMOVAL === 'true';
     let syncDynamicImportConfig:
       | {
           entrypoint_filepath_suffix: string;
@@ -346,15 +365,6 @@ export default new Transformer({
     }
 
     config.invalidateOnEnvChange('SYNC_DYNAMIC_IMPORT_CONFIG');
-
-    let enableGlobalThisAliaser =
-      options.env.NATIVE_GLOBAL_THIS_ALIASER === 'true';
-    let enableLazyLoadingTransformer =
-      options.env.NATIVE_LAZY_LOADING_TRANSFORMER === 'true';
-    let enableDeadReturnsRemover =
-      options.env.NATIVE_DEAD_RETURNS_REMOVER === 'true';
-    let enableUnusedBindingsRemover =
-      options.env.NATIVE_UNUSED_BINDINGS_REMOVER === 'true';
 
     if (conf && conf.contents) {
       validateSchema.diagnostic(
@@ -398,11 +408,17 @@ export default new Transformer({
       decorators,
       useDefineForClassFields,
       magicComments,
-      enableGlobalThisAliaser,
-      enableLazyLoadingTransformer,
-      enableDeadReturnsRemover,
-      enableUnusedBindingsRemover,
+      globalAliasingConfig,
+      enableSsrTypeofReplacement,
+      enableLazyLoading,
+      enableDeadReturnsRemoval,
+      enableUnusedBindingsRemoval,
+      enableStaticPrevaluation,
+      enableReactHooksRemoval,
       syncDynamicImportConfig,
+      enableReactAsyncImportLift,
+      reactAsyncLiftByDefault,
+      reactAsyncLiftReportLevel,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -582,16 +598,22 @@ export default new Transformer({
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
       is_source: asset.isSource,
-      enable_global_this_aliaser: Boolean(config.enableGlobalThisAliaser),
-      enable_lazy_loading_transformer: Boolean(
-        config.enableLazyLoadingTransformer,
-      ),
-      sync_dynamic_import_config: config.syncDynamicImportConfig,
       nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
-      enable_dead_returns_remover: Boolean(config.enableDeadReturnsRemover),
-      enable_unused_bindings_remover: Boolean(
-        config.enableUnusedBindingsRemover,
+      global_aliasing_config: config.globalAliasingConfig,
+      enable_ssr_typeof_replacement: Boolean(config.enableSsrTypeofReplacement),
+      enable_lazy_loading: Boolean(config.enableLazyLoading),
+      enable_dead_returns_removal: Boolean(config.enableDeadReturnsRemoval),
+      enable_unused_bindings_removal: Boolean(
+        config.enableUnusedBindingsRemoval,
       ),
+      enable_static_prevaluation: Boolean(config.enableStaticPrevaluation),
+      enable_react_hooks_removal: Boolean(config.enableReactHooksRemoval),
+      enable_react_async_import_lift: Boolean(
+        config.enableReactAsyncImportLift,
+      ),
+      react_async_lift_by_default: Boolean(config.reactAsyncLiftByDefault),
+      react_async_lift_report_level: String(config.reactAsyncLiftReportLevel),
+      sync_dynamic_import_config: config.syncDynamicImportConfig,
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
