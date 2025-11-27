@@ -198,6 +198,7 @@ export default class Atlaspack {
         env: resolvedOptions.env,
         fs: inputFS && new FileSystemV3(inputFS),
         defaultTargetOptions: resolvedOptions.defaultTargetOptions,
+        serveOptions: resolvedOptions.serveOptions,
         lmdb,
         featureFlags: resolvedOptions.featureFlags,
       });

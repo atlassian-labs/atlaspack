@@ -8,7 +8,6 @@ import {
   run,
   runBundle,
   overlayFS,
-  inputFS,
 } from '@atlaspack/test-utils';
 import {BundleGraph, PackagedBundle} from '@atlaspack/types-internal';
 
@@ -276,10 +275,14 @@ describe('Entry Points', function () {
       );
 
       assert.equal(prodTargetBundleGraph.getBundles().length, 4);
-      await assertBundleOutput(prodTargetBundleGraph, 'one', 'source one');
-      await assertBundleOutput(prodTargetBundleGraph, 'two', 'source two');
-      await assertBundleOutput(prodTargetBundleGraph, 'three', 'source three');
-      await assertBundleOutput(prodTargetBundleGraph, 'four', 'source four');
+      await assertBundleOutput(prodTargetBundleGraph, 'one.js', 'source one');
+      await assertBundleOutput(prodTargetBundleGraph, 'two.js', 'source two');
+      await assertBundleOutput(
+        prodTargetBundleGraph,
+        'three.js',
+        'source three',
+      );
+      await assertBundleOutput(prodTargetBundleGraph, 'four.js', 'source four');
 
       // Build development target
       let devTargetBundleGraph = await bundle(
@@ -291,8 +294,8 @@ describe('Entry Points', function () {
       );
 
       assert.equal(devTargetBundleGraph.getBundles().length, 2);
-      await assertBundleOutput(devTargetBundleGraph, 'one', 'source one');
-      await assertBundleOutput(devTargetBundleGraph, 'two', 'source two');
+      await assertBundleOutput(devTargetBundleGraph, 'one.js', 'source one');
+      await assertBundleOutput(devTargetBundleGraph, 'two.js', 'source two');
     });
 
     it('should prefer targets over source when both are present', async () => {
@@ -342,8 +345,8 @@ describe('Entry Points', function () {
       );
 
       assert.equal(b.getBundles().length, 2);
-      await assertBundleOutput(b, 'index', 'directory entry');
-      await assertBundleOutput(b, 'standalone', 'file entry');
+      await assertBundleOutput(b, 'index.js', 'directory entry');
+      await assertBundleOutput(b, 'standalone.js', 'file entry');
     });
 
     it.v2('should handle complex targets configuration', async () => {
@@ -374,8 +377,8 @@ describe('Entry Points', function () {
       });
 
       assert.equal(b.getBundles().length, 2);
-      await assertBundleOutput(b, 'browser', 'browser entry');
-      await assertBundleOutput(b, 'node', 'node entry');
+      await assertBundleOutput(b, 'browser.js', 'browser entry');
+      await assertBundleOutput(b, 'node.js', 'node entry');
     });
 
     it('should ignore disabled targets set to false', async () => {
@@ -409,8 +412,8 @@ describe('Entry Points', function () {
       let bundles = b.getBundles();
       // Verify we don't have a bundle for the disabled 'main' target
       assert(!bundles.some((bundle) => bundle.name === 'main'));
-      await assertBundleOutput(b, 'dev', 'dev entry');
-      await assertBundleOutput(b, 'prod', 'prod entry');
+      await assertBundleOutput(b, 'dev.js', 'dev entry');
+      await assertBundleOutput(b, 'prod.js', 'prod entry');
     });
 
     it('should handle disabled targets with source array', async () => {
@@ -445,10 +448,10 @@ describe('Entry Points', function () {
 
       // Should handle array sources for each enabled target
       assert.equal(b.getBundles().length, 4);
-      await assertBundleOutput(b, 'dev1', 'dev entry 1');
-      await assertBundleOutput(b, 'dev2', 'dev entry 2');
-      await assertBundleOutput(b, 'prod1', 'prod entry 1');
-      await assertBundleOutput(b, 'prod2', 'prod entry 2');
+      await assertBundleOutput(b, 'dev1.js', 'dev entry 1');
+      await assertBundleOutput(b, 'dev2.js', 'dev entry 2');
+      await assertBundleOutput(b, 'prod1.js', 'prod entry 1');
+      await assertBundleOutput(b, 'prod2.js', 'prod entry 2');
     });
 
     it('should error when directory has no package.json', async () => {
