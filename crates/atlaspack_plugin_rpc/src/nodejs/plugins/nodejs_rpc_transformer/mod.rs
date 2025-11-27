@@ -66,16 +66,17 @@ impl NodejsRpcTransformerPlugin {
   ) -> Result<Self, anyhow::Error> {
     let mut set = vec![];
 
+    let rpc_options = RpcPluginOptions {
+      hmr_options: ctx.options.hmr_options.clone(),
+      project_root: ctx.options.project_root.clone(),
+      mode: ctx.options.mode.clone(),
+      feature_flags: ctx.options.feature_flags.clone(),
+    };
     let opts = LoadPluginOptions {
       kind: LoadPluginKind::Transformer,
       specifier: plugin_node.package_name.clone(),
       resolve_from: plugin_node.resolve_from.as_ref().clone(),
-      feature_flags: Some(ctx.options.feature_flags.clone()),
-      options: RpcPluginOptions {
-        hmr_options: ctx.options.hmr_options.clone(),
-        project_root: ctx.options.project_root.clone(),
-        mode: ctx.options.mode.clone(),
-      },
+      options: rpc_options.clone(),
     };
 
     for worker in nodejs_workers.all_workers() {
@@ -126,11 +127,7 @@ impl NodejsRpcTransformerPlugin {
       nodejs_workers,
       plugin_options: ctx.options.clone(),
       plugin_node: plugin_node.clone(),
-      rpc_plugin_options: RpcPluginOptions {
-        hmr_options: ctx.options.hmr_options.clone(),
-        project_root: ctx.options.project_root.clone(),
-        mode: ctx.options.mode.clone(),
-      },
+      rpc_plugin_options: rpc_options,
       conditions,
     })
   }

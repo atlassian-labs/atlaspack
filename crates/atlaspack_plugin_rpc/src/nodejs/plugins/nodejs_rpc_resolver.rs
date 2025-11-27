@@ -62,11 +62,11 @@ impl RpcNodejsResolverPlugin {
           kind: LoadPluginKind::Transformer,
           specifier: self.plugin_node.package_name.clone(),
           resolve_from: self.plugin_node.resolve_from.as_ref().clone(),
-          feature_flags: Some(self.plugin_options.feature_flags.clone()),
           options: RpcPluginOptions {
             hmr_options: self.plugin_options.hmr_options.clone(),
             project_root: self.plugin_options.project_root.clone(),
             mode: self.plugin_options.mode.clone(),
+            feature_flags: self.plugin_options.feature_flags.clone(),
           },
         };
 

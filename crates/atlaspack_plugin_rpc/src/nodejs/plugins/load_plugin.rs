@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-use atlaspack_core::{plugin::HmrOptions, types::BuildMode};
+use atlaspack_core::{
+  plugin::HmrOptions,
+  types::{BuildMode, FeatureFlags},
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -9,6 +12,7 @@ pub struct RpcPluginOptions {
   pub hmr_options: Option<HmrOptions>,
   pub project_root: PathBuf,
   pub mode: BuildMode,
+  pub feature_flags: FeatureFlags,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

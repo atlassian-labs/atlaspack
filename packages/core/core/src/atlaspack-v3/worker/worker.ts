@@ -44,7 +44,7 @@ export class AtlaspackWorker {
   }
 
   loadPlugin: JsCallable<[LoadPluginOptions], Promise<undefined>> = jsCallable(
-    async ({kind, specifier, resolveFrom, featureFlags, options}) => {
+    async ({kind, specifier, resolveFrom, options}) => {
       // Use packageManager.require() instead of dynamic import() to support TypeScript plugins
       let resolvedModule = await this.#packageManager.require(
         specifier,
@@ -72,10 +72,12 @@ export class AtlaspackWorker {
         );
       }
       // Set feature flags in the worker process
-      if (featureFlags) {
-        const {setFeatureFlags} = await import('@atlaspack/feature-flags');
-        setFeatureFlags(featureFlags);
-      }
+      let featureFlags = await this.#packageManager.require(
+        '@atlaspack/feature-flags',
+        __filename,
+        {shouldAutoInstall: false},
+      );
+      featureFlags.setFeatureFlags(options.featureFlags);
 
       if (this.#options == null) {
         this.#options = {
@@ -404,13 +406,13 @@ type LoadPluginOptions = {
   kind: 'resolver' | 'transformer';
   specifier: string;
   resolveFrom: string;
-  featureFlags?: FeatureFlags;
   options: RpcPluginOptions;
 };
 
 type RpcPluginOptions = {
   projectRoot: string;
   mode: string;
+  featureFlags: FeatureFlags;
 };
 
 type Options = RpcPluginOptions & {
