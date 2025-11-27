@@ -15,18 +15,20 @@ use crate::tokens_transformer_config::{PackageJson, TokensTransformerConfig};
 pub struct AtlaspackTokensTransformerPlugin {
   project_root: PathBuf,
   options: Arc<PluginOptions>,
+  config: Option<TokensTransformerConfig>,
 }
 
 impl AtlaspackTokensTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Result<Self, Error> {
+    let config = Self::load_config(ctx.config.clone())?;
     Ok(AtlaspackTokensTransformerPlugin {
       project_root: ctx.options.project_root.clone(),
       options: ctx.options.clone(),
+      config,
     })
   }
 
   fn load_config(
-    &self,
     config_loader: atlaspack_core::config_loader::ConfigLoaderRef,
   ) -> Result<Option<TokensTransformerConfig>, Error> {
     let config = config_loader
@@ -52,7 +54,7 @@ impl AtlaspackTokensTransformerPlugin {
 impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
   async fn transform(
     &self,
-    context: TransformContext,
+    _context: TransformContext,
     asset: Asset,
   ) -> Result<TransformResult, Error> {
     // Check feature flag first
@@ -76,10 +78,7 @@ impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
       });
     }
 
-    // Load config from package.json
-    let config = self.load_config(context.config())?;
-
-    let Some(config) = config else {
+    let Some(config) = &self.config else {
       // If no config provided, just return asset unchanged
       return Ok(TransformResult {
         asset,
@@ -108,8 +107,16 @@ impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
         token_data_path,
         should_use_auto_fallback: config.should_use_auto_fallback.unwrap_or(true),
         should_force_auto_fallback: config.should_force_auto_fallback.unwrap_or(true),
-        force_auto_fallback_exemptions: config.force_auto_fallback_exemptions.unwrap_or_default(),
-        default_theme: config.default_theme.unwrap_or_else(|| "light".to_string()),
+        force_auto_fallback_exemptions: config
+          .force_auto_fallback_exemptions
+          .as_ref()
+          .cloned()
+          .unwrap_or_default(),
+        default_theme: config
+          .default_theme
+          .as_deref()
+          .unwrap_or("light")
+          .to_string(),
       },
     };
 

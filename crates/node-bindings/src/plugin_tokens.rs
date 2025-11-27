@@ -17,18 +17,6 @@ pub struct TokensPluginOptions {
   pub default_theme: String,
 }
 
-impl From<TokensPluginOptions> for SharedTokensPluginOptions {
-  fn from(opts: TokensPluginOptions) -> Self {
-    SharedTokensPluginOptions {
-      token_data_path: opts.token_data_path,
-      should_use_auto_fallback: opts.should_use_auto_fallback,
-      should_force_auto_fallback: opts.should_force_auto_fallback,
-      force_auto_fallback_exemptions: opts.force_auto_fallback_exemptions,
-      default_theme: opts.default_theme,
-    }
-  }
-}
-
 #[napi(object)]
 #[derive(Clone)]
 pub struct TokensConfig {
@@ -37,18 +25,6 @@ pub struct TokensConfig {
   pub is_source: bool,
   pub source_maps: bool,
   pub tokens_options: TokensPluginOptions,
-}
-
-impl From<TokensConfig> for SharedTokensConfig {
-  fn from(config: TokensConfig) -> Self {
-    SharedTokensConfig {
-      filename: config.filename,
-      project_root: config.project_root,
-      is_source: config.is_source,
-      source_maps: config.source_maps,
-      tokens_options: config.tokens_options.into(),
-    }
-  }
 }
 
 #[napi(object)]
@@ -89,7 +65,19 @@ pub fn apply_tokens_plugin(
   let (deferred, promise) = env.create_deferred()?;
 
   // Convert to shared config
-  let shared_config: SharedTokensConfig = config.into();
+  let shared_config = SharedTokensConfig {
+    filename: config.filename,
+    project_root: config.project_root,
+    is_source: config.is_source,
+    source_maps: config.source_maps,
+    tokens_options: SharedTokensPluginOptions {
+      token_data_path: config.tokens_options.token_data_path,
+      should_use_auto_fallback: config.tokens_options.should_use_auto_fallback,
+      should_force_auto_fallback: config.tokens_options.should_force_auto_fallback,
+      force_auto_fallback_exemptions: config.tokens_options.force_auto_fallback_exemptions,
+      default_theme: config.tokens_options.default_theme,
+    },
+  };
 
   // Spawn the work on a Rayon thread
   rayon::spawn(move || {

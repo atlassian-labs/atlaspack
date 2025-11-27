@@ -779,7 +779,7 @@ dependencies = [
  "atlaspack_core",
  "atlaspack_filesystem",
  "atlaspack_sourcemap",
- "parcel_sourcemap",
+ "parcel_sourcemap 2.1.1",
  "pretty_assertions",
  "serde",
  "serde_json",
