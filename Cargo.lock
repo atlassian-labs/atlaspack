@@ -263,6 +263,7 @@ dependencies = [
  "atlaspack_plugin_transformer_json",
  "atlaspack_plugin_transformer_raw",
  "atlaspack_plugin_transformer_svg",
+ "atlaspack_plugin_transformer_tokens",
  "atlaspack_plugin_transformer_yaml",
  "atlaspack_sourcemap",
  "dyn-hash",
@@ -354,6 +355,7 @@ dependencies = [
  "atlaspack-js-swc-core",
  "atlaspack-macros",
  "atlaspack-resolver",
+ "atlaspack_atlaskit_tokens",
  "atlaspack_core",
  "atlaspack_memory_profiler",
  "atlaspack_monitoring",
@@ -429,6 +431,17 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "xxhash-rust",
+]
+
+[[package]]
+name = "atlaspack_atlaskit_tokens"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack-js-swc-core",
+ "serde",
+ "swc_atlaskit_tokens",
+ "swc_core",
 ]
 
 [[package]]
@@ -752,6 +765,23 @@ dependencies = [
  "markup5ever_rcdom",
  "pretty_assertions",
  "regex",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "atlaspack_plugin_transformer_tokens"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "atlaspack_atlaskit_tokens",
+ "atlaspack_core",
+ "atlaspack_filesystem",
+ "atlaspack_sourcemap",
+ "parcel_sourcemap 2.1.1",
+ "pretty_assertions",
  "serde",
  "serde_json",
  "tokio",
