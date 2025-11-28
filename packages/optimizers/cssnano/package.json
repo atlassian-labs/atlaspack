@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/optimizer-cssnano",
-  "version": "2.15.2",
+  "version": "2.15.3",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,8 +16,8 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.41",
-    "@atlaspack/source-map": "3.1.2",
+    "@atlaspack/plugin": "2.14.42",
+    "@atlaspack/source-map": "3.1.3",
     "cssnano": "^5.0.15",
     "postcss": "^8.4.5"
   },

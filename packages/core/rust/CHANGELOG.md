@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.13.1
+
+### Patch Changes
+
+- [#914](https://github.com/atlassian-labs/atlaspack/pull/914) [`9468e16`](https://github.com/atlassian-labs/atlaspack/commit/9468e164e8ca20a5e8f552f5dc203aa3716cb154) Thanks [@marcins](https://github.com/marcins)! - In-source code for swc_atlaskit_tokens into Atlaspack (no functional change)
+
 ## 3.13.0
 
 ### Minor Changes

@@ -1,5 +1,12 @@
 # @atlaspack/reporter-compiled-css-in-js-migration-map
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.42
+
 ## 0.0.3
 
 ### Patch Changes
