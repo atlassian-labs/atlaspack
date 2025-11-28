@@ -288,19 +288,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "atlaspack-dev-dep-resolver"
-version = "0.1.0"
-dependencies = [
- "atlaspack-resolver",
- "es-module-lexer",
- "glob",
- "parking_lot",
- "rayon",
- "serde_json",
- "xxhash-rust",
-]
-
-[[package]]
 name = "atlaspack-js-swc-core"
 version = "0.1.0"
 dependencies = [
@@ -350,11 +337,11 @@ dependencies = [
  "aho-corasick",
  "anyhow",
  "atlaspack",
- "atlaspack-dev-dep-resolver",
  "atlaspack-js-swc-core",
  "atlaspack-macros",
  "atlaspack-resolver",
  "atlaspack_core",
+ "atlaspack_dev_dep_resolver",
  "atlaspack_memory_profiler",
  "atlaspack_monitoring",
  "atlaspack_napi_helpers",
@@ -499,6 +486,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "atlaspack_dev_dep_resolver"
+version = "0.1.0"
+dependencies = [
+ "atlaspack-resolver",
+ "es-module-lexer",
+ "glob",
+ "parking_lot",
+ "rayon",
+ "serde_json",
+ "tracing",
+ "xxhash-rust",
+]
+
+[[package]]
 name = "atlaspack_filesystem"
 version = "0.1.0"
 dependencies = [
@@ -577,9 +578,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack-resolver",
+ "atlaspack_core",
+ "atlaspack_dev_dep_resolver",
  "atlaspack_filesystem",
  "mockall",
  "serde",
+ "tracing",
 ]
 
 [[package]]
@@ -614,6 +618,7 @@ dependencies = [
  "atlaspack_config",
  "atlaspack_core",
  "atlaspack_napi_helpers",
+ "atlaspack_package_manager",
  "mockall",
  "napi",
  "once_cell",

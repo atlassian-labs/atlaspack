@@ -47,7 +47,7 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 atlaspack = { path = "../atlaspack", features = ["nodejs"] }
-atlaspack-dev-dep-resolver = { path = "../../packages/utils/dev-dep-resolver" }
+atlaspack_dev_dep_resolver = { path = "../atlaspack_dev_dep_resolver" }
 atlaspack-macros = { path = "../macros", features = ["napi"] }
 
 crossbeam-channel = { workspace = true }

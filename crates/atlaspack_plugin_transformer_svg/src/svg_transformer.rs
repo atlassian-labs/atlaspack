@@ -12,7 +12,9 @@ use markup5ever::{local_name, namespace_url, ns};
 use markup5ever_rcdom::{RcDom, SerializableHandle};
 use regex::Regex;
 
-use atlaspack_core::plugin::{PluginContext, TransformContext, TransformResult, TransformerPlugin};
+use atlaspack_core::plugin::{
+  CacheStatus, PluginContext, TransformContext, TransformResult, TransformerPlugin,
+};
 use atlaspack_core::types::{
   Asset, AssetId, AssetWithDependencies, BundleBehavior, Code, Dependency, Environment,
 };
@@ -35,6 +37,9 @@ impl AtlaspackSvgTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackSvgTransformerPlugin {
+  fn cache_key(&self) -> &CacheStatus {
+    &CacheStatus::BuiltIn
+  }
   async fn transform(
     &self,
     context: TransformContext,

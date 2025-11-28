@@ -133,7 +133,7 @@ impl<'a> EsmGraphBuilder<'a> {
               // println!("GLOB {:?} {:?}", import.specifier(), glob);
               self.expand_glob(&glob, file, resolver, &invalidations)?;
             } else {
-              // println!("DYNAMIC: {} {:?}", import.specifier(), file);
+              tracing::warn!("Start-up invalidation: {} {:?}", import.specifier(), file);
               invalidations.invalidate_on_startup();
             }
           }
