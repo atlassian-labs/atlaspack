@@ -71,7 +71,7 @@ fn transforms_token_string_literal_with_auto_fallback_default() {
   "#;
   // Expect var(--ds-text, <light fallback>)
   let expected = r#"
-    const v = "var(--ds-text, #172B4D)";
+    const v = "var(--ds-text, #292A2E)";
   "#;
 
   run_test_both_token_maps(

@@ -7,7 +7,7 @@
     "custom.exempt": "--ds-custom-exempt",
   },
   light: {
-    "color.text": "#172B4D",
+    "color.text": "#292A2E",
     "color.background": "#FFFFFF",
   },
   legacyLight: {
