@@ -1,5 +1,16 @@
 # @atlaspack/utils
 
+## 3.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`9468e16`](https://github.com/atlassian-labs/atlaspack/commit/9468e164e8ca20a5e8f552f5dc203aa3716cb154)]:
+  - @atlaspack/rust@3.13.1
+  - @atlaspack/logger@2.14.34
+  - @atlaspack/source-map@3.1.3
+  - @atlaspack/types-internal@2.21.3
+  - @atlaspack/codeframe@2.13.24
+
 ## 3.2.2
 
 ### Patch Changes
