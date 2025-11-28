@@ -1,5 +1,15 @@
 # @atlaspack/feature-flags
 
+## 2.27.2
+
+### Patch Changes
+
+- [#908](https://github.com/atlassian-labs/atlaspack/pull/908) [`91738fd`](https://github.com/atlassian-labs/atlaspack/commit/91738fd77cb6b3b7acc93e799327ec283d27f7c0) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Disallows circular package aliases during resolution. This fixes cases where package A aliases to package B, but package B imports package A, causing infinite loops during resolution. Instead, we disable the alias allow package B to import the real package A.
+
+  This is useful in cases where you create wrapper packages that re-export another package under a different name.
+
+  Enabled via the `disallowCircularPackageAliases` feature flag.
+
 ## 2.27.1
 
 ### Patch Changes
