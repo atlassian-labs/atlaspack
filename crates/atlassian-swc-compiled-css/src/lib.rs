@@ -5986,24 +5986,32 @@ impl<'a> TransformVisitor<'a> {
 
   fn walk_jsx_children(&mut self, element: &mut JSXElement) {
     for child in &mut element.children {
-      match child {
-        JSXElementChild::JSXElement(child_element) => {
-          let mut expr = Expr::JSXElement(child_element.clone());
-          self.visit_mut_expr(&mut expr);
-          match expr {
-            Expr::JSXElement(new_element) => {
-              *child_element = new_element;
-            }
-            _ => {
-              *child = JSXElementChild::JSXExprContainer(JSXExprContainer {
-                span: DUMMY_SP,
-                expr: JSXExpr::Expr(Box::new(expr)),
-              });
-            }
-          }
-        }
-        _ => child.visit_mut_children_with(self),
+      if !matches!(child, JSXElementChild::JSXElement(_)) {
+        continue;
       }
+
+      let old_child = std::mem::replace(
+        child,
+        JSXElementChild::JSXExprContainer(JSXExprContainer {
+          span: DUMMY_SP,
+          expr: JSXExpr::Expr(Box::new(Expr::Lit(Lit::Null(Null { span: DUMMY_SP })))),
+        }),
+      );
+
+      let JSXElementChild::JSXElement(child_element) = old_child else {
+        unreachable!("expected JSXElement child after match guard");
+      };
+
+      let mut expr = Expr::JSXElement(child_element);
+      self.visit_mut_expr(&mut expr);
+
+      *child = match expr {
+        Expr::JSXElement(new_element) => JSXElementChild::JSXElement(new_element),
+        _ => JSXElementChild::JSXExprContainer(JSXExprContainer {
+          span: DUMMY_SP,
+          expr: JSXExpr::Expr(Box::new(expr)),
+        }),
+      };
     }
   }
 
