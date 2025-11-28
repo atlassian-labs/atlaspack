@@ -71,10 +71,17 @@ export class AtlaspackWorker {
         );
       }
       // Set feature flags in the worker process
-      if (featureFlags) {
-        const {setFeatureFlags} = await import('@atlaspack/feature-flags');
-        setFeatureFlags(featureFlags);
-      }
+      // if (featureFlags) {
+      // Set feature flags in the worker process
+      let featureFlagsModule = await this.#packageManager.require(
+        '@atlaspack/feature-flags',
+        __filename,
+        {shouldAutoInstall: false},
+      );
+      featureFlagsModule.setFeatureFlags(featureFlags);
+      // const {setFeatureFlags} = await import('@atlaspack/feature-flags');
+      // setFeatureFlags(featureFlags);
+      // }
 
       switch (kind) {
         case 'resolver':

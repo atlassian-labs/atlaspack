@@ -10,7 +10,7 @@ workspace = true
 
 [dependencies]
 atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
-swc_atlaskit_tokens = { workspace = true, default-features = false }
+swc_atlaskit_tokens = { path = "../swc_atlaskit_tokens" }
 swc_core = { workspace = true }
 anyhow = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

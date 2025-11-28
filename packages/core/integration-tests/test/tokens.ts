@@ -73,7 +73,7 @@ describe('tokens', () => {
     require('fs').writeFileSync('/tmp/bundle.js', firstBundle);
     assert(
       !firstBundle.includes('var(--ds-text, #172B4D)'),
-      `Expected token to not be transformed, but bundle was ${firstBundle.substring(0, 200)}...`,
+      `Expected token to not be transformed, but bundle contained <SNIP>...${firstBundle.substring(firstBundle.length - 400)}`,
     );
   });
 });
