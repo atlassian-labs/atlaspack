@@ -26,7 +26,7 @@ atlaspack_vcs = { path = "../atlaspack_vcs" }
 atlaspack_swc_runner = { path = "../atlaspack_swc_runner" }
 atlassian_swc_compiled_css = { path = "../atlassian-swc-compiled-css", features = ["napi"] }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
-parcel_sourcemap = { path = "../parcel_sourcemap" }
+atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 
 aho-corasick = { workspace = true }
 anyhow = { workspace = true }

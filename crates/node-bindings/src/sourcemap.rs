@@ -1,10 +1,11 @@
+use atlaspack_sourcemap::{Mapping, OriginalLocation, SourceMap, SourceMapError};
 use napi::{
   Env, JsObject, JsTypedArray, JsUnknown, NapiValue, Result,
   bindgen_prelude::{Array, Buffer, ToNapiValue},
 };
 use napi_derive::napi;
-use parcel_sourcemap::{Mapping, OriginalLocation, SourceMap, SourceMapError};
 use rkyv::AlignedVec;
+use std::path::Path;
 
 #[cfg(target_os = "macos")]
 #[global_allocator]
@@ -19,9 +20,10 @@ pub struct JsSourceMap {
 impl JsSourceMap {
   #[napi(constructor)]
   pub fn new(project_root: String, buffer: Option<Buffer>) -> Result<Self> {
+    let project_root_path = Path::new(&project_root);
     let source_map = match buffer {
-      Some(buffer) => SourceMap::from_buffer(&project_root, &buffer).map_err(to_napi_error)?,
-      None => SourceMap::new(&project_root),
+      Some(buffer) => SourceMap::from_buffer(project_root_path, &buffer).map_err(to_napi_error)?,
+      None => SourceMap::new(project_root_path),
     };
     Ok(JsSourceMap { source_map })
   }

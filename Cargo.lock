@@ -363,6 +363,7 @@ dependencies = [
  "atlaspack_package_manager",
  "atlaspack_plugin_optimizer_inline_requires",
  "atlaspack_plugin_transformer_js",
+ "atlaspack_sourcemap",
  "atlaspack_swc_runner",
  "atlaspack_vcs",
  "atlassian_swc_compiled_css",
@@ -384,7 +385,6 @@ dependencies = [
  "num_cpus",
  "once_cell",
  "oxipng",
- "parcel_sourcemap 2.1.1",
  "parking_lot",
  "rayon",
  "regex",
@@ -646,8 +646,7 @@ dependencies = [
  "atlaspack_core",
  "atlaspack_filesystem",
  "lightningcss",
- "parcel_sourcemap 2.1.1",
- "parcel_sourcemap 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parcel_sourcemap",
  "pretty_assertions",
  "serde",
  "serde_json",
@@ -816,12 +815,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack_filesystem",
- "parcel_sourcemap 2.1.1",
+ "base64-simd 0.7.0",
+ "data-url",
  "pretty_assertions",
  "regex",
  "rkyv 0.7.45",
  "serde",
  "serde_json",
+ "vlq",
 ]
 
 [[package]]
@@ -3081,7 +3082,7 @@ dependencies = [
  "lazy_static",
  "lightningcss-derive",
  "parcel_selectors",
- "parcel_sourcemap 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parcel_sourcemap",
  "paste",
  "pathdiff",
  "rayon",
@@ -3886,18 +3887,6 @@ dependencies = [
  "precomputed-hash",
  "rustc-hash 2.1.1",
  "smallvec",
-]
-
-[[package]]
-name = "parcel_sourcemap"
-version = "2.1.1"
-dependencies = [
- "base64-simd 0.7.0",
- "data-url",
- "rkyv 0.7.45",
- "serde",
- "serde_json",
- "vlq",
 ]
 
 [[package]]

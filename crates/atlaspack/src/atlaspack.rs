@@ -246,7 +246,7 @@ impl Atlaspack {
         self.db.database().put(
           &mut txn,
           &format!("map:{}", asset.id),
-          map.to_json()?.as_bytes(),
+          map.clone().to_json(None)?.as_bytes(),
         )?;
       }
     }

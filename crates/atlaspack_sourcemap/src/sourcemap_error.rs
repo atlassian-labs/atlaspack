@@ -43,7 +43,6 @@ pub enum SourceMapErrorType {
   JSONError = 12,
 
   // Failed to parse data url
-  #[cfg(feature = "json")]
   DataUrlError = 13,
 }
 
@@ -73,9 +72,6 @@ impl std::error::Error for SourceMapError {}
 
 impl std::fmt::Display for SourceMapError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    // Prefix all errors, so it's obvious they originate from this library
-    write!(f, "[parcel-sourcemap] ")?;
-
     // Convert error type into an error message...
     match self.error_type {
       SourceMapErrorType::UnexpectedNegativeNumber => {
@@ -117,7 +113,6 @@ impl std::fmt::Display for SourceMapError {
       SourceMapErrorType::JSONError => {
         write!(f, "Error reading or writing to JSON")?;
       }
-      #[cfg(feature = "json")]
       SourceMapErrorType::DataUrlError => {
         write!(f, "Error parsing data url")?;
       }
@@ -175,7 +170,6 @@ impl From<std::string::FromUtf8Error> for SourceMapError {
   }
 }
 
-#[cfg(feature = "json")]
 impl From<serde_json::Error> for SourceMapError {
   #[inline]
   fn from(_err: serde_json::Error) -> SourceMapError {
@@ -183,7 +177,6 @@ impl From<serde_json::Error> for SourceMapError {
   }
 }
 
-#[cfg(feature = "json")]
 impl From<data_url::DataUrlError> for SourceMapError {
   #[inline]
   fn from(_err: data_url::DataUrlError) -> SourceMapError {
