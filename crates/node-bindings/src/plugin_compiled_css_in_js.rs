@@ -6,7 +6,6 @@ use atlaspack_js_swc_core::{
     error_buffer_to_diagnostics,
   },
 };
-use atlassian_swc_compiled_css::EmitCommentsGuard;
 use napi::{Env, Error as NapiError, JsObject, bindgen_prelude::Buffer};
 use napi_derive::napi;
 use once_cell::sync::Lazy;
