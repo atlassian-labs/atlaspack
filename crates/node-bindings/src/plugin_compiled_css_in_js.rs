@@ -1290,7 +1290,6 @@ root.render(page);
     );
   }
 
-  #[ignore]
   #[test]
   fn test_css_on_component() {
     let config = create_test_config(true, false);
@@ -2676,7 +2675,6 @@ const styles3 = css({
     );
   }
 
-  #[ignore]
   #[test]
   fn test_cx() {
     let config = create_test_config(true, false);
@@ -2721,6 +2719,8 @@ export function TopNavEnd({ children }) {
     // Verify transformation was applied
     assert!(!output.bail_out, "Transformation should not bail out");
 
+    println!("output.code: {}", output.code);
+
     let expected_css_map = indoc! {r#"
       const listStyles = {
           "hideOnSmallViewport": "_1e0cglyw _181n1txw",
@@ -2733,6 +2733,213 @@ export function TopNavEnd({ children }) {
 
     assert!(
       normalized_output.contains(&normalized_expected),
+      "Output should include the expected ax className call with all styles"
+    );
+
+    let has_cc = normalized_output.contains("jsxs(CC,") || normalized_output.contains("_jsxs(CC,");
+    assert!(has_cc, "Output should include CC runtime wrapper");
+    let has_cs = normalized_output.contains("jsx(CS,") || normalized_output.contains("_jsx(CS,");
+    assert!(has_cs, "Output should include CS runtime wrapper");
+  }
+
+  #[ignore]
+  #[test]
+  fn test_css_map_failing() {
+    let config = create_test_config(true, false);
+
+    let input_code = indoc! {r#"
+/**
+ * @jsxRuntime classic
+ * @jsx jsx
+ */
+import React, { useContext, useEffect, useLayoutEffect as useRealLayoutEffect } from 'react';
+
+import { cssMap, jsx, keyframes } from '@compiled/react';
+
+import InteractionContext from '@atlaskit/interaction-context';
+import { N0, N500 } from '@atlaskit/theme/colors';
+import { token } from '@atlaskit/tokens';
+
+import { presetSizes } from './constants';
+import { type Appearance, type SpinnerProps } from './types';
+
+/**
+ * Returns the appropriate circle stroke color.
+ */
+function getStrokeColor(appearance: Appearance): string {
+	return appearance === 'inherit'
+		? token('color.icon.subtle', N500)
+		: token('color.icon.inverse', N0);
+}
+
+const rotate = keyframes({
+	to: { transform: 'rotate(360deg)' },
+});
+
+/**
+ * There are three parts to the load in animation:
+ * 1. Accelerated spin
+ * 2. Stretch the spinner line
+ */
+const loadIn = keyframes({
+	from: {
+		transform: 'rotate(50deg)',
+		strokeDashoffset: 60,
+	},
+	to: {
+		transform: 'rotate(230deg)',
+		strokeDashoffset: 50,
+	},
+});
+
+const styles = cssMap({
+	rotateStyles: {
+		animationName: rotate,
+		animationDuration: '0.86s',
+		animationIterationCount: 'infinite',
+		animationTimingFunction: 'cubic-bezier(0.4, 0.15, 0.6, 0.85)',
+		transformOrigin: 'center',
+	},
+	loadInStyles: {
+		animationName: loadIn,
+		animationDuration: '1s',
+		animationTimingFunction: 'ease-in-out',
+		/**
+		 * When the animation completes, stay at the last frame of the animation.
+		 */
+		animationFillMode: 'forwards',
+	},
+	wrapperStyles: {
+		display: 'inline-flex',
+		/**
+		 * Align better inline with text.
+		 */
+		verticalAlign: 'middle',
+	},
+	circleStyles: {
+		fill: 'none',
+		strokeDasharray: 60,
+		strokeWidth: 1.5,
+		'@media screen and (forced-colors: active)': {
+			filter: 'grayscale(100%)',
+			stroke: 'CanvasText',
+		},
+	},
+});
+
+/**
+ * `useLayoutEffect` is being used in SSR safe form. On the server, this work doesn’t need to run.
+ * `useEffect` is used in-place, because `useEffect` is not run on the server and it matches types
+ * which makes things simpler than doing an `isServer` check or a `null` check.
+ *
+ * @see https://hello.atlassian.net/wiki/spaces/DST/pages/2081696628/DSTDACI-010+-+Interaction+Tracing+hooks+in+DS+components
+ */
+const useLayoutEffect = typeof window === 'undefined' ? useEffect : useRealLayoutEffect;
+
+/**
+ * __Spinner__
+ *
+ * A spinner is an animated spinning icon that lets users know content is being loaded.
+ *
+ * - [Examples](https://atlassian.design/components/spinner/examples)
+ * - [Code](https://atlassian.design/components/spinner/code)
+ * - [Usage](https://atlassian.design/components/spinner/usage)
+ */
+const Spinner = React.memo(
+	React.forwardRef<SVGSVGElement, SpinnerProps>(function Spinner(
+		{
+			appearance = 'inherit',
+			delay = 0,
+			interactionName,
+			label,
+			size: providedSize = 'medium',
+			testId,
+		}: SpinnerProps,
+		ref,
+	) {
+		const size: number =
+			typeof providedSize === 'number' ? providedSize : presetSizes[providedSize];
+
+		const animationDelay = `${delay}ms`;
+
+		const stroke = getStrokeColor(appearance);
+
+		const context = useContext(InteractionContext);
+		useLayoutEffect(() => {
+			if (context != null) {
+				return context.hold(interactionName);
+			}
+		}, [context, interactionName]);
+
+		/**
+		 * The Spinner animation uses a combination of two
+		 * css animations on two separate elements.
+		 */
+		return (
+			<span
+				/**
+				 * This span exists to off-load animations from the circle element,
+				 * which were causing performance issues (style recalculations)
+				 * on Safari and older versions of Chrome.
+				 *
+				 * This can be removed and styles placed back on the circle element once
+				 * Safari fixes this bug and off-loads rendering to the GPU from the CPU.
+				 */
+				css={[styles.wrapperStyles, styles.rotateStyles]}
+				data-testid={testId ? `${testId}-wrapper` : 'spinner-wrapper'}
+				// eslint-disable-next-line @atlaskit/ui-styling-standard/enforce-style-prop -- Ignored via go/DSP-18766
+				style={{ animationDelay, width: size, height: size }}
+			>
+				<svg
+					height={size}
+					width={size}
+					viewBox="0 0 16 16"
+					xmlns="http://www.w3.org/2000/svg"
+					data-testid={testId}
+					ref={ref}
+					aria-label={label || undefined}
+					css={styles.loadInStyles}
+					// eslint-disable-next-line @atlaskit/ui-styling-standard/enforce-style-prop -- Ignored via go/DSP-18766
+					style={{ animationDelay }}
+					role={label ? 'img' : 'none'}
+				>
+					<circle cx="8" cy="8" r="7" css={styles.circleStyles} style={{ stroke }} />
+				</svg>
+			</span>
+		);
+	}),
+);
+
+export default Spinner;
+    "#};
+
+    let result = process_compiled_css_in_js(input_code, &config);
+
+    assert!(result.is_ok(), "Transformation should succeed");
+
+    let output = result.unwrap();
+
+    // Verify transformation was applied
+    assert!(!output.bail_out, "Transformation should not bail out");
+
+    println!("output.code: {}", output.code);
+
+    assert!(
+      !output.code.contains("cssMap("),
+      "Output should not contain cssMap calls, they should be transformed to a map of classes"
+    );
+
+    let normalized_output = normalize_output(&output.code);
+
+    // CS should include the classnames as children
+    let normalized_expected = normalize_output(indoc! {r#"
+    _jsx(CS, {
+        children: []
+    })
+    "#});
+
+    assert!(
+      !normalized_output.contains(&normalized_expected),
       "Output should include the expected ax className call with all styles"
     );
 

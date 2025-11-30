@@ -10300,6 +10300,7 @@ impl<'a> TransformVisitor<'a> {
     let mut runtime_sheets = Vec::new();
     let mut pending_class_names: Vec<String> = Vec::new();
     let mut transformed = false;
+    let mut cx_detected = false;
 
     for attr in &mut element.opening.attrs {
       let JSXAttrOrSpread::JSXAttr(attr) = attr else {
@@ -10380,11 +10381,15 @@ impl<'a> TransformVisitor<'a> {
         continue;
       }
 
+      // Check if cx is being used, even if we can't statically evaluate the expression
+      self.mark_cx_usage(expr);
+      if self.contains_cx_call(expr) {
+        cx_detected = true;
+      }
+
       let Some(value) = evaluated.as_ref() else {
         continue;
       };
-
-      self.mark_cx_usage(expr);
 
       if std::env::var_os("COMPILED_DEBUG_CSS").is_some() {
         eprintln!("[compiled-debug] xcss evaluated value: {:?}", value);
@@ -10440,14 +10445,14 @@ impl<'a> TransformVisitor<'a> {
       transformed = true;
     }
 
-    if !transformed {
+    if !transformed && !cx_detected {
       return None;
     }
 
     Some(XcssProcessing {
       runtime_sheets,
       pending_class_names,
-      transformed,
+      transformed: transformed || cx_detected,
     })
   }
 
@@ -10456,8 +10461,12 @@ impl<'a> TransformVisitor<'a> {
       Expr::Ident(ident) => {
         let id = to_id(ident);
         if let Some(source) = self.compiled_import_sources.get(&id) {
-          if source == "@atlaskit/css" && ident.sym.as_ref() == "cx" {
+          if (source == "@atlaskit/css" || source == "@compiled/react") && ident.sym.as_ref() == "cx" {
             self.retain_imports.insert(id);
+            // When cx is used, we need the CC, CS, and ax runtime helpers
+            self.needs_runtime_ax = true;
+            self.needs_runtime_cc = true;
+            self.needs_runtime_cs = true;
           }
         }
       }
@@ -10498,6 +10507,66 @@ impl<'a> TransformVisitor<'a> {
         self.mark_cx_usage(&paren.expr);
       }
       _ => {}
+    }
+  }
+
+  fn contains_cx_call(&self, expr: &Expr) -> bool {
+    match expr {
+      Expr::Ident(ident) => {
+        let id = to_id(ident);
+        if let Some(source) = self.compiled_import_sources.get(&id) {
+          (source == "@atlaskit/css" || source == "@compiled/react") && ident.sym.as_ref() == "cx"
+        } else {
+          false
+        }
+      }
+      Expr::Call(call) => {
+        if let Callee::Expr(callee) = &call.callee {
+          if self.contains_cx_call(callee) {
+            return true;
+          }
+        }
+        for arg in &call.args {
+          if self.contains_cx_call(&arg.expr) {
+            return true;
+          }
+        }
+        false
+      }
+      Expr::Member(member) => self.contains_cx_call(&member.obj),
+      Expr::Cond(cond) => {
+        self.contains_cx_call(&cond.test)
+          || self.contains_cx_call(&cond.cons)
+          || self.contains_cx_call(&cond.alt)
+      }
+      Expr::Array(array) => {
+        for elem in &array.elems {
+          if let Some(elem) = elem {
+            if self.contains_cx_call(&elem.expr) {
+              return true;
+            }
+          }
+        }
+        false
+      }
+      Expr::Tpl(tpl) => {
+        for expr in &tpl.exprs {
+          if self.contains_cx_call(expr) {
+            return true;
+          }
+        }
+        false
+      }
+      Expr::Seq(seq) => {
+        for expr in &seq.exprs {
+          if self.contains_cx_call(expr) {
+            return true;
+          }
+        }
+        false
+      }
+      Expr::Paren(paren) => self.contains_cx_call(&paren.expr),
+      _ => false,
     }
   }
 
