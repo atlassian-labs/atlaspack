@@ -284,7 +284,7 @@ pub struct Asset {
   pub has_dependencies: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AssetWithDependencies {
   pub asset: Asset,
   pub dependencies: Vec<Dependency>,

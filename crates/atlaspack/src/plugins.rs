@@ -17,6 +17,7 @@ use atlaspack_core::plugin::ValidatorPlugin;
 use atlaspack_core::types::Asset;
 #[cfg(test)]
 use mockall::automock;
+use serde::Serialize;
 
 pub type PluginsRef = Arc<dyn Plugins + Send + Sync>;
 
@@ -50,11 +51,10 @@ pub trait Plugins {
   fn validators(&self, _path: &Path) -> Result<Vec<Box<dyn ValidatorPlugin>>, anyhow::Error>;
 }
 
-#[derive(Default)]
 pub struct TransformerPipeline {
   transformers: Vec<Arc<dyn TransformerPlugin>>,
   pipeline_id: u64,
-  cache_key: Option<u64>,
+  pub cache_key: Option<u64>,
 }
 
 #[cfg_attr(test, automock)]

@@ -8,6 +8,7 @@ use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::{AtlaspackOptions, SourceField, Targets};
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
+use atlaspack_memoization_cache::{CacheHandler, LmdbCacheReaderWriter};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::DatabaseHandle;
@@ -141,6 +142,7 @@ impl Atlaspack {
       Arc::new(resolved_options.clone()),
       plugins.clone(),
       project_root.clone(),
+      Arc::new(CacheHandler::new(LmdbCacheReaderWriter::new(db.clone()))),
     );
 
     Ok(Self {
@@ -203,6 +205,8 @@ impl Atlaspack {
           incrementally_bundled_assets,
         })
         .await?;
+
+      request_tracker.cache.reset_stats();
 
       let RequestResult::AssetGraph(asset_graph_request_output) = request_result.as_ref() else {
         panic!("Something went wrong with the request tracker")

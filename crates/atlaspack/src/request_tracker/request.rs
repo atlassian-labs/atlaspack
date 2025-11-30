@@ -1,3 +1,5 @@
+use atlaspack_memoization_cache::CacheHandler;
+use atlaspack_memoization_cache::LmdbCacheReaderWriter;
 use std::fmt::Debug;
 use std::future::Future;
 use std::hash::Hash;
@@ -19,6 +21,8 @@ use dyn_hash::DynHash;
 
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
+
+pub type CacheRef = Arc<CacheHandler<LmdbCacheReaderWriter>>;
 
 type ChannelRequestResult = anyhow::Result<(Arc<RequestResult>, RequestId, bool)>;
 pub type RequestResultReceiver = Receiver<ChannelRequestResult>;
@@ -66,6 +70,7 @@ impl Future for ExecuteRequestFuture {
 pub struct RunRequestContext {
   config_loader: ConfigLoaderRef,
   file_system: FileSystemRef,
+  pub cache: CacheRef,
   pub options: Arc<AtlaspackOptions>,
   parent_request_id: Option<u64>,
   plugins: PluginsRef,
@@ -81,9 +86,11 @@ impl RunRequestContext {
     parent_request_id: Option<u64>,
     plugins: PluginsRef,
     project_root: PathBuf,
+    cache: CacheRef,
     run_request_fn: RunRequestFn,
   ) -> Self {
     Self {
+      cache,
       config_loader,
       file_system,
       options,

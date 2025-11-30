@@ -14,10 +14,14 @@ use atlaspack_core::types::Dependency;
 use atlaspack_core::types::Environment;
 use atlaspack_core::types::FileType;
 use atlaspack_core::types::{Asset, Invalidation};
+use atlaspack_memoization_cache::Cacheable;
 use atlaspack_sourcemap::find_sourcemap_url;
 use atlaspack_sourcemap::load_sourcemap_url;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::VecDeque;
 use std::hash::Hash;
+use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
@@ -114,8 +118,7 @@ impl Request for AssetRequest {
     });
 
     let transform_context = TransformContext::new(config_loader, self.env.clone());
-    let mut result =
-      run_pipelines(transform_context, asset, request_context.plugins().clone()).await?;
+    let mut result = run_pipelines(transform_context, asset, request_context).await?;
 
     // TODO: Commit the asset with a project path now, as transformers rely on an absolute path
     // result.asset.file_path = to_project_path(&self.project_root, &result.asset.file_path);
@@ -154,8 +157,9 @@ impl Request for AssetRequest {
 async fn run_pipelines(
   transform_context: TransformContext,
   input: Asset,
-  plugins: PluginsRef,
+  request_context: RunRequestContext,
 ) -> anyhow::Result<TransformResult> {
+  let plugins = request_context.plugins();
   let mut all_invalidations = vec![];
   let mut asset_queue = VecDeque::from([(
     AssetWithDependencies {
@@ -185,13 +189,18 @@ async fn run_pipelines(
       plugins.transformers(&asset_to_modify).await?
     };
 
-    let (invalidations, discovered_assets, result) = run_pipeline(
-      asset_to_modify,
-      pipeline,
-      transform_context.clone(),
-      plugins.clone(),
-    )
-    .await?;
+    let (invalidations, discovered_assets, result) = request_context
+      .cache
+      .run(
+        RunPipelineInput {
+          asset: asset_to_modify,
+          pipeline,
+          context: transform_context.clone(),
+          plugins: plugins.clone(),
+        },
+        |input| async { run_pipeline(input).await },
+      )
+      .await?;
 
     all_invalidations.extend(invalidations);
     asset_queue.extend(
@@ -215,7 +224,8 @@ async fn run_pipelines(
           });
         };
       }
-      PipelineResult::TypeChange(next_pipeline, asset, mut dependencies) => {
+      PipelineResult::TypeChange(asset, mut dependencies) => {
+        let next_pipeline = plugins.transformers(&asset).await?;
         dependencies.extend(prev_dependencies);
 
         asset_queue.push_front((
@@ -239,18 +249,56 @@ async fn run_pipelines(
   })
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 enum PipelineResult {
   Complete(Asset, Vec<Dependency>),
-  TypeChange(TransformerPipeline, Asset, Vec<Dependency>),
+  TypeChange(Asset, Vec<Dependency>),
 }
 
-#[tracing::instrument(level = "trace", skip_all)]
-async fn run_pipeline(
+struct RunPipelineInput {
   asset: Asset,
   pipeline: TransformerPipeline,
   context: TransformContext,
   plugins: PluginsRef,
+}
+
+impl Cacheable for RunPipelineInput {
+  fn cache_key(&self) -> Option<(String, String)> {
+    let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
+    // Using asset id for now
+    self.asset.id.hash(&mut hasher);
+
+    // If the pipeline has no cache key then it is uncachable
+    self.pipeline.cache_key?.hash(&mut hasher);
+
+    // Ignore context and plugins from the cache key
+
+    let label = format!(
+      "run_pipeline|{}",
+      self
+        .asset
+        .file_path
+        .strip_prefix(&self.context.config().project_root)
+        .unwrap_or(&self.asset.file_path)
+        .display()
+    );
+    let cache_key = format!("{}|{}", &label, hasher.finish());
+
+    Some((label, cache_key))
+  }
+}
+
+#[tracing::instrument(level = "trace", skip_all)]
+async fn run_pipeline(
+  input: RunPipelineInput,
 ) -> anyhow::Result<(Vec<PathBuf>, Vec<AssetWithDependencies>, PipelineResult)> {
+  let RunPipelineInput {
+    asset,
+    pipeline,
+    context,
+    plugins,
+  } = input;
+
   let mut current_asset = asset.clone();
   let mut dependencies = Vec::new();
   let mut discovered_assets = Vec::new();
@@ -287,7 +335,7 @@ async fn run_pipeline(
         return Ok((
           invalidations,
           discovered_assets,
-          PipelineResult::TypeChange(next_pipeline, current_asset, dependencies),
+          PipelineResult::TypeChange(current_asset, dependencies),
         ));
       }
     }
