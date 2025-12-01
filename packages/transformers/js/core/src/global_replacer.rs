@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::Path;
 
 use indexmap::IndexMap;
@@ -63,6 +64,7 @@ pub struct GlobalReplacer<'a> {
   pub filename: &'a Path,
   pub unresolved_mark: Mark,
   pub scope_hoist: bool,
+  pub declare_consts: &'a HashSet<Atom>,
 }
 
 impl VisitMut for GlobalReplacer<'_> {
@@ -77,7 +79,11 @@ impl VisitMut for GlobalReplacer<'_> {
     };
 
     // Only handle global variables
-    if !is_unresolved(id, self.unresolved_mark) {
+    // Process if: unresolved OR in declare_consts
+    // Skip if: resolved AND not in declare_consts
+    let is_unres = is_unresolved(id, self.unresolved_mark);
+    let in_declare_consts = self.declare_consts.contains(&id.sym);
+    if !is_unres && !in_declare_consts {
       return;
     }
 
@@ -206,6 +212,7 @@ impl GlobalReplacer<'_> {
 
 #[cfg(test)]
 mod tests {
+  use std::collections::HashSet;
   use std::path::Path;
 
   use atlaspack_core::types::DependencyKind;
@@ -219,6 +226,7 @@ mod tests {
   fn make_global_replacer<'a>(
     run_test_context: RunTestContext,
     items: &'a mut Vec<DependencyDescriptor>,
+    declare_consts: &'a HashSet<Atom>,
   ) -> GlobalReplacer<'a> {
     GlobalReplacer {
       source_map: run_test_context.source_map.clone(),
@@ -229,18 +237,22 @@ mod tests {
       filename: Path::new("filename"),
       unresolved_mark: run_test_context.unresolved_mark,
       scope_hoist: false,
+      declare_consts,
     }
   }
 
   #[test]
   fn test_globals_visitor_with_require_process() {
     let mut items = vec![];
+    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
         console.log(process.test);
       "#,
-      |run_test_context: RunTestContext| make_global_replacer(run_test_context, &mut items),
+      |run_test_context: RunTestContext| {
+        make_global_replacer(run_test_context, &mut items, &declare_consts)
+      },
     );
 
     assert_eq!(
@@ -258,13 +270,16 @@ mod tests {
   #[test]
   fn test_transforms_computed_property() {
     let mut items = vec![];
+    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
         object[process.test];
         object[__dirname];
       "#,
-      |run_test_context: RunTestContext| make_global_replacer(run_test_context, &mut items),
+      |run_test_context: RunTestContext| {
+        make_global_replacer(run_test_context, &mut items, &declare_consts)
+      },
     );
 
     assert_eq!(
@@ -281,13 +296,16 @@ mod tests {
   #[test]
   fn test_does_not_transform_member_property() {
     let mut items = vec![];
+    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
         object.process.test;
         object.__filename;
       "#,
-      |run_test_context: RunTestContext| make_global_replacer(run_test_context, &mut items),
+      |run_test_context: RunTestContext| {
+        make_global_replacer(run_test_context, &mut items, &declare_consts)
+      },
     );
 
     assert_eq!(

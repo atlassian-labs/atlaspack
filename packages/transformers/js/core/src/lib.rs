@@ -2,6 +2,7 @@ pub mod add_display_name;
 mod collect;
 mod constant_module;
 mod dead_returns_remover;
+mod declare_const_collector;
 mod dependency_collector;
 mod env_replacer;
 mod esm_export_classifier;
@@ -122,6 +123,8 @@ use utils::error_buffer_to_diagnostics;
 
 use crate::esm_export_classifier::EsmExportClassifier;
 use crate::esm_export_classifier::SymbolsInfo;
+
+use crate::declare_const_collector::declare_const_collector;
 
 type SourceMapBuffer = Vec<(swc_core::common::BytePos, swc_core::common::LineCol)>;
 
@@ -318,7 +321,9 @@ pub fn transform(
                 result.magic_comments = magic_comment_visitor.magic_comments;
               }
 
+              let mut declare_consts = HashSet::<Atom>::new();
               let module = module.apply(&mut (
+                declare_const_collector(&mut declare_consts),
                 resolver(unresolved_mark, global_mark, config.is_type_script),
                 // Decorators can use type information, so must run before the TypeScript pass.
                 Optional::new(
@@ -459,7 +464,8 @@ pub fn transform(
                       used_env: &mut result.used_env,
                       source_map: source_map.clone(),
                       diagnostics: &mut diagnostics,
-                      unresolved_mark
+                      unresolved_mark,
+                      declare_consts: &declare_consts,
                     }),
                     config.source_type != SourceType::Script
                   ),
@@ -546,7 +552,8 @@ pub fn transform(
                       project_root: Path::new(&config.project_root),
                       filename: Path::new(&config.filename),
                       unresolved_mark,
-                      scope_hoist: config.scope_hoist
+                      scope_hoist: config.scope_hoist,
+                      declare_consts: &declare_consts,
                     }),
                     config.insert_node_globals
                   ),

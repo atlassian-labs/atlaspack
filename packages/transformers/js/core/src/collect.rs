@@ -2288,8 +2288,8 @@ output = getExports() === exports && getExports().foo
       .unwrap_or_else(|| panic!("No collect found"))
   }
 
-  fn map_imports(imports: BTreeMap<Id, Import>) -> BTreeMap<JsWord, PartialImport> {
-    let mut map: BTreeMap<JsWord, PartialImport> = BTreeMap::new();
+  fn map_imports(imports: BTreeMap<Id, Import>) -> BTreeMap<Atom, PartialImport> {
+    let mut map: BTreeMap<Atom, PartialImport> = BTreeMap::new();
     for (key, import) in imports.into_iter() {
       map.insert(key.0, PartialImport::from(import));
     }
