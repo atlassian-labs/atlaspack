@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 
+use rustc_hash::FxHashSet;
 use serde::Deserialize;
 use serde::Serialize;
 use swc_core::common::DUMMY_SP;
@@ -9,6 +10,7 @@ use swc_core::common::Span;
 use swc_core::common::SyntaxContext;
 use swc_core::common::errors::DiagnosticBuilder;
 use swc_core::common::errors::Emitter;
+use swc_core::ecma::ast::Id;
 use swc_core::ecma::ast::Ident;
 use swc_core::ecma::ast::IdentName;
 use swc_core::ecma::ast::{self};
@@ -19,7 +21,24 @@ pub fn is_unresolved(ident: &Ident, unresolved_mark: Mark) -> bool {
   ident.ctxt.outer() == unresolved_mark
 }
 
-pub fn match_member_expr(expr: &ast::MemberExpr, idents: Vec<&str>, unresolved_mark: Mark) -> bool {
+pub fn is_unresolved_with_bindings(
+  ident: &Ident,
+  bindings: Option<&FxHashSet<Id>>,
+  unresolved_mark: Mark,
+) -> bool {
+  if let Some(bindings) = bindings {
+    return !bindings.contains(&ident.to_id());
+  }
+
+  is_unresolved(ident, unresolved_mark)
+}
+
+pub fn match_member_expr(
+  expr: &ast::MemberExpr,
+  idents: Vec<&str>,
+  unresolved_mark: Mark,
+  bindings: Option<&FxHashSet<Id>>,
+) -> bool {
   use ast::Expr;
   use ast::Lit;
   use ast::MemberProp;
@@ -27,6 +46,7 @@ pub fn match_member_expr(expr: &ast::MemberExpr, idents: Vec<&str>, unresolved_m
 
   let mut member = expr;
   let mut idents = idents;
+
   while idents.len() > 1 {
     let expected = idents.pop().unwrap();
     let prop = match &member.prop {
@@ -50,7 +70,7 @@ pub fn match_member_expr(expr: &ast::MemberExpr, idents: Vec<&str>, unresolved_m
       Expr::Ident(id) => {
         return idents.len() == 1
           && id.sym == idents.pop().unwrap()
-          && is_unresolved(id, unresolved_mark);
+          && is_unresolved_with_bindings(id, bindings, unresolved_mark);
       }
       _ => return false,
     }
@@ -134,7 +154,12 @@ pub fn match_export_name_ident(name: &ast::ModuleExportName) -> &ast::Ident {
   }
 }
 
-pub fn match_require(node: &ast::Expr, unresolved_mark: Mark, ignore_mark: Mark) -> Option<Atom> {
+pub fn match_require(
+  node: &ast::Expr,
+  unresolved_mark: Mark,
+  ignore_mark: Mark,
+  bindings: Option<&FxHashSet<Id>>,
+) -> Option<Atom> {
   use ast::*;
 
   match node {
@@ -142,7 +167,7 @@ pub fn match_require(node: &ast::Expr, unresolved_mark: Mark, ignore_mark: Mark)
       Callee::Expr(expr) => match &**expr {
         Expr::Ident(ident) => {
           if ident.sym == atom!("require")
-            && is_unresolved(ident, unresolved_mark)
+            && is_unresolved_with_bindings(ident, bindings, unresolved_mark)
             && !is_marked(ident.ctxt, ignore_mark)
             && let Some(arg) = call.args.first()
           {
@@ -152,7 +177,7 @@ pub fn match_require(node: &ast::Expr, unresolved_mark: Mark, ignore_mark: Mark)
           None
         }
         Expr::Member(member) => {
-          if match_member_expr(member, vec!["module", "require"], unresolved_mark)
+          if match_member_expr(member, vec!["module", "require"], unresolved_mark, bindings)
             && let Some(arg) = call.args.first()
           {
             return match_str(&arg.expr).map(|(name, _)| name);
