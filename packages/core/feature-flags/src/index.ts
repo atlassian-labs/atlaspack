@@ -341,6 +341,15 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-11-27
    */
   disallowCircularPackageAliases: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * When enabled, applies the tokens and SWC compiled CSS in JS transformer to the codebase in the core pass
+   *
+   * @author Jake Lane <jlane2@atlassian.com>
+   * @since 2025-12-02
+   */
+  coreTokensAndCompiledCssInJsTransform:
+    process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

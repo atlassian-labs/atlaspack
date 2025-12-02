@@ -11,7 +11,7 @@ use parking_lot::Mutex;
 use serde_json::from_str;
 use xxhash_rust::xxh3::Xxh3;
 
-use crate::CompiledCssInJsTransformConfig;
+use crate::config::CompiledCssInJsTransformConfig;
 
 pub type IdentifierHasher = Xxh3;
 
