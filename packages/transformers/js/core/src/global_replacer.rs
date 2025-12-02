@@ -1,17 +1,19 @@
-use std::collections::HashSet;
 use std::path::Path;
 
 use indexmap::IndexMap;
 use path_slash::PathBufExt;
+use rustc_hash::FxHashSet;
 use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
 use swc_core::common::SyntaxContext;
 use swc_core::common::sync::Lrc;
+use swc_core::ecma::ast::Id;
 use swc_core::ecma::ast::{self, Expr};
 use swc_core::ecma::ast::{ComputedPropName, Module};
 use swc_core::ecma::atoms::Atom;
 use swc_core::ecma::atoms::atom;
+use swc_core::ecma::utils::collect_decls;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
 
@@ -20,7 +22,6 @@ use crate::utils::SourceLocation;
 use crate::utils::SourceType;
 use crate::utils::create_global_decl_stmt;
 use crate::utils::create_require;
-use crate::utils::is_unresolved;
 use atlaspack_core::types::DependencyKind;
 
 /// Replaces a few node.js constants with literals or require statements.
@@ -64,7 +65,7 @@ pub struct GlobalReplacer<'a> {
   pub filename: &'a Path,
   pub unresolved_mark: Mark,
   pub scope_hoist: bool,
-  pub declare_consts: &'a HashSet<Atom>,
+  pub bindings: Lrc<FxHashSet<Id>>,
 }
 
 impl VisitMut for GlobalReplacer<'_> {
@@ -78,12 +79,7 @@ impl VisitMut for GlobalReplacer<'_> {
       return;
     };
 
-    // Only handle global variables
-    // Process if: unresolved OR in declare_consts
-    // Skip if: resolved AND not in declare_consts
-    let is_unres = is_unresolved(id, self.unresolved_mark);
-    let in_declare_consts = self.declare_consts.contains(&id.sym);
-    if !is_unres && !in_declare_consts {
+    if self.bindings.contains(&id.to_id()) {
       return;
     }
 
@@ -178,6 +174,7 @@ impl VisitMut for GlobalReplacer<'_> {
   }
 
   fn visit_mut_module(&mut self, node: &mut Module) {
+    self.bindings = Lrc::new(collect_decls(node));
     node.visit_mut_children_with(self);
     node.body.splice(
       0..0,
@@ -212,12 +209,13 @@ impl GlobalReplacer<'_> {
 
 #[cfg(test)]
 mod tests {
-  use std::collections::HashSet;
   use std::path::Path;
 
   use atlaspack_core::types::DependencyKind;
   use atlaspack_swc_runner::test_utils::{RunTestContext, RunVisitResult, run_test_visit};
   use indoc::indoc;
+  use rustc_hash::FxHashSet;
+  use swc_core::common::sync::Lrc;
   use swc_core::ecma::atoms::Atom;
 
   use crate::DependencyDescriptor;
@@ -226,7 +224,6 @@ mod tests {
   fn make_global_replacer<'a>(
     run_test_context: RunTestContext,
     items: &'a mut Vec<DependencyDescriptor>,
-    declare_consts: &'a HashSet<Atom>,
   ) -> GlobalReplacer<'a> {
     GlobalReplacer {
       source_map: run_test_context.source_map.clone(),
@@ -237,22 +234,19 @@ mod tests {
       filename: Path::new("filename"),
       unresolved_mark: run_test_context.unresolved_mark,
       scope_hoist: false,
-      declare_consts,
+      bindings: Lrc::new(FxHashSet::default()),
     }
   }
 
   #[test]
   fn test_globals_visitor_with_require_process() {
     let mut items = vec![];
-    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
         console.log(process.test);
       "#,
-      |run_test_context: RunTestContext| {
-        make_global_replacer(run_test_context, &mut items, &declare_consts)
-      },
+      |run_test_context: RunTestContext| make_global_replacer(run_test_context, &mut items),
     );
 
     assert_eq!(
@@ -270,16 +264,13 @@ mod tests {
   #[test]
   fn test_transforms_computed_property() {
     let mut items = vec![];
-    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
         object[process.test];
         object[__dirname];
       "#,
-      |run_test_context: RunTestContext| {
-        make_global_replacer(run_test_context, &mut items, &declare_consts)
-      },
+      |run_test_context: RunTestContext| make_global_replacer(run_test_context, &mut items),
     );
 
     assert_eq!(
@@ -296,16 +287,13 @@ mod tests {
   #[test]
   fn test_does_not_transform_member_property() {
     let mut items = vec![];
-    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
         object.process.test;
         object.__filename;
       "#,
-      |run_test_context: RunTestContext| {
-        make_global_replacer(run_test_context, &mut items, &declare_consts)
-      },
+      |run_test_context: RunTestContext| make_global_replacer(run_test_context, &mut items),
     );
 
     assert_eq!(

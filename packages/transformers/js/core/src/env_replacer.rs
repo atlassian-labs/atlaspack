@@ -8,7 +8,10 @@ use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::sync::Lrc;
 use swc_core::ecma::ast;
+use swc_core::ecma::utils::collect_decls;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
+
+use rustc_hash::FxHashSet;
 
 use crate::utils::*;
 
@@ -21,10 +24,15 @@ pub struct EnvReplacer<'a> {
   pub source_map: Lrc<swc_core::common::SourceMap>,
   pub diagnostics: &'a mut Vec<Diagnostic>,
   pub unresolved_mark: Mark,
-  pub declare_consts: &'a HashSet<Atom>,
+  pub bindings: Lrc<FxHashSet<Id>>,
 }
 
 impl VisitMut for EnvReplacer<'_> {
+  fn visit_mut_module(&mut self, node: &mut Module) {
+    self.bindings = Lrc::new(collect_decls(node));
+    node.visit_mut_children_with(self);
+  }
+
   fn visit_mut_expr(&mut self, node: &mut Expr) {
     // Replace assignments to process.browser with `true`
     // TODO: this seems questionable but we did it in the JS version??
@@ -37,7 +45,12 @@ impl VisitMut for EnvReplacer<'_> {
     match &node {
       Expr::Bin(binary) if binary.op == BinaryOp::In => {
         if let (Expr::Lit(Lit::Str(left)), Expr::Member(member)) = (&*binary.left, &*binary.right)
-          && self.match_member_expr_with_declare_consts(member, vec!["process", "env"])
+          && match_member_expr(
+            member,
+            vec!["process", "env"],
+            self.unresolved_mark,
+            Some(self.bindings.as_ref()),
+          )
         {
           self.used_env.insert(left.value.clone());
           *node = Expr::Lit(Lit::Bool(Bool {
@@ -52,7 +65,12 @@ impl VisitMut for EnvReplacer<'_> {
 
     if let Expr::Member(member) = &node {
       if self.is_browser
-        && self.match_member_expr_with_declare_consts(member, vec!["process", "browser"])
+        && match_member_expr(
+          member,
+          vec!["process", "browser"],
+          self.unresolved_mark,
+          Some(self.bindings.as_ref()),
+        )
       {
         *node = Expr::Lit(Lit::Bool(Bool {
           value: true,
@@ -67,7 +85,12 @@ impl VisitMut for EnvReplacer<'_> {
       }
 
       if let Expr::Member(obj) = &*member.obj
-        && self.match_member_expr_with_declare_consts(obj, vec!["process", "env"])
+        && match_member_expr(
+          obj,
+          vec!["process", "env"],
+          self.unresolved_mark,
+          Some(self.bindings.as_ref()),
+        )
         && let Some((sym, _)) = match_property_name(member)
         && let Some(replacement) = self.replace(&sym, true)
       {
@@ -85,7 +108,12 @@ impl VisitMut for EnvReplacer<'_> {
       // process.env.FOO = ...;
       if let AssignTarget::Simple(SimpleAssignTarget::Member(member)) = &assign.left
         && let Expr::Member(obj) = &*member.obj
-        && self.match_member_expr_with_declare_consts(obj, vec!["process", "env"])
+        && match_member_expr(
+          obj,
+          vec!["process", "env"],
+          self.unresolved_mark,
+          Some(self.bindings.as_ref()),
+        )
       {
         self.emit_mutating_error(assign.span);
         assign.right.visit_mut_with(self);
@@ -95,7 +123,12 @@ impl VisitMut for EnvReplacer<'_> {
 
       if let Expr::Member(member) = &*assign.right
         && assign.op == AssignOp::Assign
-        && self.match_member_expr_with_declare_consts(member, vec!["process", "env"])
+        && match_member_expr(
+          member,
+          vec!["process", "env"],
+          self.unresolved_mark,
+          Some(self.bindings.as_ref()),
+        )
       {
         let pat = match &assign.left {
           // ({x, y, z, ...} = process.env);
@@ -146,7 +179,7 @@ impl VisitMut for EnvReplacer<'_> {
         Expr::Update(UpdateExpr { arg, span, .. }) => {
           if let Expr::Member(MemberExpr { obj, .. }) = &&**arg
             && let Expr::Member(member) = &**obj
-              && self.match_member_expr_with_declare_consts(member, vec!["process", "env"]) {
+              && match_member_expr(member, vec!["process", "env"], self.unresolved_mark, Some(self.bindings.as_ref())) {
                 self.emit_mutating_error(*span);
                 *node = match &node {
                   Expr::Unary(_) => Expr::Lit(Lit::Bool(Bool { span: *span, value: true })),
@@ -177,7 +210,7 @@ impl VisitMut for EnvReplacer<'_> {
     for decl in &node.decls {
       if let Some(init) = &decl.init
         && let Expr::Member(member) = &**init
-        && self.match_member_expr_with_declare_consts(member, vec!["process", "env"])
+        && match_member_expr(member, vec!["process", "env"], self.unresolved_mark, None)
       {
         self.collect_pat_bindings(&decl.name, &mut decls);
         continue;
@@ -199,53 +232,6 @@ impl VisitMut for EnvReplacer<'_> {
 }
 
 impl EnvReplacer<'_> {
-  /// Helper to check if a member expression matches, considering both unresolved
-  /// identifiers and declared constants.
-  fn match_member_expr_with_declare_consts(
-    &self,
-    expr: &ast::MemberExpr,
-    idents: Vec<&str>,
-  ) -> bool {
-    use ast::Expr;
-    use ast::Lit;
-    use ast::MemberProp;
-    use ast::Str;
-
-    let mut member = expr;
-    let mut idents = idents;
-    while idents.len() > 1 {
-      let expected = idents.pop().unwrap();
-      let prop = match &member.prop {
-        MemberProp::Computed(comp) => {
-          if let Expr::Lit(Lit::Str(Str { value: sym, .. })) = comp.expr.as_ref() {
-            sym
-          } else {
-            return false;
-          }
-        }
-        MemberProp::Ident(IdentName { sym, .. }) => sym,
-        _ => return false,
-      };
-
-      if prop != expected {
-        return false;
-      }
-
-      match &*member.obj {
-        Expr::Member(m) => member = m,
-        Expr::Ident(id) => {
-          let base_ident = idents.pop().unwrap();
-          return idents.is_empty()
-            && id.sym == base_ident
-            && (is_unresolved(id, self.unresolved_mark) || self.declare_consts.contains(&id.sym));
-        }
-        _ => return false,
-      }
-    }
-
-    false
-  }
-
   /// If an expression matches `process.browser = ...` then the RHS is replaced with
   /// `true` when `is_browser` is set to true.
   ///
@@ -259,7 +245,12 @@ impl EnvReplacer<'_> {
     };
 
     if !self.is_browser
-      || !self.match_member_expr_with_declare_consts(member, vec!["process", "browser"])
+      || !match_member_expr(
+        member,
+        vec!["process", "browser"],
+        self.unresolved_mark,
+        Some(self.bindings.as_ref()),
+      )
     {
       return None;
     }
@@ -401,7 +392,6 @@ mod tests {
     env: &'a BTreeMap<Atom, Atom>,
     used_env: &'a mut HashSet<Atom>,
     diagnostics: &'a mut Vec<Diagnostic>,
-    declare_consts: &'a HashSet<Atom>,
   ) -> EnvReplacer<'a> {
     EnvReplacer {
       replace_env: true,
@@ -411,7 +401,7 @@ mod tests {
       source_map: run_test_context.source_map.clone(),
       diagnostics,
       unresolved_mark: run_test_context.unresolved_mark,
-      declare_consts,
+      bindings: Lrc::new(FxHashSet::default()),
     }
   }
 
@@ -420,7 +410,6 @@ mod tests {
     let env: BTreeMap<Atom, Atom> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
-    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
@@ -437,7 +426,7 @@ mod tests {
         source_map: run_test_context.source_map.clone(),
         diagnostics: &mut diagnostics,
         unresolved_mark: run_test_context.unresolved_mark,
-        declare_consts: &declare_consts,
+        bindings: Lrc::new(FxHashSet::default()),
       },
     );
 
@@ -459,7 +448,6 @@ mod tests {
     let env: BTreeMap<Atom, Atom> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
-    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
@@ -469,13 +457,7 @@ mod tests {
         console.log(other = false);
       "#,
       |run_test_context: RunTestContext| {
-        make_env_replacer(
-          run_test_context,
-          &env,
-          &mut used_env,
-          &mut diagnostics,
-          &declare_consts,
-        )
+        make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
@@ -499,16 +481,9 @@ mod tests {
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
-    let declare_consts = HashSet::new();
     let RunVisitResult { output_code, .. } =
       run_test_visit("process.env = {};", |run_test_context: RunTestContext| {
-        make_env_replacer(
-          run_test_context,
-          &env,
-          &mut used_env,
-          &mut diagnostics,
-          &declare_consts,
-        )
+        make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       });
 
     assert_eq!(output_code.trim(), "process.env = {};");
@@ -521,7 +496,6 @@ mod tests {
     let env: BTreeMap<Atom, Atom> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
-    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
@@ -530,13 +504,7 @@ mod tests {
         process.env.PROP++;
       "#,
       |run_test_context: RunTestContext| {
-        make_env_replacer(
-          run_test_context,
-          &env,
-          &mut used_env,
-          &mut diagnostics,
-          &declare_consts,
-        )
+        make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
@@ -572,7 +540,6 @@ mod tests {
     let mut diagnostics = Vec::new();
 
     env.insert("foo".into(), "foo".into());
-    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
@@ -580,13 +547,7 @@ mod tests {
         const x = ({ foo, ...others } = process.env);
       "#,
       |run_test_context: RunTestContext| {
-        make_env_replacer(
-          run_test_context,
-          &env,
-          &mut used_env,
-          &mut diagnostics,
-          &declare_consts,
-        )
+        make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
@@ -608,7 +569,6 @@ mod tests {
     let env: BTreeMap<Atom, Atom> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
-    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
@@ -616,13 +576,7 @@ mod tests {
         function run(enabled = process.browser) {}
       "#,
       |run_test_context: RunTestContext| {
-        make_env_replacer(
-          run_test_context,
-          &env,
-          &mut used_env,
-          &mut diagnostics,
-          &declare_consts,
-        )
+        make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
@@ -645,7 +599,6 @@ mod tests {
     let mut diagnostics = Vec::new();
 
     env.insert("thing".into(), "here".into());
-    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
@@ -653,13 +606,7 @@ mod tests {
         console.log('other' in process.env);
       "#,
       |run_test_context: RunTestContext| {
-        make_env_replacer(
-          run_test_context,
-          &env,
-          &mut used_env,
-          &mut diagnostics,
-          &declare_consts,
-        )
+        make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
@@ -680,7 +627,6 @@ mod tests {
     let env: BTreeMap<Atom, Atom> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
-    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
@@ -688,13 +634,7 @@ mod tests {
         const version = process.env.hasOwnProperty('version');
       "#,
       |run_test_context: RunTestContext| {
-        make_env_replacer(
-          run_test_context,
-          &env,
-          &mut used_env,
-          &mut diagnostics,
-          &declare_consts,
-        )
+        make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
@@ -715,7 +655,6 @@ mod tests {
     let mut env: BTreeMap<Atom, Atom> = BTreeMap::new();
     let mut used_env: HashSet<Atom> = HashSet::new();
     let mut diagnostics = Vec::new();
-    let declare_consts = HashSet::new();
 
     env.insert("IS_TEST".into(), "true".into());
     env.insert("VERSION".into(), "1.2.3".into());
@@ -728,13 +667,7 @@ mod tests {
         const { package, IS_TEST: isTest2 } = process.env;
       "#,
       |run_test_context: RunTestContext| {
-        make_env_replacer(
-          run_test_context,
-          &env,
-          &mut used_env,
-          &mut diagnostics,
-          &declare_consts,
-        )
+        make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
@@ -763,7 +696,6 @@ mod tests {
     let mut env: BTreeMap<Atom, Atom> = BTreeMap::new();
     let mut used_env: HashSet<Atom> = HashSet::new();
     let mut diagnostics = Vec::new();
-    let declare_consts = HashSet::new();
 
     env.insert("package".into(), "atlaspack".into());
 
@@ -772,13 +704,7 @@ mod tests {
         const { package, ...other } = process.env;
       "#,
       |run_test_context: RunTestContext| {
-        make_env_replacer(
-          run_test_context,
-          &env,
-          &mut used_env,
-          &mut diagnostics,
-          &declare_consts,
-        )
+        make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 
@@ -808,20 +734,13 @@ mod tests {
     env.insert("A".into(), "A".into());
     env.insert("B".into(), "B".into());
     env.insert("C".into(), "C".into());
-    let declare_consts = HashSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(
       r#"
         const env = process.env;
       "#,
       |run_test_context: RunTestContext| {
-        make_env_replacer(
-          run_test_context,
-          &env,
-          &mut used_env,
-          &mut diagnostics,
-          &declare_consts,
-        )
+        make_env_replacer(run_test_context, &env, &mut used_env, &mut diagnostics)
       },
     );
 

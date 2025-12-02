@@ -326,6 +326,7 @@ dependencies = [
  "pathdiff",
  "pretty_assertions",
  "regex",
+ "rustc-hash 2.1.1",
  "serde",
  "serde_bytes",
  "sha-1",
