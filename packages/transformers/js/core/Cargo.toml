@@ -48,6 +48,7 @@ atlaspack_swc_runner = { path = "../../../../crates/atlaspack_swc_runner" }
 parking_lot = { workspace = true }
 pretty_assertions = { workspace = true }
 regex = { workspace = true }
+rustc-hash = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-test = { workspace = true }

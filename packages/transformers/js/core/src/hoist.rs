@@ -634,7 +634,7 @@ impl Fold for Hoist<'_> {
                     if let Some(init) = &v.init {
                       // Match var x = require('foo');
                       if let Some(source) =
-                        match_require(init, self.unresolved_mark, self.collect.ignore_mark)
+                        match_require(init, self.unresolved_mark, self.collect.ignore_mark, None)
                       {
                         // If the require is accessed in a way we cannot analyze, do not replace.
                         // e.g. const {x: {y: z}} = require('x');
@@ -680,9 +680,12 @@ impl Fold for Hoist<'_> {
 
                       if let Expr::Member(member) = &**init {
                         // Match var x = require('foo').bar;
-                        if let Some(source) =
-                          match_require(&member.obj, self.unresolved_mark, self.collect.ignore_mark)
-                          && !self.collect.non_static_requires.contains(&source)
+                        if let Some(source) = match_require(
+                          &member.obj,
+                          self.unresolved_mark,
+                          self.collect.ignore_mark,
+                          None,
+                        ) && !self.collect.non_static_requires.contains(&source)
                         {
                           // If this is not the first declarator in the variable declaration, we need to
                           // split the declaration into multiple to preserve side effect ordering.
@@ -767,7 +770,7 @@ impl Fold for Hoist<'_> {
             }
             Stmt::Expr(ExprStmt { expr, span }) => {
               if let Some(source) =
-                match_require(&expr, self.unresolved_mark, self.collect.ignore_mark)
+                match_require(&expr, self.unresolved_mark, self.collect.ignore_mark, None)
               {
                 // Require in statement position (`require('other');`) should behave just
                 // like `import 'other';` in that it doesn't add any symbols (not even '*').
@@ -826,12 +829,17 @@ impl Fold for Hoist<'_> {
       }
       Expr::Member(member) => {
         if !self.collect.should_wrap {
-          if match_member_expr(&member, vec!["module", "exports"], self.unresolved_mark) {
+          if match_member_expr(
+            &member,
+            vec!["module", "exports"],
+            self.unresolved_mark,
+            None,
+          ) {
             self.self_references.insert("*".into());
             return Expr::Ident(self.get_export_ident(member.span, &"*".into()));
           }
 
-          if match_member_expr(&member, vec!["module", "hot"], self.unresolved_mark) {
+          if match_member_expr(&member, vec!["module", "hot"], self.unresolved_mark, None) {
             return Expr::Lit(Lit::Null(Null { span: member.span }));
           }
         }
@@ -898,9 +906,12 @@ impl Fold for Hoist<'_> {
           }
           Expr::Call(_) => {
             // require('foo').bar -> $id$import$foo$bar
-            if let Some(source) =
-              match_require(&member.obj, self.unresolved_mark, self.collect.ignore_mark)
-            {
+            if let Some(source) = match_require(
+              &member.obj,
+              self.unresolved_mark,
+              self.collect.ignore_mark,
+              None,
+            ) {
               self.add_require(&source, ImportKind::Require);
               return Expr::Ident(self.get_import_ident(
                 member.span,
@@ -915,7 +926,7 @@ impl Fold for Hoist<'_> {
             // module.exports.foo -> $id$export$foo
             if self.collect.static_cjs_exports
               && !self.collect.should_wrap
-              && match_member_expr(mem, vec!["module", "exports"], self.unresolved_mark)
+              && match_member_expr(mem, vec!["module", "exports"], self.unresolved_mark, None)
             {
               self.self_references.insert(key.clone());
               return Expr::Ident(self.get_export_ident(member.span, &key));
@@ -944,7 +955,9 @@ impl Fold for Hoist<'_> {
       }
       Expr::Call(ref call) => {
         // require('foo') -> $id$import$foo
-        if let Some(source) = match_require(&node, self.unresolved_mark, self.collect.ignore_mark) {
+        if let Some(source) =
+          match_require(&node, self.unresolved_mark, self.collect.ignore_mark, None)
+        {
           self.add_require(&source, ImportKind::Require);
           return Expr::Ident(self.get_import_ident(
             call.span,
@@ -1051,7 +1064,7 @@ impl Fold for Hoist<'_> {
       .enumerate()
       .map(|(i, expr)| {
         if i != len - 1
-          && match_require(&expr, self.unresolved_mark, self.collect.ignore_mark).is_some()
+          && match_require(&expr, self.unresolved_mark, self.collect.ignore_mark, None).is_some()
         {
           return Box::new(Expr::Unary(UnaryExpr {
             op: UnaryOp::Bang,
@@ -1171,7 +1184,12 @@ impl Fold for Hoist<'_> {
     }
 
     if let AssignTarget::Simple(SimpleAssignTarget::Member(member)) = &node.left {
-      if match_member_expr(member, vec!["module", "exports"], self.unresolved_mark) {
+      if match_member_expr(
+        member,
+        vec!["module", "exports"],
+        self.unresolved_mark,
+        None,
+      ) {
         let ident = BindingIdent::from(self.get_export_ident(member.span, &"*".into()));
         return AssignExpr {
           span: node.span,
@@ -1182,9 +1200,12 @@ impl Fold for Hoist<'_> {
       }
 
       let is_cjs_exports = match &*member.obj {
-        Expr::Member(member) => {
-          match_member_expr(member, vec!["module", "exports"], self.unresolved_mark)
-        }
+        Expr::Member(member) => match_member_expr(
+          member,
+          vec!["module", "exports"],
+          self.unresolved_mark,
+          None,
+        ),
         Expr::Ident(ident) => {
           &*ident.sym == "exports" && is_unresolved(ident, self.unresolved_mark)
         }
