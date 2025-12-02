@@ -75,12 +75,11 @@ jobs:
         run: ${SCCACHE_PATH} --show-stats
 
       - uses: ./.github/actions/setup-node
+
       - name: Free up space
         if: ${{ runner.os == 'Linux' }}
-        run: |
-          sudo apt-get remove -y '^dotnet-.*'
-          sudo apt-get remove -y '^llvm-.*'
-          sudo apt-get remove -y 'php.*'
+        uses: jlumbroso/free-disk-space@main
+
       # Build native artifacts
       - env:
           RUSTUP_TARGET: ${{ matrix.target }}
