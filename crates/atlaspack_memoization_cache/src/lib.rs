@@ -45,6 +45,26 @@ impl CacheReaderWriter for LmdbCacheReaderWriter {
   }
 }
 
+/// In-memory cache implementation for testing
+#[derive(Default)]
+pub struct InMemoryReaderWriter {
+  store: parking_lot::Mutex<std::collections::HashMap<String, Vec<u8>>>,
+}
+
+impl CacheReaderWriter for InMemoryReaderWriter {
+  fn read(&self, key: &str) -> anyhow::Result<Option<Vec<u8>>> {
+    Ok(self.store.lock().get(key).cloned())
+  }
+
+  fn put(&self, key: &str, value: &[u8]) -> anyhow::Result<()> {
+    self
+      .store
+      .lock()
+      .insert(String::from(key), value.to_owned());
+    Ok(())
+  }
+}
+
 #[derive(Debug)]
 struct Stats {
   hits: AtomicU64,
