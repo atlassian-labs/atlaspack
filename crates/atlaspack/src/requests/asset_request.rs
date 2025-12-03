@@ -14,6 +14,7 @@ use atlaspack_core::types::Dependency;
 use atlaspack_core::types::Environment;
 use atlaspack_core::types::FileType;
 use atlaspack_core::types::{Asset, Invalidation};
+use atlaspack_memoization_cache::CacheReaderWriter;
 use atlaspack_memoization_cache::CacheResponse;
 use atlaspack_memoization_cache::Cacheable;
 use atlaspack_sourcemap::find_sourcemap_url;
@@ -155,10 +156,10 @@ impl Request for AssetRequest {
 }
 
 #[tracing::instrument(level = "trace", skip_all)]
-async fn run_pipelines(
+async fn run_pipelines<C: CacheReaderWriter>(
   transform_context: TransformContext,
   input: Asset,
-  request_context: RunRequestContext,
+  request_context: RunRequestContext<C>,
 ) -> anyhow::Result<TransformResult> {
   let plugins = request_context.plugins();
   let mut all_invalidations = vec![];
@@ -382,8 +383,9 @@ mod tests {
   use super::*;
   use crate::plugins::MockPlugins;
   use crate::plugins::TransformerPipeline;
+  use crate::request_tracker::RunRequestContext;
   use atlaspack_core::hash::IdentifierHasher;
-  use atlaspack_core::plugin::MockTransformerPlugin;
+  use atlaspack_core::plugin::{CacheStatus, MockTransformerPlugin};
   use atlaspack_core::types::Code;
   use atlaspack_core::types::FileType;
   use pretty_assertions::assert_eq;
@@ -422,7 +424,8 @@ mod tests {
 
     let asset = Asset::default();
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins))
+    let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
+    let result = run_pipelines(context, asset, request_context)
       .await
       .unwrap();
 
@@ -452,7 +455,8 @@ mod tests {
     let asset = make_asset("index.js", FileType::Js);
     let expected_invalidations = vec![PathBuf::from("./tmp")];
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins))
+    let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
+    let result = run_pipelines(context, asset, request_context)
       .await
       .unwrap();
 
@@ -491,7 +495,8 @@ mod tests {
 
     let asset = make_asset("index.json", FileType::Json);
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins))
+    let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
+    let result = run_pipelines(context, asset, request_context)
       .await
       .unwrap();
 
@@ -529,7 +534,8 @@ mod tests {
     let asset = make_asset("index.js", FileType::Js);
     let expected_dependencies = vec![Dependency::default()];
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins))
+    let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
+    let result = run_pipelines(context, asset, request_context)
       .await
       .unwrap();
 
@@ -580,7 +586,8 @@ mod tests {
 
     let asset = make_asset("index.js", FileType::Js);
     let context = TransformContext::default();
-    let result = run_pipelines(context, asset, Arc::new(plugins))
+    let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
+    let result = run_pipelines(context, asset, request_context)
       .await
       .unwrap();
 
@@ -617,6 +624,8 @@ mod tests {
       }
     });
 
+    mock.expect_cache_key().return_const(CacheStatus::BuiltIn);
+
     mock.expect_transform().returning({
       let label = label.clone();
       move |_context, asset: Asset| {
@@ -636,10 +645,10 @@ mod tests {
           discovered_assets: discovered_assets.clone().unwrap_or_default(),
           dependencies: dependencies.clone().unwrap_or_default(),
           invalidate_on_file_change: invalidate_on_file_change.clone().unwrap_or_default(),
+          cache_bailout: false,
         })
       }
     });
-    // .returning(move |_context, asset: Asset| get_simple_transformer(label.clone(), asset));
     Arc::new(mock)
   }
 }

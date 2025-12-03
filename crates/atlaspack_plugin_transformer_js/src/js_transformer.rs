@@ -564,7 +564,8 @@ mod tests {
         },
         discovered_assets: vec![],
         dependencies: vec![],
-        invalidate_on_file_change: vec![]
+        invalidate_on_file_change: vec![],
+        cache_bailout: false,
       }
     );
 
@@ -1558,7 +1559,8 @@ mod tests {
         },
         discovered_assets: vec![],
         dependencies: vec![],
-        invalidate_on_file_change: vec![]
+        invalidate_on_file_change: vec![],
+        cache_bailout: false,
       }
     );
 
@@ -1663,7 +1665,8 @@ mod tests {
         },
         discovered_assets: vec![],
         dependencies: expected_dependencies,
-        invalidate_on_file_change: vec![]
+        invalidate_on_file_change: vec![],
+        cache_bailout: false,
       }
     );
 

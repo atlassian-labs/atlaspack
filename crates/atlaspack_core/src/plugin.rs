@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_filesystem::FileSystemRef;
-use atlaspack_memoization_cache::{CacheHandler, LmdbCacheReaderWriter};
 pub use bundler_plugin::*;
 pub use compressor_plugin::*;
 pub use namer_plugin::*;

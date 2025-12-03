@@ -8,6 +8,7 @@ use tokio::sync::OnceCell as AsyncOnceCell;
 
 /// A thread safe storage mechanism for plugin instances
 #[derive(Default)]
+#[allow(clippy::type_complexity)]
 pub struct PluginCache {
   resolvers_store: OnceCell<Vec<Arc<dyn ResolverPlugin>>>,
   transformers_store: RwLock<HashMap<String, Arc<AsyncOnceCell<Arc<dyn TransformerPlugin>>>>>,
@@ -62,7 +63,7 @@ impl PluginCache {
 mod tests {
   use super::*;
   use async_trait::async_trait;
-  use atlaspack_core::plugin::{TransformContext, TransformResult};
+  use atlaspack_core::plugin::{CacheStatus, TransformContext, TransformResult};
   use atlaspack_core::types::Asset;
   use std::sync::Arc;
   use std::sync::atomic::{AtomicUsize, Ordering};
@@ -74,6 +75,10 @@ mod tests {
 
   #[async_trait]
   impl TransformerPlugin for MockTransformer {
+    fn cache_key(&self) -> &CacheStatus {
+      &CacheStatus::BuiltIn
+    }
+
     async fn transform(
       &self,
       _context: TransformContext,
