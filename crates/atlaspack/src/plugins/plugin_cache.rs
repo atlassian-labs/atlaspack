@@ -6,12 +6,14 @@ use parking_lot::RwLock;
 use std::future::Future;
 use tokio::sync::OnceCell as AsyncOnceCell;
 
+/// A lazily-initialized, thread-safe cell for a transformer plugin instance
+type TransformerCell = Arc<AsyncOnceCell<Arc<dyn TransformerPlugin>>>;
+
 /// A thread safe storage mechanism for plugin instances
 #[derive(Default)]
-#[allow(clippy::type_complexity)]
 pub struct PluginCache {
   resolvers_store: OnceCell<Vec<Arc<dyn ResolverPlugin>>>,
-  transformers_store: RwLock<HashMap<String, Arc<AsyncOnceCell<Arc<dyn TransformerPlugin>>>>>,
+  transformers_store: RwLock<HashMap<String, TransformerCell>>,
 }
 
 impl PluginCache {
