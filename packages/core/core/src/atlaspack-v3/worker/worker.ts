@@ -269,7 +269,7 @@ export class AtlaspackWorker {
           }),
         );
 
-      for (let {operation, value, variable, stack} of sideEffects.envUsage) {
+      for (let {operation, value, variable} of sideEffects.envUsage) {
         if (operation === 'read') {
           if (variable && variable in allowedEnv) {
             let allowed = allowedEnv[variable];
@@ -282,6 +282,7 @@ export class AtlaspackWorker {
         }
 
         cache_bailout = true;
+        // eslint-disable-next-line no-console
         console.log(
           `Transformer (${key}) uncacheable due to env var access:`,
           innerAsset.filePath,
@@ -292,6 +293,7 @@ export class AtlaspackWorker {
       }
 
       if (sideEffects.fsUsage.length > 0) {
+        // eslint-disable-next-line no-console
         console.log(`Transformer ${key} uncacheable due to fs access`);
         cache_bailout = true;
       }
