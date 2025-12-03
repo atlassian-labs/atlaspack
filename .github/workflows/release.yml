@@ -67,12 +67,7 @@ jobs:
           apt-get update
           apt-get install -y build-essential curl nodejs npm
           apt-get clean
-<<<<<<< HEAD
-=======
-          rm -rf /var/lib/apt/lists/*
->>>>>>> 02031e0e9 (More freeing action)
           npm i -g yarn
-<<<<<<< HEAD
       - name:
           Free up space
           # This build uses a debian image that's different than the Ubuntu image for the CI jobs
@@ -80,11 +75,6 @@ jobs:
           # Removing this directory frees up some 25GB of space.
         run: |
           rm -rf /var/lib/apt/lists/* /__t/*
-=======
-          rm -rf /__t/*
-          df -h
-          du -h -d4 / | sort -hr
->>>>>>> c2510cd9e (Try finding free space)
       - name: Install Rust
         uses: ./.github/actions/rust-toolchain
         with:
@@ -92,7 +82,6 @@ jobs:
       - uses: ./.github/actions/setup-node
         with:
           node-version: 22
-
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: '${{ matrix.name }}'
