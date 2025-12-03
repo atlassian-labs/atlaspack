@@ -388,7 +388,7 @@ mod tests {
   fn test_should_skip_with_invalid_utf8() {
     let conditions = Conditions {
       file_match: None,
-      code_match: Some(RegexSet::new(&["test"]).unwrap()),
+      code_match: Some(RegexSet::new(["test"]).unwrap()),
       enabled: true,
       origin: None,
     };
@@ -405,10 +405,10 @@ mod tests {
   #[test]
   fn test_file_match_deserialization() {
     // Test basic file_match deserialization
-    let json = r#"{"fileMatch": "\\.ts$", "enabled": true}"#;
+    let json = r#"{"fileMatch": ["\\.ts$"], "enabled": true}"#;
     let conditions: SerializableTransformerConditions = serde_json::from_str(json).unwrap();
     let expected = SerializableTransformerConditions {
-      file_match: Some("\\.ts$".to_string()),
+      file_match: Some(vec!["\\.ts$".to_string()]),
       code_match: None,
       enabled: Some(true),
       origin: None,
@@ -416,10 +416,10 @@ mod tests {
     assert_eq!(conditions, expected);
 
     // Test file_match with other conditions
-    let json = r#"{"fileMatch": "src/.*\\.js$", "codeMatch": ["console"], "origin": "source"}"#;
+    let json = r#"{"fileMatch": ["src/.*\\.js$"], "codeMatch": ["console"], "origin": "source"}"#;
     let conditions: SerializableTransformerConditions = serde_json::from_str(json).unwrap();
     let expected = SerializableTransformerConditions {
-      file_match: Some("src/.*\\.js$".to_string()),
+      file_match: Some(vec!["src/.*\\.js$".to_string()]),
       code_match: Some(vec!["console".to_string()]),
       enabled: None,
       origin: Some(OriginCondition::Source),
@@ -430,7 +430,7 @@ mod tests {
   #[test]
   fn test_file_match_try_from() {
     let serializable = SerializableTransformerConditions {
-      file_match: Some("\\.tsx?$".to_string()),
+      file_match: Some(vec!["\\.tsx?$".to_string()]),
       code_match: None,
       enabled: Some(true),
       origin: None,
@@ -451,7 +451,7 @@ mod tests {
   #[test]
   fn test_file_match_try_from_invalid_regex() {
     let serializable = SerializableTransformerConditions {
-      file_match: Some("[".to_string()), // Invalid regex
+      file_match: Some(vec!["[".to_string()]), // Invalid regex
       code_match: None,
       enabled: Some(true),
       origin: None,
@@ -463,7 +463,7 @@ mod tests {
 
   #[test]
   fn test_should_skip_file_match_basic() {
-    let file_regex = Regex::new(r"\.js$").unwrap();
+    let file_regex = RegexSet::new([r"\.js$"]).unwrap();
     let conditions = Conditions {
       file_match: Some(file_regex),
       code_match: None,
@@ -489,7 +489,7 @@ mod tests {
   #[test]
   fn test_should_skip_file_match_complex_patterns() {
     // Test complex regex pattern: TypeScript files in src directory
-    let file_regex = Regex::new(r"src/.*\.tsx?$").unwrap();
+    let file_regex = RegexSet::new([r"src/.*\.tsx?$"]).unwrap();
     let conditions = Conditions {
       file_match: Some(file_regex),
       code_match: None,
@@ -547,7 +547,7 @@ mod tests {
 
   #[test]
   fn test_should_skip_file_match_with_code_match() {
-    let file_regex = Regex::new(r"\.js$").unwrap();
+    let file_regex = RegexSet::new([r"\.js$"]).unwrap();
     let code_regex = RegexSet::new(["import.*react"]).unwrap();
     let conditions = Conditions {
       file_match: Some(file_regex),
@@ -575,7 +575,7 @@ mod tests {
 
   #[test]
   fn test_should_skip_file_match_with_origin() {
-    let file_regex = Regex::new(r"\.js$").unwrap();
+    let file_regex = RegexSet::new([r"\.js$"]).unwrap();
     let conditions = Conditions {
       file_match: Some(file_regex),
       code_match: None,
@@ -602,7 +602,7 @@ mod tests {
 
   #[test]
   fn test_should_skip_file_match_all_conditions() {
-    let file_regex = Regex::new(r"src/.*\.js$").unwrap();
+    let file_regex = RegexSet::new([r"src/.*\.js$"]).unwrap();
     let code_regex = RegexSet::new(["console\\.log"]).unwrap();
     let conditions = Conditions {
       file_match: Some(file_regex),
@@ -631,7 +631,7 @@ mod tests {
   #[test]
   fn test_should_skip_file_match_edge_cases() {
     // Test with empty string pattern (should match everything)
-    let file_regex = Regex::new("").unwrap();
+    let file_regex = RegexSet::new([""]).unwrap();
     let conditions = Conditions {
       file_match: Some(file_regex),
       code_match: None,
@@ -643,7 +643,7 @@ mod tests {
     assert!(!conditions.should_skip(&asset).unwrap());
 
     // Test with pattern that matches directory separators
-    let file_regex = Regex::new(r"/").unwrap();
+    let file_regex = RegexSet::new([r"/"]).unwrap();
     let conditions = Conditions {
       file_match: Some(file_regex),
       code_match: None,
