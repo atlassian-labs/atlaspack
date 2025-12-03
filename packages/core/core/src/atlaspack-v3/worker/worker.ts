@@ -1,3 +1,5 @@
+import {SideEffectDetector} from './side-effect-detector';
+
 import assert from 'assert';
 import * as napi from '@atlaspack/rust';
 // @ts-expect-error TS2305
@@ -35,12 +37,15 @@ export class AtlaspackWorker {
   #fs: FileSystem;
   #packageManager: NodePackageManager;
   #options: Options | undefined;
+  #sideEffectDetector: SideEffectDetector;
 
   constructor() {
     this.#resolvers = new Map();
     this.#transformers = new Map();
     this.#fs = new NodeFS();
     this.#packageManager = new NodePackageManager(this.#fs, '/');
+    this.#sideEffectDetector = new SideEffectDetector();
+    this.#sideEffectDetector.install();
   }
 
   loadPlugin: JsCallable<[LoadPluginOptions], Promise<undefined>> = jsCallable(
@@ -178,24 +183,22 @@ export class AtlaspackWorker {
     [RunTransformerTransformOptions, Buffer, string | null | undefined],
     Promise<RunTransformerTransformResult>
   > = jsCallable(
-    async ({key, env: napiEnv, options, asset: innerAsset}, contents, map) => {
+    async ({key, env: napiEnv, asset: innerAsset}, contents, map) => {
       const instance = this.#transformers.get(key);
       if (!instance) {
         throw new Error(`Transformer not found: ${key}`);
       }
 
-      let packageManager = instance.packageManager;
+      let {transformer, config, allowedEnv = {}} = instance;
 
-      if (!packageManager) {
-        packageManager = new NodePackageManager(this.#fs, options.projectRoot);
-        instance.packageManager = packageManager;
-      }
-
-      let {transformer, config} = instance;
+      let cache_bailout = false;
 
       const resolveFunc = (from: string, to: string): Promise<any> => {
         let customRequire = module.createRequire(from);
         let resolvedPath = customRequire.resolve(to);
+        // Tranformer not cacheable due to use of the resolve function
+
+        cache_bailout = true;
 
         return Promise.resolve(resolvedPath);
       };
@@ -208,19 +211,14 @@ export class AtlaspackWorker {
         env,
         this.#fs,
         map,
-        options.projectRoot,
+        this.options.projectRoot,
       );
 
+      const pluginOptions = new PluginOptions(this.options);
       const defaultOptions = {
         logger: new PluginLogger(),
         tracer: new PluginTracer(),
-        options: new PluginOptions({
-          ...options,
-          packageManager,
-          shouldAutoInstall: false,
-          inputFS: this.#fs,
-          outputFS: this.#fs,
-        }),
+        options: pluginOptions,
       } as const;
 
       if (transformer.loadConfig) {
@@ -241,6 +239,10 @@ export class AtlaspackWorker {
           ),
           ...defaultOptions,
         });
+
+        // Transformer uses the deprecated loadConfig API, so mark as not
+        // cachable
+        cache_bailout = true;
       }
 
       if (transformer.parse) {
@@ -256,13 +258,43 @@ export class AtlaspackWorker {
         }
       }
 
-      const result = await transformer.transform({
-        // @ts-expect-error TS2322
-        asset: mutableAsset,
-        config,
-        resolve: resolveFunc,
-        ...defaultOptions,
-      });
+      const [result, sideEffects] =
+        await this.#sideEffectDetector.monitorSideEffects(() =>
+          transformer.transform({
+            // @ts-expect-error TS2322
+            asset: mutableAsset,
+            config,
+            resolve: resolveFunc,
+            ...defaultOptions,
+          }),
+        );
+
+      for (let {operation, value, variable, stack} of sideEffects.envUsage) {
+        if (operation === 'read') {
+          if (variable && variable in allowedEnv) {
+            let allowed = allowedEnv[variable];
+
+            if (allowed === value) {
+              // Allowed access
+              continue;
+            }
+          }
+        }
+
+        cache_bailout = true;
+        console.log(
+          `Transformer (${key}) uncacheable due to env var access:`,
+          innerAsset.filePath,
+          operation,
+          variable,
+        );
+        break;
+      }
+
+      if (sideEffects.fsUsage.length > 0) {
+        console.log(`Transformer ${key} uncacheable due to fs access`);
+        cache_bailout = true;
+      }
 
       assert(
         result.length === 1,
@@ -307,6 +339,11 @@ export class AtlaspackWorker {
         assetBuffer = null;
       }
 
+      if (pluginOptions.used) {
+        // Plugin options accessed, so not cachable
+        cache_bailout = true;
+      }
+
       return [
         {
           id: mutableAsset.id,
@@ -332,6 +369,7 @@ export class AtlaspackWorker {
           ? // @ts-expect-error TS2533
             JSON.stringify((await mutableAsset.getMap()).toVLQ())
           : '',
+        cache_bailout,
       ];
     },
   );
@@ -345,7 +383,7 @@ export class AtlaspackWorker {
 
   async initializeTransformer(instance: Transformer<any>, specifier: string) {
     let transformer = instance;
-    let setup, config;
+    let setup, config, allowedEnv;
 
     let packageManager = new NodePackageManager(
       this.#fs,
@@ -353,7 +391,7 @@ export class AtlaspackWorker {
     );
 
     if (transformer.setup) {
-      let setup = await transformer.setup({
+      let setupResult = await transformer.setup({
         logger: new PluginLogger(),
         options: new PluginOptions({
           ...this.options,
@@ -372,13 +410,26 @@ export class AtlaspackWorker {
           this.options,
         ),
       });
-      config = setup?.config;
+      config = setupResult?.config;
+      allowedEnv = Object.fromEntries(
+        setupResult?.env?.map((e) => [e, process.env[e]]) ?? [],
+      );
+
+      // Always add the following env vars to the cache key
+      allowedEnv.NODE_ENV = process.env.NODE_ENV;
+
+      setup = {
+        conditions: setupResult?.conditions,
+        config,
+        env: allowedEnv,
+      };
     }
 
     this.#transformers.set(specifier, {
       transformer,
       config,
       packageManager,
+      allowedEnv,
     });
 
     return setup;
@@ -400,6 +451,7 @@ type TransformerState<ConfigType> = {
   packageManager?: NodePackageManager;
   transformer: Transformer<ConfigType>;
   config?: ConfigType;
+  allowedEnv?: Record<string, string | undefined>;
 };
 
 type LoadPluginOptions = {
@@ -460,5 +512,10 @@ type RunTransformerTransformOptions = {
   asset: napi.Asset;
 };
 
-// @ts-expect-error TS2694
-type RunTransformerTransformResult = [napi.RpcAssetResult, Buffer, string];
+type RunTransformerTransformResult = [
+  // @ts-expect-error TS2694
+  napi.RpcAssetResult,
+  Buffer,
+  string,
+  boolean,
+];

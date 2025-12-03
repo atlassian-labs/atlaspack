@@ -241,10 +241,6 @@ pub trait Cacheable {
 
 pub trait CacheResponse: DeserializeOwned + Serialize + PartialEq + std::fmt::Debug {
   fn bailout(&self) -> bool;
-
-  fn persist(&self, key: &str, reader_writer: &dyn CacheReaderWriter) -> anyhow::Result<()>;
-
-  fn hydrate(&self, key: &str, reader_writer: &dyn CacheReaderWriter) -> anyhow::Result<()>;
 }
 
 #[cfg(test)]

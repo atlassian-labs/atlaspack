@@ -1220,7 +1220,7 @@ export type Validator = DedicatedThreadValidator | MultiThreadValidator;
 
 interface TransformerConditions {
   enabled?: boolean;
-  fileMatch?: string;
+  fileMatch?: Array<string>;
   codeMatch?: Array<string>;
   origin?: 'source' | 'third-party';
 }
@@ -1228,6 +1228,13 @@ interface TransformerConditions {
 export interface TransformerSetup<Config> {
   conditions?: TransformerConditions;
   config?: Config;
+  /** List of environment variables that the transformer depends on to be fed
+   * into the cache key.
+   *
+   * Missing variables from this list will cause the transformer to not be
+   * cached.
+   * */
+  env?: Array<string>;
 }
 
 /**
