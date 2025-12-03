@@ -3,7 +3,6 @@ use rand::Rng;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::future::Future;
-use std::process::Output;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -197,11 +196,15 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
     // Now we have a result, try to serialize and cache it
     match serialize(&result) {
       Ok(serialized_result) => {
-        if let Some(value) = cache_result {
-          pretty_assertions::assert_eq!(deserialize::<Res>(&value).unwrap(), result);
+        if let Some(value) = cache_result
+          && let Ok(cached) = deserialize::<Res>(&value)
+          && cached != result
+        {
+          let comparison = pretty_assertions::Comparison::new(&cached, &result);
           tracing::error!(
-            "Cache validation mismatch for {}: cached value does not match computed result",
-            label
+            "Cache validation mismatch for {}: cached value does not match computed result\n{}",
+            label,
+            comparison
           );
         }
 
@@ -252,6 +255,26 @@ mod test {
   use pretty_assertions::assert_eq;
   use serde::{Deserialize, Serialize};
 
+  // Test response type that implements CacheResponse
+  #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+  struct TestResponse {
+    value: String,
+  }
+
+  impl TestResponse {
+    fn new(value: &str) -> Self {
+      Self {
+        value: value.to_string(),
+      }
+    }
+  }
+
+  impl CacheResponse for TestResponse {
+    fn bailout(&self) -> bool {
+      false
+    }
+  }
+
   // Simple cacheable wrapper for testing
   #[derive(Debug)]
   struct CacheableString {
@@ -283,32 +306,30 @@ mod test {
     let input = CacheableString::new("hello_result", "Hello");
     let result = handler
       .run(input, |input| async move {
-        Ok::<_, ()>(input.value.to_ascii_uppercase())
+        Ok::<_, ()>(TestResponse::new(&input.value.to_ascii_uppercase()))
       })
       .await;
 
-    assert_eq!(result, Ok("HELLO".to_string()));
+    assert_eq!(result, Ok(TestResponse::new("HELLO")));
   }
 
   #[tokio::test]
   async fn handles_cached_value() {
-    #[derive(PartialEq, Debug, Deserialize, Serialize)]
-    enum TestResult {
-      Success,
-      Fail,
-    }
-
-    let cached_value = serde_json::to_vec(&TestResult::Success).unwrap();
+    let cached_response = TestResponse::new("CACHED");
+    let cached_value = serde_json::to_vec(&cached_response).unwrap();
     let reader_writer = SimpleMockReaderWriter::new_with_cached_value(cached_value);
 
     let handler = CacheHandler::new(reader_writer);
 
     let input = CacheableString::new("test_label", "Hello");
     let result = handler
-      .run(input, |_input| async move { Ok::<_, ()>(TestResult::Fail) })
+      .run(input, |_input| async move {
+        Ok::<_, ()>(TestResponse::new("COMPUTED"))
+      })
       .await;
 
-    assert_eq!(result, Ok(TestResult::Success));
+    // Should return cached value, not computed
+    assert_eq!(result, Ok(TestResponse::new("CACHED")));
   }
 
   #[tokio::test]
@@ -319,18 +340,18 @@ mod test {
     let input1 = CacheableString::new("test_label", "Hello");
     let result = handler
       .run(input1, |input| async move {
-        Ok::<_, ()>(input.value.to_ascii_uppercase())
+        Ok::<_, ()>(TestResponse::new(&input.value.to_ascii_uppercase()))
       })
       .await;
-    assert_eq!(result, Ok("HELLO".to_string()));
+    assert_eq!(result, Ok(TestResponse::new("HELLO")));
 
     let input2 = CacheableString::new("test_label", "Hello");
-    let result: Result<String, ()> = handler
+    let result: Result<TestResponse, ()> = handler
       .run(input2, |_input| async move {
         panic!("Should not call 2nd run function")
       })
       .await;
-    assert_eq!(result, Ok("HELLO".to_string()));
+    assert_eq!(result, Ok(TestResponse::new("HELLO")));
   }
 
   #[tokio::test]
@@ -342,10 +363,10 @@ mod test {
     let input = CacheableString::new("test_label", "Hello");
     let result = handler
       .run(input, |input| async move {
-        Ok::<_, ()>(input.value.to_ascii_uppercase())
+        Ok::<_, ()>(TestResponse::new(&input.value.to_ascii_uppercase()))
       })
       .await;
-    assert_eq!(result, Ok("HELLO".to_string()));
+    assert_eq!(result, Ok(TestResponse::new("HELLO")));
   }
 
   #[tokio::test]
@@ -357,111 +378,71 @@ mod test {
     let input = CacheableString::new("test_label", "Hello");
     let result = handler
       .run(input, |input| async move {
-        Ok::<_, ()>(input.value.to_ascii_uppercase())
+        Ok::<_, ()>(TestResponse::new(&input.value.to_ascii_uppercase()))
       })
       .await;
-    assert_eq!(result, Ok("HELLO".to_string()));
+    assert_eq!(result, Ok(TestResponse::new("HELLO")));
   }
 
   #[tokio::test]
   async fn cache_validation_with_matching_results() {
-    #[derive(PartialEq, Debug, Deserialize, Serialize)]
-    struct TestResult {
-      value: String,
-    }
-
-    let cached_result = TestResult {
-      value: "HELLO".to_string(),
-    };
-    let cached_value = serde_json::to_vec(&cached_result).unwrap();
+    let cached_response = TestResponse::new("HELLO");
+    let cached_value = serde_json::to_vec(&cached_response).unwrap();
     let reader_writer = SimpleMockReaderWriter::new_with_cached_value(cached_value);
 
     // Set validation rate to 100% to ensure validation runs
     let handler = CacheHandler::new_with_validation(reader_writer, 1.0);
 
     let input = CacheableString::new("test_label", "Hello");
-    let result: Result<TestResult, ()> = handler
+    let result: Result<TestResponse, ()> = handler
       .run(input, |input| async move {
-        Ok::<_, ()>(TestResult {
-          value: input.value.to_ascii_uppercase(),
-        })
+        Ok::<_, ()>(TestResponse::new(&input.value.to_ascii_uppercase()))
       })
       .await;
 
     // Should return computed result when validation is enabled
-    assert_eq!(
-      result,
-      Ok(TestResult {
-        value: "HELLO".to_string()
-      })
-    );
+    assert_eq!(result, Ok(TestResponse::new("HELLO")));
   }
 
   #[tokio::test]
   async fn cache_validation_with_mismatched_results() {
-    #[derive(PartialEq, Debug, Deserialize, Serialize)]
-    struct TestResult {
-      value: String,
-    }
-
     // Cache contains "WRONG" but computation would return "HELLO"
-    let cached_result = TestResult {
-      value: "WRONG".to_string(),
-    };
-    let cached_value = serde_json::to_vec(&cached_result).unwrap();
+    let cached_response = TestResponse::new("WRONG");
+    let cached_value = serde_json::to_vec(&cached_response).unwrap();
     let reader_writer = SimpleMockReaderWriter::new_with_cached_value(cached_value);
 
     // Set validation rate to 100% to ensure validation runs
     let handler = CacheHandler::new_with_validation(reader_writer, 1.0);
 
     let input = CacheableString::new("test_label", "Hello");
-    let result: Result<TestResult, ()> = handler
+    let result: Result<TestResponse, ()> = handler
       .run(input, |input| async move {
-        Ok::<_, ()>(TestResult {
-          value: input.value.to_ascii_uppercase(),
-        })
+        Ok::<_, ()>(TestResponse::new(&input.value.to_ascii_uppercase()))
       })
       .await;
 
     // NOTE: Current implementation returns computed result when validation is enabled
     // This means validation always "fixes" invalid cache entries by returning fresh computation
-    assert_eq!(
-      result,
-      Ok(TestResult {
-        value: "HELLO".to_string()
-      })
-    );
+    assert_eq!(result, Ok(TestResponse::new("HELLO")));
   }
 
   #[tokio::test]
   async fn cache_validation_disabled_by_default() {
-    #[derive(PartialEq, Debug, Deserialize, Serialize)]
-    struct TestResult {
-      value: String,
-    }
-
-    let cached_result = TestResult {
-      value: "CACHED".to_string(),
-    };
-    let cached_value = serde_json::to_vec(&cached_result).unwrap();
+    let cached_response = TestResponse::new("CACHED");
+    let cached_value = serde_json::to_vec(&cached_response).unwrap();
     let reader_writer = SimpleMockReaderWriter::new_with_cached_value(cached_value);
 
     // Default handler has validation disabled
     let handler = CacheHandler::new(reader_writer);
 
     let input = CacheableString::new("test_label", "Hello");
-    let result: Result<TestResult, ()> = handler
+    let result: Result<TestResponse, ()> = handler
       .run(input, |_input| async move {
         panic!("Validation should not run - this would execute if validation was enabled")
       })
       .await;
 
-    assert_eq!(
-      result,
-      Ok(TestResult {
-        value: "CACHED".to_string()
-      })
-    );
+    assert_eq!(result, Ok(TestResponse::new("CACHED")));
   }
 
   // Simple mock for testing cache miss scenarios
