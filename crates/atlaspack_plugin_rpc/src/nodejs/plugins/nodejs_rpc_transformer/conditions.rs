@@ -1,17 +1,17 @@
 use atlaspack_core::types::Asset;
-use regex::{Regex, RegexSet};
+use regex::RegexSet;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Hash, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SerializableTransformerConditions {
-  file_match: Option<String>,
+  file_match: Option<Vec<String>>,
   code_match: Option<Vec<String>>,
   enabled: Option<bool>,
   origin: Option<OriginCondition>,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Hash, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 enum OriginCondition {
   Source,
@@ -20,7 +20,7 @@ enum OriginCondition {
 
 #[derive(Debug)]
 pub struct Conditions {
-  file_match: Option<Regex>,
+  file_match: Option<RegexSet>,
   code_match: Option<RegexSet>,
   enabled: bool,
   origin: Option<OriginCondition>,
@@ -52,7 +52,7 @@ impl TryFrom<Option<SerializableTransformerConditions>> for Conditions {
     };
 
     let file_match = if let Some(pattern) = value.file_match {
-      Some(Regex::new(&pattern)?)
+      Some(RegexSet::new(&pattern)?)
     } else {
       None
     };

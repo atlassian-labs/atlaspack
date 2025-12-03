@@ -14,6 +14,7 @@ use atlaspack_core::types::Dependency;
 use atlaspack_core::types::Environment;
 use atlaspack_core::types::FileType;
 use atlaspack_core::types::{Asset, Invalidation};
+use atlaspack_memoization_cache::CacheResponse;
 use atlaspack_memoization_cache::Cacheable;
 use atlaspack_sourcemap::find_sourcemap_url;
 use atlaspack_sourcemap::load_sourcemap_url;
@@ -189,7 +190,12 @@ async fn run_pipelines(
       plugins.transformers(&asset_to_modify).await?
     };
 
-    let (invalidations, discovered_assets, result) = request_context
+    let RunPipelineOutput {
+      invalidations,
+      discovered_assets,
+      pipeline_result: result,
+      ..
+    } = request_context
       .cache
       .run(
         RunPipelineInput {
@@ -246,6 +252,9 @@ async fn run_pipelines(
       .ok_or_else(|| anyhow!("Initial asset missing after transformer pipeline"))?,
     discovered_assets: processed_assets,
     invalidate_on_file_change: all_invalidations,
+
+    // TODO: Remove this as we've already done caching and this doesn't mean anything at this level
+    cache_bailout: false,
   })
 }
 
@@ -288,10 +297,22 @@ impl Cacheable for RunPipelineInput {
   }
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct RunPipelineOutput {
+  pub invalidations: Vec<PathBuf>,
+  pub discovered_assets: Vec<AssetWithDependencies>,
+  pub pipeline_result: PipelineResult,
+  cache_bailout: bool,
+}
+
+impl CacheResponse for RunPipelineOutput {
+  fn bailout(&self) -> bool {
+    self.cache_bailout
+  }
+}
+
 #[tracing::instrument(level = "trace", skip_all)]
-async fn run_pipeline(
-  input: RunPipelineInput,
-) -> anyhow::Result<(Vec<PathBuf>, Vec<AssetWithDependencies>, PipelineResult)> {
+async fn run_pipeline(input: RunPipelineInput) -> anyhow::Result<RunPipelineOutput> {
   let RunPipelineInput {
     asset,
     pipeline,
@@ -306,10 +327,16 @@ async fn run_pipeline(
 
   let original_asset_type = current_asset.file_type.clone();
 
+  let mut cache_bailout = false;
+
   for transformer in pipeline.transformers() {
     let transform_result = transformer
       .transform(context.clone(), current_asset)
       .await?;
+
+    if transform_result.cache_bailout {
+      cache_bailout = true;
+    }
 
     current_asset = transform_result.asset;
 
@@ -332,20 +359,22 @@ async fn run_pipeline(
           current_asset.file_type.extension()
         );
 
-        return Ok((
+        return Ok(RunPipelineOutput {
           invalidations,
           discovered_assets,
-          PipelineResult::TypeChange(current_asset, dependencies),
-        ));
+          pipeline_result: PipelineResult::TypeChange(current_asset, dependencies),
+          cache_bailout,
+        });
       }
     }
   }
 
-  Ok((
+  Ok(RunPipelineOutput {
     invalidations,
     discovered_assets,
-    PipelineResult::Complete(current_asset, dependencies),
-  ))
+    pipeline_result: PipelineResult::Complete(current_asset, dependencies),
+    cache_bailout,
+  })
 }
 
 #[cfg(test)]

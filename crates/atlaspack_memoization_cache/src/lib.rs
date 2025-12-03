@@ -3,6 +3,7 @@ use rand::Rng;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::future::Future;
+use std::process::Output;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -139,7 +140,7 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
   ) -> Result<Res, Error>
   where
     Input: Cacheable,
-    Res: DeserializeOwned + Serialize + PartialEq + std::fmt::Debug,
+    Res: CacheResponse,
     FutureResult: Future<Output = Result<Res, Error>>,
     RunFn: FnOnce(Input) -> FutureResult,
   {
@@ -171,10 +172,13 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
           return Ok(value);
         }
         Err(err) => {
+          // Log the first 200 chars of the serialized data to help debug
+          let preview = String::from_utf8_lossy(&value[..value.len().min(200)]);
           tracing::error!(
-            "Failed to deserialize cached value for {}: {:?}",
+            "Failed to deserialize cached value for {}: {}\nSerialized data preview (first 200 chars): {}",
             label,
-            err
+            err,
+            preview
           );
         }
       }
@@ -184,12 +188,17 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
     self.stats.increment_misses();
     let result = run_fn(input).await?;
 
+    if result.bailout() {
+      // If the result indicates we should bailout, do not cache it
+      tracing::debug!("Bailing out of caching for {}", label);
+      return Ok(result);
+    }
+
     // Now we have a result, try to serialize and cache it
     match serialize(&result) {
       Ok(serialized_result) => {
-        if let Some(value) = cache_result
-          && value != serialized_result
-        {
+        if let Some(value) = cache_result {
+          pretty_assertions::assert_eq!(deserialize::<Res>(&value).unwrap(), result);
           tracing::error!(
             "Cache validation mismatch for {}: cached value does not match computed result",
             label
@@ -228,6 +237,14 @@ fn serialize<Input: Serialize>(value: Input) -> Result<Vec<u8>, serde_json::Erro
 
 pub trait Cacheable {
   fn cache_key(&self) -> Option<(String, String)>;
+}
+
+pub trait CacheResponse: DeserializeOwned + Serialize + PartialEq + std::fmt::Debug {
+  fn bailout(&self) -> bool;
+
+  fn persist(&self, key: &str, reader_writer: &dyn CacheReaderWriter) -> anyhow::Result<()>;
+
+  fn hydrate(&self, key: &str, reader_writer: &dyn CacheReaderWriter) -> anyhow::Result<()>;
 }
 
 #[cfg(test)]

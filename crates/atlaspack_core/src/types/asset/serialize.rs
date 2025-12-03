@@ -110,21 +110,21 @@ impl<'de> Visitor<'de> for AssetVisitor {
     while let Some(key) = map.next_key::<String>()? {
       match key.as_str() {
         "bundleBehavior" => bundle_behavior = map.next_value()?,
-        "configKeyPath" => config_key_path = Some(map.next_value()?),
-        "configPath" => config_path = Some(map.next_value()?),
+        "configKeyPath" => config_key_path = map.next_value()?,
+        "configPath" => config_path = map.next_value()?,
         "env" => env = Some(map.next_value()?),
         "filePath" => file_path = Some(map.next_value()?),
         "id" => id = Some(map.next_value()?),
         "isBundleSplittable" => is_bundle_splittable = Some(map.next_value()?),
         "isSource" => is_source = Some(map.next_value()?),
-        "outputHash" => output_hash = Some(map.next_value()?),
-        "pipeline" => pipeline = Some(map.next_value()?),
-        "query" => query = Some(map.next_value()?),
+        "outputHash" => output_hash = map.next_value()?,
+        "pipeline" => pipeline = map.next_value()?,
+        "query" => query = map.next_value()?,
         "sideEffects" => side_effects = Some(map.next_value()?),
         "stats" => stats = Some(map.next_value()?),
-        "symbols" => symbols = Some(map.next_value()?),
+        "symbols" => symbols = map.next_value()?,
         "type" => file_type = Some(map.next_value()?),
-        "uniqueKey" => unique_key = Some(map.next_value()?),
+        "uniqueKey" => unique_key = map.next_value()?,
         "meta" => {
           let meta_map: serde_json::Value = map.next_value()?;
           meta = Some(

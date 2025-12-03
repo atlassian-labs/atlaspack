@@ -14,6 +14,7 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
+use tokio::task;
 
 use anyhow::Error;
 use atlaspack_core::hash::IdentifierHasher;
@@ -43,7 +44,6 @@ pub struct NodejsRpcTransformerPlugin {
   nodejs_workers: Arc<NodeJsWorkerCollection>,
   plugin_options: Arc<PluginOptions>,
   plugin_node: PluginNode,
-  rpc_plugin_options: RpcPluginOptions,
   conditions: Conditions,
   cache_key: CacheStatus,
 }
@@ -54,10 +54,59 @@ impl Debug for NodejsRpcTransformerPlugin {
   }
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Hash, PartialEq)]
+#[serde(deny_unknown_fields)]
 struct TransformerSetup {
   conditions: Option<SerializableTransformerConditions>,
-  state: Option<JSONObject>,
+  config: Option<JSONObject>,
+  env: Option<JSONObject>,
+}
+
+async fn setup_plugin(
+  nodejs_workers: Arc<NodeJsWorkerCollection>,
+  rpc_options: RpcPluginOptions,
+  plugin_node: &PluginNode,
+) -> anyhow::Result<Option<TransformerSetup>> {
+  let mut set = vec![];
+
+  let opts = LoadPluginOptions {
+    kind: LoadPluginKind::Transformer,
+    specifier: plugin_node.package_name.clone(),
+    resolve_from: plugin_node.resolve_from.as_ref().clone(),
+    options: rpc_options,
+  };
+
+  for worker in nodejs_workers.all_workers() {
+    let opts = opts.clone();
+    set.push(tokio::spawn(async move {
+      worker
+        .load_plugin_fn
+        .call_serde::<LoadPluginOptions, Option<TransformerSetup>>(opts)
+        .await
+    }));
+  }
+
+  let mut transformer_setup = None;
+
+  while let Some(res) = set.pop() {
+    let result = res.await??;
+
+    if let Some(existing) = &transformer_setup {
+      if existing != &result {
+        return Err(anyhow::anyhow!(
+          "Plugin {} returned inconsistent state from multiple workers",
+          plugin_node.package_name
+        ));
+      }
+    } else {
+      transformer_setup = Some(result);
+    }
+  }
+
+  transformer_setup.ok_or(anyhow::anyhow!(
+    "Plugin {} did complete setup correctly",
+    plugin_node.package_name
+  ))
 }
 
 impl NodejsRpcTransformerPlugin {
@@ -68,7 +117,13 @@ impl NodejsRpcTransformerPlugin {
     plugin_node: &PluginNode,
     package_manager: PackageManagerRef,
   ) -> Result<Self, anyhow::Error> {
-    let mut set = vec![];
+    // Calculate Dev dep hash on seperate thread
+    let dev_dep_hash = task::spawn_blocking({
+      let plugin_node = plugin_node.clone();
+      move || {
+        package_manager.resolve_dev_dependency(&plugin_node.package_name, &plugin_node.resolve_from)
+      }
+    });
 
     let rpc_options = RpcPluginOptions {
       hmr_options: ctx.options.hmr_options.clone(),
@@ -76,70 +131,38 @@ impl NodejsRpcTransformerPlugin {
       mode: ctx.options.mode.clone(),
       feature_flags: ctx.options.feature_flags.clone(),
     };
-    let opts = LoadPluginOptions {
-      kind: LoadPluginKind::Transformer,
-      specifier: plugin_node.package_name.clone(),
-      resolve_from: plugin_node.resolve_from.as_ref().clone(),
-      options: rpc_options.clone(),
-    };
 
-    for worker in nodejs_workers.all_workers() {
-      let opts = opts.clone();
-      set.push(tokio::spawn(async move {
-        worker
-          .load_plugin_fn
-          .call_serde::<LoadPluginOptions, Option<TransformerSetup>>(opts)
-          .await
-      }));
-    }
+    let transformer_setup = setup_plugin(nodejs_workers.clone(), rpc_options, plugin_node).await?;
 
-    let mut transformer_setup = None;
+    let (conditions, cache_key) = if let Some(setup) = transformer_setup {
+      let cache_key = match dev_dep_hash.await??.hash {
+        Some(dev_dep_hash) => {
+          let mut hasher = IdentifierHasher::new();
 
-    while let Some(res) = set.pop() {
-      let result = res.await??;
+          setup.hash(&mut hasher);
+          hasher.write_u64(dev_dep_hash);
 
-      if let Some(existing) = &transformer_setup {
-        if existing != &result {
-          return Err(anyhow::anyhow!(
-            "Plugin {} returned inconsistent state from multiple workers",
-            plugin_node.package_name
-          ));
+          CacheStatus::Hash(hasher.finish())
         }
-      } else {
-        transformer_setup = Some(result);
-      }
-    }
+        None => CacheStatus::Uncachable,
+      };
 
-    let transformer_setup = transformer_setup.ok_or(anyhow::anyhow!(
-      "Plugin {} did not return setup information",
-      plugin_node.package_name
-    ))?;
+      let conditions = Conditions::try_from(setup.conditions)?;
+      tracing::debug!("Loaded transformer with conditions: {:?}", conditions);
 
-    let conditions = if let Some(setup) = transformer_setup {
-      Conditions::try_from(setup.conditions)?
+      (conditions, cache_key)
     } else {
-      Conditions::default()
-    };
-
-    tracing::info!(
-      "Loaded transformer {} with conditions: {:?}",
-      plugin_node.package_name,
-      conditions
-    );
-
-    let cache_key = match package_manager
-      .resolve_dev_dependency(&plugin_node.package_name, &plugin_node.resolve_from)?
-      .hash
-    {
-      Some(hash) => CacheStatus::Hash(hash),
-      None => CacheStatus::Uncachable,
+      tracing::warn!(
+        "Plugin {} did not return any setup information, defaulting to no conditions and uncachable",
+        plugin_node.package_name
+      );
+      (Conditions::default(), CacheStatus::Uncachable)
     };
 
     Ok(Self {
       nodejs_workers,
       plugin_options: ctx.options.clone(),
       plugin_node: plugin_node.clone(),
-      rpc_plugin_options: rpc_options,
       conditions,
       cache_key,
     })
@@ -181,7 +204,6 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
 
     let run_transformer_opts = RpcTransformerOpts {
       key: self.plugin_node.package_name.clone(),
-      options: self.rpc_plugin_options.clone(),
       env: asset_env.clone(),
       asset: Asset {
         code: Default::default(),
@@ -189,7 +211,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       },
     };
 
-    let (result, contents, map) = self
+    let (result, contents, map, cache_bailout) = self
       .nodejs_workers
       .next_worker()
       .transformer_register_fn
@@ -240,7 +262,10 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
             Some(map.into_owned()?)
           };
 
-          Ok((transform_result, contents, map))
+          let cacheable = return_value.get_element::<JsUnknown>(3)?;
+          let cacheable = env.from_js_value::<bool, _>(cacheable)?;
+
+          Ok((transform_result, contents, map, cacheable))
         },
       )
       .await
@@ -283,6 +308,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       // Adding dependencies from Node plugins isn't yet supported
       // TODO: Handle invalidations
       asset: transformed_asset,
+      cache_bailout,
       ..Default::default()
     })
   }
@@ -330,7 +356,6 @@ pub struct RpcEnvironmentResult {
 #[serde(rename_all = "camelCase")]
 pub struct RpcTransformerOpts {
   pub key: String,
-  pub options: RpcPluginOptions,
   pub env: Arc<Environment>,
   pub asset: Asset,
 }

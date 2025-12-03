@@ -17,7 +17,6 @@ use atlaspack_core::plugin::ValidatorPlugin;
 use atlaspack_core::types::Asset;
 #[cfg(test)]
 use mockall::automock;
-use serde::Serialize;
 
 pub type PluginsRef = Arc<dyn Plugins + Send + Sync>;
 

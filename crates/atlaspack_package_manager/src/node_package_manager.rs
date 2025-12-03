@@ -90,20 +90,20 @@ impl NodePackageManager<'_> {
 
     for invalidation in invalidations.invalidate_on_file_create.read().iter() {
       match invalidation {
-        FileCreateInvalidation::FileName { .. } => {
+        FileCreateInvalidation::FileName { file_name, above } => {
           // We ignore file name above invalidations for hashes as we don't
           // cache the resolutions
+          tracing::trace!("File create invalidation {} above {:?}", file_name, above);
         }
         FileCreateInvalidation::Path(file_path) => {
-          tracing::warn!("File create invalidation: {:?}", file_path);
-          return Err(anyhow!(
-            "Dev dependency is not cacheable because it invalidates on file create (path)",
-          ));
+          // We ignore file name create invalidations because we don't cache the
+          // resolution
+          tracing::trace!("File create invalidation: {:?}", file_path);
         }
         FileCreateInvalidation::Glob(glob) => {
-          tracing::warn!("File create glob invalidation: {:?}", glob);
           return Err(anyhow!(
-            "Dev dependency is not cacheable because it invalidates on file create (glob)"
+            "Dev dependency is not cacheable because it invalidates on file create (glob): {:?}",
+            glob
           ));
         }
       }
@@ -113,7 +113,6 @@ impl NodePackageManager<'_> {
 
     // TODO: We should run this in parralel
     for file_path in invalidations.invalidate_on_file_change.read().iter() {
-      tracing::info!("File change invalidation: {:?}", file_path);
       let file_contents = self.resolver.cache.fs.read(file_path)?;
       hasher.write(&file_contents);
     }

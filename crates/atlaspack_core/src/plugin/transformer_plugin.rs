@@ -1,4 +1,3 @@
-use crate::cache::Cache;
 use crate::config_loader::{ConfigLoader, ConfigLoaderRef};
 use crate::hash::IdentifierHasher;
 use crate::types::{Asset, AssetWithDependencies, Dependency, Environment, SpecifierType};
@@ -30,6 +29,7 @@ pub struct TransformResult {
   /// The transformer signals through this field that its result should be invalidated
   /// if these paths change.
   pub invalidate_on_file_change: Vec<PathBuf>,
+  pub cache_bailout: bool,
 }
 
 #[derive(Clone)]
