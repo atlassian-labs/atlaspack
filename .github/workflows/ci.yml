@@ -75,16 +75,11 @@ jobs:
         run: ${SCCACHE_PATH} --show-stats
 
       - uses: ./.github/actions/setup-node
-
       - name: Free up space
         if: ${{ runner.os == 'Linux' }}
         run: |
           sudo rm -rf /usr/local/lib/android || true
           sudo apt-get remove -y '^dotnet-.*' '^llvm-.*' 'php.*'
-<<<<<<< HEAD
-=======
-
->>>>>>> 3fc11e5c8 (Free up more space in Linux CI)
       # Build native artifacts
       - env:
           RUSTUP_TARGET: ${{ matrix.target }}
@@ -156,10 +151,7 @@ jobs:
           shared-key: '${{ matrix.os }}-rust-unit-tests'
           # Only store new caches on main
           save-if: ${{ github.ref == 'refs/heads/main' }}
-<<<<<<< HEAD
 
-=======
->>>>>>> 84f914d2c (Add disk space freeing to Rust Unit Test action)
       - name: Free up space
         if: ${{ runner.os == 'Linux' }}
         run: |
