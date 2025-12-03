@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::sync::mpsc::Sender;
 
 use atlaspack_core::types::Invalidation;
+use atlaspack_memoization_cache::StatsSnapshot;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
 
@@ -333,6 +334,11 @@ impl RequestTracker {
       RequestNode::Invalid(value) => value.as_ref().map(|v| v.clone()),
       _ => None,
     }
+  }
+
+  /// Get cache statistics
+  pub fn get_cache_stats(&self) -> StatsSnapshot {
+    self.cache.get_stats()
   }
 
   /// Create an edge between a parent request and the target request.
