@@ -151,6 +151,12 @@ pub fn get_cache_stats() -> (usize, usize) {
   (total_entries, total_tokens)
 }
 
+/// Checks if a path is cached (useful for testing)
+pub fn is_path_cached<P: AsRef<Path>>(path: P) -> bool {
+  let path_str = path.as_ref().to_string_lossy().to_string();
+  SHARED_TOKEN_DATA.lock().contains_key(&path_str)
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -376,10 +382,16 @@ mod tests {
     // Should be the same Arc (cached)
     assert!(Arc::ptr_eq(&token_map_arc1, &token_map_arc2));
 
-    // Test cache stats
-    let (entries, tokens) = get_cache_stats();
-    assert_eq!(entries, 1);
-    assert_eq!(tokens, 2); // 1 token name + 1 light value
+    // Verify our specific path is cached (robust against parallel test execution)
+    assert!(is_path_cached(path));
+
+    // Verify the token count for our specific entry
+    // Note: We don't check total cache stats since they can be affected by parallel tests
+    let cached_map = get_or_load_token_map_from_json(Some(path))
+      .unwrap()
+      .unwrap();
+    assert_eq!(cached_map.token_names.len(), 1);
+    assert_eq!(cached_map.light_values.len(), 1);
   }
 
   #[test]
