@@ -108,6 +108,7 @@ export interface CompiledCssInJsPluginResult {
   diagnostics: Array<JsDiagnostic>
   bailOut: boolean
   codeHash: string
+  duration?: number
 }
 export interface JsSourceLocation {
   startLine: number

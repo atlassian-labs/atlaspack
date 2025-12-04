@@ -1,25 +1,40 @@
 use crate::postcss::value_parser as vp;
+use once_cell::sync::Lazy;
 use percent_encoding::percent_decode_str;
 use postcss as pc;
 use regex::Regex;
 use url::Url;
 
+static ABSOLUTE_SCHEME_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^[a-zA-Z][a-zA-Z\d+\-.]*?:").unwrap());
+static WINDOWS_PATH_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^[a-zA-Z]:\\|^[a-zA-Z]:/").unwrap());
+static UTM_PARAM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)^utm_\w+").unwrap());
+static DATA_URL_RE: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"(?i)^data:(?P<type>[^,]*?),(?P<data>[^#]*?)(?:#(?P<hash>.*))?$").unwrap()
+});
+static DRIVE_LETTER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[A-Za-z]:").unwrap());
+static DATA_PREFIX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)^data:").unwrap());
+static VIEW_SOURCE_PREFIX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)^view-source:").unwrap());
+static LEADING_RELATIVE_PATH_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\.*?/").unwrap());
+static TEXT_FRAGMENT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)#?:~:text.*?$").unwrap());
+static INDEX_FILE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)^index\.[a-z]+$").unwrap());
+static HTTP_PROTOCOL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^http://").unwrap());
+static PROTOCOL_RELATIVE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:https?:)?//").unwrap());
+static MULTILINE_ESCAPE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\[\r\n]").unwrap());
+static ESCAPE_CHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"([\s\(\)"'])"#).unwrap());
+static DATA_URL_VALUE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)^data:(.*)?,").unwrap());
+static EXTENSION_PROTOCOL_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"(?i)^.+-extension:/").unwrap());
+
 // ===== Strict port of postcss-normalize-url + normalize-url (6.1.0) =====
 
 // Matches JS ABSOLUTE_URL_REGEX and WINDOWS_PATH_REGEX
 fn is_absolute(url: &str) -> bool {
-  // Absolute URL scheme
-  let abs = Regex::new(r"^[a-zA-Z][a-zA-Z\d+\-.]*?:").unwrap();
-  // Windows paths like `c:\` or `c:/`
-  let windows = Regex::new(
-    r"^[a-zA-Z]:\\|
-                               ^[a-zA-Z]:/",
-  )
-  .unwrap();
-  if windows.is_match(url) {
+  if WINDOWS_PATH_RE.is_match(url) {
     return false;
   }
-  abs.is_match(url)
+  ABSOLUTE_SCHEME_RE.is_match(url)
 }
 
 #[derive(Clone)]
@@ -76,13 +91,11 @@ fn plugin_default_options() -> NormalizeOptions {
 
 fn test_parameter(name: &str) -> bool {
   // default filters: [/^utm_\w+/i]
-  let re = Regex::new(r"(?i)^utm_\w+").unwrap();
-  re.is_match(name)
+  UTM_PARAM_RE.is_match(name)
 }
 
 fn normalize_data_url(url: &str, strip_hash: bool) -> Result<String, ()> {
-  let re = Regex::new(r"(?i)^data:(?P<type>[^,]*?),(?P<data>[^#]*?)(?:#(?P<hash>.*))?$").unwrap();
-  let caps = re.captures(url).ok_or(())?;
+  let caps = DATA_URL_RE.captures(url).ok_or(())?;
   let typ = caps
     .name("type")
     .map(|m| m.as_str())
@@ -207,7 +220,7 @@ fn path_normalize_like_node(input: &str) -> String {
   let mut s = input.replace('\\', "/");
   // 2) Preserve drive prefix like 'C:' if present
   let mut prefix = String::new();
-  if let Some(capt) = Regex::new(r"^[A-Za-z]:").unwrap().find(&s) {
+  if let Some(capt) = DRIVE_LETTER_RE.find(&s) {
     prefix = s[capt.start()..capt.end()].to_string();
     s = s[capt.end()..].to_string();
   }
@@ -275,20 +288,16 @@ fn can_strip_www(hostname: &str) -> bool {
 
 fn normalize_url_impl(url_string_in: &str, opts: &NormalizeOptions) -> Result<String, ()> {
   // Data URL
-  if Regex::new(r"(?i)^data:").unwrap().is_match(url_string_in) {
+  if DATA_PREFIX_RE.is_match(url_string_in) {
     return normalize_data_url(url_string_in, opts.strip_hash);
   }
-  if Regex::new(r"(?i)^view-source:")
-    .unwrap()
-    .is_match(url_string_in)
-  {
+  if VIEW_SOURCE_PREFIX_RE.is_match(url_string_in) {
     return Err(());
   }
 
   let mut url_string = url_string_in.trim().to_string();
   let has_relative_protocol = url_string.starts_with("//");
-  let is_relative_url =
-    !has_relative_protocol && Regex::new(r"^\.*?/").unwrap().is_match(&url_string);
+  let is_relative_url = !has_relative_protocol && LEADING_RELATIVE_PATH_RE.is_match(&url_string);
   if !is_relative_url {
     // Prepend protocol when missing. JS uses a negative lookahead /
     // protocol-relative check; reproduce the behavior without lookarounds.
@@ -345,9 +354,7 @@ fn normalize_url_impl(url_string_in: &str, opts: &NormalizeOptions) -> Result<St
   } else if opts.strip_text_fragment {
     if let Some(f) = url_obj.fragment() {
       let target = format!("#{}", f);
-      let replaced = Regex::new(r"(?i)#?:~:text.*?$")
-        .unwrap()
-        .replace(&target, "");
+      let replaced = TEXT_FRAGMENT_RE.replace(&target, "");
       let new = replaced.to_string();
       let frag = if new.is_empty() {
         None
@@ -375,7 +382,7 @@ fn normalize_url_impl(url_string_in: &str, opts: &NormalizeOptions) -> Result<St
   if opts.remove_directory_index {
     let mut path_components: Vec<&str> = url_obj.path().split('/').collect();
     if let Some(last) = path_components.last().cloned() {
-      if !last.is_empty() && Regex::new(r"(?i)^index\.[a-z]+$").unwrap().is_match(last) {
+      if !last.is_empty() && INDEX_FILE_RE.is_match(last) {
         path_components.pop();
         let mut joined = path_components.join("/");
         if !joined.starts_with('/') {
@@ -454,16 +461,10 @@ fn normalize_url_impl(url_string_in: &str, opts: &NormalizeOptions) -> Result<St
   }
 
   if has_relative_protocol && !opts.normalize_protocol {
-    out = Regex::new(r"^http://")
-      .unwrap()
-      .replace(&out, "//")
-      .to_string();
+    out = HTTP_PROTOCOL_RE.replace(&out, "//").to_string();
   }
   if opts.strip_protocol {
-    out = Regex::new(r"^(?:https?:)?//")
-      .unwrap()
-      .replace(&out, "")
-      .to_string();
+    out = PROTOCOL_RELATIVE_RE.replace(&out, "").to_string();
   }
 
   Ok(out)
@@ -485,8 +486,8 @@ pub fn plugin() -> pc::BuiltPlugin {
   pc::plugin("postcss-normalize-url")
     .once_exit(|css, _| {
       let opts = plugin_default_options();
-      let multiline = Regex::new(r"\\[\r\n]").unwrap();
-      let escape_chars = Regex::new(r#"([\s\(\)"'])"#).unwrap();
+      let multiline = &*MULTILINE_ESCAPE_RE;
+      let escape_chars = &*ESCAPE_CHAR_RE;
 
       match css {
         pc::ast::nodes::RootLike::Root(root) => {
@@ -523,10 +524,10 @@ pub fn plugin() -> pc::BuiltPlugin {
                           *quote = '\0';
                           return true;
                         }
-                        if Regex::new(r"(?i)^data:(.*)?,").unwrap().is_match(&v) {
+                        if DATA_URL_VALUE_RE.is_match(&v) {
                           return true;
                         }
-                        if !Regex::new(r"(?i)^.+-extension:/").unwrap().is_match(&v) {
+                        if !EXTENSION_PROTOCOL_RE.is_match(&v) {
                           v = convert(&v, &opts);
                         }
                         if escape_chars.is_match(&v) {
@@ -546,10 +547,10 @@ pub fn plugin() -> pc::BuiltPlugin {
                         if v.is_empty() {
                           return true;
                         }
-                        if Regex::new(r"(?i)^data:(.*)?,").unwrap().is_match(&v) {
+                        if DATA_URL_VALUE_RE.is_match(&v) {
                           return true;
                         }
-                        if !Regex::new(r"(?i)^.+-extension:/").unwrap().is_match(&v) {
+                        if !EXTENSION_PROTOCOL_RE.is_match(&v) {
                           v = convert(&v, &opts);
                         }
                         *value = v;
@@ -666,10 +667,10 @@ pub fn plugin() -> pc::BuiltPlugin {
                           *quote = '\0';
                           return true;
                         }
-                        if Regex::new(r"(?i)^data:(.*)?,").unwrap().is_match(&v) {
+                        if DATA_URL_VALUE_RE.is_match(&v) {
                           return true;
                         }
-                        if !Regex::new(r"(?i)^.+-extension:/").unwrap().is_match(&v) {
+                        if !EXTENSION_PROTOCOL_RE.is_match(&v) {
                           v = convert(&v, &opts);
                         }
                         if escape_chars.is_match(&v) {
@@ -689,10 +690,10 @@ pub fn plugin() -> pc::BuiltPlugin {
                         if v.is_empty() {
                           return true;
                         }
-                        if Regex::new(r"(?i)^data:(.*)?,").unwrap().is_match(&v) {
+                        if DATA_URL_VALUE_RE.is_match(&v) {
                           return true;
                         }
-                        if !Regex::new(r"(?i)^.+-extension:/").unwrap().is_match(&v) {
+                        if !EXTENSION_PROTOCOL_RE.is_match(&v) {
                           v = convert(&v, &opts);
                         }
                         *value = v;

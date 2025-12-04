@@ -81,6 +81,7 @@ pub struct CompiledCssInJsPluginResult {
   pub diagnostics: Vec<JsDiagnostic>,
   pub bail_out: bool,
   pub code_hash: String,
+  pub duration: Option<f64>,
 }
 
 static PANIC_HOOK_GUARD: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
@@ -336,8 +337,6 @@ fn process_compiled_css_in_js(
 
   let code_hash = atlassian_swc_compiled_css::migration_hash::hash_code(code);
 
-  let _start = std::time::Instant::now();
-
   let is_safe_result =
     atlassian_swc_compiled_css::migration_hash::is_safe(&code_hash, transform_config);
 
@@ -357,6 +356,7 @@ fn process_compiled_css_in_js(
       }],
       bail_out: false,
       code_hash,
+      duration: None,
     });
   } else if let Ok(is_safe) = is_safe_result
     && !is_safe
@@ -369,6 +369,7 @@ fn process_compiled_css_in_js(
       diagnostics: Vec::new(),
       bail_out: true,
       code_hash,
+      duration: None,
     });
   }
 
@@ -391,6 +392,7 @@ fn process_compiled_css_in_js(
         }],
         bail_out: true,
         code_hash,
+        duration: None,
       });
     }
   }
@@ -440,6 +442,8 @@ fn process_compiled_css_in_js(
       }),
     };
 
+    let start = std::time::Instant::now();
+
     // Apply the transformation using the new API with panic handling
     // This needs to be wrapped in GLOBALS context
     let transform_result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
@@ -484,31 +488,10 @@ fn process_compiled_css_in_js(
           }],
           bail_out: true,
           code_hash,
+          duration: None,
         });
       }
     };
-
-    // if transform_config.unsafe_report_safe_assets_for_migration && start.elapsed().as_millis() > 25
-    // {
-    //   return Ok(CompiledCssInJsPluginResult {
-    //     code: "".to_string(),
-    //     map: None,
-    //     style_rules: Vec::new(),
-    //     diagnostics: vec![JsDiagnostic {
-    //       message: format!(
-    //         "Compiled CSS in JS transform took too long: {} ms",
-    //         start.elapsed().as_millis()
-    //       ),
-    //       code_highlights: None,
-    //       hints: None,
-    //       show_environment: false,
-    //       severity: "Error".to_string(),
-    //       documentation_url: None,
-    //     }],
-    //     bail_out: true,
-    //     code_hash,
-    //   });
-    // }
 
     let mut transformed_program = transform_output.program;
     let mut style_rules = transform_output.metadata.style_rules;
@@ -538,6 +521,8 @@ fn process_compiled_css_in_js(
     }
 
     // remove_jsx_pragma_comments(&comments);
+
+    let end: f64 = start.elapsed().as_millis() as f64;
 
     let module_result = transformed_program
       .module()
@@ -597,6 +582,7 @@ fn process_compiled_css_in_js(
       diagnostics: Vec::new(),
       bail_out: false,
       code_hash,
+      duration: Some(end),
     })
   })
 }

@@ -1,6 +1,7 @@
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 use std::collections::{BTreeSet, HashMap};
+use std::sync::Arc;
 use swc_core::css::ast::{
   AtRuleName, ComponentValue, Declaration, DeclarationName, QualifiedRule, Rule, Stylesheet,
 };
@@ -8,19 +9,15 @@ use swc_core::css::ast::{
 use super::super::transform::{Plugin, TransformContext};
 use crate::postcss::plugins::vendor_prefixing_lite::make_ident;
 
-pub(crate) static PREFIXES_JSON: Lazy<Option<&'static str>> = Lazy::new(|| {
-  Some(include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/autoprefixer_data/prefixes.json"
-  )))
-});
+pub(crate) const PREFIXES_JSON: &str = include_str!(concat!(
+  env!("CARGO_MANIFEST_DIR"),
+  "/autoprefixer_data/prefixes.json"
+));
 
-pub(crate) static AGENTS_JSON: Lazy<Option<&'static str>> = Lazy::new(|| {
-  Some(include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/autoprefixer_data/agents.json"
-  )))
-});
+pub(crate) const AGENTS_JSON: &str = include_str!(concat!(
+  env!("CARGO_MANIFEST_DIR"),
+  "/autoprefixer_data/agents.json"
+));
 
 #[derive(Debug, Deserialize)]
 struct PrefixEntry {
@@ -55,6 +52,8 @@ pub struct PrefixDB {
   agents: HashMap<String, Agent>,
 }
 
+static PREFIX_DB: Lazy<Option<PrefixDB>> = Lazy::new(|| PrefixDB::parse());
+
 #[derive(Clone, Debug)]
 pub(crate) struct ValueRule {
   pub(crate) keyword: String,
@@ -70,22 +69,28 @@ pub(crate) enum ValueKind {
 }
 
 impl PrefixDB {
-  pub fn load() -> Option<Self> {
-    let pjson = PREFIXES_JSON.as_ref().and_then(|s| Some(*s))?;
-    let aj = AGENTS_JSON.as_ref().and_then(|s| Some(*s))?;
-    let entries: HashMap<String, PrefixEntry> = match serde_json::from_str(pjson) {
+  pub fn load() -> Option<&'static Self> {
+    PREFIX_DB.as_ref()
+  }
+
+  fn parse() -> Option<Self> {
+    Self::parse_from_json(PREFIXES_JSON, AGENTS_JSON, true)
+  }
+
+  fn parse_from_json(prefixes_json: &str, agents_json: &str, trace_errors: bool) -> Option<Self> {
+    let entries: HashMap<String, PrefixEntry> = match serde_json::from_str(prefixes_json) {
       Ok(v) => v,
       Err(err) => {
-        if std::env::var("COMPILED_CLI_TRACE").is_ok() {
+        if trace_errors && std::env::var("COMPILED_CLI_TRACE").is_ok() {
           eprintln!("[autoprefixer] failed to parse prefixes.json: {err}");
         }
         return None;
       }
     };
-    let agents: HashMap<String, Agent> = match serde_json::from_str::<AgentsMap>(aj) {
+    let agents: HashMap<String, Agent> = match serde_json::from_str::<AgentsMap>(agents_json) {
       Ok(v) => v.0,
       Err(err) => {
-        if std::env::var("COMPILED_CLI_TRACE").is_ok() {
+        if trace_errors && std::env::var("COMPILED_CLI_TRACE").is_ok() {
           eprintln!("[autoprefixer] failed to parse agents.json: {err}");
         }
         return None;
@@ -96,9 +101,7 @@ impl PrefixDB {
 
   #[allow(dead_code)]
   pub fn load_from_str(prefixes_json: &str, agents_json: &str) -> Option<Self> {
-    let entries: HashMap<String, PrefixEntry> = serde_json::from_str(prefixes_json).ok()?;
-    let agents: HashMap<String, Agent> = serde_json::from_str::<AgentsMap>(agents_json).ok()?.0;
-    Some(PrefixDB { entries, agents })
+    Self::parse_from_json(prefixes_json, agents_json, false)
   }
 
   fn prefix_for_browser(&self, browser: &str) -> Option<String> {
@@ -291,6 +294,21 @@ pub struct AutoprefixerData {
   pub selector_map: HashMap<String, Vec<String>>,
 }
 
+struct AutoprefixerCache {
+  data: Arc<AutoprefixerData>,
+  targets: Vec<String>,
+}
+
+static AUTOPREFIXER_CACHE: Lazy<Option<AutoprefixerCache>> = Lazy::new(|| {
+  let db = PrefixDB::load()?;
+  let targets = resolve_browserslist_targets();
+  let data = AutoprefixerData::from_db(db, &targets);
+  Some(AutoprefixerCache {
+    data: Arc::new(data),
+    targets,
+  })
+});
+
 #[derive(Clone, Debug)]
 pub struct PrefixedDecl {
   pub property: String,
@@ -298,19 +316,20 @@ pub struct PrefixedDecl {
 }
 
 impl AutoprefixerData {
-  pub fn load_with_targets() -> Option<(Self, Vec<String>)> {
-    let db = PrefixDB::load()?;
-    let targets = resolve_browserslist_targets();
-    let data = Self::from_db(db, targets.clone());
-    Some((data, targets))
+  pub fn load_with_targets() -> Option<(Arc<Self>, &'static Vec<String>)> {
+    AUTOPREFIXER_CACHE
+      .as_ref()
+      .map(|cache| (Arc::clone(&cache.data), &cache.targets))
   }
 
-  pub fn load() -> Option<Self> {
-    Self::load_with_targets().map(|(data, _)| data)
+  pub fn load() -> Option<Arc<Self>> {
+    AUTOPREFIXER_CACHE
+      .as_ref()
+      .map(|cache| Arc::clone(&cache.data))
   }
 
-  pub fn from_db(db: PrefixDB, targets: Vec<String>) -> Self {
-    let (add, remove) = db.select_add_remove(&targets);
+  pub fn from_db(db: &PrefixDB, targets: &[String]) -> Self {
+    let (add, remove) = db.select_add_remove(targets);
     let value_map = build_value_prefix_map(&db, &add);
     let selector_map = build_selector_prefix_map(&db, &add);
     AutoprefixerData {
@@ -411,6 +430,7 @@ impl Plugin for VendorAutoprefixer {
     let Some((config, targets)) = AutoprefixerData::load_with_targets() else {
       return;
     };
+    let config_ref = config.as_ref();
     if std::env::var("COMPILED_CLI_TRACE").is_ok() {
       eprintln!("[autoprefixer] plugin start targets={}", targets.join(", "));
     }
@@ -448,7 +468,7 @@ impl Plugin for VendorAutoprefixer {
           new_rules.push(Rule::AtRule(at));
         }
         Rule::QualifiedRule(mut qr) => {
-          apply_decl_prefixing(&mut qr, &config);
+          apply_decl_prefixing(&mut qr, config_ref);
           new_rules.push(Rule::QualifiedRule(qr));
         }
         other => new_rules.push(other),

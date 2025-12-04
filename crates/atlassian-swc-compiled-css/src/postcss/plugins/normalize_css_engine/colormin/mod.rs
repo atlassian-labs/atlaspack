@@ -5,6 +5,11 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::str::FromStr;
 
+static COLOR_FUNCTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?i)(rgb|hsl)a?$").unwrap());
+static SKIP_PROPERTY_REGEX: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"(?i)^(composes|font|src$|filter|-webkit-tap-highlight-color)").unwrap()
+});
+
 // ===== Names plugin mapping (reverse: hex -> name), built to match JS order (last wins) =====
 static HEX_TO_NAME: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   // Pairs: (name, hex)
@@ -590,7 +595,7 @@ pub(crate) fn transform_value(value: &str, options: &ColorminOptions) -> String 
   walk(&mut parsed, &mut |node, _index| {
     match node {
       vp::Node::Function { value, nodes, .. } => {
-        if Regex::new(r"^(?i)(rgb|hsl)a?$").unwrap().is_match(value) {
+        if COLOR_FUNCTION_REGEX.is_match(value) {
           let original = value.clone();
           let contents = vp::stringify(nodes);
           let newv = minify_color(&format!("{}({})", original, contents), options);
@@ -636,10 +641,7 @@ pub fn plugin() -> pc::BuiltPlugin {
   pc::plugin("postcss-colormin")
     .decl(move |decl, _| {
       // Skip properties cssnano excludes
-      if Regex::new(r"(?i)^(composes|font|src$|filter|-webkit-tap-highlight-color)")
-        .unwrap()
-        .is_match(&decl.prop())
-      {
+      if SKIP_PROPERTY_REGEX.is_match(&decl.prop()) {
         return Ok(());
       }
 

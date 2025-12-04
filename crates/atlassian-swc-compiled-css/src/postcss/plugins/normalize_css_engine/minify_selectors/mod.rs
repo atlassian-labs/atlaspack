@@ -1,4 +1,6 @@
+use once_cell::sync::Lazy;
 use postcss as pc;
+use regex::Regex;
 use swc_core::atoms::Atom;
 use swc_core::common::{FileName, SourceMap, input::StringInput};
 use swc_core::css::ast::*;
@@ -19,21 +21,21 @@ static PSEUDO_REPLACEMENTS: &[(&str, &str)] = &[
 ];
 static PSEUDO_ELEMENTS: &[&str] = &["before", "after", "first-letter", "first-line"];
 static TAG_REPLACEMENTS: &[(&str, &str)] = &[("from", "0%"), ("100%", "to")];
+static ESCAPES_HEX_REGEX: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"\\([0-9A-Fa-f]{1,6})[ \t\n\f\r]?").unwrap());
+static ESCAPE_ANY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\.").unwrap());
+static DISALLOWED_RANGE_REGEX: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"[\u0000-\u002c\u002e\u002f\u003A-\u0040\u005B-\u005E\u0060\u007B-\u009f]").unwrap()
+});
+static LEADING_NUMBER_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:-?\d|--)").unwrap());
 
 fn can_unquote(value: &str) -> bool {
   if value == "-" || value.is_empty() {
     return false;
   }
-  let escapes = regex::Regex::new(r"\\([0-9A-Fa-f]{1,6})[ \t\n\f\r]?").unwrap();
-  let mut v = escapes.replace_all(value, "a").to_string();
-  v = regex::Regex::new(r"\\.")
-    .unwrap()
-    .replace_all(&v, "a")
-    .to_string();
-  let range =
-    regex::Regex::new(r"[\u0000-\u002c\u002e\u002f\u003A-\u0040\u005B-\u005E\u0060\u007B-\u009f]")
-      .unwrap();
-  !(range.is_match(&v) || regex::Regex::new(r"^(?:-?\d|--)").unwrap().is_match(&v))
+  let mut v = ESCAPES_HEX_REGEX.replace_all(value, "a").to_string();
+  v = ESCAPE_ANY_REGEX.replace_all(&v, "a").to_string();
+  !(DISALLOWED_RANGE_REGEX.is_match(&v) || LEADING_NUMBER_REGEX.is_match(&v))
 }
 
 fn normalize_attribute_string(str_value: &mut Str) {

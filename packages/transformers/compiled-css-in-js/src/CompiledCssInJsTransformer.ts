@@ -172,6 +172,7 @@ export default new Transformer({
     if (config.unsafeReportSafeAssetsForMigration) {
       // We need to run the transform without returning the result, so we can report the safe assets
       asset.meta.swcStyleRules = result.styleRules;
+      asset.meta.swcDuration = result.duration;
       if (!result.codeHash) {
         throw new Error('Code hash is required');
       }

@@ -19,10 +19,20 @@ export default new Reporter({
           )
         : {};
 
-      const safeAssets: Record<string, string> = currentMap?.safeAssets ?? {};
+      const safeAssets: Record<
+        string,
+        {asset: string; swcDuration: number; compiledDuration: number}
+      > = currentMap?.safeAssets ?? {};
       const unsafeAssets: Record<
         string,
-        {asset: string; babel: string[]; swc: string[]; diagnostics: string[]}
+        {
+          asset: string;
+          babel: string[];
+          swcDuration: number;
+          compiledDuration: number;
+          swc: string[];
+          diagnostics: string[];
+        }
       > = currentMap?.unsafeAssets ?? {};
 
       event.bundleGraph.traverseBundles((childBundle) => {
@@ -31,7 +41,7 @@ export default new Reporter({
             const assetPath = relative(options.projectRoot, asset.filePath);
 
             const currentSafeAsset = Object.entries(safeAssets).find(
-              ([, path]) => path === assetPath,
+              ([, data]) => data.asset === assetPath,
             );
 
             if (currentSafeAsset) {
@@ -62,10 +72,11 @@ export default new Reporter({
 
             if (mismatches.length === 0 && !asset.meta.compiledBailOut) {
               if (asset.meta.compiledCodeHash) {
-                safeAssets[asset.meta.compiledCodeHash as string] = relative(
-                  options.projectRoot,
-                  asset.filePath,
-                );
+                safeAssets[asset.meta.compiledCodeHash as string] = {
+                  asset: relative(options.projectRoot, asset.filePath),
+                  swcDuration: asset.meta.swcDuration as number,
+                  compiledDuration: asset.meta.compiledDuration as number,
+                };
               }
             } else {
               unsafeAssets[
@@ -73,6 +84,8 @@ export default new Reporter({
                   (relative(options.projectRoot, asset.filePath) as string)
               ] = {
                 asset: relative(options.projectRoot, asset.filePath),
+                swcDuration: asset.meta.swcDuration as number,
+                compiledDuration: asset.meta.compiledDuration as number,
                 babel: Array.from(babelStyleRules).sort(),
                 swc: Array.from(swcStyleRules).sort(),
                 diagnostics:

@@ -1,8 +1,11 @@
 use crate::postcss::plugins::normalize_css_engine::ordered_values::lib::arguments::get_arguments;
 use crate::postcss::value_parser as vp;
+use once_cell::sync::Lazy;
 use postcss as pc;
 use regex::Regex;
 use std::str::FromStr;
+
+static CALC_VALUE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^calc\(\S+\)$").unwrap());
 
 fn split_args_indices(nodes: &Vec<vp::Node>) -> Vec<Vec<usize>> {
   let mut args: Vec<Vec<usize>> = vec![Vec::new()];
@@ -57,7 +60,7 @@ fn is_stop(stop: Option<&str>) -> bool {
     if let Some((num, uni)) = unit_of(s) {
       return num == "0" || is_css_length_unit(&uni);
     }
-    return Regex::new(r"^calc\(\S+\)$").unwrap().is_match(s);
+    return CALC_VALUE_REGEX.is_match(s);
   }
   true
 }

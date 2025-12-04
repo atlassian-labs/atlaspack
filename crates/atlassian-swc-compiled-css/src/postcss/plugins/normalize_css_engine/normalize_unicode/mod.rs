@@ -1,5 +1,10 @@
+use once_cell::sync::Lazy;
 use postcss as pc;
 use regex::Regex;
+
+static UNICODE_RANGE_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"(?i)u\+[0-9a-f?]+(?:-[0-9a-f?]+)?").unwrap());
+static UNICODE_PREFIX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^u(?=\+)").unwrap());
 
 fn merge_range_bounds(left: &str, right: &str) -> Option<String> {
   let lchars: Vec<char> = left.chars().collect();
@@ -39,7 +44,6 @@ fn normalize_single_range(range: &str) -> String {
 
 pub fn plugin() -> pc::BuiltPlugin {
   let is_legacy = false;
-  let re = Regex::new(r"(?i)u\+[0-9a-f?]+(?:-[0-9a-f?]+)?").unwrap();
   pc::plugin("postcss-normalize-unicode")
     .once_exit(move |css, _| {
       let process_decl = |decl: postcss::ast::nodes::Declaration| {
@@ -48,14 +52,11 @@ pub fn plugin() -> pc::BuiltPlugin {
           if value.is_empty() {
             return;
           }
-          let newv = re
+          let newv = UNICODE_RANGE_RE
             .replace_all(&value, |caps: &regex::Captures| {
               let mut out = normalize_single_range(&caps[0]);
               if is_legacy {
-                out = Regex::new(r"^u(?=\+)")
-                  .unwrap()
-                  .replace(&out, "U")
-                  .to_string();
+                out = UNICODE_PREFIX_RE.replace(&out, "U").to_string();
               }
               out
             })

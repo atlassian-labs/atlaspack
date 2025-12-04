@@ -26,8 +26,16 @@ pub fn hash_code(code: &str) -> String {
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+struct SafeAssetEntry {
+  asset: String,
+  swc_duration: f64,
+  compiled_duration: f64,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct MigrationMap {
-  safe_assets: HashMap<String, String>,
+  safe_assets: HashMap<String, SafeAssetEntry>,
 }
 
 static SHARED_ASSETS_MAP_DATA: LazyLock<Mutex<HashMap<String, Arc<MigrationMap>>>> =

@@ -202,8 +202,7 @@ where
 
   if std::env::var("COMPILED_CLI_TRACE").is_ok() {
     eprintln!(
-      "[css-prop] replaced element span={:?} uses_runtime_wrappers={}"
-        ,
+      "[css-prop] replaced element span={:?} uses_runtime_wrappers={}",
       element.opening.span,
       meta.state().uses_runtime_wrappers
     );
@@ -411,20 +410,24 @@ mod tests {
 
     {
       let state = metadata.state();
-      assert!(!state.uses_runtime_wrappers, "flag should be false before transform");
+      assert!(
+        !state.uses_runtime_wrappers,
+        "flag should be false before transform"
+      );
     }
 
-    visit_css_prop_with_builder(&mut expr, &metadata, |_value, _| {
-      CssOutput {
-        css: vec![CssItem::unconditional(
-          "._1wyb1fwx{font-size:12px}".to_string(),
-        )],
-        variables: Vec::new(),
-      }
+    visit_css_prop_with_builder(&mut expr, &metadata, |_value, _| CssOutput {
+      css: vec![CssItem::unconditional(
+        "._1wyb1fwx{font-size:12px}".to_string(),
+      )],
+      variables: Vec::new(),
     });
 
     let state = metadata.state();
-    assert!(state.uses_runtime_wrappers, "flag should be true after css prop transform");
+    assert!(
+      state.uses_runtime_wrappers,
+      "flag should be true after css prop transform"
+    );
   }
 
   #[test]

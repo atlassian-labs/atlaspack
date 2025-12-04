@@ -630,13 +630,19 @@ mod tests {
     let node = parse_jsx_expression("<div />");
 
     let state_before = meta.state();
-    assert!(!state_before.uses_runtime_wrappers, "flag should be false before transform");
+    assert!(
+      !state_before.uses_runtime_wrappers,
+      "flag should be false before transform"
+    );
     drop(state_before);
 
     let _ = build_compiled_component(node, &simple_css_output(), &meta);
 
     let state_after = meta.state();
-    assert!(state_after.uses_runtime_wrappers, "flag should be true after build_compiled_component");
+    assert!(
+      state_after.uses_runtime_wrappers,
+      "flag should be true after build_compiled_component"
+    );
   }
 
   #[test]

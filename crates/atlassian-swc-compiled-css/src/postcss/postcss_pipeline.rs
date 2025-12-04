@@ -274,7 +274,7 @@ fn build_processor(options: &TransformCssOptions, collector: &AtomicCollector) -
     .map(|v| v != "off")
     .unwrap_or(true);
   let autoprefixer_data = if autoprefixer_enabled {
-    crate::postcss::plugins::vendor_autoprefixer::AutoprefixerData::load().map(Arc::new)
+    crate::postcss::plugins::vendor_autoprefixer::AutoprefixerData::load()
   } else {
     None
   };
