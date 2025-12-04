@@ -70,6 +70,9 @@ struct Stats {
   hits: AtomicU64,
   misses: AtomicU64,
   uncacheables: AtomicU64,
+  bailouts: AtomicU64,
+  errors: AtomicU64,
+  validations: AtomicU64,
 }
 
 impl Default for Stats {
@@ -78,6 +81,9 @@ impl Default for Stats {
       hits: AtomicU64::new(0),
       misses: AtomicU64::new(0),
       uncacheables: AtomicU64::new(0),
+      bailouts: AtomicU64::new(0),
+      errors: AtomicU64::new(0),
+      validations: AtomicU64::new(0),
     }
   }
 }
@@ -101,11 +107,26 @@ impl Stats {
     self.uncacheables.fetch_add(1, Ordering::Relaxed);
   }
 
+  fn increment_bailouts(&self) {
+    self.bailouts.fetch_add(1, Ordering::Relaxed);
+  }
+
+  fn increment_errors(&self) {
+    self.errors.fetch_add(1, Ordering::Relaxed);
+  }
+
+  fn increment_validations(&self) {
+    self.validations.fetch_add(1, Ordering::Relaxed);
+  }
+
   fn get_snapshot(&self) -> StatsSnapshot {
     StatsSnapshot {
       hits: self.hits.load(Ordering::Relaxed),
       misses: self.misses.load(Ordering::Relaxed),
       uncacheables: self.uncacheables.load(Ordering::Relaxed),
+      bailouts: self.bailouts.load(Ordering::Relaxed),
+      errors: self.errors.load(Ordering::Relaxed),
+      validations: self.validations.load(Ordering::Relaxed),
     }
   }
 }
@@ -115,6 +136,9 @@ pub struct StatsSnapshot {
   pub hits: u64,
   pub misses: u64,
   pub uncacheables: u64,
+  pub bailouts: u64,
+  pub errors: u64,
+  pub validations: u64,
 }
 
 pub struct CacheHandler<T: CacheReaderWriter> {
@@ -177,6 +201,7 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
         // We don't want to blow up the build for a cache read error, so we log it and
         // continue
         tracing::error!("Failed to read cache entry for {}:\n{}", label, err);
+        self.stats.increment_errors();
         None
       }
     };
@@ -199,46 +224,55 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
             err,
             preview
           );
+          self.stats.increment_errors();
         }
       }
     }
 
     // Otherwise, run the function to get the result (cache miss)
-    self.stats.increment_misses();
-    let result = run_fn(input).await?;
+    let computed_result = run_fn(input).await?;
 
-    if result.bailout() {
+    if computed_result.should_bailout() {
       // If the result indicates we should bailout, do not cache it
       tracing::debug!("Bailing out of caching for {}", label);
-      return Ok(result);
+      self.stats.increment_bailouts();
+      return Ok(computed_result);
     }
 
     // Now we have a result, try to serialize and cache it
-    match serialize(&result) {
+    match serialize(&computed_result) {
       Ok(serialized_result) => {
-        if let Some(value) = cache_result
-          && let Ok(cached) = deserialize::<Res>(&value)
-          && cached != result
+        if let Some(cached_result) = cache_result
+          && let Ok(cached_result) = deserialize::<Res>(&cached_result)
         {
-          let comparison = pretty_assertions::Comparison::new(&cached, &result);
-          tracing::error!(
-            "Cache validation mismatch for {}: cached value does not match computed result\n{}",
-            label,
-            comparison
-          );
-        }
+          self.stats.increment_validations();
 
-        if let Err(error) = self.reader_writer.put(&cache_key, &serialized_result) {
-          tracing::error!("Failed to write to cache for {}: {}", label, error);
+          if cached_result != computed_result {
+            let comparison = pretty_assertions::Comparison::new(&cached_result, &computed_result);
+
+            tracing::error!(
+              "Cache validation mismatch for {}: cached value does not match computed result\n{}",
+              label,
+              comparison
+            );
+          }
+        } else {
+          self.stats.increment_misses();
+
+          if let Err(error) = self.reader_writer.put(&cache_key, &serialized_result) {
+            tracing::error!("Failed to write to cache for {}: {}", label, error);
+            self.stats.increment_errors();
+          }
         }
       }
       Err(err) => {
         tracing::error!("Failed to serialize result for {}: {}", label, err);
+        self.stats.increment_errors();
       }
     }
 
     // Finally return the result
-    Ok(result)
+    Ok(computed_result)
   }
 
   /// Determines if we should validate this cache hit based on the configured sampling rate
@@ -263,7 +297,7 @@ pub trait Cacheable {
 }
 
 pub trait CacheResponse: DeserializeOwned + Serialize + PartialEq + std::fmt::Debug {
-  fn bailout(&self) -> bool;
+  fn should_bailout(&self) -> bool;
 }
 
 #[cfg(test)]
@@ -290,7 +324,7 @@ mod test {
   }
 
   impl CacheResponse for TestResponse {
-    fn bailout(&self) -> bool {
+    fn should_bailout(&self) -> bool {
       false
     }
   }

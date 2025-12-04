@@ -144,7 +144,7 @@ impl Atlaspack {
       project_root.clone(),
       Arc::new(CacheHandler::new_with_validation(
         LmdbCacheReaderWriter::new(db.clone()),
-        1.0,
+        0.01,
       )),
     );
 
