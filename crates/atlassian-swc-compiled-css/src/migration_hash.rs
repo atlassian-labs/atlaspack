@@ -11,7 +11,7 @@ use parking_lot::Mutex;
 use serde_json::from_str;
 use xxhash_rust::xxh3::Xxh3;
 
-use crate::CompiledCssInJsTransformConfig;
+use crate::config::CompiledCssInJsTransformConfig;
 
 pub type IdentifierHasher = Xxh3;
 
@@ -26,8 +26,16 @@ pub fn hash_code(code: &str) -> String {
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+struct SafeAssetEntry {
+  asset: String,
+  swc_duration: f64,
+  compiled_duration: f64,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct MigrationMap {
-  safe_assets: HashMap<String, String>,
+  safe_assets: HashMap<String, SafeAssetEntry>,
 }
 
 static SHARED_ASSETS_MAP_DATA: LazyLock<Mutex<HashMap<String, Arc<MigrationMap>>>> =

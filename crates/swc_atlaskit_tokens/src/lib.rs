@@ -88,6 +88,10 @@ where
   })
 }
 
+pub fn should_run_tokens_transform(code: &str) -> bool {
+  code.contains("@atlaskit/tokens")
+}
+
 struct TokensPass<'a, C>
 where
   C: Comments,

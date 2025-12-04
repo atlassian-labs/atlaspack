@@ -14,41 +14,26 @@ import ThrowableDiagnostic, {
 } from '@atlaspack/diagnostic';
 import {remapSourceLocation} from '@atlaspack/utils';
 
-const configFiles = ['.compiledcssrc', '.compiledcssrc.json'];
-
-const PACKAGE_KEY = '@atlaspack/transformer-compiled-css-in-js';
+import {loadCompiledCssInJsConfig} from '@atlaspack/transformer-js';
 
 export default new Transformer({
+  // eslint-disable-next-line require-await
   async loadConfig({config, options}) {
-    if (!getFeatureFlag('compiledCssInJsTransformer')) {
-      return {};
+    if (
+      !getFeatureFlag('compiledCssInJsTransformer') ||
+      getFeatureFlag('coreTokensAndCompiledCssInJsTransform')
+    ) {
+      return undefined;
     }
 
-    const conf = await config.getConfigFrom<CompiledCssInJsConfig>(
-      join(options.projectRoot, 'index'),
-      configFiles,
-      {
-        packageKey: PACKAGE_KEY,
-      },
-    );
-
-    const contents: CompiledCssInJsConfig = {
-      configPath: conf?.filePath,
-      importSources: ['@compiled/react', '@atlaskit/css'],
-    };
-
-    Object.assign(contents, conf?.contents);
-
-    if (!contents.importSources?.includes('@compiled/react')) {
-      contents.importSources?.push('@compiled/react');
-    }
-
-    contents.extract = contents.extract && options.mode !== 'development';
-
-    return contents;
+    return loadCompiledCssInJsConfig(config, options);
   },
   async transform({asset, options, config, logger}) {
-    if (!getFeatureFlag('compiledCssInJsTransformer')) {
+    if (
+      !getFeatureFlag('compiledCssInJsTransformer') ||
+      getFeatureFlag('coreTokensAndCompiledCssInJsTransform') ||
+      !config
+    ) {
       return [asset];
     }
 
@@ -187,6 +172,7 @@ export default new Transformer({
     if (config.unsafeReportSafeAssetsForMigration) {
       // We need to run the transform without returning the result, so we can report the safe assets
       asset.meta.swcStyleRules = result.styleRules;
+      asset.meta.swcDuration = result.duration;
       if (!result.codeHash) {
         throw new Error('Code hash is required');
       }
