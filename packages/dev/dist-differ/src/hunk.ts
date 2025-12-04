@@ -123,11 +123,14 @@ export function filterHunkEntries(
 }
 
 /**
- * Checks if a hunk consists only of asset ID differences
+ * Generic function to check if a hunk consists only of a specific type of difference
  */
-export function isHunkOnlyAssetIds(hunkEntries: DiffEntry[]): boolean {
+function isHunkOnlyByType(
+  hunkEntries: DiffEntry[],
+  differOnlyBy: (line1: string, line2: string) => boolean,
+): boolean {
   // A hunk consists of remove/add pairs
-  // Check if all pairs differ only by asset IDs
+  // Check if all pairs differ only by the specified type
   for (let i = 0; i < hunkEntries.length; i++) {
     const entry = hunkEntries[i];
     if (entry.type === 'remove') {
@@ -136,12 +139,12 @@ export function isHunkOnlyAssetIds(hunkEntries: DiffEntry[]): boolean {
         (e, idx) => idx > i && e.type === 'add',
       );
       if (addEntry) {
-        // Check if this pair differs only by asset IDs
-        if (!linesDifferOnlyByAssetIds(entry.line, addEntry.line)) {
+        // Check if this pair differs only by the specified type
+        if (!differOnlyBy(entry.line, addEntry.line)) {
           return false;
         }
       } else {
-        // Orphaned remove (no corresponding add) - not just asset IDs
+        // Orphaned remove (no corresponding add) - not just this type
         return false;
       }
     } else if (entry.type === 'add') {
@@ -150,87 +153,34 @@ export function isHunkOnlyAssetIds(hunkEntries: DiffEntry[]): boolean {
         (e, idx) => idx < i && e.type === 'remove',
       );
       if (!removeEntry) {
-        // Orphaned add (no corresponding remove) - not just asset IDs
+        // Orphaned add (no corresponding remove) - not just this type
         return false;
       }
       // Already checked in the remove case above
     }
   }
   return true;
+}
+
+/**
+ * Checks if a hunk consists only of asset ID differences
+ */
+export function isHunkOnlyAssetIds(hunkEntries: DiffEntry[]): boolean {
+  return isHunkOnlyByType(hunkEntries, linesDifferOnlyByAssetIds);
 }
 
 /**
  * Checks if a hunk consists only of swapped variable differences
  */
 export function isHunkOnlySwappedVariables(hunkEntries: DiffEntry[]): boolean {
-  // A hunk consists of remove/add pairs
-  // Check if all pairs differ only by swapped variables
-  for (let i = 0; i < hunkEntries.length; i++) {
-    const entry = hunkEntries[i];
-    if (entry.type === 'remove') {
-      // Find the corresponding add entry
-      const addEntry = hunkEntries.find(
-        (e, idx) => idx > i && e.type === 'add',
-      );
-      if (addEntry) {
-        // Check if this pair differs only by swapped variables
-        if (!linesDifferOnlyBySwappedVariables(entry.line, addEntry.line)) {
-          return false;
-        }
-      } else {
-        // Orphaned remove (no corresponding add) - not just swapped variables
-        return false;
-      }
-    } else if (entry.type === 'add') {
-      // Find the corresponding remove entry
-      const removeEntry = hunkEntries.find(
-        (e, idx) => idx < i && e.type === 'remove',
-      );
-      if (!removeEntry) {
-        // Orphaned add (no corresponding remove) - not just swapped variables
-        return false;
-      }
-      // Already checked in the remove case above
-    }
-  }
-  return true;
+  return isHunkOnlyByType(hunkEntries, linesDifferOnlyBySwappedVariables);
 }
 
 /**
  * Checks if a hunk consists only of source map URL differences
  */
 export function isHunkOnlySourceMapUrl(hunkEntries: DiffEntry[]): boolean {
-  // A hunk consists of remove/add pairs
-  // Check if all pairs differ only by source map URLs
-  for (let i = 0; i < hunkEntries.length; i++) {
-    const entry = hunkEntries[i];
-    if (entry.type === 'remove') {
-      // Find the corresponding add entry
-      const addEntry = hunkEntries.find(
-        (e, idx) => idx > i && e.type === 'add',
-      );
-      if (addEntry) {
-        // Check if this pair differs only by source map URLs
-        if (!linesDifferOnlyBySourceMapUrl(entry.line, addEntry.line)) {
-          return false;
-        }
-      } else {
-        // Orphaned remove (no corresponding add) - not just source map URLs
-        return false;
-      }
-    } else if (entry.type === 'add') {
-      // Find the corresponding remove entry
-      const removeEntry = hunkEntries.find(
-        (e, idx) => idx < i && e.type === 'remove',
-      );
-      if (!removeEntry) {
-        // Orphaned add (no corresponding remove) - not just source map URLs
-        return false;
-      }
-      // Already checked in the remove case above
-    }
-  }
-  return true;
+  return isHunkOnlyByType(hunkEntries, linesDifferOnlyBySourceMapUrl);
 }
 
 /**

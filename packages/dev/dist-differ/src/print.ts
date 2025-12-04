@@ -62,6 +62,78 @@ function printHunkHeader(
 }
 
 /**
+ * Checks if a hunk should be skipped based on ignore flags
+ */
+function shouldSkipHunk(
+  hunk: DiffEntry[],
+  ignoreAssetIds: boolean,
+  ignoreUnminifiedRefs: boolean,
+  ignoreSourceMapUrl: boolean,
+  ignoreSwappedVariables: boolean,
+): boolean {
+  if (hunk.length === 0) {
+    return false;
+  }
+
+  if (ignoreAssetIds && isHunkOnlyAssetIds(hunk)) {
+    return true;
+  }
+  if (ignoreUnminifiedRefs && isHunkOnlyUnminifiedRefs(hunk)) {
+    return true;
+  }
+  if (ignoreSourceMapUrl && isHunkOnlySourceMapUrl(hunk)) {
+    return true;
+  }
+  if (ignoreSwappedVariables && isHunkOnlySwappedVariables(hunk)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Prints context lines after a hunk
+ */
+function printContextAfter(
+  diff: DiffEntry[],
+  startIndex: number,
+  contextLines: number,
+): number {
+  let contextCount = 0;
+  let j = startIndex;
+  while (
+    j < diff.length &&
+    diff[j].type === 'equal' &&
+    contextCount < contextLines
+  ) {
+    printDiffLine(diff[j]);
+    contextCount++;
+    j++;
+  }
+  return j;
+}
+
+/**
+ * Checks if there are more changes ahead in the diff
+ */
+function hasMoreChanges(
+  diff: DiffEntry[],
+  startIndex: number,
+  lookAhead: number,
+): boolean {
+  for (
+    let k = startIndex;
+    k < Math.min(startIndex + lookAhead, diff.length);
+    k++
+  ) {
+    if (diff[k].type !== 'equal') {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Prints a diff with context, optionally filtering by asset IDs, unminified refs, source map URLs, or swapped variables
  */
 export function printDiff(
@@ -108,25 +180,15 @@ export function printDiff(
     if (entry.type === 'equal') {
       if (inChangeBlock) {
         // We've reached the end of a hunk, check if we should filter it
-        let shouldSkipHunk = false;
-        if (ignoreAssetIds && currentHunk.length > 0) {
-          shouldSkipHunk = isHunkOnlyAssetIds(currentHunk);
-        }
-        if (ignoreUnminifiedRefs && currentHunk.length > 0 && !shouldSkipHunk) {
-          shouldSkipHunk = isHunkOnlyUnminifiedRefs(currentHunk);
-        }
-        if (ignoreSourceMapUrl && currentHunk.length > 0 && !shouldSkipHunk) {
-          shouldSkipHunk = isHunkOnlySourceMapUrl(currentHunk);
-        }
-        if (
-          ignoreSwappedVariables &&
-          currentHunk.length > 0 &&
-          !shouldSkipHunk
-        ) {
-          shouldSkipHunk = isHunkOnlySwappedVariables(currentHunk);
-        }
+        const skipHunk = shouldSkipHunk(
+          currentHunk,
+          ignoreAssetIds,
+          ignoreUnminifiedRefs,
+          ignoreSourceMapUrl,
+          ignoreSwappedVariables,
+        );
 
-        if (!shouldSkipHunk) {
+        if (!skipHunk) {
           // Filter individual pairs within the hunk
           const {
             filtered: filteredHunk,
@@ -206,30 +268,10 @@ export function printDiff(
           }
 
           // Print context after changes
-          let contextCount = 0;
-          let j = i;
-          while (
-            j < diff.length &&
-            diff[j].type === 'equal' &&
-            contextCount < contextLines
-          ) {
-            printDiffLine(diff[j]);
-            contextCount++;
-            j++;
-          }
+          const j = printContextAfter(diff, i, contextLines);
 
           // Check if there are more changes ahead
-          let moreChanges = false;
-          for (
-            let k = j;
-            k < Math.min(j + contextLines * 2, diff.length);
-            k++
-          ) {
-            if (diff[k].type !== 'equal') {
-              moreChanges = true;
-              break;
-            }
-          }
+          const moreChanges = hasMoreChanges(diff, j, contextLines * 2);
 
           // Clear the hunk after printing
           currentHunk = [];
@@ -266,17 +308,7 @@ export function printDiff(
           }
 
           // Check if there are more changes ahead (that aren't filtered)
-          let moreChanges = false;
-          for (
-            let k = j;
-            k < Math.min(j + contextLines * 2, diff.length);
-            k++
-          ) {
-            if (diff[k].type !== 'equal') {
-              moreChanges = true;
-              break;
-            }
-          }
+          const moreChanges = hasMoreChanges(diff, j, contextLines * 2);
 
           if (moreChanges) {
             // There might be more changes, so we'll continue
@@ -319,21 +351,15 @@ export function printDiff(
 
   // Handle any remaining hunk at the end
   if (currentHunk.length > 0) {
-    let shouldSkipHunk = false;
-    if (ignoreAssetIds) {
-      shouldSkipHunk = isHunkOnlyAssetIds(currentHunk);
-    }
-    if (ignoreUnminifiedRefs && !shouldSkipHunk) {
-      shouldSkipHunk = isHunkOnlyUnminifiedRefs(currentHunk);
-    }
-    if (ignoreSourceMapUrl && !shouldSkipHunk) {
-      shouldSkipHunk = isHunkOnlySourceMapUrl(currentHunk);
-    }
-    if (ignoreSwappedVariables && !shouldSkipHunk) {
-      shouldSkipHunk = isHunkOnlySwappedVariables(currentHunk);
-    }
+    const skipHunk = shouldSkipHunk(
+      currentHunk,
+      ignoreAssetIds,
+      ignoreUnminifiedRefs,
+      ignoreSourceMapUrl,
+      ignoreSwappedVariables,
+    );
 
-    if (!shouldSkipHunk) {
+    if (!skipHunk) {
       // Filter individual pairs within the hunk
       const {
         filtered: filteredHunk,

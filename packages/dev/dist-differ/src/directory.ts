@@ -7,7 +7,12 @@ import {readAndDeminify} from './utils/deminify';
 import {computeDiff} from './diff';
 import {countHunks} from './hunk';
 import {printDiff} from './print';
-import {matchFilesByPrefix, formatFileSize, extractPrefix} from './match';
+import {matchFilesByPrefix} from './match';
+import {
+  printAmbiguousMatches,
+  printFileSummary,
+  printComparisonSummary,
+} from './report';
 
 const colors = getColors();
 
@@ -127,41 +132,7 @@ export function compareDirectories(
 
   // Report ambiguous cases
   if (ambiguous.length > 0) {
-    console.log(`${colors.yellow}⚠ Ambiguous file matches:${colors.reset}`);
-    for (const amb of ambiguous) {
-      if (amb.files1.length === 0 && amb.files2.length > 0) {
-        console.log(`  Prefix "${amb.prefix}" in ${amb.dirPath}:`);
-        console.log(`    Only in directory 2:`);
-        amb.files2.forEach((f) =>
-          console.log(
-            `      ${f.relativePath} (${formatFileSize(f.size)} bytes)`,
-          ),
-        );
-      } else if (amb.files1.length > 0 && amb.files2.length === 0) {
-        console.log(`  Prefix "${amb.prefix}" in ${amb.dirPath}:`);
-        console.log(`    Only in directory 1:`);
-        amb.files1.forEach((f) =>
-          console.log(
-            `      ${f.relativePath} (${formatFileSize(f.size)} bytes)`,
-          ),
-        );
-      } else {
-        console.log(`  Prefix "${amb.prefix}" in ${amb.dirPath}:`);
-        console.log(`    Directory 1 (${amb.files1.length} file(s)):`);
-        amb.files1.forEach((f) =>
-          console.log(
-            `      ${f.relativePath} (${formatFileSize(f.size)} bytes)`,
-          ),
-        );
-        console.log(`    Directory 2 (${amb.files2.length} file(s)):`);
-        amb.files2.forEach((f) =>
-          console.log(
-            `      ${f.relativePath} (${formatFileSize(f.size)} bytes)`,
-          ),
-        );
-      }
-    }
-    console.log();
+    printAmbiguousMatches(ambiguous);
   }
 
   // Apply minified-diff to matched pairs
@@ -264,28 +235,16 @@ export function compareDirectories(
 
     // In summary mode, print sorted list of files with differences
     if (summaryMode && filesWithDifferences.length > 0) {
-      // Sort by hunk count (descending - most hunks first)
-      filesWithDifferences.sort((a, b) => b.hunkCount - a.hunkCount);
-
-      // Print the sorted list
-      for (const fileInfo of filesWithDifferences) {
-        console.log(
-          `${colors.yellow}${fileInfo.path}${colors.reset}: ${fileInfo.hunkCount} hunk(s) differ`,
-        );
-      }
+      printFileSummary(filesWithDifferences);
     }
   }
 
   // Print summary
-  console.log();
-  console.log(`${colors.cyan}=== Summary ===${colors.reset}`);
-  console.log(
-    `  ${colors.green}Identical files: ${identicalFiles}${colors.reset}`,
-  );
-  console.log(
-    `  ${colors.yellow}Different files: ${differentFiles}${colors.reset}`,
-  );
-  console.log(
-    `  ${colors.cyan}Total files compared: ${matched.length}${colors.reset}`,
+  printComparisonSummary(
+    0,
+    false,
+    identicalFiles,
+    differentFiles,
+    matched.length,
   );
 }
