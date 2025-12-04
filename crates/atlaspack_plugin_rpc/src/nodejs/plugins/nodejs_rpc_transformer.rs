@@ -112,7 +112,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
 
     let original_source_map = asset.map.clone();
     let source_map = if let Some(map) = asset.map.as_ref() {
-      Some(map.to_json()?)
+      Some(map.clone().to_json(None)?)
     } else {
       None
     };
