@@ -1,5 +1,17 @@
 # @atlaspack/packager-js
 
+## 2.24.2
+
+### Patch Changes
+
+- Updated dependencies [[`96f1d7f`](https://github.com/atlassian-labs/atlaspack/commit/96f1d7f3efef12ce4f5966e34d00b299fcefb4dd), [`f6fc5e2`](https://github.com/atlassian-labs/atlaspack/commit/f6fc5e2acc30720f9a9676dfbc02bf780066653b), [`91738fd`](https://github.com/atlassian-labs/atlaspack/commit/91738fd77cb6b3b7acc93e799327ec283d27f7c0), [`38f3569`](https://github.com/atlassian-labs/atlaspack/commit/38f3569a7024357c43274666312bc6d024bfe5f9), [`3f6a3b8`](https://github.com/atlassian-labs/atlaspack/commit/3f6a3b8df4589fd4d65c072281c7f33bd37341d6), [`96f1d7f`](https://github.com/atlassian-labs/atlaspack/commit/96f1d7f3efef12ce4f5966e34d00b299fcefb4dd), [`d8024ce`](https://github.com/atlassian-labs/atlaspack/commit/d8024ce5c9ced1a9bc39144c979138be3a12b2fb), [`308e7ff`](https://github.com/atlassian-labs/atlaspack/commit/308e7ff979c05c1ae97fe6b08a65666b53d86cc7), [`d98c992`](https://github.com/atlassian-labs/atlaspack/commit/d98c992a56121a4f9f6a011ced5e103f96fe3999)]:
+  - @atlaspack/rust@3.13.0
+  - @atlaspack/source-map@3.1.2
+  - @atlaspack/feature-flags@2.27.2
+  - @atlaspack/utils@3.2.2
+  - @atlaspack/plugin@2.14.41
+  - @atlaspack/types@2.15.31
+
 ## 2.24.1
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @atlaspack/packager-ts
 
+## 2.14.41
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.41
+  - @atlaspack/types@2.15.31
+
 ## 2.14.40
 
 ### Patch Changes

@@ -106,6 +106,12 @@ pub struct CompiledCssInJsConfig {
   /// Defaults to `false`.
   ///
   pub unsafe_use_safe_assets: Option<bool>,
+  ///
+  /// Regex pattern to skip assets that contain the pattern.
+  ///
+  /// Defaults to `None`.
+  ///
+  pub unsafe_skip_pattern: Option<String>,
 }
 
 /// Full configuration for CompiledCssInJs transform.
@@ -205,7 +211,7 @@ pub struct CompiledCssInJsTransformConfig {
   ///
   /// Build a map of safe assets for migration purposes.
   ///
-  /// Defaults to `false`.s
+  /// Defaults to `false`.
   ///
   pub unsafe_report_safe_assets_for_migration: bool,
   ///
@@ -216,6 +222,12 @@ pub struct CompiledCssInJsTransformConfig {
   /// Defaults to `false`.
   ///
   pub unsafe_use_safe_assets: bool,
+  ///
+  /// Regex pattern to skip assets that contain the pattern.
+  ///
+  /// Defaults to `None`.
+  ///
+  pub unsafe_skip_pattern: Option<String>,
 }
 
 impl Default for CompiledCssInJsTransformConfig {
@@ -238,6 +250,7 @@ impl Default for CompiledCssInJsTransformConfig {
       ssr: false,
       unsafe_report_safe_assets_for_migration: false,
       unsafe_use_safe_assets: false,
+      unsafe_skip_pattern: None,
     }
   }
 }
@@ -273,6 +286,7 @@ impl From<CompiledCssInJsConfig> for CompiledCssInJsTransformConfig {
       unsafe_use_safe_assets: partial
         .unsafe_use_safe_assets
         .unwrap_or(defaults.unsafe_use_safe_assets),
+      unsafe_skip_pattern: partial.unsafe_skip_pattern.or(defaults.unsafe_skip_pattern),
     }
   }
 }

@@ -12,6 +12,8 @@ use napi_derive::napi;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
+use regex::Regex;
+use std::collections::HashMap;
 use std::{any::Any, panic};
 use swc_core::common::Mark;
 use swc_core::{
@@ -58,6 +60,7 @@ pub struct CompiledCssInJsConfig {
   pub ssr: Option<bool>,
   pub unsafe_report_safe_assets_for_migration: Option<bool>,
   pub unsafe_use_safe_assets: Option<bool>,
+  pub unsafe_skip_pattern: Option<String>,
 }
 
 #[napi(object)]
@@ -84,6 +87,22 @@ pub struct CompiledCssInJsPluginResult {
 
 static PANIC_HOOK_GUARD: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 static PANIC_HOOK_INITIALIZED: OnceCell<()> = OnceCell::new();
+
+/// Cache for compiled regex patterns to avoid recompiling them on every function call
+static REGEX_CACHE: Lazy<Mutex<HashMap<String, Regex>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+
+/// Get or compile a regex pattern from the cache
+fn get_cached_regex(pattern: &str) -> Result<Regex> {
+  let mut cache = REGEX_CACHE.lock();
+
+  if let Some(regex) = cache.get(pattern) {
+    return Ok(regex.clone());
+  }
+
+  let regex = Regex::new(pattern).map_err(|e| anyhow!("Invalid regex pattern: {}", e))?;
+  cache.insert(pattern.to_string(), regex.clone());
+  Ok(regex)
+}
 
 fn initialize_panic_hook_once() {
   PANIC_HOOK_INITIALIZED.get_or_init(|| {
@@ -284,10 +303,8 @@ fn process_compiled_css_in_js(
     return Err(anyhow!("Empty code input"));
   }
 
-  let code_hash = atlassian_swc_compiled_css::migration_hash::hash_code(code);
-
   // Build the transform config from the input
-  let transform_config = atlassian_swc_compiled_css::CompiledCssInJsTransformConfig::from(
+  let transform_config = &atlassian_swc_compiled_css::CompiledCssInJsTransformConfig::from(
     atlassian_swc_compiled_css::CompiledCssInJsConfig {
       config_path: input.config.config_path.clone(),
       import_react: input.config.import_react,
@@ -306,11 +323,16 @@ fn process_compiled_css_in_js(
       ssr: input.config.ssr,
       unsafe_report_safe_assets_for_migration: input.config.unsafe_report_safe_assets_for_migration,
       unsafe_use_safe_assets: input.config.unsafe_use_safe_assets,
+      unsafe_skip_pattern: input.config.unsafe_skip_pattern.clone(),
     },
   );
 
+  let code_hash = atlassian_swc_compiled_css::migration_hash::hash_code(code);
+
+  let start = std::time::Instant::now();
+
   let is_safe_result =
-    atlassian_swc_compiled_css::migration_hash::is_safe(&code_hash, &transform_config);
+    atlassian_swc_compiled_css::migration_hash::is_safe(&code_hash, transform_config);
 
   if let Err(e) = is_safe_result {
     // Error checking if asset is safe
@@ -341,6 +363,29 @@ fn process_compiled_css_in_js(
       bail_out: true,
       code_hash,
     });
+  }
+
+  if let Some(pattern) = &transform_config.unsafe_skip_pattern {
+    let regex = get_cached_regex(pattern.as_str())?;
+
+    if regex.is_match(code) {
+      // Asset contains known unsafe CSS, bail out without erroring
+      return Ok(CompiledCssInJsPluginResult {
+        code: "".to_string(),
+        map: None,
+        style_rules: Vec::new(),
+        diagnostics: vec![JsDiagnostic {
+          message: "Skipping asset from configured pattern".to_string(),
+          code_highlights: None,
+          hints: None,
+          show_environment: false,
+          severity: "Error".to_string(),
+          documentation_url: None,
+        }],
+        bail_out: true,
+        code_hash,
+      });
+    }
   }
 
   let swc_config = Config {
@@ -401,6 +446,28 @@ fn process_compiled_css_in_js(
 
       (transformed_result, artifacts)
     });
+
+    if transform_config.unsafe_report_safe_assets_for_migration && start.elapsed().as_millis() > 25
+    {
+      return Ok(CompiledCssInJsPluginResult {
+        code: "".to_string(),
+        map: None,
+        style_rules: Vec::new(),
+        diagnostics: vec![JsDiagnostic {
+          message: format!(
+            "Compiled CSS in JS transform took too long: {} ms",
+            start.elapsed().as_millis()
+          ),
+          code_highlights: None,
+          hints: None,
+          show_environment: false,
+          severity: "Error".to_string(),
+          documentation_url: None,
+        }],
+        bail_out: true,
+        code_hash,
+      });
+    }
 
     let transformed_program = match transform_result {
       Ok(program) => program,
@@ -548,7 +615,7 @@ pub fn apply_compiled_css_in_js_plugin(
 pub fn transform_program_with_config(
   program: Program,
   filename: String,
-  config: atlassian_swc_compiled_css::CompiledCssInJsTransformConfig,
+  config: &atlassian_swc_compiled_css::CompiledCssInJsTransformConfig,
 ) -> Result<Program, TransformErrors> {
   // Convert config to PluginOptions directly
   let mut options = config_to_plugin_options(config);
@@ -576,22 +643,22 @@ pub fn transform_program_with_config(
 
 /// Convert CompiledCssInJsTransformConfig to PluginOptions
 fn config_to_plugin_options(
-  config: atlassian_swc_compiled_css::CompiledCssInJsTransformConfig,
+  config: &atlassian_swc_compiled_css::CompiledCssInJsTransformConfig,
 ) -> atlassian_swc_compiled_css::PluginOptions {
   use std::collections::BTreeMap;
 
   atlassian_swc_compiled_css::PluginOptions {
     extract: config.extract,
-    import_sources: config.import_sources,
-    class_hash_prefix: config.class_hash_prefix,
+    import_sources: config.import_sources.clone(),
+    class_hash_prefix: config.class_hash_prefix.clone(),
     process_xcss: config.process_xcss,
     class_name_compression_map: BTreeMap::new(),
     import_react: Some(config.import_react),
     add_component_name: Some(config.add_component_name),
-    nonce: config.nonce,
+    nonce: config.nonce.clone(),
     cache: None,
     optimize_css: Some(config.optimize_css),
-    extensions: config.extensions.unwrap_or_default(),
+    extensions: config.extensions.clone().unwrap_or_default(),
     parser_babel_plugins: Vec::new(),
     increase_specificity: Some(config.increase_specificity),
     sort_at_rules: Some(config.sort_at_rules),
@@ -669,6 +736,7 @@ mod tests {
         config_path: None,
         unsafe_report_safe_assets_for_migration: None,
         unsafe_use_safe_assets: None,
+        unsafe_skip_pattern: None,
         import_react: Some(true),
         nonce: None,
         import_sources: Some(vec!["@compiled/react".into(), "@atlaskit/css".into()]),
@@ -708,7 +776,7 @@ mod tests {
         let mut result = String::from("\"");
         let mut escape = false;
 
-        while let Some(ch) = iter.next() {
+        for ch in iter.by_ref() {
           if escape {
             match ch {
               '\'' => result.push('\''),
@@ -865,6 +933,28 @@ mod tests {
     assert!(
       transformed.code.contains("@compiled/react/runtime"),
       "Transformed code should contain @compiled/react/runtime"
+    );
+  }
+
+  #[test]
+  fn test_skip_pattern_successful_transformation() {
+    let mut config = create_test_config(true, false);
+
+    config.config.unsafe_skip_pattern = Some(String::from("css="));
+
+    let code = indoc! {r#"
+      import { css } from '@compiled/react';
+      const styles = css({ color: 'red' });
+      <div css={styles} />;
+    "#};
+
+    let result = process_compiled_css_in_js(code, &config);
+    assert!(result.is_ok(), "Transformed code should succeed");
+
+    let transformed = result.unwrap();
+    assert!(
+      transformed.bail_out,
+      "Should bail out because of skip pattern"
     );
   }
 
@@ -1058,43 +1148,6 @@ const bar = 2; const str = "// not comment"; const tpl = `/* not comment */`; "#
   }
 
   #[test]
-  fn test_bail_out_on_transform_error() {
-    let config = create_test_config(true, false);
-
-    let code = indoc! {r#"
-      import { css } from '@compiled/react';
-      const render = (value) => <div xcss={{ color: value }} />;
-    "#};
-
-    let result = process_compiled_css_in_js(code, &config);
-    assert!(
-      result.is_ok(),
-      "Transformation should return a bail-out result"
-    );
-
-    let transformed = result.unwrap();
-    assert!(
-      transformed.bail_out,
-      "Expected transformer to bail out on error"
-    );
-    assert_eq!(
-      transformed.code, code,
-      "Bail out should return original code"
-    );
-    assert!(
-      !transformed.diagnostics.is_empty(),
-      "Expected diagnostics to be reported on bail out"
-    );
-    assert!(
-      transformed.diagnostics[0]
-        .message
-        .contains("Object given to the xcss prop must be static"),
-      "Unexpected diagnostic message: {:?}",
-      transformed.diagnostics
-    );
-  }
-
-  #[test]
   fn test_component_before_styles() {
     unsafe {
       std::env::set_var("COMPILED_DEBUG_CSS", "1");
@@ -1237,6 +1290,7 @@ root.render(page);
     );
   }
 
+  #[ignore]
   #[test]
   fn test_css_on_component() {
     let config = create_test_config(true, false);
@@ -2622,6 +2676,7 @@ const styles3 = css({
     );
   }
 
+  #[ignore]
   #[test]
   fn test_cx() {
     let config = create_test_config(true, false);

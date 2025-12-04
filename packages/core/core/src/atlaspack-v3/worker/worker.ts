@@ -77,12 +77,12 @@ export class AtlaspackWorker {
         );
       }
       // Set feature flags in the worker process
-      let featureFlags = await this.#packageManager.require(
+      let featureFlagsModule = await this.#packageManager.require(
         '@atlaspack/feature-flags',
         __filename,
         {shouldAutoInstall: false},
       );
-      featureFlags.setFeatureFlags(options.featureFlags);
+      featureFlagsModule.setFeatureFlags(options.featureFlags);
 
       if (this.#options == null) {
         this.#options = {

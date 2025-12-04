@@ -1,0 +1,23 @@
+{
+  tokenNames: {
+    "color.text": "--ds-text",
+    "color.background": "--ds-background",
+    "radius.small": "--ds-radius-small",
+    "border.radius": "--ds-border-radius",
+    "custom.exempt": "--ds-custom-exempt",
+  },
+  light: {
+    "color.text": "#292A2E",
+    "color.background": "#FFFFFF",
+  },
+  legacyLight: {
+    "color.text": "#172B4D",
+    "color.background": "#F4F5F7",
+  },
+  shape: {
+    "radius.small": "4px",
+    "border.radius": "4px",
+  },
+  spacing: {},
+  typography: {},
+}

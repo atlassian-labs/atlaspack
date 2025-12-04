@@ -78,9 +78,8 @@ jobs:
       - name: Free up space
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt-get remove -y '^dotnet-.*'
-          sudo apt-get remove -y '^llvm-.*'
-          sudo apt-get remove -y 'php.*'
+          sudo rm -rf /usr/local/lib/android || true
+          sudo apt-get remove -y '^dotnet-.*' '^llvm-.*' 'php.*'
       # Build native artifacts
       - env:
           RUSTUP_TARGET: ${{ matrix.target }}
@@ -152,6 +151,12 @@ jobs:
           shared-key: '${{ matrix.os }}-rust-unit-tests'
           # Only store new caches on main
           save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Free up space
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo rm -rf /usr/local/lib/android || true
+          sudo apt-get remove -y '^dotnet-.*' '^llvm-.*' 'php.*'
       - run: cargo test
 
   unit_tests:

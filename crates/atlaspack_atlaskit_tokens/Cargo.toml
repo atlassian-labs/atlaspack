@@ -1,0 +1,17 @@
+[package]
+name = "atlaspack_atlaskit_tokens"
+version = "0.1.0"
+authors = ["Marcin Szczepanski <mszczepanski@atlassian.com>"]
+edition = { workspace = true }
+description = "Transformation for Atlaskit tokens for the Atlaspack Bundler"
+
+[lints]
+workspace = true
+
+[dependencies]
+atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
+swc_atlaskit_tokens = { path = "../swc_atlaskit_tokens" }
+swc_core = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+

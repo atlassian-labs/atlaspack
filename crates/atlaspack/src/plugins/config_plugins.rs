@@ -30,6 +30,7 @@ use atlaspack_plugin_transformer_js::AtlaspackJsTransformerPlugin;
 use atlaspack_plugin_transformer_json::AtlaspackJsonTransformerPlugin;
 use atlaspack_plugin_transformer_raw::AtlaspackRawTransformerPlugin;
 use atlaspack_plugin_transformer_svg::AtlaspackSvgTransformerPlugin;
+use atlaspack_plugin_transformer_tokens::AtlaspackTokensTransformerPlugin;
 use atlaspack_plugin_transformer_yaml::AtlaspackYamlTransformerPlugin;
 
 use super::Plugins;
@@ -257,6 +258,10 @@ impl Plugins for ConfigPlugins {
             }
             "@atlaspack/transformer-svg" => {
               Arc::new(AtlaspackSvgTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+            }
+            "@atlaspack/transformer-tokens" => {
+              Arc::new(AtlaspackTokensTransformerPlugin::new(&self.ctx)?)
+                as Arc<dyn TransformerPlugin>
             }
             _ => {
               self

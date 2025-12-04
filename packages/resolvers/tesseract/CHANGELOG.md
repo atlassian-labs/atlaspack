@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.15.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/node-resolver-core@3.7.12
+  - @atlaspack/types-internal@2.21.2
+  - @atlaspack/plugin@2.14.41
+
 ## 2.15.13
 
 ### Patch Changes

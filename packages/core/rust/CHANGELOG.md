@@ -1,5 +1,37 @@
 # @atlaspack/rust
 
+## 3.13.0
+
+### Minor Changes
+
+- [#895](https://github.com/atlassian-labs/atlaspack/pull/895) [`96f1d7f`](https://github.com/atlassian-labs/atlaspack/commit/96f1d7f3efef12ce4f5966e34d00b299fcefb4dd) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - - Implement new dead_returns_remover transformer and hook up via opt-in flag
+  - Implement new unused_bindings_remover transformer and hook up via opt-in flag
+
+- [#895](https://github.com/atlassian-labs/atlaspack/pull/895) [`96f1d7f`](https://github.com/atlassian-labs/atlaspack/commit/96f1d7f3efef12ce4f5966e34d00b299fcefb4dd) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Add new `react_hooks_remover` transformer
+  Add new `static_prevaluator` transformer
+  Rename, expand and add config for existing `global_this_aliaser` -> `global_aliaser`
+  Refactor and expand existing `typeof_replacer` transformer
+  Rename flags for the altered existing transformers
+
+- [#897](https://github.com/atlassian-labs/atlaspack/pull/897) [`d8024ce`](https://github.com/atlassian-labs/atlaspack/commit/d8024ce5c9ced1a9bc39144c979138be3a12b2fb) Thanks [@marcins](https://github.com/marcins)! - Implement atlaspack_plugin_transformer_tokens as a fully native plugin
+
+- [#902](https://github.com/atlassian-labs/atlaspack/pull/902) [`308e7ff`](https://github.com/atlassian-labs/atlaspack/commit/308e7ff979c05c1ae97fe6b08a65666b53d86cc7) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - - Implement new `react_async_import_lift` transformer
+  - Hook up the new transformer with correct ordering in `lib.rs`
+
+### Patch Changes
+
+- [#908](https://github.com/atlassian-labs/atlaspack/pull/908) [`91738fd`](https://github.com/atlassian-labs/atlaspack/commit/91738fd77cb6b3b7acc93e799327ec283d27f7c0) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Disallows circular package aliases during resolution. This fixes cases where package A aliases to package B, but package B imports package A, causing infinite loops during resolution. Instead, we disable the alias allow package B to import the real package A.
+
+  This is useful in cases where you create wrapper packages that re-export another package under a different name.
+
+  Enabled via the `disallowCircularPackageAliases` feature flag.
+
+- [#913](https://github.com/atlassian-labs/atlaspack/pull/913) [`38f3569`](https://github.com/atlassian-labs/atlaspack/commit/38f3569a7024357c43274666312bc6d024bfe5f9) Thanks [@JakeLane](https://github.com/JakeLane)! - Avoid calling FS for each file in compiled swc and add regex skipping.
+
+- [#912](https://github.com/atlassian-labs/atlaspack/pull/912) [`3f6a3b8`](https://github.com/atlassian-labs/atlaspack/commit/3f6a3b8df4589fd4d65c072281c7f33bd37341d6) Thanks [@JakeLane](https://github.com/JakeLane)! - Skip xcss in Compiled CSS-in-JS swc plugin
+
+- [#911](https://github.com/atlassian-labs/atlaspack/pull/911) [`d98c992`](https://github.com/atlassian-labs/atlaspack/commit/d98c992a56121a4f9f6a011ced5e103f96fe3999) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix dist dir when using V3 in dev mode
+
 ## 3.12.0
 
 ### Minor Changes
