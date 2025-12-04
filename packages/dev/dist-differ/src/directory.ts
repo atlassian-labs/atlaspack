@@ -19,14 +19,17 @@ export function getAllFiles(
   baseDir: string = dir,
   fileList: FileInfo[] = [],
 ): FileInfo[] {
-  const entries = fs.readdirSync(dir, {withFileTypes: true});
+  // Ensure dir is absolute
+  const absDir = path.resolve(dir);
+  const absBaseDir = path.resolve(baseDir);
+  const entries = fs.readdirSync(absDir, {withFileTypes: true});
 
   for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    const relativePath = path.relative(baseDir, fullPath);
+    const fullPath = path.resolve(absDir, entry.name);
+    const relativePath = path.relative(absBaseDir, fullPath);
 
     if (entry.isDirectory()) {
-      getAllFiles(fullPath, baseDir, fileList);
+      getAllFiles(fullPath, absBaseDir, fileList);
     } else if (entry.isFile()) {
       // Only include .js files, ignore .map files and others
       if (entry.name.endsWith('.js')) {
@@ -52,18 +55,24 @@ export function compareDirectories(
   dir2: string,
   ignoreAssetIds: boolean,
   ignoreUnminifiedRefs: boolean,
+  ignoreSourceMapUrl: boolean,
+  ignoreSwappedVariables: boolean,
   summaryMode: boolean = false,
   verbose: boolean = false,
   sizeThreshold: number = 0.01,
 ): void {
+  // Resolve to absolute paths
+  const absDir1 = path.resolve(dir1);
+  const absDir2 = path.resolve(dir2);
+
   console.log(`${colors.cyan}=== Comparing directories ===${colors.reset}`);
-  console.log(`${colors.yellow}Directory 1:${colors.reset} ${dir1}`);
-  console.log(`${colors.yellow}Directory 2:${colors.reset} ${dir2}`);
+  console.log(`${colors.yellow}Directory 1:${colors.reset} ${absDir1}`);
+  console.log(`${colors.yellow}Directory 2:${colors.reset} ${absDir2}`);
   console.log();
 
   // Get all files from both directories
-  const files1 = getAllFiles(dir1);
-  const files2 = getAllFiles(dir2);
+  const files1 = getAllFiles(absDir1);
+  const files2 = getAllFiles(absDir2);
 
   // Early exit: file count mismatch
   if (files1.length !== files2.length) {
@@ -188,6 +197,8 @@ export function compareDirectories(
           diff,
           ignoreAssetIds,
           ignoreUnminifiedRefs,
+          ignoreSourceMapUrl,
+          ignoreSwappedVariables,
         );
         const hasChanges = diff.some((e) => e.type !== 'equal');
 
@@ -208,6 +219,8 @@ export function compareDirectories(
           diff,
           ignoreAssetIds,
           ignoreUnminifiedRefs,
+          ignoreSourceMapUrl,
+          ignoreSwappedVariables,
         );
         const hasChanges = diff.some((e) => e.type !== 'equal');
 
@@ -218,11 +231,13 @@ export function compareDirectories(
           }
           printDiff(
             diff,
-            file1.relativePath,
-            file2.relativePath,
+            file1.fullPath,
+            file2.fullPath,
             3,
             ignoreAssetIds,
             ignoreUnminifiedRefs,
+            ignoreSourceMapUrl,
+            ignoreSwappedVariables,
             false,
           );
         } else {
@@ -233,10 +248,10 @@ export function compareDirectories(
             }
             console.log(`${colors.cyan}=== Comparing files ===${colors.reset}`);
             console.log(
-              `${colors.yellow}File 1:${colors.reset} ${file1.relativePath}`,
+              `${colors.yellow}File 1:${colors.reset} ${file1.fullPath}`,
             );
             console.log(
-              `${colors.yellow}File 2:${colors.reset} ${file2.relativePath}`,
+              `${colors.yellow}File 2:${colors.reset} ${file2.fullPath}`,
             );
             console.log();
             console.log(

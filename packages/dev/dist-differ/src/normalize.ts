@@ -15,6 +15,11 @@ const ASSET_ID_VAR_PLACEHOLDER = '$ASSET_ID';
 const UNMINIFIED_REF_EXPORTS_HEX_PATTERN = /[$][0-9a-fA-F]{16}[$](?=exports)/g;
 const UNMINIFIED_REF_VAR_HEX_PATTERN = /[$][0-9a-fA-F]{16}[$](?=var[$])/g;
 
+// Source map URL pattern: //# sourceMappingURL=... (can be //# or //@)
+// Matches the source map URL comment and everything after it, including optional trailing newlines
+const SOURCE_MAP_URL_PATTERN = /\/\/[#@]\s*sourceMappingURL=[^\n]*(?:\n|$)/;
+const SOURCE_MAP_URL_PLACEHOLDER = '//# sourceMappingURL=SOURCE_MAP_URL';
+
 /**
  * Normalizes asset IDs in a line by replacing them with placeholders
  */
@@ -54,4 +59,195 @@ export function linesDifferOnlyByUnminifiedRefs(
   line2: string,
 ): boolean {
   return normalizeUnminifiedRefs(line1) === normalizeUnminifiedRefs(line2);
+}
+
+/**
+ * Normalizes source map URLs in a line by replacing them with a placeholder
+ */
+export function normalizeSourceMapUrl(line: string): string {
+  // Reset regex lastIndex to avoid state issues
+  SOURCE_MAP_URL_PATTERN.lastIndex = 0;
+  // Use replace directly - it will return the original string if no match
+  // Preserve trailing newlines if they exist
+  const match = line.match(SOURCE_MAP_URL_PATTERN);
+  if (match) {
+    const trailingNewline = line.endsWith('\n') ? '\n' : '';
+    return line.replace(
+      SOURCE_MAP_URL_PATTERN,
+      SOURCE_MAP_URL_PLACEHOLDER + trailingNewline,
+    );
+  }
+  return line;
+}
+
+/**
+ * Checks if two lines differ only by source map URLs
+ */
+export function linesDifferOnlyBySourceMapUrl(
+  line1: string,
+  line2: string,
+): boolean {
+  return normalizeSourceMapUrl(line1) === normalizeSourceMapUrl(line2);
+}
+
+/**
+ * Finds all single-character or short variable names in a line
+ * Returns a set of variable names that appear as identifiers (not in strings)
+ */
+function findShortVariables(line: string): Set<string> {
+  // Match short identifiers (1-3 characters) that are likely minified variables
+  // Use word boundaries and look for patterns like: (var=, var., var), var, etc.
+  const shortVarPattern = /\b([a-zA-Z_$][a-zA-Z0-9_$]{0,2})\b/g;
+  const variables = new Set<string>();
+  let match;
+
+  shortVarPattern.lastIndex = 0;
+  while ((match = shortVarPattern.exec(line)) !== null) {
+    const varName = match[1];
+    // Skip common keywords and long names
+    if (
+      varName.length <= 3 &&
+      ![
+        'var',
+        'let',
+        'const',
+        'for',
+        'if',
+        'new',
+        'return',
+        'this',
+        'null',
+        'true',
+        'false',
+        'undefined',
+      ].includes(varName)
+    ) {
+      variables.add(varName);
+    }
+  }
+
+  return variables;
+}
+
+/**
+ * Tries to find a variable swap mapping that makes two lines identical
+ * Returns the mapping if found, null otherwise
+ */
+function findSwapMapping(
+  line1: string,
+  line2: string,
+): Map<string, string> | null {
+  const vars1 = findShortVariables(line1);
+  const vars2 = findShortVariables(line2);
+
+  // Find variables that appear in line1 but not line2, and vice versa
+  const onlyIn1 = Array.from(vars1).filter((v) => !vars2.has(v));
+  const onlyIn2 = Array.from(vars2).filter((v) => !vars1.has(v));
+
+  // If no differences, lines are identical
+  if (onlyIn1.length === 0 && onlyIn2.length === 0) {
+    return null;
+  }
+
+  // If different number of differing variables, can't be a simple swap
+  if (onlyIn1.length !== onlyIn2.length || onlyIn1.length === 0) {
+    return null;
+  }
+
+  // Try all possible pairings (for small sets, this is feasible)
+  // For now, try 1:1 mapping (most common case)
+  if (onlyIn1.length === 1 && onlyIn2.length === 1) {
+    const mapping = new Map<string, string>();
+    mapping.set(onlyIn1[0], onlyIn2[0]);
+
+    // Test if this mapping works
+    let testLine = line1;
+    const regex = new RegExp(
+      `\\b${onlyIn1[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+      'g',
+    );
+    testLine = testLine.replace(regex, onlyIn2[0]);
+
+    if (testLine === line2) {
+      return mapping;
+    }
+  }
+
+  // For multiple swaps, try matching by occurrence count
+  // Count occurrences of each variable
+  const count1 = new Map<string, number>();
+  const count2 = new Map<string, number>();
+
+  for (const v of onlyIn1) {
+    const regex = new RegExp(
+      `\\b${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+      'g',
+    );
+    count1.set(v, (line1.match(regex) || []).length);
+  }
+
+  for (const v of onlyIn2) {
+    const regex = new RegExp(
+      `\\b${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+      'g',
+    );
+    count2.set(v, (line2.match(regex) || []).length);
+  }
+
+  // Try to match variables with same occurrence counts
+  const mapping = new Map<string, string>();
+  const used2 = new Set<string>();
+
+  const sorted1 = Array.from(onlyIn1).sort(
+    (a, b) => (count1.get(b) || 0) - (count1.get(a) || 0),
+  );
+
+  for (const v1 of sorted1) {
+    const count = count1.get(v1)!;
+    let found = false;
+
+    for (const v2 of onlyIn2) {
+      if (used2.has(v2)) continue;
+      if (count2.get(v2) === count) {
+        mapping.set(v1, v2);
+        used2.add(v2);
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      return null;
+    }
+  }
+
+  // Test if this mapping works
+  let testLine = line1;
+  const sortedMappings = Array.from(mapping.entries()).sort(
+    (a, b) => b[0].length - a[0].length,
+  );
+  for (const [from, to] of sortedMappings) {
+    const regex = new RegExp(
+      `\\b${from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+      'g',
+    );
+    testLine = testLine.replace(regex, to);
+  }
+
+  if (testLine === line2) {
+    return mapping;
+  }
+
+  return null;
+}
+
+/**
+ * Checks if two lines differ only by swapped variables
+ */
+export function linesDifferOnlyBySwappedVariables(
+  line1: string,
+  line2: string,
+): boolean {
+  const mapping = findSwapMapping(line1, line2);
+  return mapping !== null && mapping.size > 0;
 }

@@ -6,6 +6,8 @@ import {
   filterHunkEntries,
   isHunkOnlyAssetIds,
   isHunkOnlyUnminifiedRefs,
+  isHunkOnlySourceMapUrl,
+  isHunkOnlySwappedVariables,
 } from './hunk';
 
 const colors = getColors();
@@ -60,7 +62,7 @@ function printHunkHeader(
 }
 
 /**
- * Prints a diff with context, optionally filtering by asset IDs or unminified refs
+ * Prints a diff with context, optionally filtering by asset IDs, unminified refs, source map URLs, or swapped variables
  */
 export function printDiff(
   diff: DiffEntry[],
@@ -69,10 +71,18 @@ export function printDiff(
   contextLines: number = 3,
   ignoreAssetIds: boolean = false,
   ignoreUnminifiedRefs: boolean = false,
+  ignoreSourceMapUrl: boolean = false,
+  ignoreSwappedVariables: boolean = false,
   summaryMode: boolean = false,
 ): DiffResult {
   if (summaryMode) {
-    const hunkCount = countHunks(diff, ignoreAssetIds, ignoreUnminifiedRefs);
+    const hunkCount = countHunks(
+      diff,
+      ignoreAssetIds,
+      ignoreUnminifiedRefs,
+      ignoreSourceMapUrl,
+      ignoreSwappedVariables,
+    );
     const hasChanges = diff.some((e) => e.type !== 'equal');
     return {hunkCount, hasChanges};
   }
@@ -105,6 +115,16 @@ export function printDiff(
         if (ignoreUnminifiedRefs && currentHunk.length > 0 && !shouldSkipHunk) {
           shouldSkipHunk = isHunkOnlyUnminifiedRefs(currentHunk);
         }
+        if (ignoreSourceMapUrl && currentHunk.length > 0 && !shouldSkipHunk) {
+          shouldSkipHunk = isHunkOnlySourceMapUrl(currentHunk);
+        }
+        if (
+          ignoreSwappedVariables &&
+          currentHunk.length > 0 &&
+          !shouldSkipHunk
+        ) {
+          shouldSkipHunk = isHunkOnlySwappedVariables(currentHunk);
+        }
 
         if (!shouldSkipHunk) {
           // Filter individual pairs within the hunk
@@ -116,6 +136,8 @@ export function printDiff(
             currentHunk,
             ignoreAssetIds,
             ignoreUnminifiedRefs,
+            ignoreSourceMapUrl,
+            ignoreSwappedVariables,
           );
 
           // Only print if there are any remaining differences after filtering
@@ -304,6 +326,12 @@ export function printDiff(
     if (ignoreUnminifiedRefs && !shouldSkipHunk) {
       shouldSkipHunk = isHunkOnlyUnminifiedRefs(currentHunk);
     }
+    if (ignoreSourceMapUrl && !shouldSkipHunk) {
+      shouldSkipHunk = isHunkOnlySourceMapUrl(currentHunk);
+    }
+    if (ignoreSwappedVariables && !shouldSkipHunk) {
+      shouldSkipHunk = isHunkOnlySwappedVariables(currentHunk);
+    }
 
     if (!shouldSkipHunk) {
       // Filter individual pairs within the hunk
@@ -311,7 +339,13 @@ export function printDiff(
         filtered: filteredHunk,
         removeCount: hunkCount1,
         addCount: hunkCount2,
-      } = filterHunkEntries(currentHunk, ignoreAssetIds, ignoreUnminifiedRefs);
+      } = filterHunkEntries(
+        currentHunk,
+        ignoreAssetIds,
+        ignoreUnminifiedRefs,
+        ignoreSourceMapUrl,
+        ignoreSwappedVariables,
+      );
 
       // Only print if there are any remaining differences after filtering
       if (filteredHunk.length > 0) {
@@ -343,13 +377,21 @@ export function printDiff(
       `${colors.yellow}Total changes: ${changesPrinted}${colors.reset}`,
     );
     return {
-      hunkCount: countHunks(diff, ignoreAssetIds, ignoreUnminifiedRefs),
+      hunkCount: countHunks(
+        diff,
+        ignoreAssetIds,
+        ignoreUnminifiedRefs,
+        ignoreSourceMapUrl,
+        ignoreSwappedVariables,
+      ),
       hasChanges: true,
     };
   } else {
     const ignoredTypes: string[] = [];
     if (ignoreAssetIds) ignoredTypes.push('asset IDs');
     if (ignoreUnminifiedRefs) ignoredTypes.push('unminified refs');
+    if (ignoreSourceMapUrl) ignoredTypes.push('source map URLs');
+    if (ignoreSwappedVariables) ignoredTypes.push('swapped variables');
     const ignoredText =
       ignoredTypes.length > 0
         ? ` (all differences are ${ignoredTypes.join(' and ')})`

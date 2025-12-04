@@ -124,8 +124,11 @@ dist-differ dir1/ dir2/
 
 ### Options
 
+- `--ignore-all`: Skip all ignorable differences (equivalent to all `--ignore-*` flags)
 - `--ignore-asset-ids`: Skip hunks where the only differences are asset IDs
 - `--ignore-unminified-refs`: Skip hunks where the only differences are unminified refs (e.g., `$e3f4b1abd74dab96$exports`, `$00042ef5514babaf$var$...`)
+- `--ignore-source-map-url`: Skip hunks where the only differences are source map URLs (e.g., `//# sourceMappingURL=zh_TW.e18ec001.js.map`)
+- `--ignore-swapped-variables`: Skip hunks where the only differences are swapped variable names (e.g., `t` vs `a` where functionality is identical)
 - `--summary`: Show only hunk counts for changed files (directory mode only)
 - `--verbose`: Show all file matches, not just mismatches (directory mode only)
 - `--disambiguation-size-threshold <val>`: Threshold for matching files by "close enough" sizes (default: 0.01 = 1%, range: 0-1)
@@ -145,8 +148,20 @@ dist-differ --disambiguation-size-threshold 0.05 dir1/ dir2/
 # Compare with both asset IDs and unminified refs ignored
 dist-differ --ignore-asset-ids --ignore-unminified-refs dir1/ dir2/
 
+# Compare ignoring all ignorable differences
+dist-differ --ignore-all dir1/ dir2/
+
+# Compare ignoring only source map URLs
+dist-differ --ignore-source-map-url file1.js file2.js
+
+# Compare ignoring swapped variables
+dist-differ --ignore-swapped-variables file1.js file2.js
+
 # Verbose mode to see all file matches
 dist-differ --verbose dir1/ dir2/
+
+# Compare ignoring all ignorable differences
+dist-differ --ignore-all dir1/ dir2/
 ```
 
 ## Development

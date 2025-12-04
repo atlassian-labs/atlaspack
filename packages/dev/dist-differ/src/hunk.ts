@@ -2,19 +2,28 @@ import type {DiffEntry} from './types';
 import {
   linesDifferOnlyByAssetIds,
   linesDifferOnlyByUnminifiedRefs,
+  linesDifferOnlyBySourceMapUrl,
+  linesDifferOnlyBySwappedVariables,
   normalizeUnminifiedRefs,
 } from './normalize';
 
 /**
- * Filters out individual pairs that differ only by asset IDs or unminified refs
+ * Filters out individual pairs that differ only by asset IDs, unminified refs, source map URLs, or swapped variables
  * Returns the filtered entries and updated counts
  */
 export function filterHunkEntries(
   hunkEntries: DiffEntry[],
   ignoreAssetIds: boolean,
   ignoreUnminifiedRefs: boolean,
+  ignoreSourceMapUrl: boolean = false,
+  ignoreSwappedVariables: boolean = false,
 ): {filtered: DiffEntry[]; removeCount: number; addCount: number} {
-  if (!ignoreAssetIds && !ignoreUnminifiedRefs) {
+  if (
+    !ignoreAssetIds &&
+    !ignoreUnminifiedRefs &&
+    !ignoreSourceMapUrl &&
+    !ignoreSwappedVariables
+  ) {
     return {
       filtered: hunkEntries,
       removeCount: hunkEntries.filter((e) => e.type === 'remove').length,
@@ -53,6 +62,20 @@ export function filterHunkEntries(
           ignoreUnminifiedRefs &&
           !shouldFilter &&
           linesDifferOnlyByUnminifiedRefs(entry.line, addEntry.line)
+        ) {
+          shouldFilter = true;
+        }
+        if (
+          ignoreSourceMapUrl &&
+          !shouldFilter &&
+          linesDifferOnlyBySourceMapUrl(entry.line, addEntry.line)
+        ) {
+          shouldFilter = true;
+        }
+        if (
+          ignoreSwappedVariables &&
+          !shouldFilter &&
+          linesDifferOnlyBySwappedVariables(entry.line, addEntry.line)
         ) {
           shouldFilter = true;
         }
@@ -137,6 +160,80 @@ export function isHunkOnlyAssetIds(hunkEntries: DiffEntry[]): boolean {
 }
 
 /**
+ * Checks if a hunk consists only of swapped variable differences
+ */
+export function isHunkOnlySwappedVariables(hunkEntries: DiffEntry[]): boolean {
+  // A hunk consists of remove/add pairs
+  // Check if all pairs differ only by swapped variables
+  for (let i = 0; i < hunkEntries.length; i++) {
+    const entry = hunkEntries[i];
+    if (entry.type === 'remove') {
+      // Find the corresponding add entry
+      const addEntry = hunkEntries.find(
+        (e, idx) => idx > i && e.type === 'add',
+      );
+      if (addEntry) {
+        // Check if this pair differs only by swapped variables
+        if (!linesDifferOnlyBySwappedVariables(entry.line, addEntry.line)) {
+          return false;
+        }
+      } else {
+        // Orphaned remove (no corresponding add) - not just swapped variables
+        return false;
+      }
+    } else if (entry.type === 'add') {
+      // Find the corresponding remove entry
+      const removeEntry = hunkEntries.find(
+        (e, idx) => idx < i && e.type === 'remove',
+      );
+      if (!removeEntry) {
+        // Orphaned add (no corresponding remove) - not just swapped variables
+        return false;
+      }
+      // Already checked in the remove case above
+    }
+  }
+  return true;
+}
+
+/**
+ * Checks if a hunk consists only of source map URL differences
+ */
+export function isHunkOnlySourceMapUrl(hunkEntries: DiffEntry[]): boolean {
+  // A hunk consists of remove/add pairs
+  // Check if all pairs differ only by source map URLs
+  for (let i = 0; i < hunkEntries.length; i++) {
+    const entry = hunkEntries[i];
+    if (entry.type === 'remove') {
+      // Find the corresponding add entry
+      const addEntry = hunkEntries.find(
+        (e, idx) => idx > i && e.type === 'add',
+      );
+      if (addEntry) {
+        // Check if this pair differs only by source map URLs
+        if (!linesDifferOnlyBySourceMapUrl(entry.line, addEntry.line)) {
+          return false;
+        }
+      } else {
+        // Orphaned remove (no corresponding add) - not just source map URLs
+        return false;
+      }
+    } else if (entry.type === 'add') {
+      // Find the corresponding remove entry
+      const removeEntry = hunkEntries.find(
+        (e, idx) => idx < i && e.type === 'remove',
+      );
+      if (!removeEntry) {
+        // Orphaned add (no corresponding remove) - not just source map URLs
+        return false;
+      }
+      // Already checked in the remove case above
+    }
+  }
+  return true;
+}
+
+/**
  * Checks if a hunk consists only of unminified ref differences
  */
 export function isHunkOnlyUnminifiedRefs(hunkEntries: DiffEntry[]): boolean {
@@ -191,12 +288,14 @@ export function isHunkOnlyUnminifiedRefs(hunkEntries: DiffEntry[]): boolean {
 }
 
 /**
- * Counts the number of hunks in a diff, optionally filtering by asset IDs or unminified refs
+ * Counts the number of hunks in a diff, optionally filtering by asset IDs, unminified refs, source map URLs, or swapped variables
  */
 export function countHunks(
   diff: DiffEntry[],
   ignoreAssetIds: boolean = false,
   ignoreUnminifiedRefs: boolean = false,
+  ignoreSourceMapUrl: boolean = false,
+  ignoreSwappedVariables: boolean = false,
 ): number {
   let hunkCount = 0;
   let inChangeBlock = false;
@@ -215,6 +314,16 @@ export function countHunks(
         if (ignoreUnminifiedRefs && currentHunk.length > 0 && !shouldSkipHunk) {
           shouldSkipHunk = isHunkOnlyUnminifiedRefs(currentHunk);
         }
+        if (ignoreSourceMapUrl && currentHunk.length > 0 && !shouldSkipHunk) {
+          shouldSkipHunk = isHunkOnlySourceMapUrl(currentHunk);
+        }
+        if (
+          ignoreSwappedVariables &&
+          currentHunk.length > 0 &&
+          !shouldSkipHunk
+        ) {
+          shouldSkipHunk = isHunkOnlySwappedVariables(currentHunk);
+        }
 
         if (!shouldSkipHunk) {
           // Filter individual pairs and only count if there are real differences
@@ -222,6 +331,8 @@ export function countHunks(
             currentHunk,
             ignoreAssetIds,
             ignoreUnminifiedRefs,
+            ignoreSourceMapUrl,
+            ignoreSwappedVariables,
           );
           if (filtered.length > 0) {
             hunkCount++;
@@ -248,6 +359,12 @@ export function countHunks(
     if (ignoreUnminifiedRefs && !shouldSkipHunk) {
       shouldSkipHunk = isHunkOnlyUnminifiedRefs(currentHunk);
     }
+    if (ignoreSourceMapUrl && !shouldSkipHunk) {
+      shouldSkipHunk = isHunkOnlySourceMapUrl(currentHunk);
+    }
+    if (ignoreSwappedVariables && !shouldSkipHunk) {
+      shouldSkipHunk = isHunkOnlySwappedVariables(currentHunk);
+    }
 
     if (!shouldSkipHunk) {
       // Filter individual pairs and only count if there are real differences
@@ -255,6 +372,8 @@ export function countHunks(
         currentHunk,
         ignoreAssetIds,
         ignoreUnminifiedRefs,
+        ignoreSourceMapUrl,
+        ignoreSwappedVariables,
       );
       if (filtered.length > 0) {
         hunkCount++;

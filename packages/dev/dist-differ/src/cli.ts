@@ -14,6 +14,8 @@ const colors = getColors();
 export interface CliOptions {
   ignoreAssetIds: boolean;
   ignoreUnminifiedRefs: boolean;
+  ignoreSourceMapUrl: boolean;
+  ignoreSwappedVariables: boolean;
   summaryMode: boolean;
   verbose: boolean;
   sizeThreshold: number;
@@ -27,6 +29,8 @@ export function parseArgs(args: string[]): {
   const options: CliOptions = {
     ignoreAssetIds: false,
     ignoreUnminifiedRefs: false,
+    ignoreSourceMapUrl: false,
+    ignoreSwappedVariables: false,
     summaryMode: false,
     verbose: false,
     sizeThreshold: 0.01, // Default 1%
@@ -35,10 +39,19 @@ export function parseArgs(args: string[]): {
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === '--ignore-asset-ids') {
+    if (arg === '--ignore-all') {
+      options.ignoreAssetIds = true;
+      options.ignoreUnminifiedRefs = true;
+      options.ignoreSourceMapUrl = true;
+      options.ignoreSwappedVariables = true;
+    } else if (arg === '--ignore-asset-ids') {
       options.ignoreAssetIds = true;
     } else if (arg === '--ignore-unminified-refs') {
       options.ignoreUnminifiedRefs = true;
+    } else if (arg === '--ignore-source-map-url') {
+      options.ignoreSourceMapUrl = true;
+    } else if (arg === '--ignore-swapped-variables') {
+      options.ignoreSwappedVariables = true;
     } else if (arg === '--summary') {
       options.summaryMode = true;
     } else if (arg === '--verbose') {
@@ -86,6 +99,9 @@ export function printUsage(): void {
   console.error('');
   console.error('Options:');
   console.error(
+    '  --ignore-all                          Skip all ignorable differences (equivalent to all --ignore-* flags)',
+  );
+  console.error(
     '  --ignore-asset-ids                    Skip hunks where the only differences are asset IDs',
   );
   console.error(
@@ -93,6 +109,15 @@ export function printUsage(): void {
   );
   console.error(
     '                                        (e.g., $e3f4b1abd74dab96$exports, $00042ef5514babaf$var$...)',
+  );
+  console.error(
+    '  --ignore-source-map-url               Skip hunks where the only differences are source map URLs',
+  );
+  console.error(
+    '  --ignore-swapped-variables            Skip hunks where the only differences are swapped variable names',
+  );
+  console.error(
+    '                                        (e.g., t vs a where functionality is identical)',
   );
   console.error(
     '  --summary                            Show only hunk counts for changed files (directory mode only)',
@@ -123,21 +148,25 @@ function handlePrefixMatching(
   file2: string,
   options: CliOptions,
 ): void {
+  // Resolve to absolute paths first
+  const absFile1 = path.resolve(file1);
+  const absFile2 = path.resolve(file2);
+
   // Extract parent directory and prefix from each path
-  const dir1 = path.dirname(file1);
-  const dir2 = path.dirname(file2);
-  const prefix1 = path.basename(file1);
-  const prefix2 = path.basename(file2);
+  const dir1 = path.dirname(absFile1);
+  const dir2 = path.dirname(absFile2);
+  const prefix1 = path.basename(absFile1);
+  const prefix2 = path.basename(absFile2);
 
   // Check if parent directories exist
   if (!fs.existsSync(dir1) || !fs.statSync(dir1).isDirectory()) {
-    console.error(`Error: Path not found: ${file1}`);
+    console.error(`Error: Path not found: ${absFile1}`);
     process.exitCode = 1;
     return;
   }
 
   if (!fs.existsSync(dir2) || !fs.statSync(dir2).isDirectory()) {
-    console.error(`Error: Path not found: ${file2}`);
+    console.error(`Error: Path not found: ${absFile2}`);
     process.exitCode = 1;
     return;
   }
@@ -259,6 +288,8 @@ function handlePrefixMatching(
           diff,
           options.ignoreAssetIds,
           options.ignoreUnminifiedRefs,
+          options.ignoreSourceMapUrl,
+          options.ignoreSwappedVariables,
         );
         const hasChanges = diff.some((e) => e.type !== 'equal');
 
@@ -274,6 +305,8 @@ function handlePrefixMatching(
           diff,
           options.ignoreAssetIds,
           options.ignoreUnminifiedRefs,
+          options.ignoreSourceMapUrl,
+          options.ignoreSwappedVariables,
         );
         const hasChanges = diff.some((e) => e.type !== 'equal');
 
@@ -284,11 +317,13 @@ function handlePrefixMatching(
           }
           printDiff(
             diff,
-            file1.relativePath,
-            file2.relativePath,
+            file1.fullPath,
+            file2.fullPath,
             3,
             options.ignoreAssetIds,
             options.ignoreUnminifiedRefs,
+            options.ignoreSourceMapUrl,
+            options.ignoreSwappedVariables,
             false,
           );
         } else {
@@ -298,10 +333,10 @@ function handlePrefixMatching(
           }
           console.log(`${colors.cyan}=== Comparing files ===${colors.reset}`);
           console.log(
-            `${colors.yellow}File 1:${colors.reset} ${file1.relativePath}`,
+            `${colors.yellow}File 1:${colors.reset} ${file1.fullPath}`,
           );
           console.log(
-            `${colors.yellow}File 2:${colors.reset} ${file2.relativePath}`,
+            `${colors.yellow}File 2:${colors.reset} ${file2.fullPath}`,
           );
           console.log();
           console.log(
@@ -369,11 +404,13 @@ function handlePrefixMatching(
   const diff = computeDiff(lines1, lines2);
   const result = printDiff(
     diff,
-    files1[0].relativePath,
-    files2[0].relativePath,
+    files1[0].fullPath,
+    files2[0].fullPath,
     3,
     options.ignoreAssetIds,
     options.ignoreUnminifiedRefs,
+    options.ignoreSourceMapUrl,
+    options.ignoreSwappedVariables,
     options.summaryMode,
   );
 
@@ -425,12 +462,14 @@ export function main(): void {
   const stat2 = fs.statSync(file2);
 
   if (stat1.isDirectory() && stat2.isDirectory()) {
-    // Compare directories
+    // Compare directories (paths will be resolved to absolute inside compareDirectories)
     compareDirectories(
       file1,
       file2,
       options.ignoreAssetIds,
       options.ignoreUnminifiedRefs,
+      options.ignoreSourceMapUrl,
+      options.ignoreSwappedVariables,
       options.summaryMode,
       options.verbose,
       options.sizeThreshold,
@@ -444,8 +483,12 @@ export function main(): void {
   }
 
   // Both are files - compare them
-  const lines1 = readAndDeminify(file1);
-  const lines2 = readAndDeminify(file2);
+  // Resolve to absolute paths
+  const absFile1 = path.resolve(file1);
+  const absFile2 = path.resolve(file2);
+
+  const lines1 = readAndDeminify(absFile1);
+  const lines2 = readAndDeminify(absFile2);
 
   if (!lines1 || !lines2) {
     return; // Error already printed
@@ -455,11 +498,13 @@ export function main(): void {
   const diff = computeDiff(lines1, lines2);
   printDiff(
     diff,
-    file1,
-    file2,
+    absFile1,
+    absFile2,
     3,
     options.ignoreAssetIds,
     options.ignoreUnminifiedRefs,
+    options.ignoreSourceMapUrl,
+    options.ignoreSwappedVariables,
     options.summaryMode,
   );
 
@@ -469,6 +514,7 @@ export function main(): void {
       diff,
       options.ignoreAssetIds,
       options.ignoreUnminifiedRefs,
+      options.ignoreSourceMapUrl,
     );
     const hasChanges = diff.some((e) => e.type !== 'equal');
     console.log();
