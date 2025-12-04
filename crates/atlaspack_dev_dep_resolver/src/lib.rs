@@ -164,11 +164,6 @@ impl<'a> EsmGraphBuilder<'a> {
                 invalidations.invalidate_on_file_change(&p);
                 self.build(&p)?;
               }
-              Ok((Resolution::Builtin(builtin), _)) => {
-                if builtin == "fs" || builtin == "node:fs" {
-                  tracing::error!("builtin fs: {} {:?}", import.specifier(), file);
-                }
-              }
               _ => {
                 // Ignore dependencies that don't resolve to anything.
                 // The resolver calls invalidate_on_file_create already.
