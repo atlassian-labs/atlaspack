@@ -8,7 +8,7 @@ use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::{AtlaspackOptions, SourceField, Targets};
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
-use atlaspack_memoization_cache::{CacheHandler, LmdbCacheReaderWriter};
+use atlaspack_memoization_cache::{CacheHandler, LmdbCacheReaderWriter, StatsSnapshot};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::DatabaseHandle;
@@ -231,6 +231,11 @@ impl Atlaspack {
           .respond_to_fs_events(events),
       )
     })
+  }
+
+  /// Get cache statistics
+  pub async fn get_cache_stats_async(&self) -> StatsSnapshot {
+    self.request_tracker.read().await.get_cache_stats()
   }
 
   #[tracing::instrument(level = "info", skip_all)]

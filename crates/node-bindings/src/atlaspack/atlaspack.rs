@@ -195,6 +195,45 @@ pub fn atlaspack_napi_respond_to_fs_events(
   Ok(promise)
 }
 
+#[napi(object)]
+pub struct CacheStats {
+  pub hits: u32,
+  pub misses: u32,
+  pub uncacheables: u32,
+}
+
+#[tracing::instrument(level = "debug", skip_all)]
+#[napi]
+pub fn atlaspack_napi_get_cache_stats(
+  env: Env,
+  atlaspack_napi: AtlaspackNapi,
+) -> napi::Result<JsObject> {
+  let (deferred, promise) = env.create_deferred()?;
+
+  thread::spawn({
+    let atlaspack_ref = atlaspack_napi.clone();
+    move || {
+      let stats = {
+        let atlaspack = atlaspack_ref.lock();
+        // Use tokio runtime to await the async function
+        atlaspack
+          .runtime
+          .block_on(atlaspack.get_cache_stats_async())
+      };
+
+      deferred.resolve(move |_env| {
+        Ok(CacheStats {
+          hits: stats.hits as u32,
+          misses: stats.misses as u32,
+          uncacheables: stats.uncacheables as u32,
+        })
+      })
+    }
+  });
+
+  Ok(promise)
+}
+
 /// Check that the LMDB database is healthy
 ///
 /// JavaScript does all its writes through a single thread, which is not this handle. If we want

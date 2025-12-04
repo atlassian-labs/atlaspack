@@ -2,9 +2,11 @@ import {
   atlaspackNapiCreate,
   atlaspackNapiBuildAssetGraph,
   atlaspackNapiRespondToFsEvents,
+  atlaspackNapiGetCacheStats,
   AtlaspackNapi,
   Lmdb,
   AtlaspackNapiOptions,
+  CacheStats,
 } from '@atlaspack/rust';
 import {NapiWorkerPool} from './NapiWorkerPool';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
@@ -107,5 +109,9 @@ export class AtlaspackV3 {
     }
 
     return needsRebuild;
+  }
+
+  async getCacheStats(): Promise<CacheStats> {
+    return (await atlaspackNapiGetCacheStats(this._atlaspack_napi)) as CacheStats;
   }
 }

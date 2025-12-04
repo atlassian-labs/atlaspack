@@ -186,18 +186,23 @@ export class SideEffectDetector {
         'chown',
       ];
 
+      const promises = fs.promises as unknown as Record<
+        string,
+        (...args: any[]) => any
+      >;
       promiseMethodsToPatch.forEach((method) => {
-        if (typeof fs.promises[method] === 'function') {
+        if (typeof promises[method] === 'function') {
           const originalKey = `promises_${method}`;
-          this.originalMethods[originalKey] = fs.promises[method];
+          this.originalMethods[originalKey] = promises[method];
+          // eslint-disable-next-line @typescript-eslint/no-this-alias
           const self = this;
 
-          fs.promises[method] = function (path, ...args) {
+          promises[method] = function (path: unknown, ...args: unknown[]) {
             const context = self.asyncStorage.getStore();
             if (context) {
               context.fsUsage.push({
                 method: `promises.${method}`,
-                path: typeof path === 'string' ? path : path?.toString(),
+                path: typeof path === 'string' ? path : String(path),
               });
             }
 
@@ -218,6 +223,7 @@ export class SideEffectDetector {
     }
 
     this.originalMethods.processEnv = process.env;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     const allowedVars = new Set([
       'NODE_V8_COVERAGE',

@@ -1218,7 +1218,7 @@ export type MultiThreadValidator = {
  */
 export type Validator = DedicatedThreadValidator | MultiThreadValidator;
 
-interface TransformerConditions {
+export interface TransformerConditions {
   enabled?: boolean;
   fileMatch?: Array<string>;
   codeMatch?: Array<string>;
