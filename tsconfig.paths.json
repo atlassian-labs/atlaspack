@@ -381,6 +381,9 @@
     },
     {
       "path": "./packages/core/source-map/tsconfig.json"
+    },
+    {
+      "path": "./packages/dev/dist-differ/tsconfig.json"
     }
   ]
 }
