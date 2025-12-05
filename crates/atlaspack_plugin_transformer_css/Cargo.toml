@@ -15,7 +15,6 @@ atlaspack_core = { path = "../atlaspack_core" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 lightningcss = { workspace = true, features = ["browserslist", "sourcemap"] }
 parcel_sourcemap_ext = {  workspace = true }
-parcel_sourcemap = { path = "../parcel_sourcemap" }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 
