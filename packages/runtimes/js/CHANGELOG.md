@@ -1,5 +1,14 @@
 # @atlaspack/runtime-js
 
+## 2.19.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.3
+  - @atlaspack/types-internal@2.21.3
+  - @atlaspack/plugin@2.14.42
+
 ## 2.19.8
 
 ### Patch Changes

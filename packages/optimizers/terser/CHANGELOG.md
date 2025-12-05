@@ -1,5 +1,14 @@
 # @atlaspack/optimizer-terser
 
+## 2.15.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.1.3
+  - @atlaspack/utils@3.2.3
+  - @atlaspack/plugin@2.14.42
+
 ## 2.15.2
 
 ### Patch Changes
