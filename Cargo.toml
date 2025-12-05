@@ -52,6 +52,7 @@ crossbeam-channel = "0.5.14"
 data-encoding = "2.6.0"
 data-url = "0.1.1"
 derive_builder = "0.20.2"
+derivative = "2.2.0"
 dunce = "1.0.5"
 dyn-hash = "0.2.0"
 env_logger = "0.11.8"
@@ -151,7 +152,7 @@ serde_yaml = "0.9.34+deprecated"
 
 # CANNOT UPDATE
 ## rkyv includes a breaking change in a minor release which breaks parcel_sourcemap
-parcel_sourcemap_ext = { package = "parcel_sourcemap",  version="2.1.1" }
+parcel_sourcemap_ext = { package = "parcel_sourcemap", version = "2.1.1" }
 rkyv = "0.7.38"
 
 ## Other

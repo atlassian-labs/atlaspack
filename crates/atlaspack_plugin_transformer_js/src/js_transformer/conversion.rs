@@ -336,16 +336,6 @@ pub(crate) fn convert_result(
   asset.is_constant_module = result.is_constant_module;
 
   if transformer_config.conditional_bundling {
-    let mut converted = vec![];
-
-    for condition in result.conditions.iter() {
-      converted.push(serde_json::json!({
-        "key": condition.key.to_string(),
-        "ifTruePlaceholder": condition.if_true_placeholder,
-        "ifFalsePlaceholder": condition.if_false_placeholder,
-      }));
-    }
-
     asset.conditions = result.conditions;
   }
 

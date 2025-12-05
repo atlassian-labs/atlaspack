@@ -108,8 +108,7 @@ pub async fn run_pipeline(input: RunPipelineInput) -> anyhow::Result<RunPipeline
 impl Cacheable for RunPipelineInput {
   fn cache_key(&self) -> Option<(String, String)> {
     let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
-    // Using asset id for now
-    self.asset.id.hash(&mut hasher);
+    self.asset.hash(&mut hasher);
 
     // If the pipeline has no cache key then it is uncachable
     self.pipeline.cache_key?.hash(&mut hasher);
