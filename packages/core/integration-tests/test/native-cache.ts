@@ -9,6 +9,7 @@ import {
   run,
 } from '@atlaspack/test-utils';
 import {LMDBLiteCache} from '@atlaspack/cache';
+import {initializeMonitoring} from '@atlaspack/rust';
 
 /**
  * Integration tests for the native (Rust) transformer caching mechanism.
@@ -20,6 +21,11 @@ import {LMDBLiteCache} from '@atlaspack/cache';
  */
 describe.v3('Native cache', function () {
   let dir: string;
+
+  before(function () {
+    // Initialize Rust tracing
+    initializeMonitoring();
+  });
 
   beforeEach(async function () {
     dir = path.join(__dirname, 'native-cache-fixture');
