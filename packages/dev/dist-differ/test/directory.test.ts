@@ -108,7 +108,8 @@ describe('compareDirectories', () => {
       consoleOutput.push(args.join(' '));
     };
 
-    originalExitCode = process.exitCode;
+    originalExitCode =
+      typeof process.exitCode === 'number' ? process.exitCode : undefined;
     process.exitCode = 0;
   });
 

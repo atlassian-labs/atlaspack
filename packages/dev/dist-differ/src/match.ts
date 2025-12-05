@@ -249,13 +249,24 @@ export function matchFilesByPrefix(
           }
 
           // Sort by size difference (smallest first) for best matches
+          // Add deterministic tie-breaking for consistent results
           candidatePairs.sort((a, b) => {
             // First by percentage difference
             if (a.percentDiff !== b.percentDiff) {
               return a.percentDiff - b.percentDiff;
             }
             // Then by absolute difference
-            return a.sizeDiff - b.sizeDiff;
+            if (a.sizeDiff !== b.sizeDiff) {
+              return a.sizeDiff - b.sizeDiff;
+            }
+            // Deterministic tie-breaker: sort by file paths for consistent ordering
+            const pathCompare = a.file1.relativePath.localeCompare(
+              b.file1.relativePath,
+            );
+            if (pathCompare !== 0) {
+              return pathCompare;
+            }
+            return a.file2.relativePath.localeCompare(b.file2.relativePath);
           });
 
           // Greedily match pairs, ensuring each file is only matched once

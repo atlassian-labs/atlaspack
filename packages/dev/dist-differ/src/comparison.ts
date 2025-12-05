@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-import * as fs from 'fs';
 import * as path from 'path';
 import {readAndDeminify} from './utils/deminify';
 import {computeDiff} from './diff';
@@ -24,33 +23,43 @@ export function compareFiles(
   file2: string,
   options: CliOptions,
 ): void {
-  const absFile1 = path.resolve(file1);
-  const absFile2 = path.resolve(file2);
+  try {
+    const absFile1 = path.resolve(file1);
+    const absFile2 = path.resolve(file2);
 
-  const lines1 = readAndDeminify(absFile1);
-  const lines2 = readAndDeminify(absFile2);
+    const lines1 = readAndDeminify(absFile1);
+    const lines2 = readAndDeminify(absFile2);
 
-  if (!lines1 || !lines2) {
-    return; // Error already printed
-  }
+    if (!lines1 || !lines2) {
+      return; // Error already printed
+    }
 
-  // Compute and print diff
-  const diff = computeDiff(lines1, lines2);
-  const result = printDiff(
-    diff,
-    absFile1,
-    absFile2,
-    3,
-    options.ignoreAssetIds,
-    options.ignoreUnminifiedRefs,
-    options.ignoreSourceMapUrl,
-    options.ignoreSwappedVariables,
-    options.summaryMode,
-  );
+    // Compute and print diff
+    const diff = computeDiff(lines1, lines2);
+    const result = printDiff(
+      diff,
+      absFile1,
+      absFile2,
+      3,
+      options.ignoreAssetIds,
+      options.ignoreUnminifiedRefs,
+      options.ignoreSourceMapUrl,
+      options.ignoreSwappedVariables,
+      options.summaryMode,
+    );
 
-  // Show summary for file comparison
-  if (options.summaryMode) {
-    printComparisonSummary(result.hunkCount, result.hasChanges);
+    // Show summary for file comparison
+    if (options.summaryMode) {
+      printComparisonSummary(result.hunkCount, result.hasChanges);
+    }
+  } catch (error) {
+    console.error(
+      `Unexpected error comparing files: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    if (error instanceof Error && error.stack) {
+      console.error(error.stack);
+    }
+    process.exitCode = 1;
   }
 }
 
@@ -111,42 +120,54 @@ function compareSingleFilePair(
   prefix2: string,
   options: CliOptions,
 ): void {
-  const colors = getColors();
+  try {
+    const colors = getColors();
 
-  console.log(`${colors.cyan}=== Matching files by prefix ===${colors.reset}`);
-  console.log(
-    `${colors.yellow}Prefix 1:${colors.reset} ${prefix1} -> ${file1.relativePath}`,
-  );
-  console.log(
-    `${colors.yellow}Prefix 2:${colors.reset} ${prefix2} -> ${file2.relativePath}`,
-  );
-  console.log();
+    console.log(
+      `${colors.cyan}=== Matching files by prefix ===${colors.reset}`,
+    );
+    console.log(
+      `${colors.yellow}Prefix 1:${colors.reset} ${prefix1} -> ${file1.relativePath}`,
+    );
+    console.log(
+      `${colors.yellow}Prefix 2:${colors.reset} ${prefix2} -> ${file2.relativePath}`,
+    );
+    console.log();
 
-  // Read and de-minify files
-  const lines1 = readAndDeminify(file1.fullPath);
-  const lines2 = readAndDeminify(file2.fullPath);
+    // Read and de-minify files
+    const lines1 = readAndDeminify(file1.fullPath);
+    const lines2 = readAndDeminify(file2.fullPath);
 
-  if (!lines1 || !lines2) {
-    return; // Error already printed
-  }
+    if (!lines1 || !lines2) {
+      return; // Error already printed
+    }
 
-  // Compute and print diff
-  const diff = computeDiff(lines1, lines2);
-  const result = printDiff(
-    diff,
-    file1.fullPath,
-    file2.fullPath,
-    3,
-    options.ignoreAssetIds,
-    options.ignoreUnminifiedRefs,
-    options.ignoreSourceMapUrl,
-    options.ignoreSwappedVariables,
-    options.summaryMode,
-  );
+    // Compute and print diff
+    const diff = computeDiff(lines1, lines2);
+    const result = printDiff(
+      diff,
+      file1.fullPath,
+      file2.fullPath,
+      3,
+      options.ignoreAssetIds,
+      options.ignoreUnminifiedRefs,
+      options.ignoreSourceMapUrl,
+      options.ignoreSwappedVariables,
+      options.summaryMode,
+    );
 
-  // Show summary for file comparison
-  if (options.summaryMode) {
-    printComparisonSummary(result.hunkCount, result.hasChanges);
+    // Show summary for file comparison
+    if (options.summaryMode) {
+      printComparisonSummary(result.hunkCount, result.hasChanges);
+    }
+  } catch (error) {
+    console.error(
+      `Unexpected error comparing files ${file1.relativePath} and ${file2.relativePath}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    if (error instanceof Error && error.stack) {
+      console.error(error.stack);
+    }
+    process.exitCode = 1;
   }
 }
 
@@ -236,69 +257,85 @@ function compareMatchedPairs(
   for (let i = 0; i < matched.length; i++) {
     const {file1, file2} = matched[i];
 
-    // Read and de-minify files
-    const lines1 = readAndDeminify(file1.fullPath);
-    const lines2 = readAndDeminify(file2.fullPath);
+    try {
+      // Read and de-minify files
+      const lines1 = readAndDeminify(file1.fullPath);
+      const lines2 = readAndDeminify(file2.fullPath);
 
-    if (!lines1 || !lines2) {
-      continue; // Error already printed
-    }
-
-    // Compute diff
-    const diff = computeDiff(lines1, lines2);
-    const hunkCount = countHunks(
-      diff,
-      options.ignoreAssetIds,
-      options.ignoreUnminifiedRefs,
-      options.ignoreSourceMapUrl,
-      options.ignoreSwappedVariables,
-    );
-    const hasChanges = diff.some((e) => e.type !== 'equal');
-
-    if (options.summaryMode) {
-      // In summary mode, just count hunks
-      if (hasChanges && hunkCount > 0) {
-        differentFiles++;
-        filesWithDifferences.push({path: file1.relativePath, hunkCount});
-        totalHunks += hunkCount;
-        hasAnyChanges = true;
-      } else {
-        identicalFiles++;
+      if (!lines1 || !lines2) {
+        continue; // Error already printed
       }
-    } else {
-      // In normal mode, print full diff only for files that differ
-      if (hasChanges && hunkCount > 0) {
-        differentFiles++;
-        totalHunks += hunkCount;
-        hasAnyChanges = true;
-        if (i > 0) {
-          console.log();
+
+      // Compute diff
+      const diff = computeDiff(lines1, lines2);
+      const hunkCount = countHunks(
+        diff,
+        options.ignoreAssetIds,
+        options.ignoreUnminifiedRefs,
+        options.ignoreSourceMapUrl,
+        options.ignoreSwappedVariables,
+      );
+      const hasChanges = diff.some((e) => e.type !== 'equal');
+
+      if (options.summaryMode) {
+        // In summary mode, just count hunks
+        if (hasChanges && hunkCount > 0) {
+          differentFiles++;
+          filesWithDifferences.push({path: file1.relativePath, hunkCount});
+          totalHunks += hunkCount;
+          hasAnyChanges = true;
+        } else {
+          identicalFiles++;
         }
-        printDiff(
-          diff,
-          file1.fullPath,
-          file2.fullPath,
-          3,
-          options.ignoreAssetIds,
-          options.ignoreUnminifiedRefs,
-          options.ignoreSourceMapUrl,
-          options.ignoreSwappedVariables,
-          false,
-        );
       } else {
-        identicalFiles++;
-        if (i > 0) {
+        // In normal mode, print full diff only for files that differ
+        if (hasChanges && hunkCount > 0) {
+          differentFiles++;
+          totalHunks += hunkCount;
+          hasAnyChanges = true;
+          if (i > 0) {
+            console.log();
+          }
+          printDiff(
+            diff,
+            file1.fullPath,
+            file2.fullPath,
+            3,
+            options.ignoreAssetIds,
+            options.ignoreUnminifiedRefs,
+            options.ignoreSourceMapUrl,
+            options.ignoreSwappedVariables,
+            false,
+          );
+        } else {
+          identicalFiles++;
+          if (i > 0) {
+            console.log();
+          }
+          const colors = getColors();
+          console.log(`${colors.cyan}=== Comparing files ===${colors.reset}`);
+          console.log(
+            `${colors.yellow}File 1:${colors.reset} ${file1.fullPath}`,
+          );
+          console.log(
+            `${colors.yellow}File 2:${colors.reset} ${file2.fullPath}`,
+          );
           console.log();
+          console.log(
+            `${colors.green}✓ Files are identical (after de-minification)${colors.reset}`,
+          );
         }
-        const colors = getColors();
-        console.log(`${colors.cyan}=== Comparing files ===${colors.reset}`);
-        console.log(`${colors.yellow}File 1:${colors.reset} ${file1.fullPath}`);
-        console.log(`${colors.yellow}File 2:${colors.reset} ${file2.fullPath}`);
-        console.log();
-        console.log(
-          `${colors.green}✓ Files are identical (after de-minification)${colors.reset}`,
-        );
       }
+    } catch (error) {
+      console.error(
+        `Unexpected error comparing files ${file1.relativePath} and ${file2.relativePath}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      if (error instanceof Error && error.stack) {
+        console.error(error.stack);
+      }
+      process.exitCode = 1;
+      // Continue with next file pair
+      continue;
     }
   }
 

@@ -91,8 +91,32 @@ export function linesDifferOnlyBySourceMapUrl(
 }
 
 /**
+ * Checks if a character at a given position is part of a valid JavaScript identifier context
+ * This ensures we don't match parts of longer words or strings
+ */
+function isValidIdentifierContext(
+  line: string,
+  start: number,
+  end: number,
+): boolean {
+  // Check character before the match
+  const before = start > 0 ? line[start - 1] : ' ';
+  // Check character after the match
+  const after = end < line.length ? line[end] : ' ';
+
+  // Valid identifier contexts:
+  // - Start of line or after non-word character (space, operator, etc.)
+  // - Before non-word character (space, operator, etc.)
+  // - After/before common JS operators: =, +, -, *, /, %, <, >, &, |, !, ?, :, ;, ,, ., (, ), [, ], {, }
+  const validBefore = /[\s=+\-*/%<>&|!?:;,.()[\]{}]/.test(before);
+  const validAfter = /[\s=+\-*/%<>&|!?:;,.()[\]{}]/.test(after);
+
+  return validBefore && validAfter;
+}
+
+/**
  * Finds all single-character or short variable names in a line
- * Returns a set of variable names that appear as identifiers (not in strings)
+ * Returns a set of variable names that appear as identifiers (not in strings or parts of words)
  */
 function findShortVariables(line: string): Set<string> {
   // Match short identifiers (1-3 characters) that are likely minified variables
@@ -104,6 +128,9 @@ function findShortVariables(line: string): Set<string> {
   shortVarPattern.lastIndex = 0;
   while ((match = shortVarPattern.exec(line)) !== null) {
     const varName = match[1];
+    const start = match.index;
+    const end = start + varName.length;
+
     // Skip common keywords and long names
     if (
       varName.length <= 3 &&
@@ -120,7 +147,8 @@ function findShortVariables(line: string): Set<string> {
         'true',
         'false',
         'undefined',
-      ].includes(varName)
+      ].includes(varName) &&
+      isValidIdentifierContext(line, start, end)
     ) {
       variables.add(varName);
     }
@@ -160,13 +188,32 @@ function findSwapMapping(
     const mapping = new Map<string, string>();
     mapping.set(onlyIn1[0], onlyIn2[0]);
 
-    // Test if this mapping works
+    // Test if this mapping works with word-boundary validation
+    const escapedVar = onlyIn1[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escapedVar}\\b`, 'g');
+
+    // First, validate that all matches are in valid identifier contexts
+    let match;
+    regex.lastIndex = 0;
+    const matches: Array<{start: number; end: number}> = [];
+    while ((match = regex.exec(line1)) !== null) {
+      const start = match.index;
+      const end = start + match[0].length;
+      if (!isValidIdentifierContext(line1, start, end)) {
+        // Invalid context found - this swap is not valid
+        return null;
+      }
+      matches.push({start, end});
+    }
+
+    // If all matches are valid, perform the replacement
     let testLine = line1;
-    const regex = new RegExp(
-      `\\b${onlyIn1[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
-      'g',
-    );
-    testLine = testLine.replace(regex, onlyIn2[0]);
+    // Replace from end to start to preserve offsets
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const {start, end} = matches[i];
+      testLine =
+        testLine.substring(0, start) + onlyIn2[0] + testLine.substring(end);
+    }
 
     if (testLine === line2) {
       return mapping;
@@ -221,17 +268,47 @@ function findSwapMapping(
     }
   }
 
-  // Test if this mapping works
-  let testLine = line1;
+  // Test if this mapping works with word-boundary validation
+  // Validate all matches before doing any replacements
   const sortedMappings = Array.from(mapping.entries()).sort(
     (a, b) => b[0].length - a[0].length,
   );
+
+  // First pass: validate all variable occurrences are in valid contexts
+  for (const [from] of sortedMappings) {
+    const escapedVar = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escapedVar}\\b`, 'g');
+    let match;
+    regex.lastIndex = 0;
+    while ((match = regex.exec(line1)) !== null) {
+      const start = match.index;
+      const end = start + match[0].length;
+      if (!isValidIdentifierContext(line1, start, end)) {
+        // Invalid context found - this swap is not valid
+        return null;
+      }
+    }
+  }
+
+  // Second pass: perform replacements (from longest to shortest to preserve offsets)
+  let testLine = line1;
   for (const [from, to] of sortedMappings) {
-    const regex = new RegExp(
-      `\\b${from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
-      'g',
-    );
-    testLine = testLine.replace(regex, to);
+    const escapedVar = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escapedVar}\\b`, 'g');
+
+    // Collect all matches and replace from end to start
+    const matches: Array<{start: number; end: number}> = [];
+    let match;
+    regex.lastIndex = 0;
+    while ((match = regex.exec(testLine)) !== null) {
+      matches.push({start: match.index, end: match.index + match[0].length});
+    }
+
+    // Replace from end to start to preserve offsets
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const {start, end} = matches[i];
+      testLine = testLine.substring(0, start) + to + testLine.substring(end);
+    }
   }
 
   if (testLine === line2) {

@@ -200,17 +200,26 @@ export function isHunkOnlyUnminifiedRefs(hunkEntries: DiffEntry[]): boolean {
 
   // Quick check: if no line contains the pattern, skip expensive normalization
   let hasPattern = false;
-  for (const entry of [...removes, ...adds]) {
+  for (const entry of removes) {
     if (entry.line.includes('$exports') || entry.line.includes('$var$')) {
       hasPattern = true;
       break;
     }
   }
   if (!hasPattern) {
-    return false;
+    // Check adds too before returning false
+    for (const entry of adds) {
+      if (entry.line.includes('$exports') || entry.line.includes('$var$')) {
+        hasPattern = true;
+        break;
+      }
+    }
+    if (!hasPattern) {
+      return false;
+    }
   }
 
-  // Count normalized lines using a Map (faster than sorting)
+  // Count normalized lines using a Map with early-exit optimization
   const removeCounts = new Map<string, number>();
   for (const entry of removes) {
     const normalized = normalizeUnminifiedRefs(entry.line);
@@ -220,10 +229,18 @@ export function isHunkOnlyUnminifiedRefs(hunkEntries: DiffEntry[]): boolean {
   const addCounts = new Map<string, number>();
   for (const entry of adds) {
     const normalized = normalizeUnminifiedRefs(entry.line);
-    addCounts.set(normalized, (addCounts.get(normalized) || 0) + 1);
+    const currentCount = addCounts.get(normalized) || 0;
+    const removeCount = removeCounts.get(normalized) || 0;
+
+    // Early-exit: if we've already exceeded the remove count, they can't match
+    if (currentCount + 1 > removeCount) {
+      return false;
+    }
+
+    addCounts.set(normalized, currentCount + 1);
   }
 
-  // Check if counts match
+  // Check if counts match (early-exit already handled most cases)
   if (removeCounts.size !== addCounts.size) {
     return false;
   }
