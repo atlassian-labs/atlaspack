@@ -82,6 +82,7 @@ pub struct RunRequestContext<C: CacheReaderWriter = LmdbCacheReaderWriter> {
 
 impl RunRequestContext<InMemoryReaderWriter> {
   /// Create a test context with an in-memory cache
+  #[cfg(test)]
   pub fn new_for_testing(plugins: PluginsRef) -> Self {
     use atlaspack_core::config_loader::ConfigLoader;
     use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;

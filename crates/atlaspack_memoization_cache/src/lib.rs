@@ -1,8 +1,9 @@
 use lmdb_js_lite::DatabaseHandle;
-use rand::Rng;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use std::collections::hash_map::DefaultHasher;
 use std::future::Future;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -141,27 +142,26 @@ pub struct StatsSnapshot {
   pub validations: u64,
 }
 
+pub enum CacheMode {
+  Off,
+  /// Validate a percentage of runs, but never return cached values
+  Shadow(f32),
+  /// Enable with a percentage of validation runs
+  On(f32),
+}
+
 pub struct CacheHandler<T: CacheReaderWriter> {
   reader_writer: T,
-  validation_rate: f32, // Probability of running validation (0.0 to 1.0)
   stats: Stats,
+  mode: CacheMode,
 }
 
 impl<T: CacheReaderWriter> CacheHandler<T> {
-  pub fn new(reader_writer: T) -> Self {
+  pub fn new(reader_writer: T, mode: CacheMode) -> Self {
     CacheHandler {
       reader_writer,
-      validation_rate: 0.0, // No validation by default
       stats: Stats::default(),
-    }
-  }
-
-  pub fn new_with_validation(reader_writer: T, validation_rate: f32) -> Self {
-    let validation_rate = validation_rate.clamp(0.0, 1.0);
-    CacheHandler {
-      reader_writer,
-      validation_rate,
-      stats: Stats::default(),
+      mode,
     }
   }
 
@@ -187,13 +187,55 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
     FutureResult: Future<Output = Result<Res, Error>>,
     RunFn: FnOnce(Input) -> FutureResult,
   {
-    // First hash the label and input to create a cache key
-    let Some((label, cache_key)) = input.cache_key() else {
-      // Input isn't cacheable so just run the function directly
-      self.stats.increment_uncacheables();
-      return run_fn(input).await;
-    };
+    match self.mode {
+      CacheMode::Off => run_fn(input).await,
+      CacheMode::Shadow(validation_rate) => {
+        // First hash the label and input to create a cache key
+        let Some((label, cache_key)) = input.cache_key() else {
+          // Input isn't cacheable so just run the function directly
+          self.stats.increment_uncacheables();
+          return run_fn(input).await;
+        };
 
+        if !self.should_validate(&label, validation_rate) {
+          return run_fn(input).await;
+        }
+
+        self
+          .run_with_cache(label, cache_key, input, run_fn, true)
+          .await
+      }
+      CacheMode::On(validation_rate) => {
+        // First hash the label and input to create a cache key
+        let Some((label, cache_key)) = input.cache_key() else {
+          // Input isn't cacheable so just run the function directly
+          self.stats.increment_uncacheables();
+          return run_fn(input).await;
+        };
+
+        let should_validate = self.should_validate(&label, validation_rate);
+
+        self
+          .run_with_cache(label, cache_key, input, run_fn, should_validate)
+          .await
+      }
+    }
+  }
+
+  async fn run_with_cache<Input, RunFn, Res, FutureResult, Error>(
+    &self,
+    label: String,
+    cache_key: String,
+    input: Input,
+    run_fn: RunFn,
+    should_validate: bool,
+  ) -> Result<Res, Error>
+  where
+    Input: Cacheable,
+    Res: CacheResponse,
+    FutureResult: Future<Output = Result<Res, Error>>,
+    RunFn: FnOnce(Input) -> FutureResult,
+  {
     // Then check the cache for an existing value
     let cache_result = match self.reader_writer.read(&cache_key) {
       Ok(value) => value,
@@ -206,10 +248,7 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
       }
     };
 
-    // If we have a cached value, try to deserialize it and return it
-    if !self.should_validate()
-      && let Some(value) = cache_result.as_ref()
-    {
+    if !should_validate && let Some(value) = cache_result.as_ref() {
       match deserialize(value) {
         Ok(value) => {
           self.stats.increment_hits();
@@ -276,9 +315,16 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
   }
 
   /// Determines if we should validate this cache hit based on the configured sampling rate
-  fn should_validate(&self) -> bool {
-    let random: f32 = rand::thread_rng().gen_range(0.0..1.0);
-    random < self.validation_rate
+  fn should_validate(&self, label: &str, validation_rate: f32) -> bool {
+    // Use label as seed to get consistent results per key
+    let mut hasher = DefaultHasher::new();
+    label.hash(&mut hasher);
+    let hash = hasher.finish();
+
+    // Convert hash to a float between 0.0 and 1.0
+    let normalized = (hash as f64) / (u64::MAX as f64);
+
+    normalized < validation_rate as f64
   }
 }
 
@@ -355,7 +401,7 @@ mod test {
   async fn handles_no_cached_value() {
     let reader_writer = SimpleMockReaderWriter::new_empty();
 
-    let handler = CacheHandler::new(reader_writer);
+    let handler = CacheHandler::new(reader_writer, CacheMode::On(0.0));
 
     let input = CacheableString::new("hello_result", "Hello");
     let result = handler
@@ -373,7 +419,7 @@ mod test {
     let cached_value = serde_json::to_vec(&cached_response).unwrap();
     let reader_writer = SimpleMockReaderWriter::new_with_cached_value(cached_value);
 
-    let handler = CacheHandler::new(reader_writer);
+    let handler = CacheHandler::new(reader_writer, CacheMode::On(0.0));
 
     let input = CacheableString::new("test_label", "Hello");
     let result = handler
@@ -389,7 +435,7 @@ mod test {
   #[tokio::test]
   async fn caches_second_call() {
     let reader_writer = InMemoryReaderWriter::default();
-    let handler = CacheHandler::new(reader_writer);
+    let handler = CacheHandler::new(reader_writer, CacheMode::On(0.0));
 
     let input1 = CacheableString::new("test_label", "Hello");
     let result = handler
@@ -411,7 +457,7 @@ mod test {
   #[tokio::test]
   async fn handles_cache_read_error() {
     let reader_writer = ErrorMockReaderWriter::new_with_read_error();
-    let handler = CacheHandler::new(reader_writer);
+    let handler = CacheHandler::new(reader_writer, CacheMode::On(0.0));
 
     // Should still succeed even if cache read fails
     let input = CacheableString::new("test_label", "Hello");
@@ -426,7 +472,7 @@ mod test {
   #[tokio::test]
   async fn handles_cache_write_error() {
     let reader_writer = ErrorMockReaderWriter::new_with_write_error();
-    let handler = CacheHandler::new(reader_writer);
+    let handler = CacheHandler::new(reader_writer, CacheMode::On(0.0));
 
     // Should still succeed even if cache write fails
     let input = CacheableString::new("test_label", "Hello");
@@ -487,7 +533,7 @@ mod test {
     let reader_writer = SimpleMockReaderWriter::new_with_cached_value(cached_value);
 
     // Default handler has validation disabled
-    let handler = CacheHandler::new(reader_writer);
+    let handler = CacheHandler::new(reader_writer, CacheMode::On(0.0));
 
     let input = CacheableString::new("test_label", "Hello");
     let result: Result<TestResponse, ()> = handler
