@@ -367,6 +367,42 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
     let env_vars = self.env_variables(&asset);
 
+    let enable_ssr_typeof_replacement = env_vars
+      .get(&Atom::from("NATIVE_SSR_TYPEOF_REPLACEMENT"))
+      .is_some_and(|v| v == "true");
+    let global_aliasing_config = match env_vars.get(&Atom::from("NATIVE_GLOBAL_ALIASING")) {
+      Some(value) => match serde_json::from_str::<HashMap<String, String>>(value) {
+        Ok(config) => Some(config),
+        Err(err) => {
+          eprintln!(
+            "Failed to parse NATIVE_GLOBAL_ALIASING JSON: {}. Config will not be applied.",
+            err
+          );
+          None
+        }
+      },
+      None => None,
+    };
+    let enable_lazy_loading =
+      env_vars.get(&Atom::from("NATIVE_LAZY_LOADING")) == Some(&Atom::from("true"));
+    let enable_react_hooks_removal =
+      env_vars.get(&Atom::from("NATIVE_REACT_HOOKS_REMOVAL")) == Some(&Atom::from("true"));
+    let enable_react_async_import_lift =
+      env_vars.get(&Atom::from("NATIVE_REACT_ASYNC_IMPORT_LIFT")) == Some(&Atom::from("true"));
+    let react_async_lift_by_default = env_vars
+      .get(&Atom::from("REACT_ASYNC_IMPORT_LIFTING_BY_DEFAULT"))
+      == Some(&Atom::from("true"));
+    let react_async_lift_report_level = env_vars
+      .get(&Atom::from("REACT_ASYNC_LIFT_REPORT_LEVEL"))
+      .cloned()
+      .unwrap_or_else(|| Atom::from("none"))
+      .to_string();
+    let enable_static_prevaluation =
+      env_vars.get(&Atom::from("NATIVE_PREVALUATION")) == Some(&Atom::from("true"));
+    let enable_dead_returns_removal =
+      env_vars.get(&Atom::from("NATIVE_DEAD_RETURNS_REMOVAL")) == Some(&Atom::from("true"));
+    let enable_unused_bindings_removal =
+      env_vars.get(&Atom::from("NATIVE_UNUSED_BINDINGS_REMOVAL")) == Some(&Atom::from("true"));
     let sync_dynamic_import_config = if env.context.is_tesseract() {
       self.sync_dynamic_import_config()
     } else {
@@ -489,6 +525,16 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         .options
         .feature_flags
         .bool_enabled("nestedPromiseImportFix"),
+      enable_ssr_typeof_replacement,
+      global_aliasing_config,
+      enable_lazy_loading,
+      enable_react_hooks_removal,
+      enable_react_async_import_lift,
+      react_async_lift_by_default,
+      react_async_lift_report_level,
+      enable_static_prevaluation,
+      enable_dead_returns_removal,
+      enable_unused_bindings_removal,
       sync_dynamic_import_config,
       ..atlaspack_js_swc_core::Config::default()
     };
