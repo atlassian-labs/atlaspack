@@ -1865,6 +1865,34 @@ export type RuntimeAsset = {
   readonly env?: EnvironmentOptions;
   readonly priority?: RuntimeAssetPriority;
   readonly runtimeAssetRequiringExecutionOnLoad?: boolean;
+  /**
+   * Pre-computed symbol information for runtime assets to skip symbol propagation.
+   * If provided, the runtime asset graph will use this data instead of running
+   * symbol propagation analysis.
+   */
+  readonly symbolData?: {
+    readonly symbols?: ReadonlyMap<
+      Symbol,
+      {
+        readonly local: Symbol;
+        readonly loc?: SourceLocation | null | undefined;
+        readonly meta?: Meta | null | undefined;
+      }
+    >;
+    readonly dependencies?: ReadonlyArray<{
+      readonly specifier: DependencySpecifier;
+      readonly symbols?: ReadonlyMap<
+        Symbol,
+        {
+          readonly local: Symbol;
+          readonly loc?: SourceLocation | null | undefined;
+          readonly isWeak?: boolean;
+          readonly meta?: Meta | null | undefined;
+        }
+      >;
+      readonly usedSymbols?: ReadonlySet<Symbol>;
+    }>;
+  };
 };
 
 /**

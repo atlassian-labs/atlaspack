@@ -9,6 +9,7 @@ import type {
   DevDepRequest,
   AtlaspackOptions,
   DevDepRequestRef,
+  DependencyNode,
 } from './types';
 import type {AtlaspackConfig} from './AtlaspackConfig';
 import type PluginOptions from './public/PluginOptions';
@@ -19,6 +20,7 @@ import assert from 'assert';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
 import {nodeFromAssetGroup} from './AssetGraph';
+import type AssetGraph from './AssetGraph';
 import BundleGraph from './public/BundleGraph';
 import InternalBundleGraph, {bundleGraphEdgeTypes} from './BundleGraph';
 import {NamedBundle} from './public/Bundle';
@@ -276,6 +278,9 @@ export default async function applyRuntimes<TResult extends RequestResult>({
   let {assetGraph: runtimesAssetGraph, changedAssets} =
     await reconcileNewRuntimes(api, connections, optionsRef);
 
+  // Apply pre-computed symbol data from runtime assets to skip symbol propagation
+  applyRuntimeSymbolData(runtimesAssetGraph, connections);
+
   // Convert the runtime AssetGraph into a BundleGraph, this includes assigning
   // the assets their public ids
   let runtimesBundleGraph = InternalBundleGraph.fromAssetGraph(
@@ -400,6 +405,80 @@ export default async function applyRuntimes<TResult extends RequestResult>({
   }
 
   return changedAssets;
+}
+
+/**
+ * Apply pre-computed symbol data from runtime assets to the asset graph
+ * to avoid running symbol propagation on runtime code we control.
+ */
+function applyRuntimeSymbolData(
+  assetGraph: AssetGraph,
+  connections: Array<RuntimeConnection>,
+) {
+  for (let {assetGroup} of connections) {
+    // Find the asset group node in the graph
+    let assetGroupNode = nodeFromAssetGroup(assetGroup);
+    let assetGroupAssetNodeIds = assetGraph.getNodeIdsConnectedFrom(
+      assetGraph.getNodeIdByContentKey(assetGroupNode.id),
+    );
+
+    if (assetGroupAssetNodeIds.length !== 1) {
+      continue; // Skip if not a simple 1:1 asset group to asset mapping
+    }
+
+    let runtimeAssetNodeId = assetGroupAssetNodeIds[0];
+    let runtimeAssetNode = assetGraph.getNode(runtimeAssetNodeId);
+    if (!runtimeAssetNode || runtimeAssetNode.type !== 'asset') {
+      continue;
+    }
+
+    // Check if this runtime asset has symbol data
+    let symbolData = (assetGroup as any).symbolData; // Type assertion since we extended RuntimeAsset
+    if (!symbolData) {
+      continue; // No pre-computed symbols, let normal processing handle it
+    }
+
+    // Apply asset symbols
+    if (symbolData.symbols) {
+      runtimeAssetNode.value.symbols = new Map(symbolData.symbols);
+    }
+
+    // Apply dependency symbol data
+    if (symbolData.dependencies) {
+      let outgoingDeps = assetGraph
+        .getNodeIdsConnectedFrom(runtimeAssetNodeId)
+        .map((id) => assetGraph.getNode(id))
+        .filter((node) => node?.type === 'dependency')
+        .map((node) => node as DependencyNode);
+
+      for (let depSymbolData of symbolData.dependencies) {
+        // Find matching dependency by specifier
+        let matchingDep = outgoingDeps.find(
+          (depNode) => depNode.value.specifier === depSymbolData.specifier,
+        );
+
+        if (matchingDep) {
+          // Apply dependency symbols
+          if (depSymbolData.symbols) {
+            matchingDep.value.symbols = new Map(depSymbolData.symbols);
+          }
+
+          // Apply used symbols data directly to skip propagation
+          if (depSymbolData.usedSymbols) {
+            matchingDep.usedSymbolsDown = new Set(depSymbolData.usedSymbols);
+            // For runtime assets, usedSymbolsUp will be the same as usedSymbolsDown
+            // since we know exactly what we're using
+            let usedSymbolsUp = new Map();
+            for (let symbol of depSymbolData.usedSymbols) {
+              // Mark as resolved to external (null) since runtime deps are typically external
+              usedSymbolsUp.set(symbol, null);
+            }
+            matchingDep.usedSymbolsUp = usedSymbolsUp;
+          }
+        }
+      }
+    }
+  }
 }
 
 function reconcileNewRuntimes<TResult extends RequestResult>(
