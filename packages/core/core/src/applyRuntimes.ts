@@ -283,6 +283,10 @@ export default async function applyRuntimes<TResult extends RequestResult>({
     options.mode === 'production',
     bundleGraph._publicIdByAssetId,
     bundleGraph._assetPublicIds,
+    {
+      // Skip symbol propagation for runtime assets - they should have pre-computed symbol data
+      skipSymbolPropagation: true,
+    },
   );
 
   // Merge the runtimes bundle graph into the main bundle graph.
