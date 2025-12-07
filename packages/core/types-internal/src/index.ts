@@ -1867,7 +1867,7 @@ export type SymbolData = {
       {
         readonly local: Symbol;
         readonly loc?: SourceLocation | null | undefined;
-        readonly isWeak?: boolean;
+        readonly isWeak: boolean;
         readonly meta?: Meta | null | undefined;
       }
     >;

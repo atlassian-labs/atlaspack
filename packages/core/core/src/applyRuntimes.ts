@@ -24,7 +24,7 @@ import type AssetGraph from './AssetGraph';
 import BundleGraph from './public/BundleGraph';
 import InternalBundleGraph, {bundleGraphEdgeTypes} from './BundleGraph';
 import {NamedBundle} from './public/Bundle';
-import logger, {instrument, PluginLogger} from '@atlaspack/logger';
+import logger, {PluginLogger} from '@atlaspack/logger';
 import {hashString} from '@atlaspack/rust';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {dependencyToInternalDependency} from './public/Dependency';
@@ -437,15 +437,28 @@ function applyRuntimeSymbolData(
     // Check if this runtime asset has symbol data
     let symbolData = assetGroup.symbolData; // Type assertion since we extended RuntimeAsset
     if (!symbolData) {
-      logger.log({
-        message: `Skipping runtime asset without symbol data: ${assetGroup.filePath}`,
-      });
+      if (assetGroup.code && assetGroup.code.trim().length > 0) {
+        logger.log({
+          message: `Skipping runtime asset with code without symbol data: ${assetGroup.filePath}`,
+          origin: 'applyRuntimes',
+        });
+      }
+
       continue; // No pre-computed symbols, let normal processing handle it
     }
 
     // Apply asset symbols
     if (symbolData.symbols) {
-      runtimeAssetNode.value.symbols = new Map(symbolData.symbols);
+      // Convert from SymbolData format to internal Asset.symbols format
+      let internalSymbols = new Map();
+      for (let [symbol, data] of symbolData.symbols) {
+        internalSymbols.set(symbol, {
+          local: data.local,
+          loc: data.loc || null,
+          meta: data.meta,
+        });
+      }
+      runtimeAssetNode.value.symbols = internalSymbols;
     }
 
     // Apply dependency symbol data
@@ -465,7 +478,17 @@ function applyRuntimeSymbolData(
         if (matchingDep) {
           // Apply dependency symbols
           if (depSymbolData.symbols) {
-            matchingDep.value.symbols = new Map(depSymbolData.symbols);
+            // Convert from SymbolData format to internal Dependency.symbols format
+            let internalDepSymbols = new Map();
+            for (let [symbol, data] of depSymbolData.symbols) {
+              internalDepSymbols.set(symbol, {
+                local: data.local,
+                loc: data.loc || null,
+                isWeak: data.isWeak,
+                meta: data.meta,
+              });
+            }
+            matchingDep.value.symbols = internalDepSymbols;
           }
 
           // Apply used symbols data directly to skip propagation
