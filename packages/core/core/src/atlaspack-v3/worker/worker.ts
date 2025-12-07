@@ -282,19 +282,10 @@ export class AtlaspackWorker {
         }
 
         cache_bailout = true;
-        // eslint-disable-next-line no-console
-        console.log(
-          `Transformer (${key}) uncacheable due to env var access:`,
-          innerAsset.filePath,
-          operation,
-          variable,
-        );
         break;
       }
 
       if (sideEffects.fsUsage.length > 0) {
-        // eslint-disable-next-line no-console
-        console.log(`Transformer ${key} uncacheable due to fs access`);
         cache_bailout = true;
       }
 
