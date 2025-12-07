@@ -13,6 +13,8 @@ import {
   printFileSummary,
   printComparisonSummary,
 } from './report';
+import {diffToJson, generateDirectoryJsonReport} from './json';
+import type {ComparisonContext} from './context';
 
 const colors = getColors();
 
@@ -58,22 +60,18 @@ export function getAllFiles(
 export function compareDirectories(
   dir1: string,
   dir2: string,
-  ignoreAssetIds: boolean,
-  ignoreUnminifiedRefs: boolean,
-  ignoreSourceMapUrl: boolean,
-  ignoreSwappedVariables: boolean,
-  summaryMode: boolean = false,
-  verbose: boolean = false,
-  sizeThreshold: number = 0.01,
+  context: ComparisonContext,
 ): void {
   // Resolve to absolute paths
   const absDir1 = path.resolve(dir1);
   const absDir2 = path.resolve(dir2);
 
-  console.log(`${colors.cyan}=== Comparing directories ===${colors.reset}`);
-  console.log(`${colors.yellow}Directory 1:${colors.reset} ${absDir1}`);
-  console.log(`${colors.yellow}Directory 2:${colors.reset} ${absDir2}`);
-  console.log();
+  if (!context.jsonMode) {
+    console.log(`${colors.cyan}=== Comparing directories ===${colors.reset}`);
+    console.log(`${colors.yellow}Directory 1:${colors.reset} ${absDir1}`);
+    console.log(`${colors.yellow}Directory 2:${colors.reset} ${absDir2}`);
+    console.log();
+  }
 
   // Get all files from both directories
   const files1 = getAllFiles(absDir1);
@@ -81,26 +79,57 @@ export function compareDirectories(
 
   // Early exit: file count mismatch
   if (files1.length !== files2.length) {
-    console.log(`${colors.red}✗ File count mismatch${colors.reset}`);
-    console.log(`  Directory 1: ${files1.length} files`);
-    console.log(`  Directory 2: ${files2.length} files`);
-    console.log();
+    if (context.jsonMode) {
+      // JSON output for error case
+      const report = {
+        metadata: {
+          dir1: absDir1,
+          dir2: absDir2,
+          comparisonDate: new Date().toISOString(),
+          options: {
+            ignoreAssetIds: context.ignoreAssetIds,
+            ignoreUnminifiedRefs: context.ignoreUnminifiedRefs,
+            ignoreSourceMapUrl: context.ignoreSourceMapUrl,
+            ignoreSwappedVariables: context.ignoreSwappedVariables,
+          },
+        },
+        summary: {
+          totalHunks: 0,
+          meaningfulHunks: 0,
+          harmlessHunks: 0,
+          identical: false,
+          error: 'file_count_mismatch',
+          files1Count: files1.length,
+          files2Count: files2.length,
+        },
+      };
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      console.log(`${colors.red}✗ File count mismatch${colors.reset}`);
+      console.log(`  Directory 1: ${files1.length} files`);
+      console.log(`  Directory 2: ${files2.length} files`);
+      console.log();
 
-    // Show which files are unique to each directory
-    const relativePaths1 = new Set(files1.map((f) => f.relativePath));
-    const relativePaths2 = new Set(files2.map((f) => f.relativePath));
+      // Show which files are unique to each directory
+      const relativePaths1 = new Set(files1.map((f) => f.relativePath));
+      const relativePaths2 = new Set(files2.map((f) => f.relativePath));
 
-    const onlyIn1 = files1.filter((f) => !relativePaths2.has(f.relativePath));
-    const onlyIn2 = files2.filter((f) => !relativePaths1.has(f.relativePath));
+      const onlyIn1 = files1.filter((f) => !relativePaths2.has(f.relativePath));
+      const onlyIn2 = files2.filter((f) => !relativePaths1.has(f.relativePath));
 
-    if (onlyIn1.length > 0) {
-      console.log(`${colors.yellow}Files only in directory 1:${colors.reset}`);
-      onlyIn1.forEach((f) => console.log(`  ${f.relativePath}`));
-    }
+      if (onlyIn1.length > 0) {
+        console.log(
+          `${colors.yellow}Files only in directory 1:${colors.reset}`,
+        );
+        onlyIn1.forEach((f) => console.log(`  ${f.relativePath}`));
+      }
 
-    if (onlyIn2.length > 0) {
-      console.log(`${colors.yellow}Files only in directory 2:${colors.reset}`);
-      onlyIn2.forEach((f) => console.log(`  ${f.relativePath}`));
+      if (onlyIn2.length > 0) {
+        console.log(
+          `${colors.yellow}Files only in directory 2:${colors.reset}`,
+        );
+        onlyIn2.forEach((f) => console.log(`  ${f.relativePath}`));
+      }
     }
 
     process.exitCode = 1;
@@ -116,10 +145,36 @@ export function compareDirectories(
     files2.every((f) => relativePaths1.has(f.relativePath));
 
   if (allSameNames) {
-    console.log(
-      `${colors.green}✓ All files have identical names (including hash)${colors.reset}`,
-    );
-    console.log(`  Total files: ${files1.length}`);
+    if (context.jsonMode) {
+      const report = {
+        metadata: {
+          dir1: absDir1,
+          dir2: absDir2,
+          comparisonDate: new Date().toISOString(),
+          options: {
+            ignoreAssetIds: context.ignoreAssetIds,
+            ignoreUnminifiedRefs: context.ignoreUnminifiedRefs,
+            ignoreSourceMapUrl: context.ignoreSourceMapUrl,
+            ignoreSwappedVariables: context.ignoreSwappedVariables,
+          },
+        },
+        summary: {
+          totalHunks: 0,
+          meaningfulHunks: 0,
+          harmlessHunks: 0,
+          identical: true,
+          identicalFiles: files1.length,
+          differentFiles: 0,
+          totalFiles: files1.length,
+        },
+      };
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      console.log(
+        `${colors.green}✓ All files have identical names (including hash)${colors.reset}`,
+      );
+      console.log(`  Total files: ${files1.length}`);
+    }
     return;
   }
 
@@ -127,8 +182,48 @@ export function compareDirectories(
   const {matched, ambiguous} = matchFilesByPrefix(
     files1,
     files2,
-    sizeThreshold,
+    context.sizeThreshold,
   );
+
+  if (context.jsonMode) {
+    // Build JSON results
+    const fileResults: Array<import('./json').JsonFileResult> = [];
+
+    for (const {file1, file2} of matched) {
+      const lines1 = readAndDeminify(file1.fullPath);
+      const lines2 = readAndDeminify(file2.fullPath);
+
+      if (!lines1 || !lines2) {
+        continue;
+      }
+
+      const diff = computeDiff(lines1, lines2);
+      const fileResult = diffToJson(
+        diff,
+        file1.fullPath,
+        file2.fullPath,
+        context,
+      );
+
+      fileResults.push(fileResult);
+    }
+
+    const report = generateDirectoryJsonReport(
+      matched,
+      ambiguous,
+      absDir1,
+      absDir2,
+      context,
+      fileResults,
+    );
+
+    console.log(JSON.stringify(report, null, 2));
+
+    if ((report.summary.differentFiles ?? 0) > 0) {
+      process.exitCode = 1;
+    }
+    return;
+  }
 
   // Report ambiguous cases
   if (ambiguous.length > 0) {
@@ -141,7 +236,7 @@ export function compareDirectories(
   const filesWithDifferences: Array<{path: string; hunkCount: number}> = []; // For sorting in summary mode
 
   if (matched.length > 0) {
-    if (verbose) {
+    if (context.verbose) {
       console.log(
         `${colors.cyan}Comparing ${matched.length} matched file pair(s):${colors.reset}`,
       );
@@ -162,14 +257,14 @@ export function compareDirectories(
       // Compute diff
       const diff = computeDiff(lines1, lines2);
 
-      if (summaryMode) {
+      if (context.summaryMode) {
         // In summary mode, just count hunks
         const hunkCount = countHunks(
           diff,
-          ignoreAssetIds,
-          ignoreUnminifiedRefs,
-          ignoreSourceMapUrl,
-          ignoreSwappedVariables,
+          context.ignoreAssetIds,
+          context.ignoreUnminifiedRefs,
+          context.ignoreSourceMapUrl,
+          context.ignoreSwappedVariables,
         );
         const hasChanges = diff.some((e) => e.type !== 'equal');
 
@@ -178,7 +273,7 @@ export function compareDirectories(
           filesWithDifferences.push({path: file1.relativePath, hunkCount});
         } else {
           identicalFiles++;
-          if (verbose) {
+          if (context.verbose) {
             console.log(
               `${colors.green}✓${colors.reset} ${file1.relativePath}: identical`,
             );
@@ -188,16 +283,16 @@ export function compareDirectories(
         // In normal mode, print full diff only for files that differ
         const hunkCount = countHunks(
           diff,
-          ignoreAssetIds,
-          ignoreUnminifiedRefs,
-          ignoreSourceMapUrl,
-          ignoreSwappedVariables,
+          context.ignoreAssetIds,
+          context.ignoreUnminifiedRefs,
+          context.ignoreSourceMapUrl,
+          context.ignoreSwappedVariables,
         );
         const hasChanges = diff.some((e) => e.type !== 'equal');
 
         if (hasChanges && hunkCount > 0) {
           differentFiles++;
-          if (i > 0 && verbose) {
+          if (i > 0 && context.verbose) {
             console.log();
           }
           printDiff(
@@ -205,15 +300,15 @@ export function compareDirectories(
             file1.fullPath,
             file2.fullPath,
             3,
-            ignoreAssetIds,
-            ignoreUnminifiedRefs,
-            ignoreSourceMapUrl,
-            ignoreSwappedVariables,
+            context.ignoreAssetIds,
+            context.ignoreUnminifiedRefs,
+            context.ignoreSourceMapUrl,
+            context.ignoreSwappedVariables,
             false,
           );
         } else {
           identicalFiles++;
-          if (verbose) {
+          if (context.verbose) {
             if (i > 0) {
               console.log();
             }
@@ -234,7 +329,7 @@ export function compareDirectories(
     }
 
     // In summary mode, print sorted list of files with differences
-    if (summaryMode && filesWithDifferences.length > 0) {
+    if (context.summaryMode && filesWithDifferences.length > 0) {
       printFileSummary(filesWithDifferences);
     }
   }
