@@ -24,7 +24,7 @@ import type AssetGraph from './AssetGraph';
 import BundleGraph from './public/BundleGraph';
 import InternalBundleGraph, {bundleGraphEdgeTypes} from './BundleGraph';
 import {NamedBundle} from './public/Bundle';
-import {instrument, PluginLogger} from '@atlaspack/logger';
+import logger, {instrument, PluginLogger} from '@atlaspack/logger';
 import {hashString} from '@atlaspack/rust';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {dependencyToInternalDependency} from './public/Dependency';
@@ -154,6 +154,7 @@ export default async function applyRuntimes<TResult extends RequestResult>({
             env,
             runtimeAssetRequiringExecutionOnLoad,
             priority,
+            symbolData,
           } of runtimeAssets) {
             let sourceName = path.join(
               path.dirname(filePath),
@@ -172,6 +173,7 @@ export default async function applyRuntimes<TResult extends RequestResult>({
               // Runtime assets should be considered source, as they should be
               // e.g. compiled to run in the target environment
               isSource: true,
+              symbolData,
             };
 
             let connectionBundle = bundle;
@@ -433,8 +435,11 @@ function applyRuntimeSymbolData(
     }
 
     // Check if this runtime asset has symbol data
-    let symbolData = (assetGroup as any).symbolData; // Type assertion since we extended RuntimeAsset
+    let symbolData = assetGroup.symbolData; // Type assertion since we extended RuntimeAsset
     if (!symbolData) {
+      logger.log({
+        message: `Skipping runtime asset without symbol data: ${assetGroup.filePath}`,
+      });
       continue; // No pre-computed symbols, let normal processing handle it
     }
 
@@ -444,7 +449,7 @@ function applyRuntimeSymbolData(
     }
 
     // Apply dependency symbol data
-    if (symbolData.dependencies) {
+    if (symbolData.dependencies && symbolData.dependencies.length > 0) {
       let outgoingDeps = assetGraph
         .getNodeIdsConnectedFrom(runtimeAssetNodeId)
         .map((id) => assetGraph.getNode(id))
