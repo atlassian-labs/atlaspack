@@ -17,7 +17,7 @@ import fs from 'fs';
 import invariant from 'assert';
 import assert from 'assert';
 import nullthrows from 'nullthrows';
-import {instrumentAsync, PluginLogger} from '@atlaspack/logger';
+import {instrument, instrumentAsync, PluginLogger} from '@atlaspack/logger';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import AssetGraph from '../AssetGraph';
@@ -523,17 +523,19 @@ class BundlerRunner {
         ),
       );
 
-      changedRuntimes = await applyRuntimes({
-        bundleGraph: internalBundleGraph,
-        api: this.api,
-        config: this.config,
-        options: this.options,
-        optionsRef: this.optionsRef,
-        pluginOptions: this.pluginOptions,
-        previousDevDeps: this.previousDevDeps,
-        devDepRequests: this.devDepRequests,
-        configs: this.configs,
-      });
+      changedRuntimes = await instrumentAsync('applyRuntimes', () =>
+        applyRuntimes({
+          bundleGraph: internalBundleGraph,
+          api: this.api,
+          config: this.config,
+          options: this.options,
+          optionsRef: this.optionsRef,
+          pluginOptions: this.pluginOptions,
+          previousDevDeps: this.previousDevDeps,
+          devDepRequests: this.devDepRequests,
+          configs: this.configs,
+        }),
+      );
 
       // Add dev deps for namers, AFTER running them to account for lazy require().
       for (let namer of namers) {

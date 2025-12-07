@@ -24,7 +24,7 @@ import type AssetGraph from './AssetGraph';
 import BundleGraph from './public/BundleGraph';
 import InternalBundleGraph, {bundleGraphEdgeTypes} from './BundleGraph';
 import {NamedBundle} from './public/Bundle';
-import {PluginLogger} from '@atlaspack/logger';
+import {instrument, PluginLogger} from '@atlaspack/logger';
 import {hashString} from '@atlaspack/rust';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {dependencyToInternalDependency} from './public/Dependency';
@@ -486,13 +486,15 @@ function reconcileNewRuntimes<TResult extends RequestResult>(
   connections: Array<RuntimeConnection>,
   optionsRef: SharedReference,
 ) {
-  let assetGroups = connections.map((t) => t.assetGroup);
-  let request = createAssetGraphRequest({
-    name: 'Runtimes',
-    assetGroups,
-    optionsRef,
-  });
+  return instrument('reconcileNewRuntimes', () => {
+    let assetGroups = connections.map((t) => t.assetGroup);
+    let request = createAssetGraphRequest({
+      name: 'Runtimes',
+      assetGroups,
+      optionsRef,
+    });
 
-  // rebuild the graph
-  return api.runRequest(request, {force: true});
+    // rebuild the graph
+    return api.runRequest(request, {force: true});
+  });
 }

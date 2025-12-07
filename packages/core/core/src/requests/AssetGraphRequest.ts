@@ -298,41 +298,51 @@ export class AssetGraphBuilder {
         this.assetGraph,
         'AssetGraph_' + this.name + '_before_prop',
       );
-      try {
-        let errors = propagateSymbols({
-          options: this.options,
-          assetGraph: this.assetGraph,
-          changedAssetsPropagation: this.changedAssetsPropagation,
-          assetGroupsWithRemovedParents: this.assetGroupsWithRemovedParents,
-          previousErrors: this.previousSymbolPropagationErrors,
+
+      // Skip symbol propagation for runtime assets - they have pre-computed symbol data
+      if (this.name === 'Runtimes') {
+        logger.verbose({
+          origin: '@atlaspack/core',
+          message: 'Skipping symbol propagation for runtime asset graph',
         });
-        this.changedAssetsPropagation.clear();
-
-        if (errors.size > 0) {
-          this.api.storeResult(
-            {
-              assetGraph: this.assetGraph,
-              changedAssets: this.changedAssets,
-              changedAssetsPropagation: this.changedAssetsPropagation,
-              assetGroupsWithRemovedParents: this.assetGroupsWithRemovedParents,
-              previousSymbolPropagationErrors: errors,
-              assetRequests: [],
-            },
-            this.cacheKey,
-          );
-
-          // Just throw the first error. Since errors can bubble (e.g. reexporting a reexported symbol also fails),
-          // determining which failing export is the root cause is nontrivial (because of circular dependencies).
-          throw new ThrowableDiagnostic({
-            diagnostic: [...errors.values()][0],
+      } else {
+        try {
+          let errors = propagateSymbols({
+            options: this.options,
+            assetGraph: this.assetGraph,
+            changedAssetsPropagation: this.changedAssetsPropagation,
+            assetGroupsWithRemovedParents: this.assetGroupsWithRemovedParents,
+            previousErrors: this.previousSymbolPropagationErrors,
           });
+          this.changedAssetsPropagation.clear();
+
+          if (errors.size > 0) {
+            this.api.storeResult(
+              {
+                assetGraph: this.assetGraph,
+                changedAssets: this.changedAssets,
+                changedAssetsPropagation: this.changedAssetsPropagation,
+                assetGroupsWithRemovedParents:
+                  this.assetGroupsWithRemovedParents,
+                previousSymbolPropagationErrors: errors,
+                assetRequests: [],
+              },
+              this.cacheKey,
+            );
+
+            // Just throw the first error. Since errors can bubble (e.g. reexporting a reexported symbol also fails),
+            // determining which failing export is the root cause is nontrivial (because of circular dependencies).
+            throw new ThrowableDiagnostic({
+              diagnostic: [...errors.values()][0],
+            });
+          }
+        } catch (e: any) {
+          await dumpGraphToGraphViz(
+            this.assetGraph,
+            'AssetGraph_' + this.name + '_failed',
+          );
+          throw e;
         }
-      } catch (e: any) {
-        await dumpGraphToGraphViz(
-          this.assetGraph,
-          'AssetGraph_' + this.name + '_failed',
-        );
-        throw e;
       }
     }
     await dumpGraphToGraphViz(this.assetGraph, 'AssetGraph_' + this.name);

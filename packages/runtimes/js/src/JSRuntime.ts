@@ -174,6 +174,13 @@ export default new Runtime({
             )}))`,
             dependency,
             env: {sourceType: 'module'},
+            // Pre-computed symbols: exports Promise, no external dependencies (uses global)
+            symbolData: {
+              symbols: new Map([
+                ['default', {local: 'module.exports', loc: null}],
+              ]),
+              dependencies: [],
+            },
           });
         }
       } else {
@@ -197,6 +204,13 @@ export default new Runtime({
             )});`,
             dependency,
             env: {sourceType: 'module'},
+            // Pre-computed symbols: exports Promise, no external dependencies
+            symbolData: {
+              symbols: new Map([
+                ['default', {local: 'module.exports', loc: null}],
+              ]),
+              dependencies: [],
+            },
           });
           continue;
         }
@@ -311,6 +325,13 @@ export default new Runtime({
           code: `module.exports = ${JSON.stringify(dependency.id)};`,
           dependency,
           env: {sourceType: 'module'},
+          // Pre-computed symbols: simple export with no dependencies
+          symbolData: {
+            symbols: new Map([
+              ['default', {local: 'module.exports', loc: null}],
+            ]),
+            dependencies: [],
+          },
         });
         continue;
       }
@@ -326,6 +347,13 @@ export default new Runtime({
           code: `module.exports = ${JSON.stringify(dependency.specifier)}`,
           dependency,
           env: {sourceType: 'module'},
+          // Pre-computed symbols: simple export with no dependencies
+          symbolData: {
+            symbols: new Map([
+              ['default', {local: 'module.exports', loc: null}],
+            ]),
+            dependencies: [],
+          },
         });
         continue;
       }
@@ -423,6 +451,19 @@ export default new Runtime({
           bundle,
           config.splitManifestThreshold,
         ),
+        // Pre-computed symbols: requires bundle-manifest helper
+        symbolData: {
+          symbols: new Map(), // No exports, just executes
+          dependencies: [
+            {
+              specifier: './helpers/bundle-manifest',
+              symbols: new Map([
+                ['register', {local: 'register', loc: null, isWeak: false}],
+              ]),
+              usedSymbols: new Set(['register']),
+            },
+          ],
+        },
       });
     }
 

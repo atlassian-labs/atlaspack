@@ -71,6 +71,29 @@ export default new Runtime({
           filePath: __filename,
           code: CODE,
           isEntry: true,
+          // Pre-computed symbols: requires react-refresh and react-error-overlay, no exports
+          symbolData: {
+            symbols: new Map(), // No exports, just side effects and global setup
+            dependencies: [
+              {
+                specifier: 'react-refresh/runtime',
+                symbols: new Map([
+                  ['default', {local: 'Refresh', loc: null, isWeak: false}],
+                ]),
+                usedSymbols: new Set(['default']),
+              },
+              {
+                specifier: 'react-error-overlay',
+                symbols: new Map([
+                  [
+                    'default',
+                    {local: 'ErrorOverlay', loc: null, isWeak: false},
+                  ],
+                ]),
+                usedSymbols: new Set(['default']),
+              },
+            ],
+          },
         };
       }
     }
