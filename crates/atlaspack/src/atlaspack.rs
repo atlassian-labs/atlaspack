@@ -217,6 +217,8 @@ impl Atlaspack {
 
       let asset_graph = asset_graph_request_output.graph.clone();
 
+      request_tracker.cache.complete_session()?;
+
       Ok((asset_graph, had_previous_graph))
     })
   }

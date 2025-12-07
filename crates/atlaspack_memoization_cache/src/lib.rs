@@ -1,48 +1,19 @@
-use lmdb_js_lite::DatabaseHandle;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::collections::hash_map::DefaultHasher;
 use std::future::Future;
 use std::hash::{Hash, Hasher};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+
+mod lmdb_cache_reader_writer;
+
+pub use lmdb_cache_reader_writer::LmdbCacheReaderWriter;
 
 pub trait CacheReaderWriter {
   fn read(&self, key: &str) -> anyhow::Result<Option<Vec<u8>>>;
   fn put(&self, key: &str, value: &[u8]) -> anyhow::Result<()>;
-}
-
-pub struct LmdbCacheReaderWriter {
-  db_handle: Arc<DatabaseHandle>,
-}
-
-impl LmdbCacheReaderWriter {
-  pub fn new(db_handle: Arc<DatabaseHandle>) -> Self {
-    Self { db_handle }
-  }
-}
-
-impl CacheReaderWriter for LmdbCacheReaderWriter {
-  #[tracing::instrument(level = "trace", skip_all)]
-  fn read(&self, key: &str) -> anyhow::Result<Option<Vec<u8>>> {
-    let db_writer = self.db_handle.database();
-    let transaction = db_writer.read_txn()?;
-
-    db_writer
-      .get(&transaction, key)
-      .map_err(|error| anyhow::anyhow!("Read transaction error: {}", error))
-  }
-
-  #[tracing::instrument(level = "trace", skip_all)]
-  fn put(&self, key: &str, value: &[u8]) -> anyhow::Result<()> {
-    let db_writer = self.db_handle.database();
-    let mut transaction = db_writer.write_txn()?;
-
-    db_writer.put(&mut transaction, key, value)?;
-
-    transaction
-      .commit()
-      .map_err(|error| anyhow::anyhow!("Put commit error: {}", error))
+  fn complete_session(&self) -> anyhow::Result<()> {
+    Ok(())
   }
 }
 
@@ -163,6 +134,10 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
       stats: Stats::default(),
       mode,
     }
+  }
+
+  pub fn complete_session(&self) -> anyhow::Result<()> {
+    self.reader_writer.complete_session()
   }
 
   pub fn reset_stats(&self) {
@@ -491,7 +466,7 @@ mod test {
     let reader_writer = SimpleMockReaderWriter::new_with_cached_value(cached_value);
 
     // Set validation rate to 100% to ensure validation runs
-    let handler = CacheHandler::new_with_validation(reader_writer, 1.0);
+    let handler = CacheHandler::new(reader_writer, CacheMode::On(1.0));
 
     let input = CacheableString::new("test_label", "Hello");
     let result: Result<TestResponse, ()> = handler
@@ -512,7 +487,7 @@ mod test {
     let reader_writer = SimpleMockReaderWriter::new_with_cached_value(cached_value);
 
     // Set validation rate to 100% to ensure validation runs
-    let handler = CacheHandler::new_with_validation(reader_writer, 1.0);
+    let handler = CacheHandler::new(reader_writer, CacheMode::On(1.0));
 
     let input = CacheableString::new("test_label", "Hello");
     let result: Result<TestResponse, ()> = handler

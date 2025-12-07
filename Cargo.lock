@@ -535,12 +535,16 @@ name = "atlaspack_memoization_cache"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
+ "criterion",
+ "crossbeam",
  "lmdb-js-lite",
  "parking_lot",
  "pretty_assertions",
  "rand 0.8.5",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
  "tracing",
 ]
