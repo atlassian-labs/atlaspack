@@ -137,13 +137,11 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
   }
 
   pub fn complete_session(&self) -> anyhow::Result<()> {
-    self.reader_writer.complete_session()
-  }
-
-  pub fn reset_stats(&self) {
     let snapshot = self.stats.get_snapshot();
     tracing::info!("Cache stats {:#?}", snapshot);
     self.stats.clear();
+
+    self.reader_writer.complete_session()
   }
 
   pub fn get_stats(&self) -> StatsSnapshot {
