@@ -486,15 +486,13 @@ function reconcileNewRuntimes<TResult extends RequestResult>(
   connections: Array<RuntimeConnection>,
   optionsRef: SharedReference,
 ) {
-  return instrument('reconcileNewRuntimes', () => {
-    let assetGroups = connections.map((t) => t.assetGroup);
-    let request = createAssetGraphRequest({
-      name: 'Runtimes',
-      assetGroups,
-      optionsRef,
-    });
-
-    // rebuild the graph
-    return api.runRequest(request, {force: true});
+  let assetGroups = connections.map((t) => t.assetGroup);
+  let request = createAssetGraphRequest({
+    name: 'Runtimes',
+    assetGroups,
+    optionsRef,
   });
+
+  // rebuild the graph
+  return api.runRequest(request, {force: true});
 }
