@@ -26,6 +26,16 @@ use crate::package_json::{PackageJson, depends_on_react, supports_automatic_jsx_
 use crate::relative_path::relative_path;
 use crate::ts_config::{Jsx, Target, TsConfig};
 
+#[derive(Debug)]
+pub struct JsxConfiguration {
+  pub is_jsx: bool,
+  pub jsx_pragma: Option<String>,
+  pub jsx_pragma_frag: Option<String>,
+  pub jsx_import_source: Option<String>,
+  pub automatic_jsx_runtime: bool,
+  pub react_refresh: bool,
+}
+
 mod conversion;
 
 /// This is a rust only `TransformerPlugin` implementation for JS assets that goes through the
@@ -101,17 +111,7 @@ impl AtlaspackJsTransformerPlugin {
   }
 
   /// Determines JSX configuration based on file type, tsconfig, and package.json
-  fn determine_jsx_configuration(
-    &self,
-    asset: &Asset,
-  ) -> (
-    bool,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-    bool,
-    bool,
-  ) {
+  fn determine_jsx_configuration(&self, asset: &Asset) -> JsxConfiguration {
     let is_jsx = match &asset.file_type {
       FileType::Jsx | FileType::Tsx => {
         // .jsx and .tsx files should always have JSX enabled
@@ -165,14 +165,14 @@ impl AtlaspackJsTransformerPlugin {
       }
     }
 
-    (
+    JsxConfiguration {
       is_jsx,
       jsx_pragma,
       jsx_pragma_frag,
       jsx_import_source,
       automatic_jsx_runtime,
-      asset.is_source,
-    )
+      react_refresh: asset.is_source,
+    }
   }
 
   fn env_variables(&self, asset: &Asset) -> HashMap<Atom, Atom> {
@@ -369,21 +369,21 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       .as_ref()
       .and_then(|ts| ts.compiler_options.as_ref());
 
-    // v3JsxConfigurationLoading CLEANUP NOTE: Remove the flag disabled code path after rollout
+    // v3JsxConfigurationLoading CLEANUP
     let feature_flag_v3_jsx_configuration_loading = self
       .options
       .feature_flags
       .bool_enabled("v3JsxConfigurationLoading");
 
     // Determine JSX configuration based on v3JsxConfigurationLoading feature flag
-    let (
+    let JsxConfiguration {
       is_jsx,
       jsx_pragma,
       jsx_pragma_frag,
       jsx_import_source,
       automatic_jsx_runtime,
-      should_refresh,
-    ) = if feature_flag_v3_jsx_configuration_loading {
+      react_refresh,
+    } = if feature_flag_v3_jsx_configuration_loading {
       // With v3JsxConfigurationLoading enabled, use the new determine_jsx_configuration method
       self.determine_jsx_configuration(&asset)
     } else {
@@ -410,16 +410,16 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
       let jsx_pragma = compiler_options.and_then(|co| co.jsx_factory.clone());
       let jsx_pragma_frag = compiler_options.and_then(|co| co.jsx_fragment_factory.clone());
-      let should_refresh = package_json.is_some_and(|pkg| depends_on_react(&pkg.contents));
+      let react_refresh = package_json.is_some_and(|pkg| depends_on_react(&pkg.contents));
 
-      (
+      JsxConfiguration {
         is_jsx,
         jsx_pragma,
         jsx_pragma_frag,
         jsx_import_source,
         automatic_jsx_runtime,
-        should_refresh,
-      )
+        react_refresh,
+      }
     };
 
     let transform_config = atlaspack_js_swc_core::Config {
@@ -454,7 +454,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       project_root: self.options.project_root.to_string_lossy().into_owned(),
       react_refresh: self.options.hmr_options.is_some()
         && self.options.mode == BuildMode::Development
-        && should_refresh
+        && react_refresh
         && env.context.is_browser()
         && !env.is_library
         && !env.context.is_worker()
@@ -905,8 +905,10 @@ mod tests {
 
     // Case 1: Test with React configuration
     transformer.config = config_with_react;
-    let (is_jsx, jsx_pragma, jsx_pragma_frag, _, _, _) =
-      transformer.determine_jsx_configuration(&asset);
+    let jsx_config = transformer.determine_jsx_configuration(&asset);
+    let is_jsx = jsx_config.is_jsx;
+    let jsx_pragma = jsx_config.jsx_pragma;
+    let jsx_pragma_frag = jsx_config.jsx_pragma_frag;
 
     assert!(
       is_jsx,
@@ -928,8 +930,10 @@ mod tests {
     };
 
     transformer.config = config_with_react_2;
-    let (is_jsx_react_only, jsx_pragma_react_only, jsx_pragma_frag_react_only, _, _, _) =
-      transformer.determine_jsx_configuration(&asset);
+    let jsx_config = transformer.determine_jsx_configuration(&asset);
+    let is_jsx_react_only = jsx_config.is_jsx;
+    let jsx_pragma_react_only = jsx_config.jsx_pragma;
+    let jsx_pragma_frag_react_only = jsx_config.jsx_pragma_frag;
 
     assert!(
       is_jsx_react_only,
@@ -959,8 +963,10 @@ mod tests {
     };
 
     transformer.config = config_no_react_2;
-    let (is_jsx_jsx_file, jsx_pragma_jsx_file, jsx_pragma_frag_jsx_file, _, _, _) =
-      transformer.determine_jsx_configuration(&jsx_asset);
+    let jsx_config = transformer.determine_jsx_configuration(&jsx_asset);
+    let is_jsx_jsx_file = jsx_config.is_jsx;
+    let jsx_pragma_jsx_file = jsx_config.jsx_pragma;
+    let jsx_pragma_frag_jsx_file = jsx_config.jsx_pragma_frag;
 
     assert!(
       is_jsx_jsx_file,
@@ -982,8 +988,10 @@ mod tests {
     };
 
     transformer.config = config_with_react_3;
-    let (is_jsx_jsx_with_react, jsx_pragma_jsx_with_react, jsx_pragma_frag_jsx_with_react, _, _, _) =
-      transformer.determine_jsx_configuration(&jsx_asset);
+    let jsx_config = transformer.determine_jsx_configuration(&jsx_asset);
+    let is_jsx_jsx_with_react = jsx_config.is_jsx;
+    let jsx_pragma_jsx_with_react = jsx_config.jsx_pragma;
+    let jsx_pragma_frag_jsx_with_react = jsx_config.jsx_pragma_frag;
 
     assert!(
       is_jsx_jsx_with_react,
@@ -1018,8 +1026,10 @@ mod tests {
     };
 
     transformer.config = config_with_react_4;
-    let (is_jsx_ts, jsx_pragma_ts, jsx_pragma_frag_ts, _, _, _) =
-      transformer.determine_jsx_configuration(&ts_asset);
+    let jsx_config = transformer.determine_jsx_configuration(&ts_asset);
+    let is_jsx_ts = jsx_config.is_jsx;
+    let jsx_pragma_ts = jsx_config.jsx_pragma;
+    let jsx_pragma_frag_ts = jsx_config.jsx_pragma_frag;
 
     assert!(
       !is_jsx_ts,
@@ -1048,8 +1058,10 @@ mod tests {
     };
 
     transformer.config = config_with_react_5;
-    let (is_jsx_tsx, jsx_pragma_tsx, jsx_pragma_frag_tsx, _, _, _) =
-      transformer.determine_jsx_configuration(&tsx_asset);
+    let jsx_config = transformer.determine_jsx_configuration(&tsx_asset);
+    let is_jsx_tsx = jsx_config.is_jsx;
+    let jsx_pragma_tsx = jsx_config.jsx_pragma;
+    let jsx_pragma_frag_tsx = jsx_config.jsx_pragma_frag;
 
     assert!(
       is_jsx_tsx,
@@ -1080,8 +1092,8 @@ mod tests {
     };
 
     transformer.config = config_with_glob;
-    let (_, _, _, _, automatic_jsx_runtime, _) =
-      transformer.determine_jsx_configuration(&test_asset);
+    let jsx_config = transformer.determine_jsx_configuration(&test_asset);
+    let automatic_jsx_runtime = jsx_config.automatic_jsx_runtime;
 
     assert!(
       automatic_jsx_runtime,
@@ -1102,8 +1114,8 @@ mod tests {
     };
 
     transformer.config = config_with_non_matching_glob;
-    let (_, _, _, _, automatic_jsx_runtime_no_match, _) =
-      transformer.determine_jsx_configuration(&test_asset);
+    let jsx_config = transformer.determine_jsx_configuration(&test_asset);
+    let automatic_jsx_runtime_no_match = jsx_config.automatic_jsx_runtime;
 
     assert!(
       !automatic_jsx_runtime_no_match,
