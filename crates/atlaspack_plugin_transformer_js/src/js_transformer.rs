@@ -103,10 +103,7 @@ impl AtlaspackJsTransformerPlugin {
   /// Determines JSX configuration based on file type, tsconfig, and package.json
   fn determine_jsx_configuration(
     &self,
-    file_type: &FileType,
     asset: &Asset,
-    config: &JsTransformerConfig,
-    project_root: &Path,
   ) -> (
     bool,
     Option<String>,
@@ -115,14 +112,14 @@ impl AtlaspackJsTransformerPlugin {
     bool,
     bool,
   ) {
-    let mut is_jsx = matches!(file_type, FileType::Jsx | FileType::Tsx);
+    let mut is_jsx = matches!(asset.file_type, FileType::Jsx | FileType::Tsx);
     let mut jsx_pragma = None;
     let mut jsx_pragma_frag = None;
     let mut jsx_import_source = None;
     let mut automatic_jsx_runtime = false;
 
     if asset.is_source {
-      if let Some(react) = &config.react {
+      if let Some(react) = &self.config.react {
         // Use react options from transformer config if provided
         jsx_pragma = react
           .jsx_pragma
@@ -143,7 +140,7 @@ impl AtlaspackJsTransformerPlugin {
       }
 
       // Determine if JSX should be enabled based on file type and configuration
-      match file_type {
+      match &asset.file_type {
         FileType::Jsx | FileType::Tsx => {
           // .jsx and .tsx files should always have JSX enabled
           is_jsx = true;
@@ -161,7 +158,7 @@ impl AtlaspackJsTransformerPlugin {
     }
 
     // Update automatic_jsx_runtime based on package.json if not set by tsconfig
-    if let Some(react) = &config.react
+    if let Some(react) = &self.config.react
       && let Some(automatic_runtime) = &react.automatic_runtime
     {
       automatic_jsx_runtime = match automatic_runtime {
@@ -319,7 +316,6 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
     asset: Asset,
   ) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
-    let file_type = asset.file_type.clone();
     let is_node = env.context.is_node();
     let source_code = asset.code.clone();
 
@@ -394,16 +390,11 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       should_refresh,
     ) = if feature_flag_v3_jsx_configuration_loading {
       // With v3JsxConfigurationLoading enabled, use the new determine_jsx_configuration method
-      self.determine_jsx_configuration(
-        &file_type,
-        &asset,
-        &self.config,
-        self.options.project_root.as_path(),
-      )
+      self.determine_jsx_configuration(&asset)
     } else {
       // With v3JsxConfigurationLoading disabled, use the old logic
       let package_json = context.config().load_package_json::<PackageJson>().ok();
-      let is_jsx = matches!(file_type, FileType::Jsx | FileType::Tsx);
+      let is_jsx = matches!(asset.file_type, FileType::Jsx | FileType::Tsx);
 
       let automatic_jsx_runtime = compiler_options
         .map(|co| {
@@ -456,7 +447,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       is_esm_output: env.output_format == OutputFormat::EsModule,
       is_jsx,
       is_library: env.is_library,
-      is_type_script: matches!(file_type, FileType::Ts | FileType::Tsx),
+      is_type_script: matches!(asset.file_type, FileType::Ts | FileType::Tsx),
       is_worker: env.context.is_worker(),
       jsx_import_source,
       jsx_pragma,
@@ -512,7 +503,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         errors,
         MapDiagnosticOptions {
           source_code: Some(source_code.clone()),
-          file_type: Some(file_type.clone()),
+          file_type: Some(asset.file_type.clone()),
           file_path: Some(asset.file_path),
         },
       )));
