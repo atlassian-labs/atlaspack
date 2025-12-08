@@ -47,6 +47,8 @@ impl Request for AssetGraphRequest {
     &self,
     mut request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
+    println!("AssetGraphRequest::run");
+
     match self.try_reuse_asset_graph(&mut request_context).await? {
       ReusedAssetGraphResult::Reused(result) => Ok(result),
       ReusedAssetGraphResult::NeedsFullRebuild(changed_requests) => {

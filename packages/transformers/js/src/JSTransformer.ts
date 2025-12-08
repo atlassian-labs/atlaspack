@@ -285,7 +285,7 @@ export default new Transformer({
           useDefineForClassFields = Number(target) >= 2022;
         }
       }
-    }
+    } // end of asset.isSource
 
     // Check if we should ignore fs calls
     // See https://github.com/defunctzombie/node-browser-resolve#skip

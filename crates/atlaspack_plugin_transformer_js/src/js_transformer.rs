@@ -1,6 +1,11 @@
 use std::collections::HashMap;
 use std::fmt;
+use std::fs::File;
+use std::io::Write;
 use std::sync::Arc;
+use std::sync::OnceLock;
+
+use parking_lot::Mutex;
 
 use anyhow::{Error, anyhow};
 
@@ -27,6 +32,21 @@ use crate::package_json::{PackageJson, depends_on_react, supports_automatic_jsx_
 use crate::ts_config::{Jsx, Target, TsConfig};
 
 mod conversion;
+
+/// Static mutex-protected file for thread-safe CSV logging
+static CSV_FILE: OnceLock<Mutex<File>> = OnceLock::new();
+
+fn get_csv_file() -> &'static Mutex<File> {
+  CSV_FILE.get_or_init(|| {
+    use std::fs::OpenOptions;
+    let file = OpenOptions::new()
+      .create(true)
+      .append(true)
+      .open("automatic_jsx_runtime.csv")
+      .expect("Failed to open automatic_jsx_runtime.csv");
+    Mutex::new(file)
+  })
+}
 
 /// This is a rust only `TransformerPlugin` implementation for JS assets that goes through the
 /// default SWC transformer.
@@ -77,6 +97,7 @@ impl AtlaspackJsTransformerPlugin {
         |config| Ok(config.contents.config.unwrap_or_default()),
       )?;
 
+    // root tsconfig
     let ts_config = ctx
       .config
       .load_json_config::<TsConfig>("tsconfig.json")
@@ -106,7 +127,7 @@ impl AtlaspackJsTransformerPlugin {
     file_type: &FileType,
     asset: &Asset,
     compiler_options: Option<&crate::ts_config::CompilerOptions>,
-    package_json: &Option<ConfigFile<PackageJson>>,
+    local_package_json: &Option<ConfigFile<PackageJson>>,
   ) -> (bool, Option<String>, Option<String>, Option<String>, bool) {
     let mut is_jsx = matches!(file_type, FileType::Jsx | FileType::Tsx);
     let mut jsx_pragma = None;
@@ -116,7 +137,8 @@ impl AtlaspackJsTransformerPlugin {
 
     if asset.is_source {
       // Check for React dependencies in package.json
-      let has_react = package_json
+
+      let has_react = local_package_json
         .as_ref()
         .is_some_and(|pkg| depends_on_react(&pkg.contents));
 
@@ -165,13 +187,13 @@ impl AtlaspackJsTransformerPlugin {
         }
         _ => {}
       }
-    }
 
-    // Update automatic_jsx_runtime based on package.json if not set by tsconfig
-    if !automatic_jsx_runtime {
-      automatic_jsx_runtime = package_json
-        .as_ref()
-        .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents));
+      // Update automatic_jsx_runtime based on package.json if not set by tsconfig
+      if !automatic_jsx_runtime {
+        automatic_jsx_runtime = local_package_json
+          .as_ref()
+          .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents));
+      }
     }
 
     (
@@ -378,7 +400,8 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       .as_ref()
       .and_then(|ts| ts.compiler_options.as_ref());
 
-    let package_json = context.config().load_package_json::<PackageJson>().ok();
+    // this is a local package json - bad
+    let local_package_json = context.config().load_package_json::<PackageJson>().ok();
 
     // v3JsxConfigurationLoading CLEANUP NOTE: Remove the flag disabled code path after rollout
     let feature_flag_v3_jsx_configuration_loading = self
@@ -390,23 +413,33 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
     let (is_jsx, jsx_pragma, jsx_pragma_frag, jsx_import_source, automatic_jsx_runtime) =
       if feature_flag_v3_jsx_configuration_loading {
         // With v3JsxConfigurationLoading enabled, use the new determine_jsx_configuration method
-        self.determine_jsx_configuration(&file_type, &asset, compiler_options, &package_json)
+        self.determine_jsx_configuration(&file_type, &asset, compiler_options, &local_package_json)
       } else {
         // With v3JsxConfigurationLoading disabled, use the old logic
         let is_jsx = matches!(file_type, FileType::Jsx | FileType::Tsx);
 
-        let automatic_jsx_runtime = compiler_options
-          .map(|co| {
-            co.jsx
-              .as_ref()
-              .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
-              || co.jsx_import_source.is_some()
-          })
-          .unwrap_or_else(|| {
-            package_json
-              .as_ref()
-              .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents))
-          });
+        // let automatic_jsx_runtime = compiler_options
+        //   .map(|co| {
+        //     co.jsx
+        //       .as_ref()
+        //       .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
+        //       || co.jsx_import_source.is_some()
+        //   })
+        //   // local package json is bad
+        //   .unwrap_or_else(|| {
+        //     local_package_json
+        //       .as_ref()
+        //       .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents))
+        //   });
+
+        let automatic_jsx_runtime = match asset.file_path.to_string_lossy() {
+          fp if fp.contains("node_modules") => false,
+          fp if fp.contains("atlassian-frontend-monorepo/platform") => true,
+          fp if fp.contains("atlassian-frontend-monorepo/jira") => false,
+          fp if fp.contains("atlassian-frontend-monorepo/confluence") => false,
+          fp if fp.contains("atlassian-frontend-monorepo/post-office") => true,
+          _ => false,
+        };
 
         let jsx_import_source = compiler_options
           .and_then(|co| co.jsx_import_source.clone())
@@ -423,6 +456,25 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
           automatic_jsx_runtime,
         )
       };
+
+    {
+      let mut file = get_csv_file().lock();
+      writeln!(
+        file,
+        "{},{},{}",
+        match asset.file_path.to_string_lossy() {
+          fp if fp.contains("node_modules") => "node_modules",
+          fp if fp.contains("atlassian-frontend-monorepo/platform") => "platform",
+          fp if fp.contains("atlassian-frontend-monorepo/jira") => "jira",
+          fp if fp.contains("atlassian-frontend-monorepo/confluence") => "confluence",
+          fp if fp.contains("atlassian-frontend-monorepo/post-office") => "post-office",
+          _ => "other",
+        },
+        automatic_jsx_runtime,
+        asset.file_path.to_string_lossy()
+      )
+      .expect("Failed to write to CSV file");
+    }
 
     let transform_config = atlaspack_js_swc_core::Config {
       automatic_jsx_runtime,
@@ -456,7 +508,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       project_root: self.options.project_root.to_string_lossy().into_owned(),
       react_refresh: self.options.hmr_options.is_some()
         && self.options.mode == BuildMode::Development
-        && package_json.is_some_and(|pkg| depends_on_react(&pkg.contents))
+        && local_package_json.is_some_and(|pkg| depends_on_react(&pkg.contents))
         && env.context.is_browser()
         && !env.is_library
         && !env.context.is_worker()
