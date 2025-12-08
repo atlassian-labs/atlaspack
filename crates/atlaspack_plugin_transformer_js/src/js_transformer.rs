@@ -112,13 +112,24 @@ impl AtlaspackJsTransformerPlugin {
     bool,
     bool,
   ) {
-    let mut is_jsx = matches!(asset.file_type, FileType::Jsx | FileType::Tsx);
+    let is_jsx = match &asset.file_type {
+      FileType::Jsx | FileType::Tsx => {
+        // .jsx and .tsx files should always have JSX enabled
+        true
+      }
+      FileType::Js => {
+        // Enable JSX for all JS files in source
+        asset.is_source
+      }
+      _ => false,
+    };
+
     let mut jsx_pragma = None;
     let mut jsx_pragma_frag = None;
     let mut jsx_import_source = None;
     let mut automatic_jsx_runtime = false;
 
-    if asset.is_source {
+    if is_jsx {
       if let Some(react) = &self.config.react {
         // Use react options from transformer config if provided
         jsx_pragma = react
@@ -139,33 +150,17 @@ impl AtlaspackJsTransformerPlugin {
         jsx_pragma_frag = Some("React.Fragment".to_string());
       }
 
-      // Determine if JSX should be enabled based on file type and configuration
-      match &asset.file_type {
-        FileType::Jsx | FileType::Tsx => {
-          // .jsx and .tsx files should always have JSX enabled
-          is_jsx = true;
-        }
-        FileType::Js => {
-          // For .js files, enable JSX if we have configuration (tsconfig or React dependencies)
-          is_jsx = jsx_pragma.is_some();
-        }
-        FileType::Ts => {
-          // TypeScript files without .tsx extension should not have JSX
-          is_jsx = false;
-        }
-        _ => {}
-      }
-    }
-
-    // Update automatic_jsx_runtime based on package.json if not set by tsconfig
-    if let Some(react) = &self.config.react
-      && let Some(automatic_runtime) = &react.automatic_runtime
-    {
-      automatic_jsx_runtime = match automatic_runtime {
-        AutomaticReactRuntime::Enabled(enabled) => *enabled,
-        AutomaticReactRuntime::Glob(globs) => {
-          let relative_path = relative_path(asset.file_path.as_path(), &self.options.project_root);
-          globs.iter().any(|glob| glob_match(glob, &relative_path))
+      // Update automatic_jsx_runtime based on package.json if not set by tsconfig
+      if let Some(react) = &self.config.react
+        && let Some(automatic_runtime) = &react.automatic_runtime
+      {
+        automatic_jsx_runtime = match automatic_runtime {
+          AutomaticReactRuntime::Enabled(enabled) => *enabled,
+          AutomaticReactRuntime::Glob(globs) => {
+            let relative_path =
+              relative_path(asset.file_path.as_path(), &self.options.project_root);
+            globs.iter().any(|glob| glob_match(glob, &relative_path))
+          }
         }
       }
     }
@@ -1030,9 +1025,8 @@ mod tests {
       !is_jsx_ts,
       ".ts files should never have JSX enabled (explicitly disabled)"
     );
-    // Pragmas might be set if React is present, but JSX won't be enabled
-    assert_eq!(jsx_pragma_ts, Some("React.createElement".to_string()));
-    assert_eq!(jsx_pragma_frag_ts, Some("React.Fragment".to_string()));
+    assert_eq!(jsx_pragma_ts, None);
+    assert_eq!(jsx_pragma_frag_ts, None);
 
     // Case 7: .tsx file should always have JSX enabled
     // Expected: is_jsx = true, pragmas set from React configuration if present
