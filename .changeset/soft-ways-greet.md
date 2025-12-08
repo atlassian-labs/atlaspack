@@ -1,5 +1,6 @@
 ---
 '@atlaspack/integration-tests': minor
+'@atlaspack/rust': minor
 '@atlaspack/transformer-js': minor
 ---
 
