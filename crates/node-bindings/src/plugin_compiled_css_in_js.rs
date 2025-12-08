@@ -26,6 +26,17 @@ use swc_core::{
   ecma::ast::{Module, ModuleItem, Program},
 };
 
+#[napi]
+pub fn is_safe_from_js(hash: String, config_path: String) -> napi::Result<bool> {
+  atlassian_swc_compiled_css::migration_hash::is_safe_from_js(hash, config_path)
+    .map_err(|err| napi::Error::from_reason(err.to_string()))
+}
+
+#[napi]
+pub fn hash_code(raw_code: String) -> String {
+  atlassian_swc_compiled_css::migration_hash::hash_code(&raw_code)
+}
+
 /// Error type for transform failures
 #[derive(Debug, Clone)]
 pub struct TransformError {
@@ -80,8 +91,6 @@ pub struct CompiledCssInJsPluginResult {
   pub style_rules: Vec<String>,
   pub diagnostics: Vec<JsDiagnostic>,
   pub bail_out: bool,
-  pub code_hash: String,
-  pub duration: Option<f64>,
 }
 
 static PANIC_HOOK_GUARD: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
@@ -335,44 +344,6 @@ fn process_compiled_css_in_js(
     },
   );
 
-  let code_hash = atlassian_swc_compiled_css::migration_hash::hash_code(code);
-
-  let is_safe_result =
-    atlassian_swc_compiled_css::migration_hash::is_safe(&code_hash, transform_config);
-
-  if let Err(e) = is_safe_result {
-    // Error checking if asset is safe
-    return Ok(CompiledCssInJsPluginResult {
-      code: "".to_string(),
-      map: None,
-      style_rules: Vec::new(),
-      diagnostics: vec![JsDiagnostic {
-        message: format!("Compiled CSS in JS safety check failed: {}", e),
-        code_highlights: None,
-        hints: None,
-        show_environment: false,
-        severity: "Error".to_string(),
-        documentation_url: None,
-      }],
-      bail_out: false,
-      code_hash,
-      duration: None,
-    });
-  } else if let Ok(is_safe) = is_safe_result
-    && !is_safe
-  {
-    // Asset is not safe, bail out without erroring
-    return Ok(CompiledCssInJsPluginResult {
-      code: "".to_string(),
-      map: None,
-      style_rules: Vec::new(),
-      diagnostics: Vec::new(),
-      bail_out: true,
-      code_hash,
-      duration: None,
-    });
-  }
-
   if let Some(pattern) = &transform_config.unsafe_skip_pattern {
     let regex = get_cached_regex(pattern.as_str())?;
 
@@ -391,8 +362,6 @@ fn process_compiled_css_in_js(
           documentation_url: None,
         }],
         bail_out: true,
-        code_hash,
-        duration: None,
       });
     }
   }
@@ -442,8 +411,6 @@ fn process_compiled_css_in_js(
       }),
     };
 
-    let start = std::time::Instant::now();
-
     // Apply the transformation using the new API with panic handling
     // This needs to be wrapped in GLOBALS context
     let transform_result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
@@ -451,7 +418,7 @@ fn process_compiled_css_in_js(
         let options = config_to_plugin_options(transform_config);
         atlassian_swc_compiled_css::transform_with_file(
           program,
-          atlassian_swc_compiled_css::TransformFile::with_options(
+          atlassian_swc_compiled_css::TransformFile::transform_compiled_with_options(
             source_map.clone(),
             // SAFETY: `collect_comments_for_transform` extracts all leading/trailing
             // comment lists without mutating the parser's shared `SingleThreadedComments`
@@ -487,8 +454,6 @@ fn process_compiled_css_in_js(
             documentation_url: None,
           }],
           bail_out: true,
-          code_hash,
-          duration: None,
         });
       }
     };
@@ -520,9 +485,7 @@ fn process_compiled_css_in_js(
       }
     }
 
-    // remove_jsx_pragma_comments(&comments);
-
-    let end: f64 = start.elapsed().as_millis() as f64;
+    remove_jsx_pragma_comments(&comments);
 
     let module_result = transformed_program
       .module()
@@ -538,7 +501,6 @@ fn process_compiled_css_in_js(
 
     let code =
       String::from_utf8(code_bytes).with_context(|| "Failed to convert emitted code to UTF-8")?;
-    // let code = strip_jsx_pragma_comment_from_source(&code);
 
     let map_json = if input.source_maps && !line_pos_buffer.is_empty() {
       let build_map_result = {
@@ -581,8 +543,6 @@ fn process_compiled_css_in_js(
       style_rules,
       diagnostics: Vec::new(),
       bail_out: false,
-      code_hash,
-      duration: Some(end),
     })
   })
 }
@@ -2694,9 +2654,7 @@ const styles3 = css({
     "#};
 
     let normalized_output = normalize_output(&classname_output);
-    println!("{}", normalized_output);
     let normalized_expected = normalize_output(expected_classname);
-    println!("{}", normalized_expected);
 
     assert!(
       normalized_output.eq(&normalized_expected),
@@ -2814,8 +2772,6 @@ export const CloseButtonContainer: ComponentType<
 
     let output = result.unwrap();
 
-    println!("{}", output.code);
-
     // Verify transformation was applied
     assert!(!output.bail_out, "Transformation should not bail out");
 
@@ -2864,8 +2820,6 @@ const ScreenIcon = <span css={verticalAlignStyle} aria-hidden></span>;
     assert!(result.is_ok(), "Transformation should succeed");
 
     let output = result.unwrap();
-
-    println!("{}", output.code);
 
     // Verify transformation was applied
     assert!(!output.bail_out, "Transformation should not bail out");
@@ -2986,8 +2940,6 @@ export default () => {
 
     let output = result.unwrap();
 
-    println!("{}", output.code);
-
     // Verify transformation was applied
     assert!(!output.bail_out, "Transformation should not bail out");
 
@@ -3062,8 +3014,6 @@ export function CompassNotProvisionedEmptyState({ onCompassSignup }: Props) {
     assert!(result.is_ok(), "Transformation should succeed");
 
     let output = result.unwrap();
-
-    println!("{}", output.code);
 
     // Verify transformation was applied
     assert!(!output.bail_out, "Transformation should not bail out");

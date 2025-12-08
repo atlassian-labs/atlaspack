@@ -329,7 +329,7 @@ mod tests {
 
   fn metadata() -> Metadata {
     let cm: Lrc<SourceMap> = Default::default();
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       TransformFileOptions {

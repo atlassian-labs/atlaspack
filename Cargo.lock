@@ -718,6 +718,7 @@ dependencies = [
  "atlaspack_core",
  "atlaspack_filesystem",
  "atlaspack_sourcemap",
+ "atlassian_swc_compiled_css",
  "criterion",
  "glob-match",
  "indexmap",

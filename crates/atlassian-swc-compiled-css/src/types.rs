@@ -260,10 +260,10 @@ pub struct TransformFileOptions {
 
 impl TransformFile {
   pub fn new(source_map: Lrc<SourceMap>, comments: Vec<Comment>) -> Self {
-    Self::with_options(source_map, comments, TransformFileOptions::default())
+    Self::transform_compiled_with_options(source_map, comments, TransformFileOptions::default())
   }
 
-  pub fn with_options(
+  pub fn transform_compiled_with_options(
     source_map: Lrc<SourceMap>,
     comments: Vec<Comment>,
     options: TransformFileOptions,
@@ -720,7 +720,7 @@ mod tests {
     let cwd = env::current_dir().expect("current dir");
     let root = cwd.join("compiled-tests");
 
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       TransformFileOptions {
@@ -754,7 +754,7 @@ mod tests {
     let cwd = env::current_dir().expect("current dir");
     let root = cwd.join("resolver-root");
 
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       TransformFileOptions {
@@ -788,7 +788,7 @@ mod tests {
     let first_root = cwd.join("first-root");
     let second_root = cwd.join("second-root");
 
-    let first_file = TransformFile::with_options(
+    let first_file = TransformFile::transform_compiled_with_options(
       cm.clone(),
       Vec::new(),
       TransformFileOptions {
@@ -824,7 +824,7 @@ mod tests {
       .expect("expected resolver to be initialized");
     assert!(initial_resolver.starts_with(&first_root));
 
-    let second_file = TransformFile::with_options(
+    let second_file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       TransformFileOptions {

@@ -2823,7 +2823,7 @@ mod tests {
   fn create_metadata() -> Metadata {
     let cm: Lrc<SourceMap> = Default::default();
     cm.new_source_file(FileName::Custom("test.js".into()).into(), String::new());
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm.clone(),
       Vec::new(),
       TransformFileOptions {
@@ -2843,7 +2843,7 @@ mod tests {
   fn create_metadata_with_filename(filename: &str) -> Metadata {
     let cm: Lrc<SourceMap> = Default::default();
     cm.new_source_file(FileName::Custom(filename.into()).into(), String::new());
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       TransformFileOptions {

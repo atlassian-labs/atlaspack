@@ -380,7 +380,7 @@ mod tests {
 
   fn metadata_with_styled_import(name: &str) -> Metadata {
     let cm: Lrc<SourceMap> = Default::default();
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       crate::types::TransformFileOptions {

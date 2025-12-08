@@ -35,6 +35,7 @@ use atlaspack_macros::MacroCallback;
 use atlaspack_macros::MacroError;
 use atlaspack_macros::Macros;
 
+use atlassian_swc_compiled_css::remove_jsx_pragma_comments;
 use atlassian_swc_compiled_css_strip_runtime as strip_runtime;
 use collect::Collect;
 pub use collect::CollectImportedSymbol;
@@ -69,7 +70,7 @@ use swc_core::common::FileName;
 use swc_core::common::Globals;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
-use swc_core::common::comments::SingleThreadedComments;
+use swc_core::common::comments::{Comment, SingleThreadedComments};
 use swc_core::common::errors::Handler;
 use swc_core::common::pass::Optional;
 use swc_core::common::source_map::SourceMapGenConfig;
@@ -339,20 +340,44 @@ pub fn transform(
                   ));
                 }
 
-                if let Some(compiled_css_in_js_config) = &config.compiled_css_in_js_config
-                {
+                if let Some(compiled_css_in_js_config) = &config.compiled_css_in_js_config {
                   // Convert to transform config to access extract field
-                  let transform_config = atlassian_swc_compiled_css::CompiledCssInJsTransformConfig::from(
-                    compiled_css_in_js_config.clone()
-                  );
+                  let transform_config =
+                    atlassian_swc_compiled_css::CompiledCssInJsTransformConfig::from(
+                      compiled_css_in_js_config.clone(),
+                    );
 
-                  let plugin_options = atlassian_swc_compiled_css::PluginOptions::from(compiled_css_in_js_config);
+                  let plugin_options = atlassian_swc_compiled_css::PluginOptions::from(
+                    compiled_css_in_js_config,
+                  );
+                  let should_run_compiled_css =
+                    atlassian_swc_compiled_css::should_run_compiled_css_in_js_transform(
+                      code,
+                      plugin_options.clone(),
+                    );
+                  let compiled_css_transform =
+                    atlassian_swc_compiled_css::CompiledCssInJsTransform::new(plugin_options);
+
+                  {
+                    let shared_state = compiled_css_transform.state();
+                    let mut state = shared_state.borrow_mut();
+                    let transform_file =
+                      atlassian_swc_compiled_css::TransformFile::transform_compiled_with_options(
+                        source_map.clone(),
+                        collect_comments_for_transform(&comments),
+                        atlassian_swc_compiled_css::TransformFileOptions {
+                          filename: Some(config.filename.clone()),
+                          cwd: Some(PathBuf::from(&config.project_root)),
+                          root: Some(PathBuf::from(&config.project_root)),
+                          loc_filename: Some(config.filename.clone()),
+                        },
+                      );
+                    state.replace_file(transform_file);
+                  }
 
                   module = module.apply(Optional::new(
-                    visit_mut_pass(atlassian_swc_compiled_css::CompiledCssInJsTransform::new(
-                      plugin_options.clone()
-                    )),
-                    atlassian_swc_compiled_css::should_run_compiled_css_in_js_transform(code, plugin_options),
+                    visit_mut_pass(compiled_css_transform),
+                    should_run_compiled_css,
                   ));
 
                   // Apply strip runtime transform when extract is enabled
@@ -373,12 +398,11 @@ pub fn transform(
                       options: strip_options,
                     };
 
-                    let strip_output = strip_runtime::transform(
-                      module,
-                      strip_config,
-                    );
+                    let strip_output = strip_runtime::transform(module, strip_config);
                     module = strip_output.program;
                   }
+
+                  remove_jsx_pragma_comments(&comments);
                 }
               }
 
@@ -876,6 +900,15 @@ pub fn emit(
   }
 
   Ok((buf, src_map_buf))
+}
+
+fn collect_comments_for_transform(comments: &SingleThreadedComments) -> Vec<Comment> {
+  let (leading, trailing) = comments.borrow_all();
+  leading
+    .values()
+    .chain(trailing.values())
+    .flat_map(|list| list.clone())
+    .collect()
 }
 
 // Exclude macro expansions from source maps.

@@ -535,7 +535,7 @@ pub(crate) fn load_or_parse_module(meta: &Metadata, source: &str) -> Option<Cach
 
   let (program, source_map, comments) = parse_program(&module_path, &code, &options)?;
 
-  let transform_file = TransformFile::with_options(
+  let transform_file = TransformFile::transform_compiled_with_options(
     source_map.clone(),
     comments,
     TransformFileOptions {
@@ -1088,7 +1088,7 @@ mod tests {
     fs::write(&module_path, "export const blue = 'blue';").expect("write module");
 
     let cm: Lrc<SourceMap> = Default::default();
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       TransformFileOptions {
@@ -1141,7 +1141,7 @@ mod tests {
     fs::write(&gateway_path, "export { blue } from './colors';").expect("write gateway module");
 
     let cm: Lrc<SourceMap> = Default::default();
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       TransformFileOptions {
@@ -1198,7 +1198,7 @@ mod tests {
     fs::write(&module_path, "export const blue: string = 'blue';").expect("write module");
 
     let cm: Lrc<SourceMap> = Default::default();
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       TransformFileOptions {
@@ -1266,7 +1266,7 @@ mod tests {
     .expect("write module");
 
     let cm: Lrc<SourceMap> = Default::default();
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       TransformFileOptions {
@@ -1336,7 +1336,7 @@ mod tests {
     .expect("write module");
 
     let cm: Lrc<SourceMap> = Default::default();
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       TransformFileOptions {
@@ -1394,7 +1394,7 @@ mod tests {
     .expect("write module");
 
     let cm: Lrc<SourceMap> = Default::default();
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       TransformFileOptions {

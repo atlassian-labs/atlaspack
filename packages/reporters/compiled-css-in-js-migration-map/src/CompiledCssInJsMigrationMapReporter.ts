@@ -19,17 +19,13 @@ export default new Reporter({
           )
         : {};
 
-      const safeAssets: Record<
-        string,
-        {asset: string; swcDuration: number; compiledDuration: number}
-      > = currentMap?.safeAssets ?? {};
+      const safeAssets: Record<string, {asset: string}> =
+        currentMap?.safeAssets ?? {};
       const unsafeAssets: Record<
         string,
         {
           asset: string;
           babel: string[];
-          swcDuration: number;
-          compiledDuration: number;
           swc: string[];
           diagnostics: string[];
         }
@@ -74,8 +70,6 @@ export default new Reporter({
               if (asset.meta.compiledCodeHash) {
                 safeAssets[asset.meta.compiledCodeHash as string] = {
                   asset: relative(options.projectRoot, asset.filePath),
-                  swcDuration: asset.meta.swcDuration as number,
-                  compiledDuration: asset.meta.compiledDuration as number,
                 };
               }
             } else {
@@ -84,8 +78,6 @@ export default new Reporter({
                   (relative(options.projectRoot, asset.filePath) as string)
               ] = {
                 asset: relative(options.projectRoot, asset.filePath),
-                swcDuration: asset.meta.swcDuration as number,
-                compiledDuration: asset.meta.compiledDuration as number,
                 babel: Array.from(babelStyleRules).sort(),
                 swc: Array.from(swcStyleRules).sort(),
                 diagnostics:

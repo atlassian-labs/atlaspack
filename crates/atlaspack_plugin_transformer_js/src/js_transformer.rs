@@ -5,7 +5,7 @@ use std::sync::Arc;
 use anyhow::{Error, anyhow};
 
 use async_trait::async_trait;
-use atlaspack_core::config_loader::ConfigFile;
+use atlaspack_core::config_loader::{ConfigFile, ConfigLoaderRef};
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::browsers::Browsers;
@@ -15,8 +15,10 @@ use atlaspack_core::types::{
   SourceType,
 };
 use atlaspack_js_swc_core::SyncDynamicImportConfig;
+use atlassian_swc_compiled_css::config::CompiledCssInJsConfig;
 use glob_match::glob_match;
 use parking_lot::RwLock;
+use serde::Deserialize;
 use swc_core::atoms::Atom;
 
 use crate::js_transformer_config::{
@@ -44,6 +46,8 @@ pub struct AtlaspackJsTransformerPlugin {
   config: JsTransformerConfig,
   options: Arc<PluginOptions>,
   ts_config: Option<TsConfig>,
+  tokens_config: Option<atlaspack_js_swc_core::TokensConfig>,
+  compiled_css_in_js_config: Option<CompiledCssInJsConfig>,
 }
 
 #[derive(Default)]
@@ -92,11 +96,27 @@ impl AtlaspackJsTransformerPlugin {
       })
       .ok();
 
+    let enable_tokens_and_compiled_css = ctx
+      .options
+      .feature_flags
+      .bool_enabled("coreTokensAndCompiledCssInJsTransform");
+
+    let (tokens_config, compiled_css_in_js_config) = if enable_tokens_and_compiled_css {
+      (
+        Self::load_tokens_config(ctx.config.clone())?,
+        Self::load_compiled_css_in_js_config(ctx.config.clone(), ctx.options.mode.clone())?,
+      )
+    } else {
+      (None, None)
+    };
+
     Ok(Self {
       cache: Default::default(),
       config,
       options: ctx.options.clone(),
       ts_config,
+      tokens_config,
+      compiled_css_in_js_config,
     })
   }
 
@@ -300,6 +320,140 @@ impl AtlaspackJsTransformerPlugin {
 
     None
   }
+
+  fn load_tokens_config(
+    config_loader: ConfigLoaderRef,
+  ) -> Result<Option<atlaspack_js_swc_core::TokensConfig>, Error> {
+    #[derive(Debug, Deserialize)]
+    struct TokensPackageJson {
+      #[serde(rename = "@atlaspack/transformer-tokens")]
+      config: Option<TokensTransformerConfig>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct TokensTransformerConfig {
+      #[allow(dead_code)]
+      token_data_path: String,
+      should_use_auto_fallback: Option<bool>,
+      should_force_auto_fallback: Option<bool>,
+      force_auto_fallback_exemptions: Option<Vec<String>>,
+      default_theme: Option<String>,
+    }
+
+    let config = config_loader
+      .load_package_json::<TokensPackageJson>()
+      .map_or_else(
+        |err| {
+          let diagnostic = err.downcast_ref::<Diagnostic>();
+
+          if diagnostic.is_some_and(|d| d.kind != ErrorKind::NotFound) {
+            return Err(err);
+          }
+
+          Ok(None)
+        },
+        |config| Ok(config.contents.config),
+      )?;
+
+    Ok(config.map(|config| {
+      atlaspack_js_swc_core::TokensConfig {
+        should_use_auto_fallback: config.should_use_auto_fallback.unwrap_or(true),
+        should_force_auto_fallback: config.should_force_auto_fallback.unwrap_or(true),
+        force_auto_fallback_exemptions: config.force_auto_fallback_exemptions.unwrap_or_default(),
+        default_theme: config
+          .default_theme
+          .unwrap_or_else(|| String::from("light")),
+      }
+    }))
+  }
+
+  fn load_compiled_css_in_js_config(
+    config_loader: ConfigLoaderRef,
+    mode: BuildMode,
+  ) -> Result<Option<CompiledCssInJsConfig>, Error> {
+    const CONFIG_FILENAMES: [&str; 2] = [".compiledcssrc", ".compiledcssrc.json"];
+
+    let mut config_file: Option<ConfigFile<CompiledCssInJsConfig>> = None;
+
+    for filename in CONFIG_FILENAMES {
+      match config_loader.load_json_config::<CompiledCssInJsConfig>(filename) {
+        Ok(file) => {
+          config_file = Some(file);
+          break;
+        }
+        Err(err) => {
+          let diagnostic = err.downcast_ref::<Diagnostic>();
+
+          if diagnostic.is_some_and(|d| d.kind != ErrorKind::NotFound) {
+            return Err(err);
+          }
+        }
+      }
+    }
+
+    let Some(config_file) = config_file else {
+      return Ok(None);
+    };
+
+    let mut resolved = CompiledCssInJsConfig {
+      import_sources: Some(vec![
+        "@compiled/react".to_string(),
+        "@atlaskit/css".to_string(),
+      ]),
+      ..CompiledCssInJsConfig::default()
+    };
+
+    let mut file_contents = config_file.contents;
+
+    macro_rules! override_field {
+      ($field:ident) => {
+        if let Some(value) = file_contents.$field.take() {
+          resolved.$field = Some(value);
+        }
+      };
+    }
+
+    override_field!(import_react);
+    override_field!(nonce);
+    override_field!(import_sources);
+    override_field!(optimize_css);
+    override_field!(extensions);
+    override_field!(add_component_name);
+    override_field!(process_xcss);
+    override_field!(increase_specificity);
+    override_field!(sort_at_rules);
+    override_field!(sort_shorthand);
+    override_field!(class_hash_prefix);
+    override_field!(flatten_multiple_selectors);
+    override_field!(extract);
+    override_field!(ssr);
+    override_field!(unsafe_report_safe_assets_for_migration);
+    override_field!(unsafe_use_safe_assets);
+    override_field!(unsafe_skip_pattern);
+
+    resolved.config_path = Some(config_file.path.to_string_lossy().to_string());
+
+    if let Some(import_sources) = resolved.import_sources.as_mut() {
+      if !import_sources
+        .iter()
+        .any(|source| source == "@compiled/react")
+      {
+        import_sources.push("@compiled/react".to_string());
+      }
+    } else {
+      resolved.import_sources = Some(vec![
+        "@compiled/react".to_string(),
+        "@atlaskit/css".to_string(),
+      ]);
+    }
+
+    if matches!(resolved.extract, Some(true)) && mode == BuildMode::Development {
+      resolved.extract = Some(false);
+    }
+
+    Ok(Some(resolved))
+  }
 }
 
 impl fmt::Debug for AtlaspackJsTransformerPlugin {
@@ -490,6 +644,12 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         .feature_flags
         .bool_enabled("nestedPromiseImportFix"),
       sync_dynamic_import_config,
+      enable_tokens_and_compiled_css_in_js_transform: self
+        .options
+        .feature_flags
+        .bool_enabled("coreTokensAndCompiledCssInJsTransform"),
+      tokens_config: self.tokens_config.clone(),
+      compiled_css_in_js_config: self.compiled_css_in_js_config.clone(),
       ..atlaspack_js_swc_core::Config::default()
     };
 
@@ -520,7 +680,10 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
 #[cfg(test)]
 mod tests {
-  use std::path::{Path, PathBuf};
+  use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+  };
 
   use atlaspack_core::{
     config_loader::ConfigLoader,
@@ -1810,5 +1973,87 @@ mod tests {
     assert!(!code.is_empty());
 
     code
+  }
+
+  #[test]
+  fn load_tokens_config_reads_package_json_defaults() -> anyhow::Result<()> {
+    let file_system = Arc::new(InMemoryFileSystem::default());
+    let project_root = PathBuf::from("/project");
+    let search_path = project_root.join("index");
+
+    file_system.write_file(
+      &project_root.join("package.json"),
+      r#"{
+        "@atlaspack/transformer-tokens": {
+          "tokenDataPath": "tokens.json",
+          "defaultTheme": "legacy-light",
+          "shouldForceAutoFallback": false
+        }
+      }"#
+        .to_string(),
+    );
+
+    let config_loader = Arc::new(ConfigLoader {
+      fs: file_system,
+      project_root: project_root.clone(),
+      search_path,
+    });
+
+    let config =
+      AtlaspackJsTransformerPlugin::load_tokens_config(config_loader)?.expect("tokens config");
+
+    assert_eq!(config.default_theme, "legacy-light");
+    assert!(config.should_use_auto_fallback);
+    assert!(!config.should_force_auto_fallback);
+    assert!(config.force_auto_fallback_exemptions.is_empty());
+
+    Ok(())
+  }
+
+  #[test]
+  fn load_compiled_css_in_js_config_merges_defaults() -> anyhow::Result<()> {
+    let file_system = Arc::new(InMemoryFileSystem::default());
+    let project_root = PathBuf::from("/project");
+    let search_path = project_root.join("index");
+    let config_path = project_root.join(".compiledcssrc");
+
+    file_system.write_file(
+      &config_path,
+      r#"{
+        "importSources": ["@atlaskit/css"],
+        "extract": true
+      }"#
+        .to_string(),
+    );
+
+    let config_loader = Arc::new(ConfigLoader {
+      fs: file_system,
+      project_root: project_root.clone(),
+      search_path,
+    });
+
+    let config = AtlaspackJsTransformerPlugin::load_compiled_css_in_js_config(
+      config_loader,
+      BuildMode::Development,
+    )?
+    .expect("compiled css config");
+
+    assert_eq!(
+      config.config_path,
+      Some(config_path.to_string_lossy().to_string())
+    );
+    assert_eq!(config.extract, Some(false));
+
+    let import_sources = config.import_sources.expect("import sources");
+    assert!(
+      import_sources.contains(&"@compiled/react".to_string()),
+      "expected @compiled/react to be present"
+    );
+    assert!(
+      import_sources.contains(&"@atlaskit/css".to_string()),
+      "expected @atlaskit/css to be preserved"
+    );
+
+    Ok(())
   }
 }

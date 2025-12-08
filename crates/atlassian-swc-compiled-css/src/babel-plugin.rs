@@ -266,7 +266,7 @@ mod tests {
     cm: Lrc<SourceMap>,
     filename: &str,
   ) {
-    let file = TransformFile::with_options(
+    let file = TransformFile::transform_compiled_with_options(
       cm,
       Vec::new(),
       TransformFileOptions {
@@ -475,7 +475,7 @@ mod tests {
 
     {
       let mut state = transform.state.borrow_mut();
-      state.replace_file(TransformFile::with_options(
+      state.replace_file(TransformFile::transform_compiled_with_options(
         cm.clone(),
         vec![comment],
         TransformFileOptions {
@@ -534,7 +534,7 @@ mod tests {
 
     {
       let mut state = transform.state.borrow_mut();
-      state.replace_file(TransformFile::with_options(
+      state.replace_file(TransformFile::transform_compiled_with_options(
         cm.clone(),
         vec![comment],
         TransformFileOptions {
@@ -585,7 +585,7 @@ mod tests {
 
     {
       let mut state = transform.state.borrow_mut();
-      state.replace_file(TransformFile::with_options(
+      state.replace_file(TransformFile::transform_compiled_with_options(
         cm.clone(),
         vec![comment],
         TransformFileOptions {
@@ -648,7 +648,7 @@ mod tests {
 
     {
       let mut state = transform.state.borrow_mut();
-      state.replace_file(TransformFile::with_options(
+      state.replace_file(TransformFile::transform_compiled_with_options(
         cm.clone(),
         stored,
         TransformFileOptions {
@@ -765,7 +765,7 @@ mod tests {
       ..PluginOptions::default()
     });
     {
-      let file = TransformFile::with_options(
+      let file = TransformFile::transform_compiled_with_options(
         cm.clone(),
         Vec::new(),
         TransformFileOptions {
@@ -855,7 +855,7 @@ mod tests {
       ..PluginOptions::default()
     });
     {
-      let file = TransformFile::with_options(
+      let file = TransformFile::transform_compiled_with_options(
         cm.clone(),
         Vec::new(),
         TransformFileOptions {
@@ -1014,7 +1014,7 @@ mod tests {
 
     let mut transform = CompiledCssInJsTransform::new(PluginOptions::default());
     {
-      let file = TransformFile::with_options(
+      let file = TransformFile::transform_compiled_with_options(
         cm.clone(),
         Vec::new(),
         TransformFileOptions {
@@ -1109,7 +1109,7 @@ mod tests {
     });
 
     {
-      let file = TransformFile::with_options(
+      let file = TransformFile::transform_compiled_with_options(
         cm.clone(),
         Vec::new(),
         TransformFileOptions {
@@ -1322,7 +1322,7 @@ mod tests {
     });
 
     {
-      let file = TransformFile::with_options(
+      let file = TransformFile::transform_compiled_with_options(
         cm.clone(),
         Vec::new(),
         TransformFileOptions {
@@ -1375,7 +1375,7 @@ mod tests {
     });
 
     {
-      let file = TransformFile::with_options(
+      let file = TransformFile::transform_compiled_with_options(
         cm.clone(),
         Vec::new(),
         TransformFileOptions {

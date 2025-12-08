@@ -1,5 +1,6 @@
-use swc_core::ecma::ast::Program;
+use swc_core::common::comments::Comment;
 use swc_core::ecma::visit::VisitMutWith;
+use swc_core::{common::comments::SingleThreadedComments, ecma::ast::Program};
 
 pub use crate::babel_plugin::CompiledCssInJsTransform;
 #[allow(unused_imports)]
@@ -54,4 +55,34 @@ pub fn should_run_compiled_css_in_js_transform(code: &str, options: PluginOption
   };
 
   has_import_source
+}
+
+pub fn remove_jsx_pragma_comments(comments: &SingleThreadedComments) -> bool {
+  let (mut leading, mut trailing) = comments.borrow_all_mut();
+  let mut removed_any = false;
+
+  leading.retain(|_, comment_list| {
+    let original_len = comment_list.len();
+    comment_list.retain(|comment| !is_jsx_pragma_comment(comment));
+    if comment_list.len() != original_len {
+      removed_any = true;
+    }
+    !comment_list.is_empty()
+  });
+
+  trailing.retain(|_, comment_list| {
+    let original_len = comment_list.len();
+    comment_list.retain(|comment| !is_jsx_pragma_comment(comment));
+    if comment_list.len() != original_len {
+      removed_any = true;
+    }
+    !comment_list.is_empty()
+  });
+
+  removed_any
+}
+
+fn is_jsx_pragma_comment(comment: &Comment) -> bool {
+  let text = comment.text.as_ref();
+  text.contains("@jsx")
 }
