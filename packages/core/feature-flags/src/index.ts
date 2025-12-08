@@ -283,14 +283,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   sourceAssetIdBundleGraphFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
-   * Enable JSX configuration loading in v3 Rust transformer to match v2 behaviour
-   *
-   * @author matt-koko <mkokolich@atlassian.com>
-   * @since 2025-10-21
-   */
-  v3JsxConfigurationLoading: process.env.ATLASPACK_BUILD_ENV === 'test',
-
-  /**
 
    * When _disabled_, will early exit from the @atlaspack/transformer-tokens transformation
    *
@@ -341,6 +333,16 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-11-27
    */
   disallowCircularPackageAliases: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Enable new JSX config loading.
+   * The new config is a top-level "react" key in the `@atlaspack/transformer-js` config.
+   * When enabled, we no longer use package.json react deps and tsconfig to infer the JSX config.
+   *
+   * @author Matt Jones <mv3JsxConfigurationLoadingjones4@atlassian.com>
+   * @since 2025-12-9
+   */
+  newJsxConfig: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

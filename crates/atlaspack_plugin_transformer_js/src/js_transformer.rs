@@ -369,13 +369,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       .as_ref()
       .and_then(|ts| ts.compiler_options.as_ref());
 
-    // v3JsxConfigurationLoading CLEANUP
-    let feature_flag_v3_jsx_configuration_loading = self
-      .options
-      .feature_flags
-      .bool_enabled("v3JsxConfigurationLoading");
-
-    // Determine JSX configuration based on v3JsxConfigurationLoading feature flag
+    // Determine JSX configuration based on newJsxConfig feature flag
     let JsxConfiguration {
       is_jsx,
       jsx_pragma,
@@ -383,11 +377,10 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       jsx_import_source,
       automatic_jsx_runtime,
       react_refresh,
-    } = if feature_flag_v3_jsx_configuration_loading {
-      // With v3JsxConfigurationLoading enabled, use the new determine_jsx_configuration method
+    } = if self.options.feature_flags.bool_enabled("newJsxConfig") {
       self.determine_jsx_configuration(&asset)
     } else {
-      // With v3JsxConfigurationLoading disabled, use the old logic
+      // With newJsxConfig disabled, use the old logic
       let package_json = context.config().load_package_json::<PackageJson>().ok();
       let is_jsx = matches!(asset.file_type, FileType::Jsx | FileType::Tsx);
 
@@ -1078,7 +1071,7 @@ mod tests {
   #[test]
   fn test_determine_jsx_configuration_logic() {
     // Unit test for determine_jsx_configuration logic
-    // This test verifies the v3 JSX configuration logic using JsTransformerConfig
+    // This test verifies the newJsxConfig configuration logic using JsTransformerConfig
     // instead of the old package.json/tsconfig approach
 
     let mut transformer = AtlaspackJsTransformerPlugin::new(&PluginContext {
@@ -1423,7 +1416,7 @@ mod tests {
       Ok(())
     }
 
-    // v3JsxConfigurationLoading CLEANUP NOTE: Remove this test after rollout.
+    // newJsxConfig CLEANUP NOTE: Remove this test after rollout.
     #[tokio::test(flavor = "multi_thread")]
     async fn js_file_with_tsconfig_and_react_feature_flag_off() -> anyhow::Result<()> {
       // Case 1: .js file with React dependency and tsconfig jsx: "react"
@@ -1465,10 +1458,7 @@ mod tests {
       let result = run_test(TestOptions {
         asset: target_asset.clone(),
         file_system: Some(file_system.clone()),
-        feature_flags: Some(FeatureFlags::with_bool_flag(
-          "v3JsxConfigurationLoading",
-          false,
-        )),
+        feature_flags: Some(FeatureFlags::with_bool_flag("newJsxConfig", false)),
         ..TestOptions::default()
       })
       .await;
@@ -1550,7 +1540,7 @@ mod tests {
       Ok(())
     }
 
-    // v3JsxConfigurationLoading CLEANUP NOTE: Remove this test after rollout.
+    // newJsxConfig CLEANUP NOTE: Remove this test after rollout.
     #[tokio::test(flavor = "multi_thread")]
     async fn js_file_with_react_only_feature_flag_off() -> anyhow::Result<()> {
       // Case 3: .js file with React dependency but NO tsconfig
@@ -1580,10 +1570,7 @@ mod tests {
       let result = run_test(TestOptions {
         asset: target_asset.clone(),
         file_system: Some(file_system.clone()),
-        feature_flags: Some(FeatureFlags::with_bool_flag(
-          "v3JsxConfigurationLoading",
-          false,
-        )),
+        feature_flags: Some(FeatureFlags::with_bool_flag("newJsxConfig", false)),
         ..TestOptions::default()
       })
       .await;
@@ -2021,12 +2008,12 @@ mod tests {
       .file_system
       .unwrap_or_else(|| default_fs(&project_root));
 
-    // v3JsxConfigurationLoading CLEANUP NOTE: Remove 'flag enabled for tests by default' logic
+    // newJsxConfig CLEANUP NOTE: Remove 'flag enabled for tests by default' logic
     let plugin_options = PluginOptions {
       feature_flags: options
         .feature_flags
         .unwrap_or_default()
-        .with_bool_flag_default("v3JsxConfigurationLoading", true),
+        .with_bool_flag_default("newJsxConfig", true),
       project_root: project_root.clone(),
       ..PluginOptions::default()
     };
