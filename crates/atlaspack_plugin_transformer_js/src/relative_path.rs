@@ -137,4 +137,12 @@ mod tests {
     let from = Path::new("/a/b");
     assert_eq!(relative_path(path, from), "../..");
   }
+
+  #[test]
+  fn test_relative_path_outside_project_root() {
+    // Test the exact scenario from the failing test
+    let path = Path::new("/dir/other-project/index.tsx");
+    let from = Path::new("/dir/my-project");
+    assert_eq!(relative_path(path, from), "../other-project/index.tsx");
+  }
 }

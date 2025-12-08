@@ -668,6 +668,222 @@ mod tests {
   }
 
   #[tokio::test(flavor = "multi_thread")]
+  async fn transforms_react_with_automatic_runtime_glob() -> anyhow::Result<()> {
+    // Test automatic JSX runtime with glob pattern matching
+    let file_system = Arc::new(InMemoryFileSystem::default());
+
+    let target_asset = create_asset(
+      "src/components/Button.tsx",
+      "
+        const Component = () => {
+          return <div>Hello World</div>;
+        };
+
+        export default Component;
+      ",
+    );
+
+    let result = run_test(TestOptions {
+      asset: target_asset.clone(),
+      file_system: Some(file_system.clone()),
+      js_transformer_config: Some(JsTransformerConfig {
+        react: Some(crate::js_transformer_config::ReactOptions {
+          jsx_pragma: Some("React.createElement".to_string()),
+          jsx_pragma_fragment: Some("React.Fragment".to_string()),
+          jsx_import_source: Some("react".to_string()),
+          automatic_runtime: Some(crate::js_transformer_config::AutomaticReactRuntime::Glob(
+            vec!["src/components/**/*.tsx".to_string()],
+          )),
+        }),
+        ..Default::default()
+      }),
+      ..TestOptions::default()
+    })
+    .await?;
+
+    let code = result.asset.code.as_str()?;
+
+    // With automatic runtime, JSX should be transformed to use jsx() imports
+    // instead of React.createElement calls
+    assert!(
+      code.contains("jsx") || code.contains("_jsx"),
+      "Code should use automatic JSX runtime (jsx imports), got: {}",
+      code
+    );
+
+    // Should not contain React.createElement since we're using automatic runtime
+    assert!(
+      !code.contains("React.createElement"),
+      "Code should not contain React.createElement with automatic runtime, got: {}",
+      code
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn transforms_react_without_automatic_runtime_glob_no_match() -> anyhow::Result<()> {
+    // Test that files not matching glob pattern don't get automatic runtime
+    let file_system = Arc::new(InMemoryFileSystem::default());
+
+    let target_asset = create_asset(
+      "src/pages/Home.tsx", // Different path that won't match components/**
+      "
+        const Component = () => {
+          return <div>Hello World</div>;
+        };
+
+        export default Component;
+      ",
+    );
+
+    let result = run_test(TestOptions {
+      asset: target_asset.clone(),
+      file_system: Some(file_system.clone()),
+      js_transformer_config: Some(JsTransformerConfig {
+        react: Some(crate::js_transformer_config::ReactOptions {
+          jsx_pragma: Some("React.createElement".to_string()),
+          jsx_pragma_fragment: Some("React.Fragment".to_string()),
+          jsx_import_source: Some("react".to_string()),
+          automatic_runtime: Some(crate::js_transformer_config::AutomaticReactRuntime::Glob(
+            vec![
+              "src/components/**/*.tsx".to_string(), // This won't match src/pages/Home.tsx
+            ],
+          )),
+        }),
+        ..Default::default()
+      }),
+      ..TestOptions::default()
+    })
+    .await?;
+
+    let code = result.asset.code.as_str()?;
+
+    // Without automatic runtime matching, should use classic React.createElement
+    assert!(
+      code.contains("React.createElement") || code.contains("_react"),
+      "Code should use classic JSX runtime (React.createElement), got: {}",
+      code
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn transforms_react_with_automatic_runtime_glob_outside_project_root() -> anyhow::Result<()>
+  {
+    // Test automatic JSX runtime with glob pattern matching files outside project root
+    let file_system = Arc::new(InMemoryFileSystem::default());
+
+    // Asset is outside the project root: /dir/other-project/index.tsx
+    // Project root is: /dir/my-project
+    let project_root = Path::new("/dir/my-project");
+    let target_asset = create_asset_at_project_root(
+      project_root,
+      "/dir/other-project/index.tsx",
+      "
+        const Component = () => {
+          return <div>Outside Project Root</div>;
+        };
+
+        export default Component;
+      ",
+    );
+
+    let result = run_test(TestOptions {
+      asset: target_asset.clone(),
+      file_system: Some(file_system.clone()),
+      project_root: Some(PathBuf::from("/dir/my-project")), // Project root different from asset path
+      js_transformer_config: Some(JsTransformerConfig {
+        react: Some(crate::js_transformer_config::ReactOptions {
+          jsx_pragma: Some("React.createElement".to_string()),
+          jsx_pragma_fragment: Some("React.Fragment".to_string()),
+          jsx_import_source: Some("react".to_string()),
+          automatic_runtime: Some(crate::js_transformer_config::AutomaticReactRuntime::Glob(
+            vec!["../other-project/**/*.tsx".to_string()],
+          )),
+        }),
+        ..Default::default()
+      }),
+      ..TestOptions::default()
+    })
+    .await?;
+
+    let code = result.asset.code.as_str()?;
+
+    // With automatic runtime, JSX should be transformed to use jsx() imports
+    assert!(
+      code.contains("jsx") || code.contains("_jsx"),
+      "Code should use automatic JSX runtime (jsx imports) for files outside project root matching glob, got: {}",
+      code
+    );
+
+    // Should not contain React.createElement since we're using automatic runtime
+    assert!(
+      !code.contains("React.createElement"),
+      "Code should not contain React.createElement with automatic runtime, got: {}",
+      code
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn transforms_react_without_automatic_runtime_glob_outside_project_root_no_match()
+  -> anyhow::Result<()> {
+    // Test that files outside project root that don't match glob use classic runtime
+    let file_system = Arc::new(InMemoryFileSystem::default());
+
+    // Asset is outside the project root: /dir/another-project/index.tsx
+    // Project root is: /dir/my-project
+    // Glob pattern: ../other-project/** should NOT match
+    let project_root = Path::new("/dir/my-project");
+    let target_asset = create_asset_at_project_root(
+      project_root,
+      "/dir/another-project/index.tsx",
+      "
+        const Component = () => {
+          return <div>Different Outside Project</div>;
+        };
+
+        export default Component;
+      ",
+    );
+
+    let result = run_test(TestOptions {
+      asset: target_asset.clone(),
+      file_system: Some(file_system.clone()),
+      project_root: Some(PathBuf::from("/dir/my-project")), // Project root different from asset path
+      js_transformer_config: Some(JsTransformerConfig {
+        react: Some(crate::js_transformer_config::ReactOptions {
+          jsx_pragma: Some("React.createElement".to_string()),
+          jsx_pragma_fragment: Some("React.Fragment".to_string()),
+          jsx_import_source: Some("react".to_string()),
+          automatic_runtime: Some(crate::js_transformer_config::AutomaticReactRuntime::Glob(
+            vec![
+              "../other-project/**".to_string(), // Should NOT match /dir/another-project/
+            ],
+          )),
+        }),
+        ..Default::default()
+      }),
+      ..TestOptions::default()
+    })
+    .await?;
+
+    let code = result.asset.code.as_str()?;
+
+    // Without automatic runtime matching, should use classic React.createElement
+    assert!(
+      code.contains("React.createElement") || code.contains("_react"),
+      "Code should use classic JSX runtime (React.createElement) for non-matching files outside project root, got: {}",
+      code
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
   async fn transforms_react_with_inferred_automatic_runtime_from_package_json() -> anyhow::Result<()>
   {
     async fn test_version(version: &str) -> anyhow::Result<()> {
@@ -1811,6 +2027,7 @@ mod tests {
         .feature_flags
         .unwrap_or_default()
         .with_bool_flag_default("v3JsxConfigurationLoading", true),
+      project_root: project_root.clone(),
       ..PluginOptions::default()
     };
 
