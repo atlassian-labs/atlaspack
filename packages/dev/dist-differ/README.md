@@ -131,6 +131,7 @@ dist-differ dir1/ dir2/
 - `--ignore-swapped-variables`: Skip hunks where the only differences are swapped variable names (e.g., `t` vs `a` where functionality is identical)
 - `--summary`: Show only hunk counts for changed files (directory mode only)
 - `--verbose`: Show all file matches, not just mismatches (directory mode only)
+- `--json`: Output results in JSON format for AI analysis
 - `--disambiguation-size-threshold <val>`: Threshold for matching files by "close enough" sizes (default: 0.01 = 1%, range: 0-1)
 
 ### Examples
@@ -160,8 +161,9 @@ dist-differ --ignore-swapped-variables file1.js file2.js
 # Verbose mode to see all file matches
 dist-differ --verbose dir1/ dir2/
 
-# Compare ignoring all ignorable differences
-dist-differ --ignore-all dir1/ dir2/
+# Output JSON format for programmatic analysis
+dist-differ --json file1.js file2.js
+dist-differ --json --ignore-all dir1/ dir2/
 ```
 
 ## Development
@@ -189,9 +191,93 @@ yarn workspace @atlaspack/dist-differ exec atlaspack-dist-differ [args...]
 
 This uses `babel-register` to transpile TypeScript on the fly, so you don't need to rebuild after making changes.
 
+## JSON Output for AI Analysis
+
+The `--json` flag produces structured JSON output designed for programmatic analysis, particularly by AI agents. The JSON format includes:
+
+- **Categorized hunks**: Each change is classified as "meaningful" or "harmless" with confidence scores
+- **Context**: Surrounding code lines for each change
+- **Normalized representations**: Shows what code looks like after normalization (useful for verifying harmless changes)
+- **Semantic analysis**: For meaningful changes, includes change type and impact assessment
+
+### Sample AI Analysis Prompt
+
+When using the JSON output with an AI agent like Cursor, you can use this prompt template:
+
+```
+I have a JSON report from dist-differ comparing two minified JavaScript builds.
+Please analyze the report and determine:
+
+1. Are there any meaningful changes (not just harmless reordering, variable swaps, or asset ID changes)?
+2. For each meaningful change, what is the nature of the change (function modification, dependency change, logic change, etc.)?
+3. What is the potential impact of these changes (low/medium/high)?
+4. Should I be concerned about these differences, or are they all harmless build artifacts?
+
+Here is the JSON report:
+
+[Paste the JSON output from dist-differ --json]
+
+Please provide:
+- A summary of meaningful vs harmless changes
+- Detailed analysis of each meaningful change
+- Recommendations on whether action is needed
+```
+
+### Example JSON Output Structure
+
+```json
+{
+  "metadata": {
+    "file1": "/path/to/file1.js",
+    "file2": "/path/to/file2.js",
+    "comparisonDate": "2024-01-15T10:30:00Z",
+    "options": {
+      "ignoreAssetIds": false,
+      "ignoreUnminifiedRefs": false,
+      "ignoreSourceMapUrl": false,
+      "ignoreSwappedVariables": false
+    }
+  },
+  "summary": {
+    "totalHunks": 5,
+    "meaningfulHunks": 2,
+    "harmlessHunks": 3,
+    "identical": false
+  },
+  "files": [
+    {
+      "path": "relative/path/to/file.js",
+      "status": "different",
+      "hunks": [
+        {
+          "id": "hunk-1",
+          "category": "harmless",
+          "harmlessType": "swapped_variables",
+          "confidence": 0.90,
+          "changes": [...],
+          "normalized": {...}
+        },
+        {
+          "id": "hunk-2",
+          "category": "meaningful",
+          "confidence": 1.0,
+          "changes": [...],
+          "analysis": {
+            "semanticChange": true,
+            "changeType": "function_definition",
+            "impact": "high"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## How it works
 
 1. **De-minification**: Files are split on semicolons and commas to make diffs more readable
 2. **Normalization**: Asset IDs and unminified refs can be normalized to filter out noise
 3. **File Matching**: When comparing directories, files are matched by prefix (name before hash)
 4. **Size Disambiguation**: When multiple files match a prefix, size-based matching helps resolve ambiguity
+5. **JSON Output**: When `--json` is used, changes are categorized and structured for programmatic analysis

@@ -10,6 +10,7 @@ export const DEFAULT_OPTIONS: CliOptions = {
   ignoreSwappedVariables: false,
   summaryMode: false,
   verbose: false,
+  jsonMode: false,
   sizeThreshold: 0.01, // Default 1%
 };
 
