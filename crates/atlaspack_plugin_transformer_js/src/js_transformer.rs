@@ -469,7 +469,7 @@ mod tests {
     },
   };
   use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSystem};
-  use atlaspack_js_swc_core::{AutomaticReactRuntime, JsxOptions};
+  use atlaspack_js_swc_core::{AutomaticReactRuntime, AutomaticRuntimeGlobs, JsxOptions};
   use pretty_assertions::assert_eq;
   use swc_core::ecma::parser::lexer::util::CharExt;
 
