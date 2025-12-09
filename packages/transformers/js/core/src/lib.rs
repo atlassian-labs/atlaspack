@@ -896,7 +896,9 @@ mod tests {
 // JSX Configuration types and functions for NAPI sharing
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct JsxConfiguration {
+  #[serde(rename = "isJSX")]
   pub is_jsx: bool,
   pub jsx_pragma: Option<String>,
   pub jsx_pragma_frag: Option<String>,

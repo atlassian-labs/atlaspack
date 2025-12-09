@@ -196,8 +196,8 @@ type MacroContext = {
 
 interface JsxConfig {
   isJSX: boolean | undefined;
-  pragma: string | undefined;
-  pragmaFrag: string | undefined;
+  jsxPragma: string | undefined;
+  jsxPragmaFrag: string | undefined;
   jsxImportSource: string | undefined;
   automaticJSXRuntime: boolean | undefined;
   reactRefresh: boolean | null | undefined;
@@ -209,8 +209,8 @@ async function legacyDetemineJsxConfig(
 ): Promise<JsxConfig> {
   let packageJson = await config.getPackage();
   let isJSX,
-    pragma,
-    pragmaFrag,
+    jsxPragma,
+    jsxPragmaFrag,
     jsxImportSource,
     automaticJSXRuntime,
     reactRefresh;
@@ -250,11 +250,11 @@ async function legacyDetemineJsxConfig(
     )?.contents?.compilerOptions;
 
     // Use explicitly defined JSX options in tsconfig.json over inferred values from dependencies.
-    pragma =
+    jsxPragma =
       compilerOptions?.jsxFactory ||
       // @ts-expect-error TS7053
       (reactLib ? JSX_PRAGMA[reactLib].pragma : undefined);
-    pragmaFrag =
+    jsxPragmaFrag =
       compilerOptions?.jsxFragmentFactory ||
       // @ts-expect-error TS7053
       (reactLib ? JSX_PRAGMA[reactLib].pragmaFrag : undefined);
@@ -300,13 +300,13 @@ async function legacyDetemineJsxConfig(
       }
     }
 
-    isJSX = Boolean(compilerOptions?.jsx || pragma);
+    isJSX = Boolean(compilerOptions?.jsx || jsxPragma);
   }
 
   return {
     isJSX,
-    pragma,
-    pragmaFrag,
+    jsxPragma,
+    jsxPragmaFrag,
     jsxImportSource,
     automaticJSXRuntime,
     reactRefresh,
@@ -343,8 +343,8 @@ export default new Transformer({
 
     let {
       isJSX,
-      pragma,
-      pragmaFrag,
+      jsxPragma,
+      jsxPragmaFrag,
       jsxImportSource,
       automaticJSXRuntime,
       reactRefresh,
@@ -474,8 +474,8 @@ export default new Transformer({
       isJSX,
       automaticJSXRuntime,
       jsxImportSource,
-      pragma,
-      pragmaFrag,
+      pragma: jsxPragma,
+      pragmaFrag: jsxPragmaFrag,
       inlineEnvironment,
       inlineFS,
       inlineConstants,

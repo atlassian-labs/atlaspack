@@ -169,11 +169,6 @@ describe('transpilation', function () {
       assert(file.includes('React.createElement("div"'));
     });
 
-    // JSX Configuration Tests
-    // These integration tests ensure that the JSX parsing and transformation logic for:
-    // - v2 -> packages/transformers/js/src/JSTransformer.ts
-    // - v3 -> crates/atlaspack_plugin_transformer_js/src/js_transformer.rs
-    // are consistent.
     describe('JSX parsing and transformation', () => {
       let dir: string = path.join(__dirname, 'jsx-configuration-fixture');
 
