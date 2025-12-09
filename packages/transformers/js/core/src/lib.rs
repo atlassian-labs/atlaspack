@@ -914,7 +914,7 @@ pub enum AutomaticReactRuntime {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct JsxOptions {
   pub pragma: Option<String>,
   pub pragma_fragment: Option<String>,
