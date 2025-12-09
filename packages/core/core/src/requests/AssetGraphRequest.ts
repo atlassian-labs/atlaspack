@@ -43,6 +43,7 @@ export type AssetGraphRequestInput = {
   lazyIncludes?: RegExp[];
   lazyExcludes?: RegExp[];
   requestedAssetIds?: Set<string>;
+  skipSymbolProp?: boolean;
 };
 
 export type AssetGraphRequestResult = {
@@ -128,6 +129,7 @@ export class AssetGraphBuilder {
   isSingleChangeRebuild: boolean;
   assetGroupsWithRemovedParents: Set<NodeId>;
   previousSymbolPropagationErrors: Map<NodeId, Array<Diagnostic>>;
+  skipSymbolProp: boolean;
 
   constructor(
     {input, api, options}: RunInput,
@@ -167,6 +169,8 @@ export class AssetGraphBuilder {
     this.shouldBuildLazily = shouldBuildLazily ?? false;
     this.lazyIncludes = lazyIncludes ?? [];
     this.lazyExcludes = lazyExcludes ?? [];
+    this.skipSymbolProp = input.skipSymbolProp ?? false;
+
     if (getFeatureFlag('cachePerformanceImprovements')) {
       const key = hashString(
         `${ATLASPACK_VERSION}${name}${JSON.stringify(entries) ?? ''}${
@@ -300,7 +304,7 @@ export class AssetGraphBuilder {
       );
 
       // Skip symbol propagation for runtime assets - they have pre-computed symbol data
-      if (this.name === 'Runtimes') {
+      if (this.skipSymbolProp) {
         logger.verbose({
           origin: '@atlaspack/core',
           message: 'Skipping symbol propagation for runtime asset graph',

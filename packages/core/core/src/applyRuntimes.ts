@@ -519,6 +519,7 @@ function reconcileNewRuntimes<TResult extends RequestResult>(
     name: 'Runtimes',
     assetGroups,
     optionsRef,
+    skipSymbolProp: true,
   });
 
   // rebuild the graph
