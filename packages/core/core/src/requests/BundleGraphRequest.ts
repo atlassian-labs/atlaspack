@@ -64,6 +64,16 @@ import {
 } from './asset-graph-dot';
 import {Priority} from '../types';
 
+function logMemory(label: string) {
+  if (process.env.ATLASPACK_DEBUG_MEMORY) {
+    const mem = process.memoryUsage();
+    // eslint-disable-next-line no-console
+    console.log(
+      `[MEMORY] ${label}: heapUsed=${(mem.heapUsed / 1024 / 1024).toFixed(2)}MB, heapTotal=${(mem.heapTotal / 1024 / 1024).toFixed(2)}MB, rss=${(mem.rss / 1024 / 1024).toFixed(2)}MB`,
+    );
+  }
+}
+
 type BundleGraphRequestInput = {
   requestedAssetIds: Set<string>;
   signal?: AbortSignal;
@@ -233,6 +243,7 @@ export default function createBundleGraphRequest(
       let {devDeps, invalidDevDeps} = await getDevDepRequests(input.api);
       invalidateDevDeps(invalidDevDeps, input.options, atlaspackConfig);
 
+      logMemory('BundleGraphRequest: before bundling');
       let bundlingMeasurement = tracer.createMeasurement('bundling');
       let builder = new BundlerRunner(input, atlaspackConfig, devDeps);
       let res: BundleGraphResult = await builder.bundle({
@@ -241,6 +252,7 @@ export default function createBundleGraphRequest(
         assetRequests,
       });
       bundlingMeasurement && bundlingMeasurement.end();
+      logMemory('BundleGraphRequest: after bundling');
       for (let [id, asset] of changedAssets) {
         res.changedAssets.set(id, asset);
       }

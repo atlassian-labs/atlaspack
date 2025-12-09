@@ -26,6 +26,16 @@ import {getEnvironmentHash} from '../Environment';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
 import assert from 'assert';
 
+function logMemory(label: string) {
+  if (process.env.ATLASPACK_DEBUG_MEMORY) {
+    const mem = process.memoryUsage();
+    // eslint-disable-next-line no-console
+    console.log(
+      `[MEMORY] ${label}: heapUsed=${(mem.heapUsed / 1024 / 1024).toFixed(2)}MB, heapTotal=${(mem.heapTotal / 1024 / 1024).toFixed(2)}MB, rss=${(mem.rss / 1024 / 1024).toFixed(2)}MB`,
+    );
+  }
+}
+
 type RunInput = {
   input: AssetGraphRequestInput;
 } & StaticRunOpts<AssetGraphRequestResult>;
@@ -53,6 +63,7 @@ export function createAssetGraphRequestRust(
     id: input.name,
     run: async (input) => {
       let options = input.options;
+      logMemory('AssetGraphRequestRust: start');
       let {assetGraphPromise, commitPromise} =
         await rustAtlaspack.buildAssetGraph();
 
@@ -72,12 +83,19 @@ export function createAssetGraphRequestRust(
           await input.api.getPreviousResult<AssetGraphRequestResult>();
       }
 
+      logMemory('AssetGraphRequestRust: before getAssetGraph');
       let {assetGraph, changedAssets} = instrument(
         'atlaspack_v3_getAssetGraph',
         () => getAssetGraph(serializedAssetGraph, prevResult?.assetGraph),
       );
+      logMemory(
+        `AssetGraphRequestRust: after getAssetGraph (nodes=${serializedAssetGraph.nodes.length}, edges=${serializedAssetGraph.edges?.length ?? 0})`,
+      );
 
       let changedAssetsPropagation = new Set(changedAssets.keys());
+      logMemory(
+        `AssetGraphRequestRust: before propagateSymbols (changedAssets=${changedAssets.size})`,
+      );
       let errors = propagateSymbols({
         options,
         assetGraph,
@@ -85,6 +103,7 @@ export function createAssetGraphRequestRust(
         assetGroupsWithRemovedParents: new Set(),
         previousErrors: new Map(), //this.previousSymbolPropagationErrors,
       });
+      logMemory('AssetGraphRequestRust: after propagateSymbols');
 
       if (errors.size > 0) {
         // Just throw the first error. Since errors can bubble (e.g. reexporting a reexported symbol also fails),

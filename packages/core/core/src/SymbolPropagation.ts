@@ -19,6 +19,16 @@ import {instrument} from '@atlaspack/logger';
 import {BundleBehavior, Priority, SpecifierType} from './types';
 import {fromProjectPathRelative, fromProjectPath} from './projectPath';
 
+function logMemory(label: string) {
+  if (process.env.ATLASPACK_DEBUG_MEMORY) {
+    const mem = process.memoryUsage();
+    // eslint-disable-next-line no-console
+    console.log(
+      `[MEMORY] ${label}: heapUsed=${(mem.heapUsed / 1024 / 1024).toFixed(2)}MB, heapTotal=${(mem.heapTotal / 1024 / 1024).toFixed(2)}MB, rss=${(mem.rss / 1024 / 1024).toFixed(2)}MB`,
+    );
+  }
+}
+
 export function propagateSymbols({
   options,
   assetGraph,
@@ -56,6 +66,7 @@ export function propagateSymbols({
     let changedDepsUsedSymbolsUpDirtyDown = new Set<ContentKey>();
 
     // Propagate the requested symbols down from the root to the leaves
+    logMemory('propagateSymbols: before propagateSymbolsDown');
     propagateSymbolsDown(
       assetGraph,
       changedAssets,
@@ -275,6 +286,9 @@ export function propagateSymbols({
 
     // Because namespace reexports introduce ambiguity, go up the graph from the leaves to the
     // root and remove requested symbols that aren't actually exported
+    logMemory(
+      'propagateSymbols: after propagateSymbolsDown, before propagateSymbolsUp',
+    );
     let errors = propagateSymbolsUp(
       assetGraph,
       changedAssets,
@@ -555,6 +569,8 @@ export function propagateSymbols({
         return errors;
       },
     );
+
+    logMemory('propagateSymbols: after propagateSymbolsUp');
 
     // Sort usedSymbolsUp so they are a consistent order across builds.
     // This ensures a consistent ordering of these symbols when packaging.

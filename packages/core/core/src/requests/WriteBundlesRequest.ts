@@ -22,6 +22,16 @@ import {createPackageRequest} from './PackageRequest';
 import createWriteBundleRequest from './WriteBundleRequest';
 import {debugTools} from '@atlaspack/utils';
 
+function logMemory(label: string) {
+  if (process.env.ATLASPACK_DEBUG_MEMORY) {
+    const mem = process.memoryUsage();
+    // eslint-disable-next-line no-console
+    console.log(
+      `[MEMORY] ${label}: heapUsed=${(mem.heapUsed / 1024 / 1024).toFixed(2)}MB, heapTotal=${(mem.heapTotal / 1024 / 1024).toFixed(2)}MB, rss=${(mem.rss / 1024 / 1024).toFixed(2)}MB`,
+    );
+  }
+}
+
 type WriteBundlesRequestInput = {
   bundleGraph: BundleGraph;
   optionsRef: SharedReference;
@@ -85,6 +95,7 @@ async function run({
   options,
 }: RunInput<WriteBundlesRequestResult>) {
   let {bundleGraph, optionsRef} = input;
+  logMemory('WriteBundlesRequest: start');
   let {ref, dispose} = await farm.createSharedReference(bundleGraph);
 
   api.invalidateOnOptionChange('shouldContentHash');
@@ -143,6 +154,9 @@ async function run({
 
   try {
     let completeBundles = cachedBundles.size;
+    logMemory(
+      `WriteBundlesRequest: before packaging (bundles=${bundles.length}, cached=${cachedBundles.size})`,
+    );
     reportPackagingProgress(completeBundles, bundles.length);
 
     await Promise.all(

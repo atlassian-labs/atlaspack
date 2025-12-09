@@ -34,6 +34,16 @@ import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
 import {propagateSymbols} from '../SymbolPropagation';
 import {requestTypes} from '../RequestTracker';
 
+function logMemory(label: string) {
+  if (process.env.ATLASPACK_DEBUG_MEMORY) {
+    const mem = process.memoryUsage();
+    // eslint-disable-next-line no-console
+    console.log(
+      `[MEMORY] ${label}: heapUsed=${(mem.heapUsed / 1024 / 1024).toFixed(2)}MB, heapTotal=${(mem.heapTotal / 1024 / 1024).toFixed(2)}MB, rss=${(mem.rss / 1024 / 1024).toFixed(2)}MB`,
+    );
+  }
+}
+
 export type AssetGraphRequestInput = {
   entries?: Array<ProjectPath>;
   assetGroups?: Array<AssetGroup>;
@@ -299,6 +309,9 @@ export class AssetGraphBuilder {
         'AssetGraph_' + this.name + '_before_prop',
       );
       try {
+        logMemory(
+          `AssetGraphRequestJS[${this.name}]: before propagateSymbols (nodes=${this.assetGraph.nodes.length}, changedAssets=${this.changedAssetsPropagation.size})`,
+        );
         let errors = propagateSymbols({
           options: this.options,
           assetGraph: this.assetGraph,
@@ -306,6 +319,7 @@ export class AssetGraphBuilder {
           assetGroupsWithRemovedParents: this.assetGroupsWithRemovedParents,
           previousErrors: this.previousSymbolPropagationErrors,
         });
+        logMemory(`AssetGraphRequestJS[${this.name}]: after propagateSymbols`);
         this.changedAssetsPropagation.clear();
 
         if (errors.size > 0) {

@@ -34,6 +34,16 @@ import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {DefaultMap} from '@atlaspack/utils';
 import {fromEnvironmentId} from './EnvironmentManager';
 
+function logMemory(label: string) {
+  if (process.env.ATLASPACK_DEBUG_MEMORY) {
+    const mem = process.memoryUsage();
+    // eslint-disable-next-line no-console
+    console.log(
+      `[MEMORY] ${label}: heapUsed=${(mem.heapUsed / 1024 / 1024).toFixed(2)}MB, heapTotal=${(mem.heapTotal / 1024 / 1024).toFixed(2)}MB, rss=${(mem.rss / 1024 / 1024).toFixed(2)}MB`,
+    );
+  }
+}
+
 type RuntimeConnection = {
   bundle: InternalBundle;
   assetGroup: AssetGroup;
@@ -273,8 +283,14 @@ export default async function applyRuntimes<TResult extends RequestResult>({
 
   // Create a new AssetGraph from the generated runtime assets which also runs
   // transforms and resolves all dependencies.
+  logMemory(
+    `applyRuntimes: before reconcileNewRuntimes (connections=${connections.length})`,
+  );
   let {assetGraph: runtimesAssetGraph, changedAssets} =
     await reconcileNewRuntimes(api, connections, optionsRef);
+  logMemory(
+    `applyRuntimes: after reconcileNewRuntimes (runtimesAssetGraph.nodes=${runtimesAssetGraph.nodes.length})`,
+  );
 
   // Convert the runtime AssetGraph into a BundleGraph, this includes assigning
   // the assets their public ids
