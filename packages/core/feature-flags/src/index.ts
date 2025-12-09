@@ -339,8 +339,8 @@ export const DEFAULT_FEATURE_FLAGS = {
    * The new config is a top-level "react" key in the `@atlaspack/transformer-js` config.
    * When enabled, we no longer use package.json react deps and tsconfig to infer the JSX config.
    *
-   * @author Matt Jones <mv3JsxConfigurationLoadingjones4@atlassian.com>
-   * @since 2025-12-9
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-12-09
    */
   newJsxConfig: false,
 };
