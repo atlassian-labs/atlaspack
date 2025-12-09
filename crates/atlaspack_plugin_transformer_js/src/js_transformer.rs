@@ -19,22 +19,14 @@ use parking_lot::RwLock;
 use swc_core::atoms::Atom;
 
 use crate::js_transformer_config::{
-  AutomaticReactRuntime, InlineEnvironment, JsTransformerConfig, JsTransformerPackageJson,
+  InlineEnvironment, JsTransformerConfig, JsTransformerPackageJson,
 };
 use crate::map_diagnostics::{MapDiagnosticOptions, map_diagnostics};
 use crate::package_json::{PackageJson, depends_on_react, supports_automatic_jsx_runtime};
-use crate::relative_path::relative_path;
 use crate::ts_config::{Jsx, Target, TsConfig};
 
-#[derive(Debug)]
-pub struct JsxConfiguration {
-  pub is_jsx: bool,
-  pub jsx_pragma: Option<String>,
-  pub jsx_pragma_frag: Option<String>,
-  pub jsx_import_source: Option<String>,
-  pub automatic_jsx_runtime: bool,
-  pub react_refresh: bool,
-}
+// Re-export types from the shared core
+pub use atlaspack_js_swc_core::JsxConfiguration;
 
 mod conversion;
 
@@ -112,69 +104,25 @@ impl AtlaspackJsTransformerPlugin {
 
   /// Determines JSX configuration based on file type, tsconfig, and package.json
   fn determine_jsx_configuration(&self, asset: &Asset) -> JsxConfiguration {
-    let is_jsx = match &asset.file_type {
-      FileType::Jsx | FileType::Tsx => {
-        // .jsx and .tsx files should always have JSX enabled
-        true
-      }
-      FileType::Js => {
-        // Enable JSX for all JS files in source
-        asset.is_source
-      }
-      _ => false,
+    let file_type = match &asset.file_type {
+      FileType::Js => "js",
+      FileType::Jsx => "jsx",
+      FileType::Ts => "ts",
+      FileType::Tsx => "tsx",
+      _ => "unknown",
     };
 
-    let mut jsx_pragma = None;
-    let mut jsx_pragma_frag = None;
-    let mut jsx_import_source = None;
-    let mut automatic_jsx_runtime = false;
-
-    if is_jsx {
-      if let Some(react) = &self.config.react {
-        // Use react options from transformer config if provided
-        jsx_pragma = react
-          .jsx_pragma
-          .clone()
-          .unwrap_or_else(|| "React.createElement".to_string())
-          .into();
-
-        jsx_pragma_frag = react
-          .jsx_pragma_fragment
-          .clone()
-          .unwrap_or_else(|| "React.Fragment".to_string())
-          .into();
-
-        jsx_import_source = react.jsx_import_source.clone();
-      } else {
-        jsx_pragma = Some("React.createElement".to_string());
-        jsx_pragma_frag = Some("React.Fragment".to_string());
-      }
-
-      // Update automatic_jsx_runtime based on package.json if not set by tsconfig
-      if let Some(react) = &self.config.react
-        && let Some(automatic_runtime) = &react.automatic_runtime
-      {
-        automatic_jsx_runtime = match automatic_runtime {
-          AutomaticReactRuntime::Enabled(enabled) => *enabled,
-          AutomaticReactRuntime::Glob(globs) => {
-            let relative_path =
-              relative_path(asset.file_path.as_path(), &self.options.project_root);
-            globs.iter().any(|glob| glob_match(glob, &relative_path))
-          }
-        }
-      }
-    }
-
-    JsxConfiguration {
-      is_jsx,
-      jsx_pragma,
-      jsx_pragma_frag,
-      jsx_import_source,
-      automatic_jsx_runtime,
-      react_refresh: asset.is_source,
-    }
+    atlaspack_js_swc_core::determine_jsx_configuration(
+      &asset.file_path,
+      file_type,
+      asset.is_source,
+      &self.config.react,
+      &self.options.project_root,
+    )
   }
+}
 
+impl AtlaspackJsTransformerPlugin {
   fn env_variables(&self, asset: &Asset) -> HashMap<Atom, Atom> {
     if self.options.env.is_none()
       || self
@@ -522,6 +470,7 @@ mod tests {
     },
   };
   use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSystem};
+  use atlaspack_js_swc_core::{AutomaticReactRuntime, ReactOptions};
   use pretty_assertions::assert_eq;
   use swc_core::ecma::parser::lexer::util::CharExt;
 
@@ -680,13 +629,13 @@ mod tests {
       asset: target_asset.clone(),
       file_system: Some(file_system.clone()),
       js_transformer_config: Some(JsTransformerConfig {
-        react: Some(crate::js_transformer_config::ReactOptions {
+        react: Some(ReactOptions {
           jsx_pragma: Some("React.createElement".to_string()),
           jsx_pragma_fragment: Some("React.Fragment".to_string()),
           jsx_import_source: Some("react".to_string()),
-          automatic_runtime: Some(crate::js_transformer_config::AutomaticReactRuntime::Glob(
-            vec!["src/components/**/*.tsx".to_string()],
-          )),
+          automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
+            "src/components/**/*.tsx".to_string(),
+          ])),
         }),
         ..Default::default()
       }),
@@ -734,15 +683,13 @@ mod tests {
       asset: target_asset.clone(),
       file_system: Some(file_system.clone()),
       js_transformer_config: Some(JsTransformerConfig {
-        react: Some(crate::js_transformer_config::ReactOptions {
+        react: Some(ReactOptions {
           jsx_pragma: Some("React.createElement".to_string()),
           jsx_pragma_fragment: Some("React.Fragment".to_string()),
           jsx_import_source: Some("react".to_string()),
-          automatic_runtime: Some(crate::js_transformer_config::AutomaticReactRuntime::Glob(
-            vec![
-              "src/components/**/*.tsx".to_string(), // This won't match src/pages/Home.tsx
-            ],
-          )),
+          automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
+            "src/components/**/*.tsx".to_string(), // This won't match src/pages/Home.tsx
+          ])),
         }),
         ..Default::default()
       }),
@@ -788,13 +735,13 @@ mod tests {
       file_system: Some(file_system.clone()),
       project_root: Some(PathBuf::from("/dir/my-project")), // Project root different from asset path
       js_transformer_config: Some(JsTransformerConfig {
-        react: Some(crate::js_transformer_config::ReactOptions {
+        react: Some(ReactOptions {
           jsx_pragma: Some("React.createElement".to_string()),
           jsx_pragma_fragment: Some("React.Fragment".to_string()),
           jsx_import_source: Some("react".to_string()),
-          automatic_runtime: Some(crate::js_transformer_config::AutomaticReactRuntime::Glob(
-            vec!["../other-project/**/*.tsx".to_string()],
-          )),
+          automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
+            "../other-project/**/*.tsx".to_string(),
+          ])),
         }),
         ..Default::default()
       }),
@@ -848,15 +795,13 @@ mod tests {
       file_system: Some(file_system.clone()),
       project_root: Some(PathBuf::from("/dir/my-project")), // Project root different from asset path
       js_transformer_config: Some(JsTransformerConfig {
-        react: Some(crate::js_transformer_config::ReactOptions {
+        react: Some(ReactOptions {
           jsx_pragma: Some("React.createElement".to_string()),
           jsx_pragma_fragment: Some("React.Fragment".to_string()),
           jsx_import_source: Some("react".to_string()),
-          automatic_runtime: Some(crate::js_transformer_config::AutomaticReactRuntime::Glob(
-            vec![
-              "../other-project/**".to_string(), // Should NOT match /dir/another-project/
-            ],
-          )),
+          automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
+            "../other-project/**".to_string(), // Should NOT match /dir/another-project/
+          ])),
         }),
         ..Default::default()
       }),
@@ -892,13 +837,11 @@ mod tests {
         asset: target_asset.clone(),
         file_system: Some(file_system),
         js_transformer_config: Some(JsTransformerConfig {
-          react: Some(crate::js_transformer_config::ReactOptions {
+          react: Some(ReactOptions {
             jsx_pragma: Some("React.createElement".to_string()),
             jsx_pragma_fragment: Some("React.Fragment".to_string()),
             jsx_import_source: None,
-            automatic_runtime: Some(
-              crate::js_transformer_config::AutomaticReactRuntime::Enabled(true),
-            ),
+            automatic_runtime: Some(AutomaticReactRuntime::Enabled(true)),
           }),
           ..Default::default()
         }),
@@ -1103,7 +1046,7 @@ mod tests {
 
     // Test with v3 JSX configuration using JsTransformerConfig
     let config_with_react = JsTransformerConfig {
-      react: Some(crate::js_transformer_config::ReactOptions {
+      react: Some(ReactOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
@@ -1129,7 +1072,7 @@ mod tests {
     // Case 3: .js file with React configuration
     // Expected: is_jsx = true, pragmas set from React configuration
     let config_with_react_2 = JsTransformerConfig {
-      react: Some(crate::js_transformer_config::ReactOptions {
+      react: Some(ReactOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
@@ -1187,7 +1130,7 @@ mod tests {
 
     // Case 5: .jsx file with React configuration should have pragmas set
     let config_with_react_3 = JsTransformerConfig {
-      react: Some(crate::js_transformer_config::ReactOptions {
+      react: Some(ReactOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
@@ -1225,7 +1168,7 @@ mod tests {
     };
 
     let config_with_react_4 = JsTransformerConfig {
-      react: Some(crate::js_transformer_config::ReactOptions {
+      react: Some(ReactOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
@@ -1257,7 +1200,7 @@ mod tests {
     };
 
     let config_with_react_5 = JsTransformerConfig {
-      react: Some(crate::js_transformer_config::ReactOptions {
+      react: Some(ReactOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
@@ -1289,13 +1232,13 @@ mod tests {
     };
 
     let config_with_glob = JsTransformerConfig {
-      react: Some(crate::js_transformer_config::ReactOptions {
+      react: Some(ReactOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
-        automatic_runtime: Some(crate::js_transformer_config::AutomaticReactRuntime::Glob(
-          vec!["src/components/**/*.tsx".to_string()],
-        )),
+        automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
+          "src/components/**/*.tsx".to_string(),
+        ])),
       }),
       ..Default::default()
     };
@@ -1311,13 +1254,13 @@ mod tests {
 
     // Test with non-matching glob
     let config_with_non_matching_glob = JsTransformerConfig {
-      react: Some(crate::js_transformer_config::ReactOptions {
+      react: Some(ReactOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
-        automatic_runtime: Some(crate::js_transformer_config::AutomaticReactRuntime::Glob(
-          vec!["src/pages/**/*.tsx".to_string()],
-        )),
+        automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
+          "src/pages/**/*.tsx".to_string(),
+        ])),
       }),
       ..Default::default()
     };
@@ -1379,7 +1322,7 @@ mod tests {
         asset: target_asset.clone(),
         file_system: Some(file_system),
         js_transformer_config: Some(JsTransformerConfig {
-          react: Some(crate::js_transformer_config::ReactOptions {
+          react: Some(ReactOptions {
             jsx_pragma: Some("React.createElement".to_string()),
             jsx_pragma_fragment: Some("React.Fragment".to_string()),
             jsx_import_source: None,
@@ -1503,7 +1446,7 @@ mod tests {
         asset: target_asset.clone(),
         file_system: Some(file_system),
         js_transformer_config: Some(JsTransformerConfig {
-          react: Some(crate::js_transformer_config::ReactOptions {
+          react: Some(ReactOptions {
             jsx_pragma: Some("React.createElement".to_string()),
             jsx_pragma_fragment: Some("React.Fragment".to_string()),
             jsx_import_source: None,

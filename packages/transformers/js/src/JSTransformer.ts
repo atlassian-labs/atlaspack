@@ -4,13 +4,19 @@ import type {
   SourceLocation,
   FilePath,
   FileCreateInvalidation,
+  Config,
+  PluginOptions,
 } from '@atlaspack/types';
 import {createBuildCache} from '@atlaspack/build-cache';
 import type {SchemaEntity} from '@atlaspack/utils';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import SourceMap from '@atlaspack/source-map';
 import {Transformer} from '@atlaspack/plugin';
-import {transform, transformAsync} from '@atlaspack/rust';
+import {
+  transform,
+  transformAsync,
+  determineJsxConfiguration,
+} from '@atlaspack/rust';
 import invariant from 'assert';
 import browserslist from 'browserslist';
 import semver from 'semver';
@@ -117,9 +123,23 @@ const CONFIG_SCHEMA: SchemaEntity = {
     unstable_inlineConstants: {
       type: 'boolean',
     },
+    react: {
+      type: 'object',
+    },
   },
   additionalProperties: false,
 };
+
+// Mirrors the CONFIG_SCHEMA
+interface JsTransformerConfig {
+  inlineFS?: boolean;
+  inlineEnvironment?: boolean | string[];
+  addReactDisplayName?: boolean;
+  magicComments?: boolean;
+  unstable_inlineConstants?: boolean;
+  // This is exclusively used in Rust so not worth typing
+  react: any;
+}
 
 const configCache = createBuildCache();
 
@@ -174,41 +194,170 @@ type MacroContext = {
   invalidateOnBuild(): void;
 };
 
+interface JsxConfig {
+  isJSX: boolean | undefined;
+  pragma: string | undefined;
+  pragmaFrag: string | undefined;
+  jsxImportSource: string | undefined;
+  automaticJSXRuntime: boolean | undefined;
+  reactRefresh: boolean | null | undefined;
+}
+
+async function legacyDetemineJsxConfig(
+  config: Config,
+  options: PluginOptions,
+): Promise<JsxConfig> {
+  let packageJson = await config.getPackage();
+  let isJSX,
+    pragma,
+    pragmaFrag,
+    jsxImportSource,
+    automaticJSXRuntime,
+    reactRefresh;
+
+  if (config.isSource) {
+    let reactLib;
+    if (packageJson?.alias && packageJson.alias['react']) {
+      // e.g.: `{ alias: { "react": "preact/compat" } }`
+      reactLib = 'react';
+    } else {
+      // Find a dependency that we can map to a JSX pragma
+      reactLib = Object.keys(JSX_PRAGMA).find(
+        (libName) =>
+          packageJson?.dependencies?.[libName] ||
+          packageJson?.devDependencies?.[libName] ||
+          packageJson?.peerDependencies?.[libName],
+      );
+    }
+
+    reactRefresh =
+      options.hmrOptions &&
+      options.mode === 'development' &&
+      Boolean(
+        packageJson?.dependencies?.react ||
+          packageJson?.devDependencies?.react ||
+          packageJson?.peerDependencies?.react,
+      );
+
+    const compilerOptions: TSConfig['compilerOptions'] = (
+      await config.getConfigFrom<TSConfig>(
+        options.projectRoot + '/index',
+        ['tsconfig.json', 'jsconfig.json'],
+        {
+          readTracking: true,
+        },
+      )
+    )?.contents?.compilerOptions;
+
+    // Use explicitly defined JSX options in tsconfig.json over inferred values from dependencies.
+    pragma =
+      compilerOptions?.jsxFactory ||
+      // @ts-expect-error TS7053
+      (reactLib ? JSX_PRAGMA[reactLib].pragma : undefined);
+    pragmaFrag =
+      compilerOptions?.jsxFragmentFactory ||
+      // @ts-expect-error TS7053
+      (reactLib ? JSX_PRAGMA[reactLib].pragmaFrag : undefined);
+
+    if (
+      compilerOptions?.jsx === 'react-jsx' ||
+      compilerOptions?.jsx === 'react-jsxdev' ||
+      compilerOptions?.jsxImportSource
+    ) {
+      jsxImportSource = compilerOptions?.jsxImportSource;
+      automaticJSXRuntime = true;
+    } else if (reactLib) {
+      let effectiveReactLib =
+        packageJson?.alias && packageJson.alias['react'] === 'preact/compat'
+          ? 'preact'
+          : reactLib;
+      // @ts-expect-error TS7053
+      let automaticVersion = JSX_PRAGMA[effectiveReactLib]?.automatic;
+      let reactLibVersion =
+        packageJson?.dependencies?.[effectiveReactLib] ||
+        packageJson?.devDependencies?.[effectiveReactLib] ||
+        packageJson?.peerDependencies?.[effectiveReactLib];
+      // @ts-expect-error TS2322
+      reactLibVersion = reactLibVersion
+        ? semver.validRange(reactLibVersion)
+        : null;
+      let minReactLibVersion =
+        reactLibVersion !== null && reactLibVersion !== '*'
+          ? // @ts-expect-error TS2345
+            semver.minVersion(reactLibVersion)?.toString()
+          : null;
+
+      automaticJSXRuntime =
+        automaticVersion &&
+        !compilerOptions?.jsxFactory &&
+        minReactLibVersion != null &&
+        semver.satisfies(minReactLibVersion, automaticVersion, {
+          includePrerelease: true,
+        });
+
+      if (automaticJSXRuntime) {
+        jsxImportSource = reactLib;
+      }
+    }
+
+    isJSX = Boolean(compilerOptions?.jsx || pragma);
+  }
+
+  return {
+    isJSX,
+    pragma,
+    pragmaFrag,
+    jsxImportSource,
+    automaticJSXRuntime,
+    reactRefresh,
+  };
+}
+
 export default new Transformer({
-  async loadConfig({config, options, logger}) {
+  async loadConfig({config, options}) {
+    let conf = await config.getConfigFrom<JsTransformerConfig>(
+      options.projectRoot + '/index',
+      [],
+      {
+        packageKey: '@atlaspack/transformer-js',
+      },
+    );
+
+    if (conf && conf.contents) {
+      validateSchema.diagnostic(
+        CONFIG_SCHEMA,
+        {
+          data: conf.contents,
+          source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
+          filePath: conf.filePath,
+          prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-js')}`,
+        },
+        // FIXME
+        '@atlaspack/transformer-js',
+        'Invalid config for @atlaspack/transformer-js',
+      );
+    }
+
     let packageJson = await config.getPackage();
-    let isJSX,
+    let decorators, useDefineForClassFields;
+
+    let {
+      isJSX,
       pragma,
       pragmaFrag,
       jsxImportSource,
       automaticJSXRuntime,
       reactRefresh,
-      decorators,
-      useDefineForClassFields;
+    } = options.featureFlags.newJsxConfig
+      ? (determineJsxConfiguration(
+          config.searchPath,
+          config.isSource,
+          conf?.contents?.react,
+          options.projectRoot,
+        ) as JsxConfig)
+      : await legacyDetemineJsxConfig(config, options);
+
     if (config.isSource) {
-      let reactLib;
-      if (packageJson?.alias && packageJson.alias['react']) {
-        // e.g.: `{ alias: { "react": "preact/compat" } }`
-        reactLib = 'react';
-      } else {
-        // Find a dependency that we can map to a JSX pragma
-        reactLib = Object.keys(JSX_PRAGMA).find(
-          (libName) =>
-            packageJson?.dependencies?.[libName] ||
-            packageJson?.devDependencies?.[libName] ||
-            packageJson?.peerDependencies?.[libName],
-        );
-      }
-
-      reactRefresh =
-        options.hmrOptions &&
-        options.mode === 'development' &&
-        Boolean(
-          packageJson?.dependencies?.react ||
-            packageJson?.devDependencies?.react ||
-            packageJson?.peerDependencies?.react,
-        );
-
       const compilerOptions: TSConfig['compilerOptions'] = (
         await config.getConfigFrom<TSConfig>(
           options.projectRoot + '/index',
@@ -219,58 +368,6 @@ export default new Transformer({
         )
       )?.contents?.compilerOptions;
 
-      // Use explicitly defined JSX options in tsconfig.json over inferred values from dependencies.
-      pragma =
-        compilerOptions?.jsxFactory ||
-        // @ts-expect-error TS7053
-        (reactLib ? JSX_PRAGMA[reactLib].pragma : undefined);
-      pragmaFrag =
-        compilerOptions?.jsxFragmentFactory ||
-        // @ts-expect-error TS7053
-        (reactLib ? JSX_PRAGMA[reactLib].pragmaFrag : undefined);
-
-      if (
-        compilerOptions?.jsx === 'react-jsx' ||
-        compilerOptions?.jsx === 'react-jsxdev' ||
-        compilerOptions?.jsxImportSource
-      ) {
-        jsxImportSource = compilerOptions?.jsxImportSource;
-        automaticJSXRuntime = true;
-      } else if (reactLib) {
-        let effectiveReactLib =
-          packageJson?.alias && packageJson.alias['react'] === 'preact/compat'
-            ? 'preact'
-            : reactLib;
-        // @ts-expect-error TS7053
-        let automaticVersion = JSX_PRAGMA[effectiveReactLib]?.automatic;
-        let reactLibVersion =
-          packageJson?.dependencies?.[effectiveReactLib] ||
-          packageJson?.devDependencies?.[effectiveReactLib] ||
-          packageJson?.peerDependencies?.[effectiveReactLib];
-        // @ts-expect-error TS2322
-        reactLibVersion = reactLibVersion
-          ? semver.validRange(reactLibVersion)
-          : null;
-        let minReactLibVersion =
-          reactLibVersion !== null && reactLibVersion !== '*'
-            ? // @ts-expect-error TS2345
-              semver.minVersion(reactLibVersion)?.toString()
-            : null;
-
-        automaticJSXRuntime =
-          automaticVersion &&
-          !compilerOptions?.jsxFactory &&
-          minReactLibVersion != null &&
-          semver.satisfies(minReactLibVersion, automaticVersion, {
-            includePrerelease: true,
-          });
-
-        if (automaticJSXRuntime) {
-          jsxImportSource = reactLib;
-        }
-      }
-
-      isJSX = Boolean(compilerOptions?.jsx || pragma);
       decorators = compilerOptions?.experimentalDecorators;
       useDefineForClassFields = compilerOptions?.useDefineForClassFields;
       if (
@@ -294,10 +391,6 @@ export default new Transformer({
       packageJson.browser &&
       typeof packageJson.browser === 'object' &&
       packageJson.browser.fs === false;
-
-    let conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
-      packageKey: '@atlaspack/transformer-js',
-    });
 
     let inlineEnvironment = config.isSource;
     let inlineFS = !ignoreFS;
@@ -367,30 +460,13 @@ export default new Transformer({
     config.invalidateOnEnvChange('SYNC_DYNAMIC_IMPORT_CONFIG');
 
     if (conf && conf.contents) {
-      validateSchema.diagnostic(
-        CONFIG_SCHEMA,
-        {
-          data: conf.contents,
-          source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
-          filePath: conf.filePath,
-          prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-js')}`,
-        },
-        // FIXME
-        '@atlaspack/transformer-js',
-        'Invalid config for @atlaspack/transformer-js',
-      );
-
       addReactDisplayName =
-        // @ts-expect-error TS2339
         conf.contents?.addReactDisplayName ?? addReactDisplayName;
-      // @ts-expect-error TS2339
       magicComments = conf.contents?.magicComments ?? magicComments;
-      // @ts-expect-error TS2339
+      // @ts-expect-error TS2322
       inlineEnvironment = conf.contents?.inlineEnvironment ?? inlineEnvironment;
-      // @ts-expect-error TS2339
       inlineFS = conf.contents?.inlineFS ?? inlineFS;
       inlineConstants =
-        // @ts-expect-error TS2339
         conf.contents?.unstable_inlineConstants ?? inlineConstants;
     }
 

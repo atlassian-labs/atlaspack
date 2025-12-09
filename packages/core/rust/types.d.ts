@@ -164,6 +164,12 @@ export declare function performStringReplacements(
 ): string;
 export declare function transform(opts: object): unknown;
 export declare function transformAsync(opts: object): object;
+export declare function determineJsxConfiguration(
+  file_path: string,
+  is_source: boolean,
+  config: JsObject | null | undefined,
+  project_root: string,
+): object;
 export declare function getVcsStateSnapshot(
   path: string,
   excludePatterns: Array<string>,

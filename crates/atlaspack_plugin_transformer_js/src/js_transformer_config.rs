@@ -1,3 +1,4 @@
+use atlaspack_js_swc_core::ReactOptions;
 use serde::Deserialize;
 
 #[derive(Clone, Deserialize)]
@@ -5,22 +6,6 @@ use serde::Deserialize;
 pub enum InlineEnvironment {
   Enabled(bool),
   Environments(Vec<String>),
-}
-
-#[derive(Clone, Deserialize)]
-#[serde(untagged)]
-pub enum AutomaticReactRuntime {
-  Enabled(bool),
-  Glob(Vec<String>),
-}
-
-#[derive(Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ReactOptions {
-  pub automatic_runtime: Option<AutomaticReactRuntime>,
-  pub jsx_pragma: Option<String>,
-  pub jsx_pragma_fragment: Option<String>,
-  pub jsx_import_source: Option<String>,
 }
 
 #[derive(Default, Deserialize)]

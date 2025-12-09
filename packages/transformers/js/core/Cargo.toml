@@ -51,6 +51,7 @@ regex = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-test = { workspace = true }
+glob-match = "0.2"
 
 [dev-dependencies]
 tempfile = { workspace = true }

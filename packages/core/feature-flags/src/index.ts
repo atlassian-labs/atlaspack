@@ -342,7 +342,7 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @author Matt Jones <mv3JsxConfigurationLoadingjones4@atlassian.com>
    * @since 2025-12-9
    */
-  newJsxConfig: process.env.ATLASPACK_BUILD_ENV === 'test',
+  newJsxConfig: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

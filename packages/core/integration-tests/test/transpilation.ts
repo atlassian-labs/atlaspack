@@ -11,19 +11,25 @@ import {
   run,
   ncp,
   fsFixture,
+  isAtlaspackV3,
 } from '@atlaspack/test-utils';
 import {symlinkSync} from 'fs';
 import nullthrows from 'nullthrows';
 
 const inputDir = path.join(__dirname, '/input');
 
-describe('transpilation', function () {
+describe.only('transpilation', function () {
+  let featureFlags = {
+    newJsxConfig: isAtlaspackV3,
+  };
+
   it('should not transpile if no targets are defined', async function () {
     await bundle(path.join(__dirname, '/integration/babel-default/index.js'), {
       defaultTargetOptions: {
         engines: undefined,
         shouldOptimize: false,
       },
+      featureFlags,
     });
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
     assert(file.includes('class Foo'));
@@ -33,6 +39,9 @@ describe('transpilation', function () {
   it('should support transpiling using browserlist', async function () {
     await bundle(
       path.join(__dirname, '/integration/babel-browserslist/index.js'),
+      {
+        featureFlags,
+      },
     );
 
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
@@ -42,7 +51,7 @@ describe('transpilation', function () {
 
   it('should support transpiling when engines have semver ranges', async () => {
     let fixtureDir = path.join(__dirname, '/integration/babel-semver-engine');
-    await bundle(path.join(fixtureDir, 'index.js'));
+    await bundle(path.join(fixtureDir, 'index.js'), {featureFlags});
 
     let legacy = await outputFS.readFile(
       path.join(fixtureDir, 'dist', 'legacy.js'),
@@ -62,6 +71,7 @@ describe('transpilation', function () {
   it('should transpile node_modules by default', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/babel-node-modules/index.js'),
+      {featureFlags},
     );
 
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
@@ -75,6 +85,7 @@ describe('transpilation', function () {
     await assert.rejects(() =>
       bundle(
         path.join(__dirname, '/integration/babel-node-modules-jsx/index.js'),
+        {featureFlags},
       ),
     );
   });
@@ -85,6 +96,7 @@ describe('transpilation', function () {
         __dirname,
         '/integration/babel-node-modules-source-unlinked/index.js',
       ),
+      {featureFlags},
     );
 
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
@@ -93,7 +105,9 @@ describe('transpilation', function () {
   });
 
   it('should support compiling JSX', async function () {
-    await bundle(path.join(__dirname, '/integration/jsx/index.jsx'));
+    await bundle(path.join(__dirname, '/integration/jsx/index.jsx'), {
+      featureFlags,
+    });
 
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
     assert(file.includes('React.createElement("div"'));
@@ -102,7 +116,9 @@ describe('transpilation', function () {
 
   describe('supports compiling JSX', () => {
     it('with member expression type', async function () {
-      await bundle(path.join(__dirname, '/integration/jsx-member/index.jsx'));
+      await bundle(path.join(__dirname, '/integration/jsx-member/index.jsx'), {
+        featureFlags,
+      });
 
       let file = await outputFS.readFile(
         path.join(distDir, 'index.js'),
@@ -114,6 +130,7 @@ describe('transpilation', function () {
     it('with pure annotations', async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/jsx-react/pure-comment.js'),
+        {featureFlags},
       );
 
       let file = await outputFS.readFile(
@@ -131,6 +148,7 @@ describe('transpilation', function () {
     it('spread with modern targets', async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/jsx-spread/index.jsx'),
+        {featureFlags},
       );
 
       let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
@@ -140,7 +158,9 @@ describe('transpilation', function () {
     });
 
     it('in js files with a React dependency', async function () {
-      await bundle(path.join(__dirname, '/integration/jsx-react/index.js'));
+      await bundle(path.join(__dirname, '/integration/jsx-react/index.js'), {
+        featureFlags,
+      });
 
       let file = await outputFS.readFile(
         path.join(distDir, 'index.js'),
@@ -186,6 +206,7 @@ describe('transpilation', function () {
 
         await bundle(path.join(dir, 'index.js'), {
           inputFS: overlayFS,
+          featureFlags,
         });
 
         let file = await outputFS.readFile(
@@ -235,6 +256,7 @@ describe('transpilation', function () {
 
         await bundle(path.join(dir, 'index.js'), {
           inputFS: overlayFS,
+          featureFlags,
         });
 
         let file = await outputFS.readFile(
@@ -261,6 +283,7 @@ describe('transpilation', function () {
 
         await bundle(path.join(dir, 'index.jsx'), {
           inputFS: overlayFS,
+          featureFlags,
         });
 
         // Output file is normalized to .js despite input file .jsx extension
@@ -290,6 +313,7 @@ describe('transpilation', function () {
 
         await bundle(path.join(dir, 'index.jsx'), {
           inputFS: overlayFS,
+          featureFlags,
         });
 
         // Output file is normalized to .js despite input file .jsx extension
@@ -350,6 +374,7 @@ describe('transpilation', function () {
 
         await bundle(path.join(dir, 'index.tsx'), {
           inputFS: overlayFS,
+          featureFlags,
         });
 
         // Output file is normalized to .js despite input file .tsx extension
@@ -534,6 +559,7 @@ describe('transpilation', function () {
     it('supports decorators', async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/decorators/index.ts'),
+        {featureFlags},
       );
 
       let output: Array<any> = [];
@@ -557,6 +583,7 @@ describe('transpilation', function () {
           __dirname,
           '/integration/decorators-useDefineForClassFields/index.ts',
         ),
+        {featureFlags},
       );
 
       let output: Array<any> = [];
@@ -573,6 +600,7 @@ describe('transpilation', function () {
   it('should support transpiling optional chaining', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/babel-optional-chaining/index.js'),
+      {featureFlags},
     );
 
     let file = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
@@ -584,7 +612,9 @@ describe('transpilation', function () {
   });
 
   it('should only include necessary parts of core-js using browserlist', async function () {
-    await bundle(path.join(__dirname, '/integration/babel-core-js/index.js'));
+    await bundle(path.join(__dirname, '/integration/babel-core-js/index.js'), {
+      featureFlags,
+    });
 
     let file = await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8');
     // console.log(file)
@@ -755,7 +785,7 @@ describe('transpilation', function () {
         'dir',
       );
 
-      await bundle(inputDir + '/index.js', {outputFS: fs});
+      await bundle(inputDir + '/index.js', {outputFS: fs, featureFlags});
 
       let file = await fs.readFile(path.join(distDir, 'index.js'), 'utf8');
       assert(file.includes('function Foo'));
