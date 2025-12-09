@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {compareDirectories} from './directory';
 import {compareFiles, compareFilesByPrefix} from './comparison';
+import {createContext} from './context';
 
 import {DEFAULT_OPTIONS, validateSizeThreshold} from './options';
 
@@ -13,6 +14,7 @@ export interface CliOptions {
   ignoreSwappedVariables: boolean;
   summaryMode: boolean;
   verbose: boolean;
+  jsonMode: boolean;
   sizeThreshold: number;
 }
 
@@ -43,6 +45,8 @@ export function parseArgs(args: string[]): {
       options.summaryMode = true;
     } else if (arg === '--verbose') {
       options.verbose = true;
+    } else if (arg === '--json') {
+      options.jsonMode = true;
     } else if (arg === '--disambiguation-size-threshold') {
       if (i + 1 >= args.length) {
         return {
@@ -113,6 +117,9 @@ export function printUsage(): void {
     '  --verbose                            Show all file matches, not just mismatches (directory mode only)',
   );
   console.error(
+    '  --json                                Output results in JSON format for AI analysis',
+  );
+  console.error(
     '  --disambiguation-size-threshold <val> Threshold for matching files by "close enough" sizes',
   );
   console.error(
@@ -158,7 +165,8 @@ function handlePrefixMatching(
     return;
   }
 
-  compareFilesByPrefix(prefix1, prefix2, dir1, dir2, options);
+  const context = createContext(undefined, undefined, dir1, dir2, options);
+  compareFilesByPrefix(prefix1, prefix2, dir1, dir2, context);
 }
 
 export function main(): void {
@@ -196,17 +204,8 @@ export function main(): void {
 
   if (stat1.isDirectory() && stat2.isDirectory()) {
     // Compare directories (paths will be resolved to absolute inside compareDirectories)
-    compareDirectories(
-      file1,
-      file2,
-      options.ignoreAssetIds,
-      options.ignoreUnminifiedRefs,
-      options.ignoreSourceMapUrl,
-      options.ignoreSwappedVariables,
-      options.summaryMode,
-      options.verbose,
-      options.sizeThreshold,
-    );
+    const context = createContext(undefined, undefined, file1, file2, options);
+    compareDirectories(file1, file2, context);
     return;
   } else if (stat1.isDirectory() || stat2.isDirectory()) {
     console.error('Error: Cannot compare a directory with a file');
@@ -216,5 +215,6 @@ export function main(): void {
   }
 
   // Both are files - compare them
-  compareFiles(file1, file2, options);
+  const context = createContext(file1, file2, undefined, undefined, options);
+  compareFiles(file1, file2, context);
 }

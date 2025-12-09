@@ -7,13 +7,18 @@ import {printDiff} from './print';
 import {getAllFiles} from './directory';
 import {matchFilesByPrefix, extractPrefix} from './match';
 import type {FileInfo, MatchedPair} from './types';
-import type {CliOptions} from './cli';
 import {
   printAmbiguousMatches,
   printFileSummary,
   printComparisonSummary,
 } from './report';
 import {getColors} from './utils/colors';
+import {
+  generateFileJsonReport,
+  diffToJson,
+  generateDirectoryJsonReport,
+} from './json';
+import type {ComparisonContext} from './context';
 
 /**
  * Compares two files and prints the diff
@@ -21,7 +26,7 @@ import {getColors} from './utils/colors';
 export function compareFiles(
   file1: string,
   file2: string,
-  options: CliOptions,
+  context: ComparisonContext,
 ): void {
   try {
     const absFile1 = path.resolve(file1);
@@ -36,20 +41,28 @@ export function compareFiles(
 
     // Compute and print diff
     const diff = computeDiff(lines1, lines2);
+
+    if (context.jsonMode) {
+      // Output JSON
+      const report = generateFileJsonReport(diff, absFile1, absFile2, context);
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+
     const result = printDiff(
       diff,
       absFile1,
       absFile2,
       3,
-      options.ignoreAssetIds,
-      options.ignoreUnminifiedRefs,
-      options.ignoreSourceMapUrl,
-      options.ignoreSwappedVariables,
-      options.summaryMode,
+      context.ignoreAssetIds,
+      context.ignoreUnminifiedRefs,
+      context.ignoreSourceMapUrl,
+      context.ignoreSwappedVariables,
+      context.summaryMode,
     );
 
     // Show summary for file comparison
-    if (options.summaryMode) {
+    if (context.summaryMode) {
       printComparisonSummary(result.hunkCount, result.hasChanges);
     }
   } catch (error) {
@@ -71,7 +84,7 @@ export function compareFilesByPrefix(
   prefix2: string,
   dir1: string,
   dir2: string,
-  options: CliOptions,
+  context: ComparisonContext,
 ): void {
   // Search for files matching the prefix in both directories
   const files1 = getAllFiles(dir1).filter((f) => {
@@ -102,12 +115,12 @@ export function compareFilesByPrefix(
 
   // Use disambiguation logic when multiple files match
   if (files1.length > 1 || files2.length > 1) {
-    compareMultipleFilesByPrefix(prefix1, prefix2, files1, files2, options);
+    compareMultipleFilesByPrefix(prefix1, prefix2, files1, files2, context);
     return;
   }
 
   // Exactly one match in each directory - compare them
-  compareSingleFilePair(files1[0], files2[0], prefix1, prefix2, options);
+  compareSingleFilePair(files1[0], files2[0], prefix1, prefix2, context);
 }
 
 /**
@@ -118,7 +131,7 @@ function compareSingleFilePair(
   file2: FileInfo,
   prefix1: string,
   prefix2: string,
-  options: CliOptions,
+  context: ComparisonContext,
 ): void {
   try {
     const colors = getColors();
@@ -144,20 +157,33 @@ function compareSingleFilePair(
 
     // Compute and print diff
     const diff = computeDiff(lines1, lines2);
+
+    if (context.jsonMode) {
+      // Output JSON
+      const report = generateFileJsonReport(
+        diff,
+        file1.fullPath,
+        file2.fullPath,
+        context,
+      );
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+
     const result = printDiff(
       diff,
       file1.fullPath,
       file2.fullPath,
       3,
-      options.ignoreAssetIds,
-      options.ignoreUnminifiedRefs,
-      options.ignoreSourceMapUrl,
-      options.ignoreSwappedVariables,
-      options.summaryMode,
+      context.ignoreAssetIds,
+      context.ignoreUnminifiedRefs,
+      context.ignoreSourceMapUrl,
+      context.ignoreSwappedVariables,
+      context.summaryMode,
     );
 
     // Show summary for file comparison
-    if (options.summaryMode) {
+    if (context.summaryMode) {
       printComparisonSummary(result.hunkCount, result.hasChanges);
     }
   } catch (error) {
@@ -179,7 +205,7 @@ function compareMultipleFilesByPrefix(
   prefix2: string,
   files1: FileInfo[],
   files2: FileInfo[],
-  options: CliOptions,
+  context: ComparisonContext,
 ): void {
   const colors = getColors();
 
@@ -196,7 +222,7 @@ function compareMultipleFilesByPrefix(
   const {matched, ambiguous} = matchFilesByPrefix(
     files1,
     files2,
-    options.sizeThreshold,
+    context.sizeThreshold,
   );
 
   // Report ambiguous cases
@@ -211,11 +237,33 @@ function compareMultipleFilesByPrefix(
     return;
   }
 
-  const comparisonResults = compareMatchedPairs(matched, options);
+  const comparisonResults = compareMatchedPairs(matched, context);
+
+  if (context.jsonMode && comparisonResults.jsonResults) {
+    // Output JSON for directory comparison
+    // Need to get directory paths - use the first matched file's directory
+    const dir1 =
+      matched.length > 0 ? path.dirname(matched[0].file1.fullPath) : '';
+    const dir2 =
+      matched.length > 0 ? path.dirname(matched[0].file2.fullPath) : '';
+    const report = generateDirectoryJsonReport(
+      matched,
+      ambiguous,
+      dir1,
+      dir2,
+      context,
+      comparisonResults.jsonResults,
+    );
+    console.log(JSON.stringify(report, null, 2));
+    if (comparisonResults.differentFiles > 0) {
+      process.exitCode = 1;
+    }
+    return;
+  }
 
   // In summary mode, print sorted list of files with differences
   if (
-    options.summaryMode &&
+    context.summaryMode &&
     comparisonResults.filesWithDifferences.length > 0
   ) {
     printFileSummary(comparisonResults.filesWithDifferences);
@@ -240,19 +288,25 @@ function compareMultipleFilesByPrefix(
  */
 function compareMatchedPairs(
   matched: MatchedPair[],
-  options: CliOptions,
+  context: ComparisonContext,
 ): {
   identicalFiles: number;
   differentFiles: number;
   filesWithDifferences: Array<{path: string; hunkCount: number}>;
   totalHunks: number;
   hasAnyChanges: boolean;
+  jsonResults?: Array<import('./json').JsonFileResult>;
 } {
   let identicalFiles = 0;
   let differentFiles = 0;
   const filesWithDifferences: Array<{path: string; hunkCount: number}> = [];
   let totalHunks = 0;
   let hasAnyChanges = false;
+  let jsonResults: Array<import('./json').JsonFileResult> | undefined;
+
+  if (context.jsonMode) {
+    jsonResults = [];
+  }
 
   for (let i = 0; i < matched.length; i++) {
     const {file1, file2} = matched[i];
@@ -268,17 +322,19 @@ function compareMatchedPairs(
 
       // Compute diff
       const diff = computeDiff(lines1, lines2);
-      const hunkCount = countHunks(
-        diff,
-        options.ignoreAssetIds,
-        options.ignoreUnminifiedRefs,
-        options.ignoreSourceMapUrl,
-        options.ignoreSwappedVariables,
-      );
-      const hasChanges = diff.some((e) => e.type !== 'equal');
 
-      if (options.summaryMode) {
-        // In summary mode, just count hunks
+      if (context.jsonMode) {
+        const fileResult = diffToJson(
+          diff,
+          file1.fullPath,
+          file2.fullPath,
+          context,
+        );
+        jsonResults!.push(fileResult);
+
+        const hunkCount = fileResult.hunkCount;
+        const hasChanges = diff.some((e) => e.type !== 'equal');
+
         if (hasChanges && hunkCount > 0) {
           differentFiles++;
           filesWithDifferences.push({path: file1.relativePath, hunkCount});
@@ -288,42 +344,63 @@ function compareMatchedPairs(
           identicalFiles++;
         }
       } else {
-        // In normal mode, print full diff only for files that differ
-        if (hasChanges && hunkCount > 0) {
-          differentFiles++;
-          totalHunks += hunkCount;
-          hasAnyChanges = true;
-          if (i > 0) {
-            console.log();
+        const hunkCount = countHunks(
+          diff,
+          context.ignoreAssetIds,
+          context.ignoreUnminifiedRefs,
+          context.ignoreSourceMapUrl,
+          context.ignoreSwappedVariables,
+        );
+        const hasChanges = diff.some((e) => e.type !== 'equal');
+
+        if (context.summaryMode) {
+          // In summary mode, just count hunks
+          if (hasChanges && hunkCount > 0) {
+            differentFiles++;
+            filesWithDifferences.push({path: file1.relativePath, hunkCount});
+            totalHunks += hunkCount;
+            hasAnyChanges = true;
+          } else {
+            identicalFiles++;
           }
-          printDiff(
-            diff,
-            file1.fullPath,
-            file2.fullPath,
-            3,
-            options.ignoreAssetIds,
-            options.ignoreUnminifiedRefs,
-            options.ignoreSourceMapUrl,
-            options.ignoreSwappedVariables,
-            false,
-          );
         } else {
-          identicalFiles++;
-          if (i > 0) {
+          // In normal mode, print full diff only for files that differ
+          if (hasChanges && hunkCount > 0) {
+            differentFiles++;
+            totalHunks += hunkCount;
+            hasAnyChanges = true;
+            if (i > 0) {
+              console.log();
+            }
+            printDiff(
+              diff,
+              file1.fullPath,
+              file2.fullPath,
+              3,
+              context.ignoreAssetIds,
+              context.ignoreUnminifiedRefs,
+              context.ignoreSourceMapUrl,
+              context.ignoreSwappedVariables,
+              false,
+            );
+          } else {
+            identicalFiles++;
+            if (i > 0) {
+              console.log();
+            }
+            const colors = getColors();
+            console.log(`${colors.cyan}=== Comparing files ===${colors.reset}`);
+            console.log(
+              `${colors.yellow}File 1:${colors.reset} ${file1.fullPath}`,
+            );
+            console.log(
+              `${colors.yellow}File 2:${colors.reset} ${file2.fullPath}`,
+            );
             console.log();
+            console.log(
+              `${colors.green}✓ Files are identical (after de-minification)${colors.reset}`,
+            );
           }
-          const colors = getColors();
-          console.log(`${colors.cyan}=== Comparing files ===${colors.reset}`);
-          console.log(
-            `${colors.yellow}File 1:${colors.reset} ${file1.fullPath}`,
-          );
-          console.log(
-            `${colors.yellow}File 2:${colors.reset} ${file2.fullPath}`,
-          );
-          console.log();
-          console.log(
-            `${colors.green}✓ Files are identical (after de-minification)${colors.reset}`,
-          );
         }
       }
     } catch (error) {
@@ -345,5 +422,6 @@ function compareMatchedPairs(
     filesWithDifferences,
     totalHunks,
     hasAnyChanges,
+    jsonResults,
   };
 }

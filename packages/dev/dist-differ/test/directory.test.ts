@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import {getAllFiles, compareDirectories} from '../src/directory';
+import {createContext} from '../src/context';
 
 describe('getAllFiles', () => {
   let tempDir: string;
@@ -124,7 +125,8 @@ describe('compareDirectories', () => {
     fs.writeFileSync(path.join(dir1, 'app.abc123.js'), 'var a=1;');
     fs.writeFileSync(path.join(dir2, 'app.abc123.js'), 'var a=1;');
 
-    compareDirectories(dir1, dir2, false, false, false, false);
+    const context = createContext(undefined, undefined, dir1, dir2);
+    compareDirectories(dir1, dir2, context);
 
     const output = consoleOutput.join('\n');
     assert(output.includes('All files have identical names'));
@@ -135,7 +137,8 @@ describe('compareDirectories', () => {
     fs.writeFileSync(path.join(dir2, 'file1.js'), 'content1');
     fs.writeFileSync(path.join(dir2, 'file2.js'), 'content2');
 
-    compareDirectories(dir1, dir2, false, false, false, false);
+    const context = createContext(undefined, undefined, dir1, dir2);
+    compareDirectories(dir1, dir2, context);
 
     assert.equal(process.exitCode, 1);
     const output = consoleOutput.join('\n');
@@ -149,7 +152,8 @@ describe('compareDirectories', () => {
     fs.writeFileSync(path.join(dir1, 'file2.js'), 'content2');
     fs.writeFileSync(path.join(dir2, 'file1.js'), 'content1');
 
-    compareDirectories(dir1, dir2, false, false, false, false);
+    const context = createContext(undefined, undefined, dir1, dir2);
+    compareDirectories(dir1, dir2, context);
 
     const output = consoleOutput.join('\n');
     assert(output.includes('Files only in directory 1'));
@@ -161,7 +165,8 @@ describe('compareDirectories', () => {
     fs.writeFileSync(path.join(dir2, 'file1.js'), 'content1');
     fs.writeFileSync(path.join(dir2, 'file2.js'), 'content2');
 
-    compareDirectories(dir1, dir2, false, false, false, false);
+    const context = createContext(undefined, undefined, dir1, dir2);
+    compareDirectories(dir1, dir2, context);
 
     const output = consoleOutput.join('\n');
     assert(output.includes('Files only in directory 2'));
@@ -172,7 +177,8 @@ describe('compareDirectories', () => {
     fs.writeFileSync(path.join(dir1, 'app.abc123.js'), 'var a=1;');
     fs.writeFileSync(path.join(dir2, 'app.def456.js'), 'var a=1;');
 
-    compareDirectories(dir1, dir2, false, false, false, false);
+    const context = createContext(undefined, undefined, dir1, dir2);
+    compareDirectories(dir1, dir2, context);
 
     const output = consoleOutput.join('\n');
     assert(output.includes('Summary'));
@@ -183,7 +189,8 @@ describe('compareDirectories', () => {
     fs.writeFileSync(path.join(dir1, 'app.abc123.js'), 'var a=1;');
     fs.writeFileSync(path.join(dir2, 'app.def456.js'), 'var b=2;');
 
-    compareDirectories(dir1, dir2, false, false, false, false);
+    const context = createContext(undefined, undefined, dir1, dir2);
+    compareDirectories(dir1, dir2, context);
 
     const output = consoleOutput.join('\n');
     assert(output.includes('Different files: 1'));
@@ -193,10 +200,14 @@ describe('compareDirectories', () => {
     fs.writeFileSync(path.join(dir1, 'app.abc123.js'), 'var a=1;');
     fs.writeFileSync(path.join(dir2, 'app.def456.js'), 'var b=2;');
 
-    compareDirectories(dir1, dir2, false, false, false, false, true);
+    const context = createContext(undefined, undefined, dir1, dir2, {
+      summaryMode: true,
+    });
+    compareDirectories(dir1, dir2, context);
 
     const output = consoleOutput.join('\n');
     assert(output.includes('Summary'));
+    assert(output.includes('Different files: 1'));
     // Should not print full diff in summary mode
     assert(!output.includes('Comparing files'));
   });
@@ -205,7 +216,10 @@ describe('compareDirectories', () => {
     fs.writeFileSync(path.join(dir1, 'app.abc123.js'), 'var a=1;');
     fs.writeFileSync(path.join(dir2, 'app.def456.js'), 'var a=1;');
 
-    compareDirectories(dir1, dir2, false, false, false, false, false, true);
+    const context = createContext(undefined, undefined, dir1, dir2, {
+      verbose: true,
+    });
+    compareDirectories(dir1, dir2, context);
 
     const output = consoleOutput.join('\n');
     // Verbose mode should show all matches
@@ -220,7 +234,8 @@ describe('compareDirectories', () => {
     fs.writeFileSync(path.join(subDir1, 'file.js'), 'content');
     fs.writeFileSync(path.join(subDir2, 'file.js'), 'content');
 
-    compareDirectories(dir1, dir2, false, false, false, false);
+    const context = createContext(undefined, undefined, dir1, dir2);
+    compareDirectories(dir1, dir2, context);
 
     const output = consoleOutput.join('\n');
     // Should complete without error - check for either summary or identical message
@@ -235,17 +250,10 @@ describe('compareDirectories', () => {
     fs.writeFileSync(path.join(dir1, 'app.abc123.js'), 'var a=1;');
     fs.writeFileSync(path.join(dir2, 'app.def456.js'), 'var a=1;');
 
-    compareDirectories(
-      dir1,
-      dir2,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      0.01,
-    );
+    const context = createContext(undefined, undefined, dir1, dir2, {
+      sizeThreshold: 0.01,
+    });
+    compareDirectories(dir1, dir2, context);
 
     const output = consoleOutput.join('\n');
     assert(output.includes('Summary'));
