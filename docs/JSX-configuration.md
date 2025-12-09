@@ -133,7 +133,7 @@ The automatic JSX runtime transforms JSX without requiring `React` to be in scop
 
 ### `automaticRuntime`
 
-- **Type**: `boolean | string[]`
+- **Type**: `boolean | {include: string[], exclude?: string[]}`
 - **Default**: `false`
 - **Description**: Controls when automatic JSX runtime is enabled.
 
@@ -163,22 +163,31 @@ The automatic JSX runtime transforms JSX without requiring `React` to be in scop
 
 ### File Pattern Matching
 
-Enable automatic runtime only for specific file patterns using glob patterns:
+Enable automatic runtime only for specific file patterns using glob patterns with include and exclude rules:
 
 ```json
 {
   "@atlaspack/transformer-js": {
     "jsx": {
       "importSource": "react",
-      "automaticRuntime": [
-        "src/components/**/*.tsx",
-        "src/pages/**/*.jsx",
-        "../shared/**/*.tsx"
-      ]
+      "automaticRuntime": {
+        "include": [
+          "src/components/**/*.tsx",
+          "src/pages/**/*.jsx",
+          "../shared/**/*.tsx"
+        ],
+        "exclude": ["src/components/legacy/**/*.tsx", "src/pages/old/**/*.jsx"]
+      }
     }
   }
 }
 ```
+
+**Include/Exclude Rules:**
+
+- **`include`**: Array of glob patterns that files must match to get automatic runtime
+- **`exclude`** (optional): Array of glob patterns that override includes - if a file matches both include and exclude, it will NOT get automatic runtime
+- **Exclude wins**: If a file matches both include and exclude patterns, exclude takes precedence
 
 **Glob Pattern Examples:**
 

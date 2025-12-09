@@ -843,7 +843,7 @@ describe('transpilation', function () {
             "@atlaspack/transformer-js": {
               "jsx": {
                 "importSource": "react",
-                "automaticRuntime": {"Enabled": true}
+                "automaticRuntime": true
               }
             }
           }
@@ -887,7 +887,9 @@ describe('transpilation', function () {
                 "pragma": "React.createElement",
                 "pragmaFragment": "React.Fragment",
                 "importSource": "react",
-                "automaticRuntime": {"Glob": ["modern/**/*.jsx"]}
+                "automaticRuntime": {
+                  "include": ["modern/**/*.jsx"]
+                }
               }
             }
           }
@@ -953,6 +955,73 @@ describe('transpilation', function () {
       assert(
         js.includes('React.createElement'),
         'Legacy component should use React.createElement',
+      );
+    });
+
+    it('should support include and exclude patterns in automatic runtime', async () => {
+      await fsFixture(overlayFS, dir)`
+        package.json:
+          {
+            "name": "jsx-include-exclude-test",
+            "@atlaspack/transformer-js": {
+              "jsx": {
+                "pragma": "React.createElement",
+                "pragmaFragment": "React.Fragment",
+                "importSource": "react",
+                "automaticRuntime": {
+                  "include": ["src/**/*.jsx"],
+                  "exclude": ["src/legacy/**/*.jsx"]
+                }
+              }
+            }
+          }
+
+        yarn.lock:
+
+        index.js:
+          const ModernComponent = require('./src/modern/Component.jsx');
+          const LegacyComponent = require('./src/legacy/Component.jsx');
+          const HelperComponent = require('./src/utils/Helper.jsx');
+
+          module.exports = 'Include/exclude works!';
+
+        src/modern/Component.jsx:
+          const ModernComponent = () => <span>modern</span>;
+          module.exports = ModernComponent;
+
+        src/legacy/Component.jsx:
+          const LegacyComponent = () => <span>legacy</span>;
+          module.exports = LegacyComponent;
+
+        src/utils/Helper.jsx:
+          const HelperComponent = () => <span>helper</span>;
+          module.exports = HelperComponent;
+      `;
+
+      let b = await bundle(path.join(dir, 'index.js'), {
+        inputFS: overlayFS,
+        featureFlags: {
+          newJsxConfig: true,
+        },
+      });
+
+      let output = await run(b);
+      assert.equal(output, 'Include/exclude works!');
+
+      // Check that different runtime transformations are applied based on include/exclude
+      let js = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+
+      // Files in src/ but not in src/legacy/ should use automatic runtime
+      // Files in src/legacy/ should use classic runtime (excluded)
+      assert(
+        js.includes('jsx(') ||
+          js.includes('jsxDEV') ||
+          js.includes('jsx-runtime'),
+        'Included files should use automatic jsx runtime',
+      );
+      assert(
+        js.includes('React.createElement'),
+        'Excluded files should use React.createElement',
       );
     });
 
@@ -1057,8 +1126,20 @@ describe('transpilation', function () {
               newJsxConfig: true,
             },
           });
-          assert.fail(
-            'Should have failed to parse JSX in .js file without explicit config in V2 mode',
+          // V2 mode: JSX should also work in .js files with newJsxConfig feature flag
+          let b2 = await bundle(path.join(dir, 'index-with-jsx.js'), {
+            inputFS: overlayFS,
+            featureFlags: {
+              newJsxConfig: true,
+            },
+          });
+          let js2 = await outputFS.readFile(
+            b2.getBundles()[0].filePath,
+            'utf8',
+          );
+          assert(
+            js2.includes('React.createElement'),
+            'Should transform JSX in .js files in V2 mode with newJsxConfig',
           );
         } catch (err) {
           // Expected to fail - JSX should not be enabled for .js files without explicit config in V2

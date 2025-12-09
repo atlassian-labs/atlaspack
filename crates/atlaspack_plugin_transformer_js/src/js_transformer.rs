@@ -25,7 +25,6 @@ use crate::map_diagnostics::{MapDiagnosticOptions, map_diagnostics};
 use crate::package_json::{PackageJson, depends_on_react, supports_automatic_jsx_runtime};
 use crate::ts_config::{Jsx, Target, TsConfig};
 
-// Re-export types from the shared core
 pub use atlaspack_js_swc_core::JsxConfiguration;
 
 mod conversion;
@@ -633,9 +632,10 @@ mod tests {
           pragma: Some("React.createElement".to_string()),
           pragma_fragment: Some("React.Fragment".to_string()),
           import_source: Some("react".to_string()),
-          automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
-            "src/components/**/*.tsx".to_string(),
-          ])),
+          automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
+            include: vec!["src/components/**/*.tsx".to_string()],
+            exclude: None,
+          })),
         }),
         ..Default::default()
       }),
@@ -687,9 +687,10 @@ mod tests {
           pragma: Some("React.createElement".to_string()),
           pragma_fragment: Some("React.Fragment".to_string()),
           import_source: Some("react".to_string()),
-          automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
-            "src/components/**/*.tsx".to_string(), // This won't match src/pages/Home.tsx
-          ])),
+          automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
+            include: vec!["src/components/**/*.tsx".to_string()], // This won't match src/pages/Home.tsx
+            exclude: None,
+          })),
         }),
         ..Default::default()
       }),
@@ -739,9 +740,10 @@ mod tests {
           pragma: Some("React.createElement".to_string()),
           pragma_fragment: Some("React.Fragment".to_string()),
           import_source: Some("react".to_string()),
-          automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
-            "../other-project/**/*.tsx".to_string(),
-          ])),
+          automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
+            include: vec!["../other-project/**/*.tsx".to_string()],
+            exclude: None,
+          })),
         }),
         ..Default::default()
       }),
@@ -799,9 +801,10 @@ mod tests {
           pragma: Some("React.createElement".to_string()),
           pragma_fragment: Some("React.Fragment".to_string()),
           import_source: Some("react".to_string()),
-          automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
-            "../other-project/**".to_string(), // Should NOT match /dir/another-project/
-          ])),
+          automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
+            include: vec!["../other-project/**".to_string()], // Should NOT match /dir/another-project/
+            exclude: None,
+          })),
         }),
         ..Default::default()
       }),
@@ -1236,9 +1239,10 @@ mod tests {
         pragma: Some("React.createElement".to_string()),
         pragma_fragment: Some("React.Fragment".to_string()),
         import_source: None,
-        automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
-          "src/components/**/*.tsx".to_string(),
-        ])),
+        automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
+          include: vec!["src/components/**/*.tsx".to_string()],
+          exclude: None,
+        })),
       }),
       ..Default::default()
     };
@@ -1258,9 +1262,10 @@ mod tests {
         pragma: Some("React.createElement".to_string()),
         pragma_fragment: Some("React.Fragment".to_string()),
         import_source: None,
-        automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
-          "src/pages/**/*.tsx".to_string(),
-        ])),
+        automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
+          include: vec!["src/pages/**/*.tsx".to_string()],
+          exclude: None,
+        })),
       }),
       ..Default::default()
     };

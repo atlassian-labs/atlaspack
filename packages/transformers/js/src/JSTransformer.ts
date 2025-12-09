@@ -230,14 +230,11 @@ async function legacyDetemineJsxConfig(
       );
     }
 
-    reactRefresh =
-      options.hmrOptions &&
-      options.mode === 'development' &&
-      Boolean(
-        packageJson?.dependencies?.react ||
-          packageJson?.devDependencies?.react ||
-          packageJson?.peerDependencies?.react,
-      );
+    reactRefresh = Boolean(
+      packageJson?.dependencies?.react ||
+        packageJson?.devDependencies?.react ||
+        packageJson?.peerDependencies?.react,
+    );
 
     const compilerOptions: TSConfig['compilerOptions'] = (
       await config.getConfigFrom<TSConfig>(
@@ -644,13 +641,16 @@ export default new Transformer({
       automatic_jsx_runtime: Boolean(config?.automaticJSXRuntime),
       jsx_import_source: config?.jsxImportSource,
       is_development: options.mode === 'development',
-      react_refresh:
+      react_refresh: Boolean(
         asset.env.isBrowser() &&
-        !asset.env.isLibrary &&
-        !asset.env.isWorker() &&
-        !asset.env.isTesseract() &&
-        !asset.env.isWorklet() &&
-        Boolean(config?.reactRefresh),
+          !asset.env.isLibrary &&
+          !asset.env.isWorker() &&
+          !asset.env.isTesseract() &&
+          !asset.env.isWorklet() &&
+          config?.reactRefresh &&
+          options.hmrOptions &&
+          options.mode === 'development',
+      ),
       decorators: Boolean(config?.decorators),
       use_define_for_class_fields: Boolean(config?.useDefineForClassFields),
       targets,

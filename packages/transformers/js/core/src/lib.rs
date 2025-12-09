@@ -903,14 +903,22 @@ pub struct JsxConfiguration {
   pub jsx_pragma: Option<String>,
   pub jsx_pragma_frag: Option<String>,
   pub jsx_import_source: Option<String>,
+  #[serde(rename = "automaticJSXRuntime")]
   pub automatic_jsx_runtime: bool,
   pub react_refresh: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct AutomaticRuntimeGlobs {
+  pub include: Vec<String>,
+  pub exclude: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(untagged)]
 pub enum AutomaticReactRuntime {
   Enabled(bool),
-  Glob(Vec<String>),
+  Glob(AutomaticRuntimeGlobs),
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -1048,9 +1056,28 @@ pub fn determine_jsx_configuration(
         AutomaticReactRuntime::Enabled(enabled) => *enabled,
         AutomaticReactRuntime::Glob(globs) => {
           let relative_path_str = relative_path(file_path, project_root);
-          globs
+
+          // Check if file matches any include pattern
+          let matches_include = globs
+            .include
             .iter()
-            .any(|glob| glob_match(glob, &relative_path_str))
+            .any(|glob| glob_match(glob, &relative_path_str));
+
+          // If it doesn't match includes, automatic runtime is false
+          if !matches_include {
+            false
+          } else if let Some(excludes) = &globs.exclude {
+            // Check if file matches any exclude pattern
+            let matches_exclude = excludes
+              .iter()
+              .any(|glob| glob_match(glob, &relative_path_str));
+
+            // If it matches excludes, automatic runtime is false (exclude wins)
+            !matches_exclude
+          } else {
+            // File matches includes and no excludes specified
+            true
+          }
         }
       }
     }
