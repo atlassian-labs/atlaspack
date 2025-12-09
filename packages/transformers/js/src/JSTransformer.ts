@@ -123,7 +123,7 @@ const CONFIG_SCHEMA: SchemaEntity = {
     unstable_inlineConstants: {
       type: 'boolean',
     },
-    react: {
+    jsx: {
       type: 'object',
     },
   },
@@ -138,7 +138,7 @@ interface JsTransformerConfig {
   magicComments?: boolean;
   unstable_inlineConstants?: boolean;
   // This is exclusively used in Rust so not worth typing
-  react: any;
+  jsx: any;
 }
 
 const configCache = createBuildCache();
@@ -352,7 +352,7 @@ export default new Transformer({
       ? (determineJsxConfiguration(
           config.searchPath,
           config.isSource,
-          conf?.contents?.react,
+          conf?.contents?.jsx,
           options.projectRoot,
         ) as JsxConfig)
       : await legacyDetemineJsxConfig(config, options);

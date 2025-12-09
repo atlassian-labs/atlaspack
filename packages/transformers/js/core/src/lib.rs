@@ -1017,29 +1017,29 @@ pub fn determine_jsx_configuration(
   let mut automatic_jsx_runtime = false;
 
   if is_jsx {
-    if let Some(react) = &config {
-      // Use react options from transformer config if provided
-      jsx_pragma = react
+    if let Some(jsx_config) = &config {
+      // Use JSX options from transformer config if provided
+      jsx_pragma = jsx_config
         .jsx_pragma
         .clone()
         .unwrap_or_else(|| "React.createElement".to_string())
         .into();
 
-      jsx_pragma_frag = react
+      jsx_pragma_frag = jsx_config
         .jsx_pragma_fragment
         .clone()
         .unwrap_or_else(|| "React.Fragment".to_string())
         .into();
 
-      jsx_import_source = react.jsx_import_source.clone();
+      jsx_import_source = jsx_config.jsx_import_source.clone();
     } else {
       jsx_pragma = Some("React.createElement".to_string());
       jsx_pragma_frag = Some("React.Fragment".to_string());
     }
 
     // Update automatic_jsx_runtime based on config
-    if let Some(react) = &config
-      && let Some(automatic_runtime) = &react.automatic_runtime
+    if let Some(jsx_config) = &config
+      && let Some(automatic_runtime) = &jsx_config.automatic_runtime
     {
       automatic_jsx_runtime = match automatic_runtime {
         AutomaticReactRuntime::Enabled(enabled) => *enabled,
