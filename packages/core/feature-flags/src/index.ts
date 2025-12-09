@@ -341,6 +341,15 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-11-27
    */
   disallowCircularPackageAliases: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Enables experimental mode for runtimes that skips symbol prop in favour of
+   * the symbol data added to each runtime asset
+   *
+   * @author Ben Jervis <bjervis@atlassian.com>
+   * @since 2025-12-09
+   */
+  skipRuntimeSymbolProp: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

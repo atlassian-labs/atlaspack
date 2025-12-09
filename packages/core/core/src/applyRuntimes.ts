@@ -35,6 +35,7 @@ import {toProjectPath, fromProjectPathRelative} from './projectPath';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {DefaultMap} from '@atlaspack/utils';
 import {fromEnvironmentId} from './EnvironmentManager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type RuntimeConnection = {
   bundle: InternalBundle;
@@ -280,8 +281,10 @@ export default async function applyRuntimes<TResult extends RequestResult>({
   let {assetGraph: runtimesAssetGraph, changedAssets} =
     await reconcileNewRuntimes(api, connections, optionsRef);
 
-  // Apply pre-computed symbol data from runtime assets to skip symbol propagation
-  applyRuntimeSymbolData(runtimesAssetGraph, connections);
+  if (getFeatureFlag('skipRuntimeSymbolProp')) {
+    // Apply pre-computed symbol data from runtime assets to skip symbol propagation
+    applyRuntimeSymbolData(runtimesAssetGraph, connections);
+  }
 
   // Convert the runtime AssetGraph into a BundleGraph, this includes assigning
   // the assets their public ids
@@ -502,7 +505,7 @@ function reconcileNewRuntimes<TResult extends RequestResult>(
     name: 'Runtimes',
     assetGroups,
     optionsRef,
-    skipSymbolProp: true,
+    skipSymbolProp: getFeatureFlag('skipRuntimeSymbolProp'),
   });
 
   // rebuild the graph
