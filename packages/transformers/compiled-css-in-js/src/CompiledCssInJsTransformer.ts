@@ -4,9 +4,9 @@ import {Transformer} from '@atlaspack/plugin';
 import {
   applyCompiledCssInJsPlugin,
   CompiledCssInJsPluginResult,
-  type CompiledCssInJsConfig,
+  hashCode,
+  isSafeFromJs,
 } from '@atlaspack/rust/index';
-import {join} from 'path';
 import SourceMap from '@atlaspack/source-map';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import ThrowableDiagnostic, {
@@ -14,45 +14,65 @@ import ThrowableDiagnostic, {
 } from '@atlaspack/diagnostic';
 import {remapSourceLocation} from '@atlaspack/utils';
 
-const configFiles = ['.compiledcssrc', '.compiledcssrc.json'];
-
-const PACKAGE_KEY = '@atlaspack/transformer-compiled-css-in-js';
+import {loadCompiledCssInJsConfig} from '@atlaspack/transformer-js';
 
 export default new Transformer({
+  // eslint-disable-next-line require-await
   async loadConfig({config, options}) {
     if (!getFeatureFlag('compiledCssInJsTransformer')) {
-      return {};
+      return undefined;
     }
 
-    const conf = await config.getConfigFrom<CompiledCssInJsConfig>(
-      join(options.projectRoot, 'index'),
-      configFiles,
-      {
-        packageKey: PACKAGE_KEY,
-      },
-    );
-
-    const contents: CompiledCssInJsConfig = {
-      configPath: conf?.filePath,
-      importSources: ['@compiled/react', '@atlaskit/css'],
-    };
-
-    Object.assign(contents, conf?.contents);
-
-    if (!contents.importSources?.includes('@compiled/react')) {
-      contents.importSources?.push('@compiled/react');
-    }
-
-    contents.extract = contents.extract && options.mode !== 'development';
-
-    return contents;
+    return loadCompiledCssInJsConfig(config, options);
   },
   async transform({asset, options, config, logger}) {
-    if (!getFeatureFlag('compiledCssInJsTransformer')) {
+    if (!getFeatureFlag('compiledCssInJsTransformer') || !config) {
       return [asset];
     }
 
     if (!asset.isSource && !config.extract) {
+      return [asset];
+    }
+
+    const code = await asset.getCode();
+
+    if (
+      config.importSources?.every(
+        (source) =>
+          !code.includes(source) || code.includes(source + '/runtime'),
+      )
+    ) {
+      return [asset];
+    }
+
+    if (
+      getFeatureFlag('compiledCssInJsTransformer') &&
+      (config?.unsafeReportSafeAssetsForMigration ||
+        config?.unsafeUseSafeAssets)
+    ) {
+      asset.meta.compiledCodeHash ??= hashCode(code);
+    }
+
+    if (config?.unsafeUseSafeAssets) {
+      if (!config.configPath) {
+        throw new Error(
+          'configPath is required when unsafeUseSafeAssets is enabled',
+        );
+      }
+
+      asset.meta.useRustCompiledTransform ??= isSafeFromJs(
+        asset.meta.compiledCodeHash as string,
+        config.configPath,
+      );
+    }
+
+    if (getFeatureFlag('coreTokensAndCompiledCssInJsTransform')) {
+      // Skipping if we're using the compiled CSS in JS transform from the core pass
+      return [asset];
+    }
+
+    if (config.unsafeUseSafeAssets && !asset.meta.useRustCompiledTransform) {
+      // Fallback to the legacy transform if we know the asset is not safe
       return [asset];
     }
 
@@ -65,15 +85,6 @@ export default new Transformer({
 
       return originalMap;
     };
-    const code = await asset.getCode();
-    if (
-      config.importSources?.every(
-        (source) =>
-          !code.includes(source) || code.includes(source + '/runtime'),
-      )
-    ) {
-      return [asset];
-    }
 
     const codeBuffer = Buffer.from(code);
 
@@ -187,14 +198,11 @@ export default new Transformer({
     if (config.unsafeReportSafeAssetsForMigration) {
       // We need to run the transform without returning the result, so we can report the safe assets
       asset.meta.swcStyleRules = result.styleRules;
-      if (!result.codeHash) {
-        throw new Error('Code hash is required');
-      }
-      asset.meta.compiledCodeHash = result.codeHash;
       asset.meta.compiledCssDiagnostics = result.diagnostics.map(
         (d) => d.message,
       );
       asset.meta.compiledBailOut = result.bailOut;
+
       return [asset];
     }
 

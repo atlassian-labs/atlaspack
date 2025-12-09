@@ -25,6 +25,7 @@ atlaspack_napi_helpers = { path = "../atlaspack_napi_helpers" }
 atlaspack_vcs = { path = "../atlaspack_vcs" }
 atlaspack_swc_runner = { path = "../atlaspack_swc_runner" }
 atlassian_swc_compiled_css = { path = "../atlassian-swc-compiled-css", features = ["napi"] }
+atlassian_swc_compiled_css_strip_runtime = { path = "../atlassian-swc-compiled-css-strip-runtime" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
 atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 

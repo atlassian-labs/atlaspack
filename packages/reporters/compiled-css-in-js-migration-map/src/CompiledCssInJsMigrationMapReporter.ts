@@ -19,10 +19,16 @@ export default new Reporter({
           )
         : {};
 
-      const safeAssets: Record<string, string> = currentMap?.safeAssets ?? {};
+      const safeAssets: Record<string, {asset: string}> =
+        currentMap?.safeAssets ?? {};
       const unsafeAssets: Record<
         string,
-        {asset: string; babel: string[]; swc: string[]; diagnostics: string[]}
+        {
+          asset: string;
+          babel: string[];
+          swc: string[];
+          diagnostics: string[];
+        }
       > = currentMap?.unsafeAssets ?? {};
 
       event.bundleGraph.traverseBundles((childBundle) => {
@@ -31,7 +37,7 @@ export default new Reporter({
             const assetPath = relative(options.projectRoot, asset.filePath);
 
             const currentSafeAsset = Object.entries(safeAssets).find(
-              ([, path]) => path === assetPath,
+              ([, data]) => data.asset === assetPath,
             );
 
             if (currentSafeAsset) {
@@ -62,10 +68,9 @@ export default new Reporter({
 
             if (mismatches.length === 0 && !asset.meta.compiledBailOut) {
               if (asset.meta.compiledCodeHash) {
-                safeAssets[asset.meta.compiledCodeHash as string] = relative(
-                  options.projectRoot,
-                  asset.filePath,
-                );
+                safeAssets[asset.meta.compiledCodeHash as string] = {
+                  asset: relative(options.projectRoot, asset.filePath),
+                };
               }
             } else {
               unsafeAssets[

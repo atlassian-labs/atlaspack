@@ -1,6 +1,8 @@
 {
   "extends": "../../../tsconfig.base.json",
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "compilerOptions": {
     "composite": true
   },
@@ -25,6 +27,9 @@
     },
     {
       "path": "../../core/source-map/tsconfig.json"
+    },
+    {
+      "path": "../js/tsconfig.json"
     }
   ]
 }
