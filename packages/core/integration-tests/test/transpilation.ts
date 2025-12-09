@@ -18,7 +18,7 @@ import nullthrows from 'nullthrows';
 
 const inputDir = path.join(__dirname, '/input');
 
-describe.only('transpilation', function () {
+describe('transpilation', function () {
   let featureFlags = {
     newJsxConfig: isAtlaspackV3,
   };
@@ -790,6 +790,291 @@ describe.only('transpilation', function () {
       let file = await fs.readFile(path.join(distDir, 'index.js'), 'utf8');
       assert(file.includes('function Foo'));
       assert(file.includes('function Bar'));
+    });
+  });
+
+  describe('JSX configuration with newJsxConfig feature flag', () => {
+    let dir: string = path.join(__dirname, 'jsx-new-config-fixture');
+
+    beforeEach(async function () {
+      await overlayFS.rimraf(dir);
+      await overlayFS.mkdirp(dir);
+    });
+
+    it('should use custom JSX pragma from package.json config', async () => {
+      await fsFixture(overlayFS, dir)`
+        package.json:
+          {
+            "name": "jsx-pragma-test",
+            "@atlaspack/transformer-js": {
+              "jsx": {
+                "pragma": "customPragma",
+                "pragmaFragment": "Fragment"
+              }
+            }
+          }
+
+        yarn.lock:
+
+        index.js:
+          const Component = () => <div>Custom JSX works!</div>;
+          module.exports = Component;
+      `;
+
+      let b = await bundle(path.join(dir, 'index.js'), {
+        inputFS: overlayFS,
+        featureFlags: {
+          newJsxConfig: true,
+        },
+      });
+
+      // Just verify the bundle compiles successfully and uses custom pragma
+      let js = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(
+        js.includes('customPragma'),
+        'Should use customPragma instead of React.createElement',
+      );
+      assert(
+        !js.includes('React.createElement'),
+        'Should not contain React.createElement',
+      );
+    });
+
+    it('should enable automatic JSX runtime for all files', async () => {
+      await fsFixture(overlayFS, dir)`
+        package.json:
+          {
+            "name": "jsx-automatic-runtime-test",
+            "@atlaspack/transformer-js": {
+              "jsx": {
+                "importSource": "react",
+                "automaticRuntime": {"Enabled": true}
+              }
+            }
+          }
+
+        yarn.lock:
+
+        index.jsx:
+          const Component = () => <div>Automatic runtime works!</div>;
+          module.exports = Component;
+      `;
+
+      let b = await bundle(path.join(dir, 'index.jsx'), {
+        inputFS: overlayFS,
+        featureFlags: {
+          newJsxConfig: true,
+        },
+      });
+
+      // Verify automatic runtime imports and jsx usage
+      let js = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(
+        js.includes('jsx') || js.includes('jsxDEV'),
+        'Should use jsx() or jsxDEV() function from automatic runtime',
+      );
+      assert(
+        js.includes('react/jsx-runtime') ||
+          js.includes('react/jsx-dev-runtime') ||
+          js.includes('jsx-runtime'),
+        'Should import from jsx-runtime or jsx-dev-runtime',
+      );
+      // Note: Automatic runtime may still contain some React.createElement for certain elements
+    });
+
+    it('should enable automatic JSX runtime for matching glob patterns only', async () => {
+      await fsFixture(overlayFS, dir)`
+        package.json:
+          {
+            "name": "jsx-glob-runtime-test",
+            "@atlaspack/transformer-js": {
+              "jsx": {
+                "pragma": "React.createElement",
+                "pragmaFragment": "React.Fragment",
+                "importSource": "react",
+                "automaticRuntime": {"Glob": ["modern/**/*.jsx"]}
+              }
+            }
+          }
+
+        yarn.lock:
+
+        index.js:
+          // Mock React and jsx runtime
+          const React = {
+            createElement: (type, props, ...children) => {
+              if (type === 'span') return children[0];
+              return { type, props, children };
+            }
+          };
+
+          const jsx = (type, props) => {
+            if (type === 'span') return props.children;
+            return { type, props };
+          };
+
+          global.React = React;
+          global.require = global.require || function(id) {
+            if (id === 'react/jsx-runtime') {
+              return { jsx };
+            }
+            return {};
+          };
+
+          const ModernComponent = require('./modern/Component.jsx');
+          const LegacyComponent = require('./legacy/Component.jsx');
+
+          module.exports = 'Glob runtime works!';
+
+        modern/Component.jsx:
+          const ModernComponent = () => <span>modern</span>;
+          module.exports = ModernComponent;
+
+        legacy/Component.jsx:
+          const LegacyComponent = () => <span>legacy</span>;
+          module.exports = LegacyComponent;
+      `;
+
+      let b = await bundle(path.join(dir, 'index.js'), {
+        inputFS: overlayFS,
+        featureFlags: {
+          newJsxConfig: true,
+        },
+      });
+
+      let output = await run(b);
+      assert.equal(output, 'Glob runtime works!');
+
+      // Check that different runtime transformations are applied
+      let js = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+
+      // Modern component should use automatic runtime
+      assert(
+        js.includes('jsx(') || js.includes('jsx-runtime'),
+        'Modern component should use automatic jsx runtime',
+      );
+
+      // Legacy component should use classic runtime
+      assert(
+        js.includes('React.createElement'),
+        'Legacy component should use React.createElement',
+      );
+    });
+
+    it('should fall back to default React pragmas without explicit config', async () => {
+      await fsFixture(overlayFS, dir)`
+        package.json:
+          {
+            "name": "jsx-default-test"
+          }
+
+        yarn.lock:
+
+        component.jsx:
+          // Mock React for default pragma testing
+          const React = {
+            createElement: (type, props, ...children) => {
+              if (type === 'div') return children[0];
+              return { type, props, children };
+            },
+            Fragment: (props, ...children) => children
+          };
+
+          global.React = React;
+
+          const Component = () => <div>Default JSX works!</div>;
+          module.exports = Component();
+      `;
+
+      let b = await bundle(path.join(dir, 'component.jsx'), {
+        inputFS: overlayFS,
+        featureFlags: {
+          newJsxConfig: true,
+        },
+      });
+
+      let output = await run(b);
+      assert.equal(output, 'Default JSX works!');
+
+      // Verify default React pragmas are used
+      let js = await outputFS.readFile(b.getBundles()[0].filePath, 'utf8');
+      assert(
+        js.includes('React.createElement'),
+        'Should use React.createElement by default',
+      );
+      assert(
+        !js.includes('jsx('),
+        'Should not use automatic jsx runtime without explicit config',
+      );
+    });
+
+    it('should not enable JSX for .js files without explicit config', async () => {
+      await fsFixture(overlayFS, dir)`
+        package.json:
+          {
+            "name": "jsx-js-no-config-test"
+          }
+
+        yarn.lock:
+
+        index.js:
+          // This .js file should NOT transform JSX without explicit config
+          // In the new behavior, we should get a build error or JSX should remain untransformed
+          module.exports = "No JSX transformation applied";
+
+        index-with-jsx.js:
+          // This should fail to build because JSX isn't enabled for .js files without explicit config
+          const element = <div>This should not work</div>;
+          module.exports = element;
+      `;
+
+      // Test that normal JS works without JSX config
+      let b = await bundle(path.join(dir, 'index.js'), {
+        inputFS: overlayFS,
+        featureFlags: {
+          newJsxConfig: true,
+        },
+      });
+
+      let output = await run(b);
+      assert.equal(output, 'No JSX transformation applied');
+
+      // Test behavior of JSX in .js files without explicit config (differs between V2 and V3)
+      if (process.env.ATLASPACK_V3 === 'true') {
+        // V3 mode: JSX should work in .js files even without explicit config
+        let b2 = await bundle(path.join(dir, 'index-with-jsx.js'), {
+          inputFS: overlayFS,
+          featureFlags: {
+            newJsxConfig: true,
+          },
+        });
+        let js2 = await outputFS.readFile(b2.getBundles()[0].filePath, 'utf8');
+        assert(
+          js2.includes('React.createElement'),
+          'Should transform JSX in .js files in V3 mode',
+        );
+      } else {
+        // V2 mode: JSX should fail in .js files without explicit config
+        try {
+          await bundle(path.join(dir, 'index-with-jsx.js'), {
+            inputFS: overlayFS,
+            featureFlags: {
+              newJsxConfig: true,
+            },
+          });
+          assert.fail(
+            'Should have failed to parse JSX in .js file without explicit config in V2 mode',
+          );
+        } catch (err) {
+          // Expected to fail - JSX should not be enabled for .js files without explicit config in V2
+          assert(
+            err.message.includes('Unexpected token') ||
+              err.message.includes('Expression expected') ||
+              err.message.includes('Unexpected'),
+            `Expected JSX parsing error, got: ${err.message}`,
+          );
+        }
+      }
     });
   });
 });

@@ -20,7 +20,7 @@ pub fn determine_jsx_configuration(
   project_root: String,
   env: Env,
 ) -> napi::Result<JsUnknown> {
-  let config: Option<atlaspack_js_swc_core::ReactOptions> = env.from_js_value(config)?;
+  let config: Option<atlaspack_js_swc_core::JsxOptions> = env.from_js_value(config)?;
   let file_path = Path::new(&file_path);
   let project_root = Path::new(&project_root);
   let file_type = &file_path

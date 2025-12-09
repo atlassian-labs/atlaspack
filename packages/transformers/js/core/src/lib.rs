@@ -912,10 +912,11 @@ pub enum AutomaticReactRuntime {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct ReactOptions {
-  pub jsx_pragma: Option<String>,
-  pub jsx_pragma_fragment: Option<String>,
-  pub jsx_import_source: Option<String>,
+#[serde(rename_all = "camelCase")]
+pub struct JsxOptions {
+  pub pragma: Option<String>,
+  pub pragma_fragment: Option<String>,
+  pub import_source: Option<String>,
   pub automatic_runtime: Option<AutomaticReactRuntime>,
 }
 
@@ -992,11 +993,12 @@ pub fn relative_path(path: &Path, from: &Path) -> String {
 /// Standalone version of determine_jsx_configuration that can be shared with JS via NAPI
 /// This whole file should just be moved into the
 /// atlaspack_plugin_transformer_js crate onces V3 is fully rolled out
+#[tracing::instrument("info")]
 pub fn determine_jsx_configuration(
   file_path: &Path,
   file_type: &str, // "js", "jsx", "ts", "tsx"
   is_source: bool,
-  config: &Option<ReactOptions>,
+  config: &Option<JsxOptions>,
   project_root: &Path,
 ) -> JsxConfiguration {
   let is_jsx = match file_type {
@@ -1020,18 +1022,18 @@ pub fn determine_jsx_configuration(
     if let Some(jsx_config) = &config {
       // Use JSX options from transformer config if provided
       jsx_pragma = jsx_config
-        .jsx_pragma
+        .pragma
         .clone()
         .unwrap_or_else(|| "React.createElement".to_string())
         .into();
 
       jsx_pragma_frag = jsx_config
-        .jsx_pragma_fragment
+        .pragma_fragment
         .clone()
         .unwrap_or_else(|| "React.Fragment".to_string())
         .into();
 
-      jsx_import_source = jsx_config.jsx_import_source.clone();
+      jsx_import_source = jsx_config.import_source.clone();
     } else {
       jsx_pragma = Some("React.createElement".to_string());
       jsx_pragma_frag = Some("React.Fragment".to_string());

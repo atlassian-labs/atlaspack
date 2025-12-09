@@ -1,4 +1,4 @@
-use atlaspack_js_swc_core::ReactOptions;
+use atlaspack_js_swc_core::JsxOptions;
 use serde::Deserialize;
 
 #[derive(Clone, Deserialize)]
@@ -22,7 +22,7 @@ pub struct JsTransformerConfig {
 
   pub add_react_display_name: Option<bool>,
 
-  pub jsx: Option<ReactOptions>,
+  pub jsx: Option<JsxOptions>,
 }
 
 #[derive(Deserialize)]

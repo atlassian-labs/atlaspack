@@ -470,7 +470,7 @@ mod tests {
     },
   };
   use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSystem};
-  use atlaspack_js_swc_core::{AutomaticReactRuntime, ReactOptions};
+  use atlaspack_js_swc_core::{AutomaticReactRuntime, JsxOptions};
   use pretty_assertions::assert_eq;
   use swc_core::ecma::parser::lexer::util::CharExt;
 
@@ -629,7 +629,7 @@ mod tests {
       asset: target_asset.clone(),
       file_system: Some(file_system.clone()),
       js_transformer_config: Some(JsTransformerConfig {
-        jsx: Some(ReactOptions {
+        jsx: Some(JsxOptions {
           jsx_pragma: Some("React.createElement".to_string()),
           jsx_pragma_fragment: Some("React.Fragment".to_string()),
           jsx_import_source: Some("react".to_string()),
@@ -683,7 +683,7 @@ mod tests {
       asset: target_asset.clone(),
       file_system: Some(file_system.clone()),
       js_transformer_config: Some(JsTransformerConfig {
-        jsx: Some(ReactOptions {
+        jsx: Some(JsxOptions {
           jsx_pragma: Some("React.createElement".to_string()),
           jsx_pragma_fragment: Some("React.Fragment".to_string()),
           jsx_import_source: Some("react".to_string()),
@@ -735,7 +735,7 @@ mod tests {
       file_system: Some(file_system.clone()),
       project_root: Some(PathBuf::from("/dir/my-project")), // Project root different from asset path
       js_transformer_config: Some(JsTransformerConfig {
-        jsx: Some(ReactOptions {
+        jsx: Some(JsxOptions {
           jsx_pragma: Some("React.createElement".to_string()),
           jsx_pragma_fragment: Some("React.Fragment".to_string()),
           jsx_import_source: Some("react".to_string()),
@@ -795,7 +795,7 @@ mod tests {
       file_system: Some(file_system.clone()),
       project_root: Some(PathBuf::from("/dir/my-project")), // Project root different from asset path
       js_transformer_config: Some(JsTransformerConfig {
-        jsx: Some(ReactOptions {
+        jsx: Some(JsxOptions {
           jsx_pragma: Some("React.createElement".to_string()),
           jsx_pragma_fragment: Some("React.Fragment".to_string()),
           jsx_import_source: Some("react".to_string()),
@@ -837,7 +837,7 @@ mod tests {
         asset: target_asset.clone(),
         file_system: Some(file_system),
         js_transformer_config: Some(JsTransformerConfig {
-          jsx: Some(ReactOptions {
+          jsx: Some(JsxOptions {
             jsx_pragma: Some("React.createElement".to_string()),
             jsx_pragma_fragment: Some("React.Fragment".to_string()),
             jsx_import_source: None,
@@ -1046,7 +1046,7 @@ mod tests {
 
     // Test with v3 JSX configuration using JsTransformerConfig
     let config_with_jsx = JsTransformerConfig {
-      jsx: Some(ReactOptions {
+      jsx: Some(JsxOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
@@ -1072,7 +1072,7 @@ mod tests {
     // Case 3: .js file with React configuration
     // Expected: is_jsx = true, pragmas set from React configuration
     let config_with_react_2 = JsTransformerConfig {
-      jsx: Some(ReactOptions {
+      jsx: Some(JsxOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
@@ -1130,7 +1130,7 @@ mod tests {
 
     // Case 5: .jsx file with React configuration should have pragmas set
     let config_with_react_3 = JsTransformerConfig {
-      jsx: Some(ReactOptions {
+      jsx: Some(JsxOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
@@ -1168,7 +1168,7 @@ mod tests {
     };
 
     let config_with_react_4 = JsTransformerConfig {
-      jsx: Some(ReactOptions {
+      jsx: Some(JsxOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
@@ -1200,7 +1200,7 @@ mod tests {
     };
 
     let config_with_react_5 = JsTransformerConfig {
-      jsx: Some(ReactOptions {
+      jsx: Some(JsxOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
@@ -1232,7 +1232,7 @@ mod tests {
     };
 
     let config_with_glob = JsTransformerConfig {
-      jsx: Some(ReactOptions {
+      jsx: Some(JsxOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
@@ -1254,7 +1254,7 @@ mod tests {
 
     // Test with non-matching glob
     let config_with_non_matching_glob = JsTransformerConfig {
-      jsx: Some(ReactOptions {
+      jsx: Some(JsxOptions {
         jsx_pragma: Some("React.createElement".to_string()),
         jsx_pragma_fragment: Some("React.Fragment".to_string()),
         jsx_import_source: None,
@@ -1322,7 +1322,7 @@ mod tests {
         asset: target_asset.clone(),
         file_system: Some(file_system),
         js_transformer_config: Some(JsTransformerConfig {
-          jsx: Some(ReactOptions {
+          jsx: Some(JsxOptions {
             jsx_pragma: Some("React.createElement".to_string()),
             jsx_pragma_fragment: Some("React.Fragment".to_string()),
             jsx_import_source: None,
@@ -1446,7 +1446,7 @@ mod tests {
         asset: target_asset.clone(),
         file_system: Some(file_system),
         js_transformer_config: Some(JsTransformerConfig {
-          jsx: Some(ReactOptions {
+          jsx: Some(JsxOptions {
             jsx_pragma: Some("React.createElement".to_string()),
             jsx_pragma_fragment: Some("React.Fragment".to_string()),
             jsx_import_source: None,
