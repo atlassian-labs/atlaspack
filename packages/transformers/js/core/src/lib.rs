@@ -27,6 +27,7 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::OnceLock;
 
 use atlaspack_contextual_imports::ContextualImportsConfig;
 use atlaspack_contextual_imports::ContextualImportsInlineRequireVisitor;
@@ -60,6 +61,7 @@ use path_slash::PathExt;
 use pathdiff::diff_paths;
 use react_async_import_lift::ReactAsyncImportLift;
 use react_hooks_remover::ReactHooksRemover;
+use regex::Regex;
 use serde::Deserialize;
 use serde::Serialize;
 use static_prevaluator::StaticPreEvaluator;
@@ -1000,6 +1002,8 @@ pub fn relative_path(path: &Path, from: &Path) -> String {
   result
 }
 
+static IS_RUNTIME_REGEX: OnceLock<Regex> = OnceLock::new();
+
 /// Standalone version of determine_jsx_configuration that can be shared with JS via NAPI
 /// This whole file should just be moved into the
 /// atlaspack_plugin_transformer_js crate onces V3 is fully rolled out
@@ -1083,12 +1087,22 @@ pub fn determine_jsx_configuration(
     }
   }
 
+  let react_refresh = is_source
+    && file_path.to_str().is_some_and(|fp_str| {
+      // Exclude runtime files from react refresh
+      // TODO: Find a better way to exclude these or remove when we no longer
+      // use runtime files
+      !IS_RUNTIME_REGEX
+        .get_or_init(|| Regex::new(r"\/runtime-[0-9a-f]{16}\.js$").unwrap())
+        .is_match(fp_str)
+    });
+
   JsxConfiguration {
     is_jsx,
     jsx_pragma,
     jsx_pragma_frag,
     jsx_import_source,
     automatic_jsx_runtime,
-    react_refresh: is_source,
+    react_refresh,
   }
 }
