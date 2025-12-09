@@ -177,9 +177,6 @@ export default class BundleGraph {
     isProduction: boolean,
     publicIdByAssetId: Map<string, string> = new Map(),
     assetPublicIds: Set<string> = new Set(),
-    options: {
-      readonly skipSymbolPropagation?: boolean;
-    } = {},
   ): BundleGraph {
     let graph = new ContentGraph<BundleGraphNode, BundleGraphEdgeType>();
     let assetGroupIds = new Map();
@@ -285,9 +282,7 @@ export default class BundleGraph {
         node.value.symbols != null &&
         fromEnvironmentId(node.value.env).shouldScopeHoist &&
         // Disable in dev mode because this feature is at odds with safeToIncrementallyBundle
-        isProduction &&
-        // Skip symbol propagation optimization if explicitly disabled
-        !options.skipSymbolPropagation
+        isProduction
       ) {
         let nodeValueSymbols = node.value.symbols;
 
