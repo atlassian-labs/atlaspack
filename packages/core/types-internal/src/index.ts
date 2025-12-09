@@ -1891,8 +1891,6 @@ export type RuntimeAsset = {
   readonly runtimeAssetRequiringExecutionOnLoad?: boolean;
   /**
    * Pre-computed symbol information for runtime assets to skip symbol propagation.
-   * If provided, the runtime asset graph will use this data instead of running
-   * symbol propagation analysis.
    */
   readonly symbolData?: SymbolData;
 };

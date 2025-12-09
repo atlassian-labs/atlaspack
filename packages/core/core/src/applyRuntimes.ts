@@ -24,7 +24,7 @@ import type AssetGraph from './AssetGraph';
 import BundleGraph from './public/BundleGraph';
 import InternalBundleGraph, {bundleGraphEdgeTypes} from './BundleGraph';
 import {NamedBundle} from './public/Bundle';
-import logger, {PluginLogger} from '@atlaspack/logger';
+import {PluginLogger} from '@atlaspack/logger';
 import {hashString} from '@atlaspack/rust';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import {dependencyToInternalDependency} from './public/Dependency';
@@ -414,14 +414,13 @@ function applyRuntimeSymbolData(
   connections: Array<RuntimeConnection>,
 ) {
   for (let {assetGroup} of connections) {
-    // Find the asset group node in the graph
     let assetGroupNode = nodeFromAssetGroup(assetGroup);
     let assetGroupAssetNodeIds = assetGraph.getNodeIdsConnectedFrom(
       assetGraph.getNodeIdByContentKey(assetGroupNode.id),
     );
 
     if (assetGroupAssetNodeIds.length !== 1) {
-      continue; // Skip if not a simple 1:1 asset group to asset mapping
+      continue;
     }
 
     let runtimeAssetNodeId = assetGroupAssetNodeIds[0];
@@ -430,20 +429,13 @@ function applyRuntimeSymbolData(
       continue;
     }
 
-    // Check if this runtime asset has symbol data
-    let symbolData = assetGroup.symbolData; // Type assertion since we extended RuntimeAsset
+    let symbolData = assetGroup.symbolData;
     if (!symbolData) {
-      if (assetGroup.code && assetGroup.code.trim().length > 0) {
-        logger.log({
-          message: `Skipping runtime asset with code without symbol data: ${assetGroup.filePath}`,
-          origin: 'applyRuntimes',
-        });
-      }
-
-      continue; // No pre-computed symbols, let normal processing handle it
+      // We completely skip symbol propagation for runtime assets, so symbolData
+      // is required
+      throw new Error('Runtime asset is missing symbol data');
     }
 
-    // Apply asset symbols
     if (symbolData.symbols) {
       // Convert from SymbolData format to internal Asset.symbols format
       let internalSymbols = new Map();
@@ -457,7 +449,6 @@ function applyRuntimeSymbolData(
       runtimeAssetNode.value.symbols = internalSymbols;
     }
 
-    // Apply dependency symbol data
     if (symbolData.dependencies && symbolData.dependencies.length > 0) {
       let outgoingDeps = assetGraph
         .getNodeIdsConnectedFrom(runtimeAssetNodeId)
@@ -466,15 +457,12 @@ function applyRuntimeSymbolData(
         .map((node) => node as DependencyNode);
 
       for (let depSymbolData of symbolData.dependencies) {
-        // Find matching dependency by specifier
         let matchingDep = outgoingDeps.find(
           (depNode) => depNode.value.specifier === depSymbolData.specifier,
         );
 
         if (matchingDep) {
-          // Apply dependency symbols
           if (depSymbolData.symbols) {
-            // Convert from SymbolData format to internal Dependency.symbols format
             let internalDepSymbols = new Map();
             for (let [symbol, data] of depSymbolData.symbols) {
               internalDepSymbols.set(symbol, {
@@ -487,7 +475,6 @@ function applyRuntimeSymbolData(
             matchingDep.value.symbols = internalDepSymbols;
           }
 
-          // Apply used symbols data directly to skip propagation
           if (depSymbolData.usedSymbols) {
             matchingDep.usedSymbolsDown = new Set(depSymbolData.usedSymbols);
             // For runtime assets, usedSymbolsUp will be the same as usedSymbolsDown
