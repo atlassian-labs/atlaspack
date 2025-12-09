@@ -995,7 +995,6 @@ pub fn relative_path(path: &Path, from: &Path) -> String {
 /// Standalone version of determine_jsx_configuration that can be shared with JS via NAPI
 /// This whole file should just be moved into the
 /// atlaspack_plugin_transformer_js crate onces V3 is fully rolled out
-#[tracing::instrument("info")]
 pub fn determine_jsx_configuration(
   file_path: &Path,
   file_type: &str, // "js", "jsx", "ts", "tsx"
