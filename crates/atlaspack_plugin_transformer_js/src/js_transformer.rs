@@ -630,9 +630,9 @@ mod tests {
       file_system: Some(file_system.clone()),
       js_transformer_config: Some(JsTransformerConfig {
         jsx: Some(JsxOptions {
-          jsx_pragma: Some("React.createElement".to_string()),
-          jsx_pragma_fragment: Some("React.Fragment".to_string()),
-          jsx_import_source: Some("react".to_string()),
+          pragma: Some("React.createElement".to_string()),
+          pragma_fragment: Some("React.Fragment".to_string()),
+          import_source: Some("react".to_string()),
           automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
             "src/components/**/*.tsx".to_string(),
           ])),
@@ -684,9 +684,9 @@ mod tests {
       file_system: Some(file_system.clone()),
       js_transformer_config: Some(JsTransformerConfig {
         jsx: Some(JsxOptions {
-          jsx_pragma: Some("React.createElement".to_string()),
-          jsx_pragma_fragment: Some("React.Fragment".to_string()),
-          jsx_import_source: Some("react".to_string()),
+          pragma: Some("React.createElement".to_string()),
+          pragma_fragment: Some("React.Fragment".to_string()),
+          import_source: Some("react".to_string()),
           automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
             "src/components/**/*.tsx".to_string(), // This won't match src/pages/Home.tsx
           ])),
@@ -736,9 +736,9 @@ mod tests {
       project_root: Some(PathBuf::from("/dir/my-project")), // Project root different from asset path
       js_transformer_config: Some(JsTransformerConfig {
         jsx: Some(JsxOptions {
-          jsx_pragma: Some("React.createElement".to_string()),
-          jsx_pragma_fragment: Some("React.Fragment".to_string()),
-          jsx_import_source: Some("react".to_string()),
+          pragma: Some("React.createElement".to_string()),
+          pragma_fragment: Some("React.Fragment".to_string()),
+          import_source: Some("react".to_string()),
           automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
             "../other-project/**/*.tsx".to_string(),
           ])),
@@ -796,9 +796,9 @@ mod tests {
       project_root: Some(PathBuf::from("/dir/my-project")), // Project root different from asset path
       js_transformer_config: Some(JsTransformerConfig {
         jsx: Some(JsxOptions {
-          jsx_pragma: Some("React.createElement".to_string()),
-          jsx_pragma_fragment: Some("React.Fragment".to_string()),
-          jsx_import_source: Some("react".to_string()),
+          pragma: Some("React.createElement".to_string()),
+          pragma_fragment: Some("React.Fragment".to_string()),
+          import_source: Some("react".to_string()),
           automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
             "../other-project/**".to_string(), // Should NOT match /dir/another-project/
           ])),
@@ -838,9 +838,9 @@ mod tests {
         file_system: Some(file_system),
         js_transformer_config: Some(JsTransformerConfig {
           jsx: Some(JsxOptions {
-            jsx_pragma: Some("React.createElement".to_string()),
-            jsx_pragma_fragment: Some("React.Fragment".to_string()),
-            jsx_import_source: None,
+            pragma: Some("React.createElement".to_string()),
+            pragma_fragment: Some("React.Fragment".to_string()),
+            import_source: None,
             automatic_runtime: Some(AutomaticReactRuntime::Enabled(true)),
           }),
           ..Default::default()
@@ -1047,9 +1047,9 @@ mod tests {
     // Test with v3 JSX configuration using JsTransformerConfig
     let config_with_jsx = JsTransformerConfig {
       jsx: Some(JsxOptions {
-        jsx_pragma: Some("React.createElement".to_string()),
-        jsx_pragma_fragment: Some("React.Fragment".to_string()),
-        jsx_import_source: None,
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
         automatic_runtime: None,
       }),
       ..Default::default()
@@ -1073,9 +1073,9 @@ mod tests {
     // Expected: is_jsx = true, pragmas set from React configuration
     let config_with_react_2 = JsTransformerConfig {
       jsx: Some(JsxOptions {
-        jsx_pragma: Some("React.createElement".to_string()),
-        jsx_pragma_fragment: Some("React.Fragment".to_string()),
-        jsx_import_source: None,
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
         automatic_runtime: None,
       }),
       ..Default::default()
@@ -1131,9 +1131,9 @@ mod tests {
     // Case 5: .jsx file with React configuration should have pragmas set
     let config_with_react_3 = JsTransformerConfig {
       jsx: Some(JsxOptions {
-        jsx_pragma: Some("React.createElement".to_string()),
-        jsx_pragma_fragment: Some("React.Fragment".to_string()),
-        jsx_import_source: None,
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
         automatic_runtime: None,
       }),
       ..Default::default()
@@ -1169,9 +1169,9 @@ mod tests {
 
     let config_with_react_4 = JsTransformerConfig {
       jsx: Some(JsxOptions {
-        jsx_pragma: Some("React.createElement".to_string()),
-        jsx_pragma_fragment: Some("React.Fragment".to_string()),
-        jsx_import_source: None,
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
         automatic_runtime: None,
       }),
       ..Default::default()
@@ -1201,9 +1201,9 @@ mod tests {
 
     let config_with_react_5 = JsTransformerConfig {
       jsx: Some(JsxOptions {
-        jsx_pragma: Some("React.createElement".to_string()),
-        jsx_pragma_fragment: Some("React.Fragment".to_string()),
-        jsx_import_source: None,
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
         automatic_runtime: None,
       }),
       ..Default::default()
@@ -1233,9 +1233,9 @@ mod tests {
 
     let config_with_glob = JsTransformerConfig {
       jsx: Some(JsxOptions {
-        jsx_pragma: Some("React.createElement".to_string()),
-        jsx_pragma_fragment: Some("React.Fragment".to_string()),
-        jsx_import_source: None,
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
         automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
           "src/components/**/*.tsx".to_string(),
         ])),
@@ -1255,9 +1255,9 @@ mod tests {
     // Test with non-matching glob
     let config_with_non_matching_glob = JsTransformerConfig {
       jsx: Some(JsxOptions {
-        jsx_pragma: Some("React.createElement".to_string()),
-        jsx_pragma_fragment: Some("React.Fragment".to_string()),
-        jsx_import_source: None,
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
         automatic_runtime: Some(AutomaticReactRuntime::Glob(vec![
           "src/pages/**/*.tsx".to_string(),
         ])),
@@ -1323,9 +1323,9 @@ mod tests {
         file_system: Some(file_system),
         js_transformer_config: Some(JsTransformerConfig {
           jsx: Some(JsxOptions {
-            jsx_pragma: Some("React.createElement".to_string()),
-            jsx_pragma_fragment: Some("React.Fragment".to_string()),
-            jsx_import_source: None,
+            pragma: Some("React.createElement".to_string()),
+            pragma_fragment: Some("React.Fragment".to_string()),
+            import_source: None,
             automatic_runtime: None,
           }),
           ..Default::default()
@@ -1447,9 +1447,9 @@ mod tests {
         file_system: Some(file_system),
         js_transformer_config: Some(JsTransformerConfig {
           jsx: Some(JsxOptions {
-            jsx_pragma: Some("React.createElement".to_string()),
-            jsx_pragma_fragment: Some("React.Fragment".to_string()),
-            jsx_import_source: None,
+            pragma: Some("React.createElement".to_string()),
+            pragma_fragment: Some("React.Fragment".to_string()),
+            import_source: None,
             automatic_runtime: None,
           }),
           ..Default::default()
