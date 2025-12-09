@@ -22,7 +22,7 @@ pub struct JsTransformerConfig {
 
   pub add_react_display_name: Option<bool>,
 
-  pub react: Option<ReactOptions>,
+  pub jsx: Option<ReactOptions>,
 }
 
 #[derive(Deserialize)]
