@@ -21,6 +21,7 @@ pub fn is_unresolved(ident: &Ident, unresolved_mark: Mark) -> bool {
   ident.ctxt.outer() == unresolved_mark
 }
 
+// If bindings are provided, use them to determine whether an identifier is "resolved", otherwise use the unresolved mark
 pub fn is_unresolved_with_bindings(
   ident: &Ident,
   bindings: Option<&FxHashSet<Id>>,
@@ -37,6 +38,8 @@ pub fn match_member_expr(
   expr: &ast::MemberExpr,
   idents: Vec<&str>,
   unresolved_mark: Mark,
+  // Optionally use a provided set of bindings to determine whether an identifier is "resolved",
+  // if set will be used instead of the unresolved mark
   bindings: Option<&FxHashSet<Id>>,
 ) -> bool {
   use ast::Expr;

@@ -29,6 +29,9 @@ pub struct EnvReplacer<'a> {
 
 impl VisitMut for EnvReplacer<'_> {
   fn visit_mut_module(&mut self, node: &mut Module) {
+    // Rather than depending on unresolved marks for globals we use collect_decls to get bindings in this module
+    // This avoids the issue where (for example) the presence of `declare const process: {};` in a file means process is considered
+    // resolved and therefore not replaced in that file.
     self.bindings = Lrc::new(collect_decls(node));
     node.visit_mut_children_with(self);
   }
