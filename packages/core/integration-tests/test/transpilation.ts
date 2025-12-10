@@ -214,8 +214,10 @@ describe('transpilation', function () {
         assert(file.includes('React.createElement("div"'));
       });
 
-      it('fails to parse JSX in .js files without React dependency or tsconfig', async function () {
-        await fsFixture(overlayFS, dir)`
+      it.v2(
+        'fails to parse JSX in .js files without React dependency or tsconfig',
+        async function () {
+          await fsFixture(overlayFS, dir)`
           package.json:
             {
               "private": true,
@@ -226,14 +228,15 @@ describe('transpilation', function () {
             module.exports = <div>"First we bundle, then we ball." - Sun Tzu, The Art of War</div>;
         `;
 
-        await assert.rejects(
-          () =>
-            bundle(path.join(dir, 'index.js'), {
-              inputFS: overlayFS,
-            }),
-          'JSX parsing should fail when no React dependency and no tsconfig',
-        );
-      });
+          await assert.rejects(
+            () =>
+              bundle(path.join(dir, 'index.js'), {
+                inputFS: overlayFS,
+              }),
+            'JSX parsing should fail when no React dependency and no tsconfig',
+          );
+        },
+      );
 
       it('transforms JSX in .js files with React dependency but no tsconfig', async function () {
         await fsFixture(overlayFS, dir)`
