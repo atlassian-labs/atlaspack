@@ -12,9 +12,7 @@ use markup5ever::{local_name, namespace_url, ns};
 use markup5ever_rcdom::{RcDom, SerializableHandle};
 use regex::Regex;
 
-use atlaspack_core::plugin::{
-  CacheStatus, PluginContext, TransformContext, TransformResult, TransformerPlugin,
-};
+use atlaspack_core::plugin::{CacheStatus, PluginContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{
   Asset, AssetId, AssetWithDependencies, BundleBehavior, Code, Dependency, Environment,
 };
@@ -40,11 +38,8 @@ impl TransformerPlugin for AtlaspackSvgTransformerPlugin {
   fn cache_key(&self) -> &CacheStatus {
     &CacheStatus::BuiltIn
   }
-  async fn transform(
-    &self,
-    context: TransformContext,
-    input: Asset,
-  ) -> Result<TransformResult, Error> {
+
+  async fn transform(&self, input: Asset) -> Result<TransformResult, Error> {
     let bytes: &[u8] = input.code.bytes();
 
     // Pre-process XML processing instructions before parsing with html5ever
@@ -53,7 +48,7 @@ impl TransformerPlugin for AtlaspackSvgTransformerPlugin {
 
     let mut dom = parse_svg(&processed_content)?;
     let context = SVGTransformationContext {
-      env: context.env().clone(),
+      env: input.env.clone(),
       project_root: self.project_root.clone(),
       side_effects: input.side_effects,
       source_asset_id: input.id.clone(),

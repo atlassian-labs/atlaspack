@@ -5,8 +5,8 @@ use std::sync::Arc;
 use anyhow::{Error, anyhow};
 
 use async_trait::async_trait;
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
@@ -22,8 +22,7 @@ use crate::js_transformer_config::{
   InlineEnvironment, JsTransformerConfig, JsTransformerPackageJson,
 };
 use crate::map_diagnostics::{MapDiagnosticOptions, map_diagnostics};
-use crate::package_json::{PackageJson, depends_on_react, supports_automatic_jsx_runtime};
-use crate::ts_config::{Jsx, Target, TsConfig};
+use crate::ts_config::{Target, TsConfig};
 
 pub use atlaspack_js_swc_core::JsxConfiguration;
 
@@ -256,11 +255,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   }
 
   /// This does equivalent work to `JSTransformer::transform` in `packages/transformers/js`
-  async fn transform(
-    &self,
-    context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
     let is_node = env.context.is_node();
     let source_code = asset.code.clone();
@@ -364,43 +359,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       jsx_import_source,
       automatic_jsx_runtime,
       react_refresh,
-    } = if self.options.feature_flags.bool_enabled("newJsxConfig") {
-      self.determine_jsx_configuration(&asset)
-    } else {
-      // With newJsxConfig disabled, use the old logic
-      let package_json = context.config().load_package_json::<PackageJson>().ok();
-      let is_jsx = matches!(asset.file_type, FileType::Jsx | FileType::Tsx);
-
-      let automatic_jsx_runtime = compiler_options
-        .map(|co| {
-          co.jsx
-            .as_ref()
-            .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
-            || co.jsx_import_source.is_some()
-        })
-        .unwrap_or_else(|| {
-          package_json
-            .as_ref()
-            .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents))
-        });
-
-      let jsx_import_source = compiler_options
-        .and_then(|co| co.jsx_import_source.clone())
-        .or_else(|| automatic_jsx_runtime.then_some(String::from("react")));
-
-      let jsx_pragma = compiler_options.and_then(|co| co.jsx_factory.clone());
-      let jsx_pragma_frag = compiler_options.and_then(|co| co.jsx_fragment_factory.clone());
-      let react_refresh = package_json.is_some_and(|pkg| depends_on_react(&pkg.contents));
-
-      JsxConfiguration {
-        is_jsx,
-        jsx_pragma,
-        jsx_pragma_frag,
-        jsx_import_source,
-        automatic_jsx_runtime,
-        react_refresh,
-      }
-    };
+    } = self.determine_jsx_configuration(&asset);
 
     let transform_config = atlaspack_js_swc_core::Config {
       automatic_jsx_runtime,

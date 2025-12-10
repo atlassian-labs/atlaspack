@@ -1,15 +1,12 @@
-use crate::config_loader::{ConfigLoader, ConfigLoaderRef};
 use crate::hash::IdentifierHasher;
-use crate::types::{Asset, AssetWithDependencies, Dependency, Environment, SpecifierType};
+use crate::types::{Asset, AssetWithDependencies, Dependency, SpecifierType};
 use async_trait::async_trait;
-use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
 use mockall::automock;
 use serde::Serialize;
 use std::any::Any;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
-use std::sync::Arc;
 
 pub struct ResolveOptions {
   /// A list of custom conditions to use when resolving package.json "exports" and "imports"
@@ -30,43 +27,6 @@ pub struct TransformResult {
   /// if these paths change.
   pub invalidate_on_file_change: Vec<PathBuf>,
   pub cache_bailout: bool,
-}
-
-#[derive(Clone)]
-pub struct TransformContext {
-  config: ConfigLoaderRef,
-  environment: Arc<Environment>,
-}
-
-impl Default for TransformContext {
-  fn default() -> Self {
-    Self {
-      config: Arc::new(ConfigLoader {
-        fs: Arc::new(InMemoryFileSystem::default()),
-        project_root: PathBuf::default(),
-        search_path: PathBuf::default(),
-      }),
-      environment: Arc::new(Environment::default()),
-    }
-  }
-}
-
-impl TransformContext {
-  pub fn new(config: ConfigLoaderRef, environment: Arc<Environment>) -> Self {
-    Self {
-      config,
-      environment,
-    }
-  }
-
-  /// Enables configuration to be loaded from the current asset
-  pub fn config(&self) -> ConfigLoaderRef {
-    self.config.clone()
-  }
-
-  pub fn env(&self) -> &Arc<Environment> {
-    &self.environment
-  }
 }
 
 pub enum CacheStatus {
@@ -91,15 +51,14 @@ pub trait TransformerPlugin: Any + Debug + Send + Sync {
     hasher.finish()
   }
 
+  /// Determine whether the transformer should skip transforming the given asset
   fn should_skip(&self, _asset: &Asset) -> anyhow::Result<bool> {
     Ok(false)
   }
+
+  /// Get the cache key for the transformer
   fn cache_key(&self) -> &CacheStatus;
 
   /// Transform the asset and/or add new assets
-  async fn transform(
-    &self,
-    context: TransformContext,
-    asset: Asset,
-  ) -> anyhow::Result<TransformResult>;
+  async fn transform(&self, asset: Asset) -> anyhow::Result<TransformResult>;
 }

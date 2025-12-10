@@ -4,8 +4,8 @@ use std::sync::Arc;
 use anyhow::{Context, Error, anyhow};
 use async_trait::async_trait;
 use atlaspack_atlaskit_tokens::{TokensConfig, TokensPluginOptions, process_tokens_sync};
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{CacheStatus, PluginContext, PluginOptions, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::{Asset, Code, Diagnostic, ErrorKind};
 use atlaspack_sourcemap::SourceMap as AtlaspackSourceMap;
 
@@ -56,11 +56,7 @@ impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
     &CacheStatus::BuiltIn
   }
 
-  async fn transform(
-    &self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     // Check feature flag first
     if !self
       .options

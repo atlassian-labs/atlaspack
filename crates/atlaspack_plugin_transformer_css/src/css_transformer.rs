@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use anyhow::{Error, anyhow};
 use async_trait::async_trait;
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::engines::{Engines, EnginesBrowsers};
 use atlaspack_core::types::{
   Asset, AssetWithDependencies, Code, Dependency, DependencyBuilder, Diagnostic,
@@ -111,11 +111,7 @@ impl AtlaspackCssTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackCssTransformerPlugin {
-  async fn transform(
-    &self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let is_compiled_css_in_js_transformer_enabled = self
       .options
       .feature_flags
@@ -579,9 +575,8 @@ mod tests {
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
     })?;
-    let context = TransformContext::default();
 
-    plugin.transform(context, asset.clone()).await
+    plugin.transform(asset.clone()).await
   }
 
   #[tokio::test(flavor = "multi_thread")]

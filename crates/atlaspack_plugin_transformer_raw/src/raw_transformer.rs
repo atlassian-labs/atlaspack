@@ -1,7 +1,7 @@
 use anyhow::Error;
 use async_trait::async_trait;
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::{Asset, BundleBehavior};
 
 #[derive(Debug)]
@@ -19,11 +19,7 @@ impl TransformerPlugin for AtlaspackRawTransformerPlugin {
     &atlaspack_core::plugin::CacheStatus::BuiltIn
   }
 
-  async fn transform(
-    &self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     asset.bundle_behavior = Some(BundleBehavior::Isolated);
@@ -66,11 +62,10 @@ mod tests {
     assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Isolated));
     let mut asset = asset;
     asset.bundle_behavior = Some(BundleBehavior::Isolated);
-    let context = TransformContext::default();
 
     assert_eq!(
       plugin
-        .transform(context, asset.clone())
+        .transform(asset.clone())
         .await
         .map_err(|e| e.to_string()),
       Ok(TransformResult {

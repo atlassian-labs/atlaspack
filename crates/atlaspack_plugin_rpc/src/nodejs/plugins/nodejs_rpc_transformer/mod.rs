@@ -23,7 +23,6 @@ use serde::Serialize;
 
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::PluginContext;
-use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::types::Asset;
@@ -187,11 +186,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
     &self.cache_key
   }
 
-  async fn transform(
-    &self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let asset_env = asset.env.clone();
     let stats = asset.stats.clone();
 

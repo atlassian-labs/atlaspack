@@ -191,11 +191,7 @@ impl TransformerPlugin for TestingRpcPlugin {
     &CacheStatus::BuiltIn
   }
 
-  async fn transform(
-    &self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, anyhow::Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, anyhow::Error> {
     Ok(TransformResult {
       asset,
       dependencies: vec![],
