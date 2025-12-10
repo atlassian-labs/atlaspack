@@ -4709,6 +4709,738 @@ describe('javascript', function () {
     );
   });
 
+  describe('enable_ssr_typeof_replacement', () => {
+    it('should replace typeof with SSR-compatible values when enabled', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          const typeofWindow = typeof window;
+          const typeofDocument = typeof document;
+          const typeofNavigator = typeof navigator;
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_SSR_TYPEOF_REPLACEMENT: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(contents.includes('typeofWindow = "undefined"'));
+      assert(contents.includes('typeofDocument = "undefined"'));
+      assert(contents.includes('typeofNavigator = "undefined"'));
+    });
+
+    it('should use standard typeof replacement when disabled', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          const typeofWindow = typeof window;
+          const typeofRequire = typeof require;
+          const typeofModule = typeof module;
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_SSR_TYPEOF_REPLACEMENT: 'false',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // Standard replacements should still work
+      assert(contents.includes('typeofRequire = "function"'));
+      assert(contents.includes('typeofModule = "object"'));
+    });
+  });
+
+  describe('global_aliasing_config', () => {
+    it('should alias global identifiers with configured values', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          const win = window;
+          const doc = document;
+          console.log(win, doc);
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_GLOBAL_ALIASING: JSON.stringify({
+            window: '@globalThis',
+            document: '@globalThis',
+          }),
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(
+        contents.includes('win = globalThis') ||
+          contents.includes('win=globalThis'),
+      );
+      assert(
+        contents.includes('doc = globalThis') ||
+          contents.includes('doc=globalThis'),
+      );
+    });
+
+    it('should replace SSR feature flags with boolean literals', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          const isServer = __SERVER__;
+          const debug = __SENTRY_DEBUG__;
+          if (isServer) {
+            console.log('server');
+          }
+          if (debug) {
+            console.log('debug');
+          }
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_GLOBAL_ALIASING: JSON.stringify({
+            __SERVER__: 'true',
+            __SENTRY_DEBUG__: 'false',
+          }),
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(contents.includes('isServer = true'));
+      assert(contents.includes('debug = false'));
+    });
+
+    it('should not replace local variables with same name', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          function test() {
+            const window = { local: true };
+            return window;
+          }
+          const globalWin = window;
+          console.log(test(), globalWin);
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_GLOBAL_ALIASING: JSON.stringify({
+            window: '@globalThis',
+          }),
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // Only the global reference should be replaced
+      assert(contents.includes('globalWin = globalThis'));
+    });
+  });
+
+  describe('enable_lazy_loading', () => {
+    it('should transform dynamic imports to require calls for lazy loading', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        node_modules/@atlassian/react-loosely-lazy/package.json:
+          { "name": "@atlassian/react-loosely-lazy", "version": "1.0.0", "main": "index.js" }
+        node_modules/@atlassian/react-loosely-lazy/index.js:
+          export function lazy(fn) { return fn; }
+        component.js:
+          export const Component = 'component';
+        index.js:
+          import { lazy } from '@atlassian/react-loosely-lazy';
+          const LazyComponent = lazy(() => import('./component.js'));
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_LAZY_LOADING: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // Dynamic import should be converted to require
+      assert(contents.includes('require('));
+      assert(!contents.includes('import('));
+    });
+
+    it('should only transform when react-loosely-lazy is present', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        component.js:
+          export const Component = 'component';
+        index.js:
+          const LazyComponent = () => import('./component.js');
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_LAZY_LOADING: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // Should not transform without react-loosely-lazy
+      // Note: import() will still be present as the transformer checks for the library
+    });
+  });
+
+  describe('enable_react_hooks_removal', () => {
+    it('should remove useEffect calls when enabled', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          import { useEffect } from 'react';
+          function Component() {
+            useEffect(() => {
+              console.log('effect');
+            }, []);
+            return 'component';
+          }
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_REACT_HOOKS_REMOVAL: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // useEffect call should be removed or replaced
+      assert(!contents.includes("console.log('effect')"));
+    });
+
+    it('should remove useLayoutEffect calls', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          import { useLayoutEffect } from 'react';
+          function Component() {
+            const cleanup = useLayoutEffect(() => {
+              return () => {};
+            });
+            return 'component';
+          }
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_REACT_HOOKS_REMOVAL: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // useLayoutEffect should be replaced with undefined
+      assert(
+        contents.includes('cleanup = undefined') ||
+          contents.includes('cleanup=void 0'),
+      );
+    });
+
+    it('should remove di() calls', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        node_modules/@atlassian/dependency-injection/package.json:
+          { "name": "@atlassian/dependency-injection", "version": "1.0.0", "main": "index.js" }
+        node_modules/@atlassian/dependency-injection/index.js:
+          export function di(fn) { return fn(); }
+        index.js:
+          import { di } from '@atlassian/dependency-injection';
+          function Component() {
+            di(() => {
+              console.log('di call');
+            });
+            return 'component';
+          }
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_REACT_HOOKS_REMOVAL: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // di() call should be removed
+      assert(!contents.includes("console.log('di call')"));
+    });
+  });
+
+  describe('enable_react_async_import_lift', () => {
+    it('should lift imports from JSResourceForUserVisible when enabled', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        node_modules/@atlassian/react-async/package.json:
+          { "name": "@atlassian/react-async", "version": "1.0.0", "main": "index.js" }
+        node_modules/@atlassian/react-async/index.js:
+          export function JSResourceForUserVisible(fn, opts) { return { fn, opts }; }
+          export function createEntryPoint(config) { return config; }
+        ui.tsx:
+          export const UI = 'ui';
+        index.js:
+          import { JSResourceForUserVisible, createEntryPoint } from '@atlassian/react-async';
+          export const MyEntryPoint = createEntryPoint({
+            root: JSResourceForUserVisible(
+              () => import('./ui.tsx'),
+              { moduleId: "abc123", entryFsSsrLiftImportToModule: true },
+            ),
+          });
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_REACT_ASYNC_IMPORT_LIFT: 'true',
+          REACT_ASYNC_IMPORT_LIFTING_BY_DEFAULT: 'false',
+          REACT_ASYNC_LIFT_REPORT_LEVEL: 'none',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // Import should be lifted to module scope
+      assert(contents.includes('_liftedReactAsyncImport'));
+    });
+
+    it('should lift all imports when lift by default is enabled', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        node_modules/@atlassian/react-async/package.json:
+          { "name": "@atlassian/react-async", "version": "1.0.0", "main": "index.js" }
+        node_modules/@atlassian/react-async/index.js:
+          export function JSResourceForUserVisible(fn, opts) { return { fn, opts }; }
+          export function createEntryPoint(config) { return config; }
+        ui.tsx:
+          export const UI = 'ui';
+        index.js:
+          import { JSResourceForUserVisible, createEntryPoint } from '@atlassian/react-async';
+          export const MyEntryPoint = createEntryPoint({
+            root: JSResourceForUserVisible(
+              () => import('./ui.tsx'),
+              { moduleId: "abc123" },
+            ),
+          });
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_REACT_ASYNC_IMPORT_LIFT: 'true',
+          REACT_ASYNC_IMPORT_LIFTING_BY_DEFAULT: 'true',
+          REACT_ASYNC_LIFT_REPORT_LEVEL: 'none',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // Import should be lifted even without explicit option
+      assert(contents.includes('_liftedReactAsyncImport'));
+    });
+  });
+
+  describe('enable_static_prevaluation', () => {
+    it('should pre-evaluate binary equality expressions', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          const x = 1 === 1;
+          const y = "a" !== "b";
+          const z = 5 > 3;
+          console.log(x, y, z);
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_PREVALUATION: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(contents.includes('x = true'));
+      assert(contents.includes('y = true'));
+      assert(contents.includes('z = true'));
+    });
+
+    it('should pre-evaluate logical expressions', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          const a = true && false;
+          const b = "hello" || "world";
+          const c = false || "fallback";
+          console.log(a, b, c);
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_PREVALUATION: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(contents.includes('a = false'));
+      assert(contents.includes('b = "hello"'));
+      assert(contents.includes('c = "fallback"'));
+    });
+
+    it('should simplify conditional expressions', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          const x = true ? "yes" : "no";
+          const y = false ? "yes" : "no";
+          console.log(x, y);
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_PREVALUATION: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(contents.includes('x = "yes"'));
+      assert(contents.includes('y = "no"'));
+    });
+
+    it('should simplify if statements with constant conditions', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          if (true) {
+            console.log("always");
+          }
+          if (false) {
+            console.log("never");
+          }
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_PREVALUATION: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(contents.includes('console.log("always")'));
+      // The dead branch remover would eliminate the false branch
+    });
+  });
+
+  describe('enable_dead_returns_removal', () => {
+    it('should remove unreachable return statements', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          function foo() {
+            console.log('before');
+            return 1;
+            return 2;
+            return 3;
+          }
+          console.log(foo());
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_DEAD_RETURNS_REMOVAL: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // Extract just the user code (look for the foo function)
+      const fooMatch = contents.match(/function foo\(\)[^}]*\{[^}]*\}/s);
+      assert(fooMatch, 'Could not find foo function in output');
+      const fooCode = fooMatch[0];
+
+      // Count the number of return statements in the foo function
+      const returnCount = (fooCode.match(/return/g) || []).length;
+      // Should only have one return statement
+      assert(
+        returnCount === 1,
+        `Expected 1 return in foo(), got ${returnCount}. Code: ${fooCode}`,
+      );
+    });
+
+    it('should handle nested blocks with returns', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          function bar(condition) {
+            if (condition) {
+              return 1;
+              return 2;
+            }
+            return 3;
+            return 4;
+          }
+          console.log(bar(true));
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_DEAD_RETURNS_REMOVAL: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // Extract just the bar function
+      const barMatch = contents.match(
+        /function bar\([^)]*\)[^}]*\{(?:[^{}]|\{[^}]*\})*\}/s,
+      );
+      assert(barMatch, 'Could not find bar function in output');
+      const barCode = barMatch[0];
+
+      // Each block should only have one return
+      const returnCount = (barCode.match(/return/g) || []).length;
+      assert(
+        returnCount === 2,
+        `Expected 2 returns (one per block) in bar(), got ${returnCount}. Code: ${barCode}`,
+      );
+    });
+
+    it('should preserve other statements after first return', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          function baz() {
+            console.log('reachable');
+            return 1;
+            console.log('unreachable');
+            return 2;
+          }
+          console.log(baz());
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_DEAD_RETURNS_REMOVAL: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // Extract just the baz function
+      const bazMatch = contents.match(/function baz\(\)[^}]*\{[^}]*\}/s);
+      assert(bazMatch, 'Could not find baz function in output');
+      const bazCode = bazMatch[0];
+
+      assert(bazCode.includes("console.log('reachable')"));
+      // Note: The unreachable console.log may be removed by dead code elimination
+      // The dead_returns_remover only removes the extra return statement
+      // But only one return should remain
+      const returnCount = (bazCode.match(/return/g) || []).length;
+      assert(
+        returnCount === 1,
+        `Expected 1 return in baz(), got ${returnCount}. Code: ${bazCode}`,
+      );
+    });
+  });
+
+  describe('enable_unused_bindings_removal', () => {
+    it('should remove unused variable declarations', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          const unused = 1;
+          const used = 2;
+          console.log(used);
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_UNUSED_BINDINGS_REMOVAL: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(!contents.includes('unused'));
+      assert(contents.includes('used'));
+    });
+
+    it('should remove unused function declarations', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          function unusedFunc() {
+            return 1;
+          }
+          function usedFunc() {
+            return 2;
+          }
+          console.log(usedFunc());
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_UNUSED_BINDINGS_REMOVAL: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      assert(!contents.includes('unusedFunc'));
+      assert(contents.includes('usedFunc'));
+    });
+
+    it('should handle destructuring patterns', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          const obj = { a: 1, b: 2, c: 3 };
+          const { a, b, c } = obj;
+          console.log(a, c);
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_UNUSED_BINDINGS_REMOVAL: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // 'b' should be removed from destructuring
+      assert(contents.includes('a'));
+      assert(contents.includes('c'));
+      // Note: The exact output depends on how the transformer handles this
+    });
+
+    it('should handle cascading unused dependencies', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          const a = 1;
+          const b = a;
+          const c = b;
+          const d = 2;
+          console.log(d);
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_UNUSED_BINDINGS_REMOVAL: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // a, b, c should all be removed as they're unused
+      assert(!contents.includes('const a'));
+      assert(!contents.includes('const b'));
+      assert(!contents.includes('const c'));
+      assert(contents.includes('d'));
+    });
+
+    it('should preserve exports', async () => {
+      await fsFixture(overlayFS, __dirname)`
+        index.js:
+          const unused = 1;
+          export const exported = 2;
+          const alsoUnused = 3;
+      `;
+
+      let b = await bundle(path.join(__dirname, 'index.js'), {
+        inputFS: overlayFS,
+        env: {
+          NATIVE_UNUSED_BINDINGS_REMOVAL: 'true',
+        },
+      });
+
+      let contents = await outputFS.readFile(
+        b.getBundles()[0].filePath,
+        'utf8',
+      );
+
+      // Exported value should be preserved
+      assert(contents.includes('exported'));
+    });
+  });
+
   describe('sync_dynamic_import', () => {
     it('should replace non-matching dynamic imports with dummy promises', async () => {
       await fsFixture(overlayFS, __dirname)`

@@ -301,6 +301,7 @@ dependencies = [
  "atlaspack_swc_runner",
  "data-encoding",
  "dunce",
+ "glob-match",
  "indexmap",
  "indoc",
  "parking_lot",
