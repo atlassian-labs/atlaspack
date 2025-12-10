@@ -5,7 +5,6 @@ use std::sync::Arc;
 use anyhow::{Error, anyhow};
 
 use async_trait::async_trait;
-use atlaspack_core::config_loader::ConfigFile;
 use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
 use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::browsers::Browsers;
@@ -25,6 +24,8 @@ use crate::js_transformer_config::{
 use crate::map_diagnostics::{MapDiagnosticOptions, map_diagnostics};
 use crate::package_json::{PackageJson, depends_on_react, supports_automatic_jsx_runtime};
 use crate::ts_config::{Jsx, Target, TsConfig};
+
+pub use atlaspack_js_swc_core::JsxConfiguration;
 
 mod conversion;
 
@@ -101,88 +102,26 @@ impl AtlaspackJsTransformerPlugin {
   }
 
   /// Determines JSX configuration based on file type, tsconfig, and package.json
-  fn determine_jsx_configuration(
-    &self,
-    file_type: &FileType,
-    asset: &Asset,
-    compiler_options: Option<&crate::ts_config::CompilerOptions>,
-    package_json: &Option<ConfigFile<PackageJson>>,
-  ) -> (bool, Option<String>, Option<String>, Option<String>, bool) {
-    let mut is_jsx = matches!(file_type, FileType::Jsx | FileType::Tsx);
-    let mut jsx_pragma = None;
-    let mut jsx_pragma_frag = None;
-    let mut jsx_import_source = None;
-    let mut automatic_jsx_runtime = false;
+  fn determine_jsx_configuration(&self, asset: &Asset) -> JsxConfiguration {
+    let file_type = match &asset.file_type {
+      FileType::Js => "js",
+      FileType::Jsx => "jsx",
+      FileType::Ts => "ts",
+      FileType::Tsx => "tsx",
+      _ => "unknown",
+    };
 
-    if asset.is_source {
-      // Check for React dependencies in package.json
-      let has_react = package_json
-        .as_ref()
-        .is_some_and(|pkg| depends_on_react(&pkg.contents));
-
-      // Set up React JSX pragmas if React is present
-      if has_react {
-        jsx_pragma = Some("React.createElement".to_string());
-        jsx_pragma_frag = Some("React.Fragment".to_string());
-      }
-
-      // Check tsconfig.json/jsconfig.json for explicit JSX configuration
-      if let Some(co) = compiler_options {
-        // Override pragmas with explicit configuration
-        if let Some(factory) = &co.jsx_factory {
-          jsx_pragma = Some(factory.clone());
-        }
-        if let Some(fragment_factory) = &co.jsx_fragment_factory {
-          jsx_pragma_frag = Some(fragment_factory.clone());
-        }
-
-        // Check for automatic JSX runtime
-        if matches!(co.jsx, Some(Jsx::ReactJsx) | Some(Jsx::ReactJsxDev))
-          || co.jsx_import_source.is_some()
-        {
-          automatic_jsx_runtime = true;
-          jsx_import_source = co.jsx_import_source.clone();
-        }
-      }
-
-      // Determine if JSX should be enabled based on file type and configuration
-      match file_type {
-        FileType::Jsx | FileType::Tsx => {
-          // .jsx and .tsx files should always have JSX enabled
-          is_jsx = true;
-        }
-        FileType::Js => {
-          // For .js files, enable JSX if we have configuration (tsconfig or React dependencies)
-          is_jsx = compiler_options
-            .as_ref()
-            .and_then(|co| co.jsx.as_ref())
-            .is_some()
-            || jsx_pragma.is_some();
-        }
-        FileType::Ts => {
-          // TypeScript files without .tsx extension should not have JSX
-          is_jsx = false;
-        }
-        _ => {}
-      }
-    }
-
-    // Update automatic_jsx_runtime based on package.json if not set by tsconfig
-    if !automatic_jsx_runtime {
-      automatic_jsx_runtime = package_json
-        .as_ref()
-        .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents));
-    }
-
-    (
-      is_jsx,
-      jsx_pragma,
-      jsx_pragma_frag,
-      jsx_import_source,
-      automatic_jsx_runtime,
+    atlaspack_js_swc_core::determine_jsx_configuration(
+      &asset.file_path,
+      file_type,
+      asset.is_source,
+      &self.config.jsx,
+      &self.options.project_root,
     )
   }
+}
 
+impl AtlaspackJsTransformerPlugin {
   fn env_variables(&self, asset: &Asset) -> HashMap<Atom, Atom> {
     if self.options.env.is_none()
       || self
@@ -319,7 +258,6 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
     asset: Asset,
   ) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
-    let file_type = asset.file_type.clone();
     let is_node = env.context.is_node();
     let source_code = asset.code.clone();
 
@@ -414,51 +352,51 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       .as_ref()
       .and_then(|ts| ts.compiler_options.as_ref());
 
-    let package_json = context.config().load_package_json::<PackageJson>().ok();
+    // Determine JSX configuration based on newJsxConfig feature flag
+    let JsxConfiguration {
+      is_jsx,
+      jsx_pragma,
+      jsx_pragma_frag,
+      jsx_import_source,
+      automatic_jsx_runtime,
+      react_refresh,
+    } = if self.options.feature_flags.bool_enabled("newJsxConfig") {
+      self.determine_jsx_configuration(&asset)
+    } else {
+      // With newJsxConfig disabled, use the old logic
+      let package_json = context.config().load_package_json::<PackageJson>().ok();
+      let is_jsx = matches!(asset.file_type, FileType::Jsx | FileType::Tsx);
 
-    // v3JsxConfigurationLoading CLEANUP NOTE: Remove the flag disabled code path after rollout
-    let feature_flag_v3_jsx_configuration_loading = self
-      .options
-      .feature_flags
-      .bool_enabled("v3JsxConfigurationLoading");
+      let automatic_jsx_runtime = compiler_options
+        .map(|co| {
+          co.jsx
+            .as_ref()
+            .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
+            || co.jsx_import_source.is_some()
+        })
+        .unwrap_or_else(|| {
+          package_json
+            .as_ref()
+            .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents))
+        });
 
-    // Determine JSX configuration based on v3JsxConfigurationLoading feature flag
-    let (is_jsx, jsx_pragma, jsx_pragma_frag, jsx_import_source, automatic_jsx_runtime) =
-      if feature_flag_v3_jsx_configuration_loading {
-        // With v3JsxConfigurationLoading enabled, use the new determine_jsx_configuration method
-        self.determine_jsx_configuration(&file_type, &asset, compiler_options, &package_json)
-      } else {
-        // With v3JsxConfigurationLoading disabled, use the old logic
-        let is_jsx = matches!(file_type, FileType::Jsx | FileType::Tsx);
+      let jsx_import_source = compiler_options
+        .and_then(|co| co.jsx_import_source.clone())
+        .or_else(|| automatic_jsx_runtime.then_some(String::from("react")));
 
-        let automatic_jsx_runtime = compiler_options
-          .map(|co| {
-            co.jsx
-              .as_ref()
-              .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
-              || co.jsx_import_source.is_some()
-          })
-          .unwrap_or_else(|| {
-            package_json
-              .as_ref()
-              .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents))
-          });
+      let jsx_pragma = compiler_options.and_then(|co| co.jsx_factory.clone());
+      let jsx_pragma_frag = compiler_options.and_then(|co| co.jsx_fragment_factory.clone());
+      let react_refresh = package_json.is_some_and(|pkg| depends_on_react(&pkg.contents));
 
-        let jsx_import_source = compiler_options
-          .and_then(|co| co.jsx_import_source.clone())
-          .or_else(|| automatic_jsx_runtime.then_some(String::from("react")));
-
-        let jsx_pragma = compiler_options.and_then(|co| co.jsx_factory.clone());
-        let jsx_pragma_frag = compiler_options.and_then(|co| co.jsx_fragment_factory.clone());
-
-        (
-          is_jsx,
-          jsx_pragma,
-          jsx_pragma_frag,
-          jsx_import_source,
-          automatic_jsx_runtime,
-        )
-      };
+      JsxConfiguration {
+        is_jsx,
+        jsx_pragma,
+        jsx_pragma_frag,
+        jsx_import_source,
+        automatic_jsx_runtime,
+        react_refresh,
+      }
+    };
 
     let transform_config = atlaspack_js_swc_core::Config {
       automatic_jsx_runtime,
@@ -480,7 +418,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       is_esm_output: env.output_format == OutputFormat::EsModule,
       is_jsx,
       is_library: env.is_library,
-      is_type_script: matches!(file_type, FileType::Ts | FileType::Tsx),
+      is_type_script: matches!(asset.file_type, FileType::Ts | FileType::Tsx),
       is_worker: env.context.is_worker(),
       jsx_import_source,
       jsx_pragma,
@@ -492,7 +430,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       project_root: self.options.project_root.to_string_lossy().into_owned(),
       react_refresh: self.options.hmr_options.is_some()
         && self.options.mode == BuildMode::Development
-        && package_json.is_some_and(|pkg| depends_on_react(&pkg.contents))
+        && react_refresh
         && env.context.is_browser()
         && !env.is_library
         && !env.context.is_worker()
@@ -546,7 +484,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         errors,
         MapDiagnosticOptions {
           source_code: Some(source_code.clone()),
-          file_type: Some(file_type.clone()),
+          file_type: Some(asset.file_type.clone()),
           file_path: Some(asset.file_path),
         },
       )));
@@ -577,6 +515,7 @@ mod tests {
     },
   };
   use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSystem};
+  use atlaspack_js_swc_core::{AutomaticReactRuntime, AutomaticRuntimeGlobs, JsxOptions};
   use pretty_assertions::assert_eq;
   use swc_core::ecma::parser::lexer::util::CharExt;
 
@@ -716,6 +655,222 @@ mod tests {
   }
 
   #[tokio::test(flavor = "multi_thread")]
+  async fn transforms_react_with_automatic_runtime_glob() -> anyhow::Result<()> {
+    // Test automatic JSX runtime with glob pattern matching
+    let file_system = Arc::new(InMemoryFileSystem::default());
+
+    let target_asset = create_asset(
+      "src/components/Button.tsx",
+      "
+        const Component = () => {
+          return <div>Hello World</div>;
+        };
+
+        export default Component;
+      ",
+    );
+
+    let result = run_test(TestOptions {
+      asset: target_asset.clone(),
+      file_system: Some(file_system.clone()),
+      js_transformer_config: Some(JsTransformerConfig {
+        jsx: Some(JsxOptions {
+          pragma: Some("React.createElement".to_string()),
+          pragma_fragment: Some("React.Fragment".to_string()),
+          import_source: Some("react".to_string()),
+          automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
+            include: vec!["src/components/**/*.tsx".to_string()],
+            exclude: None,
+          })),
+        }),
+        ..Default::default()
+      }),
+      ..TestOptions::default()
+    })
+    .await?;
+
+    let code = result.asset.code.as_str()?;
+
+    // With automatic runtime, JSX should be transformed to use jsx() imports
+    // instead of React.createElement calls
+    assert!(
+      code.contains("jsx") || code.contains("_jsx"),
+      "Code should use automatic JSX runtime (jsx imports), got: {}",
+      code
+    );
+
+    // Should not contain React.createElement since we're using automatic runtime
+    assert!(
+      !code.contains("React.createElement"),
+      "Code should not contain React.createElement with automatic runtime, got: {}",
+      code
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn transforms_react_without_automatic_runtime_glob_no_match() -> anyhow::Result<()> {
+    // Test that files not matching glob pattern don't get automatic runtime
+    let file_system = Arc::new(InMemoryFileSystem::default());
+
+    let target_asset = create_asset(
+      "src/pages/Home.tsx", // Different path that won't match components/**
+      "
+        const Component = () => {
+          return <div>Hello World</div>;
+        };
+
+        export default Component;
+      ",
+    );
+
+    let result = run_test(TestOptions {
+      asset: target_asset.clone(),
+      file_system: Some(file_system.clone()),
+      js_transformer_config: Some(JsTransformerConfig {
+        jsx: Some(JsxOptions {
+          pragma: Some("React.createElement".to_string()),
+          pragma_fragment: Some("React.Fragment".to_string()),
+          import_source: Some("react".to_string()),
+          automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
+            include: vec!["src/components/**/*.tsx".to_string()], // This won't match src/pages/Home.tsx
+            exclude: None,
+          })),
+        }),
+        ..Default::default()
+      }),
+      ..TestOptions::default()
+    })
+    .await?;
+
+    let code = result.asset.code.as_str()?;
+
+    // Without automatic runtime matching, should use classic React.createElement
+    assert!(
+      code.contains("React.createElement") || code.contains("_react"),
+      "Code should use classic JSX runtime (React.createElement), got: {}",
+      code
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn transforms_react_with_automatic_runtime_glob_outside_project_root() -> anyhow::Result<()>
+  {
+    // Test automatic JSX runtime with glob pattern matching files outside project root
+    let file_system = Arc::new(InMemoryFileSystem::default());
+
+    // Asset is outside the project root: /dir/other-project/index.tsx
+    // Project root is: /dir/my-project
+    let project_root = Path::new("/dir/my-project");
+    let target_asset = create_asset_at_project_root(
+      project_root,
+      "/dir/other-project/index.tsx",
+      "
+        const Component = () => {
+          return <div>Outside Project Root</div>;
+        };
+
+        export default Component;
+      ",
+    );
+
+    let result = run_test(TestOptions {
+      asset: target_asset.clone(),
+      file_system: Some(file_system.clone()),
+      project_root: Some(PathBuf::from("/dir/my-project")), // Project root different from asset path
+      js_transformer_config: Some(JsTransformerConfig {
+        jsx: Some(JsxOptions {
+          pragma: Some("React.createElement".to_string()),
+          pragma_fragment: Some("React.Fragment".to_string()),
+          import_source: Some("react".to_string()),
+          automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
+            include: vec!["../other-project/**/*.tsx".to_string()],
+            exclude: None,
+          })),
+        }),
+        ..Default::default()
+      }),
+      ..TestOptions::default()
+    })
+    .await?;
+
+    let code = result.asset.code.as_str()?;
+
+    // With automatic runtime, JSX should be transformed to use jsx() imports
+    assert!(
+      code.contains("jsx") || code.contains("_jsx"),
+      "Code should use automatic JSX runtime (jsx imports) for files outside project root matching glob, got: {}",
+      code
+    );
+
+    // Should not contain React.createElement since we're using automatic runtime
+    assert!(
+      !code.contains("React.createElement"),
+      "Code should not contain React.createElement with automatic runtime, got: {}",
+      code
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn transforms_react_without_automatic_runtime_glob_outside_project_root_no_match()
+  -> anyhow::Result<()> {
+    // Test that files outside project root that don't match glob use classic runtime
+    let file_system = Arc::new(InMemoryFileSystem::default());
+
+    // Asset is outside the project root: /dir/another-project/index.tsx
+    // Project root is: /dir/my-project
+    // Glob pattern: ../other-project/** should NOT match
+    let project_root = Path::new("/dir/my-project");
+    let target_asset = create_asset_at_project_root(
+      project_root,
+      "/dir/another-project/index.tsx",
+      "
+        const Component = () => {
+          return <div>Different Outside Project</div>;
+        };
+
+        export default Component;
+      ",
+    );
+
+    let result = run_test(TestOptions {
+      asset: target_asset.clone(),
+      file_system: Some(file_system.clone()),
+      project_root: Some(PathBuf::from("/dir/my-project")), // Project root different from asset path
+      js_transformer_config: Some(JsTransformerConfig {
+        jsx: Some(JsxOptions {
+          pragma: Some("React.createElement".to_string()),
+          pragma_fragment: Some("React.Fragment".to_string()),
+          import_source: Some("react".to_string()),
+          automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
+            include: vec!["../other-project/**".to_string()], // Should NOT match /dir/another-project/
+            exclude: None,
+          })),
+        }),
+        ..Default::default()
+      }),
+      ..TestOptions::default()
+    })
+    .await?;
+
+    let code = result.asset.code.as_str()?;
+
+    // Without automatic runtime matching, should use classic React.createElement
+    assert!(
+      code.contains("React.createElement") || code.contains("_react"),
+      "Code should use classic JSX runtime (React.createElement) for non-matching files outside project root, got: {}",
+      code
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
   async fn transforms_react_with_inferred_automatic_runtime_from_package_json() -> anyhow::Result<()>
   {
     async fn test_version(version: &str) -> anyhow::Result<()> {
@@ -730,6 +885,15 @@ mod tests {
       let result = run_test(TestOptions {
         asset: target_asset.clone(),
         file_system: Some(file_system),
+        js_transformer_config: Some(JsTransformerConfig {
+          jsx: Some(JsxOptions {
+            pragma: Some("React.createElement".to_string()),
+            pragma_fragment: Some("React.Fragment".to_string()),
+            import_source: None,
+            automatic_runtime: Some(AutomaticReactRuntime::Enabled(true)),
+          }),
+          ..Default::default()
+        }),
         ..TestOptions::default()
       })
       .await?;
@@ -899,13 +1063,10 @@ mod tests {
   #[test]
   fn test_determine_jsx_configuration_logic() {
     // Unit test for determine_jsx_configuration logic
-    // This test verifies the v3 JSX configuration logic matches the v2 JSTransformer behaviour
-    // See: packages/transformers/js/src/JSTransformer.ts
+    // This test verifies the newJsxConfig configuration logic using JsTransformerConfig
+    // instead of the old package.json/tsconfig approach
 
-    use crate::package_json::DependencyList;
-    use crate::ts_config::CompilerOptions;
-
-    let transformer = AtlaspackJsTransformerPlugin::new(&PluginContext {
+    let mut transformer = AtlaspackJsTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
         fs: Arc::new(InMemoryFileSystem::default()),
         project_root: PathBuf::from("test"),
@@ -929,63 +1090,51 @@ mod tests {
       ..Default::default()
     };
 
-    // Case 1: .js file with tsconfig jsx: "react" and React dependency
-    // Expected: is_jsx = true, pragmas set from React dependency
-    let compiler_options = Some(CompilerOptions {
-      jsx: Some(Jsx::React),
+    // Case 1: .js file with React configuration
+    // Expected: is_jsx = true, pragmas set from React configuration
+
+    // Test with v3 JSX configuration using JsTransformerConfig
+    let config_with_jsx = JsTransformerConfig {
+      jsx: Some(JsxOptions {
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
+        automatic_runtime: None,
+      }),
       ..Default::default()
-    });
+    };
 
-    let package_json_with_react = Some(ConfigFile {
-      contents: PackageJson {
-        dependencies: Some(DependencyList {
-          react: Some("^18.0.0".to_string()),
-        }),
-        ..Default::default()
-      },
-      path: PathBuf::from("package.json"),
-      raw: r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
-    });
-
-    let (is_jsx, jsx_pragma, jsx_pragma_frag, _, _) = transformer.determine_jsx_configuration(
-      &FileType::Js,
-      &asset,
-      compiler_options.as_ref(),
-      &package_json_with_react,
-    );
+    // Case 1: Test with JSX configuration
+    transformer.config = config_with_jsx;
+    let jsx_config = transformer.determine_jsx_configuration(&asset);
+    let is_jsx = jsx_config.is_jsx;
+    let jsx_pragma = jsx_config.jsx_pragma;
+    let jsx_pragma_frag = jsx_config.jsx_pragma_frag;
 
     assert!(
       is_jsx,
-      "JS file with tsconfig jsx: 'react' should have JSX enabled"
+      "JS file with React configuration should have JSX enabled"
     );
     assert_eq!(jsx_pragma, Some("React.createElement".to_string()));
     assert_eq!(jsx_pragma_frag, Some("React.Fragment".to_string()));
 
-    // Case 2: .js file with NO tsconfig and NO React dependency
-    // Expected: is_jsx = false, no pragmas
-    let package_json_no_react = Some(ConfigFile {
-      contents: PackageJson {
-        dependencies: Some(DependencyList { react: None }),
-        ..Default::default()
-      },
-      path: PathBuf::from("package.json"),
-      raw: r#"{ "dependencies": {} }"#.to_string(),
-    });
+    // Case 3: .js file with React configuration
+    // Expected: is_jsx = true, pragmas set from React configuration
+    let config_with_react_2 = JsTransformerConfig {
+      jsx: Some(JsxOptions {
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
+        automatic_runtime: None,
+      }),
+      ..Default::default()
+    };
 
-    let (is_jsx_no_config, jsx_pragma_no_config, jsx_pragma_frag_no_config, _, _) =
-      transformer.determine_jsx_configuration(&FileType::Js, &asset, None, &package_json_no_react);
-
-    assert!(
-      !is_jsx_no_config,
-      "JS file without tsconfig and without React should NOT have JSX enabled"
-    );
-    assert_eq!(jsx_pragma_no_config, None);
-    assert_eq!(jsx_pragma_frag_no_config, None);
-
-    // Case 3: .js file with React dependency but NO tsconfig
-    // Expected: is_jsx = true, pragmas set from React dependency
-    let (is_jsx_react_only, jsx_pragma_react_only, jsx_pragma_frag_react_only, _, _) = transformer
-      .determine_jsx_configuration(&FileType::Js, &asset, None, &package_json_with_react);
+    transformer.config = config_with_react_2;
+    let jsx_config = transformer.determine_jsx_configuration(&asset);
+    let is_jsx_react_only = jsx_config.is_jsx;
+    let jsx_pragma_react_only = jsx_config.jsx_pragma;
+    let jsx_pragma_frag_react_only = jsx_config.jsx_pragma_frag;
 
     assert!(
       is_jsx_react_only,
@@ -1001,26 +1150,49 @@ mod tests {
     );
 
     // Case 4: .jsx file should always have JSX enabled regardless of configuration
-    // Expected: is_jsx = true, pragmas set from React dependency if present
-    let (is_jsx_jsx_file, jsx_pragma_jsx_file, jsx_pragma_frag_jsx_file, _, _) =
-      transformer.determine_jsx_configuration(&FileType::Jsx, &asset, None, &package_json_no_react);
+    // Expected: is_jsx = true, pragmas set from React configuration if present
+    let jsx_asset = Asset {
+      file_type: FileType::Jsx,
+      is_source: true,
+      env: asset.env.clone(),
+      ..Default::default()
+    };
+
+    let config_no_react_2 = JsTransformerConfig {
+      jsx: None,
+      ..Default::default()
+    };
+
+    transformer.config = config_no_react_2;
+    let jsx_config = transformer.determine_jsx_configuration(&jsx_asset);
+    let is_jsx_jsx_file = jsx_config.is_jsx;
+    let jsx_pragma_jsx_file = jsx_config.jsx_pragma;
+    let jsx_pragma_frag_jsx_file = jsx_config.jsx_pragma_frag;
 
     assert!(
       is_jsx_jsx_file,
       ".jsx files should always have JSX enabled (file extension check)"
     );
-    // Note: .jsx files get JSX enabled by file extension, but pragmas are only set if React is present
-    assert_eq!(jsx_pragma_jsx_file, None);
-    assert_eq!(jsx_pragma_frag_jsx_file, None);
+    // Note: .jsx files get JSX enabled by file extension, and get default pragmas
+    assert_eq!(jsx_pragma_jsx_file, Some("React.createElement".to_string()));
+    assert_eq!(jsx_pragma_frag_jsx_file, Some("React.Fragment".to_string()));
 
-    // Case 5: .jsx file with React dependency should have pragmas set
-    let (is_jsx_jsx_with_react, jsx_pragma_jsx_with_react, jsx_pragma_frag_jsx_with_react, _, _) =
-      transformer.determine_jsx_configuration(
-        &FileType::Jsx,
-        &asset,
-        None,
-        &package_json_with_react,
-      );
+    // Case 5: .jsx file with React configuration should have pragmas set
+    let config_with_react_3 = JsTransformerConfig {
+      jsx: Some(JsxOptions {
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
+        automatic_runtime: None,
+      }),
+      ..Default::default()
+    };
+
+    transformer.config = config_with_react_3;
+    let jsx_config = transformer.determine_jsx_configuration(&jsx_asset);
+    let is_jsx_jsx_with_react = jsx_config.is_jsx;
+    let jsx_pragma_jsx_with_react = jsx_config.jsx_pragma;
+    let jsx_pragma_frag_jsx_with_react = jsx_config.jsx_pragma_frag;
 
     assert!(
       is_jsx_jsx_with_react,
@@ -1044,26 +1216,53 @@ mod tests {
       ..Default::default()
     };
 
-    let (is_jsx_ts, jsx_pragma_ts, jsx_pragma_frag_ts, _, _) = transformer
-      .determine_jsx_configuration(
-        &FileType::Ts,
-        &ts_asset,
-        compiler_options.as_ref(),
-        &package_json_with_react,
-      );
+    let config_with_react_4 = JsTransformerConfig {
+      jsx: Some(JsxOptions {
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
+        automatic_runtime: None,
+      }),
+      ..Default::default()
+    };
+
+    transformer.config = config_with_react_4;
+    let jsx_config = transformer.determine_jsx_configuration(&ts_asset);
+    let is_jsx_ts = jsx_config.is_jsx;
+    let jsx_pragma_ts = jsx_config.jsx_pragma;
+    let jsx_pragma_frag_ts = jsx_config.jsx_pragma_frag;
 
     assert!(
       !is_jsx_ts,
       ".ts files should never have JSX enabled (explicitly disabled)"
     );
-    // Pragmas might be set if React is present, but JSX won't be enabled
-    assert_eq!(jsx_pragma_ts, Some("React.createElement".to_string()));
-    assert_eq!(jsx_pragma_frag_ts, Some("React.Fragment".to_string()));
+    assert_eq!(jsx_pragma_ts, None);
+    assert_eq!(jsx_pragma_frag_ts, None);
 
     // Case 7: .tsx file should always have JSX enabled
-    // Expected: is_jsx = true, pragmas set from React dependency if present
-    let (is_jsx_tsx, jsx_pragma_tsx, jsx_pragma_frag_tsx, _, _) = transformer
-      .determine_jsx_configuration(&FileType::Tsx, &asset, None, &package_json_with_react);
+    // Expected: is_jsx = true, pragmas set from React configuration if present
+    let tsx_asset = Asset {
+      file_type: FileType::Tsx,
+      is_source: true,
+      env: asset.env.clone(),
+      ..Default::default()
+    };
+
+    let config_with_react_5 = JsTransformerConfig {
+      jsx: Some(JsxOptions {
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
+        automatic_runtime: None,
+      }),
+      ..Default::default()
+    };
+
+    transformer.config = config_with_react_5;
+    let jsx_config = transformer.determine_jsx_configuration(&tsx_asset);
+    let is_jsx_tsx = jsx_config.is_jsx;
+    let jsx_pragma_tsx = jsx_config.jsx_pragma;
+    let jsx_pragma_frag_tsx = jsx_config.jsx_pragma_frag;
 
     assert!(
       is_jsx_tsx,
@@ -1071,6 +1270,60 @@ mod tests {
     );
     assert_eq!(jsx_pragma_tsx, Some("React.createElement".to_string()));
     assert_eq!(jsx_pragma_frag_tsx, Some("React.Fragment".to_string()));
+
+    // Case 8: Test AutomaticReactRuntime::Glob functionality
+    let test_asset = Asset {
+      file_path: PathBuf::from("src/components/Button.tsx"),
+      file_type: FileType::Tsx,
+      is_source: true,
+      env: asset.env.clone(),
+      ..Default::default()
+    };
+
+    let config_with_glob = JsTransformerConfig {
+      jsx: Some(JsxOptions {
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
+        automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
+          include: vec!["src/components/**/*.tsx".to_string()],
+          exclude: None,
+        })),
+      }),
+      ..Default::default()
+    };
+
+    transformer.config = config_with_glob;
+    let jsx_config = transformer.determine_jsx_configuration(&test_asset);
+    let automatic_jsx_runtime = jsx_config.automatic_jsx_runtime;
+
+    assert!(
+      automatic_jsx_runtime,
+      "Files matching glob pattern should have automatic JSX runtime enabled"
+    );
+
+    // Test with non-matching glob
+    let config_with_non_matching_glob = JsTransformerConfig {
+      jsx: Some(JsxOptions {
+        pragma: Some("React.createElement".to_string()),
+        pragma_fragment: Some("React.Fragment".to_string()),
+        import_source: None,
+        automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
+          include: vec!["src/pages/**/*.tsx".to_string()],
+          exclude: None,
+        })),
+      }),
+      ..Default::default()
+    };
+
+    transformer.config = config_with_non_matching_glob;
+    let jsx_config = transformer.determine_jsx_configuration(&test_asset);
+    let automatic_jsx_runtime_no_match = jsx_config.automatic_jsx_runtime;
+
+    assert!(
+      !automatic_jsx_runtime_no_match,
+      "Files not matching glob pattern should not have automatic JSX runtime enabled"
+    );
   }
 
   // End-to-end tests for the new determine_jsx_configuration logic
@@ -1119,6 +1372,15 @@ mod tests {
       let result = run_test(TestOptions {
         asset: target_asset.clone(),
         file_system: Some(file_system),
+        js_transformer_config: Some(JsTransformerConfig {
+          jsx: Some(JsxOptions {
+            pragma: Some("React.createElement".to_string()),
+            pragma_fragment: Some("React.Fragment".to_string()),
+            import_source: None,
+            automatic_runtime: None,
+          }),
+          ..Default::default()
+        }),
         ..TestOptions::default()
       })
       .await;
@@ -1148,7 +1410,7 @@ mod tests {
       Ok(())
     }
 
-    // v3JsxConfigurationLoading CLEANUP NOTE: Remove this test after rollout.
+    // newJsxConfig CLEANUP NOTE: Remove this test after rollout.
     #[tokio::test(flavor = "multi_thread")]
     async fn js_file_with_tsconfig_and_react_feature_flag_off() -> anyhow::Result<()> {
       // Case 1: .js file with React dependency and tsconfig jsx: "react"
@@ -1190,10 +1452,7 @@ mod tests {
       let result = run_test(TestOptions {
         asset: target_asset.clone(),
         file_system: Some(file_system.clone()),
-        feature_flags: Some(FeatureFlags::with_bool_flag(
-          "v3JsxConfigurationLoading",
-          false,
-        )),
+        feature_flags: Some(FeatureFlags::with_bool_flag("newJsxConfig", false)),
         ..TestOptions::default()
       })
       .await;
@@ -1203,46 +1462,6 @@ mod tests {
       assert!(
         result.is_err(),
         "Old behaviour: .js files with JSX should fail to parse when JSX is not enabled. Error: {:?}",
-        result.err()
-      );
-
-      Ok(())
-    }
-
-    #[tokio::test(flavor = "multi_thread")]
-    async fn js_file_without_react_or_tsconfig() -> anyhow::Result<()> {
-      // Case 2: .js file with NO React dependency and NO tsconfig
-      // Expected: JSX parsing should FAIL
-      let file_system = Arc::new(InMemoryFileSystem::default());
-
-      let target_asset = create_asset(
-        "render.js",
-        "
-          const Component = () => {
-            return <div>Hello World</div>;
-          };
-
-          export default Component;
-        ",
-      );
-
-      // Set up package.json WITHOUT React dependency
-      file_system.write_file(
-        Path::new("package.json"),
-        r#"{ "dependencies": {} }"#.to_string(),
-      );
-
-      let result = run_test(TestOptions {
-        asset: target_asset.clone(),
-        file_system: Some(file_system),
-        ..TestOptions::default()
-      })
-      .await;
-
-      // JSX parsing should fail
-      assert!(
-        result.is_err(),
-        "JSX parsing should fail when no React dependency and no tsconfig. Error: {:?}",
         result.err()
       );
 
@@ -1277,6 +1496,15 @@ mod tests {
       let result = run_test(TestOptions {
         asset: target_asset.clone(),
         file_system: Some(file_system),
+        js_transformer_config: Some(JsTransformerConfig {
+          jsx: Some(JsxOptions {
+            pragma: Some("React.createElement".to_string()),
+            pragma_fragment: Some("React.Fragment".to_string()),
+            import_source: None,
+            automatic_runtime: None,
+          }),
+          ..Default::default()
+        }),
         ..TestOptions::default()
       })
       .await;
@@ -1306,7 +1534,7 @@ mod tests {
       Ok(())
     }
 
-    // v3JsxConfigurationLoading CLEANUP NOTE: Remove this test after rollout.
+    // newJsxConfig CLEANUP NOTE: Remove this test after rollout.
     #[tokio::test(flavor = "multi_thread")]
     async fn js_file_with_react_only_feature_flag_off() -> anyhow::Result<()> {
       // Case 3: .js file with React dependency but NO tsconfig
@@ -1336,10 +1564,7 @@ mod tests {
       let result = run_test(TestOptions {
         asset: target_asset.clone(),
         file_system: Some(file_system.clone()),
-        feature_flags: Some(FeatureFlags::with_bool_flag(
-          "v3JsxConfigurationLoading",
-          false,
-        )),
+        feature_flags: Some(FeatureFlags::with_bool_flag("newJsxConfig", false)),
         ..TestOptions::default()
       })
       .await;
@@ -1767,6 +1992,7 @@ mod tests {
     file_system: Option<FileSystemRef>,
     project_root: Option<PathBuf>,
     feature_flags: Option<FeatureFlags>,
+    js_transformer_config: Option<JsTransformerConfig>,
   }
 
   async fn run_test(options: TestOptions) -> anyhow::Result<TransformResult> {
@@ -1776,12 +2002,13 @@ mod tests {
       .file_system
       .unwrap_or_else(|| default_fs(&project_root));
 
-    // v3JsxConfigurationLoading CLEANUP NOTE: Remove 'flag enabled for tests by default' logic
+    // newJsxConfig CLEANUP NOTE: Remove 'flag enabled for tests by default' logic
     let plugin_options = PluginOptions {
       feature_flags: options
         .feature_flags
         .unwrap_or_default()
-        .with_bool_flag_default("v3JsxConfigurationLoading", true),
+        .with_bool_flag_default("newJsxConfig", true),
+      project_root: project_root.clone(),
       ..PluginOptions::default()
     };
 
@@ -1796,7 +2023,12 @@ mod tests {
       options: Arc::new(plugin_options),
     };
 
-    let transformer = AtlaspackJsTransformerPlugin::new(&ctx)?;
+    let mut transformer = AtlaspackJsTransformerPlugin::new(&ctx)?;
+
+    // Override config if provided in test options
+    if let Some(js_transformer_config) = options.js_transformer_config {
+      transformer.config = js_transformer_config;
+    }
     let context = TransformContext::new(
       Arc::new(ConfigLoader {
         fs: file_system,

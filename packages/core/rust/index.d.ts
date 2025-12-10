@@ -183,6 +183,7 @@ export interface Replacement {
 }
 export declare function performStringReplacements(input: string, replacements: Array<Replacement>): string
 export declare function transform(opts: object): unknown
+export declare function determineJsxConfiguration(filePath: string, isSource: boolean, config: object, projectRoot: string): unknown
 export declare function transformAsync(opts: object): object
 export declare function getVcsStateSnapshot(path: string, excludePatterns: Array<string>): object
 export declare function getEventsSince(repoPath: string, vcsStateSnapshot: unknown, newRev?: string | undefined | null): object

@@ -27,6 +27,7 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::OnceLock;
 
 use atlaspack_contextual_imports::ContextualImportsConfig;
 use atlaspack_contextual_imports::ContextualImportsInlineRequireVisitor;
@@ -45,6 +46,7 @@ pub use dependency_collector::dependency_collector;
 use env_replacer::*;
 use esm_to_cjs_replacer::EsmToCjsReplacer;
 use fs::inline_fs;
+use glob_match::glob_match;
 use global_aliaser::GlobalAliaser;
 use global_replacer::GlobalReplacer;
 pub use hoist::ExportedSymbol;
@@ -59,6 +61,7 @@ use path_slash::PathExt;
 use pathdiff::diff_paths;
 use react_async_import_lift::ReactAsyncImportLift;
 use react_hooks_remover::ReactHooksRemover;
+use regex::Regex;
 use serde::Deserialize;
 use serde::Serialize;
 use static_prevaluator::StaticPreEvaluator;
@@ -889,5 +892,214 @@ mod tests {
         n => Err(format!("Expected one matching log, but found {}", n)),
       }
     });
+  }
+}
+
+// JSX Configuration types and functions for NAPI sharing
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JsxConfiguration {
+  #[serde(rename = "isJSX")]
+  pub is_jsx: bool,
+  pub jsx_pragma: Option<String>,
+  pub jsx_pragma_frag: Option<String>,
+  pub jsx_import_source: Option<String>,
+  #[serde(rename = "automaticJSXRuntime")]
+  pub automatic_jsx_runtime: bool,
+  pub react_refresh: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct AutomaticRuntimeGlobs {
+  pub include: Vec<String>,
+  pub exclude: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum AutomaticReactRuntime {
+  Enabled(bool),
+  Glob(AutomaticRuntimeGlobs),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JsxOptions {
+  pub pragma: Option<String>,
+  pub pragma_fragment: Option<String>,
+  pub import_source: Option<String>,
+  pub automatic_runtime: Option<AutomaticReactRuntime>,
+}
+
+/// Returns the relative path from `from` to `path` as a `String`.
+/// e.g. for path="/a/b/c/d.txt" and from="/a/b", returns "c/d.txt"
+/// and for path="/a/b/c/d.txt" and from="/a/b/e", returns "../c/d.txt"
+///
+/// Optimized for performance when called frequently (e.g., 100k times per build).
+pub fn relative_path(path: &Path, from: &Path) -> String {
+  // Collect components once - unavoidable allocation for comparison
+  let path_components: Vec<_> = path.components().collect();
+  let from_components: Vec<_> = from.components().collect();
+
+  // Find common prefix length
+  let common_len = path_components
+    .iter()
+    .zip(from_components.iter())
+    .take_while(|(a, b)| a == b)
+    .count();
+
+  let ups = from_components.len() - common_len;
+  let remaining = &path_components[common_len..];
+
+  // Early return for same path
+  if ups == 0 && remaining.is_empty() {
+    return ".".to_string();
+  }
+
+  // Pre-calculate capacity to avoid string reallocations
+  let mut capacity = 0;
+  if ups > 0 {
+    capacity += ups * 3; // "../" for each up
+    if ups > 1 {
+      capacity -= 1; // one less separator
+    }
+  }
+  if !remaining.is_empty() {
+    if ups > 0 {
+      capacity += 1; // separator between ups and remaining
+    }
+    for (i, component) in remaining.iter().enumerate() {
+      if let Some(name) = component.as_os_str().to_str() {
+        capacity += name.len();
+        if i < remaining.len() - 1 {
+          capacity += 1; // separator
+        }
+      }
+    }
+  }
+
+  let mut result = String::with_capacity(capacity);
+
+  // Add ".." components - build string directly to avoid intermediate allocations
+  for i in 0..ups {
+    if i > 0 {
+      result.push('/');
+    }
+    result.push_str("..");
+  }
+
+  // Add remaining path components
+  for (i, component) in remaining.iter().enumerate() {
+    if ups > 0 || i > 0 {
+      result.push('/');
+    }
+    if let Some(name) = component.as_os_str().to_str() {
+      result.push_str(name);
+    }
+  }
+
+  result
+}
+
+static IS_RUNTIME_REGEX: OnceLock<Regex> = OnceLock::new();
+
+/// Standalone version of determine_jsx_configuration that can be shared with JS via NAPI
+/// This whole file should just be moved into the
+/// atlaspack_plugin_transformer_js crate onces V3 is fully rolled out
+pub fn determine_jsx_configuration(
+  file_path: &Path,
+  file_type: &str, // "js", "jsx", "ts", "tsx"
+  is_source: bool,
+  config: &Option<JsxOptions>,
+  project_root: &Path,
+) -> JsxConfiguration {
+  let is_jsx = match file_type {
+    "jsx" | "tsx" => {
+      // .jsx and .tsx files should always have JSX enabled
+      true
+    }
+    "js" => {
+      // Enable JSX for all JS files in source
+      is_source
+    }
+    _ => false,
+  };
+
+  let mut jsx_pragma = None;
+  let mut jsx_pragma_frag = None;
+  let mut jsx_import_source = None;
+  let mut automatic_jsx_runtime = false;
+
+  if is_jsx {
+    if let Some(jsx_config) = &config {
+      // Use JSX options from transformer config if provided
+      jsx_pragma = jsx_config
+        .pragma
+        .clone()
+        .unwrap_or_else(|| "React.createElement".to_string())
+        .into();
+
+      jsx_pragma_frag = jsx_config
+        .pragma_fragment
+        .clone()
+        .unwrap_or_else(|| "React.Fragment".to_string())
+        .into();
+
+      jsx_import_source = jsx_config.import_source.clone();
+    } else {
+      jsx_pragma = Some("React.createElement".to_string());
+      jsx_pragma_frag = Some("React.Fragment".to_string());
+    }
+
+    // Update automatic_jsx_runtime based on config
+    if let Some(jsx_config) = &config
+      && let Some(automatic_runtime) = &jsx_config.automatic_runtime
+    {
+      automatic_jsx_runtime = match automatic_runtime {
+        AutomaticReactRuntime::Enabled(enabled) => *enabled,
+        AutomaticReactRuntime::Glob(globs) => {
+          let relative_path_str = relative_path(file_path, project_root);
+
+          // Check if file matches any include pattern
+          let matches_include = globs
+            .include
+            .iter()
+            .any(|glob| glob_match(glob, &relative_path_str));
+
+          // If it doesn't match includes, automatic runtime is false
+          if matches_include && let Some(excludes) = &globs.exclude {
+            // Check if file matches any exclude pattern
+            let matches_exclude = excludes
+              .iter()
+              .any(|glob| glob_match(glob, &relative_path_str));
+
+            // If it matches excludes, automatic runtime is false (exclude wins)
+            !matches_exclude
+          } else {
+            matches_include
+          }
+        }
+      }
+    }
+  }
+
+  let react_refresh = is_source
+    && file_path.to_str().is_some_and(|fp_str| {
+      // Exclude runtime files from react refresh
+      // TODO: Find a better way to exclude these or remove when we no longer
+      // use runtime files
+      !IS_RUNTIME_REGEX
+        .get_or_init(|| Regex::new(r"\/runtime-[0-9a-f]{16}\.js$").unwrap())
+        .is_match(fp_str)
+    });
+
+  JsxConfiguration {
+    is_jsx,
+    jsx_pragma,
+    jsx_pragma_frag,
+    jsx_import_source,
+    automatic_jsx_runtime,
+    react_refresh,
   }
 }
