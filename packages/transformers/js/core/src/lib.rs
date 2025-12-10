@@ -1068,9 +1068,7 @@ pub fn determine_jsx_configuration(
             .any(|glob| glob_match(glob, &relative_path_str));
 
           // If it doesn't match includes, automatic runtime is false
-          if !matches_include {
-            false
-          } else if let Some(excludes) = &globs.exclude {
+          if matches_include && let Some(excludes) = &globs.exclude {
             // Check if file matches any exclude pattern
             let matches_exclude = excludes
               .iter()
@@ -1079,8 +1077,7 @@ pub fn determine_jsx_configuration(
             // If it matches excludes, automatic runtime is false (exclude wins)
             !matches_exclude
           } else {
-            // File matches includes and no excludes specified
-            true
+            matches_include
           }
         }
       }
