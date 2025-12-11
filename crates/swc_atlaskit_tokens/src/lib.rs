@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
 use swc_core::common::{DUMMY_SP, Spanned, comments::Comments, errors::HANDLER};
@@ -15,54 +15,55 @@ pub mod generated {
   include!("generated/token_data.rs");
 }
 
-static TOKEN_NAMES_MAP: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
-  let mut m = HashMap::with_capacity(generated::TOKEN_NAMES.len());
+static TOKEN_NAMES_MAP: LazyLock<BTreeMap<&'static str, &'static str>> = LazyLock::new(|| {
+  let mut m = BTreeMap::new();
   for (k, v) in generated::TOKEN_NAMES.iter() {
     m.insert(*k, *v);
   }
   m
 });
 
-static LIGHT_VALUES_MAP: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
-  let mut m = HashMap::with_capacity(generated::LIGHT_VALUES.len());
+static LIGHT_VALUES_MAP: LazyLock<BTreeMap<&'static str, &'static str>> = LazyLock::new(|| {
+  let mut m = BTreeMap::new();
   for (k, v) in generated::LIGHT_VALUES.iter() {
     m.insert(*k, *v);
   }
   m
 });
 
-static LEGACY_LIGHT_VALUES_MAP: LazyLock<HashMap<&'static str, &'static str>> =
+static LEGACY_LIGHT_VALUES_MAP: LazyLock<BTreeMap<&'static str, &'static str>> =
   LazyLock::new(|| {
-    let mut m = HashMap::with_capacity(generated::LEGACY_LIGHT_VALUES.len());
+    let mut m = BTreeMap::new();
     for (k, v) in generated::LEGACY_LIGHT_VALUES.iter() {
       m.insert(*k, *v);
     }
     m
   });
 
-static SHAPE_VALUES_MAP: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
-  let mut m = HashMap::with_capacity(generated::SHAPE_VALUES.len());
+static SHAPE_VALUES_MAP: LazyLock<BTreeMap<&'static str, &'static str>> = LazyLock::new(|| {
+  let mut m = BTreeMap::new();
   for (k, v) in generated::SHAPE_VALUES.iter() {
     m.insert(*k, *v);
   }
   m
 });
 
-static SPACING_VALUES_MAP: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
-  let mut m = HashMap::with_capacity(generated::SPACING_VALUES.len());
+static SPACING_VALUES_MAP: LazyLock<BTreeMap<&'static str, &'static str>> = LazyLock::new(|| {
+  let mut m = BTreeMap::new();
   for (k, v) in generated::SPACING_VALUES.iter() {
     m.insert(*k, *v);
   }
   m
 });
 
-static TYPOGRAPHY_VALUES_MAP: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
-  let mut m = HashMap::with_capacity(generated::TYPOGRAPHY_VALUES.len());
-  for (k, v) in generated::TYPOGRAPHY_VALUES.iter() {
-    m.insert(*k, *v);
-  }
-  m
-});
+static TYPOGRAPHY_VALUES_MAP: LazyLock<BTreeMap<&'static str, &'static str>> =
+  LazyLock::new(|| {
+    let mut m = BTreeMap::new();
+    for (k, v) in generated::TYPOGRAPHY_VALUES.iter() {
+      m.insert(*k, *v);
+    }
+    m
+  });
 
 pub fn design_system_tokens_visitor<C>(
   comments: C,
@@ -111,10 +112,10 @@ where
     &self,
     key: &str,
     token_map_accessor: F,
-    fallback_map: &HashMap<&'static str, &'static str>,
+    fallback_map: &BTreeMap<&'static str, &'static str>,
   ) -> Option<String>
   where
-    F: Fn(&TokenMap) -> &HashMap<String, String>,
+    F: Fn(&TokenMap) -> &BTreeMap<String, String>,
   {
     if let Some(token_map) = self.token_map {
       token_map_accessor(token_map).get(key).cloned()

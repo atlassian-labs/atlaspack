@@ -3,21 +3,21 @@ use parking_lot::Mutex;
 use serde_json::Value;
 use serde_json5::from_str;
 use std::{
-  collections::HashMap,
+  collections::BTreeMap,
   fs,
   path::{Path, PathBuf},
   sync::{Arc, LazyLock},
 };
 
 /// Represents a collection of design tokens organized by category
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct TokenMap {
-  pub token_names: HashMap<String, String>,
-  pub light_values: HashMap<String, String>,
-  pub legacy_light_values: HashMap<String, String>,
-  pub shape_values: HashMap<String, String>,
-  pub spacing_values: HashMap<String, String>,
-  pub typography_values: HashMap<String, String>,
+  pub token_names: BTreeMap<String, String>,
+  pub light_values: BTreeMap<String, String>,
+  pub legacy_light_values: BTreeMap<String, String>,
+  pub shape_values: BTreeMap<String, String>,
+  pub spacing_values: BTreeMap<String, String>,
+  pub typography_values: BTreeMap<String, String>,
 }
 
 /// Categories of design tokens
@@ -41,12 +41,12 @@ impl TokenMap {
   /// Creates a new empty TokenMap
   pub fn new() -> Self {
     Self {
-      token_names: HashMap::new(),
-      light_values: HashMap::new(),
-      legacy_light_values: HashMap::new(),
-      shape_values: HashMap::new(),
-      spacing_values: HashMap::new(),
-      typography_values: HashMap::new(),
+      token_names: BTreeMap::new(),
+      light_values: BTreeMap::new(),
+      legacy_light_values: BTreeMap::new(),
+      shape_values: BTreeMap::new(),
+      spacing_values: BTreeMap::new(),
+      typography_values: BTreeMap::new(),
     }
   }
 
@@ -75,8 +75,8 @@ impl TokenMap {
   }
 }
 
-static SHARED_TOKEN_DATA: LazyLock<Mutex<HashMap<String, Arc<TokenMap>>>> =
-  LazyLock::new(|| Mutex::new(HashMap::new()));
+static SHARED_TOKEN_DATA: LazyLock<Mutex<BTreeMap<String, Arc<TokenMap>>>> =
+  LazyLock::new(|| Mutex::new(BTreeMap::new()));
 
 pub fn get_or_load_token_map_from_json<P: AsRef<Path>>(
   path: Option<P>,
@@ -108,7 +108,7 @@ pub fn load_token_map_from_json(json_path: &PathBuf) -> Result<TokenMap> {
 
   let mut token_map = TokenMap::new();
 
-  let load_map = |map: &mut HashMap<String, String>, key: &str| {
+  let load_map = |map: &mut BTreeMap<String, String>, key: &str| {
     if let Some(values) = data.get(key).and_then(|v| v.as_object()) {
       for (k, v) in values {
         if let Some(val_str) = v.as_str() {

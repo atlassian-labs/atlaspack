@@ -1,7 +1,7 @@
 use anyhow::Context;
 use atlaspack_atlaskit_tokens::{
-  TokensConfig as SharedTokensConfig, TokensPluginOptions as SharedTokensPluginOptions,
-  TokensPluginResult as SharedTokensPluginResult, process_tokens_sync,
+  AtlaskitTokensHandler, TokensConfig as SharedTokensConfig,
+  TokensPluginOptions as SharedTokensPluginOptions, TokensPluginResult as SharedTokensPluginResult,
 };
 use napi::{Env, Error as NapiError, JsObject, bindgen_prelude::Buffer};
 use napi_derive::napi;
@@ -65,23 +65,25 @@ pub fn apply_tokens_plugin(
   let (deferred, promise) = env.create_deferred()?;
 
   // Convert to shared config
-  let shared_config = SharedTokensConfig {
-    filename: config.filename,
-    project_root: config.project_root,
-    is_source: config.is_source,
-    source_maps: config.source_maps,
-    tokens_options: SharedTokensPluginOptions {
-      token_data_path: config.tokens_options.token_data_path,
-      should_use_auto_fallback: config.tokens_options.should_use_auto_fallback,
-      should_force_auto_fallback: config.tokens_options.should_force_auto_fallback,
-      force_auto_fallback_exemptions: config.tokens_options.force_auto_fallback_exemptions,
-      default_theme: config.tokens_options.default_theme,
-    },
+  let shared_config = SharedTokensPluginOptions {
+    token_data_path: config.tokens_options.token_data_path,
+    should_use_auto_fallback: config.tokens_options.should_use_auto_fallback,
+    should_force_auto_fallback: config.tokens_options.should_force_auto_fallback,
+    force_auto_fallback_exemptions: config.tokens_options.force_auto_fallback_exemptions,
+    default_theme: config.tokens_options.default_theme,
   };
 
   // Spawn the work on a Rayon thread
   rayon::spawn(move || {
-    let result = process_tokens_sync(&code, &shared_config);
+    let result =
+      AtlaskitTokensHandler::new(config.project_root, shared_config).and_then(|handler| {
+        let shared_tokens_config = SharedTokensConfig {
+          filename: config.filename,
+          is_source: config.is_source,
+          source_maps: config.source_maps,
+        };
+        handler.process(&code, shared_tokens_config)
+      });
     match result {
       Ok(plugin_result) => {
         let napi_result: TokensPluginResult = plugin_result.into();
@@ -100,8 +102,8 @@ pub fn apply_tokens_plugin(
 mod tests {
   use anyhow::Result;
   use atlaspack_atlaskit_tokens::{
-    TokensConfig as SharedTokensConfig, TokensPluginOptions as SharedTokensPluginOptions,
-    process_tokens_sync,
+    TokensPluginOptions as SharedTokensPluginOptions,
+    TokensPluginResult as SharedTokensPluginResult,
   };
   use indoc::indoc;
   use std::fs;
@@ -145,24 +147,28 @@ mod tests {
     }
   }
 
-  // Helper function to convert NAPI config to shared config for tests
-  fn to_shared_config(config: &TokensConfig) -> SharedTokensConfig {
-    SharedTokensConfig {
+  // Helper function for synchronous token processing in tests
+  fn process_tokens_sync(
+    code: &str,
+    config: &TokensConfig,
+  ) -> anyhow::Result<SharedTokensPluginResult> {
+    use atlaspack_atlaskit_tokens::{AtlaskitTokensHandler, TokensConfig as AtlaskitTokensConfig};
+
+    let shared_plugin_options = SharedTokensPluginOptions {
+      token_data_path: config.tokens_options.token_data_path.clone(),
+      should_use_auto_fallback: config.tokens_options.should_use_auto_fallback,
+      should_force_auto_fallback: config.tokens_options.should_force_auto_fallback,
+      force_auto_fallback_exemptions: config.tokens_options.force_auto_fallback_exemptions.clone(),
+      default_theme: config.tokens_options.default_theme.clone(),
+    };
+
+    let handler = AtlaskitTokensHandler::new(config.project_root.clone(), shared_plugin_options)?;
+    let atlaskit_tokens_config = AtlaskitTokensConfig {
       filename: config.filename.clone(),
-      project_root: config.project_root.clone(),
       is_source: config.is_source,
       source_maps: config.source_maps,
-      tokens_options: SharedTokensPluginOptions {
-        token_data_path: config.tokens_options.token_data_path.clone(),
-        should_use_auto_fallback: config.tokens_options.should_use_auto_fallback,
-        should_force_auto_fallback: config.tokens_options.should_force_auto_fallback,
-        force_auto_fallback_exemptions: config
-          .tokens_options
-          .force_auto_fallback_exemptions
-          .clone(),
-        default_theme: config.tokens_options.default_theme.clone(),
-      },
-    }
+    };
+    handler.process(code, atlaskit_tokens_config)
   }
 
   #[test]
@@ -181,14 +187,13 @@ mod tests {
   fn test_successful_token_transformation() {
     let temp_file = create_test_token_file().expect("Failed to create temp file");
     let napi_config = create_test_config(temp_file.path().to_str().unwrap(), true);
-    let config = to_shared_config(&napi_config);
 
     let code = indoc! {r#"
       import { token } from '@atlaskit/tokens';
       const textColor = token('color.text');
     "#};
 
-    let result = process_tokens_sync(code, &config);
+    let result = process_tokens_sync(code, &napi_config);
     assert!(result.is_ok(), "Token transformation should succeed");
 
     let transformed = result.unwrap();
@@ -201,14 +206,13 @@ mod tests {
   #[test]
   fn test_missing_token_file_error() {
     let napi_config = create_test_config("/nonexistent/path/tokens.json", true);
-    let config = to_shared_config(&napi_config);
 
     let code = indoc! {r#"
       import { token } from '@atlaskit/tokens';
       const textColor = token('color.text');
     "#};
 
-    let result = process_tokens_sync(code, &config);
+    let result = process_tokens_sync(code, &napi_config);
     assert!(result.is_err());
     let error = result.unwrap_err();
     let error_string = error.to_string();
@@ -223,14 +227,13 @@ mod tests {
   fn test_invalid_javascript_syntax_error() {
     let temp_file = create_test_token_file().expect("Failed to create temp file");
     let napi_config = create_test_config(temp_file.path().to_str().unwrap(), true);
-    let config = to_shared_config(&napi_config);
 
     let invalid_code = indoc! {r#"
       import { token from '@atlaskit/tokens'; // Missing closing brace
       const textColor = token('color.text');
     "#};
 
-    let result = process_tokens_sync(invalid_code, &config);
+    let result = process_tokens_sync(invalid_code, &napi_config);
     assert!(result.is_err(), "Invalid syntax should result in an error");
     let error = result.unwrap_err();
     let error_string = error.to_string();
@@ -246,7 +249,6 @@ mod tests {
   fn test_typescript_syntax_support() {
     let temp_file = create_test_token_file().expect("Failed to create temp file");
     let napi_config = create_test_config(temp_file.path().to_str().unwrap(), true);
-    let config = to_shared_config(&napi_config);
 
     let ts_code = indoc! {r#"
       import { token } from '@atlaskit/tokens';
@@ -256,7 +258,7 @@ mod tests {
       }
     "#};
 
-    let result = process_tokens_sync(ts_code, &config);
+    let result = process_tokens_sync(ts_code, &napi_config);
     assert!(result.is_ok(), "TypeScript syntax should be supported");
   }
 
@@ -264,14 +266,13 @@ mod tests {
   fn test_jsx_syntax_support() {
     let temp_file = create_test_token_file().expect("Failed to create temp file");
     let napi_config = create_test_config(temp_file.path().to_str().unwrap(), true);
-    let config = to_shared_config(&napi_config);
 
     let jsx_code = indoc! {r#"
       import { token } from '@atlaskit/tokens';
       const Component = () => <div style={{color: token('color.text')}}>Hello</div>;
     "#};
 
-    let result = process_tokens_sync(jsx_code, &config);
+    let result = process_tokens_sync(jsx_code, &napi_config);
     assert!(result.is_ok(), "JSX syntax should be supported");
   }
 
@@ -280,14 +281,13 @@ mod tests {
     let temp_file = create_test_token_file().expect("Failed to create temp file");
     let mut napi_config = create_test_config(temp_file.path().to_str().unwrap(), true);
     napi_config.tokens_options.default_theme = "dark".to_string();
-    let config = to_shared_config(&napi_config);
 
     let code = indoc! {r#"
       import { token } from '@atlaskit/tokens';
       const textColor = token('color.text');
     "#};
 
-    let result = process_tokens_sync(code, &config);
+    let result = process_tokens_sync(code, &napi_config);
     assert!(result.is_ok(), "Different theme configuration should work");
   }
 
@@ -297,14 +297,13 @@ mod tests {
     let mut napi_config = create_test_config(temp_file.path().to_str().unwrap(), true);
     napi_config.tokens_options.should_use_auto_fallback = false;
     napi_config.tokens_options.should_force_auto_fallback = false;
-    let config = to_shared_config(&napi_config);
 
     let code = indoc! {r#"
       import { token } from '@atlaskit/tokens';
       const textColor = token('color.text');
     "#};
 
-    let result = process_tokens_sync(code, &config);
+    let result = process_tokens_sync(code, &napi_config);
     assert!(result.is_ok(), "Auto fallback configuration should work");
   }
 
@@ -313,14 +312,13 @@ mod tests {
     let temp_file = create_test_token_file().expect("Failed to create temp file");
     let mut napi_config = create_test_config(temp_file.path().to_str().unwrap(), true);
     napi_config.tokens_options.force_auto_fallback_exemptions = vec!["color.text".to_string()];
-    let config = to_shared_config(&napi_config);
 
     let code = indoc! {r#"
       import { token } from '@atlaskit/tokens';
       const textColor = token('color.text');
     "#};
 
-    let result = process_tokens_sync(code, &config);
+    let result = process_tokens_sync(code, &napi_config);
     assert!(result.is_ok(), "Force auto fallback exemptions should work");
   }
 
@@ -328,7 +326,6 @@ mod tests {
   fn test_is_source_flag_behavior() {
     let temp_file = create_test_token_file().expect("Failed to create temp file");
     let napi_config = create_test_config(temp_file.path().to_str().unwrap(), true);
-    let config = to_shared_config(&napi_config);
 
     let code = indoc! {r#"
       import { token } from '@atlaskit/tokens';
@@ -336,11 +333,11 @@ mod tests {
     "#};
 
     // Test with is_source = true
-    let result_source = process_tokens_sync(code, &config);
+    let result_source = process_tokens_sync(code, &napi_config);
     assert!(result_source.is_ok(), "is_source=true should work");
 
     // Test with is_source = false
-    let result_not_source = process_tokens_sync(code, &config);
+    let result_not_source = process_tokens_sync(code, &napi_config);
     assert!(result_not_source.is_ok(), "is_source=false should work");
   }
 
@@ -348,10 +345,9 @@ mod tests {
   fn test_empty_code_input() {
     let temp_file = create_test_token_file().expect("Failed to create temp file");
     let napi_config = create_test_config(temp_file.path().to_str().unwrap(), true);
-    let config = to_shared_config(&napi_config);
 
     let empty_code = "";
-    let result = process_tokens_sync(empty_code, &config);
+    let result = process_tokens_sync(empty_code, &napi_config);
 
     // Empty code should result in an error since we now check for it
     assert!(result.is_err(), "Empty code should result in an error");
@@ -361,14 +357,13 @@ mod tests {
   fn test_code_without_tokens() {
     let temp_file = create_test_token_file().expect("Failed to create temp file");
     let napi_config = create_test_config(temp_file.path().to_str().unwrap(), true);
-    let config = to_shared_config(&napi_config);
 
     let code_without_tokens = indoc! {r#"
       const greeting = "Hello, world!";
       console.log(greeting);
     "#};
 
-    let result = process_tokens_sync(code_without_tokens, &config);
+    let result = process_tokens_sync(code_without_tokens, &napi_config);
 
     // Code without tokens should still be processed successfully
     // Even if there are no tokens to transform, the code should parse and emit correctly
@@ -392,14 +387,13 @@ mod tests {
   fn test_sourcemap_generation() {
     let temp_file = create_test_token_file().expect("Failed to create temp file");
     let napi_config = create_test_config(temp_file.path().to_str().unwrap(), true);
-    let config = to_shared_config(&napi_config);
 
     let code = indoc! {r#"
       import { token } from '@atlaskit/tokens';
       const textColor = token('color.text');
     "#};
 
-    let result = process_tokens_sync(code, &config);
+    let result = process_tokens_sync(code, &napi_config);
     assert!(result.is_ok(), "Token transformation should succeed");
 
     let transformed = result.unwrap();
@@ -423,14 +417,13 @@ mod tests {
   fn test_no_sourcemap_when_disabled() {
     let temp_file = create_test_token_file().expect("Failed to create temp file");
     let napi_config = create_test_config(temp_file.path().to_str().unwrap(), false);
-    let config = to_shared_config(&napi_config);
 
     let code = indoc! {r#"
       import { token } from '@atlaskit/tokens';
       const textColor = token('color.text');
     "#};
 
-    let result = process_tokens_sync(code, &config);
+    let result = process_tokens_sync(code, &napi_config);
     assert!(result.is_ok(), "Token transformation should succeed");
 
     let transformed = result.unwrap();
@@ -450,7 +443,6 @@ mod tests {
   fn test_preserve_unicode_characters_in_react_attributes() {
     let temp_file = create_test_token_file().expect("Failed to create temp file");
     let napi_config = create_test_config(temp_file.path().to_str().unwrap(), true);
-    let config = to_shared_config(&napi_config);
 
     let code = indoc! {r#"
       import { token } from '@atlaskit/tokens';
@@ -462,7 +454,7 @@ mod tests {
 
       const t = Component();
     "#};
-    let result = process_tokens_sync(code, &config);
+    let result = process_tokens_sync(code, &napi_config);
     assert!(
       result.is_ok(),
       "Unicode characters should be preserved in React attributes"
