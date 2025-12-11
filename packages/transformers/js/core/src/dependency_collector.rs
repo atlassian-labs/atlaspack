@@ -16,8 +16,8 @@ use swc_core::common::Spanned;
 use swc_core::common::sync::Lrc;
 use swc_core::common::{Mark, SourceMap, SyntaxContext};
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::JsWord;
-use swc_core::ecma::atoms::js_word;
+use swc_core::ecma::atoms::Atom;
+use swc_core::ecma::atoms::atom;
 use swc_core::ecma::utils::member_expr;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
@@ -38,8 +38,8 @@ pub struct DependencyDescriptor {
   pub kind: DependencyKind,
   pub loc: SourceLocation,
   /// The text specifier associated with the import/export statement.
-  pub specifier: swc_core::ecma::atoms::JsWord,
-  pub attributes: Option<HashMap<swc_core::ecma::atoms::JsWord, bool>>,
+  pub specifier: swc_core::ecma::atoms::Atom,
+  pub attributes: Option<HashMap<swc_core::ecma::atoms::Atom, bool>>,
   pub is_optional: bool,
   pub is_helper: bool,
   pub source_type: Option<SourceType>,
@@ -88,13 +88,13 @@ struct DependencyCollector<'a> {
 impl DependencyCollector<'_> {
   fn add_dependency(
     &mut self,
-    mut specifier: JsWord,
+    mut specifier: Atom,
     span: swc_core::common::Span,
     kind: DependencyKind,
-    attributes: Option<HashMap<swc_core::ecma::atoms::JsWord, bool>>,
+    attributes: Option<HashMap<swc_core::ecma::atoms::Atom, bool>>,
     is_optional: bool,
     source_type: SourceType,
-  ) -> Option<JsWord> {
+  ) -> Option<Atom> {
     // Rewrite SWC helpers from ESM to CJS for library output.
     let mut is_specifier_rewritten = false;
     if self.config.is_library
@@ -145,7 +145,7 @@ impl DependencyCollector<'_> {
 
   fn add_url_dependency(
     &mut self,
-    specifier: JsWord,
+    specifier: Atom,
     span: swc_core::common::Span,
     kind: DependencyKind,
     source_type: SourceType,
@@ -193,7 +193,7 @@ impl DependencyCollector<'_> {
     )
   }
 
-  fn create_require(&mut self, specifier: JsWord) -> CallExpr {
+  fn create_require(&mut self, specifier: Atom) -> CallExpr {
     let mut res = create_require(specifier, self.unresolved_mark);
 
     // For scripts, we replace with __parcel__require__, which is later replaced
@@ -485,13 +485,19 @@ impl VisitMut for DependencyCollector<'_> {
             }
           }
           Expr::Member(member) => {
-            if match_member_expr(member, vec!["module", "require"], self.unresolved_mark) {
+            if match_member_expr(
+              member,
+              vec!["module", "require"],
+              self.unresolved_mark,
+              None,
+            ) {
               DependencyKind::Require
             } else if self.config.is_browser
               && match_member_expr(
                 member,
                 vec!["navigator", "serviceWorker", "register"],
                 self.unresolved_mark,
+                None,
               )
             {
               DependencyKind::ServiceWorker
@@ -500,6 +506,7 @@ impl VisitMut for DependencyCollector<'_> {
                 member,
                 vec!["CSS", "paintWorklet", "addModule"],
                 self.unresolved_mark,
+                None,
               )
             {
               DependencyKind::Worklet
@@ -508,10 +515,19 @@ impl VisitMut for DependencyCollector<'_> {
 
               // Match compiled dynamic imports (Atlaspack)
               // Promise.resolve(require('foo'))
-              if match_member_expr(member, vec!["Promise", "resolve"], self.unresolved_mark)
-                && let Some(expr) = node.args.first()
-                && match_require(&expr.expr, self.unresolved_mark, Mark::fresh(Mark::root()))
-                  .is_some()
+              if match_member_expr(
+                member,
+                vec!["Promise", "resolve"],
+                self.unresolved_mark,
+                None,
+              ) && let Some(expr) = node.args.first()
+                && match_require(
+                  &expr.expr,
+                  self.unresolved_mark,
+                  Mark::fresh(Mark::root()),
+                  None,
+                )
+                .is_some()
               {
                 self.in_promise = true;
                 node.visit_mut_children_with(self);
@@ -528,7 +544,7 @@ impl VisitMut for DependencyCollector<'_> {
               if let Expr::Call(call) = &*member.obj
                 && let Callee::Expr(e) = &call.callee
                   && let Expr::Member(m) = &**e
-                    && match_member_expr(m, vec!["Promise", "resolve"], self.unresolved_mark) &&
+                    && match_member_expr(m, vec!["Promise", "resolve"], self.unresolved_mark, None) &&
                       // Make sure the arglist is empty.
                       // I.e. do not proceed with the below unless Promise.resolve has an empty arglist
                       // because build_promise_chain() will not work in this case.
@@ -858,7 +874,7 @@ impl VisitMut for DependencyCollector<'_> {
       ..
     } = &node
       && let Expr::Ident(ident) = &**arg
-      && ident.sym == js_word!("require")
+      && ident.sym == atom!("require")
       && is_unresolved(ident, self.unresolved_mark)
     {
       return;
@@ -1004,7 +1020,7 @@ impl VisitMut for DependencyCollector<'_> {
       if !self.config.is_library && !self.config.standalone {
         *node = Expr::New(NewExpr {
           span: DUMMY_SP,
-          callee: Box::new(Expr::Ident(Ident::new_no_ctxt(js_word!("URL"), DUMMY_SP))),
+          callee: Box::new(Expr::Ident(Ident::new_no_ctxt(atom!("URL"), DUMMY_SP))),
           ctxt: SyntaxContext::empty(),
           args: Some(vec![ExprOrSpread {
             expr: Box::new(url),
@@ -1023,12 +1039,12 @@ impl VisitMut for DependencyCollector<'_> {
     let is_require = match &node {
       Expr::Ident(ident) => {
         // Free `require` -> undefined
-        ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark)
+        ident.sym == atom!("require") && is_unresolved(ident, self.unresolved_mark)
       }
       Expr::Member(MemberExpr { obj: expr, .. }) => {
         // e.g. `require.extensions` -> undefined
         if let Expr::Ident(ident) = &**expr {
-          ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark)
+          ident.sym == atom!("require") && is_unresolved(ident, self.unresolved_mark)
         } else {
           false
         }
@@ -1108,7 +1124,13 @@ impl DependencyCollector<'_> {
         && let Expr::Ident(id) = &**callee
         && id.to_id() == resolve_id
         && let Some(arg) = call.args.first()
-        && match_require(&arg.expr, self.unresolved_mark, Mark::fresh(Mark::root())).is_some()
+        && match_require(
+          &arg.expr,
+          self.unresolved_mark,
+          Mark::fresh(Mark::root()),
+          None,
+        )
+        .is_some()
       {
         let was_in_promise = self.in_promise;
         self.in_promise = true;
@@ -1238,7 +1260,7 @@ fn create_url_constructor(url: Expr, use_import_meta: bool) -> Expr {
         kind: MetaPropKind::ImportMeta,
         span: DUMMY_SP,
       })),
-      prop: MemberProp::Ident(IdentName::new(js_word!("url"), DUMMY_SP)),
+      prop: MemberProp::Ident(IdentName::new(atom!("url"), DUMMY_SP)),
     })
   } else {
     // CJS output: "file:" + __filename
@@ -1256,7 +1278,7 @@ fn create_url_constructor(url: Expr, use_import_meta: bool) -> Expr {
   Expr::New(NewExpr {
     span: DUMMY_SP,
     ctxt: SyntaxContext::empty(),
-    callee: Box::new(Expr::Ident(Ident::new_no_ctxt(js_word!("URL"), DUMMY_SP))),
+    callee: Box::new(Expr::Ident(Ident::new_no_ctxt(atom!("URL"), DUMMY_SP))),
     args: Some(vec![
       ExprOrSpread {
         expr: Box::new(url),
@@ -1316,10 +1338,10 @@ impl VisitMut for PromiseTransformer {
 }
 
 impl DependencyCollector<'_> {
-  fn match_new_url(&mut self, expr: &Expr) -> Option<(JsWord, swc_core::common::Span)> {
+  fn match_new_url(&mut self, expr: &Expr) -> Option<(Atom, swc_core::common::Span)> {
     if let Expr::New(new) = expr {
       let is_url = match &*new.callee {
-        Expr::Ident(id) => id.sym == js_word!("URL") && is_unresolved(id, self.unresolved_mark),
+        Expr::Ident(id) => id.sym == atom!("URL") && is_unresolved(id, self.unresolved_mark),
         _ => false,
       };
 
@@ -1367,7 +1389,7 @@ impl DependencyCollector<'_> {
         let name = match_property_name(member);
 
         if let Some((name, _)) = name {
-          name == js_word!("url")
+          name == atom!("url")
         } else {
           false
         }
@@ -1457,10 +1479,7 @@ impl DependencyCollector<'_> {
           name: Pat::Ident(BindingIdent::from(ident.clone())),
           init: Some(Box::new(Expr::Call(CallExpr {
             callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
-              obj: Box::new(Expr::Ident(Ident::new_no_ctxt(
-                js_word!("Object"),
-                DUMMY_SP,
-              ))),
+              obj: Box::new(Expr::Ident(Ident::new_no_ctxt(atom!("Object"), DUMMY_SP))),
               prop: MemberProp::Ident(IdentName::new("assign".into(), DUMMY_SP)),
               span: DUMMY_SP,
             }))),
@@ -1468,10 +1487,7 @@ impl DependencyCollector<'_> {
               ExprOrSpread {
                 expr: Box::new(Expr::Call(CallExpr {
                   callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
-                    obj: (Box::new(Expr::Ident(Ident::new_no_ctxt(
-                      js_word!("Object"),
-                      DUMMY_SP,
-                    )))),
+                    obj: (Box::new(Expr::Ident(Ident::new_no_ctxt(atom!("Object"), DUMMY_SP)))),
                     prop: MemberProp::Ident(IdentName::new("create".into(), DUMMY_SP)),
                     span: DUMMY_SP,
                   }))),
@@ -1488,7 +1504,7 @@ impl DependencyCollector<'_> {
               ExprOrSpread {
                 expr: Box::new(Expr::Object(ObjectLit {
                   props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                    key: PropName::Ident(IdentName::new(js_word!("url"), DUMMY_SP)),
+                    key: PropName::Ident(IdentName::new(atom!("url"), DUMMY_SP)),
                     value: Box::new(self.get_import_meta_url()),
                   })))],
                   span: DUMMY_SP,

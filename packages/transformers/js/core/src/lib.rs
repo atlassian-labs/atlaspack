@@ -27,6 +27,7 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::OnceLock;
 
 use atlaspack_contextual_imports::ContextualImportsConfig;
 use atlaspack_contextual_imports::ContextualImportsInlineRequireVisitor;
@@ -45,6 +46,7 @@ pub use dependency_collector::dependency_collector;
 use env_replacer::*;
 use esm_to_cjs_replacer::EsmToCjsReplacer;
 use fs::inline_fs;
+use glob_match::glob_match;
 use global_aliaser::GlobalAliaser;
 use global_replacer::GlobalReplacer;
 pub use hoist::ExportedSymbol;
@@ -59,10 +61,13 @@ use path_slash::PathExt;
 use pathdiff::diff_paths;
 use react_async_import_lift::ReactAsyncImportLift;
 use react_hooks_remover::ReactHooksRemover;
+use regex::Regex;
+use rustc_hash::FxHashSet;
 use serde::Deserialize;
 use serde::Serialize;
 use static_prevaluator::StaticPreEvaluator;
 use std::io::{self};
+use swc_core::atoms::Atom;
 use swc_core::common::FileName;
 use swc_core::common::Globals;
 use swc_core::common::Mark;
@@ -83,11 +88,11 @@ use swc_core::ecma::parser::Syntax;
 use swc_core::ecma::parser::TsSyntax;
 use swc_core::ecma::parser::error::Error;
 use swc_core::ecma::parser::lexer::Lexer;
+use swc_core::ecma::preset_env;
 use swc_core::ecma::preset_env::Mode::Entry;
 use swc_core::ecma::preset_env::Targets;
 use swc_core::ecma::preset_env::Version;
 use swc_core::ecma::preset_env::Versions;
-use swc_core::ecma::preset_env::preset_env;
 use swc_core::ecma::transforms::base::assumptions::Assumptions;
 use swc_core::ecma::transforms::base::fixer::fixer;
 use swc_core::ecma::transforms::base::fixer::paren_remover;
@@ -129,7 +134,7 @@ pub struct Config {
   pub module_id: String,
   pub project_root: String,
   pub replace_env: bool,
-  pub env: HashMap<swc_core::ecma::atoms::JsWord, swc_core::ecma::atoms::JsWord>,
+  pub env: HashMap<Atom, Atom>,
   pub inline_fs: bool,
   pub insert_node_globals: bool,
   pub node_replacer: bool,
@@ -187,7 +192,7 @@ pub struct TransformResult {
   pub symbol_result: Option<CollectResult>,
   pub diagnostics: Option<Vec<Diagnostic>>,
   pub needs_esm_helpers: bool,
-  pub used_env: HashSet<swc_core::ecma::atoms::JsWord>,
+  pub used_env: HashSet<swc_core::ecma::atoms::Atom>,
   pub has_node_replacements: bool,
   pub is_constant_module: bool,
   pub conditions: HashSet<Condition>,
@@ -283,10 +288,10 @@ pub fn transform(
               let mut react_options = react::Options::default();
               if config.is_jsx {
                 if let Some(jsx_pragma) = &config.jsx_pragma {
-                  react_options.pragma = Some(jsx_pragma.clone());
+                  react_options.pragma = Some(jsx_pragma.clone().into());
                 }
                 if let Some(jsx_pragma_frag) = &config.jsx_pragma_frag {
-                  react_options.pragma_frag = Some(jsx_pragma_frag.clone());
+                  react_options.pragma_frag = Some(jsx_pragma_frag.clone().into());
                 }
                 react_options.development = Some(config.is_development);
                 react_options.refresh = if config.react_refresh {
@@ -297,7 +302,7 @@ pub fn transform(
 
                 react_options.runtime = if config.automatic_jsx_runtime {
                   if let Some(import_source) = &config.jsx_import_source {
-                    react_options.import_source = Some(import_source.clone());
+                    react_options.import_source = Some(Atom::from(import_source.as_str()));
                   }
                   Some(react::Runtime::Automatic)
                 } else {
@@ -455,7 +460,8 @@ pub fn transform(
                       used_env: &mut result.used_env,
                       source_map: source_map.clone(),
                       diagnostics: &mut diagnostics,
-                      unresolved_mark
+                      unresolved_mark,
+                      bindings: Lrc::new(FxHashSet::default()),
                     }),
                     config.source_type != SourceType::Script
                   ),
@@ -542,20 +548,20 @@ pub fn transform(
                       project_root: Path::new(&config.project_root),
                       filename: Path::new(&config.filename),
                       unresolved_mark,
-                      scope_hoist: config.scope_hoist
+                      scope_hoist: config.scope_hoist,
+                      bindings: Lrc::new(FxHashSet::default()),
                     }),
                     config.insert_node_globals
                   ),
 
                   // Transpile new syntax to older syntax if needed
                   Optional::new(
-                    preset_env(
-                      unresolved_mark,
-                      Some(&comments),
-                      preset_env_config,
-                      assumptions,
-                      &mut Default::default(),
-                    ),
+                        preset_env::transform_from_env(
+                          unresolved_mark,
+                          Some(&comments),
+                          preset_env::EnvConfig::from(preset_env_config),
+                          assumptions
+                        ),
                     should_run_preset_env,
                   ),
 
@@ -689,7 +695,7 @@ pub fn transform(
                 emit(source_map.clone(), comments, &module, config.source_maps, None)?;
               if config.source_maps
                 && source_map
-                  .build_source_map_with_config(&src_map_buf, None, SourceMapConfig)
+                  .build_source_map(&src_map_buf, None, SourceMapConfig)
                   .to_writer(&mut map_buf)
                   .is_ok()
               {
@@ -721,7 +727,8 @@ pub fn parse(
   } else {
     filename.into()
   };
-  let source_file = source_map.new_source_file(Lrc::new(FileName::Real(filename)), code.into());
+  let source_file =
+    source_map.new_source_file(Lrc::new(FileName::Real(filename)), code.to_string());
 
   let comments = SingleThreadedComments::default();
   let syntax = if config.is_type_script {
@@ -889,5 +896,214 @@ mod tests {
         n => Err(format!("Expected one matching log, but found {}", n)),
       }
     });
+  }
+}
+
+// JSX Configuration types and functions for NAPI sharing
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JsxConfiguration {
+  #[serde(rename = "isJSX")]
+  pub is_jsx: bool,
+  pub jsx_pragma: Option<String>,
+  pub jsx_pragma_frag: Option<String>,
+  pub jsx_import_source: Option<String>,
+  #[serde(rename = "automaticJSXRuntime")]
+  pub automatic_jsx_runtime: bool,
+  pub react_refresh: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct AutomaticRuntimeGlobs {
+  pub include: Vec<String>,
+  pub exclude: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum AutomaticReactRuntime {
+  Enabled(bool),
+  Glob(AutomaticRuntimeGlobs),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JsxOptions {
+  pub pragma: Option<String>,
+  pub pragma_fragment: Option<String>,
+  pub import_source: Option<String>,
+  pub automatic_runtime: Option<AutomaticReactRuntime>,
+}
+
+/// Returns the relative path from `from` to `path` as a `String`.
+/// e.g. for path="/a/b/c/d.txt" and from="/a/b", returns "c/d.txt"
+/// and for path="/a/b/c/d.txt" and from="/a/b/e", returns "../c/d.txt"
+///
+/// Optimized for performance when called frequently (e.g., 100k times per build).
+pub fn relative_path(path: &Path, from: &Path) -> String {
+  // Collect components once - unavoidable allocation for comparison
+  let path_components: Vec<_> = path.components().collect();
+  let from_components: Vec<_> = from.components().collect();
+
+  // Find common prefix length
+  let common_len = path_components
+    .iter()
+    .zip(from_components.iter())
+    .take_while(|(a, b)| a == b)
+    .count();
+
+  let ups = from_components.len() - common_len;
+  let remaining = &path_components[common_len..];
+
+  // Early return for same path
+  if ups == 0 && remaining.is_empty() {
+    return ".".to_string();
+  }
+
+  // Pre-calculate capacity to avoid string reallocations
+  let mut capacity = 0;
+  if ups > 0 {
+    capacity += ups * 3; // "../" for each up
+    if ups > 1 {
+      capacity -= 1; // one less separator
+    }
+  }
+  if !remaining.is_empty() {
+    if ups > 0 {
+      capacity += 1; // separator between ups and remaining
+    }
+    for (i, component) in remaining.iter().enumerate() {
+      if let Some(name) = component.as_os_str().to_str() {
+        capacity += name.len();
+        if i < remaining.len() - 1 {
+          capacity += 1; // separator
+        }
+      }
+    }
+  }
+
+  let mut result = String::with_capacity(capacity);
+
+  // Add ".." components - build string directly to avoid intermediate allocations
+  for i in 0..ups {
+    if i > 0 {
+      result.push('/');
+    }
+    result.push_str("..");
+  }
+
+  // Add remaining path components
+  for (i, component) in remaining.iter().enumerate() {
+    if ups > 0 || i > 0 {
+      result.push('/');
+    }
+    if let Some(name) = component.as_os_str().to_str() {
+      result.push_str(name);
+    }
+  }
+
+  result
+}
+
+static IS_RUNTIME_REGEX: OnceLock<Regex> = OnceLock::new();
+
+/// Standalone version of determine_jsx_configuration that can be shared with JS via NAPI
+/// This whole file should just be moved into the
+/// atlaspack_plugin_transformer_js crate onces V3 is fully rolled out
+pub fn determine_jsx_configuration(
+  file_path: &Path,
+  file_type: &str, // "js", "jsx", "ts", "tsx"
+  is_source: bool,
+  config: &Option<JsxOptions>,
+  project_root: &Path,
+) -> JsxConfiguration {
+  let is_jsx = match file_type {
+    "jsx" | "tsx" => {
+      // .jsx and .tsx files should always have JSX enabled
+      true
+    }
+    "js" => {
+      // Enable JSX for all JS files in source
+      is_source
+    }
+    _ => false,
+  };
+
+  let mut jsx_pragma = None;
+  let mut jsx_pragma_frag = None;
+  let mut jsx_import_source = None;
+  let mut automatic_jsx_runtime = false;
+
+  if is_jsx {
+    if let Some(jsx_config) = &config {
+      // Use JSX options from transformer config if provided
+      jsx_pragma = jsx_config
+        .pragma
+        .clone()
+        .unwrap_or_else(|| "React.createElement".to_string())
+        .into();
+
+      jsx_pragma_frag = jsx_config
+        .pragma_fragment
+        .clone()
+        .unwrap_or_else(|| "React.Fragment".to_string())
+        .into();
+
+      jsx_import_source = jsx_config.import_source.clone();
+    } else {
+      jsx_pragma = Some("React.createElement".to_string());
+      jsx_pragma_frag = Some("React.Fragment".to_string());
+    }
+
+    // Update automatic_jsx_runtime based on config
+    if let Some(jsx_config) = &config
+      && let Some(automatic_runtime) = &jsx_config.automatic_runtime
+    {
+      automatic_jsx_runtime = match automatic_runtime {
+        AutomaticReactRuntime::Enabled(enabled) => *enabled,
+        AutomaticReactRuntime::Glob(globs) => {
+          let relative_path_str = relative_path(file_path, project_root);
+
+          // Check if file matches any include pattern
+          let matches_include = globs
+            .include
+            .iter()
+            .any(|glob| glob_match(glob, &relative_path_str));
+
+          // If it doesn't match includes, automatic runtime is false
+          if matches_include && let Some(excludes) = &globs.exclude {
+            // Check if file matches any exclude pattern
+            let matches_exclude = excludes
+              .iter()
+              .any(|glob| glob_match(glob, &relative_path_str));
+
+            // If it matches excludes, automatic runtime is false (exclude wins)
+            !matches_exclude
+          } else {
+            matches_include
+          }
+        }
+      }
+    }
+  }
+
+  let react_refresh = is_source
+    && file_path.to_str().is_some_and(|fp_str| {
+      // Exclude runtime files from react refresh
+      // TODO: Find a better way to exclude these or remove when we no longer
+      // use runtime files
+      !IS_RUNTIME_REGEX
+        .get_or_init(|| Regex::new(r"\/runtime-[0-9a-f]{16}\.js$").unwrap())
+        .is_match(fp_str)
+    });
+
+  JsxConfiguration {
+    is_jsx,
+    jsx_pragma,
+    jsx_pragma_frag,
+    jsx_import_source,
+    automatic_jsx_runtime,
+    react_refresh,
   }
 }

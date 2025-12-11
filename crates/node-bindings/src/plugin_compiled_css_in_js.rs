@@ -524,7 +524,7 @@ fn process_compiled_css_in_js(
         panic::catch_unwind(panic::AssertUnwindSafe(|| {
           let mut output_map_buffer = vec![];
           let write_result = source_map
-            .build_source_map_with_config(&line_pos_buffer, None, SourceMapConfig)
+            .build_source_map(&line_pos_buffer, None, SourceMapConfig)
             .to_writer(&mut output_map_buffer);
           (write_result, output_map_buffer)
         }))

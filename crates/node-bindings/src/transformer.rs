@@ -2,12 +2,39 @@ use napi::Env;
 use napi::JsObject;
 use napi::JsUnknown;
 use napi_derive::napi;
+use std::path::Path;
 
 #[napi]
 pub fn transform(opts: JsObject, env: Env) -> napi::Result<JsUnknown> {
   let config: atlaspack_js_swc_core::Config = env.from_js_value(opts)?;
 
   let result = atlaspack_js_swc_core::transform(&config, None)?;
+  env.to_js_value(&result)
+}
+
+#[napi]
+pub fn determine_jsx_configuration(
+  file_path: String,
+  is_source: bool,
+  config: JsObject,
+  project_root: String,
+  env: Env,
+) -> napi::Result<JsUnknown> {
+  let config: Option<atlaspack_js_swc_core::JsxOptions> = env.from_js_value(config)?;
+  let file_path = Path::new(&file_path);
+  let project_root = Path::new(&project_root);
+  let file_type = &file_path
+    .extension()
+    .map_or("", |ext| ext.to_str().unwrap_or(""));
+
+  let result = atlaspack_js_swc_core::determine_jsx_configuration(
+    file_path,
+    file_type,
+    is_source,
+    &config,
+    project_root,
+  );
+
   env.to_js_value(&result)
 }
 

@@ -310,7 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { initTracingSubscriber, Lmdb, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, getNativeMemoryStats, resetMemoryTracking, sampleNativeMemory, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, applyCompiledCssInJsPlugin, Resolver, SourceMap, performStringReplacements, transform, transformAsync, getVcsStateSnapshot, getEventsSince, applyTokensPlugin } = nativeBinding
+const { initTracingSubscriber, Lmdb, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, getNativeMemoryStats, resetMemoryTracking, sampleNativeMemory, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, applyCompiledCssInJsPlugin, Resolver, SourceMap, performStringReplacements, transform, determineJsxConfiguration, transformAsync, getVcsStateSnapshot, getEventsSince, applyTokensPlugin } = nativeBinding
 
 module.exports.initTracingSubscriber = initTracingSubscriber
 module.exports.Lmdb = Lmdb
@@ -346,6 +346,7 @@ module.exports.Resolver = Resolver
 module.exports.SourceMap = SourceMap
 module.exports.performStringReplacements = performStringReplacements
 module.exports.transform = transform
+module.exports.determineJsxConfiguration = determineJsxConfiguration
 module.exports.transformAsync = transformAsync
 module.exports.getVcsStateSnapshot = getVcsStateSnapshot
 module.exports.getEventsSince = getEventsSince

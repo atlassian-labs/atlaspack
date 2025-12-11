@@ -1,5 +1,34 @@
 # @atlaspack/rust
 
+## 3.14.0
+
+### Minor Changes
+
+- [#907](https://github.com/atlassian-labs/atlaspack/pull/907) [`787290a`](https://github.com/atlassian-labs/atlaspack/commit/787290a63b3f781e7af86097201dfdb5a36c8551) Thanks [@marcins](https://github.com/marcins)! - Merge the parcel_sourcemap code into atlaspack_sourcemap directly
+
+- [#838](https://github.com/atlassian-labs/atlaspack/pull/838) [`25aa273`](https://github.com/atlassian-labs/atlaspack/commit/25aa2735f4db920960de3d65d3a427775086b7d5) Thanks [@marcins](https://github.com/marcins)! - Update SWC from v10 -> v44
+
+- [#916](https://github.com/atlassian-labs/atlaspack/pull/916) [`e55c80c`](https://github.com/atlassian-labs/atlaspack/commit/e55c80cd0ae3cc40356fe063cb7d45fbb9095356) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Add Atlaspack V3 config parsing for `typeof_replacer`, `global_aliaser`, `lazy_loading_transformer`, `react_hooks_remover`, `react_async_import_lift`, `static_prevaluator`, `dead_returns_remover`, `unused_bindings_remover`
+
+### Patch Changes
+
+- [#924](https://github.com/atlassian-labs/atlaspack/pull/924) [`cbb66a5`](https://github.com/atlassian-labs/atlaspack/commit/cbb66a554f7ad679fd4dfc9e2bf2d5abb859f846) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add new JSX config system using the `@atlaspack/transformer-js` config in package.json
+
+  This feature is enabled when the `newJsxConfig` feature flag is enabled.
+
+  The new config will be fully responsible for providing JSX settings going forward, instead of inferring values from tsconfig.json and local package.json files.
+
+  | Option           | Type                     | Description                                                                                           |
+  | ---------------- | ------------------------ | ----------------------------------------------------------------------------------------------------- |
+  | pragma           | String                   | Specifies the JSX pragma to use (e.g., "React.createElement").                                        |
+  | pragmaFragment   | String                   | Specifies the JSX fragment pragma to use (e.g., "React.Fragment").                                    |
+  | importSource     | String                   | Specifies the import source for JSX. Only relevant for automatic runtime                              |
+  | automaticRuntime | `Boolean \| Array<Glob>` | Specifies the file that require the automatic runtime. Either Globs or a boolean to set for all files |
+
+- [#922](https://github.com/atlassian-labs/atlaspack/pull/922) [`7815a93`](https://github.com/atlassian-labs/atlaspack/commit/7815a931b18983c3f34a39990b2f4b8b86855cc6) Thanks [@marcins](https://github.com/marcins)! - Remove extraneous dependency
+
+- [#914](https://github.com/atlassian-labs/atlaspack/pull/914) [`9468e16`](https://github.com/atlassian-labs/atlaspack/commit/9468e164e8ca20a5e8f552f5dc203aa3716cb154) Thanks [@marcins](https://github.com/marcins)! - In-source code for swc_atlaskit_tokens into Atlaspack (no functional change)
+
 ## 3.13.0
 
 ### Minor Changes
