@@ -1,9 +1,8 @@
 use anyhow::Error;
 use async_trait::async_trait;
-use atlaspack_core::plugin::{CacheStatus, TransformResult};
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::types::{Asset, Code, FileType};
-use atlaspack_core::version::atlaspack_rust_version;
 
 /// Escape JSON string for embedding in JavaScript double-quoted string
 fn escape_for_double_quotes(input: &str) -> String {
@@ -12,25 +11,17 @@ fn escape_for_double_quotes(input: &str) -> String {
     .replace('"', "\\\"") // Escape double quotes
 }
 
-#[derive(Debug)]
-pub struct AtlaspackJsonTransformerPlugin {
-  cache_key: CacheStatus,
-}
+#[derive(Debug, Hash)]
+pub struct AtlaspackJsonTransformerPlugin {}
 
 impl AtlaspackJsonTransformerPlugin {
   pub fn new(_ctx: &PluginContext) -> Self {
-    AtlaspackJsonTransformerPlugin {
-      cache_key: CacheStatus::Hash(atlaspack_rust_version()),
-    }
+    AtlaspackJsonTransformerPlugin {}
   }
 }
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackJsonTransformerPlugin {
-  fn cache_key(&self) -> &CacheStatus {
-    &self.cache_key
-  }
-
   #[tracing::instrument(
     level = "debug",
     skip_all,

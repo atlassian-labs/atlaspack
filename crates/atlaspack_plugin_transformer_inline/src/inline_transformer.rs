@@ -1,31 +1,22 @@
 use anyhow::Error;
 use async_trait::async_trait;
+use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
-use atlaspack_core::plugin::{CacheStatus, PluginContext};
 use atlaspack_core::types::Asset;
 use atlaspack_core::types::BundleBehavior;
-use atlaspack_core::version::atlaspack_rust_version;
 
-#[derive(Debug)]
-pub struct AtlaspackInlineTransformerPlugin {
-  cache_key: CacheStatus,
-}
+#[derive(Debug, Hash)]
+pub struct AtlaspackInlineTransformerPlugin {}
 
 impl AtlaspackInlineTransformerPlugin {
   pub fn new(_ctx: &PluginContext) -> Self {
-    AtlaspackInlineTransformerPlugin {
-      cache_key: CacheStatus::Hash(atlaspack_rust_version()),
-    }
+    AtlaspackInlineTransformerPlugin {}
   }
 }
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackInlineTransformerPlugin {
-  fn cache_key(&self) -> &CacheStatus {
-    &self.cache_key
-  }
-
   async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
