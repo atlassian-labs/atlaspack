@@ -1,4 +1,3 @@
-use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::types::Asset;
 use atlaspack_core::types::AssetWithDependencies;
 use atlaspack_core::types::Dependency;
@@ -24,8 +23,8 @@ pub enum PipelineResult {
 pub struct RunPipelineInput {
   pub asset: Asset,
   pub pipeline: TransformerPipeline,
-  pub context: TransformContext,
   pub plugins: PluginsRef,
+  pub project_root: PathBuf,
 }
 
 #[derive(Debug, PartialEq)]
@@ -33,7 +32,7 @@ pub struct RunPipelineOutput {
   pub invalidations: Vec<PathBuf>,
   pub discovered_assets: Vec<AssetWithDependencies>,
   pub pipeline_result: PipelineResult,
-  project_root: PathBuf,
+  pub project_root: PathBuf,
   cache_bailout: bool,
 }
 
@@ -42,8 +41,8 @@ pub async fn run_pipeline(input: RunPipelineInput) -> anyhow::Result<RunPipeline
   let RunPipelineInput {
     asset,
     pipeline,
-    context,
     plugins,
+    project_root,
   } = input;
 
   let mut current_asset = asset.clone();
@@ -56,9 +55,7 @@ pub async fn run_pipeline(input: RunPipelineInput) -> anyhow::Result<RunPipeline
   let mut cache_bailout = false;
 
   for transformer in pipeline.transformers() {
-    let transform_result = transformer
-      .transform(context.clone(), current_asset)
-      .await?;
+    let transform_result = transformer.transform(current_asset).await?;
 
     if transform_result.cache_bailout {
       cache_bailout = true;
@@ -73,7 +70,7 @@ pub async fn run_pipeline(input: RunPipelineInput) -> anyhow::Result<RunPipeline
     // If the Asset has changed type then we may need to trigger a different pipeline
     if current_asset.file_type != original_asset_type {
       // When the Asset changes file_type we need to regenerate its id
-      current_asset.update_id(&context.config().project_root);
+      current_asset.update_id(&project_root);
 
       let next_pipeline = plugins.transformers(&current_asset).await?;
 
@@ -89,7 +86,7 @@ pub async fn run_pipeline(input: RunPipelineInput) -> anyhow::Result<RunPipeline
           invalidations,
           discovered_assets,
           pipeline_result: PipelineResult::TypeChange(current_asset, dependencies),
-          project_root: context.config().project_root.clone(),
+          project_root: project_root.clone(),
           cache_bailout,
         });
       }
@@ -100,7 +97,7 @@ pub async fn run_pipeline(input: RunPipelineInput) -> anyhow::Result<RunPipeline
     invalidations,
     discovered_assets,
     pipeline_result: PipelineResult::Complete(current_asset, dependencies),
-    project_root: context.config().project_root.clone(),
+    project_root: project_root.clone(),
     cache_bailout,
   })
 }
@@ -113,14 +110,16 @@ impl Cacheable for RunPipelineInput {
     // If the pipeline has no cache key then it is uncachable
     self.pipeline.cache_key?.hash(&mut hasher);
 
-    // Ignore context and plugins from the cache key
+    self.project_root.hash(&mut hasher);
+
+    // Ignore plugins from the cache key
 
     let label = format!(
       "run_pipeline|{}",
       self
         .asset
         .file_path
-        .strip_prefix(&self.context.config().project_root)
+        .strip_prefix(&self.project_root)
         .unwrap_or(&self.asset.file_path)
         .display()
     );

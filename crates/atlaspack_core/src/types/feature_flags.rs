@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum FeatureFlagValue {
   String(String),
@@ -53,4 +53,124 @@ impl FeatureFlags {
       .or_insert(FeatureFlagValue::Bool(default_value));
     self
   }
+}
+
+/// Defines a type-safe feature flags struct that can be stored on other structs.
+///
+/// This macro generates a named struct with methods that only accept the specified flags,
+/// providing compile-time safety and making it possible to store the extracted flags.
+///
+/// # Examples
+///
+/// ```rust
+/// // Define the flags struct type
+/// define_feature_flags!(MyTransformerFlags, {
+///   experimental_scope_hoisting,
+///   swc_minifier,
+///   jsx_runtime
+/// });
+///
+/// // Use it in your struct
+/// struct MyTransformer {
+///   flags: MyTransformerFlags,
+/// }
+///
+/// // Create instance
+/// let flags = MyTransformerFlags::new(&source_flags);
+/// let is_enabled = flags.experimental_scope_hoisting(); // ✅ Compiles
+/// ```
+#[macro_export]
+macro_rules! define_feature_flags {
+    ($struct_name:ident, { $($flag:ident),+ $(,)? }) => {
+        #[derive(Debug, Clone, Hash)]
+        pub struct $struct_name {
+            flags: std::collections::BTreeMap<String, $crate::types::FeatureFlagValue>,
+        }
+
+        impl $struct_name {
+            pub fn new(source: &$crate::types::FeatureFlags) -> Self {
+                let mut extracted = std::collections::BTreeMap::new();
+                $(
+                    if let Some(value) = source.get(stringify!($flag)) {
+                        extracted.insert(stringify!($flag).to_string(), value.clone());
+                    }
+                )+
+                Self { flags: extracted }
+            }
+
+            $(
+                #[allow(non_snake_case)]
+                pub fn $flag(&self) -> bool {
+                    if let Some($crate::types::FeatureFlagValue::Bool(v)) = self.flags.get(stringify!($flag)) {
+                        *v
+                    } else {
+                        false
+                    }
+                }
+            )+
+        }
+    }
+}
+
+/// Creates a compile-time type-safe feature flag extractor.
+///
+/// This macro generates a struct with methods that only accept the flags listed,
+/// providing compile-time safety and preventing typos or accidental dependencies.
+///
+/// # Examples
+///
+/// ```rust
+/// let flags = extract_feature_flags!(&source_flags, {
+///   experimental_scope_hoisting,
+///   swc_minifier,
+///   jsx_runtime
+/// });
+///
+/// // Now you have compile-time safe access:
+/// let is_enabled = flags.experimental_scope_hoisting(); // ✅ Compiles
+/// let other = flags.jsx_runtime(); // ✅ Compiles
+/// // let invalid = flags.typo_flag(); // ❌ Compile error!
+/// ```
+#[macro_export]
+macro_rules! extract_feature_flags {
+    ($source:expr, { $($flag:ident),+ $(,)? }) => {
+        {
+            use std::collections::BTreeMap;
+            use $crate::types::FeatureFlagValue;
+
+            // Generate the compile-time safe struct with unique name
+            #[derive(Debug, Clone, Hash)]
+            struct ExtractedFlags {
+                flags: BTreeMap<String, FeatureFlagValue>,
+            }
+
+            impl ExtractedFlags {
+                $(
+                    #[allow(non_snake_case)]
+                    pub fn $flag(&self) -> bool {
+                        if let Some(FeatureFlagValue::Bool(v)) = self.flags.get(stringify!($flag)) {
+                            *v
+                        } else {
+                            false
+                        }
+                    }
+                )+
+
+                /// Get all extracted flags for use in cache keys
+                pub fn as_map(&self) -> &BTreeMap<String, FeatureFlagValue> {
+                    &self.flags
+                }
+            }
+
+            // Create the runtime data structure
+            let mut extracted = BTreeMap::new();
+            $(
+                if let Some(value) = $source.get(stringify!($flag)) {
+                    extracted.insert(stringify!($flag).to_string(), value.clone());
+                }
+            )+
+
+            ExtractedFlags { flags: extracted }
+        }
+    };
 }

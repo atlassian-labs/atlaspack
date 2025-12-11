@@ -204,7 +204,7 @@ mod tests {
   use crate::types::json::JSONObject;
   use crate::types::{Environment, FileType};
   use pretty_assertions::assert_eq;
-  use std::collections::HashSet;
+  use std::collections::BTreeSet;
   use std::path::PathBuf;
   use std::sync::Arc;
 
@@ -238,7 +238,7 @@ mod tests {
       should_wrap: true,
       has_node_replacements: true,
       is_constant_module: true,
-      conditions: HashSet::new(),
+      conditions: BTreeSet::new(),
       config_path: Some("config.json".to_string()),
       config_key_path: Some("key.path".to_string()),
       interpreter: Some("#!/usr/bin/node".to_string()),

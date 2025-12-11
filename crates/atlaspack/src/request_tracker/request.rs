@@ -86,6 +86,7 @@ impl RunRequestContext<InMemoryReaderWriter> {
   pub fn new_for_testing(plugins: PluginsRef) -> Self {
     use atlaspack_core::config_loader::ConfigLoader;
     use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+    use atlaspack_memoization_cache::CacheMode;
 
     let fs = Arc::new(InMemoryFileSystem::default());
     let config_loader = Arc::new(ConfigLoader {
@@ -95,7 +96,10 @@ impl RunRequestContext<InMemoryReaderWriter> {
     });
 
     Self {
-      cache: Arc::new(CacheHandler::new(InMemoryReaderWriter::default())),
+      cache: Arc::new(CacheHandler::new(
+        InMemoryReaderWriter::default(),
+        CacheMode::Off,
+      )),
       config_loader,
       file_system: fs,
       options: Arc::new(AtlaspackOptions::default()),

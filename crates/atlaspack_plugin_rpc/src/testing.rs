@@ -188,7 +188,7 @@ impl RuntimePlugin for TestingRpcPlugin {
 #[async_trait]
 impl TransformerPlugin for TestingRpcPlugin {
   fn cache_key(&self) -> &CacheStatus {
-    &CacheStatus::BuiltIn
+    &CacheStatus::Uncachable
   }
 
   async fn transform(&self, asset: Asset) -> Result<TransformResult, anyhow::Error> {

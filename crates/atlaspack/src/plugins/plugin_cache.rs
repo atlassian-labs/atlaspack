@@ -65,7 +65,7 @@ impl PluginCache {
 mod tests {
   use super::*;
   use async_trait::async_trait;
-  use atlaspack_core::plugin::{CacheStatus, TransformContext, TransformResult};
+  use atlaspack_core::plugin::{CacheStatus, TransformResult};
   use atlaspack_core::types::Asset;
   use std::sync::Arc;
   use std::sync::atomic::{AtomicUsize, Ordering};
@@ -78,14 +78,10 @@ mod tests {
   #[async_trait]
   impl TransformerPlugin for MockTransformer {
     fn cache_key(&self) -> &CacheStatus {
-      &CacheStatus::BuiltIn
+      &CacheStatus::Uncachable
     }
 
-    async fn transform(
-      &self,
-      _context: TransformContext,
-      asset: Asset,
-    ) -> anyhow::Result<TransformResult> {
+    async fn transform(&self, asset: Asset) -> anyhow::Result<TransformResult> {
       Ok(TransformResult {
         asset,
         ..Default::default()

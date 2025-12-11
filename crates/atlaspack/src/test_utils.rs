@@ -8,7 +8,7 @@ use atlaspack_core::{
   types::AtlaspackOptions,
 };
 use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSystem};
-use atlaspack_memoization_cache::{CacheHandler, LmdbCacheReaderWriter};
+use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter};
 use atlaspack_package_manager::MockPackageManager;
 use atlaspack_plugin_rpc::RpcFactory;
 use atlaspack_plugin_rpc::testing::TestingRpcFactory;
@@ -77,7 +77,10 @@ fn create_test_cache() -> CacheRef {
     map_size: None,
   };
   let db_handle = get_database(options).expect("Failed to create test database");
-  Arc::new(CacheHandler::new(LmdbCacheReaderWriter::new(db_handle)))
+  Arc::new(CacheHandler::new(
+    LmdbCacheReaderWriter::new(db_handle),
+    CacheMode::Off,
+  ))
 }
 
 pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTracker {

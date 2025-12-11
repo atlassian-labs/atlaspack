@@ -1,11 +1,9 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
-use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::hash::hash_bytes;
 use atlaspack_core::plugin::AssetBuildEvent;
 use atlaspack_core::plugin::BuildProgressEvent;
 use atlaspack_core::plugin::ReporterEvent;
-use atlaspack_core::plugin::TransformContext;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::types::AssetStats;
 use atlaspack_core::types::AssetWithDependencies;
@@ -112,14 +110,7 @@ impl Request for AssetRequest {
       }
     }
 
-    let config_loader = Arc::new(ConfigLoader {
-      fs: request_context.file_system().clone(),
-      project_root: request_context.project_root.clone(),
-      search_path: asset.file_path.clone(),
-    });
-
-    let transform_context = TransformContext::new(config_loader, self.env.clone());
-    let mut result = run_pipelines(transform_context, asset, request_context).await?;
+    let mut result = run_pipelines(asset, request_context).await?;
 
     // TODO: Commit the asset with a project path now, as transformers rely on an absolute path
     // result.asset.file_path = to_project_path(&self.project_root, &result.asset.file_path);
@@ -156,7 +147,6 @@ impl Request for AssetRequest {
 
 #[tracing::instrument(level = "trace", skip_all)]
 async fn run_pipelines<C: CacheReaderWriter>(
-  transform_context: TransformContext,
   input: Asset,
   request_context: RunRequestContext<C>,
 ) -> anyhow::Result<TransformResult> {
@@ -201,8 +191,8 @@ async fn run_pipelines<C: CacheReaderWriter>(
         RunPipelineInput {
           asset: asset_to_modify,
           pipeline,
-          context: transform_context.clone(),
           plugins: plugins.clone(),
+          project_root: request_context.project_root.clone(),
         },
         |input| async { run_pipeline(input).await },
       )
@@ -303,11 +293,8 @@ mod tests {
     });
 
     let asset = Asset::default();
-    let context = TransformContext::default();
     let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
-    let result = run_pipelines(context, asset, request_context)
-      .await
-      .unwrap();
+    let result = run_pipelines(asset, request_context).await.unwrap();
 
     assert_code(&result.asset, "::transformer1::transformer2");
   }
@@ -334,11 +321,8 @@ mod tests {
 
     let asset = make_asset("index.js", FileType::Js);
     let expected_invalidations = vec![PathBuf::from("./tmp")];
-    let context = TransformContext::default();
     let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
-    let result = run_pipelines(context, asset, request_context)
-      .await
-      .unwrap();
+    let result = run_pipelines(asset, request_context).await.unwrap();
 
     assert_code(&result.asset, "::js-1::js-2");
     assert_eq!(result.invalidate_on_file_change, expected_invalidations);
@@ -374,11 +358,8 @@ mod tests {
       });
 
     let asset = make_asset("index.json", FileType::Json);
-    let context = TransformContext::default();
     let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
-    let result = run_pipelines(context, asset, request_context)
-      .await
-      .unwrap();
+    let result = run_pipelines(asset, request_context).await.unwrap();
 
     assert_eq!(
       result.asset.clone(),
@@ -413,11 +394,8 @@ mod tests {
 
     let asset = make_asset("index.js", FileType::Js);
     let expected_dependencies = vec![Dependency::default()];
-    let context = TransformContext::default();
     let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
-    let result = run_pipelines(context, asset, request_context)
-      .await
-      .unwrap();
+    let result = run_pipelines(asset, request_context).await.unwrap();
 
     assert_code(&result.asset, "::js-1::js-2");
     assert_eq!(result.dependencies, expected_dependencies);
@@ -465,11 +443,8 @@ mod tests {
       });
 
     let asset = make_asset("index.js", FileType::Js);
-    let context = TransformContext::default();
     let request_context = RunRequestContext::new_for_testing(Arc::new(plugins));
-    let result = run_pipelines(context, asset, request_context)
-      .await
-      .unwrap();
+    let result = run_pipelines(asset, request_context).await.unwrap();
 
     assert_code(&result.asset, "::js-1::js-2");
     assert_eq!(result.discovered_assets.len(), 1);
@@ -504,11 +479,13 @@ mod tests {
       }
     });
 
-    mock.expect_cache_key().return_const(CacheStatus::BuiltIn);
+    mock
+      .expect_cache_key()
+      .return_const(CacheStatus::Uncachable);
 
     mock.expect_transform().returning({
       let label = label.clone();
-      move |_context, asset: Asset| {
+      move |asset: Asset| {
         let mut asset = asset.clone();
         asset.code = Code::from(format!(
           "{}::{}",

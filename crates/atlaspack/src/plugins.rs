@@ -75,9 +75,6 @@ impl TransformerPipeline {
           atlaspack_core::plugin::CacheStatus::Uncachable => {
             cacheable = false;
           }
-          atlaspack_core::plugin::CacheStatus::BuiltIn => {
-            // Built-in transformers are considered cacheable, but do not contribute to the cache key
-          }
         }
       }
     }
