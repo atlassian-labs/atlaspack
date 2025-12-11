@@ -8,7 +8,7 @@ pub enum InlineEnvironment {
   Environments(Vec<String>),
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, Deserialize, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct JsTransformerConfig {
   #[serde(rename = "unstable_inlineConstants")]

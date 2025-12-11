@@ -1,9 +1,9 @@
 use crate::hash::IdentifierHasher;
 use crate::types::{Asset, AssetWithDependencies, Dependency, SpecifierType};
 use async_trait::async_trait;
-use mockall::automock;
 use serde::Serialize;
 use std::any::Any;
+use std::borrow::Cow;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
@@ -29,7 +29,7 @@ pub struct TransformResult {
   pub cache_bailout: bool,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CacheStatus {
   Hash(u64),
   Uncachable,
@@ -71,11 +71,16 @@ macro_rules! cache_key {
         use std::hash::{Hash, Hasher};
         use $crate::hash::IdentifierHasher;
         use $crate::plugin::CacheStatus;
+        use $crate::version::atlaspack_rust_version;
 
         let mut hasher = IdentifierHasher::new();
         $(
             $val.hash(&mut hasher);
         )+
+
+        // Always add the @atlaspack/rust version to the cache key
+        atlaspack_rust_version().hash(&mut hasher);
+
         CacheStatus::Hash(hasher.finish())
     }};
 }
@@ -86,9 +91,8 @@ macro_rules! cache_key {
 /// designed to integrate with Atlaspack.
 ///
 #[allow(clippy::disallowed_methods, clippy::disallowed_types)]
-#[automock]
 #[async_trait]
-pub trait TransformerPlugin: Any + Debug + Send + Sync {
+pub trait TransformerPlugin: Any + Debug + Send + Sync + CacheKey {
   /// Unique ID for this transformer
   fn id(&self) -> u64 {
     let mut hasher = IdentifierHasher::new();
@@ -101,17 +105,24 @@ pub trait TransformerPlugin: Any + Debug + Send + Sync {
     Ok(false)
   }
 
-  /// Get the cache key for the transformer
-  fn cache_key(&self) -> &CacheStatus;
-
   /// Transform the asset and/or add new assets
   async fn transform(&self, asset: Asset) -> anyhow::Result<TransformResult>;
+}
+
+pub trait CacheKey {
+  fn cache_key(&self) -> Cow<'_, CacheStatus>;
+}
+
+// Automatically implement CacheKey for all types that implement Hash
+impl<T: Hash> CacheKey for T {
+  fn cache_key(&self) -> Cow<'_, CacheStatus> {
+    Cow::Owned(cache_key!(self, atlaspack_rust_version()))
+  }
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::version::atlaspack_rust_version;
 
   #[derive(Hash)]
   struct TestConfig {

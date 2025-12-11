@@ -6,18 +6,15 @@ use anyhow::{Error, anyhow};
 
 use async_trait::async_trait;
 use atlaspack_core::define_feature_flags;
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{HmrOptions, PluginContext, TransformerPlugin};
 use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
   Asset, BuildMode, Diagnostic, Diagnostics, ErrorKind, FileType, OutputFormat, SourceType,
 };
-use atlaspack_core::version::atlaspack_rust_version;
-use atlaspack_core::{
-  cache_key,
-  plugin::{CacheStatus, TransformResult},
-};
 use atlaspack_js_swc_core::SyncDynamicImportConfig;
+use derivative::Derivative;
 use glob_match::glob_match;
 use parking_lot::RwLock;
 use swc_core::atoms::Atom;
@@ -51,7 +48,12 @@ define_feature_flags!(JsTransformerFlags, {
 ///   `Dependency` as well as exported, imported and re-exported symbols (as `Symbol`, usually
 ///   mapping to a mangled name that the SWC transformer replaced in the source file + the source
 ///   module and the source name that has been imported)
+#[derive(Derivative)]
+#[derivative(Hash)]
 pub struct AtlaspackJsTransformerPlugin {
+  // We don't add the cache to the hash since it's internal mutable state that
+  // doesn't affect the cache key
+  #[derivative(Hash = "ignore")]
   cache: RwLock<Cache>,
   config: JsTransformerConfig,
   project_root: PathBuf,
@@ -62,7 +64,6 @@ pub struct AtlaspackJsTransformerPlugin {
   use_define_for_class_fields: bool,
   feature_flags: JsTransformerFlags,
   core_path: PathBuf,
-  cache_key: CacheStatus,
 }
 
 #[derive(Default)]
@@ -125,21 +126,8 @@ impl AtlaspackJsTransformerPlugin {
 
     let feature_flags = JsTransformerFlags::new(&ctx.options.feature_flags);
 
-    let cache_key = cache_key!(
-      atlaspack_rust_version(),
-      core_path,
-      decorators,
-      env,
-      feature_flags,
-      hmr_options,
-      mode,
-      project_root,
-      use_define_for_class_fields,
-    );
-
     Ok(Self {
       cache: Default::default(),
-      cache_key,
       config,
       core_path,
       decorators,
@@ -299,10 +287,6 @@ impl fmt::Debug for AtlaspackJsTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackJsTransformerPlugin {
-  fn cache_key(&self) -> &CacheStatus {
-    &self.cache_key
-  }
-
   /// This does equivalent work to `JSTransformer::transform` in `packages/transformers/js`
   async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let env = asset.env.clone();

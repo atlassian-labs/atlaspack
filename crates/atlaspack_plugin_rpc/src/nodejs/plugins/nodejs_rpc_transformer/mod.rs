@@ -1,13 +1,15 @@
 use anyhow::Context;
 use async_trait::async_trait;
+use atlaspack_core::cache_key;
+use atlaspack_core::plugin::CacheKey;
 use atlaspack_core::plugin::CacheStatus;
-use atlaspack_core::plugin::PluginOptions;
 use atlaspack_package_manager::PackageManagerRef;
 use napi::JsBuffer;
 use napi::JsObject;
 use napi::JsString;
 use napi::JsUnknown;
 use napi::bindgen_prelude::FromNapiValue;
+use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -41,9 +43,9 @@ pub mod conditions;
 
 pub struct NodejsRpcTransformerPlugin {
   nodejs_workers: Arc<NodeJsWorkerCollection>,
-  plugin_options: Arc<PluginOptions>,
   plugin_node: PluginNode,
   conditions: Conditions,
+  project_root: PathBuf,
   cache_key: CacheStatus,
 }
 
@@ -133,15 +135,12 @@ impl NodejsRpcTransformerPlugin {
 
     let transformer_setup = setup_plugin(nodejs_workers.clone(), rpc_options, plugin_node).await?;
 
+    let project_root = ctx.options.project_root.clone();
+
     let (conditions, cache_key) = if let Some(setup) = transformer_setup {
       let cache_key = match dev_dep_hash.await??.hash {
         Some(dev_dep_hash) => {
-          let mut hasher = IdentifierHasher::new();
-
-          setup.hash(&mut hasher);
-          hasher.write_u64(dev_dep_hash);
-
-          CacheStatus::Hash(hasher.finish())
+          cache_key!(setup, dev_dep_hash, plugin_node, project_root)
         }
         None => CacheStatus::Uncachable,
       };
@@ -160,11 +159,17 @@ impl NodejsRpcTransformerPlugin {
 
     Ok(Self {
       nodejs_workers,
-      plugin_options: ctx.options.clone(),
+      project_root,
       plugin_node: plugin_node.clone(),
       conditions,
       cache_key,
     })
+  }
+}
+
+impl CacheKey for NodejsRpcTransformerPlugin {
+  fn cache_key(&self) -> Cow<'_, CacheStatus> {
+    Cow::Borrowed(&self.cache_key)
   }
 }
 
@@ -179,11 +184,6 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
   #[tracing::instrument(level = "trace", skip_all)]
   fn should_skip(&self, asset: &Asset) -> anyhow::Result<bool> {
     self.conditions.should_skip(asset)
-  }
-
-  #[tracing::instrument(level = "debug", skip_all, fields(plugin = %self.plugin_node.package_name))]
-  fn cache_key(&self) -> &CacheStatus {
-    &self.cache_key
   }
 
   async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
@@ -280,10 +280,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       file_path: result.file_path,
       file_type: result.file_type,
       map: if let Some(json) = map {
-        Some(SourceMap::from_json(
-          &self.plugin_options.project_root,
-          &json,
-        )?)
+        Some(SourceMap::from_json(&self.project_root, &json)?)
       } else {
         original_source_map
       },
