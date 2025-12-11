@@ -61,6 +61,11 @@ export default new Runtime({
       env: {
         sourceType: 'module',
       },
+      // Pre-computed symbols: HMR runtime sets globals and executes, no explicit exports/imports
+      symbolData: {
+        symbols: new Map(), // No exports, just side effects
+        dependencies: [], // No explicit dependencies, uses runtime globals
+      },
     };
   },
 }) as Runtime<unknown>;
