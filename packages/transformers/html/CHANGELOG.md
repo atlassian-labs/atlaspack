@@ -1,5 +1,12 @@
 # @atlaspack/transformer-html
 
+## 2.15.20
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.43
+
 ## 2.15.19
 
 ### Patch Changes

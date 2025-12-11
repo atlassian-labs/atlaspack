@@ -1,5 +1,13 @@
 # @atlaspack/node-resolver-core
 
+## 3.7.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.38
+  - @atlaspack/utils@3.2.4
+
 ## 3.7.13
 
 ### Patch Changes

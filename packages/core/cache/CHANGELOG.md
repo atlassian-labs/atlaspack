@@ -1,5 +1,14 @@
 # @atlaspack/cache
 
+## 3.2.38
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.38
+  - @atlaspack/logger@2.14.35
+  - @atlaspack/utils@3.2.4
+
 ## 3.2.37
 
 ### Patch Changes

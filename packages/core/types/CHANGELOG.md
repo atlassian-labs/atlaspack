@@ -1,5 +1,13 @@
 # @atlaspack/types
 
+## 2.15.33
+
+### Patch Changes
+
+- Updated dependencies [[`00fa643`](https://github.com/atlassian-labs/atlaspack/commit/00fa6433202bfd3311479f6314c9ec878a789f2c)]:
+  - @atlaspack/types-internal@2.22.0
+  - @atlaspack/workers@2.14.43
+
 ## 2.15.32
 
 ### Patch Changes

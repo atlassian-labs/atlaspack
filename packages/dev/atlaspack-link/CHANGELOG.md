@@ -1,5 +1,13 @@
 # @atlaspack/link
 
+## 2.14.43
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/fs@2.15.38
+  - @atlaspack/utils@3.2.4
+
 ## 2.14.42
 
 ### Patch Changes
