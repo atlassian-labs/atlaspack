@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/bundle-stats",
-  "version": "2.14.42",
+  "version": "2.14.43",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -23,15 +23,15 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/core": "2.29.1",
-    "@atlaspack/query": "2.14.42",
-    "@atlaspack/reporter-bundle-stats": "2.14.42",
-    "@atlaspack/utils": "3.2.2",
+    "@atlaspack/core": "2.29.2",
+    "@atlaspack/query": "2.14.43",
+    "@atlaspack/reporter-bundle-stats": "2.14.43",
+    "@atlaspack/utils": "3.2.3",
     "commander": "^7.0.0"
   },
   "devDependencies": {
     "@atlaspack/babel-register": "2.14.4",
-    "@atlaspack/types": "2.15.31",
+    "@atlaspack/types": "2.15.32",
     "rimraf": "^5.0.5"
   },
   "type": "commonjs"

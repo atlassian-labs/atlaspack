@@ -1,5 +1,37 @@
 # @atlaspack/transformer-js
 
+## 10.2.0
+
+### Minor Changes
+
+- [#838](https://github.com/atlassian-labs/atlaspack/pull/838) [`25aa273`](https://github.com/atlassian-labs/atlaspack/commit/25aa2735f4db920960de3d65d3a427775086b7d5) Thanks [@marcins](https://github.com/marcins)! - Update SWC from v10 -> v44
+
+- [#916](https://github.com/atlassian-labs/atlaspack/pull/916) [`e55c80c`](https://github.com/atlassian-labs/atlaspack/commit/e55c80cd0ae3cc40356fe063cb7d45fbb9095356) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Add Atlaspack V3 config parsing for `typeof_replacer`, `global_aliaser`, `lazy_loading_transformer`, `react_hooks_remover`, `react_async_import_lift`, `static_prevaluator`, `dead_returns_remover`, `unused_bindings_remover`
+
+### Patch Changes
+
+- [#924](https://github.com/atlassian-labs/atlaspack/pull/924) [`cbb66a5`](https://github.com/atlassian-labs/atlaspack/commit/cbb66a554f7ad679fd4dfc9e2bf2d5abb859f846) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add new JSX config system using the `@atlaspack/transformer-js` config in package.json
+
+  This feature is enabled when the `newJsxConfig` feature flag is enabled.
+
+  The new config will be fully responsible for providing JSX settings going forward, instead of inferring values from tsconfig.json and local package.json files.
+
+  | Option           | Type                     | Description                                                                                           |
+  | ---------------- | ------------------------ | ----------------------------------------------------------------------------------------------------- |
+  | pragma           | String                   | Specifies the JSX pragma to use (e.g., "React.createElement").                                        |
+  | pragmaFragment   | String                   | Specifies the JSX fragment pragma to use (e.g., "React.Fragment").                                    |
+  | importSource     | String                   | Specifies the import source for JSX. Only relevant for automatic runtime                              |
+  | automaticRuntime | `Boolean \| Array<Glob>` | Specifies the file that require the automatic runtime. Either Globs or a boolean to set for all files |
+
+- Updated dependencies [[`787290a`](https://github.com/atlassian-labs/atlaspack/commit/787290a63b3f781e7af86097201dfdb5a36c8551), [`cbb66a5`](https://github.com/atlassian-labs/atlaspack/commit/cbb66a554f7ad679fd4dfc9e2bf2d5abb859f846), [`7815a93`](https://github.com/atlassian-labs/atlaspack/commit/7815a931b18983c3f34a39990b2f4b8b86855cc6), [`25aa273`](https://github.com/atlassian-labs/atlaspack/commit/25aa2735f4db920960de3d65d3a427775086b7d5), [`9468e16`](https://github.com/atlassian-labs/atlaspack/commit/9468e164e8ca20a5e8f552f5dc203aa3716cb154), [`e55c80c`](https://github.com/atlassian-labs/atlaspack/commit/e55c80cd0ae3cc40356fe063cb7d45fbb9095356)]:
+  - @atlaspack/rust@3.14.0
+  - @atlaspack/feature-flags@2.27.3
+  - @atlaspack/core@2.29.2
+  - @atlaspack/source-map@3.1.3
+  - @atlaspack/utils@3.2.3
+  - @atlaspack/workers@2.14.42
+  - @atlaspack/plugin@2.14.42
+
 ## 10.1.0
 
 ### Minor Changes
