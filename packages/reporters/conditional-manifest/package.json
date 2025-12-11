@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/reporter-conditional-manifest",
-  "version": "2.15.24",
+  "version": "2.15.25",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
@@ -16,7 +16,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/plugin": "2.14.42",
+    "@atlaspack/plugin": "2.14.43",
     "@atlaspack/feature-flags": "2.27.3",
     "nullthrows": "^1.1.1"
   },

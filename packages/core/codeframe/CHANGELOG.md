@@ -1,5 +1,12 @@
 # @atlaspack/codeframe
 
+## 2.13.25
+
+### Patch Changes
+
+- Updated dependencies [[`00fa643`](https://github.com/atlassian-labs/atlaspack/commit/00fa6433202bfd3311479f6314c9ec878a789f2c)]:
+  - @atlaspack/types-internal@2.22.0
+
 ## 2.13.24
 
 ### Patch Changes
