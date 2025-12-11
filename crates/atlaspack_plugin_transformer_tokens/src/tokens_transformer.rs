@@ -1,11 +1,10 @@
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Error, anyhow};
 use async_trait::async_trait;
 use atlaspack_atlaskit_tokens::{AtlaskitTokensHandler, TokensConfig, TokensPluginOptions};
-use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
+use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::{Asset, Code, Diagnostic, ErrorKind};
 use atlaspack_sourcemap::SourceMap as AtlaspackSourceMap;
 
@@ -104,12 +103,17 @@ impl AtlaspackTokensTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
-  fn should_skip(&self, asset: &Asset) -> Result<bool, Error> {
-    // Skip if we have no tokens handler
-    // This means the flag is off, or this project has no tokens config
-    if self.tokens_handler.is_none() {
-      return Ok(true);
-    }
+  async fn transform(
+    &self,
+    _ctx: TransformContext,
+    asset: Asset,
+  ) -> Result<TransformResult, Error> {
+    let Some(tokens_handler) = &self.tokens_handler else {
+      return Ok(TransformResult {
+        asset,
+        ..Default::default()
+      });
+    };
 
     // Check if code contains '@atlaskit/tokens' before processing
     let code_str = asset.code.as_str()?;
@@ -119,17 +123,6 @@ impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
         ..Default::default()
       });
     }
-
-    Ok(false)
-  }
-
-  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
-    let Some(tokens_handler) = &self.tokens_handler else {
-      return Ok(TransformResult {
-        asset,
-        ..Default::default()
-      });
-    };
 
     // Build tokens config
     let tokens_config = TokensConfig {
@@ -148,7 +141,7 @@ impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
 
     // Handle source maps
     let mut invalidate_on_file_change = vec![];
-    if let Ok(token_data_path) = std::path::Path::new(&self.token_data_path).canonicalize() {
+    if let Ok(token_data_path) = Path::new(&self.token_data_path).canonicalize() {
       invalidate_on_file_change.push(token_data_path);
     }
 
