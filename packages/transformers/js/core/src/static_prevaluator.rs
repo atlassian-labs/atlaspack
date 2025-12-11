@@ -1,5 +1,5 @@
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::Atom;
+use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 /// Pre-evaluates code expressions with static values.
@@ -51,7 +51,7 @@ impl StaticPreEvaluator {
 /// Internal representation of literal values for comparison.
 #[derive(Debug, Clone, PartialEq)]
 enum LiteralValue {
-  Str(Atom),
+  Str(JsWord),
   Bool(bool),
   Num(f64),
   Null,

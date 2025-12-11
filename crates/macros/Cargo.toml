@@ -14,6 +14,7 @@ napi = ["dep:napi", "dep:napi-derive", "dep:crossbeam-channel"]
 indexmap = { workspace = true }
 swc_core = { workspace = true, features = [
   "common",
+  "common_ahash",
   "common_sourcemap",
   "ecma_ast",
   "ecma_parser",

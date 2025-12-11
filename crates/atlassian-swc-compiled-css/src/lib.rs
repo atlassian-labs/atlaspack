@@ -1788,10 +1788,7 @@ fn parse_module_from_source(source: &str, path: &Path) -> Option<Module> {
 
   let filename = path.to_string_lossy().to_string();
   let cm: Arc<SourceMap> = Default::default();
-  let fm = cm.new_source_file(
-    FileName::Custom(filename.clone()).into(),
-    source.to_string(),
-  );
+  let fm = cm.new_source_file(FileName::Custom(filename.clone()).into(), source.into());
   let syntax = syntax_for_filename(&filename);
   let lexer = Lexer::new(syntax, EsVersion::Es2022, StringInput::from(&*fm), None);
   let mut parser = Parser::new_from(lexer);
@@ -13128,7 +13125,7 @@ fn parse_transformed_source(code: &str, filename: &str) -> Program {
   use std::sync::Arc;
 
   let cm: Arc<SourceMap> = Default::default();
-  let fm = cm.new_source_file(FileName::Custom(filename.into()).into(), code.to_string());
+  let fm = cm.new_source_file(FileName::Custom(filename.into()).into(), code.into());
 
   let syntax_for_file = |name: &str| {
     if name.ends_with(".ts") || name.ends_with(".tsx") || name.ends_with(".cts") {
@@ -13634,7 +13631,7 @@ mod tests {
     use std::sync::Arc;
 
     let cm: Arc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(FileName::Custom("test.tsx".into()).into(), code.to_string());
+    let fm = cm.new_source_file(FileName::Custom("test.tsx".into()).into(), code.into());
     let lexer = Lexer::new(
       Syntax::Typescript(TsSyntax {
         tsx: true,

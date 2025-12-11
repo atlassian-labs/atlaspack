@@ -6799,36 +6799,4 @@ describe('javascript', function () {
       assert.equal(res.output, 123);
     });
   }
-
-  it('should correctly replace process.env when they have a type declaration', async () => {
-    await fsFixture(overlayFS, __dirname)`
-      env-type-declarations
-        index.ts:
-            declare const process: {
-              env?: {
-                AGG_BRANCH_SLUG: string | undefined;
-              };
-            };
-
-          const branchSlug =
-              typeof process !== 'undefined' && process.env ? process.env.AGG_BRANCH_SLUG : undefined;
-          console.log(branchSlug);
-
-    `;
-
-    let b = await bundle(
-      path.join(__dirname, 'env-type-declarations/index.ts'),
-      {
-        inputFS: overlayFS,
-        outputFS: overlayFS,
-      },
-    );
-    b.getBundles().forEach(async (bundle) => {
-      let contents = await outputFS.readFile(bundle.filePath, 'utf8');
-      assert(
-        !contents.includes('AGG_BRANCH_SLUG'),
-        `Bundle ${path.basename(bundle.filePath)} should NOT include AGG_BRANCH_SLUG`,
-      );
-    });
-  });
 });

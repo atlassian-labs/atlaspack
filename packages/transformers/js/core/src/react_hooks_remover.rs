@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use swc_core::common::Mark;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::Atom;
+use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 use crate::utils::*;
@@ -48,7 +48,7 @@ use crate::utils::*;
 /// ```
 pub struct ReactHooksRemover {
   /// Set of hook identifiers to remove
-  pub hooks_to_remove: HashSet<Atom>,
+  pub hooks_to_remove: HashSet<JsWord>,
   /// Mark used to identify unresolved (global/imported) references
   pub unresolved_mark: Mark,
 }

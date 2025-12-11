@@ -3,8 +3,6 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
-use swc_core::atoms::Atom;
-use swc_core::atoms::atom;
 use swc_core::ecma::utils::stack_size::maybe_grow_default;
 
 use indexmap::IndexMap;
@@ -14,6 +12,8 @@ use swc_core::common::Span;
 use swc_core::common::sync::Lrc;
 use swc_core::common::util::take::Take;
 use swc_core::ecma::ast::*;
+use swc_core::ecma::atoms::JsWord;
+use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::parser::Parser;
 use swc_core::ecma::parser::StringInput;
 use swc_core::ecma::parser::error::Error;
@@ -59,9 +59,9 @@ pub struct Macros<'a> {
 
 struct MacroImport {
   /// The import specifier.
-  src: Atom,
+  src: JsWord,
   /// The imported identifier. None if this is a namespace import.
-  imported: Option<Atom>,
+  imported: Option<JsWord>,
   /// The location of the import specifier.
   span: Span,
 }
@@ -107,7 +107,7 @@ impl<'a> Macros<'a> {
             default.local.to_id(),
             MacroImport {
               src: import.src.value.clone(),
-              imported: Some(atom!("default")),
+              imported: Some(js_word!("default")),
               span: import.span,
             },
           );
@@ -683,7 +683,7 @@ impl Macros<'_> {
   fn value_to_expr(&self, value: JsValue) -> Result<Expr, MacroError> {
     Ok(match value {
       JsValue::Null => Expr::Lit(Lit::Null(Null::dummy())),
-      JsValue::Undefined => Expr::Ident(Ident::new_no_ctxt(atom!("undefined"), DUMMY_SP)),
+      JsValue::Undefined => Expr::Ident(Ident::new_no_ctxt(js_word!("undefined"), DUMMY_SP)),
       JsValue::Bool(b) => Expr::Lit(Lit::Bool(Bool {
         value: b,
         span: DUMMY_SP,
