@@ -1,12 +1,13 @@
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use anyhow::{Context, Error, anyhow};
 use async_trait::async_trait;
 use atlaspack_atlaskit_tokens::{TokensConfig, TokensPluginOptions, process_tokens_sync};
+use atlaspack_core::cache_key;
 use atlaspack_core::plugin::TransformResult;
-use atlaspack_core::plugin::{CacheStatus, PluginContext, PluginOptions, TransformerPlugin};
+use atlaspack_core::plugin::{CacheStatus, PluginContext, TransformerPlugin};
 use atlaspack_core::types::{Asset, Code, Diagnostic, ErrorKind};
+use atlaspack_core::version::atlaspack_rust_version;
 use atlaspack_sourcemap::SourceMap as AtlaspackSourceMap;
 
 use crate::tokens_transformer_config::{PackageJson, TokensTransformerConfig};
@@ -14,17 +15,28 @@ use crate::tokens_transformer_config::{PackageJson, TokensTransformerConfig};
 #[derive(Debug)]
 pub struct AtlaspackTokensTransformerPlugin {
   project_root: PathBuf,
-  options: Arc<PluginOptions>,
   config: Option<TokensTransformerConfig>,
+  enabled: bool,
+  cache_key: CacheStatus,
 }
 
 impl AtlaspackTokensTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Result<Self, Error> {
     let config = Self::load_config(ctx.config.clone())?;
+
+    let project_root = ctx.options.project_root.clone();
+    let enabled = ctx
+      .options
+      .feature_flags
+      .bool_enabled("enableTokensTransformer");
+
+    let cache_key = cache_key!(enabled, config, project_root, atlaspack_rust_version());
+
     Ok(AtlaspackTokensTransformerPlugin {
-      project_root: ctx.options.project_root.clone(),
-      options: ctx.options.clone(),
+      enabled,
+      project_root,
       config,
+      cache_key,
     })
   }
 
@@ -53,31 +65,25 @@ impl AtlaspackTokensTransformerPlugin {
 #[async_trait]
 impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
   fn cache_key(&self) -> &CacheStatus {
-    &CacheStatus::BuiltIn
+    &self.cache_key
+  }
+
+  fn should_skip(&self, asset: &Asset) -> Result<bool, Error> {
+    // Skip if feature flag is disabled
+    if !self.enabled {
+      return Ok(true);
+    }
+
+    // Skip if code does not contain '@atlaskit/tokens'
+    let code_str = asset.code.as_str()?;
+    if !code_str.contains("@atlaskit/tokens") {
+      return Ok(true);
+    }
+
+    Ok(false)
   }
 
   async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
-    // Check feature flag first
-    if !self
-      .options
-      .feature_flags
-      .bool_enabled("enableTokensTransformer")
-    {
-      return Ok(TransformResult {
-        asset,
-        ..Default::default()
-      });
-    }
-
-    // Check if code contains '@atlaskit/tokens' before processing
-    let code_str = asset.code.as_str()?;
-    if !code_str.contains("@atlaskit/tokens") {
-      return Ok(TransformResult {
-        asset,
-        ..Default::default()
-      });
-    }
-
     let Some(config) = &self.config else {
       // If no config provided, just return asset unchanged
       return Ok(TransformResult {
@@ -119,6 +125,8 @@ impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
           .to_string(),
       },
     };
+
+    let code_str = asset.code.as_str()?;
 
     // Process tokens
     let result = process_tokens_sync(code_str, &tokens_config)
