@@ -11,7 +11,7 @@ use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSys
 use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter};
 use atlaspack_package_manager::MockPackageManager;
 use atlaspack_plugin_rpc::RpcFactory;
-use atlaspack_plugin_rpc::testing::TestingRpcFactory;
+use atlaspack_plugin_rpc::testing::testing::TestingRpcFactory;
 use lmdb_js_lite::{LMDBOptions, get_database};
 
 use crate::{

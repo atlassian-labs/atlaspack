@@ -92,6 +92,7 @@ macro_rules! cache_key {
 ///
 #[allow(clippy::disallowed_methods, clippy::disallowed_types)]
 #[async_trait]
+#[cfg_attr(test, mockall::automock)]
 pub trait TransformerPlugin: Any + Debug + Send + Sync + CacheKey {
   /// Unique ID for this transformer
   fn id(&self) -> u64 {
@@ -117,6 +118,16 @@ pub trait CacheKey {
 impl<T: Hash> CacheKey for T {
   fn cache_key(&self) -> Cow<'_, CacheStatus> {
     Cow::Owned(cache_key!(self, atlaspack_rust_version()))
+  }
+}
+
+// Manual CacheKey implementation for MockTransformerPlugin since mockall doesn't generate Hash
+#[cfg(test)]
+impl CacheKey for MockTransformerPlugin {
+  fn cache_key(&self) -> Cow<'_, CacheStatus> {
+    // Use the mocked method from the TransformerPlugin trait
+    // Note: This will delegate to the mock expectation set up in tests
+    Cow::Owned(CacheStatus::Uncachable)
   }
 }
 

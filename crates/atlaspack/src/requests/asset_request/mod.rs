@@ -255,11 +255,11 @@ mod tests {
   use crate::plugins::TransformerPipeline;
   use crate::request_tracker::RunRequestContext;
   use atlaspack_core::hash::IdentifierHasher;
-  use atlaspack_core::plugin::{CacheStatus, MockTransformerPlugin};
-  use atlaspack_core::types::Code;
-  use atlaspack_core::types::FileType;
+  use atlaspack_core::plugin::TransformerPlugin;
+  use atlaspack_core::types::{Code, FileType};
   use pretty_assertions::assert_eq;
   use std::hash::Hasher;
+  use std::sync::Arc;
 
   fn make_asset(file_path: &str, file_type: FileType) -> Asset {
     Asset {
@@ -460,6 +460,79 @@ mod tests {
     invalidate_on_file_change: Option<Vec<PathBuf>>,
     updated_file_type: Option<FileType>,
   }
+  // Mock transformer that can simulate the expected test behavior
+  #[derive(Debug)]
+  struct MockTransformerPlugin {
+    id: u64,
+    label: String,
+    discovered_assets: Option<Vec<AssetWithDependencies>>,
+    dependencies: Option<Vec<Dependency>>,
+    invalidate_on_file_change: Option<Vec<PathBuf>>,
+    updated_file_type: Option<FileType>,
+  }
+
+  // We need to implement Hash manually since we have a String field
+  impl Hash for MockTransformerPlugin {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+      self.id.hash(state);
+      self.label.hash(state);
+    }
+  }
+
+  impl MockTransformerPlugin {
+    fn new(
+      label: String,
+      discovered_assets: Option<Vec<AssetWithDependencies>>,
+      dependencies: Option<Vec<Dependency>>,
+      invalidate_on_file_change: Option<Vec<PathBuf>>,
+      updated_file_type: Option<FileType>,
+    ) -> Self {
+      let mut hasher = IdentifierHasher::new();
+      label.hash(&mut hasher);
+      let id = hasher.finish();
+
+      Self {
+        id,
+        label,
+        discovered_assets,
+        dependencies,
+        invalidate_on_file_change,
+        updated_file_type,
+      }
+    }
+  }
+
+  #[async_trait]
+  impl TransformerPlugin for MockTransformerPlugin {
+    fn id(&self) -> u64 {
+      self.id
+    }
+
+    async fn transform(&self, asset: Asset) -> anyhow::Result<TransformResult> {
+      let mut asset = asset.clone();
+
+      // Transform the asset content by appending the label
+      asset.code = Code::from(format!(
+        "{}::{}",
+        String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
+        self.label
+      ));
+
+      // Update file type if specified
+      if let Some(file_type) = self.updated_file_type.clone() {
+        asset.file_type = file_type;
+      }
+
+      Ok(TransformResult {
+        asset,
+        discovered_assets: self.discovered_assets.clone().unwrap_or_default(),
+        dependencies: self.dependencies.clone().unwrap_or_default(),
+        invalidate_on_file_change: self.invalidate_on_file_change.clone().unwrap_or_default(),
+        cache_bailout: false,
+      })
+    }
+  }
+
   fn make_transformer(options: MockTrasformerOptions) -> Arc<MockTransformerPlugin> {
     let MockTrasformerOptions {
       label,
@@ -468,44 +541,13 @@ mod tests {
       invalidate_on_file_change,
       updated_file_type,
     } = options;
-    let label = label.to_string();
-    let mut mock = MockTransformerPlugin::new();
-    mock.expect_id().returning({
-      let label = label.clone();
-      move || {
-        let mut hasher = IdentifierHasher::new();
-        label.hash(&mut hasher);
-        hasher.finish()
-      }
-    });
 
-    mock
-      .expect_cache_key()
-      .return_const(CacheStatus::Uncachable);
-
-    mock.expect_transform().returning({
-      let label = label.clone();
-      move |asset: Asset| {
-        let mut asset = asset.clone();
-        asset.code = Code::from(format!(
-          "{}::{}",
-          String::from_utf8(asset.code.bytes().to_vec()).unwrap(),
-          label.clone()
-        ));
-
-        if let Some(file_type) = updated_file_type.clone() {
-          asset.file_type = file_type;
-        }
-
-        Ok(TransformResult {
-          asset,
-          discovered_assets: discovered_assets.clone().unwrap_or_default(),
-          dependencies: dependencies.clone().unwrap_or_default(),
-          invalidate_on_file_change: invalidate_on_file_change.clone().unwrap_or_default(),
-          cache_bailout: false,
-        })
-      }
-    });
-    Arc::new(mock)
+    Arc::new(MockTransformerPlugin::new(
+      label.to_string(),
+      discovered_assets,
+      dependencies,
+      invalidate_on_file_change,
+      updated_file_type,
+    ))
   }
 }

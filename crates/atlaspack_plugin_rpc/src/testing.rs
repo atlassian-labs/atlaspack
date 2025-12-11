@@ -1,5 +1,4 @@
-#[cfg(test)]
-mod testing {
+pub mod testing {
   use std::borrow::Cow;
   use std::sync::Arc;
 

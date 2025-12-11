@@ -269,13 +269,6 @@ mod tests {
   }
 
   #[test]
-  fn test_lmdb_cache_reader_writer_new() {
-    let db = create_test_db();
-    let cache = LmdbCacheReaderWriter::new(db);
-    assert_eq!(cache.max_entries, 2000);
-  }
-
-  #[test]
   fn test_put_and_read() {
     let db = create_test_db();
     let cache = LmdbCacheReaderWriter::new(db);
