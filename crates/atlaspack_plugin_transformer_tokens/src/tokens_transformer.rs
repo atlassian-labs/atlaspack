@@ -3,21 +3,18 @@ use std::path::PathBuf;
 use anyhow::{Context, Error, anyhow};
 use async_trait::async_trait;
 use atlaspack_atlaskit_tokens::{TokensConfig, TokensPluginOptions, process_tokens_sync};
-use atlaspack_core::cache_key;
 use atlaspack_core::plugin::TransformResult;
-use atlaspack_core::plugin::{CacheStatus, PluginContext, TransformerPlugin};
+use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::types::{Asset, Code, Diagnostic, ErrorKind};
-use atlaspack_core::version::atlaspack_rust_version;
 use atlaspack_sourcemap::SourceMap as AtlaspackSourceMap;
 
 use crate::tokens_transformer_config::{PackageJson, TokensTransformerConfig};
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct AtlaspackTokensTransformerPlugin {
   project_root: PathBuf,
   config: Option<TokensTransformerConfig>,
   enabled: bool,
-  cache_key: CacheStatus,
 }
 
 impl AtlaspackTokensTransformerPlugin {
@@ -30,13 +27,10 @@ impl AtlaspackTokensTransformerPlugin {
       .feature_flags
       .bool_enabled("enableTokensTransformer");
 
-    let cache_key = cache_key!(enabled, config, project_root, atlaspack_rust_version());
-
     Ok(AtlaspackTokensTransformerPlugin {
       enabled,
       project_root,
       config,
-      cache_key,
     })
   }
 
@@ -64,10 +58,6 @@ impl AtlaspackTokensTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
-  fn cache_key(&self) -> &CacheStatus {
-    &self.cache_key
-  }
-
   fn should_skip(&self, asset: &Asset) -> Result<bool, Error> {
     // Skip if feature flag is disabled
     if !self.enabled {

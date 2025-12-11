@@ -730,6 +730,7 @@ dependencies = [
  "atlaspack_filesystem",
  "atlaspack_sourcemap",
  "criterion",
+ "derivative",
  "glob-match",
  "indexmap",
  "nodejs-semver",

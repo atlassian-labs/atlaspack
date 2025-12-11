@@ -5,8 +5,6 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use async_trait::async_trait;
-use atlaspack_core::cache_key;
-use atlaspack_core::version::atlaspack_rust_version;
 use html5ever::serialize::SerializeOpts;
 use html5ever::tendril::TendrilSink;
 use html5ever::{ParseOpts, serialize};
@@ -14,7 +12,7 @@ use markup5ever::{local_name, namespace_url, ns};
 use markup5ever_rcdom::{RcDom, SerializableHandle};
 use regex::Regex;
 
-use atlaspack_core::plugin::{CacheStatus, PluginContext, TransformResult, TransformerPlugin};
+use atlaspack_core::plugin::{PluginContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{
   Asset, AssetId, AssetWithDependencies, BundleBehavior, Code, Dependency, Environment,
 };
@@ -22,30 +20,21 @@ use atlaspack_core::types::{
 use crate::dom_visitor::walk;
 use crate::svg_dependencies_visitor::SvgDependenciesVisitor;
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct AtlaspackSvgTransformerPlugin {
   project_root: PathBuf,
-  cache_key: CacheStatus,
 }
 
 impl AtlaspackSvgTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Self {
     let project_root = ctx.options.project_root.clone();
-    let cache_key = cache_key!(project_root, atlaspack_rust_version());
 
-    AtlaspackSvgTransformerPlugin {
-      project_root,
-      cache_key,
-    }
+    AtlaspackSvgTransformerPlugin { project_root }
   }
 }
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackSvgTransformerPlugin {
-  fn cache_key(&self) -> &CacheStatus {
-    &self.cache_key
-  }
-
   async fn transform(&self, input: Asset) -> Result<TransformResult, Error> {
     let bytes: &[u8] = input.code.bytes();
 

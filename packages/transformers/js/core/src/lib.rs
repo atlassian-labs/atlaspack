@@ -911,20 +911,20 @@ pub struct JsxConfiguration {
   pub react_refresh: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
 pub struct AutomaticRuntimeGlobs {
   pub include: Vec<String>,
   pub exclude: Option<Vec<String>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
 #[serde(untagged)]
 pub enum AutomaticReactRuntime {
   Enabled(bool),
   Glob(AutomaticRuntimeGlobs),
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct JsxOptions {
   pub pragma: Option<String>,

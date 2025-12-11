@@ -4,7 +4,6 @@ use std::path::Path;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use atlaspack_core::plugin::BundlerPlugin;
 use atlaspack_core::plugin::CompressorPlugin;
 use atlaspack_core::plugin::NamerPlugin;
 use atlaspack_core::plugin::OptimizerPlugin;
@@ -14,6 +13,7 @@ use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::plugin::ValidatorPlugin;
+use atlaspack_core::plugin::{BundlerPlugin, CacheStatus};
 use atlaspack_core::types::Asset;
 #[cfg(test)]
 use mockall::automock;
@@ -68,11 +68,11 @@ impl TransformerPipeline {
       transformer.id().hash(&mut id_hasher);
 
       if cacheable {
-        match transformer.cache_key() {
-          atlaspack_core::plugin::CacheStatus::Hash(hash) => {
+        match transformer.cache_key().as_ref() {
+          CacheStatus::Hash(hash) => {
             hash.hash(&mut cache_key_hasher);
           }
-          atlaspack_core::plugin::CacheStatus::Uncachable => {
+          CacheStatus::Uncachable => {
             cacheable = false;
           }
         }
