@@ -1,7 +1,7 @@
 use atlaspack_js_swc_core::JsxOptions;
 use serde::Deserialize;
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Hash, Deserialize)]
 #[serde(untagged)]
 pub enum InlineEnvironment {
   Enabled(bool),
