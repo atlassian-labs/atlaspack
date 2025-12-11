@@ -3,26 +3,31 @@ use std::io::Cursor;
 use anyhow::Error;
 use async_trait::async_trait;
 use atlaspack_core::diagnostic_error;
-use atlaspack_core::plugin::TransformResult;
+use atlaspack_core::plugin::{CacheStatus, TransformResult};
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::types::{Asset, BundleBehavior, Code, FileType};
+use atlaspack_core::version::atlaspack_rust_version;
 use image::imageops::FilterType;
 use image::{ImageFormat, ImageReader};
 use url_search_params::parse_url_search_params;
 
 #[derive(Debug)]
-pub struct AtlaspackImageTransformerPlugin {}
+pub struct AtlaspackImageTransformerPlugin {
+  cache_key: CacheStatus,
+}
 
 impl AtlaspackImageTransformerPlugin {
   pub fn new(_ctx: &PluginContext) -> Self {
-    AtlaspackImageTransformerPlugin {}
+    AtlaspackImageTransformerPlugin {
+      cache_key: CacheStatus::Hash(atlaspack_rust_version()),
+    }
   }
 }
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackImageTransformerPlugin {
-  fn cache_key(&self) -> &atlaspack_core::plugin::CacheStatus {
-    &atlaspack_core::plugin::CacheStatus::BuiltIn
+  fn cache_key(&self) -> &CacheStatus {
+    &self.cache_key
   }
 
   async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
