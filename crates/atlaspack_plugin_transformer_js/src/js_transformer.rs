@@ -11,7 +11,8 @@ use atlaspack_core::plugin::{HmrOptions, PluginContext, TransformerPlugin};
 use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
-  Asset, BuildMode, Diagnostic, Diagnostics, ErrorKind, FileType, OutputFormat, SourceType,
+  Asset, BuildMode, DependencyKind, Diagnostic, Diagnostics, ErrorKind, FileType, OutputFormat,
+  SourceType,
 };
 use atlaspack_js_swc_core::SyncDynamicImportConfig;
 use derivative::Derivative;
@@ -119,6 +120,9 @@ impl AtlaspackJsTransformerPlugin {
       });
 
     let core_path = ctx.options.core_path.clone();
+    // TODO: Right now we're adding the full env map to the cache key.
+    // Ideally, we'd just add the ones we're utilizing in the transformer to
+    // increase the cache hit rate.
     let env = ctx.options.env.clone();
     let hmr_options = ctx.options.hmr_options.clone();
     let mode = ctx.options.mode.clone();
@@ -444,6 +448,11 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
     let transformation_result = atlaspack_js_swc_core::transform(&transform_config, None)?;
 
+    let has_inlined_fs = transformation_result
+      .dependencies
+      .iter()
+      .any(|dep| matches!(dep.kind, DependencyKind::File));
+
     if let Some(errors) = transformation_result.diagnostics {
       return Err(anyhow!(map_diagnostics(
         errors,
@@ -455,7 +464,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       )));
     }
 
-    let result = conversion::convert_result(
+    let mut result = conversion::convert_result(
       asset,
       &transform_config,
       transformation_result,
@@ -465,6 +474,15 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       &self.hmr_options,
     )
     .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
+
+    if has_inlined_fs {
+      // If we've inlined FS call then the result is not cacheable
+      tracing::info!(
+        "Asset {} has inlined FS calls, marking transform result as non-cacheable",
+        result.asset.file_path.display()
+      );
+      result.cache_bailout = true;
+    }
 
     Ok(result)
   }

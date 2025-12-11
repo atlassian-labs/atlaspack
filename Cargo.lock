@@ -740,6 +740,7 @@ dependencies = [
  "serde_json",
  "swc_core",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

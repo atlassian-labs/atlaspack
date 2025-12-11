@@ -35,7 +35,7 @@ pub(crate) fn convert_result(
   mut asset: Asset,
   transformer_config: &atlaspack_js_swc_core::Config,
   result: atlaspack_js_swc_core::TransformResult,
-  project_root: &PathBuf,
+  project_root: &Path,
   mode: &BuildMode,
   core_path: &Path,
   hmr_options: &Option<atlaspack_core::plugin::HmrOptions>,
