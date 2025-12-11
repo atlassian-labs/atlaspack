@@ -5,14 +5,16 @@ use std::sync::Arc;
 
 use anyhow::{Error, anyhow};
 use async_trait::async_trait;
-use atlaspack_core::plugin::TransformResult;
-use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
+use atlaspack_core::cache_key;
+use atlaspack_core::plugin::{CacheStatus, TransformResult};
+use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::types::engines::{Engines, EnginesBrowsers};
 use atlaspack_core::types::{
   Asset, AssetWithDependencies, Code, Dependency, DependencyBuilder, Diagnostic,
   EnvironmentContext, ErrorKind, ExportsCondition, FileType, Priority, SourceMap, SpecifierType,
   Symbol,
 };
+use atlaspack_core::version::atlaspack_rust_version;
 use lightningcss::css_modules::{CssModuleExport, CssModuleReference};
 use lightningcss::dependencies::DependencyOptions;
 use lightningcss::printer::PrinterOptions;
@@ -28,7 +30,8 @@ use crate::css_transformer_config::{CssModulesConfig, CssModulesFullConfig, CssT
 pub struct AtlaspackCssTransformerPlugin {
   project_root: PathBuf,
   css_modules_config: CssModulesFullConfig,
-  options: Arc<PluginOptions>,
+  is_compiled_css_in_js_transformer_enabled: bool,
+  cache_key: CacheStatus,
 }
 
 #[derive(Deserialize)]
@@ -63,10 +66,24 @@ impl AtlaspackCssTransformerPlugin {
       })
       .unwrap_or_default();
 
-    Ok(AtlaspackCssTransformerPlugin {
-      project_root: ctx.options.project_root.clone(),
+    let is_compiled_css_in_js_transformer_enabled = ctx
+      .options
+      .feature_flags
+      .bool_enabled("compiledCssInJsTransformer");
+
+    let project_root = ctx.options.project_root.clone();
+    let cache_key = cache_key!(
+      project_root,
       css_modules_config,
-      options: ctx.options.clone(),
+      is_compiled_css_in_js_transformer_enabled,
+      atlaspack_rust_version()
+    );
+
+    Ok(AtlaspackCssTransformerPlugin {
+      project_root,
+      css_modules_config,
+      is_compiled_css_in_js_transformer_enabled,
+      cache_key,
     })
   }
 
@@ -112,12 +129,8 @@ impl AtlaspackCssTransformerPlugin {
 #[async_trait]
 impl TransformerPlugin for AtlaspackCssTransformerPlugin {
   async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
-    let is_compiled_css_in_js_transformer_enabled = self
-      .options
-      .feature_flags
-      .bool_enabled("compiledCssInJsTransformer");
-
-    if is_compiled_css_in_js_transformer_enabled && asset.file_path.ends_with(".compiled.css") {
+    if self.is_compiled_css_in_js_transformer_enabled && asset.file_path.ends_with(".compiled.css")
+    {
       let mut asset = asset;
       self.handle_compiled_css_asset(&mut asset)?;
 
@@ -544,8 +557,8 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
     })
   }
 
-  fn cache_key(&self) -> &atlaspack_core::plugin::CacheStatus {
-    &atlaspack_core::plugin::CacheStatus::BuiltIn
+  fn cache_key(&self) -> &CacheStatus {
+    &self.cache_key
   }
 }
 

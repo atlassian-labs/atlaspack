@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct CssModulesFullConfig {
   pub global: Option<bool>,
