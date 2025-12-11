@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use anyhow::{Context, Error, anyhow};
 use async_trait::async_trait;
-use atlaspack_atlaskit_tokens::{TokensConfig, TokensPluginOptions, process_tokens_sync};
-use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
+use atlaspack_atlaskit_tokens::{AtlaskitTokensHandler, TokensConfig, TokensPluginOptions};
+use atlaspack_core::plugin::TransformResult;
+use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::types::{Asset, Code, Diagnostic, ErrorKind};
 use atlaspack_sourcemap::SourceMap as AtlaspackSourceMap;
 
@@ -13,18 +13,70 @@ use crate::tokens_transformer_config::{PackageJson, TokensTransformerConfig};
 
 #[derive(Debug)]
 pub struct AtlaspackTokensTransformerPlugin {
+  tokens_handler: Option<AtlaskitTokensHandler>,
+  token_data_path: String,
   project_root: PathBuf,
-  options: Arc<PluginOptions>,
-  config: Option<TokensTransformerConfig>,
 }
 
 impl AtlaspackTokensTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Result<Self, Error> {
+    let project_root = ctx.options.project_root.clone();
+
+    if !ctx
+      .options
+      .feature_flags
+      .bool_enabled("enableTokensTransformer")
+    {
+      return Ok(AtlaspackTokensTransformerPlugin {
+        tokens_handler: None,
+        token_data_path: String::new(),
+        project_root,
+      });
+    }
+
     let config = Self::load_config(ctx.config.clone())?;
+
+    let Some(config) = config else {
+      return Ok(AtlaspackTokensTransformerPlugin {
+        tokens_handler: None,
+        token_data_path: String::new(),
+        project_root,
+      });
+    };
+
+    // Resolve token data path relative to project root
+    let token_data_path = if config.token_data_path.starts_with('/') {
+      config.token_data_path.clone()
+    } else {
+      project_root
+        .join(&config.token_data_path)
+        .to_string_lossy()
+        .to_string()
+    };
+
+    let tokens_handler = Some(AtlaskitTokensHandler::new(
+      project_root.to_string_lossy().to_string(),
+      TokensPluginOptions {
+        token_data_path: token_data_path.clone(),
+        should_use_auto_fallback: config.should_use_auto_fallback.unwrap_or(true),
+        should_force_auto_fallback: config.should_force_auto_fallback.unwrap_or(true),
+        force_auto_fallback_exemptions: config
+          .force_auto_fallback_exemptions
+          .as_ref()
+          .cloned()
+          .unwrap_or_default(),
+        default_theme: config
+          .default_theme
+          .as_deref()
+          .unwrap_or("light")
+          .to_string(),
+      },
+    )?);
+
     Ok(AtlaspackTokensTransformerPlugin {
-      project_root: ctx.options.project_root.clone(),
-      options: ctx.options.clone(),
-      config,
+      tokens_handler,
+      token_data_path,
+      project_root,
     })
   }
 
@@ -52,21 +104,11 @@ impl AtlaspackTokensTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
-  async fn transform(
-    &self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
-    // Check feature flag first
-    if !self
-      .options
-      .feature_flags
-      .bool_enabled("enableTokensTransformer")
-    {
-      return Ok(TransformResult {
-        asset,
-        ..Default::default()
-      });
+  fn should_skip(&self, asset: &Asset) -> Result<bool, Error> {
+    // Skip if we have no tokens handler
+    // This means the flag is off, or this project has no tokens config
+    if self.tokens_handler.is_none() {
+      return Ok(true);
     }
 
     // Check if code contains '@atlaskit/tokens' before processing
@@ -78,50 +120,27 @@ impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
       });
     }
 
-    let Some(config) = &self.config else {
-      // If no config provided, just return asset unchanged
+    Ok(false)
+  }
+
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
+    let Some(tokens_handler) = &self.tokens_handler else {
       return Ok(TransformResult {
         asset,
         ..Default::default()
       });
     };
 
-    // Resolve token data path relative to project root
-    let token_data_path = if config.token_data_path.starts_with('/') {
-      config.token_data_path.clone()
-    } else {
-      self
-        .project_root
-        .join(&config.token_data_path)
-        .to_string_lossy()
-        .to_string()
-    };
-
     // Build tokens config
     let tokens_config = TokensConfig {
       filename: asset.file_path.to_string_lossy().to_string(),
-      project_root: self.project_root.to_string_lossy().to_string(),
       is_source: asset.is_source,
       source_maps: asset.env.source_map.is_some(),
-      tokens_options: TokensPluginOptions {
-        token_data_path,
-        should_use_auto_fallback: config.should_use_auto_fallback.unwrap_or(true),
-        should_force_auto_fallback: config.should_force_auto_fallback.unwrap_or(true),
-        force_auto_fallback_exemptions: config
-          .force_auto_fallback_exemptions
-          .as_ref()
-          .cloned()
-          .unwrap_or_default(),
-        default_theme: config
-          .default_theme
-          .as_deref()
-          .unwrap_or("light")
-          .to_string(),
-      },
     };
 
     // Process tokens
-    let result = process_tokens_sync(code_str, &tokens_config)
+    let result = tokens_handler
+      .process(code_str, tokens_config)
       .with_context(|| format!("Failed to process tokens for {}", asset.file_path.display()))?;
 
     let mut transformed_asset = asset.clone();
@@ -129,9 +148,7 @@ impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
 
     // Handle source maps
     let mut invalidate_on_file_change = vec![];
-    if let Ok(token_data_path) =
-      std::path::Path::new(&tokens_config.tokens_options.token_data_path).canonicalize()
-    {
+    if let Ok(token_data_path) = std::path::Path::new(&self.token_data_path).canonicalize() {
       invalidate_on_file_change.push(token_data_path);
     }
 
