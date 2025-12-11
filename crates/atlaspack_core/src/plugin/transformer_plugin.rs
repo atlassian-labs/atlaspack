@@ -29,10 +29,10 @@ pub struct TransformResult {
   pub cache_bailout: bool,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum CacheStatus {
   Hash(u64),
   Uncachable,
-  BuiltIn,
 }
 
 /// Compile a single asset, discover dependencies, or convert the asset to a different format
