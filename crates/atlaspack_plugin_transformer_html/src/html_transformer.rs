@@ -5,15 +5,17 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use async_trait::async_trait;
+use atlaspack_core::cache_key;
 use html5ever::serialize::SerializeOpts;
 use html5ever::tendril::TendrilSink;
 use html5ever::{ParseOpts, serialize};
 use markup5ever_rcdom::{RcDom, SerializableHandle};
 
-use atlaspack_core::plugin::{PluginContext, TransformResult, TransformerPlugin};
+use atlaspack_core::plugin::{CacheStatus, PluginContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{
   Asset, AssetId, AssetWithDependencies, BundleBehavior, Code, Dependency, Environment,
 };
+use atlaspack_core::version::atlaspack_rust_version;
 
 use crate::dom_visitor::walk;
 use crate::hmr_visitor::HMRVisitor;
@@ -22,20 +24,25 @@ use crate::html_dependencies_visitor::HtmlDependenciesVisitor;
 #[derive(Debug)]
 pub struct AtlaspackHtmlTransformerPlugin {
   project_root: PathBuf,
+  cache_key: CacheStatus,
 }
 
 impl AtlaspackHtmlTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Self {
+    let project_root = ctx.options.project_root.clone();
+    let cache_key = cache_key!(project_root, atlaspack_rust_version());
+
     AtlaspackHtmlTransformerPlugin {
-      project_root: ctx.options.project_root.clone(),
+      project_root,
+      cache_key,
     }
   }
 }
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
-  fn cache_key(&self) -> &atlaspack_core::plugin::CacheStatus {
-    &atlaspack_core::plugin::CacheStatus::BuiltIn
+  fn cache_key(&self) -> &CacheStatus {
+    &self.cache_key
   }
 
   async fn transform(&self, input: Asset) -> Result<TransformResult, Error> {
