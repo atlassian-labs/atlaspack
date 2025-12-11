@@ -15,11 +15,11 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "devDependencies": {
-    "@atlaspack/core": "2.29.1",
-    "@atlaspack/plugin": "2.14.41",
-    "@atlaspack/rust": "3.13.0",
-    "@atlaspack/test-utils": "2.14.44",
-    "@atlaspack/types": "2.15.31",
+    "@atlaspack/core": "2.29.2",
+    "@atlaspack/plugin": "2.14.42",
+    "@atlaspack/rust": "3.14.0",
+    "@atlaspack/test-utils": "2.14.45",
+    "@atlaspack/types": "2.15.32",
     "playwright": "1.50.0"
   },
   "dependencies": {
