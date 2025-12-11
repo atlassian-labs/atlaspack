@@ -5,6 +5,8 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use async_trait::async_trait;
+use atlaspack_core::cache_key;
+use atlaspack_core::version::atlaspack_rust_version;
 use html5ever::serialize::SerializeOpts;
 use html5ever::tendril::TendrilSink;
 use html5ever::{ParseOpts, serialize};
@@ -23,12 +25,17 @@ use crate::svg_dependencies_visitor::SvgDependenciesVisitor;
 #[derive(Debug)]
 pub struct AtlaspackSvgTransformerPlugin {
   project_root: PathBuf,
+  cache_key: CacheStatus,
 }
 
 impl AtlaspackSvgTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Self {
+    let project_root = ctx.options.project_root.clone();
+    let cache_key = cache_key!(project_root, atlaspack_rust_version());
+
     AtlaspackSvgTransformerPlugin {
-      project_root: ctx.options.project_root.clone(),
+      project_root,
+      cache_key,
     }
   }
 }
@@ -36,7 +43,7 @@ impl AtlaspackSvgTransformerPlugin {
 #[async_trait]
 impl TransformerPlugin for AtlaspackSvgTransformerPlugin {
   fn cache_key(&self) -> &CacheStatus {
-    &CacheStatus::BuiltIn
+    &self.cache_key
   }
 
   async fn transform(&self, input: Asset) -> Result<TransformResult, Error> {
