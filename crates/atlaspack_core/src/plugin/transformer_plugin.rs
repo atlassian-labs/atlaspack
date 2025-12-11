@@ -35,6 +35,51 @@ pub enum CacheStatus {
   Uncachable,
 }
 
+/// Creates a CacheStatus::Hash by hashing the provided values.
+///
+/// This macro takes any number of arguments that implement Hash and combines
+/// them into a single u64 hash for use as a cache key.
+///
+/// # Examples
+///
+/// ```rust
+/// use atlaspack_core::{cache_key, version::atlaspack_rust_version};
+///
+/// // Simple usage with just the rust version
+/// let key = cache_key!(atlaspack_rust_version());
+///
+/// // Multiple values
+/// let config = MyConfig { /* ... */ };
+/// let key = cache_key!(config, atlaspack_rust_version(), "some_string");
+///
+/// // Can be used directly in struct initialization
+/// struct MyPlugin {
+///   cache_key: CacheStatus,
+/// }
+///
+/// impl MyPlugin {
+///   fn new(config: &Config) -> Self {
+///     Self {
+///       cache_key: cache_key!(config, atlaspack_rust_version()),
+///     }
+///   }
+/// }
+/// ```
+#[macro_export]
+macro_rules! cache_key {
+    ($($val:expr),+ $(,)?) => {{
+        use std::hash::{Hash, Hasher};
+        use $crate::hash::IdentifierHasher;
+        use $crate::plugin::CacheStatus;
+
+        let mut hasher = IdentifierHasher::new();
+        $(
+            $val.hash(&mut hasher);
+        )+
+        CacheStatus::Hash(hasher.finish())
+    }};
+}
+
 /// Compile a single asset, discover dependencies, or convert the asset to a different format
 ///
 /// Many transformers are wrappers around other tools such as compilers and preprocessors, and are
@@ -61,4 +106,70 @@ pub trait TransformerPlugin: Any + Debug + Send + Sync {
 
   /// Transform the asset and/or add new assets
   async fn transform(&self, asset: Asset) -> anyhow::Result<TransformResult>;
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::version::atlaspack_rust_version;
+
+  #[derive(Hash)]
+  struct TestConfig {
+    value: String,
+  }
+
+  #[test]
+  fn test_cache_key_macro_single_value() {
+    let key = cache_key!(42u64);
+
+    match key {
+      CacheStatus::Hash(hash_value) => {
+        // Should produce a deterministic hash
+        assert!(hash_value > 0);
+      }
+      _ => panic!("Expected Hash variant"),
+    }
+  }
+
+  #[test]
+  fn test_cache_key_macro_multiple_values() {
+    let config = TestConfig {
+      value: "test".to_string(),
+    };
+
+    let key = cache_key!(config, atlaspack_rust_version(), "extra_string");
+
+    match key {
+      CacheStatus::Hash(hash_value) => {
+        assert!(hash_value > 0);
+
+        // Same inputs should produce same hash
+        let config2 = TestConfig {
+          value: "test".to_string(),
+        };
+        let key2 = cache_key!(config2, atlaspack_rust_version(), "extra_string");
+
+        if let CacheStatus::Hash(hash_value2) = key2 {
+          assert_eq!(
+            hash_value, hash_value2,
+            "Same inputs should produce same hash"
+          );
+        } else {
+          panic!("Expected Hash variant");
+        }
+      }
+      _ => panic!("Expected Hash variant"),
+    }
+  }
+
+  #[test]
+  fn test_cache_key_macro_trailing_comma() {
+    // Test that trailing comma works
+    let key = cache_key!(42u64, "test",);
+
+    match key {
+      CacheStatus::Hash(_) => {} // Success
+      _ => panic!("Expected Hash variant"),
+    }
+  }
 }
