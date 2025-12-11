@@ -148,7 +148,7 @@ export default new Resolver({
       handleReactDomServer,
     } = config;
 
-    if (isAbsolute(specifier)) {
+    if (!specifier.startsWith('//') && isAbsolute(specifier)) {
       return {
         filePath: specifier,
         code: undefined,
