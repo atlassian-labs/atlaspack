@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod testing {
+  use std::borrow::Cow;
   use std::sync::Arc;
 
   use async_trait::async_trait;
@@ -187,12 +188,14 @@ mod testing {
     }
   }
 
+  impl CacheKey for TestingRpcPlugin {
+    fn cache_key(&self) -> Cow<'_, CacheStatus> {
+      Cow::Owned(CacheStatus::Uncachable)
+    }
+  }
+
   #[async_trait]
   impl TransformerPlugin for TestingRpcPlugin {
-    fn cache_key(&self) -> &CacheStatus {
-      &CacheStatus::Uncachable
-    }
-
     async fn transform(&self, asset: Asset) -> Result<TransformResult, anyhow::Error> {
       Ok(TransformResult {
         asset,
