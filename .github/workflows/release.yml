@@ -169,6 +169,8 @@ jobs:
           npm config set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
           npm config set registry https://registry.npmjs.org/
       - run: ${{ inputs.release-command }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   build-and-release-changesets:
     name: Build and release Changesets
