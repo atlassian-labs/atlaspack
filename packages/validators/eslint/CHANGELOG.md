@@ -1,5 +1,13 @@
 # @atlaspack/validator-eslint
 
+## 2.14.44
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.5
+  - @atlaspack/plugin@2.14.44
+
 ## 2.14.43
 
 ### Patch Changes
