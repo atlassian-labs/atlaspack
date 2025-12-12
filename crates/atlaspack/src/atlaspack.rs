@@ -136,6 +136,13 @@ impl Atlaspack {
       package_manager,
     )?);
 
+    let cache_mode = if resolved_options.feature_flags.bool_enabled("v3Caching") {
+      // Validate 1 in 1000 cache requests
+      CacheMode::On(0.001)
+    } else {
+      CacheMode::Off
+    };
+
     let request_tracker = RequestTracker::new(
       config_loader.clone(),
       fs.clone(),
@@ -144,7 +151,7 @@ impl Atlaspack {
       project_root.clone(),
       Arc::new(CacheHandler::new(
         LmdbCacheReaderWriter::new(db.clone()),
-        CacheMode::On(0.1),
+        cache_mode,
       )),
     );
 
