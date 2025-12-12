@@ -29,6 +29,13 @@ export default new Runtime({
         filePath: __filename,
         code: JSON.stringify(descendants),
         isEntry: true,
+        // Pre-computed symbols: simple JSON export, no dependencies
+        symbolData: {
+          symbols: new Map([
+            ['default', {local: 'JSON.stringify(descendants)', loc: null}],
+          ]),
+          dependencies: [],
+        },
       };
     } else if (options.hmrOptions && bundle.type == 'js') {
       const manifest = bundleGraph
@@ -60,6 +67,11 @@ export default new Runtime({
             filePath: __filename,
             code: AUTORELOAD_BG,
             isEntry: true,
+            // Pre-computed symbols: autoreload background script, no explicit deps/exports
+            symbolData: {
+              symbols: new Map(), // Side effects only, no exports
+              dependencies: [], // Uses browser APIs, no explicit dependencies
+            },
           },
           {
             filePath: __filename,
@@ -77,6 +89,13 @@ export default new Runtime({
               ),
             )})`,
             isEntry: true,
+            // Pre-computed symbols: JSON parse result, no dependencies
+            symbolData: {
+              symbols: new Map([
+                ['default', {local: 'JSON.parse(...)', loc: null}],
+              ]),
+              dependencies: [],
+            },
           },
         ];
       }

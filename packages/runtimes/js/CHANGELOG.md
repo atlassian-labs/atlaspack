@@ -1,5 +1,28 @@
 # @atlaspack/runtime-js
 
+## 2.20.0
+
+### Minor Changes
+
+- [#925](https://github.com/atlassian-labs/atlaspack/pull/925) [`00fa643`](https://github.com/atlassian-labs/atlaspack/commit/00fa6433202bfd3311479f6314c9ec878a789f2c) Thanks [@benjervis](https://github.com/benjervis)! - Save propagating symbols for runtimes by requiring symbol and dependency data be returned at the time the assets are injected.
+
+### Patch Changes
+
+- Updated dependencies [[`00fa643`](https://github.com/atlassian-labs/atlaspack/commit/00fa6433202bfd3311479f6314c9ec878a789f2c)]:
+  - @atlaspack/types-internal@2.22.0
+  - @atlaspack/plugin@2.14.43
+  - @atlaspack/utils@3.2.4
+
+## 2.19.9
+
+### Patch Changes
+
+- Updated dependencies [[`cbb66a5`](https://github.com/atlassian-labs/atlaspack/commit/cbb66a554f7ad679fd4dfc9e2bf2d5abb859f846)]:
+  - @atlaspack/feature-flags@2.27.3
+  - @atlaspack/utils@3.2.3
+  - @atlaspack/types-internal@2.21.3
+  - @atlaspack/plugin@2.14.42
+
 ## 2.19.8
 
 ### Patch Changes

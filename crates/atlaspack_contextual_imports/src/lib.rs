@@ -5,7 +5,6 @@ use swc_core::ecma::ast::{
   self, CallExpr, ExprOrSpread, Ident, IdentName, Lit, MemberExpr, MemberProp, ModuleItem, Stmt,
   Str,
 };
-use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::utils::private_ident;
 use swc_core::ecma::visit::VisitMutWith;
 use swc_core::quote;
@@ -144,7 +143,7 @@ impl ContextualImportsInlineRequireVisitor {
     .into()
   }
 
-  fn match_str(node: &ast::Expr) -> Option<(JsWord, Span)> {
+  fn match_str(node: &ast::Expr) -> Option<(Atom, Span)> {
     use ast::*;
 
     match node {

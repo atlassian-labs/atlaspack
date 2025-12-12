@@ -1,5 +1,19 @@
 # @atlaspack/types-internal
 
+## 2.22.0
+
+### Minor Changes
+
+- [#925](https://github.com/atlassian-labs/atlaspack/pull/925) [`00fa643`](https://github.com/atlassian-labs/atlaspack/commit/00fa6433202bfd3311479f6314c9ec878a789f2c) Thanks [@benjervis](https://github.com/benjervis)! - Save propagating symbols for runtimes by requiring symbol and dependency data be returned at the time the assets are injected.
+
+## 2.21.3
+
+### Patch Changes
+
+- Updated dependencies [[`cbb66a5`](https://github.com/atlassian-labs/atlaspack/commit/cbb66a554f7ad679fd4dfc9e2bf2d5abb859f846)]:
+  - @atlaspack/feature-flags@2.27.3
+  - @atlaspack/source-map@3.1.3
+
 ## 2.21.2
 
 ### Patch Changes

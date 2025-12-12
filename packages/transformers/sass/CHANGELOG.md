@@ -1,5 +1,20 @@
 # @atlaspack/transformer-sass
 
+## 2.15.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.43
+
+## 2.15.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.1.3
+  - @atlaspack/plugin@2.14.42
+
 ## 2.15.2
 
 ### Patch Changes

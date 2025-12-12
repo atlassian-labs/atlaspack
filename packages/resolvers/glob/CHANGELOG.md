@@ -1,5 +1,25 @@
 # @atlaspack/resolver-glob
 
+## 2.14.43
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.43
+  - @atlaspack/types@2.15.33
+  - @atlaspack/utils@3.2.4
+  - @atlaspack/node-resolver-core@3.7.14
+
+## 2.14.42
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.3
+  - @atlaspack/node-resolver-core@3.7.13
+  - @atlaspack/plugin@2.14.42
+  - @atlaspack/types@2.15.32
+
 ## 2.14.41
 
 ### Patch Changes

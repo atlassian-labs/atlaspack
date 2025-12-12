@@ -1,6 +1,7 @@
 use std::string::FromUtf8Error;
 use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::input::StringInput;
+use swc_core::common::source_map::DefaultSourceMapGenConfig;
 use swc_core::common::sync::Lrc;
 use swc_core::common::util::take::Take;
 use swc_core::common::{FileName, GLOBALS, Globals, Mark, SourceMap};
@@ -132,7 +133,7 @@ pub enum RunWithTransformationError {
   #[error("Invalid utf-8 output: {0}")]
   InvalidUtf8Output(#[from] FromUtf8Error),
   #[error("Failed to generate source map")]
-  SourceMap(#[from] sourcemap::Error),
+  SourceMap(#[from] swc_core::base::sourcemap::Error),
 }
 
 pub struct RunWithTransformationOutput<R> {
@@ -154,7 +155,7 @@ pub fn run_with_transformation<R>(
   transform: impl FnOnce(RunContext, &mut Module) -> R,
 ) -> Result<RunWithTransformationOutput<R>, RunWithTransformationError> {
   let source_map = Lrc::new(SourceMap::default());
-  let source_file = source_map.new_source_file(Lrc::new(FileName::Anon), options.code.into());
+  let source_file = source_map.new_source_file(Lrc::new(FileName::Anon), options.code.to_string());
 
   let comments = SingleThreadedComments::default();
   let syntax = options.syntax.unwrap_or_default();
@@ -218,7 +219,8 @@ pub fn run_with_transformation<R>(
       emitter.emit_module(&module)?;
 
       let output_code = String::from_utf8(output_buffer)?;
-      let source_map = source_map.build_source_map(&line_pos_buffer);
+      let source_map =
+        source_map.build_source_map(&line_pos_buffer, None, DefaultSourceMapGenConfig);
       let mut output_map_buffer = vec![];
 
       source_map.to_writer(&mut output_map_buffer)?;

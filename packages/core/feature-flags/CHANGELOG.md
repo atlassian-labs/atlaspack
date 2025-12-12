@@ -1,5 +1,22 @@
 # @atlaspack/feature-flags
 
+## 2.27.3
+
+### Patch Changes
+
+- [#924](https://github.com/atlassian-labs/atlaspack/pull/924) [`cbb66a5`](https://github.com/atlassian-labs/atlaspack/commit/cbb66a554f7ad679fd4dfc9e2bf2d5abb859f846) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add new JSX config system using the `@atlaspack/transformer-js` config in package.json
+
+  This feature is enabled when the `newJsxConfig` feature flag is enabled.
+
+  The new config will be fully responsible for providing JSX settings going forward, instead of inferring values from tsconfig.json and local package.json files.
+
+  | Option           | Type                     | Description                                                                                           |
+  | ---------------- | ------------------------ | ----------------------------------------------------------------------------------------------------- |
+  | pragma           | String                   | Specifies the JSX pragma to use (e.g., "React.createElement").                                        |
+  | pragmaFragment   | String                   | Specifies the JSX fragment pragma to use (e.g., "React.Fragment").                                    |
+  | importSource     | String                   | Specifies the import source for JSX. Only relevant for automatic runtime                              |
+  | automaticRuntime | `Boolean \| Array<Glob>` | Specifies the file that require the automatic runtime. Either Globs or a boolean to set for all files |
+
 ## 2.27.2
 
 ### Patch Changes

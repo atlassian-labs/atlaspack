@@ -44,6 +44,19 @@ _register(manifest, version);
         code,
         isEntry: true,
         env: {sourceType: 'module'},
+        // Pre-computed symbols: imports _register from @atlaspack/service-worker, no exports
+        symbolData: {
+          symbols: new Map(), // No exports, just side effects
+          dependencies: [
+            {
+              specifier: '@atlaspack/service-worker',
+              symbols: new Map([
+                ['_register', {local: '_register', loc: null, isWeak: false}],
+              ]),
+              usedSymbols: new Set(['_register']),
+            },
+          ],
+        },
       },
     ];
   },

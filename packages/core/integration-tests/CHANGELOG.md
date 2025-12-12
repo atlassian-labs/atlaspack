@@ -1,5 +1,11 @@
 # @atlaspack/integration-tests
 
+## 2.20.0
+
+### Minor Changes
+
+- [#916](https://github.com/atlassian-labs/atlaspack/pull/916) [`e55c80c`](https://github.com/atlassian-labs/atlaspack/commit/e55c80cd0ae3cc40356fe063cb7d45fbb9095356) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Add Atlaspack V3 config parsing for `typeof_replacer`, `global_aliaser`, `lazy_loading_transformer`, `react_hooks_remover`, `react_async_import_lift`, `static_prevaluator`, `dead_returns_remover`, `unused_bindings_remover`
+
 ## 2.19.0
 
 ### Minor Changes

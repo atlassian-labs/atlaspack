@@ -1874,6 +1874,30 @@ export type Namer<ConfigType> = {
   }): Async<FilePath | null | undefined>;
 };
 
+export type SymbolData = {
+  readonly symbols?: ReadonlyMap<
+    Symbol,
+    {
+      readonly local: Symbol;
+      readonly loc?: SourceLocation | null | undefined;
+      readonly meta?: Meta | null | undefined;
+    }
+  >;
+  readonly dependencies?: ReadonlyArray<{
+    readonly specifier: DependencySpecifier;
+    readonly symbols?: ReadonlyMap<
+      Symbol,
+      {
+        readonly local: Symbol;
+        readonly loc?: SourceLocation | null | undefined;
+        readonly isWeak: boolean;
+        readonly meta?: Meta | null | undefined;
+      }
+    >;
+    readonly usedSymbols?: ReadonlySet<Symbol>;
+  }>;
+};
+
 type RuntimeAssetPriority = 'sync' | 'parallel';
 
 /**
@@ -1888,6 +1912,10 @@ export type RuntimeAsset = {
   readonly env?: EnvironmentOptions;
   readonly priority?: RuntimeAssetPriority;
   readonly runtimeAssetRequiringExecutionOnLoad?: boolean;
+  /**
+   * Pre-computed symbol information for runtime assets to skip symbol propagation.
+   */
+  readonly symbolData?: SymbolData;
 };
 
 /**
