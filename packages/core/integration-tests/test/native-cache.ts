@@ -4,12 +4,10 @@ import {
   describe,
   it,
   fsFixture,
-  overlayFS,
   inputFS,
-  napiWorkerPool,
+  bundler,
+  run,
 } from '@atlaspack/test-utils';
-import {AtlaspackV3, FileSystemV3} from '@atlaspack/core';
-import {NodePackageManager} from '@atlaspack/package-manager';
 import {LMDBLiteCache} from '@atlaspack/cache';
 
 /**
@@ -20,269 +18,201 @@ import {LMDBLiteCache} from '@atlaspack/cache';
  * - Invalidates cache when source files change
  * - Returns correct results from cache
  */
-describe.v3('Native Transformer Cache', function () {
+describe.v3('Native cache', function () {
   let dir: string;
+  let cacheDir = path.join(__dirname, 'tmp/native-cache');
 
   beforeEach(async function () {
     dir = path.join(__dirname, 'native-cache-fixture');
-    await overlayFS.rimraf(dir);
-    await overlayFS.mkdirp(dir);
+    await inputFS.rimraf(dir);
+    await inputFS.mkdirp(dir);
   });
 
   afterEach(async function () {
-    await overlayFS.rimraf(dir);
+    await inputFS.rimraf(dir);
+    await inputFS.rimraf(cacheDir);
   });
 
-  describe('Basic Cache Behavior', function () {
-    it('builds', async () => {
-      await fsFixture(overlayFS, __dirname)`
+  it('should cache with stats', async () => {
+    await fsFixture(inputFS, dir)`
         index.js:
-          console.log('hello world');
+          export default 'should not fail';
+      `;
+
+    let instance = bundler(path.join(dir, 'index.js'), {
+      inputFS,
+      featureFlags: {
+        v3Caching: true,
+      },
+      cache: new LMDBLiteCache(cacheDir),
+    });
+
+    let buildOne = await instance.run();
+    assert.equal(buildOne.nativeCacheStats.hits, 0);
+    assert.equal(buildOne.nativeCacheStats.misses, 2);
+
+    let output = await run(buildOne.bundleGraph);
+    assert.equal(output.default, 'should not fail');
+
+    let buildTwo = await instance.run();
+    // Two hits: one for index.js, one for the esmodule-helpers.js
+    assert.equal(buildTwo.nativeCacheStats.hits, 2);
+    assert.equal(buildTwo.nativeCacheStats.misses, 0);
+
+    output = await run(buildTwo.bundleGraph);
+    assert.equal(output.default, 'should not fail');
+  });
+
+  it('should not cache when old Transformer API is used', async () => {
+    await fsFixture(inputFS, dir)`
+        package.json:
+          {
+            "name": "cache-n-stuff"
+          }
+
+        yarn.lock:
+
+        index.js:
+          export default 'should not fail';
 
         .parcelrc:
           {
             "extends": "@atlaspack/config-default",
             "transformers": {
-              "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": ["@atlaspack/transformer-js"]
+              "*.js": ["./transformer-plugin.ts", "..."]
             }
           }
 
-        yarn.lock: {}
+        transformer-plugin.ts:
+          import { Transformer } from '@atlaspack/plugin';
+
+          export default new Transformer({
+            async loadConfig() {
+              return {replaceValue: 'cache'};
+            },
+            async transform({ asset, config }) {
+              const code = await asset.getCode();
+              asset.setCode(code.replace('fail', config.replaceValue));
+              return [asset];
+            }
+          });
+
       `;
 
-      let atlaspack = await AtlaspackV3.create({
-        corePath: '',
-        serveOptions: false,
-        entries: [path.join(__dirname, 'index.js')],
-        fs: new FileSystemV3(overlayFS),
-        napiWorkerPool,
-        packageManager: new NodePackageManager(inputFS, __dirname),
-        lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
-      });
-
-      await atlaspack.buildAssetGraph();
+    let instance = bundler(path.join(dir, 'index.js'), {
+      inputFS,
+      featureFlags: {
+        v3Caching: true,
+      },
+      cache: new LMDBLiteCache(cacheDir),
     });
 
-    it('should produce identical output on rebuild without changes', async function () {
-      await fsFixture(overlayFS, dir)`
-        index.js:
-          export function hello() {
-            return 'hello world';
+    let buildOne = await instance.run();
+    assert.equal(buildOne.nativeCacheStats.uncacheables, 2);
+
+    let output = await run(buildOne.bundleGraph);
+    assert.equal(output.default, 'should not cache');
+  });
+
+  it('should not cache when unreported env usage is detected', async () => {
+    await fsFixture(inputFS, dir)`
+        package.json:
+          {
+            "name": "cache-n-stuff"
           }
-          export default hello();
+
+        yarn.lock:
+
+        index.js:
+          export default 'should not fail';
 
         .parcelrc:
           {
             "extends": "@atlaspack/config-default",
             "transformers": {
-              "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": ["@atlaspack/transformer-js"]
+              "*.js": ["./transformer-plugin-2.ts", "..."]
             }
           }
 
-        yarn.lock: {}
+        transformer-plugin-2.ts:
+          import { Transformer } from '@atlaspack/plugin';
+
+          export default new Transformer({
+            async setup() {
+              return { config: {} }
+            },
+            async transform({ asset }) {
+              const code = await asset.getCode();
+              asset.setCode(code.replace('fail', process.env.ATLASPACK_V3));
+              return [asset];
+            }
+          });
+
       `;
 
-      console.log('Creating cache at:', dir);
-      const cacheDir = path.join(dir, '.parcel-cache');
-      await overlayFS.mkdirp(cacheDir);
-      const cache = new LMDBLiteCache(cacheDir);
-
-      console.log('Creating first AtlaspackV3 instance...');
-      // Create AtlaspackV3 instance
-      let atlaspack = await AtlaspackV3.create({
-        corePath: '',
-        serveOptions: false,
-        entries: [path.join(dir, 'index.js')],
-        fs: new FileSystemV3(overlayFS),
-        napiWorkerPool,
-        packageManager: new NodePackageManager(inputFS, dir),
-        lmdb: cache.getNativeRef(),
-      });
-
-      console.log('Running first build...');
-      // First build
-      await atlaspack.buildAssetGraph();
-      console.log('First build complete!');
-      console.log('Getting cache stats...');
-      let stats1 = await atlaspack.getCacheStats();
-      console.log('Got stats1:', stats1);
-
-      // On first build, we expect misses (no cache hits)
-      assert.equal(stats1.hits, 0, 'First build should have no cache hits');
-      assert(stats1.misses > 0, 'First build should have cache misses');
-
-      console.log('Running second build with same instance...');
-      // Second build with same instance (should use cache)
-      await atlaspack.buildAssetGraph();
-      console.log('Second build complete!');
-      let stats2 = await atlaspack.getCacheStats();
-      console.log('Got stats2:', stats2);
-
-      // On second build with same instance, we expect cache hits
-      assert(
-        stats2.hits > 0,
-        `Second build should have cache hits, got: ${JSON.stringify(stats2)}`,
-      );
+    let instance = bundler(path.join(dir, 'index.js'), {
+      inputFS,
+      featureFlags: {
+        v3Caching: true,
+      },
+      cache: new LMDBLiteCache(cacheDir),
     });
 
-    // it('should invalidate cache when source file changes', async function () {
-    //   await fsFixture(overlayFS, dir)`
-    //     yarn.lock:
+    let buildOne = await instance.run();
+    assert.equal(buildOne.nativeCacheStats.bailouts, 2);
 
-    //     package.json:
-    //       {
-    //         "name": "cache-test",
-    //         "version": "1.0.0"
-    //       }
+    let output = await run(buildOne.bundleGraph);
+    assert.equal(output.default, 'should not true');
+  });
 
-    //     .parcelrc:
-    //       {
-    //         "extends": "@atlaspack/config-default",
-    //         "transformers": {
-    //           "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": ["@atlaspack/transformer-js"]
-    //         }
-    //       }
+  it('should cache when reported env usage is detected', async () => {
+    await fsFixture(inputFS, dir)`
+        package.json:
+          {
+            "name": "cache-n-stuff"
+          }
 
-    //     src/index.js:
-    //       export default 'initial value';
-    //   `;
+        yarn.lock:
 
-    //   const cacheDir = path.join(dir, '.parcel-cache');
-    //   await overlayFS.mkdirp(cacheDir);
-    //   const cache = new LMDBLiteCache(cacheDir);
+        index.js:
+          export default 'should not fail';
 
-    //   // First build
-    //   let atlaspack1 = await AtlaspackV3.create({
-    //     corePath: '',
-    //     serveOptions: false,
-    //     entries: [path.join(dir, 'src/index.js')],
-    //     fs: new FileSystemV3(overlayFS),
-    //     napiWorkerPool,
-    //     packageManager: new NodePackageManager(inputFS, dir),
-    //     lmdb: cache.getNativeRef(),
-    //   });
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "transformers": {
+              "*.js": ["./transformer-plugin-3.ts", "..."]
+            }
+          }
 
-    //   await atlaspack1.buildAssetGraph();
-    //   let stats1 = atlaspack1.getCacheStats();
-    //   assert.equal(stats1.hits, 0, 'First build should have no cache hits');
+        transformer-plugin-3.ts:
+          import { Transformer } from '@atlaspack/plugin';
 
-    //   // Modify the source file
-    //   await overlayFS.writeFile(
-    //     path.join(dir, 'src/index.js'),
-    //     "export default 'updated value';",
-    //   );
+          export default new Transformer({
+            async setup() {
+              return { config: {}, env: ['ATLASPACK_V3'] }
+            },
+            async transform({ asset }) {
+              const code = await asset.getCode();
+              asset.setCode(code.replace('fail', process.env.ATLASPACK_V3));
+              return [asset];
+            }
+          });
 
-    //   // Second build (should detect change and rebuild)
-    //   let atlaspack2 = await AtlaspackV3.create({
-    //     corePath: '',
-    //     serveOptions: false,
-    //     entries: [path.join(dir, 'src/index.js')],
-    //     fs: new FileSystemV3(overlayFS),
-    //     napiWorkerPool,
-    //     packageManager: new NodePackageManager(inputFS, dir),
-    //     lmdb: cache.getNativeRef(),
-    //   });
+      `;
 
-    //   await atlaspack2.buildAssetGraph();
-    //   let stats2 = atlaspack2.getCacheStats();
+    let instance = bundler(path.join(dir, 'index.js'), {
+      inputFS,
+      featureFlags: {
+        v3Caching: true,
+      },
+      cache: new LMDBLiteCache(cacheDir),
+    });
 
-    //   // After file change, we should still have some misses (invalidated entries)
-    //   assert(stats2.misses > 0, 'Should have cache misses after file change');
+    let buildOne = await instance.run();
+    assert.equal(buildOne.nativeCacheStats.misses, 2);
 
-    //   atlaspack1.end();
-    //   atlaspack2.end();
-    // });
-
-    // it('should handle multiple files with dependencies', async function () {
-    //   await fsFixture(overlayFS, dir)`
-    //     yarn.lock:
-
-    //     package.json:
-    //       {
-    //         "name": "cache-test",
-    //         "version": "1.0.0"
-    //       }
-
-    //     .parcelrc:
-    //       {
-    //         "extends": "@atlaspack/config-default",
-    //         "transformers": {
-    //           "*.{js,mjs,jsm,jsx,es6,cjs,ts,tsx}": ["@atlaspack/transformer-js"]
-    //         }
-    //       }
-
-    //     src/index.js:
-    //       import { getValue } from './helper';
-    //       export default getValue();
-
-    //     src/helper.js:
-    //       export function getValue() {
-    //         return 42;
-    //       }
-    //   `;
-
-    //   const cacheDir = path.join(dir, '.parcel-cache');
-    //   await overlayFS.mkdirp(cacheDir);
-    //   const cache = new LMDBLiteCache(cacheDir);
-
-    //   // First build
-    //   let atlaspack1 = await AtlaspackV3.create({
-    //     corePath: '',
-    //     serveOptions: false,
-    //     entries: [path.join(dir, 'src/index.js')],
-    //     fs: new FileSystemV3(overlayFS),
-    //     napiWorkerPool,
-    //     packageManager: new NodePackageManager(inputFS, dir),
-    //     lmdb: cache.getNativeRef(),
-    //   });
-
-    //   await atlaspack1.buildAssetGraph();
-    //   let stats1 = atlaspack1.getCacheStats();
-    //   let firstBuildMisses = stats1.misses;
-    //   assert.equal(stats1.hits, 0, 'First build should have no cache hits');
-    //   assert(firstBuildMisses > 0, 'First build should have cache misses');
-
-    //   // Rebuild without changes
-    //   let atlaspack2 = await AtlaspackV3.create({
-    //     corePath: '',
-    //     serveOptions: false,
-    //     entries: [path.join(dir, 'src/index.js')],
-    //     fs: new FileSystemV3(overlayFS),
-    //     napiWorkerPool,
-    //     packageManager: new NodePackageManager(inputFS, dir),
-    //     lmdb: cache.getNativeRef(),
-    //   });
-
-    //   await atlaspack2.buildAssetGraph();
-    //   let stats2 = atlaspack2.getCacheStats();
-    //   assert(stats2.hits > 0, 'Second build should have cache hits');
-
-    //   // Modify dependency
-    //   await overlayFS.writeFile(
-    //     path.join(dir, 'src/helper.js'),
-    //     `export function getValue() {
-    //       return 100;
-    //     }`,
-    //   );
-
-    //   // Third build (should detect change in dependency)
-    //   let atlaspack3 = await AtlaspackV3.create({
-    //     corePath: '',
-    //     serveOptions: false,
-    //     entries: [path.join(dir, 'src/index.js')],
-    //     fs: new FileSystemV3(overlayFS),
-    //     napiWorkerPool,
-    //     packageManager: new NodePackageManager(inputFS, dir),
-    //     lmdb: cache.getNativeRef(),
-    //   });
-
-    //   await atlaspack3.buildAssetGraph();
-    //   let stats3 = atlaspack3.getCacheStats();
-    //   assert(stats3.misses > 0, 'Third build should have misses due to invalidation');
-
-    //   atlaspack1.end();
-    //   atlaspack2.end();
-    //   atlaspack3.end();
-    // });
+    let output = await run(buildOne.bundleGraph);
+    assert.equal(output.default, 'should not true');
   });
 });

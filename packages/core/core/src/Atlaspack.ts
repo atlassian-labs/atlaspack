@@ -516,6 +516,7 @@ export default class Atlaspack {
           return result;
         },
         unstable_requestStats: this.#requestTracker.flushStats(),
+        nativeCacheStats: await this.rustAtlaspack?.completeCacheSession(),
         scopeHoistingStats,
       };
 
@@ -543,6 +544,7 @@ export default class Atlaspack {
         type: 'buildFailure',
         diagnostics: Array.isArray(diagnostic) ? diagnostic : [diagnostic],
         unstable_requestStats: this.#requestTracker.flushStats(),
+        nativeCacheStats: await this.rustAtlaspack?.completeCacheSession(),
       };
 
       // @ts-expect-error TS2345

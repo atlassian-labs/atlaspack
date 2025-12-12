@@ -103,7 +103,7 @@ impl Stats {
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct StatsSnapshot {
   pub hits: u64,
   pub misses: u64,
@@ -136,12 +136,14 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
     }
   }
 
-  pub fn complete_session(&self) -> anyhow::Result<()> {
+  pub fn complete_session(&self) -> anyhow::Result<StatsSnapshot> {
     let snapshot = self.stats.get_snapshot();
     tracing::info!("Cache stats {:#?}", snapshot);
-    self.stats.clear();
 
-    self.reader_writer.complete_session()
+    self.stats.clear();
+    self.reader_writer.complete_session()?;
+
+    Ok(snapshot)
   }
 
   pub fn get_stats(&self) -> StatsSnapshot {

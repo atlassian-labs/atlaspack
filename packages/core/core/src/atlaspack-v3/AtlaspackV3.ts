@@ -2,7 +2,7 @@ import {
   atlaspackNapiCreate,
   atlaspackNapiBuildAssetGraph,
   atlaspackNapiRespondToFsEvents,
-  atlaspackNapiGetCacheStats,
+  atlaspackNapiCompleteSession,
   AtlaspackNapi,
   Lmdb,
   AtlaspackNapiOptions,
@@ -111,7 +111,9 @@ export class AtlaspackV3 {
     return needsRebuild;
   }
 
-  async getCacheStats(): Promise<CacheStats> {
-    return (await atlaspackNapiGetCacheStats(this._atlaspack_napi)) as CacheStats;
+  async completeCacheSession(): Promise<CacheStats> {
+    return (await atlaspackNapiCompleteSession(
+      this._atlaspack_napi,
+    )) as CacheStats;
   }
 }

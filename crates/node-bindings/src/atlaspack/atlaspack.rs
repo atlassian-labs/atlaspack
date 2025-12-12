@@ -195,16 +195,9 @@ pub fn atlaspack_napi_respond_to_fs_events(
   Ok(promise)
 }
 
-#[napi(object)]
-pub struct CacheStats {
-  pub hits: u32,
-  pub misses: u32,
-  pub uncacheables: u32,
-}
-
 #[tracing::instrument(level = "debug", skip_all)]
 #[napi]
-pub fn atlaspack_napi_get_cache_stats(
+pub fn atlaspack_napi_complete_session(
   env: Env,
   atlaspack_napi: AtlaspackNapi,
 ) -> napi::Result<JsObject> {
@@ -218,16 +211,10 @@ pub fn atlaspack_napi_get_cache_stats(
         // Use tokio runtime to await the async function
         atlaspack
           .runtime
-          .block_on(atlaspack.get_cache_stats_async())
+          .block_on(atlaspack.complete_cache_session())
       };
 
-      deferred.resolve(move |_env| {
-        Ok(CacheStats {
-          hits: stats.hits as u32,
-          misses: stats.misses as u32,
-          uncacheables: stats.uncacheables as u32,
-        })
-      })
+      deferred.resolve(move |env| Ok(env.to_js_value(&stats)))
     }
   });
 

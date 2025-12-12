@@ -44,12 +44,7 @@ export interface AtlaspackNapiOptions {
 export declare function atlaspackNapiCreate(napiOptions: AtlaspackNapiOptions, lmdb: LMDB): object
 export declare function atlaspackNapiBuildAssetGraph(atlaspackNapi: AtlaspackNapi): object
 export declare function atlaspackNapiRespondToFsEvents(atlaspackNapi: AtlaspackNapi, options: object): object
-export interface CacheStats {
-  hits: number
-  misses: number
-  uncacheables: number
-}
-export declare function atlaspackNapiGetCacheStats(atlaspackNapi: AtlaspackNapi): object
+export declare function atlaspackNapiCompleteSession(atlaspackNapi: AtlaspackNapi): object
 export declare function createDependencyId(params: unknown): string
 export declare function createEnvironmentId(params: unknown): string
 /** Overwrite all environments with a new set of environments */

@@ -2187,6 +2187,15 @@ export type BuildProgressEvent =
   | OptimizingProgressEvent
   | PackagingAndOptimizingProgressEvent;
 
+export type NativeCacheStats = {
+  hits: number;
+  misses: number;
+  uncacheables: number;
+  bailouts: number;
+  errors: number;
+  validations: number;
+};
+
 /**
  * The build was successful.
  * @section reporter
@@ -2200,6 +2209,7 @@ export type BuildSuccessEvent = {
   readonly unstable_requestStats: {
     [requestType: string]: number;
   };
+  readonly nativeCacheStats: NativeCacheStats;
   readonly scopeHoistingStats?: {
     totalAssets: number;
     wrappedAssets: number;
@@ -2216,6 +2226,7 @@ export type BuildFailureEvent = {
   readonly unstable_requestStats: {
     [requestType: string]: number;
   };
+  readonly nativeCacheStats: NativeCacheStats;
 };
 
 /**

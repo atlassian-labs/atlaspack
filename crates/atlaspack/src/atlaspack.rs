@@ -222,8 +222,6 @@ impl Atlaspack {
 
       let asset_graph = asset_graph_request_output.graph.clone();
 
-      request_tracker.cache.complete_session()?;
-
       Ok((asset_graph, had_previous_graph))
     })
   }
@@ -241,8 +239,14 @@ impl Atlaspack {
   }
 
   /// Get cache statistics
-  pub async fn get_cache_stats_async(&self) -> StatsSnapshot {
-    self.request_tracker.read().await.get_cache_stats()
+  pub async fn complete_cache_session(&self) -> Option<StatsSnapshot> {
+    match self.request_tracker.read().await.cache.complete_session() {
+      Ok(stats) => Some(stats),
+      Err(_) => {
+        tracing::warn!("Failed to complete cache session. Cache potentially in an invalid state.");
+        None
+      }
+    }
   }
 
   #[tracing::instrument(level = "info", skip_all)]
