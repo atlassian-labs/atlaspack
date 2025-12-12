@@ -384,6 +384,12 @@
     },
     {
       "path": "./packages/dev/dist-differ/tsconfig.json"
+    },
+    {
+      "path": "./packages/transformers/compiled-external/tsconfig.json"
+    },
+    {
+      "path": "./packages/transformers/compiled/tsconfig.json"
     }
   ]
 }

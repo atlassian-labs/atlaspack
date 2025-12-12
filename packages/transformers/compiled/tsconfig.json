@@ -1,0 +1,23 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src",
+    "composite": true
+  },
+  "include": ["src/**/*"],
+  "references": [
+    {
+      "path": "../../core/plugin/tsconfig.json"
+    },
+    {
+      "path": "../../core/source-map/tsconfig.json"
+    },
+    {
+      "path": "../../core/types/tsconfig.json"
+    },
+    {
+      "path": "../../core/utils/tsconfig.json"
+    }
+  ]
+}
