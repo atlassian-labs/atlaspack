@@ -1,5 +1,18 @@
 use serde::{Deserialize, Deserializer};
 
+#[derive(Deserialize, Hash)]
+#[serde(rename_all = "kebab-case")]
+#[allow(clippy::enum_variant_names)]
+pub enum Jsx {
+  Preserve,
+  React,
+  ReactJsx,
+  #[serde(rename = "react-jsxdev")]
+  ReactJsxDev,
+  ReactNative,
+}
+
+#[derive(Hash)]
 pub enum Target {
   ES3,
   ES5,
@@ -44,16 +57,20 @@ impl<'de> Deserialize<'de> for Target {
   }
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct CompilerOptions {
   pub experimental_decorators: Option<bool>,
+  pub jsx: Option<Jsx>,
+  pub jsx_factory: Option<String>,
+  pub jsx_import_source: Option<String>,
+  pub jsx_fragment_factory: Option<String>,
   pub target: Option<Target>,
   pub use_define_for_class_fields: Option<bool>,
 }
 
 /// Refer to https://www.typescriptlang.org/tsconfig
-#[derive(Deserialize)]
+#[derive(Deserialize, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TsConfig {
   pub compiler_options: Option<CompilerOptions>,

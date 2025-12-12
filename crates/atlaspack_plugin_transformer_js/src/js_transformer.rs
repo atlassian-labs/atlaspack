@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use anyhow::{Error, anyhow};
 
 use async_trait::async_trait;
+use atlaspack_core::config_loader::ConfigLoaderRef;
 use atlaspack_core::define_feature_flags;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{HmrOptions, PluginContext, TransformerPlugin};
@@ -24,7 +25,8 @@ use crate::js_transformer_config::{
   InlineEnvironment, JsTransformerConfig, JsTransformerPackageJson,
 };
 use crate::map_diagnostics::{MapDiagnosticOptions, map_diagnostics};
-use crate::ts_config::{Target, TsConfig};
+use crate::package_json::{PackageJson, depends_on_react, supports_automatic_jsx_runtime};
+use crate::ts_config::{Jsx, Target, TsConfig};
 
 pub use atlaspack_js_swc_core::JsxConfiguration;
 
@@ -33,9 +35,10 @@ mod conversion;
 // Define the feature flags struct for this transformer
 define_feature_flags!(JsTransformerFlags, {
   conditionalBundlingApi,
+  exportsRebindingOptimisation,
   hmrImprovements,
   nestedPromiseImportFix,
-  exportsRebindingOptimisation
+  newJsxConfig
 });
 
 /// This is a rust only `TransformerPlugin` implementation for JS assets that goes through the
@@ -61,10 +64,13 @@ pub struct AtlaspackJsTransformerPlugin {
   mode: BuildMode,
   env: Option<BTreeMap<String, String>>,
   hmr_options: Option<HmrOptions>,
-  decorators: bool,
-  use_define_for_class_fields: bool,
   feature_flags: JsTransformerFlags,
   core_path: PathBuf,
+  ts_config: Option<TsConfig>,
+  // We can ignore this from cache because when it's used we trigger a cache
+  // bailout. Should be removed once we clean-up the "newJsxConfig" feature flag.
+  #[derivative(Hash = "ignore")]
+  config_loader: ConfigLoaderRef,
 }
 
 #[derive(Default)]
@@ -98,26 +104,20 @@ impl AtlaspackJsTransformerPlugin {
         |config| Ok(config.contents.config.unwrap_or_default()),
       )?;
 
-    let (decorators, use_define_for_class_fields) = ctx
+    let ts_config = ctx
       .config
       .load_json_config::<TsConfig>("tsconfig.json")
-      .map_or((false, false), |config| {
-        if let Some(compiler_options) = &config.contents.compiler_options {
-          (
-            compiler_options.experimental_decorators.unwrap_or_default(),
-            compiler_options
-              .use_define_for_class_fields
-              .unwrap_or_else(|| {
-                // Default useDefineForClassFields to true if target is ES2022 or higher (including ESNext)
-                compiler_options.target.as_ref().is_some_and(|target| {
-                  matches!(target, Target::ES2022 | Target::ES2023 | Target::ESNext)
-                })
-              }),
-          )
-        } else {
-          (false, false)
+      .map(|config| config.contents)
+      .map_err(|err| {
+        let diagnostic = err.downcast_ref::<Diagnostic>();
+
+        if diagnostic.is_some_and(|d| d.kind != ErrorKind::NotFound) {
+          return Err(err);
         }
-      });
+
+        Ok(None::<TsConfig>)
+      })
+      .ok();
 
     let core_path = ctx.options.core_path.clone();
     // TODO: Right now we're adding the full env map to the cache key.
@@ -134,13 +134,13 @@ impl AtlaspackJsTransformerPlugin {
       cache: Default::default(),
       config,
       core_path,
-      decorators,
       env,
       feature_flags,
       hmr_options,
       mode,
       project_root,
-      use_define_for_class_fields,
+      ts_config,
+      config_loader: ctx.config.clone(),
     })
   }
 
@@ -296,6 +296,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
     let env = asset.env.clone();
     let is_node = env.context.is_node();
     let source_code = asset.code.clone();
+    let mut cache_bailout = false;
 
     let mut targets: HashMap<String, String> = HashMap::new();
     if env.context.is_browser() {
@@ -371,6 +372,11 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       None
     };
 
+    let compiler_options = self
+      .ts_config
+      .as_ref()
+      .and_then(|ts| ts.compiler_options.as_ref());
+
     // Determine JSX configuration based on newJsxConfig feature flag
     let JsxConfiguration {
       is_jsx,
@@ -379,12 +385,56 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       jsx_import_source,
       automatic_jsx_runtime,
       react_refresh,
-    } = self.determine_jsx_configuration(&asset);
+    } = if self.feature_flags.newJsxConfig() {
+      self.determine_jsx_configuration(&asset)
+    } else {
+      // With newJsxConfig disabled, use the old logic and bailout using cache
+      // as reading package.json is a side-effect
+      cache_bailout = true;
+
+      let package_json = self
+        .config_loader
+        .load_local_package_json::<PackageJson>(&asset.file_path)
+        .ok();
+      let is_jsx = matches!(asset.file_type, FileType::Jsx | FileType::Tsx);
+
+      let automatic_jsx_runtime = compiler_options
+        .map(|co| {
+          co.jsx
+            .as_ref()
+            .is_some_and(|jsx| matches!(jsx, Jsx::ReactJsx | Jsx::ReactJsxDev))
+            || co.jsx_import_source.is_some()
+        })
+        .unwrap_or_else(|| {
+          package_json
+            .as_ref()
+            .is_some_and(|pkg| supports_automatic_jsx_runtime(&pkg.contents))
+        });
+
+      let jsx_import_source = compiler_options
+        .and_then(|co| co.jsx_import_source.clone())
+        .or_else(|| automatic_jsx_runtime.then_some(String::from("react")));
+
+      let jsx_pragma = compiler_options.and_then(|co| co.jsx_factory.clone());
+      let jsx_pragma_frag = compiler_options.and_then(|co| co.jsx_fragment_factory.clone());
+      let react_refresh = package_json.is_some_and(|pkg| depends_on_react(&pkg.contents));
+
+      JsxConfiguration {
+        is_jsx,
+        jsx_pragma,
+        jsx_pragma_frag,
+        jsx_import_source,
+        automatic_jsx_runtime,
+        react_refresh,
+      }
+    };
 
     let transform_config = atlaspack_js_swc_core::Config {
       automatic_jsx_runtime,
       code: source_code.bytes().to_vec(),
-      decorators: self.decorators,
+      decorators: compiler_options
+        .and_then(|co| co.experimental_decorators)
+        .unwrap_or_default(),
       env: env_vars,
       filename: asset
         .file_path
@@ -427,7 +477,16 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
         && env.engines.supports(EnvironmentFeature::WorkerModule),
       targets: (!targets.is_empty()).then_some(targets),
       trace_bailouts: false, // Simplified: could be made configurable if needed
-      use_define_for_class_fields: self.use_define_for_class_fields,
+      use_define_for_class_fields: compiler_options
+        .map(|co| {
+          co.use_define_for_class_fields.unwrap_or_else(|| {
+            // Default useDefineForClassFields to true if target is ES2022 or higher (including ESNext)
+            co.target.as_ref().is_some_and(|target| {
+              matches!(target, Target::ES2022 | Target::ES2023 | Target::ESNext)
+            })
+          })
+        })
+        .unwrap_or_default(),
       conditional_bundling: self.feature_flags.conditionalBundlingApi(),
       hmr_improvements: self.feature_flags.hmrImprovements(),
       exports_rebinding_optimisation: self.feature_flags.exportsRebindingOptimisation(),
@@ -448,10 +507,18 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
     let transformation_result = atlaspack_js_swc_core::transform(&transform_config, None)?;
 
-    let has_inlined_fs = transformation_result
+    if transformation_result
       .dependencies
       .iter()
-      .any(|dep| matches!(dep.kind, DependencyKind::File));
+      .any(|dep| matches!(dep.kind, DependencyKind::File))
+    {
+      // If we've inlined FS call then the result is not cacheable
+      tracing::info!(
+        "Asset {} has inlined FS calls, marking transform result as non-cacheable",
+        asset.file_path.display()
+      );
+      cache_bailout = true;
+    }
 
     if let Some(errors) = transformation_result.diagnostics {
       return Err(anyhow!(map_diagnostics(
@@ -475,13 +542,8 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
     )
     .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
 
-    if has_inlined_fs {
-      // If we've inlined FS call then the result is not cacheable
-      tracing::info!(
-        "Asset {} has inlined FS calls, marking transform result as non-cacheable",
-        result.asset.file_path.display()
-      );
-      result.cache_bailout = true;
+    if cache_bailout {
+      result.cache_bailout = cache_bailout;
     }
 
     Ok(result)
