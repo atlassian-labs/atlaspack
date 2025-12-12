@@ -401,7 +401,7 @@ impl Visit for ExportScannerVisitor<'_> {
   }
 
   fn visit_member_expr(&mut self, node: &MemberExpr) {
-    if match_member_expr(node, vec!["module", "exports"], self.unresolved_mark, None) {
+    if match_member_expr(node, vec!["module", "exports"], self.unresolved_mark) {
       self.is_cjs_module = true;
     }
     match (&*node.obj, &node.prop) {

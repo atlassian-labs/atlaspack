@@ -4,13 +4,13 @@ use std::collections::HashSet;
 
 use serde::Deserialize;
 use serde::Serialize;
-use swc_core::atoms::Atom;
-use swc_core::atoms::atom;
 use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::Span;
 use swc_core::common::sync::Lrc;
 use swc_core::ecma::ast::*;
+use swc_core::ecma::atoms::JsWord;
+use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::utils::stack_size::maybe_grow_default;
 use swc_core::ecma::visit::Visit;
 use swc_core::ecma::visit::VisitWith;
@@ -54,16 +54,16 @@ pub enum ImportKind {
 
 #[derive(Debug)]
 pub struct Import {
-  pub source: Atom,
-  pub specifier: Atom,
+  pub source: JsWord,
+  pub specifier: JsWord,
   pub kind: ImportKind,
   pub loc: SourceLocation,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Export {
-  pub source: Option<Atom>,
-  pub specifier: Atom,
+  pub source: Option<JsWord>,
+  pub specifier: JsWord,
   pub loc: SourceLocation,
   pub is_esm: bool,
   pub is_static_binding_safe: bool,
@@ -82,18 +82,18 @@ pub struct Collect {
   pub should_wrap: bool,
   /// local variable binding -> descriptor
   pub imports: BTreeMap<Id, Import>,
-  pub this_exprs: HashMap<Atom, Span>,
+  pub this_exprs: HashMap<JsWord, Span>,
   /// exported name -> descriptor
-  pub exports: BTreeMap<Atom, Export>,
+  pub exports: BTreeMap<JsWord, Export>,
   /// local variable binding -> exported name
-  pub exports_locals: HashMap<Id, Atom>,
+  pub exports_locals: HashMap<Id, JsWord>,
   /// source of the export-all --> location
-  pub exports_all: BTreeMap<Atom, SourceLocation>,
+  pub exports_all: BTreeMap<JsWord, SourceLocation>,
   /// the keys in `imports` that are actually used (referenced), except namespace imports
   pub used_imports: HashSet<Id>,
   pub non_static_access: HashMap<Id, Vec<Span>>,
   pub non_const_bindings: HashMap<Id, Vec<Span>>,
-  pub non_static_requires: HashSet<Atom>,
+  pub non_static_requires: HashSet<JsWord>,
   pub wrapped_requires: HashSet<String>,
   pub bailouts: Option<Vec<Bailout>>,
   pub is_empty_or_empty_export: bool,
@@ -111,9 +111,9 @@ pub struct Collect {
 #[derive(Debug, Clone, Serialize)]
 #[non_exhaustive]
 pub struct CollectImportedSymbol {
-  pub source: Atom,
-  pub local: Atom,
-  pub imported: Atom,
+  pub source: JsWord,
+  pub local: JsWord,
+  pub imported: JsWord,
   pub loc: SourceLocation,
   pub kind: ImportKind,
 }
@@ -121,15 +121,15 @@ pub struct CollectImportedSymbol {
 #[derive(Debug, Serialize)]
 #[non_exhaustive]
 pub struct CollectExportedSymbol {
-  pub source: Option<Atom>,
-  pub local: Atom,
-  pub exported: Atom,
+  pub source: Option<JsWord>,
+  pub local: JsWord,
+  pub exported: JsWord,
   pub loc: SourceLocation,
 }
 
 #[derive(Debug, Serialize)]
 pub struct CollectExportedAll {
-  pub source: Atom,
+  pub source: JsWord,
   pub loc: SourceLocation,
 }
 
@@ -388,7 +388,7 @@ impl Visit for Collect {
             id!(default.local),
             Import {
               source: node.src.value.clone(),
-              specifier: atom!("default"),
+              specifier: js_word!("default"),
               kind: ImportKind::Import,
               loc: SourceLocation::from(&self.source_map, default.span),
             },
@@ -455,7 +455,7 @@ impl Visit for Collect {
         }
         ExportSpecifier::Default(default) => {
           self.exports.insert(
-            atom!("default"),
+            js_word!("default"),
             Export {
               specifier: default.exported.sym.clone(),
               loc: SourceLocation::from(&self.source_map, default.exported.span),
@@ -468,7 +468,7 @@ impl Visit for Collect {
             self
               .exports_locals
               .entry(id!(default.exported))
-              .or_insert_with(|| atom!("default"));
+              .or_insert_with(|| js_word!("default"));
           }
         }
         ExportSpecifier::Namespace(namespace) => {
@@ -547,7 +547,7 @@ impl Visit for Collect {
       DefaultDecl::Class(class) => {
         if let Some(ident) = &class.ident {
           self.exports.insert(
-            atom!("default"),
+            js_word!("default"),
             Export {
               specifier: ident.sym.clone(),
               loc: SourceLocation::from(&self.source_map, node.span),
@@ -559,12 +559,12 @@ impl Visit for Collect {
           self
             .exports_locals
             .entry(id!(ident))
-            .or_insert_with(|| atom!("default"));
+            .or_insert_with(|| js_word!("default"));
         } else {
           self.exports.insert(
-            atom!("default"),
+            js_word!("default"),
             Export {
-              specifier: atom!("default"),
+              specifier: js_word!("default"),
               loc: SourceLocation::from(&self.source_map, node.span),
               source: None,
               is_esm: true,
@@ -576,7 +576,7 @@ impl Visit for Collect {
       DefaultDecl::Fn(func) => {
         if let Some(ident) = &func.ident {
           self.exports.insert(
-            atom!("default"),
+            js_word!("default"),
             Export {
               specifier: ident.sym.clone(),
               loc: SourceLocation::from(&self.source_map, node.span),
@@ -588,12 +588,12 @@ impl Visit for Collect {
           self
             .exports_locals
             .entry(id!(ident))
-            .or_insert_with(|| atom!("default"));
+            .or_insert_with(|| js_word!("default"));
         } else {
           self.exports.insert(
-            atom!("default"),
+            js_word!("default"),
             Export {
-              specifier: atom!("default"),
+              specifier: js_word!("default"),
               loc: SourceLocation::from(&self.source_map, node.span),
               source: None,
               is_esm: true,
@@ -617,9 +617,9 @@ impl Visit for Collect {
     }
 
     self.exports.insert(
-      atom!("default"),
+      js_word!("default"),
       Export {
-        specifier: atom!("default"),
+        specifier: js_word!("default"),
         loc: SourceLocation::from(&self.source_map, node.span),
         source: None,
         is_esm: true,
@@ -707,17 +707,17 @@ impl Visit for Collect {
     // if exports, ensure only static member expression
     // if require, could be static access (handle in fold)
 
-    if match_member_expr(node, vec!["module", "exports"], self.unresolved_mark, None) {
+    if match_member_expr(node, vec!["module", "exports"], self.unresolved_mark) {
       self.static_cjs_exports = false;
       self.has_cjs_exports = true;
       return;
     }
 
-    if match_member_expr(node, vec!["module", "hot"], self.unresolved_mark, None) {
+    if match_member_expr(node, vec!["module", "hot"], self.unresolved_mark) {
       return;
     }
 
-    if match_member_expr(node, vec!["module", "require"], self.unresolved_mark, None) {
+    if match_member_expr(node, vec!["module", "require"], self.unresolved_mark) {
       return;
     }
 
@@ -744,12 +744,7 @@ impl Visit for Collect {
 
     match &*node.obj {
       Expr::Member(member) => {
-        if match_member_expr(
-          member,
-          vec!["module", "exports"],
-          self.unresolved_mark,
-          None,
-        ) {
+        if match_member_expr(member, vec!["module", "exports"], self.unresolved_mark) {
           handle_export!();
           return;
         } else {
@@ -762,7 +757,7 @@ impl Visit for Collect {
           return;
         }
 
-        if ident.sym == atom!("module") && is_unresolved(ident, self.unresolved_mark) {
+        if ident.sym == js_word!("module") && is_unresolved(ident, self.unresolved_mark) {
           self.has_cjs_exports = true;
           self.static_cjs_exports = false;
           self.should_wrap = true;
@@ -806,7 +801,7 @@ impl Visit for Collect {
     if node.op == UnaryOp::TypeOf {
       match &*node.arg {
         Expr::Ident(ident)
-          if ident.sym == atom!("module") && is_unresolved(ident, self.unresolved_mark) =>
+          if ident.sym == js_word!("module") && is_unresolved(ident, self.unresolved_mark) =>
         {
           // Do nothing to avoid the ident visitor from marking the module as non-static.
         }
@@ -854,7 +849,7 @@ impl Visit for Collect {
     match node {
       Expr::Ident(ident) => {
         // Bail if `module` or `exports` are accessed non-statically.
-        let is_module = ident.sym == atom!("module");
+        let is_module = ident.sym == js_word!("module");
         let is_exports = &*ident.sym == "exports";
         if (is_module || is_exports) && is_unresolved(ident, self.unresolved_mark) {
           self.has_cjs_exports = true;
@@ -1013,7 +1008,7 @@ impl Visit for Collect {
     if let Callee::Expr(expr) = &node.callee {
       match &**expr {
         Expr::Ident(ident) => {
-          if ident.sym == atom!("eval") && is_unresolved(ident, self.unresolved_mark) {
+          if ident.sym == js_word!("eval") && is_unresolved(ident, self.unresolved_mark) {
             self.should_wrap = true;
             self.add_bailout(node.span, BailoutReason::Eval);
           }
@@ -1051,11 +1046,11 @@ impl Visit for Collect {
 }
 
 impl Collect {
-  pub fn match_require(&self, node: &Expr) -> Option<Atom> {
-    match_require(node, self.unresolved_mark, self.ignore_mark, None)
+  pub fn match_require(&self, node: &Expr) -> Option<JsWord> {
+    match_require(node, self.unresolved_mark, self.ignore_mark)
   }
 
-  fn add_pat_imports(&mut self, node: &Pat, src: &Atom, kind: ImportKind) {
+  fn add_pat_imports(&mut self, node: &Pat, src: &JsWord, kind: ImportKind) {
     if !self.in_top_level {
       match kind {
         ImportKind::Import => self
@@ -1226,9 +1221,9 @@ impl Collect {
   }
 }
 
-fn has_binding_identifier(node: &AssignTarget, sym: &Atom, unresolved_mark: Mark) -> bool {
+fn has_binding_identifier(node: &AssignTarget, sym: &JsWord, unresolved_mark: Mark) -> bool {
   pub struct BindingIdentFinder<'a> {
-    sym: &'a Atom,
+    sym: &'a JsWord,
     unresolved_mark: Mark,
     found: bool,
   }
@@ -1329,32 +1324,32 @@ mod tests {
     assert_eq!(
       map_imports(run_collect("import { foo } from 'other';").imports),
       BTreeMap::from([(
-        atom!("foo"),
-        PartialImport::new(ImportKind::Import, atom!("other"), atom!("foo")),
+        js_word!("foo"),
+        PartialImport::new(ImportKind::Import, js_word!("other"), js_word!("foo")),
       )]),
     );
 
     assert_eq!(
       map_imports(run_collect("import { foo as bar } from 'other';").imports),
       BTreeMap::from([(
-        atom!("bar"),
-        PartialImport::new(ImportKind::Import, atom!("other"), atom!("foo")),
+        js_word!("bar"),
+        PartialImport::new(ImportKind::Import, js_word!("other"), js_word!("foo")),
       )]),
     );
 
     assert_eq!(
       map_imports(run_collect("const x = require('other');").imports),
       BTreeMap::from([(
-        atom!("x"),
-        PartialImport::new(ImportKind::Require, atom!("other"), atom!("*")),
+        js_word!("x"),
+        PartialImport::new(ImportKind::Require, js_word!("other"), js_word!("*")),
       )]),
     );
 
     assert_eq!(
       map_imports(run_collect("const {foo: bar} = require('other');").imports),
       BTreeMap::from([(
-        atom!("bar"),
-        PartialImport::new(ImportKind::Require, atom!("other"), atom!("foo")),
+        js_word!("bar"),
+        PartialImport::new(ImportKind::Require, js_word!("other"), js_word!("foo")),
       )]),
     );
 
@@ -1373,18 +1368,18 @@ mod tests {
         .into_iter()
         .map(|s| {
           (
-            Atom::from(s),
+            JsWord::from(s),
             PartialImport {
               kind: ImportKind::Import,
-              source: atom!("other"),
+              source: js_word!("other"),
               specifier: match s {
-                "x" | "y" => Atom::from("*"),
-                _ => Atom::from(s),
+                "x" | "y" => JsWord::from("*"),
+                _ => JsWord::from(s),
               },
             },
           )
         })
-        .collect::<BTreeMap<Atom, PartialImport>>()
+        .collect::<BTreeMap<JsWord, PartialImport>>()
     );
   }
 
@@ -1392,9 +1387,9 @@ mod tests {
   fn collects_dynamic_imports() {
     fn assert_dynamic_import(
       input_code: &str,
-      imports: BTreeMap<Atom, PartialImport>,
-      non_static_access: HashSet<Atom>,
-      non_static_requires: HashSet<Atom>,
+      imports: BTreeMap<JsWord, PartialImport>,
+      non_static_access: HashSet<JsWord>,
+      non_static_requires: HashSet<JsWord>,
     ) {
       let collect = run_collect(input_code);
 
@@ -1418,7 +1413,7 @@ mod tests {
           x.foo;
         }
       ",
-      BTreeMap::from([(atom!("x"), star_import())]),
+      BTreeMap::from([(js_word!("x"), star_import())]),
       HashSet::new(),
       HashSet::new(),
     );
@@ -1430,8 +1425,8 @@ mod tests {
           x[foo];
         }
       ",
-      BTreeMap::from([(atom!("x"), star_import())]),
-      HashSet::from([atom!("x")]),
+      BTreeMap::from([(js_word!("x"), star_import())]),
+      HashSet::from([js_word!("x")]),
       HashSet::new(),
     );
 
@@ -1441,7 +1436,7 @@ mod tests {
           const {foo} = await import('other');
         }
       ",
-      BTreeMap::from([(atom!("foo"), foo_import())]),
+      BTreeMap::from([(js_word!("foo"), foo_import())]),
       HashSet::new(),
       HashSet::new(),
     );
@@ -1452,7 +1447,7 @@ mod tests {
           const {foo: bar} = await import('other');
         }
       ",
-      BTreeMap::from([(atom!("bar"), foo_import())]),
+      BTreeMap::from([(js_word!("bar"), foo_import())]),
       HashSet::new(),
       HashSet::new(),
     );
@@ -1460,11 +1455,11 @@ mod tests {
     assert_dynamic_import(
       "import('other').then(x => x.foo);",
       BTreeMap::from([(
-        atom!("x"),
+        js_word!("x"),
         PartialImport {
           kind: ImportKind::DynamicImport,
-          source: atom!("other"),
-          specifier: atom!("*"),
+          source: js_word!("other"),
+          specifier: js_word!("*"),
         },
       )]),
       HashSet::new(),
@@ -1473,49 +1468,49 @@ mod tests {
 
     assert_dynamic_import(
       "import('other').then(x => x);",
-      BTreeMap::from([(atom!("x"), star_import())]),
-      HashSet::from([atom!("x")]),
+      BTreeMap::from([(js_word!("x"), star_import())]),
+      HashSet::from([js_word!("x")]),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(({foo}) => foo);",
-      BTreeMap::from([(atom!("foo"), foo_import())]),
-      HashSet::from([atom!("foo")]),
+      BTreeMap::from([(js_word!("foo"), foo_import())]),
+      HashSet::from([js_word!("foo")]),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(({foo: bar}) => bar);",
-      BTreeMap::from([(atom!("bar"), foo_import())]),
-      HashSet::from([atom!("bar")]),
+      BTreeMap::from([(js_word!("bar"), foo_import())]),
+      HashSet::from([js_word!("bar")]),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(function (x) { return x.foo });",
-      BTreeMap::from([(atom!("x"), star_import())]),
+      BTreeMap::from([(js_word!("x"), star_import())]),
       HashSet::new(),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(function (x) { return x });",
-      BTreeMap::from([(atom!("x"), star_import())]),
-      HashSet::from([atom!("x")]),
+      BTreeMap::from([(js_word!("x"), star_import())]),
+      HashSet::from([js_word!("x")]),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(function ({foo}) {});",
-      BTreeMap::from([(atom!("foo"), foo_import())]),
+      BTreeMap::from([(js_word!("foo"), foo_import())]),
       HashSet::new(),
       HashSet::new(),
     );
 
     assert_dynamic_import(
       "import('other').then(function ({foo: bar}) {});",
-      BTreeMap::from([(atom!("bar"), foo_import())]),
+      BTreeMap::from([(js_word!("bar"), foo_import())]),
       HashSet::new(),
       HashSet::new(),
     );
@@ -1524,14 +1519,14 @@ mod tests {
       "import('other');",
       BTreeMap::new(),
       HashSet::new(),
-      HashSet::from([atom!("other")]),
+      HashSet::from([js_word!("other")]),
     );
 
     assert_dynamic_import(
       "let other = import('other');",
       BTreeMap::new(),
       HashSet::new(),
-      HashSet::from([atom!("other")]),
+      HashSet::from([js_word!("other")]),
     );
 
     assert_dynamic_import(
@@ -1542,15 +1537,19 @@ mod tests {
       ",
       BTreeMap::new(),
       HashSet::new(),
-      HashSet::from([atom!("other")]),
+      HashSet::from([js_word!("other")]),
     );
 
     fn foo_import() -> PartialImport {
-      PartialImport::new(ImportKind::DynamicImport, atom!("other"), atom!("foo"))
+      PartialImport::new(
+        ImportKind::DynamicImport,
+        js_word!("other"),
+        js_word!("foo"),
+      )
     }
 
     fn star_import() -> PartialImport {
-      PartialImport::new(ImportKind::DynamicImport, atom!("other"), atom!("*"))
+      PartialImport::new(ImportKind::DynamicImport, js_word!("other"), js_word!("*"))
     }
   }
 
@@ -1575,12 +1574,12 @@ mod tests {
         .used_imports
       ),
       HashSet::from([
-        atom!("a"),
-        atom!("b"),
-        atom!("c"),
-        atom!("e"),
-        atom!("x"),
-        atom!("y")
+        js_word!("a"),
+        js_word!("b"),
+        js_word!("c"),
+        js_word!("e"),
+        js_word!("x"),
+        js_word!("y")
       ])
     );
 
@@ -1594,7 +1593,7 @@ mod tests {
         )
         .used_imports
       ),
-      HashSet::from([atom!("SOURCES_CONFIG")]),
+      HashSet::from([js_word!("SOURCES_CONFIG")]),
     );
 
     assert_eq!(
@@ -1611,7 +1610,7 @@ mod tests {
         )
         .used_imports
       ),
-      HashSet::from([atom!("bar")])
+      HashSet::from([js_word!("bar")])
     );
   }
 
@@ -1620,7 +1619,7 @@ mod tests {
     assert_eq!(
       run_collect("export function test() {};").exports,
       BTreeMap::from([(
-        atom!("test"),
+        js_word!("test"),
         Export {
           source: None,
           specifier: "test".into(),
@@ -1639,7 +1638,7 @@ mod tests {
     assert_eq!(
       run_collect("export default function() {};").exports,
       BTreeMap::from([(
-        atom!("default"),
+        js_word!("default"),
         Export {
           source: None,
           specifier: "default".into(),
@@ -1659,7 +1658,7 @@ mod tests {
     assert_eq!(
       run_collect("export default function test() {};").exports,
       BTreeMap::from([(
-        atom!("default"),
+        js_word!("default"),
         Export {
           source: None,
           specifier: "test".into(),
@@ -1679,7 +1678,7 @@ mod tests {
     assert_eq!(
       run_collect("export default class {};").exports,
       BTreeMap::from([(
-        atom!("default"),
+        js_word!("default"),
         Export {
           source: None,
           specifier: "default".into(),
@@ -1699,7 +1698,7 @@ mod tests {
     assert_eq!(
       run_collect("export default class Test {};").exports,
       BTreeMap::from([(
-        atom!("default"),
+        js_word!("default"),
         Export {
           source: None,
           specifier: "Test".into(),
@@ -1719,7 +1718,7 @@ mod tests {
     assert_eq!(
       run_collect("const foo = 'foo'; export default foo;").exports,
       BTreeMap::from([(
-        atom!("default"),
+        js_word!("default"),
         Export {
           source: None,
           specifier: "default".into(),
@@ -1738,7 +1737,7 @@ mod tests {
     assert_eq!(
       run_collect("const foo = 'foo'; export { foo as test };").exports,
       BTreeMap::from([(
-        atom!("test"),
+        js_word!("test"),
         Export {
           source: None,
           specifier: "foo".into(),
@@ -1757,7 +1756,7 @@ mod tests {
     assert_eq!(
       run_collect("export const foo = 1;").exports,
       BTreeMap::from([(
-        atom!("foo"),
+        js_word!("foo"),
         Export {
           source: None,
           specifier: "foo".into(),
@@ -1776,7 +1775,7 @@ mod tests {
     assert_eq!(
       run_collect("module.exports.foo = 1;").exports,
       BTreeMap::from([(
-        atom!("foo"),
+        js_word!("foo"),
         Export {
           source: None,
           specifier: "foo".into(),
@@ -1795,7 +1794,7 @@ mod tests {
     assert_eq!(
       run_collect("module.exports['foo'] = 1;").exports,
       BTreeMap::from([(
-        atom!("foo"),
+        js_word!("foo"),
         Export {
           source: None,
           specifier: "foo".into(),
@@ -1814,7 +1813,7 @@ mod tests {
     assert_eq!(
       run_collect("module.exports[`foo`] = 1;").exports,
       BTreeMap::from([(
-        atom!("foo"),
+        js_word!("foo"),
         Export {
           source: None,
           specifier: "foo".into(),
@@ -1833,7 +1832,7 @@ mod tests {
     assert_eq!(
       run_collect("exports.foo = 1;").exports,
       BTreeMap::from([(
-        atom!("foo"),
+        js_word!("foo"),
         Export {
           source: None,
           specifier: "foo".into(),
@@ -1852,7 +1851,7 @@ mod tests {
     assert_eq!(
       run_collect("this.foo = 1;").exports,
       BTreeMap::from([(
-        atom!("foo"),
+        js_word!("foo"),
         Export {
           source: None,
           specifier: "foo".into(),
@@ -1961,7 +1960,7 @@ mod tests {
 
   #[test]
   fn collects_non_static_access_requires() {
-    fn assert_non_static_access(input_code: &str, non_static_access: HashSet<Atom>) {
+    fn assert_non_static_access(input_code: &str, non_static_access: HashSet<JsWord>) {
       assert_eq!(
         map_non_static_access(run_collect(input_code).non_static_access),
         non_static_access
@@ -1981,7 +1980,7 @@ mod tests {
         const x = require('other');
         console.log(x[foo]);
       ",
-      HashSet::from([atom!("x")]),
+      HashSet::from([js_word!("x")]),
     );
 
     assert_non_static_access(
@@ -1989,7 +1988,7 @@ mod tests {
         const x = require('other');
         console.log(x);
       ",
-      HashSet::from([atom!("x")]),
+      HashSet::from([js_word!("x")]),
     );
   }
 
@@ -2293,8 +2292,8 @@ output = getExports() === exports && getExports().foo
       .unwrap_or_else(|| panic!("No collect found"))
   }
 
-  fn map_imports(imports: BTreeMap<Id, Import>) -> BTreeMap<Atom, PartialImport> {
-    let mut map: BTreeMap<Atom, PartialImport> = BTreeMap::new();
+  fn map_imports(imports: BTreeMap<Id, Import>) -> BTreeMap<JsWord, PartialImport> {
+    let mut map: BTreeMap<JsWord, PartialImport> = BTreeMap::new();
     for (key, import) in imports.into_iter() {
       map.insert(key.0, PartialImport::from(import));
     }
@@ -2302,26 +2301,26 @@ output = getExports() === exports && getExports().foo
     map
   }
 
-  fn map_non_static_access(non_static_access: HashMap<Id, Vec<Span>>) -> HashSet<Atom> {
+  fn map_non_static_access(non_static_access: HashMap<Id, Vec<Span>>) -> HashSet<JsWord> {
     non_static_access
       .into_keys()
       .map(|key| key.0)
-      .collect::<HashSet<Atom>>()
+      .collect::<HashSet<JsWord>>()
   }
 
-  fn map_used_imports(set: HashSet<Id>) -> HashSet<Atom> {
+  fn map_used_imports(set: HashSet<Id>) -> HashSet<JsWord> {
     set.into_iter().map(|x| x.0).collect()
   }
 
   #[derive(Debug, Eq, Hash, PartialEq)]
   struct PartialImport {
     kind: ImportKind,
-    source: Atom,
-    specifier: Atom,
+    source: JsWord,
+    specifier: JsWord,
   }
 
   impl PartialImport {
-    pub fn new(kind: ImportKind, source: Atom, specifier: Atom) -> Self {
+    pub fn new(kind: ImportKind, source: JsWord, specifier: JsWord) -> Self {
       PartialImport {
         kind,
         source,

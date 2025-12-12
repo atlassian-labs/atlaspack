@@ -3,15 +3,12 @@ use std::collections::HashSet;
 use std::vec;
 
 use ast::*;
-use swc_core::atoms::Atom;
 use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::sync::Lrc;
 use swc_core::ecma::ast;
-use swc_core::ecma::utils::collect_decls;
+use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
-
-use rustc_hash::FxHashSet;
 
 use crate::utils::*;
 
@@ -19,23 +16,14 @@ use crate::utils::*;
 pub struct EnvReplacer<'a> {
   pub replace_env: bool,
   pub is_browser: bool,
-  pub env: &'a HashMap<Atom, Atom>,
-  pub used_env: &'a mut HashSet<Atom>,
+  pub env: &'a HashMap<JsWord, JsWord>,
+  pub used_env: &'a mut HashSet<JsWord>,
   pub source_map: Lrc<swc_core::common::SourceMap>,
   pub diagnostics: &'a mut Vec<Diagnostic>,
   pub unresolved_mark: Mark,
-  pub bindings: Lrc<FxHashSet<Id>>,
 }
 
 impl VisitMut for EnvReplacer<'_> {
-  fn visit_mut_module(&mut self, node: &mut Module) {
-    // Rather than depending on unresolved marks for globals we use collect_decls to get bindings in this module
-    // This avoids the issue where (for example) the presence of `declare const process: {};` in a file means process is considered
-    // resolved and therefore not replaced in that file.
-    self.bindings = Lrc::new(collect_decls(node));
-    node.visit_mut_children_with(self);
-  }
-
   fn visit_mut_expr(&mut self, node: &mut Expr) {
     // Replace assignments to process.browser with `true`
     // TODO: this seems questionable but we did it in the JS version??
@@ -48,12 +36,7 @@ impl VisitMut for EnvReplacer<'_> {
     match &node {
       Expr::Bin(binary) if binary.op == BinaryOp::In => {
         if let (Expr::Lit(Lit::Str(left)), Expr::Member(member)) = (&*binary.left, &*binary.right)
-          && match_member_expr(
-            member,
-            vec!["process", "env"],
-            self.unresolved_mark,
-            Some(self.bindings.as_ref()),
-          )
+          && match_member_expr(member, vec!["process", "env"], self.unresolved_mark)
         {
           self.used_env.insert(left.value.clone());
           *node = Expr::Lit(Lit::Bool(Bool {
@@ -68,12 +51,7 @@ impl VisitMut for EnvReplacer<'_> {
 
     if let Expr::Member(member) = &node {
       if self.is_browser
-        && match_member_expr(
-          member,
-          vec!["process", "browser"],
-          self.unresolved_mark,
-          Some(self.bindings.as_ref()),
-        )
+        && match_member_expr(member, vec!["process", "browser"], self.unresolved_mark)
       {
         *node = Expr::Lit(Lit::Bool(Bool {
           value: true,
@@ -88,12 +66,7 @@ impl VisitMut for EnvReplacer<'_> {
       }
 
       if let Expr::Member(obj) = &*member.obj
-        && match_member_expr(
-          obj,
-          vec!["process", "env"],
-          self.unresolved_mark,
-          Some(self.bindings.as_ref()),
-        )
+        && match_member_expr(obj, vec!["process", "env"], self.unresolved_mark)
         && let Some((sym, _)) = match_property_name(member)
         && let Some(replacement) = self.replace(&sym, true)
       {
@@ -111,12 +84,7 @@ impl VisitMut for EnvReplacer<'_> {
       // process.env.FOO = ...;
       if let AssignTarget::Simple(SimpleAssignTarget::Member(member)) = &assign.left
         && let Expr::Member(obj) = &*member.obj
-        && match_member_expr(
-          obj,
-          vec!["process", "env"],
-          self.unresolved_mark,
-          Some(self.bindings.as_ref()),
-        )
+        && match_member_expr(obj, vec!["process", "env"], self.unresolved_mark)
       {
         self.emit_mutating_error(assign.span);
         assign.right.visit_mut_with(self);
@@ -126,12 +94,7 @@ impl VisitMut for EnvReplacer<'_> {
 
       if let Expr::Member(member) = &*assign.right
         && assign.op == AssignOp::Assign
-        && match_member_expr(
-          member,
-          vec!["process", "env"],
-          self.unresolved_mark,
-          Some(self.bindings.as_ref()),
-        )
+        && match_member_expr(member, vec!["process", "env"], self.unresolved_mark)
       {
         let pat = match &assign.left {
           // ({x, y, z, ...} = process.env);
@@ -182,7 +145,7 @@ impl VisitMut for EnvReplacer<'_> {
         Expr::Update(UpdateExpr { arg, span, .. }) => {
           if let Expr::Member(MemberExpr { obj, .. }) = &&**arg
             && let Expr::Member(member) = &**obj
-              && match_member_expr(member, vec!["process", "env"], self.unresolved_mark, Some(self.bindings.as_ref())) {
+              && match_member_expr(member, vec!["process", "env"], self.unresolved_mark) {
                 self.emit_mutating_error(*span);
                 *node = match &node {
                   Expr::Unary(_) => Expr::Lit(Lit::Bool(Bool { span: *span, value: true })),
@@ -213,7 +176,7 @@ impl VisitMut for EnvReplacer<'_> {
     for decl in &node.decls {
       if let Some(init) = &decl.init
         && let Expr::Member(member) = &**init
-        && match_member_expr(member, vec!["process", "env"], self.unresolved_mark, None)
+        && match_member_expr(member, vec!["process", "env"], self.unresolved_mark)
       {
         self.collect_pat_bindings(&decl.name, &mut decls);
         continue;
@@ -248,12 +211,7 @@ impl EnvReplacer<'_> {
     };
 
     if !self.is_browser
-      || !match_member_expr(
-        member,
-        vec!["process", "browser"],
-        self.unresolved_mark,
-        Some(self.bindings.as_ref()),
-      )
+      || !match_member_expr(member, vec!["process", "browser"], self.unresolved_mark)
     {
       return None;
     }
@@ -266,7 +224,7 @@ impl EnvReplacer<'_> {
     Some(Expr::Assign(res))
   }
 
-  fn replace(&mut self, sym: &Atom, fallback_undefined: bool) -> Option<Expr> {
+  fn replace(&mut self, sym: &JsWord, fallback_undefined: bool) -> Option<Expr> {
     if let Some(val) = self.env.get(sym) {
       self.used_env.insert(sym.clone());
       return Some(Expr::Lit(Lit::Str(Str {
@@ -392,8 +350,8 @@ mod tests {
 
   fn make_env_replacer<'a>(
     run_test_context: RunTestContext,
-    env: &'a HashMap<Atom, Atom>,
-    used_env: &'a mut HashSet<Atom>,
+    env: &'a HashMap<JsWord, JsWord>,
+    used_env: &'a mut HashSet<JsWord>,
     diagnostics: &'a mut Vec<Diagnostic>,
   ) -> EnvReplacer<'a> {
     EnvReplacer {
@@ -404,13 +362,12 @@ mod tests {
       source_map: run_test_context.source_map.clone(),
       diagnostics,
       unresolved_mark: run_test_context.unresolved_mark,
-      bindings: Lrc::new(FxHashSet::default()),
     }
   }
 
   #[test]
   fn test_replacer_disabled() {
-    let env: HashMap<Atom, Atom> = HashMap::new();
+    let env: HashMap<JsWord, JsWord> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -429,7 +386,6 @@ mod tests {
         source_map: run_test_context.source_map.clone(),
         diagnostics: &mut diagnostics,
         unresolved_mark: run_test_context.unresolved_mark,
-        bindings: Lrc::new(FxHashSet::default()),
       },
     );
 
@@ -448,7 +404,7 @@ mod tests {
   // TODO: This behaviour should be removed and will be disabled for canary builds.
   #[test]
   fn test_replace_browser_assignments() {
-    let env: HashMap<Atom, Atom> = HashMap::new();
+    let env: HashMap<JsWord, JsWord> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -480,7 +436,7 @@ mod tests {
 
   #[test]
   fn test_replace_env_assignments() {
-    let env: HashMap<Atom, Atom> = HashMap::new();
+    let env: HashMap<JsWord, JsWord> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -496,7 +452,7 @@ mod tests {
 
   #[test]
   fn test_replace_env_member_assignments() {
-    let env: HashMap<Atom, Atom> = HashMap::new();
+    let env: HashMap<JsWord, JsWord> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -538,7 +494,7 @@ mod tests {
 
   #[test]
   fn test_replace_env_in_expressions() {
-    let mut env: HashMap<Atom, Atom> = HashMap::new();
+    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -569,7 +525,7 @@ mod tests {
 
   #[test]
   fn test_replace_process_dot_browser() {
-    let env: HashMap<Atom, Atom> = HashMap::new();
+    let env: HashMap<JsWord, JsWord> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -597,7 +553,7 @@ mod tests {
 
   #[test]
   fn test_replace_foo_in_process_env() {
-    let mut env: HashMap<Atom, Atom> = HashMap::new();
+    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -627,7 +583,7 @@ mod tests {
 
   #[test]
   fn test_unrelated_code_is_not_affected() {
-    let env: HashMap<Atom, Atom> = HashMap::new();
+    let env: HashMap<JsWord, JsWord> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -655,8 +611,8 @@ mod tests {
 
   #[test]
   fn test_replace_env_has_the_variable() {
-    let mut env: HashMap<Atom, Atom> = HashMap::new();
-    let mut used_env: HashSet<Atom> = HashSet::new();
+    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
+    let mut used_env: HashSet<JsWord> = HashSet::new();
     let mut diagnostics = Vec::new();
 
     env.insert("IS_TEST".into(), "true".into());
@@ -688,7 +644,7 @@ mod tests {
       ["package", "IS_TEST", "VERSION"]
         .iter()
         .map(|s| (*s).into())
-        .collect::<HashSet<Atom>>()
+        .collect::<HashSet<JsWord>>()
     );
 
     assert_eq!(diagnostics, vec![]);
@@ -696,8 +652,8 @@ mod tests {
 
   #[test]
   fn test_replace_env_rest_spread() {
-    let mut env: HashMap<Atom, Atom> = HashMap::new();
-    let mut used_env: HashSet<Atom> = HashSet::new();
+    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
+    let mut used_env: HashSet<JsWord> = HashSet::new();
     let mut diagnostics = Vec::new();
 
     env.insert("package".into(), "atlaspack".into());
@@ -723,14 +679,14 @@ mod tests {
       ["package"]
         .iter()
         .map(|s| (*s).into())
-        .collect::<HashSet<Atom>>()
+        .collect::<HashSet<JsWord>>()
     );
     assert_eq!(diagnostics, vec![]);
   }
 
   #[test]
   fn test_assign_env_to_variable() {
-    let mut env: HashMap<Atom, Atom> = HashMap::new();
+    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 

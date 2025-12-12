@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use inflector::Inflector;
-use swc_core::atoms::Atom;
-use swc_core::atoms::atom;
 use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::Span;
 use swc_core::common::SyntaxContext;
 use swc_core::ecma::ast::*;
+use swc_core::ecma::atoms::JsWord;
+use swc_core::ecma::atoms::js_word;
 use swc_core::ecma::preset_env::Feature;
 use swc_core::ecma::preset_env::Versions;
 use swc_core::ecma::visit::VisitMut;
@@ -21,11 +21,11 @@ use crate::utils::match_export_name_ident;
 
 pub struct EsmToCjsReplacer {
   // Map of imported identifier to (source, specifier)
-  imports: HashMap<Id, (Atom, Atom)>,
+  imports: HashMap<Id, (JsWord, JsWord)>,
   // Map of source to (require identifier, mark)
-  require_names: HashMap<Atom, (Atom, Mark)>,
+  require_names: HashMap<JsWord, (JsWord, Mark)>,
   // Set of declared default interops, by source.
-  interops: HashSet<Atom>,
+  interops: HashSet<JsWord>,
   // List of requires to insert at the top of the module.
   requires: Vec<ModuleItem>,
   // List of exports to add.
@@ -38,7 +38,7 @@ pub struct EsmToCjsReplacer {
   versions: Option<Versions>,
 }
 
-fn local_name_for_src(src: &Atom) -> Atom {
+fn local_name_for_src(src: &JsWord) -> JsWord {
   if !src.contains('/') {
     return format!("_{}", src.to_camel_case()).into();
   }
@@ -63,7 +63,7 @@ impl EsmToCjsReplacer {
     }
   }
 
-  fn get_require_name(&mut self, src: &Atom, span: Span) -> Ident {
+  fn get_require_name(&mut self, src: &JsWord, span: Span) -> Ident {
     if let Some((name, mark)) = self.require_names.get(src) {
       return Ident::new(name.clone(), span, SyntaxContext::empty().apply_mark(*mark));
     }
@@ -74,7 +74,7 @@ impl EsmToCjsReplacer {
     Ident::new(name, span, SyntaxContext::empty().apply_mark(mark))
   }
 
-  fn get_interop_default_name(&mut self, src: &Atom) -> Ident {
+  fn get_interop_default_name(&mut self, src: &JsWord) -> Ident {
     self.get_require_name(src, DUMMY_SP);
     let (name, mark) = self.require_names.get(src).unwrap();
     Ident::new(
@@ -84,7 +84,7 @@ impl EsmToCjsReplacer {
     )
   }
 
-  fn create_require(&mut self, src: Atom, span: Span) {
+  fn create_require(&mut self, src: JsWord, span: Span) {
     if self.require_names.contains_key(&src) {
       return;
     }
@@ -109,7 +109,7 @@ impl EsmToCjsReplacer {
     self.requires.push(require)
   }
 
-  fn create_interop_default(&mut self, src: Atom) {
+  fn create_interop_default(&mut self, src: JsWord) {
     if self.interops.contains(&src) {
       return;
     }
@@ -137,7 +137,7 @@ impl EsmToCjsReplacer {
     self.interops.insert(src);
   }
 
-  fn create_helper_call(&mut self, name: Atom, args: Vec<Expr>, span: Span) -> Expr {
+  fn create_helper_call(&mut self, name: JsWord, args: Vec<Expr>, span: Span) -> Expr {
     self.needs_helpers = true;
     let ident = Ident::new(
       "parcelHelpers".into(),
@@ -163,20 +163,20 @@ impl EsmToCjsReplacer {
     })
   }
 
-  fn call_helper(&mut self, name: Atom, args: Vec<Expr>, span: Span) -> ModuleItem {
+  fn call_helper(&mut self, name: JsWord, args: Vec<Expr>, span: Span) -> ModuleItem {
     ModuleItem::Stmt(Stmt::Expr(ExprStmt {
       expr: Box::new(self.create_helper_call(name, args, span)),
       span,
     }))
   }
 
-  fn create_export(&mut self, exported: Atom, local: Expr, span: Span) {
+  fn create_export(&mut self, exported: JsWord, local: Expr, span: Span) {
     let export = self.call_helper(
-      atom!("export"),
+      js_word!("export"),
       vec![
         Expr::Ident(Ident::new_no_ctxt("exports".into(), DUMMY_SP)),
         Expr::Lit(Lit::Str(exported.into())),
-        if matches!(self.versions, Some(versions) if Feature::ArrowFunctions.should_enable(&versions, true, false)) {
+        if matches!(self.versions, Some(versions) if Feature::ArrowFunctions.should_enable(versions, true, false)) {
           Expr::Fn(FnExpr {
             ident: None,
             function: Box::new(Function {
@@ -218,7 +218,7 @@ impl EsmToCjsReplacer {
     self.exports.push(export)
   }
 
-  fn create_exports_assign(&mut self, name: Atom, right: Expr, span: Span) -> ModuleItem {
+  fn create_exports_assign(&mut self, name: JsWord, right: Expr, span: Span) -> ModuleItem {
     ModuleItem::Stmt(Stmt::Expr(ExprStmt {
       expr: Box::new(Expr::Assign(AssignExpr {
         op: AssignOp::Assign,
@@ -234,7 +234,7 @@ impl EsmToCjsReplacer {
     }))
   }
 
-  fn create_import_access(&mut self, source: &Atom, imported: &Atom, span: Span) -> Expr {
+  fn create_import_access(&mut self, source: &JsWord, imported: &JsWord, span: Span) -> Expr {
     if imported == "*" {
       let name = self.get_require_name(source, span);
       return Expr::Ident(name);
@@ -302,7 +302,7 @@ impl VisitMut for EsmToCjsReplacer {
                     id!(named.local),
                     (import.src.value.clone(), imported.clone()),
                   );
-                  if imported == atom!("default") {
+                  if imported == js_word!("default") {
                     self.create_interop_default(import.src.value.clone());
                   }
                 }
@@ -335,7 +335,7 @@ impl VisitMut for EsmToCjsReplacer {
                       None => named.orig.clone(),
                     };
 
-                    if match_export_name(&named.orig).0 == atom!("default") {
+                    if match_export_name(&named.orig).0 == js_word!("default") {
                       self.create_interop_default(src.value.clone());
                     }
 
@@ -349,7 +349,7 @@ impl VisitMut for EsmToCjsReplacer {
                   ExportSpecifier::Default(default) => {
                     self.create_interop_default(src.value.clone());
                     let specifier =
-                      self.create_import_access(&src.value, &atom!("default"), DUMMY_SP);
+                      self.create_import_access(&src.value, &js_word!("default"), DUMMY_SP);
                     self.create_export(default.exported.sym.clone(), specifier, export.span);
                   }
                   ExportSpecifier::Namespace(namespace) => {

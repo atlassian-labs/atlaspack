@@ -215,23 +215,12 @@ import {OverlayFS} from '@atlaspack/fs';
             __dirname,
             '/integration/scope-hoisting/es6/rename-helpers/a.js',
           ),
-          {
-            defaultTargetOptions: {
-              engines: {
-                // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/toStringTag#browser_compatibility
-                browsers: ['Chrome 48'],
-              },
-            },
-          },
         );
-
-        // let contents = await outputFS.readFile(
-        //   b.getBundles()[0].filePath,
-        //   'utf8',
-        // );
-
-        // ?? After upgrading to SWC v44 this code doesn't exist in the bundle, but the bundle still executes?
-        // assert(/let \S* = Symbol.toStringTag;/.test(contents), "Expected an assignment of Symbol.toStringTag");
+        let contents = await outputFS.readFile(
+          b.getBundles()[0].filePath,
+          'utf8',
+        );
+        assert(/let \S* = Symbol.toStringTag;/.test(contents));
 
         let output = await run(b);
         assert.deepEqual(output, ['1', '2']);

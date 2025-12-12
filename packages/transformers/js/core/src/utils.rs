@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 
-use rustc_hash::FxHashSet;
 use serde::Deserialize;
 use serde::Serialize;
 use swc_core::common::DUMMY_SP;
@@ -10,38 +9,17 @@ use swc_core::common::Span;
 use swc_core::common::SyntaxContext;
 use swc_core::common::errors::DiagnosticBuilder;
 use swc_core::common::errors::Emitter;
-use swc_core::ecma::ast::Id;
 use swc_core::ecma::ast::Ident;
 use swc_core::ecma::ast::IdentName;
 use swc_core::ecma::ast::{self};
-use swc_core::ecma::atoms::Atom;
-use swc_core::ecma::atoms::atom;
+use swc_core::ecma::atoms::JsWord;
+use swc_core::ecma::atoms::js_word;
 
 pub fn is_unresolved(ident: &Ident, unresolved_mark: Mark) -> bool {
   ident.ctxt.outer() == unresolved_mark
 }
 
-// If bindings are provided, use them to determine whether an identifier is "resolved", otherwise use the unresolved mark
-pub fn is_unresolved_with_bindings(
-  ident: &Ident,
-  bindings: Option<&FxHashSet<Id>>,
-  unresolved_mark: Mark,
-) -> bool {
-  if let Some(bindings) = bindings {
-    return !bindings.contains(&ident.to_id());
-  }
-
-  is_unresolved(ident, unresolved_mark)
-}
-
-pub fn match_member_expr(
-  expr: &ast::MemberExpr,
-  idents: Vec<&str>,
-  unresolved_mark: Mark,
-  // Optionally use a provided set of bindings to determine whether an identifier is "resolved",
-  // if set will be used instead of the unresolved mark
-  bindings: Option<&FxHashSet<Id>>,
-) -> bool {
+pub fn match_member_expr(expr: &ast::MemberExpr, idents: Vec<&str>, unresolved_mark: Mark) -> bool {
   use ast::Expr;
   use ast::Lit;
   use ast::MemberProp;
@@ -49,7 +27,6 @@ pub fn match_member_expr(
 
   let mut member = expr;
   let mut idents = idents;
-
   while idents.len() > 1 {
     let expected = idents.pop().unwrap();
     let prop = match &member.prop {
@@ -73,7 +50,7 @@ pub fn match_member_expr(
       Expr::Ident(id) => {
         return idents.len() == 1
           && id.sym == idents.pop().unwrap()
-          && is_unresolved_with_bindings(id, bindings, unresolved_mark);
+          && is_unresolved(id, unresolved_mark);
       }
       _ => return false,
     }
@@ -83,7 +60,7 @@ pub fn match_member_expr(
 }
 
 pub fn create_require(
-  specifier: swc_core::ecma::atoms::Atom,
+  specifier: swc_core::ecma::atoms::JsWord,
   unresolved_mark: Mark,
 ) -> ast::CallExpr {
   let mut normalized_specifier = specifier;
@@ -120,7 +97,7 @@ fn is_marked(mut ctxt: SyntaxContext, mark: Mark) -> bool {
   }
 }
 
-pub fn match_str(node: &ast::Expr) -> Option<(Atom, Span)> {
+pub fn match_str(node: &ast::Expr) -> Option<(JsWord, Span)> {
   use ast::*;
 
   match node {
@@ -134,7 +111,7 @@ pub fn match_str(node: &ast::Expr) -> Option<(Atom, Span)> {
   }
 }
 
-pub fn match_property_name(node: &ast::MemberExpr) -> Option<(Atom, Span)> {
+pub fn match_property_name(node: &ast::MemberExpr) -> Option<(JsWord, Span)> {
   match &node.prop {
     ast::MemberProp::Computed(s) => match_str(&s.expr),
     ast::MemberProp::Ident(id) => Some((id.sym.clone(), id.span)),
@@ -142,7 +119,7 @@ pub fn match_property_name(node: &ast::MemberExpr) -> Option<(Atom, Span)> {
   }
 }
 
-pub fn match_export_name(name: &ast::ModuleExportName) -> (Atom, Span) {
+pub fn match_export_name(name: &ast::ModuleExportName) -> (JsWord, Span) {
   match name {
     ast::ModuleExportName::Ident(id) => (id.sym.clone(), id.span),
     ast::ModuleExportName::Str(s) => (s.value.clone(), s.span),
@@ -157,20 +134,15 @@ pub fn match_export_name_ident(name: &ast::ModuleExportName) -> &ast::Ident {
   }
 }
 
-pub fn match_require(
-  node: &ast::Expr,
-  unresolved_mark: Mark,
-  ignore_mark: Mark,
-  bindings: Option<&FxHashSet<Id>>,
-) -> Option<Atom> {
+pub fn match_require(node: &ast::Expr, unresolved_mark: Mark, ignore_mark: Mark) -> Option<JsWord> {
   use ast::*;
 
   match node {
     Expr::Call(call) => match &call.callee {
       Callee::Expr(expr) => match &**expr {
         Expr::Ident(ident) => {
-          if ident.sym == atom!("require")
-            && is_unresolved_with_bindings(ident, bindings, unresolved_mark)
+          if ident.sym == js_word!("require")
+            && is_unresolved(ident, unresolved_mark)
             && !is_marked(ident.ctxt, ignore_mark)
             && let Some(arg) = call.args.first()
           {
@@ -180,7 +152,7 @@ pub fn match_require(
           None
         }
         Expr::Member(member) => {
-          if match_member_expr(member, vec!["module", "require"], unresolved_mark, bindings)
+          if match_member_expr(member, vec!["module", "require"], unresolved_mark)
             && let Some(arg) = call.args.first()
           {
             return match_str(&arg.expr).map(|(name, _)| name);
@@ -196,7 +168,7 @@ pub fn match_require(
   }
 }
 
-pub fn match_import(node: &ast::Expr) -> Option<Atom> {
+pub fn match_import(node: &ast::Expr) -> Option<JsWord> {
   use ast::*;
 
   match node {
@@ -215,14 +187,14 @@ pub fn match_import(node: &ast::Expr) -> Option<Atom> {
 
 /// This matches an expression like `importCond('if_true_dependency_id`, 'if_false_dependency_id')` and
 /// returns the two dependency ids.
-pub fn match_import_cond(node: &ast::Expr, ignore_mark: Mark) -> Option<(Atom, Atom)> {
+pub fn match_import_cond(node: &ast::Expr, ignore_mark: Mark) -> Option<(JsWord, JsWord)> {
   use ast::*;
 
   match node {
     Expr::Call(call) => match &call.callee {
       Callee::Expr(expr) => match &**expr {
         Expr::Ident(ident) => {
-          if ident.sym == atom!("importCond")
+          if ident.sym == js_word!("importCond")
             && !is_marked(ident.ctxt, ignore_mark)
             && call.args.len() == 2
           {
@@ -245,7 +217,7 @@ pub fn match_import_cond(node: &ast::Expr, ignore_mark: Mark) -> Option<(Atom, A
 
 // `name` must not be an existing binding.
 pub fn create_global_decl_stmt(
-  name: swc_core::ecma::atoms::Atom,
+  name: swc_core::ecma::atoms::JsWord,
   init: ast::Expr,
   global_mark: Mark,
 ) -> (ast::Stmt, SyntaxContext) {
@@ -274,7 +246,7 @@ pub fn create_global_decl_stmt(
 
 pub fn get_undefined_ident(unresolved_mark: Mark) -> ast::Ident {
   ast::Ident::new(
-    atom!("undefined"),
+    js_word!("undefined"),
     DUMMY_SP,
     SyntaxContext::empty().apply_mark(unresolved_mark),
   )
@@ -462,7 +434,7 @@ pub struct ErrorBuffer(
 );
 
 impl Emitter for ErrorBuffer {
-  fn emit(&mut self, db: &mut DiagnosticBuilder) {
+  fn emit(&mut self, db: &DiagnosticBuilder) {
     self.0.lock().push((**db).clone());
   }
 }

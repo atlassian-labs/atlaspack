@@ -5,7 +5,7 @@ use swc_core::ecma::ast::Expr;
 use swc_core::ecma::ast::Lit;
 use swc_core::ecma::ast::Str;
 use swc_core::ecma::ast::UnaryOp;
-use swc_core::ecma::atoms::Atom;
+use swc_core::ecma::atoms::JsWord;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 use crate::utils::is_unresolved;
@@ -28,7 +28,7 @@ use crate::utils::is_unresolved;
 /// ```
 pub struct TypeofReplacer {
   unresolved_mark: Mark,
-  replacements: HashMap<Atom, Atom>,
+  replacements: HashMap<JsWord, JsWord>,
 }
 
 impl Default for TypeofReplacer {
