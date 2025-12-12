@@ -1136,7 +1136,8 @@ mod tests {
           .with_bool_flag_default("conditionalBundlingApi", true)
           .with_bool_flag_default("hmrImprovements", true)
           .with_bool_flag_default("nestedPromiseImportFix", true)
-          .with_bool_flag_default("exportsRebindingOptimisation", true),
+          .with_bool_flag_default("exportsRebindingOptimisation", true)
+          .with_bool_flag_default("newJsxConfig", true),
         ..PluginOptions::default()
       }),
     })
@@ -1337,7 +1338,7 @@ mod tests {
 
     // Case 8: Test AutomaticReactRuntime::Glob functionality
     let test_asset = Asset {
-      file_path: PathBuf::from("src/components/Button.tsx"),
+      file_path: PathBuf::from("test/src/components/Button.tsx"), // Use absolute path relative to project root
       file_type: FileType::Tsx,
       is_source: true,
       env: asset.env.clone(),
