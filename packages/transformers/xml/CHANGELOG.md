@@ -1,5 +1,13 @@
 # @atlaspack/transformer-xml
 
+## 2.14.44
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.1
+  - @atlaspack/plugin@2.14.44
+
 ## 2.14.43
 
 ### Patch Changes

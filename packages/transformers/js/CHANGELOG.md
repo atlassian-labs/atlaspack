@@ -1,5 +1,21 @@
 # @atlaspack/transformer-js
 
+## 11.1.0
+
+### Minor Changes
+
+- [#929](https://github.com/atlassian-labs/atlaspack/pull/929) [`c81b368`](https://github.com/atlassian-labs/atlaspack/commit/c81b368db20af701d9e019a11272b138f9cfe080) Thanks [@matt-koko](https://github.com/matt-koko)! - Revert SWC bump PR
+
+### Patch Changes
+
+- Updated dependencies [[`362a85d`](https://github.com/atlassian-labs/atlaspack/commit/362a85deb9722f769eeb5099bae915f8b858a126), [`c81b368`](https://github.com/atlassian-labs/atlaspack/commit/c81b368db20af701d9e019a11272b138f9cfe080)]:
+  - @atlaspack/rust@3.15.0
+  - @atlaspack/source-map@3.2.0
+  - @atlaspack/core@2.30.1
+  - @atlaspack/utils@3.2.5
+  - @atlaspack/workers@2.14.44
+  - @atlaspack/plugin@2.14.44
+
 ## 11.0.0
 
 ### Patch Changes

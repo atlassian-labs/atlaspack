@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/cache",
   "description": "Interface for defining caches and file-system, IDB and LMDB implementations.",
-  "version": "3.2.38",
+  "version": "3.2.39",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -24,10 +24,10 @@
   "dependencies": {
     "@atlaspack/build-cache": "2.13.6",
     "@atlaspack/feature-flags": "2.27.3",
-    "@atlaspack/fs": "2.15.38",
-    "@atlaspack/logger": "2.14.35",
-    "@atlaspack/rust": "3.14.0",
-    "@atlaspack/utils": "3.2.4",
+    "@atlaspack/fs": "2.15.39",
+    "@atlaspack/logger": "2.14.36",
+    "@atlaspack/rust": "3.15.0",
+    "@atlaspack/utils": "3.2.5",
     "ncp": "^2.0.0"
   },
   "devDependencies": {

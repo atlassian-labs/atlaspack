@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.15.17
+
+### Patch Changes
+
+- [#927](https://github.com/atlassian-labs/atlaspack/pull/927) [`c3041ca`](https://github.com/atlassian-labs/atlaspack/commit/c3041ca6df1c18eca954a0cec1edb8ccc7069c13) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - fix absolute path check in tesseract resolver
+
+- Updated dependencies []:
+  - @atlaspack/node-resolver-core@3.7.15
+  - @atlaspack/types-internal@2.22.1
+  - @atlaspack/plugin@2.14.44
+
 ## 2.15.16
 
 ### Patch Changes

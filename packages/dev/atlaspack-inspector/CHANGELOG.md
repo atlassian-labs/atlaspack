@@ -1,5 +1,14 @@
 # @atlaspack/inspector
 
+## 0.0.29
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/cache@3.2.39
+  - @atlaspack/core@2.30.1
+  - @atlaspack/cli@2.15.5
+
 ## 0.0.28
 
 ### Patch Changes

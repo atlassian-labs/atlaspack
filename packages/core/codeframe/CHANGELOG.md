@@ -1,5 +1,12 @@
 # @atlaspack/codeframe
 
+## 2.13.26
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.1
+
 ## 2.13.25
 
 ### Patch Changes
