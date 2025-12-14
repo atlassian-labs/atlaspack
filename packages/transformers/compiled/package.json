@@ -1,0 +1,41 @@
+{
+  "name": "@atlaspack/transformer-compiled",
+  "version": "0.0.1",
+  "description": "Atlaspack transformer for Compiled CSS-in-JS (insourced from @compiled/parcel-transformer)",
+  "license": "(MIT OR Apache-2.0)",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
+  },
+  "main": "./lib/CompiledTransformer.js",
+  "source": "./src/CompiledTransformer.ts",
+  "types": "./src/CompiledTransformer.ts",
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "files": [
+    "lib",
+    "src"
+  ],
+  "dependencies": {
+    "@atlaspack/plugin": "2.14.44",
+    "@atlaspack/source-map": "3.2.0",
+    "@atlaspack/utils": "3.2.5",
+    "@babel/core": "^7.22.11",
+    "@babel/generator": "^7.22.10",
+    "@compiled/babel-plugin": "^0.38.0",
+    "@compiled/babel-plugin-strip-runtime": "^0.38.0",
+    "@compiled/utils": "^0.13.1",
+    "enhanced-resolve": "^5.18.1"
+  },
+  "devDependencies": {
+    "@atlaspack/types": "2.15.34"
+  },
+  "type": "commonjs",
+  "scripts": {
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  }
+}
