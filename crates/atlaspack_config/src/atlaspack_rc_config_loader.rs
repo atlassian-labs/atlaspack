@@ -278,6 +278,7 @@ mod tests {
   use anyhow::anyhow;
   use atlaspack_filesystem::FileSystem;
   use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+  use atlaspack_package_manager::DevDep;
   use atlaspack_package_manager::MockPackageManager;
   use atlaspack_package_manager::PackageManager;
   use atlaspack_package_manager::Resolution;
@@ -323,6 +324,14 @@ mod tests {
       }
 
       Ok(Resolution { resolved: path })
+    }
+
+    fn resolve_dev_dependency(
+      &self,
+      _package_name: &str,
+      _resolve_from: &Path,
+    ) -> anyhow::Result<DevDep> {
+      unimplemented!()
     }
   }
 

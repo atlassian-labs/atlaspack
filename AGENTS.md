@@ -214,6 +214,12 @@ yarn clean-test
 7. Create new task describing what needs resolution
 8. Fix the issue before moving on
 
+#### Writing Rust tests
+
+- When writing tests for Rust code, always put them in the same file as the code they are testing, using the #[cfg(test)] attribute.
+- Always use the `pretty_assertions` crate for assertions in tests, as it provides better error messages.
+- When writing assertions in tests with `assert_eq`, prefer asserting entire structs rather than individual fields, as this provides more context in case of failure.
+
 ### Linting and Formatting Workflow
 
 Perform file linting and formatting before completing any task, using tools and/or the following commands:

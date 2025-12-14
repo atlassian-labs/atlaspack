@@ -355,6 +355,14 @@ export const DEFAULT_FEATURE_FLAGS = {
     // Enable for tests only in v3 mode
     process.env.ATLASPACK_BUILD_ENV === 'test' &&
     process.env.ATLASPACK_V3 === 'true',
+
+  /**
+   * Enable V3 Rust caching
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-12-15
+   */
+  v3Caching: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

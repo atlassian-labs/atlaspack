@@ -1,5 +1,5 @@
+use std::collections::BTreeSet;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -54,7 +54,7 @@ pub fn dependency_collector<'a>(
   unresolved_mark: swc_core::common::Mark,
   config: &'a Config,
   diagnostics: &'a mut Vec<Diagnostic>,
-  conditions: &'a mut HashSet<Condition>,
+  conditions: &'a mut BTreeSet<Condition>,
 ) -> impl VisitMut + 'a {
   DependencyCollector {
     source_map,
@@ -82,7 +82,7 @@ struct DependencyCollector<'a> {
   config: &'a Config,
   diagnostics: &'a mut Vec<Diagnostic>,
   import_meta: Option<VarDecl>,
-  conditions: &'a mut HashSet<Condition>,
+  conditions: &'a mut BTreeSet<Condition>,
 }
 
 impl DependencyCollector<'_> {
@@ -1587,7 +1587,7 @@ mod tests {
     items: &'a mut Vec<DependencyDescriptor>,
     diagnostics: &'a mut Vec<Diagnostic>,
     config: &'a Config,
-    conditions: &'a mut HashSet<Condition>,
+    conditions: &'a mut BTreeSet<Condition>,
   ) -> DependencyCollector<'a> {
     DependencyCollector {
       source_map: context.source_map.clone(),
@@ -1620,7 +1620,7 @@ mod tests {
 
   #[test]
   fn test_dynamic_import_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -1663,7 +1663,7 @@ mod tests {
 
   #[test]
   fn test_dynamic_import_nested_promise() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -1715,7 +1715,7 @@ mod tests {
 
   #[test]
   fn test_dynamic_import_dependency_from_script() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -1760,7 +1760,7 @@ mod tests {
 
   #[test]
   fn test_import_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -1802,7 +1802,7 @@ mod tests {
 
   #[test]
   fn test_export_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -1844,7 +1844,7 @@ mod tests {
 
   #[test]
   fn test_export_star_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut items = vec![];
     let mut diagnostics = vec![];
 
@@ -1886,7 +1886,7 @@ mod tests {
 
   #[test]
   fn test_require_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -1929,7 +1929,7 @@ mod tests {
 
   #[test]
   fn test_optional_require_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -1976,7 +1976,7 @@ mod tests {
 
   #[test]
   fn test_node_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2052,7 +2052,7 @@ mod tests {
   // Require is treated as dynamic import
   #[test]
   fn test_compiled_dynamic_imports() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2096,7 +2096,7 @@ mod tests {
   // Require is treated as dynamic import
   #[test]
   fn test_compiled_dynamic_imports_with_chain() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2142,7 +2142,7 @@ mod tests {
   // Require is treated as dynamic import
   #[test]
   fn test_compiled_dynamic_imports_with_function_chain() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2190,7 +2190,7 @@ mod tests {
   // Require is treated as dynamic import
   #[test]
   fn test_new_promise_require_imports() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2234,7 +2234,7 @@ mod tests {
   // Require is treated as dynamic import
   #[test]
   fn test_new_promise_require_imports_with_function_expr() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2280,7 +2280,7 @@ mod tests {
   // Require is treated as dynamic import
   #[test]
   fn test_promise_resolve_require_dynamic_import() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2324,7 +2324,7 @@ mod tests {
 
   #[test]
   fn test_parcel_url_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2354,7 +2354,7 @@ mod tests {
 
   #[test]
   fn test_esm_parcel_url_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2386,7 +2386,7 @@ mod tests {
 
   #[test]
   fn test_worker_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2444,7 +2444,7 @@ mod tests {
 
   #[test]
   fn test_service_worker_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2502,7 +2502,7 @@ mod tests {
 
   #[test]
   fn test_worklet_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
     let config = make_config();
@@ -2553,7 +2553,7 @@ mod tests {
       document.body.appendChild(img);
     "#;
 
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(input_code, |context| {
       make_dependency_collector(
@@ -2591,7 +2591,7 @@ mod tests {
 
   #[test]
   fn test_import_cond_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2647,7 +2647,7 @@ mod tests {
     );
     assert_eq!(
       conditions,
-      HashSet::from([Condition {
+      BTreeSet::from([Condition {
         key: "condition".into(),
         if_true_placeholder: Some(hash_a),
         if_false_placeholder: Some(hash_b)
@@ -2657,7 +2657,7 @@ mod tests {
 
   #[test]
   fn test_import_cond_scope_hoisting_enabled_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2716,7 +2716,7 @@ mod tests {
 
   #[test]
   fn test_import_cond_invalid() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2747,7 +2747,7 @@ mod tests {
 
   #[test]
   fn test_import_cond_same_deps() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2778,7 +2778,7 @@ mod tests {
 
   #[test]
   fn test_parcel_require() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2805,12 +2805,12 @@ mod tests {
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
     assert_eq!(items, []);
-    assert_eq!(conditions, HashSet::new(),);
+    assert_eq!(conditions, BTreeSet::new(),);
   }
 
   #[test]
   fn test_parcel_require_with_hmr_improvements_ff_on() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2850,6 +2850,6 @@ mod tests {
         ..items[0].clone()
       },]
     );
-    assert_eq!(conditions, HashSet::new(),);
+    assert_eq!(conditions, BTreeSet::new(),);
   }
 }

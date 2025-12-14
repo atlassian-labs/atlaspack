@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use atlaspack_filesystem::FileSystemRef;
@@ -33,22 +33,25 @@ impl ConfigLoader {
     &self,
     filename: &str,
   ) -> Result<ConfigFile<Config>, DiagnosticError> {
-    let path = find_ancestor_file(
-      &*self.fs,
-      &[filename],
-      &self.search_path,
-      &self.project_root,
-    )
-    .ok_or_else(|| {
-      diagnostic_error!(
-        DiagnosticBuilder::default()
-          .kind(ErrorKind::NotFound)
-          .message(format!(
-            "Unable to locate {filename} config file from {}",
-            self.search_path.display()
-          ))
-      )
-    })?;
+    self.private_load_json_config(filename, &self.search_path)
+  }
+
+  fn private_load_json_config<Config: DeserializeOwned>(
+    &self,
+    filename: &str,
+    search_path: &Path,
+  ) -> Result<ConfigFile<Config>, DiagnosticError> {
+    let path = find_ancestor_file(&*self.fs, &[filename], &search_path, &self.project_root)
+      .ok_or_else(|| {
+        diagnostic_error!(
+          DiagnosticBuilder::default()
+            .kind(ErrorKind::NotFound)
+            .message(format!(
+              "Unable to locate {filename} config file from {}",
+              self.search_path.display()
+            ))
+        )
+      })?;
 
     let code = self.fs.read_to_string(&path)?;
 
@@ -72,6 +75,15 @@ impl ConfigLoader {
       path,
       raw: code,
     })
+  }
+
+  /// WARNING: This is a dangerous API and should be avoided as it breaks
+  /// caching
+  pub fn load_local_package_json<Config: DeserializeOwned>(
+    &self,
+    search_path: &Path,
+  ) -> Result<ConfigFile<Config>, DiagnosticError> {
+    self.private_load_json_config("package.json", search_path)
   }
 
   pub fn load_package_json<Config: DeserializeOwned>(

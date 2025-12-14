@@ -1218,25 +1218,48 @@ export type MultiThreadValidator = {
  */
 export type Validator = DedicatedThreadValidator | MultiThreadValidator;
 
+export interface TransformerConditions {
+  enabled?: boolean;
+  fileMatch?: Array<string>;
+  codeMatch?: Array<string>;
+  origin?: 'source' | 'third-party';
+}
+
+export interface TransformerSetup<Config> {
+  conditions?: TransformerConditions;
+  config?: Config;
+  /** List of environment variables that the transformer depends on to be fed
+   * into the cache key.
+   *
+   * Missing variables from this list will cause the transformer to not be
+   * cached.
+   * */
+  env?: Array<string>;
+}
+
 /**
  * The methods for a transformer plugin.
  * @section transformer
  */
 export type Transformer<ConfigType> = {
+  setup?(arg1: {
+    options: PluginOptions;
+    config: Config;
+    logger: PluginLogger;
+  }): Async<TransformerSetup<ConfigType>>;
+  /** @deprecated Deprecated in favour of `setup` */
   loadConfig?: (arg1: {
     config: Config;
     options: PluginOptions;
     logger: PluginLogger;
     tracer: PluginTracer;
   }) => Promise<ConfigType> | ConfigType;
-  /** Whether an AST from a previous transformer can be reused (to prevent double-parsing) */
   canReuseAST?: (arg1: {
     ast: AST;
     options: PluginOptions;
     logger: PluginLogger;
     tracer: PluginTracer;
   }) => boolean;
-  /** Parse the contents into an ast */
   parse?: (arg1: {
     asset: Asset;
     config: ConfigType;
@@ -2164,6 +2187,15 @@ export type BuildProgressEvent =
   | OptimizingProgressEvent
   | PackagingAndOptimizingProgressEvent;
 
+export type NativeCacheStats = {
+  hits: number;
+  misses: number;
+  uncacheables: number;
+  bailouts: number;
+  errors: number;
+  validations: number;
+};
+
 /**
  * The build was successful.
  * @section reporter
@@ -2177,6 +2209,7 @@ export type BuildSuccessEvent = {
   readonly unstable_requestStats: {
     [requestType: string]: number;
   };
+  readonly nativeCacheStats: NativeCacheStats;
   readonly scopeHoistingStats?: {
     totalAssets: number;
     wrappedAssets: number;
@@ -2193,6 +2226,7 @@ export type BuildFailureEvent = {
   readonly unstable_requestStats: {
     [requestType: string]: number;
   };
+  readonly nativeCacheStats: NativeCacheStats;
 };
 
 /**

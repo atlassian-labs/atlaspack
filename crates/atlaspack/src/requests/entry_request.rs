@@ -34,7 +34,7 @@ pub struct EntryRequestOutput {
 
 #[async_trait]
 impl Request for EntryRequest {
-  #[tracing::instrument(level = "info", skip_all)]
+  #[tracing::instrument(level = "debug", skip_all)]
   async fn run(
     &self,
     request_context: RunRequestContext,

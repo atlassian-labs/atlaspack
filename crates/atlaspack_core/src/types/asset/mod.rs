@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::ffi::OsStr;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
 
+use derivative::Derivative;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -28,7 +29,7 @@ pub mod serialize;
 ///
 /// TODO: This should be called contents now that it's bytes
 /// TODO: This should be an enum and represent cases where the bytes are on disk
-#[derive(PartialEq, Default, Clone, Deserialize, Serialize)]
+#[derive(PartialEq, Default, Clone, Hash, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", transparent)]
 pub struct Code {
   inner: Vec<u8>,
@@ -144,7 +145,8 @@ pub fn create_asset_id(params: CreateAssetIdParams) -> String {
 ///
 /// Note that assets may exist in the file system or virtually.
 ///
-#[derive(Default, PartialEq, Clone, Debug)]
+#[derive(Default, PartialEq, Clone, Debug, Derivative)]
+#[derivative(Hash)]
 pub struct Asset {
   /// The main identify hash for the asset. It is consistent for the entire
   /// build and between builds.
@@ -179,6 +181,8 @@ pub struct Asset {
   pub query: Option<String>,
 
   /// Statistics about the asset
+  /// Should not be included in the asset hash
+  #[derivative(Hash = "ignore")]
   pub stats: AssetStats,
 
   /// The symbols that the asset exports
@@ -251,7 +255,7 @@ pub struct Asset {
   /// Contains all conditional imports for an asset
   ///
   /// This includes the condition key and the dependency placeholders
-  pub conditions: HashSet<Condition>,
+  pub conditions: BTreeSet<Condition>,
 
   pub config_path: Option<String>,
   pub config_key_path: Option<String>,
@@ -284,7 +288,7 @@ pub struct Asset {
   pub has_dependencies: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AssetWithDependencies {
   pub asset: Asset,
   pub dependencies: Vec<Dependency>,
@@ -429,7 +433,7 @@ pub struct AssetStats {
   pub time: u32,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, PartialOrd, Ord, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Condition {
   pub key: String,

@@ -12,7 +12,7 @@ use markup5ever::{local_name, namespace_url, ns};
 use markup5ever_rcdom::{RcDom, SerializableHandle};
 use regex::Regex;
 
-use atlaspack_core::plugin::{PluginContext, TransformContext, TransformResult, TransformerPlugin};
+use atlaspack_core::plugin::{PluginContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{
   Asset, AssetId, AssetWithDependencies, BundleBehavior, Code, Dependency, Environment,
 };
@@ -20,26 +20,22 @@ use atlaspack_core::types::{
 use crate::dom_visitor::walk;
 use crate::svg_dependencies_visitor::SvgDependenciesVisitor;
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct AtlaspackSvgTransformerPlugin {
   project_root: PathBuf,
 }
 
 impl AtlaspackSvgTransformerPlugin {
   pub fn new(ctx: &PluginContext) -> Self {
-    AtlaspackSvgTransformerPlugin {
-      project_root: ctx.options.project_root.clone(),
-    }
+    let project_root = ctx.options.project_root.clone();
+
+    AtlaspackSvgTransformerPlugin { project_root }
   }
 }
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackSvgTransformerPlugin {
-  async fn transform(
-    &self,
-    context: TransformContext,
-    input: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, input: Asset) -> Result<TransformResult, Error> {
     let bytes: &[u8] = input.code.bytes();
 
     // Pre-process XML processing instructions before parsing with html5ever
@@ -48,7 +44,7 @@ impl TransformerPlugin for AtlaspackSvgTransformerPlugin {
 
     let mut dom = parse_svg(&processed_content)?;
     let context = SVGTransformationContext {
-      env: context.env().clone(),
+      env: input.env.clone(),
       project_root: self.project_root.clone(),
       side_effects: input.side_effects,
       source_asset_id: input.id.clone(),

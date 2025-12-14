@@ -1,3 +1,7 @@
+use atlaspack_memoization_cache::CacheHandler;
+use atlaspack_memoization_cache::CacheReaderWriter;
+use atlaspack_memoization_cache::InMemoryReaderWriter;
+use atlaspack_memoization_cache::LmdbCacheReaderWriter;
 use std::fmt::Debug;
 use std::future::Future;
 use std::hash::Hash;
@@ -20,6 +24,8 @@ use dyn_hash::DynHash;
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
 
+pub type CacheRef = Arc<CacheHandler<LmdbCacheReaderWriter>>;
+
 type ChannelRequestResult = anyhow::Result<(Arc<RequestResult>, RequestId, bool)>;
 pub type RequestResultReceiver = Receiver<ChannelRequestResult>;
 pub type RequestResultSender = Sender<ChannelRequestResult>;
@@ -27,7 +33,7 @@ type AsyncRequestResult = anyhow::Result<(Arc<RequestResult>, RequestId, bool)>;
 
 #[derive(Debug)]
 pub struct RunRequestMessage {
-  pub request: Box<dyn Request>,
+  pub request: Box<dyn Request<LmdbCacheReaderWriter>>,
   pub parent_request_id: Option<u64>,
   pub response_tx: Option<RequestResultSender>,
 }
@@ -63,9 +69,10 @@ impl Future for ExecuteRequestFuture {
 ///
 /// We want to avoid exposing internals of the request tracker to the implementations so that we
 /// can change this.
-pub struct RunRequestContext {
+pub struct RunRequestContext<C: CacheReaderWriter = LmdbCacheReaderWriter> {
   config_loader: ConfigLoaderRef,
   file_system: FileSystemRef,
+  pub cache: Arc<CacheHandler<C>>,
   pub options: Arc<AtlaspackOptions>,
   parent_request_id: Option<u64>,
   plugins: PluginsRef,
@@ -73,7 +80,39 @@ pub struct RunRequestContext {
   run_request_fn: RunRequestFn,
 }
 
-impl RunRequestContext {
+impl RunRequestContext<InMemoryReaderWriter> {
+  /// Create a test context with an in-memory cache
+  #[cfg(test)]
+  pub fn new_for_testing(plugins: PluginsRef) -> Self {
+    use atlaspack_core::config_loader::ConfigLoader;
+    use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+    use atlaspack_memoization_cache::CacheMode;
+
+    let fs = Arc::new(InMemoryFileSystem::default());
+    let config_loader = Arc::new(ConfigLoader {
+      fs: fs.clone(),
+      project_root: PathBuf::default(),
+      search_path: PathBuf::default(),
+    });
+
+    Self {
+      cache: Arc::new(CacheHandler::new(
+        InMemoryReaderWriter::default(),
+        CacheMode::Off,
+      )),
+      config_loader,
+      file_system: fs,
+      options: Arc::new(AtlaspackOptions::default()),
+      parent_request_id: None,
+      plugins,
+      project_root: PathBuf::default(),
+      run_request_fn: Box::new(|_| {}),
+    }
+  }
+}
+
+impl<C: CacheReaderWriter> RunRequestContext<C> {
+  #[allow(clippy::too_many_arguments)]
   pub(crate) fn new(
     config_loader: ConfigLoaderRef,
     file_system: FileSystemRef,
@@ -81,9 +120,11 @@ impl RunRequestContext {
     parent_request_id: Option<u64>,
     plugins: PluginsRef,
     project_root: PathBuf,
+    cache: Arc<CacheHandler<C>>,
     run_request_fn: RunRequestFn,
   ) -> Self {
     Self {
+      cache,
       config_loader,
       file_system,
       options,
@@ -107,10 +148,10 @@ impl RunRequestContext {
   /// Run a child request to the current request
   pub fn queue_request(
     &mut self,
-    request: impl Request,
+    request: impl Request<LmdbCacheReaderWriter>,
     tx: RequestResultSender,
   ) -> anyhow::Result<()> {
-    let request: Box<dyn Request> = Box::new(request);
+    let request: Box<dyn Request<LmdbCacheReaderWriter>> = Box::new(request);
     let message = RunRequestMessage {
       request,
       response_tx: Some(tx),
@@ -122,7 +163,10 @@ impl RunRequestContext {
 
   /// Execute a child request and return a future that resolves to its result.
   /// This is an async version of queue_request that doesn't require managing channels manually.
-  pub fn execute_request(&mut self, request: impl Request) -> ExecuteRequestFuture {
+  pub fn execute_request(
+    &mut self,
+    request: impl Request<LmdbCacheReaderWriter>,
+  ) -> ExecuteRequestFuture {
     let (tx, rx) = oneshot::channel();
 
     // Create a wrapper sender that forwards to the oneshot channel
@@ -158,7 +202,9 @@ pub type RunRequestError = anyhow::Error;
 pub type RequestId = u64;
 
 #[async_trait]
-pub trait Request: DynHash + Send + Sync + Debug + 'static {
+pub trait Request<C: CacheReaderWriter = LmdbCacheReaderWriter>:
+  DynHash + Send + Sync + Debug + 'static
+{
   fn id(&self) -> RequestId {
     let mut hasher = atlaspack_core::hash::IdentifierHasher::default();
     std::any::type_name::<Self>().hash(&mut hasher);
@@ -168,11 +214,11 @@ pub trait Request: DynHash + Send + Sync + Debug + 'static {
 
   async fn run(
     &self,
-    request_context: RunRequestContext,
+    request_context: RunRequestContext<C>,
   ) -> Result<ResultAndInvalidations, RunRequestError>;
 }
 
-dyn_hash::hash_trait_object!(Request);
+dyn_hash::hash_trait_object!(Request<LmdbCacheReaderWriter>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResultAndInvalidations {

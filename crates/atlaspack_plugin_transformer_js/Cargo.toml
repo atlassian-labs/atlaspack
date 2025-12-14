@@ -22,12 +22,14 @@ atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }
+derivative = { workspace = true }
 glob-match = { workspace = true }
 indexmap = { workspace = true }
 nodejs-semver = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 swc_core = { workspace = true, features = ["ecma_ast"] }
 parking_lot = { workspace = true }
+tracing = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]

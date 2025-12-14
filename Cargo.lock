@@ -251,6 +251,7 @@ dependencies = [
  "atlaspack_config",
  "atlaspack_core",
  "atlaspack_filesystem",
+ "atlaspack_memoization_cache",
  "atlaspack_package_manager",
  "atlaspack_plugin_resolver",
  "atlaspack_plugin_rpc",
@@ -285,19 +286,6 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "xxhash-rust",
-]
-
-[[package]]
-name = "atlaspack-dev-dep-resolver"
-version = "0.1.0"
-dependencies = [
- "atlaspack-resolver",
- "es-module-lexer",
- "glob",
- "parking_lot",
- "rayon",
- "serde_json",
  "xxhash-rust",
 ]
 
@@ -352,12 +340,12 @@ dependencies = [
  "aho-corasick",
  "anyhow",
  "atlaspack",
- "atlaspack-dev-dep-resolver",
  "atlaspack-js-swc-core",
  "atlaspack-macros",
  "atlaspack-resolver",
  "atlaspack_atlaskit_tokens",
  "atlaspack_core",
+ "atlaspack_dev_dep_resolver",
  "atlaspack_memory_profiler",
  "atlaspack_monitoring",
  "atlaspack_napi_helpers",
@@ -493,10 +481,12 @@ dependencies = [
  "anyhow",
  "async-trait",
  "atlaspack_filesystem",
+ "atlaspack_memoization_cache",
  "atlaspack_sourcemap",
  "bitflags 2.9.4",
  "browserslist-rs 0.17.0",
  "caniuse_database",
+ "derivative",
  "derive_builder",
  "dyn-hash",
  "mockall",
@@ -510,6 +500,20 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "xxhash-rust",
+]
+
+[[package]]
+name = "atlaspack_dev_dep_resolver"
+version = "0.1.0"
+dependencies = [
+ "atlaspack-resolver",
+ "es-module-lexer",
+ "glob",
+ "parking_lot",
+ "rayon",
+ "serde_json",
+ "tracing",
  "xxhash-rust",
 ]
 
@@ -532,12 +536,16 @@ name = "atlaspack_memoization_cache"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
+ "criterion",
+ "crossbeam",
  "lmdb-js-lite",
  "parking_lot",
  "pretty_assertions",
  "rand 0.8.5",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
  "tracing",
 ]
@@ -592,9 +600,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack-resolver",
+ "atlaspack_core",
+ "atlaspack_dev_dep_resolver",
  "atlaspack_filesystem",
  "mockall",
  "serde",
+ "tracing",
 ]
 
 [[package]]
@@ -629,11 +640,15 @@ dependencies = [
  "atlaspack_config",
  "atlaspack_core",
  "atlaspack_napi_helpers",
+ "atlaspack_package_manager",
  "mockall",
  "napi",
  "once_cell",
  "parking_lot",
+ "pretty_assertions",
+ "regex",
  "serde",
+ "serde_json",
  "tokio",
  "tracing",
 ]
@@ -715,6 +730,7 @@ dependencies = [
  "atlaspack_filesystem",
  "atlaspack_sourcemap",
  "criterion",
+ "derivative",
  "glob-match",
  "indexmap",
  "nodejs-semver",
@@ -724,6 +740,7 @@ dependencies = [
  "serde_json",
  "swc_core",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -1705,6 +1722,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a41953f86f8a05768a6cda24def994fd2f424b04ec5c719cf89989779f199071"
 dependencies = [
  "powerfmt",
+]
+
+[[package]]
+name = "derivative"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fcc3dd5e9e9c0b295d6e1e4d811fb6f157d5ffd784b8d202fc62eac8035a770b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]

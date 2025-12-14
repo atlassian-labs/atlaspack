@@ -1,3 +1,5 @@
+import {SideEffectDetector} from './side-effect-detector';
+
 import assert from 'assert';
 import * as napi from '@atlaspack/rust';
 // @ts-expect-error TS2305
@@ -25,7 +27,6 @@ import {
   bundleBehaviorMap,
   dependencyPriorityMap,
 } from './compat';
-import {FeatureFlags} from '@atlaspack/feature-flags';
 
 const CONFIG = Symbol.for('parcel-plugin-config');
 
@@ -34,16 +35,20 @@ export class AtlaspackWorker {
   #transformers: Map<string, TransformerState<any>>;
   #fs: FileSystem;
   #packageManager: NodePackageManager;
+  #options: Options | undefined;
+  #sideEffectDetector: SideEffectDetector;
 
   constructor() {
     this.#resolvers = new Map();
     this.#transformers = new Map();
     this.#fs = new NodeFS();
     this.#packageManager = new NodePackageManager(this.#fs, '/');
+    this.#sideEffectDetector = new SideEffectDetector();
+    this.#sideEffectDetector.install();
   }
 
   loadPlugin: JsCallable<[LoadPluginOptions], Promise<undefined>> = jsCallable(
-    async ({kind, specifier, resolveFrom, featureFlags}) => {
+    async ({kind, specifier, resolveFrom, options}) => {
       // Use packageManager.require() instead of dynamic import() to support TypeScript plugins
       let resolvedModule = await this.#packageManager.require(
         specifier,
@@ -70,26 +75,32 @@ export class AtlaspackWorker {
           `Plugin could not be resolved\n\t${kind}\n\t${resolveFrom}\n\t${specifier}`,
         );
       }
-      // Set feature flags in the worker process
-      // if (featureFlags) {
+
+      if (this.#options == null) {
+        this.#options = {
+          ...options,
+          inputFS: this.#fs,
+          outputFS: this.#fs,
+          packageManager: this.#packageManager,
+          shouldAutoInstall: false,
+        };
+      }
+
       // Set feature flags in the worker process
       let featureFlagsModule = await this.#packageManager.require(
         '@atlaspack/feature-flags',
         __filename,
         {shouldAutoInstall: false},
       );
-      featureFlagsModule.setFeatureFlags(featureFlags);
-      // const {setFeatureFlags} = await import('@atlaspack/feature-flags');
-      // setFeatureFlags(featureFlags);
-      // }
+      featureFlagsModule.setFeatureFlags(options.featureFlags);
 
       switch (kind) {
         case 'resolver':
           this.#resolvers.set(specifier, {resolver: instance});
           break;
-        case 'transformer':
-          this.#transformers.set(specifier, {transformer: instance});
-          break;
+        case 'transformer': {
+          return this.initializeTransformer(instance, specifier);
+        }
       }
     },
   );
@@ -98,25 +109,10 @@ export class AtlaspackWorker {
     [RunResolverResolveOptions],
     Promise<RunResolverResolveResult>
   > = jsCallable(
-    async ({
-      key,
-      dependency: napiDependency,
-      specifier,
-      pipeline,
-      pluginOptions,
-    }) => {
+    async ({key, dependency: napiDependency, specifier, pipeline}) => {
       const state = this.#resolvers.get(key);
       if (!state) {
         throw new Error(`Resolver not found: ${key}`);
-      }
-
-      let packageManager = state.packageManager;
-      if (!packageManager) {
-        packageManager = new NodePackageManager(
-          this.#fs,
-          pluginOptions.projectRoot,
-        );
-        state.packageManager = packageManager;
       }
 
       const env = new Environment(napiDependency.env);
@@ -125,26 +121,20 @@ export class AtlaspackWorker {
       const defaultOptions = {
         logger: new PluginLogger(),
         tracer: new PluginTracer(),
-        options: new PluginOptions({
-          ...pluginOptions,
-          packageManager,
-          shouldAutoInstall: false,
-          inputFS: this.#fs,
-          outputFS: this.#fs,
-        }),
+        options: new PluginOptions(this.options),
       } as const;
 
       if (!('config' in state)) {
         // @ts-expect-error TS2345
         state.config = await state.resolver.loadConfig?.({
-          config: new PluginConfig({
-            env,
-            isSource: true,
-            searchPath: specifier,
-            projectRoot: pluginOptions.projectRoot,
-            fs: this.#fs,
-            packageManager,
-          }),
+          config: new PluginConfig(
+            {
+              plugin: key,
+              isSource: true,
+              searchPath: 'index',
+            },
+            this.options,
+          ),
           ...defaultOptions,
         });
       }
@@ -193,61 +183,67 @@ export class AtlaspackWorker {
     [RunTransformerTransformOptions, Buffer, string | null | undefined],
     Promise<RunTransformerTransformResult>
   > = jsCallable(
-    async ({key, env: napiEnv, options, asset: innerAsset}, contents, map) => {
-      const state = this.#transformers.get(key);
-      if (!state) {
+    async ({key, env: napiEnv, asset: innerAsset}, contents, map) => {
+      const instance = this.#transformers.get(key);
+      if (!instance) {
         throw new Error(`Transformer not found: ${key}`);
       }
 
-      let packageManager = state.packageManager;
-      if (!packageManager) {
-        packageManager = new NodePackageManager(this.#fs, options.projectRoot);
-        state.packageManager = packageManager;
-      }
+      let {transformer, config, allowedEnv = {}} = instance;
 
-      const transformer: Transformer<any> = state.transformer;
+      let cache_bailout = false;
+
       const resolveFunc = (from: string, to: string): Promise<any> => {
         let customRequire = module.createRequire(from);
         let resolvedPath = customRequire.resolve(to);
+        // Tranformer not cacheable due to use of the resolve function
+
+        cache_bailout = true;
 
         return Promise.resolve(resolvedPath);
       };
 
       const env = new Environment(napiEnv);
-      const mutableAsset = new MutableAsset(
+      let mutableAsset = new MutableAsset(
         innerAsset,
         // @ts-expect-error TS2345
         contents,
         env,
         this.#fs,
         map,
-        options.projectRoot,
+        this.options.projectRoot,
       );
 
+      const pluginOptions = new PluginOptions(this.options);
       const defaultOptions = {
         logger: new PluginLogger(),
         tracer: new PluginTracer(),
-        options: new PluginOptions({
-          ...options,
-          packageManager,
-          shouldAutoInstall: false,
-          inputFS: this.#fs,
-          outputFS: this.#fs,
-        }),
+        options: pluginOptions,
       } as const;
 
-      // @ts-expect-error TS2345
-      const config = await transformer.loadConfig?.({
-        config: new PluginConfig({
-          env,
-          isSource: true,
-          searchPath: innerAsset.filePath,
-          projectRoot: options.projectRoot,
-          fs: this.#fs,
-          packageManager,
-        }),
-        ...defaultOptions,
-      });
+      if (transformer.loadConfig) {
+        if (config != null) {
+          throw new Error(
+            `Transformer (${key}) should not implement 'setup' and 'loadConfig'`,
+          );
+        }
+        // @ts-expect-error TS2345
+        config = await transformer.loadConfig({
+          config: new PluginConfig(
+            {
+              plugin: key,
+              isSource: innerAsset.isSource,
+              searchPath: innerAsset.filePath,
+            },
+            this.options,
+          ),
+          ...defaultOptions,
+        });
+
+        // Transformer uses the deprecated loadConfig API, so mark as not
+        // cachable
+        cache_bailout = true;
+      }
 
       if (transformer.parse) {
         const ast = await transformer.parse({
@@ -262,13 +258,46 @@ export class AtlaspackWorker {
         }
       }
 
-      const result = await state.transformer.transform({
-        // @ts-expect-error TS2322
-        asset: mutableAsset,
-        config,
-        resolve: resolveFunc,
-        ...defaultOptions,
-      });
+      const [result, sideEffects] =
+        await this.#sideEffectDetector.monitorSideEffects(() =>
+          transformer.transform({
+            // @ts-expect-error TS2322
+            asset: mutableAsset,
+            config,
+            resolve: resolveFunc,
+            ...defaultOptions,
+          }),
+        );
+
+      for (let {operation, value, variable} of sideEffects.envUsage) {
+        if (operation === 'read') {
+          if (variable && variable in allowedEnv) {
+            let allowed = allowedEnv[variable];
+
+            if (allowed === value) {
+              // Allowed access
+              continue;
+            }
+          }
+        }
+
+        cache_bailout = true;
+        break;
+      }
+
+      if (sideEffects.fsUsage.length > 0) {
+        cache_bailout = true;
+      }
+
+      assert(
+        result.length === 1,
+        '[V3] Unimplemented: Multiple asset return from Node transformer',
+      );
+
+      assert(
+        result[0] === mutableAsset,
+        '[V3] Unimplemented: New asset returned from Node transformer',
+      );
 
       if (transformer.generate) {
         const ast = await mutableAsset.getAST();
@@ -295,22 +324,17 @@ export class AtlaspackWorker {
         }
       }
 
-      assert(
-        result.length === 1,
-        '[V3] Unimplemented: Multiple asset return from Node transformer',
-      );
-
-      assert(
-        result[0] === mutableAsset,
-        '[V3] Unimplemented: New asset returned from Node transformer',
-      );
-
       let assetBuffer: Buffer | null = await mutableAsset.getBuffer();
 
       // If the asset has no code, we set the buffer to null, which we can
       // detect in Rust, to avoid passing back an empty buffer, which we can't.
       if (assetBuffer.length === 0) {
         assetBuffer = null;
+      }
+
+      if (pluginOptions.used) {
+        // Plugin options accessed, so not cachable
+        cache_bailout = true;
       }
 
       return [
@@ -338,9 +362,71 @@ export class AtlaspackWorker {
           ? // @ts-expect-error TS2533
             JSON.stringify((await mutableAsset.getMap()).toVLQ())
           : '',
+        cache_bailout,
       ];
     },
   );
+
+  get options() {
+    if (this.#options == null) {
+      throw new Error('Plugin options have not been initialized');
+    }
+    return this.#options;
+  }
+
+  async initializeTransformer(instance: Transformer<any>, specifier: string) {
+    let transformer = instance;
+    let setup, config, allowedEnv;
+
+    let packageManager = new NodePackageManager(
+      this.#fs,
+      this.options.projectRoot,
+    );
+
+    if (transformer.setup) {
+      let setupResult = await transformer.setup({
+        logger: new PluginLogger(),
+        options: new PluginOptions({
+          ...this.options,
+          shouldAutoInstall: false,
+          inputFS: this.#fs,
+          outputFS: this.#fs,
+          packageManager,
+        }),
+        config: new PluginConfig(
+          {
+            plugin: specifier,
+            searchPath: 'index',
+            // Consider project setup config as source
+            isSource: true,
+          },
+          this.options,
+        ),
+      });
+      config = setupResult?.config;
+      allowedEnv = Object.fromEntries(
+        setupResult?.env?.map((e) => [e, process.env[e]]) ?? [],
+      );
+
+      // Always add the following env vars to the cache key
+      allowedEnv.NODE_ENV = process.env.NODE_ENV;
+
+      setup = {
+        conditions: setupResult?.conditions,
+        config,
+        env: allowedEnv,
+      };
+    }
+
+    this.#transformers.set(specifier, {
+      transformer,
+      config,
+      packageManager,
+      allowedEnv,
+    });
+
+    return setup;
+  }
 }
 
 // Create napi worker and send it back to main thread
@@ -354,21 +440,31 @@ type ResolverState<T> = {
   packageManager?: NodePackageManager;
 };
 
-type TransformerState<T> = {
+type TransformerState<ConfigType> = {
   packageManager?: NodePackageManager;
-  transformer: Transformer<T>;
+  transformer: Transformer<ConfigType>;
+  config?: ConfigType;
+  allowedEnv?: Record<string, string | undefined>;
 };
 
 type LoadPluginOptions = {
   kind: 'resolver' | 'transformer';
   specifier: string;
   resolveFrom: string;
-  featureFlags?: FeatureFlags;
+  options: RpcPluginOptions;
 };
 
 type RpcPluginOptions = {
   projectRoot: string;
   mode: string;
+  featureFlags: FeatureFlags;
+};
+
+type Options = RpcPluginOptions & {
+  inputFS: FileSystem;
+  outputFS: FileSystem;
+  packageManager: NodePackageManager;
+  shouldAutoInstall: boolean;
 };
 
 type RunResolverResolveOptions = {
@@ -377,7 +473,6 @@ type RunResolverResolveOptions = {
   dependency: napi.Dependency;
   specifier: FilePath;
   pipeline: string | null | undefined;
-  pluginOptions: RpcPluginOptions;
 };
 
 type RunResolverResolveResult = {
@@ -406,10 +501,14 @@ type RunTransformerTransformOptions = {
   key: string;
   // @ts-expect-error TS2724
   env: napi.Environment;
-  options: RpcPluginOptions;
   // @ts-expect-error TS2694
   asset: napi.Asset;
 };
 
-// @ts-expect-error TS2694
-type RunTransformerTransformResult = [napi.RpcAssetResult, Buffer, string];
+type RunTransformerTransformResult = [
+  // @ts-expect-error TS2694
+  napi.RpcAssetResult,
+  Buffer,
+  string,
+  boolean,
+];

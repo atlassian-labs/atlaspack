@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_config::AtlaspackConfig;
 use atlaspack_config::map::NamedPattern;
 use atlaspack_core::diagnostic_error;
@@ -16,6 +17,8 @@ use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::plugin::ValidatorPlugin;
 use atlaspack_core::plugin::composite_reporter_plugin::CompositeReporterPlugin;
+use atlaspack_core::types::Asset;
+use atlaspack_package_manager::PackageManagerRef;
 use atlaspack_plugin_resolver::AtlaspackResolver;
 use atlaspack_plugin_rpc::RpcWorkerRef;
 use atlaspack_plugin_transformer_css::AtlaspackCssTransformerPlugin;
@@ -49,6 +52,8 @@ pub struct ConfigPlugins {
 
   /// Storage of initialized plugins
   plugin_cache: PluginCache,
+
+  package_manager: PackageManagerRef,
 }
 
 impl ConfigPlugins {
@@ -56,6 +61,7 @@ impl ConfigPlugins {
     rpc_worker: RpcWorkerRef,
     config: AtlaspackConfig,
     ctx: PluginContext,
+    package_manager: PackageManagerRef,
   ) -> anyhow::Result<Self> {
     let mut reporters: Vec<Box<dyn ReporterPlugin>> = Vec::new();
 
@@ -71,6 +77,7 @@ impl ConfigPlugins {
       ctx,
       reporter,
       plugin_cache: Default::default(),
+      package_manager,
     })
   }
 
@@ -86,6 +93,7 @@ impl ConfigPlugins {
   }
 }
 
+#[async_trait]
 impl Plugins for ConfigPlugins {
   #[allow(unused)]
   fn bundler(&self) -> Result<Box<dyn BundlerPlugin>, anyhow::Error> {
@@ -187,18 +195,21 @@ impl Plugins for ConfigPlugins {
   }
 
   /// Resolve and load transformer plugins for a given path.
-  fn transformers(
-    &self,
-    path: &Path,
-    pipeline: Option<String>,
-  ) -> Result<TransformerPipeline, anyhow::Error> {
+  async fn transformers(&self, asset: &Asset) -> Result<TransformerPipeline, anyhow::Error> {
     let mut transformers: Vec<Arc<dyn TransformerPlugin>> = Vec::new();
-    let named_pattern = pipeline.as_ref().map(|pipeline| NamedPattern {
+    let named_pattern = asset.pipeline.as_ref().map(|pipeline| NamedPattern {
       pipeline,
       use_fallback: false,
     });
 
-    for transformer in self.config.transformers.get(path, named_pattern).iter() {
+    let file_path = &asset.file_path.with_extension(asset.file_type.extension());
+
+    for transformer in self
+      .config
+      .transformers
+      .get(file_path, named_pattern)
+      .iter()
+    {
       let transformer_name = transformer.package_name.as_str();
 
       match transformer_name {
@@ -213,46 +224,66 @@ impl Plugins for ConfigPlugins {
 
       let transformer = self
         .plugin_cache
-        .get_or_init_transformer(transformer_name, || {
+        .get_or_init_transformer(transformer_name, async || {
           Ok(match transformer_name {
-            "@atlaspack/transformer-js" => Arc::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?),
+            "@atlaspack/transformer-js" => {
+              Arc::new(AtlaspackJsTransformerPlugin::new(&self.ctx)?) as Arc<dyn TransformerPlugin>
+            }
             "@atlaspack/transformer-css" => {
-              Arc::new(AtlaspackCssTransformerPlugin::new(&self.ctx)?)
+              Arc::new(AtlaspackCssTransformerPlugin::new(&self.ctx)?) as Arc<dyn TransformerPlugin>
             }
             "@atlaspack/transformer-inline-string" => {
               Arc::new(AtlaspackInlineStringTransformerPlugin::new(&self.ctx))
+                as Arc<dyn TransformerPlugin>
             }
             "@atlaspack/transformer-inline" => {
               Arc::new(AtlaspackInlineTransformerPlugin::new(&self.ctx))
+                as Arc<dyn TransformerPlugin>
             }
             "@atlaspack/transformer-image" => {
               Arc::new(AtlaspackImageTransformerPlugin::new(&self.ctx))
+                as Arc<dyn TransformerPlugin>
             }
-            "@atlaspack/transformer-raw" => Arc::new(AtlaspackRawTransformerPlugin::new(&self.ctx)),
+            "@atlaspack/transformer-raw" => {
+              Arc::new(AtlaspackRawTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+            }
             "@atlaspack/transformer-html" => {
-              Arc::new(AtlaspackHtmlTransformerPlugin::new(&self.ctx))
+              Arc::new(AtlaspackHtmlTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
             }
             "@atlaspack/transformer-json" => {
-              Arc::new(AtlaspackJsonTransformerPlugin::new(&self.ctx))
+              Arc::new(AtlaspackJsonTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
             }
             "@atlaspack/transformer-yaml" => {
-              Arc::new(AtlaspackYamlTransformerPlugin::new(&self.ctx))
+              Arc::new(AtlaspackYamlTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
             }
-            "@atlaspack/transformer-svg" => Arc::new(AtlaspackSvgTransformerPlugin::new(&self.ctx)),
+            "@atlaspack/transformer-svg" => {
+              Arc::new(AtlaspackSvgTransformerPlugin::new(&self.ctx)) as Arc<dyn TransformerPlugin>
+            }
             "@atlaspack/transformer-tokens" => {
               Arc::new(AtlaspackTokensTransformerPlugin::new(&self.ctx)?)
+                as Arc<dyn TransformerPlugin>
             }
-            _ => self.rpc_worker.create_transformer(&self.ctx, transformer)?,
+            _ => {
+              self
+                .rpc_worker
+                .create_transformer(&self.ctx, transformer, self.package_manager.clone())
+                .await?
+            }
           })
-        })?;
+        })
+        .await?;
 
-      transformers.push(transformer);
+      if !transformer.should_skip(asset)? {
+        transformers.push(transformer);
+      }
     }
 
     if transformers.is_empty() {
-      return match pipeline {
-        None => Err(self.missing_plugin(path, "transformers")),
-        Some(pipeline) => Err(self.missing_pipeline_plugin(path, "transformers", &pipeline)),
+      return match asset.pipeline {
+        None => Err(self.missing_plugin(&asset.file_path, "transformers")),
+        Some(ref pipeline) => {
+          Err(self.missing_pipeline_plugin(&asset.file_path, "transformers", pipeline))
+        }
       };
     }
 
@@ -344,10 +375,28 @@ mod tests {
     assert_eq!(format!("{:?}", runtimes), "[RpcRuntimePlugin]")
   }
 
-  #[test]
-  fn returns_transformers() {
-    let pipeline = config_plugins(make_test_plugin_context())
-      .transformers(Path::new("a.ts"), None)
+  #[tokio::test]
+  async fn returns_transformers() {
+    use atlaspack_core::types::{Code, Environment};
+    use std::path::PathBuf;
+    use std::sync::Arc;
+
+    let ctx = make_test_plugin_context();
+    let asset = Asset::new(
+      Code::from("console.log('test');"),
+      false,
+      Arc::new(Environment::default()),
+      PathBuf::from("a.ts"),
+      None,
+      &PathBuf::default(),
+      None,
+      false,
+    )
+    .unwrap();
+
+    let pipeline = config_plugins(ctx)
+      .transformers(&asset)
+      .await
       .expect("Not to panic");
 
     assert_eq!(

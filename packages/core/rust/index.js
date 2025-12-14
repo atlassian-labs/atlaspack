@@ -310,7 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { initTracingSubscriber, Lmdb, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, getNativeMemoryStats, resetMemoryTracking, sampleNativeMemory, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, applyCompiledCssInJsPlugin, Resolver, SourceMap, performStringReplacements, transform, determineJsxConfiguration, transformAsync, getVcsStateSnapshot, getEventsSince, applyTokensPlugin } = nativeBinding
+const { initTracingSubscriber, Lmdb, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, atlaspackNapiCompleteSession, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, getNativeMemoryStats, resetMemoryTracking, sampleNativeMemory, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, applyCompiledCssInJsPlugin, Resolver, SourceMap, performStringReplacements, transform, determineJsxConfiguration, transformAsync, getVcsStateSnapshot, getEventsSince, applyTokensPlugin } = nativeBinding
 
 module.exports.initTracingSubscriber = initTracingSubscriber
 module.exports.Lmdb = Lmdb
@@ -326,6 +326,7 @@ module.exports.createAssetId = createAssetId
 module.exports.atlaspackNapiCreate = atlaspackNapiCreate
 module.exports.atlaspackNapiBuildAssetGraph = atlaspackNapiBuildAssetGraph
 module.exports.atlaspackNapiRespondToFsEvents = atlaspackNapiRespondToFsEvents
+module.exports.atlaspackNapiCompleteSession = atlaspackNapiCompleteSession
 module.exports.createDependencyId = createDependencyId
 module.exports.createEnvironmentId = createEnvironmentId
 module.exports.setAllEnvironments = setAllEnvironments

@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use anyhow::{Error, anyhow};
 use async_trait::async_trait;
-use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
+use atlaspack_core::plugin::TransformResult;
+use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
 use atlaspack_core::types::engines::{Engines, EnginesBrowsers};
 use atlaspack_core::types::{
   Asset, AssetWithDependencies, Code, Dependency, DependencyBuilder, Diagnostic,
@@ -24,11 +24,11 @@ use serde::Deserialize;
 
 use crate::css_transformer_config::{CssModulesConfig, CssModulesFullConfig, CssTransformerConfig};
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct AtlaspackCssTransformerPlugin {
   project_root: PathBuf,
   css_modules_config: CssModulesFullConfig,
-  options: Arc<PluginOptions>,
+  is_compiled_css_in_js_transformer_enabled: bool,
 }
 
 #[derive(Deserialize)]
@@ -63,10 +63,15 @@ impl AtlaspackCssTransformerPlugin {
       })
       .unwrap_or_default();
 
+    let is_compiled_css_in_js_transformer_enabled = ctx
+      .options
+      .feature_flags
+      .bool_enabled("compiledCssInJsTransformer");
+
     Ok(AtlaspackCssTransformerPlugin {
       project_root: ctx.options.project_root.clone(),
       css_modules_config,
-      options: ctx.options.clone(),
+      is_compiled_css_in_js_transformer_enabled,
     })
   }
 
@@ -111,17 +116,9 @@ impl AtlaspackCssTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackCssTransformerPlugin {
-  async fn transform(
-    &self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
-    let is_compiled_css_in_js_transformer_enabled = self
-      .options
-      .feature_flags
-      .bool_enabled("compiledCssInJsTransformer");
-
-    if is_compiled_css_in_js_transformer_enabled && asset.file_path.ends_with(".compiled.css") {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
+    if self.is_compiled_css_in_js_transformer_enabled && asset.file_path.ends_with(".compiled.css")
+    {
       let mut asset = asset;
       self.handle_compiled_css_asset(&mut asset)?;
 
@@ -575,9 +572,8 @@ mod tests {
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
     })?;
-    let context = TransformContext::default();
 
-    plugin.transform(context, asset.clone()).await
+    plugin.transform(asset.clone()).await
   }
 
   #[tokio::test(flavor = "multi_thread")]

@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::sync::mpsc::Sender;
 
 use atlaspack_core::types::Invalidation;
+use atlaspack_memoization_cache::StatsSnapshot;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
 
@@ -21,6 +22,7 @@ use crate::AtlaspackError;
 use crate::WatchEvent;
 use crate::WatchEvents;
 use crate::plugins::PluginsRef;
+use crate::request_tracker::CacheRef;
 use crate::request_tracker::RequestResultSender;
 use crate::requests::RequestResult;
 
@@ -54,6 +56,7 @@ pub struct RequestTracker {
   request_index: HashMap<u64, NodeIndex>,
   invalidations: HashMap<PathBuf, NodeIndex>,
   invalid_nodes: HashSet<NodeIndex>,
+  pub cache: CacheRef,
 }
 
 impl RequestTracker {
@@ -63,6 +66,7 @@ impl RequestTracker {
     options: Arc<AtlaspackOptions>,
     plugins: PluginsRef,
     project_root: PathBuf,
+    cache: CacheRef,
   ) -> Self {
     let mut graph = StableDiGraph::<RequestNode, RequestEdgeType>::new();
 
@@ -78,6 +82,7 @@ impl RequestTracker {
       invalidations: HashMap::new(),
       invalid_nodes: HashSet::new(),
       options,
+      cache,
     }
   }
 
@@ -153,6 +158,7 @@ impl RequestTracker {
             Some(request_id),
             self.plugins.clone(),
             self.project_root.clone(),
+            self.cache.clone(),
             // sub-request run
             Box::new({
               let tx = tx.clone();
@@ -328,6 +334,11 @@ impl RequestTracker {
       RequestNode::Invalid(value) => value.as_ref().map(|v| v.clone()),
       _ => None,
     }
+  }
+
+  /// Get cache statistics
+  pub fn get_cache_stats(&self) -> StatsSnapshot {
+    self.cache.get_stats()
   }
 
   /// Create an edge between a parent request and the target request.

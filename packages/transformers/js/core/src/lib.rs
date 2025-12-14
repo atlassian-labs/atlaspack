@@ -22,6 +22,7 @@ mod typeof_replacer;
 mod unused_bindings_remover;
 pub mod utils;
 
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
@@ -193,7 +194,7 @@ pub struct TransformResult {
   pub used_env: HashSet<swc_core::ecma::atoms::JsWord>,
   pub has_node_replacements: bool,
   pub is_constant_module: bool,
-  pub conditions: HashSet<Condition>,
+  pub conditions: BTreeSet<Condition>,
   pub magic_comments: HashMap<String, String>,
   pub is_empty_or_empty_export: bool,
 }
@@ -910,20 +911,20 @@ pub struct JsxConfiguration {
   pub react_refresh: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
 pub struct AutomaticRuntimeGlobs {
   pub include: Vec<String>,
   pub exclude: Option<Vec<String>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
 #[serde(untagged)]
 pub enum AutomaticReactRuntime {
   Enabled(bool),
   Glob(AutomaticRuntimeGlobs),
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct JsxOptions {
   pub pragma: Option<String>,

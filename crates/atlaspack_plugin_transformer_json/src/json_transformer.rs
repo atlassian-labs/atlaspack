@@ -1,7 +1,7 @@
 use anyhow::Error;
 use async_trait::async_trait;
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::{Asset, Code, FileType};
 
 /// Escape JSON string for embedding in JavaScript double-quoted string
@@ -11,7 +11,7 @@ fn escape_for_double_quotes(input: &str) -> String {
     .replace('"', "\\\"") // Escape double quotes
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct AtlaspackJsonTransformerPlugin {}
 
 impl AtlaspackJsonTransformerPlugin {
@@ -27,11 +27,7 @@ impl TransformerPlugin for AtlaspackJsonTransformerPlugin {
     skip_all,
     fields(plugin = "AtlaspackJsonTransformerPlugin")
   )]
-  async fn transform(
-    &self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     // First attempt: Try to parse with serde_json as it's much faster than
     // json5 deserialization and 99% of JSON files are standard JSON.
     let js_code = match serde_json::from_slice::<serde_json::Value>(asset.code.bytes()) {
@@ -118,9 +114,8 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
-    let context = TransformContext::default();
 
-    let result = plugin.transform(context, asset).await.unwrap();
+    let result = plugin.transform(asset).await.unwrap();
 
     // Uses serde_json, which parses and minifies the JSON
     assert_eq!(
@@ -140,9 +135,8 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
-    let context = TransformContext::default();
 
-    let result = plugin.transform(context, asset).await.unwrap();
+    let result = plugin.transform(asset).await.unwrap();
 
     // Uses serde_json, which parses and minifies the JSON
     assert_eq!(
@@ -162,10 +156,9 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
-    let context = TransformContext::default();
 
     // This should fail fast path, then use serde_json, which should also fail since it's invalid JSON
-    let result = plugin.transform(context, asset).await;
+    let result = plugin.transform(asset).await;
     assert!(result.is_err()); // Should error because "not_an_object" is not valid JSON
   }
 
@@ -185,9 +178,8 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
-    let context = TransformContext::default();
 
-    let result = plugin.transform(context, asset).await.unwrap();
+    let result = plugin.transform(asset).await.unwrap();
 
     // Should fall back to json5, parse successfully, then minify
     assert_eq!(
@@ -221,13 +213,9 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
-    let context = TransformContext::default();
 
     assert_eq!(
-      plugin
-        .transform(context, asset)
-        .await
-        .map_err(|e| e.to_string()),
+      plugin.transform(asset).await.map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
           code: Code::from(
@@ -261,9 +249,8 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
-    let context = TransformContext::default();
 
-    let result = plugin.transform(context, asset).await.unwrap();
+    let result = plugin.transform(asset).await.unwrap();
 
     // Falls back to json5 due to trailing comma, then gets minified
     assert_eq!(
@@ -285,9 +272,8 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
-    let context = TransformContext::default();
 
-    let result = plugin.transform(context, asset).await.unwrap();
+    let result = plugin.transform(asset).await.unwrap();
 
     // serde_json handles the JSON, output is properly escaped for double quotes
     assert_eq!(
@@ -305,9 +291,8 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
-    let context = TransformContext::default();
 
-    let result = plugin.transform(context, asset).await.unwrap();
+    let result = plugin.transform(asset).await.unwrap();
 
     // Uses serde_json for arrays
     assert_eq!(
@@ -326,9 +311,8 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
-    let context = TransformContext::default();
 
-    let result = plugin.transform(context, asset).await.unwrap();
+    let result = plugin.transform(asset).await.unwrap();
 
     // serde_json handles URLs properly
     assert_eq!(
@@ -352,9 +336,8 @@ mod tests {
       file_type: FileType::Json,
       ..Asset::default()
     };
-    let context = TransformContext::default();
 
-    let result = plugin.transform(context, asset).await.unwrap();
+    let result = plugin.transform(asset).await.unwrap();
 
     // Falls back to json5 due to comments, then gets minified
     assert_eq!(

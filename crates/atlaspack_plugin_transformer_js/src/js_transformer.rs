@@ -1,19 +1,22 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
-use std::sync::Arc;
+use std::path::PathBuf;
 
 use anyhow::{Error, anyhow};
 
 use async_trait::async_trait;
-use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
+use atlaspack_core::config_loader::ConfigLoaderRef;
+use atlaspack_core::define_feature_flags;
+use atlaspack_core::plugin::TransformResult;
+use atlaspack_core::plugin::{HmrOptions, PluginContext, TransformerPlugin};
 use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
-  Asset, BuildMode, Diagnostic, Diagnostics, ErrorKind, FileType, LogLevel, OutputFormat,
+  Asset, BuildMode, DependencyKind, Diagnostic, Diagnostics, ErrorKind, FileType, OutputFormat,
   SourceType,
 };
 use atlaspack_js_swc_core::SyncDynamicImportConfig;
+use derivative::Derivative;
 use glob_match::glob_match;
 use parking_lot::RwLock;
 use swc_core::atoms::Atom;
@@ -29,6 +32,15 @@ pub use atlaspack_js_swc_core::JsxConfiguration;
 
 mod conversion;
 
+// Define the feature flags struct for this transformer
+define_feature_flags!(JsTransformerFlags, {
+  conditionalBundlingApi,
+  exportsRebindingOptimisation,
+  hmrImprovements,
+  nestedPromiseImportFix,
+  newJsxConfig
+});
+
 /// This is a rust only `TransformerPlugin` implementation for JS assets that goes through the
 /// default SWC transformer.
 ///
@@ -40,11 +52,25 @@ mod conversion;
 ///   `Dependency` as well as exported, imported and re-exported symbols (as `Symbol`, usually
 ///   mapping to a mangled name that the SWC transformer replaced in the source file + the source
 ///   module and the source name that has been imported)
+#[derive(Derivative)]
+#[derivative(Hash)]
 pub struct AtlaspackJsTransformerPlugin {
+  // We don't add the cache to the hash since it's internal mutable state that
+  // doesn't affect the cache key
+  #[derivative(Hash = "ignore")]
   cache: RwLock<Cache>,
   config: JsTransformerConfig,
-  options: Arc<PluginOptions>,
+  project_root: PathBuf,
+  mode: BuildMode,
+  env: Option<BTreeMap<String, String>>,
+  hmr_options: Option<HmrOptions>,
+  feature_flags: JsTransformerFlags,
+  core_path: PathBuf,
   ts_config: Option<TsConfig>,
+  // We can ignore this from cache because when it's used we trigger a cache
+  // bailout. Should be removed once we clean-up the "newJsxConfig" feature flag.
+  #[derivative(Hash = "ignore")]
+  config_loader: ConfigLoaderRef,
 }
 
 #[derive(Default)]
@@ -93,11 +119,28 @@ impl AtlaspackJsTransformerPlugin {
       })
       .ok();
 
+    let core_path = ctx.options.core_path.clone();
+    // TODO: Right now we're adding the full env map to the cache key.
+    // Ideally, we'd just add the ones we're utilizing in the transformer to
+    // increase the cache hit rate.
+    let env = ctx.options.env.clone();
+    let hmr_options = ctx.options.hmr_options.clone();
+    let mode = ctx.options.mode.clone();
+    let project_root = ctx.options.project_root.clone();
+
+    let feature_flags = JsTransformerFlags::new(&ctx.options.feature_flags);
+
     Ok(Self {
       cache: Default::default(),
       config,
-      options: ctx.options.clone(),
+      core_path,
+      env,
+      feature_flags,
+      hmr_options,
+      mode,
+      project_root,
       ts_config,
+      config_loader: ctx.config.clone(),
     })
   }
 
@@ -116,20 +159,14 @@ impl AtlaspackJsTransformerPlugin {
       file_type,
       asset.is_source,
       &self.config.jsx,
-      &self.options.project_root,
+      &self.project_root,
     )
   }
 }
 
 impl AtlaspackJsTransformerPlugin {
   fn env_variables(&self, asset: &Asset) -> HashMap<Atom, Atom> {
-    if self.options.env.is_none()
-      || self
-        .options
-        .env
-        .as_ref()
-        .is_some_and(|vars| vars.is_empty())
-    {
+    if self.env.is_none() || self.env.as_ref().is_some_and(|vars| vars.is_empty()) {
       // Still check for custom env even if global env is empty
       if asset.env.custom_env.is_none() {
         return HashMap::new();
@@ -137,7 +174,7 @@ impl AtlaspackJsTransformerPlugin {
     }
 
     // Merge global environment variables with asset's custom environment variables
-    let mut env_vars = self.options.env.clone().unwrap_or_default();
+    let mut env_vars = self.env.clone().unwrap_or_default();
     if let Some(custom_env) = &asset.env.custom_env {
       env_vars.extend(custom_env.clone());
     }
@@ -208,7 +245,7 @@ impl AtlaspackJsTransformerPlugin {
   }
 
   fn sync_dynamic_import_config(&self) -> Option<SyncDynamicImportConfig> {
-    if let Some(env_vars) = &self.options.env
+    if let Some(env_vars) = &self.env
       && let Some(config_json) = env_vars.get("SYNC_DYNAMIC_IMPORT_CONFIG")
     {
       if let Some(cached) = self.cache.read().sync_dynamic_import_config.as_ref() {
@@ -244,7 +281,10 @@ impl AtlaspackJsTransformerPlugin {
 impl fmt::Debug for AtlaspackJsTransformerPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     f.debug_struct("AtlaspackJsTransformerPlugin")
-      .field("options", &self.options)
+      .field("project_root", &self.project_root)
+      .field("mode", &self.mode)
+      .field("env", &self.env)
+      .field("hmr_options", &self.hmr_options)
       .finish()
   }
 }
@@ -252,26 +292,11 @@ impl fmt::Debug for AtlaspackJsTransformerPlugin {
 #[async_trait]
 impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does equivalent work to `JSTransformer::transform` in `packages/transformers/js`
-  async fn transform(
-    &self,
-    context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
     let is_node = env.context.is_node();
     let source_code = asset.code.clone();
-
-    let feature_flag_conditional_bundling = self
-      .options
-      .feature_flags
-      .bool_enabled("conditionalBundlingApi");
-
-    let feature_flag_hmr_improvements = self.options.feature_flags.bool_enabled("hmrImprovements");
-
-    let feature_flag_exports_rebinding_optimisation = self
-      .options
-      .feature_flags
-      .bool_enabled("exportsRebindingOptimisation");
+    let mut cache_bailout = false;
 
     let mut targets: HashMap<String, String> = HashMap::new();
     if env.context.is_browser() {
@@ -360,11 +385,14 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       jsx_import_source,
       automatic_jsx_runtime,
       react_refresh,
-    } = if self.options.feature_flags.bool_enabled("newJsxConfig") {
+    } = if self.feature_flags.newJsxConfig() {
       self.determine_jsx_configuration(&asset)
     } else {
       // With newJsxConfig disabled, use the old logic
-      let package_json = context.config().load_package_json::<PackageJson>().ok();
+      let package_json = self
+        .config_loader
+        .load_local_package_json::<PackageJson>(&asset.file_path)
+        .ok();
       let is_jsx = matches!(asset.file_type, FileType::Jsx | FileType::Tsx);
 
       let automatic_jsx_runtime = compiler_options
@@ -414,7 +442,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       inline_fs: !env.context.is_node() && self.config.inline_fs.unwrap_or(true),
       insert_node_globals: !is_node && env.source_type != SourceType::Script,
       is_browser: env.context.is_browser(),
-      is_development: self.options.mode == BuildMode::Development,
+      is_development: self.mode == BuildMode::Development,
       is_esm_output: env.output_format == OutputFormat::EsModule,
       is_jsx,
       is_library: env.is_library,
@@ -427,9 +455,9 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       add_display_name: self.config.add_react_display_name,
       module_id: asset.id.to_string(),
       node_replacer: is_node,
-      project_root: self.options.project_root.to_string_lossy().into_owned(),
-      react_refresh: self.options.hmr_options.is_some()
-        && self.options.mode == BuildMode::Development
+      project_root: self.project_root.to_string_lossy().into_owned(),
+      react_refresh: self.hmr_options.is_some()
+        && self.mode == BuildMode::Development
         && react_refresh
         && env.context.is_browser()
         && !env.is_library
@@ -445,7 +473,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       supports_module_workers: env.should_scope_hoist
         && env.engines.supports(EnvironmentFeature::WorkerModule),
       targets: (!targets.is_empty()).then_some(targets),
-      trace_bailouts: self.options.log_level == LogLevel::Verbose,
+      trace_bailouts: false, // Simplified: could be made configurable if needed
       use_define_for_class_fields: compiler_options
         .map(|co| {
           co.use_define_for_class_fields.unwrap_or_else(|| {
@@ -456,13 +484,10 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
           })
         })
         .unwrap_or_default(),
-      conditional_bundling: feature_flag_conditional_bundling,
-      hmr_improvements: feature_flag_hmr_improvements,
-      exports_rebinding_optimisation: feature_flag_exports_rebinding_optimisation,
-      nested_promise_import_fix: self
-        .options
-        .feature_flags
-        .bool_enabled("nestedPromiseImportFix"),
+      conditional_bundling: self.feature_flags.conditionalBundlingApi(),
+      hmr_improvements: self.feature_flags.hmrImprovements(),
+      exports_rebinding_optimisation: self.feature_flags.exportsRebindingOptimisation(),
+      nested_promise_import_fix: self.feature_flags.nestedPromiseImportFix(),
       enable_ssr_typeof_replacement,
       global_aliasing_config,
       enable_lazy_loading,
@@ -479,6 +504,19 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
     let transformation_result = atlaspack_js_swc_core::transform(&transform_config, None)?;
 
+    if transformation_result
+      .dependencies
+      .iter()
+      .any(|dep| matches!(dep.kind, DependencyKind::File))
+    {
+      // If we've inlined FS call then the result is not cacheable
+      tracing::info!(
+        "Asset {} has inlined FS calls, marking transform result as non-cacheable",
+        asset.file_path.display()
+      );
+      cache_bailout = true;
+    }
+
     if let Some(errors) = transformation_result.diagnostics {
       return Err(anyhow!(map_diagnostics(
         errors,
@@ -490,13 +528,20 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       )));
     }
 
-    let result = conversion::convert_result(
+    let mut result = conversion::convert_result(
       asset,
       &transform_config,
       transformation_result,
-      &self.options,
+      &self.project_root,
+      &self.mode,
+      &self.core_path,
+      &self.hmr_options,
     )
     .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
+
+    if cache_bailout {
+      result.cache_bailout = cache_bailout;
+    }
 
     Ok(result)
   }
@@ -504,11 +549,14 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
 #[cfg(test)]
 mod tests {
-  use std::path::{Path, PathBuf};
+  use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+  };
 
   use atlaspack_core::{
     config_loader::ConfigLoader,
-    plugin::PluginLogger,
+    plugin::{PluginLogger, PluginOptions},
     types::{
       Code, DependencyBuilder, DependencyKind, Environment, EnvironmentContext, FeatureFlags,
       Location, Priority, SourceLocation, SpecifierType, Symbol,
@@ -545,7 +593,8 @@ mod tests {
         },
         discovered_assets: vec![],
         dependencies: vec![],
-        invalidate_on_file_change: vec![]
+        invalidate_on_file_change: vec![],
+        cache_bailout: false,
       }
     );
 
@@ -1069,12 +1118,25 @@ mod tests {
     let mut transformer = AtlaspackJsTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
         fs: Arc::new(InMemoryFileSystem::default()),
-        project_root: PathBuf::from("test"),
-        search_path: PathBuf::from("test"),
+        project_root: PathBuf::from("/"),
+        search_path: PathBuf::from("/"),
       }),
       file_system: Arc::new(InMemoryFileSystem::default()),
       logger: PluginLogger::default(),
-      options: Arc::new(PluginOptions::default()),
+      options: Arc::new(PluginOptions {
+        project_root: PathBuf::from("/"),
+        mode: BuildMode::Development,
+        env: Some(BTreeMap::new()),
+        hmr_options: None,
+        core_path: PathBuf::from("test"),
+        feature_flags: FeatureFlags::default()
+          .with_bool_flag_default("conditionalBundlingApi", true)
+          .with_bool_flag_default("hmrImprovements", true)
+          .with_bool_flag_default("nestedPromiseImportFix", true)
+          .with_bool_flag_default("exportsRebindingOptimisation", true)
+          .with_bool_flag_default("newJsxConfig", true),
+        ..PluginOptions::default()
+      }),
     })
     .unwrap();
 
@@ -1273,7 +1335,7 @@ mod tests {
 
     // Case 8: Test AutomaticReactRuntime::Glob functionality
     let test_asset = Asset {
-      file_path: PathBuf::from("src/components/Button.tsx"),
+      file_path: PathBuf::from("/src/components/Button.tsx"),
       file_type: FileType::Tsx,
       is_source: true,
       env: asset.env.clone(),
@@ -1297,8 +1359,8 @@ mod tests {
     let jsx_config = transformer.determine_jsx_configuration(&test_asset);
     let automatic_jsx_runtime = jsx_config.automatic_jsx_runtime;
 
-    assert!(
-      automatic_jsx_runtime,
+    assert_eq!(
+      automatic_jsx_runtime, true,
       "Files matching glob pattern should have automatic JSX runtime enabled"
     );
 
@@ -1825,7 +1887,8 @@ mod tests {
         },
         discovered_assets: vec![],
         dependencies: vec![],
-        invalidate_on_file_change: vec![]
+        invalidate_on_file_change: vec![],
+        cache_bailout: false,
       }
     );
 
@@ -1930,7 +1993,8 @@ mod tests {
         },
         discovered_assets: vec![],
         dependencies: expected_dependencies,
-        invalidate_on_file_change: vec![]
+        invalidate_on_file_change: vec![],
+        cache_bailout: false,
       }
     );
 
@@ -2029,16 +2093,8 @@ mod tests {
     if let Some(js_transformer_config) = options.js_transformer_config {
       transformer.config = js_transformer_config;
     }
-    let context = TransformContext::new(
-      Arc::new(ConfigLoader {
-        fs: file_system,
-        project_root,
-        search_path: asset.file_path.clone(),
-      }),
-      Arc::new(Environment::default()),
-    );
 
-    let mut result = transformer.transform(context, asset).await?;
+    let mut result = transformer.transform(asset).await?;
 
     result.asset.code = Code::from(normalize_code(result.asset.code.as_str()?));
 

@@ -18,6 +18,7 @@ use atlaspack_resolver::SpecifierType;
 use es_module_lexer::ImportKind;
 use es_module_lexer::lex;
 use parking_lot::RwLock;
+use rayon::str::ParallelString;
 // use rayon::prelude::{ParallelBridge, ParallelIterator};
 
 #[derive(Debug)]
@@ -79,6 +80,7 @@ struct EsmGraphBuilder<'a> {
   cjs_resolver: Resolver<'a>,
   esm_resolver: Resolver<'a>,
   cache: &'a Cache,
+  ignore: HashSet<&'a str>,
 }
 
 impl<'a> EsmGraphBuilder<'a> {
@@ -93,6 +95,7 @@ impl<'a> EsmGraphBuilder<'a> {
       && ext != "js"
       && ext != "cjs"
       && ext != "mjs"
+      && ext != "ts"
     {
       // Ignore.
       return Ok(());
@@ -133,35 +136,38 @@ impl<'a> EsmGraphBuilder<'a> {
               // println!("GLOB {:?} {:?}", import.specifier(), glob);
               self.expand_glob(&glob, file, resolver, &invalidations)?;
             } else {
-              // println!("DYNAMIC: {} {:?}", import.specifier(), file);
+              tracing::warn!("Start-up invalidation: {} {:?}", import.specifier(), file);
               invalidations.invalidate_on_startup();
             }
           }
           ImportKind::DynamicString | ImportKind::Standard => {
-            // Skip flow type imports.
+            if self
+              .ignore
+              .contains(import.specifier().as_parallel_string())
+            {
+              return Ok(());
+            }
+
+            // Skip type imports
             if import.statement().starts_with("import type ") {
               return Ok(());
             }
 
-            if let Ok((Resolution::Path(p), _)) = resolver.resolve_with_invalidations(
+            match resolver.resolve_with_invalidations(
               &import.specifier(),
               file,
               SpecifierType::Esm,
               &invalidations,
               ResolveOptions::default(),
             ) {
-              // println!(
-              //   "IMPORT {} {:?} {:?} {:?}",
-              //   import.specifier(),
-              //   import.kind(),
-              //   file,
-              //   p
-              // );
-              invalidations.invalidate_on_file_change(&p);
-              self.build(&p)?;
-            } else {
-              // Ignore dependencies that don't resolve to anything.
-              // The resolver calls invalidate_on_file_create already.
+              Ok((Resolution::Path(p), _)) => {
+                invalidations.invalidate_on_file_change(&p);
+                self.build(&p)?;
+              }
+              _ => {
+                // Ignore dependencies that don't resolve to anything.
+                // The resolver calls invalidate_on_file_create already.
+              }
             }
           }
           ImportKind::Meta => {}
@@ -520,6 +526,13 @@ pub fn build_esm_graph(
       CacheCow::Borrowed(resolver_cache),
     ),
     cache,
+    ignore: HashSet::from([
+      "esbuild-register",
+      "esbuild-register/dist/node",
+      "@atlassian/atlaspack-afm-feature-flags",
+      "@atlaspack/rust",
+      "@babel/core",
+    ]),
   };
 
   visitor.build(file)?;

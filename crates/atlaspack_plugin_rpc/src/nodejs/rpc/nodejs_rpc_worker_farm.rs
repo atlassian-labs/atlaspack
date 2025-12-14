@@ -2,13 +2,14 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::ResolverPlugin;
 use atlaspack_core::plugin::*;
+use atlaspack_package_manager::PackageManagerRef;
 
 use super::super::super::RpcWorker;
 use super::super::plugins::*;
-use super::LoadPluginOptions;
 use super::nodejs_rpc_worker::NodejsWorker;
 
 /// NodejsWorkerFarm holds a collection of Nodejs worker threads
@@ -37,6 +38,7 @@ impl NodejsWorkerFarm {
   }
 }
 
+#[async_trait]
 impl RpcWorker for NodejsWorkerFarm {
   fn create_resolver(
     &self,
@@ -50,16 +52,15 @@ impl RpcWorker for NodejsWorkerFarm {
     )?))
   }
 
-  fn create_transformer(
+  async fn create_transformer(
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,
+    package_manager: PackageManagerRef,
   ) -> anyhow::Result<Arc<dyn TransformerPlugin>> {
-    Ok(Arc::new(NodejsRpcTransformerPlugin::new(
-      self.workers.clone(),
-      ctx,
-      plugin,
-    )?))
+    Ok(Arc::new(
+      NodejsRpcTransformerPlugin::new(self.workers.clone(), ctx, plugin, package_manager).await?,
+    ))
   }
 
   fn create_bundler(
@@ -186,20 +187,5 @@ impl NodeJsWorkerCollection {
     }
 
     workers
-  }
-
-  pub async fn load_plugin(&self, opts: LoadPluginOptions) -> anyhow::Result<()> {
-    let mut set = vec![];
-
-    for worker in self.all_workers() {
-      let opts = opts.clone();
-      set.push(tokio::spawn(async move { worker.load_plugin(opts).await }));
-    }
-
-    while let Some(res) = set.pop() {
-      res.await??;
-    }
-
-    Ok(())
   }
 }

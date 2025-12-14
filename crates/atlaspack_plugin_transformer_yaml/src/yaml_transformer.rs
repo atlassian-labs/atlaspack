@@ -1,10 +1,10 @@
 use anyhow::Error;
 use async_trait::async_trait;
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::{Asset, Code, FileType};
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct AtlaspackYamlTransformerPlugin {}
 
 impl AtlaspackYamlTransformerPlugin {
@@ -15,11 +15,7 @@ impl AtlaspackYamlTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackYamlTransformerPlugin {
-  async fn transform(
-    &self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     let code = serde_yml::from_slice::<serde_yml::Value>(asset.code.bytes())?;
@@ -83,11 +79,7 @@ mod tests {
       ..Asset::default()
     };
 
-    let context = TransformContext::default();
-    let transformation = plugin
-      .transform(context, asset)
-      .await
-      .map_err(|e| e.to_string());
+    let transformation = plugin.transform(asset).await.map_err(|e| e.to_string());
 
     assert_eq!(
       transformation,

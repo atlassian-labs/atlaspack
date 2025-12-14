@@ -1,3 +1,4 @@
+mod load_plugin;
 mod nodejs_rpc_bundler;
 mod nodejs_rpc_compressor;
 mod nodejs_rpc_namer;
@@ -7,7 +8,6 @@ mod nodejs_rpc_reporter;
 mod nodejs_rpc_resolver;
 mod nodejs_rpc_runtime;
 mod nodejs_rpc_transformer;
-mod plugin_options;
 
 pub use self::nodejs_rpc_bundler::*;
 pub use self::nodejs_rpc_compressor::*;

@@ -13,7 +13,7 @@ import {identifierRegistry} from './IdentifierRegistry';
 import type {EnvironmentRef} from './EnvironmentManager';
 import {toEnvironmentId} from './EnvironmentManager';
 
-type ConfigOpts = {
+export type ConfigOpts = {
   plugin: PackageName;
   searchPath: ProjectPath;
   isSource?: boolean;
