@@ -67,8 +67,11 @@ export interface CacheStats {
   hits: number;
   misses: number;
   uncacheables: number;
+  bailouts: number;
+  errors: number;
+  validations: number;
 }
-export declare function atlaspackNapiGetCacheStats(
+export declare function atlaspackNapiCompleteSession(
   atlaspackNapi: AtlaspackNapi,
 ): Promise<CacheStats>;
 export declare function createDependencyId(params: unknown): string;

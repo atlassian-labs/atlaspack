@@ -65,6 +65,9 @@ impl Stats {
     self.hits.store(0, Ordering::Relaxed);
     self.misses.store(0, Ordering::Relaxed);
     self.uncacheables.store(0, Ordering::Relaxed);
+    self.bailouts.store(0, Ordering::Relaxed);
+    self.errors.store(0, Ordering::Relaxed);
+    self.validations.store(0, Ordering::Relaxed);
   }
 
   fn increment_hits(&self) {
