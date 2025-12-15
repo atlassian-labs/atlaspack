@@ -149,10 +149,10 @@ impl Atlaspack {
       Arc::new(resolved_options.clone()),
       plugins.clone(),
       project_root.clone(),
-      Arc::new(DynCacheHandler::Lmdb(Arc::new(CacheHandler::new(
+      Arc::new(DynCacheHandler::Lmdb(CacheHandler::new(
         LmdbCacheReaderWriter::new(db.clone()),
         cache_mode,
-      )))),
+      ))),
     );
 
     Ok(Self {

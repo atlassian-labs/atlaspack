@@ -5,7 +5,6 @@ use std::sync::Arc;
 use std::sync::mpsc::Sender;
 
 use atlaspack_core::types::Invalidation;
-use atlaspack_memoization_cache::StatsSnapshot;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
 

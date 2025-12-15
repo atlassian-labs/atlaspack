@@ -8,15 +8,14 @@ use atlaspack_core::{
   types::AtlaspackOptions,
 };
 use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSystem};
-use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter};
+use atlaspack_memoization_cache::{CacheHandler, CacheMode, InMemoryReaderWriter};
 use atlaspack_package_manager::MockPackageManager;
 use atlaspack_plugin_rpc::RpcFactory;
 use atlaspack_plugin_rpc::testing::testing::TestingRpcFactory;
-use lmdb_js_lite::{LMDBOptions, get_database};
 
 use crate::{
   plugins::{PluginsRef, config_plugins::ConfigPlugins},
-  request_tracker::{CacheRef, RequestTracker},
+  request_tracker::{CacheRef, DynCacheHandler, RequestTracker},
 };
 
 pub(crate) fn make_test_plugin_context() -> PluginContext {
@@ -66,21 +65,10 @@ impl Default for RequestTrackerTestOptions {
 
 /// Create a test cache using a temp directory
 fn create_test_cache() -> CacheRef {
-  use std::env::temp_dir;
-  let db_path = temp_dir()
-    .join("atlaspack-test-cache")
-    .join(format!("{}", std::process::id()))
-    .join("lmdb-cache.db");
-  let options = LMDBOptions {
-    path: db_path.to_str().unwrap().to_string(),
-    async_writes: false,
-    map_size: None,
-  };
-  let db_handle = get_database(options).expect("Failed to create test database");
-  Arc::new(CacheHandler::new(
-    LmdbCacheReaderWriter::new(db_handle),
+  Arc::new(DynCacheHandler::InMemory(CacheHandler::new(
+    InMemoryReaderWriter::default(),
     CacheMode::Off,
-  ))
+  )))
 }
 
 pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTracker {
