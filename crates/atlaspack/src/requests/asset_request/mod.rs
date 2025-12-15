@@ -12,7 +12,6 @@ use atlaspack_core::types::Dependency;
 use atlaspack_core::types::Environment;
 use atlaspack_core::types::FileType;
 use atlaspack_core::types::{Asset, Invalidation};
-use atlaspack_memoization_cache::CacheReaderWriter;
 use atlaspack_sourcemap::find_sourcemap_url;
 use atlaspack_sourcemap::load_sourcemap_url;
 use std::collections::VecDeque;
@@ -146,9 +145,9 @@ impl Request for AssetRequest {
 }
 
 #[tracing::instrument(level = "trace", skip_all)]
-async fn run_pipelines<C: CacheReaderWriter>(
+async fn run_pipelines(
   input: Asset,
-  request_context: RunRequestContext<C>,
+  request_context: RunRequestContext,
 ) -> anyhow::Result<TransformResult> {
   let plugins = request_context.plugins();
   let mut all_invalidations = vec![];

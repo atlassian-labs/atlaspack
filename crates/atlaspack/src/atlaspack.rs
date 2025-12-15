@@ -18,7 +18,7 @@ use tokio::sync::RwLock;
 use crate::WatchEvents;
 use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
-use crate::request_tracker::{RequestNode, RequestTracker};
+use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
 use crate::requests::{AssetGraphRequest, RequestResult};
 
 pub struct AtlaspackInitOptions {
@@ -149,10 +149,10 @@ impl Atlaspack {
       Arc::new(resolved_options.clone()),
       plugins.clone(),
       project_root.clone(),
-      Arc::new(CacheHandler::new(
+      Arc::new(DynCacheHandler::Lmdb(Arc::new(CacheHandler::new(
         LmdbCacheReaderWriter::new(db.clone()),
         cache_mode,
-      )),
+      )))),
     );
 
     Ok(Self {

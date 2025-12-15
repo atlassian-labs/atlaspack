@@ -336,11 +336,6 @@ impl RequestTracker {
     }
   }
 
-  /// Get cache statistics
-  pub fn get_cache_stats(&self) -> StatsSnapshot {
-    self.cache.get_stats()
-  }
-
   /// Create an edge between a parent request and the target request.
   fn link_request_to_parent(
     &mut self,

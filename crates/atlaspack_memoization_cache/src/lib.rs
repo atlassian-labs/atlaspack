@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::collections::hash_map::DefaultHasher;
@@ -9,7 +10,7 @@ mod lmdb_cache_reader_writer;
 
 pub use lmdb_cache_reader_writer::LmdbCacheReaderWriter;
 
-pub trait CacheReaderWriter {
+pub trait CacheReaderWriter: Send + Sync {
   fn read(&self, key: &str) -> anyhow::Result<Option<Vec<u8>>>;
   fn put(&self, key: &str, value: &[u8]) -> anyhow::Result<()>;
   fn complete_session(&self) -> anyhow::Result<()> {
@@ -130,73 +131,29 @@ pub struct CacheHandler<T: CacheReaderWriter> {
   mode: CacheMode,
 }
 
+#[async_trait]
+pub trait CacheHandlerTrait {
+  fn complete_session(&self) -> anyhow::Result<StatsSnapshot>;
+
+  async fn run<Input, RunFn, Res, FutureResult, Error>(
+    &self,
+    input: Input,
+    run_fn: RunFn,
+  ) -> Result<Res, Error>
+  where
+    Input: Cacheable + Send,
+    Res: CacheResponse + Send,
+    Error: Send,
+    FutureResult: Future<Output = Result<Res, Error>> + Send,
+    RunFn: FnOnce(Input) -> FutureResult + Send;
+}
+
 impl<T: CacheReaderWriter> CacheHandler<T> {
   pub fn new(reader_writer: T, mode: CacheMode) -> Self {
     CacheHandler {
       reader_writer,
       stats: Stats::default(),
       mode,
-    }
-  }
-
-  pub fn complete_session(&self) -> anyhow::Result<StatsSnapshot> {
-    let snapshot = self.stats.get_snapshot();
-    tracing::info!("Cache stats {:#?}", snapshot);
-
-    self.stats.clear();
-    self.reader_writer.complete_session()?;
-
-    Ok(snapshot)
-  }
-
-  pub fn get_stats(&self) -> StatsSnapshot {
-    self.stats.get_snapshot()
-  }
-
-  #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn run<Input, RunFn, Res, FutureResult, Error>(
-    &self,
-    input: Input,
-    run_fn: RunFn,
-  ) -> Result<Res, Error>
-  where
-    Input: Cacheable,
-    Res: CacheResponse,
-    FutureResult: Future<Output = Result<Res, Error>>,
-    RunFn: FnOnce(Input) -> FutureResult,
-  {
-    match self.mode {
-      CacheMode::Off => run_fn(input).await,
-      CacheMode::Shadow(validation_rate) => {
-        // First hash the label and input to create a cache key
-        let Some((label, cache_key)) = input.cache_key() else {
-          // Input isn't cacheable so just run the function directly
-          self.stats.increment_uncacheables();
-          return run_fn(input).await;
-        };
-
-        if !self.should_validate(&label, validation_rate) {
-          return run_fn(input).await;
-        }
-
-        self
-          .run_with_cache(label, cache_key, input, run_fn, true)
-          .await
-      }
-      CacheMode::On(validation_rate) => {
-        // First hash the label and input to create a cache key
-        let Some((label, cache_key)) = input.cache_key() else {
-          // Input isn't cacheable so just run the function directly
-          self.stats.increment_uncacheables();
-          return run_fn(input).await;
-        };
-
-        let should_validate = self.should_validate(&label, validation_rate);
-
-        self
-          .run_with_cache(label, cache_key, input, run_fn, should_validate)
-          .await
-      }
     }
   }
 
@@ -303,6 +260,67 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
     let normalized = (hash as f64) / (u64::MAX as f64);
 
     normalized < validation_rate as f64
+  }
+}
+
+#[async_trait]
+impl<T: CacheReaderWriter> CacheHandlerTrait for CacheHandler<T> {
+  fn complete_session(&self) -> anyhow::Result<StatsSnapshot> {
+    let snapshot = self.stats.get_snapshot();
+    tracing::info!("Cache stats {:#?}", snapshot);
+
+    self.stats.clear();
+    self.reader_writer.complete_session()?;
+
+    Ok(snapshot)
+  }
+
+  #[tracing::instrument(level = "debug", skip_all)]
+  async fn run<Input, RunFn, Res, FutureResult, Error>(
+    &self,
+    input: Input,
+    run_fn: RunFn,
+  ) -> Result<Res, Error>
+  where
+    Input: Cacheable + Send,
+    Res: CacheResponse + Send,
+    Error: Send,
+    FutureResult: Future<Output = Result<Res, Error>> + Send,
+    RunFn: FnOnce(Input) -> FutureResult + Send,
+  {
+    match self.mode {
+      CacheMode::Off => run_fn(input).await,
+      CacheMode::Shadow(validation_rate) => {
+        // First hash the label and input to create a cache key
+        let Some((label, cache_key)) = input.cache_key() else {
+          // Input isn't cacheable so just run the function directly
+          self.stats.increment_uncacheables();
+          return run_fn(input).await;
+        };
+
+        if !self.should_validate(&label, validation_rate) {
+          return run_fn(input).await;
+        }
+
+        self
+          .run_with_cache(label, cache_key, input, run_fn, true)
+          .await
+      }
+      CacheMode::On(validation_rate) => {
+        // First hash the label and input to create a cache key
+        let Some((label, cache_key)) = input.cache_key() else {
+          // Input isn't cacheable so just run the function directly
+          self.stats.increment_uncacheables();
+          return run_fn(input).await;
+        };
+
+        let should_validate = self.should_validate(&label, validation_rate);
+
+        self
+          .run_with_cache(label, cache_key, input, run_fn, should_validate)
+          .await
+      }
+    }
   }
 }
 
