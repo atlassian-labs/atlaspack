@@ -41,7 +41,7 @@ impl ConfigLoader {
     filename: &str,
     search_path: &Path,
   ) -> Result<ConfigFile<Config>, DiagnosticError> {
-    let path = find_ancestor_file(&*self.fs, &[filename], &search_path, &self.project_root)
+    let path = find_ancestor_file(&*self.fs, &[filename], search_path, &self.project_root)
       .ok_or_else(|| {
         diagnostic_error!(
           DiagnosticBuilder::default()
