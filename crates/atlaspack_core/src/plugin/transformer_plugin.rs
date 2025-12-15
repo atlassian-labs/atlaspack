@@ -39,32 +39,6 @@ pub enum CacheStatus {
 ///
 /// This macro takes any number of arguments that implement Hash and combines
 /// them into a single u64 hash for use as a cache key.
-///
-/// # Examples
-///
-/// ```rust
-/// use atlaspack_core::{cache_key, version::atlaspack_rust_version};
-///
-/// // Simple usage with just the rust version
-/// let key = cache_key!(atlaspack_rust_version());
-///
-/// // Multiple values
-/// let config = MyConfig { /* ... */ };
-/// let key = cache_key!(config, atlaspack_rust_version(), "some_string");
-///
-/// // Can be used directly in struct initialization
-/// struct MyPlugin {
-///   cache_key: CacheStatus,
-/// }
-///
-/// impl MyPlugin {
-///   fn new(config: &Config) -> Self {
-///     Self {
-///       cache_key: cache_key!(config, atlaspack_rust_version()),
-///     }
-///   }
-/// }
-/// ```
 #[macro_export]
 macro_rules! cache_key {
     ($($val:expr),+ $(,)?) => {{
