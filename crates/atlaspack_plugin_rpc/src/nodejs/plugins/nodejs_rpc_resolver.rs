@@ -59,7 +59,7 @@ impl RpcNodejsResolverPlugin {
       .started
       .get_or_try_init::<anyhow::Error, _, _>(|| async move {
         let opts = LoadPluginOptions {
-          kind: LoadPluginKind::Transformer,
+          kind: LoadPluginKind::Resolver,
           specifier: self.plugin_node.package_name.clone(),
           resolve_from: self.plugin_node.resolve_from.as_ref().clone(),
           options: RpcPluginOptions {
