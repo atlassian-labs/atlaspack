@@ -14,7 +14,6 @@ import {type ConfigOpts, createConfig} from '../../../InternalConfig';
 export class PluginConfig implements IPluginConfig {
   isSource: boolean;
   searchPath: FilePath;
-  // @ts-expect-error TS2564
   env: Environment;
   #inner: ClassicPublicConfig;
 
@@ -23,6 +22,8 @@ export class PluginConfig implements IPluginConfig {
 
     this.isSource = internalConfig.isSource;
     this.searchPath = internalConfig.searchPath;
+    // @ts-expect-error TS2564
+    this.env = internalConfig.env;
     this.#inner = new ClassicPublicConfig(internalConfig, options);
   }
 

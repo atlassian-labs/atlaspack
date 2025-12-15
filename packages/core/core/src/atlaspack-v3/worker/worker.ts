@@ -134,6 +134,7 @@ export class AtlaspackWorker {
         state.config = await state.resolver.loadConfig?.({
           config: new PluginConfig(
             {
+              env: napiDependency.env,
               plugin: key,
               isSource: true,
               searchPath: 'index',
@@ -187,190 +188,189 @@ export class AtlaspackWorker {
   runTransformerTransform: JsCallable<
     [RunTransformerTransformOptions, Buffer, string | null | undefined],
     Promise<RunTransformerTransformResult>
-  > = jsCallable(
-    async ({key, env: napiEnv, asset: innerAsset}, contents, map) => {
-      const instance = this.#transformers.get(key);
-      if (!instance) {
-        throw new Error(`Transformer not found: ${key}`);
+  > = jsCallable(async ({key, asset: innerAsset}, contents, map) => {
+    const instance = this.#transformers.get(key);
+    if (!instance) {
+      throw new Error(`Transformer not found: ${key}`);
+    }
+
+    let {transformer, config, allowedEnv = {}} = instance;
+
+    let cache_bailout = false;
+
+    const resolveFunc = (from: string, to: string): Promise<any> => {
+      let customRequire = module.createRequire(from);
+      let resolvedPath = customRequire.resolve(to);
+      // Tranformer not cacheable due to use of the resolve function
+
+      cache_bailout = true;
+
+      return Promise.resolve(resolvedPath);
+    };
+
+    const env = new Environment(innerAsset.env);
+    let mutableAsset = new MutableAsset(
+      innerAsset,
+      // @ts-expect-error TS2345
+      contents,
+      env,
+      this.#fs,
+      map,
+      this.options.projectRoot,
+    );
+
+    const pluginOptions = new PluginOptions(this.options);
+    const defaultOptions = {
+      logger: new PluginLogger(),
+      tracer: new PluginTracer(),
+      options: pluginOptions,
+    } as const;
+
+    if (transformer.loadConfig) {
+      if (config != null) {
+        throw new Error(
+          `Transformer (${key}) should not implement 'setup' and 'loadConfig'`,
+        );
       }
+      // @ts-expect-error TS2345
+      config = await transformer.loadConfig({
+        config: new PluginConfig(
+          {
+            plugin: key,
+            isSource: innerAsset.isSource,
+            searchPath: innerAsset.filePath,
+            env,
+          },
+          this.options,
+        ),
+        ...defaultOptions,
+      });
 
-      let {transformer, config, allowedEnv = {}} = instance;
+      // Transformer uses the deprecated loadConfig API, so mark as not
+      // cachable
+      cache_bailout = true;
+    }
 
-      let cache_bailout = false;
-
-      const resolveFunc = (from: string, to: string): Promise<any> => {
-        let customRequire = module.createRequire(from);
-        let resolvedPath = customRequire.resolve(to);
-        // Tranformer not cacheable due to use of the resolve function
-
-        cache_bailout = true;
-
-        return Promise.resolve(resolvedPath);
-      };
-
-      const env = new Environment(napiEnv);
-      let mutableAsset = new MutableAsset(
-        innerAsset,
-        // @ts-expect-error TS2345
-        contents,
-        env,
-        this.#fs,
-        map,
-        this.options.projectRoot,
-      );
-
-      const pluginOptions = new PluginOptions(this.options);
-      const defaultOptions = {
-        logger: new PluginLogger(),
-        tracer: new PluginTracer(),
-        options: pluginOptions,
-      } as const;
-
-      if (transformer.loadConfig) {
-        if (config != null) {
-          throw new Error(
-            `Transformer (${key}) should not implement 'setup' and 'loadConfig'`,
-          );
-        }
-        // @ts-expect-error TS2345
-        config = await transformer.loadConfig({
-          config: new PluginConfig(
-            {
-              plugin: key,
-              isSource: innerAsset.isSource,
-              searchPath: innerAsset.filePath,
-            },
-            this.options,
-          ),
-          ...defaultOptions,
-        });
-
-        // Transformer uses the deprecated loadConfig API, so mark as not
-        // cachable
-        cache_bailout = true;
+    if (transformer.parse) {
+      const ast = await transformer.parse({
+        // @ts-expect-error TS2322
+        asset: mutableAsset,
+        config,
+        resolve: resolveFunc,
+        ...defaultOptions,
+      });
+      if (ast) {
+        mutableAsset.setAST(ast);
       }
+    }
 
-      if (transformer.parse) {
-        const ast = await transformer.parse({
+    const [result, sideEffects] =
+      await this.#sideEffectDetector.monitorSideEffects(() =>
+        transformer.transform({
           // @ts-expect-error TS2322
           asset: mutableAsset,
           config,
           resolve: resolveFunc,
           ...defaultOptions,
+        }),
+      );
+
+    for (let {operation, value, variable} of sideEffects.envUsage) {
+      if (operation === 'read') {
+        if (variable && variable in allowedEnv) {
+          let allowed = allowedEnv[variable];
+
+          if (allowed === value) {
+            // Allowed access
+            continue;
+          }
+        }
+      }
+
+      cache_bailout = true;
+      break;
+    }
+
+    if (sideEffects.fsUsage.length > 0) {
+      cache_bailout = true;
+    }
+
+    assert(
+      result.length === 1,
+      '[V3] Unimplemented: Multiple asset return from Node transformer',
+    );
+
+    assert(
+      result[0] === mutableAsset,
+      '[V3] Unimplemented: New asset returned from Node transformer',
+    );
+
+    if (transformer.generate) {
+      const ast = await mutableAsset.getAST();
+      if (ast) {
+        const output = await transformer.generate({
+          // @ts-expect-error TS2322
+          asset: mutableAsset,
+          ast,
+          ...defaultOptions,
         });
-        if (ast) {
-          mutableAsset.setAST(ast);
-        }
-      }
 
-      const [result, sideEffects] =
-        await this.#sideEffectDetector.monitorSideEffects(() =>
-          transformer.transform({
-            // @ts-expect-error TS2322
-            asset: mutableAsset,
-            config,
-            resolve: resolveFunc,
-            ...defaultOptions,
-          }),
-        );
-
-      for (let {operation, value, variable} of sideEffects.envUsage) {
-        if (operation === 'read') {
-          if (variable && variable in allowedEnv) {
-            let allowed = allowedEnv[variable];
-
-            if (allowed === value) {
-              // Allowed access
-              continue;
-            }
-          }
+        if (typeof output.content === 'string') {
+          mutableAsset.setCode(output.content);
+        } else if (output.content instanceof Buffer) {
+          mutableAsset.setBuffer(output.content);
+        } else {
+          // @ts-expect-error TS2345
+          mutableAsset.setStream(output.content);
         }
 
-        cache_bailout = true;
-        break;
-      }
-
-      if (sideEffects.fsUsage.length > 0) {
-        cache_bailout = true;
-      }
-
-      assert(
-        result.length === 1,
-        '[V3] Unimplemented: Multiple asset return from Node transformer',
-      );
-
-      assert(
-        result[0] === mutableAsset,
-        '[V3] Unimplemented: New asset returned from Node transformer',
-      );
-
-      if (transformer.generate) {
-        const ast = await mutableAsset.getAST();
-        if (ast) {
-          const output = await transformer.generate({
-            // @ts-expect-error TS2322
-            asset: mutableAsset,
-            ast,
-            ...defaultOptions,
-          });
-
-          if (typeof output.content === 'string') {
-            mutableAsset.setCode(output.content);
-          } else if (output.content instanceof Buffer) {
-            mutableAsset.setBuffer(output.content);
-          } else {
-            // @ts-expect-error TS2345
-            mutableAsset.setStream(output.content);
-          }
-
-          if (output.map) {
-            mutableAsset.setMap(output.map);
-          }
+        if (output.map) {
+          mutableAsset.setMap(output.map);
         }
       }
+    }
 
-      let assetBuffer: Buffer | null = await mutableAsset.getBuffer();
+    let assetBuffer: Buffer | null = await mutableAsset.getBuffer();
 
-      // If the asset has no code, we set the buffer to null, which we can
-      // detect in Rust, to avoid passing back an empty buffer, which we can't.
-      if (assetBuffer.length === 0) {
-        assetBuffer = null;
-      }
+    // If the asset has no code, we set the buffer to null, which we can
+    // detect in Rust, to avoid passing back an empty buffer, which we can't.
+    if (assetBuffer.length === 0) {
+      assetBuffer = null;
+    }
 
-      if (pluginOptions.used) {
-        // Plugin options accessed, so not cachable
-        cache_bailout = true;
-      }
+    if (pluginOptions.used) {
+      // Plugin options accessed, so not cachable
+      cache_bailout = true;
+    }
 
-      return [
-        {
-          id: mutableAsset.id,
-          bundleBehavior: bundleBehaviorMap.intoNullable(
-            mutableAsset.bundleBehavior,
-          ),
-          code: [],
-          filePath: mutableAsset.filePath,
-          isBundleSplittable: mutableAsset.isBundleSplittable,
-          isSource: mutableAsset.isSource,
-          meta: mutableAsset.meta,
-          pipeline: mutableAsset.pipeline,
-          // Query should be undefined if it's empty
-          query: mutableAsset.query.toString() || undefined,
-          sideEffects: mutableAsset.sideEffects,
-          symbols: mutableAsset.symbols.intoNapi(),
-          type: mutableAsset.type,
-          uniqueKey: mutableAsset.uniqueKey,
-        },
-        assetBuffer,
-        // Only send back the map if it has changed
-        mutableAsset.isMapDirty
-          ? // @ts-expect-error TS2533
-            JSON.stringify((await mutableAsset.getMap()).toVLQ())
-          : '',
-        cache_bailout,
-      ];
-    },
-  );
+    return [
+      {
+        id: mutableAsset.id,
+        bundleBehavior: bundleBehaviorMap.intoNullable(
+          mutableAsset.bundleBehavior,
+        ),
+        code: [],
+        filePath: mutableAsset.filePath,
+        isBundleSplittable: mutableAsset.isBundleSplittable,
+        isSource: mutableAsset.isSource,
+        meta: mutableAsset.meta,
+        pipeline: mutableAsset.pipeline,
+        // Query should be undefined if it's empty
+        query: mutableAsset.query.toString() || undefined,
+        sideEffects: mutableAsset.sideEffects,
+        symbols: mutableAsset.symbols.intoNapi(),
+        type: mutableAsset.type,
+        uniqueKey: mutableAsset.uniqueKey,
+      },
+      assetBuffer,
+      // Only send back the map if it has changed
+      mutableAsset.isMapDirty
+        ? // @ts-expect-error TS2533
+          JSON.stringify((await mutableAsset.getMap()).toVLQ())
+        : '',
+      cache_bailout,
+    ];
+  });
 
   get options() {
     if (this.#options == null) {

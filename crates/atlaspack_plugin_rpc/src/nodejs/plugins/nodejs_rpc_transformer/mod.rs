@@ -187,7 +187,6 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
   }
 
   async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
-    let asset_env = asset.env.clone();
     let stats = asset.stats.clone();
 
     let original_source_map = asset.map.clone();
@@ -199,7 +198,6 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
 
     let run_transformer_opts = RpcTransformerOpts {
       key: self.plugin_node.package_name.clone(),
-      env: asset_env.clone(),
       asset: Asset {
         code: Default::default(),
         ..asset.clone()
@@ -276,7 +274,6 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       id: result.id,
       code: Code::new(contents),
       bundle_behavior: result.bundle_behavior,
-      env: asset_env.clone(),
       file_path: result.file_path,
       file_type: result.file_type,
       map: if let Some(json) = map {
@@ -348,6 +345,5 @@ pub struct RpcEnvironmentResult {
 #[serde(rename_all = "camelCase")]
 pub struct RpcTransformerOpts {
   pub key: String,
-  pub env: Arc<Environment>,
   pub asset: Asset,
 }
