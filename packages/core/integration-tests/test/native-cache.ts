@@ -165,6 +165,60 @@ describe.v3('Native cache', function () {
     assert.equal(output.default, 'should not true');
   });
 
+  it('should not cache when unreported fs usage is detected', async () => {
+    await fsFixture(inputFS, dir)`
+        package.json:
+          {
+            "name": "cache-n-stuff"
+          }
+
+        yarn.lock:
+
+        index.js:
+          export default 'should not fail';
+
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "transformers": {
+              "*.js": ["./transformer-plugin-2.ts", "..."]
+            }
+          }
+
+        transformer-plugin-2.ts:
+          import { Transformer } from '@atlaspack/plugin';
+          import fs from 'fs';
+
+          export default new Transformer({
+            async setup() {
+              return { config: {} }
+            },
+            async transform({ asset }) {
+              const code = await asset.getCode();
+              asset.setCode(code.replace('fail', fs.readFileSync('${dir}/replace.txt', 'utf8')));
+              return [asset];
+            }
+          });
+
+        replace.txt:
+          cache
+      `;
+
+    let instance = bundler(path.join(dir, 'index.js'), {
+      inputFS,
+      featureFlags: {
+        v3Caching: true,
+      },
+      cache: new LMDBLiteCache(cacheDir),
+    });
+
+    let buildOne = await instance.run();
+    assert.equal(buildOne.nativeCacheStats.bailouts, 2);
+
+    let output = await run(buildOne.bundleGraph);
+    assert.equal(output.default, 'should not cache');
+  });
+
   it('should cache when reported env usage is detected', async () => {
     await fsFixture(inputFS, dir)`
         package.json:

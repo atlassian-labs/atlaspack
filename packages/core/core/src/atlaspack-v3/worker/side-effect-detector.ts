@@ -1,5 +1,4 @@
 import {AsyncLocalStorage} from 'async_hooks';
-import * as fs from 'fs';
 import type {Async} from '@atlaspack/types';
 
 export interface FsUsage {
@@ -112,6 +111,8 @@ export class SideEffectDetector {
    * @private
    */
   private _patchFilesystem(): void {
+    // Inline require this to avoid babel transformer issue
+    const fs = require('fs');
     const methodsToPatch = [
       // Sync methods
       'readFileSync',
@@ -146,9 +147,7 @@ export class SideEffectDetector {
     ];
 
     methodsToPatch.forEach((method) => {
-      // @ts-expect-error Dynamic method patching
       if (typeof fs[method] === 'function') {
-        // @ts-expect-error Dynamic method patching
         this.originalMethods[method] = fs[method];
         const self = this;
 

@@ -1,4 +1,9 @@
+/* eslint-disable import/first */
 import {SideEffectDetector} from './side-effect-detector';
+
+// Install side effect detection patches BEFORE importing any modules that use fs
+const sideEffectDetector = new SideEffectDetector();
+sideEffectDetector.install();
 
 import assert from 'assert';
 import * as napi from '@atlaspack/rust';
@@ -12,6 +17,7 @@ import type {
   FilePath,
   FileSystem,
 } from '@atlaspack/types';
+import type {FeatureFlags} from '@atlaspack/feature-flags';
 import {parentPort} from 'worker_threads';
 import * as module from 'module';
 
@@ -43,8 +49,7 @@ export class AtlaspackWorker {
     this.#transformers = new Map();
     this.#fs = new NodeFS();
     this.#packageManager = new NodePackageManager(this.#fs, '/');
-    this.#sideEffectDetector = new SideEffectDetector();
-    this.#sideEffectDetector.install();
+    this.#sideEffectDetector = sideEffectDetector; // Use the global detector that was installed before imports
   }
 
   loadPlugin: JsCallable<[LoadPluginOptions], Promise<undefined>> = jsCallable(
