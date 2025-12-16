@@ -412,6 +412,8 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
     } = if self.feature_flags.newJsxConfig() {
       self.determine_jsx_configuration(&asset)
     } else {
+      // Old JSX configuration logic so cache bailout is required
+      cache_bailout = true;
       // With newJsxConfig disabled, use the old logic
       let package_json = self
         .config_loader
@@ -564,9 +566,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
     )
     .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
 
-    if cache_bailout {
-      result.cache_bailout = cache_bailout;
-    }
+    result.cache_bailout = cache_bailout;
 
     Ok(result)
   }
