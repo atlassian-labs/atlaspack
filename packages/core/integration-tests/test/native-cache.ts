@@ -181,11 +181,11 @@ describe.v3('Native cache', function () {
           {
             "extends": "@atlaspack/config-default",
             "transformers": {
-              "*.js": ["./transformer-plugin-2.ts", "..."]
+              "*.js": ["./transformer-plugin-3.ts", "..."]
             }
           }
 
-        transformer-plugin-2.ts:
+        transformer-plugin-3.ts:
           import { Transformer } from '@atlaspack/plugin';
           import fs from 'fs';
 
@@ -235,11 +235,11 @@ describe.v3('Native cache', function () {
           {
             "extends": "@atlaspack/config-default",
             "transformers": {
-              "*.js": ["./transformer-plugin-3.ts", "..."]
+              "*.js": ["./transformer-plugin-4.ts", "..."]
             }
           }
 
-        transformer-plugin-3.ts:
+        transformer-plugin-4.ts:
           import { Transformer } from '@atlaspack/plugin';
 
           export default new Transformer({
