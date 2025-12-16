@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-typescript-types",
-  "version": "2.15.5",
+  "version": "2.15.6",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,10 +17,10 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.44",
+    "@atlaspack/plugin": "2.14.45",
     "@atlaspack/source-map": "3.2.0",
-    "@atlaspack/ts-utils": "2.14.23",
-    "@atlaspack/utils": "3.2.5",
+    "@atlaspack/ts-utils": "2.14.24",
+    "@atlaspack/utils": "3.2.6",
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {

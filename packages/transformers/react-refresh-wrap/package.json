@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-react-refresh-wrap",
-  "version": "2.15.20",
+  "version": "2.15.21",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,9 +16,9 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/feature-flags": "2.27.3",
-    "@atlaspack/plugin": "2.14.44",
-    "@atlaspack/utils": "3.2.5",
+    "@atlaspack/feature-flags": "2.27.4",
+    "@atlaspack/plugin": "2.14.45",
+    "@atlaspack/utils": "3.2.6",
     "react-error-overlay": "6.0.9",
     "react-refresh": ">=0.9 <=0.16"
   },

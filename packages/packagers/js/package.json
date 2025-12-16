@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/packager-js",
-  "version": "2.24.5",
+  "version": "2.24.6",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,12 +17,12 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/feature-flags": "2.27.3",
-    "@atlaspack/plugin": "2.14.44",
+    "@atlaspack/feature-flags": "2.27.4",
+    "@atlaspack/plugin": "2.14.45",
     "@atlaspack/rust": "3.15.0",
     "@atlaspack/source-map": "3.2.0",
-    "@atlaspack/types": "2.15.34",
-    "@atlaspack/utils": "3.2.5",
+    "@atlaspack/types": "2.15.35",
+    "@atlaspack/utils": "3.2.6",
     "globals": "^13.2.0",
     "nullthrows": "^1.1.1",
     "outdent": "^0.8.0"

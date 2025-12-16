@@ -1,5 +1,22 @@
 # @atlaspack/core
 
+## 2.30.2
+
+### Patch Changes
+
+- Updated dependencies [[`793e78c`](https://github.com/atlassian-labs/atlaspack/commit/793e78c68eed25032e686f70cd77ea3601409b35)]:
+  - @atlaspack/feature-flags@2.27.4
+  - @atlaspack/cache@3.2.40
+  - @atlaspack/fs@2.15.40
+  - @atlaspack/graph@3.6.7
+  - @atlaspack/utils@3.2.6
+  - @atlaspack/package-manager@2.14.45
+  - @atlaspack/logger@2.14.37
+  - @atlaspack/plugin@2.14.45
+  - @atlaspack/profiler@2.15.6
+  - @atlaspack/types@2.15.35
+  - @atlaspack/workers@2.14.45
+
 ## 2.30.1
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @atlaspack/transformer-postcss
 
+## 2.14.45
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.2
+  - @atlaspack/utils@3.2.6
+  - @atlaspack/plugin@2.14.45
+
 ## 2.14.44
 
 ### Patch Changes

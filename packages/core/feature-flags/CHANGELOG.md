@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.27.4
+
+### Patch Changes
+
+- [#935](https://github.com/atlassian-labs/atlaspack/pull/935) [`793e78c`](https://github.com/atlassian-labs/atlaspack/commit/793e78c68eed25032e686f70cd77ea3601409b35) Thanks [@benjervis](https://github.com/benjervis)! - Add a flag to skip symbol propagation for the runtime graph
+
 ## 2.27.3
 
 ### Patch Changes
