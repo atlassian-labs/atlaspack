@@ -32,7 +32,7 @@ pub struct AtlaspackOptions {
   pub serve_options: ServeOptions,
 
   pub entries: Vec<String>,
-  pub env: Option<BTreeMap<String, String>>,
+  pub env: BTreeMap<String, String>,
 
   #[serde(rename = "defaultConfig")]
   pub fallback_config: Option<String>,

@@ -22,6 +22,7 @@ mod typeof_replacer;
 mod unused_bindings_remover;
 pub mod utils;
 
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -133,7 +134,7 @@ pub struct Config {
   pub module_id: String,
   pub project_root: String,
   pub replace_env: bool,
-  pub env: HashMap<swc_core::ecma::atoms::JsWord, swc_core::ecma::atoms::JsWord>,
+  pub env: BTreeMap<swc_core::ecma::atoms::JsWord, swc_core::ecma::atoms::JsWord>,
   pub inline_fs: bool,
   pub insert_node_globals: bool,
   pub node_replacer: bool,

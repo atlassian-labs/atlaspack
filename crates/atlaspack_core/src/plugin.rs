@@ -49,7 +49,7 @@ pub struct PluginLogger {}
 pub struct PluginOptions {
   pub core_path: PathBuf,
   /// Environment variables
-  pub env: Option<BTreeMap<String, String>>,
+  pub env: BTreeMap<String, String>,
   pub log_level: LogLevel,
   pub mode: BuildMode,
   pub project_root: PathBuf,

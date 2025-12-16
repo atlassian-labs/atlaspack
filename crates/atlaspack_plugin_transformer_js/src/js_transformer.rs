@@ -62,7 +62,7 @@ pub struct AtlaspackJsTransformerPlugin {
   config: JsTransformerConfig,
   project_root: PathBuf,
   mode: BuildMode,
-  env: Option<BTreeMap<String, String>>,
+  env: BTreeMap<Atom, Atom>,
   hmr_options: Option<HmrOptions>,
   feature_flags: JsTransformerFlags,
   core_path: PathBuf,
@@ -75,15 +75,7 @@ pub struct AtlaspackJsTransformerPlugin {
 
 #[derive(Default)]
 struct Cache {
-  env_variables: EnvVariablesCache,
   sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
-}
-
-#[derive(Default)]
-struct EnvVariablesCache {
-  allowlist: Option<HashMap<Atom, Atom>>,
-  disabled: Option<HashMap<Atom, Atom>>,
-  enabled: Option<HashMap<Atom, Atom>>,
 }
 
 impl AtlaspackJsTransformerPlugin {
@@ -119,11 +111,19 @@ impl AtlaspackJsTransformerPlugin {
       })
       .ok();
 
+    // Filter environment variables based on inline_environment config to only include
+    // what's needed in the cache key. This prevents unnecessary cache invalidation.
+    // Note: We use `true` as a default for is_source since we don't know the asset yet.
+    // For assets with custom_env, the filtering will be done on-demand in env_variables().
+    let env = Self::filter_env_vars(
+      &ctx.options.env,
+      config
+        .inline_environment
+        .as_ref()
+        .unwrap_or(&InlineEnvironment::Enabled(true)),
+    );
+
     let core_path = ctx.options.core_path.clone();
-    // TODO: Right now we're adding the full env map to the cache key.
-    // Ideally, we'd just add the ones we're utilizing in the transformer to
-    // increase the cache hit rate.
-    let env = ctx.options.env.clone();
     let hmr_options = ctx.options.hmr_options.clone();
     let mode = ctx.options.mode.clone();
     let project_root = ctx.options.project_root.clone();
@@ -165,89 +165,70 @@ impl AtlaspackJsTransformerPlugin {
 }
 
 impl AtlaspackJsTransformerPlugin {
-  fn env_variables(&self, asset: &Asset) -> HashMap<Atom, Atom> {
-    if self.env.is_none() || self.env.as_ref().is_some_and(|vars| vars.is_empty()) {
-      // Still check for custom env even if global env is empty
-      if asset.env.custom_env.is_none() {
-        return HashMap::new();
-      }
-    }
-
-    // Merge global environment variables with asset's custom environment variables
-    let mut env_vars = self.env.clone().unwrap_or_default();
-    if let Some(custom_env) = &asset.env.custom_env {
-      env_vars.extend(custom_env.clone());
-    }
-    let inline_environment = self
-      .config
-      .inline_environment
-      .clone()
-      .unwrap_or(InlineEnvironment::Enabled(asset.is_source));
-
+  /// Filters a set of environment variables based on the inline_environment configuration.
+  /// This is a shared helper used both for cache key generation and runtime filtering.
+  fn filter_env_vars(
+    env_vars: &BTreeMap<String, String>,
+    inline_environment: &InlineEnvironment,
+  ) -> BTreeMap<Atom, Atom> {
     match inline_environment {
-      InlineEnvironment::Enabled(enabled) => match enabled {
-        false => {
-          if let Some(vars) = self.cache.read().env_variables.disabled.as_ref() {
-            return vars.clone();
-          }
-
-          let mut vars: HashMap<Atom, Atom> = HashMap::new();
-
-          if let Some(node_env) = env_vars.get("NODE_ENV") {
-            vars.insert("NODE_ENV".into(), node_env.as_str().into());
-          }
-
-          if let Some(build_env) = env_vars.get("ATLASPACK_BUILD_ENV")
-            && build_env == "test"
-          {
-            vars.insert("ATLASPACK_BUILD_ENV".into(), "test".into());
-          }
-
-          self.cache.write().env_variables.disabled = Some(vars.clone());
-
-          vars
+      InlineEnvironment::Enabled(false) => {
+        // Only include NODE_ENV and ATLASPACK_BUILD_ENV when disabled
+        let mut filtered = BTreeMap::new();
+        if let Some(node_env) = env_vars.get("NODE_ENV") {
+          filtered.insert("NODE_ENV".into(), node_env.clone().into());
         }
-        true => {
-          if let Some(vars) = self.cache.read().env_variables.enabled.as_ref() {
-            return vars.clone();
-          }
-
-          let vars = env_vars
-            .iter()
-            .map(|(key, value)| (key.as_str().into(), value.as_str().into()))
-            .collect::<HashMap<Atom, Atom>>();
-
-          self.cache.write().env_variables.enabled = Some(vars.clone());
-
-          vars
+        if let Some(build_env) = env_vars.get("ATLASPACK_BUILD_ENV")
+          && build_env == "test"
+        {
+          filtered.insert("ATLASPACK_BUILD_ENV".into(), build_env.clone().into());
         }
-      },
+        filtered
+      }
+      InlineEnvironment::Enabled(true) => {
+        // Include all env vars
+        let mut filtered = BTreeMap::new();
+        for (key, value) in env_vars.iter() {
+          filtered.insert(key.clone().into(), value.clone().into());
+        }
+        filtered
+      }
       InlineEnvironment::Environments(environments) => {
-        if let Some(vars) = self.cache.read().env_variables.allowlist.as_ref() {
-          return vars.clone();
-        }
-
-        let mut vars: HashMap<Atom, Atom> = HashMap::new();
+        // Filter based on glob patterns
+        let mut filtered = BTreeMap::new();
         for env_glob in environments {
-          for (env_var, value) in env_vars
-            .iter()
-            .filter(|(key, _value)| glob_match(&env_glob, key))
-          {
-            vars.insert(env_var.as_str().into(), value.as_str().into());
+          for (key, value) in env_vars.iter() {
+            if glob_match(env_glob, key) {
+              filtered.insert(key.clone().into(), value.clone().into());
+            }
           }
         }
-
-        self.cache.write().env_variables.allowlist = Some(vars.clone());
-
-        vars
+        filtered
       }
     }
   }
 
+  fn env_variables(&self, asset: &Asset) -> BTreeMap<Atom, Atom> {
+    if let Some(custom_env) = &asset.env.custom_env {
+      let mut filtered_custom_env = Self::filter_env_vars(
+        custom_env,
+        self
+          .config
+          .inline_environment
+          .as_ref()
+          .unwrap_or(&InlineEnvironment::Enabled(asset.is_source)),
+      );
+
+      filtered_custom_env.extend(self.env.clone());
+
+      return filtered_custom_env;
+    }
+
+    self.env.clone()
+  }
+
   fn sync_dynamic_import_config(&self) -> Option<SyncDynamicImportConfig> {
-    if let Some(env_vars) = &self.env
-      && let Some(config_json) = env_vars.get("SYNC_DYNAMIC_IMPORT_CONFIG")
-    {
+    if let Some(config_json) = self.env.get(&Atom::from("SYNC_DYNAMIC_IMPORT_CONFIG")) {
       if let Some(cached) = self.cache.read().sync_dynamic_import_config.as_ref() {
         return Some(cached.clone());
       }
@@ -1126,7 +1107,7 @@ mod tests {
       options: Arc::new(PluginOptions {
         project_root: PathBuf::from("/"),
         mode: BuildMode::Development,
-        env: Some(BTreeMap::new()),
+        env: BTreeMap::new(),
         hmr_options: None,
         core_path: PathBuf::from("test"),
         feature_flags: FeatureFlags::default()
@@ -2057,6 +2038,7 @@ mod tests {
     project_root: Option<PathBuf>,
     feature_flags: Option<FeatureFlags>,
     js_transformer_config: Option<JsTransformerConfig>,
+    env: BTreeMap<String, String>,
   }
 
   async fn run_test(options: TestOptions) -> anyhow::Result<TransformResult> {
@@ -2073,6 +2055,7 @@ mod tests {
         .unwrap_or_default()
         .with_bool_flag_default("newJsxConfig", true),
       project_root: project_root.clone(),
+      env: options.env,
       ..PluginOptions::default()
     };
 
@@ -2144,5 +2127,116 @@ mod tests {
     assert!(!code.is_empty());
 
     code
+  }
+
+  // Integration tests for environment variable filtering through the full transformer
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_transformer_with_inline_env_disabled() -> anyhow::Result<()> {
+    let target_asset = create_asset(
+      "index.js",
+      r"
+        console.log(process.env.NODE_ENV);
+        console.log(process.env.API_KEY);
+      ",
+    );
+
+    let mut env_vars = BTreeMap::new();
+    env_vars.insert("NODE_ENV".to_string(), "production".to_string());
+    env_vars.insert("API_KEY".to_string(), "secret".to_string());
+
+    let result = run_test(TestOptions {
+      asset: target_asset.clone(),
+      env: env_vars,
+      js_transformer_config: Some(JsTransformerConfig {
+        inline_environment: Some(InlineEnvironment::Enabled(false)),
+        ..Default::default()
+      }),
+      ..Default::default()
+    })
+    .await?;
+
+    // With Enabled(false), only NODE_ENV should be inlined
+    let code = result.asset.code.as_str()?;
+    assert!(code.contains("\"production\""));
+    assert!(!code.contains("\"secret\""));
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_transformer_with_inline_env_enabled() -> anyhow::Result<()> {
+    let target_asset = create_asset(
+      "index.js",
+      r"
+        console.log(process.env.NODE_ENV);
+        console.log(process.env.CUSTOM_VAR);
+      ",
+    );
+
+    let mut env_vars = BTreeMap::new();
+    env_vars.insert("NODE_ENV".to_string(), "production".to_string());
+    env_vars.insert("CUSTOM_VAR".to_string(), "custom-var".to_string());
+
+    let result = run_test(TestOptions {
+      asset: target_asset.clone(),
+      env: env_vars,
+      js_transformer_config: Some(JsTransformerConfig {
+        inline_environment: Some(InlineEnvironment::Enabled(true)),
+        ..Default::default()
+      }),
+      ..TestOptions::default()
+    })
+    .await?;
+
+    // With Enabled(true), all environment variables should be available for inlining
+    let code = result.asset.code.as_str()?;
+    // The transformer should have processed the code successfully
+    assert!(code.contains("\"production\""));
+    assert!(code.contains("\"custom-var\""));
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_transformer_with_inline_env_glob_patterns() -> anyhow::Result<()> {
+    let target_asset = create_asset(
+      "index.js",
+      r"
+        console.log(process.env.REACT_APP_VERSION);
+        console.log(process.env.API_SECRET);
+        console.log(process.env.NODE_ENV);
+      ",
+    );
+
+    let mut env_vars = BTreeMap::new();
+    env_vars.insert(
+      "REACT_APP_VERSION".to_string(),
+      "react-app-version".to_string(),
+    );
+    env_vars.insert("API_SECRET".to_string(), "api-secret".to_string());
+    env_vars.insert("NODE_ENV".to_string(), "production".to_string());
+
+    let result = run_test(TestOptions {
+      asset: target_asset.clone(),
+      env: env_vars,
+      js_transformer_config: Some(JsTransformerConfig {
+        inline_environment: Some(InlineEnvironment::Environments(vec![
+          "REACT_APP_*".to_string(),
+          "NODE_ENV".to_string(),
+        ])),
+        ..Default::default()
+      }),
+      ..TestOptions::default()
+    })
+    .await?;
+
+    // With glob patterns, only REACT_APP_* and NODE_ENV should be available
+    let code = result.asset.code.as_str()?;
+    // The transformer should have processed the code successfully
+    assert!(code.contains("\"production\""));
+    assert!(code.contains("\"react-app-version\""));
+    assert!(!code.contains("\"api-secret\""));
+
+    Ok(())
   }
 }
