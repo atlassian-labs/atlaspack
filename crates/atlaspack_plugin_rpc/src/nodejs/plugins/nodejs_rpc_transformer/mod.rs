@@ -29,6 +29,7 @@ use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::TransformerPlugin;
 use atlaspack_core::types::Asset;
 use atlaspack_core::types::engines::Engines;
+use atlaspack_core::types::serialization::extract_asset_meta_fields;
 use atlaspack_core::types::*;
 
 use crate::nodejs::conditions::Conditions;
@@ -270,6 +271,13 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
         )
       })?;
 
+    // Extract meta fields into struct fields to match the serialization/deserialization behavior.
+    // The JS transformer sets values in meta, but Rust serialization expects them as struct fields.
+    // After deserialization these fields are extracted from meta, so we need to do the same here
+    // to ensure cache validation succeeds (comparing computed vs cached values).
+    let mut meta = result.meta;
+    let extracted = extract_asset_meta_fields(&mut meta);
+
     let transformed_asset = Asset {
       id: result.id,
       code: Code::new(contents),
@@ -281,7 +289,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       } else {
         original_source_map
       },
-      meta: result.meta,
+      meta,
       pipeline: result.pipeline,
       query: result.query,
       stats,
@@ -290,6 +298,19 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       side_effects: result.side_effects,
       is_bundle_splittable: result.is_bundle_splittable,
       is_source: result.is_source,
+      conditions: extracted.conditions,
+      has_cjs_exports: extracted.has_cjs_exports,
+      has_node_replacements: extracted.has_node_replacements,
+      is_constant_module: extracted.is_constant_module,
+      should_wrap: extracted.should_wrap,
+      static_exports: extracted.static_exports,
+      css_dependency_type: extracted.css_dependency_type,
+      empty_file_star_reexport: extracted.empty_file_star_reexport,
+      has_dependencies: extracted.has_dependencies,
+      has_references: extracted.has_references,
+      inline_type: extracted.inline_type,
+      interpreter: extracted.interpreter,
+      packaging_id: extracted.packaging_id,
       ..asset
     };
 

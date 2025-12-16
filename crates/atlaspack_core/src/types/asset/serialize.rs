@@ -3,7 +3,7 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use serde_json::json;
 
 use crate::types::Asset;
-use crate::types::serialization::{extract_val, extract_val_default};
+use crate::types::serialization::extract_asset_meta_fields;
 
 macro_rules! insert_if_not_none {
   ($map:expr, $key:expr, $value:expr) => {
@@ -141,21 +141,7 @@ impl<'de> Visitor<'de> for AssetVisitor {
     }
 
     let mut meta_map = meta.unwrap_or_default();
-
-    let conditions = extract_val_default(&mut meta_map, "conditions");
-    let has_cjs_exports = extract_val_default(&mut meta_map, "hasCJSExports");
-    let has_node_replacements = extract_val_default(&mut meta_map, "has_node_replacements");
-    let is_constant_module = extract_val_default(&mut meta_map, "isConstantModule");
-    let should_wrap = extract_val_default(&mut meta_map, "shouldWrap");
-    let static_exports = extract_val_default(&mut meta_map, "staticExports");
-
-    let css_dependency_type = extract_val(&mut meta_map, "type");
-    let empty_file_star_reexport = extract_val(&mut meta_map, "emptyFileStarReexport");
-    let has_dependencies = extract_val(&mut meta_map, "hasDependencies");
-    let has_references = extract_val(&mut meta_map, "hasReferences");
-    let inline_type = extract_val(&mut meta_map, "inlineType");
-    let interpreter = extract_val(&mut meta_map, "interpreter");
-    let packaging_id = extract_val(&mut meta_map, "id");
+    let extracted = extract_asset_meta_fields(&mut meta_map);
 
     Ok(Asset {
       id: id.ok_or_else(|| serde::de::Error::missing_field("id"))?,
@@ -170,24 +156,24 @@ impl<'de> Visitor<'de> for AssetVisitor {
       side_effects: side_effects.unwrap_or_default(),
       is_bundle_splittable: is_bundle_splittable.unwrap_or(true),
       is_source: is_source.unwrap_or_default(),
-      has_cjs_exports,
+      has_cjs_exports: extracted.has_cjs_exports,
       output_hash,
       config_path,
       config_key_path,
       unique_key,
       meta: meta_map,
-      conditions,
-      has_node_replacements,
-      inline_type,
-      is_constant_module,
-      should_wrap,
-      static_exports,
-      css_dependency_type,
-      empty_file_star_reexport,
-      has_dependencies,
-      has_references,
-      packaging_id,
-      interpreter,
+      conditions: extracted.conditions,
+      has_node_replacements: extracted.has_node_replacements,
+      inline_type: extracted.inline_type,
+      is_constant_module: extracted.is_constant_module,
+      should_wrap: extracted.should_wrap,
+      static_exports: extracted.static_exports,
+      css_dependency_type: extracted.css_dependency_type,
+      empty_file_star_reexport: extracted.empty_file_star_reexport,
+      has_dependencies: extracted.has_dependencies,
+      has_references: extracted.has_references,
+      packaging_id: extracted.packaging_id,
+      interpreter: extracted.interpreter,
       ..Asset::default()
     })
   }

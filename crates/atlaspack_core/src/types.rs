@@ -31,7 +31,7 @@ mod file_type;
 mod invalidation;
 mod json;
 mod package_json;
-mod serialization;
+pub mod serialization;
 mod source;
 mod symbol;
 mod target;
