@@ -1,5 +1,14 @@
 # @atlaspack/transformer-typescript-types
 
+## 2.15.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.6
+  - @atlaspack/plugin@2.14.45
+  - @atlaspack/ts-utils@2.14.24
+
 ## 2.15.5
 
 ### Patch Changes

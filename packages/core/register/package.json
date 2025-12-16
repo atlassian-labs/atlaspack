@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/register",
-  "version": "2.14.47",
+  "version": "2.14.48",
   "private": true,
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -22,10 +22,10 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/config-default": "11.0.1",
-    "@atlaspack/core": "2.30.1",
-    "@atlaspack/fs": "2.15.39",
-    "@atlaspack/package-manager": "2.14.44",
+    "@atlaspack/config-default": "11.0.2",
+    "@atlaspack/core": "2.30.2",
+    "@atlaspack/fs": "2.15.40",
+    "@atlaspack/package-manager": "2.14.45",
     "pirates": "^4.0.0"
   },
   "type": "commonjs"

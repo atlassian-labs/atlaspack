@@ -1,5 +1,21 @@
 # @atlaspack/cli
 
+## 2.15.6
+
+### Patch Changes
+
+- Updated dependencies [[`793e78c`](https://github.com/atlassian-labs/atlaspack/commit/793e78c68eed25032e686f70cd77ea3601409b35)]:
+  - @atlaspack/feature-flags@2.27.4
+  - @atlaspack/core@2.30.2
+  - @atlaspack/fs@2.15.40
+  - @atlaspack/utils@3.2.6
+  - @atlaspack/reporter-cli@2.17.27
+  - @atlaspack/config-default@11.0.2
+  - @atlaspack/package-manager@2.14.45
+  - @atlaspack/logger@2.14.37
+  - @atlaspack/reporter-dev-server@2.14.45
+  - @atlaspack/reporter-tracer@2.14.45
+
 ## 2.15.5
 
 ### Patch Changes

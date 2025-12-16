@@ -1,5 +1,12 @@
 # @atlaspack/optimizer-cssnano
 
+## 2.15.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.45
+
 ## 2.15.5
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @atlaspack/inspector
 
+## 0.0.30
+
+### Patch Changes
+
+- Updated dependencies [[`793e78c`](https://github.com/atlassian-labs/atlaspack/commit/793e78c68eed25032e686f70cd77ea3601409b35)]:
+  - @atlaspack/feature-flags@2.27.4
+  - @atlaspack/cache@3.2.40
+  - @atlaspack/cli@2.15.6
+  - @atlaspack/core@2.30.2
+
 ## 0.0.29
 
 ### Patch Changes
