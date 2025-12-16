@@ -24,6 +24,9 @@ use dyn_hash::DynHash;
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
 
+// Allow the enum size differential as the smaller variant (InMemory) is only used
+// in tests. We also only have a single instance of this enum at a time
+#[allow(clippy::large_enum_variant)]
 pub enum DynCacheHandler {
   Lmdb(CacheHandler<LmdbCacheReaderWriter>),
   InMemory(CacheHandler<InMemoryReaderWriter>),
