@@ -20,7 +20,6 @@ import {LMDBLiteCache} from '@atlaspack/cache';
  */
 describe.v3('Native cache', function () {
   let dir: string;
-  let cacheDir = path.join(__dirname, 'tmp/native-cache');
 
   beforeEach(async function () {
     dir = path.join(__dirname, 'native-cache-fixture');
@@ -30,7 +29,6 @@ describe.v3('Native cache', function () {
 
   afterEach(async function () {
     await inputFS.rimraf(dir);
-    await inputFS.rimraf(cacheDir);
   });
 
   it('should cache with stats', async () => {
@@ -44,7 +42,6 @@ describe.v3('Native cache', function () {
       featureFlags: {
         v3Caching: true,
       },
-      cache: new LMDBLiteCache(cacheDir),
     });
 
     let buildOne = await instance.run();
@@ -104,7 +101,6 @@ describe.v3('Native cache', function () {
       featureFlags: {
         v3Caching: true,
       },
-      cache: new LMDBLiteCache(cacheDir),
     });
 
     let buildOne = await instance.run();
@@ -155,7 +151,6 @@ describe.v3('Native cache', function () {
       featureFlags: {
         v3Caching: true,
       },
-      cache: new LMDBLiteCache(cacheDir),
     });
 
     let buildOne = await instance.run();
@@ -209,7 +204,6 @@ describe.v3('Native cache', function () {
       featureFlags: {
         v3Caching: true,
       },
-      cache: new LMDBLiteCache(cacheDir),
     });
 
     let buildOne = await instance.run();
@@ -260,7 +254,6 @@ describe.v3('Native cache', function () {
       featureFlags: {
         v3Caching: true,
       },
-      cache: new LMDBLiteCache(cacheDir),
     });
 
     let buildOne = await instance.run();
