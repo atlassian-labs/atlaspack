@@ -34,6 +34,7 @@ serde_json = { workspace = true }
 
 [dev-dependencies]
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+atlaspack_test_fixtures = { path = "../atlaspack_test_fixtures" }
 
 criterion = { workspace = true }
 pretty_assertions = { workspace = true }

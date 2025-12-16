@@ -52,7 +52,7 @@ pub mod package_json;
 pub struct TargetRequest {
   pub default_target_options: DefaultTargetOptions,
   pub entry: Entry,
-  pub env: Option<BTreeMap<String, String>>,
+  pub env: BTreeMap<String, String>,
   pub mode: BuildMode,
   pub serve_options: ServeOptions,
 }
@@ -276,8 +276,8 @@ impl TargetRequest {
 
     let env = self
       .env
-      .as_ref()
-      .and_then(|env| env.get("BROWSERSLIST_ENV").or_else(|| env.get("NODE_ENV")))
+      .get("BROWSERSLIST_ENV")
+      .or_else(|| self.env.get("NODE_ENV"))
       .map(|e| e.to_owned())
       .unwrap_or_else(|| self.mode.to_string());
 
@@ -938,7 +938,7 @@ mod tests {
         package_path: project_root.join(&package_dir),
         target: None,
       },
-      env: None,
+      env: Default::default(),
       mode: BuildMode::Development,
     };
 
@@ -1145,7 +1145,7 @@ mod tests {
       serve_options: ServeOptions::default(),
       default_target_options: DefaultTargetOptions::default(),
       entry: Entry::default(),
-      env: None,
+      env: Default::default(),
       mode: BuildMode::Development,
     };
 
@@ -2145,7 +2145,7 @@ mod tests {
         package_path: project_root.join(&package_dir), // Points to nested package
         target: None,
       },
-      env: None,
+      env: Default::default(),
       mode: BuildMode::Development,
     };
 

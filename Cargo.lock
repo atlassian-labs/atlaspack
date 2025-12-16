@@ -730,6 +730,7 @@ dependencies = [
  "atlaspack_core",
  "atlaspack_filesystem",
  "atlaspack_sourcemap",
+ "atlaspack_test_fixtures",
  "criterion",
  "derivative",
  "glob-match",

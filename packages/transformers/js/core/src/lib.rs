@@ -167,7 +167,7 @@ pub struct Config {
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
   pub nested_promise_import_fix: bool,
-  pub global_aliasing_config: Option<HashMap<String, String>>,
+  pub global_aliasing_config: Option<BTreeMap<String, String>>,
   pub enable_lazy_loading: bool,
   pub enable_ssr_typeof_replacement: bool,
   pub enable_react_hooks_removal: bool,
