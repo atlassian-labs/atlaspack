@@ -46,6 +46,23 @@ export class NapiWorkerPool implements INapiWorkerPool {
     }
   }
 
+  clearAllWorkerState(): Promise<void[]> {
+    return Promise.all(
+      this.#workers.map(
+        (worker) =>
+          new Promise<void>((res) => {
+            worker.postMessage('clearState');
+
+            worker.once('message', (message) => {
+              if (message == 'stateCleared') {
+                res();
+              }
+            });
+          }),
+      ),
+    );
+  }
+
   workerCount(): number {
     return this.#workerCount;
   }

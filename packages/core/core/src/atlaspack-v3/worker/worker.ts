@@ -52,6 +52,12 @@ export class AtlaspackWorker {
     this.#sideEffectDetector = sideEffectDetector; // Use the global detector that was installed before imports
   }
 
+  clearState() {
+    this.#resolvers.clear();
+    this.#transformers.clear();
+    this.#options = undefined;
+  }
+
   loadPlugin: JsCallable<[LoadPluginOptions], Promise<undefined>> = jsCallable(
     async ({kind, specifier, resolveFrom, options}) => {
       // Use packageManager.require() instead of dynamic import() to support TypeScript plugins
@@ -438,6 +444,14 @@ export class AtlaspackWorker {
 const worker = new AtlaspackWorker();
 const napiWorker = napi.newNodejsWorker(worker);
 parentPort?.postMessage(napiWorker);
+
+parentPort?.setMaxListeners(parentPort.getMaxListeners() + 1);
+parentPort?.addListener('message', (message: unknown) => {
+  if (message === 'clearState') {
+    worker.clearState();
+    parentPort?.postMessage('stateCleared');
+  }
+});
 
 type ResolverState<T> = {
   resolver: Resolver<T>;

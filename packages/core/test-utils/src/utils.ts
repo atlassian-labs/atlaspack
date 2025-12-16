@@ -103,6 +103,12 @@ after(async () => {
   }
 });
 
+afterEach(async () => {
+  if (isAtlaspackV3) {
+    await napiWorkerPool.clearAllWorkerState();
+  }
+});
+
 const chalk = new _chalk.Instance();
 const warning = chalk.keyword('orange');
 
