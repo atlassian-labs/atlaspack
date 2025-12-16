@@ -28,8 +28,8 @@ impl PackageManager for PackageManagerNapi {
 
   fn resolve_dev_dependency(
     &self,
-    package_name: &str,
-    resolve_from: &Path,
+    _package_name: &str,
+    _resolve_from: &Path,
   ) -> anyhow::Result<DevDep> {
     unimplemented!()
   }
