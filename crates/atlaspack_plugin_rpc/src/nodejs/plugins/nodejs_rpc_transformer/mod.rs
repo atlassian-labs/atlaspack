@@ -204,7 +204,7 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       },
     };
 
-    let (result, contents, map, cache_bailout) = self
+    let (result, contents, map, cache_bailouts) = self
       .nodejs_workers
       .next_worker()
       .transformer_register_fn
@@ -255,10 +255,10 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
             Some(map.into_owned()?)
           };
 
-          let cacheable = return_value.get_element::<JsUnknown>(3)?;
-          let cacheable = env.from_js_value::<bool, _>(cacheable)?;
+          let bailouts = return_value.get_element::<JsUnknown>(3)?;
+          let bailouts = env.from_js_value::<Vec<String>, _>(bailouts)?;
 
-          Ok((transform_result, contents, map, cacheable))
+          Ok((transform_result, contents, map, bailouts))
         },
       )
       .await
@@ -292,6 +292,21 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
       is_source: result.is_source,
       ..asset
     };
+
+    let cache_bailout = !cache_bailouts.is_empty();
+
+    if cache_bailout {
+      tracing::info!(
+        "Transformer({}) bailout for asset '{}'\n{}",
+        self.plugin_node.package_name,
+        transformed_asset.file_path.display(),
+        cache_bailouts
+          .iter()
+          .map(|b| format!("- {}", b))
+          .collect::<Vec<String>>()
+          .join("\n")
+      );
+    }
 
     Ok(TransformResult {
       // Adding dependencies from Node plugins isn't yet supported

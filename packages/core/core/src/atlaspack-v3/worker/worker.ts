@@ -202,14 +202,14 @@ export class AtlaspackWorker {
 
     let {transformer, config, allowedEnv = {}} = instance;
 
-    let cache_bailout = false;
+    let cache_bailouts = [];
 
     const resolveFunc = (from: string, to: string): Promise<any> => {
       let customRequire = module.createRequire(from);
       let resolvedPath = customRequire.resolve(to);
       // Tranformer not cacheable due to use of the resolve function
 
-      cache_bailout = true;
+      cache_bailouts.push(`resolve(${from}, ${to})`);
 
       return Promise.resolve(resolvedPath);
     };
@@ -254,7 +254,7 @@ export class AtlaspackWorker {
 
       // Transformer uses the deprecated loadConfig API, so mark as not
       // cachable
-      cache_bailout = true;
+      cache_bailouts.push(`Transformer.loadConfig`);
     }
 
     if (transformer.parse) {
@@ -268,6 +268,7 @@ export class AtlaspackWorker {
       if (ast) {
         mutableAsset.setAST(ast);
       }
+      cache_bailouts.push(`Transformer.parse`);
     }
 
     const [result, sideEffects] =
@@ -293,12 +294,12 @@ export class AtlaspackWorker {
         }
       }
 
-      cache_bailout = true;
+      cache_bailouts.push(`Env access: ${operation} ${variable}=${value}`);
       break;
     }
 
-    if (sideEffects.fsUsage.length > 0) {
-      cache_bailout = true;
+    for (let {method, path} of sideEffects.fsUsage) {
+      cache_bailouts.push(`FS usage: ${method}(${path})`);
     }
 
     assert(
@@ -346,7 +347,7 @@ export class AtlaspackWorker {
 
     if (pluginOptions.used) {
       // Plugin options accessed, so not cachable
-      cache_bailout = true;
+      cache_bailouts.push(`Plugin options accessed`);
     }
 
     return [
@@ -374,7 +375,8 @@ export class AtlaspackWorker {
         ? // @ts-expect-error TS2533
           JSON.stringify((await mutableAsset.getMap()).toVLQ())
         : '',
-      cache_bailout,
+      // Limit to first 10 bailouts
+      cache_bailouts.slice(0, 10),
     ];
   });
 
