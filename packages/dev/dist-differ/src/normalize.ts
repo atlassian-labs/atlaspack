@@ -21,6 +21,72 @@ const SOURCE_MAP_URL_PATTERN = /\/\/[#@]\s*sourceMappingURL=[^\n]*(?:\n|$)/;
 const SOURCE_MAP_URL_PLACEHOLDER = '//# sourceMappingURL=SOURCE_MAP_URL';
 
 /**
+ * List of global objects that should never be transformed into scoped variables
+ * These are JavaScript built-in globals that must remain as direct references
+ */
+const GLOBAL_OBJECTS = new Set([
+  'globalThis',
+  'window',
+  'self',
+  'document',
+  'navigator',
+  'console',
+  'process',
+  'Buffer',
+  'global',
+]);
+
+/**
+ * Pattern to match scoped variable references: $<hex>$var$<identifier>
+ * Note: We use [$] to match literal $ (in character class, $ doesn't need escaping)
+ */
+const SCOPED_VAR_PATTERN = /[$][0-9a-fA-F]{16}[$]var[$]/g;
+
+/**
+ * Checks if a line contains a transformation of a global object into a scoped variable
+ * This is a breaking change and should never be considered harmless
+ */
+export function hasGlobalObjectTransformation(line: string): boolean {
+  // Check if the line contains a scoped variable pattern followed by a global object
+  SCOPED_VAR_PATTERN.lastIndex = 0;
+  const match = SCOPED_VAR_PATTERN.exec(line);
+  if (!match) {
+    return false;
+  }
+
+  // Check what comes after the scoped variable pattern
+  const afterPattern = line.substring(match.index + match[0].length);
+
+  // Check if any global object appears immediately after the pattern
+  for (const globalObj of GLOBAL_OBJECTS) {
+    // Match global object as a word boundary (to avoid matching parts of longer words)
+    const globalPattern = new RegExp(
+      `\\b${globalObj.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+    );
+    if (globalPattern.test(afterPattern)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Checks if a line contains a direct reference to a global object (not wrapped in scoped variable)
+ */
+export function hasDirectGlobalObject(line: string): boolean {
+  for (const globalObj of GLOBAL_OBJECTS) {
+    const pattern = new RegExp(
+      `\\b${globalObj.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+    );
+    if (pattern.test(line) && !hasGlobalObjectTransformation(line)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Normalizes asset IDs in a line by replacing them with placeholders
  */
 export function normalizeAssetIds(line: string): string {
@@ -53,11 +119,27 @@ export function linesDifferOnlyByAssetIds(
 
 /**
  * Checks if two lines differ only by unminified refs
+ * Returns false if one line has a global object and the other has it wrapped in a scoped variable
  */
 export function linesDifferOnlyByUnminifiedRefs(
   line1: string,
   line2: string,
 ): boolean {
+  // Critical check: if one line has a direct global object reference and the other
+  // has it wrapped in a scoped variable, this is a breaking change
+  const line1HasGlobal = hasDirectGlobalObject(line1);
+  const line2HasGlobal = hasDirectGlobalObject(line2);
+  const line1HasScopedGlobal = hasGlobalObjectTransformation(line1);
+  const line2HasScopedGlobal = hasGlobalObjectTransformation(line2);
+
+  // If one line has a direct global and the other has it scoped, it's a breaking change
+  if (
+    (line1HasGlobal && line2HasScopedGlobal) ||
+    (line2HasGlobal && line1HasScopedGlobal)
+  ) {
+    return false;
+  }
+
   return normalizeUnminifiedRefs(line1) === normalizeUnminifiedRefs(line2);
 }
 
@@ -320,11 +402,27 @@ function findSwapMapping(
 
 /**
  * Checks if two lines differ only by swapped variables
+ * Returns false if one line has a global object and the other has it wrapped in a scoped variable
  */
 export function linesDifferOnlyBySwappedVariables(
   line1: string,
   line2: string,
 ): boolean {
+  // Critical check: if one line has a direct global object reference and the other
+  // has it wrapped in a scoped variable, this is a breaking change
+  const line1HasGlobal = hasDirectGlobalObject(line1);
+  const line2HasGlobal = hasDirectGlobalObject(line2);
+  const line1HasScopedGlobal = hasGlobalObjectTransformation(line1);
+  const line2HasScopedGlobal = hasGlobalObjectTransformation(line2);
+
+  // If one line has a direct global and the other has it scoped, it's a breaking change
+  if (
+    (line1HasGlobal && line2HasScopedGlobal) ||
+    (line2HasGlobal && line1HasScopedGlobal)
+  ) {
+    return false;
+  }
+
   const mapping = findSwapMapping(line1, line2);
   return mapping !== null && mapping.size > 0;
 }

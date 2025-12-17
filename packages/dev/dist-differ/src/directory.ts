@@ -13,7 +13,11 @@ import {
   printFileSummary,
   printComparisonSummary,
 } from './report';
-import {diffToJson, generateDirectoryJsonReport} from './json';
+import {
+  diffToJson,
+  generateDirectoryJsonReport,
+  writeJsonReportStreaming,
+} from './json';
 import type {ComparisonContext} from './context';
 
 const colors = getColors();
@@ -103,7 +107,7 @@ export function compareDirectories(
           files2Count: files2.length,
         },
       };
-      console.log(JSON.stringify(report, null, 2));
+      writeJsonReportStreaming(report);
     } else {
       console.log(`${colors.red}✗ File count mismatch${colors.reset}`);
       console.log(`  Directory 1: ${files1.length} files`);
@@ -168,7 +172,7 @@ export function compareDirectories(
           totalFiles: files1.length,
         },
       };
-      console.log(JSON.stringify(report, null, 2));
+      writeJsonReportStreaming(report);
     } else {
       console.log(
         `${colors.green}✓ All files have identical names (including hash)${colors.reset}`,
@@ -217,7 +221,7 @@ export function compareDirectories(
       fileResults,
     );
 
-    console.log(JSON.stringify(report, null, 2));
+    writeJsonReportStreaming(report);
 
     if ((report.summary.differentFiles ?? 0) > 0) {
       process.exitCode = 1;

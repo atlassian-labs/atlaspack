@@ -17,6 +17,7 @@ import {
   generateFileJsonReport,
   diffToJson,
   generateDirectoryJsonReport,
+  writeJsonReportStreaming,
 } from './json';
 import type {ComparisonContext} from './context';
 
@@ -45,7 +46,7 @@ export function compareFiles(
     if (context.jsonMode) {
       // Output JSON
       const report = generateFileJsonReport(diff, absFile1, absFile2, context);
-      console.log(JSON.stringify(report, null, 2));
+      writeJsonReportStreaming(report);
       return;
     }
 
@@ -166,7 +167,7 @@ function compareSingleFilePair(
         file2.fullPath,
         context,
       );
-      console.log(JSON.stringify(report, null, 2));
+      writeJsonReportStreaming(report);
       return;
     }
 
