@@ -2,6 +2,7 @@ pub mod add_display_name;
 mod collect;
 mod constant_module;
 mod dead_returns_remover;
+mod declare_const_collector;
 mod dependency_collector;
 mod env_replacer;
 mod esm_export_classifier;
@@ -277,7 +278,6 @@ pub fn transform(
         SourceType::Module => true,
         SourceType::Script => false,
       };
-
       swc_core::common::GLOBALS.set(&Globals::new(), || {
         let error_buffer = ErrorBuffer::default();
         let handler = Handler::with_emitter(true, false, Box::new(error_buffer.clone()));
@@ -314,6 +314,13 @@ pub fn transform(
 
               let global_mark = Mark::fresh(Mark::root());
               let unresolved_mark = Mark::fresh(Mark::root());
+
+              // Strip `declare const` statements without initializers before the resolver runs.
+              // This prevents the resolver from seeing them and marking them as bindings.
+              // Statements like `declare const foo: string = "hello";` are kept.
+              if config.is_type_script && declare_const_collector::DeclareConstStripper::has_declare_const(code) {
+                module.visit_mut_with(&mut declare_const_collector::DeclareConstStripper);
+              }
 
               if config.magic_comments && MagicCommentsVisitor::has_magic_comment(code) {
                 let mut magic_comment_visitor = MagicCommentsVisitor::new(code);
@@ -352,6 +359,7 @@ pub fn transform(
                   typescript::strip(unresolved_mark, global_mark),
                   config.is_type_script && !config.is_jsx
                 ),
+                // resolver(unresolved_mark, global_mark, config.is_type_script),
               ));
 
               let is_module = module.is_module();
@@ -627,6 +635,7 @@ pub fn transform(
                 is_module,
                 config.conditional_bundling,
               );
+
 
               module.visit_with(&mut collect);
 

@@ -6831,27 +6831,40 @@ describe('javascript', function () {
       );
     });
   });
-  it('should correctly replace window with globalThis when they have a type declaration', async () => {
+
+  it('handles globals with type declarations correctly', async () => {
     await fsFixture(overlayFS, __dirname)`
       window-type-declarations
         index.ts:
-            declare const globalThis: {
-              __SSR_ATL_TOKEN__: string;
-            } & Window;
+            declare const blah;
 
-            console.log(globalThis.__SSR_ATL_TOKEN__);
+            console.log(blah.__SSR_ATL_TOKEN__);
 
+        package.json:
+          {
+            "name": "window-type-declarations",
+            "version": "1.0.0",
+            "targets": {
+              "pillar": {
+                "context": "browser",
+                "engines": {
+                  "node": ">=18"
+                }
+              }
+            }
+          }
 
         yarn.lock: {}
     `;
 
     let b = await bundle(
-      path.join(__dirname, 'integration/window-type-declarations/index.ts'),
+      path.join(__dirname, 'window-type-declarations/index.ts'),
       {
         mode: 'production',
         defaultTargetOptions: {
           shouldScopeHoist: true,
         },
+        targets: ['pillar'],
         inputFS: overlayFS,
         outputFS: overlayFS,
       },
@@ -6859,8 +6872,8 @@ describe('javascript', function () {
     b.getBundles().forEach(async (bundle) => {
       let contents = await outputFS.readFile(bundle.filePath, 'utf8');
       assert(
-        contents.includes('console.log(globalThis.__SSR_ATL_TOKEN__)'),
-        `Bundle ${path.basename(bundle.filePath)} should include a clean globalThis.__SSR_ATL_TOKEN__, but got ${contents}`,
+        contents.includes('console.log(blah.__SSR_ATL_TOKEN__)'),
+        `Bundle ${path.basename(bundle.filePath)} should include a clean blah.__SSR_ATL_TOKEN__, but got ${contents}`,
       );
     });
   });
