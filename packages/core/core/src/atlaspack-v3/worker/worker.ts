@@ -287,7 +287,7 @@ export class AtlaspackWorker {
     }
 
     for (let variable of sideEffects.envUsage.vars) {
-      if (allowedEnv.has(variable)) {
+      if (variable in allowedEnv) {
         continue;
       }
 
@@ -414,10 +414,12 @@ export class AtlaspackWorker {
         ),
       });
       config = setupResult?.config;
-      allowedEnv = new Set(setupResult?.env);
+      allowedEnv = Object.fromEntries(
+        setupResult?.env?.map((env) => [env, process.env[env]]) || [],
+      );
 
       // Always add the following env vars to the cache key
-      allowedEnv.add('NODE_ENV');
+      allowedEnv['NODE_ENV'] = process.env['NODE_ENV'];
 
       setup = {
         conditions: setupResult?.conditions,
@@ -460,7 +462,7 @@ type TransformerState<ConfigType> = {
   packageManager?: NodePackageManager;
   transformer: Transformer<ConfigType>;
   config?: ConfigType;
-  allowedEnv?: Set<string>;
+  allowedEnv?: Record<string, string | undefined>;
 };
 
 type LoadPluginOptions = {
