@@ -7,18 +7,14 @@
 import {join} from 'path';
 import assert from 'assert';
 
-import {parseAsync, transformAsync} from '@babel/core';
+import {transformAsync} from '@babel/core';
 import generate from '@babel/generator';
 import type {PluginOptions as BabelPluginOptions} from '@compiled/babel-plugin';
 import type {
   PluginOptions as BabelStripRuntimePluginOptions,
   BabelFileMetadata,
 } from '@compiled/babel-plugin-strip-runtime';
-import {
-  DEFAULT_IMPORT_SOURCES,
-  DEFAULT_PARSER_BABEL_PLUGINS,
-  toBoolean,
-} from '@compiled/utils';
+import {DEFAULT_IMPORT_SOURCES, toBoolean} from '@compiled/utils';
 import {Transformer} from '@atlaspack/plugin';
 import SourceMap from '@atlaspack/source-map';
 import {relativeUrl} from '@atlaspack/utils';
@@ -26,6 +22,12 @@ import {relativeUrl} from '@atlaspack/utils';
 import type {CompiledTransformerOpts} from './types';
 import {createDefaultResolver} from './utils';
 import {BuildMode} from '@atlaspack/types';
+import CompiledBabelPlugin from '@compiled/babel-plugin';
+import CompiledBabelPluginStripRuntime from '@compiled/babel-plugin-strip-runtime';
+// @ts-expect-error no declaration file
+import BabelPluginSyntaxJsx from '@babel/plugin-syntax-jsx';
+// @ts-expect-error no declaration file
+import BabelPluginSyntaxTypescript from '@babel/plugin-syntax-typescript';
 
 const configFiles = [
   '.compiledcssrc',
@@ -106,6 +108,7 @@ export default new Transformer<Config>({
       conditions: {
         codeMatch: importSourceMatches,
       },
+      env: ['BABEL_ENV', 'BABEL_SHOW_CONFIG_FOR'],
     };
   },
 
@@ -156,16 +159,11 @@ export default new Transformer<Config>({
       configFile: false,
       sourceMaps: !!asset.env.sourceMap,
       compact: false,
-      parserOpts: {
-        // @ts-expect-error - Type mismatch between @babel/parser and @compiled/utils versions
-        plugins:
-          config.compiledConfig.parserBabelPlugins ??
-          DEFAULT_PARSER_BABEL_PLUGINS,
-      },
       plugins: [
-        ...(config.compiledConfig.transformerBabelPlugins ?? []),
+        BabelPluginSyntaxJsx,
+        [BabelPluginSyntaxTypescript, {isTSX: true}],
         asset.isSource && [
-          '@compiled/babel-plugin',
+          CompiledBabelPlugin,
           {
             ...config,
             classNameCompressionMap:
@@ -179,7 +177,7 @@ export default new Transformer<Config>({
           } as BabelPluginOptions,
         ],
         extract && [
-          '@compiled/babel-plugin-strip-runtime',
+          CompiledBabelPluginStripRuntime,
           {
             compiledRequireExclude: true,
             extractStylesToDirectory:

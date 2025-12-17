@@ -26,6 +26,8 @@
     "@atlaspack/utils": "3.2.5",
     "@babel/core": "^7.22.11",
     "@babel/generator": "^7.22.10",
+    "@babel/plugin-syntax-jsx": "^7.27.1",
+    "@babel/plugin-syntax-typescript": "^7.27.1",
     "@compiled/babel-plugin": "^0.38.0",
     "@compiled/babel-plugin-strip-runtime": "^0.38.0",
     "@compiled/utils": "^0.13.1",
