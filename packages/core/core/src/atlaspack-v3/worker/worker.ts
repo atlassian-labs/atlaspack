@@ -202,14 +202,14 @@ export class AtlaspackWorker {
 
     let {transformer, config, allowedEnv = new Set()} = instance;
 
-    let cache_bailouts = [];
+    let cacheBailouts = [];
 
     const resolveFunc = (from: string, to: string): Promise<any> => {
       let customRequire = module.createRequire(from);
       let resolvedPath = customRequire.resolve(to);
       // Tranformer not cacheable due to use of the resolve function
 
-      cache_bailouts.push(`resolve(${from}, ${to})`);
+      cacheBailouts.push(`resolve(${from}, ${to})`);
 
       return Promise.resolve(resolvedPath);
     };
@@ -254,7 +254,7 @@ export class AtlaspackWorker {
 
       // Transformer uses the deprecated loadConfig API, so mark as not
       // cachable
-      cache_bailouts.push(`Transformer.loadConfig`);
+      cacheBailouts.push(`Transformer.loadConfig`);
     }
 
     if (transformer.parse) {
@@ -268,7 +268,7 @@ export class AtlaspackWorker {
       if (ast) {
         mutableAsset.setAST(ast);
       }
-      cache_bailouts.push(`Transformer.parse`);
+      cacheBailouts.push(`Transformer.parse`);
     }
 
     const [result, sideEffects] =
@@ -283,7 +283,7 @@ export class AtlaspackWorker {
       );
 
     if (sideEffects.envUsage.didEnumerate) {
-      cache_bailouts.push(`Env access: enumeration of process.env`);
+      cacheBailouts.push(`Env access: enumeration of process.env`);
     }
 
     for (let variable of sideEffects.envUsage.vars) {
@@ -291,11 +291,11 @@ export class AtlaspackWorker {
         continue;
       }
 
-      cache_bailouts.push(`Env access: ${variable}`);
+      cacheBailouts.push(`Env access: ${variable}`);
     }
 
     for (let {method, path} of sideEffects.fsUsage) {
-      cache_bailouts.push(`FS usage: ${method}(${path})`);
+      cacheBailouts.push(`FS usage: ${method}(${path})`);
     }
 
     assert(
@@ -343,7 +343,7 @@ export class AtlaspackWorker {
 
     if (pluginOptions.used) {
       // Plugin options accessed, so not cachable
-      cache_bailouts.push(`Plugin options accessed`);
+      cacheBailouts.push(`Plugin options accessed`);
     }
 
     return [
@@ -372,8 +372,7 @@ export class AtlaspackWorker {
           JSON.stringify((await mutableAsset.getMap()).toVLQ())
         : '',
       // Limit to first 10 bailouts
-      // TODO limit has been temporarily removed
-      cache_bailouts,
+      cacheBailouts.slice(0, 10),
     ];
   });
 
