@@ -65,7 +65,6 @@ use pathdiff::diff_paths;
 use react_async_import_lift::ReactAsyncImportLift;
 use react_hooks_remover::ReactHooksRemover;
 use regex::Regex;
-use rustc_hash::FxHashSet;
 use serde::Deserialize;
 use serde::Serialize;
 use static_prevaluator::StaticPreEvaluator;
@@ -359,7 +358,6 @@ pub fn transform(
                   typescript::strip(unresolved_mark, global_mark),
                   config.is_type_script && !config.is_jsx
                 ),
-                // resolver(unresolved_mark, global_mark, config.is_type_script),
               ));
 
               let is_module = module.is_module();
@@ -471,7 +469,6 @@ pub fn transform(
                       source_map: source_map.clone(),
                       diagnostics: &mut diagnostics,
                       unresolved_mark,
-                      bindings: Lrc::new(FxHashSet::default()),
                     }),
                     config.source_type != SourceType::Script
                   ),
@@ -559,7 +556,6 @@ pub fn transform(
                       filename: Path::new(&config.filename),
                       unresolved_mark,
                       scope_hoist: config.scope_hoist,
-                      bindings: Lrc::new(FxHashSet::default()),
                     }),
                     config.insert_node_globals
                   ),
@@ -635,7 +631,6 @@ pub fn transform(
                 is_module,
                 config.conditional_bundling,
               );
-
 
               module.visit_with(&mut collect);
 

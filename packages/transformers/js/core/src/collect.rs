@@ -707,17 +707,17 @@ impl Visit for Collect {
     // if exports, ensure only static member expression
     // if require, could be static access (handle in fold)
 
-    if match_member_expr(node, vec!["module", "exports"], self.unresolved_mark, None) {
+    if match_member_expr(node, vec!["module", "exports"], self.unresolved_mark) {
       self.static_cjs_exports = false;
       self.has_cjs_exports = true;
       return;
     }
 
-    if match_member_expr(node, vec!["module", "hot"], self.unresolved_mark, None) {
+    if match_member_expr(node, vec!["module", "hot"], self.unresolved_mark) {
       return;
     }
 
-    if match_member_expr(node, vec!["module", "require"], self.unresolved_mark, None) {
+    if match_member_expr(node, vec!["module", "require"], self.unresolved_mark) {
       return;
     }
 
@@ -744,12 +744,7 @@ impl Visit for Collect {
 
     match &*node.obj {
       Expr::Member(member) => {
-        if match_member_expr(
-          member,
-          vec!["module", "exports"],
-          self.unresolved_mark,
-          None,
-        ) {
+        if match_member_expr(member, vec!["module", "exports"], self.unresolved_mark) {
           handle_export!();
           return;
         } else {
@@ -1052,7 +1047,7 @@ impl Visit for Collect {
 
 impl Collect {
   pub fn match_require(&self, node: &Expr) -> Option<Atom> {
-    match_require(node, self.unresolved_mark, self.ignore_mark, None)
+    match_require(node, self.unresolved_mark, self.ignore_mark)
   }
 
   fn add_pat_imports(&mut self, node: &Pat, src: &Atom, kind: ImportKind) {

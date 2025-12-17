@@ -485,19 +485,13 @@ impl VisitMut for DependencyCollector<'_> {
             }
           }
           Expr::Member(member) => {
-            if match_member_expr(
-              member,
-              vec!["module", "require"],
-              self.unresolved_mark,
-              None,
-            ) {
+            if match_member_expr(member, vec!["module", "require"], self.unresolved_mark) {
               DependencyKind::Require
             } else if self.config.is_browser
               && match_member_expr(
                 member,
                 vec!["navigator", "serviceWorker", "register"],
                 self.unresolved_mark,
-                None,
               )
             {
               DependencyKind::ServiceWorker
@@ -506,7 +500,6 @@ impl VisitMut for DependencyCollector<'_> {
                 member,
                 vec!["CSS", "paintWorklet", "addModule"],
                 self.unresolved_mark,
-                None,
               )
             {
               DependencyKind::Worklet
@@ -515,19 +508,10 @@ impl VisitMut for DependencyCollector<'_> {
 
               // Match compiled dynamic imports (Atlaspack)
               // Promise.resolve(require('foo'))
-              if match_member_expr(
-                member,
-                vec!["Promise", "resolve"],
-                self.unresolved_mark,
-                None,
-              ) && let Some(expr) = node.args.first()
-                && match_require(
-                  &expr.expr,
-                  self.unresolved_mark,
-                  Mark::fresh(Mark::root()),
-                  None,
-                )
-                .is_some()
+              if match_member_expr(member, vec!["Promise", "resolve"], self.unresolved_mark)
+                && let Some(expr) = node.args.first()
+                && match_require(&expr.expr, self.unresolved_mark, Mark::fresh(Mark::root()))
+                  .is_some()
               {
                 self.in_promise = true;
                 node.visit_mut_children_with(self);
@@ -544,7 +528,7 @@ impl VisitMut for DependencyCollector<'_> {
               if let Expr::Call(call) = &*member.obj
                 && let Callee::Expr(e) = &call.callee
                   && let Expr::Member(m) = &**e
-                    && match_member_expr(m, vec!["Promise", "resolve"], self.unresolved_mark, None) &&
+                    && match_member_expr(m, vec!["Promise", "resolve"], self.unresolved_mark) &&
                       // Make sure the arglist is empty.
                       // I.e. do not proceed with the below unless Promise.resolve has an empty arglist
                       // because build_promise_chain() will not work in this case.
@@ -1124,13 +1108,7 @@ impl DependencyCollector<'_> {
         && let Expr::Ident(id) = &**callee
         && id.to_id() == resolve_id
         && let Some(arg) = call.args.first()
-        && match_require(
-          &arg.expr,
-          self.unresolved_mark,
-          Mark::fresh(Mark::root()),
-          None,
-        )
-        .is_some()
+        && match_require(&arg.expr, self.unresolved_mark, Mark::fresh(Mark::root())).is_some()
       {
         let was_in_promise = self.in_promise;
         self.in_promise = true;

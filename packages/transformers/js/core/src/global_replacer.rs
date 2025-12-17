@@ -2,18 +2,15 @@ use std::path::Path;
 
 use indexmap::IndexMap;
 use path_slash::PathBufExt;
-use rustc_hash::FxHashSet;
 use swc_core::common::DUMMY_SP;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
 use swc_core::common::SyntaxContext;
 use swc_core::common::sync::Lrc;
-use swc_core::ecma::ast::Id;
 use swc_core::ecma::ast::{self, Expr};
 use swc_core::ecma::ast::{ComputedPropName, Module};
 use swc_core::ecma::atoms::Atom;
 use swc_core::ecma::atoms::atom;
-use swc_core::ecma::utils::collect_decls;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
 
@@ -22,6 +19,7 @@ use crate::utils::SourceLocation;
 use crate::utils::SourceType;
 use crate::utils::create_global_decl_stmt;
 use crate::utils::create_require;
+use crate::utils::is_unresolved;
 use atlaspack_core::types::DependencyKind;
 
 /// Replaces a few node.js constants with literals or require statements.
@@ -65,7 +63,6 @@ pub struct GlobalReplacer<'a> {
   pub filename: &'a Path,
   pub unresolved_mark: Mark,
   pub scope_hoist: bool,
-  pub bindings: Lrc<FxHashSet<Id>>,
 }
 
 impl VisitMut for GlobalReplacer<'_> {
@@ -79,7 +76,7 @@ impl VisitMut for GlobalReplacer<'_> {
       return;
     };
 
-    if self.bindings.contains(&id.to_id()) {
+    if !is_unresolved(id, self.unresolved_mark) {
       return;
     }
 
@@ -174,7 +171,6 @@ impl VisitMut for GlobalReplacer<'_> {
   }
 
   fn visit_mut_module(&mut self, node: &mut Module) {
-    self.bindings = Lrc::new(collect_decls(node));
     node.visit_mut_children_with(self);
     node.body.splice(
       0..0,
@@ -214,8 +210,6 @@ mod tests {
   use atlaspack_core::types::DependencyKind;
   use atlaspack_swc_runner::test_utils::{RunTestContext, RunVisitResult, run_test_visit};
   use indoc::indoc;
-  use rustc_hash::FxHashSet;
-  use swc_core::common::sync::Lrc;
   use swc_core::ecma::atoms::Atom;
 
   use crate::DependencyDescriptor;
@@ -234,7 +228,6 @@ mod tests {
       filename: Path::new("filename"),
       unresolved_mark: run_test_context.unresolved_mark,
       scope_hoist: false,
-      bindings: Lrc::new(FxHashSet::default()),
     }
   }
 
