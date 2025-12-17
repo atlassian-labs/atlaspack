@@ -109,10 +109,13 @@ impl NodePackageManager<'_> {
           tracing::trace!("File create invalidation: {:?}", file_path);
         }
         FileCreateInvalidation::Glob(glob) => {
-          return Err(anyhow!(
-            "Dev dependency is not cacheable because it invalidates on file create (glob): {:?}",
-            glob
-          ));
+          tracing::warn!("Glob create invalidation: {:?}", glob);
+          if !ignore_startup_invalidations {
+            return Err(anyhow!(
+              "Dev dependency is not cacheable because it invalidates on file create (glob): {:?}",
+              glob
+            ));
+          }
         }
       }
     }
