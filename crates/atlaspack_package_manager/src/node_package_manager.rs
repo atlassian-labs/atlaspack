@@ -40,6 +40,7 @@ impl PackageManager for NodePackageManager<'_> {
     &self,
     package_name: &str,
     resolve_from: &std::path::Path,
+    ignore_startup_invalidations: bool,
   ) -> anyhow::Result<DevDep> {
     let crate::Resolution { resolved } = self.resolve(package_name, resolve_from)?;
 
@@ -68,7 +69,9 @@ impl PackageManager for NodePackageManager<'_> {
           // For we're just mapping to an option and ignoring errors
           // If we want more advanced reporting on cachability we can change this
           // later
-          hash: self.hash_invalidations(&result).ok(),
+          hash: self
+            .hash_invalidations(&result, ignore_startup_invalidations)
+            .ok(),
         })
       }
     }
@@ -77,10 +80,15 @@ impl PackageManager for NodePackageManager<'_> {
 
 impl NodePackageManager<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  fn hash_invalidations(&self, invalidations: &Invalidations) -> anyhow::Result<u64> {
-    if invalidations
-      .invalidate_on_startup
-      .load(std::sync::atomic::Ordering::Relaxed)
+  fn hash_invalidations(
+    &self,
+    invalidations: &Invalidations,
+    ignore_startup_invalidations: bool,
+  ) -> anyhow::Result<u64> {
+    if !ignore_startup_invalidations
+      && invalidations
+        .invalidate_on_startup
+        .load(std::sync::atomic::Ordering::Relaxed)
     {
       tracing::warn!("Start-up invalidation");
       return Err(anyhow!(

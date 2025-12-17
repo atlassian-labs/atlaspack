@@ -123,7 +123,14 @@ impl NodejsRpcTransformerPlugin {
     let dev_dep_hash = task::spawn_blocking({
       let plugin_node = plugin_node.clone();
       move || {
-        package_manager.resolve_dev_dependency(&plugin_node.package_name, &plugin_node.resolve_from)
+        package_manager.resolve_dev_dependency(
+          &plugin_node.package_name,
+          &plugin_node.resolve_from,
+          // WARNING: Ignore startup invalidations for compiled as it has a bunch of
+          // dynamic requires that aren't used. This allows compiled to be
+          // cached but it's a bit dodgy.
+          plugin_node.package_name == "@atlaspack/transformer-compiled",
+        )
       }
     });
 

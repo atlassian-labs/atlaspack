@@ -28,5 +28,6 @@ pub trait PackageManager {
     &self,
     package_name: &str,
     resolve_from: &Path,
+    ignore_startup_invalidations: bool,
   ) -> anyhow::Result<DevDep>;
 }
