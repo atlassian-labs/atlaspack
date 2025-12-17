@@ -25,8 +25,10 @@ import {BuildMode} from '@atlaspack/types';
 import CompiledBabelPlugin from '@compiled/babel-plugin';
 import CompiledBabelPluginStripRuntime from '@compiled/babel-plugin-strip-runtime';
 // @ts-expect-error no declaration file
+// eslint-disable-next-line import/no-extraneous-dependencies
 import BabelPluginSyntaxJsx from '@babel/plugin-syntax-jsx';
 // @ts-expect-error no declaration file
+// eslint-disable-next-line import/no-extraneous-dependencies
 import BabelPluginSyntaxTypescript from '@babel/plugin-syntax-typescript';
 
 const configFiles = [

@@ -30,6 +30,7 @@ impl PackageManager for PackageManagerNapi {
     &self,
     _package_name: &str,
     _resolve_from: &Path,
+    _ignore_startup_invalidations: bool,
   ) -> anyhow::Result<DevDep> {
     unimplemented!()
   }
