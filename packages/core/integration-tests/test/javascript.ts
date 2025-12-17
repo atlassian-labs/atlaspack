@@ -6831,4 +6831,37 @@ describe('javascript', function () {
       );
     });
   });
+  it('should correctly replace window with globalThis when they have a type declaration', async () => {
+    await fsFixture(overlayFS, __dirname)`
+      window-type-declarations
+        index.ts:
+            declare const globalThis: {
+              __SSR_ATL_TOKEN__: string;
+            } & Window;
+
+            console.log(globalThis.__SSR_ATL_TOKEN__);
+
+
+        yarn.lock: {}
+    `;
+
+    let b = await bundle(
+      path.join(__dirname, 'integration/window-type-declarations/index.ts'),
+      {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: true,
+        },
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+      },
+    );
+    b.getBundles().forEach(async (bundle) => {
+      let contents = await outputFS.readFile(bundle.filePath, 'utf8');
+      assert(
+        contents.includes('console.log(globalThis.__SSR_ATL_TOKEN__)'),
+        `Bundle ${path.basename(bundle.filePath)} should include a clean globalThis.__SSR_ATL_TOKEN__, but got ${contents}`,
+      );
+    });
+  });
 });
