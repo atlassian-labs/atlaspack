@@ -35,7 +35,7 @@ impl PackageManager for NodePackageManager<'_> {
     }
   }
 
-  #[tracing::instrument(level = "debug", skip(self, resolve_from), ret)]
+  #[tracing::instrument(level = "info", skip(self, resolve_from), ret)]
   fn resolve_dev_dependency(
     &self,
     package_name: &str,

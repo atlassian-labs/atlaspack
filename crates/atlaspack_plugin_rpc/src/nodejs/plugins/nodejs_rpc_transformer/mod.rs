@@ -64,6 +64,7 @@ struct TransformerSetup {
   env: Option<JSONObject>,
 }
 
+#[tracing::instrument(level = "info", skip_all, fields(plugin = %plugin_node.package_name))]
 async fn setup_plugin(
   nodejs_workers: Arc<NodeJsWorkerCollection>,
   rpc_options: RpcPluginOptions,
@@ -323,7 +324,9 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
 
     let cache_bailout = !cache_bailouts.is_empty();
 
-    if cache_bailout {
+    if cache_bailout
+      && self.plugin_node.package_name != "@atlassian/parcel-transformer-babel-conditional"
+    {
       tracing::info!(
         "Transformer({}) bailout for asset '{}'\n{}",
         self.plugin_node.package_name,

@@ -7,14 +7,14 @@ export interface FsUsage {
 }
 
 export interface EnvUsage {
-  operation: 'read' | 'write' | 'check' | 'enumerate';
-  variable?: string;
-  value?: string | undefined;
+  vars: Set<string>;
+  didEnumerate: boolean;
 }
 
 export interface SideEffects {
   fsUsage: FsUsage[];
-  envUsage: EnvUsage[];
+  envUsage: EnvUsage;
+  packageName: string;
 }
 
 type OriginalMethods = Record<string, any>;
@@ -68,7 +68,10 @@ export class SideEffectDetector {
    * @param {string} options.label - Optional label for debugging
    * @returns {Promise<[any, SideEffects]>} Tuple of [result, sideEffects]
    */
-  monitorSideEffects<T>(fn: () => Async<T>): Async<[T, SideEffects]> {
+  monitorSideEffects<T>(
+    packageName: string,
+    fn: () => Async<T>,
+  ): Async<[T, SideEffects]> {
     if (!this.patchesInstalled) {
       throw new Error(
         'SideEffectDetector: install() must be called before monitorSideEffects()',
@@ -77,7 +80,11 @@ export class SideEffectDetector {
 
     const context: SideEffects = {
       fsUsage: [],
-      envUsage: [],
+      envUsage: {
+        vars: new Set(),
+        didEnumerate: false,
+      },
+      packageName: packageName,
     };
 
     return this.asyncStorage.run(context, async () => {
@@ -224,12 +231,16 @@ export class SideEffectDetector {
     this.originalMethods.processEnv = process.env;
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
+    // The following environment variables are allowed to be accessed by transformers
     const allowedVars = new Set([
+      'ATLASPACK_ENABLE_SENTRY',
+      // TODO we should also add the other atlaspack env vars here
       'NODE_V8_COVERAGE',
       'VSCODE_INSPECTOR_OPTIONS',
       'NODE_INSPECTOR_IPC',
       'FORCE_COLOR',
       'NO_COLOR',
+      'TTY',
     ]);
 
     // Create a proxy that intercepts property access
@@ -243,11 +254,7 @@ export class SideEffectDetector {
             !allowedVars.has(property) &&
             (property in target || !property.startsWith('_'))
           ) {
-            context.envUsage.push({
-              operation: 'read',
-              variable: property,
-              value: target[property],
-            });
+            context.envUsage.vars.add(property);
           }
         }
         return target[property];
@@ -256,11 +263,9 @@ export class SideEffectDetector {
       set(target, property, value) {
         const context = self.asyncStorage.getStore();
         if (context && typeof property === 'string') {
-          context.envUsage.push({
-            operation: 'write',
-            variable: property,
-            value,
-          });
+          if (!allowedVars.has(property) && property in target) {
+            context.envUsage.vars.add(property);
+          }
         }
         target[property] = value;
         return true;
@@ -269,10 +274,9 @@ export class SideEffectDetector {
       has(target, property) {
         const context = self.asyncStorage.getStore();
         if (context && typeof property === 'string') {
-          context.envUsage.push({
-            operation: 'check',
-            variable: property,
-          });
+          if (!allowedVars.has(property) && property in target) {
+            context.envUsage.vars.add(property);
+          }
         }
         return property in target;
       },
@@ -280,9 +284,7 @@ export class SideEffectDetector {
       ownKeys(target) {
         const context = self.asyncStorage.getStore();
         if (context) {
-          context.envUsage.push({
-            operation: 'enumerate',
-          });
+          context.envUsage.didEnumerate = true;
         }
         return Object.keys(target);
       },

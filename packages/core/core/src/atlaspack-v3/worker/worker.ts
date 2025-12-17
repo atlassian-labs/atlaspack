@@ -200,7 +200,7 @@ export class AtlaspackWorker {
       throw new Error(`Transformer not found: ${key}`);
     }
 
-    let {transformer, config, allowedEnv = {}} = instance;
+    let {transformer, config, allowedEnv = new Set()} = instance;
 
     let cache_bailouts = [];
 
@@ -272,7 +272,7 @@ export class AtlaspackWorker {
     }
 
     const [result, sideEffects] =
-      await this.#sideEffectDetector.monitorSideEffects(() =>
+      await this.#sideEffectDetector.monitorSideEffects(key, () =>
         transformer.transform({
           // @ts-expect-error TS2322
           asset: mutableAsset,
@@ -282,20 +282,16 @@ export class AtlaspackWorker {
         }),
       );
 
-    for (let {operation, value, variable} of sideEffects.envUsage) {
-      if (operation === 'read') {
-        if (variable && variable in allowedEnv) {
-          let allowed = allowedEnv[variable];
+    if (sideEffects.envUsage.didEnumerate) {
+      cache_bailouts.push(`Env access: enumeration of process.env`);
+    }
 
-          if (allowed === value) {
-            // Allowed access
-            continue;
-          }
-        }
+    for (let variable of sideEffects.envUsage.vars) {
+      if (allowedEnv.has(variable)) {
+        continue;
       }
 
-      cache_bailouts.push(`Env access: ${operation} ${variable}=${value}`);
-      break;
+      cache_bailouts.push(`Env access: ${variable}`);
     }
 
     for (let {method, path} of sideEffects.fsUsage) {
@@ -376,7 +372,8 @@ export class AtlaspackWorker {
           JSON.stringify((await mutableAsset.getMap()).toVLQ())
         : '',
       // Limit to first 10 bailouts
-      cache_bailouts.slice(0, 10),
+      // TODO limit has been temporarily removed
+      cache_bailouts,
     ];
   });
 
@@ -417,12 +414,10 @@ export class AtlaspackWorker {
         ),
       });
       config = setupResult?.config;
-      allowedEnv = Object.fromEntries(
-        setupResult?.env?.map((e) => [e, process.env[e]]) ?? [],
-      );
+      allowedEnv = new Set(setupResult?.env);
 
       // Always add the following env vars to the cache key
-      allowedEnv.NODE_ENV = process.env.NODE_ENV;
+      allowedEnv.add('NODE_ENV');
 
       setup = {
         conditions: setupResult?.conditions,
@@ -465,7 +460,7 @@ type TransformerState<ConfigType> = {
   packageManager?: NodePackageManager;
   transformer: Transformer<ConfigType>;
   config?: ConfigType;
-  allowedEnv?: Record<string, string | undefined>;
+  allowedEnv?: Set<string>;
 };
 
 type LoadPluginOptions = {

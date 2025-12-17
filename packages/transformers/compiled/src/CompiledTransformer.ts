@@ -110,7 +110,27 @@ export default new Transformer<Config>({
       conditions: {
         codeMatch: importSourceMatches,
       },
-      env: ['BABEL_ENV', 'BABEL_SHOW_CONFIG_FOR'],
+      env: [
+        // TODO revisit this list, since we may have added variables in here that were actually enumarated rather than accessed directly
+        'BABEL_ENV',
+        'BABEL_SHOW_CONFIG_FOR',
+        'BROWSERSLIST',
+        'BROWSERSLIST_CONFIG',
+        'BROWSERSLIST_DISABLE_CACHE',
+        'BROWSERSLIST_ENV',
+        'BROWSERSLIST_IGNORE_OLD_DATA',
+        'BABEL_TYPES_8_BREAKING',
+        'BROWSERSLIST_ROOT_PATH',
+        'BROWSERSLIST_STATS',
+        'AUTOPREFIXER',
+        'AUTOPREFIXER_GRID',
+        'TEST_PKG_VERSION',
+        'FORCE_COLOR',
+        'DEBUG',
+        'NODE_DEBUG',
+        'CI',
+        'COLORTERM',
+      ],
     };
   },
 

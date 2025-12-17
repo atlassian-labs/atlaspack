@@ -175,6 +175,11 @@ export class NodePackageManager implements PackageManager {
 
   requireSync(name: DependencySpecifier, from: FilePath): any {
     let {resolved} = this.resolveSync(name, from);
+
+    // TODO WARN - clean up once we fix debug issue
+    if (name === 'debug') {
+      return require(resolved);
+    }
     return this.load(resolved, from);
   }
 
