@@ -1,5 +1,15 @@
 # @atlaspack/types-internal
 
+## 2.22.3
+
+### Patch Changes
+
+- [#934](https://github.com/atlassian-labs/atlaspack/pull/934) [`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add experimental native persistent cache for Atlaspack V3.
+
+- Updated dependencies [[`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957)]:
+  - @atlaspack/feature-flags@2.27.5
+  - @atlaspack/source-map@3.2.1
+
 ## 2.22.2
 
 ### Patch Changes

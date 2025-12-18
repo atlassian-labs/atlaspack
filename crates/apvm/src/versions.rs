@@ -38,7 +38,13 @@ impl Versions {
   pub fn installed(&self) -> anyhow::Result<Vec<InstallablePackage>> {
     let mut versions_installed = Vec::<InstallablePackage>::new();
 
-    for entry in std::fs::read_dir(&self.paths.versions_v1)? {
+    for entry in std::fs::read_dir(&self.paths.versions_v1).map_err(|e| {
+      anyhow::anyhow!(
+        "Failed to read versions directory {:?} in versions.rs:installed(): {}",
+        self.paths.versions_v1,
+        e
+      )
+    })? {
       let path = entry?.path();
       let meta = path.join("meta.json");
 

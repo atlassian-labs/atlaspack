@@ -156,8 +156,12 @@ impl Serialize for RunPipelineOutput {
         code.push(asset.code.bytes());
 
         if let Some(map) = &asset.map {
-          // TODO: Handle map serialization errors
-          maps.push(Some(map.to_buffer_vec().unwrap()));
+          maps.push(Some(map.to_buffer_vec().map_err(|error| {
+            serde::ser::Error::custom(format!(
+              "Failed to serialize source map to buffer: {}",
+              error
+            ))
+          })?));
         } else {
           maps.push(None);
         }
@@ -168,8 +172,12 @@ impl Serialize for RunPipelineOutput {
       code.push(asset.code.bytes());
 
       if let Some(map) = &asset.map {
-        // TODO: Handle map serialization errors
-        maps.push(Some(map.to_buffer_vec().unwrap()));
+        maps.push(Some(map.to_buffer_vec().map_err(|error| {
+          serde::ser::Error::custom(format!(
+            "Failed to serialize source map to buffer: {}",
+            error
+          ))
+        })?));
       } else {
         maps.push(None);
       }
