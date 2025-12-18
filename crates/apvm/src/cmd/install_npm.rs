@@ -60,7 +60,15 @@ pub fn install_from_npm(
   println!("Extracting");
   let temp_dir = ctx.paths.temp_dir()?;
   archive::tar_gz(bytes.as_slice()).unpack(&temp_dir)?;
-  let inner_temp = fs::read_dir(&temp_dir)?.try_first()?;
+  let inner_temp = fs::read_dir(&temp_dir)
+    .map_err(|e| {
+      anyhow::anyhow!(
+        "Failed to read temp directory {:?} in install_npm.rs: {}",
+        temp_dir.as_ref(),
+        e
+      )
+    })?
+    .try_first()?;
 
   println!("Finalizing");
   fs_ext::create_dir_if_not_exists(&pkg.path)?;
