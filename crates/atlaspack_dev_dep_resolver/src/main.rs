@@ -10,7 +10,8 @@ use atlaspack_resolver::Resolver;
 use atlaspack_resolver::SpecifierType;
 
 fn main() {
-  let contents = std::fs::read_to_string("package.json").unwrap();
+  let contents = std::fs::read_to_string("package.json")
+    .expect("Unable to read package.json when resolving dev-deps");
   let pkg: serde_json::Value = serde_json::from_str(&contents).unwrap();
   let deps = pkg.get("dependencies").unwrap().as_object().unwrap();
   let cwd = std::env::current_dir().unwrap();
