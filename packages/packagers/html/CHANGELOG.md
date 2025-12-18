@@ -1,5 +1,15 @@
 # @atlaspack/packager-html
 
+## 2.15.28
+
+### Patch Changes
+
+- Updated dependencies [[`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957)]:
+  - @atlaspack/feature-flags@2.27.5
+  - @atlaspack/utils@3.2.7
+  - @atlaspack/plugin@2.14.46
+  - @atlaspack/types@2.15.36
+
 ## 2.15.27
 
 ### Patch Changes

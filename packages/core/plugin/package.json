@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/plugin",
-  "version": "2.14.45",
+  "version": "2.14.46",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -20,6 +20,6 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.22.2"
+    "@atlaspack/types-internal": "2.22.3"
   }
 }

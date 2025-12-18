@@ -1,5 +1,34 @@
 # @atlaspack/core
 
+## 2.31.0
+
+### Minor Changes
+
+- [#934](https://github.com/atlassian-labs/atlaspack/pull/934) [`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add experimental native persistent cache for Atlaspack V3.
+
+- [#934](https://github.com/atlassian-labs/atlaspack/pull/934) [`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add new Transformer `setup` method and deprecate `loadConfig`.
+
+  Atlaspack is moving to a pure Transformer model to improve caching performance and consistency.
+  The old `loadConfig` method which ran once per Asset goes against this behaviour is now deprecated.
+  The new `setup` method runs once per Transformer instance, allowing for better caching and performance optimizations.
+
+### Patch Changes
+
+- Updated dependencies [[`515149d`](https://github.com/atlassian-labs/atlaspack/commit/515149d0a0767d844af803efdc611646780ad0fe), [`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957), [`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957)]:
+  - @atlaspack/rust@3.16.0
+  - @atlaspack/feature-flags@2.27.5
+  - @atlaspack/cache@3.2.41
+  - @atlaspack/fs@2.15.41
+  - @atlaspack/logger@2.14.38
+  - @atlaspack/source-map@3.2.1
+  - @atlaspack/utils@3.2.7
+  - @atlaspack/graph@3.6.8
+  - @atlaspack/plugin@2.14.46
+  - @atlaspack/profiler@2.15.7
+  - @atlaspack/types@2.15.36
+  - @atlaspack/workers@2.14.46
+  - @atlaspack/package-manager@2.14.46
+
 ## 2.30.2
 
 ### Patch Changes

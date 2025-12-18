@@ -1,5 +1,13 @@
 # @atlaspack/transformer-posthtml
 
+## 2.14.46
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.7
+  - @atlaspack/plugin@2.14.46
+
 ## 2.14.45
 
 ### Patch Changes
