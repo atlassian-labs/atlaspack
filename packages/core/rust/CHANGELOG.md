@@ -1,5 +1,21 @@
 # @atlaspack/rust
 
+## 3.16.0
+
+### Minor Changes
+
+- [#934](https://github.com/atlassian-labs/atlaspack/pull/934) [`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add experimental native persistent cache for Atlaspack V3.
+
+- [#934](https://github.com/atlassian-labs/atlaspack/pull/934) [`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add new Transformer `setup` method and deprecate `loadConfig`.
+
+  Atlaspack is moving to a pure Transformer model to improve caching performance and consistency.
+  The old `loadConfig` method which ran once per Asset goes against this behaviour is now deprecated.
+  The new `setup` method runs once per Transformer instance, allowing for better caching and performance optimizations.
+
+### Patch Changes
+
+- [#938](https://github.com/atlassian-labs/atlaspack/pull/938) [`515149d`](https://github.com/atlassian-labs/atlaspack/commit/515149d0a0767d844af803efdc611646780ad0fe) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Properly handle source map serialization errors
+
 ## 3.15.0
 
 ### Minor Changes

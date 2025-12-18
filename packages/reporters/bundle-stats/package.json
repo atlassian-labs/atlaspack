@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/reporter-bundle-stats",
-  "version": "2.14.46",
+  "version": "2.14.47",
   "publishConfig": {
     "access": "public"
   },
@@ -14,12 +14,12 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/core": "2.30.2",
-    "@atlaspack/plugin": "2.14.45",
-    "@atlaspack/utils": "3.2.6"
+    "@atlaspack/core": "2.31.0",
+    "@atlaspack/plugin": "2.14.46",
+    "@atlaspack/utils": "3.2.7"
   },
   "devDependencies": {
-    "@atlaspack/types": "2.15.35"
+    "@atlaspack/types": "2.15.36"
   },
   "type": "commonjs",
   "scripts": {
