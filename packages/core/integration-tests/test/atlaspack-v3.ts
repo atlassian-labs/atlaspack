@@ -68,6 +68,7 @@ describe.v3('AtlaspackV3', function () {
     let atlaspack = await AtlaspackV3.create({
       corePath: '',
       serveOptions: false,
+      env: process.env,
       entries: [join(__dirname, 'index.js')],
       fs: new FileSystemV3(overlayFS),
       napiWorkerPool,
