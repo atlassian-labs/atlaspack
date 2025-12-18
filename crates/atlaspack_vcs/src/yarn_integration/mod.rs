@@ -10,7 +10,7 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use anyhow::{Context, anyhow};
+use anyhow::anyhow;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
