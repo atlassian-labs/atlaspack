@@ -33,7 +33,15 @@ pub fn install_from_git(
   println!("Extracting");
   let temp_dir = TempDir::new(&ctx.paths.temp)?;
   archive::tar_gz(bytes_archive.as_slice()).unpack(&temp_dir)?;
-  let inner_temp = fs::read_dir(&temp_dir)?.try_first()?;
+  let inner_temp = fs::read_dir(&temp_dir)
+    .map_err(|e| {
+      anyhow::anyhow!(
+        "Failed to read temp directory {:?} in install_git.rs: {}",
+        temp_dir.as_ref(),
+        e
+      )
+    })?
+    .try_first()?;
 
   let command_options = ExecOptions {
     cwd: Some(inner_temp.path()),
