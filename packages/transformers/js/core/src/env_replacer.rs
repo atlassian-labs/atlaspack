@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::vec;
 
@@ -16,7 +16,7 @@ use crate::utils::*;
 pub struct EnvReplacer<'a> {
   pub replace_env: bool,
   pub is_browser: bool,
-  pub env: &'a HashMap<JsWord, JsWord>,
+  pub env: &'a BTreeMap<JsWord, JsWord>,
   pub used_env: &'a mut HashSet<JsWord>,
   pub source_map: Lrc<swc_core::common::SourceMap>,
   pub diagnostics: &'a mut Vec<Diagnostic>,
@@ -350,7 +350,7 @@ mod tests {
 
   fn make_env_replacer<'a>(
     run_test_context: RunTestContext,
-    env: &'a HashMap<JsWord, JsWord>,
+    env: &'a BTreeMap<JsWord, JsWord>,
     used_env: &'a mut HashSet<JsWord>,
     diagnostics: &'a mut Vec<Diagnostic>,
   ) -> EnvReplacer<'a> {
@@ -367,7 +367,7 @@ mod tests {
 
   #[test]
   fn test_replacer_disabled() {
-    let env: HashMap<JsWord, JsWord> = HashMap::new();
+    let env: BTreeMap<JsWord, JsWord> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -404,7 +404,7 @@ mod tests {
   // TODO: This behaviour should be removed and will be disabled for canary builds.
   #[test]
   fn test_replace_browser_assignments() {
-    let env: HashMap<JsWord, JsWord> = HashMap::new();
+    let env: BTreeMap<JsWord, JsWord> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -436,7 +436,7 @@ mod tests {
 
   #[test]
   fn test_replace_env_assignments() {
-    let env: HashMap<JsWord, JsWord> = HashMap::new();
+    let env: BTreeMap<JsWord, JsWord> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -452,7 +452,7 @@ mod tests {
 
   #[test]
   fn test_replace_env_member_assignments() {
-    let env: HashMap<JsWord, JsWord> = HashMap::new();
+    let env: BTreeMap<JsWord, JsWord> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -494,7 +494,7 @@ mod tests {
 
   #[test]
   fn test_replace_env_in_expressions() {
-    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
+    let mut env: BTreeMap<JsWord, JsWord> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -525,7 +525,7 @@ mod tests {
 
   #[test]
   fn test_replace_process_dot_browser() {
-    let env: HashMap<JsWord, JsWord> = HashMap::new();
+    let env: BTreeMap<JsWord, JsWord> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -553,7 +553,7 @@ mod tests {
 
   #[test]
   fn test_replace_foo_in_process_env() {
-    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
+    let mut env: BTreeMap<JsWord, JsWord> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -583,7 +583,7 @@ mod tests {
 
   #[test]
   fn test_unrelated_code_is_not_affected() {
-    let env: HashMap<JsWord, JsWord> = HashMap::new();
+    let env: BTreeMap<JsWord, JsWord> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -611,7 +611,7 @@ mod tests {
 
   #[test]
   fn test_replace_env_has_the_variable() {
-    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
+    let mut env: BTreeMap<JsWord, JsWord> = BTreeMap::new();
     let mut used_env: HashSet<JsWord> = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -652,7 +652,7 @@ mod tests {
 
   #[test]
   fn test_replace_env_rest_spread() {
-    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
+    let mut env: BTreeMap<JsWord, JsWord> = BTreeMap::new();
     let mut used_env: HashSet<JsWord> = HashSet::new();
     let mut diagnostics = Vec::new();
 
@@ -686,7 +686,7 @@ mod tests {
 
   #[test]
   fn test_assign_env_to_variable() {
-    let mut env: HashMap<JsWord, JsWord> = HashMap::new();
+    let mut env: BTreeMap<JsWord, JsWord> = BTreeMap::new();
     let mut used_env = HashSet::new();
     let mut diagnostics = Vec::new();
 

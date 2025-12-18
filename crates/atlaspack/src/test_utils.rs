@@ -8,12 +8,14 @@ use atlaspack_core::{
   types::AtlaspackOptions,
 };
 use atlaspack_filesystem::{FileSystemRef, in_memory_file_system::InMemoryFileSystem};
+use atlaspack_memoization_cache::{CacheHandler, CacheMode, InMemoryReaderWriter};
+use atlaspack_package_manager::MockPackageManager;
 use atlaspack_plugin_rpc::RpcFactory;
-use atlaspack_plugin_rpc::testing::TestingRpcFactory;
+use atlaspack_plugin_rpc::testing::testing::TestingRpcFactory;
 
 use crate::{
   plugins::{PluginsRef, config_plugins::ConfigPlugins},
-  request_tracker::RequestTracker,
+  request_tracker::{CacheRef, DynCacheHandler, RequestTracker},
 };
 
 pub(crate) fn make_test_plugin_context() -> PluginContext {
@@ -37,7 +39,8 @@ pub(crate) fn config_plugins(ctx: PluginContext) -> PluginsRef {
   let fixture = default_config(Arc::new(PathBuf::default()));
   let rpc_factory = TestingRpcFactory::default();
   let rpc_worker = rpc_factory.start().unwrap();
-  Arc::new(ConfigPlugins::new(rpc_worker, fixture.atlaspack_config, ctx).unwrap())
+  let package_manager = Arc::new(MockPackageManager::new());
+  Arc::new(ConfigPlugins::new(rpc_worker, fixture.atlaspack_config, ctx, package_manager).unwrap())
 }
 
 pub struct RequestTrackerTestOptions {
@@ -58,6 +61,14 @@ impl Default for RequestTrackerTestOptions {
       atlaspack_options: AtlaspackOptions::default(),
     }
   }
+}
+
+/// Create a test cache using a temp directory
+fn create_test_cache() -> CacheRef {
+  Arc::new(DynCacheHandler::InMemory(CacheHandler::new(
+    InMemoryReaderWriter::default(),
+    CacheMode::Off,
+  )))
 }
 
 pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTracker {
@@ -93,11 +104,14 @@ pub(crate) fn request_tracker(options: RequestTrackerTestOptions) -> RequestTrac
     })
   });
 
+  let cache = create_test_cache();
+
   RequestTracker::new(
     Arc::clone(&config_loader),
     fs,
     Arc::new(atlaspack_options),
     plugins,
     project_root,
+    cache,
   )
 }

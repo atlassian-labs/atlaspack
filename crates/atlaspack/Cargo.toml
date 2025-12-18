@@ -14,6 +14,7 @@ nodejs = ["atlaspack_plugin_rpc/nodejs"]
 atlaspack_config = { path = "../atlaspack_config" }
 atlaspack_core = { path = "../atlaspack_core" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+atlaspack_memoization_cache = { path = "../atlaspack_memoization_cache" }
 atlaspack_package_manager = { path = "../atlaspack_package_manager" }
 atlaspack_plugin_resolver = { path = "../atlaspack_plugin_resolver" }
 atlaspack_plugin_transformer_html = { path = "../atlaspack_plugin_transformer_html" }

@@ -3,14 +3,14 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Error, anyhow};
 use async_trait::async_trait;
 use atlaspack_atlaskit_tokens::{AtlaskitTokensHandler, TokensConfig, TokensPluginOptions};
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::{Asset, Code, Diagnostic, ErrorKind};
 use atlaspack_sourcemap::SourceMap as AtlaspackSourceMap;
 
 use crate::tokens_transformer_config::{PackageJson, TokensTransformerConfig};
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct AtlaspackTokensTransformerPlugin {
   tokens_handler: Option<AtlaskitTokensHandler>,
   token_data_path: String,
@@ -103,11 +103,21 @@ impl AtlaspackTokensTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
-  async fn transform(
-    &self,
-    _ctx: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  fn should_skip(&self, asset: &Asset) -> anyhow::Result<bool> {
+    if self.tokens_handler.is_none() {
+      return Ok(true);
+    }
+
+    if let Ok(code_str) = asset.code.as_str()
+      && !code_str.contains("@atlaskit/tokens")
+    {
+      return Ok(true);
+    }
+
+    Ok(false)
+  }
+
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let Some(tokens_handler) = &self.tokens_handler else {
       return Ok(TransformResult {
         asset,

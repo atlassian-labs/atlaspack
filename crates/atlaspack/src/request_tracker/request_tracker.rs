@@ -21,6 +21,7 @@ use crate::AtlaspackError;
 use crate::WatchEvent;
 use crate::WatchEvents;
 use crate::plugins::PluginsRef;
+use crate::request_tracker::CacheRef;
 use crate::request_tracker::RequestResultSender;
 use crate::requests::RequestResult;
 
@@ -54,6 +55,7 @@ pub struct RequestTracker {
   request_index: HashMap<u64, NodeIndex>,
   invalidations: HashMap<PathBuf, NodeIndex>,
   invalid_nodes: HashSet<NodeIndex>,
+  pub cache: CacheRef,
 }
 
 impl RequestTracker {
@@ -63,6 +65,7 @@ impl RequestTracker {
     options: Arc<AtlaspackOptions>,
     plugins: PluginsRef,
     project_root: PathBuf,
+    cache: CacheRef,
   ) -> Self {
     let mut graph = StableDiGraph::<RequestNode, RequestEdgeType>::new();
 
@@ -78,6 +81,7 @@ impl RequestTracker {
       invalidations: HashMap::new(),
       invalid_nodes: HashSet::new(),
       options,
+      cache,
     }
   }
 
@@ -153,6 +157,7 @@ impl RequestTracker {
             Some(request_id),
             self.plugins.clone(),
             self.project_root.clone(),
+            self.cache.clone(),
             // sub-request run
             Box::new({
               let tx = tx.clone();

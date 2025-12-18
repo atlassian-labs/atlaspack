@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use std::io;
 use std::path::Path;
 
@@ -768,6 +769,14 @@ impl PartialEq for SourceMap {
   fn eq(&self, other: &Self) -> bool {
     // TODO: Add onto this when needed
     self.get_names() == other.get_names()
+  }
+}
+
+// Implement Hash to match PartialEq
+// Should we be including more fields though???
+impl Hash for SourceMap {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.get_names().hash(state)
   }
 }
 

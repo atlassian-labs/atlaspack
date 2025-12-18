@@ -8,6 +8,7 @@ use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::{AtlaspackOptions, SourceField, Targets};
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
+use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter, StatsSnapshot};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::DatabaseHandle;
@@ -17,7 +18,7 @@ use tokio::sync::RwLock;
 use crate::WatchEvents;
 use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
-use crate::request_tracker::{RequestNode, RequestTracker};
+use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
 use crate::requests::{AssetGraphRequest, RequestResult};
 
 pub struct AtlaspackInitOptions {
@@ -94,8 +95,7 @@ impl Atlaspack {
 
     let rpc_worker = rpc.start()?;
 
-    let rc_config_loader =
-      AtlaspackRcConfigLoader::new(Arc::clone(&fs), Arc::clone(&package_manager));
+    let rc_config_loader = AtlaspackRcConfigLoader::new(Arc::clone(&fs), package_manager.clone());
 
     let (config, _files) = rc_config_loader.load(
       &project_root,
@@ -133,7 +133,15 @@ impl Atlaspack {
         // TODO Initialise actual logger
         logger: PluginLogger::default(),
       },
+      package_manager,
     )?);
+
+    let cache_mode = if resolved_options.feature_flags.bool_enabled("v3Caching") {
+      // Validate 1 in 1000 cache requests
+      CacheMode::On(0.001)
+    } else {
+      CacheMode::Off
+    };
 
     let request_tracker = RequestTracker::new(
       config_loader.clone(),
@@ -141,6 +149,10 @@ impl Atlaspack {
       Arc::new(resolved_options.clone()),
       plugins.clone(),
       project_root.clone(),
+      Arc::new(DynCacheHandler::Lmdb(CacheHandler::new(
+        LmdbCacheReaderWriter::new(db.clone()),
+        cache_mode,
+      ))),
     );
 
     Ok(Self {
@@ -224,6 +236,17 @@ impl Atlaspack {
           .respond_to_fs_events(events),
       )
     })
+  }
+
+  /// Get cache statistics
+  pub async fn complete_cache_session(&self) -> Option<StatsSnapshot> {
+    match self.request_tracker.read().await.cache.complete_session() {
+      Ok(stats) => Some(stats),
+      Err(_) => {
+        tracing::warn!("Failed to complete cache session. Cache potentially in an invalid state.");
+        None
+      }
+    }
   }
 
   #[tracing::instrument(level = "info", skip_all)]

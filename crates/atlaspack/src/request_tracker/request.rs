@@ -1,3 +1,7 @@
+use atlaspack_memoization_cache::CacheHandler;
+use atlaspack_memoization_cache::CacheHandlerTrait;
+use atlaspack_memoization_cache::InMemoryReaderWriter;
+use atlaspack_memoization_cache::LmdbCacheReaderWriter;
 use std::fmt::Debug;
 use std::future::Future;
 use std::hash::Hash;
@@ -19,6 +23,43 @@ use dyn_hash::DynHash;
 
 use crate::plugins::PluginsRef;
 use crate::requests::RequestResult;
+
+// Allow the enum size differential as the smaller variant (InMemory) is only used
+// in tests. We also only have a single instance of this enum at a time
+#[allow(clippy::large_enum_variant)]
+pub enum DynCacheHandler {
+  Lmdb(CacheHandler<LmdbCacheReaderWriter>),
+  InMemory(CacheHandler<InMemoryReaderWriter>),
+}
+
+impl DynCacheHandler {
+  pub fn complete_session(&self) -> anyhow::Result<atlaspack_memoization_cache::StatsSnapshot> {
+    match self {
+      DynCacheHandler::Lmdb(cache) => cache.complete_session(),
+      DynCacheHandler::InMemory(cache) => cache.complete_session(),
+    }
+  }
+
+  pub async fn run<Input, RunFn, Res, FutureResult, Error>(
+    &self,
+    input: Input,
+    run_fn: RunFn,
+  ) -> Result<Res, Error>
+  where
+    Input: atlaspack_memoization_cache::Cacheable + Send,
+    Res: atlaspack_memoization_cache::CacheResponse + Send,
+    Error: Send,
+    FutureResult: Future<Output = Result<Res, Error>> + Send,
+    RunFn: FnOnce(Input) -> FutureResult + Send,
+  {
+    match self {
+      DynCacheHandler::Lmdb(cache) => cache.run(input, run_fn).await,
+      DynCacheHandler::InMemory(cache) => cache.run(input, run_fn).await,
+    }
+  }
+}
+
+pub type CacheRef = Arc<DynCacheHandler>;
 
 type ChannelRequestResult = anyhow::Result<(Arc<RequestResult>, RequestId, bool)>;
 pub type RequestResultReceiver = Receiver<ChannelRequestResult>;
@@ -66,6 +107,7 @@ impl Future for ExecuteRequestFuture {
 pub struct RunRequestContext {
   config_loader: ConfigLoaderRef,
   file_system: FileSystemRef,
+  pub cache: CacheRef,
   pub options: Arc<AtlaspackOptions>,
   parent_request_id: Option<u64>,
   plugins: PluginsRef,
@@ -74,6 +116,38 @@ pub struct RunRequestContext {
 }
 
 impl RunRequestContext {
+  /// Create a test context with an in-memory cache
+  #[cfg(test)]
+  pub fn new_for_testing(plugins: PluginsRef) -> Self {
+    use atlaspack_core::config_loader::ConfigLoader;
+    use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
+    use atlaspack_memoization_cache::CacheMode;
+
+    let fs = Arc::new(InMemoryFileSystem::default());
+    let config_loader = Arc::new(ConfigLoader {
+      fs: fs.clone(),
+      project_root: PathBuf::default(),
+      search_path: PathBuf::default(),
+    });
+
+    Self {
+      cache: Arc::new(DynCacheHandler::InMemory(CacheHandler::new(
+        InMemoryReaderWriter::default(),
+        CacheMode::Off,
+      ))),
+      config_loader,
+      file_system: fs,
+      options: Arc::new(AtlaspackOptions::default()),
+      parent_request_id: None,
+      plugins,
+      project_root: PathBuf::default(),
+      run_request_fn: Box::new(|_| {}),
+    }
+  }
+}
+
+impl RunRequestContext {
+  #[allow(clippy::too_many_arguments)]
   pub(crate) fn new(
     config_loader: ConfigLoaderRef,
     file_system: FileSystemRef,
@@ -81,9 +155,11 @@ impl RunRequestContext {
     parent_request_id: Option<u64>,
     plugins: PluginsRef,
     project_root: PathBuf,
+    cache: CacheRef,
     run_request_fn: RunRequestFn,
   ) -> Self {
     Self {
+      cache,
       config_loader,
       file_system,
       options,

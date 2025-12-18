@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 use swc_core::common::DUMMY_SP;
@@ -113,7 +114,7 @@ impl GlobalAliaser {
   ///   "__SENTRY_TRACING__": "false"
   /// }
   /// ``````
-  pub fn with_config(unresolved_mark: Mark, config: &Option<HashMap<String, String>>) -> Self {
+  pub fn with_config(unresolved_mark: Mark, config: &Option<BTreeMap<String, String>>) -> Self {
     let Some(config) = config else {
       return Self::new(unresolved_mark);
     };
@@ -308,7 +309,7 @@ mod tests {
 
   #[test]
   fn test_with_config() {
-    let config = HashMap::from([
+    let config = BTreeMap::from([
       ("custom".into(), "@globalThis".into()),
       ("test".into(), "@replacement".into()),
       ("__CUSTOM__".into(), "true".into()),

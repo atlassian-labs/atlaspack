@@ -1,21 +1,23 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
-use std::sync::Arc;
+use std::path::PathBuf;
 
 use anyhow::{Error, anyhow};
 
 use async_trait::async_trait;
-use atlaspack_core::plugin::{PluginContext, PluginOptions, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
+use atlaspack_core::config_loader::ConfigLoaderRef;
+use atlaspack_core::define_feature_flags;
+use atlaspack_core::plugin::TransformResult;
+use atlaspack_core::plugin::{HmrOptions, PluginContext, TransformerPlugin};
 use atlaspack_core::types::browsers::Browsers;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
-  Asset, BuildMode, Diagnostic, Diagnostics, ErrorKind, FileType, LogLevel, OutputFormat,
+  Asset, BuildMode, DependencyKind, Diagnostic, Diagnostics, ErrorKind, FileType, OutputFormat,
   SourceType,
 };
 use atlaspack_js_swc_core::SyncDynamicImportConfig;
+use derivative::Derivative;
 use glob_match::glob_match;
-use parking_lot::RwLock;
 use swc_core::atoms::Atom;
 
 use crate::js_transformer_config::{
@@ -29,6 +31,30 @@ pub use atlaspack_js_swc_core::JsxConfiguration;
 
 mod conversion;
 
+// Define the feature flags struct for this transformer
+define_feature_flags!(JsTransformerFlags, {
+  conditionalBundlingApi,
+  exportsRebindingOptimisation,
+  hmrImprovements,
+  nestedPromiseImportFix,
+  newJsxConfig
+});
+
+#[derive(Clone, Hash)]
+struct EnvFeatures {
+  enable_ssr_typeof_replacement: bool,
+  global_aliasing_config: Option<BTreeMap<String, String>>,
+  enable_lazy_loading: bool,
+  enable_react_hooks_removal: bool,
+  enable_react_async_import_lift: bool,
+  react_async_lift_by_default: bool,
+  react_async_lift_report_level: String,
+  enable_static_prevaluation: bool,
+  enable_dead_returns_removal: bool,
+  enable_unused_bindings_removal: bool,
+  sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
+}
+
 /// This is a rust only `TransformerPlugin` implementation for JS assets that goes through the
 /// default SWC transformer.
 ///
@@ -40,24 +66,23 @@ mod conversion;
 ///   `Dependency` as well as exported, imported and re-exported symbols (as `Symbol`, usually
 ///   mapping to a mangled name that the SWC transformer replaced in the source file + the source
 ///   module and the source name that has been imported)
+#[derive(Derivative)]
+#[derivative(Hash)]
 pub struct AtlaspackJsTransformerPlugin {
-  cache: RwLock<Cache>,
   config: JsTransformerConfig,
-  options: Arc<PluginOptions>,
+  project_root: PathBuf,
+  mode: BuildMode,
+  source_asset_env: BTreeMap<Atom, Atom>,
+  external_asset_env: BTreeMap<Atom, Atom>,
+  hmr_options: Option<HmrOptions>,
+  feature_flags: JsTransformerFlags,
+  core_path: PathBuf,
   ts_config: Option<TsConfig>,
-}
-
-#[derive(Default)]
-struct Cache {
-  env_variables: EnvVariablesCache,
-  sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
-}
-
-#[derive(Default)]
-struct EnvVariablesCache {
-  allowlist: Option<HashMap<Atom, Atom>>,
-  disabled: Option<HashMap<Atom, Atom>>,
-  enabled: Option<HashMap<Atom, Atom>>,
+  env_features: EnvFeatures,
+  // We can ignore this from cache because when it's used we trigger a cache
+  // bailout. Should be removed once we clean-up the "newJsxConfig" feature flag.
+  #[derivative(Hash = "ignore")]
+  config_loader: ConfigLoaderRef,
 }
 
 impl AtlaspackJsTransformerPlugin {
@@ -93,11 +118,46 @@ impl AtlaspackJsTransformerPlugin {
       })
       .ok();
 
+    // Filter environment variables based on inline_environment config to only include
+    // what's needed in the cache key. This prevents unnecessary cache invalidation.
+    // Note: We have two envs, one for source assets and one for external
+    // assets. For assets with custom_env, the filtering will be done on-demand in env_variables().
+    let source_asset_env = Self::filter_env_vars(
+      &ctx.options.env,
+      config
+        .inline_environment
+        .as_ref()
+        .unwrap_or(&InlineEnvironment::Enabled(true)),
+    );
+    let external_asset_env = Self::filter_env_vars(
+      &ctx.options.env,
+      config
+        .inline_environment
+        .as_ref()
+        .unwrap_or(&InlineEnvironment::Enabled(false)),
+    );
+
+    let env_features = Self::get_env_features(&ctx.options.env);
+
+    let core_path = ctx.options.core_path.clone();
+    let hmr_options = ctx.options.hmr_options.clone();
+    let mode = ctx.options.mode.clone();
+    let project_root = ctx.options.project_root.clone();
+
+    let feature_flags = JsTransformerFlags::new(&ctx.options.feature_flags);
+
     Ok(Self {
-      cache: Default::default(),
       config,
-      options: ctx.options.clone(),
+      core_path,
+      source_asset_env,
+      external_asset_env,
+      env_features,
+      feature_flags,
+      hmr_options,
+      mode,
+      project_root,
       ts_config,
+      config_loader: ctx.config.clone(),
     })
   }
 
@@ -116,112 +176,130 @@ impl AtlaspackJsTransformerPlugin {
       file_type,
       asset.is_source,
       &self.config.jsx,
-      &self.options.project_root,
+      &self.project_root,
     )
   }
 }
 
 impl AtlaspackJsTransformerPlugin {
-  fn env_variables(&self, asset: &Asset) -> HashMap<Atom, Atom> {
-    if self.options.env.is_none()
-      || self
-        .options
-        .env
-        .as_ref()
-        .is_some_and(|vars| vars.is_empty())
-    {
-      // Still check for custom env even if global env is empty
-      if asset.env.custom_env.is_none() {
-        return HashMap::new();
-      }
-    }
-
-    // Merge global environment variables with asset's custom environment variables
-    let mut env_vars = self.options.env.clone().unwrap_or_default();
-    if let Some(custom_env) = &asset.env.custom_env {
-      env_vars.extend(custom_env.clone());
-    }
-    let inline_environment = self
-      .config
-      .inline_environment
-      .clone()
-      .unwrap_or(InlineEnvironment::Enabled(asset.is_source));
-
+  /// Filters a set of environment variables based on the inline_environment configuration.
+  /// This is a shared helper used both for cache key generation and runtime filtering.
+  fn filter_env_vars(
+    env_vars: &BTreeMap<String, String>,
+    inline_environment: &InlineEnvironment,
+  ) -> BTreeMap<Atom, Atom> {
     match inline_environment {
-      InlineEnvironment::Enabled(enabled) => match enabled {
-        false => {
-          if let Some(vars) = self.cache.read().env_variables.disabled.as_ref() {
-            return vars.clone();
-          }
-
-          let mut vars: HashMap<Atom, Atom> = HashMap::new();
-
-          if let Some(node_env) = env_vars.get("NODE_ENV") {
-            vars.insert("NODE_ENV".into(), node_env.as_str().into());
-          }
-
-          if let Some(build_env) = env_vars.get("ATLASPACK_BUILD_ENV")
-            && build_env == "test"
-          {
-            vars.insert("ATLASPACK_BUILD_ENV".into(), "test".into());
-          }
-
-          self.cache.write().env_variables.disabled = Some(vars.clone());
-
-          vars
+      InlineEnvironment::Enabled(false) => {
+        // Only include NODE_ENV and ATLASPACK_BUILD_ENV when disabled
+        let mut filtered = BTreeMap::new();
+        if let Some(node_env) = env_vars.get("NODE_ENV") {
+          filtered.insert("NODE_ENV".into(), node_env.clone().into());
         }
-        true => {
-          if let Some(vars) = self.cache.read().env_variables.enabled.as_ref() {
-            return vars.clone();
-          }
-
-          let vars = env_vars
-            .iter()
-            .map(|(key, value)| (key.as_str().into(), value.as_str().into()))
-            .collect::<HashMap<Atom, Atom>>();
-
-          self.cache.write().env_variables.enabled = Some(vars.clone());
-
-          vars
+        if let Some(build_env) = env_vars.get("ATLASPACK_BUILD_ENV")
+          && build_env == "test"
+        {
+          filtered.insert("ATLASPACK_BUILD_ENV".into(), build_env.clone().into());
         }
-      },
+        filtered
+      }
+      InlineEnvironment::Enabled(true) => {
+        // Include all env vars
+        let mut filtered = BTreeMap::new();
+        for (key, value) in env_vars.iter() {
+          filtered.insert(key.clone().into(), value.clone().into());
+        }
+        filtered
+      }
       InlineEnvironment::Environments(environments) => {
-        if let Some(vars) = self.cache.read().env_variables.allowlist.as_ref() {
-          return vars.clone();
-        }
-
-        let mut vars: HashMap<Atom, Atom> = HashMap::new();
+        // Filter based on glob patterns
+        let mut filtered = BTreeMap::new();
         for env_glob in environments {
-          for (env_var, value) in env_vars
-            .iter()
-            .filter(|(key, _value)| glob_match(&env_glob, key))
-          {
-            vars.insert(env_var.as_str().into(), value.as_str().into());
+          for (key, value) in env_vars.iter() {
+            if glob_match(env_glob, key) {
+              filtered.insert(key.clone().into(), value.clone().into());
+            }
           }
         }
-
-        self.cache.write().env_variables.allowlist = Some(vars.clone());
-
-        vars
+        filtered
       }
     }
   }
 
-  fn sync_dynamic_import_config(&self) -> Option<SyncDynamicImportConfig> {
-    if let Some(env_vars) = &self.options.env
-      && let Some(config_json) = env_vars.get("SYNC_DYNAMIC_IMPORT_CONFIG")
-    {
-      if let Some(cached) = self.cache.read().sync_dynamic_import_config.as_ref() {
-        return Some(cached.clone());
-      }
+  fn env_variables(&self, asset: &Asset) -> BTreeMap<Atom, Atom> {
+    let env = if asset.is_source {
+      &self.source_asset_env
+    } else {
+      &self.external_asset_env
+    };
 
-      match serde_json::from_str::<SyncDynamicImportConfig>(config_json) {
-        Ok(config) => {
-          self.cache.write().sync_dynamic_import_config = Some(config.clone());
-          return Some(config);
-        }
-        Err(_) => {
+    if let Some(custom_env) = &asset.env.custom_env {
+      let mut filtered_custom_env = Self::filter_env_vars(
+        custom_env,
+        self
+          .config
+          .inline_environment
+          .as_ref()
+          .unwrap_or(&InlineEnvironment::Enabled(asset.is_source)),
+      );
+
+      filtered_custom_env.extend(env.clone());
+
+      return filtered_custom_env;
+    }
+
+    env.clone()
+  }
+
+  fn get_env_features(env_vars: &BTreeMap<String, String>) -> EnvFeatures {
+    let enable_ssr_typeof_replacement = env_vars
+      .get("NATIVE_SSR_TYPEOF_REPLACEMENT")
+      .is_some_and(|v| v == "true");
+    let global_aliasing_config = match env_vars.get("NATIVE_GLOBAL_ALIASING") {
+      Some(value) => match serde_json::from_str::<BTreeMap<String, String>>(value) {
+        Ok(config) => Some(config),
+        Err(err) => {
           eprintln!(
+            "Failed to parse NATIVE_GLOBAL_ALIASING JSON: {}. Config will not be applied.",
+            err
+          );
+          None
+        }
+      },
+      None => None,
+    };
+    let enable_lazy_loading = env_vars
+      .get("NATIVE_LAZY_LOADING")
+      .is_some_and(|v| v == "true");
+    let enable_react_hooks_removal = env_vars
+      .get("NATIVE_REACT_HOOKS_REMOVAL")
+      .is_some_and(|v| v == "true");
+    let enable_react_async_import_lift = env_vars
+      .get("NATIVE_REACT_ASYNC_IMPORT_LIFT")
+      .is_some_and(|v| v == "true");
+    let react_async_lift_by_default = env_vars
+      .get("REACT_ASYNC_IMPORT_LIFTING_BY_DEFAULT")
+      .is_some_and(|v| v == "true");
+    let react_async_lift_report_level = env_vars
+      .get("REACT_ASYNC_LIFT_REPORT_LEVEL")
+      .cloned()
+      .unwrap_or_else(|| String::from("none"));
+    let enable_static_prevaluation = env_vars
+      .get("NATIVE_PREVALUATION")
+      .is_some_and(|v| v == "true");
+    let enable_dead_returns_removal = env_vars
+      .get("NATIVE_DEAD_RETURNS_REMOVAL")
+      .is_some_and(|v| v == "true");
+    let enable_unused_bindings_removal = env_vars
+      .get("NATIVE_UNUSED_BINDINGS_REMOVAL")
+      .is_some_and(|v| v == "true");
+
+    let sync_dynamic_import_config = if let Some(sync_dynamic_import_config) =
+      env_vars.get("SYNC_DYNAMIC_IMPORT_CONFIG")
+    {
+      match serde_json::from_str::<SyncDynamicImportConfig>(sync_dynamic_import_config) {
+        Ok(config) => Some(config),
+        Err(_) => {
+          tracing::error!(
             "Failed to parse SYNC_DYNAMIC_IMPORT_CONFIG to JSON or config shape did not match. Config will not be applied."
           );
 
@@ -230,48 +308,43 @@ impl AtlaspackJsTransformerPlugin {
             actual_require_paths: vec![],
           };
 
-          self.cache.write().sync_dynamic_import_config = Some(fallback.clone());
-
-          return Some(fallback);
+          Some(fallback)
         }
       }
-    }
+    } else {
+      None
+    };
 
-    None
+    EnvFeatures {
+      enable_ssr_typeof_replacement,
+      global_aliasing_config,
+      enable_lazy_loading,
+      enable_react_hooks_removal,
+      enable_react_async_import_lift,
+      react_async_lift_by_default,
+      react_async_lift_report_level,
+      enable_static_prevaluation,
+      enable_dead_returns_removal,
+      enable_unused_bindings_removal,
+      sync_dynamic_import_config,
+    }
   }
 }
 
 impl fmt::Debug for AtlaspackJsTransformerPlugin {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    f.debug_struct("AtlaspackJsTransformerPlugin")
-      .field("options", &self.options)
-      .finish()
+    f.debug_struct("AtlaspackJsTransformerPlugin").finish()
   }
 }
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackJsTransformerPlugin {
   /// This does equivalent work to `JSTransformer::transform` in `packages/transformers/js`
-  async fn transform(
-    &self,
-    context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let env = asset.env.clone();
     let is_node = env.context.is_node();
     let source_code = asset.code.clone();
-
-    let feature_flag_conditional_bundling = self
-      .options
-      .feature_flags
-      .bool_enabled("conditionalBundlingApi");
-
-    let feature_flag_hmr_improvements = self.options.feature_flags.bool_enabled("hmrImprovements");
-
-    let feature_flag_exports_rebinding_optimisation = self
-      .options
-      .feature_flags
-      .bool_enabled("exportsRebindingOptimisation");
+    let mut cache_bailout = false;
 
     let mut targets: HashMap<String, String> = HashMap::new();
     if env.context.is_browser() {
@@ -305,47 +378,23 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
     let env_vars = self.env_variables(&asset);
 
-    let enable_ssr_typeof_replacement = env_vars
-      .get(&Atom::from("NATIVE_SSR_TYPEOF_REPLACEMENT"))
-      .is_some_and(|v| v == "true");
-    let global_aliasing_config = match env_vars.get(&Atom::from("NATIVE_GLOBAL_ALIASING")) {
-      Some(value) => match serde_json::from_str::<HashMap<String, String>>(value) {
-        Ok(config) => Some(config),
-        Err(err) => {
-          eprintln!(
-            "Failed to parse NATIVE_GLOBAL_ALIASING JSON: {}. Config will not be applied.",
-            err
-          );
-          None
-        }
-      },
-      None => None,
-    };
-    let enable_lazy_loading =
-      env_vars.get(&Atom::from("NATIVE_LAZY_LOADING")) == Some(&Atom::from("true"));
-    let enable_react_hooks_removal =
-      env_vars.get(&Atom::from("NATIVE_REACT_HOOKS_REMOVAL")) == Some(&Atom::from("true"));
-    let enable_react_async_import_lift =
-      env_vars.get(&Atom::from("NATIVE_REACT_ASYNC_IMPORT_LIFT")) == Some(&Atom::from("true"));
-    let react_async_lift_by_default = env_vars
-      .get(&Atom::from("REACT_ASYNC_IMPORT_LIFTING_BY_DEFAULT"))
-      == Some(&Atom::from("true"));
-    let react_async_lift_report_level = env_vars
-      .get(&Atom::from("REACT_ASYNC_LIFT_REPORT_LEVEL"))
-      .cloned()
-      .unwrap_or_else(|| Atom::from("none"))
-      .to_string();
-    let enable_static_prevaluation =
-      env_vars.get(&Atom::from("NATIVE_PREVALUATION")) == Some(&Atom::from("true"));
-    let enable_dead_returns_removal =
-      env_vars.get(&Atom::from("NATIVE_DEAD_RETURNS_REMOVAL")) == Some(&Atom::from("true"));
-    let enable_unused_bindings_removal =
-      env_vars.get(&Atom::from("NATIVE_UNUSED_BINDINGS_REMOVAL")) == Some(&Atom::from("true"));
-    let sync_dynamic_import_config = if env.context.is_tesseract() {
-      self.sync_dynamic_import_config()
-    } else {
-      None
-    };
+    let EnvFeatures {
+      enable_ssr_typeof_replacement,
+      global_aliasing_config,
+      enable_lazy_loading,
+      enable_react_hooks_removal,
+      enable_react_async_import_lift,
+      react_async_lift_by_default,
+      react_async_lift_report_level,
+      enable_static_prevaluation,
+      enable_dead_returns_removal,
+      enable_unused_bindings_removal,
+      mut sync_dynamic_import_config,
+    } = self.env_features.clone();
+
+    if !env.context.is_tesseract() {
+      sync_dynamic_import_config = None;
+    }
 
     let compiler_options = self
       .ts_config
@@ -360,11 +409,16 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       jsx_import_source,
       automatic_jsx_runtime,
       react_refresh,
-    } = if self.options.feature_flags.bool_enabled("newJsxConfig") {
+    } = if self.feature_flags.newJsxConfig() {
       self.determine_jsx_configuration(&asset)
     } else {
+      // Old JSX configuration logic so cache bailout is required
+      cache_bailout = true;
       // With newJsxConfig disabled, use the old logic
-      let package_json = context.config().load_package_json::<PackageJson>().ok();
+      let package_json = self
+        .config_loader
+        .load_local_package_json::<PackageJson>(&asset.file_path)
+        .ok();
       let is_jsx = matches!(asset.file_type, FileType::Jsx | FileType::Tsx);
 
       let automatic_jsx_runtime = compiler_options
@@ -414,7 +468,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       inline_fs: !env.context.is_node() && self.config.inline_fs.unwrap_or(true),
       insert_node_globals: !is_node && env.source_type != SourceType::Script,
       is_browser: env.context.is_browser(),
-      is_development: self.options.mode == BuildMode::Development,
+      is_development: self.mode == BuildMode::Development,
       is_esm_output: env.output_format == OutputFormat::EsModule,
       is_jsx,
       is_library: env.is_library,
@@ -427,9 +481,9 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       add_display_name: self.config.add_react_display_name,
       module_id: asset.id.to_string(),
       node_replacer: is_node,
-      project_root: self.options.project_root.to_string_lossy().into_owned(),
-      react_refresh: self.options.hmr_options.is_some()
-        && self.options.mode == BuildMode::Development
+      project_root: self.project_root.to_string_lossy().into_owned(),
+      react_refresh: self.hmr_options.is_some()
+        && self.mode == BuildMode::Development
         && react_refresh
         && env.context.is_browser()
         && !env.is_library
@@ -445,7 +499,7 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       supports_module_workers: env.should_scope_hoist
         && env.engines.supports(EnvironmentFeature::WorkerModule),
       targets: (!targets.is_empty()).then_some(targets),
-      trace_bailouts: self.options.log_level == LogLevel::Verbose,
+      trace_bailouts: false, // Simplified: could be made configurable if needed
       use_define_for_class_fields: compiler_options
         .map(|co| {
           co.use_define_for_class_fields.unwrap_or_else(|| {
@@ -456,13 +510,10 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
           })
         })
         .unwrap_or_default(),
-      conditional_bundling: feature_flag_conditional_bundling,
-      hmr_improvements: feature_flag_hmr_improvements,
-      exports_rebinding_optimisation: feature_flag_exports_rebinding_optimisation,
-      nested_promise_import_fix: self
-        .options
-        .feature_flags
-        .bool_enabled("nestedPromiseImportFix"),
+      conditional_bundling: self.feature_flags.conditionalBundlingApi(),
+      hmr_improvements: self.feature_flags.hmrImprovements(),
+      exports_rebinding_optimisation: self.feature_flags.exportsRebindingOptimisation(),
+      nested_promise_import_fix: self.feature_flags.nestedPromiseImportFix(),
       enable_ssr_typeof_replacement,
       global_aliasing_config,
       enable_lazy_loading,
@@ -474,10 +525,24 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       enable_dead_returns_removal,
       enable_unused_bindings_removal,
       sync_dynamic_import_config,
-      ..atlaspack_js_swc_core::Config::default()
+      is_swc_helpers: false,
+      standalone: false,
     };
 
     let transformation_result = atlaspack_js_swc_core::transform(&transform_config, None)?;
+
+    if transformation_result
+      .dependencies
+      .iter()
+      .any(|dep| matches!(dep.kind, DependencyKind::File))
+    {
+      // If we've inlined FS call then the result is not cacheable
+      tracing::info!(
+        "Asset {} has inlined FS calls, marking transform result as non-cacheable",
+        asset.file_path.display()
+      );
+      cache_bailout = true;
+    }
 
     if let Some(errors) = transformation_result.diagnostics {
       return Err(anyhow!(map_diagnostics(
@@ -490,13 +555,18 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
       )));
     }
 
-    let result = conversion::convert_result(
+    let mut result = conversion::convert_result(
       asset,
       &transform_config,
       transformation_result,
-      &self.options,
+      &self.project_root,
+      &self.mode,
+      &self.core_path,
+      &self.hmr_options,
     )
     .map_err(|errors| anyhow!(Diagnostics::from(errors)))?;
+
+    result.cache_bailout = cache_bailout;
 
     Ok(result)
   }
@@ -504,11 +574,14 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 
 #[cfg(test)]
 mod tests {
-  use std::path::{Path, PathBuf};
+  use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+  };
 
   use atlaspack_core::{
     config_loader::ConfigLoader,
-    plugin::PluginLogger,
+    plugin::{PluginLogger, PluginOptions},
     types::{
       Code, DependencyBuilder, DependencyKind, Environment, EnvironmentContext, FeatureFlags,
       Location, Priority, SourceLocation, SpecifierType, Symbol,
@@ -545,7 +618,8 @@ mod tests {
         },
         discovered_assets: vec![],
         dependencies: vec![],
-        invalidate_on_file_change: vec![]
+        invalidate_on_file_change: vec![],
+        cache_bailout: false,
       }
     );
 
@@ -656,36 +730,51 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn transforms_react_with_automatic_runtime_glob() -> anyhow::Result<()> {
-    // Test automatic JSX runtime with glob pattern matching
-    let file_system = Arc::new(InMemoryFileSystem::default());
+    use atlaspack_test_fixtures::test_fixture;
 
-    let target_asset = create_asset(
-      "src/components/Button.tsx",
-      "
+    // Test automatic JSX runtime with glob pattern matching
+    let project_root = PathBuf::from("/");
+    let file_system = test_fixture! {
+      project_root.clone(),
+      "package.json" => r#"{
+        "@atlaspack/transformer-js": {
+          "jsx": {
+            "pragma": "React.createElement",
+            "pragmaFragment": "React.Fragment",
+            "importSource": "react",
+            "automaticRuntime": {
+              "include": ["src/components/**/*.tsx"],
+              "exclude": []
+            }
+          }
+        }
+      }"#,
+      "src/components/Button.tsx" => r#"
         const Component = () => {
           return <div>Hello World</div>;
         };
 
         export default Component;
-      ",
+      "#
+    };
+
+    let target_asset = create_asset_at_project_root(
+      &project_root,
+      "/src/components/Button.tsx",
+      r#"
+        const Component = () => {
+          return <div>Hello World</div>;
+        };
+
+        export default Component;
+      "#,
     );
 
     let result = run_test(TestOptions {
-      asset: target_asset.clone(),
-      file_system: Some(file_system.clone()),
-      js_transformer_config: Some(JsTransformerConfig {
-        jsx: Some(JsxOptions {
-          pragma: Some("React.createElement".to_string()),
-          pragma_fragment: Some("React.Fragment".to_string()),
-          import_source: Some("react".to_string()),
-          automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
-            include: vec!["src/components/**/*.tsx".to_string()],
-            exclude: None,
-          })),
-        }),
-        ..Default::default()
-      }),
-      ..TestOptions::default()
+      asset: target_asset,
+      file_system: Some(file_system),
+      project_root: Some(project_root),
+      ..Default::default()
     })
     .await?;
 
@@ -711,36 +800,51 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn transforms_react_without_automatic_runtime_glob_no_match() -> anyhow::Result<()> {
-    // Test that files not matching glob pattern don't get automatic runtime
-    let file_system = Arc::new(InMemoryFileSystem::default());
+    use atlaspack_test_fixtures::test_fixture;
 
-    let target_asset = create_asset(
-      "src/pages/Home.tsx", // Different path that won't match components/**
-      "
+    // Test that files not matching glob pattern don't get automatic runtime
+    let project_root = PathBuf::from("/test");
+    let file_system = test_fixture! {
+      project_root.clone(),
+      "package.json" => r#"{
+        "@atlaspack/transformer-js": {
+          "jsx": {
+            "pragma": "React.createElement",
+            "pragmaFragment": "React.Fragment",
+            "importSource": "react",
+            "automaticRuntime": {
+              "include": ["src/components/**/*.tsx"],
+              "exclude": []
+            }
+          }
+        }
+      }"#,
+      "src/pages/Home.tsx" => r#"
         const Component = () => {
           return <div>Hello World</div>;
         };
 
         export default Component;
-      ",
+      "#
+    };
+
+    let target_asset = create_asset_at_project_root(
+      &project_root,
+      "src/pages/Home.tsx",
+      r#"
+        const Component = () => {
+          return <div>Hello World</div>;
+        };
+
+        export default Component;
+      "#,
     );
 
     let result = run_test(TestOptions {
-      asset: target_asset.clone(),
-      file_system: Some(file_system.clone()),
-      js_transformer_config: Some(JsTransformerConfig {
-        jsx: Some(JsxOptions {
-          pragma: Some("React.createElement".to_string()),
-          pragma_fragment: Some("React.Fragment".to_string()),
-          import_source: Some("react".to_string()),
-          automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
-            include: vec!["src/components/**/*.tsx".to_string()], // This won't match src/pages/Home.tsx
-            exclude: None,
-          })),
-        }),
-        ..Default::default()
-      }),
-      ..TestOptions::default()
+      asset: target_asset,
+      file_system: Some(file_system),
+      project_root: Some(project_root),
+      ..Default::default()
     })
     .await?;
 
@@ -759,41 +863,53 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn transforms_react_with_automatic_runtime_glob_outside_project_root() -> anyhow::Result<()>
   {
-    // Test automatic JSX runtime with glob pattern matching files outside project root
-    let file_system = Arc::new(InMemoryFileSystem::default());
+    use atlaspack_test_fixtures::test_fixture;
 
+    // Test automatic JSX runtime with glob pattern matching files outside project root
     // Asset is outside the project root: /dir/other-project/index.tsx
     // Project root is: /dir/my-project
-    let project_root = Path::new("/dir/my-project");
-    let target_asset = create_asset_at_project_root(
-      project_root,
-      "/dir/other-project/index.tsx",
-      "
+    let project_root = PathBuf::from("/dir/my-project");
+    let file_system = test_fixture! {
+      project_root.clone(),
+      "package.json" => r#"{
+        "@atlaspack/transformer-js": {
+          "jsx": {
+            "pragma": "React.createElement",
+            "pragmaFragment": "React.Fragment",
+            "importSource": "react",
+            "automaticRuntime": {
+              "include": ["../other-project/**/*.tsx"],
+              "exclude": []
+            }
+          }
+        }
+      }"#,
+      "../other-project/index.tsx" => r#"
         const Component = () => {
           return <div>Outside Project Root</div>;
         };
 
         export default Component;
-      ",
+      "#
+    };
+
+    let target_asset = create_asset_at_project_root(
+      &project_root,
+      "/dir/other-project/index.tsx",
+      r#"
+        const Component = () => {
+          return <div>Outside Project Root</div>;
+        };
+
+        export default Component;
+      "#,
     );
 
     let result = run_test(TestOptions {
-      asset: target_asset.clone(),
-      file_system: Some(file_system.clone()),
-      project_root: Some(PathBuf::from("/dir/my-project")), // Project root different from asset path
-      js_transformer_config: Some(JsTransformerConfig {
-        jsx: Some(JsxOptions {
-          pragma: Some("React.createElement".to_string()),
-          pragma_fragment: Some("React.Fragment".to_string()),
-          import_source: Some("react".to_string()),
-          automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
-            include: vec!["../other-project/**/*.tsx".to_string()],
-            exclude: None,
-          })),
-        }),
-        ..Default::default()
-      }),
-      ..TestOptions::default()
+      asset: target_asset,
+      file_system: Some(file_system),
+      project_root: Some(project_root),
+      ..Default::default()
     })
     .await?;
 
@@ -819,42 +935,54 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn transforms_react_without_automatic_runtime_glob_outside_project_root_no_match()
   -> anyhow::Result<()> {
-    // Test that files outside project root that don't match glob use classic runtime
-    let file_system = Arc::new(InMemoryFileSystem::default());
+    use atlaspack_test_fixtures::test_fixture;
 
+    // Test that files outside project root that don't match glob use classic runtime
     // Asset is outside the project root: /dir/another-project/index.tsx
     // Project root is: /dir/my-project
     // Glob pattern: ../other-project/** should NOT match
-    let project_root = Path::new("/dir/my-project");
-    let target_asset = create_asset_at_project_root(
-      project_root,
-      "/dir/another-project/index.tsx",
-      "
+    let project_root = PathBuf::from("/dir/my-project");
+    let file_system = test_fixture! {
+      project_root.clone(),
+      "package.json" => r#"{
+        "@atlaspack/transformer-js": {
+          "jsx": {
+            "pragma": "React.createElement",
+            "pragmaFragment": "React.Fragment",
+            "importSource": "react",
+            "automaticRuntime": {
+              "include": ["../other-project/**"],
+              "exclude": []
+            }
+          }
+        }
+      }"#,
+      "../another-project/index.tsx" => r#"
         const Component = () => {
           return <div>Different Outside Project</div>;
         };
 
         export default Component;
-      ",
+      "#
+    };
+
+    let target_asset = create_asset_at_project_root(
+      &project_root,
+      "/dir/another-project/index.tsx",
+      r#"
+        const Component = () => {
+          return <div>Different Outside Project</div>;
+        };
+
+        export default Component;
+      "#,
     );
 
     let result = run_test(TestOptions {
-      asset: target_asset.clone(),
-      file_system: Some(file_system.clone()),
-      project_root: Some(PathBuf::from("/dir/my-project")), // Project root different from asset path
-      js_transformer_config: Some(JsTransformerConfig {
-        jsx: Some(JsxOptions {
-          pragma: Some("React.createElement".to_string()),
-          pragma_fragment: Some("React.Fragment".to_string()),
-          import_source: Some("react".to_string()),
-          automatic_runtime: Some(AutomaticReactRuntime::Glob(AutomaticRuntimeGlobs {
-            include: vec!["../other-project/**".to_string()], // Should NOT match /dir/another-project/
-            exclude: None,
-          })),
-        }),
-        ..Default::default()
-      }),
-      ..TestOptions::default()
+      asset: target_asset,
+      file_system: Some(file_system),
+      project_root: Some(project_root),
+      ..Default::default()
     })
     .await?;
 
@@ -873,28 +1001,33 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn transforms_react_with_inferred_automatic_runtime_from_package_json() -> anyhow::Result<()>
   {
-    async fn test_version(version: &str) -> anyhow::Result<()> {
-      let file_system = Arc::new(InMemoryFileSystem::default());
-      let target_asset = create_asset("index.jsx", "const main = () => <div />;");
+    use atlaspack_test_fixtures::test_fixture;
 
-      file_system.write_file(
-        Path::new("package.json"),
-        format!(r#"{{ "dependencies": {{ "react": "{version}" }} }}"#,),
-      );
+    async fn test_version(version: &str) -> anyhow::Result<()> {
+      let project_root = PathBuf::from("/test");
+      let file_system = test_fixture! {
+        project_root.clone(),
+        "package.json" => &format!(r#"{{
+          "dependencies": {{ "react": "{version}" }},
+          "@atlaspack/transformer-js": {{
+            "jsx": {{
+              "pragma": "React.createElement",
+              "pragmaFragment": "React.Fragment",
+              "automaticRuntime": true
+            }}
+          }}
+        }}"#),
+        "index.jsx" => "const main = () => <div />;"
+      };
+
+      let target_asset =
+        create_asset_at_project_root(&project_root, "index.jsx", "const main = () => <div />;");
 
       let result = run_test(TestOptions {
         asset: target_asset.clone(),
         file_system: Some(file_system),
-        js_transformer_config: Some(JsTransformerConfig {
-          jsx: Some(JsxOptions {
-            pragma: Some("React.createElement".to_string()),
-            pragma_fragment: Some("React.Fragment".to_string()),
-            import_source: None,
-            automatic_runtime: Some(AutomaticReactRuntime::Enabled(true)),
-          }),
-          ..Default::default()
-        }),
-        ..TestOptions::default()
+        project_root: Some(project_root),
+        ..Default::default()
       })
       .await?;
 
@@ -1069,12 +1202,25 @@ mod tests {
     let mut transformer = AtlaspackJsTransformerPlugin::new(&PluginContext {
       config: Arc::new(ConfigLoader {
         fs: Arc::new(InMemoryFileSystem::default()),
-        project_root: PathBuf::from("test"),
-        search_path: PathBuf::from("test"),
+        project_root: PathBuf::from("/"),
+        search_path: PathBuf::from("/"),
       }),
       file_system: Arc::new(InMemoryFileSystem::default()),
       logger: PluginLogger::default(),
-      options: Arc::new(PluginOptions::default()),
+      options: Arc::new(PluginOptions {
+        project_root: PathBuf::from("/"),
+        mode: BuildMode::Development,
+        env: BTreeMap::new(),
+        hmr_options: None,
+        core_path: PathBuf::from("test"),
+        feature_flags: FeatureFlags::default()
+          .with_bool_flag_default("conditionalBundlingApi", true)
+          .with_bool_flag_default("hmrImprovements", true)
+          .with_bool_flag_default("nestedPromiseImportFix", true)
+          .with_bool_flag_default("exportsRebindingOptimisation", true)
+          .with_bool_flag_default("newJsxConfig", true),
+        ..PluginOptions::default()
+      }),
     })
     .unwrap();
 
@@ -1273,7 +1419,7 @@ mod tests {
 
     // Case 8: Test AutomaticReactRuntime::Glob functionality
     let test_asset = Asset {
-      file_path: PathBuf::from("src/components/Button.tsx"),
+      file_path: PathBuf::from("/src/components/Button.tsx"),
       file_type: FileType::Tsx,
       is_source: true,
       env: asset.env.clone(),
@@ -1297,8 +1443,8 @@ mod tests {
     let jsx_config = transformer.determine_jsx_configuration(&test_asset);
     let automatic_jsx_runtime = jsx_config.automatic_jsx_runtime;
 
-    assert!(
-      automatic_jsx_runtime,
+    assert_eq!(
+      automatic_jsx_runtime, true,
       "Files matching glob pattern should have automatic JSX runtime enabled"
     );
 
@@ -1334,13 +1480,29 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn js_file_with_tsconfig_and_react() -> anyhow::Result<()> {
+      use atlaspack_test_fixtures::test_fixture;
+
       // Case 1: .js file with React dependency and tsconfig jsx: "react"
       // Expected: JSX should be enabled and transformed
-      let file_system = Arc::new(InMemoryFileSystem::default());
-
-      let target_asset = create_asset(
-        "render.js",
-        "
+      let project_root = PathBuf::from("/test");
+      let file_system = test_fixture! {
+        project_root.clone(),
+        "package.json" => r#"{
+          "dependencies": { "react": "^18.0.0" },
+          "@atlaspack/transformer-js": {
+            "jsx": {
+              "pragma": "React.createElement",
+              "pragmaFragment": "React.Fragment"
+            }
+          }
+        }"#,
+        "tsconfig.json" => r#"{
+          "compilerOptions": {
+            "jsx": "react",
+            "target": "es2015"
+          }
+        }"#,
+        "render.js" => r#"
           import React from 'react';
 
           const Component = () => {
@@ -1348,40 +1510,28 @@ mod tests {
           };
 
           export default Component;
-        ",
-      );
+        "#
+      };
 
-      // Set up package.json with React dependency
-      file_system.write_file(
-        Path::new("package.json"),
-        r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
-      );
+      let target_asset = create_asset_at_project_root(
+        &project_root,
+        "render.js",
+        r#"
+          import React from 'react';
 
-      // Set up tsconfig.json with JSX configuration
-      file_system.write_file(
-        Path::new("tsconfig.json"),
-        r#"{
-          "compilerOptions": {
-            "jsx": "react",
-            "target": "es2015"
-          }
-        }"#
-          .to_string(),
+          const Component = () => {
+            return <div>Hello World</div>;
+          };
+
+          export default Component;
+        "#,
       );
 
       let result = run_test(TestOptions {
-        asset: target_asset.clone(),
+        asset: target_asset,
         file_system: Some(file_system),
-        js_transformer_config: Some(JsTransformerConfig {
-          jsx: Some(JsxOptions {
-            pragma: Some("React.createElement".to_string()),
-            pragma_fragment: Some("React.Fragment".to_string()),
-            import_source: None,
-            automatic_runtime: None,
-          }),
-          ..Default::default()
-        }),
-        ..TestOptions::default()
+        project_root: Some(project_root),
+        ..Default::default()
       })
       .await;
       let transform_result = result?;
@@ -1470,13 +1620,23 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn js_file_with_react_only() -> anyhow::Result<()> {
+      use atlaspack_test_fixtures::test_fixture;
+
       // Case 3: .js file with React dependency but NO tsconfig
       // Expected: JSX should be enabled and transformed
-      let file_system = Arc::new(InMemoryFileSystem::default());
-
-      let target_asset = create_asset(
-        "render.js",
-        "
+      let project_root = PathBuf::from("/test");
+      let file_system = test_fixture! {
+        project_root.clone(),
+        "package.json" => r#"{
+          "dependencies": { "react": "^18.0.0" },
+          "@atlaspack/transformer-js": {
+            "jsx": {
+              "pragma": "React.createElement",
+              "pragmaFragment": "React.Fragment"
+            }
+          }
+        }"#,
+        "render.js" => r#"
           import React from 'react';
 
           const Component = () => {
@@ -1484,28 +1644,28 @@ mod tests {
           };
 
           export default Component;
-        ",
-      );
+        "#
+      };
 
-      // Set up package.json with React dependency
-      file_system.write_file(
-        Path::new("package.json"),
-        r#"{ "dependencies": { "react": "^18.0.0" } }"#.to_string(),
+      let target_asset = create_asset_at_project_root(
+        &project_root,
+        "render.js",
+        r#"
+          import React from 'react';
+
+          const Component = () => {
+            return <div>Hello World</div>;
+          };
+
+          export default Component;
+        "#,
       );
 
       let result = run_test(TestOptions {
-        asset: target_asset.clone(),
+        asset: target_asset,
         file_system: Some(file_system),
-        js_transformer_config: Some(JsTransformerConfig {
-          jsx: Some(JsxOptions {
-            pragma: Some("React.createElement".to_string()),
-            pragma_fragment: Some("React.Fragment".to_string()),
-            import_source: None,
-            automatic_runtime: None,
-          }),
-          ..Default::default()
-        }),
-        ..TestOptions::default()
+        project_root: Some(project_root),
+        ..Default::default()
       })
       .await;
       let transform_result = result?;
@@ -1825,7 +1985,8 @@ mod tests {
         },
         discovered_assets: vec![],
         dependencies: vec![],
-        invalidate_on_file_change: vec![]
+        invalidate_on_file_change: vec![],
+        cache_bailout: false,
       }
     );
 
@@ -1930,7 +2091,8 @@ mod tests {
         },
         discovered_assets: vec![],
         dependencies: expected_dependencies,
-        invalidate_on_file_change: vec![]
+        invalidate_on_file_change: vec![],
+        cache_bailout: false,
       }
     );
 
@@ -1992,7 +2154,7 @@ mod tests {
     file_system: Option<FileSystemRef>,
     project_root: Option<PathBuf>,
     feature_flags: Option<FeatureFlags>,
-    js_transformer_config: Option<JsTransformerConfig>,
+    env: BTreeMap<String, String>,
   }
 
   async fn run_test(options: TestOptions) -> anyhow::Result<TransformResult> {
@@ -2009,6 +2171,7 @@ mod tests {
         .unwrap_or_default()
         .with_bool_flag_default("newJsxConfig", true),
       project_root: project_root.clone(),
+      env: options.env,
       ..PluginOptions::default()
     };
 
@@ -2023,22 +2186,9 @@ mod tests {
       options: Arc::new(plugin_options),
     };
 
-    let mut transformer = AtlaspackJsTransformerPlugin::new(&ctx)?;
+    let transformer = AtlaspackJsTransformerPlugin::new(&ctx)?;
 
-    // Override config if provided in test options
-    if let Some(js_transformer_config) = options.js_transformer_config {
-      transformer.config = js_transformer_config;
-    }
-    let context = TransformContext::new(
-      Arc::new(ConfigLoader {
-        fs: file_system,
-        project_root,
-        search_path: asset.file_path.clone(),
-      }),
-      Arc::new(Environment::default()),
-    );
-
-    let mut result = transformer.transform(context, asset).await?;
+    let mut result = transformer.transform(asset).await?;
 
     result.asset.code = Code::from(normalize_code(result.asset.code.as_str()?));
 
@@ -2088,5 +2238,268 @@ mod tests {
     assert!(!code.is_empty());
 
     code
+  }
+
+  // Integration tests for environment variable filtering through the full transformer
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_transformer_with_inline_env_default() -> anyhow::Result<()> {
+    use atlaspack_test_fixtures::test_fixture;
+
+    let project_root = PathBuf::from("/test");
+    let file_system = test_fixture! {
+      project_root.clone(),
+    };
+
+    let source_asset = create_asset_at_project_root(
+      &project_root,
+      "index.js",
+      r#"
+        console.log(process.env.NODE_ENV);
+        console.log(process.env.API_KEY);
+      "#,
+    );
+
+    let mut env_vars = BTreeMap::new();
+    env_vars.insert("NODE_ENV".to_string(), "production".to_string());
+    env_vars.insert("API_KEY".to_string(), "secret".to_string());
+
+    let result = run_test(TestOptions {
+      asset: source_asset,
+      file_system: Some(file_system.clone()),
+      project_root: Some(project_root.clone()),
+      env: env_vars,
+      ..Default::default()
+    })
+    .await?;
+
+    // With Enabled(false), only NODE_ENV should be inlined
+    let code = result.asset.code.as_str()?;
+    assert!(
+      code.contains("\"production\""),
+      "NODE_ENV should be inlined, got: {}",
+      code
+    );
+    assert!(
+      code.contains("\"secret\""),
+      "API_KEY should be inlined, got: {}",
+      code
+    );
+
+    let external_asset = create_asset_at_project_root(
+      &project_root,
+      "node_modules/library.js",
+      r#"
+        console.log(process.env.NODE_ENV);
+        console.log(process.env.API_KEY);
+      "#,
+    );
+
+    let mut env_vars = BTreeMap::new();
+    env_vars.insert("NODE_ENV".to_string(), "production".to_string());
+    env_vars.insert("API_KEY".to_string(), "secret".to_string());
+
+    let result = run_test(TestOptions {
+      asset: external_asset,
+      file_system: Some(file_system),
+      project_root: Some(project_root),
+      env: env_vars,
+      ..Default::default()
+    })
+    .await?;
+
+    // With Enabled(false), only NODE_ENV should be inlined
+    let code = result.asset.code.as_str()?;
+    assert!(
+      code.contains("\"production\""),
+      "NODE_ENV should be inlined, got: {}",
+      code
+    );
+    assert!(
+      !code.contains("\"secret\""),
+      "API_KEY should not be inlined, got: {}",
+      code
+    );
+
+    Ok(())
+  }
+
+  // Integration tests for environment variable filtering through the full transformer
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_transformer_with_inline_env_disabled() -> anyhow::Result<()> {
+    use atlaspack_test_fixtures::test_fixture;
+
+    let project_root = PathBuf::from("/test");
+    let file_system = test_fixture! {
+      project_root.clone(),
+      "package.json" => r#"{
+        "@atlaspack/transformer-js": {
+          "inlineEnvironment": false
+        }
+      }"#,
+      "index.js" => r#"
+        console.log(process.env.NODE_ENV);
+        console.log(process.env.API_KEY);
+      "#
+    };
+
+    let target_asset = create_asset_at_project_root(
+      &project_root,
+      "index.js",
+      r#"
+        console.log(process.env.NODE_ENV);
+        console.log(process.env.API_KEY);
+      "#,
+    );
+
+    let mut env_vars = BTreeMap::new();
+    env_vars.insert("NODE_ENV".to_string(), "production".to_string());
+    env_vars.insert("API_KEY".to_string(), "secret".to_string());
+
+    let result = run_test(TestOptions {
+      asset: target_asset,
+      file_system: Some(file_system),
+      project_root: Some(project_root),
+      env: env_vars,
+      ..Default::default()
+    })
+    .await?;
+
+    // With Enabled(false), only NODE_ENV should be inlined
+    let code = result.asset.code.as_str()?;
+    assert!(
+      code.contains("\"production\""),
+      "NODE_ENV should be inlined, got: {}",
+      code
+    );
+    assert!(
+      !code.contains("\"secret\""),
+      "API_KEY should NOT be inlined, got: {}",
+      code
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_transformer_with_inline_env_enabled() -> anyhow::Result<()> {
+    use atlaspack_test_fixtures::test_fixture;
+
+    let project_root = PathBuf::from("/test");
+    let file_system = test_fixture! {
+      project_root.clone(),
+      "package.json" => r#"{
+        "@atlaspack/transformer-js": {
+          "inlineEnvironment": true
+        }
+      }"#,
+      "index.js" => r#"
+        console.log(process.env.NODE_ENV);
+        console.log(process.env.CUSTOM_VAR);
+      "#
+    };
+
+    let target_asset = create_asset_at_project_root(
+      &project_root,
+      "index.js",
+      r#"
+        console.log(process.env.NODE_ENV);
+        console.log(process.env.CUSTOM_VAR);
+      "#,
+    );
+
+    let mut env_vars = BTreeMap::new();
+    env_vars.insert("NODE_ENV".to_string(), "production".to_string());
+    env_vars.insert("CUSTOM_VAR".to_string(), "custom-var".to_string());
+
+    let result = run_test(TestOptions {
+      asset: target_asset,
+      file_system: Some(file_system),
+      project_root: Some(project_root),
+      env: env_vars,
+      ..Default::default()
+    })
+    .await?;
+
+    // With Enabled(true), all environment variables should be inlined
+    let code = result.asset.code.as_str()?;
+    assert!(
+      code.contains("\"production\""),
+      "NODE_ENV should be inlined, got: {}",
+      code
+    );
+    assert!(
+      code.contains("\"custom-var\""),
+      "CUSTOM_VAR should be inlined, got: {}",
+      code
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_transformer_with_inline_env_glob_patterns() -> anyhow::Result<()> {
+    use atlaspack_test_fixtures::test_fixture;
+
+    let project_root = PathBuf::from("/test");
+    let file_system = test_fixture! {
+      project_root.clone(),
+      "package.json" => r#"{
+        "@atlaspack/transformer-js": {
+          "inlineEnvironment": ["REACT_APP_*", "NODE_ENV"]
+        }
+      }"#,
+      "index.js" => r#"
+        console.log(process.env.REACT_APP_VERSION);
+        console.log(process.env.API_SECRET);
+        console.log(process.env.NODE_ENV);
+      "#
+    };
+
+    let target_asset = create_asset_at_project_root(
+      &project_root,
+      "index.js",
+      r#"
+        console.log(process.env.REACT_APP_VERSION);
+        console.log(process.env.API_SECRET);
+        console.log(process.env.NODE_ENV);
+      "#,
+    );
+
+    let mut env_vars = BTreeMap::new();
+    env_vars.insert(
+      "REACT_APP_VERSION".to_string(),
+      "react-app-version".to_string(),
+    );
+    env_vars.insert("API_SECRET".to_string(), "api-secret".to_string());
+    env_vars.insert("NODE_ENV".to_string(), "production".to_string());
+
+    let result = run_test(TestOptions {
+      asset: target_asset,
+      file_system: Some(file_system),
+      project_root: Some(project_root),
+      env: env_vars,
+      ..Default::default()
+    })
+    .await?;
+
+    // With glob patterns, only REACT_APP_* and NODE_ENV should be inlined
+    let code = result.asset.code.as_str()?;
+    assert!(
+      code.contains("\"react-app-version\""),
+      "REACT_APP_VERSION should be inlined, got: {}",
+      code
+    );
+    assert!(
+      code.contains("\"production\""),
+      "NODE_ENV should be inlined, got: {}",
+      code
+    );
+    assert!(
+      !code.contains("\"api-secret\""),
+      "API_SECRET should NOT be inlined, got: {}",
+      code
+    );
+
+    Ok(())
   }
 }

@@ -3,14 +3,14 @@ use std::io::Cursor;
 use anyhow::Error;
 use async_trait::async_trait;
 use atlaspack_core::diagnostic_error;
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::{Asset, BundleBehavior, Code, FileType};
 use image::imageops::FilterType;
 use image::{ImageFormat, ImageReader};
 use url_search_params::parse_url_search_params;
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct AtlaspackImageTransformerPlugin {}
 
 impl AtlaspackImageTransformerPlugin {
@@ -21,11 +21,7 @@ impl AtlaspackImageTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackImageTransformerPlugin {
-  async fn transform(
-    &self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
     if asset.bundle_behavior.is_none() {
@@ -124,14 +120,10 @@ mod tests {
     });
 
     let asset = Asset::default();
-    let context = TransformContext::default();
 
     assert_ne!(asset.bundle_behavior, Some(BundleBehavior::Isolated));
     assert_eq!(
-      plugin
-        .transform(context, asset)
-        .await
-        .map_err(|e| e.to_string()),
+      plugin.transform(asset).await.map_err(|e| e.to_string()),
       Ok(TransformResult {
         asset: Asset {
           bundle_behavior: Some(BundleBehavior::Isolated),

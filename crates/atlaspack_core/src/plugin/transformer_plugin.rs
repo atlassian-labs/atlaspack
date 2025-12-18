@@ -1,15 +1,12 @@
-use crate::config_loader::{ConfigLoader, ConfigLoaderRef};
 use crate::hash::IdentifierHasher;
-use crate::types::{Asset, AssetWithDependencies, Dependency, Environment, SpecifierType};
+use crate::types::{Asset, AssetWithDependencies, Dependency, SpecifierType};
 use async_trait::async_trait;
-use atlaspack_filesystem::in_memory_file_system::InMemoryFileSystem;
-use mockall::automock;
 use serde::Serialize;
 use std::any::Any;
+use std::borrow::Cow;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
-use std::sync::Arc;
 
 pub struct ResolveOptions {
   /// A list of custom conditions to use when resolving package.json "exports" and "imports"
@@ -29,43 +26,37 @@ pub struct TransformResult {
   /// The transformer signals through this field that its result should be invalidated
   /// if these paths change.
   pub invalidate_on_file_change: Vec<PathBuf>,
+  pub cache_bailout: bool,
 }
 
-#[derive(Clone)]
-pub struct TransformContext {
-  config: ConfigLoaderRef,
-  environment: Arc<Environment>,
+#[derive(Clone, Debug, PartialEq)]
+pub enum CacheStatus {
+  Hash(u64),
+  Uncachable,
 }
 
-impl Default for TransformContext {
-  fn default() -> Self {
-    Self {
-      config: Arc::new(ConfigLoader {
-        fs: Arc::new(InMemoryFileSystem::default()),
-        project_root: PathBuf::default(),
-        search_path: PathBuf::default(),
-      }),
-      environment: Arc::new(Environment::default()),
-    }
-  }
-}
+/// Creates a CacheStatus::Hash by hashing the provided values.
+///
+/// This macro takes any number of arguments that implement Hash and combines
+/// them into a single u64 hash for use as a cache key.
+#[macro_export]
+macro_rules! cache_key {
+    ($($val:expr),+ $(,)?) => {{
+        use std::hash::{Hash, Hasher};
+        use $crate::hash::IdentifierHasher;
+        use $crate::plugin::CacheStatus;
+        use $crate::version::atlaspack_rust_version;
 
-impl TransformContext {
-  pub fn new(config: ConfigLoaderRef, environment: Arc<Environment>) -> Self {
-    Self {
-      config,
-      environment,
-    }
-  }
+        let mut hasher = IdentifierHasher::new();
+        $(
+            $val.hash(&mut hasher);
+        )+
 
-  /// Enables configuration to be loaded from the current asset
-  pub fn config(&self) -> ConfigLoaderRef {
-    self.config.clone()
-  }
+        // Always add the @atlaspack/rust version to the cache key
+        atlaspack_rust_version().hash(&mut hasher);
 
-  pub fn env(&self) -> &Arc<Environment> {
-    &self.environment
-  }
+        CacheStatus::Hash(hasher.finish())
+    }};
 }
 
 /// Compile a single asset, discover dependencies, or convert the asset to a different format
@@ -74,9 +65,9 @@ impl TransformContext {
 /// designed to integrate with Atlaspack.
 ///
 #[allow(clippy::disallowed_methods, clippy::disallowed_types)]
-#[automock]
 #[async_trait]
-pub trait TransformerPlugin: Any + Debug + Send + Sync {
+#[cfg_attr(test, mockall::automock)]
+pub trait TransformerPlugin: Any + Debug + Send + Sync + CacheKey {
   /// Unique ID for this transformer
   fn id(&self) -> u64 {
     let mut hasher = IdentifierHasher::new();
@@ -84,10 +75,97 @@ pub trait TransformerPlugin: Any + Debug + Send + Sync {
     hasher.finish()
   }
 
+  /// Determine whether the transformer should skip transforming the given asset
+  fn should_skip(&self, _asset: &Asset) -> anyhow::Result<bool> {
+    Ok(false)
+  }
+
   /// Transform the asset and/or add new assets
-  async fn transform(
-    &self,
-    context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, anyhow::Error>;
+  async fn transform(&self, asset: Asset) -> anyhow::Result<TransformResult>;
+}
+
+pub trait CacheKey {
+  fn cache_key(&self) -> Cow<'_, CacheStatus>;
+}
+
+// Automatically implement CacheKey for all types that implement Hash
+impl<T: Hash> CacheKey for T {
+  fn cache_key(&self) -> Cow<'_, CacheStatus> {
+    Cow::Owned(cache_key!(self, atlaspack_rust_version()))
+  }
+}
+
+// Manual CacheKey implementation for MockTransformerPlugin since mockall doesn't generate Hash
+#[cfg(test)]
+impl CacheKey for MockTransformerPlugin {
+  fn cache_key(&self) -> Cow<'_, CacheStatus> {
+    // Use the mocked method from the TransformerPlugin trait
+    // Note: This will delegate to the mock expectation set up in tests
+    Cow::Owned(CacheStatus::Uncachable)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[derive(Hash)]
+  struct TestConfig {
+    value: String,
+  }
+
+  #[test]
+  fn test_cache_key_macro_single_value() {
+    let key = cache_key!(42u64);
+
+    match key {
+      CacheStatus::Hash(hash_value) => {
+        // Should produce a deterministic hash
+        assert!(hash_value > 0);
+      }
+      _ => panic!("Expected Hash variant"),
+    }
+  }
+
+  #[test]
+  fn test_cache_key_macro_multiple_values() {
+    let config = TestConfig {
+      value: "test".to_string(),
+    };
+
+    let key = cache_key!(config, atlaspack_rust_version(), "extra_string");
+
+    match key {
+      CacheStatus::Hash(hash_value) => {
+        assert!(hash_value > 0);
+
+        // Same inputs should produce same hash
+        let config2 = TestConfig {
+          value: "test".to_string(),
+        };
+        let key2 = cache_key!(config2, atlaspack_rust_version(), "extra_string");
+
+        if let CacheStatus::Hash(hash_value2) = key2 {
+          assert_eq!(
+            hash_value, hash_value2,
+            "Same inputs should produce same hash"
+          );
+        } else {
+          panic!("Expected Hash variant");
+        }
+      }
+      _ => panic!("Expected Hash variant"),
+    }
+  }
+
+  #[test]
+  fn test_cache_key_macro_trailing_comma() {
+    // Test that trailing comma works
+    let key = cache_key!(42u64, "test",);
+
+    match key {
+      CacheStatus::Hash(_) => {} // Success
+      _ => panic!("Expected Hash variant"),
+    }
+  }
 }

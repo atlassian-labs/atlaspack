@@ -63,6 +63,17 @@ export declare function atlaspackNapiRespondToFsEvents(
   atlaspackNapi: AtlaspackNapi,
   options: object,
 ): object;
+export interface CacheStats {
+  hits: number;
+  misses: number;
+  uncacheables: number;
+  bailouts: number;
+  errors: number;
+  validations: number;
+}
+export declare function atlaspackNapiCompleteSession(
+  atlaspackNapi: AtlaspackNapi,
+): Promise<CacheStats>;
 export declare function createDependencyId(params: unknown): string;
 export declare function createEnvironmentId(params: unknown): string;
 /** Overwrite all environments with a new set of environments */

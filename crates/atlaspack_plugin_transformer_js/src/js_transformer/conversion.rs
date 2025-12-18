@@ -5,12 +5,12 @@ use atlaspack_core::diagnostic;
 use atlaspack_sourcemap::SourceMapError;
 use indexmap::IndexMap;
 use std::collections::{BTreeMap, HashMap};
-use swc_core::atoms::{Atom, JsWord};
+use swc_core::atoms::Atom;
 
-use atlaspack_core::plugin::{PluginOptions, TransformResult};
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::types::engines::EnvironmentFeature;
 use atlaspack_core::types::{
-  Asset, BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, DependencyBuilder,
+  Asset, BuildMode, BundleBehavior, Code, CodeFrame, CodeHighlight, Dependency, DependencyBuilder,
   DependencyKind, Diagnostic, DiagnosticBuilder, Environment, EnvironmentContext, File, FileType,
   IncludeNodeModules, OutputFormat, Priority, SourceLocation, SourceMap, SourceType, SpecifierType,
   Symbol,
@@ -35,7 +35,10 @@ pub(crate) fn convert_result(
   mut asset: Asset,
   transformer_config: &atlaspack_js_swc_core::Config,
   result: atlaspack_js_swc_core::TransformResult,
-  options: &PluginOptions,
+  project_root: &Path,
+  mode: &BuildMode,
+  core_path: &Path,
+  hmr_options: &Option<atlaspack_core::plugin::HmrOptions>,
 ) -> Result<TransformResult, Vec<Diagnostic>> {
   let asset_file_path = asset.file_path.to_path_buf();
   let asset_environment = asset.env.clone();
@@ -43,7 +46,7 @@ pub(crate) fn convert_result(
   asset.interpreter = result.shebang;
 
   let (mut dependency_by_specifier, invalidate_on_file_change) = convert_dependencies(
-    &options.project_root,
+    project_root,
     transformer_config,
     result.dependencies,
     result.magic_comments,
@@ -52,7 +55,7 @@ pub(crate) fn convert_result(
 
   if result.needs_esm_helpers {
     let dependency = make_esm_helpers_dependency(
-      options,
+      core_path,
       &asset_file_path,
       (*asset_environment).clone(),
       &asset.id,
@@ -74,16 +77,14 @@ pub(crate) fn convert_result(
 
     // Collect all exported variable names
     for symbol in &hoist_result.exported_symbols {
-      let symbol =
-        transformer_exported_symbol_into_symbol(&options.project_root, &asset_file_path, symbol);
+      let symbol = transformer_exported_symbol_into_symbol(project_root, &asset_file_path, symbol);
       asset_symbols.push(symbol);
     }
 
     // Collect all imported symbols into each of the corresponding dependencies' symbols array
     for symbol in hoist_result.imported_symbols {
       if let Some(dependency) = dependency_by_specifier.get_mut(&symbol.source) {
-        let symbol =
-          transformer_imported_symbol_to_symbol(&options.project_root, &asset_file_path, &symbol);
+        let symbol = transformer_imported_symbol_to_symbol(project_root, &asset_file_path, &symbol);
         if let Some(symbols) = dependency.symbols.as_mut() {
           symbols.push(symbol);
         } else {
@@ -96,7 +97,7 @@ pub(crate) fn convert_result(
       if let Some(dependency) = dependency_by_specifier.get_mut(&symbol.source) {
         if is_re_export_all_symbol(&symbol) {
           let loc = Some(convert_loc(
-            &options.project_root,
+            project_root,
             asset_file_path.clone(),
             &symbol.loc,
           ));
@@ -133,7 +134,7 @@ pub(crate) fn convert_result(
             exported: symbol.imported.as_ref().into(),
             local: re_export_fake_local_key.clone(),
             loc: Some(convert_loc(
-              &options.project_root,
+              project_root,
               asset_file_path.clone(),
               &symbol.loc,
             )),
@@ -151,7 +152,7 @@ pub(crate) fn convert_result(
             exported: symbol.local.as_ref().into(),
             local: re_export_fake_local_key.clone(),
             loc: Some(convert_loc(
-              &options.project_root,
+              project_root,
               asset_file_path.clone(),
               &symbol.loc,
             )),
@@ -163,7 +164,7 @@ pub(crate) fn convert_result(
     }
 
     for specifier in hoist_result.wrapped_requires {
-      if let Some(dependency) = dependency_by_specifier.get_mut(&JsWord::new(specifier)) {
+      if let Some(dependency) = dependency_by_specifier.get_mut(&Atom::new(specifier)) {
         dependency.should_wrap = true;
       }
     }
@@ -225,11 +226,7 @@ pub(crate) fn convert_result(
           let symbol = Symbol {
             exported: sym.local.as_ref().into(),
             local: local.clone(),
-            loc: Some(convert_loc(
-              &options.project_root,
-              asset_file_path.clone(),
-              &sym.loc,
-            )),
+            loc: Some(convert_loc(project_root, asset_file_path.clone(), &sym.loc)),
             is_weak: true,
             ..Symbol::default()
           };
@@ -248,11 +245,7 @@ pub(crate) fn convert_result(
         asset_symbols.push(Symbol {
           exported: sym.exported.as_ref().into(),
           local,
-          loc: Some(convert_loc(
-            &options.project_root,
-            asset_file_path.clone(),
-            &sym.loc,
-          )),
+          loc: Some(convert_loc(project_root, asset_file_path.clone(), &sym.loc)),
           is_weak,
           ..Symbol::default()
         });
@@ -260,11 +253,8 @@ pub(crate) fn convert_result(
 
       for sym in symbol_result.imports {
         if let Some(dependency) = dependency_by_specifier.get_mut(&sym.source) {
-          let symbol = transformer_collect_imported_symbol_to_symbol(
-            &options.project_root,
-            &asset_file_path,
-            &sym,
-          );
+          let symbol =
+            transformer_collect_imported_symbol_to_symbol(project_root, &asset_file_path, &sym);
           if let Some(symbols) = dependency.symbols.as_mut() {
             symbols.push(symbol);
           } else {
@@ -275,11 +265,7 @@ pub(crate) fn convert_result(
 
       for sym in symbol_result.exports_all {
         if let Some(dependency) = dependency_by_specifier.get_mut(&sym.source) {
-          let loc = Some(convert_loc(
-            &options.project_root,
-            asset_file_path.clone(),
-            &sym.loc,
-          ));
+          let loc = Some(convert_loc(project_root, asset_file_path.clone(), &sym.loc));
           let symbol = make_export_all_symbol(loc);
           if let Some(symbols) = dependency.symbols.as_mut() {
             symbols.push(symbol);
@@ -336,16 +322,6 @@ pub(crate) fn convert_result(
   asset.is_constant_module = result.is_constant_module;
 
   if transformer_config.conditional_bundling {
-    let mut converted = vec![];
-
-    for condition in result.conditions.iter() {
-      converted.push(serde_json::json!({
-        "key": condition.key.to_string(),
-        "ifTruePlaceholder": condition.if_true_placeholder,
-        "ifFalsePlaceholder": condition.if_false_placeholder,
-      }));
-    }
-
     asset.conditions = result.conditions;
   }
 
@@ -359,7 +335,8 @@ pub(crate) fn convert_result(
       react_refresh::wrap_with_react_refresh(
         &asset,
         &final_code,
-        options,
+        mode,
+        hmr_options.is_some(),
         &dependency_by_specifier,
         transformer_config.hmr_improvements,
       )
@@ -402,7 +379,7 @@ pub(crate) fn convert_result(
     };
 
     let mut source_map =
-      SourceMap::from_json(&options.project_root, &map).map_err(source_map_error_to_diagnostic)?;
+      SourceMap::from_json(project_root, &map).map_err(source_map_error_to_diagnostic)?;
 
     if let Some(original_map) = asset.map {
       source_map
@@ -500,7 +477,7 @@ fn make_export_star_symbol(asset_id: &str) -> Symbol {
 }
 
 fn make_esm_helpers_dependency(
-  options: &PluginOptions,
+  core_path: &Path,
   #[allow(clippy::ptr_arg)] asset_file_path: &PathBuf,
   asset_environment: Environment,
   asset_id: &str,
@@ -517,7 +494,7 @@ fn make_esm_helpers_dependency(
       )])),
       ..asset_environment.clone()
     }))
-    .resolve_from(options.core_path.as_path().into())
+    .resolve_from(core_path.into())
     .priority(Priority::default())
     .build()
 }

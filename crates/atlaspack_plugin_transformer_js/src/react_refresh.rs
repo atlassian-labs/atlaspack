@@ -1,6 +1,5 @@
 // This file is a rewrite of `@atlaspack/transformer-react-refresh-wrap`
 // packages/transformers/react-refresh-wrap/src/ReactRefreshWrapTransformer.ts
-use atlaspack_core::plugin::PluginOptions;
 use atlaspack_core::types::{
   Asset, BuildMode, Dependency, DependencyBuilder, DependencyKind, Priority, SpecifierType,
 };
@@ -10,16 +9,17 @@ use swc_core::atoms::Atom;
 /// Determines whether an asset should be excluded from React refresh wrapping
 pub fn should_exclude_from_react_refresh(
   asset: &Asset,
-  options: &PluginOptions,
+  mode: &BuildMode,
+  hmr_enabled: bool,
   dependencies: &IndexMap<Atom, Dependency>,
 ) -> bool {
   !asset.is_source
-    || options.hmr_options.is_none()
+    || !hmr_enabled
     || !asset.env.context.is_browser()
     || asset.env.is_library
     || asset.env.context.is_worker()
     || asset.env.context.is_worklet()
-    || options.mode != BuildMode::Development
+    || mode != &BuildMode::Development
     || !has_react_dependency(dependencies)
 }
 
@@ -44,11 +44,12 @@ type SourceMapOffset = (u32, i64);
 pub fn wrap_with_react_refresh(
   asset: &Asset,
   code: &[u8],
-  options: &PluginOptions,
+  mode: &BuildMode,
+  hmr_enabled: bool,
   dependencies: &IndexMap<Atom, Dependency>,
   hmr_improvements: bool,
 ) -> Option<(Vec<u8>, Dependency, SourceMapOffset)> {
-  if should_exclude_from_react_refresh(asset, options, dependencies) {
+  if should_exclude_from_react_refresh(asset, mode, hmr_enabled, dependencies) {
     return None;
   }
 
@@ -182,7 +183,12 @@ mod tests {
     let options = create_test_options(BuildMode::Development, true);
     let deps = create_dependencies_with_specifiers(vec!["react"]);
 
-    assert!(should_exclude_from_react_refresh(&asset, &options, &deps));
+    assert!(should_exclude_from_react_refresh(
+      &asset,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps
+    ));
   }
 
   #[test]
@@ -191,7 +197,12 @@ mod tests {
     let options = create_test_options(BuildMode::Development, false);
     let deps = create_dependencies_with_specifiers(vec!["react"]);
 
-    assert!(should_exclude_from_react_refresh(&asset, &options, &deps));
+    assert!(should_exclude_from_react_refresh(
+      &asset,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps
+    ));
   }
 
   #[test]
@@ -204,7 +215,12 @@ mod tests {
     let options = create_test_options(BuildMode::Development, true);
     let deps = create_dependencies_with_specifiers(vec!["react"]);
 
-    assert!(should_exclude_from_react_refresh(&asset, &options, &deps));
+    assert!(should_exclude_from_react_refresh(
+      &asset,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps
+    ));
   }
 
   #[test]
@@ -217,7 +233,12 @@ mod tests {
     let options = create_test_options(BuildMode::Development, true);
     let deps = create_dependencies_with_specifiers(vec!["react"]);
 
-    assert!(should_exclude_from_react_refresh(&asset, &options, &deps));
+    assert!(should_exclude_from_react_refresh(
+      &asset,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps
+    ));
   }
 
   #[test]
@@ -230,7 +251,12 @@ mod tests {
     let options = create_test_options(BuildMode::Development, true);
     let deps = create_dependencies_with_specifiers(vec!["react"]);
 
-    assert!(should_exclude_from_react_refresh(&asset, &options, &deps));
+    assert!(should_exclude_from_react_refresh(
+      &asset,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps
+    ));
   }
 
   #[test]
@@ -243,7 +269,12 @@ mod tests {
     let options = create_test_options(BuildMode::Development, true);
     let deps = create_dependencies_with_specifiers(vec!["react"]);
 
-    assert!(should_exclude_from_react_refresh(&asset, &options, &deps));
+    assert!(should_exclude_from_react_refresh(
+      &asset,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps
+    ));
   }
 
   #[test]
@@ -252,7 +283,12 @@ mod tests {
     let options = create_test_options(BuildMode::Production, true);
     let deps = create_dependencies_with_specifiers(vec!["react"]);
 
-    assert!(should_exclude_from_react_refresh(&asset, &options, &deps));
+    assert!(should_exclude_from_react_refresh(
+      &asset,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps
+    ));
   }
 
   #[test]
@@ -261,7 +297,12 @@ mod tests {
     let options = create_test_options(BuildMode::Development, true);
     let deps = create_dependencies_with_specifiers(vec!["lodash", "axios"]);
 
-    assert!(should_exclude_from_react_refresh(&asset, &options, &deps));
+    assert!(should_exclude_from_react_refresh(
+      &asset,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps
+    ));
   }
 
   #[test]
@@ -270,7 +311,12 @@ mod tests {
     let options = create_test_options(BuildMode::Development, true);
     let deps = create_dependencies_with_specifiers(vec!["react"]);
 
-    assert!(!should_exclude_from_react_refresh(&asset, &options, &deps));
+    assert!(!should_exclude_from_react_refresh(
+      &asset,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps
+    ));
   }
 
   #[test]
@@ -316,7 +362,14 @@ mod tests {
     let deps = create_dependencies_with_specifiers(vec!["react"]);
     let code = b"console.log('test');".to_vec();
 
-    let result = wrap_with_react_refresh(&asset, &code, &options, &deps, false);
+    let result = wrap_with_react_refresh(
+      &asset,
+      &code,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps,
+      false,
+    );
 
     assert!(result.is_none());
   }
@@ -328,7 +381,14 @@ mod tests {
     let deps = create_dependencies_with_specifiers(vec!["react"]);
     let code = b"console.log('test');".to_vec();
 
-    let result = wrap_with_react_refresh(&asset, &code, &options, &deps, false);
+    let result = wrap_with_react_refresh(
+      &asset,
+      &code,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps,
+      false,
+    );
 
     assert!(result.is_some());
     let (result_code, dependency, source_map_offset) = result.unwrap();
@@ -371,7 +431,12 @@ console.log('test');
     let code = b"const App = () => <div />;".to_vec();
 
     let result = wrap_with_react_refresh(
-      &asset, &code, &options, &deps, true, // hmr_improvements = true
+      &asset,
+      &code,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps,
+      true, // hmr_improvements = true
     );
 
     assert!(result.is_some());
@@ -412,7 +477,14 @@ const App = () => <div />;
     let deps = create_dependencies_with_specifiers(vec!["react"]);
     let code = b"const str = \"Hello \\\"world\\\"\"; // Comment with 'quotes'".to_vec();
 
-    let result = wrap_with_react_refresh(&asset, &code, &options, &deps, false);
+    let result = wrap_with_react_refresh(
+      &asset,
+      &code,
+      &options.mode,
+      options.hmr_options.is_some(),
+      &deps,
+      false,
+    );
 
     assert!(result.is_some());
     let (result_code, _, source_map_offset) = result.unwrap();

@@ -5,25 +5,31 @@
  * allowing users to transition without any change in functionality.
  */
 import {join} from 'path';
+import assert from 'assert';
 
-import {parseAsync, transformFromAstAsync} from '@babel/core';
+import {transformAsync} from '@babel/core';
 import generate from '@babel/generator';
 import type {PluginOptions as BabelPluginOptions} from '@compiled/babel-plugin';
 import type {
   PluginOptions as BabelStripRuntimePluginOptions,
   BabelFileMetadata,
 } from '@compiled/babel-plugin-strip-runtime';
-import {
-  DEFAULT_IMPORT_SOURCES,
-  DEFAULT_PARSER_BABEL_PLUGINS,
-  toBoolean,
-} from '@compiled/utils';
+import {DEFAULT_IMPORT_SOURCES, toBoolean} from '@compiled/utils';
 import {Transformer} from '@atlaspack/plugin';
 import SourceMap from '@atlaspack/source-map';
 import {relativeUrl} from '@atlaspack/utils';
 
 import type {CompiledTransformerOpts} from './types';
 import {createDefaultResolver} from './utils';
+import {BuildMode} from '@atlaspack/types';
+import CompiledBabelPlugin from '@compiled/babel-plugin';
+import CompiledBabelPluginStripRuntime from '@compiled/babel-plugin-strip-runtime';
+// @ts-expect-error no declaration file
+// eslint-disable-next-line import/no-extraneous-dependencies
+import BabelPluginSyntaxJsx from '@babel/plugin-syntax-jsx';
+// @ts-expect-error no declaration file
+// eslint-disable-next-line import/no-extraneous-dependencies
+import BabelPluginSyntaxTypescript from '@babel/plugin-syntax-typescript';
 
 const configFiles = [
   '.compiledcssrc',
@@ -34,11 +40,17 @@ const configFiles = [
 
 const packageKey = '@atlaspack/transformer-compiled';
 
+interface Config {
+  compiledConfig: CompiledTransformerOpts;
+  mode: BuildMode;
+  projectRoot: string;
+}
+
 /**
  * Atlaspack Compiled transformer.
  */
-export default new Transformer<CompiledTransformerOpts>({
-  async loadConfig({config, options}) {
+export default new Transformer<Config>({
+  async setup({config, options}) {
     const conf = await config.getConfigFrom<CompiledTransformerOpts>(
       join(options.projectRoot, 'index'),
       configFiles,
@@ -84,84 +96,84 @@ export default new Transformer<CompiledTransformerOpts>({
       Object.assign(contents, conf.contents);
     }
 
-    return contents;
-  },
+    let importSourceMatches = [
+      ...DEFAULT_IMPORT_SOURCES,
+      ...(contents.importSources || []),
+    ];
 
-  canReuseAST() {
-    // Compiled should run before any other JS transformer.
-    return false;
-  },
-
-  async parse({asset, config, options}) {
-    // Disable stylesheet extraction locally due to https://github.com/atlassian-labs/compiled/issues/1306
-    const extract = config.extract && options.mode !== 'development';
-    if (!asset.isSource && !extract) {
-      // Only parse source (pre-built code should already have been baked) or if stylesheet extraction is enabled
-      return undefined;
-    }
-
-    const code = await asset.getCode();
-    if (
-      // If neither Compiled (default) nor any of the additional import sources are found in the code, we bail out.
-      [...DEFAULT_IMPORT_SOURCES, ...(config.importSources || [])].every(
-        (importSource) => !code.includes(importSource),
-      )
-    ) {
-      // We only want to parse files that are actually using Compiled.
-      // For everything else we bail out.
-      return undefined;
-    }
-    if (code.includes('/* COMPILED_TRANSFORMED_ASSET */')) {
-      // If we're dealing with a pre-transformed asset, we bail out to avoid performing the expensive parse operation.
-      // We add this marker to the code to indicate that the asset has already been transformed.
-      return undefined;
-    }
-
-    const program = await parseAsync(code, {
-      filename: asset.filePath,
-      babelrc: false,
-      configFile: false,
-      caller: {name: 'compiled'},
-      rootMode: 'upward-optional',
-      parserOpts: {
-        // @ts-expect-error - Type mismatch between @babel/parser and @compiled/utils versions
-        plugins: config.parserBabelPlugins ?? DEFAULT_PARSER_BABEL_PLUGINS,
+    return {
+      config: {
+        compiledConfig: contents,
+        mode: options.mode,
+        projectRoot: options.projectRoot,
       },
-      plugins: config.transformerBabelPlugins ?? undefined,
-    });
-
-    if (program) {
-      return {
-        type: 'babel',
-        version: '7.0.0',
-        program,
-      };
-    }
-
-    return undefined;
+      conditions: {
+        codeMatch: importSourceMatches,
+      },
+      env: [
+        // TODO revisit this list, since we may have added variables in here that were actually enumarated rather than accessed directly
+        'BABEL_ENV',
+        'BABEL_SHOW_CONFIG_FOR',
+        'BROWSERSLIST',
+        'BROWSERSLIST_CONFIG',
+        'BROWSERSLIST_DISABLE_CACHE',
+        'BROWSERSLIST_ENV',
+        'BROWSERSLIST_IGNORE_OLD_DATA',
+        'BABEL_TYPES_8_BREAKING',
+        'BROWSERSLIST_ROOT_PATH',
+        'BROWSERSLIST_STATS',
+        'AUTOPREFIXER',
+        'AUTOPREFIXER_GRID',
+        'TEST_PKG_VERSION',
+        'FORCE_COLOR',
+        'DEBUG',
+        'NODE_DEBUG',
+        'CI',
+        'COLORTERM',
+      ],
+    };
   },
 
-  async transform({asset, config, options}) {
-    if (config.extract && config.classHashPrefix) {
+  async transform({asset, config}) {
+    if (
+      config.compiledConfig.extract &&
+      config.compiledConfig.classHashPrefix
+    ) {
       throw new Error(
         '`@atlaspack/transformer-compiled` is mixing `extract: true` and `classHashPrefix` options, which will not supported and will result in bundle size bloat.',
       );
     }
 
-    const ast = await asset.getAST();
+    // Disable stylesheet extraction locally due to https://github.com/atlassian-labs/compiled/issues/1306
+    const extract =
+      config.compiledConfig.extract && config.mode !== 'development';
+    if (!asset.isSource && !extract) {
+      // Only parse source (pre-built code should already have been baked) or if stylesheet extraction is enabled
+      return [asset];
+    }
 
-    if (!(ast?.type === 'babel' && ast.program)) {
-      // We will only receive ASTs for assets we're interested in.
-      // Since this is undefined (or in node modules) we aren't interested in it.
+    const code = await asset.getCode();
+    if (
+      // If neither Compiled (default) nor any of the additional import sources are found in the code, we bail out.
+      [
+        ...DEFAULT_IMPORT_SOURCES,
+        ...(config.compiledConfig.importSources || []),
+      ].every((importSource) => !code.includes(importSource))
+    ) {
+      // We only want to parse files that are actually using Compiled.
+      // For everything else we bail out.
+      return [asset];
+    }
+    if (code.includes('/* COMPILED_TRANSFORMED_ASSET */')) {
+      // If we're dealing with a pre-transformed asset, we bail out to avoid performing the expensive parse operation.
+      // We add this marker to the code to indicate that the asset has already been transformed.
       return [asset];
     }
 
     // Disable stylesheet extraction locally due to https://github.com/atlassian-labs/compiled/issues/1306
-    const extract = config.extract && options.mode !== 'development';
     const includedFiles: string[] = [];
-    const code = asset.isASTDirty() ? undefined : await asset.getCode();
 
-    const result = await transformFromAstAsync(ast.program, code, {
+    const result = await transformAsync(code, {
       code: false,
       ast: true,
       filename: asset.filePath,
@@ -169,30 +181,29 @@ export default new Transformer<CompiledTransformerOpts>({
       configFile: false,
       sourceMaps: !!asset.env.sourceMap,
       compact: false,
-      parserOpts: {
-        // @ts-expect-error - Type mismatch between @babel/parser and @compiled/utils versions
-        plugins: config.parserBabelPlugins ?? DEFAULT_PARSER_BABEL_PLUGINS,
-      },
       plugins: [
-        ...(config.transformerBabelPlugins ?? []),
+        BabelPluginSyntaxJsx,
+        [BabelPluginSyntaxTypescript, {isTSX: true}],
         asset.isSource && [
-          '@compiled/babel-plugin',
+          CompiledBabelPlugin,
           {
             ...config,
             classNameCompressionMap:
-              config.extract && config.classNameCompressionMap,
+              config.compiledConfig.extract &&
+              config.compiledConfig.classNameCompressionMap,
             onIncludedFiles: (files: string[]) => includedFiles.push(...files),
-            resolver: config.resolver
-              ? config.resolver
-              : createDefaultResolver(config),
+            resolver: config.compiledConfig.resolver
+              ? config.compiledConfig.resolver
+              : createDefaultResolver(config.compiledConfig),
             cache: false,
           } as BabelPluginOptions,
         ],
         extract && [
-          '@compiled/babel-plugin-strip-runtime',
+          CompiledBabelPluginStripRuntime,
           {
             compiledRequireExclude: true,
-            extractStylesToDirectory: config.extractStylesToDirectory,
+            extractStylesToDirectory:
+              config.compiledConfig.extractStylesToDirectory,
           } as BabelStripRuntimePluginOptions,
         ],
       ].filter(toBoolean),
@@ -217,25 +228,15 @@ export default new Transformer<CompiledTransformerOpts>({
       ];
     }
 
-    if (result?.ast) {
-      asset.setAST({
-        type: 'babel',
-        version: '7.0.0',
-        program: result.ast,
-      });
-    }
-
-    return [asset];
-  },
-
-  async generate({asset, ast, options}) {
     const originalSourceMap = await asset.getMap();
     const sourceFileName: string = relativeUrl(
-      options.projectRoot,
+      config.projectRoot,
       asset.filePath,
     );
 
-    const {code, rawMappings} = generate(ast.program, {
+    assert(result?.ast, 'Babel transform returned no AST');
+
+    const {code: generatedCode, rawMappings} = generate(result.ast.program, {
       sourceFileName,
       sourceMaps: !!asset.env.sourceMap,
       comments: true,
@@ -249,7 +250,9 @@ export default new Transformer<CompiledTransformerOpts>({
       }>;
     };
 
-    const map = new SourceMap(options.projectRoot);
+    asset.setCode(generatedCode);
+
+    const map = new SourceMap(config.projectRoot);
     if (rawMappings) {
       map.addIndexedMappings(rawMappings);
     }
@@ -266,9 +269,6 @@ export default new Transformer<CompiledTransformerOpts>({
       }
     }
 
-    return {
-      content: code,
-      map,
-    };
+    return [asset];
   },
 });

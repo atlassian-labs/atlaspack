@@ -14,6 +14,7 @@ import type {FeatureFlags} from '@atlaspack/feature-flags';
 
 export class PluginOptions implements IPluginOptions {
   #options: IPluginOptions;
+  used = false;
 
   get env(): EnvMap {
     if (!('env' in this.#options)) {
@@ -27,6 +28,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('projectRoot' in this.#options)) {
       throw new Error('PluginOptions.projectRoot');
     }
+    this.used = true;
     return this.#options.projectRoot;
   }
 
@@ -34,6 +36,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('packageManager' in this.#options)) {
       throw new Error('PluginOptions.packageManager');
     }
+    this.used = true;
     return this.#options.packageManager;
   }
 
@@ -41,6 +44,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('mode' in this.#options)) {
       throw new Error('PluginOptions.mode');
     }
+    this.used = true;
     return this.#options.mode;
   }
 
@@ -49,6 +53,7 @@ export class PluginOptions implements IPluginOptions {
       return 'UNKNOWN VERSION';
       // throw new Error('PluginOptions.parcelVersion');
     }
+    this.used = true;
     return this.#options.parcelVersion;
   }
 
@@ -56,6 +61,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('hmrOptions' in this.#options)) {
       throw new Error('PluginOptions.hmrOptions');
     }
+    this.used = true;
     return this.#options.hmrOptions;
   }
 
@@ -63,6 +69,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('serveOptions' in this.#options)) {
       throw new Error('PluginOptions.serveOptions');
     }
+    this.used = true;
     return this.#options.serveOptions;
   }
 
@@ -70,6 +77,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('shouldBuildLazily' in this.#options)) {
       throw new Error('PluginOptions.shouldBuildLazily');
     }
+    this.used = true;
     return this.#options.shouldBuildLazily;
   }
 
@@ -77,6 +85,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('shouldAutoInstall' in this.#options)) {
       throw new Error('PluginOptions.shouldAutoInstall');
     }
+    this.used = true;
     return this.#options.shouldAutoInstall;
   }
 
@@ -91,6 +100,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('cacheDir' in this.#options)) {
       throw new Error('PluginOptions.cacheDir');
     }
+    this.used = true;
     return this.#options.cacheDir;
   }
 
@@ -98,6 +108,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('inputFS' in this.#options)) {
       throw new Error('PluginOptions.inputFS');
     }
+    this.used = true;
     return this.#options.inputFS;
   }
 
@@ -105,6 +116,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('outputFS' in this.#options)) {
       throw new Error('PluginOptions.outputFS');
     }
+    this.used = true;
     return this.#options.outputFS;
   }
 
@@ -112,6 +124,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('instanceId' in this.#options)) {
       throw new Error('PluginOptions.instanceId');
     }
+    this.used = true;
     return this.#options.instanceId;
   }
 
@@ -119,6 +132,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('detailedReport' in this.#options)) {
       throw new Error('PluginOptions.detailedReport');
     }
+    this.used = true;
     return this.#options.detailedReport;
   }
 
@@ -126,6 +140,7 @@ export class PluginOptions implements IPluginOptions {
     if (!('featureFlags' in this.#options)) {
       throw new Error('PluginOptions.featureFlags');
     }
+    this.used = true;
     return this.#options.featureFlags;
   }
 

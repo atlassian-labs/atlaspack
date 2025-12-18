@@ -48,7 +48,17 @@ function findTargetSourcePositions(
 }
 
 export default new Transformer({
-  async transform({asset, options}) {
+  setup({options}) {
+    return {
+      config: {
+        projectRoot: options.projectRoot,
+      },
+      conditions: {
+        codeMatch: [/\.compiled\.css$/.source],
+      },
+    };
+  },
+  async transform({asset, config}) {
     let code = await asset.getCode();
 
     if (code.indexOf('.compiled.css') < 0) {
@@ -66,7 +76,7 @@ export default new Transformer({
       if (!specifierPath) continue;
 
       if (asset.env.sourceMap) {
-        if (!map) map = new SourceMap(options.projectRoot);
+        if (!map) map = new SourceMap(config.projectRoot);
 
         map.offsetColumns(
           match.line + 1,
