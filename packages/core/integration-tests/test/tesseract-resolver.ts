@@ -6,6 +6,7 @@ import {
   it,
   fsFixture,
   overlayFS,
+  outputFS,
 } from '@atlaspack/test-utils';
 
 describe('tesseract-resolver', function () {
@@ -54,5 +55,14 @@ describe('tesseract-resolver', function () {
 
     // The build should succeed without throwing an error
     assert(b !== null);
+
+    // Verify the bundler output contains the unchanged URL
+    let distDir = path.join(__dirname, '../dist/');
+    let filename = path.join(distDir, 'index.html');
+    let html = await outputFS.readFile(filename, 'utf8');
+    assert(
+      html.includes('//example.com/font.woff2'),
+      'HTML output should contain the unchanged protocol-relative URL',
+    );
   });
 });
