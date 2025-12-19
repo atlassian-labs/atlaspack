@@ -742,13 +742,18 @@ export function writeJsonReportStreaming(
   report: JsonReport,
   output: stream.Writable = process.stdout,
 ): void {
+  const logger =
+    output === process.stdout
+      ? // eslint-disable-next-line no-console
+        console.log
+      : (msg: string) => output.write(msg);
+
   const writer = new StreamingJsonWriter(output, 2);
 
   try {
     // Try regular JSON.stringify first (faster for small objects)
     const jsonStr = JSON.stringify(report, null, 2);
-    output.write(jsonStr);
-    output.write('\n');
+    logger(jsonStr);
   } catch (error) {
     // If stringify fails (likely due to size), fall back to streaming
     // This is a simplified streaming approach - we write the structure incrementally
@@ -836,6 +841,5 @@ export function writeJsonReportStreaming(
     }
 
     writer.endObject();
-    output.write('\n');
   }
 }
