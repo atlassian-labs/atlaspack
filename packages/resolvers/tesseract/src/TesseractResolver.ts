@@ -137,7 +137,7 @@ export default new Resolver({
       ignoreModules,
       browserResolvedNodeBuiltins,
       handleReactDomServer,
-      unsupportedExtensions
+      unsupportedExtensions,
     };
   },
   resolve({dependency, specifier, config, options}) {
@@ -150,12 +150,11 @@ export default new Resolver({
       builtinAliases,
       serverSuffixes,
       handleReactDomServer,
-      unsupportedExtensions
+      unsupportedExtensions,
     } = config;
 
     if (
-      unsupportedExtensions.some((ext) => 
-        dependency.specifier.endsWith(ext))
+      unsupportedExtensions.some((ext) => dependency.specifier.endsWith(ext))
     ) {
       // fallback to atlaspack's default resolver
       return null;

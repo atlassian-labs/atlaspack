@@ -1,6 +1,6 @@
 ---
-"@atlaspack/integration-tests": patch
-"@atlaspack/resolver-tesseract": patch
+'@atlaspack/integration-tests': patch
+'@atlaspack/resolver-tesseract': patch
 ---
 
-Update TesseractResolver.ts to add new `unsupportedExtensions` config option
+Update TesseractResolver.ts to add new `unsupportedExtensions` config option to allow fallback
