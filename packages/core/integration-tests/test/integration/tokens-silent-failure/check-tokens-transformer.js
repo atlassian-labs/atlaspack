@@ -7,7 +7,6 @@ const {Transformer} = require('@atlaspack/plugin');
 module.exports = new Transformer({
   async transform({asset}) {
     const code = await asset.getCode();
-    console.log("CODE", code);
     // Check if there are any token() calls remaining in the code
     // This simulates what the Compiled CSS transformer expects
     if (code.includes('token(')) {

@@ -1,4 +1,4 @@
-import {bundle, overlayFS} from '@atlaspack/test-utils';
+import {it, bundle, overlayFS} from '@atlaspack/test-utils';
 import assert from 'assert';
 import path from 'path';
 
@@ -77,67 +77,59 @@ describe('tokens', () => {
     );
   });
 
-  it('should silently fail when token() is called with invalid arguments', async () => {
-    // This test demonstrates the silent failure bug: when the visitor reports errors
-    // via HANDLER.with(|h| h.span_err(...)), those errors are collected but never
-    // checked after transformation, causing the build to succeed even though tokens
-    // weren't processed.
-
-    // The bug: build succeeds even though token() has invalid syntax
-    // The visitor reports an error but it's never checked, so the build succeeds
-    // when it should fail. This is the silent failure we're testing for.
-    //
-    // We use a custom transformer (check-tokens-transformer.js) that runs after
-    // the tokens transformer to simulate the Compiled CSS transformer behavior.
-    // It throws if it finds any token() calls remaining, which should happen
-    // when the tokens transformer silently fails.
-    try {
-      await bundle(
-        path.join(__dirname, './integration/tokens-silent-failure/index.js'),
-        {
-          outputFS: overlayFS,
-          mode: 'development',
-        },
-      );
-
-      // If we get here, the build succeeded when it should have failed
-      // This means the check-tokens-transformer didn't catch the untransformed token
-      // which shouldn't happen if the bug exists (it should throw)
-      assert.fail(
-        `Build succeeded, but check-tokens-transformer should have thrown an error ` +
-          `because token() calls remain untransformed. This suggests the bug may be fixed or the test setup is incorrect.`,
-      );
-    } catch (error: any) {
-      // The build should fail because:
-      // 1. The tokens transformer silently fails (doesn't transform token())
-      // 2. The check-tokens-transformer finds the untransformed token() and throws
-      // This demonstrates the silent failure bug - the tokens transformer should have
-      // reported the error and failed the build, but instead it silently failed and
-      // let the next transformer discover the problem.
-
-      // Check if the error is from our check-tokens-transformer
-      const errorMessage = error.message || error.toString();
-      if (errorMessage.includes('Found untransformed token() call')) {
-        // This is the expected behavior - the bug exists and our transformer caught it
-        assert.ok(
-          true,
-          `Build failed as expected: check-tokens-transformer found untransformed token() calls. ` +
-            `This demonstrates the silent failure bug - the tokens transformer should have failed ` +
-            `with an error, but instead it silently failed and let the next transformer discover the problem.`,
+  it.v2(
+    'should fail when token() is called with invalid arguments',
+    async () => {
+      // This test verifies that the tokens transformer properly checks for errors
+      // reported during transformation and fails the build when errors are found.
+      //
+      // Previously, there was a bug where errors reported via HANDLER.with(|h| h.span_err(...))
+      // were collected but never checked after transformation, causing silent failures.
+      // This test ensures that bug is fixed.
+      //
+      // We use a custom transformer (check-tokens-transformer.js) that runs after
+      // the tokens transformer to simulate the Compiled CSS transformer behavior.
+      // However, with the bug fixed, the tokens transformer should fail before
+      // the check-tokens-transformer runs.
+      try {
+        await bundle(
+          path.join(__dirname, './integration/tokens-silent-failure/index.js'),
+          {
+            outputFS: overlayFS,
+            mode: 'development',
+          },
         );
-      } else if (
-        errorMessage.includes('token() requires at least one argument')
-      ) {
-        // If we get this error, the bug is fixed - the tokens transformer is now properly
-        // checking errors and failing the build
-        throw new Error(
-          `Build failed with tokens transformer error (bug is fixed!). ` +
-            `The tokens transformer is now properly checking errors. Update this test. Error: ${errorMessage}`,
+
+        // If we get here, the build succeeded when it should have failed
+        assert.fail(
+          `Build succeeded when it should have failed. ` +
+            `The tokens transformer should have reported an error for token() with no arguments.`,
         );
-      } else {
-        // Some other error occurred
-        throw error;
+      } catch (error: any) {
+        // The build should fail because the tokens transformer detects the error
+        // and properly reports it, causing the build to fail
+        const errorMessage = error.message || error.toString();
+
+        if (errorMessage.includes('token() requires at least one argument')) {
+          // This is the expected behavior - the tokens transformer properly checks errors
+          // and throws a ThrowableDiagnostic with the error message
+          assert.ok(
+            true,
+            `Build failed as expected: tokens transformer detected and reported the error. ` +
+              `Error: ${errorMessage}`,
+          );
+        } else if (errorMessage.includes('Found untransformed token() call')) {
+          // This would indicate the bug still exists - the tokens transformer silently failed
+          // and the check-tokens-transformer caught it
+          assert.fail(
+            `Build failed, but error was caught by check-tokens-transformer instead of tokens transformer. ` +
+              `This suggests the silent failure bug may still exist. Error: ${errorMessage}`,
+          );
+        } else {
+          // Some other error occurred - re-throw to see what it is
+          throw error;
+        }
       }
-    }
-  });
+    },
+  );
 });

@@ -1,4 +1,9 @@
-import {encodeJSONKeyComponent} from '@atlaspack/diagnostic';
+import {
+  encodeJSONKeyComponent,
+  default as ThrowableDiagnostic,
+  convertSourceLocationToHighlight,
+  type Diagnostic,
+} from '@atlaspack/diagnostic';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Transformer} from '@atlaspack/plugin';
 import {applyTokensPlugin, TokensPluginResult} from '@atlaspack/rust';
@@ -72,7 +77,7 @@ export default new Transformer({
     }
   },
 
-  async transform({asset, options, config}) {
+  async transform({asset, options, config, logger}) {
     if (!getFeatureFlag('enableTokensTransformer')) {
       return [asset];
     }
@@ -92,15 +97,84 @@ export default new Transformer({
       return [asset];
     }
 
-    const result = await (applyTokensPlugin(codeBuffer, {
-      filename: asset.filePath,
-      projectRoot: options.projectRoot,
-      isSource: asset.isSource,
-      sourceMaps: !!asset.env.sourceMap,
-      tokensOptions: {
-        ...config,
-      },
-    }) as Promise<TokensPluginResult>);
+    const result = await (
+      applyTokensPlugin(codeBuffer, {
+        filename: asset.filePath,
+        projectRoot: options.projectRoot,
+        isSource: asset.isSource,
+        sourceMaps: !!asset.env.sourceMap,
+        tokensOptions: {
+          ...config,
+        },
+      }) as Promise<TokensPluginResult>
+    ).catch((error) => {
+      // Re-throw with context about which file failed
+      throw new Error(
+        `Failed to transform tokens in ${asset.filePath}: ${error.message || error}`,
+      );
+    });
+
+    // Check for diagnostics and convert them to proper Diagnostic objects with code frames
+    if (result.diagnostics && result.diagnostics.length > 0) {
+      const convertDiagnostic = (diagnostic: any): Diagnostic => {
+        const codeHighlights = diagnostic.code_highlights?.map(
+          (highlight: any) =>
+            convertSourceLocationToHighlight(
+              {
+                start: {
+                  line: highlight.loc.start_line,
+                  column: highlight.loc.start_col,
+                },
+                end: {
+                  line: highlight.loc.end_line,
+                  column: highlight.loc.end_col,
+                },
+              },
+              highlight.message ?? undefined,
+            ),
+        );
+
+        const res: Diagnostic = {
+          message: diagnostic.message,
+          codeFrames: [
+            {
+              filePath: asset.filePath,
+              code: code,
+              codeHighlights: codeHighlights ?? [],
+            },
+          ],
+          hints: diagnostic.hints,
+        };
+
+        if (diagnostic.documentation_url) {
+          res.documentationURL = diagnostic.documentation_url;
+        }
+
+        return res;
+      };
+
+      const errors = result.diagnostics.filter(
+        (d: any) =>
+          d.severity === 'Error' ||
+          (d.severity === 'SourceError' && asset.isSource),
+      );
+
+      if (errors.length > 0) {
+        throw new ThrowableDiagnostic({
+          diagnostic: errors.map(convertDiagnostic),
+        });
+      }
+
+      // Log warnings
+      const warnings = result.diagnostics.filter(
+        (d: any) =>
+          d.severity === 'Warning' ||
+          (d.severity === 'SourceError' && !asset.isSource),
+      );
+      if (warnings.length > 0) {
+        logger.warn(warnings.map(convertDiagnostic));
+      }
+    }
 
     // Ensure this transform is invalidated when the token data changes
     asset.invalidateOnFileChange(config.tokenDataPath);

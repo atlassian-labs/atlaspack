@@ -286,9 +286,31 @@ export interface TokensConfig {
   tokensOptions: TokensPluginOptions;
 }
 
+export interface TokensJsSourceLocation {
+  start_line: number;
+  start_col: number;
+  end_line: number;
+  end_col: number;
+}
+
+export interface TokensJsCodeHighlight {
+  message: string | null;
+  loc: TokensJsSourceLocation;
+}
+
+export interface TokensJsDiagnostic {
+  message: string;
+  code_highlights: Array<TokensJsCodeHighlight> | null;
+  hints: Array<string> | null;
+  show_environment: boolean;
+  severity: string;
+  documentation_url: string | null;
+}
+
 export interface TokensPluginResult {
   code: string;
   map: string | null;
+  diagnostics: Array<TokensJsDiagnostic>;
 }
 
 /** Apply the tokens transformation plugin to the given code asynchronously */
