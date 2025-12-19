@@ -387,7 +387,7 @@ export function diffToJson(
               if (hasGlobalObjectTransformation(add.line)) {
                 globalObjectTransformations.push({
                   line: remove.line,
-                  lineNum: remove.lineNum1,
+                  lineNum: remove.lineNum1 ?? 0,
                   type: 'remove',
                 });
                 break;
@@ -404,7 +404,7 @@ export function diffToJson(
               if (hasDirectGlobalObject(remove.line)) {
                 globalObjectTransformations.push({
                   line: add.line,
-                  lineNum: add.lineNum2,
+                  lineNum: add.lineNum2 ?? 0,
                   type: 'add',
                 });
                 break;
@@ -431,7 +431,7 @@ export function diffToJson(
           if (hasGlobalObjectTransformation(add.line)) {
             globalObjectTransformations.push({
               line: remove.line,
-              lineNum: remove.lineNum1,
+              lineNum: remove.lineNum1 ?? 0,
               type: 'remove',
             });
             break;
@@ -447,7 +447,7 @@ export function diffToJson(
           if (hasDirectGlobalObject(remove.line)) {
             globalObjectTransformations.push({
               line: add.line,
-              lineNum: add.lineNum2,
+              lineNum: add.lineNum2 ?? 0,
               type: 'add',
             });
             break;
