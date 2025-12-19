@@ -16,7 +16,10 @@ describe('tesseract-resolver', function () {
         package.json:
           {
             "name": "resolver-protocol-relative-url",
-            "version": "1.0.0"
+            "version": "1.0.0",
+            "@atlaspack/resolver-tesseract": {
+              "unsupportedExtensions": ["woff", "woff2"]
+            }
           }
 
         .parcelrc:
