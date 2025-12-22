@@ -96,6 +96,220 @@ The current approach manually computes reachability:
 
 Break the bundler into clear, testable phases with well-defined inputs/outputs:
 
+**Phase 0: Pre-Bundling Preparation** (runs before bundler)
+
+This phase transforms the AssetGraph into a BundleGraph-ready format by:
+
+1. **Assigning Public IDs** - Generate short, stable IDs for each asset
+2. **Symbol Resolution & Dependency Retargeting** - Tree shaking preparation
+   - Resolve side-effect-free re-exports to their actual targets
+   - Split dependencies by imported symbols (one dep per symbol when beneficial)
+   - Remove dependencies that only import external symbols
+3. **Conditional Bundling Setup** - Map placeholder IDs to actual dependencies
+
+```rust
+pub struct PreBundlingProcessor {
+    public_id_generator: PublicIdGenerator,
+    symbol_resolver: SymbolResolver,
+}
+
+impl PreBundlingProcessor {
+    pub fn prepare_for_bundling(
+        &mut self,
+        asset_graph: &mut AssetGraph,
+        is_production: bool,
+    ) -> Result<PreparedGraph> {
+        // Step 1: Assign public IDs to all assets
+        let public_ids = self.assign_public_ids(asset_graph)?;
+
+        // Step 2: Symbol resolution and dependency retargeting (production only)
+        if is_production {
+            self.resolve_and_retarget_symbols(asset_graph)?;
+        }
+
+        // Step 3: Setup conditional bundling metadata
+        self.setup_conditional_bundles(asset_graph)?;
+
+        Ok(PreparedGraph {
+            asset_graph,
+            public_ids,
+        })
+    }
+
+    /// Assign short, stable public IDs to assets for runtime references
+    fn assign_public_ids(&mut self, asset_graph: &AssetGraph) -> Result<HashMap<AssetId, String>> {
+        let mut public_ids = HashMap::new();
+
+        for asset in asset_graph.assets() {
+            let public_id = self.public_id_generator.generate(asset.id);
+            public_ids.insert(asset.id, public_id);
+        }
+
+        Ok(public_ids)
+    }
+
+    /// Resolve symbols and retarget dependencies for tree shaking
+    /// This is critical for production scope-hoisting
+    fn resolve_and_retarget_symbols(&mut self, asset_graph: &mut AssetGraph) -> Result<()> {
+        for dep_id in asset_graph.dependencies() {
+            let dep = asset_graph.dependency(dep_id);
+
+            // Only retarget sync dependencies with symbols in scope-hoisted production builds
+            if dep.priority != Priority::Sync || dep.symbols.is_none() {
+                continue;
+            }
+
+            // Get symbol resolution from symbol propagation
+            let symbol_targets = self.symbol_resolver.resolve_symbols(dep_id, asset_graph)?;
+
+            // Check if retargeting is beneficial
+            if self.should_retarget(&symbol_targets, dep)? {
+                // Split dependency into multiple dependencies, one per target asset
+                self.split_dependency_by_symbols(dep_id, symbol_targets, asset_graph)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Split a single dependency into multiple dependencies based on symbol targets
+    /// Example: `import {a, b} from './reexports'` where a comes from X and b from Y
+    ///          becomes two deps: one to X for 'a', one to Y for 'b'
+    fn split_dependency_by_symbols(
+        &mut self,
+        original_dep: DependencyId,
+        symbol_targets: HashMap<AssetId, HashMap<Symbol, Symbol>>,
+        asset_graph: &mut AssetGraph,
+    ) -> Result<()> {
+        let dep = asset_graph.dependency(original_dep);
+
+        // Keep original dep for external symbols (if any)
+        let external_symbols: Vec<Symbol> = dep.symbols.iter()
+            .filter(|s| !symbol_targets.values().any(|m| m.contains_key(s)))
+            .cloned()
+            .collect();
+
+        if external_symbols.is_empty() {
+            // Mark original for exclusion
+            asset_graph.mark_dependency_excluded(original_dep);
+        } else {
+            // Keep only external symbols in original
+            asset_graph.update_dependency_symbols(original_dep, external_symbols);
+        }
+
+        // Create new dependencies for each target asset
+        for (target_asset, symbol_map) in symbol_targets {
+            let new_dep_id = self.create_retargeted_dependency(
+                dep,
+                target_asset,
+                symbol_map,
+            )?;
+
+            asset_graph.add_dependency(dep.source_asset, new_dep_id);
+        }
+
+        Ok(())
+    }
+
+    /// Determine if dependency retargeting would be beneficial
+    fn should_retarget(
+        &self,
+        symbol_targets: &HashMap<AssetId, HashMap<Symbol, Symbol>>,
+        dep: &Dependency,
+    ) -> Result<bool> {
+        // Don't retarget if:
+        // - Using wildcard imports (no benefit)
+        // - Multiple imports of same symbol with different names (ambiguous)
+        // - Non-sync dependencies (async retargeting not yet supported)
+        // - Has side effects and no symbols imported (need to preserve for effects)
+
+        if dep.symbols.contains(&Symbol::wildcard()) {
+            return Ok(false);
+        }
+
+        if symbol_targets.values().any(|map| {
+            let values: HashSet<_> = map.values().collect();
+            values.len() != map.len() // Duplicate symbol targets
+        }) {
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
+
+    /// Setup conditional bundling metadata (importCond support)
+    fn setup_conditional_bundles(&mut self, asset_graph: &AssetGraph) -> Result<()> {
+        // Map placeholder IDs in asset.meta.conditions to actual dependencies
+        // Generate public IDs for conditions
+        // Store in graph for later bundler use
+
+        for asset in asset_graph.assets() {
+            if let Some(conditions) = &asset.meta.conditions {
+                for condition in conditions {
+                    let cond_id = self.register_condition(
+                        &condition.key,
+                        &condition.if_true_placeholder,
+                        &condition.if_false_placeholder,
+                        asset_graph,
+                    )?;
+
+                    // Store condition ID on asset for bundler
+                    asset.meta.condition_ids.push(cond_id);
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+```
+
+**Why this must run before bundling**:
+
+1. **Tree shaking accuracy**: Retargeted dependencies let bundler know precise asset relationships
+2. **Reduced bundle graph complexity**: Fewer dependencies to consider during bundling
+3. **Correct reachability**: Bundler sees actual targets, not intermediate re-exports
+4. **Public IDs needed**: Bundler and runtime use these IDs for asset references
+
+**Testing strategy for Phase 0**:
+
+```rust
+#[test]
+fn test_symbol_retargeting() {
+    // Given: import {a, b} from './reexports' where:
+    //   - reexports.js: export {a} from './x'; export {b} from './y'
+    //   - x.js and y.js have no side effects
+    let asset_graph = build_reexport_test_graph();
+
+    let mut processor = PreBundlingProcessor::new();
+    processor.prepare_for_bundling(&mut asset_graph, true)?;
+
+    // Should create two dependencies: one to x.js for 'a', one to y.js for 'b'
+    let deps = asset_graph.dependencies_from(main_asset);
+    assert_eq!(deps.len(), 2);
+
+    // Original reexports.js dependency should be excluded (no symbols from it)
+    let reexport_dep = find_dep_to(reexports_asset);
+    assert!(reexport_dep.excluded);
+}
+
+#[test]
+fn test_no_retarget_with_side_effects() {
+    // If intermediate re-export has side effects, don't retarget
+    let asset_graph = build_side_effect_test_graph();
+
+    let mut processor = PreBundlingProcessor::new();
+    processor.prepare_for_bundling(&mut asset_graph, true)?;
+
+    // Should NOT split - preserve original dependency
+    let deps = asset_graph.dependencies_from(main_asset);
+    assert_eq!(deps.len(), 1);
+    assert!(!deps[0].excluded);
+}
+```
+
+**Phase 1: Build Ideal Graph** (runs after Phase 0)
+
 ```rust
 pub struct BundlerContext {
     asset_graph: &AssetGraph,
