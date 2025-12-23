@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.16.1
+
+### Patch Changes
+
+- [#940](https://github.com/atlassian-labs/atlaspack/pull/940) [`7cb8569`](https://github.com/atlassian-labs/atlaspack/commit/7cb85698143e381fcb887173b2bfd15f0aea7918) Thanks [@benjervis](https://github.com/benjervis)! - Adds additional error detail to various `fs::` function calls throughout the codebase. This is purely as a debugging measure to help us work out where these file not found errors are coming from.
+
 ## 3.16.0
 
 ### Minor Changes
