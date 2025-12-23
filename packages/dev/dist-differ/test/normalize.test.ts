@@ -207,6 +207,26 @@ describe('linesDifferOnlyByUnminifiedRefs', () => {
     const line2 = '$00042ef5514babaf$var$foo = 1;';
     assert.equal(linesDifferOnlyByUnminifiedRefs(line1, line2), true);
   });
+
+  it('should return false when globalThis is transformed into scoped variable', () => {
+    const line1 = 'const atlToken = (0, globalThis.__SSR_ATL_TOKEN__);';
+    const line2 =
+      'const atlToken = (0, $b7103106635bd426$var$globalThis.__SSR_ATL_TOKEN__);';
+    assert.equal(linesDifferOnlyByUnminifiedRefs(line1, line2), false);
+  });
+
+  it('should return false when window is transformed into scoped variable', () => {
+    const line1 = 'const value = window.location;';
+    const line2 = 'const value = $a1b2c3d4e5f6g7h8$var$window.location;';
+    assert.equal(linesDifferOnlyByUnminifiedRefs(line1, line2), false);
+  });
+
+  it('should return false when document is transformed into scoped variable', () => {
+    const line1 = 'const el = document.getElementById("test");';
+    const line2 =
+      'const el = $1234567890abcdef$var$document.getElementById("test");';
+    assert.equal(linesDifferOnlyByUnminifiedRefs(line1, line2), false);
+  });
 });
 
 describe('linesDifferOnlyBySourceMapUrl', () => {
@@ -307,5 +327,25 @@ describe('linesDifferOnlyBySwappedVariables', () => {
     const line1 = 'var t = return + this;';
     const line2 = 'var a = return + this;';
     assert.equal(linesDifferOnlyBySwappedVariables(line1, line2), true);
+  });
+
+  it('should return false when globalThis is transformed into scoped variable', () => {
+    const line1 = 'const atlToken = (0, globalThis.__SSR_ATL_TOKEN__);';
+    const line2 =
+      'const atlToken = (0, $b7103106635bd426$var$globalThis.__SSR_ATL_TOKEN__);';
+    assert.equal(linesDifferOnlyBySwappedVariables(line1, line2), false);
+  });
+
+  it('should return false when window is transformed into scoped variable', () => {
+    const line1 = 'const value = window.location;';
+    const line2 = 'const value = $a1b2c3d4e5f6g7h8$var$window.location;';
+    assert.equal(linesDifferOnlyBySwappedVariables(line1, line2), false);
+  });
+
+  it('should return false when document is transformed into scoped variable', () => {
+    const line1 = 'const el = document.getElementById("test");';
+    const line2 =
+      'const el = $1234567890abcdef$var$document.getElementById("test");';
+    assert.equal(linesDifferOnlyBySwappedVariables(line1, line2), false);
   });
 });

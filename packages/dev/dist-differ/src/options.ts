@@ -11,6 +11,7 @@ export const DEFAULT_OPTIONS: CliOptions = {
   summaryMode: false,
   verbose: false,
   jsonMode: false,
+  mcpMode: false,
   sizeThreshold: 0.01, // Default 1%
 };
 
