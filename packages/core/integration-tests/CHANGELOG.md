@@ -1,5 +1,11 @@
 # @atlaspack/integration-tests
 
+## 2.20.1
+
+### Patch Changes
+
+- [#943](https://github.com/atlassian-labs/atlaspack/pull/943) [`6152999`](https://github.com/atlassian-labs/atlaspack/commit/61529999f8ab3131c591362c88b65e697e0bd9b8) Thanks [@emzeidan](https://github.com/emzeidan)! - Update TesseractResolver.ts to add new `unsupportedExtensions` config option to allow fallback
+
 ## 2.20.0
 
 ### Minor Changes

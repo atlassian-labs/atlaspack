@@ -1,5 +1,13 @@
 # @atlaspack/runtime-react-refresh
 
+## 2.16.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.8
+  - @atlaspack/plugin@2.14.47
+
 ## 2.16.3
 
 ### Patch Changes

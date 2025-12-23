@@ -1,5 +1,14 @@
 # @atlaspack/link
 
+## 2.14.47
+
+### Patch Changes
+
+- Updated dependencies [[`7cb8569`](https://github.com/atlassian-labs/atlaspack/commit/7cb85698143e381fcb887173b2bfd15f0aea7918)]:
+  - @atlaspack/rust@3.16.1
+  - @atlaspack/fs@2.15.42
+  - @atlaspack/utils@3.2.8
+
 ## 2.14.46
 
 ### Patch Changes
