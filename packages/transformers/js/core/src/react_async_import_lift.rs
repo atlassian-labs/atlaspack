@@ -1,12 +1,11 @@
 use std::collections::HashSet;
-use std::path::Path;
 
 use swc_core::common::{DUMMY_SP, Mark, SourceMap, Span, SyntaxContext, sync::Lrc};
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 use swc_core::quote;
 
-use crate::utils::SourceLocation;
+use crate::utils::{CodeHighlight, Diagnostic, DiagnosticSeverity, SourceLocation};
 
 /// Transformer that lifts dynamic imports out of JSResourceForUserVisible calls
 /// from @atlassian/react-async for SSR optimization.
@@ -53,8 +52,8 @@ pub struct ReactAsyncImportLift<'a> {
   pub jsx_resource_bindings: HashSet<Id>,
   /// Source map for location information
   pub source_map: Lrc<SourceMap>,
-  /// Current file being transformed
-  pub filename: &'a Path,
+  /// Diagnostics collected during transformation
+  pub diagnostics: &'a mut Vec<Diagnostic>,
 }
 
 impl<'a> ReactAsyncImportLift<'a> {
@@ -63,7 +62,7 @@ impl<'a> ReactAsyncImportLift<'a> {
     import_lifting_by_default: bool,
     reporting_level: String,
     source_map: Lrc<SourceMap>,
-    filename: &'a Path,
+    diagnostics: &'a mut Vec<Diagnostic>,
   ) -> Self {
     Self {
       global_mark,
@@ -73,12 +72,12 @@ impl<'a> ReactAsyncImportLift<'a> {
       lift_counter: 0,
       jsx_resource_bindings: HashSet::new(),
       source_map,
-      filename,
+      diagnostics,
     }
   }
 
   /// Check if import lifting is enabled for a given options object
-  fn is_import_lifted(&self, opts: &ObjectLit, call_span: Span) -> bool {
+  fn is_import_lifted(&mut self, opts: &ObjectLit, call_span: Span) -> bool {
     // Look for entryFsSsrLiftImportToModule property
     for prop in &opts.props {
       if let PropOrSpread::Prop(prop) = prop
@@ -91,20 +90,28 @@ impl<'a> ReactAsyncImportLift<'a> {
       }
     }
 
-    // Report missing flag if configured with location information
+    // Report missing flag if configured with diagnostic
     if matches!(self.reporting_level.as_str(), "report" | "error") {
       let loc = SourceLocation::from(&self.source_map, call_span);
-      let filename = self.filename.display();
-      let message = format!(
-        "No entryFsSsrLiftImportToModule setting found in JSResourceForUserVisible call at {}:{}:{}",
-        filename, loc.start_line, loc.start_col
-      );
 
-      match self.reporting_level.as_str() {
-        "report" => tracing::warn!("{}", message),
-        "error" => tracing::error!("{}", message),
+      let severity = match self.reporting_level.as_str() {
+        "report" => DiagnosticSeverity::Warning,
+        "error" => DiagnosticSeverity::Error,
         _ => unreachable!(),
-      }
+      };
+
+      self.diagnostics.push(Diagnostic {
+        message: "No entryFsSsrLiftImportToModule setting found in JSResourceForUserVisible call"
+          .into(),
+        code_highlights: Some(vec![CodeHighlight { message: None, loc }]),
+        hints: Some(vec![
+          "Add { entryFsSsrLiftImportToModule: true } to the options object".into(),
+          "Or set { entryFsSsrLiftImportToModule: false } to explicitly disable lifting".into(),
+        ]),
+        show_environment: false,
+        severity,
+        documentation_url: None,
+      });
     }
 
     self.import_lifting_by_default
@@ -346,38 +353,40 @@ mod tests {
   use super::*;
   use atlaspack_swc_runner::test_utils::{RunTestContext, run_test_visit};
   use indoc::indoc;
-  use tracing_test::traced_test;
 
   /// Helper to run transformer with default settings
   fn run_transform(code: &str, lift_by_default: bool) -> String {
+    let mut diagnostics = Vec::new();
     run_test_visit(code, |ctx: RunTestContext| {
       ReactAsyncImportLift::new(
         ctx.global_mark,
         lift_by_default,
         "report".into(),
         ctx.source_map,
-        Path::new("test.tsx"),
+        &mut diagnostics,
       )
     })
     .output_code
   }
 
-  /// Helper to run transformer with custom reporting level
+  /// Helper to run transformer with custom reporting level and return diagnostics
   fn run_transform_with_reporting(
     code: &str,
     lift_by_default: bool,
     reporting_level: &str,
-  ) -> String {
-    run_test_visit(code, |ctx: RunTestContext| {
+  ) -> (String, Vec<Diagnostic>) {
+    let mut diagnostics = Vec::new();
+    let output = run_test_visit(code, |ctx: RunTestContext| {
       ReactAsyncImportLift::new(
         ctx.global_mark,
         lift_by_default,
         reporting_level.into(),
         ctx.source_map,
-        Path::new("src/my-component.tsx"),
+        &mut diagnostics,
       )
     })
-    .output_code
+    .output_code;
+    (output, diagnostics)
   }
 
   #[test]
@@ -505,8 +514,7 @@ mod tests {
   }
 
   #[test]
-  #[traced_test]
-  fn test_warning_log_with_location_when_flag_missing() {
+  fn test_diagnostics_with_different_severity_levels() {
     let input = indoc! {r#"
       import { JSResourceForUserVisible } from '@atlassian/react-async';
       export const MyEntryPoint = JSResourceForUserVisible(
@@ -515,42 +523,44 @@ mod tests {
       );
     "#};
 
-    let _output = run_transform_with_reporting(input, false, "report");
+    // Test warning severity
+    let (_output, diagnostics) = run_transform_with_reporting(input, false, "report");
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(diagnostics[0].severity, DiagnosticSeverity::Warning);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("No entryFsSsrLiftImportToModule setting found")
+    );
+    assert_eq!(
+      diagnostics[0].code_highlights.as_ref().unwrap()[0]
+        .loc
+        .start_line,
+      2
+    );
 
-    // Verify warning contains file location information
-    assert!(logs_contain(
-      "No entryFsSsrLiftImportToModule setting found"
-    ));
-    assert!(logs_contain("JSResourceForUserVisible call at"));
-    assert!(logs_contain("src/my-component.tsx"));
-    assert!(logs_contain(":2:")); // Line 2 where JSResourceForUserVisible is called
+    // Test error severity (causes build failure)
+    let (_output, diagnostics) = run_transform_with_reporting(input, false, "error");
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(diagnostics[0].severity, DiagnosticSeverity::Error);
+    assert!(
+      diagnostics[0]
+        .message
+        .contains("No entryFsSsrLiftImportToModule setting found")
+    );
+
+    // Verify hints are provided
+    assert!(diagnostics[0].hints.is_some());
+    let hints = diagnostics[0].hints.as_ref().unwrap();
+    assert!(
+      hints
+        .iter()
+        .any(|h| h.contains("entryFsSsrLiftImportToModule"))
+    );
   }
 
   #[test]
-  #[traced_test]
-  fn test_error_log_with_location_when_flag_missing() {
-    let input = indoc! {r#"
-      import { JSResourceForUserVisible } from '@atlassian/react-async';
-      export const MyEntryPoint = JSResourceForUserVisible(
-        () => import('./ui/index.tsx'),
-        { moduleId: "abc123" }
-      );
-    "#};
-
-    let _output = run_transform_with_reporting(input, false, "error");
-
-    // Verify error contains file location information
-    assert!(logs_contain(
-      "No entryFsSsrLiftImportToModule setting found"
-    ));
-    assert!(logs_contain("JSResourceForUserVisible call at"));
-    assert!(logs_contain("src/my-component.tsx"));
-    assert!(logs_contain(":2:")); // Line 2 where JSResourceForUserVisible is called
-  }
-
-  #[test]
-  #[traced_test]
-  fn test_no_log_when_flag_present() {
+  fn test_no_diagnostic_when_flag_present() {
     let input = indoc! {r#"
       import { JSResourceForUserVisible } from '@atlassian/react-async';
       export const MyEntryPoint = JSResourceForUserVisible(
@@ -559,17 +569,14 @@ mod tests {
       );
     "#};
 
-    let _output = run_transform_with_reporting(input, false, "report");
+    let (_output, diagnostics) = run_transform_with_reporting(input, false, "report");
 
-    // Should not log when flag is explicitly set
-    assert!(!logs_contain(
-      "No entryFsSsrLiftImportToModule setting found"
-    ));
+    // No diagnostic should be created when flag is explicitly set
+    assert_eq!(diagnostics.len(), 0);
   }
 
   #[test]
-  #[traced_test]
-  fn test_no_log_when_reporting_disabled() {
+  fn test_no_diagnostic_when_reporting_disabled() {
     let input = indoc! {r#"
       import { JSResourceForUserVisible } from '@atlassian/react-async';
       export const MyEntryPoint = JSResourceForUserVisible(
@@ -578,35 +585,38 @@ mod tests {
       );
     "#};
 
-    let _output = run_transform_with_reporting(input, false, "off");
+    let (_output, diagnostics) = run_transform_with_reporting(input, false, "off");
 
-    // Should not log when reporting level is "off" or anything else
-    assert!(!logs_contain(
-      "No entryFsSsrLiftImportToModule setting found"
-    ));
+    // No diagnostic should be created when reporting level is "off"
+    assert_eq!(diagnostics.len(), 0);
   }
 
   #[test]
-  #[traced_test]
-  fn test_multiple_calls_log_multiple_locations() {
+  fn test_multiple_calls_create_multiple_diagnostics() {
     let input = indoc! {r#"
       import { JSResourceForUserVisible } from '@atlassian/react-async';
       export const Entry1 = JSResourceForUserVisible(() => import('./file1.tsx'), { moduleId: "1" });
       export const Entry2 = JSResourceForUserVisible(() => import('./file2.tsx'), { moduleId: "2" });
     "#};
 
-    let _output = run_transform_with_reporting(input, false, "report");
+    let (_output, diagnostics) = run_transform_with_reporting(input, false, "report");
 
-    // Should log once for each call
-    logs_assert(|lines: &[&str]| {
-      let count = lines
+    // Should create one diagnostic for each call
+    assert_eq!(diagnostics.len(), 2);
+    assert!(
+      diagnostics
         .iter()
-        .filter(|line| line.contains("No entryFsSsrLiftImportToModule setting found"))
-        .count();
-      match count {
-        2 => Ok(()),
-        n => Err(format!("Expected two log messages, but found {}", n)),
-      }
-    });
+        .all(|d| d.severity == DiagnosticSeverity::Warning)
+    );
+
+    // Verify different line numbers for each diagnostic
+    let line1 = diagnostics[0].code_highlights.as_ref().unwrap()[0]
+      .loc
+      .start_line;
+    let line2 = diagnostics[1].code_highlights.as_ref().unwrap()[0]
+      .loc
+      .start_line;
+    assert_eq!(line1, 2); // First JSResourceForUserVisible call
+    assert_eq!(line2, 3); // Second JSResourceForUserVisible call
   }
 }

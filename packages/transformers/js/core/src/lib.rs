@@ -430,25 +430,25 @@ pub fn transform(
                 ));
               }
 
-              let module = module.apply((
-                  Optional::new(
-                    visit_mut_pass(ReactAsyncImportLift::new(
-                      global_mark,
-                      config.react_async_lift_by_default,
-                      config.react_async_lift_report_level.clone(),
-                      source_map.clone(),
-                      Path::new(&config.filename),
-                    )),
-                    config.enable_react_async_import_lift && ReactAsyncImportLift::should_transform(code)
-                  ),
-                  Optional::new(
-                    visit_mut_pass(
-                      SyncDynamicImport::new(Path::new(&config.filename),
-                        unresolved_mark,
-                        &config.sync_dynamic_import_config,
-                      )),
-                      config.sync_dynamic_import_config.is_some()),
+              // Lift React async imports to top-level
+              if config.enable_react_async_import_lift && ReactAsyncImportLift::should_transform(code) {
+                module.visit_mut_with(&mut ReactAsyncImportLift::new(
+                  global_mark,
+                  config.react_async_lift_by_default,
+                  config.react_async_lift_report_level.clone(),
+                  source_map.clone(),
+                  &mut diagnostics,
                 ));
+              }
+
+              // Transform dynamic imports to sync imports if configured
+              if config.sync_dynamic_import_config.is_some() {
+                module.visit_mut_with(
+                  &mut SyncDynamicImport::new(Path::new(&config.filename),
+                    unresolved_mark,
+                    &config.sync_dynamic_import_config,
+                  ));
+                }
 
               let mut module = {
                 let mut passes = (
