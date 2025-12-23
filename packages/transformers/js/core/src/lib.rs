@@ -432,7 +432,13 @@ pub fn transform(
 
               let module = module.apply((
                   Optional::new(
-                    visit_mut_pass(ReactAsyncImportLift::new(global_mark, config.react_async_lift_by_default, config.react_async_lift_report_level.clone())),
+                    visit_mut_pass(ReactAsyncImportLift::new(
+                      global_mark,
+                      config.react_async_lift_by_default,
+                      config.react_async_lift_report_level.clone(),
+                      source_map.clone(),
+                      Path::new(&config.filename),
+                    )),
                     config.enable_react_async_import_lift && ReactAsyncImportLift::should_transform(code)
                   ),
                   Optional::new(

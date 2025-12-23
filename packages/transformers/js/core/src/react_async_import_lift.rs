@@ -1,9 +1,12 @@
 use std::collections::HashSet;
+use std::path::Path;
 
-use swc_core::common::{DUMMY_SP, Mark, SyntaxContext};
+use swc_core::common::{DUMMY_SP, Mark, SourceMap, Span, SyntaxContext, sync::Lrc};
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 use swc_core::quote;
+
+use crate::utils::SourceLocation;
 
 /// Transformer that lifts dynamic imports out of JSResourceForUserVisible calls
 /// from @atlassian/react-async for SSR optimization.
@@ -36,7 +39,7 @@ use swc_core::quote;
 ///   }),
 /// });
 /// ```
-pub struct ReactAsyncImportLift {
+pub struct ReactAsyncImportLift<'a> {
   /// Mark used for generated/synthetic nodes
   pub global_mark: Mark,
   /// Whether import lifting is applied regardless of import options
@@ -48,10 +51,20 @@ pub struct ReactAsyncImportLift {
   pub lift_counter: usize,
   /// Set to track bindings of JSResourceForUserVisible imports
   pub jsx_resource_bindings: HashSet<Id>,
+  /// Source map for location information
+  pub source_map: Lrc<SourceMap>,
+  /// Current file being transformed
+  pub filename: &'a Path,
 }
 
-impl ReactAsyncImportLift {
-  pub fn new(global_mark: Mark, import_lifting_by_default: bool, reporting_level: String) -> Self {
+impl<'a> ReactAsyncImportLift<'a> {
+  pub fn new(
+    global_mark: Mark,
+    import_lifting_by_default: bool,
+    reporting_level: String,
+    source_map: Lrc<SourceMap>,
+    filename: &'a Path,
+  ) -> Self {
     Self {
       global_mark,
       import_lifting_by_default,
@@ -59,11 +72,13 @@ impl ReactAsyncImportLift {
       lifted_imports: Vec::new(),
       lift_counter: 0,
       jsx_resource_bindings: HashSet::new(),
+      source_map,
+      filename,
     }
   }
 
   /// Check if import lifting is enabled for a given options object
-  fn is_import_lifted(&self, opts: &ObjectLit) -> bool {
+  fn is_import_lifted(&self, opts: &ObjectLit, call_span: Span) -> bool {
     // Look for entryFsSsrLiftImportToModule property
     for prop in &opts.props {
       if let PropOrSpread::Prop(prop) = prop
@@ -76,11 +91,20 @@ impl ReactAsyncImportLift {
       }
     }
 
-    // Report missing flag if configured
-    match self.reporting_level.as_str() {
-      "report" => println!("No entryFsSsrLiftImportToModule setting found"),
-      "error" => eprintln!("No entryFsSsrLiftImportToModule setting found"),
-      _ => {}
+    // Report missing flag if configured with location information
+    if matches!(self.reporting_level.as_str(), "report" | "error") {
+      let loc = SourceLocation::from(&self.source_map, call_span);
+      let filename = self.filename.display();
+      let message = format!(
+        "No entryFsSsrLiftImportToModule setting found in JSResourceForUserVisible call at {}:{}:{}",
+        filename, loc.start_line, loc.start_col
+      );
+
+      match self.reporting_level.as_str() {
+        "report" => tracing::warn!("{}", message),
+        "error" => tracing::error!("{}", message),
+        _ => unreachable!(),
+      }
     }
 
     self.import_lifting_by_default
@@ -259,7 +283,7 @@ impl ReactAsyncImportLift {
   }
 }
 
-impl VisitMut for ReactAsyncImportLift {
+impl VisitMut for ReactAsyncImportLift<'_> {
   fn visit_mut_import_decl(&mut self, import: &mut ImportDecl) {
     // Collect JSResourceForUserVisible bindings from @atlassian/react-async imports
     if import.src.value == "@atlassian/react-async" {
@@ -303,7 +327,7 @@ impl VisitMut for ReactAsyncImportLift {
     {
       // Determine if lifting should happen by checking the options
       let should_lift = call.args.get(1).is_some_and(
-        |opts_arg| matches!(&*opts_arg.expr, Expr::Object(opts) if self.is_import_lifted(opts)),
+        |opts_arg| matches!(&*opts_arg.expr, Expr::Object(opts) if self.is_import_lifted(opts, call.span)),
       );
 
       // If lifting is enabled, process the loader argument and DON'T visit children
@@ -322,11 +346,36 @@ mod tests {
   use super::*;
   use atlaspack_swc_runner::test_utils::{RunTestContext, run_test_visit};
   use indoc::indoc;
+  use tracing_test::traced_test;
 
   /// Helper to run transformer with default settings
   fn run_transform(code: &str, lift_by_default: bool) -> String {
     run_test_visit(code, |ctx: RunTestContext| {
-      ReactAsyncImportLift::new(ctx.global_mark, lift_by_default, "report".into())
+      ReactAsyncImportLift::new(
+        ctx.global_mark,
+        lift_by_default,
+        "report".into(),
+        ctx.source_map,
+        Path::new("test.tsx"),
+      )
+    })
+    .output_code
+  }
+
+  /// Helper to run transformer with custom reporting level
+  fn run_transform_with_reporting(
+    code: &str,
+    lift_by_default: bool,
+    reporting_level: &str,
+  ) -> String {
+    run_test_visit(code, |ctx: RunTestContext| {
+      ReactAsyncImportLift::new(
+        ctx.global_mark,
+        lift_by_default,
+        reporting_level.into(),
+        ctx.source_map,
+        Path::new("src/my-component.tsx"),
+      )
     })
     .output_code
   }
@@ -453,5 +502,111 @@ mod tests {
     assert!(output.contains("if (someCondition)"));
     assert!(output.contains("return _liftedReactAsyncImport"));
     assert!(output.contains("return _liftedReactAsyncImport1"));
+  }
+
+  #[test]
+  #[traced_test]
+  fn test_warning_log_with_location_when_flag_missing() {
+    let input = indoc! {r#"
+      import { JSResourceForUserVisible } from '@atlassian/react-async';
+      export const MyEntryPoint = JSResourceForUserVisible(
+        () => import('./ui/index.tsx'),
+        { moduleId: "abc123" }
+      );
+    "#};
+
+    let _output = run_transform_with_reporting(input, false, "report");
+
+    // Verify warning contains file location information
+    assert!(logs_contain(
+      "No entryFsSsrLiftImportToModule setting found"
+    ));
+    assert!(logs_contain("JSResourceForUserVisible call at"));
+    assert!(logs_contain("src/my-component.tsx"));
+    assert!(logs_contain(":2:")); // Line 2 where JSResourceForUserVisible is called
+  }
+
+  #[test]
+  #[traced_test]
+  fn test_error_log_with_location_when_flag_missing() {
+    let input = indoc! {r#"
+      import { JSResourceForUserVisible } from '@atlassian/react-async';
+      export const MyEntryPoint = JSResourceForUserVisible(
+        () => import('./ui/index.tsx'),
+        { moduleId: "abc123" }
+      );
+    "#};
+
+    let _output = run_transform_with_reporting(input, false, "error");
+
+    // Verify error contains file location information
+    assert!(logs_contain(
+      "No entryFsSsrLiftImportToModule setting found"
+    ));
+    assert!(logs_contain("JSResourceForUserVisible call at"));
+    assert!(logs_contain("src/my-component.tsx"));
+    assert!(logs_contain(":2:")); // Line 2 where JSResourceForUserVisible is called
+  }
+
+  #[test]
+  #[traced_test]
+  fn test_no_log_when_flag_present() {
+    let input = indoc! {r#"
+      import { JSResourceForUserVisible } from '@atlassian/react-async';
+      export const MyEntryPoint = JSResourceForUserVisible(
+        () => import('./ui/index.tsx'),
+        { entryFsSsrLiftImportToModule: true }
+      );
+    "#};
+
+    let _output = run_transform_with_reporting(input, false, "report");
+
+    // Should not log when flag is explicitly set
+    assert!(!logs_contain(
+      "No entryFsSsrLiftImportToModule setting found"
+    ));
+  }
+
+  #[test]
+  #[traced_test]
+  fn test_no_log_when_reporting_disabled() {
+    let input = indoc! {r#"
+      import { JSResourceForUserVisible } from '@atlassian/react-async';
+      export const MyEntryPoint = JSResourceForUserVisible(
+        () => import('./ui/index.tsx'),
+        { moduleId: "abc123" }
+      );
+    "#};
+
+    let _output = run_transform_with_reporting(input, false, "off");
+
+    // Should not log when reporting level is "off" or anything else
+    assert!(!logs_contain(
+      "No entryFsSsrLiftImportToModule setting found"
+    ));
+  }
+
+  #[test]
+  #[traced_test]
+  fn test_multiple_calls_log_multiple_locations() {
+    let input = indoc! {r#"
+      import { JSResourceForUserVisible } from '@atlassian/react-async';
+      export const Entry1 = JSResourceForUserVisible(() => import('./file1.tsx'), { moduleId: "1" });
+      export const Entry2 = JSResourceForUserVisible(() => import('./file2.tsx'), { moduleId: "2" });
+    "#};
+
+    let _output = run_transform_with_reporting(input, false, "report");
+
+    // Should log once for each call
+    logs_assert(|lines: &[&str]| {
+      let count = lines
+        .iter()
+        .filter(|line| line.contains("No entryFsSsrLiftImportToModule setting found"))
+        .count();
+      match count {
+        2 => Ok(()),
+        n => Err(format!("Expected two log messages, but found {}", n)),
+      }
+    });
   }
 }
