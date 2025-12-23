@@ -9,8 +9,8 @@ use swc_core::common::SyntaxContext;
 use swc_core::common::sync::Lrc;
 use swc_core::ecma::ast::{self, Expr};
 use swc_core::ecma::ast::{ComputedPropName, Module};
-use swc_core::ecma::atoms::JsWord;
-use swc_core::ecma::atoms::js_word;
+use swc_core::ecma::atoms::Atom;
+use swc_core::ecma::atoms::atom;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
 
@@ -58,7 +58,7 @@ pub struct GlobalReplacer<'a> {
   pub items: &'a mut Vec<DependencyDescriptor>,
   pub global_mark: Mark,
   /// Internal structure for inserted global statements.
-  pub globals: IndexMap<JsWord, (SyntaxContext, ast::Stmt)>,
+  pub globals: IndexMap<Atom, (SyntaxContext, ast::Stmt)>,
   pub project_root: &'a Path,
   pub filename: &'a Path,
   pub unresolved_mark: Mark,
@@ -76,7 +76,6 @@ impl VisitMut for GlobalReplacer<'_> {
       return;
     };
 
-    // Only handle global variables
     if !is_unresolved(id, self.unresolved_mark) {
       return;
     }
@@ -85,7 +84,7 @@ impl VisitMut for GlobalReplacer<'_> {
     match id.sym.to_string().as_str() {
       "process" => {
         if self.update_binding(id, |_| {
-          Call(create_require(js_word!("process"), unresolved_mark))
+          Call(create_require(atom!("process"), unresolved_mark))
         }) {
           let specifier = id.sym.clone();
           self.items.push(DependencyDescriptor {
@@ -101,7 +100,7 @@ impl VisitMut for GlobalReplacer<'_> {
         }
       }
       "Buffer" => {
-        let specifier = swc_core::ecma::atoms::JsWord::from("buffer");
+        let specifier = swc_core::ecma::atoms::Atom::from("buffer");
         if self.update_binding(id, |_| {
           Member(MemberExpr {
             obj: Box::new(Call(create_require(specifier.clone(), unresolved_mark))),
@@ -133,7 +132,7 @@ impl VisitMut for GlobalReplacer<'_> {
             };
 
           Lit(ast::Lit::Str(
-            swc_core::ecma::atoms::JsWord::from(filename).into(),
+            swc_core::ecma::atoms::Atom::from(filename).into(),
           ))
         });
       }
@@ -149,7 +148,7 @@ impl VisitMut for GlobalReplacer<'_> {
             String::from("/")
           };
           Lit(ast::Lit::Str(
-            swc_core::ecma::atoms::JsWord::from(dirname).into(),
+            swc_core::ecma::atoms::Atom::from(dirname).into(),
           ))
         });
       }
@@ -157,10 +156,7 @@ impl VisitMut for GlobalReplacer<'_> {
         if !self.scope_hoist {
           self.update_binding(id, |_| {
             Member(MemberExpr {
-              obj: Box::new(Ident(ast::Ident::new_no_ctxt(
-                js_word!("arguments"),
-                DUMMY_SP,
-              ))),
+              obj: Box::new(Ident(ast::Ident::new_no_ctxt(atom!("arguments"), DUMMY_SP))),
               prop: MemberProp::Computed(ComputedPropName {
                 span: DUMMY_SP,
                 expr: Box::new(Lit(ast::Lit::Num(3.into()))),
@@ -214,7 +210,7 @@ mod tests {
   use atlaspack_core::types::DependencyKind;
   use atlaspack_swc_runner::test_utils::{RunTestContext, RunVisitResult, run_test_visit};
   use indoc::indoc;
-  use swc_core::ecma::atoms::JsWord;
+  use swc_core::ecma::atoms::Atom;
 
   use crate::DependencyDescriptor;
   use crate::global_replacer::GlobalReplacer;
@@ -255,7 +251,7 @@ mod tests {
     );
     assert_eq!(items.len(), 1);
     assert_eq!(items[0].kind, DependencyKind::Require);
-    assert_eq!(items[0].specifier, JsWord::from("process"));
+    assert_eq!(items[0].specifier, Atom::from("process"));
   }
 
   #[test]
