@@ -21,10 +21,12 @@ interface TesseractResolverConfig {
 
   /** Enable React DOM Server specific behavior. */
   handleReactDomServer?: boolean;
+
+  /** Unsupported extensions, configure to fallback to default behaviour */
+  unsupportedExtensions?: Array<string>;
 }
 
 const IGNORE_MODULES_REGEX = /(mock|mocks|\.woff|\.woff2|\.mp3|\.ogg)$/;
-
 const IGNORE_PATH = join(__dirname, 'data', 'empty-module.js');
 
 /**
@@ -105,6 +107,7 @@ export default new Resolver({
     const browserResolvedNodeBuiltins =
       userConfig.browserResolvedNodeBuiltins || [];
     const handleReactDomServer = userConfig.handleReactDomServer || false;
+    const unsupportedExtensions = userConfig.unsupportedExtensions || [];
     const nodeResolver = new NodeResolver({
       fs: options.inputFS,
       projectRoot: options.projectRoot,
@@ -134,6 +137,7 @@ export default new Resolver({
       ignoreModules,
       browserResolvedNodeBuiltins,
       handleReactDomServer,
+      unsupportedExtensions,
     };
   },
   resolve({dependency, specifier, config, options}) {
@@ -146,7 +150,15 @@ export default new Resolver({
       builtinAliases,
       serverSuffixes,
       handleReactDomServer,
+      unsupportedExtensions,
     } = config;
+
+    if (
+      unsupportedExtensions.some((ext) => dependency.specifier.endsWith(ext))
+    ) {
+      // fallback to atlaspack's default resolver
+      return null;
+    }
 
     if (!specifier.startsWith('//') && isAbsolute(specifier)) {
       return {

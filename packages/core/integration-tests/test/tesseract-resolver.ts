@@ -6,17 +6,20 @@ import {
   it,
   fsFixture,
   overlayFS,
+  outputFS,
 } from '@atlaspack/test-utils';
 
 describe('tesseract-resolver', function () {
-  it('should not fail when resolving protocol-relative URLs in CSS', async function () {
-    // Ensures protocol-relative URLs (//example.com) in CSS are not incorrectly treated as absolute file paths by TesseractResolver.
+  it('should skip resolving unsupportedExtensions', async function () {
     await fsFixture(overlayFS, __dirname)`
       resolver-protocol-relative-url
         package.json:
           {
             "name": "resolver-protocol-relative-url",
-            "version": "1.0.0"
+            "version": "1.0.0",
+            "@atlaspack/resolver-tesseract": {
+              "unsupportedExtensions": ["woff", "woff2"]
+            }
           }
 
         .parcelrc:
@@ -51,5 +54,14 @@ describe('tesseract-resolver', function () {
 
     // The build should succeed without throwing an error
     assert(b !== null);
+
+    // Verify the bundler output contains the unchanged URL
+    let distDir = path.join(__dirname, '../dist/');
+    let filename = path.join(distDir, 'index.html');
+    let html = await outputFS.readFile(filename, 'utf8');
+    assert(
+      html.includes('//example.com/font.woff2'),
+      'HTML output should contain the unchanged protocol-relative URL',
+    );
   });
 });
