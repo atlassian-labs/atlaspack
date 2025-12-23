@@ -19,6 +19,7 @@ pub mod js_tracing;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod atlaspack;
+mod diagnostics;
 #[cfg(not(test))]
 pub mod lmdb;
 mod optimizers;

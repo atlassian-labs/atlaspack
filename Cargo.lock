@@ -795,6 +795,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "atlaspack-js-swc-core",
  "atlaspack_atlaskit_tokens",
  "atlaspack_core",
  "atlaspack_filesystem",

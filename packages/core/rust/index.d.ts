@@ -63,6 +63,27 @@ export declare function resetMemoryTracking(): void
 export declare function sampleNativeMemory(): void
 /** Called on the worker thread to create a reference to the NodeJs worker */
 export declare function newNodejsWorker(worker: object): JsTransferable
+/** NAPI-compatible source location for JavaScript */
+export interface JsSourceLocation {
+  startLine: number
+  startCol: number
+  endLine: number
+  endCol: number
+}
+/** NAPI-compatible code highlight for JavaScript */
+export interface JsCodeHighlight {
+  message?: string
+  loc: JsSourceLocation
+}
+/** NAPI-compatible diagnostic for JavaScript */
+export interface JsDiagnostic {
+  message: string
+  codeHighlights?: Array<JsCodeHighlight>
+  hints?: Array<string>
+  showEnvironment: boolean
+  severity: string
+  documentationUrl?: string
+}
 export interface InlineRequiresOptimizerInput {
   code: string
   sourceMaps: boolean
@@ -109,24 +130,6 @@ export interface CompiledCssInJsPluginResult {
   diagnostics: Array<JsDiagnostic>
   bailOut: boolean
   codeHash: string
-}
-export interface JsSourceLocation {
-  startLine: number
-  startCol: number
-  endLine: number
-  endCol: number
-}
-export interface JsCodeHighlight {
-  message?: string
-  loc: JsSourceLocation
-}
-export interface JsDiagnostic {
-  message: string
-  codeHighlights?: Array<JsCodeHighlight>
-  hints?: Array<string>
-  showEnvironment: boolean
-  severity: string
-  documentationUrl?: string
 }
 export declare function applyCompiledCssInJsPlugin(rawCode: Buffer, input: CompiledCssInJsPluginInput): object
 export interface JsFileSystemOptions {
@@ -205,6 +208,7 @@ export interface TokensConfig {
 export interface TokensPluginResult {
   code: string
   map?: string
+  diagnostics: Array<JsDiagnostic>
 }
 /** Apply the tokens transformation plugin to the given code asynchronously */
 export declare function applyTokensPlugin(rawCode: Buffer, config: TokensConfig): object

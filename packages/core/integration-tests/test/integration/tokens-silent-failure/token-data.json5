@@ -1,0 +1,12 @@
+{
+  tokenNames: {
+    'color.text': '--ds-text',
+  },
+  light: {
+    'color.text': '#172B4D',
+  },
+  shape: {},
+  spacing: {},
+  typography: {},
+}
+

@@ -215,72 +215,7 @@ fn map_transform_errors_to_diagnostics(
     .collect()
 }
 
-#[napi(object)]
-#[derive(Debug, serde::Serialize)]
-pub struct JsSourceLocation {
-  pub start_line: u32,
-  pub start_col: u32,
-  pub end_line: u32,
-  pub end_col: u32,
-}
-
-#[napi(object)]
-#[derive(Debug, serde::Serialize)]
-pub struct JsCodeHighlight {
-  pub message: Option<String>,
-  pub loc: JsSourceLocation,
-}
-
-#[napi(object)]
-#[derive(Debug, serde::Serialize)]
-pub struct JsDiagnostic {
-  pub message: String,
-  pub code_highlights: Option<Vec<JsCodeHighlight>>,
-  pub hints: Option<Vec<String>>,
-  pub show_environment: bool,
-  pub severity: String,
-  pub documentation_url: Option<String>,
-}
-
-fn convert_source_location(loc: SourceLocation) -> JsSourceLocation {
-  JsSourceLocation {
-    start_line: loc.start_line as u32,
-    start_col: loc.start_col as u32,
-    end_line: loc.end_line as u32,
-    end_col: loc.end_col as u32,
-  }
-}
-
-fn convert_code_highlight(highlight: CodeHighlight) -> JsCodeHighlight {
-  JsCodeHighlight {
-    message: highlight.message,
-    loc: convert_source_location(highlight.loc),
-  }
-}
-
-fn convert_diagnostic(diagnostic: Diagnostic) -> JsDiagnostic {
-  let severity = match diagnostic.severity {
-    DiagnosticSeverity::Error => "Error",
-    DiagnosticSeverity::Warning => "Warning",
-    DiagnosticSeverity::SourceError => "SourceError",
-  }
-  .to_string();
-
-  JsDiagnostic {
-    message: diagnostic.message,
-    code_highlights: diagnostic
-      .code_highlights
-      .map(|highlights| highlights.into_iter().map(convert_code_highlight).collect()),
-    hints: diagnostic.hints,
-    show_environment: diagnostic.show_environment,
-    severity,
-    documentation_url: diagnostic.documentation_url,
-  }
-}
-
-fn convert_diagnostics(diagnostics: Vec<Diagnostic>) -> Vec<JsDiagnostic> {
-  diagnostics.into_iter().map(convert_diagnostic).collect()
-}
+use crate::diagnostics::{JsDiagnostic, convert_diagnostics};
 
 // Exclude macro expansions from source maps.
 struct SourceMapConfig;
