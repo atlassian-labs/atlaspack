@@ -27,11 +27,14 @@ pub struct TokensConfig {
   pub tokens_options: TokensPluginOptions,
 }
 
+use crate::diagnostics::{JsDiagnostic, convert_diagnostic};
+
 #[napi(object)]
 #[derive(Clone, Debug, Serialize)]
 pub struct TokensPluginResult {
   pub code: String,
   pub map: Option<String>,
+  pub diagnostics: Vec<JsDiagnostic>,
 }
 
 impl From<SharedTokensPluginResult> for TokensPluginResult {
@@ -39,6 +42,11 @@ impl From<SharedTokensPluginResult> for TokensPluginResult {
     TokensPluginResult {
       code: result.code,
       map: result.map,
+      diagnostics: result
+        .diagnostics
+        .into_iter()
+        .map(convert_diagnostic)
+        .collect(),
     }
   }
 }
