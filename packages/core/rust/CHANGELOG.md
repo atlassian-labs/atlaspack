@@ -1,5 +1,15 @@
 # @atlaspack/rust
 
+## 3.17.0
+
+### Minor Changes
+
+- [#942](https://github.com/atlassian-labs/atlaspack/pull/942) [`695339e`](https://github.com/atlassian-labs/atlaspack/commit/695339e4fd46df9590013c2ef4de74cb22225927) Thanks [@marcins](https://github.com/marcins)! - Improve error handling in Tokens transform
+
+### Patch Changes
+
+- [#940](https://github.com/atlassian-labs/atlaspack/pull/940) [`7cb8569`](https://github.com/atlassian-labs/atlaspack/commit/7cb85698143e381fcb887173b2bfd15f0aea7918) Thanks [@benjervis](https://github.com/benjervis)! - Adds additional error detail to various `fs::` function calls throughout the codebase. This is purely as a debugging measure to help us work out where these file not found errors are coming from.
+
 ## 3.16.0
 
 ### Minor Changes

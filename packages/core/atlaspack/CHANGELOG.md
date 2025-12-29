@@ -1,5 +1,105 @@
 # atlaspack
 
+## 2.0.31
+
+### Patch Changes
+
+- Updated dependencies [[`7cb8569`](https://github.com/atlassian-labs/atlaspack/commit/7cb85698143e381fcb887173b2bfd15f0aea7918), [`695339e`](https://github.com/atlassian-labs/atlaspack/commit/695339e4fd46df9590013c2ef4de74cb22225927)]:
+  - @atlaspack/rust@3.17.0
+  - @atlaspack/core@2.31.1
+  - @atlaspack/bundler-default@3.4.19
+  - @atlaspack/cache@3.2.42
+  - @atlaspack/fs@2.15.42
+  - @atlaspack/logger@2.14.39
+  - @atlaspack/utils@3.2.8
+  - @atlaspack/optimizer-image@12.0.1
+  - @atlaspack/optimizer-inline-requires@2.15.8
+  - @atlaspack/packager-js@2.24.8
+  - @atlaspack/transformer-html@2.15.24
+  - @atlaspack/transformer-js@12.0.1
+  - @atlaspack/transformer-postcss@2.14.47
+  - @atlaspack/transformer-svg@2.14.47
+  - @atlaspack/node-resolver-core@3.7.18
+  - @atlaspack/config-default@12.0.1
+  - @atlaspack/config-webextension@12.0.1
+  - @atlaspack/cli@2.15.8
+  - @atlaspack/reporter-bundle-stats@2.14.48
+  - @atlaspack/transformer-image@12.0.1
+  - @atlaspack/package-manager@2.14.47
+  - @atlaspack/profiler@2.15.8
+  - @atlaspack/workers@2.14.47
+  - @atlaspack/watcher-watchman-js@2.14.47
+  - @atlaspack/types-internal@2.22.4
+  - @atlaspack/optimizer-css@2.15.8
+  - @atlaspack/optimizer-cssnano@2.15.8
+  - @atlaspack/optimizer-swc@2.15.8
+  - @atlaspack/optimizer-terser@2.15.8
+  - @atlaspack/packager-css@2.15.8
+  - @atlaspack/transformer-babel@2.15.8
+  - @atlaspack/transformer-css@2.15.8
+  - @atlaspack/transformer-less@2.15.8
+  - @atlaspack/transformer-sass@2.15.8
+  - @atlaspack/transformer-typescript-tsc@2.15.8
+  - @atlaspack/transformer-typescript-types@2.15.8
+  - @atlaspack/optimizer-blob-url@2.14.47
+  - @atlaspack/optimizer-data-url@2.14.47
+  - @atlaspack/optimizer-svgo@2.14.47
+  - @atlaspack/packager-html@2.15.29
+  - @atlaspack/packager-raw-url@2.14.47
+  - @atlaspack/packager-svg@2.14.47
+  - @atlaspack/packager-webextension@2.14.47
+  - @atlaspack/packager-xml@2.14.47
+  - @atlaspack/reporter-build-metrics@2.14.47
+  - @atlaspack/reporter-bundle-analyzer@2.14.47
+  - @atlaspack/reporter-cli@2.17.29
+  - @atlaspack/reporter-dev-server@2.14.47
+  - @atlaspack/reporter-json@2.14.47
+  - @atlaspack/reporter-lsp@2.14.47
+  - @atlaspack/reporter-sourcemap-visualiser@2.14.47
+  - @atlaspack/reporter-tracer@2.14.47
+  - @atlaspack/resolver-glob@2.14.47
+  - @atlaspack/runtime-browser-hmr@2.15.4
+  - @atlaspack/runtime-js@2.20.4
+  - @atlaspack/runtime-react-refresh@2.16.4
+  - @atlaspack/runtime-service-worker@2.15.4
+  - @atlaspack/runtime-webextension@2.15.4
+  - @atlaspack/transformer-posthtml@2.14.47
+  - @atlaspack/transformer-react-refresh-wrap@2.15.23
+  - @atlaspack/transformer-webextension@2.14.47
+  - @atlaspack/transformer-webmanifest@2.14.47
+  - @atlaspack/validator-eslint@2.14.47
+  - @atlaspack/validator-typescript@2.14.47
+  - @atlaspack/resolver-default@2.14.47
+  - @atlaspack/types@2.15.37
+  - @atlaspack/codeframe@2.13.29
+  - @atlaspack/graph@3.6.9
+  - @atlaspack/plugin@2.14.47
+  - @atlaspack/reporter-bundle-buddy@2.14.47
+  - @atlaspack/transformer-xml@2.14.47
+  - @atlaspack/packager-ts@2.14.47
+  - @atlaspack/transformer-jsonld@2.14.47
+  - @atlaspack/bundler-library@2.12.49
+  - @atlaspack/compressor-brotli@2.13.49
+  - @atlaspack/compressor-gzip@2.13.49
+  - @atlaspack/compressor-raw@2.13.49
+  - @atlaspack/namer-default@2.14.47
+  - @atlaspack/optimizer-htmlnano@2.14.47
+  - @atlaspack/packager-raw@2.14.47
+  - @atlaspack/packager-wasm@2.14.47
+  - @atlaspack/reporter-conditional-manifest@2.15.29
+  - @atlaspack/transformer-glsl@2.14.47
+  - @atlaspack/transformer-graphql@2.14.47
+  - @atlaspack/transformer-inline@2.14.47
+  - @atlaspack/transformer-inline-string@2.14.47
+  - @atlaspack/transformer-json@2.14.47
+  - @atlaspack/transformer-mdx@2.14.47
+  - @atlaspack/transformer-pug@2.14.47
+  - @atlaspack/transformer-raw@2.14.47
+  - @atlaspack/transformer-svg-react@2.14.47
+  - @atlaspack/transformer-toml@2.14.47
+  - @atlaspack/transformer-worklet@2.14.47
+  - @atlaspack/transformer-yaml@2.14.47
+
 ## 2.0.30
 
 ### Patch Changes

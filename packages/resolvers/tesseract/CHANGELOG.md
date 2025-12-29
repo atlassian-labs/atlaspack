@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.15.20
+
+### Patch Changes
+
+- [#943](https://github.com/atlassian-labs/atlaspack/pull/943) [`6152999`](https://github.com/atlassian-labs/atlaspack/commit/61529999f8ab3131c591362c88b65e697e0bd9b8) Thanks [@emzeidan](https://github.com/emzeidan)! - Update TesseractResolver.ts to add new `unsupportedExtensions` config option to allow fallback
+
+- Updated dependencies []:
+  - @atlaspack/node-resolver-core@3.7.18
+  - @atlaspack/types-internal@2.22.4
+  - @atlaspack/plugin@2.14.47
+
 ## 2.15.19
 
 ### Patch Changes
