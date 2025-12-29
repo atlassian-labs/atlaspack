@@ -5,9 +5,9 @@
   "private": true,
   "scripts": {
     "build:inspect": "PARCEL_WORKERS=0 node --inspect-brk $(yarn bin atlaspack) build --no-cache src/index.html",
-    "build": "atlaspack build --feature-flag compiledCssInJsTransformer=true --no-cache src/index.html",
+    "build": "atlaspack build --feature-flag enableTokensTransformer=true --feature-flag compiledCssInJsTransformer=true --feature-flag coreTokensAndCompiledCssInJsTransform=false --no-cache src/index.html",
     "dev": "npx nodemon -e 'ts, tsx, json, .parcelrc' --watch . --ignore 'dist/' --ignore 'compiled-css-migration-map.json' --exec 'yarn build && node serve.js'",
-    "serve": "atlaspack serve --feature-flag compiledCssInJsTransformer=true --no-cache src/index.html"
+    "serve": "atlaspack serve --feature-flag enableTokensTransformer=true --feature-flag compiledCssInJsTransformer=true --feature-flag coreTokensAndCompiledCssInJsTransform=false --no-cache src/index.html"
   },
   "dependencies": {
     "@atlaskit/button": "*",
@@ -21,5 +21,13 @@
     "@types/react-dom": "^17.0.2",
     "express": "*"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "@atlaspack/transformer-tokens": {
+    "tokenDataPath": "../../../../atlassian-frontend-monorepo/platform/packages/design-system/tokens/src/artifacts/token-data.json5",
+    "shouldUseAutoFallback": true,
+    "shouldForceAutoFallback": false,
+    "forceAutoFallbackExemptions": [
+      "radius"
+    ]
+  }
 }

@@ -1,3 +1,5 @@
+#![deny(clippy::panic)]
+
 pub mod add_display_name;
 mod collect;
 mod constant_module;
@@ -38,6 +40,8 @@ use atlaspack_macros::MacroCallback;
 use atlaspack_macros::MacroError;
 use atlaspack_macros::Macros;
 
+use atlassian_swc_compiled_css::remove_jsx_pragma_comments;
+use atlassian_swc_compiled_css_strip_runtime as strip_runtime;
 use collect::Collect;
 pub use collect::CollectImportedSymbol;
 use collect::CollectResult;
@@ -56,6 +60,7 @@ use hoist::HoistResult;
 pub use hoist::ImportedSymbol;
 use hoist::hoist;
 use indexmap::IndexMap;
+use indexmap::IndexSet;
 use lazy_loading_transformer::LazyLoadingTransformer;
 use magic_comments::MagicCommentsVisitor;
 use node_replacer::NodeReplacer;
@@ -68,11 +73,12 @@ use serde::Deserialize;
 use serde::Serialize;
 use static_prevaluator::StaticPreEvaluator;
 use std::io::{self};
+use swc_atlaskit_tokens::design_system_tokens_visitor;
 use swc_core::common::FileName;
 use swc_core::common::Globals;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
-use swc_core::common::comments::SingleThreadedComments;
+use swc_core::common::comments::{Comment, SingleThreadedComments};
 use swc_core::common::errors::Handler;
 use swc_core::common::pass::Optional;
 use swc_core::common::source_map::SourceMapGenConfig;
@@ -119,12 +125,21 @@ use utils::DiagnosticSeverity;
 use utils::ErrorBuffer;
 pub use utils::SourceLocation;
 pub use utils::SourceType;
-use utils::error_buffer_to_diagnostics;
+use utils::{error_buffer_to_diagnostics, transform_errors_to_diagnostics};
 
 use crate::esm_export_classifier::EsmExportClassifier;
 use crate::esm_export_classifier::SymbolsInfo;
 
 type SourceMapBuffer = Vec<(swc_core::common::BytePos, swc_core::common::LineCol)>;
+
+#[derive(Default, Serialize, Debug, Deserialize, Clone, Hash, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TokensConfig {
+  pub should_use_auto_fallback: bool,
+  pub should_force_auto_fallback: bool,
+  pub force_auto_fallback_exemptions: Vec<String>,
+  pub default_theme: String,
+}
 
 #[derive(Default, Serialize, Debug, Deserialize)]
 pub struct Config {
@@ -178,6 +193,9 @@ pub struct Config {
   pub enable_dead_returns_removal: bool,
   pub enable_unused_bindings_removal: bool,
   pub sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
+  pub enable_tokens_and_compiled_css_in_js_transform: bool,
+  pub tokens_config: Option<TokensConfig>,
+  pub compiled_css_in_js_config: Option<atlassian_swc_compiled_css::config::CompiledCssInJsConfig>,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -198,6 +216,7 @@ pub struct TransformResult {
   pub conditions: BTreeSet<Condition>,
   pub magic_comments: HashMap<String, String>,
   pub is_empty_or_empty_export: bool,
+  pub style_rules: Option<Vec<String>>,
 }
 
 fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Versions> {
@@ -278,8 +297,12 @@ pub fn transform(
 
       swc_core::common::GLOBALS.set(&Globals::new(), || {
         let error_buffer = ErrorBuffer::default();
-        let handler = Handler::with_emitter(true, false, Box::new(error_buffer.clone()));
-        swc_core::common::errors::HANDLER.set(&handler, || {
+        let handler = Lrc::new(Handler::with_emitter(
+          true,
+          false,
+          Box::new(error_buffer.clone()),
+        ));
+        swc_core::common::errors::HANDLER.set(handler.as_ref(), || {
           helpers::HELPERS.set(
             &helpers::Helpers::new(
               /* external helpers from @swc/helpers */ should_import_swc_helpers,
@@ -312,6 +335,105 @@ pub fn transform(
 
               let global_mark = Mark::fresh(Mark::root());
               let unresolved_mark = Mark::fresh(Mark::root());
+              let mut diagnostics = vec![];
+
+              if config.enable_tokens_and_compiled_css_in_js_transform {
+                if let Some(tokens_config) = &config.tokens_config
+                {
+                  module = module.apply(Optional::new(
+                    design_system_tokens_visitor(
+                      &comments,
+                      tokens_config.should_use_auto_fallback,
+                      tokens_config.should_force_auto_fallback,
+                      tokens_config.force_auto_fallback_exemptions.clone(),
+                      tokens_config.default_theme.clone(),
+                      false,
+                      None,
+                    ),
+                    swc_atlaskit_tokens::should_run_tokens_transform(code),
+                  ));
+                }
+
+                if let Some(compiled_css_in_js_config) = &config.compiled_css_in_js_config {
+                  let mut style_rules = IndexSet::new();
+                  // Convert to transform config to access extract field
+                  let transform_config =
+                    atlassian_swc_compiled_css::CompiledCssInJsTransformConfig::from(
+                      compiled_css_in_js_config.clone(),
+                    );
+
+                  let plugin_options = atlassian_swc_compiled_css::PluginOptions::from(
+                    compiled_css_in_js_config,
+                  );
+                  let should_run_compiled_css =
+                    atlassian_swc_compiled_css::should_run_compiled_css_in_js_transform(
+                      code,
+                      plugin_options.clone(),
+                    );
+                  let compiled_css_transform =
+                    atlassian_swc_compiled_css::CompiledCssInJsTransform::new(plugin_options);
+
+                  {
+                    let shared_state = compiled_css_transform.state();
+                    let mut state = shared_state.borrow_mut();
+                    let transform_file =
+                      atlassian_swc_compiled_css::TransformFile::transform_compiled_with_options(
+                        source_map.clone(),
+                        collect_comments_for_transform(&comments),
+                        atlassian_swc_compiled_css::TransformFileOptions {
+                          filename: Some(config.filename.clone()),
+                          cwd: Some(PathBuf::from(&config.project_root)),
+                          root: Some(PathBuf::from(&config.project_root)),
+                          loc_filename: Some(config.filename.clone()),
+                        },
+                      );
+                    state.replace_file(transform_file);
+
+                    style_rules.extend(state.style_rules.clone());
+                  }
+
+                  module = module.apply(Optional::new(
+                    visit_mut_pass(compiled_css_transform),
+                    should_run_compiled_css,
+                  ));
+
+                  // Apply strip runtime transform when extract is enabled
+                  if transform_config.extract {
+                    let strip_options = strip_runtime::PluginOptions {
+                      style_sheet_path: None,
+                      compiled_require_exclude: Some(true),
+                      extract_styles_to_directory: None,
+                      sort_at_rules: Some(transform_config.sort_at_rules),
+                      sort_shorthand: Some(transform_config.sort_shorthand),
+                    };
+
+                    let strip_config = strip_runtime::TransformConfig {
+                      filename: Some(config.filename.clone()),
+                      cwd: Some(config.project_root.clone()),
+                      root: Some(config.project_root.clone()),
+                      source_file_name: Some(config.filename.clone()),
+                      options: strip_options,
+                    };
+
+                    module = match strip_runtime::try_transform(module, strip_config) {
+                      Ok(strip_output) => {
+                        style_rules.extend(strip_output.metadata.style_rules);
+                        strip_output.program
+                      }
+                      Err(errors) => {
+                        diagnostics.extend(transform_errors_to_diagnostics(errors, &source_map));
+                        result.diagnostics = Some(diagnostics);
+                        return Ok(result);
+                      }
+                    };
+                  }
+
+                  remove_jsx_pragma_comments(&comments);
+
+                  result.style_rules = Some(style_rules.into_iter().collect());
+                }
+
+              }
 
               if config.magic_comments && MagicCommentsVisitor::has_magic_comment(code) {
                 let mut magic_comment_visitor = MagicCommentsVisitor::new(code);
@@ -403,7 +525,6 @@ pub fn transform(
                 assumptions.set_public_class_fields |= true;
               }
 
-              let mut diagnostics = vec![];
               if let Some(call_macro) = call_macro {
                 let mut errors = Vec::new();
                 module = module.fold_with(&mut Macros::new(call_macro, &source_map, &mut errors));
@@ -807,6 +928,15 @@ pub fn emit(
   }
 
   Ok((buf, src_map_buf))
+}
+
+fn collect_comments_for_transform(comments: &SingleThreadedComments) -> Vec<Comment> {
+  let (leading, trailing) = comments.borrow_all();
+  leading
+    .values()
+    .chain(trailing.values())
+    .flat_map(|list| list.clone())
+    .collect()
 }
 
 // Exclude macro expansions from source maps.

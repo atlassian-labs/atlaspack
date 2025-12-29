@@ -310,7 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { initTracingSubscriber, Lmdb, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, atlaspackNapiCompleteSession, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, getNativeMemoryStats, resetMemoryTracking, sampleNativeMemory, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, applyCompiledCssInJsPlugin, Resolver, SourceMap, performStringReplacements, transform, determineJsxConfiguration, transformAsync, getVcsStateSnapshot, getEventsSince, applyTokensPlugin } = nativeBinding
+const { initTracingSubscriber, Lmdb, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, atlaspackNapiCompleteSession, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, getNativeMemoryStats, resetMemoryTracking, sampleNativeMemory, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, isSafeFromJs, hashCode, applyCompiledCssInJsPlugin, Resolver, SourceMap, performStringReplacements, transform, determineJsxConfiguration, transformAsync, getVcsStateSnapshot, getEventsSince, applyTokensPlugin } = nativeBinding
 
 module.exports.initTracingSubscriber = initTracingSubscriber
 module.exports.Lmdb = Lmdb
@@ -342,6 +342,8 @@ module.exports.sampleNativeMemory = sampleNativeMemory
 module.exports.newNodejsWorker = newNodejsWorker
 module.exports.runInlineRequiresOptimizer = runInlineRequiresOptimizer
 module.exports.runInlineRequiresOptimizerAsync = runInlineRequiresOptimizerAsync
+module.exports.isSafeFromJs = isSafeFromJs
+module.exports.hashCode = hashCode
 module.exports.applyCompiledCssInJsPlugin = applyCompiledCssInJsPlugin
 module.exports.Resolver = Resolver
 module.exports.SourceMap = SourceMap

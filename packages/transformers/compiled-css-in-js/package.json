@@ -25,6 +25,7 @@
     "@atlaspack/plugin": "2.14.46",
     "@atlaspack/rust": "3.16.0",
     "@atlaspack/source-map": "3.2.1",
+    "@atlaspack/transformer-js": "12.0.0",
     "@atlaspack/utils": "3.2.7"
   },
   "devDependencies": {},

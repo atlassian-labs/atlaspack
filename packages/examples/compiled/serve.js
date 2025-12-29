@@ -9,7 +9,9 @@ app.get('/', (req, res, next) => {
   res.contentType = 'text/html';
   res.send(index);
 });
+
 app.use(express.static('dist'));
+
 app.listen(3000, () => {
   console.log('Server is running on http://localhost:3000');
 });

@@ -17,6 +17,7 @@ import {
   transformAsync,
   determineJsxConfiguration,
 } from '@atlaspack/rust';
+import {type CompiledCssInJsConfig} from '@atlaspack/rust/index';
 import invariant from 'assert';
 import browserslist from 'browserslist';
 import semver from 'semver';
@@ -28,6 +29,7 @@ import ThrowableDiagnostic, {
 import {validateSchema, remapSourceLocation, globMatch} from '@atlaspack/utils';
 import pkg from '../package.json';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import path, {join} from 'path';
 
 const JSX_EXTENSIONS = {
   jsx: true,
@@ -194,6 +196,31 @@ type MacroContext = {
   invalidateOnBuild(): void;
 };
 
+type AtlaskitTokensConfigPartial = {
+  shouldUseAutoFallback?: boolean;
+  shouldForceAutoFallback?: boolean;
+  forceAutoFallbackExemptions?: Array<string>;
+  defaultTheme?: 'light' | 'legacy-light';
+  tokenDataPath: string;
+};
+
+type AtlaskitTokensConfig = Required<AtlaskitTokensConfigPartial>;
+
+const TOKENS_CONFIG_SCHEMA = {
+  type: 'object',
+  properties: {
+    shouldUseAutoFallback: {type: 'boolean'},
+    shouldForceAutoFallback: {type: 'boolean'},
+    forceAutoFallbackExemptions: {
+      type: 'array',
+      items: {type: 'string'},
+    },
+    defaultTheme: {type: 'string', enum: ['light', 'legacy-light']},
+    tokenDataPath: {type: 'string'},
+  },
+  additionalProperties: false,
+} as const;
+
 interface JsxConfig {
   isJSX: boolean | undefined;
   jsxPragma: string | undefined;
@@ -308,6 +335,67 @@ async function legacyDetemineJsxConfig(
     automaticJSXRuntime,
     reactRefresh,
   };
+}
+
+export async function loadTokensConfig(config: Config, options: PluginOptions) {
+  const conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
+    packageKey: '@atlaspack/transformer-tokens',
+  });
+
+  if (conf && conf.contents) {
+    validateSchema.diagnostic(
+      TOKENS_CONFIG_SCHEMA,
+      {
+        data: conf.contents,
+        source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
+        filePath: conf.filePath,
+        prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-tokens')}`,
+      },
+      '@atlaspack/transformer-tokens',
+      'Invalid config for @atlaspack/transformer-tokens',
+    );
+
+    // @ts-expect-error TS2339
+    const tokensConfig: AtlaskitTokensConfigPartial = conf.contents;
+
+    let resolvedConfig: AtlaskitTokensConfig = {
+      shouldUseAutoFallback: tokensConfig.shouldUseAutoFallback ?? true,
+      shouldForceAutoFallback: tokensConfig.shouldForceAutoFallback ?? true,
+      forceAutoFallbackExemptions:
+        tokensConfig.forceAutoFallbackExemptions ?? [],
+      defaultTheme: tokensConfig.defaultTheme ?? 'light',
+      tokenDataPath: path.join(options.projectRoot, tokensConfig.tokenDataPath),
+    };
+    return resolvedConfig;
+  }
+}
+
+export async function loadCompiledCssInJsConfig(
+  config: Config,
+  options: PluginOptions,
+) {
+  const conf = await config.getConfigFrom<CompiledCssInJsConfig>(
+    join(options.projectRoot, 'index'),
+    ['.compiledcssrc', '.compiledcssrc.json'],
+    {
+      packageKey: '@atlaspack/transformer-compiled-css-in-js',
+    },
+  );
+
+  const contents: CompiledCssInJsConfig = {
+    configPath: conf?.filePath,
+    importSources: ['@compiled/react', '@atlaskit/css'],
+  };
+
+  Object.assign(contents, conf?.contents);
+
+  if (!contents.importSources?.includes('@compiled/react')) {
+    contents.importSources?.push('@compiled/react');
+  }
+
+  contents.extract = contents.extract && options.mode !== 'development';
+
+  return contents;
 }
 
 export default new Transformer({
@@ -456,6 +544,16 @@ export default new Transformer({
 
     config.invalidateOnEnvChange('SYNC_DYNAMIC_IMPORT_CONFIG');
 
+    const tokensConfig = getFeatureFlag('coreTokensAndCompiledCssInJsTransform')
+      ? await loadTokensConfig(config, options)
+      : undefined;
+
+    const compiledCssInJsConfig = getFeatureFlag(
+      'coreTokensAndCompiledCssInJsTransform',
+    )
+      ? await loadCompiledCssInJsConfig(config, options)
+      : undefined;
+
     if (conf && conf.contents) {
       addReactDisplayName =
         conf.contents?.addReactDisplayName ?? addReactDisplayName;
@@ -492,6 +590,8 @@ export default new Transformer({
       enableReactAsyncImportLift,
       reactAsyncLiftByDefault,
       reactAsyncLiftReportLevel,
+      tokensConfig: tokensConfig,
+      compiledCssInJsConfig: compiledCssInJsConfig,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -621,6 +721,8 @@ export default new Transformer({
       conditions,
       // @ts-expect-error TS2339
       magic_comments,
+      // @ts-expect-error TS2339
+      style_rules,
     } = await (transformAsync || transform)({
       filename: asset.filePath,
       code,
@@ -690,6 +792,11 @@ export default new Transformer({
       react_async_lift_by_default: Boolean(config.reactAsyncLiftByDefault),
       react_async_lift_report_level: String(config.reactAsyncLiftReportLevel),
       sync_dynamic_import_config: config.syncDynamicImportConfig,
+      enable_tokens_and_compiled_css_in_js_transform: getFeatureFlag(
+        'coreTokensAndCompiledCssInJsTransform',
+      ),
+      tokens_config: config.tokensConfig,
+      compiled_css_in_js_config: config.compiledCssInJsConfig,
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
@@ -811,6 +918,10 @@ export default new Transformer({
 
     if (getFeatureFlag('conditionalBundlingApi')) {
       asset.meta.conditions = conditions;
+    }
+
+    if (style_rules) {
+      asset.meta.styleRules = style_rules;
     }
 
     if (is_constant_module) {

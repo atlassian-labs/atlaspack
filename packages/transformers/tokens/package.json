@@ -18,6 +18,7 @@
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/feature-flags": "2.27.5",
+    "@atlaspack/transformer-js": "12.0.0",
     "@atlaspack/types-internal": "2.22.3",
     "@atlaspack/plugin": "2.14.46",
     "@atlaspack/rust": "3.16.0",

@@ -8,10 +8,9 @@ use std::{
 
 use anyhow::{Context, Result};
 use parking_lot::Mutex;
-use serde_json::from_str;
 use xxhash_rust::xxh3::Xxh3;
 
-use crate::CompiledCssInJsTransformConfig;
+use crate::config::CompiledCssInJsTransformConfig;
 
 pub type IdentifierHasher = Xxh3;
 
@@ -26,8 +25,14 @@ pub fn hash_code(code: &str) -> String {
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+struct SafeAssetEntry {
+  asset: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct MigrationMap {
-  safe_assets: HashMap<String, String>,
+  safe_assets: HashMap<String, SafeAssetEntry>,
 }
 
 static SHARED_ASSETS_MAP_DATA: LazyLock<Mutex<HashMap<String, Arc<MigrationMap>>>> =
@@ -60,9 +65,8 @@ fn load_safe_assets_map_from_json(config_path: &Path) -> Result<MigrationMap> {
   let json_content = fs::read_to_string(&json_path)
     .with_context(|| format!("Failed to read {}", json_path.display()))?;
 
-  let data: MigrationMap =
-    from_str(&json_content).with_context(|| format!("Failed to parse {}", json_path.display()))?;
-
+  let jd = &mut serde_json::Deserializer::from_str(&json_content);
+  let data: MigrationMap = serde_path_to_error::deserialize(jd).map_err(anyhow::Error::from)?;
   Ok(data)
 }
 
@@ -92,6 +96,15 @@ pub fn is_safe(code_hash: &str, config: &CompiledCssInJsTransformConfig) -> Resu
   }
 }
 
+pub fn is_safe_from_js(hash: String, config_path: String) -> Result<bool> {
+  let safe_map = get_or_load_safe_assets_map_from_json(config_path);
+
+  match safe_map {
+    Ok(safe_map) => Ok(safe_map.safe_assets.contains_key(&hash)),
+    Err(e) => Err(e),
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -105,12 +118,12 @@ mod tests {
     temp_dir: TempDir,
   }
 
-  fn mock_map(entries: Vec<(String, String)>) -> MockMap {
+  fn mock_map(entries: Vec<(String, SafeAssetEntry)>) -> MockMap {
     let temp_dir = tempdir().expect("failed to create temp dir");
     let config_path = temp_dir.path().join("config.json");
     fs::write(&config_path, "{}").expect("failed to create config stub");
 
-    let safe_assets: HashMap<String, String> = entries.into_iter().collect();
+    let safe_assets: HashMap<String, SafeAssetEntry> = entries.into_iter().collect();
     let migration_map = MigrationMap { safe_assets };
     let migration_map_path = temp_dir.path().join("compiled-css-migration-map.json");
     fs::write(
@@ -128,7 +141,12 @@ mod tests {
   #[test]
   fn in_safe_assets_map() {
     let code_hash = hash_code("test");
-    let mock = mock_map(vec![(code_hash.clone(), "migrated.js".to_string())]);
+    let mock = mock_map(vec![(
+      code_hash.clone(),
+      SafeAssetEntry {
+        asset: "migrated.js".to_string(),
+      },
+    )]);
     let config = CompiledCssInJsTransformConfig {
       unsafe_use_safe_assets: true,
       unsafe_report_safe_assets_for_migration: false,

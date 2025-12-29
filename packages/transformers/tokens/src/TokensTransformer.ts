@@ -6,75 +6,25 @@ import {
 } from '@atlaspack/diagnostic';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Transformer} from '@atlaspack/plugin';
+import {isSafeFromJs, hashCode} from '@atlaspack/rust/index';
 import {applyTokensPlugin, TokensPluginResult} from '@atlaspack/rust';
-import {validateSchema} from '@atlaspack/utils';
 import SourceMap from '@atlaspack/source-map';
-import path from 'path';
-
-type AtlaskitTokensConfigPartial = {
-  shouldUseAutoFallback?: boolean;
-  shouldForceAutoFallback?: boolean;
-  forceAutoFallbackExemptions?: Array<string>;
-  defaultTheme?: 'light' | 'legacy-light';
-  tokenDataPath: string;
-};
-
-type AtlaskitTokensConfig = Required<AtlaskitTokensConfigPartial>;
-
-const CONFIG_SCHEMA = {
-  type: 'object',
-  properties: {
-    shouldUseAutoFallback: {type: 'boolean'},
-    shouldForceAutoFallback: {type: 'boolean'},
-    forceAutoFallbackExemptions: {
-      type: 'array',
-      items: {type: 'string'},
-    },
-    defaultTheme: {type: 'string', enum: ['light', 'legacy-light']},
-    tokenDataPath: {type: 'string'},
-  },
-  additionalProperties: false,
-} as const;
+import {
+  loadCompiledCssInJsConfig,
+  loadTokensConfig,
+} from '@atlaspack/transformer-js';
 
 export default new Transformer({
+  // eslint-disable-next-line require-await
   async loadConfig({config, options}) {
-    const conf = await config.getConfigFrom(
-      options.projectRoot + '/index',
-      [],
-      {
-        packageKey: '@atlaspack/transformer-tokens',
-      },
-    );
-
-    if (conf && conf.contents) {
-      validateSchema.diagnostic(
-        CONFIG_SCHEMA,
-        {
-          data: conf.contents,
-          source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
-          filePath: conf.filePath,
-          prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-tokens')}`,
-        },
-        '@atlaspack/transformer-tokens',
-        'Invalid config for @atlaspack/transformer-tokens',
-      );
-
-      // @ts-expect-error TS2339
-      const tokensConfig: AtlaskitTokensConfigPartial = conf.contents;
-
-      let resolvedConfig: AtlaskitTokensConfig = {
-        shouldUseAutoFallback: tokensConfig.shouldUseAutoFallback ?? true,
-        shouldForceAutoFallback: tokensConfig.shouldForceAutoFallback ?? true,
-        forceAutoFallbackExemptions:
-          tokensConfig.forceAutoFallbackExemptions ?? [],
-        defaultTheme: tokensConfig.defaultTheme ?? 'light',
-        tokenDataPath: path.join(
-          options.projectRoot,
-          tokensConfig.tokenDataPath,
-        ),
-      };
-      return resolvedConfig;
+    if (!getFeatureFlag('enableTokensTransformer')) {
+      return undefined;
     }
+
+    return {
+      tokensConfig: await loadTokensConfig(config, options),
+      compiledCssInJsConfig: await loadCompiledCssInJsConfig(config, options),
+    };
   },
 
   async transform({asset, options, config, logger}) {
@@ -91,8 +41,34 @@ export default new Transformer({
       return [asset];
     }
 
+    if (getFeatureFlag('compiledCssInJsTransformer')) {
+      if (
+        config?.compiledCssInJsConfig.unsafeReportSafeAssetsForMigration ||
+        config?.compiledCssInJsConfig?.unsafeUseSafeAssets
+      ) {
+        asset.meta.compiledCodeHash ??= hashCode(code);
+      }
+
+      if (config?.compiledCssInJsConfig?.unsafeUseSafeAssets) {
+        if (!config.compiledCssInJsConfig.configPath) {
+          throw new Error(
+            'configPath is required when unsafeUseSafeAssets is enabled',
+          );
+        }
+
+        asset.meta.useRustCompiledTransform ??= isSafeFromJs(
+          asset.meta.compiledCodeHash as string,
+          config.compiledCssInJsConfig.configPath,
+        );
+
+        if (asset.meta.useRustCompiledTransform) {
+          return [asset];
+        }
+      }
+    }
+
     const codeBuffer = Buffer.from(code);
-    if (!config) {
+    if (!config?.tokensConfig) {
       // If no config provided, just return asset unchanged.
       return [asset];
     }
@@ -104,7 +80,7 @@ export default new Transformer({
         isSource: asset.isSource,
         sourceMaps: !!asset.env.sourceMap,
         tokensOptions: {
-          ...config,
+          ...config.tokensConfig,
         },
       }) as Promise<TokensPluginResult>
     ).catch((error) => {
@@ -177,7 +153,7 @@ export default new Transformer({
     }
 
     // Ensure this transform is invalidated when the token data changes
-    asset.invalidateOnFileChange(config.tokenDataPath);
+    asset.invalidateOnFileChange(config.tokensConfig.tokenDataPath);
 
     // Handle sourcemap merging if sourcemap is generated
     if (result.map != null) {

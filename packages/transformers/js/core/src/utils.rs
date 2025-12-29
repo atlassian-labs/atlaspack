@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 
+use atlassian_swc_compiled_css::TransformError;
 use serde::Deserialize;
 use serde::Serialize;
 use swc_core::common::DUMMY_SP;
@@ -480,6 +481,36 @@ pub fn error_buffer_to_diagnostics(
         message,
         code_highlights,
         hints,
+        show_environment: false,
+        severity: DiagnosticSeverity::Error,
+        documentation_url: None,
+      }
+    })
+    .collect()
+}
+
+pub fn transform_errors_to_diagnostics(
+  errors: Vec<TransformError>,
+  source_map: &SourceMap,
+) -> Vec<Diagnostic> {
+  errors
+    .into_iter()
+    .map(|error| {
+      let code_highlights = error.span.and_then(|span| {
+        if span.lo().is_dummy() || span.hi().is_dummy() {
+          None
+        } else {
+          Some(vec![CodeHighlight {
+            message: None,
+            loc: SourceLocation::from(source_map, span),
+          }])
+        }
+      });
+
+      Diagnostic {
+        message: error.message,
+        code_highlights,
+        hints: None,
         show_environment: false,
         severity: DiagnosticSeverity::Error,
         documentation_url: None,

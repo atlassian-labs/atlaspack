@@ -2284,6 +2284,7 @@ output = getExports() === exports && getExports().foo
     );
   }
 
+  #[allow(clippy::panic)]
   fn run_collect(input_code: &str) -> Collect {
     let RunVisitResult { visitor, .. } = run_test_visit_const(input_code, TestCollectVisitor::new);
 
