@@ -3804,11 +3804,11 @@ describe('javascript', function () {
                     {
                       message: undefined,
                       start: {
-                        line: 11,
+                        line: 5,
                         column: 17,
                       },
                       end: {
-                        line: 11,
+                        line: 5,
                         column: 21,
                       },
                     },
