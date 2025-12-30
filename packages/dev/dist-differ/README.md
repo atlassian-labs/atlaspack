@@ -131,7 +131,8 @@ dist-differ dir1/ dir2/
 - `--ignore-swapped-variables`: Skip hunks where the only differences are swapped variable names (e.g., `t` vs `a` where functionality is identical)
 - `--summary`: Show only hunk counts for changed files (directory mode only)
 - `--verbose`: Show all file matches, not just mismatches (directory mode only)
-- `--json`: Output results in JSON format for AI analysis
+- `--json`: Output results in JSON format for AI analysis (uses streaming for large outputs)
+- `--mcp`: Start an MCP server for AI agent queries (requires comparison paths)
 - `--disambiguation-size-threshold <val>`: Threshold for matching files by "close enough" sizes (default: 0.01 = 1%, range: 0-1)
 
 ### Examples
@@ -164,6 +165,9 @@ dist-differ --verbose dir1/ dir2/
 # Output JSON format for programmatic analysis
 dist-differ --json file1.js file2.js
 dist-differ --json --ignore-all dir1/ dir2/
+
+# Start MCP server for AI agent queries
+dist-differ --mcp dir1/ dir2/
 ```
 
 ## Development
@@ -274,6 +278,217 @@ Please provide:
 }
 ```
 
+## MCP Server for AI Agents
+
+The `--mcp` flag starts a Model Context Protocol (MCP) server that allows AI agents to query dist diff data interactively. This is useful when you want an AI agent to analyze differences without loading the entire JSON output into memory.
+
+### Usage
+
+```bash
+# Start MCP server (optionally with an initial comparison)
+dist-differ --mcp                    # Start server without initial comparison
+dist-differ --mcp dir1/ dir2/        # Start server with initial comparison
+```
+
+The server will:
+
+1. Optionally run an initial comparison if two paths are provided
+2. Start an MCP server on stdio (stdin/stdout)
+3. Accept queries from AI agents via the MCP protocol
+
+**Note**: You can start the server without providing paths and use the `compare` tool to run comparisons on-demand.
+
+### Configuring in Cursor
+
+To use the dist-differ MCP server in Cursor, you need to add it to your MCP configuration file. The configuration file is typically located at `~/.cursor/mcp.json` (or `%APPDATA%\Cursor\mcp.json` on Windows).
+
+**Important**: Since the MCP server requires specific directories/files to compare, you have two options:
+
+#### Option 1: Manual Start (Recommended)
+
+Start the MCP server manually in a terminal before using it in Cursor:
+
+```bash
+# In your terminal
+dist-differ --mcp /path/to/dir1 /path/to/dir2
+```
+
+Then configure Cursor to connect to a running stdio MCP server. However, note that Cursor's MCP integration typically expects to start the server itself, so this approach may require custom setup.
+
+#### Option 2: Per-Project Configuration (Recommended)
+
+You can configure the MCP server in Cursor to start automatically. Since the server now supports on-demand comparisons via the `compare` tool, you can start it without specifying directories:
+
+```json
+{
+  "mcpServers": {
+    "dist-differ": {
+      "command": "node",
+      "args": [
+        "/path/to/atlaspack/packages/dev/dist-differ/bin/dist-differ.js",
+        "--mcp"
+      ]
+    }
+  }
+}
+```
+
+Replace `/path/to/atlaspack/packages/dev/dist-differ/bin/dist-differ.js` with the actual path to the dist-differ binary.
+
+**Note**: With the `compare` tool, you can now run comparisons on-demand without restarting the server or updating the configuration. Simply use the `compare` tool with the paths you want to compare.
+
+If you want to start with an initial comparison, you can still provide the directories:
+
+```json
+{
+  "mcpServers": {
+    "dist-differ": {
+      "command": "node",
+      "args": [
+        "/path/to/atlaspack/packages/dev/dist-differ/bin/dist-differ.js",
+        "--mcp",
+        "/path/to/dir1",
+        "/path/to/dir2"
+      ]
+    }
+  }
+}
+```
+
+#### Using yarn workspace (if working in Atlaspack repo)
+
+If you're working within the Atlaspack repository, you can use:
+
+```json
+{
+  "mcpServers": {
+    "dist-differ": {
+      "command": "yarn",
+      "args": [
+        "workspace",
+        "@atlaspack/dist-differ",
+        "exec",
+        "atlaspack-dist-differ",
+        "--mcp",
+        "/path/to/dir1",
+        "/path/to/dir2"
+      ],
+      "cwd": "/path/to/atlaspack"
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+The MCP server provides the following tools for AI agents:
+
+- **`compare`**: Run a dist diff analysis between two files or directories. **Returns summary data immediately** for quick analysis, then stores the full results in memory for selective querying. For large comparisons (100s of MB), the summary allows you to decide whether to explore further before querying specific areas. Parameters:
+  - `path1`: First file or directory path to compare
+  - `path2`: Second file or directory path to compare
+  - `ignoreAssetIds` (optional): Ignore asset ID differences
+  - `ignoreUnminifiedRefs` (optional): Ignore unminified ref differences
+  - `ignoreSourceMapUrl` (optional): Ignore source map URL differences
+  - `ignoreSwappedVariables` (optional): Ignore swapped variable differences
+
+  **Note**: The `compare` tool returns summary statistics immediately (total hunks, meaningful vs harmless changes, file counts). The full diff data is stored in memory for use by other tools, but you can use selective queries to explore specific files or changes without loading everything at once.
+
+- **`get-summary`**: Get a summary of the current comparison including total hunks, meaningful vs harmless changes, and file counts
+- **`list-files`**: List all files that were compared, showing their status and hunk counts
+- **`get-file-details`**: Get detailed information about differences in a specific file. For files with many hunks (>10), shows a sample (first 3 and last 3 hunks) to give you the "vibe" of the changes rather than exhaustive details. Use `get-next-hunks` for progressive iteration.
+- **`get-meaningful-changes`**: Get a **statistics-only summary** of meaningful (non-harmless) changes. Returns counts, change types, impact distribution, and top files - **never returns hunk details** to avoid context window issues. Use `get-next-meaningful-hunks` for progressive iteration through actual changes.
+- **`search-changes`**: Search for specific text patterns in the changes across all files
+- **`get-next-hunks`**: **Progressive iteration** - Get the next batch of hunks for a specific file. The MCP server maintains iterator state, allowing you to navigate through large diffs incrementally. Parameters:
+  - `filePath`: The file path to iterate through
+  - `batchSize` (optional): Number of hunks to return per call (default: 5)
+  - `reset` (optional): Reset iterator to beginning (default: false)
+- **`get-next-meaningful-hunks`**: **Progressive iteration** - Get the next batch of meaningful hunks across all files. Maintains global iterator state for reviewing meaningful changes incrementally. Parameters:
+  - `batchSize` (optional): Number of hunks to return per call (default: 5)
+  - `reset` (optional): Reset iterator to beginning (default: false)
+- **`get-hunk-by-id`**: Get detailed information about a specific hunk by its ID. Useful when you want to examine a particular change in detail. Parameters:
+  - `hunkId`: The hunk ID (e.g., "hunk-1")
+  - `filePath` (optional): The file path to search in (searches all files if not provided)
+- **`quit`**: Forces the MCP server to quit and exit. Use this when you want to stop the server. No parameters required.
+
+### Example AI Agent Usage
+
+An AI agent can connect to the MCP server and use these tools to:
+
+- Quickly identify if there are any meaningful changes
+- Get details about specific files or hunks
+- Search for specific patterns in the code changes
+- Analyze the impact of changes without loading the entire JSON report
+
+### Sample AI Analysis Prompt (MCP Server)
+
+When using the MCP server with an AI agent like Cursor, you can use this prompt template:
+
+```
+Please run a dist diff analysis between <path1> and <path2> using the MCP server's compare tool, then analyze the differences and determine:
+```
+
+Or if you've already run a comparison:
+
+```
+I have a dist-differ MCP server running that has compared two minified JavaScript builds.
+Please use the available MCP tools to analyze the differences and determine:
+
+1. Are there any meaningful changes (not just harmless reordering, variable swaps, or asset ID changes)?
+   - Use the `get-summary` tool to get an overview
+   - Use the `get-meaningful-changes` tool to see all meaningful changes
+
+2. For each meaningful change, what is the nature of the change?
+   - Use `get-file-details` to examine specific files
+   - Look at the change type and impact assessment in each hunk
+
+3. What is the potential impact of these changes (low/medium/high)?
+   - Review the impact field in meaningful hunks
+   - Consider the types of changes (function modifications, dependency changes, etc.)
+
+4. Should I be concerned about these differences, or are they all harmless build artifacts?
+   - Compare meaningful vs harmless hunk counts
+   - Review the specific changes to assess risk
+
+Please provide:
+- A summary of meaningful vs harmless changes
+- Detailed analysis of each meaningful change
+- Recommendations on whether action is needed
+- If you find specific patterns, use `search-changes` to investigate further
+```
+
+**Note**: The MCP server must be running (started with `dist-differ --mcp dir1/ dir2/`) for the AI agent to connect and use these tools.
+
+### Handling Large Comparisons
+
+The MCP server is optimized for large comparisons with **progressive iteration**:
+
+- **State management**: The server maintains iterator state for each file and globally, allowing you to navigate through diffs incrementally
+- **Progressive iteration tools**: Use `get-next-hunks` and `get-next-meaningful-hunks` to review changes in small batches (default: 5 hunks at a time)
+- **Early exit for very large files**: Files with 1000+ hunks are truncated during processing to prevent the tool from getting stuck
+- **Sampling for overview**: When displaying hunks in summary tools, files with >10 hunks show a sample (first 3 and last 3) to give you the "vibe" of the changes
+- **Summary-first approach**: The `compare` tool returns summary statistics immediately, allowing you to decide if further exploration is needed
+- **Selective querying**: Use specific tools like `get-hunk-by-id` or `search-changes` to explore targeted areas
+
+**Recommended workflow for large comparisons**:
+
+1. Run `compare` to get summary statistics
+2. Use `get-summary` for high-level overview
+3. Use `list-files` to see which files have changes
+4. Use `get-next-meaningful-hunks` to review meaningful changes incrementally (5 at a time)
+5. For specific files, use `get-next-hunks <filePath>` to iterate through all hunks
+6. Use `get-hunk-by-id` to examine specific hunks in detail
+7. Use `search-changes` to find specific patterns
+
+This progressive approach prevents the tool from getting stuck in loops and avoids overwhelming the AI agent with too much data at once.
+
+### Streaming JSON Output
+
+When using `--json`, the output uses a streaming approach that:
+
+- First attempts to use `JSON.stringify` for fast output of small reports
+- Falls back to incremental JSON writing if the report is too large to stringify
+- Prevents memory issues when comparing very large directories
+
 ## How it works
 
 1. **De-minification**: Files are split on semicolons and commas to make diffs more readable
@@ -281,3 +496,4 @@ Please provide:
 3. **File Matching**: When comparing directories, files are matched by prefix (name before hash)
 4. **Size Disambiguation**: When multiple files match a prefix, size-based matching helps resolve ambiguity
 5. **JSON Output**: When `--json` is used, changes are categorized and structured for programmatic analysis
+6. **MCP Server**: When `--mcp` is used, an MCP server is started for interactive AI agent queries
