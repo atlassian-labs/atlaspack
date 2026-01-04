@@ -53,11 +53,23 @@ export class NapiWorkerPool implements INapiWorkerPool {
           new Promise<void>((res) => {
             worker.postMessage('clearState');
 
-            worker.once('message', (message) => {
-              if (message == 'stateCleared') {
+            // Set up a message handler that only resolves on 'stateCleared'
+            // and ignores all other messages (like the initial napiWorker Transferable)
+            const messageHandler = (message: unknown) => {
+              if (message === 'stateCleared') {
+                worker.removeListener('message', messageHandler);
                 res();
+              } else {
+                // Log unexpected messages for debugging
+                // eslint-disable-next-line no-console
+                console.warn(
+                  `[NapiWorkerPool] Received unexpected message during clearAllWorkerState: ${JSON.stringify(message)} (type: ${typeof message})`,
+                );
+                // Keep listening for 'stateCleared' - don't remove the listener
               }
-            });
+            };
+
+            worker.on('message', messageHandler);
           }),
       ),
     );

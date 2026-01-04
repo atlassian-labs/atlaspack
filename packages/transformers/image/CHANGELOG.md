@@ -1,5 +1,15 @@
 # @atlaspack/transformer-image
 
+## 12.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`695339e`](https://github.com/atlassian-labs/atlaspack/commit/695339e4fd46df9590013c2ef4de74cb22225927)]:
+  - @atlaspack/core@2.31.1
+  - @atlaspack/utils@3.2.8
+  - @atlaspack/workers@2.14.47
+  - @atlaspack/plugin@2.14.47
+
 ## 12.0.0
 
 ### Patch Changes

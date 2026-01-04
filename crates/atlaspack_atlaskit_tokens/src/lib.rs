@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, anyhow};
 use atlaspack_js_swc_core::{
-  Config, emit, parse, utils::ErrorBuffer, utils::error_buffer_to_diagnostics,
+  Config, emit, parse, utils::Diagnostic, utils::ErrorBuffer, utils::error_buffer_to_diagnostics,
 };
 use serde::Serialize;
 use std::sync::Arc;
@@ -34,10 +34,11 @@ pub struct TokensConfig {
   pub source_maps: bool,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct TokensPluginResult {
   pub code: String,
   pub map: Option<String>,
+  pub diagnostics: Vec<Diagnostic>,
 }
 
 // Exclude macro expansions from source maps.
@@ -133,6 +134,14 @@ impl AtlaskitTokensHandler {
         self.tokens_map.as_ref().map(|t| t.as_ref()),
       );
       let module = module.apply(&mut passes);
+
+      // Check for errors reported during transformation
+      // The visitor may report errors via HANDLER.with(|h| h.span_err(...))
+      // but those errors are only collected in error_buffer, not automatically checked
+      let diagnostics = error_buffer_to_diagnostics(&error_buffer, &source_map);
+
+      // Always return diagnostics, even if there are errors
+      // The TypeScript transformer will check for errors and throw appropriately
       let module_result = module
         .module()
         .ok_or_else(|| anyhow!("Failed to get transformed module"))?;
@@ -165,6 +174,7 @@ impl AtlaskitTokensHandler {
       Ok(TokensPluginResult {
         code,
         map: map_json,
+        diagnostics,
       })
     })
   }

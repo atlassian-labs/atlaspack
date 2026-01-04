@@ -1,5 +1,17 @@
 # @atlaspack/test-utils
 
+## 2.14.50
+
+### Patch Changes
+
+- Updated dependencies [[`695339e`](https://github.com/atlassian-labs/atlaspack/commit/695339e4fd46df9590013c2ef4de74cb22225927)]:
+  - @atlaspack/core@2.31.1
+  - @atlaspack/cache@3.2.42
+  - @atlaspack/fs@2.15.42
+  - @atlaspack/utils@3.2.8
+  - @atlaspack/config-default@12.0.1
+  - @atlaspack/package-manager@2.14.47
+
 ## 2.14.49
 
 ### Patch Changes
