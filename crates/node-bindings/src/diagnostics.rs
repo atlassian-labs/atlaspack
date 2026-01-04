@@ -10,6 +10,7 @@ use serde::Serialize;
 /// NAPI-compatible source location for JavaScript
 #[napi(object)]
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct JsSourceLocation {
   pub start_line: u32,
   pub start_col: u32,
@@ -20,6 +21,7 @@ pub struct JsSourceLocation {
 /// NAPI-compatible code highlight for JavaScript
 #[napi(object)]
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct JsCodeHighlight {
   pub message: Option<String>,
   pub loc: JsSourceLocation,
@@ -28,6 +30,7 @@ pub struct JsCodeHighlight {
 /// NAPI-compatible diagnostic for JavaScript
 #[napi(object)]
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct JsDiagnostic {
   pub message: String,
   pub code_highlights: Option<Vec<JsCodeHighlight>>,

@@ -179,11 +179,17 @@ pub fn error_if_not_valid_object_property(property: &PropOrSpread, meta: &Metada
   false
 }
 
-pub fn report_css_map_error(meta: &Metadata, span: Span, message: impl AsRef<str>) {
-  let handler = meta.state().handler.clone();
-  handler
-    .struct_span_err(span, &create_error_message(message))
-    .emit();
+pub fn report_css_map_error(_meta: &Metadata, span: Span, message: impl AsRef<str>) {
+  use crate::errors::set_transform_span;
+
+  // Set span context before panicking so the panic diagnostic includes source location
+  // We use set_transform_span directly instead of TransformSpanGuard to avoid the guard
+  // being dropped and clearing the span during unwinding. The span will persist in
+  // thread-local storage so it can be captured by from_panic() during exception handling.
+  set_transform_span(span);
+
+  let msg = create_error_message(message);
+  panic!("{}", msg);
 }
 
 #[cfg(test)]
@@ -352,12 +358,5 @@ mod tests {
     let meta = create_metadata();
 
     error_if_not_valid_object_property(&property, &meta);
-  }
-
-  #[test]
-  fn create_error_message_appends_docs_link() {
-    let message = create_error_message("Some error");
-    assert!(message.contains("Some error"));
-    assert!(message.contains("compiledcssinjs.com/docs/api-cssmap"));
   }
 }

@@ -178,8 +178,17 @@ export default new Transformer({
           (diagnostic.severity === 'SourceError' && asset.isSource),
       );
       if (errors.length > 0) {
-        for (const error of errors) {
-          logger.error(convertDiagnostic(error));
+        if (
+          config.unsafeUseSafeAssets ||
+          config.unsafeReportSafeAssetsForMigration
+        ) {
+          for (const error of errors) {
+            logger.warn(convertDiagnostic(error));
+          }
+        } else {
+          throw new ThrowableDiagnostic({
+            diagnostic: errors.map(convertDiagnostic),
+          });
         }
       }
 
