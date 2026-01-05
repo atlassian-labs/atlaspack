@@ -276,7 +276,7 @@ describe.v3('AtlaspackV3', function () {
   it('should convert packageConditions from bitflags to array', async () => {
     const dir = join(__dirname, 'tmp', 'v3-css-style-condition');
     await inputFS.rimraf(dir);
-    inputFS.mkdirp(dir);
+    await inputFS.mkdirp(dir);
 
     await fsFixture(inputFS, dir)`
         package.json:
