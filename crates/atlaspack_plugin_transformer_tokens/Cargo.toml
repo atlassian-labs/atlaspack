@@ -12,6 +12,7 @@ workspace = true
 atlaspack_atlaskit_tokens = { path = "../atlaspack_atlaskit_tokens" }
 atlaspack_core = { path = "../atlaspack_core" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 anyhow = { workspace = true }
 async-trait = { workspace = true }

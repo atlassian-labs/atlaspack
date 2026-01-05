@@ -1,5 +1,12 @@
 # @atlaspack/namer-default
 
+## 2.14.47
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.47
+
 ## 2.14.46
 
 ### Patch Changes

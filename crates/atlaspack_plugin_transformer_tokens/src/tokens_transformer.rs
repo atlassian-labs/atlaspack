@@ -5,7 +5,10 @@ use async_trait::async_trait;
 use atlaspack_atlaskit_tokens::{AtlaskitTokensHandler, TokensConfig, TokensPluginOptions};
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
-use atlaspack_core::types::{Asset, Code, Diagnostic, ErrorKind};
+use atlaspack_core::types::{
+  Asset, Code, CodeFrame, CodeHighlight, Diagnostic, Diagnostics, ErrorKind, Location,
+};
+use atlaspack_js_swc_core::utils::{Diagnostic as ClassicDiagnostic, DiagnosticSeverity};
 use atlaspack_sourcemap::SourceMap as AtlaspackSourceMap;
 
 use crate::tokens_transformer_config::{PackageJson, TokensTransformerConfig};
@@ -145,6 +148,64 @@ impl TransformerPlugin for AtlaspackTokensTransformerPlugin {
     let result = tokens_handler
       .process(code_str, tokens_config)
       .with_context(|| format!("Failed to process tokens for {}", asset.file_path.display()))?;
+
+    // Check for errors in diagnostics
+    let errors: Vec<&ClassicDiagnostic> = result
+      .diagnostics
+      .iter()
+      .filter(|d| {
+        matches!(
+          d.severity,
+          DiagnosticSeverity::Error | DiagnosticSeverity::SourceError
+        ) && (asset.is_source || !matches!(d.severity, DiagnosticSeverity::SourceError))
+      })
+      .collect();
+
+    if !errors.is_empty() {
+      // Convert diagnostics to core Diagnostic format
+      let mut diagnostics = Diagnostics::default();
+      for error in errors {
+        let mut diagnostic = Diagnostic {
+          kind: ErrorKind::Unknown,
+          code_frames: vec![],
+          hints: error.hints.clone().unwrap_or_default(),
+          documentation_url: error.documentation_url.clone(),
+          message: error.message.clone(),
+          origin: Some("@atlaspack/transformer-tokens".to_string()),
+        };
+
+        if let Some(code_highlights) = &error.code_highlights {
+          // Convert PathBuf to String to avoid potential serialization issues
+          let file_path_str = asset.file_path.to_string_lossy().to_string();
+
+          let mut code_frame = CodeFrame {
+            code_highlights: vec![],
+            code: Some(code_str.to_string()),
+            language: Some(asset.file_type.clone().into()),
+            file_path: Some(PathBuf::from(file_path_str)),
+          };
+
+          for code_highlight in code_highlights.iter() {
+            code_frame.code_highlights.push(CodeHighlight {
+              message: code_highlight.message.clone(),
+              start: Location {
+                line: code_highlight.loc.start_line,
+                column: code_highlight.loc.start_col,
+              },
+              end: Location {
+                line: code_highlight.loc.end_line,
+                column: code_highlight.loc.end_col,
+              },
+            });
+          }
+          diagnostic.code_frames.push(code_frame);
+        }
+
+        diagnostics.diagnostics.push(diagnostic);
+      }
+
+      return Err(anyhow!(diagnostics));
+    }
 
     let mut transformed_asset = asset.clone();
     transformed_asset.code = Code::new(result.code.into_bytes());
