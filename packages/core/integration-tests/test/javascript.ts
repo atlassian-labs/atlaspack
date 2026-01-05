@@ -4506,7 +4506,7 @@ describe('javascript', function () {
 
   it('should detect shorthand identifier imports', async function () {
     const dir = path.join(__dirname, 'js-import-shorthand-identifier');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
       package.json:

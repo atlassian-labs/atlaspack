@@ -14,7 +14,7 @@ import {
 describe('plugins with "registered" languages', () => {
   it('should support plugins with esbuild-register', async () => {
     const dir = path.join(__dirname, 'esbuild-register-plugin');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
       package.json:
