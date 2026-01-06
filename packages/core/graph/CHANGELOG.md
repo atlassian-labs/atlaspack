@@ -1,5 +1,12 @@
 # @atlaspack/graph
 
+## 3.6.10
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.5
+
 ## 3.6.9
 
 ### Patch Changes
