@@ -238,10 +238,12 @@ describe.v3('AtlaspackV3', function () {
 
   describe('featureFlags', () => {
     it('should not throw if feature flag is bool', async () => {
-      await assert.rejects(() =>
+      await assert.doesNotReject(() =>
         AtlaspackV3.create({
-          corePath: '',
-          entries: [join(__dirname, 'index.js')],
+          corePath: join(__dirname, '..', '..', 'core'),
+          serveOptions: false,
+          env: {},
+          entries: [join(__dirname, 'integration', 'tokens', 'index.js')],
           fs: new FileSystemV3(overlayFS),
           lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
           napiWorkerPool,
@@ -253,13 +255,15 @@ describe.v3('AtlaspackV3', function () {
     });
 
     it('should not throw if feature flag is string', async () => {
-      await assert.rejects(() =>
+      await assert.doesNotReject(() =>
         AtlaspackV3.create({
-          corePath: '',
-          entries: [join(__dirname, 'index.js')],
+          corePath: join(__dirname, '..', '..', 'core'),
+          serveOptions: false,
+          env: {},
+          entries: [join(__dirname, 'integration', 'tokens', 'index.js')],
           fs: new FileSystemV3(overlayFS),
-          napiWorkerPool,
           lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
+          napiWorkerPool,
           featureFlags: {
             testFlag: 'testFlagValue',
           },
