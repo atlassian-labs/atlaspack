@@ -1,5 +1,14 @@
 # @atlaspack/reporter-dev-server
 
+## 2.14.48
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.2.9
+  - @atlaspack/types@2.15.38
+  - @atlaspack/plugin@2.14.48
+
 ## 2.14.47
 
 ### Patch Changes

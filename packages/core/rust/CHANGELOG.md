@@ -1,5 +1,11 @@
 # @atlaspack/rust
 
+## 3.17.1
+
+### Patch Changes
+
+- [#947](https://github.com/atlassian-labs/atlaspack/pull/947) [`e4e5522`](https://github.com/atlassian-labs/atlaspack/commit/e4e55222422d8c73653d3ea09f1a0d13946345b9) Thanks [@marcins](https://github.com/marcins)! - Fix bug where early errors in V3 init could cause a hang
+
 ## 3.17.0
 
 ### Minor Changes

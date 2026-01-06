@@ -1,5 +1,15 @@
 # @atlaspack/cache
 
+## 3.2.43
+
+### Patch Changes
+
+- Updated dependencies [[`e4e5522`](https://github.com/atlassian-labs/atlaspack/commit/e4e55222422d8c73653d3ea09f1a0d13946345b9)]:
+  - @atlaspack/rust@3.17.1
+  - @atlaspack/fs@2.15.43
+  - @atlaspack/logger@2.14.40
+  - @atlaspack/utils@3.2.9
+
 ## 3.2.42
 
 ### Patch Changes
