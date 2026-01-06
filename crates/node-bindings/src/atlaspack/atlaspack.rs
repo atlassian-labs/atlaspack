@@ -50,8 +50,6 @@ pub fn atlaspack_napi_create(
   let thread_id = std::thread::current().id();
   tracing::trace!(?thread_id, "atlaspack-napi initialize");
 
-  let (deferred, promise) = env.create_deferred()?;
-
   // Wrap the JavaScript-supplied FileSystem
   let fs: Option<FileSystemRef> = if let Some(fs) = napi_options.fs {
     Some(Arc::new(FileSystemNapi::new(&env, &fs)?))
@@ -74,6 +72,7 @@ pub fn atlaspack_napi_create(
   let options = env.from_js_value(napi_options.options)?;
   let get_workers = JsCallable::new_method_bound("getWorkers", &napi_options.napi_worker_pool)?;
 
+  let (deferred, promise) = env.create_deferred()?;
   thread::spawn({
     let db = db_handle.clone();
     move || {
@@ -101,7 +100,7 @@ pub fn atlaspack_napi_create(
         package_manager,
         rpc,
       });
-
+      tracing::trace!(?thread_id, "atlaspack-napi resolve");
       deferred.resolve(move |env| match atlaspack {
         Ok(atlaspack) => {
           NapiAtlaspackResult::ok(&env, External::new(Arc::new(Mutex::new(atlaspack))))
