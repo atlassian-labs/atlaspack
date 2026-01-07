@@ -1387,7 +1387,16 @@ ${code}
         return this.getPropertyAccess(obj, exportSymbol);
       }
     } else if (!symbol) {
-      invariant(false, 'Asset was skipped or not found.');
+      let parentPath =
+        path.relative(this.options.projectRoot, parentAsset.filePath) ||
+        '<unknown>';
+      let resolvedPath =
+        path.relative(this.options.projectRoot, resolvedAsset.filePath) ||
+        '<unknown>';
+      invariant(
+        false,
+        `Asset was skipped or not found.\nSearching for exported symbol "${imported}" (resolved as "${exportSymbol}") in asset with id "${resolvedAsset.meta.id}" (public id: "${publicId}", path: "${resolvedPath}") from parent asset "${parentAsset.meta.id}" (path: "${parentPath}").`,
+      );
     } else {
       return replacements?.get(symbol) || symbol;
     }
