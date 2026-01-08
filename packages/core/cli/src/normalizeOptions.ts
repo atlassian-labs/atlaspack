@@ -3,6 +3,7 @@ import commander from 'commander';
 import getPort from 'get-port';
 import type {FileSystem} from '@atlaspack/fs';
 import type {FeatureFlags} from '@atlaspack/feature-flags';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 import type {InitialAtlaspackOptions, LogLevel} from '@atlaspack/types';
 import {INTERNAL_ORIGINAL_CONSOLE} from '@atlaspack/logger';
 import path from 'path';
@@ -128,6 +129,20 @@ export async function normalizeOptions(
 
   if (command.name() === 'serve') {
     let {publicUrl} = command;
+
+    // Normalize publicUrl to ensure it has a trailing slash for the dev server
+    // This prevents issues where URLs like "http://localhost:8080" would result in
+    // malformed asset URLs like "localhost:8080assets.json" instead of "localhost:8080/assets.json"
+    // This normalization affects BOTH the dev server routing AND the bundled asset URLs
+    if (
+      getFeatureFlag('normalizePublicUrlTrailingSlash') &&
+      publicUrl &&
+      !publicUrl.endsWith('/')
+    ) {
+      publicUrl = publicUrl + '/';
+      // Update command.publicUrl so it's also normalized for defaultTargetOptions
+      command.publicUrl = publicUrl;
+    }
 
     // @ts-expect-error TS2322
     serveOptions = {

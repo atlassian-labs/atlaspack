@@ -363,6 +363,16 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-12-15
    */
   v3Caching: false,
+
+  /**
+   * Normalize publicUrl to always have a trailing slash in dev server.
+   * This prevents issues where URLs without trailing slashes could result in
+   * malformed asset URLs (e.g., "localhost:8080assets.json" instead of "localhost:8080/assets.json")
+   *
+   * @author Sravan Kumar <sravankumar@atlassian.com>
+   * @since 2026-01-08
+   */
+  normalizePublicUrlTrailingSlash: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
