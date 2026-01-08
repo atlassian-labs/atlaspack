@@ -1,9 +1,27 @@
 import assert from 'assert';
 import path from 'path';
-import {bundle, describe, it, run} from '@atlaspack/test-utils';
+import {
+  bundle,
+  describe,
+  isAtlaspackV3,
+  it,
+  run,
+  sleep,
+} from '@atlaspack/test-utils';
 import {parse, print} from 'graphql/language';
 
 describe('graphql', function () {
+  // This is very very shit, but prevents an issue where ThreadSafeFunctions that are kicked off but not complete when
+  // the build ends result in a fatal NAPI error which hangs the build. It seems to mostly affect this particular suite for
+  // some reason, but we have not found the root cause yet.
+  //
+  // This "only" adds ~2s to the integration test suite.
+  afterEach(async () => {
+    if (isAtlaspackV3) {
+      await sleep(500);
+    }
+  });
+
   it('should support requiring graphql files', async function () {
     let b = await bundle(path.join(__dirname, '/integration/graphql/index.js'));
 
