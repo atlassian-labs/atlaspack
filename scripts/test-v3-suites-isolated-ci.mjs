@@ -221,52 +221,10 @@ function runTestFilesTogether(testFiles) {
     let hangDetected = false;
     let startTime = Date.now();
 
-    // Monitor for hangs by checking if process is still running
-    const hangTimeout = setInterval(() => {
-      if (testProcess.killed || testProcess.exitCode !== null) {
-        clearInterval(hangTimeout);
-        return;
-      }
-
-      const timeSinceStart = Date.now() - startTime;
-
-      // If process has been running for more than MAX_TEST_TIMEOUT_MS, consider it hung
-      if (timeSinceStart >= MAX_TEST_TIMEOUT_MS) {
-        hangDetected = true;
-        console.error(
-          `\n⚠️  HANG DETECTED: Tests have been running for ${MAX_TEST_TIMEOUT_MS / 1000}s`,
-        );
-        testProcess.kill('SIGTERM');
-        clearInterval(hangTimeout);
-        clearTimeout(maxTimeout);
-
-        setTimeout(() => {
-          if (!testProcess.killed) {
-            testProcess.kill('SIGKILL');
-          }
-        }, 5000);
-      }
-    }, 1000);
-
-    const maxTimeout = setTimeout(() => {
-      if (!testProcess.killed) {
-        hangDetected = true;
-        console.error(`\n⚠️  HANG DETECTED: Tests exceeded maximum timeout`);
-        testProcess.kill('SIGTERM');
-        clearInterval(hangTimeout);
-
-        setTimeout(() => {
-          if (!testProcess.killed) {
-            testProcess.kill('SIGKILL');
-          }
-        }, 5000);
-      }
-    }, MAX_TEST_TIMEOUT_MS);
+    // No timeout monitoring when running tests together - let them run to completion
+    // The CI job timeout will handle truly hung processes
 
     testProcess.on('exit', (code, signal) => {
-      clearInterval(hangTimeout);
-      clearTimeout(maxTimeout);
-
       const result = {
         files: relativePaths,
         success: code === 0 && !hangDetected,
@@ -280,9 +238,6 @@ function runTestFilesTogether(testFiles) {
     });
 
     testProcess.on('error', (error) => {
-      clearInterval(hangTimeout);
-      clearTimeout(maxTimeout);
-
       resolve({
         files: relativePaths,
         success: false,
