@@ -111,7 +111,7 @@ function runTestSuite(testFile) {
 
     const testProcess = spawn(
       'yarn',
-      ['workspace', '@atlaspack/integration-tests', 'test', testFile],
+      ['workspace', '@atlaspack/integration-tests', 'test-ci', testFile],
       {
         cwd: PROJECT_ROOT,
         env: {
@@ -207,7 +207,7 @@ function runTestFilesTogether(testFiles) {
 
     const testProcess = spawn(
       'yarn',
-      ['workspace', '@atlaspack/integration-tests', 'test', ...testFiles],
+      ['workspace', '@atlaspack/integration-tests', 'test-ci', ...testFiles],
       {
         cwd: PROJECT_ROOT,
         env: {
