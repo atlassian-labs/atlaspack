@@ -275,6 +275,7 @@ jobs:
           ATLASPACK_V3: true
           SLICE_NUM: ${{ matrix.slice_num }}
           SLICE_TOTAL: ${{ matrix.slice_total }}
+          ISOLATE_TESTS: 'false'
           RUST_BACKTRACE: full
       - name: Collect core dumps (Linux only)
         if: ${{ runner.os == 'Linux' && always() }}
