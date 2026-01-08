@@ -391,6 +391,62 @@ describe('server', function () {
     );
   });
 
+  it('should normalize public url without trailing slash', async function () {
+    let port = await getPort();
+    let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
+      defaultTargetOptions: {
+        distDir,
+      },
+      config,
+      featureFlags: {
+        normalizePublicUrlTrailingSlash: true,
+      },
+      serveOptions: {
+        https: false,
+        port: port,
+        host: 'localhost',
+        publicUrl: '/assets',
+      },
+    });
+
+    subscription = await b.watch();
+    await getNextBuild(b);
+
+    let data = await get('/assets/index.js', port);
+    assert.equal(
+      data,
+      await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8'),
+    );
+  });
+
+  it('should normalize full URL public url without trailing slash', async function () {
+    let port = await getPort();
+    let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
+      defaultTargetOptions: {
+        distDir,
+      },
+      config,
+      featureFlags: {
+        normalizePublicUrlTrailingSlash: true,
+      },
+      serveOptions: {
+        https: false,
+        port: port,
+        host: 'localhost',
+        publicUrl: `http://localhost:${port}`,
+      },
+    });
+
+    subscription = await b.watch();
+    await getNextBuild(b);
+
+    let data = await get('/index.js', port);
+    assert.equal(
+      data,
+      await outputFS.readFile(path.join(distDir, 'index.js'), 'utf8'),
+    );
+  });
+
   it('should work with query parameters that contain a dot', async function () {
     let port = await getPort();
     let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
