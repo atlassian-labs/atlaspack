@@ -7,11 +7,16 @@
  *
  * This script:
  * 1. Finds all test files in packages/core/integration-tests/test/
- * 2. Runs each test file separately with ATLASPACK_V3=true
- * 3. Shows full mocha output (stdio: inherit)
- * 4. Uses clear delimiters to mark the start/end of each suite
- * 5. Monitors for hangs and reports which suites hang or fail
- * 6. NO state management - runs all tests every time
+ * 2. Splits tests into slices if SLICE_NUM and SLICE_TOTAL are provided
+ * 3. Runs each test file separately with ATLASPACK_V3=true
+ * 4. Shows full mocha output (stdio: inherit)
+ * 5. Uses clear delimiters to mark the start/end of each suite
+ * 6. Monitors for hangs and reports which suites hang or fail
+ * 7. NO state management - runs all tests every time
+ *
+ * Usage:
+ *   node scripts/test-v3-suites-isolated-ci.mjs
+ *   SLICE_NUM=1 SLICE_TOTAL=2 node scripts/test-v3-suites-isolated-ci.mjs
  */
 
 import {spawn} from 'child_process';
@@ -188,14 +193,56 @@ function runTestSuite(testFile) {
   });
 }
 
+function getSlice(testFiles, sliceNum, sliceTotal) {
+  if (!sliceNum || !sliceTotal) {
+    return testFiles;
+  }
+
+  const sliceNumInt = parseInt(sliceNum, 10);
+  const sliceTotalInt = parseInt(sliceTotal, 10);
+
+  if (isNaN(sliceNumInt) || isNaN(sliceTotalInt) || sliceNumInt < 1 || sliceNumInt > sliceTotalInt) {
+    throw new Error(
+      `Invalid slice parameters: SLICE_NUM=${sliceNum}, SLICE_TOTAL=${sliceTotal}`,
+    );
+  }
+
+  const totalFiles = testFiles.length;
+  const filesPerSlice = Math.ceil(totalFiles / sliceTotalInt);
+  const startIndex = (sliceNumInt - 1) * filesPerSlice;
+  const endIndex = Math.min(startIndex + filesPerSlice, totalFiles);
+
+  return testFiles.slice(startIndex, endIndex);
+}
+
 async function main() {
+  const sliceNum = process.env.SLICE_NUM;
+  const sliceTotal = process.env.SLICE_TOTAL;
+
   console.log('\n');
-  printDelimiter('V3 INTEGRATION TESTS - ISOLATED RUNNER (CI MODE)', '=');
+  if (sliceNum && sliceTotal) {
+    printDelimiter(
+      `V3 INTEGRATION TESTS - ISOLATED RUNNER (CI MODE) - SLICE ${sliceNum}/${sliceTotal}`,
+      '=',
+    );
+  } else {
+    printDelimiter('V3 INTEGRATION TESTS - ISOLATED RUNNER (CI MODE)', '=');
+  }
   console.log('Running each test suite in isolation with full mocha output\n');
 
   console.log('Finding test files...');
-  const testFiles = await findTestFiles(TEST_DIR);
-  console.log(`Found ${testFiles.length} test files\n`);
+  const allTestFiles = await findTestFiles(TEST_DIR);
+  console.log(`Found ${allTestFiles.length} test files`);
+
+  const testFiles = getSlice(allTestFiles, sliceNum, sliceTotal);
+
+  if (sliceNum && sliceTotal) {
+    console.log(
+      `Running slice ${sliceNum}/${sliceTotal}: ${testFiles.length} test files\n`,
+    );
+  } else {
+    console.log(`Running all ${testFiles.length} test files\n`);
+  }
 
   const results = {
     passed: [],
@@ -204,6 +251,7 @@ async function main() {
     errors: [],
   };
 
+  // Track which test number we're on within the slice
   for (let i = 0; i < testFiles.length; i++) {
     const testFile = testFiles[i];
     const relativePath = relative(TEST_DIR, testFile);
@@ -237,8 +285,18 @@ async function main() {
   }
 
   console.log('\n');
-  printDelimiter('FINAL SUMMARY', '=');
-  console.log(`Total suites: ${testFiles.length}`);
+  if (sliceNum && sliceTotal) {
+    printDelimiter(
+      `FINAL SUMMARY - SLICE ${sliceNum}/${sliceTotal}`,
+      '=',
+    );
+  } else {
+    printDelimiter('FINAL SUMMARY', '=');
+  }
+  console.log(`Total suites in slice: ${testFiles.length}`);
+  if (sliceNum && sliceTotal) {
+    console.log(`Total suites overall: ${allTestFiles.length}`);
+  }
   console.log(`✅ Passed: ${results.passed.length}`);
   console.log(`❌ Failed: ${results.failed.length}`);
   console.log(`⚠️  Hung: ${results.hung.length}`);
