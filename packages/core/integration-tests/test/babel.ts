@@ -13,6 +13,7 @@ import {
   removeDistDirectory,
   run,
   sleep,
+  isAtlaspackV3,
 } from '@atlaspack/test-utils';
 import Logger from '@atlaspack/logger';
 import os from 'os';
@@ -37,6 +38,15 @@ describe('babel', function () {
     if (subscription) {
       await subscription.unsubscribe();
       subscription = null;
+    }
+
+    // This is very very shit, but prevents an issue where ThreadSafeFunctions that are kicked off but not complete when
+    // the build ends result in a fatal NAPI error which hangs the build. It seems to mostly affect this particular suite for
+    // some reason, but we have not found the root cause yet.
+    //
+    // This "only" adds ~10s to the integration test suite.
+    if (isAtlaspackV3) {
+      await sleep(500);
     }
   });
 
