@@ -617,17 +617,42 @@ fn order_class_names_by_bucket(class_names: &[String], sheets: &[String]) -> Vec
   with_index.into_iter().map(|(_i, s)| s.clone()).collect()
 }
 
+fn order_class_names_from_sheet_order(class_names: &[String], sheets: &[String]) -> Vec<String> {
+  let mut ordered: IndexSet<String> = IndexSet::new();
+
+  for sheet_class in sheets
+    .iter()
+    .filter_map(|sheet| extract_first_class_from_sheet(sheet.as_str()))
+  {
+    if class_names.iter().any(|name| name == &sheet_class) {
+      ordered.insert(sheet_class);
+    }
+  }
+
+  for name in class_names {
+    ordered.insert(name.clone());
+  }
+
+  ordered.into_iter().collect()
+}
+
 fn compress_class_names(
   class_names: &[String],
   compression_map: Option<&BTreeMap<String, String>>,
-  _sheets: &[String],
+  sheets: &[String],
 ) -> String {
-  let compressed = compress_class_names_for_runtime(class_names, compression_map);
+  let ordered = order_class_names_from_sheet_order(class_names, sheets);
+  let compressed = compress_class_names_for_runtime(&ordered, compression_map);
   compressed.join(" ")
 }
 
 /// Builds the styled component wrapper mirroring the Babel helper.
-pub fn build_styled_component(tag: Tag, css_output: CssOutput, meta: &Metadata) -> Expr {
+pub fn build_styled_component(
+  tag: Tag,
+  css_output: CssOutput,
+  meta: &Metadata,
+  component_name: Option<&str>,
+) -> Expr {
   // Mark that we're using runtime wrappers so imports are added
   meta.state_mut().uses_runtime_wrappers = true;
 
@@ -683,7 +708,9 @@ pub fn build_styled_component(tag: Tag, css_output: CssOutput, meta: &Metadata) 
   let unconditional_class_names =
     compress_class_names(&css_result.class_names, class_map_ref, &css_result.sheets);
 
-  let component_name = component_name_from_tag(&tag);
+  let component_name = component_name
+    .map(|name| name.to_string())
+    .or_else(|| component_name_from_tag(&tag));
   let helper = get_runtime_class_name_library(meta);
 
   let class_array = build_class_name_array(
@@ -828,7 +855,7 @@ mod tests {
       name: "div".into(),
       tag_type: TagType::InBuiltComponent,
     };
-    let expr = build_styled_component(tag, css_output(), &meta);
+    let expr = build_styled_component(tag, css_output(), &meta, None);
 
     match expr {
       Expr::Call(call) => {
@@ -870,7 +897,7 @@ mod tests {
       name: "div".into(),
       tag_type: TagType::InBuiltComponent,
     };
-    let expr = build_styled_component(tag, css_output(), &meta);
+    let expr = build_styled_component(tag, css_output(), &meta, None);
 
     if let Expr::Call(call) = expr {
       if let Expr::Arrow(arrow) = &*call.args[0].expr {
@@ -911,7 +938,7 @@ mod tests {
       name: "div".into(),
       tag_type: TagType::InBuiltComponent,
     };
-    let expr = build_styled_component(tag, css_output(), &meta);
+    let expr = build_styled_component(tag, css_output(), &meta, Some("FooBar"));
 
     let call = match expr {
       Expr::Call(call) => call,

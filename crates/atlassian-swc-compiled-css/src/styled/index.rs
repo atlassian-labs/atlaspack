@@ -284,7 +284,7 @@ where
     );
   }
 
-  *node = build_styled_component(styled_data.tag, css_output, meta);
+  *node = build_styled_component(styled_data.tag, css_output, meta, variable_name);
 
   if let Some(name) = variable_name {
     result.display_name = Some(build_display_name(name, None));

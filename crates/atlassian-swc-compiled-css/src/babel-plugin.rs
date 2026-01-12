@@ -2133,6 +2133,8 @@ impl CompiledCssInJsTransform {
 struct CssPropVisitor {
   meta: Metadata,
   scope_stack: Vec<SharedScope>,
+  recursion_depth: usize,
+  max_recursion_depth: usize,
 }
 
 impl CssPropVisitor {
@@ -2141,6 +2143,8 @@ impl CssPropVisitor {
     Self {
       meta,
       scope_stack: vec![parent_scope],
+      recursion_depth: 0,
+      max_recursion_depth: 500, // Prevent stack overflow from infinite recursion
     }
   }
 
@@ -2321,7 +2325,30 @@ impl VisitMut for CssPropVisitor {
   }
 
   fn visit_mut_expr(&mut self, expr: &mut Expr) {
+    // Check recursion depth to prevent stack overflow from infinite loops
+    if self.recursion_depth > self.max_recursion_depth {
+      let error = build_code_frame_error(
+        "AST traversal depth exceeded 500 levels - possible infinite recursion in visitor",
+        Some(expr.span()),
+        &self.meta,
+      );
+      panic!("{error}");
+    }
+
+    if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+      eprintln!(
+        "[CssPropVisitor.visit_mut_expr] START depth={}",
+        self.recursion_depth
+      );
+    }
+
+    self.recursion_depth += 1;
     expr.visit_mut_children_with(self);
+    self.recursion_depth -= 1;
+
+    if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+      eprintln!("[CssPropVisitor.visit_mut_expr] children visited");
+    }
 
     if matches!(expr, Expr::JSXElement(_)) {
       if std::env::var("COMPILED_CLI_TRACE").is_ok() {
@@ -2331,21 +2358,67 @@ impl VisitMut for CssPropVisitor {
           state.css_map.keys().collect::<Vec<&String>>()
         );
       }
+      if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+        eprintln!("[CssPropVisitor.visit_mut_expr] calling visit_css_prop");
+      }
       let meta = self
         .scoped_meta()
         .with_parent_expr(Some(expr))
         .with_own_span(Some(expr.span()));
       visit_css_prop(expr, &meta);
+      if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+        eprintln!("[CssPropVisitor.visit_mut_expr] visit_css_prop completed");
+      }
+    }
+
+    if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+      eprintln!("[CssPropVisitor.visit_mut_expr] END");
     }
   }
 
   fn visit_mut_jsx_element(&mut self, element: &mut swc_core::ecma::ast::JSXElement) {
+    // Check recursion depth to prevent stack overflow from infinite loops
+    if self.recursion_depth > self.max_recursion_depth {
+      let error = build_code_frame_error(
+        "JSX element nesting depth exceeded 500 levels - possible infinite recursion in visitor",
+        Some(element.opening.span),
+        &self.meta,
+      );
+      panic!("{error}");
+    }
+
+    if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+      use swc_core::ecma::ast::JSXElementName;
+      let name = match &element.opening.name {
+        JSXElementName::Ident(id) => id.sym.as_ref().to_string(),
+        _ => String::from("<complex>"),
+      };
+      eprintln!(
+        "[CssPropVisitor.visit_mut_jsx_element] START element={} depth={}",
+        name, self.recursion_depth
+      );
+    }
+
     // First traverse children so nested elements are handled depth-first
+    self.recursion_depth += 1;
+    if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+      eprintln!("[CssPropVisitor.visit_mut_jsx_element] visiting children");
+    }
     element.visit_mut_children_with(self);
+    self.recursion_depth -= 1;
+    if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+      eprintln!("[CssPropVisitor.visit_mut_jsx_element] children done");
+    }
 
     // Then attempt css prop transform on this element directly
+    if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+      eprintln!("[CssPropVisitor.visit_mut_jsx_element] calling visit_css_prop_on_element");
+    }
     let meta = self.scoped_meta();
     crate::css_prop::visit_css_prop_on_element(element, &meta);
+    if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+      eprintln!("[CssPropVisitor.visit_mut_jsx_element] visit_css_prop_on_element done");
+    }
   }
 }
 

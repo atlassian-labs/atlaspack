@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::backtrace::Backtrace;
 use std::cell::RefCell;
 use std::sync::Once;
 use swc_core::common::Span;
@@ -20,12 +21,22 @@ static PANIC_HOOK_INIT: Once = Once::new();
 /// ensuring panic output is suppressed regardless of which thread the panic occurs in.
 pub fn init_panic_suppression() {
   PANIC_HOOK_INIT.call_once(|| {
+    let debug_panics = std::env::var("COMPILED_CSS_DEBUG_PANIC").is_ok();
     // Set a global panic hook that suppresses panic output
     // This will apply to all threads in the process
-    std::panic::set_hook(Box::new(|_info| {
-      // Suppress the default panic hook output - errors are handled as diagnostics
-      // We deliberately do nothing here - don't call any default hook
-      // The panic will be caught and converted to a diagnostic at the entrypoint
+    std::panic::set_hook(Box::new(move |info| {
+      // Suppress the default panic hook output - errors are handled as diagnostics.
+      // When debugging, optionally log the panic location and a backtrace to stderr.
+      if debug_panics {
+        eprintln!(
+          "[compiled-css] panic: {info}{}",
+          info
+            .location()
+            .map(|loc| format!(" at {}:{}", loc.file(), loc.line()))
+            .unwrap_or_default()
+        );
+        eprintln!("{:?}", Backtrace::force_capture());
+      }
     }));
   });
 }
@@ -112,8 +123,7 @@ impl TransformError {
       _ => {
         message.push_str(
           "\n\nInternal error: no source span was captured for this panic. \
-           This usually means the transformer failed to attach a span before panicking. \
-           Please report with a minimal reproduction.",
+           This usually means the transformer failed to attach a span before panicking.",
         );
         None
       }

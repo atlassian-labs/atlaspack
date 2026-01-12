@@ -244,6 +244,22 @@ fn ordered_class_names_from_sheets(sheets: &[String]) -> Vec<String> {
   ordered.into_iter().collect()
 }
 
+fn order_class_names_from_sheet_order(class_names: &[String], sheets: &[String]) -> Vec<String> {
+  let mut ordered: indexmap::IndexSet<String> = indexmap::IndexSet::new();
+
+  for sheet_class in ordered_class_names_from_sheets(sheets) {
+    if class_names.iter().any(|name| name == &sheet_class) {
+      ordered.insert(sheet_class);
+    }
+  }
+
+  for name in class_names {
+    ordered.insert(name.clone());
+  }
+
+  ordered.into_iter().collect()
+}
+
 fn negate_expression(expr: Expr) -> Expr {
   Expr::Unary(UnaryExpr {
     span: DUMMY_SP,
@@ -372,34 +388,16 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
 
   match item {
     CssItem::Conditional(conditional) => {
-      let cons_empty = if matches!(&*conditional.consequent, CssItem::Map(_)) {
-        false
-      } else {
-        css_is_effectively_empty(&get_item_css(&conditional.consequent))
-      };
-      let alt_empty = if matches!(&*conditional.alternate, CssItem::Map(_)) {
-        false
-      } else {
-        css_is_effectively_empty(&get_item_css(&conditional.alternate))
-      };
       let conditional = conditional.clone();
-      let consequent = if cons_empty {
-        TransformCssItemResult::default()
-      } else {
-        transform_css_item(&conditional.consequent, meta)
-      };
-      let alternate = if alt_empty {
-        TransformCssItemResult::default()
-      } else {
-        transform_css_item(&conditional.alternate, meta)
-      };
+      let consequent = transform_css_item(&conditional.consequent, meta);
+      let alternate = transform_css_item(&conditional.alternate, meta);
       let has_consequent_sheets = !consequent.sheets.is_empty();
       let has_alternate_sheets = !alternate.sheets.is_empty();
 
       if std::env::var("STACK_DEBUG").is_ok() {
         eprintln!(
-          "[transform_css_item] cond has_consequent_sheets={} has_alternate_sheets={} cons_empty={} alt_empty={}",
-          has_consequent_sheets, has_alternate_sheets, cons_empty, alt_empty
+          "[transform_css_item] cond has_consequent_sheets={} has_alternate_sheets={}",
+          has_consequent_sheets, has_alternate_sheets
         );
       }
 
@@ -409,22 +407,25 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
 
       let default_expression = undefined_ident();
 
+      // Mirror Babel behaviour: when only one branch produces sheets, collapse the
+      // conditional into a logical expression (test && className) using either the
+      // original test or its negation.
       if !has_consequent_sheets || !has_alternate_sheets {
-        let (sheets, class_expression, test) = if has_consequent_sheets {
+        let (sheets, test_expr, class_expr) = if has_consequent_sheets {
           (
             consequent.sheets,
+            conditional.test.clone(),
             consequent
               .class_expression
               .unwrap_or_else(|| default_expression.clone()),
-            conditional.test.clone(),
           )
         } else {
           (
             alternate.sheets,
+            negate_expression(conditional.test.clone()),
             alternate
               .class_expression
               .unwrap_or_else(|| default_expression.clone()),
-            negate_expression(conditional.test.clone()),
           )
         };
 
@@ -432,8 +433,8 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
           sheets,
           class_expression: Some(logical_expression(
             LogicalOperator::And,
-            test,
-            class_expression,
+            test_expr,
+            class_expr,
           )),
         };
       }
@@ -462,8 +463,8 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
     CssItem::Logical(logical) => {
       let (options, compression_map) = create_transform_css_options(meta);
       let css_result = transform_css(&logical.css, options).unwrap_or_else(|err| panic!("{err}"));
-      let compressed =
-        compress_class_names_for_runtime(&css_result.class_names, compression_map.as_ref());
+      let ordered = order_class_names_from_sheet_order(&css_result.class_names, &css_result.sheets);
+      let compressed = compress_class_names_for_runtime(&ordered, compression_map.as_ref());
       let class_name_literal = string_literal(compressed.join(" "));
 
       TransformCssItemResult {
@@ -518,7 +519,7 @@ fn transform_css_item(item: &CssItem, meta: &Metadata) -> TransformCssItemResult
         );
       }
 
-      let ordered = css_result.class_names.clone();
+      let ordered = order_class_names_from_sheet_order(&css_result.class_names, &css_result.sheets);
       let compressed = compress_class_names_for_runtime(&ordered, compression_map.as_ref());
       let class_name = compressed.join(" ");
       let class_expression = if class_name.trim().is_empty() {
@@ -600,7 +601,7 @@ mod tests {
   use swc_core::atoms::Atom;
   use swc_core::common::sync::Lrc;
   use swc_core::common::{DUMMY_SP, SourceMap, SyntaxContext};
-  use swc_core::ecma::ast::{Expr, Ident, Lit, Str};
+  use swc_core::ecma::ast::{BinaryOp, Expr, Ident, Lit, Str};
 
   use crate::postcss::transform::transform_css;
   use crate::types::{Metadata, PluginOptions, TransformFile, TransformState};
@@ -686,6 +687,41 @@ mod tests {
         }
       }
       other => panic!("expected conditional expression, found {other:?}"),
+    }
+  }
+
+  #[test]
+  fn folds_single_sided_conditional_into_logical_expression() {
+    let meta = create_metadata();
+    let conditional = CssItem::Conditional(ConditionalCssItem {
+      test: Expr::Ident(Ident::new(
+        Atom::from("flag"),
+        DUMMY_SP,
+        SyntaxContext::empty(),
+      )),
+      consequent: Box::new(CssItem::Unconditional(UnconditionalCssItem {
+        css: ".a { color: red; }".into(),
+      })),
+      alternate: Box::new(CssItem::Unconditional(UnconditionalCssItem {
+        css: "".into(),
+      })),
+    });
+
+    let result = transform_css_items(&[conditional], &meta);
+
+    assert_eq!(result.sheets.len(), 1);
+    assert_eq!(result.sheets[0], ".a { color: red; }");
+    assert_eq!(result.class_names.len(), 1);
+
+    match &result.class_names[0] {
+      Expr::Bin(bin) => {
+        assert_eq!(bin.op, BinaryOp::LogicalAnd);
+        match bin.left.as_ref() {
+          Expr::Ident(ident) => assert_eq!(ident.sym.as_ref(), "flag"),
+          other => panic!("unexpected test expression: {other:?}"),
+        }
+      }
+      other => panic!("expected logical expression, found {other:?}"),
     }
   }
 

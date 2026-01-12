@@ -2529,21 +2529,19 @@ fn wrap_bare_declarations_plugin(options: TransformCssOptions) -> pc::BuiltPlugi
           if !decls.is_empty() {
             // Use an empty selector so no placeholder leaks into output
             let wrapper = PcRule::new("");
-            for d in decls {
+            for decl in decls {
               {
-                let mut b = d.borrow_mut();
+                let mut b = decl.borrow_mut();
                 b.raws.set_text("between", ":");
               }
-              let _ = d.clone();
-              d.borrow();
               // Remove using low-level Node::remove by index
-              if let Some(idx) = d.borrow().parent().and_then(|p| {
+              if let Some(idx) = decl.borrow().parent().and_then(|p| {
                 let b = p.borrow();
-                b.nodes.iter().position(|n| std::ptr::eq(n, &d))
+                b.nodes.iter().position(|n| std::ptr::eq(n, &decl))
               }) {
-                postcss::ast::Node::remove(&d.borrow().parent().unwrap(), idx);
+                postcss::ast::Node::remove(&decl.borrow().parent().unwrap(), idx);
               }
-              wrapper.append(d);
+              wrapper.append(decl);
             }
             d.prepend(wrapper.to_node());
           }

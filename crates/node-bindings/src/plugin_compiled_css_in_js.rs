@@ -535,8 +535,10 @@ fn config_to_plugin_options(
     on_included_files: None,
     optimize_css: Some(config.optimize_css),
     resolver: None,
-    extensions: Some(config.extensions.clone().unwrap_or_default()),
-    parser_babel_plugins: Some(Vec::new()),
+    // Preserve caller-provided extensions; when unset fall back to Compiled defaults.
+    extensions: config.extensions.clone(),
+    // Allow the transformer to apply its own parser defaults (TS + JSX) instead of forcing none.
+    parser_babel_plugins: None,
     add_component_name: Some(config.add_component_name),
     class_name_compression_map: Some(std::collections::BTreeMap::new()),
     process_xcss: Some(config.process_xcss),

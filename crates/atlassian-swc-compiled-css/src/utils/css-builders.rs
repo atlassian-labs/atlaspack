@@ -1629,21 +1629,31 @@ where
     }
   }
 
-  let is_effectively_empty = |item: &CssItem| match item {
-    CssItem::Map(_) => false,
-    _ => {
-      let css = css_text(item);
-      let trimmed = css.trim();
-      if trimmed.is_empty() {
-        return true;
+  fn is_effectively_empty(item: &CssItem) -> bool {
+    match item {
+      // CssMap branches are always considered meaningful, even when their backing css
+      // string is empty, so never treat them as "effectively empty".
+      CssItem::Map(_) => false,
+      // A conditional is only effectively empty when both branches are empty. This
+      // ensures conditionals that eventually resolve to cssMap branches are preserved
+      // rather than collapsed into single-sided logical expressions.
+      CssItem::Conditional(c) => {
+        is_effectively_empty(&c.consequent) && is_effectively_empty(&c.alternate)
       }
-      if let Some(idx) = trimmed.find(':') {
-        let value = trimmed[idx + 1..].trim().trim_end_matches(';').trim();
-        return value.is_empty();
+      _ => {
+        let css = css_text(item);
+        let trimmed = css.trim();
+        if trimmed.is_empty() {
+          return true;
+        }
+        if let Some(idx) = trimmed.find(':') {
+          let value = trimmed[idx + 1..].trim().trim_end_matches(';').trim();
+          return value.is_empty();
+        }
+        false
       }
-      false
     }
-  };
+  }
 
   let mut consequent_css = process_branch(&node.cons, meta, build_css, &mut variables);
   if let Some(ref item) = consequent_css {

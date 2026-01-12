@@ -3,6 +3,7 @@ use swc_core::ecma::ast::{
   ArrowExpr, BlockStmt, BlockStmtOrExpr, CallExpr, Callee, Expr, Function,
 };
 
+use crate::errors::set_transform_span;
 use crate::types::Metadata;
 
 /// Formats a diagnostic message that mirrors Babel's `buildCodeFrameError` helper.
@@ -12,22 +13,12 @@ use crate::types::Metadata;
 /// returned unchanged with a trailing period.
 pub fn build_code_frame_error(message: &str, span: Option<Span>, meta: &Metadata) -> String {
   let resolved_span = span.or(meta.own_span).or(meta.parent_span);
-  let (handler, source_map) = {
-    let state = meta.state();
-    (state.handler.clone(), state.file().source_map.clone())
-  };
-
-  match resolved_span {
-    Some(span) => {
-      handler.struct_span_err(span, message).emit();
-      let location = source_map.lookup_char_pos(span.lo());
-      format!("{message} ({}:{}).", location.line, location.col_display)
-    }
-    None => {
-      handler.struct_err(message).emit();
-      format!("{message}.")
-    }
+  if let Some(span) = resolved_span {
+    // Capture span for panic diagnostics so TransformError::from_panic can attach it.
+    set_transform_span(span);
   }
+
+  format!("{message}.")
 }
 
 /// Wraps the provided block or expression in an IIFE.

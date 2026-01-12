@@ -166,7 +166,16 @@ where
     eprintln!("[css-prop] found css attribute span={:?}", attr_clone.span);
   }
 
+  if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+    eprintln!("[visit_css_prop_with_builder] calling build_css_from_attribute");
+  }
   let css_output = build_css_from_attribute(&attr_clone, meta, &build_css);
+  if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+    eprintln!(
+      "[visit_css_prop_with_builder] build_css_from_attribute done, css_count={}",
+      css_output.css.len()
+    );
+  }
 
   if std::env::var("COMPILED_CLI_TRACE").is_ok() {
     let state = meta.state();
@@ -197,8 +206,16 @@ where
     return;
   }
 
+  if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+    eprintln!(
+      "[visit_css_prop_with_builder] creating jsx_expr and calling build_compiled_component"
+    );
+  }
   let jsx_expr = Expr::JSXElement(element.as_ref().clone().into());
   let replacement = build_compiled_component(jsx_expr, &css_output, meta);
+  if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+    eprintln!("[visit_css_prop_with_builder] build_compiled_component done");
+  }
 
   if std::env::var("COMPILED_CLI_TRACE").is_ok() {
     eprintln!(
@@ -208,13 +225,25 @@ where
     );
   }
 
+  if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+    eprintln!("[visit_css_prop_with_builder] assigning replacement to node");
+  }
   *node = replacement;
+  if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+    eprintln!("[visit_css_prop_with_builder] END");
+  }
 }
 
 /// Convenience wrapper that mirrors the Babel visitor by invoking the shared
 /// `build_css` helper when transforming a `css` prop.
 pub fn visit_css_prop(node: &mut Expr, meta: &Metadata) {
+  if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+    eprintln!("[visit_css_prop] START");
+  }
   visit_css_prop_with_builder(node, meta, build_css_from_expr);
+  if std::env::var("DEBUG_VISITOR_TRACE").is_ok() {
+    eprintln!("[visit_css_prop] END");
+  }
 }
 
 /// Transform a css prop on a JSXElement directly (for nested elements),

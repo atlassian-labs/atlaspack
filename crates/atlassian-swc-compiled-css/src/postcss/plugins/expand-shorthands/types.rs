@@ -366,11 +366,12 @@ pub fn parse_value_to_components(value: &str) -> Vec<ComponentValue> {
         let mut result: Vec<ComponentValue> = Vec::new();
         let mut cursor = 0usize;
         let value_str = value;
+        let value_len = value_str.len();
 
         for component in declaration.value.drain(..) {
           // Capture leading whitespace between tokens so round-tripping preserves spacing.
           let whitespace_start = cursor;
-          while cursor < value_str.len() {
+          while cursor < value_len {
             let ch = value_str[cursor..].chars().next().unwrap();
             if ch.is_whitespace() {
               cursor += ch.len_utf8();
@@ -393,10 +394,13 @@ pub fn parse_value_to_components(value: &str) -> Vec<ComponentValue> {
 
           let component_text = serialize_component_values(&[component.clone()]).unwrap_or_default();
           if !component_text.is_empty() {
-            if let Some(position) = value_str[cursor..].find(&component_text) {
-              cursor += position + component_text.len();
+            let safe_cursor = cursor.min(value_len);
+            if let Some(position) = value_str[safe_cursor..].find(&component_text) {
+              cursor = safe_cursor + position + component_text.len();
             } else {
-              cursor += component_text.len();
+              cursor = safe_cursor
+                .saturating_add(component_text.len())
+                .min(value_len);
             }
           }
 
@@ -405,7 +409,7 @@ pub fn parse_value_to_components(value: &str) -> Vec<ComponentValue> {
 
         // Trailing whitespace at the end of the value string.
         let whitespace_start = cursor;
-        while cursor < value_str.len() {
+        while cursor < value_len {
           let ch = value_str[cursor..].chars().next().unwrap();
           if ch.is_whitespace() {
             cursor += ch.len_utf8();

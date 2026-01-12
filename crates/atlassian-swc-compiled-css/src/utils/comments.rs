@@ -11,14 +11,35 @@ pub struct NodeComments {
   pub current: Vec<Comment>,
 }
 
+fn lookup_line(pos: BytePos, source_map: &SourceMap) -> Option<u32> {
+  // `lookup_char_pos` will panic if the byte offset falls inside the middle of a multi-byte
+  // character. This can happen if an upstream span is ill-formed (e.g. constructed using
+  // character counts instead of byte offsets). Mirror Babel's tolerant behaviour by dropping
+  // line info when a span is unusable rather than crashing the transform.
+  let file = source_map.lookup_source_file(pos);
+  let src = file.src.as_ref();
+
+  if pos.0 < file.start_pos.0 {
+    return None;
+  }
+
+  let rel = (pos.0 - file.start_pos.0) as usize;
+  if rel > src.len() || !src.is_char_boundary(rel) {
+    return None;
+  }
+
+  let line = src[..rel].bytes().filter(|b| *b == b'\n').count() as u32;
+  Some(line + 1)
+}
+
 fn single_line(span: Span, source_map: &SourceMap) -> Option<u32> {
-  let start_line = source_map.lookup_char_pos(span.lo()).line as u32;
+  let start_line = lookup_line(span.lo(), source_map)?;
   let end_pos = if span.hi() > span.lo() {
     BytePos(span.hi().0.saturating_sub(1))
   } else {
     span.hi()
   };
-  let end_line = source_map.lookup_char_pos(end_pos).line as u32;
+  let end_line = lookup_line(end_pos, source_map)?;
 
   if start_line == end_line {
     Some(start_line)
