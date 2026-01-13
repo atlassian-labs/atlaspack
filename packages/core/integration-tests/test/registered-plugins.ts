@@ -81,7 +81,7 @@ describe('TypeScript plugin loading', () => {
   it('should load TypeScript transformer plugins with ESM default export', async () => {
     const dir = path.join(__dirname, 'tmp', 'ts-transformer-plugin');
     await rimraf(dir);
-    inputFS.mkdirp(dir);
+    await inputFS.mkdirp(dir);
 
     await fsFixture(inputFS, dir)`
       package.json:
@@ -138,7 +138,7 @@ describe('TypeScript plugin loading', () => {
   it('should load TypeScript resolver plugins with CommonJS module.exports', async () => {
     const dir = path.join(__dirname, 'tmp', 'ts-resolver-plugin');
     await rimraf(dir);
-    inputFS.mkdirp(dir);
+    await inputFS.mkdirp(dir);
 
     await fsFixture(inputFS, dir)`
       package.json:
@@ -198,7 +198,7 @@ describe('TypeScript plugin loading', () => {
   it('should load TypeScript transformer plugins that import other TS files', async () => {
     const dir = path.join(__dirname, 'tmp', 'ts-transformer-with-imports');
     await rimraf(dir);
-    inputFS.mkdirp(dir);
+    await inputFS.mkdirp(dir);
 
     await fsFixture(inputFS, dir)`
       package.json:
