@@ -699,7 +699,7 @@ async function transform(file, api, options) {
 }
 
 module.exports = transform;
-module.exports.parser = 'flow';
+module.exports.parser = 'tsx';
 
 /**
  * Runs jscodeshift to apply `transform` to `file`.
@@ -714,7 +714,7 @@ function runJsCodeshift(file, {dryRun, verbose, yes, keep, grep}) {
       testsToVerify: new Set(),
     };
 
-    let args = ['--run-in-band', '--parser=flow'];
+    let args = ['--run-in-band', '--parser=tsx'];
     if (dryRun) args.push('--dry');
     if (verbose) args.push('--verbose=2');
     if (yes) args.push('--yes');

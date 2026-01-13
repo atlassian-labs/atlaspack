@@ -3804,11 +3804,11 @@ describe('javascript', function () {
                     {
                       message: undefined,
                       start: {
-                        line: 11,
+                        line: 5,
                         column: 17,
                       },
                       end: {
-                        line: 11,
+                        line: 5,
                         column: 21,
                       },
                     },
@@ -4506,7 +4506,7 @@ describe('javascript', function () {
 
   it('should detect shorthand identifier imports', async function () {
     const dir = path.join(__dirname, 'js-import-shorthand-identifier');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
       package.json:

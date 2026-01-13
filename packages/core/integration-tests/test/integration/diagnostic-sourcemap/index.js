@@ -1,10 +1,4 @@
-// @flow
-
-type Test = {|
-  foo: string
-|};
-
-let test: Test = {
+let test = {
 	foo: 'hi'
 };
 

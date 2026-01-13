@@ -1,13 +1,7 @@
-// @flow
-
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
-type Props = {|
-  bar: string,
-|};
-
-function App(props: Props) {
+function App(props) {
   return <div>{props.bar}</div>;
 }
 
