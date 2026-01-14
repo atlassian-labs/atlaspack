@@ -4,7 +4,7 @@
 'use strict';
 
 /**
- * Script to transform a single file using Atlaspack.
+ * Script to transform one or more files using Atlaspack
  *
  * Usage:
  *   node scripts/transform-file.js <file> [--cwd <directory>] [--profile-native [instruments|samply]]
@@ -27,10 +27,11 @@
  */
 
 const path = require('path');
+const fs = require('fs').promises;
 const os = require('os');
+const glob = require('glob');
 const {DEFAULT_FEATURE_FLAGS} = require('@atlaspack/feature-flags');
 
-const {NodeFS} = require('@atlaspack/fs');
 const Atlaspack = require('@atlaspack/core').default;
 
 async function main() {
@@ -49,23 +50,34 @@ async function main() {
     process.exit(1);
   }
 
-  const fs = new NodeFS();
-
   // Change to specified cwd if provided
   const cwd = options.cwd ? path.resolve(options.cwd) : process.cwd();
   process.chdir(cwd);
 
-  // Resolve file path relative to cwd
-  const filePath = path.resolve(cwd, options.file);
+  // Resolve file pattern relative to cwd and expand globs
+  const filePattern = path.resolve(cwd, options.file);
+  const filePaths = Array.from(
+    new Set(
+      glob.sync(filePattern, {
+        cwd,
+        nodir: true,
+        absolute: true,
+      }),
+    ),
+  );
 
-  // Check file exists
-  if (!fs.existsSync(filePath)) {
-    console.error(`Error: File not found: ${filePath}`);
+  if (filePaths.length === 0) {
+    console.error(`Error: No files matched pattern: ${options.file}`);
     process.exit(1);
   }
 
-  console.log(`Transforming: ${filePath}`);
+  console.log(
+    `Transforming ${filePaths.length} file(s) matching: ${options.file}`,
+  );
   console.log(`Working directory: ${cwd}`);
+  for (const filePath of filePaths) {
+    console.log(`  - ${filePath}`);
+  }
 
   // Determine native profiler type
   let nativeProfiler;
@@ -99,7 +111,7 @@ async function main() {
     }
 
     const atlaspackOptions = {
-      entries: [filePath],
+      entries: filePaths,
       defaultConfig,
       shouldPatchConsole: false,
       shouldDisableCache: options.noCache ?? false,
@@ -126,33 +138,64 @@ async function main() {
 
     console.log('\nStarting transformation...\n');
 
-    // Warm up the code base
-    await atlaspack.unstable_transform({
-      filePath,
-    });
+    // Warm up the code base using the first matched file
+    if (options.profile || options.profileNative) {
+      await atlaspack.unstable_transform({
+        filePath: filePaths[0],
+      });
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
 
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    for (const filePath of filePaths) {
+      console.log(`\nStarting transformation for ${filePath}...\n`);
 
-    const startTime = Date.now();
-    const assets = await atlaspack.unstable_transform({
-      filePath,
-      nativeProfiler,
-    });
-    const duration = Date.now() - startTime;
+      try {
+        const startTime = Date.now();
 
-    console.log(`\nTransformation completed in ${duration}ms`);
-    console.log(`Generated ${assets.length} asset(s):\n`);
+        const assets = await atlaspack.unstable_transform({
+          filePath,
+          nativeProfiler,
+        });
+        const duration = Date.now() - startTime;
 
-    for (const asset of assets) {
-      console.log(`  - ${asset.filePath}`);
-      console.log(`    Type: ${asset.type}`);
-      console.log(`    Bundle behavior: ${asset.bundleBehavior || 'default'}`);
+        console.log(
+          `\nTransformation completed for ${filePath} in ${duration}ms`,
+        );
+        console.log(`Generated ${assets.length} asset(s):\n`);
 
-      if (options.output) {
-        const code = await asset.getCode();
-        console.log('\n--- Code ---');
-        console.log(code);
-        console.log('--- End Code ---\n');
+        for (const asset of assets) {
+          console.log(`  - ${asset.filePath}`);
+          console.log(`    Type: ${asset.type}`);
+          console.log(
+            `    Bundle behavior: ${asset.bundleBehavior || 'default'}`,
+          );
+
+          if (options.output) {
+            const code = await asset.getCode();
+            console.log('\n--- Code ---');
+            console.log(code);
+            console.log('--- End Code ---\n');
+          }
+
+          if (options.outputFile) {
+            const code = await asset.getCode();
+            await fs.writeFile(asset.filePath + '.' + options.outputFile, code);
+            console.log(`Output file: ${asset.filePath}.${options.outputFile}`);
+          }
+        }
+      } catch (error) {
+        console.error('\nTransformation failed:');
+        console.error(error.message);
+        if (error.diagnostics) {
+          for (const diagnostic of error.diagnostics) {
+            console.error(`\n${diagnostic.message}`);
+            if (diagnostic.codeFrames) {
+              for (const frame of diagnostic.codeFrames) {
+                console.error(frame.code);
+              }
+            }
+          }
+        }
       }
     }
 
@@ -164,18 +207,7 @@ async function main() {
 
     process.exit(0);
   } catch (error) {
-    console.error('\nTransformation failed:');
-    console.error(error.message);
-    if (error.diagnostics) {
-      for (const diagnostic of error.diagnostics) {
-        console.error(`\n${diagnostic.message}`);
-        if (diagnostic.codeFrames) {
-          for (const frame of diagnostic.codeFrames) {
-            console.error(frame.code);
-          }
-        }
-      }
-    }
+    console.error(`\nUnexpected error: ${error.message}`);
     process.exit(1);
   }
 }
@@ -227,6 +259,8 @@ function parseArgs(args) {
       parseFeatureFlag(arg.slice(15), options.featureFlags);
     } else if (!arg.startsWith('-')) {
       options.file = arg;
+    } else if (arg.startsWith('--output-file=')) {
+      options.outputFile = arg.slice('--output-file='.length);
     }
   }
 
@@ -259,7 +293,7 @@ Usage: node scripts/transform-file.js <file> [options]
 Transform a single file using Atlaspack.
 
 Arguments:
-  <file>                      Path to the file to transform (required)
+  <file>                      Path or glob of the file(s) to transform (required)
 
 Options:
   --cwd <directory>           Working directory to load settings from (default: current directory)
@@ -276,6 +310,7 @@ Options:
 
 Examples:
   node scripts/transform-file.js src/index.js
+  node scripts/transform-file.js 'src/**/*.js'
   node scripts/transform-file.js src/index.js --cwd /path/to/project
   node scripts/transform-file.js src/index.js --profile-native
   node scripts/transform-file.js src/index.js --profile-native=samply --production
