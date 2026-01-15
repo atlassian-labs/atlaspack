@@ -338,12 +338,10 @@ where
   }
 
   fn raw_after(&self, root: &NodeRef, own: Option<&str>) -> String {
-    if let Some(own_key) = own {
-      if let Some(value) = self.raw_from_children(root, Some(own_key)) {
-        if let RawCacheValue::Text(text) = value {
-          return text;
-        }
-      }
+    if let Some(RawCacheValue::Text(text)) =
+      own.and_then(|own_key| self.raw_from_children(root, Some(own_key)))
+    {
+      return text;
     }
     String::new()
   }
@@ -569,7 +567,7 @@ where
       }
 
       if let Some(before) = before_value {
-        if let Some(last) = before.split('\n').last() {
+        if let Some(last) = before.split('\n').next_back() {
           value = Some(collapse_non_space(last));
           return false;
         }

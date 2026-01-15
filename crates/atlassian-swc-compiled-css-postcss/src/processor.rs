@@ -1,3 +1,13 @@
+#![allow(
+  clippy::result_large_err,
+  clippy::type_complexity,
+  clippy::iter_cloned_collect,
+  clippy::map_flatten,
+  clippy::manual_async_fn,
+  clippy::option_as_ref_deref,
+  clippy::new_without_default
+)]
+
 use std::collections::HashMap;
 use std::fmt;
 use std::future::Future;
@@ -5,10 +15,10 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
-use crate::ast::nodes::{AtRule, Comment, Declaration, Document, NodeKind, Root, RootLike, Rule};
 use crate::ast::NodeRef;
+use crate::ast::nodes::{AtRule, Comment, Declaration, Document, NodeKind, Root, RootLike, Rule};
 use crate::css_syntax_error::CssSyntaxError;
-use crate::parse::{parse_with_options, ParseError, ParseOptions};
+use crate::parse::{ParseError, ParseOptions, parse_with_options};
 use crate::result::{ProcessorMetadata, Result as PostcssResult, ResultOptions, Warning};
 use crate::source_map::{MapGenerator, MapOptions, MapSetting, PreviousMapError};
 

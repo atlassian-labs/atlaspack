@@ -1,15 +1,17 @@
+#![allow(clippy::collapsible_match)]
+
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64;
 use pathdiff::diff_paths;
 use sourcemap::SourceMapBuilder;
 use url::Url;
 
-use crate::ast::nodes::{self, RootLike};
 use crate::ast::NodeRef;
+use crate::ast::nodes::{self, RootLike};
 use crate::input::{Input, InputOptions, InputRef, Position};
 use crate::processor::CustomStringifier;
 

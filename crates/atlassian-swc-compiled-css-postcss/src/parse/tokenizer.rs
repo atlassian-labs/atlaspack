@@ -169,6 +169,7 @@ impl Tokenizer {
     self.css[start..=end].to_string()
   }
 
+  #[allow(clippy::result_large_err)]
   pub fn next_token(&mut self, ignore_unclosed: bool) -> Result<Option<Token>, CssSyntaxError> {
     if let Some(token) = self.returned.pop() {
       return Ok(Some(token));
@@ -193,7 +194,7 @@ impl Tokenizer {
         let value = self.slice(start, next);
         current_token = Token::new(TokenKind::Space, value, Some(start), Some(next));
         self.pos = next + 1;
-        return Ok(Some(current_token));
+        Ok(Some(current_token))
       }
       OPEN_SQUARE => {
         let start = self.pos;
@@ -204,7 +205,7 @@ impl Tokenizer {
           Some(start),
         );
         self.pos += 1;
-        return Ok(Some(current_token));
+        Ok(Some(current_token))
       }
       CLOSE_SQUARE => {
         let start = self.pos;
@@ -215,7 +216,7 @@ impl Tokenizer {
           Some(start),
         );
         self.pos += 1;
-        return Ok(Some(current_token));
+        Ok(Some(current_token))
       }
       OPEN_CURLY => {
         let start = self.pos;
@@ -226,7 +227,7 @@ impl Tokenizer {
           Some(start),
         );
         self.pos += 1;
-        return Ok(Some(current_token));
+        Ok(Some(current_token))
       }
       CLOSE_CURLY => {
         let start = self.pos;
@@ -237,13 +238,13 @@ impl Tokenizer {
           Some(start),
         );
         self.pos += 1;
-        return Ok(Some(current_token));
+        Ok(Some(current_token))
       }
       COLON => {
         let start = self.pos;
         current_token = Token::new(TokenKind::Colon, ":".to_string(), Some(start), Some(start));
         self.pos += 1;
-        return Ok(Some(current_token));
+        Ok(Some(current_token))
       }
       SEMICOLON => {
         let start = self.pos;
@@ -254,7 +255,7 @@ impl Tokenizer {
           Some(start),
         );
         self.pos += 1;
-        return Ok(Some(current_token));
+        Ok(Some(current_token))
       }
       CLOSE_PARENTHESES => {
         let start = self.pos;
@@ -265,7 +266,7 @@ impl Tokenizer {
           Some(start),
         );
         self.pos += 1;
-        return Ok(Some(current_token));
+        Ok(Some(current_token))
       }
       OPEN_PARENTHESES => {
         let prev = if let Some(last) = self.buffer.last() {
@@ -308,7 +309,7 @@ impl Tokenizer {
           let value = self.slice(start, next);
           current_token = Token::new(TokenKind::Brackets, value, Some(start), Some(next));
           self.pos = next + 1;
-          return Ok(Some(current_token));
+          Ok(Some(current_token))
         } else {
           if let Some(idx) = self.css[self.pos + 1..].find(')') {
             next = self.pos + idx + 1;
@@ -336,7 +337,6 @@ impl Tokenizer {
                 Some(next),
               );
               self.pos = next + 1;
-              return Ok(Some(current_token));
             }
           } else {
             let start = self.pos;
@@ -348,7 +348,7 @@ impl Tokenizer {
             );
           }
           self.pos += 1;
-          return Ok(Some(current_token));
+          Ok(Some(current_token))
         }
       }
       SINGLE_QUOTE | DOUBLE_QUOTE => {
@@ -378,7 +378,7 @@ impl Tokenizer {
         let value = self.slice(start, next);
         current_token = Token::new(TokenKind::String, value, Some(start), Some(next));
         self.pos = next + 1;
-        return Ok(Some(current_token));
+        Ok(Some(current_token))
       }
       AT => {
         next = self.pos + 1;
@@ -393,7 +393,7 @@ impl Tokenizer {
         let value = self.css[start..next].to_string();
         current_token = Token::new(TokenKind::AtWord, value, Some(start), Some(next - 1));
         self.pos = next;
-        return Ok(Some(current_token));
+        Ok(Some(current_token))
       }
       BACKSLASH => {
         next = self.pos;
@@ -427,7 +427,7 @@ impl Tokenizer {
         let value = self.slice(self.pos, next);
         current_token = Token::new(TokenKind::Word, value, Some(self.pos), Some(next));
         self.pos = next + 1;
-        return Ok(Some(current_token));
+        Ok(Some(current_token))
       }
       _ => {
         if code == SLASH && self.bytes.get(self.pos + 1) == Some(&ASTERISK) {
@@ -446,16 +446,14 @@ impl Tokenizer {
           let value = self.slice(self.pos, next_index);
           current_token = Token::new(TokenKind::Comment, value, Some(self.pos), Some(next_index));
           self.pos = next_index + 1;
-          return Ok(Some(current_token));
+          Ok(Some(current_token))
         } else {
           next = self.pos + 1;
           while next < self.bytes.len() {
             let code = self.bytes[next];
             if is_word_end_stop(code) {
-              if code == SLASH {
-                if self.bytes.get(next + 1) == Some(&ASTERISK) {
-                  break;
-                }
+              if code == SLASH && self.bytes.get(next + 1) == Some(&ASTERISK) {
+                break;
               }
               break;
             }
@@ -465,7 +463,7 @@ impl Tokenizer {
           current_token = Token::new(TokenKind::Word, value, Some(self.pos), Some(next - 1));
           self.buffer.push(current_token.clone());
           self.pos = next;
-          return Ok(Some(current_token));
+          Ok(Some(current_token))
         }
       }
     }

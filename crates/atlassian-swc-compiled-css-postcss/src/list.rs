@@ -52,9 +52,7 @@ pub fn split(string: &str, separators: &[char], last: bool) -> Vec<String> {
     } else if ch == '(' {
       func_level = func_level.saturating_add(1);
     } else if ch == ')' {
-      if func_level > 0 {
-        func_level -= 1;
-      }
+      func_level = func_level.saturating_sub(1);
     } else if func_level == 0 && separators.contains(&ch) {
       should_split = true;
     }

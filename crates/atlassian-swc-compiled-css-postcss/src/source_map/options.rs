@@ -1,3 +1,5 @@
+#![allow(clippy::derivable_impls)]
+
 use std::fmt;
 use std::sync::Arc;
 
