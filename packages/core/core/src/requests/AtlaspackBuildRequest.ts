@@ -21,6 +21,8 @@ import {assetFromValue} from '../public/Asset';
 import {tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 
+import {deserializeBundleGraph} from '@atlaspack/rust';
+
 type AtlaspackBuildRequestInput = {
   optionsRef: SharedReference;
   requestedAssetIds: Set<string>;
@@ -82,6 +84,10 @@ async function run({
         Boolean(rustAtlaspack) ||
         (options.shouldBuildLazily && requestedAssetIds.size > 0),
     });
+
+  const serializedBundleGraph = bundleGraph.serialize();
+  console.log(serializedBundleGraph.graph.adjacencyList.edges);
+  deserializeBundleGraph(serializedBundleGraph);
 
   // @ts-expect-error TS2345
   dumpGraphToGraphViz(bundleGraph._graph, 'BundleGraph', bundleGraphEdgeTypes);
