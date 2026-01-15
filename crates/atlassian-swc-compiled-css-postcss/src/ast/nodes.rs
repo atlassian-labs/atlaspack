@@ -3,7 +3,7 @@ use std::fmt;
 
 use regex::{Captures, Regex};
 
-use super::{Node, NodeAccess, NodeData, NodeRef, RawData, init_node, set_end_position};
+use super::{init_node, set_end_position, Node, NodeAccess, NodeData, NodeRef, RawData};
 use crate::input::Position;
 use crate::processor::{ProcessOptions, Processor, ProcessorError};
 use crate::result::Result as PostcssResult;
@@ -42,7 +42,11 @@ pub trait ContainerChildArg {
 impl ContainerChildArg for usize {
   fn resolve_index(&self, container: &NodeRef) -> Option<usize> {
     let len = container.borrow().nodes.len();
-    if *self < len { Some(*self) } else { None }
+    if *self < len {
+      Some(*self)
+    } else {
+      None
+    }
   }
 }
 
