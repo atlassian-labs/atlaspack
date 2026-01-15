@@ -11,7 +11,6 @@
     "benchmarks/*",
     "crates/atlaspack_contextual_imports_swc_plugin",
     "crates/caniuse_database",
-    "crates/lmdb-js-lite",
     "packages/*/*",
     "packages/dev/atlaspack-inspector",
     "packages/dev/atlaspack-inspector/src/frontend",
