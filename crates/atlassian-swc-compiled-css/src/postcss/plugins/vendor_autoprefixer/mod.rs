@@ -288,6 +288,7 @@ impl PrefixDB {
 
 #[derive(Clone, Debug)]
 pub struct AutoprefixerData {
+  pub property_add: HashMap<String, Vec<String>>,
   pub add: HashMap<String, Vec<String>>,
   pub remove: HashMap<String, Vec<String>>,
   pub value_map: HashMap<String, Vec<ValueRule>>,
@@ -330,9 +331,11 @@ impl AutoprefixerData {
 
   pub fn from_db(db: &PrefixDB, targets: &[String]) -> Self {
     let (add, remove) = db.select_add_remove(targets);
+    let property_add = build_property_prefix_map(db, &add);
     let value_map = build_value_prefix_map(&db, &add);
     let selector_map = build_selector_prefix_map(&db, &add);
     AutoprefixerData {
+      property_add,
       add,
       remove,
       value_map,
@@ -341,7 +344,7 @@ impl AutoprefixerData {
   }
 
   pub fn property_prefixes(&self, prop: &str) -> Option<&Vec<String>> {
-    self.add.get(prop)
+    self.property_add.get(prop)
   }
 
   pub fn selector_prefixes(&self, selector: &str) -> Option<&Vec<String>> {
@@ -439,13 +442,13 @@ impl Plugin for VendorAutoprefixer {
       eprintln!(
         "[autoprefixer] targets={} add_keys={} remove_keys={}",
         targets.join(", "),
-        config.add.len(),
+        config.property_add.len(),
         config.remove.len()
       );
       eprintln!(
         "[autoprefixer] trace includes user-select? {} placeholder? {}",
-        config.add.contains_key("user-select"),
-        config.add.contains_key("::placeholder")
+        config.property_add.contains_key("user-select"),
+        config.selector_map.contains_key("::placeholder")
       );
     }
 
@@ -719,6 +722,25 @@ fn maybe_prefix_value(
   // TODO: Full value-level prefixing (gradients, grid, imageset, cross-fade, etc.)
   let _ = config; // silence unused parameter until full port lands
   out
+}
+
+fn build_property_prefix_map(
+  db: &PrefixDB,
+  add: &HashMap<String, Vec<String>>,
+) -> HashMap<String, Vec<String>> {
+  let mut map: HashMap<String, Vec<String>> = HashMap::new();
+  for (name, entry) in &db.entries {
+    if entry.selector || entry.props.is_some() {
+      continue;
+    }
+    if name.starts_with('@') {
+      continue;
+    }
+    if let Some(prefixes) = add.get(name) {
+      map.insert(name.clone(), prefixes.clone());
+    }
+  }
+  map
 }
 
 pub(crate) fn build_value_prefix_map(

@@ -2,6 +2,7 @@
 use postcss as pc;
 
 // Submodules mirroring JS plugin file structure for clarity and parity.
+pub(crate) mod browserslist_support;
 pub mod calc;
 pub mod colormin;
 pub mod convert_values;

@@ -180,6 +180,7 @@ pub(crate) fn create_transform_css_options(
   options.sort_shorthand = None;
   options.class_hash_prefix = state.opts.class_hash_prefix.clone();
   options.flatten_multiple_selectors = state.opts.flatten_multiple_selectors;
+  options.browserslist_config_path = Some(state.root.clone());
 
   let compression_map = state.opts.class_name_compression_map.clone();
   if let Some(map) = &compression_map {
