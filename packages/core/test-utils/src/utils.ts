@@ -1435,7 +1435,12 @@ export function requestRaw(
   data: string;
 }> {
   return new Promise((resolve, reject: (error?: any) => void) => {
-    client
+    const timeout = setTimeout(() => {
+      req.destroy();
+      reject(new Error(`Request timeout after 30s: ${file} on port ${port}`));
+    }, 30000);
+
+    const req = client
       .request(
         {
           hostname: 'localhost',
@@ -1449,6 +1454,7 @@ export function requestRaw(
           let data = '';
           res.on('data', (c) => (data += c));
           res.on('end', () => {
+            clearTimeout(timeout);
             if (res.statusCode !== 200) {
               return reject({res, data});
             }
@@ -1457,6 +1463,10 @@ export function requestRaw(
           });
         },
       )
+      .on('error', (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      })
       .end();
   });
 }
@@ -1471,7 +1481,13 @@ export function request(
       resolve: (result: Promise<string> | string) => void,
       reject: (error?: any) => void,
     ) => {
-      client.get(
+      let req: ReturnType<typeof client.get>;
+      const timeout = setTimeout(() => {
+        req.destroy();
+        reject(new Error(`Request timeout after 30s: ${file} on port ${port}`));
+      }, 30000);
+
+      req = client.get(
         {
           hostname: 'localhost',
           port: port,
@@ -1483,6 +1499,7 @@ export function request(
           let data = '';
           res.on('data', (c) => (data += c));
           res.on('end', () => {
+            clearTimeout(timeout);
             if (res.statusCode !== 200) {
               return reject({statusCode: res.statusCode, data});
             }
@@ -1491,6 +1508,11 @@ export function request(
           });
         },
       );
+
+      req.on('error', (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
     },
   );
 }
