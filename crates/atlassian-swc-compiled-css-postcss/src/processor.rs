@@ -15,10 +15,10 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
-use crate::ast::nodes::{AtRule, Comment, Declaration, Document, NodeKind, Root, RootLike, Rule};
 use crate::ast::NodeRef;
+use crate::ast::nodes::{AtRule, Comment, Declaration, Document, NodeKind, Root, RootLike, Rule};
 use crate::css_syntax_error::CssSyntaxError;
-use crate::parse::{parse_with_options, ParseError, ParseOptions};
+use crate::parse::{ParseError, ParseOptions, parse_with_options};
 use crate::result::{ProcessorMetadata, Result as PostcssResult, ResultOptions, Warning};
 use crate::source_map::{MapGenerator, MapOptions, MapSetting, PreviousMapError};
 
@@ -656,7 +656,13 @@ fn apply_plugin_visitors(
   plugin: &dyn Plugin,
   result: &mut PostcssResult,
 ) -> Result<(), ProcessorError> {
-  let root_like = result.root_like().clone();
+  let root_like = {
+    let root_like_ref = result.root_like();
+    match root_like_ref {
+      RootLike::Root(root) => RootLike::Root(Root::from_node(root.to_node())),
+      RootLike::Document(doc) => RootLike::Document(Document::from_node(doc.to_node())),
+    }
+  };
   let root_node = root_like.to_node();
   plugin.once(&root_like, result)?;
   walk_plugin_node(plugin, result, root_node.clone())?;
