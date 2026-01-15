@@ -199,76 +199,12 @@ mod tests {
   use super::*;
 
   #[test]
-  fn returns_bundler() {
-    let bundler = config_plugins(make_test_plugin_context())
-      .bundler()
-      .expect("Not to panic");
-
-    assert_eq!(format!("{:?}", bundler), "RpcBundlerPlugin")
-  }
-
-  #[test]
-  fn returns_compressors() {
-    let compressors = config_plugins(make_test_plugin_context())
-      .compressors(Path::new("a.js"))
-      .expect("Not to panic");
-
-    assert_eq!(format!("{:?}", compressors), "[RpcCompressorPlugin]")
-  }
-
-  #[test]
-  fn returns_namers() {
-    let namers = config_plugins(make_test_plugin_context())
-      .namers()
-      .expect("Not to panic");
-
-    assert_eq!(format!("{:?}", namers), "[RpcNamerPlugin]")
-  }
-
-  #[test]
-  fn returns_optimizers() {
-    let optimizers = config_plugins(make_test_plugin_context())
-      .optimizers(Path::new("a.js"), None)
-      .expect("Not to panic");
-
-    assert_eq!(format!("{:?}", optimizers), "[RpcOptimizerPlugin]")
-  }
-
-  #[test]
-  fn returns_packager() {
-    let packager = config_plugins(make_test_plugin_context())
-      .packager(Path::new("a.js"))
-      .expect("Not to panic");
-
-    assert_eq!(format!("{:?}", packager), "RpcPackagerPlugin")
-  }
-
-  #[test]
-  fn returns_reporter() {
-    let reporter = config_plugins(make_test_plugin_context()).reporter();
-
-    assert_eq!(
-      format!("{:?}", reporter),
-      "CompositeReporterPlugin { reporters: [RpcReporterPlugin] }"
-    )
-  }
-
-  #[test]
   fn returns_resolvers() {
     let resolvers = config_plugins(make_test_plugin_context())
       .resolvers()
       .expect("Not to panic");
 
     assert_eq!(format!("{:?}", resolvers), "[AtlaspackResolver]")
-  }
-
-  #[test]
-  fn returns_runtimes() {
-    let runtimes = config_plugins(make_test_plugin_context())
-      .runtimes()
-      .expect("Not to panic");
-
-    assert_eq!(format!("{:?}", runtimes), "[RpcRuntimePlugin]")
   }
 
   #[tokio::test]

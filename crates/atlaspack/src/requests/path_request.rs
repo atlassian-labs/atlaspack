@@ -158,9 +158,7 @@ mod tests {
   use std::fmt::Debug;
 
   use async_trait::async_trait;
-  use atlaspack_core::plugin::{
-    Resolved, ResolverPlugin, composite_reporter_plugin::CompositeReporterPlugin,
-  };
+  use atlaspack_core::plugin::{Resolved, ResolverPlugin};
 
   use crate::{
     plugins::{MockPlugins, PluginsRef},
@@ -185,10 +183,6 @@ mod tests {
       let mut plugins = MockPlugins::new();
 
       plugins.expect_named_pipelines().returning(|| Vec::new());
-
-      plugins
-        .expect_reporter()
-        .returning(|| Arc::new(CompositeReporterPlugin::default()));
 
       plugins.expect_resolvers().returning(move || Ok($resolvers));
 
