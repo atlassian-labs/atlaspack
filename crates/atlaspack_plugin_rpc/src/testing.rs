@@ -25,68 +25,12 @@ pub mod testing {
 
   #[async_trait]
   impl RpcWorker for TestingRpcWorker {
-    fn create_bundler(
-      &self,
-      _ctx: &PluginContext,
-      _plugin: &PluginNode,
-    ) -> anyhow::Result<Box<dyn BundlerPlugin>> {
-      Ok(Box::new(TestingRpcPlugin("RpcBundlerPlugin".into())))
-    }
-
-    fn create_compressor(
-      &self,
-      _ctx: &PluginContext,
-      _plugin: &PluginNode,
-    ) -> anyhow::Result<Box<dyn CompressorPlugin>> {
-      Ok(Box::new(TestingRpcPlugin("RpcCompressorPlugin".into())))
-    }
-
-    fn create_namer(
-      &self,
-      _ctx: &PluginContext,
-      _plugin: &PluginNode,
-    ) -> anyhow::Result<Box<dyn NamerPlugin>> {
-      Ok(Box::new(TestingRpcPlugin("RpcNamerPlugin".into())))
-    }
-
-    fn create_optimizer(
-      &self,
-      _ctx: &PluginContext,
-      _plugin: &PluginNode,
-    ) -> anyhow::Result<Box<dyn OptimizerPlugin>> {
-      Ok(Box::new(TestingRpcPlugin("RpcOptimizerPlugin".into())))
-    }
-
-    fn create_packager(
-      &self,
-      _ctx: &PluginContext,
-      _plugin: &PluginNode,
-    ) -> anyhow::Result<Box<dyn PackagerPlugin>> {
-      Ok(Box::new(TestingRpcPlugin("RpcPackagerPlugin".into())))
-    }
-
-    fn create_reporter(
-      &self,
-      _ctx: &PluginContext,
-      _plugin: &PluginNode,
-    ) -> anyhow::Result<Box<dyn ReporterPlugin>> {
-      Ok(Box::new(TestingRpcPlugin("RpcReporterPlugin".into())))
-    }
-
     fn create_resolver(
       &self,
       _ctx: &PluginContext,
       _plugin: &PluginNode,
     ) -> anyhow::Result<Arc<dyn ResolverPlugin>> {
       Ok(Arc::new(TestingRpcPlugin("RpcResolverPlugin".into())))
-    }
-
-    fn create_runtime(
-      &self,
-      _ctx: &PluginContext,
-      _plugin: &PluginNode,
-    ) -> anyhow::Result<Box<dyn RuntimePlugin>> {
-      Ok(Box::new(TestingRpcPlugin("RpcRuntimePlugin".into())))
     }
 
     async fn create_transformer(
@@ -108,65 +52,6 @@ pub mod testing {
   }
 
   #[async_trait]
-  impl BundlerPlugin for TestingRpcPlugin {
-    async fn bundle(
-      &self,
-      _bundle_graph: &mut atlaspack_core::bundle_graph::BundleGraph,
-    ) -> Result<(), anyhow::Error> {
-      Ok(())
-    }
-
-    async fn optimize(
-      &self,
-      _bundle_graph: &mut atlaspack_core::bundle_graph::BundleGraph,
-    ) -> Result<(), anyhow::Error> {
-      Ok(())
-    }
-  }
-
-  #[async_trait]
-  impl CompressorPlugin for TestingRpcPlugin {
-    async fn compress(&self, _file: &std::fs::File) -> Result<Option<CompressedFile>, String> {
-      Ok(None)
-    }
-  }
-
-  #[async_trait]
-  impl NamerPlugin for TestingRpcPlugin {
-    async fn name(
-      &self,
-      _bundle: &atlaspack_core::types::Bundle,
-      _bundle_graph: &atlaspack_core::bundle_graph::BundleGraph,
-    ) -> Result<Option<std::path::PathBuf>, anyhow::Error> {
-      Ok(None)
-    }
-  }
-
-  #[async_trait]
-  impl OptimizerPlugin for TestingRpcPlugin {
-    async fn optimize<'a>(
-      &self,
-      _ctx: OptimizeContext<'a>,
-    ) -> Result<OptimizedBundle, anyhow::Error> {
-      anyhow::bail!("Mock Optimizer Plugin Incomplete")
-    }
-  }
-
-  #[async_trait]
-  impl PackagerPlugin for TestingRpcPlugin {
-    async fn package<'a>(&self, _ctx: PackageContext<'a>) -> Result<PackagedBundle, anyhow::Error> {
-      anyhow::bail!("Mock Packager Plugin Incomplete")
-    }
-  }
-
-  #[async_trait]
-  impl ReporterPlugin for TestingRpcPlugin {
-    async fn report(&self, _event: &ReporterEvent) -> Result<(), anyhow::Error> {
-      Ok(())
-    }
-  }
-
-  #[async_trait]
   impl ResolverPlugin for TestingRpcPlugin {
     async fn resolve(&self, _ctx: ResolveContext) -> Result<Resolved, anyhow::Error> {
       Ok(Resolved {
@@ -175,18 +60,6 @@ pub mod testing {
       })
     }
   }
-
-  #[async_trait]
-  impl RuntimePlugin for TestingRpcPlugin {
-    async fn apply(
-      &self,
-      _bundle: atlaspack_core::types::Bundle,
-      _bundle_graph: atlaspack_core::bundle_graph::BundleGraph,
-    ) -> Result<Option<Vec<RuntimeAsset>>, anyhow::Error> {
-      Ok(None)
-    }
-  }
-
   impl CacheKey for TestingRpcPlugin {
     fn cache_key(&self) -> Cow<'_, CacheStatus> {
       Cow::Owned(CacheStatus::Uncachable)
