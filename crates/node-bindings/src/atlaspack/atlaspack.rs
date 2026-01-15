@@ -50,8 +50,6 @@ pub fn atlaspack_napi_create(
   let thread_id = std::thread::current().id();
   tracing::trace!(?thread_id, "atlaspack-napi initialize");
 
-  let (deferred, promise) = env.create_deferred()?;
-
   // Wrap the JavaScript-supplied FileSystem
   let fs: Option<FileSystemRef> = if let Some(fs) = napi_options.fs {
     Some(Arc::new(FileSystemNapi::new(&env, &fs)?))
@@ -74,6 +72,7 @@ pub fn atlaspack_napi_create(
   let options = env.from_js_value(napi_options.options)?;
   let get_workers = JsCallable::new_method_bound("getWorkers", &napi_options.napi_worker_pool)?;
 
+  let (deferred, promise) = env.create_deferred()?;
   thread::spawn({
     let db = db_handle.clone();
     move || {
@@ -101,7 +100,7 @@ pub fn atlaspack_napi_create(
         package_manager,
         rpc,
       });
-
+      tracing::trace!(?thread_id, "atlaspack-napi resolve");
       deferred.resolve(move |env| match atlaspack {
         Ok(atlaspack) => {
           NapiAtlaspackResult::ok(&env, External::new(Arc::new(Mutex::new(atlaspack))))
@@ -115,6 +114,10 @@ pub fn atlaspack_napi_create(
   });
 
   Ok(promise)
+}
+
+fn resolve_commit_ok(env: Env) -> napi::Result<JsObject> {
+  NapiAtlaspackResult::ok(&env, ())
 }
 
 #[tracing::instrument(level = "info", skip_all)]
@@ -141,23 +144,32 @@ pub fn atlaspack_napi_build_asset_graph(
       // "deferred.resolve" closure executes on the JavaScript thread.
       // Errors are returned as a resolved value because they need to be serialized and are
       // not supplied as JavaScript Error types. The JavaScript layer needs to handle conversions
-      deferred.resolve(move |env| match result {
-        Ok((asset_graph, had_previous_graph)) => {
-          let serialize_result =
-            serialize_asset_graph(&env, &asset_graph.clone(), had_previous_graph)?;
-          thread::spawn(move || {
-            {
-              let atlaspack = atlaspack_ref.lock();
-              atlaspack.commit_assets(&asset_graph).unwrap();
+      let mut commit_deferred_opt = Some(second_deferred);
+      deferred.resolve(move |env| {
+        match result {
+          Ok((asset_graph, had_previous_graph)) => {
+            let serialize_result =
+              serialize_asset_graph(&env, &asset_graph.clone(), had_previous_graph)?;
+            if let Some(commit_deferred) = commit_deferred_opt.take() {
+              thread::spawn(move || {
+                {
+                  let atlaspack = atlaspack_ref.lock();
+                  atlaspack.commit_assets(&asset_graph).unwrap();
+                }
+                commit_deferred.resolve(resolve_commit_ok)
+              });
             }
-            second_deferred.resolve(move |env| NapiAtlaspackResult::ok(&env, ()))
-          });
 
-          NapiAtlaspackResult::ok(&env, serialize_result)
-        }
-        Err(error) => {
-          let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
-          NapiAtlaspackResult::error(&env, js_object)
+            NapiAtlaspackResult::ok(&env, serialize_result)
+          }
+          Err(error) => {
+            // Resolve the commit promise immediately since there's nothing to commit on error
+            if let Some(commit_deferred) = commit_deferred_opt.take() {
+              commit_deferred.resolve(resolve_commit_ok);
+            }
+            let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+            NapiAtlaspackResult::error(&env, js_object)
+          }
         }
       })
     }

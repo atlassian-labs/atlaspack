@@ -162,7 +162,7 @@ describe('hmr', function () {
 
       ws = await openSocket('ws://localhost:' + port);
 
-      outputFS.writeFile(
+      await outputFS.writeFile(
         path.join(__dirname, '/input/local.js'),
         'exports.a = 5;\nexports.b = 5;',
       );
@@ -193,7 +193,7 @@ describe('hmr', function () {
 
       ws = await openSocket('ws://localhost:' + port);
 
-      outputFS.writeFile(
+      await outputFS.writeFile(
         path.join(__dirname, '/input/local.js'),
         'require("fs"); exports.a = 5; exports.b = 5;',
       );
@@ -218,7 +218,7 @@ describe('hmr', function () {
 
       ws = await openSocket('ws://localhost:' + port);
 
-      outputFS.writeFile(
+      await outputFS.writeFile(
         path.join(__dirname, '/input/local.js'),
         'require("fs"; exports.a = 5; exports.b = 5;',
       );
@@ -339,7 +339,7 @@ describe('hmr', function () {
         rejectUnauthorized: false,
       });
 
-      outputFS.writeFile(
+      await outputFS.writeFile(
         path.join(__dirname, '/input/local.js'),
         'exports.a = 5;\nexports.b = 5;',
       );

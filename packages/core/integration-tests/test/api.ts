@@ -63,7 +63,7 @@ describe('JS API', function () {
     it('should pass the parcel version to plugins', async () => {
       const dir = path.join(__dirname, 'plugin-atlaspack-version');
 
-      overlayFS.mkdirp(dir);
+      await overlayFS.mkdirp(dir);
 
       await fsFixture(overlayFS, dir)`
       index.js:

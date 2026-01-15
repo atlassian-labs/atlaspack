@@ -14,7 +14,7 @@ describe('resolveOptions integration', function () {
   describe('projectRoot option', function () {
     it('should handle absolute projectRoot with bundling', async function () {
       let projectRoot = path.join(__dirname, 'fixtures', 'absolute-project');
-      overlayFS.mkdirp(projectRoot);
+      await overlayFS.mkdirp(projectRoot);
       await fsFixture(overlayFS, projectRoot)`
       package.json:
         {
