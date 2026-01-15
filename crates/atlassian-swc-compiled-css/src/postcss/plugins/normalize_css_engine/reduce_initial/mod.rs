@@ -415,7 +415,7 @@ mod tests {
   #[test]
   fn converts_background_color_transparent_to_initial() {
     let tmp = tempfile::tempdir().expect("tmpdir");
-    fs::write(tmp.path().join(".browserslistrc"), "Chrome 142\n")
+    fs::write(tmp.path().join(".browserslistrc"), "Chrome 100\n")
       .expect("browserslist config write");
 
     browserslist_cache().lock().unwrap().clear();
@@ -426,14 +426,10 @@ mod tests {
       .process("a{background-color:transparent}")
       .expect("process should succeed");
 
-    // Force result to be evaluatedf
-    let _ = result.result();
-
     assert_eq!(
       result.css().expect("css string").to_string(),
       "a{background-color:initial}"
     );
-
     browserslist_cache()
       .lock()
       .unwrap()
