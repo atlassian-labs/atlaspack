@@ -9,6 +9,8 @@ function hasUnstagedChanges() {
       console.log('Unstaged changes detected in main branch:');
       console.log(result);
 
+      console.log(execSync('git diff', {encoding: 'utf8'}));
+
       return true;
     } else {
       console.log('No unstaged changes in main branch');
