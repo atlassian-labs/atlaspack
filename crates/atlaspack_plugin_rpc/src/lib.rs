@@ -34,46 +34,11 @@ pub trait RpcFactory: Send + Sync {
 #[automock]
 #[async_trait]
 pub trait RpcWorker: Send + Sync {
-  fn create_bundler(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn BundlerPlugin>>;
-  fn create_compressor(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn CompressorPlugin>>;
-  fn create_namer(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn NamerPlugin>>;
-  fn create_optimizer(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn OptimizerPlugin>>;
-  fn create_packager(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn PackagerPlugin>>;
-  fn create_reporter(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn ReporterPlugin>>;
   fn create_resolver(
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,
   ) -> anyhow::Result<Arc<dyn ResolverPlugin>>;
-  fn create_runtime(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn RuntimePlugin>>;
   async fn create_transformer(
     &self,
     ctx: &PluginContext,

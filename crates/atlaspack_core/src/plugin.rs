@@ -3,31 +3,15 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_filesystem::FileSystemRef;
-pub use bundler_plugin::*;
-pub use compressor_plugin::*;
-pub use namer_plugin::*;
-pub use optimizer_plugin::*;
-pub use packager_plugin::*;
-pub use reporter_plugin::*;
 pub use resolver_plugin::*;
-pub use runtime_plugin::*;
 use serde::{Deserialize, Serialize};
 pub use transformer_plugin::*;
-pub use validator_plugin::*;
 
-use crate::config_loader::{ConfigLoader, ConfigLoaderRef};
+use crate::config_loader::ConfigLoaderRef;
 use crate::types::{AliasMap, BuildMode, FeatureFlags, LogLevel};
 
-mod bundler_plugin;
-mod compressor_plugin;
-mod namer_plugin;
-mod optimizer_plugin;
-mod packager_plugin;
-mod reporter_plugin;
 mod resolver_plugin;
-mod runtime_plugin;
 mod transformer_plugin;
-mod validator_plugin;
 
 pub struct PluginContext {
   pub config: ConfigLoaderRef,

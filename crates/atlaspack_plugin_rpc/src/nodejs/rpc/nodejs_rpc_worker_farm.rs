@@ -62,62 +62,6 @@ impl RpcWorker for NodejsWorkerFarm {
       NodejsRpcTransformerPlugin::new(self.workers.clone(), ctx, plugin, package_manager).await?,
     ))
   }
-
-  fn create_bundler(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn BundlerPlugin>> {
-    Ok(Box::new(NodejsRpcBundlerPlugin::new(ctx, plugin)?))
-  }
-
-  fn create_compressor(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn CompressorPlugin>> {
-    Ok(Box::new(NodejsRpcCompressorPlugin::new(ctx, plugin)?))
-  }
-
-  fn create_namer(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn NamerPlugin>> {
-    Ok(Box::new(NodejsRpcNamerPlugin::new(ctx, plugin)?))
-  }
-
-  fn create_optimizer(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn OptimizerPlugin>> {
-    Ok(Box::new(NodejsRpcOptimizerPlugin::new(ctx, plugin)?))
-  }
-
-  fn create_packager(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn PackagerPlugin>> {
-    Ok(Box::new(NodejsRpcPackagerPlugin::new(ctx, plugin)?))
-  }
-
-  fn create_reporter(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn ReporterPlugin>> {
-    Ok(Box::new(NodejsRpcReporterPlugin::new(ctx, plugin)?))
-  }
-
-  fn create_runtime(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn RuntimePlugin>> {
-    Ok(Box::new(NodejsRpcRuntimePlugin::new(ctx, plugin)?))
-  }
 }
 
 pub struct NodeJsWorkerCollection {

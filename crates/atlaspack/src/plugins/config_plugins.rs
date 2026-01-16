@@ -5,18 +5,9 @@ use async_trait::async_trait;
 use atlaspack_config::AtlaspackConfig;
 use atlaspack_config::map::NamedPattern;
 use atlaspack_core::diagnostic_error;
-use atlaspack_core::plugin::BundlerPlugin;
-use atlaspack_core::plugin::CompressorPlugin;
-use atlaspack_core::plugin::NamerPlugin;
-use atlaspack_core::plugin::OptimizerPlugin;
-use atlaspack_core::plugin::PackagerPlugin;
 use atlaspack_core::plugin::PluginContext;
-use atlaspack_core::plugin::ReporterPlugin;
 use atlaspack_core::plugin::ResolverPlugin;
-use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::plugin::TransformerPlugin;
-use atlaspack_core::plugin::ValidatorPlugin;
-use atlaspack_core::plugin::composite_reporter_plugin::CompositeReporterPlugin;
 use atlaspack_core::types::Asset;
 use atlaspack_package_manager::PackageManagerRef;
 use atlaspack_plugin_resolver::AtlaspackResolver;
@@ -47,9 +38,6 @@ pub struct ConfigPlugins {
   /// Dependencies available to all plugin types
   ctx: PluginContext,
 
-  /// A reporter that runs all reporter plugins
-  reporter: Arc<dyn ReporterPlugin>,
-
   /// Storage of initialized plugins
   plugin_cache: PluginCache,
 
@@ -63,19 +51,10 @@ impl ConfigPlugins {
     ctx: PluginContext,
     package_manager: PackageManagerRef,
   ) -> anyhow::Result<Self> {
-    let mut reporters: Vec<Box<dyn ReporterPlugin>> = Vec::new();
-
-    for reporter in config.reporters.iter() {
-      reporters.push(rpc_worker.create_reporter(&ctx, reporter)?);
-    }
-
-    let reporter = Arc::new(CompositeReporterPlugin::new(reporters));
-
     Ok(ConfigPlugins {
       rpc_worker,
       config,
       ctx,
-      reporter,
       plugin_cache: Default::default(),
       package_manager,
     })
@@ -95,75 +74,8 @@ impl ConfigPlugins {
 
 #[async_trait]
 impl Plugins for ConfigPlugins {
-  #[allow(unused)]
-  fn bundler(&self) -> Result<Box<dyn BundlerPlugin>, anyhow::Error> {
-    self
-      .rpc_worker
-      .create_bundler(&self.ctx, &self.config.bundler)
-  }
-
-  #[allow(unused)]
-  fn compressors(&self, path: &Path) -> Result<Vec<Box<dyn CompressorPlugin>>, anyhow::Error> {
-    let mut compressors: Vec<Box<dyn CompressorPlugin>> = Vec::new();
-
-    for compressor in self.config.compressors.get(path).iter() {
-      compressors.push(self.rpc_worker.create_compressor(&self.ctx, compressor)?);
-    }
-
-    if compressors.is_empty() {
-      return Err(self.missing_plugin(path, "compressors"));
-    }
-
-    Ok(compressors)
-  }
-
   fn named_pipelines(&self) -> Vec<String> {
     self.config.transformers.named_pipelines()
-  }
-
-  #[allow(unused)]
-  fn namers(&self) -> Result<Vec<Box<dyn NamerPlugin>>, anyhow::Error> {
-    let mut namers: Vec<Box<dyn NamerPlugin>> = Vec::new();
-
-    for namer in self.config.namers.iter() {
-      namers.push(self.rpc_worker.create_namer(&self.ctx, namer)?);
-    }
-
-    Ok(namers)
-  }
-
-  #[allow(unused)]
-  fn optimizers(
-    &self,
-    path: &Path,
-    pipeline: Option<String>,
-  ) -> Result<Vec<Box<dyn OptimizerPlugin>>, anyhow::Error> {
-    let mut optimizers: Vec<Box<dyn OptimizerPlugin>> = Vec::new();
-    let named_pattern = pipeline.as_ref().map(|pipeline| NamedPattern {
-      pipeline,
-      use_fallback: true,
-    });
-
-    for optimizer in self.config.optimizers.get(path, named_pattern).iter() {
-      optimizers.push(self.rpc_worker.create_optimizer(&self.ctx, optimizer)?);
-    }
-
-    Ok(optimizers)
-  }
-
-  #[allow(unused)]
-  fn packager(&self, path: &Path) -> Result<Box<dyn PackagerPlugin>, anyhow::Error> {
-    let packager = self.config.packagers.get(path);
-
-    let Some(packager) = packager else {
-      return Err(self.missing_plugin(path, "packager"));
-    };
-
-    self.rpc_worker.create_packager(&self.ctx, packager)
-  }
-
-  fn reporter(&self) -> Arc<dyn ReporterPlugin> {
-    self.reporter.clone()
   }
 
   fn resolvers(&self) -> anyhow::Result<Vec<Arc<dyn ResolverPlugin>>> {
@@ -181,17 +93,6 @@ impl Plugins for ConfigPlugins {
 
       Ok(resolvers)
     })
-  }
-
-  #[allow(unused)]
-  fn runtimes(&self) -> Result<Vec<Box<dyn RuntimePlugin>>, anyhow::Error> {
-    let mut runtimes: Vec<Box<dyn RuntimePlugin>> = Vec::new();
-
-    for runtime in self.config.runtimes.iter() {
-      runtimes.push(self.rpc_worker.create_runtime(&self.ctx, runtime)?);
-    }
-
-    Ok(runtimes)
   }
 
   /// Resolve and load transformer plugins for a given path.
@@ -289,11 +190,6 @@ impl Plugins for ConfigPlugins {
 
     Ok(TransformerPipeline::new(transformers))
   }
-
-  #[allow(unused)]
-  fn validators(&self, _path: &Path) -> Result<Vec<Box<dyn ValidatorPlugin>>, anyhow::Error> {
-    todo!()
-  }
 }
 
 #[cfg(test)]
@@ -303,76 +199,12 @@ mod tests {
   use super::*;
 
   #[test]
-  fn returns_bundler() {
-    let bundler = config_plugins(make_test_plugin_context())
-      .bundler()
-      .expect("Not to panic");
-
-    assert_eq!(format!("{:?}", bundler), "RpcBundlerPlugin")
-  }
-
-  #[test]
-  fn returns_compressors() {
-    let compressors = config_plugins(make_test_plugin_context())
-      .compressors(Path::new("a.js"))
-      .expect("Not to panic");
-
-    assert_eq!(format!("{:?}", compressors), "[RpcCompressorPlugin]")
-  }
-
-  #[test]
-  fn returns_namers() {
-    let namers = config_plugins(make_test_plugin_context())
-      .namers()
-      .expect("Not to panic");
-
-    assert_eq!(format!("{:?}", namers), "[RpcNamerPlugin]")
-  }
-
-  #[test]
-  fn returns_optimizers() {
-    let optimizers = config_plugins(make_test_plugin_context())
-      .optimizers(Path::new("a.js"), None)
-      .expect("Not to panic");
-
-    assert_eq!(format!("{:?}", optimizers), "[RpcOptimizerPlugin]")
-  }
-
-  #[test]
-  fn returns_packager() {
-    let packager = config_plugins(make_test_plugin_context())
-      .packager(Path::new("a.js"))
-      .expect("Not to panic");
-
-    assert_eq!(format!("{:?}", packager), "RpcPackagerPlugin")
-  }
-
-  #[test]
-  fn returns_reporter() {
-    let reporter = config_plugins(make_test_plugin_context()).reporter();
-
-    assert_eq!(
-      format!("{:?}", reporter),
-      "CompositeReporterPlugin { reporters: [RpcReporterPlugin] }"
-    )
-  }
-
-  #[test]
   fn returns_resolvers() {
     let resolvers = config_plugins(make_test_plugin_context())
       .resolvers()
       .expect("Not to panic");
 
     assert_eq!(format!("{:?}", resolvers), "[AtlaspackResolver]")
-  }
-
-  #[test]
-  fn returns_runtimes() {
-    let runtimes = config_plugins(make_test_plugin_context())
-      .runtimes()
-      .expect("Not to panic");
-
-    assert_eq!(format!("{:?}", runtimes), "[RpcRuntimePlugin]")
   }
 
   #[tokio::test]
