@@ -1,5 +1,17 @@
 # @atlaspack/rust
 
+## 3.18.0
+
+### Minor Changes
+
+- [#944](https://github.com/atlassian-labs/atlaspack/pull/944) [`6e5fec1`](https://github.com/atlassian-labs/atlaspack/commit/6e5fec1406c53257be7e7fbe06c028beda70fcf1) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Integrate diagnostics into `react_async_import_lift` JS transformer
+
+### Patch Changes
+
+- [#949](https://github.com/atlassian-labs/atlaspack/pull/949) [`9df722c`](https://github.com/atlassian-labs/atlaspack/commit/9df722c38b225054883693ba9731344f701767a7) Thanks [@marcins](https://github.com/marcins)! - Ensure that commit deferred is resolved when asset graph build fails to avoid leaving a "dangling deferred".
+
+- [#947](https://github.com/atlassian-labs/atlaspack/pull/947) [`e4e5522`](https://github.com/atlassian-labs/atlaspack/commit/e4e55222422d8c73653d3ea09f1a0d13946345b9) Thanks [@marcins](https://github.com/marcins)! - Fix bug where early errors in V3 init could cause a hang
+
 ## 3.17.0
 
 ### Minor Changes
