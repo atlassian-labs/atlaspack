@@ -163,7 +163,7 @@ pub fn plugin() -> pc::BuiltPlugin {
             }
 
             // Split by commas, then sort and dedupe for deterministic output
-            let args = crate::postcss::plugins::normalize_css_engine::ordered_values::lib::arguments::get_arguments(&parsed);
+            let args = crate::postcss::plugins::normalize_css_engine::ordered_values::library::arguments::get_arguments(&parsed);
             if tracing { eprintln!("[minify-params] get_arguments -> {} args @{}", args.len(), name); }
             let mut joined = {
                 let splits: Vec<String> = args.into_iter().map(|a| split_arg(&a)).collect();

@@ -49,7 +49,7 @@ pub fn to_json(node: &NodeRef) -> Value {
 }
 
 pub fn to_json_nodes(nodes: &[NodeRef]) -> Value {
-  let values: Vec<Value> = nodes.iter().map(|node| to_json(node)).collect();
+  let values: Vec<Value> = nodes.iter().map(to_json).collect();
   Value::Array(values)
 }
 

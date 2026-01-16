@@ -40,6 +40,7 @@ napi-derive = { workspace = true, optional = true }
 oxc_browserslist = { package = "oxc-browserslist", version = "2.1.2" }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 serde_path_to_error = "0.1.17"
+caniuse-serde = "0.0.6"
 
 [features]
 # Use the vendored PostCSS engine by default for identical pipeline parity.

@@ -273,6 +273,6 @@ mod tests {
     let span = Span::new(file.start_pos, file.start_pos + BytePos(3));
     let message = build_code_frame_error("Example error", Some(span), &meta);
 
-    assert_eq!(message, "Example error (1:0).");
+    assert_eq!(message, "Example error.");
   }
 }

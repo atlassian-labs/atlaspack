@@ -733,11 +733,8 @@ impl TransformerPlugin for AtlaspackJsTransformerPlugin {
 #[cfg(test)]
 mod tests {
   use std::{
+    path::{Path, PathBuf},
     sync::Arc,
-    {
-      path::{Path, PathBuf},
-      sync::Arc,
-    },
   };
 
   use atlaspack_core::{

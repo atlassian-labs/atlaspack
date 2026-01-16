@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err, clippy::large_enum_variant)]
+
 mod tokenizer;
 
 pub use tokenizer::{Token, TokenKind, Tokenizer};
@@ -96,6 +98,7 @@ impl Parser {
     }
   }
 
+  #[allow(clippy::result_large_err)]
   fn parse(mut self) -> Result<Root, CssSyntaxError> {
     while !self.tokenizer.end_of_file() {
       let token = match self.tokenizer.next_token(false)? {
@@ -520,7 +523,7 @@ impl Parser {
       node.borrow_mut().raws.set_text("afterName", after_name);
       self.raw(&node, "params", params.clone(), false);
       if last {
-        if let Some(last_token) = params.last().and_then(|t| token_after(t)) {
+        if let Some(last_token) = params.last().and_then(token_after) {
           self.set_end_position(&node, last_token);
         }
         self.spaces = between;
@@ -613,7 +616,7 @@ impl Parser {
         break;
       } else {
         if matches!(kind, TokenKind::Word) && token.value.chars().any(|c| c.is_alphanumeric()) {
-          self.unknown_word(&[token.clone()])?;
+          self.unknown_word(std::slice::from_ref(&token))?;
         }
         between.push_str(&token.value);
       }

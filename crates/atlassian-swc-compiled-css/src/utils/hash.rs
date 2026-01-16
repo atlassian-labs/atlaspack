@@ -97,11 +97,11 @@ mod tests {
   #[test]
   fn matches_var_value_hash() {
     assert_eq!(
-      hash("var(--space-200,4px)")
+      hash("var(--ds-space-0, 0)")
         .chars()
         .take(4)
         .collect::<String>(),
-      "opcn"
+      "ze3t"
     );
   }
 

@@ -153,7 +153,7 @@ fn hydrate_node(
     .ok_or(FromJsonError::MissingField("type"))?;
 
   let node = match node_type {
-    "root" => Node::new(NodeData::Root(RootData::default())),
+    "root" => Node::new(NodeData::Root(RootData)),
     "document" => {
       let mut data = DocumentData::default();
       if let Some(mode) = object.get("mode").and_then(|v| v.as_str()) {
@@ -173,11 +173,14 @@ fn hydrate_node(
         .get("name")
         .and_then(|v| v.as_str())
         .ok_or(FromJsonError::MissingField("name"))?;
-      let mut data = AtRuleData::default();
-      data.name = name.to_string();
-      if let Some(params) = object.get("params").and_then(|v| v.as_str()) {
-        data.params = params.to_string();
-      }
+      let data = AtRuleData {
+        name: name.to_string(),
+        params: object
+          .get("params")
+          .and_then(|v| v.as_str())
+          .map(|s| s.to_string())
+          .unwrap_or_default(),
+      };
       Node::new(NodeData::AtRule(data))
     }
     "decl" => {
@@ -189,12 +192,14 @@ fn hydrate_node(
         .get("value")
         .and_then(|v| v.as_str())
         .ok_or(FromJsonError::MissingField("value"))?;
-      let mut data = DeclarationData::default();
-      data.prop = prop.to_string();
-      data.value = value.to_string();
-      if let Some(important) = object.get("important").and_then(|v| v.as_bool()) {
-        data.important = important;
-      }
+      let data = DeclarationData {
+        prop: prop.to_string(),
+        value: value.to_string(),
+        important: object
+          .get("important")
+          .and_then(|v| v.as_bool())
+          .unwrap_or(false),
+      };
       Node::new(NodeData::Declaration(data))
     }
     "comment" => {

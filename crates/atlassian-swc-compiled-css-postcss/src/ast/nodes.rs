@@ -28,9 +28,7 @@ where
 {
   let filter = |node_ref: &NodeRef| {
     let borrowed = node_ref.borrow();
-    matcher(&borrowed.data)
-      .map(|value| predicate(value))
-      .unwrap_or(false)
+    matcher(&borrowed.data).map(predicate).unwrap_or(false)
   };
   Node::walk_filtered(node, &filter, callback)
 }
@@ -340,23 +338,19 @@ pub struct CommentData {
   pub text: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Root {
   node: NodeRef,
 }
 
 impl Root {
   pub fn new() -> Self {
-    let node = Node::new(NodeData::Root(RootData::default()));
+    let node = Node::new(NodeData::Root(RootData));
     Root { node }
   }
 
   pub(crate) fn from_node(node: NodeRef) -> Self {
     Root { node }
-  }
-
-  pub fn clone(&self) -> Self {
-    Root::from_node(NodeAccess::clone_node(self))
   }
 
   pub fn clone_with<F>(&self, callback: F) -> Self
@@ -404,10 +398,12 @@ impl Root {
     &self.node
   }
 
+  #[allow(clippy::result_large_err)]
   pub fn to_result(&self) -> std::result::Result<PostcssResult, ProcessorError> {
     self.to_result_with_options(ProcessOptions::new())
   }
 
+  #[allow(clippy::result_large_err)]
   pub fn to_result_with_options(
     &self,
     opts: ProcessOptions,
@@ -637,7 +633,19 @@ impl fmt::Display for Root {
   }
 }
 
-#[derive(Clone, Debug)]
+impl Default for Root {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
+impl Clone for Root {
+  fn clone(&self) -> Self {
+    Root::from_node(NodeAccess::clone_node(self))
+  }
+}
+
+#[derive(Debug)]
 pub struct Document {
   node: NodeRef,
 }
@@ -650,10 +658,6 @@ impl Document {
 
   pub(crate) fn from_node(node: NodeRef) -> Self {
     Document { node }
-  }
-
-  pub fn clone(&self) -> Self {
-    Document::from_node(NodeAccess::clone_node(self))
   }
 
   pub fn clone_with<F>(&self, callback: F) -> Self
@@ -894,10 +898,12 @@ impl Document {
     Document::from_node(self.node.clone())
   }
 
+  #[allow(clippy::result_large_err)]
   pub fn to_result(&self) -> std::result::Result<PostcssResult, ProcessorError> {
     self.to_result_with_options(ProcessOptions::new())
   }
 
+  #[allow(clippy::result_large_err)]
   pub fn to_result_with_options(
     &self,
     opts: ProcessOptions,
@@ -922,6 +928,18 @@ impl fmt::Display for Document {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     let css = crate::stringifier::node_to_string(&self.node);
     f.write_str(&css)
+  }
+}
+
+impl Default for Document {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
+impl Clone for Document {
+  fn clone(&self) -> Self {
+    Document::from_node(NodeAccess::clone_node(self))
   }
 }
 
@@ -987,25 +1005,21 @@ impl From<Document> for RootLike {
   }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Rule {
   node: NodeRef,
 }
 
 impl Rule {
   pub fn new(selector: impl Into<String>) -> Self {
-    let mut data = RuleData::default();
-    data.selector = selector.into();
-    let node = Node::new(NodeData::Rule(data));
+    let node = Node::new(NodeData::Rule(RuleData {
+      selector: selector.into(),
+    }));
     Rule { node }
   }
 
   pub(crate) fn from_node(node: NodeRef) -> Self {
     Rule { node }
-  }
-
-  pub fn clone(&self) -> Self {
-    Rule::from_node(NodeAccess::clone_node(self))
   }
 
   pub fn clone_with<F>(&self, callback: F) -> Self
@@ -1268,25 +1282,28 @@ impl NodeAccess for Rule {
   }
 }
 
-#[derive(Clone, Debug)]
+impl Clone for Rule {
+  fn clone(&self) -> Self {
+    Rule::from_node(NodeAccess::clone_node(self))
+  }
+}
+
+#[derive(Debug)]
 pub struct AtRule {
   node: NodeRef,
 }
 
 impl AtRule {
   pub fn new(name: impl Into<String>) -> Self {
-    let mut data = AtRuleData::default();
-    data.name = name.into();
-    let node = Node::new(NodeData::AtRule(data));
+    let node = Node::new(NodeData::AtRule(AtRuleData {
+      name: name.into(),
+      ..AtRuleData::default()
+    }));
     AtRule { node }
   }
 
   pub(crate) fn from_node(node: NodeRef) -> Self {
     AtRule { node }
-  }
-
-  pub fn clone(&self) -> Self {
-    AtRule::from_node(NodeAccess::clone_node(self))
   }
 
   pub fn clone_with<F>(&self, callback: F) -> Self
@@ -1563,26 +1580,29 @@ impl NodeAccess for AtRule {
   }
 }
 
-#[derive(Clone, Debug)]
+impl Clone for AtRule {
+  fn clone(&self) -> Self {
+    AtRule::from_node(NodeAccess::clone_node(self))
+  }
+}
+
+#[derive(Debug)]
 pub struct Declaration {
   node: NodeRef,
 }
 
 impl Declaration {
   pub fn new(prop: impl Into<String>, value: impl Into<String>) -> Self {
-    let mut data = DeclarationData::default();
-    data.prop = prop.into();
-    data.value = value.into();
-    let node = Node::new(NodeData::Declaration(data));
+    let node = Node::new(NodeData::Declaration(DeclarationData {
+      prop: prop.into(),
+      value: value.into(),
+      ..DeclarationData::default()
+    }));
     Declaration { node }
   }
 
   pub(crate) fn from_node(node: NodeRef) -> Self {
     Declaration { node }
-  }
-
-  pub fn clone(&self) -> Self {
-    Declaration::from_node(NodeAccess::clone_node(self))
   }
 
   pub fn clone_with<F>(&self, callback: F) -> Self
@@ -1680,25 +1700,25 @@ impl NodeAccess for Declaration {
   }
 }
 
-#[derive(Clone, Debug)]
+impl Clone for Declaration {
+  fn clone(&self) -> Self {
+    Declaration::from_node(NodeAccess::clone_node(self))
+  }
+}
+
+#[derive(Debug)]
 pub struct Comment {
   node: NodeRef,
 }
 
 impl Comment {
   pub fn new(text: impl Into<String>) -> Self {
-    let mut data = CommentData::default();
-    data.text = text.into();
-    let node = Node::new(NodeData::Comment(data));
+    let node = Node::new(NodeData::Comment(CommentData { text: text.into() }));
     Comment { node }
   }
 
   pub(crate) fn from_node(node: NodeRef) -> Self {
     Comment { node }
-  }
-
-  pub fn clone(&self) -> Self {
-    Comment::from_node(NodeAccess::clone_node(self))
   }
 
   pub fn clone_with<F>(&self, callback: F) -> Self
@@ -1771,6 +1791,12 @@ impl NodeAccess for Comment {
   }
 }
 
+impl Clone for Comment {
+  fn clone(&self) -> Self {
+    Comment::from_node(NodeAccess::clone_node(self))
+  }
+}
+
 /// Helper to convert an existing node reference into a [`Rule`] wrapper if it
 /// stores rule data.
 pub fn as_rule(node: &NodeRef) -> Option<Rule> {
@@ -1831,11 +1857,11 @@ pub fn declaration_with_raws(
   important: bool,
   raws: RawData,
 ) -> NodeRef {
-  let mut data = DeclarationData::default();
-  data.prop = prop;
-  data.value = value;
-  data.important = important;
-  let node = Node::new(NodeData::Declaration(data));
+  let node = Node::new(NodeData::Declaration(DeclarationData {
+    prop,
+    value,
+    important,
+  }));
   node.borrow_mut().raws = raws;
   node
 }
@@ -1849,19 +1875,14 @@ pub fn comment_with_raws(text: String, raws: RawData) -> NodeRef {
 
 /// Create a rule node with raw metadata and selector text.
 pub fn rule_with_raws(selector: String, raws: RawData) -> NodeRef {
-  let mut data = RuleData::default();
-  data.selector = selector;
-  let node = Node::new(NodeData::Rule(data));
+  let node = Node::new(NodeData::Rule(RuleData { selector }));
   node.borrow_mut().raws = raws;
   node
 }
 
 /// Create an at-rule node with raw metadata.
 pub fn at_rule_with_raws(name: String, params: String, raws: RawData) -> NodeRef {
-  let mut data = AtRuleData::default();
-  data.name = name;
-  data.params = params;
-  let node = Node::new(NodeData::AtRule(data));
+  let node = Node::new(NodeData::AtRule(AtRuleData { name, params }));
   node.borrow_mut().raws = raws;
   node
 }

@@ -1,7 +1,7 @@
 use crate::postcss::value_parser as vp;
 use postcss as pc;
 pub mod data;
-pub mod lib;
+pub mod library;
 pub mod rules;
 
 fn vendor_unprefixed(prop: &str) -> &str {
@@ -704,7 +704,7 @@ pub fn plugin() -> pc::BuiltPlugin {
           "list-style" => rules::list_style::normalize(&parsed),
           "columns" => rules::columns::normalize(&parsed),
           "flex-flow" => rules::flex_flow::normalize(&parsed),
-          "animation" => lib::get_value::get_value(lib::arguments::get_arguments(&parsed)),
+          "animation" => library::get_value::get_value(library::arguments::get_arguments(&parsed)),
           "box-shadow" => match rules::box_shadow::normalize(&parsed) {
             Ok(s) => s,
             Err(()) => vp::stringify(&parsed.nodes),

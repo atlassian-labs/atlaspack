@@ -98,7 +98,7 @@ export declare function runInlineRequiresOptimizer(input: InlineRequiresOptimize
 export declare function runInlineRequiresOptimizerAsync(input: InlineRequiresOptimizerInput): object
 export declare function isSafeFromJs(hash: string, configPath: string): boolean
 export declare function hashCode(rawCode: string): string
-export interface CompiledCssInJsConfig {
+export interface CompiledCssInJsConfigPlugin {
   configPath?: string
   importReact?: boolean
   nonce?: string
@@ -123,7 +123,7 @@ export interface CompiledCssInJsPluginInput {
   projectRoot: string
   isSource: boolean
   sourceMaps: boolean
-  config: CompiledCssInJsConfig
+  config: CompiledCssInJsConfigPlugin
 }
 export interface CompiledCssInJsPluginResult {
   code: string
@@ -214,7 +214,7 @@ export interface TokensPluginResult {
 /** Apply the tokens transformation plugin to the given code asynchronously */
 export declare function applyTokensPlugin(rawCode: Buffer, config: TokensConfig): object
 export type LMDB = Lmdb
-export class Lmdb {
+export declare class Lmdb {
   constructor(options: LmdbOptions)
   get(key: string): Promise<Buffer | null | undefined>
   hasSync(key: string): boolean
@@ -247,18 +247,18 @@ export class Lmdb {
   commitWriteTransaction(): Promise<void>
   compact(targetPath: string): void
 }
-export class Hash {
+export declare class Hash {
   constructor()
   writeString(s: string): void
   writeBuffer(buf: Buffer): void
   finish(): string
 }
-export class AtlaspackTracer {
+export declare class AtlaspackTracer {
   constructor()
   enter(label: string): SpanId
   exit(id: SpanId): void
 }
-export class Resolver {
+export declare class Resolver {
   constructor(projectRoot: string, options: FileSystem)
   resolve(options: ResolveOptions): ResolveResult
   resolveAsync(): object
@@ -267,7 +267,7 @@ export class Resolver {
   getInvalidations(path: string): JsInvalidations
 }
 export type JsSourceMap = SourceMap
-export class SourceMap {
+export declare class SourceMap {
   constructor(projectRoot: string, buffer?: Buffer | undefined | null)
   addSource(source: string): number
   getSource(sourceIndex: number): string

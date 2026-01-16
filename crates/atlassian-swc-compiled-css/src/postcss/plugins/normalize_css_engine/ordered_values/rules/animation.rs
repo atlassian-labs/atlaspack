@@ -1,4 +1,4 @@
-use super::super::lib::{add_space::add_space, arguments::get_arguments, get_value::get_value};
+use super::super::library::{add_space::add_space, arguments::get_arguments, get_value::get_value};
 use crate::postcss::value_parser as vp;
 
 // Port (subset) of src/rules/animation.js

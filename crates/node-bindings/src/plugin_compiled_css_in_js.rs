@@ -41,7 +41,7 @@ pub fn hash_code(raw_code: String) -> String {
 // All fields are optional and will be filled with defaults
 #[napi(object)]
 #[derive(Clone, Debug, Default)]
-pub struct CompiledCssInJsConfig {
+pub struct CompiledCssInJsConfigPlugin {
   pub config_path: Option<String>,
   pub import_react: Option<bool>,
   pub nonce: Option<String>,
@@ -69,7 +69,7 @@ pub struct CompiledCssInJsPluginInput {
   pub project_root: String,
   pub is_source: bool,
   pub source_maps: bool,
-  pub config: CompiledCssInJsConfig,
+  pub config: CompiledCssInJsConfigPlugin,
 }
 
 #[napi(object)]
@@ -562,7 +562,7 @@ mod tests {
       project_root: "/project".to_string(),
       is_source: false,
       source_maps,
-      config: CompiledCssInJsConfig {
+      config: CompiledCssInJsConfigPlugin {
         config_path: None,
         unsafe_report_safe_assets_for_migration: None,
         unsafe_use_safe_assets: None,

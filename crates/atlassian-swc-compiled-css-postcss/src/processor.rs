@@ -1,3 +1,13 @@
+#![allow(
+  clippy::result_large_err,
+  clippy::type_complexity,
+  clippy::iter_cloned_collect,
+  clippy::map_flatten,
+  clippy::manual_async_fn,
+  clippy::option_as_ref_deref,
+  clippy::new_without_default
+)]
+
 use std::collections::HashMap;
 use std::fmt;
 use std::future::Future;
@@ -646,7 +656,13 @@ fn apply_plugin_visitors(
   plugin: &dyn Plugin,
   result: &mut PostcssResult,
 ) -> Result<(), ProcessorError> {
-  let root_like = result.root_like().clone();
+  let root_like = {
+    let root_like_ref = result.root_like();
+    match root_like_ref {
+      RootLike::Root(root) => RootLike::Root(Root::from_node(root.to_node())),
+      RootLike::Document(doc) => RootLike::Document(Document::from_node(doc.to_node())),
+    }
+  };
   let root_node = root_like.to_node();
   plugin.once(&root_like, result)?;
   walk_plugin_node(plugin, result, root_node.clone())?;

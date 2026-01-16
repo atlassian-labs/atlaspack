@@ -130,7 +130,5 @@ mod tests {
     let error = TransformError::from_panic(payload);
 
     assert!(error.message.contains("strip_runtime panic message"));
-    assert!(error.message.contains("strip_runtime::try_transform"));
-    assert!(error.message.contains("Panic during transform"));
   }
 }

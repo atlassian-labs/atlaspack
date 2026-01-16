@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use indexmap::IndexSet;
 use swc_core::common::{FileName, SourceMap, input::StringInput};
@@ -31,6 +30,7 @@ pub struct TransformCssOptions {
   pub class_hash_prefix: Option<String>,
   pub flatten_multiple_selectors: Option<bool>,
   pub declaration_placeholder: Option<String>,
+  pub browserslist_config_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -262,13 +262,16 @@ pub(crate) fn transform_css_via_swc_pipeline(
   pipeline.push(Box::new(parent_orphaned_pseudos()));
   pipeline.push(Box::new(nested()));
 
+  // Expand shorthands early so longhands (e.g., background-color) flow through
+  // reduce-initial/colormin before hashing, matching the Babel plugin order.
+  pipeline.push(Box::new(expand_shorthands()));
+
   for plugin in normalize_css(&options) {
     pipeline.push(plugin);
   }
   // COMPAT: Run minimal color minification before hashing so value-based
   // class name hashes match Babel (which normalizes colors pre-atomicify).
   pipeline.push(Box::new(super::plugins::colormin_lite::colormin_lite()));
-  pipeline.push(Box::new(expand_shorthands()));
   pipeline.push(Box::new(atomicify_rules()));
 
   if flatten_multiple_selectors_option {

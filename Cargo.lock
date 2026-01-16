@@ -8,7 +8,7 @@ version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 dependencies = [
- "lazy_static",
+ "lazy_static 1.5.0",
  "regex",
 ]
 
@@ -413,7 +413,7 @@ dependencies = [
  "json_comments",
  "once_cell",
  "parking_lot",
- "percent-encoding",
+ "percent-encoding 2.3.2",
  "rayon",
  "serde",
  "serde_json",
@@ -422,7 +422,7 @@ dependencies = [
  "thread_local",
  "tracing",
  "tracing-subscriber",
- "url",
+ "url 2.5.7",
  "xxhash-rust",
 ]
 
@@ -895,12 +895,12 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "pathdiff",
- "percent-encoding",
+ "percent-encoding 2.3.2",
  "regex",
  "serde",
  "serde_json",
  "sourcemap",
- "url",
+ "url 2.5.7",
 ]
 
 [[package]]
@@ -909,6 +909,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "atlassian-swc-compiled-css-postcss",
+ "caniuse-serde",
  "csscolorparser",
  "indexmap",
  "insta",
@@ -918,7 +919,7 @@ dependencies = [
  "oxc-browserslist",
  "oxc_resolver",
  "parking_lot",
- "percent-encoding",
+ "percent-encoding 2.3.2",
  "regex",
  "ryu-js",
  "serde",
@@ -926,7 +927,7 @@ dependencies = [
  "serde_path_to_error",
  "swc_core",
  "tempfile",
- "url",
+ "url 2.5.7",
  "xxhash-rust",
 ]
 
@@ -1284,6 +1285,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "caniuse-serde"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d50a3632b340e0d2a130e4ae0c63318ba5db8038801903744bf5925ffc0d7d9"
+dependencies = [
+ "chrono",
+ "lazy_static 0.2.11",
+ "maplit",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "url 1.7.2",
+ "url_serde",
+]
+
+[[package]]
 name = "caniuse_database"
 version = "0.1.0"
 dependencies = [
@@ -1384,7 +1401,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "145052bdd345b87320e369255277e3fb5152762ad123a901ef5c262dd38fe8d2"
 dependencies = [
  "iana-time-zone",
+ "js-sys",
  "num-traits",
+ "serde",
+ "wasm-bindgen",
  "windows-link 0.2.1",
 ]
 
@@ -2119,7 +2139,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40b9e59cd0f7e0806cca4be089683ecb6434e602038df21fe6bf6711b2f07f64"
 dependencies = [
  "cc",
- "lazy_static",
+ "lazy_static 1.5.0",
  "libc",
  "winapi",
 ]
@@ -2188,7 +2208,7 @@ version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
 dependencies = [
- "percent-encoding",
+ "percent-encoding 2.3.2",
 ]
 
 [[package]]
@@ -2451,7 +2471,7 @@ dependencies = [
  "page_size",
  "serde",
  "synchronoise",
- "url",
+ "url 2.5.7",
 ]
 
 [[package]]
@@ -2664,7 +2684,7 @@ dependencies = [
  "hyper",
  "ipnet",
  "libc",
- "percent-encoding",
+ "percent-encoding 2.3.2",
  "pin-project-lite",
  "socket2",
  "tokio",
@@ -2787,6 +2807,17 @@ name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
+
+[[package]]
+name = "idna"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38f09e0f0b1fb55fdee1f17470ad800da77af5186a1a76c026b679358b7e844e"
+dependencies = [
+ "matches",
+ "unicode-bidi",
+ "unicode-normalization",
+]
 
 [[package]]
 name = "idna"
@@ -3116,6 +3147,12 @@ dependencies = [
 
 [[package]]
 name = "lazy_static"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76f033c7ad61445c5b347c7382dd1237847eb1bce590fe50365dcb33d546be73"
+
+[[package]]
+name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
@@ -3297,7 +3334,7 @@ dependencies = [
  "getrandom 0.2.16",
  "indexmap",
  "itertools 0.10.5",
- "lazy_static",
+ "lazy_static 1.5.0",
  "lightningcss-derive",
  "parcel_selectors",
  "parcel_sourcemap",
@@ -3416,6 +3453,12 @@ checksum = "d640282b302c0bb0a2a8e0233ead9035e3bed871f0b7e81fe4a1ec829765db44"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "maplit"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22593015b8df7747861c69c28acd32589fb96c1686369f3b661d12e409d4cf65"
 
 [[package]]
 name = "markup5ever"
@@ -4065,7 +4108,7 @@ dependencies = [
  "simdutf8",
  "thiserror 2.0.17",
  "tracing",
- "url",
+ "url 2.5.7",
  "windows 0.62.2",
 ]
 
@@ -4180,6 +4223,12 @@ name = "pathdiff"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
+
+[[package]]
+name = "percent-encoding"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31010dd2e1ac33d5b46a5b413495239882813e0369f8ed8a5e266f173602f831"
 
 [[package]]
 name = "percent-encoding"
@@ -4987,7 +5036,7 @@ dependencies = [
  "js-sys",
  "log",
  "native-tls",
- "percent-encoding",
+ "percent-encoding 2.3.2",
  "pin-project-lite",
  "quinn",
  "rustls",
@@ -5002,7 +5051,7 @@ dependencies = [
  "tower",
  "tower-http",
  "tower-service",
- "url",
+ "url 2.5.7",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -5407,7 +5456,7 @@ dependencies = [
  "serde_json",
  "thiserror 1.0.69",
  "time",
- "url",
+ "url 2.5.7",
  "uuid",
 ]
 
@@ -5592,7 +5641,7 @@ version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
- "lazy_static",
+ "lazy_static 1.5.0",
 ]
 
 [[package]]
@@ -5729,7 +5778,7 @@ dependencies = [
  "serde",
  "serde_json",
  "unicode-id-start",
- "url",
+ "url 2.5.7",
 ]
 
 [[package]]
@@ -5936,7 +5985,7 @@ dependencies = [
  "termcolor",
  "tracing",
  "unicode-width 0.1.14",
- "url",
+ "url 2.5.7",
 ]
 
 [[package]]
@@ -5965,7 +6014,7 @@ dependencies = [
  "termcolor",
  "tracing",
  "unicode-width 0.1.14",
- "url",
+ "url 2.5.7",
 ]
 
 [[package]]
@@ -7454,6 +7503,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "unicode-bidi"
+version = "0.3.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c1cb5db39152898a79168971543b1cb5020dff7fe43c8dc468b0885f5e29df5"
+
+[[package]]
 name = "unicode-id"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7476,6 +7531,15 @@ name = "unicode-linebreak"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b09c83c3c29d37506a3e260c08c03743a6bb66a9cd432c6934ab501a190571f"
+
+[[package]]
+name = "unicode-normalization"
+version = "0.1.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fd4f6878c9cb28d874b009da9e8d183b5abc80117c40bbd187a1fde336be6e8"
+dependencies = [
+ "tinyvec",
+]
 
 [[package]]
 name = "unicode-segmentation"
@@ -7525,8 +7589,19 @@ dependencies = [
  "once_cell",
  "rustls",
  "rustls-pki-types",
- "url",
+ "url 2.5.7",
  "webpki-roots 0.26.11",
+]
+
+[[package]]
+name = "url"
+version = "1.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd4e7c0d531266369519a4aa4f399d748bd37043b00bde1e4ff1f60a120b355a"
+dependencies = [
+ "idna 0.1.5",
+ "matches",
+ "percent-encoding 1.0.1",
 ]
 
 [[package]]
@@ -7536,8 +7611,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08bc136a29a3d1758e07a9cca267be308aeebf5cfd5a10f3f67ab2097683ef5b"
 dependencies = [
  "form_urlencoded",
- "idna",
- "percent-encoding",
+ "idna 1.1.0",
+ "percent-encoding 2.3.2",
  "serde",
 ]
 
@@ -7546,6 +7621,16 @@ name = "url-search-params"
 version = "12.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a4b5120022ae7548d0005c9e99f9a695a33bcd732deffb578f7e85516dbb7a6"
+
+[[package]]
+name = "url_serde"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74e7d099f1ee52f823d4bdd60c93c3602043c728f5db3b97bdb548467f7bddea"
+dependencies = [
+ "serde",
+ "url 1.7.2",
+]
 
 [[package]]
 name = "urlencoding"

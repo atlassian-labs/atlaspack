@@ -19,7 +19,7 @@ static TO_INITIAL: Lazy<HashMap<String, String>> = Lazy::new(|| {
 });
 
 static DEFAULT_IGNORE_PROPS: Lazy<HashSet<String>> = Lazy::new(|| {
-  let values: Vec<String> = serde_json::from_str(include_str!("lib/ignoreProps.json"))
+  let values: Vec<String> = serde_json::from_str(include_str!("library/ignoreProps.json"))
     .expect("failed to parse ignoreProps.json");
   values
     .into_iter()
