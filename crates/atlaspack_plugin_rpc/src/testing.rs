@@ -111,14 +111,14 @@ pub mod testing {
   impl BundlerPlugin for TestingRpcPlugin {
     async fn bundle(
       &self,
-      _bundle_graph: &mut atlaspack_core::bundle_graph::BundleGraph,
+      _bundle_graph: &mut atlaspack_core::types::bundle_graph::BundleGraph,
     ) -> Result<(), anyhow::Error> {
       Ok(())
     }
 
     async fn optimize(
       &self,
-      _bundle_graph: &mut atlaspack_core::bundle_graph::BundleGraph,
+      _bundle_graph: &mut atlaspack_core::types::bundle_graph::BundleGraph,
     ) -> Result<(), anyhow::Error> {
       Ok(())
     }
@@ -136,7 +136,7 @@ pub mod testing {
     async fn name(
       &self,
       _bundle: &atlaspack_core::types::Bundle,
-      _bundle_graph: &atlaspack_core::bundle_graph::BundleGraph,
+      _bundle_graph: &atlaspack_core::types::bundle_graph::BundleGraph,
     ) -> Result<Option<std::path::PathBuf>, anyhow::Error> {
       Ok(None)
     }
@@ -181,7 +181,7 @@ pub mod testing {
     async fn apply(
       &self,
       _bundle: atlaspack_core::types::Bundle,
-      _bundle_graph: atlaspack_core::bundle_graph::BundleGraph,
+      _bundle_graph: atlaspack_core::types::bundle_graph::BundleGraph,
     ) -> Result<Option<Vec<RuntimeAsset>>, anyhow::Error> {
       Ok(None)
     }

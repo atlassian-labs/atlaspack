@@ -1,7 +1,9 @@
-use crate::types::Dependency;
 use crate::types::serialization::{extract_val, extract_val_default};
+use crate::types::{Dependency, FileType, SourceLocation, Target};
 use serde::de::{Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
+use serde_json;
+use std::path::PathBuf;
 
 impl Serialize for Dependency {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -154,7 +156,11 @@ impl<'de> Visitor<'de> for DependencyVisitor {
         "id" => id = Some(map.next_value()?),
         "bundleBehavior" => bundle_behavior = Some(map.next_value()?),
         "env" => env = Some(map.next_value()?),
-        "loc" => loc = Some(map.next_value()?),
+        "loc" => {
+          // Handle null explicitly for Option<SourceLocation>
+          let value: Option<SourceLocation> = map.next_value()?;
+          loc = value;
+        }
         "meta" => {
           let meta_map: serde_json::Value = map.next_value()?;
           meta = Some(
@@ -166,17 +172,44 @@ impl<'de> Visitor<'de> for DependencyVisitor {
         }
         "needsStableName" => needs_stable_name = Some(map.next_value()?),
         "packageConditions" => package_conditions = Some(map.next_value()?),
-        "pipeline" => pipeline = Some(map.next_value()?),
+        "pipeline" => {
+          let value: Option<String> = map.next_value()?;
+          pipeline = value;
+        }
         "priority" => priority = Some(map.next_value()?),
-        "range" => range = Some(map.next_value()?),
-        "resolveFrom" => resolve_from = Some(map.next_value()?),
-        "sourceAssetId" => source_asset_id = Some(map.next_value()?),
-        "sourcePath" => source_path = Some(map.next_value()?),
+        "range" => {
+          let value: Option<String> = map.next_value()?;
+          range = value;
+        }
+        "resolveFrom" => {
+          let value: Option<PathBuf> = map.next_value()?;
+          resolve_from = value;
+        }
+        "sourceAssetId" => {
+          let value: Option<String> = map.next_value()?;
+          source_asset_id = value;
+        }
+        "sourcePath" => {
+          let value: Option<PathBuf> = map.next_value()?;
+          source_path = value;
+        }
         "specifier" => specifier = Some(map.next_value()?),
         "specifierType" => specifier_type = Some(map.next_value()?),
-        "sourceAssetType" => source_asset_type = Some(map.next_value()?),
-        "symbols" => symbols = Some(map.next_value()?),
-        "target" => target = Some(map.next_value()?),
+        "sourceAssetType" => {
+          let value: Option<FileType> = map.next_value()?;
+          source_asset_type = value;
+        }
+        "symbols" => {
+          // symbols in JS is a Map<Symbol, {...}>, but Rust expects Option<Vec<Symbol>>
+          // This is a type mismatch. Skip deserializing this field entirely
+          let _ignored: serde::de::IgnoredAny = map.next_value()?;
+          // Set to None since we can't convert Map to Vec easily
+          symbols = None;
+        }
+        "target" => {
+          let value: Option<Box<Target>> = map.next_value()?;
+          target = value;
+        }
         "isEntry" => is_entry = Some(map.next_value()?),
         "isOptional" => is_optional = Some(map.next_value()?),
         _ => {

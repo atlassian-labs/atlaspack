@@ -1,4 +1,4 @@
-use crate::bundle_graph::BundleGraph;
+use crate::types::bundle_graph::BundleGraph;
 use async_trait::async_trait;
 use std::fmt::Debug;
 

@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 use std::path::PathBuf;
 
-use crate::bundle_graph::BundleGraph;
 use crate::types::Bundle;
 use crate::types::Dependency;
+use crate::types::bundle_graph::BundleGraph;
 use async_trait::async_trait;
 
 pub enum RuntimeAssetPriority {

@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use atlaspack_config::PluginNode;
-use atlaspack_core::bundle_graph::BundleGraph;
 use atlaspack_core::plugin::PluginContext;
 use atlaspack_core::plugin::RuntimeAsset;
 use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::types::Bundle;
+use atlaspack_core::types::bundle_graph::BundleGraph;
 use std::fmt;
 use std::fmt::Debug;
 

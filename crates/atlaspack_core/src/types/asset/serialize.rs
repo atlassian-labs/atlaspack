@@ -4,6 +4,7 @@ use serde_json::json;
 
 use crate::types::Asset;
 use crate::types::serialization::extract_asset_meta_fields;
+use crate::types::symbol::Symbol;
 
 macro_rules! insert_if_not_none {
   ($map:expr, $key:expr, $value:expr) => {
@@ -122,7 +123,33 @@ impl<'de> Visitor<'de> for AssetVisitor {
         "query" => query = map.next_value()?,
         "sideEffects" => side_effects = Some(map.next_value()?),
         "stats" => stats = Some(map.next_value()?),
-        "symbols" => symbols = map.next_value()?,
+        "symbols" => {
+          let value: serde_json::Value = map.next_value()?;
+          symbols = if value.is_null() {
+            None
+          } else if value.is_array() {
+            // Standard sequence deserialization
+            serde_json::from_value::<Vec<Symbol>>(value)
+              .map(Some)
+              .map_err(serde::de::Error::custom)?
+          } else if value.is_object() {
+            // Map representation: extract values (Symbol objects)
+            let mut symbols_vec = Vec::new();
+            let obj = value
+              .as_object()
+              .ok_or_else(|| serde::de::Error::custom("Expected object for symbols map"))?;
+            for (_, val) in obj {
+              let symbol: Symbol =
+                serde_json::from_value(val.clone()).map_err(serde::de::Error::custom)?;
+              symbols_vec.push(symbol);
+            }
+            Some(symbols_vec)
+          } else {
+            return Err(serde::de::Error::custom(
+              "symbols must be an array, object, or null",
+            ));
+          };
+        }
         "type" => file_type = Some(map.next_value()?),
         "uniqueKey" => unique_key = map.next_value()?,
         "meta" => {
@@ -134,8 +161,69 @@ impl<'de> Visitor<'de> for AssetVisitor {
               .clone(),
           );
         }
+        "committed" => {
+          // Skip the committed field - it exists in TypeScript Asset but not in Rust Asset
+          let _: bool = map.next_value()?;
+        }
+        "contentKey" => {
+          // Skip the contentKey field - it exists in TypeScript Asset but not in Rust Asset
+          let _: Option<String> = map.next_value()?;
+        }
+        "mapKey" => {
+          // Skip the mapKey field - it exists in TypeScript Asset but not in Rust Asset
+          let _: Option<String> = map.next_value()?;
+        }
+        "astKey" => {
+          // Skip the astKey field - it exists in TypeScript Asset but not in Rust Asset
+          let _: Option<String> = map.next_value()?;
+        }
+        "astGenerator" => {
+          // Skip the astGenerator field - it exists in TypeScript Asset but not in Rust Asset
+          let _: serde::de::IgnoredAny = map.next_value()?;
+        }
+        "dependencies" => {
+          // Skip the dependencies field - it exists in TypeScript Asset but not in Rust Asset
+          // TypeScript has dependencies: Map<string, Dependency>, but Rust Asset doesn't have this
+          let _: serde::de::IgnoredAny = map.next_value()?;
+        }
+        "plugin" => {
+          // Skip the plugin field - it exists in TypeScript Asset but not in Rust Asset
+          let _: serde::de::IgnoredAny = map.next_value()?;
+        }
+        "isLargeBlob" => {
+          // Skip the isLargeBlob field - it exists in TypeScript Asset but not in Rust Asset
+          let _: serde::de::IgnoredAny = map.next_value()?;
+        }
         _ => {
-          return Err(serde::de::Error::unknown_field(&key, &[]));
+          // Provide better error message with the field name
+          return Err(serde::de::Error::unknown_field(
+            &key,
+            &[
+              "bundleBehavior",
+              "configKeyPath",
+              "configPath",
+              "env",
+              "filePath",
+              "id",
+              "isBundleSplittable",
+              "isSource",
+              "outputHash",
+              "pipeline",
+              "query",
+              "sideEffects",
+              "stats",
+              "symbols",
+              "type",
+              "uniqueKey",
+              "meta",
+              "committed",
+              "contentKey",
+              "mapKey",
+              "astKey",
+              "astGenerator",
+              "dependencies",
+            ],
+          ));
         }
       }
     }

@@ -86,8 +86,15 @@ async function run({
     });
 
   const serializedBundleGraph = bundleGraph.serialize();
-  console.log(serializedBundleGraph.graph.adjacencyList.edges);
-  deserializeBundleGraph(serializedBundleGraph);
+  let rawEdges = [];
+  const gen = bundleGraph._graph.getAllEdges();
+  let next = gen.next();
+  while (!next.done) {
+    let edge = next.value;
+    rawEdges.push([edge.from, edge.to]);
+    next = gen.next();
+  }
+  deserializeBundleGraph(serializedBundleGraph, rawEdges);
 
   // @ts-expect-error TS2345
   dumpGraphToGraphViz(bundleGraph._graph, 'BundleGraph', bundleGraphEdgeTypes);

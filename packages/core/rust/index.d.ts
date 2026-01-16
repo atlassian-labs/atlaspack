@@ -46,7 +46,7 @@ export declare function atlaspackNapiBuildAssetGraph(atlaspackNapi: AtlaspackNap
 export declare function atlaspackNapiRespondToFsEvents(atlaspackNapi: AtlaspackNapi, options: object): object
 export declare function atlaspackNapiCompleteSession(atlaspackNapi: AtlaspackNapi): object
 export declare function createDependencyId(params: unknown): string
-export declare function deserializeBundleGraph(jsBundleGraph: object): void
+export declare function deserializeBundleGraph(jsBundleGraph: object, rawEdges: Array<[number, number]>): void
 export declare function createEnvironmentId(params: unknown): string
 /** Overwrite all environments with a new set of environments */
 export declare function setAllEnvironments(environments: unknown): void
