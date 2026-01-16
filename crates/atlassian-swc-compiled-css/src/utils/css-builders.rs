@@ -621,6 +621,25 @@ fn normalize_content_value(value: &str) -> String {
     return String::from("\"\"");
   }
 
+  // Strip inner quotes from url() values
+  // e.g., url('https://...') becomes url(https://...)
+  if let Some(url_value) = value.strip_prefix("url(").and_then(|v| v.strip_suffix(')')) {
+    // Strip quotes if present
+    if let Some(string) = url_value
+      .strip_prefix('\'')
+      .and_then(|v| v.strip_suffix('\''))
+      .or(
+        url_value
+          .strip_prefix('"')
+          .and_then(|v| v.strip_suffix('"')),
+      )
+    {
+      return format!("url({})", string);
+    }
+
+    return format!("url({})", url_value);
+  }
+
   if value.contains('"') || value.contains('\'') || CONTENT_VALUE_PATTERN.is_match(value) {
     value.to_string()
   } else {
@@ -1385,9 +1404,6 @@ where
 
     let (before, after) = css_affix_interpolation(&raw, next_quasi.raw.as_ref());
 
-    next_quasi.raw = after.css.clone().into();
-    next_quasi.cooked = Some(after.css.clone().into());
-
     let mut name = format!("--_{}", hash(&variable_name));
     if before.variable_prefix == "-" {
       name.push('-');
@@ -1414,12 +1430,18 @@ where
       };
       if !value_text.is_empty() {
         literal_result.push_str(&before.css);
+        literal_result.push_str(&before.variable_prefix);
         literal_result.push_str(&value_text);
+        literal_result.push_str(&after.variable_suffix);
         next_quasi.raw = after.css.clone().into();
         next_quasi.cooked = Some(after.css.clone().into());
         continue;
       }
     }
+
+    // For CSS variables, update the next quasi to remove the extracted suffix
+    next_quasi.raw = after.css.clone().into();
+    next_quasi.cooked = Some(after.css.clone().into());
 
     variables.push(Variable {
       name: name.clone(),
@@ -3750,5 +3772,121 @@ mod tests {
     let state = metadata.state();
     assert!(state.ignore_member_expressions.contains("styles"));
     assert!(state.css_map.is_empty());
+  }
+
+  #[test]
+  fn extract_object_with_content_url_string_literal() {
+    // Test that content property with url() string literal preserves the url() wrapper
+    // and strips inner quotes to match Babel behavior
+    let metadata = create_metadata();
+    let expr = parse_expression("({ content: \"url('https://example.com/image.svg')\" })");
+
+    let output = build_css_internal(&expr, &metadata);
+
+    assert_eq!(output.variables.len(), 0);
+    assert_eq!(output.css.len(), 1);
+
+    match &output.css[0] {
+      CssItem::Unconditional(item) => {
+        eprintln!("Generated CSS: {}", item.css);
+        // The output should be url(https://...) without inner quotes
+        assert_eq!(
+          item.css, "content: url(https://example.com/image.svg);",
+          "CSS should match Babel output"
+        );
+      }
+      other => panic!("expected unconditional css, found {other:?}"),
+    }
+  }
+
+  #[test]
+  fn extract_template_literal_with_url_interpolation() {
+    // Test that template literals with url() and interpolation work correctly
+    let metadata = create_metadata();
+    let expr = parse_expression("`content: url(${imageUrl});`");
+
+    let output = build_css_internal(&expr, &metadata);
+
+    // Should have one CSS variable for the imageUrl
+    assert_eq!(output.variables.len(), 1);
+
+    // The variable should have url( as prefix and ) as suffix
+    let var = &output.variables[0];
+    assert_eq!(var.prefix, Some("url(".to_string()));
+    assert_eq!(var.suffix, Some(")".to_string()));
+
+    // The CSS should contain var() but NOT wrapped in url()
+    match &output.css[0] {
+      CssItem::Unconditional(item) => {
+        assert!(
+          item.css.contains("var(--_"),
+          "CSS should contain var() but was: {}",
+          item.css
+        );
+        // Should NOT have url(var(...)) - the url() is in the variable's prefix/suffix
+        assert!(
+          !item.css.contains("url(var("),
+          "CSS should NOT wrap var() in url() but was: {}",
+          item.css
+        );
+      }
+      other => panic!("expected unconditional css, found {other:?}"),
+    }
+  }
+
+  #[test]
+  fn extract_template_literal_with_url_static_value() {
+    // Test that template literals with url() and static string value inline correctly
+    let metadata = create_metadata();
+    // Simulate a template literal where the interpolation evaluates to a static string
+    let expr = parse_expression("`content: url(${'https://example.com/image.svg'});`");
+
+    let output = build_css_internal(&expr, &metadata);
+
+    // Should have no variables since the value is static
+    assert_eq!(output.variables.len(), 0);
+
+    // The CSS should have the url() wrapper preserved around the static value
+    match &output.css[0] {
+      CssItem::Unconditional(item) => {
+        assert!(
+          item
+            .css
+            .contains("content: url(https://example.com/image.svg)"),
+          "CSS should contain 'content: url(https://example.com/image.svg)' but was: {}",
+          item.css
+        );
+      }
+      other => panic!("expected unconditional css, found {other:?}"),
+    }
+  }
+
+  #[test]
+  fn normalize_content_value_strips_url_quotes() {
+    use super::normalize_content_value;
+
+    // Should strip single quotes from url()
+    assert_eq!(
+      normalize_content_value("url('https://example.com/image.svg')"),
+      "url(https://example.com/image.svg)"
+    );
+
+    // Should strip double quotes from url()
+    assert_eq!(
+      normalize_content_value(r#"url("https://example.com/image.svg")"#),
+      "url(https://example.com/image.svg)"
+    );
+
+    // Should preserve url() without quotes
+    assert_eq!(
+      normalize_content_value("url(https://example.com/image.svg)"),
+      "url(https://example.com/image.svg)"
+    );
+
+    // Should not affect other values
+    assert_eq!(normalize_content_value("inherit"), "inherit");
+    assert_eq!(normalize_content_value(r#""hello""#), r#""hello""#);
+    assert_eq!(normalize_content_value("plain"), r#""plain""#);
+    assert_eq!(normalize_content_value(""), r#""""#);
   }
 }
