@@ -264,10 +264,54 @@ mod tests {
 
   #[test]
   fn affix_interpolation_handles_url_function() {
+    // When url( and ) surround an interpolation, they should be extracted
+    // as prefix/suffix so they can be applied to the runtime value, not the var() itself
     let (before, after) = css_affix_interpolation("background-image: url(", ")");
     assert_eq!(before.variable_prefix, "url(");
     assert_eq!(after.variable_suffix, ")");
     assert_eq!(before.css, "background-image: ");
+    assert_eq!(after.css, "");
+  }
+
+  #[test]
+  fn affix_interpolation_preserves_url_with_additional_css() {
+    // url( and ) should be extracted even when there's additional CSS after
+    let (before, after) = css_affix_interpolation("background-image: url(", "); color: red;");
+    assert_eq!(before.variable_prefix, "url(");
+    assert_eq!(after.variable_suffix, ")");
+    assert_eq!(before.css, "background-image: ");
+    assert_eq!(after.css, "; color: red;");
+  }
+
+  #[test]
+  fn affix_interpolation_handles_non_url_cases() {
+    // Quotes should also be extracted as prefix/suffix
+    let (before, after) = css_affix_interpolation("content: \"", "\"; color: blue;");
+    assert_eq!(before.variable_prefix, "\"");
+    assert_eq!(after.variable_suffix, "\"");
+    assert_eq!(before.css, "content: ");
+    assert_eq!(after.css, "; color: blue;");
+  }
+
+  #[test]
+  fn affix_interpolation_does_not_extract_url_without_closing_paren() {
+    // If `before` ends with "url(" but `after` doesn't start with ")",
+    // it should not extract the url( as a prefix
+    let (before, after) = css_affix_interpolation("background: url(", "; color: red;");
+    assert_eq!(before.variable_prefix, "");
+    assert_eq!(after.variable_suffix, "");
+    assert_eq!(before.css, "background: url(");
+    assert_eq!(after.css, "; color: red;");
+  }
+
+  #[test]
+  fn affix_interpolation_handles_units() {
+    // Units like px should be extracted as suffix
+    let (before, after) = css_affix_interpolation("padding: ", "px 10px");
+    assert_eq!(before.variable_prefix, "");
+    assert_eq!(after.variable_suffix, "px");
+    assert_eq!(before.css, "padding: ");
+    assert_eq!(after.css, " 10px");
   }
 
   #[test]
