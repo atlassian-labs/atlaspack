@@ -310,10 +310,8 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { initTracingSubscriber, Lmdb, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, atlaspackNapiCompleteSession, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, getNativeMemoryStats, resetMemoryTracking, sampleNativeMemory, newNodejsWorker, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, applyCompiledCssInJsPlugin, Resolver, SourceMap, performStringReplacements, transform, determineJsxConfiguration, transformAsync, getVcsStateSnapshot, getEventsSince, applyTokensPlugin } = nativeBinding
+const { findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, atlaspackNapiCompleteSession, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, getNativeMemoryStats, resetMemoryTracking, sampleNativeMemory, newNodejsWorker, Lmdb, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, applyCompiledCssInJsPlugin, Resolver, SourceMap, performStringReplacements, transform, determineJsxConfiguration, transformAsync, getVcsStateSnapshot, getEventsSince, applyTokensPlugin } = nativeBinding
 
-module.exports.initTracingSubscriber = initTracingSubscriber
-module.exports.Lmdb = Lmdb
 module.exports.findAncestorFile = findAncestorFile
 module.exports.findFirstFile = findFirstFile
 module.exports.findNodeModule = findNodeModule
@@ -340,6 +338,7 @@ module.exports.getNativeMemoryStats = getNativeMemoryStats
 module.exports.resetMemoryTracking = resetMemoryTracking
 module.exports.sampleNativeMemory = sampleNativeMemory
 module.exports.newNodejsWorker = newNodejsWorker
+module.exports.Lmdb = Lmdb
 module.exports.runInlineRequiresOptimizer = runInlineRequiresOptimizer
 module.exports.runInlineRequiresOptimizerAsync = runInlineRequiresOptimizerAsync
 module.exports.applyCompiledCssInJsPlugin = applyCompiledCssInJsPlugin
