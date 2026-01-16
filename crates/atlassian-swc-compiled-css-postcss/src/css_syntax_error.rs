@@ -62,6 +62,7 @@ pub struct CssSyntaxError {
 }
 
 impl CssSyntaxError {
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     reason: impl Into<String>,
     line: Option<u32>,
@@ -176,7 +177,7 @@ impl CssSyntaxError {
       return String::new();
     };
 
-    let color_enabled = color.unwrap_or_else(|| terminal_highlight::is_color_supported());
+    let color_enabled = color.unwrap_or_else(terminal_highlight::is_color_supported);
     let display_source = if color_enabled {
       terminal_highlight::highlight(&source)
     } else {
@@ -193,8 +194,8 @@ impl CssSyntaxError {
       aside = Box::new(|text: &str| text.to_string());
     }
 
-    let display_lines: Vec<&str> = display_source.split(|c| c == '\n').collect();
-    let plain_lines: Vec<&str> = source.split(|c| c == '\n').collect();
+    let display_lines: Vec<&str> = display_source.split('\n').collect();
+    let plain_lines: Vec<&str> = source.split('\n').collect();
     if line == 0 || line > display_lines.len() {
       return String::new();
     }

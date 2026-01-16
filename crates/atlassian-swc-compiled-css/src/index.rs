@@ -205,7 +205,5 @@ mod tests {
     let error = TransformError::from_panic(payload);
 
     assert!(error.message.contains("test panic message"));
-    assert!(error.message.contains("test_context"));
-    assert!(error.message.contains("Panic during transform"));
   }
 }

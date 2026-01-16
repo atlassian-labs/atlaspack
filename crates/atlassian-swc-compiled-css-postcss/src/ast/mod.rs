@@ -110,21 +110,11 @@ impl RawCacheValue {
 pub type RawCache = BTreeMap<String, RawCacheValue>;
 
 /// Common source information available on every AST node.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Source {
   pub input: Option<InputRef>,
   pub start: Option<Position>,
   pub end: Option<Position>,
-}
-
-impl Default for Source {
-  fn default() -> Self {
-    Self {
-      input: None,
-      start: None,
-      end: None,
-    }
-  }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -315,20 +305,12 @@ impl Node {
   where
     I: IntoIterator<Item = NodeRef>,
   {
-    nodes
-      .into_iter()
-      .map(|child| {
-        Node::detach(&child);
-        child
-      })
-      .collect()
+    nodes.into_iter().inspect(Node::detach).collect()
   }
 
   fn insert_all(parent: &NodeRef, index: usize, nodes: Vec<NodeRef>) {
-    let mut offset = 0usize;
-    for child in nodes {
+    for (offset, child) in nodes.into_iter().enumerate() {
       Node::insert(parent, index + offset, child);
-      offset += 1;
     }
   }
 
@@ -739,11 +721,9 @@ impl Node {
         result = false;
         return false;
       }
-      if child.borrow().data.is_container() {
-        if !Node::walk(&child, callback) {
-          result = false;
-          return false;
-        }
+      if child.borrow().data.is_container() && !Node::walk(&child, callback) {
+        result = false;
+        return false;
       }
       true
     };
@@ -762,11 +742,9 @@ impl Node {
       if !result {
         return false;
       }
-      if predicate(&child) {
-        if !callback(child.clone(), index) {
-          result = false;
-          return false;
-        }
+      if predicate(&child) && !callback(child.clone(), index) {
+        result = false;
+        return false;
       }
       true
     };
@@ -1020,9 +998,7 @@ pub trait NodeAccess {
   {
     let clone = self.clone_node();
     callback(&clone);
-    if self.parent().is_none() {
-      return None;
-    }
+    self.parent()?;
     Node::insert_before(self.node(), std::iter::once(clone.clone()));
     Some(clone)
   }
@@ -1033,9 +1009,7 @@ pub trait NodeAccess {
   {
     let clone = self.clone_node();
     callback(&clone);
-    if self.parent().is_none() {
-      return None;
-    }
+    self.parent()?;
     Node::insert_after(self.node(), std::iter::once(clone.clone()));
     Some(clone)
   }
