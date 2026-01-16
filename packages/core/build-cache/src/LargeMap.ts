@@ -10,15 +10,19 @@
 export class LargeMap<K, V> {
   maps: Map<K, V>[];
   maxSize: number;
+  singleMap: boolean;
+  lastMap: Map<K, V>;
 
   constructor(maxSize: number = Math.pow(2, 23)) {
-    this.maps = [new Map()];
+    this.lastMap = new Map();
+    this.maps = [this.lastMap];
+    this.singleMap = true;
     this.maxSize = maxSize;
   }
 
   set(key: K, value: V): this {
     // Update existing key if found
-    if (this.maps.length > 1) {
+    if (!this.singleMap) {
       for (let map of this.maps) {
         if (map.has(key)) {
           map.set(key, value);
@@ -28,16 +32,22 @@ export class LargeMap<K, V> {
     }
 
     // Otherwise, add to last map
-    let lastMap = this.maps[this.maps.length - 1];
-    if (lastMap.size >= this.maxSize) {
-      lastMap = new Map();
-      this.maps.push(lastMap);
+    if (this.lastMap.size >= this.maxSize) {
+      this.lastMap = new Map();
+      this.maps.push(this.lastMap);
+      this.singleMap = false;
     }
-    lastMap.set(key, value);
+
+    this.lastMap.set(key, value);
+
     return this;
   }
 
   get(key: K): V | undefined {
+    if (this.singleMap) {
+      return this.lastMap.get(key);
+    }
+
     for (let map of this.maps) {
       if (map.has(key)) {
         return map.get(key);
