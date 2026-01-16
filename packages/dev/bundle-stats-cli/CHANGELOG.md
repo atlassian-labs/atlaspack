@@ -1,5 +1,15 @@
 # @atlaspack/bundle-stats
 
+## 2.14.49
+
+### Patch Changes
+
+- Updated dependencies [[`47aa84e`](https://github.com/atlassian-labs/atlaspack/commit/47aa84e44c61066072a5bf3d57678565b9d2c5a3)]:
+  - @atlaspack/utils@3.3.0
+  - @atlaspack/core@2.31.2
+  - @atlaspack/reporter-bundle-stats@2.14.49
+  - @atlaspack/query@2.14.49
+
 ## 2.14.48
 
 ### Patch Changes
