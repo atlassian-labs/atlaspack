@@ -19,5 +19,8 @@
   },
   "scripts": {
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  },
+  "dependencies": {
+    "@atlaspack/feature-flags": "2.13.6"
   }
 }
