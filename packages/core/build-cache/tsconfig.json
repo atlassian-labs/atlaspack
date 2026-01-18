@@ -3,5 +3,10 @@
   "include": ["src"],
   "compilerOptions": {
     "composite": true
-  }
+  },
+  "references": [
+    {
+      "path": "../feature-flags/tsconfig.json"
+    }
+  ]
 }

@@ -1,19 +1,11 @@
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
-use std::path::Path;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use atlaspack_core::plugin::CompressorPlugin;
-use atlaspack_core::plugin::NamerPlugin;
-use atlaspack_core::plugin::OptimizerPlugin;
-use atlaspack_core::plugin::PackagerPlugin;
-use atlaspack_core::plugin::ReporterPlugin;
+use atlaspack_core::plugin::CacheStatus;
 use atlaspack_core::plugin::ResolverPlugin;
-use atlaspack_core::plugin::RuntimePlugin;
 use atlaspack_core::plugin::TransformerPlugin;
-use atlaspack_core::plugin::ValidatorPlugin;
-use atlaspack_core::plugin::{BundlerPlugin, CacheStatus};
 use atlaspack_core::types::Asset;
 #[cfg(test)]
 use mockall::automock;
@@ -26,28 +18,9 @@ pub mod plugin_cache;
 #[cfg_attr(test, automock)]
 #[async_trait]
 pub trait Plugins {
-  #[allow(unused)]
-  fn bundler(&self) -> Result<Box<dyn BundlerPlugin>, anyhow::Error>;
-  #[allow(unused)]
-  fn compressors(&self, path: &Path) -> Result<Vec<Box<dyn CompressorPlugin>>, anyhow::Error>;
   fn named_pipelines(&self) -> Vec<String>;
-  #[allow(unused)]
-  fn namers(&self) -> Result<Vec<Box<dyn NamerPlugin>>, anyhow::Error>;
-  #[allow(unused)]
-  fn optimizers(
-    &self,
-    path: &Path,
-    pipeline: Option<String>,
-  ) -> Result<Vec<Box<dyn OptimizerPlugin>>, anyhow::Error>;
-  #[allow(unused)]
-  fn packager(&self, path: &Path) -> Result<Box<dyn PackagerPlugin>, anyhow::Error>;
-  fn reporter(&self) -> Arc<dyn ReporterPlugin>;
   fn resolvers(&self) -> Result<Vec<Arc<dyn ResolverPlugin>>, anyhow::Error>;
-  #[allow(unused)]
-  fn runtimes(&self) -> Result<Vec<Box<dyn RuntimePlugin>>, anyhow::Error>;
   async fn transformers(&self, asset: &Asset) -> Result<TransformerPipeline, anyhow::Error>;
-  #[allow(unused)]
-  fn validators(&self, _path: &Path) -> Result<Vec<Box<dyn ValidatorPlugin>>, anyhow::Error>;
 }
 
 pub struct TransformerPipeline {

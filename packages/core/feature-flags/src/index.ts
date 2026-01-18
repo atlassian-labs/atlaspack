@@ -353,6 +353,14 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-12-15
    */
   v3Caching: false,
+
+  /**
+   * Use LargeMap in build cache serializer to work around Node 24's Map size limit.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2026-01-16
+   */
+  useLargeMapInBuildCache: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

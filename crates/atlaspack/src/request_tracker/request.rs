@@ -15,7 +15,6 @@ use tokio::sync::oneshot;
 
 use async_trait::async_trait;
 use atlaspack_core::config_loader::ConfigLoaderRef;
-use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::types::AtlaspackOptions;
 use atlaspack_core::types::Invalidation;
 use atlaspack_filesystem::FileSystemRef;
@@ -169,17 +168,6 @@ impl RunRequestContext {
       run_request_fn,
     }
   }
-
-  /// Report an event
-  pub async fn report(&self, event: ReporterEvent) {
-    self
-      .plugins()
-      .reporter()
-      .report(&event)
-      .await
-      .expect("TODO this should be handled?")
-  }
-
   /// Run a child request to the current request
   pub fn queue_request(
     &mut self,
