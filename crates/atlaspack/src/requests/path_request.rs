@@ -4,12 +4,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use atlaspack_core::diagnostic_error;
-use atlaspack_core::plugin::BuildProgressEvent;
-use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::plugin::Resolution;
 use atlaspack_core::plugin::ResolveContext;
 use atlaspack_core::plugin::ResolvedResolution;
-use atlaspack_core::plugin::ResolvingEvent;
 use atlaspack_core::types::Dependency;
 use atlaspack_resolver::parse_scheme;
 
@@ -46,14 +43,6 @@ impl Request for PathRequest {
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
-    request_context
-      .report(ReporterEvent::BuildProgress(BuildProgressEvent::Resolving(
-        ResolvingEvent {
-          dependency: Arc::clone(&self.dependency),
-        },
-      )))
-      .await;
-
     let (parsed_pipeline, specifier) = parse_scheme(&self.dependency.specifier)
       .and_then(|(pipeline, specifier)| {
         if request_context
@@ -169,9 +158,7 @@ mod tests {
   use std::fmt::Debug;
 
   use async_trait::async_trait;
-  use atlaspack_core::plugin::{
-    Resolved, ResolverPlugin, composite_reporter_plugin::CompositeReporterPlugin,
-  };
+  use atlaspack_core::plugin::{Resolved, ResolverPlugin};
 
   use crate::{
     plugins::{MockPlugins, PluginsRef},
@@ -196,10 +183,6 @@ mod tests {
       let mut plugins = MockPlugins::new();
 
       plugins.expect_named_pipelines().returning(|| Vec::new());
-
-      plugins
-        .expect_reporter()
-        .returning(|| Arc::new(CompositeReporterPlugin::default()));
 
       plugins.expect_resolvers().returning(move || Ok($resolvers));
 
