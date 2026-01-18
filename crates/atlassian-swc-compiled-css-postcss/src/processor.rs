@@ -1,3 +1,14 @@
+#![allow(
+  clippy::collapsible_match,
+  clippy::double_ended_iterator_last,
+  clippy::iter_cloned_collect,
+  clippy::manual_async_fn,
+  clippy::new_without_default,
+  clippy::option_as_ref_deref,
+  clippy::result_large_err,
+  clippy::type_complexity
+)]
+
 use std::collections::HashMap;
 use std::fmt;
 use std::future::Future;

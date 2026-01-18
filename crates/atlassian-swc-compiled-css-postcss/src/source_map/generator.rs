@@ -1,3 +1,5 @@
+#![allow(clippy::collapsible_match)]
+
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

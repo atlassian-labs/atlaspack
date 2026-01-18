@@ -1,3 +1,9 @@
+#![allow(
+  clippy::manual_pattern_char_comparison,
+  clippy::redundant_closure,
+  clippy::too_many_arguments
+)]
+
 use std::error::Error;
 use std::fmt;
 

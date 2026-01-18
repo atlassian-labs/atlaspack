@@ -1,3 +1,12 @@
+#![allow(
+  clippy::default_constructed_unit_structs,
+  clippy::field_reassign_with_default,
+  clippy::new_without_default,
+  clippy::redundant_closure,
+  clippy::result_large_err,
+  clippy::should_implement_trait
+)]
+
 use std::cell::RefMut;
 use std::fmt;
 

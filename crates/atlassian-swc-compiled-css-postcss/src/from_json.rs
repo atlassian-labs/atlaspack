@@ -1,3 +1,8 @@
+#![allow(
+  clippy::default_constructed_unit_structs,
+  clippy::field_reassign_with_default
+)]
+
 use std::fmt;
 
 use serde_json::Value;

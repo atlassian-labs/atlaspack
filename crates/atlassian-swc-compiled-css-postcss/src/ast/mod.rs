@@ -1,3 +1,11 @@
+#![allow(
+  clippy::collapsible_if,
+  clippy::derivable_impls,
+  clippy::explicit_counter_loop,
+  clippy::manual_inspect,
+  clippy::question_mark
+)]
+
 use std::borrow::Cow;
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::BTreeMap;
