@@ -405,7 +405,7 @@ fn parse_program(
 ) -> Option<(Program, Lrc<SourceMap>, Vec<Comment>)> {
   let source_map: Lrc<SourceMap> = Default::default();
   let file_name: FileName = FileName::Real(PathBuf::from(path).into());
-  let file = source_map.new_source_file(file_name.into(), code.into());
+  let file = source_map.new_source_file(file_name.into(), code.to_string());
   let comments = SingleThreadedComments::default();
 
   let parser_config = ParserPluginConfig::from_options(path, options);

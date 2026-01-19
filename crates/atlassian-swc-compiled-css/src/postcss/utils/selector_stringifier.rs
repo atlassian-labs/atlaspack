@@ -443,7 +443,7 @@ pub fn parse_selector_list_from_component_values(
 pub fn parse_selector_list_from_str(selector: &str) -> Option<SelectorList> {
   let css = format!("{}{{}}", selector);
   let cm: Arc<SourceMap> = Default::default();
-  let fm = cm.new_source_file(FileName::Custom("selector.css".into()).into(), css.into());
+  let fm = cm.new_source_file(FileName::Custom("selector.css".into()).into(), css);
   let mut errors = vec![];
   let stylesheet = parse_string_input::<swc_core::css::ast::Stylesheet>(
     StringInput::from(&*fm),

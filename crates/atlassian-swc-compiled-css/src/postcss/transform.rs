@@ -198,7 +198,10 @@ pub trait Plugin {
 /// Parse CSS source into an AST using swc's CSS parser.
 fn parse_stylesheet(css: &str) -> Result<Stylesheet, CssTransformError> {
   let cm: Arc<SourceMap> = Default::default();
-  let fm = cm.new_source_file(FileName::Custom("inline.css".into()).into(), css.into());
+  let fm = cm.new_source_file(
+    FileName::Custom("inline.css".into()).into(),
+    css.to_string(),
+  );
   let mut errors = vec![];
   match parse_string_input::<Stylesheet>(
     StringInput::from(&*fm),

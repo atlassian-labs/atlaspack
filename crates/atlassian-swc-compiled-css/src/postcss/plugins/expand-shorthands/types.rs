@@ -352,7 +352,7 @@ pub fn parse_value_to_components(value: &str) -> Vec<ComponentValue> {
 
   let css = format!("a{{a:{value};}}");
   let cm: Arc<SourceMap> = Default::default();
-  let fm = cm.new_source_file(FileName::Custom("value.css".into()).into(), css.into());
+  let fm = cm.new_source_file(FileName::Custom("value.css".into()).into(), css);
   let mut errors = vec![];
 
   if let Ok(mut stylesheet) = parse_string_input::<Stylesheet>(

@@ -192,6 +192,7 @@ fn try_static_evaluate(expr: &Expr, meta: &Metadata) -> Option<Expr> {
         unresolved_ctxt: SyntaxContext::empty(),
         is_unresolved_ref_safe: false,
         in_strict: false,
+        remaining_depth: 4,
       };
       let mut nums: Vec<f64> = Vec::new();
       for arg in &call.args {
@@ -201,7 +202,7 @@ fn try_static_evaluate(expr: &Expr, meta: &Metadata) -> Option<Expr> {
         if let Some(ev2) = try_static_evaluate(&val_expr, &evaluated.meta) {
           val_expr = ev2;
         }
-        if let Value::Known(n) = val_expr.as_pure_number(&ctx) {
+        if let Value::Known(n) = val_expr.as_pure_number(ctx) {
           nums.push(n);
         } else {
           nums.clear();
@@ -229,13 +230,14 @@ fn try_static_evaluate(expr: &Expr, meta: &Metadata) -> Option<Expr> {
     unresolved_ctxt: SyntaxContext::empty(),
     is_unresolved_ref_safe: false,
     in_strict: false,
+    remaining_depth: 4,
   };
 
   // Do not coerce boolean literals into numbers – Babel preserves booleans
   // (e.g., "false") rather than converting to 0. This matters for CSS object
   // properties like `inherits: false` under `@property`.
   if !matches!(expr, Expr::Lit(Lit::Str(_)) | Expr::Lit(Lit::Bool(_))) {
-    if let Value::Known(value) = expr.as_pure_number(&ctx) {
+    if let Value::Known(value) = expr.as_pure_number(ctx) {
       let allow_nan = matches!(expr, Expr::Lit(Lit::Num(_)) | Expr::Bin(_));
 
       if value.is_finite() || allow_nan {
@@ -250,7 +252,7 @@ fn try_static_evaluate(expr: &Expr, meta: &Metadata) -> Option<Expr> {
     return None;
   }
 
-  match expr.as_pure_string(&ctx) {
+  match expr.as_pure_string(ctx) {
     Value::Known(value) => Some(make_string_literal(value, expr.span())),
     Value::Unknown => None,
   }

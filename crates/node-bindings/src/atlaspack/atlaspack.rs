@@ -11,7 +11,7 @@ use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use lmdb_js_lite::DatabaseHandle;
-use lmdb_js_lite::LMDB;
+use lmdb_js_lite::LMDBJsLite;
 use napi::Env;
 use napi::JsObject;
 use napi::JsUnknown;
@@ -45,7 +45,7 @@ pub type AtlaspackNapi = External<Arc<Mutex<Atlaspack>>>;
 pub fn atlaspack_napi_create(
   env: Env,
   napi_options: AtlaspackNapiOptions,
-  lmdb: &LMDB,
+  lmdb: &LMDBJsLite,
 ) -> napi::Result<JsObject> {
   let thread_id = std::thread::current().id();
   tracing::trace!(?thread_id, "atlaspack-napi initialize");
