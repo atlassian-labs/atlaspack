@@ -135,7 +135,7 @@ function buildNapiLibrary(pkgDir) {
   );
 
   if (rustProfile !== 'dev') {
-    command.push(`--cargo-flags="--profile ${rustProfile}"`);
+    command.push('--profile', rustProfile);
   }
 
   command.push('--cargo-name', pkgJson.napi.name.replaceAll('-', '_'));
