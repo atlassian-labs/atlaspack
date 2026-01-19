@@ -11,10 +11,10 @@ crate-type = ["rlib"]
 thiserror = { workspace = true }
 swc_core = { workspace = true, features = [
   "common",
-  "common_ahash",
   "common_sourcemap",
   "ecma_ast",
   "ecma_codegen",
+  "ecma_helpers_inline",
   "ecma_parser",
   "ecma_preset_env",
   "ecma_transforms",
@@ -51,6 +51,7 @@ atlassian_swc_compiled_css_strip_runtime = { path = "../../../../crates/atlassia
 parking_lot = { workspace = true }
 pretty_assertions = { workspace = true }
 regex = { workspace = true }
+rustc-hash = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-test = { workspace = true }

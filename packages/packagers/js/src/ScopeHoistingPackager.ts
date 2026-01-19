@@ -415,14 +415,13 @@ export class ScopeHoistingPackager {
   // Helper to check if an asset is referenced, with cache-first + fast-check hybrid approach
   isAssetReferencedInBundle(bundle: NamedBundle, asset: Asset): boolean {
     // STEP 1: Check expensive computation cache first (fastest when it hits)
-    if (getFeatureFlag('precomputeReferencedAssets')) {
-      let bundleId = bundle.id;
-      let referencedAssets = this.referencedAssetsCache.get(bundleId);
 
-      if (referencedAssets) {
-        // Cache hit - fastest path (~0.001ms)
-        return referencedAssets.has(asset);
-      }
+    let bundleId = bundle.id;
+    let referencedAssets = this.referencedAssetsCache.get(bundleId);
+
+    if (referencedAssets) {
+      // Cache hit - fastest path (~0.001ms)
+      return referencedAssets.has(asset);
     }
 
     // STEP 2: Cache miss - try fast checks (~0.01ms)
@@ -437,17 +436,12 @@ export class ScopeHoistingPackager {
     }
 
     // STEP 3: Need expensive computation (~20-2000ms)
-    if (getFeatureFlag('precomputeReferencedAssets')) {
-      // Compute and cache expensive results for this bundle
-      let bundleId = bundle.id;
-      let referencedAssets = this.bundleGraph.getReferencedAssets(bundle);
-      this.referencedAssetsCache.set(bundleId, referencedAssets);
 
-      return referencedAssets.has(asset);
-    } else {
-      // No caching - fall back to original expensive method
-      return this.bundleGraph.isAssetReferenced(bundle, asset);
-    }
+    // Compute and cache expensive results for this bundle
+    referencedAssets = this.bundleGraph.getReferencedAssets(bundle);
+    this.referencedAssetsCache.set(bundleId, referencedAssets);
+
+    return referencedAssets.has(asset);
   }
 
   async loadAssets() {
@@ -1387,7 +1381,16 @@ ${code}
         return this.getPropertyAccess(obj, exportSymbol);
       }
     } else if (!symbol) {
-      invariant(false, 'Asset was skipped or not found.');
+      let parentPath =
+        path.relative(this.options.projectRoot, parentAsset.filePath) ||
+        '<unknown>';
+      let resolvedPath =
+        path.relative(this.options.projectRoot, resolvedAsset.filePath) ||
+        '<unknown>';
+      invariant(
+        false,
+        `Asset was skipped or not found when packaging ${this.bundle.name}.\nSearching for exported symbol "${imported}" (resolved as "${exportSymbol}") in asset with id "${resolvedAsset.meta.id}" (public id: "${publicId}", path: "${resolvedPath}") from parent asset "${parentAsset.meta.id}" (path: "${parentPath}").`,
+      );
     } else {
       return replacements?.get(symbol) || symbol;
     }

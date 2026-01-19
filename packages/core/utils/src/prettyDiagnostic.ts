@@ -28,12 +28,12 @@ export type AnsiDiagnosticResult = {
   documentation: string;
 };
 
-export default async function prettyDiagnostic(
+export function prettyDiagnosticSync(
   diagnostic: Diagnostic,
   options?: PluginOptions,
   terminalWidth?: number,
   format: 'ansi' | 'html' = 'ansi',
-): Promise<AnsiDiagnosticResult> {
+): AnsiDiagnosticResult {
   let {
     origin,
     message,
@@ -88,7 +88,7 @@ export default async function prettyDiagnostic(
       let code = codeFrame.code;
       if (code == null && options && filePath != null) {
         try {
-          code = await options.inputFS.readFile(filePath, 'utf8');
+          code = options.inputFS.readFileSync(filePath, 'utf8');
         } catch (e) {
           // In strange cases this can fail and hide the underlying error.
           logger.warn({
@@ -149,4 +149,15 @@ export default async function prettyDiagnostic(
   }
 
   return result;
+}
+
+export default function prettyDiagnostic(
+  diagnostic: Diagnostic,
+  options?: PluginOptions,
+  terminalWidth?: number,
+  format: 'ansi' | 'html' = 'ansi',
+): Promise<AnsiDiagnosticResult> {
+  return Promise.resolve(
+    prettyDiagnosticSync(diagnostic, options, terminalWidth, format),
+  );
 }

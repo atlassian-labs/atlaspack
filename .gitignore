@@ -10,7 +10,6 @@
 coverage/
 dist/
 **/lib/**
-!**/lib/**/*.js.flow
 logs/
 node_modules/
 tmp

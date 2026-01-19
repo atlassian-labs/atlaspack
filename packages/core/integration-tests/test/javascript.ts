@@ -3804,11 +3804,11 @@ describe('javascript', function () {
                     {
                       message: undefined,
                       start: {
-                        line: 11,
+                        line: 5,
                         column: 17,
                       },
                       end: {
-                        line: 11,
+                        line: 5,
                         column: 21,
                       },
                     },
@@ -4506,7 +4506,7 @@ describe('javascript', function () {
 
   it('should detect shorthand identifier imports', async function () {
     const dir = path.join(__dirname, 'js-import-shorthand-identifier');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
       package.json:
@@ -6799,4 +6799,82 @@ describe('javascript', function () {
       assert.equal(res.output, 123);
     });
   }
+
+  it('should correctly replace process.env when they have a type declaration', async () => {
+    await fsFixture(overlayFS, __dirname)`
+      env-type-declarations
+        index.ts:
+            declare const process: {
+              env?: {
+                AGG_BRANCH_SLUG: string | undefined;
+              };
+            };
+
+          const branchSlug =
+              typeof process !== 'undefined' && process.env ? process.env.AGG_BRANCH_SLUG : undefined;
+          console.log(branchSlug);
+
+    `;
+
+    let b = await bundle(
+      path.join(__dirname, 'env-type-declarations/index.ts'),
+      {
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+      },
+    );
+    b.getBundles().forEach(async (bundle) => {
+      let contents = await outputFS.readFile(bundle.filePath, 'utf8');
+      assert(
+        !contents.includes('AGG_BRANCH_SLUG'),
+        `Bundle ${path.basename(bundle.filePath)} should NOT include AGG_BRANCH_SLUG`,
+      );
+    });
+  });
+
+  it('handles globals with type declarations correctly', async () => {
+    await fsFixture(overlayFS, __dirname)`
+      window-type-declarations
+        index.ts:
+            declare const blah;
+
+            console.log(blah.__SSR_ATL_TOKEN__);
+
+        package.json:
+          {
+            "name": "window-type-declarations",
+            "version": "1.0.0",
+            "targets": {
+              "pillar": {
+                "context": "browser",
+                "engines": {
+                  "node": ">=18"
+                }
+              }
+            }
+          }
+
+        yarn.lock: {}
+    `;
+
+    let b = await bundle(
+      path.join(__dirname, 'window-type-declarations/index.ts'),
+      {
+        mode: 'production',
+        defaultTargetOptions: {
+          shouldScopeHoist: true,
+        },
+        targets: ['pillar'],
+        inputFS: overlayFS,
+        outputFS: overlayFS,
+      },
+    );
+    b.getBundles().forEach(async (bundle) => {
+      let contents = await outputFS.readFile(bundle.filePath, 'utf8');
+      assert(
+        contents.includes('console.log(blah.__SSR_ATL_TOKEN__)'),
+        `Bundle ${path.basename(bundle.filePath)} should include a clean blah.__SSR_ATL_TOKEN__, but got ${contents}`,
+      );
+    });
+  });
 });

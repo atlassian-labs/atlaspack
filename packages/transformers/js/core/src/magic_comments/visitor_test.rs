@@ -13,7 +13,7 @@ use super::MagicCommentsVisitor;
 pub fn parse(code: &str) -> anyhow::Result<Program> {
   let source_map = Lrc::new(SourceMap::default());
   let source_file =
-    source_map.new_source_file(Lrc::new(FileName::Real(PathBuf::new())), code.into());
+    source_map.new_source_file(Lrc::new(FileName::Real(PathBuf::new())), code.to_string());
 
   let comments = SingleThreadedComments::default();
   let syntax = {

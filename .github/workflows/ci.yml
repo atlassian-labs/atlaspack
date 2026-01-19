@@ -190,7 +190,7 @@ jobs:
       - run: yarn test:js:unit
 
   integration_tests:
-    name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }})
+    name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }}, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
     needs:
       - build_native
     timeout-minutes: 45
@@ -199,14 +199,10 @@ jobs:
       # others from potentially succeeding
       fail-fast: false
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 22
-
-          # MacOS ARM64
-          - os: macos-15
-            node: 22
+        slice_num: [1, 2]
+        slice_total: [2]
+        os: [ubuntu-22.04, macos-15]
+        node: [22]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -224,10 +220,12 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
       - run: yarn test:integration-ci
         env:
+          SLICE_NUM: ${{ matrix.slice_num }}
+          SLICE_TOTAL: ${{ matrix.slice_total }}
           RUST_BACKTRACE: full
 
   integration_tests_v3:
-    name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }})
+    name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }}, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
     needs:
       - build_native
     timeout-minutes: 15
@@ -236,14 +234,10 @@ jobs:
       # others from potentially succeeding
       fail-fast: false
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 22
-
-          # MacOS ARM64
-          - os: macos-15
-            node: 22
+        slice_num: [1, 2]
+        slice_total: [2]
+        os: [ubuntu-22.04, macos-15]
+        node: [22]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Collect Workflow Telemetry
@@ -277,6 +271,9 @@ jobs:
       - run: yarn test:integration-ci
         env:
           ATLASPACK_V3: true
+          SLICE_NUM: ${{ matrix.slice_num }}
+          SLICE_TOTAL: ${{ matrix.slice_total }}
+          ISOLATE_TESTS: 'false'
           RUST_BACKTRACE: full
       - name: Collect core dumps (Linux only)
         if: ${{ runner.os == 'Linux' && always() }}

@@ -5,7 +5,7 @@
   "source": "src/index.js",
   "devDependencies": {
     "@atlaspack/babel-register": "2.14.4",
-    "@atlaspack/core": "2.31.0"
+    "@atlaspack/core": "2.31.1"
   },
   "targets": {
     "alternate": {

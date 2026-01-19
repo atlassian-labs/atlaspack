@@ -4,6 +4,7 @@ pub mod add_display_name;
 mod collect;
 mod constant_module;
 mod dead_returns_remover;
+mod declare_const_collector;
 mod dependency_collector;
 mod env_replacer;
 mod esm_export_classifier;
@@ -74,6 +75,7 @@ use serde::Serialize;
 use static_prevaluator::StaticPreEvaluator;
 use std::io::{self};
 use swc_atlaskit_tokens::design_system_tokens_visitor;
+use swc_core::atoms::Atom;
 use swc_core::common::FileName;
 use swc_core::common::Globals;
 use swc_core::common::Mark;
@@ -94,11 +96,11 @@ use swc_core::ecma::parser::Syntax;
 use swc_core::ecma::parser::TsSyntax;
 use swc_core::ecma::parser::error::Error;
 use swc_core::ecma::parser::lexer::Lexer;
+use swc_core::ecma::preset_env;
 use swc_core::ecma::preset_env::Mode::Entry;
 use swc_core::ecma::preset_env::Targets;
 use swc_core::ecma::preset_env::Version;
 use swc_core::ecma::preset_env::Versions;
-use swc_core::ecma::preset_env::preset_env;
 use swc_core::ecma::transforms::base::assumptions::Assumptions;
 use swc_core::ecma::transforms::base::fixer::fixer;
 use swc_core::ecma::transforms::base::fixer::paren_remover;
@@ -149,7 +151,7 @@ pub struct Config {
   pub module_id: String,
   pub project_root: String,
   pub replace_env: bool,
-  pub env: BTreeMap<swc_core::ecma::atoms::JsWord, swc_core::ecma::atoms::JsWord>,
+  pub env: BTreeMap<Atom, Atom>,
   pub inline_fs: bool,
   pub insert_node_globals: bool,
   pub node_replacer: bool,
@@ -210,7 +212,7 @@ pub struct TransformResult {
   pub symbol_result: Option<CollectResult>,
   pub diagnostics: Option<Vec<Diagnostic>>,
   pub needs_esm_helpers: bool,
-  pub used_env: HashSet<swc_core::ecma::atoms::JsWord>,
+  pub used_env: HashSet<swc_core::ecma::atoms::Atom>,
   pub has_node_replacements: bool,
   pub is_constant_module: bool,
   pub conditions: BTreeSet<Condition>,
@@ -294,7 +296,6 @@ pub fn transform(
         SourceType::Module => true,
         SourceType::Script => false,
       };
-
       swc_core::common::GLOBALS.set(&Globals::new(), || {
         let error_buffer = ErrorBuffer::default();
         let handler = Lrc::new(Handler::with_emitter(
@@ -311,10 +312,10 @@ pub fn transform(
               let mut react_options = react::Options::default();
               if config.is_jsx {
                 if let Some(jsx_pragma) = &config.jsx_pragma {
-                  react_options.pragma = Some(jsx_pragma.clone());
+                  react_options.pragma = Some(jsx_pragma.clone().into());
                 }
                 if let Some(jsx_pragma_frag) = &config.jsx_pragma_frag {
-                  react_options.pragma_frag = Some(jsx_pragma_frag.clone());
+                  react_options.pragma_frag = Some(jsx_pragma_frag.clone().into());
                 }
                 react_options.development = Some(config.is_development);
                 react_options.refresh = if config.react_refresh {
@@ -325,7 +326,7 @@ pub fn transform(
 
                 react_options.runtime = if config.automatic_jsx_runtime {
                   if let Some(import_source) = &config.jsx_import_source {
-                    react_options.import_source = Some(import_source.clone());
+                    react_options.import_source = Some(Atom::from(import_source.as_str()));
                   }
                   Some(react::Runtime::Automatic)
                 } else {
@@ -433,6 +434,13 @@ pub fn transform(
                   result.style_rules = Some(style_rules.into_iter().collect());
                 }
 
+              }
+
+              // Strip `declare const` statements without initializers before the resolver runs.
+              // This prevents the resolver from seeing them and marking them as bindings.
+              // Statements like `declare const foo: string = "hello";` are kept.
+              if config.is_type_script && declare_const_collector::DeclareConstStripper::has_declare_const(code) {
+                module.visit_mut_with(&mut declare_const_collector::DeclareConstStripper);
               }
 
               if config.magic_comments && MagicCommentsVisitor::has_magic_comment(code) {
@@ -551,19 +559,25 @@ pub fn transform(
                 ));
               }
 
-              let module = module.apply((
-                  Optional::new(
-                    visit_mut_pass(ReactAsyncImportLift::new(global_mark, config.react_async_lift_by_default, config.react_async_lift_report_level.clone())),
-                    config.enable_react_async_import_lift && ReactAsyncImportLift::should_transform(code)
-                  ),
-                  Optional::new(
-                    visit_mut_pass(
-                      SyncDynamicImport::new(Path::new(&config.filename),
-                        unresolved_mark,
-                        &config.sync_dynamic_import_config,
-                      )),
-                      config.sync_dynamic_import_config.is_some()),
+              // Lift React async imports to top-level
+              if config.enable_react_async_import_lift && ReactAsyncImportLift::should_transform(code) {
+                module.visit_mut_with(&mut ReactAsyncImportLift::new(
+                  global_mark,
+                  config.react_async_lift_by_default,
+                  config.react_async_lift_report_level.clone(),
+                  source_map.clone(),
+                  &mut diagnostics,
                 ));
+              }
+
+              // Transform dynamic imports to sync imports if configured
+              if config.sync_dynamic_import_config.is_some() {
+                module.visit_mut_with(
+                  &mut SyncDynamicImport::new(Path::new(&config.filename),
+                    unresolved_mark,
+                    &config.sync_dynamic_import_config,
+                  ));
+                }
 
               let mut module = {
                 let mut passes = (
@@ -581,7 +595,7 @@ pub fn transform(
                       used_env: &mut result.used_env,
                       source_map: source_map.clone(),
                       diagnostics: &mut diagnostics,
-                      unresolved_mark
+                      unresolved_mark,
                     }),
                     config.source_type != SourceType::Script
                   ),
@@ -668,20 +682,19 @@ pub fn transform(
                       project_root: Path::new(&config.project_root),
                       filename: Path::new(&config.filename),
                       unresolved_mark,
-                      scope_hoist: config.scope_hoist
+                      scope_hoist: config.scope_hoist,
                     }),
                     config.insert_node_globals
                   ),
 
                   // Transpile new syntax to older syntax if needed
                   Optional::new(
-                    preset_env(
-                      unresolved_mark,
-                      Some(&comments),
-                      preset_env_config,
-                      assumptions,
-                      &mut Default::default(),
-                    ),
+                        preset_env::transform_from_env(
+                          unresolved_mark,
+                          Some(&comments),
+                          preset_env::EnvConfig::from(preset_env_config),
+                          assumptions
+                        ),
                     should_run_preset_env,
                   ),
 
@@ -815,7 +828,7 @@ pub fn transform(
                 emit(source_map.clone(), comments, &module, config.source_maps, None)?;
               if config.source_maps
                 && source_map
-                  .build_source_map_with_config(&src_map_buf, None, SourceMapConfig)
+                  .build_source_map(&src_map_buf, None, SourceMapConfig)
                   .to_writer(&mut map_buf)
                   .is_ok()
               {
@@ -847,7 +860,8 @@ pub fn parse(
   } else {
     filename.into()
   };
-  let source_file = source_map.new_source_file(Lrc::new(FileName::Real(filename)), code.into());
+  let source_file =
+    source_map.new_source_file(Lrc::new(FileName::Real(filename)), code.to_string());
 
   let comments = SingleThreadedComments::default();
   let syntax = if config.is_type_script {

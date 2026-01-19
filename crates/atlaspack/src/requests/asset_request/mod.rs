@@ -1,9 +1,6 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
 use atlaspack_core::hash::hash_bytes;
-use atlaspack_core::plugin::AssetBuildEvent;
-use atlaspack_core::plugin::BuildProgressEvent;
-use atlaspack_core::plugin::ReporterEvent;
 use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::types::AssetStats;
 use atlaspack_core::types::AssetWithDependencies;
@@ -60,14 +57,6 @@ impl Request for AssetRequest {
     &self,
     request_context: RunRequestContext,
   ) -> Result<ResultAndInvalidations, RunRequestError> {
-    request_context
-      .report(ReporterEvent::BuildProgress(BuildProgressEvent::Building(
-        AssetBuildEvent {
-          file_path: self.file_path.clone(),
-        },
-      )))
-      .await;
-
     let start = Instant::now();
 
     let code = if let Some(code) = self.code.as_ref() {

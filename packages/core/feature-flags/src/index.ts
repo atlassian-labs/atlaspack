@@ -311,16 +311,6 @@ export const DEFAULT_FEATURE_FLAGS = {
   nestedPromiseImportFix: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
-   * Precompute referenced assets in bundles to avoid repeated traversals
-   * during scope hoisting packaging. This optimization caches which assets
-   * are referenced in a bundle, reducing O(N*M) calls to O(1).
-   *
-   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
-   * @since 2025-10-24
-   */
-  precomputeReferencedAssets: process.env.ATLASPACK_BUILD_ENV === 'test',
-
-  /**
    * Disallows circular package aliases during resolution.
    * This fixes cases where package A aliases to package B, but package B
    * imports package A, causing infinite loops during resolution. Instead,
@@ -372,6 +362,14 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-12-15
    */
   v3Caching: false,
+
+  /**
+   * Use LargeMap in build cache serializer to work around Node 24's Map size limit.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2026-01-16
+   */
+  useLargeMapInBuildCache: process.env.ATLASPACK_BUILD_ENV === 'test',
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

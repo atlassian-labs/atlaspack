@@ -1105,7 +1105,7 @@ describe('monorepos', function () {
 
   it.v2('should support globs in the source field', async function () {
     const dir = path.join(__dirname, 'source-glob');
-    overlayFS.mkdirp(dir);
+    await overlayFS.mkdirp(dir);
 
     await fsFixture(overlayFS, dir)`
       yarn.lock:

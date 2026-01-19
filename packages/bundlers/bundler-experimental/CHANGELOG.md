@@ -1,5 +1,18 @@
 # @atlaspack/bundler-experimental
 
+## 2.13.50
+
+### Patch Changes
+
+- Updated dependencies [[`7cb8569`](https://github.com/atlassian-labs/atlaspack/commit/7cb85698143e381fcb887173b2bfd15f0aea7918), [`695339e`](https://github.com/atlassian-labs/atlaspack/commit/695339e4fd46df9590013c2ef4de74cb22225927)]:
+  - @atlaspack/rust@3.17.0
+  - @atlaspack/core@2.31.1
+  - @atlaspack/logger@2.14.39
+  - @atlaspack/utils@3.2.8
+  - @atlaspack/types@2.15.37
+  - @atlaspack/graph@3.6.9
+  - @atlaspack/plugin@2.14.47
+
 ## 2.13.49
 
 ### Patch Changes

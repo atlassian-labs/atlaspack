@@ -10,9 +10,14 @@ import {
   normalizeAssetIds,
   normalizeUnminifiedRefs,
   normalizeSourceMapUrl,
+  hasGlobalObjectTransformation,
+  hasDirectGlobalObject,
 } from './normalize';
+
 import type {ComparisonContext} from './context';
 import * as path from 'path';
+import * as stream from 'stream';
+import {StreamingJsonWriter} from './utils/streaming-json';
 
 export interface JsonHunk {
   id: string;
@@ -44,6 +49,7 @@ export interface JsonHunk {
     semanticChange: boolean;
     changeType?: string;
     impact?: 'low' | 'medium' | 'high';
+    description?: string;
   };
 }
 
@@ -219,6 +225,7 @@ function analyzeMeaningfulHunk(hunk: DiffEntry[]): {
   semanticChange: boolean;
   changeType?: string;
   impact?: 'low' | 'medium' | 'high';
+  description?: string;
 } {
   const removes = hunk.filter((e) => e.type === 'remove');
   const adds = hunk.filter((e) => e.type === 'add');
@@ -226,6 +233,50 @@ function analyzeMeaningfulHunk(hunk: DiffEntry[]): {
   // Simple heuristics for analysis
   const removeText = removes.map((e) => e.line).join(' ');
   const addText = adds.map((e) => e.line).join(' ');
+
+  // CRITICAL: Check for global object transformations FIRST
+  // This is a breaking change that must be highlighted
+  const removeHasDirectGlobal = removes.some((e) =>
+    hasDirectGlobalObject(e.line),
+  );
+  const addHasDirectGlobal = adds.some((e) => hasDirectGlobalObject(e.line));
+  const removeHasScopedGlobal = removes.some((e) =>
+    hasGlobalObjectTransformation(e.line),
+  );
+  const addHasScopedGlobal = adds.some((e) =>
+    hasGlobalObjectTransformation(e.line),
+  );
+
+  if (
+    (removeHasDirectGlobal && addHasScopedGlobal) ||
+    (addHasDirectGlobal && removeHasScopedGlobal)
+  ) {
+    // Find which global object is being transformed
+    const globalObjects = [
+      'globalThis',
+      'window',
+      'self',
+      'document',
+      'navigator',
+      'console',
+      'process',
+      'Buffer',
+      'global',
+    ];
+    const transformedGlobal = globalObjects.find((g) => {
+      const pattern = new RegExp(
+        `\\b${g.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+      );
+      return (removeText.match(pattern) || addText.match(pattern)) !== null;
+    });
+
+    return {
+      semanticChange: true,
+      changeType: 'global_object_transformation',
+      impact: 'high',
+      description: `CRITICAL BREAKING CHANGE: Global object ${transformedGlobal || 'reference'} has been transformed into a scoped variable. This will cause runtime errors as the code will try to access a scoped variable instead of the global object. Example: ${transformedGlobal || 'globalThis'} → $hash$var$${transformedGlobal || 'globalThis'}`,
+    };
+  }
 
   // Check for function changes
   if (removeText.includes('function') || addText.includes('function')) {
@@ -237,7 +288,7 @@ function analyzeMeaningfulHunk(hunk: DiffEntry[]): {
   }
 
   // Check for import/require changes
-  if (removeText.includes('require') || removeText.includes('import')) {
+  if (removeText.includes('require') || addText.includes('import')) {
     return {
       semanticChange: true,
       changeType: 'dependency_change',
@@ -308,6 +359,104 @@ export function diffToJson(
   file2: string,
   context: ComparisonContext,
 ): JsonFileResult {
+  // CRITICAL: Scan ALL diff entries for global object transformations BEFORE truncation
+  // This ensures we catch transformations even if they're beyond the 1000 hunk limit
+  const globalObjectTransformations: Array<{
+    line: string;
+    lineNum: number;
+    type: 'remove' | 'add';
+  }> = [];
+
+  // Group entries into potential hunks to check for transformations
+  let currentHunkEntries: DiffEntry[] = [];
+  for (let i = 0; i < diff.length; i++) {
+    const entry = diff[i];
+
+    if (entry.type === 'equal') {
+      // End of hunk - check for global object transformations
+      if (currentHunkEntries.length > 0) {
+        const removes = currentHunkEntries.filter((e) => e.type === 'remove');
+        const adds = currentHunkEntries.filter((e) => e.type === 'add');
+
+        // Check if this hunk contains a global object transformation
+        for (const remove of removes) {
+          const hasDirectGlobal = hasDirectGlobalObject(remove.line);
+          if (hasDirectGlobal) {
+            // Check if any add line has it scoped
+            for (const add of adds) {
+              if (hasGlobalObjectTransformation(add.line)) {
+                globalObjectTransformations.push({
+                  line: remove.line,
+                  lineNum: remove.lineNum1 ?? 0,
+                  type: 'remove',
+                });
+                break;
+              }
+            }
+          }
+        }
+
+        for (const add of adds) {
+          const hasScopedGlobal = hasGlobalObjectTransformation(add.line);
+          if (hasScopedGlobal) {
+            // Check if any remove line has it direct
+            for (const remove of removes) {
+              if (hasDirectGlobalObject(remove.line)) {
+                globalObjectTransformations.push({
+                  line: add.line,
+                  lineNum: add.lineNum2 ?? 0,
+                  type: 'add',
+                });
+                break;
+              }
+            }
+          }
+        }
+      }
+      currentHunkEntries = [];
+    } else {
+      currentHunkEntries.push(entry);
+    }
+  }
+
+  // Also check the last hunk if file doesn't end with equal
+  if (currentHunkEntries.length > 0) {
+    const removes = currentHunkEntries.filter((e) => e.type === 'remove');
+    const adds = currentHunkEntries.filter((e) => e.type === 'add');
+
+    for (const remove of removes) {
+      const hasDirectGlobal = hasDirectGlobalObject(remove.line);
+      if (hasDirectGlobal) {
+        for (const add of adds) {
+          if (hasGlobalObjectTransformation(add.line)) {
+            globalObjectTransformations.push({
+              line: remove.line,
+              lineNum: remove.lineNum1 ?? 0,
+              type: 'remove',
+            });
+            break;
+          }
+        }
+      }
+    }
+
+    for (const add of adds) {
+      const hasScopedGlobal = hasGlobalObjectTransformation(add.line);
+      if (hasScopedGlobal) {
+        for (const remove of removes) {
+          if (hasDirectGlobalObject(remove.line)) {
+            globalObjectTransformations.push({
+              line: add.line,
+              lineNum: add.lineNum2 ?? 0,
+              type: 'add',
+            });
+            break;
+          }
+        }
+      }
+    }
+  }
+
   const hunks: JsonHunk[] = [];
   let hunkId = 0;
   let currentHunk: DiffEntry[] = [];
@@ -315,8 +464,17 @@ export function diffToJson(
   let hunkStartLine1: number | null = null;
   let hunkStartLine2: number | null = null;
 
+  // Limit for very large files - stop processing after this many hunks
+  const MAX_HUNKS_TO_PROCESS = 1000;
+  let truncated = false;
+
   // Group diff entries into hunks
   for (let i = 0; i < diff.length; i++) {
+    // Early exit for very large files
+    if (hunks.length >= MAX_HUNKS_TO_PROCESS) {
+      truncated = true;
+      break;
+    }
     const entry = diff[i];
 
     if (entry.type === 'equal') {
@@ -456,14 +614,29 @@ export function diffToJson(
   const meaningfulHunks = hunks.filter((h) => h.category === 'meaningful');
   const harmlessHunks = hunks.filter((h) => h.category === 'harmless');
 
-  return {
+  // If truncated, we need to estimate the total hunk count
+  // We'll mark this in the result so the MCP server can handle it appropriately
+  const result: JsonFileResult = {
     path: path.relative(process.cwd(), file1),
     status: hunks.length > 0 ? 'different' : 'identical',
     hunks,
-    hunkCount: hunks.length,
+    hunkCount: truncated ? MAX_HUNKS_TO_PROCESS : hunks.length,
     meaningfulHunkCount: meaningfulHunks.length,
     harmlessHunkCount: harmlessHunks.length,
   };
+
+  // Add a flag to indicate truncation (we'll use a custom property)
+  if (truncated) {
+    (result as any).truncated = true;
+    (result as any).estimatedTotalHunks = '1000+';
+  }
+
+  // Store global object transformations found (even if hunks were truncated)
+  if (globalObjectTransformations.length > 0) {
+    (result as any).globalObjectTransformations = globalObjectTransformations;
+  }
+
+  return result;
 }
 
 /**
@@ -560,4 +733,113 @@ export function generateDirectoryJsonReport(
           }))
         : undefined,
   };
+}
+
+/**
+ * Writes a JSON report using streaming to avoid memory issues with large objects
+ */
+export function writeJsonReportStreaming(
+  report: JsonReport,
+  output: stream.Writable = process.stdout,
+): void {
+  const logger =
+    output === process.stdout
+      ? // eslint-disable-next-line no-console
+        console.log
+      : (msg: string) => output.write(msg);
+
+  const writer = new StreamingJsonWriter(output, 2);
+
+  try {
+    // Try regular JSON.stringify first (faster for small objects)
+    const jsonStr = JSON.stringify(report, null, 2);
+    logger(jsonStr);
+  } catch (error) {
+    // If stringify fails (likely due to size), fall back to streaming
+    // This is a simplified streaming approach - we write the structure incrementally
+    writer.startObject();
+
+    // Write metadata
+    writer.propertyKey('metadata');
+    writer.startObject();
+    if (report.metadata.file1) {
+      writer.property('file1', report.metadata.file1);
+    }
+    if (report.metadata.file2) {
+      writer.property('file2', report.metadata.file2);
+    }
+    if (report.metadata.dir1) {
+      writer.property('dir1', report.metadata.dir1);
+    }
+    if (report.metadata.dir2) {
+      writer.property('dir2', report.metadata.dir2);
+    }
+    writer.property('comparisonDate', report.metadata.comparisonDate);
+    writer.propertyKey('options');
+    writer.startObject();
+    writer.property('ignoreAssetIds', report.metadata.options.ignoreAssetIds);
+    writer.property(
+      'ignoreUnminifiedRefs',
+      report.metadata.options.ignoreUnminifiedRefs,
+    );
+    writer.property(
+      'ignoreSourceMapUrl',
+      report.metadata.options.ignoreSourceMapUrl,
+    );
+    writer.property(
+      'ignoreSwappedVariables',
+      report.metadata.options.ignoreSwappedVariables,
+    );
+    writer.endObject();
+    writer.endObject();
+
+    // Write summary
+    writer.propertyKey('summary');
+    writer.startObject();
+    writer.property('totalHunks', report.summary.totalHunks);
+    writer.property('meaningfulHunks', report.summary.meaningfulHunks);
+    writer.property('harmlessHunks', report.summary.harmlessHunks);
+    writer.property('identical', report.summary.identical);
+    if (report.summary.identicalFiles !== undefined) {
+      writer.property('identicalFiles', report.summary.identicalFiles);
+    }
+    if (report.summary.differentFiles !== undefined) {
+      writer.property('differentFiles', report.summary.differentFiles);
+    }
+    if (report.summary.totalFiles !== undefined) {
+      writer.property('totalFiles', report.summary.totalFiles);
+    }
+    if (report.summary.error) {
+      writer.property('error', report.summary.error);
+    }
+    if (report.summary.files1Count !== undefined) {
+      writer.property('files1Count', report.summary.files1Count);
+    }
+    if (report.summary.files2Count !== undefined) {
+      writer.property('files2Count', report.summary.files2Count);
+    }
+    writer.endObject();
+
+    // Write files array (this is where it gets large)
+    if (report.files && report.files.length > 0) {
+      writer.propertyKey('files');
+      writer.startArray();
+      for (const file of report.files) {
+        writer.arrayItem(file);
+      }
+      writer.endArray();
+    }
+
+    // Write ambiguous matches
+    if (report.ambiguousMatches && report.ambiguousMatches.length > 0) {
+      writer.propertyKey('ambiguousMatches');
+      writer.startArray();
+      for (const match of report.ambiguousMatches) {
+        writer.arrayItem(match);
+      }
+      writer.endArray();
+    }
+
+    writer.endObject();
+  }
 }
