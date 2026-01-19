@@ -1,3 +1,5 @@
+#![allow(clippy::collapsible_match, clippy::double_ended_iterator_last)]
+
 use std::collections::BTreeMap;
 use std::rc::Rc;
 

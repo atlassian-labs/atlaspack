@@ -98,7 +98,7 @@ export declare function runInlineRequiresOptimizer(input: InlineRequiresOptimize
 export declare function runInlineRequiresOptimizerAsync(input: InlineRequiresOptimizerInput): object
 export declare function isSafeFromJs(hash: string, configPath: string): boolean
 export declare function hashCode(rawCode: string): string
-export interface CompiledCssInJsConfig {
+export interface CompiledCssInJsConfigPlugin {
   configPath?: string
   importReact?: boolean
   nonce?: string
@@ -123,7 +123,7 @@ export interface CompiledCssInJsPluginInput {
   projectRoot: string
   isSource: boolean
   sourceMaps: boolean
-  config: CompiledCssInJsConfig
+  config: CompiledCssInJsConfigPlugin
 }
 export interface CompiledCssInJsPluginResult {
   code: string

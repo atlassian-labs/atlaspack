@@ -349,11 +349,12 @@ pub(crate) struct ColorminOptions {
 pub(crate) fn add_plugin_defaults() -> ColorminOptions {
   // Defaults per plugin when no caniuse data is provided via browserslist env:
   // - transparent: true (unless IE 8/9 detected)
-  // - alphaHex: false (conservative without caniuse-api to avoid rrggbbaa)
+  // - alphaHex: true (cssnano enables this when modern browsers are targeted; Babel
+  //   output uses #RRGGBBAA)
   // - name: true
   ColorminOptions {
     transparent: true,
-    alpha_hex: false,
+    alpha_hex: true,
     name: true,
   }
 }
@@ -376,6 +377,10 @@ fn to_hex_rgba(r: u8, g: u8, b: u8, a: u8) -> String {
 fn short_hex_candidate(base_hex: &str, alpha: f32) -> Option<String> {
   // base_hex is #rrggbb or #rrggbbaa (lowercase)
   let chars: Vec<char> = base_hex.chars().collect();
+  if chars.len() < 7 {
+    // Already in short form like #rgb or #rgba; nothing to shorten further.
+    return Some(base_hex.to_string());
+  }
   let (s, o, u, l, p, f, g, v) = (
     chars[1],
     chars[2],

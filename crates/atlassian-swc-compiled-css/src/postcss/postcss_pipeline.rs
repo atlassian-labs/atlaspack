@@ -292,9 +292,15 @@ fn build_processor(options: &TransformCssOptions, collector: &AtomicCollector) -
     use super::plugins::normalize_css_engine as nce;
     plugins.push(nce::ordered_values::plugin());
   }
+  // Expand shorthands before reduce-initial/colormin so longhands like
+  // background -> background-color flow through initial reduction and color
+  // minification in the same order as the Babel plugin.
+  plugins.push(super::plugins::expand_shorthands_engine::plugin());
   {
     use super::plugins::normalize_css_engine as nce;
-    plugins.push(nce::reduce_initial::plugin());
+    plugins.push(nce::reduce_initial::plugin(
+      options.browserslist_config_path.clone(),
+    ));
   }
   {
     use super::plugins::normalize_css_engine as nce;
@@ -326,7 +332,6 @@ fn build_processor(options: &TransformCssOptions, collector: &AtomicCollector) -
     use super::plugins::normalize_css_engine as nce;
     plugins.push(nce::calc::plugin());
   }
-  plugins.push(super::plugins::expand_shorthands_engine::plugin());
   // Start emitting atomic rules.
   plugins.push(atomicify_rules_plugin(
     options.clone(),

@@ -1,3 +1,10 @@
+#![allow(
+  clippy::cloned_ref_to_slice_refs,
+  clippy::large_enum_variant,
+  clippy::redundant_closure,
+  clippy::result_large_err
+)]
+
 mod tokenizer;
 
 pub use tokenizer::{Token, TokenKind, Tokenizer};

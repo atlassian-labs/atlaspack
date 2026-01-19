@@ -1,3 +1,5 @@
+#![allow(clippy::redundant_closure)]
+
 use std::collections::HashMap;
 
 use serde_json::{Map as JsonMap, Value};

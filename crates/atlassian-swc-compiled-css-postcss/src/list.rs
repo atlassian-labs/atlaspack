@@ -1,3 +1,4 @@
+#![allow(clippy::implicit_saturating_sub)]
 //! Utilities for splitting CSS value lists while respecting PostCSS quirks.
 //!
 //! This module mirrors the behaviour of `lib/list.js` from the JavaScript

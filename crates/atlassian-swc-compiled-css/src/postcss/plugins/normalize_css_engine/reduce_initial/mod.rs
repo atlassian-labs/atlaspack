@@ -1,10 +1,17 @@
+use caniuse_serde::FeatureName;
 use once_cell::sync::Lazy;
 use postcss as pc;
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
+
+use super::browserslist_support::feature_supported_for_config_path;
+
+#[cfg(test)]
+use super::browserslist_support::browserslist_cache;
 
 static TO_INITIAL: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   // Strict port of src/data/toInitial.json
   let mut m = HashMap::new();
+
   m.insert("background-clip", "border-box");
   m.insert("background-color", "transparent");
   m.insert("background-origin", "padding-box");
@@ -23,7 +30,7 @@ static TO_INITIAL: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   m.insert("box-sizing", "content-box");
   m.insert("color", "canvastext");
   m.insert("column-rule-color", "currentcolor");
-  m.insert("font-synthesis", "weight style");
+  m.insert("font-synthesis", "weight style small-caps position");
   m.insert("image-orientation", "from-image");
   m.insert("mask-clip", "border-box");
   m.insert("mask-mode", "match-source");
@@ -38,6 +45,7 @@ static TO_INITIAL: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   m.insert("transform-box", "view-box");
   m.insert("transform-origin", "50% 50% 0");
   m.insert("vertical-align", "baseline");
+  m.insert("white-space-collapse", "collapse");
   m.insert("writing-mode", "horizontal-tb");
   m
 });
@@ -345,12 +353,15 @@ static FROM_INITIAL: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   m
 });
 
-pub fn plugin() -> pc::BuiltPlugin {
+fn initial_support(config_path: Option<PathBuf>) -> (bool, Vec<String>) {
+  feature_supported_for_config_path(config_path, FeatureName::from("css-initial-value"))
+}
+
+pub fn plugin(config_path: Option<PathBuf>) -> pc::BuiltPlugin {
   let ignore_default = vec!["writing-mode", "transform-box"];
-  // Babel’s cssnano preset currently evaluates `initialSupport` to false for this repo’s
-  // browserslist (still includes `op_mini all`). Default to false here until the same
-  // detection path is ported, so engine + Babel outputs stay aligned.
-  let initial_support = false;
+  // Align with Babel/cssnano: enable `initial` only when the resolved browsers support it.
+  let (initial_support, _) = initial_support(config_path);
+
   pc::plugin("postcss-reduce-initial")
     .once_exit(move |css, _| {
       let process_decl = |decl: postcss::ast::nodes::Declaration| {
@@ -394,4 +405,38 @@ pub fn plugin() -> pc::BuiltPlugin {
       Ok(())
     })
     .build()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::fs;
+
+  #[test]
+  fn converts_background_color_transparent_to_initial() {
+    let tmp = tempfile::tempdir().expect("tmpdir");
+    fs::write(tmp.path().join(".browserslistrc"), "Chrome 142\n")
+      .expect("browserslist config write");
+
+    browserslist_cache().lock().unwrap().clear();
+
+    let plugin = plugin(Some(tmp.path().to_path_buf()));
+    let processor = pc::postcss_with_plugins(vec![plugin]);
+    let mut result = processor
+      .process("a{background-color:transparent}")
+      .expect("process should succeed");
+
+    // Force result to be evaluatedf
+    let _ = result.result();
+
+    assert_eq!(
+      result.css().expect("css string").to_string(),
+      "a{background-color:initial}"
+    );
+
+    browserslist_cache()
+      .lock()
+      .unwrap()
+      .remove(&tmp.path().to_path_buf());
+  }
 }

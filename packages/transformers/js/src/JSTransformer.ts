@@ -17,7 +17,7 @@ import {
   transformAsync,
   determineJsxConfiguration,
 } from '@atlaspack/rust';
-import {type CompiledCssInJsConfig} from '@atlaspack/rust/index';
+import {type CompiledCssInJsConfigPlugin} from '@atlaspack/rust/index';
 import invariant from 'assert';
 import browserslist from 'browserslist';
 import semver from 'semver';
@@ -373,8 +373,8 @@ export async function loadTokensConfig(config: Config, options: PluginOptions) {
 export async function loadCompiledCssInJsConfig(
   config: Config,
   options: PluginOptions,
-) {
-  const conf = await config.getConfigFrom<CompiledCssInJsConfig>(
+): Promise<CompiledCssInJsConfigPlugin> {
+  const conf = await config.getConfigFrom<CompiledCssInJsConfigPlugin>(
     join(options.projectRoot, 'index'),
     ['.compiledcssrc', '.compiledcssrc.json'],
     {
@@ -382,7 +382,7 @@ export async function loadCompiledCssInJsConfig(
     },
   );
 
-  const contents: CompiledCssInJsConfig = {
+  const contents: CompiledCssInJsConfigPlugin = {
     configPath: conf?.filePath,
     importSources: ['@compiled/react', '@atlaskit/css'],
   };

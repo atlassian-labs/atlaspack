@@ -1,4 +1,4 @@
-use super::super::lib::{add_space::add_space, get_value::get_value};
+use super::super::library::{add_space::add_space, get_value::get_value};
 use crate::postcss::value_parser as vp;
 
 // Strict port of src/rules/border.js — assemble nodes with explicit spaces

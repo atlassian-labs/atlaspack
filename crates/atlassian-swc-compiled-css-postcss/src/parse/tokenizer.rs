@@ -1,3 +1,9 @@
+#![allow(
+  clippy::collapsible_if,
+  clippy::needless_return,
+  clippy::result_large_err
+)]
+
 use crate::css_syntax_error::CssSyntaxError;
 use crate::input::InputRef;
 

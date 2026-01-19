@@ -1,5 +1,6 @@
 use memory_stats::memory_stats;
 use napi_derive::napi;
+#[allow(clippy::disallowed_types)]
 use std::sync::{
   Mutex,
   atomic::{AtomicU64, Ordering},
@@ -10,6 +11,7 @@ static BASELINE_VIRTUAL: AtomicU64 = AtomicU64::new(0);
 static SAMPLE_COUNT: AtomicU64 = AtomicU64::new(0);
 
 // Store all samples for detailed statistics
+#[allow(clippy::disallowed_types, clippy::disallowed_methods)]
 static MEMORY_SAMPLES: Mutex<Vec<MemorySample>> = Mutex::new(Vec::new());
 
 #[derive(Clone, Copy, Debug)]
