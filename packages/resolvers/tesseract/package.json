@@ -18,7 +18,8 @@
   "dependencies": {
     "@atlaspack/node-resolver-core": "3.7.19",
     "@atlaspack/plugin": "2.14.48",
-    "@atlaspack/types-internal": "2.22.5"
+    "@atlaspack/types-internal": "2.22.5",
+    "@atlaspack/feature-flags": "2.27.6"
   },
   "type": "commonjs",
   "scripts": {
