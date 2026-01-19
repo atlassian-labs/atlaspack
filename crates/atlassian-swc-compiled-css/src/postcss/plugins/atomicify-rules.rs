@@ -632,7 +632,7 @@ mod tests {
 
   fn parse_stylesheet(css: &str) -> Stylesheet {
     let cm: Arc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(FileName::Custom("test.css".into()).into(), css.to_string());
+    let fm = cm.new_source_file(FileName::Custom("test.css".into()).into(), css);
     let mut errors = vec![];
     parse_string_input::<Stylesheet>(
       StringInput::from(&*fm),

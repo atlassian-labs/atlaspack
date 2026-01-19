@@ -187,6 +187,7 @@ fn parse_selector(selector: &str) -> Option<ComplexSelector> {
   let css = format!("{selector}{{}}");
   let cm: std::sync::Arc<SourceMap> = Default::default();
   let fm = cm.new_source_file(FileName::Custom("selector.css".into()).into(), css);
+  let fm = cm.new_source_file(FileName::Custom("selector.css".into()).into(), css);
   let mut errors = vec![];
   let stylesheet = parse_string_input::<Stylesheet>(
     StringInput::from(&*fm),
@@ -265,7 +266,7 @@ mod tests {
 
   fn parse_stylesheet(css: &str) -> Stylesheet {
     let cm: std::sync::Arc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(FileName::Custom("test.css".into()).into(), css.to_string());
+    let fm = cm.new_source_file(FileName::Custom("test.css".into()).into(), css);
     let mut errors = vec![];
     parse_string_input::<Stylesheet>(
       StringInput::from(&*fm),
