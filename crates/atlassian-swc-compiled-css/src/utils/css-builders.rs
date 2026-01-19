@@ -1134,6 +1134,7 @@ where
                     unresolved_ctxt: swc_core::common::SyntaxContext::empty(),
                     is_unresolved_ref_safe: false,
                     in_strict: false,
+                    remaining_depth: 4,
                   };
                   let mut nums: Vec<f64> = Vec::new();
                   for arg in &call.args {
@@ -1141,7 +1142,7 @@ where
                     let arg_expr = ev.value;
                     // We don't have direct access to the internal try_static_evaluate here;
                     // rely on ExprExt as_pure_number on the evaluated form.
-                    if let swc_core::ecma::utils::Value::Known(n) = arg_expr.as_pure_number(&ctx) {
+                    if let swc_core::ecma::utils::Value::Known(n) = arg_expr.as_pure_number(ctx) {
                       nums.push(n);
                     } else {
                       nums.clear();
@@ -2898,7 +2899,8 @@ mod tests {
   }
 
   fn parse_expression_with_source_map(cm: &Lrc<SourceMap>, code: &str) -> Expr {
-    let source_file = cm.new_source_file(FileName::Custom("test.js".into()).into(), code.into());
+    let source_file =
+      cm.new_source_file(FileName::Custom("test.js".into()).into(), code.to_string());
     let lexer = Lexer::new(
       Syntax::Es(Default::default()),
       Default::default(),

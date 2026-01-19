@@ -650,7 +650,7 @@ mod tests {
 
   fn parse(source: &str) -> (Program, Lrc<SourceMap>, SingleThreadedComments) {
     let cm: Lrc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(FileName::Anon.into(), source.into());
+    let fm = cm.new_source_file(FileName::Anon.into(), source.to_string());
     let comments = SingleThreadedComments::default();
     let lexer = Lexer::new(
       Syntax::Es(Default::default()),
@@ -665,7 +665,7 @@ mod tests {
 
   fn parse_script(source: &str) -> (Program, Lrc<SourceMap>, SingleThreadedComments) {
     let cm: Lrc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(FileName::Anon.into(), source.into());
+    let fm = cm.new_source_file(FileName::Anon.into(), source.to_string());
     let comments = SingleThreadedComments::default();
     let lexer = Lexer::new(
       Syntax::Es(Default::default()),

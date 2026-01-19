@@ -17,7 +17,7 @@ fn lookup_line(pos: BytePos, source_map: &SourceMap) -> Option<u32> {
   // character counts instead of byte offsets). Mirror Babel's tolerant behaviour by dropping
   // line info when a span is unusable rather than crashing the transform.
   let file = source_map.lookup_source_file(pos);
-  let src = file.src.as_ref();
+  let src: &str = file.src.as_ref();
 
   if pos.0 < file.start_pos.0 {
     return None;
@@ -108,7 +108,10 @@ mod tests {
 
   fn create_file(code: &str) -> (Lrc<SourceMap>, Lrc<SourceFile>) {
     let cm: Lrc<SourceMap> = Default::default();
-    let file = cm.new_source_file(Lrc::new(FileName::Custom("test.jsx".into())), code.into());
+    let file = cm.new_source_file(
+      Lrc::new(FileName::Custom("test.jsx".into())),
+      code.to_string(),
+    );
     (cm, file)
   }
 

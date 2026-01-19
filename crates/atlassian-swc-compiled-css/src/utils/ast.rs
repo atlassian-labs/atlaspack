@@ -266,7 +266,7 @@ mod tests {
     let sm = &state.file().source_map;
     let file = sm.new_source_file(
       Lrc::new(FileName::Custom("virtual.tsx".into())),
-      "let x = 1;".into(),
+      "let x = 1;".to_string(),
     );
     drop(state);
 

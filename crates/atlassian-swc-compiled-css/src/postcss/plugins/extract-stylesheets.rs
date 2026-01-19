@@ -349,7 +349,10 @@ mod tests {
 
   fn parse_stylesheet(css: &str) -> Stylesheet {
     let cm: std::sync::Arc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(FileName::Custom("inline.css".into()).into(), css.into());
+    let fm = cm.new_source_file(
+      FileName::Custom("inline.css".into()).into(),
+      css.to_string(),
+    );
     let mut errors = vec![];
     parse_string_input::<Stylesheet>(
       StringInput::from(&*fm),

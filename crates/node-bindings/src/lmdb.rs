@@ -5,7 +5,7 @@ use napi_derive::napi;
 
 #[napi]
 pub struct LMDB {
-  inner: lmdb_js_lite::LMDB,
+  inner: lmdb_js_lite::LMDBJsLite,
 }
 
 #[napi]
@@ -13,7 +13,7 @@ impl LMDB {
   #[napi(constructor)]
   pub fn new(options: lmdb_js_lite::LMDBOptions) -> napi::Result<Self> {
     Ok(Self {
-      inner: lmdb_js_lite::LMDB::new(options)?,
+      inner: lmdb_js_lite::LMDBJsLite::new(options)?,
     })
   }
 

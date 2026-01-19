@@ -354,7 +354,7 @@ mod tests {
     cm: Option<Lrc<SourceMap>>,
   ) -> (Expr, Lrc<SourceMap>, Lrc<swc_core::common::SourceFile>) {
     let cm: Lrc<SourceMap> = cm.unwrap_or_default();
-    let fm = cm.new_source_file(FileName::Custom("expr.jsx".into()).into(), code.into());
+    let fm = cm.new_source_file(FileName::Custom("expr.jsx".into()).into(), code.to_string());
     let lexer = Lexer::new(
       Syntax::Es(EsSyntax {
         jsx: true,

@@ -928,7 +928,7 @@ mod tests {
     };
     let file = source_map.new_source_file(
       FileName::Custom("component.tsx".into()).into(),
-      "const FooBar = styled.div``;".into(),
+      "const FooBar = styled.div``;".to_string(),
     );
     let start = file.start_pos + BytePos(6);
     let span = Span::new(start, start + BytePos(6));

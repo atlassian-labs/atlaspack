@@ -524,7 +524,7 @@ fn serialize_component_values(values: &[ComponentValue]) -> Option<String> {
 fn parse_selector_as_rule(selector: &str) -> QualifiedRule {
   let css = format!("{}{{}}", selector);
   let cm: Arc<SourceMap> = Default::default();
-  let fm = cm.new_source_file(FileName::Custom("atomic.css".into()).into(), css.into());
+  let fm = cm.new_source_file(FileName::Custom("atomic.css".into()).into(), css);
   let mut errors = vec![];
   let stylesheet = parse_string_input::<Stylesheet>(
     StringInput::from(&*fm),
@@ -632,7 +632,7 @@ mod tests {
 
   fn parse_stylesheet(css: &str) -> Stylesheet {
     let cm: Arc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(FileName::Custom("test.css".into()).into(), css.into());
+    let fm = cm.new_source_file(FileName::Custom("test.css".into()).into(), css.to_string());
     let mut errors = vec![];
     parse_string_input::<Stylesheet>(
       StringInput::from(&*fm),

@@ -41,7 +41,10 @@ pub fn sort_atomic_style_sheet(css: &str, options: SortOptions) -> String {
 
 fn parse_stylesheet(css: &str) -> Result<Stylesheet, ()> {
   let cm: Arc<SourceMap> = Default::default();
-  let fm = cm.new_source_file(FileName::Custom("inline.css".into()).into(), css.into());
+  let fm = cm.new_source_file(
+    FileName::Custom("inline.css".into()).into(),
+    css.to_string(),
+  );
   let mut errors = vec![];
 
   match parse_string_input::<Stylesheet>(
