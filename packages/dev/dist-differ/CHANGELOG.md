@@ -1,5 +1,11 @@
 # @atlaspack/dist-differ
 
+## 2.2.0
+
+### Minor Changes
+
+- [#936](https://github.com/atlassian-labs/atlaspack/pull/936) [`532cc1e`](https://github.com/atlassian-labs/atlaspack/commit/532cc1e783577a5a434f2c09d0e8e0769386fa28) Thanks [@marcins](https://github.com/marcins)! - Add MCP server, streaming JSON output
+
 ## 2.1.0
 
 ### Minor Changes
