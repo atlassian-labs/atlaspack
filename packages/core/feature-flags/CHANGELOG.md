@@ -1,5 +1,15 @@
 # @atlaspack/feature-flags
 
+## 2.27.6
+
+### Patch Changes
+
+- [#953](https://github.com/atlassian-labs/atlaspack/pull/953) [`c31090c`](https://github.com/atlassian-labs/atlaspack/commit/c31090c9025f35d3fa8561b42dca170853a32e6f) Thanks [@marcins](https://github.com/marcins)! - Cleanup feature flag precomputeReferencedAssets
+
+- [#960](https://github.com/atlassian-labs/atlaspack/pull/960) [`565bab3`](https://github.com/atlassian-labs/atlaspack/commit/565bab3771cc334659d873cabff4cdfac0860cc7) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add LargeMap to work around Node 24's Map size limit in build cache serializer.
+
+  This change is behind the `useLargeMapInBuildCache` feature flag.
+
 ## 2.27.5
 
 ### Patch Changes

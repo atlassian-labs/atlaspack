@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/source-map",
-  "version": "3.2.2",
+  "version": "3.2.3",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -21,6 +21,6 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@atlaspack/rust": "3.17.0"
+    "@atlaspack/rust": "3.18.0"
   }
 }
