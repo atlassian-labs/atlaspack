@@ -183,6 +183,10 @@ export default class SourceMap {
     lineOffset: number = 0,
     columnOffset: number = 0,
   ): SourceMap {
+    // Guard against empty mappings to avoid crashes in native code (SWC v44 issue)
+    if (mappings.length === 0) {
+      return this;
+    }
     let mappingBuffer = this._indexedMappingsToInt32Array(
       mappings,
       lineOffset,

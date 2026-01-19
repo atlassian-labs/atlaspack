@@ -33,6 +33,7 @@ tracing = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
+swc_ecma_lexer = { workspace = true }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
 atlaspack_test_fixtures = { path = "../atlaspack_test_fixtures" }
 
