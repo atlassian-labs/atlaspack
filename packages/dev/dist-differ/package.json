@@ -21,6 +21,10 @@
   "engines": {
     "node": ">= 16.0.0"
   },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.0",
+    "zod": "^3"
+  },
   "devDependencies": {
     "@atlaspack/babel-register": "2.14.4",
     "rimraf": "^5.0.5"

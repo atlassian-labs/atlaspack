@@ -4,6 +4,11 @@ import * as path from 'path';
 import {compareDirectories} from './directory';
 import {compareFiles, compareFilesByPrefix} from './comparison';
 import {createContext} from './context';
+import {DistDifferMCPServer} from './mcp-server';
+import {
+  runComparison as runComparisonUtil,
+  type ComparisonOptions,
+} from './compare';
 
 import {DEFAULT_OPTIONS, validateSizeThreshold} from './options';
 
@@ -15,6 +20,7 @@ export interface CliOptions {
   summaryMode: boolean;
   verbose: boolean;
   jsonMode: boolean;
+  mcpMode: boolean;
   sizeThreshold: number;
 }
 
@@ -47,6 +53,9 @@ export function parseArgs(args: string[]): {
       options.verbose = true;
     } else if (arg === '--json') {
       options.jsonMode = true;
+    } else if (arg === '--mcp') {
+      options.mcpMode = true;
+      options.jsonMode = true; // MCP mode requires JSON mode
     } else if (arg === '--disambiguation-size-threshold') {
       if (i + 1 >= args.length) {
         return {
@@ -120,6 +129,9 @@ export function printUsage(): void {
     '  --json                                Output results in JSON format for AI analysis',
   );
   console.error(
+    '  --mcp                                 Start an MCP server for AI agent queries (requires comparison paths)',
+  );
+  console.error(
     '  --disambiguation-size-threshold <val> Threshold for matching files by "close enough" sizes',
   );
   console.error(
@@ -169,7 +181,33 @@ function handlePrefixMatching(
   compareFilesByPrefix(prefix1, prefix2, dir1, dir2, context);
 }
 
-export function main(): void {
+/**
+ * Runs a comparison and returns the JSON report (for MCP mode)
+ */
+async function runComparisonForMCP(
+  file1: string,
+  file2: string,
+  options: CliOptions,
+): Promise<import('./json').JsonReport | null> {
+  const comparisonOptions: ComparisonOptions = {
+    ignoreAssetIds: options.ignoreAssetIds,
+    ignoreUnminifiedRefs: options.ignoreUnminifiedRefs,
+    ignoreSourceMapUrl: options.ignoreSourceMapUrl,
+    ignoreSwappedVariables: options.ignoreSwappedVariables,
+    jsonMode: options.jsonMode,
+    sizeThreshold: options.sizeThreshold,
+  };
+
+  const report = await runComparisonUtil(file1, file2, comparisonOptions);
+
+  if (!report) {
+    console.error(`Error: Could not compare ${file1} and ${file2}`);
+  }
+
+  return report;
+}
+
+export async function main(): Promise<void> {
   const args = process.argv.slice(2);
 
   const {options, files, error} = parseArgs(args);
@@ -180,6 +218,58 @@ export function main(): void {
     return;
   }
 
+  // MCP mode: starts server (optionally with initial comparison)
+  if (options.mcpMode) {
+    const mcpServer = new DistDifferMCPServer();
+
+    // If two paths are provided, run an initial comparison
+    if (files.length === 2) {
+      const [file1, file2] = files;
+
+      console.error('Running initial comparison...');
+      const report = await runComparisonForMCP(file1, file2, options);
+
+      if (!report) {
+        console.error(
+          'Warning: Initial comparison failed, but MCP server will start anyway.',
+        );
+        console.error(
+          'You can use the "compare" tool to run comparisons once the server is running.',
+        );
+      } else {
+        console.error('Comparison complete.');
+        console.error(
+          `Summary: ${report.summary.totalHunks} total hunks (${report.summary.meaningfulHunks} meaningful, ${report.summary.harmlessHunks} harmless)`,
+        );
+        if (report.files) {
+          console.error(`Files compared: ${report.files.length}`);
+        }
+        mcpServer.setReport(report);
+      }
+    } else if (files.length > 0) {
+      console.error('Warning: --mcp expects 0 or 2 file/directory paths.');
+      console.error('If you provide paths, you must provide exactly 2.');
+      console.error('Starting MCP server without initial comparison.');
+      console.error(
+        'You can use the "compare" tool to run comparisons once the server is running.',
+      );
+    }
+
+    console.error('');
+    console.error('Starting MCP server...');
+    console.error('The server is now ready to accept connections via stdio.');
+    console.error(
+      'Use the "compare" tool to run dist diff analyses between paths.',
+    );
+    console.error('Press Ctrl+C to stop the server.');
+    console.error('');
+
+    // Start the MCP server (this will run indefinitely)
+    await mcpServer.start();
+    return;
+  }
+
+  // Normal mode: run comparison and exit
   if (files.length !== 2) {
     printUsage();
     process.exitCode = 1;
