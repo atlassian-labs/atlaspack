@@ -183,6 +183,7 @@ impl LMDBJsLite {
   }
 
   #[napi(ts_return_type = "Promise<Buffer | null | undefined>")]
+  #[allow(clippy::useless_conversion)]
   pub fn get(&self, env: Env, key: String) -> napi::Result<napi::JsObject> {
     let database_handle = &self.inner;
     let (deferred, promise) = env.create_deferred()?;
@@ -192,7 +193,14 @@ impl LMDBJsLite {
       .send(DatabaseWriterMessage::Get {
         key,
         resolve: Box::new(|value| match value {
-          Ok(value) => deferred.resolve(move |_| Ok(value.map(Buffer::from))),
+          Ok(value) => deferred.resolve(move |_| {
+            #[cfg(test)]
+            let result = value;
+            #[cfg(not(test))]
+            #[allow(clippy::useless_conversion)]
+            let result = value.map(Buffer::from);
+            Ok(result)
+          }),
           Err(err) => deferred.reject(napi_error(err)),
         }),
       })
@@ -246,6 +254,7 @@ impl LMDBJsLite {
   }
 
   #[napi]
+  #[allow(clippy::useless_conversion)]
   pub fn get_many_sync(&self, keys: Vec<String>) -> napi::Result<Vec<Option<Buffer>>> {
     let database_handle = &self.inner;
     let database = &database_handle.database;
@@ -256,10 +265,17 @@ impl LMDBJsLite {
       .map_err(|err| napi_error(anyhow!(err)))?;
 
     for key in keys {
-      let buffer = database
-        .get(&txn, &key)
-        .map_err(|err| napi_error(anyhow!(err)))?
-        .map(Buffer::from);
+      let buffer = {
+        let result = database
+          .get(&txn, &key)
+          .map_err(|err| napi_error(anyhow!(err)))?;
+        #[cfg(test)]
+        let buffer = result;
+        #[cfg(not(test))]
+        #[allow(clippy::useless_conversion)]
+        let buffer = result.map(Buffer::from);
+        buffer
+      };
       results.push(buffer);
     }
 
@@ -427,6 +443,15 @@ impl LMDBJsLite {
 
   pub fn get_database(&self) -> &Arc<DatabaseHandle> {
     &self.inner
+  }
+}
+
+impl Drop for LMDBJsLite {
+  fn drop(&mut self) {
+    // Ensure any active read transaction is committed before dropping
+    if let Some(txn) = self.read_transaction.take() {
+      let _ = txn.commit();
+    }
   }
 }
 

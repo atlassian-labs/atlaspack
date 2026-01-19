@@ -70,7 +70,8 @@ pub fn atlaspack_napi_create(
 
   // Get Atlaspack Options
   let options = env.from_js_value(napi_options.options)?;
-  let get_workers = JsCallable::new_method_bound("getWorkers", &napi_options.napi_worker_pool)?;
+  let get_workers =
+    JsCallable::new_method_bound("getWorkers", &napi_options.napi_worker_pool)?.into_unref(&env)?;
 
   let (deferred, promise) = env.create_deferred()?;
   thread::spawn({
