@@ -13,6 +13,9 @@
     },
     {
       "path": "../../utils/node-resolver-core/tsconfig.json"
+    },
+    {
+      "path": "../../core/feature-flags/tsconfig.json"
     }
   ]
 }

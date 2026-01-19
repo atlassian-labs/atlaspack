@@ -2,6 +2,7 @@ import {Resolver} from '@atlaspack/plugin';
 import NodeResolver from '@atlaspack/node-resolver-core';
 import {basename, dirname, extname, isAbsolute, join} from 'path';
 import {FileSystem} from '@atlaspack/types-internal';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 interface TesseractResolverConfig {
   /** Modules to replace with empty stubs during resolution. */
@@ -262,6 +263,9 @@ export default new Resolver({
           packageConditions,
         });
 
+    if (getFeatureFlag('skipServerFileCheck')) {
+      return promise;
+    }
     return promise
       .then(async (result) => {
         const resolvedPath = result?.filePath;
