@@ -214,7 +214,7 @@ export interface TokensPluginResult {
 /** Apply the tokens transformation plugin to the given code asynchronously */
 export declare function applyTokensPlugin(rawCode: Buffer, config: TokensConfig): object
 export type LMDB = Lmdb
-export declare class Lmdb {
+export class Lmdb {
   constructor(options: LmdbOptions)
   get(key: string): Promise<Buffer | null | undefined>
   hasSync(key: string): boolean
@@ -247,18 +247,18 @@ export declare class Lmdb {
   commitWriteTransaction(): Promise<void>
   compact(targetPath: string): void
 }
-export declare class Hash {
+export class Hash {
   constructor()
   writeString(s: string): void
   writeBuffer(buf: Buffer): void
   finish(): string
 }
-export declare class AtlaspackTracer {
+export class AtlaspackTracer {
   constructor()
   enter(label: string): SpanId
   exit(id: SpanId): void
 }
-export declare class Resolver {
+export class Resolver {
   constructor(projectRoot: string, options: FileSystem)
   resolve(options: ResolveOptions): ResolveResult
   resolveAsync(): object
@@ -267,7 +267,7 @@ export declare class Resolver {
   getInvalidations(path: string): JsInvalidations
 }
 export type JsSourceMap = SourceMap
-export declare class SourceMap {
+export class SourceMap {
   constructor(projectRoot: string, buffer?: Buffer | undefined | null)
   addSource(source: string): number
   getSource(sourceIndex: number): string
