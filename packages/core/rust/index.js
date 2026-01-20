@@ -310,10 +310,13 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { initTracingSubscriber, LmdbJsLite, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, atlaspackNapiCompleteSession, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, getNativeMemoryStats, resetMemoryTracking, sampleNativeMemory, newNodejsWorker, Lmdb, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, isSafeFromJs, hashCode, applyCompiledCssInJsPlugin, Resolver, SourceMap, performStringReplacements, transform, determineJsxConfiguration, transformAsync, getVcsStateSnapshot, getEventsSince, applyTokensPlugin } = nativeBinding
+const { initTracingSubscriber, LmdbJsLite, sampleNativeMemory, getNativeMemoryStats, resetMemoryTracking, findAncestorFile, findFirstFile, findNodeModule, hashString, hashBuffer, Hash, optimizeImage, AtlaspackTracer, createAssetId, atlaspackNapiCreate, atlaspackNapiBuildAssetGraph, atlaspackNapiRespondToFsEvents, atlaspackNapiCompleteSession, createDependencyId, createEnvironmentId, setAllEnvironments, getAllEnvironments, getEnvironment, addEnvironment, getAvailableThreads, initializeMonitoring, closeMonitoring, newNodejsWorker, Lmdb, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, isSafeFromJs, hashCode, applyCompiledCssInJsPlugin, Resolver, SourceMap, performStringReplacements, transform, determineJsxConfiguration, transformAsync, getVcsStateSnapshot, getEventsSince, applyTokensPlugin } = nativeBinding
 
 module.exports.initTracingSubscriber = initTracingSubscriber
 module.exports.LmdbJsLite = LmdbJsLite
+module.exports.sampleNativeMemory = sampleNativeMemory
+module.exports.getNativeMemoryStats = getNativeMemoryStats
+module.exports.resetMemoryTracking = resetMemoryTracking
 module.exports.findAncestorFile = findAncestorFile
 module.exports.findFirstFile = findFirstFile
 module.exports.findNodeModule = findNodeModule
@@ -336,9 +339,6 @@ module.exports.addEnvironment = addEnvironment
 module.exports.getAvailableThreads = getAvailableThreads
 module.exports.initializeMonitoring = initializeMonitoring
 module.exports.closeMonitoring = closeMonitoring
-module.exports.getNativeMemoryStats = getNativeMemoryStats
-module.exports.resetMemoryTracking = resetMemoryTracking
-module.exports.sampleNativeMemory = sampleNativeMemory
 module.exports.newNodejsWorker = newNodejsWorker
 module.exports.Lmdb = Lmdb
 module.exports.runInlineRequiresOptimizer = runInlineRequiresOptimizer
