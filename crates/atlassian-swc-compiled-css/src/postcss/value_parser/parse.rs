@@ -233,5 +233,5 @@ fn is_ident_start(c: u8) -> bool {
 }
 
 fn is_ident_continue(c: u8) -> bool {
-  is_ident_start(c) || (c >= b'0' && c <= b'9')
+  is_ident_start(c) || (c >= b'0' && c <= b'9') || c == b'.'
 }
