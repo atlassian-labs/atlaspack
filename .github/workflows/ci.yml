@@ -165,14 +165,8 @@ jobs:
       - build_native
     strategy:
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: [22, 24]
-
-          # MacOS ARM64
-          - os: macos-15
-            node: [22, 24]
+        os: ['ubuntu-22.04', 'macos-15']
+        node: [22, 24]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -328,18 +322,9 @@ jobs:
       - build_native
     strategy:
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 22
-            project: '@atlaspack/inspector'
-          - os: ubuntu-22.04
-            node: 22
-            project: '@atlaspack/inspector-frontend'
-
-          # MacOS ARM64
-          # - os: macos-15
-          #   node: 22
+        node: [22, 24]
+        os: ['ubuntu-22.04']
+        project: ['@atlaspack/inspector', '@atlaspack/inspector-frontend']
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -365,14 +350,8 @@ jobs:
       - build_native
     strategy:
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 22
-
-          # MacOS ARM64
-          # - os: macos-15
-          #   node: 22
+        node: [22, 24]
+        os: ['ubuntu-22.04']
 
     runs-on: ${{ matrix.os }}
     steps:
