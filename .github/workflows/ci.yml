@@ -202,7 +202,7 @@ jobs:
         slice_num: [1, 2]
         slice_total: [2]
         os: [ubuntu-22.04, macos-15]
-        node: [22]
+        node: [22, 24]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -237,7 +237,7 @@ jobs:
         slice_num: [1, 2]
         slice_total: [2]
         os: [ubuntu-22.04, macos-15]
-        node: [22]
+        node: [22, 24]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Collect Workflow Telemetry
@@ -303,7 +303,7 @@ jobs:
     timeout-minutes: 35
     strategy:
       matrix:
-        node: [22]
+        node: [22, 24]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
