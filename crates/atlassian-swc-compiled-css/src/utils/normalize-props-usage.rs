@@ -420,7 +420,7 @@ mod tests {
 
   fn parse_expression(code: &str) -> Expr {
     let cm: Lrc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(FileName::Custom("test.tsx".into()).into(), code.into());
+    let fm = cm.new_source_file(FileName::Custom("test.tsx".into()).into(), code.to_string());
     let mut es_config = EsSyntax::default();
     es_config.jsx = true;
     let lexer = Lexer::new(

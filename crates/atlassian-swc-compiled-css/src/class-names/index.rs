@@ -405,7 +405,7 @@ mod tests {
 
   fn parse_jsx_expression(code: &str) -> Expr {
     let cm: Lrc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(FileName::Custom("expr.tsx".into()).into(), code.into());
+    let fm = cm.new_source_file(FileName::Custom("expr.tsx".into()).into(), code.to_string());
     let lexer = Lexer::new(
       Syntax::Es(EsSyntax {
         jsx: true,

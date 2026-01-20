@@ -193,7 +193,10 @@ mod tests {
 
   fn parse_program(code: &str) -> (Program, Lrc<SourceMap>, Lrc<SourceFile>) {
     let cm: Lrc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(Lrc::new(FileName::Custom("test.tsx".into())), code.into());
+    let fm = cm.new_source_file(
+      Lrc::new(FileName::Custom("test.tsx".into())),
+      code.to_string(),
+    );
     let lexer = Lexer::new(
       Syntax::Es(EsSyntax {
         jsx: true,
@@ -212,7 +215,10 @@ mod tests {
 
   fn parse_script(code: &str) -> (Program, Lrc<SourceMap>, Lrc<SourceFile>) {
     let cm: Lrc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(Lrc::new(FileName::Custom("script.tsx".into())), code.into());
+    let fm = cm.new_source_file(
+      Lrc::new(FileName::Custom("script.tsx".into())),
+      code.to_string(),
+    );
     let lexer = Lexer::new(
       Syntax::Es(EsSyntax {
         jsx: true,

@@ -211,7 +211,7 @@ mod tests {
 
   fn parse_module(code: &str) -> Program {
     let cm: Lrc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(FileName::Custom("test.js".into()).into(), code.into());
+    let fm = cm.new_source_file(FileName::Custom("test.js".into()).into(), code.to_string());
     let lexer = Lexer::new(
       Syntax::Es(EsSyntax {
         jsx: true,

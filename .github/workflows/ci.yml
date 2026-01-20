@@ -234,8 +234,8 @@ jobs:
       # others from potentially succeeding
       fail-fast: false
       matrix:
-        slice_num: [1, 2]
-        slice_total: [2]
+        slice_num: [1, 2, 3]
+        slice_total: [3]
         os: [ubuntu-22.04, macos-15]
         node: [22]
     runs-on: ${{ matrix.os }}

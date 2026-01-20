@@ -108,7 +108,10 @@ mod tests {
 
   fn create_file(code: &str) -> (Lrc<SourceMap>, Lrc<SourceFile>) {
     let cm: Lrc<SourceMap> = Default::default();
-    let file = cm.new_source_file(Lrc::new(FileName::Custom("test.jsx".into())), code.into());
+    let file = cm.new_source_file(
+      Lrc::new(FileName::Custom("test.jsx".into())),
+      code.to_string(),
+    );
     (cm, file)
   }
 

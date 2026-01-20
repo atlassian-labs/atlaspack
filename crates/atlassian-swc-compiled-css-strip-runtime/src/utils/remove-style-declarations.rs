@@ -144,7 +144,7 @@ mod tests {
 
   fn parse_module(source: &str, syntax: Syntax) -> Module {
     let cm: Lrc<SourceMap> = Default::default();
-    let fm = cm.new_source_file(FileName::Anon.into(), source.into());
+    let fm = cm.new_source_file(FileName::Anon.into(), source.to_string());
     let lexer = Lexer::new(syntax, Default::default(), StringInput::from(&*fm), None);
     let mut parser = Parser::new_from(lexer);
     parser.parse_module().expect("failed to parse module")
