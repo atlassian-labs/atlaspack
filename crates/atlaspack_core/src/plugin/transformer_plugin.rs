@@ -1,5 +1,5 @@
 use crate::hash::IdentifierHasher;
-use crate::types::{Asset, AssetWithDependencies, Dependency, SpecifierType};
+use crate::types::{Asset, AssetWithDependencies, Dependency, SpecifierType, Symbol};
 use async_trait::async_trait;
 use serde::Serialize;
 use std::any::Any;
@@ -27,6 +27,56 @@ pub struct TransformResult {
   /// if these paths change.
   pub invalidate_on_file_change: Vec<PathBuf>,
   pub cache_bailout: bool,
+  /// Symbol information for demand-driven symbol resolution
+  pub symbol_info: TransformSymbolInfo,
+}
+
+/// Symbol information collected during transformation
+#[derive(Debug, Serialize, PartialEq, Default)]
+pub struct TransformSymbolInfo {
+  /// Symbols that this asset exports
+  pub exports: Vec<Symbol>,
+  /// Symbol requests made by this asset (imports)
+  pub symbol_requests: Vec<SymbolRequest>,
+  /// Re-export information for barrel file handling
+  pub reexports: Vec<ReexportInfo>,
+}
+
+/// A symbol request discovered during transformation
+#[derive(Debug, Serialize, PartialEq, Clone)]
+pub struct SymbolRequest {
+  /// The symbol name being imported
+  pub symbol: String,
+  /// Index of the dependency that should provide this symbol
+  pub dependency_index: usize,
+  /// The local name this symbol will have in the importing asset
+  pub local_name: String,
+  /// How the symbol is imported
+  pub import_kind: ImportKind,
+  /// Source location for error reporting
+  pub source_location: Option<crate::types::SourceLocation>,
+}
+
+/// Different ways a symbol can be imported
+#[derive(Debug, Serialize, PartialEq, Clone)]
+pub enum ImportKind {
+  /// import { foo } from './bar'
+  Named(String),
+  /// import * as foo from './bar'  
+  Namespace,
+  /// import foo from './bar'
+  Default,
+}
+
+/// Re-export information for barrel file detection
+#[derive(Debug, Serialize, PartialEq, Clone)]
+pub struct ReexportInfo {
+  /// The dependency being re-exported from
+  pub dependency_index: usize,
+  /// Specific symbols being re-exported, or None for export *
+  pub symbols: Option<Vec<String>>,
+  /// Whether this is an export * (namespace re-export)
+  pub is_namespace: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
