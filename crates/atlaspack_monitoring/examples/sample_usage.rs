@@ -1,6 +1,6 @@
 //! This is https://github.com/EmbarkStudios/crash-handling/blob/e2891a4c6a8d43374ec63d791c7e6d42ff2e6545/minidumper/examples/diskwrite.rs
 
-use minidumper::Server;
+use minidumper::{Server, SocketName};
 
 use atlaspack_monitoring::{
   CrashReporterOptions, MONITORING_GUARD, MonitoringOptions, TracerMode, initialize_monitoring,
@@ -11,7 +11,8 @@ const SOCKET_NAME: &str = "minidumper-example";
 fn run_server() {
   let pid = std::process::id();
   tracing::info!(%pid, "Starting server");
-  let mut server = Server::with_name(SOCKET_NAME).expect("Failed to create server");
+  let mut server =
+    Server::with_name(SocketName::path(SOCKET_NAME)).expect("Failed to create server");
 
   let shutdown = std::sync::atomic::AtomicBool::new(false);
 
