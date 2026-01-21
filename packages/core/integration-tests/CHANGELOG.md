@@ -1,5 +1,11 @@
 # @atlaspack/integration-tests
 
+## 2.20.2
+
+### Patch Changes
+
+- [#921](https://github.com/atlassian-labs/atlaspack/pull/921) [`f33f9c4`](https://github.com/atlassian-labs/atlaspack/commit/f33f9c48dd24b319df352d197e4a83cbb1b053bc) Thanks [@JakeLane](https://github.com/JakeLane)! - Update Compiled CSS-in-JS SWC transformer to be more accurate
+
 ## 2.20.1
 
 ### Patch Changes
