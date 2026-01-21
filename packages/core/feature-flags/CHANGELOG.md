@@ -1,5 +1,13 @@
 # @atlaspack/feature-flags
 
+## 2.27.7
+
+### Patch Changes
+
+- [#921](https://github.com/atlassian-labs/atlaspack/pull/921) [`f33f9c4`](https://github.com/atlassian-labs/atlaspack/commit/f33f9c48dd24b319df352d197e4a83cbb1b053bc) Thanks [@JakeLane](https://github.com/JakeLane)! - Update Compiled CSS-in-JS SWC transformer to be more accurate
+
+- [#962](https://github.com/atlassian-labs/atlaspack/pull/962) [`e15fb6c`](https://github.com/atlassian-labs/atlaspack/commit/e15fb6c885c6354c6c02283de35ce18abc8c9e18) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - adds flag to remove server file check in tesseract resolver
+
 ## 2.27.6
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @atlaspack/rust
 
+## 3.19.0
+
+### Minor Changes
+
+- [#921](https://github.com/atlassian-labs/atlaspack/pull/921) [`f33f9c4`](https://github.com/atlassian-labs/atlaspack/commit/f33f9c48dd24b319df352d197e4a83cbb1b053bc) Thanks [@JakeLane](https://github.com/JakeLane)! - Update Compiled CSS-in-JS SWC transformer to be more accurate
+
+- [#963](https://github.com/atlassian-labs/atlaspack/pull/963) [`53da216`](https://github.com/atlassian-labs/atlaspack/commit/53da216320e19c9b71b001386eb420d05f111db8) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Fix non-hex numbers being abbreviated in native Compiled
+
+### Patch Changes
+
+- [#968](https://github.com/atlassian-labs/atlaspack/pull/968) [`fc3adc0`](https://github.com/atlassian-labs/atlaspack/commit/fc3adc098f583e40d6d7687412cac6dde7cbb3f3) Thanks [@tomgasson](https://github.com/tomgasson)! - Update atlaspack_monitoring deps
+
 ## 3.18.0
 
 ### Minor Changes

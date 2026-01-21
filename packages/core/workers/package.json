@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/workers",
-  "version": "2.14.48",
+  "version": "2.14.49",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -17,12 +17,12 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/build-cache": "2.13.7",
+    "@atlaspack/build-cache": "2.13.8",
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/logger": "2.14.40",
-    "@atlaspack/profiler": "2.15.9",
-    "@atlaspack/types-internal": "2.22.5",
-    "@atlaspack/utils": "3.3.0",
+    "@atlaspack/logger": "2.14.41",
+    "@atlaspack/profiler": "2.15.10",
+    "@atlaspack/types-internal": "2.22.6",
+    "@atlaspack/utils": "3.3.1",
     "nullthrows": "^1.1.1"
   },
   "browser": {
