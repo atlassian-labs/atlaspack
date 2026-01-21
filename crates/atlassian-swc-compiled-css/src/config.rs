@@ -1,7 +1,7 @@
 /// Partial configuration for CompiledCssInJs transform.
 /// All fields are optional and will use defaults if not specified.
 #[cfg_attr(feature = "napi", napi_derive::napi(object))]
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct CompiledCssInJsConfig {
   ///

@@ -32,3 +32,4 @@ debug-symbols/
 /databases
 
 mocha-cpu-profiles/
+*.trace

@@ -8,35 +8,46 @@ autobins = false
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-# Binary disabled - needs additional dependencies and config module
-# [[bin]]
-# name = "emit_fixtures"
-# path = "bin/emit_fixtures.rs"
-
 [dependencies]
-swc_core                       = { workspace = true, features = ["ecma_plugin_transform", "ecma_codegen", "ecma_transforms_react", "__parser", "__utils"] }
-serde                          = { workspace = true, features = ["derive"]}
-serde_json                     = { workspace = true }
-once_cell                      = { workspace = true }
-rustc-hash                     = "1.1"
-xxhash-rust                    = { version = "0.8", features = ["xxh3"] }
-swc_plugin_macro               = { workspace = true, optional = true }
-napi-derive                    = { workspace = true }
-napi                           = { workspace = true }
-oxc_resolver = "11.12.0"
-indexmap.workspace = true
-thiserror.workspace = true
-walkdir = "2.5.0"
 anyhow = { workspace = true }
+oxc_resolver = { workspace = true }
 parking_lot = { workspace = true }
-lru = "0.12"
-
-[dev-dependencies]
-anyhow = { workspace = true }
-clap = { workspace = true, features = ["derive"] }
-tempfile = "3.10"
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+indexmap = { workspace = true }
+csscolorparser = { workspace = true }
+once_cell = { workspace = true }
+regex = { workspace = true }
+ryu-js = { workspace = true }
+swc_core = { workspace = true, features = [
+  "common",
+  "css_ast",
+  "css_codegen",
+  "css_parser",
+  "css_visit",
+  "ecma_ast",
+  "ecma_codegen",
+  "ecma_parser",
+  "ecma_plugin_transform",
+  "ecma_utils",
+  "ecma_visit"
+] }
+url = { workspace = true }
+percent-encoding = { workspace = true }
+postcss = { package = "atlassian-swc-compiled-css-postcss", path = "../atlassian-swc-compiled-css-postcss", optional = true }
+napi = { workspace = true, optional = true }
+napi-derive = { workspace = true, optional = true }
+oxc_browserslist = { package = "oxc-browserslist", version = "2.1.2" }
+xxhash-rust = { workspace = true, features = ["xxh3"] }
+serde_path_to_error = "0.1.17"
+caniuse-serde = "0.0.6"
 
 [features]
-default = []
-plugin = ["swc_plugin_macro"]
-napi = []
+# Use the vendored PostCSS engine by default for identical pipeline parity.
+default = ["postcss_engine"]
+postcss_engine = ["postcss"]
+napi = ["dep:napi", "dep:napi-derive"]
+
+[dev-dependencies]
+insta = "1.39.0"
+tempfile = "3.10.1"

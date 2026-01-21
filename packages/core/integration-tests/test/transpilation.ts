@@ -703,29 +703,6 @@ describe('transpilation', function () {
                 {
                   message: undefined,
                   start: {
-                    column: 1,
-                    line: 1,
-                  },
-                  end: {
-                    column: 12,
-                    line: 1,
-                  },
-                },
-              ],
-              filePath: source,
-            },
-          ],
-          hints: null,
-          message: 'pragma cannot be set when runtime is automatic',
-          origin: '@atlaspack/transformer-js',
-        },
-        {
-          codeFrames: [
-            {
-              codeHighlights: [
-                {
-                  message: undefined,
-                  start: {
                     column: 3,
                     line: 9,
                   },

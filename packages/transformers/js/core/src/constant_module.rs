@@ -170,6 +170,7 @@ mod tests {
   use super::*;
   extern crate indoc;
 
+  #[allow(clippy::panic)]
   fn is_constant_module(code: &str) -> bool {
     let source_map = Lrc::new(SourceMap::default());
     let source_file = source_map.new_source_file(Lrc::new(FileName::Anon), code.to_string());

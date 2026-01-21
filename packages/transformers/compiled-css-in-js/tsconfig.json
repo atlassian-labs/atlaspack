@@ -22,6 +22,9 @@
     },
     {
       "path": "../../core/utils/tsconfig.json"
+    },
+    {
+      "path": "../js/tsconfig.json"
     }
   ]
 }

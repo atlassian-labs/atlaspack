@@ -19,6 +19,7 @@ harness = false
 atlaspack_core = { path = "../atlaspack_core" }
 atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
+atlassian_swc_compiled_css = { path = "../atlassian-swc-compiled-css" }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }

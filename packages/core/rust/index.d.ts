@@ -41,7 +41,7 @@ export interface AtlaspackNapiOptions {
   threads?: number
   napiWorkerPool: object
 }
-export declare function atlaspackNapiCreate(napiOptions: AtlaspackNapiOptions, lmdb: LMDB): object
+export declare function atlaspackNapiCreate(napiOptions: AtlaspackNapiOptions, lmdb: LMDBJsLite): object
 export declare function atlaspackNapiBuildAssetGraph(atlaspackNapi: AtlaspackNapi): object
 export declare function atlaspackNapiRespondToFsEvents(atlaspackNapi: AtlaspackNapi, options: object): object
 export declare function atlaspackNapiCompleteSession(atlaspackNapi: AtlaspackNapi): object
@@ -96,7 +96,9 @@ export interface InlineRequiresOptimizerResult {
 export declare function runInlineRequiresOptimizer(input: InlineRequiresOptimizerInput): InlineRequiresOptimizerResult
 /** Runs in the rayon thread pool */
 export declare function runInlineRequiresOptimizerAsync(input: InlineRequiresOptimizerInput): object
-export interface CompiledCssInJsConfig {
+export declare function isSafeFromJs(hash: string, configPath: string): boolean
+export declare function hashCode(rawCode: string): string
+export interface CompiledCssInJsConfigPlugin {
   configPath?: string
   importReact?: boolean
   nonce?: string
@@ -121,7 +123,7 @@ export interface CompiledCssInJsPluginInput {
   projectRoot: string
   isSource: boolean
   sourceMaps: boolean
-  config: CompiledCssInJsConfig
+  config: CompiledCssInJsConfigPlugin
 }
 export interface CompiledCssInJsPluginResult {
   code: string
@@ -129,7 +131,6 @@ export interface CompiledCssInJsPluginResult {
   styleRules: Array<string>
   diagnostics: Array<JsDiagnostic>
   bailOut: boolean
-  codeHash: string
 }
 export declare function applyCompiledCssInJsPlugin(rawCode: Buffer, input: CompiledCssInJsPluginInput): object
 export interface JsFileSystemOptions {
@@ -212,8 +213,8 @@ export interface TokensPluginResult {
 }
 /** Apply the tokens transformation plugin to the given code asynchronously */
 export declare function applyTokensPlugin(rawCode: Buffer, config: TokensConfig): object
-export type LMDB = Lmdb
-export class Lmdb {
+export type LMDBJsLite = LmdbJsLite
+export class LmdbJsLite {
   constructor(options: LmdbOptions)
   get(key: string): Promise<Buffer | null | undefined>
   hasSync(key: string): boolean
@@ -230,6 +231,20 @@ export class Lmdb {
   commitWriteTransaction(): Promise<void>
   /** Compact the database to the target path */
   compact(targetPath: string): void
+}
+export class Hash {
+  constructor()
+  writeString(s: string): void
+  writeBuffer(buf: Buffer): void
+  finish(): string
+}
+export class AtlaspackTracer {
+  constructor()
+  enter(label: string): SpanId
+  exit(id: SpanId): void
+}
+export type LMDB = Lmdb
+export class Lmdb {
   constructor(options: LMDBOptions)
   get(key: string): Promise<Buffer | null | undefined>
   hasSync(key: string): boolean
@@ -245,17 +260,6 @@ export class Lmdb {
   startWriteTransaction(): Promise<void>
   commitWriteTransaction(): Promise<void>
   compact(targetPath: string): void
-}
-export class Hash {
-  constructor()
-  writeString(s: string): void
-  writeBuffer(buf: Buffer): void
-  finish(): string
-}
-export class AtlaspackTracer {
-  constructor()
-  enter(label: string): SpanId
-  exit(id: SpanId): void
 }
 export class Resolver {
   constructor(projectRoot: string, options: FileSystem)

@@ -166,13 +166,13 @@ pub fn get_database(options: LMDBOptions) -> anyhow::Result<Arc<DatabaseHandle>>
 }
 
 #[napi]
-pub struct LMDB {
+pub struct LMDBJsLite {
   inner: Arc<DatabaseHandle>,
   read_transaction: Option<heed::RoTxn<'static>>,
 }
 
 #[napi]
-impl LMDB {
+impl LMDBJsLite {
   #[napi(constructor)]
   pub fn new(options: LMDBOptions) -> napi::Result<Self> {
     let database = get_database(options).map_err(napi_error)?;
@@ -430,7 +430,7 @@ impl LMDB {
   }
 }
 
-impl LMDB {
+impl LMDBJsLite {
   /// On the main thread, we either start a new read transaction on each read, or use the currently
   /// active read transaction.
   fn read_txn<'a, 'b>(&'b self) -> napi::Result<writer::Transaction<'a, 'b>> {
@@ -463,7 +463,7 @@ mod tests {
       async_writes: false,
       map_size: None,
     };
-    let lmdb = LMDB::new(options).unwrap();
+    let lmdb = LMDBJsLite::new(options).unwrap();
     drop(lmdb);
   }
 

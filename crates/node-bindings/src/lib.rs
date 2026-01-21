@@ -37,6 +37,7 @@ pub use atlaspack_memory_profiler::{
   get_native_memory_stats, reset_memory_tracking, sample_native_memory,
 };
 pub use atlassian_swc_compiled_css::config::CompiledCssInJsTransformConfig;
+pub use plugin_compiled_css_in_js::is_safe_from_js;
 
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]
