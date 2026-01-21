@@ -13,6 +13,8 @@ import nullthrows from 'nullthrows';
 import {runConfigRequest} from './ConfigRequest';
 import {getDevDepRequests, runDevDepRequest} from './DevDepRequest';
 import createAtlaspackConfigRequest from './AtlaspackConfigRequest';
+import {fromEnvironmentId} from '../EnvironmentManager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type PackageRequestInput = {
   bundleGraph: BundleGraph;
@@ -48,6 +50,16 @@ export function createPackageRequest(
 
 async function run({input, api, farm}: RunInput<BundleInfo>) {
   let {bundleGraphReference, optionsRef, bundle, useMainThread} = input;
+
+  if (
+    getFeatureFlag('nativePackager') &&
+    getFeatureFlag('nativePackagerSSRDev') &&
+    fromEnvironmentId(bundle.env).context === 'tesseract'
+  ) {
+    // eslint-disable-next-line no-console
+    console.log('I WOULD NATIVELY PACKAGE HERE');
+  }
+
   let runPackage = farm.createHandle('runPackage', useMainThread);
 
   let start = Date.now();

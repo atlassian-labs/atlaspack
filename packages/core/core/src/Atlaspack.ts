@@ -592,7 +592,7 @@ export default class Atlaspack {
         });
 
         let nativeInvalid = false;
-        if (this.rustAtlaspack) {
+        if (getFeatureFlag('atlaspackV3') && this.rustAtlaspack) {
           nativeInvalid = await this.rustAtlaspack.respondToFsEvents(events);
         }
 
@@ -688,7 +688,7 @@ export default class Atlaspack {
 
     const start = Date.now();
     const result = await this.#requestTracker.runRequest(
-      this.rustAtlaspack != null && getFeatureFlag('atlaspackV3')
+      getFeatureFlag('atlaspackV3') && this.rustAtlaspack != null
         ? // @ts-expect-error TS2345
           createAssetGraphRequestRust(this.rustAtlaspack)(input)
         : // @ts-expect-error TS2345
