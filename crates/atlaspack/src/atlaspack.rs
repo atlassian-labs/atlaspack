@@ -230,6 +230,10 @@ impl Atlaspack {
     self.runtime.block_on(async move { Ok(()) })
   }
 
+  pub fn package(&self) -> anyhow::Result<()> {
+    self.runtime.block_on(async move { Ok(()) })
+  }
+
   pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {
     self.runtime.block_on(async move {
       Ok(

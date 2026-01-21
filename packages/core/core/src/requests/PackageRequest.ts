@@ -48,17 +48,8 @@ export function createPackageRequest(
   };
 }
 
-async function run({input, api, farm}: RunInput<BundleInfo>) {
+async function run({input, api, farm, rustAtlaspack}: RunInput<BundleInfo>) {
   let {bundleGraphReference, optionsRef, bundle, useMainThread} = input;
-
-  if (
-    getFeatureFlag('nativePackager') &&
-    getFeatureFlag('nativePackagerSSRDev') &&
-    fromEnvironmentId(bundle.env).context === 'tesseract'
-  ) {
-    // eslint-disable-next-line no-console
-    console.log('I WOULD NATIVELY PACKAGE HERE');
-  }
 
   let runPackage = farm.createHandle('runPackage', useMainThread);
 
@@ -69,6 +60,16 @@ async function run({input, api, farm}: RunInput<BundleInfo>) {
       createAtlaspackConfigRequest(),
     ),
   );
+
+  if (
+    getFeatureFlag('nativePackager') &&
+    getFeatureFlag('nativePackagerSSRDev') &&
+    rustAtlaspack &&
+    fromEnvironmentId(bundle.env).context === 'tesseract'
+  ) {
+    // Once this actually does something, the code below will be in an `else` block (i.e. we'll only run one or the other)
+    await rustAtlaspack.package();
+  }
 
   let {devDepRequests, configRequests, bundleInfo, invalidations} =
     (await runPackage({

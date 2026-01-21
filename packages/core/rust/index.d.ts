@@ -178,6 +178,7 @@ export declare function atlaspackNapiBuildAssetGraph(atlaspackNapi: AtlaspackNap
 export declare function atlaspackNapiCompleteSession(atlaspackNapi: AtlaspackNapi): object
 export declare function atlaspackNapiCreate(napiOptions: AtlaspackNapiOptions, lmdb: LMDBJsLite): object
 export declare function atlaspackNapiLoadBundleGraph(atlaspackNapi: AtlaspackNapi, nodes: Array<object>, edges: Array<[number, number]>): object
+export declare function atlaspackNapiPackage(atlaspackNapi: AtlaspackNapi): object
 export declare function atlaspackNapiRespondToFsEvents(atlaspackNapi: AtlaspackNapi, options: object): object
 export declare function closeMonitoring(): void
 export declare function createAssetId(params: unknown): string

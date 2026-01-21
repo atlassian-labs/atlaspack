@@ -4,6 +4,7 @@ import {
   atlaspackNapiRespondToFsEvents,
   atlaspackNapiCompleteSession,
   atlaspackNapiLoadBundleGraph,
+  atlaspackNapiPackage,
   AtlaspackNapi,
   Lmdb,
   AtlaspackNapiOptions,
@@ -111,6 +112,10 @@ export class AtlaspackV3 {
       nodes,
       edges,
     ) as Promise<any>;
+  }
+
+  package(): Promise<any> {
+    return atlaspackNapiPackage(this._atlaspack_napi) as Promise<any>;
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {
