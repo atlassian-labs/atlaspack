@@ -75,6 +75,7 @@ pub mod testing {
         discovered_assets: vec![],
         invalidate_on_file_change: vec![],
         cache_bailout: false,
+        symbol_info: TransformSymbolInfo::default(),
       })
     }
   }

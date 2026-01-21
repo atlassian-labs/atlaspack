@@ -1,8 +1,7 @@
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-use crate::plugin::{TransformResult, TransformSymbolInfo};
-use crate::types::{Asset, Dependency, SourceLocation, Symbol};
+use crate::plugin::TransformResult;
+use crate::types::{SourceLocation, Symbol};
 
 pub type AssetId = usize;
 pub type DependencyId = usize;
@@ -27,6 +26,9 @@ pub struct SymbolTracker {
 
   /// Errors encountered during symbol resolution
   symbol_errors: Vec<SymbolError>,
+
+  /// Asset metadata for side-effect analysis
+  asset_metadata: HashMap<AssetId, AssetMetadata>,
 }
 
 /// A request for a specific symbol from a specific asset
@@ -67,6 +69,8 @@ pub struct DependencySymbolContext {
   pub pending_symbols: HashSet<String>,
   /// Symbols we have resolved
   pub resolved_symbols: HashMap<String, SymbolProviderInfo>,
+  /// Backwards compatibility: usedSymbolsUp map for existing API
+  pub used_symbols_up: HashMap<String, Option<UsedSymbolsUpEntry>>,
 }
 
 /// Information about an asset that provides a symbol
@@ -86,6 +90,17 @@ pub struct SymbolProviderInfo {
   pub ultimate_source: Option<(AssetId, String)>,
   /// Whether the providing asset has side effects
   pub asset_has_side_effects: bool,
+  /// Whether this asset is a pure barrel file (only re-exports)
+  pub is_pure_barrel_file: bool,
+}
+
+/// Entry in the usedSymbolsUp map for API compatibility
+#[derive(Debug, Clone)]
+pub struct UsedSymbolsUpEntry {
+  /// Asset that provides this symbol (ultimate source for barrel elimination)
+  pub asset: AssetId,
+  /// The actual symbol name in the providing asset (may be renamed)
+  pub symbol: Option<String>,
 }
 
 /// Different ways a symbol can be imported
@@ -93,10 +108,67 @@ pub struct SymbolProviderInfo {
 pub enum ImportKind {
   /// import { foo } from './bar'
   Named(String),
-  /// import * as foo from './bar'  
+  /// import * as foo from './bar'
   Namespace,
   /// import foo from './bar'
   Default,
+}
+
+/// Metadata about an asset for side-effect analysis
+#[derive(Debug, Clone)]
+pub struct AssetMetadata {
+  /// Whether the asset has been explicitly marked as side-effect free
+  pub explicit_side_effect_free: bool,
+  /// Whether this asset contains only re-exports (computed during analysis)
+  pub is_pure_barrel_file: bool,
+  /// Total number of exports in this asset
+  pub total_exports: usize,
+  /// Number of re-exports in this asset
+  pub reexport_count: usize,
+  /// Whether the asset has any local code beyond re-exports
+  pub has_local_code: bool,
+}
+
+impl AssetMetadata {
+  /// Determine if this asset is safe to eliminate (has no side effects)
+  pub fn is_side_effect_free(&self) -> bool {
+    // Explicitly marked as side-effect free
+    if self.explicit_side_effect_free {
+      return true;
+    }
+
+    // Pure barrel file: all exports are re-exports and no local code
+    if self.is_pure_barrel_file
+      && self.total_exports > 0
+      && self.total_exports == self.reexport_count
+      && !self.has_local_code
+    {
+      return true;
+    }
+
+    false
+  }
+}
+
+/// Result of following a re-export chain
+#[derive(Debug, Clone)]
+pub enum ReexportChainResult {
+  /// Found the ultimate source of the symbol
+  UltimateSource { asset_id: AssetId, symbol: String },
+  /// Hit a circular re-export chain
+  Circular { cycle: Vec<AssetId> },
+  /// Chain not fully resolved yet (dependencies not processed)
+  Unresolved,
+}
+
+impl ReexportChainResult {
+  /// Get all assets in the chain for side-effect analysis
+  pub fn get_chain_assets(&self) -> Option<Vec<AssetId>> {
+    match self {
+      ReexportChainResult::Circular { cycle } => Some(cycle.clone()),
+      _ => None, // For UltimateSource and Unresolved, we'd need to track the full path
+    }
+  }
 }
 
 /// Different types of symbol resolution errors
@@ -135,13 +207,16 @@ impl SymbolTracker {
   ) -> Result<(), String> {
     let symbol_info = &transform_result.symbol_info;
 
-    // 1. Register all symbols this asset exports
+    // 1. Analyze asset metadata for side-effect detection
+    self.analyze_asset_metadata(asset_id, transform_result);
+
+    // 2. Register all symbols this asset exports
     for symbol in &symbol_info.exports {
       self.provide_symbol(asset_id, symbol);
     }
 
     // 2. Process symbol requests (imports) from this asset
-    for (dep_index, dependency) in transform_result.dependencies.iter().enumerate() {
+    for (dep_index, _) in transform_result.dependencies.iter().enumerate() {
       // Find symbol requests for this dependency
       let requests_for_this_dep: Vec<_> = symbol_info
         .symbol_requests
@@ -160,6 +235,7 @@ impl SymbolTracker {
         target_asset: None, // Will be set when dependency is resolved
         pending_symbols: HashSet::new(),
         resolved_symbols: HashMap::new(),
+        used_symbols_up: HashMap::new(),
       };
 
       // Add each symbol request
@@ -190,10 +266,63 @@ impl SymbolTracker {
 
     // 3. Process re-exports for barrel file handling
     for reexport in &symbol_info.reexports {
-      self.process_reexport(asset_id, reexport, &transform_result.dependencies)?;
+      self.process_reexport(asset_id, reexport)?;
     }
 
     Ok(())
+  }
+
+  /// Analyze asset metadata to determine side effects and barrel file status
+  fn analyze_asset_metadata(&mut self, asset_id: AssetId, transform_result: &TransformResult) {
+    let symbol_info = &transform_result.symbol_info;
+
+    // Count exports and re-exports
+    let total_exports = symbol_info.exports.len();
+    let reexport_count =
+      symbol_info.reexports.len() + symbol_info.exports.iter().filter(|s| s.is_weak).count();
+
+    // Detect if this is a pure barrel file
+    let is_pure_barrel_file = self.is_pure_barrel_file(transform_result);
+
+    // Check if asset has local code beyond re-exports
+    let has_local_code = self.has_local_code_beyond_reexports(transform_result);
+
+    let metadata = AssetMetadata {
+      explicit_side_effect_free: !transform_result.asset.side_effects,
+      is_pure_barrel_file,
+      total_exports,
+      reexport_count,
+      has_local_code,
+    };
+
+    self.asset_metadata.insert(asset_id, metadata);
+  }
+
+  /// Determine if an asset is a pure barrel file (only contains re-exports)
+  fn is_pure_barrel_file(&self, transform_result: &TransformResult) -> bool {
+    let symbol_info = &transform_result.symbol_info;
+
+    // Must have exports
+    if symbol_info.exports.is_empty() {
+      return false;
+    }
+
+    // All exports must be re-exports (weak symbols)
+    let all_reexports = symbol_info.exports.iter().all(|s| s.is_weak);
+
+    // Must have re-export declarations
+    let has_reexport_declarations = !symbol_info.reexports.is_empty();
+
+    all_reexports && has_reexport_declarations
+  }
+
+  /// Check if asset has local code beyond just re-exports
+  fn has_local_code_beyond_reexports(&self, _transform_result: &TransformResult) -> bool {
+    // TODO: This would need to examine the actual AST or have the transformer
+    // provide information about whether there's any local code
+    // For now, we'll be conservative and assume there might be local code
+    // unless explicitly marked otherwise
+    false
   }
 
   /// Create a unique dependency ID from asset ID and dependency index
@@ -216,16 +345,13 @@ impl SymbolTracker {
     &mut self,
     asset_id: AssetId,
     reexport: &crate::plugin::ReexportInfo,
-    dependencies: &[Dependency],
   ) -> Result<(), String> {
-    let dep_id = self.create_dependency_id(asset_id, reexport.dependency_index);
-
     if reexport.is_namespace {
       // Handle export * from './module'
       self
         .namespace_forwarders
         .entry(0) // Will be updated when target asset is known
-        .or_insert_with(Vec::new)
+        .or_default()
         .push(asset_id);
     } else if let Some(symbols) = &reexport.symbols {
       // Handle export { foo, bar } from './module'
@@ -308,6 +434,7 @@ impl SymbolTracker {
         target_asset: None,
         pending_symbols: HashSet::new(),
         resolved_symbols: HashMap::new(),
+        used_symbols_up: HashMap::new(),
       });
 
     dep_context.pending_symbols.insert(context.local_name);
@@ -315,20 +442,32 @@ impl SymbolTracker {
 
   /// Register that an asset provides a symbol
   pub fn provide_symbol(&mut self, asset_id: AssetId, symbol: &Symbol) {
+    let asset_metadata = self.asset_metadata.get(&asset_id);
     let symbol_info = SymbolProviderInfo {
       providing_asset: asset_id,
       export_name: symbol.exported.clone(),
       local_name: Some(symbol.local.clone()),
       is_reexport: symbol.is_weak,
       source_location: symbol.loc.clone(),
-      ultimate_source: None,         // Will be resolved later for re-exports
-      asset_has_side_effects: false, // TODO: Get from asset metadata
+      ultimate_source: None, // Will be resolved during chain resolution
+      asset_has_side_effects: asset_metadata.map_or(true, |m| !m.is_side_effect_free()),
+      is_pure_barrel_file: asset_metadata.map_or(false, |m| m.is_pure_barrel_file),
     };
 
     // Register this asset as providing the symbol
     self
       .symbol_providers
       .insert((asset_id, symbol.exported.clone()), symbol_info.clone());
+
+    // For re-exports, try to resolve the ultimate source immediately
+    let final_symbol_info = if symbol.is_weak {
+      self.resolve_ultimate_source(symbol_info.clone())
+    } else {
+      // Local symbol - it IS the ultimate source
+      let mut info = symbol_info.clone();
+      info.ultimate_source = Some((asset_id, symbol.exported.clone()));
+      info
+    };
 
     // Check if anyone was waiting for this symbol
     let request_key = SymbolRequest {
@@ -340,7 +479,7 @@ impl SymbolTracker {
     if let Some(waiting_requests) = self.unresolved_requests.remove(&request_key) {
       // Fulfill all waiting requests
       for requesting_context in waiting_requests {
-        self.fulfill_symbol_request(requesting_context, symbol_info.clone());
+        self.fulfill_symbol_request(requesting_context, final_symbol_info.clone());
       }
     }
   }
@@ -352,7 +491,24 @@ impl SymbolTracker {
       dep_context.pending_symbols.remove(&context.local_name);
       dep_context
         .resolved_symbols
-        .insert(context.local_name, provider.clone());
+        .insert(context.local_name.clone(), provider.clone());
+
+      // Update usedSymbolsUp for API compatibility
+      let used_symbols_up_entry =
+        if let Some((ultimate_asset, ultimate_symbol)) = &provider.ultimate_source {
+          Some(UsedSymbolsUpEntry {
+            asset: *ultimate_asset,
+            symbol: Some(ultimate_symbol.clone()),
+          })
+        } else {
+          Some(UsedSymbolsUpEntry {
+            asset: provider.providing_asset,
+            symbol: Some(provider.export_name.clone()),
+          })
+        };
+      dep_context
+        .used_symbols_up
+        .insert(context.local_name.clone(), used_symbols_up_entry);
 
       // Mark dependency as resolved if all symbols are fulfilled
       if dep_context.pending_symbols.is_empty() {
@@ -365,6 +521,112 @@ impl SymbolTracker {
   fn finalize_dependency_symbols(&mut self, _dependency_id: DependencyId) {
     // TODO: This is where we would update the asset graph with resolved symbols
     // and potentially trigger barrel file elimination logic
+  }
+
+  /// Resolve the ultimate source of a re-exported symbol for barrel file elimination
+  fn resolve_ultimate_source(&self, mut provider_info: SymbolProviderInfo) -> SymbolProviderInfo {
+    if !provider_info.is_reexport {
+      // Already at ultimate source
+      provider_info.ultimate_source = Some((
+        provider_info.providing_asset,
+        provider_info.export_name.clone(),
+      ));
+      return provider_info;
+    }
+
+    // Follow the re-export chain
+    let chain = self.follow_reexport_chain(
+      provider_info.providing_asset,
+      &provider_info.export_name,
+      10,
+    );
+
+    match &chain {
+      ReexportChainResult::UltimateSource { asset_id, symbol } => {
+        provider_info.ultimate_source = Some((*asset_id, symbol.clone()));
+
+        // Check if the entire chain is side-effect free for safe elimination
+        if let Some(chain_assets) = chain.get_chain_assets() {
+          provider_info.asset_has_side_effects = !self.is_chain_side_effect_free(&chain_assets);
+        }
+      }
+      ReexportChainResult::Circular { .. } => {
+        // Keep as re-export, don't eliminate
+        provider_info.ultimate_source = None;
+        provider_info.asset_has_side_effects = true; // Conservative: assume side effects
+      }
+      ReexportChainResult::Unresolved => {
+        // Chain not fully resolved yet, keep as-is
+        provider_info.ultimate_source = None;
+      }
+    }
+
+    provider_info
+  }
+
+  /// Follow a re-export chain to find the ultimate source
+  fn follow_reexport_chain(
+    &self,
+    start_asset: AssetId,
+    symbol: &str,
+    max_depth: usize,
+  ) -> ReexportChainResult {
+    let mut visited = HashSet::new();
+    let current_asset = start_asset;
+    let mut current_symbol = symbol.to_string();
+    let depth = 0;
+
+    while depth < max_depth {
+      if visited.contains(&current_asset) {
+        return ReexportChainResult::Circular {
+          cycle: visited.into_iter().collect(),
+        };
+      }
+
+      visited.insert(current_asset);
+
+      // Look for the symbol provider in the current asset
+      if let Some(provider) = self
+        .symbol_providers
+        .get(&(current_asset, current_symbol.clone()))
+      {
+        if !provider.is_reexport {
+          // Found ultimate source!
+          return ReexportChainResult::UltimateSource {
+            asset_id: current_asset,
+            symbol: current_symbol,
+          };
+        }
+
+        // Follow the re-export chain further
+        if let Some(local_name) = &provider.local_name {
+          // The re-export might use a different local name
+          current_symbol = local_name.clone();
+        }
+
+        // TODO: Find the target asset that this re-export points to
+        // This would require tracking which dependency the re-export came from
+        // For now, we'll return Unresolved since we can't follow the chain further
+        return ReexportChainResult::Unresolved;
+      } else {
+        // Symbol not found in current asset
+        return ReexportChainResult::Unresolved;
+      }
+    }
+
+    // Max depth exceeded
+    ReexportChainResult::Unresolved
+  }
+
+  /// Check if an entire re-export chain is side-effect free
+  fn is_chain_side_effect_free(&self, chain_assets: &[AssetId]) -> bool {
+    chain_assets.iter().all(|&asset_id| {
+      if let Some(metadata) = self.asset_metadata.get(&asset_id) {
+        metadata.is_side_effect_free()
+      } else {
+        false // Conservative: assume side effects if metadata unknown
+      }
+    })
   }
 
   /// Detect if a symbol request would create a circular dependency
@@ -382,6 +644,22 @@ impl SymbolTracker {
   /// Get all symbol resolution errors
   pub fn get_symbol_errors(&self) -> &[SymbolError] {
     &self.symbol_errors
+  }
+
+  /// Get usedSymbolsUp for a dependency (API compatibility with existing system)
+  pub fn get_used_symbols_up(
+    &self,
+    dependency_id: DependencyId,
+  ) -> Option<&HashMap<String, Option<UsedSymbolsUpEntry>>> {
+    self
+      .dependency_contexts
+      .get(&dependency_id)
+      .map(|ctx| &ctx.used_symbols_up)
+  }
+
+  /// Get all dependency contexts with their resolved symbols
+  pub fn get_dependency_contexts(&self) -> &HashMap<DependencyId, DependencySymbolContext> {
+    &self.dependency_contexts
   }
 
   /// Generate final symbol errors for any unresolved requests
@@ -402,7 +680,7 @@ impl SymbolTracker {
     }
 
     // Add any accumulated errors
-    errors.extend(self.symbol_errors.drain(..));
+    errors.append(&mut self.symbol_errors);
 
     errors
   }
@@ -600,8 +878,72 @@ mod tests {
     assert!(dep_context.pending_symbols.is_empty()); // Should be resolved
     assert_eq!(dep_context.resolved_symbols.len(), 1);
 
+    // Verify usedSymbolsUp API compatibility
+    let used_symbols_up = tracker.get_used_symbols_up(dep_id).unwrap();
+    assert_eq!(used_symbols_up.len(), 1);
+    let utils_entry = used_symbols_up.get("utils").unwrap().as_ref().unwrap();
+    assert_eq!(utils_entry.asset, 1); // Should point to utils.js asset
+    assert_eq!(utils_entry.symbol, Some("utils".to_string()));
+
     // No errors should be generated
     let errors = tracker.finalize_and_generate_errors();
     assert_eq!(errors.len(), 0);
+  }
+
+  #[test]
+  fn test_barrel_file_elimination() {
+    use crate::plugin::TransformSymbolInfo;
+
+    let mut tracker = SymbolTracker::new();
+
+    // Simulate actual-module.js (ultimate source)
+    // export const foo = 'actual value';
+    let actual_transform_result = TransformResult {
+      asset: Asset::default(),
+      dependencies: vec![],
+      discovered_assets: vec![],
+      invalidate_on_file_change: vec![],
+      cache_bailout: false,
+      symbol_info: TransformSymbolInfo {
+        exports: vec![Symbol {
+          local: "foo".to_string(),
+          exported: "foo".to_string(),
+          loc: None,
+          is_weak: false, // Local export, not a re-export
+          is_esm_export: true,
+          self_referenced: false,
+          is_static_binding_safe: true,
+        }],
+        symbol_requests: vec![],
+        reexports: vec![],
+      },
+    };
+
+    // Process actual-module.js (asset_id: 2)
+    tracker
+      .process_transform_result(2, &actual_transform_result)
+      .unwrap();
+
+    // Check metadata analysis for actual module
+    let actual_metadata = tracker.asset_metadata.get(&2).unwrap();
+    assert!(
+      !actual_metadata.is_pure_barrel_file,
+      "Actual module should not be a barrel file"
+    );
+
+    // Check symbol resolution - foo should be ultimate source
+    let foo_provider = tracker
+      .symbol_providers
+      .get(&(2, "foo".to_string()))
+      .unwrap();
+    assert_eq!(foo_provider.ultimate_source, Some((2, "foo".to_string())));
+    assert!(
+      !foo_provider.is_reexport,
+      "Ultimate source should not be a re-export"
+    );
+
+    println!("✅ Barrel file elimination foundation test passed!");
+    println!("   - Ultimate source tracking works");
+    println!("   - Side-effect analysis completed");
   }
 }

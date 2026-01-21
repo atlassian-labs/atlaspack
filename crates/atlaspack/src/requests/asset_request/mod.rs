@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use atlaspack_core::hash::hash_bytes;
 use atlaspack_core::plugin::TransformResult;
+use atlaspack_core::plugin::TransformSymbolInfo;
 use atlaspack_core::types::AssetStats;
 use atlaspack_core::types::AssetWithDependencies;
 use atlaspack_core::types::Code;
@@ -233,6 +234,7 @@ async fn run_pipelines(
 
     // TODO: Remove this as we've already done caching and this doesn't mean anything at this level
     cache_bailout: false,
+    symbol_info: TransformSymbolInfo::default(),
   })
 }
 
