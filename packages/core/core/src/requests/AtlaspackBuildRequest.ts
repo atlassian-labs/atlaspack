@@ -98,8 +98,7 @@ async function run({
       }
     });
     if (hasTesseractTarget) {
-      // eslint-disable-next-line no-console
-      console.log('I WOULD SEND THE BUNDLE GRAPH TO RUST HERE');
+      await rustAtlaspack.loadBundleGraph({nodes: [], edges: []});
     }
   }
 

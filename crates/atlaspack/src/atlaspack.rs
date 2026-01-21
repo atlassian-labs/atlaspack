@@ -226,6 +226,10 @@ impl Atlaspack {
     })
   }
 
+  pub fn load_bundle_graph(&self, _nodes: Vec<()>, _edges: Vec<(u32, u32)>) -> anyhow::Result<()> {
+    self.runtime.block_on(async move { Ok(()) })
+  }
+
   pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {
     self.runtime.block_on(async move {
       Ok(

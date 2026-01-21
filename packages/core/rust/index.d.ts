@@ -10,155 +10,6 @@ export interface AtlaspackNapiOptions {
   threads?: number
   napiWorkerPool: object
 }
-/**
- * Partial configuration for CompiledCssInJs transform.
- * All fields are optional and will use defaults if not specified.
- */
-export interface CompiledCssInJsConfig {
-  /**
-   *
-   * Path to the compiled config file. Specified by the JS transformer
-   *
-   */
-  configPath?: string
-  /**
-   *
-   * Will import the React namespace if it is missing.
-   * When using the `'automatic'` jsx runtime set this to `false`.
-   *
-   * Defaults to `true`
-   *
-   */
-  importReact?: boolean
-  /**
-   *
-   * Security nonce that will be applied to inline style elements if defined.
-   *
-   * Defaults to `None`
-   *
-   */
-  nonce?: string
-  /**
-   *
-   * Custom module origins that Compiled should compile when using APIs from.
-   *
-   * Defaults to `["@compiled/react"]`
-   *
-   */
-  importSources?: Array<string>
-  /**
-   *
-   * Will run additional cssnano plugins to normalize CSS during build.
-   *
-   * Defaults to `true`
-   *
-   */
-  optimizeCss?: boolean
-  /**
-   *
-   * List of file extensions to traverse as code
-   *
-   * Defaults to `None`
-   *
-   */
-  extensions?: Array<string>
-  /**
-   *
-   * Add the component name as class name to DOM in non-production environment if styled is used
-   * Defaults to `false`
-   *
-   */
-  addComponentName?: boolean
-  /**
-   *
-   * Whether Compiled should process usages of xcss in the codebase.
-   * Disable this if xcss is not implemented in your codebase using Compiled's xcss functionality.
-   *
-   * Defaults to `true`
-   *
-   */
-  processXcss?: boolean
-  /**
-   *
-   * Increases the specificity of all declared Compiled styles.
-   * Generally you would only use this for migration purposes when mixing two or more styling
-   * solutions.
-   *
-   * Defaults to `false`
-   */
-  increaseSpecificity?: boolean
-  /**
-   *
-   * Whether to sort at-rules, including media queries.
-   * Defaults to `true`
-   */
-  sortAtRules?: boolean
-  /**
-   *
-   * Whether to sort shorthand properties.
-   * Defaults to `true`
-   */
-  sortShorthand?: boolean
-  /**
-   *
-   * Adds a defined prefix to the generated classes' hashes.
-   * Useful in micro frontend environments to avoid clashing/specificity issues.
-   *
-   * Avoid mixing this with extraction as this may throw an error if combined with extraction
-   * or `extract: true` in Webpack loaders or Parcel tranformers.
-   *
-   * Defaults to `None`
-   *
-   */
-  classHashPrefix?: string
-  /**
-   *
-   * Whether to flatten multiple selectors into separate rules to better deduplicate and sort styles.
-   *
-   * Defaults to `true`.
-   */
-  flattenMultipleSelectors?: boolean
-  /**
-   *
-   * Extract CSS from from the code into a single stylesheet
-   *
-   * Defaults to `false`.
-   */
-  extract?: boolean
-  /**
-   *
-   * Builds in a node environment.
-   *
-   * Defaults to `false`.
-   */
-  ssr?: boolean
-  /**
-   *
-   * Build a map of safe assets for migration purposes.
-   *
-   * Defaults to `false`.
-   *
-   */
-  unsafeReportSafeAssetsForMigration?: boolean
-  /**
-   *
-   * Use known safe assets from hash for migration purposes.
-   *
-   * Requires `unsafe_report_safe_assets_for_migration` to build a map of safe assets.
-   *
-   * Defaults to `false`.
-   *
-   */
-  unsafeUseSafeAssets?: boolean
-  /**
-   *
-   * Regex pattern to skip assets that contain the pattern.
-   *
-   * Defaults to `None`.
-   *
-   */
-  unsafeSkipPattern?: string
-}
 export interface CompiledCssInJsConfigPlugin {
   configPath?: string
   importReact?: boolean
@@ -192,165 +43,6 @@ export interface CompiledCssInJsPluginResult {
   styleRules: Array<string>
   diagnostics: Array<JsDiagnostic>
   bailOut: boolean
-}
-/**
- * Full configuration for CompiledCssInJs transform.
- * All fields are required.
- */
-export interface CompiledCssInJsTransformConfig {
-  /**
-   *
-   * Path to the compiled config file. Specified by the JS transformer
-   *
-   */
-  configPath?: string
-  /**
-   *
-   * Will import the React namespace if it is missing.
-   * When using the `'automatic'` jsx runtime set this to `false`.
-   *
-   * Defaults to `true`
-   *
-   */
-  importReact: boolean
-  /**
-   *
-   * Security nonce that will be applied to inline style elements if defined.
-   *
-   * Defaults to `None`
-   *
-   */
-  nonce?: string
-  /**
-   *
-   * Custom module origins that Compiled should compile when using APIs from.
-   *
-   * Defaults to `None`
-   *
-   */
-  importSources: Array<string>
-  /**
-   *
-   * Will run additional cssnano plugins to normalize CSS during build.
-   *
-   * Defaults to `true`
-   *
-   */
-  optimizeCss: boolean
-  /**
-   *
-   * List of file extensions to traverse as code
-   *
-   * Defaults to `None`
-   *
-   */
-  extensions?: Array<string>
-  /**
-   *
-   * Add the component name as class name to DOM in non-production environment if styled is used
-   * Defaults to `false`
-   *
-   */
-  addComponentName: boolean
-  /**
-   *
-   * Whether Compiled should process usages of xcss in the codebase.
-   * Disable this if xcss is not implemented in your codebase using Compiled's xcss functionality.
-   *
-   * Defaults to `true`
-   *
-   */
-  processXcss: boolean
-  /**
-   *
-   * Increases the specificity of all declared Compiled styles.
-   * Generally you would only use this for migration purposes when mixing two or more styling
-   * solutions.
-   *
-   * Defaults to `false`
-   */
-  increaseSpecificity: boolean
-  /**
-   *
-   * Whether to sort at-rules, including media queries.
-   * Defaults to `true`
-   */
-  sortAtRules: boolean
-  /**
-   *
-   * Whether to sort shorthand properties.
-   * Defaults to `true`
-   */
-  sortShorthand: boolean
-  /**
-   *
-   * Adds a defined prefix to the generated classes' hashes.
-   * Useful in micro frontend environments to avoid clashing/specificity issues.
-   *
-   * Avoid mixing this with extraction as this may throw an error if combined with extraction
-   * or `extract: true` in Webpack loaders or Parcel tranformers.
-   *
-   * Defaults to `None`
-   *
-   */
-  classHashPrefix?: string
-  /**
-   *
-   * Whether to flatten multiple selectors into separate rules to better deduplicate and sort styles.
-   *
-   * Defaults to `true`.
-   */
-  flattenMultipleSelectors: boolean
-  /**
-   *
-   * Extract CSS from from the code into a single stylesheet
-   *
-   * Defaults to `false`.
-   */
-  extract: boolean
-  /**
-   *
-   * Builds in a node environment.
-   *
-   * Defaults to `false`.
-   */
-  ssr: boolean
-  /**
-   *
-   * Build a map of safe assets for migration purposes.
-   *
-   * Defaults to `false`.
-   *
-   */
-  unsafeReportSafeAssetsForMigration: boolean
-  /**
-   *
-   * Use known safe assets from hash for migration purposes.
-   *
-   * Requires `unsafe_report_safe_assets_for_migration` to build a map of safe assets.
-   *
-   * Defaults to `false`.
-   *
-   */
-  unsafeUseSafeAssets: boolean
-  /**
-   *
-   * Regex pattern to skip assets that contain the pattern.
-   *
-   * Defaults to `None`.
-   *
-   */
-  unsafeSkipPattern?: string
-}
-export interface DetailedMemoryStats {
-  min: number
-  max: number
-  mean: number
-  median: number
-  p95: number
-  p99: number
-  standardDeviation: number
-  range: number
 }
 export interface Entry {
   key: string
@@ -413,10 +105,6 @@ export interface JsInvalidations {
   invalidateOnFileCreate: Array<FilePathCreateInvalidation | FileNameCreateInvalidation | GlobCreateInvalidation>
   invalidateOnStartup: boolean
 }
-export interface JsMacroError {
-  kind: number
-  message: string
-}
 /** NAPI-compatible source location for JavaScript */
 export interface JsSourceLocation {
   startLine: number
@@ -442,11 +130,6 @@ export interface LmdbOptions {
    * if this isn't set it'll default to around 10MB.
    */
   mapSize?: number
-}
-export interface NativeMemoryStats {
-  physicalMem: DetailedMemoryStats
-  virtualMem: DetailedMemoryStats
-  sampleCount: number
 }
 export interface Replacement {
   from: string
@@ -494,6 +177,7 @@ export declare function applyTokensPlugin(rawCode: Buffer, config: TokensConfig)
 export declare function atlaspackNapiBuildAssetGraph(atlaspackNapi: AtlaspackNapi): object
 export declare function atlaspackNapiCompleteSession(atlaspackNapi: AtlaspackNapi): object
 export declare function atlaspackNapiCreate(napiOptions: AtlaspackNapiOptions, lmdb: LMDBJsLite): object
+export declare function atlaspackNapiLoadBundleGraph(atlaspackNapi: AtlaspackNapi, nodes: Array<object>, edges: Array<[number, number]>): object
 export declare function atlaspackNapiRespondToFsEvents(atlaspackNapi: AtlaspackNapi, options: object): object
 export declare function closeMonitoring(): void
 export declare function createAssetId(params: unknown): string

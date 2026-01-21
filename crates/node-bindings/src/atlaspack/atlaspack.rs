@@ -207,6 +207,33 @@ pub fn atlaspack_napi_respond_to_fs_events(
   Ok(promise)
 }
 
+#[tracing::instrument(level = "info", skip_all)]
+#[napi]
+pub fn atlaspack_napi_load_bundle_graph(
+  env: Env,
+  atlaspack_napi: AtlaspackNapi,
+  _nodes: Vec<JsObject>,
+  edges: Vec<(u32, u32)>,
+) -> napi::Result<JsObject> {
+  let (deferred, promise) = env.create_deferred()?;
+
+  thread::spawn({
+    let atlaspack = atlaspack_napi.clone();
+    move || {
+      let atlaspack = atlaspack.lock();
+      let result = atlaspack.load_bundle_graph(vec![()], edges);
+      deferred.resolve(move |env| match result {
+        Ok(()) => NapiAtlaspackResult::ok(&env, ()),
+        Err(error) => {
+          let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+          NapiAtlaspackResult::error(&env, js_object)
+        }
+      })
+    }
+  });
+  Ok(promise)
+}
+
 #[tracing::instrument(level = "debug", skip_all)]
 #[napi]
 pub fn atlaspack_napi_complete_session(
