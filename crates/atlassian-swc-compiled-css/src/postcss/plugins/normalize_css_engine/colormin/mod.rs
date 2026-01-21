@@ -451,6 +451,16 @@ fn rgba_to_hsl(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 }
 
 fn minify_color(input: &str, options: &ColorminOptions) -> String {
+  let trimmed = input.trim();
+
+  // Workaround for csscolorparser incorrectly parsing 3/4/6/8 digit hex without # as hex
+  if matches!(trimmed.len(), 3 | 4 | 6 | 8)
+    && trimmed.chars().all(|c| c.is_ascii_hexdigit())
+    && !trimmed.starts_with('#')
+  {
+    return input.to_string();
+  }
+
   // Try parsing with csscolorparser (supports many forms), falling back to our name table.
   let parsed = csscolorparser::Color::from_str(input).or_else(|_e| {
     let lower = input.trim().to_ascii_lowercase();
