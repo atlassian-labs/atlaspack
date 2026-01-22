@@ -16,10 +16,10 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
-use crate::ast::nodes::{AtRule, Comment, Declaration, Document, NodeKind, Root, RootLike, Rule};
 use crate::ast::NodeRef;
+use crate::ast::nodes::{AtRule, Comment, Declaration, Document, NodeKind, Root, RootLike, Rule};
 use crate::css_syntax_error::CssSyntaxError;
-use crate::parse::{parse_with_options, ParseError, ParseOptions};
+use crate::parse::{ParseError, ParseOptions, parse_with_options};
 use crate::result::{ProcessorMetadata, Result as PostcssResult, ResultOptions, Warning};
 use crate::source_map::{MapGenerator, MapOptions, MapSetting, PreviousMapError};
 
@@ -1116,7 +1116,8 @@ impl LazyResult {
     self.plugins = prepared_plugins;
 
     for plugin in &self.plugins {
-      let tracing = std::env::var("COMPILED_CLI_TRACE").is_ok();
+      let tracing =
+        std::env::var("COMPILED_CLI_TRACE").is_ok() || std::env::var("COMPILED_CSS_TRACE").is_ok();
       if tracing {
         eprintln!("[postcss] plugin {}: run", plugin.name());
       }

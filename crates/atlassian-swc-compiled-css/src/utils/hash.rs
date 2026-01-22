@@ -110,4 +110,23 @@ mod tests {
     assert_eq!(hash_with_seed("namespace----cacheKey", 0), "11sab8f");
     assert_eq!(hash_with_seed("namespace----cacheKey", 5), "wqqrxw");
   }
+
+  #[test]
+  fn padding_top_var_hash_values() {
+    // Test hash values for different padding-top var() formats
+    let v1 = "var(--ds-space-300,24px)"; // No space after comma
+    let v2 = "var(--ds-space-300, 24px)"; // Space after comma
+    let v3 = "var(--ds-space-300,1pc)"; // Different unit
+
+    let h1 = hash(v1).chars().take(4).collect::<String>();
+    let h2 = hash(v2).chars().take(4).collect::<String>();
+    let h3 = hash(v3).chars().take(4).collect::<String>();
+
+    // IMPORTANT: Babel hashes the value WITH the space, because postcss-normalize-whitespace
+    // runs AFTER atomicify in Babel's pipeline. So "var(--ds-space-300, 24px)" → "1ejb"
+    assert_eq!(h1, "hpek", "Hash of '{}' should be 'hpek'", v1);
+    assert_eq!(h2, "1ejb", "Hash of '{}' should be '1ejb'", v2);
+    // Document the hash for the 1pc version (no space)
+    assert_eq!(h3, "uh5s", "Hash of '{}' should be 'uh5s'", v3);
+  }
 }

@@ -324,6 +324,42 @@ fn starts_with_relative_combinator(selector: &str) -> bool {
   matches!(trimmed.chars().next(), Some('>') | Some('+') | Some('~'))
 }
 
+fn collapse_adjacent_nesting_selectors(original: &str, optimized: String) -> String {
+  // Preserve adjacent nesting selectors like `&&&&.foo` which SWC will parse
+  // as descendant combinators (`& & & &.foo`) unless we collapse them back.
+  if !original.contains("&&") {
+    return optimized;
+  }
+
+  let mut out = String::with_capacity(optimized.len());
+  let mut chars = optimized.chars().peekable();
+  while let Some(ch) = chars.next() {
+    if ch == '&' {
+      out.push('&');
+      let mut saw_ws = false;
+      while let Some(next) = chars.peek() {
+        if next.is_whitespace() {
+          saw_ws = true;
+          chars.next();
+        } else {
+          break;
+        }
+      }
+      if let Some('&') = chars.peek().copied() {
+        // Drop whitespace between adjacent nesting selectors.
+        continue;
+      }
+      if saw_ws {
+        out.push(' ');
+      }
+      continue;
+    }
+    out.push(ch);
+  }
+
+  out
+}
+
 fn minify_selector_string(selector: &str) -> Option<String> {
   let trace = std::env::var("COMPILED_CSS_TRACE").is_ok();
   fn log_nth(list: &SelectorList, label: &str) {
@@ -416,6 +452,14 @@ fn minify_selector_string(selector: &str) -> Option<String> {
       "relative-an+b",
     );
     let optimized = serialize_relative_selector_list(&list);
+    let collapsed = collapse_adjacent_nesting_selectors(trimmed, optimized.clone());
+    if trace && collapsed != optimized {
+      eprintln!(
+        "[minify-selectors] collapsed nesting relative '{}' -> '{}'",
+        optimized, collapsed
+      );
+    }
+    let optimized = collapsed;
     if std::env::var("COMPILED_CSS_TRACE").is_ok() && selector.contains("nth-of-type") {
       eprintln!(
         "[minify-selectors] relative in='{}' out='{}'",
@@ -443,6 +487,14 @@ fn minify_selector_string(selector: &str) -> Option<String> {
   process_selector_list(&mut list, true);
   log_nth(&list, "an+b");
   let optimized = serialize_selector_list(&list);
+  let collapsed = collapse_adjacent_nesting_selectors(trimmed, optimized.clone());
+  if trace && collapsed != optimized {
+    eprintln!(
+      "[minify-selectors] collapsed nesting '{}' -> '{}'",
+      optimized, collapsed
+    );
+  }
+  let optimized = collapsed;
   if std::env::var("COMPILED_CSS_TRACE").is_ok() && selector.contains("nth-of-type") {
     eprintln!("[minify-selectors] in='{}' out='{}'", selector, optimized);
   }

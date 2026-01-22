@@ -18,7 +18,9 @@ pub(crate) struct BrowserslistCacheEntry {
 static BROWSERSLIST_CACHE: OnceLock<Mutex<HashMap<PathBuf, BrowserslistCacheEntry>>> =
   OnceLock::new();
 
-pub(crate) fn browserslist_cache() -> &'static Mutex<HashMap<PathBuf, BrowserslistCacheEntry>> {
+/// Returns the global cache for browserslist entries.
+/// Public for test usage.
+pub fn browserslist_cache() -> &'static Mutex<HashMap<PathBuf, BrowserslistCacheEntry>> {
   BROWSERSLIST_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
@@ -110,7 +112,9 @@ fn supports_feature(
   match feature.implementation(agent, &version) {
     Some(Some(support)) => Some(matches!(
       support.maturity(),
-      SupportMaturity::SupportedByDefault
+      // Align with caniuse-api's permissive interpretation of support:
+      // treat "a" (almost supported) as supported for build-time normalization.
+      SupportMaturity::SupportedByDefault | SupportMaturity::AlmostSupported
     )),
     // Unknown or missing data: remain permissive.
     _ => None,

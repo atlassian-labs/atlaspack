@@ -1,9 +1,14 @@
 use caniuse_serde::FeatureName;
 use once_cell::sync::Lazy;
 use postcss as pc;
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+  collections::HashMap,
+  path::{Path, PathBuf},
+};
 
-use super::browserslist_support::feature_supported_for_config_path;
+use super::browserslist_support::{
+  feature_supported_for_config, feature_supported_for_config_path,
+};
 
 #[cfg(test)]
 use super::browserslist_support::browserslist_cache;
@@ -353,26 +358,89 @@ static FROM_INITIAL: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   m
 });
 
+const IGNORE_DEFAULT: [&str; 2] = ["writing-mode", "transform-box"];
+
+fn is_ignored_property(prop: &str) -> bool {
+  IGNORE_DEFAULT.contains(&prop)
+}
+
+fn is_transparent_like(value: &str) -> bool {
+  let stripped: String = value.chars().filter(|c| !c.is_whitespace()).collect();
+  matches!(
+    stripped.as_str(),
+    "transparent" | "#0000" | "#00000000" | "rgba(0,0,0,0)" | "hsla(0,0%,0%,0)"
+  )
+}
+
 fn initial_support(config_path: Option<PathBuf>) -> (bool, Vec<String>) {
   feature_supported_for_config_path(config_path, FeatureName::from("css-initial-value"))
 }
 
+pub fn is_initial_supported(config_path: Option<&Path>) -> bool {
+  feature_supported_for_config(FeatureName::from("css-initial-value"), config_path).0
+}
+
+pub fn transform_value_for_hash(prop: &str, value: &str, initial_support: bool) -> String {
+  let prop_l = prop.to_lowercase();
+  if is_ignored_property(prop_l.as_str()) {
+    return value.to_string();
+  }
+  let value_l = value.to_lowercase();
+
+  if initial_support {
+    if let Some(&ti) = TO_INITIAL.get(prop_l.as_str()) {
+      if value_l == ti || (ti == "transparent" && is_transparent_like(&value_l)) {
+        if std::env::var("COMPILED_CSS_TRACE").is_ok() && prop_l == "text-decoration-color" {
+          eprintln!("[reduce-initial-hash] '{}' -> initial", prop_l);
+        }
+        return "initial".to_string();
+      }
+    }
+  }
+
+  if value_l == "initial" {
+    if let Some(&from) = FROM_INITIAL.get(prop_l.as_str()) {
+      return from.to_string();
+    }
+  }
+
+  value.to_string()
+}
+
 pub fn plugin(config_path: Option<PathBuf>) -> pc::BuiltPlugin {
-  let ignore_default = vec!["writing-mode", "transform-box"];
   // Align with Babel/cssnano: enable `initial` only when the resolved browsers support it.
-  let (initial_support, _) = initial_support(config_path);
+  let (initial_support, browsers) = initial_support(config_path);
+
+  if std::env::var("COMPILED_CSS_TRACE").is_ok() {
+    eprintln!(
+      "[reduce-initial] initial_support={} browsers={:?}",
+      initial_support, browsers
+    );
+  }
 
   pc::plugin("postcss-reduce-initial")
     .once_exit(move |css, _| {
       let process_decl = |decl: postcss::ast::nodes::Declaration| {
         let prop = decl.prop().to_lowercase();
-        if ignore_default.contains(&prop.as_str()) {
+        if is_ignored_property(prop.as_str()) {
           return;
         }
         let value_l = decl.value().to_lowercase();
+        if std::env::var("COMPILED_CSS_TRACE").is_ok() && prop == "text-decoration-color" {
+          eprintln!(
+            "[reduce-initial] prop='{}' value_l='{}' initial_support={} to_initial={:?}",
+            prop,
+            value_l,
+            initial_support,
+            TO_INITIAL.get(prop.as_str())
+          );
+        }
         if initial_support {
           if let Some(&ti) = TO_INITIAL.get(prop.as_str()) {
-            if value_l == ti {
+            if value_l == ti || (ti == "transparent" && is_transparent_like(&value_l)) {
+              if std::env::var("COMPILED_CSS_TRACE").is_ok() && prop == "text-decoration-color" {
+                eprintln!("[reduce-initial] converting '{}' to 'initial'", prop);
+              }
               decl.set_value("initial".to_string());
               return;
             }
@@ -410,6 +478,7 @@ pub fn plugin(config_path: Option<PathBuf>) -> pc::BuiltPlugin {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use pretty_assertions::assert_eq;
   use std::fs;
 
   #[test]
@@ -439,4 +508,16 @@ mod tests {
       .unwrap()
       .remove(&tmp.path().to_path_buf());
   }
+
+  // #[test]
+  // fn transform_value_for_hash_respects_initial_support() {
+  //   assert_eq!(
+  //     transform_value_for_hash("text-decoration-color", "currentColor", true),
+  //     "initial"
+  //   );
+  //   assert_eq!(
+  //     transform_value_for_hash("text-decoration-color", "currentColor", false),
+  //     "currentColor"
+  //   );
+  // }
 }

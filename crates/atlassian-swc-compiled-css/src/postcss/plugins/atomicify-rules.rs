@@ -34,6 +34,7 @@ impl Plugin for AtomicifyRules {
       class_name_compression_map: ctx.options.class_name_compression_map.as_ref(),
       class_hash_prefix: ctx.options.class_hash_prefix.as_deref(),
       declaration_placeholder: ctx.options.declaration_placeholder.as_deref(),
+      optimize_css: ctx.options.optimize_css.unwrap_or(true),
     };
 
     let mut transformed: Vec<Rule> = Vec::with_capacity(stylesheet.rules.len());
@@ -50,7 +51,9 @@ impl Plugin for AtomicifyRules {
         }
         Rule::QualifiedRule(rule) => {
           let sels = collect_rule_selectors(&rule);
-          println!("[atomicify.rule.pre] selectors={:?}", sels);
+          if trace_enabled() {
+            eprintln!("[atomicify.rule.pre] selectors={:?}", sels);
+          }
           let replacements = atomicify_qualified_rule(*rule, &options, ctx, None);
           for replacement in replacements {
             transformed.push(Rule::QualifiedRule(Box::new(replacement)));
@@ -76,6 +79,7 @@ struct AtomicifyOptions<'a> {
   class_name_compression_map: Option<&'a std::collections::HashMap<String, String>>,
   class_hash_prefix: Option<&'a str>,
   declaration_placeholder: Option<&'a str>,
+  optimize_css: bool,
 }
 
 fn normalize_selectors(selectors: Vec<String>, options: &AtomicifyOptions<'_>) -> Vec<String> {
@@ -105,57 +109,15 @@ fn atomicify_qualified_rule(
   ctx: &mut TransformContext<'_>,
   at_rule_label: Option<&str>,
 ) -> Vec<QualifiedRule> {
-  let selectors =
-    filter_redundant_selectors(normalize_selectors(collect_rule_selectors(&rule), options))
-      .into_iter()
-      .map(|sel| {
-        let mut cleaned = sel.replace(" &", "&").replace("& ", "&");
-        // COMPAT: collapse descendant gap between repeated class in orphaned pseudo chains
-        // e.g. "._a:focus ._a:before" or "._a:focus-within ._a:before" -> "._a:focus._a:before"
-        if let Some((left, right)) = cleaned.split_once(' ') {
-          if left.starts_with("._") && right.starts_with('.') {
-            let left_parts: Vec<&str> = left.split('.').collect();
-            let right_parts: Vec<&str> = right.split('.').collect();
-            if left_parts.get(1) == right_parts.get(1) {
-              cleaned = format!("{}{}", left, right);
-            }
-          }
-        }
-        // Regex-ish collapse for descendant between identical class hashes followed by pseudos
-        // to mirror Babel combined pseudo selectors.
-        if let Some(idx) = cleaned.find(" ._") {
-          let (l, r) = cleaned.split_at(idx);
-          let right = &r[1..]; // drop leading space
-          if l.starts_with("._") && right.starts_with("._") {
-            let lhash = l.split(':').next().unwrap_or(l);
-            let rhash = right.split(':').next().unwrap_or(right);
-            if lhash == rhash {
-              cleaned = format!("{}{}", l, right);
-            }
-          }
-        }
-        // Final fallback: if cleaned still has ' ._' and both sides share the same hash, strip the space.
-        if let Some(idx) = cleaned.find(" ._") {
-          let (l, r) = cleaned.split_at(idx);
-          let right = &r[1..];
-          if l.starts_with("._") && right.starts_with("._") {
-            let lhash = l.split(':').next().unwrap_or(l);
-            let rhash = right.split(':').next().unwrap_or(right);
-            if lhash == rhash {
-              cleaned = format!("{}{}", l, right);
-            }
-          }
-        }
-        if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-          eprintln!(
-            "[atomicify.rule] selector raw='{}' cleaned='{}'",
-            sel, cleaned
-          );
-        }
-        cleaned
-      })
-      .filter(|sel| !sel.contains("* *"))
-      .collect::<Vec<String>>();
+  let selectors = normalize_selectors(collect_rule_selectors(&rule), options)
+    .into_iter()
+    .map(|sel| {
+      if std::env::var("COMPILED_CSS_TRACE").is_ok() {
+        eprintln!("[atomicify.rule] selector='{}'", sel);
+      }
+      sel
+    })
+    .collect::<Vec<String>>();
   let mut replacements: Vec<QualifiedRule> = Vec::new();
 
   for component in rule.block.value {
@@ -244,25 +206,17 @@ fn build_atomic_selector(
   ctx: &mut TransformContext<'_>,
   at_rule_label: Option<&str>,
 ) -> String {
-  fn collapse_universal(selector: &str) -> String {
-    let mut collapsed = selector.to_string();
-    while collapsed.contains(" * *") {
-      collapsed = collapsed.replace(" * *", " *");
-    }
-    collapsed
-  }
-
   let base_selectors: Vec<Cow<'_, str>> = if selectors.is_empty() {
     vec![Cow::Borrowed("")]
   } else {
     selectors
       .iter()
-      .map(|selector| Cow::Owned(collapse_universal(selector)))
+      .map(|selector| Cow::Borrowed(selector.as_str()))
       .collect()
   };
   if trace_enabled() {
     eprintln!(
-      "[atomicify.selector] raw={:?} collapsed={:?}",
+      "[atomicify.selector] raw={:?} normalized={:?}",
       selectors,
       base_selectors
         .iter()
@@ -312,11 +266,13 @@ fn atomic_class_name(
   let group = group_hash.chars().take(4).collect::<String>();
 
   let mut value_seed = serialize_component_values(&declaration.value).unwrap_or_default();
-  // COMPAT: Babel trims whitespace around multiplication inside calc() before hashing.
-  value_seed = value_seed.replace(" *", "*");
-  value_seed = value_seed.replace("* ", "*");
-  value_seed = value_seed.replace("*-", "* -");
-  value_seed = value_seed.replace("*+", "* +");
+  if options.optimize_css {
+    // COMPAT: Babel trims whitespace around multiplication inside calc() before hashing.
+    value_seed = value_seed.replace(" *", "*");
+    value_seed = value_seed.replace("* ", "*");
+    value_seed = value_seed.replace("*-", "* -");
+    value_seed = value_seed.replace("*+", "* +");
+  }
   if declaration.important.is_some() {
     value_seed.push_str("true");
   }
@@ -336,68 +292,27 @@ fn replace_nesting_selector(selector: &str, parent_class_name: &str) -> String {
   selector.replace('&', &replacement)
 }
 
-fn collapse_adjacent_ampersands(selector: &str) -> String {
-  let mut out = String::with_capacity(selector.len());
-  let mut chars = selector.chars().peekable();
-
-  while let Some(ch) = chars.next() {
-    if ch == '&' {
-      out.push('&');
-
-      loop {
-        let mut consumed_ws = false;
-        while let Some(&next) = chars.peek() {
-          if next.is_whitespace() {
-            consumed_ws = true;
-            chars.next();
-          } else {
-            break;
-          }
-        }
-
-        match chars.peek() {
-          Some('&') => {
-            // Collapse any chain of ampersands separated by whitespace.
-            chars.next();
-            out.push('&');
-            continue;
-          }
-          Some(_) => {
-            if consumed_ws {
-              // Preserve a single space when whitespace wasn't between two ampersands.
-              out.push(' ');
-            }
-          }
-          None => {
-            // Do not emit trailing whitespace at end of selector.
-          }
-        }
-        break;
-      }
-
-      continue;
-    }
-
-    out.push(ch);
-  }
-
-  out
-}
-
 fn normalize_selector(selector: &str) -> String {
-  if selector.is_empty() {
+  let trimmed = selector.trim();
+  let collapsed = collapse_adjacent_nesting_selectors(trimmed);
+  let collapsed = collapsed.trim();
+  if std::env::var("COMPILED_CSS_TRACE").is_ok() {
+    if collapsed != trimmed {
+      eprintln!(
+        "[atomicify] collapse_nesting '{}' -> '{}'",
+        trimmed, collapsed
+      );
+    }
+    eprintln!("[atomicify] normalize_selector input='{}'", collapsed);
+  }
+  if collapsed.is_empty() {
     return "&".to_string();
   }
-
-  let trimmed = selector.trim();
-  if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-    eprintln!("[atomicify] normalize_selector input='{}'", trimmed);
-  }
-  if trimmed.contains('&') {
-    return collapse_adjacent_ampersands(trimmed);
+  if collapsed.contains('&') {
+    return collapsed.to_string();
   }
 
-  format!("& {}", trimmed)
+  format!("& {}", collapsed)
 }
 
 fn declaration_name(name: &DeclarationName) -> String {
@@ -409,17 +324,6 @@ fn declaration_name(name: &DeclarationName) -> String {
 
 #[allow(unreachable_patterns)]
 fn collect_rule_selectors(rule: &QualifiedRule) -> Vec<String> {
-  fn canonicalize(selector: &str) -> String {
-    let mut out: Vec<&str> = Vec::new();
-    for part in selector.split_whitespace() {
-      if part == "*" && out.last().copied() == Some("*") {
-        continue;
-      }
-      out.push(part);
-    }
-    out.join(" ")
-  }
-
   let selectors = match &rule.prelude {
     QualifiedRulePrelude::SelectorList(list) => list
       .children
@@ -452,34 +356,7 @@ fn collect_rule_selectors(rule: &QualifiedRule) -> Vec<String> {
     eprintln!("[atomicify.collect] raw selectors={:?}", selectors);
   }
 
-  let mut dedup: indexmap::IndexSet<String> = indexmap::IndexSet::new();
-  for selector in selectors {
-    let mut canonical = canonicalize(&selector);
-    // Collapse repeated universal descendants (e.g., "* *" -> "*") to mirror
-    // postcss-nested JS behavior.
-    while canonical.contains(" * *") {
-      canonical = canonical.replace(" * *", " *");
-    }
-    dedup.insert(canonical);
-  }
-
-  dedup.into_iter().collect()
-}
-
-fn filter_redundant_selectors(selectors: Vec<String>) -> Vec<String> {
-  use indexmap::IndexSet;
-  eprintln!("[atomicify.filter] raw selectors={:?}", selectors);
-  let mut set: IndexSet<String> = IndexSet::new();
-  for sel in selectors {
-    let collapsed_once = sel.replace("* *", "*");
-    if collapsed_once != sel && set.contains(&collapsed_once) {
-      continue;
-    }
-    set.insert(collapsed_once);
-  }
-  let result: Vec<String> = set.into_iter().collect();
-  eprintln!("[atomicify.filter] filtered selectors={:?}", result);
-  result
+  selectors
 }
 
 fn serialize_complex_selector_with_possible_nesting(
@@ -629,6 +506,7 @@ fn is_identifier_continue(ch: char) -> bool {
 mod tests {
   use super::*;
   use crate::postcss::transform::{TransformContext, TransformCssOptions};
+  use pretty_assertions::assert_eq;
 
   fn parse_stylesheet(css: &str) -> Stylesheet {
     let cm: Arc<SourceMap> = Default::default();
@@ -676,7 +554,82 @@ mod tests {
       other => panic!("expected selector list, got {:?}", other),
     }
   }
+
+  #[test]
+  fn hashes_box_shadow_with_minified_whitespace() {
+    // NOTE: This test is for the SWC-based pipeline (without postcss_engine feature).
+    // The SWC CSS serialization can differ from PostCSS, but we now hash pre-whitespace
+    // values to align with Babel's atomicify behavior where possible.
+    let mut stylesheet =
+      parse_stylesheet(".foo { box-shadow: 0 0 1px 0 #1e1f214f, 0 8px 9pt 0 #1e1f2126; }");
+    let options = TransformCssOptions::default();
+    let mut ctx = TransformContext::new(&options);
+
+    AtomicifyRules.run(&mut stylesheet, &mut ctx);
+
+    let result = ctx.finish();
+    assert_eq!(result.class_names.len(), 1);
+    let group_seed = "undefined& .foobox-shadow";
+    // SWC serialization preserves space after comma: "0 0 1px 0 #1e1f214f, 0 8px 9pt 0 #1e1f2126"
+    // SWC's serialize_component_values may produce slightly different spacing,
+    // but group hash should still match the selector/properties.
+    let expected_group = hash(group_seed).chars().take(4).collect::<String>();
+    assert!(
+      result.class_names[0].starts_with(&format!("_{}", expected_group)),
+      "Expected class name to start with '_{}'",
+      expected_group
+    );
+  }
+
+  #[test]
+  fn normalize_selector_preserves_descendant_spacing() {
+    let input = "._a ._a:focus";
+    let output = normalize_selector(input);
+    assert_eq!(output, "& ._a ._a:focus");
+  }
+
+  #[test]
+  fn normalize_selector_keeps_existing_ampersand() {
+    let input = "  & .foo  ";
+    let output = normalize_selector(input);
+    assert_eq!(output, "& .foo");
+  }
+
+  #[test]
+  fn normalize_selector_collapses_adjacent_ampersands() {
+    let input = "& & &.important";
+    let output = normalize_selector(input);
+    assert_eq!(output, "&&&.important");
+  }
 }
 fn trace_enabled() -> bool {
   std::env::var("COMPILED_CSS_TRACE").is_ok()
+}
+
+fn collapse_adjacent_nesting_selectors(selector: &str) -> String {
+  let mut out = String::with_capacity(selector.len());
+  let mut chars = selector.chars().peekable();
+  while let Some(ch) = chars.next() {
+    if ch == '&' {
+      out.push('&');
+      let mut saw_ws = false;
+      while let Some(next) = chars.peek() {
+        if next.is_whitespace() {
+          saw_ws = true;
+          chars.next();
+        } else {
+          break;
+        }
+      }
+      if let Some('&') = chars.peek().copied() {
+        continue;
+      }
+      if saw_ws {
+        out.push(' ');
+      }
+      continue;
+    }
+    out.push(ch);
+  }
+  out
 }
