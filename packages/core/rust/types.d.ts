@@ -377,6 +377,7 @@ export class SourceMap {
   ): object | null;
   getProjectRoot(): string;
 }
+<<<<<<< HEAD
 
 export declare function atlaspackNapiLoadBundleGraph(
   atlaspackNapi: AtlaspackNapi,
@@ -386,3 +387,25 @@ export declare function atlaspackNapiLoadBundleGraph(
 export declare function atlaspackNapiPackage(
   atlaspackNapi: AtlaspackNapi,
 ): object;
+=======
+export interface CompiledCssInJsConfigPlugin {
+  configPath?: string;
+  importReact?: boolean;
+  nonce?: string;
+  importSources?: Array<string>;
+  optimizeCss?: boolean;
+  extensions?: Array<string>;
+  addComponentName?: boolean;
+  processXcss?: boolean;
+  increaseSpecificity?: boolean;
+  sortAtRules?: boolean;
+  sortShorthand?: boolean;
+  classHashPrefix?: string;
+  flattenMultipleSelectors?: boolean;
+  extract?: boolean;
+  ssr?: boolean;
+  unsafeReportSafeAssetsForMigration?: boolean;
+  unsafeUseSafeAssets?: boolean;
+  unsafeSkipPattern?: string;
+}
+>>>>>>> be75085d8 (Add required compiled type to types.d.ts)
