@@ -7,6 +7,10 @@ const process = require('node:process');
 
 const __root = path.normalize(path.join(__dirname, '..'));
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+const cleanNapi = args.includes('--clean-napi');
+
 // Do a full cargo build
 const CARGO_PROFILE = process.env.CARGO_PROFILE;
 const RUSTUP_TARGET = process.env.RUST_TARGET || process.env.RUSTUP_TARGET;
@@ -22,6 +26,11 @@ const defaultTarget = {
 
 const rustTarget = RUSTUP_TARGET || defaultTarget;
 let rustProfile = CARGO_PROFILE || 'dev';
+
+// If --clean-napi flag is set, clean all crates with #[napi] annotations before building
+if (cleanNapi) {
+  cleanNapiCrates();
+}
 
 // Only build APVM with `cargo build` - this prevents building unnecessary dependencies
 // when re-building for NAPI as the environment is different and it triggers build.rs files to run
@@ -122,7 +131,8 @@ function buildNapiLibrary(pkgDir) {
     //    "CARGO_PROFILE_RELEASE_LTO=true cargo build -p atlaspack-node-bindings --target wasm32-unknown-unknown --release
     //    wasm-opt --strip-debug -O ../../../target/wasm32-unknown-unknown/release/atlaspack_node_bindings.wasm -o atlaspack_node_bindings.wasm"
     console.error('Not supported');
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   const command = [];
@@ -210,7 +220,8 @@ function copyBinaries(pkgDir) {
   if (!arrayOrStringHas(pkgJson.copyBin?.permittedTargets, rustTarget)) return;
   if (!pkgJson.copyBin.name) {
     console.error('No bin specified for', pkgJson.name);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   const sourceBin = path.join(
@@ -227,7 +238,8 @@ function copyBinaries(pkgDir) {
 
   if (!fs.existsSync(sourceBin)) {
     console.error('Binary not found', pkgJson.name, pkgJson.copyBin.name);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   if (fs.existsSync(targetBin)) {
@@ -251,4 +263,116 @@ function arrayOrStringHas(target, contains) {
     return true;
   }
   return false;
+}
+
+/**
+ * Find all local crates that contain #[napi] annotations and clean them.
+ * This forces a rebuild of those crates, which will regenerate the intermediate
+ * type files and fix stale type definition issues.
+ */
+function cleanNapiCrates() {
+  console.log('Cleaning crates with #[napi] annotations...');
+
+  try {
+    // Use ripgrep to find all Rust files with #[napi] annotations
+    // Handle both ripgrep not being available and no matches found
+    let rgOutput = '';
+    try {
+      rgOutput = child_process.execSync(
+        'rg -l "#\\[napi\\]" crates/ packages/ --type rust 2>/dev/null || true',
+        {cwd: __root, encoding: 'utf8'},
+      );
+    } catch (e) {
+      // Check if ripgrep is not available (ENOENT) vs no matches (other errors)
+      if (e.code === 'ENOENT') {
+        console.error(
+          'Error: ripgrep (rg) is required for --clean-napi. Please install it.',
+        );
+        process.exitCode = 1;
+        return;
+      }
+      // ripgrep returns non-zero if no matches found, which is fine
+      rgOutput = '';
+    }
+
+    const filesWithNapi = rgOutput
+      .split('\n')
+      .filter((line) => line.trim().length > 0);
+
+    if (filesWithNapi.length === 0) {
+      console.log('No crates with #[napi] annotations found.');
+      return;
+    }
+
+    // Extract unique crate directories from file paths
+    const crateDirs = new Set();
+    for (const file of filesWithNapi) {
+      // Find the Cargo.toml directory (go up from src/ or lib.rs location)
+      const filePath = path.join(__root, file);
+      let dir = path.dirname(filePath);
+
+      // Walk up to find Cargo.toml
+      while (dir !== __root && dir !== path.dirname(__root)) {
+        const cargoToml = path.join(dir, 'Cargo.toml');
+        if (fs.existsSync(cargoToml)) {
+          crateDirs.add(dir);
+          break;
+        }
+        dir = path.dirname(dir);
+      }
+    }
+
+    // Read Cargo.toml for each crate to get the package name
+    const crateNames = [];
+    for (const crateDir of crateDirs) {
+      const cargoTomlPath = path.join(crateDir, 'Cargo.toml');
+      try {
+        const cargoToml = fs.readFileSync(cargoTomlPath, 'utf8');
+        const nameMatch = cargoToml.match(/^name\s*=\s*["']([^"']+)["']/m);
+        if (nameMatch) {
+          crateNames.push(nameMatch[1]);
+        }
+      } catch (e) {
+        console.warn(`Failed to read ${cargoTomlPath}:`, e.message);
+      }
+    }
+
+    if (crateNames.length === 0) {
+      console.log('No crate names found to clean.');
+      return;
+    }
+
+    console.log(
+      `Found ${crateNames.length} crate(s) with #[napi] annotations:`,
+    );
+    for (const name of crateNames) {
+      console.log(`  - ${name}`);
+    }
+
+    // Clean each crate
+    for (const crateName of crateNames) {
+      console.log(`Cleaning crate: ${crateName}`);
+      const cleanCommand = [
+        'cargo',
+        'clean',
+        '-p',
+        crateName,
+        '--target',
+        rustTarget,
+      ];
+      try {
+        child_process.execSync(cleanCommand.join(' '), {
+          stdio: 'inherit',
+          cwd: __root,
+        });
+      } catch (e) {
+        console.warn(`Failed to clean ${crateName}:`, e.message);
+      }
+    }
+
+    console.log('Finished cleaning napi crates.');
+  } catch (e) {
+    console.error('Error during napi crate cleaning:', e.message);
+    // Don't fail the build if cleaning fails
+  }
 }
