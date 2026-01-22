@@ -24,6 +24,21 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Serve viewer.css
+  if (parsedUrl.pathname === '/viewer.css') {
+    const filePath = path.join(__dirname, 'viewer.css');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500);
+        res.end('Error loading viewer.css');
+        return;
+      }
+      res.writeHead(200, {'Content-Type': 'text/css'});
+      res.end(data);
+    });
+    return;
+  }
+
   // Proxy requests to Tesseract server
   if (parsedUrl.pathname === '/render') {
     // Handle CORS preflight
