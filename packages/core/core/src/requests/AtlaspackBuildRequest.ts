@@ -90,14 +90,17 @@ async function run({
     getFeatureFlag('nativePackagerSSRDev') &&
     rustAtlaspack
   ) {
-    let hasTesseractTarget = false;
+    let hasSupportedTarget = false;
     bundleGraph.traverseBundles((bundle, ctx, actions) => {
-      if (fromEnvironmentId(bundle.env).context === 'tesseract') {
-        hasTesseractTarget = true;
+      if (
+        fromEnvironmentId(bundle.env).context === 'tesseract' &&
+        bundle.type === 'js'
+      ) {
+        hasSupportedTarget = true;
         actions.stop();
       }
     });
-    if (hasTesseractTarget) {
+    if (hasSupportedTarget) {
       await rustAtlaspack.loadBundleGraph({nodes: [], edges: []});
     }
   }

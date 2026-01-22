@@ -65,7 +65,8 @@ async function run({input, api, farm, rustAtlaspack}: RunInput<BundleInfo>) {
     getFeatureFlag('nativePackager') &&
     getFeatureFlag('nativePackagerSSRDev') &&
     rustAtlaspack &&
-    fromEnvironmentId(bundle.env).context === 'tesseract'
+    fromEnvironmentId(bundle.env).context === 'tesseract' &&
+    bundle.type === 'js'
   ) {
     // Once this actually does something, the code below will be in an `else` block (i.e. we'll only run one or the other)
     await rustAtlaspack.package();

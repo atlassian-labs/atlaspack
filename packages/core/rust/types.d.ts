@@ -6,7 +6,7 @@ export type JsTransferable = any;
 export type NapiSideEffectsVariants = any;
 export type LMDBOptions = any;
 export type SpanId = any;
-
+export type BundleGraphNode = any;
 export interface LmdbOptions {
   /** The database directory path */
   path: string;
@@ -377,3 +377,12 @@ export class SourceMap {
   ): object | null;
   getProjectRoot(): string;
 }
+
+export declare function atlaspackNapiLoadBundleGraph(
+  atlaspackNapi: AtlaspackNapi,
+  nodes: Array<BundleGraphNode>,
+  edges: Array<[number, number]>,
+): object;
+export declare function atlaspackNapiPackage(
+  atlaspackNapi: AtlaspackNapi,
+): object;
