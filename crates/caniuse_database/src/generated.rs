@@ -582,7 +582,6 @@ pub enum BrowserFeature {
   ///
   /// * [Article on using the Cookie Store API](https://developers.google.com/web/updates/2018/09/asynchronous-access-to-http-cookies)
   /// * [Specification explainer](https://wicg.github.io/cookie-store/explainer.html)
-  /// * [Firefox position: defer](https://mozilla.github.io/standards-positions/#cookie-store)
   /// * [Firefox support bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1475599)
   /// * [WebKit position](https://github.com/WebKit/standards-positions/issues/36)
   /// * [WebKit support bug](https://bugs.webkit.org/show_bug.cgi?id=258504)
@@ -613,6 +612,15 @@ pub enum BrowserFeature {
   /// * [Sample Code](https://github.com/GoogleChrome/credential-management-sample)
   /// * [Spec discussion](https://github.com/w3c/webappsec-credential-management)
   CredentialManagement,
+  /// View Transitions (cross-document)
+  ///
+  /// Provides a mechanism for easily creating animated transitions between different DOM states, while also updating the DOM contents in a single step. This API is specific to cross-document transitions.
+  ///
+  /// * [Explainer document](https://github.com/WICG/view-transitions/blob/main/cross-doc-explainer.md)
+  /// * [View Transition API on MDN](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API)
+  /// * [Chrome Developers documentation](https://developer.chrome.com/docs/web-platform/view-transitions/)
+  /// * [Firefox support bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1860854)
+  CrossDocumentViewTransitions,
   /// Web Cryptography
   ///
   /// JavaScript API for performing basic cryptographic operations in web applications
@@ -650,6 +658,7 @@ pub enum BrowserFeature {
   ///
   /// * [Blog post on usage](https://robertnyman.com/2010/05/06/css3-animations/)
   /// * [WebPlatform Docs](https://webplatform.github.io/docs/css/properties/animations)
+  /// * [MDN - animation](https://developer.mozilla.org/en-US/docs/Web/CSS/animation)
   CssAnimation,
   /// CSS :any-link selector
   ///
@@ -694,6 +703,7 @@ pub enum BrowserFeature {
   /// * [codepen example](https://codepen.io/bennettfeely/pen/rxoAc)
   /// * [Blog post](https://medium.com/web-design-technique/6b51bf53743a)
   /// * [Demo](https://bennettfeely.com/gradients/)
+  /// * [MDN Web Docs - background-blend-mode](https://developer.mozilla.org/en-US/docs/Web/CSS/background-blend-mode)
   CssBackgroundblendmode,
   /// CSS box-decoration-break
   ///
@@ -1014,7 +1024,7 @@ pub enum BrowserFeature {
   CssFontRenderingControls,
   /// CSS font-stretch
   ///
-  /// If a font has multiple types of variations based on the width of characters, the `font-stretch` property allows the appropriate one to be selected. The property in itself does not cause the browser to stretch to a font.
+  /// If a font has multiple types of variations based on the width of characters, this property allows the appropriate one to be selected. The property in itself does not cause the browser to stretch to a font. Note that `font-stretch` is an alias of the [`font-width`](/wf-font-width) CSS property.
   ///
   /// * [MDN Web Docs - font-stretch](https://developer.mozilla.org/en-US/docs/Web/CSS/font-stretch)
   /// * [CSS Tricks article](https://css-tricks.com/almanac/properties/f/font-stretch/)
@@ -1045,6 +1055,12 @@ pub enum BrowserFeature {
   /// * [Css Grid By Example: Everything you need to learn CSS Grid Layout](https://gridbyexample.com/)
   /// * [Mozilla: Introduction to CSS Grid Layout](https://mozilladevelopers.github.io/playground/css-grid)
   CssGrid,
+  /// CSS Grid Lanes
+  ///
+  /// CSS Grid Lanes extends CSS Grid to create layouts with columns *or* rows (not both), allowing mixed aspect ratio content to pack neatly (also known as  "masonry" or "waterfall" layout).
+  ///
+  /// * [Introducing CSS Grid Lanes](https://webkit.org/blog/17660/introducing-css-grid-lanes/)
+  CssGridLanes,
   /// CSS hanging-punctuation
   ///
   /// Allows some punctuation characters from start (or the end) of text elements to be placed "outside" of the box in order to preserve the reading flow.
@@ -1073,6 +1089,16 @@ pub enum BrowserFeature {
   /// * [Chromium bug for implementing hyphenation](https://bugs.chromium.org/p/chromium/issues/detail?id=652964)
   /// * [WebKit bug to unprefix `-webkit-hyphens`](https://bugs.webkit.org/show_bug.cgi?id=193002)
   CssHyphens,
+  /// CSS if() function
+  ///
+  /// The `if()` CSS function allows different values to be set for a property depending on the result of a conditional test. The test can be based on a style query, a media query, or a feature query.
+  ///
+  /// * [MDN Web Docs - if()](https://developer.mozilla.org/en-US/docs/Web/CSS/if)
+  /// * [Firefox request for position](https://github.com/mozilla/standards-positions/issues/1167)
+  /// * [WebKit request for position](https://github.com/WebKit/standards-positions/issues/453)
+  /// * [Minimal vanilla JavaScript polyfill and PostCSS plugin](https://github.com/mfranzke/css-if-polyfill)
+  /// * [Firefox support bug 1981485](https://bugzilla.mozilla.org/show_bug.cgi?id=1981485)
+  CssIf,
   /// CSS3 image-orientation
   ///
   /// CSS property used generally to fix the intended orientation of an image. This can be done using 90 degree increments or based on the image's EXIF data using the "from-image" value.
@@ -1148,6 +1174,7 @@ pub enum BrowserFeature {
   /// CSS property that will contain text to a given amount of lines when used in combination with `display: -webkit-box`. It will end with ellipsis when `text-overflow: ellipsis` is included.
   ///
   /// * [CSS Tricks article](https://css-tricks.com/line-clampin/)
+  /// * [MDN Web Docs - line-clamp](https://developer.mozilla.org/en-US/docs/Web/CSS/line-clamp)
   CssLineClamp,
   /// CSS Logical Properties
   ///
@@ -1176,6 +1203,7 @@ pub enum BrowserFeature {
   /// * [Firefox implementation bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1224422)
   /// * [Visual test cases](https://lab.iamvdo.me/css-svg-masks)
   /// * [Detailed blog post (via The Internet Archive)](https://web.archive.org/web/20160505054016/http://thenittygritty.co/css-masking)
+  /// * [MDN - mask](https://developer.mozilla.org/en-US/docs/Web/CSS/mask)
   CssMasks,
   /// :is() CSS pseudo-class
   ///
@@ -1296,6 +1324,7 @@ pub enum BrowserFeature {
   /// Method of setting the transparency level of an element
   ///
   /// * [WebPlatform Docs](https://webplatform.github.io/docs/css/properties/opacity)
+  /// * [MDN - opacity](https://developer.mozilla.org/en-US/docs/Web/CSS/opacity)
   CssOpacity,
   /// :optional CSS pseudo-class
   ///
@@ -1401,6 +1430,7 @@ pub enum BrowserFeature {
   /// Method of displaying a reflection of an element
   ///
   /// * [WebKit blog post](https://webkit.org/blog/182/css-reflections/)
+  /// * [MDN - -webkit-box-reflect](https://developer.mozilla.org/en-US/docs/Web/CSS/-webkit-box-reflect)
   CssReflections,
   /// CSS Regions
   ///
@@ -1434,6 +1464,7 @@ pub enum BrowserFeature {
   /// * [CSS Tricks info](https://css-tricks.com/almanac/properties/r/resize/)
   /// * [On textarea resizing](https://davidwalsh.name/textarea-resize)
   /// * [CSS resize none on textarea is bad for UX](https://catalin.red/css-resize-none-is-bad-for-ux/)
+  /// * [MDN - resize](https://developer.mozilla.org/en-US/docs/Web/CSS/resize)
   CssResize,
   /// CSS revert value
   ///
@@ -1556,12 +1587,9 @@ pub enum BrowserFeature {
   /// * [MDN Web Docs - CSS text-align-last](https://developer.mozilla.org/en-US/docs/Web/CSS/text-align-last)
   /// * [WebKit support bug](https://bugs.webkit.org/show_bug.cgi?id=146772)
   CssTextAlignLast,
-  /// CSS text-box-trim & text-box-edge
+  /// CSS Text Box
   ///
-  /// Provides the ability to remove the vertical space appearing above and below text glyphs, allowing more precise positioning and alignment.
-  ///
-  /// Previously specified as the `leading-trim` & `text-edge` properties.
-  ///
+  /// CSS `text-box` (and its longhands `text-box-trim` & `text-box-edge`) provide the ability to trim extra space over/under text glyphs at the start/end of a block to match specific font-provided metrics. This allows for more precise alignment and positioning of text.
   ///
   /// * [Document with examples of text-box-trim uses](https://github.com/jantimon/text-box-trim-examples)
   /// * [CSS Tricks article](https://css-tricks.com/leading-trim-the-future-of-digital-typesetting/)
@@ -1621,6 +1649,7 @@ pub enum BrowserFeature {
   /// * [Article on usage](https://www.webdesignerdepot.com/2010/01/css-transitions-101/)
   /// * [Examples on timing functions](https://www.the-art-of-web.com/css/timing-function/)
   /// * [WebPlatform Docs](https://webplatform.github.io/docs/css/properties/transition)
+  /// * [MDN - CSS transitions](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_transitions)
   CssTransitions,
   /// CSS unset value
   ///
@@ -2739,6 +2768,7 @@ pub enum BrowserFeature {
   /// * [WebKit support bug](https://bugs.webkit.org/show_bug.cgi?id=208235)
   /// * [Request for Mozilla position on JPEG XL](https://github.com/mozilla/standards-positions/issues/522)
   /// * [2024 update on the request for Mozilla position on JPEG XL](https://github.com/mozilla/standards-positions/pull/1064)
+  /// * [JPEG-XL Image Support Returns To Latest Chrome / Chromium Code](https://www.phoronix.com/news/JPEG-XL-Returns-Chrome-Chromium)
   Jpegxl,
   /// JPEG XR image format
   ///
@@ -3368,6 +3398,7 @@ pub enum BrowserFeature {
   /// * [Article & tutorial](https://robertnyman.com/2010/03/22/css-pointer-events-to-allow-clicks-on-underlying-elements/)
   /// * [has.js test](https://raw.github.com/phiggins42/has.js/master/detect/css.js#css-pointerevents)
   /// * [Polyfill](https://github.com/kmewhort/pointer_events_polyfill)
+  /// * [MDN Web Docs - pointer-events](https://developer.mozilla.org/en-US/docs/Web/CSS/pointer-events)
   PointerEvents,
   /// Pointer Lock API
   ///
@@ -3642,12 +3673,13 @@ pub enum BrowserFeature {
   ///
   /// * [Firefox support bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1231923)
   SelectionApi,
-  /// Selectlist - Customizable select element
+  /// Customizable Select element
   ///
-  /// Proposal for a customizable `<select>` element, currently defined as `<selectlist>`, previously `<selectmenu>`.
+  /// Proposal for a customizable `<select>` element. Previously envisioned as a separate element (`<selectlist>` or `<selectmenu>`).
   ///
   /// * [Blog post: Two levels of customising <selectlist>](https://hidde.blog/custom-select-with-selectlist/)
   /// * [Open UI's <selectlist> demos](https://microsoftedge.github.io/Demos/selectlist/index.html)
+  /// * [Chrome's request for feedback on latest proposal](https://developer.chrome.com/blog/rfc-customizable-select)
   Selectlist,
   /// Server Timing
   ///
@@ -3975,7 +4007,7 @@ pub enum BrowserFeature {
   Textencoder,
   /// TLS 1.1
   ///
-  /// Version 1.1 of the Transport Layer Security (TLS) protocol.
+  /// Version 1.1 of the Transport Layer Security (TLS) protocol, made obsolete by [version 1.2](/tls1-2).
   ///
   /// * [Wikipedia article about TLS 1.1](https://en.wikipedia.org/wiki/Transport_Layer_Security#TLS_1.1)
   /// * [Modernizing Transport Security - Google Security Blog](https://security.googleblog.com/2018/10/modernizing-transport-security.html)
@@ -4035,7 +4067,8 @@ pub enum BrowserFeature {
   /// An API that forces developers to be very explicit about their use of powerful DOM-injection APIs. Can greatly improve security against XSS attacks.
   ///
   /// * [Web.dev article on using trusted types](https://web.dev/trusted-types/)
-  /// * [Firefox position: non-harmful](https://mozilla.github.io/standards-positions/#trusted-types)
+  /// * [Firefox position: positive](https://mozilla.github.io/standards-positions/#trusted-types)
+  /// * [Firefox meta bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1508286)
   TrustedTypes,
   /// TTF/OTF - TrueType and OpenType font support
   ///
@@ -4092,9 +4125,6 @@ pub enum BrowserFeature {
   ///
   /// URL fragment that defines a piece of text to be scrolled into view and highlighted.
   ///
-  /// * [Current Firefox position](https://mozilla.github.io/standards-positions/#scroll-to-text-fragment)
-  /// * [Safari's position as of Jan 2020](https://lists.webkit.org/pipermail/webkit-dev/2019-December/030996.html)
-  /// * [Firefox support bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1753933)
   /// * [Article about why the `:~:` syntax](https://blog.jim-nielsen.com/2022/scroll-to-text-fragments/)
   UrlScrollToTextFragment,
   /// URLSearchParams
@@ -4179,12 +4209,12 @@ pub enum BrowserFeature {
   Videotracks,
   /// View Transitions API (single-document)
   ///
-  /// Provides a mechanism for easily creating animated transitions between different DOM states, while also updating the DOM contents in a single step. This API is specific to single-document transitions, support for same-origin cross-document transitions is [being planned](https://github.com/WICG/view-transitions/blob/main/cross-doc-explainer.md).
+  /// Provides a mechanism for easily creating animated transitions between different DOM states, while also updating the DOM contents in a single step. This API is specific to single-document transitions.
   ///
   /// * [Explainer document](https://github.com/WICG/view-transitions/blob/main/explainer.md)
-  /// * [View Transitions API on MDN](https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API)
   /// * [Chrome Developers documentation](https://developer.chrome.com/docs/web-platform/view-transitions/)
   /// * [Firefox support bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1823896)
+  /// * [View Transition API on MDN](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API)
   ViewTransitions,
   /// Small, Large, and Dynamic viewport units
   ///
@@ -4575,6 +4605,7 @@ pub enum BrowserFeature {
   /// * [Support test](https://www.daniel.priv.no/tools/zstd-browser-test/)
   /// * [Firefox support bug](https://bugzilla.mozilla.org/show_bug.cgi?id=zstd)
   /// * [WebKit position on zstd](https://github.com/WebKit/standards-positions/issues/168)
+  /// * [MDN Glossary entry on Zstandard compression](https://developer.mozilla.org/en-US/docs/Glossary/Zstandard_compression)
   Zstd,
   /// Any other browser feature
   Any(String),
@@ -4646,6 +4677,7 @@ impl BrowserFeature {
       BrowserFeature::Cors => "cors",
       BrowserFeature::Createimagebitmap => "createimagebitmap",
       BrowserFeature::CredentialManagement => "credential-management",
+      BrowserFeature::CrossDocumentViewTransitions => "cross-document-view-transitions",
       BrowserFeature::Cryptography => "cryptography",
       BrowserFeature::CssAll => "css-all",
       BrowserFeature::CssAnchorPositioning => "css-anchor-positioning",
@@ -4697,9 +4729,11 @@ impl BrowserFeature {
       BrowserFeature::CssGencontent => "css-gencontent",
       BrowserFeature::CssGradients => "css-gradients",
       BrowserFeature::CssGrid => "css-grid",
+      BrowserFeature::CssGridLanes => "css-grid-lanes",
       BrowserFeature::CssHangingPunctuation => "css-hanging-punctuation",
       BrowserFeature::CssHas => "css-has",
       BrowserFeature::CssHyphens => "css-hyphens",
+      BrowserFeature::CssIf => "css-if",
       BrowserFeature::CssImageOrientation => "css-image-orientation",
       BrowserFeature::CssImageSet => "css-image-set",
       BrowserFeature::CssInOutOfRange => "css-in-out-of-range",
@@ -5202,6 +5236,7 @@ impl BrowserFeature {
       "cors" => BrowserFeature::Cors,
       "createimagebitmap" => BrowserFeature::Createimagebitmap,
       "credential-management" => BrowserFeature::CredentialManagement,
+      "cross-document-view-transitions" => BrowserFeature::CrossDocumentViewTransitions,
       "cryptography" => BrowserFeature::Cryptography,
       "css-all" => BrowserFeature::CssAll,
       "css-anchor-positioning" => BrowserFeature::CssAnchorPositioning,
@@ -5253,9 +5288,11 @@ impl BrowserFeature {
       "css-gencontent" => BrowserFeature::CssGencontent,
       "css-gradients" => BrowserFeature::CssGradients,
       "css-grid" => BrowserFeature::CssGrid,
+      "css-grid-lanes" => BrowserFeature::CssGridLanes,
       "css-hanging-punctuation" => BrowserFeature::CssHangingPunctuation,
       "css-has" => BrowserFeature::CssHas,
       "css-hyphens" => BrowserFeature::CssHyphens,
+      "css-if" => BrowserFeature::CssIf,
       "css-image-orientation" => BrowserFeature::CssImageOrientation,
       "css-image-set" => BrowserFeature::CssImageSet,
       "css-in-out-of-range" => BrowserFeature::CssInOutOfRange,
