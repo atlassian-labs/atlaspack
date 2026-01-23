@@ -1,5 +1,5 @@
-use crate::types::Dependency;
-use crate::types::serialization::{extract_val, extract_val_default};
+use crate::types::serialization::{deserialize_field, extract_val, extract_val_default};
+use crate::types::{Dependency, SourceLocation};
 use serde::de::{Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
@@ -151,12 +151,18 @@ impl<'de> Visitor<'de> for DependencyVisitor {
 
     while let Some(key) = map.next_key::<String>()? {
       match key.as_str() {
-        "id" => id = Some(map.next_value()?),
-        "bundleBehavior" => bundle_behavior = Some(map.next_value()?),
-        "env" => env = Some(map.next_value()?),
-        "loc" => loc = Some(map.next_value()?),
+        "id" => id = Some(deserialize_field!(map, "id", "Dependency")?),
+        "bundleBehavior" => {
+          bundle_behavior = Some(deserialize_field!(map, "bundleBehavior", "Dependency")?)
+        }
+        "env" => env = Some(deserialize_field!(map, "env", "Dependency")?),
+        "loc" => {
+          // Handle null explicitly for Option<SourceLocation>
+          let value: Option<SourceLocation> = deserialize_field!(map, "loc", "Dependency")?;
+          loc = value;
+        }
         "meta" => {
-          let meta_map: serde_json::Value = map.next_value()?;
+          let meta_map: serde_json::Value = deserialize_field!(map, "meta", "Dependency")?;
           meta = Some(
             meta_map
               .as_object()
@@ -164,23 +170,55 @@ impl<'de> Visitor<'de> for DependencyVisitor {
               .clone(),
           );
         }
-        "needsStableName" => needs_stable_name = Some(map.next_value()?),
-        "packageConditions" => package_conditions = Some(map.next_value()?),
-        "pipeline" => pipeline = Some(map.next_value()?),
-        "priority" => priority = Some(map.next_value()?),
-        "range" => range = Some(map.next_value()?),
-        "resolveFrom" => resolve_from = Some(map.next_value()?),
-        "sourceAssetId" => source_asset_id = Some(map.next_value()?),
-        "sourcePath" => source_path = Some(map.next_value()?),
-        "specifier" => specifier = Some(map.next_value()?),
-        "specifierType" => specifier_type = Some(map.next_value()?),
-        "sourceAssetType" => source_asset_type = Some(map.next_value()?),
-        "symbols" => symbols = Some(map.next_value()?),
-        "target" => target = Some(map.next_value()?),
-        "isEntry" => is_entry = Some(map.next_value()?),
-        "isOptional" => is_optional = Some(map.next_value()?),
+        "needsStableName" => {
+          needs_stable_name = Some(deserialize_field!(map, "needsStableName", "Dependency")?)
+        }
+        "packageConditions" => {
+          package_conditions = Some(deserialize_field!(map, "packageConditions", "Dependency")?)
+        }
+        "pipeline" => {
+          // Handle null explicitly for Option<String>
+          pipeline = deserialize_field!(map, "pipeline", "Dependency")?;
+        }
+        "priority" => priority = Some(deserialize_field!(map, "priority", "Dependency")?),
+        "range" => {
+          // Handle null explicitly for Option<String>
+          range = deserialize_field!(map, "range", "Dependency")?;
+        }
+        "resolveFrom" => {
+          // Handle null explicitly for Option<PathBuf>
+          resolve_from = deserialize_field!(map, "resolveFrom", "Dependency")?;
+        }
+        "sourceAssetId" => {
+          // Handle null explicitly for Option<String>
+          source_asset_id = deserialize_field!(map, "sourceAssetId", "Dependency")?;
+        }
+        "sourcePath" => {
+          // Handle null explicitly for Option<PathBuf>
+          source_path = deserialize_field!(map, "sourcePath", "Dependency")?;
+        }
+        "specifier" => specifier = Some(deserialize_field!(map, "specifier", "Dependency")?),
+        "specifierType" => {
+          specifier_type = Some(deserialize_field!(map, "specifierType", "Dependency")?)
+        }
+        "sourceAssetType" => {
+          // Handle null explicitly for Option<FileType>
+          source_asset_type = deserialize_field!(map, "sourceAssetType", "Dependency")?;
+        }
+        "symbols" => {
+          // Handle null explicitly for Option<DependencySymbols>
+          symbols = deserialize_field!(map, "symbols", "Dependency")?;
+        }
+        "target" => {
+          // Handle null explicitly for Option<Target>
+          target = deserialize_field!(map, "target", "Dependency")?;
+        }
+        "isEntry" => is_entry = Some(deserialize_field!(map, "isEntry", "Dependency")?),
+        "isOptional" => is_optional = Some(deserialize_field!(map, "isOptional", "Dependency")?),
         _ => {
-          return Err(serde::de::Error::unknown_field(&key, &[]));
+          tracing::warn!(field = %key, "Unknown field in Dependency, skipping");
+          // Skip unknown field value
+          let _: serde::de::IgnoredAny = map.next_value()?;
         }
       }
     }

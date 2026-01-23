@@ -3,6 +3,30 @@ use std::collections::BTreeSet;
 use crate::types::asset::Condition;
 use crate::types::json::JSONObject;
 
+/// Helper macro to deserialize a field with context on error.
+///
+/// Wraps `map.next_value()` with tracing and error context that includes
+/// the field name being deserialized, making debugging much easier.
+///
+/// # Usage
+/// ```ignore
+/// use crate::types::serialization::deserialize_field;
+///
+/// // In a Visitor's visit_map implementation:
+/// "fieldName" => some_var = Some(deserialize_field!(map, "fieldName", "TypeName")?),
+/// ```
+#[macro_export]
+macro_rules! deserialize_field {
+  ($map:expr, $field:expr, $type_name:expr) => {{
+    $map.next_value().map_err(|e| {
+      tracing::error!(field = $field, error = %e, concat!($type_name, " deserialization failed"));
+      serde::de::Error::custom(format!("field '{}': {}", $field, e))
+    })
+  }};
+}
+
+pub use deserialize_field;
+
 pub fn extract_val_default<T>(map: &mut serde_json::Map<String, serde_json::Value>, key: &str) -> T
 where
   T: serde::de::DeserializeOwned + Default,
