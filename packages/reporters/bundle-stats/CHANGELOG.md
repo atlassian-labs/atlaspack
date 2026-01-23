@@ -1,5 +1,14 @@
 # @atlaspack/reporter-bundle-stats
 
+## 2.14.50
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/core@2.31.3
+  - @atlaspack/utils@3.3.1
+  - @atlaspack/plugin@2.14.49
+
 ## 2.14.49
 
 ### Patch Changes

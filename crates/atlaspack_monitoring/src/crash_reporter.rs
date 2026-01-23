@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use crash_handler::CrashHandler;
-use minidumper::Client;
+use minidumper::{Client, SocketName};
 
 use crate::from_env::{FromEnvError, optional_var, required_var};
 
@@ -97,7 +97,7 @@ fn try_to_connect_to_server(options: &CrashReporterOptions) -> anyhow::Result<Cl
     remaining_attempts -= 1;
     let socket_name = &options.minidumper_server_socket_name;
     tracing::debug!(%socket_name, %remaining_attempts, "Attempting to connect to minidumper server");
-    let result = Client::with_name(socket_name);
+    let result = Client::with_name(SocketName::path(socket_name));
 
     match result {
       Ok(client) => {

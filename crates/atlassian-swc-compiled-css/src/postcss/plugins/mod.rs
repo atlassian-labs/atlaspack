@@ -4,11 +4,6 @@
 pub mod at_rules;
 #[path = "atomicify-rules.rs"]
 pub mod atomicify_rules;
-// colormin is not yet enabled; when parity requires it we can add it back.
-// #[path = "colormin.rs"]
-// pub mod colormin;
-#[path = "colormin_lite.rs"]
-pub mod colormin_lite;
 #[path = "convert-values.rs"]
 pub mod convert_values;
 #[path = "discard-comments.rs"]

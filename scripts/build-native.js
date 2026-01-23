@@ -23,7 +23,9 @@ const defaultTarget = {
 const rustTarget = RUSTUP_TARGET || defaultTarget;
 let rustProfile = CARGO_PROFILE || 'dev';
 
-const cargoCommand = ['cargo', 'build', '--target', rustTarget];
+// Only build APVM with `cargo build` - this prevents building unnecessary dependencies
+// when re-building for NAPI as the environment is different and it triggers build.rs files to run
+const cargoCommand = ['cargo', 'build', '--target', rustTarget, '-p apvm'];
 
 if (rustProfile !== 'dev') {
   cargoCommand.push('--profile', rustProfile);

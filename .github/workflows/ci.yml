@@ -165,14 +165,12 @@ jobs:
       - build_native
     strategy:
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 22
-
-          # MacOS ARM64
+        os: ['ubuntu-22.04', 'macos-15']
+        node: [22, 24]
+        exclude:
+          # Seems to have an error - in theory we have enough coverage with the other tests / variations
           - os: macos-15
-            node: 22
+            node: 24
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -202,7 +200,7 @@ jobs:
         slice_num: [1, 2]
         slice_total: [2]
         os: [ubuntu-22.04, macos-15]
-        node: [22]
+        node: [22, 24]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -237,7 +235,7 @@ jobs:
         slice_num: [1, 2]
         slice_total: [2]
         os: [ubuntu-22.04, macos-15]
-        node: [22]
+        node: [22, 24]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Collect Workflow Telemetry
@@ -303,7 +301,7 @@ jobs:
     timeout-minutes: 35
     strategy:
       matrix:
-        node: [22]
+        node: [22, 24]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -328,18 +326,9 @@ jobs:
       - build_native
     strategy:
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 22
-            project: '@atlaspack/inspector'
-          - os: ubuntu-22.04
-            node: 22
-            project: '@atlaspack/inspector-frontend'
-
-          # MacOS ARM64
-          # - os: macos-15
-          #   node: 22
+        node: [22, 24]
+        os: ['ubuntu-22.04']
+        project: ['@atlaspack/inspector', '@atlaspack/inspector-frontend']
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -365,14 +354,8 @@ jobs:
       - build_native
     strategy:
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 22
-
-          # MacOS ARM64
-          # - os: macos-15
-          #   node: 22
+        node: [22, 24]
+        os: ['ubuntu-22.04']
 
     runs-on: ${{ matrix.os }}
     steps:

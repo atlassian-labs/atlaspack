@@ -81,7 +81,7 @@ pub fn init_sentry(options: SentryOptions) -> anyhow::Result<ClientInitGuard> {
 
   configure_scope(|scope| {
     scope.set_user(Some(sentry::User {
-      username: Some(username()),
+      username: username().ok(),
       ..Default::default()
     }));
 
