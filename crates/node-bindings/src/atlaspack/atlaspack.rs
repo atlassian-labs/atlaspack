@@ -22,7 +22,7 @@ use napi_derive::napi;
 use atlaspack::file_system::FileSystemRef;
 use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack_package_manager::PackageManagerRef;
-use parking_lot::Mutex;
+use parking_lot::RwLock;
 
 use super::file_system_napi::FileSystemNapi;
 use super::napi_result::NapiAtlaspackResult;
@@ -38,7 +38,7 @@ pub struct AtlaspackNapiOptions {
   pub napi_worker_pool: JsObject,
 }
 
-pub type AtlaspackNapi = External<Arc<Mutex<Atlaspack>>>;
+pub type AtlaspackNapi = External<Arc<RwLock<Atlaspack>>>;
 
 #[tracing::instrument(level = "info", skip_all)]
 #[napi]
@@ -103,7 +103,7 @@ pub fn atlaspack_napi_create(
       tracing::trace!(?thread_id, "atlaspack-napi resolve");
       deferred.resolve(move |env| match atlaspack {
         Ok(atlaspack) => {
-          NapiAtlaspackResult::ok(&env, External::new(Arc::new(Mutex::new(atlaspack))))
+          NapiAtlaspackResult::ok(&env, External::new(Arc::new(RwLock::new(atlaspack))))
         }
         Err(error) => {
           let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
@@ -137,7 +137,7 @@ pub fn atlaspack_napi_build_asset_graph(
     let atlaspack_ref = atlaspack_napi.clone();
     move || {
       let result = {
-        let atlaspack = atlaspack_ref.lock();
+        let atlaspack = atlaspack_ref.write();
         atlaspack.build_asset_graph()
       };
 
@@ -153,7 +153,7 @@ pub fn atlaspack_napi_build_asset_graph(
             if let Some(commit_deferred) = commit_deferred_opt.take() {
               thread::spawn(move || {
                 {
-                  let atlaspack = atlaspack_ref.lock();
+                  let atlaspack = atlaspack_ref.write();
                   atlaspack.commit_assets(&asset_graph).unwrap();
                 }
                 commit_deferred.resolve(resolve_commit_ok)
@@ -191,7 +191,7 @@ pub fn atlaspack_napi_respond_to_fs_events(
   thread::spawn({
     let atlaspack = atlaspack_napi.clone();
     move || {
-      let atlaspack = atlaspack.lock();
+      let atlaspack = atlaspack.write();
       let result = atlaspack.respond_to_fs_events(options);
 
       deferred.resolve(move |env| match result {
@@ -207,6 +207,52 @@ pub fn atlaspack_napi_respond_to_fs_events(
   Ok(promise)
 }
 
+#[napi]
+pub fn atlaspack_napi_load_bundle_graph(
+  env: Env,
+  atlaspack_napi: AtlaspackNapi,
+  _nodes: Vec<JsObject>,
+  edges: Vec<(u32, u32)>,
+) -> napi::Result<JsObject> {
+  let (deferred, promise) = env.create_deferred()?;
+
+  thread::spawn({
+    let atlaspack = atlaspack_napi.clone();
+    move || {
+      let atlaspack = atlaspack.write();
+      let result = atlaspack.load_bundle_graph(vec![()], edges);
+      deferred.resolve(move |env| match result {
+        Ok(()) => NapiAtlaspackResult::ok(&env, ()),
+        Err(error) => {
+          let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+          NapiAtlaspackResult::error(&env, js_object)
+        }
+      })
+    }
+  });
+  Ok(promise)
+}
+
+#[napi]
+pub fn atlaspack_napi_package(env: Env, atlaspack_napi: AtlaspackNapi) -> napi::Result<JsObject> {
+  let (deferred, promise) = env.create_deferred()?;
+  thread::spawn({
+    let atlaspack = atlaspack_napi.clone();
+    move || {
+      let atlaspack = atlaspack.read();
+      let result = atlaspack.package();
+      deferred.resolve(move |env| match result {
+        Ok(()) => NapiAtlaspackResult::ok(&env, ()),
+        Err(error) => {
+          let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+          NapiAtlaspackResult::error(&env, js_object)
+        }
+      })
+    }
+  });
+  Ok(promise)
+}
+
 #[tracing::instrument(level = "debug", skip_all)]
 #[napi]
 pub fn atlaspack_napi_complete_session(
@@ -219,7 +265,7 @@ pub fn atlaspack_napi_complete_session(
     let atlaspack_ref = atlaspack_napi.clone();
     move || {
       let stats = {
-        let atlaspack = atlaspack_ref.lock();
+        let atlaspack = atlaspack_ref.write();
         // Use tokio runtime to await the async function
         atlaspack
           .runtime

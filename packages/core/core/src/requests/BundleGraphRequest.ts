@@ -141,9 +141,10 @@ export default function createBundleGraphRequest(
       let {optionsRef, requestedAssetIds, signal} = input.input;
       let measurement = tracer.createMeasurement('building');
 
-      let createAssetGraphRequest = input.rustAtlaspack
-        ? createAssetGraphRequestRust(input.rustAtlaspack)
-        : createAssetGraphRequestJS;
+      let createAssetGraphRequest =
+        getFeatureFlag('atlaspackV3') && input.rustAtlaspack
+          ? createAssetGraphRequestRust(input.rustAtlaspack)
+          : createAssetGraphRequestJS;
 
       let request = createAssetGraphRequest({
         name: 'Main',

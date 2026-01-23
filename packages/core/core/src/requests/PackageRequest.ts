@@ -13,6 +13,8 @@ import nullthrows from 'nullthrows';
 import {runConfigRequest} from './ConfigRequest';
 import {getDevDepRequests, runDevDepRequest} from './DevDepRequest';
 import createAtlaspackConfigRequest from './AtlaspackConfigRequest';
+import {fromEnvironmentId} from '../EnvironmentManager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type PackageRequestInput = {
   bundleGraph: BundleGraph;
@@ -46,8 +48,9 @@ export function createPackageRequest(
   };
 }
 
-async function run({input, api, farm}: RunInput<BundleInfo>) {
+async function run({input, api, farm, rustAtlaspack}: RunInput<BundleInfo>) {
   let {bundleGraphReference, optionsRef, bundle, useMainThread} = input;
+
   let runPackage = farm.createHandle('runPackage', useMainThread);
 
   let start = Date.now();
@@ -57,6 +60,17 @@ async function run({input, api, farm}: RunInput<BundleInfo>) {
       createAtlaspackConfigRequest(),
     ),
   );
+
+  if (
+    getFeatureFlag('nativePackager') &&
+    getFeatureFlag('nativePackagerSSRDev') &&
+    rustAtlaspack &&
+    fromEnvironmentId(bundle.env).context === 'tesseract' &&
+    bundle.type === 'js'
+  ) {
+    // Once this actually does something, the code below will be in an `else` block (i.e. we'll only run one or the other)
+    await rustAtlaspack.package();
+  }
 
   let {devDepRequests, configRequests, bundleInfo, invalidations} =
     (await runPackage({

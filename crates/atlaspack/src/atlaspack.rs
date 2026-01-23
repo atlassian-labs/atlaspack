@@ -226,6 +226,22 @@ impl Atlaspack {
     })
   }
 
+  #[tracing::instrument(level = "info", skip_all)]
+  pub fn load_bundle_graph(&self, _nodes: Vec<()>, _edges: Vec<(u32, u32)>) -> anyhow::Result<()> {
+    self.runtime.block_on(async move {
+      tracing::debug!("TODO: load_bundle_graph()");
+      Ok(())
+    })
+  }
+
+  #[tracing::instrument(level = "info", skip_all)]
+  pub fn package(&self) -> anyhow::Result<()> {
+    self.runtime.block_on(async move {
+      tracing::debug!("TODO: package()");
+      Ok(())
+    })
+  }
+
   pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {
     self.runtime.block_on(async move {
       Ok(
