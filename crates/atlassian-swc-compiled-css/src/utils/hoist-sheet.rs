@@ -5,11 +5,13 @@ use swc_core::ecma::ast::Ident;
 use crate::postcss::plugins::extract_stylesheets::normalize_block_value_spacing;
 use crate::types::Metadata;
 
+/// Formats an identifier name based on its index.
+/// Counts `_`, `_0`, `_1`... to mimic Babel
 fn next_identifier_name(counter: usize) -> String {
-  if counter == 1 {
+  if counter == 0 {
     "_".to_string()
   } else {
-    format!("_{}", counter)
+    format!("_{}", counter - 1)
   }
 }
 
@@ -31,9 +33,9 @@ pub fn hoist_sheet(sheet: &str, meta: &Metadata) -> Ident {
     return existing.clone();
   }
 
-  state.sheet_identifier_counter += 1;
   let name = next_identifier_name(state.sheet_identifier_counter);
   let ident = Ident::new(Atom::from(name), DUMMY_SP, SyntaxContext::empty());
+  state.sheet_identifier_counter += 1;
 
   state.sheets.insert(normalized, ident.clone());
 
