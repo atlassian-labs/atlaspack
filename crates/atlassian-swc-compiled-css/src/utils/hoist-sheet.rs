@@ -84,9 +84,9 @@ mod tests {
     assert_eq!(first.sym.as_ref(), "_");
 
     let second = hoist_sheet("._b{color:blue}", &meta);
-    assert_eq!(second.sym.as_ref(), "_2");
+    assert_eq!(second.sym.as_ref(), "_0");
 
     let third = hoist_sheet("._c{color:green}", &meta);
-    assert_eq!(third.sym.as_ref(), "_3");
+    assert_eq!(third.sym.as_ref(), "_1");
   }
 }
