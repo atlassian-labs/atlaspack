@@ -4,7 +4,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build": "atlaspack build src/index.js --target ssr",
+    "build": "rm -rf dist && atlaspack build src/index.js src/index2.js --target ssr",
     "viewer": "node server.js"
   },
   "dependencies": {
@@ -18,7 +18,8 @@
     "ssr": {
       "context": "tesseract",
       "distDir": "dist",
-      "outputFormat": "commonjs"
+      "outputFormat": "commonjs",
+      "__unstable_singleFileOutput": true
     }
   },
   "type": "commonjs"

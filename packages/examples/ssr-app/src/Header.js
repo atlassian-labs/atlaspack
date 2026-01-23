@@ -1,5 +1,3 @@
-const React = require('react');
-
 function Header({title = 'SSR App'}) {
   return (
     <header className="header">

@@ -1,5 +1,3 @@
-const React = require('react');
-
 function InfoCard({title, children, icon}) {
   return (
     <div className="info-card">

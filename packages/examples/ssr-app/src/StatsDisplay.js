@@ -1,5 +1,3 @@
-const React = require('react');
-
 function StatsDisplay({timestamp}) {
   const now = timestamp ? new Date(timestamp) : new Date();
 

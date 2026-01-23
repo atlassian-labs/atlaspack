@@ -1,5 +1,3 @@
-const React = require('react');
-
 function DateDisplay({timestamp}) {
   const date = timestamp ? new Date(timestamp) : new Date();
   const formattedDate = date.toLocaleDateString('en-US', {
