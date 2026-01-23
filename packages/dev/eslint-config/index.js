@@ -68,6 +68,19 @@ module.exports = {
         // Use internal rule
         'monorepo/no-relative-import': 'off',
         '@atlaspack/internal/no-relative-import': 'error',
+        // Ban imports from @atlaspack/rust/index - use @atlaspack/rust instead
+        'no-restricted-imports': [
+          'error',
+          {
+            paths: [
+              {
+                name: '@atlaspack/rust/index',
+                message:
+                  'Import from @atlaspack/rust instead. Add missing types to types.d.ts if needed.',
+              },
+            ],
+          },
+        ],
         // Temporary
         'prefer-const': 'off',
         'no-var': 'off',
@@ -112,6 +125,19 @@ module.exports = {
     // Use internal rule
     'monorepo/no-relative-import': 'off',
     '@atlaspack/internal/no-relative-import': 'error',
+    // Ban imports from @atlaspack/rust/index - use @atlaspack/rust instead
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          {
+            name: '@atlaspack/rust/index',
+            message:
+              'Import from @atlaspack/rust instead. Add missing types to types.d.ts if needed.',
+          },
+        ],
+      },
+    ],
   },
   settings: {
     flowtype: {
