@@ -13,7 +13,9 @@ use crate::request_tracker::{
   Request, RequestResultReceiver, RequestResultSender, ResultAndInvalidations, RunRequestContext,
   RunRequestError,
 };
-use atlaspack_core::asset_graph::{AssetGraph, DependencyState, propagate_requested_symbols};
+use atlaspack_core::asset_graph::{
+  AssetGraph, DependencyState, SymbolTracker, propagate_requested_symbols,
+};
 use atlaspack_core::types::{AssetWithDependencies, Dependency};
 
 use super::RequestResult;
@@ -36,9 +38,18 @@ impl Hash for AssetGraphRequest {
   fn hash<H: Hasher>(&self, _state: &mut H) {}
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct AssetGraphRequestOutput {
   pub graph: Arc<AssetGraph>,
+  /// Symbol resolution data for demand-driven symbol propagation
+  pub symbol_tracker: Arc<SymbolTracker>,
+}
+
+impl PartialEq for AssetGraphRequestOutput {
+  fn eq(&self, other: &Self) -> bool {
+    // Only compare the graph, not the symbol tracker (which is derived from the graph anyway)
+    self.graph == other.graph
+  }
 }
 
 #[async_trait]
@@ -136,6 +147,7 @@ impl AssetGraphRequest {
             asset,
             discovered_assets,
             dependencies,
+            transform_result: _,
           } = asset_request_result;
 
           let AssetRequestOutput {
@@ -185,6 +197,7 @@ impl AssetGraphRequest {
     Ok(ReusedAssetGraphResult::Reused(ResultAndInvalidations {
       result: RequestResult::AssetGraph(AssetGraphRequestOutput {
         graph: Arc::new(asset_graph),
+        symbol_tracker: Arc::new(SymbolTracker::new()), // Empty tracker for incremental builds
       }),
       invalidations: vec![],
     }))
@@ -205,6 +218,8 @@ pub(crate) struct AssetGraphBuilder {
   waiting_asset_requests: HashMap<u64, HashSet<NodeId>>,
   entry_dependencies: Vec<(String, NodeId)>,
   changed_requests: HashSet<u64>,
+  /// NEW: Demand-driven symbol resolution tracker
+  symbol_tracker: SymbolTracker,
 }
 
 impl AssetGraphBuilder {
@@ -227,6 +242,7 @@ impl AssetGraphBuilder {
       waiting_asset_requests: HashMap::new(),
       entry_dependencies: Vec::new(),
       changed_requests,
+      symbol_tracker: SymbolTracker::new(),
     }
   }
 
@@ -306,6 +322,7 @@ impl AssetGraphBuilder {
     Ok(ResultAndInvalidations {
       result: RequestResult::AssetGraph(AssetGraphRequestOutput {
         graph: Arc::new(self.graph),
+        symbol_tracker: Arc::new(self.symbol_tracker),
       }),
       invalidations: vec![],
     })
@@ -315,7 +332,7 @@ impl AssetGraphBuilder {
     let existing_edges = self.graph.get_outgoing_neighbors(&existing_dep_id);
     for edge in existing_edges {
       self.graph.add_edge(&new_dep_id, &edge);
-      self.propagate_requested_symbols(edge, new_dep_id);
+      // REMOVED: propagate_requested_symbols - now handled by demand-driven SymbolTracker in handle_asset_result
     }
   }
 
@@ -421,6 +438,7 @@ impl AssetGraphBuilder {
       asset,
       discovered_assets,
       dependencies,
+      transform_result,
     } = result;
 
     // If the asset request was already processed as part of
@@ -442,6 +460,18 @@ impl AssetGraphBuilder {
 
     self.asset_request_to_asset_id.insert(request_id, asset_id);
 
+    // NEW: Process symbols with our demand-driven tracker instead of post-processing
+    if let Err(e) = self
+      .symbol_tracker
+      .process_transform_result(asset_id, transform_result)
+    {
+      tracing::error!(
+        "Symbol tracking error for asset {}: {}",
+        asset.file_path.display(),
+        e
+      );
+    }
+
     let mut added_discovered_assets: HashMap<String, NodeId> = HashMap::new();
 
     // Attach the "direct" discovered assets to the graph
@@ -462,7 +492,7 @@ impl AssetGraphBuilder {
         asset_unique_key.as_ref(),
         cached,
       );
-      self.propagate_requested_symbols(asset_id, incoming_dependency_id);
+      // REMOVED: propagate_requested_symbols - now handled by demand-driven SymbolTracker in handle_asset_result
     }
 
     self.add_asset_dependencies(
@@ -475,7 +505,7 @@ impl AssetGraphBuilder {
       cached,
     );
 
-    self.propagate_requested_symbols(asset_id, incoming_dependency_id);
+    // REMOVED: propagate_requested_symbols - now handled by demand-driven SymbolTracker in handle_asset_result
 
     // Connect any previously discovered Dependencies that were waiting
     // for this AssetNode to be created
@@ -573,7 +603,7 @@ impl AssetGraphBuilder {
             root_asset_unique_key,
             cached,
           );
-          self.propagate_requested_symbols(asset_id, dependency_id);
+          // REMOVED: propagate_requested_symbols - now handled by demand-driven SymbolTracker in handle_asset_result
         }
       }
     }

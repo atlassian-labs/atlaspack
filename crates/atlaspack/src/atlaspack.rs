@@ -171,7 +171,13 @@ impl Atlaspack {
 }
 
 impl Atlaspack {
-  pub fn build_asset_graph(&self) -> anyhow::Result<(Arc<AssetGraph>, bool)> {
+  pub fn build_asset_graph(
+    &self,
+  ) -> anyhow::Result<(
+    Arc<AssetGraph>,
+    Arc<atlaspack_core::asset_graph::SymbolTracker>,
+    bool,
+  )> {
     self.runtime.block_on(async move {
       // Notify all resolver plugins that a new build is starting
       for resolver in self.plugins.resolvers()? {
@@ -221,8 +227,9 @@ impl Atlaspack {
       };
 
       let asset_graph = asset_graph_request_output.graph.clone();
+      let symbol_tracker = asset_graph_request_output.symbol_tracker.clone();
 
-      Ok((asset_graph, had_previous_graph))
+      Ok((asset_graph, symbol_tracker, had_previous_graph))
     })
   }
 

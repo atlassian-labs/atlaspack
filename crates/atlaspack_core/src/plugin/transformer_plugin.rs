@@ -18,7 +18,7 @@ pub struct ResolveOptions {
 /// A function that enables transformers to resolve a dependency specifier
 pub type Resolve = dyn Fn(PathBuf, String, ResolveOptions) -> Result<PathBuf, anyhow::Error>;
 
-#[derive(Debug, Serialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, PartialEq, Default)]
 pub struct TransformResult {
   pub asset: Asset,
   pub dependencies: Vec<Dependency>,
@@ -32,7 +32,7 @@ pub struct TransformResult {
 }
 
 /// Symbol information collected during transformation
-#[derive(Debug, Serialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, PartialEq, Default)]
 pub struct TransformSymbolInfo {
   /// Symbols that this asset exports
   pub exports: Vec<Symbol>,

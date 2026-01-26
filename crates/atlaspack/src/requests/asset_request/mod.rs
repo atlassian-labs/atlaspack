@@ -49,6 +49,7 @@ pub struct AssetRequestOutput {
   pub asset: Arc<Asset>,
   pub discovered_assets: Vec<AssetWithDependencies>,
   pub dependencies: Vec<Dependency>,
+  pub transform_result: TransformResult,
 }
 
 #[async_trait]
@@ -118,15 +119,17 @@ impl Request for AssetRequest {
       .invalidate_on_file_change
       .push(result.asset.file_path.clone());
 
+    let invalidations = result.invalidate_on_file_change.clone();
+
     Ok(ResultAndInvalidations {
       result: RequestResult::Asset(AssetRequestOutput {
-        asset: Arc::new(result.asset),
+        asset: Arc::new(result.asset.clone()),
         // TODO: Need to decide whether a discovered asset will belong to the asset graph as it's own node
-        discovered_assets: result.discovered_assets,
-        dependencies: result.dependencies,
+        discovered_assets: result.discovered_assets.clone(),
+        dependencies: result.dependencies.clone(),
+        transform_result: result,
       }),
-      invalidations: result
-        .invalidate_on_file_change
+      invalidations: invalidations
         .into_iter()
         .map(Invalidation::FileChange)
         .collect(),

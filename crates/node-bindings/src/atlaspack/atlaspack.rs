@@ -147,9 +147,13 @@ pub fn atlaspack_napi_build_asset_graph(
       let mut commit_deferred_opt = Some(second_deferred);
       deferred.resolve(move |env| {
         match result {
-          Ok((asset_graph, had_previous_graph)) => {
-            let serialize_result =
-              serialize_asset_graph(&env, &asset_graph.clone(), had_previous_graph)?;
+          Ok((asset_graph, symbol_tracker, had_previous_graph)) => {
+            let serialize_result = serialize_asset_graph(
+              &env,
+              &asset_graph.clone(),
+              Some(&symbol_tracker),
+              had_previous_graph,
+            )?;
             if let Some(commit_deferred) = commit_deferred_opt.take() {
               thread::spawn(move || {
                 {

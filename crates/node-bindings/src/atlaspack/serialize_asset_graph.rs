@@ -4,7 +4,11 @@ use serde::Serialize;
 
 use anyhow::anyhow;
 
-use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode, DependencyState};
+use std::collections::HashMap;
+
+use atlaspack_core::asset_graph::{
+  AssetGraph, AssetGraphNode, DependencyState, SymbolTracker, UsedSymbolsUpEntry,
+};
 use atlaspack_core::types::{Asset, Dependency};
 
 /// Returns
@@ -18,18 +22,29 @@ use atlaspack_core::types::{Asset, Dependency};
 pub fn serialize_asset_graph(
   env: &Env,
   asset_graph: &AssetGraph,
+  symbol_tracker: Option<&SymbolTracker>,
   had_previous_graph: bool,
 ) -> anyhow::Result<JsObject> {
   let mut napi_asset_graph = env.create_object()?;
 
   napi_asset_graph.set_named_property(
     "nodes",
-    serialize_asset_graph_nodes(env, asset_graph, &asset_graph.new_nodes().collect())?,
+    serialize_asset_graph_nodes(
+      env,
+      asset_graph,
+      symbol_tracker,
+      &asset_graph.new_nodes().collect(),
+    )?,
   )?;
 
   napi_asset_graph.set_named_property(
     "updates",
-    serialize_asset_graph_nodes(env, asset_graph, &asset_graph.updated_nodes().collect())?,
+    serialize_asset_graph_nodes(
+      env,
+      asset_graph,
+      symbol_tracker,
+      &asset_graph.updated_nodes().collect(),
+    )?,
   )?;
 
   if !asset_graph.safe_to_skip_bundling {
@@ -45,6 +60,7 @@ pub fn serialize_asset_graph(
 fn serialize_asset_graph_nodes(
   env: &Env,
   asset_graph: &AssetGraph,
+  symbol_tracker: Option<&SymbolTracker>,
   nodes: &Vec<&AssetGraphNode>,
 ) -> anyhow::Result<JsObject> {
   // Serialize graph nodes in parallel
@@ -67,10 +83,27 @@ fn serialize_asset_graph_nodes(
 
           let dep_state = asset_graph.get_dependency_state(dep_node_id);
 
+          // Get usedSymbolsUp from our SymbolTracker if available
+          let used_symbols_up = symbol_tracker
+            .and_then(|tracker| tracker.get_used_symbols_up(*dep_node_id))
+            .map(|symbols| {
+              symbols
+                .iter()
+                .map(|(symbol, entry)| {
+                  let serialized_entry = entry.as_ref().map(|e| SerializedUsedSymbolsUpEntry {
+                    asset: e.asset,
+                    symbol: e.symbol.clone(),
+                  });
+                  (symbol.clone(), serialized_entry)
+                })
+                .collect::<HashMap<_, _>>()
+            });
+
           SerializedAssetGraphNode::Dependency {
             value: SerializedDependency {
               id: dependency.id(),
               dependency: dependency.as_ref(),
+              used_symbols_up,
             },
             has_deferred: *dep_state == DependencyState::Deferred,
           }
@@ -98,6 +131,19 @@ fn serialize_asset_graph_nodes(
 pub struct SerializedDependency<'a> {
   id: String,
   dependency: &'a Dependency,
+  /// Symbol resolution data for API compatibility with TypeScript SymbolPropagation
+  #[serde(skip_serializing_if = "Option::is_none")]
+  used_symbols_up: Option<HashMap<String, Option<SerializedUsedSymbolsUpEntry>>>,
+}
+
+/// Serialized version of UsedSymbolsUpEntry for JavaScript consumption
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SerializedUsedSymbolsUpEntry {
+  /// Asset ID that provides this symbol (ultimate source for barrel elimination)
+  pub asset: usize,
+  /// The actual symbol name in the providing asset (may be renamed)
+  pub symbol: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
