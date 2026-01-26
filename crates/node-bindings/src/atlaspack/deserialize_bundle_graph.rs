@@ -83,8 +83,6 @@ fn create_deserialization_error(
 }
 
 /// Deserialize a single BundleGraphNode from a JsObject
-/// Optimized version that skips node_id lookup in the hot path (only used for error messages)
-/// Note: No tracing instrumentation to avoid per-node overhead for large graphs
 pub fn deserialize_bundle_graph_node(env: &Env, node: &JsObject) -> napi::Result<BundleGraphNode> {
   // First, get the type field to determine which variant to deserialize
   let node_type: String = node.get_named_property("type").map_err(|e| {
@@ -94,8 +92,6 @@ pub fn deserialize_bundle_graph_node(env: &Env, node: &JsObject) -> napi::Result
     )
   })?;
   // Deserialize based on the type field
-  // Note: We skip fetching node_id in the hot path since it's only used for error messages
-  // If deserialization fails, we'll create a simpler error message without the node_id
   match node_type.as_str() {
     "asset" => {
       let asset_node: AssetNode = env
@@ -161,13 +157,6 @@ pub fn deserialize_bundle_graph(
         format!("Node at index {} is null or undefined", i),
       )
     })?;
-
-    // let node: JsObject = node_unknown.coerce_to_object().map_err(|e| {
-    //   napi::Error::new(
-    //     napi::Status::GenericFailure,
-    //     format!("Failed to convert node at index {} to JsObject: {:?}", i, e),
-    //   )
-    // })?;
 
     let deserialized_node = deserialize_bundle_graph_node(&env, node).map_err(|e| {
       // The error from deserialize_bundle_graph_node already includes node type and field info

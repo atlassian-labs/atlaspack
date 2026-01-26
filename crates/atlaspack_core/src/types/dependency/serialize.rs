@@ -216,7 +216,6 @@ impl<'de> Visitor<'de> for DependencyVisitor {
         "isEntry" => is_entry = Some(deserialize_field!(map, "isEntry", "Dependency")?),
         "isOptional" => is_optional = Some(deserialize_field!(map, "isOptional", "Dependency")?),
         _ => {
-          tracing::warn!(field = %key, "Unknown field in Dependency, skipping");
           // Skip unknown field value
           let _: serde::de::IgnoredAny = map.next_value()?;
         }

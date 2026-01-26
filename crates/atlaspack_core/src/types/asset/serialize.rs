@@ -164,7 +164,6 @@ impl<'de> Visitor<'de> for AssetVisitor {
           );
         }
         _ => {
-          tracing::warn!(field = %key, "Unknown field in Asset, skipping");
           // Skip unknown field value
           let _: serde::de::IgnoredAny = map.next_value()?;
         }
