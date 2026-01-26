@@ -94,3 +94,228 @@ pub fn extract_asset_meta_fields(meta: &mut JSONObject) -> ExtractedAssetMetaFie
     packaging_id: extract_val(meta, "id"),
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::types::asset::Condition;
+  use pretty_assertions::assert_eq;
+
+  #[test]
+  fn test_extract_val_string() {
+    let mut meta = serde_json::Map::new();
+    meta.insert("name".to_string(), serde_json::json!("test-value"));
+    meta.insert("other".to_string(), serde_json::json!("keep-me"));
+
+    let result: Option<String> = extract_val(&mut meta, "name");
+
+    assert_eq!(result, Some("test-value".to_string()));
+    // Key should be removed from the map
+    assert!(!meta.contains_key("name"));
+    // Other keys remain
+    assert!(meta.contains_key("other"));
+  }
+
+  #[test]
+  fn test_extract_val_missing_key() {
+    let mut meta = serde_json::Map::new();
+    meta.insert("existing".to_string(), serde_json::json!("value"));
+
+    let result: Option<String> = extract_val(&mut meta, "missing");
+
+    assert_eq!(result, None);
+    // Original key still exists
+    assert!(meta.contains_key("existing"));
+  }
+
+  #[test]
+  fn test_extract_val_wrong_type() {
+    let mut meta = serde_json::Map::new();
+    meta.insert("number".to_string(), serde_json::json!(42));
+
+    // Try to extract as String (should fail type conversion)
+    let result: Option<String> = extract_val(&mut meta, "number");
+
+    // Fails to deserialize, but key is still removed
+    assert_eq!(result, None);
+  }
+
+  #[test]
+  fn test_extract_val_number() {
+    let mut meta = serde_json::Map::new();
+    meta.insert("count".to_string(), serde_json::json!(42));
+
+    let result: Option<i32> = extract_val(&mut meta, "count");
+
+    assert_eq!(result, Some(42));
+    assert!(!meta.contains_key("count"));
+  }
+
+  #[test]
+  fn test_extract_val_boolean() {
+    let mut meta = serde_json::Map::new();
+    meta.insert("enabled".to_string(), serde_json::json!(true));
+
+    let result: Option<bool> = extract_val(&mut meta, "enabled");
+
+    assert_eq!(result, Some(true));
+    assert!(!meta.contains_key("enabled"));
+  }
+
+  #[test]
+  fn test_extract_val_default_present() {
+    let mut meta = serde_json::Map::new();
+    meta.insert("value".to_string(), serde_json::json!(123));
+
+    let result: i32 = extract_val_default(&mut meta, "value");
+
+    assert_eq!(result, 123);
+    assert!(!meta.contains_key("value"));
+  }
+
+  #[test]
+  fn test_extract_val_default_missing() {
+    let mut meta = serde_json::Map::new();
+
+    let result: i32 = extract_val_default(&mut meta, "missing");
+
+    assert_eq!(result, 0); // Default for i32
+  }
+
+  #[test]
+  fn test_extract_val_default_string() {
+    let mut meta = serde_json::Map::new();
+
+    let result: String = extract_val_default(&mut meta, "missing");
+
+    assert_eq!(result, String::new()); // Default for String
+  }
+
+  #[test]
+  fn test_extract_val_default_bool() {
+    let mut meta = serde_json::Map::new();
+
+    let result: bool = extract_val_default(&mut meta, "missing");
+
+    assert!(!result); // Default for bool is false
+  }
+
+  #[test]
+  fn test_extract_val_default_vec() {
+    let mut meta = serde_json::Map::new();
+
+    let result: Vec<String> = extract_val_default(&mut meta, "missing");
+
+    assert_eq!(result, Vec::<String>::new());
+  }
+
+  #[test]
+  fn test_extract_asset_meta_fields_all_present() {
+    let mut meta = serde_json::Map::new();
+    meta.insert(
+      "conditions".to_string(),
+      serde_json::json!([{ "key": "test", "ifTruePlaceholder": "a.js", "ifFalsePlaceholder": "b.js" }]),
+    );
+    meta.insert("hasCJSExports".to_string(), serde_json::json!(true));
+    meta.insert("has_node_replacements".to_string(), serde_json::json!(true));
+    meta.insert("isConstantModule".to_string(), serde_json::json!(true));
+    meta.insert("shouldWrap".to_string(), serde_json::json!(true));
+    meta.insert("staticExports".to_string(), serde_json::json!(true));
+    meta.insert("type".to_string(), serde_json::json!("tag"));
+    meta.insert(
+      "emptyFileStarReexport".to_string(),
+      serde_json::json!(false),
+    );
+    meta.insert("hasDependencies".to_string(), serde_json::json!(true));
+    meta.insert("hasReferences".to_string(), serde_json::json!(true));
+    meta.insert("inlineType".to_string(), serde_json::json!("string"));
+    meta.insert(
+      "interpreter".to_string(),
+      serde_json::json!("#!/usr/bin/node"),
+    );
+    meta.insert("id".to_string(), serde_json::json!("pkg123"));
+    // Add a custom field that should remain
+    meta.insert(
+      "customPlugin".to_string(),
+      serde_json::json!("custom-value"),
+    );
+
+    let extracted = extract_asset_meta_fields(&mut meta);
+
+    // Verify extracted values
+    let expected_condition = Condition {
+      key: "test".to_string(),
+      if_true_placeholder: Some("a.js".to_string()),
+      if_false_placeholder: Some("b.js".to_string()),
+    };
+    assert_eq!(extracted.conditions.len(), 1);
+    assert!(extracted.conditions.contains(&expected_condition));
+    assert!(extracted.has_cjs_exports);
+    assert!(extracted.has_node_replacements);
+    assert!(extracted.is_constant_module);
+    assert!(extracted.should_wrap);
+    assert!(extracted.static_exports);
+    assert_eq!(extracted.css_dependency_type, Some("tag".to_string()));
+    assert_eq!(extracted.empty_file_star_reexport, Some(false));
+    assert_eq!(extracted.has_dependencies, Some(true));
+    assert_eq!(extracted.has_references, Some(true));
+    assert_eq!(extracted.inline_type, Some("string".to_string()));
+    assert_eq!(extracted.interpreter, Some("#!/usr/bin/node".to_string()));
+    assert_eq!(extracted.packaging_id, Some("pkg123".to_string()));
+
+    // Custom field should still be present, all extracted keys removed
+    assert!(meta.contains_key("customPlugin"));
+    assert!(!meta.contains_key("conditions"));
+    assert!(!meta.contains_key("hasCJSExports"));
+    assert!(!meta.contains_key("type"));
+    assert!(!meta.contains_key("id"));
+  }
+
+  #[test]
+  fn test_extract_asset_meta_fields_empty() {
+    let mut meta = serde_json::Map::new();
+
+    let extracted = extract_asset_meta_fields(&mut meta);
+
+    // All fields should have default values
+    assert!(extracted.conditions.is_empty());
+    assert!(!extracted.has_cjs_exports);
+    assert!(!extracted.has_node_replacements);
+    assert!(!extracted.is_constant_module);
+    assert!(!extracted.should_wrap);
+    assert!(!extracted.static_exports);
+    assert_eq!(extracted.css_dependency_type, None);
+    assert_eq!(extracted.empty_file_star_reexport, None);
+    assert_eq!(extracted.has_dependencies, None);
+    assert_eq!(extracted.has_references, None);
+    assert_eq!(extracted.inline_type, None);
+    assert_eq!(extracted.interpreter, None);
+    assert_eq!(extracted.packaging_id, None);
+
+    // Meta should be empty
+    assert!(meta.is_empty());
+  }
+
+  #[test]
+  fn test_extract_asset_meta_fields_partial() {
+    let mut meta = serde_json::Map::new();
+    meta.insert("hasCJSExports".to_string(), serde_json::json!(true));
+    meta.insert("shouldWrap".to_string(), serde_json::json!(false));
+    meta.insert(
+      "pluginData".to_string(),
+      serde_json::json!({ "key": "val" }),
+    );
+
+    let extracted = extract_asset_meta_fields(&mut meta);
+
+    assert!(extracted.has_cjs_exports);
+    assert!(!extracted.should_wrap);
+    // Other fields should be defaults
+    assert!(extracted.conditions.is_empty());
+    assert_eq!(extracted.css_dependency_type, None);
+
+    // Only pluginData should remain
+    assert_eq!(meta.len(), 1);
+    assert!(meta.contains_key("pluginData"));
+  }
+}

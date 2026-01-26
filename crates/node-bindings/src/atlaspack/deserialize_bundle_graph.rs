@@ -169,3 +169,113 @@ pub fn deserialize_bundle_graph(
   }
   Ok(deserialized_nodes)
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_extract_field_info_missing_field_backticks() {
+    let error_msg = "missing field `specifier`";
+    let result = extract_field_info(error_msg);
+    assert_eq!(result, Some("specifier".to_string()));
+  }
+
+  #[test]
+  fn test_extract_field_info_unknown_field_backticks() {
+    let error_msg = "unknown field `unknownField`";
+    let result = extract_field_info(error_msg);
+    assert_eq!(result, Some("unknownField".to_string()));
+  }
+
+  #[test]
+  fn test_extract_field_info_single_quotes() {
+    let error_msg = "field 'envName': invalid type";
+    let result = extract_field_info(error_msg);
+    assert_eq!(result, Some("envName".to_string()));
+  }
+
+  #[test]
+  fn test_extract_field_info_fallback_backticks() {
+    // Fallback to any alphanumeric content in backticks
+    let error_msg = "error deserializing `bundleBehavior` value";
+    let result = extract_field_info(error_msg);
+    assert_eq!(result, Some("bundleBehavior".to_string()));
+  }
+
+  #[test]
+  fn test_extract_field_info_with_underscores() {
+    let error_msg = "missing field `source_asset_id`";
+    let result = extract_field_info(error_msg);
+    assert_eq!(result, Some("source_asset_id".to_string()));
+  }
+
+  #[test]
+  fn test_extract_field_info_no_field() {
+    let error_msg = "invalid type: expected string, found number";
+    let result = extract_field_info(error_msg);
+    assert_eq!(result, None);
+  }
+
+  #[test]
+  fn test_extract_field_info_empty_string() {
+    let result = extract_field_info("");
+    assert_eq!(result, None);
+  }
+
+  #[test]
+  fn test_extract_field_info_non_alphanumeric_in_backticks() {
+    // Should not match if content in backticks is not alphanumeric
+    let error_msg = "error at `line:col` position";
+    let result = extract_field_info(error_msg);
+    // "line:col" contains ':', not alphanumeric, so no match from fallback
+    assert_eq!(result, None);
+  }
+
+  #[test]
+  fn test_create_deserialization_error_with_id_and_field() {
+    let original_error =
+      napi::Error::new(napi::Status::GenericFailure, "missing field `specifier`");
+    let result = create_deserialization_error("asset", Some("asset123"), original_error);
+
+    let error_msg = result.to_string();
+    assert!(error_msg.contains("asset"));
+    assert!(error_msg.contains("asset123"));
+    assert!(error_msg.contains("specifier"));
+  }
+
+  #[test]
+  fn test_create_deserialization_error_with_id_only() {
+    let original_error = napi::Error::new(
+      napi::Status::GenericFailure,
+      "invalid type: expected string",
+    );
+    let result = create_deserialization_error("dependency", Some("dep456"), original_error);
+
+    let error_msg = result.to_string();
+    assert!(error_msg.contains("dependency"));
+    assert!(error_msg.contains("dep456"));
+    assert!(error_msg.contains("invalid type"));
+  }
+
+  #[test]
+  fn test_create_deserialization_error_with_field_only() {
+    let original_error =
+      napi::Error::new(napi::Status::GenericFailure, "unknown field `extraField`");
+    let result = create_deserialization_error("bundle", None, original_error);
+
+    let error_msg = result.to_string();
+    assert!(error_msg.contains("bundle"));
+    assert!(error_msg.contains("extraField"));
+  }
+
+  #[test]
+  fn test_create_deserialization_error_minimal() {
+    let original_error = napi::Error::new(napi::Status::GenericFailure, "parse error");
+    let result = create_deserialization_error("root", None, original_error);
+
+    let error_msg = result.to_string();
+    assert!(error_msg.contains("root"));
+    assert!(error_msg.contains("parse error"));
+  }
+}
