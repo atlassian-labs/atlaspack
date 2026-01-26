@@ -530,7 +530,7 @@ dependencies = [
  "atlaspack_memoization_cache",
  "atlaspack_sourcemap",
  "bitflags 2.10.0",
- "browserslist-rs 0.17.0",
+ "browserslist-rs",
  "caniuse_database",
  "derivative",
  "derive_builder",
@@ -1191,23 +1191,6 @@ dependencies = [
 
 [[package]]
 name = "browserslist-rs"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74c973b79d9b6b89854493185ab760c6ef8e54bcfad10ad4e33991e46b374ac8"
-dependencies = [
- "ahash 0.8.12",
- "chrono",
- "either",
- "indexmap",
- "itertools 0.13.0",
- "nom 7.1.3",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "browserslist-rs"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8dd48a6ca358df4f7000e3fb5f08738b1b91a0e5d5f862e2f77b2b14647547f5"
@@ -1363,7 +1346,7 @@ dependencies = [
 name = "caniuse_database"
 version = "0.1.0"
 dependencies = [
- "browserslist-rs 0.17.0",
+ "browserslist-rs",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -3476,7 +3459,7 @@ checksum = "53ffa6c1fbb167164723c7b58396584504afb8cb3966064b24962dd7d10e19cc"
 dependencies = [
  "ahash 0.8.12",
  "bitflags 2.10.0",
- "browserslist-rs 0.19.0",
+ "browserslist-rs",
  "const-str",
  "cssparser",
  "cssparser-color",
@@ -4963,7 +4946,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8e82699979593636125cbeeedaf538d11f3dc4645287bbd594041404ad4a88a"
 dependencies = [
  "anyhow",
- "browserslist-rs 0.19.0",
+ "browserslist-rs",
  "dashmap",
  "from_variant 2.0.2",
  "once_cell",
