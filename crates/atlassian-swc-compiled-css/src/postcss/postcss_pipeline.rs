@@ -318,27 +318,21 @@ fn build_processor(options: &TransformCssOptions, collector: &AtomicCollector) -
   plugins.push(super::plugins::normalize_css_engine::minify_params::plugin());
   if optimize_css {
     // Plugin order matches cssnano-preset-default for compatibility with Babel/cssnano.
-    // Key ordering constraints:
-    // - colormin must run before ordered_values (colormin adds spaces after color functions)
-    // - ordered_values must run after colormin to clean up those spaces
-    // - convert_values must run after ordered_values
     use super::plugins::normalize_css_engine as nce;
+    plugins.push(nce::ordered_values::plugin());
     plugins.push(nce::reduce_initial::plugin(
       options.browserslist_config_path.clone(),
     ));
-    plugins.push(nce::minify_gradients::plugin());
-    plugins.push(nce::colormin::plugin());
-    plugins.push(nce::normalize_string::plugin());
-    plugins.push(nce::normalize_unicode::plugin());
-    plugins.push(nce::normalize_url::plugin());
-    plugins.push(nce::normalize_positions::plugin());
-    // ordered_values must run AFTER colormin to clean up spaces inserted by colormin
-    plugins.push(nce::ordered_values::plugin());
-    // convert_values must run AFTER ordered_values
     plugins.push(nce::convert_values::plugin());
+    plugins.push(nce::colormin::plugin());
+    plugins.push(nce::normalize_url::plugin());
+    plugins.push(nce::normalize_unicode::plugin());
+    plugins.push(nce::normalize_string::plugin());
+    plugins.push(nce::normalize_positions::plugin());
+    plugins.push(nce::normalize_timing_functions::plugin());
+    plugins.push(nce::minify_gradients::plugin());
     plugins.push(nce::discard_comments_plugin());
     plugins.push(nce::calc::plugin());
-    plugins.push(nce::normalize_timing_functions::plugin());
     plugins.push(nce::normalize_current_color_plugin());
   }
   // Match Babel ordering: expand shorthands after normalization.
@@ -353,7 +347,9 @@ fn build_processor(options: &TransformCssOptions, collector: &AtomicCollector) -
     plugins.push(flatten_multiple_selectors_plugin());
     plugins.push(pc::plugin("discard-duplicates-2").build());
   }
-  plugins.push(pc::plugin("increase-specificity").build());
+  if options.increase_specificity.unwrap_or(false) {
+    plugins.push(pc::plugin("increase-specificity").build());
+  }
   plugins.push(sort_atomic_style_sheet_plugin());
   plugins.push(normalize_whitespace_plugin());
   // Collect keyframes as sheets to match Babel output
@@ -1082,6 +1078,14 @@ fn extract_stylesheets_plugin(
     }
   }
 
+  fn starts_with_combinator(selector: &str) -> bool {
+    let trimmed = selector.trim_start();
+    trimmed.starts_with('>')
+      || trimmed.starts_with('+')
+      || trimmed.starts_with('~')
+      || trimmed.starts_with("||")
+  }
+
   fn combine_selectors(parent: &[String], child: &str) -> Vec<String> {
     let child_parts = comma(child);
     let parents = if parent.is_empty() {
@@ -1107,6 +1111,8 @@ fn extract_stylesheets_plugin(
           out.push(trimmed.to_string());
         } else if trimmed.is_empty() {
           out.push(p.clone());
+        } else if starts_with_combinator(trimmed) {
+          out.push(format!("{}{}", p, trimmed));
         } else {
           out.push(format!("{} {}", p, trimmed));
         }
@@ -1465,11 +1471,54 @@ fn normalize_value_for_hash(
       prop, value, after_colormin
     );
   }
-  if after_colormin.len() < trimmed.len() {
+  let mut normalized = if after_colormin.len() < trimmed.len() {
     after_colormin
   } else {
     trimmed.to_string()
+  };
+
+  // COMPAT: cssnano ordered-values preserves an extra space before negative
+  // grid line values (e.g. "1 / -1" -> "1 /  -1") for hashing.
+  if matches!(
+    prop.to_ascii_lowercase().as_str(),
+    "grid-column"
+      | "grid-row"
+      | "grid-row-start"
+      | "grid-row-end"
+      | "grid-column-start"
+      | "grid-column-end"
+  ) {
+    let mut out = String::with_capacity(normalized.len());
+    let mut chars = normalized.chars().peekable();
+    while let Some(ch) = chars.next() {
+      if ch == '/' {
+        out.push(ch);
+        let mut ws = String::new();
+        while let Some(&next) = chars.peek() {
+          if next.is_whitespace() {
+            ws.push(next);
+            chars.next();
+          } else {
+            break;
+          }
+        }
+        if let Some(&next) = chars.peek() {
+          if next == '-' && ws == " " {
+            out.push_str("  ");
+          } else {
+            out.push_str(&ws);
+          }
+        } else {
+          out.push_str(&ws);
+        }
+        continue;
+      }
+      out.push(ch);
+    }
+    normalized = out;
   }
+
+  normalized
 }
 
 #[cfg(feature = "postcss_engine")]
@@ -1511,6 +1560,14 @@ fn atomicify_rules_plugin(
     )
   }
 
+  fn starts_with_combinator(selector: &str) -> bool {
+    let trimmed = selector.trim_start();
+    trimmed.starts_with('>')
+      || trimmed.starts_with('+')
+      || trimmed.starts_with('~')
+      || trimmed.starts_with("||")
+  }
+
   fn combine_selectors(parent: &[String], child: &str) -> Vec<String> {
     let child_parts = comma(child);
     let parents = if parent.is_empty() {
@@ -1536,6 +1593,8 @@ fn atomicify_rules_plugin(
           out.push(trimmed.to_string());
         } else if trimmed.is_empty() {
           out.push(p.clone());
+        } else if starts_with_combinator(trimmed) {
+          out.push(format!("{}{}", p, trimmed));
         } else {
           out.push(format!("{} {}", p, trimmed));
         }
@@ -2767,5 +2826,37 @@ mod tests {
       .lock()
       .unwrap()
       .remove(&tmp.path().to_path_buf());
+  }
+
+  /// Regression test: nested selectors starting with a combinator should not
+  /// introduce a space before the combinator when combined.
+  #[test]
+  fn combines_relative_child_selectors_without_space() {
+    let css = "div > .ProseMirror { > p { line-height: 20px; } }";
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    assert!(
+      result
+        .sheets
+        .iter()
+        .any(|sheet| sheet.contains("div>.ProseMirror>p{line-height:20px}")),
+      "expected combined selector without extra space"
+    );
+  }
+
+  /// Regression test: grid-column with negative end should preserve hash spacing
+  /// (Babel output: ._yyhyjvu9{grid-column:1/-1}).
+  #[test]
+  fn grid_column_negative_hash_matches_babel() {
+    let css = "& { grid-column: 1 / -1; }";
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    assert_eq!(result.class_names.len(), 1);
+    assert_eq!(result.class_names[0], "_yyhyjvu9");
+    assert!(result.sheets[0].contains("grid-column:1/-1"));
   }
 }

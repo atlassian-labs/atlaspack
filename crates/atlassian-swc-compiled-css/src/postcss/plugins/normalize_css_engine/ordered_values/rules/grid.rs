@@ -62,6 +62,46 @@ pub fn normalize_gap(parsed: &vp::ParsedValue) -> String {
 
 pub fn normalize_line(parsed: &vp::ParsedValue) -> String {
   let s = vp::stringify(&parsed.nodes);
+  let has_span = parsed.nodes.iter().any(|node| match node {
+    vp::Node::Word { value } => value.eq_ignore_ascii_case("span"),
+    _ => false,
+  });
+  if !has_span {
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(ch) = chars.next() {
+      if ch == '/' {
+        out.push(ch);
+        let mut ws = String::new();
+        while let Some(&next) = chars.peek() {
+          if next.is_whitespace() {
+            ws.push(next);
+            chars.next();
+          } else {
+            break;
+          }
+        }
+        if let Some(&next) = chars.peek() {
+          if next == '-' && ws == " " {
+            // COMPAT: cssnano ordered-values preserves an extra space before
+            // negative grid lines (e.g. "1 / -1" -> "1 /  -1").
+            out.push_str("  ");
+          } else {
+            out.push_str(&ws);
+          }
+        } else {
+          out.push_str(&ws);
+        }
+        continue;
+      }
+      out.push(ch);
+    }
+    let normalized = out.trim().to_string();
+    if std::env::var("COMPILED_CSS_TRACE").is_ok() && normalized != s {
+      eprintln!("[ordered-values][grid] '{}' -> '{}'", s, normalized);
+    }
+    return normalized;
+  }
   let grid_value: Vec<String> = s.split('/').map(|p| p.to_string()).collect();
   if grid_value.len() > 1 {
     let mapped: Vec<String> = grid_value
@@ -99,4 +139,15 @@ pub fn normalize_line(parsed: &vp::ParsedValue) -> String {
     out.push(format!("{} {}", front.trim(), back.trim()));
   }
   out.join("")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn normalize_line_preserves_negative_spacing_for_hash() {
+    let parsed = vp::parse("1 / -1");
+    assert_eq!(normalize_line(&parsed), "1 /  -1");
+  }
 }

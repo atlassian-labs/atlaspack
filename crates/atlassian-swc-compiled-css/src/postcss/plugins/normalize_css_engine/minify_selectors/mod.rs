@@ -142,6 +142,7 @@ fn process_pseudo_element_selector(selector: &mut PseudoElementSelector) {
 fn process_pseudo_class_selector(selector: &mut PseudoClassSelector) {
   let name = selector.name.value.to_string();
   let lower = name.to_lowercase();
+  let is_has = lower == "has";
   if selector.children.is_some() {
     if handle_nth_replacements(selector, &lower) {
       return;
@@ -150,9 +151,35 @@ fn process_pseudo_class_selector(selector: &mut PseudoClassSelector) {
   if let Some(children) = &mut selector.children {
     for child in children.iter_mut() {
       match child {
-        PseudoClassSelectorChildren::SelectorList(list) => process_selector_list(list, false),
+        PseudoClassSelectorChildren::SelectorList(list) => {
+          if std::env::var("COMPILED_CSS_TRACE").is_ok() && is_has {
+            eprintln!(
+              "[minify-selectors] :has selector list (before)='{}'",
+              serialize_selector_list(list)
+            );
+          }
+          process_selector_list(list, false, !is_has);
+          if std::env::var("COMPILED_CSS_TRACE").is_ok() && is_has {
+            eprintln!(
+              "[minify-selectors] :has selector list (after)='{}'",
+              serialize_selector_list(list)
+            );
+          }
+        }
         PseudoClassSelectorChildren::RelativeSelectorList(list) => {
-          process_relative_selector_list(list, false)
+          if std::env::var("COMPILED_CSS_TRACE").is_ok() && is_has {
+            eprintln!(
+              "[minify-selectors] :has relative list (before)='{}'",
+              serialize_relative_selector_list(list)
+            );
+          }
+          process_relative_selector_list(list, false, !is_has);
+          if std::env::var("COMPILED_CSS_TRACE").is_ok() && is_has {
+            eprintln!(
+              "[minify-selectors] :has relative list (after)='{}'",
+              serialize_relative_selector_list(list)
+            );
+          }
         }
         PseudoClassSelectorChildren::ForgivingSelectorList(list) => {
           for selector in &mut list.children {
@@ -160,7 +187,9 @@ fn process_pseudo_class_selector(selector: &mut PseudoClassSelector) {
               process_complex_selector(sel);
             }
           }
-          dedupe_forgiving_selectors(&mut list.children);
+          if !is_has {
+            dedupe_forgiving_selectors(&mut list.children);
+          }
         }
         PseudoClassSelectorChildren::ForgivingRelativeSelectorList(list) => {
           for selector in &mut list.children {
@@ -171,7 +200,9 @@ fn process_pseudo_class_selector(selector: &mut PseudoClassSelector) {
               process_complex_selector(&mut rel.selector);
             }
           }
-          dedupe_forgiving_relative_selectors(&mut list.children);
+          if !is_has {
+            dedupe_forgiving_relative_selectors(&mut list.children);
+          }
         }
         _ => {}
       }
@@ -294,23 +325,31 @@ fn format_relative(sel: &RelativeSelector) -> String {
   serialize_relative_selector(sel)
 }
 
-fn process_selector_list(list: &mut SelectorList, allow_reorder: bool) {
+fn process_selector_list(list: &mut SelectorList, allow_reorder: bool, allow_dedupe: bool) {
   for complex in &mut list.children {
     process_complex_selector(complex);
   }
-  dedupe_complex_selectors(&mut list.children);
+  if allow_dedupe {
+    dedupe_complex_selectors(&mut list.children);
+  }
   if allow_reorder {
     sort_complex_selectors(&mut list.children);
   }
 }
-fn process_relative_selector_list(list: &mut RelativeSelectorList, allow_reorder: bool) {
+fn process_relative_selector_list(
+  list: &mut RelativeSelectorList,
+  allow_reorder: bool,
+  allow_dedupe: bool,
+) {
   for rel in &mut list.children {
     if let Some(c) = &mut rel.combinator {
       process_combinator(c);
     }
     process_complex_selector(&mut rel.selector);
   }
-  dedupe_relative_selectors(&mut list.children);
+  if allow_dedupe {
+    dedupe_relative_selectors(&mut list.children);
+  }
   if allow_reorder {
     sort_relative_selectors(&mut list.children);
   }
@@ -355,6 +394,78 @@ fn collapse_adjacent_nesting_selectors(original: &str, optimized: String) -> Str
       continue;
     }
     out.push(ch);
+  }
+
+  out
+}
+
+fn collapse_nesting_whitespace(original: &str, optimized: String) -> String {
+  // Preserve cases where the original selector had `foo&` with no whitespace.
+  let mut adjacency: Vec<bool> = Vec::new();
+  let mut in_single = false;
+  let mut in_double = false;
+  let mut escape_next = false;
+  let mut prev_non_ws: Option<char> = None;
+  let mut saw_ws_since_token = false;
+
+  for ch in original.chars() {
+    if escape_next {
+      escape_next = false;
+    } else if ch == '\\' {
+      escape_next = true;
+    } else if in_single {
+      if ch == '\'' {
+        in_single = false;
+      }
+    } else if in_double {
+      if ch == '"' {
+        in_double = false;
+      }
+    } else {
+      match ch {
+        '\'' => in_single = true,
+        '"' => in_double = true,
+        '&' => {
+          let adjacent = !saw_ws_since_token
+            && prev_non_ws
+              .map(|c| !matches!(c, '>' | '+' | '~' | ',' | '|'))
+              .unwrap_or(false);
+          adjacency.push(adjacent);
+        }
+        _ => {}
+      }
+    }
+
+    if !ch.is_whitespace() && !in_single && !in_double {
+      prev_non_ws = Some(ch);
+      saw_ws_since_token = false;
+    } else if ch.is_whitespace() && !in_single && !in_double {
+      saw_ws_since_token = true;
+    }
+  }
+
+  if adjacency.is_empty() {
+    return optimized;
+  }
+
+  fn pop_trailing_ws(out: &mut String) {
+    while matches!(out.chars().last(), Some(c) if c.is_whitespace()) {
+      out.pop();
+    }
+  }
+
+  let mut out = String::with_capacity(optimized.len());
+  let mut iter = adjacency.into_iter();
+  for ch in optimized.chars() {
+    if ch == '&' {
+      let adjacent = iter.next().unwrap_or(false);
+      if adjacent {
+        pop_trailing_ws(&mut out);
+      }
+      out.push('&');
+    } else {
+      out.push(ch);
+    }
   }
 
   out
@@ -419,6 +530,7 @@ fn minify_selector_string(selector: &str) -> Option<String> {
     trimmed.to_string(),
   );
   let mut errors = vec![];
+  let allow_reorder = !trimmed.contains('&');
   if parse_relative {
     let mut list = parse_string_input::<RelativeSelectorList>(
       StringInput::from(&*fm),
@@ -436,7 +548,7 @@ fn minify_selector_string(selector: &str) -> Option<String> {
       }
       return None;
     }
-    process_relative_selector_list(&mut list, true);
+    process_relative_selector_list(&mut list, allow_reorder, true);
     log_nth(
       &SelectorList {
         span: Default::default(),
@@ -453,6 +565,7 @@ fn minify_selector_string(selector: &str) -> Option<String> {
     );
     let optimized = serialize_relative_selector_list(&list);
     let collapsed = collapse_adjacent_nesting_selectors(trimmed, optimized.clone());
+    let collapsed = collapse_nesting_whitespace(trimmed, collapsed);
     if trace && collapsed != optimized {
       eprintln!(
         "[minify-selectors] collapsed nesting relative '{}' -> '{}'",
@@ -484,10 +597,11 @@ fn minify_selector_string(selector: &str) -> Option<String> {
     }
     return None;
   }
-  process_selector_list(&mut list, true);
+  process_selector_list(&mut list, allow_reorder, true);
   log_nth(&list, "an+b");
   let optimized = serialize_selector_list(&list);
   let collapsed = collapse_adjacent_nesting_selectors(trimmed, optimized.clone());
+  let collapsed = collapse_nesting_whitespace(trimmed, collapsed);
   if trace && collapsed != optimized {
     eprintln!(
       "[minify-selectors] collapsed nesting '{}' -> '{}'",
@@ -565,6 +679,7 @@ pub fn plugin() -> pc::BuiltPlugin {
 #[cfg(test)]
 mod tests {
   use super::minify_selector_string;
+  use pretty_assertions::assert_eq;
 
   #[test]
   fn trims_whitespace_inside_is_arguments() {
@@ -582,5 +697,35 @@ mod tests {
   fn trims_whitespace_around_child_combinators() {
     let optimized = minify_selector_string("> div > div:first-of-type").unwrap();
     assert_eq!(optimized, ">div>div:first-of-type");
+  }
+
+  #[test]
+  fn preserves_compound_nesting_without_space() {
+    let optimized = minify_selector_string("div&:hover").unwrap();
+    assert_eq!(optimized, "div&:hover");
+  }
+
+  #[test]
+  fn keeps_descendant_space_before_nesting() {
+    let optimized = minify_selector_string("div &:hover").unwrap();
+    assert_eq!(optimized, "div &:hover");
+  }
+
+  #[test]
+  fn preserves_adjacent_nesting_in_not_hover() {
+    let optimized = minify_selector_string("&:not(&:focus)&:hover, &:focus").unwrap();
+    assert_eq!(optimized, "&:not(&:focus)&:hover,&:focus");
+  }
+
+  #[test]
+  fn preserves_duplicates_inside_has() {
+    let optimized = minify_selector_string("div:has(a,a)").unwrap();
+    assert_eq!(optimized, "div:has(a,a)");
+  }
+
+  #[test]
+  fn preserves_nested_duplicates_inside_has() {
+    let optimized = minify_selector_string("&:not(:has(a,a))").unwrap();
+    assert_eq!(optimized, "&:not(:has(a,a))");
   }
 }
