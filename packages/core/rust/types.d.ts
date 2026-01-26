@@ -406,3 +406,16 @@ export interface CompiledCssInJsConfigPlugin {
   unsafeUseSafeAssets?: boolean;
   unsafeSkipPattern?: string;
 }
+export declare function hashCode(rawCode: string): string;
+export declare function isSafeFromJs(hash: string, configPath: string): boolean;
+export declare function applyCompiledCssInJsPlugin(
+  rawCode: Buffer,
+  input: CompiledCssInJsPluginInput,
+): object;
+export interface CompiledCssInJsPluginResult {
+  code: string;
+  map?: string;
+  styleRules: Array<string>;
+  diagnostics: Array<JsDiagnostic>;
+  bailOut: boolean;
+}
