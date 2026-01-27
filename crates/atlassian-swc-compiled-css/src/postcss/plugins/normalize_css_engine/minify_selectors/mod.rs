@@ -252,11 +252,18 @@ fn process_subclass_selector(subclass: &mut SubclassSelector) {
 fn process_combinator(_c: &mut Combinator) {}
 
 fn process_compound_selector(compound: &mut CompoundSelector, is_simple: bool) {
+  let remove_universal = should_remove_universal(compound);
   if let Some(ty) = &mut compound.type_selector {
     match &mut **ty {
-      TypeSelector::TagName(tag) => process_tag_selector(tag, is_simple),
+      TypeSelector::TagName(tag) => {
+        if tag.name.value.value == "*" && remove_universal {
+          compound.type_selector = None;
+        } else {
+          process_tag_selector(tag, is_simple);
+        }
+      }
       TypeSelector::Universal(_) => {
-        if should_remove_universal(compound) {
+        if remove_universal {
           compound.type_selector = None;
         }
       }
@@ -727,5 +734,11 @@ mod tests {
   fn preserves_nested_duplicates_inside_has() {
     let optimized = minify_selector_string("&:not(:has(a,a))").unwrap();
     assert_eq!(optimized, "&:not(:has(a,a))");
+  }
+
+  #[test]
+  fn removes_universal_before_empty_pseudo() {
+    let optimized = minify_selector_string("*:empty").unwrap();
+    assert_eq!(optimized, ":empty");
   }
 }

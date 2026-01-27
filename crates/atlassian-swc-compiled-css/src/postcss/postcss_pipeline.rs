@@ -1086,6 +1086,26 @@ fn extract_stylesheets_plugin(
       || trimmed.starts_with("||")
   }
 
+  fn strip_universal_before_pseudo(parent: &str, selector: String) -> String {
+    let mut out = selector;
+    if parent.trim() == "*" && out.starts_with("*:") {
+      out = out.trim_start_matches('*').to_string();
+    }
+    if out.contains(">*:") {
+      out = out.replace(">*:", ">:"); // >*:hover -> >:hover
+    }
+    if out.contains("+*:") {
+      out = out.replace("+*:", "+:"); // +*:hover -> +:hover
+    }
+    if out.contains("~*:") {
+      out = out.replace("~*:", "~:"); // ~*:hover -> ~:hover
+    }
+    if out.contains("||*:") {
+      out = out.replace("||*:", "||:"); // ||*:hover -> ||:hover
+    }
+    out
+  }
+
   fn combine_selectors(parent: &[String], child: &str) -> Vec<String> {
     let child_parts = comma(child);
     let parents = if parent.is_empty() {
@@ -1106,7 +1126,7 @@ fn extract_stylesheets_plugin(
         }
         if trimmed.contains('&') {
           let replaced = trimmed.replace('&', &p);
-          out.push(replaced);
+          out.push(strip_universal_before_pseudo(&p, replaced));
         } else if p == "&" {
           out.push(trimmed.to_string());
         } else if trimmed.is_empty() {
@@ -1568,6 +1588,26 @@ fn atomicify_rules_plugin(
       || trimmed.starts_with("||")
   }
 
+  fn strip_universal_before_pseudo(parent: &str, selector: String) -> String {
+    let mut out = selector;
+    if parent.trim() == "*" && out.starts_with("*:") {
+      out = out.trim_start_matches('*').to_string();
+    }
+    if out.contains(">*:") {
+      out = out.replace(">*:", ">:"); // >*:hover -> >:hover
+    }
+    if out.contains("+*:") {
+      out = out.replace("+*:", "+:"); // +*:hover -> +:hover
+    }
+    if out.contains("~*:") {
+      out = out.replace("~*:", "~:"); // ~*:hover -> ~:hover
+    }
+    if out.contains("||*:") {
+      out = out.replace("||*:", "||:"); // ||*:hover -> ||:hover
+    }
+    out
+  }
+
   fn combine_selectors(parent: &[String], child: &str) -> Vec<String> {
     let child_parts = comma(child);
     let parents = if parent.is_empty() {
@@ -1588,7 +1628,7 @@ fn atomicify_rules_plugin(
         }
         if trimmed.contains('&') {
           let replaced = trimmed.replace('&', &p);
-          out.push(replaced);
+          out.push(strip_universal_before_pseudo(&p, replaced));
         } else if p == "&" {
           out.push(trimmed.to_string());
         } else if trimmed.is_empty() {
@@ -2858,5 +2898,211 @@ mod tests {
     assert_eq!(result.class_names.len(), 1);
     assert_eq!(result.class_names[0], "_yyhyjvu9");
     assert!(result.sheets[0].contains("grid-column:1/-1"));
+  }
+
+  fn collect_sheets(css_inputs: &[&str], options: TransformCssOptions) -> Vec<String> {
+    let mut sheets = Vec::new();
+    for input in css_inputs {
+      let result = transform_css(input, options.clone()).expect("transform should succeed");
+      sheets.extend(result.sheets);
+    }
+    sheets.sort();
+    sheets.dedup();
+    sheets
+  }
+
+  fn assert_contains_sheets(sheets: &[String], expected: &[&str]) {
+    for rule in expected {
+      assert!(
+        sheets.iter().any(|sheet| sheet == rule),
+        "missing generated rule: {rule}"
+      );
+    }
+  }
+
+  fn options_with_browserslist() -> (TransformCssOptions, tempfile::TempDir) {
+    use std::fs;
+
+    let tmp = tempfile::tempdir().expect("tmpdir");
+    fs::write(tmp.path().join(".browserslistrc"), "Chrome >= 80\n")
+      .expect("browserslist config write");
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    options.browserslist_config_path = Some(tmp.path().to_path_buf());
+    (options, tmp)
+  }
+
+  #[test]
+  fn prompt_editor_wrapper_css_outputs_match_babel() {
+    let css_inputs = [
+      "div > .ProseMirror { > p { line-height: 20px; } > p:last-child { margin-bottom: 0; padding-bottom: 0; } min-height: auto; } .ProseMirror .inlineCardView-content-wrap .card { padding-top: 0; padding-bottom: 0; }",
+      "div > .ProseMirror { > p { padding-top: 0.5px; line-height: 24px; } }",
+    ];
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let sheets = collect_sheets(&css_inputs, options);
+    let expected = [
+      "._12k3idpf div>.ProseMirror>p:last-child{padding-bottom:0}",
+      "._1hxn1tcg div>.ProseMirror>p{line-height:24px}",
+      "._1hxngktf div>.ProseMirror>p{line-height:20px}",
+      "._hmumidpf div>.ProseMirror>p:last-child{margin-bottom:0}",
+      "._w79o1m6u div>.ProseMirror>p{padding-top:.5px}",
+    ];
+    assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn refinement_tag_css_outputs_match_babel() {
+    let css_inputs = [
+      "> span { margin: 0; align-items: var(--align-items); > span { max-width: var(--content-width); &:has([data-testid=\"command-palette-rovo-agent-icon\"]) { height: var(--elem-before-height); margin-inline: 0; > div { margin-inline: 0; } } } }",
+    ];
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let sheets = collect_sheets(&css_inputs, options);
+    let expected = [
+      "._1k2cidpf >span>span:has([data-testid=command-palette-rovo-agent-icon]){margin-inline:0}",
+      "._b3iiidpf >span>span:has([data-testid=command-palette-rovo-agent-icon])>div{margin-inline:0}",
+      "._qxh5o3gi >span>span{max-width:var(--content-width)}",
+      "._spsw16ko >span>span:has([data-testid=command-palette-rovo-agent-icon]){height:var(--elem-before-height)}",
+    ];
+    assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn side_navigation_footer_css_outputs_match_babel() {
+    let css_inputs = [
+      "div&:hover { background-color: var(--ds-background-neutral-subtle, transparent); cursor: default; }",
+      "div&:active { background-color: var(--ds-background-neutral-subtle, transparent); color: var(--ds-text-subtle, #42526e); }",
+    ];
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let sheets = collect_sheets(&css_inputs, options);
+    let expected = [
+      "div._11kj1w7a:hover{background-color:var(--ds-background-neutral-subtle,#0000)}",
+      "div._1et61w7a:active{background-color:var(--ds-background-neutral-subtle,#0000)}",
+      "div._1v6jjjyb:active{color:var(--ds-text-subtle,#42526e)}",
+      "div._jl2n73ad:hover{cursor:default}",
+    ];
+    assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn side_navigation_header_css_outputs_match_babel() {
+    let css_inputs = [
+      "div&:hover { background-color: var(--ds-background-neutral-subtle, transparent); cursor: default; }",
+      "div&:active { background-color: var(--ds-background-neutral-subtle, transparent); color: var(--ds-text, #42526e); }",
+    ];
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let sheets = collect_sheets(&css_inputs, options);
+    let expected = [
+      "div._11kj1w7a:hover{background-color:var(--ds-background-neutral-subtle,#0000)}",
+      "div._1et61w7a:active{background-color:var(--ds-background-neutral-subtle,#0000)}",
+      "div._1v6j10s3:active{color:var(--ds-text,#42526e)}",
+      "div._jl2n73ad:hover{cursor:default}",
+    ];
+    assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn conversation_assistant_wrapper_calc_outputs_match_babel() {
+    let css_inputs = [
+      "& { width: calc(100% - var(--ds-space-150, 9pt)); height: calc(100% - var(--ds-space-200, 1pc)); }",
+    ];
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let sheets = collect_sheets(&css_inputs, options);
+    let expected = [
+      "._1bsb1ina{width:calc(100% - var(--ds-space-150, 9pt))}",
+      "._4t3inau3{height:calc(100% - var(--ds-space-200, 1pc))}",
+    ];
+    assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn agent_header_gradient_outputs_match_babel() {
+    let css_inputs = ["& { background: linear-gradient(90deg, #4D8CED 0%, #CFE1FD 100%); }"];
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let sheets = collect_sheets(&css_inputs, options);
+    let expected = ["._11q7taqa{background:linear-gradient(90deg,#4d8ced,#cfe1fd)}"];
+    assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn tab_button_text_decoration_outputs_match_babel() {
+    let (options, _tmp) = options_with_browserslist();
+    let css_inputs = [
+      "& { text-decoration: underline; text-decoration-thickness: var(--ds-border-width-selected, 2px); text-underline-offset: var(--ds-space-100, 8px); }",
+    ];
+    let sheets = collect_sheets(&css_inputs, options.clone());
+    let expected = ["._4bfu18uv{text-decoration-color:initial}"];
+    assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn input_field_hover_text_decoration_outputs_match_babel() {
+    let (options, _tmp) = options_with_browserslist();
+    let css_inputs = ["&:hover { text-decoration: underline; }"];
+    let sheets = collect_sheets(&css_inputs, options.clone());
+    let expected = ["._9oik18uv:hover{text-decoration-color:initial}"];
+    assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn shimmer_gradient_outputs_match_babel() {
+    let css_inputs =
+      ["& { background-image: linear-gradient(90deg, #6B6E76 0%, #C7CDDC 59%, #6B6E76 97.12%); }"];
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let sheets = collect_sheets(&css_inputs, options);
+    let expected =
+      ["._1itk1fnj{background-image:linear-gradient(90deg,#6b6e76,#c7cddc 59%,#6b6e76 97.12%)}"];
+    assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn inline_card_text_decoration_outputs_match_babel() {
+    let (options, _tmp) = options_with_browserslist();
+    let css_inputs = ["& { text-decoration: none; } &:hover { text-decoration: underline; }"];
+    let sheets = collect_sheets(&css_inputs, options.clone());
+    let expected = [
+      "._4bfu18uv{text-decoration-color:initial}",
+      "._9oik18uv:hover{text-decoration-color:initial}",
+    ];
+    assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn title_box_surface_color_outputs_match_babel() {
+    let css_inputs = ["& { background-color: var(--ds-surface, rgba(255, 255, 255, 1)); }"];
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let sheets = collect_sheets(&css_inputs, options);
+    let expected = ["._bfhkvuon{background-color:var(--ds-surface,#fff)}"];
+    assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn backlog_story_point_empty_selector_outputs_match_babel() {
+    let css_inputs = ["& { * { &:empty { box-shadow: none; } } }"];
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let sheets = collect_sheets(&css_inputs, options);
+    let expected = ["._y5xnglyw :empty{box-shadow:none}"];
+    assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn quarter_picker_child_pseudo_outputs_match_babel() {
+    let css_inputs = ["& { > :hover { height: 105px; } > :disabled { height: 105px; } }"];
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let sheets = collect_sheets(&css_inputs, options);
+    let expected = [
+      "._1p4f1nzx >:hover{height:105px}",
+      "._1u1q1nzx >:disabled{height:105px}",
+    ];
+    assert_contains_sheets(&sheets, &expected);
   }
 }

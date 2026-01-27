@@ -26,7 +26,7 @@
     "build": "yarn build:clean && yarn build:prepare && yarn build:gulp && yarn build:ts",
     "build:ci": "yarn build && node scripts/post-build-ci.mjs",
     "build:clean": "node ./scripts/clean.mjs",
-    "build:prepare": "lerna run dev:prepare --verbose",
+    "build:prepare": "lerna run dev:prepare",
     "build:gulp": "cross-env NODE_ENV=production ATLASPACK_BUILD_ENV=production ATLASPACK_REGISTER_USE_SRC=true gulp",
     "build:ts": "yarn update-ts-references && tsc --build tsconfig.paths.json",
     "build-native": "node scripts/build-native.js",
