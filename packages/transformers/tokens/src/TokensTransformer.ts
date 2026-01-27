@@ -6,8 +6,12 @@ import {
 } from '@atlaspack/diagnostic';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {Transformer} from '@atlaspack/plugin';
-import {isSafeFromJs, hashCode} from '@atlaspack/rust/index';
-import {applyTokensPlugin, TokensPluginResult} from '@atlaspack/rust';
+import {
+  applyTokensPlugin,
+  hashCode,
+  isSafeFromJs,
+  TokensPluginResult,
+} from '@atlaspack/rust';
 import SourceMap from '@atlaspack/source-map';
 import {
   loadCompiledCssInJsConfig,

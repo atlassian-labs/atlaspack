@@ -17,7 +17,7 @@ import {
   transformAsync,
   determineJsxConfiguration,
 } from '@atlaspack/rust';
-import {type CompiledCssInJsConfigPlugin} from '@atlaspack/rust/index';
+import {type CompiledCssInJsConfigPlugin} from '@atlaspack/rust';
 import invariant from 'assert';
 import browserslist from 'browserslist';
 import semver from 'semver';
