@@ -1,21 +1,30 @@
 use anyhow::anyhow;
+use std::collections::HashMap;
+
 use petgraph::{graph::NodeIndex, prelude::StableDiGraph, visit::Dfs};
 use rayon::prelude::*;
 
 use crate::{
   bundle_graph::bundle_graph::BundleGraph,
-  types::{Bundle, BundleGraphEdgeType, BundleGraphNode},
+  types::{Asset, Bundle, BundleGraphEdgeType, BundleGraphNode},
 };
 
+type BundleGraphNodeId = String;
+
+#[derive(Default)]
 pub struct BundleGraphFromJs {
   graph: StableDiGraph<BundleGraphNode, BundleGraphEdgeType>,
+  nodes_by_id: HashMap<BundleGraphNodeId, NodeIndex>,
 }
 
 impl BundleGraphFromJs {
   pub fn new(nodes: Vec<BundleGraphNode>, edges: Vec<(u32, u32, BundleGraphEdgeType)>) -> Self {
     let mut graph = StableDiGraph::new();
+    let mut nodes_by_id = HashMap::new();
     for node in nodes {
-      graph.add_node(node);
+      let id = node.id().to_string();
+      let idx = graph.add_node(node);
+      nodes_by_id.insert(id, idx);
     }
     for edge in edges {
       graph.add_edge(
@@ -24,7 +33,23 @@ impl BundleGraphFromJs {
         edge.2,
       );
     }
-    BundleGraphFromJs { graph }
+    BundleGraphFromJs { graph, nodes_by_id }
+  }
+
+  /// Returns all bundles reachable from the root node via DFS traversal.
+  pub fn get_bundles(&self) -> Vec<&Bundle> {
+    let Some(root_idx) = self.nodes_by_id.get("root") else {
+      return Vec::new();
+    };
+
+    let mut bundles = Vec::new();
+    let mut dfs = Dfs::new(&self.graph, *root_idx);
+    while let Some(node_idx) = dfs.next(&self.graph) {
+      if let Some(BundleGraphNode::Bundle(bundle_node)) = self.graph.node_weight(node_idx) {
+        bundles.push(&bundle_node.value);
+      }
+    }
+    bundles
   }
 
   #[tracing::instrument(level = "info", skip_all, fields(size))]
@@ -47,20 +72,31 @@ impl BundleGraphFromJs {
 }
 
 impl BundleGraph for BundleGraphFromJs {
-  // Temporary code just to validate functionality
-  fn get_bundles(&self) -> Vec<&Bundle> {
-    if self.graph.node_count() == 0 {
-      return Vec::new();
+  fn get_bundle_by_id(&self, id: &str) -> Option<&Bundle> {
+    if let Some(node_idx) = self.nodes_by_id.get(id)
+      && let Some(node) = self.graph.node_weight(*node_idx)
+    {
+      return match node {
+        BundleGraphNode::Bundle(node) => Some(&node.value),
+        _ => None,
+      };
     }
-    let mut bundles = Vec::new();
-    let mut dfs = Dfs::new(&self.graph, NodeIndex::new(0));
-    while let Some(node) = dfs.next(&self.graph) {
-      let node = self.graph.node_weight(node).unwrap();
-      if let BundleGraphNode::Bundle(node) = node {
-        bundles.push(&node.value);
+    None
+  }
+
+  #[tracing::instrument(level = "trace", skip_all)]
+  fn traverse_bundle_assets(&self, bundle: &Bundle, mut visit: impl FnMut(&Asset)) {
+    if bundle.entry_asset_ids.is_empty() || bundle.entry_asset_ids.len() > 1 {
+      todo!("Implement support for non-single entry assets");
+    }
+    let entry_asset_idx = self.nodes_by_id.get(&bundle.entry_asset_ids[0]).unwrap();
+    let mut dfs = Dfs::new(&self.graph, *entry_asset_idx);
+    while let Some(node_idx) = dfs.next(&self.graph) {
+      let node = self.graph.node_weight(node_idx).unwrap();
+      if let BundleGraphNode::Asset(node) = node {
+        visit(&node.value)
       }
     }
-    bundles
   }
 }
 

@@ -69,7 +69,8 @@ async function run({input, api, farm, rustAtlaspack}: RunInput<BundleInfo>) {
     bundle.type === 'js'
   ) {
     // Once this actually does something, the code below will be in an `else` block (i.e. we'll only run one or the other)
-    await rustAtlaspack.package();
+    const packagingResult = await rustAtlaspack.package(bundle.id);
+    // console.log(`RESULT:`, packagingResult);
   }
 
   let {devDepRequests, configRequests, bundleInfo, invalidations} =

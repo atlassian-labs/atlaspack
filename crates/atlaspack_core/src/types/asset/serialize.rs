@@ -106,6 +106,7 @@ impl<'de> Visitor<'de> for AssetVisitor {
     let mut output_hash = None;
     let mut config_path = None;
     let mut config_key_path = None;
+    let mut content_key = None;
     let mut unique_key = None;
     let mut meta = None;
 
@@ -115,6 +116,7 @@ impl<'de> Visitor<'de> for AssetVisitor {
         "bundleBehavior" => bundle_behavior = deserialize_field!(map, "bundleBehavior", "Asset")?,
         "configKeyPath" => config_key_path = deserialize_field!(map, "configKeyPath", "Asset")?,
         "configPath" => config_path = deserialize_field!(map, "configPath", "Asset")?,
+        "contentKey" => content_key = deserialize_field!(map, "contentKey", "Asset")?,
         "env" => env = Some(deserialize_field!(map, "env", "Asset")?),
         "filePath" => file_path = Some(deserialize_field!(map, "filePath", "Asset")?),
         "id" => id = Some(deserialize_field!(map, "id", "Asset")?),
@@ -169,6 +171,7 @@ impl<'de> Visitor<'de> for AssetVisitor {
       output_hash,
       config_path,
       config_key_path,
+      content_key,
       unique_key,
       meta: meta_map,
       conditions: extracted.conditions,
@@ -236,6 +239,7 @@ mod tests {
       conditions: BTreeSet::new(),
       config_path: Some("config.json".to_string()),
       config_key_path: Some("key.path".to_string()),
+      content_key: Some("Asset/1.0.0/test.js/test123/content".to_string()),
       interpreter: Some("#!/usr/bin/node".to_string()),
       packaging_id: Some("pkg123".to_string()),
       has_references: Some(true),

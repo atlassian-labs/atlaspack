@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
 use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode};
-use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
@@ -12,6 +11,7 @@ use atlaspack_core::types::{AtlaspackOptions, BundleGraphNode, SourceField, Targ
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
 use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter, StatsSnapshot};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
+use atlaspack_packager_js::JsPackager;
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::DatabaseHandle;
 use tokio::runtime::Runtime;
@@ -42,9 +42,9 @@ pub struct Atlaspack {
   pub config_loader: Arc<ConfigLoader>,
   pub plugins: PluginsRef,
   pub request_tracker: Arc<RwLock<RequestTracker>>,
-  // This is the bundle graph that is deserialised from JS, and will be used temporarily until
-  // we have a native bundle graph implementation.
-  pub bundle_graph: Arc<RwLock<Option<BundleGraphFromJs>>>,
+  /// The bundle graph deserialised from JS. Used temporarily until we have a native
+  /// bundle graph implementation. Starts empty and is populated via `load_bundle_graph`.
+  pub bundle_graph: Arc<RwLock<BundleGraphFromJs>>,
 }
 
 impl Atlaspack {
@@ -171,7 +171,7 @@ impl Atlaspack {
       config_loader,
       plugins,
       request_tracker: Arc::new(RwLock::new(request_tracker)),
-      bundle_graph: Arc::new(RwLock::new(None)),
+      bundle_graph: Arc::new(RwLock::new(BundleGraphFromJs::default())),
     })
   }
 }
@@ -239,23 +239,17 @@ impl Atlaspack {
     edges: Vec<(u32, u32, u8)>,
   ) -> anyhow::Result<()> {
     self.runtime.block_on(async move {
-      let bundle_graph = BundleGraphFromJs::new(nodes, edges);
-      self.bundle_graph.write().await.replace(bundle_graph);
+      *self.bundle_graph.write().await = BundleGraphFromJs::new(nodes, edges);
       Ok(())
     })
   }
 
   #[tracing::instrument(level = "info", skip_all)]
-  pub fn package(&self) -> anyhow::Result<()> {
+  pub fn package(&self, bundle_id: String) -> anyhow::Result<String> {
     self.runtime.block_on(async move {
-      tracing::debug!("TODO: package()");
-      // Temporary code just to make sure we can read the bundle graph and get some
-      // data out - obviously we'll know which bundle we're actually packaging here normally
-      let binding = self.bundle_graph.read().await;
-      let bundles = binding.as_ref().unwrap().get_bundles();
-      dbg!(&bundles.iter().map(|b| b.name.clone()).collect::<Vec<_>>());
-
-      Ok(())
+      let bundle_graph = self.bundle_graph.read().await;
+      let packager = JsPackager::new(Arc::clone(&self.db));
+      packager.package(&bundle_id, &*bundle_graph)
     })
   }
 

@@ -1,6 +1,6 @@
-use crate::types::Bundle;
+use crate::types::{Asset, Bundle};
 
 pub trait BundleGraph {
-  // Temporary code just to validate functionality
-  fn get_bundles(&self) -> Vec<&Bundle>;
+  fn get_bundle_by_id(&self, id: &str) -> Option<&Bundle>;
+  fn traverse_bundle_assets(&self, bundle: &Bundle, visit: impl FnMut(&Asset));
 }

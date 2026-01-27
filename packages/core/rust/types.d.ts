@@ -380,6 +380,7 @@ export class SourceMap {
 
 export declare function atlaspackNapiPackage(
   atlaspackNapi: AtlaspackNapi,
+  bundleId: string,
 ): object;
 export interface CompiledCssInJsConfigPlugin {
   configPath?: string;

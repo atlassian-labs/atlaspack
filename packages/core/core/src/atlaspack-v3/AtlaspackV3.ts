@@ -14,8 +14,8 @@ import {NapiWorkerPool} from './NapiWorkerPool';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Event} from '@parcel/watcher';
 import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
-import invariant from 'assert';
 import type BundleGraph from '../BundleGraph';
+import {RunPackagerRunnerResult} from '../PackagerRunner';
 
 export type AtlaspackV3Options = {
   fs?: AtlaspackNapiOptions['fs'];
@@ -111,8 +111,8 @@ export class AtlaspackV3 {
     ) as Promise<void>;
   }
 
-  package(): Promise<any> {
-    return atlaspackNapiPackage(this._atlaspack_napi) as Promise<any>;
+  package(bundleId: string): Promise<RunPackagerRunnerResult> {
+    return atlaspackNapiPackage(this._atlaspack_napi, bundleId) as Promise<any>;
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {
