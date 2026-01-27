@@ -6,7 +6,7 @@ import {
   CompiledCssInJsPluginResult,
   hashCode,
   isSafeFromJs,
-} from '@atlaspack/rust/index';
+} from '@atlaspack/rust';
 import SourceMap from '@atlaspack/source-map';
 import type {Diagnostic} from '@atlaspack/diagnostic';
 import ThrowableDiagnostic, {
