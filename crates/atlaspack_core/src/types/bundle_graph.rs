@@ -27,14 +27,22 @@ pub struct BundleGroup {
 
 // Deserialization structs for each node type
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type")]
 pub enum BundleGraphNode {
+  #[serde(rename = "asset")]
   Asset(AssetNode),
+  #[serde(rename = "dependency")]
   Dependency(DependencyNode),
+  #[serde(rename = "entry_specifier")]
   EntrySpecifier(EntrySpecifierNode),
+  #[serde(rename = "entry_file")]
   EntryFile(EntryFileNode),
+  #[serde(rename = "root")]
   Root(RootNode),
+  #[serde(rename = "bundle_group")]
   BundleGroup(BundleGroupNode),
+  #[serde(rename = "bundle")]
   Bundle(BundleNode),
 }
 
@@ -56,8 +64,6 @@ impl BundleGraphNode {
 #[serde(rename_all = "camelCase")]
 pub struct AssetNode {
   pub id: String,
-  #[serde(rename = "type")]
-  pub node_type: String,
   pub value: Asset,
   // TODO - this isn't used by the dev packager, so we'll skip for now to avoid deser complexity
   #[serde(skip)]
@@ -74,8 +80,6 @@ pub struct AssetNode {
 #[serde(rename_all = "camelCase")]
 pub struct DependencyNode {
   pub id: String,
-  #[serde(rename = "type")]
-  pub node_type: String,
   pub value: Dependency,
   #[serde(default)]
   pub complete: Option<bool>,
@@ -106,8 +110,6 @@ pub struct UsedSymbolResolution {
 #[serde(rename_all = "camelCase")]
 pub struct EntrySpecifierNode {
   pub id: String,
-  #[serde(rename = "type")]
-  pub node_type: String,
   pub value: PathBuf,
   #[serde(default)]
   pub corresponding_request: Option<String>,
@@ -117,8 +119,6 @@ pub struct EntrySpecifierNode {
 #[serde(rename_all = "camelCase")]
 pub struct EntryFileNode {
   pub id: String,
-  #[serde(rename = "type")]
-  pub node_type: String,
   pub value: Entry,
   #[serde(default)]
   pub corresponding_request: Option<String>,
@@ -128,8 +128,6 @@ pub struct EntryFileNode {
 #[serde(rename_all = "camelCase")]
 pub struct RootNode {
   pub id: String,
-  #[serde(rename = "type")]
-  pub node_type: String,
   pub value: Option<String>,
 }
 
@@ -137,8 +135,6 @@ pub struct RootNode {
 #[serde(rename_all = "camelCase")]
 pub struct BundleGroupNode {
   pub id: String,
-  #[serde(rename = "type")]
-  pub node_type: String,
   pub value: BundleGroup,
 }
 
@@ -146,8 +142,6 @@ pub struct BundleGroupNode {
 #[serde(rename_all = "camelCase")]
 pub struct BundleNode {
   pub id: String,
-  #[serde(rename = "type")]
-  pub node_type: String,
   pub value: Bundle,
 }
 

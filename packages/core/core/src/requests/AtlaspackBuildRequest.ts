@@ -3,12 +3,7 @@ import type {Async} from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
 
 import type {StaticRunOpts} from '../RequestTracker';
-import type {
-  Asset,
-  AssetGroup,
-  BundleGraphNode,
-  PackagedBundleInfo,
-} from '../types';
+import type {Asset, AssetGroup, PackagedBundleInfo} from '../types';
 import type BundleGraph from '../BundleGraph';
 
 import createBundleGraphRequest, {
@@ -17,7 +12,7 @@ import createBundleGraphRequest, {
 import createWriteBundlesRequest from './WriteBundlesRequest';
 import {assertSignalNotAborted} from '../utils';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
-import {BundleGraphEdgeType, bundleGraphEdgeTypes} from '../BundleGraph';
+import {bundleGraphEdgeTypes} from '../BundleGraph';
 import {report} from '../ReporterRunner';
 import IBundleGraph from '../public/BundleGraph';
 import {NamedBundle} from '../public/Bundle';
@@ -107,17 +102,7 @@ async function run({
       }
     });
     if (hasSupportedTarget) {
-      // In theory this could be a (somehow) null[] - but we know if we've gotten this far it probably isn't..
-      let nodes = bundleGraph._graph.nodes as BundleGraphNode[];
-      let rawEdges: [number, number, BundleGraphEdgeType][] = [];
-      const gen = bundleGraph._graph.getAllEdges();
-      let next = gen.next();
-      while (!next.done) {
-        let edge = next.value;
-        rawEdges.push([edge.from, edge.to, edge.type]);
-        next = gen.next();
-      }
-      await rustAtlaspack.loadBundleGraph({nodes, edges: rawEdges});
+      await rustAtlaspack.loadBundleGraph(bundleGraph);
     }
   }
 

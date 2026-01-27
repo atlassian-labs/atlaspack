@@ -236,6 +236,55 @@ pub fn atlaspack_napi_load_bundle_graph(
   Ok(promise)
 }
 
+/// Batch version that accepts JSON string instead of individual objects
+/// This avoids 300K+ NAPI calls for large bundle graphs
+#[tracing::instrument(level = "info", skip_all)]
+#[napi]
+pub fn atlaspack_napi_load_bundle_graph_json(
+  env: Env,
+  atlaspack_napi: AtlaspackNapi,
+  nodes_json: String,
+  edges: Vec<(u32, u32, u8)>,
+) -> napi::Result<JsObject> {
+  let (deferred, promise) = env.create_deferred()?;
+
+  // Move all parsing and deserialization off the JS thread
+  thread::spawn({
+    let atlaspack = atlaspack_napi.clone();
+    move || {
+      use atlaspack_core::types::BundleGraphNode;
+      use rayon::prelude::*;
+
+      let result: anyhow::Result<()> = (|| {
+        // Parse JSON to Vec<Value> first (fast), then parallelize node deserialization
+        let json_values: Vec<serde_json::Value> = serde_json::from_str(&nodes_json)
+          .map_err(|e| anyhow!("Failed to parse bundle graph JSON: {}", e))?;
+
+        // Parallelize the deserialization of individual nodes using rayon
+        let nodes: Vec<BundleGraphNode> = json_values
+          .into_par_iter()
+          .map(|value| {
+            serde_json::from_value::<BundleGraphNode>(value)
+              .map_err(|e| anyhow!("Failed to deserialize node: {}", e))
+          })
+          .collect::<anyhow::Result<Vec<_>>>()?;
+
+        let atlaspack = atlaspack.write();
+        atlaspack.load_bundle_graph(nodes, edges)
+      })();
+
+      deferred.resolve(move |env| match result {
+        Ok(()) => NapiAtlaspackResult::ok(&env, ()),
+        Err(error) => {
+          let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
+          NapiAtlaspackResult::error(&env, js_object)
+        }
+      })
+    }
+  });
+  Ok(promise)
+}
+
 #[napi]
 pub fn atlaspack_napi_package(env: Env, atlaspack_napi: AtlaspackNapi) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;

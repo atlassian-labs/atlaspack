@@ -77,7 +77,6 @@ mod tests {
   fn create_test_asset_node(id: &str) -> AssetNode {
     AssetNode {
       id: id.to_string(),
-      node_type: "asset".to_string(),
       value: Asset {
         id: id.to_string(),
         file_path: PathBuf::from(format!("{}.js", id)),
@@ -96,7 +95,6 @@ mod tests {
   fn create_test_dependency_node(id: &str) -> DependencyNode {
     DependencyNode {
       id: id.to_string(),
-      node_type: "dependency".to_string(),
       value: Dependency {
         id: id.to_string(),
         specifier: "./test".to_string(),
@@ -121,7 +119,6 @@ mod tests {
   fn create_test_bundle_node(id: &str, name: &str) -> BundleNode {
     BundleNode {
       id: id.to_string(),
-      node_type: "bundle".to_string(),
       value: create_test_bundle(id, name),
     }
   }
@@ -129,7 +126,6 @@ mod tests {
   fn create_test_root_node() -> RootNode {
     RootNode {
       id: "root".to_string(),
-      node_type: "root".to_string(),
       value: None,
     }
   }

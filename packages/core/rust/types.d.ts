@@ -419,3 +419,8 @@ export interface CompiledCssInJsPluginResult {
   diagnostics: Array<JsDiagnostic>;
   bailOut: boolean;
 }
+export declare function atlaspackNapiLoadBundleGraphJson(
+  atlaspackNapi: AtlaspackNapi,
+  nodesJson: string,
+  edges: Array<[number, number, number]>,
+): object;

@@ -3,7 +3,7 @@ import {
   atlaspackNapiBuildAssetGraph,
   atlaspackNapiRespondToFsEvents,
   atlaspackNapiCompleteSession,
-  atlaspackNapiLoadBundleGraph,
+  atlaspackNapiLoadBundleGraphJson,
   atlaspackNapiPackage,
   AtlaspackNapi,
   Lmdb,
@@ -14,9 +14,8 @@ import {NapiWorkerPool} from './NapiWorkerPool';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Event} from '@parcel/watcher';
 import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
-import {BundleGraphNode} from '../types';
 import invariant from 'assert';
-import {BundleGraphEdgeType} from '../BundleGraph';
+import type BundleGraph from '../BundleGraph';
 
 export type AtlaspackV3Options = {
   fs?: AtlaspackNapiOptions['fs'];
@@ -102,19 +101,14 @@ export class AtlaspackV3 {
     return atlaspackNapiBuildAssetGraph(this._atlaspack_napi) as Promise<any>;
   }
 
-  loadBundleGraph({
-    nodes,
-    edges,
-  }: {
-    nodes: BundleGraphNode[];
-    edges: [number, number, BundleGraphEdgeType][];
-  }): Promise<any> {
-    invariant(nodes.length > 0, 'Bundle graph must have at least one node');
-    return atlaspackNapiLoadBundleGraph(
+  loadBundleGraph(bundleGraph: BundleGraph): Promise<void> {
+    const {nodesJson, edges} = bundleGraph.serializeForNative();
+
+    return atlaspackNapiLoadBundleGraphJson(
       this._atlaspack_napi,
-      nodes,
+      nodesJson,
       edges,
-    ) as Promise<any>;
+    ) as Promise<void>;
   }
 
   package(): Promise<any> {
