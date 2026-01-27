@@ -12,6 +12,7 @@ import invariant from 'assert';
 import path from 'path';
 import fs from 'fs';
 import {replaceScriptDependencies, getSpecifier} from './utils';
+import {PluginLogger as Logger} from '@atlaspack/types';
 
 const PRELUDE = fs
   .readFileSync(path.join(__dirname, 'dev-prelude.js'), 'utf8')
@@ -23,26 +24,33 @@ export class DevPackager {
   bundleGraph: BundleGraph<NamedBundle>;
   bundle: NamedBundle;
   parcelRequireName: string;
+  logger: Logger;
 
   constructor(
     options: PluginOptions,
     bundleGraph: BundleGraph<NamedBundle>,
     bundle: NamedBundle,
     parcelRequireName: string,
+    logger: Logger,
   ) {
     this.options = options;
     this.bundleGraph = bundleGraph;
     this.bundle = bundle;
     this.parcelRequireName = parcelRequireName;
+    this.logger = logger;
   }
 
   async package(): Promise<{
     contents: string;
     map: SourceMap | null | undefined;
   }> {
+    const startTime = Date.now();
+    let assetCount = 0;
+
     // Load assets
     let queue = new PromiseQueue({maxConcurrent: 32});
     this.bundle.traverseAssets((asset) => {
+      assetCount += 1;
       queue.add(async () => {
         let [code, mapBuffer] = await Promise.all([
           asset.getCode(),
@@ -61,6 +69,7 @@ export class DevPackager {
 
     let prefix = this.getPrefix();
     let lineOffset = countLines(prefix);
+
     let script:
       | {
           code: string;
@@ -121,7 +130,6 @@ export class DevPackager {
             deps[specifier] = dep.specifier;
           }
         }
-
         if (getFeatureFlag('hmrImprovements')) {
           // Add dependencies for parcelRequire calls added by runtimes
           // so that the HMR runtime can correctly traverse parents.
@@ -232,6 +240,11 @@ export class DevPackager {
         map.addSourceMap(entryMap, lineOffset);
       }
     }
+
+    const endTime = Date.now();
+    this.logger.verbose({
+      message: `DevPackager.package(${this.bundle.id}): ${endTime - startTime}ms for ${assetCount} assets`,
+    });
 
     return {
       contents,
