@@ -508,16 +508,4 @@ mod tests {
       .unwrap()
       .remove(&tmp.path().to_path_buf());
   }
-
-  // #[test]
-  // fn transform_value_for_hash_respects_initial_support() {
-  //   assert_eq!(
-  //     transform_value_for_hash("text-decoration-color", "currentColor", true),
-  //     "initial"
-  //   );
-  //   assert_eq!(
-  //     transform_value_for_hash("text-decoration-color", "currentColor", false),
-  //     "currentColor"
-  //   );
-  // }
 }
