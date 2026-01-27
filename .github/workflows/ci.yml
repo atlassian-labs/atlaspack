@@ -221,6 +221,12 @@ jobs:
           SLICE_NUM: ${{ matrix.slice_num }}
           SLICE_TOTAL: ${{ matrix.slice_total }}
           RUST_BACKTRACE: full
+          ATLASPACK_PROFILE_MOCHA: true
+      - name: Upload mocha-cpu-profiles
+        uses: actions/upload-artifact@v4
+        with:
+          name: mocha-cpu-profiles-v2-${{ matrix.os }}-${{ matrix.node }}
+          path: mocha-cpu-profiles
 
   integration_tests_v3:
     name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }}, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
