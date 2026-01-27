@@ -377,6 +377,24 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2026-01-19
    */
   skipServerFileCheck: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Enables native packaging. By itself, this feature flag will only ensure that
+   * the native code is ready for a bundle graph, but does not enable any native packaging features.
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2026-01-21
+   */
+  nativePackager: false,
+
+  /**
+   * Enables native packaging for SSR development. This flag is used in conjuction with runtime checks to enable the
+   * setup and use of the native packager when building bundles in development mode for the `tesseract` target.
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2026-01-21
+   */
+  nativePackagerSSRDev: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

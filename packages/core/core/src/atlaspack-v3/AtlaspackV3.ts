@@ -3,6 +3,8 @@ import {
   atlaspackNapiBuildAssetGraph,
   atlaspackNapiRespondToFsEvents,
   atlaspackNapiCompleteSession,
+  atlaspackNapiLoadBundleGraph,
+  atlaspackNapiPackage,
   AtlaspackNapi,
   Lmdb,
   AtlaspackNapiOptions,
@@ -12,6 +14,7 @@ import {NapiWorkerPool} from './NapiWorkerPool';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Event} from '@parcel/watcher';
 import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
+import {BundleGraphNode} from '../types';
 
 export type AtlaspackV3Options = {
   fs?: AtlaspackNapiOptions['fs'];
@@ -95,6 +98,24 @@ export class AtlaspackV3 {
 
   buildAssetGraph(): Promise<any> {
     return atlaspackNapiBuildAssetGraph(this._atlaspack_napi) as Promise<any>;
+  }
+
+  loadBundleGraph({
+    nodes,
+    edges,
+  }: {
+    nodes: BundleGraphNode[];
+    edges: [number, number][];
+  }): Promise<any> {
+    return atlaspackNapiLoadBundleGraph(
+      this._atlaspack_napi,
+      nodes,
+      edges,
+    ) as Promise<any>;
+  }
+
+  package(): Promise<any> {
+    return atlaspackNapiPackage(this._atlaspack_napi) as Promise<any>;
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {

@@ -58,7 +58,11 @@ import {
   fromProjectPathRelative,
 } from './projectPath';
 import {tracer, NativeProfiler} from '@atlaspack/profiler';
-import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
+import {
+  setFeatureFlags,
+  DEFAULT_FEATURE_FLAGS,
+  getFeatureFlag,
+} from '@atlaspack/feature-flags';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
@@ -165,7 +169,10 @@ export default class Atlaspack {
     this.#resolvedOptions = resolvedOptions;
 
     let rustAtlaspack: AtlaspackV3;
-    if (resolvedOptions.featureFlags.atlaspackV3) {
+    if (
+      resolvedOptions.featureFlags.atlaspackV3 ||
+      resolvedOptions.featureFlags.nativePackager
+    ) {
       // eslint-disable-next-line no-unused-vars
       let {entries, inputFS, outputFS, ...options} = this.#initialOptions;
 
@@ -585,7 +592,7 @@ export default class Atlaspack {
         });
 
         let nativeInvalid = false;
-        if (this.rustAtlaspack) {
+        if (getFeatureFlag('atlaspackV3') && this.rustAtlaspack) {
           nativeInvalid = await this.rustAtlaspack.respondToFsEvents(events);
         }
 
@@ -681,7 +688,7 @@ export default class Atlaspack {
 
     const start = Date.now();
     const result = await this.#requestTracker.runRequest(
-      this.rustAtlaspack != null
+      getFeatureFlag('atlaspackV3') && this.rustAtlaspack != null
         ? // @ts-expect-error TS2345
           createAssetGraphRequestRust(this.rustAtlaspack)(input)
         : // @ts-expect-error TS2345
