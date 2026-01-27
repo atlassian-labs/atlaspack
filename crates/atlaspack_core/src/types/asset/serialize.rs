@@ -3,7 +3,9 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use serde_json::json;
 
 use crate::types::Asset;
-use crate::types::serialization::extract_asset_meta_fields;
+use crate::types::serialization::{
+  deserialize_field, deserialize_symbols_field, extract_asset_meta_fields,
+};
 
 macro_rules! insert_if_not_none {
   ($map:expr, $key:expr, $value:expr) => {
@@ -108,25 +110,31 @@ impl<'de> Visitor<'de> for AssetVisitor {
     let mut meta = None;
 
     while let Some(key) = map.next_key::<String>()? {
+      tracing::trace!(field = %key, "Deserializing Asset field");
       match key.as_str() {
-        "bundleBehavior" => bundle_behavior = map.next_value()?,
-        "configKeyPath" => config_key_path = map.next_value()?,
-        "configPath" => config_path = map.next_value()?,
-        "env" => env = Some(map.next_value()?),
-        "filePath" => file_path = Some(map.next_value()?),
-        "id" => id = Some(map.next_value()?),
-        "isBundleSplittable" => is_bundle_splittable = Some(map.next_value()?),
-        "isSource" => is_source = Some(map.next_value()?),
-        "outputHash" => output_hash = map.next_value()?,
-        "pipeline" => pipeline = map.next_value()?,
-        "query" => query = map.next_value()?,
-        "sideEffects" => side_effects = Some(map.next_value()?),
-        "stats" => stats = Some(map.next_value()?),
-        "symbols" => symbols = map.next_value()?,
-        "type" => file_type = Some(map.next_value()?),
-        "uniqueKey" => unique_key = map.next_value()?,
+        "bundleBehavior" => bundle_behavior = deserialize_field!(map, "bundleBehavior", "Asset")?,
+        "configKeyPath" => config_key_path = deserialize_field!(map, "configKeyPath", "Asset")?,
+        "configPath" => config_path = deserialize_field!(map, "configPath", "Asset")?,
+        "env" => env = Some(deserialize_field!(map, "env", "Asset")?),
+        "filePath" => file_path = Some(deserialize_field!(map, "filePath", "Asset")?),
+        "id" => id = Some(deserialize_field!(map, "id", "Asset")?),
+        "isBundleSplittable" => {
+          is_bundle_splittable = Some(deserialize_field!(map, "isBundleSplittable", "Asset")?)
+        }
+        "isSource" => is_source = Some(deserialize_field!(map, "isSource", "Asset")?),
+        "outputHash" => output_hash = deserialize_field!(map, "outputHash", "Asset")?,
+        "pipeline" => pipeline = deserialize_field!(map, "pipeline", "Asset")?,
+        "query" => query = deserialize_field!(map, "query", "Asset")?,
+        "sideEffects" => side_effects = Some(deserialize_field!(map, "sideEffects", "Asset")?),
+        "stats" => stats = Some(deserialize_field!(map, "stats", "Asset")?),
+        "symbols" => {
+          let value: serde_json::Value = map.next_value()?;
+          symbols = deserialize_symbols_field(value).map_err(serde::de::Error::custom)?;
+        }
+        "type" => file_type = Some(deserialize_field!(map, "type", "Asset")?),
+        "uniqueKey" => unique_key = deserialize_field!(map, "uniqueKey", "Asset")?,
         "meta" => {
-          let meta_map: serde_json::Value = map.next_value()?;
+          let meta_map: serde_json::Value = deserialize_field!(map, "meta", "Asset")?;
           meta = Some(
             meta_map
               .as_object()
@@ -135,7 +143,8 @@ impl<'de> Visitor<'de> for AssetVisitor {
           );
         }
         _ => {
-          return Err(serde::de::Error::unknown_field(&key, &[]));
+          // Skip unknown field value
+          let _: serde::de::IgnoredAny = map.next_value()?;
         }
       }
     }
