@@ -1,4 +1,6 @@
-use crate::types::serialization::{deserialize_field, extract_val, extract_val_default};
+use crate::types::serialization::{
+  deserialize_field, deserialize_symbols_field, extract_val, extract_val_default,
+};
 use crate::types::{Dependency, SourceLocation};
 use serde::de::{Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
@@ -206,8 +208,9 @@ impl<'de> Visitor<'de> for DependencyVisitor {
           source_asset_type = deserialize_field!(map, "sourceAssetType", "Dependency")?;
         }
         "symbols" => {
-          // Handle null explicitly for Option<DependencySymbols>
-          symbols = deserialize_field!(map, "symbols", "Dependency")?;
+          // Handle both array (from Rust) and map (from JS) formats
+          let value: serde_json::Value = map.next_value()?;
+          symbols = deserialize_symbols_field(value).map_err(serde::de::Error::custom)?;
         }
         "target" => {
           // Handle null explicitly for Option<Target>

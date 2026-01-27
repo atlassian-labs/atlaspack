@@ -2,8 +2,10 @@ use serde::de::{Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use serde_json::json;
 
-use crate::types::serialization::{deserialize_field, extract_asset_meta_fields};
-use crate::types::{Asset, Symbol};
+use crate::types::Asset;
+use crate::types::serialization::{
+  deserialize_field, deserialize_symbols_field, extract_asset_meta_fields,
+};
 
 macro_rules! insert_if_not_none {
   ($map:expr, $key:expr, $value:expr) => {
@@ -127,30 +129,7 @@ impl<'de> Visitor<'de> for AssetVisitor {
         "stats" => stats = Some(deserialize_field!(map, "stats", "Asset")?),
         "symbols" => {
           let value: serde_json::Value = map.next_value()?;
-          symbols = if value.is_null() {
-            None
-          } else if value.is_array() {
-            // Standard sequence deserialization
-            serde_json::from_value::<Vec<Symbol>>(value)
-              .map(Some)
-              .map_err(serde::de::Error::custom)?
-          } else if value.is_object() {
-            // Map representation: extract values (Symbol objects)
-            let mut symbols_vec = Vec::new();
-            let obj = value
-              .as_object()
-              .ok_or_else(|| serde::de::Error::custom("Expected object for symbols map"))?;
-            for (_, val) in obj {
-              let symbol: Symbol =
-                serde_json::from_value(val.clone()).map_err(serde::de::Error::custom)?;
-              symbols_vec.push(symbol);
-            }
-            Some(symbols_vec)
-          } else {
-            return Err(serde::de::Error::custom(
-              "symbols must be an array, object, or null",
-            ));
-          };
+          symbols = deserialize_symbols_field(value).map_err(serde::de::Error::custom)?;
         }
         "type" => file_type = Some(deserialize_field!(map, "type", "Asset")?),
         "uniqueKey" => unique_key = deserialize_field!(map, "uniqueKey", "Asset")?,

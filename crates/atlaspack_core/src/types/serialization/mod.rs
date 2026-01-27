@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 
+use crate::types::Symbol;
 use crate::types::asset::Condition;
 use crate::types::json::JSONObject;
 
@@ -26,6 +27,78 @@ macro_rules! deserialize_field {
 }
 
 pub use deserialize_field;
+
+/// Deserialize symbols from either an array or a map format.
+///
+/// JavaScript represents symbols as `Map<exported, {local, loc, isWeak, meta}>`,
+/// which serializes to a JSON object with exported names as keys.
+/// Rust expects `Vec<Symbol>` with the exported name as a field.
+///
+/// This function handles both formats:
+/// - Array: `[{exported, local, loc, ...}, ...]` - used by Rust serialization
+/// - Object/Map: `{exported_name: {local, loc, ...}, ...}` - used by JS serialization
+pub fn deserialize_symbols_field(value: serde_json::Value) -> Result<Option<Vec<Symbol>>, String> {
+  if value.is_null() {
+    return Ok(None);
+  }
+
+  if value.is_array() {
+    // Standard sequence deserialization
+    serde_json::from_value::<Vec<Symbol>>(value)
+      .map(Some)
+      .map_err(|e| e.to_string())
+  } else if value.is_object() {
+    // Map representation: key is "exported", value contains other fields
+    let mut symbols_vec = Vec::new();
+    let obj = value
+      .as_object()
+      .ok_or_else(|| "Expected object for symbols map".to_string())?;
+
+    for (exported_name, val) in obj {
+      // The value is {local, loc, isWeak, meta: {isEsm, isStaticBindingSafe}}
+      // We need to extract these and build a Symbol
+      let local = val
+        .get("local")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+      let loc = val.get("loc").and_then(|v| {
+        if v.is_null() {
+          None
+        } else {
+          serde_json::from_value(v.clone()).ok()
+        }
+      });
+
+      let is_weak = val.get("isWeak").and_then(|v| v.as_bool()).unwrap_or(false);
+
+      // Meta contains isEsm (isEsmExport) and isStaticBindingSafe
+      let meta = val.get("meta");
+      let is_esm_export = meta
+        .and_then(|m| m.get("isEsm"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+      let is_static_binding_safe = meta
+        .and_then(|m| m.get("isStaticBindingSafe"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+      symbols_vec.push(Symbol {
+        exported: exported_name.clone(),
+        local,
+        loc,
+        is_weak,
+        is_esm_export,
+        self_referenced: false,
+        is_static_binding_safe,
+      });
+    }
+    Ok(Some(symbols_vec))
+  } else {
+    Err("symbols must be an array, object, or null".to_string())
+  }
+}
 
 pub fn extract_val_default<T>(map: &mut serde_json::Map<String, serde_json::Value>, key: &str) -> T
 where
@@ -317,5 +390,143 @@ mod tests {
     // Only pluginData should remain
     assert_eq!(meta.len(), 1);
     assert!(meta.contains_key("pluginData"));
+  }
+
+  #[test]
+  fn test_deserialize_symbols_field_null() {
+    let value = serde_json::json!(null);
+    let result = deserialize_symbols_field(value);
+    assert_eq!(result, Ok(None));
+  }
+
+  #[test]
+  fn test_deserialize_symbols_field_array_format() {
+    // Rust serialization format: array of Symbol objects
+    let value = serde_json::json!([
+      {
+        "exported": "foo",
+        "local": "$abc$foo",
+        "loc": null,
+        "isWeak": false,
+        "isEsmExport": true,
+        "selfReferenced": false,
+        "isStaticBindingSafe": true
+      },
+      {
+        "exported": "bar",
+        "local": "$abc$bar",
+        "loc": null,
+        "isWeak": true,
+        "isEsmExport": false,
+        "selfReferenced": false,
+        "isStaticBindingSafe": false
+      }
+    ]);
+
+    let result = deserialize_symbols_field(value).unwrap().unwrap();
+
+    assert_eq!(result.len(), 2);
+    assert_eq!(result[0].exported, "foo");
+    assert_eq!(result[0].local, "$abc$foo");
+    assert!(!result[0].is_weak);
+    assert!(result[0].is_esm_export);
+    assert!(result[0].is_static_binding_safe);
+
+    assert_eq!(result[1].exported, "bar");
+    assert_eq!(result[1].local, "$abc$bar");
+    assert!(result[1].is_weak);
+    assert!(!result[1].is_esm_export);
+    assert!(!result[1].is_static_binding_safe);
+  }
+
+  #[test]
+  fn test_deserialize_symbols_field_map_format() {
+    // JS Map serialization format: object with exported names as keys
+    // This is how JS `Map<exported, {local, loc, isWeak, meta}>` serializes
+    let value = serde_json::json!({
+      "foo": {
+        "local": "$abc$foo",
+        "loc": null,
+        "isWeak": false,
+        "meta": {
+          "isEsm": true,
+          "isStaticBindingSafe": true
+        }
+      },
+      "bar": {
+        "local": "$abc$bar",
+        "loc": null,
+        "isWeak": true,
+        "meta": {
+          "isEsm": false,
+          "isStaticBindingSafe": false
+        }
+      }
+    });
+
+    let result = deserialize_symbols_field(value).unwrap().unwrap();
+
+    assert_eq!(result.len(), 2);
+
+    // Find foo and bar (order not guaranteed in JSON object)
+    let foo = result.iter().find(|s| s.exported == "foo").unwrap();
+    let bar = result.iter().find(|s| s.exported == "bar").unwrap();
+
+    assert_eq!(foo.local, "$abc$foo");
+    assert!(!foo.is_weak);
+    assert!(foo.is_esm_export);
+    assert!(foo.is_static_binding_safe);
+
+    assert_eq!(bar.local, "$abc$bar");
+    assert!(bar.is_weak);
+    assert!(!bar.is_esm_export);
+    assert!(!bar.is_static_binding_safe);
+  }
+
+  #[test]
+  fn test_deserialize_symbols_field_map_format_missing_meta() {
+    // JS Map format with missing meta fields (should use defaults)
+    let value = serde_json::json!({
+      "foo": {
+        "local": "$abc$foo",
+        "isWeak": true
+      }
+    });
+
+    let result = deserialize_symbols_field(value).unwrap().unwrap();
+
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].exported, "foo");
+    assert_eq!(result[0].local, "$abc$foo");
+    assert!(result[0].is_weak);
+    // Defaults when meta is missing
+    assert!(!result[0].is_esm_export);
+    assert!(!result[0].is_static_binding_safe);
+    assert!(!result[0].self_referenced);
+  }
+
+  #[test]
+  fn test_deserialize_symbols_field_empty_array() {
+    let value = serde_json::json!([]);
+    let result = deserialize_symbols_field(value).unwrap().unwrap();
+    assert!(result.is_empty());
+  }
+
+  #[test]
+  fn test_deserialize_symbols_field_empty_object() {
+    let value = serde_json::json!({});
+    let result = deserialize_symbols_field(value).unwrap().unwrap();
+    assert!(result.is_empty());
+  }
+
+  #[test]
+  fn test_deserialize_symbols_field_invalid_type() {
+    let value = serde_json::json!("not an array or object");
+    let result = deserialize_symbols_field(value);
+    assert!(result.is_err());
+    assert_eq!(
+      result.unwrap_err(),
+      "symbols must be an array, object, or null"
+    );
   }
 }
