@@ -293,9 +293,6 @@ fn discard_empty_rules_plugin() -> pc::BuiltPlugin {
 #[cfg(feature = "postcss_engine")]
 fn build_processor(options: &TransformCssOptions, collector: &AtomicCollector) -> pc::Processor {
   let optimize_css = options.optimize_css.unwrap_or(true);
-  if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-    eprintln!("[postcss-engine] optimize_css={}", optimize_css);
-  }
   let flatten_enabled = options.flatten_multiple_selectors.unwrap_or(true);
   let mut plugins: Vec<pc::BuiltPlugin> = Vec::new();
   let autoprefixer_enabled = std::env::var("AUTOPREFIXER")
@@ -423,12 +420,6 @@ fn parent_orphaned_pseudos_plugin() -> pc::BuiltPlugin {
   use postcss::ast::nodes::as_rule;
 
   fn add_nesting(selector: &str) -> Option<String> {
-    if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-      eprintln!(
-        "[postcss-engine][parent-orphaned] selector_in='{}'",
-        selector
-      );
-    }
     fn insert_nesting(body: &str) -> String {
       // Insert '&' immediately before each pseudo group, keeping pseudos on the same
       // compound (no descendant space). If the selector doesn't start with '&', also
@@ -460,9 +451,6 @@ fn parent_orphaned_pseudos_plugin() -> pc::BuiltPlugin {
     let mut updated: Vec<String> = Vec::with_capacity(parts.len());
     for part in parts {
       let trimmed = part.trim_start();
-      if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-        eprintln!("[postcss-engine][parent-orphaned] raw part='{}'", part);
-      }
       if trimmed.starts_with(':') || trimmed.starts_with("&:") {
         let offset = part
           .char_indices()
@@ -476,12 +464,6 @@ fn parent_orphaned_pseudos_plugin() -> pc::BuiltPlugin {
         rebuilt.push_str(&rebuilt_body);
         updated.push(rebuilt);
         changed = true;
-        if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-          eprintln!(
-            "[postcss-engine][parent-orphaned] rebuilt='{}' from part='{}'",
-            rebuilt_body, part
-          );
-        }
       } else {
         updated.push(part);
       }
@@ -1459,17 +1441,6 @@ fn normalize_value_for_hash(
       value,
       initial_support,
     );
-  if std::env::var("COMPILED_CSS_TRACE").is_ok()
-    && matches!(
-      prop,
-      "background" | "background-color" | "text-decoration-color"
-    )
-  {
-    eprintln!(
-      "[atomicify.hash] prop='{}' raw='{}' reduce_initial='{}'",
-      prop, value, after_reduce_initial
-    );
-  }
 
   // Then apply colormin transformation
   let trimmed = after_reduce_initial.trim();
@@ -1479,18 +1450,6 @@ fn normalize_value_for_hash(
   let colormin_opts = super::plugins::normalize_css_engine::colormin::add_plugin_defaults();
   let after_colormin =
     super::plugins::normalize_css_engine::colormin::transform_value(trimmed, &colormin_opts);
-  if std::env::var("COMPILED_CSS_TRACE").is_ok()
-    && matches!(
-      prop,
-      "background" | "background-color" | "text-decoration-color"
-    )
-    && after_colormin != value
-  {
-    eprintln!(
-      "[atomicify.hash] prop='{}' raw='{}' normalized='{}'",
-      prop, value, after_colormin
-    );
-  }
   let mut normalized = if after_colormin.len() < trimmed.len() {
     after_colormin
   } else {

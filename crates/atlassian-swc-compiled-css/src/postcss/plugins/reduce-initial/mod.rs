@@ -175,9 +175,6 @@ impl Plugin for ReduceInitial {
 
   fn run(&self, stylesheet: &mut Stylesheet, ctx: &mut TransformContext<'_>) {
     let initial_support = self.resolve_initial_support(ctx);
-    if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-      eprintln!("[swc.reduce-initial] initial_support={}", initial_support);
-    }
     self.process_stylesheet(stylesheet, initial_support);
   }
 }

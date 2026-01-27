@@ -111,12 +111,7 @@ fn atomicify_qualified_rule(
 ) -> Vec<QualifiedRule> {
   let selectors = normalize_selectors(collect_rule_selectors(&rule), options)
     .into_iter()
-    .map(|sel| {
-      if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-        eprintln!("[atomicify.rule] selector='{}'", sel);
-      }
-      sel
-    })
+    .map(|sel| sel)
     .collect::<Vec<String>>();
   let mut replacements: Vec<QualifiedRule> = Vec::new();
 
@@ -297,12 +292,6 @@ fn normalize_selector(selector: &str) -> String {
   let collapsed = collapse_adjacent_nesting_selectors(trimmed);
   let collapsed = collapsed.trim();
   if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-    if collapsed != trimmed {
-      eprintln!(
-        "[atomicify] collapse_nesting '{}' -> '{}'",
-        trimmed, collapsed
-      );
-    }
     eprintln!("[atomicify] normalize_selector input='{}'", collapsed);
   }
   if collapsed.is_empty() {

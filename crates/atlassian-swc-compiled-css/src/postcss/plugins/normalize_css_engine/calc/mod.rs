@@ -12,7 +12,6 @@ enum Node {
 struct ValueKind {
   num: f64,
   unit: Option<String>,
-  leading_dot: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -24,12 +23,8 @@ struct OpKind {
 
 fn stringify_node(node: &Node, precision: usize) -> String {
   match node {
-    Node::Value(ValueKind {
-      num,
-      unit,
-      leading_dot,
-    }) => {
-      let mut s = fmt_number_with_leading_dot(*num, precision, *leading_dot);
+    Node::Value(ValueKind { num, unit }) => {
+      let mut s = fmt_number(*num, precision);
       if let Some(u) = unit {
         s.push_str(u);
       }
@@ -124,11 +119,9 @@ fn parse_calc_expression(input: &str) -> Option<Node> {
     num *= sign;
     let unit = lx.take_while(|c| c.is_ascii_alphabetic() || c == '%');
     let unit_opt = if unit.is_empty() { None } else { Some(unit) };
-    let leading_dot = num_str.starts_with('.');
     Some(Node::Value(ValueKind {
       num,
       unit: unit_opt,
-      leading_dot,
     }))
   }
   fn parse_primary(lx: &mut Lexer) -> Option<Node> {
@@ -425,7 +418,6 @@ fn push_value_item(
   mut sign: char,
   mut num: f64,
   unit: Option<String>,
-  leading_dot: bool,
   collected: &mut Vec<CollectItem>,
   precision: usize,
 ) {
@@ -440,7 +432,6 @@ fn push_value_item(
       if let Node::Value(ValueKind {
         num: ref mut existing_num,
         unit: ref existing_unit,
-        leading_dot: ref mut existing_leading_dot,
       }) = item.node
       {
         if let Some(converted) = convert_value_to_target(num, &unit, existing_unit, precision) {
@@ -453,7 +444,6 @@ fn push_value_item(
               item.sign = flip_sign(item.sign);
             }
           }
-          *existing_leading_dot = false;
           handled = true;
           break;
         }
@@ -464,11 +454,7 @@ fn push_value_item(
   if !handled {
     collected.push(CollectItem {
       sign,
-      node: Node::Value(ValueKind {
-        num,
-        unit,
-        leading_dot,
-      }),
+      node: Node::Value(ValueKind { num, unit }),
     });
   }
 }
@@ -480,21 +466,13 @@ fn collect_add_sub_items(
   precision: usize,
 ) {
   match node {
-    Node::Value(ValueKind {
-      num,
-      unit,
-      leading_dot,
-    }) => {
+    Node::Value(ValueKind { num, unit }) => {
       if is_known_unit(&unit) {
-        push_value_item(sign, num, unit, leading_dot, collected, precision);
+        push_value_item(sign, num, unit, collected, precision);
       } else {
         collected.push(CollectItem {
           sign,
-          node: Node::Value(ValueKind {
-            num,
-            unit,
-            leading_dot,
-          }),
+          node: Node::Value(ValueKind { num, unit }),
         });
       }
     }
@@ -530,7 +508,6 @@ fn reduce_add_sub_expression(left: Node, right: Node, op: char, precision: usize
     return Node::Value(ValueKind {
       num: 0.0,
       unit: None,
-      leading_dot: false,
     });
   }
 
@@ -552,7 +529,6 @@ fn reduce_add_sub_expression(left: Node, right: Node, op: char, precision: usize
     return Node::Value(ValueKind {
       num: 0.0,
       unit: None,
-      leading_dot: false,
     });
   }
 
@@ -576,32 +552,16 @@ fn reduce_add_sub_expression(left: Node, right: Node, op: char, precision: usize
   root
 }
 
-fn apply_number_multiplication(
-  node: Node,
-  multiplier: f64,
-  precision: usize,
-  leading_dot: bool,
-) -> Node {
+fn apply_number_multiplication(node: Node, multiplier: f64, precision: usize) -> Node {
   match node {
-    Node::Value(ValueKind { num, unit, .. }) => Node::Value(ValueKind {
+    Node::Value(ValueKind { num, unit }) => Node::Value(ValueKind {
       num: num * multiplier,
       unit,
-      leading_dot: false,
     }),
     Node::Op(OpKind { op, left, right }) if op == '+' || op == '-' => Node::Op(OpKind {
       op,
-      left: Box::new(apply_number_multiplication(
-        *left,
-        multiplier,
-        precision,
-        leading_dot,
-      )),
-      right: Box::new(apply_number_multiplication(
-        *right,
-        multiplier,
-        precision,
-        leading_dot,
-      )),
+      left: Box::new(apply_number_multiplication(*left, multiplier, precision)),
+      right: Box::new(apply_number_multiplication(*right, multiplier, precision)),
     }),
     other => Node::Op(OpKind {
       op: '*',
@@ -609,13 +569,12 @@ fn apply_number_multiplication(
       right: Box::new(Node::Value(ValueKind {
         num: multiplier,
         unit: None,
-        leading_dot,
       })),
     }),
   }
 }
 
-fn apply_number_division(node: Node, divisor: f64, precision: usize, leading_dot: bool) -> Node {
+fn apply_number_division(node: Node, divisor: f64, precision: usize) -> Node {
   if divisor == 0.0 {
     return Node::Op(OpKind {
       op: '/',
@@ -623,30 +582,18 @@ fn apply_number_division(node: Node, divisor: f64, precision: usize, leading_dot
       right: Box::new(Node::Value(ValueKind {
         num: divisor,
         unit: None,
-        leading_dot,
       })),
     });
   }
   match node {
-    Node::Value(ValueKind { num, unit, .. }) => Node::Value(ValueKind {
+    Node::Value(ValueKind { num, unit }) => Node::Value(ValueKind {
       num: num / divisor,
       unit,
-      leading_dot: false,
     }),
     Node::Op(OpKind { op, left, right }) if op == '+' || op == '-' => Node::Op(OpKind {
       op,
-      left: Box::new(apply_number_division(
-        *left,
-        divisor,
-        precision,
-        leading_dot,
-      )),
-      right: Box::new(apply_number_division(
-        *right,
-        divisor,
-        precision,
-        leading_dot,
-      )),
+      left: Box::new(apply_number_division(*left, divisor, precision)),
+      right: Box::new(apply_number_division(*right, divisor, precision)),
     }),
     other => Node::Op(OpKind {
       op: '/',
@@ -654,7 +601,6 @@ fn apply_number_division(node: Node, divisor: f64, precision: usize, leading_dot
       right: Box::new(Node::Value(ValueKind {
         num: divisor,
         unit: None,
-        leading_dot,
       })),
     }),
   }
@@ -664,22 +610,12 @@ fn reduce_multiplication_expression(left: Node, right: Node, precision: usize) -
   let left_reduced = reduce_node(left, precision);
   let right_reduced = reduce_node(right, precision);
 
-  if let Node::Value(ValueKind {
-    num,
-    unit: None,
-    leading_dot,
-  }) = right_reduced
-  {
-    return apply_number_multiplication(left_reduced, num, precision, leading_dot);
+  if let Node::Value(ValueKind { num, unit: None }) = right_reduced {
+    return apply_number_multiplication(left_reduced, num, precision);
   }
 
-  if let Node::Value(ValueKind {
-    num,
-    unit: None,
-    leading_dot,
-  }) = left_reduced
-  {
-    return apply_number_multiplication(right_reduced, num, precision, leading_dot);
+  if let Node::Value(ValueKind { num, unit: None }) = left_reduced {
+    return apply_number_multiplication(right_reduced, num, precision);
   }
 
   Node::Op(OpKind {
@@ -693,13 +629,8 @@ fn reduce_division_expression(left: Node, right: Node, precision: usize) -> Node
   let left_reduced = reduce_node(left, precision);
   let right_reduced = reduce_node(right, precision);
 
-  if let Node::Value(ValueKind {
-    num,
-    unit: None,
-    leading_dot,
-  }) = right_reduced
-  {
-    return apply_number_division(left_reduced, num, precision, leading_dot);
+  if let Node::Value(ValueKind { num, unit: None }) = right_reduced {
+    return apply_number_division(left_reduced, num, precision);
   }
 
   Node::Op(OpKind {
@@ -749,18 +680,6 @@ fn fmt_number(n: f64, precision: usize) -> String {
   let mut s = ryu_js::Buffer::new().format_finite(rounded).to_string();
   if s == "-0" {
     s = "0".to_string();
-  }
-  s
-}
-
-fn fmt_number_with_leading_dot(n: f64, precision: usize, leading_dot: bool) -> String {
-  let mut s = fmt_number(n, precision);
-  if leading_dot && n.abs() < 1.0 {
-    if let Some(rest) = s.strip_prefix("0.") {
-      s = format!(".{rest}");
-    } else if let Some(rest) = s.strip_prefix("-0.") {
-      s = format!("-.{rest}");
-    }
   }
   s
 }
@@ -817,12 +736,8 @@ pub fn plugin() -> pc::BuiltPlugin {
             if let Some(ast) = parse_calc_expression(&inner) {
               let reduced = reduce_node(ast, opt.precision);
               match reduced {
-                Node::Value(ValueKind {
-                  num,
-                  unit,
-                  leading_dot,
-                }) => {
-                  let mut v = fmt_number_with_leading_dot(num, opt.precision, leading_dot);
+                Node::Value(ValueKind { num, unit }) => {
+                  let mut v = fmt_number(num, opt.precision);
                   if let Some(u) = unit {
                     v.push_str(&u);
                   }
@@ -885,12 +800,8 @@ mod tests {
         if let Some(ast) = parse_calc_expression(&inner) {
           let reduced = reduce_node(ast, opt.precision);
           match reduced {
-            Node::Value(ValueKind {
-              num,
-              unit,
-              leading_dot,
-            }) => {
-              let mut v = fmt_number_with_leading_dot(num, opt.precision, leading_dot);
+            Node::Value(ValueKind { num, unit }) => {
+              let mut v = fmt_number(num, opt.precision);
               if let Some(u) = unit {
                 v.push_str(&u);
               }

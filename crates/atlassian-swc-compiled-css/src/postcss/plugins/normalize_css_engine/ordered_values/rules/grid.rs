@@ -97,9 +97,6 @@ pub fn normalize_line(parsed: &vp::ParsedValue) -> String {
       out.push(ch);
     }
     let normalized = out.trim().to_string();
-    if std::env::var("COMPILED_CSS_TRACE").is_ok() && normalized != s {
-      eprintln!("[ordered-values][grid] '{}' -> '{}'", s, normalized);
-    }
     return normalized;
   }
   let grid_value: Vec<String> = s.split('/').map(|p| p.to_string()).collect();

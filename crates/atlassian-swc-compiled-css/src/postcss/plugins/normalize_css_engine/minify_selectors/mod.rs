@@ -152,34 +152,10 @@ fn process_pseudo_class_selector(selector: &mut PseudoClassSelector) {
     for child in children.iter_mut() {
       match child {
         PseudoClassSelectorChildren::SelectorList(list) => {
-          if std::env::var("COMPILED_CSS_TRACE").is_ok() && is_has {
-            eprintln!(
-              "[minify-selectors] :has selector list (before)='{}'",
-              serialize_selector_list(list)
-            );
-          }
           process_selector_list(list, false, !is_has);
-          if std::env::var("COMPILED_CSS_TRACE").is_ok() && is_has {
-            eprintln!(
-              "[minify-selectors] :has selector list (after)='{}'",
-              serialize_selector_list(list)
-            );
-          }
         }
         PseudoClassSelectorChildren::RelativeSelectorList(list) => {
-          if std::env::var("COMPILED_CSS_TRACE").is_ok() && is_has {
-            eprintln!(
-              "[minify-selectors] :has relative list (before)='{}'",
-              serialize_relative_selector_list(list)
-            );
-          }
           process_relative_selector_list(list, false, !is_has);
-          if std::env::var("COMPILED_CSS_TRACE").is_ok() && is_has {
-            eprintln!(
-              "[minify-selectors] :has relative list (after)='{}'",
-              serialize_relative_selector_list(list)
-            );
-          }
         }
         PseudoClassSelectorChildren::ForgivingSelectorList(list) => {
           for selector in &mut list.children {
@@ -572,14 +548,7 @@ fn minify_selector_string(selector: &str) -> Option<String> {
     );
     let optimized = serialize_relative_selector_list(&list);
     let collapsed = collapse_adjacent_nesting_selectors(trimmed, optimized.clone());
-    let collapsed = collapse_nesting_whitespace(trimmed, collapsed);
-    if trace && collapsed != optimized {
-      eprintln!(
-        "[minify-selectors] collapsed nesting relative '{}' -> '{}'",
-        optimized, collapsed
-      );
-    }
-    let optimized = collapsed;
+    let optimized = collapse_nesting_whitespace(trimmed, collapsed);
     if std::env::var("COMPILED_CSS_TRACE").is_ok() && selector.contains("nth-of-type") {
       eprintln!(
         "[minify-selectors] relative in='{}' out='{}'",
@@ -608,14 +577,7 @@ fn minify_selector_string(selector: &str) -> Option<String> {
   log_nth(&list, "an+b");
   let optimized = serialize_selector_list(&list);
   let collapsed = collapse_adjacent_nesting_selectors(trimmed, optimized.clone());
-  let collapsed = collapse_nesting_whitespace(trimmed, collapsed);
-  if trace && collapsed != optimized {
-    eprintln!(
-      "[minify-selectors] collapsed nesting '{}' -> '{}'",
-      optimized, collapsed
-    );
-  }
-  let optimized = collapsed;
+  let optimized = collapse_nesting_whitespace(trimmed, collapsed);
   if std::env::var("COMPILED_CSS_TRACE").is_ok() && selector.contains("nth-of-type") {
     eprintln!("[minify-selectors] in='{}' out='{}'", selector, optimized);
   }

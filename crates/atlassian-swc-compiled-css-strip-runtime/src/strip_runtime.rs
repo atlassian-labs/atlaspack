@@ -40,14 +40,6 @@ pub struct StripRuntimeTransform {
 
 impl StripRuntimeTransform {
   pub fn new(config: TransformConfig) -> Self {
-    if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-      eprintln!(
-        "[strip-runtime] sort_at_rules={:?} sort_shorthand={:?} extract_styles_to_directory={:?}",
-        config.options.sort_at_rules,
-        config.options.sort_shorthand,
-        config.options.extract_styles_to_directory
-      );
-    }
     Self {
       config,
       metadata: TransformMetadata::default(),

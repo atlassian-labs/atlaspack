@@ -390,9 +390,6 @@ pub fn transform_value_for_hash(prop: &str, value: &str, initial_support: bool) 
   if initial_support {
     if let Some(&ti) = TO_INITIAL.get(prop_l.as_str()) {
       if value_l == ti || (ti == "transparent" && is_transparent_like(&value_l)) {
-        if std::env::var("COMPILED_CSS_TRACE").is_ok() && prop_l == "text-decoration-color" {
-          eprintln!("[reduce-initial-hash] '{}' -> initial", prop_l);
-        }
         return "initial".to_string();
       }
     }
@@ -409,14 +406,7 @@ pub fn transform_value_for_hash(prop: &str, value: &str, initial_support: bool) 
 
 pub fn plugin(config_path: Option<PathBuf>) -> pc::BuiltPlugin {
   // Align with Babel/cssnano: enable `initial` only when the resolved browsers support it.
-  let (initial_support, browsers) = initial_support(config_path);
-
-  if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-    eprintln!(
-      "[reduce-initial] initial_support={} browsers={:?}",
-      initial_support, browsers
-    );
-  }
+  let (initial_support, _browsers) = initial_support(config_path);
 
   pc::plugin("postcss-reduce-initial")
     .once_exit(move |css, _| {
@@ -426,21 +416,9 @@ pub fn plugin(config_path: Option<PathBuf>) -> pc::BuiltPlugin {
           return;
         }
         let value_l = decl.value().to_lowercase();
-        if std::env::var("COMPILED_CSS_TRACE").is_ok() && prop == "text-decoration-color" {
-          eprintln!(
-            "[reduce-initial] prop='{}' value_l='{}' initial_support={} to_initial={:?}",
-            prop,
-            value_l,
-            initial_support,
-            TO_INITIAL.get(prop.as_str())
-          );
-        }
         if initial_support {
           if let Some(&ti) = TO_INITIAL.get(prop.as_str()) {
             if value_l == ti || (ti == "transparent" && is_transparent_like(&value_l)) {
-              if std::env::var("COMPILED_CSS_TRACE").is_ok() && prop == "text-decoration-color" {
-                eprintln!("[reduce-initial] converting '{}' to 'initial'", prop);
-              }
               decl.set_value("initial".to_string());
               return;
             }
