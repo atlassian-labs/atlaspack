@@ -15,6 +15,8 @@ import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Event} from '@parcel/watcher';
 import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
 import {BundleGraphNode} from '../types';
+import invariant from 'assert';
+import {BundleGraphEdgeType} from '../BundleGraph';
 
 export type AtlaspackV3Options = {
   fs?: AtlaspackNapiOptions['fs'];
@@ -105,8 +107,9 @@ export class AtlaspackV3 {
     edges,
   }: {
     nodes: BundleGraphNode[];
-    edges: [number, number][];
+    edges: [number, number, BundleGraphEdgeType][];
   }): Promise<any> {
+    invariant(nodes.length > 0, 'Bundle graph must have at least one node');
     return atlaspackNapiLoadBundleGraph(
       this._atlaspack_napi,
       nodes,

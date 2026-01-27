@@ -381,7 +381,7 @@ export class SourceMap {
 export declare function atlaspackNapiLoadBundleGraph(
   atlaspackNapi: AtlaspackNapi,
   nodes: Array<BundleGraphNode>,
-  edges: Array<[number, number]>,
+  edges: Array<[number, number, BundleGraphEdgeType]>,
 ): object;
 export declare function atlaspackNapiPackage(
   atlaspackNapi: AtlaspackNapi,
