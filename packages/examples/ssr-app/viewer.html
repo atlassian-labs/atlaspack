@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSR App Viewer</title>
+    <link rel="stylesheet" href="viewer.css" />
+  </head>
+  <body>
+    <div class="header">
+      <h1>SSR App Viewer</h1>
+      <p>View the server-side rendered output from your Tesseract SSR bundle</p>
+    </div>
+
+    <div class="container">
+      <div class="controls">
+        <label for="server-url">Tesseract Server URL:</label>
+        <input
+          type="text"
+          id="server-url"
+          value="/render"
+          placeholder="/render"
+        />
+
+        <label for="input-data">Input Data (JSON):</label>
+        <input
+          type="text"
+          id="input-data"
+          value='{"title": "SSR App", "description": "This is a description"}'
+          placeholder='{"title": "SSR App", "description": "This is a description"}'
+        />
+        <button id="render-btn" onclick="render()">Render</button>
+      </div>
+
+      <div id="error-container"></div>
+      <div id="loading-container"></div>
+      <div id="rendered-content"></div>
+    </div>
+
+    <script>
+      async function render() {
+        const serverUrl = document.getElementById('server-url').value;
+        const inputDataText = document.getElementById('input-data').value;
+        const renderBtn = document.getElementById('render-btn');
+        const errorContainer = document.getElementById('error-container');
+        const loadingContainer = document.getElementById('loading-container');
+        const renderedContent = document.getElementById('rendered-content');
+
+        // Clear previous content
+        errorContainer.innerHTML = '';
+        loadingContainer.innerHTML = '';
+        renderedContent.innerHTML = '';
+
+        // Validate JSON
+        let inputData;
+        try {
+          inputData = JSON.parse(inputDataText);
+        } catch (e) {
+          errorContainer.innerHTML =
+            '<div class="error">Invalid JSON: ' + e.message + '</div>';
+          return;
+        }
+
+        // Show loading
+        renderBtn.disabled = true;
+        loadingContainer.innerHTML = '<div class="loading">Rendering...</div>';
+
+        try {
+          const response = await fetch(serverUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({input: inputData}),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const text = await response.text();
+          console.log('Raw response from server:', text);
+
+          let result;
+          try {
+            result = JSON.parse(text);
+          } catch (e) {
+            renderedContent.innerHTML =
+              '<div class="error">Failed to parse JSON response: ' +
+              e.message +
+              '</div><pre>' +
+              text +
+              '</pre>';
+            loadingContainer.innerHTML = '';
+            renderBtn.disabled = false;
+            return;
+          }
+
+          // Debug: log the parsed response
+          console.log('Parsed response:', result);
+
+          // Display the rendered HTML - handle different response formats
+          let html = null;
+          if (result.output && result.output.html) {
+            html = result.output.html;
+          } else if (result.html) {
+            html = result.html;
+          } else if (result.data && result.data.html) {
+            html = result.data.html;
+          } else if (typeof result === 'string') {
+            html = result;
+          }
+
+          if (html) {
+            renderedContent.innerHTML = html;
+          } else {
+            // Show full response for debugging
+            renderedContent.innerHTML =
+              '<div class="error">No HTML found in response. Full response:</div><pre>' +
+              JSON.stringify(result, null, 2) +
+              '</pre>';
+          }
+
+          loadingContainer.innerHTML = '';
+        } catch (error) {
+          errorContainer.innerHTML =
+            '<div class="error">Error: ' + error.message + '</div>';
+          loadingContainer.innerHTML = '';
+        } finally {
+          renderBtn.disabled = false;
+        }
+      }
+
+      // Allow Enter key to trigger render
+      document
+        .getElementById('input-data')
+        .addEventListener('keypress', function (e) {
+          if (e.key === 'Enter') {
+            render();
+          }
+        });
+    </script>
+  </body>
+</html>
