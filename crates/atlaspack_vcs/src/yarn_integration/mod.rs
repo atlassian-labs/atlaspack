@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 pub enum YarnLockEntry {
   Resolution(YarnResolution),
   #[allow(unused)]
-  Other(serde_yaml::Value),
+  Other(serde_yaml_ng::Value),
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -55,7 +55,7 @@ impl YarnLock {
 }
 
 pub fn parse_yarn_lock(contents: &str) -> anyhow::Result<YarnLock> {
-  let yarn_lock: YarnLock = serde_yaml::from_str(contents)?;
+  let yarn_lock: YarnLock = serde_yaml_ng::from_str(contents)?;
   yarn_lock.validate()?;
   Ok(yarn_lock)
 }
@@ -76,7 +76,7 @@ impl YarnDependencyState {
 enum YarnStateFileEntry {
   Dependency(YarnDependencyState),
   #[allow(unused)]
-  Other(serde_yaml::Value),
+  Other(serde_yaml_ng::Value),
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -132,7 +132,7 @@ pub fn parse_yarn_state_file(node_modules_directory: &Path) -> anyhow::Result<Ya
   let state_file_string = std::fs::read_to_string(node_modules_directory.join(".yarn-state.yml"))
     .map_err(|err| anyhow!("Failed to read yarn state file: {err:?}"))?;
 
-  let state: YarnStateFile = serde_yaml::from_str(&state_file_string)?;
+  let state: YarnStateFile = serde_yaml_ng::from_str(&state_file_string)?;
   state.validate()?;
   Ok(state)
 }
@@ -237,7 +237,7 @@ mod test {
     let old_yarn_lock = parse_yarn_lock(&std::fs::read_to_string(old_yarn_lock_path)?)?;
     let new_yarn_lock = parse_yarn_lock(&std::fs::read_to_string(new_yarn_lock_path)?)?;
     let yarn_state: YarnStateFile =
-      serde_yaml::from_str(&std::fs::read_to_string(yarn_state_path)?)?;
+      serde_yaml_ng::from_str(&std::fs::read_to_string(yarn_state_path)?)?;
     yarn_state.validate()?;
 
     let events = get_changed_node_modules(
@@ -266,7 +266,7 @@ mod test {
 
     let new_yarn_lock = parse_yarn_lock(&std::fs::read_to_string(new_yarn_lock_path)?)?;
     let yarn_state: YarnStateFile =
-      serde_yaml::from_str(&std::fs::read_to_string(yarn_state_path)?)?;
+      serde_yaml_ng::from_str(&std::fs::read_to_string(yarn_state_path)?)?;
     yarn_state.validate()?;
 
     let events = get_changed_node_modules(
