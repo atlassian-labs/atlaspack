@@ -13,7 +13,10 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         node-version-file: .nvmrc
-        corepack-home: /home/runner/.corepack
+
+    - name: Enable Corepack
+      run: corepack enable
+      shell: bash
 
     - name: Get yarn cache directory path
       id: yarn-cache-dir-path
