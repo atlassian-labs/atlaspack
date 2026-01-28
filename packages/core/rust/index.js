@@ -310,7 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { addEnvironment, applyCompiledCssInJsPlugin, applyTokensPlugin, atlaspackNapiBuildAssetGraph, atlaspackNapiCompleteSession, atlaspackNapiCreate, atlaspackNapiLoadBundleGraph, atlaspackNapiLoadBundleGraphJson, atlaspackNapiPackage, atlaspackNapiRespondToFsEvents, AtlaspackTracer, closeMonitoring, createAssetId, createDependencyId, createEnvironmentId, determineJsxConfiguration, findAncestorFile, findFirstFile, findNodeModule, getAllEnvironments, getAvailableThreads, getEnvironment, getEventsSince, getNativeMemoryStats, getVcsStateSnapshot, Hash, hashBuffer, hashCode, hashString, initializeMonitoring, initTracingSubscriber, isSafeFromJs, Lmdb, LmdbJsLite, newNodejsWorker, optimizeImage, performStringReplacements, resetMemoryTracking, Resolver, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, sampleNativeMemory, setAllEnvironments, SourceMap, transform, transformAsync } = nativeBinding
+const { addEnvironment, applyCompiledCssInJsPlugin, applyTokensPlugin, atlaspackNapiBuildAssetGraph, atlaspackNapiCompleteSession, atlaspackNapiCreate, atlaspackNapiLoadBundleGraph, atlaspackNapiPackage, atlaspackNapiRespondToFsEvents, AtlaspackTracer, closeMonitoring, createAssetId, createDependencyId, createEnvironmentId, determineJsxConfiguration, findAncestorFile, findFirstFile, findNodeModule, getAllEnvironments, getAvailableThreads, getEnvironment, getEventsSince, getNativeMemoryStats, getVcsStateSnapshot, Hash, hashBuffer, hashCode, hashString, initializeMonitoring, initTracingSubscriber, isSafeFromJs, Lmdb, LmdbJsLite, newNodejsWorker, optimizeImage, performStringReplacements, resetMemoryTracking, Resolver, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, sampleNativeMemory, setAllEnvironments, SourceMap, transform, transformAsync } = nativeBinding
 
 module.exports.addEnvironment = addEnvironment
 module.exports.applyCompiledCssInJsPlugin = applyCompiledCssInJsPlugin
@@ -319,7 +319,6 @@ module.exports.atlaspackNapiBuildAssetGraph = atlaspackNapiBuildAssetGraph
 module.exports.atlaspackNapiCompleteSession = atlaspackNapiCompleteSession
 module.exports.atlaspackNapiCreate = atlaspackNapiCreate
 module.exports.atlaspackNapiLoadBundleGraph = atlaspackNapiLoadBundleGraph
-module.exports.atlaspackNapiLoadBundleGraphJson = atlaspackNapiLoadBundleGraphJson
 module.exports.atlaspackNapiPackage = atlaspackNapiPackage
 module.exports.atlaspackNapiRespondToFsEvents = atlaspackNapiRespondToFsEvents
 module.exports.AtlaspackTracer = AtlaspackTracer

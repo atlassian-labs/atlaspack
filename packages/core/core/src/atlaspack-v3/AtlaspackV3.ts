@@ -3,7 +3,7 @@ import {
   atlaspackNapiBuildAssetGraph,
   atlaspackNapiRespondToFsEvents,
   atlaspackNapiCompleteSession,
-  atlaspackNapiLoadBundleGraphJson,
+  atlaspackNapiLoadBundleGraph,
   atlaspackNapiPackage,
   AtlaspackNapi,
   Lmdb,
@@ -104,7 +104,7 @@ export class AtlaspackV3 {
   loadBundleGraph(bundleGraph: BundleGraph): Promise<void> {
     const {nodesJson, edges} = bundleGraph.serializeForNative();
 
-    return atlaspackNapiLoadBundleGraphJson(
+    return atlaspackNapiLoadBundleGraph(
       this._atlaspack_napi,
       nodesJson,
       edges,

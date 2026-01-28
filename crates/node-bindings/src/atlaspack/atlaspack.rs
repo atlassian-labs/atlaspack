@@ -24,8 +24,6 @@ use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack_package_manager::PackageManagerRef;
 use parking_lot::RwLock;
 
-use crate::atlaspack::deserialize_bundle_graph::deserialize_bundle_graph;
-
 use super::file_system_napi::FileSystemNapi;
 use super::napi_result::NapiAtlaspackResult;
 use super::package_manager_napi::PackageManagerNapi;
@@ -209,38 +207,9 @@ pub fn atlaspack_napi_respond_to_fs_events(
   Ok(promise)
 }
 
-#[napi]
-pub fn atlaspack_napi_load_bundle_graph(
-  env: Env,
-  atlaspack_napi: AtlaspackNapi,
-  nodes: Vec<JsObject>,
-  edges: Vec<(u32, u32, u8)>,
-) -> napi::Result<JsObject> {
-  let (deferred, promise) = env.create_deferred()?;
-  // Deserialization needs to happen on JS thread
-  let nodes = deserialize_bundle_graph(env, nodes)?;
-  thread::spawn({
-    let atlaspack = atlaspack_napi.clone();
-    move || {
-      let atlaspack = atlaspack.write();
-      let result = atlaspack.load_bundle_graph(nodes, edges);
-      deferred.resolve(move |env| match result {
-        Ok(()) => NapiAtlaspackResult::ok(&env, ()),
-        Err(error) => {
-          let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
-          NapiAtlaspackResult::error(&env, js_object)
-        }
-      })
-    }
-  });
-  Ok(promise)
-}
-
-/// Batch version that accepts JSON string instead of individual objects
-/// This avoids 300K+ NAPI calls for large bundle graphs
 #[tracing::instrument(level = "info", skip_all)]
 #[napi]
-pub fn atlaspack_napi_load_bundle_graph_json(
+pub fn atlaspack_napi_load_bundle_graph(
   env: Env,
   atlaspack_napi: AtlaspackNapi,
   nodes_json: String,
