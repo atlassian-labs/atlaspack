@@ -27,7 +27,7 @@ impl BundleGraphFromJs {
     BundleGraphFromJs { graph }
   }
 
-  #[tracing::instrument(level = "info", skip_all)]
+  #[tracing::instrument(level = "info", skip_all, fields(size))]
   pub fn deserialize_from_json(nodes_json: String) -> anyhow::Result<Vec<BundleGraphNode>> {
     // Parse JSON to Vec<Value> first (fast), then parallelize node deserialization
     let json_values: Vec<serde_json::Value> = serde_json::from_str(&nodes_json)
@@ -41,6 +41,7 @@ impl BundleGraphFromJs {
           .map_err(|e| anyhow!("Failed to deserialize node: {}", e))
       })
       .collect::<anyhow::Result<Vec<_>>>()?;
+    tracing::Span::current().record("size", nodes.len());
     Ok(nodes)
   }
 }
