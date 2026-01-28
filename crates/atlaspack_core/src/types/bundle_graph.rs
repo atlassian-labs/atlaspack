@@ -147,3 +147,105 @@ pub struct BundleNode {
 
 // TODO make this a proper enum matching BundleGraph.ts
 pub type BundleGraphEdgeType = u8;
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use pretty_assertions::assert_eq;
+
+  #[test]
+  fn test_deserialize_root_node() {
+    let json = r#"{"type": "root", "id": "root-1", "value": null}"#;
+    let node: BundleGraphNode = serde_json::from_str(json).unwrap();
+    assert_eq!(node.id(), "root-1");
+    assert!(matches!(node, BundleGraphNode::Root(_)));
+  }
+
+  #[test]
+  fn test_deserialize_entry_specifier_node() {
+    let json = r#"{
+      "type": "entry_specifier",
+      "id": "entry-spec-1",
+      "value": "/path/to/entry.js",
+      "correspondingRequest": "req-123"
+    }"#;
+    let node: BundleGraphNode = serde_json::from_str(json).unwrap();
+    assert_eq!(node.id(), "entry-spec-1");
+    assert!(matches!(node, BundleGraphNode::EntrySpecifier(_)));
+  }
+
+  #[test]
+  fn test_deserialize_entry_file_node() {
+    let json = r#"{
+      "type": "entry_file",
+      "id": "entry-file-1",
+      "value": {
+        "filePath": "/src/index.js",
+        "packagePath": "/src"
+      }
+    }"#;
+    let node: BundleGraphNode = serde_json::from_str(json).unwrap();
+    assert_eq!(node.id(), "entry-file-1");
+    assert!(matches!(node, BundleGraphNode::EntryFile(_)));
+  }
+
+  #[test]
+  fn test_deserialize_bundle_group_node() {
+    let json = r#"{
+      "type": "bundle_group",
+      "id": "bg-1",
+      "value": {
+        "target": {
+          "distDir": "/dist",
+          "distEntry": "index.js",
+          "env": {
+            "context": "browser",
+            "engines": {},
+            "includeNodeModules": true,
+            "outputFormat": "esmodule",
+            "sourceType": "module",
+            "isLibrary": false,
+            "shouldOptimize": false,
+            "shouldScopeHoist": false,
+            "sourceMap": {},
+            "unstableSingleFileOutput": false
+          },
+          "name": "default",
+          "publicUrl": "/"
+        },
+        "entryAssetId": "asset-123"
+      }
+    }"#;
+    let node: BundleGraphNode = serde_json::from_str(json).unwrap();
+    assert_eq!(node.id(), "bg-1");
+    assert!(matches!(node, BundleGraphNode::BundleGroup(_)));
+  }
+
+  #[test]
+  fn test_deserialize_unknown_type_fails() {
+    let json = r#"{"type": "unknown_type", "id": "test"}"#;
+    let result: Result<BundleGraphNode, _> = serde_json::from_str(json);
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("unknown variant"));
+  }
+
+  #[test]
+  fn test_deserialize_missing_type_fails() {
+    let json = r#"{"id": "test"}"#;
+    let result: Result<BundleGraphNode, _> = serde_json::from_str(json);
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn test_deserialize_array_of_nodes() {
+    let json = r#"[
+      {"type": "root", "id": "root", "value": null},
+      {"type": "entry_specifier", "id": "es-1", "value": "/index.js"}
+    ]"#;
+    let nodes: Vec<BundleGraphNode> = serde_json::from_str(json).unwrap();
+    assert_eq!(nodes.len(), 2);
+    assert_eq!(nodes[0].id(), "root");
+    assert_eq!(nodes[1].id(), "es-1");
+  }
+}
