@@ -156,9 +156,6 @@ which = "7.0.3"
 whoami = "2.0.2"
 xxhash-rust = "0.8.15"
 
-# DEPRECATED
-
-
 # CANNOT UPDATE
 ## rkyv includes a breaking change in a minor release which breaks parcel_sourcemap
 parcel_sourcemap_ext = { package = "parcel_sourcemap",  version="2.1.1" }
