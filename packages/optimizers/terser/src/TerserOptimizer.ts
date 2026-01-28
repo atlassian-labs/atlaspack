@@ -109,7 +109,7 @@ export default new Optimizer({
     let resultMap = result.map;
     if (resultMap && typeof resultMap !== 'string') {
       sourceMap = new SourceMap(options.projectRoot);
-      sourceMap.addVLQMap(resultMap);
+      sourceMap.addVLQMap(resultMap as any);
       let sourcemapReference = await getSourceMapReference(sourceMap);
       if (sourcemapReference) {
         minifiedContents += `\n//# sourceMappingURL=${sourcemapReference}\n`;

@@ -1,10 +1,9 @@
 import SourceMap from '@atlaspack/source-map';
 import {Optimizer} from '@atlaspack/plugin';
 import postcss from 'postcss';
-// @ts-expect-error TS7016
 import cssnano from 'cssnano';
-// @ts-expect-error TS7016
-import type {CSSNanoOptions} from 'cssnano'; // TODO the type is based on cssnano 4
+// import type {CSSNanoOptions} from 'cssnano'; // TODO the type is based on cssnano 4
+type CSSNanoOptions = any;
 
 export default new Optimizer({
   async loadConfig({config}) {

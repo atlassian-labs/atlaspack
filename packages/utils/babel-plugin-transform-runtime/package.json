@@ -18,8 +18,8 @@
     "semver": "^7.5.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.22.11",
-    "@atlaspack/babel-preset-env": "2.14.4"
+    "@atlaspack/babel-preset-env": "2.14.4",
+    "@babel/core": "^7.22.11"
   },
   "type": "commonjs",
   "scripts": {

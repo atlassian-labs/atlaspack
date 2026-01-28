@@ -2,7 +2,6 @@ import {Transformer} from '@atlaspack/plugin';
 import path from 'path';
 import {EOL} from 'os';
 import SourceMap from '@atlaspack/source-map';
-// @ts-expect-error TS7016
 import sass from 'sass';
 import {promisify} from 'util';
 
@@ -66,7 +65,7 @@ export default new Transformer({
     let css;
     try {
       let code = await asset.getCode();
-      let result = await sassRender({
+      let result: any = await sassRender({
         ...rawConfig,
         file: asset.filePath,
         // @ts-expect-error TS2339
@@ -99,7 +98,7 @@ export default new Transformer({
 
       if (result.map != null) {
         let map = new SourceMap(options.projectRoot);
-        map.addVLQMap(JSON.parse(result.map));
+        map.addVLQMap(JSON.parse(result.map.toString()));
         asset.setMap(map);
       }
     } catch (err: any) {
@@ -114,7 +113,7 @@ export default new Transformer({
     }
 
     asset.type = 'css';
-    asset.setCode(css);
+    asset.setCode(css as any);
     return [asset];
   },
 }) as Transformer<unknown>;

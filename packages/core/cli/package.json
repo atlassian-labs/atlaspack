@@ -36,13 +36,13 @@
     "@atlaspack/reporter-dev-server": "2.14.49",
     "@atlaspack/reporter-tracer": "2.14.49",
     "@atlaspack/utils": "3.3.1",
-    "chalk": "^4.1.0",
+    "chalk": "^4.1.2",
     "commander": "^7.0.0",
     "get-port": "^4.2.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.22.11",
     "@atlaspack/babel-register": "2.14.4",
+    "@babel/core": "^7.22.11",
     "rimraf": "^5.0.5"
   }
 }

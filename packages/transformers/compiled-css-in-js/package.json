@@ -28,7 +28,6 @@
     "@atlaspack/transformer-js": "12.1.1",
     "@atlaspack/utils": "3.3.1"
   },
-  "devDependencies": {},
   "type": "commonjs",
   "scripts": {
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."

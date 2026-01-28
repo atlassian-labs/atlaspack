@@ -18,12 +18,12 @@
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/feature-flags": "2.27.7",
-    "@atlaspack/transformer-js": "12.1.1",
-    "@atlaspack/types-internal": "2.22.6",
     "@atlaspack/plugin": "2.14.49",
     "@atlaspack/rust": "3.19.0",
-    "@atlaspack/utils": "3.3.1",
-    "@atlaspack/source-map": "3.2.4"
+    "@atlaspack/source-map": "3.2.4",
+    "@atlaspack/transformer-js": "12.1.1",
+    "@atlaspack/types-internal": "2.22.6",
+    "@atlaspack/utils": "3.3.1"
   },
   "type": "commonjs",
   "scripts": {

@@ -4,9 +4,7 @@
   "version": "0.0.9",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
-  "bin": {
-    "apvm": "apvm.mjs"
-  },
+  "bin": "apvm.mjs",
   "publishConfig": {
     "access": "public"
   },

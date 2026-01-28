@@ -20,8 +20,8 @@
     "@atlaspack/domain-sharding": "2.14.4",
     "@atlaspack/feature-flags": "2.27.7",
     "@atlaspack/plugin": "2.14.49",
-    "@atlaspack/utils": "3.3.1",
     "@atlaspack/types-internal": "2.22.6",
+    "@atlaspack/utils": "3.3.1",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs",

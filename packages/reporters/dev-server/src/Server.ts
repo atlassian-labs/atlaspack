@@ -534,9 +534,8 @@ export default class Server {
         resolve: (result: Promise<Server> | Server) => void,
         reject: (error?: any) => void,
       ) => {
-        server.once('error', (err) => {
+        server.once('error', (err: any) => {
           this.options.logger.error({
-            // @ts-expect-error TS2345
             message: serverErrors(err, this.options.port),
           } as Diagnostic);
           reject(err);

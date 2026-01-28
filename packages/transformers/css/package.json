@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/plugin": "2.14.49",
     "@atlaspack/feature-flags": "2.27.7",
+    "@atlaspack/plugin": "2.14.49",
     "@atlaspack/source-map": "3.2.4",
     "@atlaspack/types": "2.15.39",
     "@atlaspack/utils": "3.3.1",

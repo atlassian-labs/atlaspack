@@ -9,10 +9,10 @@
     "url": "https://github.com/atlassian-labs/atlaspack.git"
   },
   "dependencies": {
-    "@babel/register": "^7.22.5",
     "@atlaspack/babel-preset": "2.14.4",
-    "resolve": "^1.12.0",
-    "esbuild-register": "^3.5.0"
+    "@babel/register": "^7.22.5",
+    "esbuild-register": "^3.5.0",
+    "resolve": "^1.12.0"
   },
   "peerDependencies": {
     "@babel/core": "^7.22.11"

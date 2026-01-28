@@ -6,6 +6,7 @@ import path from 'path';
 import clone from 'clone';
 import json5 from 'json5';
 import {parse as toml} from '@iarna/toml';
+// @ts-expect-error - lru-cache types not available
 import LRU from 'lru-cache';
 
 export type ConfigOutput = {
@@ -18,7 +19,6 @@ export type ConfigOptions = {
   parser?: (arg1: string) => any;
 };
 
-// @ts-expect-error TS2351
 const configCache = new LRU<FilePath, ConfigOutput>({max: 500});
 const resolveCache = new Map();
 

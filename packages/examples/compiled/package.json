@@ -16,8 +16,8 @@
   },
   "devDependencies": {
     "@atlaspack/cli": "*",
-    "@atlaspack/transformer-compiled-css-in-js": "*",
     "@atlaspack/reporter-compiled-css-in-js-migration-map": "*",
+    "@atlaspack/transformer-compiled-css-in-js": "*",
     "@types/react-dom": "^17.0.2",
     "express": "*"
   },

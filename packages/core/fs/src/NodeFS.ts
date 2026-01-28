@@ -210,7 +210,7 @@ export class NodeFS implements FileSystem {
     }
 
     if (stat.isDirectory()) {
-      await nativeFS.promises.rmdir(filePath, {recursive: true});
+      await (nativeFS.promises.rmdir as any)(filePath, {recursive: true});
     } else {
       await nativeFS.promises.unlink(filePath);
     }

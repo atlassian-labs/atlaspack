@@ -17,5 +17,5 @@
     "strict": true,
     "target": "ES2020"
   },
-  "typeRoots": ["./types/"]
+  "typeRoots": ["./types/", "./node_modules/@types"]
 }

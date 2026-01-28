@@ -23,12 +23,12 @@
     "lib"
   ],
   "dependencies": {
-    "@mischnic/json-sourcemap": "^0.1.0",
     "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/feature-flags": "2.27.7",
     "@atlaspack/fs": "2.15.44",
     "@atlaspack/rust": "3.19.0",
     "@atlaspack/utils": "3.3.1",
+    "@mischnic/json-sourcemap": "^0.1.0",
     "nullthrows": "^1.1.1",
     "semver": "^7.5.2"
   },
