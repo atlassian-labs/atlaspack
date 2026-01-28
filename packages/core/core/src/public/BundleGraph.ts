@@ -48,9 +48,9 @@ type BundleFactory<TBundle extends IBundle> = (
   arg3: AtlaspackOptions,
 ) => TBundle;
 
-export default class BundleGraph<TBundle extends IBundle>
-  implements IBundleGraph<TBundle>
-{
+export default class BundleGraph<
+  TBundle extends IBundle,
+> implements IBundleGraph<TBundle> {
   #graph: InternalBundleGraph;
   #options: AtlaspackOptions;
   #createBundle: BundleFactory<TBundle>;

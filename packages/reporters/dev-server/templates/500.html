@@ -79,7 +79,10 @@
       %><a
         href="/__parcel_launch_editor?file=<%- encodeURIComponent(frame.location) %>"
         style="text-decoration: underline; color: #888"
-        onclick="fetch(this.href); return false"
+        onclick="
+          fetch(this.href);
+          return false;
+        "
         ><%- frame.location %></a
       >
       <%- frame.code %><% }); %><% } else { %><%- error.stack %><% } %>

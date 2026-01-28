@@ -754,9 +754,11 @@ export default class AdjacencyList<TEdgeType extends number = NullEdgeType> {
  *        └────┼─────────┴─────────────────┘                 │
  *             └─────────────────────────────────────────────┘
  */
-export class SharedTypeMap<TItemType, THash, TAddress extends number>
-  implements Iterable<TAddress>
-{
+export class SharedTypeMap<
+  TItemType,
+  THash,
+  TAddress extends number,
+> implements Iterable<TAddress> {
   /**
    * The header for the `SharedTypeMap` comprises 2 4-byte chunks:
    *

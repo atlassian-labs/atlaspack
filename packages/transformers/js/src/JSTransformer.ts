@@ -259,8 +259,8 @@ async function legacyDetemineJsxConfig(
 
     reactRefresh = Boolean(
       packageJson?.dependencies?.react ||
-        packageJson?.devDependencies?.react ||
-        packageJson?.peerDependencies?.react,
+      packageJson?.devDependencies?.react ||
+      packageJson?.peerDependencies?.react,
     );
 
     const compilerOptions: TSConfig['compilerOptions'] = (
@@ -745,13 +745,13 @@ export default new Transformer({
       is_development: options.mode === 'development',
       react_refresh: Boolean(
         asset.env.isBrowser() &&
-          !asset.env.isLibrary &&
-          !asset.env.isWorker() &&
-          !asset.env.isTesseract() &&
-          !asset.env.isWorklet() &&
-          config?.reactRefresh &&
-          options.hmrOptions &&
-          options.mode === 'development',
+        !asset.env.isLibrary &&
+        !asset.env.isWorker() &&
+        !asset.env.isTesseract() &&
+        !asset.env.isWorklet() &&
+        config?.reactRefresh &&
+        options.hmrOptions &&
+        options.mode === 'development',
       ),
       decorators: Boolean(config?.decorators),
       use_define_for_class_fields: Boolean(config?.useDefineForClassFields),

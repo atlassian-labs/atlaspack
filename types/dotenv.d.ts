@@ -17,7 +17,7 @@ declare module 'dotenv' {
 }
 
 declare module 'dotenv-expand' {
-  import type { DotenvParseOutput } from 'dotenv';
+  import type {DotenvParseOutput} from 'dotenv';
 
   export interface DotenvExpandOptions {
     parsed?: DotenvParseOutput;
@@ -29,5 +29,7 @@ declare module 'dotenv-expand' {
     error?: Error;
   }
 
-  export default function expand(options: DotenvExpandOptions): DotenvExpandOutput;
+  export default function expand(
+    options: DotenvExpandOptions,
+  ): DotenvExpandOutput;
 }

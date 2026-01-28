@@ -57,8 +57,8 @@ function createAssetGraph(
   assets: Array<
     [
       FilePath,
-      /* symbols (or cleared) */ (
-        | Array<
+      (
+        /* symbols (or cleared) */ | Array<
             [
               symbol,
               {
@@ -78,8 +78,8 @@ function createAssetGraph(
     [
       /* from */ FilePath,
       /* to */ FilePath,
-      /* symbols (or cleared) */ (
-        | Array<
+      (
+        /* symbols (or cleared) */ | Array<
             [
               symbol,
               {
@@ -302,8 +302,8 @@ async function testPropagation(
   assets: Array<
     [
       FilePath,
-      /* symbols (or cleared) */ (
-        | Array<
+      (
+        /* symbols (or cleared) */ | Array<
             [
               symbol,
               {
@@ -324,8 +324,8 @@ async function testPropagation(
     [
       /* from */ FilePath,
       /* to */ FilePath,
-      /* symbols (or cleared) */ (
-        | Array<
+      (
+        /* symbols (or cleared) */ | Array<
             [
               symbol,
               {
@@ -339,8 +339,8 @@ async function testPropagation(
         | null
         | undefined
       ),
-      /* usedSymbols */ (
-        | Array<
+      (
+        /* usedSymbols */ | Array<
             | [symbol, [FilePath, symbol | null | undefined] | null | undefined]
             | [symbol]
           >
