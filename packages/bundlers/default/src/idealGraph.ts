@@ -1405,7 +1405,7 @@ export function createIdealGraph(
           for (let sourceBundleId of sourceBundles) {
             let sourceBundle = nullthrows(
               bundleGraph.getNode(sourceBundleId),
-              'Source bundle not found when removing shared bundle due to MPR',
+              'Source bundle not found when removing shared bundle due to hitting max parallel requests limit',
             );
             invariant(sourceBundle !== 'root');
             modifiedSourceBundles.add(sourceBundle);
@@ -1420,7 +1420,7 @@ export function createIdealGraph(
                   asset,
                   nullthrows(
                     sourceBundle.mainEntryAsset,
-                    'Source bundle has no mainEntryAsset when removing shared bundle due to MPR',
+                    'Source bundle has no mainEntryAsset when removing shared bundle due to hitting max parallel requests limit',
                   ),
                 );
               }
