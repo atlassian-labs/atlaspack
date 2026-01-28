@@ -1,4 +1,6 @@
+use anyhow::anyhow;
 use petgraph::{graph::NodeIndex, prelude::StableDiGraph, visit::Dfs};
+use rayon::prelude::*;
 
 use crate::{
   bundle_graph::bundle_graph::BundleGraph,
@@ -8,6 +10,7 @@ use crate::{
 pub struct BundleGraphFromJs {
   graph: StableDiGraph<BundleGraphNode, BundleGraphEdgeType>,
 }
+
 impl BundleGraphFromJs {
   pub fn new(nodes: Vec<BundleGraphNode>, edges: Vec<(u32, u32, BundleGraphEdgeType)>) -> Self {
     let mut graph = StableDiGraph::new();
@@ -22,6 +25,23 @@ impl BundleGraphFromJs {
       );
     }
     BundleGraphFromJs { graph }
+  }
+
+  #[tracing::instrument(level = "info", skip_all)]
+  pub fn deserialize_from_json(nodes_json: String) -> anyhow::Result<Vec<BundleGraphNode>> {
+    // Parse JSON to Vec<Value> first (fast), then parallelize node deserialization
+    let json_values: Vec<serde_json::Value> = serde_json::from_str(&nodes_json)
+      .map_err(|e| anyhow!("Failed to parse bundle graph JSON: {}", e))?;
+
+    // Parallelize the deserialization of individual nodes using rayon
+    let nodes: Vec<BundleGraphNode> = json_values
+      .into_par_iter()
+      .map(|value| {
+        serde_json::from_value::<BundleGraphNode>(value)
+          .map_err(|e| anyhow!("Failed to deserialize node: {}", e))
+      })
+      .collect::<anyhow::Result<Vec<_>>>()?;
+    Ok(nodes)
   }
 }
 
@@ -235,5 +255,78 @@ mod tests {
 
     let dep = BundleGraphNode::Dependency(create_test_dependency_node("d1"));
     assert_eq!(dep.id(), "d1");
+  }
+
+  #[test]
+  fn test_deserialize_from_json_empty_array() {
+    let json = "[]".to_string();
+    let nodes = BundleGraphFromJs::deserialize_from_json(json).unwrap();
+    assert!(nodes.is_empty());
+  }
+
+  #[test]
+  fn test_deserialize_from_json_single_root_node() {
+    let json = r#"[{"type": "root", "id": "root-1", "value": null}]"#.to_string();
+    let nodes = BundleGraphFromJs::deserialize_from_json(json).unwrap();
+    assert_eq!(nodes.len(), 1);
+    assert_eq!(nodes[0].id(), "root-1");
+    assert!(matches!(nodes[0], BundleGraphNode::Root(_)));
+  }
+
+  #[test]
+  fn test_deserialize_from_json_multiple_nodes() {
+    let json = r#"[
+      {"type": "root", "id": "root", "value": null},
+      {"type": "entry_specifier", "id": "es-1", "value": "/src/index.js"}
+    ]"#
+      .to_string();
+    let nodes = BundleGraphFromJs::deserialize_from_json(json).unwrap();
+    assert_eq!(nodes.len(), 2);
+    assert_eq!(nodes[0].id(), "root");
+    assert_eq!(nodes[1].id(), "es-1");
+  }
+
+  #[test]
+  fn test_deserialize_from_json_invalid_json() {
+    let json = "not valid json".to_string();
+    let result = BundleGraphFromJs::deserialize_from_json(json);
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("Failed to parse bundle graph JSON"));
+  }
+
+  #[test]
+  fn test_deserialize_from_json_invalid_node_type() {
+    let json = r#"[{"type": "invalid_type", "id": "test"}]"#.to_string();
+    let result = BundleGraphFromJs::deserialize_from_json(json);
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("Failed to deserialize node"));
+  }
+
+  #[test]
+  fn test_deserialize_from_json_missing_required_field() {
+    // Missing "id" field
+    let json = r#"[{"type": "root", "value": null}]"#.to_string();
+    let result = BundleGraphFromJs::deserialize_from_json(json);
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("Failed to deserialize node"));
+  }
+
+  #[test]
+  fn test_deserialize_from_json_integration_with_graph() {
+    // Test that deserialized nodes can be used to create a graph
+    let json = r#"[
+      {"type": "root", "id": "root", "value": null},
+      {"type": "entry_specifier", "id": "es-1", "value": "/src/index.js"}
+    ]"#
+      .to_string();
+    let nodes = BundleGraphFromJs::deserialize_from_json(json).unwrap();
+    let edges = vec![(0, 1, 1u8)];
+
+    let graph = BundleGraphFromJs::new(nodes, edges);
+    // Graph should be created successfully (no bundles in this case)
+    assert!(graph.get_bundles().is_empty());
   }
 }

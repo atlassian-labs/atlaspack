@@ -8,6 +8,7 @@ use atlaspack::AtlaspackError;
 use atlaspack::AtlaspackInitOptions;
 use atlaspack::WatchEvents;
 use atlaspack::rpc::nodejs::NodejsWorker;
+use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use lmdb_js_lite::DatabaseHandle;
@@ -207,7 +208,6 @@ pub fn atlaspack_napi_respond_to_fs_events(
   Ok(promise)
 }
 
-#[tracing::instrument(level = "info", skip_all)]
 #[napi]
 pub fn atlaspack_napi_load_bundle_graph(
   env: Env,
@@ -221,22 +221,8 @@ pub fn atlaspack_napi_load_bundle_graph(
   thread::spawn({
     let atlaspack = atlaspack_napi.clone();
     move || {
-      use atlaspack_core::types::BundleGraphNode;
-      use rayon::prelude::*;
-
       let result: anyhow::Result<()> = (|| {
-        // Parse JSON to Vec<Value> first (fast), then parallelize node deserialization
-        let json_values: Vec<serde_json::Value> = serde_json::from_str(&nodes_json)
-          .map_err(|e| anyhow!("Failed to parse bundle graph JSON: {}", e))?;
-
-        // Parallelize the deserialization of individual nodes using rayon
-        let nodes: Vec<BundleGraphNode> = json_values
-          .into_par_iter()
-          .map(|value| {
-            serde_json::from_value::<BundleGraphNode>(value)
-              .map_err(|e| anyhow!("Failed to deserialize node: {}", e))
-          })
-          .collect::<anyhow::Result<Vec<_>>>()?;
+        let nodes = BundleGraphFromJs::deserialize_from_json(nodes_json)?;
 
         let atlaspack = atlaspack.write();
         atlaspack.load_bundle_graph(nodes, edges)
