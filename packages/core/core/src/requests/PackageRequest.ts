@@ -15,6 +15,7 @@ import {getDevDepRequests, runDevDepRequest} from './DevDepRequest';
 import createAtlaspackConfigRequest from './AtlaspackConfigRequest';
 import {fromEnvironmentId} from '../EnvironmentManager';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import logger from '@atlaspack/logger';
 
 type PackageRequestInput = {
   bundleGraph: BundleGraph;
@@ -70,7 +71,10 @@ async function run({input, api, farm, rustAtlaspack}: RunInput<BundleInfo>) {
   ) {
     // Once this actually does something, the code below will be in an `else` block (i.e. we'll only run one or the other)
     const packagingResult = await rustAtlaspack.package(bundle.id);
-    // console.log(`RESULT:`, packagingResult);
+    logger.info({
+      message: JSON.stringify(packagingResult, null, 2),
+      origin: '@atlaspack/core',
+    });
   }
 
   let {devDepRequests, configRequests, bundleInfo, invalidations} =

@@ -6,6 +6,7 @@ use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, Load
 use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode};
 use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
 use atlaspack_core::config_loader::ConfigLoader;
+use atlaspack_core::package_result::PackageResult;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::{AtlaspackOptions, BundleGraphNode, SourceField, Targets};
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
@@ -245,7 +246,7 @@ impl Atlaspack {
   }
 
   #[tracing::instrument(level = "info", skip_all)]
-  pub fn package(&self, bundle_id: String) -> anyhow::Result<String> {
+  pub fn package(&self, bundle_id: String) -> anyhow::Result<PackageResult> {
     self.runtime.block_on(async move {
       let bundle_graph = self.bundle_graph.read().await;
       let packager = JsPackager::new(Arc::clone(&self.db));

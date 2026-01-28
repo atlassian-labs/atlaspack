@@ -14,7 +14,6 @@ use atlaspack_napi_helpers::js_callable::JsCallable;
 use lmdb_js_lite::DatabaseHandle;
 use lmdb_js_lite::LMDBJsLite;
 use napi::Env;
-use napi::JsNumber;
 use napi::JsObject;
 use napi::JsUnknown;
 use napi::bindgen_prelude::External;
@@ -25,6 +24,8 @@ use atlaspack::file_system::FileSystemRef;
 use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack_package_manager::PackageManagerRef;
 use parking_lot::RwLock;
+
+use crate::atlaspack::package_result_napi::JsPackageResult;
 
 use super::file_system_napi::FileSystemNapi;
 use super::napi_result::NapiAtlaspackResult;
@@ -241,47 +242,6 @@ pub fn atlaspack_napi_load_bundle_graph(
   Ok(promise)
 }
 
-// #[napi(object)]
-// pub struct BundleInfo {
-//   pub r#type: String,
-//   pub size: JsNumber,
-//   pub hash: String,
-//   pub hash_references: Vec<String>,
-//   pub time: Option<JsNumber>,
-//   pub cache_keys: CacheKeyMap,
-//   pub is_large_blob: bool,
-//   pub scope_hoisting_stats: Option<ScopeHoistingStats>,
-// }
-
-// #[napi(object)]
-// pub struct ScopeHoistingStats {
-//   pub total_assets: JsNumber,
-//   pub wrapped_assets: JsNumber,
-// }
-
-// #[napi(object)]
-// pub struct CacheKeyMap {
-//   pub content: String,
-//   pub map: String,
-//   pub info: String,
-// }
-
-// #[napi(object)]
-// struct PackageRequestResult {
-//   pub bundle_info: JsObject,
-//   pub config_requests: Vec<JsObject>,
-//   pub dev_dep_requests: Vec<JsObject>,
-//   pub invalidations: Vec<JsObject>,
-// }
-
-#[napi(object)]
-pub struct PackageRequestResult {
-  pub content_key: String,
-  pub map_key: String,
-  pub info_key: String,
-  pub size: JsNumber,
-  pub total_assets: JsNumber,
-}
 #[napi]
 pub fn atlaspack_napi_package(
   env: Env,
@@ -295,16 +255,7 @@ pub fn atlaspack_napi_package(
       let atlaspack = atlaspack.read();
       let result = atlaspack.package(bundle_id);
       deferred.resolve(move |env| match result {
-        Ok(cache_key) => NapiAtlaspackResult::ok(
-          &env,
-          PackageRequestResult {
-            content_key: cache_key,
-            map_key: "".to_string(),
-            info_key: "".to_string(),
-            size: env.create_uint32(0)?,
-            total_assets: env.create_uint32(0)?,
-          },
-        ),
+        Ok(result) => NapiAtlaspackResult::ok(&env, JsPackageResult::from(result)),
         Err(error) => {
           let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
           NapiAtlaspackResult::error(&env, js_object)

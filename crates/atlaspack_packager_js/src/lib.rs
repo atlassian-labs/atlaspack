@@ -4,6 +4,8 @@ use atlaspack_core::{bundle_graph::bundle_graph::BundleGraph, types::Asset};
 use lmdb_js_lite::DatabaseHandle;
 use rayon::prelude::*;
 
+use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
+
 pub struct JsPackager {
   db: Arc<DatabaseHandle>,
 }
@@ -17,7 +19,7 @@ impl JsPackager {
     &self,
     bundle_id: &str,
     bundle_graph: &B,
-  ) -> anyhow::Result<String> {
+  ) -> anyhow::Result<PackageResult> {
     let bundle = bundle_graph
       .get_bundle_by_id(bundle_id)
       .ok_or(anyhow::anyhow!("Bundle not found"))?;
@@ -39,6 +41,24 @@ impl JsPackager {
         String::from_utf8_lossy(&code.unwrap()).to_string()
       })
       .collect::<Vec<String>>();
-    Ok(contents.join("\n"))
+    Ok(PackageResult {
+      bundle_info: BundleInfo {
+        bundle_type: bundle.bundle_type.extension().to_string(),
+        size: contents.into_iter().map(|c| c.len() as u64).sum::<u64>(),
+        total_assets: assets.len() as u64,
+        hash: "TODO".to_string(),
+        hash_references: vec![],
+        cache_keys: CacheKeyMap {
+          content: "TODO".to_string(),
+          map: "TODO".to_string(),
+          info: "TODO".to_string(),
+        },
+        is_large_blob: false,
+        time: Some(0),
+      },
+      config_requests: vec![],
+      dev_dep_requests: vec![],
+      invalidations: vec![],
+    })
   }
 }
