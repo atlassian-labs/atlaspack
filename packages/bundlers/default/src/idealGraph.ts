@@ -1403,15 +1403,27 @@ export function createIdealGraph(
           );
 
           for (let sourceBundleId of sourceBundles) {
-            let sourceBundle = nullthrows(bundleGraph.getNode(sourceBundleId));
+            let sourceBundle = nullthrows(
+              bundleGraph.getNode(sourceBundleId),
+              'Source bundle not found when removing shared bundle due to MPR',
+            );
             invariant(sourceBundle !== 'root');
             modifiedSourceBundles.add(sourceBundle);
             bundleToRemove.sourceBundles.delete(sourceBundleId);
             for (let asset of bundleToRemove.assets) {
-              addAssetToBundleRoot(
-                asset,
-                nullthrows(sourceBundle.mainEntryAsset),
-              );
+              if (sourceBundle.manualSharedBundle != null) {
+                sourceBundle.assets.add(asset);
+                sourceBundle.size += asset.stats.size;
+                assignInlineConstants(asset, sourceBundle);
+              } else {
+                addAssetToBundleRoot(
+                  asset,
+                  nullthrows(
+                    sourceBundle.mainEntryAsset,
+                    'Source bundle has no mainEntryAsset when removing shared bundle due to MPR',
+                  ),
+                );
+              }
             }
             //This case is specific to reused bundles, which can have shared bundles attached to it
             for (let childId of bundleGraph.getNodeIdsConnectedFrom(
