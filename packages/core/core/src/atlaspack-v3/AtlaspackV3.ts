@@ -11,7 +11,7 @@ import {
   CacheStats,
 } from '@atlaspack/rust';
 import {NapiWorkerPool} from './NapiWorkerPool';
-import ThrowableDiagnostic from '@atlaspack/diagnostic';
+import ThrowableDiagnostic, {Diagnostic} from '@atlaspack/diagnostic';
 import type {Event} from '@parcel/watcher';
 import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
 import type BundleGraph from '../BundleGraph';
@@ -111,8 +111,12 @@ export class AtlaspackV3 {
     ) as Promise<void>;
   }
 
-  package(bundleId: string): Promise<RunPackagerRunnerResult> {
-    return atlaspackNapiPackage(this._atlaspack_napi, bundleId) as Promise<any>;
+  package(
+    bundleId: string,
+  ): Promise<[RunPackagerRunnerResult, Diagnostic | null]> {
+    return atlaspackNapiPackage(this._atlaspack_napi, bundleId) as Promise<
+      [RunPackagerRunnerResult, Diagnostic | null]
+    >;
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {

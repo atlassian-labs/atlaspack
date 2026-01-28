@@ -381,7 +381,7 @@ export class SourceMap {
 export declare function atlaspackNapiPackage(
   atlaspackNapi: AtlaspackNapi,
   bundleId: string,
-): object;
+): Promise<[RunPackagerRunnerResult, AtlaspackNapiError]>;
 export interface CompiledCssInJsConfigPlugin {
   configPath?: string;
   importReact?: boolean;
