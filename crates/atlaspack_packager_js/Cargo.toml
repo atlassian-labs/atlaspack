@@ -12,4 +12,5 @@ atlaspack_core = { path = "../atlaspack_core" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
 anyhow = { workspace = true }
 rayon = { workspace = true }
+regex = { workspace = true }
 tracing = { workspace = true }

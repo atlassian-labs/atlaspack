@@ -665,6 +665,7 @@ dependencies = [
  "atlaspack_core",
  "lmdb-js-lite",
  "rayon",
+ "regex",
  "tracing",
 ]
 

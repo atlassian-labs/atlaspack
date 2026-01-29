@@ -101,22 +101,13 @@ impl BundleGraph for BundleGraphFromJs {
 
   #[tracing::instrument(level = "trace", skip_all)]
   fn traverse_bundle_assets(&self, bundle: &Bundle, mut visit: impl FnMut(&Asset)) {
+    // THIS IS HACKY CODE - real impl TBA..
     // Get the bundle node
     let bundle_node_idx = self.nodes_by_id.get(&bundle.id).unwrap();
-
-    // The 'contains' edge type (2) marks which assets belong to this bundle
-    const CONTAINS_EDGE_TYPE: u8 = 2;
-
-    // Find all assets that have a 'contains' edge FROM the bundle
-    for edge in self
-      .graph
-      .edges_directed(*bundle_node_idx, Direction::Outgoing)
-    {
-      if *edge.weight() == CONTAINS_EDGE_TYPE {
-        let target_node = self.graph.node_weight(edge.target()).unwrap();
-        if let BundleGraphNode::Asset(asset_node) = target_node {
-          visit(&asset_node.value);
-        }
+    let mut dfs = Dfs::new(&self.graph, *bundle_node_idx);
+    while let Some(node_idx) = dfs.next(&self.graph) {
+      if let Some(BundleGraphNode::Asset(asset_node)) = self.graph.node_weight(node_idx) {
+        visit(&asset_node.value);
       }
     }
   }
@@ -168,32 +159,24 @@ impl BundleGraph for BundleGraphFromJs {
       .collect();
 
     // Find the first asset where there's a "contains" edge between the bundle and the asset
-    match asset_nodes.iter().find(|asset_node| {
+    if let Some(node_index) = asset_nodes.iter().find(|asset_node| {
       self.graph.edges_connecting(*bundle_node, **asset_node).any(
         |edge| *edge.weight() == 2, /* BundleGraphEdgeType::Contains */
       )
-    }) {
-      Some(node_index) => {
-        if let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(*node_index) {
-          return Ok(Some(&asset.value));
-        }
-      }
-      _ => (),
+    }) && let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(*node_index)
+    {
+      return Ok(Some(&asset.value));
     }
 
     // Next - find an asset that matches the bundle type
-    match asset_nodes.iter().find(|asset_node| {
+    if let Some(node_index) = asset_nodes.iter().find(|asset_node| {
       if let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(**asset_node) {
         return asset.value.file_type == bundle.bundle_type;
       }
       false
-    }) {
-      Some(node_index) => {
-        if let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(*node_index) {
-          return Ok(Some(&asset.value));
-        }
-      }
-      _ => (),
+    }) && let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(*node_index)
+    {
+      return Ok(Some(&asset.value));
     }
 
     // Return the first asset
