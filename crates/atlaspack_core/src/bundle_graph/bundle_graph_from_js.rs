@@ -1,12 +1,17 @@
 use anyhow::anyhow;
 use std::collections::HashMap;
 
-use petgraph::{graph::NodeIndex, prelude::StableDiGraph, visit::Dfs};
+use petgraph::{
+  Direction,
+  graph::NodeIndex,
+  prelude::StableDiGraph,
+  visit::{Dfs, EdgeRef},
+};
 use rayon::prelude::*;
 
 use crate::{
   bundle_graph::bundle_graph::BundleGraph,
-  types::{Asset, Bundle, BundleGraphEdgeType, BundleGraphNode},
+  types::{self, Asset, Bundle, BundleGraphEdgeType, BundleGraphNode, Dependency},
 };
 
 type BundleGraphNodeId = String;
@@ -96,21 +101,118 @@ impl BundleGraph for BundleGraphFromJs {
 
   #[tracing::instrument(level = "trace", skip_all)]
   fn traverse_bundle_assets(&self, bundle: &Bundle, mut visit: impl FnMut(&Asset)) {
-    if bundle.entry_asset_ids.is_empty() || bundle.entry_asset_ids.len() > 1 {
-      todo!("Implement support for non-single entry assets");
-    }
-    let entry_asset_idx = self.nodes_by_id.get(&bundle.entry_asset_ids[0]).unwrap();
-    let mut dfs = Dfs::new(&self.graph, *entry_asset_idx);
-    while let Some(node_idx) = dfs.next(&self.graph) {
-      let node = self.graph.node_weight(node_idx).unwrap();
-      if let BundleGraphNode::Asset(node) = node {
-        visit(&node.value)
+    // Get the bundle node
+    let bundle_node_idx = self.nodes_by_id.get(&bundle.id).unwrap();
+
+    // The 'contains' edge type (2) marks which assets belong to this bundle
+    const CONTAINS_EDGE_TYPE: u8 = 2;
+
+    // Find all assets that have a 'contains' edge FROM the bundle
+    for edge in self
+      .graph
+      .edges_directed(*bundle_node_idx, Direction::Outgoing)
+    {
+      if *edge.weight() == CONTAINS_EDGE_TYPE {
+        let target_node = self.graph.node_weight(edge.target()).unwrap();
+        if let BundleGraphNode::Asset(asset_node) = target_node {
+          visit(&asset_node.value);
+        }
       }
     }
   }
 
   fn get_public_asset_id(&self, asset_id: &str) -> Option<&str> {
     self.public_id_by_asset_id.get(asset_id).map(|s| s.as_str())
+  }
+
+  fn get_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&types::Dependency>> {
+    let asset_node = self.nodes_by_id.get(&asset.id).unwrap();
+
+    // Filter to only edges of type 1 (NULL_EDGE_TYPE) - this is the default edge type
+    // used to connect assets to their dependencies in the bundle graph
+    const NULL_EDGE_TYPE: u8 = 1;
+
+    self
+      .graph
+      .edges_directed(*asset_node, Direction::Outgoing)
+      .filter(|edge| *edge.weight() == NULL_EDGE_TYPE)
+      .map(|edge| {
+        let node = self.graph.node_weight(edge.target()).unwrap();
+        let BundleGraphNode::Dependency(dependency) = node else {
+          return Err(anyhow!("Expected dependency node, got {:?}", node));
+        };
+        Ok(&dependency.value)
+      })
+      .collect()
+  }
+
+  fn get_resolved_asset(
+    &self,
+    dependency: &Dependency,
+    bundle: &Bundle,
+  ) -> anyhow::Result<Option<&Asset>> {
+    let dependency_node = self.nodes_by_id.get(&dependency.id).ok_or(anyhow!(
+      "Dependency {} not found in bundle graph",
+      dependency.id
+    ))?;
+
+    let bundle_node = self
+      .nodes_by_id
+      .get(&bundle.id)
+      .ok_or(anyhow!("Bundle {} not found in bundle graph", bundle.id))?;
+
+    // Collect all asset nodes so we can iterate multiple times
+    let asset_nodes: Vec<_> = self
+      .graph
+      .neighbors_directed(*dependency_node, Direction::Outgoing)
+      .collect();
+
+    // Find the first asset where there's a "contains" edge between the bundle and the asset
+    match asset_nodes.iter().find(|asset_node| {
+      self.graph.edges_connecting(*bundle_node, **asset_node).any(
+        |edge| *edge.weight() == 2, /* BundleGraphEdgeType::Contains */
+      )
+    }) {
+      Some(node_index) => {
+        if let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(*node_index) {
+          return Ok(Some(&asset.value));
+        }
+      }
+      _ => (),
+    }
+
+    // Next - find an asset that matches the bundle type
+    match asset_nodes.iter().find(|asset_node| {
+      if let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(**asset_node) {
+        return asset.value.file_type == bundle.bundle_type;
+      }
+      false
+    }) {
+      Some(node_index) => {
+        if let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(*node_index) {
+          return Ok(Some(&asset.value));
+        }
+      }
+      _ => (),
+    }
+
+    // Return the first asset
+    if let Some(node_index) = asset_nodes.first()
+      && let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(*node_index)
+    {
+      return Ok(Some(&asset.value));
+    }
+
+    Ok(None)
+  }
+
+  fn is_dependency_skipped(&self, dependency: &Dependency) -> bool {
+    let dependency_node = self.nodes_by_id.get(&dependency.id).unwrap();
+    let node = self.graph.node_weight(*dependency_node).unwrap();
+    let BundleGraphNode::Dependency(dependency) = node else {
+      return false;
+    };
+    dependency.deferred || dependency.excluded
   }
 }
 

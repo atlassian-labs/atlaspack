@@ -1,5 +1,6 @@
 use std::{
   collections::{HashMap, HashSet},
+  fmt::{Display, Formatter},
   path::PathBuf,
 };
 
@@ -57,6 +58,26 @@ impl BundleGraphNode {
       BundleGraphNode::BundleGroup(node) => &node.id,
       BundleGraphNode::Bundle(node) => &node.id,
     }
+  }
+}
+
+impl Display for BundleGraphNode {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    let type_name = match self {
+      BundleGraphNode::Asset(_node) => "Asset",
+      BundleGraphNode::Dependency(_node) => "Dependency",
+      BundleGraphNode::EntrySpecifier(_node) => "EntrySpecifier",
+      BundleGraphNode::EntryFile(_node) => "EntryFile",
+      BundleGraphNode::Root(_node) => "Root",
+      BundleGraphNode::BundleGroup(_node) => "BundleGroup",
+      BundleGraphNode::Bundle(_node) => "Bundle",
+    };
+    write!(
+      f,
+      "{type_name}: {id}",
+      type_name = type_name,
+      id = self.id()
+    )
   }
 }
 

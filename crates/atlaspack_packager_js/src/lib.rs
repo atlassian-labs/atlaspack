@@ -1,8 +1,10 @@
 use std::sync::{Arc, RwLock};
 
 use atlaspack_core::{
-  bundle_graph::bundle_graph::BundleGraph, bundle_graph::bundle_graph_from_js::BundleGraphFromJs,
-  hash::hash_bytes, types::Asset, version::atlaspack_rust_version,
+  bundle_graph::bundle_graph::BundleGraph,
+  hash::hash_bytes,
+  types::{Asset, Bundle},
+  version::atlaspack_rust_version,
 };
 use lmdb_js_lite::DatabaseHandle;
 use rayon::prelude::*;
@@ -26,7 +28,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   /// Acquires a read lock and returns a guard. Use for operations that need the graph for
   /// multiple calls (e.g. get_bundle_by_id then traverse_bundle_assets). For single lookups
   /// from other threads (e.g. in par_iter), use `self.bundle_graph.read().unwrap()` directly.
-  fn bundle_graph(&self) -> std::sync::RwLockReadGuard<'_, BundleGraphFromJs> {
+  fn bundle_graph(&self) -> std::sync::RwLockReadGuard<'_, B> {
     self.bundle_graph.read().unwrap()
   }
 
@@ -39,6 +41,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     let mut assets: Vec<Asset> = Vec::new();
     // Get all the assets in the bundle
     graph.traverse_bundle_assets(bundle, &mut |asset: &Asset| {
+      tracing::debug!("Traversing asset: {}", asset.id);
       assets.push(asset.clone());
     });
     let contents = assets
@@ -52,12 +55,12 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
           .unwrap();
         let asset_code = String::from_utf8_lossy(&code.unwrap()).to_string();
         if bundle.entry_asset_ids.contains(&asset.id) {
-          asset_code
+          Ok(asset_code)
         } else {
-          self.wrap_asset(asset, asset_code)
+          self.wrap_asset(bundle, asset, asset_code)
         }
       })
-      .collect::<Vec<String>>();
+      .collect::<anyhow::Result<Vec<String>>>()?;
 
     let bundle_contents = assemble_bundle(contents);
     let bundle_contents = bundle_contents.as_bytes();
@@ -104,15 +107,44 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     })
   }
 
-  fn wrap_asset(&self, asset: &Asset, code: String) -> String {
-    let guard = self.bundle_graph.read().unwrap();
-    let public_id = guard
+  fn wrap_asset(&self, bundle: &Bundle, asset: &Asset, code: String) -> anyhow::Result<String> {
+    let bundle_graph = self.bundle_graph.read().unwrap();
+    let public_id = bundle_graph
       .get_public_asset_id(&asset.id)
       .expect("Asset not found in bundle graph")
       .to_string();
-    format!(
+
+    // Get dependencies for asset
+    let dependencies = bundle_graph.get_dependencies(asset)?;
+    for dependency in dependencies {
+      let resolved = bundle_graph.get_resolved_asset(dependency, bundle)?;
+
+      let specifier = match dependency.meta.get("placeholder") {
+        Some(placeholder) => placeholder.as_str().unwrap(),
+        None => &dependency.specifier,
+      };
+
+      let dep_value: Option<&str> = if bundle_graph.is_dependency_skipped(dependency) {
+        None
+      } else if let Some(resolved) = resolved {
+        Some(
+          bundle_graph
+            .get_public_asset_id(&resolved.id)
+            .ok_or(anyhow::anyhow!("Asset not found in bundle graph"))?,
+        )
+      } else {
+        tracing::debug!(
+          "Dependency {} did not resolve to an asset in the bundle graph",
+          dependency.id
+        );
+        Some(&dependency.specifier)
+      };
+      dbg!(&specifier, &dep_value);
+    }
+    println!("----");
+    Ok(format!(
       "define('{}', function (require,module,exports) {{ {code} }});",
       public_id
-    )
+    ))
   }
 }
