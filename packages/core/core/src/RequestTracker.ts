@@ -1041,6 +1041,8 @@ export class RequestGraph extends ContentGraph<
       let hasFileRequest = this.hasContentKey(filePath);
 
       // If we see a 'create' event for the project root itself,
+
+      // If we see a 'create' event for the project root itself,
       // this means the project root was moved and we need to
       // re-run all requests.
       if (type === 'create' && filePath === '') {
@@ -1303,7 +1305,10 @@ export default class RequestTracker {
     contentKey: ContentKey,
     ifMatch?: string,
   ): Promise<T | null | undefined> {
-    let node = nullthrows(this.graph.getNodeByContentKey(contentKey));
+    let node = this.graph.getNodeByContentKey(contentKey);
+    if (!node) {
+      return undefined;
+    }
     invariant(node.type === REQUEST);
 
     if (ifMatch != null && node.resultCacheKey !== ifMatch) {
