@@ -387,62 +387,65 @@ describe('css modules', () => {
       assert.equal(typeof output, 'function');
 
       let value = output();
-      const composes6Classes = value.composes6.split.v2(' ');
+      const composes6Classes = value.composes6.split(' ');
       assert(composes6Classes[0].endsWith('_composes6'));
       assert(composes6Classes[1].endsWith('_test'));
       assert(composes6Classes[2].endsWith('_test-2'));
     },
   );
 
-  it('should throw an error when importing a missing class', async function () {
-    await assert.rejects(
-      () =>
-        bundle(
-          path.join(
-            __dirname,
-            '/integration/no-export-error-with-correct-filetype/src/App.jsx',
-          ),
-          {
-            shouldDisableCache: true,
-            defaultTargetOptions: {
-              shouldScopeHoist: true,
-            },
-          },
-        ),
-      {
-        name: 'BuildError',
-        diagnostics: [
-          {
-            codeFrames: [
-              {
-                filePath: path.join(
-                  __dirname,
-                  '/integration/no-export-error-with-correct-filetype/src/App.jsx',
-                ),
-                language: 'js',
-                codeHighlights: [
-                  {
-                    message: undefined,
-                    end: {
-                      column: 45,
-                      line: 7,
-                    },
-                    start: {
-                      column: 28,
-                      line: 7,
-                    },
-                  },
-                ],
+  it.v2(
+    'should throw an error when importing a missing class',
+    async function () {
+      await assert.rejects(
+        () =>
+          bundle(
+            path.join(
+              __dirname,
+              '/integration/no-export-error-with-correct-filetype/src/App.jsx',
+            ),
+            {
+              shouldDisableCache: true,
+              defaultTargetOptions: {
+                shouldScopeHoist: true,
               },
-            ],
-            message:
-              "integration/no-export-error-with-correct-filetype/src/app.module.css does not export 'notExisting'",
-            origin: '@atlaspack/core',
-          },
-        ],
-      },
-    );
-  });
+            },
+          ),
+        {
+          name: 'BuildError',
+          diagnostics: [
+            {
+              codeFrames: [
+                {
+                  filePath: path.join(
+                    __dirname,
+                    '/integration/no-export-error-with-correct-filetype/src/App.jsx',
+                  ),
+                  language: 'js',
+                  codeHighlights: [
+                    {
+                      message: undefined,
+                      end: {
+                        column: 45,
+                        line: 7,
+                      },
+                      start: {
+                        column: 28,
+                        line: 7,
+                      },
+                    },
+                  ],
+                },
+              ],
+              message:
+                "integration/no-export-error-with-correct-filetype/src/app.module.css does not export 'notExisting'",
+              origin: '@atlaspack/core',
+            },
+          ],
+        },
+      );
+    },
+  );
 
   it.v2(
     'should fall back to postcss for legacy css modules',
