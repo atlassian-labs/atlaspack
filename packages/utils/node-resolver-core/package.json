@@ -57,7 +57,7 @@
     "vm-browserify": "^1.1.2"
   },
   "browser": {
-    "./src/builtins.js": "./src/builtins.browser.js"
+    "./lib/builtins.js": "./lib/builtins.browser.js"
   },
   "type": "commonjs"
 }
