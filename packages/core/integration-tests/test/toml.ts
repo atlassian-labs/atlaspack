@@ -13,7 +13,7 @@ import {
   run,
 } from '@atlaspack/test-utils';
 
-describe.v2('toml', function () {
+describe('toml', function () {
   beforeEach(async () => {
     await removeDistDirectory();
   });

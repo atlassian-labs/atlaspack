@@ -19,7 +19,7 @@ import {
   MockPackageInstaller,
 } from '@atlaspack/package-manager';
 
-describe.v2('postcss', () => {
+describe('postcss', () => {
   it('should build successfully with only postcss-modules config', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-modules-config/index.js'),

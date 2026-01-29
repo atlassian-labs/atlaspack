@@ -2675,7 +2675,7 @@ import {OverlayFS} from '@atlaspack/fs';
         });
       });
 
-      describe.v2('correctly updates used symbols on changes', () => {
+      describe('correctly updates used symbols on changes', () => {
         it('throws after removing an export', async function () {
           let testDir = path.join(
             __dirname,

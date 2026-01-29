@@ -18,7 +18,7 @@ import {Asset} from '@atlaspack/types';
 const CONFIG = Symbol.for('parcel-plugin-config');
 let packageManager = new NodePackageManager(inputFS, '/');
 
-describe.v2('incremental bundling', function () {
+describe('incremental bundling', function () {
   let defaultBundlerSpy, customBundlerSpy;
   let assertChangedAssets = (actual: number, expected: number) => {
     assert.equal(

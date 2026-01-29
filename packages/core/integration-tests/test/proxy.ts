@@ -57,7 +57,7 @@ function get(file: string, port: number, client = http) {
   );
 }
 
-describe.v2('proxy', function () {
+describe('proxy', function () {
   let subscription;
   let cwd;
   let server;

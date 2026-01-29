@@ -275,7 +275,7 @@ function findSnapshotPath(): string {
   );
 }
 
-describe.v2('vcs cache', () => {
+describe('vcs cache', () => {
   before(async function () {
     this.timeout(10000);
     // Warm up worker farm so that the first test doesn't account for this time.

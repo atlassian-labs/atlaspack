@@ -11,7 +11,7 @@ const config = path.join(
   './integration/custom-configs/.parcelrc-json-reporter',
 );
 
-describe.v2('json reporter', () => {
+describe('json reporter', () => {
   it('logs bundling a commonjs bundle to stdout as json', async () => {
     let consoleStub = sinon.stub(console, 'log');
     try {

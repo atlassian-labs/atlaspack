@@ -9,7 +9,7 @@ import {
   run,
 } from '@atlaspack/test-utils';
 
-describe.v2('symbol propagation', () => {
+describe('symbol propagation', () => {
   it('should handle removed assets from previous failed builds', async () => {
     await fsFixture(overlayFS, __dirname)`
         broken.js:

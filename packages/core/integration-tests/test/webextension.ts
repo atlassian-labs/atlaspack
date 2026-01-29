@@ -9,7 +9,7 @@ import {
   outputFS,
 } from '@atlaspack/test-utils';
 
-describe.v2('webextension', function () {
+describe('webextension', function () {
   it('should resolve a full webextension bundle', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/webextension/manifest.json'),

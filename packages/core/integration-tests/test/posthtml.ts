@@ -17,7 +17,7 @@ import {
   MockPackageInstaller,
 } from '@atlaspack/package-manager';
 
-describe.v2('posthtml', function () {
+describe('posthtml', function () {
   afterEach(async () => {
     await removeDistDirectory();
   });
