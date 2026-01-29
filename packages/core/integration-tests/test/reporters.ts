@@ -62,7 +62,7 @@ describe('reporters', () => {
   });
 
   describe('running on the programmatic api', () => {
-    it.v2('resolves when no errors are emitted', async () => {
+    it.v2('resolves when no errors are emitted', async function () {
       let buildEvent = await bundler(successfulEntry).run();
 
       assert.equal(buildEvent.type, 'buildSuccess');
@@ -82,7 +82,7 @@ describe('reporters', () => {
       }
     });
 
-    it.v2('rejects when a reporter emits an error', async () => {
+    it.v2('rejects when a reporter emits an error', async function () {
       try {
         let buildEvent = await bundler(failingReporterEntry).run();
 

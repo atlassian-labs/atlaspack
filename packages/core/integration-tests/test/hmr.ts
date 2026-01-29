@@ -928,7 +928,7 @@ module.hot.dispose((data) => {
 
     it.v2(
       'should update CSS link tags when a CSS asset is changed',
-      async () => {
+      async function () {
         let testDir = path.join(__dirname, '/input');
         await overlayFS.rimraf(testDir);
         await overlayFS.mkdirp(testDir);

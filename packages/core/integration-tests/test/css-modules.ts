@@ -205,7 +205,7 @@ describe('css modules', () => {
     );
   });
 
-  it.v2('should support css modules composes imports', async () => {
+  it.v2('should support css modules composes imports', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index.js'),
     );
@@ -248,7 +248,7 @@ describe('css modules', () => {
     assert(css.includes(`.${cssClass2}`));
   });
 
-  it.v2('should not include css twice for composes imports', async () => {
+  it.v2('should not include css twice for composes imports', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index.js'),
     );
@@ -262,7 +262,7 @@ describe('css modules', () => {
     );
   });
 
-  it.v2('should support composes imports for sass', async () => {
+  it.v2('should support composes imports for sass', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index2.js'),
     );
@@ -290,35 +290,41 @@ describe('css modules', () => {
     assert(css.includes('height: 200px;'));
   });
 
-  it.v2('should support composes imports with custom path names', async () => {
-    let b = await bundle(
-      path.join(__dirname, '/integration/postcss-composes/index3.js'),
-    );
+  it.v2(
+    'should support composes imports with custom path names',
+    async function () {
+      let b = await bundle(
+        path.join(__dirname, '/integration/postcss-composes/index3.js'),
+      );
 
-    assertBundles(b, [
-      {
-        name: 'index3.js',
-        assets: ['index3.js', 'composes-4.module.css', 'mixins.module.css'],
-      },
-      {
-        name: 'index3.css',
-        assets: ['composes-4.module.css', 'mixins.module.css'],
-      },
-    ]);
+      assertBundles(b, [
+        {
+          name: 'index3.js',
+          assets: ['index3.js', 'composes-4.module.css', 'mixins.module.css'],
+        },
+        {
+          name: 'index3.css',
+          assets: ['composes-4.module.css', 'mixins.module.css'],
+        },
+      ]);
 
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
+      let output = await run(b);
+      assert.equal(typeof output, 'function');
 
-    let value = output();
-    const composes4Classes = value.composes4.split(' ');
-    assert(composes4Classes[0].endsWith('_composes4'));
-    assert(composes4Classes[1].endsWith('_test'));
+      let value = output();
+      const composes4Classes = value.composes4.split(' ');
+      assert(composes4Classes[0].endsWith('_composes4'));
+      assert(composes4Classes[1].endsWith('_test'));
 
-    let css = await outputFS.readFile(path.join(distDir, 'index3.css'), 'utf8');
-    assert(css.includes('height: 100px;'));
-  });
+      let css = await outputFS.readFile(
+        path.join(distDir, 'index3.css'),
+        'utf8',
+      );
+      assert(css.includes('height: 100px;'));
+    },
+  );
 
-  it.v2('should support deep nested composes imports', async () => {
+  it.v2('should support deep nested composes imports', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index4.js'),
     );
@@ -359,84 +365,84 @@ describe('css modules', () => {
     assert(css.indexOf('_intermediate') < css.indexOf('_composes5'));
   });
 
-  it.v2('should support composes imports for multiple selectors', async () => {
-    let b = await bundle(
-      path.join(__dirname, '/integration/postcss-composes/index5.js'),
-    );
-
-    assertBundles(b, [
-      {
-        name: 'index5.js',
-        assets: ['index5.js', 'composes-6.module.css', 'mixins.module.css'],
-      },
-      {
-        name: 'index5.css',
-        assets: ['composes-6.module.css', 'mixins.module.css'],
-      },
-    ]);
-
-    let output = await run(b);
-    assert.equal(typeof output, 'function');
-
-    let value = output();
-    const composes6Classes = value.composes6.split(' ');
-    assert(composes6Classes[0].endsWith('_composes6'));
-    assert(composes6Classes[1].endsWith('_test'));
-    assert(composes6Classes[2].endsWith('_test-2'));
-  });
-
   it.v2(
-    'should throw an error when importing a missing class',
+    'should support composes imports for multiple selectors',
     async function () {
-      await assert.rejects(
-        () =>
-          bundle(
-            path.join(
-              __dirname,
-              '/integration/no-export-error-with-correct-filetype/src/App.jsx',
-            ),
-            {
-              shouldDisableCache: true,
-              defaultTargetOptions: {
-                shouldScopeHoist: true,
-              },
-            },
-          ),
-        {
-          name: 'BuildError',
-          diagnostics: [
-            {
-              codeFrames: [
-                {
-                  filePath: path.join(
-                    __dirname,
-                    '/integration/no-export-error-with-correct-filetype/src/App.jsx',
-                  ),
-                  language: 'js',
-                  codeHighlights: [
-                    {
-                      message: undefined,
-                      end: {
-                        column: 45,
-                        line: 7,
-                      },
-                      start: {
-                        column: 28,
-                        line: 7,
-                      },
-                    },
-                  ],
-                },
-              ],
-              message:
-                "integration/no-export-error-with-correct-filetype/src/app.module.css does not export 'notExisting'",
-              origin: '@atlaspack/core',
-            },
-          ],
-        },
+      let b = await bundle(
+        path.join(__dirname, '/integration/postcss-composes/index5.js'),
       );
+
+      assertBundles(b, [
+        {
+          name: 'index5.js',
+          assets: ['index5.js', 'composes-6.module.css', 'mixins.module.css'],
+        },
+        {
+          name: 'index5.css',
+          assets: ['composes-6.module.css', 'mixins.module.css'],
+        },
+      ]);
+
+      let output = await run(b);
+      assert.equal(typeof output, 'function');
+
+      let value = output();
+      const composes6Classes = value.composes6.split.v2(' ');
+      assert(composes6Classes[0].endsWith('_composes6'));
+      assert(composes6Classes[1].endsWith('_test'));
+      assert(composes6Classes[2].endsWith('_test-2'));
     },
   );
+
+  it('should throw an error when importing a missing class', async function () {
+    await assert.rejects(
+      () =>
+        bundle(
+          path.join(
+            __dirname,
+            '/integration/no-export-error-with-correct-filetype/src/App.jsx',
+          ),
+          {
+            shouldDisableCache: true,
+            defaultTargetOptions: {
+              shouldScopeHoist: true,
+            },
+          },
+        ),
+      {
+        name: 'BuildError',
+        diagnostics: [
+          {
+            codeFrames: [
+              {
+                filePath: path.join(
+                  __dirname,
+                  '/integration/no-export-error-with-correct-filetype/src/App.jsx',
+                ),
+                language: 'js',
+                codeHighlights: [
+                  {
+                    message: undefined,
+                    end: {
+                      column: 45,
+                      line: 7,
+                    },
+                    start: {
+                      column: 28,
+                      line: 7,
+                    },
+                  },
+                ],
+              },
+            ],
+            message:
+              "integration/no-export-error-with-correct-filetype/src/app.module.css does not export 'notExisting'",
+            origin: '@atlaspack/core',
+          },
+        ],
+      },
+    );
+  });
 
   it.v2(
     'should fall back to postcss for legacy css modules',

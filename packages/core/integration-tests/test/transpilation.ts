@@ -12,6 +12,7 @@ import {
   ncp,
   fsFixture,
   isAtlaspackV3,
+  disableV3,
 } from '@atlaspack/test-utils';
 import {symlinkSync} from 'fs';
 import nullthrows from 'nullthrows';
@@ -456,7 +457,9 @@ describe('transpilation', function () {
     });
   });
 
-  describe.v2('supports the automatic jsx runtime', () => {
+  describe('supports the automatic jsx runtime', () => {
+    disableV3();
+
     it('with React >= 17', async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/jsx-automatic/index.js'),

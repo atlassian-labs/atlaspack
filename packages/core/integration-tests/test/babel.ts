@@ -532,7 +532,7 @@ describe('babel', function () {
     },
   );
 
-  describe.v2('environment', () => {
+  describe('environment', () => {
     it('BABEL_ENV should be preferred to NODE_ENV', async () => {
       await bundle(
         path.join(__dirname, '/integration/babel-env-name/index.js'),

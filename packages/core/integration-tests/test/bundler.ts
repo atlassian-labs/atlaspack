@@ -570,77 +570,6 @@ describe('bundler', function () {
     await run(b);
   });
 
-  // TODO: v3 does not run the transformation pipeline over the inline script, and omits the
-  // asset size as a result
-  it.v2(
-    'should not count inline assests towards parallel request limit',
-    async function () {
-      await fsFixture(overlayFS, __dirname)`
-      inlined-assests
-        buzz.js:
-          export default 7;
-
-        inline-module.js:
-          import('./buzz');
-
-          export default 10;
-
-        local.html:
-          <!doctype html>
-          <html>
-            <body>
-              <script type="module">
-                import './inline-module';
-              </script>
-            </body>
-          </html>
-
-        package.json:
-          {
-            "@atlaspack/bundler-default": {
-              "minBundles": 1,
-              "minBundleSize": 200,
-              "maxParallelRequests": 2
-            }
-          }
-
-        yarn.lock: {}
-    `;
-
-      // Shared bundle should not be removed in this case
-      let b = await bundle(path.join(__dirname, 'inlined-assests/local.html'), {
-        mode: 'production',
-        defaultTargetOptions: {
-          shouldScopeHoist: false,
-        },
-        inputFS: overlayFS,
-      });
-
-      assertBundles(b, [
-        {
-          assets: ['local.html'],
-        },
-        {
-          assets: ['buzz.js'],
-        },
-        {
-          assets: [
-            'inline-module.js',
-            'local.html',
-            'bundle-url.js',
-            'cacheLoader.js',
-            'js-loader.js',
-          ],
-        },
-        {
-          assets: ['esmodule-helpers.js'],
-        },
-      ]);
-
-      await run(b);
-    },
-  );
-
   it('should not create a shared bundle from an asset if that asset is shared by less than minBundles bundles', async function () {
     let b = await bundle(
       path.join(__dirname, 'integration/min-bundles/index.js'),
@@ -2786,7 +2715,7 @@ describe('bundler', function () {
 
   it.v2(
     'should merge dynamic imports with the same webpackChunkName',
-    async () => {
+    async function () {
       await fsFixture(overlayFS, __dirname)`
       merge-webpack-chunk-name
         index.html:

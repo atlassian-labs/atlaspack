@@ -2,7 +2,7 @@ import assert from 'assert';
 import path from 'path';
 import {bundle, describe, it, outputFS, distDir} from '@atlaspack/test-utils';
 
-describe.v2('namer', function () {
+describe('namer', function () {
   it('should determine correct entry root when building a directory', async function () {
     await bundle(path.join(__dirname, 'integration/namer-dir'));
 

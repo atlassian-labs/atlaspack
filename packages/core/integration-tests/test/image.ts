@@ -81,7 +81,7 @@ describe('images', function () {
     it('from html', testCase('html'));
     it('from css', testCase('css'));
 
-    it.v2('all formats', async () => {
+    it.v2('all formats', async function () {
       let b = await bundle(
         join(__dirname, `/integration/image/reformat-all.html`),
       );
@@ -166,7 +166,7 @@ describe('images', function () {
     assert(output.length < input.length);
   });
 
-  it.v2('retain EXIF data when resized with a query string', async () => {
+  it.v2('retain EXIF data when resized with a query string', async function () {
     let b = await bundle(join(__dirname, '/integration/image-exif/resized.js'));
 
     let jpgBundle = b
@@ -206,7 +206,7 @@ describe('images', function () {
     assert.strictEqual(image.exif, undefined);
   });
 
-  it.v2('uses the EXIF orientation tag when resizing', async () => {
+  it.v2('uses the EXIF orientation tag when resizing', async function () {
     let b = await bundle(join(__dirname, '/integration/image-exif/resized.js'));
 
     let jpgBundle = b

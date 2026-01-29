@@ -79,7 +79,7 @@ describe('tokens', () => {
 
   it.v2(
     'should fail when token() is called with invalid arguments',
-    async () => {
+    async function () {
       // This test verifies that the tokens transformer properly checks for errors
       // reported during transformation and fails the build when errors are found.
       //

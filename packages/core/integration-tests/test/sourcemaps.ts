@@ -1329,7 +1329,7 @@ describe('sourcemaps', function () {
 
   it.v2(
     'carries sourcesContent from the original sources through multiple transformations (babel and swc)',
-    async () => {
+    async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -1377,7 +1377,7 @@ describe('sourcemaps', function () {
 
   it.v2(
     'carries sourcesContent from the original sources (tsx) through multiple transformations (babel and swc)',
-    async () => {
+    async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -1427,7 +1427,7 @@ describe('sourcemaps', function () {
   // perform additional sourcesContent handling that rust does not do in from_json
   it.v2(
     'retains sourcesContent from the original sources from a large text file',
-    async () => {
+    async function () {
       let testDir = path.join(
         __dirname,
         'integration/sourcemap-original-sourcecontents-large',

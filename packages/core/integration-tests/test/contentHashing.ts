@@ -96,7 +96,7 @@ describe('content hashing', function () {
 
   it.v2(
     'should generate the same hash for the same distDir inside separate projects',
-    async () => {
+    async function () {
       let a = await _bundle(
         path.join(__dirname, 'integration/hash-distDir/a/index.html'),
         {

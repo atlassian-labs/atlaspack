@@ -70,7 +70,7 @@ describe('bundle-text:', function () {
     assert(!cssBundleContent.includes('sourceMappingURL'));
   });
 
-  it.v2('inlines and compiles a html bundle', async () => {
+  it.v2('inlines and compiles a html bundle', async function () {
     await fsFixture(overlayFS, __dirname)`
       index.js:
         import html from 'bundle-text:./index.html';

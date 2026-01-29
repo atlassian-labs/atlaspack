@@ -1,8 +1,10 @@
 import assert from 'assert';
 import path from 'path';
-import {bundle, describe, it, outputFS} from '@atlaspack/test-utils';
+import {bundle, describe, disableV3, it, outputFS} from '@atlaspack/test-utils';
 
-describe.v2('tailwind', function () {
+describe('tailwind', function () {
+  disableV3();
+
   it('should support tailwind from SCSS', async function () {
     let fixture = path.join(__dirname, '/integration/tailwind-scss');
     let b = await bundle(path.join(fixture, 'index.html'));

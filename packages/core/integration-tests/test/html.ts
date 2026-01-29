@@ -31,7 +31,7 @@ describe('html', function () {
     }
   });
 
-  it.v2('should support bundling HTML', async () => {
+  it.v2('should support bundling HTML', async function () {
     let b = await bundle(path.join(__dirname, '/integration/html/index.html'));
 
     assertBundles(b, [
@@ -107,7 +107,7 @@ describe('html', function () {
     assert.equal(value, 'Hi');
   });
 
-  it.v2('should support pkg#source array as entrypoints', async () => {
+  it.v2('should support pkg#source array as entrypoints', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/html-pkg-source-array'),
     );
@@ -2906,7 +2906,7 @@ describe('html', function () {
     },
   );
 
-  it.v2('should inline data-urls', async () => {
+  it.v2('should inline data-urls', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/data-url/index.html'),
       {
@@ -2926,40 +2926,43 @@ describe('html', function () {
     );
   });
 
-  it.v2('should print a diagnostic for invalid bundler options', async () => {
-    let dir = path.join(__dirname, 'integration/invalid-bundler-config');
-    let pkg = path.join(dir, 'package.json');
-    let code = await inputFS.readFileSync(pkg, 'utf8');
-    await assert.rejects(() => bundle(path.join(dir, 'index.html')), {
-      name: 'BuildError',
-      diagnostics: [
-        {
-          message: 'Invalid config for @atlaspack/bundler-default',
-          origin: '@atlaspack/bundler-default',
-          codeFrames: [
-            {
-              filePath: pkg,
-              language: 'json',
-              code,
-              codeHighlights: [
-                {
-                  message: 'Did you mean "minBundleSize", "minBundles"?',
-                  start: {
-                    column: 33,
-                    line: 3,
+  it.v2(
+    'should print a diagnostic for invalid bundler options',
+    async function () {
+      let dir = path.join(__dirname, 'integration/invalid-bundler-config');
+      let pkg = path.join(dir, 'package.json');
+      let code = await inputFS.readFileSync(pkg, 'utf8');
+      await assert.rejects(() => bundle(path.join(dir, 'index.html')), {
+        name: 'BuildError',
+        diagnostics: [
+          {
+            message: 'Invalid config for @atlaspack/bundler-default',
+            origin: '@atlaspack/bundler-default',
+            codeFrames: [
+              {
+                filePath: pkg,
+                language: 'json',
+                code,
+                codeHighlights: [
+                  {
+                    message: 'Did you mean "minBundleSize", "minBundles"?',
+                    start: {
+                      column: 33,
+                      line: 3,
+                    },
+                    end: {
+                      column: 48,
+                      line: 3,
+                    },
                   },
-                  end: {
-                    column: 48,
-                    line: 3,
-                  },
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
-  });
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    },
+  );
 
   it('should escape inline script tags', async function () {
     let b = await bundle(

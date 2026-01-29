@@ -443,7 +443,7 @@ describe('css', () => {
   });
 
   // This breaks in v3 as it uses asset.addURLDependency inside the SVG transformer
-  it.v2('should inline data-urls for text-encoded files', async () => {
+  it.v2('should inline data-urls for text-encoded files', async function () {
     await bundle(path.join(__dirname, '/integration/data-url/text.css'), {
       defaultTargetOptions: {
         sourceMaps: false,
@@ -469,7 +469,7 @@ describe('css', () => {
 
   it.v2(
     'should remap locations in diagnostics using the input source map',
-    async () => {
+    async function () {
       let fixture = path.join(
         __dirname,
         'integration/diagnostic-sourcemap/index.scss',

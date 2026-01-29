@@ -9,7 +9,7 @@ import {
   distDir,
 } from '@atlaspack/test-utils';
 
-describe.v2('pug', function () {
+describe('pug', function () {
   it('should support bundling HTML', async function () {
     const b = await bundle(path.join(__dirname, '/integration/pug/index.pug'));
 

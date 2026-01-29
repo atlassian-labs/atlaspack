@@ -1358,7 +1358,7 @@ describe('javascript', function () {
 
   it.v2(
     'should insert environment variables inserted by a prior transform',
-    async () => {
+    async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/env-prior-transform/index.js'),
       );
@@ -1982,7 +1982,7 @@ describe('javascript', function () {
 
   it.v2(
     'should exclude resolving specifiers that map to false in the browser field in browser builds',
-    async () => {
+    async function () {
       let b = await bundle(
         path.join(
           __dirname,
@@ -3226,46 +3226,52 @@ describe('javascript', function () {
     assert.deepEqual(await (await run(b)).default, [42, 43]);
   });
 
-  it.v2('should display a codeframe on a Terser parse error', async () => {
-    let fixture = path.join(__dirname, 'integration/terser-codeframe/index.js');
-    let code = await inputFS.readFileSync(fixture, 'utf8');
-    await assert.rejects(
-      () =>
-        bundle(fixture, {
-          defaultTargetOptions: {
-            shouldOptimize: true,
-          },
-        }),
-      {
-        name: 'BuildError',
-        diagnostics: [
-          {
-            message: '`let` cannot be used as an identifier in strict mode',
-            origin: '@atlaspack/optimizer-swc',
-            codeFrames: [
-              {
-                filePath: undefined,
-                language: 'js',
-                code,
-                codeHighlights: [
-                  {
-                    start: {
-                      column: 1,
-                      line: 1,
+  it.v2(
+    'should display a codeframe on a Terser parse error',
+    async function () {
+      let fixture = path.join(
+        __dirname,
+        'integration/terser-codeframe/index.js',
+      );
+      let code = await inputFS.readFileSync(fixture, 'utf8');
+      await assert.rejects(
+        () =>
+          bundle(fixture, {
+            defaultTargetOptions: {
+              shouldOptimize: true,
+            },
+          }),
+        {
+          name: 'BuildError',
+          diagnostics: [
+            {
+              message: '`let` cannot be used as an identifier in strict mode',
+              origin: '@atlaspack/optimizer-swc',
+              codeFrames: [
+                {
+                  filePath: undefined,
+                  language: 'js',
+                  code,
+                  codeHighlights: [
+                    {
+                      start: {
+                        column: 1,
+                        line: 1,
+                      },
+                      end: {
+                        column: 1,
+                        line: 1,
+                      },
                     },
-                    end: {
-                      column: 1,
-                      line: 1,
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    );
-  });
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      );
+    },
+  );
 
   it('can run an async bundle that depends on a nonentry asset in a sibling', async () => {
     let b = await bundle(
@@ -3777,7 +3783,7 @@ describe('javascript', function () {
 
   it.v2(
     'should remap locations in diagnostics using the input source map',
-    async () => {
+    async function () {
       let fixture = path.join(
         __dirname,
         'integration/diagnostic-sourcemap/index.js',
@@ -4662,7 +4668,7 @@ describe('javascript', function () {
     },
   );
 
-  it.v2(`should also fail on recoverable parse errors`, async () => {
+  it.v2(`should also fail on recoverable parse errors`, async function () {
     await fsFixture(overlayFS, __dirname)`
       js-recoverable-parse-errors
         index.js:

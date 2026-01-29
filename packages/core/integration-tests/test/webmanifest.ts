@@ -10,7 +10,7 @@ import {
 } from '@atlaspack/test-utils';
 import {md} from '@atlaspack/diagnostic';
 
-describe.v2('webmanifest', function () {
+describe('webmanifest', function () {
   it('should support .webmanifest', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/webmanifest/index.html'),

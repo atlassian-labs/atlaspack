@@ -17,6 +17,7 @@ import {
   outputFS,
   bundle,
   napiWorkerPool,
+  disableV2,
 } from '@atlaspack/test-utils';
 import {LMDBLiteCache} from '@atlaspack/cache';
 import type {InitialAtlaspackOptions} from '@atlaspack/types';
@@ -48,7 +49,9 @@ async function assertOutputIsIdentical(
   }
 }
 
-describe.v3('AtlaspackV3', function () {
+describe('AtlaspackV3', function () {
+  disableV2();
+
   it('builds', async () => {
     await fsFixture(overlayFS, __dirname)`
       index.js:

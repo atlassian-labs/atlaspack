@@ -2675,7 +2675,7 @@ import {OverlayFS} from '@atlaspack/fs';
         });
       });
 
-      describe.v2('correctly updates used symbols on changes', () => {
+      describe('correctly updates used symbols on changes', () => {
         it('throws after removing an export', async function () {
           let testDir = path.join(
             __dirname,
@@ -3653,19 +3653,22 @@ import {OverlayFS} from '@atlaspack/fs';
         assert.equal(await run(b), undefined);
       });
 
-      it.v2('should handle interop with a re-export namespace', async () => {
-        let b = await bundle(
-          path.join(
-            __dirname,
-            'integration/scope-hoisting/es6/re-export-interop/a.js',
-          ),
-        );
+      it.v2(
+        'should handle interop with a re-export namespace',
+        async function () {
+          let b = await bundle(
+            path.join(
+              __dirname,
+              'integration/scope-hoisting/es6/re-export-interop/a.js',
+            ),
+          );
 
-        let res = await run(b);
-        assert.deepEqual(res['en_US'], {
-          test: 'foo',
-        });
-      });
+          let res = await run(b);
+          assert.deepEqual(res['en_US'], {
+            test: 'foo',
+          });
+        },
+      );
 
       it('should prioritize named exports before re-exports (before)', async () => {
         let b = await bundle(
@@ -6077,7 +6080,7 @@ import {OverlayFS} from '@atlaspack/fs';
 
     it.v2(
       'can run an entry bundle whose entry asset is present in another bundle',
-      async () => {
+      async function () {
         let b = await bundle(
           ['index.js', 'value.js'].map((basename) =>
             path.join(__dirname, '/integration/sync-entry-shared', basename),

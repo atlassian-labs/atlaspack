@@ -55,7 +55,7 @@ const distDirIncludes = async (matches: Array<RegExp | string>) => {
   return true;
 };
 
-describe.v2('lazy compile', function () {
+describe('lazy compile', function () {
   it('should lazy compile', async function () {
     const b = await bundler(
       path.join(__dirname, '/integration/lazy-compile/index.js'),

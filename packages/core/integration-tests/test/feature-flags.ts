@@ -11,7 +11,7 @@ import {
 } from '@atlaspack/test-utils';
 
 // TODO: V3 JavaScript plugins need to use the real filesystem or properly use the overlayFS + package manager
-describe.v2('feature flags', () => {
+describe('feature flags', () => {
   let dir = path.join(__dirname, 'feature-flags-fixture');
   beforeEach(async () => {
     await rimraf(dir);
