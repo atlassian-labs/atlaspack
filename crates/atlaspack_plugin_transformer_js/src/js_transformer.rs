@@ -326,6 +326,7 @@ impl AtlaspackJsTransformerPlugin {
           let fallback = SyncDynamicImportConfig {
             entrypoint_filepath_suffix: "__NO_MATCH__".into(),
             actual_require_paths: vec![],
+            activate_reject_on_unresolved_imports: false,
           };
 
           Some(fallback)

@@ -11,6 +11,8 @@ use swc_core::ecma::{
 pub struct SyncDynamicImportConfig {
   pub entrypoint_filepath_suffix: String,
   pub actual_require_paths: Vec<String>,
+  #[serde(default)]
+  pub activate_reject_on_unresolved_imports: bool,
 }
 
 pub struct SyncDynamicImport<'a> {
@@ -46,9 +48,55 @@ impl<'a> SyncDynamicImport<'a> {
     })
   }
 
+  fn create_dummy_promise(&self) -> Expr {
+    // new Promise(() => {})
+    Expr::New(NewExpr {
+      span: Default::default(),
+      callee: Box::new(Expr::Ident(Ident::new(
+        "Promise".into(),
+        Default::default(),
+        SyntaxContext::empty().apply_mark(self.unresolved_mark),
+      ))),
+      args: Some(vec![ExprOrSpread {
+        spread: None,
+        expr: Box::new(Expr::Arrow(ArrowExpr {
+          span: Default::default(),
+          params: vec![],
+          body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+            span: Default::default(),
+            stmts: vec![],
+            ctxt: SyntaxContext::empty().apply_mark(self.unresolved_mark),
+          })),
+          is_async: false,
+          is_generator: false,
+          type_params: None,
+          return_type: None,
+          ctxt: SyntaxContext::empty().apply_mark(self.unresolved_mark),
+        })),
+      }]),
+      type_args: None,
+      ctxt: SyntaxContext::empty().apply_mark(self.unresolved_mark),
+    })
+  }
+
+  fn get_unresolved_import_promise(&self, import_path: &Option<String>) -> Expr {
+    // Check if we should activate rejecting promises based on config
+    let should_reject = self
+      .config
+      .as_ref()
+      .map(|config| config.activate_reject_on_unresolved_imports)
+      .unwrap_or(false);
+
+    if should_reject {
+      self.create_rejecting_promise(import_path)
+    } else {
+      self.create_dummy_promise()
+    }
+  }
+
   fn create_rejecting_promise(&self, import_path: &Option<String>) -> Expr {
     // new Promise((_resolve, reject) => {
-    //   if (globalThis.THROW_ON_UNRESOLVED_DYNAMIC_IMPORT) {
+    //   if (globalThis.__SSR_TEMP_THROW_ON_UNRESOLVED_DYNAMIC_IMPORT) {
     //     reject('...')
     //   }
     // })
@@ -56,9 +104,11 @@ impl<'a> SyncDynamicImport<'a> {
       .as_ref()
       .map(|p| p.as_str())
       .unwrap_or("unknown");
+    // Escape single quotes in the path for the JavaScript string literal
+    let escaped_path = path_str.replace('\'', "\\'");
     let error_message = format!(
       "A dynamic import() statement to path \"{}\" was used in SSR code, but only synchronous (require()) imports will work. To include this code in the SSR bundle, update the `actual_require_paths` property of SYNC_DYNAMIC_IMPORT_CONFIG",
-      path_str
+      escaped_path
     );
 
     Expr::New(NewExpr {
@@ -101,7 +151,7 @@ impl<'a> SyncDynamicImport<'a> {
                   Default::default(),
                   SyntaxContext::empty().apply_mark(self.unresolved_mark),
                 ))),
-                prop: MemberProp::Ident("THROW_ON_UNRESOLVED_DYNAMIC_IMPORT".into()),
+                prop: MemberProp::Ident("__SSR_TEMP_THROW_ON_UNRESOLVED_DYNAMIC_IMPORT".into()),
               })),
               cons: Box::new(Stmt::Block(BlockStmt {
                 span: Default::default(),
@@ -285,8 +335,8 @@ impl<'a> VisitMut for SyncDynamicImport<'a> {
       let is_string_literal = matches!(&*first_arg.expr, Expr::Lit(Lit::Str(_)) | Expr::Tpl(_));
 
       if !is_string_literal {
-        // Replace with rejecting promise for non-string imports
-        *expr = self.create_rejecting_promise(&None);
+        // Replace with rejecting or dummy promise for non-string imports
+        *expr = self.get_unresolved_import_promise(&None);
         return;
       }
 
@@ -312,11 +362,11 @@ impl<'a> VisitMut for SyncDynamicImport<'a> {
           return;
         }
 
-        // Default case: replace with rejecting promise using resolved path
-        *expr = self.create_rejecting_promise(&Some(resolved_path));
+        // Default case: replace with rejecting or dummy promise using resolved path
+        *expr = self.get_unresolved_import_promise(&Some(resolved_path));
       } else {
         // No path extracted, use None
-        *expr = self.create_rejecting_promise(&None);
+        *expr = self.get_unresolved_import_promise(&None);
       }
     }
 
@@ -338,11 +388,13 @@ mod tests {
         "src/packages/router-resources".into(),
         "@atlaskit/tokens".into(),
       ],
+      activate_reject_on_unresolved_imports: false,
     })
   }
 
   #[test]
-  fn test_rejecting_promise_without_global() {
+  fn test_dummy_promise_without_config() {
+    // When no config is provided, should generate dummy promise (default behavior)
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         const module = import('module');
@@ -365,29 +417,13 @@ mod tests {
     assert_eq!(
       output_code,
       indoc! {r#"
-        const module = new Promise((_resolve, reject)=>{
-            if (globalThis.THROW_ON_UNRESOLVED_DYNAMIC_IMPORT) {
-                reject('A dynamic import() statement to path "/repo/index.tsx/module" was used in SSR code, but only synchronous (require()) imports will work. To include this code in the SSR bundle, update the `actual_require_paths` property of SYNC_DYNAMIC_IMPORT_CONFIG');
-            }
-        });
-        export const bar = ()=>new Promise((_resolve, reject)=>{
-                if (globalThis.THROW_ON_UNRESOLVED_DYNAMIC_IMPORT) {
-                    reject('A dynamic import() statement to path "/repo/index.tsx/bar" was used in SSR code, but only synchronous (require()) imports will work. To include this code in the SSR bundle, update the `actual_require_paths` property of SYNC_DYNAMIC_IMPORT_CONFIG');
-                }
-            }).then((m)=>m.Bar);
+        const module = new Promise(()=>{});
+        export const bar = ()=>new Promise(()=>{}).then((m)=>m.Bar);
         export function foo() {
-            new Promise((_resolve, reject)=>{
-                if (globalThis.THROW_ON_UNRESOLVED_DYNAMIC_IMPORT) {
-                    reject('A dynamic import() statement to path "/repo/index.tsx/foo" was used in SSR code, but only synchronous (require()) imports will work. To include this code in the SSR bundle, update the `actual_require_paths` property of SYNC_DYNAMIC_IMPORT_CONFIG');
-                }
-            });
+            new Promise(()=>{});
         }
         const path = '../path/index.tsx';
-        const dummy = new Promise((_resolve, reject)=>{
-            if (globalThis.THROW_ON_UNRESOLVED_DYNAMIC_IMPORT) {
-                reject('A dynamic import() statement to path "unknown" was used in SSR code, but only synchronous (require()) imports will work. To include this code in the SSR bundle, update the `actual_require_paths` property of SYNC_DYNAMIC_IMPORT_CONFIG');
-            }
-        });
+        const dummy = new Promise(()=>{});
       "#}
     );
   }
@@ -420,11 +456,7 @@ mod tests {
             const moduleWithOpts = require('@atlaskit/tokens', {
                 with: 'json'
             });
-            const dummy = new Promise((_resolve, reject)=>{
-                if (globalThis.THROW_ON_UNRESOLVED_DYNAMIC_IMPORT) {
-                    reject('A dynamic import() statement to path "/repo/index.tsx/dummy" was used in SSR code, but only synchronous (require()) imports will work. To include this code in the SSR bundle, update the `actual_require_paths` property of SYNC_DYNAMIC_IMPORT_CONFIG');
-                }
-            });
+            const dummy = new Promise(()=>{});
         }
       "#}
     );
@@ -561,8 +593,14 @@ mod tests {
   #[test]
   fn test_rejecting_promise_runtime_behavior() {
     // This test documents the runtime behavior of the rejecting promise
-    // When globalThis.THROW_ON_UNRESOLVED_DYNAMIC_IMPORT is true, the promise should reject
+    // When globalThis.__SSR_TEMP_THROW_ON_UNRESOLVED_DYNAMIC_IMPORT is true, the promise should reject
     // This is a documentation test showing what the generated code should do
+    let config = Some(SyncDynamicImportConfig {
+      entrypoint_filepath_suffix: "entrypoint.tsx".into(),
+      actual_require_paths: vec![],
+      activate_reject_on_unresolved_imports: true,
+    });
+
     let RunVisitResult { output_code, .. } = run_test_visit(
       indoc! {r#"
         const moduleA = import('unmatched-module-a');
@@ -572,14 +610,103 @@ mod tests {
         SyncDynamicImport::new(
           Path::new("/repo/index.tsx"),
           run_test_context.unresolved_mark,
-          &None,
+          &config,
         )
       },
     );
 
     // Verify that unmatched imports generate promises with rejection logic
-    assert!(output_code.contains("if (globalThis.THROW_ON_UNRESOLVED_DYNAMIC_IMPORT)"));
+    assert!(output_code.contains("if (globalThis.__SSR_TEMP_THROW_ON_UNRESOLVED_DYNAMIC_IMPORT)"));
     assert!(output_code.contains("reject('A dynamic import() statement to path"));
     assert!(output_code.contains("was used in SSR code"));
+  }
+
+  #[test]
+  fn test_rejecting_promise_with_single_quote_in_path() {
+    // Test that single quotes in the module path are properly escaped when rejecting is enabled
+    let config = Some(SyncDynamicImportConfig {
+      entrypoint_filepath_suffix: "entrypoint.tsx".into(),
+      actual_require_paths: vec![],
+      activate_reject_on_unresolved_imports: true,
+    });
+
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const module = import("./it's-a-module");
+      "#},
+      |run_test_context: RunTestContext| {
+        SyncDynamicImport::new(
+          Path::new("/repo/index.tsx"),
+          run_test_context.unresolved_mark,
+          &config,
+        )
+      },
+    );
+
+    // Verify the single quote is escaped in the output (with triple backslash as SWC escapes it)
+    assert!(output_code.contains(r"it\\\'s-a-module"));
+    assert!(output_code.contains("if (globalThis.__SSR_TEMP_THROW_ON_UNRESOLVED_DYNAMIC_IMPORT)"));
+    assert!(output_code.contains("A dynamic import() statement to path"));
+  }
+
+  #[test]
+  fn test_dummy_promise_when_config_disabled() {
+    // When activate_reject_on_unresolved_imports is false, should generate dummy promise
+    let config = Some(SyncDynamicImportConfig {
+      entrypoint_filepath_suffix: "entrypoint.tsx".into(),
+      actual_require_paths: vec![],
+      activate_reject_on_unresolved_imports: false,
+    });
+
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const module = import('module');
+        const dummy = import('./dummy');
+      "#},
+      |run_test_context: RunTestContext| {
+        SyncDynamicImport::new(
+          Path::new("/repo/index.tsx"),
+          run_test_context.unresolved_mark,
+          &config,
+        )
+      },
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        const module = new Promise(()=>{});
+        const dummy = new Promise(()=>{});
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_rejecting_promise_when_config_enabled() {
+    // When activate_reject_on_unresolved_imports is true, should generate rejecting promise
+    let config = Some(SyncDynamicImportConfig {
+      entrypoint_filepath_suffix: "entrypoint.tsx".into(),
+      actual_require_paths: vec![],
+      activate_reject_on_unresolved_imports: true,
+    });
+
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        const module = import('module');
+        const dummy = import('./dummy');
+      "#},
+      |run_test_context: RunTestContext| {
+        SyncDynamicImport::new(
+          Path::new("/repo/index.tsx"),
+          run_test_context.unresolved_mark,
+          &config,
+        )
+      },
+    );
+
+    assert!(output_code.contains("if (globalThis.__SSR_TEMP_THROW_ON_UNRESOLVED_DYNAMIC_IMPORT)"));
+    assert!(output_code.contains("reject('A dynamic import() statement to path"));
+    assert!(output_code.contains("/repo/index.tsx/module"));
+    assert!(output_code.contains("/repo/index.tsx/dummy"));
   }
 }
