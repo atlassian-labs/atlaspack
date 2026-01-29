@@ -8,6 +8,7 @@ use atlaspack::AtlaspackError;
 use atlaspack::AtlaspackInitOptions;
 use atlaspack::WatchEvents;
 use atlaspack::rpc::nodejs::NodejsWorker;
+use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use lmdb_js_lite::DatabaseHandle;
@@ -23,8 +24,6 @@ use atlaspack::file_system::FileSystemRef;
 use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack_package_manager::PackageManagerRef;
 use parking_lot::RwLock;
-
-use crate::atlaspack::deserialize_bundle_graph::deserialize_bundle_graph;
 
 use super::file_system_napi::FileSystemNapi;
 use super::napi_result::NapiAtlaspackResult;
@@ -213,17 +212,22 @@ pub fn atlaspack_napi_respond_to_fs_events(
 pub fn atlaspack_napi_load_bundle_graph(
   env: Env,
   atlaspack_napi: AtlaspackNapi,
-  nodes: Vec<JsObject>,
+  nodes_json: String,
   edges: Vec<(u32, u32, u8)>,
 ) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;
-  // Deserialization needs to happen on JS thread
-  let nodes = deserialize_bundle_graph(env, nodes)?;
+
+  // Move all parsing and deserialization off the JS thread
   thread::spawn({
     let atlaspack = atlaspack_napi.clone();
     move || {
-      let atlaspack = atlaspack.write();
-      let result = atlaspack.load_bundle_graph(nodes, edges);
+      let result: anyhow::Result<()> = (|| {
+        let nodes = BundleGraphFromJs::deserialize_from_json(nodes_json)?;
+
+        let atlaspack = atlaspack.write();
+        atlaspack.load_bundle_graph(nodes, edges)
+      })();
+
       deferred.resolve(move |env| match result {
         Ok(()) => NapiAtlaspackResult::ok(&env, ()),
         Err(error) => {

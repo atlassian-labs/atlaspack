@@ -46,6 +46,7 @@ import {ISOLATED_ENVS} from './public/Environment';
 import {fromProjectPath, fromProjectPathRelative} from './projectPath';
 import {HASH_REF_PREFIX} from './constants';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import logger from '@atlaspack/logger';
 import {fromEnvironmentId} from './EnvironmentManager';
 import type {EnvironmentRef} from './EnvironmentManager';
 
@@ -569,6 +570,76 @@ export default class BundleGraph {
       publicIdByAssetId: serialized.publicIdByAssetId,
       conditions: serialized.conditions,
     });
+  }
+
+  /**
+   * Serialize the bundle graph for efficient transfer to native Rust code.
+   * Returns a JSON string of nodes and an array of edges.
+   */
+  serializeForNative(): {
+    nodesJson: string;
+    edges: [number, number, BundleGraphEdgeType][];
+  } {
+    const start = performance.now();
+
+    const nodes = this._graph.nodes as BundleGraphNode[];
+    const edges: [number, number, BundleGraphEdgeType][] = [];
+
+    const edgeIterator = this._graph.getAllEdges();
+    let next = edgeIterator.next();
+    while (!next.done) {
+      const edge = next.value;
+      edges.push([edge.from, edge.to, edge.type]);
+      next = edgeIterator.next();
+    }
+
+    // Optimize nodes by omitting null/undefined values to reduce JSON size
+    const optimizedNodes = nodes.map((node) => this._omitNulls(node));
+    const nodesJson = JSON.stringify(optimizedNodes);
+
+    const duration = performance.now() - start;
+    const sizeMB = (nodesJson.length / (1024 * 1024)).toFixed(2);
+    logger.verbose({
+      origin: '@atlaspack/core',
+      message: `serializeForNative: ${duration.toFixed(1)}ms, ${sizeMB}MB JSON, ${nodes.length} nodes, ${edges.length} edges`,
+    });
+
+    return {nodesJson, edges};
+  }
+
+  /**
+   * Remove null and undefined values from an object to reduce JSON size.
+   * Preserves false, 0, empty strings, and arrays.
+   */
+  private _omitNulls(obj: unknown): unknown {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this._omitNulls(item));
+    }
+
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      if (value === null || value === undefined) {
+        continue;
+      }
+      if (
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        Object.keys(value as object).length === 0
+      ) {
+        continue;
+      }
+      if (typeof value === 'object') {
+        const processed = this._omitNulls(value);
+        if (processed !== undefined) {
+          result[key] = processed;
+        }
+      } else {
+        result[key] = value;
+      }
+    }
+    return result;
   }
 
   createBundle(

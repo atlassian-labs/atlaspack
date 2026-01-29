@@ -378,11 +378,6 @@ export class SourceMap {
   getProjectRoot(): string;
 }
 
-export declare function atlaspackNapiLoadBundleGraph(
-  atlaspackNapi: AtlaspackNapi,
-  nodes: Array<BundleGraphNode>,
-  edges: Array<[number, number, BundleGraphEdgeType]>,
-): object;
 export declare function atlaspackNapiPackage(
   atlaspackNapi: AtlaspackNapi,
 ): object;
@@ -419,3 +414,8 @@ export interface CompiledCssInJsPluginResult {
   diagnostics: Array<JsDiagnostic>;
   bailOut: boolean;
 }
+export declare function atlaspackNapiLoadBundleGraph(
+  atlaspackNapi: AtlaspackNapi,
+  nodes: string,
+  edges: Array<[number, number, number]>,
+): object;
