@@ -13,7 +13,7 @@ import {
 
 const ZIPFS = `${path.sep}zipfs`;
 
-describe.v2('pnp', function () {
+describe('pnp', function () {
   it('should defer to the pnp resolution when needed', async function () {
     let dir = path.join(__dirname, 'integration/pnp-require');
 

@@ -14,7 +14,7 @@ import {
 import {md} from '@atlaspack/diagnostic';
 import {normalizeSeparators} from '@atlaspack/utils';
 
-describe.v2('typescript types', function () {
+describe('typescript types', function () {
   it('should generate a typescript declaration file', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/ts-types/main/index.ts'),

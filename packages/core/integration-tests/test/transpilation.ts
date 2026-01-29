@@ -456,7 +456,7 @@ describe('transpilation', function () {
     });
   });
 
-  describe.v2('supports the automatic jsx runtime', () => {
+  describe('supports the automatic jsx runtime', () => {
     it('with React >= 17', async function () {
       let b = await bundle(
         path.join(__dirname, '/integration/jsx-automatic/index.js'),

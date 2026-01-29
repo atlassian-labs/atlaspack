@@ -7,6 +7,8 @@ import {
   inputFS,
   bundler,
   run,
+  disableV2,
+  setupV3,
 } from '@atlaspack/test-utils';
 
 /**
@@ -17,7 +19,15 @@ import {
  * - Invalidates cache when source files change
  * - Returns correct results from cache
  */
-describe.v3('Native cache', function () {
+describe('Native cache', function () {
+  before(() => {
+    disableV2();
+  });
+
+  setupV3({
+    atlaspackV3: true,
+  });
+
   let dir: string;
 
   beforeEach(async function () {

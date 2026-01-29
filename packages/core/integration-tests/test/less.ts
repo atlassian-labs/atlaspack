@@ -13,7 +13,7 @@ import {
 } from '@atlaspack/test-utils';
 import {md} from '@atlaspack/diagnostic';
 
-describe.v2('less', function () {
+describe('less', function () {
   it('should support requiring less files', async function () {
     await fsFixture(overlayFS)`
       .parcelrc:
