@@ -14,13 +14,16 @@ import type {
   PluginOptions as BabelStripRuntimePluginOptions,
   BabelFileMetadata,
 } from '@compiled/babel-plugin-strip-runtime';
-import {DEFAULT_IMPORT_SOURCES, toBoolean} from '@compiled/utils';
 import {Transformer} from '@atlaspack/plugin';
 import SourceMap from '@atlaspack/source-map';
 import {relativeUrl} from '@atlaspack/utils';
 
 import type {CompiledTransformerOpts} from './types';
-import {createDefaultResolver} from './utils';
+import {
+  createDefaultResolver,
+  DEFAULT_IMPORT_SOURCES,
+  toBoolean,
+} from './utils';
 import {BuildMode} from '@atlaspack/types';
 import CompiledBabelPlugin from '@compiled/babel-plugin';
 import CompiledBabelPluginStripRuntime from '@compiled/babel-plugin-strip-runtime';
