@@ -1,35 +1,44 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use atlaspack_core::{
-  bundle_graph::bundle_graph::BundleGraph, hash::hash_bytes, types::Asset,
-  version::atlaspack_rust_version,
+  bundle_graph::bundle_graph::BundleGraph, bundle_graph::bundle_graph_from_js::BundleGraphFromJs,
+  hash::hash_bytes, types::Asset, version::atlaspack_rust_version,
 };
 use lmdb_js_lite::DatabaseHandle;
 use rayon::prelude::*;
 
 use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
 
-pub struct JsPackager {
+use crate::assemble::assemble_bundle;
+
+mod assemble;
+
+pub struct JsPackager<B: BundleGraph + Send + Sync> {
   db: Arc<DatabaseHandle>,
+  bundle_graph: Arc<RwLock<B>>,
 }
 
-impl JsPackager {
-  pub fn new(db: Arc<DatabaseHandle>) -> Self {
-    Self { db }
+impl<B: BundleGraph + Send + Sync> JsPackager<B> {
+  pub fn new(db: Arc<DatabaseHandle>, bundle_graph: Arc<RwLock<B>>) -> Self {
+    Self { db, bundle_graph }
   }
 
-  pub fn package<B: BundleGraph>(
-    &self,
-    bundle_id: &str,
-    bundle_graph: &B,
-  ) -> anyhow::Result<PackageResult> {
-    let bundle = bundle_graph
+  /// Acquires a read lock and returns a guard. Use for operations that need the graph for
+  /// multiple calls (e.g. get_bundle_by_id then traverse_bundle_assets). For single lookups
+  /// from other threads (e.g. in par_iter), use `self.bundle_graph.read().unwrap()` directly.
+  fn bundle_graph(&self) -> std::sync::RwLockReadGuard<'_, BundleGraphFromJs> {
+    self.bundle_graph.read().unwrap()
+  }
+
+  pub fn package(&self, bundle_id: &str) -> anyhow::Result<PackageResult> {
+    let graph = self.bundle_graph();
+    let bundle = graph
       .get_bundle_by_id(bundle_id)
       .ok_or(anyhow::anyhow!("Bundle not found"))?;
 
     let mut assets: Vec<Asset> = Vec::new();
     // Get all the assets in the bundle
-    bundle_graph.traverse_bundle_assets(bundle, &mut |asset: &Asset| {
+    graph.traverse_bundle_assets(bundle, &mut |asset: &Asset| {
       assets.push(asset.clone());
     });
     let contents = assets
@@ -41,11 +50,16 @@ impl JsPackager {
           .database()
           .get(&txn, asset.content_key.as_ref().unwrap())
           .unwrap();
-        String::from_utf8_lossy(&code.unwrap()).to_string()
+        let asset_code = String::from_utf8_lossy(&code.unwrap()).to_string();
+        if bundle.entry_asset_ids.contains(&asset.id) {
+          asset_code
+        } else {
+          self.wrap_asset(asset, asset_code)
+        }
       })
       .collect::<Vec<String>>();
 
-    let bundle_contents = contents.join("\n");
+    let bundle_contents = assemble_bundle(contents);
     let bundle_contents = bundle_contents.as_bytes();
     let content_hash = hash_bytes(bundle_contents);
     let content_cache_key = format!(
@@ -72,7 +86,7 @@ impl JsPackager {
     Ok(PackageResult {
       bundle_info: BundleInfo {
         bundle_type: bundle.bundle_type.extension().to_string(),
-        size: contents.into_iter().map(|c| c.len() as u64).sum::<u64>(),
+        size: bundle_contents.len() as u64,
         total_assets: assets.len() as u64,
         hash: content_hash,
         hash_references: vec![],
@@ -88,5 +102,17 @@ impl JsPackager {
       dev_dep_requests: vec![],
       invalidations: vec![],
     })
+  }
+
+  fn wrap_asset(&self, asset: &Asset, code: String) -> String {
+    let guard = self.bundle_graph.read().unwrap();
+    let public_id = guard
+      .get_public_asset_id(&asset.id)
+      .expect("Asset not found in bundle graph")
+      .to_string();
+    format!(
+      "define('{}', function (require,module,exports) {{ {code} }});",
+      public_id
+    )
   }
 }

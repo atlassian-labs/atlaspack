@@ -45,7 +45,8 @@ pub struct Atlaspack {
   pub request_tracker: Arc<RwLock<RequestTracker>>,
   /// The bundle graph deserialised from JS. Used temporarily until we have a native
   /// bundle graph implementation. Starts empty and is populated via `load_bundle_graph`.
-  pub bundle_graph: Arc<RwLock<BundleGraphFromJs>>,
+  /// Uses std::sync::RwLock so the packager (and any Rayon threads) can take a read lock when needed.
+  pub bundle_graph: Arc<std::sync::RwLock<BundleGraphFromJs>>,
 }
 
 impl Atlaspack {
@@ -172,7 +173,7 @@ impl Atlaspack {
       config_loader,
       plugins,
       request_tracker: Arc::new(RwLock::new(request_tracker)),
-      bundle_graph: Arc::new(RwLock::new(BundleGraphFromJs::default())),
+      bundle_graph: Arc::new(std::sync::RwLock::new(BundleGraphFromJs::default())),
     })
   }
 }
@@ -240,20 +241,15 @@ impl Atlaspack {
     edges: Vec<(u32, u32, u8)>,
     public_id_by_asset_id: HashMap<String, String>,
   ) -> anyhow::Result<()> {
-    self.runtime.block_on(async move {
-      *self.bundle_graph.write().await =
-        BundleGraphFromJs::new(nodes, edges, public_id_by_asset_id);
-      Ok(())
-    })
+    *self.bundle_graph.write().unwrap() =
+      BundleGraphFromJs::new(nodes, edges, public_id_by_asset_id);
+    Ok(())
   }
 
   #[tracing::instrument(level = "info", skip_all)]
   pub fn package(&self, bundle_id: String) -> anyhow::Result<PackageResult> {
-    self.runtime.block_on(async move {
-      let bundle_graph = self.bundle_graph.read().await;
-      let packager = JsPackager::new(Arc::clone(&self.db));
-      packager.package(&bundle_id, &*bundle_graph)
-    })
+    let packager = JsPackager::new(Arc::clone(&self.db), Arc::clone(&self.bundle_graph));
+    packager.package(&bundle_id)
   }
 
   pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {
