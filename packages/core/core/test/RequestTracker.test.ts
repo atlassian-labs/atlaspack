@@ -37,11 +37,8 @@ describe('RequestTracker', () => {
   });
 
   beforeEach(async () => {
+    await options.cache.clear();
     await options.cache.ensure();
-
-    for (const key of options.cache.keys()) {
-      await options.cache.getNativeRef().delete(key);
-    }
   });
 
   after(() => {

@@ -11,9 +11,7 @@
       "aarch64-apple-darwin"
     ]
   },
-  "bin": {
-    "apvm-macos-arm64": "apvm-macos-arm64"
-  },
+  "bin": "apvm-macos-arm64",
   "publishConfig": {
     "access": "public"
   },

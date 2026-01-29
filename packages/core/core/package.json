@@ -22,7 +22,6 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "dependencies": {
-    "@mischnic/json-sourcemap": "^0.1.0",
     "@atlaspack/build-cache": "2.13.8",
     "@atlaspack/cache": "3.2.44",
     "@atlaspack/diagnostic": "2.14.4",
@@ -35,10 +34,11 @@
     "@atlaspack/plugin": "2.14.49",
     "@atlaspack/profiler": "2.15.10",
     "@atlaspack/rust": "3.19.0",
+    "@atlaspack/source-map": "3.2.4",
     "@atlaspack/types": "2.15.39",
     "@atlaspack/utils": "3.3.1",
     "@atlaspack/workers": "2.14.49",
-    "@atlaspack/source-map": "3.2.4",
+    "@mischnic/json-sourcemap": "^0.1.0",
     "base-x": "^3.0.8",
     "browserslist": "^4.6.6",
     "clone": "^2.1.1",
@@ -52,9 +52,9 @@
   "devDependencies": {
     "@atlaspack/babel-register": "2.14.4",
     "@types/node": ">= 18",
-    "rfdc": "1",
-    "jest-diff": "*",
     "graphviz": "^0.0.9",
+    "jest-diff": "*",
+    "rfdc": "1",
     "tempy": "^0.2.1"
   },
   "browser": {

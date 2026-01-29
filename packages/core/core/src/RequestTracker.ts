@@ -1038,7 +1038,17 @@ export class RequestGraph extends ContentGraph<
 
       let _filePath = toProjectPath(options.projectRoot, _path);
       let filePath = fromProjectPathRelative(_filePath);
+
+      // If the file is an .env file, we should ignore it here and let the env invalidation
+      // logic handle it. This ensures that we only invalidate if the env vars actually
+      // changed.
+      if (path.basename(_path).startsWith('.env')) {
+        continue;
+      }
+
       let hasFileRequest = this.hasContentKey(filePath);
+
+      // If we see a 'create' event for the project root itself,
 
       // If we see a 'create' event for the project root itself,
       // this means the project root was moved and we need to
@@ -1303,7 +1313,10 @@ export default class RequestTracker {
     contentKey: ContentKey,
     ifMatch?: string,
   ): Promise<T | null | undefined> {
-    let node = nullthrows(this.graph.getNodeByContentKey(contentKey));
+    let node = this.graph.getNodeByContentKey(contentKey);
+    if (!node) {
+      return undefined;
+    }
     invariant(node.type === REQUEST);
 
     if (ifMatch != null && node.resultCacheKey !== ifMatch) {

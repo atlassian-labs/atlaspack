@@ -10,12 +10,12 @@
     "start:v3:plugins": "env ATLASPACK_BENCH_MODE=V3 ATLASPACK_BENCH_PLUGINS=10 node ./scripts/build.mjs"
   },
   "dependencies": {
+    "@atlaspack/cli": "*",
     "@atlaspack/config-default": "*",
     "@atlaspack/core": "*",
     "@atlaspack/plugin": "*",
-    "@atlaspack/cli": "*",
     "@oclif/table": "0.3.3",
     "@swc/helpers": "*",
-    "chalk": "*"
+    "chalk": "^4.1.2"
   }
 }

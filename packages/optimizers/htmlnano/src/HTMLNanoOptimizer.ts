@@ -1,7 +1,6 @@
 // @ts-expect-error TS2724
 import type {PostHTMLNode} from 'posthtml';
 
-// @ts-expect-error TS7016
 import htmlnano from 'htmlnano';
 import {Optimizer} from '@atlaspack/plugin';
 import posthtml from 'posthtml';
@@ -42,7 +41,7 @@ export default new Optimizer({
 
     const clonedConfig: Record<any, any> = config || {};
 
-    const presets = htmlnano.presets;
+    const presets = htmlnano.presets as Record<string, any>;
     const preset: Record<any, any> =
       typeof clonedConfig.preset === 'string'
         ? presets[clonedConfig.preset]
@@ -87,7 +86,7 @@ export default new Optimizer({
       // skipConfigLoading: true,
     };
 
-    let plugins = [htmlnano(htmlNanoConfig)];
+    let plugins = [htmlnano(htmlNanoConfig as any)];
 
     // @ts-expect-error TS18046
     if (htmlNanoConfig.minifySvg !== false) {

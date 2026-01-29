@@ -16,10 +16,10 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/types-internal": "2.22.6",
     "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/plugin": "2.14.49",
     "@atlaspack/source-map": "3.2.4",
+    "@atlaspack/types-internal": "2.22.6",
     "@atlaspack/utils": "3.3.1",
     "lightningcss": "^1.28.2",
     "nullthrows": "^1.1.1"

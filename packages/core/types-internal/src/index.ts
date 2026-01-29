@@ -489,17 +489,16 @@ export type Symbol = string;
 /**
  * A map of export names to the corresponding asset's local variable names.
  */
-export interface AssetSymbols
-  extends Iterable<
-    [
-      Symbol,
-      {
-        local: Symbol;
-        loc: SourceLocation | null | undefined;
-        meta?: Meta | null | undefined;
-      },
-    ]
-  > {
+export interface AssetSymbols extends Iterable<
+  [
+    Symbol,
+    {
+      local: Symbol;
+      loc: SourceLocation | null | undefined;
+      meta?: Meta | null | undefined;
+    },
+  ]
+> {
   /**
    * The exports of the asset are unknown, rather than just empty.
    * This is the default state.
@@ -535,18 +534,17 @@ export interface MutableAssetSymbols extends AssetSymbols {
 /**
  * isWeak means: the symbol is not used by the parent asset itself and is merely reexported
  */
-export interface MutableDependencySymbols
-  extends Iterable<
-    [
-      Symbol,
-      {
-        local: Symbol;
-        loc: SourceLocation | null | undefined;
-        isWeak: boolean;
-        meta?: Meta | null | undefined;
-      },
-    ]
-  > {
+export interface MutableDependencySymbols extends Iterable<
+  [
+    Symbol,
+    {
+      local: Symbol;
+      loc: SourceLocation | null | undefined;
+      isWeak: boolean;
+      meta?: Meta | null | undefined;
+    },
+  ]
+> {
   /**
    * Initializes the map, sets isCleared to false.
    */

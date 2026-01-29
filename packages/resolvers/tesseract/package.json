@@ -16,10 +16,10 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
+    "@atlaspack/feature-flags": "2.27.7",
     "@atlaspack/node-resolver-core": "3.7.20",
     "@atlaspack/plugin": "2.14.49",
-    "@atlaspack/types-internal": "2.22.6",
-    "@atlaspack/feature-flags": "2.27.7"
+    "@atlaspack/types-internal": "2.22.6"
   },
   "type": "commonjs",
   "scripts": {

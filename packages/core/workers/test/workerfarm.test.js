@@ -282,9 +282,8 @@ describe('WorkerFarm', function () {
     let workerfarm = new WorkerFarm({
       warmWorkers: true,
       useLocalWorker: false,
-      workerPath: require.resolve(
-        './integration/workerfarm/shared-reference.js',
-      ),
+      workerPath:
+        require.resolve('./integration/workerfarm/shared-reference.js'),
     });
 
     let sharedValue = 'Something to be shared';
@@ -301,9 +300,8 @@ describe('WorkerFarm', function () {
     let workerfarm = new WorkerFarm({
       warmWorkers: true,
       useLocalWorker: false,
-      workerPath: require.resolve(
-        './integration/workerfarm/resolve-shared-reference.js',
-      ),
+      workerPath:
+        require.resolve('./integration/workerfarm/resolve-shared-reference.js'),
     });
 
     let sharedValue = 'Something to be shared';
@@ -321,9 +319,8 @@ describe('WorkerFarm', function () {
     let workerfarm = new WorkerFarm({
       warmWorkers: true,
       useLocalWorker: true,
-      workerPath: require.resolve(
-        './integration/workerfarm/shared-reference.js',
-      ),
+      workerPath:
+        require.resolve('./integration/workerfarm/shared-reference.js'),
     });
 
     let sharedValue = 'Something to be shared';
@@ -340,9 +337,8 @@ describe('WorkerFarm', function () {
     let workerfarm = new WorkerFarm({
       warmWorkers: true,
       useLocalWorker: true,
-      workerPath: require.resolve(
-        './integration/workerfarm/resolve-shared-reference.js',
-      ),
+      workerPath:
+        require.resolve('./integration/workerfarm/resolve-shared-reference.js'),
     });
 
     let sharedValue = 'Something to be shared';

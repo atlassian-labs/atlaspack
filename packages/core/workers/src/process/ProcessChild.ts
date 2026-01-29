@@ -37,8 +37,7 @@ export default class ProcessChild implements ChildImpl {
 
   send(data: WorkerMessage) {
     let processSend = nullthrows(process.send).bind(process);
-    // @ts-expect-error TS7006
-    processSend(serialize(data).toString('base64'), (err) => {
+    processSend(serialize(data).toString('base64'), (err: any) => {
       if (err && err instanceof Error) {
         // @ts-expect-error TS2339
         if (err.code === 'ERR_IPC_CHANNEL_CLOSED') {

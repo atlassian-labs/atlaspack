@@ -2,6 +2,7 @@ import type {FileSystem} from '@atlaspack/fs';
 import type {EnvMap, FilePath} from '@atlaspack/types';
 
 import {resolveConfig} from '@atlaspack/utils';
+// @ts-expect-error - JB; just getting yarn upgrade working
 import dotenv from 'dotenv';
 import variableExpansion from 'dotenv-expand';
 

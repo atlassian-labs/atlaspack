@@ -26,10 +26,10 @@
     "semver": "^7.5.2"
   },
   "devDependencies": {
+    "@atlaspack/types": "2.15.39",
     "@babel/core": "^7.22.11",
     "@babel/preset-env": "^7.22.14",
-    "@babel/types": "^7.22.11",
-    "@atlaspack/types": "2.15.39"
+    "@babel/types": "^7.22.11"
   },
   "type": "commonjs",
   "scripts": {

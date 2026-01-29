@@ -49,8 +49,8 @@
   "browserslist": "Chrome 75",
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
-    "@testing-library/react": "^16.3.0",
     "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "eslint-config-react-app": "^7.0.1",
