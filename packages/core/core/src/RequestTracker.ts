@@ -1038,6 +1038,14 @@ export class RequestGraph extends ContentGraph<
 
       let _filePath = toProjectPath(options.projectRoot, _path);
       let filePath = fromProjectPathRelative(_filePath);
+
+      // If the file is an .env file, we should ignore it here and let the env invalidation
+      // logic handle it. This ensures that we only invalidate if the env vars actually
+      // changed.
+      if (path.basename(_path).startsWith('.env')) {
+        continue;
+      }
+
       let hasFileRequest = this.hasContentKey(filePath);
 
       // If we see a 'create' event for the project root itself,
