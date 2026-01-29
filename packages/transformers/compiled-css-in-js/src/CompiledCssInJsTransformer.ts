@@ -40,7 +40,7 @@ export default new Transformer({
 
     // If neither Compiled (default) nor any of the additional import sources are found in the code, we bail out.
     if (
-      [...DEFAULT_IMPORT_SOURCES, ...(config.importSources || [])].every(
+      (config.importSources || DEFAULT_IMPORT_SOURCES).every(
         (importSource) => !code.includes(importSource),
       )
     ) {

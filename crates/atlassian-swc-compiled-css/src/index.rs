@@ -4,6 +4,7 @@ use swc_core::ecma::visit::VisitMutWith;
 use swc_core::{common::comments::SingleThreadedComments, ecma::ast::Program};
 
 pub use crate::babel_plugin::CompiledCssInJsTransform;
+use crate::constants::DEFAULT_IMPORT_SOURCES;
 pub use crate::errors::{TransformError, init_panic_suppression};
 #[allow(unused_imports)]
 pub use crate::types::{
@@ -65,8 +66,6 @@ pub fn transform_with_file(
   }))
   .map_err(|panic_payload| vec![TransformError::from_panic(panic_payload)])
 }
-
-const DEFAULT_IMPORT_SOURCES: &[&str] = &["@compiled/react", "@atlaskit/css"];
 
 pub fn should_run_compiled_css_in_js_transform(code: &str, options: PluginOptions) -> bool {
   if let Some(import_sources) = options.import_sources {
