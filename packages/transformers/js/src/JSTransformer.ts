@@ -384,14 +384,10 @@ export async function loadCompiledCssInJsConfig(
 
   const contents: CompiledCssInJsConfigPlugin = {
     configPath: conf?.filePath,
-    importSources: ['@compiled/react', '@atlaskit/css'],
+    importSources: undefined,
   };
 
   Object.assign(contents, conf?.contents);
-
-  if (!contents.importSources?.includes('@compiled/react')) {
-    contents.importSources?.push('@compiled/react');
-  }
 
   contents.extract = contents.extract && options.mode !== 'development';
 

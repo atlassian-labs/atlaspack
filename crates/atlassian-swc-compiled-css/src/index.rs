@@ -4,6 +4,7 @@ use swc_core::ecma::visit::VisitMutWith;
 use swc_core::{common::comments::SingleThreadedComments, ecma::ast::Program};
 
 pub use crate::babel_plugin::CompiledCssInJsTransform;
+use crate::constants::DEFAULT_IMPORT_SOURCES;
 pub use crate::errors::{TransformError, init_panic_suppression};
 #[allow(unused_imports)]
 pub use crate::types::{
@@ -66,20 +67,16 @@ pub fn transform_with_file(
   .map_err(|panic_payload| vec![TransformError::from_panic(panic_payload)])
 }
 
-const DEFAULT_IMPORT_SOURCES: &[&str] = &["@compiled/react", "@atlaskit/css"];
-
 pub fn should_run_compiled_css_in_js_transform(code: &str, options: PluginOptions) -> bool {
-  let has_import_source = if let Some(import_sources) = options.import_sources {
-    import_sources.iter().any(|source| {
-      code.contains(source.as_str()) && !code.contains(&format!("{}/runtime", source))
-    })
+  if let Some(import_sources) = options.import_sources {
+    import_sources
+      .iter()
+      .any(|source| code.contains(source.as_str()))
   } else {
     DEFAULT_IMPORT_SOURCES
       .iter()
-      .any(|source| code.contains(source) && !code.contains(&format!("{}/runtime", source)))
-  };
-
-  has_import_source
+      .any(|source| code.contains(source))
+  }
 }
 
 pub fn remove_jsx_pragma_comments(comments: &SingleThreadedComments) -> bool {
@@ -121,13 +118,6 @@ mod tests {
     let code = "import { css } from '@compiled/react';";
     let options = PluginOptions::default();
     assert!(should_run_compiled_css_in_js_transform(code, options));
-  }
-
-  #[test]
-  fn test_should_run_compiled_css_in_js_transform_with_runtime() {
-    let code = "import { css } from '@compiled/react/runtime';";
-    let options = PluginOptions::default();
-    assert!(!should_run_compiled_css_in_js_transform(code, options));
   }
 
   #[test]
