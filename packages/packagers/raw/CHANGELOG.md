@@ -1,5 +1,12 @@
 # @atlaspack/packager-raw
 
+## 2.14.50
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.50
+
 ## 2.14.49
 
 ### Patch Changes

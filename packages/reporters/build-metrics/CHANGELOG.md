@@ -1,5 +1,13 @@
 # @atlaspack/reporter-build-metrics
 
+## 2.14.50
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/utils@3.3.2
+  - @atlaspack/plugin@2.14.50
+
 ## 2.14.49
 
 ### Patch Changes
