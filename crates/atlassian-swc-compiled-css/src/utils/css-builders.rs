@@ -14,6 +14,9 @@ use swc_core::ecma::codegen::{Config, Emitter, Node};
 use swc_core::ecma::utils::ExprExt;
 
 use crate::css_map::{CssMapUsage, visit_css_map_path_with_builder};
+use crate::postcss::plugins::sort_shorthand_declarations::{
+  parent_shorthand_for, shorthand_bucket,
+};
 use crate::types::{Metadata, MetadataContext};
 use crate::utils_ast::build_code_frame_error;
 use crate::utils_create_result_pair::create_result_pair;
@@ -152,9 +155,7 @@ fn babel_like_code_for_hash(expr: &Expr) -> String {
         if let Prop::KeyValue(kv) = p.as_ref() {
           let key = match &kv.key {
             PropName::Ident(i) => i.sym.as_ref().to_string(),
-            PropName::Str(s) => {
-              format!("'{}'", escape_string(s.value.as_ref(), '\''))
-            }
+            PropName::Str(s) => format!("'{}'", escape_string(s.value.as_ref(), '\'')),
             PropName::Num(n) => {
               let mut s = n.value.to_string();
               if s.ends_with(".0") {
@@ -653,7 +654,11 @@ fn is_custom_property_name(value: &str) -> bool {
 
 fn get_variable_declarator_value_for_parent_expr(expr: &Expr, meta: &Metadata) -> (Expr, String) {
   let mut expression = expr.clone();
-  let mut variable_name = babel_like_expression(expr, meta);
+  let mut hash_expr = expr.clone();
+  if !matches!(meta.context, MetadataContext::Keyframes { .. }) {
+    normalize_props_usage(&mut hash_expr);
+  }
+  let mut variable_name = babel_like_expression(&hash_expr, meta);
 
   if let Expr::Ident(ident) = expr {
     let base_name = ident.sym.as_ref();
@@ -664,7 +669,14 @@ fn get_variable_declarator_value_for_parent_expr(expr: &Expr, meta: &Metadata) -
 
     if let Some(binding) = resolve_binding(base_name, meta.clone(), evaluate_expression) {
       if let Some(node) = &binding.node {
-        expression = node.clone();
+        if !matches!(binding.source, BindingSource::Import) {
+          expression = node.clone();
+          if !matches!(meta.context, MetadataContext::Keyframes { .. }) {
+            let mut normalized = node.clone();
+            normalize_props_usage(&mut normalized);
+            variable_name = babel_like_expression(&normalized, &binding.meta);
+          }
+        }
       }
     }
   }
@@ -676,6 +688,12 @@ fn get_variable_declarator_value_for_parent_expr(expr: &Expr, meta: &Metadata) -
 /// any sheet entries. This mirrors the behaviour of the Babel helper and is
 /// relied upon when normalising conditional CSS branches.
 pub fn merge_subsequent_unconditional_css_items(items: Vec<CssItem>) -> Vec<CssItem> {
+  fn needs_unconditional_separator(prev: &str, next: &str) -> bool {
+    let prev_trimmed = prev.trim_end();
+    let next_trimmed = next.trim_start();
+    !prev_trimmed.is_empty() && prev_trimmed.ends_with('}') && next_trimmed.starts_with('@')
+  }
+
   let mut merged: Vec<CssItem> = Vec::new();
   let mut sheets: Vec<CssItem> = Vec::new();
 
@@ -704,7 +722,11 @@ pub fn merge_subsequent_unconditional_css_items(items: Vec<CssItem>) -> Vec<CssI
         while lookahead < items.len() {
           match &items[lookahead] {
             CssItem::Unconditional(_) => {
-              css.push_str(&get_item_css(&items[lookahead]));
+              let next_css = get_item_css(&items[lookahead]);
+              if needs_unconditional_separator(&css, &next_css) {
+                css.push('\n');
+              }
+              css.push_str(&next_css);
               last_index = lookahead;
             }
             CssItem::Sheet(_) => sheets.push(items[lookahead].clone()),
@@ -1396,8 +1418,17 @@ where
       continue;
     }
 
-    let (mut variable_expression, variable_name) =
-      get_variable_declarator_value_for_parent_expr(node_expression, meta);
+    let (mut variable_expression, variable_name) = match node_expression {
+      Expr::Ident(ident) => {
+        let base_name = ident.sym.as_ref().to_string();
+        let name = match &meta.context {
+          MetadataContext::Keyframes { keyframe } => format!("{keyframe}:{base_name}"),
+          _ => base_name,
+        };
+        (Expr::Ident(ident.clone()), name)
+      }
+      _ => get_variable_declarator_value_for_parent_expr(node_expression, meta),
+    };
     normalize_props_usage(&mut variable_expression);
     let Some(next_quasi) = template.quasis.get_mut(index + 1) else {
       panic!("Template literal missing trailing quasi for interpolation");
@@ -1802,6 +1833,18 @@ fn css_property_name(key: &str) -> String {
   }
 }
 
+fn normalize_keyframe_selector_key(key: &str) -> String {
+  let trimmed = key.trim();
+  let lower = trimmed.to_ascii_lowercase();
+  if lower == "from" {
+    "0%".to_string()
+  } else if lower == "100%" {
+    "to".to_string()
+  } else {
+    trimmed.to_string()
+  }
+}
+
 pub fn extract_array_with_builder<F>(
   array: &ArrayLit,
   meta: &Metadata,
@@ -1852,10 +1895,87 @@ pub fn extract_object_expression_with_builder<F>(
 where
   F: FnMut(&Expr, &Metadata) -> CssOutput,
 {
+  fn shorthand_bucket_for_prop(prop: &PropOrSpread, meta: &Metadata) -> Option<u32> {
+    match prop {
+      PropOrSpread::Prop(prop) => match prop.as_ref() {
+        Prop::KeyValue(key_value) => {
+          let key = object_property_to_string(key_value, meta.clone());
+          shorthand_bucket(&key).or_else(|| parent_shorthand_for(&key).and_then(shorthand_bucket))
+        }
+        Prop::Shorthand(ident) => {
+          let key = ident.sym.as_ref();
+          shorthand_bucket(key).or_else(|| parent_shorthand_for(key).and_then(shorthand_bucket))
+        }
+        _ => None,
+      },
+      _ => None,
+    }
+  }
+
+  fn ordered_keyframe_props<'a>(
+    props: &'a [PropOrSpread],
+    meta: &Metadata,
+  ) -> Vec<&'a PropOrSpread> {
+    let mut indexed: Vec<(usize, &PropOrSpread)> = props.iter().enumerate().collect();
+    indexed.sort_by(|(ia, a), (ib, b)| {
+      let bucket_a = shorthand_bucket_for_prop(a, meta);
+      let bucket_b = shorthand_bucket_for_prop(b, meta);
+      match (bucket_a, bucket_b) {
+        (Some(a_bucket), Some(b_bucket)) => a_bucket.cmp(&b_bucket).then_with(|| ia.cmp(ib)),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => ia.cmp(ib),
+      }
+    });
+    indexed.into_iter().map(|(_, prop)| prop).collect()
+  }
+
+  fn sort_keyframe_props_in_place(props: &mut Vec<PropOrSpread>, meta: &Metadata) {
+    let mut indexed: Vec<(usize, PropOrSpread, Option<u32>)> = props
+      .iter()
+      .enumerate()
+      .map(|(idx, prop)| (idx, prop.clone(), shorthand_bucket_for_prop(prop, meta)))
+      .collect();
+    indexed.sort_by(|(ia, _a, ba), (ib, _b, bb)| match (ba, bb) {
+      (Some(a_bucket), Some(b_bucket)) => a_bucket.cmp(b_bucket).then_with(|| ia.cmp(ib)),
+      (Some(_), None) => std::cmp::Ordering::Less,
+      (None, Some(_)) => std::cmp::Ordering::Greater,
+      (None, None) => ia.cmp(ib),
+    });
+    *props = indexed.into_iter().map(|(_, prop, _)| prop).collect();
+  }
+
+  fn sort_keyframe_declarations_in_object(object: &mut ObjectLit, meta: &Metadata) {
+    for prop in &mut object.props {
+      let PropOrSpread::Prop(prop) = prop else {
+        continue;
+      };
+      let Prop::KeyValue(key_value) = prop.as_mut() else {
+        continue;
+      };
+      if let Expr::Object(inner) = key_value.value.as_mut() {
+        sort_keyframe_props_in_place(&mut inner.props, meta);
+        sort_keyframe_declarations_in_object(inner, meta);
+      }
+    }
+  }
+
   let mut css: Vec<CssItem> = Vec::new();
   let mut variables: Vec<Variable> = Vec::new();
 
-  for property in &object.props {
+  let mut normalized_object = object.clone();
+  if matches!(meta.context, MetadataContext::Keyframes { .. }) {
+    sort_keyframe_declarations_in_object(&mut normalized_object, meta);
+  }
+
+  let ordered_props: Vec<&PropOrSpread> =
+    if matches!(meta.context, MetadataContext::Keyframes { .. }) {
+      ordered_keyframe_props(&normalized_object.props, meta)
+    } else {
+      normalized_object.props.iter().collect()
+    };
+
+  for property in ordered_props {
     match property {
       PropOrSpread::Prop(prop) => {
         let mut synthesized: Option<KeyValueProp> = None;
@@ -1868,7 +1988,10 @@ where
           _ => continue,
         };
 
-        let key = object_property_to_string(key_value, meta.clone());
+        let mut key = object_property_to_string(key_value, meta.clone());
+        if matches!(meta.context, MetadataContext::Keyframes { .. }) {
+          key = normalize_keyframe_selector_key(&key);
+        }
         let evaluated = evaluate_expression(key_value.value.as_ref(), meta.clone());
         let mut prop_value = evaluated.value;
         let updated_meta = evaluated.meta;
@@ -1981,6 +2104,11 @@ where
         );
 
         if matches!(prop_value, Expr::Object(_)) || logical_expression {
+          if key.starts_with("@keyframes") {
+            if let Expr::Object(obj) = &mut prop_value {
+              sort_keyframe_declarations_in_object(obj, &updated_meta);
+            }
+          }
           let result = build_css(&prop_value, &updated_meta);
           let mapped = if logical_expression {
             to_css_rule(&key, &result)
@@ -2332,7 +2460,11 @@ where
         }
 
         let (mut variable_expression, variable_name) =
-          get_variable_declarator_value_for_parent_expr(&prop_value, &updated_meta);
+          if matches!(key_value.value.as_ref(), Expr::Ident(_)) {
+            get_variable_declarator_value_for_parent_expr(key_value.value.as_ref(), meta)
+          } else {
+            get_variable_declarator_value_for_parent_expr(&prop_value, &updated_meta)
+          };
         normalize_props_usage(&mut variable_expression);
         let name = format!("--_{}", hash(&variable_name));
         if let Ok(label) = std::env::var("DEBUG_CSS_FIXTURE") {
@@ -2822,13 +2954,15 @@ pub fn build_css(node: &Expr, meta: &Metadata) -> CssOutput {
 
 #[cfg(test)]
 mod tests {
+  use super::normalize_props_usage;
   use super::{
-    assert_no_imported_css_variables, build_css_internal, callback_if_file_included,
-    extract_conditional_expression_with_builder, extract_keyframes_with_builder,
-    extract_logical_expression_with_builder, extract_member_expression_with_builder,
-    extract_template_literal_with_builder, find_binding_identifier,
-    generate_cache_for_css_map_with_builder, get_item_css,
-    merge_subsequent_unconditional_css_items, print_expression, to_css_declaration, to_css_rule,
+    assert_no_imported_css_variables, babel_like_expression, build_css_internal,
+    callback_if_file_included, extract_conditional_expression_with_builder,
+    extract_keyframes_with_builder, extract_logical_expression_with_builder,
+    extract_member_expression_with_builder, extract_template_literal_with_builder,
+    find_binding_identifier, generate_cache_for_css_map_with_builder, get_item_css,
+    get_variable_declarator_value_for_parent_expr, merge_subsequent_unconditional_css_items,
+    print_expression, to_css_declaration, to_css_rule,
   };
   use crate::types::{
     CompiledImports, Metadata, MetadataContext, PluginOptions, TransformFile, TransformFileOptions,
@@ -3010,6 +3144,28 @@ mod tests {
   }
 
   #[test]
+  fn keyframes_sort_shorthand_declarations_in_blocks() {
+    let metadata = create_metadata();
+    let expr = parse_expression(
+      "keyframes({ from: { transform: 'rotate(0deg)', background: 'red' }, to: { transform: 'rotate(360deg)', background: 'red' } })",
+    );
+    let mut build_css = |value: &Expr, meta: &Metadata| super::build_css_internal(value, meta);
+    let output =
+      extract_keyframes_with_builder(&expr, &metadata, "animation: ", ";", &mut build_css);
+
+    let sheet = match &output.css[0] {
+      CssItem::Sheet(SheetCssItem { css }) => css,
+      other => panic!("expected sheet css, found {other:?}"),
+    };
+    let normalized: String = sheet.chars().filter(|ch| !ch.is_whitespace()).collect();
+    if std::env::var("COMPILED_CSS_TRACE").is_ok() {
+      eprintln!("[keyframes.test] {}", normalized);
+    }
+    assert!(normalized.contains("0%{background:red;transform:rotate(0deg);}"));
+    assert!(normalized.contains("to{background:red;transform:rotate(360deg);}"));
+  }
+
+  #[test]
   fn extract_keyframes_from_tagged_template() {
     let metadata = create_metadata();
     let expr = parse_expression("keyframes`from { opacity: 1; } to { opacity: 0; }`");
@@ -3134,6 +3290,34 @@ mod tests {
     assert_eq!(output.css.len(), 1);
     let css = get_item_css(&output.css[0]);
     assert!(css.contains(&format!("var({})", variable.name)));
+  }
+
+  #[test]
+  fn extract_template_literal_keeps_identifier_expression_for_hashing() {
+    let metadata = create_metadata();
+    let binding_meta = create_metadata();
+    let binding_expr = parse_expression("(props) => props.size === 'small' ? 16 : 24");
+    let binding = PartialBindingWithMeta::new(
+      Some(binding_expr),
+      None,
+      true,
+      binding_meta,
+      BindingSource::Module,
+    );
+    metadata.insert_parent_binding("getIconSize", binding);
+
+    let expr = parse_expression("`width: ${getIconSize}px;`");
+    let Expr::Tpl(template) = expr else {
+      panic!("expected template literal expression");
+    };
+
+    let mut build_css = |_value: &Expr, _meta: &Metadata| CssOutput::new();
+    let output = extract_template_literal_with_builder(&template, &metadata, &mut build_css);
+
+    assert_eq!(output.variables.len(), 1);
+    let variable = &output.variables[0];
+    assert!(matches!(variable.expression, Expr::Ident(_)));
+    assert_eq!(variable.name, format!("--_{}", hash("getIconSize")));
   }
 
   #[test]
@@ -3660,6 +3844,87 @@ mod tests {
     } else {
       panic!("expected conditional expression");
     }
+  }
+
+  #[test]
+  fn variable_name_uses_binding_initializer() {
+    let meta = create_metadata();
+    let binding_meta = create_metadata();
+    let binding_expr = parse_expression("isLoading || continueAnimation ? 'a' : 'b'");
+    let binding = PartialBindingWithMeta::new(
+      Some(binding_expr.clone()),
+      None,
+      true,
+      binding_meta.clone(),
+      BindingSource::Module,
+    );
+    meta.insert_parent_binding("bg", binding);
+
+    let (expression, variable_name) =
+      get_variable_declarator_value_for_parent_expr(&ident_expr("bg"), &meta);
+
+    assert!(matches!(expression, Expr::Cond(_)));
+    let expected = babel_like_expression(&binding_expr, &binding_meta);
+    assert_eq!(variable_name, expected);
+  }
+
+  #[test]
+  fn variable_name_skips_import_binding_initializer() {
+    let meta = create_metadata();
+    let binding_meta = create_metadata();
+    let binding_expr = parse_expression("`${borderWidth}px solid ${secondaryBorderColor}`");
+    let binding = PartialBindingWithMeta::new(
+      Some(binding_expr),
+      None,
+      true,
+      binding_meta,
+      BindingSource::Import,
+    );
+    meta.insert_parent_binding("secondaryBorder", binding);
+
+    let (expression, variable_name) =
+      get_variable_declarator_value_for_parent_expr(&ident_expr("secondaryBorder"), &meta);
+
+    assert!(matches!(expression, Expr::Ident(_)));
+    assert_eq!(variable_name, "secondaryBorder");
+  }
+
+  #[test]
+  fn variable_name_uses_normalized_props_expression() {
+    let meta = create_metadata();
+    let expr = parse_expression(
+      "({ isLoading, continueAnimation }) => isLoading || continueAnimation ? 'rotationAnimation linear 3s infinite' : ''",
+    );
+    let (_expression, variable_name) = get_variable_declarator_value_for_parent_expr(&expr, &meta);
+
+    let mut normalized = expr.clone();
+    normalize_props_usage(&mut normalized);
+    let expected = babel_like_expression(&normalized, &meta);
+    assert_eq!(variable_name, expected);
+  }
+
+  #[test]
+  fn babel_like_expression_preserves_props_identifier() {
+    let meta = create_metadata();
+    let expr = parse_expression("__cmplp.isLoading");
+    assert_eq!(babel_like_expression(&expr, &meta), "__cmplp.isLoading");
+  }
+
+  #[test]
+  fn babel_like_expression_uses_single_quotes() {
+    let meta = create_metadata();
+    let expr = parse_expression("\"rotationAnimation\"");
+    assert_eq!(babel_like_expression(&expr, &meta), "'rotationAnimation'");
+  }
+
+  #[test]
+  fn variable_name_hash_matches_babel_for_props_conditionals() {
+    let meta = create_metadata();
+    let expr = parse_expression(
+      "__cmplp.isLoading || __cmplp.continueAnimation ? 'rotationAnimation linear 3s infinite' : ''",
+    );
+    let (_expression, variable_name) = get_variable_declarator_value_for_parent_expr(&expr, &meta);
+    assert_eq!(hash(&variable_name), "1rywqsk");
   }
 
   #[test]

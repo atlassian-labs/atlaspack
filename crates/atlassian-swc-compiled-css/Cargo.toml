@@ -51,3 +51,4 @@ napi = ["dep:napi", "dep:napi-derive"]
 [dev-dependencies]
 insta = "1.39.0"
 tempfile = "3.10.1"
+pretty_assertions = { workspace = true }

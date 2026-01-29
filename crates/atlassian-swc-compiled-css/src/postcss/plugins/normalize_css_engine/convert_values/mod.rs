@@ -256,6 +256,43 @@ fn clamp_opacity(node: &mut vp::Node) {
   }
 }
 
+fn walk_nodes(nodes: &mut [vp::Node], prop: &str, keep_zero_unit: bool) {
+  for node in nodes.iter_mut() {
+    match node {
+      vp::Node::Word { .. } => {
+        parse_word(node, keep_zero_unit, None);
+        if prop == "opacity" || prop == "shape-image-threshold" {
+          clamp_opacity(node);
+        }
+      }
+      vp::Node::Function {
+        value,
+        nodes: inner,
+        ..
+      } => {
+        let low = value.to_lowercase();
+        if low == "url" {
+          continue;
+        }
+        let inner_keep_zero = matches!(
+          low.as_str(),
+          "calc" | "min" | "max" | "clamp" | "hsl" | "hsla"
+        );
+        walk_nodes(
+          inner,
+          prop,
+          if inner_keep_zero {
+            true
+          } else {
+            keep_zero_unit
+          },
+        );
+      }
+      _ => {}
+    }
+  }
+}
+
 fn should_keep_zero_unit(
   prop: &str,
   value_has_percent: bool,
@@ -304,48 +341,33 @@ pub fn plugin() -> pc::BuiltPlugin {
         Some(&prop),
         &browsers,
       );
-      vp::walk(
-        &mut nodes[..],
-        &mut |node| {
-          match node {
-            vp::Node::Word { .. } => {
-              parse_word(node, keep_zero_unit, None);
-              if prop == "opacity" || prop == "shape-image-threshold" {
-                clamp_opacity(node);
-              }
-            }
-            vp::Node::Function {
-              value,
-              nodes: inner,
-              ..
-            } => {
-              let low = value.to_lowercase();
-              if matches!(
-                low.as_str(),
-                "calc" | "min" | "max" | "clamp" | "hsl" | "hsla"
-              ) {
-                // Only transform unit-like words inside supported math/color functions.
-                for n in inner.iter_mut() {
-                  if let vp::Node::Word { .. } = n {
-                    parse_word(n, true, None);
-                  }
-                }
-                // Prevent walker from descending again into children we already handled.
-                return false;
-              }
-              if low == "url" {
-                return false;
-              }
-            }
-            _ => {}
-          }
-          true
-        },
-        false,
-      );
+      walk_nodes(&mut nodes[..], &prop, keep_zero_unit);
       parsed.nodes = nodes;
       decl.set_value(vp::stringify(&parsed.nodes));
       Ok(())
     })
     .build()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use postcss as pc;
+  use pretty_assertions::assert_eq;
+
+  #[test]
+  fn converts_var_fallback_units_inside_calc() {
+    let processor = pc::postcss_with_plugins(vec![plugin()]);
+    let mut result = processor
+      .process(
+        "a{width:calc(100% - var(--ds-space-150, 12px));height:calc(100% - var(--ds-space-200, 16px))}",
+      )
+      .expect("process should succeed");
+
+    let css = result.css().expect("css string").to_string();
+    assert_eq!(
+      css,
+      "a{width:calc(100% - var(--ds-space-150, 9pt));height:calc(100% - var(--ds-space-200, 1pc))}"
+    );
+  }
 }

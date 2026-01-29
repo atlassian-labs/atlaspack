@@ -69,6 +69,83 @@ fn is_color_stop(color: &str, stop: Option<&str>) -> bool {
   csscolorparser::Color::from_str(color).is_ok() && is_stop(stop)
 }
 
+fn normalize_gradient_spacing(nodes: &mut Vec<vp::Node>) -> bool {
+  let mut changed = false;
+
+  // Drop empty word/space nodes left behind by removals.
+  let mut i = 0usize;
+  while i < nodes.len() {
+    let remove = match &nodes[i] {
+      vp::Node::Word { value } => value.is_empty(),
+      vp::Node::Space { value } => value.is_empty(),
+      _ => false,
+    };
+    if remove {
+      nodes.remove(i);
+      changed = true;
+    } else {
+      i += 1;
+    }
+  }
+
+  // Trim leading/trailing spaces.
+  while matches!(nodes.first(), Some(vp::Node::Space { .. })) {
+    nodes.remove(0);
+    changed = true;
+  }
+  while matches!(nodes.last(), Some(vp::Node::Space { .. })) {
+    nodes.pop();
+    changed = true;
+  }
+
+  // Remove spaces before commas and collapse spaces after commas.
+  let mut idx = 0usize;
+  while idx < nodes.len() {
+    let is_comma = matches!(
+      nodes.get(idx),
+      Some(vp::Node::Div { value, .. }) if value == ","
+    );
+    if is_comma {
+      while idx > 0 {
+        if matches!(
+          nodes.get(idx.saturating_sub(1)),
+          Some(vp::Node::Space { .. })
+        ) {
+          nodes.remove(idx - 1);
+          idx = idx.saturating_sub(1);
+          changed = true;
+        } else {
+          break;
+        }
+      }
+
+      let had_space_after = matches!(nodes.get(idx + 1), Some(vp::Node::Space { .. }));
+      while idx + 1 < nodes.len() {
+        if matches!(nodes.get(idx + 1), Some(vp::Node::Space { .. })) {
+          nodes.remove(idx + 1);
+          changed = true;
+        } else {
+          break;
+        }
+      }
+
+      if had_space_after && idx + 1 < nodes.len() {
+        nodes.insert(
+          idx + 1,
+          vp::Node::Space {
+            value: " ".to_string(),
+          },
+        );
+        changed = true;
+        idx += 1;
+      }
+    }
+    idx += 1;
+  }
+
+  changed
+}
+
 pub fn plugin() -> pc::BuiltPlugin {
   pc::plugin("postcss-minify-gradients")
         .decl(|decl, _| {
@@ -168,6 +245,9 @@ pub fn plugin() -> pc::BuiltPlugin {
                                 }
                             }
                         }
+                        if normalize_gradient_spacing(nodes) {
+                            changed = true;
+                        }
                     } else if matches!(name.as_str(), "radial-gradient"|"repeating-radial-gradient") {
                         let arg_indices = split_args_indices(nodes);
                         let mut last_stop: Option<(String,String)> = None;
@@ -184,6 +264,9 @@ pub fn plugin() -> pc::BuiltPlugin {
                                 }
                             }
                             last_stop = this_stop;
+                        }
+                        if normalize_gradient_spacing(nodes) {
+                            changed = true;
                         }
                     } else if matches!(name.as_str(), "-webkit-radial-gradient"|"-webkit-repeating-radial-gradient") {
                         let arg_indices = split_args_indices(nodes);
@@ -215,6 +298,9 @@ pub fn plugin() -> pc::BuiltPlugin {
                             }
                             last_stop = this_stop;
                         }
+                        if normalize_gradient_spacing(nodes) {
+                            changed = true;
+                        }
                     }
                 }
                 true
@@ -223,4 +309,39 @@ pub fn plugin() -> pc::BuiltPlugin {
             Ok(())
         })
         .build()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::plugin;
+  use postcss as pc;
+  use postcss::ast::nodes::as_declaration;
+  use pretty_assertions::assert_eq;
+
+  #[test]
+  fn trims_extra_gradient_spacing_after_stop_removal() {
+    let css = ".a{background: linear-gradient(90deg, #4d8ced 0%, #cfe1fd 100%);}";
+    let mut result = pc::Processor::new()
+      .with_plugin(plugin())
+      .process(css)
+      .expect("process css");
+    let output = result.to_css_string().expect("stringify css");
+    let root = pc::parse(&output).expect("parse output");
+    let mut value = None;
+
+    root.walk_decls(|node, _| {
+      if let Some(decl) = as_declaration(&node) {
+        if decl.prop() == "background" {
+          value = Some(decl.value());
+          return false;
+        }
+      }
+      true
+    });
+
+    assert_eq!(
+      value.expect("background decl"),
+      "linear-gradient(90deg, #4d8ced, #cfe1fd)"
+    );
+  }
 }
