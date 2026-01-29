@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -238,9 +238,11 @@ impl Atlaspack {
     &self,
     nodes: Vec<BundleGraphNode>,
     edges: Vec<(u32, u32, u8)>,
+    public_id_by_asset_id: HashMap<String, String>,
   ) -> anyhow::Result<()> {
     self.runtime.block_on(async move {
-      *self.bundle_graph.write().await = BundleGraphFromJs::new(nodes, edges);
+      *self.bundle_graph.write().await =
+        BundleGraphFromJs::new(nodes, edges, public_id_by_asset_id);
       Ok(())
     })
   }

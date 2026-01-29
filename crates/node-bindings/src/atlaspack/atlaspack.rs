@@ -1,4 +1,5 @@
 use core::str;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread;
 
@@ -216,6 +217,7 @@ pub fn atlaspack_napi_load_bundle_graph(
   atlaspack_napi: AtlaspackNapi,
   nodes_json: String,
   edges: Vec<(u32, u32, u8)>,
+  public_id_by_asset_id: HashMap<String, String>,
 ) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;
 
@@ -227,7 +229,7 @@ pub fn atlaspack_napi_load_bundle_graph(
         let nodes = BundleGraphFromJs::deserialize_from_json(nodes_json)?;
 
         let atlaspack = atlaspack.write();
-        atlaspack.load_bundle_graph(nodes, edges)
+        atlaspack.load_bundle_graph(nodes, edges, public_id_by_asset_id)
       })();
 
       deferred.resolve(move |env| match result {

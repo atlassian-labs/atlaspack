@@ -574,11 +574,12 @@ export default class BundleGraph {
 
   /**
    * Serialize the bundle graph for efficient transfer to native Rust code.
-   * Returns a JSON string of nodes and an array of edges.
+   * Returns a JSON string of nodes, an array of edges, and a map of asset IDs to public IDs.
    */
   serializeForNative(): {
     nodesJson: string;
     edges: [number, number, BundleGraphEdgeType][];
+    publicIdByAssetId: Record<string, string>;
   } {
     const start = performance.now();
 
@@ -597,6 +598,12 @@ export default class BundleGraph {
     const optimizedNodes = nodes.map((node) => this._omitNulls(node));
     const nodesJson = JSON.stringify(optimizedNodes);
 
+    // Convert Map to plain object for serialization
+    const publicIdByAssetId: Record<string, string> = {};
+    for (const [assetId, publicId] of this._publicIdByAssetId) {
+      publicIdByAssetId[assetId] = publicId;
+    }
+
     const duration = performance.now() - start;
     const sizeMB = (nodesJson.length / (1024 * 1024)).toFixed(2);
     logger.verbose({
@@ -604,7 +611,7 @@ export default class BundleGraph {
       message: `serializeForNative: ${duration.toFixed(1)}ms, ${sizeMB}MB JSON, ${nodes.length} nodes, ${edges.length} edges`,
     });
 
-    return {nodesJson, edges};
+    return {nodesJson, edges, publicIdByAssetId};
   }
 
   /**

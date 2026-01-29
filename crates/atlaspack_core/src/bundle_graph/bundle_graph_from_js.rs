@@ -15,10 +15,16 @@ type BundleGraphNodeId = String;
 pub struct BundleGraphFromJs {
   graph: StableDiGraph<BundleGraphNode, BundleGraphEdgeType>,
   nodes_by_id: HashMap<BundleGraphNodeId, NodeIndex>,
+  /// Maps full asset IDs (16-character hex strings) to shortened public IDs (base62-encoded).
+  public_id_by_asset_id: HashMap<String, String>,
 }
 
 impl BundleGraphFromJs {
-  pub fn new(nodes: Vec<BundleGraphNode>, edges: Vec<(u32, u32, BundleGraphEdgeType)>) -> Self {
+  pub fn new(
+    nodes: Vec<BundleGraphNode>,
+    edges: Vec<(u32, u32, BundleGraphEdgeType)>,
+    public_id_by_asset_id: HashMap<String, String>,
+  ) -> Self {
     let mut graph = StableDiGraph::new();
     let mut nodes_by_id = HashMap::new();
     for node in nodes {
@@ -33,7 +39,11 @@ impl BundleGraphFromJs {
         edge.2,
       );
     }
-    BundleGraphFromJs { graph, nodes_by_id }
+    BundleGraphFromJs {
+      graph,
+      nodes_by_id,
+      public_id_by_asset_id,
+    }
   }
 
   /// Returns all bundles reachable from the root node via DFS traversal.
@@ -97,6 +107,10 @@ impl BundleGraph for BundleGraphFromJs {
         visit(&node.value)
       }
     }
+  }
+
+  fn get_public_asset_id(&self, asset_id: &str) -> Option<&str> {
+    self.public_id_by_asset_id.get(asset_id).map(|s| s.as_str())
   }
 }
 
@@ -189,7 +203,7 @@ mod tests {
 
   #[test]
   fn test_bundle_graph_from_js_new_empty() {
-    let graph = BundleGraphFromJs::new(vec![], vec![]);
+    let graph = BundleGraphFromJs::new(vec![], vec![], HashMap::new());
     assert!(graph.get_bundles().is_empty());
   }
 
@@ -201,7 +215,7 @@ mod tests {
     ];
     let edges = vec![(0, 1, 1u8)]; // Edge from root to bundle
 
-    let graph = BundleGraphFromJs::new(nodes, edges);
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new());
     let bundles = graph.get_bundles();
 
     assert_eq!(bundles.len(), 1);
@@ -223,7 +237,7 @@ mod tests {
       (1, 3, 2u8), // bundle1 -> bundle3
     ];
 
-    let graph = BundleGraphFromJs::new(nodes, edges);
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new());
     let bundles = graph.get_bundles();
 
     assert_eq!(bundles.len(), 3);
@@ -250,7 +264,7 @@ mod tests {
       (3, 4, 2u8), // dependency -> bundle2
     ];
 
-    let graph = BundleGraphFromJs::new(nodes, edges);
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new());
     let bundles = graph.get_bundles();
 
     // Only Bundle nodes should be returned
@@ -271,7 +285,7 @@ mod tests {
     // Only edge from root to bundle1, bundle2 is disconnected
     let edges = vec![(0, 1, 1u8)];
 
-    let graph = BundleGraphFromJs::new(nodes, edges);
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new());
     let bundles = graph.get_bundles();
 
     // Only bundle1 should be reachable
@@ -362,8 +376,21 @@ mod tests {
     let nodes = BundleGraphFromJs::deserialize_from_json(json).unwrap();
     let edges = vec![(0, 1, 1u8)];
 
-    let graph = BundleGraphFromJs::new(nodes, edges);
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new());
     // Graph should be created successfully (no bundles in this case)
     assert!(graph.get_bundles().is_empty());
+  }
+
+  #[test]
+  fn test_get_public_asset_id() {
+    let mut public_id_by_asset_id = HashMap::new();
+    public_id_by_asset_id.insert("abc123def456".to_string(), "8LVYC".to_string());
+    public_id_by_asset_id.insert("xyz789uvw012".to_string(), "d7Pd5".to_string());
+
+    let graph = BundleGraphFromJs::new(vec![], vec![], public_id_by_asset_id);
+
+    assert_eq!(graph.get_public_asset_id("abc123def456"), Some("8LVYC"));
+    assert_eq!(graph.get_public_asset_id("xyz789uvw012"), Some("d7Pd5"));
+    assert_eq!(graph.get_public_asset_id("nonexistent"), None);
   }
 }
