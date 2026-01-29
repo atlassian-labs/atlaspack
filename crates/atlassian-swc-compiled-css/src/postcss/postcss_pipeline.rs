@@ -1372,6 +1372,13 @@ fn extract_stylesheets_plugin(
             },
             |node_ref, _| {
               if let Some(at) = as_at_rule(&node_ref) {
+                if std::env::var("COMPILED_CSS_TRACE").is_ok() {
+                  eprintln!(
+                    "[extract-stylesheets] at='{}' params='{}'",
+                    at.name(),
+                    at.params()
+                  );
+                }
                 let tmp = postcss::ast::nodes::Root::new();
                 tmp.append(at.to_node());
                 if let Ok(mut res) = tmp.to_result() {
@@ -1400,6 +1407,13 @@ fn extract_stylesheets_plugin(
             },
             |node_ref, _| {
               if let Some(at) = as_at_rule(&node_ref) {
+                if std::env::var("COMPILED_CSS_TRACE").is_ok() {
+                  eprintln!(
+                    "[extract-stylesheets] at='{}' params='{}'",
+                    at.name(),
+                    at.params()
+                  );
+                }
                 let tmp = postcss::ast::nodes::Root::new();
                 tmp.append(at.to_node());
                 if let Ok(mut res) = tmp.to_result() {
@@ -2481,7 +2495,7 @@ pub fn transform_css_via_postcss(
       let header = info.text[..brace_pos].to_string();
       let inner =
         info.text[brace_pos + 1..info.text.rfind('}').unwrap_or(info.text.len())].to_string();
-      let key = path_key(&info.path);
+      let key = format!("{}|{}", path_key(&info.path), header);
       group_map
         .entry(key.clone())
         .or_insert_with(|| (header.clone(), Vec::new()))
@@ -2498,7 +2512,9 @@ pub fn transform_css_via_postcss(
     match kind {
       SheetKind::CatchAll { .. } => sheets.push(info.text),
       SheetKind::AtRule { .. } => {
-        let key = path_key(&info.path);
+        let brace_pos = info.text.find('{').unwrap_or(info.text.len());
+        let header = info.text[..brace_pos].to_string();
+        let key = format!("{}|{}", path_key(&info.path), header);
         if produced.insert(key.clone()) {
           if let Some((header, parts)) = group_map.get(&key) {
             let mut joined = String::new();
@@ -2743,6 +2759,43 @@ mod tests {
     assert_eq!(result.class_names[0], "_bfhkvuon");
     // Verify the CSS output contains the normalized fallback color
     assert!(result.sheets[0].contains("background-color:var(--ds-surface,#fff)"));
+  }
+
+  #[test]
+  fn keeps_property_and_adjacent_keyframes_separate() {
+    let css = "position: relative;@property --gradient-angle { syntax: '<angle>'; initial-value: 45deg; inherits: false; }@keyframes rotationAnimation { 0% { --gradient-angle: 0deg; }100% { --gradient-angle: 360deg; } }@keyframes rotate { from { transform: rotate(0deg); }to { transform: rotate(360deg); } }@keyframes rotate-end { from { transform: rotate(0deg); background: red; }to { transform: rotate(360deg); background: red; } }";
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    let property_rules: Vec<&String> = result
+      .sheets
+      .iter()
+      .filter(|sheet| sheet.contains("@property --gradient-angle"))
+      .collect();
+    assert_eq!(property_rules.len(), 1);
+
+    let keyframes: Vec<&String> = result
+      .sheets
+      .iter()
+      .filter(|sheet| sheet.starts_with("@keyframes "))
+      .collect();
+    assert_eq!(keyframes.len(), 3);
+    assert!(
+      keyframes
+        .iter()
+        .any(|sheet| sheet.starts_with("@keyframes rotationAnimation"))
+    );
+    assert!(
+      keyframes
+        .iter()
+        .any(|sheet| sheet.starts_with("@keyframes rotate{"))
+    );
+    assert!(
+      keyframes
+        .iter()
+        .any(|sheet| sheet.starts_with("@keyframes rotate-end"))
+    );
   }
 
   /// Regression test: linear-gradient background must match Babel's hash.

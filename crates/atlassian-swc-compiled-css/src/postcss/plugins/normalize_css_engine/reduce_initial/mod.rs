@@ -366,10 +366,42 @@ fn is_ignored_property(prop: &str) -> bool {
 
 fn is_transparent_like(value: &str) -> bool {
   let stripped: String = value.chars().filter(|c| !c.is_whitespace()).collect();
-  matches!(
-    stripped.as_str(),
-    "transparent" | "#0000" | "#00000000" | "rgba(0,0,0,0)" | "hsla(0,0%,0%,0)"
-  )
+  let lowered = stripped.to_ascii_lowercase();
+  if matches!(
+    lowered.as_str(),
+    "transparent"
+      | "#0000"
+      | "#00000000"
+      | "rgba(0,0,0,0)"
+      | "hsla(0,0%,0%,0)"
+      | "rgb(0,0,0,0)"
+      | "hsl(0,0%,0%,0)"
+  ) {
+    return true;
+  }
+
+  fn alpha_zero_args(args: &str) -> bool {
+    if let Some((_, alpha)) = args.rsplit_once('/') {
+      return matches!(alpha, "0" | "0.0" | "0%");
+    }
+    if let Some((_, alpha)) = args.rsplit_once(',') {
+      return matches!(alpha, "0" | "0.0" | "0%");
+    }
+    false
+  }
+
+  for func in ["rgb", "hsl", "lab", "lch", "oklab", "oklch"] {
+    if let Some(args) = lowered
+      .strip_prefix(&format!("{func}("))
+      .and_then(|v| v.strip_suffix(')'))
+    {
+      if alpha_zero_args(args) {
+        return true;
+      }
+    }
+  }
+
+  false
 }
 
 fn initial_support(config_path: Option<PathBuf>) -> (bool, Vec<String>) {
@@ -474,6 +506,33 @@ mod tests {
       .expect("process should succeed");
 
     // Force result to be evaluatedf
+    let _ = result.result();
+
+    assert_eq!(
+      result.css().expect("css string").to_string(),
+      "a{background-color:initial}"
+    );
+
+    browserslist_cache()
+      .lock()
+      .unwrap()
+      .remove(&tmp.path().to_path_buf());
+  }
+
+  #[test]
+  fn converts_background_color_lch_transparent_to_initial() {
+    let tmp = tempfile::tempdir().expect("tmpdir");
+    fs::write(tmp.path().join(".browserslistrc"), "Chrome 142\n")
+      .expect("browserslist config write");
+
+    browserslist_cache().lock().unwrap().clear();
+
+    let plugin = plugin(Some(tmp.path().to_path_buf()));
+    let processor = pc::postcss_with_plugins(vec![plugin]);
+    let mut result = processor
+      .process("a{background-color:lch(0% 0 0 / 0)}")
+      .expect("process should succeed");
+
     let _ = result.result();
 
     assert_eq!(

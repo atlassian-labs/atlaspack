@@ -681,6 +681,11 @@ fn fmt_number(n: f64, precision: usize) -> String {
   if s == "-0" {
     s = "0".to_string();
   }
+  if let Some(stripped) = s.strip_prefix("0.") {
+    s = format!(".{stripped}");
+  } else if let Some(stripped) = s.strip_prefix("-0.") {
+    s = format!("-.{stripped}");
+  }
   s
 }
 

@@ -10,6 +10,7 @@ use swc_core::css::codegen::{CodeGenerator, CodegenConfig, Emit, writer::basic::
 use swc_core::css::parser::{parse_string_input, parser::ParserConfig};
 
 use super::super::transform::{Plugin, TransformContext};
+use crate::postcss::utils::collapse_adjacent_nesting_selectors;
 use crate::utils_hash::hash;
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -109,10 +110,7 @@ fn atomicify_qualified_rule(
   ctx: &mut TransformContext<'_>,
   at_rule_label: Option<&str>,
 ) -> Vec<QualifiedRule> {
-  let selectors = normalize_selectors(collect_rule_selectors(&rule), options)
-    .into_iter()
-    .map(|sel| sel)
-    .collect::<Vec<String>>();
+  let selectors = normalize_selectors(collect_rule_selectors(&rule), options);
   let mut replacements: Vec<QualifiedRule> = Vec::new();
 
   for component in rule.block.value {
@@ -491,6 +489,10 @@ fn is_identifier_continue(ch: char) -> bool {
   ch.is_ascii_alphanumeric() || ch == '-' || ch == '_'
 }
 
+fn trace_enabled() -> bool {
+  std::env::var("COMPILED_CSS_TRACE").is_ok()
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -590,35 +592,4 @@ mod tests {
     let output = normalize_selector(input);
     assert_eq!(output, "&&&.important");
   }
-}
-fn trace_enabled() -> bool {
-  std::env::var("COMPILED_CSS_TRACE").is_ok()
-}
-
-fn collapse_adjacent_nesting_selectors(selector: &str) -> String {
-  let mut out = String::with_capacity(selector.len());
-  let mut chars = selector.chars().peekable();
-  while let Some(ch) = chars.next() {
-    if ch == '&' {
-      out.push('&');
-      let mut saw_ws = false;
-      while let Some(next) = chars.peek() {
-        if next.is_whitespace() {
-          saw_ws = true;
-          chars.next();
-        } else {
-          break;
-        }
-      }
-      if let Some('&') = chars.peek().copied() {
-        continue;
-      }
-      if saw_ws {
-        out.push(' ');
-      }
-      continue;
-    }
-    out.push(ch);
-  }
-  out
 }

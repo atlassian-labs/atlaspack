@@ -6,6 +6,7 @@ use swc_core::common::{FileName, SourceMap, input::StringInput};
 use swc_core::css::ast::*;
 use swc_core::css::parser::{parse_string_input, parser::ParserConfig};
 
+use crate::postcss::utils::collapse_adjacent_nesting_selectors;
 use crate::postcss::utils::selector_stringifier::{
   serialize_complex_selector, serialize_relative_selector, serialize_relative_selector_list,
   serialize_selector_list,
@@ -346,40 +347,14 @@ fn starts_with_relative_combinator(selector: &str) -> bool {
   matches!(trimmed.chars().next(), Some('>') | Some('+') | Some('~'))
 }
 
-fn collapse_adjacent_nesting_selectors(original: &str, optimized: String) -> String {
+fn collapse_adjacent_nesting_selectors_if_needed(original: &str, optimized: String) -> String {
   // Preserve adjacent nesting selectors like `&&&&.foo` which SWC will parse
   // as descendant combinators (`& & & &.foo`) unless we collapse them back.
   if !original.contains("&&") {
     return optimized;
   }
 
-  let mut out = String::with_capacity(optimized.len());
-  let mut chars = optimized.chars().peekable();
-  while let Some(ch) = chars.next() {
-    if ch == '&' {
-      out.push('&');
-      let mut saw_ws = false;
-      while let Some(next) = chars.peek() {
-        if next.is_whitespace() {
-          saw_ws = true;
-          chars.next();
-        } else {
-          break;
-        }
-      }
-      if let Some('&') = chars.peek().copied() {
-        // Drop whitespace between adjacent nesting selectors.
-        continue;
-      }
-      if saw_ws {
-        out.push(' ');
-      }
-      continue;
-    }
-    out.push(ch);
-  }
-
-  out
+  collapse_adjacent_nesting_selectors(&optimized)
 }
 
 fn collapse_nesting_whitespace(original: &str, optimized: String) -> String {
@@ -547,7 +522,7 @@ fn minify_selector_string(selector: &str) -> Option<String> {
       "relative-an+b",
     );
     let optimized = serialize_relative_selector_list(&list);
-    let collapsed = collapse_adjacent_nesting_selectors(trimmed, optimized.clone());
+    let collapsed = collapse_adjacent_nesting_selectors_if_needed(trimmed, optimized.clone());
     let optimized = collapse_nesting_whitespace(trimmed, collapsed);
     if std::env::var("COMPILED_CSS_TRACE").is_ok() && selector.contains("nth-of-type") {
       eprintln!(
@@ -576,7 +551,7 @@ fn minify_selector_string(selector: &str) -> Option<String> {
   process_selector_list(&mut list, allow_reorder, true);
   log_nth(&list, "an+b");
   let optimized = serialize_selector_list(&list);
-  let collapsed = collapse_adjacent_nesting_selectors(trimmed, optimized.clone());
+  let collapsed = collapse_adjacent_nesting_selectors_if_needed(trimmed, optimized.clone());
   let optimized = collapse_nesting_whitespace(trimmed, collapsed);
   if std::env::var("COMPILED_CSS_TRACE").is_ok() && selector.contains("nth-of-type") {
     eprintln!("[minify-selectors] in='{}' out='{}'", selector, optimized);
