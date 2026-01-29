@@ -1580,16 +1580,21 @@ where
    -> Option<CssItem> {
     let mut css_output: Option<CssOutput> = None;
 
+    // COMPAT: Babel only treats string literals as CSS if they contain a colon,
+    // indicating they're CSS declarations (e.g., 'color: red'). String literals
+    // without colons (e.g., '104px') are values that should flow through the
+    // CSS variable path, not be treated as CSS declarations.
     if let Expr::Lit(Lit::Str(str_lit)) = expr {
-      css_output = Some(CssOutput {
-        css: vec![CssItem::unconditional(str_lit.value.as_ref())],
-        variables: Vec::new(),
-      });
-    } else if let Expr::Lit(Lit::Num(num_lit)) = expr {
-      css_output = Some(CssOutput {
-        css: vec![CssItem::unconditional(&num_lit.value.to_string())],
-        variables: Vec::new(),
-      });
+      if str_lit.value.contains(':') {
+        css_output = Some(CssOutput {
+          css: vec![CssItem::unconditional(str_lit.value.as_ref())],
+          variables: Vec::new(),
+        });
+      }
+    } else if let Expr::Lit(Lit::Num(_)) = expr {
+      // COMPAT: Numeric literals in conditional branches should also flow through
+      // the CSS variable path, not be treated as complete CSS declarations.
+      // This matches Babel's behavior where value-only expressions become variables.
     } else {
       let looks_like_css_literal = if matches!(expr, Expr::Object(_)) {
         true
@@ -3955,6 +3960,55 @@ mod tests {
         }
         _ => panic!("expected logical css item"),
       }
+    } else {
+      panic!("expected conditional expression");
+    }
+  }
+
+  #[test]
+  fn extract_conditional_expression_treats_value_strings_as_non_css() {
+    // String literals without colons (like '104px') should NOT be treated as CSS
+    // declarations. They should be treated as values that flow through the CSS
+    // variable path. This matches Babel's behavior.
+    let meta = create_metadata();
+    let expr = parse_expression("flag ? propValue : '104px'");
+
+    if let Expr::Cond(cond) = expr {
+      let result = extract_conditional_expression_with_builder(&cond, &meta, &mut |_, _| {
+        // This should NOT be called for string literals without colons
+        panic!("build_css should not be called for value-only string literals");
+      });
+
+      // Neither branch should produce CSS, so the result should be empty
+      assert!(
+        result.css.is_empty(),
+        "expected empty CSS for value-only conditional, got {:?}",
+        result.css
+      );
+    } else {
+      panic!("expected conditional expression");
+    }
+  }
+
+  #[test]
+  fn extract_conditional_expression_treats_css_strings_with_colons() {
+    // String literals WITH colons (like 'color: red') SHOULD be treated as CSS
+    let meta = create_metadata();
+    let expr = parse_expression("flag ? 'color: red' : 'color: blue'");
+    let mut call_count = 0;
+
+    if let Expr::Cond(cond) = expr {
+      let result = extract_conditional_expression_with_builder(&cond, &meta, &mut |_, _| {
+        call_count += 1;
+        CssOutput {
+          css: vec![CssItem::unconditional("mock css")],
+          variables: Vec::new(),
+        }
+      });
+
+      // Both branches have colons, so they should be treated as CSS
+      assert_eq!(result.css.len(), 1);
+      assert!(matches!(result.css[0], CssItem::Conditional(_)));
     } else {
       panic!("expected conditional expression");
     }
