@@ -8,7 +8,9 @@ use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::package_result::PackageResult;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
-use atlaspack_core::types::{AtlaspackOptions, BundleGraphNode, Environment, SourceField, Targets};
+use atlaspack_core::types::{
+  AtlaspackOptions, BundleGraphEdgeType, BundleGraphNode, Environment, SourceField, Targets,
+};
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
 use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter, StatsSnapshot};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
@@ -45,7 +47,7 @@ pub struct Atlaspack {
   pub request_tracker: Arc<RwLock<RequestTracker>>,
   /// The bundle graph deserialised from JS. Used temporarily until we have a native
   /// bundle graph implementation. Starts empty and is populated via `load_bundle_graph`.
-  /// Uses std::sync::RwLock so the packager (and any Rayon threads) can take a read lock when needed.
+  /// Uses non-async RwLock so the packager (and any Rayon threads) can take a read lock when needed.
   pub bundle_graph: Arc<parking_lot::RwLock<BundleGraphFromJs>>,
 }
 
@@ -242,7 +244,7 @@ impl Atlaspack {
   pub fn load_bundle_graph(
     &self,
     nodes: Vec<BundleGraphNode>,
-    edges: Vec<(u32, u32, u8)>,
+    edges: Vec<(u32, u32, BundleGraphEdgeType)>,
     public_id_by_asset_id: HashMap<String, String>,
     environments: Vec<Environment>,
   ) -> anyhow::Result<()> {
@@ -253,6 +255,8 @@ impl Atlaspack {
 
   #[tracing::instrument(level = "info", skip_all)]
   pub fn package(&self, bundle_id: String) -> anyhow::Result<PackageResult> {
+    // This possibly could be persistent between pacakges? But right now with SSR builds only we're talking about a few packages at most
+    // so we can worry about that refactor later.
     let packager = JsPackager::new(Arc::clone(&self.db), Arc::clone(&self.bundle_graph));
     packager.package(&bundle_id)
   }

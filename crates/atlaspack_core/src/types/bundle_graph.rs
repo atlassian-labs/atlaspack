@@ -166,9 +166,30 @@ pub struct BundleNode {
   pub value: Bundle,
 }
 
-// TODO make this a proper enum matching BundleGraph.ts
-pub type BundleGraphEdgeType = u8;
+// This matches the edge types from JS in packages/core/core/src/BundleGraph.ts
+#[derive(PartialEq, Eq)]
+pub enum BundleGraphEdgeType {
+  Null = 1,
+  Contains = 2,
+  Bundle = 3,
+  References = 4,
+  InternalAsync = 5,
+  Conditional = 6, // NOTE - this does not match JS, but the JS thing is probably a bug!
+}
 
+impl From<u8> for BundleGraphEdgeType {
+  fn from(value: u8) -> Self {
+    match value {
+      1 => BundleGraphEdgeType::Null,
+      2 => BundleGraphEdgeType::Contains,
+      3 => BundleGraphEdgeType::Bundle,
+      4 => BundleGraphEdgeType::References,
+      5 => BundleGraphEdgeType::InternalAsync,
+      6 => BundleGraphEdgeType::Conditional,
+      _ => panic!("Invalid bundle graph edge type: {}", value),
+    }
+  }
+}
 #[cfg(test)]
 mod tests {
   use super::*;

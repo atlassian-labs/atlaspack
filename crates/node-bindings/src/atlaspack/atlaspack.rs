@@ -234,7 +234,15 @@ pub fn atlaspack_napi_load_bundle_graph(
         let nodes = BundleGraphFromJs::deserialize_from_json(nodes_json, &environments)?;
 
         let atlaspack = atlaspack.write();
-        atlaspack.load_bundle_graph(nodes, edges, public_id_by_asset_id, environments)
+        atlaspack.load_bundle_graph(
+          nodes,
+          edges
+            .into_iter()
+            .map(|(from, to, edge_type)| (from, to, edge_type.into()))
+            .collect(),
+          public_id_by_asset_id,
+          environments,
+        )
       })();
 
       deferred.resolve(move |env| match result {

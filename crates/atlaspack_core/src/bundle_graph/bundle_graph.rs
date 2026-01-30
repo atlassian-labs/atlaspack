@@ -18,5 +18,6 @@ pub trait BundleGraph {
     bundle: &Bundle,
   ) -> anyhow::Result<Option<&Asset>>;
 
+  /// Returns whether a dependency was excluded because it had no used symbols.
   fn is_dependency_skipped(&self, dependency: &Dependency) -> bool;
 }

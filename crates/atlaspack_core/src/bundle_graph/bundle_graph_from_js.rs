@@ -174,14 +174,10 @@ impl BundleGraph for BundleGraphFromJs {
   fn get_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&types::Dependency>> {
     let asset_node = self.nodes_by_id.get(&asset.id).unwrap();
 
-    // Filter to only edges of type 1 (NULL_EDGE_TYPE) - this is the default edge type
-    // used to connect assets to their dependencies in the bundle graph
-    const NULL_EDGE_TYPE: u8 = 1;
-
     self
       .graph
       .edges_directed(*asset_node, Direction::Outgoing)
-      .filter(|edge| *edge.weight() == NULL_EDGE_TYPE)
+      .filter(|edge| *edge.weight() == BundleGraphEdgeType::Null)
       .map(|edge| {
         let node = self.graph.node_weight(edge.target()).unwrap();
         let BundleGraphNode::Dependency(dependency) = node else {
@@ -215,9 +211,10 @@ impl BundleGraph for BundleGraphFromJs {
 
     // Find the first asset where there's a "contains" edge between the bundle and the asset
     if let Some(node_index) = asset_nodes.iter().find(|asset_node| {
-      self.graph.edges_connecting(*bundle_node, **asset_node).any(
-        |edge| *edge.weight() == 2, /* BundleGraphEdgeType::Contains */
-      )
+      self
+        .graph
+        .edges_connecting(*bundle_node, **asset_node)
+        .any(|edge| *edge.weight() == BundleGraphEdgeType::Contains)
     }) && let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(*node_index)
     {
       return Ok(Some(&asset.value));
