@@ -1,3 +1,4 @@
+import type {Async} from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
 import type {AtlaspackConfig, LoadedPlugin} from '../AtlaspackConfig';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
@@ -27,7 +28,11 @@ import {
   invalidateDevDeps,
 } from './DevDepRequest';
 import {PluginWithLoadConfig} from './ConfigRequest';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {requestTypes} from '../RequestTracker';
 import type {AtlaspackV3} from '../atlaspack-v3';
+import createAssetGraphRequestJS from './AssetGraphRequest';
+import {createAssetGraphRequestRust} from './AssetGraphRequestRust';
 import type {BundleGraphResult} from './BundleGraphRequest';
 import createAtlaspackConfigRequest, {
   getCachedAtlaspackConfig,
@@ -39,6 +44,12 @@ import {
   loadPluginConfigWithDevDeps,
   runDevDepRequest,
 } from './BundleGraphRequestUtils';
+
+type BundleGraphRequestInput = {
+  requestedAssetIds: Set<string>;
+  signal?: AbortSignal;
+  optionsRef: SharedReference;
+};
 
 type BundleGraphRequestRustInput = {
   assetGraph: AssetGraph;
@@ -52,6 +63,78 @@ type RunInput = {
   input: BundleGraphRequestRustInput;
 } & StaticRunOpts<BundleGraphResult>;
 
+type FactoryRunInput = {
+  input: BundleGraphRequestInput;
+} & StaticRunOpts<BundleGraphResult>;
+
+type BundleGraphRequestRust = {
+  id: string;
+  readonly type: typeof requestTypes.bundle_graph_request;
+  run: (arg1: FactoryRunInput) => Async<BundleGraphResult>;
+  input: BundleGraphRequestInput;
+};
+
+/**
+ * Creates a bundle graph request implementation that performs bundling via Rust.
+ *
+ * Note: Asset graph creation is still delegated to the existing AssetGraphRequest
+ * infrastructure (JS by default, or Rust when `atlaspackV3` is enabled).
+ */
+export default function createBundleGraphRequestRust(
+  input: BundleGraphRequestInput,
+): BundleGraphRequestRust {
+  return {
+    type: requestTypes.bundle_graph_request,
+    id: 'BundleGraphRust',
+    run: async (runInput) => {
+      const {options, api} = runInput;
+      const {optionsRef, requestedAssetIds} = runInput.input;
+
+      if (!runInput.rustAtlaspack) {
+        throw new Error(
+          'BundleGraphRequestRust requires rustAtlaspack to be present',
+        );
+      }
+
+      const createAssetGraphRequest =
+        getFeatureFlag('atlaspackV3') && runInput.rustAtlaspack
+          ? createAssetGraphRequestRust(runInput.rustAtlaspack)
+          : createAssetGraphRequestJS;
+
+      const assetGraphRequest = createAssetGraphRequest({
+        name: 'Main',
+        entries: options.entries,
+        optionsRef,
+        shouldBuildLazily: options.shouldBuildLazily,
+        lazyIncludes: options.lazyIncludes,
+        lazyExcludes: options.lazyExcludes,
+        requestedAssetIds,
+      });
+
+      const {assetGraph, changedAssets, assetRequests} = await api.runRequest(
+        assetGraphRequest,
+        {
+          force:
+            Boolean(runInput.rustAtlaspack) ||
+            (options.shouldBuildLazily && requestedAssetIds.size > 0),
+        },
+      );
+
+      return runBundleGraphRequestRust({
+        ...(runInput as any),
+        input: {
+          assetGraph,
+          changedAssets,
+          assetRequests,
+          optionsRef,
+          rustAtlaspack: runInput.rustAtlaspack,
+        },
+      });
+    },
+    input,
+  };
+}
+
 /**
  * Runs the native Rust bundler, then performs naming and runtime application in JS.
  *
@@ -61,7 +144,7 @@ type RunInput = {
  */
 export async function runBundleGraphRequestRust(
   runInput: RunInput,
-): Promise<BundleGraphResult> {
+): Promise<BundleGraphResult> { 
   const {input, api, options} = runInput;
   const {
     assetGraph,

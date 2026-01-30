@@ -398,7 +398,7 @@ export const DEFAULT_FEATURE_FLAGS = {
 
   /**
    * Enables native bundling. When enabled, the bundle graph is built in Rust
-   * instead of JavaScript. This is the first step towards a fully native bundler.
+   * instead of JavaScript.
    *
    * @author Matt Jones <mjones4@atlassian.com>
    * @since 2026-01-27

@@ -9,6 +9,7 @@ import type BundleGraph from '../BundleGraph';
 import createBundleGraphRequest, {
   BundleGraphResult,
 } from './BundleGraphRequest';
+import createBundleGraphRequestRust from './BundleGraphRequestRust';
 import createWriteBundlesRequest from './WriteBundlesRequest';
 import {assertSignalNotAborted} from '../utils';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
@@ -73,11 +74,18 @@ async function run({
 }: RunInput<AtlaspackBuildRequestResult>) {
   let {optionsRef, requestedAssetIds, signal} = input;
 
-  let bundleGraphRequest = createBundleGraphRequest({
-    optionsRef,
-    requestedAssetIds,
-    signal,
-  });
+  let bundleGraphRequest =
+    getFeatureFlag('nativeBundling') && rustAtlaspack
+      ? createBundleGraphRequestRust({
+          optionsRef,
+          requestedAssetIds,
+          signal,
+        })
+      : createBundleGraphRequest({
+          optionsRef,
+          requestedAssetIds,
+          signal,
+        });
 
   let {bundleGraph, changedAssets, assetRequests}: BundleGraphResult =
     await api.runRequest(bundleGraphRequest, {

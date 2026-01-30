@@ -52,7 +52,6 @@ import {
 } from './BundleGraphRequestUtils';
 import createAssetGraphRequestJS from './AssetGraphRequest';
 import {createAssetGraphRequestRust} from './AssetGraphRequestRust';
-import {runBundleGraphRequestRust} from './BundleGraphRequestRust';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 import {
@@ -215,39 +214,6 @@ export default function createBundleGraphRequest(
       if (subRequestsInvalid) {
         assetGraph.safeToIncrementallyBundle = false;
         assetGraph.setNeedsBundling();
-      }
-
-      // Use native bundling if the feature flag is enabled and rustAtlaspack is available
-      if (getFeatureFlag('nativeBundling') && input.rustAtlaspack) {
-        let bundlingMeasurement = tracer.createMeasurement('bundling');
-        let res = await runBundleGraphRequestRust({
-          input: {
-            assetGraph,
-            changedAssets,
-            assetRequests,
-            optionsRef,
-            rustAtlaspack: input.rustAtlaspack,
-          },
-          api: input.api,
-          options,
-          farm: input.farm,
-          invalidateReason,
-          rustAtlaspack: input.rustAtlaspack,
-        });
-        bundlingMeasurement && bundlingMeasurement.end();
-
-        for (let [id, asset] of changedAssets) {
-          res.changedAssets.set(id, asset);
-        }
-
-        await dumpGraphToGraphViz(
-          // @ts-expect-error TS2345
-          res.bundleGraph._graph,
-          'BundleGraph',
-          bundleGraphEdgeTypes,
-        );
-
-        return res;
       }
 
       let configResult = nullthrows(
