@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.28.0
+
+### Minor Changes
+
+- [#970](https://github.com/atlassian-labs/atlaspack/pull/970) [`8826fd0`](https://github.com/atlassian-labs/atlaspack/commit/8826fd02c29c9c67cf0c80da41f424257fbdef93) Thanks [@marcins](https://github.com/marcins)! - Add initial plumbing for native packaging to core and Atlaspack V3 code
+
 ## 2.27.7
 
 ### Patch Changes
