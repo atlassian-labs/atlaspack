@@ -26,3 +26,11 @@ export function createDefaultResolver(
     },
   };
 }
+
+export const DEFAULT_IMPORT_SOURCES = ['@compiled/react', '@atlaskit/css'];
+
+type Falsy = false | null | undefined | '' | 0;
+
+export function toBoolean<T>(value: T): value is Exclude<T, Falsy> {
+  return Boolean(value);
+}
