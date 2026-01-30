@@ -420,4 +420,5 @@ export declare function atlaspackNapiLoadBundleGraph(
   nodes: string,
   edges: Array<[number, number, number]>,
   publicIdByAssetId: Record<string, string>,
+  environments: string,
 ): object;

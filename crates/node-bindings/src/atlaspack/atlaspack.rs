@@ -10,6 +10,7 @@ use atlaspack::AtlaspackInitOptions;
 use atlaspack::WatchEvents;
 use atlaspack::rpc::nodejs::NodejsWorker;
 use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
+use atlaspack_core::types::Environment;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use lmdb_js_lite::DatabaseHandle;
@@ -218,6 +219,7 @@ pub fn atlaspack_napi_load_bundle_graph(
   nodes_json: String,
   edges: Vec<(u32, u32, u8)>,
   public_id_by_asset_id: HashMap<String, String>,
+  environments_json: String,
 ) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;
 
@@ -226,10 +228,13 @@ pub fn atlaspack_napi_load_bundle_graph(
     let atlaspack = atlaspack_napi.clone();
     move || {
       let result: anyhow::Result<()> = (|| {
-        let nodes = BundleGraphFromJs::deserialize_from_json(nodes_json)?;
+        let environments: Vec<Environment> = serde_json::from_str(&environments_json)
+          .map_err(|e| anyhow::anyhow!("Failed to parse environments JSON: {}", e))?;
+
+        let nodes = BundleGraphFromJs::deserialize_from_json(nodes_json, &environments)?;
 
         let atlaspack = atlaspack.write();
-        atlaspack.load_bundle_graph(nodes, edges, public_id_by_asset_id)
+        atlaspack.load_bundle_graph(nodes, edges, public_id_by_asset_id, environments)
       })();
 
       deferred.resolve(move |env| match result {

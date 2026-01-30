@@ -1,7 +1,4 @@
-use std::{
-  collections::HashMap,
-  sync::{Arc, RwLock},
-};
+use std::{collections::HashMap, sync::Arc};
 
 use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
@@ -10,12 +7,15 @@ use atlaspack_core::{
   version::atlaspack_rust_version,
 };
 use lmdb_js_lite::DatabaseHandle;
+use parking_lot::{RwLock, RwLockReadGuard};
 use rayon::prelude::*;
 use regex::Regex;
 
 use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
 
 mod assemble;
+
+type PackagedAsset<'a> = (&'a Asset, String);
 
 pub struct JsPackager<B: BundleGraph + Send + Sync> {
   db: Arc<DatabaseHandle>,
@@ -30,8 +30,8 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   /// Acquires a read lock and returns a guard. Use for operations that need the graph for
   /// multiple calls (e.g. get_bundle_by_id then traverse_bundle_assets). For single lookups
   /// from other threads (e.g. in par_iter), use `self.bundle_graph.read().unwrap()` directly.
-  fn bundle_graph(&self) -> std::sync::RwLockReadGuard<'_, B> {
-    self.bundle_graph.read().unwrap()
+  fn bundle_graph(&self) -> RwLockReadGuard<'_, B> {
+    self.bundle_graph.read()
   }
 
   pub fn package(&self, bundle_id: &str) -> anyhow::Result<PackageResult> {
@@ -161,7 +161,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     bundle: &Bundle,
     asset: &Asset,
   ) -> anyhow::Result<HashMap<String, Option<String>>> {
-    let bundle_graph = self.bundle_graph.read().unwrap();
+    let bundle_graph = self.bundle_graph.read();
 
     // Get dependencies for asset
     let dependencies = bundle_graph.get_dependencies(asset)?;
@@ -200,7 +200,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   }
 
   fn wrap_asset(&self, _bundle: &Bundle, asset: &Asset, code: String) -> anyhow::Result<String> {
-    let bundle_graph = self.bundle_graph.read().unwrap();
+    let bundle_graph = self.bundle_graph.read();
     let public_id = bundle_graph
       .get_public_asset_id(&asset.id)
       .expect("Asset not found in bundle graph")
@@ -240,12 +240,10 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     // Sort the contents - non-entry assets by asset id first, then entry assets in the same order as bundle.entry_asset_ids
 
     // Separate entry and non-entry assets
-    let (mut entry_contents, mut non_entry_contents): (
-      Vec<(&Asset, String)>,
-      Vec<(&Asset, String)>,
-    ) = contents
-      .into_iter()
-      .partition(|(asset, _)| bundle.entry_asset_ids.contains(&asset.id));
+    let (mut entry_contents, mut non_entry_contents): (Vec<PackagedAsset>, Vec<PackagedAsset>) =
+      contents
+        .into_iter()
+        .partition(|(asset, _)| bundle.entry_asset_ids.contains(&asset.id));
 
     // Sort non-entry assets by asset ID
     non_entry_contents.sort_by_key(|(asset, _)| asset.id.clone());

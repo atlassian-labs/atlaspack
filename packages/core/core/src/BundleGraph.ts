@@ -22,6 +22,7 @@ import type {
   BundleNode,
   Dependency,
   DependencyNode,
+  Environment,
   InternalSourceLocation,
   Target,
   Condition,
@@ -580,6 +581,7 @@ export default class BundleGraph {
     nodesJson: string;
     edges: [number, number, BundleGraphEdgeType][];
     publicIdByAssetId: Record<string, string>;
+    environmentsJson: string;
   } {
     const start = performance.now();
 
@@ -594,9 +596,46 @@ export default class BundleGraph {
       next = edgeIterator.next();
     }
 
+    // Extract and deduplicate environments
+    const environmentMap = new Map<string, Environment>();
+    const extractEnvironment = (envRef: EnvironmentRef): string => {
+      const env = fromEnvironmentId(envRef);
+      const envId = env.id;
+      if (!environmentMap.has(envId)) {
+        environmentMap.set(envId, env);
+      }
+      return envId;
+    };
+
+    // Replace env objects with env IDs in nodes
+    const processedNodes = nodes.map((node) => {
+      const processedNode = {...node};
+      if (node.type === 'asset' && node.value?.env) {
+        processedNode.value = {
+          ...node.value,
+          env: extractEnvironment(node.value.env),
+        };
+      } else if (node.type === 'dependency' && node.value?.env) {
+        processedNode.value = {
+          ...node.value,
+          env: extractEnvironment(node.value.env),
+        };
+      } else if (node.type === 'bundle' && node.value?.env) {
+        processedNode.value = {
+          ...node.value,
+          env: extractEnvironment(node.value.env),
+        };
+      }
+      return processedNode;
+    });
+
     // Optimize nodes by omitting null/undefined values to reduce JSON size
-    const optimizedNodes = nodes.map((node) => this._omitNulls(node));
+    const optimizedNodes = processedNodes.map((node) => this._omitNulls(node));
     const nodesJson = JSON.stringify(optimizedNodes);
+
+    // Serialize environments as array
+    const environments = Array.from(environmentMap.values());
+    const environmentsJson = JSON.stringify(environments);
 
     // Convert Map to plain object for serialization
     const publicIdByAssetId: Record<string, string> = {};
@@ -605,13 +644,14 @@ export default class BundleGraph {
     }
 
     const duration = performance.now() - start;
-    const sizeMB = (nodesJson.length / (1024 * 1024)).toFixed(2);
+    const nodesSizeMB = (nodesJson.length / (1024 * 1024)).toFixed(2);
+    const envsSizeMB = (environmentsJson.length / (1024 * 1024)).toFixed(2);
     logger.verbose({
       origin: '@atlaspack/core',
-      message: `serializeForNative: ${duration.toFixed(1)}ms, ${sizeMB}MB JSON, ${nodes.length} nodes, ${edges.length} edges`,
+      message: `serializeForNative: ${duration.toFixed(1)}ms, ${nodesSizeMB}MB nodes, ${envsSizeMB}MB envs (${environmentMap.size} unique), ${nodes.length} nodes, ${edges.length} edges`,
     });
 
-    return {nodesJson, edges, publicIdByAssetId};
+    return {nodesJson, edges, publicIdByAssetId, environmentsJson};
   }
 
   /**

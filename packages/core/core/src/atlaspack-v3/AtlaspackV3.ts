@@ -102,7 +102,7 @@ export class AtlaspackV3 {
   }
 
   loadBundleGraph(bundleGraph: BundleGraph): Promise<void> {
-    const {nodesJson, edges, publicIdByAssetId} =
+    const {nodesJson, edges, publicIdByAssetId, environmentsJson} =
       bundleGraph.serializeForNative();
 
     return atlaspackNapiLoadBundleGraph(
@@ -110,6 +110,7 @@ export class AtlaspackV3 {
       nodesJson,
       edges,
       publicIdByAssetId,
+      environmentsJson,
     ) as Promise<void>;
   }
 

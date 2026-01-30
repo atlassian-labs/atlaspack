@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use petgraph::{
   Direction,
@@ -11,7 +12,7 @@ use rayon::prelude::*;
 
 use crate::{
   bundle_graph::bundle_graph::BundleGraph,
-  types::{self, Asset, Bundle, BundleGraphEdgeType, BundleGraphNode, Dependency},
+  types::{self, Asset, Bundle, BundleGraphEdgeType, BundleGraphNode, Dependency, Environment},
 };
 
 type BundleGraphNodeId = String;
@@ -22,6 +23,8 @@ pub struct BundleGraphFromJs {
   nodes_by_id: HashMap<BundleGraphNodeId, NodeIndex>,
   /// Maps full asset IDs (16-character hex strings) to shortened public IDs (base62-encoded).
   public_id_by_asset_id: HashMap<String, String>,
+  /// Maps environment IDs to Environment objects for lookup
+  _environments_by_id: HashMap<String, Arc<Environment>>,
 }
 
 impl BundleGraphFromJs {
@@ -29,7 +32,17 @@ impl BundleGraphFromJs {
     nodes: Vec<BundleGraphNode>,
     edges: Vec<(u32, u32, BundleGraphEdgeType)>,
     public_id_by_asset_id: HashMap<String, String>,
+    environments: Vec<Environment>,
   ) -> Self {
+    // Build environment lookup map
+    let environments_by_id: HashMap<String, Arc<Environment>> = environments
+      .into_iter()
+      .map(|env| {
+        let id = env.id();
+        (id, Arc::new(env))
+      })
+      .collect();
+
     let mut graph = StableDiGraph::new();
     let mut nodes_by_id = HashMap::new();
     for node in nodes {
@@ -48,6 +61,7 @@ impl BundleGraphFromJs {
       graph,
       nodes_by_id,
       public_id_by_asset_id,
+      _environments_by_id: environments_by_id,
     }
   }
 
@@ -67,8 +81,24 @@ impl BundleGraphFromJs {
     bundles
   }
 
-  #[tracing::instrument(level = "info", skip_all, fields(size))]
-  pub fn deserialize_from_json(nodes_json: String) -> anyhow::Result<Vec<BundleGraphNode>> {
+  #[tracing::instrument(
+    level = "info",
+    skip_all,
+    fields(json_size = nodes_json.len())
+  )]
+  pub fn deserialize_from_json(
+    nodes_json: String,
+    environments: &[Environment],
+  ) -> anyhow::Result<Vec<BundleGraphNode>> {
+    // Build environment lookup map
+    let environments_by_id: HashMap<String, Arc<Environment>> = environments
+      .iter()
+      .map(|env| {
+        let id = env.id();
+        (id, Arc::new(env.clone()))
+      })
+      .collect();
+
     // Parse JSON to Vec<Value> first (fast), then parallelize node deserialization
     let json_values: Vec<serde_json::Value> = serde_json::from_str(&nodes_json)
       .map_err(|e| anyhow!("Failed to parse bundle graph JSON: {}", e))?;
@@ -77,12 +107,37 @@ impl BundleGraphFromJs {
     let nodes: Vec<BundleGraphNode> = json_values
       .into_par_iter()
       .map(|value| {
-        serde_json::from_value::<BundleGraphNode>(value)
+        Self::deserialize_node_with_env_lookup(value, &environments_by_id)
           .map_err(|e| anyhow!("Failed to deserialize node: {}", e))
       })
       .collect::<anyhow::Result<Vec<_>>>()?;
-    tracing::Span::current().record("size", nodes.len());
+
+    tracing::Span::current().record("nodes", nodes.len());
     Ok(nodes)
+  }
+
+  /// Deserialize a single node, replacing environment ID strings with Arc<Environment> references
+  fn deserialize_node_with_env_lookup(
+    mut value: serde_json::Value,
+    environments_by_id: &HashMap<String, Arc<Environment>>,
+  ) -> anyhow::Result<BundleGraphNode> {
+    // Check if this node has an env field that needs to be resolved
+    if let Some(node_value) = value.get_mut("value")
+      && let Some(env_id) = node_value.get("env").and_then(|v| v.as_str())
+    {
+      // Look up the environment and replace the ID with the full object
+      let env = environments_by_id
+        .get(env_id)
+        .ok_or_else(|| anyhow!("Environment ID not found: {}", env_id))?;
+
+      // Serialize the environment and replace the env field
+      let env_value = serde_json::to_value(&**env)
+        .map_err(|e| anyhow!("Failed to serialize environment: {}", e))?;
+      node_value["env"] = env_value;
+    }
+
+    serde_json::from_value::<BundleGraphNode>(value)
+      .map_err(|e| anyhow!("Failed to deserialize node: {}", e))
   }
 }
 
@@ -288,7 +343,7 @@ mod tests {
 
   #[test]
   fn test_bundle_graph_from_js_new_empty() {
-    let graph = BundleGraphFromJs::new(vec![], vec![], HashMap::new());
+    let graph = BundleGraphFromJs::new(vec![], vec![], HashMap::new(), vec![]);
     assert!(graph.get_bundles().is_empty());
   }
 
@@ -300,7 +355,7 @@ mod tests {
     ];
     let edges = vec![(0, 1, 1u8)]; // Edge from root to bundle
 
-    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new());
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![Environment::default()]);
     let bundles = graph.get_bundles();
 
     assert_eq!(bundles.len(), 1);
@@ -322,7 +377,7 @@ mod tests {
       (1, 3, 2u8), // bundle1 -> bundle3
     ];
 
-    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new());
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![Environment::default()]);
     let bundles = graph.get_bundles();
 
     assert_eq!(bundles.len(), 3);
@@ -349,7 +404,7 @@ mod tests {
       (3, 4, 2u8), // dependency -> bundle2
     ];
 
-    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new());
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![Environment::default()]);
     let bundles = graph.get_bundles();
 
     // Only Bundle nodes should be returned
@@ -370,7 +425,7 @@ mod tests {
     // Only edge from root to bundle1, bundle2 is disconnected
     let edges = vec![(0, 1, 1u8)];
 
-    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new());
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![Environment::default()]);
     let bundles = graph.get_bundles();
 
     // Only bundle1 should be reachable
@@ -396,14 +451,14 @@ mod tests {
   #[test]
   fn test_deserialize_from_json_empty_array() {
     let json = "[]".to_string();
-    let nodes = BundleGraphFromJs::deserialize_from_json(json).unwrap();
+    let nodes = BundleGraphFromJs::deserialize_from_json(json, &[]).unwrap();
     assert!(nodes.is_empty());
   }
 
   #[test]
   fn test_deserialize_from_json_single_root_node() {
     let json = r#"[{"type": "root", "id": "root-1", "value": null}]"#.to_string();
-    let nodes = BundleGraphFromJs::deserialize_from_json(json).unwrap();
+    let nodes = BundleGraphFromJs::deserialize_from_json(json, &[]).unwrap();
     assert_eq!(nodes.len(), 1);
     assert_eq!(nodes[0].id(), "root-1");
     assert!(matches!(nodes[0], BundleGraphNode::Root(_)));
@@ -416,7 +471,7 @@ mod tests {
       {"type": "entry_specifier", "id": "es-1", "value": "/src/index.js"}
     ]"#
       .to_string();
-    let nodes = BundleGraphFromJs::deserialize_from_json(json).unwrap();
+    let nodes = BundleGraphFromJs::deserialize_from_json(json, &[]).unwrap();
     assert_eq!(nodes.len(), 2);
     assert_eq!(nodes[0].id(), "root");
     assert_eq!(nodes[1].id(), "es-1");
@@ -425,7 +480,7 @@ mod tests {
   #[test]
   fn test_deserialize_from_json_invalid_json() {
     let json = "not valid json".to_string();
-    let result = BundleGraphFromJs::deserialize_from_json(json);
+    let result = BundleGraphFromJs::deserialize_from_json(json, &[]);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("Failed to parse bundle graph JSON"));
@@ -434,7 +489,7 @@ mod tests {
   #[test]
   fn test_deserialize_from_json_invalid_node_type() {
     let json = r#"[{"type": "invalid_type", "id": "test"}]"#.to_string();
-    let result = BundleGraphFromJs::deserialize_from_json(json);
+    let result = BundleGraphFromJs::deserialize_from_json(json, &[]);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("Failed to deserialize node"));
@@ -444,7 +499,7 @@ mod tests {
   fn test_deserialize_from_json_missing_required_field() {
     // Missing "id" field
     let json = r#"[{"type": "root", "value": null}]"#.to_string();
-    let result = BundleGraphFromJs::deserialize_from_json(json);
+    let result = BundleGraphFromJs::deserialize_from_json(json, &[]);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("Failed to deserialize node"));
@@ -458,10 +513,10 @@ mod tests {
       {"type": "entry_specifier", "id": "es-1", "value": "/src/index.js"}
     ]"#
       .to_string();
-    let nodes = BundleGraphFromJs::deserialize_from_json(json).unwrap();
+    let nodes = BundleGraphFromJs::deserialize_from_json(json, &[]).unwrap();
     let edges = vec![(0, 1, 1u8)];
 
-    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new());
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
     // Graph should be created successfully (no bundles in this case)
     assert!(graph.get_bundles().is_empty());
   }
@@ -472,7 +527,7 @@ mod tests {
     public_id_by_asset_id.insert("abc123def456".to_string(), "8LVYC".to_string());
     public_id_by_asset_id.insert("xyz789uvw012".to_string(), "d7Pd5".to_string());
 
-    let graph = BundleGraphFromJs::new(vec![], vec![], public_id_by_asset_id);
+    let graph = BundleGraphFromJs::new(vec![], vec![], public_id_by_asset_id, vec![]);
 
     assert_eq!(graph.get_public_asset_id("abc123def456"), Some("8LVYC"));
     assert_eq!(graph.get_public_asset_id("xyz789uvw012"), Some("d7Pd5"));

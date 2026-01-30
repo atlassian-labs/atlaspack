@@ -8,7 +8,7 @@ use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::package_result::PackageResult;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
-use atlaspack_core::types::{AtlaspackOptions, BundleGraphNode, SourceField, Targets};
+use atlaspack_core::types::{AtlaspackOptions, BundleGraphNode, Environment, SourceField, Targets};
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
 use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter, StatsSnapshot};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
@@ -46,7 +46,7 @@ pub struct Atlaspack {
   /// The bundle graph deserialised from JS. Used temporarily until we have a native
   /// bundle graph implementation. Starts empty and is populated via `load_bundle_graph`.
   /// Uses std::sync::RwLock so the packager (and any Rayon threads) can take a read lock when needed.
-  pub bundle_graph: Arc<std::sync::RwLock<BundleGraphFromJs>>,
+  pub bundle_graph: Arc<parking_lot::RwLock<BundleGraphFromJs>>,
 }
 
 impl Atlaspack {
@@ -173,7 +173,7 @@ impl Atlaspack {
       config_loader,
       plugins,
       request_tracker: Arc::new(RwLock::new(request_tracker)),
-      bundle_graph: Arc::new(std::sync::RwLock::new(BundleGraphFromJs::default())),
+      bundle_graph: Arc::new(parking_lot::RwLock::new(BundleGraphFromJs::default())),
     })
   }
 }
@@ -234,15 +234,20 @@ impl Atlaspack {
     })
   }
 
-  #[tracing::instrument(level = "info", skip_all)]
+  #[tracing::instrument(
+    level = "info",
+    skip_all,
+    fields(nodes = nodes.len(), edges = edges.len(), asset_id_map_size = public_id_by_asset_id.len(), environments = environments.len())
+  )]
   pub fn load_bundle_graph(
     &self,
     nodes: Vec<BundleGraphNode>,
     edges: Vec<(u32, u32, u8)>,
     public_id_by_asset_id: HashMap<String, String>,
+    environments: Vec<Environment>,
   ) -> anyhow::Result<()> {
-    *self.bundle_graph.write().unwrap() =
-      BundleGraphFromJs::new(nodes, edges, public_id_by_asset_id);
+    *self.bundle_graph.write() =
+      BundleGraphFromJs::new(nodes, edges, public_id_by_asset_id, environments);
     Ok(())
   }
 

@@ -11,6 +11,7 @@ workspace = true
 atlaspack_core = { path = "../atlaspack_core" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
 anyhow = { workspace = true }
+parking_lot = { workspace = true }
 rayon = { workspace = true }
 regex = { workspace = true }
 tracing = { workspace = true }
