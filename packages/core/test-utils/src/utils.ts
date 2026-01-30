@@ -104,46 +104,10 @@ after(async () => {
   }
 });
 
-export const isAtlaspackV3 = process.env.ATLASPACK_V3 === 'true';
-
-const defaultFeatureFlags = {atlaspackV3: isAtlaspackV3};
-
-let featureFlags: Partial<FeatureFlags> = defaultFeatureFlags;
-let v2Only = false;
-let v3Only = false;
-
-export function setupV3Flags(flags: Partial<FeatureFlags>) {
-  if (!isAtlaspackV3) return;
-
-  // Apply flags for each test in the current suite scope.
-  // This happens at runtime (before the test body), which is when `getParcelOptions` reads `featureFlags`.
-  beforeEach(() => {
-    Object.assign(featureFlags, flags);
-  });
-}
-
-export function disableV3() {
-  // Mark tests as V2-only (i.e. skip them in V3 runs).
-  beforeEach(() => {
-    v2Only = true;
-  });
-}
-
-export function disableV2() {
-  // Mark tests as V3-only (i.e. skip them in V2 runs).
-  beforeEach(() => {
-    v3Only = true;
-  });
-}
-
 afterEach(async () => {
   if (isAtlaspackV3) {
     await napiWorkerPool.clearAllWorkerState();
   }
-
-  featureFlags = defaultFeatureFlags;
-  v2Only = false;
-  v3Only = false;
 });
 
 const chalk = new _chalk.Instance();
@@ -196,6 +160,23 @@ If you don't know how, check here: https://bit.ly/2UmWsbD
   );
 }
 
+export const isAtlaspackV3 = process.env.ATLASPACK_V3 === 'true';
+
+let v3FeatureFlags: Partial<FeatureFlags> | null = null;
+
+// Configure additional feature flags for V3 runs.
+// In V2 runs, this is a no-op to avoid accidentally forcing V3 behavior.
+export function setupV3Flags(flags: Partial<FeatureFlags>) {
+  if (!isAtlaspackV3) return;
+  beforeEach(() => {
+    v3FeatureFlags = flags;
+  });
+}
+
+afterEach(() => {
+  v3FeatureFlags = null;
+});
+
 // Initialize the Napi Worker Pool once and
 // reuse the same instance in all of the tests
 export let napiWorkerPool: NapiWorkerPool;
@@ -226,7 +207,8 @@ export function getParcelOptions(
         distDir,
       },
       featureFlags: {
-        ...featureFlags,
+        atlaspackV3: isAtlaspackV3,
+        ...(isAtlaspackV3 ? v3FeatureFlags : null),
       },
     },
     opts,
@@ -1552,28 +1534,80 @@ export function request(
   );
 }
 
+let origDescribe = globalThis.describe;
+let atlaspackVersion: string | undefined;
+
+function applyVersion(version: string | undefined, fn: () => void) {
+  let previousVersion = atlaspackVersion;
+  atlaspackVersion = version;
+  fn();
+  atlaspackVersion = previousVersion;
+}
+
+export function describe(...args: unknown[]) {
+  // @ts-expect-error TS2684
+  applyVersion(undefined, origDescribe.bind(this, ...args));
+}
+
+describe.only = function (...args: unknown[]) {
+  // @ts-expect-error TS2684
+  applyVersion(undefined, origDescribe.only.bind(this, ...args));
+};
+
+describe.skip = function (...args: unknown[]) {
+  // @ts-expect-error TS2684
+  applyVersion(undefined, origDescribe.skip.bind(this, ...args));
+};
+
+describe.v2 = function (...args: unknown[]) {
+  applyVersion('v2', () => {
+    if (!isAtlaspackV3) {
+      // @ts-expect-error TS2345
+      origDescribe.apply(this, args);
+    }
+  });
+};
+
+// @ts-expect-error TS2339
+describe.v2.only = function (...args: unknown[]) {
+  applyVersion('v2', () => {
+    if (!isAtlaspackV3) {
+      // @ts-expect-error TS2345
+      origDescribe.only.apply(this, args);
+    }
+  });
+};
+
+describe.v3 = function (...args: unknown[]) {
+  applyVersion('v3', () => {
+    if (isAtlaspackV3) {
+      // @ts-expect-error TS2345
+      origDescribe.apply(this, args);
+    }
+  });
+};
+
+// @ts-expect-error TS2339
+describe.v3.only = function (...args: unknown[]) {
+  applyVersion('v3', () => {
+    if (isAtlaspackV3) {
+      // @ts-expect-error TS2345
+      origDescribe.only.apply(this, args);
+    }
+  });
+};
+
 let origIt = globalThis.it;
 
 export function it(...args: unknown[]) {
-  // Always register the test with Mocha so hooks (`after`, etc) still run.
-  // We enforce V2/V3 exclusivity at runtime by skipping.
-  // @ts-expect-error TS2683
-  origIt.apply(this, [
-    args[0] as string,
-    function (this: Mocha.Context, ...fnArgs: unknown[]) {
-      if (isAtlaspackV3) {
-        if (v2Only) {
-          this.skip();
-        }
-      } else {
-        if (v3Only) {
-          this.skip();
-        }
-      }
-
-      return (args[1] as any)?.apply(this, fnArgs);
-    },
-  ]);
+  if (
+    atlaspackVersion == null ||
+    (atlaspackVersion == 'v2' && !isAtlaspackV3) ||
+    (atlaspackVersion == 'v3' && isAtlaspackV3)
+  ) {
+    // @ts-expect-error TS2683
+    origIt.apply(this, args);
+  }
 }
 
 it.only = function (...args: unknown[]) {
@@ -1587,31 +1621,34 @@ it.skip = function (...args: unknown[]) {
 };
 
 it.v2 = function (...args: unknown[]) {
-  const [name, fn] = args as [unknown, unknown];
-  it.call(this, name, function (this: Mocha.Context, ...fnArgs: unknown[]) {
-    if (isAtlaspackV3) {
-      this.skip();
-    }
-    return (fn as any)?.apply(this, fnArgs);
-  });
+  if (!isAtlaspackV3) {
+    // @ts-expect-error TS2345
+    origIt.apply(this, args);
+  }
 };
 
 // @ts-expect-error TS2339
 it.v2.only = function (...args: unknown[]) {
-  const [name, fn] = args as [unknown, unknown];
-  origIt.only.call(
-    this,
-    name as string,
-    function (this: Mocha.Context, ...fnArgs: unknown[]) {
-      if (isAtlaspackV3) {
-        this.skip();
-      }
-      return (fn as any)?.apply(this, fnArgs);
-    },
-  );
+  if (!isAtlaspackV3) {
+    // @ts-expect-error TS2345
+    origIt.only.apply(this, args);
+  }
 };
-// Export describe for convenience
-export const describe = globalThis.describe;
+
+it.v3 = function (...args: unknown[]) {
+  if (isAtlaspackV3) {
+    // @ts-expect-error TS2345
+    origIt.apply(this, args);
+  }
+};
+
+// @ts-expect-error TS2339
+it.v3.only = function (...args: unknown[]) {
+  if (isAtlaspackV3) {
+    // @ts-expect-error TS2345
+    origIt.only.apply(this, args);
+  }
+};
 
 // If no tests run, then `after()` is not called, and so worker farms are never cleaned up.
 // This test ensures that at least one test runs, and so `after()` is called.

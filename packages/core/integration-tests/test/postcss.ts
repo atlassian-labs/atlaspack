@@ -13,16 +13,13 @@ import {
   overlayFS,
   ncp,
   getNextBuild,
-  disableV3,
 } from '@atlaspack/test-utils';
 import {
   NodePackageManager,
   MockPackageInstaller,
 } from '@atlaspack/package-manager';
 
-describe('postcss', () => {
-  disableV3();
-
+describe.v2('postcss', () => {
   it('should build successfully with only postcss-modules config', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-modules-config/index.js'),

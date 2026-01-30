@@ -7,13 +7,10 @@ import {
   inputFS,
   it,
   outputFS,
-  disableV3,
 } from '@atlaspack/test-utils';
 import {md} from '@atlaspack/diagnostic';
 
-describe('webmanifest', function () {
-  disableV3();
-
+describe.v2('webmanifest', function () {
   it('should support .webmanifest', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/webmanifest/index.html'),

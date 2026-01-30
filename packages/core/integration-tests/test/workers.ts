@@ -994,7 +994,7 @@ describe('atlaspack', function () {
     },
   );
 
-  it.v2('errors on dynamic import() inside service workers', async () => {
+  it.v2('errors on dynamic import() inside service workers', async function () {
     let errored = false;
     try {
       await bundle(
@@ -1269,7 +1269,7 @@ describe('atlaspack', function () {
 
   it.v2(
     'creates a shared bundle between browser and worker contexts',
-    async function () {
+    async () => {
       let b = await bundle(
         path.join(__dirname, '/integration/html-shared-worker/index.html'),
         {mode: 'production', defaultTargetOptions: {shouldScopeHoist: false}},

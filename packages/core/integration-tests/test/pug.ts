@@ -7,12 +7,9 @@ import {
   it,
   outputFS,
   distDir,
-  disableV3,
 } from '@atlaspack/test-utils';
 
-describe('pug', function () {
-  disableV3();
-
+describe.v2('pug', function () {
   it('should support bundling HTML', async function () {
     const b = await bundle(path.join(__dirname, '/integration/pug/index.pug'));
 

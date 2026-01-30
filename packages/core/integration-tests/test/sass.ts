@@ -10,12 +10,9 @@ import {
   outputFS,
   overlayFS,
   fsFixture,
-  disableV3,
 } from '@atlaspack/test-utils';
 
-describe('sass', function () {
-  disableV3();
-
+describe.v2('sass', function () {
   it('should support requiring sass files', async function () {
     let b = await bundle(path.join(__dirname, '/integration/sass/index.js'));
 

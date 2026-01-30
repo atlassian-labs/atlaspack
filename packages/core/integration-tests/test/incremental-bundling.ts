@@ -7,7 +7,6 @@ import {
   overlayFS,
   run,
   fsFixture,
-  disableV3,
 } from '@atlaspack/test-utils';
 import assert from 'assert';
 import path from 'path';
@@ -19,9 +18,7 @@ import {Asset} from '@atlaspack/types';
 const CONFIG = Symbol.for('parcel-plugin-config');
 let packageManager = new NodePackageManager(inputFS, '/');
 
-describe('incremental bundling', function () {
-  disableV3();
-
+describe.v2('incremental bundling', function () {
   let defaultBundlerSpy, customBundlerSpy;
   let assertChangedAssets = (actual: number, expected: number) => {
     assert.equal(
@@ -62,11 +59,7 @@ describe('incremental bundling', function () {
   });
 
   describe('non-dependency based changes', () => {
-  disableV3();
-
     describe('javascript', () => {
-  disableV3();
-
       it('add a console log should not bundle by default', async () => {
         let subscription;
         let fixture = path.join(__dirname, '/integration/incremental-bundling');
@@ -479,8 +472,6 @@ console.log(a);`,
   });
 
   describe('dependency based changes should run the bundler', () => {
-  disableV3();
-
     it('adding a new dependency', async () => {
       let subscription;
       let fixture = path.join(__dirname, '/integration/incremental-bundling');
@@ -674,8 +665,6 @@ console.log('index.js');`,
   });
 
   describe('other changes that would for a re-bundle', () => {
-  disableV3();
-
     it('changing the bundler in parcel configs', async () => {
       let subscription;
       let fixture = path.join(__dirname, '/integration/incremental-bundling');

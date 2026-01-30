@@ -10,13 +10,10 @@ import {
   outputFS,
   overlayFS,
   run,
-  disableV3,
 } from '@atlaspack/test-utils';
 import {md} from '@atlaspack/diagnostic';
 
-describe('less', function () {
-  disableV3();
-
+describe.v2('less', function () {
   it('should support requiring less files', async function () {
     await fsFixture(overlayFS)`
       .parcelrc:

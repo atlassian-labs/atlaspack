@@ -1,15 +1,13 @@
 import assert from 'assert';
 import path from 'path';
-import { bundler, describe, it, outputFS, disableV3 } from '@atlaspack/test-utils';
+import {bundler, describe, it, outputFS} from '@atlaspack/test-utils';
 
 const config = path.join(
   __dirname,
   './integration/custom-configs/.parcelrc-build-metrics',
 );
 
-describe('Build Metrics Reporter', () => {
-  disableV3();
-
+describe.v2('Build Metrics Reporter', () => {
   it('Should dump bundle metrics to parcel-metrics.json', async () => {
     let b = bundler(path.join(__dirname, '/integration/commonjs/index.js'), {
       config,

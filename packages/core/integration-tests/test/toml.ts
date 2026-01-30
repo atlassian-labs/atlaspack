@@ -11,12 +11,9 @@ import {
   overlayFS,
   removeDistDirectory,
   run,
-  disableV3,
 } from '@atlaspack/test-utils';
 
-describe('toml', function () {
-  disableV3();
-
+describe.v2('toml', function () {
   beforeEach(async () => {
     await removeDistDirectory();
   });

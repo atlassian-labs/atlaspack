@@ -595,7 +595,7 @@ module.hot.dispose((data) => {
       assert(reloaded);
     });
 
-    it.v2('should work with urls', async () => {
+    it.v2('should work with urls', async function () {
       let search;
       let {outputs} = await testHMRClient('hmr-url', (outputs) => {
         assert.equal(outputs.length, 1);
@@ -928,7 +928,7 @@ module.hot.dispose((data) => {
 
     it.v2(
       'should update CSS link tags when a CSS asset is changed',
-      async function () {
+      async () => {
         let testDir = path.join(__dirname, '/input');
         await overlayFS.rimraf(testDir);
         await overlayFS.mkdirp(testDir);

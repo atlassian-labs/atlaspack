@@ -8,13 +8,10 @@ import {
   run,
   overlayFS,
   fsFixture,
-  disableV3,
 } from '@atlaspack/test-utils';
 
 // TODO: V3 JavaScript plugins need to use the real filesystem or properly use the overlayFS + package manager
-describe('feature flags', () => {
-  disableV3();
-
+describe.v2('feature flags', () => {
   let dir = path.join(__dirname, 'feature-flags-fixture');
   beforeEach(async () => {
     await rimraf(dir);

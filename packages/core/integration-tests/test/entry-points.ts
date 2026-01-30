@@ -136,7 +136,7 @@ describe('Entry Points', function () {
 
     it.v2(
       'should handle directory with builtin target defined in package.json targets field',
-      async function () {
+      async () => {
         await fsFixture(overlayFS, dir)`
         test-package
           yarn.lock:
@@ -166,7 +166,7 @@ describe('Entry Points', function () {
 
     it.v2(
       'should handle builtin main target defined targets field',
-      async function () {
+      async () => {
         await fsFixture(overlayFS, dir)`
         test-package
           yarn.lock:
@@ -192,7 +192,7 @@ describe('Entry Points', function () {
 
     it.v2(
       'should build library with main defined in top level package.json field',
-      async function () {
+      async () => {
         await fsFixture(overlayFS, dir)`
         test-package
           yarn.lock:

@@ -469,7 +469,7 @@ describe('css', () => {
 
   it.v2(
     'should remap locations in diagnostics using the input source map',
-    async function () {
+    async () => {
       let fixture = path.join(
         __dirname,
         'integration/diagnostic-sourcemap/index.scss',

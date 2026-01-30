@@ -10,7 +10,6 @@ import {
   assertBundles,
   workerFarm,
   cacheDir,
-  disableV3,
 } from '@atlaspack/test-utils';
 import {ATLASPACK_VERSION} from '@atlaspack/core';
 
@@ -276,9 +275,7 @@ function findSnapshotPath(): string {
   );
 }
 
-describe('vcs cache', () => {
-  disableV3();
-
+describe.v2('vcs cache', () => {
   before(async function () {
     this.timeout(10000);
     // Warm up worker farm so that the first test doesn't account for this time.

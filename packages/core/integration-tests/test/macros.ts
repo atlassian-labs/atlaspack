@@ -10,12 +10,9 @@ import {
   overlayFS,
   fsFixture,
   getNextBuild,
-  disableV3,
 } from '@atlaspack/test-utils';
 
-describe('macros', function () {
-  disableV3();
-
+describe.v2('macros', function () {
   let count = 0;
   let dir;
   beforeEach(async () => {

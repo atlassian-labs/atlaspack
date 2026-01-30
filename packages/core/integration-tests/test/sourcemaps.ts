@@ -763,7 +763,7 @@ describe('sourcemaps', function () {
     await test(true);
   });
 
-  it.v2('should create a valid sourcemap for a Sass asset', async () => {
+  it.v2('should create a valid sourcemap for a Sass asset', async function () {
     async function test(shouldOptimize: boolean) {
       let inputFilePath = path.join(
         __dirname,
@@ -926,7 +926,7 @@ describe('sourcemaps', function () {
     },
   );
 
-  it.v2('should create a valid sourcemap for a LESS asset', async () => {
+  it.v2('should create a valid sourcemap for a LESS asset', async function () {
     async function test(shouldOptimize: boolean) {
       await fsFixture(overlayFS, __dirname)`
         .parcelrc:
@@ -1329,7 +1329,7 @@ describe('sourcemaps', function () {
 
   it.v2(
     'carries sourcesContent from the original sources through multiple transformations (babel and swc)',
-    async function () {
+    async () => {
       let b = await bundle(
         path.join(
           __dirname,
@@ -1377,7 +1377,7 @@ describe('sourcemaps', function () {
 
   it.v2(
     'carries sourcesContent from the original sources (tsx) through multiple transformations (babel and swc)',
-    async function () {
+    async () => {
       let b = await bundle(
         path.join(
           __dirname,
@@ -1427,7 +1427,7 @@ describe('sourcemaps', function () {
   // perform additional sourcesContent handling that rust does not do in from_json
   it.v2(
     'retains sourcesContent from the original sources from a large text file',
-    async function () {
+    async () => {
       let testDir = path.join(
         __dirname,
         'integration/sourcemap-original-sourcecontents-large',

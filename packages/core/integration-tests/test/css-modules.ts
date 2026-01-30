@@ -359,34 +359,31 @@ describe('css modules', () => {
     assert(css.indexOf('_intermediate') < css.indexOf('_composes5'));
   });
 
-  it.v2(
-    'should support composes imports for multiple selectors',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/postcss-composes/index5.js'),
-      );
+  it.v2('should support composes imports for multiple selectors', async () => {
+    let b = await bundle(
+      path.join(__dirname, '/integration/postcss-composes/index5.js'),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index5.js',
-          assets: ['index5.js', 'composes-6.module.css', 'mixins.module.css'],
-        },
-        {
-          name: 'index5.css',
-          assets: ['composes-6.module.css', 'mixins.module.css'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index5.js',
+        assets: ['index5.js', 'composes-6.module.css', 'mixins.module.css'],
+      },
+      {
+        name: 'index5.css',
+        assets: ['composes-6.module.css', 'mixins.module.css'],
+      },
+    ]);
 
-      let output = await run(b);
-      assert.equal(typeof output, 'function');
+    let output = await run(b);
+    assert.equal(typeof output, 'function');
 
-      let value = output();
-      const composes6Classes = value.composes6.split(' ');
-      assert(composes6Classes[0].endsWith('_composes6'));
-      assert(composes6Classes[1].endsWith('_test'));
-      assert(composes6Classes[2].endsWith('_test-2'));
-    },
-  );
+    let value = output();
+    const composes6Classes = value.composes6.split(' ');
+    assert(composes6Classes[0].endsWith('_composes6'));
+    assert(composes6Classes[1].endsWith('_test'));
+    assert(composes6Classes[2].endsWith('_test-2'));
+  });
 
   it.v2(
     'should throw an error when importing a missing class',

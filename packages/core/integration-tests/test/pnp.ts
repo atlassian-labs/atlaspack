@@ -9,14 +9,11 @@ import {
   run,
   assertBundles,
   inputFS,
-  disableV3,
 } from '@atlaspack/test-utils';
 
 const ZIPFS = `${path.sep}zipfs`;
 
-describe('pnp', function () {
-  disableV3();
-
+describe.v2('pnp', function () {
   it('should defer to the pnp resolution when needed', async function () {
     let dir = path.join(__dirname, 'integration/pnp-require');
 

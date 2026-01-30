@@ -6,12 +6,9 @@ import {
   describe,
   it,
   outputFS,
-  disableV3,
 } from '@atlaspack/test-utils';
 
-describe('xml', function () {
-  disableV3();
-
+describe.v2('xml', function () {
   it('should transform an atom feed', async function () {
     let b = await bundle(path.join(__dirname, '/integration/xml/atom.xml'), {
       defaultTargetOptions: {

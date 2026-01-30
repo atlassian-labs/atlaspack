@@ -10,7 +10,6 @@ import {
   outputFS,
   overlayFS,
   run,
-  disableV3,
 } from '@atlaspack/test-utils';
 
 const config = path.join(
@@ -18,9 +17,7 @@ const config = path.join(
   './integration/custom-configs/.parcelrc-typescript-validation',
 );
 
-describe('ts-validator', function () {
-  disableV3();
-
+describe.v2('ts-validator', function () {
   let subscription;
   afterEach(async () => {
     if (subscription) {

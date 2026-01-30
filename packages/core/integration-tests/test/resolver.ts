@@ -11,7 +11,6 @@ import {
   fsFixture,
   inputFS,
   findAsset,
-  disableV2,
 } from '@atlaspack/test-utils';
 
 describe('resolver', function () {
@@ -594,9 +593,7 @@ describe('resolver', function () {
     });
   });
 
-  describe('unstable_alias', function () {
-    disableV2();
-
+  describe.v3('unstable_alias', function () {
     // unstable_alias is currently only supported in v3
     it('should resolve aliases set by unstable_alias in .parcelrc', async function () {
       await fsFixture(overlayFS, __dirname)`
