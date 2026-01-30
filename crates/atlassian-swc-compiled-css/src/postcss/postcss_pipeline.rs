@@ -1157,6 +1157,16 @@ fn extract_stylesheets_plugin(
     }
   }
 
+  /// Normalizes a value for hash computation, matching Babel's plugin order:
+  /// colormin and calc normalization run before atomicify, but whitespace normalization
+  /// runs after atomicify.
+  fn normalize_for_hash_seed(value: &str) -> String {
+    // Apply colormin transformation
+    let after_colormin = minify_color_value(value);
+    // Apply calc normalization (removes whitespace around * and / in calc())
+    super::plugins::normalize_css_engine::calc::normalize_calc_value_for_hash(&after_colormin)
+  }
+
   #[allow(dead_code)]
   fn walk_and_emit(
     node: &postcss::ast::NodeRef,
@@ -1186,17 +1196,15 @@ fn extract_stylesheets_plugin(
           if let Some(decl) = as_declaration(&gc) {
             let prop = decl.prop();
             let raw_value = decl.value();
-            // COMPAT: Hash seed must use the value BEFORE whitespace normalization
-            // to match Babel's behavior. In Babel's pipeline, postcss-normalize-whitespace
-            // runs AFTER atomicify, so atomicify hashes the value with original spacing
-            // (e.g., "var(--ds-space-300, 24px)" with space, not "var(--ds-space-300,24px)").
-            // Only apply colormin transformation since that runs before atomicify in Babel.
-            let mut hash_seed = minify_color_value(&raw_value);
+            // COMPAT: Hash seed must use the value AFTER colormin and calc transformations
+            // but BEFORE whitespace normalization, matching Babel's plugin order.
+            // In Babel's pipeline: normalizeCSS (includes postcss-calc) -> atomicify -> whitespace
+            let mut hash_seed = normalize_for_hash_seed(&raw_value);
             if decl.important() {
               hash_seed.push_str("true");
             }
-            // For CSS output, apply full normalization
-            let mut normalized_value = minify_color_value(&raw_value);
+            // For CSS output, apply full normalization (including calc and whitespace)
+            let mut normalized_value = normalize_for_hash_seed(&raw_value);
             normalized_value = minify_value_whitespace(&normalized_value);
             let mut base_value = normalized_value.clone();
             if decl.important() {
@@ -1435,6 +1443,7 @@ fn extract_stylesheets_plugin(
 /// This applies the same transformations that run BEFORE atomicify in Babel:
 /// - reduce-initial: converts values like `currentColor` to `initial` when supported
 /// - colormin: minifies color values
+/// - postcss-calc: normalizes calc expressions (removes whitespace around * and /)
 ///
 /// IMPORTANT: This does NOT apply whitespace normalization, because in Babel
 /// postcss-normalize-whitespace runs AFTER atomicify.
@@ -1469,6 +1478,11 @@ fn normalize_value_for_hash(
   } else {
     trimmed.to_string()
   };
+
+  // Apply postcss-calc normalization: removes whitespace around * and / in calc()
+  // This matches Babel's plugin order where postcss-calc runs before atomicify.
+  normalized =
+    super::plugins::normalize_css_engine::calc::normalize_calc_value_for_hash(&normalized);
 
   // COMPAT: cssnano ordered-values preserves an extra space before negative
   // grid line values (e.g. "1 / -1" -> "1 /  -1") for hashing.
@@ -2485,27 +2499,160 @@ pub fn transform_css_via_postcss(
       .collect::<Vec<_>>()
       .join(">")
   }
+  // For grouping purposes, include all at-rules in the path EXCEPT for @starting-style,
+  // and exclude the index to match Babel's merge-duplicate-at-rules behavior.
+  // This ensures that:
+  // 1. Rules under @starting-style inside @media are grouped with sibling rules
+  //    (e.g., @media {...} and @media {@starting-style{...}} share the same key)
+  // 2. Nested at-rules like @supports { @media {...} } are still grouped correctly
+  //    (e.g., @supports{@media{...}} rules share a key that includes both @supports and @media)
+  // 3. Rules with different child indices but same at-rule chain are merged together
+  fn grouping_path_key(path: &[(String, String, usize)]) -> String {
+    path
+      .iter()
+      .filter(|(n, _, _)| n.to_ascii_lowercase() != "starting-style")
+      .map(|(n, p, _)| format!("{}|{}", n, p)) // Exclude idx to match Babel behavior
+      .collect::<Vec<_>>()
+      .join(">")
+  }
   use std::collections::HashMap;
   use std::collections::HashSet;
+
+  // Helper to extract property from CSS like "._class{prop:val}" or "@starting-style{...}"
+  fn extract_property_for_sort(css: &str) -> Option<String> {
+    // Skip @-rules (they don't have a property to sort by)
+    if css.starts_with('@') {
+      return None;
+    }
+    // Find property after the opening brace: "._class{prop:val}" -> "prop"
+    if let Some(brace) = css.find('{') {
+      let after_brace = &css[brace + 1..];
+      if let Some(colon) = after_brace.find(':') {
+        return Some(after_brace[..colon].to_string());
+      }
+    }
+    None
+  }
+
+  // Helper to get shorthand bucket for sorting.
+  // IMPORTANT: This matches Babel's sortShorthandDeclarations behavior, which ONLY checks
+  // if the property itself is a shorthand (in shorthandBuckets), NOT if its parent is.
+  // Constituent properties like `margin-block-start` get Infinity (not their parent's bucket).
+  fn get_shorthand_bucket_for_sort(css: &str) -> i32 {
+    use crate::postcss::plugins::sort_shorthand_declarations::shorthand_bucket;
+    if let Some(prop) = extract_property_for_sort(css) {
+      if let Some(bucket) = shorthand_bucket(&prop) {
+        return bucket as i32;
+      }
+    }
+    // Non-shorthand properties and @-rules come last (Infinity equivalent)
+    i32::MAX
+  }
+
+  // Build group_map from collected_sheets (unsorted) to preserve source order within groups.
   let mut group_map: HashMap<String, (String, Vec<String>)> = HashMap::new();
-  let mut group_order: Vec<String> = Vec::new();
-  for (kind, info) in &paired {
+  for sheet in &collected_sheets {
+    let kind = classify(&sheet.css);
     if matches!(kind, SheetKind::AtRule { .. }) {
-      let brace_pos = info.text.find('{').unwrap_or(info.text.len());
-      let header = info.text[..brace_pos].to_string();
+      let brace_pos = sheet.css.find('{').unwrap_or(sheet.css.len());
+      let header = sheet.css[..brace_pos].to_string();
       let inner =
-        info.text[brace_pos + 1..info.text.rfind('}').unwrap_or(info.text.len())].to_string();
-      let key = format!("{}|{}", path_key(&info.path), header);
+        sheet.css[brace_pos + 1..sheet.css.rfind('}').unwrap_or(sheet.css.len())].to_string();
+      let key = format!("{}|{}", grouping_path_key(&sheet.path), header);
       group_map
         .entry(key.clone())
         .or_insert_with(|| (header.clone(), Vec::new()))
         .1
         .push(inner);
+    }
+  }
+
+  // Sort parts within each group by shorthand bucket to match Babel's sortShorthandDeclarations.
+  // This ensures shorthand properties come before their constituent properties within at-rules.
+  for (_key, (_header, parts)) in group_map.iter_mut() {
+    parts.sort_by(|a, b| {
+      let bucket_a = get_shorthand_bucket_for_sort(a);
+      let bucket_b = get_shorthand_bucket_for_sort(b);
+      bucket_a.cmp(&bucket_b)
+    });
+  }
+
+  // Build group_order from sorted paired to get the correct ordering of different at-rule groups.
+  let mut group_order: Vec<String> = Vec::new();
+  for (kind, info) in &paired {
+    if matches!(kind, SheetKind::AtRule { .. }) {
+      let brace_pos = info.text.find('{').unwrap_or(info.text.len());
+      let header = info.text[..brace_pos].to_string();
+      let key = format!("{}|{}", grouping_path_key(&info.path), header);
       if !group_order.contains(&key) {
         group_order.push(key);
       }
     }
   }
+  // Recursively merge at-rules by their header within a CSS string.
+  // E.g., "@media a{x}@media a{y}@media a{@starting-style{z}}" becomes
+  // "@media a{xy@starting-style{z}}"
+  fn merge_inner_at_rules(css: &str) -> String {
+    if css.is_empty() || !css.starts_with('@') {
+      return css.to_string();
+    }
+
+    // Parse at-rules from the CSS string
+    let mut at_rules: Vec<(String, String)> = Vec::new();
+    let mut pos = 0;
+    while pos < css.len() {
+      if css[pos..].starts_with('@') {
+        // Find the opening brace
+        if let Some(brace_start) = css[pos..].find('{') {
+          let header = css[pos..pos + brace_start].to_string();
+          // Find matching closing brace
+          let mut depth = 1;
+          let mut end = pos + brace_start + 1;
+          while end < css.len() && depth > 0 {
+            match css.as_bytes()[end] {
+              b'{' => depth += 1,
+              b'}' => depth -= 1,
+              _ => {}
+            }
+            end += 1;
+          }
+          let inner = css[pos + brace_start + 1..end - 1].to_string();
+          at_rules.push((header, inner));
+          pos = end;
+        } else {
+          // No opening brace, shouldn't happen for valid CSS
+          break;
+        }
+      } else {
+        // Not an at-rule, shouldn't happen in our inner content
+        pos += 1;
+      }
+    }
+
+    if at_rules.is_empty() {
+      return css.to_string();
+    }
+
+    // Group by header and merge
+    let mut merged: indexmap::IndexMap<String, Vec<String>> = indexmap::IndexMap::new();
+    for (header, inner) in at_rules {
+      merged.entry(header).or_default().push(inner);
+    }
+
+    // Reconstruct merged CSS
+    let mut result = String::new();
+    for (header, parts) in merged {
+      let mut joined_inner = String::new();
+      for part in parts {
+        // Recursively merge nested at-rules
+        let merged_part = merge_inner_at_rules(&part);
+        joined_inner.push_str(&merged_part);
+      }
+      result.push_str(&format!("{}{{{}}}", header, joined_inner));
+    }
+    result
+  }
+
   let mut produced: HashSet<String> = HashSet::new();
   let mut sheets: Vec<String> = Vec::new();
   for (kind, info) in paired {
@@ -2514,14 +2661,16 @@ pub fn transform_css_via_postcss(
       SheetKind::AtRule { .. } => {
         let brace_pos = info.text.find('{').unwrap_or(info.text.len());
         let header = info.text[..brace_pos].to_string();
-        let key = format!("{}|{}", path_key(&info.path), header);
+        let key = format!("{}|{}", grouping_path_key(&info.path), header);
         if produced.insert(key.clone()) {
           if let Some((header, parts)) = group_map.get(&key) {
             let mut joined = String::new();
             for part in parts {
               joined.push_str(part);
             }
-            sheets.push(format!("{}{{{}}}", header, joined));
+            // Recursively merge any nested at-rules in the joined content
+            let merged = merge_inner_at_rules(&joined);
+            sheets.push(format!("{}{{{}}}", header, merged));
           } else {
             sheets.push(info.text);
           }
@@ -3116,5 +3265,73 @@ mod tests {
       "._1u1q1nzx >:disabled{height:105px}",
     ];
     assert_contains_sheets(&sheets, &expected);
+  }
+
+  #[test]
+  fn starting_style_inside_media_is_grouped_with_sibling_rules() {
+    // This tests that @starting-style nested inside @media is grouped with sibling rules
+    // in the same @media query, rather than being separated into its own @media block.
+    let css_inputs = [
+      "& { @media (prefers-reduced-motion: no-preference) { transition-duration: .2s; @starting-style { transform: translateX(-100%); } } }",
+    ];
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let sheets = collect_sheets(&css_inputs, options);
+    // The output should have @starting-style merged inside the @media block
+    // Check that we have a single @media rule containing both the transition-duration
+    // and the @starting-style block
+    let has_merged_rule = sheets.iter().any(|s| {
+      s.contains("@media (prefers-reduced-motion:no-preference)")
+        && s.contains("transition-duration:")
+        && s.contains("@starting-style{")
+        && s.contains("transform:")
+    });
+    assert!(
+      has_merged_rule,
+      "Expected @starting-style to be merged inside @media with sibling rules. Got: {:?}",
+      sheets
+    );
+  }
+
+  #[test]
+  fn nested_at_rules_supports_media_are_merged() {
+    // This tests that nested at-rules like @supports { @media { ... } } are properly merged.
+    // Multiple declarations under the same @supports > @media chain should be merged into
+    // a single @media block inside @supports, not separate @media blocks.
+    let css_inputs = [
+      "& { @supports not (-moz-appearance:none) { @media (prefers-reduced-motion: no-preference) { transition-property: transform; transition-duration: .2s; @starting-style { transform: translateX(-100%); } } } }",
+    ];
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let sheets = collect_sheets(&css_inputs, options);
+    // Find the @supports rule
+    let supports_sheet = sheets.iter().find(|s| s.starts_with("@supports"));
+    assert!(
+      supports_sheet.is_some(),
+      "Expected @supports rule in output. Got: {:?}",
+      sheets
+    );
+    let sheet = supports_sheet.unwrap();
+    // Count how many @media blocks are inside @supports - should be exactly 1
+    let media_count = sheet.matches("@media").count();
+    assert_eq!(
+      media_count, 1,
+      "Expected exactly 1 @media block inside @supports, but found {}. Sheet: {}",
+      media_count, sheet
+    );
+    // Verify it contains all the declarations
+    assert!(
+      sheet.contains("transition-property:"),
+      "Missing transition-property"
+    );
+    assert!(
+      sheet.contains("transition-duration:"),
+      "Missing transition-duration"
+    );
+    assert!(
+      sheet.contains("@starting-style{"),
+      "Missing @starting-style"
+    );
+    assert!(sheet.contains("transform:"), "Missing transform");
   }
 }
