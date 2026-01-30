@@ -79,7 +79,7 @@ impl<'a> SyncDynamicImport<'a> {
     })
   }
 
-  fn get_unresolved_import_promise(&self, import_path: &Option<String>) -> Expr {
+  fn create_unresolved_import_promise(&self, import_path: &Option<String>) -> Expr {
     // Check if we should activate rejecting promises based on config
     let should_reject = self
       .config
@@ -336,7 +336,7 @@ impl<'a> VisitMut for SyncDynamicImport<'a> {
 
       if !is_string_literal {
         // Replace with rejecting or dummy promise for non-string imports
-        *expr = self.get_unresolved_import_promise(&None);
+        *expr = self.create_unresolved_import_promise(&None);
         return;
       }
 
@@ -363,10 +363,10 @@ impl<'a> VisitMut for SyncDynamicImport<'a> {
         }
 
         // Default case: replace with rejecting or dummy promise using resolved path
-        *expr = self.get_unresolved_import_promise(&Some(resolved_path));
+        *expr = self.create_unresolved_import_promise(&Some(resolved_path));
       } else {
         // No path extracted, use None
-        *expr = self.get_unresolved_import_promise(&None);
+        *expr = self.create_unresolved_import_promise(&None);
       }
     }
 
