@@ -8,6 +8,7 @@ import type {
   InitialAtlaspackOptions,
   PackagedBundle,
 } from '@atlaspack/types';
+import type {FeatureFlags} from '@atlaspack/feature-flags';
 import type {FileSystem} from '@atlaspack/fs';
 import {MemoryFS, ncp as _ncp, NodeFS, OverlayFS} from '@atlaspack/fs';
 import type WorkerFarm from '@atlaspack/workers';
@@ -161,6 +162,21 @@ If you don't know how, check here: https://bit.ly/2UmWsbD
 
 export const isAtlaspackV3 = process.env.ATLASPACK_V3 === 'true';
 
+let v3FeatureFlags: Partial<FeatureFlags> | null = null;
+
+// Configure additional feature flags for V3 runs.
+// In V2 runs, this is a no-op to avoid accidentally forcing V3 behavior.
+export function setupV3Flags(flags: Partial<FeatureFlags>) {
+  if (!isAtlaspackV3) return;
+  beforeEach(() => {
+    v3FeatureFlags = flags;
+  });
+}
+
+afterEach(() => {
+  v3FeatureFlags = null;
+});
+
 // Initialize the Napi Worker Pool once and
 // reuse the same instance in all of the tests
 export let napiWorkerPool: NapiWorkerPool;
@@ -192,6 +208,7 @@ export function getParcelOptions(
       },
       featureFlags: {
         atlaspackV3: isAtlaspackV3,
+        ...(isAtlaspackV3 ? v3FeatureFlags : null),
       },
     },
     opts,
