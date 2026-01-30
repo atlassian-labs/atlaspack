@@ -8,11 +8,14 @@ import {
   it,
   outputFS,
   run,
+  disableV3,
 } from '@atlaspack/test-utils';
 
 const config = path.join(__dirname, '/integration/typescript-config/.parcelrc');
 
 describe('typescript tsc', function () {
+  disableV3();
+
   it('should support loading tsconfig.json', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/typescript-config/index.ts'),

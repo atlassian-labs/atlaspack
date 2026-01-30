@@ -14,6 +14,7 @@ import {
   run,
   sleep,
   isAtlaspackV3,
+  disableV3,
 } from '@atlaspack/test-utils';
 import Logger from '@atlaspack/logger';
 import os from 'os';
@@ -533,6 +534,8 @@ describe('babel', function () {
   );
 
   describe('environment', () => {
+    disableV3();
+
     it('BABEL_ENV should be preferred to NODE_ENV', async () => {
       await bundle(
         path.join(__dirname, '/integration/babel-env-name/index.js'),

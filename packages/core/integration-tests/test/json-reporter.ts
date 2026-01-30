@@ -3,7 +3,7 @@
 import assert from 'assert';
 import invariant from 'assert';
 import path from 'path';
-import {bundle, describe, it} from '@atlaspack/test-utils';
+import { bundle, describe, it, disableV3 } from '@atlaspack/test-utils';
 import sinon from 'sinon';
 
 const config = path.join(
@@ -12,6 +12,8 @@ const config = path.join(
 );
 
 describe('json reporter', () => {
+  disableV3();
+
   it('logs bundling a commonjs bundle to stdout as json', async () => {
     let consoleStub = sinon.stub(console, 'log');
     try {

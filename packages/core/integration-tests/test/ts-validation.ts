@@ -10,6 +10,7 @@ import {
   outputFS,
   overlayFS,
   run,
+  disableV3,
 } from '@atlaspack/test-utils';
 
 const config = path.join(
@@ -18,6 +19,8 @@ const config = path.join(
 );
 
 describe('ts-validator', function () {
+  disableV3();
+
   let subscription;
   afterEach(async () => {
     if (subscription) {

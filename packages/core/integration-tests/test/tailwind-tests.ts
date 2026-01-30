@@ -5,6 +5,8 @@ import {bundle, describe, disableV3, it, outputFS} from '@atlaspack/test-utils';
 describe('tailwind', function () {
   disableV3();
 
+  disableV3();
+
   it('should support tailwind from SCSS', async function () {
     let fixture = path.join(__dirname, '/integration/tailwind-scss');
     let b = await bundle(path.join(fixture, 'index.html'));

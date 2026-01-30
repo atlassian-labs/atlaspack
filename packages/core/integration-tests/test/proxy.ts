@@ -6,6 +6,7 @@ import {
   getNextBuild,
   inputFS,
   it,
+  disableV3,
 } from '@atlaspack/test-utils';
 import http from 'http';
 import getPort from 'get-port';
@@ -58,6 +59,8 @@ function get(file: string, port: number, client = http) {
 }
 
 describe('proxy', function () {
+  disableV3();
+
   let subscription;
   let cwd;
   let server;

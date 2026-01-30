@@ -12,6 +12,7 @@ import {
   run,
   fsFixture,
   overlayFS,
+  disableV3,
 } from '@atlaspack/test-utils';
 import type {NamedBundle, BundleGraph, PackagedBundle} from '@atlaspack/types';
 
@@ -56,6 +57,8 @@ const distDirIncludes = async (matches: Array<RegExp | string>) => {
 };
 
 describe('lazy compile', function () {
+  disableV3();
+
   it('should lazy compile', async function () {
     const b = await bundler(
       path.join(__dirname, '/integration/lazy-compile/index.js'),

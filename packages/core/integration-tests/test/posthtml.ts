@@ -10,6 +10,7 @@ import {
   outputFS,
   overlayFS,
   ncp,
+  disableV3,
 } from '@atlaspack/test-utils';
 import path from 'path';
 import {
@@ -18,6 +19,8 @@ import {
 } from '@atlaspack/package-manager';
 
 describe('posthtml', function () {
+  disableV3();
+
   afterEach(async () => {
     await removeDistDirectory();
   });

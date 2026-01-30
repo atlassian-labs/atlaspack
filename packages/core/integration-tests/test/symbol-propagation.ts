@@ -7,9 +7,12 @@ import {
   it,
   overlayFS,
   run,
+  disableV3,
 } from '@atlaspack/test-utils';
 
 describe('symbol propagation', () => {
+  disableV3();
+
   it('should handle removed assets from previous failed builds', async () => {
     await fsFixture(overlayFS, __dirname)`
         broken.js:

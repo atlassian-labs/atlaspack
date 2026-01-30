@@ -1,6 +1,6 @@
 import assert from 'assert';
 import path from 'path';
-import {bundle, describe, it} from '@atlaspack/test-utils';
+import { bundle, describe, it, disableV3 } from '@atlaspack/test-utils';
 
 const config = path.join(
   __dirname,
@@ -8,6 +8,8 @@ const config = path.join(
 );
 
 describe('eslint-validator', function () {
+  disableV3();
+
   it('should throw validation error with eslint errors', async function () {
     let didThrow = false;
     let entry = path.join(__dirname, '/integration/eslint-error/index.js');

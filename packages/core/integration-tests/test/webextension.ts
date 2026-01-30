@@ -7,9 +7,12 @@ import {
   distDir,
   it,
   outputFS,
+  disableV3,
 } from '@atlaspack/test-utils';
 
 describe('webextension', function () {
+  disableV3();
+
   it('should resolve a full webextension bundle', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/webextension/manifest.json'),

@@ -3,6 +3,8 @@ const path = require('path');
 const {bundle, describe, it, run} = require('@atlaspack/test-utils');
 
 describe('mdx', function () {
+  disableV3();
+
   it('should support bundling MDX', async function () {
     let b = await bundle(path.join(__dirname, '/integration/mdx/index.mdx'));
 

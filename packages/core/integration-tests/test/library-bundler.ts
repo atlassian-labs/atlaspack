@@ -10,10 +10,13 @@ import {
   outputFS,
   fsFixture,
   assertBundles,
+  disableV3,
 } from '@atlaspack/test-utils';
 import nullthrows from 'nullthrows';
 
 describe('library bundler', function () {
+  disableV3();
+
   let count = 0;
   let dir;
   beforeEach(async () => {

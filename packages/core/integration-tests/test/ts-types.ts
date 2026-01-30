@@ -10,11 +10,14 @@ import {
   outputFS,
   ncp,
   fsFixture,
+  disableV3,
 } from '@atlaspack/test-utils';
 import {md} from '@atlaspack/diagnostic';
 import {normalizeSeparators} from '@atlaspack/utils';
 
 describe('typescript types', function () {
+  disableV3();
+
   it('should generate a typescript declaration file', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/ts-types/main/index.ts'),

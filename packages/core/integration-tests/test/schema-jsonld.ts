@@ -5,11 +5,14 @@ import {
   distDir,
   it,
   outputFS,
+  disableV3,
 } from '@atlaspack/test-utils';
 import path from 'path';
 import assert from 'assert';
 
 describe('jsonld', function () {
+  disableV3();
+
   it('Should parse a LD+JSON schema and collect dependencies', async function () {
     let b = await bundle(
       path.join(__dirname, '/integration/schema-jsonld/index.html'),

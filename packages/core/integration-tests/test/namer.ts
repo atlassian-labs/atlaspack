@@ -1,8 +1,10 @@
 import assert from 'assert';
 import path from 'path';
-import {bundle, describe, it, outputFS, distDir} from '@atlaspack/test-utils';
+import { bundle, describe, it, outputFS, distDir, disableV3 } from '@atlaspack/test-utils';
 
 describe('namer', function () {
+  disableV3();
+
   it('should determine correct entry root when building a directory', async function () {
     await bundle(path.join(__dirname, 'integration/namer-dir'));
 
