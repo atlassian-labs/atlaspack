@@ -145,8 +145,15 @@ pub struct BundleNode {
   pub value: Bundle,
 }
 
-// TODO make this a proper enum matching BundleGraph.ts
-pub type BundleGraphEdgeType = u8;
+#[derive(PartialEq, Eq)]
+pub enum BundleGraphEdgeType {
+  Null = 1,
+  Contains = 2,
+  Bundle = 3,
+  References = 4,
+  InternalAsync = 5,
+  Conditional = 6,
+}
 
 #[cfg(test)]
 mod tests {
