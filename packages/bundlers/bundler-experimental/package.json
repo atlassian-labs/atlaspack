@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/bundler-experimental",
-  "version": "2.13.52",
+  "version": "2.13.53",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {
@@ -17,19 +17,19 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
-    "@atlaspack/core": "2.31.3",
+    "@atlaspack/core": "2.32.0",
     "@atlaspack/diagnostic": "2.14.4",
-    "@atlaspack/feature-flags": "2.27.7",
-    "@atlaspack/graph": "3.6.11",
-    "@atlaspack/logger": "2.14.41",
-    "@atlaspack/plugin": "2.14.49",
-    "@atlaspack/rust": "3.19.0",
-    "@atlaspack/types": "2.15.39",
-    "@atlaspack/utils": "3.3.1",
+    "@atlaspack/feature-flags": "2.28.0",
+    "@atlaspack/graph": "3.6.12",
+    "@atlaspack/logger": "2.14.42",
+    "@atlaspack/plugin": "2.14.50",
+    "@atlaspack/rust": "3.20.0",
+    "@atlaspack/types": "2.15.40",
+    "@atlaspack/utils": "3.3.2",
     "nullthrows": "^1.1.1"
   },
   "devDependencies": {
-    "@atlaspack/fs": "2.15.44"
+    "@atlaspack/fs": "2.15.45"
   },
   "scripts": {
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
