@@ -578,55 +578,47 @@ fn short_hex_literal(hex: &str) -> String {
   format!("#{}", h)
 }
 
-fn walk(
-  parent: &mut vp::ParsedValue,
-  cb: &mut dyn FnMut(&mut vp::Node, usize) -> (bool, Option<vp::Node>),
-) {
+fn transform_nodes(nodes: &mut Vec<vp::Node>, options: &ColorminOptions) {
   let mut i = 0usize;
-  while i < parent.nodes.len() {
-    let (bubble, insert_after) = {
-      let node = &mut parent.nodes[i];
-      cb(node, i)
-    };
-    if let Some(to_insert) = insert_after {
-      parent.nodes.insert(i + 1, to_insert);
-      i += 1;
-    }
-    if let vp::Node::Function { nodes, .. } = &mut parent.nodes[i] {
-      if bubble {
-        let mut inner = vp::ParsedValue {
-          nodes: nodes.clone(),
-        };
-        walk(&mut inner, cb);
-        *nodes = inner.nodes;
-      }
-    }
-    i += 1;
-  }
-}
-
-pub(crate) fn transform_value(value: &str, options: &ColorminOptions) -> String {
-  let mut parsed = vp::parse(value);
-  walk(&mut parsed, &mut |node, _index| {
-    match node {
-      vp::Node::Function { value, nodes, .. } => {
+  while i < nodes.len() {
+    match &mut nodes[i] {
+      vp::Node::Function {
+        value,
+        nodes: inner,
+        ..
+      } => {
         if COLOR_FUNCTION_REGEX.is_match(value) {
           let original = value.clone();
-          let contents = vp::stringify(nodes);
+          let contents = vp::stringify(inner);
           let newv = minify_color(&format!("{}({})", original, contents), options);
-          *node = vp::Node::Word {
+          nodes[i] = vp::Node::Word {
             value: newv.clone(),
           };
           if newv.to_lowercase() != original.to_lowercase() {
-            return (
-              true,
-              Some(vp::Node::Space {
-                value: " ".to_string(),
-              }),
-            );
+            let needs_space = match nodes.get(i + 1) {
+              None => false,
+              Some(vp::Node::Space { .. }) => false,
+              Some(vp::Node::Div { .. }) => false,
+              Some(vp::Node::Comment { .. }) => false,
+              _ => true,
+            };
+            if needs_space {
+              nodes.insert(
+                i + 1,
+                vp::Node::Space {
+                  value: " ".to_string(),
+                },
+              );
+              i += 1;
+            }
           }
-        } else if is_math_function(node) {
-          return (false, None);
+        } else if matches!(
+          value.to_ascii_lowercase().as_str(),
+          "calc" | "min" | "max" | "clamp"
+        ) {
+          // Skip minifying colors inside math functions to mirror cssnano behavior.
+        } else {
+          transform_nodes(inner, options);
         }
       }
       vp::Node::Word { value } => {
@@ -634,8 +626,13 @@ pub(crate) fn transform_value(value: &str, options: &ColorminOptions) -> String 
       }
       _ => {}
     }
-    (true, None)
-  });
+    i += 1;
+  }
+}
+
+pub(crate) fn transform_value(value: &str, options: &ColorminOptions) -> String {
+  let mut parsed = vp::parse(value);
+  transform_nodes(&mut parsed.nodes, options);
   vp::stringify(&parsed.nodes)
 }
 

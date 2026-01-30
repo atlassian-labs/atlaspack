@@ -302,6 +302,11 @@ pub(crate) fn normalize_block_value_spacing(input: &str) -> String {
       let is_calc = current_ident.eq_ignore_ascii_case("calc");
       calc_stack.push(is_calc);
       current_ident.clear();
+      if inside_block && !is_calc {
+        while matches!(chars.peek(), Some(c) if c.is_whitespace()) {
+          chars.next();
+        }
+      }
     } else if ch == ')' {
       calc_stack.pop();
     } else if ch.is_alphabetic() || ch == '-' {
@@ -384,6 +389,16 @@ mod tests {
     let raw = "._a{box-shadow:var(--foo, 10px)}";
     let normalized = normalize_block_value_spacing(raw);
     assert_eq!(normalized, "._a{box-shadow:var(--foo,10px)}");
+  }
+
+  #[test]
+  fn trims_space_after_function_open_outside_calc() {
+    let raw = "._a{background:conic-gradient( from var(--foo))}";
+    let normalized = normalize_block_value_spacing(raw);
+    assert_eq!(
+      normalized,
+      "._a{background:conic-gradient(from var(--foo))}"
+    );
   }
 
   #[test]

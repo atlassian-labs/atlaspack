@@ -681,6 +681,11 @@ fn fmt_number(n: f64, precision: usize) -> String {
   if s == "-0" {
     s = "0".to_string();
   }
+  if let Some(stripped) = s.strip_prefix("0.") {
+    s = format!(".{stripped}");
+  } else if let Some(stripped) = s.strip_prefix("-0.") {
+    s = format!("-.{stripped}");
+  }
   s
 }
 
@@ -780,7 +785,50 @@ pub fn plugin() -> pc::BuiltPlugin {
 
 #[cfg(test)]
 mod tests {
-  use super::{parse_calc_expression, reduce_node, stringify_ast};
+  use super::*;
+  use pretty_assertions::assert_eq;
+
+  fn normalize_calc_value(value: &str) -> String {
+    let mut parsed = vp::parse(value);
+    let opt = Options::default();
+    for n in parsed.nodes.iter_mut() {
+      if let vp::Node::Function {
+        value: name, nodes, ..
+      } = n
+      {
+        let name_l = name.to_ascii_lowercase();
+        let is_calc = name_l == "calc" || name_l == "-webkit-calc" || name_l == "-moz-calc";
+        if !is_calc {
+          continue;
+        }
+        let inner = vp::stringify(nodes);
+        if let Some(ast) = parse_calc_expression(&inner) {
+          let reduced = reduce_node(ast, opt.precision);
+          match reduced {
+            Node::Value(ValueKind { num, unit }) => {
+              let mut v = fmt_number(num, opt.precision);
+              if let Some(u) = unit {
+                v.push_str(&u);
+              }
+              *n = vp::Node::Word { value: v };
+            }
+            other => {
+              let expr = stringify_ast(&other, opt.precision);
+              let wrapped = format!("{}({})", name, expr);
+              *n = vp::Node::Word { value: wrapped };
+            }
+          }
+        }
+      }
+    }
+    vp::stringify(&parsed.nodes)
+  }
+
+  #[test]
+  fn preserves_leading_dot_in_calc_expression() {
+    let output = normalize_calc_value("calc(var(--x) * .125)");
+    assert_eq!(output, "calc(var(--x)*.125)");
+  }
 
   #[test]
   fn parses_calc_with_var_and_spacing() {
