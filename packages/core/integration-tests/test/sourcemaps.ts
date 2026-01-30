@@ -763,7 +763,7 @@ describe('sourcemaps', function () {
     await test(true);
   });
 
-  it.v2('should create a valid sourcemap for a Sass asset', async function () {
+  it.v2('should create a valid sourcemap for a Sass asset', async () => {
     async function test(shouldOptimize: boolean) {
       let inputFilePath = path.join(
         __dirname,
@@ -926,7 +926,7 @@ describe('sourcemaps', function () {
     },
   );
 
-  it.v2('should create a valid sourcemap for a LESS asset', async function () {
+  it.v2('should create a valid sourcemap for a LESS asset', async () => {
     async function test(shouldOptimize: boolean) {
       await fsFixture(overlayFS, __dirname)`
         .parcelrc:

@@ -235,7 +235,7 @@ describe('react-refresh', function () {
     await run(b, {}, {require: false});
   });
 
-  it.v2('does not apply to library targets', async function () {
+  it.v2('does not apply to library targets', async () => {
     let port = await getPort();
     let parcel = await bundler(
       path.join(

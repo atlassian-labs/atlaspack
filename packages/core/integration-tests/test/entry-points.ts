@@ -349,7 +349,7 @@ describe('Entry Points', function () {
       await assertBundleOutput(b, 'standalone.js', 'file entry');
     });
 
-    it.v2('should handle complex targets configuration', async function () {
+    it.v2('should handle complex targets configuration', async () => {
       await fsFixture(overlayFS, dir)`
         test-package
           package.json:

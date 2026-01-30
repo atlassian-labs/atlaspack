@@ -994,7 +994,7 @@ describe('atlaspack', function () {
     },
   );
 
-  it.v2('errors on dynamic import() inside service workers', async function () {
+  it.v2('errors on dynamic import() inside service workers', async () => {
     let errored = false;
     try {
       await bundle(

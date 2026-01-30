@@ -16,7 +16,7 @@ describe('data-url:', function () {
     await removeDistDirectory();
   });
 
-  it.v2('inlines text content as a data url', async function () {
+  it.v2('inlines text content as a data url', async () => {
     await fsFixture(overlayFS, __dirname)`
       index.js:
         import svg from 'data-url:./img.svg';

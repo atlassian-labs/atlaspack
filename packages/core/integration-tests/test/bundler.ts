@@ -2715,7 +2715,7 @@ describe('bundler', function () {
 
   it.v2(
     'should merge dynamic imports with the same webpackChunkName',
-    async function () {
+    async () => {
       await fsFixture(overlayFS, __dirname)`
       merge-webpack-chunk-name
         index.html:

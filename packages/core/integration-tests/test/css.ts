@@ -443,7 +443,7 @@ describe('css', () => {
   });
 
   // This breaks in v3 as it uses asset.addURLDependency inside the SVG transformer
-  it.v2('should inline data-urls for text-encoded files', async function () {
+  it.v2('should inline data-urls for text-encoded files', async () => {
     await bundle(path.join(__dirname, '/integration/data-url/text.css'), {
       defaultTargetOptions: {
         sourceMaps: false,

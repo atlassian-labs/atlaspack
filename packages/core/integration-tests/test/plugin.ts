@@ -340,7 +340,7 @@ describe('plugin', function () {
     },
   );
 
-  it.v2('should allow resolvers to invalidateOnEnvChange', async function () {
+  it.v2('should allow resolvers to invalidateOnEnvChange', async () => {
     async function assertAsset(replacedCode: string) {
       let b = await bundle(
         path.join(
@@ -360,7 +360,7 @@ describe('plugin', function () {
     await assertAsset('const replaced = 2;');
   });
 
-  it.v2('should output sourcemaps when packaging wasm', async function () {
+  it.v2('should output sourcemaps when packaging wasm', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/wasm-sourcemap-transformer/index.js'),
     );

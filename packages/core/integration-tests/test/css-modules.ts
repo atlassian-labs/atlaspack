@@ -205,7 +205,7 @@ describe('css modules', () => {
     );
   });
 
-  it.v2('should support css modules composes imports', async function () {
+  it.v2('should support css modules composes imports', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index.js'),
     );
@@ -248,7 +248,7 @@ describe('css modules', () => {
     assert(css.includes(`.${cssClass2}`));
   });
 
-  it.v2('should not include css twice for composes imports', async function () {
+  it.v2('should not include css twice for composes imports', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index.js'),
     );
@@ -262,7 +262,7 @@ describe('css modules', () => {
     );
   });
 
-  it.v2('should support composes imports for sass', async function () {
+  it.v2('should support composes imports for sass', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index2.js'),
     );
@@ -290,41 +290,35 @@ describe('css modules', () => {
     assert(css.includes('height: 200px;'));
   });
 
-  it.v2(
-    'should support composes imports with custom path names',
-    async function () {
-      let b = await bundle(
-        path.join(__dirname, '/integration/postcss-composes/index3.js'),
-      );
+  it.v2('should support composes imports with custom path names', async () => {
+    let b = await bundle(
+      path.join(__dirname, '/integration/postcss-composes/index3.js'),
+    );
 
-      assertBundles(b, [
-        {
-          name: 'index3.js',
-          assets: ['index3.js', 'composes-4.module.css', 'mixins.module.css'],
-        },
-        {
-          name: 'index3.css',
-          assets: ['composes-4.module.css', 'mixins.module.css'],
-        },
-      ]);
+    assertBundles(b, [
+      {
+        name: 'index3.js',
+        assets: ['index3.js', 'composes-4.module.css', 'mixins.module.css'],
+      },
+      {
+        name: 'index3.css',
+        assets: ['composes-4.module.css', 'mixins.module.css'],
+      },
+    ]);
 
-      let output = await run(b);
-      assert.equal(typeof output, 'function');
+    let output = await run(b);
+    assert.equal(typeof output, 'function');
 
-      let value = output();
-      const composes4Classes = value.composes4.split(' ');
-      assert(composes4Classes[0].endsWith('_composes4'));
-      assert(composes4Classes[1].endsWith('_test'));
+    let value = output();
+    const composes4Classes = value.composes4.split(' ');
+    assert(composes4Classes[0].endsWith('_composes4'));
+    assert(composes4Classes[1].endsWith('_test'));
 
-      let css = await outputFS.readFile(
-        path.join(distDir, 'index3.css'),
-        'utf8',
-      );
-      assert(css.includes('height: 100px;'));
-    },
-  );
+    let css = await outputFS.readFile(path.join(distDir, 'index3.css'), 'utf8');
+    assert(css.includes('height: 100px;'));
+  });
 
-  it.v2('should support deep nested composes imports', async function () {
+  it.v2('should support deep nested composes imports', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/postcss-composes/index4.js'),
     );

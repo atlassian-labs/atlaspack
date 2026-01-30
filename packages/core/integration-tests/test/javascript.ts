@@ -4668,7 +4668,7 @@ describe('javascript', function () {
     },
   );
 
-  it.v2(`should also fail on recoverable parse errors`, async function () {
+  it.v2(`should also fail on recoverable parse errors`, async () => {
     await fsFixture(overlayFS, __dirname)`
       js-recoverable-parse-errors
         index.js:

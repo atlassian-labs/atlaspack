@@ -595,7 +595,7 @@ module.hot.dispose((data) => {
       assert(reloaded);
     });
 
-    it.v2('should work with urls', async function () {
+    it.v2('should work with urls', async () => {
       let search;
       let {outputs} = await testHMRClient('hmr-url', (outputs) => {
         assert.equal(outputs.length, 1);

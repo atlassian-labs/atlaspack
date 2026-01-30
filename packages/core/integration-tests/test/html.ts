@@ -31,7 +31,7 @@ describe('html', function () {
     }
   });
 
-  it.v2('should support bundling HTML', async function () {
+  it.v2('should support bundling HTML', async () => {
     let b = await bundle(path.join(__dirname, '/integration/html/index.html'));
 
     assertBundles(b, [
@@ -107,7 +107,7 @@ describe('html', function () {
     assert.equal(value, 'Hi');
   });
 
-  it.v2('should support pkg#source array as entrypoints', async function () {
+  it.v2('should support pkg#source array as entrypoints', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/html-pkg-source-array'),
     );
@@ -2906,7 +2906,7 @@ describe('html', function () {
     },
   );
 
-  it.v2('should inline data-urls', async function () {
+  it.v2('should inline data-urls', async () => {
     let b = await bundle(
       path.join(__dirname, '/integration/data-url/index.html'),
       {

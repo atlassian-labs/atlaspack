@@ -26,7 +26,7 @@ describe('content hashing', function () {
     await outputFS.rimraf(path.join(__dirname, '/input'));
   });
 
-  it.v2('should update content hash when content changes', async function () {
+  it.v2('should update content hash when content changes', async () => {
     await ncp(
       path.join(__dirname, '/integration/html-css'),
       path.join(__dirname, '/input'),
@@ -59,7 +59,7 @@ describe('content hashing', function () {
     assert.notEqual(filename, newFilename);
   });
 
-  it.v2('should update content hash when raw asset changes', async function () {
+  it.v2('should update content hash when raw asset changes', async () => {
     await ncp(
       path.join(__dirname, '/integration/import-raw'),
       path.join(__dirname, '/input'),
@@ -96,7 +96,7 @@ describe('content hashing', function () {
 
   it.v2(
     'should generate the same hash for the same distDir inside separate projects',
-    async function () {
+    async () => {
       let a = await _bundle(
         path.join(__dirname, 'integration/hash-distDir/a/index.html'),
         {
