@@ -3158,9 +3158,6 @@ mod tests {
       other => panic!("expected sheet css, found {other:?}"),
     };
     let normalized: String = sheet.chars().filter(|ch| !ch.is_whitespace()).collect();
-    if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-      eprintln!("[keyframes.test] {}", normalized);
-    }
     assert!(normalized.contains("0%{background:red;transform:rotate(0deg);}"));
     assert!(normalized.contains("to{background:red;transform:rotate(360deg);}"));
   }

@@ -51,10 +51,6 @@ impl Plugin for AtomicifyRules {
           }
         }
         Rule::QualifiedRule(rule) => {
-          let sels = collect_rule_selectors(&rule);
-          if trace_enabled() {
-            eprintln!("[atomicify.rule.pre] selectors={:?}", sels);
-          }
           let replacements = atomicify_qualified_rule(*rule, &options, ctx, None);
           for replacement in replacements {
             transformed.push(Rule::QualifiedRule(Box::new(replacement)));
@@ -289,9 +285,6 @@ fn normalize_selector(selector: &str) -> String {
   let trimmed = selector.trim();
   let collapsed = collapse_adjacent_nesting_selectors(trimmed);
   let collapsed = collapsed.trim();
-  if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-    eprintln!("[atomicify] normalize_selector input='{}'", collapsed);
-  }
   if collapsed.is_empty() {
     return "&".to_string();
   }

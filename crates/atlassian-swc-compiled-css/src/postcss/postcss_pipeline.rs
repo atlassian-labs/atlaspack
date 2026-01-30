@@ -1372,13 +1372,6 @@ fn extract_stylesheets_plugin(
             },
             |node_ref, _| {
               if let Some(at) = as_at_rule(&node_ref) {
-                if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-                  eprintln!(
-                    "[extract-stylesheets] at='{}' params='{}'",
-                    at.name(),
-                    at.params()
-                  );
-                }
                 let tmp = postcss::ast::nodes::Root::new();
                 tmp.append(at.to_node());
                 if let Ok(mut res) = tmp.to_result() {
@@ -1407,13 +1400,6 @@ fn extract_stylesheets_plugin(
             },
             |node_ref, _| {
               if let Some(at) = as_at_rule(&node_ref) {
-                if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-                  eprintln!(
-                    "[extract-stylesheets] at='{}' params='{}'",
-                    at.name(),
-                    at.params()
-                  );
-                }
                 let tmp = postcss::ast::nodes::Root::new();
                 tmp.append(at.to_node());
                 if let Ok(mut res) = tmp.to_result() {
@@ -1731,12 +1717,6 @@ fn atomicify_rules_plugin(
           value_full.push_str("!important");
         }
         value_full = minify_value_whitespace(&value_full);
-        if std::env::var("COMPILED_CSS_TRACE").is_ok() && prop == "box-shadow" {
-          eprintln!(
-            "[atomicify.hash] prop='{}' raw='{}' hash_seed='{}' value='{}'",
-            prop, orig_value, hash_seed, value_full
-          );
-        }
 
         let mut normalized_list: Vec<String> = ctx
           .selectors
@@ -1878,12 +1858,6 @@ fn atomicify_rules_plugin(
         let mut normalized_value =
           normalize_value_for_hash(&prop, &raw_value, initial_support, optimize_css);
         normalized_value = minify_value_whitespace(&normalized_value);
-        if std::env::var("COMPILED_CSS_TRACE").is_ok() && prop == "box-shadow" {
-          eprintln!(
-            "[atomicify.hash] prop='{}' raw='{}' hash_seed='{}' value='{}'",
-            prop, raw_value, hash_seed, normalized_value
-          );
-        }
         let autoprefixer_ref = autoprefixer.as_ref().map(|arc| arc.as_ref());
         let prefixed_entries =
           prefixed_decl_entries(autoprefixer_ref, &prop, &normalized_value, has_important);
@@ -2064,12 +2038,6 @@ fn atomicify_rules_plugin(
             let mut value_full =
               normalize_value_for_hash(&prop, &raw_value, initial_support, optimize_css);
             value_full = minify_value_whitespace(&value_full);
-            if std::env::var("COMPILED_CSS_TRACE").is_ok() && prop == "box-shadow" {
-              eprintln!(
-                "[atomicify.rule_exit] prop='{}' raw='{}' hash_seed='{}'",
-                prop, raw_value, hash_seed
-              );
-            }
             let prefixed_entries =
               prefixed_decl_entries(autoprefixer_ref, &prop, &value_full, has_important);
             let decls = serialize_decl_entries(&prefixed_entries);
