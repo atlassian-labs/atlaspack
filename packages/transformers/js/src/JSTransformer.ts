@@ -506,6 +506,7 @@ export default new Transformer({
       | {
           entrypoint_filepath_suffix: string;
           actual_require_paths: string[];
+          activate_reject_on_unresolved_imports?: boolean;
         }
       | undefined;
 
@@ -520,6 +521,10 @@ export default new Transformer({
 
           invariant(typeof config?.entrypoint_filepath_suffix === 'string');
           invariant(Array.isArray(config.actual_require_paths));
+          invariant(
+            typeof (config.activate_reject_on_unresolved_imports ?? false) ===
+              'boolean',
+          );
 
           configCache.set('SYNC_DYNAMIC_IMPORT_CONFIG', config);
         }
@@ -534,6 +539,7 @@ export default new Transformer({
         const fallback = {
           entrypoint_filepath_suffix: '__NO_MATCH__',
           actual_require_paths: [],
+          activate_reject_on_unresolved_imports: false,
         };
 
         // Set cache to fallback so we don't keep trying to parse.
