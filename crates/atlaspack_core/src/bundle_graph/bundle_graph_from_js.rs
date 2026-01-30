@@ -6,7 +6,7 @@ use petgraph::{
   Direction,
   graph::NodeIndex,
   prelude::StableDiGraph,
-  visit::{Dfs, EdgeRef},
+  visit::{Control, Dfs, DfsEvent, EdgeRef, depth_first_search},
 };
 use rayon::prelude::*;
 
@@ -203,42 +203,93 @@ impl BundleGraph for BundleGraphFromJs {
       .get(&bundle.id)
       .ok_or(anyhow!("Bundle {} not found in bundle graph", bundle.id))?;
 
-    // Collect all asset nodes so we can iterate multiple times
-    let asset_nodes: Vec<_> = self
+    let bundle_type = &bundle.bundle_type;
+
+    // Single pass: prioritize by: contains edge > type match > first asset
+    let mut first_asset: Option<&Asset> = None;
+    let mut type_matched_asset: Option<&Asset> = None;
+
+    for asset_node in self
       .graph
       .neighbors_directed(*dependency_node, Direction::Outgoing)
-      .collect();
+    {
+      // Only process asset nodes
+      let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(asset_node) else {
+        continue;
+      };
 
-    // Find the first asset where there's a "contains" edge between the bundle and the asset
-    if let Some(node_index) = asset_nodes.iter().find(|asset_node| {
-      self
+      // Highest priority: contains edge
+      if self
         .graph
-        .edges_connecting(*bundle_node, **asset_node)
+        .edges_connecting(*bundle_node, asset_node)
         .any(|edge| *edge.weight() == BundleGraphEdgeType::Contains)
-    }) && let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(*node_index)
-    {
-      return Ok(Some(&asset.value));
-    }
-
-    // Next - find an asset that matches the bundle type
-    if let Some(node_index) = asset_nodes.iter().find(|asset_node| {
-      if let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(**asset_node) {
-        return asset.value.file_type == bundle.bundle_type;
+      {
+        return Ok(Some(&asset.value));
       }
-      false
-    }) && let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(*node_index)
-    {
-      return Ok(Some(&asset.value));
+
+      // Medium priority: type match (save for later)
+      if type_matched_asset.is_none() && asset.value.file_type == *bundle_type {
+        type_matched_asset = Some(&asset.value);
+      }
+
+      // Lowest priority: first asset (save for later)
+      if first_asset.is_none() {
+        first_asset = Some(&asset.value);
+      }
     }
 
-    // Return the first asset
-    if let Some(node_index) = asset_nodes.first()
-      && let Some(BundleGraphNode::Asset(asset)) = self.graph.node_weight(*node_index)
-    {
-      return Ok(Some(&asset.value));
+    // If found via direct neighbors, return in priority order
+    if let Some(asset) = type_matched_asset.or(first_asset) {
+      return Ok(Some(asset));
     }
 
-    Ok(None)
+    // Fallback: traverse via References edges to find any reachable assets
+    // This matches the TypeScript implementation that traverses with skipChildren control
+    let mut type_matched_fallback: Option<&Asset> = None;
+    let mut first_fallback: Option<&Asset> = None;
+
+    // Use depth_first_search with Control to properly skip children
+    depth_first_search(&self.graph, Some(*dependency_node), |event| {
+      match event {
+        DfsEvent::Discover(node_idx, _) => {
+          // Skip the dependency node itself
+          if node_idx == *dependency_node {
+            return Control::Continue;
+          }
+
+          match self.graph.node_weight(node_idx) {
+            Some(BundleGraphNode::Asset(asset)) => {
+              // Found an asset - check if it matches bundle type
+              if type_matched_fallback.is_none() && asset.value.file_type == *bundle_type {
+                type_matched_fallback = Some(&asset.value);
+              }
+              if first_fallback.is_none() {
+                first_fallback = Some(&asset.value);
+              }
+
+              // Early exit if we found a type match
+              if type_matched_fallback.is_some() {
+                return Control::Break(());
+              }
+              Control::Continue
+            }
+            Some(BundleGraphNode::Dependency(_)) => {
+              // Continue traversal through dependency nodes
+              Control::Continue
+            }
+            _ => {
+              // Skip children for non-asset, non-dependency nodes
+              // This matches the TypeScript behavior: traversal.skipChildren()
+              Control::Prune
+            }
+          }
+        }
+        _ => Control::Continue,
+      }
+    });
+
+    // Return type-matched asset or first asset found
+    Ok(type_matched_fallback.or(first_fallback))
   }
 
   fn is_dependency_skipped(&self, dependency: &Dependency) -> bool {
