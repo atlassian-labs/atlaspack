@@ -55,13 +55,18 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     let contents = assets
       .par_iter()
       .map(|asset| {
-        let txn = self.db.database().read_txn().unwrap();
-        let code = self
-          .db
-          .database()
-          .get(&txn, asset.content_key.as_ref().unwrap())
-          .unwrap();
-        let asset_code = String::from_utf8_lossy(&code.unwrap()).to_string();
+        let txn = self.db.database().read_txn()?;
+        let code = self.db.database().get(
+          &txn,
+          asset
+            .content_key
+            .as_ref()
+            .ok_or(anyhow::anyhow!("Asset content key not found"))?,
+        )?;
+        txn.commit()?;
+        let asset_code =
+          String::from_utf8_lossy(&code.ok_or(anyhow::anyhow!("Unable to read asset code"))?)
+            .to_string();
         self
           .process_asset(bundle, asset, asset_code)
           .map(|content| (asset, content))
@@ -171,38 +176,40 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
 
     // Get dependencies for asset
     let dependencies = bundle_graph.get_dependencies(asset)?;
-    let mut deps: HashMap<String, Option<String>> = HashMap::new();
+    // let mut deps: HashMap<String, Option<String>> = HashMap::new();
 
-    for dependency in dependencies {
-      let resolved = bundle_graph.get_resolved_asset(dependency, bundle)?;
+    let deps = dependencies
+      .par_iter()
+      .map(|dependency| {
+        let specifier = dependency
+          .placeholder
+          .as_deref()
+          .unwrap_or(&dependency.specifier);
 
-      let specifier = dependency
-        .placeholder
-        .as_deref()
-        .unwrap_or(&dependency.specifier);
+        let dep_value: Option<String> = if bundle_graph.is_dependency_skipped(dependency) {
+          None
+        } else if let Some(resolved) = bundle_graph.get_resolved_asset(dependency, bundle)? {
+          Some(
+            bundle_graph
+              .get_public_asset_id(&resolved.id)
+              .ok_or(anyhow::anyhow!("Asset not found in bundle graph"))?
+              .to_string(),
+          )
+        } else {
+          tracing::debug!(
+            "Dependency {} did not resolve to an asset in the bundle graph",
+            dependency.id
+          );
+          Some(dependency.specifier.clone())
+        };
 
-      let dep_value: Option<String> = if bundle_graph.is_dependency_skipped(dependency) {
-        None
-      } else if let Some(resolved) = resolved {
-        Some(
-          bundle_graph
-            .get_public_asset_id(&resolved.id)
-            .ok_or(anyhow::anyhow!("Asset not found in bundle graph"))?
-            .to_string(),
-        )
-      } else {
-        tracing::debug!(
-          "Dependency {} did not resolve to an asset in the bundle graph",
-          dependency.id
-        );
-        Some(dependency.specifier.clone())
-      };
-
-      deps.insert(specifier.to_string(), dep_value);
-    }
+        Ok((specifier.to_string(), dep_value))
+      })
+      .collect::<anyhow::Result<HashMap<String, Option<String>>>>()?;
+    let deps: HashMap<String, Option<String>> = deps.into_iter().collect();
 
     tracing::debug!("Asset {} dependencies done", asset.id);
-    Ok(deps)
+    Ok(deps.into_iter().collect())
   }
 
   fn wrap_asset(&self, _bundle: &Bundle, asset: &Asset, code: String) -> anyhow::Result<String> {
