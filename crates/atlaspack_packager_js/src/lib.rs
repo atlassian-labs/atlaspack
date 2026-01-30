@@ -29,7 +29,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
 
   /// Acquires a read lock and returns a guard. Use for operations that need the graph for
   /// multiple calls (e.g. get_bundle_by_id then traverse_bundle_assets). For single lookups
-  /// from other threads (e.g. in par_iter), use `self.bundle_graph.read().unwrap()` directly.
+  /// from other threads (e.g. in par_iter), use `self.bundle_graph.read()` directly.
   fn bundle_graph(&self) -> RwLockReadGuard<'_, B> {
     self.bundle_graph.read()
   }
@@ -113,7 +113,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     // Get dependency map for this asset
     let deps = self.get_asset_dependency_map(bundle, asset)?;
     let code = self.replace_require_calls(code, &deps);
-    // Entry assets are not wrapped but need require() calls replaced
+
     if bundle.entry_asset_ids.contains(&asset.id) {
       Ok(code)
     } else {
@@ -121,6 +121,8 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     }
   }
 
+  // NOTE THIS IS A TEMPORARY HACK IMPL - just to validate the end-to-end packaging.
+  // While it produces a (sort of) working bundle, it's not actually how we want to approach this
   fn replace_require_calls(&self, code: String, deps: &HashMap<String, Option<String>>) -> String {
     // Regex to match require("...") or require('...')
     let re = Regex::new(r#"require\(["']([^"']+)["']\)"#).unwrap();
