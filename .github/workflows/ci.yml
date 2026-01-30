@@ -16,6 +16,8 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write
+  actions: read
 
 jobs:
   # Validate changesets - handles both general and Rust-specific validation
@@ -73,6 +75,11 @@ jobs:
         run: ${SCCACHE_PATH} --show-stats
 
       - uses: ./.github/actions/setup-node
+      - name: Free up space
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo rm -rf /usr/local/lib/android || true
+          sudo apt-get remove -y '^dotnet-.*' '^llvm-.*' 'php.*'
       # Build native artifacts
       - env:
           RUSTUP_TARGET: ${{ matrix.target }}
@@ -82,7 +89,7 @@ jobs:
         run: yarn build-native
 
       - if: ${{ matrix.build_js }}
-        run: yarn build
+        run: yarn build:ci
       # Upload artifacts for use later in pipeline
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -144,6 +151,12 @@ jobs:
           shared-key: '${{ matrix.os }}-rust-unit-tests'
           # Only store new caches on main
           save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Free up space
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo rm -rf /usr/local/lib/android || true
+          sudo apt-get remove -y '^dotnet-.*' '^llvm-.*' 'php.*'
       - run: cargo test
 
   unit_tests:
@@ -152,14 +165,12 @@ jobs:
       - build_native
     strategy:
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 22
-
-          # MacOS ARM64
+        os: ['ubuntu-22.04', 'macos-15']
+        node: [22, 24]
+        exclude:
+          # Seems to have an error - in theory we have enough coverage with the other tests / variations
           - os: macos-15
-            node: 22
+            node: 24
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -177,7 +188,7 @@ jobs:
       - run: yarn test:js:unit
 
   integration_tests:
-    name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }})
+    name: Integration tests (${{ matrix.os }}, Node ${{ matrix.node }}, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
     needs:
       - build_native
     timeout-minutes: 45
@@ -186,14 +197,10 @@ jobs:
       # others from potentially succeeding
       fail-fast: false
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 20
-
-          # MacOS ARM64
-          - os: macos-15
-            node: 20
+        slice_num: [1, 2]
+        slice_total: [2]
+        os: [ubuntu-22.04, macos-15]
+        node: [22, 24]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -211,10 +218,12 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
       - run: yarn test:integration-ci
         env:
+          SLICE_NUM: ${{ matrix.slice_num }}
+          SLICE_TOTAL: ${{ matrix.slice_total }}
           RUST_BACKTRACE: full
 
   integration_tests_v3:
-    name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }})
+    name: Integration tests (v3 ${{ matrix.os }}, Node ${{ matrix.node }}, Slice ${{ matrix.slice_num }}/${{ matrix.slice_total }})
     needs:
       - build_native
     timeout-minutes: 15
@@ -223,16 +232,16 @@ jobs:
       # others from potentially succeeding
       fail-fast: false
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 20
-
-          # MacOS ARM64
-          - os: macos-15
-            node: 20
+        slice_num: [1, 2]
+        slice_total: [2]
+        os: [ubuntu-22.04, macos-15]
+        node: [22, 24]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Collect Workflow Telemetry
+        uses: catchpoint/workflow-telemetry-action@v2
+        with:
+          comment_on_pr: false
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-watchman
       - uses: ./.github/actions/setup-node
@@ -246,10 +255,44 @@ jobs:
       - name: Bump max inotify watches (Linux only)
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
         if: ${{ runner.os == 'Linux' }}
+      - name: Enable core dumps (Linux only)
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          # Enable core dumps
+          ulimit -c unlimited
+          # Set core dump pattern to put dumps in /tmp with identifying info
+          echo '/tmp/core.%e.%p.%t' | sudo tee /proc/sys/kernel/core_pattern
+          # Create directory for core dumps
+          sudo mkdir -p /tmp
+          sudo chmod 777 /tmp
+          echo "Core dumps enabled. Pattern: $(cat /proc/sys/kernel/core_pattern)"
       - run: yarn test:integration-ci
         env:
           ATLASPACK_V3: true
+          SLICE_NUM: ${{ matrix.slice_num }}
+          SLICE_TOTAL: ${{ matrix.slice_total }}
+          ISOLATE_TESTS: 'false'
           RUST_BACKTRACE: full
+      - name: Collect core dumps (Linux only)
+        if: ${{ runner.os == 'Linux' && always() }}
+        run: |
+          echo "Looking for core dumps in /tmp..."
+          if ls /tmp/core.* 1> /dev/null 2>&1; then
+            echo "Core dumps found:"
+            ls -lh /tmp/core.*
+            mkdir -p core-dumps
+            cp /tmp/core.* core-dumps/ || true
+          else
+            echo "No core dumps found"
+          fi
+      - name: Upload core dumps (Linux only)
+        if: ${{ runner.os == 'Linux' && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-dumps-v3-${{ matrix.os }}-node-${{ matrix.node }}-${{ github.run_id }}
+          path: core-dumps/
+          if-no-files-found: ignore
+          retention-days: 7
 
   end_to_end_tests:
     name: E2E tests
@@ -258,7 +301,7 @@ jobs:
     timeout-minutes: 35
     strategy:
       matrix:
-        node: [22]
+        node: [22, 24]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -283,18 +326,9 @@ jobs:
       - build_native
     strategy:
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 22
-            project: '@atlaspack/inspector'
-          - os: ubuntu-22.04
-            node: 22
-            project: '@atlaspack/inspector-frontend'
-
-          # MacOS ARM64
-          # - os: macos-15
-          #   node: 22
+        node: [22, 24]
+        os: ['ubuntu-22.04']
+        project: ['@atlaspack/inspector', '@atlaspack/inspector-frontend']
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -320,14 +354,8 @@ jobs:
       - build_native
     strategy:
       matrix:
-        include:
-          # Linux AMD64
-          - os: ubuntu-22.04
-            node: 22
-
-          # MacOS ARM64
-          # - os: macos-15
-          #   node: 22
+        node: [22, 24]
+        os: ['ubuntu-22.04']
 
     runs-on: ${{ matrix.os }}
     steps:

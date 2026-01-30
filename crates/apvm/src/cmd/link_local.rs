@@ -51,7 +51,13 @@ pub fn link_local(
   // Create node_modules/@atlaspack
   // Remove internal folders excluding apvm
   fs_ext::create_dir_if_not_exists(&node_modules_atlaspack)?;
-  for entry in fs::read_dir(&node_modules_atlaspack)? {
+  for entry in fs::read_dir(&node_modules_atlaspack).map_err(|e| {
+    anyhow::anyhow!(
+      "Failed to read node_modules/@atlaspack directory {:?} in link_local.rs: {}",
+      node_modules_atlaspack,
+      e
+    )
+  })? {
     let entry_path = entry?.path();
     if entry_path.try_file_stem()?.contains("apvm") {
       continue;
@@ -60,7 +66,13 @@ pub fn link_local(
   }
 
   // Map packages to target directory
-  for entry in fs::read_dir(&package_packages)? {
+  for entry in fs::read_dir(&package_packages).map_err(|e| {
+    anyhow::anyhow!(
+      "Failed to read packages directory {:?} in link_local.rs: {}",
+      package_packages,
+      e
+    )
+  })? {
     let entry = entry?;
     let entry_path = entry.path();
     let basename = entry_path.try_file_name()?;
@@ -69,7 +81,13 @@ pub fn link_local(
       continue;
     }
 
-    for entry in fs::read_dir(&entry_path)? {
+    for entry in fs::read_dir(&entry_path).map_err(|e| {
+      anyhow::anyhow!(
+        "Failed to read package entry directory {:?} in link_local.rs: {}",
+        entry_path,
+        e
+      )
+    })? {
       let entry = entry?;
       let entry_path = entry.path();
       let basename = entry_path.try_file_name()?;

@@ -1,5 +1,23 @@
 # @atlaspack/build-cache
 
+## 2.13.8
+
+### Patch Changes
+
+- Updated dependencies [[`f33f9c4`](https://github.com/atlassian-labs/atlaspack/commit/f33f9c48dd24b319df352d197e4a83cbb1b053bc), [`e15fb6c`](https://github.com/atlassian-labs/atlaspack/commit/e15fb6c885c6354c6c02283de35ce18abc8c9e18)]:
+  - @atlaspack/feature-flags@2.27.7
+
+## 2.13.7
+
+### Patch Changes
+
+- [#960](https://github.com/atlassian-labs/atlaspack/pull/960) [`565bab3`](https://github.com/atlassian-labs/atlaspack/commit/565bab3771cc334659d873cabff4cdfac0860cc7) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add LargeMap to work around Node 24's Map size limit in build cache serializer.
+
+  This change is behind the `useLargeMapInBuildCache` feature flag.
+
+- Updated dependencies [[`c31090c`](https://github.com/atlassian-labs/atlaspack/commit/c31090c9025f35d3fa8561b42dca170853a32e6f), [`565bab3`](https://github.com/atlassian-labs/atlaspack/commit/565bab3771cc334659d873cabff4cdfac0860cc7)]:
+  - @atlaspack/feature-flags@2.27.6
+
 ## 2.13.6
 
 ### Patch Changes

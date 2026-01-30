@@ -181,7 +181,8 @@ export default async function resolveOptions(
       return initialOptions.cache;
     }
 
-    const needsRustLmdbCache = getFeatureFlag('atlaspackV3');
+    const needsRustLmdbCache =
+      getFeatureFlag('atlaspackV3') || getFeatureFlag('nativePackager');
 
     if (!getFeatureFlag('cachePerformanceImprovements')) {
       if (!needsRustLmdbCache && !(outputFS instanceof NodeFS)) {
@@ -269,6 +270,7 @@ export default async function resolveOptions(
       : false,
     shouldDisableCache: initialOptions.shouldDisableCache ?? false,
     shouldProfile: initialOptions.shouldProfile ?? false,
+    nativeProfiler: initialOptions.nativeProfiler,
     shouldTrace: initialOptions.shouldTrace ?? false,
     cacheDir,
     watchDir,

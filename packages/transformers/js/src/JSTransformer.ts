@@ -4,13 +4,20 @@ import type {
   SourceLocation,
   FilePath,
   FileCreateInvalidation,
-  ConditionMeta,
+  Config,
+  PluginOptions,
 } from '@atlaspack/types';
+import {createBuildCache} from '@atlaspack/build-cache';
 import type {SchemaEntity} from '@atlaspack/utils';
 import type {Diagnostic} from '@atlaspack/diagnostic';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {Transformer} from '@atlaspack/plugin';
-import {transform, transformAsync} from '@atlaspack/rust';
+import {
+  transform,
+  transformAsync,
+  determineJsxConfiguration,
+} from '@atlaspack/rust';
+import {type CompiledCssInJsConfigPlugin} from '@atlaspack/rust';
 import invariant from 'assert';
 import browserslist from 'browserslist';
 import semver from 'semver';
@@ -22,6 +29,7 @@ import ThrowableDiagnostic, {
 import {validateSchema, remapSourceLocation, globMatch} from '@atlaspack/utils';
 import pkg from '../package.json';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import path, {join} from 'path';
 
 const JSX_EXTENSIONS = {
   jsx: true,
@@ -117,9 +125,25 @@ const CONFIG_SCHEMA: SchemaEntity = {
     unstable_inlineConstants: {
       type: 'boolean',
     },
+    jsx: {
+      type: 'object',
+    },
   },
   additionalProperties: false,
 };
+
+// Mirrors the CONFIG_SCHEMA
+interface JsTransformerConfig {
+  inlineFS?: boolean;
+  inlineEnvironment?: boolean | string[];
+  addReactDisplayName?: boolean;
+  magicComments?: boolean;
+  unstable_inlineConstants?: boolean;
+  // This is exclusively used in Rust so not worth typing
+  jsx: any;
+}
+
+const configCache = createBuildCache();
 
 const SCRIPT_ERRORS = {
   browser: {
@@ -172,41 +196,253 @@ type MacroContext = {
   invalidateOnBuild(): void;
 };
 
+type AtlaskitTokensConfigPartial = {
+  shouldUseAutoFallback?: boolean;
+  shouldForceAutoFallback?: boolean;
+  forceAutoFallbackExemptions?: Array<string>;
+  defaultTheme?: 'light' | 'legacy-light';
+  tokenDataPath: string;
+};
+
+type AtlaskitTokensConfig = Required<AtlaskitTokensConfigPartial>;
+
+const TOKENS_CONFIG_SCHEMA = {
+  type: 'object',
+  properties: {
+    shouldUseAutoFallback: {type: 'boolean'},
+    shouldForceAutoFallback: {type: 'boolean'},
+    forceAutoFallbackExemptions: {
+      type: 'array',
+      items: {type: 'string'},
+    },
+    defaultTheme: {type: 'string', enum: ['light', 'legacy-light']},
+    tokenDataPath: {type: 'string'},
+  },
+  additionalProperties: false,
+} as const;
+
+interface JsxConfig {
+  isJSX: boolean | undefined;
+  jsxPragma: string | undefined;
+  jsxPragmaFrag: string | undefined;
+  jsxImportSource: string | undefined;
+  automaticJSXRuntime: boolean | undefined;
+  reactRefresh: boolean | null | undefined;
+}
+
+async function legacyDetemineJsxConfig(
+  config: Config,
+  options: PluginOptions,
+): Promise<JsxConfig> {
+  let packageJson = await config.getPackage();
+  let isJSX,
+    jsxPragma,
+    jsxPragmaFrag,
+    jsxImportSource,
+    automaticJSXRuntime,
+    reactRefresh;
+
+  if (config.isSource) {
+    let reactLib;
+    if (packageJson?.alias && packageJson.alias['react']) {
+      // e.g.: `{ alias: { "react": "preact/compat" } }`
+      reactLib = 'react';
+    } else {
+      // Find a dependency that we can map to a JSX pragma
+      reactLib = Object.keys(JSX_PRAGMA).find(
+        (libName) =>
+          packageJson?.dependencies?.[libName] ||
+          packageJson?.devDependencies?.[libName] ||
+          packageJson?.peerDependencies?.[libName],
+      );
+    }
+
+    reactRefresh = Boolean(
+      packageJson?.dependencies?.react ||
+        packageJson?.devDependencies?.react ||
+        packageJson?.peerDependencies?.react,
+    );
+
+    const compilerOptions: TSConfig['compilerOptions'] = (
+      await config.getConfigFrom<TSConfig>(
+        options.projectRoot + '/index',
+        ['tsconfig.json', 'jsconfig.json'],
+        {
+          readTracking: true,
+        },
+      )
+    )?.contents?.compilerOptions;
+
+    // Use explicitly defined JSX options in tsconfig.json over inferred values from dependencies.
+    jsxPragma =
+      compilerOptions?.jsxFactory ||
+      // @ts-expect-error TS7053
+      (reactLib ? JSX_PRAGMA[reactLib].pragma : undefined);
+    jsxPragmaFrag =
+      compilerOptions?.jsxFragmentFactory ||
+      // @ts-expect-error TS7053
+      (reactLib ? JSX_PRAGMA[reactLib].pragmaFrag : undefined);
+
+    if (
+      compilerOptions?.jsx === 'react-jsx' ||
+      compilerOptions?.jsx === 'react-jsxdev' ||
+      compilerOptions?.jsxImportSource
+    ) {
+      jsxImportSource = compilerOptions?.jsxImportSource;
+      automaticJSXRuntime = true;
+    } else if (reactLib) {
+      let effectiveReactLib =
+        packageJson?.alias && packageJson.alias['react'] === 'preact/compat'
+          ? 'preact'
+          : reactLib;
+      // @ts-expect-error TS7053
+      let automaticVersion = JSX_PRAGMA[effectiveReactLib]?.automatic;
+      let reactLibVersion =
+        packageJson?.dependencies?.[effectiveReactLib] ||
+        packageJson?.devDependencies?.[effectiveReactLib] ||
+        packageJson?.peerDependencies?.[effectiveReactLib];
+      // @ts-expect-error TS2322
+      reactLibVersion = reactLibVersion
+        ? semver.validRange(reactLibVersion)
+        : null;
+      let minReactLibVersion =
+        reactLibVersion !== null && reactLibVersion !== '*'
+          ? // @ts-expect-error TS2345
+            semver.minVersion(reactLibVersion)?.toString()
+          : null;
+
+      automaticJSXRuntime =
+        automaticVersion &&
+        !compilerOptions?.jsxFactory &&
+        minReactLibVersion != null &&
+        semver.satisfies(minReactLibVersion, automaticVersion, {
+          includePrerelease: true,
+        });
+
+      if (automaticJSXRuntime) {
+        jsxImportSource = reactLib;
+      }
+    }
+
+    isJSX = Boolean(compilerOptions?.jsx || jsxPragma);
+  }
+
+  return {
+    isJSX,
+    jsxPragma,
+    jsxPragmaFrag,
+    jsxImportSource,
+    automaticJSXRuntime,
+    reactRefresh,
+  };
+}
+
+export async function loadTokensConfig(config: Config, options: PluginOptions) {
+  const conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
+    packageKey: '@atlaspack/transformer-tokens',
+  });
+
+  if (conf && conf.contents) {
+    validateSchema.diagnostic(
+      TOKENS_CONFIG_SCHEMA,
+      {
+        data: conf.contents,
+        source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
+        filePath: conf.filePath,
+        prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-tokens')}`,
+      },
+      '@atlaspack/transformer-tokens',
+      'Invalid config for @atlaspack/transformer-tokens',
+    );
+
+    // @ts-expect-error TS2339
+    const tokensConfig: AtlaskitTokensConfigPartial = conf.contents;
+
+    let resolvedConfig: AtlaskitTokensConfig = {
+      shouldUseAutoFallback: tokensConfig.shouldUseAutoFallback ?? true,
+      shouldForceAutoFallback: tokensConfig.shouldForceAutoFallback ?? true,
+      forceAutoFallbackExemptions:
+        tokensConfig.forceAutoFallbackExemptions ?? [],
+      defaultTheme: tokensConfig.defaultTheme ?? 'light',
+      tokenDataPath: path.join(options.projectRoot, tokensConfig.tokenDataPath),
+    };
+    return resolvedConfig;
+  }
+}
+
+export async function loadCompiledCssInJsConfig(
+  config: Config,
+  options: PluginOptions,
+): Promise<CompiledCssInJsConfigPlugin> {
+  const conf = await config.getConfigFrom<CompiledCssInJsConfigPlugin>(
+    join(options.projectRoot, 'index'),
+    ['.compiledcssrc', '.compiledcssrc.json'],
+    {
+      packageKey: '@atlaspack/transformer-compiled-css-in-js',
+    },
+  );
+
+  const contents: CompiledCssInJsConfigPlugin = {
+    configPath: conf?.filePath,
+    importSources: ['@compiled/react', '@atlaskit/css'],
+  };
+
+  Object.assign(contents, conf?.contents);
+
+  if (!contents.importSources?.includes('@compiled/react')) {
+    contents.importSources?.push('@compiled/react');
+  }
+
+  contents.extract = contents.extract && options.mode !== 'development';
+
+  return contents;
+}
+
 export default new Transformer({
   async loadConfig({config, options}) {
+    let conf = await config.getConfigFrom<JsTransformerConfig>(
+      options.projectRoot + '/index',
+      [],
+      {
+        packageKey: '@atlaspack/transformer-js',
+      },
+    );
+
+    if (conf && conf.contents) {
+      validateSchema.diagnostic(
+        CONFIG_SCHEMA,
+        {
+          data: conf.contents,
+          source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
+          filePath: conf.filePath,
+          prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-js')}`,
+        },
+        // FIXME
+        '@atlaspack/transformer-js',
+        'Invalid config for @atlaspack/transformer-js',
+      );
+    }
+
     let packageJson = await config.getPackage();
-    let isJSX,
-      pragma,
-      pragmaFrag,
+    let decorators, useDefineForClassFields;
+
+    let {
+      isJSX,
+      jsxPragma,
+      jsxPragmaFrag,
       jsxImportSource,
       automaticJSXRuntime,
       reactRefresh,
-      decorators,
-      useDefineForClassFields;
+    } = options.featureFlags.newJsxConfig
+      ? (determineJsxConfiguration(
+          config.searchPath,
+          config.isSource,
+          conf?.contents?.jsx,
+          options.projectRoot,
+        ) as JsxConfig)
+      : await legacyDetemineJsxConfig(config, options);
+
     if (config.isSource) {
-      let reactLib;
-      if (packageJson?.alias && packageJson.alias['react']) {
-        // e.g.: `{ alias: { "react": "preact/compat" } }`
-        reactLib = 'react';
-      } else {
-        // Find a dependency that we can map to a JSX pragma
-        reactLib = Object.keys(JSX_PRAGMA).find(
-          (libName) =>
-            packageJson?.dependencies?.[libName] ||
-            packageJson?.devDependencies?.[libName] ||
-            packageJson?.peerDependencies?.[libName],
-        );
-      }
-
-      reactRefresh =
-        options.hmrOptions &&
-        options.mode === 'development' &&
-        Boolean(
-          packageJson?.dependencies?.react ||
-            packageJson?.devDependencies?.react ||
-            packageJson?.peerDependencies?.react,
-        );
-
       const compilerOptions: TSConfig['compilerOptions'] = (
         await config.getConfigFrom<TSConfig>(
           options.projectRoot + '/index',
@@ -217,58 +453,6 @@ export default new Transformer({
         )
       )?.contents?.compilerOptions;
 
-      // Use explicitly defined JSX options in tsconfig.json over inferred values from dependencies.
-      pragma =
-        compilerOptions?.jsxFactory ||
-        // @ts-expect-error TS7053
-        (reactLib ? JSX_PRAGMA[reactLib].pragma : undefined);
-      pragmaFrag =
-        compilerOptions?.jsxFragmentFactory ||
-        // @ts-expect-error TS7053
-        (reactLib ? JSX_PRAGMA[reactLib].pragmaFrag : undefined);
-
-      if (
-        compilerOptions?.jsx === 'react-jsx' ||
-        compilerOptions?.jsx === 'react-jsxdev' ||
-        compilerOptions?.jsxImportSource
-      ) {
-        jsxImportSource = compilerOptions?.jsxImportSource;
-        automaticJSXRuntime = true;
-      } else if (reactLib) {
-        let effectiveReactLib =
-          packageJson?.alias && packageJson.alias['react'] === 'preact/compat'
-            ? 'preact'
-            : reactLib;
-        // @ts-expect-error TS7053
-        let automaticVersion = JSX_PRAGMA[effectiveReactLib]?.automatic;
-        let reactLibVersion =
-          packageJson?.dependencies?.[effectiveReactLib] ||
-          packageJson?.devDependencies?.[effectiveReactLib] ||
-          packageJson?.peerDependencies?.[effectiveReactLib];
-        // @ts-expect-error TS2322
-        reactLibVersion = reactLibVersion
-          ? semver.validRange(reactLibVersion)
-          : null;
-        let minReactLibVersion =
-          reactLibVersion !== null && reactLibVersion !== '*'
-            ? // @ts-expect-error TS2345
-              semver.minVersion(reactLibVersion)?.toString()
-            : null;
-
-        automaticJSXRuntime =
-          automaticVersion &&
-          !compilerOptions?.jsxFactory &&
-          minReactLibVersion != null &&
-          semver.satisfies(minReactLibVersion, automaticVersion, {
-            includePrerelease: true,
-          });
-
-        if (automaticJSXRuntime) {
-          jsxImportSource = reactLib;
-        }
-      }
-
-      isJSX = Boolean(compilerOptions?.jsx || pragma);
       decorators = compilerOptions?.experimentalDecorators;
       useDefineForClassFields = compilerOptions?.useDefineForClassFields;
       if (
@@ -293,49 +477,91 @@ export default new Transformer({
       typeof packageJson.browser === 'object' &&
       packageJson.browser.fs === false;
 
-    let conf = await config.getConfigFrom(options.projectRoot + '/index', [], {
-      packageKey: '@atlaspack/transformer-js',
-    });
-
     let inlineEnvironment = config.isSource;
     let inlineFS = !ignoreFS;
     let inlineConstants = false;
     let magicComments = false;
     let addReactDisplayName = false;
 
-    let enableGlobalThisAliaser = Boolean(
-      options.env.NATIVE_GLOBAL_THIS_ALIASER,
-    );
-    let enableLazyLoadingTransformer = Boolean(
-      options.env.NATIVE_LAZY_LOADING_TRANSFORMER,
-    );
+    let enableSsrTypeofReplacement =
+      options.env.NATIVE_SSR_TYPEOF_REPLACEMENT === 'true';
+    let globalAliasingConfig =
+      options.env.NATIVE_GLOBAL_ALIASING &&
+      JSON.parse(options.env.NATIVE_GLOBAL_ALIASING);
+    let enableLazyLoading = options.env.NATIVE_LAZY_LOADING === 'true';
+    let enableReactHooksRemoval =
+      options.env.NATIVE_REACT_HOOKS_REMOVAL === 'true';
+    let enableReactAsyncImportLift =
+      options.env.NATIVE_REACT_ASYNC_IMPORT_LIFT === 'true';
+    let reactAsyncLiftByDefault =
+      options.env.REACT_ASYNC_IMPORT_LIFTING_BY_DEFAULT === 'true';
+    let reactAsyncLiftReportLevel =
+      options.env.REACT_ASYNC_LIFT_REPORT_LEVEL || 'none';
+    let enableStaticPrevaluation = options.env.NATIVE_PREVALUATION === 'true';
+    let enableDeadReturnsRemoval =
+      options.env.NATIVE_DEAD_RETURNS_REMOVAL === 'true';
+    let enableUnusedBindingsRemoval =
+      options.env.NATIVE_UNUSED_BINDINGS_REMOVAL === 'true';
+    let syncDynamicImportConfig:
+      | {
+          entrypoint_filepath_suffix: string;
+          actual_require_paths: string[];
+        }
+      | undefined;
+
+    if (config.env.isTesseract() && options.env.SYNC_DYNAMIC_IMPORT_CONFIG) {
+      try {
+        let config = configCache.get(
+          'SYNC_DYNAMIC_IMPORT_CONFIG',
+        ) as typeof syncDynamicImportConfig;
+
+        if (!config) {
+          config = JSON.parse(options.env.SYNC_DYNAMIC_IMPORT_CONFIG);
+
+          invariant(typeof config?.entrypoint_filepath_suffix === 'string');
+          invariant(Array.isArray(config.actual_require_paths));
+
+          configCache.set('SYNC_DYNAMIC_IMPORT_CONFIG', config);
+        }
+
+        syncDynamicImportConfig = config;
+      } catch {
+        // eslint-disable-next-line no-console
+        console.warn(
+          'Failed to parse SYNC_DYNAMIC_IMPORT_CONFIG to JSON or config shape did not match. Config will not be applied.',
+        );
+
+        const fallback = {
+          entrypoint_filepath_suffix: '__NO_MATCH__',
+          actual_require_paths: [],
+        };
+
+        // Set cache to fallback so we don't keep trying to parse.
+        configCache.set('SYNC_DYNAMIC_IMPORT_CONFIG', fallback);
+        syncDynamicImportConfig = fallback;
+      }
+    }
+
+    config.invalidateOnEnvChange('SYNC_DYNAMIC_IMPORT_CONFIG');
+
+    const tokensConfig = getFeatureFlag('coreTokensAndCompiledCssInJsTransform')
+      ? await loadTokensConfig(config, options)
+      : undefined;
+
+    const compiledCssInJsConfig = getFeatureFlag(
+      'coreTokensAndCompiledCssInJsTransform',
+    )
+      ? await loadCompiledCssInJsConfig(config, options)
+      : undefined;
 
     if (conf && conf.contents) {
-      validateSchema.diagnostic(
-        CONFIG_SCHEMA,
-        {
-          data: conf.contents,
-          // FIXME
-          source: await options.inputFS.readFile(conf.filePath, 'utf8'),
-          filePath: conf.filePath,
-          prependKey: `/${encodeJSONKeyComponent('@atlaspack/transformer-js')}`,
-        },
-        // FIXME
-        '@atlaspack/transformer-js',
-        'Invalid config for @atlaspack/transformer-js',
-      );
-
       addReactDisplayName =
-        // @ts-expect-error TS2339
         conf.contents?.addReactDisplayName ?? addReactDisplayName;
-      // @ts-expect-error TS2339
       magicComments = conf.contents?.magicComments ?? magicComments;
-      // @ts-expect-error TS2339
+      // @ts-expect-error TS2322
       inlineEnvironment = conf.contents?.inlineEnvironment ?? inlineEnvironment;
-      // @ts-expect-error TS2339
       inlineFS = conf.contents?.inlineFS ?? inlineFS;
       inlineConstants =
-        // @ts-expect-error TS2339
         conf.contents?.unstable_inlineConstants ?? inlineConstants;
     }
 
@@ -343,8 +569,8 @@ export default new Transformer({
       isJSX,
       automaticJSXRuntime,
       jsxImportSource,
-      pragma,
-      pragmaFrag,
+      pragma: jsxPragma,
+      pragmaFrag: jsxPragmaFrag,
       inlineEnvironment,
       inlineFS,
       inlineConstants,
@@ -353,8 +579,19 @@ export default new Transformer({
       decorators,
       useDefineForClassFields,
       magicComments,
-      enableGlobalThisAliaser,
-      enableLazyLoadingTransformer,
+      globalAliasingConfig,
+      enableSsrTypeofReplacement,
+      enableLazyLoading,
+      enableDeadReturnsRemoval,
+      enableUnusedBindingsRemoval,
+      enableStaticPrevaluation,
+      enableReactHooksRemoval,
+      syncDynamicImportConfig,
+      enableReactAsyncImportLift,
+      reactAsyncLiftByDefault,
+      reactAsyncLiftReportLevel,
+      tokensConfig: tokensConfig,
+      compiledCssInJsConfig: compiledCssInJsConfig,
     };
   },
   async transform({asset, config, options, logger}) {
@@ -484,6 +721,8 @@ export default new Transformer({
       conditions,
       // @ts-expect-error TS2339
       magic_comments,
+      // @ts-expect-error TS2339
+      style_rules,
     } = await (transformAsync || transform)({
       filename: asset.filePath,
       code,
@@ -504,13 +743,16 @@ export default new Transformer({
       automatic_jsx_runtime: Boolean(config?.automaticJSXRuntime),
       jsx_import_source: config?.jsxImportSource,
       is_development: options.mode === 'development',
-      react_refresh:
+      react_refresh: Boolean(
         asset.env.isBrowser() &&
-        !asset.env.isLibrary &&
-        !asset.env.isWorker() &&
-        !asset.env.isTesseract() &&
-        !asset.env.isWorklet() &&
-        Boolean(config?.reactRefresh),
+          !asset.env.isLibrary &&
+          !asset.env.isWorker() &&
+          !asset.env.isTesseract() &&
+          !asset.env.isWorklet() &&
+          config?.reactRefresh &&
+          options.hmrOptions &&
+          options.mode === 'development',
+      ),
       decorators: Boolean(config?.decorators),
       use_define_for_class_fields: Boolean(config?.useDefineForClassFields),
       targets,
@@ -533,10 +775,28 @@ export default new Transformer({
       magic_comments:
         Boolean(config?.magicComments) ||
         getFeatureFlag('supportWebpackChunkName'),
-      enable_global_this_aliaser: Boolean(config.enableGlobalThisAliaser),
-      enable_lazy_loading_transformer: Boolean(
-        config.enableLazyLoadingTransformer,
+      is_source: asset.isSource,
+      nested_promise_import_fix: options.featureFlags.nestedPromiseImportFix,
+      global_aliasing_config: config.globalAliasingConfig,
+      enable_ssr_typeof_replacement: Boolean(config.enableSsrTypeofReplacement),
+      enable_lazy_loading: Boolean(config.enableLazyLoading),
+      enable_dead_returns_removal: Boolean(config.enableDeadReturnsRemoval),
+      enable_unused_bindings_removal: Boolean(
+        config.enableUnusedBindingsRemoval,
       ),
+      enable_static_prevaluation: Boolean(config.enableStaticPrevaluation),
+      enable_react_hooks_removal: Boolean(config.enableReactHooksRemoval),
+      enable_react_async_import_lift: Boolean(
+        config.enableReactAsyncImportLift,
+      ),
+      react_async_lift_by_default: Boolean(config.reactAsyncLiftByDefault),
+      react_async_lift_report_level: String(config.reactAsyncLiftReportLevel),
+      sync_dynamic_import_config: config.syncDynamicImportConfig,
+      enable_tokens_and_compiled_css_in_js_transform: getFeatureFlag(
+        'coreTokensAndCompiledCssInJsTransform',
+      ),
+      tokens_config: config.tokensConfig,
+      compiled_css_in_js_config: config.compiledCssInJsConfig,
       callMacro: asset.isSource
         ? async (err: any, src: any, exportName: any, args: any, loc: any) => {
             let mod;
@@ -594,7 +854,6 @@ export default new Transformer({
 
                       map.addIndexedMappings(mappings);
                       if (originalMap) {
-                        // @ts-expect-error TS2345
                         map.extends(originalMap);
                       } else {
                         if (!getFeatureFlag('omitSourcesContentInMemory')) {
@@ -659,6 +918,10 @@ export default new Transformer({
 
     if (getFeatureFlag('conditionalBundlingApi')) {
       asset.meta.conditions = conditions;
+    }
+
+    if (style_rules) {
+      asset.meta.styleRules = style_rules;
     }
 
     if (is_constant_module) {
@@ -1184,7 +1447,6 @@ export default new Transformer({
       let sourceMap = new SourceMap(options.projectRoot);
       sourceMap.addVLQMap(JSON.parse(map));
       if (originalMap) {
-        // @ts-expect-error TS2345
         sourceMap.extends(originalMap);
       }
       asset.setMap(sourceMap);

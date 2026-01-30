@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/node-resolver-core",
-  "version": "3.7.6",
+  "version": "3.7.20",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"

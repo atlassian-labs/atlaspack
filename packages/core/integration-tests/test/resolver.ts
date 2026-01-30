@@ -1,5 +1,5 @@
 import assert from 'assert';
-import path from 'path';
+import path, {join} from 'path';
 import {
   bundle,
   describe,
@@ -8,6 +8,9 @@ import {
   ncp,
   overlayFS,
   outputFS,
+  fsFixture,
+  inputFS,
+  findAsset,
 } from '@atlaspack/test-utils';
 
 describe('resolver', function () {
@@ -476,5 +479,194 @@ describe('resolver', function () {
 
     output = await run(b);
     assert.strictEqual(output.default, 'production');
+  });
+
+  describe('resolver sideEffects defaults', function () {
+    const dir = join(__dirname, 'tmp');
+
+    beforeEach(async function () {
+      await inputFS.rimraf(dir);
+    });
+
+    afterEach(async function () {
+      await inputFS.rimraf(dir);
+    });
+
+    it('should default sideEffects to true when custom resolver does not specify it', async function () {
+      // This test verifies the fix for the bug where custom resolvers that don't specify
+      // sideEffects would get false by default in V3, causing issues with asset graph construction.
+      // The fix ensures sideEffects defaults to true, matching V2 behavior.
+
+      await fsFixture(inputFS, dir)`
+        custom-resolver-sideeffects-default
+          package.json:
+            {
+              "name": "custom-resolver-sideeffects-default",
+              "version": "1.0.0"
+            }
+
+          .parcelrc:
+            {
+              "extends": "@atlaspack/config-default",
+              "resolvers": ["./custom-resolver.js", "..."]
+            }
+
+          yarn.lock:
+
+          index.js:
+            // This file imports a module that will be resolved by a custom resolver
+            // The custom resolver doesn't specify sideEffects, so it should default to true
+            import value from 'custom-module';
+
+            export default value;
+
+          custom-module.js:
+            // This module is resolved by the custom resolver
+            export default 42;
+
+          custom-resolver.js:
+            const {Resolver} = require('@atlaspack/plugin');
+            const path = require('path');
+
+            /**
+             * Custom resolver that doesn't specify sideEffects.
+             * This tests that sideEffects defaults to true in V3.
+             */
+            module.exports = new Resolver({
+              async resolve({specifier}) {
+                if (specifier === 'custom-module') {
+                  return {
+                    filePath: path.join(__dirname, 'custom-module.js'),
+                    // Note: sideEffects is NOT specified - should default to true
+                  };
+                }
+
+                return null;
+              },
+            });
+      `;
+
+      let b = await bundle(
+        join(dir, 'custom-resolver-sideeffects-default/index.js'),
+        {
+          inputFS,
+        },
+      );
+
+      let output = await run(b);
+      assert.strictEqual(output.default, 42);
+
+      let customModule = findAsset(b, 'custom-module.js');
+      assert.equal(customModule.sideEffects, true);
+    });
+
+    it('should default sideEffects to true when using the native atlaspack resolver', async function () {
+      // This test verifies that when the built-in Atlaspack resolver resolves Node builtins
+      // without polyfills to _empty.js, sideEffects defaults to true, preventing symbol
+      // propagation errors during scope hoisting.
+      //
+      // Without the fix (passing false), this test would fail with:
+      // "does not export 'Buffer'" or similar errors during symbol propagation.
+
+      await fsFixture(inputFS, dir)`
+        native-resolver
+          lib.js:
+            var fs;
+            try {
+              // fs is a Node builtin, so it will be resolved to _empty.js
+              fs = require('fs');
+            } catch (e) {
+            }
+
+          index.js:
+            import './lib.js';
+            sideEffectNoop();
+      `;
+
+      let b = await bundle(join(dir, 'native-resolver/index.js'), {
+        inputFS,
+        mode: 'production', // Enable scope hoisting to trigger symbol propagation
+      });
+
+      let empty = findAsset(b, '_empty.js');
+      assert.equal(empty.sideEffects, true);
+    });
+  });
+
+  describe.v3('unstable_alias', function () {
+    // unstable_alias is currently only supported in v3
+    it('should resolve aliases set by unstable_alias in .parcelrc', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        unstable-alias-test
+          .parcelrc:
+            {
+              "extends": "@atlaspack/config-default",
+               "unstable_alias": {"my-alias": "./test.js"}
+            }
+
+          package.json:
+            {
+              "name": "unstable-alias-test"
+            }
+
+          yarn.lock:
+
+          test.js:
+            module.exports = 42;
+
+          index.js:
+            module.exports = 'hello ' + require('my-alias');
+      `;
+
+      let b = await bundle(
+        path.join(__dirname, 'unstable-alias-test/index.js'),
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      let output = await run(b);
+      assert.equal(output, 'hello 42');
+    });
+
+    it('should handle unstable_alias as well as regular alias', async function () {
+      await fsFixture(overlayFS, __dirname)`
+        unstable-alias-test-2
+          .parcelrc:
+            {
+              "extends": "@atlaspack/config-default",
+               "unstable_alias": {"my-alias": "./test.js"}
+            }
+
+          package.json:
+            {
+              "name": "unstable-alias-test",
+              "alias": {
+                "my-other-alias": "./other.js"
+              }
+            }
+
+          yarn.lock:
+
+          other.js:
+            module.exports = 'other';
+
+          test.js:
+            module.exports = 'test';
+
+          index.js:
+            module.exports = 'hello ' + require('my-alias') + ' ' + require('my-other-alias');
+      `;
+
+      let b = await bundle(
+        path.join(__dirname, 'unstable-alias-test-2/index.js'),
+        {
+          inputFS: overlayFS,
+        },
+      );
+
+      let output = await run(b);
+      assert.equal(output, 'hello test other');
+    });
   });
 });

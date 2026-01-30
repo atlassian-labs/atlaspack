@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use anyhow::{Error, anyhow};
 use async_trait::async_trait;
+use atlaspack_core::plugin::TransformResult;
 use atlaspack_core::plugin::{PluginContext, TransformerPlugin};
-use atlaspack_core::plugin::{TransformContext, TransformResult};
 use atlaspack_core::types::engines::{Engines, EnginesBrowsers};
 use atlaspack_core::types::{
   Asset, AssetWithDependencies, Code, Dependency, DependencyBuilder, Diagnostic,
@@ -18,15 +18,17 @@ use lightningcss::dependencies::DependencyOptions;
 use lightningcss::printer::PrinterOptions;
 use lightningcss::stylesheet::{ParserFlags, ParserOptions, StyleSheet};
 use lightningcss::targets::{Browsers, Targets};
-use parcel_sourcemap::SourceMap as ParcelSourceMap;
+// Lightning CSS uses the upstream Parcel SourceMap, but Atlaspack uses the in-sourced version (which will eventually be renamed)
+use parcel_sourcemap_ext::SourceMap as ParcelSourceMapExt;
 use serde::Deserialize;
 
 use crate::css_transformer_config::{CssModulesConfig, CssModulesFullConfig, CssTransformerConfig};
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct AtlaspackCssTransformerPlugin {
   project_root: PathBuf,
   css_modules_config: CssModulesFullConfig,
+  is_compiled_css_in_js_transformer_enabled: bool,
 }
 
 #[derive(Deserialize)]
@@ -61,9 +63,15 @@ impl AtlaspackCssTransformerPlugin {
       })
       .unwrap_or_default();
 
+    let is_compiled_css_in_js_transformer_enabled = ctx
+      .options
+      .feature_flags
+      .bool_enabled("compiledCssInJsTransformer");
+
     Ok(AtlaspackCssTransformerPlugin {
       project_root: ctx.options.project_root.clone(),
       css_modules_config,
+      is_compiled_css_in_js_transformer_enabled,
     })
   }
 
@@ -89,15 +97,36 @@ impl AtlaspackCssTransformerPlugin {
     // enabled
     asset.is_source && self.css_modules_config.global.unwrap_or_default()
   }
+
+  fn handle_compiled_css_asset(&self, asset: &mut Asset) -> Result<(), Error> {
+    let code = asset.code.as_str()?;
+    let rules: Vec<String> = code.split("\n").map(|s| s.to_string()).collect();
+
+    // styleRules will be consumed by the optimiser in @compiled/parcel-optimizer
+    asset
+      .meta
+      .insert("styleRules".into(), serde_json::to_value(rules)?);
+
+    // Empty the code because we only use compiled CSS assets for their metadata
+    asset.code = Code::new(vec![]);
+
+    Ok(())
+  }
 }
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackCssTransformerPlugin {
-  async fn transform(
-    &self,
-    _context: TransformContext,
-    asset: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
+    if self.is_compiled_css_in_js_transformer_enabled && asset.file_path.ends_with(".compiled.css")
+    {
+      let mut asset = asset;
+      self.handle_compiled_css_asset(&mut asset)?;
+
+      return Ok(TransformResult {
+        asset,
+        ..Default::default()
+      });
+    }
     let css_modules = if self.is_css_module(&asset) {
       Some(lightningcss::css_modules::Config {
         dashed_idents: asset.is_source && self.css_modules_config.dashed_idents.unwrap_or_default(),
@@ -153,8 +182,8 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
       },
     )?;
 
-    let mut lightning_source_map: Option<ParcelSourceMap> = if asset.env.source_map.is_some() {
-      let mut sm = ParcelSourceMap::new(&self.project_root.to_string_lossy());
+    let mut lightning_source_map: Option<ParcelSourceMapExt> = if asset.env.source_map.is_some() {
+      let mut sm = ParcelSourceMapExt::new(&self.project_root.to_string_lossy());
       sm.add_source(&asset.file_path.to_string_lossy());
       sm.set_source_content(0, asset.code.as_str()?)?;
       Some(sm)
@@ -494,8 +523,12 @@ impl TransformerPlugin for AtlaspackCssTransformerPlugin {
     css_code.push(css.code);
     asset.code = Code::from(css_code.join("\n"));
 
-    if let Some(source_map) = lightning_source_map.clone() {
-      let mut source_map = SourceMap::from(source_map);
+    if let Some(mut source_map) = lightning_source_map {
+      // The Lightning CSS sourcemap is a Parcel SourceMap, but we need an Atlaspack SourceMap - the only safe way to convert
+      // from one to the other is via JSON - as a buffer will use rkyv and requires binary compatibility
+      let lightning_source_map_json =
+        source_map.to_json(Some(&self.project_root.to_string_lossy()))?;
+      let mut source_map = SourceMap::from_json(&self.project_root, &lightning_source_map_json)?;
 
       if let Some(original_map) = asset.map {
         source_map.extends(&mut original_map.clone())?;
@@ -539,9 +572,8 @@ mod tests {
       logger: PluginLogger::default(),
       options: Arc::new(PluginOptions::default()),
     })?;
-    let context = TransformContext::default();
 
-    plugin.transform(context, asset.clone()).await
+    plugin.transform(asset.clone()).await
   }
 
   #[tokio::test(flavor = "multi_thread")]

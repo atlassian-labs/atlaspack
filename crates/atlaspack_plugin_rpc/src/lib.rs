@@ -4,8 +4,10 @@ pub mod testing;
 
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use atlaspack_config::PluginNode;
 use atlaspack_core::plugin::*;
+use atlaspack_package_manager::PackageManagerRef;
 use mockall::automock;
 
 pub type RpcFactoryRef = Arc<dyn RpcFactory>;
@@ -30,50 +32,17 @@ pub trait RpcFactory: Send + Sync {
 /// their equivalent within the external context
 #[allow(clippy::disallowed_methods, clippy::disallowed_types)]
 #[automock]
+#[async_trait]
 pub trait RpcWorker: Send + Sync {
-  fn create_bundler(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn BundlerPlugin>>;
-  fn create_compressor(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn CompressorPlugin>>;
-  fn create_namer(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn NamerPlugin>>;
-  fn create_optimizer(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn OptimizerPlugin>>;
-  fn create_packager(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn PackagerPlugin>>;
-  fn create_reporter(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn ReporterPlugin>>;
   fn create_resolver(
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,
   ) -> anyhow::Result<Arc<dyn ResolverPlugin>>;
-  fn create_runtime(
+  async fn create_transformer(
     &self,
     ctx: &PluginContext,
     plugin: &PluginNode,
-  ) -> anyhow::Result<Box<dyn RuntimePlugin>>;
-  fn create_transformer(
-    &self,
-    ctx: &PluginContext,
-    plugin: &PluginNode,
+    package_manager: PackageManagerRef,
   ) -> anyhow::Result<Arc<dyn TransformerPlugin>>;
 }

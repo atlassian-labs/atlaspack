@@ -26,20 +26,36 @@ pub enum RequestResult {
   TestMain(Vec<String>),
 }
 
+impl std::fmt::Display for RequestResult {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    match self {
+      RequestResult::AssetGraph(_output) => f.write_str("AssetGraph"),
+      RequestResult::Entry(output) => f.write_str(&format!("Entry({:?})", &output.entries)),
+      RequestResult::Asset(output) => {
+        f.write_str(&format!("Asset({})", &output.asset.file_path.display()))
+      }
+      RequestResult::Path(output) => f.write_str(&format!("Path({:?})", output)),
+      RequestResult::Target(_output) => f.write_str(&format!("Target")),
+      #[cfg(test)]
+      RequestResult::TestSub(_output) => f.write_str(&format!("TestSub")),
+      #[cfg(test)]
+      RequestResult::TestMain(_output) => f.write_str(&format!("Target")),
+    }
+  }
+}
+
 impl std::fmt::Debug for RequestResult {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match self {
-      RequestResult::AssetGraph(_) => write!(f, "AssetGraph"),
-      RequestResult::Asset(asset_request) => {
-        write!(f, "Asset({:?})", asset_request.asset.file_path)
-      }
-      RequestResult::Entry(_) => write!(f, "Entry"),
-      RequestResult::Path(_) => write!(f, "Path"),
-      RequestResult::Target(output) => output.fmt(f),
+      RequestResult::AssetGraph(output) => f.debug_tuple("AssetGraph").field(output).finish(),
+      RequestResult::Asset(output) => f.debug_tuple("Asset").field(output).finish(),
+      RequestResult::Entry(output) => f.debug_tuple("Entry").field(output).finish(),
+      RequestResult::Path(output) => f.debug_tuple("Path").field(output).finish(),
+      RequestResult::Target(output) => f.debug_tuple("Target").field(output).finish(),
       #[cfg(test)]
-      RequestResult::TestSub(_) => write!(f, "TestSub"),
+      RequestResult::TestSub(output) => f.debug_tuple("TestSub").field(output).finish(),
       #[cfg(test)]
-      RequestResult::TestMain(_) => write!(f, "TestMain"),
+      RequestResult::TestMain(output) => f.debug_tuple("TestMain").field(output).finish(),
     }
   }
 }

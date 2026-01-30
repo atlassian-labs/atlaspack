@@ -10,16 +10,15 @@ use html5ever::tendril::TendrilSink;
 use html5ever::{ParseOpts, serialize};
 use markup5ever_rcdom::{RcDom, SerializableHandle};
 
-use atlaspack_core::plugin::{PluginContext, TransformContext, TransformResult, TransformerPlugin};
+use crate::dom_visitor::walk;
+use crate::hmr_visitor::HMRVisitor;
+use crate::html_dependencies_visitor::HtmlDependenciesVisitor;
+use atlaspack_core::plugin::{PluginContext, TransformResult, TransformerPlugin};
 use atlaspack_core::types::{
   Asset, AssetId, AssetWithDependencies, BundleBehavior, Code, Dependency, Environment,
 };
 
-use crate::dom_visitor::walk;
-use crate::hmr_visitor::HMRVisitor;
-use crate::html_dependencies_visitor::HtmlDependenciesVisitor;
-
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct AtlaspackHtmlTransformerPlugin {
   project_root: PathBuf,
 }
@@ -34,17 +33,13 @@ impl AtlaspackHtmlTransformerPlugin {
 
 #[async_trait]
 impl TransformerPlugin for AtlaspackHtmlTransformerPlugin {
-  async fn transform(
-    &self,
-    context: TransformContext,
-    input: Asset,
-  ) -> Result<TransformResult, Error> {
+  async fn transform(&self, input: Asset) -> Result<TransformResult, Error> {
     let bytes: &[u8] = input.code.bytes();
     let mut dom = parse_html(bytes)?;
     let context = HTMLTransformationContext {
       // TODO: Where is this?
       enable_hmr: false,
-      env: context.env().clone(),
+      env: input.env.clone(),
       project_root: self.project_root.clone(),
       side_effects: input.side_effects,
       source_asset_id: input.id.clone(),

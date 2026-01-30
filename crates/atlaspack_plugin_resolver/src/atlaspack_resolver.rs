@@ -39,6 +39,7 @@ pub struct AtlaspackResolver {
   cache: Cache,
   config: ResolverConfig,
   options: Arc<PluginOptions>,
+  extra_aliases: Option<atlaspack_resolver::AliasMap>,
 }
 
 impl Debug for AtlaspackResolver {
@@ -84,10 +85,17 @@ impl AtlaspackResolver {
       cache.scan_package_duplicates(&ctx.config.project_root)?;
     }
 
+    let extra_aliases = ctx
+      .options
+      .unstable_alias
+      .as_ref()
+      .map(atlaspack_resolver::AliasMap::from);
+
     Ok(Self {
       cache,
       config,
       options: Arc::clone(&ctx.options),
+      extra_aliases,
     })
   }
 
@@ -288,7 +296,7 @@ impl AtlaspackResolver {
       _ => {
         return Ok(Resolved {
           invalidations: Vec::new(),
-          resolution: Resolution::Resolved(self.resolve_empty(false)),
+          resolution: Resolution::Resolved(self.resolve_empty(true)),
         });
       }
     };
@@ -319,6 +327,16 @@ impl ResolverPlugin for AtlaspackResolver {
       Cow::Borrowed(&self.options.project_root),
       CacheCow::Borrowed(&self.cache),
     );
+
+    // Set unstable_alias from config
+    if let Some(ref extra_aliases) = self.extra_aliases {
+      resolver.extra_aliases = Some(extra_aliases);
+    }
+
+    resolver.dissalow_circular_package_aliases = self
+      .options
+      .feature_flags
+      .bool_enabled("disallowCircularPackageAliases");
 
     resolver.conditions.set(
       ExportsCondition::BROWSER,
@@ -453,6 +471,10 @@ impl ResolverPlugin for AtlaspackResolver {
         }),
       }),
     }
+  }
+
+  fn on_new_build(&self) {
+    self.cache.clear();
   }
 }
 

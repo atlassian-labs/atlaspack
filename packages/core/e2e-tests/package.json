@@ -10,12 +10,21 @@
   "scripts": {
     "test": "node --experimental-strip-types ./main.mts",
     "test-ci": "yarn test",
+    "benchmark": "node --experimental-strip-types --expose-gc ./benchmark.mts",
+    "benchmark:ci": "yarn benchmark --github-comment",
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "devDependencies": {
     "@atlaspack/core": "workspace:*",
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/rust": "workspace:*",
     "@atlaspack/test-utils": "workspace:*",
     "@atlaspack/types": "workspace:*",
     "playwright": "1.50.0"
+  },
+  "dependencies": {
+    "@atlaskit/button": "^23.5.3",
+    "@compiled/parcel-optimizer": "^0.6.4",
+    "@compiled/react": "^0.18.6"
   }
 }

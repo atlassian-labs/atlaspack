@@ -21,6 +21,7 @@ use crate::AtlaspackError;
 use crate::WatchEvent;
 use crate::WatchEvents;
 use crate::plugins::PluginsRef;
+use crate::request_tracker::CacheRef;
 use crate::request_tracker::RequestResultSender;
 use crate::requests::RequestResult;
 
@@ -54,6 +55,7 @@ pub struct RequestTracker {
   request_index: HashMap<u64, NodeIndex>,
   invalidations: HashMap<PathBuf, NodeIndex>,
   invalid_nodes: HashSet<NodeIndex>,
+  pub cache: CacheRef,
 }
 
 impl RequestTracker {
@@ -63,6 +65,7 @@ impl RequestTracker {
     options: Arc<AtlaspackOptions>,
     plugins: PluginsRef,
     project_root: PathBuf,
+    cache: CacheRef,
   ) -> Self {
     let mut graph = StableDiGraph::<RequestNode, RequestEdgeType>::new();
 
@@ -78,6 +81,7 @@ impl RequestTracker {
       invalidations: HashMap::new(),
       invalid_nodes: HashSet::new(),
       options,
+      cache,
     }
   }
 
@@ -140,7 +144,7 @@ impl RequestTracker {
 
             // Cached request
             if let Some(response_tx) = response_tx {
-              let _ = response_tx.send(Ok((previous_result, request_id)));
+              let _ = response_tx.send(Ok((previous_result, request_id, true)));
             }
             continue;
           }
@@ -153,6 +157,7 @@ impl RequestTracker {
             Some(request_id),
             self.plugins.clone(),
             self.project_root.clone(),
+            self.cache.clone(),
             // sub-request run
             Box::new({
               let tx = tx.clone();
@@ -188,13 +193,21 @@ impl RequestTracker {
           self.link_request_to_parent(request_id, parent_request_id)?;
 
           if let Some(response_tx) = response_tx {
-            let _ = response_tx.send(result.map(|result| (result, request_id)));
+            let _ = response_tx.send(result.map(|result| (result, request_id, false)));
           }
         }
       }
     }
 
-    self.get_request(None, request_id)
+    self.link_request_to_parent(request_id, None)?;
+    self.get_request(request_id)
+  }
+
+  pub fn get_invalid_nodes(&self) -> impl Iterator<Item = &RequestNode> {
+    self
+      .invalid_nodes
+      .iter()
+      .map(|node_index| &self.graph[*node_index])
   }
 
   /// Before a request is run, a 'pending' [`RequestNode::Incomplete`] entry is added to the graph.
@@ -210,12 +223,16 @@ impl RequestTracker {
       .ok_or_else(|| diagnostic_error!("Failed to find request node"))?;
 
     // Don't run if already run
-    if let RequestNode::Valid(result) = request_node {
-      return Ok(Some(result.clone()));
+    if let RequestNode::Valid(previous_result) = request_node {
+      return Ok(Some(previous_result.clone()));
     }
 
     self.invalid_nodes.remove(&node_index);
-    *request_node = RequestNode::Incomplete(None);
+    *request_node = if let RequestNode::Invalid(previous_result) = request_node {
+      RequestNode::Incomplete(previous_result.clone())
+    } else {
+      RequestNode::Incomplete(None)
+    };
 
     self.clear_invalidations(node_index);
 
@@ -264,6 +281,8 @@ impl RequestTracker {
           invalidations,
         } = result;
         let result = Arc::new(result);
+
+        // Update node with latest result
         *request_node = RequestNode::Valid(result.clone());
 
         for invalidation in invalidations.iter() {
@@ -295,26 +314,24 @@ impl RequestTracker {
     }
   }
 
-  /// Get a request result and call [`RequestTracker::link_request_to_parent`] to create a
-  /// dependency link between the source request and this sub-request.
-  fn get_request(
-    &mut self,
-    parent_request_hash: Option<u64>,
-    request_id: u64,
-  ) -> anyhow::Result<Arc<RequestResult>> {
-    self.link_request_to_parent(request_id, parent_request_hash)?;
+  fn get_request_node(&self, request_id: u64) -> Option<&RequestNode> {
+    let node_index = self.request_index.get(&request_id)?;
+    self.graph.node_weight(*node_index)
+  }
 
-    let Some(node_index) = self.request_index.get(&request_id) else {
-      return Err(diagnostic_error!("Impossible error"));
-    };
-    let Some(request_node) = self.graph.node_weight(*node_index) else {
-      return Err(diagnostic_error!("Impossible"));
-    };
+  fn get_request(&self, request_id: u64) -> anyhow::Result<Arc<RequestResult>> {
+    match self.get_request_node(request_id) {
+      Some(RequestNode::Error(error)) => Err(AtlaspackError::from(error).into()),
+      Some(RequestNode::Valid(value)) => Ok(value.clone()),
+      _ => Err(diagnostic_error!("No request with result {}", request_id)),
+    }
+  }
 
-    match request_node {
-      RequestNode::Error(error) => Err(AtlaspackError::from(error).into()),
-      RequestNode::Valid(value) => Ok(value.clone()),
-      _ => Err(diagnostic_error!("Impossible")),
+  pub fn get_cached_request_result(&self, request: impl Request) -> Option<Arc<RequestResult>> {
+    match self.get_request_node(request.id())? {
+      RequestNode::Valid(value) => Some(value.clone()),
+      RequestNode::Invalid(value) => value.as_ref().map(|v| v.clone()),
+      _ => None,
     }
   }
 
@@ -368,13 +385,12 @@ impl RequestTracker {
     }
 
     for invalid_node in invalid_nodes {
-      tracing::info!(
-        "{:?} invalidates {:#?}",
-        file_path_reason,
-        self.graph.node_weight(invalid_node)
-      );
       self.graph[invalid_node] = match &self.graph[invalid_node] {
-        RequestNode::Valid(result) => RequestNode::Invalid(Some(result.clone())),
+        RequestNode::Valid(result) => {
+          tracing::info!("{:?} invalidates {}", file_path_reason, result);
+
+          RequestNode::Invalid(Some(result.clone()))
+        }
         RequestNode::Incomplete(result) => RequestNode::Invalid(result.clone()),
         _ => {
           panic!("Impossible node type")
@@ -384,7 +400,7 @@ impl RequestTracker {
     }
   }
 
-  #[tracing::instrument(level = "info", skip_all, ret, fields(events = watch_events.len()))]
+  #[tracing::instrument(level = "debug", skip_all, ret, fields(events = watch_events.len()))]
   pub fn respond_to_fs_events(&mut self, watch_events: WatchEvents) -> bool {
     let nodes_to_invalidate: Vec<(NodeIndex, &PathBuf)> = watch_events
       .iter()
@@ -404,7 +420,7 @@ impl RequestTracker {
       self.invalidate_node(node_id, file_path_reason);
     }
 
-    tracing::info!(
+    tracing::debug!(
       "Invalid nodes {:#?}",
       self
         .invalid_nodes

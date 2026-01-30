@@ -1,26 +1,38 @@
+#![deny(clippy::panic)]
+
 pub mod add_display_name;
 mod collect;
 mod constant_module;
+mod dead_returns_remover;
+mod declare_const_collector;
 mod dependency_collector;
 mod env_replacer;
 mod esm_export_classifier;
 mod esm_to_cjs_replacer;
 mod fs;
+mod global_aliaser;
 mod global_replacer;
-mod global_this_aliaser;
 mod hoist;
 mod lazy_loading_transformer;
 mod magic_comments;
 mod node_replacer;
+mod react_async_import_lift;
+mod react_hooks_remover;
+mod static_prevaluator;
+mod sync_dynamic_import;
 pub mod test_utils;
 mod typeof_replacer;
-mod utils;
+mod unused_bindings_remover;
+pub mod utils;
 
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::OnceLock;
 
 use atlaspack_contextual_imports::ContextualImportsConfig;
 use atlaspack_contextual_imports::ContextualImportsInlineRequireVisitor;
@@ -29,35 +41,46 @@ use atlaspack_macros::MacroCallback;
 use atlaspack_macros::MacroError;
 use atlaspack_macros::Macros;
 
+use atlassian_swc_compiled_css::remove_jsx_pragma_comments;
+use atlassian_swc_compiled_css_strip_runtime as strip_runtime;
 use collect::Collect;
 pub use collect::CollectImportedSymbol;
 use collect::CollectResult;
 use constant_module::ConstantModule;
+use dead_returns_remover::DeadReturnsRemover;
 pub use dependency_collector::DependencyDescriptor;
 pub use dependency_collector::dependency_collector;
 use env_replacer::*;
 use esm_to_cjs_replacer::EsmToCjsReplacer;
 use fs::inline_fs;
+use glob_match::glob_match;
+use global_aliaser::GlobalAliaser;
 use global_replacer::GlobalReplacer;
-use global_this_aliaser::GlobalThisAliaser;
 pub use hoist::ExportedSymbol;
 use hoist::HoistResult;
 pub use hoist::ImportedSymbol;
 use hoist::hoist;
 use indexmap::IndexMap;
+use indexmap::IndexSet;
 use lazy_loading_transformer::LazyLoadingTransformer;
 use magic_comments::MagicCommentsVisitor;
 use node_replacer::NodeReplacer;
 use path_slash::PathExt;
 use pathdiff::diff_paths;
+use react_async_import_lift::ReactAsyncImportLift;
+use react_hooks_remover::ReactHooksRemover;
+use regex::Regex;
 use serde::Deserialize;
 use serde::Serialize;
+use static_prevaluator::StaticPreEvaluator;
 use std::io::{self};
+use swc_atlaskit_tokens::design_system_tokens_visitor;
+use swc_core::atoms::Atom;
 use swc_core::common::FileName;
 use swc_core::common::Globals;
 use swc_core::common::Mark;
 use swc_core::common::SourceMap;
-use swc_core::common::comments::SingleThreadedComments;
+use swc_core::common::comments::{Comment, SingleThreadedComments};
 use swc_core::common::errors::Handler;
 use swc_core::common::pass::Optional;
 use swc_core::common::source_map::SourceMapGenConfig;
@@ -73,11 +96,11 @@ use swc_core::ecma::parser::Syntax;
 use swc_core::ecma::parser::TsSyntax;
 use swc_core::ecma::parser::error::Error;
 use swc_core::ecma::parser::lexer::Lexer;
+use swc_core::ecma::preset_env;
 use swc_core::ecma::preset_env::Mode::Entry;
 use swc_core::ecma::preset_env::Targets;
 use swc_core::ecma::preset_env::Version;
 use swc_core::ecma::preset_env::Versions;
-use swc_core::ecma::preset_env::preset_env;
 use swc_core::ecma::transforms::base::assumptions::Assumptions;
 use swc_core::ecma::transforms::base::fixer::fixer;
 use swc_core::ecma::transforms::base::fixer::paren_remover;
@@ -94,19 +117,31 @@ use swc_core::ecma::visit::FoldWith;
 use swc_core::ecma::visit::VisitMutWith;
 use swc_core::ecma::visit::VisitWith;
 use swc_core::ecma::visit::visit_mut_pass;
+use sync_dynamic_import::SyncDynamicImport;
+pub use sync_dynamic_import::SyncDynamicImportConfig;
 use typeof_replacer::*;
+use unused_bindings_remover::UnusedBindingsRemover;
 use utils::CodeHighlight;
 pub use utils::Diagnostic;
 use utils::DiagnosticSeverity;
 use utils::ErrorBuffer;
 pub use utils::SourceLocation;
 pub use utils::SourceType;
-use utils::error_buffer_to_diagnostics;
+use utils::{error_buffer_to_diagnostics, transform_errors_to_diagnostics};
 
 use crate::esm_export_classifier::EsmExportClassifier;
 use crate::esm_export_classifier::SymbolsInfo;
 
 type SourceMapBuffer = Vec<(swc_core::common::BytePos, swc_core::common::LineCol)>;
+
+#[derive(Default, Serialize, Debug, Deserialize, Clone, Hash, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TokensConfig {
+  pub should_use_auto_fallback: bool,
+  pub should_force_auto_fallback: bool,
+  pub force_auto_fallback_exemptions: Vec<String>,
+  pub default_theme: String,
+}
 
 #[derive(Default, Serialize, Debug, Deserialize)]
 pub struct Config {
@@ -116,7 +151,7 @@ pub struct Config {
   pub module_id: String,
   pub project_root: String,
   pub replace_env: bool,
-  pub env: HashMap<swc_core::ecma::atoms::JsWord, swc_core::ecma::atoms::JsWord>,
+  pub env: BTreeMap<Atom, Atom>,
   pub inline_fs: bool,
   pub insert_node_globals: bool,
   pub node_replacer: bool,
@@ -148,8 +183,21 @@ pub struct Config {
   pub hmr_improvements: bool,
   pub magic_comments: bool,
   pub exports_rebinding_optimisation: bool,
-  pub enable_global_this_aliaser: bool,
-  pub enable_lazy_loading_transformer: bool,
+  pub nested_promise_import_fix: bool,
+  pub global_aliasing_config: Option<BTreeMap<String, String>>,
+  pub enable_lazy_loading: bool,
+  pub enable_ssr_typeof_replacement: bool,
+  pub enable_react_hooks_removal: bool,
+  pub enable_react_async_import_lift: bool,
+  pub react_async_lift_by_default: bool,
+  pub react_async_lift_report_level: String,
+  pub enable_static_prevaluation: bool,
+  pub enable_dead_returns_removal: bool,
+  pub enable_unused_bindings_removal: bool,
+  pub sync_dynamic_import_config: Option<SyncDynamicImportConfig>,
+  pub enable_tokens_and_compiled_css_in_js_transform: bool,
+  pub tokens_config: Option<TokensConfig>,
+  pub compiled_css_in_js_config: Option<atlassian_swc_compiled_css::config::CompiledCssInJsConfig>,
 }
 
 #[derive(Serialize, Debug, Default)]
@@ -164,12 +212,13 @@ pub struct TransformResult {
   pub symbol_result: Option<CollectResult>,
   pub diagnostics: Option<Vec<Diagnostic>>,
   pub needs_esm_helpers: bool,
-  pub used_env: HashSet<swc_core::ecma::atoms::JsWord>,
+  pub used_env: HashSet<swc_core::ecma::atoms::Atom>,
   pub has_node_replacements: bool,
   pub is_constant_module: bool,
-  pub conditions: HashSet<Condition>,
+  pub conditions: BTreeSet<Condition>,
   pub magic_comments: HashMap<String, String>,
   pub is_empty_or_empty_export: bool,
+  pub style_rules: Option<Vec<String>>,
 }
 
 fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Versions> {
@@ -203,7 +252,7 @@ fn targets_to_versions(targets: &Option<HashMap<String, String>>) -> Option<Vers
 }
 
 pub fn transform(
-  config: Config,
+  config: &Config,
   call_macro: Option<MacroCallback>,
 ) -> Result<TransformResult, io::Error> {
   let mut result = TransformResult::default();
@@ -216,7 +265,7 @@ pub fn transform(
     config.project_root.as_str(),
     config.filename.as_str(),
     &source_map,
-    &config,
+    config,
   );
 
   match module {
@@ -247,11 +296,14 @@ pub fn transform(
         SourceType::Module => true,
         SourceType::Script => false,
       };
-
       swc_core::common::GLOBALS.set(&Globals::new(), || {
         let error_buffer = ErrorBuffer::default();
-        let handler = Handler::with_emitter(true, false, Box::new(error_buffer.clone()));
-        swc_core::common::errors::HANDLER.set(&handler, || {
+        let handler = Lrc::new(Handler::with_emitter(
+          true,
+          false,
+          Box::new(error_buffer.clone()),
+        ));
+        swc_core::common::errors::HANDLER.set(handler.as_ref(), || {
           helpers::HELPERS.set(
             &helpers::Helpers::new(
               /* external helpers from @swc/helpers */ should_import_swc_helpers,
@@ -260,10 +312,10 @@ pub fn transform(
               let mut react_options = react::Options::default();
               if config.is_jsx {
                 if let Some(jsx_pragma) = &config.jsx_pragma {
-                  react_options.pragma = Some(jsx_pragma.clone());
+                  react_options.pragma = Some(jsx_pragma.clone().into());
                 }
                 if let Some(jsx_pragma_frag) = &config.jsx_pragma_frag {
-                  react_options.pragma_frag = Some(jsx_pragma_frag.clone());
+                  react_options.pragma_frag = Some(jsx_pragma_frag.clone().into());
                 }
                 react_options.development = Some(config.is_development);
                 react_options.refresh = if config.react_refresh {
@@ -274,7 +326,7 @@ pub fn transform(
 
                 react_options.runtime = if config.automatic_jsx_runtime {
                   if let Some(import_source) = &config.jsx_import_source {
-                    react_options.import_source = Some(import_source.clone());
+                    react_options.import_source = Some(Atom::from(import_source.as_str()));
                   }
                   Some(react::Runtime::Automatic)
                 } else {
@@ -284,6 +336,112 @@ pub fn transform(
 
               let global_mark = Mark::fresh(Mark::root());
               let unresolved_mark = Mark::fresh(Mark::root());
+              let mut diagnostics = vec![];
+
+              if config.enable_tokens_and_compiled_css_in_js_transform {
+                if let Some(tokens_config) = &config.tokens_config
+                {
+                  module = module.apply(Optional::new(
+                    design_system_tokens_visitor(
+                      &comments,
+                      tokens_config.should_use_auto_fallback,
+                      tokens_config.should_force_auto_fallback,
+                      tokens_config.force_auto_fallback_exemptions.clone(),
+                      tokens_config.default_theme.clone(),
+                      false,
+                      None,
+                    ),
+                    swc_atlaskit_tokens::should_run_tokens_transform(code),
+                  ));
+                }
+
+                if let Some(compiled_css_in_js_config) = &config.compiled_css_in_js_config {
+                  let mut style_rules = IndexSet::new();
+                  // Convert to transform config to access extract field
+                  let transform_config =
+                    atlassian_swc_compiled_css::CompiledCssInJsTransformConfig::from(
+                      compiled_css_in_js_config.clone(),
+                    );
+
+                  let plugin_options = atlassian_swc_compiled_css::PluginOptions::from(
+                    compiled_css_in_js_config,
+                  );
+                  let should_run_compiled_css =
+                    atlassian_swc_compiled_css::should_run_compiled_css_in_js_transform(
+                      code,
+                      plugin_options.clone(),
+                    );
+                  let compiled_css_transform =
+                    atlassian_swc_compiled_css::CompiledCssInJsTransform::new(plugin_options);
+
+                  {
+                    let shared_state = compiled_css_transform.state();
+                    let mut state = shared_state.borrow_mut();
+                    let transform_file =
+                      atlassian_swc_compiled_css::TransformFile::transform_compiled_with_options(
+                        source_map.clone(),
+                        collect_comments_for_transform(&comments),
+                        atlassian_swc_compiled_css::TransformFileOptions {
+                          filename: Some(config.filename.clone()),
+                          cwd: Some(PathBuf::from(&config.project_root)),
+                          root: Some(PathBuf::from(&config.project_root)),
+                          loc_filename: Some(config.filename.clone()),
+                        },
+                      );
+                    state.replace_file(transform_file);
+
+                    style_rules.extend(state.style_rules.clone());
+                  }
+
+                  module = module.apply(Optional::new(
+                    visit_mut_pass(compiled_css_transform),
+                    should_run_compiled_css,
+                  ));
+
+                  // Apply strip runtime transform when extract is enabled
+                  if transform_config.extract {
+                    let strip_options = strip_runtime::PluginOptions {
+                      style_sheet_path: None,
+                      compiled_require_exclude: Some(true),
+                      extract_styles_to_directory: None,
+                      sort_at_rules: Some(transform_config.sort_at_rules),
+                      sort_shorthand: Some(transform_config.sort_shorthand),
+                    };
+
+                    let strip_config = strip_runtime::TransformConfig {
+                      filename: Some(config.filename.clone()),
+                      cwd: Some(config.project_root.clone()),
+                      root: Some(config.project_root.clone()),
+                      source_file_name: Some(config.filename.clone()),
+                      options: strip_options,
+                    };
+
+                    module = match strip_runtime::try_transform(module, strip_config) {
+                      Ok(strip_output) => {
+                        style_rules.extend(strip_output.metadata.style_rules);
+                        strip_output.program
+                      }
+                      Err(errors) => {
+                        diagnostics.extend(transform_errors_to_diagnostics(errors, &source_map));
+                        result.diagnostics = Some(diagnostics);
+                        return Ok(result);
+                      }
+                    };
+                  }
+
+                  remove_jsx_pragma_comments(&comments);
+
+                  result.style_rules = Some(style_rules.into_iter().collect());
+                }
+
+              }
+
+              // Strip `declare const` statements without initializers before the resolver runs.
+              // This prevents the resolver from seeing them and marking them as bindings.
+              // Statements like `declare const foo: string = "hello";` are kept.
+              if config.is_type_script && declare_const_collector::DeclareConstStripper::has_declare_const(code) {
+                module.visit_mut_with(&mut declare_const_collector::DeclareConstStripper);
+              }
 
               if config.magic_comments && MagicCommentsVisitor::has_magic_comment(code) {
                 let mut magic_comment_visitor = MagicCommentsVisitor::new(code);
@@ -375,7 +533,6 @@ pub fn transform(
                 assumptions.set_public_class_fields |= true;
               }
 
-              let mut diagnostics = vec![];
               if let Some(call_macro) = call_macro {
                 let mut errors = Vec::new();
                 module = module.fold_with(&mut Macros::new(call_macro, &source_map, &mut errors));
@@ -402,10 +559,31 @@ pub fn transform(
                 ));
               }
 
+              // Lift React async imports to top-level
+              if config.enable_react_async_import_lift && ReactAsyncImportLift::should_transform(code) {
+                module.visit_mut_with(&mut ReactAsyncImportLift::new(
+                  global_mark,
+                  config.react_async_lift_by_default,
+                  config.react_async_lift_report_level.clone(),
+                  source_map.clone(),
+                  &mut diagnostics,
+                ));
+              }
+
+              // Transform dynamic imports to sync imports if configured
+              if config.sync_dynamic_import_config.is_some() {
+                module.visit_mut_with(
+                  &mut SyncDynamicImport::new(Path::new(&config.filename),
+                    unresolved_mark,
+                    &config.sync_dynamic_import_config,
+                  ));
+                }
+
               let mut module = {
                 let mut passes = (
                   Optional::new(
-                    visit_mut_pass(TypeofReplacer::new(unresolved_mark)),
+                    visit_mut_pass(
+                      if config.enable_ssr_typeof_replacement { TypeofReplacer::new_ssr(unresolved_mark) } else { TypeofReplacer::new(unresolved_mark) }),
                     config.source_type != SourceType::Script,
                   ),
                   // Inline process.env and process.browser,
@@ -417,23 +595,42 @@ pub fn transform(
                       used_env: &mut result.used_env,
                       source_map: source_map.clone(),
                       diagnostics: &mut diagnostics,
-                      unresolved_mark
+                      unresolved_mark,
                     }),
                     config.source_type != SourceType::Script
                   ),
                   Optional::new(
-                    visit_mut_pass(GlobalThisAliaser::new(unresolved_mark)),
-                    config.enable_global_this_aliaser && GlobalThisAliaser::should_transform(&config.filename)
+                    visit_mut_pass(GlobalAliaser::with_config(unresolved_mark, &config.global_aliasing_config)),
+                    config.global_aliasing_config.is_some()
                   ),
                   Optional::new(
                     visit_mut_pass(LazyLoadingTransformer::new(unresolved_mark)),
-                    config.enable_lazy_loading_transformer && LazyLoadingTransformer::should_transform(code)
+                    config.enable_lazy_loading && LazyLoadingTransformer::should_transform(code)
+                  ),
+                  Optional::new(
+                    visit_mut_pass(ReactHooksRemover::new(unresolved_mark)),
+                    config.enable_react_hooks_removal
                   ),
                   paren_remover(Some(&comments)),
+                  // Pre-evaluate static expressions at compile time
+                  Optional::new(
+                    visit_mut_pass(StaticPreEvaluator),
+                    config.enable_static_prevaluation
+                  ),
                   // Simplify expressions and remove dead branches so that we
                   // don't include dependencies inside conditionals that are always false.
                   expr_simplifier(unresolved_mark, Default::default()),
                   dead_branch_remover(unresolved_mark),
+                  // Remove unreachable statements after return statements
+                  Optional::new(
+                    visit_mut_pass(DeadReturnsRemover::new()),
+                    config.enable_dead_returns_removal
+                  ),
+                  // Remove unused variable bindings
+                  Optional::new(
+                    visit_mut_pass(UnusedBindingsRemover::new()),
+                    config.enable_unused_bindings_removal
+                  ),
                   // Inline Node fs.readFileSync calls
                   Optional::new(
                     visit_mut_pass(inline_fs(
@@ -485,20 +682,19 @@ pub fn transform(
                       project_root: Path::new(&config.project_root),
                       filename: Path::new(&config.filename),
                       unresolved_mark,
-                      scope_hoist: config.scope_hoist
+                      scope_hoist: config.scope_hoist,
                     }),
                     config.insert_node_globals
                   ),
 
                   // Transpile new syntax to older syntax if needed
                   Optional::new(
-                    preset_env(
-                      unresolved_mark,
-                      Some(&comments),
-                      preset_env_config,
-                      assumptions,
-                      &mut Default::default(),
-                    ),
+                        preset_env::transform_from_env(
+                          unresolved_mark,
+                          Some(&comments),
+                          preset_env::EnvConfig::from(preset_env_config),
+                          assumptions
+                        ),
                     should_run_preset_env,
                   ),
 
@@ -528,7 +724,7 @@ pub fn transform(
                       &mut result.dependencies,
                       ignore_mark,
                       unresolved_mark,
-                      &config,
+                      config,
                       &mut diagnostics,
                       &mut result.conditions,
                     ),
@@ -629,10 +825,10 @@ pub fn transform(
               }
 
               let (buf, src_map_buf) =
-                emit(source_map.clone(), comments, &module, config.source_maps)?;
+                emit(source_map.clone(), comments, &module, config.source_maps, None)?;
               if config.source_maps
                 && source_map
-                  .build_source_map_with_config(&src_map_buf, None, SourceMapConfig)
+                  .build_source_map(&src_map_buf, None, SourceMapConfig)
                   .to_writer(&mut map_buf)
                   .is_ok()
               {
@@ -650,7 +846,7 @@ pub fn transform(
 
 pub type ParseResult<T> = Result<T, Vec<Error>>;
 
-fn parse(
+pub fn parse(
   code: &str,
   project_root: &str,
   filename: &str,
@@ -664,7 +860,8 @@ fn parse(
   } else {
     filename.into()
   };
-  let source_file = source_map.new_source_file(Lrc::new(FileName::Real(filename)), code.into());
+  let source_file =
+    source_map.new_source_file(Lrc::new(FileName::Real(filename)), code.to_string());
 
   let comments = SingleThreadedComments::default();
   let syntax = if config.is_type_script {
@@ -710,11 +907,12 @@ fn parse(
   Ok((module, comments))
 }
 
-fn emit(
+pub fn emit(
   source_map: Lrc<SourceMap>,
   comments: SingleThreadedComments,
   module: &Module,
   source_maps: bool,
+  ascii_only: Option<bool>,
 ) -> Result<(Vec<u8>, SourceMapBuffer), io::Error> {
   let mut src_map_buf = vec![];
   let mut buf = vec![];
@@ -731,8 +929,8 @@ fn emit(
     ));
     let config = swc_core::ecma::codegen::Config::default()
       .with_target(swc_core::ecma::ast::EsVersion::Es5)
-      // Make sure the output works regardless of whether it's loaded with the correct (utf8) encoding
-      .with_ascii_only(true);
+      // Controls whether non-ASCII characters should be escaped (defaults to true for backward compatibility)
+      .with_ascii_only(ascii_only.unwrap_or(true));
     let mut emitter = swc_core::ecma::codegen::Emitter {
       cfg: config,
       comments: Some(&comments),
@@ -744,6 +942,15 @@ fn emit(
   }
 
   Ok((buf, src_map_buf))
+}
+
+fn collect_comments_for_transform(comments: &SingleThreadedComments) -> Vec<Comment> {
+  let (leading, trailing) = comments.borrow_all();
+  leading
+    .values()
+    .chain(trailing.values())
+    .flat_map(|list| list.clone())
+    .collect()
 }
 
 // Exclude macro expansions from source maps.
@@ -815,12 +1022,12 @@ mod tests {
   fn test_logs_when_flag_is_on_and_file_is_empty() {
     let config: Config = make_test_swc_config(r#""#);
     unsafe { env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "true") };
-    let _result = transform(config, None);
+    let _result = transform(&config, None);
     assert!(logs_contain("You are attempting to import"));
 
     unsafe { env::set_var("ATLASPACK_SHOULD_LOOK_FOR_EMPTY_FILES", "false") };
     let config: Config = make_test_swc_config(r#""#);
-    let _result = transform(config, None);
+    let _result = transform(&config, None);
     logs_assert(|lines: &[&str]| {
       let count = lines
         .iter()
@@ -831,5 +1038,214 @@ mod tests {
         n => Err(format!("Expected one matching log, but found {}", n)),
       }
     });
+  }
+}
+
+// JSX Configuration types and functions for NAPI sharing
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JsxConfiguration {
+  #[serde(rename = "isJSX")]
+  pub is_jsx: bool,
+  pub jsx_pragma: Option<String>,
+  pub jsx_pragma_frag: Option<String>,
+  pub jsx_import_source: Option<String>,
+  #[serde(rename = "automaticJSXRuntime")]
+  pub automatic_jsx_runtime: bool,
+  pub react_refresh: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
+pub struct AutomaticRuntimeGlobs {
+  pub include: Vec<String>,
+  pub exclude: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
+#[serde(untagged)]
+pub enum AutomaticReactRuntime {
+  Enabled(bool),
+  Glob(AutomaticRuntimeGlobs),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JsxOptions {
+  pub pragma: Option<String>,
+  pub pragma_fragment: Option<String>,
+  pub import_source: Option<String>,
+  pub automatic_runtime: Option<AutomaticReactRuntime>,
+}
+
+/// Returns the relative path from `from` to `path` as a `String`.
+/// e.g. for path="/a/b/c/d.txt" and from="/a/b", returns "c/d.txt"
+/// and for path="/a/b/c/d.txt" and from="/a/b/e", returns "../c/d.txt"
+///
+/// Optimized for performance when called frequently (e.g., 100k times per build).
+pub fn relative_path(path: &Path, from: &Path) -> String {
+  // Collect components once - unavoidable allocation for comparison
+  let path_components: Vec<_> = path.components().collect();
+  let from_components: Vec<_> = from.components().collect();
+
+  // Find common prefix length
+  let common_len = path_components
+    .iter()
+    .zip(from_components.iter())
+    .take_while(|(a, b)| a == b)
+    .count();
+
+  let ups = from_components.len() - common_len;
+  let remaining = &path_components[common_len..];
+
+  // Early return for same path
+  if ups == 0 && remaining.is_empty() {
+    return ".".to_string();
+  }
+
+  // Pre-calculate capacity to avoid string reallocations
+  let mut capacity = 0;
+  if ups > 0 {
+    capacity += ups * 3; // "../" for each up
+    if ups > 1 {
+      capacity -= 1; // one less separator
+    }
+  }
+  if !remaining.is_empty() {
+    if ups > 0 {
+      capacity += 1; // separator between ups and remaining
+    }
+    for (i, component) in remaining.iter().enumerate() {
+      if let Some(name) = component.as_os_str().to_str() {
+        capacity += name.len();
+        if i < remaining.len() - 1 {
+          capacity += 1; // separator
+        }
+      }
+    }
+  }
+
+  let mut result = String::with_capacity(capacity);
+
+  // Add ".." components - build string directly to avoid intermediate allocations
+  for i in 0..ups {
+    if i > 0 {
+      result.push('/');
+    }
+    result.push_str("..");
+  }
+
+  // Add remaining path components
+  for (i, component) in remaining.iter().enumerate() {
+    if ups > 0 || i > 0 {
+      result.push('/');
+    }
+    if let Some(name) = component.as_os_str().to_str() {
+      result.push_str(name);
+    }
+  }
+
+  result
+}
+
+static IS_RUNTIME_REGEX: OnceLock<Regex> = OnceLock::new();
+
+/// Standalone version of determine_jsx_configuration that can be shared with JS via NAPI
+/// This whole file should just be moved into the
+/// atlaspack_plugin_transformer_js crate onces V3 is fully rolled out
+pub fn determine_jsx_configuration(
+  file_path: &Path,
+  file_type: &str, // "js", "jsx", "ts", "tsx"
+  is_source: bool,
+  config: &Option<JsxOptions>,
+  project_root: &Path,
+) -> JsxConfiguration {
+  let is_jsx = match file_type {
+    "jsx" | "tsx" => {
+      // .jsx and .tsx files should always have JSX enabled
+      true
+    }
+    "js" => {
+      // Enable JSX for all JS files in source
+      is_source
+    }
+    _ => false,
+  };
+
+  let mut jsx_pragma = None;
+  let mut jsx_pragma_frag = None;
+  let mut jsx_import_source = None;
+  let mut automatic_jsx_runtime = false;
+
+  if is_jsx {
+    if let Some(jsx_config) = &config {
+      // Use JSX options from transformer config if provided
+      jsx_pragma = jsx_config
+        .pragma
+        .clone()
+        .unwrap_or_else(|| "React.createElement".to_string())
+        .into();
+
+      jsx_pragma_frag = jsx_config
+        .pragma_fragment
+        .clone()
+        .unwrap_or_else(|| "React.Fragment".to_string())
+        .into();
+
+      jsx_import_source = jsx_config.import_source.clone();
+    } else {
+      jsx_pragma = Some("React.createElement".to_string());
+      jsx_pragma_frag = Some("React.Fragment".to_string());
+    }
+
+    // Update automatic_jsx_runtime based on config
+    if let Some(jsx_config) = &config
+      && let Some(automatic_runtime) = &jsx_config.automatic_runtime
+    {
+      automatic_jsx_runtime = match automatic_runtime {
+        AutomaticReactRuntime::Enabled(enabled) => *enabled,
+        AutomaticReactRuntime::Glob(globs) => {
+          let relative_path_str = relative_path(file_path, project_root);
+
+          // Check if file matches any include pattern
+          let matches_include = globs
+            .include
+            .iter()
+            .any(|glob| glob_match(glob, &relative_path_str));
+
+          // If it doesn't match includes, automatic runtime is false
+          if matches_include && let Some(excludes) = &globs.exclude {
+            // Check if file matches any exclude pattern
+            let matches_exclude = excludes
+              .iter()
+              .any(|glob| glob_match(glob, &relative_path_str));
+
+            // If it matches excludes, automatic runtime is false (exclude wins)
+            !matches_exclude
+          } else {
+            matches_include
+          }
+        }
+      }
+    }
+  }
+
+  let react_refresh = is_source
+    && file_path.to_str().is_some_and(|fp_str| {
+      // Exclude runtime files from react refresh
+      // TODO: Find a better way to exclude these or remove when we no longer
+      // use runtime files
+      !IS_RUNTIME_REGEX
+        .get_or_init(|| Regex::new(r"\/runtime-[0-9a-f]{16}\.js$").unwrap())
+        .is_match(fp_str)
+    });
+
+  JsxConfiguration {
+    is_jsx,
+    jsx_pragma,
+    jsx_pragma_frag,
+    jsx_import_source,
+    automatic_jsx_runtime,
+    react_refresh,
   }
 }

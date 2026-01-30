@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Hash)]
 #[serde(rename_all = "kebab-case")]
 #[allow(clippy::enum_variant_names)]
 pub enum Jsx {
@@ -12,6 +12,7 @@ pub enum Jsx {
   ReactNative,
 }
 
+#[derive(Hash)]
 pub enum Target {
   ES3,
   ES5,
@@ -56,7 +57,7 @@ impl<'de> Deserialize<'de> for Target {
   }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct CompilerOptions {
   pub experimental_decorators: Option<bool>,
@@ -69,7 +70,7 @@ pub struct CompilerOptions {
 }
 
 /// Refer to https://www.typescriptlang.org/tsconfig
-#[derive(Deserialize)]
+#[derive(Deserialize, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TsConfig {
   pub compiler_options: Option<CompilerOptions>,

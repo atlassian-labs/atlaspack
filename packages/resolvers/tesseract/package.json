@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/resolver-tesseract",
-  "version": "2.15.8",
+  "version": "2.15.22",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -16,6 +16,7 @@
     "node": ">= 16.0.0"
   },
   "dependencies": {
+    "@atlaspack/feature-flags": "workspace:*",
     "@atlaspack/node-resolver-core": "workspace:*",
     "@atlaspack/plugin": "workspace:*",
     "@atlaspack/types-internal": "workspace:*"

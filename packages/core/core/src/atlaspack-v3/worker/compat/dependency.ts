@@ -70,7 +70,7 @@ export class Dependency implements IDependency {
     this.isOptional = inner.isOptional;
     this.isEntry = inner.isEntry;
     this.loc = inner.loc;
-    this.packageConditions = packageConditionsMap.fromArray(
+    this.packageConditions = packageConditionsMap.toArray(
       inner.packageConditions || [],
     );
     this.sourceAssetId = inner.sourceAssetId;

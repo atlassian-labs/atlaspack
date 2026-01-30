@@ -1,9 +1,5 @@
-// @flow
-
-import type {Writable} from 'stream';
-
-function echo(...messages: Array<mixed>): void {
-  let stdout: Writable = process.stdout;
+function echo(...messages) {
+  let stdout = process.stdout;
   for (let message of messages) {
     stdout.write(String(message))
   }

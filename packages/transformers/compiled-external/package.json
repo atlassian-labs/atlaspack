@@ -1,0 +1,34 @@
+{
+  "name": "@atlaspack/transformer-compiled-external",
+  "version": "0.2.3",
+  "description": "Atlaspack transformer for handling external Compiled CSS imports (insourced from @compiled/parcel-transformer-external)",
+  "license": "(MIT OR Apache-2.0)",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atlassian-labs/atlaspack.git"
+  },
+  "main": "./lib/CompiledExternalTransformer.js",
+  "source": "./src/CompiledExternalTransformer.ts",
+  "types": "./src/CompiledExternalTransformer.ts",
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "files": [
+    "lib",
+    "src"
+  ],
+  "dependencies": {
+    "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/source-map": "workspace:*"
+  },
+  "devDependencies": {
+    "@atlaspack/types": "workspace:*"
+  },
+  "type": "commonjs",
+  "scripts": {
+    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+  }
+}

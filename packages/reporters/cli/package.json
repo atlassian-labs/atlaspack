@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/reporter-cli",
-  "version": "2.17.17",
+  "version": "2.17.31",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"

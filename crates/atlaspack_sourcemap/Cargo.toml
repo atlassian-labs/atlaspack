@@ -9,12 +9,15 @@ description = "Sourcemaps for Atlaspack"
 workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
-parcel_sourcemap = { workspace = true, features = ["json"] }
 regex = { workspace = true }
 rkyv = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+vlq = { workspace = true }
+base64-simd = { workspace = true }
+data-url = { workspace = true }
 
 [dev-dependencies]
-anyhow = { workspace = true }
 pretty_assertions = { workspace = true }

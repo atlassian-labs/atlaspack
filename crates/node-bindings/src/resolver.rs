@@ -56,6 +56,7 @@ pub struct JsResolverOptions {
   pub extensions: Option<Vec<String>>,
   pub package_exports: bool,
   pub typescript: Option<bool>,
+  pub reduce_string_creation: Option<bool>,
 }
 
 pub struct FunctionRef {
@@ -250,6 +251,10 @@ impl Resolver {
       ),
       _ => return Err(napi::Error::new(napi::Status::InvalidArg, "Invalid mode")),
     };
+
+    if let Some(reduce_string_creation) = options.reduce_string_creation {
+      resolver.reduce_string_creation = reduce_string_creation;
+    }
 
     if let Some(include_node_modules) = options.include_node_modules {
       resolver.include_node_modules = Cow::Owned(match include_node_modules {

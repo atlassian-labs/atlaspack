@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/reporter-conditional-manifest",
-  "version": "2.15.17",
+  "version": "2.15.31",
   "license": "MIT",
   "publishConfig": {
     "access": "public"

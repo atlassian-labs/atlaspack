@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-html",
-  "version": "2.15.12",
+  "version": "2.15.26",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"

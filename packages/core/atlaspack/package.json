@@ -1,7 +1,7 @@
 {
   "name": "atlaspack",
   "description": "Blazing fast, zero configuration web application bundler",
-  "version": "2.0.19",
+  "version": "2.0.33",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {

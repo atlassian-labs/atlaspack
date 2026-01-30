@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/core",
-  "version": "2.26.0",
+  "version": "2.31.3",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -34,11 +34,11 @@
     "@atlaspack/plugin": "workspace:*",
     "@atlaspack/profiler": "workspace:*",
     "@atlaspack/rust": "workspace:*",
+    "@atlaspack/source-map": "workspace:*",
     "@atlaspack/types": "workspace:*",
     "@atlaspack/utils": "workspace:*",
     "@atlaspack/workers": "workspace:*",
     "@mischnic/json-sourcemap": "^0.1.0",
-    "@parcel/source-map": "^2.1.1",
     "base-x": "^3.0.8",
     "browserslist": "^4.6.6",
     "clone": "^2.1.1",

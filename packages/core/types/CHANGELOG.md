@@ -1,5 +1,117 @@
 # @atlaspack/types
 
+## 2.15.39
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.6
+  - @atlaspack/workers@2.14.49
+
+## 2.15.38
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/workers@2.14.48
+  - @atlaspack/types-internal@2.22.5
+
+## 2.15.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/workers@2.14.47
+  - @atlaspack/types-internal@2.22.4
+
+## 2.15.36
+
+### Patch Changes
+
+- Updated dependencies [[`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957)]:
+  - @atlaspack/types-internal@2.22.3
+  - @atlaspack/workers@2.14.46
+
+## 2.15.35
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.2
+  - @atlaspack/workers@2.14.45
+
+## 2.15.34
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.22.1
+  - @atlaspack/workers@2.14.44
+
+## 2.15.33
+
+### Patch Changes
+
+- Updated dependencies [[`00fa643`](https://github.com/atlassian-labs/atlaspack/commit/00fa6433202bfd3311479f6314c9ec878a789f2c)]:
+  - @atlaspack/types-internal@2.22.0
+  - @atlaspack/workers@2.14.43
+
+## 2.15.32
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.21.3
+  - @atlaspack/workers@2.14.42
+
+## 2.15.31
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.21.2
+  - @atlaspack/workers@2.14.41
+
+## 2.15.30
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.21.1
+  - @atlaspack/workers@2.14.40
+
+## 2.15.29
+
+### Patch Changes
+
+- Updated dependencies [[`8eb84ee`](https://github.com/atlassian-labs/atlaspack/commit/8eb84ee61a42bfe87c58079b610802b07a6a13e4), [`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0), [`617a318`](https://github.com/atlassian-labs/atlaspack/commit/617a318ddc9419b38360257353fec50b9051ee13)]:
+  - @atlaspack/types-internal@2.21.0
+  - @atlaspack/workers@2.14.39
+
+## 2.15.28
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.8
+  - @atlaspack/workers@2.14.38
+
+## 2.15.27
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.7
+  - @atlaspack/workers@2.14.37
+
+## 2.15.26
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/types-internal@2.20.6
+  - @atlaspack/workers@2.14.36
+
 ## 2.15.25
 
 ### Patch Changes

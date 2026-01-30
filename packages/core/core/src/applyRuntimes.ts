@@ -9,6 +9,7 @@ import type {
   DevDepRequest,
   AtlaspackOptions,
   DevDepRequestRef,
+  DependencyNode,
 } from './types';
 import type {AtlaspackConfig} from './AtlaspackConfig';
 import type PluginOptions from './public/PluginOptions';
@@ -19,6 +20,7 @@ import assert from 'assert';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
 import {nodeFromAssetGroup} from './AssetGraph';
+import type AssetGraph from './AssetGraph';
 import BundleGraph from './public/BundleGraph';
 import InternalBundleGraph, {bundleGraphEdgeTypes} from './BundleGraph';
 import {NamedBundle} from './public/Bundle';
@@ -33,6 +35,7 @@ import {toProjectPath, fromProjectPathRelative} from './projectPath';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {DefaultMap} from '@atlaspack/utils';
 import {fromEnvironmentId} from './EnvironmentManager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type RuntimeConnection = {
   bundle: InternalBundle;
@@ -152,6 +155,7 @@ export default async function applyRuntimes<TResult extends RequestResult>({
             env,
             runtimeAssetRequiringExecutionOnLoad,
             priority,
+            symbolData,
           } of runtimeAssets) {
             let sourceName = path.join(
               path.dirname(filePath),
@@ -170,6 +174,7 @@ export default async function applyRuntimes<TResult extends RequestResult>({
               // Runtime assets should be considered source, as they should be
               // e.g. compiled to run in the target environment
               isSource: true,
+              symbolData,
             };
 
             let connectionBundle = bundle;
@@ -275,6 +280,11 @@ export default async function applyRuntimes<TResult extends RequestResult>({
   // transforms and resolves all dependencies.
   let {assetGraph: runtimesAssetGraph, changedAssets} =
     await reconcileNewRuntimes(api, connections, optionsRef);
+
+  if (getFeatureFlag('skipRuntimeSymbolProp')) {
+    // Apply pre-computed symbol data from runtime assets to skip symbol propagation
+    applyRuntimeSymbolData(runtimesAssetGraph, connections);
+  }
 
   // Convert the runtime AssetGraph into a BundleGraph, this includes assigning
   // the assets their public ids
@@ -398,6 +408,93 @@ export default async function applyRuntimes<TResult extends RequestResult>({
   return changedAssets;
 }
 
+/**
+ * Apply pre-computed symbol data from runtime assets to the asset graph
+ * to avoid running symbol propagation on runtime code we control.
+ */
+function applyRuntimeSymbolData(
+  assetGraph: AssetGraph,
+  connections: Array<RuntimeConnection>,
+) {
+  for (let {assetGroup} of connections) {
+    let assetGroupNode = nodeFromAssetGroup(assetGroup);
+    let assetGroupAssetNodeIds = assetGraph.getNodeIdsConnectedFrom(
+      assetGraph.getNodeIdByContentKey(assetGroupNode.id),
+    );
+
+    if (assetGroupAssetNodeIds.length !== 1) {
+      continue;
+    }
+
+    let runtimeAssetNodeId = assetGroupAssetNodeIds[0];
+    let runtimeAssetNode = assetGraph.getNode(runtimeAssetNodeId);
+    if (!runtimeAssetNode || runtimeAssetNode.type !== 'asset') {
+      continue;
+    }
+
+    let symbolData = assetGroup.symbolData;
+    if (!symbolData) {
+      // We completely skip symbol propagation for runtime assets, so symbolData
+      // is required
+      throw new Error('Runtime asset is missing symbol data');
+    }
+
+    if (symbolData.symbols) {
+      // Convert from SymbolData format to internal Asset.symbols format
+      let internalSymbols = new Map();
+      for (let [symbol, data] of symbolData.symbols) {
+        internalSymbols.set(symbol, {
+          local: data.local,
+          loc: data.loc || null,
+          meta: data.meta,
+        });
+      }
+      runtimeAssetNode.value.symbols = internalSymbols;
+    }
+
+    if (symbolData.dependencies && symbolData.dependencies.length > 0) {
+      let outgoingDeps = assetGraph
+        .getNodeIdsConnectedFrom(runtimeAssetNodeId)
+        .map((id) => assetGraph.getNode(id))
+        .filter((node) => node?.type === 'dependency')
+        .map((node) => node as DependencyNode);
+
+      for (let depSymbolData of symbolData.dependencies) {
+        let matchingDep = outgoingDeps.find(
+          (depNode) => depNode.value.specifier === depSymbolData.specifier,
+        );
+
+        if (matchingDep) {
+          if (depSymbolData.symbols) {
+            let internalDepSymbols = new Map();
+            for (let [symbol, data] of depSymbolData.symbols) {
+              internalDepSymbols.set(symbol, {
+                local: data.local,
+                loc: data.loc || null,
+                isWeak: data.isWeak,
+                meta: data.meta,
+              });
+            }
+            matchingDep.value.symbols = internalDepSymbols;
+          }
+
+          if (depSymbolData.usedSymbols) {
+            matchingDep.usedSymbolsDown = new Set(depSymbolData.usedSymbols);
+            // For runtime assets, usedSymbolsUp will be the same as usedSymbolsDown
+            // since we know exactly what we're using
+            let usedSymbolsUp = new Map();
+            for (let symbol of depSymbolData.usedSymbols) {
+              // Mark as resolved to external (null) since runtime deps are typically external
+              usedSymbolsUp.set(symbol, null);
+            }
+            matchingDep.usedSymbolsUp = usedSymbolsUp;
+          }
+        }
+      }
+    }
+  }
+}
+
 function reconcileNewRuntimes<TResult extends RequestResult>(
   api: RunAPI<TResult>,
   connections: Array<RuntimeConnection>,
@@ -408,6 +505,7 @@ function reconcileNewRuntimes<TResult extends RequestResult>(
     name: 'Runtimes',
     assetGroups,
     optionsRef,
+    skipSymbolProp: getFeatureFlag('skipRuntimeSymbolProp'),
   });
 
   // rebuild the graph

@@ -1,7 +1,7 @@
 {
   "name": "@atlaspack/cache",
   "description": "Interface for defining caches and file-system, IDB and LMDB implementations.",
-  "version": "3.2.30",
+  "version": "3.2.44",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",
   "publishConfig": {

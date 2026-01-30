@@ -6,3 +6,4 @@ pub mod hash;
 pub mod plugin;
 pub mod project_path;
 pub mod types;
+pub mod version;

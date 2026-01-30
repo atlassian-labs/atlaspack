@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/packager-css",
-  "version": "2.14.35",
+  "version": "2.15.10",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -18,9 +18,9 @@
   "dependencies": {
     "@atlaspack/diagnostic": "workspace:*",
     "@atlaspack/plugin": "workspace:*",
+    "@atlaspack/source-map": "workspace:*",
     "@atlaspack/types-internal": "workspace:*",
     "@atlaspack/utils": "workspace:*",
-    "@parcel/source-map": "^2.1.1",
     "lightningcss": "^1.28.2",
     "nullthrows": "^1.1.1"
   },

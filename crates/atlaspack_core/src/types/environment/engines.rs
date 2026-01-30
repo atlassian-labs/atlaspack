@@ -106,7 +106,7 @@ impl From<EnvironmentFeature> for caniuse_database::BrowserFeature {
   fn from(feature: EnvironmentFeature) -> Self {
     match feature {
       EnvironmentFeature::DynamicImport => caniuse_database::BrowserFeature::Es6ModuleDynamicImport,
-      EnvironmentFeature::WorkerModule => caniuse_database::BrowserFeature::Webworkers,
+      EnvironmentFeature::WorkerModule => caniuse_database::BrowserFeature::Webworkers, // NOTE: This only checks basic worker support
     }
   }
 }
@@ -155,10 +155,23 @@ impl Engines {
       .as_ref()
       .unwrap_or(&Default::default())
       .resolve();
-    caniuse_database::check_browserslist_support(
-      &caniuse_database::BrowserFeature::from(feature),
-      &distribs,
-    )
+
+    match feature {
+      EnvironmentFeature::WorkerModule => {
+        // Module workers require both web worker support AND ES6 module support
+        caniuse_database::check_browserslist_support(
+          &caniuse_database::BrowserFeature::Webworkers,
+          &distribs,
+        ) && caniuse_database::check_browserslist_support(
+          &caniuse_database::BrowserFeature::Es6Module,
+          &distribs,
+        )
+      }
+      _ => caniuse_database::check_browserslist_support(
+        &caniuse_database::BrowserFeature::from(feature),
+        &distribs,
+      ),
+    }
   }
 }
 

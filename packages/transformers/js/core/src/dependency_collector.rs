@@ -1,5 +1,5 @@
+use std::collections::BTreeSet;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -16,8 +16,8 @@ use swc_core::common::Spanned;
 use swc_core::common::sync::Lrc;
 use swc_core::common::{Mark, SourceMap, SyntaxContext};
 use swc_core::ecma::ast::*;
-use swc_core::ecma::atoms::JsWord;
-use swc_core::ecma::atoms::js_word;
+use swc_core::ecma::atoms::Atom;
+use swc_core::ecma::atoms::atom;
 use swc_core::ecma::utils::member_expr;
 use swc_core::ecma::visit::VisitMut;
 use swc_core::ecma::visit::VisitMutWith;
@@ -38,8 +38,8 @@ pub struct DependencyDescriptor {
   pub kind: DependencyKind,
   pub loc: SourceLocation,
   /// The text specifier associated with the import/export statement.
-  pub specifier: swc_core::ecma::atoms::JsWord,
-  pub attributes: Option<HashMap<swc_core::ecma::atoms::JsWord, bool>>,
+  pub specifier: swc_core::ecma::atoms::Atom,
+  pub attributes: Option<HashMap<swc_core::ecma::atoms::Atom, bool>>,
   pub is_optional: bool,
   pub is_helper: bool,
   pub source_type: Option<SourceType>,
@@ -54,7 +54,7 @@ pub fn dependency_collector<'a>(
   unresolved_mark: swc_core::common::Mark,
   config: &'a Config,
   diagnostics: &'a mut Vec<Diagnostic>,
-  conditions: &'a mut HashSet<Condition>,
+  conditions: &'a mut BTreeSet<Condition>,
 ) -> impl VisitMut + 'a {
   DependencyCollector {
     source_map,
@@ -82,19 +82,19 @@ struct DependencyCollector<'a> {
   config: &'a Config,
   diagnostics: &'a mut Vec<Diagnostic>,
   import_meta: Option<VarDecl>,
-  conditions: &'a mut HashSet<Condition>,
+  conditions: &'a mut BTreeSet<Condition>,
 }
 
 impl DependencyCollector<'_> {
   fn add_dependency(
     &mut self,
-    mut specifier: JsWord,
+    mut specifier: Atom,
     span: swc_core::common::Span,
     kind: DependencyKind,
-    attributes: Option<HashMap<swc_core::ecma::atoms::JsWord, bool>>,
+    attributes: Option<HashMap<swc_core::ecma::atoms::Atom, bool>>,
     is_optional: bool,
     source_type: SourceType,
-  ) -> Option<JsWord> {
+  ) -> Option<Atom> {
     // Rewrite SWC helpers from ESM to CJS for library output.
     let mut is_specifier_rewritten = false;
     if self.config.is_library
@@ -145,7 +145,7 @@ impl DependencyCollector<'_> {
 
   fn add_url_dependency(
     &mut self,
-    specifier: JsWord,
+    specifier: Atom,
     span: swc_core::common::Span,
     kind: DependencyKind,
     source_type: SourceType,
@@ -193,7 +193,7 @@ impl DependencyCollector<'_> {
     )
   }
 
-  fn create_require(&mut self, specifier: JsWord) -> CallExpr {
+  fn create_require(&mut self, specifier: Atom) -> CallExpr {
     let mut res = create_require(specifier, self.unresolved_mark);
 
     // For scripts, we replace with __parcel__require__, which is later replaced
@@ -539,16 +539,36 @@ impl VisitMut for DependencyCollector<'_> {
               {
                 match &*arg.expr {
                   Expr::Fn(_) | Expr::Arrow(_) => {
-                    self.in_promise = true;
-                    node.visit_mut_children_with(self);
-                    self.in_promise = was_in_promise;
+                    if self.config.nested_promise_import_fix {
+                      self.in_promise = true;
+                      // Reset require_node to capture only requires within this
+                      // promise.then
+                      let old_require_node = self.require_node.take();
+                      node.visit_mut_children_with(self);
+                      self.in_promise = was_in_promise;
+                      // Get the require node captured during visiting children
+                      // and reset the require_node to its previous value
+                      let require_node = self.require_node.take();
+                      self.require_node = old_require_node;
 
-                    // Transform Promise.resolve().then(() => __importStar(require('foo')))
-                    //   => Promise.resolve().then(() => require('foo')).then(res => __importStar(res))
-                    if let Some(require_node) = self.require_node.clone() {
-                      self.require_node = None;
-                      build_promise_chain(node, require_node);
-                      return;
+                      // Transform Promise.resolve().then(() => __importStar(require('foo')))
+                      //   => Promise.resolve().then(() => require('foo')).then(res => __importStar(res))
+                      if let Some(require_node) = require_node {
+                        build_promise_chain(node, require_node);
+                        return;
+                      }
+                    } else {
+                      self.in_promise = true;
+                      node.visit_mut_children_with(self);
+                      self.in_promise = was_in_promise;
+
+                      // Transform Promise.resolve().then(() => __importStar(require('foo')))
+                      //   => Promise.resolve().then(() => require('foo')).then(res => __importStar(res))
+                      if let Some(require_node) = self.require_node.clone() {
+                        self.require_node = None;
+                        build_promise_chain(node, require_node);
+                        return;
+                      }
                     }
                   }
                   _ => {}
@@ -838,7 +858,7 @@ impl VisitMut for DependencyCollector<'_> {
       ..
     } = &node
       && let Expr::Ident(ident) = &**arg
-      && ident.sym == js_word!("require")
+      && ident.sym == atom!("require")
       && is_unresolved(ident, self.unresolved_mark)
     {
       return;
@@ -984,7 +1004,7 @@ impl VisitMut for DependencyCollector<'_> {
       if !self.config.is_library && !self.config.standalone {
         *node = Expr::New(NewExpr {
           span: DUMMY_SP,
-          callee: Box::new(Expr::Ident(Ident::new_no_ctxt(js_word!("URL"), DUMMY_SP))),
+          callee: Box::new(Expr::Ident(Ident::new_no_ctxt(atom!("URL"), DUMMY_SP))),
           ctxt: SyntaxContext::empty(),
           args: Some(vec![ExprOrSpread {
             expr: Box::new(url),
@@ -1003,12 +1023,12 @@ impl VisitMut for DependencyCollector<'_> {
     let is_require = match &node {
       Expr::Ident(ident) => {
         // Free `require` -> undefined
-        ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark)
+        ident.sym == atom!("require") && is_unresolved(ident, self.unresolved_mark)
       }
       Expr::Member(MemberExpr { obj: expr, .. }) => {
         // e.g. `require.extensions` -> undefined
         if let Expr::Ident(ident) = &**expr {
-          ident.sym == js_word!("require") && is_unresolved(ident, self.unresolved_mark)
+          ident.sym == atom!("require") && is_unresolved(ident, self.unresolved_mark)
         } else {
           false
         }
@@ -1218,7 +1238,7 @@ fn create_url_constructor(url: Expr, use_import_meta: bool) -> Expr {
         kind: MetaPropKind::ImportMeta,
         span: DUMMY_SP,
       })),
-      prop: MemberProp::Ident(IdentName::new(js_word!("url"), DUMMY_SP)),
+      prop: MemberProp::Ident(IdentName::new(atom!("url"), DUMMY_SP)),
     })
   } else {
     // CJS output: "file:" + __filename
@@ -1236,7 +1256,7 @@ fn create_url_constructor(url: Expr, use_import_meta: bool) -> Expr {
   Expr::New(NewExpr {
     span: DUMMY_SP,
     ctxt: SyntaxContext::empty(),
-    callee: Box::new(Expr::Ident(Ident::new_no_ctxt(js_word!("URL"), DUMMY_SP))),
+    callee: Box::new(Expr::Ident(Ident::new_no_ctxt(atom!("URL"), DUMMY_SP))),
     args: Some(vec![
       ExprOrSpread {
         expr: Box::new(url),
@@ -1296,10 +1316,10 @@ impl VisitMut for PromiseTransformer {
 }
 
 impl DependencyCollector<'_> {
-  fn match_new_url(&mut self, expr: &Expr) -> Option<(JsWord, swc_core::common::Span)> {
+  fn match_new_url(&mut self, expr: &Expr) -> Option<(Atom, swc_core::common::Span)> {
     if let Expr::New(new) = expr {
       let is_url = match &*new.callee {
-        Expr::Ident(id) => id.sym == js_word!("URL") && is_unresolved(id, self.unresolved_mark),
+        Expr::Ident(id) => id.sym == atom!("URL") && is_unresolved(id, self.unresolved_mark),
         _ => false,
       };
 
@@ -1347,7 +1367,7 @@ impl DependencyCollector<'_> {
         let name = match_property_name(member);
 
         if let Some((name, _)) = name {
-          name == js_word!("url")
+          name == atom!("url")
         } else {
           false
         }
@@ -1437,10 +1457,7 @@ impl DependencyCollector<'_> {
           name: Pat::Ident(BindingIdent::from(ident.clone())),
           init: Some(Box::new(Expr::Call(CallExpr {
             callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
-              obj: Box::new(Expr::Ident(Ident::new_no_ctxt(
-                js_word!("Object"),
-                DUMMY_SP,
-              ))),
+              obj: Box::new(Expr::Ident(Ident::new_no_ctxt(atom!("Object"), DUMMY_SP))),
               prop: MemberProp::Ident(IdentName::new("assign".into(), DUMMY_SP)),
               span: DUMMY_SP,
             }))),
@@ -1448,10 +1465,7 @@ impl DependencyCollector<'_> {
               ExprOrSpread {
                 expr: Box::new(Expr::Call(CallExpr {
                   callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
-                    obj: (Box::new(Expr::Ident(Ident::new_no_ctxt(
-                      js_word!("Object"),
-                      DUMMY_SP,
-                    )))),
+                    obj: (Box::new(Expr::Ident(Ident::new_no_ctxt(atom!("Object"), DUMMY_SP)))),
                     prop: MemberProp::Ident(IdentName::new("create".into(), DUMMY_SP)),
                     span: DUMMY_SP,
                   }))),
@@ -1468,7 +1482,7 @@ impl DependencyCollector<'_> {
               ExprOrSpread {
                 expr: Box::new(Expr::Object(ObjectLit {
                   props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                    key: PropName::Ident(IdentName::new(js_word!("url"), DUMMY_SP)),
+                    key: PropName::Ident(IdentName::new(atom!("url"), DUMMY_SP)),
                     value: Box::new(self.get_import_meta_url()),
                   })))],
                   span: DUMMY_SP,
@@ -1560,13 +1574,14 @@ mod tests {
   use atlaspack_core::types::DependencyKind;
   use atlaspack_swc_runner::test_utils::{RunContext, RunVisitResult, run_test_visit};
   use indoc::{formatdoc, indoc};
+  use pretty_assertions::assert_eq;
 
   fn make_dependency_collector<'a>(
     context: RunContext,
     items: &'a mut Vec<DependencyDescriptor>,
     diagnostics: &'a mut Vec<Diagnostic>,
     config: &'a Config,
-    conditions: &'a mut HashSet<Condition>,
+    conditions: &'a mut BTreeSet<Condition>,
   ) -> DependencyCollector<'a> {
     DependencyCollector {
       source_map: context.source_map.clone(),
@@ -1586,6 +1601,7 @@ mod tests {
   fn make_config() -> Config {
     let mut config = Config::default();
     config.is_browser = true;
+    config.nested_promise_import_fix = true;
     config
   }
 
@@ -1598,11 +1614,11 @@ mod tests {
 
   #[test]
   fn test_dynamic_import_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let config = Config::default();
+    let config = make_config();
     let input_code = r#"
       const { x } = await import('other');
     "#;
@@ -1640,12 +1656,64 @@ mod tests {
   }
 
   #[test]
-  fn test_dynamic_import_dependency_from_script() {
-    let mut conditions = HashSet::new();
+  fn test_dynamic_import_nested_promise() {
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let mut config = Config::default();
+    let mut config = make_config();
+    config.scope_hoist = true;
+
+    let input_code = indoc! {r#"
+      const dynamic = () => import('./dynamic');
+
+      Promise.resolve().then(() => {
+          Promise.resolve().then(() => console.log());
+      });
+    "#};
+
+    let RunVisitResult { output_code, .. } = run_test_visit(input_code, |context| {
+      make_dependency_collector(
+        context,
+        &mut items,
+        &mut diagnostics,
+        &config,
+        &mut conditions,
+      )
+    });
+
+    let hash = make_placeholder_hash("./dynamic", DependencyKind::DynamicImport);
+    let expected_code = formatdoc! {r#"
+      const dynamic = ()=>import("{hash}");
+      Promise.resolve().then(()=>{{
+          Promise.resolve().then(()=>console.log());
+      }});
+    "#};
+
+    assert_eq!(diagnostics, []);
+    assert_eq!(
+      items,
+      [DependencyDescriptor {
+        kind: DependencyKind::DynamicImport,
+        specifier: "./dynamic".into(),
+        attributes: None,
+        is_optional: false,
+        is_helper: false,
+        source_type: Some(SourceType::Module),
+        placeholder: Some(hash),
+        ..items[0].clone()
+      }]
+    );
+    assert_eq!(output_code, expected_code);
+  }
+
+  #[test]
+  fn test_dynamic_import_dependency_from_script() {
+    let mut conditions = BTreeSet::new();
+    let mut diagnostics = vec![];
+    let mut items = vec![];
+
+    let mut config = make_config();
     config.source_type = SourceType::Script;
 
     let input_code = r#"
@@ -1686,11 +1754,11 @@ mod tests {
 
   #[test]
   fn test_import_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let config = Config::default();
+    let config = make_config();
     let input_code = r#"
       import { x } from 'other';
     "#;
@@ -1728,11 +1796,11 @@ mod tests {
 
   #[test]
   fn test_export_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
-    let config = Config::default();
+    let config = make_config();
     let input_code = r#"
       export { x } from 'other';
     "#;
@@ -1770,11 +1838,11 @@ mod tests {
 
   #[test]
   fn test_export_star_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut items = vec![];
     let mut diagnostics = vec![];
 
-    let config = Config::default();
+    let config = make_config();
     let input_code = r#"
       export * from 'other';
     "#;
@@ -1812,7 +1880,7 @@ mod tests {
 
   #[test]
   fn test_require_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -1855,7 +1923,7 @@ mod tests {
 
   #[test]
   fn test_optional_require_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -1902,7 +1970,7 @@ mod tests {
 
   #[test]
   fn test_node_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -1978,7 +2046,7 @@ mod tests {
   // Require is treated as dynamic import
   #[test]
   fn test_compiled_dynamic_imports() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2022,7 +2090,7 @@ mod tests {
   // Require is treated as dynamic import
   #[test]
   fn test_compiled_dynamic_imports_with_chain() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2068,7 +2136,7 @@ mod tests {
   // Require is treated as dynamic import
   #[test]
   fn test_compiled_dynamic_imports_with_function_chain() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2116,7 +2184,7 @@ mod tests {
   // Require is treated as dynamic import
   #[test]
   fn test_new_promise_require_imports() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2160,7 +2228,7 @@ mod tests {
   // Require is treated as dynamic import
   #[test]
   fn test_new_promise_require_imports_with_function_expr() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2206,7 +2274,7 @@ mod tests {
   // Require is treated as dynamic import
   #[test]
   fn test_promise_resolve_require_dynamic_import() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2250,7 +2318,7 @@ mod tests {
 
   #[test]
   fn test_parcel_url_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2280,7 +2348,7 @@ mod tests {
 
   #[test]
   fn test_esm_parcel_url_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2312,7 +2380,7 @@ mod tests {
 
   #[test]
   fn test_worker_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2370,7 +2438,7 @@ mod tests {
 
   #[test]
   fn test_service_worker_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2428,7 +2496,7 @@ mod tests {
 
   #[test]
   fn test_worklet_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
     let config = make_config();
@@ -2479,7 +2547,7 @@ mod tests {
       document.body.appendChild(img);
     "#;
 
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
 
     let RunVisitResult { output_code, .. } = run_test_visit(input_code, |context| {
       make_dependency_collector(
@@ -2517,7 +2585,7 @@ mod tests {
 
   #[test]
   fn test_import_cond_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2573,7 +2641,7 @@ mod tests {
     );
     assert_eq!(
       conditions,
-      HashSet::from([Condition {
+      BTreeSet::from([Condition {
         key: "condition".into(),
         if_true_placeholder: Some(hash_a),
         if_false_placeholder: Some(hash_b)
@@ -2583,7 +2651,7 @@ mod tests {
 
   #[test]
   fn test_import_cond_scope_hoisting_enabled_dependency() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2642,7 +2710,7 @@ mod tests {
 
   #[test]
   fn test_import_cond_invalid() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2673,7 +2741,7 @@ mod tests {
 
   #[test]
   fn test_import_cond_same_deps() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2704,7 +2772,7 @@ mod tests {
 
   #[test]
   fn test_parcel_require() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2731,12 +2799,12 @@ mod tests {
     assert_eq!(output_code, expected_code);
     assert_eq!(diagnostics, []);
     assert_eq!(items, []);
-    assert_eq!(conditions, HashSet::new(),);
+    assert_eq!(conditions, BTreeSet::new(),);
   }
 
   #[test]
   fn test_parcel_require_with_hmr_improvements_ff_on() {
-    let mut conditions = HashSet::new();
+    let mut conditions = BTreeSet::new();
     let mut diagnostics = vec![];
     let mut items = vec![];
 
@@ -2776,6 +2844,6 @@ mod tests {
         ..items[0].clone()
       },]
     );
-    assert_eq!(conditions, HashSet::new(),);
+    assert_eq!(conditions, BTreeSet::new(),);
   }
 }

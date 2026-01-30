@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/cli",
-  "version": "2.14.14",
+  "version": "2.15.10",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "type": "commonjs",

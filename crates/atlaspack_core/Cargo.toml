@@ -13,6 +13,7 @@ default = []
 [dependencies]
 atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 atlaspack_filesystem = { path = "../atlaspack_filesystem" }
+atlaspack_memoization_cache = { path = "../atlaspack_memoization_cache" }
 caniuse_database = { path = "../caniuse_database" }
 
 anyhow = { workspace = true }
@@ -20,6 +21,7 @@ async-trait = { workspace = true }
 bitflags = { workspace = true }
 browserslist-rs = { workspace = true }
 derive_builder = { workspace = true }
+derivative = { workspace = true }
 dyn-hash = { workspace = true }
 nodejs-semver = { workspace = true }
 mockall = { workspace = true }
@@ -33,3 +35,4 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 tokio = { workspace = true, features = ["full"] }
+rayon = { workspace = true }

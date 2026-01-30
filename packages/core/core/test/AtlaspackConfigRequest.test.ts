@@ -133,7 +133,7 @@ describe('AtlaspackConfigRequest', () => {
         (e: any) => {
           assert.strictEqual(
             e.diagnostics[0].codeFrames[0].codeHighlights[0].message,
-            `Possible values: "$schema", "bundler", "resolvers", "transformers", "validators", "namers", "packagers", "optimizers", "compressors", "reporters", "runtimes", "filePath", "resolveFrom"`,
+            `Possible values: "$schema", "bundler", "resolvers", "transformers", "validators", "namers", "packagers", "optimizers", "compressors", "reporters", "runtimes", "unstable\\_alias", "filePath", "resolveFrom"`,
           );
           return true;
         },

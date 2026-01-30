@@ -17,7 +17,7 @@ import fs from 'fs';
 import invariant from 'assert';
 import assert from 'assert';
 import nullthrows from 'nullthrows';
-import {PluginLogger} from '@atlaspack/logger';
+import {instrumentAsync, PluginLogger} from '@atlaspack/logger';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import AssetGraph from '../AssetGraph';
@@ -141,9 +141,10 @@ export default function createBundleGraphRequest(
       let {optionsRef, requestedAssetIds, signal} = input.input;
       let measurement = tracer.createMeasurement('building');
 
-      let createAssetGraphRequest = input.rustAtlaspack
-        ? createAssetGraphRequestRust(input.rustAtlaspack)
-        : createAssetGraphRequestJS;
+      let createAssetGraphRequest =
+        getFeatureFlag('atlaspackV3') && input.rustAtlaspack
+          ? createAssetGraphRequestRust(input.rustAtlaspack)
+          : createAssetGraphRequestJS;
 
       let request = createAssetGraphRequest({
         name: 'Main',
@@ -155,12 +156,14 @@ export default function createBundleGraphRequest(
         requestedAssetIds,
       });
 
-      let {assetGraph, changedAssets, assetRequests} = await api.runRequest(
-        request,
-        {
-          force:
-            Boolean(input.rustAtlaspack) ||
-            (options.shouldBuildLazily && requestedAssetIds.size > 0),
+      let {assetGraph, changedAssets, assetRequests} = await instrumentAsync(
+        'asset-graph-request',
+        () => {
+          return api.runRequest(request, {
+            force:
+              Boolean(input.rustAtlaspack) ||
+              (options.shouldBuildLazily && requestedAssetIds.size > 0),
+          });
         },
       );
 
@@ -521,17 +524,19 @@ class BundlerRunner {
         ),
       );
 
-      changedRuntimes = await applyRuntimes({
-        bundleGraph: internalBundleGraph,
-        api: this.api,
-        config: this.config,
-        options: this.options,
-        optionsRef: this.optionsRef,
-        pluginOptions: this.pluginOptions,
-        previousDevDeps: this.previousDevDeps,
-        devDepRequests: this.devDepRequests,
-        configs: this.configs,
-      });
+      changedRuntimes = await instrumentAsync('applyRuntimes', () =>
+        applyRuntimes({
+          bundleGraph: internalBundleGraph,
+          api: this.api,
+          config: this.config,
+          options: this.options,
+          optionsRef: this.optionsRef,
+          pluginOptions: this.pluginOptions,
+          previousDevDeps: this.previousDevDeps,
+          devDepRequests: this.devDepRequests,
+          configs: this.configs,
+        }),
+      );
 
       // Add dev deps for namers, AFTER running them to account for lazy require().
       for (let namer of namers) {

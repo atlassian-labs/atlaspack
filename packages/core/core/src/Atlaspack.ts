@@ -43,7 +43,7 @@ import createPathRequest from './requests/PathRequest';
 import {createEnvironment} from './Environment';
 import {createDependency} from './Dependency';
 import {Disposable} from '@atlaspack/events';
-import {init as initSourcemaps} from '@parcel/source-map';
+import {init as initSourcemaps} from '@atlaspack/source-map';
 import {LMDBLiteCache} from '@atlaspack/cache';
 import {
   // @ts-expect-error TS2305
@@ -57,8 +57,12 @@ import {
   toProjectPath,
   fromProjectPathRelative,
 } from './projectPath';
-import {tracer} from '@atlaspack/profiler';
-import {setFeatureFlags, DEFAULT_FEATURE_FLAGS} from '@atlaspack/feature-flags';
+import {tracer, NativeProfiler} from '@atlaspack/profiler';
+import {
+  setFeatureFlags,
+  DEFAULT_FEATURE_FLAGS,
+  getFeatureFlag,
+} from '@atlaspack/feature-flags';
 import {AtlaspackV3, FileSystemV3} from './atlaspack-v3';
 import createAssetGraphRequestJS from './requests/AssetGraphRequest';
 import {createAssetGraphRequestRust} from './requests/AssetGraphRequestRust';
@@ -165,7 +169,10 @@ export default class Atlaspack {
     this.#resolvedOptions = resolvedOptions;
 
     let rustAtlaspack: AtlaspackV3;
-    if (resolvedOptions.featureFlags.atlaspackV3) {
+    if (
+      resolvedOptions.featureFlags.atlaspackV3 ||
+      resolvedOptions.featureFlags.nativePackager
+    ) {
       // eslint-disable-next-line no-unused-vars
       let {entries, inputFS, outputFS, ...options} = this.#initialOptions;
 
@@ -198,6 +205,7 @@ export default class Atlaspack {
         env: resolvedOptions.env,
         fs: inputFS && new FileSystemV3(inputFS),
         defaultTargetOptions: resolvedOptions.defaultTargetOptions,
+        serveOptions: resolvedOptions.serveOptions,
         lmdb,
         featureFlags: resolvedOptions.featureFlags,
       });
@@ -407,6 +415,10 @@ export default class Atlaspack {
       if (options.shouldProfile) {
         await this.startProfiling();
       }
+      if (options.nativeProfiler) {
+        const nativeProfiler = new NativeProfiler();
+        await nativeProfiler.startProfiling(options.nativeProfiler);
+      }
       if (options.shouldTrace) {
         tracer.enable();
         // We need to ensure the tracer is disabled when Atlaspack is disposed as it is a module level object.
@@ -511,6 +523,7 @@ export default class Atlaspack {
           return result;
         },
         unstable_requestStats: this.#requestTracker.flushStats(),
+        nativeCacheStats: await this.rustAtlaspack?.completeCacheSession(),
         scopeHoistingStats,
       };
 
@@ -538,6 +551,7 @@ export default class Atlaspack {
         type: 'buildFailure',
         diagnostics: Array.isArray(diagnostic) ? diagnostic : [diagnostic],
         unstable_requestStats: this.#requestTracker.flushStats(),
+        nativeCacheStats: await this.rustAtlaspack?.completeCacheSession(),
       };
 
       // @ts-expect-error TS2345
@@ -578,7 +592,7 @@ export default class Atlaspack {
         });
 
         let nativeInvalid = false;
-        if (this.rustAtlaspack) {
+        if (getFeatureFlag('atlaspackV3') && this.rustAtlaspack) {
           nativeInvalid = await this.rustAtlaspack.respondToFsEvents(events);
         }
 
@@ -674,7 +688,7 @@ export default class Atlaspack {
 
     const start = Date.now();
     const result = await this.#requestTracker.runRequest(
-      this.rustAtlaspack != null
+      getFeatureFlag('atlaspackV3') && this.rustAtlaspack != null
         ? // @ts-expect-error TS2345
           createAssetGraphRequestRust(this.rustAtlaspack)(input)
         : // @ts-expect-error TS2345

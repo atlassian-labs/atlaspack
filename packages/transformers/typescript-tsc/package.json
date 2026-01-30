@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-typescript-tsc",
-  "version": "2.14.35",
+  "version": "2.15.10",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@atlaspack/plugin": "workspace:*",
-    "@atlaspack/ts-utils": "workspace:*",
-    "@parcel/source-map": "^2.1.1"
+    "@atlaspack/source-map": "workspace:*",
+    "@atlaspack/ts-utils": "workspace:*"
   },
   "devDependencies": {
     "typescript": ">=3.0.0"

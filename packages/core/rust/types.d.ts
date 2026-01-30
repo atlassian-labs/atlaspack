@@ -6,7 +6,7 @@ export type JsTransferable = any;
 export type NapiSideEffectsVariants = any;
 export type LMDBOptions = any;
 export type SpanId = any;
-
+export type BundleGraphNode = any;
 export interface LmdbOptions {
   /** The database directory path */
   path: string;
@@ -63,6 +63,17 @@ export declare function atlaspackNapiRespondToFsEvents(
   atlaspackNapi: AtlaspackNapi,
   options: object,
 ): object;
+export interface CacheStats {
+  hits: number;
+  misses: number;
+  uncacheables: number;
+  bailouts: number;
+  errors: number;
+  validations: number;
+}
+export declare function atlaspackNapiCompleteSession(
+  atlaspackNapi: AtlaspackNapi,
+): Promise<CacheStats>;
 export declare function createDependencyId(params: unknown): string;
 export declare function createEnvironmentId(params: unknown): string;
 /** Overwrite all environments with a new set of environments */
@@ -76,6 +87,9 @@ export declare function addEnvironment(environment: unknown): void;
 export declare function getAvailableThreads(): number;
 export declare function initializeMonitoring(): void;
 export declare function closeMonitoring(): void;
+export declare function getNativeMemoryStats(): NativeMemoryStats | null;
+export declare function resetMemoryTracking(): void;
+export declare function sampleNativeMemory(): void;
 /** Called on the worker thread to create a reference to the NodeJs worker */
 export declare function newNodejsWorker(worker: object): JsTransferable;
 export interface InlineRequiresOptimizerInput {
@@ -161,6 +175,12 @@ export declare function performStringReplacements(
 ): string;
 export declare function transform(opts: object): unknown;
 export declare function transformAsync(opts: object): object;
+export declare function determineJsxConfiguration(
+  file_path: string,
+  is_source: boolean,
+  config: JsObject | null | undefined,
+  project_root: string,
+): object;
 export declare function getVcsStateSnapshot(
   path: string,
   excludePatterns: Array<string>,
@@ -249,3 +269,153 @@ export interface Symbol {
   isStaticBindingSafe: boolean;
   selfReferenced: boolean;
 }
+
+export interface TokensPluginOptions {
+  tokenDataPath: string;
+  shouldUseAutoFallback: boolean;
+  shouldForceAutoFallback: boolean;
+  forceAutoFallbackExemptions: Array<string>;
+  defaultTheme: string;
+}
+
+export interface TokensConfig {
+  filename: string;
+  projectRoot: string;
+  isSource: boolean;
+  sourceMaps: boolean;
+  tokensOptions: TokensPluginOptions;
+}
+
+export interface TokensJsSourceLocation {
+  start_line: number;
+  start_col: number;
+  end_line: number;
+  end_col: number;
+}
+
+export interface TokensJsCodeHighlight {
+  message: string | null;
+  loc: TokensJsSourceLocation;
+}
+
+export interface TokensJsDiagnostic {
+  message: string;
+  code_highlights: Array<TokensJsCodeHighlight> | null;
+  hints: Array<string> | null;
+  show_environment: boolean;
+  severity: string;
+  documentation_url: string | null;
+}
+
+export interface TokensPluginResult {
+  code: string;
+  map: string | null;
+  diagnostics: Array<TokensJsDiagnostic>;
+}
+
+/** Apply the tokens transformation plugin to the given code asynchronously */
+export declare function applyTokensPlugin(
+  rawCode: Buffer,
+  config: TokensConfig,
+): object;
+
+export interface DetailedMemoryStats {
+  min: number;
+  max: number;
+  mean: number;
+  median: number;
+  p95: number;
+  p99: number;
+  standardDeviation: number;
+  range: number;
+}
+
+export interface NativeMemoryStats {
+  physicalMem: DetailedMemoryStats;
+  virtualMem: DetailedMemoryStats;
+  sampleCount: number;
+}
+
+export type JsSourceMap = SourceMap;
+export class SourceMap {
+  constructor(projectRoot: string, buffer?: Buffer | undefined | null);
+  addSource(source: string): number;
+  getSource(sourceIndex: number): string;
+  getSources(): Array<string>;
+  getSourcesContent(): Array<string>;
+  getSourceIndex(source: string): number;
+  setSourceContentBySource(source: string, sourceContent: string): void;
+  getSourceContentBySource(source: string): string;
+  addName(name: string): number;
+  getName(nameIndex: number): string;
+  getNames(): Array<string>;
+  getNameIndex(name: string): number;
+  getMappings(): unknown[];
+  toBuffer(): Buffer;
+  addSourceMap(sourcemapObject: SourceMap, lineOffset: number): void;
+  addVLQMap(
+    vlqMappings: string,
+    sources: Array<string>,
+    sourcesContent: Array<string>,
+    names: Array<string>,
+    lineOffset: number,
+    columnOffset: number,
+  ): void;
+  toVLQ(): object;
+  addIndexedMappings(mappings: JsTypedArray): void;
+  offsetLines(generatedLine: number, generatedLineOffset: number): void;
+  offsetColumns(
+    generatedLine: number,
+    generatedColumn: number,
+    generatedColumnOffset: number,
+  ): void;
+  addEmptyMap(source: string, sourceContent: string, lineOffset: number): void;
+  extends(originalSourcemap: SourceMap): void;
+  findClosestMapping(
+    generatedLine: number,
+    generatedColumn: number,
+  ): object | null;
+  getProjectRoot(): string;
+}
+
+export declare function atlaspackNapiPackage(
+  atlaspackNapi: AtlaspackNapi,
+): object;
+export interface CompiledCssInJsConfigPlugin {
+  configPath?: string;
+  importReact?: boolean;
+  nonce?: string;
+  importSources?: Array<string>;
+  optimizeCss?: boolean;
+  extensions?: Array<string>;
+  addComponentName?: boolean;
+  processXcss?: boolean;
+  increaseSpecificity?: boolean;
+  sortAtRules?: boolean;
+  sortShorthand?: boolean;
+  classHashPrefix?: string;
+  flattenMultipleSelectors?: boolean;
+  extract?: boolean;
+  ssr?: boolean;
+  unsafeReportSafeAssetsForMigration?: boolean;
+  unsafeUseSafeAssets?: boolean;
+  unsafeSkipPattern?: string;
+}
+export declare function hashCode(rawCode: string): string;
+export declare function isSafeFromJs(hash: string, configPath: string): boolean;
+export declare function applyCompiledCssInJsPlugin(
+  rawCode: Buffer,
+  input: CompiledCssInJsPluginInput,
+): object;
+export interface CompiledCssInJsPluginResult {
+  code: string;
+  map?: string;
+  styleRules: Array<string>;
+  diagnostics: Array<JsDiagnostic>;
+  bailOut: boolean;
+}
+export declare function atlaspackNapiLoadBundleGraph(
+  atlaspackNapi: AtlaspackNapi,
+  nodes: string,
+  edges: Array<[number, number, number]>,
+): object;

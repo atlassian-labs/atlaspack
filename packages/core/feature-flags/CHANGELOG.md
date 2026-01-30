@@ -1,5 +1,107 @@
 # @atlaspack/feature-flags
 
+## 2.27.7
+
+### Patch Changes
+
+- [#921](https://github.com/atlassian-labs/atlaspack/pull/921) [`f33f9c4`](https://github.com/atlassian-labs/atlaspack/commit/f33f9c48dd24b319df352d197e4a83cbb1b053bc) Thanks [@JakeLane](https://github.com/JakeLane)! - Update Compiled CSS-in-JS SWC transformer to be more accurate
+
+- [#962](https://github.com/atlassian-labs/atlaspack/pull/962) [`e15fb6c`](https://github.com/atlassian-labs/atlaspack/commit/e15fb6c885c6354c6c02283de35ce18abc8c9e18) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - adds flag to remove server file check in tesseract resolver
+
+## 2.27.6
+
+### Patch Changes
+
+- [#953](https://github.com/atlassian-labs/atlaspack/pull/953) [`c31090c`](https://github.com/atlassian-labs/atlaspack/commit/c31090c9025f35d3fa8561b42dca170853a32e6f) Thanks [@marcins](https://github.com/marcins)! - Cleanup feature flag precomputeReferencedAssets
+
+- [#960](https://github.com/atlassian-labs/atlaspack/pull/960) [`565bab3`](https://github.com/atlassian-labs/atlaspack/commit/565bab3771cc334659d873cabff4cdfac0860cc7) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add LargeMap to work around Node 24's Map size limit in build cache serializer.
+
+  This change is behind the `useLargeMapInBuildCache` feature flag.
+
+## 2.27.5
+
+### Patch Changes
+
+- [#934](https://github.com/atlassian-labs/atlaspack/pull/934) [`02cc8b3`](https://github.com/atlassian-labs/atlaspack/commit/02cc8b32c06ca6b51806b33f6f707ca06e55e957) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add experimental native persistent cache for Atlaspack V3.
+
+## 2.27.4
+
+### Patch Changes
+
+- [#935](https://github.com/atlassian-labs/atlaspack/pull/935) [`793e78c`](https://github.com/atlassian-labs/atlaspack/commit/793e78c68eed25032e686f70cd77ea3601409b35) Thanks [@benjervis](https://github.com/benjervis)! - Add a flag to skip symbol propagation for the runtime graph
+
+## 2.27.3
+
+### Patch Changes
+
+- [#924](https://github.com/atlassian-labs/atlaspack/pull/924) [`cbb66a5`](https://github.com/atlassian-labs/atlaspack/commit/cbb66a554f7ad679fd4dfc9e2bf2d5abb859f846) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add new JSX config system using the `@atlaspack/transformer-js` config in package.json
+
+  This feature is enabled when the `newJsxConfig` feature flag is enabled.
+
+  The new config will be fully responsible for providing JSX settings going forward, instead of inferring values from tsconfig.json and local package.json files.
+
+  | Option           | Type                     | Description                                                                                           |
+  | ---------------- | ------------------------ | ----------------------------------------------------------------------------------------------------- |
+  | pragma           | String                   | Specifies the JSX pragma to use (e.g., "React.createElement").                                        |
+  | pragmaFragment   | String                   | Specifies the JSX fragment pragma to use (e.g., "React.Fragment").                                    |
+  | importSource     | String                   | Specifies the import source for JSX. Only relevant for automatic runtime                              |
+  | automaticRuntime | `Boolean \| Array<Glob>` | Specifies the file that require the automatic runtime. Either Globs or a boolean to set for all files |
+
+## 2.27.2
+
+### Patch Changes
+
+- [#908](https://github.com/atlassian-labs/atlaspack/pull/908) [`91738fd`](https://github.com/atlassian-labs/atlaspack/commit/91738fd77cb6b3b7acc93e799327ec283d27f7c0) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Disallows circular package aliases during resolution. This fixes cases where package A aliases to package B, but package B imports package A, causing infinite loops during resolution. Instead, we disable the alias allow package B to import the real package A.
+
+  This is useful in cases where you create wrapper packages that re-export another package under a different name.
+
+  Enabled via the `disallowCircularPackageAliases` feature flag.
+
+## 2.27.1
+
+### Patch Changes
+
+- [#881](https://github.com/atlassian-labs/atlaspack/pull/881) [`2f3af93`](https://github.com/atlassian-labs/atlaspack/commit/2f3af9374bcc082e6f4835f6f5a2b98e32ea45b4) Thanks [@marcins](https://github.com/marcins)! - Cleanup feature flag schemaValidationDeferSourceLoading
+
+## 2.27.0
+
+### Minor Changes
+
+- [#858](https://github.com/atlassian-labs/atlaspack/pull/858) [`8eb84ee`](https://github.com/atlassian-labs/atlaspack/commit/8eb84ee61a42bfe87c58079b610802b07a6a13e4) Thanks [@marcins](https://github.com/marcins)! - Introduce a new `getReferencedAssets(bundle)` method to the BundleGraph to pre-compute referenced assets, this is used by the scope hoisting packager behind a new `precomputeReferencedAssets` feature flag.
+
+- [#789](https://github.com/atlassian-labs/atlaspack/pull/789) [`73168c2`](https://github.com/atlassian-labs/atlaspack/commit/73168c275a5d9abff9907bcf536b340bca1ed5f0) Thanks [@marcins](https://github.com/marcins)! - Use an in-sourced version of @parcel/source-map, as @atlaspack/source-map
+
+## 2.26.2
+
+### Patch Changes
+
+- [#873](https://github.com/atlassian-labs/atlaspack/pull/873) [`ec3abe4`](https://github.com/atlassian-labs/atlaspack/commit/ec3abe4dffc98560a850fd2f71fb566577e6c99c) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - cleanup deduplicateReporters flag
+
+- [#868](https://github.com/atlassian-labs/atlaspack/pull/868) [`c7fe3f7`](https://github.com/atlassian-labs/atlaspack/commit/c7fe3f76f247e9e20299e205e2df0a16c418eaf2) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Fix issue where nested Promise.resolve calls mixed with dynamic imports could cause build errors
+
+## 2.26.1
+
+### Patch Changes
+
+- [#863](https://github.com/atlassian-labs/atlaspack/pull/863) [`373ee2d`](https://github.com/atlassian-labs/atlaspack/commit/373ee2d3b5cc315df1e90e647619f915892e2b87) Thanks [@matt-koko](https://github.com/matt-koko)! - Revert clean up of resolver optimisation feature-flag.
+  Reverts PR: 'Clean-up resolver optimisation #816'
+
+## 2.26.0
+
+### Minor Changes
+
+- [#846](https://github.com/atlassian-labs/atlaspack/pull/846) [`58527ee`](https://github.com/atlassian-labs/atlaspack/commit/58527eec15c1aebaaadbeb63586f3082c16beae3) Thanks [@JakeLane](https://github.com/JakeLane)! - Creating a new temp package @atlaspack/transformer-compiled-css-in-js to aid in native migration from babel
+
+- [#777](https://github.com/atlassian-labs/atlaspack/pull/777) [`cfb39a0`](https://github.com/atlassian-labs/atlaspack/commit/cfb39a0d729eb620cf2ca1611750a2bf7a080d08) Thanks [@matt-koko](https://github.com/matt-koko)! - Added logic to rust JS transformer to account for JSX transformations in scenarios when the file extension of the asset is NOT .jsx or .tsx. The logic to determine whether the file should be treated as JSX syntax now mirrors that of the existing v2 behaviour. Several unit tests and integration tests have been introduced to ensure this parity is maintained.
+
+### Patch Changes
+
+- [#844](https://github.com/atlassian-labs/atlaspack/pull/844) [`d0c7bea`](https://github.com/atlassian-labs/atlaspack/commit/d0c7bea04458255b4c5d4299600e734b5f919fe1) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - deduplicate reporters from config
+
+- [#847](https://github.com/atlassian-labs/atlaspack/pull/847) [`9cd9521`](https://github.com/atlassian-labs/atlaspack/commit/9cd9521978f783046e2ae4ce78f2de7aeb07d073) Thanks [@marcins](https://github.com/marcins)! - Implement a new transformer for Atlaskit Tokens, re-using infrastructure from the existing JS transformer.
+
+- [#852](https://github.com/atlassian-labs/atlaspack/pull/852) [`5776be2`](https://github.com/atlassian-labs/atlaspack/commit/5776be21f70a3f2b9471ba33da3ba1a883f21f1a) Thanks [@marcins](https://github.com/marcins)! - Support passing a function for source property in schema validation to allow for deferred reads of files
+
 ## 2.25.5
 
 ### Patch Changes

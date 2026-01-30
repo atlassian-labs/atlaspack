@@ -12,9 +12,11 @@ crate-type = ["cdylib"]
 
 [dependencies]
 atlaspack = { path = "../atlaspack" }
+atlaspack_atlaskit_tokens = { path = "../atlaspack_atlaskit_tokens" }
 atlaspack_core = { path = "../atlaspack_core" }
 atlaspack-js-swc-core = { path = "../../packages/transformers/js/core" }
 atlaspack_monitoring = { path = "../atlaspack_monitoring" }
+atlaspack_memory_profiler = { path = "../atlaspack_memory_profiler" }
 atlaspack-resolver = { path = "../../packages/utils/node-resolver-rs" }
 atlaspack_package_manager = { path = "../atlaspack_package_manager" }
 atlaspack_plugin_optimizer_inline_requires = { path = "../atlaspack_plugin_optimizer_inline_requires" }
@@ -22,7 +24,10 @@ atlaspack_plugin_transformer_js = { path = "../atlaspack_plugin_transformer_js" 
 atlaspack_napi_helpers = { path = "../atlaspack_napi_helpers" }
 atlaspack_vcs = { path = "../atlaspack_vcs" }
 atlaspack_swc_runner = { path = "../atlaspack_swc_runner" }
+atlassian_swc_compiled_css = { path = "../atlassian-swc-compiled-css", features = ["napi"] }
+atlassian_swc_compiled_css_strip_runtime = { path = "../atlassian-swc-compiled-css-strip-runtime" }
 lmdb-js-lite = { path = "../lmdb-js-lite" }
+atlaspack_sourcemap = { path = "../atlaspack_sourcemap" }
 
 aho-corasick = { workspace = true }
 anyhow = { workspace = true }
@@ -32,9 +37,12 @@ mockall = { workspace = true }
 napi-derive = { workspace = true }
 num_cpus = { workspace = true }
 parking_lot = { workspace = true }
+regex = { workspace = true }
+rkyv = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 toml = { workspace = true }
+tokio = { workspace = true, features = ["rt"] }
 tracing = { workspace = true }
 tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -42,7 +50,7 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 atlaspack = { path = "../atlaspack", features = ["nodejs"] }
-atlaspack-dev-dep-resolver = { path = "../../packages/utils/dev-dep-resolver" }
+atlaspack_dev_dep_resolver = { path = "../atlaspack_dev_dep_resolver" }
 atlaspack-macros = { path = "../macros", features = ["napi"] }
 
 crossbeam-channel = { workspace = true }
@@ -59,6 +67,7 @@ once_cell = { workspace = true }
 oxipng = { workspace = true }
 rayon = { workspace = true }
 swc_core = { workspace = true }
+swc_atlaskit_tokens = { path = "../swc_atlaskit_tokens" }
 
 # Crash reporting dependencies
 
@@ -68,6 +77,13 @@ napi = { workspace = true, features = ["serde-json"] }
 
 [target.'cfg(windows)'.dependencies]
 mimalloc = { workspace = true }
+
+[dev-dependencies]
+indoc = { workspace = true }
+tempfile = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+jemallocator = { workspace = true, features = ["disable_initial_exec_tls"]}
 
 [build-dependencies]
 napi-build = { workspace = true }

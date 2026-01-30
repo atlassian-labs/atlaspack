@@ -1,13 +1,14 @@
+use atlaspack_js_swc_core::JsxOptions;
 use serde::Deserialize;
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Hash, Deserialize)]
 #[serde(untagged)]
 pub enum InlineEnvironment {
   Enabled(bool),
   Environments(Vec<String>),
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, Deserialize, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct JsTransformerConfig {
   #[serde(rename = "unstable_inlineConstants")]
@@ -20,6 +21,8 @@ pub struct JsTransformerConfig {
   pub magic_comments: Option<bool>,
 
   pub add_react_display_name: Option<bool>,
+
+  pub jsx: Option<JsxOptions>,
 }
 
 #[derive(Deserialize)]

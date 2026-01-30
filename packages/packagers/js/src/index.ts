@@ -1,5 +1,5 @@
 import type {Async, BundleResult} from '@atlaspack/types';
-import type SourceMap from '@parcel/source-map';
+import type SourceMap from '@atlaspack/source-map';
 import {Packager} from '@atlaspack/plugin';
 import {
   replaceInlineReferences,
@@ -16,6 +16,7 @@ import {
   type PackageResult as ScopeHoistingPackageResult,
   ScopeHoistingPackager,
 } from './ScopeHoistingPackager';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 type JSPackagerConfig = {
   parcelRequireName: string;
@@ -54,7 +55,7 @@ export default new Packager({
         CONFIG_SCHEMA,
         {
           data: conf?.contents,
-          source: await options.inputFS.readFile(conf.filePath, 'utf8'),
+          source: () => options.inputFS.readFileSync(conf.filePath, 'utf8'),
           filePath: conf.filePath,
           prependKey: `/${encodeJSONKeyComponent(packageKey)}`,
         },

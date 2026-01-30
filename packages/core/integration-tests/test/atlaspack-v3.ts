@@ -67,6 +67,8 @@ describe.v3('AtlaspackV3', function () {
 
     let atlaspack = await AtlaspackV3.create({
       corePath: '',
+      serveOptions: false,
+      env: process.env,
       entries: [join(__dirname, 'index.js')],
       fs: new FileSystemV3(overlayFS),
       napiWorkerPool,
@@ -206,7 +208,7 @@ describe.v3('AtlaspackV3', function () {
       shutdown
         index.js:
           console.log('hello world');
-                    
+
         yarn.lock: {}
     `;
 
@@ -236,10 +238,12 @@ describe.v3('AtlaspackV3', function () {
 
   describe('featureFlags', () => {
     it('should not throw if feature flag is bool', async () => {
-      await assert.rejects(() =>
+      await assert.doesNotReject(() =>
         AtlaspackV3.create({
-          corePath: '',
-          entries: [join(__dirname, 'index.js')],
+          corePath: join(__dirname, '..', '..', 'core'),
+          serveOptions: false,
+          env: {},
+          entries: [join(__dirname, 'integration', 'tokens', 'index.js')],
           fs: new FileSystemV3(overlayFS),
           lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
           napiWorkerPool,
@@ -251,18 +255,109 @@ describe.v3('AtlaspackV3', function () {
     });
 
     it('should not throw if feature flag is string', async () => {
-      await assert.rejects(() =>
+      await assert.doesNotReject(() =>
         AtlaspackV3.create({
-          corePath: '',
-          entries: [join(__dirname, 'index.js')],
+          corePath: join(__dirname, '..', '..', 'core'),
+          serveOptions: false,
+          env: {},
+          entries: [join(__dirname, 'integration', 'tokens', 'index.js')],
           fs: new FileSystemV3(overlayFS),
-          napiWorkerPool,
           lmdb: new LMDBLiteCache('.parcel-cache').getNativeRef(),
+          napiWorkerPool,
           featureFlags: {
             testFlag: 'testFlagValue',
           },
         }),
       );
     });
+  });
+
+  // Regression test for V3's TypeScript/Rust interop: BitFlags conversion for packageConditions
+  // When a CSS file imports another CSS file with a custom JS resolver, the Rust CSS
+  // transformer sets package_conditions to ExportsCondition::STYLE (bitflags number 4096).
+  // This test ensures packageConditions are correctly converted from Rust bitflags (numbers)
+  // to TypeScript arrays in the Dependency constructor.
+  it('should convert packageConditions from bitflags to array', async () => {
+    const dir = join(__dirname, 'tmp', 'v3-css-style-condition');
+    await inputFS.rimraf(dir);
+    await inputFS.mkdirp(dir);
+
+    await fsFixture(inputFS, dir)`
+        package.json:
+          {
+            "name": "v3-css-style-condition-test"
+          }
+
+        .parcelrc:
+          {
+            "extends": "@atlaspack/config-default",
+            "resolvers": ["./custom-resolver.js"]
+          }
+
+        yarn.lock:
+
+        index.js:
+          import './main.css';
+
+        main.css:
+          @import './variables.css';
+
+          body {
+            background: var(--bg-color);
+            color: var(--text-color);
+          }
+
+        variables.css:
+          :root {
+            --bg-color: white;
+            --text-color: black;
+          }
+
+        custom-resolver.js:
+          const NodeResolver = require('@atlaspack/node-resolver-core').default;
+          const { Resolver } = require('@atlaspack/plugin');
+
+          // This custom resolver uses NodeResolver directly, forcing dependencies
+          // through the JavaScript worker's runResolverResolve, which triggers
+          // the BitFlags bug in the Dependency constructor
+          module.exports = new Resolver({
+            async loadConfig({ options }) {
+              return new NodeResolver({
+                fs: options.inputFS,
+                projectRoot: options.projectRoot,
+                packageManager: options.packageManager,
+              });
+            },
+
+            async resolve({ dependency, specifier, config: resolver }) {
+              return resolver.resolve({
+                filename: specifier,
+                specifierType: dependency.specifierType,
+                parent: dependency.resolveFrom,
+                env: dependency.env,
+                sourcePath: dependency.sourcePath,
+                packageConditions: dependency.packageConditions,
+              });
+            }
+          });
+    `;
+
+    let b = await bundle(join(dir, 'index.js'), {
+      inputFS,
+    });
+
+    // If we get here, the BitFlags conversion is working correctly
+    assert.ok(b, 'Bundle should be created');
+    let bundles = b.getBundles();
+    assert.ok(bundles.length > 0, 'Should have at least one bundle');
+
+    // Verify we have CSS bundles (proves CSS @imports with style condition were processed correctly)
+    let cssBundles = bundles.filter((bundle) => bundle.type === 'css');
+    assert.ok(
+      cssBundles.length > 0,
+      'Should have CSS bundle with @import resolved',
+    );
+
+    await inputFS.rimraf(dir);
   });
 });

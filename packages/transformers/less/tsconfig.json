@@ -10,6 +10,9 @@
     },
     {
       "path": "../../core/types-internal/tsconfig.json"
+    },
+    {
+      "path": "../../core/source-map/tsconfig.json"
     }
   ]
 }

@@ -28,7 +28,7 @@
     "@atlaspack/core": "workspace:*",
     "@atlaspack/fs": "workspace:*",
     "@atlaspack/types": "workspace:*",
-    "@napi-rs/cli": "^2.18.4",
+    "@napi-rs/cli": "2.18.3",
     "@types/node": ">= 18",
     "bench-node": "^0.0.1-beta.0",
     "prettier": "^3.3.3",

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/transformer-yaml",
-  "version": "2.14.35",
+  "version": "2.14.49",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"

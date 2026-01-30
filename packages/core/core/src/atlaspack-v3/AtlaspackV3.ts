@@ -2,14 +2,20 @@ import {
   atlaspackNapiCreate,
   atlaspackNapiBuildAssetGraph,
   atlaspackNapiRespondToFsEvents,
+  atlaspackNapiCompleteSession,
+  atlaspackNapiLoadBundleGraph,
+  atlaspackNapiPackage,
   AtlaspackNapi,
   Lmdb,
   AtlaspackNapiOptions,
+  CacheStats,
 } from '@atlaspack/rust';
 import {NapiWorkerPool} from './NapiWorkerPool';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
 import type {Event} from '@parcel/watcher';
 import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
+import invariant from 'assert';
+import type BundleGraph from '../BundleGraph';
 
 export type AtlaspackV3Options = {
   fs?: AtlaspackNapiOptions['fs'];
@@ -91,19 +97,22 @@ export class AtlaspackV3 {
     }
   }
 
-  async buildAssetGraph(): Promise<any> {
-    // @ts-expect-error TS2488
-    let [graph, error] = await atlaspackNapiBuildAssetGraph(
+  buildAssetGraph(): Promise<any> {
+    return atlaspackNapiBuildAssetGraph(this._atlaspack_napi) as Promise<any>;
+  }
+
+  loadBundleGraph(bundleGraph: BundleGraph): Promise<void> {
+    const {nodesJson, edges} = bundleGraph.serializeForNative();
+
+    return atlaspackNapiLoadBundleGraph(
       this._atlaspack_napi,
-    );
+      nodesJson,
+      edges,
+    ) as Promise<void>;
+  }
 
-    if (error !== null) {
-      throw new ThrowableDiagnostic({
-        diagnostic: error,
-      });
-    }
-
-    return graph;
+  package(): Promise<any> {
+    return atlaspackNapiPackage(this._atlaspack_napi) as Promise<any>;
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {
@@ -118,5 +127,11 @@ export class AtlaspackV3 {
     }
 
     return needsRebuild;
+  }
+
+  async completeCacheSession(): Promise<CacheStats> {
+    return (await atlaspackNapiCompleteSession(
+      this._atlaspack_napi,
+    )) as CacheStats;
   }
 }

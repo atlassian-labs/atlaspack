@@ -302,9 +302,6 @@
       "path": "./packages/transformers/toml/tsconfig.json"
     },
     {
-      "path": "./packages/transformers/typescript-tsc/tsconfig.json"
-    },
-    {
       "path": "./packages/transformers/typescript-types/tsconfig.json"
     },
     {
@@ -369,6 +366,30 @@
     },
     {
       "path": "./packages/bundlers/bundler-experimental/tsconfig.json"
+    },
+    {
+      "path": "./packages/transformers/tokens/tsconfig.json"
+    },
+    {
+      "path": "./packages/transformers/compiled-css-in-js/tsconfig.json"
+    },
+    {
+      "path": "./packages/transformers/typescript-tsc/tsconfig.json"
+    },
+    {
+      "path": "./packages/reporters/compiled-css-in-js-migration-map/tsconfig.json"
+    },
+    {
+      "path": "./packages/core/source-map/tsconfig.json"
+    },
+    {
+      "path": "./packages/dev/dist-differ/tsconfig.json"
+    },
+    {
+      "path": "./packages/transformers/compiled-external/tsconfig.json"
+    },
+    {
+      "path": "./packages/transformers/compiled/tsconfig.json"
     }
   ]
 }

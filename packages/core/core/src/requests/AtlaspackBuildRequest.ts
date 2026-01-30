@@ -20,6 +20,9 @@ import {assetFromValue} from '../public/Asset';
 
 import {tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+import {fromEnvironmentId} from '../EnvironmentManager';
+import invariant from 'assert';
 
 type AtlaspackBuildRequestInput = {
   optionsRef: SharedReference;
@@ -82,6 +85,26 @@ async function run({
         Boolean(rustAtlaspack) ||
         (options.shouldBuildLazily && requestedAssetIds.size > 0),
     });
+
+  if (
+    getFeatureFlag('nativePackager') &&
+    getFeatureFlag('nativePackagerSSRDev') &&
+    rustAtlaspack
+  ) {
+    let hasSupportedTarget = false;
+    bundleGraph.traverseBundles((bundle, ctx, actions) => {
+      if (
+        fromEnvironmentId(bundle.env).context === 'tesseract' &&
+        bundle.type === 'js'
+      ) {
+        hasSupportedTarget = true;
+        actions.stop();
+      }
+    });
+    if (hasSupportedTarget) {
+      await rustAtlaspack.loadBundleGraph(bundleGraph);
+    }
+  }
 
   // @ts-expect-error TS2345
   dumpGraphToGraphViz(bundleGraph._graph, 'BundleGraph', bundleGraphEdgeTypes);

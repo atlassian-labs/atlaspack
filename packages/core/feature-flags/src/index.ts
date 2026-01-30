@@ -1,5 +1,3 @@
-// Converted from Flow to TypeScript
-
 export type ConsistencyCheckFeatureFlagValue =
   (typeof CONSISTENCY_CHECK_VALUES)[number];
 
@@ -94,6 +92,15 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-03-07
    */
   loadableSideEffects: false,
+
+  /**
+   * Enable performance optimization for the resolver specifier to_string
+   * conversions
+   *
+   * @author Pedro Tacla Yamada <pyamada@atlassian.com>
+   * @since 2025-03-13
+   */
+  reduceResolverStringCreation: false,
 
   /**
    * Fixes source maps for inline bundles
@@ -274,13 +281,120 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2025-09-29
    */
   sourceAssetIdBundleGraphFix: process.env.ATLASPACK_BUILD_ENV === 'test',
+
   /**
-   * When enabled, deduplicates reporters when resolving the config.
+
+   * When _disabled_, will early exit from the @atlaspack/transformer-tokens transformation
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2025-10-17
+   */
+  enableTokensTransformer: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /*
+   * When enabled, applies the SWC compiled CSS in JS transformer to the codebase.
+   *
+   * This is a temporary feature flag for the migration state. We eventually will remove this transformer plugin and directly use the SWC visitor in the JS transform.
+   *
+   * @author Jake Lane <jlane2@atlassian.com>
+   * @since 2025-10-16
+   */
+  compiledCssInJsTransformer: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Fixes an issue where nested Promise.resolve chains mixed with dynamic
+   * imports could cause build errors.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-11-05
+   */
+  nestedPromiseImportFix: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Disallows circular package aliases during resolution.
+   * This fixes cases where package A aliases to package B, but package B
+   * imports package A, causing infinite loops during resolution. Instead,
+   * we disable the alias allow package B to import the real package A.
+   *
+   * This is useful in cases where you create wrapper packages that re-export
+   * another package under a different name.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-11-27
+   */
+  disallowCircularPackageAliases: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * When enabled, applies the tokens and SWC compiled CSS in JS transformer to the codebase in the core pass
+   *
+   * @author Jake Lane <jlane2@atlassian.com>
+   * @since 2025-12-02
+   */
+  coreTokensAndCompiledCssInJsTransform:
+    process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Enables experimental mode for runtimes that skips symbol prop in favour of
+   * the symbol data added to each runtime asset
+   *
+   * @author Ben Jervis <bjervis@atlassian.com>
+   * @since 2025-12-09
+   */
+  skipRuntimeSymbolProp: false,
+
+  /**
+   * Enable new JSX config loading.
+   * The new config is a top-level "react" key in the `@atlaspack/transformer-js` config.
+   * When enabled, we no longer use package.json react deps and tsconfig to infer the JSX config.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-12-09
+   */
+  newJsxConfig:
+    // Enable for tests only in v3 mode
+    process.env.ATLASPACK_BUILD_ENV === 'test' &&
+    process.env.ATLASPACK_V3 === 'true',
+
+  /**
+   * Enable V3 Rust caching
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2025-12-15
+   */
+  v3Caching: false,
+
+  /**
+   * Use LargeMap in build cache serializer to work around Node 24's Map size limit.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2026-01-16
+   */
+  useLargeMapInBuildCache: process.env.ATLASPACK_BUILD_ENV === 'test',
+  /*
+   * Enable the skipping of server file check in TesseractResolver
    *
    * @author Vy Kim Nguyen <vnguyen4@atlassian.com>
-   * @since 2025-10-14
+   * @since 2026-01-19
    */
-  deduplicateReporters: process.env.ATLASPACK_BUILD_ENV === 'test',
+  skipServerFileCheck: process.env.ATLASPACK_BUILD_ENV === 'test',
+
+  /**
+   * Enables native packaging. By itself, this feature flag will only ensure that
+   * the native code is ready for a bundle graph, but does not enable any native packaging features.
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2026-01-21
+   */
+  nativePackager: false,
+
+  /**
+   * Enables native packaging for SSR development. This flag is used in conjuction with runtime checks to enable the
+   * setup and use of the native packager when building bundles in development mode for the `tesseract` target.
+   *
+   * @author Marcin Szczepanski <mszczepanski@atlassian.com>
+   * @since 2026-01-21
+   */
+  nativePackagerSSRDev: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;

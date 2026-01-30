@@ -1,7 +1,7 @@
-import type {SourceLocation} from '@atlaspack/types';
+import type {MutableAsset, SourceLocation} from '@atlaspack/types';
 
 import path from 'path';
-import SourceMap from '@parcel/source-map';
+import SourceMap from '@atlaspack/source-map';
 import {Transformer} from '@atlaspack/plugin';
 import {
   remapSourceLocation,
@@ -53,6 +53,13 @@ export default new Transformer({
     return contents;
   },
   async transform({asset, config, options, logger}) {
+    if (
+      getFeatureFlag('compiledCssInJsTransformer') &&
+      asset.filePath.endsWith('.compiled.css')
+    ) {
+      return handleCompiledCssAsset(asset);
+    }
+
     // Normalize the asset's environment so that properties that only affect JS don't cause CSS to be duplicated.
     // For example, with ESModule and CommonJS targets, only a single shared CSS bundle should be produced.
     let env = asset.env;
@@ -419,4 +426,17 @@ function convertLoc(loc: LightningSourceLocation): SourceLocation {
     start: {line: loc.start.line, column: loc.start.column},
     end: {line: loc.end.line, column: loc.end.column + 1},
   };
+}
+
+async function handleCompiledCssAsset(asset: MutableAsset) {
+  const code = await asset.getCode();
+
+  const rules: Array<string> = code.split('\n').map((line) => line.trim());
+  // styleRules will be consumed by the optimiser in @compiled/parcel-optimizer
+  asset.meta.styleRules = rules;
+
+  // Empty the code because we only use compiled CSS assets for their metadata
+  asset.setCode('');
+
+  return [asset];
 }

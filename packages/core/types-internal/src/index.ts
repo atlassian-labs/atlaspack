@@ -1,5 +1,5 @@
 import type {Readable} from 'stream';
-import type SourceMap from '@parcel/source-map';
+import type {SourceMap} from '@atlaspack/source-map';
 import type {
   Diagnostic,
   Diagnostifiable,
@@ -383,6 +383,7 @@ export type InitialAtlaspackOptionsInternal<WorkerFarm> = {
   readonly shouldAutoInstall?: boolean;
   readonly logLevel?: LogLevel;
   readonly shouldProfile?: boolean;
+  readonly nativeProfiler?: 'instruments' | 'samply';
   readonly shouldTrace?: boolean;
   readonly shouldPatchConsole?: boolean;
   readonly shouldBuildLazily?: boolean;
@@ -1217,25 +1218,48 @@ export type MultiThreadValidator = {
  */
 export type Validator = DedicatedThreadValidator | MultiThreadValidator;
 
+export interface TransformerConditions {
+  enabled?: boolean;
+  fileMatch?: Array<string>;
+  codeMatch?: Array<string>;
+  origin?: 'source' | 'third-party';
+}
+
+export interface TransformerSetup<Config> {
+  conditions?: TransformerConditions;
+  config?: Config;
+  /** List of environment variables that the transformer depends on to be fed
+   * into the cache key.
+   *
+   * Missing variables from this list will cause the transformer to not be
+   * cached.
+   * */
+  env?: Array<string>;
+}
+
 /**
  * The methods for a transformer plugin.
  * @section transformer
  */
 export type Transformer<ConfigType> = {
+  setup?(arg1: {
+    options: PluginOptions;
+    config: Config;
+    logger: PluginLogger;
+  }): Async<TransformerSetup<ConfigType>>;
+  /** @deprecated Deprecated in favour of `setup` */
   loadConfig?: (arg1: {
     config: Config;
     options: PluginOptions;
     logger: PluginLogger;
     tracer: PluginTracer;
   }) => Promise<ConfigType> | ConfigType;
-  /** Whether an AST from a previous transformer can be reused (to prevent double-parsing) */
   canReuseAST?: (arg1: {
     ast: AST;
     options: PluginOptions;
     logger: PluginLogger;
     tracer: PluginTracer;
   }) => boolean;
-  /** Parse the contents into an ast */
   parse?: (arg1: {
     asset: Asset;
     config: ConfigType;
@@ -1691,6 +1715,13 @@ export interface BundleGraph<TBundle extends Bundle> {
   /** Returns whether an asset is referenced outside the given bundle. */
   isAssetReferenced(bundle: Bundle, asset: Asset): boolean;
   /**
+   * Fast checks only for asset reference status. Returns true if fast checks succeed,
+   * null if expensive traversal computation is needed.
+   */
+  isAssetReferencedFastCheck(bundle: Bundle, asset: Asset): boolean | null;
+  /** Returns a set of all assets that are referenced outside the given bundle. */
+  getReferencedAssets(bundle: Bundle): Set<Asset>;
+  /**
    * Resolves the export `symbol` of `asset` to the source,
    * stopping at the first asset after leaving `bundle`.
    * `symbol === null`: bailout (== caller should do `asset.exports[exportsSymbol]`)
@@ -1843,6 +1874,30 @@ export type Namer<ConfigType> = {
   }): Async<FilePath | null | undefined>;
 };
 
+export type SymbolData = {
+  readonly symbols?: ReadonlyMap<
+    Symbol,
+    {
+      readonly local: Symbol;
+      readonly loc?: SourceLocation | null | undefined;
+      readonly meta?: Meta | null | undefined;
+    }
+  >;
+  readonly dependencies?: ReadonlyArray<{
+    readonly specifier: DependencySpecifier;
+    readonly symbols?: ReadonlyMap<
+      Symbol,
+      {
+        readonly local: Symbol;
+        readonly loc?: SourceLocation | null | undefined;
+        readonly isWeak: boolean;
+        readonly meta?: Meta | null | undefined;
+      }
+    >;
+    readonly usedSymbols?: ReadonlySet<Symbol>;
+  }>;
+};
+
 type RuntimeAssetPriority = 'sync' | 'parallel';
 
 /**
@@ -1857,6 +1912,10 @@ export type RuntimeAsset = {
   readonly env?: EnvironmentOptions;
   readonly priority?: RuntimeAssetPriority;
   readonly runtimeAssetRequiringExecutionOnLoad?: boolean;
+  /**
+   * Pre-computed symbol information for runtime assets to skip symbol propagation.
+   */
+  readonly symbolData?: SymbolData;
 };
 
 /**
@@ -2128,6 +2187,15 @@ export type BuildProgressEvent =
   | OptimizingProgressEvent
   | PackagingAndOptimizingProgressEvent;
 
+export type NativeCacheStats = {
+  hits: number;
+  misses: number;
+  uncacheables: number;
+  bailouts: number;
+  errors: number;
+  validations: number;
+};
+
 /**
  * The build was successful.
  * @section reporter
@@ -2141,6 +2209,7 @@ export type BuildSuccessEvent = {
   readonly unstable_requestStats: {
     [requestType: string]: number;
   };
+  readonly nativeCacheStats: NativeCacheStats;
   readonly scopeHoistingStats?: {
     totalAssets: number;
     wrappedAssets: number;
@@ -2157,6 +2226,7 @@ export type BuildFailureEvent = {
   readonly unstable_requestStats: {
     [requestType: string]: number;
   };
+  readonly nativeCacheStats: NativeCacheStats;
 };
 
 /**

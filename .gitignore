@@ -10,7 +10,6 @@
 coverage/
 dist/
 **/lib/**
-!**/lib/**/*.js.flow
 logs/
 node_modules/
 tmp
@@ -34,3 +33,4 @@ debug-symbols/
 
 mocha-cpu-profiles/
 /.yarn/install-state.gz
+*.trace

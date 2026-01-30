@@ -2,6 +2,7 @@ import {Resolver} from '@atlaspack/plugin';
 import NodeResolver from '@atlaspack/node-resolver-core';
 import {basename, dirname, extname, isAbsolute, join} from 'path';
 import {FileSystem} from '@atlaspack/types-internal';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
 
 interface TesseractResolverConfig {
   /** Modules to replace with empty stubs during resolution. */
@@ -18,10 +19,15 @@ interface TesseractResolverConfig {
 
   /** Server file suffixes checked in priority order. */
   serverSuffixes?: Array<string>;
+
+  /** Enable React DOM Server specific behavior. */
+  handleReactDomServer?: boolean;
+
+  /** Unsupported extensions, configure to fallback to default behaviour */
+  unsupportedExtensions?: Array<string>;
 }
 
 const IGNORE_MODULES_REGEX = /(mock|mocks|\.woff|\.woff2|\.mp3|\.ogg)$/;
-
 const IGNORE_PATH = join(__dirname, 'data', 'empty-module.js');
 
 /**
@@ -101,7 +107,8 @@ export default new Resolver({
     const ignoreModules = userConfig.ignoreModules || [];
     const browserResolvedNodeBuiltins =
       userConfig.browserResolvedNodeBuiltins || [];
-
+    const handleReactDomServer = userConfig.handleReactDomServer || false;
+    const unsupportedExtensions = userConfig.unsupportedExtensions || [];
     const nodeResolver = new NodeResolver({
       fs: options.inputFS,
       projectRoot: options.projectRoot,
@@ -130,6 +137,8 @@ export default new Resolver({
       builtinAliases,
       ignoreModules,
       browserResolvedNodeBuiltins,
+      handleReactDomServer,
+      unsupportedExtensions,
     };
   },
   resolve({dependency, specifier, config, options}) {
@@ -141,9 +150,18 @@ export default new Resolver({
       preResolved,
       builtinAliases,
       serverSuffixes,
+      handleReactDomServer,
+      unsupportedExtensions,
     } = config;
 
-    if (isAbsolute(specifier)) {
+    if (
+      unsupportedExtensions.some((ext) => dependency.specifier.endsWith(ext))
+    ) {
+      // fallback to atlaspack's default resolver
+      return null;
+    }
+
+    if (!specifier.startsWith('//') && isAbsolute(specifier)) {
       return {
         filePath: specifier,
         code: undefined,
@@ -194,39 +212,60 @@ export default new Resolver({
       (options.env.STATIC_FALLBACK === 'true' &&
         STATIC_FALLBACK_MODULES.includes(specifier));
 
+    const snapvmEnv = new Proxy(dependency.env, {
+      get(target, property) {
+        if (handleReactDomServer && specifier.includes('react-dom/server')) {
+          if (property === 'isNode') {
+            return () => true;
+          }
+          if (property === 'isBrowser') {
+            return () => false;
+          }
+          if (property === 'isWorker') {
+            return () => false;
+          }
+        }
+
+        if (property === 'isLibrary') {
+          return false;
+        }
+
+        if (typeof property === 'string') {
+          const value = target[property as keyof typeof target];
+          const ret = typeof value === 'function' ? value.bind(target) : value;
+          return ret;
+        }
+
+        return Reflect.get(target, property);
+      },
+    });
+
+    const packageConditions =
+      handleReactDomServer && specifier.includes('react-dom/server')
+        ? ['default']
+        : ['ssr', 'require'];
+
     const promise = useBrowser
       ? browserResolver.resolve({
           sourcePath: dependency.sourcePath,
           parent: dependency.resolveFrom,
           filename: aliasSpecifier || specifier,
           specifierType: dependency.specifierType,
-          env: new Proxy(dependency.env, {
-            get(target, property) {
-              if (property === 'isLibrary') {
-                return false;
-              }
-
-              if (typeof property === 'string') {
-                const value = target[property as keyof typeof target];
-                const ret =
-                  typeof value === 'function' ? value.bind(target) : value;
-                return ret;
-              }
-
-              return Reflect.get(target, property);
-            },
-          }),
-          packageConditions: ['ssr', 'require'],
+          env: snapvmEnv,
+          packageConditions,
         })
       : nodeResolver.resolve({
           sourcePath: dependency.sourcePath,
           parent: dependency.resolveFrom,
           filename: aliasSpecifier || specifier,
           specifierType: dependency.specifierType,
-          env: dependency.env,
-          packageConditions: ['ssr', 'require'],
+          env: handleReactDomServer ? snapvmEnv : dependency.env,
+          packageConditions,
         });
 
+    if (getFeatureFlag('skipServerFileCheck')) {
+      return promise;
+    }
     return promise
       .then(async (result) => {
         const resolvedPath = result?.filePath;
