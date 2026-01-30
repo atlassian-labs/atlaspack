@@ -401,7 +401,7 @@ mod tests {
       BundleGraphNode::Root(create_test_root_node()),
       BundleGraphNode::Bundle(create_test_bundle_node("bundle1", "main.js")),
     ];
-    let edges = vec![(0, 1, 1u8)]; // Edge from root to bundle
+    let edges = vec![(0, 1, BundleGraphEdgeType::Null)]; // Edge from root to bundle
 
     let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![Environment::default()]);
     let bundles = graph.get_bundles();
@@ -420,9 +420,9 @@ mod tests {
       BundleGraphNode::Bundle(create_test_bundle_node("bundle3", "chunk-b.js")),
     ];
     let edges = vec![
-      (0, 1, 1u8), // root -> bundle1
-      (1, 2, 2u8), // bundle1 -> bundle2
-      (1, 3, 2u8), // bundle1 -> bundle3
+      (0, 1, BundleGraphEdgeType::Null),     // root -> bundle1
+      (1, 2, BundleGraphEdgeType::Contains), // bundle1 -> bundle2
+      (1, 3, BundleGraphEdgeType::Contains), // bundle1 -> bundle3
     ];
 
     let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![Environment::default()]);
@@ -446,10 +446,10 @@ mod tests {
       BundleGraphNode::Bundle(create_test_bundle_node("bundle2", "chunk.js")),
     ];
     let edges = vec![
-      (0, 1, 1u8), // root -> asset
-      (0, 2, 1u8), // root -> bundle1
-      (2, 3, 2u8), // bundle1 -> dependency
-      (3, 4, 2u8), // dependency -> bundle2
+      (0, 1, BundleGraphEdgeType::Null),     // root -> asset
+      (0, 2, BundleGraphEdgeType::Null),     // root -> bundle1
+      (2, 3, BundleGraphEdgeType::Contains), // bundle1 -> dependency
+      (3, 4, BundleGraphEdgeType::Contains), // dependency -> bundle2
     ];
 
     let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![Environment::default()]);
@@ -471,7 +471,7 @@ mod tests {
       BundleGraphNode::Bundle(create_test_bundle_node("bundle2", "orphan.js")),
     ];
     // Only edge from root to bundle1, bundle2 is disconnected
-    let edges = vec![(0, 1, 1u8)];
+    let edges = vec![(0, 1, BundleGraphEdgeType::Null)];
 
     let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![Environment::default()]);
     let bundles = graph.get_bundles();
@@ -562,7 +562,7 @@ mod tests {
     ]"#
       .to_string();
     let nodes = BundleGraphFromJs::deserialize_from_json(json, &[]).unwrap();
-    let edges = vec![(0, 1, 1u8)];
+    let edges = vec![(0, 1, BundleGraphEdgeType::Null)];
 
     let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
     // Graph should be created successfully (no bundles in this case)
@@ -580,5 +580,261 @@ mod tests {
     assert_eq!(graph.get_public_asset_id("abc123def456"), Some("8LVYC"));
     assert_eq!(graph.get_public_asset_id("xyz789uvw012"), Some("d7Pd5"));
     assert_eq!(graph.get_public_asset_id("nonexistent"), None);
+  }
+
+  #[test]
+  fn test_get_dependencies_returns_outgoing_null_edges() {
+    let asset1 = create_test_asset_node("asset1");
+    let dep1 = create_test_dependency_node("dep1");
+    let dep2 = create_test_dependency_node("dep2");
+
+    let nodes = vec![
+      BundleGraphNode::Asset(asset1.clone()),
+      BundleGraphNode::Dependency(dep1.clone()),
+      BundleGraphNode::Dependency(dep2.clone()),
+    ];
+
+    // asset1 -> dep1 (Null edge)
+    // asset1 -> dep2 (Null edge)
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::Null),
+      (0, 2, BundleGraphEdgeType::Null),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+
+    let deps = graph.get_dependencies(&asset1.value).unwrap();
+    assert_eq!(deps.len(), 2);
+    let dep_ids: Vec<&str> = deps.iter().map(|d| d.id.as_str()).collect();
+    assert!(dep_ids.contains(&"dep1"));
+    assert!(dep_ids.contains(&"dep2"));
+  }
+
+  #[test]
+  fn test_get_dependencies_filters_non_null_edges() {
+    let asset1 = create_test_asset_node("asset1");
+    let dep1 = create_test_dependency_node("dep1");
+    let dep2 = create_test_dependency_node("dep2");
+
+    let nodes = vec![
+      BundleGraphNode::Asset(asset1.clone()),
+      BundleGraphNode::Dependency(dep1.clone()),
+      BundleGraphNode::Dependency(dep2.clone()),
+    ];
+
+    // asset1 -> dep1 (Null edge - should be included)
+    // asset1 -> dep2 (References edge - should be filtered out)
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::Null),
+      (0, 2, BundleGraphEdgeType::References),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+
+    let deps = graph.get_dependencies(&asset1.value).unwrap();
+    assert_eq!(deps.len(), 1);
+    assert_eq!(deps[0].id, "dep1");
+  }
+
+  #[test]
+  fn test_get_dependencies_empty_when_no_edges() {
+    let asset1 = create_test_asset_node("asset1");
+
+    let nodes = vec![BundleGraphNode::Asset(asset1.clone())];
+    let edges = vec![];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+
+    let deps = graph.get_dependencies(&asset1.value).unwrap();
+    assert!(deps.is_empty());
+  }
+
+  #[test]
+  fn test_is_dependency_skipped_when_deferred() {
+    let mut dep_node = create_test_dependency_node("dep1");
+    dep_node.deferred = true;
+
+    let nodes = vec![BundleGraphNode::Dependency(dep_node.clone())];
+
+    let graph = BundleGraphFromJs::new(nodes, vec![], HashMap::new(), vec![]);
+
+    assert!(graph.is_dependency_skipped(&dep_node.value));
+  }
+
+  #[test]
+  fn test_is_dependency_skipped_when_excluded() {
+    let mut dep_node = create_test_dependency_node("dep1");
+    dep_node.excluded = true;
+
+    let nodes = vec![BundleGraphNode::Dependency(dep_node.clone())];
+
+    let graph = BundleGraphFromJs::new(nodes, vec![], HashMap::new(), vec![]);
+
+    assert!(graph.is_dependency_skipped(&dep_node.value));
+  }
+
+  #[test]
+  fn test_is_dependency_skipped_when_not_skipped() {
+    let dep_node = create_test_dependency_node("dep1");
+
+    let nodes = vec![BundleGraphNode::Dependency(dep_node.clone())];
+
+    let graph = BundleGraphFromJs::new(nodes, vec![], HashMap::new(), vec![]);
+
+    assert!(!graph.is_dependency_skipped(&dep_node.value));
+  }
+
+  #[test]
+  fn test_traverse_bundle_assets_visits_all_reachable_assets() {
+    let bundle = create_test_bundle_node("bundle1", "main.js");
+    let asset1 = create_test_asset_node("asset1");
+    let asset2 = create_test_asset_node("asset2");
+    let dep1 = create_test_dependency_node("dep1");
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(bundle.clone()),
+      BundleGraphNode::Asset(asset1.clone()),
+      BundleGraphNode::Dependency(dep1),
+      BundleGraphNode::Asset(asset2.clone()),
+    ];
+
+    // bundle -> asset1 -> dep1 -> asset2
+    let edges = vec![
+      (0, 1, BundleGraphEdgeType::Null),
+      (1, 2, BundleGraphEdgeType::Null),
+      (2, 3, BundleGraphEdgeType::Null),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+
+    let mut visited_ids = Vec::new();
+    graph.traverse_bundle_assets(&bundle.value, |asset| {
+      visited_ids.push(asset.id.clone());
+    });
+
+    assert_eq!(visited_ids.len(), 2);
+    assert!(visited_ids.contains(&"asset1".to_string()));
+    assert!(visited_ids.contains(&"asset2".to_string()));
+  }
+
+  #[test]
+  fn test_get_resolved_asset_with_contains_edge() {
+    let bundle = create_test_bundle_node("bundle1", "main.js");
+    let dep = create_test_dependency_node("dep1");
+    let asset = create_test_asset_node("asset1");
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(bundle),
+      BundleGraphNode::Dependency(dep),
+      BundleGraphNode::Asset(asset),
+    ];
+
+    // dep -> asset (outgoing from dep)
+    // bundle -> asset (Contains edge - highest priority)
+    let edges = vec![
+      (1, 2, BundleGraphEdgeType::Null),
+      (0, 2, BundleGraphEdgeType::Contains),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+
+    // Get references to the nodes for testing
+    let bundle_ref = graph.get_bundle_by_id("bundle1").unwrap();
+    let dep_value = &create_test_dependency_node("dep1").value;
+
+    let resolved = graph.get_resolved_asset(dep_value, bundle_ref).unwrap();
+    assert!(resolved.is_some());
+    assert_eq!(resolved.unwrap().id, "asset1");
+  }
+
+  #[test]
+  fn test_get_resolved_asset_with_type_match() {
+    let mut bundle = create_test_bundle("bundle1", "main.js");
+    bundle.bundle_type = FileType::Js;
+
+    let dep = create_test_dependency_node("dep1");
+    let mut asset1 = create_test_asset_node("asset1");
+    asset1.value.file_type = FileType::Css;
+    let mut asset2 = create_test_asset_node("asset2");
+    asset2.value.file_type = FileType::Js; // Matches bundle type
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(BundleNode {
+        id: bundle.id.clone(),
+        value: bundle.clone(),
+      }),
+      BundleGraphNode::Dependency(dep),
+      BundleGraphNode::Asset(asset1),
+      BundleGraphNode::Asset(asset2),
+    ];
+
+    // dep -> asset1 (CSS, doesn't match)
+    // dep -> asset2 (JS, matches bundle type)
+    let edges = vec![
+      (1, 2, BundleGraphEdgeType::Null),
+      (1, 3, BundleGraphEdgeType::Null),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+
+    // Get reference for testing
+    let dep_value = &create_test_dependency_node("dep1").value;
+    let resolved = graph.get_resolved_asset(dep_value, &bundle).unwrap();
+    assert!(resolved.is_some());
+    // Should prefer asset2 due to type match
+    assert_eq!(resolved.unwrap().id, "asset2");
+  }
+
+  #[test]
+  fn test_get_resolved_asset_returns_none_when_not_found() {
+    let bundle = create_test_bundle("bundle1", "main.js");
+    let dep = create_test_dependency_node("dep1");
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(BundleNode {
+        id: bundle.id.clone(),
+        value: bundle.clone(),
+      }),
+      BundleGraphNode::Dependency(dep),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, vec![], HashMap::new(), vec![]);
+
+    let dep_value = &create_test_dependency_node("dep1").value;
+    let resolved = graph.get_resolved_asset(dep_value, &bundle).unwrap();
+    assert!(resolved.is_none());
+  }
+
+  #[test]
+  fn test_get_resolved_asset_with_references_edge_traversal() {
+    let bundle = create_test_bundle("bundle1", "main.js");
+    let dep = create_test_dependency_node("dep1");
+    let intermediate_dep = create_test_dependency_node("dep2");
+    let asset = create_test_asset_node("asset1");
+
+    let nodes = vec![
+      BundleGraphNode::Bundle(BundleNode {
+        id: bundle.id.clone(),
+        value: bundle.clone(),
+      }),
+      BundleGraphNode::Dependency(dep),
+      BundleGraphNode::Dependency(intermediate_dep),
+      BundleGraphNode::Asset(asset),
+    ];
+
+    // dep1 -> dep2 (intermediate dependency)
+    // dep2 -> asset1
+    let edges = vec![
+      (1, 2, BundleGraphEdgeType::References),
+      (2, 3, BundleGraphEdgeType::Null),
+    ];
+
+    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
+
+    let dep_value = &create_test_dependency_node("dep1").value;
+    let resolved = graph.get_resolved_asset(dep_value, &bundle).unwrap();
+    // Should find asset via traversal
+    assert!(resolved.is_some());
+    assert_eq!(resolved.unwrap().id, "asset1");
   }
 }

@@ -81,7 +81,7 @@ impl Display for BundleGraphNode {
   }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AssetNode {
   pub id: String,
@@ -97,7 +97,7 @@ pub struct AssetNode {
   pub requested: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DependencyNode {
   pub id: String,
@@ -120,7 +120,7 @@ pub struct DependencyNode {
   pub excluded: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UsedSymbolResolution {
   pub asset: String,
@@ -159,7 +159,7 @@ pub struct BundleGroupNode {
   pub value: BundleGroup,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BundleNode {
   pub id: String,

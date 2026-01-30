@@ -81,6 +81,7 @@ mimalloc = { workspace = true }
 [dev-dependencies]
 indoc = { workspace = true }
 tempfile = { workspace = true }
+pretty_assertions = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 jemallocator = { workspace = true, features = ["disable_initial_exec_tls"]}

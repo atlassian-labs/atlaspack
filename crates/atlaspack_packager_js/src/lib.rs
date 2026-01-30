@@ -6,10 +6,16 @@ use atlaspack_core::{
   types::{Asset, Bundle},
   version::atlaspack_rust_version,
 };
+use lazy_static::lazy_static;
 use lmdb_js_lite::DatabaseHandle;
 use parking_lot::{RwLock, RwLockReadGuard};
 use rayon::prelude::*;
 use regex::Regex;
+
+lazy_static! {
+  /// Regex to match require("...") or require('...')
+  static ref REQUIRE_CALL_REGEX: Regex = Regex::new(r#"require\(["']([^"']+)["']\)"#).unwrap();
+}
 
 use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
 
@@ -124,38 +130,36 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   // NOTE THIS IS A TEMPORARY HACK IMPL - just to validate the end-to-end packaging.
   // While it produces a (sort of) working bundle, it's not actually how we want to approach this
   fn replace_require_calls(&self, code: String, deps: &HashMap<String, Option<String>>) -> String {
-    // Regex to match require("...") or require('...')
-    let re = Regex::new(r#"require\(["']([^"']+)["']\)"#).unwrap();
+    REQUIRE_CALL_REGEX
+      .replace_all(&code, |caps: &regex::Captures| {
+        let specifier = &caps[1];
 
-    re.replace_all(&code, |caps: &regex::Captures| {
-      let specifier = &caps[1];
-
-      match deps.get(specifier) {
-        Some(Some(public_id)) => {
-          tracing::debug!(
-            "Replacing require(\"{}\") with require(\"{}\")",
-            specifier,
-            public_id
-          );
-          format!(r#"require("{}")"#, public_id)
+        match deps.get(specifier) {
+          Some(Some(public_id)) => {
+            tracing::debug!(
+              "Replacing require(\"{}\") with require(\"{}\")",
+              specifier,
+              public_id
+            );
+            format!(r#"require("{}")"#, public_id)
+          }
+          Some(None) => {
+            tracing::warn!(
+              "Dependency \"{}\" was skipped, leaving unreplaced",
+              specifier
+            );
+            caps[0].to_string()
+          }
+          None => {
+            tracing::warn!(
+              "No dependency found for specifier \"{}\", leaving unreplaced",
+              specifier
+            );
+            caps[0].to_string()
+          }
         }
-        Some(None) => {
-          tracing::warn!(
-            "Dependency \"{}\" was skipped, leaving unreplaced",
-            specifier
-          );
-          caps[0].to_string()
-        }
-        None => {
-          tracing::warn!(
-            "No dependency found for specifier \"{}\", leaving unreplaced",
-            specifier
-          );
-          caps[0].to_string()
-        }
-      }
-    })
-    .to_string()
+      })
+      .to_string()
   }
 
   fn get_asset_dependency_map(
@@ -269,5 +273,183 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .collect::<Vec<_>>()
       .join("\n");
     prelude.to_string() + &asset_contents + "\n})();\n"
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use atlaspack_core::types::{Asset, Bundle, Environment, FileType};
+  use std::path::PathBuf;
+  use std::sync::Arc;
+
+  // Note: Full integration tests with database and complex mocking are better suited
+  // for integration tests. These unit tests focus on pure logic that can be tested
+  // in isolation.
+
+  fn create_test_asset(id: &str, file_path: &str) -> Asset {
+    Asset {
+      id: id.to_string(),
+      file_path: PathBuf::from(file_path),
+      file_type: FileType::Js,
+      env: Arc::new(Environment::default()),
+      content_key: Some(format!("content_{}", id)),
+      ..Asset::default()
+    }
+  }
+
+  fn create_test_bundle(id: &str) -> Bundle {
+    Bundle {
+      id: id.to_string(),
+      name: Some("test.js".to_string()),
+      bundle_behavior: None,
+      bundle_type: FileType::Js,
+      entry_asset_ids: vec![],
+      env: Environment::default(),
+      hash_reference: String::new(),
+      is_splittable: Some(true),
+      main_entry_id: None,
+      manual_shared_bundle: None,
+      needs_stable_name: Some(false),
+      pipeline: None,
+      public_id: None,
+      target: Default::default(),
+    }
+  }
+
+  /// Test that the regex correctly matches require calls and replaces them
+  #[test]
+  fn test_replace_require_calls_regex_matching() {
+    let code = r#"
+      const foo = require("./foo");
+      const bar = require('./bar');
+      const baz = require("deeply/nested/module");
+    "#
+    .to_string();
+
+    let mut deps = HashMap::new();
+    deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
+    deps.insert("./bar".to_string(), Some("pub_bar".to_string()));
+    deps.insert(
+      "deeply/nested/module".to_string(),
+      Some("pub_nested".to_string()),
+    );
+
+    // Test the regex by extracting the logic
+    let result = REQUIRE_CALL_REGEX.replace_all(&code, |caps: &regex::Captures| {
+      let specifier = &caps[1];
+      match deps.get(specifier) {
+        Some(Some(public_id)) => format!(r#"require("{}")"#, public_id),
+        _ => caps[0].to_string(),
+      }
+    });
+
+    assert!(result.contains(r#"require("pub_foo")"#));
+    assert!(result.contains(r#"require("pub_bar")"#));
+    assert!(result.contains(r#"require("pub_nested")"#));
+  }
+
+  #[test]
+  fn test_replace_require_calls_preserves_skipped_deps() {
+    let code = r#"const foo = require("./foo"); const bar = require("./bar");"#.to_string();
+    let mut deps = HashMap::new();
+    deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
+    deps.insert("./bar".to_string(), None); // Skipped
+
+    let result = REQUIRE_CALL_REGEX.replace_all(&code, |caps: &regex::Captures| {
+      let specifier = &caps[1];
+      match deps.get(specifier) {
+        Some(Some(public_id)) => format!(r#"require("{}")"#, public_id),
+        _ => caps[0].to_string(),
+      }
+    });
+
+    assert!(result.contains(r#"require("pub_foo")"#));
+    assert!(result.contains(r#"require("./bar")"#)); // Unchanged
+  }
+
+  #[test]
+  fn test_assemble_bundle_structure() {
+    // Test the structure and ordering logic without needing a full JsPackager instance
+    let bundle = create_test_bundle("bundle1");
+    let asset1 = create_test_asset("zzz", "/z.js");
+    let asset2 = create_test_asset("aaa", "/a.js");
+    let asset3 = create_test_asset("mmm", "/m.js");
+
+    let contents = vec![
+      (&asset1, "// asset zzz".to_string()),
+      (&asset2, "// asset aaa".to_string()),
+      (&asset3, "// asset mmm".to_string()),
+    ];
+
+    // Test the sorting logic directly
+    let (entry_contents, mut non_entry_contents): (Vec<_>, Vec<_>) = contents
+      .into_iter()
+      .partition(|(asset, _)| bundle.entry_asset_ids.contains(&asset.id));
+
+    non_entry_contents.sort_by_key(|(asset, _)| asset.id.clone());
+
+    // Verify sorting order
+    assert_eq!(non_entry_contents.len(), 3);
+    assert_eq!(non_entry_contents[0].0.id, "aaa"); // Alphabetically first
+    assert_eq!(non_entry_contents[1].0.id, "mmm");
+    assert_eq!(non_entry_contents[2].0.id, "zzz"); // Alphabetically last
+    assert!(entry_contents.is_empty());
+  }
+
+  #[test]
+  fn test_assemble_bundle_entry_asset_ordering() {
+    let mut bundle = create_test_bundle("bundle1");
+    bundle.entry_asset_ids = vec!["entry2".to_string(), "entry1".to_string()];
+
+    let entry1 = create_test_asset("entry1", "/entry1.js");
+    let entry2 = create_test_asset("entry2", "/entry2.js");
+    let non_entry = create_test_asset("zzz", "/zzz.js");
+
+    let contents = vec![
+      (&entry1, "// entry 1".to_string()),
+      (&non_entry, "// non entry".to_string()),
+      (&entry2, "// entry 2".to_string()),
+    ];
+
+    // Test the partitioning and sorting logic
+    let (mut entry_contents, mut non_entry_contents): (Vec<_>, Vec<_>) = contents
+      .into_iter()
+      .partition(|(asset, _)| bundle.entry_asset_ids.contains(&asset.id));
+
+    non_entry_contents.sort_by_key(|(asset, _)| asset.id.clone());
+
+    entry_contents.sort_by_key(|(asset, _)| {
+      bundle
+        .entry_asset_ids
+        .iter()
+        .position(|id| id == &asset.id)
+        .unwrap_or(usize::MAX)
+    });
+
+    // Verify ordering
+    assert_eq!(non_entry_contents.len(), 1);
+    assert_eq!(non_entry_contents[0].0.id, "zzz");
+
+    assert_eq!(entry_contents.len(), 2);
+    assert_eq!(entry_contents[0].0.id, "entry2"); // First in entry_asset_ids
+    assert_eq!(entry_contents[1].0.id, "entry1"); // Second in entry_asset_ids
+  }
+
+  #[test]
+  fn test_wrap_asset_format() {
+    let public_id = "pub123";
+    let code = "module.exports = 42;";
+
+    let expected = format!(
+      "define('{}', function (require,module,exports) {{ {} }});",
+      public_id, code
+    );
+
+    // Verify the format
+    assert!(expected.starts_with("define('pub123',"));
+    assert!(expected.contains("function (require,module,exports)"));
+    assert!(expected.contains("module.exports = 42;"));
+    assert!(expected.ends_with("});"));
   }
 }

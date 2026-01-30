@@ -30,6 +30,7 @@ impl Serialize for Asset {
     state.serialize_field("bundleBehavior", &self.bundle_behavior)?;
     state.serialize_field("configKeyPath", &self.config_key_path)?;
     state.serialize_field("configPath", &self.config_path)?;
+    state.serialize_field("contentKey", &self.content_key)?;
     state.serialize_field("env", &self.env)?;
     state.serialize_field("filePath", &self.file_path)?;
     state.serialize_field("id", &self.id)?;
@@ -282,6 +283,7 @@ mod tests {
       "bundleBehavior": null,
       "configKeyPath": null,
       "configPath": null,
+      "contentKey": null,
       "env": {
         "context": "browser",
         "engines": {
@@ -356,6 +358,7 @@ mod tests {
       "bundleBehavior": null,
       "configKeyPath": null,
       "configPath": null,
+      "contentKey": null,
       "env": {
         "context": "browser",
         "engines": {
@@ -428,6 +431,7 @@ mod tests {
       "bundleBehavior": null,
       "configKeyPath": "ts.compile",
       "configPath": "/config.json",
+      "contentKey": null,
       "env": {
         "context": "browser",
         "engines": {
