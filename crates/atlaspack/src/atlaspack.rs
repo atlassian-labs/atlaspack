@@ -15,6 +15,8 @@ use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
 use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter, StatsSnapshot};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
 use atlaspack_packager_js::JsPackager;
+#[cfg(feature = "nodejs")]
+use atlaspack_plugin_rpc::nodejs::get_transformer_bailout_stats;
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::DatabaseHandle;
 use tokio::runtime::Runtime;
@@ -225,6 +227,23 @@ impl Atlaspack {
           incrementally_bundled_assets,
         })
         .await?;
+
+      // Log memoization cache stats after asset graph request completes.
+      // This is useful for debugging cache hit rates during transformer pipelines.
+      let cache_stats = request_tracker.cache.get_stats_snapshot();
+      tracing::info!("Transformer pipeline cache stats: {:#?}", cache_stats);
+
+      // Log bailout breakdown by transformer
+      #[cfg(feature = "nodejs")]
+      {
+        let bailout_stats = get_transformer_bailout_stats();
+        if bailout_stats.total_bailouts > 0 {
+          tracing::info!(
+            "Transformer bailout breakdown: {:#?}",
+            bailout_stats.bailouts_by_transformer
+          );
+        }
+      }
 
       let RequestResult::AssetGraph(asset_graph_request_output) = request_result.as_ref() else {
         panic!("Something went wrong with the request tracker")

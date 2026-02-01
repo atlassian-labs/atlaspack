@@ -223,10 +223,44 @@ impl AtlaspackJsTransformerPlugin {
         filtered
       }
       InlineEnvironment::Enabled(true) => {
-        // Include all env vars
+        // Include all env vars except vars that are known to change between
+        // build sessions, causing unnecessary cache invalidation
+        use std::collections::HashSet;
+        use std::sync::LazyLock;
+
+        static EXCLUDED_ENV_VARS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+          HashSet::from([
+            // Yarn/npm - changes per invocation or contains build-specific paths
+            "BERRY_BIN_FOLDER",
+            "INIT_CWD",
+            "PROJECT_CWD",
+            // Atlassian internal - changes per invocation
+            "DEVMETRICS_PARENT_ID",
+            // Shell variables that change frequently
+            "PATH", // Can include build-specific paths
+            "_",    // Last executed command
+            "OLDPWD",
+            "PWD",
+            "SHLVL",
+            // Terminal/IDE session variables
+            "TERM_SESSION_ID",
+            "TERM_PROGRAM_VERSION",
+            "SHELL_SESSION_ID",
+            "ITERM_SESSION_ID",
+            "VSCODE_PID",
+            "VSCODE_IPC_HOOK",
+            "CURSOR_TRACE_ID",
+            // SSH session variables
+            "SSH_AUTH_SOCK",
+            "SSH_AGENT_PID",
+          ])
+        });
+
         let mut filtered = BTreeMap::new();
         for (key, value) in env_vars.iter() {
-          filtered.insert(key.clone().into(), value.clone().into());
+          if !EXCLUDED_ENV_VARS.contains(key.as_str()) {
+            filtered.insert(key.clone().into(), value.clone().into());
+          }
         }
         filtered
       }

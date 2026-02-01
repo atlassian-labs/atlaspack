@@ -133,6 +133,10 @@ pub struct CacheHandler<T: CacheReaderWriter> {
 
 #[async_trait]
 pub trait CacheHandlerTrait {
+  /// Get a snapshot of the current cache statistics without clearing them.
+  /// Useful for intermediate logging during a build.
+  fn get_stats_snapshot(&self) -> StatsSnapshot;
+
   fn complete_session(&self) -> anyhow::Result<StatsSnapshot>;
 
   async fn run<Input, RunFn, Res, FutureResult, Error>(
@@ -265,6 +269,10 @@ impl<T: CacheReaderWriter> CacheHandler<T> {
 
 #[async_trait]
 impl<T: CacheReaderWriter> CacheHandlerTrait for CacheHandler<T> {
+  fn get_stats_snapshot(&self) -> StatsSnapshot {
+    self.stats.get_snapshot()
+  }
+
   fn complete_session(&self) -> anyhow::Result<StatsSnapshot> {
     let snapshot = self.stats.get_snapshot();
     tracing::info!("Cache stats {:#?}", snapshot);
