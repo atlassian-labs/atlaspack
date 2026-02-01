@@ -1,7 +1,12 @@
 use anyhow::anyhow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use petgraph::{graph::NodeIndex, prelude::StableDiGraph, visit::Dfs};
+use petgraph::{
+  Direction,
+  graph::NodeIndex,
+  prelude::StableDiGraph,
+  visit::{Dfs, EdgeRef},
+};
 use rayon::prelude::*;
 
 use crate::{
@@ -12,7 +17,7 @@ use crate::{
 pub struct BundleGraphFromJs {
   graph: StableDiGraph<BundleGraphNode, BundleGraphEdgeType>,
   /// Content key (e.g. bundle.id, asset.id) -> NodeIndex. Mirrors JS ContentGraph._contentKeyToNodeId.
-  content_key_to_node_index: HashMap<String, NodeIndex>,
+  node_by_key: HashMap<String, NodeIndex>,
 }
 
 impl BundleGraphFromJs {
@@ -28,23 +33,20 @@ impl BundleGraphFromJs {
         edge.2,
       );
     }
-    let content_key_to_node_index = graph
+    let node_by_key = graph
       .node_indices()
       .map(|idx| {
         let id = graph.node_weight(idx).unwrap().id().to_string();
         (id, idx)
       })
       .collect();
-    BundleGraphFromJs {
-      graph,
-      content_key_to_node_index,
-    }
+    BundleGraphFromJs { graph, node_by_key }
   }
 
   /// Returns the node index for the given content key (e.g. bundle.id, asset.id).
   /// Equivalent to JS ContentGraph.getNodeIdByContentKey(contentKey).
-  pub fn get_node_index_by_content_key(&self, content_key: &str) -> Option<NodeIndex> {
-    self.content_key_to_node_index.get(content_key).copied()
+  pub fn get_node_id(&self, key: &str) -> Option<&NodeIndex> {
+    self.node_by_key.get(key)
   }
 
   #[tracing::instrument(level = "info", skip_all, fields(size))]
@@ -82,46 +84,20 @@ impl BundleGraph for BundleGraphFromJs {
     }
     bundles
   }
-  fn traverse_bundle_assets(&self, bundle: &Bundle, start_asset: Option<&Asset>) -> Vec<&Asset> {
-    let bundle_node_id = match self.get_node_index_by_content_key(&bundle.id) {
-      Some(id) => id,
-      None => return vec![],
-    };
-    let start_node_id = start_asset.and_then(|asset| self.get_node_index_by_content_key(&asset.id));
-    let entry_asset_ids = &bundle.entry_asset_ids;
+  fn get_bundle_assets(&self, bundle: &Bundle) -> anyhow::Result<Vec<&Asset>> {
+    let bundle_node_id = self
+      .get_node_id(&bundle.id)
+      .ok_or(anyhow!("Bundle {} not found in bundle graph", bundle.id))?;
 
-    // DFS to collect all nodes reachable from start; keep (node_index, &Asset) for contained assets.
-    let start_index = start_node_id.unwrap_or(bundle_node_id);
-    let mut dfs = Dfs::new(&self.graph, start_index);
-    let mut collected: Vec<(NodeIndex, &Asset)> = Vec::new();
-    while let Some(node) = dfs.next(&self.graph) {
-      let has_contains_edge = self
-        .graph
-        .edges_connecting(bundle_node_id, node)
-        .any(|e| *e.weight() == BundleGraphEdgeType::Contains);
-      if has_contains_edge
-        && let Some(BundleGraphNode::Asset(asset_node)) = self.graph.node_weight(node)
-      {
-        collected.push((node, &asset_node.value));
-      }
-    }
-
-    // Sorts bundle assets by entry_asset_ids order
-    let mut added: HashSet<NodeIndex> = HashSet::new();
-    let mut bundle_assets: Vec<&Asset> = Vec::new();
-    for entry_id in entry_asset_ids {
-      if let Some((idx, asset)) = collected.iter().find(|(_, a)| a.id == *entry_id)
-        && added.insert(*idx)
-      {
-        bundle_assets.push(asset);
-      }
-    }
-    for (idx, asset) in &collected {
-      if added.insert(*idx) {
-        bundle_assets.push(asset);
-      }
-    }
-    bundle_assets
+    let bundle_assets: Vec<&Asset> = self
+      .graph
+      .edges_directed(*bundle_node_id, Direction::Outgoing)
+      .filter_map(|e| match (e.weight(), self.graph.node_weight(e.target())) {
+        (BundleGraphEdgeType::Contains, Some(BundleGraphNode::Asset(an))) => Some(&an.value),
+        _ => None,
+      })
+      .collect::<Vec<&Asset>>();
+    Ok(bundle_assets)
   }
 }
 
@@ -220,7 +196,7 @@ mod tests {
     }
   }
 
-  /// Returns asset ids from traverse_bundle_assets result for assertions.
+  /// Returns asset ids from get_bundle_assets result for assertions.
   fn asset_ids<'a>(assets: &'a [&'a Asset]) -> Vec<&'a str> {
     assets.iter().map(|a| a.id.as_str()).collect()
   }
@@ -432,66 +408,23 @@ mod tests {
   }
 
   #[test]
-  fn test_traverse_bundle_assets_handles_empty_bundle_gracefully() {
+  fn test_get_bundle_assets_handles_empty_bundle_gracefully() {
     let nodes = vec![BundleGraphNode::Bundle(create_test_bundle_node(
       "empty_bundle",
       None,
       Some(vec![]),
     ))];
     let edges: Vec<(u32, u32, BundleGraphEdgeType)> = vec![];
-    let graph = BundleGraphFromJs::new(nodes.into_iter().collect::<Vec<_>>(), edges);
+    let graph = BundleGraphFromJs::new(nodes, edges);
     let bundles = graph.get_bundles();
     let bundle = bundles[0];
-    let bundle_assets = graph.traverse_bundle_assets(bundle, None);
+    let bundle_assets = graph.get_bundle_assets(bundle).unwrap();
 
     assert!(bundle_assets.is_empty());
   }
 
   #[test]
-  fn test_traverse_bundle_assets_starts_from_specific_asset_when_start_asset_provided() {
-    let nodes = vec![
-      BundleGraphNode::Bundle(create_test_bundle_node(
-        "bundle1",
-        None,
-        Some(vec!["asset1".to_string()]),
-      )),
-      BundleGraphNode::Asset(create_test_asset_node("asset1")),
-      BundleGraphNode::Asset(create_test_asset_node("asset2")),
-      BundleGraphNode::Asset(create_test_asset_node("asset3")),
-      BundleGraphNode::Dependency(create_test_dependency_node("dep1")),
-      BundleGraphNode::Dependency(create_test_dependency_node("dep2")),
-    ];
-    let edges = vec![
-      (0, 1, BundleGraphEdgeType::Contains),
-      (0, 1, BundleGraphEdgeType::Null),
-      (0, 2, BundleGraphEdgeType::Contains),
-      (0, 3, BundleGraphEdgeType::Contains),
-      (0, 4, BundleGraphEdgeType::Contains),
-      (0, 5, BundleGraphEdgeType::Contains),
-      (1, 4, BundleGraphEdgeType::Null),
-      (4, 2, BundleGraphEdgeType::Null),
-      (2, 5, BundleGraphEdgeType::Null),
-      (5, 3, BundleGraphEdgeType::Null),
-    ];
-    let graph = BundleGraphFromJs::new(
-      nodes.into_iter().collect::<Vec<_>>(),
-      edges
-        .into_iter()
-        .map(|(a, b, t)| (a as u32, b as u32, t))
-        .collect::<Vec<_>>(),
-    );
-    let bundles = graph.get_bundles();
-    let bundle = bundles[0];
-    let all_assets = graph.traverse_bundle_assets(bundle, None);
-    let start_asset = all_assets.iter().find(|a| a.id == "asset2").copied();
-    let bundle_assets = graph.traverse_bundle_assets(bundle, start_asset);
-
-    assert_contains_asset_ids(&bundle_assets, &["asset2", "asset3"]);
-    assert!(!asset_ids(&bundle_assets).contains(&"asset1"));
-  }
-
-  #[test]
-  fn test_traverse_bundle_assets_skips_nodes_not_contained_in_bundle() {
+  fn test_get_bundle_assets_skips_nodes_not_contained_in_bundle() {
     let nodes = vec![
       BundleGraphNode::Bundle(create_test_bundle_node(
         "bundle1",
@@ -520,23 +453,17 @@ mod tests {
       (1, 7, BundleGraphEdgeType::Null),
       (7, 4, BundleGraphEdgeType::Null),
     ];
-    let graph = BundleGraphFromJs::new(
-      nodes.into_iter().collect::<Vec<_>>(),
-      edges
-        .into_iter()
-        .map(|(a, b, t)| (a as u32, b as u32, t))
-        .collect::<Vec<_>>(),
-    );
+    let graph = BundleGraphFromJs::new(nodes, edges);
     let bundles = graph.get_bundles();
     let bundle = bundles[0];
-    let bundle_assets = graph.traverse_bundle_assets(bundle, None);
+    let bundle_assets = graph.get_bundle_assets(bundle).unwrap();
 
     assert_contains_asset_ids(&bundle_assets, &["asset1", "asset2", "asset3"]);
     assert!(!asset_ids(&bundle_assets).contains(&"external"));
   }
 
   #[test]
-  fn test_traverse_bundle_assets_handles_bundle_with_single_asset() {
+  fn test_get_bundle_assets_handles_bundle_with_single_asset() {
     let nodes = vec![
       BundleGraphNode::Bundle(create_test_bundle_node(
         "bundle1",
@@ -549,23 +476,17 @@ mod tests {
       (0, 1, BundleGraphEdgeType::Contains),
       (0, 1, BundleGraphEdgeType::Null),
     ];
-    let graph = BundleGraphFromJs::new(
-      nodes.into_iter().collect::<Vec<_>>(),
-      edges
-        .into_iter()
-        .map(|(a, b, t)| (a as u32, b as u32, t))
-        .collect::<Vec<_>>(),
-    );
+    let graph = BundleGraphFromJs::new(nodes, edges);
     let bundles = graph.get_bundles();
     let bundle = bundles[0];
-    let bundle_assets = graph.traverse_bundle_assets(bundle, None);
+    let bundle_assets = graph.get_bundle_assets(bundle).unwrap();
 
     assert_contains_asset_ids(&bundle_assets, &["asset3"]);
     assert_entry_asset_order(bundle, &bundle_assets);
   }
 
   #[test]
-  fn test_traverse_bundle_assets_returns_all_assets_in_bundle() {
+  fn test_get_bundle_assets_returns_all_assets_in_bundle() {
     let nodes = vec![
       BundleGraphNode::Bundle(create_test_bundle_node(
         "bundle1",
@@ -587,16 +508,10 @@ mod tests {
       (3, 2, BundleGraphEdgeType::Null),
       (2, 4, BundleGraphEdgeType::Null),
     ];
-    let graph = BundleGraphFromJs::new(
-      nodes.into_iter().collect::<Vec<_>>(),
-      edges
-        .into_iter()
-        .map(|(a, b, t)| (a as u32, b as u32, t))
-        .collect::<Vec<_>>(),
-    );
+    let graph = BundleGraphFromJs::new(nodes, edges);
     let bundles = graph.get_bundles();
     let bundle = bundles[0];
-    let bundle_assets = graph.traverse_bundle_assets(bundle, None);
+    let bundle_assets = graph.get_bundle_assets(bundle).unwrap();
 
     assert_contains_asset_ids(&bundle_assets, &["asset1", "asset2"]);
     assert_entry_asset_order(bundle, &bundle_assets);
