@@ -506,8 +506,7 @@ impl Visit for Collect {
         );
         self
           .exports_locals
-          .entry(id!(class.ident))
-          .or_insert_with(|| class.ident.sym.clone());
+          .insert(id!(class.ident), class.ident.sym.clone());
       }
       Decl::Fn(func) => {
         self.exports.insert(
