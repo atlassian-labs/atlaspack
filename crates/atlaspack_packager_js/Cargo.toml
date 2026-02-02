@@ -15,3 +15,6 @@ parking_lot = { workspace = true }
 rayon = { workspace = true }
 regex = { workspace = true }
 tracing = { workspace = true }
+
+[build-dependencies]
+glob = { workspace = true }

@@ -5,7 +5,7 @@ use std::{
 
 use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
-  hash::hash_bytes,
+  hash::{hash_bytes, hash_string},
   types::{Asset, Bundle},
   version::atlaspack_rust_version,
 };
@@ -193,28 +193,37 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
 
   pub fn assemble_bundle(&self, bundle: &Bundle, contents: Vec<(&Asset, String)>) -> String {
     // This is a temporary implementation that will just use string concatenation
-    let prelude = r#"
-    (function () {
-    const registry = {};
-    const modules = {};
-    function define(id, factory) {
-      registry[id] = factory;
-    }
-    function require(id) {
-      if (modules[id]) {
-        return modules[id].exports;
-      }
-      const module = { exports: {} };
-      modules[id] = module;
-      if (!registry[id]) {
-        const e = new Error(`Module ${id} not found`);
-        e.code = 'MODULE_NOT_FOUND';
-        throw e;
-      }
-      registry[id].call(module.exports, require, module, module.exports);
-      return module.exports;
-    }
-    "#;
+    // let prelude = r#"
+    // (function () {
+    // const registry = {};
+    // const modules = {};
+    // function define(id, factory) {
+    //   registry[id] = factory;
+    // }
+    // function require(id) {
+    //   if (modules[id]) {
+    //     return modules[id].exports;
+    //   }
+    //   const module = { exports: {} };
+    //   modules[id] = module;
+    //   if (!registry[id]) {
+    //     const e = new Error(`Module ${id} not found`);
+    //     e.code = 'MODULE_NOT_FOUND';
+    //     throw e;
+    //   }
+    //   registry[id].call(module.exports, require, module, module.exports);
+    //   return module.exports;
+    // }
+    // "#;
+
+    let full_hash = hash_string("FIXME".to_string());
+    let hash = full_hash
+      .chars()
+      .skip(full_hash.len() - 4)
+      .collect::<String>();
+
+    let prelude_string =
+      include_str!("../prelude/lib/prelude.js").replace("ATLASPACK_PRELUDE_HASH", &hash);
 
     // Sort the contents - non-entry assets by asset id first, then entry assets in the same order as bundle.entry_asset_ids
 
@@ -245,7 +254,20 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .map(|(_, content)| content)
       .collect::<Vec<_>>()
       .join("\n");
-    prelude.to_string() + &asset_contents + "\n})();\n"
+
+    let prelude_loader = format!(
+      r#"
+    var atlaspack = globalObject[`atlaspack_{hash}`];
+    var require = atlaspack.require;
+    var define = atlaspack.define;
+    "#
+    );
+
+    "(function() {\n".to_string()
+      + &prelude_string
+      + &prelude_loader
+      + &asset_contents
+      + "\n})();\n"
   }
 }
 
