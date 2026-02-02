@@ -220,26 +220,6 @@ impl BundleGraph for BundleGraphFromJs {
     Ok(bundle_assets)
   }
 
-  // #[tracing::instrument(level = "trace", skip_all)]
-  // fn traverse_bundle_assets(&self, bundle: &Bundle, mut visit: impl FnMut(&Asset)) {
-  //   // THIS IS HACKY CODE - real impl TBA..
-  //   // Get the bundle node
-  //   let bundle_node_idx = self.nodes_by_key.get(&bundle.id).unwrap();
-
-  //   // Only traverse assets that are directly connected to this bundle via Contains edges
-  //   // We iterate over all outgoing edges from the bundle node and check if they are Contains edges
-  //   for edge in self.graph.edges(*bundle_node_idx) {
-  //     // Check if this is a Contains edge
-  //     if *edge.weight() == BundleGraphEdgeType::Contains {
-  //       let target_node_idx = edge.target();
-  //       // Check if the target is an Asset node
-  //       if let Some(BundleGraphNode::Asset(asset_node)) = self.graph.node_weight(target_node_idx) {
-  //         visit(&asset_node.value);
-  //       }
-  //     }
-  //   }
-  // }
-
   fn get_public_asset_id(&self, asset_id: &str) -> Option<&str> {
     self.public_id_by_asset_id.get(asset_id).map(|s| s.as_str())
   }
