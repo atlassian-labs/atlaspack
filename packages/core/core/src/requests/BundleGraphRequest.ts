@@ -1,11 +1,10 @@
-import type {Async, Bundle as IBundle, Namer} from '@atlaspack/types';
+import type {Async} from '@atlaspack/types';
 import type {SharedReference} from '@atlaspack/workers';
 import type {AtlaspackConfig, LoadedPlugin} from '../AtlaspackConfig';
 import type {StaticRunOpts, RunAPI} from '../RequestTracker';
 import type {
   Asset,
   AssetGroup,
-  Bundle as InternalBundle,
   Config,
   DevDepRequest,
   AtlaspackOptions,
@@ -21,13 +20,10 @@ import {instrumentAsync, PluginLogger} from '@atlaspack/logger';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import ThrowableDiagnostic, {errorToDiagnostic} from '@atlaspack/diagnostic';
 import AssetGraph from '../AssetGraph';
-import BundleGraph from '../public/BundleGraph';
 import InternalBundleGraph, {bundleGraphEdgeTypes} from '../BundleGraph';
 import MutableBundleGraph from '../public/MutableBundleGraph';
-import {Bundle, NamedBundle} from '../public/Bundle';
 import {report} from '../ReporterRunner';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
-import {unique, setSymmetricDifference} from '@atlaspack/utils';
 import {hashString} from '@atlaspack/rust';
 import PluginOptions from '../public/PluginOptions';
 import applyRuntimes from '../applyRuntimes';
@@ -42,19 +38,21 @@ import {
   invalidateDevDeps,
   runDevDepRequest,
 } from './DevDepRequest';
-import {createConfig} from '../InternalConfig';
 import {
   loadPluginConfig,
   runConfigRequest,
   PluginWithLoadConfig,
 } from './ConfigRequest';
+import {fromProjectPathRelative} from '../projectPath';
 import {
-  joinProjectPath,
-  fromProjectPathRelative,
-  toProjectPathUnsafe,
-} from '../projectPath';
+  validateBundles,
+  nameBundle,
+  loadPluginConfigWithDevDeps,
+  runDevDepRequest as runDevDepRequestShared,
+} from './BundleGraphRequestUtils';
 import createAssetGraphRequestJS from './AssetGraphRequest';
 import {createAssetGraphRequestRust} from './AssetGraphRequestRust';
+import {runBundleGraphRequestRust} from './BundleGraphRequestRust';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 import {
@@ -219,6 +217,39 @@ export default function createBundleGraphRequest(
         assetGraph.setNeedsBundling();
       }
 
+      // Use native bundling if the feature flag is enabled and rustAtlaspack is available
+      if (getFeatureFlag('nativeBundling') && input.rustAtlaspack) {
+        let bundlingMeasurement = tracer.createMeasurement('bundling');
+        let res = await runBundleGraphRequestRust({
+          input: {
+            assetGraph,
+            changedAssets,
+            assetRequests,
+            optionsRef,
+            rustAtlaspack: input.rustAtlaspack,
+          },
+          api: input.api,
+          options,
+          farm: input.farm,
+          invalidateReason,
+          rustAtlaspack: input.rustAtlaspack,
+        });
+        bundlingMeasurement && bundlingMeasurement.end();
+
+        for (let [id, asset] of changedAssets) {
+          res.changedAssets.set(id, asset);
+        }
+
+        await dumpGraphToGraphViz(
+          // @ts-expect-error TS2345
+          res.bundleGraph._graph,
+          'BundleGraph',
+          bundleGraphEdgeTypes,
+        );
+
+        return res;
+      }
+
       let configResult = nullthrows(
         await input.api.runRequest<null, ConfigAndCachePath>(
           createAtlaspackConfigRequest(),
@@ -319,30 +350,18 @@ class BundlerRunner {
   }
 
   async loadConfig<T extends PluginWithLoadConfig>(plugin: LoadedPlugin<T>) {
-    let config = createConfig({
-      plugin: plugin.name,
-      searchPath: toProjectPathUnsafe('index'),
-    });
-
-    await loadPluginConfig(plugin, config, this.options);
-    await runConfigRequest(this.api, config);
-    for (let devDep of config.devDeps) {
-      let devDepRequest = await createDevDependency(
-        devDep,
-        this.previousDevDeps,
-        this.options,
-      );
-      await this.runDevDepRequest(devDepRequest);
-    }
-
-    this.configs.set(plugin.name, config);
+    await loadPluginConfigWithDevDeps(
+      plugin,
+      this.options,
+      this.api,
+      this.previousDevDeps,
+      this.devDepRequests,
+      this.configs,
+    );
   }
 
   async runDevDepRequest(devDepRequest: DevDepRequest | DevDepRequestRef) {
-    let {specifier, resolveFrom} = devDepRequest;
-    let key = `${specifier}:${fromProjectPathRelative(resolveFrom)}`;
-    this.devDepRequests.set(key, devDepRequest);
-    await runDevDepRequest(this.api, devDepRequest);
+    await runDevDepRequestShared(this.api, devDepRequest, this.devDepRequests);
   }
 
   async bundle({
@@ -520,7 +539,14 @@ class BundlerRunner {
       let bundles = internalBundleGraph.getBundles({includeInline: true});
       await Promise.all(
         bundles.map((bundle) =>
-          this.nameBundle(namers, bundle, internalBundleGraph),
+          nameBundle(
+            namers,
+            bundle,
+            internalBundleGraph,
+            this.options,
+            this.pluginOptions,
+            this.configs,
+          ),
         ),
       );
 
@@ -551,7 +577,7 @@ class BundlerRunner {
         await this.runDevDepRequest(devDepRequest);
       }
 
-      this.validateBundles(internalBundleGraph);
+      validateBundles(internalBundleGraph);
 
       // Pre-compute the hashes for each bundle so they are only computed once and shared between workers.
       internalBundleGraph.getBundleGraphHash();
@@ -582,70 +608,4 @@ class BundlerRunner {
     };
   }
 
-  validateBundles(bundleGraph: InternalBundleGraph): void {
-    let bundles = bundleGraph.getBundles();
-
-    let bundleNames = bundles.map((b) =>
-      joinProjectPath(b.target.distDir, nullthrows(b.name)),
-    );
-    assert.deepEqual(
-      bundleNames,
-      unique(bundleNames),
-      'Bundles must have unique name. Conflicting names: ' +
-        [
-          ...setSymmetricDifference(
-            new Set(bundleNames),
-            new Set(unique(bundleNames)),
-          ),
-        ].join(),
-    );
-  }
-
-  async nameBundle(
-    namers: Array<LoadedPlugin<Namer<unknown>>>,
-    internalBundle: InternalBundle,
-    internalBundleGraph: InternalBundleGraph,
-  ): Promise<void> {
-    let bundle = Bundle.get(internalBundle, internalBundleGraph, this.options);
-    let bundleGraph = new BundleGraph<IBundle>(
-      internalBundleGraph,
-      NamedBundle.get.bind(NamedBundle),
-      this.options,
-    );
-
-    for (let namer of namers) {
-      let measurement;
-      try {
-        measurement = tracer.createMeasurement(namer.name, 'namer', bundle.id);
-        let name = await namer.plugin.name({
-          bundle,
-          bundleGraph,
-          config: this.configs.get(namer.name)?.result,
-          options: this.pluginOptions,
-          logger: new PluginLogger({origin: namer.name}),
-          tracer: new PluginTracer({origin: namer.name, category: 'namer'}),
-        });
-
-        if (name != null) {
-          internalBundle.name = name;
-          let {hashReference} = internalBundle;
-          internalBundle.displayName = name.includes(hashReference)
-            ? name.replace(hashReference, '[hash]')
-            : name;
-
-          return;
-        }
-      } catch (e: any) {
-        throw new ThrowableDiagnostic({
-          diagnostic: errorToDiagnostic(e, {
-            origin: namer.name,
-          }),
-        });
-      } finally {
-        measurement && measurement.end();
-      }
-    }
-
-    throw new Error('Unable to name bundle');
-  }
 }

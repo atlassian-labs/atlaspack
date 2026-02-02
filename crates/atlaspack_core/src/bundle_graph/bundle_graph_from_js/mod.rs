@@ -10,10 +10,11 @@ use petgraph::{
 };
 use rayon::prelude::*;
 
-use crate::{
-  bundle_graph::bundle_graph::BundleGraph,
-  types::{self, Asset, Bundle, BundleGraphEdgeType, BundleGraphNode, Dependency, Environment},
-};
+use crate::bundle_graph::BundleGraph;
+use crate::types::{Asset, Bundle, Dependency, Environment};
+
+pub mod types;
+pub use types::{BundleGraphEdgeType, BundleGraphNode};
 
 type BundleGraphNodeId = String;
 
@@ -225,7 +226,7 @@ impl BundleGraph for BundleGraphFromJs {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  fn get_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&types::Dependency>> {
+  fn get_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&crate::types::Dependency>> {
     let asset_node = self.nodes_by_key.get(&asset.id).unwrap();
 
     self

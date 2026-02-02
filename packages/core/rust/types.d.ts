@@ -59,6 +59,9 @@ export declare function atlaspackNapiCreate(
 export declare function atlaspackNapiBuildAssetGraph(
   atlaspackNapi: AtlaspackNapi,
 ): object;
+export declare function atlaspackNapiBuildBundleGraph(
+  atlaspackNapi: AtlaspackNapi,
+): object;
 export declare function atlaspackNapiRespondToFsEvents(
   atlaspackNapi: AtlaspackNapi,
   options: object,

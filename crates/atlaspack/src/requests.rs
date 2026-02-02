@@ -1,4 +1,5 @@
 pub use asset_graph_request::*;
+pub use bundle_graph_request::*;
 use asset_request::AssetRequestOutput;
 use entry_request::EntryRequestOutput;
 use path_request::PathRequestOutput;
@@ -6,6 +7,7 @@ use target_request::TargetRequestOutput;
 
 mod asset_graph_request;
 mod asset_request;
+mod bundle_graph_request;
 mod entry_request;
 mod path_request;
 mod target_request;
@@ -16,6 +18,7 @@ mod target_request;
 pub enum RequestResult {
   AssetGraph(AssetGraphRequestOutput),
   Asset(AssetRequestOutput),
+  BundleGraph(BundleGraphRequestOutput),
   Entry(EntryRequestOutput),
   Path(PathRequestOutput),
   Target(TargetRequestOutput),
@@ -30,6 +33,7 @@ impl std::fmt::Display for RequestResult {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match self {
       RequestResult::AssetGraph(_output) => f.write_str("AssetGraph"),
+      RequestResult::BundleGraph(_output) => f.write_str("BundleGraph"),
       RequestResult::Entry(output) => f.write_str(&format!("Entry({:?})", &output.entries)),
       RequestResult::Asset(output) => {
         f.write_str(&format!("Asset({})", &output.asset.file_path.display()))
@@ -49,6 +53,7 @@ impl std::fmt::Debug for RequestResult {
     match self {
       RequestResult::AssetGraph(output) => f.debug_tuple("AssetGraph").field(output).finish(),
       RequestResult::Asset(output) => f.debug_tuple("Asset").field(output).finish(),
+      RequestResult::BundleGraph(output) => f.debug_tuple("BundleGraph").field(output).finish(),
       RequestResult::Entry(output) => f.debug_tuple("Entry").field(output).finish(),
       RequestResult::Path(output) => f.debug_tuple("Path").field(output).finish(),
       RequestResult::Target(output) => f.debug_tuple("Target").field(output).finish(),
