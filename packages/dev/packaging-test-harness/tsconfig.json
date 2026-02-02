@@ -19,6 +19,12 @@
     },
     {
       "path": "../babel-register/tsconfig.json"
+    },
+    {
+      "path": "../../core/diagnostic/tsconfig.json"
+    },
+    {
+      "path": "../../core/rust/tsconfig.json"
     }
   ]
 }
