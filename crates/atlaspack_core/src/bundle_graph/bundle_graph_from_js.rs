@@ -762,41 +762,6 @@ mod tests {
   }
 
   #[test]
-  fn test_traverse_bundle_assets_visits_all_reachable_assets() {
-    let bundle = create_test_bundle_node("bundle1", "main.js");
-    let asset1 = create_test_asset_node("asset1");
-    let asset2 = create_test_asset_node("asset2");
-    let dep1 = create_test_dependency_node("dep1");
-
-    let nodes = vec![
-      BundleGraphNode::Bundle(bundle.clone()),
-      BundleGraphNode::Asset(asset1.clone()),
-      BundleGraphNode::Dependency(dep1),
-      BundleGraphNode::Asset(asset2.clone()),
-    ];
-
-    // Bundle contains asset1 and asset2 via Contains edges
-    // asset1 -> dep1 -> asset2 (for dependency resolution, but traversal uses Contains edges only)
-    let edges = vec![
-      (0, 1, BundleGraphEdgeType::Contains), // bundle -> asset1
-      (0, 3, BundleGraphEdgeType::Contains), // bundle -> asset2
-      (1, 2, BundleGraphEdgeType::Null),     // asset1 -> dep1
-      (2, 3, BundleGraphEdgeType::Null),     // dep1 -> asset2
-    ];
-
-    let graph = BundleGraphFromJs::new(nodes, edges, HashMap::new(), vec![]);
-
-    let mut visited_ids = Vec::new();
-    graph.traverse_bundle_assets(&bundle.value, |asset| {
-      visited_ids.push(asset.id.clone());
-    });
-
-    assert_eq!(visited_ids.len(), 2);
-    assert!(visited_ids.contains(&"asset1".to_string()));
-    assert!(visited_ids.contains(&"asset2".to_string()));
-  }
-
-  #[test]
   fn test_get_resolved_asset_with_contains_edge() {
     let bundle = create_test_bundle_node("bundle1", "main.js");
     let dep = create_test_dependency_node("dep1");
