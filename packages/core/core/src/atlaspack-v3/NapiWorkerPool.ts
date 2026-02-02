@@ -4,7 +4,7 @@ import path from 'path';
 import process from 'process';
 // @ts-expect-error TS2724
 import type {Transferable} from '@atlaspack/rust';
-import {getAvailableThreads} from '@atlaspack/rust';
+import {getAvailableThreads, clearTransferableRegistry} from '@atlaspack/rust';
 
 const WORKER_PATH = path.join(__dirname, 'worker', 'index.js');
 const ATLASPACK_NAPI_WORKERS =
@@ -38,6 +38,7 @@ export class NapiWorkerPool implements INapiWorkerPool {
     for (let i = 0; i < this.#workerCount; i++) {
       let worker = new Worker(WORKER_PATH);
       this.#workers.push(worker);
+
       this.#napiWorkers.push(
         new Promise((res: (result: Promise<never>) => void) =>
           worker.once('message', res),
@@ -83,9 +84,31 @@ export class NapiWorkerPool implements INapiWorkerPool {
     return Promise.all(this.#napiWorkers);
   }
 
-  shutdown(): void {
+  /**
+   * Shuts down the worker pool by terminating all worker threads.
+   *
+   * This method also clears the JsTransferable registry to release
+   * Arc<NodejsWorker> references that would otherwise persist in memory.
+   */
+  async shutdown(): Promise<void> {
+    const terminatePromises: Promise<number>[] = [];
+
     for (const worker of this.#workers) {
-      worker.terminate();
+      terminatePromises.push(worker.terminate());
+    }
+
+    // Wait for all workers to terminate
+    await Promise.all(terminatePromises);
+
+    // Clear the workers array so we don't try to use them again
+    this.#workers = [];
+    this.#napiWorkers = [];
+
+    // Clear the JsTransferable registry to release Arc<NodejsWorker> references.
+    // Without this, the Rust-side NodejsWorker instances would persist in memory
+    // even though the JS worker threads are terminated.
+    if (clearTransferableRegistry) {
+      clearTransferableRegistry();
     }
   }
 }
