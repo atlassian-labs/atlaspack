@@ -554,7 +554,9 @@ impl Visit for Collect {
               is_static_binding_safe: self.symbols_info.is_static_binding_safe(&ident.to_id()),
             },
           );
-          self.exports_locals.insert(id!(ident), js_word!("default"));
+          self
+            .exports_locals
+            .insert(id!(ident), Atom::from("default"));
         } else {
           self.exports.insert(
             atom!("default"),
@@ -580,7 +582,9 @@ impl Visit for Collect {
               is_static_binding_safe: self.symbols_info.is_static_binding_safe(&ident.to_id()),
             },
           );
-          self.exports_locals.insert(id!(ident), js_word!("default"));
+          self
+            .exports_locals
+            .insert(id!(ident), Atom::from("default"));
         } else {
           self.exports.insert(
             atom!("default"),
