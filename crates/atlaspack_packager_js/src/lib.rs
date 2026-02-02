@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+  collections::HashMap,
+  sync::{Arc, LazyLock},
+};
 
 use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
@@ -6,16 +9,14 @@ use atlaspack_core::{
   types::{Asset, Bundle},
   version::atlaspack_rust_version,
 };
-use lazy_static::lazy_static;
 use lmdb_js_lite::DatabaseHandle;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use regex::Regex;
 
-lazy_static! {
-  /// Regex to match require("...") or require('...')
-  static ref REQUIRE_CALL_REGEX: Regex = Regex::new(r#"require\(["']([^"']+)["']\)"#).unwrap();
-}
+/// Regex to match require("...") or require('...')
+static REQUIRE_CALL_REGEX: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r#"require\(["']([^"']+)["']\)"#).unwrap());
 
 use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
 

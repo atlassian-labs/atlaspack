@@ -664,7 +664,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atlaspack_core",
- "lazy_static 1.5.0",
  "lmdb-js-lite",
  "parking_lot",
  "rayon",
