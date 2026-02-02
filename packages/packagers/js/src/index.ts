@@ -130,7 +130,6 @@ export default new Packager({
           bundleGraph,
           bundle,
           nullthrows(config).parcelRequireName,
-          logger,
         );
 
         let packageResult = await packager.package();

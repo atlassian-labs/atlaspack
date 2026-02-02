@@ -24,20 +24,17 @@ export class DevPackager {
   bundleGraph: BundleGraph<NamedBundle>;
   bundle: NamedBundle;
   parcelRequireName: string;
-  logger: Logger;
 
   constructor(
     options: PluginOptions,
     bundleGraph: BundleGraph<NamedBundle>,
     bundle: NamedBundle,
     parcelRequireName: string,
-    logger: Logger,
   ) {
     this.options = options;
     this.bundleGraph = bundleGraph;
     this.bundle = bundle;
     this.parcelRequireName = parcelRequireName;
-    this.logger = logger;
   }
 
   async package(): Promise<{
