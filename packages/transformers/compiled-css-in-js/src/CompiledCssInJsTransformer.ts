@@ -15,7 +15,6 @@ import ThrowableDiagnostic, {
 import {remapSourceLocation} from '@atlaspack/utils';
 
 import {loadCompiledCssInJsConfig} from '@atlaspack/transformer-js';
-import {DEFAULT_IMPORT_SOURCES} from './utils';
 
 export default new Transformer({
   // eslint-disable-next-line require-await
@@ -39,9 +38,7 @@ export default new Transformer({
 
     // If neither Compiled (default) nor any of the additional import sources are found in the code, we bail out.
     if (
-      (config.importSources ?? DEFAULT_IMPORT_SOURCES).every(
-        (importSource) => !code.includes(importSource),
-      )
+      config.importSources.every((importSource) => !code.includes(importSource))
     ) {
       return [asset];
     }

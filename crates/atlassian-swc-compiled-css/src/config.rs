@@ -26,7 +26,7 @@ pub struct CompiledCssInJsConfig {
   ///
   /// Defaults to `["@compiled/react"]`
   ///
-  pub import_sources: Option<Vec<String>>,
+  pub import_sources: Vec<String>,
   ///
   /// Will run additional cssnano plugins to normalize CSS during build.
   ///
@@ -262,7 +262,7 @@ impl From<CompiledCssInJsConfig> for CompiledCssInJsTransformConfig {
       config_path: partial.config_path,
       import_react: partial.import_react.unwrap_or(defaults.import_react),
       nonce: partial.nonce.or(defaults.nonce),
-      import_sources: partial.import_sources.unwrap_or(defaults.import_sources),
+      import_sources: partial.import_sources,
       optimize_css: partial.optimize_css.unwrap_or(defaults.optimize_css),
       extensions: partial.extensions.or(defaults.extensions),
       add_component_name: partial

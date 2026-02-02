@@ -22,7 +22,6 @@ use swc_core::ecma::ast::{Expr, Ident, Program};
 
 use oxc_resolver::Resolver;
 
-use crate::constants::DEFAULT_IMPORT_SOURCES;
 use crate::utils_cache::{Cache, CacheOptions};
 use crate::utils_types::PartialBindingWithMeta;
 
@@ -141,7 +140,7 @@ pub struct PluginOptions {
   pub max_size: Option<usize>,
   pub import_react: Option<bool>,
   pub nonce: Option<String>,
-  pub import_sources: Option<Vec<String>>,
+  pub import_sources: Vec<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub on_included_files: Option<Value>,
   pub optimize_css: Option<bool>,
@@ -165,7 +164,7 @@ impl Default for PluginOptions {
       max_size: None,
       import_react: None,
       nonce: None,
-      import_sources: None,
+      import_sources: vec![],
       on_included_files: None,
       optimize_css: None,
       resolver: None,
@@ -524,23 +523,18 @@ impl TransformState {
   }
 
   fn resolve_import_sources(file: &TransformFile, opts: &PluginOptions) -> Vec<String> {
-    let mut sources: Vec<String> = DEFAULT_IMPORT_SOURCES
+    opts
+      .import_sources
       .iter()
-      .map(|source| source.to_string())
-      .collect();
-
-    if let Some(additional) = &opts.import_sources {
-      for origin in additional {
+      .map(|origin| {
         if origin.starts_with('.') {
-          let joined = normalized_join(&file.root, origin);
-          sources.push(joined.to_string_lossy().into_owned());
+          let joined = normalized_join(&file.root, origin.as_str());
+          joined.to_string_lossy().into_owned()
         } else {
-          sources.push(origin.clone());
+          origin.clone()
         }
-      }
-    }
-
-    sources
+      })
+      .collect()
   }
 
   pub fn enqueue_cleanup(&mut self, action: CleanupAction, span: Span) {
@@ -732,16 +726,13 @@ mod tests {
     );
 
     let options = PluginOptions {
-      import_sources: Some(vec!["./relative/module".into(), "@scope/package".into()]),
+      import_sources: vec!["./relative/module".into(), "@scope/package".into()],
       ..PluginOptions::default()
     };
 
     let state = TransformState::new(file, options);
 
-    let mut expected = DEFAULT_IMPORT_SOURCES
-      .iter()
-      .map(|source| source.to_string())
-      .collect::<Vec<_>>();
+    let mut expected = vec!["@compiled/react".to_string(), "@atlaskit/css".to_string()];
     expected.push(root.join("relative/module").to_string_lossy().into_owned());
     expected.push("@scope/package".into());
 
@@ -800,7 +791,7 @@ mod tests {
     );
 
     let options = PluginOptions {
-      import_sources: Some(vec!["./relative/module".into()]),
+      import_sources: vec!["./relative/module".into()],
       resolver: Some(ResolverOption::Module("./custom/resolver.js".into())),
       ..PluginOptions::default()
     };

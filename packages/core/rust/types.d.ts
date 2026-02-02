@@ -385,7 +385,7 @@ export interface CompiledCssInJsConfigPlugin {
   configPath?: string;
   importReact?: boolean;
   nonce?: string;
-  importSources?: Array<string>;
+  importSources: Array<string>;
   optimizeCss?: boolean;
   extensions?: Array<string>;
   addComponentName?: boolean;

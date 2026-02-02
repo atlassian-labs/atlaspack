@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::path::PathBuf;
 
@@ -426,10 +426,7 @@ impl AtlaspackJsTransformerPlugin {
     };
 
     let mut resolved = CompiledCssInJsConfig {
-      import_sources: Some(vec![
-        "@compiled/react".to_string(),
-        "@atlaskit/css".to_string(),
-      ]),
+      import_sources: vec!["@compiled/react".to_string(), "@atlaskit/css".to_string()],
       ..CompiledCssInJsConfig::default()
     };
 
@@ -445,7 +442,6 @@ impl AtlaspackJsTransformerPlugin {
 
     override_field!(import_react);
     override_field!(nonce);
-    override_field!(import_sources);
     override_field!(optimize_css);
     override_field!(extensions);
     override_field!(add_component_name);
@@ -463,19 +459,14 @@ impl AtlaspackJsTransformerPlugin {
 
     resolved.config_path = Some(config_file.path.to_string_lossy().to_string());
 
-    if let Some(import_sources) = resolved.import_sources.as_mut() {
-      if !import_sources
-        .iter()
-        .any(|source| source == "@compiled/react")
-      {
-        import_sources.push("@compiled/react".to_string());
-      }
-    } else {
-      resolved.import_sources = Some(vec![
-        "@compiled/react".to_string(),
-        "@atlaskit/css".to_string(),
-      ]);
-    }
+    let default_imports = vec!["@compiled/react".to_string(), "@atlaskit/css".to_string()];
+
+    let import_sources_set: HashSet<_> = default_imports
+      .into_iter()
+      .chain(resolved.import_sources)
+      .collect();
+
+    resolved.import_sources = import_sources_set.into_iter().collect();
 
     if matches!(resolved.extract, Some(true)) && mode == BuildMode::Development {
       resolved.extract = Some(false);
@@ -2467,7 +2458,7 @@ mod tests {
     );
     assert_eq!(config.extract, Some(false));
 
-    let import_sources = config.import_sources.expect("import sources");
+    let import_sources = config.import_sources;
     assert!(
       import_sources.contains(&"@compiled/react".to_string()),
       "expected @compiled/react to be present"
