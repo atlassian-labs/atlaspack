@@ -193,6 +193,23 @@ impl BundleGraphFromJs {
 }
 
 impl BundleGraph for BundleGraphFromJs {
+  fn get_bundles(&self) -> Vec<&Bundle> {
+    if self.graph.node_count() == 0 {
+      return Vec::new();
+    }
+
+    let mut bundles = Vec::new();
+    let mut dfs = Dfs::new(&self.graph, NodeIndex::new(0));
+    while let Some(node) = dfs.next(&self.graph) {
+      let node = self.graph.node_weight(node).unwrap();
+      if let BundleGraphNode::Bundle(node) = node {
+        bundles.push(&node.value);
+      }
+    }
+
+    bundles
+  }
+
   fn get_bundle_by_id(&self, id: &str) -> Option<&Bundle> {
     if let Some(node_idx) = self.nodes_by_key.get(id)
       && let Some(node) = self.graph.node_weight(*node_idx)

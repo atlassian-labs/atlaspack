@@ -8,9 +8,8 @@ use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::package_result::PackageResult;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
-use atlaspack_core::types::{
-  AtlaspackOptions, BundleGraphEdgeType, BundleGraphNode, Environment, SourceField, Targets,
-};
+use atlaspack_core::bundle_graph::bundle_graph_from_js::{BundleGraphEdgeType, BundleGraphNode};
+use atlaspack_core::types::{AtlaspackOptions, Environment, SourceField, Targets};
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
 use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter, StatsSnapshot};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
@@ -25,7 +24,6 @@ use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
 use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
 use crate::requests::{AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, RequestResult};
-
 pub struct AtlaspackInitOptions {
   pub db: Arc<DatabaseHandle>,
   pub fs: Option<FileSystemRef>,
@@ -259,25 +257,43 @@ impl Atlaspack {
   /// to create the bundle graph.
   #[tracing::instrument(level = "info", skip_all)]
   pub fn build_bundle_graph(&self) -> anyhow::Result<BundleGraphRequestOutput> {
+    let (_asset_graph, bundle_delta, _had_previous_graph) =
+      self.build_bundle_graph_with_asset_graph()?;
+    Ok(bundle_delta)
+  }
+
+  /// Build the asset graph and bundle graph together.
+  ///
+  /// This is used by the JS `BundleGraphRequestRust` so it can construct a full bundle graph
+  /// from scratch (without running a separate asset graph request in JS).
+  #[tracing::instrument(level = "info", skip_all)]
+  pub fn build_bundle_graph_with_asset_graph(
+    &self,
+  ) -> anyhow::Result<(Arc<AssetGraph>, BundleGraphRequestOutput, bool)> {
     // First, build the asset graph
-    let (asset_graph, _had_previous_graph) = self.build_asset_graph()?;
+    let (asset_graph, had_previous_graph) = self.build_asset_graph()?;
 
     // Then run the bundle graph request
-    self.runtime.block_on(async move {
-      tracing::debug!("build_bundle_graph: running BundleGraphRequest");
+    let asset_graph_for_request = asset_graph.clone();
+    let bundle_delta = self.runtime.block_on(async move {
+      tracing::debug!("build_bundle_graph_with_asset_graph: running BundleGraphRequest");
 
       let mut request_tracker = self.request_tracker.write().await;
 
       let request_result = request_tracker
-        .run_request(BundleGraphRequest { asset_graph })
+        .run_request(BundleGraphRequest {
+          asset_graph: asset_graph_for_request,
+        })
         .await?;
 
       let RequestResult::BundleGraph(bundle_graph_output) = request_result.as_ref() else {
         anyhow::bail!("Unexpected request result from BundleGraphRequest");
       };
 
-      Ok(bundle_graph_output.clone())
-    })
+      Ok::<_, anyhow::Error>(bundle_graph_output.clone())
+    })?;
+
+    Ok((asset_graph, bundle_delta, had_previous_graph))
   }
 
   #[tracing::instrument(level = "info", skip_all)]

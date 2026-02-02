@@ -85,6 +85,50 @@ describe('monolithic bundler', function () {
     },
   );
 
+  it.only('nativeBundling: should not split any bundles when using singleFileOutput', async function () {
+    await fsFixture(overlayFS, __dirname)`
+      single-file-output
+        a.js:
+          import {c} from './b';
+          import './should-be-ignored.css';
+          const ignore = () => import('./c');
+        b.js:
+          export const c = () => import('./c');
+        c.js:
+          export const c = 'c';
+        should-be-ignored.css:
+          * {
+            color: papayawhip;
+          }
+
+        yarn.lock: {}
+    `;
+
+    let singleBundle = await bundle(
+      path.join(__dirname, 'single-file-output/a.js'),
+      {
+        defaultTargetOptions: {shouldScopeHoist: false},
+        inputFS: overlayFS,
+        featureFlags: {
+          atlaspackV3: true,
+          nativeBundling: true,
+        },
+        targets: {
+          'single-file-native': {
+            distDir: 'dist-single-native',
+            __unstable_singleFileOutput: true,
+          },
+        },
+      },
+    );
+
+    assertBundles(singleBundle, [
+      {assets: ['a.js', 'b.js', 'c.js', 'esmodule-helpers.js']},
+    ]);
+
+    await run(singleBundle);
+  });
+
   it.v2('should error if isolated assets are in the build', async function () {
     await fsFixture(overlayFS, __dirname)`
       isolated-bundles

@@ -33,6 +33,7 @@ use super::file_system_napi::FileSystemNapi;
 use super::napi_result::NapiAtlaspackResult;
 use super::package_manager_napi::PackageManagerNapi;
 use super::serialize_asset_graph::serialize_asset_graph;
+use super::serialize_bundle_graph::serialize_bundle_graph;
 
 #[napi(object)]
 pub struct AtlaspackNapiOptions {
@@ -219,21 +220,49 @@ pub fn atlaspack_napi_build_bundle_graph(
   atlaspack_napi: AtlaspackNapi,
 ) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;
+  let (second_deferred, second_promise) = env.create_deferred()?;
+
+  let mut js_result = env.create_object()?;
+  js_result.set_named_property("bundleGraphPromise", promise)?;
+  js_result.set_named_property("commitPromise", second_promise)?;
 
   thread::spawn({
     let atlaspack_ref = atlaspack_napi.clone();
     move || {
       let result = {
         let atlaspack = atlaspack_ref.write();
-        atlaspack.build_bundle_graph()
+        atlaspack.build_bundle_graph_with_asset_graph()
       };
 
+      let mut commit_deferred_opt = Some(second_deferred);
       deferred.resolve(move |env| match result {
-        Ok(bundle_graph_result) => {
-          let js_result = env.to_js_value(&bundle_graph_result)?;
-          NapiAtlaspackResult::ok(&env, js_result)
+        Ok((asset_graph, bundle_graph_delta, had_previous_graph)) => {
+          let serialize_result = serialize_bundle_graph(
+            &env,
+            &asset_graph,
+            &bundle_graph_delta.bundle_nodes,
+            &bundle_graph_delta.bundle_edges,
+            &bundle_graph_delta.public_id_by_asset_id,
+            &bundle_graph_delta.asset_public_ids,
+            had_previous_graph,
+          )?;
+
+          if let Some(commit_deferred) = commit_deferred_opt.take() {
+            thread::spawn(move || {
+              {
+                let atlaspack = atlaspack_ref.write();
+                atlaspack.commit_assets(&asset_graph).unwrap();
+              }
+              commit_deferred.resolve(resolve_commit_ok)
+            });
+          }
+
+          NapiAtlaspackResult::ok(&env, serialize_result)
         }
         Err(error) => {
+          if let Some(commit_deferred) = commit_deferred_opt.take() {
+            commit_deferred.resolve(resolve_commit_ok);
+          }
           let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
           NapiAtlaspackResult::error(&env, js_object)
         }
@@ -241,7 +270,7 @@ pub fn atlaspack_napi_build_bundle_graph(
     }
   });
 
-  Ok(promise)
+  Ok(js_result)
 }
 
 #[napi]

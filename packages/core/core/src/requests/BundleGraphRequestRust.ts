@@ -1,22 +1,14 @@
-import type {Async} from '@atlaspack/types';
-import type {SharedReference} from '@atlaspack/workers';
-import type {AtlaspackConfig, LoadedPlugin} from '../AtlaspackConfig';
-import type {StaticRunOpts, RunAPI} from '../RequestTracker';
-import type {
-  Asset,
-  AssetGroup,
-  Config,
-  DevDepRequest,
-  AtlaspackOptions,
-  DevDepRequestRef,
-} from '../types';
+import invariant from 'assert';
 
-import nullthrows from 'nullthrows';
-import {instrumentAsync} from '@atlaspack/logger';
 import ThrowableDiagnostic from '@atlaspack/diagnostic';
-import AssetGraph from '../AssetGraph';
+import type {Async} from '@atlaspack/types';
+import {ContentGraph} from '@atlaspack/graph';
+import {instrument, instrumentAsync, PluginLogger} from '@atlaspack/logger';
+import {getFeatureFlag} from '@atlaspack/feature-flags';
+
 import InternalBundleGraph, {bundleGraphEdgeTypes} from '../BundleGraph';
 import dumpGraphToGraphViz from '../dumpGraphToGraphViz';
+import nullthrows from 'nullthrows';
 import {hashString} from '@atlaspack/rust';
 import PluginOptions from '../public/PluginOptions';
 import applyRuntimes from '../applyRuntimes';
@@ -28,11 +20,8 @@ import {
   invalidateDevDeps,
 } from './DevDepRequest';
 import {PluginWithLoadConfig} from './ConfigRequest';
-import {getFeatureFlag} from '@atlaspack/feature-flags';
-import {requestTypes} from '../RequestTracker';
+import {requestTypes, StaticRunOpts} from '../RequestTracker';
 import type {AtlaspackV3} from '../atlaspack-v3';
-import createAssetGraphRequestJS from './AssetGraphRequest';
-import {createAssetGraphRequestRust} from './AssetGraphRequestRust';
 import type {BundleGraphResult} from './BundleGraphRequest';
 import createAtlaspackConfigRequest, {
   getCachedAtlaspackConfig,
@@ -44,42 +33,57 @@ import {
   loadPluginConfigWithDevDeps,
   runDevDepRequest,
 } from './BundleGraphRequestUtils';
+import {toEnvironmentRef} from '../EnvironmentManager';
+import {getEnvironmentHash} from '../Environment';
+import type {
+  Asset,
+  BundleGraphNode,
+  BundleNode,
+  BundleGroupNode,
+  DependencyNode,
+  AssetNode,
+  Environment,
+} from '../types';
+import {tracer, PluginTracer} from '@atlaspack/profiler';
+import ThrowableDiagnostic2, {errorToDiagnostic} from '@atlaspack/diagnostic';
+import type {AtlaspackConfig, LoadedPlugin} from '../AtlaspackConfig';
+import type {RunAPI} from '../RequestTracker';
+import type {
+  Config,
+  DevDepRequest,
+  AtlaspackOptions,
+  DevDepRequestRef,
+  Bundle as InternalBundle,
+} from '../types';
+import type {Namer, Bundle as IBundle} from '@atlaspack/types';
+import BundleGraph from '../public/BundleGraph';
+import {Bundle, NamedBundle} from '../public/Bundle';
 
 type BundleGraphRequestInput = {
   requestedAssetIds: Set<string>;
   signal?: AbortSignal;
-  optionsRef: SharedReference;
-};
-
-type BundleGraphRequestRustInput = {
-  assetGraph: AssetGraph;
-  changedAssets: Map<string, Asset>;
-  assetRequests: Array<AssetGroup>;
-  optionsRef: SharedReference;
-  rustAtlaspack: AtlaspackV3;
+  optionsRef: any;
 };
 
 type RunInput = {
-  input: BundleGraphRequestRustInput;
-} & StaticRunOpts<BundleGraphResult>;
-
-type FactoryRunInput = {
   input: BundleGraphRequestInput;
 } & StaticRunOpts<BundleGraphResult>;
 
 type BundleGraphRequestRust = {
   id: string;
   readonly type: typeof requestTypes.bundle_graph_request;
-  run: (arg1: FactoryRunInput) => Async<BundleGraphResult>;
+  run: (arg1: RunInput) => Async<BundleGraphResult>;
   input: BundleGraphRequestInput;
 };
 
-/**
- * Creates a bundle graph request implementation that performs bundling via Rust.
- *
- * Note: Asset graph creation is still delegated to the existing AssetGraphRequest
- * infrastructure (JS by default, or Rust when `atlaspackV3` is enabled).
- */
+type SerializedBundleGraph = {
+  nodes: Array<any>;
+  edges: Array<number>;
+  publicIdByAssetId: {[k: string]: string};
+  assetPublicIds: Array<string>;
+  hadPreviousGraph: boolean;
+};
+
 export default function createBundleGraphRequestRust(
   input: BundleGraphRequestInput,
 ): BundleGraphRequestRust {
@@ -87,194 +91,282 @@ export default function createBundleGraphRequestRust(
     type: requestTypes.bundle_graph_request,
     id: 'BundleGraphRust',
     run: async (runInput) => {
-      const {options, api} = runInput;
-      const {optionsRef, requestedAssetIds} = runInput.input;
+      const {api, options, rustAtlaspack} = runInput;
+      invariant(rustAtlaspack, 'BundleGraphRequestRust requires rustAtlaspack');
 
-      if (!runInput.rustAtlaspack) {
-        throw new Error(
-          'BundleGraphRequestRust requires rustAtlaspack to be present',
-        );
+      let {bundleGraphPromise, commitPromise} = await rustAtlaspack.buildBundleGraph();
+      let [serializedBundleGraph, bundleGraphError] =
+        (await bundleGraphPromise) as [SerializedBundleGraph, Error | null];
+
+      if (bundleGraphError) {
+        throw new ThrowableDiagnostic({diagnostic: bundleGraphError});
       }
 
-      const createAssetGraphRequest =
-        getFeatureFlag('atlaspackV3') && runInput.rustAtlaspack
-          ? createAssetGraphRequestRust(runInput.rustAtlaspack)
-          : createAssetGraphRequestJS;
-
-      const assetGraphRequest = createAssetGraphRequest({
-        name: 'Main',
-        entries: options.entries,
-        optionsRef,
-        shouldBuildLazily: options.shouldBuildLazily,
-        lazyIncludes: options.lazyIncludes,
-        lazyExcludes: options.lazyExcludes,
-        requestedAssetIds,
-      });
-
-      const {assetGraph, changedAssets, assetRequests} = await api.runRequest(
-        assetGraphRequest,
-        {
-          force:
-            Boolean(runInput.rustAtlaspack) ||
-            (options.shouldBuildLazily && requestedAssetIds.size > 0),
-        },
+      // Don’t reuse previous JS result yet; we just rebuild from scratch.
+      let {bundleGraph, changedAssets} = instrument(
+        'atlaspack_v3_getBundleGraph',
+        () => getBundleGraph(serializedBundleGraph),
       );
 
-      return runBundleGraphRequestRust({
-        ...(runInput as any),
-        input: {
-          assetGraph,
-          changedAssets,
-          assetRequests,
-          optionsRef,
-          rustAtlaspack: runInput.rustAtlaspack,
-        },
-      });
+      const runner = new NativeBundlerRunner({api, options} as any, input.optionsRef);
+      await runner.loadConfigs();
+
+      // Name all bundles
+      const namers = await runner.config.getNamers();
+      const bundles = bundleGraph.getBundles({includeInline: true});
+      await Promise.all(
+        bundles.map((b) =>
+          nameBundle(
+            namers,
+            b,
+            bundleGraph,
+            options,
+            runner.pluginOptions,
+            runner.configs,
+          ),
+        ),
+      );
+
+      // Apply runtimes
+      const changedRuntimes = await instrumentAsync('applyRuntimes', () =>
+        applyRuntimes({
+          bundleGraph,
+          api,
+          config: runner.config,
+          options,
+          optionsRef: input.optionsRef,
+          pluginOptions: runner.pluginOptions,
+          previousDevDeps: runner.previousDevDeps,
+          devDepRequests: runner.devDepRequests,
+          configs: runner.configs,
+        }),
+      );
+
+      // Add dev deps for namers
+      for (const namer of namers) {
+        const devDepRequest = await createDevDependency(
+          {
+            specifier: namer.name,
+            resolveFrom: namer.resolveFrom,
+          },
+          runner.previousDevDeps,
+          options,
+        );
+        await runDevDepRequest(api, devDepRequest, runner.devDepRequests);
+      }
+
+      validateBundles(bundleGraph);
+      bundleGraph.getBundleGraphHash();
+
+      await dumpGraphToGraphViz(
+        // @ts-expect-error
+        bundleGraph._graph,
+        'after_runtimes_native',
+        bundleGraphEdgeTypes,
+      );
+
+      let [_commitResult, commitError] = await commitPromise;
+      if (commitError) {
+        throw new ThrowableDiagnostic({
+          diagnostic: {
+            message: 'Error committing bundle graph in Rust: ' + commitError.message,
+          },
+        });
+      }
+
+      return {
+        bundleGraph,
+        // Not accurate yet — ok for now.
+        assetGraphBundlingVersion: 0,
+        changedAssets: changedRuntimes,
+        assetRequests: [],
+      };
     },
     input,
   };
 }
 
-/**
- * Runs the native Rust bundler, then performs naming and runtime application in JS.
- *
- * This is the entry point for native bundling (milestone 1). The Rust side currently
- * returns a stub bundle graph, which will be expanded as the native bundling
- * implementation progresses.
- */
-export async function runBundleGraphRequestRust(
-  runInput: RunInput,
-): Promise<BundleGraphResult> { 
-  const {input, api, options} = runInput;
-  const {
-    assetGraph,
-    changedAssets,
-    assetRequests,
-    optionsRef,
-    rustAtlaspack,
-  } = input;
-
-  // Call the Rust bundler
-  const [bundleGraphResult, bundleGraphError] = (await rustAtlaspack.buildBundleGraph()) as [
-    {
-      nodeCount: number;
-      edges: [number, number][];
-      publicIdByAssetId: {[id: string]: string};
-      assetPublicIds: string[];
+function mapSymbols({exported, ...symbol}: any) {
+  let jsSymbol: any = {
+    local: symbol.local ?? undefined,
+    loc: symbol.loc ?? undefined,
+    isWeak: symbol.isWeak,
+    meta: {
+      isEsm: symbol.isEsmExport,
+      isStaticBindingSafe: symbol.isStaticBindingSafe,
     },
-    Error | null,
-  ];
-
-  if (bundleGraphError) {
-    throw new ThrowableDiagnostic({
-      diagnostic: bundleGraphError,
-    });
-  }
-
-  // For now, the Rust bundler returns an empty result, so we fall back to
-  // creating the bundle graph from the asset graph using JS.
-  // This will be replaced once native bundling is fully implemented.
-  const publicIdByAssetId = new Map(
-    Object.entries(bundleGraphResult.publicIdByAssetId ?? {}),
-  );
-  const assetPublicIds = new Set(bundleGraphResult.assetPublicIds ?? []);
-
-  const internalBundleGraph = InternalBundleGraph.fromAssetGraph(
-    assetGraph,
-    options.mode === 'production',
-    publicIdByAssetId,
-    assetPublicIds,
-  );
-
-  // Set up the bundler runner for naming and runtimes
-  const runner = new NativeBundlerRunner(
-    runInput,
-    optionsRef,
-  );
-
-  await runner.loadConfigs();
-
-  // Name all bundles
-  const namers = await runner.config.getNamers();
-  const bundles = internalBundleGraph.getBundles({includeInline: true});
-  await Promise.all(
-    bundles.map((bundle) =>
-      nameBundle(
-        namers,
-        bundle,
-        internalBundleGraph,
-        options,
-        runner.pluginOptions,
-        runner.configs,
-      ),
-    ),
-  );
-
-  // Apply runtimes
-  const changedRuntimes = await instrumentAsync('applyRuntimes', () =>
-    applyRuntimes({
-      bundleGraph: internalBundleGraph,
-      api,
-      config: runner.config,
-      options,
-      optionsRef,
-      pluginOptions: runner.pluginOptions,
-      previousDevDeps: runner.previousDevDeps,
-      devDepRequests: runner.devDepRequests,
-      configs: runner.configs,
-    }),
-  );
-
-  // Add dev deps for namers
-  for (const namer of namers) {
-    const devDepRequest = await createDevDependency(
-      {
-        specifier: namer.name,
-        resolveFrom: namer.resolveFrom,
-      },
-      runner.previousDevDeps,
-      options,
-    );
-    await runDevDepRequest(api, devDepRequest, runner.devDepRequests);
-  }
-
-  validateBundles(internalBundleGraph);
-
-  // Pre-compute the hashes for each bundle
-  internalBundleGraph.getBundleGraphHash();
-
-  await dumpGraphToGraphViz(
-    // @ts-expect-error TS2345
-    internalBundleGraph._graph,
-    'after_runtimes_native',
-    bundleGraphEdgeTypes,
-  );
-
-  api.storeResult(
-    {
-      bundleGraph: internalBundleGraph,
-      assetGraphBundlingVersion: assetGraph.getBundlingVersion(),
-      changedAssets: new Map(),
-      assetRequests: [],
-    },
-    runner.cacheKey,
-  );
-
-  return {
-    bundleGraph: internalBundleGraph,
-    assetGraphBundlingVersion: assetGraph.getBundlingVersion(),
-    changedAssets: changedRuntimes,
-    assetRequests,
   };
+
+  if (symbol.exported) {
+    jsSymbol.exported = symbol.exported;
+  }
+
+  return [exported, jsSymbol];
 }
 
-/**
- * Helper class that handles naming bundles and applying runtimes for native bundling.
- * This reuses the same logic as BundlerRunner in BundleGraphRequest.ts.
- */
+function normalizeEnv(env: Environment): any {
+  if (!env) return env;
+  env.id = env.id || getEnvironmentHash(env);
+  return toEnvironmentRef(env);
+}
+
+export function getBundleGraph(serializedGraph: SerializedBundleGraph): {
+  bundleGraph: InternalBundleGraph;
+  changedAssets: Map<string, Asset>;
+} {
+  // Build a fresh internal bundle graph.
+  const publicIdByAssetId = new Map(Object.entries(serializedGraph.publicIdByAssetId ?? {}));
+  const assetPublicIds = new Set(serializedGraph.assetPublicIds ?? []);
+
+  // BundleGraph constructor expects a ContentGraph under `_graph`.
+  // We reuse the internal graph class by creating an empty instance and then adding nodes.
+  const graph = new InternalBundleGraph({
+    // We intentionally start with an empty graph and add nodes/edges from the Rust payload.
+    // `ContentGraph` will allocate as needed.
+    graph: new ContentGraph(),
+    bundleContentHashes: new Map(),
+    publicIdByAssetId,
+    assetPublicIds,
+    conditions: new Map(),
+  });
+
+  // Root must exist at node id 0.
+  const rootNodeId = graph._graph.addNodeByContentKey('@@root', {
+    id: '@@root',
+    type: 'root',
+    value: null,
+  });
+  graph._graph.setRootNodeId(rootNodeId);
+
+  let entry = 0;
+  const changedAssets = new Map<string, Asset>();
+
+  // Create nodes in order.
+  for (let i = 0; i < serializedGraph.nodes.length; i++) {
+    let node = JSON.parse(serializedGraph.nodes[i]);
+
+    if (node.type === 'root') {
+      continue;
+    }
+
+    if (node.type === 'entry') {
+      let id = 'entry:' + ++entry;
+      graph._graph.addNodeByContentKey(id, {id, type: 'root', value: null});
+      continue;
+    }
+
+    if (node.type === 'asset') {
+      let asset = node.value;
+      let id = asset.id;
+
+      asset.committed = true;
+      asset.contentKey = id;
+      asset.env = {...asset.env};
+      asset.env.id = getFeatureFlag('environmentDeduplication')
+        ? getEnvironmentHash(asset.env)
+        : getEnvironmentHash(asset.env);
+      asset.env = normalizeEnv(asset.env);
+      asset.mapKey = `map:${asset.id}`;
+      asset.dependencies = new Map();
+      asset.meta.isV3 = true;
+      if (asset.symbols != null) {
+        asset.symbols = new Map(asset.symbols.map(mapSymbols));
+      }
+
+      changedAssets.set(id, asset);
+
+      const assetNode: AssetNode = {
+        id,
+        type: 'asset',
+        usedSymbols: new Set(),
+        usedSymbolsDownDirty: true,
+        usedSymbolsUpDirty: true,
+        value: asset,
+      };
+      graph._graph.addNodeByContentKey(id, assetNode);
+      continue;
+    }
+
+    if (node.type === 'dependency') {
+      let {dependency, id} = node.value;
+      dependency.id = id;
+      dependency.env = {...dependency.env};
+      dependency.env.id = getEnvironmentHash(dependency.env);
+      dependency.env = normalizeEnv(dependency.env);
+      if (dependency.symbols != null) {
+        dependency.symbols = new Map(dependency.symbols?.map(mapSymbols));
+      }
+
+      let usedSymbolsDown = new Set();
+      let usedSymbolsUp = new Map();
+      if (dependency.isEntry && dependency.isLibrary) {
+        usedSymbolsDown.add('*');
+        usedSymbolsUp.set('*', undefined);
+      }
+
+      const depNode: DependencyNode = {
+        id,
+        type: 'dependency',
+        deferred: false,
+        excluded: false,
+        hasDeferred: node.has_deferred,
+        // @ts-expect-error
+        usedSymbolsDown,
+        usedSymbolsDownDirty: true,
+        usedSymbolsUp,
+        usedSymbolsUpDirtyDown: true,
+        usedSymbolsUpDirtyUp: true,
+        value: dependency,
+      };
+      graph._graph.addNodeByContentKey(id, depNode);
+      continue;
+    }
+
+    if (node.type === 'bundle') {
+      // Normalize env
+      node.value.env = normalizeEnv(node.value.env);
+      node.value.target.env = normalizeEnv(node.value.target.env);
+      graph._graph.addNodeByContentKey(node.id, node as BundleNode);
+      continue;
+    }
+
+    if (node.type === 'bundle_group') {
+      node.value.target.env = normalizeEnv(node.value.target.env);
+      graph._graph.addNodeByContentKey(node.id, node as BundleGroupNode);
+      continue;
+    }
+  }
+
+  // Apply edges
+  for (let i = 0; i < serializedGraph.edges.length; i += 3) {
+    const from = serializedGraph.edges[i];
+    const to = serializedGraph.edges[i + 1];
+    const type = serializedGraph.edges[i + 2];
+
+    const fromNode = graph._graph.getNode(from);
+    const toNode = graph._graph.getNode(to);
+
+    if (fromNode?.type === 'asset' && toNode?.type === 'dependency') {
+      fromNode.value.dependencies.set(toNode.value.id, toNode.value);
+    }
+
+    // If we are adding a references edge, remove existing null edge.
+    if (
+      type === bundleGraphEdgeTypes.references &&
+      graph._graph.hasEdge(from, to, bundleGraphEdgeTypes.null)
+    ) {
+      graph._graph.removeEdge(from, to, bundleGraphEdgeTypes.null);
+    }
+
+    graph._graph.addEdge(from, to, type as any);
+  }
+
+  return {bundleGraph: graph, changedAssets};
+}
+
 class NativeBundlerRunner {
   options: AtlaspackOptions;
-  optionsRef: SharedReference;
+  optionsRef: any;
   config!: AtlaspackConfig;
   pluginOptions: PluginOptions;
   api: RunAPI<BundleGraphResult>;
@@ -283,10 +375,7 @@ class NativeBundlerRunner {
   configs: Map<string, Config>;
   cacheKey: string;
 
-  constructor(
-    {input, api, options}: RunInput,
-    optionsRef: SharedReference,
-  ) {
+  constructor({api, options}: any, optionsRef: any) {
     this.options = options;
     this.api = api;
     this.optionsRef = optionsRef;
@@ -306,7 +395,6 @@ class NativeBundlerRunner {
   }
 
   async loadConfigs() {
-    // Load config using the same pattern as BundleGraphRequest
     const configResult = nullthrows(
       await this.api.runRequest<null, ConfigAndCachePath>(
         createAtlaspackConfigRequest(),
@@ -319,7 +407,6 @@ class NativeBundlerRunner {
     this.previousDevDeps = devDeps;
     invalidateDevDeps(invalidDevDeps, this.options, this.config);
 
-    // Load all configs up front
     const bundler = await this.config.getBundler();
     await this.loadPluginConfig(bundler);
 
