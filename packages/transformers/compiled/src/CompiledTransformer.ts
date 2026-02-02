@@ -98,9 +98,12 @@ export default new Transformer<Config>({
       }
 
       Object.assign(contents, conf.contents);
-    }
 
-    let importSources = [...DEFAULT_IMPORT_SOURCES, ...contents.importSources];
+      contents.importSources = [
+        ...DEFAULT_IMPORT_SOURCES,
+        ...(contents.importSources ?? []),
+      ];
+    }
 
     return {
       config: {
@@ -109,7 +112,7 @@ export default new Transformer<Config>({
         projectRoot: options.projectRoot,
       },
       conditions: {
-        codeMatch: importSources,
+        codeMatch: contents.importSources,
       },
       env: [
         // TODO revisit this list, since we may have added variables in here that were actually enumarated rather than accessed directly

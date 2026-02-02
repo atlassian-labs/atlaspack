@@ -4,13 +4,15 @@ import type {ResolveOptions} from 'enhanced-resolve';
 
 type BabelPluginOpts = Omit<
   PluginOptions,
-  'cache' | 'onIncludedFiles' | 'resolver'
+  'cache' | 'onIncludedFiles' | 'resolver' | 'importSource'
 >;
 
 export interface CompiledTransformerOpts extends BabelPluginOpts {
   extract?: boolean;
   extractFromDistributedCode?: boolean;
   stylesheetPath?: string;
+
+  importSources: string[];
 
   /**
    * List of transformer babel plugins to be applied to evaluated files
