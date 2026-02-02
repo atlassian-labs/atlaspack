@@ -1,8 +1,10 @@
 use crate::types::{Asset, Bundle, Dependency};
 
 pub trait BundleGraph {
+  /// Gets all of the assets "contained" by a Bundle.
   fn get_bundle_assets(&self, bundle: &Bundle) -> anyhow::Result<Vec<&Asset>>;
 
+  /// Helper to get a `Bundle` from an `id`.
   fn get_bundle_by_id(&self, id: &str) -> Option<&Bundle>;
 
   /// Get the public ID for an asset by its full asset ID.
@@ -10,10 +12,10 @@ pub trait BundleGraph {
   /// Public IDs are shortened, base62-encoded versions of asset IDs used at runtime.
   fn get_public_asset_id(&self, asset_id: &str) -> Option<&str>;
 
-  /// Returns all of the Dependencies for an Asset (the dependencies that the asset requires)
+  /// Returns all of the Dependencies for an Asset (the dependencies that the asset requires).
   fn get_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&Dependency>>;
 
-  /// Resolves a dependency to an asset in a bundle
+  /// Resolves a dependency to an asset in a bundle.
   fn get_resolved_asset(
     &self,
     dependency: &Dependency,
