@@ -1,19 +1,20 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
 use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode};
-use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
 use atlaspack_core::config_loader::ConfigLoader;
+use atlaspack_core::package_result::PackageResult;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::{
-  AtlaspackOptions, BundleGraphEdgeType, BundleGraphNode, SourceField, Targets,
+  AtlaspackOptions, BundleGraphEdgeType, BundleGraphNode, Environment, SourceField, Targets,
 };
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
 use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter, StatsSnapshot};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
+use atlaspack_packager_js::JsPackager;
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::DatabaseHandle;
 use tokio::runtime::Runtime;
@@ -44,9 +45,10 @@ pub struct Atlaspack {
   pub config_loader: Arc<ConfigLoader>,
   pub plugins: PluginsRef,
   pub request_tracker: Arc<RwLock<RequestTracker>>,
-  // This is the bundle graph that is deserialised from JS, and will be used temporarily until
-  // we have a native bundle graph implementation.
-  pub bundle_graph: Arc<RwLock<Option<BundleGraphFromJs>>>,
+  /// The bundle graph deserialised from JS. Used temporarily until we have a native
+  /// bundle graph implementation. Starts empty and is populated via `load_bundle_graph`.
+  /// Uses non-async RwLock so the packager (and any Rayon threads) can take a read lock when needed.
+  pub bundle_graph: Arc<parking_lot::RwLock<BundleGraphFromJs>>,
 }
 
 impl Atlaspack {
@@ -173,7 +175,7 @@ impl Atlaspack {
       config_loader,
       plugins,
       request_tracker: Arc::new(RwLock::new(request_tracker)),
-      bundle_graph: Arc::new(RwLock::new(None)),
+      bundle_graph: Arc::new(parking_lot::RwLock::new(BundleGraphFromJs::default())),
     })
   }
 }
@@ -234,31 +236,29 @@ impl Atlaspack {
     })
   }
 
-  #[tracing::instrument(level = "info", skip_all)]
+  #[tracing::instrument(
+    level = "info",
+    skip_all,
+    fields(nodes = nodes.len(), edges = edges.len(), asset_id_map_size = public_id_by_asset_id.len(), environments = environments.len())
+  )]
   pub fn load_bundle_graph(
     &self,
     nodes: Vec<BundleGraphNode>,
     edges: Vec<(u32, u32, BundleGraphEdgeType)>,
+    public_id_by_asset_id: HashMap<String, String>,
+    environments: Vec<Environment>,
   ) -> anyhow::Result<()> {
-    self.runtime.block_on(async move {
-      let bundle_graph = BundleGraphFromJs::new(nodes, edges);
-      self.bundle_graph.write().await.replace(bundle_graph);
-      Ok(())
-    })
+    *self.bundle_graph.write() =
+      BundleGraphFromJs::new(nodes, edges, public_id_by_asset_id, environments);
+    Ok(())
   }
 
   #[tracing::instrument(level = "info", skip_all)]
-  pub fn package(&self) -> anyhow::Result<()> {
-    self.runtime.block_on(async move {
-      tracing::debug!("TODO: package()");
-      // Temporary code just to make sure we can read the bundle graph and get some
-      // data out - obviously we'll know which bundle we're actually packaging here normally
-      let binding = self.bundle_graph.read().await;
-      let bundles = binding.as_ref().unwrap().get_bundles();
-      dbg!(&bundles.iter().map(|b| b.name.clone()).collect::<Vec<_>>());
-
-      Ok(())
-    })
+  pub fn package(&self, bundle_id: String) -> anyhow::Result<PackageResult> {
+    // This possibly could be persistent between pacakges? But right now with SSR builds only we're talking about a few packages at most
+    // so we can worry about that refactor later.
+    let packager = JsPackager::new(Arc::clone(&self.db), Arc::clone(&self.bundle_graph));
+    packager.package(&bundle_id)
   }
 
   pub fn respond_to_fs_events(&self, events: WatchEvents) -> anyhow::Result<bool> {

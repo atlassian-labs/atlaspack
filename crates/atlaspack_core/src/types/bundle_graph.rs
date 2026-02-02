@@ -1,5 +1,6 @@
 use std::{
   collections::{HashMap, HashSet},
+  fmt::{Display, Formatter},
   path::PathBuf,
 };
 
@@ -60,7 +61,27 @@ impl BundleGraphNode {
   }
 }
 
-#[derive(Debug, Deserialize)]
+impl Display for BundleGraphNode {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    let type_name = match self {
+      BundleGraphNode::Asset(_node) => "Asset",
+      BundleGraphNode::Dependency(_node) => "Dependency",
+      BundleGraphNode::EntrySpecifier(_node) => "EntrySpecifier",
+      BundleGraphNode::EntryFile(_node) => "EntryFile",
+      BundleGraphNode::Root(_node) => "Root",
+      BundleGraphNode::BundleGroup(_node) => "BundleGroup",
+      BundleGraphNode::Bundle(_node) => "Bundle",
+    };
+    write!(
+      f,
+      "{type_name}: {id}",
+      type_name = type_name,
+      id = self.id()
+    )
+  }
+}
+
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AssetNode {
   pub id: String,
@@ -76,7 +97,7 @@ pub struct AssetNode {
   pub requested: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DependencyNode {
   pub id: String,
@@ -99,7 +120,7 @@ pub struct DependencyNode {
   pub excluded: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UsedSymbolResolution {
   pub asset: String,
@@ -138,14 +159,15 @@ pub struct BundleGroupNode {
   pub value: BundleGroup,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BundleNode {
   pub id: String,
   pub value: Bundle,
 }
 
-#[derive(PartialEq, Eq)]
+// This matches the edge types from JS in packages/core/core/src/BundleGraph.ts
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum BundleGraphEdgeType {
   Null = 1,
   Contains = 2,

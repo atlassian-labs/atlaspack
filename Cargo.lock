@@ -294,6 +294,7 @@ dependencies = [
  "atlaspack_filesystem",
  "atlaspack_memoization_cache",
  "atlaspack_package_manager",
+ "atlaspack_packager_js",
  "atlaspack_plugin_resolver",
  "atlaspack_plugin_rpc",
  "atlaspack_plugin_transformer_css",
@@ -421,6 +422,7 @@ dependencies = [
  "once_cell",
  "oxipng",
  "parking_lot",
+ "pretty_assertions",
  "rayon",
  "regex",
  "rkyv 0.7.46",
@@ -653,6 +655,19 @@ dependencies = [
  "atlaspack_filesystem",
  "mockall",
  "serde",
+ "tracing",
+]
+
+[[package]]
+name = "atlaspack_packager_js"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack_core",
+ "lmdb-js-lite",
+ "parking_lot",
+ "rayon",
+ "regex",
  "tracing",
 ]
 
