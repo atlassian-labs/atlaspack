@@ -8,7 +8,9 @@ use atlaspack_core::bundle_graph::bundle_graph::BundleGraph;
 use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
-use atlaspack_core::types::{AtlaspackOptions, BundleGraphNode, SourceField, Targets};
+use atlaspack_core::types::{
+  AtlaspackOptions, BundleGraphEdgeType, BundleGraphNode, SourceField, Targets,
+};
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
 use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter, StatsSnapshot};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
@@ -236,7 +238,7 @@ impl Atlaspack {
   pub fn load_bundle_graph(
     &self,
     nodes: Vec<BundleGraphNode>,
-    edges: Vec<(u32, u32, u8)>,
+    edges: Vec<(u32, u32, BundleGraphEdgeType)>,
   ) -> anyhow::Result<()> {
     self.runtime.block_on(async move {
       let bundle_graph = BundleGraphFromJs::new(nodes, edges);

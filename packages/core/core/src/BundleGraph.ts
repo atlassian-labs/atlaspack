@@ -1773,8 +1773,36 @@ export default class BundleGraph {
   }
 
   /**
-   * TODO: Document why this works like this & why visitor order matters
-   * on these use-cases.
+   * Performs a depth-first traversal of all assets and dependencies contained
+   * within a bundle. Only visits nodes that are directly contained in the bundle
+   * (connected via a `contains` edge).
+   *
+   * Entry Asset Ordering:
+   * The traversal guarantees that entry assets are visited in the exact order they
+   * appear in `bundle.entryAssetIds`. This ordering is critical for several reasons:
+   *
+   * 1. **Code Execution Order in Packagers**: Packagers (ScopeHoistingPackager,
+   *    DevPackager) use this traversal to concatenate assets into the final bundle.
+   *    The traversal order determines the execution order of code in the output.
+   *    Entry assets must be processed in their defined order to ensure correct
+   *    initialization sequences.
+   *
+   * 2. **Runtime Injection**: Runtime assets (HMR, bundle manifests) are prepended
+   *    to `entryAssetIds` via `unshift()` in `applyRuntimes.ts`. By honoring the
+   *    array order, runtimes are guaranteed to be visited (and thus output) before
+   *    application entry points, ensuring the runtime infrastructure is available
+   *    when application code executes.
+   *
+   * 3. **Deterministic Builds**: Consistent traversal order ensures reproducible
+   *    bundle output, which is essential for caching and build verification.
+   *
+   * The sorting only applies at the first traversal level (direct children of the
+   * start node). Subsequent levels follow standard DFS order based on the graph's
+   * edge structure.
+   *
+   * @param bundle - The bundle to traverse
+   * @param visit - Visitor callback receiving asset or dependency nodes
+   * @param startAsset - Optional asset to start traversal from (defaults to bundle root)
    */
   traverseBundle<TContext>(
     bundle: Bundle,
