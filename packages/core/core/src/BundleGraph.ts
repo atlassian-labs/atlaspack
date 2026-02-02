@@ -75,7 +75,7 @@ export const bundleGraphEdgeTypes = {
   internal_async: 5,
   // This type is used to mark an edge between a bundle and a conditional bundle.
   // This allows efficient discovery of conditional bundles in packaging
-  conditional: 5,
+  conditional: 6,
 } as const;
 
 export type BundleGraphEdgeType =
