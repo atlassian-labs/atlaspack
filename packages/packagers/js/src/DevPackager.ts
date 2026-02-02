@@ -12,7 +12,7 @@ import invariant from 'assert';
 import path from 'path';
 import fs from 'fs';
 import {replaceScriptDependencies, getSpecifier} from './utils';
-import {PluginLogger as Logger} from '@atlaspack/types';
+import {tracer} from '@atlaspack/logger';
 
 const PRELUDE = fs
   .readFileSync(path.join(__dirname, 'dev-prelude.js'), 'utf8')
@@ -44,7 +44,7 @@ export class DevPackager {
     contents: string;
     map: SourceMap | null | undefined;
   }> {
-    const startTime = Date.now();
+    const span = tracer.enter('DevPackager.package');
     let assetCount = 0;
 
     // Load assets
@@ -241,10 +241,8 @@ export class DevPackager {
       }
     }
 
-    const endTime = Date.now();
-    this.logger.verbose({
-      message: `DevPackager.package(${this.bundle.id}): ${endTime - startTime}ms for ${assetCount} assets`,
-    });
+    tracer.record(span, {assetCount: assetCount.toString()});
+    tracer.exit(span);
 
     return {
       contents,

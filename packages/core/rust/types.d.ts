@@ -234,6 +234,7 @@ export class AtlaspackTracer {
   constructor();
   enter(label: string): SpanId;
   exit(id: SpanId): void;
+  record(id: SpanId, data?: any | undefined | null): void;
 }
 export class Resolver {
   constructor(projectRoot: string, options: FileSystem);

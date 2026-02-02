@@ -13,7 +13,7 @@ import {ValueEmitter} from '@atlaspack/events';
 import {inspect} from 'util';
 import {errorToDiagnostic, anyToDiagnostic} from '@atlaspack/diagnostic';
 
-export {instrument, instrumentAsync} from './tracer';
+export {tracer, instrument, instrumentAsync} from './tracer';
 
 class Logger {
   logEmitter: ValueEmitter<LogEvent> = new ValueEmitter();
