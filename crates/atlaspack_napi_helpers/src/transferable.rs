@@ -47,11 +47,15 @@ impl<T: Send + Sync + 'static> JsTransferable<T> {
 
   /// Take the value out of Transferable, so it can no longer be accessed
   pub fn take(self) -> napi::Result<T> {
-    let Some(value) = VALUES.lock().remove(&self.id) else {
-      return Err(napi::Error::from_reason(format!(
-        "JsTransferableError::NotExists: id({})",
-        self.id
-      )));
+    let value = {
+      let mut values = VALUES.lock();
+      let Some(value) = values.remove(&self.id) else {
+        return Err(napi::Error::from_reason(format!(
+          "JsTransferableError::NotExists: id({})",
+          self.id
+        )));
+      };
+      value
     };
 
     let Ok(val) = value.downcast::<T>() else {
@@ -75,6 +79,7 @@ impl<T: Send + Sync + 'static> JsTransferable<T> {
   // Get a read-only copy of a Transferable value
   pub fn get(&self) -> napi::Result<JsTransferableRef<T>> {
     let values = VALUES.lock();
+
     let Some(value) = values.get(&self.id) else {
       return Err(napi::Error::from_reason(format!(
         "JsTransferableError::NotExists: id({})",
@@ -92,6 +97,16 @@ impl<T: Send + Sync + 'static> JsTransferable<T> {
 
     Ok(JsTransferableRef(val))
   }
+}
+
+/// Clear all entries from the transferable registry.
+///
+/// This should be called during worker pool shutdown to release any
+/// Arc references that are stored in the global registry. Without this,
+/// Rust-side values would persist in memory even after worker threads
+/// are terminated.
+pub fn clear_transferable_registry() {
+  VALUES.lock().clear();
 }
 
 pub struct JsTransferableRef<T>(Arc<T>);

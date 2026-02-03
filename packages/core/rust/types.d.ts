@@ -92,6 +92,15 @@ export declare function resetMemoryTracking(): void;
 export declare function sampleNativeMemory(): void;
 /** Called on the worker thread to create a reference to the NodeJs worker */
 export declare function newNodejsWorker(worker: object): JsTransferable;
+
+/**
+ * Clear the JsTransferable registry.
+ *
+ * This should be called during worker pool shutdown to release Arc<NodejsWorker>
+ * references that are stored in the global registry.
+ */
+export declare function clearTransferableRegistry(): void;
+
 export interface InlineRequiresOptimizerInput {
   code: string;
   sourceMaps: boolean;

@@ -27,6 +27,12 @@ pub type MapJsReturn<Return> =
 ///
 /// Functions can be called from threads or the main thread, while parameters and return types can
 /// be mapped by the caller.
+///
+/// ## Handle Management
+///
+/// By default, JsCallable wraps a ThreadsafeFunction that keeps the Node.js event loop alive.
+/// Call `unref()` to allow Node.js to exit even if the JsCallable still exists. This is
+/// important for worker threads where the ThreadsafeFunction should not prevent process exit.
 pub struct JsCallable {
   #[cfg(debug_assertions)]
   initial_thread: ThreadId,
@@ -44,7 +50,6 @@ impl std::fmt::Debug for JsCallable {
 
 impl JsCallable {
   pub fn new(callback: JsFunction, fn_name: String) -> napi::Result<Self> {
-    // Store the threadsafe function on the struct
     let tsfn: ThreadsafeFunction<MapJsParams, ErrorStrategy::Fatal> = callback
       .create_threadsafe_function(0, |ctx: ThreadSafeCallContext<MapJsParams>| {
         Ok((ctx.value)(&ctx.env)?)
@@ -75,9 +80,17 @@ impl JsCallable {
     Self::new(jsfn, method_name.to_string())
   }
 
+  /// Unref this JsCallable, allowing Node.js to exit even if it still exists.
+  /// Consumes self and returns the unref'd version.
   pub fn into_unref(mut self, env: &Env) -> napi::Result<Self> {
     self.threadsafe_function.unref(env)?;
     Ok(self)
+  }
+
+  /// Unref this JsCallable in place, allowing Node.js to exit even if it still exists.
+  pub fn unref(&mut self, env: &Env) -> napi::Result<()> {
+    self.threadsafe_function.unref(env)?;
+    Ok(())
   }
 
   /// Call JavaScript function and handle the return value
