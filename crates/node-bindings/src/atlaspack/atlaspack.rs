@@ -213,7 +213,6 @@ pub fn atlaspack_napi_respond_to_fs_events(
   Ok(promise)
 }
 
-#[tracing::instrument(level = "info", skip_all)]
 #[napi]
 pub fn atlaspack_napi_build_bundle_graph(
   env: Env,
