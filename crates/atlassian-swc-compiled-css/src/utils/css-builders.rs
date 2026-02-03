@@ -901,13 +901,52 @@ fn logical_items_from_conditional_expression(
         })
       }
       _ => {
+        let test_clone = (*node.test).clone();
         let expression = match branch {
-          ConditionalBranch::Consequent => (*node.test).clone(),
-          ConditionalBranch::Alternate => Expr::Unary(UnaryExpr {
-            span: node.test.span(),
-            op: UnaryOp::Bang,
-            arg: Box::new((*node.test).clone()),
-          }),
+          ConditionalBranch::Consequent => test_clone,
+          ConditionalBranch::Alternate => {
+            // For the alternate branch, we need to negate the test.
+            // Instead of using !(test), we try to invert the comparison operator
+            // if the test is a binary comparison. This produces cleaner output
+            // and avoids issues with SWC's optimizer incorrectly simplifying
+            // !(a === b) expressions.
+            //
+            // Examples:
+            //   a === b  ->  a !== b
+            //   a !== b  ->  a === b
+            //   Otherwise: !(test)
+            if let Expr::Bin(bin_expr) = &test_clone {
+              let inverted_op = match bin_expr.op {
+                BinaryOp::EqEqEq => Some(BinaryOp::NotEqEq),
+                BinaryOp::NotEqEq => Some(BinaryOp::EqEqEq),
+                BinaryOp::EqEq => Some(BinaryOp::NotEq),
+                BinaryOp::NotEq => Some(BinaryOp::EqEq),
+                _ => None,
+              };
+              if let Some(new_op) = inverted_op {
+                Expr::Bin(BinExpr {
+                  span: DUMMY_SP,
+                  op: new_op,
+                  left: bin_expr.left.clone(),
+                  right: bin_expr.right.clone(),
+                })
+              } else {
+                // For other binary operators, fall back to negation
+                Expr::Unary(UnaryExpr {
+                  span: DUMMY_SP,
+                  op: UnaryOp::Bang,
+                  arg: Box::new(test_clone),
+                })
+              }
+            } else {
+              // For non-binary expressions, use negation
+              Expr::Unary(UnaryExpr {
+                span: DUMMY_SP,
+                op: UnaryOp::Bang,
+                arg: Box::new(test_clone),
+              })
+            }
+          }
         };
 
         CssItem::Logical(LogicalCssItem {
@@ -2986,8 +3025,8 @@ mod tests {
   use swc_core::common::sync::Lrc;
   use swc_core::common::{DUMMY_SP, FileName, SourceMap, SyntaxContext};
   use swc_core::ecma::ast::{
-    CallExpr, Callee, Expr, ExprOrSpread, Ident, KeyValueProp, ObjectLit, Prop, PropName,
-    PropOrSpread,
+    BinExpr, BinaryOp, CallExpr, Callee, CondExpr, Expr, ExprOrSpread, Ident, KeyValueProp, Lit,
+    Number, ObjectLit, Prop, PropName, PropOrSpread, Str,
   };
   use swc_core::ecma::parser::{Parser, StringInput, Syntax, lexer::Lexer};
 
@@ -4250,5 +4289,234 @@ mod tests {
     assert_eq!(normalize_content_value(r#""hello""#), r#""hello""#);
     assert_eq!(normalize_content_value("plain"), r#""plain""#);
     assert_eq!(normalize_content_value(""), r#""""#);
+  }
+
+  #[test]
+  fn logical_items_inverts_strict_equality_for_alternate_branch() {
+    // Test that for alternate branches, === is converted to !== instead of using !(===)
+    // This avoids issues with SWC's expr_simplifier incorrectly simplifying !(a === b)
+    use super::{ConditionalBranch, logical_items_from_conditional_expression};
+
+    let test_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::EqEqEq,
+      left: Box::new(ident_expr("widthMode")),
+      right: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "wide".into(),
+        raw: None,
+      }))),
+    });
+
+    let cond_expr = CondExpr {
+      span: DUMMY_SP,
+      test: Box::new(test_expr),
+      cons: Box::new(ident_expr("undefined")),
+      alt: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "216px".into(),
+        raw: None,
+      }))),
+    };
+
+    let css_item = CssItem::Unconditional(UnconditionalCssItem {
+      css: "width:216px;".into(),
+    });
+
+    let result = logical_items_from_conditional_expression(
+      vec![css_item],
+      &cond_expr,
+      ConditionalBranch::Alternate,
+    );
+
+    assert_eq!(result.len(), 1);
+    match &result[0] {
+      CssItem::Logical(logical) => {
+        // The expression should be a binary !== operation, not a unary !
+        match &logical.expression {
+          Expr::Bin(bin) => {
+            assert_eq!(
+              bin.op,
+              BinaryOp::NotEqEq,
+              "Expected !== but got {:?}",
+              bin.op
+            );
+          }
+          Expr::Unary(_) => {
+            panic!("Expected binary !== expression, got unary expression");
+          }
+          other => panic!("Expected binary expression, got {:?}", other),
+        }
+        assert_eq!(logical.operator, LogicalOperator::And);
+        assert_eq!(logical.css, "width:216px;");
+      }
+      other => panic!("Expected Logical CssItem, got {:?}", other),
+    }
+  }
+
+  #[test]
+  fn logical_items_inverts_strict_inequality_for_alternate_branch() {
+    // Test that !== is converted to === for alternate branches
+    use super::{ConditionalBranch, logical_items_from_conditional_expression};
+
+    let test_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::NotEqEq,
+      left: Box::new(ident_expr("widthMode")),
+      right: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "wide".into(),
+        raw: None,
+      }))),
+    });
+
+    let cond_expr = CondExpr {
+      span: DUMMY_SP,
+      test: Box::new(test_expr),
+      cons: Box::new(ident_expr("undefined")),
+      alt: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "center".into(),
+        raw: None,
+      }))),
+    };
+
+    let css_item = CssItem::Unconditional(UnconditionalCssItem {
+      css: "align-items:center;".into(),
+    });
+
+    let result = logical_items_from_conditional_expression(
+      vec![css_item],
+      &cond_expr,
+      ConditionalBranch::Alternate,
+    );
+
+    assert_eq!(result.len(), 1);
+    match &result[0] {
+      CssItem::Logical(logical) => match &logical.expression {
+        Expr::Bin(bin) => {
+          assert_eq!(
+            bin.op,
+            BinaryOp::EqEqEq,
+            "Expected === but got {:?}",
+            bin.op
+          );
+        }
+        other => panic!("Expected binary expression, got {:?}", other),
+      },
+      other => panic!("Expected Logical CssItem, got {:?}", other),
+    }
+  }
+
+  #[test]
+  fn logical_items_uses_negation_for_non_equality_operators() {
+    // Test that for non-equality binary operators (like <, >, etc.), we fall back to negation
+    use super::{ConditionalBranch, logical_items_from_conditional_expression};
+
+    let test_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::Lt, // Less than - can't be inverted to something simpler
+      left: Box::new(ident_expr("count")),
+      right: Box::new(Expr::Lit(Lit::Num(Number {
+        span: DUMMY_SP,
+        value: 10.0,
+        raw: None,
+      }))),
+    });
+
+    let cond_expr = CondExpr {
+      span: DUMMY_SP,
+      test: Box::new(test_expr),
+      cons: Box::new(ident_expr("undefined")),
+      alt: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "red".into(),
+        raw: None,
+      }))),
+    };
+
+    let css_item = CssItem::Unconditional(UnconditionalCssItem {
+      css: "color:red;".into(),
+    });
+
+    let result = logical_items_from_conditional_expression(
+      vec![css_item],
+      &cond_expr,
+      ConditionalBranch::Alternate,
+    );
+
+    assert_eq!(result.len(), 1);
+    match &result[0] {
+      CssItem::Logical(logical) => {
+        // For non-equality operators, we should get a unary ! expression
+        match &logical.expression {
+          Expr::Unary(unary) => {
+            assert_eq!(unary.op, swc_core::ecma::ast::UnaryOp::Bang);
+          }
+          other => panic!(
+            "Expected unary expression for non-equality operator, got {:?}",
+            other
+          ),
+        }
+      }
+      other => panic!("Expected Logical CssItem, got {:?}", other),
+    }
+  }
+
+  #[test]
+  fn logical_items_preserves_test_for_consequent_branch() {
+    // Test that for consequent branches, the test expression is preserved as-is
+    use super::{ConditionalBranch, logical_items_from_conditional_expression};
+
+    let test_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::EqEqEq,
+      left: Box::new(ident_expr("widthMode")),
+      right: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "wide".into(),
+        raw: None,
+      }))),
+    });
+
+    let cond_expr = CondExpr {
+      span: DUMMY_SP,
+      test: Box::new(test_expr),
+      cons: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "300px".into(),
+        raw: None,
+      }))),
+      alt: Box::new(ident_expr("undefined")),
+    };
+
+    let css_item = CssItem::Unconditional(UnconditionalCssItem {
+      css: "width:300px;".into(),
+    });
+
+    let result = logical_items_from_conditional_expression(
+      vec![css_item],
+      &cond_expr,
+      ConditionalBranch::Consequent,
+    );
+
+    assert_eq!(result.len(), 1);
+    match &result[0] {
+      CssItem::Logical(logical) => {
+        // The expression should preserve the === test
+        match &logical.expression {
+          Expr::Bin(bin) => {
+            assert_eq!(
+              bin.op,
+              BinaryOp::EqEqEq,
+              "Expected === for consequent branch but got {:?}",
+              bin.op
+            );
+          }
+          other => panic!("Expected binary expression for consequent, got {:?}", other),
+        }
+      }
+      other => panic!("Expected Logical CssItem, got {:?}", other),
+    }
   }
 }
