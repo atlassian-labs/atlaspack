@@ -45,7 +45,7 @@ pub struct CompiledCssInJsConfigPlugin {
   pub config_path: Option<String>,
   pub import_react: Option<bool>,
   pub nonce: Option<String>,
-  pub import_sources: Option<Vec<String>>,
+  pub import_sources: Vec<String>,
   pub optimize_css: Option<bool>,
   pub extensions: Option<Vec<String>>,
   pub add_component_name: Option<bool>,
@@ -520,18 +520,18 @@ pub fn apply_compiled_css_in_js_plugin(
 fn config_to_plugin_options(
   config: &atlassian_swc_compiled_css::CompiledCssInJsTransformConfig,
 ) -> atlassian_swc_compiled_css::PluginOptions {
-  // Ensure @compiled/react is in import_sources
-  let mut import_sources = config.import_sources.clone();
-  if !import_sources.contains(&"@compiled/react".to_string()) {
-    import_sources.push("@compiled/react".to_string());
-  }
+  let import_sources = atlassian_swc_compiled_css::DEFAULT_IMPORT_SOURCES
+    .iter()
+    .map(|s| s.to_string())
+    .chain(config.import_sources.clone())
+    .collect();
 
   atlassian_swc_compiled_css::PluginOptions {
     cache: None,
     max_size: None,
     import_react: Some(config.import_react),
     nonce: config.nonce.clone(),
-    import_sources: Some(import_sources),
+    import_sources,
     on_included_files: None,
     optimize_css: Some(config.optimize_css),
     resolver: None,
@@ -569,7 +569,7 @@ mod tests {
         unsafe_skip_pattern: None,
         import_react: Some(true),
         nonce: None,
-        import_sources: Some(vec!["@compiled/react".into(), "@atlaskit/css".into()]),
+        import_sources: vec!["@compiled/react".into(), "@atlaskit/css".into()],
         optimize_css: Some(true),
         extensions: None,
         add_component_name: Some(false),
@@ -2952,7 +2952,7 @@ export function CompassNotProvisionedEmptyState({ onCompassSignup }: Props) {
 
     let code = indoc! {r#"
       import { css } from '@compiled/react';
-      
+
       const complexStyles = css({
         '@media (max-width: 768px)': {
           color: 'blue',
@@ -2965,7 +2965,7 @@ export function CompassNotProvisionedEmptyState({ onCompassSignup }: Props) {
           display: 'block',
         }
       });
-      
+
       export const ComplexComponent = () => (
         <div css={complexStyles}>Complex Styles</div>
       );

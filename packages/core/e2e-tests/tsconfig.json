@@ -19,6 +19,9 @@
     },
     {
       "path": "../rust/tsconfig.json"
+    },
+    {
+      "path": "../../transformers/compiled-external/tsconfig.json"
     }
   ]
 }

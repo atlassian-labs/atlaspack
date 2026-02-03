@@ -14,13 +14,16 @@ import type {
   PluginOptions as BabelStripRuntimePluginOptions,
   BabelFileMetadata,
 } from '@compiled/babel-plugin-strip-runtime';
-import {DEFAULT_IMPORT_SOURCES, toBoolean} from '@compiled/utils';
 import {Transformer} from '@atlaspack/plugin';
 import SourceMap from '@atlaspack/source-map';
 import {relativeUrl} from '@atlaspack/utils';
 
 import type {CompiledTransformerOpts} from './types';
-import {createDefaultResolver} from './utils';
+import {
+  createDefaultResolver,
+  DEFAULT_IMPORT_SOURCES,
+  toBoolean,
+} from './utils';
 import {BuildMode} from '@atlaspack/types';
 import CompiledBabelPlugin from '@compiled/babel-plugin';
 import CompiledBabelPluginStripRuntime from '@compiled/babel-plugin-strip-runtime';
@@ -63,6 +66,7 @@ export default new Transformer<Config>({
       extract: false,
       importReact: true,
       ssr: false,
+      importSources: DEFAULT_IMPORT_SOURCES,
     };
 
     if (conf) {
@@ -94,12 +98,12 @@ export default new Transformer<Config>({
       }
 
       Object.assign(contents, conf.contents);
-    }
 
-    let importSourceMatches = [
-      ...DEFAULT_IMPORT_SOURCES,
-      ...(contents.importSources || []),
-    ];
+      contents.importSources = [
+        ...DEFAULT_IMPORT_SOURCES,
+        ...(contents.importSources ?? []),
+      ];
+    }
 
     return {
       config: {
@@ -108,7 +112,7 @@ export default new Transformer<Config>({
         projectRoot: options.projectRoot,
       },
       conditions: {
-        codeMatch: importSourceMatches,
+        codeMatch: contents.importSources,
       },
       env: [
         // TODO revisit this list, since we may have added variables in here that were actually enumarated rather than accessed directly
@@ -155,10 +159,9 @@ export default new Transformer<Config>({
     const code = await asset.getCode();
     if (
       // If neither Compiled (default) nor any of the additional import sources are found in the code, we bail out.
-      [
-        ...DEFAULT_IMPORT_SOURCES,
-        ...(config.compiledConfig.importSources || []),
-      ].every((importSource) => !code.includes(importSource))
+      config.compiledConfig.importSources.every(
+        (importSource) => !code.includes(importSource),
+      )
     ) {
       // We only want to parse files that are actually using Compiled.
       // For everything else we bail out.
@@ -188,6 +191,7 @@ export default new Transformer<Config>({
           CompiledBabelPlugin,
           {
             ...config,
+            importSources: config.compiledConfig.importSources,
             classNameCompressionMap:
               config.compiledConfig.extract &&
               config.compiledConfig.classNameCompressionMap,

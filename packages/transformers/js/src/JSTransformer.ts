@@ -374,6 +374,8 @@ export async function loadCompiledCssInJsConfig(
   config: Config,
   options: PluginOptions,
 ): Promise<CompiledCssInJsConfigPlugin> {
+  const DEFAULT_IMPORT_SOURCES = ['@compiled/react', '@atlaskit/css'];
+
   const conf = await config.getConfigFrom<CompiledCssInJsConfigPlugin>(
     join(options.projectRoot, 'index'),
     ['.compiledcssrc', '.compiledcssrc.json'],
@@ -383,17 +385,13 @@ export async function loadCompiledCssInJsConfig(
   );
 
   const contents: CompiledCssInJsConfigPlugin = {
-    configPath: conf?.filePath,
-    importSources: ['@compiled/react', '@atlaskit/css'],
+    ...conf?.contents,
+    importSources: [
+      ...DEFAULT_IMPORT_SOURCES,
+      ...(conf?.contents.importSources ?? []),
+    ],
+    extract: conf?.contents.extract && options.mode !== 'development',
   };
-
-  Object.assign(contents, conf?.contents);
-
-  if (!contents.importSources?.includes('@compiled/react')) {
-    contents.importSources?.push('@compiled/react');
-  }
-
-  contents.extract = contents.extract && options.mode !== 'development';
 
   return contents;
 }
@@ -596,8 +594,8 @@ export default new Transformer({
       enableReactAsyncImportLift,
       reactAsyncLiftByDefault,
       reactAsyncLiftReportLevel,
-      tokensConfig: tokensConfig,
-      compiledCssInJsConfig: compiledCssInJsConfig,
+      tokensConfig,
+      compiledCssInJsConfig,
     };
   },
   async transform({asset, config, options, logger}) {

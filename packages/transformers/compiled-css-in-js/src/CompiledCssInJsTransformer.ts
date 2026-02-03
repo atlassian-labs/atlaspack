@@ -36,11 +36,9 @@ export default new Transformer({
 
     const code = await asset.getCode();
 
+    // If neither Compiled (default) nor any of the additional import sources are found in the code, we bail out.
     if (
-      config.importSources?.every(
-        (source) =>
-          !code.includes(source) || code.includes(source + '/runtime'),
-      )
+      config.importSources.every((importSource) => !code.includes(importSource))
     ) {
       return [asset];
     }
@@ -239,7 +237,10 @@ export default new Transformer({
     if (config.extract) {
       // Note: we only set styleRules if extract is true, this is because we will duplicate style rules on the client.
       // This will cause undefined behaviour because the style rules will race for specificity based on ordering
-      asset.meta.styleRules = result.styleRules;
+      asset.meta.styleRules = [
+        ...((asset.meta.styleRules as string[]) || []),
+        ...result.styleRules,
+      ];
     }
 
     return [asset];

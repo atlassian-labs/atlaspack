@@ -25,6 +25,7 @@
   "dependencies": {
     "@compiled/react": "^0.18.6",
     "@atlaskit/button": "^23.5.3",
+    "@atlaspack/transformer-compiled-external": "0.2.4",
     "@compiled/parcel-optimizer": "^0.6.4"
   }
 }
