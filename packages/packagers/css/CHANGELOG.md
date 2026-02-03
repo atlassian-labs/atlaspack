@@ -1,5 +1,15 @@
 # @atlaspack/packager-css
 
+## 2.15.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/source-map@3.2.6
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/types-internal@2.22.8
+  - @atlaspack/plugin@2.14.51
+
 ## 2.15.11
 
 ### Patch Changes
