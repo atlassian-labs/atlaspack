@@ -291,7 +291,10 @@ impl<'a> SyncDynamicImport<'a> {
       .filename
       .to_str()
       .zip(self.config.as_ref())
-      .map(|(f, config)| f.ends_with(&config.entrypoint_filepath_suffix))
+      .map(|(f, config)| {
+        f.to_lowercase()
+          .ends_with(&config.entrypoint_filepath_suffix.to_lowercase())
+      })
       .unwrap_or(false)
   }
 
@@ -478,6 +481,41 @@ mod tests {
       |run_test_context: RunTestContext| {
         SyncDynamicImport::new(
           Path::new("/repo/entrypoint.tsx"),
+          run_test_context.unresolved_mark,
+          &config,
+        )
+      },
+    );
+
+    assert_eq!(
+      output_code,
+      indoc! {r#"
+        export const modalEntryPoint = createEntryPoint({
+            root: JSResourceForInteraction(()=>(()=>{
+                    const fileExports = require('./modal.tsx');
+                    return Promise.resolve(fileExports);
+                })())
+        });
+      "#}
+    );
+  }
+
+  #[test]
+  fn test_entrypoint_file_case_insensitive() {
+    let config = get_config();
+    let RunVisitResult { output_code, .. } = run_test_visit(
+      indoc! {r#"
+        export const modalEntryPoint = createEntryPoint({
+          root: JSResourceForInteraction(() =>
+            import(
+              /* webpackChunkName: "async-modal-entrypoint" */ './modal.tsx'
+            ),
+          ),
+        });
+      "#},
+      |run_test_context: RunTestContext| {
+        SyncDynamicImport::new(
+          Path::new("/repo/modalEntrypoint.tsx"),
           run_test_context.unresolved_mark,
           &config,
         )
