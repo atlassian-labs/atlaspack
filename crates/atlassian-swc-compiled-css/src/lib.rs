@@ -6,6 +6,7 @@ pub mod errors;
 pub mod migration_hash;
 
 pub use config::CompiledCssInJsTransformConfig;
+pub use constants::DEFAULT_IMPORT_SOURCES;
 
 #[path = "babel-plugin.rs"]
 mod babel_plugin;
