@@ -231,7 +231,7 @@ pub fn atlaspack_napi_build_bundle_graph(
     move || {
       let result = {
         let atlaspack = atlaspack_ref.write();
-        atlaspack.build_bundle_graph_with_asset_graph()
+        atlaspack.build_bundle_graph()
       };
 
       let mut commit_deferred_opt = Some(second_deferred);

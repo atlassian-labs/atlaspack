@@ -251,23 +251,8 @@ impl Atlaspack {
     Ok(())
   }
 
-  /// Build the bundle graph from the asset graph.
-  ///
-  /// This method first builds the asset graph, then runs the bundling request
-  /// to create the bundle graph.
   #[tracing::instrument(level = "info", skip_all)]
-  pub fn build_bundle_graph(&self) -> anyhow::Result<BundleGraphRequestOutput> {
-    let (_asset_graph, bundle_delta, _had_previous_graph) =
-      self.build_bundle_graph_with_asset_graph()?;
-    Ok(bundle_delta)
-  }
-
-  /// Build the asset graph and bundle graph together.
-  ///
-  /// This is used by the JS `BundleGraphRequestRust` so it can construct a full bundle graph
-  /// from scratch (without running a separate asset graph request in JS).
-  #[tracing::instrument(level = "info", skip_all)]
-  pub fn build_bundle_graph_with_asset_graph(
+  pub fn build_bundle_graph(
     &self,
   ) -> anyhow::Result<(Arc<AssetGraph>, BundleGraphRequestOutput, bool)> {
     // First, build the asset graph
