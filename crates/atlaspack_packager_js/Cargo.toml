@@ -1,0 +1,17 @@
+[package]
+name = "atlaspack_packager_js"
+version = "0.1.0"
+edition = { workspace = true }
+description = "JavaScript packager for the Atlaspack Bundler"
+
+[lints]
+workspace = true
+
+[dependencies]
+atlaspack_core = { path = "../atlaspack_core" }
+lmdb-js-lite = { path = "../lmdb-js-lite" }
+anyhow = { workspace = true }
+parking_lot = { workspace = true }
+rayon = { workspace = true }
+regex = { workspace = true }
+tracing = { workspace = true }
