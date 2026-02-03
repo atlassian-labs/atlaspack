@@ -2129,11 +2129,14 @@ where
           let result = if template.exprs.len() == 1 {
             if let Some(first_expr) = template.exprs.first() {
               if let Expr::Arrow(arrow) = first_expr.as_ref() {
-                if matches!(
+                // Check if the body is a conditional expression, stripping parentheses first
+                // to handle cases like: `minHeight: \`${(props) => (props.isLoading ? '0' : '200px')}\``
+                let is_conditional_body = matches!(
                     arrow.body.as_ref(),
                     BlockStmtOrExpr::Expr(body)
-                        if matches!(**body, Expr::Cond(_))
-                ) {
+                        if matches!(strip_parentheses_expr(body), Expr::Cond(_))
+                );
+                if is_conditional_body {
                   let mut optimized = template.clone();
                   recompose_template_literal(
                     &mut optimized,
@@ -3163,9 +3166,6 @@ mod tests {
       other => panic!("expected sheet css, found {other:?}"),
     };
     let normalized: String = sheet.chars().filter(|ch| !ch.is_whitespace()).collect();
-    if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-      eprintln!("[keyframes.test] {}", normalized);
-    }
     assert!(normalized.contains("0%{background:red;transform:rotate(0deg);}"));
     assert!(normalized.contains("to{background:red;transform:rotate(360deg);}"));
   }
@@ -3359,6 +3359,46 @@ mod tests {
         assert_eq!(unconditional.css, ";");
       }
       other => panic!("expected trailing unconditional item, found {other:?}"),
+    }
+  }
+
+  #[test]
+  fn extract_object_expression_builds_template_literal_with_parenthesized_conditional() {
+    // Tests the case where the conditional expression is wrapped in parentheses:
+    // minHeight: `${(props) => (props.isLoading ? '0' : '200px')}`
+    let metadata = create_metadata();
+    let object =
+      parse_object_literal("({ minHeight: `${(props) => (props.isLoading ? '0' : '200px')}` })");
+    let mut build_css = |expr: &Expr, meta: &Metadata| super::build_css_internal(expr, meta);
+
+    let output = super::extract_object_expression_with_builder(&object, &metadata, &mut build_css);
+
+    assert!(
+      output.variables.is_empty(),
+      "expected no variables for parenthesized conditional, found {:?}",
+      output.variables
+    );
+
+    // Should have a conditional CSS item, not a CSS variable
+    let conditional = output
+      .css
+      .iter()
+      .find_map(|item| match item {
+        CssItem::Conditional(cond) => Some(cond),
+        _ => None,
+      })
+      .expect("expected conditional css item for parenthesized conditional");
+
+    if let CssItem::Unconditional(unconditional) = conditional.consequent.as_ref() {
+      assert_eq!(unconditional.css, "min-height:0");
+    } else {
+      panic!("expected unconditional consequent");
+    }
+
+    if let CssItem::Unconditional(unconditional) = conditional.alternate.as_ref() {
+      assert_eq!(unconditional.css, "min-height:200px");
+    } else {
+      panic!("expected unconditional alternate");
     }
   }
 

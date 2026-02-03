@@ -7,6 +7,98 @@ use std::str::FromStr;
 
 static CALC_VALUE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^calc\(\S+\)$").unwrap());
 
+/// Transform a CSS value for hash computation, applying gradient minification.
+/// This mirrors the minify_gradients PostCSS plugin behavior for hash consistency.
+/// IMPORTANT: This function preserves whitespace (newlines, tabs) because Babel's
+/// cssnano runs BEFORE atomicify, and whitespace normalization runs AFTER atomicify.
+/// The hash must be computed from the value with preserved whitespace.
+pub fn transform_value_for_hash(value: &str) -> String {
+  let normalized = value.to_ascii_lowercase();
+  if !normalized.contains("gradient") {
+    return value.to_string();
+  }
+  // Skip values with var() or env() as we don't want to transform those
+  if normalized.contains("var(") || normalized.contains("env(") {
+    return value.to_string();
+  }
+
+  let mut parsed = vp::parse(value);
+  let mut changed = false;
+
+  vp::walk(
+    &mut parsed.nodes[..],
+    &mut |n| {
+      if let vp::Node::Function {
+        value: fname,
+        nodes,
+        ..
+      } = n
+      {
+        let name = fname.to_ascii_lowercase();
+        if matches!(
+          name.as_str(),
+          "linear-gradient"
+            | "repeating-linear-gradient"
+            | "-webkit-linear-gradient"
+            | "-webkit-repeating-linear-gradient"
+        ) {
+          let arg_indices = split_args_indices(nodes);
+
+          // Only process final 100% removal - preserve all other whitespace
+          if let Some(last_arg_idx) = arg_indices.last() {
+            if last_arg_idx.len() >= 2 {
+              // Find the last Word node (the stop value)
+              let stop_i = last_arg_idx
+                .iter()
+                .rev()
+                .copied()
+                .find(|&i| matches!(&nodes[i], vp::Node::Word { .. }));
+
+              if let Some(stop_i) = stop_i {
+                if let vp::Node::Word { value: stop_val } = &nodes[stop_i] {
+                  if stop_val == "100%" {
+                    // Find the space before the 100%
+                    let mid_i = last_arg_idx
+                      .iter()
+                      .position(|&i| i == stop_i)
+                      .and_then(|pos| {
+                        if pos > 0 {
+                          Some(last_arg_idx[pos - 1])
+                        } else {
+                          None
+                        }
+                      });
+
+                    // Clear the space before 100%
+                    if let Some(mid_i) = mid_i {
+                      if let vp::Node::Space { value } = &mut nodes[mid_i] {
+                        *value = String::new();
+                      }
+                    }
+                    // Clear the 100%
+                    if let vp::Node::Word { value } = &mut nodes[stop_i] {
+                      *value = String::new();
+                    }
+                    changed = true;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      true
+    },
+    false,
+  );
+
+  if changed {
+    vp::stringify(&parsed.nodes)
+  } else {
+    value.to_string()
+  }
+}
+
 fn split_args_indices(nodes: &Vec<vp::Node>) -> Vec<Vec<usize>> {
   let mut args: Vec<Vec<usize>> = vec![Vec::new()];
   let mut depth = 0i32;
@@ -119,6 +211,8 @@ fn normalize_gradient_spacing(nodes: &mut Vec<vp::Node>) -> bool {
         }
       }
 
+      // Normalize spaces after commas: collapse multiple spaces to a single space
+      // but PRESERVE ONE space (cssnano postcss-minify-gradients behavior)
       let had_space_after = matches!(nodes.get(idx + 1), Some(vp::Node::Space { .. }));
       while idx + 1 < nodes.len() {
         if matches!(nodes.get(idx + 1), Some(vp::Node::Space { .. })) {
@@ -128,7 +222,7 @@ fn normalize_gradient_spacing(nodes: &mut Vec<vp::Node>) -> bool {
           break;
         }
       }
-
+      // Re-insert a single space if there was one originally
       if had_space_after && idx + 1 < nodes.len() {
         nodes.insert(
           idx + 1,
@@ -136,7 +230,6 @@ fn normalize_gradient_spacing(nodes: &mut Vec<vp::Node>) -> bool {
             value: " ".to_string(),
           },
         );
-        changed = true;
         idx += 1;
       }
     }
@@ -144,6 +237,25 @@ fn normalize_gradient_spacing(nodes: &mut Vec<vp::Node>) -> bool {
   }
 
   changed
+}
+
+/// Count leading space nodes in a Vec of nodes.
+fn count_leading_spaces(nodes: &[vp::Node]) -> usize {
+  nodes
+    .iter()
+    .take_while(|n| matches!(n, vp::Node::Space { .. }))
+    .count()
+}
+
+/// Map gradient direction keyword to degrees.
+fn direction_to_degrees(direction: &str) -> Option<&'static str> {
+  match direction.to_ascii_lowercase().as_str() {
+    "top" => Some("0deg"),
+    "right" => Some("90deg"),
+    "bottom" => Some("180deg"),
+    "left" => Some("270deg"),
+    _ => None,
+  }
 }
 
 pub fn plugin() -> pc::BuiltPlugin {
@@ -154,63 +266,65 @@ pub fn plugin() -> pc::BuiltPlugin {
             if normalized.contains("var(") || normalized.contains("env(") { return Ok(()); }
             if !normalized.contains("gradient") { return Ok(()); }
 
+
             let mut parsed = vp::parse(&value);
             let mut changed = false;
             vp::walk(&mut parsed.nodes[..], &mut |n| {
                 if let vp::Node::Function { value: fname, nodes, .. } = n {
                     let name = fname.to_ascii_lowercase();
                     if matches!(name.as_str(), "linear-gradient"|"repeating-linear-gradient"|"-webkit-linear-gradient"|"-webkit-repeating-linear-gradient") {
-                        let mut args = get_arguments(&vp::ParsedValue { nodes: nodes.clone() });
-                        if let Some(first_tokens) = args.get_mut(0) {
-                            if !first_tokens.is_empty() {
-                                if let vp::Node::Word { value: ref mut first } = first_tokens[0] {
-                                    if first.to_ascii_lowercase() == "to" && first_tokens.len() == 3 {
-                                        // slice(2)
-                                        nodes.drain(0..2);
-                                        if let Some(vp::Node::Word { value: side }) = nodes.get_mut(0) {
-                                            let lv = side.to_ascii_lowercase();
-                                            let mapped = match lv.as_str() {
-                                                "top" => "0deg".to_string(),
-                                                "right" => "90deg".to_string(),
-                                                "bottom" => "180deg".to_string(),
-                                                "left" => "270deg".to_string(),
-                                                _ => lv.clone(),
-                                            };
-                                            *side = mapped;
-                                            changed = true;
+                        // Handle "to <direction>" syntax and convert to degrees.
+                        // The nodes may have leading whitespace that we need to account for.
+                        let leading_spaces = count_leading_spaces(nodes);
+                        let args = get_arguments(&vp::ParsedValue { nodes: nodes.clone() });
+                        if let Some(first_tokens) = args.first() {
+                            // first_tokens has leading spaces stripped by get_arguments,
+                            // so we check for [Word("to"), Space, Word(direction)]
+                            if first_tokens.len() == 3 {
+                                if let vp::Node::Word { value: first } = &first_tokens[0] {
+                                    if first.eq_ignore_ascii_case("to") {
+                                        if let vp::Node::Word { value: direction } = &first_tokens[2] {
+                                            if let Some(degrees) = direction_to_degrees(direction) {
+                                                // Drain: leading_spaces + "to" + space = leading_spaces + 2
+                                                // Then set the first Word node (direction) to degrees
+                                                let drain_count = leading_spaces + 2;
+                                                if nodes.len() > drain_count {
+                                                    nodes.drain(0..drain_count);
+                                                    // Skip any remaining leading space after drain
+                                                    while matches!(nodes.first(), Some(vp::Node::Space { .. })) {
+                                                        nodes.remove(0);
+                                                    }
+                                                    // Now nodes[0] should be the direction keyword
+                                                    if let Some(vp::Node::Word { value: side }) = nodes.get_mut(0) {
+                                                        *side = degrees.to_string();
+                                                        changed = true;
+                                                    }
+                                                }
+                                            }
                                         }
-                                    }
-                                }
-                            }
-                        }
-                        // process color stops
-                        // angle keyword conversion
-                        if nodes.len() >= 3 {
-                            if let vp::Node::Word { value: first } = &nodes[0] {
-                                if first.eq_ignore_ascii_case("to") {
-                                    let side = if let vp::Node::Word { value: s } = &nodes[2] { s.to_ascii_lowercase() } else { String::new() };
-                                    nodes.drain(0..2);
-                                    if let Some(vp::Node::Word { value: v0 }) = nodes.get_mut(0) {
-                                        let mapped = match side.as_str() {
-                                            "top" => "0deg".to_string(),
-                                            "right" => "90deg".to_string(),
-                                            "bottom" => "180deg".to_string(),
-                                            "left" => "270deg".to_string(),
-                                            _ => side.clone(),
-                                        };
-                                        *v0 = mapped;
-                                        changed = true;
                                     }
                                 }
                             }
                         }
                         let arg_indices = split_args_indices(nodes);
                         let mut last_stop: Option<(String,String)> = None;
+                        // Track indices to clear for final 100% removal
+                        let mut final_100_removal: Option<(usize, usize)> = None;
+
                         for (idx, arg_idx) in arg_indices.iter().enumerate() {
                             if arg_idx.len() < 3 { continue; }
                             let is_final = idx == arg_indices.len() - 1;
-                            let stop_i = arg_idx[arg_idx.len()-1];
-                            let mid_i = arg_idx[arg_idx.len()-2];
+
+                            // Find the last Word or Function node (skipping trailing spaces)
+                            let stop_i = arg_idx.iter().rev().copied().find(|&i| {
+                                matches!(&nodes[i], vp::Node::Word { .. } | vp::Node::Function { .. })
+                            }).unwrap_or(arg_idx[arg_idx.len()-1]);
+
+                            // Find the space before stop_i (for mid position)
+                            let mid_i = arg_idx.iter().position(|&i| i == stop_i)
+                                .and_then(|pos| if pos > 0 { Some(arg_idx[pos - 1]) } else { None })
+                                .unwrap_or(arg_idx[arg_idx.len().saturating_sub(2)]);
+
                             let stop_val_s = match &nodes[stop_i] { vp::Node::Word { value } => Some(value.clone()), vp::Node::Function { value, nodes: inner, .. } => Some(format!("{}({})", value, vp::stringify(inner))), _ => None };
                             let this_stop = stop_val_s.as_deref().and_then(|s| unit_of(s));
                             if last_stop.is_none() {
@@ -228,22 +342,22 @@ pub fn plugin() -> pc::BuiltPlugin {
                             }
                             last_stop = this_stop;
                             if is_final {
-                                if mid_i != stop_i {
-                                    let (i1, i2) = if mid_i < stop_i { (mid_i, stop_i) } else { (stop_i, mid_i) };
-                                    let (left, right) = nodes.split_at_mut(i2);
-                                    let left_node = &mut left[i1];
-                                    let right_node = &mut right[0];
-                                    // Map back which is which
-                                    let (mid_node, stop_node) = if mid_i < stop_i { (left_node, right_node) } else { (right_node, left_node) };
-                                    if let vp::Node::Word { value: stop_val } = stop_node {
-                                        if stop_val == "100%" {
-                                            if let vp::Node::Word { value: mid_val } = mid_node { *mid_val = String::new(); }
-                                            *stop_val = String::new();
-                                            changed = true;
-                                        }
+                                // Check if the stop value is "100%" and mark for removal
+                                if let vp::Node::Word { value: stop_val } = &nodes[stop_i] {
+                                    if stop_val == "100%" {
+                                        final_100_removal = Some((mid_i, stop_i));
                                     }
                                 }
                             }
+                        }
+
+                        // Apply 100% removal in a separate pass to avoid borrow issues
+                        if let Some((mid_i, stop_i)) = final_100_removal {
+                            // Clear the space before 100%
+                            if let vp::Node::Space { value } = &mut nodes[mid_i] { *value = String::new(); }
+                            // Clear the 100% value
+                            if let vp::Node::Word { value } = &mut nodes[stop_i] { *value = String::new(); }
+                            changed = true;
                         }
                         if normalize_gradient_spacing(nodes) {
                             changed = true;
@@ -343,5 +457,199 @@ mod tests {
       value.expect("background decl"),
       "linear-gradient(90deg, #4d8ced, #cfe1fd)"
     );
+  }
+
+  #[test]
+  fn converts_to_bottom_to_180deg() {
+    let css = ".a{background: linear-gradient(to bottom, #101214, #0e1624);}";
+    let mut result = pc::Processor::new()
+      .with_plugin(plugin())
+      .process(css)
+      .expect("process css");
+    let output = result.to_css_string().expect("stringify css");
+    let root = pc::parse(&output).expect("parse output");
+    let mut value = None;
+
+    root.walk_decls(|node, _| {
+      if let Some(decl) = as_declaration(&node) {
+        if decl.prop() == "background" {
+          value = Some(decl.value());
+          return false;
+        }
+      }
+      true
+    });
+
+    assert_eq!(
+      value.expect("background decl"),
+      "linear-gradient(180deg, #101214, #0e1624)"
+    );
+  }
+
+  #[test]
+  fn converts_to_top_to_0deg() {
+    let css = ".a{background-image: linear-gradient(to top, #101214, #0e1624);}";
+    let mut result = pc::Processor::new()
+      .with_plugin(plugin())
+      .process(css)
+      .expect("process css");
+    let output = result.to_css_string().expect("stringify css");
+    let root = pc::parse(&output).expect("parse output");
+    let mut value = None;
+
+    root.walk_decls(|node, _| {
+      if let Some(decl) = as_declaration(&node) {
+        if decl.prop() == "background-image" {
+          value = Some(decl.value());
+          return false;
+        }
+      }
+      true
+    });
+
+    assert_eq!(
+      value.expect("background-image decl"),
+      "linear-gradient(0deg, #101214, #0e1624)"
+    );
+  }
+
+  #[test]
+  fn converts_to_bottom_with_extra_spacing() {
+    // This test case has extra spacing like in the real source file
+    let css =
+      ".a{background: linear-gradient( to bottom, #101214, rgba(14, 22, 36, 0) ) no-repeat;}";
+    let mut result = pc::Processor::new()
+      .with_plugin(plugin())
+      .process(css)
+      .expect("process css");
+    let output = result.to_css_string().expect("stringify css");
+    let root = pc::parse(&output).expect("parse output");
+    let mut value = None;
+
+    root.walk_decls(|node, _| {
+      if let Some(decl) = as_declaration(&node) {
+        if decl.prop() == "background" {
+          value = Some(decl.value());
+          return false;
+        }
+      }
+      true
+    });
+
+    // Should convert "to bottom" to "180deg"
+    assert!(
+      value.as_ref().expect("background decl").contains("180deg"),
+      "Expected 180deg but got: {:?}",
+      value
+    );
+  }
+
+  #[test]
+  fn removes_100_percent_from_final_color_stop_without_spacing() {
+    // This is the actual failing case - no spaces after commas
+    let css = ".a{background:linear-gradient(90deg,#0065ff,#0469ff 12%,#bf63f3 24%,#ffa900 48%,#bf63f3 64%,#0469ff 80%,#0065ff 100%);}";
+    let mut result = pc::Processor::new()
+      .with_plugin(plugin())
+      .process(css)
+      .expect("process css");
+    let output = result.to_css_string().expect("stringify css");
+    let root = pc::parse(&output).expect("parse output");
+    let mut value = None;
+
+    root.walk_decls(|node, _| {
+      if let Some(decl) = as_declaration(&node) {
+        if decl.prop() == "background" {
+          value = Some(decl.value());
+          return false;
+        }
+      }
+      true
+    });
+
+    // The 100% should be removed from the final color stop
+    // Expected: linear-gradient(90deg,#0065ff,#0469ff 12%,#bf63f3 24%,#ffa900 48%,#bf63f3 64%,#0469ff 80%,#0065ff)
+    let result = value.expect("background decl");
+    assert!(
+      !result.contains("100%"),
+      "Expected 100%% to be removed from final stop but got: {}",
+      result
+    );
+    // Should end with just the color (no percentage)
+    assert!(
+      result.contains("#0065ff)") || result.ends_with("#0065ff"),
+      "Expected gradient to end with #0065ff without percentage but got: {}",
+      result
+    );
+  }
+
+  #[test]
+  fn removes_100_percent_with_trailing_whitespace() {
+    // This is the exact format from the real build output - CSS with newlines and tabs
+    let css = ".a{background:linear-gradient(90deg,\n\t\t\t#0065ff 0,\n\t\t\t#0469ff 12%,\n\t\t\t#bf63f3 24%,\n\t\t\t#ffa900 48%,\n\t\t\t#bf63f3 64%,\n\t\t\t#0469ff 80%,\n\t\t\t#0065ff 100%\n\t\t\t);}";
+    let mut result = pc::Processor::new()
+      .with_plugin(plugin())
+      .process(css)
+      .expect("process css");
+    let output = result.to_css_string().expect("stringify css");
+    let root = pc::parse(&output).expect("parse output");
+    let mut value = None;
+
+    root.walk_decls(|node, _| {
+      if let Some(decl) = as_declaration(&node) {
+        if decl.prop() == "background" {
+          value = Some(decl.value());
+          return false;
+        }
+      }
+      true
+    });
+
+    let result = value.expect("background decl");
+    assert!(
+      !result.contains("100%"),
+      "Expected 100%% to be removed from final stop but got: {}",
+      result
+    );
+  }
+
+  #[test]
+  fn transform_value_for_hash_removes_100_percent() {
+    let value = "linear-gradient(90deg,#0065ff,#0469ff 12%,#bf63f3 24%,#ffa900 48%,#bf63f3 64%,#0469ff 80%,#0065ff 100%)";
+    let result = super::transform_value_for_hash(value);
+    assert!(
+      !result.contains("100%"),
+      "Expected 100%% to be removed from hash value but got: {}",
+      result
+    );
+    assert!(
+      result.ends_with("#0065ff)"),
+      "Expected result to end with #0065ff) but got: {}",
+      result
+    );
+  }
+
+  #[test]
+  fn transform_value_for_hash_handles_whitespace() {
+    // This test matches Babel's cssnano behavior: 100% is removed but whitespace is preserved
+    let value = "linear-gradient(90deg,\n\t\t\t#0065ff,\n\t\t\t#0469ff 12%,\n\t\t\t#bf63f3 24%,\n\t\t\t#ffa900 48%,\n\t\t\t#bf63f3 64%,\n\t\t\t#0469ff 80%,\n\t\t\t#0065ff 100%\n\t\t\t)";
+    let result = super::transform_value_for_hash(value);
+    assert!(
+      !result.contains("100%"),
+      "Expected 100%% to be removed from hash value with whitespace but got: {}",
+      result
+    );
+    // Whitespace (newlines and tabs) should be preserved for correct hash computation
+    assert!(
+      result.contains("\n\t\t\t"),
+      "Expected whitespace to be preserved but got: {}",
+      result
+    );
+  }
+
+  #[test]
+  fn transform_value_for_hash_preserves_non_gradient_values() {
+    let value = "red";
+    let result = super::transform_value_for_hash(value);
+    assert_eq!(result, "red");
   }
 }

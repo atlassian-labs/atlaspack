@@ -310,7 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { addEnvironment, applyCompiledCssInJsPlugin, applyTokensPlugin, atlaspackNapiBuildAssetGraph, atlaspackNapiCompleteSession, atlaspackNapiCreate, atlaspackNapiLoadBundleGraph, atlaspackNapiPackage, atlaspackNapiRespondToFsEvents, AtlaspackTracer, closeMonitoring, createAssetId, createDependencyId, createEnvironmentId, determineJsxConfiguration, findAncestorFile, findFirstFile, findNodeModule, getAllEnvironments, getAvailableThreads, getEnvironment, getEventsSince, getNativeMemoryStats, getVcsStateSnapshot, Hash, hashBuffer, hashCode, hashString, initializeMonitoring, initTracingSubscriber, isSafeFromJs, Lmdb, LmdbJsLite, newNodejsWorker, optimizeImage, performStringReplacements, resetMemoryTracking, Resolver, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, sampleNativeMemory, setAllEnvironments, SourceMap, transform, transformAsync } = nativeBinding
+const { addEnvironment, applyCompiledCssInJsPlugin, applyTokensPlugin, atlaspackNapiBuildAssetGraph, atlaspackNapiCompleteSession, atlaspackNapiCreate, atlaspackNapiLoadBundleGraph, atlaspackNapiPackage, atlaspackNapiRespondToFsEvents, AtlaspackTracer, closeMonitoring, createAssetId, createDependencyId, createEnvironmentId, determineJsxConfiguration, findAncestorFile, findFirstFile, findNodeModule, getAllEnvironments, getAvailableThreads, getEnvironment, getEventsSince, getNativeMemoryStats, getVcsStateSnapshot, Hash, hashBuffer, hashCode, hashString, initializeMonitoring, isSafeFromJs, Lmdb, newNodejsWorker, optimizeImage, performStringReplacements, resetMemoryTracking, Resolver, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, sampleNativeMemory, setAllEnvironments, SourceMap, transform, transformAsync } = nativeBinding
 
 module.exports.addEnvironment = addEnvironment
 module.exports.applyCompiledCssInJsPlugin = applyCompiledCssInJsPlugin
@@ -341,10 +341,8 @@ module.exports.hashBuffer = hashBuffer
 module.exports.hashCode = hashCode
 module.exports.hashString = hashString
 module.exports.initializeMonitoring = initializeMonitoring
-module.exports.initTracingSubscriber = initTracingSubscriber
 module.exports.isSafeFromJs = isSafeFromJs
 module.exports.Lmdb = Lmdb
-module.exports.LmdbJsLite = LmdbJsLite
 module.exports.newNodejsWorker = newNodejsWorker
 module.exports.optimizeImage = optimizeImage
 module.exports.performStringReplacements = performStringReplacements

@@ -135,6 +135,30 @@ impl AtomicCollector {
   }
 }
 
+/// Properties that need vendor prefixes when inside a vendor-prefixed selector.
+/// For example, `transition` inside `::-moz-range-track` needs `-moz-transition`.
+/// Note: `appearance` is NOT included because Babel/autoprefixer doesn't add vendor
+/// prefixes for `appearance` when inside vendor-prefixed selectors.
+const SELECTOR_PREFIXABLE_PROPERTIES: &[&str] = &["transition", "animation", "transform"];
+
+/// Extract vendor prefix from a selector (e.g., "::-moz-range-track" -> "-moz-").
+/// Returns None if no vendor prefix is found.
+#[cfg(feature = "postcss_engine")]
+fn extract_vendor_prefix_from_selector(selector: &str) -> Option<&'static str> {
+  // Check for common vendor-prefixed pseudo-elements/selectors
+  if selector.contains("::-moz-") || selector.contains(":-moz-") {
+    Some("-moz-")
+  } else if selector.contains("::-webkit-") || selector.contains(":-webkit-") {
+    Some("-webkit-")
+  } else if selector.contains("::-ms-") || selector.contains(":-ms-") {
+    Some("-ms-")
+  } else if selector.contains("::-o-") || selector.contains(":-o-") {
+    Some("-o-")
+  } else {
+    None
+  }
+}
+
 #[cfg(feature = "postcss_engine")]
 fn prefixed_decl_entries(
   autoprefixer: Option<&AutoprefixerData>,
@@ -142,7 +166,23 @@ fn prefixed_decl_entries(
   normalized_value: &str,
   important: bool,
 ) -> Vec<(String, String)> {
+  prefixed_decl_entries_with_selector(autoprefixer, prop, normalized_value, important, None)
+}
+
+/// Generate prefixed declaration entries, optionally considering the selector's vendor prefix.
+/// When a selector contains a vendor prefix (e.g., `::-moz-range-track`), certain properties
+/// like `transition` should also get the corresponding vendor prefix (e.g., `-moz-transition`).
+#[cfg(feature = "postcss_engine")]
+fn prefixed_decl_entries_with_selector(
+  autoprefixer: Option<&AutoprefixerData>,
+  prop: &str,
+  normalized_value: &str,
+  important: bool,
+  selector: Option<&str>,
+) -> Vec<(String, String)> {
   let mut entries: Vec<(String, String)> = Vec::new();
+
+  // First, add any prefixes from autoprefixer based on browserslist
   if let Some(engine) = autoprefixer {
     for PrefixedDecl {
       property,
@@ -155,6 +195,29 @@ fn prefixed_decl_entries(
       entries.push((property, value));
     }
   }
+
+  // Then, add vendor-prefixed property if the selector has a vendor prefix
+  // and this property is one that needs prefixing in such contexts.
+  if let Some(sel) = selector {
+    let prop_lower = prop.to_ascii_lowercase();
+    if SELECTOR_PREFIXABLE_PROPERTIES
+      .iter()
+      .any(|&p| p == prop_lower)
+    {
+      if let Some(vendor_prefix) = extract_vendor_prefix_from_selector(sel) {
+        let prefixed_prop = format!("{}{}", vendor_prefix, prop);
+        // Check if this prefixed property wasn't already added
+        if !entries.iter().any(|(p, _)| p == &prefixed_prop) {
+          let mut value = normalized_value.to_string();
+          if important {
+            value.push_str("!important");
+          }
+          entries.push((prefixed_prop, value));
+        }
+      }
+    }
+  }
+
   let mut base = normalized_value.to_string();
   if important {
     base.push_str("!important");
@@ -1160,6 +1223,8 @@ fn extract_stylesheets_plugin(
   /// Normalizes a value for hash computation, matching Babel's plugin order:
   /// colormin and calc normalization run before atomicify, but whitespace normalization
   /// runs after atomicify.
+  /// NOTE: minify-gradients is NOT applied here because Babel computes the hash
+  /// BEFORE cssnano minification.
   fn normalize_for_hash_seed(value: &str) -> String {
     // Apply colormin transformation
     let after_colormin = minify_color_value(value);
@@ -1380,13 +1445,6 @@ fn extract_stylesheets_plugin(
             },
             |node_ref, _| {
               if let Some(at) = as_at_rule(&node_ref) {
-                if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-                  eprintln!(
-                    "[extract-stylesheets] at='{}' params='{}'",
-                    at.name(),
-                    at.params()
-                  );
-                }
                 let tmp = postcss::ast::nodes::Root::new();
                 tmp.append(at.to_node());
                 if let Ok(mut res) = tmp.to_result() {
@@ -1415,13 +1473,6 @@ fn extract_stylesheets_plugin(
             },
             |node_ref, _| {
               if let Some(at) = as_at_rule(&node_ref) {
-                if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-                  eprintln!(
-                    "[extract-stylesheets] at='{}' params='{}'",
-                    at.name(),
-                    at.params()
-                  );
-                }
                 let tmp = postcss::ast::nodes::Root::new();
                 tmp.append(at.to_node());
                 if let Ok(mut res) = tmp.to_result() {
@@ -1437,6 +1488,18 @@ fn extract_stylesheets_plugin(
       Ok(())
     })
     .build()
+}
+
+/// Properties that should skip colormin transformation (matches cssnano behavior).
+/// This matches the SKIP_PROPERTY_REGEX in colormin/mod.rs.
+#[cfg(feature = "postcss_engine")]
+fn should_skip_colormin(prop: &str) -> bool {
+  let lower = prop.to_ascii_lowercase();
+  lower.starts_with("composes")
+    || lower.starts_with("font")
+    || lower == "src"
+    || lower.starts_with("filter")
+    || lower.starts_with("-webkit-tap-highlight-color")
 }
 
 /// Normalize a value for hashing purposes.
@@ -1465,24 +1528,52 @@ fn normalize_value_for_hash(
       initial_support,
     );
 
-  // Then apply colormin transformation
+  // Then apply colormin transformation (unless property should be skipped)
   let trimmed = after_reduce_initial.trim();
   if trimmed.is_empty() {
     return after_reduce_initial;
   }
-  let colormin_opts = super::plugins::normalize_css_engine::colormin::add_plugin_defaults();
-  let after_colormin =
-    super::plugins::normalize_css_engine::colormin::transform_value(trimmed, &colormin_opts);
-  let mut normalized = if after_colormin.len() < trimmed.len() {
-    after_colormin
-  } else {
+
+  // Skip colormin for certain properties (matches cssnano behavior)
+  let mut normalized = if should_skip_colormin(prop) {
     trimmed.to_string()
+  } else {
+    let colormin_opts = super::plugins::normalize_css_engine::colormin::add_plugin_defaults();
+    let after_colormin =
+      super::plugins::normalize_css_engine::colormin::transform_value(trimmed, &colormin_opts);
+    if after_colormin.len() < trimmed.len() {
+      after_colormin
+    } else {
+      trimmed.to_string()
+    }
   };
 
   // Apply postcss-calc normalization: removes whitespace around * and / in calc()
   // This matches Babel's plugin order where postcss-calc runs before atomicify.
   normalized =
     super::plugins::normalize_css_engine::calc::normalize_calc_value_for_hash(&normalized);
+
+  // Apply minify-gradients transformation: removes 100% from final color stop, etc.
+  // This matches Babel's plugin order where postcss-minify-gradients runs before atomicify.
+  normalized =
+    super::plugins::normalize_css_engine::minify_gradients::transform_value_for_hash(&normalized);
+
+  // Apply normalize-positions transformation for background-position values.
+  // This ensures consistent hashing by normalizing position keywords like
+  // "left center" -> "0" before computing the hash.
+  if prop.to_ascii_lowercase() == "background-position" {
+    let before = normalized.clone();
+    normalized =
+      super::plugins::normalize_css_engine::normalize_positions::transform_value_for_hash(
+        &normalized,
+      );
+    if std::env::var("COMPILED_CLI_TRACE").is_ok() {
+      eprintln!(
+        "[normalize_value_for_hash] background-position: before='{}' after='{}'",
+        before, normalized
+      );
+    }
+  }
 
   // COMPAT: cssnano ordered-values preserves an extra space before negative
   // grid line values (e.g. "1 / -1" -> "1 /  -1") for hashing.
@@ -1745,12 +1836,6 @@ fn atomicify_rules_plugin(
           value_full.push_str("!important");
         }
         value_full = minify_value_whitespace(&value_full);
-        if std::env::var("COMPILED_CSS_TRACE").is_ok() && prop == "box-shadow" {
-          eprintln!(
-            "[atomicify.hash] prop='{}' raw='{}' hash_seed='{}' value='{}'",
-            prop, orig_value, hash_seed, value_full
-          );
-        }
 
         let mut normalized_list: Vec<String> = ctx
           .selectors
@@ -1799,6 +1884,12 @@ fn atomicify_rules_plugin(
             eprintln!(
               "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
               at_label, norm, prop, group_seed, group
+            );
+          }
+          if std::env::var("COMPILED_CLI_TRACE").is_ok() && prop == "background-position" {
+            eprintln!(
+              "[atomicify.value_hash] prop='{}' hash_seed='{}'",
+              prop, hash_seed
             );
           }
           let value_hash = hash(&hash_seed).chars().take(4).collect::<String>();
@@ -1892,20 +1983,22 @@ fn atomicify_rules_plugin(
         let mut normalized_value =
           normalize_value_for_hash(&prop, &raw_value, initial_support, optimize_css);
         normalized_value = minify_value_whitespace(&normalized_value);
-        if std::env::var("COMPILED_CSS_TRACE").is_ok() && prop == "box-shadow" {
-          eprintln!(
-            "[atomicify.hash] prop='{}' raw='{}' hash_seed='{}' value='{}'",
-            prop, raw_value, hash_seed, normalized_value
-          );
-        }
         let autoprefixer_ref = autoprefixer.as_ref().map(|arc| arc.as_ref());
-        let prefixed_entries =
-          prefixed_decl_entries(autoprefixer_ref, &prop, &normalized_value, has_important);
-        let decls = serialize_decl_entries(&prefixed_entries);
 
         let mut normalized_list: indexmap::IndexSet<String> =
           selectors.iter().map(|s| normalized_selector(s)).collect();
         for norm in normalized_list.drain(..) {
+          // Compute prefixed entries per selector, since vendor-prefixed selectors
+          // (like ::-moz-range-track) need corresponding vendor-prefixed properties.
+          let prefixed_entries = prefixed_decl_entries_with_selector(
+            autoprefixer_ref,
+            &prop,
+            &normalized_value,
+            has_important,
+            Some(&norm),
+          );
+          let decls = serialize_decl_entries(&prefixed_entries);
+
           let mut group_seed = String::new();
           if let Some(prefix) = &opts.class_hash_prefix {
             group_seed.push_str(prefix);
@@ -1924,8 +2017,11 @@ fn atomicify_rules_plugin(
               "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
               at_label, norm, prop, group_seed, group
             );
-            if prop == "margin-left" {
-              eprintln!("[atomicify.hash.postcss] value='{}'", hash_seed);
+            if prop == "margin-left" || prop == "background-position" {
+              eprintln!(
+                "[atomicify.hash.postcss.decl] prop='{}' value='{}'",
+                prop, hash_seed
+              );
             }
           }
           let value_hash = hash(&hash_seed).chars().take(4).collect::<String>();
@@ -2017,12 +2113,6 @@ fn atomicify_rules_plugin(
           .cloned()
           .unwrap_or_else(|| vec!["&".to_string()]);
         let mut raw_selector = rule.selector();
-        if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-          eprintln!(
-            "[engine.rule_filter] parent={:?} raw_selector='{}'",
-            parent, raw_selector
-          );
-        }
         if let Some(ph) = &opts.declaration_placeholder {
           if raw_selector.contains(ph) {
             let cleaned = raw_selector.replace(ph, "").trim().to_string();
@@ -2078,12 +2168,6 @@ fn atomicify_rules_plugin(
             let mut value_full =
               normalize_value_for_hash(&prop, &raw_value, initial_support, optimize_css);
             value_full = minify_value_whitespace(&value_full);
-            if std::env::var("COMPILED_CSS_TRACE").is_ok() && prop == "box-shadow" {
-              eprintln!(
-                "[atomicify.rule_exit] prop='{}' raw='{}' hash_seed='{}'",
-                prop, raw_value, hash_seed
-              );
-            }
             let prefixed_entries =
               prefixed_decl_entries(autoprefixer_ref, &prop, &value_full, has_important);
             let decls = serialize_decl_entries(&prefixed_entries);
@@ -2091,6 +2175,17 @@ fn atomicify_rules_plugin(
             let normalized_list: Vec<String> =
               selectors.iter().map(|s| normalized_selector(s)).collect();
             for norm in normalized_list {
+              // Compute prefixed entries per selector, since vendor-prefixed selectors
+              // (like ::-moz-range-track) need corresponding vendor-prefixed properties.
+              let prefixed_entries = prefixed_decl_entries_with_selector(
+                autoprefixer_ref,
+                &prop,
+                &value_full,
+                has_important,
+                Some(&norm),
+              );
+              let decls = serialize_decl_entries(&prefixed_entries);
+
               let mut group_seed = String::new();
               if let Some(prefix) = &opts.class_hash_prefix {
                 group_seed.push_str(prefix);
@@ -2109,6 +2204,12 @@ fn atomicify_rules_plugin(
                   "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
                   at_label, norm, prop, group_seed, group
                 );
+                if prop == "margin-left" || prop == "background-position" {
+                  eprintln!(
+                    "[atomicify.hash.postcss.rule] prop='{}' value='{}'",
+                    prop, hash_seed
+                  );
+                }
               }
               let value_hash = hash(&hash_seed).chars().take(4).collect::<String>();
               let full_class = format!("_{}{}", group, value_hash);
@@ -2160,11 +2261,19 @@ fn atomicify_rules_plugin(
                 let mut normalized_value =
                   normalize_value_for_hash(&prop, &raw_value, initial_support, optimize_css);
                 normalized_value = minify_value_whitespace(&normalized_value);
-                let prefixed_entries =
-                  prefixed_decl_entries(autoprefixer_ref, &prop, &normalized_value, has_important);
-                let decls = serialize_decl_entries(&prefixed_entries);
 
                 for norm in &normalized_list {
+                  // Compute prefixed entries per selector, since vendor-prefixed selectors
+                  // (like ::-moz-range-track) need corresponding vendor-prefixed properties.
+                  let prefixed_entries = prefixed_decl_entries_with_selector(
+                    autoprefixer_ref,
+                    &prop,
+                    &normalized_value,
+                    has_important,
+                    Some(norm),
+                  );
+                  let decls = serialize_decl_entries(&prefixed_entries);
+
                   let mut group_seed = String::new();
                   if let Some(prefix) = &opts.class_hash_prefix {
                     group_seed.push_str(prefix);
@@ -2183,6 +2292,12 @@ fn atomicify_rules_plugin(
                       "[atomicify.group] at='{}' sel='{}' prop='{}' seed='{}' -> {}",
                       at_label, norm, prop, group_seed, group
                     );
+                    if prop == "margin-left" || prop == "background-position" {
+                      eprintln!(
+                        "[atomicify.hash.postcss.nested] prop='{}' value='{}'",
+                        prop, hash_seed
+                      );
+                    }
                   }
                   let value_hash = hash(&hash_seed).chars().take(4).collect::<String>();
                   let full_class = format!("_{}{}", group, value_hash);
@@ -2642,13 +2757,34 @@ pub fn transform_css_via_postcss(
     // Reconstruct merged CSS
     let mut result = String::new();
     for (header, parts) in merged {
-      let mut joined_inner = String::new();
-      for part in parts {
-        // Recursively merge nested at-rules
-        let merged_part = merge_inner_at_rules(&part);
-        joined_inner.push_str(&merged_part);
+      // For @keyframes and similar at-rules, don't merge/concatenate inner content.
+      // These should have identical content if duplicated, so just use the first.
+      let header_lower = header.trim().to_ascii_lowercase();
+      let is_non_mergeable = header_lower.starts_with("@keyframes")
+        || header_lower.starts_with("@-webkit-keyframes")
+        || header_lower.starts_with("@-moz-keyframes")
+        || header_lower.starts_with("@font-face")
+        || header_lower.starts_with("@property")
+        || header_lower.starts_with("@counter-style")
+        || header_lower.starts_with("@color-profile")
+        || header_lower.starts_with("@font-palette-values")
+        || header_lower.starts_with("@page");
+
+      if is_non_mergeable {
+        // Use only the first part (deduplicate)
+        if let Some(first_part) = parts.first() {
+          let merged_part = merge_inner_at_rules(first_part);
+          result.push_str(&format!("{}{{{}}}", header, merged_part));
+        }
+      } else {
+        let mut joined_inner = String::new();
+        for part in parts {
+          // Recursively merge nested at-rules
+          let merged_part = merge_inner_at_rules(&part);
+          joined_inner.push_str(&merged_part);
+        }
+        result.push_str(&format!("{}{{{}}}", header, joined_inner));
       }
-      result.push_str(&format!("{}{{{}}}", header, joined_inner));
     }
     result
   }
@@ -2664,13 +2800,35 @@ pub fn transform_css_via_postcss(
         let key = format!("{}|{}", grouping_path_key(&info.path), header);
         if produced.insert(key.clone()) {
           if let Some((header, parts)) = group_map.get(&key) {
-            let mut joined = String::new();
-            for part in parts {
-              joined.push_str(part);
+            // For @keyframes, @font-face, @property, etc., don't merge/concatenate inner content.
+            // These at-rules should have identical content if duplicated, so just use the first.
+            let header_lower = header.trim().to_ascii_lowercase();
+            let is_non_mergeable = header_lower.starts_with("@keyframes")
+              || header_lower.starts_with("@-webkit-keyframes")
+              || header_lower.starts_with("@-moz-keyframes")
+              || header_lower.starts_with("@font-face")
+              || header_lower.starts_with("@property")
+              || header_lower.starts_with("@counter-style")
+              || header_lower.starts_with("@color-profile")
+              || header_lower.starts_with("@font-palette-values")
+              || header_lower.starts_with("@page");
+
+            if is_non_mergeable {
+              // Use only the first part (deduplicate identical at-rules)
+              if let Some(first_part) = parts.first() {
+                sheets.push(format!("{}{{{}}}", header, first_part));
+              } else {
+                sheets.push(info.text);
+              }
+            } else {
+              let mut joined = String::new();
+              for part in parts {
+                joined.push_str(part);
+              }
+              // Recursively merge any nested at-rules in the joined content
+              let merged = merge_inner_at_rules(&joined);
+              sheets.push(format!("{}{{{}}}", header, merged));
             }
-            // Recursively merge any nested at-rules in the joined content
-            let merged = merge_inner_at_rules(&joined);
-            sheets.push(format!("{}{{{}}}", header, merged));
           } else {
             sheets.push(info.text);
           }
@@ -2712,6 +2870,53 @@ pub fn transform_css_via_postcss(
     }
     return transform_css_via_swc_pipeline(css, options);
   }
+
+  // Post-process sheets to fix serialization artifacts like "-100 %" -> "-100%".
+  // This can occur when the PostCSS crate serializes negative values with units
+  // where the raw value cache doesn't match the actual value.
+  fn fix_value_spacing(css: &str) -> String {
+    // Fix cases where a number is followed by a space and then a unit (e.g., "-100 %" -> "-100%")
+    // This regex-like replacement fixes spacing between digits and common CSS units.
+    let mut result = css.to_string();
+    // Match patterns like "N %" where N is a digit (including negative numbers)
+    // Common units that shouldn't have a space before them
+    for unit in &[
+      "%", "px", "em", "rem", "vh", "vw", "vmin", "vmax", "deg", "rad", "s", "ms",
+    ] {
+      // Replace "digit space unit" with "digit unit"
+      let with_space = format!(" {}", unit);
+      let mut new_result = String::with_capacity(result.len());
+      let mut chars = result.chars().peekable();
+      while let Some(ch) = chars.next() {
+        new_result.push(ch);
+        // Check if we're at a digit followed by space followed by unit
+        if ch.is_ascii_digit() {
+          // Look ahead for " unit"
+          let remaining: String = chars.clone().collect();
+          if remaining.starts_with(&with_space) {
+            // Check that the unit is followed by a non-alphanumeric char or end of string
+            let after_unit = &remaining[with_space.len()..];
+            let next_char = after_unit.chars().next();
+            if next_char.is_none() || !next_char.unwrap().is_alphanumeric() {
+              // Skip the space and directly add the unit
+              chars.next(); // skip the space
+              // Add the unit
+              for _ in 0..unit.len() {
+                if let Some(c) = chars.next() {
+                  new_result.push(c);
+                }
+              }
+            }
+          }
+        }
+      }
+      result = new_result;
+    }
+    result
+  }
+
+  // Apply spacing fix to all sheets
+  let sheets: Vec<String> = sheets.into_iter().map(|s| fix_value_spacing(&s)).collect();
 
   if std::env::var("COMPILED_CLI_TRACE").is_ok() {
     eprintln!("[postcss] via-postcss end");
@@ -3333,5 +3538,32 @@ mod tests {
       "Missing @starting-style"
     );
     assert!(sheet.contains("transform:"), "Missing transform");
+  }
+
+  #[test]
+  fn background_position_comma_separated_should_not_expand() {
+    // Test that comma-separated background-position values are NOT expanded to two-value syntax.
+    // Babel/cssnano keeps single values as single values.
+    // Note: Babel preserves 'top' and 'bottom' keywords for single vertical values.
+    let css = "& { background-position: 0,0,100%,100%,top,0 52px,bottom,bottom; }";
+    let mut options = TransformCssOptions::default();
+    options.optimize_css = Some(true);
+    let result = transform_css(css, options).expect("transform should succeed");
+
+    assert_eq!(result.sheets.len(), 1);
+    let sheet = &result.sheets[0];
+    // The background-position value should NOT have 'center' added
+    assert!(
+      !sheet.contains("center"),
+      "background-position should not be expanded to include 'center'. Got: {}",
+      sheet
+    );
+    // Babel preserves single vertical keywords (top, bottom) as-is
+    // Single horizontal values are converted: left -> 0, right -> 100%
+    assert!(
+      sheet.contains("background-position:0,0,100%,100%,top,0 52px,bottom,bottom"),
+      "Expected normalized background-position matching Babel output. Got: {}",
+      sheet
+    );
   }
 }

@@ -785,4 +785,24 @@ mod tests {
     let css1 = transform_css("a{min-height:100%;}", options).expect("transform css");
     assert_eq!(css1.class_names.len(), 1);
   }
+
+  #[test]
+  fn transform_keyframes_preserves_negative_percent() {
+    let meta = create_metadata();
+    let (mut options, _) = create_transform_css_options(&meta);
+
+    // This tests that -100% is preserved in keyframes, not truncated to -100
+    let css = "@keyframes test{0%{background-position:100%}to{background-position:-100%}}";
+
+    // Test WITH optimization - should preserve the -100% unit
+    options.optimize_css = Some(true);
+    let result = transform_css(css, options).expect("transform css with opt");
+
+    // The keyframes should be in sheets with -100% preserved
+    assert!(
+      result.sheets.iter().any(|s| s.contains("-100%")),
+      "Expected -100%% to be preserved in keyframes but got: {:?}",
+      result.sheets
+    );
+  }
 }

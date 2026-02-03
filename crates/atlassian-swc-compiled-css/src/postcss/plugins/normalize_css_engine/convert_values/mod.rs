@@ -370,4 +370,19 @@ mod tests {
       "a{width:calc(100% - var(--ds-space-150, 9pt));height:calc(100% - var(--ds-space-200, 1pc))}"
     );
   }
+
+  #[test]
+  fn preserves_negative_percentage_unit() {
+    let processor = pc::postcss_with_plugins(vec![plugin()]);
+    let mut result = processor
+      .process("a{background-position:-100%}")
+      .expect("process should succeed");
+
+    let css = result.css().expect("css string").to_string();
+    assert!(
+      css.contains("-100%"),
+      "Expected -100%% to be preserved but got: {}",
+      css
+    );
+  }
 }

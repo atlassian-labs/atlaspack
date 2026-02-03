@@ -51,10 +51,6 @@ impl Plugin for AtomicifyRules {
           }
         }
         Rule::QualifiedRule(rule) => {
-          let sels = collect_rule_selectors(&rule);
-          if trace_enabled() {
-            eprintln!("[atomicify.rule.pre] selectors={:?}", sels);
-          }
           let replacements = atomicify_qualified_rule(*rule, &options, ctx, None);
           for replacement in replacements {
             transformed.push(Rule::QualifiedRule(Box::new(replacement)));
@@ -260,6 +256,13 @@ fn atomic_class_name(
 
   let mut value_seed = serialize_component_values(&declaration.value).unwrap_or_default();
   if options.optimize_css {
+    // COMPAT: Apply gradient minification (remove 100% from final stop, etc.) before hashing.
+    // This matches Babel's plugin order where postcss-minify-gradients runs before atomicify.
+    value_seed =
+      super::super::plugins::normalize_css_engine::minify_gradients::transform_value_for_hash(
+        &value_seed,
+      );
+
     // COMPAT: Babel trims whitespace around multiplication inside calc() before hashing.
     value_seed = value_seed.replace(" *", "*");
     value_seed = value_seed.replace("* ", "*");
@@ -269,10 +272,11 @@ fn atomic_class_name(
   if declaration.important.is_some() {
     value_seed.push_str("true");
   }
-  if std::env::var("COMPILED_CLI_TRACE").is_ok()
-    && declaration_name(&declaration.name) == "margin-left"
-  {
-    eprintln!("[atomicify.hash] raw='{}'", value_seed);
+  if std::env::var("COMPILED_CLI_TRACE").is_ok() {
+    let prop_name = declaration_name(&declaration.name);
+    if prop_name == "margin-left" || prop_name == "background-position" {
+      eprintln!("[atomicify.hash] prop='{}' raw='{}'", prop_name, value_seed);
+    }
   }
   let value_hash = hash(&value_seed);
   let value = value_hash.chars().take(4).collect::<String>();
@@ -289,9 +293,6 @@ fn normalize_selector(selector: &str) -> String {
   let trimmed = selector.trim();
   let collapsed = collapse_adjacent_nesting_selectors(trimmed);
   let collapsed = collapsed.trim();
-  if std::env::var("COMPILED_CSS_TRACE").is_ok() {
-    eprintln!("[atomicify] normalize_selector input='{}'", collapsed);
-  }
   if collapsed.is_empty() {
     return "&".to_string();
   }
