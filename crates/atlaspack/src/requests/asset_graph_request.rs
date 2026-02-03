@@ -233,7 +233,7 @@ impl AssetGraphBuilder {
       waiting_asset_requests: HashMap::new(),
       entry_dependencies: Vec::new(),
       changed_requests,
-      symbol_tracker: SymbolTracker::new(),
+      symbol_tracker: SymbolTracker::default(),
     }
   }
 

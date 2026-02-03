@@ -1,27 +1,28 @@
 use anyhow::anyhow;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::{
   asset_graph::{AssetGraph, AssetGraphNode},
   types::{Asset, Dependency, Symbol},
 };
 
-#[derive(Default, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct SymbolTracker {
   requirements_by_dep: HashMap<String, Vec<SymbolRequirement>>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SymbolRequirement {
   pub symbol: Symbol,
   pub final_location: Option<FinalSymbolLocation>,
 }
 
-#[derive(Default, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FinalSymbolLocation {
   pub local_name: String,
   pub imported_name: String,
-  pub providing_asset: Asset,
+  pub providing_asset: Arc<Asset>,
 }
 
 fn dep_has_symbol(dep: &Dependency, symbol: &Symbol) -> bool {
@@ -72,12 +73,6 @@ fn get_incoming_dependencies<'a>(
 }
 
 impl SymbolTracker {
-  pub fn new() -> Self {
-    Self {
-      requirements_by_dep: HashMap::new(),
-    }
-  }
-
   /// Handles the tracking of symbols for a given asset.
   ///
   /// This looks at both the dependencies this asset has, to register symbols
@@ -86,8 +81,8 @@ impl SymbolTracker {
   pub fn track_symbols(
     &mut self,
     asset_graph: &AssetGraph,
-    asset: &Asset,
-    dependencies: &Vec<Dependency>,
+    asset: &Arc<Asset>,
+    dependencies: &[Dependency],
     // TODO: This should actually return a list of the new requests that need to
     // be kicked off, what `propagate_requested_symbols` does at the moment
   ) -> anyhow::Result<()> {
@@ -143,7 +138,7 @@ impl SymbolTracker {
             providing_asset: asset.clone(),
           };
 
-          self.handle_answer_propagation(asset_graph, &final_location, incoming_dep)?;
+          self.handle_answer_propagation(asset_graph, final_location, incoming_dep)?;
         }
       }
     }
@@ -154,7 +149,7 @@ impl SymbolTracker {
   fn handle_answer_propagation(
     &mut self,
     asset_graph: &AssetGraph,
-    located_symbol: &FinalSymbolLocation,
+    located_symbol: FinalSymbolLocation,
     dep: &Dependency,
   ) -> anyhow::Result<()> {
     let mut work_queue = vec![dep];
