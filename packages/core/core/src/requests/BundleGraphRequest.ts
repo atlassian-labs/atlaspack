@@ -573,5 +573,4 @@ class BundlerRunner {
       assetRequests,
     };
   }
-
 }

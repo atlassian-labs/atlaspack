@@ -30,8 +30,16 @@ import {
   createDevDependency,
   runDevDepRequest as runDevDepRequestInternal,
 } from './DevDepRequest';
-import {loadPluginConfig, runConfigRequest, PluginWithLoadConfig} from './ConfigRequest';
-import {joinProjectPath, fromProjectPathRelative, toProjectPathUnsafe} from '../projectPath';
+import {
+  loadPluginConfig,
+  runConfigRequest,
+  PluginWithLoadConfig,
+} from './ConfigRequest';
+import {
+  joinProjectPath,
+  fromProjectPathRelative,
+  toProjectPathUnsafe,
+} from '../projectPath';
 import {tracer, PluginTracer} from '@atlaspack/profiler';
 import type {BundleGraphResult} from './BundleGraphRequest';
 
@@ -115,7 +123,9 @@ export async function nameBundle(
 /**
  * Loads configuration for a plugin and tracks its dev dependencies.
  */
-export async function loadPluginConfigWithDevDeps<T extends PluginWithLoadConfig>(
+export async function loadPluginConfigWithDevDeps<
+  T extends PluginWithLoadConfig,
+>(
   plugin: LoadedPlugin<T>,
   options: AtlaspackOptions,
   api: RunAPI<BundleGraphResult>,
