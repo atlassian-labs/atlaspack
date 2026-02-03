@@ -9,7 +9,10 @@ use napi::JsObject;
 use napi::JsString;
 use napi::JsUnknown;
 use napi::bindgen_prelude::FromNapiValue;
+use once_cell::sync::Lazy;
+use parking_lot::RwLock;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -39,6 +42,49 @@ use crate::nodejs::plugins::load_plugin::LoadPluginOptions;
 
 use super::super::rpc::nodejs_rpc_worker_farm::NodeJsWorkerCollection;
 use super::load_plugin::RpcPluginOptions;
+
+/// Global tracker for transformer bailouts by transformer name.
+/// This is useful for debugging which transformers are preventing cache hits.
+static TRANSFORMER_BAILOUT_STATS: Lazy<RwLock<HashMap<String, u64>>> =
+  Lazy::new(|| RwLock::new(HashMap::new()));
+
+/// Snapshot of bailout statistics per transformer.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct TransformerBailoutStats {
+  /// Map of transformer package name to number of bailouts
+  pub bailouts_by_transformer: HashMap<String, u64>,
+  /// Total number of bailouts across all transformers
+  pub total_bailouts: u64,
+}
+
+/// Get a snapshot of the current transformer bailout statistics without clearing them.
+pub fn get_transformer_bailout_stats() -> TransformerBailoutStats {
+  let stats = TRANSFORMER_BAILOUT_STATS.read();
+  let total_bailouts = stats.values().sum();
+  TransformerBailoutStats {
+    bailouts_by_transformer: stats.clone(),
+    total_bailouts,
+  }
+}
+
+/// Get a snapshot of the current transformer bailout statistics and clear them.
+pub fn get_and_clear_transformer_bailout_stats() -> TransformerBailoutStats {
+  let mut stats = TRANSFORMER_BAILOUT_STATS.write();
+  let total_bailouts = stats.values().sum();
+  TransformerBailoutStats {
+    bailouts_by_transformer: std::mem::take(&mut *stats),
+    total_bailouts,
+  }
+}
+
+/// Record bailouts for transformers.
+/// Called from the asset request layer after a cacheable pipeline completes.
+pub fn record_transformer_bailouts(transformer_names: &[String]) {
+  let mut stats = TRANSFORMER_BAILOUT_STATS.write();
+  for name in transformer_names {
+    *stats.entry(name.clone()).or_insert(0) += 1;
+  }
+}
 
 pub mod conditions;
 
@@ -334,7 +380,8 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
 
     let cache_bailout = !cache_bailouts.is_empty();
 
-    if cache_bailout {
+    // Only track bailouts for transformers that are marked as cacheable.
+    let bailout_transformer = if cache_bailout && matches!(self.cache_key, CacheStatus::Hash(_)) {
       tracing::debug!(
         "Transformer({}) bailout for asset '{}'\n{}",
         self.plugin_node.package_name,
@@ -345,13 +392,17 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
           .collect::<Vec<String>>()
           .join("\n")
       );
-    }
+      Some(self.plugin_node.package_name.clone())
+    } else {
+      None
+    };
 
     Ok(TransformResult {
       // Adding dependencies from Node plugins isn't yet supported
       // TODO: Handle invalidations
       asset: transformed_asset,
       cache_bailout,
+      bailout_transformer,
       ..Default::default()
     })
   }
