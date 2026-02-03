@@ -328,4 +328,82 @@ impl BundleGraph for NativeBundleGraph {
 
     Ok(assets)
   }
+
+  fn get_bundle_by_id(&self, id: &str) -> Option<&Bundle> {
+    let node_id = self.get_node_id_by_content_key(id)?;
+    match self.nodes.get(*node_id)? {
+      NativeBundleGraphNode::Bundle(b) => Some(b),
+      _ => None,
+    }
+  }
+
+  fn get_public_asset_id(&self, asset_id: &str) -> Option<&str> {
+    self.public_id_by_asset_id.get(asset_id).map(|s| s.as_str())
+  }
+
+  fn get_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&Dependency>> {
+    let asset_node_id = self
+      .get_node_id_by_content_key(&asset.id)
+      .ok_or_else(|| anyhow::anyhow!("Asset {} not found in bundle graph", asset.id))?;
+
+    let asset_node_index = self
+      .node_id_to_node_index
+      .get(asset_node_id)
+      .ok_or_else(|| anyhow::anyhow!("Asset node index missing for {}", asset.id))?;
+
+    let deps = self
+      .graph
+      .edges_directed(*asset_node_index, Direction::Outgoing)
+      .filter_map(|e| {
+        // In the base graph copied from AssetGraph, asset -> dependency edges are Null.
+        if *e.weight() != NativeBundleGraphEdgeType::Null {
+          return None;
+        }
+        let to_id = *self.graph.node_weight(e.target())?;
+        match self.nodes.get(to_id)? {
+          NativeBundleGraphNode::Dependency(d) => Some(d.as_ref()),
+          _ => None,
+        }
+      })
+      .collect();
+
+    Ok(deps)
+  }
+
+  fn get_resolved_asset(
+    &self,
+    dependency: &Dependency,
+    _bundle: &Bundle,
+  ) -> anyhow::Result<Option<&Asset>> {
+    let dep_node_id = match self.get_node_id_by_content_key(&dependency.id()) {
+      Some(id) => id,
+      None => return Ok(None),
+    };
+
+    let dep_node_index = self
+      .node_id_to_node_index
+      .get(dep_node_id)
+      .ok_or_else(|| anyhow::anyhow!("Dependency node index missing for {}", dependency.id()))?;
+
+    let resolved = self
+      .graph
+      .edges_directed(*dep_node_index, Direction::Outgoing)
+      .filter_map(|e| {
+        if *e.weight() != NativeBundleGraphEdgeType::Null {
+          return None;
+        }
+        let to_id = *self.graph.node_weight(e.target())?;
+        match self.nodes.get(to_id)? {
+          NativeBundleGraphNode::Asset(a) => Some(a.as_ref()),
+          _ => None,
+        }
+      })
+      .next();
+
+    Ok(resolved)
+  }
+
+  fn is_dependency_skipped(&self, _dependency: &Dependency) -> bool {
+    false
+  }
 }
