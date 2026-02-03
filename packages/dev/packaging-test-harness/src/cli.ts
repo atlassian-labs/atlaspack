@@ -19,7 +19,7 @@ program
     './packaging-output',
   )
   .option('--bundle-type <type>', 'Filter bundles by type (e.g., "js", "css")')
-  .option('--bundle-name <pattern>', 'Filter bundles by name pattern (regex)')
+  .option('--bundle-name <prefix>', 'Filter bundles by name prefix')
   .option('-v, --verbose', 'Enable verbose output')
   .option(
     '-c, --compare',
@@ -48,8 +48,7 @@ program
             return false;
           }
           if (options.bundleName) {
-            const regex = new RegExp(options.bundleName);
-            if (!bundle.name || !regex.test(bundle.name)) {
+            if (!bundle.name || !bundle.name.startsWith(options.bundleName)) {
               return false;
             }
           }
