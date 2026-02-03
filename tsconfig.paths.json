@@ -390,6 +390,9 @@
     },
     {
       "path": "./packages/transformers/compiled/tsconfig.json"
+    },
+    {
+      "path": "./packages/dev/packaging-test-harness/tsconfig.json"
     }
   ]
 }
