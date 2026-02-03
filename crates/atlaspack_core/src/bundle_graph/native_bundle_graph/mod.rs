@@ -11,6 +11,7 @@ use petgraph::stable_graph::StableDiGraph;
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 
 use crate::asset_graph::{AssetGraph, AssetGraphNode};
+use crate::bundle_graph::BundleGraph;
 use crate::types::{Asset, Bundle, Dependency, Target};
 
 /// PetGraph-backed bundle graph, modelled similarly to `AssetGraph`.
@@ -286,4 +287,45 @@ where
   }
 
   panic!("Original id was not unique: {}", id);
+}
+
+impl BundleGraph for NativeBundleGraph {
+  fn get_bundles(&self) -> Vec<&Bundle> {
+    self
+      .nodes
+      .iter()
+      .filter_map(|n| match n {
+        NativeBundleGraphNode::Bundle(b) => Some(b),
+        _ => None,
+      })
+      .collect()
+  }
+
+  fn get_bundle_assets(&self, bundle: &Bundle) -> anyhow::Result<Vec<&Asset>> {
+    let bundle_node_id = self
+      .get_node_id_by_content_key(&bundle.id)
+      .ok_or_else(|| anyhow::anyhow!("Bundle {} not found in bundle graph", bundle.id))?;
+
+    let bundle_node_index = self
+      .node_id_to_node_index
+      .get(bundle_node_id)
+      .ok_or_else(|| anyhow::anyhow!("Bundle node index missing for {}", bundle.id))?;
+
+    let assets = self
+      .graph
+      .edges_directed(*bundle_node_index, Direction::Outgoing)
+      .filter_map(|e| {
+        if *e.weight() != NativeBundleGraphEdgeType::Contains {
+          return None;
+        }
+        let to_id = *self.graph.node_weight(e.target())?;
+        match self.nodes.get(to_id)? {
+          NativeBundleGraphNode::Asset(a) => Some(a.as_ref()),
+          _ => None,
+        }
+      })
+      .collect();
+
+    Ok(assets)
+  }
 }
