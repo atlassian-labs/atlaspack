@@ -16,6 +16,7 @@ pub enum NativeBundleGraphEdgeType {
   Bundle = 3,
   References = 4,
   InternalAsync = 5,
+  Conditional = 6,
 }
 
 #[derive(Clone, Debug, PartialEq)]

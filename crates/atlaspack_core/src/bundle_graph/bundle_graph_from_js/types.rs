@@ -13,8 +13,9 @@ pub enum BundleGraphEdgeType {
   Contains = 2,
   Bundle = 3,
   References = 4,
-  /// In JS, `internal_async` and `conditional` both use 5.
   InternalAsync = 5,
+  /// Edge between a bundle and a conditional bundle.
+  Conditional = 6,
 }
 
 impl From<u8> for BundleGraphEdgeType {
@@ -25,6 +26,7 @@ impl From<u8> for BundleGraphEdgeType {
       3 => BundleGraphEdgeType::Bundle,
       4 => BundleGraphEdgeType::References,
       5 => BundleGraphEdgeType::InternalAsync,
+      6 => BundleGraphEdgeType::Conditional,
       _ => BundleGraphEdgeType::Null,
     }
   }
