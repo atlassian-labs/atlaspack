@@ -134,8 +134,7 @@ pub struct BundleGroupNode {
   pub value: BundleGroup,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(untagged)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 #[allow(clippy::large_enum_variant)]
 pub enum BundleGraphNode {
   Asset(AssetNode),
@@ -157,6 +156,48 @@ impl BundleGraphNode {
       BundleGraphNode::Root(n) => &n.id,
       BundleGraphNode::BundleGroup(n) => &n.id,
       BundleGraphNode::Bundle(n) => &n.id,
+    }
+  }
+}
+
+impl<'de> Deserialize<'de> for BundleGraphNode {
+  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+  where
+    D: serde::Deserializer<'de>,
+  {
+    let mut value = serde_json::Value::deserialize(deserializer)?;
+    let node_type = value
+      .get("type")
+      .and_then(|v| v.as_str())
+      .ok_or_else(|| serde::de::Error::custom("Missing 'type' field"))?
+      .to_string();
+
+    match node_type.as_str() {
+      "asset" => serde_json::from_value::<AssetNode>(value)
+        .map(BundleGraphNode::Asset)
+        .map_err(serde::de::Error::custom),
+      "dependency" => serde_json::from_value::<DependencyNode>(value)
+        .map(BundleGraphNode::Dependency)
+        .map_err(serde::de::Error::custom),
+      "entry_specifier" => serde_json::from_value::<EntrySpecifierNode>(value)
+        .map(BundleGraphNode::EntrySpecifier)
+        .map_err(serde::de::Error::custom),
+      "entry_file" => serde_json::from_value::<EntryFileNode>(value)
+        .map(BundleGraphNode::EntryFile)
+        .map_err(serde::de::Error::custom),
+      "root" => serde_json::from_value::<RootNode>(value)
+        .map(BundleGraphNode::Root)
+        .map_err(serde::de::Error::custom),
+      "bundle_group" => serde_json::from_value::<BundleGroupNode>(value)
+        .map(BundleGraphNode::BundleGroup)
+        .map_err(serde::de::Error::custom),
+      "bundle" => serde_json::from_value::<BundleNode>(value)
+        .map(BundleGraphNode::Bundle)
+        .map_err(serde::de::Error::custom),
+      other => Err(serde::de::Error::custom(format!(
+        "Invalid node type: {}",
+        other
+      ))),
     }
   }
 }
