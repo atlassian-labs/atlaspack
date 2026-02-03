@@ -2,12 +2,28 @@ import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
 import type { AtlaspackPrelude } from './prelude';
+import { execSync } from 'child_process';
+import { rolldown, type RolldownOptions } from 'rolldown';
+import { preludeConfig } from '../rolldown.config';
+
+async function getPreludeCode(mode: 'dev' | 'prod') {
+  const config: RolldownOptions = {
+    ...preludeConfig(mode),
+    cwd: path.join(__dirname, '../')
+  };
+  const devPrelude = await rolldown(config);
+  if (!config.output || Array.isArray(config.output)) {
+    throw new Error('Invalid output config');
+  }
+  return (await devPrelude.generate(config.output)).output[0].code;
+}
 
 describe('prelude', () => {
   // Assumption is that Rust build has been run first to create the prelude
   let atlaspack: AtlaspackPrelude;
-  before(() => {
-    const preludeCode = fs.readFileSync(path.join(__dirname, '../lib/prelude.dev.js'), 'utf8');
+  before(async () => {
+    // Build the prelude
+    const preludeCode = await getPreludeCode('dev');
     atlaspack = eval(preludeCode);
   });
   beforeEach(() => {
