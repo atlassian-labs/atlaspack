@@ -3,8 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
+    "build:lib": "rm -rf lib && rolldown -c rolldown.config.ts"
   },
-  "dependencies": {
+  "devDependencies": {
+    "rolldown": "1.0.0-rc.2"
   }
 }

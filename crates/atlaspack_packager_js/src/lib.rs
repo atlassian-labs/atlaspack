@@ -193,28 +193,6 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
 
   pub fn assemble_bundle(&self, bundle: &Bundle, contents: Vec<(&Asset, String)>) -> String {
     // This is a temporary implementation that will just use string concatenation
-    // let prelude = r#"
-    // (function () {
-    // const registry = {};
-    // const modules = {};
-    // function define(id, factory) {
-    //   registry[id] = factory;
-    // }
-    // function require(id) {
-    //   if (modules[id]) {
-    //     return modules[id].exports;
-    //   }
-    //   const module = { exports: {} };
-    //   modules[id] = module;
-    //   if (!registry[id]) {
-    //     const e = new Error(`Module ${id} not found`);
-    //     e.code = 'MODULE_NOT_FOUND';
-    //     throw e;
-    //   }
-    //   registry[id].call(module.exports, require, module, module.exports);
-    //   return module.exports;
-    // }
-    // "#;
 
     let full_hash = hash_string("FIXME".to_string());
     let hash = full_hash
@@ -257,10 +235,10 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
 
     let prelude_loader = format!(
       r#"
-    var atlaspack = globalObject[`atlaspack_{hash}`];
-    var require = atlaspack.require;
-    var define = atlaspack.define;
-    "#
+    var require = Atlaspack_{hash}.require;
+    var define = Atlaspack_{hash}.define;
+    "#,
+      hash = &hash
     );
 
     "(function() {\n".to_string()
