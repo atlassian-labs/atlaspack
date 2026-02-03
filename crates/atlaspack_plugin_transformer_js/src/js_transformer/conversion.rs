@@ -130,6 +130,8 @@ pub(crate) fn convert_result(
             .map(|sym| sym.local.clone())
             .unwrap_or_else(|| format!("${}$re_export${}", asset.id, symbol.local));
 
+          let is_weak = existing.map(|e| e.is_weak).unwrap_or(true);
+
           let dependency_symbol = Symbol {
             exported: symbol.imported.as_ref().into(),
             local: re_export_fake_local_key.clone(),
@@ -138,7 +140,7 @@ pub(crate) fn convert_result(
               asset_file_path.clone(),
               &symbol.loc,
             )),
-            is_weak: existing.map(|e| e.is_weak).unwrap_or(true),
+            is_weak,
             ..Symbol::default()
           };
 
@@ -156,7 +158,7 @@ pub(crate) fn convert_result(
               asset_file_path.clone(),
               &symbol.loc,
             )),
-            is_weak: false,
+            is_weak,
             ..Symbol::default()
           });
         }
@@ -223,6 +225,10 @@ pub(crate) fn convert_result(
           .and_then(|source| dependency_by_specifier.get_mut(source))
         {
           let local = format!("${}${}", dependency.id(), sym.local);
+          println!(
+            "Adding weak symbol in dependency {} for export: {} -> {}",
+            dependency.specifier, sym.exported, local
+          );
           let symbol = Symbol {
             exported: sym.local.as_ref().into(),
             local: local.clone(),
@@ -242,6 +248,10 @@ pub(crate) fn convert_result(
           (format!("${}", sym.local), false)
         };
 
+        println!(
+          "Adding export symbol to asset {:?}: {} -> {} (is_weak: {})",
+          asset.file_path, sym.exported, local, is_weak
+        );
         asset_symbols.push(Symbol {
           exported: sym.exported.as_ref().into(),
           local,
@@ -504,6 +514,10 @@ fn make_esm_helpers_dependency(
 ///
 /// These correspond to `export * from './dep';` statements.
 fn make_export_all_symbol(loc: Option<SourceLocation>) -> Symbol {
+  println!(
+    "Creating export all symbol: {:?}",
+    loc.clone().map(|l| l.file_path)
+  );
   Symbol {
     exported: "*".into(),
     local: "*".into(),
