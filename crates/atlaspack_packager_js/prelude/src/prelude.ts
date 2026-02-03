@@ -20,7 +20,6 @@ declare const MODE: 'dev' | 'prod';
 
 let registry: Record<string, ModuleFactory> = {};
 let modules: Record<string, Module> = {};
-// @ts-expect-error TS2441 - require is reserved
 const require = (id: string): ModuleExports => {
   if (modules[id]) {
     return modules[id].exports;

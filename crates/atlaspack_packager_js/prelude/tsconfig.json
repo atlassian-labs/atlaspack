@@ -1,6 +1,6 @@
 {
   "extends": "../../../tsconfig.base.json",
-  "include": ["src"],
+  "include": ["src", "src/rolldown.config.ts"],
   "compilerOptions": {
     "composite": true
   },

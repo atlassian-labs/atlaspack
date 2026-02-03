@@ -1,11 +1,11 @@
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
-import type { AtlaspackPrelude } from './prelude';
-import { execSync } from 'child_process';
+import type { AtlaspackPrelude } from './prelude.js';
 import { rolldown, type RolldownOptions } from 'rolldown';
-import { preludeConfig } from '../rolldown.config';
+import { preludeConfig } from './rolldown.config.js';
 
+// Helper function for building the prelude with Rolldown
 async function getPreludeCode(mode: 'dev' | 'prod') {
   const config: RolldownOptions = {
     ...preludeConfig(mode),
@@ -19,7 +19,6 @@ async function getPreludeCode(mode: 'dev' | 'prod') {
 }
 
 describe('prelude', () => {
-  // Assumption is that Rust build has been run first to create the prelude
   let atlaspack: AtlaspackPrelude;
   before(async () => {
     // Build the prelude
