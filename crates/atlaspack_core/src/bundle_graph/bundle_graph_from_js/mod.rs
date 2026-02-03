@@ -1,3 +1,6 @@
+pub mod types;
+pub use types::{BundleGraphEdgeType, BundleGraphNode};
+
 use anyhow::anyhow;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -13,8 +16,6 @@ use rayon::prelude::*;
 use crate::bundle_graph::BundleGraph;
 use crate::types::{Asset, Bundle, Dependency, Environment};
 
-pub mod types;
-pub use types::{BundleGraphEdgeType, BundleGraphNode};
 
 type BundleGraphNodeId = String;
 
@@ -206,7 +207,6 @@ impl BundleGraph for BundleGraphFromJs {
         bundles.push(&node.value);
       }
     }
-
     bundles
   }
 
@@ -411,6 +411,7 @@ mod tests {
   fn create_test_asset_node(id: &str) -> AssetNode {
     AssetNode {
       id: id.to_string(),
+      node_type: "asset".to_string(),
       value: Asset {
         id: id.to_string(),
         file_path: PathBuf::from(format!("{}.js", id)),
@@ -429,6 +430,7 @@ mod tests {
   fn create_test_dependency_node(id: &str) -> DependencyNode {
     DependencyNode {
       id: id.to_string(),
+      node_type: "dependency".to_string(),
       value: Dependency {
         id: id.to_string(),
         specifier: "./test".to_string(),
@@ -453,6 +455,7 @@ mod tests {
   fn create_test_bundle_node(id: &str, name: &str) -> BundleNode {
     BundleNode {
       id: id.to_string(),
+      node_type: "bundle".to_string(),
       value: create_test_bundle(id, name),
     }
   }
@@ -460,6 +463,7 @@ mod tests {
   fn create_test_root_node() -> RootNode {
     RootNode {
       id: "root".to_string(),
+      node_type: "root".to_string(),
       value: None,
     }
   }

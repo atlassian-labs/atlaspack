@@ -4,11 +4,12 @@ use std::sync::Arc;
 
 use atlaspack_config::atlaspack_rc_config_loader::{AtlaspackRcConfigLoader, LoadConfigOptions};
 use atlaspack_core::asset_graph::{AssetGraph, AssetGraphNode};
-use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
+use atlaspack_core::bundle_graph::bundle_graph_from_js::{
+  BundleGraphEdgeType, BundleGraphFromJs, BundleGraphNode,
+};
 use atlaspack_core::config_loader::ConfigLoader;
 use atlaspack_core::package_result::PackageResult;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
-use atlaspack_core::bundle_graph::bundle_graph_from_js::{BundleGraphEdgeType, BundleGraphNode};
 use atlaspack_core::types::{AtlaspackOptions, Environment, SourceField, Targets};
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
 use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter, StatsSnapshot};

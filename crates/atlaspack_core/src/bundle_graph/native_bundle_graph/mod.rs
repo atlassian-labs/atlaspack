@@ -1,3 +1,7 @@
+pub mod types;
+
+pub use types::{NativeBundleGraphEdgeType, NativeBundleGraphNode, NodeId};
+
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -9,35 +13,6 @@ use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 use crate::asset_graph::{AssetGraph, AssetGraphNode};
 use crate::types::{Asset, Bundle, Dependency, Target};
 
-pub type NodeId = usize;
-
-/// Edge types in the native bundle graph.
-///
-/// Numeric values match the JS bundle graph edge types.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
-#[repr(u8)]
-pub enum NativeBundleGraphEdgeType {
-  #[default]
-  Null = 1,
-  Contains = 2,
-  Bundle = 3,
-  References = 4,
-  InternalAsync = 5,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-#[allow(clippy::large_enum_variant)]
-pub enum NativeBundleGraphNode {
-  Root,
-  Asset(Arc<Asset>),
-  Dependency(Arc<Dependency>),
-  BundleGroup {
-    target: Target,
-    entry_asset_id: String,
-  },
-  Bundle(Bundle),
-}
-
 /// PetGraph-backed bundle graph, modelled similarly to `AssetGraph`.
 #[derive(Clone, Debug)]
 pub struct NativeBundleGraph {
@@ -47,11 +22,8 @@ pub struct NativeBundleGraph {
   content_key_to_node_id: HashMap<String, NodeId>,
   root_node_id: NodeId,
 
-  /// Maps full asset IDs to concise public IDs.
   pub public_id_by_asset_id: HashMap<String, String>,
-  /// Set of all assigned asset public IDs.
   pub asset_public_ids: HashSet<String>,
-  /// Set of all assigned bundle public IDs.
   pub bundle_public_ids: HashSet<String>,
 }
 
@@ -124,24 +96,17 @@ impl NativeBundleGraph {
     }
   }
 
-  /// Create a bundle graph from an asset graph.
-  ///
-  /// Copies all asset/dependency/root nodes and all edges from the asset graph.
   pub fn from_asset_graph(asset_graph: &AssetGraph) -> Self {
     let mut bundle_graph = NativeBundleGraph::new();
 
-    // Copy nodes
     for node in asset_graph.nodes() {
       match node {
         AssetGraphNode::Root => {
-          // already present
           bundle_graph
             .content_key_to_node_id
             .insert("@@root".into(), 0);
         }
-        AssetGraphNode::Entry => {
-          // ignored for now
-        }
+        AssetGraphNode::Entry => {}
         AssetGraphNode::Asset(asset) => {
           bundle_graph.add_asset(asset.clone(), true);
         }
@@ -247,7 +212,6 @@ impl NativeBundleGraph {
     );
   }
 
-  /// Add a bundle group node.
   pub fn add_bundle_group(&mut self, id: String, target: Target, entry_asset_id: String) -> NodeId {
     self.add_node(
       id,
@@ -259,7 +223,6 @@ impl NativeBundleGraph {
     )
   }
 
-  /// Add a bundle node. If the bundle does not have a public id, assign it here.
   pub fn add_bundle(&mut self, mut bundle: Bundle) -> NodeId {
     if bundle.public_id.is_none() {
       let public_id = generate_public_id(&bundle.id, |candidate| {
