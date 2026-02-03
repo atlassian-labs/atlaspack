@@ -1,5 +1,23 @@
 # @atlaspack/transformer-compiled-css-in-js
 
+## 0.2.0
+
+### Minor Changes
+
+- [#981](https://github.com/atlassian-labs/atlaspack/pull/981) [`783118c`](https://github.com/atlassian-labs/atlaspack/commit/783118c772f45a0cf6a3b6b447fb9a0e225b25a6) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Fix errant file content exclusions from native Compiled
+  Small refactor for some external Compiled dependencies to insourced
+
+### Patch Changes
+
+- [#978](https://github.com/atlassian-labs/atlaspack/pull/978) [`59e1345`](https://github.com/atlassian-labs/atlaspack/commit/59e1345f84f43e0632d434ab42c06bf748241985) Thanks [@JakeLane](https://github.com/JakeLane)! - Fix group normalisation in Compiled CSS-in-JS SWC plugin
+
+- Updated dependencies [[`a631dcd`](https://github.com/atlassian-labs/atlaspack/commit/a631dcd961112db072b0f8de0831efd178f355a7), [`e9dce31`](https://github.com/atlassian-labs/atlaspack/commit/e9dce3168a8e6727a994bf2a6ac6041eb29f6027), [`59e1345`](https://github.com/atlassian-labs/atlaspack/commit/59e1345f84f43e0632d434ab42c06bf748241985), [`3a3885c`](https://github.com/atlassian-labs/atlaspack/commit/3a3885cb08e26752c65c7f64c6dc38abd488d036), [`783118c`](https://github.com/atlassian-labs/atlaspack/commit/783118c772f45a0cf6a3b6b447fb9a0e225b25a6), [`fcaf517`](https://github.com/atlassian-labs/atlaspack/commit/fcaf517010d15c9300393bcad3f9b465689d9d16)]:
+  - @atlaspack/rust@3.21.0
+  - @atlaspack/transformer-js@13.1.0
+  - @atlaspack/source-map@3.2.6
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/plugin@2.14.51
+
 ## 0.1.1
 
 ### Patch Changes

@@ -1,5 +1,23 @@
 # @atlaspack/transformer-js
 
+## 13.1.0
+
+### Minor Changes
+
+- [#986](https://github.com/atlassian-labs/atlaspack/pull/986) [`e9dce31`](https://github.com/atlassian-labs/atlaspack/commit/e9dce3168a8e6727a994bf2a6ac6041eb29f6027) Thanks [@OliverWessels](https://github.com/OliverWessels)! - Add `activate_reject_on_unresolved_imports` config option to `sync-dynamic-import` transformer to create a rejecting promise for unresolved imports if `globalThis.__SSR_TEMP_THROW_ON_UNRESOLVED_DYNAMIC_IMPORT` is set.
+
+### Patch Changes
+
+- [#995](https://github.com/atlassian-labs/atlaspack/pull/995) [`3a3885c`](https://github.com/atlassian-labs/atlaspack/commit/3a3885cb08e26752c65c7f64c6dc38abd488d036) Thanks [@emzeidan](https://github.com/emzeidan)! - Fix symbol collection with multiple exports of same function
+
+- Updated dependencies [[`a631dcd`](https://github.com/atlassian-labs/atlaspack/commit/a631dcd961112db072b0f8de0831efd178f355a7), [`5755a11`](https://github.com/atlassian-labs/atlaspack/commit/5755a114903bbf660e2ada3ae2e7ff6ceac7565b), [`e9dce31`](https://github.com/atlassian-labs/atlaspack/commit/e9dce3168a8e6727a994bf2a6ac6041eb29f6027), [`59e1345`](https://github.com/atlassian-labs/atlaspack/commit/59e1345f84f43e0632d434ab42c06bf748241985), [`783118c`](https://github.com/atlassian-labs/atlaspack/commit/783118c772f45a0cf6a3b6b447fb9a0e225b25a6), [`fcaf517`](https://github.com/atlassian-labs/atlaspack/commit/fcaf517010d15c9300393bcad3f9b465689d9d16)]:
+  - @atlaspack/core@2.32.1
+  - @atlaspack/rust@3.21.0
+  - @atlaspack/source-map@3.2.6
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/workers@2.14.51
+  - @atlaspack/plugin@2.14.51
+
 ## 13.0.0
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/e2e-tests",
-  "version": "2.14.5",
+  "version": "2.14.6",
   "private": true,
   "license": "(MIT OR Apache-2.0)",
   "repository": {
@@ -15,17 +15,17 @@
     "build:lib": "gulp build --gulpfile ../../../gulpfile.js --cwd ."
   },
   "devDependencies": {
-    "@atlaspack/core": "2.32.0",
-    "@atlaspack/plugin": "2.14.50",
-    "@atlaspack/rust": "3.20.0",
-    "@atlaspack/test-utils": "2.14.53",
-    "@atlaspack/types": "2.15.40",
+    "@atlaspack/core": "2.32.1",
+    "@atlaspack/plugin": "2.14.51",
+    "@atlaspack/rust": "3.21.0",
+    "@atlaspack/test-utils": "2.14.54",
+    "@atlaspack/types": "2.15.41",
     "playwright": "1.50.0"
   },
   "dependencies": {
     "@compiled/react": "^0.18.6",
     "@atlaskit/button": "^23.5.3",
-    "@atlaspack/transformer-compiled-external": "0.2.4",
+    "@atlaspack/transformer-compiled-external": "0.2.5",
     "@compiled/parcel-optimizer": "^0.6.4"
   }
 }

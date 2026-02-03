@@ -1,5 +1,22 @@
 # @atlaspack/rust
 
+## 3.21.0
+
+### Minor Changes
+
+- [#981](https://github.com/atlassian-labs/atlaspack/pull/981) [`783118c`](https://github.com/atlassian-labs/atlaspack/commit/783118c772f45a0cf6a3b6b447fb9a0e225b25a6) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Fix errant file content exclusions from native Compiled
+  Small refactor for some external Compiled dependencies to insourced
+
+### Patch Changes
+
+- [#988](https://github.com/atlassian-labs/atlaspack/pull/988) [`a631dcd`](https://github.com/atlassian-labs/atlaspack/commit/a631dcd961112db072b0f8de0831efd178f355a7) Thanks [@marcins](https://github.com/marcins)! - Implement a basic package() method for the native packager
+
+- [#986](https://github.com/atlassian-labs/atlaspack/pull/986) [`e9dce31`](https://github.com/atlassian-labs/atlaspack/commit/e9dce3168a8e6727a994bf2a6ac6041eb29f6027) Thanks [@OliverWessels](https://github.com/OliverWessels)! - Add `activate_reject_on_unresolved_imports` config option to `sync-dynamic-import` transformer to create a rejecting promise for unresolved imports if `globalThis.__SSR_TEMP_THROW_ON_UNRESOLVED_DYNAMIC_IMPORT` is set.
+
+- [#978](https://github.com/atlassian-labs/atlaspack/pull/978) [`59e1345`](https://github.com/atlassian-labs/atlaspack/commit/59e1345f84f43e0632d434ab42c06bf748241985) Thanks [@JakeLane](https://github.com/JakeLane)! - Fix group normalisation in Compiled CSS-in-JS SWC plugin
+
+- [#987](https://github.com/atlassian-labs/atlaspack/pull/987) [`fcaf517`](https://github.com/atlassian-labs/atlaspack/commit/fcaf517010d15c9300393bcad3f9b465689d9d16) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - add get_bundle_assets
+
 ## 3.20.0
 
 ### Minor Changes

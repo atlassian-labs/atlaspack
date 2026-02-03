@@ -1,5 +1,11 @@
 # @atlaspack/integration-tests
 
+## 2.20.3
+
+### Patch Changes
+
+- [#995](https://github.com/atlassian-labs/atlaspack/pull/995) [`3a3885c`](https://github.com/atlassian-labs/atlaspack/commit/3a3885cb08e26752c65c7f64c6dc38abd488d036) Thanks [@emzeidan](https://github.com/emzeidan)! - Fix symbol collection with multiple exports of same function
+
 ## 2.20.2
 
 ### Patch Changes

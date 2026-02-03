@@ -1,5 +1,29 @@
 # @atlaspack/core
 
+## 2.32.1
+
+### Patch Changes
+
+- [#988](https://github.com/atlassian-labs/atlaspack/pull/988) [`a631dcd`](https://github.com/atlassian-labs/atlaspack/commit/a631dcd961112db072b0f8de0831efd178f355a7) Thanks [@marcins](https://github.com/marcins)! - Implement a basic package() method for the native packager
+
+- [#990](https://github.com/atlassian-labs/atlaspack/pull/990) [`5755a11`](https://github.com/atlassian-labs/atlaspack/commit/5755a114903bbf660e2ada3ae2e7ff6ceac7565b) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - changes conditional bundleGraphEdgeType value
+
+- [#987](https://github.com/atlassian-labs/atlaspack/pull/987) [`fcaf517`](https://github.com/atlassian-labs/atlaspack/commit/fcaf517010d15c9300393bcad3f9b465689d9d16) Thanks [@vykimnguyen](https://github.com/vykimnguyen)! - add get_bundle_assets
+
+- Updated dependencies [[`a631dcd`](https://github.com/atlassian-labs/atlaspack/commit/a631dcd961112db072b0f8de0831efd178f355a7), [`e9dce31`](https://github.com/atlassian-labs/atlaspack/commit/e9dce3168a8e6727a994bf2a6ac6041eb29f6027), [`59e1345`](https://github.com/atlassian-labs/atlaspack/commit/59e1345f84f43e0632d434ab42c06bf748241985), [`783118c`](https://github.com/atlassian-labs/atlaspack/commit/783118c772f45a0cf6a3b6b447fb9a0e225b25a6), [`fcaf517`](https://github.com/atlassian-labs/atlaspack/commit/fcaf517010d15c9300393bcad3f9b465689d9d16)]:
+  - @atlaspack/rust@3.21.0
+  - @atlaspack/cache@3.2.46
+  - @atlaspack/fs@2.15.46
+  - @atlaspack/logger@2.14.43
+  - @atlaspack/source-map@3.2.6
+  - @atlaspack/utils@3.3.3
+  - @atlaspack/package-manager@2.14.51
+  - @atlaspack/profiler@2.15.12
+  - @atlaspack/workers@2.14.51
+  - @atlaspack/types@2.15.41
+  - @atlaspack/graph@3.6.13
+  - @atlaspack/plugin@2.14.51
+
 ## 2.32.0
 
 ### Minor Changes
