@@ -524,18 +524,19 @@ impl TransformState {
   }
 
   fn resolve_import_sources(file: &TransformFile, opts: &PluginOptions) -> Vec<String> {
-    opts
-      .import_sources
+    let resolved_sources = opts.import_sources.iter().map(|origin| {
+      if origin.starts_with('.') {
+        let joined = normalized_join(&file.root, origin.as_str());
+        joined.to_string_lossy().into_owned()
+      } else {
+        origin.clone()
+      }
+    });
+
+    DEFAULT_IMPORT_SOURCES
       .iter()
-      .map(|origin| {
-        if origin.starts_with('.') {
-          let joined = normalized_join(&file.root, origin.as_str());
-          joined.to_string_lossy().into_owned()
-        } else {
-          origin.clone()
-        }
-      })
-      .chain(DEFAULT_IMPORT_SOURCES.iter().map(|s| s.to_string()))
+      .map(|s| s.to_string())
+      .chain(resolved_sources)
       .collect()
   }
 

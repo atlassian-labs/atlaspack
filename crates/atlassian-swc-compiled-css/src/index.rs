@@ -3,6 +3,7 @@ use swc_core::common::comments::Comment;
 use swc_core::ecma::visit::VisitMutWith;
 use swc_core::{common::comments::SingleThreadedComments, ecma::ast::Program};
 
+use crate::DEFAULT_IMPORT_SOURCES;
 pub use crate::babel_plugin::CompiledCssInJsTransform;
 pub use crate::errors::{TransformError, init_panic_suppression};
 #[allow(unused_imports)]
@@ -70,7 +71,9 @@ pub fn should_run_compiled_css_in_js_transform(code: &str, options: PluginOption
   options
     .import_sources
     .iter()
-    .any(|source| code.contains(source.as_str()))
+    .map(|s| s.as_str())
+    .chain(DEFAULT_IMPORT_SOURCES.iter().copied())
+    .any(|source| code.contains(source))
 }
 
 pub fn remove_jsx_pragma_comments(comments: &SingleThreadedComments) -> bool {
