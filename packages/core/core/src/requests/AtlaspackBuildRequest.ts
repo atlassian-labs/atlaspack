@@ -22,6 +22,7 @@ import {tracer} from '@atlaspack/profiler';
 import {requestTypes} from '../RequestTracker';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
 import {fromEnvironmentId} from '../EnvironmentManager';
+import invariant from 'assert';
 
 type AtlaspackBuildRequestInput = {
   optionsRef: SharedReference;
@@ -101,7 +102,7 @@ async function run({
       }
     });
     if (hasSupportedTarget) {
-      await rustAtlaspack.loadBundleGraph({nodes: [], edges: []});
+      await rustAtlaspack.loadBundleGraph(bundleGraph);
     }
   }
 

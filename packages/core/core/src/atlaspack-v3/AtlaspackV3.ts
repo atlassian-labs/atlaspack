@@ -11,10 +11,11 @@ import {
   CacheStats,
 } from '@atlaspack/rust';
 import {NapiWorkerPool} from './NapiWorkerPool';
-import ThrowableDiagnostic from '@atlaspack/diagnostic';
+import ThrowableDiagnostic, {Diagnostic} from '@atlaspack/diagnostic';
 import type {Event} from '@parcel/watcher';
 import type {NapiWorkerPool as INapiWorkerPool} from '@atlaspack/types';
-import {BundleGraphNode} from '../types';
+import type BundleGraph from '../BundleGraph';
+import {RunPackagerRunnerResult} from '../PackagerRunner';
 
 export type AtlaspackV3Options = {
   fs?: AtlaspackNapiOptions['fs'];
@@ -100,22 +101,25 @@ export class AtlaspackV3 {
     return atlaspackNapiBuildAssetGraph(this._atlaspack_napi) as Promise<any>;
   }
 
-  loadBundleGraph({
-    nodes,
-    edges,
-  }: {
-    nodes: BundleGraphNode[];
-    edges: [number, number][];
-  }): Promise<any> {
+  loadBundleGraph(bundleGraph: BundleGraph): Promise<void> {
+    const {nodesJson, edges, publicIdByAssetId, environmentsJson} =
+      bundleGraph.serializeForNative();
+
     return atlaspackNapiLoadBundleGraph(
       this._atlaspack_napi,
-      nodes,
+      nodesJson,
       edges,
-    ) as Promise<any>;
+      publicIdByAssetId,
+      environmentsJson,
+    ) as Promise<void>;
   }
 
-  package(): Promise<any> {
-    return atlaspackNapiPackage(this._atlaspack_napi) as Promise<any>;
+  package(
+    bundleId: string,
+  ): Promise<[RunPackagerRunnerResult, Diagnostic | null]> {
+    return atlaspackNapiPackage(this._atlaspack_napi, bundleId) as Promise<
+      [RunPackagerRunnerResult, Diagnostic | null]
+    >;
   }
 
   async respondToFsEvents(events: Array<Event>): Promise<boolean> {

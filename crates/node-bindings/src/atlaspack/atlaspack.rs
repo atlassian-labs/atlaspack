@@ -1,4 +1,5 @@
 use core::str;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread;
 
@@ -8,6 +9,8 @@ use atlaspack::AtlaspackError;
 use atlaspack::AtlaspackInitOptions;
 use atlaspack::WatchEvents;
 use atlaspack::rpc::nodejs::NodejsWorker;
+use atlaspack_core::bundle_graph::bundle_graph_from_js::BundleGraphFromJs;
+use atlaspack_core::types::Environment;
 use atlaspack_napi_helpers::JsTransferable;
 use atlaspack_napi_helpers::js_callable::JsCallable;
 use lmdb_js_lite::DatabaseHandle;
@@ -23,6 +26,8 @@ use atlaspack::file_system::FileSystemRef;
 use atlaspack::rpc::nodejs::NodejsRpcFactory;
 use atlaspack_package_manager::PackageManagerRef;
 use parking_lot::RwLock;
+
+use crate::atlaspack::package_result_napi::JsPackageResult;
 
 use super::file_system_napi::FileSystemNapi;
 use super::napi_result::NapiAtlaspackResult;
@@ -211,16 +216,35 @@ pub fn atlaspack_napi_respond_to_fs_events(
 pub fn atlaspack_napi_load_bundle_graph(
   env: Env,
   atlaspack_napi: AtlaspackNapi,
-  _nodes: Vec<JsObject>,
-  edges: Vec<(u32, u32)>,
+  nodes_json: String,
+  edges: Vec<(u32, u32, u8)>,
+  public_id_by_asset_id: HashMap<String, String>,
+  environments_json: String,
 ) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;
 
+  // Move all parsing and deserialization off the JS thread
   thread::spawn({
     let atlaspack = atlaspack_napi.clone();
     move || {
-      let atlaspack = atlaspack.write();
-      let result = atlaspack.load_bundle_graph(vec![()], edges);
+      let result: anyhow::Result<()> = (|| {
+        let environments: Vec<Environment> = serde_json::from_str(&environments_json)
+          .map_err(|e| anyhow::anyhow!("Failed to parse environments JSON: {}", e))?;
+
+        let nodes = BundleGraphFromJs::deserialize_from_json(nodes_json, &environments)?;
+
+        let atlaspack = atlaspack.write();
+        atlaspack.load_bundle_graph(
+          nodes,
+          edges
+            .into_iter()
+            .map(|(from, to, edge_type)| (from, to, edge_type.into()))
+            .collect(),
+          public_id_by_asset_id,
+          environments,
+        )
+      })();
+
       deferred.resolve(move |env| match result {
         Ok(()) => NapiAtlaspackResult::ok(&env, ()),
         Err(error) => {
@@ -234,15 +258,19 @@ pub fn atlaspack_napi_load_bundle_graph(
 }
 
 #[napi]
-pub fn atlaspack_napi_package(env: Env, atlaspack_napi: AtlaspackNapi) -> napi::Result<JsObject> {
+pub fn atlaspack_napi_package(
+  env: Env,
+  atlaspack_napi: AtlaspackNapi,
+  bundle_id: String,
+) -> napi::Result<JsObject> {
   let (deferred, promise) = env.create_deferred()?;
   thread::spawn({
     let atlaspack = atlaspack_napi.clone();
     move || {
       let atlaspack = atlaspack.read();
-      let result = atlaspack.package();
+      let result = atlaspack.package(bundle_id);
       deferred.resolve(move |env| match result {
-        Ok(()) => NapiAtlaspackResult::ok(&env, ()),
+        Ok(result) => NapiAtlaspackResult::ok(&env, JsPackageResult::from(result)),
         Err(error) => {
           let js_object = env.to_js_value(&AtlaspackError::from(&error))?;
           NapiAtlaspackResult::error(&env, js_object)

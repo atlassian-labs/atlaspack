@@ -294,6 +294,7 @@ dependencies = [
  "atlaspack_filesystem",
  "atlaspack_memoization_cache",
  "atlaspack_package_manager",
+ "atlaspack_packager_js",
  "atlaspack_plugin_resolver",
  "atlaspack_plugin_rpc",
  "atlaspack_plugin_transformer_css",
@@ -421,6 +422,7 @@ dependencies = [
  "once_cell",
  "oxipng",
  "parking_lot",
+ "pretty_assertions",
  "rayon",
  "regex",
  "rkyv 0.7.46",
@@ -539,6 +541,7 @@ dependencies = [
  "nodejs-semver",
  "petgraph",
  "pretty_assertions",
+ "rayon",
  "serde",
  "serde-value",
  "serde_json",
@@ -652,6 +655,19 @@ dependencies = [
  "atlaspack_filesystem",
  "mockall",
  "serde",
+ "tracing",
+]
+
+[[package]]
+name = "atlaspack_packager_js"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack_core",
+ "lmdb-js-lite",
+ "parking_lot",
+ "rayon",
+ "regex",
  "tracing",
 ]
 
@@ -864,7 +880,7 @@ dependencies = [
  "atlaspack_filesystem",
  "pretty_assertions",
  "serde_json",
- "serde_yml",
+ "serde_yaml_ng",
  "tokio",
 ]
 
@@ -925,7 +941,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
- "serde_yaml",
+ "serde_yaml_ng",
  "tempfile",
  "tracing",
  "tracing-subscriber",
@@ -3440,16 +3456,6 @@ dependencies = [
  "bitflags 2.10.0",
  "libc",
  "redox_syscall 0.7.0",
-]
-
-[[package]]
-name = "libyml"
-version = "0.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3302702afa434ffa30847a83305f0a69d6abd74293b6554c18ec85c7ef30c980"
-dependencies = [
- "anyhow",
- "version_check",
 ]
 
 [[package]]
@@ -5992,31 +5998,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_yaml"
-version = "0.9.34+deprecated"
+name = "serde_yaml_ng"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
+checksum = "7b4db627b98b36d4203a7b458cf3573730f2bb591b28871d916dfa9efabfd41f"
 dependencies = [
  "indexmap",
  "itoa",
  "ryu",
  "serde",
  "unsafe-libyaml",
-]
-
-[[package]]
-name = "serde_yml"
-version = "0.0.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59e2dd588bf1597a252c3b920e0143eb99b0f76e4e082f4c92ce34fbc9e71ddd"
-dependencies = [
- "indexmap",
- "itoa",
- "libyml",
- "memchr",
- "ryu",
- "serde",
- "version_check",
 ]
 
 [[package]]

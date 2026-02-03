@@ -15,6 +15,8 @@ import {getDevDepRequests, runDevDepRequest} from './DevDepRequest';
 import createAtlaspackConfigRequest from './AtlaspackConfigRequest';
 import {fromEnvironmentId} from '../EnvironmentManager';
 import {getFeatureFlag} from '@atlaspack/feature-flags';
+import logger from '@atlaspack/logger';
+import ThrowableDiagnostic, {Diagnostic} from '@atlaspack/diagnostic';
 
 type PackageRequestInput = {
   bundleGraph: BundleGraph;
@@ -61,6 +63,7 @@ async function run({input, api, farm, rustAtlaspack}: RunInput<BundleInfo>) {
     ),
   );
 
+  let packagingResult: RunPackagerRunnerResult;
   if (
     getFeatureFlag('nativePackager') &&
     getFeatureFlag('nativePackagerSSRDev') &&
@@ -69,11 +72,20 @@ async function run({input, api, farm, rustAtlaspack}: RunInput<BundleInfo>) {
     bundle.type === 'js'
   ) {
     // Once this actually does something, the code below will be in an `else` block (i.e. we'll only run one or the other)
-    await rustAtlaspack.package();
-  }
-
-  let {devDepRequests, configRequests, bundleInfo, invalidations} =
-    (await runPackage({
+    let result = await rustAtlaspack.package(bundle.id);
+    let error: Diagnostic | null = null;
+    [packagingResult, error] = result;
+    if (error) {
+      throw new ThrowableDiagnostic({
+        diagnostic: error,
+      });
+    }
+    logger.verbose({
+      message: JSON.stringify(packagingResult, null, 2),
+      origin: '@atlaspack/core',
+    });
+  } else {
+    packagingResult = (await runPackage({
       bundle,
       bundleGraphReference,
       optionsRef,
@@ -82,7 +94,10 @@ async function run({input, api, farm, rustAtlaspack}: RunInput<BundleInfo>) {
       invalidDevDeps,
       previousInvalidations: api.getInvalidations(),
     })) as RunPackagerRunnerResult;
+  }
 
+  let {devDepRequests, configRequests, bundleInfo, invalidations} =
+    packagingResult;
   for (let devDepRequest of devDepRequests) {
     await runDevDepRequest(api, devDepRequest);
   }

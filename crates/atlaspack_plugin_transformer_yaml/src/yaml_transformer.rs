@@ -18,7 +18,7 @@ impl TransformerPlugin for AtlaspackYamlTransformerPlugin {
   async fn transform(&self, asset: Asset) -> Result<TransformResult, Error> {
     let mut asset = asset.clone();
 
-    let code = serde_yml::from_slice::<serde_yml::Value>(asset.code.bytes())?;
+    let code = serde_yaml_ng::from_slice::<serde_yaml_ng::Value>(asset.code.bytes())?;
     let code = serde_json::to_string(&code)?;
 
     asset.code = Code::from(format!("module.exports = {code};"));

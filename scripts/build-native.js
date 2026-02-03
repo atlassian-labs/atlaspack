@@ -10,6 +10,7 @@ const __root = path.normalize(path.join(__dirname, '..'));
 // Parse command line arguments
 const args = process.argv.slice(2);
 const cleanNapi = args.includes('--clean-napi');
+const fastMode = args.includes('--fast');
 
 // Do a full cargo build
 const CARGO_PROFILE = process.env.CARGO_PROFILE;
@@ -31,18 +32,22 @@ let rustProfile = CARGO_PROFILE || 'dev';
 if (cleanNapi) {
   cleanNapiCrates();
 }
+if (!fastMode) {
+  // Only build APVM with `cargo build` - this prevents building unnecessary dependencies
+  // when re-building for NAPI as the environment is different and it triggers build.rs files to run
+  const cargoCommand = ['cargo', 'build', '--target', rustTarget, '-p apvm'];
 
-// Only build APVM with `cargo build` - this prevents building unnecessary dependencies
-// when re-building for NAPI as the environment is different and it triggers build.rs files to run
-const cargoCommand = ['cargo', 'build', '--target', rustTarget, '-p apvm'];
+  if (rustProfile !== 'dev') {
+    cargoCommand.push('--profile', rustProfile);
+  }
 
-if (rustProfile !== 'dev') {
-  cargoCommand.push('--profile', rustProfile);
+  // eslint-disable-next-line no-console
+  console.log(cargoCommand.join(' '));
+  child_process.execSync(cargoCommand.join(' '), {
+    stdio: 'inherit',
+    cwd: __root,
+  });
 }
-
-// eslint-disable-next-line no-console
-console.log(cargoCommand.join(' '));
-child_process.execSync(cargoCommand.join(' '), {stdio: 'inherit', cwd: __root});
 
 // Go through npm packages and run custom native commands on them
 const {workspaces} = JSON.parse(
@@ -53,7 +58,9 @@ for (const workspace of workspaces) {
   for (const pkg of glob.sync(workspace, {cwd: __root})) {
     const pkgDir = path.join(__root, pkg);
     buildNapiLibrary(pkgDir);
-    copyBinaries(pkgDir);
+    if (!fastMode) {
+      copyBinaries(pkgDir);
+    }
   }
 }
 

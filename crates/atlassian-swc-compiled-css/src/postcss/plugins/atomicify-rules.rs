@@ -255,20 +255,11 @@ fn atomic_class_name(
   let group = group_hash.chars().take(4).collect::<String>();
 
   let mut value_seed = serialize_component_values(&declaration.value).unwrap_or_default();
-  if options.optimize_css {
-    // COMPAT: Apply gradient minification (remove 100% from final stop, etc.) before hashing.
-    // This matches Babel's plugin order where postcss-minify-gradients runs before atomicify.
-    value_seed =
-      super::super::plugins::normalize_css_engine::minify_gradients::transform_value_for_hash(
-        &value_seed,
-      );
-
-    // COMPAT: Babel trims whitespace around multiplication inside calc() before hashing.
-    value_seed = value_seed.replace(" *", "*");
-    value_seed = value_seed.replace("* ", "*");
-    value_seed = value_seed.replace("*-", "* -");
-    value_seed = value_seed.replace("*+", "* +");
-  }
+  // COMPAT: Babel trims whitespace around multiplication inside calc() before hashing.
+  value_seed = value_seed.replace(" *", "*");
+  value_seed = value_seed.replace("* ", "*");
+  value_seed = value_seed.replace("*-", "* -");
+  value_seed = value_seed.replace("*+", "* +");
   if declaration.important.is_some() {
     value_seed.push_str("true");
   }
