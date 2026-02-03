@@ -94,7 +94,8 @@ export default function createBundleGraphRequestRust(
       const {api, options, rustAtlaspack} = runInput;
       invariant(rustAtlaspack, 'BundleGraphRequestRust requires rustAtlaspack');
 
-      let {bundleGraphPromise, commitPromise} = await rustAtlaspack.buildBundleGraph();
+      let {bundleGraphPromise, commitPromise} =
+        await rustAtlaspack.buildBundleGraph();
       let [serializedBundleGraph, bundleGraphError] =
         (await bundleGraphPromise) as [SerializedBundleGraph, Error | null];
 
@@ -108,7 +109,10 @@ export default function createBundleGraphRequestRust(
         () => getBundleGraph(serializedBundleGraph),
       );
 
-      const runner = new NativeBundlerRunner({api, options} as any, input.optionsRef);
+      const runner = new NativeBundlerRunner(
+        {api, options} as any,
+        input.optionsRef,
+      );
       await runner.loadConfigs();
 
       // Name all bundles
@@ -159,7 +163,7 @@ export default function createBundleGraphRequestRust(
       bundleGraph.getBundleGraphHash();
 
       await dumpGraphToGraphViz(
-        // @ts-expect-error
+        // @ts-expect-error Accessing internal graph for debug output
         bundleGraph._graph,
         'after_runtimes_native',
         bundleGraphEdgeTypes,
@@ -169,7 +173,8 @@ export default function createBundleGraphRequestRust(
       if (commitError) {
         throw new ThrowableDiagnostic({
           diagnostic: {
-            message: 'Error committing bundle graph in Rust: ' + commitError.message,
+            message:
+              'Error committing bundle graph in Rust: ' + commitError.message,
           },
         });
       }
@@ -215,7 +220,9 @@ export function getBundleGraph(serializedGraph: SerializedBundleGraph): {
   changedAssets: Map<string, Asset>;
 } {
   // Build a fresh internal bundle graph.
-  const publicIdByAssetId = new Map(Object.entries(serializedGraph.publicIdByAssetId ?? {}));
+  const publicIdByAssetId = new Map(
+    Object.entries(serializedGraph.publicIdByAssetId ?? {}),
+  );
   const assetPublicIds = new Set(serializedGraph.assetPublicIds ?? []);
 
   // BundleGraph constructor expects a ContentGraph under `_graph`.
@@ -241,9 +248,12 @@ export function getBundleGraph(serializedGraph: SerializedBundleGraph): {
   let entry = 0;
   const changedAssets = new Map<string, Asset>();
 
+  const decoder = new TextDecoder();
+
   // Create nodes in order.
   for (let i = 0; i < serializedGraph.nodes.length; i++) {
-    let node = JSON.parse(serializedGraph.nodes[i]);
+    // Nodes come back as buffers (same as AssetGraphRequestRust)
+    let node = JSON.parse(decoder.decode(serializedGraph.nodes[i]));
 
     if (node.type === 'root') {
       continue;
@@ -310,7 +320,7 @@ export function getBundleGraph(serializedGraph: SerializedBundleGraph): {
         deferred: false,
         excluded: false,
         hasDeferred: node.has_deferred,
-        // @ts-expect-error
+        // @ts-expect-error Flow types expect a more specific symbol set type
         usedSymbolsDown,
         usedSymbolsDownDirty: true,
         usedSymbolsUp,
@@ -323,15 +333,33 @@ export function getBundleGraph(serializedGraph: SerializedBundleGraph): {
     }
 
     if (node.type === 'bundle') {
-      // Normalize env
       node.value.env = normalizeEnv(node.value.env);
       node.value.target.env = normalizeEnv(node.value.target.env);
       graph._graph.addNodeByContentKey(node.id, node as BundleNode);
       continue;
     }
 
-    if (node.type === 'bundle_group') {
+    if (node.type === 'bundle_group' || node.type === 'bundleGroup') {
+      // Rust serializer may emit bundleGroup nodes either as `{id,type,value:{...}}`
+      // or as `{type:"bundleGroup", id, target, entryAssetId}`.
+      if (node.value == null) {
+        node.value = {
+          target: node.target,
+          entryAssetId: node.entryAssetId ?? node.entry_asset_id,
+        };
+      }
+
+      // Normalize entry asset id field naming
+      if (
+        node.value.entryAssetId == null &&
+        node.value.entry_asset_id != null
+      ) {
+        node.value.entryAssetId = node.value.entry_asset_id;
+      }
+
       node.value.target.env = normalizeEnv(node.value.target.env);
+      // Normalise to the expected snake_case type
+      node.type = 'bundle_group';
       graph._graph.addNodeByContentKey(node.id, node as BundleGroupNode);
       continue;
     }

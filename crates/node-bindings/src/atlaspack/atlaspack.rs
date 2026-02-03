@@ -237,15 +237,8 @@ pub fn atlaspack_napi_build_bundle_graph(
       let mut commit_deferred_opt = Some(second_deferred);
       deferred.resolve(move |env| match result {
         Ok((asset_graph, bundle_graph_delta, had_previous_graph)) => {
-          let serialize_result = serialize_bundle_graph(
-            &env,
-            &asset_graph,
-            &bundle_graph_delta.bundle_nodes,
-            &bundle_graph_delta.bundle_edges,
-            &bundle_graph_delta.public_id_by_asset_id,
-            &bundle_graph_delta.asset_public_ids,
-            had_previous_graph,
-          )?;
+          let serialize_result =
+            serialize_bundle_graph(&env, &bundle_graph_delta.bundle_graph, had_previous_graph)?;
 
           if let Some(commit_deferred) = commit_deferred_opt.take() {
             thread::spawn(move || {
