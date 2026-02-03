@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 
 use once_cell::sync::Lazy;
 use oxc_browserslist::{Opts, execute};
@@ -52,72 +53,86 @@ static CSS_INITIAL_VALUE_SUPPORT: Lazy<HashMap<String, HashSet<String>>> = Lazy:
 
 #[derive(Debug, Clone)]
 pub struct ReduceInitial {
-  initial_support: bool,
+  initial_support: Option<bool>,
   ignore_props: HashSet<String>,
 }
 
 impl ReduceInitial {
   fn new() -> Self {
     Self {
-      initial_support: detect_initial_support(),
+      initial_support: None,
       ignore_props: DEFAULT_IGNORE_PROPS.clone(),
     }
   }
 
-  fn process_stylesheet(&self, stylesheet: &mut Stylesheet) {
-    for rule in &mut stylesheet.rules {
-      self.process_rule(rule);
+  #[cfg(test)]
+  fn with_initial_support(initial_support: bool) -> Self {
+    Self {
+      initial_support: Some(initial_support),
+      ignore_props: DEFAULT_IGNORE_PROPS.clone(),
     }
   }
 
-  fn process_rule(&self, rule: &mut Rule) {
+  fn resolve_initial_support(&self, ctx: &TransformContext<'_>) -> bool {
+    self
+      .initial_support
+      .unwrap_or_else(|| detect_initial_support(ctx.options.browserslist_config_path.as_deref()))
+  }
+
+  fn process_stylesheet(&self, stylesheet: &mut Stylesheet, initial_support: bool) {
+    for rule in &mut stylesheet.rules {
+      self.process_rule(rule, initial_support);
+    }
+  }
+
+  fn process_rule(&self, rule: &mut Rule, initial_support: bool) {
     match rule {
       Rule::QualifiedRule(rule) => {
-        self.process_component_values(&mut rule.block.value);
+        self.process_component_values(&mut rule.block.value, initial_support);
       }
       Rule::AtRule(at_rule) => {
         if let Some(block) = &mut at_rule.block {
-          self.process_component_values(&mut block.value);
+          self.process_component_values(&mut block.value, initial_support);
         }
       }
       Rule::ListOfComponentValues(list) => {
-        self.process_component_values(&mut list.children);
+        self.process_component_values(&mut list.children, initial_support);
       }
     }
   }
 
-  fn process_component_values(&self, values: &mut [ComponentValue]) {
+  fn process_component_values(&self, values: &mut [ComponentValue], initial_support: bool) {
     for value in values {
       match value {
         ComponentValue::Declaration(declaration) => {
-          self.process_declaration(declaration);
+          self.process_declaration(declaration, initial_support);
         }
         ComponentValue::QualifiedRule(rule) => {
-          self.process_component_values(&mut rule.block.value);
+          self.process_component_values(&mut rule.block.value, initial_support);
         }
         ComponentValue::AtRule(at_rule) => {
           if let Some(block) = &mut at_rule.block {
-            self.process_component_values(&mut block.value);
+            self.process_component_values(&mut block.value, initial_support);
           }
         }
         ComponentValue::SimpleBlock(block) => {
-          self.process_component_values(&mut block.value);
+          self.process_component_values(&mut block.value, initial_support);
         }
         ComponentValue::ListOfComponentValues(list) => {
-          self.process_component_values(&mut list.children);
+          self.process_component_values(&mut list.children, initial_support);
         }
         ComponentValue::Function(function) => {
-          self.process_component_values(&mut function.value);
+          self.process_component_values(&mut function.value, initial_support);
         }
         ComponentValue::KeyframeBlock(block) => {
-          self.process_component_values(&mut block.block.value);
+          self.process_component_values(&mut block.block.value, initial_support);
         }
         _ => {}
       }
     }
   }
 
-  fn process_declaration(&self, declaration: &mut Declaration) {
+  fn process_declaration(&self, declaration: &mut Declaration, initial_support: bool) {
     let property = declaration_property_name(&declaration.name);
     let normalized_property = property.to_ascii_lowercase();
 
@@ -130,7 +145,7 @@ impl ReduceInitial {
     };
     let normalized_value = serialized_value.to_ascii_lowercase();
 
-    if self.initial_support {
+    if initial_support {
       if let Some(target) = TO_INITIAL.get(&normalized_property) {
         if normalized_value == *target {
           if normalized_value != "initial" {
@@ -158,8 +173,9 @@ impl Plugin for ReduceInitial {
     "postcss-reduce-initial"
   }
 
-  fn run(&self, stylesheet: &mut Stylesheet, _ctx: &mut TransformContext<'_>) {
-    self.process_stylesheet(stylesheet);
+  fn run(&self, stylesheet: &mut Stylesheet, ctx: &mut TransformContext<'_>) {
+    let initial_support = self.resolve_initial_support(ctx);
+    self.process_stylesheet(stylesheet, initial_support);
   }
 }
 
@@ -167,9 +183,11 @@ pub fn reduce_initial() -> ReduceInitial {
   ReduceInitial::new()
 }
 
-fn detect_initial_support() -> bool {
+fn detect_initial_support(config_path: Option<&Path>) -> bool {
   let mut opts = Opts::default();
-  opts.path = Some(env!("CARGO_MANIFEST_DIR").to_string());
+  if let Some(path) = config_path {
+    opts.path = Some(path.to_string_lossy().into_owned());
+  }
 
   execute(&opts)
     .map(|entries| {
@@ -179,14 +197,14 @@ fn detect_initial_support() -> bool {
         css_initial_supported(&browser, &version)
       })
     })
-    .unwrap_or(false)
+    .unwrap_or(true)
 }
 
 fn css_initial_supported(browser: &str, version: &str) -> bool {
   CSS_INITIAL_VALUE_SUPPORT
     .get(browser)
     .map(|versions| versions.contains(version))
-    .unwrap_or(false)
+    .unwrap_or(true)
 }
 
 #[cfg(test)]
@@ -232,30 +250,21 @@ mod tests {
 
   #[test]
   fn converts_known_values_to_initial_when_supported() {
-    let plugin = ReduceInitial {
-      initial_support: true,
-      ignore_props: DEFAULT_IGNORE_PROPS.clone(),
-    };
+    let plugin = ReduceInitial::with_initial_support(true);
     let result = run_plugin(".a { background-color: transparent; }", &plugin);
     assert_eq!(result, ".a {\n  background-color: initial;\n}");
   }
 
   #[test]
   fn keeps_values_when_support_missing() {
-    let plugin = ReduceInitial {
-      initial_support: false,
-      ignore_props: DEFAULT_IGNORE_PROPS.clone(),
-    };
+    let plugin = ReduceInitial::with_initial_support(false);
     let result = run_plugin(".a { background-color: transparent; }", &plugin);
     assert_eq!(result, ".a {\n  background-color: transparent;\n}");
   }
 
   #[test]
   fn replaces_initial_with_longhand_equivalent() {
-    let plugin = ReduceInitial {
-      initial_support: false,
-      ignore_props: DEFAULT_IGNORE_PROPS.clone(),
-    };
+    let plugin = ReduceInitial::with_initial_support(false);
     let result = run_plugin(".a { border-top-width: initial; }", &plugin);
     assert_eq!(result, ".a {\n  border-top-width: medium;\n}");
   }
@@ -265,7 +274,7 @@ mod tests {
     let mut ignore = DEFAULT_IGNORE_PROPS.clone();
     ignore.insert("background-color".into());
     let plugin = ReduceInitial {
-      initial_support: true,
+      initial_support: Some(true),
       ignore_props: ignore,
     };
     let result = run_plugin(".a { background-color: transparent; }", &plugin);

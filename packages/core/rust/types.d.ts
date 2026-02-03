@@ -234,6 +234,7 @@ export class AtlaspackTracer {
   constructor();
   enter(label: string): SpanId;
   exit(id: SpanId): void;
+  record(id: SpanId, data?: any | undefined | null): void;
 }
 export class Resolver {
   constructor(projectRoot: string, options: FileSystem);
@@ -380,7 +381,8 @@ export class SourceMap {
 
 export declare function atlaspackNapiPackage(
   atlaspackNapi: AtlaspackNapi,
-): object;
+  bundleId: string,
+): Promise<[RunPackagerRunnerResult, AtlaspackNapiError]>;
 export interface CompiledCssInJsConfigPlugin {
   configPath?: string;
   importReact?: boolean;
@@ -418,4 +420,6 @@ export declare function atlaspackNapiLoadBundleGraph(
   atlaspackNapi: AtlaspackNapi,
   nodes: string,
   edges: Array<[number, number, number]>,
+  publicIdByAssetId: Record<string, string>,
+  environments: string,
 ): object;
