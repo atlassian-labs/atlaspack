@@ -165,7 +165,7 @@ impl<'de> Deserialize<'de> for BundleGraphNode {
   where
     D: serde::Deserializer<'de>,
   {
-    let mut value = serde_json::Value::deserialize(deserializer)?;
+    let value = serde_json::Value::deserialize(deserializer)?;
     let node_type = value
       .get("type")
       .and_then(|v| v.as_str())

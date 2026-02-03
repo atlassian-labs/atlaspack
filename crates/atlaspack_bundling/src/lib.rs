@@ -35,21 +35,23 @@ impl Bundler for MonolithicBundler {
     let mut entry_asset_id: Option<String> = None;
 
     for node in asset_graph.nodes() {
-      if let AssetGraphNode::Dependency(dep) = node {
-        if dep.is_entry {
-          entry_dep = Some((**dep).clone());
-          // Resolve to first outgoing asset
-          if let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dep.id) {
-            let neighbors = asset_graph.get_outgoing_neighbors(dep_node_id);
-            for n in neighbors {
-              if let Some(AssetGraphNode::Asset(asset)) = asset_graph.get_node(&n) {
-                entry_asset_id = Some(asset.id.clone());
-                break;
-              }
+      if let AssetGraphNode::Dependency(dep) = node
+        && dep.is_entry
+      {
+        entry_dep = Some((**dep).clone());
+
+        // Resolve to first outgoing asset
+        if let Some(dep_node_id) = asset_graph.get_node_id_by_content_key(&dep.id) {
+          let neighbors = asset_graph.get_outgoing_neighbors(dep_node_id);
+          for n in neighbors {
+            if let Some(AssetGraphNode::Asset(asset)) = asset_graph.get_node(&n) {
+              entry_asset_id = Some(asset.id.clone());
+              break;
             }
           }
-          break;
         }
+
+        break;
       }
     }
 
@@ -135,15 +137,15 @@ impl Bundler for MonolithicBundler {
       }
 
       if let Some(node_id) = asset_graph.get_node_id_by_content_key(&asset_id) {
-        if let Some(AssetGraphNode::Asset(asset)) = asset_graph.get_node(node_id) {
-          if asset.file_type == FileType::Js {
-            bundle_graph.add_edge(
-              &bundle_node_id,
-              node_id,
-              NativeBundleGraphEdgeType::Contains,
-            );
-            bundle_graph.add_edge(&bundle_node_id, node_id, NativeBundleGraphEdgeType::Null);
-          }
+        if let Some(AssetGraphNode::Asset(asset)) = asset_graph.get_node(node_id)
+          && asset.file_type == FileType::Js
+        {
+          bundle_graph.add_edge(
+            &bundle_node_id,
+            node_id,
+            NativeBundleGraphEdgeType::Contains,
+          );
+          bundle_graph.add_edge(&bundle_node_id, node_id, NativeBundleGraphEdgeType::Null);
         }
 
         for child in asset_graph.get_outgoing_neighbors(node_id) {

@@ -35,7 +35,7 @@ impl Request for BundleGraphRequest {
   ) -> Result<ResultAndInvalidations, RunRequestError> {
     let mut bundle_graph = NativeBundleGraph::from_asset_graph(&self.asset_graph);
 
-    let bundler = MonolithicBundler::default();
+    let bundler = MonolithicBundler;
     bundler.bundle(&self.asset_graph, &mut bundle_graph)?;
 
     let output = BundleGraphRequestOutput {

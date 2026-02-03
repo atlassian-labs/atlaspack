@@ -1,6 +1,6 @@
 pub use asset_graph_request::*;
-pub use bundle_graph_request::*;
 use asset_request::AssetRequestOutput;
+pub use bundle_graph_request::*;
 use entry_request::EntryRequestOutput;
 use path_request::PathRequestOutput;
 use target_request::TargetRequestOutput;

@@ -24,7 +24,9 @@ use crate::WatchEvents;
 use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
 use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
-use crate::requests::{AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, RequestResult};
+use crate::requests::{
+  AssetGraphRequest, BundleGraphRequest, BundleGraphRequestOutput, RequestResult,
+};
 pub struct AtlaspackInitOptions {
   pub db: Arc<DatabaseHandle>,
   pub fs: Option<FileSystemRef>,
