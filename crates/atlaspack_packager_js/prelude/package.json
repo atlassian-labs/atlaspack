@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build:lib": "rm -rf lib && rolldown -c rolldown.config.ts"
+    "build:lib": "rolldown -c rolldown.config.ts"
   },
   "devDependencies": {
     "rolldown": "1.0.0-rc.2"

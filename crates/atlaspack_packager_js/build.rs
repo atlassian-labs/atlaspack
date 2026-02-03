@@ -3,6 +3,8 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
+  println!("cargo:rerun-if-changed=prelude/rolldown.config.ts");
+  println!("cargo:rerun-if-changed=prelude/package.json");
   // Register all non-test TypeScript files in prelude/src for change detection
   for path in glob("prelude/src/**/*.ts")
     .expect("Failed to read glob pattern")

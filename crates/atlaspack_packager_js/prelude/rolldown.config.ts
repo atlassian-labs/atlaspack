@@ -1,14 +1,26 @@
-import { defineConfig } from 'rolldown';
+import { defineConfig, type RolldownOptions } from 'rolldown';
 
-export default defineConfig({
-  input: 'src/prelude.ts',
-  platform: 'neutral',
-  transform: {
-    target: 'es2019'
-  },
-  output: {
-    file: 'lib/prelude.js',
-    format: 'iife',
-    name: 'Atlaspack_ATLASPACK_PRELUDE_HASH',
-  },
-});
+function preludeConfig(mode: 'dev' | 'prod'): RolldownOptions {
+  return {
+    input: 'src/prelude.ts',
+    platform: 'neutral',
+    transform: {
+      target: 'es2019',
+      define: {
+        MODE: JSON.stringify(mode),
+      }
+    },
+    output: {
+      file: `lib/prelude.${mode}.js`,
+      format: 'iife',
+      name: 'Atlaspack_ATLASPACK_PRELUDE_HASH',
+      minify: mode === 'prod',
+
+    },
+  };
+}
+
+export default defineConfig([
+  preludeConfig('dev'),
+  preludeConfig('prod'),
+]);

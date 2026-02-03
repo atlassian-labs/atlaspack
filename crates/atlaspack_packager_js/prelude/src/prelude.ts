@@ -12,11 +12,11 @@ interface AtlaspackPrelude {
   define: (id: string, factory: ModuleFactory) => void;
 
   // Used for testing
-  // (TODO: can we compile this out?)
-  __reset: () => void;
+  __reset?: () => void;
 }
 
 const globalObject = globalThis ?? global ?? window ?? this ?? {};
+declare const MODE: 'dev' | 'prod';
 
 let registry: Record<string, ModuleFactory> = {};
 let modules: Record<string, Module> = {};
@@ -47,10 +47,10 @@ const define = (id: string, factory: ModuleFactory): void => {
 };
 
 // Used for testing
-const __reset = (): void => {
-  registry = {};
-  modules = {};
-};
+const __reset = MODE === 'dev' ? (): void => {
+    registry = {};
+    modules = {};
+  } : undefined;
 export default {
   require,
   define,
