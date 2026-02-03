@@ -980,6 +980,7 @@ dependencies = [
  "oxc_resolver",
  "parking_lot",
  "percent-encoding 2.3.2",
+ "pretty_assertions",
  "regex",
  "ryu-js",
  "serde",

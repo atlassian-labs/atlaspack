@@ -216,3 +216,23 @@ pub fn plugin() -> pc::BuiltPlugin {
     })
     .build()
 }
+
+#[cfg(test)]
+mod tests {
+  use super::normalize_value;
+  use pretty_assertions::assert_eq;
+
+  #[test]
+  fn preserves_double_quotes_in_font_values() {
+    let input = r#"var(--ds-font-body-UNSAFE_small,normal 400 9pt/1pc ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Ubuntu,"Helvetica Neue",sans-serif)"#;
+    let output = normalize_value(input, '"');
+    assert_eq!(output, input);
+  }
+
+  #[test]
+  fn preserves_double_quotes_in_grid_template_areas() {
+    let input = r#""elem-before interactive elem-after actions""#;
+    let output = normalize_value(input, '"');
+    assert_eq!(output, input);
+  }
+}
