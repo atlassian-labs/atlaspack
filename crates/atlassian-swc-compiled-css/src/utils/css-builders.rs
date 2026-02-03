@@ -2269,6 +2269,25 @@ where
           fn literal_return_value(arrow: &ArrowExpr) -> Option<Expr> {
             match arrow.body.as_ref() {
               BlockStmtOrExpr::BlockStmt(block) => {
+                // If there are any control flow statements, the function may return
+                // different values depending on conditions, so we can't treat it as
+                // a static literal return.
+                let has_control_flow = block.stmts.iter().any(|stmt| {
+                  matches!(
+                    stmt,
+                    Stmt::If(_)
+                      | Stmt::Switch(_)
+                      | Stmt::For(_)
+                      | Stmt::ForIn(_)
+                      | Stmt::ForOf(_)
+                      | Stmt::While(_)
+                      | Stmt::DoWhile(_)
+                  )
+                });
+                if has_control_flow {
+                  return None;
+                }
+
                 for stmt in &block.stmts {
                   if let Some(found) = literal_from_stmt(stmt) {
                     return Some(found);
@@ -2289,6 +2308,25 @@ where
               Expr::Arrow(arrow) => literal_return_value(arrow),
               Expr::Fn(fn_expr) => {
                 if let Some(body) = &fn_expr.function.body {
+                  // If there are any control flow statements, the function may return
+                  // different values depending on conditions, so we can't treat it as
+                  // a static literal return.
+                  let has_control_flow = body.stmts.iter().any(|stmt| {
+                    matches!(
+                      stmt,
+                      Stmt::If(_)
+                        | Stmt::Switch(_)
+                        | Stmt::For(_)
+                        | Stmt::ForIn(_)
+                        | Stmt::ForOf(_)
+                        | Stmt::While(_)
+                        | Stmt::DoWhile(_)
+                    )
+                  });
+                  if has_control_flow {
+                    return None;
+                  }
+
                   for stmt in &body.stmts {
                     if let Stmt::Return(ReturnStmt { arg: Some(arg), .. }) = stmt {
                       match arg.as_ref() {
@@ -3604,6 +3642,40 @@ mod tests {
         assert_eq!(
           unconditional.css,
           format!("font-size: var({expected_name});")
+        );
+      }
+      other => panic!("expected unconditional css item, found {other:?}"),
+    }
+  }
+
+  #[test]
+  fn arrow_function_with_control_flow_creates_variable() {
+    // An arrow function with control flow (if statements) should NOT be collapsed
+    // to a static literal, but should create a CSS variable instead
+    let metadata = create_metadata();
+    let object = parse_object_literal(
+      "({ padding: (props) => { if (props.compact) { return '4px'; } return '8px 16px'; } })",
+    );
+    let mut build_css = |expr: &Expr, meta: &Metadata| super::build_css_internal(expr, meta);
+
+    let output = super::extract_object_expression_with_builder(&object, &metadata, &mut build_css);
+
+    // Should create a CSS variable since the function has control flow
+    assert_eq!(output.variables.len(), 1);
+    assert_eq!(output.css.len(), 1);
+
+    // The CSS should use var() not expanded longhands
+    match &output.css[0] {
+      CssItem::Unconditional(unconditional) => {
+        assert!(
+          unconditional.css.contains("padding: var(--_"),
+          "Expected padding with CSS variable, got: {}",
+          unconditional.css
+        );
+        // Should NOT have expanded longhands
+        assert!(
+          !unconditional.css.contains("padding-top:"),
+          "Should not have expanded longhands"
         );
       }
       other => panic!("expected unconditional css item, found {other:?}"),
