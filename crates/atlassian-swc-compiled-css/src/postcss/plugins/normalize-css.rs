@@ -11,13 +11,11 @@ pub fn normalize_css(options: &TransformCssOptions) -> Vec<Box<dyn Plugin>> {
   let mut plugins: Vec<Box<dyn Plugin>> = Vec::new();
 
   // Base plugins that always run regardless of `optimize_css`.
-  plugins.push(Box::new(discard_comments()));
   plugins.push(Box::new(minify_selectors(true)));
   plugins.push(Box::new(minify_params()));
 
   if options.optimize_css.unwrap_or(true) {
-    // Production-only plugins that cssnano would include.
-    // Legacy ordered-values plugin is disabled in favor of the engine port
+    // Production-only plugins that cssnano would include, in preset order.
     plugins.push(Box::new(CssnanoPlaceholder::new("postcss-ordered-values")));
     plugins.push(Box::new(reduce_initial()));
     plugins.push(Box::new(super::convert_values::convert_values()));
@@ -38,6 +36,7 @@ pub fn normalize_css(options: &TransformCssOptions) -> Vec<Box<dyn Plugin>> {
     plugins.push(Box::new(CssnanoPlaceholder::new(
       "postcss-minify-gradients",
     )));
+    plugins.push(Box::new(discard_comments()));
     plugins.push(Box::new(CssnanoPlaceholder::new("postcss-calc")));
 
     // Custom plugin beyond cssnano preset default.
