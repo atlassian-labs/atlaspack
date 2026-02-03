@@ -7,7 +7,7 @@ type ModuleFactory = (
   global: Record<string, unknown>,
 ) => void;
 
-interface AtlaspackPrelude {
+export interface AtlaspackPrelude {
   require: (id: string) => ModuleExports;
   define: (id: string, factory: ModuleFactory) => void;
 

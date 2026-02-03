@@ -13,7 +13,6 @@ function preludeConfig(mode: 'dev' | 'prod'): RolldownOptions {
     output: {
       file: `lib/prelude.${mode}.js`,
       format: 'iife',
-      name: 'Atlaspack_ATLASPACK_PRELUDE_HASH',
       minify: mode === 'prod',
 
     },

@@ -191,15 +191,6 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   pub fn assemble_bundle(&self, bundle: &Bundle, contents: Vec<(&Asset, String)>) -> String {
     // This is a temporary implementation that will just use string concatenation
 
-    let full_hash = hash_string("FIXME".to_string());
-    let hash = full_hash
-      .chars()
-      .skip(full_hash.len() - 4)
-      .collect::<String>();
-
-    let prelude_string =
-      include_str!("../prelude/lib/prelude.dev.js").replace("ATLASPACK_PRELUDE_HASH", &hash);
-
     // Sort the contents - non-entry assets by asset id first, then entry assets in the same order as bundle.entry_asset_ids
 
     // Separate entry and non-entry assets
@@ -230,19 +221,40 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .collect::<Vec<_>>()
       .join("\n");
 
+    // For now we just always use the dev prelude
+    let prelude_string = include_str!("../prelude/lib/prelude.dev.js");
+
+    // For SSR bundles we don't have the concern of disambiguating preludes from different builds
+    // I'm not sure if we need this functionality at all for our use case, but let's leave it in for now.
+    let full_hash = hash_string("TODO".to_string());
+    let prelude_hash = full_hash
+      .chars()
+      .skip(full_hash.len() - 4)
+      .collect::<String>();
+
+    // It's a little bit of gymnastics, but what we want to do here is:
+    // - have a prelude that's pre-compiled and can be unit tested in isolation - so the prelude code is just an iife
+    // - we want to minimise the amount of JS that's in a string and not typechecked / unit testable
+    // - we want to only have one copy of the prelude, no matter how many bundles are loaded (less relevant for SSR)
+    // - we want (relatively) short names for the required top level methods `require` and `define`
+    //
+    // We are working under the assumption that a few extra prelude bytes are not going to be a big deal - I don't think we should
+    // be micro-optimising at that level (when we get to that point what we probably want is an external prelude bundle anyway and no prelude
+    // in "user" bundles)
     let prelude_loader = format!(
       r#"
-    var require = Atlaspack_{hash}.require;
-    var define = Atlaspack_{hash}.define;
+    var globalObject = globalThis ?? global ?? window ?? this ?? {{}};
+    if (!globalObject.Atlaspack_{prelude_hash}) {{
+      globalObject.Atlaspack_{prelude_hash} = {prelude_string};
+    }}
+    var require = globalObject.Atlaspack_{prelude_hash}.require;
+    var define = globalObject.Atlaspack_{prelude_hash}.define;
     "#,
-      hash = &hash
+      prelude_hash = &prelude_hash
     );
 
-    "(function() {\n".to_string()
-      + &prelude_string
-      + &prelude_loader
-      + &asset_contents
-      + "\n})();\n"
+    // We wrap the whole bundle in an IIFE as well to isolate the top level variables
+    "(function() {\n".to_string() + &prelude_loader + &asset_contents + "\n})();\n"
   }
 }
 
