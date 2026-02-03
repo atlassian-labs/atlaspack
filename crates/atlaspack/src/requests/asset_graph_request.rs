@@ -13,7 +13,9 @@ use crate::request_tracker::{
   Request, RequestResultReceiver, RequestResultSender, ResultAndInvalidations, RunRequestContext,
   RunRequestError,
 };
-use atlaspack_core::asset_graph::{AssetGraph, DependencyState, propagate_requested_symbols};
+use atlaspack_core::asset_graph::{
+  AssetGraph, DependencyState, SymbolTracker, propagate_requested_symbols,
+};
 use atlaspack_core::types::{AssetWithDependencies, Dependency};
 
 use super::RequestResult;
@@ -39,6 +41,7 @@ impl Hash for AssetGraphRequest {
 #[derive(Clone, Debug, PartialEq)]
 pub struct AssetGraphRequestOutput {
   pub graph: Arc<AssetGraph>,
+  pub symbol_tracker: Option<SymbolTracker>,
 }
 
 #[async_trait]
@@ -186,6 +189,7 @@ impl AssetGraphRequest {
     Ok(ReusedAssetGraphResult::Reused(ResultAndInvalidations {
       result: RequestResult::AssetGraph(AssetGraphRequestOutput {
         graph: Arc::new(asset_graph),
+        symbol_tracker: None,
       }),
       invalidations: vec![],
     }))
@@ -206,6 +210,7 @@ pub(crate) struct AssetGraphBuilder {
   waiting_asset_requests: HashMap<u64, HashSet<NodeId>>,
   entry_dependencies: Vec<(String, NodeId)>,
   changed_requests: HashSet<u64>,
+  symbol_tracker: SymbolTracker,
 }
 
 impl AssetGraphBuilder {
@@ -228,6 +233,7 @@ impl AssetGraphBuilder {
       waiting_asset_requests: HashMap::new(),
       entry_dependencies: Vec::new(),
       changed_requests,
+      symbol_tracker: SymbolTracker::new(),
     }
   }
 
@@ -307,6 +313,7 @@ impl AssetGraphBuilder {
     Ok(ResultAndInvalidations {
       result: RequestResult::AssetGraph(AssetGraphRequestOutput {
         graph: Arc::new(self.graph),
+        symbol_tracker: Some(self.symbol_tracker),
       }),
       invalidations: vec![],
     })
