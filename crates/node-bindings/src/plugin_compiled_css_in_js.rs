@@ -520,11 +520,11 @@ pub fn apply_compiled_css_in_js_plugin(
 fn config_to_plugin_options(
   config: &atlassian_swc_compiled_css::CompiledCssInJsTransformConfig,
 ) -> atlassian_swc_compiled_css::PluginOptions {
-  // Ensure @compiled/react is in import_sources
-  let mut import_sources = config.import_sources.clone();
-  if !import_sources.contains(&"@compiled/react".to_string()) {
-    import_sources.push("@compiled/react".to_string());
-  }
+  let import_sources = atlassian_swc_compiled_css::DEFAULT_IMPORT_SOURCES
+    .iter()
+    .map(|s| s.to_string())
+    .chain(config.import_sources.clone())
+    .collect();
 
   atlassian_swc_compiled_css::PluginOptions {
     cache: None,

@@ -22,6 +22,7 @@ use swc_core::ecma::ast::{Expr, Ident, Program};
 
 use oxc_resolver::Resolver;
 
+use crate::DEFAULT_IMPORT_SOURCES;
 use crate::utils_cache::{Cache, CacheOptions};
 use crate::utils_types::PartialBindingWithMeta;
 
@@ -164,7 +165,7 @@ impl Default for PluginOptions {
       max_size: None,
       import_react: None,
       nonce: None,
-      import_sources: vec![],
+      import_sources: Default::default(),
       on_included_files: None,
       optimize_css: None,
       resolver: None,
@@ -534,6 +535,7 @@ impl TransformState {
           origin.clone()
         }
       })
+      .chain(DEFAULT_IMPORT_SOURCES.iter().map(|s| s.to_string()))
       .collect()
   }
 

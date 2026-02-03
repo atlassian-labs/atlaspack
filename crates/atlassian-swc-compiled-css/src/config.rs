@@ -240,7 +240,7 @@ impl Default for CompiledCssInJsTransformConfig {
       extract: false,
       flatten_multiple_selectors: true,
       import_react: true,
-      import_sources: vec!["@compiled/react".into()],
+      import_sources: Default::default(),
       increase_specificity: false,
       nonce: None,
       optimize_css: true,
