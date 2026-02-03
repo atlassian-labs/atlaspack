@@ -210,6 +210,7 @@ pub(crate) struct AssetGraphBuilder {
   waiting_asset_requests: HashMap<u64, HashSet<NodeId>>,
   entry_dependencies: Vec<(String, NodeId)>,
   changed_requests: HashSet<u64>,
+  enable_symbol_tracker: bool,
   symbol_tracker: SymbolTracker,
 }
 
@@ -220,6 +221,11 @@ impl AssetGraphBuilder {
     changed_requests: HashSet<u64>,
   ) -> Self {
     let (sender, receiver) = channel();
+
+    let enable_symbol_tracker = request_context
+      .options
+      .feature_flags
+      .bool_enabled("rustSymbolTracker");
 
     AssetGraphBuilder {
       request_id_to_dependency_id: HashMap::new(),
@@ -233,6 +239,7 @@ impl AssetGraphBuilder {
       waiting_asset_requests: HashMap::new(),
       entry_dependencies: Vec::new(),
       changed_requests,
+      enable_symbol_tracker,
       symbol_tracker: SymbolTracker::default(),
     }
   }
@@ -313,7 +320,7 @@ impl AssetGraphBuilder {
     Ok(ResultAndInvalidations {
       result: RequestResult::AssetGraph(AssetGraphRequestOutput {
         graph: Arc::new(self.graph),
-        symbol_tracker: Some(self.symbol_tracker),
+        symbol_tracker: self.enable_symbol_tracker.then_some(self.symbol_tracker),
       }),
       invalidations: vec![],
     })
@@ -482,6 +489,18 @@ impl AssetGraphBuilder {
       asset_unique_key.as_ref(),
       cached,
     );
+
+    if self.enable_symbol_tracker
+      && let Err(err) = self
+        .symbol_tracker
+        .track_symbols(&self.graph, asset, dependencies)
+    {
+      panic!(
+        "Error tracking symbols for asset {}: {}",
+        asset.file_path.display(),
+        err
+      );
+    }
 
     self.propagate_requested_symbols(asset_id, incoming_dependency_id);
 
@@ -719,6 +738,48 @@ mod tests {
 
   use crate::requests::{AssetGraphRequest, RequestResult};
   use crate::test_utils::{RequestTrackerTestOptions, request_tracker};
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_asset_graph_request_symbol_tracker_feature_flag_disabled_by_default() {
+    let options = RequestTrackerTestOptions::default();
+    let mut request_tracker = request_tracker(options);
+
+    let asset_graph_request = AssetGraphRequest {
+      prev_asset_graph: None,
+      incrementally_bundled_assets: None,
+    };
+    let result = request_tracker
+      .run_request(asset_graph_request)
+      .await
+      .unwrap();
+    let RequestResult::AssetGraph(asset_graph_request_result) = result.as_ref() else {
+      panic!("Got invalid result");
+    };
+
+    assert!(asset_graph_request_result.symbol_tracker.is_none());
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_asset_graph_request_symbol_tracker_feature_flag_enabled() {
+    let mut options = RequestTrackerTestOptions::default();
+    options.atlaspack_options.feature_flags =
+      atlaspack_core::types::FeatureFlags::with_bool_flag("rustSymbolTracker", true);
+    let mut request_tracker = request_tracker(options);
+
+    let asset_graph_request = AssetGraphRequest {
+      prev_asset_graph: None,
+      incrementally_bundled_assets: None,
+    };
+    let result = request_tracker
+      .run_request(asset_graph_request)
+      .await
+      .unwrap();
+    let RequestResult::AssetGraph(asset_graph_request_result) = result.as_ref() else {
+      panic!("Got invalid result");
+    };
+
+    assert!(asset_graph_request_result.symbol_tracker.is_some());
+  }
 
   #[tokio::test(flavor = "multi_thread")]
   async fn test_asset_graph_request_with_no_entries() {
