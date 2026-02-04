@@ -382,16 +382,21 @@ impl TransformerPlugin for NodejsRpcTransformerPlugin {
 
     // Only track bailouts for transformers that are marked as cacheable.
     let bailout_transformer = if cache_bailout && matches!(self.cache_key, CacheStatus::Hash(_)) {
-      tracing::debug!(
-        "Transformer({}) bailout for asset '{}'\n{}",
-        self.plugin_node.package_name,
-        transformed_asset.file_path.display(),
-        cache_bailouts
-          .iter()
-          .map(|b| format!("- {}", b))
-          .collect::<Vec<String>>()
-          .join("\n")
-      );
+      match self.plugin_node.package_name.as_str() {
+        "@atlassian/parcel-transformer-babel-conditional" => {}
+        _ => {
+          tracing::debug!(
+            "Transformer({}) bailout for asset '{}'\n{}",
+            self.plugin_node.package_name,
+            transformed_asset.file_path.display(),
+            cache_bailouts
+              .iter()
+              .map(|b| format!("- {}", b))
+              .collect::<Vec<String>>()
+              .join("\n")
+          );
+        }
+      }
       Some(self.plugin_node.package_name.clone())
     } else {
       None
