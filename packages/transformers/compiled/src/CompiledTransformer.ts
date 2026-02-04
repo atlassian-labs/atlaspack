@@ -9,7 +9,10 @@ import assert from 'assert';
 
 import {transformAsync} from '@babel/core';
 import generate from '@babel/generator';
-import type {PluginOptions as BabelPluginOptions} from '@compiled/babel-plugin';
+import type {
+  PluginOptions as BabelPluginOptions,
+  Resolver,
+} from '@compiled/babel-plugin';
 import type {
   PluginOptions as BabelStripRuntimePluginOptions,
   BabelFileMetadata,
@@ -34,6 +37,79 @@ import BabelPluginSyntaxJsx from '@babel/plugin-syntax-jsx';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import BabelPluginSyntaxTypescript from '@babel/plugin-syntax-typescript';
 
+/**
+ * Module-level cache for resolver instances.
+ * Key: resolver module path, Value: loaded resolver object
+ *
+ * We use a module-level cache because:
+ * 1. The config returned from setup() must be serializable (no functions)
+ * 2. Each worker process has its own cache (workers are separate Node.js processes)
+ * 3. The resolver is loaded once per worker during setup(), avoiding FS operations during transform()
+ */
+const resolverCache = new Map<string, Resolver>();
+
+/**
+ * Loads and validates a custom resolver module.
+ * The resolver can be specified as a module path string in the config.
+ * This function resolves and loads it at setup time to avoid FS operations during transform.
+ *
+ * The loaded resolver is cached in the module-level cache, keyed by the resolver path.
+ * In transform(), we retrieve the resolver from the cache instead of storing it in config
+ * (since functions are not serializable).
+ */
+function loadResolver(resolverPath: string, projectRoot: string): Resolver {
+  // Check cache first
+  const cacheKey = `${projectRoot}:${resolverPath}`;
+  const cached = resolverCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const resolvedPath = require.resolve(resolverPath, {
+      paths: [projectRoot],
+    });
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const resolverModule = require(resolvedPath);
+
+    let resolver: Resolver;
+    // The module should export a resolveSync function directly or as a property
+    if (typeof resolverModule.resolveSync === 'function') {
+      resolver = resolverModule as Resolver;
+    } else if (typeof resolverModule === 'function') {
+      resolver = {resolveSync: resolverModule} as Resolver;
+    } else {
+      throw new Error(
+        `Resolver module "${resolverPath}" does not export a valid resolveSync function`,
+      );
+    }
+
+    // Cache the resolver for use in transform()
+    resolverCache.set(cacheKey, resolver);
+    return resolver;
+  } catch (error) {
+    throw new Error(
+      `Failed to load resolver module "${resolverPath}": ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+/**
+ * Gets the resolver for use in transform().
+ * If a custom resolver path is specified, retrieves it from the cache.
+ * Otherwise, creates a default resolver.
+ */
+function getResolver(config: Config): Resolver {
+  if (config.resolverCacheKey) {
+    const cached = resolverCache.get(config.resolverCacheKey);
+    if (cached) {
+      return cached;
+    }
+    // If not in cache (shouldn't happen in normal flow), fall through to default
+  }
+  return createDefaultResolver(config.compiledConfig);
+}
+
 const configFiles = [
   '.compiledcssrc',
   '.compiledcssrc.json',
@@ -47,6 +123,15 @@ interface Config {
   compiledConfig: CompiledTransformerOpts;
   mode: BuildMode;
   projectRoot: string;
+  /**
+   * Cache key for the resolver. If the config specifies a resolver as a string (module path),
+   * it is resolved and loaded in setup() and cached in the module-level resolverCache.
+   * This key is used to retrieve the resolver in transform().
+   *
+   * We use a cache key instead of the resolver object itself because the config must be
+   * serializable (functions cannot be serialized across the Rust/JS boundary).
+   */
+  resolverCacheKey?: string;
 }
 
 /**
@@ -112,11 +197,27 @@ export default new Transformer<Config>({
       contents.transformerBabelPlugins &&
       contents.transformerBabelPlugins.length > 0;
 
+    // Pre-load the resolver module in setup() to avoid FS operations during transform().
+    // The config can specify a resolver as a string (module path) which the Compiled babel
+    // plugin would normally resolve via require() during transform. By loading it here,
+    // we move those FS operations out of the transform phase, enabling caching.
+    //
+    // We store a cache key in the config (not the resolver itself) because the config must
+    // be serializable. The resolver is stored in the module-level cache and retrieved in transform().
+    let resolverCacheKey: string | undefined;
+    if (typeof contents.resolver === 'string') {
+      resolverCacheKey = `${options.projectRoot}:${contents.resolver}`;
+      // Load the resolver now (during setup) to populate the cache
+      // This ensures FS operations happen during setup, not during transform
+      loadResolver(contents.resolver, options.projectRoot);
+    }
+
     return {
       config: {
         compiledConfig: contents,
         mode: options.mode,
         projectRoot: options.projectRoot,
+        resolverCacheKey,
       },
       conditions: {
         codeMatch: contents.importSources,
@@ -141,6 +242,7 @@ export default new Transformer<Config>({
         'NODE_DEBUG',
         'CI',
         'COLORTERM',
+        'TERM',
       ],
       disableCache: hasExternalBabelPlugins,
     };
@@ -190,6 +292,14 @@ export default new Transformer<Config>({
       filename: asset.filePath,
       babelrc: false,
       configFile: false,
+      // Disable browserslist config file lookup to prevent FS operations on every transform.
+      // Browserslist walks up directory tree reading package.json files to find browserslist config,
+      // which causes cache bailouts. The Compiled transformer doesn't need browser targets for its
+      // AST transformation - it only transforms CSS-in-JS syntax.
+      browserslistConfigFile: false,
+      // Provide empty targets to prevent Babel from trying to infer them.
+      // The actual browser targeting is handled by downstream tools (bundler, autoprefixer).
+      targets: {},
       sourceMaps: !!asset.env.sourceMap,
       compact: false,
       plugins: [
@@ -205,9 +315,12 @@ export default new Transformer<Config>({
               config.compiledConfig.extract &&
               config.compiledConfig.classNameCompressionMap,
             onIncludedFiles: (files: string[]) => includedFiles.push(...files),
-            resolver: config.compiledConfig.resolver
-              ? config.compiledConfig.resolver
-              : createDefaultResolver(config.compiledConfig),
+            // Use the pre-loaded resolver from setup(), or create a default one.
+            // The resolver is retrieved from the module-level cache using the cache key.
+            // By passing the resolver object (not a string), we avoid the Compiled
+            // babel plugin doing require.resolve() during transform, which would
+            // cause FS operations and cache bailouts.
+            resolver: getResolver(config),
             cache: false,
           } as BabelPluginOptions,
         ],
