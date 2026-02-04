@@ -770,6 +770,7 @@ mod tests {
         dependencies: vec![],
         invalidate_on_file_change: vec![],
         cache_bailout: false,
+        bailout_transformer: None,
       }
     );
 
@@ -2137,6 +2138,7 @@ mod tests {
         dependencies: vec![],
         invalidate_on_file_change: vec![],
         cache_bailout: false,
+        bailout_transformer: None,
       }
     );
 
@@ -2243,6 +2245,7 @@ mod tests {
         dependencies: expected_dependencies,
         invalidate_on_file_change: vec![],
         cache_bailout: false,
+        bailout_transformer: None,
       }
     );
 

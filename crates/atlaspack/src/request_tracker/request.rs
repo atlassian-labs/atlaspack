@@ -32,6 +32,13 @@ pub enum DynCacheHandler {
 }
 
 impl DynCacheHandler {
+  pub fn get_stats_snapshot(&self) -> atlaspack_memoization_cache::StatsSnapshot {
+    match self {
+      DynCacheHandler::Lmdb(cache) => cache.get_stats_snapshot(),
+      DynCacheHandler::InMemory(cache) => cache.get_stats_snapshot(),
+    }
+  }
+
   pub fn complete_session(&self) -> anyhow::Result<atlaspack_memoization_cache::StatsSnapshot> {
     match self {
       DynCacheHandler::Lmdb(cache) => cache.complete_session(),

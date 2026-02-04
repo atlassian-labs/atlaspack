@@ -22,6 +22,7 @@ use crate::requests::asset_request::run_pipeline::PipelineResult;
 use crate::requests::asset_request::run_pipeline::RunPipelineInput;
 use crate::requests::asset_request::run_pipeline::RunPipelineOutput;
 use crate::requests::asset_request::run_pipeline::run_pipeline;
+use atlaspack_memoization_cache::Cacheable;
 
 use super::RequestResult;
 
@@ -168,23 +169,30 @@ async fn run_pipelines(
       plugins.transformers(&asset_to_modify).await?
     };
 
+    let pipeline_input = RunPipelineInput {
+      asset: asset_to_modify,
+      pipeline,
+      plugins: plugins.clone(),
+      project_root: request_context.project_root.clone(),
+    };
+
+    let pipeline_is_cacheable = pipeline_input.cache_key().is_some();
+
     let RunPipelineOutput {
       invalidations,
       discovered_assets,
       pipeline_result: result,
+      bailout_transformers,
       ..
     } = request_context
       .cache
-      .run(
-        RunPipelineInput {
-          asset: asset_to_modify,
-          pipeline,
-          plugins: plugins.clone(),
-          project_root: request_context.project_root.clone(),
-        },
-        |input| async { run_pipeline(input).await },
-      )
+      .run(pipeline_input, |input| async { run_pipeline(input).await })
       .await?;
+
+    #[cfg(feature = "nodejs")]
+    if pipeline_is_cacheable && !bailout_transformers.is_empty() {
+      atlaspack_plugin_rpc::nodejs::record_transformer_bailouts(&bailout_transformers);
+    }
 
     all_invalidations.extend(invalidations);
     asset_queue.extend(
@@ -233,6 +241,7 @@ async fn run_pipelines(
 
     // TODO: Remove this as we've already done caching and this doesn't mean anything at this level
     cache_bailout: false,
+    bailout_transformer: None,
   })
 }
 
@@ -517,6 +526,7 @@ mod tests {
         dependencies: self.dependencies.clone().unwrap_or_default(),
         invalidate_on_file_change: self.invalidate_on_file_change.clone().unwrap_or_default(),
         cache_bailout: false,
+        bailout_transformer: None,
       })
     }
   }

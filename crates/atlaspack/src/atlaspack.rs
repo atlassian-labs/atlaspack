@@ -12,15 +12,20 @@ use atlaspack_core::package_result::PackageResult;
 use atlaspack_core::plugin::{PluginContext, PluginLogger, PluginOptions};
 use atlaspack_core::types::{AtlaspackOptions, Environment, SourceField, Targets};
 use atlaspack_filesystem::{FileSystemRef, os_file_system::OsFileSystem};
-use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter, StatsSnapshot};
+use atlaspack_memoization_cache::{CacheHandler, CacheMode, LmdbCacheReaderWriter};
 use atlaspack_package_manager::{NodePackageManager, PackageManagerRef};
 use atlaspack_packager_js::JsPackager;
+#[cfg(feature = "nodejs")]
+use atlaspack_plugin_rpc::nodejs::{
+  get_and_clear_transformer_bailout_stats, get_transformer_bailout_stats,
+};
 use atlaspack_plugin_rpc::{RpcFactoryRef, RpcWorkerRef};
 use lmdb_js_lite::DatabaseHandle;
 use tokio::runtime::Runtime;
 use tokio::sync::RwLock;
 
 use crate::WatchEvents;
+use crate::cache_stats::{NativeCacheStats, TransformerPipelineCacheStats};
 use crate::plugins::{PluginsRef, config_plugins::ConfigPlugins};
 use crate::project_root::infer_project_root;
 use crate::request_tracker::{DynCacheHandler, RequestNode, RequestTracker};
@@ -227,6 +232,18 @@ impl Atlaspack {
         })
         .await?;
 
+      // Log memoization cache stats after asset graph request completes.
+      #[cfg(feature = "nodejs")]
+      let bailouts_by_transformer = get_transformer_bailout_stats().bailouts_by_transformer;
+      #[cfg(not(feature = "nodejs"))]
+      let bailouts_by_transformer = HashMap::new();
+
+      TransformerPipelineCacheStats::from_snapshot(
+        &request_tracker.cache.get_stats_snapshot(),
+        bailouts_by_transformer,
+      )
+      .log();
+
       let RequestResult::AssetGraph(asset_graph_request_output) = request_result.as_ref() else {
         panic!("Something went wrong with the request tracker")
       };
@@ -305,13 +322,30 @@ impl Atlaspack {
   }
 
   /// Get cache statistics
-  pub async fn complete_cache_session(&self) -> Option<StatsSnapshot> {
-    match self.request_tracker.read().await.cache.complete_session() {
-      Ok(stats) => Some(stats),
+  pub async fn complete_cache_session(&self) -> NativeCacheStats {
+    let transformer_pipelines = match self.request_tracker.read().await.cache.complete_session() {
+      Ok(stats) => {
+        #[cfg(feature = "nodejs")]
+        let bailouts_by_transformer =
+          get_and_clear_transformer_bailout_stats().bailouts_by_transformer;
+        #[cfg(not(feature = "nodejs"))]
+        let bailouts_by_transformer = HashMap::new();
+
+        let cache_stats =
+          TransformerPipelineCacheStats::from_snapshot(&stats, bailouts_by_transformer);
+
+        cache_stats.log();
+
+        Some(cache_stats)
+      }
       Err(_) => {
         tracing::warn!("Failed to complete cache session. Cache potentially in an invalid state.");
         None
       }
+    };
+
+    NativeCacheStats {
+      transformer_pipelines,
     }
   }
 

@@ -27,6 +27,9 @@ pub struct TransformResult {
   /// if these paths change.
   pub invalidate_on_file_change: Vec<PathBuf>,
   pub cache_bailout: bool,
+  /// The name of the transformer that caused a cacheable pipeline bailout, if any.
+  /// Used for tracking bailout statistics for cacheable transformers.
+  pub bailout_transformer: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

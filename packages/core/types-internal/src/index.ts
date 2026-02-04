@@ -2195,13 +2195,28 @@ export type BuildProgressEvent =
   | OptimizingProgressEvent
   | PackagingAndOptimizingProgressEvent;
 
-export type NativeCacheStats = {
+/**
+ * Stats for transformer pipeline cache, including transformer-specific bailout breakdown.
+ */
+export type TransformerPipelineCacheStats = {
   hits: number;
   misses: number;
   uncacheables: number;
   bailouts: number;
   errors: number;
   validations: number;
+  /** Map of transformer package name to number of bailouts */
+  bailoutsByTransformer: Record<string, number>;
+};
+
+/**
+ * Top-level cache stats container, namespaced by cache user.
+ * This allows different caching systems to report their stats independently.
+ */
+export type NativeCacheStats = {
+  /** Stats for transformer pipeline caching */
+  transformerPipelines?: TransformerPipelineCacheStats;
+  // Future: resolver?: ResolverCacheStats;
 };
 
 /**

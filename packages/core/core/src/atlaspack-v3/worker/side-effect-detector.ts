@@ -4,6 +4,7 @@ import type {Async} from '@atlaspack/types';
 export interface FsUsage {
   method: string;
   path?: string;
+  stack?: string;
 }
 
 export interface EnvUsage {
@@ -163,10 +164,18 @@ export class SideEffectDetector {
           // Record filesystem access in current context
           const context = self.asyncStorage.getStore();
           if (context) {
-            context.fsUsage.push({
+            const pathStr = typeof path === 'string' ? path : path?.toString();
+            const fsUsage: FsUsage = {
               method,
-              path: typeof path === 'string' ? path : path?.toString(),
-            });
+              path: pathStr,
+            };
+
+            // Capture stack trace for package.json reads to help debug cache bailouts
+            if (pathStr?.endsWith('package.json')) {
+              fsUsage.stack = new Error().stack;
+            }
+
+            context.fsUsage.push(fsUsage);
           }
 
           return self.originalMethods[method].call(this, path, ...args);
