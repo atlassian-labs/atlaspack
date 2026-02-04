@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:lib": "npx rolldown -c ./src/rolldown.config.ts"
+    "build:lib": "rolldown -c ./src/rolldown.config.ts"
   },
   "devDependencies": {
     "rolldown": "1.0.0-rc.2"
