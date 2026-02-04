@@ -10,3 +10,4 @@ pub struct JsPackager<B: BundleGraph + Send + Sync> {
 }
 
 pub mod js_packager;
+pub mod process_asset;

@@ -1,7 +1,4 @@
-use std::{
-  collections::HashMap,
-  sync::{Arc, LazyLock},
-};
+use std::{collections::HashMap, sync::Arc};
 
 use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
@@ -12,15 +9,11 @@ use atlaspack_core::{
 use lmdb_js_lite::DatabaseHandle;
 use parking_lot::RwLock;
 use rayon::prelude::*;
-use regex::Regex;
-
-/// Regex to match require("...") or require('...')
-static REQUIRE_CALL_REGEX: LazyLock<Regex> =
-  LazyLock::new(|| Regex::new(r#"require\(["']([^"']+)["']\)"#).unwrap());
 
 use atlaspack_core::package_result::{BundleInfo, CacheKeyMap, PackageResult};
 
 use super::JsPackager;
+use super::process_asset::rewrite_asset_code;
 
 type PackagedAsset<'a> = (&'a Asset, String);
 
@@ -110,31 +103,13 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
   fn process_asset(&self, bundle: &Bundle, asset: &Asset, code: String) -> anyhow::Result<String> {
     // Get dependency map for this asset
     let deps = self.get_asset_dependency_map(bundle, asset)?;
-    let code = self.replace_require_calls(code, &deps);
+    let code = rewrite_asset_code(code, &deps)?;
 
     if bundle.entry_asset_ids.contains(&asset.id) {
       Ok(code)
     } else {
       self.wrap_asset(bundle, asset, code)
     }
-  }
-
-  // NOTE THIS IS A TEMPORARY HACK IMPL - just to validate the end-to-end packaging.
-  // While it produces a (sort of) working bundle, it's not actually how we want to approach this
-  fn replace_require_calls(&self, code: String, deps: &HashMap<String, Option<String>>) -> String {
-    REQUIRE_CALL_REGEX
-      .replace_all(&code, |caps: &regex::Captures| {
-        let specifier = &caps[1];
-
-        match deps.get(specifier) {
-          Some(Some(public_id)) => {
-            format!(r#"require("{}")"#, public_id)
-          }
-          Some(None) => caps[0].to_string(),
-          None => caps[0].to_string(),
-        }
-      })
-      .to_string()
   }
 
   fn get_asset_dependency_map(
@@ -297,57 +272,6 @@ mod tests {
       public_id: None,
       target: Default::default(),
     }
-  }
-
-  /// Test that the regex correctly matches require calls and replaces them
-  #[test]
-  fn test_replace_require_calls_regex_matching() {
-    let code = r#"
-      const foo = require("./foo");
-      const bar = require('./bar');
-      const baz = require("deeply/nested/module");
-    "#
-    .to_string();
-
-    let mut deps = HashMap::new();
-    deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
-    deps.insert("./bar".to_string(), Some("pub_bar".to_string()));
-    deps.insert(
-      "deeply/nested/module".to_string(),
-      Some("pub_nested".to_string()),
-    );
-
-    // Test the regex by extracting the logic
-    let result = REQUIRE_CALL_REGEX.replace_all(&code, |caps: &regex::Captures| {
-      let specifier = &caps[1];
-      match deps.get(specifier) {
-        Some(Some(public_id)) => format!(r#"require("{}")"#, public_id),
-        _ => caps[0].to_string(),
-      }
-    });
-
-    assert!(result.contains(r#"require("pub_foo")"#));
-    assert!(result.contains(r#"require("pub_bar")"#));
-    assert!(result.contains(r#"require("pub_nested")"#));
-  }
-
-  #[test]
-  fn test_replace_require_calls_preserves_skipped_deps() {
-    let code = r#"const foo = require("./foo"); const bar = require("./bar");"#.to_string();
-    let mut deps = HashMap::new();
-    deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
-    deps.insert("./bar".to_string(), None); // Skipped
-
-    let result = REQUIRE_CALL_REGEX.replace_all(&code, |caps: &regex::Captures| {
-      let specifier = &caps[1];
-      match deps.get(specifier) {
-        Some(Some(public_id)) => format!(r#"require("{}")"#, public_id),
-        _ => caps[0].to_string(),
-      }
-    });
-
-    assert!(result.contains(r#"require("pub_foo")"#));
-    assert!(result.contains(r#"require("./bar")"#)); // Unchanged
   }
 
   #[test]
