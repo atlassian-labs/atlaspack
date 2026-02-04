@@ -2168,9 +2168,6 @@ fn atomicify_rules_plugin(
             let mut value_full =
               normalize_value_for_hash(&prop, &raw_value, initial_support, optimize_css);
             value_full = minify_value_whitespace(&value_full);
-            let prefixed_entries =
-              prefixed_decl_entries(autoprefixer_ref, &prop, &value_full, has_important);
-            let decls = serialize_decl_entries(&prefixed_entries);
 
             let normalized_list: Vec<String> =
               selectors.iter().map(|s| normalized_selector(s)).collect();
