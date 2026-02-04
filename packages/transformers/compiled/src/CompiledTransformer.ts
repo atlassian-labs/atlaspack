@@ -105,6 +105,13 @@ export default new Transformer<Config>({
       ];
     }
 
+    // When transformerBabelPlugins is configured, we cannot cache transformer results
+    // because these plugins are loaded dynamically by string name and the dev dep scanner
+    // cannot track their dependencies for cache invalidation.
+    const hasExternalBabelPlugins =
+      contents.transformerBabelPlugins &&
+      contents.transformerBabelPlugins.length > 0;
+
     return {
       config: {
         compiledConfig: contents,
@@ -135,6 +142,7 @@ export default new Transformer<Config>({
         'CI',
         'COLORTERM',
       ],
+      disableCache: hasExternalBabelPlugins,
     };
   },
 
@@ -187,10 +195,11 @@ export default new Transformer<Config>({
       plugins: [
         BabelPluginSyntaxJsx,
         [BabelPluginSyntaxTypescript, {isTSX: true}],
+        ...(config.compiledConfig.transformerBabelPlugins ?? []),
         asset.isSource && [
           CompiledBabelPlugin,
           {
-            ...config,
+            ...config.compiledConfig,
             importSources: config.compiledConfig.importSources,
             classNameCompressionMap:
               config.compiledConfig.extract &&
