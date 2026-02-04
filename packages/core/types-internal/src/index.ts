@@ -1235,6 +1235,14 @@ export interface TransformerSetup<Config> {
    * cached.
    * */
   env?: Array<string>;
+  /**
+   * When set to true, disables caching for this transformer entirely.
+   *
+   * For example - use this when the transformer depends on external resources
+   * that cannot be tracked by the dev dependency scanner, such as dynamically
+   * loaded Babel plugins specified by string name.
+   */
+  disableCache?: boolean;
 }
 
 /**
