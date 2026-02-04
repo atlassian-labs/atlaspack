@@ -6,8 +6,8 @@ use swc_core::common::{DUMMY_SP, SourceMap, SourceMapper, Spanned, SyntaxContext
 use swc_core::ecma::ast::{
   ArrayLit, ArrowExpr, BinExpr, BinaryOp, BlockStmt, BlockStmtOrExpr, CallExpr, Callee, CondExpr,
   Expr, ExprOrSpread, Ident, KeyValueProp, Lit, MemberExpr, MemberProp, ObjectLit, OptChainBase,
-  Pat, Prop, PropName, PropOrSpread, ReturnStmt, SpreadElement, Stmt, TaggedTpl, Tpl, TplElement,
-  TsType, UnaryExpr, UnaryOp,
+  ParenExpr, Pat, Prop, PropName, PropOrSpread, ReturnStmt, SpreadElement, Stmt, TaggedTpl, Tpl,
+  TplElement, TsType, UnaryExpr, UnaryOp,
 };
 use swc_core::ecma::codegen::text_writer::JsWriter;
 use swc_core::ecma::codegen::{Config, Emitter, Node};
@@ -880,7 +880,36 @@ fn logical_items_from_conditional_expression(
   css
     .into_iter()
     .map(|item| match item {
-      CssItem::Conditional(_) => item,
+      CssItem::Conditional(mut conditional) => {
+        // When a nested conditional is inside a single-sided conditional, we need to
+        // preserve the outer test as a guard. For example:
+        //   outer_test ? (inner_test ? value1 : value2) : undefined
+        // should produce: outer_test && (inner_test ? class1 : class2)
+        let guard_expr = match branch {
+          ConditionalBranch::Consequent => (*node.test).clone(),
+          ConditionalBranch::Alternate => Expr::Unary(UnaryExpr {
+            span: DUMMY_SP,
+            op: UnaryOp::Bang,
+            arg: Box::new(Expr::Paren(ParenExpr {
+              span: DUMMY_SP,
+              expr: Box::new((*node.test).clone()),
+            })),
+          }),
+        };
+
+        // Combine with any existing guard using &&
+        conditional.guard = Some(match conditional.guard.take() {
+          Some(existing) => Expr::Bin(BinExpr {
+            span: DUMMY_SP,
+            op: BinaryOp::LogicalAnd,
+            left: Box::new(guard_expr),
+            right: Box::new(existing),
+          }),
+          None => guard_expr,
+        });
+
+        CssItem::Conditional(conditional)
+      }
       CssItem::Logical(logical) => {
         let mut span = logical.expression.span();
         if span == DUMMY_SP {
@@ -906,46 +935,18 @@ fn logical_items_from_conditional_expression(
           ConditionalBranch::Consequent => test_clone,
           ConditionalBranch::Alternate => {
             // For the alternate branch, we need to negate the test.
-            // Instead of using !(test), we try to invert the comparison operator
-            // if the test is a binary comparison. This produces cleaner output
-            // and avoids issues with SWC's optimizer incorrectly simplifying
-            // !(a === b) expressions.
-            //
-            // Examples:
-            //   a === b  ->  a !== b
-            //   a !== b  ->  a === b
-            //   Otherwise: !(test)
-            if let Expr::Bin(bin_expr) = &test_clone {
-              let inverted_op = match bin_expr.op {
-                BinaryOp::EqEqEq => Some(BinaryOp::NotEqEq),
-                BinaryOp::NotEqEq => Some(BinaryOp::EqEqEq),
-                BinaryOp::EqEq => Some(BinaryOp::NotEq),
-                BinaryOp::NotEq => Some(BinaryOp::EqEq),
-                _ => None,
-              };
-              if let Some(new_op) = inverted_op {
-                Expr::Bin(BinExpr {
-                  span: DUMMY_SP,
-                  op: new_op,
-                  left: bin_expr.left.clone(),
-                  right: bin_expr.right.clone(),
-                })
-              } else {
-                // For other binary operators, fall back to negation
-                Expr::Unary(UnaryExpr {
-                  span: DUMMY_SP,
-                  op: UnaryOp::Bang,
-                  arg: Box::new(test_clone),
-                })
-              }
-            } else {
-              // For non-binary expressions, use negation
-              Expr::Unary(UnaryExpr {
+            // To match Babel's output exactly, we always use !(test) pattern
+            // by wrapping the test in parentheses before negating.
+            // This produces !(a === b) instead of a !== b, which is important
+            // for hash consistency with the Babel plugin.
+            Expr::Unary(UnaryExpr {
+              span: DUMMY_SP,
+              op: UnaryOp::Bang,
+              arg: Box::new(Expr::Paren(ParenExpr {
                 span: DUMMY_SP,
-                op: UnaryOp::Bang,
-                arg: Box::new(test_clone),
-              })
-            }
+                expr: Box::new(test_clone),
+              })),
+            })
           }
         };
 
@@ -1773,6 +1774,7 @@ where
         test: (*node.test).clone(),
         consequent: Box::new(consequent),
         alternate: Box::new(alternate),
+        guard: None,
       }));
     }
     (Some(consequent), None) => css.extend(logical_items_from_conditional_expression(
@@ -2619,6 +2621,7 @@ fn to_css_rule_internal(selector: &str, item: &CssItem) -> CssItem {
       test: conditional.test.clone(),
       consequent: Box::new(to_css_rule_internal(selector, &conditional.consequent)),
       alternate: Box::new(to_css_rule_internal(selector, &conditional.alternate)),
+      guard: conditional.guard.clone(),
     }),
     CssItem::Unconditional(unconditional) => CssItem::Unconditional(UnconditionalCssItem {
       css: wrap_with_selector(selector, unconditional.css.clone()),
@@ -2666,6 +2669,7 @@ fn to_css_declaration_internal(key: &str, item: &CssItem) -> CssItem {
       test: conditional.test.clone(),
       consequent: Box::new(to_css_declaration_internal(key, &conditional.consequent)),
       alternate: Box::new(to_css_declaration_internal(key, &conditional.alternate)),
+      guard: conditional.guard.clone(),
     }),
     CssItem::Unconditional(unconditional) => CssItem::Unconditional(UnconditionalCssItem {
       css: declaration_css(key, unconditional.css.clone()),
@@ -3756,6 +3760,7 @@ mod tests {
       test: Expr::Ident(Ident::new("flag".into(), DUMMY_SP, SyntaxContext::empty())),
       consequent: Box::new(CssItem::unconditional("color: red;")),
       alternate: Box::new(CssItem::unconditional("color: blue;")),
+      guard: None,
     });
 
     let output = CssOutput {
@@ -4364,9 +4369,9 @@ mod tests {
   }
 
   #[test]
-  fn logical_items_inverts_strict_equality_for_alternate_branch() {
-    // Test that for alternate branches, === is converted to !== instead of using !(===)
-    // This avoids issues with SWC's expr_simplifier incorrectly simplifying !(a === b)
+  fn logical_items_negates_test_for_alternate_branch() {
+    // Test that for alternate branches, we use !(test) pattern to match Babel output.
+    // This ensures hash consistency with the Babel plugin.
     use super::{ConditionalBranch, logical_items_from_conditional_expression};
 
     let test_expr = Expr::Bin(BinExpr {
@@ -4404,20 +4409,30 @@ mod tests {
     assert_eq!(result.len(), 1);
     match &result[0] {
       CssItem::Logical(logical) => {
-        // The expression should be a binary !== operation, not a unary !
+        // The expression should be a unary ! with parenthesized test: !(widthMode === 'wide')
         match &logical.expression {
-          Expr::Bin(bin) => {
-            assert_eq!(
-              bin.op,
-              BinaryOp::NotEqEq,
-              "Expected !== but got {:?}",
-              bin.op
-            );
+          Expr::Unary(unary) => {
+            assert_eq!(unary.op, swc_core::ecma::ast::UnaryOp::Bang);
+            // The argument should be a parenthesized expression
+            match unary.arg.as_ref() {
+              Expr::Paren(paren) => {
+                // Inside the parens should be the original binary expression
+                match paren.expr.as_ref() {
+                  Expr::Bin(bin) => {
+                    assert_eq!(
+                      bin.op,
+                      BinaryOp::EqEqEq,
+                      "Expected === inside parens but got {:?}",
+                      bin.op
+                    );
+                  }
+                  other => panic!("Expected binary expression inside parens, got {:?}", other),
+                }
+              }
+              other => panic!("Expected parenthesized expression, got {:?}", other),
+            }
           }
-          Expr::Unary(_) => {
-            panic!("Expected binary !== expression, got unary expression");
-          }
-          other => panic!("Expected binary expression, got {:?}", other),
+          other => panic!("Expected unary expression, got {:?}", other),
         }
         assert_eq!(logical.operator, LogicalOperator::And);
         assert_eq!(logical.css, "width:216px;");
@@ -4427,8 +4442,8 @@ mod tests {
   }
 
   #[test]
-  fn logical_items_inverts_strict_inequality_for_alternate_branch() {
-    // Test that !== is converted to === for alternate branches
+  fn logical_items_negates_inequality_for_alternate_branch() {
+    // Test that for alternate branches with !==, we use !(test) pattern to match Babel output.
     use super::{ConditionalBranch, logical_items_from_conditional_expression};
 
     let test_expr = Expr::Bin(BinExpr {
@@ -4465,29 +4480,41 @@ mod tests {
 
     assert_eq!(result.len(), 1);
     match &result[0] {
-      CssItem::Logical(logical) => match &logical.expression {
-        Expr::Bin(bin) => {
-          assert_eq!(
-            bin.op,
-            BinaryOp::EqEqEq,
-            "Expected === but got {:?}",
-            bin.op
-          );
+      CssItem::Logical(logical) => {
+        // The expression should be a unary ! with parenthesized test: !(widthMode !== 'wide')
+        match &logical.expression {
+          Expr::Unary(unary) => {
+            assert_eq!(unary.op, swc_core::ecma::ast::UnaryOp::Bang);
+            match unary.arg.as_ref() {
+              Expr::Paren(paren) => match paren.expr.as_ref() {
+                Expr::Bin(bin) => {
+                  assert_eq!(
+                    bin.op,
+                    BinaryOp::NotEqEq,
+                    "Expected !== inside parens but got {:?}",
+                    bin.op
+                  );
+                }
+                other => panic!("Expected binary expression inside parens, got {:?}", other),
+              },
+              other => panic!("Expected parenthesized expression, got {:?}", other),
+            }
+          }
+          other => panic!("Expected unary expression, got {:?}", other),
         }
-        other => panic!("Expected binary expression, got {:?}", other),
-      },
+      }
       other => panic!("Expected Logical CssItem, got {:?}", other),
     }
   }
 
   #[test]
-  fn logical_items_uses_negation_for_non_equality_operators() {
-    // Test that for non-equality binary operators (like <, >, etc.), we fall back to negation
+  fn logical_items_negates_non_equality_operators() {
+    // Test that for non-equality binary operators (like <, >, etc.), we use !(test) pattern
     use super::{ConditionalBranch, logical_items_from_conditional_expression};
 
     let test_expr = Expr::Bin(BinExpr {
       span: DUMMY_SP,
-      op: BinaryOp::Lt, // Less than - can't be inverted to something simpler
+      op: BinaryOp::Lt, // Less than
       left: Box::new(ident_expr("count")),
       right: Box::new(Expr::Lit(Lit::Num(Number {
         span: DUMMY_SP,
@@ -4520,10 +4547,24 @@ mod tests {
     assert_eq!(result.len(), 1);
     match &result[0] {
       CssItem::Logical(logical) => {
-        // For non-equality operators, we should get a unary ! expression
+        // The expression should be a unary ! with parenthesized test: !(count < 10)
         match &logical.expression {
           Expr::Unary(unary) => {
             assert_eq!(unary.op, swc_core::ecma::ast::UnaryOp::Bang);
+            match unary.arg.as_ref() {
+              Expr::Paren(paren) => match paren.expr.as_ref() {
+                Expr::Bin(bin) => {
+                  assert_eq!(
+                    bin.op,
+                    BinaryOp::Lt,
+                    "Expected < inside parens but got {:?}",
+                    bin.op
+                  );
+                }
+                other => panic!("Expected binary expression inside parens, got {:?}", other),
+              },
+              other => panic!("Expected parenthesized expression, got {:?}", other),
+            }
           }
           other => panic!(
             "Expected unary expression for non-equality operator, got {:?}",
