@@ -310,12 +310,13 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { addEnvironment, applyCompiledCssInJsPlugin, applyTokensPlugin, atlaspackNapiBuildAssetGraph, atlaspackNapiCompleteSession, atlaspackNapiCreate, atlaspackNapiLoadBundleGraph, atlaspackNapiPackage, atlaspackNapiRespondToFsEvents, AtlaspackTracer, closeMonitoring, createAssetId, createDependencyId, createEnvironmentId, determineJsxConfiguration, findAncestorFile, findFirstFile, findNodeModule, getAllEnvironments, getAvailableThreads, getEnvironment, getEventsSince, getNativeMemoryStats, getVcsStateSnapshot, Hash, hashBuffer, hashCode, hashString, initializeMonitoring, initTracingSubscriber, isSafeFromJs, Lmdb, LmdbJsLite, newNodejsWorker, optimizeImage, performStringReplacements, resetMemoryTracking, Resolver, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, sampleNativeMemory, setAllEnvironments, SourceMap, transform, transformAsync } = nativeBinding
+const { addEnvironment, applyCompiledCssInJsPlugin, applyTokensPlugin, atlaspackNapiBuildAssetGraph, atlaspackNapiBuildBundleGraph, atlaspackNapiCompleteSession, atlaspackNapiCreate, atlaspackNapiLoadBundleGraph, atlaspackNapiPackage, atlaspackNapiRespondToFsEvents, AtlaspackTracer, closeMonitoring, createAssetId, createDependencyId, createEnvironmentId, determineJsxConfiguration, findAncestorFile, findFirstFile, findNodeModule, getAllEnvironments, getAvailableThreads, getEnvironment, getEventsSince, getNativeMemoryStats, getVcsStateSnapshot, Hash, hashBuffer, hashCode, hashString, initializeMonitoring, initTracingSubscriber, isSafeFromJs, Lmdb, LmdbJsLite, newNodejsWorker, optimizeImage, performStringReplacements, resetMemoryTracking, Resolver, runInlineRequiresOptimizer, runInlineRequiresOptimizerAsync, sampleNativeMemory, setAllEnvironments, SourceMap, transform, transformAsync } = nativeBinding
 
 module.exports.addEnvironment = addEnvironment
 module.exports.applyCompiledCssInJsPlugin = applyCompiledCssInJsPlugin
 module.exports.applyTokensPlugin = applyTokensPlugin
 module.exports.atlaspackNapiBuildAssetGraph = atlaspackNapiBuildAssetGraph
+module.exports.atlaspackNapiBuildBundleGraph = atlaspackNapiBuildBundleGraph
 module.exports.atlaspackNapiCompleteSession = atlaspackNapiCompleteSession
 module.exports.atlaspackNapiCreate = atlaspackNapiCreate
 module.exports.atlaspackNapiLoadBundleGraph = atlaspackNapiLoadBundleGraph

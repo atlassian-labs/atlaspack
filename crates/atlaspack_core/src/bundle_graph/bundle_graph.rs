@@ -1,6 +1,12 @@
 use crate::types::{Asset, Bundle, Dependency};
 
+/// Minimal interface for querying a bundle graph.
+///
+/// This trait is currently used by the JS->Rust bundle graph loading code (`BundleGraphFromJs`).
+/// As native bundling is implemented, this will evolve or be replaced.
 pub trait BundleGraph {
+  fn get_bundles(&self) -> Vec<&Bundle>;
+
   /// Gets all of the assets "contained" by a Bundle.
   fn get_bundle_assets(&self, bundle: &Bundle) -> anyhow::Result<Vec<&Asset>>;
 

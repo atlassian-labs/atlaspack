@@ -289,6 +289,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "atlaspack-resolver",
+ "atlaspack_bundling",
  "atlaspack_config",
  "atlaspack_core",
  "atlaspack_filesystem",
@@ -422,6 +423,7 @@ dependencies = [
  "once_cell",
  "oxipng",
  "parking_lot",
+ "petgraph",
  "pretty_assertions",
  "rayon",
  "regex",
@@ -479,6 +481,16 @@ dependencies = [
  "serde",
  "swc_atlaskit_tokens",
  "swc_core",
+]
+
+[[package]]
+name = "atlaspack_bundling"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack_core",
+ "petgraph",
+ "serde_json",
 ]
 
 [[package]]

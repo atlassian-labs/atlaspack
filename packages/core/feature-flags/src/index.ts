@@ -395,6 +395,15 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2026-01-21
    */
   nativePackagerSSRDev: false,
+
+  /**
+   * Enables native bundling. When enabled, the bundle graph is built in Rust
+   * instead of JavaScript.
+   *
+   * @author Matt Jones <mjones4@atlassian.com>
+   * @since 2026-01-27
+   */
+  nativeBundling: false,
 };
 
 export type FeatureFlags = typeof DEFAULT_FEATURE_FLAGS;
