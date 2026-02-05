@@ -22,6 +22,16 @@ export const DEFAULT_FEATURE_FLAGS = {
   atlaspackV3: false,
 
   /**
+   * Enable Rust symbol tracker results in the AssetGraphRequest.
+   *
+   * This is used to gate the new Rust-side symbol tracking work.
+   *
+   * @author Ben Jervis <bjervis@atlassian.com>
+   * @since 2026-02-05
+   */
+  rustSymbolTracker: false,
+
+  /**
    * Use node.js implementation of @parcel/watcher watchman backend
    *
    * @author Pedro Tacla Yamada <pyamada@atlassian.com>
