@@ -237,7 +237,7 @@ impl SymbolTracker {
   }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct UsedSymbol {
   pub symbol: Symbol,
   pub asset: AssetId,
