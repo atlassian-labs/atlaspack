@@ -8,3 +8,6 @@ anyhow = { workspace = true }
 atlaspack_core = { path = "../atlaspack_core" }
 serde_json = { workspace = true }
 petgraph = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

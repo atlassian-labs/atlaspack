@@ -490,6 +490,7 @@ dependencies = [
  "anyhow",
  "atlaspack_core",
  "petgraph",
+ "pretty_assertions",
  "serde_json",
 ]
 

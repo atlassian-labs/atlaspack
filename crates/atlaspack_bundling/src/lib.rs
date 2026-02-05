@@ -5,6 +5,10 @@ use atlaspack_core::{
   types::{Bundle, FileType, Target},
 };
 
+pub mod ideal_graph;
+
+pub use ideal_graph::IdealGraphBundler;
+
 /// Bundler algorithms take an asset graph and assign assets/dependencies to bundles.
 ///
 /// Implementations are expected to mutate the provided `NativeBundleGraph` to:
