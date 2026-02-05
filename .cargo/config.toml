@@ -18,7 +18,11 @@ rustflags = ["-C", "link-args=-Wl,-z,nodelete"]
 # unit-testing, however if this crate depends on a crate B that also defines
 # `napi` bindings, the linker will fail because B will have been compiled
 # without the testing mode noop removal.
-rustflags = ["-C", "link-args=-Wl,-z,nodelete,--warn-unresolved-symbols"]
+#
+# NOTE: Rust 1.90 switched to the `lld` linker by default. This causes problems with NAPI (https://github.com/rust-lang/rust/issues/147707),
+# These have been fixed in NAPI v3: https://github.com/napi-rs/napi-rs/pull/2996, so when we upgrade all
+# of this hackery around linker flags can be removed.
+rustflags = ["-C", "linker-features=-lld", "-C", "link-args=-Wl,-z,nodelete,--warn-unresolved-symbols"]
 
 [target.x86_64-apple-darwin]
 rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
