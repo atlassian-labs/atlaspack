@@ -1,5 +1,14 @@
 # @atlaspack/transformer-less
 
+## 2.15.13
+
+### Patch Changes
+
+- Updated dependencies [[`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916)]:
+  - @atlaspack/types-internal@2.23.0
+  - @atlaspack/plugin@2.14.52
+  - @atlaspack/source-map@3.2.7
+
 ## 2.15.12
 
 ### Patch Changes

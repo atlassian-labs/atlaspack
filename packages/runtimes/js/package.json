@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/runtime-js",
-  "version": "2.20.8",
+  "version": "2.20.9",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
     "access": "public"
@@ -18,10 +18,10 @@
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/domain-sharding": "2.14.4",
-    "@atlaspack/feature-flags": "2.28.0",
-    "@atlaspack/plugin": "2.14.51",
-    "@atlaspack/utils": "3.3.3",
-    "@atlaspack/types-internal": "2.22.8",
+    "@atlaspack/feature-flags": "2.29.0",
+    "@atlaspack/plugin": "2.14.52",
+    "@atlaspack/utils": "3.3.4",
+    "@atlaspack/types-internal": "2.23.0",
     "nullthrows": "^1.1.1"
   },
   "type": "commonjs",

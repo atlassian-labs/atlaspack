@@ -1,5 +1,23 @@
 # @atlaspack/rust
 
+## 3.22.0
+
+### Minor Changes
+
+- [#993](https://github.com/atlassian-labs/atlaspack/pull/993) [`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916) Thanks [@matt-koko](https://github.com/matt-koko)! - Add disableCache option to TransformerSetup API
+
+- [#1005](https://github.com/atlassian-labs/atlaspack/pull/1005) [`053e375`](https://github.com/atlassian-labs/atlaspack/commit/053e3754c08c5b5dc239e9f7267df289cbbf31ab) Thanks [@OscarCookeAbbott](https://github.com/OscarCookeAbbott)! - Bump `csscolorparser` dependency for fix
+
+- [#1003](https://github.com/atlassian-labs/atlaspack/pull/1003) [`25c976e`](https://github.com/atlassian-labs/atlaspack/commit/25c976e01c30e536fb1027eab5b17594c604efff) Thanks [@marcins](https://github.com/marcins)! - Bump Rust to 1.93.0
+
+- [#999](https://github.com/atlassian-labs/atlaspack/pull/999) [`9959efe`](https://github.com/atlassian-labs/atlaspack/commit/9959efe30699a2de3b69275be7ecb47afe81c0b6) Thanks [@JakeLane](https://github.com/JakeLane)! - Update Compiled SWC transformer to support a lot more files
+
+### Patch Changes
+
+- [#996](https://github.com/atlassian-labs/atlaspack/pull/996) [`1a86b65`](https://github.com/atlassian-labs/atlaspack/commit/1a86b657868ee881ca5acc68661cca208ac37779) Thanks [@nickrobson](https://github.com/nickrobson)! - Make entrypoint_filepath_suffix option on sync_dynamic_import case-insensitive
+
+- [#998](https://github.com/atlassian-labs/atlaspack/pull/998) [`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add initial native bundler boilerplate and single file bundler
+
 ## 3.21.0
 
 ### Minor Changes
