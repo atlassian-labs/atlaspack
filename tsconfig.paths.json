@@ -2,6 +2,12 @@
   "files": [],
   "references": [
     {
+      "path": "./crates/atlaspack_packager_js/prelude/tsconfig.json"
+    },
+    {
+      "path": "./packages/bundlers/bundler-experimental/tsconfig.json"
+    },
+    {
       "path": "./packages/bundlers/default/tsconfig.json"
     },
     {
@@ -71,6 +77,9 @@
       "path": "./packages/core/rust/tsconfig.json"
     },
     {
+      "path": "./packages/core/source-map/tsconfig.json"
+    },
+    {
       "path": "./packages/core/test-utils/tsconfig.json"
     },
     {
@@ -95,6 +104,9 @@
       "path": "./packages/dev/bundle-stats-cli/tsconfig.json"
     },
     {
+      "path": "./packages/dev/dist-differ/tsconfig.json"
+    },
+    {
       "path": "./packages/dev/eslint-config-browser/tsconfig.json"
     },
     {
@@ -105,6 +117,9 @@
     },
     {
       "path": "./packages/dev/mocha-profiler/tsconfig.json"
+    },
+    {
+      "path": "./packages/dev/packaging-test-harness/tsconfig.json"
     },
     {
       "path": "./packages/dev/query/tsconfig.json"
@@ -191,6 +206,9 @@
       "path": "./packages/reporters/cli/tsconfig.json"
     },
     {
+      "path": "./packages/reporters/compiled-css-in-js-migration-map/tsconfig.json"
+    },
+    {
       "path": "./packages/reporters/conditional-manifest/tsconfig.json"
     },
     {
@@ -237,6 +255,15 @@
     },
     {
       "path": "./packages/transformers/babel/tsconfig.json"
+    },
+    {
+      "path": "./packages/transformers/compiled-css-in-js/tsconfig.json"
+    },
+    {
+      "path": "./packages/transformers/compiled-external/tsconfig.json"
+    },
+    {
+      "path": "./packages/transformers/compiled/tsconfig.json"
     },
     {
       "path": "./packages/transformers/css/tsconfig.json"
@@ -299,7 +326,13 @@
       "path": "./packages/transformers/svg/tsconfig.json"
     },
     {
+      "path": "./packages/transformers/tokens/tsconfig.json"
+    },
+    {
       "path": "./packages/transformers/toml/tsconfig.json"
+    },
+    {
+      "path": "./packages/transformers/typescript-tsc/tsconfig.json"
     },
     {
       "path": "./packages/transformers/typescript-types/tsconfig.json"
@@ -363,36 +396,6 @@
     },
     {
       "path": "./packages/validators/typescript/tsconfig.json"
-    },
-    {
-      "path": "./packages/bundlers/bundler-experimental/tsconfig.json"
-    },
-    {
-      "path": "./packages/transformers/tokens/tsconfig.json"
-    },
-    {
-      "path": "./packages/transformers/compiled-css-in-js/tsconfig.json"
-    },
-    {
-      "path": "./packages/transformers/typescript-tsc/tsconfig.json"
-    },
-    {
-      "path": "./packages/reporters/compiled-css-in-js-migration-map/tsconfig.json"
-    },
-    {
-      "path": "./packages/core/source-map/tsconfig.json"
-    },
-    {
-      "path": "./packages/dev/dist-differ/tsconfig.json"
-    },
-    {
-      "path": "./packages/transformers/compiled-external/tsconfig.json"
-    },
-    {
-      "path": "./packages/transformers/compiled/tsconfig.json"
-    },
-    {
-      "path": "./packages/dev/packaging-test-harness/tsconfig.json"
     }
   ]
 }
