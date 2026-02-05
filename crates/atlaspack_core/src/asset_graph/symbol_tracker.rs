@@ -1,10 +1,11 @@
 use anyhow::anyhow;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::{
   asset_graph::{AssetGraph, AssetGraphNode},
-  types::{Asset, Dependency, Symbol},
+  types::{Asset, AssetId, Dependency, DependencyId, Symbol},
 };
 
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -196,5 +197,64 @@ impl SymbolTracker {
       .entry(dep_id.to_string())
       .or_default()
       .push(question);
+  }
+
+  /// Finalizes the symbol tracker, returning a read-only version of the
+  /// FinalizedSymbolTracker that can be used for serialization and lookup of
+  /// symbol locations. This method also validates that there are no outstanding
+  /// symbol requirements that have not been satisfied, and that there are no
+  /// conflicts.
+  #[tracing::instrument(name = "finalize_symbol_tracker", skip_all)]
+  pub fn finalize(self) -> FinalizedSymbolTracker {
+    let mut requirements_by_dep: HashMap<DependencyId, DependencyUsedSymbols> = HashMap::new();
+
+    for (dep_id, requirements) in self.requirements_by_dep.into_iter() {
+      let mut used_symbols = HashMap::new();
+
+      for requirement in requirements.into_iter() {
+        let Some(final_location) = requirement.final_location else {
+          panic!(
+            "Symbol {} required by dependency [{}] was not satisfied",
+            requirement.symbol.exported, dep_id
+          );
+        };
+
+        used_symbols.insert(
+          requirement.symbol.clone(),
+          UsedSymbol {
+            symbol: requirement.symbol,
+            asset: final_location.providing_asset.id.clone(),
+          },
+        );
+      }
+
+      requirements_by_dep.insert(dep_id, used_symbols);
+    }
+
+    FinalizedSymbolTracker {
+      requirements_by_dep,
+    }
+  }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct UsedSymbol {
+  pub symbol: Symbol,
+  pub asset: AssetId,
+}
+
+pub type DependencyUsedSymbols = HashMap<Symbol, UsedSymbol>;
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct FinalizedSymbolTracker {
+  requirements_by_dep: HashMap<DependencyId, DependencyUsedSymbols>,
+}
+
+impl FinalizedSymbolTracker {
+  pub fn get_used_symbols_for_dependency(
+    &self,
+    dep_id: &DependencyId,
+  ) -> Option<&DependencyUsedSymbols> {
+    self.requirements_by_dep.get(dep_id)
   }
 }

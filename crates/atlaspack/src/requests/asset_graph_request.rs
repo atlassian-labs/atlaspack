@@ -14,7 +14,8 @@ use crate::request_tracker::{
   RunRequestError,
 };
 use atlaspack_core::asset_graph::{
-  AssetGraph, DependencyState, SymbolTracker, propagate_requested_symbols,
+  AssetGraph, AssetGraphNode, DependencyState, FinalizedSymbolTracker, SymbolTracker,
+  propagate_requested_symbols,
 };
 use atlaspack_core::types::{AssetWithDependencies, Dependency};
 
@@ -41,7 +42,7 @@ impl Hash for AssetGraphRequest {
 #[derive(Clone, Debug, PartialEq)]
 pub struct AssetGraphRequestOutput {
   pub graph: Arc<AssetGraph>,
-  pub symbol_tracker: Option<SymbolTracker>,
+  pub symbol_tracker: Option<FinalizedSymbolTracker>,
 }
 
 #[async_trait]
@@ -317,10 +318,16 @@ impl AssetGraphBuilder {
       self.graph.add_edge(&self.graph.root_node(), node_index);
     }
 
+    let finalized_symbol_tracker = if self.enable_symbol_tracker {
+      Some(self.symbol_tracker.finalize())
+    } else {
+      None
+    };
+
     Ok(ResultAndInvalidations {
       result: RequestResult::AssetGraph(AssetGraphRequestOutput {
         graph: Arc::new(self.graph),
-        symbol_tracker: self.enable_symbol_tracker.then_some(self.symbol_tracker),
+        symbol_tracker: finalized_symbol_tracker,
       }),
       invalidations: vec![],
     })
@@ -452,6 +459,15 @@ impl AssetGraphBuilder {
 
     // Connect the incoming DependencyNode to the new AssetNode
     let asset_id = self.graph.add_asset(asset.clone(), cached);
+    let new_asset = match self
+      .graph
+      .get_node(&asset_id)
+      .expect("Missing newly added asset node")
+    {
+      AssetGraphNode::Asset(a) => a,
+      _ => panic!("Expected asset node for newly added asset {}", asset_id),
+    }
+    .clone();
 
     self.graph.add_edge(&incoming_dependency_id, &asset_id);
 
@@ -466,6 +482,16 @@ impl AssetGraphBuilder {
         .graph
         .add_asset(Arc::new(discovered_asset.asset.clone()), cached);
 
+      let new_asset = match self
+        .graph
+        .get_node(&asset_id)
+        .expect("Missing newly added asset node")
+      {
+        AssetGraphNode::Asset(a) => a,
+        _ => panic!("Expected asset node for newly added asset {}", asset_id),
+      }
+      .clone();
+
       self.graph.add_edge(&incoming_dependency_id, &asset_id);
 
       self.add_asset_dependencies(
@@ -477,6 +503,22 @@ impl AssetGraphBuilder {
         asset_unique_key.as_ref(),
         cached,
       );
+
+      if self.enable_symbol_tracker
+        && let Err(err) =
+          self
+            .symbol_tracker
+            .track_symbols(&self.graph, &new_asset, &discovered_asset.dependencies)
+      {
+        panic!(
+          "Error tracking symbols for discovered asset {}: {}",
+          discovered_asset.asset.file_path.display(),
+          err
+        );
+      }
+
+      // TODO: Once track_symbols is set up properly, this will need to go in an
+      // else block of the feature flag
       self.propagate_requested_symbols(asset_id, incoming_dependency_id);
     }
 
@@ -493,11 +535,11 @@ impl AssetGraphBuilder {
     if self.enable_symbol_tracker
       && let Err(err) = self
         .symbol_tracker
-        .track_symbols(&self.graph, asset, dependencies)
+        .track_symbols(&self.graph, &new_asset, dependencies)
     {
       panic!(
         "Error tracking symbols for asset {}: {}",
-        asset.file_path.display(),
+        new_asset.file_path.display(),
         err
       );
     }
@@ -588,6 +630,16 @@ impl AssetGraphBuilder {
           // it and assign its dependencies by calling added_discovered_assets
           // recursively.
           let asset_id = self.graph.add_asset(Arc::new(asset.clone()), cached);
+          let new_asset = match self
+            .graph
+            .get_node(&asset_id)
+            .expect("Missing newly added asset node")
+          {
+            AssetGraphNode::Asset(a) => a,
+            _ => panic!("Expected asset node for newly added asset {}", asset_id),
+          }
+          .clone();
+
           self.graph.add_edge(&dependency_id, &asset_id);
           added_discovered_assets.insert(asset.id.clone(), asset_id);
 
@@ -600,6 +652,20 @@ impl AssetGraphBuilder {
             root_asset_unique_key,
             cached,
           );
+
+          if self.enable_symbol_tracker
+            && let Err(err) =
+              self
+                .symbol_tracker
+                .track_symbols(&self.graph, &new_asset, dependencies)
+          {
+            panic!(
+              "Error tracking symbols for asset {}: {}",
+              new_asset.file_path.display(),
+              err
+            );
+          }
+
           self.propagate_requested_symbols(asset_id, dependency_id);
         }
       }
