@@ -186,7 +186,7 @@ impl<'a> ReactAsyncImportLift<'a> {
   fn replace_import_with_ident(expr: &mut Box<Expr>, lifted_id: &Ident) {
     match &mut **expr {
       Expr::Call(call) if matches!(call.callee, Callee::Import(_)) => {
-        *expr = Box::new(Expr::Ident(lifted_id.clone()));
+        **expr = Expr::Ident(lifted_id.clone());
       }
       Expr::Call(call) => {
         if let Callee::Expr(callee_expr) = &mut call.callee
@@ -248,7 +248,7 @@ impl<'a> ReactAsyncImportLift<'a> {
             // Lift imports from expression body
             if let Some(lifted_id) = self.lift_imports_in_expr(body_expr) {
               // Body is now just an identifier, replace entire arrow with simpler one
-              *loader_expr = Box::new(quote!("() => $id" as Expr, id = lifted_id));
+              **loader_expr = quote!("() => $id" as Expr, id = lifted_id);
             }
           }
           BlockStmtOrExpr::BlockStmt(block) => {
@@ -261,7 +261,7 @@ impl<'a> ReactAsyncImportLift<'a> {
             if let [Stmt::Return(ReturnStmt { arg: Some(arg), .. })] = &block.stmts[..]
               && let Expr::Ident(ident) = &**arg
             {
-              *loader_expr = Box::new(quote!("() => $id" as Expr, id = ident.clone()));
+              **loader_expr = quote!("() => $id" as Expr, id = ident.clone());
             }
           }
         }
@@ -277,7 +277,7 @@ impl<'a> ReactAsyncImportLift<'a> {
           if let [Stmt::Return(ReturnStmt { arg: Some(arg), .. })] = &body.stmts[..]
             && let Expr::Ident(ident) = &**arg
           {
-            *loader_expr = Box::new(quote!("() => $id" as Expr, id = ident.clone()));
+            **loader_expr = quote!("() => $id" as Expr, id = ident.clone());
           }
         }
       }

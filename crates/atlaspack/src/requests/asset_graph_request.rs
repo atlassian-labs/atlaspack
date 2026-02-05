@@ -62,6 +62,7 @@ impl Request for AssetGraphRequest {
   }
 }
 
+#[allow(clippy::large_enum_variant)]
 enum ReusedAssetGraphResult {
   Reused(ResultAndInvalidations),
   NeedsFullRebuild(HashSet<u64>),

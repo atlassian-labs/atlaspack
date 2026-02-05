@@ -289,6 +289,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "atlaspack-resolver",
+ "atlaspack_bundling",
  "atlaspack_config",
  "atlaspack_core",
  "atlaspack_filesystem",
@@ -422,6 +423,7 @@ dependencies = [
  "once_cell",
  "oxipng",
  "parking_lot",
+ "petgraph",
  "pretty_assertions",
  "rayon",
  "regex",
@@ -479,6 +481,16 @@ dependencies = [
  "serde",
  "swc_atlaskit_tokens",
  "swc_core",
+]
+
+[[package]]
+name = "atlaspack_bundling"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atlaspack_core",
+ "petgraph",
+ "serde_json",
 ]
 
 [[package]]
@@ -1800,9 +1812,9 @@ dependencies = [
 
 [[package]]
 name = "csscolorparser"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02ee6eae4d99456f92dc379ba21cf08f783ef5525f193c3854b4e921ece045c5"
+checksum = "64a878cfd6075649977f548ed439564cfdbe1f190a6656a00b48af7740f2f148"
 dependencies = [
  "num-traits",
  "phf 0.13.1",

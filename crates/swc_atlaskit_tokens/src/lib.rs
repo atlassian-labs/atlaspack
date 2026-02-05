@@ -356,11 +356,11 @@ where
       let mut fallback_expr = call.args[1].expr.clone();
       let force = self.should_force_auto_fallback && !self.is_exempted(&token_name);
       if force && let Some(v) = self.get_default_fallback(&token_name) {
-        fallback_expr = Box::new(Expr::Lit(Lit::Str(Str {
+        *fallback_expr = Expr::Lit(Lit::Str(Str {
           value: v.into(),
           raw: None,
           span: DUMMY_SP,
-        })));
+        }));
       }
       match *fallback_expr {
         Expr::Lit(Lit::Str(ref s)) => {

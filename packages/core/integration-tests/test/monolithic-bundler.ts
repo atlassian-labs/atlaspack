@@ -7,6 +7,7 @@ import {
   overlayFS,
   fsFixture,
   run,
+  setupV3Flags,
 } from '@atlaspack/test-utils';
 import assert from 'assert';
 
@@ -219,5 +220,51 @@ describe('monolithic bundler', function () {
       bundles[0].name === 'a.js',
       'Expected bundle name to be a.js, but it was ' + bundles[0].name,
     );
+  });
+
+  describe('Native bundling ready', function () {
+    setupV3Flags({
+      nativeBundling: true,
+    });
+
+    it('should not split any bundles when using singleFileOutput', async function () {
+      await fsFixture(overlayFS, __dirname)`
+      single-file-output
+        a.js:
+          import {c} from './b';
+          import './should-be-ignored.css';
+          const ignore = () => import('./c');
+        b.js:
+          export const c = () => import('./c');
+        c.js:
+          export const c = 'c';
+        should-be-ignored.css:
+          * {
+            color: papayawhip;
+          }
+
+        yarn.lock: {}
+    `;
+
+      let singleBundle = await bundle(
+        path.join(__dirname, 'single-file-output/a.js'),
+        {
+          defaultTargetOptions: {shouldScopeHoist: false},
+          inputFS: overlayFS,
+          targets: {
+            'single-file-native': {
+              distDir: 'dist-single-native',
+              __unstable_singleFileOutput: true,
+            },
+          },
+        },
+      );
+
+      assertBundles(singleBundle, [
+        {assets: ['a.js', 'b.js', 'c.js', 'esmodule-helpers.js']},
+      ]);
+
+      await run(singleBundle);
+    });
   });
 });

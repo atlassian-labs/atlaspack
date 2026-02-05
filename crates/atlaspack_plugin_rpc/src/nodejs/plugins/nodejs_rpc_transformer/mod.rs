@@ -58,10 +58,12 @@ impl Debug for NodejsRpcTransformerPlugin {
 
 #[derive(Debug, Deserialize, Hash, PartialEq)]
 #[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase")]
 struct TransformerSetup {
   conditions: Option<SerializableTransformerConditions>,
   config: Option<JSONObject>,
   env: Option<JSONObject>,
+  disable_cache: Option<bool>,
 }
 
 #[tracing::instrument(level = "debug", skip_all)]
@@ -147,11 +149,19 @@ impl NodejsRpcTransformerPlugin {
     let project_root = ctx.options.project_root.clone();
 
     let (conditions, cache_key) = if let Some(setup) = transformer_setup {
-      let cache_key = match dev_dep_hash.await??.hash {
-        Some(dev_dep_hash) => {
-          cache_key!(setup, dev_dep_hash, plugin_node, project_root)
+      let cache_key = if setup.disable_cache == Some(true) {
+        tracing::info!(
+          "Transformer {} has caching disabled via disableCache flag",
+          plugin_node.package_name
+        );
+        CacheStatus::Uncachable
+      } else {
+        match dev_dep_hash.await??.hash {
+          Some(dev_dep_hash) => {
+            cache_key!(setup, dev_dep_hash, plugin_node, project_root)
+          }
+          None => CacheStatus::Uncachable,
         }
-        None => CacheStatus::Uncachable,
       };
 
       let conditions = Conditions::try_from(setup.conditions)?;

@@ -1,3 +1,6 @@
+pub mod types;
+pub use types::{BundleGraphEdgeType, BundleGraphNode};
+
 use anyhow::anyhow;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -10,10 +13,8 @@ use petgraph::{
 };
 use rayon::prelude::*;
 
-use crate::{
-  bundle_graph::bundle_graph::BundleGraph,
-  types::{self, Asset, Bundle, BundleGraphEdgeType, BundleGraphNode, Dependency, Environment},
-};
+use crate::bundle_graph::BundleGraph;
+use crate::types::{Asset, Bundle, Dependency, Environment};
 
 type BundleGraphNodeId = String;
 
@@ -192,6 +193,23 @@ impl BundleGraphFromJs {
 }
 
 impl BundleGraph for BundleGraphFromJs {
+  // Temporary code just to validate functionality
+  fn get_bundles(&self) -> Vec<&Bundle> {
+    if self.graph.node_count() == 0 {
+      return Vec::new();
+    }
+
+    let mut bundles = Vec::new();
+    let mut dfs = Dfs::new(&self.graph, NodeIndex::new(0));
+    while let Some(node) = dfs.next(&self.graph) {
+      let node = self.graph.node_weight(node).unwrap();
+      if let BundleGraphNode::Bundle(node) = node {
+        bundles.push(&node.value);
+      }
+    }
+    bundles
+  }
+
   fn get_bundle_by_id(&self, id: &str) -> Option<&Bundle> {
     if let Some(node_idx) = self.nodes_by_key.get(id)
       && let Some(node) = self.graph.node_weight(*node_idx)
@@ -225,7 +243,7 @@ impl BundleGraph for BundleGraphFromJs {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  fn get_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&types::Dependency>> {
+  fn get_dependencies(&self, asset: &Asset) -> anyhow::Result<Vec<&crate::types::Dependency>> {
     let asset_node = self.nodes_by_key.get(&asset.id).unwrap();
 
     self
@@ -361,12 +379,10 @@ impl BundleGraph for BundleGraphFromJs {
 
 #[cfg(test)]
 mod tests {
+  use super::types::{AssetNode, BundleNode, DependencyNode, RootNode};
   use super::*;
   use crate::types::{Asset, Dependency};
-  use crate::types::{
-    AssetNode, BundleNode, DependencyNode, Environment, FileType, Priority, RootNode,
-    SpecifierType, Target,
-  };
+  use crate::types::{Environment, FileType, Priority, SpecifierType, Target};
   use pretty_assertions::assert_eq;
   use std::path::PathBuf;
   use std::sync::Arc;
@@ -393,6 +409,7 @@ mod tests {
   fn create_test_asset_node(id: &str) -> AssetNode {
     AssetNode {
       id: id.to_string(),
+      node_type: "asset".to_string(),
       value: Asset {
         id: id.to_string(),
         file_path: PathBuf::from(format!("{}.js", id)),
@@ -411,6 +428,7 @@ mod tests {
   fn create_test_dependency_node(id: &str) -> DependencyNode {
     DependencyNode {
       id: id.to_string(),
+      node_type: "dependency".to_string(),
       value: Dependency {
         id: id.to_string(),
         specifier: "./test".to_string(),
@@ -435,6 +453,7 @@ mod tests {
   fn create_test_bundle_node(id: &str, name: &str) -> BundleNode {
     BundleNode {
       id: id.to_string(),
+      node_type: "bundle".to_string(),
       value: create_test_bundle(id, name),
     }
   }
@@ -442,6 +461,7 @@ mod tests {
   fn create_test_root_node() -> RootNode {
     RootNode {
       id: "root".to_string(),
+      node_type: "root".to_string(),
       value: None,
     }
   }
@@ -785,6 +805,7 @@ mod tests {
     let nodes = vec![
       BundleGraphNode::Bundle(BundleNode {
         id: bundle.id.clone(),
+        node_type: "bundle".to_string(),
         value: bundle.clone(),
       }),
       BundleGraphNode::Dependency(dep),
@@ -817,6 +838,7 @@ mod tests {
     let nodes = vec![
       BundleGraphNode::Bundle(BundleNode {
         id: bundle.id.clone(),
+        node_type: "bundle".to_string(),
         value: bundle.clone(),
       }),
       BundleGraphNode::Dependency(dep),
@@ -839,6 +861,7 @@ mod tests {
     let nodes = vec![
       BundleGraphNode::Bundle(BundleNode {
         id: bundle.id.clone(),
+        node_type: "bundle".to_string(),
         value: bundle.clone(),
       }),
       BundleGraphNode::Dependency(dep),
