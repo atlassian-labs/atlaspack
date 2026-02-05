@@ -979,48 +979,6 @@
     "@babel/runtime" "^7.0.0"
     "@compiled/react" "^0.18.3"
 
-"@atlaspack/feature-flags@2.28.0":
-  version "2.28.0"
-  resolved "https://registry.yarnpkg.com/@atlaspack/feature-flags/-/feature-flags-2.28.0.tgz#f0f2512a875f99e97d025f5682e9af92451add47"
-  integrity sha512-xzPh0bZ7cCPImOulSt2JPJ2mnh4AZDPzo22XYx0sxZeNY4ZtxWtS3wVFsof1/738EKzrMn7u+EhpjRqRe1l7Vg==
-
-"@atlaspack/plugin@2.14.50":
-  version "2.14.50"
-  resolved "https://registry.yarnpkg.com/@atlaspack/plugin/-/plugin-2.14.50.tgz#d10e780b8fa9059dd814eaff8d3016b8cf2054cf"
-  integrity sha512-ryCIA1Tpuf1MboQddinDL5lIjVmEegyjTJm5EJcouhCL7N5xctEJyvCVLLmlHEHe5m7XThVK4dcnBQcsh55M6Q==
-  dependencies:
-    "@atlaspack/types-internal" "2.22.7"
-
-"@atlaspack/rust@3.20.0":
-  version "3.20.0"
-  resolved "https://registry.yarnpkg.com/@atlaspack/rust/-/rust-3.20.0.tgz#623390138d37b6ad6560ff0d97a2f9b879be9044"
-  integrity sha512-vcDMLvXuhuJRyrzBB5VgvIwRsWLH27+7g6tMcpOsCbgDthegGWC/ADt7LA8sYDV57MzLjuoR+1ZbKewmWW6urg==
-
-"@atlaspack/source-map@3.2.5":
-  version "3.2.5"
-  resolved "https://registry.yarnpkg.com/@atlaspack/source-map/-/source-map-3.2.5.tgz#9bc536e55aa08b1751a1ea05a96f3b57c2c0c3b6"
-  integrity sha512-Djcehg/wnAEfOYBmgzzCq7joOEdQLpjbKuhTb7caBrUm45ntwF+E0EUCobeaAAkPajjtzo4PubJs2XtC+CkefQ==
-  dependencies:
-    "@atlaspack/rust" "3.20.0"
-
-"@atlaspack/transformer-compiled-external@0.2.4":
-  version "0.2.4"
-  resolved "https://registry.yarnpkg.com/@atlaspack/transformer-compiled-external/-/transformer-compiled-external-0.2.4.tgz#4d0e87952d7f3c3ec9172d1a307ba06bc810ccd0"
-  integrity sha512-UfSNHfIpUynBkuuY9Nkbo01rNcWrBz7Xpx2gLaonw4+9zVheoU0xsuhP+L5ZiFymZQatxlfOt5jqpLrF5IhsEA==
-  dependencies:
-    "@atlaspack/plugin" "2.14.50"
-    "@atlaspack/source-map" "3.2.5"
-
-"@atlaspack/types-internal@2.22.7":
-  version "2.22.7"
-  resolved "https://registry.yarnpkg.com/@atlaspack/types-internal/-/types-internal-2.22.7.tgz#ae04dd25ce8e08a8bdda81c88f571206e1732d0a"
-  integrity sha512-K9d0nchCzLVaScYuayRfuYG+FQy8B3gk+91EYHqUMKIm1RaInU8QZf/Yrm2c/3fTWTMt1p4vbnFN0Vg9XvALBA==
-  dependencies:
-    "@atlaspack/diagnostic" "2.14.4"
-    "@atlaspack/feature-flags" "2.28.0"
-    "@atlaspack/source-map" "3.2.5"
-    utility-types "^3.10.0"
-
 "@babel/code-frame@^7.0.0", "@babel/code-frame@^7.10.4", "@babel/code-frame@^7.22.13", "@babel/code-frame@^7.23.4":
   version "7.23.4"
   resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.23.4.tgz#03ae5af150be94392cb5c7ccd97db5a19a5da6aa"
@@ -21802,7 +21760,7 @@ string-natural-compare@^3.0.1:
   resolved "https://registry.yarnpkg.com/string-natural-compare/-/string-natural-compare-3.0.1.tgz#7a42d58474454963759e8e8b7ae63d71c1e7fdf4"
   integrity sha512-n3sPwynL1nwKi3WJ6AIsClwBMa0zTi54fn2oLU6ndfTSIO05xaznjSf15PcBZU6FNWbmN5Q6cxT4V5hGvB4taw==
 
-"string-width-cjs@npm:string-width@^4.2.0", "string-width@^1.0.2 || 2 || 3 || 4", string-width@^4.0.0, string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
+"string-width-cjs@npm:string-width@^4.2.0":
   version "4.2.3"
   resolved "https://registry.yarnpkg.com/string-width/-/string-width-4.2.3.tgz#269c7117d27b05ad2e536830a8ec895ef9c6d010"
   integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
@@ -21827,6 +21785,15 @@ string-width@^1.0.1, string-width@^1.0.2:
   dependencies:
     is-fullwidth-code-point "^2.0.0"
     strip-ansi "^4.0.0"
+
+"string-width@^1.0.2 || 2 || 3 || 4", string-width@^4.0.0, string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
+  version "4.2.3"
+  resolved "https://registry.yarnpkg.com/string-width/-/string-width-4.2.3.tgz#269c7117d27b05ad2e536830a8ec895ef9c6d010"
+  integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
+  dependencies:
+    emoji-regex "^8.0.0"
+    is-fullwidth-code-point "^3.0.0"
+    strip-ansi "^6.0.1"
 
 string-width@^5.0.1, string-width@^5.1.2:
   version "5.1.2"
@@ -21983,7 +21950,7 @@ stringify-object@^3.3.0:
     is-obj "^1.0.1"
     is-regexp "^1.0.0"
 
-"strip-ansi-cjs@npm:strip-ansi@^6.0.1", strip-ansi@^6.0.0, strip-ansi@^6.0.1:
+"strip-ansi-cjs@npm:strip-ansi@^6.0.1":
   version "6.0.1"
   resolved "https://registry.yarnpkg.com/strip-ansi/-/strip-ansi-6.0.1.tgz#9e26c63d30f53443e9489495b2105d37b67a85d9"
   integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
@@ -22003,6 +21970,13 @@ strip-ansi@^4.0.0:
   integrity sha512-4XaJ2zQdCzROZDivEVIDPkcQn8LMFSa8kj8Gxb/Lnwzv9A8VctNZ+lfivC/sV3ivW8ElJTERXZoPBRrZKkNKow==
   dependencies:
     ansi-regex "^3.0.0"
+
+strip-ansi@^6.0.0, strip-ansi@^6.0.1:
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/strip-ansi/-/strip-ansi-6.0.1.tgz#9e26c63d30f53443e9489495b2105d37b67a85d9"
+  integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
+  dependencies:
+    ansi-regex "^5.0.1"
 
 strip-ansi@^7.0.1, strip-ansi@^7.1.0:
   version "7.1.0"
@@ -23967,7 +23941,7 @@ workerpool@6.1.0:
   resolved "https://registry.yarnpkg.com/workerpool/-/workerpool-6.1.0.tgz#a8e038b4c94569596852de7a8ea4228eefdeb37b"
   integrity sha512-toV7q9rWNYha963Pl/qyeZ6wG+3nnsyvolaNUS8+R5Wtw6qJPTxIlOP1ZSvcGhEJw+l3HMMmtiNo9Gl61G4GVg==
 
-"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0", wrap-ansi@^7.0.0:
+"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0":
   version "7.0.0"
   resolved "https://registry.yarnpkg.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz#67e145cff510a6a6984bdf1152911d69d2eb9e43"
   integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
@@ -23988,6 +23962,15 @@ wrap-ansi@^6.0.1, wrap-ansi@^6.2.0:
   version "6.2.0"
   resolved "https://registry.yarnpkg.com/wrap-ansi/-/wrap-ansi-6.2.0.tgz#e9393ba07102e6c91a3b221478f0257cd2856e53"
   integrity sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==
+  dependencies:
+    ansi-styles "^4.0.0"
+    string-width "^4.1.0"
+    strip-ansi "^6.0.0"
+
+wrap-ansi@^7.0.0:
+  version "7.0.0"
+  resolved "https://registry.yarnpkg.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz#67e145cff510a6a6984bdf1152911d69d2eb9e43"
+  integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
   dependencies:
     ansi-styles "^4.0.0"
     string-width "^4.1.0"
