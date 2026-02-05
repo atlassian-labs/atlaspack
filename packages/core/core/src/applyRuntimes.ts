@@ -505,7 +505,9 @@ function reconcileNewRuntimes<TResult extends RequestResult>(
     name: 'Runtimes',
     assetGroups,
     optionsRef,
-    skipSymbolProp: getFeatureFlag('skipRuntimeSymbolProp'),
+    skipSymbolProp:
+      getFeatureFlag('skipRuntimeSymbolProp') ||
+      getFeatureFlag('rustSymbolTracker'),
   });
 
   // rebuild the graph

@@ -151,6 +151,7 @@ export default function createBundleGraphRequest(
         lazyIncludes: options.lazyIncludes,
         lazyExcludes: options.lazyExcludes,
         requestedAssetIds,
+        skipSymbolProp: getFeatureFlag('rustSymbolTracker'),
       });
 
       let {assetGraph, changedAssets, assetRequests} = await instrumentAsync(
