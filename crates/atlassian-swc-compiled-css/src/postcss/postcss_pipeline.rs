@@ -2871,6 +2871,11 @@ pub fn transform_css_via_postcss(
   // Post-process sheets to fix serialization artifacts like "-100 %" -> "-100%".
   // This can occur when the PostCSS crate serializes negative values with units
   // where the raw value cache doesn't match the actual value.
+  //
+  // NOTE: This is distinct from the gradient minification in minify_gradients.rs.
+  // That module handles CSS value transformations (like removing trailing 100% stops),
+  // while this function fixes low-level serialization bugs in the PostCSS crate where
+  // negative numbers get incorrectly separated from their units (e.g., "-100 %" vs "-100%").
   fn fix_value_spacing(css: &str) -> String {
     // Fix cases where a number is followed by a space and then a unit (e.g., "-100 %" -> "-100%")
     // This regex-like replacement fixes spacing between digits and common CSS units.

@@ -7,11 +7,20 @@ use std::str::FromStr;
 
 static CALC_VALUE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^calc\(\S+\)$").unwrap());
 
-/// Transform a CSS value for hash computation, applying gradient minification.
-/// This mirrors the minify_gradients PostCSS plugin behavior for hash consistency.
+/// Transform a CSS value for hash computation, applying gradient-specific minification.
+///
+/// This function exists because Babel's plugin architecture processes CSS differently:
+/// 1. Babel runs cssnano (including gradient minification) BEFORE atomicify hashes values
+/// 2. Our PostCSS pipeline runs gradient minification AFTER atomicify in the full pipeline
+///
+/// For hash consistency with Babel, we need to apply the same gradient transformations
+/// (specifically: removing trailing `100%` from gradient stops) that Babel applies before
+/// hashing. This is why we specifically handle gradients here - other CSS values don't
+/// have this ordering issue because their transformations don't affect the hash input.
+///
 /// IMPORTANT: This function preserves whitespace (newlines, tabs) because Babel's
-/// cssnano runs BEFORE atomicify, and whitespace normalization runs AFTER atomicify.
-/// The hash must be computed from the value with preserved whitespace.
+/// whitespace normalization also runs AFTER atomicify. The hash must be computed
+/// from the value with preserved whitespace.
 pub fn transform_value_for_hash(value: &str) -> String {
   let normalized = value.to_ascii_lowercase();
   if !normalized.contains("gradient") {
@@ -28,64 +37,8 @@ pub fn transform_value_for_hash(value: &str) -> String {
   vp::walk(
     &mut parsed.nodes[..],
     &mut |n| {
-      if let vp::Node::Function {
-        value: fname,
-        nodes,
-        ..
-      } = n
-      {
-        let name = fname.to_ascii_lowercase();
-        if matches!(
-          name.as_str(),
-          "linear-gradient"
-            | "repeating-linear-gradient"
-            | "-webkit-linear-gradient"
-            | "-webkit-repeating-linear-gradient"
-        ) {
-          let arg_indices = split_args_indices(nodes);
-
-          // Only process final 100% removal - preserve all other whitespace
-          if let Some(last_arg_idx) = arg_indices.last() {
-            if last_arg_idx.len() >= 2 {
-              // Find the last Word node (the stop value)
-              let stop_i = last_arg_idx
-                .iter()
-                .rev()
-                .copied()
-                .find(|&i| matches!(&nodes[i], vp::Node::Word { .. }));
-
-              if let Some(stop_i) = stop_i {
-                if let vp::Node::Word { value: stop_val } = &nodes[stop_i] {
-                  if stop_val == "100%" {
-                    // Find the space before the 100%
-                    let mid_i = last_arg_idx
-                      .iter()
-                      .position(|&i| i == stop_i)
-                      .and_then(|pos| {
-                        if pos > 0 {
-                          Some(last_arg_idx[pos - 1])
-                        } else {
-                          None
-                        }
-                      });
-
-                    // Clear the space before 100%
-                    if let Some(mid_i) = mid_i {
-                      if let vp::Node::Space { value } = &mut nodes[mid_i] {
-                        *value = String::new();
-                      }
-                    }
-                    // Clear the 100%
-                    if let vp::Node::Word { value } = &mut nodes[stop_i] {
-                      *value = String::new();
-                    }
-                    changed = true;
-                  }
-                }
-              }
-            }
-          }
-        }
+      if try_remove_final_100_percent_for_hash(n) {
+        changed = true;
       }
       true
     },
@@ -97,6 +50,79 @@ pub fn transform_value_for_hash(value: &str) -> String {
   } else {
     value.to_string()
   }
+}
+
+/// Helper to remove trailing `100%` from linear gradient stops for hash computation.
+/// Returns true if a modification was made.
+///
+/// This is a workaround to improve the correctness of the hash computation despite
+/// the fact that cssnano/postcss-minify-gradients removes the 100% from the final color stop.
+///
+/// This appears to be inconsistent behavior the ordering in Babel and Rust
+fn try_remove_final_100_percent_for_hash(node: &mut vp::Node) -> bool {
+  let vp::Node::Function {
+    value: fname,
+    nodes,
+    ..
+  } = node
+  else {
+    return false;
+  };
+
+  let name = fname.to_ascii_lowercase();
+  if !matches!(
+    name.as_str(),
+    "linear-gradient"
+      | "repeating-linear-gradient"
+      | "-webkit-linear-gradient"
+      | "-webkit-repeating-linear-gradient"
+  ) {
+    return false;
+  }
+
+  let arg_indices = split_args_indices(nodes);
+  let Some(last_arg_idx) = arg_indices.last() else {
+    return false;
+  };
+  if last_arg_idx.len() < 2 {
+    return false;
+  }
+
+  // Find the last Word node (the stop value)
+  let Some(stop_i) = last_arg_idx
+    .iter()
+    .rev()
+    .copied()
+    .find(|&i| matches!(&nodes[i], vp::Node::Word { .. }))
+  else {
+    return false;
+  };
+
+  // Check if the stop value is "100%"
+  let is_100_percent = matches!(&nodes[stop_i], vp::Node::Word { value } if value == "100%");
+  if !is_100_percent {
+    return false;
+  }
+
+  // Find the space before the 100%
+  let mid_i = last_arg_idx
+    .iter()
+    .position(|&i| i == stop_i)
+    .and_then(|pos| (pos > 0).then(|| last_arg_idx[pos - 1]));
+
+  // Clear the space before 100%
+  if let Some(mid_i) = mid_i {
+    if let vp::Node::Space { value } = &mut nodes[mid_i] {
+      *value = String::new();
+    }
+  }
+
+  // Clear the 100%
+  if let vp::Node::Word { value } = &mut nodes[stop_i] {
+    *value = String::new();
+  }
+
+  true
 }
 
 fn split_args_indices(nodes: &Vec<vp::Node>) -> Vec<Vec<usize>> {
@@ -222,7 +248,10 @@ fn normalize_gradient_spacing(nodes: &mut Vec<vp::Node>) -> bool {
           break;
         }
       }
-      // Re-insert a single space if there was one originally
+      // Re-insert a single space if there was one originally.
+      // Note: We intentionally do NOT set `changed = true` here because we're restoring
+      // the space that was there before - the net effect is no change to the output.
+      // This follows cssnano's behavior of preserving a single space after commas.
       if had_space_after && idx + 1 < nodes.len() {
         nodes.insert(
           idx + 1,
@@ -248,6 +277,13 @@ fn count_leading_spaces(nodes: &[vp::Node]) -> usize {
 }
 
 /// Map gradient direction keyword to degrees.
+///
+/// Note: Diagonal directions (e.g., "to top right") are NOT included here because:
+/// 1. They require two keywords ("to top right" = 3 tokens), not a single direction word
+/// 2. Diagonal gradients depend on the element's aspect ratio and can't be expressed
+///    as a fixed degree value (e.g., "to top right" goes to the top-right corner,
+///    which is 45deg only for square elements)
+/// 3. cssnano/postcss-minify-gradients also doesn't convert diagonal directions to degrees
 fn direction_to_degrees(direction: &str) -> Option<&'static str> {
   match direction.to_ascii_lowercase().as_str() {
     "top" => Some("0deg"),
@@ -351,7 +387,12 @@ pub fn plugin() -> pc::BuiltPlugin {
                             }
                         }
 
-                        // Apply 100% removal in a separate pass to avoid borrow issues
+                        // Apply 100% removal in a separate pass to avoid borrow issues.
+                        // NOTE: This same 100% removal logic also exists in `transform_value_for_hash()`.
+                        // The duplication is intentional: `transform_value_for_hash()` is called during
+                        // hash computation (before PostCSS runs) to match Babel's pre-atomicify hashing,
+                        // while this code runs during the actual PostCSS transformation pipeline.
+                        // Both need to apply the same transformation for consistency.
                         if let Some((mid_i, stop_i)) = final_100_removal {
                             // Clear the space before 100%
                             if let vp::Node::Space { value } = &mut nodes[mid_i] { *value = String::new(); }

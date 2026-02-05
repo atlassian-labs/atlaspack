@@ -1,12 +1,12 @@
 use crate::postcss::value_parser as vp;
 use postcss as pc;
 
-/// Direction keywords for background-position.
-const DIRECTION_KEYWORDS: [&str; 5] = ["top", "right", "bottom", "left", "center"];
-
-/// Check if a value is a direction keyword.
+/// Check if a value is a direction keyword (top, right, bottom, left, center).
 fn is_direction_keyword(keyword: &str) -> bool {
-  DIRECTION_KEYWORDS.contains(&keyword.to_ascii_lowercase().as_str())
+  matches!(
+    keyword.to_ascii_lowercase().as_str(),
+    "top" | "right" | "bottom" | "left" | "center"
+  )
 }
 
 /// Check if a keyword is a horizontal position (left/right).
