@@ -1,5 +1,12 @@
 # @atlaspack/transformer-toml
 
+## 2.14.52
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.52
+
 ## 2.14.51
 
 ### Patch Changes

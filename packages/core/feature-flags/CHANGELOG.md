@@ -1,5 +1,11 @@
 # @atlaspack/feature-flags
 
+## 2.29.0
+
+### Minor Changes
+
+- [#998](https://github.com/atlassian-labs/atlaspack/pull/998) [`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be) Thanks [@mattcompiles](https://github.com/mattcompiles)! - Add initial native bundler boilerplate and single file bundler
+
 ## 2.28.0
 
 ### Minor Changes

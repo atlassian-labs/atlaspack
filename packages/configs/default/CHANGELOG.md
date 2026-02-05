@@ -1,5 +1,42 @@
 # @atlaspack/config-default
 
+## 14.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`e058f0e`](https://github.com/atlassian-labs/atlaspack/commit/e058f0e7a0423ba9373e85a7dbd5c1dd43b47916), [`25c976e`](https://github.com/atlassian-labs/atlaspack/commit/25c976e01c30e536fb1027eab5b17594c604efff), [`1a86b65`](https://github.com/atlassian-labs/atlaspack/commit/1a86b657868ee881ca5acc68661cca208ac37779), [`349b19c`](https://github.com/atlassian-labs/atlaspack/commit/349b19c3aca2ccb1ffb5cdcdc74890f4b62228be)]:
+  - @atlaspack/core@2.33.0
+  - @atlaspack/transformer-js@14.0.0
+  - @atlaspack/bundler-default@3.4.24
+  - @atlaspack/packager-css@2.15.13
+  - @atlaspack/runtime-js@2.20.9
+  - @atlaspack/transformer-postcss@2.14.52
+  - @atlaspack/optimizer-image@14.0.0
+  - @atlaspack/transformer-html@2.15.29
+  - @atlaspack/transformer-image@14.0.0
+  - @atlaspack/packager-js@2.24.13
+  - @atlaspack/transformer-svg@2.14.52
+  - @atlaspack/packager-html@2.15.34
+  - @atlaspack/runtime-react-refresh@2.16.9
+  - @atlaspack/transformer-css@2.15.13
+  - @atlaspack/transformer-react-refresh-wrap@2.15.28
+  - @atlaspack/compressor-raw@2.13.54
+  - @atlaspack/namer-default@2.14.52
+  - @atlaspack/optimizer-css@2.15.13
+  - @atlaspack/optimizer-htmlnano@2.14.52
+  - @atlaspack/optimizer-svgo@2.14.52
+  - @atlaspack/optimizer-swc@2.15.13
+  - @atlaspack/packager-raw@2.14.52
+  - @atlaspack/packager-svg@2.14.52
+  - @atlaspack/packager-wasm@2.14.52
+  - @atlaspack/reporter-dev-server@2.14.52
+  - @atlaspack/resolver-default@2.14.52
+  - @atlaspack/runtime-browser-hmr@2.15.9
+  - @atlaspack/runtime-service-worker@2.15.9
+  - @atlaspack/transformer-json@2.14.52
+  - @atlaspack/transformer-posthtml@2.14.52
+  - @atlaspack/transformer-raw@2.14.52
+
 ## 13.0.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@atlaspack/profiler",
-  "version": "2.15.12",
+  "version": "2.15.13",
   "description": "Blazing fast, zero configuration web application bundler",
   "license": "(MIT OR Apache-2.0)",
   "publishConfig": {
@@ -22,9 +22,9 @@
   "dependencies": {
     "@atlaspack/diagnostic": "2.14.4",
     "@atlaspack/events": "2.14.4",
-    "@atlaspack/types-internal": "2.22.8",
-    "@atlaspack/logger": "2.14.43",
-    "@atlaspack/utils": "3.3.3",
+    "@atlaspack/types-internal": "2.23.0",
+    "@atlaspack/logger": "2.14.44",
+    "@atlaspack/utils": "3.3.4",
     "chalk": "^4.1.2",
     "chrome-trace-event": "^1.0.2"
   },
