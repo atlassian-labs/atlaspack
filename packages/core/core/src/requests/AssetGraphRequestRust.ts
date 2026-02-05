@@ -312,8 +312,15 @@ export function getAssetGraph(
         dependency.symbols = new Map(dependency.symbols?.map(mapSymbols));
       }
 
-      let usedSymbolsDown = new Set();
       let usedSymbolsUp = new Map();
+
+      if (node.used_symbols_up) {
+        for (let usedSymbol of node.used_symbols_up) {
+          usedSymbolsUp.set(usedSymbol.symbol, usedSymbol);
+        }
+      }
+
+      let usedSymbolsDown = new Set();
       if (dependency.isEntry && dependency.isLibrary) {
         usedSymbolsDown.add('*');
         usedSymbolsUp.set('*', undefined);
