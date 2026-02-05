@@ -23,19 +23,30 @@ pub fn build_code_frame_error(message: &str, span: Option<Span>, meta: &Metadata
 
 /// Wraps the provided block or expression in an IIFE.
 pub fn wrap_node_in_iife(body: BlockStmtOrExpr) -> Expr {
+  use swc_core::ecma::ast::ParenExpr;
+
+  // Create the arrow function
+  let arrow = Expr::Arrow(ArrowExpr {
+    span: DUMMY_SP,
+    ctxt: SyntaxContext::empty(),
+    params: Vec::new(),
+    body: Box::new(body),
+    is_generator: false,
+    is_async: false,
+    type_params: None,
+    return_type: None,
+  });
+
+  // Wrap in parentheses so SWC emits (() => ...)() instead of () => ...()
+  let paren_arrow = Expr::Paren(ParenExpr {
+    span: DUMMY_SP,
+    expr: Box::new(arrow),
+  });
+
   Expr::Call(CallExpr {
     span: DUMMY_SP,
     ctxt: SyntaxContext::empty(),
-    callee: Callee::Expr(Box::new(Expr::Arrow(ArrowExpr {
-      span: DUMMY_SP,
-      ctxt: SyntaxContext::empty(),
-      params: Vec::new(),
-      body: Box::new(body),
-      is_generator: false,
-      is_async: false,
-      type_params: None,
-      return_type: None,
-    }))),
+    callee: Callee::Expr(Box::new(paren_arrow)),
     args: Vec::new(),
     type_args: None,
   })
@@ -145,17 +156,22 @@ mod tests {
       SyntaxContext::empty(),
     )))));
 
+    // The IIFE should be: (()=>a)()
+    // Structure: Call { callee: Paren { expr: Arrow { body: Expr(Ident("a")) } } }
     match expr {
       Expr::Call(CallExpr {
         callee: Callee::Expr(callee),
         ..
       }) => match *callee {
-        Expr::Arrow(ArrowExpr { body, .. }) => match *body {
-          BlockStmtOrExpr::Expr(inner) => match *inner {
-            Expr::Ident(Ident { sym, .. }) => assert_eq!(sym.as_ref(), "a"),
-            other => panic!("unexpected inner expression: {other:?}"),
+        Expr::Paren(paren) => match *paren.expr {
+          Expr::Arrow(ArrowExpr { body, .. }) => match *body {
+            BlockStmtOrExpr::Expr(inner) => match *inner {
+              Expr::Ident(Ident { sym, .. }) => assert_eq!(sym.as_ref(), "a"),
+              other => panic!("unexpected inner expression: {other:?}"),
+            },
+            other => panic!("unexpected IIFE body: {other:?}"),
           },
-          other => panic!("unexpected IIFE body: {other:?}"),
+          other => panic!("unexpected paren inner: {other:?}"),
         },
         other => panic!("unexpected callee: {other:?}"),
       },
@@ -195,16 +211,21 @@ mod tests {
     let expr = arrow_expr(BlockStmtOrExpr::BlockStmt(block.clone()));
     let result = pick_function_body(&expr);
 
+    // The IIFE should be: (()=>{ return value; })()
+    // Structure: Call { callee: Paren { expr: Arrow { body: BlockStmt } } }
     match result {
       Expr::Call(CallExpr {
         callee: Callee::Expr(callee),
         ..
       }) => match *callee {
-        Expr::Arrow(ArrowExpr { body, .. }) => match *body {
-          BlockStmtOrExpr::BlockStmt(inner_block) => {
-            assert_eq!(inner_block.stmts.len(), 1);
-          }
-          other => panic!("unexpected body: {other:?}"),
+        Expr::Paren(paren) => match *paren.expr {
+          Expr::Arrow(ArrowExpr { body, .. }) => match *body {
+            BlockStmtOrExpr::BlockStmt(inner_block) => {
+              assert_eq!(inner_block.stmts.len(), 1);
+            }
+            other => panic!("unexpected body: {other:?}"),
+          },
+          other => panic!("unexpected paren inner: {other:?}"),
         },
         other => panic!("unexpected callee: {other:?}"),
       },
@@ -242,16 +263,21 @@ mod tests {
 
     let result = pick_function_body(&function);
 
+    // The IIFE should be: (()=>{ return a; })()
+    // Structure: Call { callee: Paren { expr: Arrow { body: BlockStmt } } }
     match result {
       Expr::Call(CallExpr {
         callee: Callee::Expr(callee),
         ..
       }) => match *callee {
-        Expr::Arrow(ArrowExpr { body, .. }) => match *body {
-          BlockStmtOrExpr::BlockStmt(block) => {
-            assert_eq!(block.stmts.len(), 1);
-          }
-          other => panic!("unexpected body: {other:?}"),
+        Expr::Paren(paren) => match *paren.expr {
+          Expr::Arrow(ArrowExpr { body, .. }) => match *body {
+            BlockStmtOrExpr::BlockStmt(block) => {
+              assert_eq!(block.stmts.len(), 1);
+            }
+            other => panic!("unexpected body: {other:?}"),
+          },
+          other => panic!("unexpected paren inner: {other:?}"),
         },
         other => panic!("unexpected callee: {other:?}"),
       },

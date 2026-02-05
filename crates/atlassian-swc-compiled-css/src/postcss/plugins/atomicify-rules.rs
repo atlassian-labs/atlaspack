@@ -255,20 +255,19 @@ fn atomic_class_name(
   let group = group_hash.chars().take(4).collect::<String>();
 
   let mut value_seed = serialize_component_values(&declaration.value).unwrap_or_default();
-  if options.optimize_css {
-    // COMPAT: Babel trims whitespace around multiplication inside calc() before hashing.
-    value_seed = value_seed.replace(" *", "*");
-    value_seed = value_seed.replace("* ", "*");
-    value_seed = value_seed.replace("*-", "* -");
-    value_seed = value_seed.replace("*+", "* +");
-  }
+  // COMPAT: Babel trims whitespace around multiplication inside calc() before hashing.
+  value_seed = value_seed.replace(" *", "*");
+  value_seed = value_seed.replace("* ", "*");
+  value_seed = value_seed.replace("*-", "* -");
+  value_seed = value_seed.replace("*+", "* +");
   if declaration.important.is_some() {
     value_seed.push_str("true");
   }
-  if std::env::var("COMPILED_CLI_TRACE").is_ok()
-    && declaration_name(&declaration.name) == "margin-left"
-  {
-    eprintln!("[atomicify.hash] raw='{}'", value_seed);
+  if std::env::var("COMPILED_CLI_TRACE").is_ok() {
+    let prop_name = declaration_name(&declaration.name);
+    if prop_name == "margin-left" || prop_name == "background-position" {
+      eprintln!("[atomicify.hash] prop='{}' raw='{}'", prop_name, value_seed);
+    }
   }
   let value_hash = hash(&value_seed);
   let value = value_hash.chars().take(4).collect::<String>();

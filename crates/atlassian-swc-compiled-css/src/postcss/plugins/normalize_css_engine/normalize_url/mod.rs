@@ -533,12 +533,14 @@ pub fn plugin() -> pc::BuiltPlugin {
                         if escape_chars.is_match(&v) {
                           let escaped = escape_chars.replace_all(&v, r"\$1").to_string();
                           if escaped.len() < s.len() + 2 {
-                            *n = vp::Node::Word { value: escaped };
+                            // Change the inner node from String to Word, keeping the url() function
+                            *first = vp::Node::Word { value: escaped };
                           } else {
                             *s = v;
                           }
                         } else {
-                          *n = vp::Node::Word { value: v };
+                          // Change the inner node from String to Word, keeping the url() function
+                          *first = vp::Node::Word { value: v };
                         }
                       }
                       vp::Node::Word { value } => {
@@ -676,12 +678,14 @@ pub fn plugin() -> pc::BuiltPlugin {
                         if escape_chars.is_match(&v) {
                           let escaped = escape_chars.replace_all(&v, r"\$1").to_string();
                           if escaped.len() < s.len() + 2 {
-                            *n = vp::Node::Word { value: escaped };
+                            // Change the inner node from String to Word, keeping the url() function
+                            *first = vp::Node::Word { value: escaped };
                           } else {
                             *s = v;
                           }
                         } else {
-                          *n = vp::Node::Word { value: v };
+                          // Change the inner node from String to Word, keeping the url() function
+                          *first = vp::Node::Word { value: v };
                         }
                       }
                       vp::Node::Word { value } => {
@@ -780,4 +784,88 @@ pub fn plugin() -> pc::BuiltPlugin {
       Ok(())
     })
     .build()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use postcss as pc;
+
+  fn run_normalize_url(css: &str) -> String {
+    let mut result = pc::Processor::new()
+      .with_plugin(plugin())
+      .process(css)
+      .expect("process css");
+    result.to_css_string().expect("stringify css")
+  }
+
+  #[test]
+  fn preserves_url_function_with_quoted_value() {
+    // The url() function should be preserved, only the inner quotes should be removed
+    let input = r#".a{background-image:url("https://example.com/image.jpg")}"#;
+    let output = run_normalize_url(input);
+    assert_eq!(
+      output,
+      ".a{background-image:url(https://example.com/image.jpg)}"
+    );
+  }
+
+  #[test]
+  fn preserves_url_function_with_single_quoted_value() {
+    let input = r#".a{background-image:url('https://example.com/image.jpg')}"#;
+    let output = run_normalize_url(input);
+    assert_eq!(
+      output,
+      ".a{background-image:url(https://example.com/image.jpg)}"
+    );
+  }
+
+  #[test]
+  fn preserves_url_function_with_unquoted_value() {
+    let input = ".a{background-image:url(https://example.com/image.jpg)}";
+    let output = run_normalize_url(input);
+    assert_eq!(
+      output,
+      ".a{background-image:url(https://example.com/image.jpg)}"
+    );
+  }
+
+  #[test]
+  fn preserves_url_with_special_characters_escapes() {
+    // When URL contains spaces or special chars, they should be escaped and url() preserved
+    let input = r#".a{background-image:url("https://example.com/my image.jpg")}"#;
+    let output = run_normalize_url(input);
+    // The space should be escaped and url() function preserved
+    assert!(output.contains("url("));
+    assert!(output.contains("example.com"));
+  }
+
+  #[test]
+  fn preserves_url_with_data_uri() {
+    // Data URIs should be preserved as-is
+    let input = r#".a{background-image:url("data:image/png;base64,ABC123")}"#;
+    let output = run_normalize_url(input);
+    assert!(output.contains("url("));
+    assert!(output.contains("data:image/png;base64,ABC123"));
+  }
+
+  #[test]
+  fn preserves_multiple_url_functions() {
+    let input =
+      r#".a{background:url("https://example.com/bg.jpg"),url("https://example.com/overlay.png")}"#;
+    let output = run_normalize_url(input);
+    // Both url() functions should be preserved
+    let url_count = output.matches("url(").count();
+    assert_eq!(url_count, 2, "Should have two url() functions: {}", output);
+  }
+
+  #[test]
+  fn normalizes_absolute_url_within_url_function() {
+    // Test that URL normalization happens inside url() without removing url()
+    let input = r#".a{background-image:url("https://www.example.com/image.jpg")}"#;
+    let output = run_normalize_url(input);
+    // URL should be inside url() function
+    assert!(output.contains("url("));
+    assert!(output.contains("example.com"));
+  }
 }

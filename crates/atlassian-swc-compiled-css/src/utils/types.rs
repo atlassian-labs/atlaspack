@@ -16,6 +16,11 @@ pub struct ConditionalCssItem {
   pub test: Expr,
   pub consequent: Box<CssItem>,
   pub alternate: Box<CssItem>,
+  /// Optional guard expression that must be true for the conditional to apply.
+  /// This is used when a conditional is nested inside a single-sided conditional,
+  /// e.g., `outer_test ? (inner_test ? value1 : value2) : undefined`
+  /// becomes a conditional with guard = Some(outer_test).
+  pub guard: Option<Expr>,
 }
 
 /// Logical operators supported when composing conditional CSS.

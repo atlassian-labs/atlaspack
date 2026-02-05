@@ -6,8 +6,8 @@ use swc_core::common::{DUMMY_SP, SourceMap, SourceMapper, Spanned, SyntaxContext
 use swc_core::ecma::ast::{
   ArrayLit, ArrowExpr, BinExpr, BinaryOp, BlockStmt, BlockStmtOrExpr, CallExpr, Callee, CondExpr,
   Expr, ExprOrSpread, Ident, KeyValueProp, Lit, MemberExpr, MemberProp, ObjectLit, OptChainBase,
-  Pat, Prop, PropName, PropOrSpread, ReturnStmt, SpreadElement, Stmt, TaggedTpl, Tpl, TplElement,
-  TsType, UnaryExpr, UnaryOp,
+  ParenExpr, Pat, Prop, PropName, PropOrSpread, ReturnStmt, SpreadElement, Stmt, TaggedTpl, Tpl,
+  TplElement, TsType, UnaryExpr, UnaryOp,
 };
 use swc_core::ecma::codegen::text_writer::JsWriter;
 use swc_core::ecma::codegen::{Config, Emitter, Node};
@@ -880,7 +880,36 @@ fn logical_items_from_conditional_expression(
   css
     .into_iter()
     .map(|item| match item {
-      CssItem::Conditional(_) => item,
+      CssItem::Conditional(mut conditional) => {
+        // When a nested conditional is inside a single-sided conditional, we need to
+        // preserve the outer test as a guard. For example:
+        //   outer_test ? (inner_test ? value1 : value2) : undefined
+        // should produce: outer_test && (inner_test ? class1 : class2)
+        let guard_expr = match branch {
+          ConditionalBranch::Consequent => (*node.test).clone(),
+          ConditionalBranch::Alternate => Expr::Unary(UnaryExpr {
+            span: DUMMY_SP,
+            op: UnaryOp::Bang,
+            arg: Box::new(Expr::Paren(ParenExpr {
+              span: DUMMY_SP,
+              expr: Box::new((*node.test).clone()),
+            })),
+          }),
+        };
+
+        // Combine with any existing guard using &&
+        conditional.guard = Some(match conditional.guard.take() {
+          Some(existing) => Expr::Bin(BinExpr {
+            span: DUMMY_SP,
+            op: BinaryOp::LogicalAnd,
+            left: Box::new(guard_expr),
+            right: Box::new(existing),
+          }),
+          None => guard_expr,
+        });
+
+        CssItem::Conditional(conditional)
+      }
       CssItem::Logical(logical) => {
         let mut span = logical.expression.span();
         if span == DUMMY_SP {
@@ -901,13 +930,24 @@ fn logical_items_from_conditional_expression(
         })
       }
       _ => {
+        let test_clone = (*node.test).clone();
         let expression = match branch {
-          ConditionalBranch::Consequent => (*node.test).clone(),
-          ConditionalBranch::Alternate => Expr::Unary(UnaryExpr {
-            span: node.test.span(),
-            op: UnaryOp::Bang,
-            arg: Box::new((*node.test).clone()),
-          }),
+          ConditionalBranch::Consequent => test_clone,
+          ConditionalBranch::Alternate => {
+            // For the alternate branch, we need to negate the test.
+            // To match Babel's output exactly, we always use !(test) pattern
+            // by wrapping the test in parentheses before negating.
+            // This produces !(a === b) instead of a !== b, which is important
+            // for hash consistency with the Babel plugin.
+            Expr::Unary(UnaryExpr {
+              span: DUMMY_SP,
+              op: UnaryOp::Bang,
+              arg: Box::new(Expr::Paren(ParenExpr {
+                span: DUMMY_SP,
+                expr: Box::new(test_clone),
+              })),
+            })
+          }
         };
 
         CssItem::Logical(LogicalCssItem {
@@ -1580,16 +1620,21 @@ where
    -> Option<CssItem> {
     let mut css_output: Option<CssOutput> = None;
 
+    // COMPAT: Babel only treats string literals as CSS if they contain a colon,
+    // indicating they're CSS declarations (e.g., 'color: red'). String literals
+    // without colons (e.g., '104px') are values that should flow through the
+    // CSS variable path, not be treated as CSS declarations.
     if let Expr::Lit(Lit::Str(str_lit)) = expr {
-      css_output = Some(CssOutput {
-        css: vec![CssItem::unconditional(str_lit.value.as_ref())],
-        variables: Vec::new(),
-      });
-    } else if let Expr::Lit(Lit::Num(num_lit)) = expr {
-      css_output = Some(CssOutput {
-        css: vec![CssItem::unconditional(&num_lit.value.to_string())],
-        variables: Vec::new(),
-      });
+      if str_lit.value.contains(':') {
+        css_output = Some(CssOutput {
+          css: vec![CssItem::unconditional(str_lit.value.as_ref())],
+          variables: Vec::new(),
+        });
+      }
+    } else if let Expr::Lit(Lit::Num(_)) = expr {
+      // COMPAT: Numeric literals in conditional branches should also flow through
+      // the CSS variable path, not be treated as complete CSS declarations.
+      // This matches Babel's behavior where value-only expressions become variables.
     } else {
       let looks_like_css_literal = if matches!(expr, Expr::Object(_)) {
         true
@@ -1729,6 +1774,7 @@ where
         test: (*node.test).clone(),
         consequent: Box::new(consequent),
         alternate: Box::new(alternate),
+        guard: None,
       }));
     }
     (Some(consequent), None) => css.extend(logical_items_from_conditional_expression(
@@ -2124,11 +2170,14 @@ where
           let result = if template.exprs.len() == 1 {
             if let Some(first_expr) = template.exprs.first() {
               if let Expr::Arrow(arrow) = first_expr.as_ref() {
-                if matches!(
+                // Check if the body is a conditional expression, stripping parentheses first
+                // to handle cases like: `minHeight: \`${(props) => (props.isLoading ? '0' : '200px')}\``
+                let is_conditional_body = matches!(
                     arrow.body.as_ref(),
                     BlockStmtOrExpr::Expr(body)
-                        if matches!(**body, Expr::Cond(_))
-                ) {
+                        if matches!(strip_parentheses_expr(body), Expr::Cond(_))
+                );
+                if is_conditional_body {
                   let mut optimized = template.clone();
                   recompose_template_literal(
                     &mut optimized,
@@ -2222,6 +2271,25 @@ where
           fn literal_return_value(arrow: &ArrowExpr) -> Option<Expr> {
             match arrow.body.as_ref() {
               BlockStmtOrExpr::BlockStmt(block) => {
+                // If there are any control flow statements, the function may return
+                // different values depending on conditions, so we can't treat it as
+                // a static literal return.
+                let has_control_flow = block.stmts.iter().any(|stmt| {
+                  matches!(
+                    stmt,
+                    Stmt::If(_)
+                      | Stmt::Switch(_)
+                      | Stmt::For(_)
+                      | Stmt::ForIn(_)
+                      | Stmt::ForOf(_)
+                      | Stmt::While(_)
+                      | Stmt::DoWhile(_)
+                  )
+                });
+                if has_control_flow {
+                  return None;
+                }
+
                 for stmt in &block.stmts {
                   if let Some(found) = literal_from_stmt(stmt) {
                     return Some(found);
@@ -2242,6 +2310,25 @@ where
               Expr::Arrow(arrow) => literal_return_value(arrow),
               Expr::Fn(fn_expr) => {
                 if let Some(body) = &fn_expr.function.body {
+                  // If there are any control flow statements, the function may return
+                  // different values depending on conditions, so we can't treat it as
+                  // a static literal return.
+                  let has_control_flow = body.stmts.iter().any(|stmt| {
+                    matches!(
+                      stmt,
+                      Stmt::If(_)
+                        | Stmt::Switch(_)
+                        | Stmt::For(_)
+                        | Stmt::ForIn(_)
+                        | Stmt::ForOf(_)
+                        | Stmt::While(_)
+                        | Stmt::DoWhile(_)
+                    )
+                  });
+                  if has_control_flow {
+                    return None;
+                  }
+
                   for stmt in &body.stmts {
                     if let Stmt::Return(ReturnStmt { arg: Some(arg), .. }) = stmt {
                       match arg.as_ref() {
@@ -2534,6 +2621,7 @@ fn to_css_rule_internal(selector: &str, item: &CssItem) -> CssItem {
       test: conditional.test.clone(),
       consequent: Box::new(to_css_rule_internal(selector, &conditional.consequent)),
       alternate: Box::new(to_css_rule_internal(selector, &conditional.alternate)),
+      guard: conditional.guard.clone(),
     }),
     CssItem::Unconditional(unconditional) => CssItem::Unconditional(UnconditionalCssItem {
       css: wrap_with_selector(selector, unconditional.css.clone()),
@@ -2581,6 +2669,7 @@ fn to_css_declaration_internal(key: &str, item: &CssItem) -> CssItem {
       test: conditional.test.clone(),
       consequent: Box::new(to_css_declaration_internal(key, &conditional.consequent)),
       alternate: Box::new(to_css_declaration_internal(key, &conditional.alternate)),
+      guard: conditional.guard.clone(),
     }),
     CssItem::Unconditional(unconditional) => CssItem::Unconditional(UnconditionalCssItem {
       css: declaration_css(key, unconditional.css.clone()),
@@ -2978,8 +3067,8 @@ mod tests {
   use swc_core::common::sync::Lrc;
   use swc_core::common::{DUMMY_SP, FileName, SourceMap, SyntaxContext};
   use swc_core::ecma::ast::{
-    CallExpr, Callee, Expr, ExprOrSpread, Ident, KeyValueProp, ObjectLit, Prop, PropName,
-    PropOrSpread,
+    BinExpr, BinaryOp, CallExpr, Callee, CondExpr, Expr, ExprOrSpread, Ident, KeyValueProp, Lit,
+    Number, ObjectLit, Prop, PropName, PropOrSpread, Str,
   };
   use swc_core::ecma::parser::{Parser, StringInput, Syntax, lexer::Lexer};
 
@@ -3355,6 +3444,46 @@ mod tests {
   }
 
   #[test]
+  fn extract_object_expression_builds_template_literal_with_parenthesized_conditional() {
+    // Tests the case where the conditional expression is wrapped in parentheses:
+    // minHeight: `${(props) => (props.isLoading ? '0' : '200px')}`
+    let metadata = create_metadata();
+    let object =
+      parse_object_literal("({ minHeight: `${(props) => (props.isLoading ? '0' : '200px')}` })");
+    let mut build_css = |expr: &Expr, meta: &Metadata| super::build_css_internal(expr, meta);
+
+    let output = super::extract_object_expression_with_builder(&object, &metadata, &mut build_css);
+
+    assert!(
+      output.variables.is_empty(),
+      "expected no variables for parenthesized conditional, found {:?}",
+      output.variables
+    );
+
+    // Should have a conditional CSS item, not a CSS variable
+    let conditional = output
+      .css
+      .iter()
+      .find_map(|item| match item {
+        CssItem::Conditional(cond) => Some(cond),
+        _ => None,
+      })
+      .expect("expected conditional css item for parenthesized conditional");
+
+    if let CssItem::Unconditional(unconditional) = conditional.consequent.as_ref() {
+      assert_eq!(unconditional.css, "min-height:0");
+    } else {
+      panic!("expected unconditional consequent");
+    }
+
+    if let CssItem::Unconditional(unconditional) = conditional.alternate.as_ref() {
+      assert_eq!(unconditional.css, "min-height:200px");
+    } else {
+      panic!("expected unconditional alternate");
+    }
+  }
+
+  #[test]
   fn extract_object_expression_builds_arrow_template_branch() {
     let metadata = create_metadata();
     let object = parse_object_literal("({ fontSize: (props) => `${props.isLast ? 5 : 10}px` })");
@@ -3524,6 +3653,40 @@ mod tests {
   }
 
   #[test]
+  fn arrow_function_with_control_flow_creates_variable() {
+    // An arrow function with control flow (if statements) should NOT be collapsed
+    // to a static literal, but should create a CSS variable instead
+    let metadata = create_metadata();
+    let object = parse_object_literal(
+      "({ padding: (props) => { if (props.compact) { return '4px'; } return '8px 16px'; } })",
+    );
+    let mut build_css = |expr: &Expr, meta: &Metadata| super::build_css_internal(expr, meta);
+
+    let output = super::extract_object_expression_with_builder(&object, &metadata, &mut build_css);
+
+    // Should create a CSS variable since the function has control flow
+    assert_eq!(output.variables.len(), 1);
+    assert_eq!(output.css.len(), 1);
+
+    // The CSS should use var() not expanded longhands
+    match &output.css[0] {
+      CssItem::Unconditional(unconditional) => {
+        assert!(
+          unconditional.css.contains("padding: var(--_"),
+          "Expected padding with CSS variable, got: {}",
+          unconditional.css
+        );
+        // Should NOT have expanded longhands
+        assert!(
+          !unconditional.css.contains("padding-top:"),
+          "Should not have expanded longhands"
+        );
+      }
+      other => panic!("expected unconditional css item, found {other:?}"),
+    }
+  }
+
+  #[test]
   fn merges_adjacent_unconditional_items() {
     let items = vec![
       CssItem::unconditional("color: red;"),
@@ -3597,6 +3760,7 @@ mod tests {
       test: Expr::Ident(Ident::new("flag".into(), DUMMY_SP, SyntaxContext::empty())),
       consequent: Box::new(CssItem::unconditional("color: red;")),
       alternate: Box::new(CssItem::unconditional("color: blue;")),
+      guard: None,
     });
 
     let output = CssOutput {
@@ -3958,6 +4122,55 @@ mod tests {
   }
 
   #[test]
+  fn extract_conditional_expression_treats_value_strings_as_non_css() {
+    // String literals without colons (like '104px') should NOT be treated as CSS
+    // declarations. They should be treated as values that flow through the CSS
+    // variable path. This matches Babel's behavior.
+    let meta = create_metadata();
+    let expr = parse_expression("flag ? propValue : '104px'");
+
+    if let Expr::Cond(cond) = expr {
+      let result = extract_conditional_expression_with_builder(&cond, &meta, &mut |_, _| {
+        // This should NOT be called for string literals without colons
+        panic!("build_css should not be called for value-only string literals");
+      });
+
+      // Neither branch should produce CSS, so the result should be empty
+      assert!(
+        result.css.is_empty(),
+        "expected empty CSS for value-only conditional, got {:?}",
+        result.css
+      );
+    } else {
+      panic!("expected conditional expression");
+    }
+  }
+
+  #[test]
+  fn extract_conditional_expression_treats_css_strings_with_colons() {
+    // String literals WITH colons (like 'color: red') SHOULD be treated as CSS
+    let meta = create_metadata();
+    let expr = parse_expression("flag ? 'color: red' : 'color: blue'");
+    let mut call_count = 0;
+
+    if let Expr::Cond(cond) = expr {
+      let result = extract_conditional_expression_with_builder(&cond, &meta, &mut |_, _| {
+        call_count += 1;
+        CssOutput {
+          css: vec![CssItem::unconditional("mock css")],
+          variables: Vec::new(),
+        }
+      });
+
+      // Both branches have colons, so they should be treated as CSS
+      assert_eq!(result.css.len(), 1);
+      assert!(matches!(result.css[0], CssItem::Conditional(_)));
+    } else {
+      panic!("expected conditional expression");
+    }
+  }
+
+  #[test]
   fn to_css_declaration_preserves_sheets() {
     let sheet_css = ".a { color: red; }".to_string();
     let sheet = CssItem::Sheet(SheetCssItem {
@@ -4153,5 +4366,270 @@ mod tests {
     assert_eq!(normalize_content_value(r#""hello""#), r#""hello""#);
     assert_eq!(normalize_content_value("plain"), r#""plain""#);
     assert_eq!(normalize_content_value(""), r#""""#);
+  }
+
+  #[test]
+  fn logical_items_negates_test_for_alternate_branch() {
+    // Test that for alternate branches, we use !(test) pattern to match Babel output.
+    // This ensures hash consistency with the Babel plugin.
+    use super::{ConditionalBranch, logical_items_from_conditional_expression};
+
+    let test_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::EqEqEq,
+      left: Box::new(ident_expr("widthMode")),
+      right: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "wide".into(),
+        raw: None,
+      }))),
+    });
+
+    let cond_expr = CondExpr {
+      span: DUMMY_SP,
+      test: Box::new(test_expr),
+      cons: Box::new(ident_expr("undefined")),
+      alt: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "216px".into(),
+        raw: None,
+      }))),
+    };
+
+    let css_item = CssItem::Unconditional(UnconditionalCssItem {
+      css: "width:216px;".into(),
+    });
+
+    let result = logical_items_from_conditional_expression(
+      vec![css_item],
+      &cond_expr,
+      ConditionalBranch::Alternate,
+    );
+
+    assert_eq!(result.len(), 1);
+    match &result[0] {
+      CssItem::Logical(logical) => {
+        // The expression should be a unary ! with parenthesized test: !(widthMode === 'wide')
+        match &logical.expression {
+          Expr::Unary(unary) => {
+            assert_eq!(unary.op, swc_core::ecma::ast::UnaryOp::Bang);
+            // The argument should be a parenthesized expression
+            match unary.arg.as_ref() {
+              Expr::Paren(paren) => {
+                // Inside the parens should be the original binary expression
+                match paren.expr.as_ref() {
+                  Expr::Bin(bin) => {
+                    assert_eq!(
+                      bin.op,
+                      BinaryOp::EqEqEq,
+                      "Expected === inside parens but got {:?}",
+                      bin.op
+                    );
+                  }
+                  other => panic!("Expected binary expression inside parens, got {:?}", other),
+                }
+              }
+              other => panic!("Expected parenthesized expression, got {:?}", other),
+            }
+          }
+          other => panic!("Expected unary expression, got {:?}", other),
+        }
+        assert_eq!(logical.operator, LogicalOperator::And);
+        assert_eq!(logical.css, "width:216px;");
+      }
+      other => panic!("Expected Logical CssItem, got {:?}", other),
+    }
+  }
+
+  #[test]
+  fn logical_items_negates_inequality_for_alternate_branch() {
+    // Test that for alternate branches with !==, we use !(test) pattern to match Babel output.
+    use super::{ConditionalBranch, logical_items_from_conditional_expression};
+
+    let test_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::NotEqEq,
+      left: Box::new(ident_expr("widthMode")),
+      right: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "wide".into(),
+        raw: None,
+      }))),
+    });
+
+    let cond_expr = CondExpr {
+      span: DUMMY_SP,
+      test: Box::new(test_expr),
+      cons: Box::new(ident_expr("undefined")),
+      alt: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "center".into(),
+        raw: None,
+      }))),
+    };
+
+    let css_item = CssItem::Unconditional(UnconditionalCssItem {
+      css: "align-items:center;".into(),
+    });
+
+    let result = logical_items_from_conditional_expression(
+      vec![css_item],
+      &cond_expr,
+      ConditionalBranch::Alternate,
+    );
+
+    assert_eq!(result.len(), 1);
+    match &result[0] {
+      CssItem::Logical(logical) => {
+        // The expression should be a unary ! with parenthesized test: !(widthMode !== 'wide')
+        match &logical.expression {
+          Expr::Unary(unary) => {
+            assert_eq!(unary.op, swc_core::ecma::ast::UnaryOp::Bang);
+            match unary.arg.as_ref() {
+              Expr::Paren(paren) => match paren.expr.as_ref() {
+                Expr::Bin(bin) => {
+                  assert_eq!(
+                    bin.op,
+                    BinaryOp::NotEqEq,
+                    "Expected !== inside parens but got {:?}",
+                    bin.op
+                  );
+                }
+                other => panic!("Expected binary expression inside parens, got {:?}", other),
+              },
+              other => panic!("Expected parenthesized expression, got {:?}", other),
+            }
+          }
+          other => panic!("Expected unary expression, got {:?}", other),
+        }
+      }
+      other => panic!("Expected Logical CssItem, got {:?}", other),
+    }
+  }
+
+  #[test]
+  fn logical_items_negates_non_equality_operators() {
+    // Test that for non-equality binary operators (like <, >, etc.), we use !(test) pattern
+    use super::{ConditionalBranch, logical_items_from_conditional_expression};
+
+    let test_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::Lt, // Less than
+      left: Box::new(ident_expr("count")),
+      right: Box::new(Expr::Lit(Lit::Num(Number {
+        span: DUMMY_SP,
+        value: 10.0,
+        raw: None,
+      }))),
+    });
+
+    let cond_expr = CondExpr {
+      span: DUMMY_SP,
+      test: Box::new(test_expr),
+      cons: Box::new(ident_expr("undefined")),
+      alt: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "red".into(),
+        raw: None,
+      }))),
+    };
+
+    let css_item = CssItem::Unconditional(UnconditionalCssItem {
+      css: "color:red;".into(),
+    });
+
+    let result = logical_items_from_conditional_expression(
+      vec![css_item],
+      &cond_expr,
+      ConditionalBranch::Alternate,
+    );
+
+    assert_eq!(result.len(), 1);
+    match &result[0] {
+      CssItem::Logical(logical) => {
+        // The expression should be a unary ! with parenthesized test: !(count < 10)
+        match &logical.expression {
+          Expr::Unary(unary) => {
+            assert_eq!(unary.op, swc_core::ecma::ast::UnaryOp::Bang);
+            match unary.arg.as_ref() {
+              Expr::Paren(paren) => match paren.expr.as_ref() {
+                Expr::Bin(bin) => {
+                  assert_eq!(
+                    bin.op,
+                    BinaryOp::Lt,
+                    "Expected < inside parens but got {:?}",
+                    bin.op
+                  );
+                }
+                other => panic!("Expected binary expression inside parens, got {:?}", other),
+              },
+              other => panic!("Expected parenthesized expression, got {:?}", other),
+            }
+          }
+          other => panic!(
+            "Expected unary expression for non-equality operator, got {:?}",
+            other
+          ),
+        }
+      }
+      other => panic!("Expected Logical CssItem, got {:?}", other),
+    }
+  }
+
+  #[test]
+  fn logical_items_preserves_test_for_consequent_branch() {
+    // Test that for consequent branches, the test expression is preserved as-is
+    use super::{ConditionalBranch, logical_items_from_conditional_expression};
+
+    let test_expr = Expr::Bin(BinExpr {
+      span: DUMMY_SP,
+      op: BinaryOp::EqEqEq,
+      left: Box::new(ident_expr("widthMode")),
+      right: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "wide".into(),
+        raw: None,
+      }))),
+    });
+
+    let cond_expr = CondExpr {
+      span: DUMMY_SP,
+      test: Box::new(test_expr),
+      cons: Box::new(Expr::Lit(Lit::Str(Str {
+        span: DUMMY_SP,
+        value: "300px".into(),
+        raw: None,
+      }))),
+      alt: Box::new(ident_expr("undefined")),
+    };
+
+    let css_item = CssItem::Unconditional(UnconditionalCssItem {
+      css: "width:300px;".into(),
+    });
+
+    let result = logical_items_from_conditional_expression(
+      vec![css_item],
+      &cond_expr,
+      ConditionalBranch::Consequent,
+    );
+
+    assert_eq!(result.len(), 1);
+    match &result[0] {
+      CssItem::Logical(logical) => {
+        // The expression should preserve the === test
+        match &logical.expression {
+          Expr::Bin(bin) => {
+            assert_eq!(
+              bin.op,
+              BinaryOp::EqEqEq,
+              "Expected === for consequent branch but got {:?}",
+              bin.op
+            );
+          }
+          other => panic!("Expected binary expression for consequent, got {:?}", other),
+        }
+      }
+      other => panic!("Expected Logical CssItem, got {:?}", other),
+    }
   }
 }
