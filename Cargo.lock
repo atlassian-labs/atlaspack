@@ -492,6 +492,7 @@ dependencies = [
  "petgraph",
  "pretty_assertions",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]

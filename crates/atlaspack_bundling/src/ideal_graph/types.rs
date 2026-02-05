@@ -1,9 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use atlaspack_core::{
-  asset_graph::{AssetGraph, AssetGraphNode},
-  types::{Asset, Dependency},
-};
+use atlaspack_core::types::{MaybeBundleBehavior, Priority};
 
 /// Configuration knobs for the ideal graph build/analysis.
 ///
@@ -21,151 +18,172 @@ pub struct IdealGraphBuildStats {
   pub dependencies: usize,
 }
 
-/// A stable identifier for nodes in the ideal graph.
+/// Typed decision event.
 ///
-/// We keep this separate from petgraph indices so we can change the underlying
-/// graph representation without rewriting all consumers.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct IdealNodeId(pub u32);
+/// This is intended for debugging/visualization and should not be used for correctness.
+///
+/// To extend: add new variants. As we build out phases, this becomes the "audit trail"
+/// explaining *why* the algorithm made a particular choice.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DecisionKind {
+  // Phase 1 (boundaries)
+  BoundaryCreated {
+    asset_id: String,
+    from_asset_id: String,
+    dependency_id: String,
+    priority: Priority,
+    type_change: bool,
+    isolated: bool,
+  },
 
-/// Node payload.
-#[derive(Debug, Clone)]
-pub enum IdealNode {
-  Asset { id: String },
-  Dependency { id: String },
+  // Phase 2 (sync graph)
+  SyncEdgeIncluded {
+    from_asset_id: String,
+    to_asset_id: String,
+  },
+  SyncEdgeSkipped {
+    from_asset_id: String,
+    to_asset_id: String,
+    reason: SyncEdgeSkipReason,
+  },
+
+  // Phase 4 (placement)
+  BundleRootCreated {
+    bundle_id: IdealBundleId,
+    root_asset_id: String,
+  },
+  AssetAssignedToBundle {
+    asset_id: String,
+    bundle_id: IdealBundleId,
+  },
+
+  // Phase 6 (availability)
+  AvailabilityComputed {
+    bundle_id: IdealBundleId,
+    ancestor_assets_len: usize,
+  },
 }
 
-/// Intermediate graph representation used by the bundler algorithm.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SyncEdgeSkipReason {
+  NonSyncPriority,
+  BoundaryTarget,
+  Isolated,
+  MissingNode,
+}
+
+/// Single decision event.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Decision {
+  /// Monotonically increasing sequence number assigned by the logger.
+  pub seq: u64,
+
+  /// Phase name (free-form).
+  pub phase: &'static str,
+
+  pub kind: DecisionKind,
+}
+
+/// A collection of decisions captured during an algorithm run.
 ///
-/// Initial implementation is intentionally minimal: just the subset we need
-/// to get started and write tests.
+/// This is intended for debugging/visualization and should not be used for correctness.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct DecisionLog {
+  next_seq: u64,
+  pub decisions: Vec<Decision>,
+}
+
+impl DecisionLog {
+  pub fn push(&mut self, phase: &'static str, kind: DecisionKind) {
+    let seq = self.next_seq;
+    self.next_seq += 1;
+
+    self.decisions.push(Decision { seq, phase, kind });
+  }
+
+  pub fn is_empty(&self) -> bool {
+    self.decisions.is_empty()
+  }
+}
+
+/// Bundle graph edge classification (bundle-level).
+///
+/// This corresponds to the research doc's `EdgeType`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum IdealEdgeType {
+  Sync,
+  Parallel,
+  Lazy,
+  Conditional,
+}
+
+/// Stable bundle identifier used within the ideal graph.
+///
+/// For now this is just the root asset id (string). We keep it wrapped so we can
+/// change representation later.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct IdealBundleId(pub String);
+
+/// A bundle in the ideal graph (zero duplication placement).
+///
+/// Mirrors the research doc's bundle struct, but starts small and grows as we implement.
+#[derive(Debug, Clone)]
+pub struct IdealBundle {
+  pub id: IdealBundleId,
+
+  /// The asset that created this bundle (entry/boundary). Shared bundles may not have one.
+  pub root_asset_id: Option<String>,
+
+  /// Assets assigned to this bundle (no duplication in the ideal phase).
+  pub assets: HashSet<String>,
+
+  /// Output bundle type (roughly corresponds to asset file type).
+  pub bundle_type: atlaspack_core::types::FileType,
+
+  pub needs_stable_name: bool,
+  pub behavior: MaybeBundleBehavior,
+
+  /// Assets known to be available when this bundle loads.
+  ///
+  /// In the doc, this is computed using the *intersection* rule across parent paths.
+  pub ancestor_assets: HashSet<String>,
+}
+
+impl IdealBundle {
+  /// Convenience: assets available at runtime when this bundle loads.
+  ///
+  /// In the doc this can include additional sets (e.g. bundle-group/parallel bundles).
+  pub fn all_assets_available_from_here(&self) -> HashSet<String> {
+    self
+      .ancestor_assets
+      .union(&self.assets)
+      .cloned()
+      .collect::<HashSet<_>>()
+  }
+}
+
+/// Output of the ideal graph algorithm.
+///
+/// This is the primary artifact future optimization/materialization phases will consume.
 #[derive(Debug, Default, Clone)]
 pub struct IdealGraph {
-  pub nodes: Vec<IdealNode>,
-  pub edges: Vec<(IdealNodeId, IdealNodeId)>,
+  /// Bundles with assets assigned (zero duplication).
+  pub bundles: HashMap<IdealBundleId, IdealBundle>,
 
-  /// Fast lookup for AssetGraph content keys.
-  pub index_by_content_key: HashMap<String, IdealNodeId>,
+  /// Bundle dependency graph (which bundles load which).
+  pub bundle_edges: Vec<(IdealBundleId, IdealBundleId, IdealEdgeType)>,
+
+  /// Asset -> Bundle mapping.
+  pub asset_to_bundle: HashMap<String, IdealBundleId>,
+
+  /// Optional debug information captured during the build.
+  pub debug: Option<IdealGraphDebug>,
 }
 
-impl IdealGraph {
-  pub fn from_asset_graph(
-    asset_graph: &AssetGraph,
-    _options: &IdealGraphBuildOptions,
-  ) -> anyhow::Result<(Self, IdealGraphBuildStats)> {
-    let mut g = IdealGraph::default();
-    let mut stats = IdealGraphBuildStats::default();
-
-    // 1) Create nodes for assets/dependencies.
-    for node in asset_graph.nodes() {
-      match node {
-        AssetGraphNode::Asset(asset) => {
-          let id = g.push_node(IdealNode::Asset {
-            id: asset.id.clone(),
-          });
-          g.index_by_content_key.insert(asset.id.clone(), id);
-          stats.assets += 1;
-        }
-        AssetGraphNode::Dependency(dep) => {
-          let id = g.push_node(IdealNode::Dependency { id: dep.id.clone() });
-          g.index_by_content_key.insert(dep.id.clone(), id);
-          stats.dependencies += 1;
-        }
-        _ => {}
-      }
-    }
-
-    // 2) Create edges by walking AssetGraph connectivity.
-    //
-    // Important: `AssetGraph` uses its own `NodeId` (currently `usize`) rather than petgraph's
-    // `NodeIndex`, so we only use the public `AssetGraph` APIs.
-    let mut node_ids_by_key: Vec<(String, usize)> = Vec::new();
-
-    for node in asset_graph.nodes() {
-      match node {
-        AssetGraphNode::Asset(a) => {
-          if let Some(node_id) = asset_graph.get_node_id_by_content_key(&a.id) {
-            node_ids_by_key.push((a.id.clone(), *node_id));
-          }
-        }
-        AssetGraphNode::Dependency(d) => {
-          if let Some(node_id) = asset_graph.get_node_id_by_content_key(&d.id) {
-            node_ids_by_key.push((d.id.clone(), *node_id));
-          }
-        }
-        _ => {}
-      }
-    }
-
-    for (from_key, from_node_id) in node_ids_by_key {
-      let Some(from) = g.index_by_content_key.get(&from_key).copied() else {
-        continue;
-      };
-
-      for to in asset_graph.get_outgoing_neighbors(&from_node_id) {
-        let Some(to_node) = asset_graph.get_node(&to) else {
-          continue;
-        };
-
-        let to_key: Option<&str> = match to_node {
-          AssetGraphNode::Asset(a) => Some(a.id.as_str()),
-          AssetGraphNode::Dependency(d) => Some(d.id.as_str()),
-          _ => None,
-        };
-
-        let Some(to_key) = to_key else {
-          continue;
-        };
-
-        if let Some(to_id) = g.index_by_content_key.get(to_key).copied() {
-          g.edges.push((from, to_id));
-        }
-      }
-    }
-
-    Ok((g, stats))
-  }
-
-  pub fn push_node(&mut self, node: IdealNode) -> IdealNodeId {
-    let id = IdealNodeId(u32::try_from(self.nodes.len()).expect("IdealGraph node id overflow"));
-    self.nodes.push(node);
-    id
-  }
-
-  pub fn node(&self, id: IdealNodeId) -> Option<&IdealNode> {
-    self.nodes.get(id.0 as usize)
-  }
-
-  pub fn outgoing(&self, from: IdealNodeId) -> impl Iterator<Item = IdealNodeId> + '_ {
-    self
-      .edges
-      .iter()
-      .filter_map(move |(a, b)| (*a == from).then_some(*b))
-  }
-
-  /// Returns all node ids reachable from `start` including `start`.
-  pub fn reachable(&self, start: IdealNodeId) -> HashSet<IdealNodeId> {
-    let mut visited = HashSet::new();
-    let mut stack = vec![start];
-
-    while let Some(n) = stack.pop() {
-      if !visited.insert(n) {
-        continue;
-      }
-
-      for out in self.outgoing(n) {
-        stack.push(out);
-      }
-    }
-
-    visited
-  }
+#[derive(Debug, Clone, Default)]
+pub struct IdealGraphDebug {
+  pub decisions: DecisionLog,
 }
-
-// These are used by future phases, but keeping the imports here helps avoid churn
-// when implementing dominators/placement logic.
-#[allow(unused_imports)]
-fn _type_anchors(_a: &Asset, _d: &Dependency) {}
 
 #[cfg(test)]
 mod tests {
@@ -177,13 +195,11 @@ mod tests {
   };
   use pretty_assertions::assert_eq;
 
-  use super::*;
-
+  /// Sanity test: constructing the minimal asset graph used elsewhere still works.
   #[test]
-  fn builds_nodes_and_edges_from_asset_graph() {
+  fn can_construct_minimal_asset_graph_fixture() {
     let mut asset_graph = AssetGraph::new();
 
-    // entry dep -> entry asset -> dep2 -> asset2
     let target = Target::default();
     let entry_dep = Dependency::entry("entry.js".to_string(), target);
     let entry_dep_node = asset_graph.add_entry_dependency(entry_dep, false);
@@ -198,45 +214,7 @@ mod tests {
     let entry_asset_node = asset_graph.add_asset(entry_asset, false);
     asset_graph.add_edge(&entry_dep_node, &entry_asset_node);
 
-    let dep2 = atlaspack_core::types::DependencyBuilder::default()
-      .specifier("./asset2.js".to_string())
-      .specifier_type(atlaspack_core::types::SpecifierType::Esm)
-      .env(Arc::new(Environment::default()))
-      .priority(atlaspack_core::types::Priority::default())
-      .build();
-    let dep2_id = dep2.id.clone();
-    let dep2_node = asset_graph.add_dependency(dep2, false);
-    asset_graph.add_edge(&entry_asset_node, &dep2_node);
-
-    let asset2 = Arc::new(Asset {
-      id: "asset2".into(),
-      file_path: "asset2.js".into(),
-      file_type: FileType::Js,
-      env: Arc::new(Environment::default()),
-      ..Asset::default()
-    });
-    let asset2_node = asset_graph.add_asset(asset2, false);
-    asset_graph.add_edge(&dep2_node, &asset2_node);
-
-    let (g, stats) =
-      IdealGraph::from_asset_graph(&asset_graph, &IdealGraphBuildOptions::default()).unwrap();
-
-    assert_eq!(stats.assets, 2);
-    assert_eq!(stats.dependencies, 2);
-
-    // Ensure content keys were indexed.
-    assert!(g.index_by_content_key.contains_key("entry_asset"));
-    assert!(g.index_by_content_key.contains_key(&dep2_id));
-
-    // Ensure reachability works.
-    let start = g.index_by_content_key["entry_asset"];
-    let reachable = g.reachable(start);
-    assert!(reachable.len() >= 3);
-
-    // Sanity check we have at least one edge.
-    assert!(!g.edges.is_empty());
-
-    // Avoid unused warnings for nodes we created.
-    let _ = (entry_asset_node, asset2_node);
+    assert_eq!(asset_graph.get_assets().count(), 1);
+    assert_eq!(asset_graph.get_dependencies().count(), 1);
   }
 }
