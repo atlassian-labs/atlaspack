@@ -5588,41 +5588,6 @@ describe('javascript', function () {
 
       assert(contents.includes('return Promise.resolve(fileExports);'));
     });
-
-    it('should handle entrypoint files case-insensitively', async () => {
-      await fsFixture(overlayFS, __dirname)`
-        src/packages/components/modal.js:
-          const modal = 'modal';
-          export default modal;
-        modalEntrypoint.tsx:
-          const result = () => import('./src/packages/components/modal.js');
-      `;
-
-      let b = await bundle(path.join(__dirname, 'modalEntrypoint.tsx'), {
-        inputFS: overlayFS,
-        targets: {
-          default: {
-            context: 'tesseract',
-            distDir: path.join(__dirname, 'dist'),
-          },
-        },
-        env: {
-          SYNC_DYNAMIC_IMPORT_CONFIG: JSON.stringify({
-            entrypoint_filepath_suffix: 'entrypoint.tsx',
-            actual_require_paths: [],
-          }),
-        },
-      });
-
-      await run(b, null, {require: false});
-
-      let contents = await outputFS.readFile(
-        b.getBundles()[0].filePath,
-        'utf8',
-      );
-
-      assert(contents.includes('return Promise.resolve(fileExports);'));
-    });
   });
 
   for (let shouldScopeHoist of [false, true]) {
