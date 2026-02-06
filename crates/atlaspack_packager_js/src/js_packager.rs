@@ -4,7 +4,7 @@ use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
   debug_tools::DebugTools,
   hash::{hash_bytes, hash_string},
-  types::{Asset, Bundle},
+  types::{Asset, Bundle, OutputFormat},
   version::atlaspack_rust_version,
 };
 use lmdb_js_lite::DatabaseHandle;
@@ -186,7 +186,6 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
           .map(|p| format!(": {}", p))
           .unwrap_or_default()
       };
-
       &format!("\n// {public_id}{file_path_comment}\n")
     } else {
       ""
@@ -276,21 +275,44 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       prelude_hash = &prelude_hash
     );
 
-    // We wrap the whole bundle in an IIFE to isolate the top level variables
-    // All assets (including entries) are wrapped in define() calls
-    // Entry assets are explicitly executed via require() calls at the end
-    "(function() {\n".to_string()
-      + &prelude_loader
-      + &asset_contents
-      + "\n"
-      + &entry_requires
-      + "\n})();\n"
+    // Bundle structure depends on output format:
+    //
+    // CommonJS (e.g., SSR bundles):
+    //   - All assets (including entries) are wrapped in define() calls
+    //   - Main entry asset is explicitly required and its exports assigned to module.exports
+    //   - No IIFE wrapper - the bundle is directly executable by Node.js
+    //   - This allows the SSR bundle to export functions that can be imported by other modules
+    //
+    // Other formats (Global, ESModule):
+    //   - All assets (including entries) are wrapped in define() calls
+    //   - Entry assets are explicitly executed via require() calls
+    //   - Entire bundle is wrapped in IIFE to isolate variables and avoid global pollution
+    let is_commonjs = bundle.env.output_format == OutputFormat::CommonJS;
+
+    if is_commonjs {
+      let main_entry_require = if let Some(main_entry_id) = bundle.entry_asset_ids.first() {
+        let public_id = bundle_graph
+          .get_public_asset_id(main_entry_id)
+          .expect("Main entry asset not found in bundle graph");
+        format!("module.exports = require('{}');", public_id)
+      } else {
+        String::new()
+      };
+
+      prelude_loader + &asset_contents + "\n" + &main_entry_require + "\n"
+    } else {
+      "(function() {\n".to_string()
+        + &prelude_loader
+        + &asset_contents
+        + "\n"
+        + &entry_requires
+        + "\n})();\n"
+    }
   }
 }
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use atlaspack_core::types::{Asset, Bundle, Environment, FileType};
   use std::path::PathBuf;
   use std::sync::Arc;
