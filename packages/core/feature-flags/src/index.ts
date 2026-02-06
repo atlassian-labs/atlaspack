@@ -370,13 +370,6 @@ export const DEFAULT_FEATURE_FLAGS = {
    * @since 2026-01-16
    */
   useLargeMapInBuildCache: process.env.ATLASPACK_BUILD_ENV === 'test',
-  /*
-   * Enable the skipping of server file check in TesseractResolver
-   *
-   * @author Vy Kim Nguyen <vnguyen4@atlassian.com>
-   * @since 2026-01-19
-   */
-  skipServerFileCheck: process.env.ATLASPACK_BUILD_ENV === 'test',
 
   /**
    * Enables native packaging. By itself, this feature flag will only ensure that
