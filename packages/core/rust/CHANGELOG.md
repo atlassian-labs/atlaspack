@@ -1,5 +1,13 @@
 # @atlaspack/rust
 
+## 3.22.1
+
+### Patch Changes
+
+- [#1001](https://github.com/atlassian-labs/atlaspack/pull/1001) [`95914a7`](https://github.com/atlassian-labs/atlaspack/commit/95914a7f33f9370cdb0c8a3fd6845c042911af59) Thanks [@marcins](https://github.com/marcins)! - Use a compiled prelude for the new packager
+
+- [#1008](https://github.com/atlassian-labs/atlaspack/pull/1008) [`883c107`](https://github.com/atlassian-labs/atlaspack/commit/883c107e60dab2f459e27342017c54e3a7db8bc5) Thanks [@nickrobson](https://github.com/nickrobson)! - Reverting faulty change in context of Jira SSR
+
 ## 3.22.0
 
 ### Minor Changes

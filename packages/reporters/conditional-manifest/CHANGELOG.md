@@ -1,5 +1,12 @@
 # @atlaspack/reporter-conditional-manifest
 
+## 2.15.35
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @atlaspack/plugin@2.14.53
+
 ## 2.15.34
 
 ### Patch Changes

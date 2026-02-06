@@ -1,5 +1,12 @@
 # @atlaspack/source-map
 
+## 3.2.8
+
+### Patch Changes
+
+- Updated dependencies [[`95914a7`](https://github.com/atlassian-labs/atlaspack/commit/95914a7f33f9370cdb0c8a3fd6845c042911af59), [`883c107`](https://github.com/atlassian-labs/atlaspack/commit/883c107e60dab2f459e27342017c54e3a7db8bc5)]:
+  - @atlaspack/rust@3.22.1
+
 ## 3.2.7
 
 ### Patch Changes
