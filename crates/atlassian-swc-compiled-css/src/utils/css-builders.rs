@@ -2513,15 +2513,25 @@ where
               },
             };
 
-            recompose_template_literal(
-              &mut optimized,
-              &format!("{}:", css_property_name(&key)),
-              ";",
-            );
-            let result =
-              extract_template_literal_with_builder(&optimized, &updated_meta, build_css);
-            css.extend(result.css);
-            variables.extend(result.variables);
+            if is_selector_key(&key) {
+              // Key is a selector (e.g. [data-styled-selector="..."]); wrap result as a rule
+              // instead of treating it as a property name to produce valid "selector { css }".
+              let result =
+                extract_template_literal_with_builder(&optimized, &updated_meta, build_css);
+              let mapped = to_css_rule(&key, &result);
+              css.extend(mapped.css);
+              variables.extend(mapped.variables);
+            } else {
+              recompose_template_literal(
+                &mut optimized,
+                &format!("{}:", css_property_name(&key)),
+                ";",
+              );
+              let result =
+                extract_template_literal_with_builder(&optimized, &updated_meta, build_css);
+              css.extend(result.css);
+              variables.extend(result.variables);
+            }
             continue;
           }
         }
@@ -2613,6 +2623,13 @@ where
 
 fn wrap_with_selector(selector: &str, css: String) -> String {
   format!("{selector} {{ {css} }}")
+}
+
+/// Returns true when the object key is a CSS selector (e.g. nested rule) rather than a
+/// property name. Selector keys must be wrapped with to_css_rule to produce valid
+/// "selector { declarations }" instead of invalid "selector: declarations".
+fn is_selector_key(key: &str) -> bool {
+  key.starts_with('&') || key.starts_with('[')
 }
 
 fn to_css_rule_internal(selector: &str, item: &CssItem) -> CssItem {
@@ -3050,8 +3067,8 @@ mod tests {
     extract_keyframes_with_builder, extract_logical_expression_with_builder,
     extract_member_expression_with_builder, extract_template_literal_with_builder,
     find_binding_identifier, generate_cache_for_css_map_with_builder, get_item_css,
-    get_variable_declarator_value_for_parent_expr, merge_subsequent_unconditional_css_items,
-    print_expression, to_css_declaration, to_css_rule,
+    get_variable_declarator_value_for_parent_expr, is_selector_key,
+    merge_subsequent_unconditional_css_items, print_expression, to_css_declaration, to_css_rule,
   };
   use crate::types::{
     CompiledImports, Metadata, MetadataContext, PluginOptions, TransformFile, TransformFileOptions,
@@ -3733,6 +3750,24 @@ mod tests {
       operator: LogicalOperator::And,
     });
     assert_eq!(get_item_css(&logical), "display: none;");
+  }
+
+  #[test]
+  fn is_selector_key_returns_true_for_selector_like_keys() {
+    assert!(is_selector_key("&:hover"));
+    assert!(is_selector_key("&:focus-within"));
+    assert!(is_selector_key(
+      "[data-styled-selector=\"template-card.GalleryTemplateCard.TemplateName\"]"
+    ));
+    assert!(is_selector_key("[data-id~=test]"));
+  }
+
+  #[test]
+  fn is_selector_key_returns_false_for_property_names() {
+    assert!(!is_selector_key("color"));
+    assert!(!is_selector_key("fontSize"));
+    assert!(!is_selector_key("paddingTop"));
+    assert!(!is_selector_key("--custom-property"));
   }
 
   #[test]
