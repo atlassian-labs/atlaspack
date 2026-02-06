@@ -1,7 +1,8 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use atlaspack_core::{
   bundle_graph::bundle_graph::BundleGraph,
+  debug_tools::DebugTools,
   hash::{hash_bytes, hash_string},
   types::{Asset, Bundle},
   version::atlaspack_rust_version,
@@ -18,8 +19,18 @@ use super::process_asset::rewrite_asset_code;
 type PackagedAsset<'a> = (&'a Asset, String);
 
 impl<B: BundleGraph + Send + Sync> JsPackager<B> {
-  pub fn new(db: Arc<DatabaseHandle>, bundle_graph: Arc<RwLock<B>>) -> Self {
-    Self { db, bundle_graph }
+  pub fn new(
+    db: Arc<DatabaseHandle>,
+    bundle_graph: Arc<RwLock<B>>,
+    project_root: PathBuf,
+    debug_tools: DebugTools,
+  ) -> Self {
+    Self {
+      db,
+      bundle_graph,
+      project_root,
+      debug_tools,
+    }
   }
 
   pub fn package(&self, bundle_id: &str) -> anyhow::Result<PackageResult> {
@@ -105,11 +116,9 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     let deps = self.get_asset_dependency_map(bundle, asset)?;
     let code = rewrite_asset_code(code, &deps)?;
 
-    if bundle.entry_asset_ids.contains(&asset.id) {
-      Ok(code)
-    } else {
-      self.wrap_asset(bundle, asset, code)
-    }
+    // All assets are wrapped, including entry assets. Entry assets will be explicitly
+    // required at the bottom of the bundle to ensure they execute in order.
+    self.wrap_asset(bundle, asset, code)
   }
 
   fn get_asset_dependency_map(
@@ -157,9 +166,34 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .expect("Asset not found in bundle graph")
       .to_string();
 
+    // Only add comments if debug flag is enabled
+    let comment = if self.debug_tools.asset_file_names_in_output {
+      // Get relative file path from project root if possible
+      let file_path_comment = if asset.file_path.is_absolute() {
+        // For absolute paths, try to strip the project root
+        asset
+          .file_path
+          .strip_prefix(&self.project_root)
+          .ok()
+          .and_then(|p| p.to_str())
+          .map(|p| format!(": {}", p))
+          .unwrap_or_default()
+      } else {
+        // For relative paths, use them as-is
+        asset
+          .file_path
+          .to_str()
+          .map(|p| format!(": {}", p))
+          .unwrap_or_default()
+      };
+
+      &format!("\n// {public_id}{file_path_comment}\n")
+    } else {
+      ""
+    };
+
     Ok(format!(
-      "define('{}', function (require,module,exports) {{ {code} }});",
-      public_id
+      "{comment}define('{public_id}', function (require,module,exports) {{ {code} }});"
     ))
   }
 
@@ -196,6 +230,20 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       .collect::<Vec<_>>()
       .join("\n");
 
+    // Build explicit require() calls for entry assets to execute them in order
+    let bundle_graph = self.bundle_graph.read();
+    let entry_requires = bundle
+      .entry_asset_ids
+      .iter()
+      .map(|asset_id| {
+        let public_id = bundle_graph
+          .get_public_asset_id(asset_id)
+          .expect("Entry asset not found in bundle graph");
+        format!("require('{}');", public_id)
+      })
+      .collect::<Vec<_>>()
+      .join("\n");
+
     // For now we just always use the dev prelude
     let prelude_string = include_str!("../prelude/lib/prelude.dev.js");
 
@@ -228,8 +276,15 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
       prelude_hash = &prelude_hash
     );
 
-    // We wrap the whole bundle in an IIFE as well to isolate the top level variables
-    "(function() {\n".to_string() + &prelude_loader + &asset_contents + "\n})();\n"
+    // We wrap the whole bundle in an IIFE to isolate the top level variables
+    // All assets (including entries) are wrapped in define() calls
+    // Entry assets are explicitly executed via require() calls at the end
+    "(function() {\n".to_string()
+      + &prelude_loader
+      + &asset_contents
+      + "\n"
+      + &entry_requires
+      + "\n})();\n"
   }
 }
 
@@ -347,15 +402,16 @@ mod tests {
     let public_id = "pub123";
     let code = "module.exports = 42;";
 
-    let expected = format!(
-      "define('{}', function (require,module,exports) {{ {} }});",
-      public_id, code
+    let expected_pattern = format!(
+      "\n// {}\ndefine('{}', function (require,module,exports) {{ {} }});",
+      public_id, public_id, code
     );
 
     // Verify the format
-    assert!(expected.starts_with("define('pub123',"));
-    assert!(expected.contains("function (require,module,exports)"));
-    assert!(expected.contains("module.exports = 42;"));
-    assert!(expected.ends_with("});"));
+    assert!(expected_pattern.contains(&format!("// {}", public_id)));
+    assert!(expected_pattern.contains("define('pub123',"));
+    assert!(expected_pattern.contains("function (require,module,exports)"));
+    assert!(expected_pattern.contains("module.exports = 42;"));
+    assert!(expected_pattern.ends_with("});"));
   }
 }
