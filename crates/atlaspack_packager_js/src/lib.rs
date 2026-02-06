@@ -133,7 +133,8 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
           Some(Some(public_id)) => {
             format!(r#"require("{}")"#, public_id)
           }
-          Some(None) => caps[0].to_string(),
+          // Skipped dependency: DevPackager maps these to false and runtime returns {}.
+          Some(None) => "(function(){return {};})()".to_string(),
           None => caps[0].to_string(),
         }
       })
@@ -150,31 +151,33 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     // Get dependencies for asset
     let dependencies = bundle_graph.get_dependencies(asset)?;
 
-    let deps = dependencies
-      .iter()
-      .map(|dependency| {
-        let specifier = dependency
-          .placeholder
-          .as_deref()
-          .unwrap_or(&dependency.specifier);
+    let mut deps = HashMap::new();
+    for dependency in dependencies.iter() {
+      let dep_value: Option<String> = if bundle_graph.is_dependency_skipped(dependency) {
+        None
+      } else if let Some(resolved) = bundle_graph.get_resolved_asset(dependency, bundle)? {
+        Some(
+          bundle_graph
+            .get_public_asset_id(&resolved.id)
+            .ok_or(anyhow::anyhow!("Asset not found in bundle graph"))?
+            .to_string(),
+        )
+      } else {
+        Some(dependency.specifier.clone())
+      };
 
-        let dep_value: Option<String> = if bundle_graph.is_dependency_skipped(dependency) {
-          None
-        } else if let Some(resolved) = bundle_graph.get_resolved_asset(dependency, bundle)? {
-          Some(
-            bundle_graph
-              .get_public_asset_id(&resolved.id)
-              .ok_or(anyhow::anyhow!("Asset not found in bundle graph"))?
-              .to_string(),
-          )
-        } else {
-          Some(dependency.specifier.clone())
-        };
-
-        Ok((specifier.to_string(), dep_value))
-      })
-      .collect::<anyhow::Result<HashMap<String, Option<String>>>>()?;
-
+      // DevPackager uses getSpecifier(dep) = dep.meta.placeholder ?? dep.specifier as the key.
+      // The code may contain require(placeholder) or require(specifier) depending on how the
+      // transformer/runtime emitted it (e.g. lazy loaders use chunk/bundle ids). Add both as keys
+      // so either string in the source resolves to the same module.
+      let specifier_key = dependency.specifier.clone();
+      deps.insert(specifier_key.clone(), dep_value.clone());
+      if let Some(ref placeholder) = dependency.placeholder
+        && placeholder != &specifier_key
+      {
+        deps.insert(placeholder.clone(), dep_value.clone());
+      }
+    }
     Ok(deps)
   }
 
@@ -195,6 +198,8 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
     // This is a temporary implementation that will just use string concatenation
     let prelude = r#"
     (function () {
+    var _ref, _ref2, _ref3, _globalThis;
+	  const globalObject = (_ref = (_ref2 = (_ref3 = (_globalThis = globalThis) !== null && _globalThis !== void 0 ? _globalThis : global) !== null && _ref3 !== void 0 ? _ref3 : window) !== null && _ref2 !== void 0 ? _ref2 : void 0) !== null && _ref !== void 0 ? _ref : {};
     const registry = {};
     const modules = {};
     function define(id, factory) {
@@ -211,7 +216,7 @@ impl<B: BundleGraph + Send + Sync> JsPackager<B> {
         e.code = 'MODULE_NOT_FOUND';
         throw e;
       }
-      registry[id].call(module.exports, require, module, module.exports);
+      registry[id].call(module.exports, require, module, module.exports, globalObject);
       return module.exports;
     }
     "#;
@@ -323,22 +328,24 @@ mod tests {
   }
 
   #[test]
-  fn test_replace_require_calls_preserves_skipped_deps() {
+  fn test_replace_require_calls_skipped_deps_become_empty_object() {
     let code = r#"const foo = require("./foo"); const bar = require("./bar");"#.to_string();
     let mut deps = HashMap::new();
     deps.insert("./foo".to_string(), Some("pub_foo".to_string()));
-    deps.insert("./bar".to_string(), None); // Skipped
+    deps.insert("./bar".to_string(), None); // Skipped - same as DevPackager: runtime returns {}
 
     let result = REQUIRE_CALL_REGEX.replace_all(&code, |caps: &regex::Captures| {
       let specifier = &caps[1];
       match deps.get(specifier) {
         Some(Some(public_id)) => format!(r#"require("{}")"#, public_id),
-        _ => caps[0].to_string(),
+        Some(None) => "(function(){return {};})()".to_string(),
+        None => caps[0].to_string(),
       }
     });
 
     assert!(result.contains(r#"require("pub_foo")"#));
-    assert!(result.contains(r#"require("./bar")"#)); // Unchanged
+    assert!(result.contains("(function(){return {};})()"));
+    assert!(!result.contains(r#"require("./bar")"#));
   }
 
   #[test]
