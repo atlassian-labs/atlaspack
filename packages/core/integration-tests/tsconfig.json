@@ -4,5 +4,5 @@
     "types": ["node", "mocha"],
     "composite": true
   },
-  "include": ["test/*"]
+  "include": ["test/*", "test/utils/*"]
 }
